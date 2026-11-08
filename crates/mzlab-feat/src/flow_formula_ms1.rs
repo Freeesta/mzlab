@@ -156,7 +156,19 @@ fn row_text(o: &Opts, warn: bool, t: &Table, n: usize, name: &str, run: &Run) ->
                     return Err(e)
                 }
                 Err(e) => {
-                    out.raw(",\"error\":").str(e.key).raw("}");
+                    out.raw(",\"error\":").str(e.key);
+                    // a grid over the limit says how many rows it had and the limit, for the note of the feature
+                    let grid = if e.key == "err.comp.many" {
+                        &e.params[..]
+                    } else {
+                        &[]
+                    };
+                    for (name, key) in [("n", "grid"), ("max", "max_grid")] {
+                        if let Some((_, v)) = grid.iter().find(|(k, _)| *k == name) {
+                            out.raw(",\"").raw(key).raw("\":").raw(v);
+                        }
+                    }
+                    out.raw("}");
                 }
             }
         }

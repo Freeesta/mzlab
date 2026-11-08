@@ -20,14 +20,14 @@ def immagine() -> str | None:
     return f"{p['nome']}@{p['digest']}" if p["digest"] else None
 
 
-def comando(img: str, mzml_dir: Path, nat: Path, config: Path, analisi: Path | None, sospetti: Path | None, stems: list[str]) -> list[str]:
+def comando(img: str, mzml_dir: Path, nat: Path, config: Path, analysis: Path | None, sospetti: Path | None, stems: list[str]) -> list[str]:
     """The `docker run` line: mzML folder and inputs read-only, only the native output folder writable."""
     c = ["docker", "run", "--rm", "-v", f"{mzml_dir.resolve()}:/mzml:ro", "-v", f"{nat.resolve()}:/out", "-v", f"{R.resolve()}:/bench/run.R:ro",
          "-v", f"{config.resolve()}:/bench/par.json:ro"]
-    for nome, p in (("analisi", analisi), ("sospetti", sospetti)):
+    for nome, p in (("analisi", analysis), ("sospetti", sospetti)):
         if p:
             c += ["-v", f"{p.resolve()}:/bench/{nome}.csv:ro"]
-    return c + [img, "Rscript", "/bench/run.R", "/bench/par.json", "/out", "/bench/analisi.csv" if analisi else "-", "/bench/sospetti.csv" if sospetti else "-",
+    return c + [img, "Rscript", "/bench/run.R", "/bench/par.json", "/out", "/bench/analisi.csv" if analysis else "-", "/bench/sospetti.csv" if sospetti else "-",
                 *[f"/mzml/{s}.mzML" for s in stems]]
 
 
@@ -55,10 +55,10 @@ def main() -> None:
     fg = nat / "featureGroups.csv"
     if r.returncode != 0 or not fg.exists():
         raise SystemExit(f"patRoon failed (exit {r.returncode}):\n{r.stderr[-2000:]}")
-    versione = next((l.split()[1] for l in r.stdout.splitlines() if l.startswith("patRoon ")), "unknown")
+    version = next((l.split()[1] for l in r.stdout.splitlines() if l.startswith("patRoon ")), "unknown")
     sosp = nat / "suspects.csv"
     t = adatta.da_csv("patroon", fg, [f.stem for f in fs], a.dataset, a.config, sospetti=sosp if so and sosp.exists() else None)
-    print(corri.salva(t, a.out_dir, f"{versione} ({img})"), len(t["righe"]), "rows")
+    print(corri.salva(t, a.out_dir, f"{version} ({img})"), len(t["righe"]), "rows")
 
 
 if __name__ == "__main__":

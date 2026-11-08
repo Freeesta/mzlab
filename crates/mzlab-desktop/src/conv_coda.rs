@@ -1,5 +1,6 @@
 //! The background conversion queue of the desktop app: each maker's file the page holds is converted to indexed mzML in the cache folder by the very
-//! entry of `mzlab-cli convert` (same bytes), on `cores - 1` threads and never while an index of Data is being built. The page reads it with
+//! entry of `mzlab-cli convert` (same bytes), on the threads of `convert` (cores - 1, 1 to 4, fewer when the memory budget does not give each its share:
+//! `conv_list` then carries the same notice the CLI prints) and never while an index of Data is being built. The page reads it with
 //! `conv_list`, stops it with `conv_cancel`, saves the ready files with `conv_save`; `flow/run` takes a ready mzML instead of converting again.
 
 use std::path::{Path, PathBuf};
@@ -132,12 +133,18 @@ impl Inner {
     }
 }
 
+#[path = "conv_fili.rs"]
+mod fili;
+
 #[derive(Default)]
 pub(crate) struct Coda {
     pub(crate) inner: Arc<Mutex<Inner>>,
     folder: Mutex<Option<PathBuf>>,
-    /// threads at most; 0 = cores - 1
+    /// threads at most; 0 = those of `convert` on the budget `auto_mb`
     workers: usize,
+    /// the native budget in MB the threads share; 0 = the one of this computer (read once)
+    auto_mb: f64,
+    native_mb: std::sync::OnceLock<f64>,
     /// the re-check pause of `wait_for_indexing` in ms; 0 = `RECHECK_MS`
     recheck_ms: u64,
 }
@@ -158,17 +165,6 @@ impl Coda {
             workers: 1,
             recheck_ms: ms,
             ..Coda::default()
-        }
-    }
-
-    fn limit(&self) -> usize {
-        if self.workers > 0 {
-            self.workers
-        } else {
-            std::thread::available_parallelism()
-                .map_or(1, |n| n.get())
-                .saturating_sub(1)
-                .max(1)
         }
     }
 
@@ -464,7 +460,12 @@ impl Coda {
                 rows.push(json!({ "name": name, "state": state, "error": error }));
             }
         }
-        json!({ "jobs": rows })
+        let many = g.jobs.len() > self.limit();
+        drop(g);
+        match self.notice() {
+            Some(n) if many => json!({ "jobs": rows, "notice": n }),
+            _ => json!({ "jobs": rows }),
+        }
     }
 
     /// Puts every ready mzML in the folder `dest` (a hard link where the system allows, else a copy); how many.

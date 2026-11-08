@@ -99,7 +99,7 @@ with sync_playwright() as p:
         pg.set_input_files("input[type=file][accept*='.dam']", []) if False else None
         pg.click("#np-method"); ready(pg); t = pg.inner_text("#bigdlg"); assert "Q1 (m/z)" in t and "Q3 (m/z)" in t and "Dwell" in t, t[:300]
         pg.screenshot(path=SH + "124_method_mrm.png"); pg.click("#bigx")
-        pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='ms2'));renderFileList();renderNav()"); pg.click("#np-method"); ready(pg); attendi(pg, "document.querySelector('#bigdlg').innerText.includes('Precursori (Q1)')")
+        pg.evaluate("activeFile(E.files.findIndex(f=>f.kind==='ms2'));renderFileList();renderNav()"); pg.click("#np-method"); ready(pg); wait_for_js(pg, "document.querySelector('#bigdlg').innerText.includes('Precursori (Q1)')")
         assert "Precursori (Q1)" in pg.inner_text("#bigdlg") and "Energia di collisione" in pg.inner_text("#bigdlg"); pg.screenshot(path=SH + "125_method_ms2.png"); pg.click("#bigx")
     step("Metodo: MRM transitions and MS2 precursors listed", method)
     def ital():

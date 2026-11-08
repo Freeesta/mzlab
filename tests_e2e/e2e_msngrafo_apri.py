@@ -12,7 +12,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
 
-lib_msngrafo.prepara()
+lib_msngrafo.prepare()
 FX = Path(__file__).parent / "fixtures"
 OLD = FX / "msngrafo_esempio.json"
 NEW = FX / "msngrafo_esempio_vista.json"
@@ -23,11 +23,13 @@ NEWER = TMP / "newer.json"; NEWER.write_text(OLD.read_text().replace('"msngrafo/
 # the /1 fixture as the engine writes it now: msngrafo/2, English `opzioni` keys
 V2 = TMP / "v2.json"; V2.write_text(json.dumps({**(o := json.loads(OLD.read_text())), "formato": "msngrafo/2", "opzioni": {({"max_picchi": "max_peaks", "isotopi": "isotopes", "attivazione": "activation", "mz_basso": "low_mz", "ppm_basso": "wide_ppm", "prove_min": "min_evidence", "scelte": "pick"}).get(k, k): v for k, v in o["opzioni"].items()}}))
 OTHER = TMP / "other.json"; OTHER.write_text('{"formato": "something/1"}')
+# a saved graph over the page's 200 MB: only its head is real, the rest is a sparse hole (no disk used)
+BIG = TMP / "big.json"; BIG.write_text('{"formato": "msngrafo/2", "nodi": ['); import os; os.truncate(BIG, 201_000_000)
 r = Run(port=8979, wd="/tmp/wd_msngrafo_apri")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1500})
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); attendi(pg, "typeof INFGAPRI !== 'x' && !!document.querySelector('#pick')")
+        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); wait_for_js(pg, "typeof INFGAPRI !== 'x' && !!document.querySelector('#pick')")
         ASK = "(window.__qqU||[]).filter(u=>/api\\/(upload|explore|msn_grafo|msn_albero)/.test(u))"
         def opened(path, via="pick"):
             pg.set_input_files("#pick", str(path))
@@ -103,6 +105,13 @@ try:
             assert "not a mass-spectrometry file we know" in pg.inner_text("#unopen") and pg.locator("#ig-ro").count() == 0
             pg.click("#unopen [data-a=close]")
         step("another .json keeps the usual «not a mass-spectrometry file we know»", other)
+        def big():
+            pg.set_input_files("#pick", str(BIG)); pg.wait_for_selector("#unopen .fail", timeout=15000)
+            txt = pg.inner_text("#unopen")
+            assert "201 MB" in txt and "200 MB" in txt and "raw data" in txt and "not a mass-spectrometry file" not in txt, txt[:400]
+            assert pg.locator("#ig-ro").count() == 0
+            pg.click("#unopen [data-a=close]")
+        step("a saved graph over 200 MB names the limit, says it was not opened and gives the next step", big)
         def noapi():
             urls = pg.evaluate(ASK)
             assert not urls, urls

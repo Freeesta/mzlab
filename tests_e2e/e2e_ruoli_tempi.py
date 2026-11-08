@@ -2,7 +2,7 @@
 no strip, no warning, nothing to confirm: the files open as soon as they are read; a proposed cell carries the guess class until edited) and the negative time of the dark. Synthetic files with invented names."""
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
-lib.AUTO_TEMPI = False
+lib.AUTO_TIMES = False
 from lib import *
 import synth
 steps = []

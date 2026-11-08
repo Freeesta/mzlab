@@ -45,7 +45,7 @@ try:
         def typed():
             pg.select_option("#tunit", "h")
             i = pg.locator("#flist input[data-k=time]").nth(0); i.fill("0,5"); i.press("Tab")
-            attendi(pg, "Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>i.value)[0] === '0.5'")      # the commit is applied once the focus has moved
+            wait_for_js(pg, "Array.from(document.querySelectorAll('#flist input[data-k=time]')).map(i=>i.value)[0] === '0.5'")      # the commit is applied once the focus has moved
             names = pg.evaluate(NAMES); assert names[0] == "s_t30" or names[1] == "s_t30", names     # 0.5 h = 30 min ties with s_t30: order by name
             j = pg.locator("#flist input[data-k=time]").nth(2); j.fill("abc"); j.press("Tab")
             assert pg.get_attribute("#flist input[aria-invalid=true]", "data-k") == "time"
@@ -58,7 +58,7 @@ try:
         step("the file list shows the chosen unit", list_unit)
         r2 = Run(port=8922, wd="/tmp/wd_ordine2"); pg2 = r2.page(p)
         def nolabel():
-            import lib; lib.AUTO_TEMPI = False       # the test is about names with no time: nothing is written for it
+            import lib; lib.AUTO_TIMES = False       # the test is about names with no time: nothing is written for it
             stage(pg2, [D / "campione10.mzML", D / "campione2.mzML"]); show_table(pg2)
             thaw(pg2)
             assert pg2.evaluate(NAMES) == ["campione2", "campione10"], pg2.evaluate(NAMES)

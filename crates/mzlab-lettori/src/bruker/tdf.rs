@@ -268,35 +268,41 @@ impl LettoreBruker {
 }
 
 impl Lettore for LettoreBruker {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro(if self.tsf { "bruker-tsf" } else { "bruker-tdf" })
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::non_portati::BRUKER
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn mancanti(&mut self, _c: usize) -> usize {
+    fn missing(&mut self, _c: usize) -> usize {
         self.mancanti
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         self.completa()?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    // the decoding of every MS2 frame for its TIC is left to the callers that read it
+    fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+        self.uno(c)?;
+        Ok(&self.indice)
+    }
+
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.uno(c)?;
         self.spettro(k)
     }
 
     /// Frame, scan range, isolation and collision energy of spectrum `k`.
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.uno(c)?;
         let d = self.desc.get(k).ok_or_else(|| indice_cattivo(k))?;
         let f = &self.dati.frames[d.frame];
@@ -351,7 +357,7 @@ impl Lettore for LettoreBruker {
         Ok(o)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.uno(c)?;
         Ok(["TIC", "BPC"]
             .into_iter()
@@ -364,18 +370,18 @@ impl Lettore for LettoreBruker {
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.uno(c)?;
         self.traccia(id)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.uno(c)?;
         let (f, _) = self.file();
         Ok(self.testata.documento(f))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.uno(c)?;
         let (f, nomi) = self.file();
         let doc = self.testata.documento(f);

@@ -142,6 +142,11 @@ fn ari(a: &[usize], b: &[u32]) -> f64 {
     (sum_ij - exp) / (0.5 * (sa + sb) - exp)
 }
 
+/// The budget of the page when it asks for none (192 MB): the step must fit in it on these series, as in the browser.
+fn site() -> mzlab_core::budget::MemBudget {
+    mzlab_core::budget::MemBudget::from_request(0.0)
+}
+
 fn defaults() -> mzlab_feat::ionnet::Params {
     params_of(&[], 1).unwrap().0
 }
@@ -192,6 +197,9 @@ fn ion_identity_edges_are_found() {
     }
 }
 
+#[path = "ionnet_parti/files.rs"]
+mod files;
+
 #[test]
 fn every_row_stays() {
     let (t, _) = series(7, 40);
@@ -202,7 +210,7 @@ fn every_row_stays() {
         ..Origin::default()
     };
     let bytes = write_table(&t, &Recipe::default(), &origin);
-    let text = group_text(&[], &bytes).unwrap();
+    let text = group_text(&[], &bytes, &site()).unwrap().text;
     let v: Value = parse(text.as_bytes()).unwrap();
     assert_eq!(v.get("format").and_then(Value::str), Some("ionnet/1"));
     let ids: Vec<u32> = v
@@ -223,7 +231,7 @@ fn every_row_stays() {
         .iter()
         .all(|g| g.f64().unwrap() >= 1.0));
     // the same bytes twice
-    assert_eq!(group_text(&[], &bytes).unwrap(), text);
+    assert_eq!(group_text(&[], &bytes, &site()).unwrap().text, text);
 }
 
 #[test]
@@ -235,3 +243,50 @@ fn an_unknown_species_is_refused() {
     let (q, positive) = params_of(&p, 1).unwrap();
     assert!(!positive && q.ions[0].name == "[M-H]-");
 }
+
+/// The series squeezed into a narrow RT range, so that many compounds co-elute and correlate: the case where the pair lookup costs most.
+fn crowded(seed: u64, n: usize) -> Aligned {
+    let (mut t, _) = series(seed, n);
+    let squeeze = |x: f64| 1.0 + (x - 1.0) * 0.05;
+    for r in 0..t.len() {
+        t.rt[r] = squeeze(t.rt[r]);
+    }
+    for v in t.apex_rt.iter_mut() {
+        *v = squeeze(f64::from(*v)) as f32;
+    }
+    t
+}
+
+#[test]
+fn the_bytes_stay_on_a_crowded_table() {
+    // sha256 of the ionnet/1 text, frozen from the engine before the sorted lookup of linked pairs
+    let mut got = Vec::new();
+    for (seed, n) in [(7u64, 40), (99, 300), (2026, 900)] {
+        let t = crowded(seed, n);
+        let bytes = write_table(&t, &Recipe::default(), &Origin::default());
+        let text = group_text(&[], &bytes, &site()).unwrap().text;
+        let g = group(&t, &defaults());
+        // a pair of rows has at most one edge of each kind, and a correlation edge only when no other edge links them
+        let mut seen = std::collections::BTreeSet::new();
+        for e in &g.edges {
+            assert!(
+                seen.insert((e.a, e.b, e.kind)),
+                "seed {seed}: duplicate edge"
+            );
+        }
+        for e in g.edges.iter().filter(|e| e.kind == EdgeKind::Corr) {
+            assert!(
+                !seen.contains(&(e.a, e.b, EdgeKind::Ion))
+                    && !seen.contains(&(e.a, e.b, EdgeKind::Isotope))
+            );
+        }
+        got.push(mzlab_core::budget::sha256_hex(text.as_bytes()));
+    }
+    assert_eq!(got, GOLD);
+}
+
+const GOLD: [&str; 3] = [
+    "403aa9bf54db76eb312475fa7d6a57b3493955cf12dda0c415294b40b99f1f8d",
+    "5e25b1e29620529076b9ae9bf6520613ad1a25e2e43cae14ffb3f6e273cca45d",
+    "9f7991f3822b6170b8b4d8888b0aa78f0f1ad662d18100e5d10c0875862d73d3",
+];

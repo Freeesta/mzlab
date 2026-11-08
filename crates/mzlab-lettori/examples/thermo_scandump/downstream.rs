@@ -108,7 +108,7 @@ pub fn add_downstream(
     name: &str,
     scans: &mut Scans,
 ) {
-    let voci = l.indice(0).expect("index").to_vec();
+    let voci = l.index(0).expect("index").to_vec();
     let mut mzml = Vec::new();
     lettori_mzml::scrivi(l, 0, &mut mzml, &mut |_, _| {}).expect("mzML");
     let written = precursors_of(&String::from_utf8_lossy(&mzml));

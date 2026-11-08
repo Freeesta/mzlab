@@ -1,7 +1,7 @@
 //! The `.mzidx` of a vendor file set (`docs/agenti/mzidx.md`, version 2), straight from a `Lettore`, with no mzML written and read again:
 //! the rows are the ones `scantable` reads from the header of each spectrum as `lettori_mzml::scrivi` would write it (built from the scan itself,
 //! with no text), and the spectra given to the builder are the ones the mzML would give back. Only the first two columns of a row change:
-//! the `Posizione` of the scan in the members of the set and its number `k` in `Lettore::indice`.
+//! the `Posizione` of the scan in the members of the set and its number `k` in `Lettore::index`.
 
 use crate::error::Result;
 use crate::lettori::{Lettore, VoceScansione};
@@ -15,7 +15,7 @@ use crate::scantable::{Dove, Rows, Table};
 
 /// Scan `k` of sample `c` as the mzML written by `lettori_mzml::scrivi` reads back: the arrays cut to the shorter of m/z and intensity.
 pub(crate) fn spettro(l: &mut dyn Lettore, c: usize, k: usize) -> Result<Spectrum> {
-    taglia(l.scansione(c, k)?)
+    taglia(l.scan(c, k)?)
 }
 
 /// The arrays of `s` cut to the shorter of m/z and intensity.
@@ -32,7 +32,8 @@ pub(crate) fn taglia(mut s: Spectrum) -> Result<Spectrum> {
 }
 
 /// The scan table of sample `c`: every scan is decoded once and its row is built from the scan itself (`Rows::lettore`), the row that `Rows::spectrum`
-/// reads from the header text `mzmlwrite::spectrum_head` would write (the writer is only used for a scan whose extras could change that text).
+/// reads from the header text `mzmlwrite::spectrum_head` would write (the writer is only used for a scan whose extras could change that text: precursors
+/// and cvParams of `precursori`, accessions in ids, filters or userParams).
 /// `n_chromatograms` counts, as in the mzML, the chromatograms the writer writes (a kind it knows, at least one point).
 pub fn righe(l: &mut dyn Lettore, c: usize) -> Result<Table> {
     tabella(l, c, None)
@@ -52,7 +53,7 @@ pub(crate) fn righe_prima<'a>(
 
 fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima<'_>>) -> Result<Table> {
     let mut rows = righe_vuote(l, c)?;
-    let n = l.indice(c)?.len();
+    let n = l.index(c)?.len();
     for k in 0..n {
         let s = spettro(l, c, k)?;
         riga(&mut rows, l, k, &s, prima.as_deref_mut())?;
@@ -62,7 +63,7 @@ fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima<'_>>) -> 
 
 /// The rows of a table with no scan yet, from the header of the reader.
 fn righe_vuote(l: &mut dyn Lettore, c: usize) -> Result<Rows> {
-    let h = lettori_mzml::testata_tabella(l, c)?;
+    let h = lettori_mzml::table_header(l, c)?;
     Ok(match Rows::da_testata(&h) {
         Some(r) => r,
         None => Rows::from_head(&MzmlWriter::new(Vec::new(), &h)?.finish()?),
@@ -78,8 +79,10 @@ fn riga(
     prima: Option<&mut Prima<'_>>,
 ) -> Result<()> {
     let extra = l.extra_mzml(s);
-    // the sum `spectrum_head` writes
-    let tic: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+    // the total `spectrum_head` writes: the maker's, else the sum of the points
+    let tic = extra
+        .tic
+        .unwrap_or_else(|| (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum());
     if !rows.lettore(s, &extra, tic) {
         rows.spectrum(0, 0, &mzmlwrite::spectrum_head(k, s, &extra));
     }
@@ -96,8 +99,8 @@ fn riga(
 
 fn cromatogrammi_scritti(l: &mut dyn Lettore, c: usize) -> Result<usize> {
     let mut n_chromatograms = 0;
-    for v in l.cromatogrammi(c)? {
-        let t = l.cromatogramma(c, &v.id)?;
+    for v in l.chromatograms(c)? {
+        let t = l.chromatogram(c, &v.id)?;
         if !t.time.is_empty() {
             n_chromatograms += 1;
         }
@@ -115,7 +118,7 @@ pub(crate) fn righe_prima_doppie(
 ) -> Result<(Table, Table)> {
     let mut rows = righe_vuote(l.semplice(), c)?;
     let mut rows_cen = righe_vuote(l, c)?;
-    let n = l.indice(c)?.len();
+    let n = l.index(c)?.len();
     for k in 0..n {
         let s = taglia(l.grezza(c, k)?)?;
         riga(&mut rows, l.semplice(), k, &s, Some(&mut *prima))?;

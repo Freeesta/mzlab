@@ -24,14 +24,14 @@ def extra(ap) -> None:
     ap.add_argument("--params", default="")
 
 
-def tabella_semplice(cartella: Path, nomi: list[str], dataset: str, config: str) -> dict:
+def table_simple(folder: Path, names: list[str], dataset: str, config: str) -> dict:
     """`series.mzfeat` (no identities) -> `bench/1`."""
-    meta, a = nativo.apri((cartella / "series.mzfeat").read_bytes())
+    meta, a = nativo.apri((folder / "series.mzfeat").read_bytes())
     n, k = meta["rows"], meta["files"]
     stato = a["state"].reshape(n, k)
     area = np.where(stato == nativo.CELLA_ASSENTE, 0.0, np.nan_to_num(a["area"].reshape(n, k)))
     righe = [{"mz": float(a["mz"][i]), "rt": float(a["rt"][i]), "aree": [float(x) for x in area[i]]} for i in range(n)]
-    return adatta.tabella("mzlab", dataset, config, nomi, righe)
+    return adatta.tabella("mzlab", dataset, config, names, righe)
 
 
 def main() -> None:
@@ -41,25 +41,25 @@ def main() -> None:
     nat = corri.cartella_nativa(a.out_dir, "mzlab", a.config)
     nativo.costruisci_esempio()
     idx = nativo.indici(fs, nat / "indici")
-    nomi = [Path(x).stem for x in idx]
+    names = [Path(x).stem for x in idx]
     if a.engine == "untargeted":
         from valida import cancello_untargeted as U
-        uscita = nat / "uscita"
-        U.esegui(idx, uscita, a.params)
-        t = tabella_semplice(uscita, nomi, a.dataset, a.config)
-        versione = nativo.apri((uscita / "series.mzfeat").read_bytes())[0]["crate"]
+        output = nat / "uscita"
+        U.esegui(idx, output, a.params)
+        t = table_simple(output, names, a.dataset, a.config)
+        version = nativo.apri((output / "series.mzfeat").read_bytes())[0]["crate"]
     elif a.genitore:
-        serie = nativo.esegui(idx, a.genitore, a.mz_genitore, a.rt_genitore, nat / "uscita", a.smiles)
-        t = adatta.da_serie(serie, a.dataset, a.config)
-        versione = serie.versione_crate
+        series = nativo.esegui(idx, a.genitore, a.mz_genitore, a.rt_genitore, nat / "uscita", a.smiles)
+        t = adatta.da_serie(series, a.dataset, a.config)
+        version = series.versione_crate
     else:
-        uscita = nat / "uscita"
-        uscita.mkdir(exist_ok=True)
-        cmd = [str(nativo.ESEMPIO), str(uscita), *idx] + (["--recipe", par["recipe"]] if par["recipe"] else [])
+        output = nat / "uscita"
+        output.mkdir(exist_ok=True)
+        cmd = [str(nativo.ESEMPIO), str(output), *idx] + (["--recipe", par["recipe"]] if par["recipe"] else [])
         subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True)
-        t = tabella_semplice(uscita, nomi, a.dataset, a.config)
-        versione = nativo.apri((uscita / "series.mzfeat").read_bytes())[0]["crate"]
-    print(corri.salva(t, a.out_dir, versione), len(t["righe"]), "rows")
+        t = table_simple(output, names, a.dataset, a.config)
+        version = nativo.apri((output / "series.mzfeat").read_bytes())[0]["crate"]
+    print(corri.salva(t, a.out_dir, version), len(t["righe"]), "rows")
 
 
 if __name__ == "__main__":

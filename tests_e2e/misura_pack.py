@@ -72,7 +72,7 @@ def launch(p, rate=1):
 
 
 def start_page(pg, port, path=""):
-    pg.goto(f"http://127.0.0.1:{port}/{path}"); attendi(pg, "window.MZLAB_LR !== undefined", timeout=240000); pg.wait_for_selector("#pick", state="attached", timeout=240000)
+    pg.goto(f"http://127.0.0.1:{port}/{path}"); wait_for_js(pg, "window.MZLAB_LR !== undefined", timeout=240000); pg.wait_for_selector("#pick", state="attached", timeout=240000)
 
 
 # ---------------------------------------------------------------- hr
@@ -186,7 +186,7 @@ def run_in(pg, act, until, cap=120000):
 
 def run_py(pg, act, until):
     """the action is Python (a mouse move, the size of the window): mark, act, wait until `until`, collect"""
-    t0 = pg.evaluate("performance.now()"); act(); attendi(pg, until, timeout=120000)
+    t0 = pg.evaluate("performance.now()"); act(); wait_for_js(pg, until, timeout=120000)
     return summary(pg.evaluate("t0 => __M.end(t0)", t0))
 
 
@@ -200,7 +200,7 @@ def lr_files(n):
 
 
 def load_files(pg, port, files):
-    start_page(pg, port); stage(pg, files, timeout=300000); pg.click("#opbtn"); attendi(pg, "typeof E !== 'undefined' && E.panels.some(p => p._a)", timeout=600000); ready(pg, timeout=600000)
+    start_page(pg, port); stage(pg, files, timeout=300000); pg.click("#opbtn"); wait_for_js(pg, "typeof E !== 'undefined' && E.panels.some(p => p._a)", timeout=600000); ready(pg, timeout=600000)
 
 
 def draw_tic20(pg, port):
@@ -250,7 +250,7 @@ def draw_msn(pg, port):
 
 
 def part_draw(p, r):
-    import lib_msngrafo; lib_msngrafo.prepara()
+    import lib_msngrafo; lib_msngrafo.prepare()
     out = {}
     for rate in (1, 4):
         for name, fn in (("tic20", draw_tic20), ("map", draw_map), ("msn", draw_msn)):

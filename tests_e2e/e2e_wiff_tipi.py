@@ -4,7 +4,7 @@ Needs the site and the .wasm (python tools/build_site.py + wasm, see e2e_wiff.py
 import json, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, attendi, free_port
+from lib import ROOT, wait_for_js, free_port
 
 PORT = free_port()
 errs = []
@@ -30,9 +30,9 @@ try:
         pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/")
-        pg.wait_for_selector("#drop"); attendi(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange")
+        pg.wait_for_selector("#drop"); wait_for_js(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange")
         pg.set_input_files("#pick", [str(D / "misto.wiff"), str(D / "misto.wiff.scan")])
-        attendi(pg, f"ST.files.length === {len(TRUE)} && ST.files.every(f => f.kind)", timeout=120000)
+        wait_for_js(pg, f"ST.files.length === {len(TRUE)} && ST.files.every(f => f.kind)", timeout=120000)
         got = pg.evaluate(SHOWN)
         print("   shown:", json.dumps([g[:3] for g in got]))
         def kinds():

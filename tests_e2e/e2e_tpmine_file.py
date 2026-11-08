@@ -82,9 +82,9 @@ try:
             settle()
             before = names(); pg.click("#tp-rmall")
             assert pg.is_hidden("#tp-rmall") and pg.locator("#tp-files tr").count() == 0
-            lib.attendi(pg, f"(document.querySelector('.sr-only[role=status]') || {{ textContent: '' }}).textContent.includes('{N} files')")
+            lib.wait_for_js(pg, f"(document.querySelector('.sr-only[role=status]') || {{ textContent: '' }}).textContent.includes('{N} files')")
             assert f"{N} files" in pg.inner_text(".sr-only[role=status]"), pg.inner_text(".sr-only[role=status]")
-            pg.keyboard.press("Control+z"); lib.attendi(pg, f"document.querySelectorAll('#tp-files tr').length === {N + 1}")
+            pg.keyboard.press("Control+z"); lib.wait_for_js(pg, f"document.querySelectorAll('#tp-files tr').length === {N + 1}")
             assert names() == before and pg.is_visible("#tp-rmall")
         step("«Remove all» empties the list and Ctrl+Z brings all the files back", allgone)
 

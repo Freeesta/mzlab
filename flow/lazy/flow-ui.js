@@ -85,6 +85,7 @@
       "err.flow.port.format": `${q.ref} is in the ${q.writes} format; this input reads ${q.reads}.`,
       "err.flow.port.unwritten": `${q.ref} is written only when input ${q.input} is connected${q.param ? " and " + q.param.replace("=", " is not ") : ""}.`,
       "err.flow.port.missing": `Input ${q.port} is not connected.`,
+      "err.flow.lineage": `${q.step} needs a table aligned by features.align in this plan.`,
       "err.flow.input.unknown": `The plan has no input file ${q.ref}.`,
       "err.flow.ref.unknown": `No step ${q.ref}.`,
       "err.flow.type": `A ${q.from} cannot go into a ${q.to} input.`,
@@ -125,6 +126,7 @@
       "error.featNoHypotheses": "The hypotheses of the parent must be searched before the proofs are built.",
       "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
       "error.featMemory": `Not enough memory for the «${q.fase}» phase (about ${q.stima_mb} MB needed of ${q.budget_mb} MB).`,
+      "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
     };
     return M[p.key] || p.key;
   };

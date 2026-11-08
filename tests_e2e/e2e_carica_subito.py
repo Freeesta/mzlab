@@ -2,7 +2,7 @@
 the files open at once with no message under the table; the t0 is the sample at time 0 (no role of its own) and the dark has a negative time that stays out of the gradient."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
-lib.AUTO_TEMPI = False
+lib.AUTO_TIMES = False
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
 NAMES = ["FullScan_t0", "FullScan_t5", "FullScan_t10", "FullScan_t15", "FullScan_t30"]

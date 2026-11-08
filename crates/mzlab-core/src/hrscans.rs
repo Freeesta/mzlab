@@ -40,6 +40,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/scan" => self.scan_route(q, mzml),
             "/api/scanavg" => self.scanavg_route(q, mzml),
             "/api/msntree" => self.msntree_route(q, mzml),
+            "/api/dda_window" => self.dda_window_src(q, mzml),
             _ => Ok(None),
         }
     }

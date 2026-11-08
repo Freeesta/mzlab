@@ -7,7 +7,7 @@ product-ion scan, with a method; `two.wiff` + `.wiff.scan`: a scan sample and an
 tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectra with m/z = start + bin * step, intensity = count * scale; MRM
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 The variants of the readers module (feature `estesi`): `variante.wiff` (Log model QTRAP 5500; survey scan V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1,
-under "variante" in the JSON) and the files the module refuses with `err.file.wiff` (under "rifiuti": name -> text of the `detail`): two periods, a TOF scan type, a TOF block, a block version 4.
+under "variante" in the JSON) and the files the module refuses (under "rifiuti": name -> the cause as the tests spell it: `periods=N`, `scan type code C (experiment E)` for `err.file.wiffPeriods` / `wiffScanType`, else the `detail` of `err.file.wiff`): two periods, a TOF scan type, a TOF block, a block version 4.
 `dadmetodo.wiff`: a 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method (under "dadmetodo").
 """
 import json
@@ -210,11 +210,11 @@ def main():
     energia = energy(out)
     transizioni = transitions(out)
     programmati = scheduled(out)
-    variante, rifiuti = variants(out)
-    totale = full_tic(out)
+    variante, refusals = variants(out)
+    total = full_tic(out)
     blocchi = blocks_v13(out)
     dad = dad_method(out)
-    (out / "riferimento.json").write_text(json.dumps({"dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti, "totale": totale, "blocchi": blocchi}))
+    (out / "riferimento.json").write_text(json.dumps({"dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi}))
 
 
 def energy(out: Path):
@@ -319,31 +319,31 @@ def variants(out: Path):
     w.sample(1, [("scan", FULL, 100.0, 1.0, 2), ("scan", PRODUCT, 200.0, 1.0, 3)], {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 239.0)}, log="3200 QTRAP")
     w.save(out, "epi3200")
     variante = {"1": {"polarity": 1, "model": "QTRAP 5500", "spectra": want, "chromatograms": []}}
-    rifiuti = {}
+    refusals = {}
     one = [("scan", FULL, 1000.0, 1.0)]
     w = Writer()  # two periods: the reader has no real file with one, so it refuses
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0), "Period1/Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 6500+")
     w.save(out, "periodi")
-    rifiuti["periodi"] = "periods=2"
+    refusals["periodi"] = "periods=2"
     w = Writer()  # a TOF MS experiment
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(8, 0.0)}, log="TripleTOF 6600")
     w.save(out, "tof")
-    rifiuti["tof"] = "scan type code 8 (experiment 1)"
+    refusals["tof"] = "scan type code 8 (experiment 1)"
     w = Writer()  # an unknown code
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(21, 0.0)}, log="QTRAP 5500")
     w.save(out, "codice")
-    rifiuti["codice"] = "scan type code 21 (experiment 1)"
+    refusals["codice"] = "scan type code 21 (experiment 1)"
     w = Writer()  # a block of the TOF family under a scan experiment
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 5500")
     w.scan[44:48] = b"\xff\xff\xff\xff"
     w.save(out, "bloccotof")
-    rifiuti["bloccotof"] = "TOF block"
+    refusals["bloccotof"] = "TOF block"
     w = Writer()  # a scan block of a version nobody knows
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 5500")
     w.scan[48:52] = struct.pack("<I", 4)
     w.save(out, "versione4")
-    rifiuti["versione4"] = "scan block version 4"
-    return variante, rifiuti
+    refusals["versione4"] = "scan block version 4"
+    return variante, refusals
 
 
 def blocks_v13(out: Path):

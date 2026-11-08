@@ -12,7 +12,7 @@ try:
         pg.click("#nav [data-v=draw]")
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         KJ = "document.querySelector('#kframe').contentWindow.ketcher"
-        pg.evaluate(f"{KJ}.addFragment('CCO')"); attendi(pg, f"!{KJ}.editor.struct().isBlank()")
+        pg.evaluate(f"{KJ}.addFragment('CCO')"); wait_for_js(pg, f"!{KJ}.editor.struct().isBlank()")
         pg.evaluate("window.__t = []; const o = window.toast; window.toast = m => { window.__t.push(m); o(m); }")
         OPEN = """(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()"""
         def copy_first(mode):
@@ -23,7 +23,7 @@ try:
                 if pg.locator("#ctx:not([hidden]) div[role=menuitem]").count(): break
                 pg.evaluate("new Promise(r => requestAnimationFrame(r))")
             pg.locator("#ctx div[role=menuitem]").first.click()
-            attendi(pg, "window.__t.length > 0")
+            wait_for_js(pg, "window.__t.length > 0")
             return pg.evaluate("window.__t.join('|')")
         def refused():
             t = copy_first("refuse"); assert "Copia non riuscita" in t and "Copiato" not in t, t

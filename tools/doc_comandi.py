@@ -25,8 +25,8 @@ UNDO = {
 def tabella() -> list[dict]:
     """The rows of COMANDI_TAB: the text between TAB-BEGIN and TAB-END is a plain literal, evaluated by node."""
     src = JS.read_text(encoding="utf-8")
-    corpo = src.split("// TAB-BEGIN", 1)[1].split("// TAB-END", 1)[0]
-    r = subprocess.run(["node", "-e", corpo + "\nconsole.log(JSON.stringify(COMANDI_TAB))"], capture_output=True, text=True, encoding="utf-8", check=True)
+    body = src.split("// TAB-BEGIN", 1)[1].split("// TAB-END", 1)[0]
+    r = subprocess.run(["node", "-e", body + "\nconsole.log(JSON.stringify(COMANDI_TAB))"], capture_output=True, text=True, encoding="utf-8", check=True)
     return json.loads(r.stdout)
 
 
@@ -35,16 +35,16 @@ def etichette(lang: str) -> dict[str, str]:
 
 
 def pagina() -> str:
-    righe, it = tabella(), etichette("it")
+    rows, it = tabella(), etichette("it")
     o = ["# Azioni che cambiano stato (generato)", "",
          "Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab/web/comandi.js`: non si modifica a mano. "
          "Ogni azione che cambia stato nella vista Dati sta nella tabella; `tests/test_comandi.py` lo controlla.", "",
          "| Id | Nome | Modulo | Cosa sceglie l'utente | Stato che cambia | Tasto | Passi | Annullamento |", "|---|---|---|---|---|---|---|---|"]
-    for r in righe:
+    for r in rows:
         und = UNDO[r["annulla"]] + (f": {r['motivo']}" if r.get("motivo") else "")
         o.append(f"| `{r['id']}` | {it.get(r['nome'], r['nome'])} (`{r['nome']}`) | `{r['modulo']}` | {r['parametri']} | {', '.join(r['campi']) or '-'} | {r['tasto'] or '-'} | {r['unisci'] or '-'} | {und} |")
-    n = sum(r["annulla"] == "da-portare" for r in righe)
-    o += ["", f"Da portare nello stack: {n} azioni su {len(righe)}.", ""]
+    n = sum(r["annulla"] == "da-portare" for r in rows)
+    o += ["", f"Da portare nello stack: {n} azioni su {len(rows)}.", ""]
     return "\n".join(o)
 
 

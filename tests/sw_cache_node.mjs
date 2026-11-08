@@ -29,7 +29,7 @@ function mondo(net = { ...FILES }, man = manifest()) {
   };
   const sw = { addEventListener: (n, f) => { listeners[n] = f; }, skipWaiting() {}, clients: { claim() {} }, registration: { update: async () => { st.updates++; } } };
   const ctx = {
-    self: sw, location: { origin: "https://x.test", href: O + "sw.js" }, Date: class extends Date { static now() { return Date.now() + st.skew; } }, URL, Headers, Response, Request, crypto: crypto.webcrypto, importScripts() {},
+    self: sw, location: { origin: "https://x.test", href: O + "sw.js" }, Date: class extends Date { static now() { return Date.now() + st.skew; } }, URL, Headers, Response, Request, AbortController, crypto: crypto.webcrypto, importScripts() {},
     setTimeout: (f, ms) => { f.ms = ms; timers.push(f); return timers.length; },
     caches: { open, keys: async () => [...stores.keys()], delete: async n => stores.delete(n) },
     fetch: async (r, init) => {

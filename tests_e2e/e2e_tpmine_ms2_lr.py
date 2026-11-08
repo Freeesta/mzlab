@@ -177,7 +177,7 @@ try:
             if not out or not pg.locator("#tp-ms2map").count(): return
             for scheme in ("light", "dark"):
                 for w in (1280, 390):
-                    pg.emulate_media(color_scheme=scheme); pg.set_viewport_size({"width": w, "height": 1100}); lib.fermo(pg, "#tp-ms2map")
+                    pg.emulate_media(color_scheme=scheme); pg.set_viewport_size({"width": w, "height": 1100}); lib.wait_still(pg, "#tp-ms2map")
                     pg.locator("#tp-ms2map").screenshot(path=str(Path(out) / f"ms2_{tag}_{scheme}_{w}.png"))
             pg.emulate_media(color_scheme="light"); pg.set_viewport_size({"width": 1280, "height": 1000})
         shots("card")

@@ -2,12 +2,13 @@
 // Files of a maker (Thermo .raw, SCIEX .wiff + .wiff.scan, Agilent .D folder) read as they are, in the engine's worker (rust-worker.js): no mzML is written. The members of a dataset
 // are kept in OPFS `files/` under flat names; a sample is a «file» of the program called `x.mzML` whose bytes are a small JSON (the stub: which members, which sample), so the list of the
 // files, the index (`idx/x.mzML.mzidx`) and the removal work as for any mzML. The engine reads the members through their offsets (crates/mzlab-wasm/src/nativi.rs).
-import { putChunks, ensureRoom } from "./archivio.js";
+import { putChunks, ensureRoom, ROOM } from "./archivio.js";
 import { openSource } from "./lettura-sync.js";
 import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
 import { createEsterno } from "./lettore-esterno.js";
 import { loadModulo } from "./carica-modulo.js";
+import { createTicNativo } from "./tic-nativo.js";
 
 export const MAGIC = "mzlab/nat1";
 export const INDEX_ERROR = "err.file.index";              // the key the engines give when the index of a file cannot be built (idxbuild.rs of crates/mzlab-desktop)
@@ -19,7 +20,7 @@ const PHASES = { 1: "sha", 4: "open", 2: "scans", 3: "chrom" };        // the ph
 const SHOWN = { sha: "read", open: "open", scans: "scans", chrom: "chrom" };  // the name of the phase the page shows
 
 /** @typedef {{ name: string, store: string, size: number, mtime?: number, sha256?: string, sha1?: string, probe?: string }} StubMember (`mtime`: lastModified of the file given; the fingerprints taken during the copy; a stub without them gets them from the engine as before) */
-/** @typedef {{ mzlab: string, ds: string, c: number, id: number, centroid: boolean, members: StubMember[], size: number, dim?: number | null }} Stub */
+/** @typedef {{ mzlab: string, ds: string, c: number, id: number, centroid: boolean, members: StubMember[], size: number, dim?: number | null, sul?: boolean }} Stub */
 
 /** the stub in a File of the archive, or null when it is an ordinary file (an mzML, a member) */
 export async function readStub(/** @type {Blob} */ f) {
@@ -32,10 +33,13 @@ export function prints(/** @type {StubMember[]} */ members) {
   return members.length && members.every(m => m.sha256 && m.sha1 && m.probe) ? members.flatMap(m => [m.sha256, m.sha1, m.probe]) : undefined;
 }
 
-/** `read(member, offset, length)` over some Files, as nativi.rs wants it; `seen(i, end)` is told how far each member was read */
+/** `read(member, offset, length)` over some Files, as nativi.rs wants it (with `into` over handles); `seen(i, end)` is told how far each member was read */
 export function reader(/** @type {Blob[]} */ files, /** @type {((i: number, end: number) => void) | undefined} */ seen, /** @type {import("./lettura-sync.js").Fonte[] | undefined} */ fonti = undefined) {
   const fr = new FileReaderSync(), rd = fonti ? fonti.map(f => f.read) : files.map(f => (/** @type {number} */ o, /** @type {number} */ n) => new Uint8Array(fr.readAsArrayBuffer(f.slice(o, o + n))));
-  return (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
+  const read = (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
+  // over handles, `read.into(i, offset, view)`: the engine (nativi/membro.rs) and the readers modules (lettura.rs) give a view of their memory, the handle reads into it
+  if (fonti) read.into = (/** @type {number} */ i, /** @type {number} */ o, /** @type {Uint8Array} */ v) => { const k = fonti[i].into(o, v); if (seen) seen(i, o + k); return k; };
+  return read;
 }
 
 /** runs `fn(read)` with the members of `st` read through read-only handles of their OPFS copies, closed when it ends (a reader kept longer goes on through the Blobs) @template T @param {Stub} st @param {Blob[]} files @param {(read: ReturnType<typeof reader>) => T} fn @returns {Promise<T>} */
@@ -44,11 +48,26 @@ async function viaHandles(st, files, fn) {
   try { return fn(reader(files, undefined, fonti)); } finally { fonti.forEach(f => f.close()); }
 }
 
-/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it; `progress({frac, phase, done, total})` is told the overall fraction 0..1 and, in the phases that read the scans, how many of the sample's scans are done */
-export async function buildNative(/** @type {Function} */ build_mzidx_native, /** @type {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} */ ext, /** @type {{ st: Stub, files: Blob[] }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string, done: number, total: number }) => void} */ progress, /** @type {number} */ budget, /** @type {{ put: (o: number, d: Uint8Array) => void, get: (o: number, n: number) => Uint8Array } | null} */ spill = null, /** @type {((o: number, d: Uint8Array) => void) | undefined} */ writeCen = undefined) {
+/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it (`bytes`, and those of `spill.put` and `writeCen`, are views of the engine's memory valid during the call only: written at once, never kept, no call to the engine meanwhile); `progress({frac, phase, done, total})` is told the overall fraction 0..1 and, in the phases that read the scans, how many of the sample's scans are done */
+// the fingerprints a builder waits for once its first pass is done (`lateJob`): Int32 [state (0 waiting, 1 there, 2 none), length], then their JSON
+const LATE_BYTES = 64 << 10, LATE_WAIT_MS = 600000;
+/** the shared buffer of `lateJob` gets the fingerprints (null: none, the builder reads the members itself) */
+function fillLate(/** @type {SharedArrayBuffer} */ sab, /** @type {string[] | null} */ o) {
+  const i = new Int32Array(sab, 0, 2), b = o && new TextEncoder().encode(JSON.stringify(o));
+  if (b && b.length <= LATE_BYTES - 8) { new Uint8Array(sab, 8).set(b); i[1] = b.length; Atomics.store(i, 0, 1); } else Atomics.store(i, 0, 2);
+  Atomics.notify(i, 0);
+}
+/** in the builder: waits for the fingerprints of `fillLate` (the build is synchronous: no message can reach it); null when there are none */
+function waitLate(/** @type {SharedArrayBuffer} */ sab) {
+  const i = new Int32Array(sab, 0, 2);
+  Atomics.wait(i, 0, 0, LATE_WAIT_MS);
+  return Atomics.load(i, 0) === 1 ? JSON.parse(new TextDecoder().decode(new Uint8Array(sab, 8, i[1]).slice())) : null;
+}
+
+export async function buildNative(/** @type {Function} */ build_mzidx_native, /** @type {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} */ ext, /** @type {{ st: Stub, files: Blob[], late?: SharedArrayBuffer }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string, done: number, total: number }) => void} */ progress, /** @type {number} */ budget, /** @type {{ put: (o: number, d: Uint8Array) => void, get: (o: number, n: number) => Uint8Array } | null} */ spill = null, /** @type {((o: number, d: Uint8Array) => void) | undefined} */ writeCen = undefined) {
   await ext.prepara(j.st.members.map(x => x.name), j.st.members);
   const sizes = j.files.map(f => f.size), all = sizes.reduce((a, b) => a + b, 0) || 1, high = sizes.map(() => 0);
-  const given = prints(j.st.members), w = given ? { ...W, sha: 0, scans: W.scans + W.sha } : W;          // the fingerprints of the copy: no phase to read the members again
+  const given = prints(j.st.members) || (j.late ? () => waitLate(/** @type {SharedArrayBuffer} */ (j.late)) : undefined), w = given ? { ...W, sha: 0, scans: W.scans + W.sha } : W;          // the fingerprints of the copy, now or once the first pass is done: no phase to read the members again
   const order = ["sha", "open", "scans", "chrom"];
   let phase = given ? "open" : "sha", last = 0, done = 0, total = 0, from = 0, spilled = 0, back = 0;
   const base = () => { let b = w.copy; for (const k of order) { if (k === phase) break; b += w[k]; } return b; };
@@ -93,7 +112,7 @@ function registroDi(stubOf, memberFiles, ext, jerr) {
   /** @type {{ name: string, s: any, timer: any } | null} */
   let log = null;
   const IDLE = 30000;
-  const close = () => { if (log) { clearTimeout(log.timer); try { log.s.chiudi(); } catch (_) { /* already closed */ } log = null; } };
+  const close = () => { if (log) { clearTimeout(log.timer); try { log.s.close(); } catch (_) { /* already closed */ } log = null; } };
   /** one series as the module's chromatogram JSON; the points are computed here, when asked for */
   async function registro(/** @type {string} */ name, /** @type {string} */ id) {
     if (!log || log.name !== name) {
@@ -102,27 +121,36 @@ function registroDi(stubOf, memberFiles, ext, jerr) {
       if (!st) jerr("err.session.fileNotFound");
       const files = await memberFiles(st);
       await ext.prepara(st.members.map(m => m.name));
-      const s = await viaHandles(st, files, rd => ext.apri(st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), rd));      // the session outlives the handles (idle: none held); its later reads use the Blobs
+      const s = await viaHandles(st, files, rd => ext.open(st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), rd));      // the session outlives the handles (idle: none held); its later reads use the Blobs
       if (!s) jerr("err.route.unavailable");
       log = { name, s, timer: 0 };
     }
     clearTimeout(log.timer);
     const cur = log;
     cur.timer = setTimeout(() => { if (log === cur) close(); }, IDLE);
-    return cur.s.cromatogramma(0, id);
+    return cur.s.chromatogram(0, id);
   }
   return { registro, forget: (/** @type {string} */ n) => { if (log && log.name === n) close(); }, forgetAll: close };
 }
 
 
-/** one member copied to OPFS unless it is there (or being written for another sample); its fingerprints are taken in the same pass, or, for a member already there that this worker did not copy, read from a stub of another sample (`known`) */
-async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: number) => import("./impronta.js").Presa }, writing: Map<string, Promise<void>>, taken: Map<string, string[]>, known?: (store: string, size: number, mtime: number) => Promise<string[] | null> }} */ { ARCH, impronte, writing, taken, known }, /** @type {Blob} */ blob, /** @type {string} */ store, /** @type {(n: number) => void} */ bump) {
+/** one member copied to OPFS unless it is there (or being written for another sample); its fingerprints are taken in the same pass, or, for a member already there that this worker did not copy, read from a stub of another sample (`known`).
+ *  With `hashing` the copy waits for the SHA-1 only (`free` of impronta.js): the rest of the hash goes on and `hashing` holds its promise until it ends */
+async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: number) => import("./impronta.js").Presa, free?: (size: number, source: Blob) => import("./impronta.js").Libera | null }, writing: Map<string, Promise<void>>, taken: Map<string, string[]>, hashing?: Map<string, Promise<string[] | null>>, known?: (store: string, size: number, mtime: number) => Promise<string[] | null> }} */ { ARCH, impronte, writing, taken, hashing, known }, /** @type {Blob} */ blob, /** @type {string} */ store, /** @type {(n: number) => void} */ bump) {
   const have = await ARCH.get("files", store);
   if (writing.has(store)) { await writing.get(store); bump(blob.size); return; }
   if (have && have.size === blob.size) { bump(blob.size); if (!taken.has(store) && known) { const o = await known(store, blob.size, /** @type {any} */ (blob).lastModified || 0); if (o) taken.set(store, o); } return; }
-  const pass = impronte ? impronte.start(blob.size) : null;           // each piece goes to the hash once written
+  const free = hashing && impronte?.free ? impronte.free(blob.size, blob) : null, pass = free || (impronte ? impronte.start(blob.size) : null);      // each piece goes to the hash once written
   const job = putChunks("files", store, blob.size, async (/** @type {number} */ o, /** @type {number} */ n) => { const b = new Uint8Array(await blob.slice(o, o + n).arrayBuffer()); bump(b.length); return b; }, pass ? b => pass.add(b) : undefined)
-    .then(async () => { const o = pass && await pass.end().catch(() => null); if (o) taken.set(store, o); }, async e => { if (pass) pass.end().catch(() => null); throw e; });
+    .then(async (/** @type {File} */ f) => {
+      if (free && hashing) {
+        const r = free.end(f), sha1 = await r.sha1.catch(() => null);
+        if (sha1) taken.set(store, ["", sha1, ""]);                     // the stub has the SHA-1 the reader of the members needs; the rest arrives later
+        hashing.set(store, r.all.catch(() => null).then(o => { if (o) taken.set(store, o); hashing.delete(store); return o; }));
+        return;
+      }
+      const o = pass && await /** @type {import("./impronta.js").Presa} */ (pass).end().catch(() => null); if (o) taken.set(store, o);
+    }, async e => { if (free) free.drop(); else if (pass) /** @type {import("./impronta.js").Presa} */ (pass).end().catch(() => null); throw e; });
   writing.set(store, job);
   try { await job; } finally { writing.delete(store); }
 }
@@ -152,7 +180,25 @@ async function known(/** @type {any} */ ARCH, /** @type {(n: string) => Promise<
   }
   return null;
 }
-/** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function, native_srm: Function, native_external: Function, impronte?: { start: (size: number) => import("./impronta.js").Presa } }} h */
+/** the fingerprints of the members of `st` (flat, as `prints`) when the hash of one still goes on after its copy (`hashing`): a promise of them (null if one fails), else undefined */
+function pending(/** @type {Map<string, Promise<string[] | null>>} */ hashing, /** @type {Map<string, string[]>} */ taken, /** @type {Stub} */ st) {
+  if (!st.members.some(m => !m.sha256 && hashing.has(m.store))) return undefined;
+  return Promise.all(st.members.map(m => m.sha256 ? [m.sha256, m.sha1, m.probe] : hashing.get(m.store) || taken.get(m.store) || null))
+    .then(all => all.every(o => o && o.length === 3 && o.every(Boolean)) ? /** @type {string[]} */ (all.flat()) : null);
+}
+
+/** the job of the index builder (`indexJob`) when the hash of a member still goes on: with shared memory the builder starts now and waits for the fingerprints where
+ *  it writes the source (`late`); without it they are awaited here and given to it */
+async function lateJobDi(/** @type {Map<string, Promise<string[] | null>>} */ hashing, /** @type {Map<string, string[]>} */ taken, /** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) {
+  const p = job && pending(hashing, taken, job.st);
+  if (!job || !p) return job;
+  if (!isolated) { const o = await p; return o ? { ...job, st: { ...job.st, members: job.st.members.map((m, i) => ({ ...m, sha256: o[3 * i], sha1: o[3 * i + 1], probe: o[3 * i + 2] })) } } : job; }
+  const late = new SharedArrayBuffer(LATE_BYTES);
+  p.then(o => fillLate(late, o), () => fillLate(late, null));
+  return { ...job, late };
+}
+
+/** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function, native_srm: Function, native_external: Function, impronte?: { start: (size: number) => import("./impronta.js").Presa, free?: (size: number, source: Blob) => import("./impronta.js").Libera | null } }} h */
 /** which of `names` are samples of the same files as `members` ([{ name, size, mtime }]: same names, sizes and lastModified, and in OPFS): the same pair given again */
 async function sameDi(/** @type {(n: string) => Promise<Stub | null>} */ stubOf, /** @type {any} */ ARCH, /** @type {{ name: string, size: number, mtime: number }[]} */ members, /** @type {string[]} */ names) {
   const key = (/** @type {{ name: string, size: number, mtime?: number }[]} */ ms) => JSON.stringify(ms.map(m => [m.name, m.size, m.mtime || 0]).sort());
@@ -197,20 +243,32 @@ async function writerOf(/** @type {Stub} */ st, /** @type {Function} */ native_t
   if (st.centroid || !st.members.some(x => /\.wiff$/i.test(x.name)))
     return (/** @type {any[]} */ ...a) => native_to_mzml(a[0], a[1], a[2], a[3], st.centroid, a[4], a[5], a[6]);
   const w = await loadModulo("sciex").catch(e => { throw JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: "sciex", detail: String(e && e.message || e) } }); });
-  return (/** @type {any[]} */ ...a) => w.to_mzml_come(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
+  return (/** @type {any[]} */ ...a) => w.to_mzml_with(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
 }
 
-export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte }) {
-  const ext = createEsterno(native_external);               // a Thermo .raw is read through the `thermo` module (lettore-esterno.js)
+const quotaErr = (/** @type {any} */ e) => /quota/i.test(typeof e === "string" ? e : String(e && (e.name || e.message)));
+/** at boot: a sample read in place (stub `sul`) whose members were the Files of a closed tab: the stub and the members it alone kept go; returns their names */
+async function lostDi(/** @type {any} */ ARCH, /** @type {(n: string) => Promise<Stub | null>} */ fresh) {
+  /** @type {string[]} */ const out = [], drop = new Set();
+  for (const e of await ARCH.list("files")) {
+    const st = /\.mzml$/i.test(e.name) ? await fresh(e.name) : null;
+    if (!st || !st.sul || (await Promise.all(st.members.map(x => ARCH.get("files", x.store)))).every(Boolean)) continue;
+    await ARCH.remove("files", e.name); out.push(e.name); st.members.forEach(x => drop.add(x.store));
+  }
+  if (out.length) { const used = await usedStores(ARCH, fresh); for (const n of drop) if (!used.has(n)) await ARCH.remove("files", n); }      // not named again as an interrupted copy
+  return out;
+}
+export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte, pool, post }) {
+  const ext = createEsterno(native_external), early = createTicNativo(pool, post);   // a .raw is read through `thermo` (lettore-esterno.js); its TIC is read while it is copied (tic-nativo.js)
   const stubs = new Map();                                // mzML name -> Stub (read from the file once)
   const writing = new Map();                              // store name -> Promise: the samples of a .wiff share their members, written once
-  const taken = new Map();                                // store name -> [sha256, sha1, probe] taken while it was copied here (the other samples of the dataset find it again)
-  const stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);
+  const taken = new Map(), hashing = new Map();          // store name -> [sha256, sha1, probe] taken while it was copied here (the other samples find it again); -> Promise of them while the hash goes on after the copy
+  const posto = new Map(), stubOf = async (/** @type {string} */ name) => stubs.get(name) || stubs.set(name, await readStub(await fileOf(name))).get(name);      // posto: store name -> the user's File of a member read in place, gone with the tab
 
   /** the Files of the members of a stub (read from OPFS) */
   async function memberFiles(/** @type {Stub} */ st) {
     const out = [];
-    for (const m of st.members) { const f = await ARCH.get("files", m.store); if (!f) jerr("err.session.fileNotFound"); out.push(f); }
+    for (const m of st.members) { const f = await ARCH.get("files", m.store) || posto.get(m.store); if (!f) jerr("err.session.fileNotFound"); out.push(f); }
     return out;
   }
   /** attaches slot `slot` (whose .mzidx is open) to its reader when `name` is a native sample; true when it is */
@@ -226,7 +284,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
   /** the members of an upload copied to OPFS (once per store name), then the stub, under the dataset lock (`put`: another tab's boot leaves them alone); `tell(frac)` 0..1 of the copy */
   async function putHeld(/** @type {any} */ m, /** @type {(f: number) => void} */ tell) {
     const nat = m.nat, total = nat.members.reduce((/** @type {number} */ a, /** @type {any} */ x) => a + x.blob.size, 0);
-    await ensureRoom(await missing(ARCH, writing, nat), m.name);      // room for the members still to write (and their index), held for this sample until lr_index ends
+    const can = nat.members.every((/** @type {any} */ x) => x.blob instanceof File), quota = (/** @type {any} */ e) => { if (!(can && quotaErr(e))) throw e; }; let sul = false; try { await ensureRoom(await missing(ARCH, writing, nat), m.name); } catch (e) { quota(e); sul = true; }      // room for the members still to write (and their index), held for this sample until lr_index ends; with none (refused before, or by the browser halfway) the members left, if all are the user's Files, are read in place (`posto`)
     let done = 0, last = 0;
     const bump = (/** @type {number} */ n) => { done += n; const t = performance.now(); if (t - last > TICK || done >= total) { last = t; tell(total ? Math.min(1, done / total) : 1); } };
     /** @type {StubMember[]} */ const members = [];
@@ -234,12 +292,12 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
       const store = storeOf(nat, x);
       const member = /** @type {StubMember} */ ({ name: x.name, store, size: x.blob.size, mtime: /** @type {any} */ (x.blob).lastModified || 0 });
       members.push(member);
-      await copyMember({ ARCH, impronte, writing, taken, known: (store, size, mtime) => known(ARCH, stubOf, store, size, mtime) }, x.blob, store, bump);
+      if (!sul) try { await copyMember({ ARCH, impronte, writing, taken, hashing, known: (store, size, mtime) => known(ARCH, stubOf, store, size, mtime) }, x.blob, store, bump); } catch (e) { quota(e); sul = true; } if (sul && !(await ARCH.get("files", store))) { posto.set(store, x.blob); bump(x.blob.size); }
       const o = taken.get(store);
       if (o) [member.sha256, member.sha1, member.probe] = o;
     }
     /** @type {Stub} */
-    const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total, dim: nat.size != null ? nat.size : null };      // size = the sum of the members (what the index records); dim = the size of this sample to show
+    const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total, dim: nat.size != null ? nat.size : null }; if (sul) { await ensureRoom(total * (ROOM - 1) / ROOM, m.name); st.sul = true; if (post) post({ op: "notice", key: "load.sulPosto", params: { name: m.name } }); }      // the room of its index alone      // size = the sum of the members (what the index records); dim = the size of this sample to show
     stubs.delete(m.name);
     return ARCH.put("files", m.name, new TextEncoder().encode(JSON.stringify(st)));
   }
@@ -278,5 +336,5 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
 
   const samples = (/** @type {{ name: string, blob: Blob }[]} */ members) => samplesDi(native_samples, ext, members);
   const log = registroDi(stubOf, memberFiles, ext, jerr);
-  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => held(m.nat.key, () => putHeld(m, tell)), same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); }, forgetAll: () => { stubs.clear(); log.forgetAll(); }, registro: log.registro };
+  return { stubOf, attach, put: (/** @type {any} */ m, /** @type {(f: number) => void} */ tell) => { early.start(m); return held(m.nat.key, () => putHeld(m, f => { early.tell(m.name, m.id, { frac: f, phase: "read" }); tell(f); })); }, early, same: (/** @type {{ name: string, size: number, mtime: number }[]} */ ms, /** @type {string[]} */ ns) => sameDi(stubOf, ARCH, ms, ns), indexJob, lateJob: (/** @type {{ st: Stub, files: Blob[] } | null} */ job, /** @type {boolean} */ isolated) => lateJobDi(hashing, taken, job, isolated), toMzml, samples, sweep, orphans: () => orphansDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), lost: () => lostDi(ARCH, (/** @type {string} */ n) => { stubs.delete(n); return stubOf(n); }), srm: async (/** @type {string} */ name) => srmDi(await stubOf(name) || jerr("err.session.fileNotFound"), memberFiles, native_srm, ext), forget: (/** @type {string} */ n) => { log.forget(n); stubs.delete(n); early.drop(n); }, forgetAll: () => { stubs.clear(); posto.clear(); log.forgetAll(); }, registro: log.registro };
 }

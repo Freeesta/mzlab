@@ -121,9 +121,7 @@ pub fn tp_dig_inputs(
             structure,
             rt: file.rt,
         };
-        let mut indexes = (0..index_sizes.len())
-            .map(|k| crate::open_one(&index_read, k, index_sizes[k]))
-            .collect::<Result<Vec<_>>>()?;
+        let mut indexes = crate::open_all(&index_read, &index_sizes)?;
         let mut recipe = match indexes.first_mut() {
             Some(first) => run::recipe_for(recipe, first)?,
             None => run::recipe_from_json(recipe)?,

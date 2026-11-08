@@ -32,10 +32,10 @@ def cancel_cleans():
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             pg.evaluate(ARM)
             pg.set_input_files("#pick", fs)
-            attendi(pg, "window.__at !== null", 300000)
+            wait_for_js(pg, "window.__at !== null", 300000)
             at = pg.evaluate("window.__at")
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
-            try: attendi(pg, CLEAN, 12000)      # the cancelled files go within a few seconds
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
+            try: wait_for_js(pg, CLEAN, 12000)      # the cancelled files go within a few seconds
             except TimeoutError: pass
             o = pg.evaluate(OPFS)
             assert o["rows"] and len(o["rows"]) < len(fs), f"the cancel came too late or too early: {at} → {o['rows']}"

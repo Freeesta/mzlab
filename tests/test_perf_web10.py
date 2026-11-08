@@ -57,7 +57,7 @@ console.log(JSON.stringify(out));
     assert r["span"] is True
 
 
-def test_liste_series_hasmatch_csv_equal_to_the_old_code():
+def test_lists_series_hasmatch_csv_equal_to_the_old_code():
     r = run(r"""
 globalThis.I18N = { lang: 'it', t: (k, p) => (p && p.name !== undefined ? p.name + ' n=' + p.n : k) };
 const L = require(web + '/liste.js');

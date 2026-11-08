@@ -91,7 +91,7 @@ function popOpen(/** @type {Pannello} */ p, /** @type {HTMLElement} */ anchor) {
   if (!pop) {
     pop = document.createElement("div"); pop.id = "subpop"; pop.className = "subpop"; pop.setAttribute("role", "dialog"); pop.hidden = true; document.body.appendChild(pop);
     document.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape" && !pop.hidden) { const a = pop._anchor; popClose(); if (a && a.isConnected) a.focus(); } });
-    document.addEventListener("mousedown", (/** @type {MouseEvent} */ e) => { if (!pop.hidden && !/** @type {HTMLElement} */ (e.target).closest("#subpop") && !/** @type {HTMLElement} */ (e.target).closest(".subchip")) popClose(); });
+    document.addEventListener("pointerdown", (/** @type {PointerEvent} */ e) => { if (!pop.hidden && !/** @type {HTMLElement} */ (e.target).closest("#subpop") && !/** @type {HTMLElement} */ (e.target).closest(".subchip")) popClose(); });
   }
   popP = p; pop._anchor = anchor; popBuild(p);
   pop.hidden = false;

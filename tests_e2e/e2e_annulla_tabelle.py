@@ -81,7 +81,7 @@ try:
             ev(f"COMANDI.fai('panel.rename',{xp},()=>{{{xp}.title='mine'}})")
             undo(); assert ev(f"{xp}.title") != "mine", "Ctrl+Z gives the title back"
         step("XIC: traces, series and title", xic_traces)
-        def apri_chiudi():
+        def open_close():
             fresh()
             n = ev("E.panels.length")
             pg.click("#np-chrom"); tick()
@@ -89,15 +89,15 @@ try:
             undo(); assert ev("E.panels.length") == n, "Ctrl+Z closes the panel just opened"
             redo(); assert ev("E.panels.length") == n + 1, "redo opens it again"
             undo()
-        step("panels: open, undo, redo", apri_chiudi)
-        def isotopi_sfondo():
+        step("panels: open, undo, redo", open_close)
+        def isotopes_and_background():
             fresh()
             sp = SPEC
             ev(f"COMANDI.fai('spec.isotopes',{sp},()=>{{{sp}.iso={{formula:'C10H14N',ad:'[M]+'}};{sp}.zoom=[100,200]}})")
             undo(); assert ev(f"{sp}.iso") is None and ev(f"{sp}.zoom") is None, "Ctrl+Z takes the pattern and its zoom back"
             ev(f"COMANDI.fai('spec.background',{sp},()=>{{{sp}.bg='w';{sp}.bw0=2;{sp}.bw1=3}})")
             undo(); assert ev(f"{sp}.bw0") is None and ev(f"{sp}.bg") in ("", None), "Ctrl+Z gives the background back"
-        step("spectrum: isotopes and background", isotopi_sfondo)
+        step("spectrum: isotopes and background", isotopes_and_background)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

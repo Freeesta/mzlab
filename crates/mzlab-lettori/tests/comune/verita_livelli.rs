@@ -123,7 +123,7 @@ fn f2_campi(
     if !(t["ce"].is_number() || t["isolamento"].is_object()) {
         return;
     }
-    let campi = l.intestazione(c, k).unwrap_or_default();
+    let campi = l.scan_header(c, k).unwrap_or_default();
     if let Some(ce) = num(&t["ce"]) {
         match campi
             .iter()
@@ -169,7 +169,7 @@ pub fn f3_punti(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol) -> Esito {
         let Ok(k) = chiave.parse::<usize>() else {
             continue;
         };
-        let Ok(s) = l.scansione(c, k) else {
+        let Ok(s) = l.scan(c, k) else {
             d3.push(format!("scan {k}: cannot be read"));
             continue;
         };
@@ -274,7 +274,7 @@ pub fn f4_cromatogrammi(
             d4.push(format!("chromatogram {id} ({tipo}): not in the reader"));
             continue;
         };
-        match l.cromatogramma(c, &voce.id) {
+        match l.chromatogram(c, &voce.id) {
             Ok(ch) => f4_traccia(id, t, &ch, tol, &mut d4),
             Err(_) => d4.push(format!("chromatogram {id}: cannot be read")),
         }
@@ -329,7 +329,7 @@ pub fn metadati(l: &mut dyn Lettore, v: &Value, c: usize) -> Esito {
     if campi.is_empty() {
         return Esito::Manca(vec!["no fields in the truth".into()]);
     }
-    let metodo: Value = match l.metodo(c).ok().and_then(|m| serde_json::from_str(&m).ok()) {
+    let metodo: Value = match l.method(c).ok().and_then(|m| serde_json::from_str(&m).ok()) {
         Some(m) => m,
         None => return Esito::Difetto(vec!["metodo/1 cannot be read".into()]),
     };

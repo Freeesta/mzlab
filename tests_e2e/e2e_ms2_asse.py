@@ -9,7 +9,7 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); pg.evaluate("setTab('full')"); ready(pg)
         MS2 = "E.panels.find(p=>p.type==='spec'&&p.level===2&&p._a)"
         pg.evaluate("(async()=>{const D=await DDA.get(E.panels.find(p=>p.level===1&&p.type==='spec').k);await DDA.selectMs2(E.panels.find(p=>p.level===2),D.sid[0]);})(); 0")
-        attendi(pg, f"!!({MS2})")
+        wait_for_js(pg, f"!!({MS2})")
         r1 = pg.evaluate(f"(()=>{{const p={MS2},a=p._a,d=a.data[0].d,mz=d.pmz||d.mz;return {{x0:a.x0,x1:a.x1,lo:mz[0],hi:mz[mz.length-1],prec:a.data[0].prec,fileHi:E.files[p.k].mz2_max}}}})()")
         print(r1)
         assert r1["x1"] <= r1["hi"] * 1.12 + 6 and r1["x1"] >= r1["hi"], r1          # fits the peaks, with a margin

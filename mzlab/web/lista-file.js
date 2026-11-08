@@ -110,10 +110,37 @@ function removeFile(/** @type {any} */ f) {
   if (STORIA) STORIA.tolto({ what: f.label, dati: f.label, undo: r.back, redo: r.take, scade: window.MZLAB_BROWSER ? () => r.free().then(reindexAfterFree) : null });
   else r.free();
 }
-/** Removes every file of the list (or of `fs`, a user group named `what`) with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). */
-function removeAllFiles(fs = E.files.filter(f => !f.gone), /** @type {string | null} */ what = null) {
-  const rs = fs.map(fileRemoval); if (!rs.length) return;
-  rs.forEach((r, i) => r.take(i < rs.length - 1));
+/** The rows of the loading table that are read but not open: waiting in the queue of OPENNOW, set aside («Choose», ×) or of the other world. */
+const unopenedRows = () => ST.files.filter((/** @type {FileRiga} */ r) => !OPENNOW.isOpen(r.name) && !E.files.some(g => g.gone && (g.file || "").split("#")[0] === r.name));
+/** «Remove all» on such a row: without it the copy, the index and the row stay, and the queue opens the file after the removal. Same three steps as fileRemoval. */
+function rowRemoval(/** @type {FileRiga} */ r0) {
+  const name = r0.name, was = { use: r0.use, held: OPENNOW.held(name) }, row = () => ST.files.find((/** @type {FileRiga} */ x) => x.name === name);
+  let undone = false, /** @type {any[]} */ late = [];
+  // the batch repaints once (removeAllFiles): the `quiet` flag of fileRemoval has nothing to skip here
+  const take = (_quiet = false) => {
+    undone = false; OPENNOW.hold([name]);
+    // the file being opened at this moment still opens: it joins the removal when it lands
+    OPENNOW.idle().then(() => { if (undone) return; late = E.files.filter(g => !g.gone && (g.file || "").split("#")[0] === name).map(fileRemoval); late.forEach((x, i) => x.take(i < late.length - 1)); });
+  };
+  const back = (_quiet = false) => {
+    undone = true; [...late].reverse().forEach(x => x.back()); late = [];
+    const r = row(); if (!r || was.held) return;
+    if (OPENNOW.release(name)) r.use = was.use; else if (was.use && !OPENNOW.isOpen(name)) OPENNOW.tick(r, true);      // a name still queued must not be queued twice
+  };
+  // after the queue: an opening slower than the window of Undo lands first, and is freed as one of `late`
+  const free = (_quiet = false) => OPENNOW.idle().then(() => {
+    if (undone) return;
+    if (late.length) return Promise.all(late.map(x => x.free(true)));
+    if (!window.MZLAB_BROWSER || !row() || OPENNOW.isOpen(name)) return;
+    return post("api/remove", { name }).then((/** @type {any} */ j) => mergeFiles(j.files || [])).catch((/** @type {any} */ e) => console.warn("remove", name, e));
+  });
+  return { take, back, free };
+}
+/** Removes every file of the list (or of `fs`, a user group named `what`) with ONE «Removed · Undo» entry that takes them all back (same mechanism as removeFile). The whole list also takes the rows read but not open (rowRemoval). */
+function removeAllFiles(/** @type {any[] | null} */ fs = null, /** @type {string | null} */ what = null) {
+  const rows = fs ? [] : unopenedRows().map(rowRemoval);
+  const rs = rows.concat((fs || E.files.filter(f => !f.gone)).map(fileRemoval)); if (!rs.length) return;      // the rows first: the last step repaints
+  rs.forEach((r, i) => r.take(i < rs.length - 1)); if (rows.length === rs.length) renderFiles();
   // removed from a hidden side bar (palette, shortcut): bring it back so the notice and the empty list are in view
   if (window.BARRA && BARRA.isDataView() && !BARRA.open) BARRA.show("file");
   const all = (/** @type {"take" | "back"} */ k) => () => (k === "back" ? [...rs].reverse() : rs).forEach((r, i) => r[k](i < rs.length - 1));      // only the last step repaints
@@ -137,7 +164,7 @@ function bindListaFile() {
   }, true);
   // when the click pair did the double click itself: the native dblclick that may follow is ignored
   L.ondblclick = e => {
-    if (e.timeStamp - dn < 600) return;
+    if (e.type === "dblclick" && e.timeStamp - dn < 600) return;      // only the native one: a click pair that does it itself is never blocked by the one before
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
     const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");
     if (sw) { e.stopPropagation(); const g = fileOf(sw.parentElement?.querySelector(".nm"), ".nm"); if (g) pickFileColor(g); return; }

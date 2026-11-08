@@ -29,9 +29,9 @@ try:
         pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()"); ready(pg)
         def overlay():
             assert pg.evaluate("E.files.filter(f=>f.pda).length") == 2
-            pick_kind(pg, "pda"); ready(pg); attendi(pg, f"!!({C} && {C}._a)")
+            pick_kind(pg, "pda"); ready(pg); wait_for_js(pg, f"!!({C} && {C}._a)")
             dbl(pg, C, 6.4)
-            attendi(pg, f"{UVS}.length === 1 && {UVS}[0]._a && {UVS}[0]._a.uvd")
+            wait_for_js(pg, f"{UVS}.length === 1 && {UVS}[0]._a && {UVS}[0]._a.uvd")
             u = f"{UVS}[0]"
             a = pg.evaluate(f"({{full: {u}._a.full, n: {u}._a.uvd.ser.length, ks: {u}._a.uvd.ser.map(s=>s.k), rt: {u}._a.uvd.rt}})")
             assert a["full"] == [190, 310], a
@@ -49,33 +49,33 @@ try:
         def warm():
             pg.evaluate("(()=>{window.__n=[]; if(!window.__f){window.__f=window.fetch; window.fetch=function(u,...a){ if(/api\\/(uvspec|map|chrom)/.test(String(u))) window.__n.push(String(u)); return window.__f.call(this,u,...a)}}})()")
             dbl(pg, C, 8.5)
-            attendi(pg, f"{UVS}.length === 2 && {UVS}[1]._a && Math.abs({UVS}[1]._a.uvd.rt - 8.5) < 0.1")
+            wait_for_js(pg, f"{UVS}.length === 2 && {UVS}[1]._a && Math.abs({UVS}[1]._a.uvd.rt - 8.5) < 0.1")
             assert pg.evaluate("window.__n.filter(u=>/uvspec|map/.test(u))") == [], pg.evaluate("window.__n")
         step("a second double click asks the engine nothing: the matrix is held", warm)
         def from_wl():
             pg.evaluate(f"wlOpen({C}, 254, 254)")
             W = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda'&&q.mz0===254)"
-            attendi(pg, f"!!({W} && {W}._a)")
+            wait_for_js(pg, f"!!({W} && {W}._a)")
             n0 = pg.evaluate(f"{UVS}.length")
             dbl(pg, W, 3.1)
             u = f"{UVS}.reduce((a,q)=>q.id>a.id?q:a)"                                     # the newest: a panel opens next to its source, not at the end
-            attendi(pg, f"{UVS}.length === {n0 + 1} && {u}._a")
+            wait_for_js(pg, f"{UVS}.length === {n0 + 1} && {u}._a")
             got = pg.evaluate(f"[{u}.wl, {u}._a.full]")
             assert got == [[254, 254], [190, 310]], got
         step("from the 254 nm trace: the full UV spectrum at that time, with 254 nm marked", from_wl)
         def back_to_wl():
             n0 = pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")
             dbl(pg, f"{UVS}[0]", 280)
-            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            wait_for_js(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
             w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
             assert w[0] == w[1] and abs(w[0] - 280) < 2, w
-            attendi(pg, "E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
+            wait_for_js(pg, "E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
         step("double click on the UV spectrum: the trace of the DAD at that wavelength", back_to_wl)
         def toolbar():
             n0 = pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")
             assert pg.evaluate(f"{C}.el.querySelector('[data-a=xic]').textContent") == "λ"
             pg.evaluate(f"{C}.el.querySelector('[data-a=xic]').click()")
-            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1} && E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
+            wait_for_js(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1} && E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
             assert pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a.sr.length") == 2
         step("the λ button of the PDA trace opens the trace by wavelength of both samples", toolbar)
     r.close()

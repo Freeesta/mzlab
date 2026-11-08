@@ -80,7 +80,7 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
             assert!(x == b, "{label}: build_lettore differs at budget {budget}");
         }
     }
-    if l.indice(0).unwrap().len() > 200 {
+    if l.index(0).unwrap().len() > 200 {
         assert!(saw_many, "{label}: no budget forced the rounds");
     }
     con_scratch(label, &mut l, &pb, &name, &b);
@@ -160,7 +160,7 @@ fn con_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b:
             "{label}: the index with a scratch file differs at budget {budget}"
         );
     }
-    if l.indice(0).unwrap().len() > 200 && !ripassa {
+    if l.index(0).unwrap().len() > 200 && !ripassa {
         assert!(spilled, "{label}: no budget used the scratch file");
     }
 }

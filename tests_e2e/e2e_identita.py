@@ -4,8 +4,8 @@ Needs the built site (python3 tools/build_site.py). Run from the repo root: pyth
 import json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, attendi
-from lib import copia as lib_copia, scrivi as lib_scrivi
+from lib import ROOT, wait_for_js
+from lib import copy_file as lib_copy_file, write_file as lib_write_file
 
 from lib import free_port; PORT = free_port()
 errs, steps = [], []
@@ -16,9 +16,9 @@ def step(name, fn):
 if not (ROOT / "site" / "index.html").exists():
     print("  ", ("site", "FAIL site/ not built: python3 tools/build_site.py")); sys.exit(0)
 mf = ROOT / "site" / "static" / "mzfinder"
-for f in (ROOT / "TP_Mine" / "js").glob("*.js"): lib_copia(f, mf / f.name)
-idx = json.loads((mf / "indice.json").read_text()); idx["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); lib_scrivi(mf / "indice.json", json.dumps(idx))
-for f in ("libreria-worker.js", "libreria.js", "livelli.js", "livelli-1.js"): lib_copia(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
+for f in (ROOT / "TP_Mine" / "js").glob("*.js"): lib_copy_file(f, mf / f.name)
+idx = json.loads((mf / "indice.json").read_text()); idx["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); lib_write_file(mf / "indice.json", json.dumps(idx))
+for f in ("libreria-worker.js", "libreria.js", "livelli.js", "livelli-1.js"): lib_copy_file(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
 
 P, M0 = 1.00727646688, 300.1
 RAMP, OTHER = [1.0, 2.5, 4.0, 3.0, 6.0], [5.0, 1.0, 4.0, 6.0, 0.5]
@@ -39,7 +39,7 @@ try:
             pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000); pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-unt", timeout=60000)
-            attendi(pg, "!!window.UNTUI", 120000); pg.click("#tp-unt"); pg.wait_for_selector("#unt[open]", timeout=10000)      # the button does nothing until the table module is registered
+            wait_for_js(pg, "!!window.UNTUI", 120000); pg.click("#tp-unt"); pg.wait_for_selector("#unt[open]", timeout=10000)      # the button does nothing until the table module is registered
             pg.set_input_files("#unt-in", [str(tmp / "tabella_pos.csv")]); pg.wait_for_function("document.querySelector('#unt-sum').textContent.includes('7 features')", timeout=20000)
             pg.click("#unt-go"); pg.wait_for_selector("#unt-res:not([hidden])", timeout=60000)
             assert pg.evaluate("document.querySelectorAll('#unt-t tbody tr.clk').length") == 7

@@ -22,10 +22,10 @@ try:
             n = pg.evaluate("document.querySelectorAll('#flst .fl input[data-k]').length"); assert n == 3, n          # one list with the three files, the others closed
         step("only the first file is open; the list holds all three", first_only)
         def together():
-            open_kind(pg, "ms2"); attendi(pg, "E.panels.some(p=>p.tab==='ms2')")
+            open_kind(pg, "ms2"); wait_for_js(pg, "E.panels.some(p=>p.tab==='ms2')")
             open_kind(pg, "mrm")
             pg.wait_for_function("new Set(E.panels.map(p=>p.tab)).size>=3", timeout=30000)
-            attendi(pg, "(()=>{const m={};E.panels.forEach(p=>{(m[p.tab]=m[p.tab]||[]).push([p.y,p.y+p.h])});const r=Object.values(m).map(a=>[Math.min(...a.map(x=>x[0])),Math.max(...a.map(x=>x[1]))]).sort((a,b)=>a[0]-b[0]);return r.every((x,i)=>i===0||r[i-1][1]<=x[0]+1)})()", timeout=30000)      # the new blocks are placed under the ones already there
+            wait_for_js(pg, "(()=>{const m={};E.panels.forEach(p=>{(m[p.tab]=m[p.tab]||[]).push([p.y,p.y+p.h])});const r=Object.values(m).map(a=>[Math.min(...a.map(x=>x[0])),Math.max(...a.map(x=>x[1]))]).sort((a,b)=>a[0]-b[0]);return r.every((x,i)=>i===0||r[i-1][1]<=x[0]+1)})()", timeout=30000)      # the new blocks are placed under the ones already there
             v = pg.evaluate(VIS); assert {"full", "ms2", "mrm"} <= set(v), v
             ys = pg.evaluate("(()=>{const m={};E.panels.forEach(p=>{(m[p.tab]=m[p.tab]||[]).push([p.y,p.y+p.h])});return Object.fromEntries(Object.entries(m).map(([t,a])=>[t,[Math.min(...a.map(x=>x[0])),Math.max(...a.map(x=>x[1]))]]))})()")
             order = sorted(ys, key=lambda t: ys[t][0])
@@ -44,7 +44,7 @@ try:
             open_kind(pg, "mrm")
             assert pg.evaluate("E.tab") == "mrm"
             # the page scrolls smoothly to the block after a short delay: wait for it to arrive (a slow runner needs longer than a fixed pause)
-            try: attendi(pg, "(()=>{const t=E.panels.find(p=>p.tab==='mrm').el.getBoundingClientRect().top;return t>-5&&t<600})()", timeout=20000)      # the page went to the MRM block
+            try: wait_for_js(pg, "(()=>{const t=E.panels.find(p=>p.tab==='mrm').el.getBoundingClientRect().top;return t>-5&&t<600})()", timeout=20000)      # the page went to the MRM block
             except TimeoutError: raise AssertionError("the page never reached the MRM block: " + pg.evaluate("JSON.stringify({tab: E.tab, top: E.panels.filter(p => p.tab === 'mrm').map(p => Math.round(p.el.getBoundingClientRect().top)), y: scrollY, h: document.documentElement.scrollHeight, ih: innerHeight, wrap: [...document.querySelectorAll('*')].filter(e => e.scrollHeight > e.clientHeight + 50 && /(auto|scroll)/.test(getComputedStyle(e).overflowY)).slice(0, 4).map(e => (e.id || e.className) + ':' + e.scrollTop + '/' + e.scrollHeight), rm: matchMedia('(prefers-reduced-motion: reduce)').matches})"))
             open_kind(pg, "ms2"); pg.wait_for_timeout(3500)
             assert pg.evaluate("E.tab") == "ms2" and "full" in pg.evaluate(VIS)

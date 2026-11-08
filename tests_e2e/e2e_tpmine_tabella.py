@@ -84,9 +84,9 @@ try:
             pg.wait_for_function("!document.querySelector('#hr-tbl [data-chip=not0]').hasAttribute('aria-disabled')", timeout=60000)
             assert not pg.locator("#hr-tbl [data-chip=noblank]").get_attribute("aria-disabled")
             before = pg.locator("#hr-t tbody tr.clk").count()
-            pg.click("#hr-tbl [data-chip=not0]"); pg.click("#hr-tbl [data-chip=noblank]"); lib.attendi(pg, "document.querySelector('#hr-tbl [data-chip=noblank]').getAttribute('aria-pressed') === 'true'")
+            pg.click("#hr-tbl [data-chip=not0]"); pg.click("#hr-tbl [data-chip=noblank]"); lib.wait_for_js(pg, "document.querySelector('#hr-tbl [data-chip=noblank]').getAttribute('aria-pressed') === 'true'")
             assert pg.locator("#hr-t tbody tr.clk").count() <= before
-            pg.click("#hr-tbl [data-chip=not0]"); pg.click("#hr-tbl [data-chip=noblank]"); lib.attendi(pg, "document.querySelector('#hr-tbl [data-chip=noblank]').getAttribute('aria-pressed') === 'false'")
+            pg.click("#hr-tbl [data-chip=not0]"); pg.click("#hr-tbl [data-chip=noblank]"); lib.wait_for_js(pg, "document.querySelector('#hr-tbl [data-chip=noblank]').getAttribute('aria-pressed') === 'false'")
             assert pg.locator("#hr-t tbody tr.clk").count() == before
         step("t0 and blank arrive from the Rust route (the two chips are enabled and filter)", columns)
 
@@ -123,20 +123,20 @@ try:
 
         def sort():
             col = pg.locator("#hr-t thead th", has_text="RT").first
-            col.locator("button").click(); lib.attendi(pg, "[...document.querySelectorAll('#hr-t thead th')].some(t => /RT/.test(t.innerText) && t.getAttribute('aria-sort') !== 'none')")
+            col.locator("button").click(); lib.wait_for_js(pg, "[...document.querySelectorAll('#hr-t thead th')].some(t => /RT/.test(t.innerText) && t.getAttribute('aria-sort') !== 'none')")
             a = [float(x) for x in pg.eval_on_selector_all("#hr-t tbody tr.clk", "rs=>rs.map(r=>r.children[%d].innerText)" % pg.evaluate("[...document.querySelectorAll('#hr-t thead th')].findIndex(t=>/RT/.test(t.innerText))"))]
             d1 = col.get_attribute("aria-sort"); assert d1 in ("ascending", "descending"), d1
             assert a == sorted(a, reverse=d1 == "descending"), (d1, a)
-            col.locator("button").click(); lib.attendi(pg, "[...document.querySelectorAll('#hr-t thead th')].some(t => /RT/.test(t.innerText) && t.getAttribute('aria-sort') !== '%s')" % d1)
+            col.locator("button").click(); lib.wait_for_js(pg, "[...document.querySelectorAll('#hr-t thead th')].some(t => /RT/.test(t.innerText) && t.getAttribute('aria-sort') !== '%s')" % d1)
             assert col.get_attribute("aria-sort") == ("ascending" if d1 == "descending" else "descending")
         step("sorting by a header (aria-sort)", sort)
 
         def filt():
             before = pg.locator("#hr-t tbody tr.clk").count()
-            pg.click("#hr-tbl [data-chip=ms2]"); lib.attendi(pg, "document.querySelector('#hr-tbl [data-chip=ms2]').getAttribute('aria-pressed') === 'true'")
+            pg.click("#hr-tbl [data-chip=ms2]"); lib.wait_for_js(pg, "document.querySelector('#hr-tbl [data-chip=ms2]').getAttribute('aria-pressed') === 'true'")
             after = pg.locator("#hr-t tbody tr.clk").count(); assert after <= before, (before, after)
             assert pg.get_attribute("#hr-tbl [data-chip=ms2]", "aria-pressed") == "true"
-            pg.click("#hr-tbl [data-chip=ms2]"); lib.attendi(pg, "document.querySelector('#hr-tbl [data-chip=ms2]').getAttribute('aria-pressed') === 'false'")
+            pg.click("#hr-tbl [data-chip=ms2]"); lib.wait_for_js(pg, "document.querySelector('#hr-tbl [data-chip=ms2]').getAttribute('aria-pressed') === 'false'")
             assert pg.locator("#hr-t tbody tr.clk").count() == before
             assert " of " in pg.inner_text("#hr-cnt")
         step("the MS2 chip narrows and restores the rows", filt)

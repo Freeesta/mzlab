@@ -53,7 +53,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1900})
         load(pg, [F], 6000, 1)
-        attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
+        wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         tree = pg.evaluate("fetch('api/msn_albero?k=0').then(r=>r.json())")
         ids = [n["id"] for n in tree["nodi"]]
         fx = json.loads(json.dumps(FX))
@@ -100,7 +100,7 @@ try:
             assert "Isotopes are not expected" in pg.inner_text("#ig-node") or pg.evaluate("I18N.lang") != "en"
         step("isolation window and unexplained peaks are written", notes)
         def draw():
-            pg.click(".ig-node[data-id=n2]"); pg.fill("#ig-smi", "CCOC(=O)c1ccccc1N"); pg.dispatch_event("#ig-smi", "change"); attendi(pg, "INFG.G.smiles")
+            pg.click(".ig-node[data-id=n2]"); pg.fill("#ig-smi", "CCOC(=O)c1ccccc1N"); pg.dispatch_event("#ig-smi", "change"); wait_for_js(pg, "INFG.G.smiles")
             pg.click(".ig-node[data-id=n0]"); pg.wait_for_selector("[data-a=draw]", timeout=10000)
             assert pg.locator("[data-a=draw]").count() == 1 and pg.locator("[data-a=save]").count() == 1
             assert pg.locator(".ig-draw .muted").count() >= 1
@@ -132,7 +132,7 @@ try:
             pg.focus(".ig-cut"); pg.keyboard.press("Enter")
             pg.wait_for_function("S.view==='draw'", timeout=15000)
             pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=90000)
-            attendi(pg, "TPDraw.smiles().then(s => s.length > 5)", 30000)
+            wait_for_js(pg, "TPDraw.smiles().then(s => s.length > 5)", 30000)
             assert pg.evaluate("TPDraw.mark([[1, 2]])") == 1 and pg.evaluate("TPDraw.mark([[0, 9]])") == 0
             pg.evaluate("setView('data')"); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=15000)
         step("a node with a SMILES lists the cut candidates with ppm; one opens Draw and marks the bond", cuts)
@@ -166,8 +166,8 @@ try:
             assert abs(c[0][0] - c[1][0]) < 3 and abs(c[0][1] - c[1][1]) < 3, c
             sizes = pg.evaluate("[...document.querySelectorAll('#ig-bar2 .bt, #ig-bar2 input:not([type=checkbox]), #ig-bar2 select, #ig-bar2 label')].map(b=>{const r=b.getBoundingClientRect();return Math.min(r.width,r.height)})")
             assert min(sizes) >= 24, sizes
-            pg.focus(".ig-node[data-id=n0]"); pg.keyboard.press("ArrowRight"); attendi(pg, "INFG.G.sel === 'n3'")
-            pg.keyboard.press("ArrowDown"); attendi(pg, "INFG.G.sel === 'n2'"); pg.keyboard.press("ArrowLeft"); attendi(pg, "INFG.G.sel === 'n0'")
+            pg.focus(".ig-node[data-id=n0]"); pg.keyboard.press("ArrowRight"); wait_for_js(pg, "INFG.G.sel === 'n3'")
+            pg.keyboard.press("ArrowDown"); wait_for_js(pg, "INFG.G.sel === 'n2'"); pg.keyboard.press("ArrowLeft"); wait_for_js(pg, "INFG.G.sel === 'n0'")
             pg.click("#ig-vt"); pg.wait_for_selector(".ig-svg[data-mode=tree]"); assert pg.evaluate("INFG.G.sel") == "n0" and len(ids()) == len(fx["nodi"])
         step("the Tree / Radial switch keeps the ion, puts the precursor in the middle, no box over another; arrows follow the rings", views)
         def filters():
@@ -210,14 +210,14 @@ try:
             for fmt, name, body in got:
                 assert name.endswith("." + fmt) and f"export {fmt} clean=1 node=tutto" in body, (fmt, name, body[:80])
             pg.select_option("#ig-scope", index=1); pg.select_option("#ig-clean", "0"); pg.select_option("#ig-fmt", "mgf")
-            pg.click("#ig-exp [data-a=copy]"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('export mgf'))")
+            pg.click("#ig-exp [data-a=copy]"); wait_for_js(pg, "navigator.clipboard.readText().then(t => t.includes('export mgf'))")
             clip = pg.evaluate("navigator.clipboard.readText()")
             assert "export mgf clean=0 node=n2" in clip, clip[:80]
         step("clean spectra: CSV, MGF, MSP for the tree, copy for a node (all, discarded marked)", exports)
         def library():
-            pg.click("#ig-lib"); attendi(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 1")
+            pg.click("#ig-lib"); wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 1")
             n1 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length"); assert n1 == 1
-            pg.click("#ig-lib"); attendi(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 2")
+            pg.click("#ig-lib"); wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').length >= 2")
             body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/aggiungi').slice(-1)[0][2]"))
             assert body["libreria"] and body["formula"].startswith("C14H15N3O5"), body
             assert pg.evaluate("document.body.textContent").count("already in the library") > 0 or pg.evaluate("I18N.lang") != "en"
@@ -231,7 +231,7 @@ try:
         step("Search lab library: candidates with the scores apart, the analog marked", find)
         def workflow():
             n0 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').length")
-            pg.click("#ig-flow"); attendi(pg, f"window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').length > {n0}")
+            pg.click("#ig-flow"); wait_for_js(pg, f"window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').length > {n0}")
             pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
         step("Run MSn workflow: graph and library search with one click", workflow)
         def interp():
@@ -242,7 +242,7 @@ try:
             assert pg.evaluate("I18N.t('msngrafo.act.line', { list: 'CID 35' })") in pg.inner_text(".ig-act"), pg.inner_text(".ig-act")
         step("The panel of a node shows the neutral loss as evidence", interp)
         def data():
-            pg.click("#ig-copyd"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
+            pg.click("#ig-copyd"); wait_for_js(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
             clip = pg.evaluate("navigator.clipboard.readText()"); assert "n2" in clip and "C13H10NO4" in clip, clip[:200]
             pg.click("#ig-data"); pg.wait_for_selector("dialog#tdati table", timeout=5000)
             assert pg.locator("dialog#tdati tbody tr").count() == len(fx["nodi"]) + len(fx["archi"])
@@ -254,11 +254,11 @@ try:
             sel = pg.evaluate("INFG.G.sel"); assert sel in ("n1", "n2", "n3"), sel
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("ArrowLeft")
             assert pg.evaluate("INFG.G.sel") == "n0", pg.evaluate("INFG.G.sel")
-            pg.keyboard.press("ArrowRight"); attendi(pg, "INFG.G.sel !== 'n0'")
+            pg.keyboard.press("ArrowRight"); wait_for_js(pg, "INFG.G.sel !== 'n0'")
             cur = pg.evaluate("INFG.G.sel"); node = [n for n in fx["nodi"] if n["id"] == cur][0]
             pg.keyboard.press("Enter")
-            if node["albero"]: attendi(pg, f"E.panels.some(p=>p.type==='spec' && p.filt==='msn:{node['albero'][0]}')", 15000)
-            pg.keyboard.press("Escape"); attendi(pg, "INFG.G.sel === null")
+            if node["albero"]: wait_for_js(pg, f"E.panels.some(p=>p.type==='spec' && p.filt==='msn:{node['albero'][0]}')", 15000)
+            pg.keyboard.press("Escape"); wait_for_js(pg, "INFG.G.sel === null")
             assert pg.evaluate("INFG.G.sel") is None
         step("arrows move between ions, Enter puts the spectrum in the active cell, Esc clears", keys)
         def zoom():
@@ -280,7 +280,7 @@ try:
         def names():
             pg.fill("#ig-mol input", "Exam"); pg.wait_for_selector("#ig-mol [role=option]", timeout=5000)
             pg.click("#ig-mol [role=option]"); pg.wait_for_function("INFG.G.mol && INFG.G.mol.id==='ik:TESTONLY'", timeout=5000)
-            attendi(pg, "window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1].includes('smiles=')")
+            wait_for_js(pg, "window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1].includes('smiles=')")
             last = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1]")
             assert "formula=C14H15N3O5+%5BM%2BH%5D%2B" in last.replace("%20", "+") and "smiles=" in last, last
         step("a molecule chosen in the search box fills the ion formula with the adduct and the SMILES; the id is kept", names)
@@ -289,7 +289,7 @@ try:
             assert "<sub>14</sub>" in pg.inner_html("#ig-ionfmt") and pg.locator("#ig-ion").evaluate("e=>e.tagName") == "INPUT"
             pg.fill("#ig-ion", "C8H11N4O2+"); assert "<sup>+</sup>" in pg.inner_html("#ig-ionfmt")
             pg.fill("#ig-ion", "C14H15N3O5")
-            attendi(pg, "document.querySelector('#ig-sum sub')")
+            wait_for_js(pg, "document.querySelector('#ig-sum sub')")
         step("the ion field has the formula only (the adduct is its select), with a subscript preview; the ion line has subscripts", ionfield)
         def capital():
             assert pg.input_value("#ig-mol input") == "Exampline" and pg.evaluate("INFG.G.mol.nome") == "exampline"
@@ -332,7 +332,7 @@ try:
             pg.click("#ig-bar [data-z=fit]"); assert pg.evaluate("+document.querySelector('.ig-svg').getAttribute('width')") < w1
         step("gestures on the canvas of the side panel: Ctrl/Cmd + wheel zooms, wheel scrolls, drag pans; nothing is blocked outside", gestures)
         # the real engine (the .wasm msngrafo of the site, no stand-in): the cut table of a node of the synthetic file
-        pg4 = r.b.new_page(viewport={"width": 1500, "height": 1900}); pg4.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg4, "window.qqReady === true")
+        pg4 = r.b.new_page(viewport={"width": 1500, "height": 1900}); pg4.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg4, "window.qqReady === true")
         load(pg4, [F], 6000, 1)
         def real_cuts():
             drawer(pg4, "gra"); pg4.wait_for_selector(".ig-node", timeout=60000)
@@ -349,11 +349,11 @@ try:
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         # two files loaded: no tab
-        pg2 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg2.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg2, "window.qqReady === true")
+        pg2 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg2.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg2, "window.qqReady === true")
         load(pg2, [F, F2], 6000, 2)
         step("two files loaded: the tab is not there", lambda: (_ for _ in ()).throw(AssertionError("single")) if pg2.evaluate("INF.single()") else None)
         # Italian
-        pg3 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg3.goto(f"http://127.0.0.1:{r.port}/?lang=it"); attendi(pg3, "window.qqReady === true")
+        pg3 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg3.goto(f"http://127.0.0.1:{r.port}/?lang=it"); wait_for_js(pg3, "window.qqReady === true")
         load(pg3, [F], 6000, 1); pg3.evaluate(STAND_IN, fx); drawer(pg3, "gra"); pg3.wait_for_selector(".ig-node", timeout=30000)
         step("Italian: texts from the catalogue", lambda: None if "Formula dello ione" in pg3.inner_text("#ig-field") else (_ for _ in ()).throw(AssertionError(pg3.inner_text("#ig-field"))))
         step("no request left unanswered by the engine", lambda: (_ for _ in ()).throw(AssertionError(pg.evaluate("window.MZLAB_LR_MISS"))) if pg.evaluate("(window.MZLAB_LR_MISS||[]).length") else None)

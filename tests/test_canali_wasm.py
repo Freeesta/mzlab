@@ -33,7 +33,7 @@ def files(work):
     return [MSN, work / "srm.mzML", work / "srm_epi.mzML"]
 
 
-def wasm_canali(work, mzml):
+def wasm_channels(work, mzml):
     idx = work / (mzml.stem + ".mzidx")
     run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-core", "--example", "mzidx", "--", str(mzml), str(idx))
     plan = work / "plan.json"
@@ -46,7 +46,7 @@ def wasm_canali(work, mzml):
 @pytest.mark.parametrize("which", [0, 1, 2])
 def test_wasm_and_cli_give_the_same_channels(work, which):
     mzml = files(work)[which]
-    got = wasm_canali(work, mzml)
+    got = wasm_channels(work, mzml)
     want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "canali", str(mzml)).stdout
     assert got.strip() == want.strip()
     doc = json.loads(got)

@@ -1,5 +1,5 @@
 //! The matrix of the scan modes of a QTRAP against the synthetic pairs of `tools/wiff_modi.py`: what the `.wiff` reader does today with each mode, exactly
-//! (read with level / precursor / CV type, or refused with `err.file.wiff` and the `scan type code C (experiment 1)` detail), never a panic. Whoever adds
+//! (read with level / precursor / CV type, or refused with `err.file.wiffScanType`, `code` C and `experiment` 1), never a panic. Whoever adds
 //! a mode changes its entry in `modi.json`. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![cfg(feature = "sciex")]
@@ -51,13 +51,28 @@ fn close(a: f64, b: f64) -> bool {
     a == b || (a - b).abs() <= 1e-9 * a.abs().max(b.abs()).max(1.0)
 }
 
+/// The cause of a refusal as one text: the keys of the readers module (`wiffScanType`, `wiffPeriods`, `wiffNeeds2`) spelled as the reference writes them, else `detail`.
 fn detail(e: &mzlab_core::error::Error) -> String {
-    assert_eq!(e.key, "err.file.wiff");
-    e.params
-        .iter()
-        .find(|(k, _)| *k == "detail")
-        .map(|(_, v)| v.clone())
-        .unwrap_or_default()
+    let p = |n: &str| {
+        e.params
+            .iter()
+            .find(|(k, _)| *k == n)
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
+    };
+    match e.key {
+        "err.file.wiffScanType" => format!(
+            "scan type code {} (experiment {})",
+            p("code"),
+            p("experiment")
+        ),
+        "err.file.wiffPeriods" => format!("periods={}", p("periods")),
+        "err.file.wiffNeeds2" => "wiff2".into(),
+        k => {
+            assert_eq!(k, "err.file.wiff");
+            p("detail")
+        }
+    }
 }
 
 fn set(dir: &Path, name: &str) -> FileSet {
@@ -242,7 +257,7 @@ fn q1_reads_like_ems_and_the_method_one_fallback_serves_every_sample() {
         assert_eq!(w.experiments.len(), 1, "sample {n}");
         assert_eq!(w.experiments[0].code, Some(0), "sample {n}");
         assert!(
-            !w.variante(),
+            !w.variant(),
             "sample {n}: a 3200 QTRAP Q1 scan is not a variant"
         );
         let run = w.run(&mut scan).unwrap();
@@ -264,7 +279,7 @@ fn sim_modes_give_one_sim_chromatogram_per_ion() {
     for sigla in ["Q1MI", "Q3MI"] {
         let ions = modi[sigla]["futuro"]["ioni"].as_array().unwrap().len();
         let mut l = lettori::apri(set(&dir, sigla), &Limiti::sito()).unwrap();
-        let list = l.cromatogrammi(0).unwrap();
+        let list = l.chromatograms(0).unwrap();
         let sim: Vec<_> = list
             .iter()
             .filter(|v| v.tipo == mzlab_core::mzml::ChromKind::Sic)

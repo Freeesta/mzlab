@@ -29,9 +29,9 @@ def _out(cmd: list[str], env=None) -> str:
 
 def raccogli(mzmine: str | None = None, java_home: str | None = None) -> dict:
     v = {"python": platform.python_version(), "sistema": platform.platform()}
-    for nome, pacchetto in (("pyopenms", "pyopenms"), ("asari", "asari-metabolomics"), ("numpy", "numpy")):
+    for nome, package in (("pyopenms", "pyopenms"), ("asari", "asari-metabolomics"), ("numpy", "numpy")):
         try:
-            v[nome] = metadata.version(pacchetto)
+            v[nome] = metadata.version(package)
         except metadata.PackageNotFoundError:
             v[nome] = "unavailable"
     if shutil.which("Rscript"):

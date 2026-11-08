@@ -131,11 +131,11 @@ try:
         step("several candidates of the same nominal m/z: one line each, ordered", several)
 
         def narrow():
-            pg.set_viewport_size({"width": 360, "height": 800}); lib.attendi(pg, "innerWidth === 360"); lib.fermo(pg, "#tp-det")
+            pg.set_viewport_size({"width": 360, "height": 800}); lib.wait_for_js(pg, "innerWidth === 360"); lib.wait_still(pg, "#tp-det")
             for tab in ("overview", "identity", "samples", "quality"):
-                pg.click(f'#tp-det [data-tab="{tab}"]'); lib.attendi(pg, f"document.querySelector('#tp-det [data-tab={tab}]').getAttribute('aria-selected') === 'true'"); lib.fermo(pg, "#tp-det")
+                pg.click(f'#tp-det [data-tab="{tab}"]'); lib.wait_for_js(pg, f"document.querySelector('#tp-det [data-tab={tab}]').getAttribute('aria-selected') === 'true'"); lib.wait_still(pg, "#tp-det")
                 o = pg.evaluate(OVER); assert not o, (tab, o)
-            pg.set_viewport_size({"width": 1280, "height": 1000}); lib.attendi(pg, "innerWidth === 1280")
+            pg.set_viewport_size({"width": 1280, "height": 1000}); lib.wait_for_js(pg, "innerWidth === 1280")
         step("no overflow at 360 px in the head and the four tabs", narrow)
 
         def to_data():

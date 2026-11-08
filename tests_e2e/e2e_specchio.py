@@ -61,7 +61,7 @@ try:
             assert pg.locator(".ft-cmp-go:visible").count() == 0, "the button must not show without a library"
         step("no installed library: no «Compare with library» button", nolib)
         add_lib(pg)
-        pg.click("#spc-host #ft-t tbody tr"); lib.attendi(pg, "!document.querySelector('#spc-host .ft-cmp')"); open_row(pg)
+        pg.click("#spc-host #ft-t tbody tr"); lib.wait_for_js(pg, "!document.querySelector('#spc-host .ft-cmp')"); open_row(pg)
         clicks = 0
         def button():
             pg.wait_for_selector(".ft-cmp-go:visible", timeout=10000)
@@ -83,10 +83,10 @@ try:
             assert pg.locator(".ft-cmp-b").nth(1).evaluate("e => document.activeElement === e"), "focus stays on the choice"
             assert pg.locator(".ft-cmp-m").inner_text().split(" · ")[0] == pg.locator(".ft-cmp-b").nth(1).inner_text().split(". ", 1)[1].split(" · ")[0]
         step("another result is chosen from the keyboard", keyboard)
-        def clic():
+        def click():
             print(f"MISURA clic_specchio: {clicks} click from the open row")
             assert clicks == 1
-        step("one click from the open row", clic)
+        step("one click from the open row", click)
         def tdati():
             pg.click(".ft-cmp .tdbtn"); pg.wait_for_selector("dialog[open] table, .tdati table", timeout=10000)
             t = pg.inner_text("dialog[open] table, .tdati table"); assert "m/z" in t and "Library" in t or "library" in t.lower(), t[:200]

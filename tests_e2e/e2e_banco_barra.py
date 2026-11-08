@@ -61,6 +61,19 @@ try:
             with pg.expect_download(timeout=15000) as d: (pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"), pg.click("#ctx >> text=Excel"))
             assert d.value.suggested_filename.endswith(".xlsx"), d.value.suggested_filename
         step("copy the data as text; export to Excel (menu of the cell)", copy_xls)
+        def copy_png():
+            # a clipboard as strict as Safari's: write() only while the click is being dispatched; the image is drawn after it
+            pg.evaluate("""(() => { window.__clipT = null; window.__clipNo = false; let live = false;
+              addEventListener('click', () => { live = true; }, true); addEventListener('click', () => { live = false; });
+              Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+                writeText: () => Promise.reject(new DOMException('not allowed', 'NotAllowedError')),
+                write: items => { if (!live) { window.__clipNo = true; return Promise.reject(new DOMException('not allowed', 'NotAllowedError')); }
+                  return items[0].getType('image/png').then(b => { window.__clipT = [items[0].types, b.size]; }); } } }); })()""")
+            pg.evaluate("E.active.el.querySelector('[data-a=dl]').click()"); pg.click("#ctx >> text=Copia l'immagine")
+            wait_for_js(pg, "window.__clipT !== null || window.__clipNo", 15000)
+            assert not pg.evaluate("window.__clipNo"), "the image reached the clipboard after the click was over (Safari refuses it and the PNG is downloaded instead)"
+            types, size = pg.evaluate("window.__clipT"); assert types == ["image/png"] and size > 1000, (types, size)
+        step("copy the image: handed to the clipboard inside the click, drawn after (Safari)", copy_png)
         def one_row():
             # one row of buttons above the cells, one pair of arrows for the files, one pair for the scans, one pair of undo/redo
             tops = pg.evaluate("(()=>{const t=[...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>b.getBoundingClientRect().top);return Math.max(...t)-Math.min(...t)<12?[0]:t})()")
@@ -122,10 +135,10 @@ except Exception as e:
     try: r.close()
     except Exception: pass
 HRMS = percorso("dati/HRMS")    # None without the private data repository: the block is skipped
-DATI = str(HRMS) if HRMS and glob.glob(f"{HRMS}/*/*direct-infusion_MSn.mzML") else None
-if DATI:
-    MSN = glob.glob(DATI + "/*/*direct-infusion_MSn.mzML")[0]
-    TIO = [glob.glob(DATI + f"/*/*_TiO2_t0{n}min.mzML")[0] for n in ("10", "20", "45")]
+DATA_DIR = str(HRMS) if HRMS and glob.glob(f"{HRMS}/*/*direct-infusion_MSn.mzML") else None
+if DATA_DIR:
+    MSN = glob.glob(DATA_DIR + "/*/*direct-infusion_MSn.mzML")[0]
+    TIO = [glob.glob(DATA_DIR + f"/*/*_TiO2_t0{n}min.mzML")[0] for n in ("10", "20", "45")]
     r = Run(port=8980, wd="/tmp/wd_msnbarra")
     try:
         with sync_playwright() as p:

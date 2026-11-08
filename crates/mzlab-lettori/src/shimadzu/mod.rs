@@ -30,7 +30,7 @@ pub const VOCE: VoceLettore = VoceLettore {
 };
 
 /// What a container holds, from the names of its directory (a storage can be there and empty: the data are told by `carica::scegli`). `Ignoto` and `Rotto`: a `.qgd`/`.lcd`
-/// that is an OLE2 container of other storages (another instrument's data), or whose directory lies beyond its end (a cut copy): refused with what was found.
+/// that is an OLE2 container of other storages (another instrument's data), or whose directory lies beyond its end: refused with what was found, or as `err.file.cutShort` when its header points past the end (a cut copy).
 enum Contenuto {
     Dati,
     QTof,
@@ -93,6 +93,19 @@ fn rifiuto(detail: &str) -> Error {
     Error::new("err.file.shimadzu").with("detail", detail)
 }
 
+/// A copy cut before its directory (its header points past the end, `Ole::header_cut`): the same notice as a cut found after `open`.
+fn tagliato_prima(m: &mut mzlab_core::lettori::Membro) -> Option<Error> {
+    let mut h = vec![0u8; m.dim.min(512) as usize];
+    m.dati.read_at(0, &mut h).ok()?;
+    let need = Ole::header_cut(&h).filter(|&n| n > m.dim)?;
+    Some(
+        Error::new("err.file.cutShort")
+            .with("name", &m.nome)
+            .with("size", m.dim)
+            .with("needed", need),
+    )
+}
+
 fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let (i, c) = trova(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted"))?;
     match &c {
@@ -102,7 +115,11 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
             )))
         }
         Contenuto::Rotto => {
-            let d = fs.membri[i].dim;
+            let m = &mut fs.membri[i];
+            if let Some(e) = tagliato_prima(m) {
+                return Err(e);
+            }
+            let d = m.dim;
             return Err(rifiuto(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
         }
         _ => {}
@@ -118,6 +135,13 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     data.resize(m.dim as usize, 0);
     m.dati.read_at(0, &mut data)?;
     let ole = Ole::open(data, &m.nome)?;
+    // sectors in use past the end: the raw stream would read short and the file would open with fewer scans, or none, unsaid
+    if let Some(need) = ole.cut_short() {
+        return Err(Error::new("err.file.cutShort")
+            .with("name", &m.nome)
+            .with("size", m.dim)
+            .with("needed", need));
+    }
     let Some(fam) = carica::scegli(&ole) else {
         return Err(rifiuto(match c {
             Contenuto::QTof => "Q-TOF data (QTFL RawData) are not read: their m/z could not be checked against a reference",

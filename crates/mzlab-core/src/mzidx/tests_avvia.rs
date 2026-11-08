@@ -33,7 +33,7 @@ fn per_peak(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
         if gruppi[i].f32 {
             parti.push32(sp, mz as f32, it as f32, pos)?;
         } else {
-            parti.push(sp, mz, it, pos)?;
+            parti.push(sp, mz, it, pos, gruppi[i].level == 1)?;
         }
     }
     Ok(parti)

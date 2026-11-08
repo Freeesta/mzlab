@@ -1,6 +1,6 @@
 //! A SIM (Q1MI) `.wiff` of a triple quadrupole (`tools/wiff_sim.py`: two samples, a positive experiment with three ions and a negative one with one,
 //! two isobaric peaks on one ion): each ion is one SIM chromatogram with its m/z, dwell, polarity and name, in the engine, through the registry and
-//! after a round trip through the mzML; a SIM method of two periods is refused with `periods=2`, an empty row does not cut the ions. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
+//! after a round trip through the mzML; a SIM method of two periods is refused with `err.file.wiffPeriods` (`periods` 2), an empty row does not cut the ions. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -126,9 +126,9 @@ fn the_registry_and_the_mzml_keep_the_sim_channels() {
     };
     let ions = want["ioni"].as_array().unwrap();
     let mut l = lettori::apri(pair(&dir), &Limiti::sito()).unwrap();
-    assert_eq!(l.campioni().len(), 2);
+    assert_eq!(l.samples().len(), 2);
     for c in 0..2 {
-        let list = l.cromatogrammi(c).unwrap();
+        let list = l.chromatograms(c).unwrap();
         let sim: Vec<_> = list.iter().filter(|v| v.tipo == ChromKind::Sic).collect();
         assert_eq!(sim.len(), ions.len(), "sample {}", c + 1);
         assert!(sim[0]
@@ -174,11 +174,8 @@ fn a_sim_method_of_two_periods_is_refused_and_an_empty_row_is_left_out() {
         Wiff::open(&ole, name, Some(scan.len() as u64), 1).and_then(|w| w.run(&mut scan))
     };
     let err = read("sim_periodi").err().unwrap();
-    assert_eq!(err.key, "err.file.wiff");
-    assert!(err
-        .params
-        .iter()
-        .any(|(k, v)| *k == "detail" && v == "periods=2"));
+    assert_eq!(err.key, "err.file.wiffPeriods");
+    assert!(err.params.iter().any(|(k, v)| *k == "periods" && v == "2"));
     let run = read("sim_vuoti").unwrap();
     let cycles = want["cicli"].as_u64().unwrap() as usize;
     let sim: Vec<_> = run

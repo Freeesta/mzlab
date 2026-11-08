@@ -87,7 +87,7 @@ const LETTORI_MOD = {
   /** what the module sees in a dataset */
   async probe(/** @type {string} */ fam, /** @type {Member[]} */ members) { return /** @type {Probe} */ ((await ask({ op: "probe", fam, members })).info); },
   /** the mzML of sample `c` of a dataset as a File of OPFS (a Blob without OPFS); `signal` ends the worker, so the conversion stops at once; `opts` = {dad, compression}
-   * of «Download .mzML» (`to_mzml_come`), without it the form of the loading */
+   * of «Download .mzML» (`to_mzml_with`), without it the form of the loading */
   async toMzml(/** @type {string} */ fam, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ dest, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal, /** @type {{ dad: boolean, compression: string } | undefined} */ opts) {
     if (signal && signal.aborted) throw cancelled();
     const w = start(), drop = async () => {

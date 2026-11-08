@@ -80,11 +80,11 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
             ],
         };
         let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
-        let twc = l.cromatogramma(0, "DAD TWC").unwrap();
+        let twc = l.chromatogram(0, "DAD TWC").unwrap();
         assert_eq!(twc.kind, ChromKind::Pda);
         assert_eq!(twc.unit, "mAU");
         assert_eq!(twc.time.len(), expected_pts);
-        let ch254 = l.cromatogramma(0, "DAD 254 nm").unwrap();
+        let ch254 = l.chromatogram(0, "DAD 254 nm").unwrap();
         assert_eq!(ch254.kind, ChromKind::Pda);
         assert_eq!(ch254.intensity.len(), expected_pts);
         for i in [0, 100, expected_pts / 2, expected_pts - 1] {
@@ -154,7 +154,7 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
         ],
     };
     let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
-    let doc = json::parse(l.metodo(0).unwrap().as_bytes()).unwrap();
+    let doc = json::parse(l.method(0).unwrap().as_bytes()).unwrap();
     let tr_json = doc
         .get("ms")
         .and_then(|ms| ms.get("periodi"))

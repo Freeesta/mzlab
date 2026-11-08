@@ -19,12 +19,12 @@ import warnings
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CAMPAGNA = ROOT / "tests/data/attributio/campagna_sintetica"
+CAMPAIGN = ROOT / "tests/data/attributio/campagna_sintetica"
 USCITA = ROOT / "tests/golden/attributio/sintetica"
-LIBRERIE = ROOT / "tests/data/attributio/librerie_sintetiche"
+LIBRARIES = ROOT / "tests/data/attributio/librerie_sintetiche"
 FONTI = ROOT / "tests/data/attributio/fonti_sintetiche"
-SORBENTI = ROOT / "tests/data/attributio/campagna_sorbenti"
-USCITA_SORBENTI = ROOT / "tests/golden/attributio/sorbenti"
+SORBENTS = ROOT / "tests/data/attributio/campagna_sorbenti"
+OUTPUT_SORBENTS = ROOT / "tests/golden/attributio/sorbenti"
 POLS = ("POS", "NEG")
 LEVEL_COLS = ["_pol", "_id", "level", "level_sub", "level_basis", "name"]
 
@@ -54,22 +54,22 @@ def frame_rows(df, cols=None):
     return [{c: jsonable(row[c]) for c in cols} for _, row in df.iterrows()]
 
 
-def scrivi(uscita: Path, nome: str, dati) -> None:
-    uscita.mkdir(parents=True, exist_ok=True)
-    testo = json.dumps(jsonable(dati), indent=1, sort_keys=True, ensure_ascii=False)
-    (uscita / nome).write_text(testo + "\n", encoding="utf-8")
+def scrivi(output: Path, nome: str, data) -> None:
+    output.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(jsonable(data), indent=1, sort_keys=True, ensure_ascii=False)
+    (output / nome).write_text(text + "\n", encoding="utf-8")
 
 
-def carica(src: Path, campagna: Path):
+def carica(src: Path, campaign: Path):
     os.environ["UNTARGET_OFFLINE"] = "1"
     os.environ.setdefault("MPLBACKEND", "Agg")
     sys.path.insert(0, str(src))
     warnings.simplefilter("ignore")
     from attributio import load_campaign
-    return load_campaign(campagna / "campaign.toml")
+    return load_campaign(campaign / "campaign.toml")
 
 
-def stadio_campagna(C):
+def stage_campaign(C):
     return {"id": C.id, "name": C.name, "instrument": C.instrument,
             "sites": C.sites, "matrices": C.matrices, "sorbents": list(C.sorbents),
             "site_prefix": C.site_prefix, "polarity_tag": C.polarity_tag,
@@ -78,7 +78,7 @@ def stadio_campagna(C):
             if C.feature_decisions_csv else None}
 
 
-def stadio_letture(C):
+def stage_reads(C):
     from attributio.readers import mzmine, feature_decisions
     from attributio.readers.gnps import load_gnps_library, load_gnps_network
     out: dict = {"mzmine_tabella": {}, "mzmine_libreria": {}, "gnps_libreria": {},
@@ -109,12 +109,12 @@ def stadio_letture(C):
     return out
 
 
-def stadio_rilevazione(C):
+def stage_detection(C):
     from attributio.annotate import detection_table
     return {p: frame_rows(detection_table(C, p, list(C.sites))) for p in POLS}
 
 
-def stadio_livelli(feat):
+def stage_levels(feat):
     from attributio.annotate import level_sub  # noqa: F401  (level_sub is already a column)
     cols = LEVEL_COLS + ["identity_override", "level_decisive", "level_why", "decision_2b"]
     rows = frame_rows(feat, cols)
@@ -124,14 +124,14 @@ def stadio_livelli(feat):
     return {"features": rows}
 
 
-def stadio_identita(feat, C):
+def stage_identity(feat, C):
     from attributio.identity import identity_table, level_counts
     sites = list(C.sites)
     it = identity_table(feat, sites)
     return {"identity_table": frame_rows(it), "level_counts": level_counts(feat, sites)}
 
 
-def _tabella_curazione(percorso):
+def _curation_table(percorso):
     """(pattern, canonical_name, category) rows of a curation table of the campaign, as curation._load_pattern_csv reads them."""
     import pandas as pd
     df = pd.read_csv(percorso, sep=";", keep_default_na=False, dtype=str)
@@ -147,16 +147,16 @@ NOMI = [
     "carboxy-losartan acid", "trifloxystrobin cga 321113", "trifloxystrobin cga321113", "7-oxodehydroabietic", "7-oxocallitrisic", "fictbase",
     "fictbaseine", "fictbaseineine", "Fictanoid x", "fictstd-d3", "  ", "", "Atenolol acid", "cid:123", "Sulfamethoxazole (antibiotic)",
 ]
-FORMULE_NOMI = [None, "C6H14O4"]
+NAME_FORMULAS = [None, "C6H14O4"]
 
 
-def stadio_nomi():
+def stage_names():
     import re
     import attributio.curation as cu
     from attributio import names
     saved = (cu.CEC_MAP, cu.NONCEC_OVERRIDE)
-    cu.CEC_MAP = cu.NAME_MAP = _tabella_curazione(CAMPAGNA / "curation" / "name_map.csv")
-    cu.NONCEC_OVERRIDE = _tabella_curazione(CAMPAGNA / "curation" / "category_override.csv")
+    cu.CEC_MAP = cu.NAME_MAP = _curation_table(CAMPAIGN / "curation" / "name_map.csv")
+    cu.NONCEC_OVERRIDE = _curation_table(CAMPAIGN / "curation" / "category_override.csv")
     try:
         rows = []
         for n in NOMI:
@@ -165,23 +165,23 @@ def stadio_nomi():
                  "noncec": cu.match_noncec_override(clean),
                  "identity": list(cu.curate_identity(None, None, clean)),
                  "identity_formula": list(cu.curate_identity(None, None, clean, "C1H2O3")),
-                 "raw_canonical": [names.canonical_name(n, f) for f in FORMULE_NOMI],
-                 "clean_canonical": [names.canonical_name(clean, f) for f in FORMULE_NOMI]}
+                 "raw_canonical": [names.canonical_name(n, f) for f in NAME_FORMULAS],
+                 "clean_canonical": [names.canonical_name(clean, f) for f in NAME_FORMULAS]}
             rows.append(r)
-        sin_nome = {"none": list(cu.curate_identity(None, None, None)), "formula": list(cu.curate_identity(None, None, None, "C9H9")),
+        unnamed = {"none": list(cu.curate_identity(None, None, None)), "formula": list(cu.curate_identity(None, None, None, "C9H9")),
                     "given": list(cu.curate_identity("Given", "ppcp", "Caffeine")), "blank_given": list(cu.curate_identity("  ", None, "caffeine"))}
-        return {"names": rows, "unnamed": sin_nome, "audit": cu.audit_cec_map()}
+        return {"names": rows, "unnamed": unnamed, "audit": cu.audit_cec_map()}
     finally:
         cu.CEC_MAP, cu.NONCEC_OVERRIDE = saved
 
 
-def stadio_membri(feat, C):
+def stage_members(feat, C):
     import attributio.curation as cu
     from attributio.chem import members
     from attributio.identity import identity_table_by_structure
     saved = (cu.CEC_MAP, cu.NONCEC_OVERRIDE)
-    cu.CEC_MAP = cu.NAME_MAP = _tabella_curazione(CAMPAGNA / "curation" / "name_map.csv")
-    cu.NONCEC_OVERRIDE = _tabella_curazione(CAMPAGNA / "curation" / "category_override.csv")
+    cu.CEC_MAP = cu.NAME_MAP = _curation_table(CAMPAIGN / "curation" / "name_map.csv")
+    cu.NONCEC_OVERRIDE = _curation_table(CAMPAIGN / "curation" / "category_override.csv")
     try:
         ev = members.feature_evidence(C, feat)
         mem = members.identity_members(ev)
@@ -194,7 +194,7 @@ def stadio_membri(feat, C):
         cu.CEC_MAP, cu.NONCEC_OVERRIDE = saved
 
 
-def stadio_proposte(C):
+def stage_proposals(C):
     from attributio.review import build
     from attributio.review.settings import ReviewSettings
     p = build.collect(C, ReviewSettings(), fetch=False, verbose=False)
@@ -204,20 +204,20 @@ def stadio_proposte(C):
     return {"settings": p.get("settings"), "features": rows}
 
 
-def stadio_decisioni(C, feat):
+def stage_decisions(C, feat):
     from attributio.readers.feature_decisions import load_feature_decisions, match_decisions
     d = load_feature_decisions(C.feature_decisions_csv)
     m = match_decisions(feat, d)
     return {"decisioni": frame_rows(d), "abbinate": frame_rows(m)}
 
 
-def stadio_sirius(C):
+def stage_sirius(C):
     from attributio.readers.sirius import load_sirius_tables
     cano, st, sp = load_sirius_tables(C)
     return {"canopus": frame_rows(cano), "structure": frame_rows(st), "spectral": frame_rows(sp)}
 
 
-def stadio_standard(C):
+def stage_standard(C):
     from attributio.annotate import detection_table, feature_mgf, standards_settings
     from attributio.readers import ms2
     from attributio.readers.standards import load_decisions, mass_rt_candidates, match_reference_standards
@@ -242,7 +242,7 @@ def stadio_standard(C):
     return out
 
 
-def stadio_sorbenti(C):
+def stage_sorbents(C):
     from attributio.annotate import detection_table
     from attributio.sorbents import blank_abundance
     df = C.load_feature_table("POS")
@@ -253,11 +253,11 @@ def stadio_sorbenti(C):
             "blank_abundance": [[t, blank_abundance(t)] for t in ("", "x (abundance 1.3E3)", "abundance 5)", "(abundance 2) (abundance 7)")]}
 
 
-def _pool_spettri():
+def _pool_spectra():
     """Nine invented MS2 spectra around the campaign's standard spectrum (fixed seed): shifted
     m/z, dropped and extra peaks (one below 1 %, one in the precursor region), other precursors."""
     import random
-    base = json.loads((CAMPAGNA / "library/ms2_pos.json").read_text(encoding="utf-8"))
+    base = json.loads((CAMPAIGN / "library/ms2_pos.json").read_text(encoding="utf-8"))
     rnd = random.Random(20260101)
     pool = []
     for k in range(9):
@@ -272,9 +272,9 @@ def _pool_spettri():
     return pool
 
 
-def _abbinamento_coppie(R):
+def _matching_pairs(R):
     import numpy as np
-    pool = _pool_spettri()
+    pool = _pool_spectra()
     tutte = [(i, j) for i in range(len(pool)) for j in range(len(pool)) if i != j]
     out = []
     for n, (i, j) in enumerate(tutte[::2][:30]):
@@ -289,22 +289,22 @@ def _abbinamento_coppie(R):
     return {"pool": pool, "coppie": out}
 
 
-def _abbinamento_librerie(L):
+def _matching_libraries(L):
     import numpy as np
     files = {}
-    for p in sorted(list(LIBRERIE.iterdir()) + [CAMPAGNA / "library/ms2_pos.json"]):
+    for p in sorted(list(LIBRARIES.iterdir()) + [CAMPAIGN / "library/ms2_pos.json"]):
         fmt = L.sniff(p)
         recs = [] if fmt not in L.PARSERS else [
             {"name": r["name"], "prec": r["prec"], "adduct": r["adduct"], "pol": r["pol"], "ik1": r["ik1"],
              "entry": r["entry"], "n_peaks": len(r["peaks"])} for r in L.PARSERS[fmt](p)]
         files[p.name] = {"format": fmt, "records": recs}
-    found = [[str(p.relative_to(LIBRERIE)), f] for p, f in L.find_library_files(LIBRERIE)]
+    found = [[str(p.relative_to(LIBRARIES)), f] for p, f in L.find_library_files(LIBRARIES)]
     adducts = ["[M+H]+", "M+H", "[M + H]+", "[M+Na]+", "[M-H]-", "M-H-", "[M+NH4]+", "[2M+H]+", "[M-H2O+H]+",
                "", "garbage", "[M+FA-H]-", "M+Cl"]
     return {"files": files, "found": found, "adduct_keys": {a: L.adduct_key(a) for a in adducts}}
 
 
-def _abbinamento_fonti():
+def _matching_sources():
     import pandas as pd
     from attributio.review import sources as S
 
@@ -328,45 +328,45 @@ def _abbinamento_fonti():
             return FONTI / f"gnps_{pol}"
 
     C = FakeC()
-    por_chiave = lambda d: [{"pol": k[0], "id": k[1], "items": v} for k, v in sorted(d.items())]
-    return {"sirius_hits": frame_rows(S.sirius_hits(C)), "sirius_formulas": por_chiave(S.sirius_formulas(C)),
-            "csi_top5": por_chiave(S.csi_top5(C)), "network_edges": frame_rows(S.network_edges(C)),
+    by_key = lambda d: [{"pol": k[0], "id": k[1], "items": v} for k, v in sorted(d.items())]
+    return {"sirius_hits": frame_rows(S.sirius_hits(C)), "sirius_formulas": by_key(S.sirius_formulas(C)),
+            "csi_top5": by_key(S.csi_top5(C)), "network_edges": frame_rows(S.network_edges(C)),
             "gnps_hits": frame_rows(S.gnps_hits(C))}
 
 
-def _abbinamento_impostazioni():
+def _matching_settings():
     from dataclasses import asdict
     from types import SimpleNamespace
     from attributio.review.settings import ReviewSettings
-    testo = ('[review]\nppm_ion = 3.5\ntop_n = 8\nraw_dir = "{lab}/raw"\nexclude_raw_prefixes = ["Po_X", "Qq"]\n'
+    text = ('[review]\nppm_ion = 3.5\ntop_n = 8\nraw_dir = "{lab}/raw"\nexclude_raw_prefixes = ["Po_X", "Qq"]\n'
              'lc_gradient = [[0, 5], [10, 95.5]]\nrt_logp_floor = 1\n')
     import tomllib
-    cfg = tomllib.loads(testo)["review"]
+    cfg = tomllib.loads(text)["review"]
     S = ReviewSettings.for_campaign(SimpleNamespace(review_cfg=cfg, config_path=Path("campaign.toml")))
     try:
         ReviewSettings.for_campaign(SimpleNamespace(review_cfg={"ppm_ionn": 1}, config_path=Path("campaign.toml")))
         err = None
     except ValueError as e:
         err = str(e)
-    return {"defaults": asdict(ReviewSettings()), "toml": testo, "parsed": asdict(S), "unknown_key_error": err}
+    return {"defaults": asdict(ReviewSettings()), "toml": text, "parsed": asdict(S), "unknown_key_error": err}
 
 
-def stadio_abbinamenti():
+def stage_matches():
     """Review matching, delta-m formulas, library parsers, hit tables and settings (AT-05)."""
     from attributio.review import libraries as L
     from attributio.review import matching as R
-    spettri = _abbinamento_coppie(R)
+    spettri = _matching_pairs(R)
     pairs = spettri["coppie"]
     deltas = [14.01565, -14.01565, 15.994915, 28.0313, 42.010565, 79.956815, 176.032088, 2.01565, 13.979265,
               58.0, 0.5, -27.994915, 18.010565, 162.052824, 100.0, 14.0, 305.07, -43.99]
     deltas += [p["shift"] for p in pairs]
     formulas = [{"delta": d, "tol_mda": 5.0, "n": 3, "out": R.delta_formulas(d, 5.0, 3)} for d in deltas]
     formulas += [{"delta": d, "tol_mda": 1.0, "n": 2, "out": R.delta_formulas(d, 1.0, 2)} for d in deltas[:6]]
-    return {"pool": spettri["pool"], "coppie": pairs, "delta": formulas, "librerie": _abbinamento_librerie(L),
-            "fonti": _abbinamento_fonti(), "impostazioni": _abbinamento_impostazioni()}
+    return {"pool": spettri["pool"], "coppie": pairs, "delta": formulas, "librerie": _matching_libraries(L),
+            "fonti": _matching_sources(), "impostazioni": _matching_settings()}
 
 
-def stadio_formule():
+def stage_formulas():
     """Masses of 20 formulas/adducts, ion m/z, closest common adduct, structure fit and norm_name (AT-02)."""
     from attributio.chem import formula as F
     from attributio.chem.checks import norm_name
@@ -402,7 +402,7 @@ def _gauss(rt, c, w, h):
     return [h * math.exp(-0.5 * ((t - c) / w) ** 2) for t in rt]
 
 
-def stadio_spiegazioni():
+def stage_explanations():
     """Review proofs: sub-formula explanation, isotope pattern and comparison, MS2 purity, raw proofs and RT versus logP (AT-06)."""
     import numpy as np
     from attributio.review import explain as X
@@ -452,11 +452,11 @@ def stadio_spiegazioni():
         cmp_ = ISO.compare(ionf, pol, obs_mz, obs_it, sticks[0][0] + 0.0006, 0.06, 0.35, 10.0, 12.0)
         iso.append({"ion": ionf, "pol": pol, "sticks": [list(x) for x in sticks], "clusters": ISO.clusters(sticks),
                     "obs_mz": obs_mz, "obs_it": obs_it, "prec": sticks[0][0] + 0.0006, "cmp": cmp_})
-    return {"spiegazioni": expl, "isotopi": iso, "purezza": _spiegazioni_purezza(PU, RAW, ISO, X, S),
-            "rtlogp": _spiegazioni_rtlogp(RL)}
+    return {"spiegazioni": expl, "isotopi": iso, "purezza": _explanations_purity(PU, RAW, ISO, X, S),
+            "rtlogp": _explanations_rtlogp(RL)}
 
 
-def _spiegazioni_purezza(PU, RAW, ISO, X, S):
+def _explanations_purity(PU, RAW, ISO, X, S):
     import numpy as np
     prec = 301.1415
     mz = [299.12, 300.1389, prec, prec + 1.00336, prec + 2.0067, 302.35, 303.0102, 301.6]
@@ -493,7 +493,7 @@ def _spiegazioni_purezza(PU, RAW, ISO, X, S):
                                                     "ri": ri, "expl": expl, "rt": rt, "g1": g1, "g2": g2, "y": y, "blank": br}}
 
 
-def _spiegazioni_rtlogp(RL):
+def _explanations_rtlogp(RL):
     x = [0.2 + 0.31 * i for i in range(24)]
     y = [1.1 + 0.9 * v + 0.15 * math.sin(3 * i) for i, v in enumerate(x)]
     X = [[v, 150 + 12 * i, 20 + (i * 7) % 40, i % 6, i % 4, (i * 3) % 7] for i, v in enumerate(x)]
@@ -524,7 +524,7 @@ FRAGMENTI_SMILES = [
 ]
 
 
-def stadio_frammenti():
+def stage_fragments():
     """Systematic bond cleavage of 40 structures against peaks built from their own fragments (AT-06; needs RDKit)."""
     from attributio.review.fragmenter import fragment_molecule
     out = []
@@ -551,12 +551,12 @@ def stadio_frammenti():
     return {"molecole": out}
 
 
-ESPORTAZIONE = ROOT / "tests/data/attributio/campagna_esportazione"
+EXPORT = ROOT / "tests/data/attributio/campagna_esportazione"
 GRADIENTE = ROOT / "tests/data/attributio/campagna_gradiente"
-USCITA_ESPORTAZIONE = ROOT / "tests/golden/attributio/esportazione"
+OUTPUT_EXPORT = ROOT / "tests/golden/attributio/esportazione"
 
 
-def foglio(nome, df):
+def sheet(nome, df):
     """DataFrame -> {name, head, rows}: a missing value is null, the numbers stay numbers."""
     import pandas as pd
     righe = [[None if (not isinstance(v, (list, dict, tuple, set)) and pd.isna(v)) else jsonable(v) for v in r]
@@ -569,12 +569,12 @@ def campagna_esportazione(src: Path):
     import shutil
     import tempfile
     tmp = Path(tempfile.mkdtemp())
-    shutil.copytree(CAMPAGNA, tmp / "c")
-    shutil.copytree(ESPORTAZIONE, tmp / "c", dirs_exist_ok=True)
+    shutil.copytree(CAMPAIGN, tmp / "c")
+    shutil.copytree(EXPORT, tmp / "c", dirs_exist_ok=True)
     return carica(src, tmp / "c"), tmp
 
 
-def stadio_quantificazione(src):
+def stage_quantification(src):
     from attributio.annotate import load_annotations
     from attributio.quantify import quantify_lvl1, quantify_lvl1_environmental
     C, _ = campagna_esportazione(src)
@@ -584,10 +584,10 @@ def stadio_quantificazione(src):
         warnings.simplefilter("always")
         e = quantify_lvl1_environmental(C, feat)
     avvisi = [str(x.message) for x in w if "quantify_lvl1_environmental" in str(x.message)]
-    return {"lvl1": foglio("lvl1", q), "env": foglio("env", e), "avviso": avvisi[0] if avvisi else None}
+    return {"lvl1": sheet("lvl1", q), "env": sheet("env", e), "avviso": avvisi[0] if avvisi else None}
 
 
-def stadio_schymanski(src):
+def stage_schymanski(src):
     import pandas as pd
     from attributio.diagnostics import schymanski_export as se
     from attributio.identity import identity_table
@@ -618,14 +618,14 @@ def stadio_schymanski(src):
     if not by_identity.empty:
         by_identity = by_identity[[c for c in se._FRONT if c in by_identity.columns]
                                   + [c for c in by_identity.columns if c not in se._FRONT]]
-    hojas = [foglio(n, d if not d.empty else pd.DataFrame({e: []}))
+    hojas = [sheet(n, d if not d.empty else pd.DataFrame({e: []}))
              for n, d, e in (("by_identity", by_identity, "(no identities)"), ("features", features, "(no features)"),
                              ("excluded", excluded, "(no excluded identities)"))]
-    hojas.append(foglio("notes", se._notes(C, sites, C.calibration_csv is not None)))
+    hojas.append(sheet("notes", se._notes(C, sites, C.calibration_csv is not None)))
     return {"sheets": hojas}
 
 
-def _senza_dati_di_pericolo(pt):
+def _without_hazard_data(pt):
     """Stand-in of the hazard record without snapshot data: the record of a name that the registry does not know."""
     from attributio.ecotox import hazard as hz
 
@@ -642,47 +642,47 @@ def _senza_dati_di_pericolo(pt):
     pt._hazard.record = record
 
 
-def stadio_pubblicazione(src):
+def stage_publication(src):
     import pandas as pd
     from attributio.diagnostics import publication_table as pt
     C, _ = campagna_esportazione(src)
-    _senza_dati_di_pericolo(pt)
-    vuoto = (pd.DataFrame(columns=["inchikey_first_block"]), pd.DataFrame(columns=["name", "first_block", "campaign"]))
-    res = pt.build(C, "all", registry=vuoto)
+    _without_hazard_data(pt)
+    empty = (pd.DataFrame(columns=["inchikey_first_block"]), pd.DataFrame(columns=["name", "first_block", "campaign"]))
+    res = pt.build(C, "all", registry=empty)
     rd = pt.readme(res, "Title", "Description", {})
-    return {"identities": foglio("Identities", res["Identities"]), "excluded": foglio("Excluded", res["Excluded"]),
-            "readme": foglio("README", rd), "counts": res["counts"], "sites": res["sites"], "short": res["short"],
+    return {"identities": sheet("Identities", res["Identities"]), "excluded": sheet("Excluded", res["Excluded"]),
+            "readme": sheet("README", rd), "counts": res["counts"], "sites": res["sites"], "short": res["short"],
             "csv": res["Identities"].to_csv(sep=";", decimal=".", index=False, encoding="utf-8")}
 
 
-def stadio_gradiente(src):
+def stage_gradient(src):
     from attributio import gradient as gr
     from attributio.annotate import load_annotations
     from attributio.diagnostics import publication_table as pt
     import pandas as pd
     C = carica(src, GRADIENTE)
     sites = list(C.sites)
-    vero = pt.rt_logp_flags
+    true = pt.rt_logp_flags
 
-    def senza_l3(feat):          # the reference stops when no Level 3 feature rests on CSI:FingerID: no flags then
+    def without_l3(feat):          # the reference stops when no Level 3 feature rests on CSI:FingerID: no flags then
         try:
-            return vero(feat)
+            return true(feat)
         except ValueError:
             return pd.DataFrame(columns=["_pol", "_id", "rt_logp_resid", "rt_logp_z", "rt_logp_outlier", "rt_logp_note"])
-    pt.rt_logp_flags = senza_l3
+    pt.rt_logp_flags = without_l3
     feat = load_annotations(C)
     gt, dd = pt.canonical_identities(feat, sites)
     fr = pt.feature_frame(C, feat, gt, sites)
     ident = dd.rename(columns={"nome_comune": "canonical_name"})
     fi = fr.rename(columns={"nome_comune": "canonical_name"})[["_pol", "_id", "rt", "canonical_name"]]
-    out = {"sites": sites, "identities": foglio("identities", ident), "feature_identities": foglio("fi", fi)}
+    out = {"sites": sites, "identities": sheet("identities", ident), "feature_identities": sheet("fi", fi)}
     for nome, same in (("stesso_sorbente", None), ("senza_sorbente", False)):
         tab, summ = gr.identity_gradient(C, feat, ident, sites[0], sites[1], 3.0,
                                          feature_identities_fn=lambda _f: fi, same_sorbent=same)
-        out[nome] = {"table": foglio(nome, tab), "summary": jsonable(summ.__dict__)}
+        out[nome] = {"table": sheet(nome, tab), "summary": jsonable(summ.__dict__)}
     nuvola = gr.feature_cloud_gradient(C, feat, sites[0], sites[1])
     cols = ["_pol", "_id", "area_us", "area_ds", "status", "log2FC_us_ds", "abs_area"]
-    out["cloud"] = foglio("cloud", nuvola[cols])
+    out["cloud"] = sheet("cloud", nuvola[cols])
     ar = gr.compute_gradient_areas(C, tuple(sites))
     out["areas"] = {f"{p}|{s}": {str(k): v for k, v in sorted(m.items())} for (p, s), m in sorted(ar.items())}
     ab = gr.compute_gradient_areas_by_sorbent(C, tuple(sites))
@@ -691,9 +691,9 @@ def stadio_gradiente(src):
     return out
 
 
-def controlla(uscita: Path, campagna: Path) -> int:
-    got = json.loads((uscita / "livelli.json").read_text(encoding="utf-8"))["features"]
-    with open(campagna / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
+def controlla(output: Path, campaign: Path) -> int:
+    got = json.loads((output / "livelli.json").read_text(encoding="utf-8"))["features"]
+    with open(campaign / "livelli_attesi.csv", encoding="utf-8", newline="") as fh:
         att = list(csv.DictReader(fh, delimiter=";"))
     if len(got) != len(att):
         print(f"FAIL: {len(got)} features, {len(att)} expected")
@@ -714,11 +714,11 @@ def main() -> int:
     from attributio_tox_riferimento import stadi_tox
 
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--campagna", type=Path, default=CAMPAGNA)
+    ap.add_argument("--campagna", type=Path, default=CAMPAIGN)
     ap.add_argument("--uscita", type=Path, default=USCITA)
-    ap.add_argument("--sorbenti", type=Path, default=SORBENTI)
-    ap.add_argument("--uscita-sorbenti", type=Path, default=USCITA_SORBENTI)
-    ap.add_argument("--uscita-esportazione", type=Path, default=USCITA_ESPORTAZIONE)
+    ap.add_argument("--sorbenti", type=Path, default=SORBENTS)
+    ap.add_argument("--uscita-sorbenti", type=Path, default=OUTPUT_SORBENTS)
+    ap.add_argument("--uscita-esportazione", type=Path, default=OUTPUT_EXPORT)
     ap.add_argument("--solo", nargs="+", metavar="STADIO", help="write only these stages (e.g. spiegazioni frammenti)")
     ap.add_argument("--controlla", action="store_true",
                     help="compare livelli.json with livelli_attesi.csv (exit 1 on difference)")
@@ -732,31 +732,31 @@ def main() -> int:
     from attributio.annotate import load_annotations
     feat = load_annotations(C)
     esp = a.uscita_esportazione
-    stadi = {
-        "quantificazione": lambda: scrivi(esp, "quantificazione.json", stadio_quantificazione(root)),
-        "schymanski": lambda: scrivi(esp, "schymanski.json", stadio_schymanski(root)),
-        "pubblicazione": lambda: scrivi(esp, "pubblicazione.json", stadio_pubblicazione(root)),
-        "gradiente": lambda: scrivi(esp, "gradiente.json", stadio_gradiente(root)),
-        "campagna": lambda: scrivi(a.uscita, "campagna.json", stadio_campagna(C)),
-        "letture": lambda: scrivi(a.uscita, "letture.json", stadio_letture(C)),
-        "rilevazione": lambda: scrivi(a.uscita, "rilevazione.json", stadio_rilevazione(C)),
-        "livelli": lambda: scrivi(a.uscita, "livelli.json", stadio_livelli(feat)),
-        "identita": lambda: scrivi(a.uscita, "identita.json", stadio_identita(feat, C)),
-        "nomi": lambda: scrivi(a.uscita, "nomi.json", stadio_nomi()),
-        "membri": lambda: scrivi(a.uscita, "membri.json", stadio_membri(feat, C)),
-        "proposte": lambda: scrivi(a.uscita, "proposte.json", stadio_proposte(C)),
-        "decisioni": lambda: scrivi(a.uscita, "decisioni.json", stadio_decisioni(C, feat)),
-        "abbinamenti": lambda: scrivi(a.uscita, "abbinamenti.json", stadio_abbinamenti()),
-        "formule": lambda: scrivi(a.uscita, "formule.json", stadio_formule()),
-        "sirius": lambda: scrivi(a.uscita, "sirius.json", stadio_sirius(C)),
-        "standard": lambda: scrivi(a.uscita, "standard.json", stadio_standard(C)),
-        "spiegazioni": lambda: scrivi(a.uscita, "spiegazioni.json", stadio_spiegazioni()),
-        "frammenti": lambda: scrivi(a.uscita, "frammenti.json", stadio_frammenti()),
-        "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stadio_sorbenti(carica(root, a.sorbenti.resolve()))),
+    stages = {
+        "quantificazione": lambda: scrivi(esp, "quantificazione.json", stage_quantification(root)),
+        "schymanski": lambda: scrivi(esp, "schymanski.json", stage_schymanski(root)),
+        "pubblicazione": lambda: scrivi(esp, "pubblicazione.json", stage_publication(root)),
+        "gradiente": lambda: scrivi(esp, "gradiente.json", stage_gradient(root)),
+        "campagna": lambda: scrivi(a.uscita, "campagna.json", stage_campaign(C)),
+        "letture": lambda: scrivi(a.uscita, "letture.json", stage_reads(C)),
+        "rilevazione": lambda: scrivi(a.uscita, "rilevazione.json", stage_detection(C)),
+        "livelli": lambda: scrivi(a.uscita, "livelli.json", stage_levels(feat)),
+        "identita": lambda: scrivi(a.uscita, "identita.json", stage_identity(feat, C)),
+        "nomi": lambda: scrivi(a.uscita, "nomi.json", stage_names()),
+        "membri": lambda: scrivi(a.uscita, "membri.json", stage_members(feat, C)),
+        "proposte": lambda: scrivi(a.uscita, "proposte.json", stage_proposals(C)),
+        "decisioni": lambda: scrivi(a.uscita, "decisioni.json", stage_decisions(C, feat)),
+        "abbinamenti": lambda: scrivi(a.uscita, "abbinamenti.json", stage_matches()),
+        "formule": lambda: scrivi(a.uscita, "formule.json", stage_formulas()),
+        "sirius": lambda: scrivi(a.uscita, "sirius.json", stage_sirius(C)),
+        "standard": lambda: scrivi(a.uscita, "standard.json", stage_standard(C)),
+        "spiegazioni": lambda: scrivi(a.uscita, "spiegazioni.json", stage_explanations()),
+        "frammenti": lambda: scrivi(a.uscita, "frammenti.json", stage_fragments()),
+        "sorbenti": lambda: scrivi(a.uscita_sorbenti, "sorbenti.json", stage_sorbents(carica(root, a.sorbenti.resolve()))),
     }
-    stadi.update(stadi_tox(frame_rows, scrivi, lambda: carica(root, CAMPAGNA)))
-    for nome in a.solo or list(stadi):
-        stadi[nome]()
+    stages.update(stadi_tox(frame_rows, scrivi, lambda: carica(root, CAMPAIGN)))
+    for nome in a.solo or list(stages):
+        stages[nome]()
     return controlla(a.uscita, a.campagna) if a.controlla else 0
 
 

@@ -39,17 +39,17 @@ r = Run(port=8962, wd="/tmp/wd_apri_subito")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.wait_for_selector("#drop"); attendi(pg, "window.qqReady === true", 60000)
+        pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
         pg.evaluate(HOLD)
-        lib.AUTO_TEMPI = False                               # the times must come from the late proposals, not from the test
+        lib.AUTO_TIMES = False                               # the times must come from the late proposals, not from the test
         pg.set_input_files("#pick", LR)
         def first_row():
-            attendi(pg, "window.__up != null", 20000)
+            wait_for_js(pg, "window.__up != null", 20000)
             dt = pg.evaluate("window.__up - window.__pick")
             assert dt < 100, f"first progress row after {dt:.0f} ms"
         step("the first progress row shows within 100 ms of the drop", first_row)
         def landing_then_click():
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === 3", 60000)
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === 3", 60000)
             assert pg.evaluate("window.__moved") == [], f"the drop area moved: {pg.evaluate('window.__moved')}"
             assert pg.evaluate("window.__early") == [], f"shown while reading: {pg.evaluate('[...new Set(window.__early)]')}"
             frames(pg, 3)
@@ -62,8 +62,8 @@ try:
             assert "Loading finished" not in txt and "Caricamento finito" not in txt and "Loading the files" not in txt, "no end-of-loading text"
         step("the first file opens by itself, the others wait in the list", landing_then_click)
         def late_proposal():
-            attendi(pg, "RUOLI.busy() === 0 && ST.files.every(f => f.prop)", 30000)
-            attendi(pg, "E.files.filter(f => !f.gone).map(f => f.time).sort((a, b) => a - b).join() === '0,10,30'", 10000)
+            wait_for_js(pg, "RUOLI.busy() === 0 && ST.files.every(f => f.prop)", 30000)
+            wait_for_js(pg, "E.files.filter(f => !f.gone).map(f => f.time).sort((a, b) => a - b).join() === '0,10,30'", 10000)
             assert pg.locator("#flist input[data-k=time].guess").count() >= 2, "the proposed times carry the guess class"
         step("a proposal that lands after the files opened reaches the open files", late_proposal)
         def table_button():
@@ -72,7 +72,7 @@ try:
             pg.wait_for_selector("#wtable .samphead", state="visible", timeout=10000)
             assert pg.get_attribute("#samptab", "aria-pressed") == "true" and not pg.is_visible("#dpanels .pnl"), "the table in place of the panels"
             pg.click("#flst .fl .nm >> nth=1")
-            attendi(pg, "document.getElementById('v-workspace').dataset.work === 'panels'", 10000)
+            wait_for_js(pg, "document.getElementById('v-workspace').dataset.work === 'panels'", 10000)
             assert pg.get_attribute("#samptab", "aria-pressed") == "false"
         step("«Sample table» shows the table; a click on a file goes back to the panels", table_button)
         def table_button_after_close():
@@ -80,17 +80,17 @@ try:
             b = pg.evaluate("(() => { const s = document.querySelector('#samptab').getBoundingClientRect(), l = [...document.querySelectorAll('#flst .fl')].pop().getBoundingClientRect(); return [s.top, l.bottom]; })()")
             assert b[0] >= b[1] - 1, f"the button is below the file list: {b}"
             pg.click("#np-closeall")
-            attendi(pg, "document.getElementById('v-workspace').dataset.work === 'landing'", 10000)
+            wait_for_js(pg, "document.getElementById('v-workspace').dataset.work === 'landing'", 10000)
             assert pg.is_enabled("#samptab"), "the button is not inert on the landing"
             pg.click("#samptab")
             pg.wait_for_selector("#wtable .samphead", state="visible", timeout=10000)
             assert pg.get_attribute("#samptab", "aria-pressed") == "true", "the table is back"
             pg.focus("#samptab"); pg.keyboard.press("Enter")
-            attendi(pg, "document.getElementById('v-workspace').dataset.work !== 'table'", 10000)
+            wait_for_js(pg, "document.getElementById('v-workspace').dataset.work !== 'table'", 10000)
         step("«Sample table» sits below the list and works after the X", table_button_after_close)
         def hr_aside():
             pg.set_input_files("#pick", [str(HR)])
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && ST.files.length === 4 && !document.querySelector('#hrmix').hidden", 60000)
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && ST.files.length === 4 && !document.querySelector('#hrmix').hidden", 60000)
             assert pg.evaluate("OPENNOW.world()") is False, "the session stays low resolution"
             assert pg.evaluate("ST.files.find(f => f.hr).use") is False, "the HR file is unticked"
             assert pg.evaluate("!E.files.some(f => !f.gone && f.file.startsWith('HR_'))")
@@ -102,7 +102,7 @@ try:
             pg.wait_for_selector("#askdlg[open]", timeout=20000)
             assert "51" in pg.inner_text("#asktxt"), pg.inner_text("#asktxt")
             pg.click("#askno")
-            attendi(pg, "ST.files.filter(f => f.name.startsWith('M_')).length === 51 && UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
+            wait_for_js(pg, "ST.files.filter(f => f.name.startsWith('M_')).length === 51 && UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
             assert pg.evaluate("ST.files.filter(f => f.name.startsWith('M_') && f.use).length") == 0, "«Choose»: all unticked"
             assert pg.evaluate("!E.files.some(f => !f.gone && f.file.startsWith('M_'))"), "none of them opened"
         step("more than 50 files ask once; «Choose» leaves them unticked", many)
@@ -110,9 +110,9 @@ try:
             # a fresh visit whose files are not of the starting tab (Full scan): the click on one changes the tab, under no veil
             q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
             q.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-            q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop"); attendi(q, "window.qqReady === true", 60000)
+            q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop"); wait_for_js(q, "window.qqReady === true", 60000)
             q.evaluate(HOLD); q.set_input_files("#pick", [str(f) for f in KINDS])
-            attendi(q, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length >= 2", 60000)
+            wait_for_js(q, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length >= 2", 60000)
             q.wait_for_selector("#dpanels .pnl canvas", timeout=60000)
             assert q.evaluate("E.tab") != "full", "the first file is of another tab"
             assert q.evaluate("window.__early") == [], f"shown while opening: {q.evaluate('[...new Set(window.__early)]')}"

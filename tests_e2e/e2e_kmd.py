@@ -114,6 +114,13 @@ try:
             pg.wait_for_function("E.panels.some(p => p.pfasIon) && E.panels.some(p => p.pfasMs2)", timeout=30000)
             assert pg.locator("#pfas-tab tr.sel").count() == 1
         step("PFAS: a click opens the XIC and the MS2 scan", pfas_click)
+        def pfas_capped():
+            assert pg.evaluate("PFAS.result.total") == 9 and pg.locator("#pfas-capped").count() == 0, "every ion examined: no note"
+            pg.evaluate("PFAS.result.total = 400")          # a table longer than the view's cap: the summary says so once, with the next step
+            pg.locator("#pfas-plot g[data-i]").nth(4).dispatch_event("click"); pg.wait_for_selector("#pfas-capped", timeout=10000)
+            want = pg.evaluate("I18N.t('pfas.capped', { n: 9, m: 400, go: I18N.t('kmd.go') })")
+            assert pg.inner_text("#pfas-capped") == want and pg.locator("#pfas-res .err").count() == 0, pg.inner_text("#pfas-capped")
+        step("PFAS: a table longer than the cap of the view gets one calm note with the next step", pfas_capped)
         def unit():
             pg.select_option("#kmd-unit", "CH2"); pg.click("#kmd-go"); pg.wait_for_function("KMD.params.unit==='CH2' && KMD.result && KMD.result.unit.id==='CH2'", timeout=10000)      # the result follows the parameter
             assert pg.evaluate("KMD.result.series.length") == 0 or pg.evaluate("KMD.result.series[0].members.length") < 7, "another unit does not regroup the CF2 series"

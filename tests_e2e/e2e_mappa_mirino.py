@@ -19,7 +19,7 @@ r = Run(port=8899, wd="/tmp/wd_mirino_e2e")
 def case(pg, label):
     box = lambda: pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
     def prepare():
-        pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); attendi(pg, M + ".el.classList.contains('max')"); ready(pg)
+        pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); wait_for_js(pg, M + ".el.classList.contains('max')"); ready(pg)
         pg.evaluate(COUNT)
     step(f"{label}: full screen, sight on", prepare)
     def bitmaps():                                          # the margin plots are never stretched: bitmap aspect = box aspect (1 px)
@@ -36,7 +36,7 @@ def case(pg, label):
         for i in range(70):                                     # fast: no pause between events
             pg.mouse.move(c[0] + c[2] * .2 + i * 7, y0 + (i % 7) * 4)
             if i % 5 == 0: samples.append(pg.evaluate(f"(()=>{{const s={M}._mz.shown;return s?{{sp:s.sp,xi:s.xi,rt:s.pt.rt,mz:s.pt.mz}}:null}})()"))
-        ready(pg); attendi(pg, "(s => !!s && !!s.sp && !!s.xi)(" + M + "._mz.shown)")
+        ready(pg); wait_for_js(pg, "(s => !!s && !!s.sp && !!s.xi)(" + M + "._mz.shown)")
         rq = pg.evaluate("window.__rq"); n = len(rq)
         assert "nearest_scan" not in rq and "spectrum" not in rq, rq                          # the scan is found in the page, one scan by position
         assert n <= 70 + 8, n                                                                 # at most about one request per event, never a queue per pixel
@@ -80,7 +80,7 @@ def case(pg, label):
     step(f"{label}: scans visited before come from the cache", cached)
     def keyboard():
         pg.evaluate(M + ".cv.focus()"); p0 = pg.evaluate(f"MAPPA.point({M})")
-        pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); ready(pg); attendi(pg, f"MAPPA.point({M}).rt > {p0['rt']!r}")
+        pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); ready(pg); wait_for_js(pg, f"MAPPA.point({M}).rt > {p0['rt']!r}")
         p1 = pg.evaluate(f"MAPPA.point({M})"); assert p1["rt"] > p0["rt"]
         sh = pg.evaluate(f"{M}._mz.shown"); assert sh["sp"] and sh["xi"], sh
     step(f"{label}: arrows still move the sight scan by scan", keyboard)
@@ -90,9 +90,9 @@ try:
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "typeof E !== 'undefined'")
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
-        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, M + "._a")
+        pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "typeof E !== 'undefined'")
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
+        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); wait_for_js(pg, M + "._a")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         case(pg, "LR")
         # high resolution: the Full Scans of a synthetic Orbitrap file, in a session of their own
@@ -102,10 +102,10 @@ try:
         pg2.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         r2 = Run(port=8900, wd="/tmp/wd_mirino_e2e2")
         try:
-            pg2.goto(f"http://127.0.0.1:{r2.port}/"); attendi(pg2, "typeof E !== 'undefined'")
-            pg2.set_input_files("#pick", [str(hr)]); attendi(pg2, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
+            pg2.goto(f"http://127.0.0.1:{r2.port}/"); wait_for_js(pg2, "typeof E !== 'undefined'")
+            pg2.set_input_files("#pick", [str(hr)]); wait_for_js(pg2, "document.querySelectorAll('#flist input[data-k=use]').length >= 1")
             pg2.click("#opbtn"); ready(pg2); frames(pg2, 3); pg2.evaluate("document.querySelector('.fl')?.click()"); ready(pg2)
-            pg2.evaluate("reveal(addPanel('map',{k:E.files[0].k}))"); ready(pg2); attendi(pg2, M + "._a")
+            pg2.evaluate("reveal(addPanel('map',{k:E.files[0].k}))"); ready(pg2); wait_for_js(pg2, M + "._a")
             case(pg2, "HR")
         finally:
             r2.close()

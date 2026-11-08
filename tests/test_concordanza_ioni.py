@@ -19,7 +19,7 @@ from valida.tabelle import Tabella  # noqa: E402
 ORO = ROOT / "tests" / "data" / "untargeted" / "mzmine39"
 
 
-def tabelle(n: int = 40, k: int = 3):
+def tables(n: int = 40, k: int = 3):
     """Two identical tables but for the unit of the areas (ours counts x s, mzmine intensity x min) and the RT (+0.01 min)."""
     rng = np.random.default_rng(7)
     mz, rt = np.sort(rng.uniform(150, 800, n)), rng.uniform(1, 20, n)
@@ -31,21 +31,21 @@ def tabelle(n: int = 40, k: int = 3):
 
 
 def test_converted_units_give_zero_log_ratio_on_equal_areas():
-    nat, mm = tabelle()
+    nat, mm = tables()
     c = M.concordanza_mzmine_ioni(nat, mm, [0, 1, 2], 1e3)
     assert c["richiamo"] == 1.0 and c["precisione"] == 1.0 and c["spearman"] > 0.999
     assert c["log2_mediano"] < 1e-9 and c["log2_centrato"] < 1e-9
 
 
 def test_without_the_conversion_the_ratio_is_the_factor_60():
-    nat, mm = tabelle()
+    nat, mm = tables()
     mm.area = mm.area * M.MIN_A_S                      # mzmine areas in counts x s of ours would be 60 times too large after the conversion
     c = M.concordanza_mzmine_ioni(nat, mm, [0, 1, 2], 1e3)
     assert abs(c["log2_mediano"] - np.log2(60)) < 1e-9 and c["log2_centrato"] < 1e-9
 
 
 def test_a_row_under_the_floor_leaves_both_sides():
-    nat, mm = tabelle(n=10, k=1)
+    nat, mm = tables(n=10, k=1)
     nat.altezza[3, 0] = mm.altezza[3, 0] = 5.0         # under the floor in both
     c = M.concordanza_mzmine_ioni(nat, mm, [0], 100.0)
     assert (c["righe_mzmine"], c["righe_native"], c["abbinate"]) == (9, 9, 9) and c["richiamo"] == 1.0 and c["precisione"] == 1.0
@@ -55,14 +55,14 @@ def test_a_row_under_the_floor_leaves_both_sides():
 
 
 def test_heights_are_required():
-    nat, mm = tabelle(n=5, k=1)
+    nat, mm = tables(n=5, k=1)
     nat.altezza = None
     with pytest.raises(ValueError, match="no heights"):
         M.concordanza_mzmine_ioni(nat, mm, [0], 1.0)
 
 
-def uno(mz: float, rt: float, alt: float = 1e5, nome: str = "t") -> Tabella:
-    return Tabella(nome, ["a"], np.array(mz, float).reshape(-1), np.array(rt, float).reshape(-1), np.full(len(np.atleast_1d(mz)), alt * 10.0).reshape(-1, 1),
+def uno(mz: float, rt: float, alt: float = 1e5, name: str = "t") -> Tabella:
+    return Tabella(name, ["a"], np.array(mz, float).reshape(-1), np.array(rt, float).reshape(-1), np.full(len(np.atleast_1d(mz)), alt * 10.0).reshape(-1, 1),
                    altezza=np.full(len(np.atleast_1d(mz)), alt).reshape(-1, 1))
 
 
@@ -72,31 +72,31 @@ def lista(mz, rt, a, b) -> list:
 
 def test_reason_family_a_row_of_mzmine_that_is_a_member_of_one_of_ours():
     nat = uno([300.0], [5.0])
-    mm = uno([300.0, 301.0034], [5.0, 5.02], nome="mm")             # the second row of mzmine is the M+1 of the first
-    membri = (np.array([0, 2]), np.array([300.0, 301.0034]), np.array([5.0, 5.02]))
-    vuota = lista([], [], [], [])
-    e = MM.classifica(nat, mm, [0], 1e4, vuota, vuota, None, membri)
+    mm = uno([300.0, 301.0034], [5.0, 5.02], name="mm")             # the second row of mzmine is the M+1 of the first
+    members = (np.array([0, 2]), np.array([300.0, 301.0034]), np.array([5.0, 5.02]))
+    empty = lista([], [], [], [])
+    e = MM.classifica(nat, mm, [0], 1e4, empty, empty, None, members)
     assert MM.conteggi(e)["mzmine"]["family"] == 1 and e["mzmine"]["family"] == [1]
     assert sum(len(v) for v in e["mzmine"].values()) == 1
 
 
 def test_reason_split_mzmine_cuts_a_peak_that_we_keep_whole():
     nat = uno([400.0], [3.45])
-    mm = uno([400.0, 400.0], [3.40, 3.50], nome="mm")                # mzmine closes at a zero: two features, ours one
+    mm = uno([400.0, 400.0], [3.40, 3.50], name="mm")                # mzmine closes at a zero: two features, ours one
     nat_file = lista([400.0], [3.45], [3.30], [3.62])
     mm_file = lista([400.0, 400.0], [3.40, 3.50], [3.30, 3.50], [3.40, 3.62])
     e = MM.classifica(nat, mm, [0], 1e4, nat_file, mm_file)
     assert len(e["mzmine"]["split"]) == 1
     assert sum(len(v) for v in e["mzmine"].values()) == 1
     # the other way round: a row of ours with no partner that holds two features of mzmine
-    nat2, mm2 = uno([400.0], [3.45]), uno([400.0, 400.0], [3.30, 3.62], nome="mm")
+    nat2, mm2 = uno([400.0], [3.45]), uno([400.0, 400.0], [3.30, 3.62], name="mm")
     e2 = MM.classifica(nat2, mm2, [0], 1e4, lista([400.0], [3.45], [3.25], [3.70]), lista([400.0, 400.0], [3.30, 3.62], [3.25, 3.5], [3.5, 3.70]))
     assert len(e2["mzmine"]["split"]) == 2 and e2["nativa"]["split"] == [0]
 
 
 def test_reason_below_and_background_and_area():
     nat = uno([200.0, 250.0], [1.0, 2.0], 9e3)
-    mm = uno([200.0, 300.0], [1.0, 4.0], 1e5, nome="mm")
+    mm = uno([200.0, 300.0], [1.0, 4.0], 1e5, name="mm")
     nat.altezza[1, 0], mm.altezza[0, 0] = 5e4, 1e5
     mm.area[0, 0] = nat.area[0, 0] / M.MIN_A_S * 8.0               # area 8 times larger than ours
     nat.altezza[0, 0] = 1e5
@@ -110,31 +110,31 @@ def test_reason_below_and_background_and_area():
 
 def test_the_synthetic_files_are_written_again_with_the_same_content(tmp_path):
     shas = oro_mzmine.genera(tmp_path)
-    testo = (ORO / "LEGGIMI.md").read_text(encoding="utf-8")
+    text = (ORO / "LEGGIMI.md").read_text(encoding="utf-8")
     assert len(shas) == 4
-    for nome, h in shas.items():
+    for name, h in shas.items():
         # the pinned hashes are the ones of Linux: the last bit of libm/SIMD floats on another platform (seen on Windows with Python 3.14) can move a value across the 6-digit rounding;
         # elsewhere only the equality of two runs is checked
         if sys.platform == "linux":
-            assert f"`{nome}`: `{h}`" in testo, nome
-        assert (tmp_path / nome).stat().st_size < 2_000_000
+            assert f"`{name}`: `{h}`" in text, name
+        assert (tmp_path / name).stat().st_size < 2_000_000
     if sys.platform != "linux":
-        altra = tmp_path / "again"
-        altra.mkdir()
-        assert oro_mzmine.genera(altra) == shas
+        other = tmp_path / "again"
+        other.mkdir()
+        assert oro_mzmine.genera(other) == shas
 
 
 def test_the_gold_csv_have_the_documented_content():
     assert sum(p.stat().st_size for p in ORO.glob("*.csv")) <= 300_000
-    righe = {n: [r.split(",") for r in (ORO / f"{n}.csv").read_text(encoding="utf-8").splitlines()] for n in ("adap", "resolved", "aligned", "gapfilled", "isotopes")}
-    assert righe["adap"][0] == "file,id,mz,rt,rt_start,rt_end,height".split(",")
-    assert righe["resolved"][0] == "file,id,mz,rt,rt_start,rt_end,height,area".split(",")
-    assert righe["aligned"][0][:6] == "row,mz,rt,aligned_features,score,file".split(",")
-    stati = {r[-1] for r in righe["gapfilled"][1:]}
-    assert stati == {"DETECTED", "ESTIMATED"} and {r[-1] for r in righe["aligned"][1:]} == {"DETECTED"}
-    ruoli = {r[6] for r in righe["isotopes"][1:]}
-    assert ruoli == {"alone", "principal", "isotopologue"}
-    cariche = {r[5] for r in righe["isotopes"][1:] if r[6] == "principal"}
+    rows = {n: [r.split(",") for r in (ORO / f"{n}.csv").read_text(encoding="utf-8").splitlines()] for n in ("adap", "resolved", "aligned", "gapfilled", "isotopes")}
+    assert rows["adap"][0] == "file,id,mz,rt,rt_start,rt_end,height".split(",")
+    assert rows["resolved"][0] == "file,id,mz,rt,rt_start,rt_end,height,area".split(",")
+    assert rows["aligned"][0][:6] == "row,mz,rt,aligned_features,score,file".split(",")
+    states = {r[-1] for r in rows["gapfilled"][1:]}
+    assert states == {"DETECTED", "ESTIMATED"} and {r[-1] for r in rows["aligned"][1:]} == {"DETECTED"}
+    roles = {r[6] for r in rows["isotopes"][1:]}
+    assert roles == {"alone", "principal", "isotopologue"}
+    cariche = {r[5] for r in rows["isotopes"][1:] if r[6] == "principal"}
     assert cariche == {"1", "2"}                                   # the pairs of charge 1 and 2 are both found
 
 

@@ -3,7 +3,7 @@ shares of the phases are printed (the weights of progresso.js). Synthetic data. 
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT, attendi
+from lib import ROOT, wait_for_js
 import synth
 
 from lib import free_port; PORT = free_port()
@@ -44,7 +44,7 @@ try:
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         pg.evaluate(RECORD)
         pg.set_input_files("#pick", MZ + WIFF)
-        attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 4 && !PROGRESSO.busy()", 120000)
+        wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 4 && !PROGRESSO.busy()", 120000)
         pcs = pg.evaluate("window.__pc")
         print("   bar:", pcs)
         def forward():

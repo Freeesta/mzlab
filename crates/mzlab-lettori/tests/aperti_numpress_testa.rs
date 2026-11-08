@@ -60,8 +60,8 @@ fn numpress_solo_nelle_intensita_dopo_un_mz_lungo_si_riconosce() {
         "fixture must hide it past 64 KB"
     );
     let mut l = apri(byte);
-    assert_eq!(l.formato(), Formato::Altro("mzml-numpress"));
-    let s = l.scansione(0, 0).unwrap();
+    assert_eq!(l.format(), Formato::Altro("mzml-numpress"));
+    let s = l.scan(0, 0).unwrap();
     assert_eq!(s.mz.len(), 30_000);
 }
 
@@ -76,7 +76,7 @@ fn uno_spettro_senza_id_conserva_la_finestra() {
     let senza_id = testo.replace("id=\"controllerType=0 controllerNumber=1 scan=", "x=\"");
     let mut l = apri(senza_id.into_bytes());
     for k in 0..scan.len() {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         assert_eq!(s.id, format!("index={k}"));
         assert_eq!(s.index, k);
         assert_eq!(l.extra_mzml(&s).window, Some((100.0, 1000.0)), "scan {k}");
@@ -106,7 +106,7 @@ fn letti_da_testata(byte: Vec<u8>) -> (u64, u64) {
     };
     let mut l = mzlab_lettori::apri(fs, &Limiti::sito()).unwrap();
     let prima = letti.get();
-    l.testata_mzml(0).unwrap();
+    l.mzml_header(0).unwrap();
     (letti.get() - prima, dim)
 }
 

@@ -33,7 +33,7 @@ STROKES = f"""(async () => {{ const p = {P}, C = CanvasRenderingContext2D.protot
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(f) for f in FILES]); attendi(pg, "E.files.length >= 4", 300000); ready(pg)
+        pg.set_input_files("#pick", [str(f) for f in FILES]); wait_for_js(pg, "E.files.length >= 4", 300000); ready(pg)
         pg.evaluate("E.files.forEach(f => f.vis = true); syncBrowse(); renderFileList(); redrawAll(); 0"); ready(pg)
         pg.evaluate(f"(() => {{ const p = {P}; p.mode = 'cas'; return draw(p); }})()"); ready(pg)
         d = pg.evaluate(STROKES)

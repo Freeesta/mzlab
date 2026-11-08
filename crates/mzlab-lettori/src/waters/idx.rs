@@ -37,28 +37,31 @@ fn variante_a(b: &[u8]) -> bool {
     }
 }
 
-pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Vec<Riga>> {
+/// The rows of `b`; `None` when its size is no whole number of rows of either variant (an index cut inside a row).
+pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Option<Vec<Riga>>> {
     if b.is_empty() {
-        return Ok(Vec::new());
+        return Ok(Some(Vec::new()));
     }
     if !b.len().is_multiple_of(A) && !b.len().is_multiple_of(B) {
-        return Err(errore("IDX size"));
+        return Ok(None);
     }
     let a = variante_a(b);
     let passo = if a { A } else { B };
     limiti.voci_ok((b.len() / passo) as u64)?;
-    Ok(b.chunks_exact(passo)
-        .map(|r| Riga {
-            offset: if a {
-                u32_at(r, 0) as u64
-            } else {
-                u32_at(r, 22) as u64 | (u32_at(r, 26) as u64) << 32
-            },
-            conta: u32_at(r, 4) & 0x00FF_FFFF,
-            tic: f32_at(r, 8),
-            rt: f32_at(r, 12),
-        })
-        .collect())
+    Ok(Some(
+        b.chunks_exact(passo)
+            .map(|r| Riga {
+                offset: if a {
+                    u32_at(r, 0) as u64
+                } else {
+                    u32_at(r, 22) as u64 | (u32_at(r, 26) as u64) << 32
+                },
+                conta: u32_at(r, 4) & 0x00FF_FFFF,
+                tic: f32_at(r, 8),
+                rt: f32_at(r, 12),
+            })
+            .collect(),
+    ))
 }
 
 /// Bytes per record of a function: the first scan whose extent (up to the offset of the next scan, or up to the end of the DAT for the last) is a whole number of records.

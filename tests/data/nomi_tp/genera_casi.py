@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Generazione deterministica dei casi di test per la nomenclatura dei TP.
+"""Deterministic generation of the test cases for TP naming.
 
-Rigenera byte-per-byte:
-  - tests/data/nomi_tp/trasformazioni.csv (120 righe)
-  - tests/data/nomi_tp/casi_nomi.csv (110 righe)
+Regenerates byte for byte:
+  - tests/data/nomi_tp/trasformazioni.csv (120 rows)
+  - tests/data/nomi_tp/casi_nomi.csv (110 rows)
 
-Utilizza esclusivamente la libreria standard di Python e pyteomics.
+Uses only the Python standard library and pyteomics.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ import pyteomics.mass
 # -----------------------------------------------------------------------------
 # Deterministic transformation data (120 rows over 8 parent molecules)
 # -----------------------------------------------------------------------------
-TRASFORMAZIONI_RAW = """case_id,parent_name,parent_smiles,parent_formula,transformation,net_change,tp_formula_neutral
+TRANSFORMATIONS_RAW = """case_id,parent_name,parent_smiles,parent_formula,transformation,net_change,tp_formula_neutral
 T001,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,idrossilazione,+O,C15H12N2O2
 T002,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,addizione di metano,+CH4,C16H16N2O
 T003,carbamazepina,NC(=O)N1c2ccccc2C=Cc2ccccc21,C15H12N2O,diidrossilazione,+2O,C15H12N2O3
@@ -183,7 +183,7 @@ DIFF_SPEC = [
 
 
 def get_versions() -> tuple[str, str]:
-    """Restituisce le versioni di Python e pyteomics."""
+    """Returns the versions of Python and pyteomics."""
     py_ver = sys.version.split()[0]
     try:
         pyt_ver = importlib.metadata.version("pyteomics")
@@ -192,15 +192,15 @@ def get_versions() -> tuple[str, str]:
     return py_ver, pyt_ver
 
 
-def generate_trasformazioni_bytes() -> bytes:
-    """Genera deterministicamente i byte esatti di trasformazioni.csv."""
-    lines = [line.strip("\r\n") for line in TRASFORMAZIONI_RAW.strip().splitlines()]
+def generate_transformations_bytes() -> bytes:
+    """Generates the exact bytes of trasformazioni.csv, deterministically."""
+    lines = [line.strip("\r\n") for line in TRANSFORMATIONS_RAW.strip().splitlines()]
     content = "\r\n".join(lines) + "\r\n"
     return content.encode("utf-8")
 
 
-def build_casi_nomi_records(t_rows: list[dict[str, str]]) -> list[dict]:
-    """Costruisce i 110 casi di test secondo le specifiche di nomenclatura."""
+def build_name_cases_records(t_rows: list[dict[str, str]]) -> list[dict]:
+    """Builds the 110 test cases from the naming specs."""
     used_nominal_groups: set[tuple[str, int]] = set()
     for p, f, _ in ISOMERS_SPEC:
         mz = pyteomics.mass.calculate_mass(formula=f, charge=1)
@@ -263,8 +263,8 @@ def build_casi_nomi_records(t_rows: list[dict[str, str]]) -> list[dict]:
     return all_cases
 
 
-def generate_casi_nomi_bytes(records: list[dict]) -> bytes:
-    """Genera i byte esatti di casi_nomi.csv (CRLF, UTF-8)."""
+def generate_name_cases_bytes(records: list[dict]) -> bytes:
+    """Generates the exact bytes of casi_nomi.csv (CRLF, UTF-8)."""
     fieldnames = [
         "case_id", "parent_name", "tp_formula_neutral", "adduct",
         "mz_exact", "mz_nominal", "rt_min", "expected_group", "expected_kind"
@@ -288,7 +288,7 @@ def generate_casi_nomi_bytes(records: list[dict]) -> bytes:
 
 
 def verify_and_write(path: Path, new_bytes: bytes, label: str) -> None:
-    """Verifica la corrispondenza byte-per-byte se il file esiste, altrimenti scrive."""
+    """Checks the byte-for-byte match when the file exists, otherwise writes it."""
     if path.exists():
         existing_bytes = path.read_bytes()
         if existing_bytes != new_bytes:
@@ -300,7 +300,7 @@ def verify_and_write(path: Path, new_bytes: bytes, label: str) -> None:
 
 
 def cleanup_obsolete_scripts(target_dir: Path) -> None:
-    """Rimuove vecchi script scratch lasciati da iterazioni precedenti."""
+    """Removes old scratch scripts left by earlier iterations."""
     obsolete = target_dir / "generate_casi_nomi.py"
     if obsolete.exists():
         obsolete.unlink()
@@ -316,17 +316,17 @@ def main() -> None:
     print("=================================================================")
 
     # 1. Generate and check trasformazioni.csv
-    trasf_bytes = generate_trasformazioni_bytes()
-    trasf_path = target_dir / "trasformazioni.csv"
-    verify_and_write(trasf_path, trasf_bytes, "trasformazioni.csv")
+    transf_bytes = generate_transformations_bytes()
+    transf_path = target_dir / "trasformazioni.csv"
+    verify_and_write(transf_path, transf_bytes, "trasformazioni.csv")
 
     # 2. Load the transformation rows and generate casi_nomi.csv
-    reader = csv.DictReader(io.StringIO(trasf_bytes.decode("utf-8")))
+    reader = csv.DictReader(io.StringIO(transf_bytes.decode("utf-8")))
     t_rows = list(reader)
-    casi_records = build_casi_nomi_records(t_rows)
-    casi_bytes = generate_casi_nomi_bytes(casi_records)
-    casi_path = target_dir / "casi_nomi.csv"
-    verify_and_write(casi_path, casi_bytes, "casi_nomi.csv")
+    cases_records = build_name_cases_records(t_rows)
+    cases_bytes = generate_name_cases_bytes(cases_records)
+    cases_path = target_dir / "casi_nomi.csv"
+    verify_and_write(cases_path, cases_bytes, "casi_nomi.csv")
 
     # 3. Clean up obsolete scripts
     cleanup_obsolete_scripts(target_dir)
@@ -334,7 +334,7 @@ def main() -> None:
     print("-----------------------------------------------------------------")
     print(f"Rigenerazione deterministica completata con successo:")
     print(f"  - trasformazioni.csv: {len(t_rows)} righe, 11094 byte")
-    print(f"  - casi_nomi.csv:      {len(casi_records)} righe, 9324 byte")
+    print(f"  - casi_nomi.csv:      {len(cases_records)} righe, 9324 byte")
     print("=================================================================")
 
 

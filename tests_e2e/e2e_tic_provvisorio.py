@@ -25,14 +25,14 @@ def shown_then_replaced():
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             pg.evaluate(WATCH, False)
             pg.set_input_files("#pick", [f])
-            attendi(pg, "window.__tp !== null", 120000)
+            wait_for_js(pg, "window.__tp !== null", 120000)
             tp = pg.evaluate("window.__tp")
             assert not tp["panel"], "the provisional TIC must show before the first panel"
             assert "tic_lento.mzML" in tp["title"] and tp["label"] == tp["title"], tp
             assert tp["desc"] and tp["btn"] and tp["w"] > 0, f"the chart needs its description and «Data» table: {tp}"
             open_first(pg)
             ready(pg)
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0")
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0")
             assert pg.evaluate("document.getElementById('ticprov').hidden"), "the box stays once the real panel is open"
             assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
     finally:
@@ -46,7 +46,7 @@ def cancel_hides():
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             pg.evaluate(WATCH, True)
             pg.set_input_files("#pick", [f])
-            attendi(pg, "window.__tp !== null && UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
+            wait_for_js(pg, "window.__tp !== null && UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
             assert pg.evaluate("document.getElementById('ticprov').hidden"), "the box stays after «Cancel»"
             assert pg.evaluate("E.files.filter(f => !f.gone).length") == 0, "a cancelled file was opened"
             assert pg.is_visible("#start")

@@ -13,14 +13,14 @@ function attach(p) {
   const inPlotY = py => py >= M.t && py <= p._a.H - M.b;
   const yAxisZone = (px, py) => canYZ(p._a) && px < M.l && inPlotY(py);               // the numbers at the left of the y axis
   const xAxisZone = (px, py) => p._a && !p._a.map && px >= M.l && px <= p._a.W - M.r && py > p._a.H - M.b;   // the numbers under the x axis
-  const onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < 6;
+  const tol = () => (document.documentElement.classList.contains("ptr-touch") ? 14 : 6), onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < tol();   // tol: px to grab a line, a fingertip covers more than a mouse pointer
   const edgeOf = (it, e) => {
     let mate = null; for (const o of p.ints) if (o !== it && o.key === it.key) for (const f of ["a", "b"]) if (Math.abs(o[f] - it[e]) < INT_EPS) mate = { it: o, e: f };      // a border shared with the next peak moves both
     return { it, e, mate, snap: intSnap(p) };
   };
   const edgeAt = px => {
-    if (!p._a || p.type === "spec") return null;
-    for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) return edgeOf(it, e);
+    if (!p._a || p.type === "spec") return null; let best = null, bd = tol(); for (const it of p.ints) for (const e of ["a", "b"]) { const d = Math.abs(p._a.X(it[e]) - px); if (d < bd) { bd = d; best = { it, e }; } }
+    return best ? edgeOf(best.it, best.e) : null;                             // the nearest border: with a finger's tolerance two close borders both qualify
   };
   const edgeMove = (ed, x) => {                                              // the border stops at the neighbouring peak (touching is fine, overlapping is not)
     const { it, e, mate } = ed, o = e === "a" ? it.b : it.a, v = it[e], oth = p.ints.filter(i => i !== it && (!mate || i !== mate.it) && i.key === it.key);
@@ -167,9 +167,9 @@ function attach(p) {
       else { p.sel = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); pushLinked(p, p.sel[0], p.sel[1], nearestFile(p, (x0 + x1) / 2)); }
     } else if (p.type === "spec") { if (window.DDA && DDA.click(p, d.x0, d.y0)) return; specClick(p, d.x0, d.y0); }
     else if (p.type !== "spec") {
-      const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 6 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
+      const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 12 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { if (window.DDA && DDA.onTri(p, tt)) return; goMs2(tt); return; }          // a triangle: that MS2 scan (in the DDA trio, or in the MS2 tab)
-      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); p.sel = null; p.cur = xs; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
+      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); if (p.sel && x0 >= p.sel[0] && x0 <= p.sel[1]) p._dsel = [p.sel, e ? e.timeStamp : performance.now()]; p.sel = null; p.cur = xs; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs && !p.sel) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }
   };
   addEventListener("mouseup", p._up, { signal: p._ac.signal });
@@ -198,7 +198,8 @@ function attach(p) {
       return;
     }
     // one rule for every other graph, from the registry: an annotation = edit it; zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
-    const x = xd(rect(e));
+    const x = xd(rect(e)), ds = p._dsel; p._dsel = null;
+    if (!p.sel && ds && e.timeStamp - ds[1] < 800 && x >= ds[0][0] && x <= ds[0][1]) { p.sel = ds[0]; draw(p); }      // the first click of the pair cleared the range it was in: the double click is for that range
     await AZIONI.doppio({ vista: p.type, p, x, k: p.type === "spec" ? 0 : nearestFile(p, x), near: hit && hit.ann, e, dbl: true, a: p._a, m: null, has: false });
   };
   // no dragging needed (WCAG 2.5.7): on the focused chart + and - zoom, [ and ] move the visible range, 0 shows everything
@@ -444,7 +445,7 @@ function lcHtml(lc, row) {
    ${pda.start != null ? `<section class="msec"><h4>${I18N.t("method.pda.title")}</h4><table>${row(I18N.t("method.pda.range"), I18N.t("method.pda.value", { start: pda.start, stop: pda.stop, step: pda.step }))}</table></section>` : ""}`;
 }
 
-// ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
+// ------------------------------------------------------------------ acquisition method (read from the mzML)
 async function showMethod(sel) {
   const f = E.files[E.cur], held = METODO_M.any();      // the Agilent *.m method folders loaded outside any run (metodo-m.js) show here too
   if (!f) return held ? showHeldMethods("") : info(I18N.t("method.none"));
@@ -520,7 +521,7 @@ Q("#np-method").onclick = () => showMethod();
 function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noopener"); }
 window.openBT = openBT;
 
-// ------------------------------------------------------------------ barra strumenti
+// ------------------------------------------------------------------ toolbar
 Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
 Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
 Q("#np-xic").onclick = () => openXic(null);
@@ -532,7 +533,7 @@ Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { cons
 let rzRaf = 0; addEventListener("resize", () => { fitWidth(); if (!rzRaf) rzRaf = FRAME.next(() => { rzRaf = 0; tabPanels().forEach(drawSized); }); });
 document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
-// ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)
+// ------------------------------------------------------------------ formula -> m/z calculator (like «mass from formula» of Xcalibur)
 // the calculator is a drop-down under its button (no dark backdrop): the graphs stay visible and usable; it closes with the button, Esc or the ×
 const calcBox = Q("#calcdlg");
 Object.defineProperty(calcBox, "open", {
@@ -698,21 +699,21 @@ Q("#calcin").oninput = calcRun;
   document.addEventListener("mouseout", e => { if (cur && !(e.relatedTarget && cur.contains(e.relatedTarget))) hide(); });
   ["mousedown", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, hide, true));
   // touch has no hover: a long press (0.6 s) on a button or control shows its tooltip for a moment; the click that follows the release is swallowed. Graphs and file rows keep their long press = right click (touch.js)
-  let lpT = null, lpX = 0, lpY = 0, lpDone = 0;
+  let lpT = null, lpX = 0, lpY = 0, lpDone = 0, lpUp = false;      // lpDone: the lift that ends a press whose tooltip came up; the click a finger sends on lifting (iOS and Chromium, however long the press) is swallowed for 700 ms after it
   const lpStop = () => clearTimeout(lpT);
   document.addEventListener("pointerdown", e => {
-    lpStop(); if (e.pointerType !== "touch") return;
+    lpStop(); lpUp = false; if (e.pointerType !== "touch") return; if (!tip.hidden) hide();      // the next touch puts the tooltip of a long press away
     const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
     if (!t || t.closest("dialog[open], canvas, .fl, .pnl .cv")) return;
     lpX = e.clientX; lpY = e.clientY;
     lpT = setTimeout(() => {
       if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
       if (!t.dataset.tip && !t.dataset.tiph) return;
-      show(t); lpDone = Date.now(); cur = t; clearTimeout(timer); timer = setTimeout(hide, 2800);
+      show(t); lpUp = true; cur = t; clearTimeout(timer); timer = setTimeout(hide, 2800);
     }, 600);
   }, true);
   document.addEventListener("pointermove", e => { if (lpT && Math.hypot(e.clientX - lpX, e.clientY - lpY) > 10) lpStop(); }, true);
-  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, lpStop, true));
+  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, () => { lpStop(); if (lpUp) { lpDone = Date.now(); lpUp = false; } }, true));
   document.addEventListener("click", e => { if (Date.now() - lpDone < 700) { e.stopPropagation(); e.preventDefault(); lpDone = 0; } }, true);
   addEventListener("scroll", hide, true);
 })();

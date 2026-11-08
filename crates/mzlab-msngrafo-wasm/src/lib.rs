@@ -52,9 +52,9 @@ pub fn version() -> String {
     format!("mzlab-msngrafo/1 {}", env!("CARGO_PKG_VERSION"))
 }
 
-/// `completa`: the text of an `msngrafo/1` with the key `vista` (the bytes `mzlab-cli msn-graph complete` writes); a keyed error for what is not one.
+/// `complete`: the text of an `msngrafo/1` with the key `vista` (the bytes `mzlab-cli msn-graph complete` writes); a keyed error for what is not one.
 #[wasm_bindgen]
-pub fn completa(json: &str) -> Result<String, JsValue> {
+pub fn complete(json: &str) -> Result<String, JsValue> {
     mzlab_core::msngrafo::completa(json).map_err(js_err)
 }
 
@@ -138,7 +138,7 @@ const PPM_STRUTTURA: f64 = 10.0;
 /// The `msngrafo/1` of the file `nome` for the query string `query` (`formula`, `tol`, `ce`, `ppm_formula`, ..., `scelte`; `api/msn_grafo`).
 /// `read_idx` reads the `.mzidx` (`idx_size` bytes) and `read_file` the mzML the index points into.
 #[wasm_bindgen]
-pub fn msn_grafo(
+pub fn msn_graph(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
@@ -169,7 +169,7 @@ pub fn msn_grafo(
 /// The texts of the Flow steps come from the same route: `formato=massbank` (or `msp` with `libreria=1`) is the tree as a library (`msn.library_export`:
 /// `livelli=all|ms2`, `annota=0|1`, `id`), `vista=modifications|nodes|peaks` the CSV table of the graph (`msn.table_export`).
 #[wasm_bindgen]
-pub fn msn_grafo_export(
+pub fn msn_graph_export(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
@@ -215,7 +215,7 @@ pub fn msn_grafo_export(
 /// `api/msnlib/aggiungi`: the library text `libreria` ("" = none yet) with the entry of `molecola_id` for the graph of the query added;
 /// `{"libreria": text, "doppione": bool}` (the text unchanged when the same entry was already there).
 #[wasm_bindgen]
-pub fn msnlib_aggiungi(
+pub fn msnlib_add(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
@@ -236,7 +236,7 @@ pub fn msnlib_aggiungi(
 /// `api/msnlib/cerca`: the candidates of the library text `libreria` for the graph of the query (`msncerca/1`); the query carries the options of the graph and
 /// those of the search (`ppm_prec`, `tol_mz`, `min_prove`, `top`, `delta_max`).
 #[wasm_bindgen]
-pub fn msnlib_cerca(
+pub fn msnlib_search(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,

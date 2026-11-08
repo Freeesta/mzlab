@@ -29,10 +29,10 @@ fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
 
 /// Every scan: the decoded intensities add up to the TIC of the index, the times do not go back.
 fn controlla_scansioni(l: &mut dyn Lettore) -> usize {
-    let idx = l.indice(0).unwrap().to_vec();
+    let idx = l.index(0).unwrap().to_vec();
     let mut prima = -1.0;
     for (k, v) in idx.iter().enumerate() {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         let tot: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
         assert_eq!(tot, v.tic, "TIC of scan {k}");
         assert!(v.rt >= prima, "time of scan {k}");
@@ -56,7 +56,7 @@ fn qgd_scans_add_up_to_the_tic() {
         let n = controlla_scansioni(&mut *l);
         eprintln!(
             "{f}: {n} scans, chroms {}",
-            l.cromatogrammi(0).unwrap().len()
+            l.chromatograms(0).unwrap().len()
         );
         assert!(n > 100);
     }
@@ -69,7 +69,7 @@ fn lcms2020_scans_add_up_to_the_tic() {
     };
     let n = controlla_scansioni(&mut *l);
     assert_eq!(n, 2400);
-    let m = l.metodo(0).unwrap();
+    let m = l.method(0).unwrap();
     eprintln!(
         "LEN {} {}",
         m.len(),
@@ -94,9 +94,9 @@ fn qqq_mrm_gives_srm_chromatograms() {
         "gcms_tq8040_MTBLS5383/MTBLS5383_GC0270_AtD01_20170530_17.qgd",
     ] {
         let Some(mut l) = apri(f) else { return };
-        let v = l.cromatogrammi(0).unwrap();
+        let v = l.chromatograms(0).unwrap();
         let srm = v.iter().filter(|c| c.tipo == ChromKind::Srm).count();
-        eprintln!("{f}: scans {} srm {srm}", l.indice(0).unwrap().len());
+        eprintln!("{f}: scans {} srm {srm}", l.index(0).unwrap().len());
         if let Some(c) = v.iter().find(|c| c.tipo == ChromKind::Srm) {
             eprintln!("   {}", c.id);
         }
@@ -116,10 +116,10 @@ fn the_method_names_the_maker_and_the_mzml_header_has_no_operator() {
     ]) {
         let Some(mut l) = apri(f) else { return };
         assert!(
-            l.metodo(0).unwrap().contains("\"produttore\":\"Shimadzu\""),
+            l.method(0).unwrap().contains("\"produttore\":\"Shimadzu\""),
             "{f}"
         );
-        let h = l.testata_mzml(0).unwrap().unwrap();
+        let h = l.mzml_header(0).unwrap().unwrap();
         assert!(!h.run_params[0].1.contains("operatore"), "{f}");
     }
 }

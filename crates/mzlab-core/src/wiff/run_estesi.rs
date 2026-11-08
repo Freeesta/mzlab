@@ -26,7 +26,7 @@ impl Wiff {
     ) -> Result<Vec<Chromatogram>> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
         let mut n = 0;
-        for r in &self.records {
+        for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
             if let Some(p) = scan::read_scan(scan, self.scan_len, r.at, r.end)? {
                 if p.mz.is_empty() {
                     continue;
@@ -50,11 +50,24 @@ impl Wiff {
         Ok(chroms)
     }
 
-    /// The chromatograms of the MRM blocks only (no scan is decoded).
-    pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
+    /// The chromatograms of the MRM blocks only (no scan is decoded). `counts`: the point count of each record's head when the reader already read them.
+    pub fn chromatograms<R: ReadAt>(
+        &self,
+        scan: &mut R,
+        counts: Option<&[Option<u32>]>,
+    ) -> Result<Vec<Chromatogram>> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
-        for r in &self.records {
-            if let Some(count) = scan::point_count(scan, self.scan_len, r.at, r.end)? {
+        for (i, r) in self
+            .records
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| !r.cut(self.scan_len))
+        {
+            let count = match counts.and_then(|c| c.get(i)) {
+                Some(&c) => c,
+                None => scan::point_count(scan, self.scan_len, r.at, r.end)?,
+            };
+            if let Some(count) = count {
                 if count > 0 && self.is_full_scan(r.experiment) {
                     blocks.add_tic(r, None);
                 }

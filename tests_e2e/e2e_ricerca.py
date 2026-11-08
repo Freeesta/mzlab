@@ -24,7 +24,7 @@ try:
         txt = lambda: pg.inner_text("#paletta")
         def typ(q, want=None):
             pg.fill("#pal-in", q)
-            if want: attendi(pg, f"document.querySelector('#pal-l').innerText.includes({want!r})")
+            if want: wait_for_js(pg, f"document.querySelector('#pal-l').innerText.includes({want!r})")
         def empty():
             opn(); t = txt(); assert "Prova: 18, C6H12O6+Na, smoothing" in t, t
             assert pg.locator("#pal-l li[role=option]").count() <= 12, "no endless command list"
@@ -39,17 +39,17 @@ try:
         def keys():
             n0 = pg.get_attribute("#pal-in", "aria-activedescendant"); pg.keyboard.press("ArrowDown")
             assert pg.get_attribute("#pal-in", "aria-activedescendant") != n0 and pg.locator("#pal-l [aria-selected=true]").count() == 1
-            pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter"); attendi(pg, "document.querySelector('#paletta').hidden")
-            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#calcin") == "18", "the loss panel opens with the number"; attendi(pg, "document.activeElement.id === 'calcin'"); pg.evaluate("BARRA.close(false)")
+            pg.keyboard.press("ArrowUp"); pg.keyboard.press("Enter"); wait_for_js(pg, "document.querySelector('#paletta').hidden")
+            wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'losses')"); assert pg.input_value("#calcin") == "18", "the loss panel opens with the number"; wait_for_js(pg, "document.activeElement.id === 'calcin'"); pg.evaluate("BARRA.close(false)")
         step("↑↓ and Enter open the panel of the first result", keys)
         def cont():
             opn(); typ("63.04", "Contaminante"); pg.locator("#pal-l li[role=option]", has_text="Contaminante").first.click()
-            attendi(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')"); assert pg.input_value("#calcin") == "63.04", pg.input_value("#calcin")
+            wait_for_js(pg, "(BARRA.curTab === 'addloss' && BARRA.curSub === 'cont')"); assert pg.input_value("#calcin") == "63.04", pg.input_value("#calcin")
             assert not pg.evaluate("[...document.querySelectorAll('dialog')].some(d => d.open)"), "the side panel, never a pop-up"
             pg.evaluate("BARRA.close(false)")
         step("a contaminant hit opens the Contaminants tab of the side panel with the number", cont)
         def esc():
-            opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('#paletta').hidden")
+            opn(); typ("18", "Perdita"); pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#paletta').hidden")
             assert not pg.is_visible("#paletta"), (pg.evaluate("document.activeElement.id||document.activeElement.tagName"), pg.evaluate("document.querySelector('#paletta').hidden"))
         step("Esc closes", esc)
         def formula():
@@ -72,16 +72,16 @@ try:
             try:
                 stage(q, [EX / "FullScan_t0.mzML"]); q.click("text=Carica dati"); ready(q)
                 q.click("#tb-search"); q.wait_for_selector("#paletta:not([hidden])"); q.fill("#pal-in", "18")
-                attendi(q, "document.querySelector('#pal-l').innerText.includes('Addotto')")
+                wait_for_js(q, "document.querySelector('#pal-l').innerText.includes('Addotto')")
                 assert q.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth") <= 1, "no sideways scroll"
                 assert q.evaluate("(()=>{const b=document.querySelector('#paletta .pal-b').getBoundingClientRect();return b.left>=0&&b.right<=innerWidth})()")
             finally:
                 ctx.close()
         step("400 px: the box fits", narrow)
         def english():
-            pg.evaluate("I18N.set('en')"); attendi(pg, "I18N.lang === 'en'"); ready(pg); opn(); typ("18", "loss")
+            pg.evaluate("I18N.set('en')"); wait_for_js(pg, "I18N.lang === 'en'"); ready(pg); opn(); typ("18", "loss")
             t = txt(); assert "loss" in t and "Adduct" in t, t
-            pg.fill("#pal-in", ""); attendi(pg, "document.querySelector('#paletta').innerText.includes('Try: 18')")
+            pg.fill("#pal-in", ""); wait_for_js(pg, "document.querySelector('#paletta').innerText.includes('Try: 18')")
             pg.keyboard.press("Escape")
         step("English labels", english)
         step("no engine miss and no console error", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))

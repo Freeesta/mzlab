@@ -35,7 +35,7 @@ try:
         step("bug report: plain button opens and closes the form", bug_toggle)
         def narrow():
             for w in (360, 1400):
-                pg.set_viewport_size({"width": w, "height": 800}); attendi(pg, f"innerWidth === {w}")
+                pg.set_viewport_size({"width": w, "height": 800}); wait_for_js(pg, f"innerWidth === {w}")
                 m = pg.evaluate("""(() => { const d = document.querySelector('#uipset'), l = document.querySelector('.imp-lang'), s = l.querySelector('span').getBoundingClientRect(), g = l.querySelector('.seglang').getBoundingClientRect();
                   return [d.scrollWidth - d.clientWidth, Math.abs(s.top + s.height / 2 - g.top - g.height / 2), g.width, g.height]; })()""")
                 assert m[0] <= 0 and m[1] < 20 and m[3] >= 24, (w, m)
@@ -43,7 +43,7 @@ try:
         def keyboard():
             pg.focus("input[name=uip-lang][value=it]")
             with pg.expect_navigation(): pg.keyboard.press("ArrowRight")
-            attendi(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
+            wait_for_js(pg, "typeof I18N !== 'undefined' && I18N.lang === 'en'", 60000); ready(pg)
             assert pg.evaluate("localStorage.getItem('mzlab.lang')") == "en"
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             assert pg.evaluate("document.querySelector('input[name=uip-lang]:checked').value") == "en"
@@ -51,7 +51,7 @@ try:
         step("language by keyboard (arrow) switches to English and is remembered", keyboard)
         def click_back():
             with pg.expect_navigation(): pg.click("input[name=uip-lang][value=it]", force=True)
-            attendi(pg, "typeof I18N !== 'undefined' && I18N.lang === 'it'", 60000); ready(pg)
+            wait_for_js(pg, "typeof I18N !== 'undefined' && I18N.lang === 'it'", 60000); ready(pg)
         step("language by click switches back to Italian", click_back)
         if AXE:
             def axe_themes():
