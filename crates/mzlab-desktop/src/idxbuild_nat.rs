@@ -1,6 +1,6 @@
 //! The index of a native sample (a maker's file read as it is): built straight from its reader, version 2 (see `nativi.rs`).
 use mzlab_core::lettori::Limiti;
-use mzlab_core::mzidx::{Stats, DEFAULT_BUDGET};
+use mzlab_core::mzidx::Stats;
 use mzlab_core::{lettori_centroidi, upload, Error};
 
 use crate::idxbuild::IdxBuilder;
@@ -31,12 +31,12 @@ impl IdxBuilder {
                         impronte,
                         name,
                         out,
-                        DEFAULT_BUDGET,
+                        mzlab_core::budget_auto::native_index_budget(),
                         Some(spill),
                         &mut |_| {},
                     )?;
                     // the spectra a truncated file declares beyond the ones it holds
-                    st.missing = l.mancanti(nat.c);
+                    st.missing = l.missing(nat.c);
                     Ok(st)
                 },
             )

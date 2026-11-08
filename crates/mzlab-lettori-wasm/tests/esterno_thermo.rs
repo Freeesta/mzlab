@@ -55,32 +55,32 @@ struct ViaSessione {
 }
 
 impl Modulo for ViaSessione {
-    fn campioni(&mut self) -> Result<String> {
-        self.s.campioni(self.h)
+    fn samples(&mut self) -> Result<String> {
+        self.s.samples(self.h)
     }
-    fn protocollo(&mut self) -> Result<u32> {
+    fn protocol(&mut self) -> Result<u32> {
         Ok(mzlab_core::trasporto::PROTOCOLLO)
     }
-    fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
-        self.s.indice(self.h, c)
+    fn index(&mut self, c: usize) -> Result<Vec<u8>> {
+        self.s.index(self.h, c)
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
-        self.s.scansione(self.h, c, k)
+    fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
+        self.s.scan(self.h, c, k)
     }
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
-        self.s.intestazione(self.h, c, k)
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<String> {
+        self.s.scan_header(self.h, c, k)
     }
-    fn cromatogrammi(&mut self, c: usize) -> Result<String> {
-        self.s.cromatogrammi(self.h, c)
+    fn chromatograms(&mut self, c: usize) -> Result<String> {
+        self.s.chromatograms(self.h, c)
     }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String> {
-        self.s.cromatogramma(self.h, c, id)
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<String> {
+        self.s.chromatogram(self.h, c, id)
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.s.metodo(self.h, c)
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.s.method(self.h, c)
     }
-    fn testata(&mut self, c: usize) -> Result<String> {
-        self.s.testata(self.h, c)
+    fn file_header(&mut self, c: usize) -> Result<String> {
+        self.s.file_header(self.h, c)
     }
 }
 
@@ -107,10 +107,7 @@ fn mzml(l: &mut dyn Lettore) -> (u64, u64) {
 
 /// Scan `k` and its header, from the external reader and from the linked one.
 fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, nome: &str) {
-    let (a, b) = (
-        ext.scansione(0, k).unwrap(),
-        diretto.scansione(0, k).unwrap(),
-    );
+    let (a, b) = (ext.scan(0, k).unwrap(), diretto.scan(0, k).unwrap());
     assert_eq!(
         (
             a.index,
@@ -142,8 +139,8 @@ fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, nome: &
         "{nome}: scan {k} intensities"
     );
     assert_eq!(
-        ext.intestazione(0, k).unwrap(),
-        diretto.intestazione(0, k).unwrap(),
+        ext.scan_header(0, k).unwrap(),
+        diretto.scan_header(0, k).unwrap(),
         "{nome}: header {k}"
     );
 }
@@ -161,32 +158,32 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         let h = s.inserisci(mzlab_lettori::apri_nudo(set(f), &Limiti::sito()).unwrap());
         let mut ext = LettoreEsterno::new(ViaSessione { s, h }).unwrap();
         let nome = f.display();
-        assert_eq!(ext.formato(), diretto.formato(), "{nome}");
-        assert_eq!(ext.campioni(), diretto.campioni(), "{nome}");
-        let indice = diretto.indice(0).unwrap().to_vec();
-        assert_eq!(ext.indice(0).unwrap(), &indice[..], "{nome}: index");
+        assert_eq!(ext.format(), diretto.format(), "{nome}");
+        assert_eq!(ext.samples(), diretto.samples(), "{nome}");
+        let indice = diretto.index(0).unwrap().to_vec();
+        assert_eq!(ext.index(0).unwrap(), &indice[..], "{nome}: index");
         let passo = (indice.len() / 20).max(1);
         for k in (0..indice.len()).step_by(passo) {
             same_scan(&mut ext, &mut *diretto, k, &nome.to_string());
         }
         assert_eq!(
-            ext.cromatogrammi(0).unwrap(),
-            diretto.cromatogrammi(0).unwrap(),
+            ext.chromatograms(0).unwrap(),
+            diretto.chromatograms(0).unwrap(),
             "{nome}"
         );
         assert_eq!(
-            ext.cromatogramma(0, "TIC").unwrap(),
-            diretto.cromatogramma(0, "TIC").unwrap(),
+            ext.chromatogram(0, "TIC").unwrap(),
+            diretto.chromatogram(0, "TIC").unwrap(),
             "{nome}: TIC"
         );
         assert_eq!(
-            ext.metodo(0).unwrap(),
-            diretto.metodo(0).unwrap(),
+            ext.method(0).unwrap(),
+            diretto.method(0).unwrap(),
             "{nome}: metodo/1"
         );
         assert_eq!(
-            format!("{:?}", ext.testata_mzml(0).unwrap()),
-            format!("{:?}", diretto.testata_mzml(0).unwrap()),
+            format!("{:?}", ext.mzml_header(0).unwrap()),
+            format!("{:?}", diretto.mzml_header(0).unwrap()),
             "{nome}: header of the mzML"
         );
         let (a, b) = (mzml(&mut ext), mzml(&mut *diretto));

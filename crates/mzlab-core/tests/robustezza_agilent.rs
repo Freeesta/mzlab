@@ -35,10 +35,10 @@ fn legge(membri: Vec<(String, Vec<u8>, Option<u64>)>) -> Vec<String> {
         membri: membri.iter().map(|(n, b, d)| membro(n, b, *d)).collect(),
     };
     if let Some(mut l) = nota(lettori::apri(fs, &Limiti::sito()), &mut k) {
-        if let Some(ix) = nota(l.indice(0), &mut k).map(<[_]>::to_vec) {
-            (0..ix.len()).for_each(|j| drop(nota(l.scansione(0, j), &mut k)));
+        if let Some(ix) = nota(l.index(0), &mut k).map(<[_]>::to_vec) {
+            (0..ix.len()).for_each(|j| drop(nota(l.scan(0, j), &mut k)));
         }
-        nota(l.metodo(0), &mut k);
+        nota(l.method(0), &mut k);
     }
     k
 }

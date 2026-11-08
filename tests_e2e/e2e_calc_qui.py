@@ -11,10 +11,10 @@ r = Run(port=8886, wd="/tmp/wd86")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        attendi(pg, "window.qqReady && !document.querySelector('#start').hidden"); pg.evaluate("setView('draw')")
-        attendi(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
+        wait_for_js(pg, "window.qqReady && !document.querySelector('#start').hidden"); pg.evaluate("setView('draw')")
+        wait_for_js(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
         pg.click("#np-calc2")
-        attendi(pg, "!document.querySelector('#calcdlg').hidden && typeof CALCQUI !== 'undefined' && CALCQUI.calc")
+        wait_for_js(pg, "!document.querySelector('#calcdlg').hidden && typeof CALCQUI !== 'undefined' && CALCQUI.calc")
         def type_(v):
             pg.fill("#calcin", v)
             pg.evaluate("document.querySelector('#calcin').dispatchEvent(new Event('input',{bubbles:true}))")
@@ -96,12 +96,12 @@ try:
               return ts }""")
             assert max(t) <= 30, t
         step("search time per keystroke <= 30 ms", timing)
-        def apri():
-            pg.evaluate("CALCQUI.apri(214)"); attendi(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#calcin').offsetParent")
+        def open_calc():
+            pg.evaluate("CALCQUI.apri(214)"); wait_for_js(pg, "BARRA.curTab === 'addloss' && !!document.querySelector('#calcin').offsetParent")
             assert pg.input_value("#calcin") == "214" and pg.evaluate("BARRA.curSub") == "losses"
-            pg.evaluate("BARRA.close(false); setView('draw')"); attendi(pg, "!!document.querySelector('#np-calc2').offsetParent")
+            pg.evaluate("BARRA.close(false); setView('draw')"); wait_for_js(pg, "!!document.querySelector('#np-calc2').offsetParent")
             if not pg.is_visible("#calcdlg"): pg.click("#np-calc2")
-        step("CALCQUI.apri(214) puts the number in the field of Adducts & losses (Dati view)", apri)
+        step("CALCQUI.apri(214) puts the number in the field of Adducts & losses (Dati view)", open_calc)
         def shot(name, w):
             if not SHOTS: return
             pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 25)
@@ -110,7 +110,7 @@ try:
         pg.set_viewport_size({"width": 1500, "height": 2200})
         # the Adducts panel
         def adducts():
-            pg.click("#np-addloss"); attendi(pg, "document.querySelector('#refdlg') && !document.querySelector('#refdlg').hidden || document.querySelector('#sb-panel-adducts') && !document.querySelector('#sb-panel-adducts').hidden")
+            pg.click("#np-addloss"); wait_for_js(pg, "document.querySelector('#refdlg') && !document.querySelector('#refdlg').hidden || document.querySelector('#sb-panel-adducts') && !document.querySelector('#sb-panel-adducts').hidden")
             q = pg.query_selector("#calcin")
             assert q
             q.fill("21.98"); frames(pg, 25)
@@ -118,7 +118,7 @@ try:
         step("Adducts panel opens and answers a number", adducts)
         def to_loss():
             pg.click("#reftitle ~ *", timeout=1000) if False else None
-            pg.click("#np-addloss") if not pg.evaluate("BARRA.curTab==='addloss'") else None; pg.click("#al-t-losses"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-res')")
+            pg.click("#np-addloss") if not pg.evaluate("BARRA.curTab==='addloss'") else None; pg.click("#al-t-losses"); wait_for_js(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-res')")
             pg.fill("#calcin", "30"); frames(pg, 25)
             t = pg.inner_text("#sb-panel-losses"); assert "CH2O" in t or "CH₂O" in t, t[:300]
             assert pg.locator("#al-ctl [data-r]").count() == 0 and pg.get_attribute("#al-ctl .cq-ctl", "data-mode") == "lr"
@@ -134,11 +134,11 @@ try:
         def lists_on_demand():
             asked = []
             pg.context.on("request", lambda q: asked.append(q.url) if "contaminan" in q.url else None)       # the context sees the engine worker's requests too
-            pg.reload(); attendi(pg, "window.qqReady && !document.querySelector('#start').hidden")
-            pg.evaluate("setView('draw')"); attendi(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
-            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden && typeof CALCQUI !== 'undefined' && CALCQUI.calc"); frames(pg, 25)
+            pg.reload(); wait_for_js(pg, "window.qqReady && !document.querySelector('#start').hidden")
+            pg.evaluate("setView('draw')"); wait_for_js(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
+            pg.click("#np-calc2"); wait_for_js(pg, "!document.querySelector('#calcdlg').hidden && typeof CALCQUI !== 'undefined' && CALCQUI.calc"); frames(pg, 25)
             assert not asked, "the contaminant list (447 KB) was fetched before an m/z was typed: " + str(asked)
-            type_("149.0233"); attendi(pg, "/ftal|phthal/i.test(document.querySelector('#calcout').innerText)")
+            type_("149.0233"); wait_for_js(pg, "/ftal|phthal/i.test(document.querySelector('#calcout').innerText)")
             assert asked and "liste" in str(groups()), (asked, groups())
         step("the contaminant list is fetched once an m/z is typed, not at boot; 149.0233 finds the phthalate fragment", lists_on_demand)
 finally:

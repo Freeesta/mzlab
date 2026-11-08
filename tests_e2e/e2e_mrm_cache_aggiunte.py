@@ -27,9 +27,9 @@ def no_refetch():
             pg.evaluate(COUNT)
             pg.set_input_files("#pick", files)
             # the first file shown as soon as it opens, while the others are still being read and appended
-            attendi(pg, "typeof E !== 'undefined' && E.files.filter(f => !f.gone).length >= 1", 120000)
+            wait_for_js(pg, "typeof E !== 'undefined' && E.files.filter(f => !f.gone).length >= 1", 120000)
             pg.evaluate("() => { if (!E.files.some(f => f.vis && !f.gone)) soloFile(E.files.find(f => !f.gone)); }")
-            attendi(pg, f"E.files.filter(f => !f.gone).length === {N} && UPBUSY === 0 && OPENNOW.busy() === 0", 180000)
+            wait_for_js(pg, f"E.files.filter(f => !f.gone).length === {N} && UPBUSY === 0 && OPENNOW.busy() === 0", 180000)
             ready(pg)
             n = pg.evaluate("window.__mrm")
             shown = pg.evaluate("E.files.find(f => f.vis && !f.gone).k")

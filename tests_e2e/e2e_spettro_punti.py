@@ -18,13 +18,13 @@ try:
         SP = "E.panels.find(p=>p.type==='spec')"
         redraw = f"(async()=>{{window.__arcs=0; await draw({SP}); return window.__arcs}})()"
         def off():
-            attendi(pg, f"{SP} && {SP}._a")
+            wait_for_js(pg, f"{SP} && {SP}._a")
             assert pg.evaluate(redraw) == 0, "no dots by default"
         step("by default the spectrum has no dots", off)
         def popover():
-            pg.evaluate(f"{SP}.el.querySelector('[data-a=par]').click()"); attendi(pg, f"!!{SP}.el.querySelector('.sp-pop [data-s=dots]')")
+            pg.evaluate(f"{SP}.el.querySelector('[data-a=par]').click()"); wait_for_js(pg, f"!!{SP}.el.querySelector('.sp-pop [data-s=dots]')")
             pg.evaluate(f"{SP}.el.querySelector('.sp-pop [data-s=dots]').click()")
-            attendi(pg, f"{SP}.dots===true")
+            wait_for_js(pg, f"{SP}.dots===true")
             n = pg.evaluate(redraw); assert n > 5, n
         step("popover: «Points only» draws a dot for every point", popover)
         def nolines():
@@ -32,10 +32,10 @@ try:
             pg.evaluate(f"{SP}.sticks=false")
         step("dots win over the sticks", nolines)
         def save():
-            pg.evaluate("uiSave(true)"); attendi(pg, "JSON.stringify(NB.ui||{}).includes('\"dots\":true')")
+            pg.evaluate("uiSave(true)"); wait_for_js(pg, "JSON.stringify(NB.ui||{}).includes('\"dots\":true')")
         step("the session keeps it", save)
         def back():
-            pg.evaluate(f"{SP}.el.querySelector('.sp-pop [data-s=dots]').click()"); attendi(pg, f"{SP}.dots===false")
+            pg.evaluate(f"{SP}.el.querySelector('.sp-pop [data-s=dots]').click()"); wait_for_js(pg, f"{SP}.dots===false")
             assert pg.evaluate(redraw) == 0
         step("unticked: back to the line", back)
         step("state is coherent", lambda: pg.evaluate("STATO.verifica()") == [] or (_ for _ in ()).throw(AssertionError("stato")))

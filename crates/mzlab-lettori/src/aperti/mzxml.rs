@@ -193,11 +193,11 @@ impl LettoreMzxml {
 }
 
 impl Lettore for LettoreMzxml {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("mzxml")
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use mzlab_core::conv::FUORI_MODELLO;
         &[(
             "text of the header elements, scanOrigin, maldi, separation, spotting and processingOperation",
@@ -205,11 +205,11 @@ impl Lettore for LettoreMzxml {
         )]
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn mancanti(&mut self, c: usize) -> usize {
+    fn missing(&mut self, c: usize) -> usize {
         if c != 0 {
             return 0;
         }
@@ -218,20 +218,20 @@ impl Lettore for LettoreMzxml {
             .max(self.scartate)
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         self.completa(true)?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.uno(c)?;
         let (s, e) = self.spettro(k)?;
         *self.ultima.borrow_mut() = Some((k, e));
         Ok(s)
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.uno(c)?;
         let byte = self.byte(k)?;
         let testo = String::from_utf8_lossy(&byte);
@@ -254,7 +254,7 @@ impl Lettore for LettoreMzxml {
         Ok(out)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.uno(c)?;
         Ok(["TIC", "BPC"]
             .into_iter()
@@ -267,18 +267,18 @@ impl Lettore for LettoreMzxml {
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.uno(c)?;
         self.traccia(id)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.uno(c)?;
         let sha1 = self.sha1();
         Ok(testata::documento(&self.cabina, &self.nome, self.dim, sha1))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.uno(c)?;
         let sha1 = self.sha1();
         let doc = testata::documento(&self.cabina, &self.nome, self.dim, sha1.clone());

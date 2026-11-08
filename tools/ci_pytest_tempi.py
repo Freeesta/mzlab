@@ -15,9 +15,9 @@ def pytest_runtest_logreport(report):
     f[report.when] += report.duration
     if report.when == "call":
         f["n"] += 1
-    nodo = getattr(report, "node", None)
-    if nodo is not None:
-        f["worker"].add(nodo.workerinput.get("workerid", "?"))
+    node = getattr(report, "node", None)
+    if node is not None:
+        f["worker"].add(node.workerinput.get("workerid", "?"))
 
 
 def pytest_sessionfinish(session):

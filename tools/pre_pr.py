@@ -33,9 +33,9 @@ JS_SYNTAX = [PY, "-c", "import sys; sys.path.insert(0, 'tools'); import verifica
              "print(r[0][3]); sys.exit(r[0][1] == 'FAIL')"]
 
 
-def cambiato(*prefissi: str) -> bool:
+def cambiato(*prefixes: str) -> bool:
     """True when something under a `prefisso` differs from origin/main (committed, staged or not); True too when origin/main is unknown (better a check too many)."""
-    r = subprocess.run(["git", "diff", "--name-only", "origin/main", "--", *prefissi], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(["git", "diff", "--name-only", "origin/main", "--", *prefixes], cwd=ROOT, capture_output=True, text=True)
     return r.returncode != 0 or bool(r.stdout.strip())
 
 
@@ -59,7 +59,7 @@ def passi_solo_doc() -> list[tuple[str, list[str]]]:
 
 
 # prints the e2e that `verifica.py --cambiati` would run, without running them
-SELEZIONE_E2E = [PY, "-c", "import sys; sys.path.insert(0, 'tools'); import verifica as v; sel, why = v.changed_tests(); print(why)"]
+SELECTION_E2E = [PY, "-c", "import sys; sys.path.insert(0, 'tools'); import verifica as v; sel, why = v.changed_tests(); print(why)"]
 
 
 def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
@@ -77,11 +77,13 @@ def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     ]
     if (ROOT / "tools" / "controlla_import.py").exists():
         p.append(("import degli e2e", [PY, "tools/controlla_import.py"]))
+    if shutil.which("cargo") and cambiato("vendor/opentfraw/"):  # the crate is out of the workspace: no CI job runs its own tests
+        p.append(("test lib di opentfraw", ["cargo", "test", "-q", "--manifest-path", "vendor/opentfraw/Cargo.toml", "--lib"]))
     if veloce:
         p.append(("hash CSP", [PY, "tools/csp_hash.py", "--check"]))
         if cambiato(*RUST):
             p.append(("cargo fmt contro la base", [PY, "tools/controlla_rust.py", "--solo-fmt"]))
-        p.append(("e2e che verrebbero eseguiti", SELEZIONE_E2E))
+        p.append(("e2e che verrebbero eseguiti", SELECTION_E2E))
         return p
     if cambiato(*RUST):
         p += [("fmt e clippy contro la base", [PY, "tools/controlla_rust.py"])]
@@ -93,27 +95,27 @@ def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
 
 
 def main() -> int:
-    saltati = False
+    skipped = False
     veloce = "--veloce" in sys.argv or (in_cloud() and "--completo" not in sys.argv)
     solo_doc = ci_solo_doc.solo(files_cambiati())
     if solo_doc:
         print("solo documenti: only the checks the documents need")
-    elenco = passi_solo_doc() if solo_doc else passi("--senza-e2e" not in sys.argv and not veloce, veloce)
-    for i, (nome, cmd) in enumerate(elenco, 1):
-        print(f"...  [{i}/{len(elenco)}] {nome}", flush=True)
+    listing = passi_solo_doc() if solo_doc else passi("--senza-e2e" not in sys.argv and not veloce, veloce)
+    for i, (name, cmd) in enumerate(listing, 1):
+        print(f"...  [{i}/{len(listing)}] {name}", flush=True)
         t0 = time.time()
         r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
         dt = time.time() - t0
         if r.returncode:
-            print(f"FAIL {nome} ({dt:.0f} s): {' '.join(cmd)}")
+            print(f"FAIL {name} ({dt:.0f} s): {' '.join(cmd)}")
             print((r.stdout + r.stderr)[-3000:])
             return 1
         if "verifica.py" in " ".join(cmd) and "SKIP e2e" in r.stdout:
-            saltati = True
-            print(f"SKIP {nome} ({dt:.0f} s)")
+            skipped = True
+            print(f"SKIP {name} ({dt:.0f} s)")
         else:
-            print(f"ok   {nome} ({dt:.0f} s)" + (f": {r.stdout.strip()[:300]}" if veloce and "e2e" in nome else ""), flush=True)
-    if saltati:
+            print(f"ok   {name} ({dt:.0f} s)" + (f": {r.stdout.strip()[:300]}" if veloce and "e2e" in name else ""), flush=True)
+    if skipped:
         print("E2E SALTATI: Chromium non trovato, la CI li eseguirà (gli altri passi sono verdi, ma questo NON è «tutto verde»).")
         return 2
     if veloce and not solo_doc:

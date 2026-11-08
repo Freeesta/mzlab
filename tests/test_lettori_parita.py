@@ -41,22 +41,22 @@ def tools(tmp_path_factory):
     return {"cli": ROOT / "target/release/mzlab-cli", "tmp": tmp_path_factory.mktemp("parita")}
 
 
-_pacchetti = {}
+_packages = {}
 
 
-def pacchetto(tools, fam):
+def package(tools, fam):
     """The module of the family, built as the site builds it (no wasm-opt: it does not change what the code computes) and packed for Node."""
-    if fam not in _pacchetti:
+    if fam not in _packages:
         b = run(["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lettori-wasm", "--no-default-features", "--features", fam])
         assert b.returncode == 0, b.stderr[-2000:]
         out = tools["tmp"] / f"pkg_{fam}"
         w = run(["wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), str(ROOT / "target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm")])
         assert w.returncode == 0, w.stderr[-2000:]
-        _pacchetti[fam] = out
-    return _pacchetti[fam]
+        _packages[fam] = out
+    return _packages[fam]
 
 
-def membri(p: Path):
+def members(p: Path):
     """(logical name, file) of a dataset as `crates/mzlab-cli/src/flow_set.rs` `members` gives them: a folder leads its names, a .wiff brings its .wiff.scan."""
     if p.is_dir():
         def walk(d, prefix):
@@ -80,8 +80,8 @@ def sha(b: bytes) -> str:
 def da_wasm(tools, fam, ds: Path) -> bytes:
     piano = tools["tmp"] / f"piano_{fam}.json"
     out = tools["tmp"] / f"wasm_{fam}.mzML"
-    piano.write_text(json.dumps({"members": [{"name": n, "path": str(f)} for n, f in membri(ds)], "out": str(out)}))
-    r = run(["node", str(ROOT / "tests/lettori_parita_node.js"), str(pacchetto(tools, fam)), str(piano)])
+    piano.write_text(json.dumps({"members": [{"name": n, "path": str(f)} for n, f in members(ds)], "out": str(out)}))
+    r = run(["node", str(ROOT / "tests/lettori_parita_node.js"), str(package(tools, fam)), str(piano)])
     assert r.returncode == 0, r.stderr[-2000:]
     return out.read_bytes()
 
@@ -121,7 +121,7 @@ def mzxml(path: Path, n=40):
     return path
 
 
-def crea(fam: str, d: Path) -> Path:
+def create(fam: str, d: Path) -> Path:
     d.mkdir(parents=True, exist_ok=True)
     if fam == "aperti":
         return mzxml(d / "campione.mzXML")
@@ -140,16 +140,16 @@ def crea(fam: str, d: Path) -> Path:
         r = run([sys.executable, str(ROOT / "tools/wiff_grande.py"), str(d), "--name", "synt", "--samples", "1", "--scans", "60", "--points", "200"])
         assert r.returncode == 0, r.stderr[-1500:]
         return d / "synt.wiff"
-    if fam in SINTETICI_RUST:
-        sintetici(d.parent)
-        return d.parent / "sintetici" / SINTETICI_RUST[fam]
+    if fam in SYNTHETIC_RUST:
+        synthetic(d.parent)
+        return d.parent / "sintetici" / SYNTHETIC_RUST[fam]
     raise AssertionError(fam)
 
 
-SINTETICI_RUST = {"thermo": "thermo/synt.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "andi": "andi/synt.cdf"}
+SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "andi": "andi/synt.cdf"}
 
 
-def sintetici(base: Path):
+def synthetic(base: Path):
     """Runs the example that writes the Thermo, Bruker and ANDI datasets (once per test run)."""
     if not (base / "sintetici").exists():
         r = run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-lettori", "--features", "tutte", "--example", "sintetici", "--", str(base / "sintetici")])
@@ -157,8 +157,8 @@ def sintetici(base: Path):
 
 
 @pytest.mark.parametrize("fam", ["aperti", "agilent", "waters", "shimadzu", "sciex", "thermo", "bruker", "andi"])
-def test_mzml_del_modulo_uguale_a_quello_del_cli(tools, fam):
-    ds = crea(fam, tools["tmp"] / f"in_{fam}")
+def test_module_mzml_equals_the_cli_one(tools, fam):
+    ds = create(fam, tools["tmp"] / f"in_{fam}")
     cli = da_cli(tools, fam, ds)
     wasm = da_wasm(tools, fam, ds)
     assert sha(wasm) == sha(cli), (fam, len(wasm), len(cli), first_diff(wasm, cli))
@@ -166,14 +166,27 @@ def test_mzml_del_modulo_uguale_a_quello_del_cli(tools, fam):
 
 def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
     """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte."""
-    ds = crea("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")
+    ds = create("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")
     cli = da_cli(tools, "bruker_tagliato", ds)
     wasm = da_wasm(tools, "bruker", ds)
     assert cli.count(b"<spectrum ") == 3
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
-def test_wiff_con_dad_e_metodo_uguale_al_cli_con_dad(tools):
+@pytest.mark.parametrize("membro", ["MSScan.bin", "MSPeak.bin"])
+def test_agilent_tagliata_uguale_al_cli(tools, membro):
+    """A `.D` whose index or points file ends inside the last of 60 scans: both faces write the 59 whole scans, byte for byte."""
+    import agilent_sintetico
+    ds = agilent_sintetico.write(tools["tmp"] / f"in_agilent_{membro}", "synt.D", 60)
+    f = ds / "AcqData" / membro
+    f.write_bytes(f.read_bytes()[:-7])
+    cli = da_cli(tools, "agilent", ds)
+    wasm = da_wasm(tools, "agilent", ds)
+    assert cli.count(b"<spectrum ") == 59
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
+def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
     (`mzLab metodo/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""
     d = tools["tmp"] / "in_dadmetodo"

@@ -34,10 +34,10 @@ try:
         c.add_init_script("document.addEventListener('DOMContentLoaded', () => { " + NOTES + " })")
         def opened(pg):
             pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop", state="attached"); attendi(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=120000)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop", state="attached"); wait_for_js(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=120000)
             return pg
         A = opened(c.new_page())
-        A.set_input_files("#pick", PAIR); attendi(A, DONE, timeout=120000)
+        A.set_input_files("#pick", PAIR); wait_for_js(A, DONE, timeout=120000)
         kept = [n for n in A.evaluate(FILES) if n.startswith("nat~")]
         step("the pair is loaded and its members are in the storage", lambda: (len(kept) == 2) or (_ for _ in ()).throw(AssertionError(A.evaluate(FILES))))
         # two orphan datasets: x nobody copies, y another tab (A) is copying now
@@ -45,7 +45,7 @@ try:
         B = opened(c.new_page())
         msg = lambda pg, n: pg.evaluate("n => I18N.t('load.natInterrupted', { name: n })", n)
         def two_tabs():
-            attendi(B, "(window.__notes || []).length > 0", timeout=30000)
+            wait_for_js(B, "(window.__notes || []).length > 0", timeout=30000)
             have = B.evaluate(FILES)
             assert X not in have, have
             assert Y in have, ("a member another tab is copying was removed", have)
@@ -53,17 +53,17 @@ try:
             notes = B.evaluate("window.__notes")
             assert notes == [msg(B, "x.wiff")], notes
         step("two tabs: the orphan nobody copies goes and is named; the one another tab is copying stays", two_tabs)
-        step("the samples already loaded keep their members and stay readable", lambda: attendi(B, f"ST.files.length === {N}", timeout=60000) or None)
+        step("the samples already loaded keep their members and stay readable", lambda: wait_for_js(B, f"ST.files.length === {N}", timeout=60000) or None)
         A.evaluate("window.__free()")
         B.close(); B = opened(c.new_page())
         def after_release():
-            attendi(B, "(window.__notes || []).length > 0", timeout=30000)
+            wait_for_js(B, "(window.__notes || []).length > 0", timeout=30000)
             assert Y not in B.evaluate(FILES), B.evaluate(FILES)
             assert B.evaluate("window.__notes") == [msg(B, "y.wiff")], B.evaluate("window.__notes")
         step("once the other tab lets go, the next start removes its orphan and names it", after_release)
         B.close(); B = opened(c.new_page())
         def silent():
-            attendi(B, f"ST.files.length === {N}", timeout=60000)   # the boot posts its notices before the reply the list is built from
+            wait_for_js(B, f"ST.files.length === {N}", timeout=60000)   # the boot posts its notices before the reply the list is built from
             assert not B.evaluate("(window.__notes || []).filter(t => t === I18N.t('load.natInterrupted', { name: 'x.wiff' }) || /x\\.wiff|y\\.wiff|misto/.test(t))"), B.evaluate("window.__notes")
             assert all(k in B.evaluate(FILES) for k in kept), B.evaluate(FILES)
         step("no orphan: nothing said, nothing removed", silent)

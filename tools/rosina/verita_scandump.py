@@ -78,7 +78,7 @@ def _chrom(c: dict, points: int) -> dict:
     }
 
 
-def da_scandump(path: Path, oracolo: tuple) -> dict:
+def da_scandump(path: Path, oracle: tuple) -> dict:
     v = _verita()
     head, scans, peaks, chroms = None, [], {}, []
     for r in _rows(path):
@@ -97,17 +97,17 @@ def da_scandump(path: Path, oracolo: tuple) -> dict:
     scansioni = [_scan(s) for s in scans]
     at = {s["n"]: i for i, s in enumerate(scans)}
     pt = {str(at[n]): {"mz": p["mz"], "intensita": p["int"]} for n, p in peaks.items() if n in at}
-    cromatogrammi = [_chrom(c, v.PUNTI_CROMATOGRAMMA) for c in chroms]
+    chromatograms = [_chrom(c, v.PUNTI_CROMATOGRAMMA) for c in chroms]
     cs, cc = {}, {}
     for s in scansioni:
         cs[f"ms{s['livello']}"] = cs.get(f"ms{s['livello']}", 0) + 1
-    for c in cromatogrammi:
+    for c in chromatograms:
         cc[c["tipo"]] = cc.get(c["tipo"], 0) + 1
-    metadati = {}
+    metadata = {}
     for k, nome in (("instrument", "scandump:instrument"), ("format_version", "scandump:format_version")):
         if head.get(k) is not None:
-            metadati[nome] = {"valore": head[k], "produttore": head.get("producer", "")}
-    nome, ver, opz = oracolo
+            metadata[nome] = {"valore": head[k], "produttore": head.get("producer", "")}
+    nome, ver, opz = oracle
     return {
         "schema": "verita/1",
         "file": {"nome": head["name"], "sha256": head.get("sha256"), "campione": None},
@@ -121,8 +121,8 @@ def da_scandump(path: Path, oracolo: tuple) -> dict:
         "conteggi": {"spettri": cs, "cromatogrammi": cc},
         "scansioni": scansioni,
         "punti": pt,
-        "cromatogrammi": cromatogrammi,
-        "metadati": metadati,
+        "cromatogrammi": chromatograms,
+        "metadati": metadata,
     }
 
 

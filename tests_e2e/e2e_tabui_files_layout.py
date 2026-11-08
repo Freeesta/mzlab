@@ -53,7 +53,7 @@ try:
                     pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
                     pg.set_input_files("#tp-in", mk(n))
                     pg.wait_for_function(f"document.querySelectorAll('#tp-files tr').length > {min(n, 6)}", timeout=240000)
-                    if n > 6: pg.click("#tp-more"); lib.attendi(pg, "document.getElementById('tp-more').getAttribute('aria-expanded') === 'true'")
+                    if n > 6: pg.click("#tp-more"); lib.wait_for_js(pg, "document.getElementById('tp-more').getAttribute('aria-expanded') === 'true'")
                     m = pg.evaluate(MEASURE)
                     assert m["pageOver"] <= 0, m                                   # the page does not scroll sideways
                     assert m["tableR"] <= m["cardR"] + 1 or m["filesOver"] > 0, m  # the table fits, or scrolls inside its own box

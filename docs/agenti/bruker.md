@@ -14,7 +14,7 @@
 ## Blocchi (`Frames.TimsId` = offset in `tdf_bin`)
 - Compressione 2 (`TimsCompressionType`, zstd): dentro lo zstd, `ns + 2·np` parole `u32` scritte in 4 piani di byte (tutti i byte 0, poi i byte 1, ...). Le prime `ns` sono l'intestazione (la scansione `s` ha `parola[s+1]/2` picchi, l'ultima il resto di `NumPeaks`); poi coppie (delta di indice TOF, intensità). L'accumulatore parte da `u32::MAX`: il primo indice TOF di una scansione è delta−1.
 - Compressione 1: `ns+1` offset `u32`, poi per ogni scansione un flusso LZF di parole `i32`: una parola negativa salta |v| indici TOF, una non negativa è un'intensità all'indice corrente, che poi avanza di 1. Il numero di scansioni è quello scritto nel blocco (la rampa intera, es. 985), non quello della tabella `Frames`.
-- `*_bin` tagliato (copia interrotta): all'apertura `tagliati` (`tdf_aiuti.rs`) segna i frame il cui blocco non finisce dentro il file (un blocco finisce dove inizia il successivo; si legge solo l'intestazione dell'ultimo che inizia nel file); i loro spettri escono dall'indice, `Lettore::mancanti` li conta e il resto si legge (TIC, BPC, mzML, `.mzidx`).
+- `*_bin` tagliato (copia interrotta): all'apertura `tagliati` (`tdf_aiuti.rs`) segna i frame il cui blocco non finisce dentro il file (un blocco finisce dove inizia il successivo; si legge solo l'intestazione dell'ultimo che inizia nel file); i loro spettri escono dall'indice, `Lettore::missing` li conta e il resto si legge (TIC, BPC, mzML, `.mzidx`).
 - TSF: `u32` dimensione del profilo zstd, `u32` dimensione delle linee zstd; le linee sono `NumPeaks` posizioni TOF `f64` poi `NumPeaks` intensità `f32`; il profilo (se non ci sono linee) ha `DigitizerNumSamples` campioni `u32`, tenuti solo se diversi da zero.
 
 ## m/z (`MzCalibration`, `ModelType` 1)
@@ -22,7 +22,7 @@
 
 ## Intensità
 Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` della tabella `Frames` sono normalizzati a 100 ms: il TIC dell'indice è `SummedIntensities·AccumulationTime/100`. Indici TOF uguali nello stesso spettro si sommano (msconvert li lascia come punti separati: stesse somme).
-- Cromatogrammi: TIC (MS1 da `Frames`, MS2 sommato dai punti alla prima chiamata di `indice`) e BPC, il massimo delle intensità a 32 bit di ogni spettro di rilievo; il lettore tiene il massimo di ogni spettro già decodificato (`massimi`, `tracce.rs`), così il BPC dopo un giro intero (indice `.mzidx`, mzML) non decodifica di nuovo nessun frame. Prova: `bpc_uguale_prima_e_dopo_il_giro` (`tests/robustezza_bruker.rs`).
+- Cromatogrammi: TIC (MS1 da `Frames`, MS2 sommato dai punti alla prima chiamata di `indice`; probe, mzML, `conv/1` e prova SRM chiedono `indice_senza_tic`, senza decodificare frame: `crates/mzlab-lettori/tests/bruker_senza_tic.rs`) e BPC, il massimo delle intensità a 32 bit di ogni spettro di rilievo; il lettore tiene il massimo di ogni spettro già decodificato (`massimi`, `tracce.rs`), così il BPC dopo un giro intero (indice `.mzidx`, mzML) non decodifica di nuovo nessun frame. Prova: `bpc_uguale_prima_e_dopo_il_giro` (`tests/robustezza_bruker.rs`).
 
 ## Spettri
 - `MsMsType` 0 (MS1): un frame è uno spettro, mobilità sommata.

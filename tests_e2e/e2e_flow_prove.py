@@ -7,7 +7,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi
+from lib import free_port, wait_for_js
 PORT = free_port(); steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -46,13 +46,13 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=60000); pg.click('#nav button[data-v="flow"]'); pg.wait_for_selector("#flx-root", timeout=30000)
-        attendi(pg, "window.ATTRIBUTIO_CORE && window.PIPEQC && window.PIPET && window.PIPEV && window.FLOW && FLOW.viewFor && (FLOW.viewFor('table', { file: {}, label: 'a.mzfeat' }) || {}).id === 'feattable'")   # the scripts of Tabui and the late scripts of Flow arrive after its tab
-        pg.evaluate(OPEN); attendi(pg, "window.__fo && window.__fo.extraTabs")
+        wait_for_js(pg, "window.ATTRIBUTIO_CORE && window.PIPEQC && window.PIPET && window.PIPEV && window.FLOW && FLOW.viewFor && (FLOW.viewFor('table', { file: {}, label: 'a.mzfeat' }) || {}).id === 'feattable'")   # the scripts of Tabui and the late scripts of Flow arrive after its tab
+        pg.evaluate(OPEN); wait_for_js(pg, "window.__fo && window.__fo.extraTabs")
         def shown():
-            pg.evaluate(FILL); attendi(pg, "window.__panel.querySelector('.fl-proofs button')")
+            pg.evaluate(FILL); wait_for_js(pg, "window.__panel.querySelector('.fl-proofs button')")
             assert pg.locator(".fl-proofs select option").count() == 2
             pg.select_option(".fl-proofs select", "b"); pg.click(".fl-proofs button")
-            attendi(pg, "window.__panel.querySelectorAll('.fl-proofs tbody tr').length === 1")
+            wait_for_js(pg, "window.__panel.querySelectorAll('.fl-proofs tbody tr').length === 1")
             call = pg.evaluate("window.__calls[0]")
             assert call[0] == {"name": "b", "path": "mzlab/idx/b.mzidx"} and '"polarity":-1' in call[1] and '"mode":"family"' in call[1], call
             t = pg.inner_text(".fl-proofs table")
@@ -61,14 +61,14 @@ try:
         step("«Show proofs» asks the engine for the file chosen and lists the arcs of the family with their proofs", shown)
         def errors():
             for mode, text in (("recipe", "parameters of the pipeline are not valid"), ("memory", "about 900 MB needed of 192 MB")):
-                pg.evaluate(f"window.__mode = '{mode}'"); pg.evaluate(FILL); attendi(pg, "window.__panel.querySelector('.fl-proofs button')")
-                pg.click(".fl-proofs button"); attendi(pg, "window.__panel.querySelector('.fl-proofs [role=alert]')")
+                pg.evaluate(f"window.__mode = '{mode}'"); pg.evaluate(FILL); wait_for_js(pg, "window.__panel.querySelector('.fl-proofs button')")
+                pg.click(".fl-proofs button"); wait_for_js(pg, "window.__panel.querySelector('.fl-proofs [role=alert]')")
                 assert text in pg.inner_text(".fl-proofs [role=alert]"), pg.inner_text(".fl-proofs")
                 assert pg.locator(".fl-proofs button").is_enabled()
         step("an error of the engine is told in words and the button works again", errors)
         def phone():
             pg.evaluate("() => { const real = matchMedia.bind(window); window.matchMedia = q => (/coarse/.test(q) ? { matches: true, media: q, addEventListener() {}, removeEventListener() {} } : real(q)); }")
-            pg.evaluate(FILL); attendi(pg, "window.__panel.querySelector('.fl-proofs')")
+            pg.evaluate(FILL); wait_for_js(pg, "window.__panel.querySelector('.fl-proofs')")
             assert "designed for computers" in pg.inner_text(".fl-proofs") and pg.locator(".fl-proofs button").count() == 0
         step("on a phone the tab says the function is designed for computers", phone)
         b.close()

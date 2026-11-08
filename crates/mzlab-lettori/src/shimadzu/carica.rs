@@ -127,7 +127,7 @@ pub(super) fn carica(ole: &Ole, fam: Fam, limiti: &Limiti) -> Result<Dati> {
         });
     }
     let da = d.cromat.len();
-    d.cromat.extend(srm.cromatogrammi(da));
+    d.cromat.extend(srm.chromatograms(da));
     d.transizioni = srm.serie.iter().map(|s| (s.q1, s.q3, s.pol)).collect();
     segna_sim(&mut d, &impronte);
     d.raw = raw;

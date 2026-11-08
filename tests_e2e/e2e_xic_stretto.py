@@ -25,7 +25,7 @@ try:
         pg = r.page(p)
         load(pg, [D / "B_FullMass-t0.mzML"], 6000, 1); ready(pg)
         pg.evaluate("openXic(null,{})"); pg.wait_for_selector("#xic-mz", state="visible"); pg.fill("#xic-mz", "364.4"); pg.click("#xic-go")
-        attendi(pg, "E.panels.some(q => q.type === 'xic')"); frames(pg, 4); ready(pg)
+        wait_for_js(pg, "E.panels.some(q => q.type === 'xic')"); frames(pg, 4); ready(pg)
         for w in (420, 360):
             def narrow(w=w):
                 pg.set_viewport_size({"width": w, "height": 800}); frames(pg, 6)

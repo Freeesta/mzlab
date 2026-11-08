@@ -3,7 +3,7 @@
     python3 tools/prepara_sito.py
 
 `tools/build_site.py`, then `cargo build` of mzlab-wasm for wasm32 and `wasm-bindgen` into site/static/wasm (the same two commands the site
-tests run when the engine is missing). Nothing is done when site/ is newer than its sources; cargo skips what is up to date; the wasm-bindgen version must be the one of Cargo.lock.
+tests run when the engine is missing), and the library engine mzlab-lib-wasm into site/static/wasm-lib as the published site has it. Nothing is done when site/ is newer than its sources; cargo skips what is up to date; the wasm-bindgen version must be the one of Cargo.lock.
 """
 import hashlib
 import json
@@ -44,14 +44,14 @@ def bindgen_version() -> str:
 def up_to_date() -> bool:
     """site/ and its .wasm exist and nothing they are made from is newer (a site built with mzFinder's Pyodide, as the site tests do, is kept)."""
     out = ROOT / "site" / "static" / "wasm" / "mzlab_wasm_bg.wasm"
-    if not out.exists() or not (ROOT / "site" / "index.html").exists():
+    if not out.exists() or not (ROOT / "site" / "index.html").exists() or not (ROOT / "site" / "static" / "wasm-lib" / "mzlab_lib_wasm.js").exists():
         return False
     t = out.stat().st_mtime
     sources = [ROOT / "Cargo.lock", *(ROOT / "mzlab" / "web").rglob("*"), *(ROOT / "crates").rglob("*.rs")]
     return all(f.stat().st_mtime <= t for f in sources if f.is_file())
 
 
-def add_rotte() -> None:
+def add_routes() -> None:
     """The lazy module `rotte` (statistics, molecules, Data and Flow routes, crates/mzlab-rotte-wasm) into site/static/wasm-feat with its manifest entry; the rest of the manifest is the CI's."""
     mod = ROOT / "site" / "static" / "wasm-feat" / "rotte"
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(mod), str(WASM.with_name("mzlab_rotte_wasm.wasm"))])
@@ -80,7 +80,10 @@ def main() -> int:
     if want and want not in have:
         run(["cargo", "install", "wasm-bindgen-cli", "--version", want, "--locked", "--force"])
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", "site/static/wasm", str(WASM)])
-    add_rotte()
+    add_routes()
+    # its own cargo run: built with mzlab-wasm, unified features could change the engine's bytes
+    run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm"], build_env("wasm32-unknown-unknown", commit=False))
+    run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", "site/static/wasm-lib", str(WASM.with_name("mzlab_lib_wasm.wasm"))])
     run([sys.executable, "tools/build_site.py", "--build-json"])      # the .wasm is in place now: build.json names its SHA-256
     return 0
 

@@ -50,13 +50,13 @@ try:
             hs = pg.evaluate("tabPanels().map(p=>p.h)"); assert all(abs(ys2[i + 1] - (ys2[i] + hs[i] + 10)) < 1 for i in range(len(ys2) - 1)), "gaps"
         step("fixed slots: dragging a panel up swaps the others down", slots)
         pg.screenshot(path=SH + "92_after_swap.png")
-        def metodo():
+        def method():
             pg.click("#np-method"); ready(pg)
             t = pg.inner_text("body")
             assert "Metodo cromatografico (LC)" in t and "<sub>" not in t and "H2O + 0.1% FA" in t and "% A" in t and "Flusso iniziale" not in t and "PDA: canali" not in t
             assert pg.locator("svg polyline").count() >= 1
             pg.screenshot(path=SH + "93_metodo.png")
-        step("Metodo window shows gradient, flow, PDA", metodo)
+        step("Metodo window shows gradient, flow, PDA", method)
 finally:
     r.close()
 r.report()

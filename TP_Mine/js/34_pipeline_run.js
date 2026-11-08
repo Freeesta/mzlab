@@ -106,7 +106,7 @@
     try {
       if (!st.R) { const url = URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })); st.R = await import(url); }
       if (window.MZLAB_DESKTOP) { const pool = await st.ctx.pool(); st.call = (op, j) => pool.campioni(op, j); }     // the app: the native route finder/campioni
-      else { const m = await /** @type {any} */ (window).PIPEQC.engine(window.QTOOLS.ctx.base); st.call = (op, j) => { try { return m.campioni(op, j); } catch (e) { throw fail(e); } }; }
+      else { const m = await /** @type {any} */ (window).PIPEQC.engine(window.QTOOLS.ctx.base); st.call = (op, j) => { try { return m.samples(op, j); } catch (e) { throw fail(e); } }; }
       st.cs = await st.R.build(st.call, st.files, typeof NB !== "undefined" ? NB : null, qaqcRoles());
       await drawRoles();
     } catch (e) { st.cs = null; st.block = "The roles of the files could not be read."; await drawRoles(); msg(st.ctx.msg(e.key || "error.featFailed", e.params), true); }

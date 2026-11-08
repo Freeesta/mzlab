@@ -75,7 +75,7 @@ pub fn idxread(data: &[u8]) {
 /// The Thermo `.raw` reader (opentfraw): index, method and streamed spectra.
 pub fn raw(data: &[u8]) {
     let _ = raw::instrument_method_text(Cursor::new(data));
-    let _ = raw::metodo(Cursor::new(data), "x.raw");
+    let _ = raw::method(Cursor::new(data), "x.raw");
     let _ = raw::parse(Cursor::new(data), |_| {});
 }
 
@@ -96,19 +96,19 @@ pub fn wiff(data: &[u8]) {
     let Ok(mut l) = lettori::apri(insieme(membri), &Limiti::sito()) else {
         return;
     };
-    let Ok(ix) = l.indice(0).map(<[_]>::to_vec) else {
+    let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
         return;
     };
     for j in [0, ix.len() / 2, ix.len().saturating_sub(1)] {
         if j < ix.len() {
-            let _ = l.scansione(0, j);
-            let _ = l.intestazione(0, j);
+            let _ = l.scan(0, j);
+            let _ = l.scan_header(0, j);
         }
     }
-    if let Ok(cr) = l.cromatogrammi(0)
+    if let Ok(cr) = l.chromatograms(0)
         && let Some(v) = cr.first()
     {
-        let _ = l.cromatogramma(0, &v.id);
+        let _ = l.chromatogram(0, &v.id);
     }
 }
 

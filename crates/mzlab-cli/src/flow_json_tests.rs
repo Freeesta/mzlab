@@ -76,9 +76,9 @@ fn steps_json_has_the_ids_of_the_exports_and_the_native_flags() {
     let one = run_cli(&["steps", "--json", "--id", "features.table"]);
     assert_eq!(one.code, 0);
     assert_eq!(str_of(&json(&one.stdout), "id"), "features.table");
-    let at = run_cli(&["steps", "--id", "features.detect@1"]);
+    let at = run_cli(&["steps", "--id", "features.detect@2"]);
     assert!(
-        at.stdout.starts_with(b"features.detect@1  native  "),
+        at.stdout.starts_with(b"features.detect@2  native  "),
         "{}",
         String::from_utf8_lossy(&at.stdout)
     );

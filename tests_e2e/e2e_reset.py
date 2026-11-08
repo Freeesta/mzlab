@@ -35,7 +35,7 @@ try:
         base = f"http://127.0.0.1:{r.port}/"
         def load_files():
             pg.goto(base); pg.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000)
-            if pg.evaluate("!!S.sess"): attendi(pg, "E.files.length >= 2", 60000)          # a session left by the previous step resumes its files
+            if pg.evaluate("!!S.sess"): wait_for_js(pg, "E.files.length >= 2", 60000)          # a session left by the previous step resumes its files
             pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")
             if not pg.evaluate("typeof E !== 'undefined' && E.files.length >= 2"):          # a page that resumed its session already has them
                 stage(pg, [EX / "FullScan_t0.mzML", EX / "FullScan_t30.mzML"])
@@ -45,7 +45,7 @@ try:
         def stay():
             load_files()
             pg.evaluate("localStorage.removeItem('mzlab.reset.note')"); saved(pg); pg.reload(); ready(pg)
-            attendi(pg, "E.files.length >= 2", 60000)
+            wait_for_js(pg, "E.files.length >= 2", 60000)
             assert pg.evaluate("E.files.length") >= 2, "after a reload the files are still there (this is wanted)"
             assert pg.locator("#resetnote").count() == 0, "no reminder pops up (switched off in reset.js)"
         step("a reload keeps the files and shows no reminder", stay)
@@ -127,7 +127,7 @@ try:
             load_files()
             pg.evaluate("location.hash = '#/data'")                                               # a hash in the address must not stop the reload
             pg.evaluate("QQRESET.run('files')"); pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000)
-            attendi(pg, "(async () => { const n = []; for await (const [k] of (await navigator.storage.getDirectory()).entries()) n.push(k); return n.includes('librerie') && !S.sess; })()", 30000)   # settled: the reset finished writing
+            wait_for_js(pg, "(async () => { const n = []; for await (const [k] of (await navigator.storage.getDirectory()).entries()) n.push(k); return n.includes('librerie') && !S.sess; })()", 30000)   # settled: the reset finished writing
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"] and s["mzlab"] == [], s                     # memory released: the files and their indexes are gone
             assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files and session only»

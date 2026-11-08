@@ -15,6 +15,7 @@ use mzlab_core::step::Step;
 
 use crate::flow::{executable, steps, FileRunner, Meter};
 pub(crate) use crate::flow_apply::apply_set;
+pub use crate::flow_inputs::fill_inputs;
 use crate::flow_json::{fail as jfail, invalid, Style, JSONL_MARK};
 use crate::Outcome;
 use mzlab_core::flow::apply_sets;
@@ -222,6 +223,7 @@ pub(crate) fn run_checked(
     runner: &FileRunner,
     workers: usize,
 ) -> mzlab_core::Result<(Run, String)> {
+    runner.budget.run_with(workers);
     let run = execute(plan, &steps(), runner, workers)?;
     runner.save_cache()?;
     let prov = prov_text(text, &run);
@@ -262,7 +264,45 @@ pub(crate) fn progress_line(
     match err {
         None if cached => format!("{what} ... reused"),
         None => format!("{what} ... done in {:.1} s", ms / 1e3),
-        Some(e) => format!("{what} ... failed: {e}"),
+        Some(e) => {
+            let get = |k: &str| {
+                e.params
+                    .iter()
+                    .find(|(n, _)| *n == k)
+                    .map(|(_, v)| v.clone())
+            };
+            format!(
+                "{what} ... failed: {e}{}",
+                memory_advice(e.key, &get, &job.instance.id)
+            )
+        }
+    }
+}
+
+/// For a memory refusal, a second line that says it in words and names the next step: the budget of the index builder (`--set`), the working memory
+/// (`--budget-mb`) or fewer files at once. Empty for any other error.
+pub(crate) fn memory_advice(
+    key: &str,
+    get: &dyn Fn(&str) -> Option<String>,
+    instance: &str,
+) -> String {
+    if key != "error.memoryBudget" {
+        return String::new();
+    }
+    let p = |k: &str| get(k).and_then(|v| v.parse::<usize>().ok());
+    let fase = get("fase");
+    match (fase.as_deref(), p("stima_mb"), p("budget_mb")) {
+        (Some("indexPeaks"), Some(est), Some(cap)) => format!(
+            "\n    the densest 1-Da m/z range of this file holds at least {est} MB of peaks and the index builder holds {} of one range \
+             (twice its budget): try --set {instance}.budget={} (bytes; the index is the same at any budget)",
+            if cap > 0 { format!("at most {cap} MB") } else { "less than 1 MB".to_string() },
+            // the count may have stopped early (a lower bound): twice what it says, and never below the default
+            est.next_power_of_two().max(2 * cap).max(64) << 20
+        ),
+        (Some(f), Some(est), Some(cap)) => format!(
+            "\n    the {f} phase needs about {est} MB and the budget is {cap} MB: give more working memory with --budget-mb N, or run fewer files at once"
+        ),
+        _ => "\n    memory could not be reserved: close other programs or run fewer files at once (--workers 1)".to_string(),
     }
 }
 
@@ -405,39 +445,6 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
     let out = a.out.unwrap_or_default();
     let opts = (a.fresh, a.budget_mb, a.style);
     crate::flow_out::write_run(&plan, &ready, found, out, a.workers, meter, opts)
-}
-
-/// The inputs of the plan that name no hash get it from the file `locate` gives (one that names a hash must match it), and the scan inputs the facets
-/// their file gives where the plan writes none (`mzlab_feat::nature::fill_facets`).
-pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> mzlab_core::Result<()> {
-    for f in &mut plan.inputs {
-        let (bytes, sha) =
-            crate::flow_set::digest(&locate(&f.name)).map_err(|e| e.with("input", &f.name))?;
-        if !f.sha256.is_empty() && f.sha256 != sha {
-            return Err(mzlab_core::Error::new("err.flow.input.sha").with("input", &f.name));
-        }
-        f.sha256 = sha;
-        f.bytes = Some(bytes);
-    }
-    mzlab_feat::nature::fill_facets(plan, |n| scan_facts(&locate(n)));
-    Ok(())
-}
-
-/// The (polarity, high resolution) of a scan file, from its index or from the scan headers of an mzML; None for a file read by another reader or
-/// that does not open (its facets stay unknown and the step checks them when it starts).
-fn scan_facts(path: &Path) -> Option<(i8, Option<bool>)> {
-    let ext = path.extension()?.to_str()?.to_ascii_lowercase();
-    let mut f = std::fs::File::open(path).ok()?;
-    let size = f.metadata().ok()?.len();
-    match ext.as_str() {
-        "mzidx" => mzlab_core::idxread::Index::open(f, size)
-            .ok()
-            .map(|ix| mzlab_feat::nature::index_facts(&ix)),
-        "mzml" => mzlab_core::scantable::read(&mut f, size)
-            .ok()
-            .map(|t| mzlab_feat::nature::table_facts(&t)),
-        _ => None,
-    }
 }
 
 /// Reads, checks and runs a workflow file; returns the run and its `prov/1` text. Files of the plan are read from `dir`, outputs written to `work`.

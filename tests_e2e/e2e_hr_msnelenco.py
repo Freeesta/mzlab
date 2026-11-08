@@ -18,11 +18,11 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2)
-        attendi(pg, "!!document.querySelector('#hrbar [data-hb=tree]') && !document.querySelector('#hrbar [data-hb=tree]').hidden", 60000)
+        wait_for_js(pg, "!!document.querySelector('#hrbar [data-hb=tree]') && !document.querySelector('#hrbar [data-hb=tree]').hidden", 60000)
         def open_list():
             pg.evaluate("(()=>{const d=document.querySelector('#bigdlg');if(d.open)d.close()})()")
             pg.click("#hrbar [data-hb=tree]")
-            attendi(pg, "document.querySelectorAll('#mt-pexp .msnl-b .msnl-r').length > 0", 60000)
+            wait_for_js(pg, "document.querySelectorAll('#mt-pexp .msnl-b .msnl-r').length > 0", 60000)
         def opens():
             open_list()
             v = pg.evaluate("""(()=>({sel:String(!document.querySelector('#mt-tabs')), tree:!document.querySelector('#mt-ptree'),
@@ -40,9 +40,9 @@ try:
             assert len(m) > 1 and all(m[i] >= m[i + 1] for i in range(len(m) - 1)), m
             assert pg.get_attribute("#mt-pexp [data-c=prec]", "aria-sort") == "descending"
             pg.fill("#mt-pexp [data-f=mz0]", str(PREC - 0.01)); pg.fill("#mt-pexp [data-f=mz1]", str(PREC + 0.01))
-            attendi(pg, "document.querySelectorAll('#mt-pexp .msnl-g').length === 1")
+            wait_for_js(pg, "document.querySelectorAll('#mt-pexp .msnl-g').length === 1")
             if not pg.is_checked("#mt-pexp [data-f=all]"): pg.check("#mt-pexp [data-f=all]")
-            attendi(pg, "document.querySelectorAll('#mt-pexp .msnl-r:not(.msnl-g):not(.msnl-h)').length > 0")
+            wait_for_js(pg, "document.querySelectorAll('#mt-pexp .msnl-r:not(.msnl-g):not(.msnl-h)').length > 0")
             v = pg.evaluate("[...document.querySelectorAll('#mt-pexp .msnl-r:not(.msnl-g):not(.msnl-h)')].map(r=>[+r.children[1].textContent,r.children[3].textContent,r.children[6].textContent])"); print(v[:3])
             assert all(abs(float(x[1].split(" ")[-1]) - PREC) < 0.01 and x[2] for x in v), v
         step("sort by precursor m/z (descending), filter by m/z, every scan of the precursor with its base peak", sort_filter)
@@ -55,30 +55,30 @@ try:
         def row_opens():
             sid = pg.evaluate("(async()=>{const f=E.files.find(x=>x.dda);const D=await DDA.get(f.k);const r=document.querySelector('#mt-pexp .msnl-r:not(.msnl-g):not(.msnl-h)');const no=+r.children[0].textContent;return D.sid[D.no.indexOf(no)]})()")
             pg.click("#mt-pexp .msnl-r:not(.msnl-g):not(.msnl-h)")
-            attendi(pg, "!document.querySelector('#bigdlg').open && (()=>{const s=E.panels.find(p=>p.dda!=null);return !!(s && s.sid==" + str(sid) + " && s._a)})()", 20000)
+            wait_for_js(pg, "!document.querySelector('#bigdlg').open && (()=>{const s=E.panels.find(p=>p.dda!=null);return !!(s && s.sid==" + str(sid) + " && s._a)})()", 20000)
             assert pg.evaluate("E.tab") == "full"
         step("a click on a scan closes the window and shows that MS2 next to its Full Scan", row_opens)
         def click_point(panel, level):
             # the linked spectrum is there at the apex; a click elsewhere on the trace moves it to that RT
-            try: attendi(pg, "(()=>{const c=" + panel + ";const s=E.panels.find(q=>q.type==='spec'&&q.link===c.id);return !!(s && s._a && s.level===" + str(level) + " && s.r0!=null)})()", 30000)
+            try: wait_for_js(pg, "(()=>{const c=" + panel + ";const s=E.panels.find(q=>q.type==='spec'&&q.link===c.id);return !!(s && s._a && s.level===" + str(level) + " && s.r0!=null)})()", 30000)
             except Exception:
                 print(pg.evaluate("(()=>{const c=" + panel + ";return E.panels.filter(q=>q.type==='spec').map(s=>[s.link===c.id,s.tab,s.level,s.r0,!!s._a,s.k,s.prec])})()")); raise
             r0 = pg.evaluate("(()=>{const c=" + panel + ";c.el.scrollIntoView({block:'center',behavior:'instant'});return E.panels.find(q=>q.type==='spec'&&q.link===c.id).r0})()")
             # an MS2-tab trace snaps the click to its nearest scan: aim at the scan farthest from the apex
             box = pg.evaluate("(()=>{const c=" + panel + ";const r=c.cv.getBoundingClientRect();const t=c._a.sr&&c._a.sr[0];let x=r.width*0.3;if(t){let b=-1;t.x.forEach((v,i)=>{if(t.y[i]>0&&Math.abs(v-c.cur)>b){b=Math.abs(v-c.cur);x=c._a.X(v);}});}return {x:r.left+x,y:r.top+r.height/2}})()")
             # the loading screen of the tab change stays up for a moment and would take the click
-            attendi(pg, "document.querySelector('#loading').hidden", 20000)
+            wait_for_js(pg, "document.querySelector('#loading').hidden", 20000)
             pg.mouse.click(box["x"], box["y"])
-            attendi(pg, "(()=>{const c=" + panel + ";const s=E.panels.find(q=>q.type==='spec'&&q.link===c.id);return Math.abs(s.r0-(" + str(r0) + "))>1e-6})()", 20000)
+            wait_for_js(pg, "(()=>{const c=" + panel + ";const s=E.panels.find(q=>q.type==='spec'&&q.link===c.id);return Math.abs(s.r0-(" + str(r0) + "))>1e-6})()", 20000)
         def tic():
             # the precursor with the most scans: the activation column sorts the precursors by their number of scans
             open_list()
             pg.click("#mt-pexp [data-c=act] button"); pg.click("#mt-pexp [data-c=act] button")
-            attendi(pg, "document.querySelector('#mt-pexp [data-c=act]').getAttribute('aria-sort')==='descending'")
+            wait_for_js(pg, "document.querySelector('#mt-pexp [data-c=act]').getAttribute('aria-sort')==='descending'")
             mz = pg.evaluate("+document.querySelector('#mt-pexp .msnl-g').children[3].textContent")
             n = pg.evaluate("+document.querySelector('#mt-pexp .msnl-g').children[0].textContent.replace(/[^0-9]/g,'')")
             pg.click("#mt-pexp .msnl-g [data-a=tic]")
-            attendi(pg, "E.tab==='ms2' && (()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.ptol);return !!(c && c._a)})()", 30000)
+            wait_for_js(pg, "E.tab==='ms2' && (()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.ptol);return !!(c && c._a)})()", 30000)
             v = pg.evaluate("(async()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.ptol);const f=E.files.find(x=>x.kind==='ms2');const j=await (await fetch(`api/chrom?k=${f.k}&kind=tic&level=2&prec=${c.prec}&ptol=${c.ptol}`)).json();const w=await (await fetch(`api/chrom?k=${f.k}&kind=tic&level=2&prec=${c.prec}`)).json();return {prec:c.prec,ptol:c.ptol,n:j.rt.length,wide:w.rt.length}})()"); print(v, n)
             assert n > 2 and abs(v["prec"] - mz) < 0.01 and v["ptol"] < 0.05 and v["n"] == n and v["n"] <= v["wide"], v
             click_point("E.panels.find(p=>p.type==='chrom'&&p.ptol)", 2)
@@ -86,9 +86,9 @@ try:
         def xic():
             open_list()
             pg.fill("#mt-pexp [data-f=mz0]", str(PREC - 0.01)); pg.fill("#mt-pexp [data-f=mz1]", str(PREC + 0.01))
-            attendi(pg, "document.querySelectorAll('#mt-pexp .msnl-g').length === 1")
+            wait_for_js(pg, "document.querySelectorAll('#mt-pexp .msnl-g').length === 1")
             pg.click("#mt-pexp .msnl-g [data-a=xic]")
-            attendi(pg, "E.tab==='full' && (()=>{const x=E.panels.find(p=>p.type==='xic'&&p.traces.some(t=>Math.abs(t.mz-" + str(PREC) + ")<0.01));return !!(x && x._a)})()", 30000)
+            wait_for_js(pg, "E.tab==='full' && (()=>{const x=E.panels.find(p=>p.type==='xic'&&p.traces.some(t=>Math.abs(t.mz-" + str(PREC) + ")<0.01));return !!(x && x._a)})()", 30000)
             click_point("E.panels.find(p=>p.type==='xic')", 1)
         step("XIC of the precursor: an XIC panel of the Full Scan at its m/z", xic)
         def ms3():
@@ -103,9 +103,9 @@ try:
               return {g:G.map(g=>[g.mz,g.idx.length,g.lev.join(',')]),tabs:document.querySelectorAll('#mt-tabs [role=tab]').length,done}})()"""); print(v)
             assert v["g"] == [[300.1, 3, "2,3,4"], [400.2, 1, "2"]] and v["tabs"] == 2 and v["done"] == 0, v
             pg.click("#mt-ttree")
-            attendi(pg, "!document.querySelector('#mt-ptree').hidden && document.querySelector('#mt-pexp').hidden")
+            wait_for_js(pg, "!document.querySelector('#mt-ptree').hidden && document.querySelector('#mt-pexp').hidden")
             pg.focus("#mt-ttree"); pg.keyboard.press("ArrowLeft")
-            attendi(pg, "!document.querySelector('#mt-pexp').hidden && document.activeElement.id==='mt-texp'")
+            wait_for_js(pg, "!document.querySelector('#mt-pexp').hidden && document.activeElement.id==='mt-texp'")
         step("MS3 under its first precursor; a file with MS3 gets the «Tree» tab, arrows move between the tabs", ms3)
         def keys():
             open_list()

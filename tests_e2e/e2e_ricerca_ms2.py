@@ -18,7 +18,7 @@ TRIO = "(()=>{const s1=E.panels.find(p=>p.type==='spec'&&p.duo!=null),s2=E.panel
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1500})
-        load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2); attendi(pg, "E.files.some(f=>f.kind==='ms2')")
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2); wait_for_js(pg, "E.files.some(f=>f.kind==='ms2')")
         info = pg.evaluate("""(async()=>{const k=E.files.find(f=>f.kind==='ms2').k, d=await J('api/dda?k='+k), cnt={};d.tgt.forEach(t=>{if(t)cnt[t]=(cnt[t]||0)+1});
           const t=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0], i=d.tgt.indexOf(t), s=await J('api/scan?k='+k+'&sid='+d.sid[i]);
           return {k, t, n:cnt[t], sid:d.sid[i], mz:s.mz, y:s.y}})()""")
@@ -29,13 +29,13 @@ try:
                 + msp("Analogo di prova", info["t"] - 15.9949, [(m if i < len(pk) // 2 else m - 15.9949, y) for i, (m, y) in enumerate(pk)], "CCCCCCCCCCCCCC-AAAAAAAAAA-N"))
         pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'prova.msp')})})(%s)" % json.dumps(text))
         def open_menu():
-            pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); attendi(pg, "(()=>{const t=" + TRIO + ";return !!(t.s2&&t.s2._a)})()"); frames(pg, 3)
+            pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); wait_for_js(pg, "(()=>{const t=" + TRIO + ";return !!(t.s2&&t.s2._a)})()"); frames(pg, 3)
             pos = pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.scrollIntoView({block:'center'});const r=t.s2.cv.getBoundingClientRect();return {x:r.left+r.width*0.5,y:r.top+r.height*0.3}})()")
-            pg.mouse.click(pos["x"], pos["y"], button="right"); attendi(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"Cos'è?\")")
+            pg.mouse.click(pos["x"], pos["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"Cos'è?\")")
             assert "Cos'è?" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
         step("the MS2 panel of the DDA trio has the voice «Cos'è? (cerca nelle librerie)»", open_menu)
         def result():
-            pg.click("#ctx >> text=Cos'è?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000); pg.set_viewport_size({"width": 1280, "height": 800}); attendi(pg, "/Analoghi \\([1-9]/.test(document.querySelector('#lw-tab-an').textContent)")
+            pg.click("#ctx >> text=Cos'è?"); pg.wait_for_selector("#libwhat[open] #lw-list table", timeout=60000); pg.set_viewport_size({"width": 1280, "height": 800}); wait_for_js(pg, "/Analoghi \\([1-9]/.test(document.querySelector('#lw-tab-an').textContent)")
             t = pg.inner_text("#libwhat")
             assert "Candidati (" in t and "Analoghi (" in t, t[:300]
             names = pg.locator("#libwhat tr.row[data-k=id]:not([hidden]) td:nth-child(1)").all_inner_texts()
@@ -63,12 +63,12 @@ try:
             b = pg.locator("#libwhat [data-grp]"); assert b.count() == 1, b.count()          # the twin shares the first InChIKey block
             assert "stesso primo blocco" in b.first.get_attribute("title")
             assert pg.locator("#libwhat tr.mem[hidden]").count() == 1
-            b.first.click(); attendi(pg, "document.querySelectorAll('#libwhat tr.mem:not([hidden])').length === 1")
+            b.first.click(); wait_for_js(pg, "document.querySelectorAll('#libwhat tr.mem:not([hidden])').length === 1")
         step("entries with the same first InChIKey block are grouped (stereoisomers), expandable", groups)
         def sorting():
-            pg.click("#lw-list [data-sort=name]"); attendi(pg, "document.querySelector('#lw-list th[aria-sort=ascending] [data-sort=name]') !== null")
+            pg.click("#lw-list [data-sort=name]"); wait_for_js(pg, "document.querySelector('#lw-list th[aria-sort=ascending] [data-sort=name]') !== null")
             n = pg.locator("#libwhat tr.row[data-k=id]:not(.mem) td:nth-child(1)").all_inner_texts(); assert n == sorted(n), n
-            pg.click("#lw-list [data-sort=ent]"); attendi(pg, "document.querySelector('#lw-list th[aria-sort=descending] [data-sort=ent]') !== null")
+            pg.click("#lw-list [data-sort=ent]"); wait_for_js(pg, "document.querySelector('#lw-list th[aria-sort=descending] [data-sort=ent]') !== null")
         step("sortable columns (aria-sort), groups kept together", sorting)
         def level():
             v = pg.inner_text("#lw-verdict")
@@ -82,18 +82,18 @@ try:
         def decision():
             lv = pg.evaluate("document.querySelector('#lw-verdict .lvb').textContent.replace('L','')")
             assert lv in ("2a", "3a"), lv
-            pg.select_option("#libwhat #lv-dec", "2b"); attendi(pg, "document.querySelector('#lw-verdict .lvb').textContent === 'L2b'")
+            pg.select_option("#libwhat #lv-dec", "2b"); wait_for_js(pg, "document.querySelector('#lw-verdict .lvb').textContent === 'L2b'")
             assert "Livello proposto: L" + lv in pg.inner_text("#lw-verdict").replace("\n", " "), "the proposal stays"
-            pg.select_option("#libwhat #lv-dec", "1"); attendi(pg, "document.querySelector('#libwhat #lv-msg').innerText.includes('standard')")
+            pg.select_option("#libwhat #lv-dec", "1"); wait_for_js(pg, "document.querySelector('#libwhat #lv-msg').innerText.includes('standard')")
             assert pg.input_value("#libwhat #lv-dec") == "2b"
             pg.select_option("#libwhat #lv-dec", ""); frames(pg, 3)
         step("2b only by the decision of the chemist; 1 refused without a standard", decision)
         def options():
             assert not pg.is_visible("#libwhat [data-thr=entropia_min]")
             pg.click("#lw-opt summary"); assert pg.is_visible("#libwhat [data-thr=entropia_min]") and pg.is_visible("#lw-tol") and pg.is_visible("#lw-libs")
-            pg.fill("#libwhat [data-thr=entropia_min]", "0,999"); pg.dispatch_event("#libwhat [data-thr=entropia_min]", "change"); attendi(pg, "(() => { try { return JSON.parse(localStorage.getItem('mzlab.lib.soglie')).mzlab.entropia_min === 0.999; } catch (e) { return false; } })()")
+            pg.fill("#libwhat [data-thr=entropia_min]", "0,999"); pg.dispatch_event("#libwhat [data-thr=entropia_min]", "change"); wait_for_js(pg, "(() => { try { return JSON.parse(localStorage.getItem('mzlab.lib.soglie')).mzlab.entropia_min === 0.999; } catch (e) { return false; } })()")
             wf = pg.evaluate("LIVELLI.exportState()"); assert wf["soglie"]["entropia_min"] == 0.999 and wf["formato"] == "livelli/1"
-            pg.click("#lw-thr-reset"); attendi(pg, "LIVELLI.thresholds().entropia_min === 0.75")
+            pg.click("#lw-thr-reset"); wait_for_js(pg, "LIVELLI.thresholds().entropia_min === 0.75")
             pg.keyboard.press("Escape"); frames(pg, 2)
             assert pg.evaluate("document.querySelector('#libwhat').open && !document.querySelector('#lw-opt').open"), "Esc closes the popup, not the window"
         step("«Opzioni…»: tolerances, thresholds (saved, exported, reset) and libraries in one popup; Esc closes it", options)
@@ -110,7 +110,7 @@ try:
         step("the 2D structure of the selected candidate (SMILES of the library entry)", structure)
         def mirror_lines():
             lines = json.loads(pg.get_attribute("#lw-cv", "data-lines")); assert len(lines) >= 4 and all(l[2] == 0 for l in lines), lines
-            pg.click("#lw-tab-an"); pg.locator("#libwhat tr.row[data-k=an]").first.click(); attendi(pg, "(() => { const c = document.querySelector('#lw-cv'); if (!c) return false; try { return JSON.parse(c.getAttribute('data-lines')).some(l => l[2] === 1); } catch (e) { return false; } })()")
+            pg.click("#lw-tab-an"); pg.locator("#libwhat tr.row[data-k=an]").first.click(); wait_for_js(pg, "(() => { const c = document.querySelector('#lw-cv'); if (!c) return false; try { return JSON.parse(c.getAttribute('data-lines')).some(l => l[2] === 1); } catch (e) { return false; } })()")
             assert "Analogo di prova" in pg.inner_text("#libwhat tr.row[data-k=an]")
             ln = json.loads(pg.get_attribute("#lw-cv", "data-lines")); assert any(l[2] == 1 for l in ln), ln
             if not pg.evaluate("document.querySelector('#lw-more').open"): pg.click("#lw-more summary")
@@ -121,17 +121,17 @@ try:
         def hovering():
             x = pg.evaluate("""(() => { const c = document.querySelector('#lw-cv'), g = c._mg, b = c.getBoundingClientRect(), p = g.r.pairs[0];
               return {x: b.left + g.X(g.q.mz[p[0]]), y: b.top + g.mid - g.q.it[p[0]] * g.half / 2}; })()""")
-            pg.mouse.move(x["x"], x["y"]); attendi(pg, "!document.querySelector('.lw-tip').hidden")
+            pg.mouse.move(x["x"], x["y"]); wait_for_js(pg, "!document.querySelector('.lw-tip').hidden")
             tip = pg.inner_text(".lw-tip"); assert "m/z" in tip and "appaiato" in tip, tip
         step("hover on a peak of the mirror: m/z, intensity and its partner with Δ", hovering)
         def keyboard():
             pg.click("#lw-tab-id"); pg.locator("#libwhat tr.row[data-k=id]:not([hidden])").first.focus(); pg.keyboard.press("ArrowDown")
-            attendi(pg, "document.activeElement.matches('tr.row.sel') && document.activeElement !== document.querySelector('#libwhat tr.row[data-k=id]:not([hidden])')")
-            pg.focus("#lw-tab-id"); pg.keyboard.press("ArrowRight"); attendi(pg, "document.querySelector('#lw-tab-an').getAttribute('aria-selected') === 'true'")
+            wait_for_js(pg, "document.activeElement.matches('tr.row.sel') && document.activeElement !== document.querySelector('#libwhat tr.row[data-k=id]:not([hidden])')")
+            pg.focus("#lw-tab-id"); pg.keyboard.press("ArrowRight"); wait_for_js(pg, "document.querySelector('#lw-tab-an').getAttribute('aria-selected') === 'true'")
             pg.keyboard.press("ArrowLeft")
         step("keyboard: arrows move along the rows and between the tabs", keyboard)
         def attribution():
-            pg.locator("#libwhat tr.row[data-k=id]").first.click(); attendi(pg, "document.querySelector('#lw-more').innerText.includes('ACC001')")
+            pg.locator("#libwhat tr.row[data-k=id]").first.click(); wait_for_js(pg, "document.querySelector('#lw-more').innerText.includes('ACC001')")
             assert "Autore di prova" in pg.inner_text("#lw-more"), pg.inner_text("#lw-more")
         step("authors, accession and license behind «Dettagli»", attribution)
         def axe():
@@ -151,10 +151,10 @@ try:
         step("no page or console error; the window closes", shot)
         def golden_pairs():
             ok = 0
-            for tipo in ("stesso", "analogo", "chimerico"):
-                cs = [c for c in GOLD["casi"] if c["tipo"] == tipo and c["match_tol0.02"]["pairs"]]
-                if tipo == "analogo": cs = [c for c in cs if c["match_tol0.02"]["n_shifted"] > 0]
-                assert cs, tipo; c = cs[0]
+            for kind in ("stesso", "analogo", "chimerico"):
+                cs = [c for c in GOLD["casi"] if c["tipo"] == kind and c["match_tol0.02"]["pairs"]]
+                if kind == "analogo": cs = [c for c in cs if c["match_tol0.02"]["n_shifted"] > 0]
+                assert cs, kind; c = cs[0]
                 got = pg.evaluate("""(c) => { const cv = document.createElement('canvas'); cv.style.width = '900px'; cv.style.height = '320px'; document.body.appendChild(cv);
                   const nz = a => { const m = Math.max(...a); return a.map(v => v / m); };
                   LIB.mirror(cv, {mz: c.a.mz, it: nz(c.a.int), hr: true}, {mz: c.b.mz, it: nz(c.b.int), prec: c.b.prec, name: 'x', shared: c.match['matched'], pairs: c.match.pairs});
@@ -174,12 +174,12 @@ try:
         r = Run(port=8982, wd="/tmp/wd_ricms2lr"); pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_MS2-t15")]); pg.wait_for_selector("text=Carica dati")
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("setTab('ms2',true)"); attendi(pg, "(() => { const p = E.panels.find(p => p.type === 'spec' && p.level === 2); return !!(p && p._a && p._a.data && p._a.data[0]); })()")
+        pg.evaluate("setTab('ms2',true)"); wait_for_js(pg, "(() => { const p = E.panels.find(p => p.type === 'spec' && p.level === 2); return !!(p && p._a && p._a.data && p._a.data[0]); })()")
         def lr_none():
             SPEC = "E.panels.find(p => p.type === 'spec' && p.level === 2)"
             assert pg.evaluate(f"LIB.isHr({SPEC})") is False
             c = pg.evaluate(f"(() => {{ const p = {SPEC}; p.el.scrollIntoView({{block:'center'}}); const q = p.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
-            pg.mouse.click(c["x"], c["y"], button="right"); attendi(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.trim() !== ''")
+            pg.mouse.click(c["x"], c["y"], button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.trim() !== ''")
             t = pg.inner_text("#ctx"); assert "Cos'è?" not in t, t
         step("low resolution: the voice «Cos'è?» does not exist (the program gives no answers)", lr_none)
     r.close()

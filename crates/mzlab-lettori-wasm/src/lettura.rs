@@ -44,30 +44,71 @@ fn da_js(read: &Function, i: u32, off: u64, n: usize) -> mzlab_core::Result<js_s
     Ok(a)
 }
 
+/// `read.into(i, offset, view)` of the page (`rust-nativo.js`, over OPFS handles): the bytes go from the handle straight into this module's memory. The view (as `lend` of
+/// `crates/mzlab-wasm/src/nativi.rs`, the other way) is valid during the call only: JS fills it at once, never keeps it, makes no call into the module meanwhile, and answers the bytes it put.
+fn into_di(read: &Function) -> Option<Function> {
+    js_sys::Reflect::get(read, &JsValue::from_str("into"))
+        .ok()?
+        .dyn_into()
+        .ok()
+}
+
+/// `buf.len()` bytes of member `i` at `off` into `buf`: through `into` when the page has it, otherwise `read` copied.
+fn leggi(
+    read: &Function,
+    into: Option<&Function>,
+    i: u32,
+    off: u64,
+    buf: &mut [u8],
+) -> mzlab_core::Result<()> {
+    let bad = || mzlab_core::Error::new("error.badIndex");
+    let Some(into) = into else {
+        da_js(read, i, off, buf.len())?.copy_to(buf);
+        return Ok(());
+    };
+    let mem: js_sys::WebAssembly::Memory = wasm_bindgen::memory().unchecked_into();
+    let (at, n) = u32::try_from(buf.as_mut_ptr() as usize)
+        .ok()
+        .zip(u32::try_from(buf.len()).ok())
+        .ok_or_else(bad)?;
+    let v = js_sys::Uint8Array::new_with_byte_offset_and_length(&mem.buffer(), at, n);
+    let k = into
+        .call3(&JsValue::NULL, &i.into(), &(off as f64).into(), &v)
+        .map_err(|_| bad())?;
+    if k.as_f64() != Some(f64::from(n)) {
+        return Err(bad());
+    }
+    Ok(())
+}
+
 /// Blocks kept by the `thermo` module: the reader alternates between the packets of the scans, the trailer records and the index, and a block thrown away by a far read is read
 /// again at the next (`raw_tempi`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145). The other families keep
 /// the one block they had: their gain is not measured and their `.wasm` limits leave no room for the cache.
 #[cfg(feature = "thermo")]
 const BLOCCHI: usize = 3;
 
-/// Member `i` of a dataset, read through `read` and a cache of `BLOCCHI` blocks of `LETTURA` bytes (the small reads are served from them).
+/// The longest block of a run of reads in order (the profiles of the scans, one after the other): an OPFS sync-handle read costs about 0.25 ms per call
+/// plus 0.085 ms per 64 KiB, so 4 MiB blocks read the scans of a 422 MB `.raw` in about 100 calls instead of 1600 of 256 KiB.
+#[cfg(feature = "thermo")]
+const LETTURA_MAX: usize = 4 << 20;
+
+/// Member `i` of a dataset, read through `read` and a cache of `BLOCCHI` blocks of `LETTURA` bytes, growing to `LETTURA_MAX` along reads in order (the small reads are served from them).
 #[cfg(feature = "thermo")]
 fn membro_js(
     read: Function,
     i: u32,
     dim: u64,
 ) -> mzlab_core::blocchi::BlockCache<impl FnMut(u64, &mut [u8]) -> mzlab_core::Result<()>> {
-    let fetch = move |off: u64, buf: &mut [u8]| -> mzlab_core::Result<()> {
-        da_js(&read, i, off, buf.len())?.copy_to(buf);
-        Ok(())
-    };
-    mzlab_core::blocchi::BlockCache::new(fetch, dim, LETTURA, BLOCCHI)
+    let into = into_di(&read);
+    let fetch = move |off: u64, buf: &mut [u8]| leggi(&read, into.as_ref(), i, off, buf);
+    mzlab_core::blocchi::BlockCache::new(fetch, dim, LETTURA, BLOCCHI).read_ahead(LETTURA_MAX)
 }
 
 /// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`; the small reads are served from the last block read.
 #[cfg(not(feature = "thermo"))]
 struct JsMember {
     read: Function,
+    into: Option<Function>,
     i: u32,
     dim: u64,
     inizio: u64,
@@ -77,6 +118,7 @@ struct JsMember {
 #[cfg(not(feature = "thermo"))]
 fn membro_js(read: Function, i: u32, dim: u64) -> JsMember {
     JsMember {
+        into: into_di(&read),
         read,
         i,
         dim,
@@ -93,12 +135,21 @@ impl mzlab_core::idxread::ReadAt for JsMember {
         if !dentro {
             let n = self.dim.saturating_sub(off).min(LETTURA as u64) as usize;
             if buf.len() >= LETTURA || n < buf.len() {
-                da_js(&self.read, self.i, off, buf.len())?.copy_to(buf); // big (or past the end, for JS to refuse): as asked
-                return Ok(());
+                // big (or past the end, for JS to refuse): as asked
+                return leggi(&self.read, self.into.as_ref(), self.i, off, buf);
             }
-            let a = da_js(&self.read, self.i, off, n)?;
             self.blocco.resize(n, 0);
-            a.copy_to(&mut self.blocco);
+            // a failed read leaves no block: its bytes may be half written
+            if let Err(e) = leggi(
+                &self.read,
+                self.into.as_ref(),
+                self.i,
+                off,
+                &mut self.blocco,
+            ) {
+                self.blocco.clear();
+                return Err(e);
+            }
             self.inizio = off;
         }
         let da = (off - self.inizio) as usize;
@@ -185,7 +236,7 @@ impl Write for BlockWriter {
 
 /// The family of this module (`agilent`, `sciex`, `thermo`, ...).
 #[wasm_bindgen]
-pub fn famiglia() -> String {
+pub fn family() -> String {
     mzlab_lettori::famiglia().into()
 }
 
@@ -214,9 +265,9 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     }
     let mut o = mzlab_core::json::Out::default();
     o.raw("{\"formato\":")
-        .str(l.formato().id())
+        .str(l.format().id())
         .raw(",\"campioni\":");
-    json_testo::campioni_json(&mut o, l.campioni());
+    json_testo::campioni_json(&mut o, l.samples());
     o.raw(",\"motivi\":[");
     for (i, m) in motivi.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(m);
@@ -253,7 +304,7 @@ fn apri_campione(
     mzlab_lettori::apri(fs, &Limiti::sito())
 }
 
-/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::mancanti`).
+/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::missing`).
 /// Indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
 /// the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte.
 #[wasm_bindgen]
@@ -265,14 +316,14 @@ pub fn to_mzml(
     sink: Function,
     progress: Function,
 ) -> Result<f64, JsValue> {
-    to_mzml_come(names, sizes, read, c, true, "standard", sink, progress)
+    to_mzml_with(names, sizes, read, c, true, "standard", sink, progress)
 }
 
 /// `to_mzml` with the optical matrix only when `dad` and the compression of «Download .mzML» (`mzmlwrite::opzioni_compressione`): with `dad` false the file of
 /// `mzlab-cli convert` with the same `conv.numpress`, byte for byte (the download of a `.wiff` sample, also one the engine reads: the engine leaves out what `estesi` writes).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
-pub fn to_mzml_come(
+pub fn to_mzml_with(
     names: js_sys::Array,
     sizes: &[f64],
     read: Function,
@@ -286,7 +337,7 @@ pub fn to_mzml_come(
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     let m = Membri::new(names, sizes, read)?;
     let mut l = apri_campione(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
-    let lacking = l.mancanti(c as usize);
+    let lacking = l.missing(c as usize);
     let mut out = BlockWriter {
         sink,
         buf: Vec::new(),
@@ -320,16 +371,16 @@ fn con<T>(f: impl FnOnce(&mut Sessioni) -> mzlab_core::Result<T>) -> Result<T, J
         .map_err(|e| error_json(&e))
 }
 
-/// Opens a dataset and keeps it under a handle (`chiudi` frees it); `campioni(h)` says what it holds.
+/// Opens a dataset and keeps it under a handle (`close` frees it); `samples(h)` says what it holds.
 #[wasm_bindgen]
-pub fn apri(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<u32, JsValue> {
+pub fn open(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<u32, JsValue> {
     apri_membri(Membri::new(names, sizes, read)?.fileset())
 }
-/// `apri` with the SHA-1 of each member when the page took it while copying the file (empty text: unknown): the header of the mzML uses it instead of
+/// `open` with the SHA-1 of each member when the page took it while copying the file (empty text: unknown): the header of the mzML uses it instead of
 /// reading the file again. Only the `thermo` module has it (the other readers take their SHA-1 themselves).
 #[cfg(feature = "thermo")]
 #[wasm_bindgen]
-pub fn apri_con_sha1(
+pub fn open_with_sha1(
     names: js_sys::Array,
     sizes: &[f64],
     read: Function,
@@ -347,51 +398,75 @@ fn apri_membri(fs: FileSet) -> Result<u32, JsValue> {
     con(|s| Ok(s.inserisci(l)))
 }
 #[wasm_bindgen]
-pub fn campioni(h: u32) -> Result<String, JsValue> {
-    con(|s| s.campioni(h))
+pub fn samples(h: u32) -> Result<String, JsValue> {
+    con(|s| s.samples(h))
 }
 /// The version of the binary transport of the index and the scans (`mzlab_core::trasporto::PROTOCOLLO`): the engine refuses a module with another.
 #[wasm_bindgen]
-pub fn protocollo() -> u32 {
+pub fn protocol() -> u32 {
     mzlab_core::trasporto::PROTOCOLLO
 }
 /// The index of the sample as one `Uint8Array` (`mzlab_core::trasporto::encode_indice`).
 #[wasm_bindgen]
-pub fn indice(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
-    con(|s| s.indice(h, c as usize))
+pub fn index(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
+    con(|s| s.index(h, c as usize))
 }
 /// A scan as one `Uint8Array` (`mzlab_core::trasporto::encode_scansione`).
 #[wasm_bindgen]
-pub fn scansione(h: u32, c: u32, k: u32) -> Result<Vec<u8>, JsValue> {
-    con(|s| s.scansione(h, c as usize, k as usize))
+pub fn scan(h: u32, c: u32, k: u32) -> Result<Vec<u8>, JsValue> {
+    con(|s| s.scan(h, c as usize, k as usize))
+}
+/// A scan as `[head, m/z, intensities]`: the head of `trasporto::testa_scansione`, then views of this module's memory (`Float64Array`, and `Float32Array`
+/// or, for 64-bit intensities, `Float64Array`), valid until its next call: the engine copies each in one piece instead of a block copied twice.
+#[wasm_bindgen]
+pub fn scan_parts(h: u32, c: u32, k: u32) -> Result<js_sys::Array, JsValue> {
+    con(|s| {
+        let sp = s.scan_parts(h, c as usize, k as usize)?;
+        let n = sp.mz.len();
+        let a = js_sys::Array::new();
+        a.push(&js_sys::Uint8Array::from(
+            &mzlab_core::trasporto::testa_scansione(sp)[..],
+        ));
+        // SAFETY: nothing allocates in this module between here and the engine's copy (the views are read before any other call)
+        unsafe {
+            a.push(&js_sys::Float64Array::view(&sp.mz));
+            match &sp.wide {
+                Some(w) => a.push(&js_sys::Float64Array::view(&w[..n.min(w.len())])),
+                None => a.push(&js_sys::Float32Array::view(
+                    &sp.intensity[..n.min(sp.intensity.len())],
+                )),
+            };
+        }
+        Ok(a)
+    })
 }
 #[wasm_bindgen]
-pub fn intestazione(h: u32, c: u32, k: u32) -> Result<String, JsValue> {
-    con(|s| s.intestazione(h, c as usize, k as usize))
+pub fn scan_header(h: u32, c: u32, k: u32) -> Result<String, JsValue> {
+    con(|s| s.scan_header(h, c as usize, k as usize))
 }
 #[wasm_bindgen]
-pub fn cromatogrammi(h: u32, c: u32) -> Result<String, JsValue> {
-    con(|s| s.cromatogrammi(h, c as usize))
+pub fn chromatograms(h: u32, c: u32) -> Result<String, JsValue> {
+    con(|s| s.chromatograms(h, c as usize))
 }
 #[wasm_bindgen]
-pub fn cromatogramma(h: u32, c: u32, id: &str) -> Result<String, JsValue> {
-    con(|s| s.cromatogramma(h, c as usize, id))
+pub fn chromatogram(h: u32, c: u32, id: &str) -> Result<String, JsValue> {
+    con(|s| s.chromatogram(h, c as usize, id))
 }
 #[wasm_bindgen]
-pub fn metodo(h: u32, c: u32) -> Result<String, JsValue> {
-    con(|s| s.metodo(h, c as usize))
+pub fn method(h: u32, c: u32) -> Result<String, JsValue> {
+    con(|s| s.method(h, c as usize))
 }
 /// The spectra of the sample that a truncated file declares but does not hold.
 #[wasm_bindgen]
-pub fn mancanti(h: u32, c: u32) -> Result<u32, JsValue> {
-    con(|s| s.mancanti(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
+pub fn missing(h: u32, c: u32) -> Result<u32, JsValue> {
+    con(|s| s.missing(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
 }
 /// The header of the mzML of the sample as JSON (`null` when the reader has none).
 #[wasm_bindgen]
-pub fn testata(h: u32, c: u32) -> Result<String, JsValue> {
-    con(|s| s.testata(h, c as usize))
+pub fn file_header(h: u32, c: u32) -> Result<String, JsValue> {
+    con(|s| s.file_header(h, c as usize))
 }
 #[wasm_bindgen]
-pub fn chiudi(h: u32) {
+pub fn close(h: u32) {
     SESSIONI.with(|s| s.borrow_mut().chiudi(h));
 }

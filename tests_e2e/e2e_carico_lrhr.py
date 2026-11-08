@@ -19,8 +19,8 @@ try:
         ticked = lambda: pg.evaluate("[...document.querySelectorAll('#flist input[data-k=use]')].map(x=>x.checked)")
         world = lambda: pg.evaluate("OPENNOW.world()")
         def note():
-            attendi(pg, "OPENNOW.busy() === 0 && UPBUSY === 0 && document.querySelector('#hrmix') && !document.querySelector('#hrmix').hidden")
-            attendi(pg, "!document.querySelector('#fl-note').hidden && /«(Switch|Passa)/.test(document.querySelector('#fl-note').textContent)")      # the side list says where the other world is
+            wait_for_js(pg, "OPENNOW.busy() === 0 && UPBUSY === 0 && document.querySelector('#hrmix') && !document.querySelector('#hrmix').hidden")
+            wait_for_js(pg, "!document.querySelector('#fl-note').hidden && /«(Switch|Passa)/.test(document.querySelector('#fl-note').textContent)")      # the side list says where the other world is
             show_table(pg)
             w = world(); assert w is not None
             assert pg.get_attribute("#hrmix", "role") == "status" and pg.locator("#flist input[data-k=use]").count() == 3, "nothing lost from the list"
@@ -31,14 +31,14 @@ try:
         step("mixed files: the first world read opens, the other is set aside with «Switch»", note)
         def switch():
             w = world(); pg.click("#hrmix-lr" if w else "#hrmix-hr")
-            attendi(pg, f"OPENNOW.busy() === 0 && OPENNOW.world() === {'false' if w else 'true'}", 60000)
+            wait_for_js(pg, f"OPENNOW.busy() === 0 && OPENNOW.world() === {'false' if w else 'true'}", 60000)
             assert ticked().count(True) == (2 if w else 1), ticked()
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("JSON.stringify(window.MZLAB_LR_MISS)")
         step("«Switch» closes the open world and opens the other one", switch)
         def retick():
             show_table(pg); w = world(); i = ticked().index(False)
             pg.locator("#flist input[data-k=use]").nth(i).click()
-            attendi(pg, f"!document.querySelectorAll('#flist input[data-k=use]')[{i}].checked")
+            wait_for_js(pg, f"!document.querySelectorAll('#flist input[data-k=use]')[{i}].checked")
             assert world() == w, "a file of the other world does not join the open one"
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("JSON.stringify(window.MZLAB_LR_MISS)")
         step("ticking a file of the other world leaves it aside", retick)

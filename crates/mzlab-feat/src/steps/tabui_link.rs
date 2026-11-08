@@ -16,7 +16,7 @@ pub(super) fn link() -> Step {
     Step {
         version: 2,
         ins: vec![
-            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(any_resolution()),
+            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(any_resolution()).lineage(),
             Port::new("samples", DataType::Samples, "Roles and times of the files (treated, t0, blanks, infusion)"),
             Port::new("parent", DataType::Structure, "Parent compound: formula or SMILES, with its retention time"),
             Port::new("index", DataType::Mzidx, "Scan index of each file of the series, in the order of the table").many().requires(Facets {

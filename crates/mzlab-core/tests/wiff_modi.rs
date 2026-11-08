@@ -242,7 +242,7 @@ fn q1_reads_like_ems_and_the_method_one_fallback_serves_every_sample() {
         assert_eq!(w.experiments.len(), 1, "sample {n}");
         assert_eq!(w.experiments[0].code, Some(0), "sample {n}");
         assert!(
-            !w.variante(),
+            !w.variant(),
             "sample {n}: a 3200 QTRAP Q1 scan is not a variant"
         );
         let run = w.run(&mut scan).unwrap();
@@ -264,7 +264,7 @@ fn sim_modes_give_one_sim_chromatogram_per_ion() {
     for sigla in ["Q1MI", "Q3MI"] {
         let ions = modi[sigla]["futuro"]["ioni"].as_array().unwrap().len();
         let mut l = lettori::apri(set(&dir, sigla), &Limiti::sito()).unwrap();
-        let list = l.cromatogrammi(0).unwrap();
+        let list = l.chromatograms(0).unwrap();
         let sim: Vec<_> = list
             .iter()
             .filter(|v| v.tipo == mzlab_core::mzml::ChromKind::Sic)

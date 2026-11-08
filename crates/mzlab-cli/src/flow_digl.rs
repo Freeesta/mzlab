@@ -44,7 +44,7 @@ pub fn dig_lr_step() -> Step {
     };
     Step {
         ins: vec![
-            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(lr.clone()),
+            Port::new("table", DataType::Table, "Aligned feature table of the series, made by this plan").requires(lr.clone()).lineage(),
             Port::new("samples", DataType::Samples, "Roles and times of the files"),
             Port::new("parent", DataType::Structure, "Parent compound: formula or SMILES"),
             Port::new("index", DataType::Mzidx, "Scan index of each file of the series, in the order of the table").many().requires(lr),

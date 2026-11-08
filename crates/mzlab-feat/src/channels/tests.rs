@@ -4,7 +4,7 @@ use super::*;
 
 /// `link` as it was before the reach of a segment was bounded: every segment of the next channel is tried.
 fn link_all(segs: &[Seg], p: &Params, parent: &mut [u32]) {
-    let max_gap = p.max_gap as i64;
+    let reach = p.max_gap as i64 + 1;
     for i in 0..segs.len() {
         let c = segs[i].chan;
         let lo = segs.partition_point(|s| s.chan < c + 1);
@@ -18,7 +18,7 @@ fn link_all(segs: &[Seg], p: &Params, parent: &mut [u32]) {
                 && hi_mx <= 10.0 * lo_mx
                 && lo_mx >= TOUCH_HEIGHT;
             let overlap = ov as f64 >= 0.5 * short as f64;
-            if overlap || (ov >= 1 - max_gap && ov <= max_gap + 1 && like) {
+            if overlap || (ov >= 1 - reach && ov <= reach + 1 && like) {
                 let (ra, rb) = (find(parent, i as u32), find(parent, j as u32));
                 if ra != rb {
                     parent[ra.max(rb) as usize] = ra.min(rb);
@@ -57,7 +57,7 @@ fn the_bounded_reach_links_the_segments_the_full_one_links() {
                     z,
                     broad: false,
                 });
-                at = z + p.max_gap + 1 + r(20) as u32;
+                at = z + p.max_gap + 2 + r(20) as u32;
             }
         }
         let mut want: Vec<u32> = (0..segs.len() as u32).collect();

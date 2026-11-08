@@ -6,7 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi; PORT = free_port()
+from lib import free_port, wait_for_js; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -34,9 +34,9 @@ try:
         text = lambda: pg.evaluate(f"FLOW.exportText({PLAN})")
         sha = lambda: hashlib.sha256(text().encode()).hexdigest()
         def start():
-            attendi(pg, "!!document.querySelector('.fl-card button[aria-label^=\"Use my own list\"]')")
+            wait_for_js(pg, "!!document.querySelector('.fl-card button[aria-label^=\"Use my own list\"]')")
             before = sha(); pg.click('.fl-card button[aria-label^="Use my own list"]')
-            attendi(pg, "document.querySelectorAll('.fl-list tbody tr').length === 1 && !!document.querySelector('.fl-list-sha').dataset.sha")
+            wait_for_js(pg, "document.querySelectorAll('.fl-list tbody tr').length === 1 && !!document.querySelector('.fl-list-sha').dataset.sha")
             assert sha() != before and "name;delta;charge;comment" in text(), text()
         step("«Use my own list» turns the names into a one-row table and changes the plan", start)
         def edit():
@@ -44,18 +44,18 @@ try:
             pg.click('.fl-list button[aria-label^="Add a row"]')
             pg.fill('.fl-list tbody tr:nth-child(2) input[data-col=name]', "[M+Na]+"); pg.fill('.fl-list tbody tr:nth-child(2) input[data-col=delta]', "+Na")
             pg.locator('.fl-list tbody tr:nth-child(2) input[data-col=delta]').dispatch_event("change")
-            attendi(pg, "document.querySelectorAll('.fl-list tbody tr').length === 2 && document.querySelector('.fl-list-sha').dataset.sha !== '%s'" % first)
+            wait_for_js(pg, "document.querySelectorAll('.fl-list tbody tr').length === 2 && document.querySelector('.fl-list-sha').dataset.sha !== '%s'" % first)
             assert sha() != plan and "[M+Na]+" in text()
             pg.fill('.fl-list tbody tr:nth-child(2) input[data-col=name]', ""); pg.locator('.fl-list tbody tr:nth-child(2) input[data-col=name]').dispatch_event("change")
-            attendi(pg, "document.querySelector('.fl-list-err li') && document.querySelector('.fl-list-err').textContent.includes('noName')")
+            wait_for_js(pg, "document.querySelector('.fl-list-err li') && document.querySelector('.fl-list-err').textContent.includes('noName')")
             assert "[M+Na]+" in text(), "a wrong row must not reach the plan"
             pg.click('.fl-list tbody tr:nth-child(2) button[aria-label^="Remove row"]')
-            attendi(pg, "document.querySelectorAll('.fl-list tbody tr').length === 1 && document.querySelector('.fl-list-sha').dataset.sha === '%s'" % first)
+            wait_for_js(pg, "document.querySelectorAll('.fl-list tbody tr').length === 1 && document.querySelector('.fl-list-sha').dataset.sha === '%s'" % first)
         step("add a row, a wrong row is refused with its error, remove it: the SHA-256 follows the list", edit)
         def imp():
             plan = sha()
             pg.set_input_files('.fl-list input[type=file]', files=[{"name": "my.csv", "mimeType": "text/csv", "buffer": b"name;delta;charge;comment\n[M+K]+;+K;1;potassium\n[M+NH4]+;+NH4;1;\n"}])
-            attendi(pg, "document.querySelectorAll('.fl-list tbody tr').length === 2")
+            wait_for_js(pg, "document.querySelectorAll('.fl-list tbody tr').length === 2")
             assert pg.input_value('.fl-list tbody tr:nth-child(1) input[data-col=name]') == "[M+K]+" and sha() != plan and "potassium" in text()
         step("importing a CSV replaces the rows and the plan follows", imp)
         def export():

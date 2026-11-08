@@ -22,9 +22,9 @@ def idx_row(offset: int, count: int, tic: float, rt: float) -> bytes:
     return struct.pack("<IIff", offset, count | 0x18000000, tic, rt) + bytes(6)
 
 
-def func_record(tipo: int, sotto: int, cycle: float, slots) -> bytes:
+def func_record(tipo: int, below: int, cycle: float, slots) -> bytes:
     r = bytearray(416)
-    r[0], r[1] = tipo, sotto
+    r[0], r[1] = tipo, below
     r[2:6] = struct.pack("<f", cycle)
     for k, (q1, q3, dwell) in enumerate(slots):
         r[0x20 + 4 * k : 0x24 + 4 * k] = struct.pack("<f", dwell)

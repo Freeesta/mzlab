@@ -22,12 +22,12 @@ def reopen_all():
             # from here the engine never gets the notebook: the state of a tab closed before its write landed
             pg.evaluate("""() => { const f = window.fetch; window.fetch = (u, o) => (String(u).includes('api/notebook') && o && o.method === 'POST') ? Promise.reject(new Error('lost')) : f(u, o); }""")
             pg.set_input_files("#pick", [str(EX / f"{B}.mzML")])
-            attendi(pg, f"E.files.filter(f => !f.gone).length === 2 && UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
+            wait_for_js(pg, f"E.files.filter(f => !f.gone).length === 2 && UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
             stored = pg.evaluate("fetch('api/notebook').then(r => r.json()).then(n => (n.session || []).map(x => x.file.split('#')[0]))")
             assert sorted(set(stored)) == [f"{A}.mzML"], f"the engine must still hold the older notebook: {stored}"
             pg.reload()
             pg.wait_for_function("typeof E !== 'undefined' && E.files.filter(f => !f.gone).length >= 1", timeout=120000)
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0", 120000)
             got = pg.evaluate(OPEN)
             assert got == [f"{A}.mzML", f"{B}.mzML"], f"after the reload only {got} opened (the rows: {pg.evaluate('ST.files.map(r => r.name)')})"
             assert not [e for e in r.errs if e[0] == "pageerror"], r.errs

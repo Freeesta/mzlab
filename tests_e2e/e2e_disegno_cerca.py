@@ -17,8 +17,8 @@ try:
         errors = []
         pg.on("pageerror", lambda e: errors.append(str(e)))
         pg.evaluate("() => { location.hash = '#/draw'; }")
-        attendi(pg, "!!(window.TPDraw && TPDraw.ready()) && document.getElementById('kframe').classList.contains('kwait') === false", timeout=90000)
-        attendi(pg, "document.getElementById('ex-smi').getAttribute('role') === 'combobox'", timeout=30000)
+        wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready()) && document.getElementById('kframe').classList.contains('kwait') === false", timeout=90000)
+        wait_for_js(pg, "document.getElementById('ex-smi').getAttribute('role') === 'combobox'", timeout=30000)
         smiles = lambda: pg.evaluate("async () => String(await TPDraw.smiles())")
         options = lambda: pg.evaluate("() => [...document.querySelectorAll('.molc [role=option]')].map(o => o.textContent)")
         def type_into(text):
@@ -32,20 +32,20 @@ try:
 
         def keyboard():
             type_into("atraz")
-            attendi(pg, "document.querySelectorAll('.molc [role=option]').length > 0", timeout=60000)
+            wait_for_js(pg, "document.querySelectorAll('.molc [role=option]').length > 0", timeout=60000)
             assert options()[0].lower().startswith("atrazine"), options()
             assert pg.get_attribute("#ex-smi", "aria-expanded") == "true"
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter")
-            attendi(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
+            wait_for_js(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
             s = smiles()
             assert "Cl" in s and "N" in s, s
         step("a name prefix lists suggestions and Enter draws the chosen structure", keyboard)
 
         def click():
             type_into("imidac")
-            attendi(pg, "document.querySelectorAll('.molc [role=option]').length > 0", timeout=30000)
+            wait_for_js(pg, "document.querySelectorAll('.molc [role=option]').length > 0", timeout=30000)
             pg.click(".molc [role=option]")
-            attendi(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
+            wait_for_js(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
             assert smiles().count(".") == 1, "two structures side by side: " + smiles()
         step("a click on a suggestion draws it next to the first structure", click)
 
@@ -53,29 +53,29 @@ try:
             type_into("CCO")
             assert pg.get_attribute("#ex-smi", "aria-expanded") == "false" and not options(), "a SMILES is not searched"
             pg.keyboard.press("Enter")
-            attendi(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
+            wait_for_js(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
             assert smiles().count(".") == 2, smiles()
             pg.fill("#ex-smi", "c1ccccc1"); pg.click("#ex-load")
-            attendi(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
+            wait_for_js(pg, "document.getElementById('ex-smi').value === ''", timeout=30000)
             assert smiles().count(".") == 3, smiles()
         step("a pasted SMILES is drawn without a search (Enter and the button)", plain)
 
         def invalid():
             pg.fill("#ex-smi", "C1CC"); pg.click("#ex-load")
-            attendi(pg, "!document.getElementById('smi-warn').hidden", timeout=15000)
+            wait_for_js(pg, "!document.getElementById('smi-warn').hidden", timeout=15000)
             assert "SMILES" in pg.inner_text("#smi-warn")
             assert pg.input_value("#ex-smi") == "C1CC", "an invalid SMILES stays in the field"
         step("an invalid SMILES shows the message", invalid)
 
         def accents():
             type_into("caffeìna")
-            attendi(pg, "document.querySelectorAll('.molc [role=option]').length > 0", timeout=30000)
+            wait_for_js(pg, "document.querySelectorAll('.molc [role=option]').length > 0", timeout=30000)
             assert any(o.lower().startswith("caffeine") for o in options()), options()
         step("accents in the typed name are ignored", accents)
 
         def nothing():
             type_into("zzzqqqxx")
-            attendi(pg, "document.querySelector('.molc [role=status]').textContent.length > 0", timeout=30000)
+            wait_for_js(pg, "document.querySelector('.molc [role=status]').textContent.length > 0", timeout=30000)
             assert not options() and pg.get_attribute("#ex-smi", "aria-expanded") == "false"
         step("an unknown name shows no list and a status message", nothing)
         step("no page error", lambda: (_ for _ in ()).throw(AssertionError(errors[:2])) if errors else None)

@@ -15,7 +15,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
 
-lib_msngrafo.prepara()
+lib_msngrafo.prepare()
 tmp = Path(tempfile.mkdtemp(prefix="msnnat_"))
 folder = agilent_sintetico.write(tmp / "serie", "uno.D", 60)
 mask = lambda t: re.sub(r'"nome":"[^"]*","sha256_idx":"[0-9a-f]*"', '"nome":"","sha256_idx":""', t)      # the name of the sample (uno.mzML in the page, uno.D for the command line) and the index may differ

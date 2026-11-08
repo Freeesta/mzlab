@@ -9,11 +9,11 @@ use mzlab_core::mzml::ChromKind;
 
 fn controlla(c: &Corsa) {
     let mut l = apri_andi(andi_ms(c));
-    assert_eq!(l.formato().id(), "andi-ms");
-    assert_eq!(l.campioni()[0].scansioni, SCANSIONI);
-    let indice = l.indice(0).unwrap().to_vec();
+    assert_eq!(l.format().id(), "andi-ms");
+    assert_eq!(l.samples()[0].scansioni, SCANSIONI);
+    let indice = l.index(0).unwrap().to_vec();
     for (k, voce) in indice.iter().enumerate() {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         let p = punti(k);
         assert_eq!(s.mz.len(), p.len(), "scan {k}");
         for (i, (mz, it)) in p.iter().enumerate() {
@@ -75,21 +75,21 @@ fn la_polarita_negativa_si_legge() {
         polarita: "Negative Polarity",
         ..PIATTA
     }));
-    assert_eq!(l.scansione(0, 0).unwrap().polarity, -1);
+    assert_eq!(l.scan(0, 0).unwrap().polarity, -1);
 }
 
 #[test]
 fn tic_e_bpc_vengono_dalle_scansioni() {
     let mut l = apri_andi(andi_ms(&PIATTA));
     let ids: Vec<String> = l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .into_iter()
         .map(|c| c.id)
         .collect();
     assert_eq!(ids, ["TIC", "BPC"]);
-    let tic = l.cromatogramma(0, "TIC").unwrap();
-    let bpc = l.cromatogramma(0, "BPC").unwrap();
+    let tic = l.chromatogram(0, "TIC").unwrap();
+    let bpc = l.chromatogram(0, "BPC").unwrap();
     assert_eq!((tic.kind, bpc.kind), (ChromKind::Tic, ChromKind::Bpc));
     for k in 0..SCANSIONI {
         let p = punti(k);
@@ -102,7 +102,7 @@ fn tic_e_bpc_vengono_dalle_scansioni() {
 #[test]
 fn l_intestazione_porta_le_variabili_della_scansione() {
     let mut l = apri_andi(andi_ms(&PIATTA));
-    let c = l.intestazione(0, 2).unwrap();
+    let c = l.scan_header(0, 2).unwrap();
     let v = |n: &str| c.iter().find(|x| x.nome == n).map(|x| x.valore.clone());
     assert_eq!(v("scan_acquisition_time").as_deref(), Some("63"));
     assert_eq!(v("mass_range_max").as_deref(), Some("400"));
@@ -110,13 +110,13 @@ fn l_intestazione_porta_le_variabili_della_scansione() {
         v("point_count").as_deref(),
         Some(punti(2).len().to_string().as_str())
     );
-    assert!(l.intestazione(0, SCANSIONI).is_err());
+    assert!(l.scan_header(0, SCANSIONI).is_err());
 }
 
 #[test]
 fn il_metodo_porta_strumento_operatore_e_ogni_attributo() {
     let mut l = apri_andi(andi_ms(&PIATTA));
-    let m = l.metodo(0).unwrap();
+    let m = l.method(0).unwrap();
     for t in [
         "\"formato\":\"andi-ms\"",
         "\"file_creato\":\"20190312141102+0100\"",
@@ -155,19 +155,19 @@ fn si_scrive_come_mzml_e_si_rilegge() {
 #[test]
 fn un_cromatogramma_andi_e_un_campione_con_una_traccia_analogica() {
     let mut l = apri_andi(andi_cromato(40));
-    assert_eq!(l.campioni()[0].scansioni, 0);
-    assert!(l.indice(0).unwrap().is_empty());
-    let voci = l.cromatogrammi(0).unwrap();
+    assert_eq!(l.samples()[0].scansioni, 0);
+    assert!(l.index(0).unwrap().is_empty());
+    let voci = l.chromatograms(0).unwrap();
     assert_eq!(voci.len(), 1);
     assert_eq!(
         (voci[0].id.as_str(), voci[0].tipo, voci[0].unita.as_str()),
         ("FID1A", ChromKind::Analog, "Volts")
     );
-    let c = l.cromatogramma(0, "FID1A").unwrap();
+    let c = l.chromatogram(0, "FID1A").unwrap();
     assert_eq!(c.time.len(), 40);
     assert!((c.time[2] - (30.0 + 1.0) / 60.0).abs() < 1e-12);
     assert!((c.intensity[3] - (1000.0 + 21.0)).abs() < 1e-9);
-    assert!(l.cromatogramma(0, "altro").is_err());
+    assert!(l.chromatogram(0, "altro").is_err());
     let out = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     assert!(String::from_utf8(out).unwrap().contains("FID1A"));
 }
@@ -199,7 +199,7 @@ fn l_intestazione_applica_scale_factor_e_add_offset() {
         ..PIATTA
     }));
     for k in 0..SCANSIONI {
-        let campi = l.intestazione(0, k).unwrap();
+        let campi = l.scan_header(0, k).unwrap();
         let t = campi
             .iter()
             .find(|c| c.nome == "scan_acquisition_time")
@@ -216,16 +216,16 @@ fn l_indice_e_l_asse_dei_tempi_applicano_scale_factor_e_add_offset() {
         ..PIATTA
     }));
     let rt = |k: usize| (60.0 + 1.5 * k as f64) / 60.0;
-    for (k, voce) in l.indice(0).unwrap().to_vec().iter().enumerate() {
+    for (k, voce) in l.index(0).unwrap().to_vec().iter().enumerate() {
         assert!(
             (voce.rt - rt(k)).abs() < 1e-9,
             "index scan {k}: {}",
             voce.rt
         );
-        assert!((l.scansione(0, k).unwrap().rt - rt(k)).abs() < 1e-9);
+        assert!((l.scan(0, k).unwrap().rt - rt(k)).abs() < 1e-9);
     }
     for id in ["TIC", "BPC"] {
-        let c = l.cromatogramma(0, id).unwrap();
+        let c = l.chromatogram(0, id).unwrap();
         for (k, t) in c.time.iter().enumerate() {
             assert!((t - rt(k)).abs() < 1e-9, "{id} point {k}: {t}");
         }
@@ -258,7 +258,7 @@ fn il_tempo_dei_punti_e_la_ritenzione_analogica_applicano_scale_factor_e_add_off
         tv,
     ];
     let mut l = apri_andi(cdf(false, &dims, &globali_ms(&PIATTA), &vars, n as u32));
-    for (k, v) in l.indice(0).unwrap().iter().enumerate() {
+    for (k, v) in l.index(0).unwrap().iter().enumerate() {
         assert!(
             (v.rt - (60.0 + 1.5 * k as f64) / 60.0).abs() < 1e-9,
             "time_values scan {k}: {}",
@@ -278,7 +278,7 @@ fn il_tempo_dei_punti_e_la_ritenzione_analogica_applicano_scale_factor_e_add_off
     let vars = vec![var("ordinate_values", &[0], 6, vec![1.0; m]), r];
     let g = vec![("detector_name".to_string(), t("FID1A"))];
     let mut l = apri_andi(cdf(false, &dims, &g, &vars, m as u32));
-    let c = l.cromatogramma(0, "FID1A").unwrap();
+    let c = l.chromatogram(0, "FID1A").unwrap();
     for (i, x) in c.time.iter().enumerate() {
         assert!(
             (x - (30.0 + i as f64) / 60.0).abs() < 1e-9,

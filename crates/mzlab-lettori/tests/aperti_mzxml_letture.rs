@@ -51,7 +51,7 @@ fn the_index_of_many_scans_takes_few_reads_and_the_same_rows() {
         // opening: the header, the pass over the file for the starts of the scans, the windows of the index
         assert!(chiamate.get() < scan.len() / 10, "{} reads", chiamate.get());
         let mut r = apri_mzxml(byte);
-        let (a, b) = (l.indice(0).unwrap().to_vec(), r.indice(0).unwrap().to_vec());
+        let (a, b) = (l.index(0).unwrap().to_vec(), r.index(0).unwrap().to_vec());
         assert_eq!(a, b);
         assert_eq!(a.len(), scan.len());
         for (v, x) in a.iter().zip(&scan) {

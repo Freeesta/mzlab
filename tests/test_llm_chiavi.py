@@ -20,25 +20,25 @@ def names(node):
             yield from names(v)
 
 
-def test_nessuna_forma_di_chiave_nei_cataloghi_e_nei_dati():
+def test_no_key_shape_in_catalogs_and_data():
     paths = list((ROOT / "mzlab/web/lang").rglob("*.js")) + list((ROOT / "mzlab/web/llm").glob("*")) + [f for f in (ROOT / "tests/data/llm").rglob("*") if f.is_file()]
     paths += [ROOT / "crates/mzlab-llm/data/fornitori-1.json"]
     for p in paths:
         assert not FORMS.search(p.read_text(encoding="utf-8")), p
 
 
-def test_schemi_senza_campi_chiave():
+def test_schemas_without_key_fields():
     for p in (ROOT / "docs/schemi").glob("llm*.json"):
         assert not (FIELDS & set(names(json.loads(p.read_text(encoding="utf-8")).get("properties", {})))), p
 
 
-def test_campione_del_log_senza_chiavi():
+def test_log_sample_without_keys():
     for p in (ROOT / "tests/data/llm").glob("*.jsonl"):
         for line in p.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 assert not (FIELDS & set(names(json.loads(line)))), p
 
 
-def test_le_esportazioni_non_nominano_il_file_delle_chiavi():
+def test_exports_do_not_name_the_keys_file():
     for p in list((ROOT / "mzlab/web").glob("*.js")) + list((ROOT / "crates/mzlab-cli/src").rglob("*.rs")):
         assert "llm-chiavi" not in p.read_text(encoding="utf-8"), p

@@ -19,7 +19,7 @@ run_dir = tmp / "run"
 subprocess.run(["cargo", "test", "--locked", "-q", "-p", "mzlab-cli", "--lib", "both_paths_run_in_one_plan_for_the_wasm_parity"], cwd=str(ROOT), check=True,
                capture_output=True, env={**os.environ, "MZLAB_PARITA_NORMATIVE": str(run_dir)})
 for f in ("table.mzfeat", "normative.mzsus"): (run_dir / f).unlink()
-corsa = json.loads(subprocess.run(["cargo", "run", "--locked", "-q", "-p", "mzlab-cli", "--", "flow", "report", str(run_dir)], cwd=str(ROOT), check=True, capture_output=True).stdout)
+run_doc = json.loads(subprocess.run(["cargo", "run", "--locked", "-q", "-p", "mzlab-cli", "--", "flow", "report", str(run_dir)], cwd=str(ROOT), check=True, capture_output=True).stdout)
 FORBIDDEN = re.compile(r"\b(detected|present|non-compliant|exceeds?|violations?|contaminated)\b", re.I)
 
 HOST = """<!doctype html><html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,"><title>host</title><style>:root{--ink:#1a1a1a;--line:#999;--accent:#0072B2;--bad:#D55E00}body{background:#fff;margin:0}</style></head>
@@ -38,8 +38,8 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: errs.append(m.text) if m.type in ("error", "warning") else None)
         pg.goto(f"http://127.0.0.1:{port}/")
         R = "RAPPORTO_FLOW.render(document.getElementById('m'), %s)"
-        pg.evaluate(R % json.dumps(corsa))
-        g = corsa["regulatory"]
+        pg.evaluate(R % json.dumps(run_doc))
+        g = run_doc["regulatory"]
         def section():
             t = pg.inner_text("#rf-regulatory")
             assert pg.inner_text("#rf-regulatory-h") == "Regulatory lists", t
@@ -69,7 +69,7 @@ try:
             pg.uncheck("input[data-sec=regulatory]"); assert not pg.is_visible("#rf-regulatory")
         step("the toolbar turns the section off", toggle)
         def absent():
-            c = {k: v for k, v in corsa.items() if k != "regulatory"}
+            c = {k: v for k, v in run_doc.items() if k != "regulatory"}
             pg.evaluate(R % json.dumps(c)); assert pg.locator("#rf-regulatory").count() == 0 and pg.locator("input[data-sec=regulatory]").count() == 0
         step("a run without regulatory lists has no such section", absent)
         b.close()

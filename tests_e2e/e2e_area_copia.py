@@ -14,7 +14,7 @@ try:
         pg = r.page(p, motion=True); pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Carica dati")
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); attendi(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
+        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
         pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.intf=p._a.sr[0].key;p.el.scrollIntoView({{block:'center'}})}})()"); frames(pg, 2)
         KEY = pg.evaluate(f"{XP}._a.sr[0].key")
         pg.evaluate(f"(()=>{{const p={XP};addInt(p,p._a.sr[0],13.9,14.6)}})()"); frames(pg, 3)
@@ -24,13 +24,13 @@ try:
             l = lab(); assert l["copy"].replace(".", "").replace("E+", "").replace("E-", "").isdigit(), l
             pg.mouse.move(l["x"], l["y"]); frames(pg, 2)
             assert pg.evaluate(f"{XP}.cv.style.cursor") == "pointer"
-            pg.mouse.click(l["x"], l["y"]); attendi(pg, "!!document.querySelector('.areacopied.show')")
+            pg.mouse.click(l["x"], l["y"]); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")
             assert clip() == l["copy"], (clip(), l)
             assert pg.inner_text(".areacopied") == "Copiato!"
             assert pg.get_attribute(".areacopied", "aria-live") == "polite"
         step("click on the label copies the displayed number and shows the notice", click_copies)
         def fades():
-            attendi(pg, "!document.querySelector('.areacopied.show')", 4000)
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", 4000)
         step("the notice fades after about 1.5 s", fades)
         def elsewhere():
             pg.evaluate("navigator.clipboard.writeText('x')"); n0 = pg.evaluate(f"{XP}.ints.length")
@@ -42,8 +42,8 @@ try:
             l = lab(); pg.evaluate("navigator.clipboard.writeText('x')")
             names = pg.evaluate(f"(()=>{{const p={XP};return AZIONI.per({{vista:p.type,p,x:14.2,k:0,near:null,px:{l['x']}-p.cv.getBoundingClientRect().left,py:{l['y']}-p.cv.getBoundingClientRect().top}}).map(i=>i.label||i.nome)}})()")
             assert "Copia valore" in [str(x) for x in names], names
-            pg.mouse.click(l["x"], l["y"], button="right"); attendi(pg, "[...document.querySelectorAll('#ctx *')].some(e=>e.textContent==='Copia valore')")
-            pg.get_by_text("Copia valore", exact=True).click(); attendi(pg, "!!document.querySelector('.areacopied.show')")
+            pg.mouse.click(l["x"], l["y"], button="right"); wait_for_js(pg, "[...document.querySelectorAll('#ctx *')].some(e=>e.textContent==='Copia valore')")
+            pg.get_by_text("Copia valore", exact=True).click(); wait_for_js(pg, "!!document.querySelector('.areacopied.show')")
             assert clip() == l["copy"]
         step("context menu: «Copia valore» does the same", menu_copies)
         def not_in_png():

@@ -31,7 +31,7 @@ try:
             kinds = {x[0]: x for x in snap["a"]}
             assert kinds["X_blank.mzML"][1] == "blank" and kinds["X_t030min.mzML"][1] == "qc" and kinds["X_t005min.mzML"][2] == 7 and kinds["X_t060min.mzML"][3] is False, kinds
             pg.evaluate("uiSave(true)")
-            attendi(pg, "fetch('api/notebook').then(r => r.json()).then(j => (j.session || []).some(x => x.file === 'X_t005min.mzML' && x.tempo_min === 7))")
+            wait_for_js(pg, "fetch('api/notebook').then(r => r.json()).then(j => (j.session || []).some(x => x.file === 'X_t005min.mzML' && x.tempo_min === 7))")
             pg.reload(); pg.wait_for_function("typeof E !== 'undefined' && E.files.length === 6", timeout=90000); ready(pg)
             after = pg.evaluate(SNAP)
             assert after == snap["a"], ([x for x in after if x not in snap["a"]], [x for x in snap["a"] if x not in after])
@@ -62,9 +62,9 @@ try:
         def old_documents():
             """A saved project of the old program: role «t0», blank subtypes, a dark with a positive time. It opens as sample at 0, plain blanks and a negative dark."""
             pg.evaluate("() => { window.uiSave = () => {}; window.nbSave = () => {}; }")
-            def e(file, tipo, tempo=None, bianco=None, k=1):
+            def e(file, kind, tempo=None, blank_kind=None, k=1):
                 return {"composto": "", "concentrazione": None, "file": file, "istd": False, "note": "", "ordine_iniezione": k, "replica": 1, "serie": "", "sha256": "", "tempo": tempo,
-                        "tempo_confermato": tempo is not None, "tempo_min": tempo, "tipo": tipo, "tipo_bianco": bianco, "unita": None, "unita_tempo": "min"}
+                        "tempo_confermato": tempo is not None, "tempo_min": tempo, "tipo": kind, "tipo_bianco": blank_kind, "unita": None, "unita_tempo": "min"}
             old = {"_v": 2, "session": [e("X_t000min.mzML", "t0", 0, k=1), e("X_t005min.mzML", "sample", 5, k=2), e("X_t030min.mzML", "sample", 30, k=3), e("X_t060min.mzML", "sample", 60, k=4),
                                         e("X_dark-adsorption.mzML", "dark", 15, k=5), e("X_blank.mzML", "blank", None, "solvent", k=6)]}
             pg.evaluate("async (d) => { await fetch('api/notebook', {method: 'POST', body: JSON.stringify(d)}); localStorage.removeItem('mzlab.qaqc'); }", old)

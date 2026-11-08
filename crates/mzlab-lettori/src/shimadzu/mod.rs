@@ -118,6 +118,13 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     data.resize(m.dim as usize, 0);
     m.dati.read_at(0, &mut data)?;
     let ole = Ole::open(data, &m.nome)?;
+    // sectors in use past the end: the raw stream would read short and the file would open with fewer scans, or none, unsaid
+    if let Some(need) = ole.cut_short() {
+        return Err(Error::new("err.file.cutShort")
+            .with("name", &m.nome)
+            .with("size", m.dim)
+            .with("needed", need));
+    }
     let Some(fam) = carica::scegli(&ole) else {
         return Err(rifiuto(match c {
             Contenuto::QTof => "Q-TOF data (QTFL RawData) are not read: their m/z could not be checked against a reference",

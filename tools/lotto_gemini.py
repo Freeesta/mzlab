@@ -19,45 +19,45 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_KB = 200
-INTESTAZIONE = "=== FILE: {path} ({n} di {tot}) — file separati nel progetto, qui uniti in un unico documento ==="
+HEADER = "=== FILE: {path} ({n} di {tot}) — file separati nel progetto, qui uniti in un unico documento ==="
 FINE = "=== FINE FILE ==="
 
 
 def leggi_elenco(testo: str, lotto: int | None = None, radice: Path = ROOT) -> list[str]:
     """The paths of a list; with `lotto`, only those of that `@lotto N` section. Lines that are not paths of existing files are skipped
     (a Markdown file with prose can be passed), except in a plain list without `@lotto` where a missing path is reported by `unisci`."""
-    corrente: int | None = None
-    ha_sezioni = any(r.strip().startswith("@lotto") for r in testo.splitlines())
+    current: int | None = None
+    has_sections = any(r.strip().startswith("@lotto") for r in testo.splitlines())
     out: list[str] = []
-    for riga in testo.splitlines():
-        r = riga.strip().strip("`")
+    for row in testo.splitlines():
+        r = row.strip().strip("`")
         if not r or r.startswith("#"):
             continue
         if r.startswith("@lotto"):
             try:
-                corrente = int(r.split()[1])
+                current = int(r.split()[1])
             except (IndexError, ValueError):
-                raise SystemExit(f"bad lotto line: {riga!r}")
+                raise SystemExit(f"bad lotto line: {row!r}")
             continue
-        if lotto is not None and corrente != lotto:
+        if lotto is not None and current != lotto:
             continue
-        if ha_sezioni and (corrente is None or not (radice / r).is_file()):
+        if has_sections and (current is None or not (radice / r).is_file()):
             continue
-        if not ha_sezioni and lotto is None and not (radice / r).is_file() and " " in r:
+        if not has_sections and lotto is None and not (radice / r).is_file() and " " in r:
             continue
         out.append(r)
     return out
 
 
-def unisci(percorsi: list[str], radice: Path = ROOT) -> tuple[str, int]:
+def unisci(paths: list[str], radice: Path = ROOT) -> tuple[str, int]:
     """The joined document and its size in bytes. A missing file raises FileNotFoundError."""
-    parti: list[str] = []
-    for i, p in enumerate(percorsi, 1):
+    parts: list[str] = []
+    for i, p in enumerate(paths, 1):
         f = radice / p
         if not f.is_file():
             raise FileNotFoundError(p)
-        parti.append(INTESTAZIONE.format(path=p, n=i, tot=len(percorsi)) + "\n" + f.read_text(encoding="utf-8", errors="replace").rstrip("\n") + "\n" + FINE + "\n")
-    doc = "\n".join(parti)
+        parts.append(HEADER.format(path=p, n=i, tot=len(paths)) + "\n" + f.read_text(encoding="utf-8", errors="replace").rstrip("\n") + "\n" + FINE + "\n")
+    doc = "\n".join(parts)
     return doc, len(doc.encode("utf-8"))
 
 
@@ -70,20 +70,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--strict", action="store_true", help="exit code 1 when over the limit")
     ap.add_argument("--controlla", action="store_true", help="only print the sizes, write nothing")
     a = ap.parse_args(argv)
-    percorsi = leggi_elenco(Path(a.elenco).read_text(encoding="utf-8"), a.lotto)
-    if not percorsi:
+    paths = leggi_elenco(Path(a.elenco).read_text(encoding="utf-8"), a.lotto)
+    if not paths:
         print("no files in the list", file=sys.stderr)
         return 1
     try:
-        doc, n = unisci(percorsi)
+        doc, n = unisci(paths)
     except FileNotFoundError as e:
         print(f"missing file: {e}", file=sys.stderr)
         return 1
     kb = n / 1024
     if a.controlla:
-        for p in percorsi:
+        for p in paths:
             print(f"{(ROOT / p).stat().st_size / 1024:7.1f} KB  {p}")
-    print(f"{len(percorsi)} files, {kb:.1f} KB", file=sys.stderr)
+    print(f"{len(paths)} files, {kb:.1f} KB", file=sys.stderr)
     over = kb > a.max_kb
     if over:
         print(f"WARNING: {kb:.1f} KB is over the limit of {a.max_kb} KB", file=sys.stderr)

@@ -20,7 +20,7 @@ pub(crate) struct Entry {
 fn sample_ids(p: &Path) -> Vec<(u32, bool)> {
     let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limiti::desktop()));
     let ids: Vec<(u32, bool)> = opened.map_or(Vec::new(), |l| {
-        l.campioni()
+        l.samples()
             .iter()
             .map(|s| (s.id, s.scansioni == 0))
             .collect()

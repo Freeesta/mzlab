@@ -13,14 +13,14 @@ try:
         pg.evaluate("try { localStorage.removeItem('mzlab.tour.lr'); localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1'); } catch (_) {}")
         pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
         pg.click("text=Carica dati"); ready(pg)
-        def invito():
+        def invite():
             pg.wait_for_selector("#tour-invito", timeout=8000); pg.mouse.move(700, 100)
             t = pg.inner_text("#tour-invito"); assert "Prima volta?" in t and "minut" not in t, t
             hold(pg, 55000); assert pg.is_visible("#tour-invito"), "still there before a minute"
             hold(pg, 8000); assert not pg.is_visible("#tour-invito"), "dismissed by itself after a minute"
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).stato") == "invitato"
             pg.reload(); ready(pg); pg.wait_for_timeout(1500); assert not pg.is_visible("#tour-invito"), "does not come back on reload"
-        step("the invitation closes by itself after a minute and does not come back", invito)
+        step("the invitation closes by itself after a minute and does not come back", invite)
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             t = pg.inner_text("#uipset")
@@ -40,7 +40,7 @@ try:
             assert pg.evaluate("S.view") == "draw"
             pg.click("#np-set"); pg.wait_for_selector("#uipset"); assert pg.is_enabled("#uip-tour")
             pg.click("#uip-tour")
-            attendi(pg, "!!(window.TOUR && TOUR.active)")
+            wait_for_js(pg, "!!(window.TOUR && TOUR.active)")
             assert pg.evaluate("S.view") == "draw", "the tour of Disegno starts in Disegno"
         step("Guided tour from Disegno starts the tour of Disegno", tour_from_draw)
 finally:

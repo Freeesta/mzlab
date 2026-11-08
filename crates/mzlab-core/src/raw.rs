@@ -89,7 +89,7 @@ pub fn instrument_method_text<R: Read + Seek>(mut source: R) -> Result<Option<St
 }
 
 /// The `metodo/1` document of a `.raw` (`metodo_raw.rs`); `name` is the file name.
-pub fn metodo<R: Read + Seek>(mut source: R, name: &str) -> Result<String> {
+pub fn method<R: Read + Seek>(mut source: R, name: &str) -> Result<String> {
     let raw = open(&mut source)?;
     Ok(metodo_of(&raw, &mut source, name))
 }

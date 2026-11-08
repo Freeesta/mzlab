@@ -73,20 +73,20 @@ def main() -> int:
     ap.add_argument("--cli", help="the mzlab-cli binary (default: cargo run --release)")
     ap.add_argument("--out", help="write the summary there instead of the standard output")
     args = ap.parse_args()
-    cartella = registri(args)
+    folder = registri(args)
     with tempfile.TemporaryDirectory(prefix="mzlab-regole-") as tmp:
-        lista, righe = Path(tmp) / "lista.txt", Path(tmp) / "righe.jsonl"
-        lista.write_text("".join(f"{p}\n" for p in sorted(cartella.glob("*.txt"))))
+        entries, righe = Path(tmp) / "lista.txt", Path(tmp) / "righe.jsonl"
+        entries.write_text("".join(f"{p}\n" for p in sorted(folder.glob("*.txt"))))
         base = cli(args)
-        for comando in (
-            [*base, "msn-rules", "--lista", str(lista), "--regole", "--decoy", args.seme, "--out", str(righe)],
+        for command in (
+            [*base, "msn-rules", "--lista", str(entries), "--regole", "--decoy", args.seme, "--out", str(righe)],
         ):
-            subprocess.run(comando, cwd=ROOT, check=True)
-        somma = subprocess.run([*base, "msn-rules", "somma", str(righe)], cwd=ROOT, check=True, capture_output=True, text=True).stdout
+            subprocess.run(command, cwd=ROOT, check=True)
+        total = subprocess.run([*base, "msn-rules", "somma", str(righe)], cwd=ROOT, check=True, capture_output=True, text=True).stdout
     if args.out:
-        Path(args.out).write_text(somma, encoding="utf-8")
+        Path(args.out).write_text(total, encoding="utf-8")
     else:
-        sys.stdout.write(somma)
+        sys.stdout.write(total)
     return 0
 
 
