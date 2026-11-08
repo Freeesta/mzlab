@@ -20,7 +20,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, SYN); pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
-        pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()"); attendi(pg, "E.panels.some(p=>p.type==='chrom'&&p._a)")
+        pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()"); wait_for_js(pg, "E.panels.some(p=>p.type==='chrom'&&p._a)")
         def line_ok(t):
             first = t.split("\n")[0]
             assert first.startswith(f"# mzLab {VER} · "), first

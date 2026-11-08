@@ -12,7 +12,7 @@ def csp(text):
     return re.search(r'Content-Security-Policy" content="([^"]+)"', text).group(1)
 
 
-def test_pagina_e_finestra_senza_host_dei_fornitori():
+def test_page_and_window_without_provider_hosts():
     page = csp((ROOT / "mzlab/web/index.html").read_text(encoding="utf-8"))
     conf = json.loads((ROOT / "crates/mzlab-desktop/tauri.conf.json").read_text(encoding="utf-8"))["app"]["security"]["csp"]
     connect = re.search(r"connect-src ([^;]+)", page).group(1)
@@ -22,7 +22,7 @@ def test_pagina_e_finestra_senza_host_dei_fornitori():
         assert host not in page and host not in conf
 
 
-def test_trasporto_solo_host_elencati():
+def test_transport_listed_hosts_only():
     t = (ROOT / "mzlab/web/llm/trasporto.html").read_text(encoding="utf-8")
     pol = csp(t)
     connect = set(re.search(r"connect-src ([^;]+)", pol).group(1).split())

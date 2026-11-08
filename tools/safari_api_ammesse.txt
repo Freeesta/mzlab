@@ -1,0 +1,37 @@
+# Uses of web APIs / CSS newer than the Safari floor (16.4) that are covered: file::id::count  # the guard or the fallback (tools/safari_api.py).
+# A new use needs a guard or a fallback in compat.js first (docs/agenti/compat-safari.md); lower or remove a line when the use goes.
+mzlab/web/compat.js::AbortSignal.any::1  # the fallback itself
+mzlab/web/pannelli.js::AbortSignal.any::1  # compat.js
+TP_Mine/js/52_attributio_banco.js::createWritable::1  # a picker folder, absent on Safari (no showDirectoryPicker)
+flow/lazy/flow-web-msn.js::createWritable::1  # OPFS file: compat.js
+mzlab/web/infusione-grafo-esporta.js::createWritable::1  # OPFS file: compat.js
+mzlab/web/libreria-cartella.js::createWritable::1  # if (fh.createWritable), else the sync handle
+TP_Mine/lazy/reatt-auto.js::requestIdleCallback::1  # typeof check, setTimeout
+flow/js/flow-tool.js::requestIdleCallback::1  # "in window", setTimeout
+mzlab/web/first-paint.js::requestIdleCallback::1  # || setTimeout
+mzlab/web/mappa-caldo.js::requestIdleCallback::1  # ? :, setTimeout
+mzlab/web/mappa.js::requestIdleCallback::1  # || setTimeout
+mzlab/web/rust-budget.js::requestIdleCallback::1  # read then checked
+mzlab/web/shell.js::requestIdleCallback::1  # read then checked
+mzlab/web/tpmine-loader.js::requestIdleCallback::1  # typeof check, setTimeout
+flow/lazy/flow-campaign.js::file pickers::2  # typeof check, <input> otherwise
+mzlab/web/capacita.js::file pickers::1  # the detection (cartellaLocale)
+mzlab/web/cartella-puntata.js::file pickers::2  # supported() = cartellaLocale
+mzlab/web/libreria-corpo.js::file pickers::2  # folderOk() = cartellaLocale
+mzlab/web/cartella-puntata.js::FileSystemObserver::2  # "in window": else a new read of the folder
+mzlab/web/cache-dati.js::deviceMemory::1  # || 4
+mzlab/web/conversione.js::deviceMemory::1  # || "?"
+mzlab/web/mappa.js::deviceMemory::1  # || 4
+mzlab/web/mappa3d.js::deviceMemory::1  # && (absent = not small)
+mzlab/web/mirino.js::deviceMemory::1  # && (absent = not small)
+mzlab/web/perf.js::deviceMemory::1  # || "?"
+mzlab/web/riscalda.js::deviceMemory::1  # && (absent = not small)
+mzlab/web/rust-budget.js::deviceMemory::1  # || 0
+mzlab/web/tema-morbido.js::startViewTransition::2  # typeof check: no transition
+mzlab/web/transizioni.css::view-transition::1  # ignored without startViewTransition
+mzlab/web/app.css::scrollbar props::2  # ::-webkit-scrollbar beside it
+mzlab/web/tavola-periodica.js::scrollbar props::1  # scrollbar-gutter ignored: cosmetic
+mzlab/web/touch.js::wheel ctrlKey zoom::1  # the synthetic events of the e2e tests
+mzlab/web/draw.js::wheel ctrlKey zoom::1  # no zoom: only stops a sideways swipe going back in history
+flow/lazy/flow-canvas.js::wheel ctrlKey zoom::1  # Safari's gesture* pinch is turned into this wheel by compat.js pinchWheel (.fl-view is touch-action:none)
+mzlab/web/compat.js::wheel ctrlKey zoom::1  # pinchWheel: the Ctrl+wheel it dispatches for Safari's gesture* pinch

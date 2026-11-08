@@ -33,10 +33,10 @@ def to_flow(pg):
     pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
     pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web", timeout=120000)
     (None if pg.locator('.flx-tpl.show').count() else pg.click('button[aria-label="Start from a template"]')); pg.click('.flx-tc[data-tpl="msn"]')
-    attendi(pg, "document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow && document.querySelector('.flx-list').__flow.plan.steps.length === 3")
+    wait_for_js(pg, "document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow && document.querySelector('.flx-list').__flow.plan.steps.length === 3")
 
 def open_input(pg):
-    pg.click('.fln[data-key^="file:"]'); attendi(pg, "!!document.querySelector('.fl-insp .fl-data')")
+    pg.click('.fln[data-key^="file:"]'); wait_for_js(pg, "!!document.querySelector('.fl-insp .fl-data')")
 
 def add(pg, button, target):
     with pg.expect_file_chooser() as fc: pg.click(f".fl-insp button:has-text('{button}')")
@@ -56,11 +56,11 @@ try:
         step("without a file the run says the infusion is not open and how to add it", before)
         def files():
             add(pg, "Add files", F)
-            attendi(pg, "FLOW.dataFiles().length === 1", 180000)
+            wait_for_js(pg, "FLOW.dataFiles().length === 1", 180000)
             assert pg.evaluate("FLOW.dataFiles()[0]") == "MSn_synth_t01.mzML", pg.evaluate("FLOW.dataFiles()")
         step("«Add files» of the input node opens the file (the node no longer waits for a file)", files)
         def node():
-            attendi(pg, "!/Add a file/.test(document.querySelector('.fln[data-key^=\"file:\"]').textContent)", 30000)
+            wait_for_js(pg, "!/Add a file/.test(document.querySelector('.fln[data-key^=\"file:\"]').textContent)", 30000)
         step("the node does not say «Add a file» any more", node)
         def run():
             x = pg.evaluate(RUN)
@@ -70,7 +70,7 @@ try:
             assert len(by) == 3 and all(s[-1] == "done" for s in by.values()), by
         step("spectra.msn_graph opens the file and the steps after it are done, none skipped", run)
         def no_null():
-            attendi(pg, "(document.getElementById('flx-live') || {}).textContent", 30000)      # the status line spoke about a step
+            wait_for_js(pg, "(document.getElementById('flx-live') || {}).textContent", 30000)      # the status line spoke about a step
             t = pg.inner_text("#flx-live")
             assert t.strip() and "null" not in t, repr(t)
         step("the status line of the steps has words and no «null»", no_null)
@@ -81,7 +81,7 @@ try:
             assert pg.evaluate("FLOW.dataFiles().length") == 0
             open_input(pg)
             add(pg, "Add a folder", D / "dir")
-            attendi(pg, "FLOW.dataFiles().length === 1", 180000)
+            wait_for_js(pg, "FLOW.dataFiles().length === 1", 180000)
             assert pg.evaluate("FLOW.dataFiles()[0]") == "MSn_synth_t02.mzML", pg.evaluate("FLOW.dataFiles()")
         step("«Add a folder» of the input node opens the files of the folder", folder)
         def run2():

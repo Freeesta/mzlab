@@ -41,12 +41,12 @@ fn lap(name: &str, bytes: &[u8]) -> (Lap, usize) {
     let t0 = Instant::now();
     let mut l =
         (rawlettore::VOCE.apri)(fileset(name, bytes.to_vec()), &Limiti::desktop()).expect("open");
-    let n = l.indice(0).expect("index").len();
+    let n = l.index(0).expect("index").len();
     let open = ms(t0);
 
     // TIC and base peak come from the index and the headers, no peaks decoded
     let t = Instant::now();
-    let idx = l.indice(0).expect("index");
+    let idx = l.index(0).expect("index");
     let (mut tic, mut bpc) = (0.0f64, 0.0f64);
     for v in idx {
         tic += v.tic;
@@ -56,13 +56,13 @@ fn lap(name: &str, bytes: &[u8]) -> (Lap, usize) {
     let tic_bpc = ms(t);
 
     let t = Instant::now();
-    std::hint::black_box(l.scansione(0, 0).expect("scan"));
+    std::hint::black_box(l.scan(0, 0).expect("scan"));
     let first_scan = ms(t);
 
     let t = Instant::now();
     let mut peaks = 0u64;
     for k in 0..n {
-        peaks += l.scansione(0, k).expect("scan").mz.len() as u64;
+        peaks += l.scan(0, k).expect("scan").mz.len() as u64;
     }
     let read_all = ms(t);
 
@@ -75,7 +75,7 @@ fn lap(name: &str, bytes: &[u8]) -> (Lap, usize) {
         x ^= x << 17;
         let k = (x % n as u64) as usize;
         let t = Instant::now();
-        std::hint::black_box(l.scansione(0, k).expect("scan"));
+        std::hint::black_box(l.scan(0, k).expect("scan"));
         random.push(ms(t));
     }
     (

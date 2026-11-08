@@ -46,14 +46,14 @@ def centre(loc):
 LIVE = "document.getElementById('gdnd-live')?.textContent || ''"
 def table(pg):
     if pg.get_attribute("#samptab", "aria-pressed") != "true": pg.click("#samptab")
-    attendi(pg, "!!document.querySelector('#flist').offsetParent", 10000); fermo(pg, "#flist")
+    wait_for_js(pg, "!!document.querySelector('#flist').offsetParent", 10000); wait_still(pg, "#flist")
 def drag(pg, src, dst, where=0.5, rest=0.8, hold=None):
     """A real mouse drag from the centre of `src` to the point `where` (0 top … 1 bottom) of the height of `dst`; it rests there (`rest`: the middle third waits for its `.gdnd-onto` mark, the 600 ms dwell), `hold` runs before the drop."""
     x, y = centre(src); pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x + 4, y + 4); pg.mouse.move(x + 8, y + 8)
     b = box(dst); tx, ty = b["x"] + b["width"] / 2, b["y"] + b["height"] * where
     pg.mouse.move(tx, ty, steps=10); pg.mouse.move(tx + 1, ty, steps=2)
     if rest:
-        if 0.34 < where < 0.66: attendi(pg, "!!document.querySelector('.gdnd-onto')", 5000)
+        if 0.34 < where < 0.66: wait_for_js(pg, "!!document.querySelector('.gdnd-onto')", 5000)
         else: frames(pg, 3)
         pg.mouse.move(tx, ty, steps=2)
     if hold: hold()
@@ -63,9 +63,9 @@ def redo(pg): pg.keyboard.press("Control+Shift+z")
 def last(pg): return pg.evaluate("(STORIA.pila.v[STORIA.pila.v.length - 1] || {}).w")
 def esc_rename(pg, expect):
     """The new group's name opens in rename mode with the proposed name; Esc keeps it."""
-    attendi(pg, "document.getElementById('askdlg').open", 10000)
+    wait_for_js(pg, "document.getElementById('askdlg').open", 10000)
     got = pg.evaluate("document.getElementById('askin').value"); assert got == expect, (expect, got)
-    pg.keyboard.press("Escape"); attendi(pg, "!document.getElementById('askdlg').open", 5000)
+    pg.keyboard.press("Escape"); wait_for_js(pg, "!document.getElementById('askdlg').open", 5000)
 RUN = """(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
   .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
 r = Run(port=8965, wd="/tmp/wd_gruppi_su_file")
@@ -76,7 +76,7 @@ try:
         pg.set_input_files("#pick", PATHS)
         pg.click("text=Load data" if pg.locator("text=Load data").count() else "text=Carica dati"); ready(pg, timeout=180000); drawer(pg)
         pg.wait_for_selector("#flst .fl .nm", timeout=30000)
-        try: attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && document.querySelectorAll('#flist tbody tr').length === 30", 120000)
+        try: wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && document.querySelectorAll('#flist tbody tr').length === 30", 120000)
         except Exception: raise AssertionError(pg.evaluate("[UPBUSY, OPENNOW.busy(), ST.files.length, document.querySelectorAll('#flist tbody tr').length]"))
         pg.evaluate("window.__cls = 0; window.__sh = []; new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) { window.__cls += e.value; window.__sh.push([e.value, [...e.sources].map(x => x.node && ((x.node.id || x.node.className || x.node.nodeName) + '')).join(',')]); } }).observe({type: 'layout-shift', buffered: false});")
         if AXE: pg.add_script_tag(path=AXE)
@@ -87,22 +87,22 @@ try:
             assert pg.evaluate("document.querySelectorAll('#flist .tg-grip').length") == 30
         step("starting point: 30 files, no group, every table row has its grip", start)
         def outer():
-            fermo(pg, "#flst"); before = snap(pg); order = pg.evaluate("E.files.map(f => f.file)")
+            wait_still(pg, "#flst"); before = snap(pg); order = pg.evaluate("E.files.map(f => f.file)")
             drag(pg, srow(pg, "TW_blk"), srow(pg, "MQ_blk"), where=0.1, rest=0)           # the top third: insert before, as ever
-            attendi(pg, "E.files.findIndex(f => f.file.startsWith('TW_blk')) < E.files.findIndex(f => f.file.startsWith('MQ_blk'))", 10000)
+            wait_for_js(pg, "E.files.findIndex(f => f.file.startsWith('TW_blk')) < E.files.findIndex(f => f.file.startsWith('MQ_blk'))", 10000)
             drag(pg, srow(pg, "MQ_blk"), srow(pg, "MQ_Wash_2"), where=0.9, rest=0)        # the bottom third: insert after
-            attendi(pg, "E.files.findIndex(f => f.file.startsWith('MQ_blk')) > E.files.findIndex(f => f.file.startsWith('MQ_Wash_2'))", 10000)
+            wait_for_js(pg, "E.files.findIndex(f => f.file.startsWith('MQ_blk')) > E.files.findIndex(f => f.file.startsWith('MQ_Wash_2'))", 10000)
             assert snap(pg) == before, "a reorder made a group"
             assert pg.evaluate("E.files.map(f => f.file)") != order
         step("a drop on the top or bottom third of a side-list row reorders and makes no group", outer)
         def quick():
             before = snap(pg)
             drag(pg, srow(pg, "TW_blk"), srow(pg, "MQ_Wash_1"), where=0.5, rest=0)         # no rest in the middle: no group
-            fermo(pg, "#flst"); assert snap(pg) == before, "a quick drop in the middle made a group"
+            wait_still(pg, "#flst"); assert snap(pg) == before, "a quick drop in the middle made a group"
         step("a quick drop in the middle of a low (31 px) side-list row is not an «onto» (it needs the rest)", quick)
         S = []
         def chain(name, fn, key, expect=None):
-            fn(); fermo(pg, "#flist"); same(pg); S.append(snap(pg))
+            fn(); wait_still(pg, "#flist"); same(pg); S.append(snap(pg))
             w = last(pg); assert w == key, (name, key, w)
         S.append(snap(pg)); pg.evaluate("window.__cls = 0; window.__sh = []")          # the reorder above moves rows on purpose: the group actions are what must not shift anything
         def new_table():
@@ -122,7 +122,7 @@ try:
         def join():
             table(pg); n = pg.evaluate("new Set(Object.values(ST.files.map(f => f.ugrp).filter(Boolean))).size")
             drag(pg, trow(pg, "MQ_O2_T00").locator(".tg-grip"), trow(pg, "MQ_H2O2_T01"), hold=lambda: assert_said(pg, "Move to MQ_H2O2 · 1 file"))
-            attendi(pg, "ST.files.find(f => f.name.startsWith('MQ_O2_T00')).ugrp === 'MQ_H2O2'", 10000)
+            wait_for_js(pg, "ST.files.find(f => f.name.startsWith('MQ_O2_T00')).ugrp === 'MQ_H2O2'", 10000)
             assert pg.evaluate("new Set(ST.files.map(f => f.ugrp).filter(Boolean)).size") == n, "a group was made instead of a join"
         def assert_said(pg, text):
             got = pg.evaluate(LIVE); assert got == text, (text, got)
@@ -134,43 +134,43 @@ try:
         step("side list: TW_AIR_T00 onto TW_AIR_T01 makes «TW_AIR»", lambda: chain("new_side", new_side, "groups.undo.new"))
         def with_menu():
             table(pg)
-            trow(pg, "TW_H2O2_T05").locator("[data-mv]").focus(); pg.keyboard.press("Enter"); attendi(pg, "!document.querySelector('#ctx').hidden", 5000)
+            trow(pg, "TW_H2O2_T05").locator("[data-mv]").focus(); pg.keyboard.press("Enter"); wait_for_js(pg, "!document.querySelector('#ctx').hidden", 5000)
             pg.locator("#ctx", has_text="Group with…").locator("text=Group with…").first.click()
-            attendi(pg, "document.getElementById('askdlg').open && document.getElementById('askin').getAttribute('list')", 5000)
+            wait_for_js(pg, "document.getElementById('askdlg').open && document.getElementById('askin').getAttribute('list')", 5000)
             pg.keyboard.type("AIR_T05"); pg.keyboard.press("Enter")
             esc_rename(pg, "TW_T05")
             assert tlabel(pg, "TW_H2O2_T05") == "TW_T05" == tlabel(pg, "TW_AIR_T05")
         step("«Group with…» of the row menu (keyboard, type-ahead) does the same as a drop onto", lambda: chain("with", with_menu, "groups.undo.new"))
         def rename():
             pg.locator('#flst .fgh[data-ug="TW_T05"] .chv').focus(); pg.keyboard.press("F2")
-            attendi(pg, "document.getElementById('askdlg').open", 5000); pg.keyboard.type("Tween"); pg.keyboard.press("Enter")
-            attendi(pg, "ST.files.some(f => f.ugrp === 'Tween')", 10000)
+            wait_for_js(pg, "document.getElementById('askdlg').open", 5000); pg.keyboard.type("Tween"); pg.keyboard.press("Enter")
+            wait_for_js(pg, "ST.files.some(f => f.ugrp === 'Tween')", 10000)
             assert tlabel(pg, "TW_AIR_T05") == "Tween" == slabel(pg, "TW_AIR_T05")
         step("F2 renames the group in the side list and the table", lambda: chain("rename", rename, "groups.undo.rename"))
         def move():
             table(pg)
             drag(pg, trow(pg, "MQ_blk").locator(".tg-grip"), pg.locator('#flist tr.tg-head[data-ug="MQ_T00"]'), rest=0)
-            attendi(pg, "ST.files.find(f => f.name.startsWith('MQ_blk')).ugrp === 'MQ_T00'", 10000)
+            wait_for_js(pg, "ST.files.find(f => f.name.startsWith('MQ_blk')).ugrp === 'MQ_T00'", 10000)
         step("a row dragged onto a header still moves to that group", lambda: chain("move", move, "groups.undo.move"))
         def ungroup():
             pg.locator('#flst .fgh[data-ug="Tween"]').click(button="right")
-            attendi(pg, "!document.querySelector('#ctx').hidden", 5000); pg.locator("#ctx", has_text="Ungroup").locator("text=Ungroup").first.click()
-            attendi(pg, "!ST.files.some(f => f.ugrp === 'Tween')", 10000)
+            wait_for_js(pg, "!document.querySelector('#ctx').hidden", 5000); pg.locator("#ctx", has_text="Ungroup").locator("text=Ungroup").first.click()
+            wait_for_js(pg, "!ST.files.some(f => f.ugrp === 'Tween')", 10000)
         step("«Ungroup» on a side header frees the files of the table too", lambda: chain("ungroup", ungroup, "groups.undo.ungroup"))
         def by():
-            table(pg); pg.click("#tb-by"); attendi(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
-            pg.locator(".gby-menu [role=menuitemradio]", has_text="Condition").first.click(); attendi(pg, "!!E.ugBy && E.ugBy.by === 'cond'", 10000)
+            table(pg); pg.click("#tb-by"); wait_for_js(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
+            pg.locator(".gby-menu [role=menuitemradio]", has_text="Condition").first.click(); wait_for_js(pg, "!!E.ugBy && E.ugBy.by === 'cond'", 10000)
         step("Group by → Condition replaces the manual groups", lambda: chain("by", by, "groups.undo.by"))
         def none():
-            table(pg); pg.click("#tb-by"); attendi(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
-            pg.locator(".gby-menu [role=menuitemradio]", has_text="None").first.click(); attendi(pg, "!E.ugBy", 10000)
+            table(pg); pg.click("#tb-by"); wait_for_js(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
+            pg.locator(".gby-menu [role=menuitemradio]", has_text="None").first.click(); wait_for_js(pg, "!E.ugBy", 10000)
         step("Group by → None removes every group", lambda: chain("none", none, "groups.undo.none"))
         def walk():
             n = len(S) - 1
             for k in range(n, 0, -1):
-                undo(pg); attendi(pg, f"{SNAP} === {S[k - 1]!r}", 8000)
+                undo(pg); wait_for_js(pg, f"{SNAP} === {S[k - 1]!r}", 8000)
             for k in range(1, n + 1):
-                redo(pg); attendi(pg, f"{SNAP} === {S[k]!r}", 8000)
+                redo(pg); wait_for_js(pg, f"{SNAP} === {S[k]!r}", 8000)
         step("ten mixed group actions undo one by one back to the start and redo one by one", walk)
         def calm():
             assert pg.evaluate("window.__cls") < 0.001, [pg.evaluate("[window.__cls, window.__sh]"), CLSAT]
@@ -181,8 +181,8 @@ try:
         step("axe: the table with its grips has no serious or critical violation", ax)
         def reload():
             table(pg); drag(pg, trow(pg, "MQ_N2_T01").locator(".tg-grip"), trow(pg, "MQ_N2_T02")); esc_rename(pg, "MQ_N2")
-            attendi(pg, "E.files.some(f => f.ugrp === 'MQ_N2')", 10000); pg.evaluate("uiSave()"); frames(pg, 3)
-            pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.some(f => f.ugrp)", 120000); ready(pg)
+            wait_for_js(pg, "E.files.some(f => f.ugrp === 'MQ_N2')", 10000); pg.evaluate("uiSave()"); frames(pg, 3)
+            pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.some(f => f.ugrp)", 120000); ready(pg)
             assert slabel(pg, "MQ_N2_T01") == "MQ_N2" == slabel(pg, "MQ_N2_T02")
         step("a reload keeps the group made by a drop onto", reload)
         step("no engine miss", lambda: pg.evaluate("(window.MZLAB_LR_MISS || []).length") == 0 or (_ for _ in ()).throw(AssertionError(pg.evaluate("window.MZLAB_LR_MISS"))))

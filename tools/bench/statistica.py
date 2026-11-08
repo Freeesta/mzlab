@@ -28,44 +28,44 @@ def indici_bootstrap(n: int, strati=None, n_boot: int = N_BOOT, seme: int = SEME
     return out
 
 
-def _stat(x: np.ndarray, quale: str) -> np.ndarray:
+def _stat(x: np.ndarray, which: str) -> np.ndarray:
     """The statistic of every resample (rows of x): the mean of 0/1 values, or the median ignoring the missing values."""
-    if quale == "media":
+    if which == "media":
         return x.mean(1)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")                 # a resample with no measured compound gives NaN, not a warning
         return np.nanmedian(x, axis=1)
 
 
-def _punto(x: np.ndarray, quale: str) -> float:
-    if quale == "media":
+def _point(x: np.ndarray, which: str) -> float:
+    if which == "media":
         return float(np.mean(x)) if len(x) else float("nan")
     return float(np.nanmedian(x)) if len(x) and not np.all(np.isnan(x)) else float("nan")
 
 
-def intervallo(x, quale: str = "media", strati=None, n_boot: int = N_BOOT, seme: int = SEME) -> dict:
+def intervallo(x, which: str = "media", strati=None, n_boot: int = N_BOOT, seme: int = SEME) -> dict:
     """Value and 95 % percentile interval of a metric measured per compound."""
     x = np.asarray(x, float)
-    if len(x) == 0 or (quale != "media" and np.all(np.isnan(x))):
+    if len(x) == 0 or (which != "media" and np.all(np.isnan(x))):
         return {"n": int(len(x)), "valore": None, "ic_basso": None, "ic_alto": None}
-    s = _stat(x[indici_bootstrap(len(x), strati, n_boot, seme)], quale)
+    s = _stat(x[indici_bootstrap(len(x), strati, n_boot, seme)], which)
     lo, hi = np.nanpercentile(s, [2.5, 97.5])
-    return {"n": int(len(x)), "valore": _punto(x, quale), "ic_basso": float(lo), "ic_alto": float(hi)}
+    return {"n": int(len(x)), "valore": _point(x, which), "ic_basso": float(lo), "ic_alto": float(hi)}
 
 
-def differenza(a, b, quale: str = "media", strati=None, n_boot: int = N_BOOT, seme: int = SEME) -> dict:
+def differenza(a, b, which: str = "media", strati=None, n_boot: int = N_BOOT, seme: int = SEME) -> dict:
     """Paired difference a - b (same compounds, same resamples): value, 95 % interval, and the two-sided bootstrap p-value (0 is the null)."""
     a, b = np.asarray(a, float), np.asarray(b, float)
     if len(a) != len(b):
         raise ValueError("the two tools must be measured on the same compounds")
-    if len(a) == 0 or (quale != "media" and (np.all(np.isnan(a)) or np.all(np.isnan(b)))):
+    if len(a) == 0 or (which != "media" and (np.all(np.isnan(a)) or np.all(np.isnan(b)))):
         return {"n": int(len(a)), "valore": None, "ic_basso": None, "ic_alto": None, "p": None}
     ix = indici_bootstrap(len(a), strati, n_boot, seme)
-    d = _stat(a[ix], quale) - _stat(b[ix], quale)
+    d = _stat(a[ix], which) - _stat(b[ix], which)
     d = d[~np.isnan(d)]
     lo, hi = np.percentile(d, [2.5, 97.5])
     p = min(1.0, 2 * min(((d <= 0).sum() + 1) / (len(d) + 1), ((d >= 0).sum() + 1) / (len(d) + 1)))
-    return {"n": int(len(a)), "valore": _punto(a, quale) - _punto(b, quale), "ic_basso": float(lo), "ic_alto": float(hi), "p": float(p)}
+    return {"n": int(len(a)), "valore": _point(a, which) - _point(b, which), "ic_basso": float(lo), "ic_alto": float(hi), "p": float(p)}
 
 
 def mcnemar_esatto(a, b) -> dict:
@@ -83,26 +83,26 @@ def mcnemar_esatto(a, b) -> dict:
 def holm(p: list[float], alfa: float = ALFA) -> dict:
     """Holm step-down: adjusted p-values (monotone, capped at 1) and which hypotheses are rejected at `alfa`, in the order of the input."""
     m = len(p)
-    ordine = sorted(range(m), key=lambda i: (p[i], i))
+    order = sorted(range(m), key=lambda i: (p[i], i))
     adj = [0.0] * m
-    corrente = 0.0
-    for r, i in enumerate(ordine):
-        corrente = max(corrente, min(1.0, (m - r) * p[i]))
-        adj[i] = corrente
+    current = 0.0
+    for r, i in enumerate(order):
+        current = max(current, min(1.0, (m - r) * p[i]))
+        adj[i] = current
     return {"p_corretto": adj, "rifiutata": [x < alfa for x in adj]}
 
 
-def non_inferiore(diff: dict, direzione: str, margine: float) -> bool | None:
+def non_inferiore(diff: dict, direction: str, margin: float) -> bool | None:
     """Non-inferiority of a - b: the interval of the difference must stay on the right side of the margin (a negative margin when higher is better:
     the lower end above it; a positive one when lower is better: the upper end below it). None if there is nothing to compare."""
     if diff.get("valore") is None:
         return None
-    return bool(diff["ic_basso"] > margine) if direzione == "alto" else bool(diff["ic_alto"] < margine)
+    return bool(diff["ic_basso"] > margin) if direction == "alto" else bool(diff["ic_alto"] < margin)
 
 
-def superiore(diff: dict, direzione: str, rifiutata: bool) -> bool | None:
+def superiore(diff: dict, direction: str, refused: bool) -> bool | None:
     """Superiority of a over b: the whole interval on the favourable side of zero and the null rejected after Holm."""
     if diff.get("valore") is None:
         return None
-    lato = diff["ic_basso"] > 0 if direzione == "alto" else diff["ic_alto"] < 0
-    return bool(lato and rifiutata)
+    side = diff["ic_basso"] > 0 if direction == "alto" else diff["ic_alto"] < 0
+    return bool(side and refused)

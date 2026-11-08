@@ -3,7 +3,7 @@ height, the width of #nav nor the top of #drop change while the page starts (at 
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
-lib.AUTO_TEMPI = False
+lib.AUTO_TIMES = False
 from lib import *
 
 # rAF log from the first frame: [header height, #nav width, #drop top] whenever it changes
@@ -19,9 +19,9 @@ if __name__ == "__main__":
             for w, h, loc in ((400, 800, "en-US"), (400, 800, "it-IT"), (800, 700, "en-US"), (1400, 900, "it-IT")):
                 b = p.chromium.launch(); ctx = b.new_context(viewport={"width": w, "height": h}, locale=loc)
                 pg = ctx.new_page(); pg.add_init_script(SKIP_TOUR); pg.add_init_script(LOG)
-                pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "window.qqReady || document.querySelector('#fl-hint')"); frames(pg, 30)
+                pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "window.qqReady || document.querySelector('#fl-hint')"); frames(pg, 30)
                 seen = pg.evaluate("window.__h")
-                dw, tw = pg.evaluate("(() => { const t = document.querySelector('#wtable'), was = t.hidden; t.hidden = false; const v = [document.querySelector('#drop').getBoundingClientRect().width, t.getBoundingClientRect().width]; t.hidden = was; return v; })()")
+                dw, tw = pg.evaluate("(() => { const t = document.querySelector('#wtable'), was = t.hidden, k = document.createElement('i'); t.querySelector('#flist').appendChild(k); t.hidden = false; const v = [document.querySelector('#drop').getBoundingClientRect().width, t.getBoundingClientRect().width]; k.remove(); t.hidden = was; return v; })()")      # an empty #wtable is display:none (app.css): a child in #flist gives it its width
                 print(f"{w}x{h} {loc}: {seen} drop {dw} table {tw}")
                 if abs(dw - tw) > 1: bad.append((w, loc, "drop width", dw, tw))
                 if len(seen) != 1: bad.append((w, loc, seen))

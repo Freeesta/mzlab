@@ -72,6 +72,8 @@ pub(crate) struct Parti {
     slots: Vec<Vec<u32>>,
     records: Vec<u64>,
     next_slot: u32,
+    /// Whether 64-bit peaks of MS1 scans were written: an MS1 section of 32 bits may take one into the bucket above its own (`leggi_parti`).
+    ms1_larghe: bool,
 }
 
 /// The first bucket of every partition for the peaks counted so far.
@@ -111,6 +113,7 @@ impl Parti {
             slots: vec![Vec::new(); 2 * PARTS],
             records: vec![0; 2 * PARTS],
             next_slot: 0,
+            ms1_larghe: false,
         }
     }
 
@@ -137,6 +140,16 @@ impl Parti {
     }
 }
 
+/// One record (`m/z`, intensity, scan, little-endian) made on the stack and appended in one copy: pass 1 appends one per spilled peak.
+#[allow(clippy::indexing_slicing)] // `R == 2 * W + 4`, the two record widths of `REC`
+fn record<const R: usize, const W: usize>(mz: [u8; W], it: [u8; W], pos: u32) -> [u8; R] {
+    let mut r = [0; R];
+    r[..W].copy_from_slice(&mz);
+    r[W..2 * W].copy_from_slice(&it);
+    r[2 * W..].copy_from_slice(&pos.to_le_bytes());
+    r
+}
+
 fn f64_at(r: &[u8], at: usize) -> f64 {
     r.get(at..at + 8)
         .and_then(|b| b.try_into().ok())
@@ -156,12 +169,19 @@ fn u32_at(r: &[u8], at: usize) -> u32 {
 }
 
 impl Parti {
-    pub(crate) fn push(&mut self, sp: &mut dyn Spill, mz: f64, it: f64, pos: u32) -> Result<()> {
+    /// A peak kept in 64 bits; `ms1`: of an MS1 scan.
+    pub(crate) fn push(
+        &mut self,
+        sp: &mut dyn Spill,
+        mz: f64,
+        it: f64,
+        pos: u32,
+        ms1: bool,
+    ) -> Result<()> {
+        self.ms1_larghe |= ms1;
         let p = usize::from(self.of_bucket[bucket(mz)]);
         let buf = self.buffer(0, p)?;
-        buf.extend_from_slice(&mz.to_le_bytes());
-        buf.extend_from_slice(&it.to_le_bytes());
-        buf.extend_from_slice(&pos.to_le_bytes());
+        buf.extend_from_slice(&record::<20, 8>(mz.to_le_bytes(), it.to_le_bytes(), pos));
         let full = buf.len() >= PER_CHUNK[0] * REC[0];
         self.records[p] += 1;
         if full {
@@ -174,9 +194,7 @@ impl Parti {
     pub(crate) fn push32(&mut self, sp: &mut dyn Spill, mz: f32, it: f32, pos: u32) -> Result<()> {
         let p = usize::from(self.of_bucket[bucket(f64::from(mz))]);
         let buf = self.buffer(1, p)?;
-        buf.extend_from_slice(&mz.to_le_bytes());
-        buf.extend_from_slice(&it.to_le_bytes());
-        buf.extend_from_slice(&pos.to_le_bytes());
+        buf.extend_from_slice(&record::<12, 4>(mz.to_le_bytes(), it.to_le_bytes(), pos));
         let full = buf.len() >= PER_CHUNK[1] * REC[1];
         self.records[PARTS + p] += 1;
         if full {
@@ -195,8 +213,31 @@ impl Parti {
     }
 }
 
-/// Calls `f(mz, intensity, scan)` for every peak of the partitions that may hold buckets `lo..hi` (one more on each side: a bucket taken after rounding
-/// the m/z to 32 bits can be the next one), partition by partition, each in the order it was written. `f` keeps the peaks whose bucket it wants.
+/// With a scratch file (`parti`): `hi` lowered to the last partition boundary in `lo + 1..=hi` (none: `hi`), so that every partition is read by one round when the rounds can hold one;
+/// `used` lowered by the `cost` of the buckets left out. At the end of the axis `hi` stays.
+pub(crate) fn allinea(
+    parti: Option<&Parti>,
+    lo: usize,
+    hi: usize,
+    used: usize,
+    cost: &dyn Fn(usize) -> usize,
+) -> (usize, usize) {
+    let Some(first) = parti.map(|p| &p.first) else {
+        return (hi, used);
+    };
+    match first
+        .partition_point(|&f| f <= hi)
+        .checked_sub(1)
+        .and_then(|i| first.get(i).copied())
+    {
+        Some(b) if hi < NB && b > lo => (b, used - (b..hi).map(cost).sum::<usize>()),
+        _ => (hi, used),
+    }
+}
+
+/// Calls `f(mz, intensity, scan)` for every peak of the partitions that may hold buckets `lo..hi`, partition by partition, each in the order it was
+/// written; `f` keeps the peaks whose bucket it wants. The 32-bit peaks are split by the bucket their section takes; a 64-bit peak of an MS1 scan
+/// rounded to 32 bits by its section can only go up one bucket (`f32` holds every integer m/z and rounding keeps the order), so bucket `lo - 1` is read too.
 pub(crate) fn leggi_parti(
     parti: &Parti,
     sp: &mut dyn Spill,
@@ -204,17 +245,19 @@ pub(crate) fn leggi_parti(
     hi: usize,
     f: &mut dyn FnMut(f64, f64, u32) -> Result<()>,
 ) -> Result<()> {
-    let (lo, hi) = (lo.saturating_sub(1), hi.saturating_add(1));
+    let lo0 = lo.saturating_sub(usize::from(parti.ms1_larghe));
     let mut buf = Vec::new();
     buf.try_reserve_exact(CHUNK)
         .map_err(|_| Error::memory_budget())?;
     buf.resize(CHUNK, 0);
     for p in 0..PARTS {
-        if parti.first[p] >= parti.first[p + 1] || parti.first[p] >= hi || parti.first[p + 1] <= lo
-        {
+        if parti.first[p] >= parti.first[p + 1] || parti.first[p] >= hi {
             continue;
         }
         for kind in 0..2 {
+            if parti.first[p + 1] <= [lo0, lo][kind] {
+                continue;
+            }
             let q = kind * PARTS + p;
             let mut left = parti.records[q];
             for &slot in &parti.slots[q] {
@@ -238,3 +281,7 @@ pub(crate) fn leggi_parti(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "mzidx_spill_prove.rs"]
+mod prove;

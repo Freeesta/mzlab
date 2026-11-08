@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 # op -> why the app has no branch for it
-SOLO_SITO = {
+SITE_ONLY = {
     "module": "the worker receives the compiled .wasm: the app has no .wasm",
     "policy": "the storage policy of OPFS: the app reads the disk",
     "budget": "memory budget of the wasm instance (4 GiB cap); the app has no cap",
@@ -39,10 +39,10 @@ def app_ops():
 
 
 def test_every_site_operation_has_a_branch_in_the_app():
-    missing = sorted(site_ops() - app_ops() - set(SOLO_SITO))
+    missing = sorted(site_ops() - app_ops() - set(SITE_ONLY))
     assert not missing, f"operations of rust-worker.js the app answers with rpc.unknown: {missing} (add the branch, or name the reason in SOLO_SITO)"
 
 
 def test_the_site_only_list_holds_no_stale_name():
-    stale = sorted(o for o in SOLO_SITO if o not in site_ops() or o in app_ops())
+    stale = sorted(o for o in SITE_ONLY if o not in site_ops() or o in app_ops())
     assert not stale, f"SOLO_SITO names operations the site lacks or the app answers: {stale}"

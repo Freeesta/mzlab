@@ -20,9 +20,9 @@ fn ogni_codec_si_apre_e_torna_entro_la_sua_precisione() {
         (Np::Pic, true),
     ] {
         let mut l = apri(mzml_di(&scan, Cod::Np { intensita, zlib: z }, None));
-        assert_eq!(l.campioni()[0].scansioni, scan.len());
+        assert_eq!(l.samples()[0].scansioni, scan.len());
         for (k, x) in scan.iter().enumerate() {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert_eq!(s.mz.len(), x.mz.len());
             let fp = numpress::linear_fixed_point(&x.mz);
             for (a, b) in s.mz.iter().zip(&x.mz) {
@@ -58,7 +58,7 @@ fn l_indice_dice_livello_precursore_tic_senza_leggere_i_picchi() {
         },
         None,
     ));
-    let ind = l.indice(0).unwrap();
+    let ind = l.index(0).unwrap();
     assert_eq!(ind.len(), scan.len());
     for (v, x) in ind.iter().zip(&scan) {
         assert_eq!(v.livello, x.livello);
@@ -169,7 +169,7 @@ fn il_metodo_si_ripete_solo_se_l_mzml_lo_porta() {
         },
         Some(doc),
     ));
-    assert_eq!(con.metodo(0).unwrap(), doc);
+    assert_eq!(con.method(0).unwrap(), doc);
     let t = String::from_utf8_lossy(&mzml_scritto(&mut con)).to_string();
     assert!(t.contains("mzLab metodo/1"));
     let mut senza = apri(mzml_di(
@@ -180,7 +180,7 @@ fn il_metodo_si_ripete_solo_se_l_mzml_lo_porta() {
         },
         None,
     ));
-    assert_eq!(senza.metodo(0).unwrap(), "{}");
+    assert_eq!(senza.method(0).unwrap(), "{}");
 }
 
 #[test]
@@ -206,9 +206,9 @@ fn i_cromatogrammi_numpress_si_leggono() {
         },
         None,
     ));
-    let v = l.cromatogrammi(0).unwrap();
+    let v = l.chromatograms(0).unwrap();
     assert_eq!(v.len(), 1);
-    let c = l.cromatogramma(0, &v[0].id).unwrap();
+    let c = l.chromatogram(0, &v[0].id).unwrap();
     assert_eq!(c.time.len(), scan.len());
     assert!((c.time[1] - 0.75).abs() < 1e-3);
 }
@@ -239,9 +239,9 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
         indexed.starts_with(b"<?xml") && String::from_utf8_lossy(&indexed).contains("<indexedmzML")
     );
     let (mut a, mut b) = (apri(plain), apri(indexed));
-    assert_eq!(a.indice(0).unwrap().len(), b.indice(0).unwrap().len());
-    for k in 0..a.indice(0).unwrap().len() {
-        let (x, y) = (a.scansione(0, k).unwrap(), b.scansione(0, k).unwrap());
+    assert_eq!(a.index(0).unwrap().len(), b.index(0).unwrap().len());
+    for k in 0..a.index(0).unwrap().len() {
+        let (x, y) = (a.scan(0, k).unwrap(), b.scan(0, k).unwrap());
         assert!(x.mz == y.mz && x.intensity == y.intensity && x.rt == y.rt && x.id == y.id);
     }
 }
@@ -256,13 +256,13 @@ fn un_numpress_troncato_dichiara_gli_spettri_mancanti() {
     };
     let b = mzml_di(&scan, cod, None);
     let mut intero = mzlab_lettori::apri(insieme("a.mzML", b.clone()), &Limiti::sito()).unwrap();
-    assert_eq!(intero.mancanti(0), 0);
+    assert_eq!(intero.missing(0), 0);
     let mut l = mzlab_lettori::apri(
         insieme("a.mzML", b[..b.len() * 3 / 4].to_vec()),
         &Limiti::sito(),
     )
     .unwrap();
-    let ha = l.campioni()[0].scansioni;
+    let ha = l.samples()[0].scansioni;
     assert!(ha > 0 && ha < scan.len(), "{ha} of {}", scan.len());
-    assert_eq!(ha + l.mancanti(0), scan.len());
+    assert_eq!(ha + l.missing(0), scan.len());
 }

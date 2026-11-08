@@ -16,7 +16,7 @@ try:
         pg = r.page(p)
         stage(pg, [str(ES / f"MS2_t{t}.mzML") for t in (15, 60)])
         pg.click("text=Carica dati"); ready(pg)
-        open_ms2(pg); pg.locator('#flst [data-pg="229.1"]').dblclick(); attendi(pg, f"{specs(pg)}.length >= 1"); ready(pg)
+        open_ms2(pg); pg.locator('#flst [data-pg="229.1"]').dblclick(); wait_for_js(pg, f"{specs(pg)}.length >= 1"); ready(pg)
         def menu():
             q = pg.evaluate(f"({RULES})({specs(pg)}[0])")
             assert q["files"] == ["MS2_t15"], q["files"]                 # MS2_t60 has no scan of 229.1
@@ -27,8 +27,8 @@ try:
             ws = pg.evaluate("[...document.querySelectorAll('.ppair')].map(e => getComputedStyle(e).whiteSpace)"); assert ws and set(ws) == {"nowrap"}, ws
         step("pair badge on one line", badge)
         def bis():
-            pg.locator('#flst input[data-pr="237"]').click(); attendi(pg, "E.panels.filter(p => p.tab === 'ms2' && p.type === 'chrom').length >= 2"); ready(pg)
-            open_ms2(pg); pg.locator('#flst [data-pg="237"]').dblclick(); attendi(pg, f"{specs(pg)}.length >= 2"); ready(pg)
+            pg.locator('#flst input[data-pr="237"]').click(); wait_for_js(pg, "E.panels.filter(p => p.tab === 'ms2' && p.type === 'chrom').length >= 2"); ready(pg)
+            open_ms2(pg); pg.locator('#flst [data-pg="237"]').dblclick(); wait_for_js(pg, f"{specs(pg)}.length >= 2"); ready(pg)
             q = pg.evaluate(f"{specs(pg)}.map(p => ({RULES})(p))")
             assert [x["file"] for x in q] == ["MS2_t15", "MS2_t60"] or sorted(x["file"] for x in q) == ["MS2_t15", "MS2_t60"], q
             b = [x for x in q if x["file"] == "MS2_t60"][0]

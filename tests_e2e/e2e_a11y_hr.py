@@ -36,10 +36,10 @@ try:
         step("axe: the HR bench", lambda: axe_ok(pg, "#dpanels"))
         step("axe: the whole page with the HR bench open", lambda: axe_ok(pg))
         def info():
-            pg.evaluate("BARRA.setTab('hdr')"); attendi(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0"); axe_ok(pg, "#hrinfo")
+            pg.evaluate("BARRA.setTab('hdr')"); wait_for_js(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0"); axe_ok(pg, "#hrinfo")
         step("axe: the information bar of the HR bench", info)
         def info_minor():
-            pg.evaluate("BARRA.setTab('hdr')"); attendi(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0")
+            pg.evaluate("BARRA.setTab('hdr')"); wait_for_js(pg, "(document.querySelector('#hri-body')?.innerText || '').length > 0")
             for th in ("light", "dark"):
                 pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th)
                 v = pg.evaluate(RUN_MINOR); assert not v, (th, v)
@@ -79,7 +79,7 @@ try:
             assert n >= 3, f"only {n} live regions on the page"
         step("dynamic updates: live regions exist", live)
         def esc():
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog[open]')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog[open]')")
         step("keyboard: Esc leaves no open dialog", esc)
     r.close()
 except Exception as e:

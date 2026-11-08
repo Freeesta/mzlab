@@ -39,7 +39,7 @@ fn termini_attivazione(a: Activation, analyzer: Option<Analyzer>) -> Vec<(String
         .collect()
 }
 
-/// `Lettore::extra_scansione` of the `.raw`: nothing when the sample cannot be opened, the plain precursor of the spectrum when the scan cannot be read.
+/// `Lettore::scan_extra` of the `.raw`: nothing when the sample cannot be opened, the plain precursor of the spectrum when the scan cannot be read.
 pub(super) fn di_scansione(l: &mut LettoreRaw, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
     if l.one(c).is_err() {
         return SpectrumExtra::default();
@@ -150,8 +150,8 @@ pub(super) fn noise_fields(raw: &RawFileReader, src: &mut Stream, idx: u32) -> V
     ]
 }
 
-/// `Lettore::intestazione` of the `.raw`: the header fields of scan `k` and its noise nodes.
-pub(super) fn intestazione(l: &mut LettoreRaw, c: usize, k: usize) -> Result<Vec<Campo>> {
+/// `Lettore::scan_header` of the `.raw`: the header fields of scan `k` and its noise nodes.
+pub(super) fn scan_header(l: &mut LettoreRaw, c: usize, k: usize) -> Result<Vec<Campo>> {
     l.one(c)?;
     let idx = l.row(k)?;
     let first = l.raw.run_header.sample_info.first_scan_number;

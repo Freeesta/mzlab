@@ -302,16 +302,19 @@ const BANCO = (() => {
   const tabOfAct = () => (act() && act().tab) || E.tab;
   function barBtn(id, tip, ic, fn, label) { return `<button type="button" data-hb="${id}" title="${EH(tip)}" aria-label="${EH(tip)}">${ic}${label ? `<span class="hl">${EH(label)}</span>` : ""}</button>`; }
   async function copyPng(p) {
-    let cvs; p._exp = true; EXPORTING = true; paintFiles();
-    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
-    const blob = await new Promise(r => cvs.toBlob(r));
-    try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); nearMsg(I18N.t("bn.copied.img")); }
-    catch (e) { saveBlob(blob, plotName(p) + ".png"); info(I18N.t("bn.copied.dl")); }
+    // handed to the clipboard before the image is drawn: Safari takes it only while the click runs
+    const png = (async () => {
+      let cvs; p._exp = true; EXPORTING = true; paintFiles();
+      try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
+      return /** @type {Promise<Blob>} */ (new Promise(r => cvs.toBlob(r)));
+    })();
+    try { await clipboardCopy({ "image/png": png }); nearMsg(I18N.t("bn.copied.img")); }
+    catch (e) { saveBlob(await png, plotName(p) + ".png"); info(I18N.t("bn.copied.dl")); }
   }
   async function copyText(p) {
     const t = plotSheets(p); if (!t || !t[0]) return info(I18N.t("bn.noCopy"));
-    const sh = t[0], txt = await PROV.tsv([sh.head.join("\t"), ...sh.rows.map(r => r.map(v => (v == null ? "" : v)).join("\t"))].join("\n"), { p, table: "plot" });
-    try { await navigator.clipboard.writeText(txt); nearMsg(I18N.t("bn.copied.txt")); } catch (e) { info(I18N.t("bn.noClip")); }
+    const sh = t[0], txt = PROV.tsv([sh.head.join("\t"), ...sh.rows.map(r => r.map(v => (v == null ? "" : v)).join("\t"))].join("\n"), { p, table: "plot" });
+    try { await clipboardCopy({ "text/plain": txt }); nearMsg(I18N.t("bn.copied.txt")); } catch (e) { info(I18N.t("bn.noClip")); }
   }
   function addCell(type) {
     const tab = tabOfAct() === "mrm" ? "full" : tabOfAct(), f = tabFiles(tab)[0]; if (!f) return;

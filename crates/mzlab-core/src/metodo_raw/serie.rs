@@ -1,6 +1,6 @@
 //! The instrument log of a `.raw` as series over time: every numeric channel of the status log (`status:<section>/<label>`) and every numeric field of the scan trailer that changes
 //! (`trailer:<label>`, one point per scan). A channel with fewer than two different values stays in `campi` only. The list (`Voce`) carries no points; the points of one series are
-//! computed when it is asked for (`Lettore::cromatogramma`), never at opening. The series are not chromatograms of the file: they are not in the mzML nor in the `.mzidx`.
+//! computed when it is asked for (`Lettore::chromatogram`), never at opening. The series are not chromatograms of the file: they are not in the mzML nor in the `.mzidx`.
 
 use crate::metodo::{num, obj, text, V};
 use opentfraw::generic_data::{GenericDataHeader, GenericRecord, GenericValue};
@@ -76,7 +76,7 @@ impl Statistiche {
     }
 }
 
-fn numero_di(v: &GenericValue) -> Option<f64> {
+pub(super) fn numero_di(v: &GenericValue) -> Option<f64> {
     if matches!(v, GenericValue::Bool(_)) {
         return None;
     }
@@ -309,8 +309,8 @@ fn scansioni(raw: &RawFileReader) -> Vec<Scansione> {
         .collect()
 }
 
-/// Every series of the file: the status log first, then the trailer.
-pub fn indice<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Voce> {
+/// Every series of the file: the status log first, then the trailer, whose records `righe` gives (the single pass of `metodo_raw` over it).
+pub fn index(raw: &RawFileReader, righe: Righe) -> Vec<Voce> {
     let mut out = raw
         .status_log
         .as_ref()
@@ -319,7 +319,7 @@ pub fn indice<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Voce> 
     out.extend(indice_trailer(
         &raw.scan_parameters_header,
         &scansioni(raw),
-        &mut righe_di(raw, source),
+        righe,
     ));
     out
 }

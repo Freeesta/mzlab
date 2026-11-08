@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 NODE = shutil.which("node")
 TARGET_JS = ROOT / "mzlab" / "web" / "liste-target.js"
-LISTE_JS = ROOT / "mzlab" / "web" / "liste.js"
+LISTS_JS = ROOT / "mzlab" / "web" / "liste.js"
 
 
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
@@ -180,7 +180,7 @@ console.log(csv);
 
 
 @pytest.mark.skipif(not NODE, reason="node non disponibile")
-def test_liste_target_integration():
+def test_lists_target_integration():
     code = r"""
 globalThis.NOMI = require(process.argv[1].replace(/[^\/\\]*$/, "nomi.js"));
 const L = require(process.argv[1]);
@@ -190,7 +190,7 @@ const out = {
 };
 console.log(JSON.stringify(out));
 """
-    res = subprocess.run([NODE, "-e", code, str(LISTE_JS)], capture_output=True, text=True, encoding="utf-8", check=True)
+    res = subprocess.run([NODE, "-e", code, str(LISTS_JS)], capture_output=True, text=True, encoding="utf-8", check=True)
     out = json.loads(res.stdout)
     assert out["hasOpenTarget"] is True
     assert out["hasTargetMethod"] is True

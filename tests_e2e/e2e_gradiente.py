@@ -75,7 +75,7 @@ try:
             r = pg.evaluate(f"GRADIENTE.reading({TIC}, 12.5)"); assert abs(r["b"] - 61.6666667) < 1e-4 and abs(r["bcol"] - 57.5) < 1e-6, r
         step("a delay of 1.0 min moves the reading at the column", delay)
         def saved():
-            pg.evaluate("uiSave(true)"); attendi(pg, "!!NB.ui")
+            pg.evaluate("uiSave(true)"); wait_for_js(pg, "!!NB.ui")
             u = pg.evaluate("NB.ui.panels.filter(q=>q.overlay).map(q=>[q.overlay,q.gdelay])"); assert u == [["grad", 1]], u
             assert pg.evaluate("typeof GRADIENTE.exportState") == "undefined"
         step("overlay and delay are saved with the session", saved)

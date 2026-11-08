@@ -169,9 +169,9 @@ const grpOf = (/** @type {FileAperto} */ f) => f.ugrp ? "u:" + f.ugrp : (window.
 const GRP_HR = /** @type {Record<string, () => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }); const grpLabel = (/** @type {string} */ g) => g.startsWith("u:") ? g.slice(2) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
 // the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
 const sibsOf = (/** @type {FileAperto} */ f) => E.files.filter((/** @type {FileAperto} */ x) => fileBase(x.file) === fileBase(f.file));
-const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
+const TOL0 = 1.0;                                   // dated instrument: XIC window of +-1 Da
 
-// ------------------------------------------------------------------ schermata di caricamento
+// ------------------------------------------------------------------ loading screen
 // small inline icons (no external files): download arrow and "fit to window" corners
 const IC_DL = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M6 1v7M3 5.5 6 8.5 9 5.5M1.5 11h9"/></svg>';
 // peak with its area + sparkle = automatic
@@ -229,7 +229,7 @@ let ldSlow = 0;
   };
 })();
 
-// ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
+// ------------------------------------------------------------------ notebook (saved next to the data)
 let nbTimer = /** @type {ReturnType<typeof setTimeout> | null} */ (null), nbLast = "", nbBase = /** @type {Bag} */ ({}), nbRemote = /** @type {Bag | null} */ (null), nbGen = 0, nbQueue = /** @type {Promise<unknown>} */ (Promise.resolve());      // one save at a time; a save overtaken by a newer one is dropped (its stale read of the stored copy, merged after the newer save moved nbBase, would write the old notebook back)
 // schema of the notebook: bump it when a field changes meaning and migrate in nbLoad (2: NB.session in the format campioni/2)
 const NB_V = 2;
@@ -868,7 +868,7 @@ const shownFor = (/** @type {Bag} */ p) => {
 };
 /** @template {{ kind?: unknown }} T @param {T[]} l */ const scanFiles = l => l.filter(f => f.kind !== "mrm");
 
-// ------------------------------------------------------------------ barra: frecce tra i file, metodo, esporta
+// ------------------------------------------------------------------ bar: arrows between files, method, export
 function renderNav() {
   const s = Q("#fsel"); if (!s) return;
   // a very long name is cut in the middle, so the final time stays visible

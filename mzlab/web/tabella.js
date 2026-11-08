@@ -75,7 +75,7 @@ const TABELLA = (() => {
     const p = parseList(text);
     if (p.bad.length) throw new Error(t("feat.err.lines", { n: p.bad.length, list: p.bad.slice(0, 6).join(", ") }));
     if (!p.rows.length) throw new Error(t("feat.err.empty"));
-    if (p.rows.length > MAX_LIST) throw new Error(t("feat.err.many", { max: MAX_LIST }));
+    if (p.rows.length > MAX_LIST) throw new Error(t("feat.err.many", { n: p.rows.length, max: MAX_LIST }));
     const fs = files(), /** @type {Bag[]} */ out = [];
     for (let i = 0; i < p.rows.length; i++) {
       const r = p.rows[i];

@@ -13,15 +13,15 @@ from bench import rapporto as R  # noqa: E402
 from bench import versioni  # noqa: E402
 
 
-def comp(i, mz, rt, ruolo):
-    return {"id": i, "mz": mz, "rt": rt, "ruolo": ruolo, "fascia": None, "atteso": None, "area_attesa": [100.0, 100.0] if ruolo == "progenitore" else None}
+def comp(i, mz, rt, role):
+    return {"id": i, "mz": mz, "rt": rt, "ruolo": role, "fascia": None, "atteso": None, "area_attesa": [100.0, 100.0] if role == "progenitore" else None}
 
 
-VERITA = [comp("par", 300.1000, 5.0, "progenitore"), comp("a", 316.1000, 4.0, "tp1"), comp("b", 330.2000, 6.0, "tp1"), comp("e1", 500.5000, None, "esca")]
-STRUTTURE = {"par": "Parent", "a": "ProdA", "b": "ProdB"}
+TRUTH = [comp("par", 300.1000, 5.0, "progenitore"), comp("a", 316.1000, 4.0, "tp1"), comp("b", 330.2000, 6.0, "tp1"), comp("e1", 500.5000, None, "esca")]
+STRUCTURES = {"par": "Parent", "a": "ProdA", "b": "ProdB"}
 
 
-def scrivi(tmp_path):
+def write(tmp_path):
     (tmp_path / "fg.csv").write_text(
         "group,ret,mz,S1,S2\n"
         "M300_R300,300,300.1001,90,110\n"                 # parent, one hit with the true name
@@ -39,7 +39,7 @@ def scrivi(tmp_path):
 
 
 def test_patroon_csv_to_bench1_with_hits(tmp_path):
-    fg, su = scrivi(tmp_path)
+    fg, su = write(tmp_path)
     t = A.da_csv("patroon", fg, ["S1", "S2"], "T", "openms", sospetti=su)
     assert t["formato"] == FORMATO and len(t["righe"]) == 5
     r = {x["gruppo"]: x for x in t["righe"]}
@@ -52,15 +52,15 @@ def test_patroon_csv_to_bench1_with_hits(tmp_path):
 
 
 def test_identification_endpoints_known_values(tmp_path):
-    fg, su = scrivi(tmp_path)
+    fg, su = write(tmp_path)
     t = A.da_csv("patroon", fg, ["S1", "S2"], "T", "openms", sospetti=su)
-    m = M.identificazione(VERITA, t, STRUTTURE)
+    m = M.identificazione(TRUTH, t, STRUCTURES)
     assert m["standard"] == ["par", "a", "b"] and m["colpo"] == [1, 1, 0] and m["rango"] == [1, 2, None] and m["livello"] == ["3a", "3a", None]
     assert m["richiamo_colpi"] == 2 / 3 and m["mrr"] == (1 + 0.5 + 0) / 3
     assert m["esche"] == ["e1"] and m["falso"] == [1] and m["falsi"] == 1.0 and m["livelli"] == {"3a": 2, "none": 1}
-    e = M.endpoint_nts(VERITA, t, STRUTTURE)
+    e = M.endpoint_nts(TRUTH, t, STRUCTURES)
     assert e["P1"]["richiamo"] == 1.0 and e["P1"]["n"] == 3 and e["ID"]["n"] == 3
-    r = R.identificazione_affiancata(VERITA, [t], STRUTTURE)
+    r = R.identificazione_affiancata(TRUTH, [t], STRUCTURES)
     assert r["patroon/openms"]["livelli"] == {"3a": 2, "none": 1} and "| patroon/openms | 3 |" in R.identificazione_markdown(r)
 
 

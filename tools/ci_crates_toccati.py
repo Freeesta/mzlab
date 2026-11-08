@@ -19,16 +19,16 @@ def main(base: str, head: str) -> str:
     # a crate manifest outside its folder prefix (root package) is not expected: treat an unknown change under crates/ as global
     if any(f.startswith("crates/") and not any(f.startswith(c) for c in cartelle.values()) for f in files):
         return "ALL"
-    toccati = {n for n, c in cartelle.items() if any(f.startswith(c) for f in files)}
+    touched = {n for n, c in cartelle.items() if any(f.startswith(c) for f in files)}
     dip = {p["name"]: {d["name"] for d in p["dependencies"] if d["name"] in cartelle} for p in meta["packages"]}
-    cambiato = True
-    while cambiato:
-        cambiato = False
+    changed = True
+    while changed:
+        changed = False
         for n, ds in dip.items():
-            if n not in toccati and ds & toccati:
-                toccati.add(n)
-                cambiato = True
-    return " ".join(sorted(toccati))
+            if n not in touched and ds & touched:
+                touched.add(n)
+                changed = True
+    return " ".join(sorted(touched))
 
 
 if __name__ == "__main__":

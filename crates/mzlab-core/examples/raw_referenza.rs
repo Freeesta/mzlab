@@ -19,10 +19,10 @@ fn main() {
         }],
     };
     let mut l = (rawlettore::VOCE.apri)(fs, &Limiti::sito()).expect("open");
-    let index = l.indice(0).expect("index").to_vec();
+    let index = l.index(0).expect("index").to_vec();
     let n = index.len();
     let k = n / 2;
-    let s = l.scansione(0, k).expect("scan");
+    let s = l.scan(0, k).expect("scan");
     let ms1: Vec<_> = index.iter().filter(|r| r.livello == 1).collect();
     let (rt, tic): (Vec<f64>, Vec<f64>) = ms1.iter().map(|r| (r.rt, r.tic)).unzip();
     let mut o = Out::default();

@@ -58,6 +58,8 @@ pub struct LettoreNumpress {
     righe: Vec<Row>,
     /// Spectra the run header declares (0: not declared), to count those a truncated file lacks.
     dichiarati: usize,
+    /// The file does not end with its closing tag: a TIC lost with the cut is built from the whole scans.
+    tagliato: bool,
     indice: Vec<VoceScansione>,
     tracce: Option<Vec<Chrom>>,
     /// SHA-1 of the file, read the first time the header of the mzML is asked for (`Some(None)`: it could not be read).
@@ -118,8 +120,15 @@ impl LettoreNumpress {
     /// The chromatograms of the file with their kind and unit.
     fn voci_tracce(&mut self) -> Result<Vec<VoceCromatogramma>> {
         let tracce = self.cromatogrammi_del_file()?.to_vec();
-        let mut m = Mzml::new(Prestito(&mut *self.dati), self.dim);
         let mut out = Vec::new();
+        if self.tic_dall_indice(&tracce) {
+            out.push(VoceCromatogramma {
+                id: "TIC".into(),
+                tipo: ChromKind::Tic,
+                unita: UNITA_TIC.into(),
+            });
+        }
+        let mut m = Mzml::new(Prestito(&mut *self.dati), self.dim);
         for t in tracce {
             out.push(VoceCromatogramma {
                 tipo: tipo(&t.kind),
@@ -132,11 +141,13 @@ impl LettoreNumpress {
 
     /// The chromatogram `id`, read from its bytes with the numpress arrays plain.
     fn traccia(&mut self, id: &str) -> Result<Chromatogram> {
-        let t = self
-            .cromatogrammi_del_file()?
-            .iter()
+        let tracce = self.cromatogrammi_del_file()?.to_vec();
+        if id == "TIC" && self.tic_dall_indice(&tracce) {
+            return Ok(self.tic_indice());
+        }
+        let t = tracce
+            .into_iter()
             .find(|t| t.id == id)
-            .cloned()
             .ok_or_else(|| Error::new("error.badIndex").with("id", id))?;
         // the bytes of the chromatogram with its numpress arrays plain, read as a file of its own
         if t.end <= t.start || t.end - t.start > self.limiti.byte {
@@ -166,6 +177,44 @@ impl LettoreNumpress {
             intensity,
         })
     }
+}
+
+/// The unit of a TIC built from the `totIonCurrent` of the scans (as the mzXML reader gives it).
+const UNITA_TIC: &str = "number of detector counts";
+
+impl LettoreNumpress {
+    /// Yes when a cut took the TIC of the file away and scans are left to build it from.
+    fn tic_dall_indice(&self, tracce: &[Chrom]) -> bool {
+        self.tagliato
+            && !self.indice.is_empty()
+            && !tracce.iter().any(|t| t.kind == "tic" || t.id == "TIC")
+    }
+
+    /// The TIC of the whole scans: the `totIonCurrent` of each, in the order of the file (an mzML TIC covers every scan of the run).
+    fn tic_indice(&self) -> Chromatogram {
+        let (time, intensity) = self.indice.iter().map(|v| (v.rt, v.tic)).unzip();
+        Chromatogram {
+            index: 0,
+            id: "TIC".into(),
+            kind: ChromKind::Tic,
+            q1: None,
+            q3: None,
+            unit: UNITA_TIC.into(),
+            time,
+            intensity,
+        }
+    }
+}
+
+/// Yes when the last bytes of the file are its closing tag (`</indexedmzML>` or `</mzML>`).
+fn chiuso(dati: &mut dyn ReadAt, dim: u64) -> bool {
+    let n = dim.min(64);
+    let mut coda = vec![0u8; n as usize];
+    if dati.read_at(dim - n, &mut coda).is_err() {
+        return false;
+    }
+    let coda = coda.trim_ascii_end();
+    coda.ends_with(b"</indexedmzML>") || coda.ends_with(b"</mzML>")
 }
 
 fn tipo(k: &str) -> ChromKind {
@@ -203,7 +252,7 @@ impl LettoreNumpress {
     }
 
     /// The header of the mzML we write (`testata_da`), with the SHA-1 of the file when the original names no source.
-    fn testata(&mut self) -> Result<Header> {
+    fn file_header(&mut self) -> Result<Header> {
         let head = self.testa_xml()?;
         let mut h = testata_da(&head, &self.nome, &self.limiti)?;
         if h.sources.is_empty() {
@@ -259,36 +308,36 @@ fn ha_numpress(text: &str) -> bool {
 }
 
 impl Lettore for LettoreNumpress {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("mzml-numpress")
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::non_portati::NUMPRESS
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
 
-    fn mancanti(&mut self, c: usize) -> usize {
+    fn missing(&mut self, c: usize) -> usize {
         if c != 0 {
             return 0;
         }
         self.dichiarati.saturating_sub(self.righe.len())
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
         self.uno(c)?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.uno(c)?;
         self.spettro(k)
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         self.uno(c)?;
         let byte = self.byte(k)?;
         Ok(parametri(&byte)
@@ -297,26 +346,26 @@ impl Lettore for LettoreNumpress {
             .collect())
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         self.uno(c)?;
         self.voci_tracce()
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.uno(c)?;
         self.traccia(id)
     }
 
     /// The `metodo/1` document the mzML carries (written by mzLab); an mzML of another program has none (`{}`: no section).
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.uno(c)?;
         let head = self.testa_xml()?;
         Ok(metodo::from_userparam(&head).unwrap_or_else(|| "{}".to_string()))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.uno(c)?;
-        self.testata().map(Some)
+        self.file_header().map(Some)
     }
 
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
@@ -375,6 +424,7 @@ pub(super) fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>>
         .rsplit_once('.')
         .map_or(nome.as_str(), |(s, _)| s)
         .to_string();
+    let tagliato = !chiuso(&mut *dati, dim);
     Ok(Box::new(LettoreNumpress {
         dati,
         dim,
@@ -387,6 +437,7 @@ pub(super) fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>>
         nome,
         limiti: *limiti,
         dichiarati: tabella.declared,
+        tagliato,
         righe: tabella.rows,
         indice,
         tracce: None,

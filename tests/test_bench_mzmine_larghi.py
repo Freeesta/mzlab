@@ -14,16 +14,16 @@ from bench import corri, corri_mzmine, oro_mzmine410  # noqa: E402
 CONFIG = ("mzmine_default", "mzmine_wide")
 
 
-def _par(nome):
-    return corri.parametri("mzmine", nome)
+def _par(name):
+    return corri.parametri("mzmine", name)
 
 
-def _risolutore(xml: str) -> dict:
+def _solver(xml: str) -> dict:
     """Parameters of the minimum search resolver step of a batch -> {name: text}."""
     radice = ET.fromstring(xml)
-    passo = next(s for s in radice.iter("batchstep") if s.get("method", "").endswith("MinimumSearchFeatureResolverModule"))
+    step = next(s for s in radice.iter("batchstep") if s.get("method", "").endswith("MinimumSearchFeatureResolverModule"))
     out = {}
-    for p in passo.findall("parameter"):
+    for p in step.findall("parameter"):
         out[p.get("name")] = p.text if len(p) == 0 else {c.tag: c.text for c in p}
     return out
 
@@ -36,9 +36,9 @@ def test_default_is_the_documented_workflow():
 
 def test_wide_changes_only_the_resolver():
     d, w = _par("mzmine_default"), _par("mzmine_wide")
-    for chiave in d:
-        if chiave not in ("nota", "MinimumSearchResolver"):
-            assert d[chiave] == w[chiave], chiave
+    for key in d:
+        if key not in ("nota", "MinimumSearchResolver"):
+            assert d[key] == w[key], key
     cambiati = {k for k in d["MinimumSearchResolver"] if d["MinimumSearchResolver"][k] != w["MinimumSearchResolver"][k]}
     assert cambiati == {"chromatographic_threshold", "search_rt_range", "duration_max"}
     r = w["MinimumSearchResolver"]
@@ -46,12 +46,12 @@ def test_wide_changes_only_the_resolver():
     assert r["duration_max"] >= 8.0 > d["MinimumSearchResolver"]["duration_max"]
 
 
-@pytest.mark.parametrize("nome", CONFIG)
-def test_batch_xml_parses_and_carries_the_values(nome, tmp_path):
-    par = _par(nome)
+@pytest.mark.parametrize("name", CONFIG)
+def test_batch_xml_parses_and_carries_the_values(name, tmp_path):
+    par = _par(name)
     f = tmp_path / "a.mzML"
     xml = corri_mzmine.batch_xml([f], tmp_path / "out.csv", par)
-    r = _risolutore(xml)
+    r = _solver(xml)
     ris = par["MinimumSearchResolver"]
     assert float(r["Chromatographic threshold"]) == ris["chromatographic_threshold"]
     assert float(r["Minimum search range RT/Mobility (absolute)"]) == ris["search_rt_range"]
@@ -59,14 +59,14 @@ def test_batch_xml_parses_and_carries_the_values(nome, tmp_path):
     assert xml.count("<batchstep ") == 7                      # import, detect, chromatograms, resolver, align, gap filling, export
 
 
-@pytest.mark.parametrize("nome", CONFIG)
-def test_batch_xml_converts_to_410(nome, tmp_path):
-    xml = oro_mzmine410.batch_xml([tmp_path / "a.mzML"], tmp_path, _par(nome), "4.10.90")
+@pytest.mark.parametrize("name", CONFIG)
+def test_batch_xml_converts_to_410(name, tmp_path):
+    xml = oro_mzmine410.batch_xml([tmp_path / "a.mzML"], tmp_path, _par(name), "4.10.90")
     ET.fromstring(xml)
     assert "MinimumSearchFeatureResolverModule" in xml
 
 
 def test_configs_are_valid_json_with_all_sections():
-    for nome in CONFIG:
-        j = json.loads((ROOT / "tools/bench/parametri/mzmine" / f"{nome}.json").read_text(encoding="utf-8"))
+    for name in CONFIG:
+        j = json.loads((ROOT / "tools/bench/parametri/mzmine" / f"{name}.json").read_text(encoding="utf-8"))
         assert {"MassDetection", "ADAPChromatogramBuilder", "MinimumSearchResolver", "JoinAligner", "GapFilling", "polarita"} <= set(j)

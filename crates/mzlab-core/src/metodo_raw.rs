@@ -292,9 +292,29 @@ fn experiments_of(
     (exps, settings)
 }
 
+/// The scan trailer read once, each record decoded once: its fields for `campi` and its series for `serie_registro`.
+fn trailer_pass<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+) -> (Vec<campi::Campo>, Vec<serie::Voce>) {
+    let mut t = campi::Trailer::new(raw);
+    let n = raw.scan_parameters_header.fields.len();
+    let mut vals = Vec::with_capacity(n);
+    let voci = serie::index(raw, &mut |row| {
+        raw.scan_parameters.for_each(source, &mut |k, rec| {
+            vals.clear();
+            vals.extend((0..n).map(|i| rec.value(i)));
+            t.step(&vals);
+            row(k, &|i| vals.get(i)?.as_ref().and_then(serie::numero_di));
+        });
+    });
+    (t.finish(raw), voci)
+}
+
 /// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Source) -> String {
     let s = &raw.seq_row;
+    let (trailer, voci) = trailer_pass(raw, source);
     let ident = Ident {
         computer: raw.raw_file_info.computer_name.clone(),
         paths: [&s.path, &s.file_name, &s.inst_method, &s.proc_method]
@@ -359,14 +379,11 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         (
             "campi",
             Some(V::Arr(campi::fields(
-                raw, source, &traces, &pairs, &items, &ident,
+                raw, trailer, &traces, &pairs, &items, &ident,
             ))),
         ),
         ("registro", Some(V::Arr(registro::voci(&raw.error_log)))),
-        (
-            "serie_registro",
-            Some(V::Arr(serie::sezione(&serie::indice(raw, source)))),
-        ),
+        ("serie_registro", Some(V::Arr(serie::sezione(&voci)))),
         ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
     ]);

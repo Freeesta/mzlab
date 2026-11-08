@@ -37,32 +37,35 @@ impl ScanIndexEntry {
         }
     }
 
+    /// One entry from one read of its bytes: a field-by-field read goes through the source once per field (14 calls per scan).
     pub(crate) fn read<R: Read + Seek>(r: &mut BinaryReader<R>, version: u32) -> Result<Self> {
-        let offset_32 = r.read_u32()?;
-        let index = r.read_u32()?;
-        let scan_event = r.read_u16()?;
-        let scan_segment = r.read_u16()?;
-        let _next = r.read_u32()?;
-        let _unk = r.read_u32()?;
-        let data_size = r.read_u32()?;
-        let start_time = r.read_f64()?;
-        let total_current = r.read_f64()?;
-        let base_intensity = r.read_f64()?;
-        let base_mz = r.read_f64()?;
-        let low_mz = r.read_f64()?;
-        let high_mz = r.read_f64()?;
-
-        let offset = if version >= 64 {
-            r.read_u64()?
-        } else {
-            offset_32 as u64
+        let mut b = [0u8; 88];
+        let b = &mut b[..Self::min_size_for_version(version) as usize];
+        r.read_bytes_into(b)?;
+        let u16_at = |i: usize| u16::from_le_bytes([b[i], b[i + 1]]);
+        let u32_at = |i: usize| u32::from_le_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]]);
+        let f64_at = |i: usize| {
+            let mut w = [0u8; 8];
+            w.copy_from_slice(&b[i..i + 8]);
+            f64::from_le_bytes(w)
         };
-
-        if version >= 66 {
-            // Two trailing unknown u32s
-            let _unk1 = r.read_u32()?;
-            let _unk2 = r.read_u32()?;
-        }
+        // offset_32 (0), index (4), scan_event (8), scan_segment (10), next (12), unk (16), data_size (20), 6 f64 (24..72),
+        // then the u64 offset from v64 on and two unknown u32s in v66
+        let index = u32_at(4);
+        let scan_event = u16_at(8);
+        let scan_segment = u16_at(10);
+        let data_size = u32_at(20);
+        let start_time = f64_at(24);
+        let total_current = f64_at(32);
+        let base_intensity = f64_at(40);
+        let base_mz = f64_at(48);
+        let low_mz = f64_at(56);
+        let high_mz = f64_at(64);
+        let offset = if version >= 64 {
+            u64::from(u32_at(72)) | (u64::from(u32_at(76)) << 32)
+        } else {
+            u64::from(u32_at(0))
+        };
 
         Ok(Self {
             index,

@@ -2,7 +2,7 @@
 picker of «Load» opens with every file (compat.js frees the accept list that iPadOS would grey out) and an example file opens with its charts; the page
 keeps its width at Split View 1/3 and 1/2 and after a rotation; a tap outside closes the menus and pop-ups; the legend chip of many traces opens by tap and keyboard; a private window
 (storage refused) gets its own loading message; with AbortSignal.any and createWritable taken away (what Safari before 17.4 and 26
-lacks) compat.js stands in and an OPFS file written through createWritable reads back the same. No browser errors.
+lacks) compat.js stands in and an OPFS file written through createWritable reads back the same. No browser errors and no answer of 400 or more.
 The real engine of Safari is WebKit: with --browser webkit (the nightly round on macOS) every step runs in WebKit; the cloud has only Chromium, which
 emulates the iPad (touch, coarse pointer, mobile viewport) and the output says so."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +30,7 @@ def ipad(b, w=1180, h=820, extra=""):
     pg = c.new_page()
     pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
     pg.on("console", lambda m: r.errs.append(("console." + m.type, m.text)) if m.type == "error" else None)
+    pg.on("response", lambda x: r.errs.append((f"http {x.status}", x.url)) if x.status >= 400 else None)   # a worker's 404 is a console error in WebKit only
     pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg); return pg
 
 if BROWSER == "firefox":          # Playwright's Firefox cannot be a touch-only device (no isMobile, the pointer stays fine): nothing here would be an iPad
@@ -52,14 +53,14 @@ try:
             assert pg.get_attribute("#pick", "accept") is None, "the accept list is still on the input"
             assert ".wiff" in (pg.get_attribute("#pick", "data-accept") or ""), "the list is not kept in data-accept"
             fc.value.set_files([str(EX / "FullScan_t0.mzML")])
-            attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 60000)
+            wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 60000)
             pg.click("#opbtn"); ready(pg)
-            attendi(pg, "E.panels.length > 0 && E.panels.some(q => q.el.querySelector('canvas') && q.el.querySelector('canvas').width > 0)", 60000)
+            wait_for_js(pg, "E.panels.length > 0 && E.panels.some(q => q.el.querySelector('canvas') && q.el.querySelector('canvas').width > 0)", 60000)
         step("iPad: «Load» shows every file and an example file opens with its charts", picker)
         def widths():
             pg = S["pg"]; out = []
             for w, h in ((1180, 820), (820, 1180), (375, 820), (590, 820), (1180, 820)):      # landscape, portrait, Split View 1/3 and 1/2, back
-                pg.set_viewport_size({"width": w, "height": h}); attendi(pg, f"innerWidth === {w}"); frames(pg, 3); ready(pg)
+                pg.set_viewport_size({"width": w, "height": h}); wait_for_js(pg, f"innerWidth === {w}"); frames(pg, 3); ready(pg)
                 out.append((w, pg.evaluate(WIDE), pg.evaluate("E.panels[0].el.getBoundingClientRect().width")))
             print("  width, horizontal overflow, first panel width:", out)
             assert all(o <= 1 for _, o, _ in out), f"the page scrolls sideways: {out}"
@@ -71,7 +72,7 @@ try:
             pg.click("#np-xic"); pg.fill("#xic-mz", "200"); pg.click("#xic-go"); ready(pg)
             for mz in ("250", "300", "350", "400"):
                 pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", mz); pg.click("#xic-go"); ready(pg)
-            attendi(pg, "!!document.querySelector('.pnl.xic .leg .lgc')")
+            wait_for_js(pg, "!!document.querySelector('.pnl.xic .leg .lgc')")
             chip, lst = pg.locator(".pnl.xic .leg .lgc").first, pg.locator(".pnl.xic .leg .lgl").first
             assert pg.evaluate("document.querySelector('.pnl.xic .leg .lgc').tagName") == "BUTTON"
             assert chip.bounding_box()["height"] >= 24, chip.bounding_box()
@@ -85,21 +86,21 @@ try:
             pg.keyboard.press("Enter"); assert not lst.is_visible()
         step("iPad: the legend chip of many traces opens by tap and Enter, Escape closes it", legend_chip)
         def drawer_fits():
-            pg = S["pg"]; pg.set_viewport_size({"width": 1024, "height": 768}); attendi(pg, "innerWidth === 1024"); frames(pg, 3)
+            pg = S["pg"]; pg.set_viewport_size({"width": 1024, "height": 768}); wait_for_js(pg, "innerWidth === 1024"); frames(pg, 3)
             pg.evaluate("BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()")
-            attendi(pg, "(t => !!t && t.offsetWidth > 0)(document.querySelector('#flist .ldtab'))", 20000); frames(pg, 2)
+            wait_for_js(pg, "(t => !!t && t.offsetWidth > 0)(document.querySelector('#flist .ldtab'))", 20000); frames(pg, 2)
             fw = pg.evaluate("(t => [...t.rows[0].cells].find(c => /^File$/.test(c.textContent.trim())).offsetWidth)(document.querySelector('#flist .ldtab'))")
             pg.evaluate("document.getElementById('samptab').click()")                   # back to the charts: the toggle is left as found
-            pg.evaluate("BARRA.show('calc',{noFocus:true,instant:true})"); attendi(pg, "document.querySelector('#al-tabs').offsetWidth > 0", 20000); frames(pg, 2)
+            pg.evaluate("BARRA.show('calc',{noFocus:true,instant:true})"); wait_for_js(pg, "document.querySelector('#al-tabs').offsetWidth > 0", 20000); frames(pg, 2)
             tabs = pg.evaluate("(a => [a.clientWidth, a.scrollWidth])(document.querySelector('#al-tabs'))")
-            pg.evaluate("BARRA.close()"); pg.set_viewport_size({"width": 1180, "height": 820}); attendi(pg, "innerWidth === 1180")
+            pg.evaluate("BARRA.close()"); pg.set_viewport_size({"width": 1180, "height": 820}); wait_for_js(pg, "innerWidth === 1180")
             assert fw >= 120, f"the File column of the sample table is {fw} px wide at 1024 px"
             assert tabs[1] <= tabs[0], f"the calculator tabs are clipped (box, content): {tabs}"
         step("iPad 1024x768: the File column of the sample table is readable, the calculator tabs fit the drawer", drawer_fits)
         def targets():
             pg = S["pg"]; small = []
             def size(sel, opener, closer="(()=>{for(const d of document.querySelectorAll('dialog[open]'))d.close()})()"):
-                pg.evaluate(opener); attendi(pg, f"(e => !!e && e.offsetWidth > 0)(document.querySelector({sel!r}))", 20000); frames(pg, 2)
+                pg.evaluate(opener); wait_for_js(pg, f"(e => !!e && e.offsetWidth > 0)(document.querySelector({sel!r}))", 20000); frames(pg, 2)
                 w, h = pg.evaluate(f"(r => [r.width, r.height])(document.querySelector({sel!r}).getBoundingClientRect())")
                 if w < 24 or h < 24: small.append((sel, round(w), round(h)))
                 pg.evaluate(closer)
@@ -168,9 +169,9 @@ try:
             c = b.new_context(**k); c.add_init_script(SKIP_TOUR)
             c.add_init_script(NO_STORAGE)
             pg = c.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/")
-            attendi(pg, "!!window.qqFailed", 60000)
+            wait_for_js(pg, "!!window.qqFailed", 60000)
             assert pg.evaluate("window.qqFailed") == "load.err.noStorage", pg.evaluate("[window.qqFailed, window.MZLAB_LR_ERR]")
-            attendi(pg, "/finestra privata|private window/.test(document.body.innerText)", 10000)     # the reader sees it, in the language of the page
+            wait_for_js(pg, "/finestra privata|private window/.test(document.body.innerText)", 10000)     # the reader sees it, in the language of the page
             c.close()
         step("a private window (the browser storage refused): the loading screen says so", private_window)
         b.close()

@@ -252,7 +252,7 @@ async function isoAsk(p) {
   if (!v) return;
   // a name of the list written in full (a pick not made) is read like the pick: its formula, the adduct of the text or of the list
   const nm = await LISTE.ready().then(() => LISTENOMI.byName(v), () => null);
-  const mm = nm ? [v, nm.formula, nm.adduct || undefined] : v.match(/^\s*(\S+)\s*(\[.*\].*)?$/); if (!mm) return;
+  const mm = nm ? [v, nm.formula, nm.adduct || undefined] : v.match(/^\s*(\S+)\s*(\[.*\].*)?$/) || [v, v.trim(), undefined];      // neither a name nor «formula [adduct]»: the engine reads it and gives its usual error
   let ftxt = mm[1], adt = mm[2];
   // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
   const chg = ftxt.match(/^(.+?)([+\-−])$/);

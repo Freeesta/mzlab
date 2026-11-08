@@ -34,22 +34,22 @@ fn esegui_registro(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let Some(mut l) = nota(lettori::apri(fileset(m), &Limiti::sito()), &mut k) else {
         return k;
     };
-    let _ = l.formato();
-    for c in 0..l.campioni().len().min(2) {
-        if let Some(ix) = nota(l.indice(c), &mut k).map(<[_]>::to_vec) {
+    let _ = l.format();
+    for c in 0..l.samples().len().min(2) {
+        if let Some(ix) = nota(l.index(c), &mut k).map(<[_]>::to_vec) {
             for j in [0, ix.len() / 2, ix.len().saturating_sub(1)] {
                 if j < ix.len() {
-                    nota(l.scansione(c, j), &mut k);
-                    nota(l.intestazione(c, j), &mut k);
+                    nota(l.scan(c, j), &mut k);
+                    nota(l.scan_header(c, j), &mut k);
                 }
             }
         }
-        if let Some(cr) = nota(l.cromatogrammi(c), &mut k)
+        if let Some(cr) = nota(l.chromatograms(c), &mut k)
             && let Some(v) = cr.first()
         {
-            nota(l.cromatogramma(c, &v.id), &mut k);
+            nota(l.chromatogram(c, &v.id), &mut k);
         }
-        nota(l.metodo(c), &mut k);
+        nota(l.method(c), &mut k);
         nota(
             lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}),
             &mut k,

@@ -2,7 +2,7 @@
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
-lib.AUTO_TEMPI = False
+lib.AUTO_TIMES = False
 from lib import *
 
 VIS = "id => { const e = document.querySelector(id); return !!e && !e.hidden && e.offsetParent !== null; }"
@@ -12,7 +12,7 @@ if __name__ == "__main__":
     try:
         with sync_playwright() as p:
             pg = r.page(p)
-            pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "window.qqReady && document.querySelector('#fl-hint')"); frames(pg, 5)
             assert not pg.evaluate(VIS, "#np-calc2"), "no calculator button on the start page: it lives in Adducts & losses"
             for cmd, panel in (("addloss", "#sb-panel-adducts"), ("lists", "#sb-panel-lists")):
                 pg.click(f'#stbar [data-cmd="{cmd}"]'); frames(pg, 6)

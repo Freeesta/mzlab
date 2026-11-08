@@ -25,11 +25,11 @@ pub fn leggi<T: Tracce>(t: &mut T) -> Result<Vec<Traccia>> {
 /// `Tracce::srm` for a reader of chromatograms: the list, then each of kind SRM.
 pub(crate) fn da_voci<T: Tracce + ?Sized>(t: &mut T) -> Result<Vec<Traccia>> {
     let mut out = Vec::new();
-    for v in t.cromatogrammi()? {
+    for v in t.chromatograms()? {
         if v.tipo != ChromKind::Srm {
             continue;
         }
-        let c = t.cromatogramma(&v.id)?;
+        let c = t.chromatogram(&v.id)?;
         let (_, _, ce, name) = srm_id(&c.id);
         let (Some(q1), Some(q3)) = (c.q1, c.q3) else {
             continue;

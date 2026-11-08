@@ -17,13 +17,13 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1200})
         load(pg, [F], 6000, 1)
-        attendi(pg, "BARRA.curTab === 'alb'", 30000)
+        wait_for_js(pg, "BARRA.curTab === 'alb'", 30000)
         def inf():
             assert pg.evaluate("BARRA.isOpen('alb')"), pg.evaluate("BARRA.curTab")
             pg.wait_for_selector("#inf-tree tbody tr", timeout=30000)
             assert pg.evaluate("E.panels.length") > 0, "the cells stay"
         step("an infusion file opens the precursor tree, not the file list", inf)
-        pg2 = r.b.new_page(viewport={"width": 1500, "height": 1200}); pg2.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg2, "window.qqReady === true")
+        pg2 = r.b.new_page(viewport={"width": 1500, "height": 1200}); pg2.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg2, "window.qqReady === true")
         load(pg2, [D / "B_FullMass-t0.mzML"], 4000, 1)
         def lc():
             assert pg2.evaluate("BARRA.curTab") == "file", pg2.evaluate("BARRA.curTab")

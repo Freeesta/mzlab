@@ -15,12 +15,12 @@ import mzml_msconvert_sintetico as gen  # noqa: E402
 pytestmark = pytest.mark.skipif(not shutil.which("node"), reason="node missing")
 
 
-def nodo(js: str):
+def node(js: str):
     r = subprocess.run(["node", "-e", f"const D=require({str(ROOT / 'mzlab/web/diagnosi.js')!r});process.stdout.write(JSON.stringify({js}))"], capture_output=True, text=True, encoding="utf-8", check=True)
     return json.loads(r.stdout)
 
 
-@pytest.mark.parametrize("fase,raw,causa", [
+@pytest.mark.parametrize("phase,raw,cause", [
     ("copy", "QuotaExceededError: The quota has been exceeded", "quota"),
     ("copy", "NotReadableError: The requested file could not be read", "read"),
     ("index", '{"error_key":"error.memoryBudget"}', "memory"),
@@ -29,31 +29,31 @@ def nodo(js: str):
     ("decode", "zlib: invalid stored block lengths in scan 55", "decode"),
     ("open", "something odd", "unknown"),
 ])
-def test_causa_per_fase(fase, raw, causa):
-    d = nodo(f"D.da({{key:'err.engine.index',params:{{fase:{fase!r},raw:{json.dumps(raw)}}}}},{{name:'a.mzML',size:5}})")
-    assert d["causa"] == causa and d["fase"] == fase and d["codice"] == "err.engine.index"
+def test_cause_per_phase(phase, raw, cause):
+    d = node(f"D.da({{key:'err.engine.index',params:{{fase:{phase!r},raw:{json.dumps(raw)}}}}},{{name:'a.mzML',size:5}})")
+    assert d["causa"] == cause and d["fase"] == phase and d["codice"] == "err.engine.index"
     assert set(d) == {"codice", "fase", "causa", "dettagli"}
 
 
-def test_nessun_dato_personale():
-    t = nodo(r"D.pulisci('read /Users/mario.rossi/Desktop/a.raw and C:\\Users\\Mario\\x.mzML and /home/luca/x and file:///Users/a/b')")
+def test_no_personal_data():
+    t = node(r"D.pulisci('read /Users/mario.rossi/Desktop/a.raw and C:\\Users\\Mario\\x.mzML and /home/luca/x and file:///Users/a/b')")
     assert "mario" not in t.lower() and "luca" not in t and "Users" not in t and t.count("<path>") == 4
 
 
-def test_testa_senza_dati():
+def test_head_without_data():
     xml = '<?xml version="1.0"?>\n<mzML id="Run1">\n<softwareList>\n</softwareList>\n<spectrumList count="9"><spectrum><binary>QUJD</binary>\n<spectrum>SECRET'
-    t = nodo(f"D.testa({json.dumps(xml)})")
+    t = node(f"D.testa({json.dumps(xml)})")
     assert "Run1" in t and "spectrumList" in t and "QUJD" not in t and "SECRET" not in t
-    assert nodo("D.testa('\\u0000\\u0001binary')") == ""
+    assert node("D.testa('\\u0000\\u0001binary')") == ""
 
 
-def test_testo_da_copiare():
-    t = nodo("D.testo(D.da({key:'k',params:{fase:'index',raw:'boom /home/x/y'}},{name:'privato.mzML',size:7},'<mzML>'),'1.2')")
+def test_text_to_copy():
+    t = node("D.testo(D.da({key:'k',params:{fase:'index',raw:'boom /home/x/y'}},{name:'privato.mzML',size:7},'<mzML>'),'1.2')")
     assert "phase: index" in t and "privato" not in t and "/home/x" not in t and "<mzML>" in t
 
 
 @pytest.mark.parametrize("variante", sorted(gen.VARIANTI))
-def test_sintetico_varianti(tmp_path, variante):
+def test_synthetic_variants(tmp_path, variante):
     p = tmp_path / f"{variante}.mzML"
     n = gen.scrivi(p, scans=24, peaks1=50, peaks2=10, variante=variante)
     s = p.read_bytes()
@@ -63,7 +63,7 @@ def test_sintetico_varianti(tmp_path, variante):
 
 def test_long_tasks_are_told_apart_by_phase():
     """The long tasks of the page carry the phase active when they started (Tabui marks its phases); the text to copy lists the longest ones and names no file."""
-    r = nodo("""(() => {
+    r = node("""(() => {
       D.LONG.marks.push({t: 100, fase: 'start'}, {t: 200, fase: 'xic'}, {t: 900, fase: 'render'});
       D.LONG.registra(150, 60); D.LONG.registra(300, 420); D.LONG.registra(1000, 90);
       return {fasi: D.LONG.list.map(x => x.fase), righe: D.LONG.righe(0), dopo: D.LONG.righe(500).length, testo: D.testoLento('1.2.3', 0)};

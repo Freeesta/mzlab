@@ -18,18 +18,18 @@ try:
         ks = pg.evaluate("tabFiles('full').map(f=>f.k)")
         assert len(ks) == 5, ks
         pg.evaluate(f"(()=>{{E.browse=false;tabFiles('full').forEach(f=>f.vis=f.k==={ks[0]}||f.k==={ks[1]});renderFileList();redrawAll()}})()")
-        attendi(pg, f"!!{SPEC}&&!!{SPEC}._a")
+        wait_for_js(pg, f"!!{SPEC}&&!!{SPEC}._a")
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})")
         def opts(): return pg.evaluate(f"[...{SPEC}.el.querySelectorAll('select[data-o=k] option')].map(o=>+o.value)")
         def cur(): return pg.evaluate(f"{SPEC}.k")
         def click_tic(rt):
             pg.evaluate(f"{CH}.el.scrollIntoView({{block:'center'}})")
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return {{x:q.left+p._a.X({rt}),y:q.top+q.height*0.5}}}})()")
-            pg.mouse.move(c["x"], c["y"]); pg.mouse.click(c["x"], c["y"]); attendi(pg, f"Math.abs({SPEC}.r0-{rt})<0.5"); pg.evaluate("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))")
+            pg.mouse.move(c["x"], c["y"]); pg.mouse.click(c["x"], c["y"]); wait_for_js(pg, f"Math.abs({SPEC}.r0-{rt})<0.5"); pg.evaluate("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))")
         def solo_spuntati(): assert sorted(opts()) == sorted(ks[:2]), (opts(), ks)
         step("menu: only the ticked files", solo_spuntati)
         def persiste():
-            pg.select_option("select[data-o=k]", str(ks[1])); attendi(pg, f"{SPEC}.k==={ks[1]}")
+            pg.select_option("select[data-o=k]", str(ks[1])); wait_for_js(pg, f"{SPEC}.k==={ks[1]}")
             assert cur() == ks[1], cur()
             r0 = pg.evaluate(f"{SPEC}.r0")
             click_tic(9.0); r1 = pg.evaluate(f"{SPEC}.r0"); assert r1 != r0 and abs(r1 - 9.0) < 0.5, ("click did not move the RT", r0, r1)
@@ -37,7 +37,7 @@ try:
             click_tic(12.0); assert abs(pg.evaluate(f"{SPEC}.r0") - 12.0) < 0.5 and cur() == ks[1], ("after click 2", cur())
         step("the choice survives clicks in the TIC", persiste)
         def tolta():
-            pg.evaluate(f"(()=>{{E.files[{ks[1]}].vis=false;renderFileList();redrawAll()}})()"); attendi(pg, f"{SPEC}.k==={ks[0]}")
+            pg.evaluate(f"(()=>{{E.files[{ks[1]}].vis=false;renderFileList();redrawAll()}})()"); wait_for_js(pg, f"{SPEC}.k==={ks[0]}")
             assert cur() == ks[0], cur()
             assert opts() == [ks[0]], opts()
             assert not pg.evaluate("window.__errs&&window.__errs.length"), "errors"

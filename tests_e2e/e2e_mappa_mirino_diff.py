@@ -23,12 +23,12 @@ try:
         pg.click("#opbtn"); ready(pg)
         pg.click("#np-map"); ready(pg)
         pg.evaluate(f"(()=>{{const q={M};E.cur=E.files[1].k;q.k=E.files[1].k;q.corr='file';q.ref=E.files[0].k;ctl(q);draw(q)}})()"); ready(pg)
-        attendi(pg, f"!!({M} && {M}._a && {M}._a.ref && {M}.cv)")
+        wait_for_js(pg, f"!!({M} && {M}._a && {M}._a.ref && {M}.cv)")
         pg.evaluate(M + ".el.scrollIntoView({block:'start'})")
         pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("m")
         c = pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
         pg.mouse.move(c[0] + c[2] * .5, c[1] + c[3] * .5); pg.mouse.move(c[0] + c[2] * .52, c[1] + c[3] * .5)
-        attendi(pg, f"(()=>{{const s={M}._mz; return !!(s.shown && s.shown.sp && s.shown.xi && s.tic)}})()")
+        wait_for_js(pg, f"(()=>{{const s={M}._mz; return !!(s.shown && s.shown.sp && s.shown.xi && s.tic)}})()")
         def spectrum():
             sp = pg.evaluate(f"({{...{M}._mz.spec, mz: undefined, y: undefined, n: {M}._mz.spec.mz.length, sum: {M}._mz.spec.y.reduce((a, b) => a + b, 0), pos: {M}._mz.spec.y.filter(v => v > 0).length, neg: {M}._mz.spec.y.filter(v => v < 0).length}})")
             assert sp["signed"] and sp["n"] > 3, sp

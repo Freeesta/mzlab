@@ -58,7 +58,7 @@ async function engine(deps) {
   await js.default({ module_or_path: bytes });
   return (mod = js);
 }
-const campioni = (/** @type {string} */ op, /** @type {string} */ j) => /** @type {any} */ (mod).campioni(op, j);
+const campioni = (/** @type {string} */ op, /** @type {string} */ j) => /** @type {any} */ (mod).samples(op, j);
 
 /**
  * riga/1 of one row of the table of the last Dig, with its traces (riga_tracce/1: XIC of every file, MS1 at the best apex) read from the .mzidx of the series.

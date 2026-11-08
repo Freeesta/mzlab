@@ -14,8 +14,8 @@ def sh(cwd, *a):
     return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
 
 
-def commit(repo, nome, testo, msg):
-    p = Path(repo) / nome
+def commit(repo, name, testo, msg):
+    p = Path(repo) / name
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(testo)
     sh(repo, "add", "-A")
@@ -24,7 +24,7 @@ def commit(repo, nome, testo, msg):
 
 
 @pytest.fixture
-def mondo(tmp_path):
+def world(tmp_path):
     """(clone, origin, pr(file, testo) -> sha, eventi(sha, test, rust) -> None)."""
     origin, clone = tmp_path / "origin.git", tmp_path / "clone"
     sh(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
@@ -49,56 +49,56 @@ def mondo(tmp_path):
         sh(clone, "checkout", "-q", "main")
         return n[0], sha
 
-    def eventi(sha, test="success", rust=None):
+    def events(sha, test="success", rust=None):
         sh(clone, "checkout", "-q", "--orphan", "stat-ci")
         sh(clone, "rm", "-rqf", ".")
-        righe = [{"tipo": "run", "sha": sha, "workflow": "test", "esito": test, "ts_utc": "2026-10-21T10:00:00Z"}]
+        rows = [{"tipo": "run", "sha": sha, "workflow": "test", "esito": test, "ts_utc": "2026-10-21T10:00:00Z"}]
         if rust:
-            righe.append({"tipo": "run", "sha": sha, "workflow": "rust", "esito": rust, "ts_utc": "2026-10-21T10:00:00Z"})
-        commit(clone, "eventi.jsonl", "".join(json.dumps(r) + "\n" for r in righe), "ev")
+            rows.append({"tipo": "run", "sha": sha, "workflow": "rust", "esito": rust, "ts_utc": "2026-10-21T10:00:00Z"})
+        commit(clone, "eventi.jsonl", "".join(json.dumps(r) + "\n" for r in rows), "ev")
         sh(clone, "push", "-qf", "origin", "HEAD:stat-ci")
         sh(clone, "checkout", "-qf", "main")
-    return clone, pr, eventi
+    return clone, pr, events
 
 
-def test_verde(mondo):
-    clone, pr, eventi = mondo
+def test_green(world):
+    clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
-    eventi(sha)
+    events(sha)
     r = c.valuta(clone, n, sha)
     assert r["verde"] and r["combine"] and r["unire"] and r["rischi"] == []
     assert sh(clone, "worktree", "list").count("\n") == 0
 
 
-def test_rosso(mondo):
-    clone, pr, eventi = mondo
+def test_red(world):
+    clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
-    eventi(sha, rust="failure")
+    events(sha, rust="failure")
     r = c.valuta(clone, n, sha)
     assert not r["verde"] and not r["unire"] and r["motivo"] == "CI non verde: rust"
 
 
-def test_sha_diverso(mondo):
-    clone, pr, eventi = mondo
+def test_different_sha(world):
+    clone, pr, events = world
     n, sha = pr("b.txt", "x\n")
-    eventi(sha)
+    events(sha)
     r = c.valuta(clone, n, "0" * 40)
     assert not r["unire"] and "differs" in r["motivo"]
 
 
-def test_conflitto(mondo):
-    clone, pr, eventi = mondo
+def test_conflict(world):
+    clone, pr, events = world
     n, sha = pr("a.txt", "pr\n")
     commit(clone, "a.txt", "main\n", "main cambia a")
     sh(clone, "push", "-q", "origin", "HEAD:main")
-    eventi(sha)
+    events(sha)
     r = c.valuta(clone, n, sha)
     assert r["verde"] and r["combine"] is False and not r["unire"] and "a.txt" in r["motivo"]
 
 
-def test_rischio_cargo(mondo):
-    clone, pr, eventi = mondo
+def test_rischio_cargo(world):
+    clone, pr, events = world
     n, sha = pr("crates/x/Cargo.toml", "[package]\n")
-    eventi(sha)
+    events(sha)
     r = c.valuta(clone, n, sha)
     assert r["verde"] and r["combine"] and not r["unire"] and r["rischi"] == ["VIA richiesto: crates/x/Cargo.toml"]

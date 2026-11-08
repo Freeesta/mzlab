@@ -43,6 +43,7 @@ I18N.add("en", {
   "comp.none": "No formula within the tolerance with these elements and limits.",
   "comp.count": "{n, plural, one {# candidate} other {# candidates}}",
   "comp.first": "(first {n})",
+  "comp.scored": "Isotope and fragment fit done only for the {n} closest masses of {m}: narrow the tolerance or the elements to fit all.",
   "comp.confidence": "Confidence level: formula compatible with the mass, not identified.",
   "comp.col.ion": "Formula of the ion",
   "comp.col.neutral": "Neutral",

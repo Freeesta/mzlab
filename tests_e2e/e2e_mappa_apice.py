@@ -17,12 +17,12 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(EX / "FullScan_t30.mzML")])
         pg.click("#opbtn"); ready(pg)
-        pg.click("#np-map"); ready(pg); attendi(pg, f"{M}&&{M}._a")
+        pg.click("#np-map"); ready(pg); wait_for_js(pg, f"{M}&&{M}._a")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         raw = pg.evaluate(f"""(async () => {{ const a = {M}._a; return await fetch(`api/mappunti3d?k=${{a.f.k}}&level=1&rt0=${{a.full[0]}}&rt1=${{a.full[1]}}&mz0=${{a.y0}}&mz1=${{a.y1}}&max=5`).then(r => r.json()); }})()""")
         top = {"rt": struct.unpack("<f", base64.b64decode(raw["rt"])[:4])[0], "mz": struct.unpack("<d", base64.b64decode(raw["mz"])[:8])[0]}     # the most intense true point of the file (the points come most intense first)
         pg.evaluate(f"(() => {{ const p = {M}, a = p._a; p.zoom = [{top['rt']} - 0.5, {top['rt']} + 0.5]; p.zoomY = [{top['mz']} - 3, {top['mz']} + 3]; draw(p); }})()")
-        attendi(pg, f"{M}._a && Math.abs({M}._a.x0 - ({top['rt']} - 0.5)) < 1e-6")
+        wait_for_js(pg, f"{M}._a && Math.abs({M}._a.x0 - ({top['rt']} - 0.5)) < 1e-6")
         def px():
             c = pg.evaluate(f"(() => {{ const r = {M}.cv.getBoundingClientRect(), a = {M}._a; return [r.left + a.X({top['rt']}), r.top + a.Y({top['mz']})]; }})()")
             return c
@@ -30,13 +30,13 @@ try:
             c = px(); pg.mouse.click(c[0] + dx, c[1] + dy)
         def apex():
             pg.click(".pnl.map [data-mz=mark]"); click_near(3, 2)
-            attendi(pg, f"MAPPA.pts({M}).length === 1")
+            wait_for_js(pg, f"MAPPA.pts({M}).length === 1")
             q = pg.evaluate(f"MAPPA.pts({M})[0]")
             assert abs(q["rt"] - top["rt"]) < 1e-5 and abs(q["mz"] - top["mz"]) < 1e-9, (q, top)
         step("a click 3 px from the most intense point puts the marker on its RT and m/z", apex)
         def free():
             pg.click(".pnl.map [data-mz=snap]"); assert pg.get_attribute(".pnl.map [data-mz=snap]", "aria-pressed") == "false"
-            click_near(30, 20); attendi(pg, f"MAPPA.pts({M}).length === 2")
+            click_near(30, 20); wait_for_js(pg, f"MAPPA.pts({M}).length === 2")
             q = pg.evaluate(f"MAPPA.pts({M})[1]"); assert abs(q["rt"] - top["rt"]) > 1e-4, (q, top)       # snap off: free marker, where it was clicked
             pg.click(".pnl.map [data-mz=snap]"); assert pg.get_attribute(".pnl.map [data-mz=snap]", "aria-pressed") == "true"
         step("with «snap» off the marker stays where it was clicked", free)
@@ -48,10 +48,10 @@ try:
             assert m and m[0] > 0 and m[0] == m[1], m                                           # the marker stands on the top cell of the peak
         step("3D: the marker stands on the top cell of the peak", d3)
         def groups():
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.m3d[open]')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog.m3d[open]')")
             pg.wait_for_function(f"({M}._mz.rows || []).length >= 1", timeout=15000)
             pg.fill(".pnl.map [data-t=grp]", "0.02"); pg.keyboard.press("Tab")      # the default tolerance follows the scan step (5 scans): fixed here, 1 and 3 within it, 2 beyond
-            pg.evaluate(f"MAPPA.addPointAt({M}, {top['rt']} + 0.005, {top['mz']}, 1, 0.2)"); attendi(pg, f"({M}._mz.rows || []).length >= 3")
+            pg.evaluate(f"MAPPA.addPointAt({M}, {top['rt']} + 0.005, {top['mz']}, 1, 0.2)"); wait_for_js(pg, f"({M}._mz.rows || []).length >= 3")
             g = pg.evaluate(f"{M}._mz.rows.map(r => r.g)"); assert g[0] == g[2] and g[1] != g[0], g          # 1 and 3 are within the window of RT, 2 is 30 px away (0.03 min)
             sh = pg.evaluate(f"[0, 1, 2].map(i => MAPPA.grpShape({M}, i))"); assert sh[0] == sh[2], sh
             assert pg.locator(".pnl.map .mztab tr.mzgr").count() == 1

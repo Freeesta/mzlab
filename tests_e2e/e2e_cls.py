@@ -22,7 +22,7 @@ try:
             q.add_init_script(OBSERVE)
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
             c.new_cdp_session(q).send("Emulation.setCPUThrottlingRate", {"rate": 4})
-            q.goto(url); attendi(q, ready, timeout=90000); frames(q, 30)
+            q.goto(url); wait_for_js(q, ready, timeout=90000); frames(q, 30)
             cls, shifts = q.evaluate("() => [window.__cls, window.__shifts]"); c.close()
             assert cls <= LIMIT, f"CLS {cls:.4f} > {LIMIT}: {shifts}"
         step("Disegno at #/draw: no shift after the first paint", lambda: cold(f"http://127.0.0.1:{r.port}/#/draw",

@@ -7,28 +7,28 @@ struct Vuoto {
 }
 
 impl Lettore for Vuoto {
-    fn formato(&self) -> Formato {
+    fn format(&self) -> Formato {
         Formato::Altro("prova")
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Campione] {
         &self.campioni
     }
-    fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
         Ok(&self.indice)
     }
-    fn scansione(&mut self, _: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         Err(Error::new("error.badIndex").with("k", k))
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
         Ok(vec![])
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(vec![])
     }
-    fn cromatogramma(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
         Err(Error::new("error.badIndex"))
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok(String::new())
     }
 }
@@ -147,8 +147,31 @@ fn the_limits_refuse_what_a_file_asks_beyond_them() {
 #[test]
 fn a_reader_serves_the_trait() {
     let mut l = apri_vuoto(FileSet::default(), &Limiti::default()).unwrap();
-    assert_eq!(l.formato().id(), "prova");
-    assert_eq!(l.campioni().len(), 1);
-    assert!(l.indice(0).unwrap().is_empty());
-    assert!(l.scansione(0, 3).is_err());
+    assert_eq!(l.format().id(), "prova");
+    assert_eq!(l.samples().len(), 1);
+    assert!(l.index(0).unwrap().is_empty());
+    assert!(l.scan(0, 3).is_err());
+}
+
+fn voce(rt: f64, livello: u8, tic: f64) -> VoceScansione {
+    VoceScansione {
+        id: String::new(),
+        rt,
+        livello,
+        polarita: 1,
+        tic,
+        picco_base: None,
+        filtro: String::new(),
+        precursore: None,
+        posizione: None,
+    }
+}
+
+#[test]
+fn the_early_tic_keeps_the_ms1_scans_or_every_scan_when_none_is_ms1() {
+    let v = [voce(0.1, 1, 10.0), voce(0.2, 2, 3.0), voce(0.3, 1, 12.0)];
+    assert_eq!(tic_ms1(&v), (vec![0.1, 0.3], vec![10.0, 12.0]));
+    let v = [voce(0.1, 2, 4.0), voce(0.2, 2, 5.0)];
+    assert_eq!(tic_ms1(&v), (vec![0.1, 0.2], vec![4.0, 5.0]));
+    assert_eq!(tic_ms1(&[]), (vec![], vec![]));
 }

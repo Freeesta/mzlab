@@ -210,7 +210,7 @@ try:
         def roles_names():
             r = pg.evaluate("""async () => {
               const url = URL.createObjectURL(new Blob([QTOOLS.ctx.files["finder-ruoli.js"]], { type: "text/javascript" })), R = await import(url);
-              const m = await PIPEQC.engine(QTOOLS.ctx.base), call = (op, j) => m.campioni(op, j);
+              const m = await PIPEQC.engine(QTOOLS.ctx.base), call = (op, j) => m.samples(op, j);
               const cs = await R.build(call, ["S-t5.mzidx", "S-t30 (2).mzidx", "S_blank.mzidx", "S_dark.mzidx", "S_standard_direct-infusion_MSn.mzidx"], null, null);
               return { roles: cs.map(c => c.tipo), min: cs.map(c => c.tempo_min), conf: cs.map(c => c.tempo_confermato), tp: await R.forTp(call, cs), sha: (await R.canonical(call, cs)).sha256 };
             }""")
@@ -309,7 +309,7 @@ try:
             pg.evaluate("document.querySelector('#pv-det').hidden = true")        # the detail of the list of identities, opened by the step before
             # the first two columns stay while the table scrolls sideways
             x0 = pg.evaluate("document.querySelectorAll('#ft-t thead th')[1].getBoundingClientRect().left")
-            pg.evaluate("(() => { const w = document.querySelector('#ft-host .tpt-wrap'); w.style.maxWidth = '380px'; w.scrollLeft = 150; })()"); lib.attendi(pg, "document.querySelector('#ft-host .tpt-wrap').scrollLeft > 0 || document.querySelector('#ft-host .tpt-wrap').scrollWidth <= document.querySelector('#ft-host .tpt-wrap').clientWidth")
+            pg.evaluate("(() => { const w = document.querySelector('#ft-host .tpt-wrap'); w.style.maxWidth = '380px'; w.scrollLeft = 150; })()"); lib.wait_for_js(pg, "document.querySelector('#ft-host .tpt-wrap').scrollLeft > 0 || document.querySelector('#ft-host .tpt-wrap').scrollWidth <= document.querySelector('#ft-host .tpt-wrap').clientWidth")
             assert abs(pg.evaluate("document.querySelectorAll('#ft-t thead th')[1].getBoundingClientRect().left") - x0) < 2, "Identity stays in place"
             pg.evaluate("(() => { const w = document.querySelector('#ft-host .tpt-wrap'); w.scrollLeft = 0; w.style.maxWidth = ''; })()")
             # a chip is the same view as the numeric field

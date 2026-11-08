@@ -17,6 +17,37 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 950})
         if AXE: pg.add_script_tag(path=AXE)
+        # the Mac Safari pages come first: run last they held the test open until the late downloads of the page, which the teardown cut (a blob: request WebKit reports)
+        SAFARI = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
+        CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        def page_mac(ua):
+            c = r.b.new_context(user_agent=ua, viewport={"width": 1200, "height": 900}, reduced_motion="reduce")
+            c.add_init_script("Object.defineProperty(Navigator.prototype,'platform',{get:()=>'MacIntel'});try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
+            q = c.new_page(); q.goto(f"http://127.0.0.1:{r.port}/"); ready(q)
+            return c, q
+        def rows_mac(ua):
+            c, q = page_mac(ua)
+            q.evaluate("SCORCIATOIE.apri()"); wait_for_js(q, "document.querySelector('#scorc[open]')")
+            rows = q.evaluate("[...document.querySelectorAll('#scorc li')].map(li => [li.querySelector('kbd').textContent, li.querySelector('.sc-n').textContent, li.querySelector('.sc-n').title])")
+            c.close(); return rows
+        def option_tab():
+            safari, chrome = rows_mac(SAFARI), rows_mac(CHROME)
+            tab = [x for x in safari if x[0] == "⌥Tab"]
+            assert tab and "Safari" in tab[0][1] and "Safari ›" in tab[0][2], f"Safari on a Mac: no ⌥Tab row with its name and the Safari setting in the panel: {safari}"
+            assert any(x[0].startswith("⌘") for x in safari), f"the Mac keys are not written as ⌘: {safari}"
+            assert not [x for x in chrome if x[0] == "⌥Tab"], f"⌥Tab row outside Safari: {chrome}"
+        step("Safari on a Mac: the panel says that ⌥Tab reaches buttons and links (not in other Mac browsers)", option_tab)
+        def option_tab_not_taken():
+            c, q = page_mac(SAFARI)
+            try:
+                assert q.evaluate("AZIONI.voci.some(a => a.id === 'app.tabSafari')"), "no ⌥Tab action with a Mac Safari UA"
+                # Alt+Tab sends an Alt keydown first: the listener keeps only the Tab one (a `once` listener would be spent on Alt)
+                q.evaluate("window.__tabPrev = null; addEventListener('keydown', e => { if (e.key === 'Tab') window.__tabPrev = e.defaultPrevented; })")
+                q.keyboard.press("Alt+Tab"); prev = q.evaluate("window.__tabPrev")
+                assert prev is False, f"the app took ⌥Tab from Safari (defaultPrevented: {prev})"
+            finally:
+                c.close()
+        step("⌥Tab is left to the browser", option_tab_not_taken)
         pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")])
         pg.click("#opbtn"); ready(pg)
         pnl = lambda t: f"E.panels.filter(q => q.type === '{t}')"
@@ -24,7 +55,7 @@ try:
         n = lambda t: pg.evaluate(f"{pnl(t)}.length")
         def panel_lists_registry():
             pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Shift+?")
-            attendi(pg, "document.querySelector('#scorc[open]')")
+            wait_for_js(pg, "document.querySelector('#scorc[open]')")
             got = pg.evaluate("[...document.querySelectorAll('#scorc li')].map(li => li.querySelector('kbd').textContent)")
             want = pg.evaluate("AZIONI.voci.filter(a => a.scorciatoia).map(a => AZIONI.testo(a.scorciatoia))")
             assert got and set(got) <= set(want), (got, want)
@@ -32,7 +63,7 @@ try:
                 assert k in got, (k, got)
             assert pg.evaluate("document.activeElement.closest('#scorc') !== null"), "the focus is inside the panel"
             if AXE: v = pg.evaluate(RUN, "#scorc"); assert not v, v
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#scorc[open]')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#scorc[open]')")
         step("? opens the panel generated from the registry (axe clean), Esc closes it", panel_lists_registry)
         def nothing_in_a_field():
             pg.evaluate("(()=>{const i=document.createElement('input');i.id='tmpin';document.body.appendChild(i);i.focus()})()")
@@ -48,14 +79,14 @@ try:
             assert n("spec") + n("xic") == before and not pg.evaluate("!!document.querySelector('dialog[open]')")
         step("the letters need the focus on a chart", nothing_without_focus)
         def enter_spectrum():
-            focus("chrom"); b = n("spec"); pg.keyboard.press("Enter"); attendi(pg, f"{pnl('spec')}.length === {b + 1}"); ready(pg)
+            focus("chrom"); b = n("spec"); pg.keyboard.press("Enter"); wait_for_js(pg, f"{pnl('spec')}.length === {b + 1}"); ready(pg)
         step("Enter on a chromatogram: the spectrum at the cursor", enter_spectrum)
         def measure():
-            focus("spec"); pg.keyboard.press("r"); attendi(pg, f"(()=>{{const q={pnl('spec')}.slice(-1)[0]; return !!(q.meas && q.meas.ref != null)}})()")
+            focus("spec"); pg.keyboard.press("r"); wait_for_js(pg, f"(()=>{{const q={pnl('spec')}.slice(-1)[0]; return !!(q.meas && q.meas.ref != null)}})()")
         step("R on a spectrum: the measure starts at the highest peak", measure)
         def xic():
-            focus("chrom"); pg.keyboard.press("x"); attendi(pg, "!!document.querySelector('dialog[open]') || " + pnl("xic") + ".length > 0")
-            if pg.evaluate("!!document.querySelector('dialog[open]')"): pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog[open]')")
+            focus("chrom"); pg.keyboard.press("x"); wait_for_js(pg, "!!document.querySelector('dialog[open]') || " + pnl("xic") + ".length > 0")
+            if pg.evaluate("!!document.querySelector('dialog[open]')"): pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog[open]')")
         step("X on a chromatogram: the XIC request", xic)
         def integrate():
             focus("chrom"); pg.keyboard.press("i")
@@ -63,35 +94,35 @@ try:
             if pg.evaluate("!!document.querySelector('dialog[open]')"): pg.keyboard.press("Escape")
         step("I on a chromatogram does not break (integration or its guard)", integrate)
         def fullscreen():
-            q = focus("chrom"); pg.keyboard.press("f"); attendi(pg, f"E.panels.find(x => x.id === {q}).el.classList.contains('max')")
-            pg.keyboard.press("f"); attendi(pg, f"!E.panels.find(x => x.id === {q}).el.classList.contains('max')")
+            q = focus("chrom"); pg.keyboard.press("f"); wait_for_js(pg, f"E.panels.find(x => x.id === {q}).el.classList.contains('max')")
+            pg.keyboard.press("f"); wait_for_js(pg, f"!E.panels.find(x => x.id === {q}).el.classList.contains('max')")
         step("F: full screen and back", fullscreen)
         def esc_priority():
             q = focus("spec"); panel = f"E.panels.find(x => x.id === {q})"
             pg.evaluate(f"(()=>{{const q={panel}; if (!(q.meas && q.meas.ref != null)) measSet(q, 0)}})()")
-            pg.keyboard.press("f"); attendi(pg, f"{panel}.el.classList.contains('max')")
-            pg.keyboard.press("Escape"); attendi(pg, f"!(({panel}).meas && ({panel}).meas.ref != null)")
+            pg.keyboard.press("f"); wait_for_js(pg, f"{panel}.el.classList.contains('max')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, f"!(({panel}).meas && ({panel}).meas.ref != null)")
             assert pg.evaluate(f"{panel}.el.classList.contains('max')"), "the first Esc took back the measure only, full screen stays"
-            pg.keyboard.press("Escape"); attendi(pg, f"!{panel}.el.classList.contains('max')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, f"!{panel}.el.classList.contains('max')")
             assert not pg.evaluate("ESC.prossimo()"), "nothing left for Esc"
         step("Esc: one thing per press, measure before full screen", esc_priority)
         def esc_menu_first():
             q = focus("chrom"); panel = f"E.panels.find(x => x.id === {q})"
-            pg.keyboard.press("f"); attendi(pg, f"{panel}.el.classList.contains('max')")
+            pg.keyboard.press("f"); wait_for_js(pg, f"{panel}.el.classList.contains('max')")
             pg.evaluate("document.getElementById('ctx').hidden = false")
-            pg.keyboard.press("Escape"); attendi(pg, "document.getElementById('ctx').hidden")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "document.getElementById('ctx').hidden")
             assert pg.evaluate(f"{panel}.el.classList.contains('max')"), "the menu takes the Esc, full screen stays"
-            pg.keyboard.press("Escape"); attendi(pg, f"!{panel}.el.classList.contains('max')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, f"!{panel}.el.classList.contains('max')")
         step("Esc: an open menu goes before full screen", esc_menu_first)
         def whole_view():
             q = focus("chrom"); panel = f"E.panels.find(x => x.id === {q})"
             pg.evaluate(f"(()=>{{const q={panel}; q.zoom=[q._a.x0+1, q._a.x1-1]; draw(q)}})()")
-            pg.keyboard.press("Backspace"); attendi(pg, f"{panel}.zoom == null")
+            pg.keyboard.press("Backspace"); wait_for_js(pg, f"{panel}.zoom == null")
         step("Backspace: whole view (key of the registry)", whole_view)
         def views():
             pg.evaluate("document.activeElement && document.activeElement.blur()")
-            pg.keyboard.press("Alt+Digit2"); attendi(pg, "S.view === 'draw'")
-            pg.keyboard.press("Alt+Digit1"); attendi(pg, "S.view === 'data'")
+            pg.keyboard.press("Alt+Digit2"); wait_for_js(pg, "S.view === 'draw'")
+            pg.keyboard.press("Alt+Digit1"); wait_for_js(pg, "S.view === 'data'")
         step("Alt+1-2 change view (by code)", views)
         def open_files():
             assert not pg.evaluate("!!document.querySelector('dialog[open]')"), "a dialog is still open"
@@ -104,7 +135,7 @@ try:
                     if tries == 3: raise
         step("Ctrl+O opens the file chooser", open_files)
         def palette_key():
-            pg.keyboard.press("Control+k"); attendi(pg, "PALETTE.isOpen")
+            pg.keyboard.press("Control+k"); wait_for_js(pg, "PALETTE.isOpen")
             pg.fill("#pal-in", "rapporto" if pg.evaluate("I18N.lang === 'it'") else "report")
             dbg = pg.evaluate("[PALETTE.search('report').map(c => c.id), [BARRA.commands.find(c => c.id === 'report').azione, !!AZIONI.voce('app.esporta'), document.querySelector('#pal-l li .pal-t').parentElement.innerHTML.replace(/<svg.*<\/svg>/s, '')]]")
             assert pg.locator("#pal-l .pal-k").count() >= 1, ("the palette shows the key of the report", dbg)
@@ -112,20 +143,28 @@ try:
         step("the palette shows the key", palette_key)
         def side_bar():
             pg.evaluate("document.activeElement && document.activeElement.blur()")
-            o = pg.evaluate("BARRA.open"); pg.keyboard.press("Shift+H"); attendi(pg, f"BARRA.open === {str(not o).lower()}")
-            pg.keyboard.press("Shift+H"); attendi(pg, f"BARRA.open === {str(o).lower()}")
+            o = pg.evaluate("BARRA.open"); pg.keyboard.press("Shift+H"); wait_for_js(pg, f"BARRA.open === {str(not o).lower()}")
+            pg.keyboard.press("Shift+H"); wait_for_js(pg, f"BARRA.open === {str(o).lower()}")
         step("Shift+H shows/hides the side panels", side_bar)
+        def bar_keeps_field_focus():
+            pg.evaluate("BARRA.close(false)"); wait_for_js(pg, "!BARRA.open")
+            pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Shift+H"); wait_for_js(pg, "BARRA.open")
+            pg.evaluate("(()=>{const i=document.createElement('input'); i.id='tmpin'; document.body.appendChild(i); i.focus()})()")
+            pg.evaluate("new Promise(ok => setTimeout(ok, 90))")      # queued after the side bar's own 90 ms focus timer, so it runs after that timer (order of timers, not a pause)
+            assert pg.evaluate("document.activeElement.id") == "tmpin", "the side bar must not take the focus from a field focused after it opened"
+            pg.evaluate("document.activeElement.blur(); document.getElementById('tmpin')?.remove()")
+        step("a field focused while the side bar opens keeps the focus", bar_keeps_field_focus)
         def files():
             pg.evaluate("document.activeElement && document.activeElement.blur()")
-            k0 = pg.evaluate("E.cur"); pg.keyboard.press("Alt+ArrowRight"); attendi(pg, f"E.cur !== {k0}")
-            pg.keyboard.press("Alt+ArrowLeft"); attendi(pg, f"E.cur === {k0}")
+            k0 = pg.evaluate("E.cur"); pg.keyboard.press("Alt+ArrowRight"); wait_for_js(pg, f"E.cur !== {k0}")
+            pg.keyboard.press("Alt+ArrowLeft"); wait_for_js(pg, f"E.cur === {k0}")
             pg.evaluate("(()=>{const i=document.createElement('input'); i.id='tmpin'; document.body.appendChild(i); i.focus()})()")
             pg.keyboard.press("Alt+ArrowRight"); frames(pg, 3); assert pg.evaluate("E.cur") == k0, "Alt+Right in a text field must not change file"
             pg.evaluate("document.activeElement.blur(); document.getElementById('tmpin')?.remove()")
         step("Alt+Left/Right: previous/next file, not in a text field", files)
         def remove_all_shows_bar():
-            pg.evaluate("BARRA.close(false)"); attendi(pg, "!BARRA.open")
-            pg.evaluate("removeAllFiles()"); attendi(pg, "BARRA.open && BARRA.curTab === 'file'")
+            pg.evaluate("BARRA.close(false)"); wait_for_js(pg, "!BARRA.open")
+            pg.evaluate("removeAllFiles()"); wait_for_js(pg, "BARRA.open && BARRA.curTab === 'file'")
         step("Remove all brings the side bar back when hidden", remove_all_shows_bar)
 finally:
     r.close(); r.report()

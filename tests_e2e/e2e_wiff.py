@@ -155,7 +155,7 @@ try:
             assert not errs, errs
             c5.close()
         step("an injection that acquired nothing is listed as an empty sample under its own number", empty_injection)
-        def variante():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
+        def variant():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
                 print("   (variante: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return
             c3 = b.new_context(viewport={"width": 1500, "height": 1800}); c3.set_default_timeout(120000); asked = []; c3.on("request", lambda r: asked.append(r.url)); pg = c3.new_page()
@@ -172,7 +172,7 @@ try:
             assert not pyodide(asked) and not miss, (miss, pg.evaluate("(window.MZLAB_TRACE || []).slice(-40)"), pg.evaluate("window.MZLAB_LR_ERR || null"), diag(pg))
             assert not errs, errs
             c3.close()
-        step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variante)
+        step("a .wiff of another instrument (QTRAP 5500) is read by the sciex module, not by the engine", variant)
         def rejected_named():                            # a pair the engine and the module both refuse (a TOF experiment): the error is told under the dropped .wiff, not under the «tof.mzML» that stood for it
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
                 print("   (rejected: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return

@@ -120,6 +120,32 @@ try:
             c0 = pg.evaluate(f"{CH}.cur"); x, y = X(5), Ymid(); T("touchStart", [(x, y)]); T("touchEnd", []); wait(700)
             c1 = pg.evaluate(f"{CH}.cur"); assert abs(c1 - 5) < 0.3 and abs(c1 - c0) > 1, (c0, c1)
         step("a tap elsewhere acts as always (it places the cursor, the dot follows)", tapelsewhere)
+        def nearline():
+            # a fingertip 10 px beside the cursor line still grabs it (a mouse needs 6 px): the drag moves the cursor, it draws no selection
+            c0 = pg.evaluate(f"{CH}.cur"); x, y, tx = X(c0) + 10, Ymid(), X(c0 + 2) + 10
+            T("touchStart", [(x, y)]); wait(60)
+            for k in range(1, 9): T("touchMove", [(x + (tx - x) * k / 8, y)]); wait(30)
+            T("touchEnd", []); wait(500)
+            c1 = pg.evaluate(f"{CH}.cur"); assert c1 - c0 > 1.5, (c0, c1)
+            assert pg.evaluate(f"{CH}.sel") is None, pg.evaluate(f"{CH}.sel")
+        step("a finger beside the cursor line drags the line (finger tolerance)", nearline)
+        def nearedge():
+            # the same tolerance for the border of an integrated peak: 10 px beside it, a finger moves the border
+            XP = "E.panels.find(p=>p.type==='xic')"
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); wait_for_js(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
+            pg.evaluate(f"{XP}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
+            xq = lambda rt: pg.evaluate(f"(()=>{{const p={XP},q=p.cv.getBoundingClientRect();return q.left+p._a.X({rt})}})()")
+            y = pg.evaluate(f"(()=>{{const q={XP}.cv.getBoundingClientRect();return q.top+q.height*0.6}})()")
+            def fdrag(x0, x1):
+                T("touchStart", [(x0, y)]); wait(60)
+                for k in range(1, 9): T("touchMove", [(x0 + (x1 - x0) * k / 8, y)]); wait(30)
+                T("touchEnd", []); wait(500)
+            pg.evaluate(f"{XP}.el.querySelector('[data-a=iman]').click()"); fdrag(xq(13.9), xq(14.8))
+            wait_for_js(pg, f"{XP}.ints.length==1"); pg.evaluate(f"{XP}.imode=null; ctl({XP})"); frames(pg, 2)
+            b0 = pg.evaluate(f"{XP}.ints[0].b"); x = xq(b0) + 10; fdrag(x, x + 40)
+            b1 = pg.evaluate(f"{XP}.ints[0].b"); assert b1 > b0 + 0.1, (b0, b1, pg.evaluate(f"{XP}.sel"))
+            pg.evaluate(f"closePanel({XP}); {CH}.el.scrollIntoView({{block:'start'}})"); frames(pg, 2)
+        step("a finger beside the border of an integrated peak moves the border", nearedge)
         def grip():
             h0 = pg.evaluate(f"{CH}.h"); b = pg.evaluate(f"(() => {{ const r = {CH}.el.querySelector('.rzg').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }})()")
             T("touchStart", [(b[0], b[1])]); wait(60)
@@ -127,6 +153,14 @@ try:
             T("touchEnd", []); wait(500)
             h1 = pg.evaluate(f"{CH}.h"); assert h1 > h0 + 60, (h0, h1)
         step("the grip changes the height of a panel", grip)
+        def targets():
+            # WCAG 2.5.8: the grip and the trace name / remove button of a legend are at least 24 x 24 px for a finger
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'},{id:E.seq++,mz:200.1,w:0.5,label:'m/z 200'}]})")
+            wait_for_js(pg, "(()=>{const p=E.panels.find(p=>p.type==='xic');return !!(p&&p.leg&&p.leg.querySelector('[data-r]')&&p.el.querySelector('.rzg'))})()")
+            sz = pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='xic'),r=e=>{const b=e.getBoundingClientRect();return [Math.round(b.width),Math.round(b.height)]};return {grip:r(p.el.querySelector('.rzg')),x:r(p.leg.querySelector('[data-r]')),name:r(p.leg.querySelector('[data-t]'))}})()")
+            assert all(min(v) >= 24 for v in sz.values()), sz
+            pg.evaluate("closePanel(E.panels.find(p=>p.type==='xic'))")
+        step("touch targets: grip, legend name and remove button are at least 24 px", targets)
         def filelong():
             drawer(pg); b = pg.locator("#flst .fl .nm").first.bounding_box(); x, y = b["x"] + 10, b["y"] + b["height"] / 2
             T("touchStart", [(x, y)]); wait(800); T("touchEnd", []); wait(300)

@@ -13,15 +13,15 @@ from sospetti_prova import make_sources  # noqa: E402
 
 @pytest.fixture
 def mini(tmp_path):
-    fonti, keys, mass, form = make_sources(tmp_path)
-    raw = gs.genera(fonti, tmp_path, scarica=False)
-    return fonti, keys, mass, form, raw, tmp_path
+    sources, keys, mass, form = make_sources(tmp_path)
+    raw = gs.genera(sources, tmp_path, scarica=False)
+    return sources, keys, mass, form, raw, tmp_path
 
 
 def test_deterministic(mini):
-    fonti, _, _, _, raw, d = mini
-    assert hashlib.sha256(gs.genera(fonti, d, scarica=False)).hexdigest() == hashlib.sha256(raw).hexdigest()
-    z1, z2 = zlib.compress(raw, 9), zlib.compress(gs.genera(fonti, d, scarica=False), 9)
+    sources, _, _, _, raw, d = mini
+    assert hashlib.sha256(gs.genera(sources, d, scarica=False)).hexdigest() == hashlib.sha256(raw).hexdigest()
+    z1, z2 = zlib.compress(raw, 9), zlib.compress(gs.genera(sources, d, scarica=False), 9)
     assert z1 == z2
 
 
@@ -51,17 +51,17 @@ def test_search_ppm_exact(mini):
 
 
 def test_wrong_hash_rejected(mini):
-    fonti, _, _, _, _, d = mini
+    sources, _, _, _, _, d = mini
     (d / "su.csv").write_text("changed\n", encoding="utf-8")
     with pytest.raises(SystemExit):
-        gs.genera(fonti, d, scarica=False)
+        gs.genera(sources, d, scarica=False)
 
 
 def test_missing_file_without_download(mini):
-    fonti, _, _, _, _, d = mini
+    sources, _, _, _, _, d = mini
     (d / "pl.csv").unlink()
     with pytest.raises(SystemExit):
-        gs.genera(fonti, d, scarica=False)
+        gs.genera(sources, d, scarica=False)
 
 
 def test_bad_files_rejected():

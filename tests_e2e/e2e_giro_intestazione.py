@@ -41,7 +41,7 @@ def back_to(pg, base):
     for _ in range(2):
         if pg.evaluate(OPEN) == base: return
         pg.keyboard.press("Escape"); frames(pg, 3)
-    if pg.evaluate("!!document.fullscreenElement"): pg.evaluate("document.exitFullscreen()"); attendi(pg, "!document.fullscreenElement")
+    if pg.evaluate("!!document.fullscreenElement"): pg.evaluate("document.exitFullscreen()"); wait_for_js(pg, "!document.fullscreenElement")
     if pg.evaluate(OPEN)["sb"] != base["sb"]:
         pg.evaluate("sb => { if (sb) BARRA.show(sb, {noFocus: true, instant: true}); else BARRA.close(); }", base["sb"]); frames(pg, 3)
 
@@ -49,7 +49,7 @@ def back_to(pg, base):
 def to_data(pg, sel, base):
     """A TO_DATA button outside Dati: Dati with its page open; then Dati's side panel as it was and back to the view it came from."""
     tab0 = pg.evaluate("BARRA.curTab")
-    pg.click(sel); attendi(pg, f"S.view === 'data' && BARRA.isDataView() && BARRA.curTab === '{TO_DATA[sel]}'"); frames(pg, 3); ready(pg, settle=200)
+    pg.click(sel); wait_for_js(pg, f"S.view === 'data' && BARRA.isDataView() && BARRA.curTab === '{TO_DATA[sel]}'"); frames(pg, 3); ready(pg, settle=200)
     pg.evaluate("t => BARRA.show(t, {noFocus: true, instant: true})", tab0); frames(pg, 3)
     view(pg, base["view"]); back_to(pg, base)
 
@@ -85,7 +85,7 @@ def walk(pg, where):
 
 
 def view(pg, v):
-    pg.click(f'#nav [data-v="{v}"]'); attendi(pg, f"S.view === '{v}'"); frames(pg, 3); ready(pg, settle=200)
+    pg.click(f'#nav [data-v="{v}"]'); wait_for_js(pg, f"S.view === '{v}'"); frames(pg, 3); ready(pg, settle=200)
 
 
 def round_trip(pg, views):
@@ -118,8 +118,8 @@ VIEWS = ["draw", "flow", "tpmine"]
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
-        attendi(pg, "typeof AVVIO !== 'undefined' && AVVIO.stato === 'ready'", 120000); ready(pg)
-        attendi(pg, "!!document.querySelector('#nav [data-v=flow]') && !!document.querySelector('#nav [data-v=tpmine]')")
+        wait_for_js(pg, "typeof AVVIO !== 'undefined' && AVVIO.stato === 'ready'", 120000); ready(pg)
+        wait_for_js(pg, "!!document.querySelector('#nav [data-v=flow]') && !!document.querySelector('#nav [data-v=tpmine]')")
         step("no samples, Dati: every header button opens and closes, nothing moves", lambda: walk(pg, "data, empty"))
         for v in VIEWS:
             step(f"no samples, {v}: every header button opens and closes, nothing moves", lambda v=v: (view(pg, v), walk(pg, f"{v}, empty"), view(pg, "data")))
@@ -146,8 +146,8 @@ try:
             for sel in ("#np-chrom", "#np-spec", "#np-map"):
                 if not pg.is_visible(sel) or pg.is_disabled(sel): continue
                 n0, g0 = pg.evaluate("E.panels.length"), pg.evaluate(GEOM)
-                pg.click(sel); attendi(pg, f"E.panels.length === {n0 + 1}"); ready(pg, settle=200)
-                pg.evaluate("E.panels[E.panels.length - 1].el.querySelector('.x').click()"); attendi(pg, f"E.panels.length === {n0}"); ready(pg, settle=200)
+                pg.click(sel); wait_for_js(pg, f"E.panels.length === {n0 + 1}"); ready(pg, settle=200)
+                pg.evaluate("E.panels[E.panels.length - 1].el.querySelector('.x').click()"); wait_for_js(pg, f"E.panels.length === {n0}"); ready(pg, settle=200)
                 m = moved(g0, pg.evaluate(GEOM))
                 if m: bad.append(f"{sel}: {m}")
             assert not bad, " | ".join(bad)
@@ -162,13 +162,13 @@ try:
             return max(xs) - min(xs), sorted(set(xs))[:6]
         def fresh(motion=False):
             q = r.page(p, motion=motion); q.set_viewport_size({"width": 1440, "height": 900})
-            attendi(q, "typeof AVVIO !== 'undefined' && AVVIO.stato === 'ready'", 120000); ready(q); return q
+            wait_for_js(q, "typeof AVVIO !== 'undefined' && AVVIO.stato === 'ready'", 120000); ready(q); return q
 
         def no_slide_back():
             q = fresh(True); stage(q, [mz("B_FullMass-t15")]); open_first(q); ready(q)
             for v in ("draw", "flow"):
                 view(q, v); q.evaluate(SAMPLE, {"pane": "#sb-pane", "work": "#v-workspace"})
-                q.click('#nav [data-v="data"]'); attendi(q, "S.view === 'data'"); hold(q, 1200)          # only time shows a slide
+                q.click('#nav [data-v="data"]'); wait_for_js(q, "S.view === 'data'"); hold(q, 1200)          # only time shows a slide
                 for k in ("pane", "work"):
                     d, xs = spread(q, k); assert d <= MOVE_PX, f"back from {v}: {k} moved {d} px over time {xs}"
         step("one sample, motion on: coming back to Dati the side panel and the work area do not slide", no_slide_back)

@@ -26,7 +26,7 @@ def state(pg):
 def give(pg):
     n = pg.evaluate(COUNT)
     pg.set_input_files("#pickdir", str(TOP))
-    attendi(pg, f"window.__ups > {n} && {IDLE}", 180000)
+    wait_for_js(pg, f"window.__ups > {n} && {IDLE}", 180000)
 def again():
     r = Run(port=8868, wd="/tmp/wd_agilent_riaggiunto")
     try:
@@ -34,7 +34,7 @@ def again():
             pg = r.page(p)
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             give(pg)
-            attendi(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
+            wait_for_js(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
             first = state(pg)
             assert first["rows"] == ["uno.mzML"] and len(first["copies"]) >= 1 and len(first["idx"]) == 1, first
             give(pg)
@@ -42,7 +42,7 @@ def again():
             assert same == first, ("same page", first, same)
             assert pg.evaluate("CONVROWS.rows.some(r => r.name === 'uno.mzML' && r.state === 'done')"), "no «from the cache» row"
             pg.reload()
-            attendi(pg, f"typeof ST !== 'undefined' && ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
+            wait_for_js(pg, f"typeof ST !== 'undefined' && ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
             give(pg)
             after = state(pg)
             assert after == first, ("after a reload", first, after)
@@ -60,7 +60,7 @@ def again_module():
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
             pg.evaluate("""async () => { const rb = await window.MZLAB_RUST_READY; rb.nativeSamples = async () => { throw Object.assign(new Error('refused'), { json: { error: 'err.file.agilent', params: {} } }); }; }""")
             give(pg)
-            attendi(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
+            wait_for_js(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
             assert pg.evaluate("CONV.sources.size") == 1, "the sample did not take the module path"
             first = state(pg)
             assert first["rows"] == ["uno.mzML"] and len(first["idx"]) == 1, first
@@ -71,10 +71,10 @@ def again_module():
             assert pg.evaluate("ST.files.every(f => OPENNOW.isOpen(f.name))"), "the sample is not open"
             # removed from the loading table: its source and mzML leave CONV, so a later file of the same name is not taken for this .D (cachedModulo, «Download .mzML»)
             pg.evaluate("document.querySelector('#flist [data-rm]').click()")
-            attendi(pg, f"ST.files.length === 0 && {IDLE}", 60000)
+            wait_for_js(pg, f"ST.files.length === 0 && {IDLE}", 60000)
             assert pg.evaluate("[CONV.sources.size, CONV.has('uno.mzML')]") == [0, False], "the removed sample stays in CONV"
             give(pg)
-            attendi(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
+            wait_for_js(pg, f"ST.files.length === 1 && OPENNOW.isOpen(ST.files[0].name) && {IDLE}", 180000)
             assert pg.evaluate("CONV.sources.size") == 1 and state(pg)["rows"] == ["uno.mzML"], "given again after its removal, the .D is not read again"
             assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
     finally:

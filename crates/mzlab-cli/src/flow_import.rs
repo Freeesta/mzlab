@@ -12,7 +12,7 @@ pub(crate) fn import_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let fs = crate::flow_set::file_set(&r.path(input))?;
     let reader = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-    let ids: Vec<u32> = reader.campioni().iter().map(|s| s.id).collect();
+    let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
     crate::flow_set::sample_index(input.label.as_deref().unwrap_or(""), &ids)?;
     let mut artifact = input.clone();
     artifact.ty = DataType::Raw;

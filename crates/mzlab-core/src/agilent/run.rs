@@ -121,7 +121,7 @@ impl AgilentD {
 
     /// The `metodo/1` document for the files read (name, SHA-1).
     fn document(&self, sources: &[(String, String)]) -> String {
-        self.metodo(&Source {
+        self.method(&Source {
             format: "agilent-d",
             files: sources
                 .iter()

@@ -26,8 +26,8 @@ def to_flow(pg):
     pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
     pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web", timeout=120000)
     (None if pg.locator('.flx-tpl.show').count() else pg.click('button[aria-label="Start from a template"]')); pg.click('.flx-tc[data-tpl="msn"]')
-    attendi(pg, "document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow && document.querySelector('.flx-list').__flow.plan.steps.length === 3")
-    pg.click('.fln[data-key^="file:"]'); attendi(pg, "!!document.querySelector('.fl-insp .fl-data')")
+    wait_for_js(pg, "document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow && document.querySelector('.flx-list').__flow.plan.steps.length === 3")
+    pg.click('.fln[data-key^="file:"]'); wait_for_js(pg, "!!document.querySelector('.fl-insp .fl-data')")
 
 r = Run(port=8982, wd="/tmp/wd_flowrawfiles")
 try:
@@ -36,10 +36,10 @@ try:
         to_flow(pg)
         with pg.expect_file_chooser() as fc: pg.click(".fl-insp button:has-text('Add files')")
         fc.value.set_files(str(INF))
-        attendi(pg, "FLOW.dataFiles().length === 1 && !!document.querySelector('.fl-rf table')", 180000)
+        wait_for_js(pg, "FLOW.dataFiles().length === 1 && !!document.querySelector('.fl-rf table')", 180000)
         with pg.expect_file_chooser() as fc: pg.click(".fl-insp button:has-text('Add files')")
         fc.value.set_files(str(LC))
-        attendi(pg, "FLOW.dataFiles().length === 2 && document.querySelectorAll('.fl-rf tbody tr').length === 2", 180000)
+        wait_for_js(pg, "FLOW.dataFiles().length === 2 && document.querySelectorAll('.fl-rf tbody tr').length === 2", 180000)
         def table():
             t = pg.locator(".fl-rf table")
             assert t.locator("caption").count() == 1 and t.locator("th[scope=col]").count() >= 6, t.inner_html()[:300]
@@ -52,18 +52,18 @@ try:
         step("a row per file, sorted by name, with type, MS levels, polarity, instrument and size", table)
         def explore():
             pg.click("button[aria-label='Explore MSn_synth_t01.mzML']")
-            attendi(pg, "document.querySelector('.fl-rf-body .fi-kv')", 30000)
+            wait_for_js(pg, "document.querySelector('.fl-rf-body .fi-kv')", 30000)
             assert [x.strip() for x in pg.locator(".fl-rf-tabs button").all_inner_texts()] == ["File and instrument", "Scans", "Precursor tree"]
             ref = pg.evaluate("""async () => { const f = E.files.find(x => String(x.file).startsWith('MSn_synth')); const j = await (await fetch('api/fileinfo?k=' + f.k)).json(); return [j.instrument, j.scans]; }""")
             txt = pg.inner_text(".fl-rf-body")
             assert str(ref[1]) in txt and (ref[0] or "").lower() in txt.lower(), (ref, txt[:300])
-            pg.click(".fl-rf-tabs button:has-text('Scans')"); attendi(pg, "document.querySelector('.fl-rf-body .hri-list .r')", 30000)
-            pg.click(".fl-rf-tabs button:has-text('Precursor tree')"); attendi(pg, "document.querySelector('.fl-rf-body #inf-tree tbody tr')", 30000)
+            pg.click(".fl-rf-tabs button:has-text('Scans')"); wait_for_js(pg, "document.querySelector('.fl-rf-body .hri-list .r')", 30000)
+            pg.click(".fl-rf-tabs button:has-text('Precursor tree')"); wait_for_js(pg, "document.querySelector('.fl-rf-body #inf-tree tbody tr')", 30000)
             assert pg.locator("#hri-list").count() == 0 or pg.locator("[id=hri-list]").count() <= 1
         step("Explore shows the File and instrument, Scans and Precursor tree tabs of the file", explore)
         def one_at_a_time():
             pg.click(f"button[aria-label='Explore {LC.name}']")
-            attendi(pg, "document.querySelector('.fl-rf-body .fi-kv')", 30000)
+            wait_for_js(pg, "document.querySelector('.fl-rf-body .fi-kv')", 30000)
             assert pg.locator(".fl-rf-body").count() == 1 and pg.locator(".fl-rf-tabs button").count() == 2, pg.locator(".fl-rf-tabs button").all_inner_texts()
             pg.click(f"button[aria-label='Explore {LC.name}']")
             assert pg.locator(".fl-rf-body").count() == 0
@@ -75,7 +75,7 @@ try:
         step("Export mzML downloads <stem>.mzML as it is", export)
         def keyboard():
             pg.focus("button[aria-label='Explore MSn_synth_t01.mzML']"); pg.keyboard.press("Enter")
-            attendi(pg, "document.querySelector('.fl-rf-body .fi-kv')", 30000)
+            wait_for_js(pg, "document.querySelector('.fl-rf-body .fi-kv')", 30000)
         step("Explore works from the keyboard", keyboard)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)

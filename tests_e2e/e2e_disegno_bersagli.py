@@ -13,8 +13,8 @@ INIT = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'
 READY = "document.getElementById('kframe').classList.contains('kwait') === false && !!(window.TPDraw && TPDraw.ready())"
 def open_draw(ctx):
     pg = ctx.new_page(); pg.add_init_script(INIT)
-    pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "!!document.querySelector('#nav [data-v=draw]')")
-    pg.click("#nav [data-v=draw]"); attendi(pg, READY, timeout=60000); hold(pg, 2000)
+    pg.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg, "!!document.querySelector('#nav [data-v=draw]')")
+    pg.click("#nav [data-v=draw]"); wait_for_js(pg, READY, timeout=60000); hold(pg, 2000)
     return pg
 # every visible control of the aside and of the Ketcher iframe, as page coordinates; the aside is measured with every <details> open
 TARGETS = """(() => {

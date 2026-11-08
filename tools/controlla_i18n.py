@@ -31,7 +31,7 @@ import lang_catalogo
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "mzlab" / "web"
 LANG = WEB / "lang"
-ECCEZIONI = ROOT / "tools" / "i18n_eccezioni.txt"
+EXCEPTIONS = ROOT / "tools" / "i18n_eccezioni.txt"
 
 # JS files whose strings must already be free of Italian (grows as the parts of the work migrate files)
 MIGRATED = {"mzlab/web/elementare.js", "mzlab/web/elementare-pannello.js", "mzlab/web/visualizza.js", "mzlab/web/barra.js", "mzlab/web/paletta.js", "mzlab/web/browser.js", "mzlab/web/calcola.js", "mzlab/web/calc-addotti.js", "mzlab/web/calc-addotti-html.js", "mzlab/web/draw.js", "mzlab/web/mappa3d.js", "mzlab/web/explore.js", "mzlab/web/ordine.js", "mzlab/web/conversione.js", "mzlab/web/cartella-carica.js", "mzlab/web/cartella-puntata.js", "mzlab/web/cartella-puntata-desktop.js", "mzlab/web/pannelli.js", "mzlab/web/grafici.js", "mzlab/web/picchi.js", "mzlab/web/eventi.js", "mzlab/web/i18n.js", "mzlab/web/icons-modi.js", "mzlab/web/index.html", "mzlab/web/modi.js", "mzlab/web/perdite.js", "mzlab/web/perf.js", "mzlab/web/scroll.js", "mzlab/web/settings.js", "mzlab/web/spettro.js", "mzlab/web/tables.js", "mzlab/web/help.js", "mzlab/web/liste.js", "mzlab/web/libreria.js", "mzlab/web/livelli.js", "mzlab/web/dda.js", "mzlab/web/composizione.js", "mzlab/web/origine.js", "mzlab/web/banco.js", "mzlab/web/libreria-worker.js", "mzlab/web/hr.js", "mzlab/web/tabs.js", "mzlab/web/touch.js", "mzlab/web/xlsx.js", "mzlab/web/xic-spettro.js", "mzlab/web/xic-lente.js"}
@@ -65,7 +65,7 @@ scansione scansioni madre sconosciuto sconosciuta vicina vicino
 """.split())
 
 # crates that never serve the page, and the keys a student never sees (one reason per key)
-CRATE_ESCLUSI = ("mzlab-cli", "mzlab-desktop", "mzlab-llm")
+EXCLUDED_CRATES = ("mzlab-cli", "mzlab-desktop", "mzlab-llm")
 CRATE_SENZA_TESTO = {
     "err.test": "placeholder error of a unit test inside a src file",
     "err.test.interned": "string used by a unit test of the interner",
@@ -80,7 +80,7 @@ def crate_keys(cli: bool = False) -> dict[str, str]:
     for p in sorted((ROOT / "crates").rglob("*.rs")):
         rel = p.relative_to(ROOT).as_posix()
         parts = rel.split("/")
-        if (parts[1] in CRATE_ESCLUSI and not (cli and parts[1] == "mzlab-cli")) or "tests" in parts or "examples" in parts or "benches" in parts or p.stem.endswith("_tests") or p.stem.startswith("tests"):
+        if (parts[1] in EXCLUDED_CRATES and not (cli and parts[1] == "mzlab-cli")) or "tests" in parts or "examples" in parts or "benches" in parts or p.stem.endswith("_tests") or p.stem.startswith("tests"):
             continue
         for k in CRATE_KEY.findall(p.read_text(encoding="utf-8", errors="replace")):
             out.setdefault(k, rel)
@@ -322,8 +322,8 @@ def js_strings(src: str):
 
 def load_exceptions() -> set[tuple[str, str]]:
     out = set()
-    if ECCEZIONI.exists():
-        for ln in ECCEZIONI.read_text(encoding="utf-8").splitlines():
+    if EXCEPTIONS.exists():
+        for ln in EXCEPTIONS.read_text(encoding="utf-8").splitlines():
             ln = ln.strip()
             if ln and not ln.startswith("#"):
                 f, _, snippet = ln.partition("\t")
@@ -403,9 +403,9 @@ def has_form(text: str, forms: list[str]) -> bool:
 
 def check_glossary(it: dict, en: dict, errs: list) -> None:
     g = json.loads((LANG / "glossario.json").read_text(encoding="utf-8"))
-    fonti = g.get("fonti", {})
+    sources = g.get("fonti", {})
     for v in g["voci"]:
-        if v.get("fonte") not in fonti:
+        if v.get("fonte") not in sources:
             errs.append(f"glossary: entry «{v['id']}» without a known source")
         for k, itxt in it.items():
             for ex in v.get("escludi_it", []):               # Italian phrases where the word has another meaning ("in fondo" = at the bottom)

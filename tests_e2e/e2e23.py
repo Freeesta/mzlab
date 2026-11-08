@@ -64,13 +64,13 @@ try:
         def spec():
             pg.evaluate("document.querySelector('#ctx').hidden=true")
             n = pg.evaluate("E.panels.filter(q=>q.type==='spec'&&(q.link===%d||q.src===%d)).length" % (cid, cid)); assert n >= 1, n
-            pg.evaluate("ibkSpectra(%s)" % P); attendi(pg, "E.panels.filter(q=>q.type==='spec'&&(q.link===%d||q.src===%d)).every(q=>q.bg==='w'&&q.bw0===0.3&&q.bw1===2)" % (cid, cid))
+            pg.evaluate("ibkSpectra(%s)" % P); wait_for_js(pg, "E.panels.filter(q=>q.type==='spec'&&(q.link===%d||q.src===%d)).every(q=>q.bg==='w'&&q.bw0===0.3&&q.bw1===2)" % (cid, cid))
             assert pg.evaluate("E.panels.filter(q=>q.type==='spec'&&(q.link===%d||q.src===%d)).every(q=>q.bg==='w'&&q.bw0===0.3&&q.bw1===2)" % (cid, cid))
         step("spectrum of the blank stretch subtracted from the linked spectra", spec)
         def reload():
-            saved(pg); pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.panels.some(q => q.tab === 'full' && q.type === 'chrom' && q.fondo)", 90000); ready(pg)
+            saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.panels.some(q => q.tab === 'full' && q.type === 'chrom' && q.fondo)", 90000); ready(pg)
             assert pg.evaluate("(E.panels.find(q=>q.tab==='full'&&q.type==='chrom')||{}).fondo.ib.mode") == "mean"
-            pg.locator("#dpanels .pnl >> nth=0 >> [data-o=cinfo]").click(); pg.locator("#dpanels .pnl >> nth=0 >> [data-ib=off]").click(); attendi(pg, "E.panels.find(q=>q.tab==='full'&&q.type==='chrom').fondo.mode==='none'")
+            pg.locator("#dpanels .pnl >> nth=0 >> [data-o=cinfo]").click(); pg.locator("#dpanels .pnl >> nth=0 >> [data-ib=off]").click(); wait_for_js(pg, "E.panels.find(q=>q.tab==='full'&&q.type==='chrom').fondo.mode==='none'")
             assert pg.evaluate("E.panels.find(q=>q.tab==='full'&&q.type==='chrom').fondo.mode") == "none"
         step("saved in the notebook, removable with one click", reload)
         pg.screenshot(path=SH + "230_ibk.png", full_page=True)

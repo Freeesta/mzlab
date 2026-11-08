@@ -57,3 +57,32 @@ fn the_electron_has_the_right_sign() {
     // and the error of the same candidate has the sign of the m/z that was typed, in both modes
     assert!(plus < 0.0 && minus > 0.0, "{plus} {minus}");
 }
+
+/// The isotope pool says how many candidates it scored when it left some out, and stays silent otherwise (synthetic glucose isotopes).
+#[test]
+fn the_isotope_pool_names_how_many_it_scored() {
+    let run = |pool: usize, obs: Vec<(f64, f64)>| -> Value {
+        let o = Opts {
+            elements: Some(parse_elements("C:0-12,H:0-30,O:0-8,N:0-4,S:0-2,P:0-1").unwrap()),
+            tol: 50.0,
+            max_results: 2,
+            pool,
+            obs,
+            ..Opts::default()
+        };
+        serde_json::from_str(&compose(181.070665, &o).unwrap()).unwrap()
+    };
+    let obs = vec![(181.070665, 100.0), (182.074, 6.7)];
+    let cut = run(3, obs.clone());
+    let n = cut["n_candidates"].as_i64().unwrap();
+    assert!(n > 3, "{cut}");
+    assert_eq!(cut["scored"].as_i64(), Some(3), "{cut}");
+    assert!(
+        run(n as usize, obs)["scored"].is_null(),
+        "a pool that holds every candidate is not a cut"
+    );
+    assert!(
+        run(3, vec![])["scored"].is_null(),
+        "no observed peaks: nothing is scored, nothing to report"
+    );
+}

@@ -27,7 +27,7 @@ ITEM = "document.querySelectorAll('.gby-menu [role=menuitemradio]')"
 def count(pg, label): return pg.evaluate(COUNT, label)
 def item(pg, text): return pg.locator(".gby-menu [role=menuitemradio]", has_text=text).first
 def open_menu(pg):
-    pg.click("#sb-by"); attendi(pg, f"!!document.querySelector('.gby-menu') && {ITEM}.length > 3", 10000)
+    pg.click("#sb-by"); wait_for_js(pg, f"!!document.querySelector('.gby-menu') && {ITEM}.length > 3", 10000)
 RUN = """(sel) => axe.run(document.querySelector(sel) || document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}})
   .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')]))"""
 r = Run(port=8962, wd="/tmp/wd_gruppi_per")
@@ -47,7 +47,7 @@ try:
             assert pg.evaluate("E.files.filter(f => !f.gone).length") == 30
             open_menu(pg)
             assert item(pg, "Experiment type").get_attribute("aria-checked") == "true"
-            item(pg, "Matrix").click(); attendi(pg, "!!E.ugBy && E.ugBy.by === 'matrix'", 10000); fermo(pg, "#flst")
+            item(pg, "Matrix").click(); wait_for_js(pg, "!!E.ugBy && E.ugBy.by === 'matrix'", 10000); wait_still(pg, "#flst")
             assert (count(pg, "MQ"), count(pg, "TW")) == (20, 9), (count(pg, "MQ"), count(pg, "TW"))
             assert pg.evaluate("E.files.filter(f => !f.gone && !f.ugrp).length") == 1
             assert pg.evaluate("E.ugOrder") == ["MQ", "TW"], pg.evaluate("E.ugOrder")
@@ -55,60 +55,60 @@ try:
             assert heads == ["MQ", "TW"], heads
         step("Group by → Matrix: MQ 20, TW 9, one file out of every group", matrix)
         def then():
-            open_menu(pg); item(pg, "Then by").click(); attendi(pg, f"{ITEM}.length > 2 && !!document.querySelector('.gby-menu')", 5000)
+            open_menu(pg); item(pg, "Then by").click(); wait_for_js(pg, f"{ITEM}.length > 2 && !!document.querySelector('.gby-menu')", 5000)
             pg.locator(".gby-menu [role=menuitemradio]", has_text="Condition").first.click()
-            attendi(pg, "E.ugBy && E.ugBy.then === 'cond'", 10000); fermo(pg, "#flst")
+            wait_for_js(pg, "E.ugBy && E.ugBy.then === 'cond'", 10000); wait_still(pg, "#flst")
             assert count(pg, "MQ · H2O2") == 4, pg.evaluate(LABELS)
         step("Then by Condition gives «MQ · H2O2» with 4 files", then)
         def undo_redo():
             pg.evaluate("document.activeElement && document.activeElement.blur()")
-            pg.keyboard.press("Control+z"); attendi(pg, "!E.ugBy || !E.ugBy.then", 5000)
+            pg.keyboard.press("Control+z"); wait_for_js(pg, "!E.ugBy || !E.ugBy.then", 5000)
             assert (count(pg, "MQ"), count(pg, "TW")) == (20, 9) and count(pg, "MQ · H2O2") == 0
-            pg.keyboard.press("Control+z"); attendi(pg, "!E.ugBy && !E.files.some(f => f.ugrp)", 5000)
-            pg.keyboard.press("Control+Shift+z"); attendi(pg, "!!E.ugBy && E.ugBy.by === 'matrix' && !E.ugBy.then", 5000)
+            pg.keyboard.press("Control+z"); wait_for_js(pg, "!E.ugBy && !E.files.some(f => f.ugrp)", 5000)
+            pg.keyboard.press("Control+Shift+z"); wait_for_js(pg, "!!E.ugBy && E.ugBy.by === 'matrix' && !E.ugBy.then", 5000)
             assert count(pg, "MQ") == 20
-            pg.keyboard.press("Control+Shift+z"); attendi(pg, "E.ugBy && E.ugBy.then === 'cond'", 5000)
+            pg.keyboard.press("Control+Shift+z"); wait_for_js(pg, "E.ugBy && E.ugBy.then === 'cond'", 5000)
             assert count(pg, "MQ · H2O2") == 4
         step("Ctrl+Z / Ctrl+Shift+Z restore the labels and the key, one step each", undo_redo)
         def contains():
-            open_menu(pg); item(pg, "Contains").click(); attendi(pg, "!!document.querySelector('dialog.gby-dlg[open]')", 5000)
+            open_menu(pg); item(pg, "Contains").click(); wait_for_js(pg, "!!document.querySelector('dialog.gby-dlg[open]')", 5000)
             pg.locator("dialog.gby-dlg input[type=text]").fill("O2")
-            attendi(pg, "document.querySelector('dialog.gby-dlg .gby-prev li') && !document.querySelector('dialog.gby-dlg button:not(.sec)').disabled", 10000)
+            wait_for_js(pg, "document.querySelector('dialog.gby-dlg .gby-prev li') && !document.querySelector('dialog.gby-dlg button:not(.sec)').disabled", 10000)
             prev = pg.evaluate("[...document.querySelectorAll('dialog.gby-dlg .gby-prev li')].map(l => l.textContent)")
             assert prev == ["O2 · 4", "Other · 26"], prev
-            pg.locator("dialog.gby-dlg button:not(.sec)").click(); attendi(pg, "E.ugBy && E.ugBy.by === 'manuale'", 10000); fermo(pg, "#flst")
+            pg.locator("dialog.gby-dlg button:not(.sec)").click(); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'manuale'", 10000); wait_still(pg, "#flst")
             assert count(pg, "O2") == 4 and count(pg, "Other") == 26, pg.evaluate(LABELS)
         step("Contains «O2» matches the whole word only (4 files), the rest is «Other»", contains)
         def reload():
-            saved(pg); pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.some(f => f.ugrp)", 120000); ready(pg)
+            saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files.some(f => f.ugrp)", 120000); ready(pg)
             assert pg.evaluate("E.ugBy && E.ugBy.by") == "manuale" and count(pg, "O2") == 4, pg.evaluate("E.ugBy")
         step("a reload keeps the groups and the key", reload)
         def keyboard():
-            drawer(pg); watch(); fermo(pg, "#flst"); global box0; box0 = pg.evaluate(BOX); pg.locator("#sb-by").focus(); pg.keyboard.press("Enter"); attendi(pg, f"{ITEM}.length > 3", 10000)
+            drawer(pg); watch(); wait_still(pg, "#flst"); global box0; box0 = pg.evaluate(BOX); pg.locator("#sb-by").focus(); pg.keyboard.press("Enter"); wait_for_js(pg, f"{ITEM}.length > 3", 10000)
             assert pg.evaluate("document.activeElement.closest('.gby-menu') !== null"), "the focus is not in the menu"
             assert pg.evaluate("document.querySelector('.gby-menu').getAttribute('role')") == "menu"
             pg.keyboard.press("ArrowDown"); pg.keyboard.press("End"); pg.keyboard.press("Home")
             assert "Experiment type" in pg.evaluate("document.activeElement.textContent")
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('.gby-menu')", 3000)
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('.gby-menu')", 3000)
             assert pg.evaluate("document.activeElement.id") == "sb-by", "the focus does not return to the button"
-            pg.keyboard.press("Enter"); attendi(pg, f"{ITEM}.length > 3", 10000)
+            pg.keyboard.press("Enter"); wait_for_js(pg, f"{ITEM}.length > 3", 10000)
             while "Token position" not in pg.evaluate("document.activeElement.textContent"): pg.keyboard.press("ArrowDown")
-            pg.keyboard.press("Enter"); attendi(pg, "!!document.querySelector('dialog.gby-dlg[open]')", 5000)
+            pg.keyboard.press("Enter"); wait_for_js(pg, "!!document.querySelector('dialog.gby-dlg[open]')", 5000)
             assert pg.evaluate("document.activeElement.closest('dialog') !== null"), "the focus is not in the dialog"
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.gby-dlg')", 3000)
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog.gby-dlg')", 3000)
             assert pg.evaluate("document.activeElement.id") == "sb-by"
-            pg.keyboard.press("Enter"); attendi(pg, f"{ITEM}.length > 3", 10000)
+            pg.keyboard.press("Enter"); wait_for_js(pg, f"{ITEM}.length > 3", 10000)
             while "Experiment type" not in pg.evaluate("document.activeElement.textContent"): pg.keyboard.press("ArrowUp")
-            pg.keyboard.press("Space"); attendi(pg, "!E.ugBy && !E.files.some(f => f.ugrp)", 5000)
+            pg.keyboard.press("Space"); wait_for_js(pg, "!E.ugBy && !E.files.some(f => f.ugrp)", 5000)
         step("the menu and the dialogs work with the keyboard only (arrows, Enter, Space, Esc), the focus returns to the button", keyboard)
         def axe():
             if not AXE: raise AssertionError("axe-core not available")
             for what in ("menu", "dialog"):
                 if what == "menu": open_menu(pg)
                 else:
-                    pg.keyboard.press("Escape"); open_menu(pg); item(pg, "Contains").click(); attendi(pg, "!!document.querySelector('dialog.gby-dlg[open]')", 5000)
+                    pg.keyboard.press("Escape"); open_menu(pg); item(pg, "Contains").click(); wait_for_js(pg, "!!document.querySelector('dialog.gby-dlg[open]')", 5000)
                 v = pg.evaluate(RUN, "body"); assert not v, (what, v)
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.gby-dlg')", 3000)
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog.gby-dlg')", 3000)
         step("axe: the menu and the dialog have no serious or critical violation", axe)
         def stable():
             cls = pg.evaluate("window.__cls"); assert cls < 0.001, f"layout shift {cls}"

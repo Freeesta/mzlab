@@ -34,10 +34,10 @@ try:
         b = p.chromium.launch(); c = b.new_context(viewport={"width": 1400, "height": 900}); c.set_default_timeout(120000); c.add_init_script(INIT)
         def opened(pg):
             pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop", state="attached"); attendi(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=120000)
+            pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop", state="attached"); wait_for_js(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=120000)
             return pg
         A = opened(c.new_page())
-        A.set_input_files("#pick", PAIRS); attendi(A, DONE, timeout=120000)
+        A.set_input_files("#pick", PAIRS); wait_for_js(A, DONE, timeout=120000)
         def counts():
             got = A.evaluate(COUNTS)
             assert got == WANT, (got, WANT)
@@ -48,9 +48,9 @@ try:
         A.close(); B = opened(c.new_page())
         def rebuilt():
             assert aged, "no reader key in the index"
-            try: attendi(B, DONE, timeout=60000)
+            try: wait_for_js(B, DONE, timeout=60000)
             except Exception: raise AssertionError(B.evaluate("JSON.stringify({n: ST.files.length, f: ST.files.map(f => [f.name, f.kind, f.indexed]), up: UPBUSY, open: OPENNOW.busy(), e: E.files.length})"))
-            attendi(B, f"(async () => {{ const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx'); return /\"reader\":2/.test(new TextDecoder('latin1').decode(await (await (await d.getFileHandle({json.dumps(name)} + '.mzidx')).getFile()).arrayBuffer())); }})()", timeout=120000)
+            wait_for_js(B, f"(async () => {{ const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('idx'); return /\"reader\":2/.test(new TextDecoder('latin1').decode(await (await (await d.getFileHandle({json.dumps(name)} + '.mzidx')).getFile()).arrayBuffer())); }})()", timeout=120000)
             got = B.evaluate(COUNTS)
             assert got == WANT, (got, WANT)
         step("an index of an older generation is built again once and gives the same list", rebuilt)

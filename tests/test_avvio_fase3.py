@@ -37,7 +37,7 @@ def run_node(code: str) -> dict:
     return json.loads([ln for ln in r.stdout.strip().splitlines() if ln.strip()][-1])
 
 
-def test_banner_alert_same_text_as_errore_and_restoring_box_removed():
+def test_banner_alert_same_text_as_error_and_restoring_box_removed():
     res = run_node(f"""
     {DOM}
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');

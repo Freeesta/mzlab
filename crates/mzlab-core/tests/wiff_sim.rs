@@ -126,9 +126,9 @@ fn the_registry_and_the_mzml_keep_the_sim_channels() {
     };
     let ions = want["ioni"].as_array().unwrap();
     let mut l = lettori::apri(pair(&dir), &Limiti::sito()).unwrap();
-    assert_eq!(l.campioni().len(), 2);
+    assert_eq!(l.samples().len(), 2);
     for c in 0..2 {
-        let list = l.cromatogrammi(c).unwrap();
+        let list = l.chromatograms(c).unwrap();
         let sim: Vec<_> = list.iter().filter(|v| v.tipo == ChromKind::Sic).collect();
         assert_eq!(sim.len(), ions.len(), "sample {}", c + 1);
         assert!(sim[0]

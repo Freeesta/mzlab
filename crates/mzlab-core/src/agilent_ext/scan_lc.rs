@@ -6,6 +6,12 @@ use super::*;
 impl Layout {
     pub fn from_xsd_ext(xsd: &str) -> Result<Layout> {
         let clean = strip_comments(xsd);
+        if let Some(e) = elements(&clean, "ScanRecordType")
+            .ok()
+            .and_then(|s| ims(&s))
+        {
+            return Err(e);
+        }
         let mut flat = Vec::new();
         expand(&clean, "ScanRecordType", 0, &mut flat)?;
         if !flat.iter().any(|(n, _)| n == "SpectrumOffset") {

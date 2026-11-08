@@ -6,7 +6,7 @@ import json, os, random, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT
-from lib import copia as lib_copia, scrivi as lib_scrivi
+from lib import copy_file as lib_copy_file, write_file as lib_write_file
 
 from lib import free_port; PORT = free_port()
 errs, steps = [], []
@@ -18,9 +18,9 @@ if not (ROOT / "site" / "index.html").exists():
     print("  ", ("site", "FAIL site/ not built: python3 tools/build_site.py")); sys.exit(0)
 # the page of the site is a copy: make sure it has the current sources of mzFinder and of the library module
 mf = ROOT / "site" / "static" / "mzfinder"
-for f in (ROOT / "TP_Mine" / "js").glob("*.js"): lib_copia(f, mf / f.name)
-idx = json.loads((mf / "indice.json").read_text()); idx["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); lib_scrivi(mf / "indice.json", json.dumps(idx))
-for f in ("libreria-worker.js", "libreria.js", "libreria-finestra.js", "mol-svg.js", "livelli.js", "livelli-1.js"): lib_copia(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
+for f in (ROOT / "TP_Mine" / "js").glob("*.js"): lib_copy_file(f, mf / f.name)
+idx = json.loads((mf / "indice.json").read_text()); idx["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); lib_write_file(mf / "indice.json", json.dumps(idx))
+for f in ("libreria-worker.js", "libreria.js", "libreria-finestra.js", "mol-svg.js", "livelli.js", "livelli-1.js"): lib_copy_file(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
 
 A = [(85.0284, 40), (105.0699, 120), (130.0651, 300), (158.0964, 1000), (186.0913, 600), (212.1070, 250), (240.1019, 180), (283.1441, 90)]
 ALPHA = "Name: Alpha\nPrecursorMZ: 301.1547\nIon_mode: Positive\nPrecursor_type: [M+H]+\nCollision_energy: 30\nInstrument_type: Orbitrap\nInChIKey: AAAAAAAAAAAAAA-UHFFFAOYSA-N\nNum Peaks: %d\n%s\n" % (len(A), "\n".join(f"{m:.4f}\t{i}" for m, i in A))
@@ -101,11 +101,11 @@ try:
         step("only one row is open at a time", one)
         def axe(theme):
             def f():
-                from lib import axe_path, attendi
+                from lib import axe_path, wait_for_js
                 ax = axe_path()
                 if not ax: print("SKIP axe-core not available"); return
                 pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme)
-                attendi(pg, "document.getAnimations().length === 0")          # the chips fade between the themes
+                wait_for_js(pg, "document.getAnimations().length === 0")          # the chips fade between the themes
                 if not pg.evaluate("typeof axe") == "object": pg.add_script_tag(path=ax)
                 v = pg.evaluate("axe.run(document.getElementById('unt'), {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' '))]))")
                 assert not v, v

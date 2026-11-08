@@ -82,8 +82,8 @@ fn confronta_cartella(cartella: &str, mzml_rif: &str) {
     let mut l = mzlab_lettori::apri_nudo(set_of(&base.join(cartella)), &Limiti::desktop()).unwrap();
     let rif = spettri_mzml(&base.join(mzml_rif));
     // the copy of the test data keeps only the first 400 kB of `analysis.tdf_bin`: the spectra of the frames past its end leave the index and are counted
-    let n = l.indice(0).unwrap().len();
-    assert_eq!(n + l.mancanti(0), rif.len(), "{cartella}");
+    let n = l.index(0).unwrap().len();
+    assert_eq!(n + l.missing(0), rif.len(), "{cartella}");
     if n < rif.len() {
         eprintln!(
             "{cartella}: {} spectra past the end of the cut tdf_bin",
@@ -91,7 +91,7 @@ fn confronta_cartella(cartella: &str, mzml_rif: &str) {
         );
     }
     for (k, r) in rif.iter().enumerate().take(n) {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         assert_eq!(s.level, r.level, "{cartella} {k}");
         assert!((s.rt - r.rt).abs() < 1e-6, "{cartella} {k}: rt");
         confronta(&s, r, 5.0, &format!("{cartella} #{k} {}", s.id));
@@ -119,10 +119,10 @@ fn percorri(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
         return None;
     };
     let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limiti::desktop()).unwrap();
-    let ix = l.indice(0).unwrap().to_vec();
+    let ix = l.index(0).unwrap().to_vec();
     let mut livelli = Vec::new();
     for k in (0..ix.len()).take(max) {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         assert!(
             s.mz.windows(2).all(|w| w[0] < w[1]) && s.mz.iter().all(|m| m.is_finite() && *m > 0.0),
             "{rel} #{k}: m/z order"
@@ -172,9 +172,9 @@ fn cartelle_sintetiche_di_timsrust() {
             continue;
         }
         let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limiti::desktop()).unwrap();
-        assert!(!l.indice(0).unwrap().is_empty());
+        assert!(!l.index(0).unwrap().is_empty());
         assert_eq!(
-            l.scansione(0, 0).err().map(|e| e.key),
+            l.scan(0, 0).err().map(|e| e.key),
             Some("err.dam.unreadable")
         );
     }

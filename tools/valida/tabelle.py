@@ -37,28 +37,28 @@ class Tabella:
     def area_di(self, k: int, righe) -> np.ndarray:
         return self.area[righe] if self.lungo else self.area[righe, k]
 
-    def massimo(self, colonne) -> np.ndarray:
+    def massimo(self, columns) -> np.ndarray:
         """Largest area of each row over the columns (aligned tables only)."""
-        colonne = list(colonne)
-        if self.lungo or not colonne:
+        columns = list(columns)
+        if self.lungo or not columns:
             return np.zeros(len(self))
-        return self.area[:, colonne].max(1)
+        return self.area[:, columns].max(1)
 
-    def massimo_altezza(self, colonne) -> np.ndarray:
+    def massimo_altezza(self, columns) -> np.ndarray:
         """Largest height of each row over the columns (aligned tables with heights only)."""
-        colonne = list(colonne)
+        columns = list(columns)
         if self.altezza is None or self.lungo:
             raise ValueError(f"table {self.nome}: no heights")
-        return np.nan_to_num(self.altezza[:, colonne]).max(1) if colonne else np.zeros(len(self))
+        return np.nan_to_num(self.altezza[:, columns]).max(1) if columns else np.zeros(len(self))
 
 
-def nome_file(path) -> str:
+def name_file(path) -> str:
     return re.sub(r"\.mzml$", "", Path(path).name, flags=re.I)
 
 
 def descrivi_file(path) -> dict:
     """time (min, None if unknown) and type of a file from its name: tNNmin, t0/dark/adsorption = reference at time 0, blank/bianco/control."""
-    n = nome_file(path)
+    n = name_file(path)
     low = n.lower()
     tipo = "blank" if re.search(r"blank|bianc", low) else "control" if "control" in low else "sample"
     m = re.search(r"(?:^|[_\-\s])t(\d+(?:[.,]\d+)?)\s*min", low) or re.search(r"(?:^|[_\-\s])t(\d+(?:[.,]\d+)?)(?:$|[_\-\s])", low)
@@ -66,12 +66,12 @@ def descrivi_file(path) -> dict:
     return {"nome": n, "path": str(path), "time": tempo, "type": tipo}
 
 
-def trova_serie(cartella) -> list[dict]:
+def trova_serie(folder) -> list[dict]:
     """The HR LC series of a folder: mzML files with high-resolution MS1 (the MSn infusion of a standard and unit-resolution files are left out),
     sorted by time, then name."""
     from mzlab.reader.mzml import Run
     out = []
-    for p in sorted({*Path(cartella).glob("*.mzML"), *Path(cartella).glob("*.mzml")}):      # a set: on Windows and macOS both patterns match every file
+    for p in sorted({*Path(folder).glob("*.mzML"), *Path(folder).glob("*.mzml")}):      # a set: on Windows and macOS both patterns match every file
         r = Run(p)
         levels = {s.level for s in r.scans}
         hr = max(levels, default=1) < 3 and getattr(r, "hr1", False) and 1 in levels     # not an MSn infusion, high-resolution MS1
@@ -80,13 +80,13 @@ def trova_serie(cartella) -> list[dict]:
             out.append(descrivi_file(p))
     out.sort(key=lambda x: (x["time"] is None, x["time"] if x["time"] is not None else 0.0, x["nome"]))
     if not [x for x in out if x["time"] is not None and x["time"] > 0]:
-        raise ValueError(f"{cartella}: no treated samples (time > 0) among the high-resolution files")
+        raise ValueError(f"{folder}: no treated samples (time > 0) among the high-resolution files")
     return out
 
 
 # ---------------------------------------------------------------------------------------------------------------------- mzmine
-def leggi_mzmine(path, serie: list[dict]) -> Tabella:
-    """mzmine CSV (export 'full' or quant) as a table whose columns are the files of `serie` (by name without .mzML); series files missing from the CSV stay at 0."""
+def leggi_mzmine(path, series: list[dict]) -> Tabella:
+    """mzmine CSV (export 'full' or quant) as a table whose columns are the files of `series` (by name without .mzML); series files missing from the CSV stay at 0."""
     text = Path(path).read_text(encoding="utf-8-sig")
     head = text.splitlines()[0] if text else ""
     delim = ";" if head.count(";") > head.count(",") else ","
@@ -100,7 +100,7 @@ def leggi_mzmine(path, serie: list[dict]) -> Tabella:
                 return low.index(nme)
         raise ValueError(f"{path}: column not found ({' / '.join(names)})")
     imz, irt = col("row m/z", "mz"), col("row retention time", "rt")
-    pos = {x["nome"].lower(): k for k, x in enumerate(serie)}
+    pos = {x["nome"].lower(): k for k, x in enumerate(series)}
     cols, cols_h = {}, {}
     for i, c in enumerate(h):
         m = re.match(r"^datafile:(.+):area$", c, re.I) or re.match(r"^(.*?)\s*Peak area$", c, re.I)
@@ -122,12 +122,12 @@ def leggi_mzmine(path, serie: list[dict]) -> Tabella:
         except ValueError:
             return 0.0
     body = [r for r in rows[1:] if len(r) > max(imz, irt)]
-    area = np.zeros((len(body), len(serie)))
+    area = np.zeros((len(body), len(series)))
     for k, i in cols.items():
         area[:, k] = [num(r[i]) if i < len(r) else 0.0 for r in body]
     altezza = None
     if cols_h:
-        altezza = np.zeros((len(body), len(serie)))
+        altezza = np.zeros((len(body), len(series)))
         for k, i in cols_h.items():
             altezza[:, k] = [num(r[i]) if i < len(r) else 0.0 for r in body]
-    return Tabella("mzmine", [x["nome"] for x in serie], np.array([num(r[imz]) for r in body]), np.array([num(r[irt]) for r in body]), area, altezza=altezza)
+    return Tabella("mzmine", [x["nome"] for x in series], np.array([num(r[imz]) for r in body]), np.array([num(r[irt]) for r in body]), area, altezza=altezza)

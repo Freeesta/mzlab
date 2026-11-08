@@ -87,11 +87,11 @@ fn il_lettore_finto_serve_le_scansioni_generate() {
     let f = dir.join("d.bin");
     genera(&f, &PICCOLO, false).unwrap();
     let mut l = Denso::apri(&f).unwrap();
-    assert_eq!(l.indice(0).unwrap().len(), 3);
+    assert_eq!(l.index(0).unwrap().len(), 3);
     for k in 0..3 {
         let (mut b, mut v) = (Vec::new(), Verita::default());
         pacchetto(&mut b, &PICCOLO, k, Some(&mut v));
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         assert!(!s.profile);
         assert_eq!(
             bits(
@@ -103,7 +103,7 @@ fn il_lettore_finto_serve_le_scansioni_generate() {
             ),
             bits(&v.picchi)
         );
-        let p = l.scansione_profilo(0, k).unwrap().unwrap();
+        let p = l.scan_profile(0, k).unwrap().unwrap();
         assert!(p.profile);
         assert_eq!(p.mz.len(), v.profilo.len());
         // the frequency step is negative, so m/z grows with the bin
