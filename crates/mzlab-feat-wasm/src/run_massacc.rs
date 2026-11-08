@@ -3,7 +3,6 @@
 
 use js_sys::Function;
 use mzlab_core::error::Error;
-use mzlab_core::idxread::Index;
 use mzlab_core::json::{parse, Value};
 use mzlab_feat::massacc::{self, Params};
 use wasm_bindgen::prelude::*;
@@ -75,17 +74,12 @@ pub fn mass_accuracy(
         .iter()
         .map(|n| (text(n, 0), text(n, 1)))
         .collect();
+    // one file at a time (`massacc::run`), each read through the cache of `open_one`: a trace of every reference asks a few KB per slab, thousands of calls per file
     let mut open = |k: usize| {
         let size = *index_sizes
             .get(k)
             .ok_or_else(|| Error::new("err.flow.port.missing").with("port", "raw"))?;
-        Index::open(
-            JsReader {
-                read: index_read.clone(),
-                k: k as u32,
-            },
-            size as u64,
-        )
+        crate::open_one(&index_read, k, size)
     };
     let mut reader = JsReader {
         read: table_read,

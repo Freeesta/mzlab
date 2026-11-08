@@ -11,9 +11,11 @@ use std::sync::Arc;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::mzidx::build_mzml_late;
-use mzlab_core::upload::{impronte, indicizza_lettore_con, prepare_con, probe};
+use mzlab_core::upload::{
+    con_impronte_parallele, indicizza_lettore_con, prepare_con, probe, senza_sha1,
+};
 
 use crate::{flow_set, io};
 
@@ -255,7 +257,8 @@ pub(crate) fn build_index_with(
 }
 
 /// The index of a file read through the registry (maker's files, Numpress, gzip). The peaks that do not fit in `budget` wait in a scratch file, so the
-/// scans are decoded once and not once per round (a Numpress file decodes slowly: rounds made it quadratic).
+/// scans are decoded once and not once per round (a Numpress file decodes slowly: rounds made it quadratic). The fingerprints are taken by a second
+/// thread while the scans are decoded, as the desktop does (`idxbuild_nat.rs`); it stops at its next read once the job is cancelled or the build fails.
 fn index_reader(
     path: &Path,
     label: &str,
@@ -269,7 +272,7 @@ fn index_reader(
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let mut fs = flow_set::file_set(path)?;
-    let imp = impronte(&mut fs)?;
+    senza_sha1(&mut fs);
     let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     let sample = flow_set::sample_index(label, &ids)?;
@@ -282,19 +285,74 @@ fn index_reader(
         .truncate(true)
         .open(&scratch_path)
         .map_err(io)?;
-    let built = indicizza_lettore_con(
-        &mut l,
-        sample,
-        &mut || Ok(imp.clone()),
-        &name,
-        out,
-        budget,
-        Some(&mut scratch),
-        &mut |_| {},
+    let halt = Arc::new(AtomicBool::new(false));
+    let hashing = Halting {
+        stop: stop.clone(),
+        halt: halt.clone(),
+    };
+    let built = con_impronte_parallele(
+        move || hashing.file_set(path),
+        |imp| {
+            let r = indicizza_lettore_con(
+                &mut l,
+                sample,
+                imp,
+                &name,
+                out,
+                budget,
+                Some(&mut scratch),
+                &mut |_| {},
+            );
+            if r.is_err() {
+                halt.store(true, Ordering::Relaxed);
+            }
+            r
+        },
     );
     drop(scratch);
     let _ = std::fs::remove_file(&scratch_path);
     built.map(|_| ())
+}
+
+/// The members as the fingerprint thread reads them: each read fails with `err.flow.cancelled` once the job is cancelled (`stop`) or the build has
+/// failed (`halt`), so the job does not wait for the whole hash of a big file.
+struct Halting {
+    stop: Stop,
+    halt: Arc<AtomicBool>,
+}
+
+impl Halting {
+    fn file_set(self, path: &Path) -> Result<FileSet> {
+        let mut fs = flow_set::file_set(path)?;
+        fs.membri = fs
+            .membri
+            .into_iter()
+            .map(|m| Membro {
+                dati: Box::new(HaltingAt {
+                    r: m.dati,
+                    stop: self.stop.clone(),
+                    halt: self.halt.clone(),
+                }),
+                ..m
+            })
+            .collect();
+        Ok(fs)
+    }
+}
+
+struct HaltingAt {
+    r: Box<dyn ReadAt>,
+    stop: Stop,
+    halt: Arc<AtomicBool>,
+}
+
+impl ReadAt for HaltingAt {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        if up(&self.stop) || self.halt.load(Ordering::Relaxed) {
+            return Err(cancelled());
+        }
+        self.r.read_at(off, buf)
+    }
 }
 
 /// A reader that tells `pace` how many scans of sample `c` it has decoded (as many as the sample has in pass 1; a later pass counts past the total and is clamped).

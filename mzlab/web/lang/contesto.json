@@ -962,6 +962,7 @@
   "err.file.agilent": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.file.agilentCut": "Cartella Agilent .D copiata a metà: nessuna scansione intera resta da leggere. {name} = nome della cartella .D.",
   "err.file.agilentNoPeaks": "Cartella Agilent .D con l'elenco delle scansioni ma senza il file degli spettri MSPeak.bin (mancante o vuoto). {name} = nome della cartella .D.",
+  "err.file.agilentIms": "Cartella .D (Agilent) a mobilità ionica (IMS, frame divisi in bin di drift): formato non ancora letto, nessun dato caricato.",
   "err.file.base64": "Messaggio d'errore del motore; {detail} = dettaglio tecnico.",
   "err.file.nonFinite": "Messaggio d'errore dei lettori; {scan} = id o numero della scansione, {what} = rt, tic, mz o intensity, {value} = NaN, inf o -inf.",
   "err.file.nonFiniteTrace": "Messaggio d'errore dei lettori; {trace} = id del cromatogramma, {what} = time o intensity, {value} = NaN, inf o -inf.",
