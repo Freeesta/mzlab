@@ -179,3 +179,69 @@ fn the_decoded_scans_of_a_profile_file_keep_their_pinned_hash() {
 const FILE_SHA256: &str = "e2d77e897f6c86a56a78d0f149acaf0026904a250e9d5e23f49b554c5482099f";
 const METHOD_SHA256: &str = "abad0fdfdb1af251aaf3a5debee54f29fa4712bb7eb772a0d6bf032a0bdced8d";
 const DECODED_SHA256: &str = "e261d343d99bf77b0137844eb261914460852073efd3f7a4efac23b241666ddb";
+
+/// `/api/dda_window` of a DDA `.raw`, whose reader gives no precursor intensity: the page (index and source = the mzML the reader writes) and the
+/// app and CLI (index and source = the reader) give the same bytes, the intensities filled from the parent survey scans.
+#[test]
+fn the_dda_window_of_a_raw_fills_its_precursor_intensities_alike() {
+    use mzlab_core::idxread::Index;
+    use mzlab_core::routes::{Query, Routes};
+    use mzlab_core::sorgente::SorgenteLettore;
+    use mzlab_core::{lettori_mzml, mzidx, upload};
+    let d = cartella("ddaw");
+    let f = d.join("dda.raw");
+    genera(
+        &f,
+        &[
+            "--scans", "60", "--peaks", "200", "--ms2", "5", "--seed", "7", "--dda",
+        ],
+    );
+    let b = std::fs::read(&f).unwrap();
+    let _ = std::fs::remove_dir_all(&d);
+    let mut set = FileSet {
+        membri: vec![Membro {
+            nome: "dda.raw".into(),
+            dim: b.len() as u64,
+            dati: Box::new(b),
+            sha1: None,
+        }],
+    };
+    let membri = upload::impronte(&mut set).unwrap();
+    let mut l = mzlab_lettori::apri(set, &Limiti::desktop()).expect("open");
+    let mzml = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "dda.mzML").unwrap();
+    let (ia, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, mzidx::DEFAULT_BUDGET).unwrap();
+    let pb = upload::prepare_lettore(&mut *l, 0, &membri, "dda.mzML").unwrap();
+    let mut ib = std::io::Cursor::new(Vec::new());
+    mzidx::build_lettore(&pb.table, &mut *l, 0, &mut ib, mzidx::DEFAULT_BUDGET).unwrap();
+    let ib = ib.into_inner();
+    let mut ra = Routes::new(Index::open(ia.clone(), ia.len() as u64).unwrap());
+    let mut rb = Routes::new(Index::open(ib.clone(), ib.len() as u64).unwrap());
+    let hi = ra.idx.scans.iter().map(|s| s.rt).fold(0.0, f64::max);
+    for q in [
+        format!("r0=0&r1={hi}"),
+        format!("r0={}&r1={}", hi / 3.0, hi / 2.0),
+        format!("r0=0&r1={hi}&hr=0"),
+    ] {
+        let q = Query::parse(&q);
+        let a = ra
+            .mzml_route("/api/dda_window", &q, &mut mzml.clone())
+            .unwrap()
+            .unwrap();
+        let c = rb
+            .mzml_route(
+                "/api/dda_window",
+                &q,
+                &mut SorgenteLettore { l: &mut *l, c: 0 },
+            )
+            .unwrap()
+            .unwrap();
+        assert_eq!(a, c, "{q:?}");
+        let plain = ra.handle("/api/dda_window", &q).unwrap().unwrap();
+        assert!(!a.contains("null"), "a precursor without intensity: {a}");
+        assert!(
+            plain.contains("null"),
+            "the reader gives intensities: {plain}"
+        );
+    }
+}

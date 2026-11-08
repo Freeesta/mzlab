@@ -1,11 +1,14 @@
 //! `mzlab-cli dda-window FILE --from MIN --to MIN [--set hr=0|1] [--out PATH]`: the MS2 started from the survey scans of a time window, grouped by
-//! precursor, the JSON of `api/dda_window` (`mzlab_core::ddafinestra`, the «N MS²» list of the DDA trio of the page).
+//! precursor, the JSON of `api/dda_window` (`mzlab_core::ddafinestra`, the «N MS²» list of the DDA trio of the page). The route reads the file as
+//! its source, as the page and the app: a precursor intensity the reader lacks comes from the parent survey scan.
 
 use std::path::PathBuf;
 
 use mzlab_core::error::{Error, Result};
+use mzlab_core::lettori::Limiti;
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::routes::{Query, Routes};
+use mzlab_core::sorgente::SorgenteLettore;
 
 use crate::Outcome;
 
@@ -71,8 +74,31 @@ fn read(c: &Ask, tmp: &std::path::Path) -> Result<String> {
     let idx = tmp.join("0.mzidx");
     crate::build_index(&c.file, &idx, DEFAULT_BUDGET)?;
     let mut r = Routes::new(crate::open(&idx)?);
-    r.handle("/api/dda_window", &query(c.from, c.to, c.hr))?
-        .ok_or_else(|| Error::new("err.route.unavailable"))
+    let q = query(c.from, c.to, c.hr);
+    let a = if crate::flow_pace::reads_as_mzml(&c.file) {
+        r.mzml_route(
+            "/api/dda_window",
+            &q,
+            &mut std::fs::File::open(&c.file)
+                .map_err(|e| Error::new("err.flow.io").with("detail", e))?,
+        )?
+    } else {
+        let mut l = mzlab_lettori::apri(crate::flow_set::file_set(&c.file)?, &Limiti::desktop())?;
+        r.mzml_route(
+            "/api/dda_window",
+            &q,
+            &mut SorgenteLettore {
+                l: l.as_mut(),
+                c: 0,
+            },
+        )?
+    };
+    match a {
+        Some(a) => Ok(a),
+        None => r
+            .handle("/api/dda_window", &q)?
+            .ok_or_else(|| Error::new("err.route.unavailable")),
+    }
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
