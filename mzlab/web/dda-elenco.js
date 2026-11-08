@@ -22,7 +22,8 @@ function button(I, p) {
  * @param {Bag} I @param {Bag} p @param {Bag | null} w @param {string} why */
 export function sync(I, p, w, why) {
   const b = button(I, p), n = w ? w.n : 0, one = w && w.ms1 === 1, txt = T("dda.win.btn", { n });
-  const tip = !w ? T("dda.win.wait") : !n ? why : one ? T("dda.win.one") : T("dda.win.avg", { n: w.ms1 });
+  const cut = w && w.pintCut ? ". " + T("dda.win.cut", { n: w.pintCut }) : "";             // past these parents the precursor intensities stay unread
+  const tip = (!w ? T("dda.win.wait") : !n ? why : one ? T("dda.win.one") : T("dda.win.avg", { n: w.ms1 })) + (n ? cut : "");
   if (b.textContent !== txt) { b.textContent = txt; fitHdSoon(p); }
   if (b.title !== tip) { b.title = tip; b.setAttribute("aria-label", txt + ". " + tip); }
   b.setAttribute("aria-disabled", String(!n));
@@ -53,6 +54,10 @@ function open(I, p, b) {
   });
   let at = 0;
   const move = (/** @type {number} */ i) => { opts[at].setAttribute("aria-selected", "false"); at = Math.max(0, Math.min(opts.length - 1, i)); opts[at].setAttribute("aria-selected", "true"); pop.setAttribute("aria-activedescendant", opts[at].id); opts[at].scrollIntoView({ block: "nearest" }); };
+  if (w.pintCut) {                                    // one calm line over the rows, read with the list (a listbox holds only options)
+    const note = document.createElement("small"); note.id = `dw${p.id}-cut`; note.setAttribute("aria-hidden", "true");
+    note.textContent = T("dda.win.cut", { n: w.pintCut }); pop.append(note); pop.setAttribute("aria-describedby", note.id);
+  }
   pop.append(...opts);
   pop.addEventListener("keydown", e => {
     const k = e.key, step = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: opts.length - 1 }[k];
