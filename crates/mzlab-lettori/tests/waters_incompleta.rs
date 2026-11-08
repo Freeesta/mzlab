@@ -34,14 +34,12 @@ fn accorcia(f: &mut [(String, Vec<u8>)], nome: &str, di: usize) {
 
 #[test]
 fn a_folder_without_its_function_list_is_incomplete() {
-    for file in ["_FUNCTNS.INF"] {
-        let k = (
-            "err.file.folderIncomplete".into(),
-            "X.raw".into(),
-            file.into(),
-        );
-        assert_eq!(rifiuto(|f| senza(f, file)), k);
-    }
+    let k = (
+        "err.file.folderIncomplete".into(),
+        "X.raw".into(),
+        "_FUNCTNS.INF".into(),
+    );
+    assert_eq!(rifiuto(|f| senza(f, "_FUNCTNS.INF")), k);
 }
 
 #[test]
