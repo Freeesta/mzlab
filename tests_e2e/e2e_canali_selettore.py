@@ -20,7 +20,7 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("#pick", state="attached")
         pg.click("text=Carica dati"); ready(pg)
-        attendi(pg, f"{CH}.el.querySelector('[data-o=kind]')")
+        wait_for_js(pg, f"{CH}.el.querySelector('[data-o=kind]')")
         def one_button():
             n = pg.evaluate(f"{CH}.el.querySelectorAll('[data-o=canali]').length"); assert n == 0, n
             assert pg.evaluate(f"{CH}.el.querySelector('select[data-o=kind]')") is None
@@ -28,7 +28,7 @@ try:
         step("a single picker, shown as «TIC»; no Channels button", one_button)
         def groups():
             pg.click(".pnl.chrom [data-o=kind]")
-            attendi(pg, "document.querySelector('.can-pop:not([hidden]) [role=treeitem]')")
+            wait_for_js(pg, "document.querySelector('.can-pop:not([hidden]) [role=treeitem]')")
             g = pg.evaluate("[...document.querySelectorAll('.can-pop:not([hidden]) [role=group]')].map(e => e.getAttribute('aria-label'))")
             assert g[0] == "Spettrometria di massa" and "Rivelatori" in g, g
             h = pg.evaluate("[...document.querySelectorAll('.can-pop:not([hidden]) .can-hd span')].map(e => e.textContent)")
@@ -41,26 +41,26 @@ try:
             t = pg.evaluate(f"{CH}.el.querySelector('[data-o=kind] .can-bt').textContent"); assert t.endswith("+ 1"), t
         step("two channels: the label reads «… + 1»", label)
         def pressure():
-            attendi(pg, "document.querySelector('.can-pop:not([hidden])')")
+            wait_for_js(pg, "document.querySelector('.can-pop:not([hidden])')")
             pg.click(".can-pop:not([hidden]) [data-kind=press]"); ready(pg); frames(pg, 8)
             k = pg.evaluate(f"{CH}.kind"); assert k == "press", k
             v = pg.evaluate(f"(()=>{{const a={CH}._a;return [a.sr.length, a.sr[0].y.length]}})()"); assert v[0] == 1 and v[1] > 10, v
             assert pg.evaluate(f"{CH}.el.querySelector('[data-o=kind] .can-bt').textContent") == "Pressione della pompa"
         step("the pump pressure is drawn when picked", pressure)
         def back():
-            pg.click(".pnl.chrom [data-o=kind]"); attendi(pg, "document.querySelector('.can-pop:not([hidden])')")
+            pg.click(".pnl.chrom [data-o=kind]"); wait_for_js(pg, "document.querySelector('.can-pop:not([hidden])')")
             pg.click(".can-pop:not([hidden]) [data-omo='tic']"); ready(pg); frames(pg, 6)
             k = pg.evaluate(f"{CH}.kind"); assert k == "tic", k
         step("going back to a channel of scans", back)
         def keys():
             pg.keyboard.press("Escape")
             pg.focus(".pnl.chrom [data-o=kind]"); pg.keyboard.press("ArrowDown")
-            attendi(pg, "document.querySelector('.can-pop:not([hidden]) .can-row:focus')")
+            wait_for_js(pg, "document.querySelector('.can-pop:not([hidden]) .can-row:focus')")
             pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelector('.can-pop').hidden")
             assert pg.evaluate("document.activeElement.dataset.o") == "kind"
         step("keyboard: ArrowDown opens, Escape closes and returns the focus", keys)
         def size():
-            pg.click(".pnl.chrom [data-o=kind]"); attendi(pg, "document.querySelector('.can-pop:not([hidden])')")
+            pg.click(".pnl.chrom [data-o=kind]"); wait_for_js(pg, "document.querySelector('.can-pop:not([hidden])')")
             h = pg.evaluate("Math.min(...[...document.querySelectorAll('.can-pop:not([hidden]) .can-row')].filter(e => e.offsetParent).map(e => e.getBoundingClientRect().height))"); assert h >= 24, h
             b = pg.evaluate(f"{CH}.el.querySelector('[data-o=kind]').getBoundingClientRect().height"); assert b >= 24, b
             pg.keyboard.press("Escape")

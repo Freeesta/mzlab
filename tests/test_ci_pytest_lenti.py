@@ -10,7 +10,7 @@ def run(ts, **file):
     return {"tipo": "test_durate", "python": "3.11", "ts_utc": ts, "fasi": {f: [s, v, 0] for f, (s, v) in file.items()}}
 
 
-def test_ordine_per_media_e_soglia():
+def test_order_by_mean_and_threshold():
     ev = [run("2026-10-22T01:00:00Z", **{"tests/old.py": (0, 99)}),
           run("2026-10-22T02:00:00Z", **{"tests/a.py": (1, 9), "tests/b.py": (0, 30), "tests/c.py": (0, 2)}),
           run("2026-10-22T03:00:00Z", **{"tests/a.py": (1, 11), "tests/b.py": (0, 50), "tests/c.py": (0, 3)}),
@@ -19,14 +19,14 @@ def test_ordine_per_media_e_soglia():
     assert [f for f, _ in c.lenti(ev, ultimi=3, minimo=5)[:2]] == ["tests/old.py", "tests/b.py"]     # the mean also counts the runs where the file did not appear
 
 
-def test_senza_dati_lista_vuota():
+def test_no_data_empty_list():
     assert c.lenti([{"tipo": "run"}]) == []
 
 
-def test_gli_shard_della_stessa_corsa_si_uniscono():
-    def riga(run, parte, fasi):
-        return {"tipo": "test_durate", "python": "3.11", "parte": parte, "run_id": run, "ts_utc": f"2026-10-22T0{run}:00:00Z", "fasi": fasi}
+def test_shards_of_the_same_run_are_merged():
+    def row(run, parte, phases):
+        return {"tipo": "test_durate", "python": "3.11", "parte": parte, "run_id": run, "ts_utc": f"2026-10-22T0{run}:00:00Z", "fasi": phases}
 
-    ev = [riga(1, "rest", {"tests/a.py": [0, 6, 0]}), riga(1, "solo311", {"tests/b.py": [0, 9, 0]}),
-          riga(2, "rest", {"tests/a.py": [0, 4, 0]}), riga(2, "solo311", {"tests/b.py": [0, 7, 0]})]
+    ev = [row(1, "rest", {"tests/a.py": [0, 6, 0]}), row(1, "solo311", {"tests/b.py": [0, 9, 0]}),
+          row(2, "rest", {"tests/a.py": [0, 4, 0]}), row(2, "solo311", {"tests/b.py": [0, 7, 0]})]
     assert c.lenti(ev, ultimi=8, minimo=5.0) == [("tests/b.py", 8.0), ("tests/a.py", 5.0)]

@@ -30,6 +30,6 @@ def test_database_version_4_adds_only_the_molecules_store():
     assert res["ver"] == 4 and res["made"] == [["molecole", "id"]] and res["idempotent"], res
 
 
-def test_nomi_and_the_schema_name_the_same_version():
+def test_names_and_the_schema_name_the_same_version():
     assert re.search(r"const DB_VER = 4;", (WEB / "nomi.js").read_text(encoding="utf-8"))
     assert re.search(r"export const DB_VER = 4;", (WEB / "qqq-db.js").read_text(encoding="utf-8"))

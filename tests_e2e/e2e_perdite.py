@@ -85,8 +85,8 @@ try:
             pg.evaluate("window.HR.isHr=()=>true; CALCQUI.follow(() => ({ hr: true, name: 'Orbitrap' }), () => 1)"); pg.fill("#calcin", "62")
             pg.locator('#nl-list [data-d="Cl"]').click() if pg.locator('#nl-list [data-f="Cl"] .nldet:visible').count() == 0 else None
             d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "Levsen" not in d, d
-            attendi(pg, "/\\d\\.\\d{4}/.test(document.querySelector('#nl-res').innerText)"); assert "mDa" in pg.inner_text("#nl-res"), "four decimals and the error in mDa in HR"
-            pg.evaluate("window.HR.isHr=()=>false; CALCQUI.follow(() => ({ hr: false, name: 'QTRAP' }), () => 1)"); pg.fill("#calcin", "62"); attendi(pg, "!/\\d\\.\\d{2,}/.test(document.querySelector('#nl-res').innerText)")
+            wait_for_js(pg, "/\\d\\.\\d{4}/.test(document.querySelector('#nl-res').innerText)"); assert "mDa" in pg.inner_text("#nl-res"), "four decimals and the error in mDa in HR"
+            pg.evaluate("window.HR.isHr=()=>false; CALCQUI.follow(() => ({ hr: false, name: 'QTRAP' }), () => 1)"); pg.fill("#calcin", "62"); wait_for_js(pg, "!/\\d\\.\\d{2,}/.test(document.querySelector('#nl-res').innerText)")
             import re; assert not re.search(r"\d\.\d{2,}", pg.inner_text("#nl-res")), pg.inner_text("#nl-res")      # LR: masses to one decimal at most (and the error in Da), never the four decimals of HR
             pg.fill("#calcin", "")
         step("LR rounded to the unit / HR with four decimals, no references in both", hr_version)
@@ -102,7 +102,7 @@ try:
                     pg.set_viewport_size({"width": w, "height": h})
                     if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')")
                     # the layout settles after the resize event; wait for the state, then report who overflows
-                    try: attendi(pg, f"!({SW}).some(Boolean)", 5000)
+                    try: wait_for_js(pg, f"!({SW}).some(Boolean)", 5000)
                     except TimeoutError: pass
                     sw = pg.evaluate(SW)
                     if any(sw):

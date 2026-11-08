@@ -27,7 +27,7 @@ SHA = """async () => { const d = await (await (await navigator.storage.getDirect
 try:
     with sync_playwright() as p:
         a = r.page(p); a.add_init_script("document.addEventListener('DOMContentLoaded', () => { " + NOTES + " })"); a.reload()
-        attendi(a, "window.qqReady === true", 60000)
+        wait_for_js(a, "window.qqReady === true", 60000)
         cdp = a.context.new_cdp_session(a)
         def room(free, real):          # the room the page sees (estimate) and the one the browser enforces on writes (the worker's estimate does not see it)
             u = a.evaluate("navigator.storage.estimate().then(e => e.usage)")
@@ -37,18 +37,18 @@ try:
         ref = {}
         def copied():
             room(4 * SIZE, 4 * SIZE)
-            a.set_input_files("#pick", [SRC]); attendi(a, DONE, 240000)
+            a.set_input_files("#pick", [SRC]); wait_for_js(a, DONE, 240000)
             o = a.evaluate(WALK)
             assert o.get("files/grande.mzML") == SIZE, o
             ref["sha"] = a.evaluate(SHA)
-            a.evaluate("removeAllFiles()"); attendi(a, "ST.files.length === 0 && UPBUSY === 0", 30000)
-            attendi(a, "(" + WALK + ").then(o => !Object.keys(o).some(k => k.includes('grande')))", 30000)
+            a.evaluate("removeAllFiles()"); wait_for_js(a, "ST.files.length === 0 && UPBUSY === 0", 30000)
+            wait_for_js(a, "(" + WALK + ").then(o => !Object.keys(o).some(k => k.includes('grande')))", 30000)
         step("with room the file is copied, as before (the reference index)", copied)
         def in_place():
             room(int(SIZE * 1.2), int(SIZE * 0.6))         # the page sees room for the index alone; the browser refuses the copy halfway, as with a full disk
             a.evaluate("window.__notes = []")
             a.set_input_files("#pick", [SRC])
-            try: attendi(a, DONE, 240000)
+            try: wait_for_js(a, DONE, 240000)
             except Exception as e: raise AssertionError((a.evaluate(WALK), str(e)[:80], a.evaluate(WHY)))
             assert not a.evaluate("document.getElementById('quotadlg')?.open === true"), "the question was asked though the index fits"
             o = a.evaluate(WALK)
@@ -57,21 +57,21 @@ try:
             assert not [k for k in o if k.endswith(".part")], o
             assert a.evaluate("document.querySelectorAll('#unopen .fail, #unopen .quota-note, #flst .fl.up.err').length") == 0, a.evaluate("document.getElementById('unopen')?.innerText || ''")
             want = a.evaluate("I18N.t('load.sulPosto', { name: 'grande.mzML' })")
-            attendi(a, "(window.__notes || []).includes(%r)" % want, 30000)
+            wait_for_js(a, "(window.__notes || []).includes(%r)" % want, 30000)
         step("the copy refused halfway: it loads in place, no copy in files/, its index and marker in idx/, one calm notice", in_place)
         def same():
             assert a.evaluate(SHA) == ref["sha"], "the index read in place differs from the one built from the copy"
         step("the index built from the user's File is byte-identical to the one built from the copy", same)
         def reads():
-            attendi(a, "typeof E !== 'undefined' && E.files && E.files.some(f => f.k != null)", 60000)
+            wait_for_js(a, "typeof E !== 'undefined' && E.files && E.files.some(f => f.k != null)", 60000)
             j = a.evaluate("(async () => { const k = E.files.find(f => f.k != null).k; const s = await J(`api/spectra?k=${k}&i0=0&i1=5&level=1`); return [s.scans.length, s.scans[2].mz.length]; })()")
             assert j[0] > 0 and j[1] > 0, j
         step("the scans are read from the user's File (the spectra of the first scans)", reads)
         def reload():
-            a.reload(); attendi(a, "window.qqReady === true && window.MZLAB_LR !== undefined", 60000)
+            a.reload(); wait_for_js(a, "window.qqReady === true && window.MZLAB_LR !== undefined", 60000)
             want = a.evaluate("I18N.t('load.sulRiapri', { name: 'grande.mzML' })")
-            attendi(a, "(window.__notes || []).includes(%r)" % want, 30000)
-            attendi(a, "ST.files.length === 0", 30000)
+            wait_for_js(a, "(window.__notes || []).includes(%r)" % want, 30000)
+            wait_for_js(a, "ST.files.length === 0", 30000)
             o = a.evaluate(WALK)
             assert not [k for k in o if "grande" in k], ("the index of a file read in place stayed after the reload", o)
         step("after a reload: a calm notice says to load it again (the file is on the disk) and its index is removed", reload)

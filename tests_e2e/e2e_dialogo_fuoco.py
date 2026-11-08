@@ -17,32 +17,32 @@ try:
         load(pg, [D / "B_FullMass-t0.mzML"], 4000, 1)
         more = pg.locator("#dpanels .hmb:visible").first
         def xic_esc():
-            more.click(); pg.locator("#dpanels .hmore [data-a=xic]:visible").first.click(); attendi(pg, "document.querySelector('#xicdlg').open")
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#xicdlg').open")
-            try: attendi(pg, f"{FOCUS} === 'Altri strumenti del grafico'")
+            more.click(); pg.locator("#dpanels .hmore [data-a=xic]:visible").first.click(); wait_for_js(pg, "document.querySelector('#xicdlg').open")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
+            try: wait_for_js(pg, f"{FOCUS} === 'Altri strumenti del grafico'")
             except Exception: raise AssertionError(pg.evaluate("document.activeElement.outerHTML.slice(0, 160)"))
         step("XIC from the ⋯ menu, Esc: the focus goes back to the ⋯ button", xic_esc)
         def xic_cancel():
-            more.click(); pg.locator("#dpanels .hmore [data-a=xic]:visible").first.click(); attendi(pg, "document.querySelector('#xicdlg').open")
-            pg.click("#xic-no"); attendi(pg, "!document.querySelector('#xicdlg').open")
-            try: attendi(pg, f"{FOCUS} === 'Altri strumenti del grafico'")
+            more.click(); pg.locator("#dpanels .hmore [data-a=xic]:visible").first.click(); wait_for_js(pg, "document.querySelector('#xicdlg').open")
+            pg.click("#xic-no"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
+            try: wait_for_js(pg, f"{FOCUS} === 'Altri strumenti del grafico'")
             except Exception: raise AssertionError(pg.evaluate("document.activeElement.outerHTML.slice(0, 160)"))
         step("XIC from the ⋯ menu, Cancel: the same", xic_cancel)
         def shortcuts():
-            more.click(); pg.locator("#dpanels .hmore [data-a=log]:visible").first.focus(); pg.keyboard.press("Shift+?"); attendi(pg, "document.querySelector('#scorc') && document.querySelector('#scorc').open")
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#scorc').open")
-            attendi(pg, f"{FOCUS} !== 'body'")
+            more.click(); pg.locator("#dpanels .hmore [data-a=log]:visible").first.focus(); pg.keyboard.press("Shift+?"); wait_for_js(pg, "document.querySelector('#scorc') && document.querySelector('#scorc').open")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#scorc').open")
+            wait_for_js(pg, f"{FOCUS} !== 'body'")
         step("the shortcuts panel opened from a ⋯ menu item: Esc does not leave the focus on the body", shortcuts)
         def plain():
             pg.locator("#np-xic").focus() if pg.locator("#np-xic").is_visible() else None
-            pg.evaluate("document.activeElement.blur()"); pg.evaluate("openXic(null)"); attendi(pg, "document.querySelector('#xicdlg').open")
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#xicdlg').open")
+            pg.evaluate("document.activeElement.blur()"); pg.evaluate("openXic(null)"); wait_for_js(pg, "document.querySelector('#xicdlg').open")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
         step("a window opened with nothing focused still closes with Esc", plain)
         def calc():
             pg.click("#nav [data-v=draw]")
             for how in ("Escape", "#calcx"):
-                pg.click("#np-calc2"); attendi(pg, "!Q('#calcdlg').hidden && document.activeElement.id === 'calcin'")
-                pg.keyboard.press(how) if how == "Escape" else pg.click(how); attendi(pg, "Q('#calcdlg').hidden")
+                pg.click("#np-calc2"); wait_for_js(pg, "!Q('#calcdlg').hidden && document.activeElement.id === 'calcin'")
+                pg.keyboard.press(how) if how == "Escape" else pg.click(how); wait_for_js(pg, "Q('#calcdlg').hidden")
                 assert pg.evaluate("document.activeElement.id") == "np-calc2", (how, pg.evaluate(FOCUS))
         step("the floating calculator (Draw view), Esc and ×: the focus goes back to its toolbar button", calc)
     r.close()

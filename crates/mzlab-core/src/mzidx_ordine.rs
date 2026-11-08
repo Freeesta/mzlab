@@ -95,7 +95,7 @@ fn finish_runs<P: Copy>(s: &mut [P], key: &impl Fn(&P) -> u64, tie: Tie<P>) {
 }
 
 /// Orders the peaks of a bucket by m/z (and by scan when `per_scansione`; equal ones keep their order): the radix sort on the 32-bit order bits
-/// of an `f32` m/z (and the scan below them), or on the high half of the order bits of an `f64` and then the runs of equal halves by comparison.
+/// of an `f32` m/z (and the scan below them), or on the high 48 order bits of an `f64` (about 1e-8 Th at m/z 500, so HR ions repeated across scans rarely tie) and then the runs of equal keys by comparison.
 #[allow(clippy::disallowed_methods)] // hot path: per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
 pub(crate) fn ordina<T: Num>(
     s: &mut [Peak<T>],
@@ -117,7 +117,7 @@ pub(crate) fn ordina<T: Num>(
         // the scan goes below the order bits; without `per_scansione` the digits of the scan are not looked at
         radix(s, tmp, key32::<T>, usize::from(!per_scansione) * 4, None)
     } else {
-        radix(s, tmp, key64::<T>, 4, Some(&cmp))
+        radix(s, tmp, key64::<T>, 2, Some(&cmp))
     }
 }
 
@@ -268,7 +268,7 @@ fn key32<T: Num>(p: &Peak<T>) -> u64 {
     (u64::from(k) << 32) | u64::from(p.pos)
 }
 
-/// The same for an `f64` m/z, keeping the high half (the runs of equal halves are ordered by comparison).
+/// The same for an `f64` m/z, keeping the high 48 bits (the runs of equal keys are ordered by comparison).
 #[inline(always)]
 fn key64<T: Num>(p: &Peak<T>) -> u64 {
     let x = p.mz.to64();
@@ -277,7 +277,7 @@ fn key64<T: Num>(p: &Peak<T>) -> u64 {
         b if b >> 63 == 1 => !b,
         b => b | 1 << 63,
     };
-    k & !0xFFFF_FFFF
+    k & !0xFFFF
 }
 
 #[cfg(test)]
@@ -326,3 +326,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "mzidx_ordine_prove.rs"]
+mod prove;

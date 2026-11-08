@@ -17,13 +17,13 @@ try:
         def title(view, name):
             def f():
                 pg.click(f"#nav [data-v={view}]")
-                attendi(pg, f"document.title === {name!r}".replace("'", '"'), 10000)
+                wait_for_js(pg, f"document.title === {name!r}".replace("'", '"'), 10000)
             step(f"title of {view}", f)
         for view, name in [("flow", f"Flow · {app}"), ("tpmine", f"Tabui · {app}"), ("draw", pg.evaluate("I18N.t('nav.draw')") + f" · {app}"), ("data", None)]:
             if name: title(view, name)
             else:
                 def d():
-                    pg.click("#nav [data-v=data]"); attendi(pg, 'document.querySelector("#v-data") && !document.querySelector("#v-data").hidden || !document.querySelector("#start").hidden', 10000); assert " · " not in pg.title(), pg.title()
+                    pg.click("#nav [data-v=data]"); wait_for_js(pg, 'document.querySelector("#v-data") && !document.querySelector("#v-data").hidden || !document.querySelector("#start").hidden', 10000); assert " · " not in pg.title(), pg.title()
                 step("title of data", d)
     r.close()
 except Exception as e:

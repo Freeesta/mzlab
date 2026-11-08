@@ -43,10 +43,10 @@ def settle(q):
 
 def setup(q):
     ready(q)
-    if q.is_visible("#dfiles"): close_side(q); attendi(q, "(()=>{const d=document.querySelector('#dfiles');return !d||!d.offsetParent})()")      # the File panel is open at first start: the test measures the panel headers at the width of the window
+    if q.is_visible("#dfiles"): close_side(q); wait_for_js(q, "(()=>{const d=document.querySelector('#dfiles');return !d||!d.offsetParent})()")      # the File panel is open at first start: the test measures the panel headers at the width of the window
     q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000)
-    q.evaluate("(()=>{addPanel('xic',{tab:E.tab,traces:[HR.ionTrace(305.0702,{tab:E.tab})],x:0,y:700,w:hostWidth(),h:300,full:true});relayout();fitHost()})()"); attendi(q, "E.panels.some(p=>p.type==='xic')")
-    q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full'); if(f){addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()}})()"); attendi(q, "E.panels.some(p=>p.type==='map')||!E.files.find(x=>x.kind==='full')"); settle(q)
+    q.evaluate("(()=>{addPanel('xic',{tab:E.tab,traces:[HR.ionTrace(305.0702,{tab:E.tab})],x:0,y:700,w:hostWidth(),h:300,full:true});relayout();fitHost()})()"); wait_for_js(q, "E.panels.some(p=>p.type==='xic')")
+    q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full'); if(f){addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()}})()"); wait_for_js(q, "E.panels.some(p=>p.type==='map')||!E.files.find(x=>x.kind==='full')"); settle(q)
 
 try:
     with sync_playwright() as p:
@@ -55,11 +55,11 @@ try:
         setup(pg)
         assert pg.evaluate("E.panels.some(p=>p.type==='chrom') && E.panels.some(p=>p.type==='spec') && E.panels.some(p=>p.type==='xic')")
 
-        def larghe():
+        def wide_layouts():
             for w in (1280, 1440, 1680):
                 pg.set_viewport_size({"width": w, "height": 900}); settle(pg)
                 res = check(pg, w); print(w, [(x["type"], x["rows"], x["more"]) for x in res])
-        step("header on one row at 1280, 1440, 1680 px", larghe)
+        step("header on one row at 1280, 1440, 1680 px", wide_layouts)
 
         def strette():
             seen = False
@@ -71,9 +71,9 @@ try:
             cid = pg.evaluate("E.panels.find(p=>p.type==='chrom').id")
             sel = f"E.panels.find(p=>p.id=={cid}).el"
             assert pg.evaluate(f"!{sel}.querySelector('[data-a=more]').hidden"), "chromatogram header has the «⋯» button at 700 px"
-            pg.evaluate(f"{sel}.querySelector('[data-a=more]').click()"); attendi(pg, f"!{sel}.querySelector('.hmore').hidden")
+            pg.evaluate(f"{sel}.querySelector('[data-a=more]').click()"); wait_for_js(pg, f"!{sel}.querySelector('.hmore').hidden")
             assert pg.evaluate(f"!{sel}.querySelector('.hmore').hidden && {sel}.querySelector('.hmore').children.length>0 && {sel}.querySelector('[data-a=more]').getAttribute('aria-expanded')==='true'")
-            pg.keyboard.press("Escape"); attendi(pg, f"{sel}.querySelector('.hmore').hidden")
+            pg.keyboard.press("Escape"); wait_for_js(pg, f"{sel}.querySelector('.hmore').hidden")
             assert pg.evaluate(f"{sel}.querySelector('.hmore').hidden")
             pg.set_viewport_size({"width": 1680, "height": 900}); settle(pg)
             assert pg.evaluate(f"{sel}.querySelector('[data-a=more]').hidden && {sel}.querySelector('.hmore').children.length===0"), "with room again everything is back in the header"
@@ -83,13 +83,13 @@ try:
             cid = pg.evaluate("E.panels.find(p=>p.type==='chrom').id")
             b = f"E.panels.find(p=>p.id=={cid}).el.querySelector('[data-a=smooth]')"
             assert pg.evaluate(f"{b}.getAttribute('aria-pressed')") == "true" and pg.evaluate(f"{b}.tagName") == "BUTTON"
-            pg.evaluate(f"E.active=E.panels.find(p=>p.id=={cid}); BARRA.commands.find(c=>c.id==='smooth').run()"); attendi(pg, f"E.panels.find(p=>p.id=={cid}).smooth===false")
+            pg.evaluate(f"E.active=E.panels.find(p=>p.id=={cid}); BARRA.commands.find(c=>c.id==='smooth').run()"); wait_for_js(pg, f"E.panels.find(p=>p.id=={cid}).smooth===false")
             assert pg.evaluate(f"E.panels.find(p=>p.id=={cid}).smooth") is False and pg.evaluate(f"{b}.getAttribute('aria-pressed')") == "false"
-            pg.evaluate(f"{b}.click()"); attendi(pg, f"E.panels.find(p=>p.id=={cid}).smooth===true")
+            pg.evaluate(f"{b}.click()"); wait_for_js(pg, f"E.panels.find(p=>p.id=={cid}).smooth===true")
             assert pg.evaluate(f"E.panels.find(p=>p.id=={cid}).smooth") is True and pg.evaluate(f"{b}.getAttribute('aria-pressed')") == "true"
         step("Smoothing: a button, also reachable from the palette command", smoothing)
 
-        def cassetto():
+        def drawer_states():
             for w in (1280, 1440, 1680):
                 pg.set_viewport_size({"width": w, "height": 900}); settle(pg)
                 pg.evaluate("BARRA.setTab('file',{noFocus:true})"); settle(pg)
@@ -97,7 +97,7 @@ try:
                 pg.evaluate("BARRA.show('file',{noFocus:true})"); settle(pg)
                 check(pg, ("pinned", w))
                 pg.evaluate("BARRA.close && BARRA.close()"); settle(pg)
-        step("drawer open or pinned: headers stay on one row, nothing cut (1280, 1440, 1680)", cassetto)
+        step("drawer open or pinned: headers stay on one row, nothing cut (1280, 1440, 1680)", drawer_states)
 
         def ipad():
             for w, h in ((1024, 1366), (1366, 1024), (768, 1024), (834, 1194), (1100, 900), (600, 900)):

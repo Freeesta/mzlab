@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici as ds  # noqa: E402
 import dati_sintetici_dad as dd  # noqa: E402
 
-ESEMPI = ROOT / "mzlab" / "web" / "esempi"
+EXAMPLES = ROOT / "mzlab" / "web" / "esempi"
 
 
 def _matrix(path: Path):
@@ -25,7 +25,7 @@ def _matrix(path: Path):
 
 def test_demos_carry_a_small_consistent_matrix():
     for t in dd.DEMOS:
-        f = ESEMPI / f"FullScan_t{t}.mzML"
+        f = EXAMPLES / f"FullScan_t{t}.mzML"
         assert f.stat().st_size <= dd.STEP_MAX, f.name
         assert dd.check(f) == [], f.name
         m, p = _matrix(f)
@@ -33,11 +33,11 @@ def test_demos_carry_a_small_consistent_matrix():
 
 
 def test_bands_follow_the_compounds_and_the_kinetics():
-    m, p = _matrix(ESEMPI / "FullScan_t10.mzML")
+    m, p = _matrix(EXAMPLES / "FullScan_t10.mzML")
     rt = np.linspace(p["rt_start"], p["rt_stop"], int(p["n_rt"]))
     at = lambda c: dd.WL[m[int(np.argmin(abs(rt - c)))].argmax()]
     assert abs(at(14.30) - 224) <= 4 and abs(at(7.07) - 248) <= 4
-    peak = lambda t, c: (lambda m, p: m[int(np.argmin(abs(np.linspace(p["rt_start"], p["rt_stop"], int(p["n_rt"])) - c)))].max())(*_matrix(ESEMPI / f"FullScan_t{t}.mzML"))
+    peak = lambda t, c: (lambda m, p: m[int(np.argmin(abs(np.linspace(p["rt_start"], p["rt_stop"], int(p["n_rt"])) - c)))].max())(*_matrix(EXAMPLES / f"FullScan_t{t}.mzML"))
     assert peak(0, 14.30) > peak(30, 14.30)                  # the parent decays
     assert peak(0, 7.07) < peak(30, 7.07)                    # TP 1 grows
 

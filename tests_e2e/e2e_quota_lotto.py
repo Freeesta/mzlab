@@ -21,7 +21,7 @@ DONE = "UPBUSY === 0 && OPENNOW.busy() === 0"
 NOTE = "[...document.querySelectorAll('#unopen .quota-note')]"
 try:
     with sync_playwright() as p:
-        a = r.page(p); attendi(a, "window.qqReady === true", 60000)
+        a = r.page(p); wait_for_js(a, "window.qqReady === true", 60000)
         cdp = a.context.new_cdp_session(a)
         def room(free, slack):          # the room the page sees (estimate) and the one the browser enforces on writes
             u = a.evaluate("navigator.storage.estimate().then(e => e.usage)")
@@ -31,13 +31,13 @@ try:
         room(FREE, SLACK)
         def ask():
             a.set_input_files("#pick", names)
-            attendi(a, "document.getElementById('quotadlg')?.open === true", 30000)
+            wait_for_js(a, "document.getElementById('quotadlg')?.open === true", 30000)
             t = a.evaluate("document.getElementById('quotadlg').textContent")
             assert str(N) in t and "2" in t, t
             assert a.evaluate("document.querySelectorAll('#flst [data-up]').length") == 0, "a file started copying before the question"
         step("a batch bigger than the room asks once, before copying: N files, the room, how many fit", ask)
         def first():
-            a.click("#quotadlg [data-q=first]"); attendi(a, DONE, 240000)
+            a.click("#quotadlg [data-q=first]"); wait_for_js(a, DONE, 240000)
             why = "[ST.files.map(f => f.name), [...MZLAB_LOADFAIL], document.getElementById('unopen').innerText.slice(0, 600), navigator.storage.estimate().then(e => e.usage)]"
             assert a.evaluate("ST.files.length") == 2, a.evaluate(why)
             assert a.evaluate(NOTE + ".length") == 1, a.evaluate(why)
@@ -47,9 +47,9 @@ try:
         step("«Load the first ones»: two load, one message says four were not loaded, with «Retry the rest»", first)
         def full():
             room(0, 10 * 2**20)
-            a.click("#unopen [data-a=quota-retry]"); attendi(a, "document.getElementById('quotadlg')?.open === true", 30000)
+            a.click("#unopen [data-a=quota-retry]"); wait_for_js(a, "document.getElementById('quotadlg')?.open === true", 30000)
             assert a.evaluate("document.querySelector('#quotadlg [data-q=first]').hidden"), "none fits: no «Load the first ones»"
-            a.click("#quotadlg [data-q=all]"); attendi(a, DONE, 240000)
+            a.click("#quotadlg [data-q=all]"); wait_for_js(a, DONE, 240000)
             assert a.evaluate("ST.files.length") == 2, a.evaluate("ST.files.map(f => f.name)")
             assert a.evaluate(NOTE + ".length") == 1, a.evaluate("document.getElementById('unopen').innerText")
             t = a.evaluate(NOTE + "[0].textContent"); assert "4" in t, t
@@ -57,18 +57,18 @@ try:
             assert a.evaluate("document.querySelectorAll('#flst .fl.up.err').length") == 0, "error rows left in the side list"
         step("«Try all» with no room: the queue stops at the first refusal, ONE message, no error per file", full)
         def panel():
-            a.click("#unopen [data-a=quota-free]"); attendi(a, "document.getElementById('spaziodlg')?.open === true", 30000)
-            attendi(a, "document.querySelectorAll('#spaziovoci li').length === 3", 30000)
+            a.click("#unopen [data-a=quota-free]"); wait_for_js(a, "document.getElementById('spaziodlg')?.open === true", 30000)
+            wait_for_js(a, "document.querySelectorAll('#spaziovoci li').length === 3", 30000)
             t = a.evaluate("document.getElementById('spaziodlg').innerText")
             assert re.search(r"\d[\d.]* (MB|GB)", a.evaluate("document.getElementById('spaziouso').textContent")), t
             assert "2" in a.evaluate("document.querySelector('#spaziovoci li').textContent"), t       # the two files loaded
             assert a.evaluate("document.getElementById('spaziopriv').textContent") == "", "a normal window is not called private: " + t
             assert not a.evaluate("document.querySelector('#spaziodlg [data-s=all]').hidden")
-            a.keyboard.press("Escape"); attendi(a, "!document.getElementById('spaziodlg').open")
+            a.keyboard.press("Escape"); wait_for_js(a, "!document.getElementById('spaziodlg').open")
             # a quota under 2 GB, as a private window gives: the panel says so and points to a normal window
             a.evaluate("""() => { const f = window.fetch; window.__f0 = f; window.fetch = async (u, o) => { const r = await f(u, o); if (!String(u).startsWith('api/spazio')) return r;
                 const j = await r.json(); return new Response(JSON.stringify({ ...j, quota: 300 * 1048576 })); }; }""")
-            a.click("#unopen [data-a=quota-free]"); attendi(a, "document.getElementById('spaziopriv').textContent.length > 0", 30000)
+            a.click("#unopen [data-a=quota-free]"); wait_for_js(a, "document.getElementById('spaziopriv').textContent.length > 0", 30000)
             assert "300 MB" in a.evaluate("document.getElementById('spaziopriv').textContent")
             a.evaluate("window.fetch = window.__f0; 0"); a.keyboard.press("Escape")
         step("«Free space»: granted and used in real numbers, files, indexes, leftovers; a quota under 2 GB names the private window", panel)
@@ -83,12 +83,12 @@ try:
         step("the refused files leave no partial copy, no half-written index: only the two loaded files and their indexes", clean)
         def freed():
             u0 = a.evaluate("navigator.storage.estimate().then(e => e.usage)")
-            a.evaluate("removeAllFiles()"); attendi(a, "ST.files.length === 0 && " + DONE, 30000)
-            attendi(a, "navigator.storage.estimate().then(e => e.usage < %d)" % (u0 - 40 * 2**20), 30000)
+            a.evaluate("removeAllFiles()"); wait_for_js(a, "ST.files.length === 0 && " + DONE, 30000)
+            wait_for_js(a, "navigator.storage.estimate().then(e => e.usage < %d)" % (u0 - 40 * 2**20), 30000)
         step("«Remove all» gives the room back at once (the estimate falls by the two files)", freed)
         def one():
             room(0, 10 * 2**20)
-            a.set_input_files("#pick", names[:1]); attendi(a, DONE + " && document.querySelectorAll('#unopen .quota-note').length === 1", 240000)     # under 50 MB: no question, the write is refused
+            a.set_input_files("#pick", names[:1]); wait_for_js(a, DONE + " && document.querySelectorAll('#unopen .quota-note').length === 1", 240000)     # under 50 MB: no question, the write is refused
             assert a.evaluate(NOTE + ".length") == 1, a.evaluate("document.getElementById('unopen').innerText")
             t = a.evaluate(NOTE + "[0].textContent")
             assert len(re.findall(r"\d+ MB", t)) >= 2, "a single file says the MB it needs and the room: " + t

@@ -26,8 +26,8 @@ def feat_bytes(arrays, rows, files, evid):
     return head + b"\0" * (-len(head) % 64) + data
 
 
-def proof(tipo, valore, soglia, punti, segno):
-    return {"tipo": tipo, "valore": valore, "soglia": soglia, "punti": punti, "segno": segno, "fonte": "test", "versione": 1, "parametri": {}}
+def proof(tipo, value, threshold, points, sign):
+    return {"tipo": tipo, "valore": value, "soglia": threshold, "punti": points, "segno": sign, "fonte": "test", "versione": 1, "parametri": {}}
 
 
 def series():

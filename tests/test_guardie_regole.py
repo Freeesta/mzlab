@@ -67,7 +67,7 @@ def extract_literals(path: Path):
 # ==============================================================================
 
 
-def test_guardia_tutto_in_rust_albero_mzlab_nessun_python_non_autorizzato():
+def test_guard_all_in_rust_mzlab_tree_no_unauthorized_python():
     """Tutto in Rust rule: engine computation must live in Rust (crates/).
 
     The Python package mzlab/ is strictly a parity reference; no unauthorized Python
@@ -84,7 +84,7 @@ def test_guardia_tutto_in_rust_albero_mzlab_nessun_python_non_autorizzato():
     )
 
 
-def test_guardia_tutto_in_rust_web_senza_python():
+def test_guard_all_in_rust_web_without_python():
     """Web distribution rule: mzlab/web/ must never contain any Python files."""
     cmd = ["git", "ls-files", "mzlab/web"]
     out = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
@@ -92,7 +92,7 @@ def test_guardia_tutto_in_rust_web_senza_python():
     assert not web_py, f"Python files found in web distribution (mzlab/web/): {web_py}"
 
 
-def test_guardia_tutto_in_rust_tpmine_senza_runtime_python():
+def test_guard_all_in_rust_tpmine_without_python_runtime():
     """Tabui / TP_Mine runtime must have zero Python execution files.
 
     Only test files in TP_Mine/tests/ are allowed for offline data generation.
@@ -111,7 +111,7 @@ def test_guardia_tutto_in_rust_tpmine_senza_runtime_python():
 # ==============================================================================
 
 
-def test_guardia_tabui_nessuna_chiave_lang():
+def test_guard_tabui_no_lang_key():
     """Tabui is English only: TP_Mine/js files must not use the lang/ translation catalogs."""
     for subdir in ("js", "lazy", "files"):
         for path in sorted((TP_MINE / subdir).glob("*.js")):
@@ -122,14 +122,14 @@ def test_guardia_tabui_nessuna_chiave_lang():
             )
 
 
-def test_guardia_tabui_nessuna_chiave_interna_in_lang_catalog():
+def test_guard_tabui_no_internal_key_in_lang_catalog():
     """Main application lang catalogs (lang/it.js, lang/en.js) must not contain internal Tabui keys."""
     for lang in ("it", "en"):
         src = lang_catalogo.testo(lang)
         assert not re.search(r'"tpmine\.', src), f"mzlab/web/lang/{lang}.js has tpmine.* keys"
 
 
-def test_guardia_tabui_testi_ui_in_inglese():
+def test_guard_tabui_ui_texts_in_english():
     """Tabui UI strings in TP_Mine/js, TP_Mine/lazy, TP_Mine/files must be strictly in English."""
     violations = []
     for subdir in ("js", "lazy", "files"):
@@ -143,7 +143,7 @@ def test_guardia_tabui_testi_ui_in_inglese():
     assert not violations, "Italian text found in Tabui files:\n" + "\n".join(violations[:25])
 
 
-def test_guardia_tabui_formula_mai_da_sola():
+def test_guard_tabui_formula_never_alone():
     """Rule 'Formula mai da sola': the word 'formula' must never appear alone.
 
     It must always be qualified (e.g. 'Neutral formula', '[M+H]+ formula',
@@ -180,53 +180,53 @@ def test_guardia_tabui_formula_mai_da_sola():
     )
 
 
-def test_guardia_nessun_relaxed_simd_nei_file_di_build():
+def test_guard_no_relaxed_simd_in_build_files():
     """Relaxed SIMD gives CPU-dependent results: the site and the app must stay byte for byte equal, so it never enters a build file."""
     files = [ROOT / ".cargo/config.toml", ROOT / "Cargo.toml", ROOT / "rust-toolchain.toml"]
     files += sorted((ROOT / "tools").glob("*.sh")) + sorted((ROOT / ".github/workflows").glob("*.yml"))
     files += sorted(ROOT.glob("crates/*/Cargo.toml")) + sorted(ROOT.glob("crates/*/.cargo/config.toml"))
-    trovati = []
+    found = []
     for f in files:
         if f.exists() and re.search(r"relaxed[-_]simd", f.read_text(encoding="utf-8"), re.IGNORECASE):
-            trovati.append(str(f.relative_to(ROOT)))
-    assert not trovati, f"relaxed SIMD in build files: {trovati}"
+            found.append(str(f.relative_to(ROOT)))
+    assert not found, f"relaxed SIMD in build files: {found}"
 
 
 # Std sorts cost 2-10 KB of .wasm per instance: the wasm crates use `mzlab_picchi::sortc` (docs/agenti/wasm-tetti.md, «Ordinamenti»).
 SORT_STD = re.compile(r"\.sort(_unstable)?(_by(_key)?|_by_cached_key)?\(")
 # folders that keep std sorts (raw-data detection, legacy reference)
-SORT_STD_AMMESSI = ("crates/mzlab-feat/src/untargeted/", "crates/mzlab-feat/src/legacy/")
+SORT_STD_ALLOWED = ("crates/mzlab-feat/src/untargeted/", "crates/mzlab-feat/src/legacy/")
 
 
-def test_guardia_ordinamenti_std_solo_sortc_nei_crate_wasm():
-    trovati = []
+def test_guard_std_sorts_only_sortc_in_wasm_crates():
+    found = []
     for crate in ("mzlab-lib", "mzlab-feat", "mzlab-feat-wasm"):
         for f in sorted((ROOT / "crates" / crate / "src").rglob("*.rs")):
             rel = f.relative_to(ROOT).as_posix()
-            if rel.startswith(SORT_STD_AMMESSI) or f.stem.endswith("tests") or f.parent.name == "tests":
+            if rel.startswith(SORT_STD_ALLOWED) or f.stem.endswith("tests") or f.parent.name == "tests":
                 continue
             testo = f.read_text(encoding="utf-8").split("#[cfg(test)]")[0]
-            for n, riga in enumerate(testo.splitlines(), 1):
-                if SORT_STD.search(riga) and not riga.lstrip().startswith("//"):
-                    trovati.append(f"{rel}:{n}")
-    assert not trovati, f"use sortc (SortC::sortc_by...) instead of std sorts: {trovati}"
+            for n, row in enumerate(testo.splitlines(), 1):
+                if SORT_STD.search(row) and not row.lstrip().startswith("//"):
+                    found.append(f"{rel}:{n}")
+    assert not found, f"use sortc (SortC::sortc_by...) instead of std sorts: {found}"
 
 
 def test_guardia_costanti_di_massa_solo_in_elements():
     """Proton, electron and 13C step are written once (mzlab-core elements.rs); crates import them by name."""
     pat = re.compile(r"1\.00727|1\.007_276|0\.00054858|1\.00335|1\.003_35")
-    trovati = []
+    found = []
     for f in sorted(ROOT.glob("crates/*/src/**/*.rs")):
         rel = f.relative_to(ROOT).as_posix()
         if rel.endswith("mzlab-core/src/elements.rs") or "tests" in f.name or "/tests" in rel:
             continue
-        for n, riga in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
-            if pat.search(riga) and not riga.lstrip().startswith("//"):
-                trovati.append(f"{rel}:{n}")
-    assert not trovati, f"mass constant literals outside elements.rs: {trovati}"
+        for n, row in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            if pat.search(row) and not row.lstrip().startswith("//"):
+                found.append(f"{rel}:{n}")
+    assert not found, f"mass constant literals outside elements.rs: {found}"
 
 
-def test_guardia_rustc_bootstrap_solo_nelle_build_wasm_del_sito():
+def test_guard_rustc_bootstrap_only_in_site_wasm_builds():
     """RUSTC_BOOTSTRAP / -Z flags live only in tools/cargo_wasm.sh; native builds and the repo config never see them,
     and the site workflows and scripts build their .wasm through it."""
     assert "RUSTC_BOOTSTRAP" not in (ROOT / ".cargo" / "config.toml").read_text(encoding="utf-8")

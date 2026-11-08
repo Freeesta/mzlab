@@ -5,7 +5,7 @@ from pathlib import Path
 import dati_sintetici as ds
 
 
-def margini_mzml(path: Path) -> Path:
+def margins_mzml(path: Path) -> Path:
     """600 scans, RT 0.5-20 min: ion 250.3 flat at 2e4 (baseline), 300.3 and 350.3 narrow peaks at RT 14.4 and 8.0, light noise."""
     rng = np.random.default_rng(7)
     rts = np.linspace(0.5, 20.0, 600)

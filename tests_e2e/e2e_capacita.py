@@ -22,7 +22,7 @@ def load(b, q=""):
     pg.goto(f"http://127.0.0.1:{r.port}/{q}"); ready(pg); return pg
 
 def open_example(pg):
-    pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1")
+    pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1")
     pg.click("#opbtn"); ready(pg)
     assert pg.evaluate("E.panels.length") > 0, "Dati opened no panel"
 
@@ -35,7 +35,7 @@ try:
             assert pg.evaluate(NOTE) == 0, "notice without cap-off: " + str(pg.evaluate("[CAPACITA.snapshot(), document.getElementById('cap-live').innerText]"))
             assert all(pg.evaluate(f"CAPACITA.stato('{f}')") != "no" for f in set(FN.values()) if f != "indiceParallelo"), "a function is off in a normal Chromium"
             open_example(pg); assert pg.evaluate(NOTE) == 0, "notice after opening a file"
-            attendi(pg, "CAPACITA.statoCap('opfsSync') !== 'verifica'")            # the engine worker told it in its ready message
+            wait_for_js(pg, "CAPACITA.statoCap('opfsSync') !== 'verifica'")            # the engine worker told it in its ready message
             assert pg.evaluate("CAPACITA.statoCap('opfsSync')") == "si"
         step("no cap-off: no notice, Dati works", clean)
         def cost():
@@ -49,9 +49,9 @@ try:
                 assert pg.evaluate(f"CAPACITA.stato('{fn}')") == "no" and not pg.evaluate(f"CAPACITA.ha('{cap}')")
                 if fn != "motore": open_example(pg)                               # everything that is not the engine's: Dati works
                 if fn == "motore":
-                    attendi(pg, "window.MZLAB_RUST && window.MZLAB_RUST.disabled === true"); attendi(pg, "document.getElementById('cap-live')")
+                    wait_for_js(pg, "window.MZLAB_RUST && window.MZLAB_RUST.disabled === true"); wait_for_js(pg, "document.getElementById('cap-live')")
                 elif fn == "cartella":
-                    pg.evaluate("LIB.open()"); attendi(pg, "document.getElementById('lib-fchoose') && !document.getElementById('lib-fchoose').hidden")
+                    pg.evaluate("LIB.open()"); wait_for_js(pg, "document.getElementById('lib-fchoose') && !document.getElementById('lib-fchoose').hidden")
                     assert pg.get_attribute("#lib-fchoose", "aria-disabled") == "true"
                 elif fn == "mappa3d":
                     pg.click("#np-map"); ready(pg)
@@ -61,7 +61,7 @@ try:
                 else:
                     pg.evaluate("(() => { const b = document.createElement('button'); b.id = 'probe'; document.body.appendChild(b); CAPACITA.serve('indiceParallelo', b); })()")
                     assert pg.get_attribute("#probe", "aria-disabled") == "true"
-                attendi(pg, "document.getElementById('cap-live')"); t = pg.inner_text("#cap-live"); assert "non disponibile in questo browser" in t, t
+                wait_for_js(pg, "document.getElementById('cap-live')"); t = pg.inner_text("#cap-live"); assert "non disponibile in questo browser" in t, t
                 assert any("github.com/Freeesta/mzlab/releases" in h for h in pg.evaluate("[...document.querySelectorAll('#cap-live a')].map(a => a.href)")), "no link to the app"
             step(f"cap-off={cap}: «{fn}» off with the notice and the link", off)
         b.close()

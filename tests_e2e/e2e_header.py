@@ -42,7 +42,7 @@ try:
             cx = (min(x for x, _ in ink) + max(x for x, _ in ink) + 1) / 2; cy = (min(y for _, y in ink) + max(y for _, y in ink) + 1) / 2
             assert abs(cx - w / 2) <= 0.75 and abs(cy - h / 2) <= 0.75, ("the drawn i is off centre", cx, cy, w, h)
         step("the i is centred in its round button (box and drawn glyph, three zoom levels)", centred)
-        def correzione():
+        def correction():
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
             pg.click("text=Carica dati"); ready(pg)
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2000)
@@ -56,7 +56,7 @@ try:
             pg.click('.pnl.xic .corri[data-c="snip"]'); pg.wait_for_timeout(800)
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').fondo.mode") == "auto" and "Fondo automatico" in pg.get_attribute('.pnl.xic [data-o="bkg"]', "aria-label")
             pg.screenshot(path=SH + "correzione.png")
-        step("Correzione: a drop-down with an icon and a short label for every choice", correzione)
+        step("Correzione: a drop-down with an icon and a short label for every choice", correction)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

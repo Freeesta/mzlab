@@ -309,7 +309,7 @@ try:
             pg.evaluate("document.querySelector('#pv-det').hidden = true")        # the detail of the list of identities, opened by the step before
             # the first two columns stay while the table scrolls sideways
             x0 = pg.evaluate("document.querySelectorAll('#ft-t thead th')[1].getBoundingClientRect().left")
-            pg.evaluate("(() => { const w = document.querySelector('#ft-host .tpt-wrap'); w.style.maxWidth = '380px'; w.scrollLeft = 150; })()"); lib.attendi(pg, "document.querySelector('#ft-host .tpt-wrap').scrollLeft > 0 || document.querySelector('#ft-host .tpt-wrap').scrollWidth <= document.querySelector('#ft-host .tpt-wrap').clientWidth")
+            pg.evaluate("(() => { const w = document.querySelector('#ft-host .tpt-wrap'); w.style.maxWidth = '380px'; w.scrollLeft = 150; })()"); lib.wait_for_js(pg, "document.querySelector('#ft-host .tpt-wrap').scrollLeft > 0 || document.querySelector('#ft-host .tpt-wrap').scrollWidth <= document.querySelector('#ft-host .tpt-wrap').clientWidth")
             assert abs(pg.evaluate("document.querySelectorAll('#ft-t thead th')[1].getBoundingClientRect().left") - x0) < 2, "Identity stays in place"
             pg.evaluate("(() => { const w = document.querySelector('#ft-host .tpt-wrap'); w.scrollLeft = 0; w.style.maxWidth = ''; })()")
             # a chip is the same view as the numeric field

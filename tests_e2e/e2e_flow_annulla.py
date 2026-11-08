@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi; PORT = free_port()
+from lib import free_port, wait_for_js; PORT = free_port()
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -28,15 +28,15 @@ try:
         pg.click('#nav button[data-v="flow"]'); pg.wait_for_selector("#flx-root", timeout=30000)
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: pg.click(f'.fl-it[data-step="{s}"]')
-        attendi(pg, "document.querySelectorAll('.fl-card').length === 4")
+        wait_for_js(pg, "document.querySelectorAll('.fl-card').length === 4")
         def undo_on_a_select():
             val = lambda: pg.evaluate("document.querySelector('#fl-alg-detect').value")
             before = val()
             other = pg.evaluate("[...document.querySelectorAll('#fl-alg-detect option')].map(o => o.value).find(v => v && v !== document.querySelector('#fl-alg-detect').value && !/threshold/.test(v))")
             assert other, "no second available algorithm"
-            pg.select_option("#fl-alg-detect", other); attendi(pg, f"document.querySelector('#fl-alg-detect').value === '{other}'")
-            pg.focus("#fl-alg-detect"); pg.keyboard.press("Control+z"); attendi(pg, f"document.querySelector('#fl-alg-detect').value === '{before}'")
-            pg.focus("#fl-alg-detect"); pg.keyboard.press("Control+y"); attendi(pg, f"document.querySelector('#fl-alg-detect').value === '{other}'")
+            pg.select_option("#fl-alg-detect", other); wait_for_js(pg, f"document.querySelector('#fl-alg-detect').value === '{other}'")
+            pg.focus("#fl-alg-detect"); pg.keyboard.press("Control+z"); wait_for_js(pg, f"document.querySelector('#fl-alg-detect').value === '{before}'")
+            pg.focus("#fl-alg-detect"); pg.keyboard.press("Control+y"); wait_for_js(pg, f"document.querySelector('#fl-alg-detect').value === '{other}'")
         step("Ctrl+Z and Ctrl+Y work with the focus on a select of the form", undo_on_a_select)
         b.close()
 finally:

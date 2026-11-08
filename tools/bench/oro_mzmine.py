@@ -71,12 +71,12 @@ def componenti(nome: str) -> list[tuple[float, float, float, float]]:
 
 def sha_contenuto(dati: bytes) -> str:
     """sha256 of the mzML with every binary array decoded and written as text with 6 significant digits: neither the zlib bytes nor the last bits of the floats (libm and SIMD paths change with the CPU of the machine) enter the hash, the content does."""
-    def arrotonda(m: re.Match) -> bytes:
+    def rounded(m: re.Match) -> bytes:
         head, payload = m.group(1), m.group(2)
         tipo = "<f8" if b"MS:1000523" in head else "<f4"
         v = np.frombuffer(zlib.decompress(base64.b64decode(payload)), dtype=tipo)
         return head + b"<binary>" + " ".join(f"{x:.5e}" for x in v).encode() + b"</binary>"
-    return hashlib.sha256(re.sub(rb"(<binaryDataArray[^>]*>.*?)<binary>([^<]+)</binary>", arrotonda, dati, flags=re.S)).hexdigest()
+    return hashlib.sha256(re.sub(rb"(<binaryDataArray[^>]*>.*?)<binary>([^<]+)</binary>", rounded, dati, flags=re.S)).hexdigest()
 
 
 def scrivi(path: Path) -> str:
@@ -108,9 +108,9 @@ def scrivi(path: Path) -> str:
     return sha_contenuto(path.read_bytes())
 
 
-def genera(cartella: Path) -> dict[str, str]:
-    cartella.mkdir(parents=True, exist_ok=True)
-    return {f"{n}.mzML": scrivi(cartella / f"{n}.mzML") for n in DERIVA}
+def genera(folder: Path) -> dict[str, str]:
+    folder.mkdir(parents=True, exist_ok=True)
+    return {f"{n}.mzML": scrivi(folder / f"{n}.mzML") for n in DERIVA}
 
 
 def _read(path: Path) -> list[dict]:
@@ -125,10 +125,10 @@ def _number(x: str) -> float | None:
         return None
 
 
-def _per_file(fasi: Path, prefix: str) -> list[tuple[str, list[dict]]]:
+def _per_file(phases: Path, prefix: str) -> list[tuple[str, list[dict]]]:
     """The exports `<prefix>_<file>.mzML_<list name>.csv` of one stage, by file name."""
     out = []
-    for p in sorted(fasi.glob(f"{prefix}_*.mzML_*.csv")):
+    for p in sorted(phases.glob(f"{prefix}_*.mzML_*.csv")):
         out.append((re.match(rf"{prefix}_(.+?)\.mzML", p.name).group(1), _read(p)))
     return out
 
@@ -144,9 +144,9 @@ def _scrivi_csv(path: Path, columns: list[str], rows: list[list], chiave: tuple[
         w.writerows(rows)
 
 
-def _fase_per_file(fasi: Path, prefix: str, area: bool) -> tuple[list[str], list[list]]:
+def _fase_per_file(phases: Path, prefix: str, area: bool) -> tuple[list[str], list[list]]:
     col = ["file", "id", "mz", "rt", "rt_start", "rt_end", "height"] + (["area"] if area else [])
-    rows = [[f, r["id"], r["mz"], r["rt"], r["rt_range:min"], r["rt_range:max"], r["height"]] + ([r["area"]] if area else []) for f, rs in _per_file(fasi, prefix) for r in rs]
+    rows = [[f, r["id"], r["mz"], r["rt"], r["rt_range:min"], r["rt_range:max"], r["height"]] + ([r["area"]] if area else []) for f, rs in _per_file(phases, prefix) for r in rs]
     return col, rows
 
 
@@ -163,12 +163,12 @@ def _fase_allineata(csv_path: Path) -> tuple[list[str], list[list]]:
     return col, rows
 
 
-def _fase_isotopi(fasi: Path) -> tuple[list[str], list[list]]:
+def _fase_isotopi(phases: Path) -> tuple[list[str], list[list]]:
     """Per file: the rows that the grouper keeps (charge > 0: principal; charge 0: alone) and the ones it removes (isotopologues, attached to the principal of their charge)."""
     col = ["file", "id", "mz", "rt", "height", "charge", "role", "principal"]
     rows = []
-    for f, kept in _per_file(fasi, "isotopi"):
-        tutte = dict(_per_file(fasi, "risolutore"))[f]
+    for f, kept in _per_file(phases, "isotopi"):
+        tutte = dict(_per_file(phases, "risolutore"))[f]
         principali = {r["id"]: (float(r["mz"]), int(float(r["charge"] or 0)), float(r["rt"])) for r in kept}
         for r in tutte:
             mz, rt = float(r["mz"]), float(r["rt"])
@@ -193,11 +193,11 @@ def scrivi_oro(dest: Path) -> None:
         t = Path(t)
         shas = genera(t / "mzml")
         fs = sorted((t / "mzml").glob("*.mzML"))
-        fasi = t / "fasi"
-        fasi.mkdir()
-        xml_a, xml_b = fasi / "fasi.xml", fasi / "isotopi.xml"
-        xml_a.write_text(corri_mzmine.batch_xml(fs, fasi / "finale.csv", par, fasi=fasi), encoding="utf-8")
-        xml_b.write_text(corri_mzmine.batch_xml(fs, fasi / "finale.csv", par, fasi=fasi, isotopi=True), encoding="utf-8")
+        phases = t / "fasi"
+        phases.mkdir()
+        xml_a, xml_b = phases / "fasi.xml", phases / "isotopi.xml"
+        xml_a.write_text(corri_mzmine.batch_xml(fs, phases / "finale.csv", par, phases=phases), encoding="utf-8")
+        xml_b.write_text(corri_mzmine.batch_xml(fs, phases / "finale.csv", par, phases=phases, isotopi=True), encoding="utf-8")
         ignoti = corri_mzmine.parametri_non_letti(xml_a, mm) + corri_mzmine.parametri_non_letti(xml_b, mm)
         if ignoti:
             raise SystemExit("mzmine would ignore these parameters: " + "; ".join(ignoti))
@@ -207,29 +207,29 @@ def scrivi_oro(dest: Path) -> None:
                 raise SystemExit(f"mzmine failed on {x.name}:\n{(r.stdout + r.stderr)[-2000:]}")
         dest.mkdir(parents=True, exist_ok=True)
         per_file, aligned = ("file", "id"), ("mz", "rt", "file")
-        for nome, (col, rows), chiave in [("adap.csv", _fase_per_file(fasi, "adap", False), per_file), ("resolved.csv", _fase_per_file(fasi, "risolutore", True), per_file),
-                                           ("aligned.csv", _fase_allineata(fasi / "join_Aligned_feature_list.csv"), aligned),
-                                           ("gapfilled.csv", _fase_allineata(fasi / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
-                                           ("isotopes.csv", _fase_isotopi(fasi), per_file)]:
+        for nome, (col, rows), chiave in [("adap.csv", _fase_per_file(phases, "adap", False), per_file), ("resolved.csv", _fase_per_file(phases, "risolutore", True), per_file),
+                                           ("aligned.csv", _fase_allineata(phases / "join_Aligned_feature_list.csv"), aligned),
+                                           ("gapfilled.csv", _fase_allineata(phases / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
+                                           ("isotopes.csv", _fase_isotopi(phases), per_file)]:
             _scrivi_csv(dest / nome, col, rows, chiave)
         java = subprocess.run([str(jh / "bin" / "java"), "-version"], capture_output=True, text=True).stderr.strip().splitlines()
         java = [x for x in java if x.startswith(("openjdk version", "OpenJDK Runtime"))]
         (dest / "LEGGIMI.md").write_text(_leggimi(shas, [java[0], java[1]] if len(java) > 1 else java, _sostituisci(xml_a.read_text(), t), _sostituisci(xml_b.read_text(), t)), encoding="utf-8")
 
 
-def write_real(cartella: Path, dest: Path, quanti: int = 2) -> None:
-    """Runs mzmine 3.9.0 on the first `quanti` mzML of `cartella` and writes `adap_<file>.csv` (columns of `adap.csv`) in `dest`: the lists the real-data test of the ADAP builder reads."""
+def write_real(folder: Path, dest: Path, quanti: int = 2) -> None:
+    """Runs mzmine 3.9.0 on the first `quanti` mzML of `folder` and writes `adap_<file>.csv` (columns of `adap.csv`) in `dest`: the lists the real-data test of the ADAP builder reads."""
     mm, jh = corri_mzmine.installa_39()
     par = corri.parametri("mzmine", "predefinita")
-    fs = sorted(cartella.glob("*.mzML"))[:quanti]
+    fs = sorted(folder.glob("*.mzML"))[:quanti]
     if not fs:
-        raise SystemExit(f"no mzML in {cartella}")
+        raise SystemExit(f"no mzML in {folder}")
     with tempfile.TemporaryDirectory() as t:
         t = Path(t)
-        fasi = t / "fasi"
-        fasi.mkdir()
-        xml = fasi / "fasi.xml"
-        xml.write_text(corri_mzmine.batch_xml(fs, fasi / "finale.csv", par, fasi=fasi), encoding="utf-8")
+        phases = t / "fasi"
+        phases.mkdir()
+        xml = phases / "fasi.xml"
+        xml.write_text(corri_mzmine.batch_xml(fs, phases / "finale.csv", par, phases=phases), encoding="utf-8")
         ignoti = corri_mzmine.parametri_non_letti(xml, mm)
         if ignoti:
             raise SystemExit("mzmine would ignore these parameters: " + "; ".join(ignoti))
@@ -237,7 +237,7 @@ def write_real(cartella: Path, dest: Path, quanti: int = 2) -> None:
         if r.returncode or "SEVERE" in r.stdout + r.stderr:
             raise SystemExit(f"mzmine failed:\n{(r.stdout + r.stderr)[-2000:]}")
         dest.mkdir(parents=True, exist_ok=True)
-        col, rows = _fase_per_file(fasi, "adap", False)
+        col, rows = _fase_per_file(phases, "adap", False)
         for f in sorted({r[0] for r in rows}):
             _scrivi_csv(dest / f"adap_{f}.csv", col, [r for r in rows if r[0] == f], ("id",))
 

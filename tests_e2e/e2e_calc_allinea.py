@@ -21,9 +21,9 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")])
         pg.click("text=Carica dati"); ready(pg)
-        pg.click("#stbar [data-cmd=addloss]"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
-        pg.fill("#calcin", "4+5"); attendi(pg, "document.querySelector('#calcres').innerText.trim() === '9'")
-        attendi(pg, "!document.querySelector('#calc-nl').hidden")
+        pg.click("#stbar [data-cmd=addloss]"); wait_for_js(pg, "!!document.querySelector('#calcin').offsetParent")
+        pg.fill("#calcin", "4+5"); wait_for_js(pg, "document.querySelector('#calcres').innerText.trim() === '9'")
+        wait_for_js(pg, "!document.querySelector('#calc-nl').hidden")
         step("desktop, light: same edges, centred result", lambda: check(pg))
         def dark():
             pg.emulate_media(color_scheme="dark"); frames(pg, 3); check(pg)
@@ -31,8 +31,8 @@ try:
         def phone():
             pg.set_viewport_size({"width": 390, "height": 800}); frames(pg, 5)
             if not pg.evaluate("!!document.querySelector('#calcin').offsetParent"):
-                pg.evaluate("BARRA.setTab('calc')"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
-            pg.fill("#calcin", "4+5"); attendi(pg, "document.querySelector('#calcres').innerText.trim() === '9' && !document.querySelector('#calc-nl').hidden")
+                pg.evaluate("BARRA.setTab('calc')"); wait_for_js(pg, "!!document.querySelector('#calcin').offsetParent")
+            pg.fill("#calcin", "4+5"); wait_for_js(pg, "document.querySelector('#calcres').innerText.trim() === '9' && !document.querySelector('#calc-nl').hidden")
             check(pg)
         step("phone width", phone)
 finally:

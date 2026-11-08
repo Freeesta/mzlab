@@ -32,27 +32,27 @@ WHY = "[ST.files.map(f => [f.name, f.kind]), UPBUSY, document.getElementById('un
 try:
     with sync_playwright() as p:
         a = r.page(p); a.add_init_script("document.addEventListener('DOMContentLoaded', () => { " + NOTES + " })"); a.reload()
-        attendi(a, "window.qqReady === true", 60000)
+        wait_for_js(a, "window.qqReady === true", 60000)
         cdp = a.context.new_cdp_session(a)
         def limit(real):          # the room the browser enforces on writes (the page and the worker see their own estimate)
             u = a.evaluate("navigator.storage.estimate().then(e => e.usage)")
             cdp.send("Storage.overrideQuotaForOrigin", {"origin": f"http://127.0.0.1:{r.port}", "quotaSize": u + real})
         ref = {}
         def copied():
-            a.set_input_files("#pick", PAIR); attendi(a, DONE, 120000)
+            a.set_input_files("#pick", PAIR); wait_for_js(a, DONE, 120000)
             o = a.evaluate(WALK); ref["walk"] = o
             assert [k for k in o if k.startswith("files/nat~")], o
             assert not any(a.evaluate(STUBS).values()), "a stub of a copied sample is marked sul"
             ref["sha"] = a.evaluate(SHAS); assert len(ref["sha"]) >= N - 1, ref["sha"]
-            a.evaluate("removeAllFiles()"); attendi(a, "ST.files.length === 0 && UPBUSY === 0", 30000)
-            attendi(a, "(" + WALK + ").then(o => !Object.keys(o).some(k => k.startsWith('files/') || k.startsWith('idx/')))", 30000)
+            a.evaluate("removeAllFiles()"); wait_for_js(a, "ST.files.length === 0 && UPBUSY === 0", 30000)
+            wait_for_js(a, "(" + WALK + ").then(o => !Object.keys(o).some(k => k.startsWith('files/') || k.startsWith('idx/')))", 30000)
         step("with room the members are copied, as before (the reference indexes)", copied)
         def in_place():
             members = sum(os.path.getsize(f) for f in PAIR); room = sum(v for k, v in ref["walk"].items() if not k.startswith("files/nat~"))
             limit(room + (1 << 20))          # the stubs and indexes fit, the members do not
             a.evaluate("window.__notes = []")
             a.set_input_files("#pick", PAIR)
-            try: attendi(a, DONE, 120000)
+            try: wait_for_js(a, DONE, 120000)
             except Exception as e: raise AssertionError((a.evaluate(WALK), str(e)[:60], a.evaluate(WHY)))
             o = a.evaluate(WALK)
             assert not [k for k in o if k.startswith("files/nat~") and k.endswith(".scan")], ("the .wiff.scan was copied", o)
@@ -67,9 +67,9 @@ try:
         step("the indexes built from the user's Files are byte-identical to the ones built from the copy", same)
         def reload():
             names = a.evaluate("ST.files.map(f => f.name)")
-            a.evaluate("window.__notes = []"); a.reload(); attendi(a, "window.qqReady === true && window.MZLAB_LR !== undefined", 60000)
-            attendi(a, "ST.files.length === 0 && (window.__notes || []).length >= %d" % len(names), 30000)
-            attendi(a, "(" + WALK + ").then(o => !Object.keys(o).some(k => k.startsWith('files/') || k.endsWith('.mzidx')))", 30000)
+            a.evaluate("window.__notes = []"); a.reload(); wait_for_js(a, "window.qqReady === true && window.MZLAB_LR !== undefined", 60000)
+            wait_for_js(a, "ST.files.length === 0 && (window.__notes || []).length >= %d" % len(names), 30000)
+            wait_for_js(a, "(" + WALK + ").then(o => !Object.keys(o).some(k => k.startsWith('files/') || k.endsWith('.mzidx')))", 30000)
             notes = a.evaluate("window.__notes")
             calm = [a.evaluate("n => I18N.t('load.sulRiapri', { name: n })", n) for n in names]
             assert notes and all(t in calm for t in notes), ("only the calm notice of the samples read in place, no «interrupted copy»", notes)

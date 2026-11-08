@@ -48,6 +48,9 @@ name = "thermo_banco"
 required-features = ["thermo"]
 
 [[example]]
+name = "thermo_sintetico"
+
+[[example]]
 name = "thermo_diagnosi"
 required-features = ["thermo"]
 

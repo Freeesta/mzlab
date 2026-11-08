@@ -5,13 +5,15 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use js_sys::{Array, Function, Reflect, Uint8Array};
+use js_sys::{Array, Float32Array, Float64Array, Function, Reflect, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
 use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
-use mzlab_core::trasporto::{decode_indice, decode_scansione, PROTOCOLLO};
+use mzlab_core::trasporto::{
+    decode_indice, decode_scansione, scansione_da_parti, Intensita, PROTOCOLLO,
+};
 use wasm_bindgen::prelude::*;
 
 /// The session interface of a module, as the engine uses it: JSON texts, and the index and the scans as bytes. An error is the `Error` of the module (same key).
@@ -23,6 +25,10 @@ pub trait Modulo {
     fn index(&mut self, c: usize) -> Result<Vec<u8>>;
     /// Scan `k` of sample `c` (`trasporto::encode_scansione`).
     fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>>;
+    /// Scan `k` of sample `c` decoded: from the block of `scan`, unless the module hands its columns over apart (`ModuloJs`).
+    fn scan_spectrum(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        decode_scansione(k, &self.scan(c, k)?)
+    }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<String>;
     fn chromatograms(&mut self, c: usize) -> Result<String>;
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<String>;
@@ -162,13 +168,12 @@ pub struct RisposteScansioni;
 
 impl RisposteScansioni {
     /// The scan as the module sends it, with the id and the filter of its row of the index.
-    pub(crate) fn scan(k: usize, b: &[u8], riga: Option<&VoceScansione>) -> Result<Spectrum> {
-        let mut s = decode_scansione(k, b)?;
+    pub(crate) fn scan(mut s: Spectrum, riga: Option<&VoceScansione>) -> Spectrum {
         if let Some(r) = riga {
             s.id = r.id.clone();
             s.filter = r.filtro.clone();
         }
-        Ok(s)
+        s
     }
 
     /// `[{name, value, unit, cv}]`.
@@ -312,9 +317,12 @@ impl<M: Modulo> Lettore for LettoreEsterno<M> {
         Ok(self.indici.get(&c).map_or(&[][..], Vec::as_slice))
     }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let b = self.m.scan(c, k)?;
+        let s = self.m.scan_spectrum(c, k)?;
         self.index(c)?;
-        RisposteScansioni::scan(k, &b, self.indici.get(&c).and_then(|v| v.get(k)))
+        Ok(RisposteScansioni::scan(
+            s,
+            self.indici.get(&c).and_then(|v| v.get(k)),
+        ))
     }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         RisposteScansioni::scan_header(&self.m.scan_header(c, k)?)
@@ -340,11 +348,16 @@ impl<M: Modulo> Lettore for LettoreEsterno<M> {
 /// that already hold the handle of the session: `samples()`, `index(c)`, `scan(c, k)`, ...
 pub(crate) struct ModuloJs {
     sessione: JsValue,
+    // `scan_parts` of a module that hands a scan over as its head and two views of its columns (an older build has only `scan`)
+    parti: Option<Function>,
 }
 
 impl ModuloJs {
     pub(crate) fn new(sessione: JsValue) -> Self {
-        ModuloJs { sessione }
+        let parti = Reflect::get(&sessione, &JsValue::from_str("scan_parts"))
+            .ok()
+            .and_then(|f| f.dyn_into().ok());
+        ModuloJs { sessione, parti }
     }
 
     fn chiama(&self, nome: &str, args: &[JsValue]) -> Result<JsValue> {
@@ -353,11 +366,7 @@ impl ModuloJs {
             .and_then(|f| f.dyn_into().ok())
             .ok_or_else(|| guasto(nome))?;
         let a: Array = args.iter().collect();
-        f.apply(&self.sessione, &a)
-            .map_err(|e| match e.as_string() {
-                Some(t) => errore_del_modulo(&t),
-                None => guasto(nome),
-            })
+        f.apply(&self.sessione, &a).map_err(|e| dal_modulo(nome, e))
     }
 
     /// A `Uint8Array` answer, copied once into the memory of the engine.
@@ -383,6 +392,32 @@ impl Drop for ModuloJs {
     }
 }
 
+/// The error a module threw: its JSON, or the key of a broken module.
+fn dal_modulo(nome: &str, e: JsValue) -> Error {
+    match e.as_string() {
+        Some(t) => errore_del_modulo(&t),
+        None => guasto(nome),
+    }
+}
+
+/// The scan from `scan_parts`: the columns are views of the module's memory, valid until its next call, so each is copied here at once, in one piece.
+fn dalle_parti(k: usize, r: JsValue) -> Result<Spectrum> {
+    let a: Array = r.dyn_into().map_err(|_| guasto("scan"))?;
+    let testa: Uint8Array = a.get(0).dyn_into().map_err(|_| guasto("scan"))?;
+    let mz: Float64Array = a.get(1).dyn_into().map_err(|_| guasto("scan"))?;
+    let mz = mz.to_vec();
+    let y = a.get(2);
+    let y = match y.dyn_ref::<Float64Array>() {
+        Some(w) => Intensita::Larghe(w.to_vec()),
+        None => Intensita::Strette(
+            y.dyn_into::<Float32Array>()
+                .map_err(|_| guasto("scan"))?
+                .to_vec(),
+        ),
+    };
+    scansione_da_parti(k, &testa.to_vec(), mz, y)
+}
+
 impl Modulo for ModuloJs {
     fn protocol(&mut self) -> Result<u32> {
         self.chiama("protocol", &[])?
@@ -398,6 +433,15 @@ impl Modulo for ModuloJs {
     }
     fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
         self.byte("scan", &[(c as f64).into(), (k as f64).into()])
+    }
+    fn scan_spectrum(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        let Some(f) = &self.parti else {
+            return decode_scansione(k, &self.scan(c, k)?);
+        };
+        let r = f
+            .call2(&self.sessione, &(c as f64).into(), &(k as f64).into())
+            .map_err(|e| dal_modulo("scan", e))?;
+        dalle_parti(k, r)
     }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<String> {
         self.testo("scan_header", &[(c as f64).into(), (k as f64).into()])

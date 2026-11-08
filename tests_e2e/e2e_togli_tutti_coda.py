@@ -21,28 +21,28 @@ r = Run(port=8971, wd="/tmp/wd_togli_tutti_coda")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
-        pg.wait_for_selector("#drop"); attendi(pg, "window.qqReady === true", 60000)
+        pg.wait_for_selector("#drop"); wait_for_js(pg, "window.qqReady === true", 60000)
         files = mlm.small_files(Path("/tmp/wd_togli_tutti_coda_in"), N)
         def drop_stalled():
             pg.evaluate(STALL); pg.set_input_files("#pick", files)
-            attendi(pg, f"UPBUSY === 0 && ST.files.length === {N} && {OPEN} === 1 && OPENNOW.busy() > 0", 120000)
+            wait_for_js(pg, f"UPBUSY === 0 && ST.files.length === {N} && {OPEN} === 1 && OPENNOW.busy() > 0", 120000)
         def remove_all_queued():
             drop_stalled()
             assert pg.evaluate(COUNT) == {"files": N, "idx": N}, pg.evaluate(COUNT)
             pg.evaluate("removeAllFiles()"); pg.evaluate("window.__go = true")
-            attendi(pg, "OPENNOW.busy() === 0", 60000)
+            wait_for_js(pg, "OPENNOW.busy() === 0", 60000)
             # the window of Undo (6 s) closes, then the copies are freed
-            attendi(pg, "ST.files.length === 0", 30000); assert pg.evaluate(OPEN) == 0, f"open after Remove all: {pg.evaluate(OPEN)}"
+            wait_for_js(pg, "ST.files.length === 0", 30000); assert pg.evaluate(OPEN) == 0, f"open after Remove all: {pg.evaluate(OPEN)}"
             pg.wait_for_function(COUNT.replace("return o; }", "return o.files === 0 && o.idx === 0; }"), timeout=30000)
-            pg.reload(); attendi(pg, "window.qqReady === true", 60000); hold(pg, 1500)
+            pg.reload(); wait_for_js(pg, "window.qqReady === true", 60000); hold(pg, 1500)
             assert pg.evaluate("ST.files.length") == 0 and pg.evaluate(OPEN) == 0, f"rows back after reload: {pg.evaluate('ST.files.length')}"
             assert pg.evaluate(COUNT) == {"files": 0, "idx": 0}, pg.evaluate(COUNT)
         step("Remove all while files wait to open: every copy, index and row is freed, none comes back after reload", remove_all_queued)
         def undo_queued():
             drop_stalled()
-            pg.evaluate("removeAllFiles()"); attendi(pg, f"{OPEN} === 0")
+            pg.evaluate("removeAllFiles()"); wait_for_js(pg, f"{OPEN} === 0")
             assert pg.evaluate("STORIA.annulla()"), "nothing to undo"; pg.evaluate("window.__go = true")
-            attendi(pg, f"UPBUSY === 0 && OPENNOW.busy() === 0 && {OPEN} === {N}", 60000)
+            wait_for_js(pg, f"UPBUSY === 0 && OPENNOW.busy() === 0 && {OPEN} === {N}", 60000)
             hold(pg, 7000)      # past the window: an undone removal frees nothing
             assert pg.evaluate(OPEN) == N and pg.evaluate("ST.files.length") == N
             assert pg.evaluate("new Set(E.files.map(f => f.file)).size") == N, f"a file opened twice: {pg.evaluate('E.files.map(f => f.file)')}"
@@ -50,11 +50,11 @@ try:
         step("Undo of Remove all while files wait to open: all of them open and keep their copies", undo_queued)
         def set_aside():
             pg.evaluate("window.__go = true; window.post = window.__p0; 0")
-            name = os.path.basename(files[0]); pg.evaluate("removeAllFiles()"); attendi(pg, "ST.files.length === 0", 30000)
+            name = os.path.basename(files[0]); pg.evaluate("removeAllFiles()"); wait_for_js(pg, "ST.files.length === 0", 30000)
             pg.wait_for_function(COUNT.replace("return o; }", "return o.files === 0 && o.idx === 0; }"), timeout=30000)
             pg.evaluate(f"OPENNOW.hold([{name!r}])"); pg.set_input_files("#pick", files)
-            attendi(pg, f"UPBUSY === 0 && OPENNOW.busy() === 0 && ST.files.length === {N} && {OPEN} === {N - 1}", 120000)
-            pg.evaluate("removeAllFiles()"); attendi(pg, "ST.files.length === 0", 30000)
+            wait_for_js(pg, f"UPBUSY === 0 && OPENNOW.busy() === 0 && ST.files.length === {N} && {OPEN} === {N - 1}", 120000)
+            pg.evaluate("removeAllFiles()"); wait_for_js(pg, "ST.files.length === 0", 30000)
             pg.wait_for_function(COUNT.replace("return o; }", "return o.files === 0 && o.idx === 0; }"), timeout=30000)
         step("Remove all also frees a file set aside (unticked, never opened)", set_aside)
     r.close()

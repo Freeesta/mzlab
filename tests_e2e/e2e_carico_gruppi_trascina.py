@@ -51,7 +51,7 @@ def drag(pg, name, target, hold=None):
 def table(pg):
     """The sample table on screen (the work area leaves it when a file is shown or the work settles)."""
     if pg.get_attribute("#samptab", "aria-pressed") != "true": pg.click("#samptab")
-    attendi(pg, "!!document.querySelector('#flist').offsetParent", 10000); fermo(pg, "#flist")
+    wait_for_js(pg, "!!document.querySelector('#flist').offsetParent", 10000); wait_still(pg, "#flist")
 def undo(pg): pg.evaluate("document.activeElement && document.activeElement.blur()"); pg.keyboard.press("Control+z")
 def redo(pg): pg.keyboard.press("Control+Shift+z")
 def item(pg, text): return pg.locator(".gby-menu [role=menuitemradio]", has_text=text).first
@@ -80,16 +80,16 @@ try:
         if AXE: pg.add_script_tag(path=AXE)
         BOX = "['#tools', '#sb-header', '#drop'].map(s => { const e = document.querySelector(s); if (!e || !e.offsetParent) return null; const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round).join(); }).join('|')"
         def start():
-            try: attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && document.querySelectorAll('#flist tbody tr').length === 30", 120000)
+            try: wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && document.querySelectorAll('#flist tbody tr').length === 30", 120000)
             except Exception: raise AssertionError(pg.evaluate("[UPBUSY, OPENNOW.busy(), ST.files.length, document.querySelectorAll('#flist tbody tr').length, document.querySelector('#v-workspace').dataset.work]"))
             table(pg)
             assert not heads(pg) and pg.is_visible("#tb-by"), "the table is as before: no group row, the control above it"
             assert pg.evaluate("document.querySelectorAll('#flist .tg-grip, #flist [data-mv]').length") == 60, "every row has its grip and its move button"
         step("starting point: the table of 30 files, no group row, «Group by» above it", start)
         def by():
-            table(pg); pg.click("#tb-by"); attendi(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
+            table(pg); pg.click("#tb-by"); wait_for_js(pg, "document.querySelectorAll('.gby-menu [role=menuitemradio]').length > 3", 10000)
             assert pg.get_attribute("#tb-by", "aria-expanded") == "true"
-            item(pg, "Condition").click(); attendi(pg, "!!E.ugBy && E.ugBy.by === 'cond'", 10000); fermo(pg, "#flist")
+            item(pg, "Condition").click(); wait_for_js(pg, "!!E.ugBy && E.ugBy.by === 'cond'", 10000); wait_still(pg, "#flist")
             hs = heads(pg); names = [h[0] for h in hs]
             assert "PMS" in names and "H2O2" in names and names[-1] == "", hs
             assert sum(int(h[1].split()[0]) for h in hs) == 30, hs
@@ -102,49 +102,49 @@ try:
             seen = []
             drag(pg, "MQ_O2_T00", THEAD("PMS"), hold=lambda: seen.extend([pg.evaluate(f"document.querySelector('{THEAD('PMS')}').classList.contains('gdnd-over')"), pg.evaluate(LIVE)]))
             assert seen == [True, "Move to PMS · 1 file"], seen
-            attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); fermo(pg, "#flist")
+            wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 10000); wait_still(pg, "#flist")
             assert tlabel(pg, "MQ_O2_T00") == "PMS" and slabel(pg, "MQ_O2_T00") == "PMS"
             assert pg.evaluate(LIVE) == "Moved to PMS", pg.evaluate(LIVE)
             same(pg)
             assert pg.evaluate("document.querySelectorAll('#flist .gdnd-over, #flist.gdnd-gap').length") == 0
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'cond'", 5000); table(pg)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'cond'", 5000); table(pg)
             assert tlabel(pg, "MQ_O2_T00") == "O2" and slabel(pg, "MQ_O2_T00") == "O2"; same(pg)
-            redo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 5000); fermo(pg, "#flist")
+            redo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 5000); wait_still(pg, "#flist")
             assert tlabel(pg, "MQ_O2_T00") == "PMS"; same(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'cond'", 5000); table(pg)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'cond'", 5000); table(pg)
         step("a row dragged by its grip onto the PMS header joins PMS (header highlighted, said, one undo, one redo), table and side list agree", one)
         def ungroup():
             table(pg)
             drag(pg, "MQ_PMS_T00", THEAD(""), hold=lambda: said(pg, "Remove from groups · 1 file"))
-            attendi(pg, "!ST.files.find(f => f.name.startsWith('MQ_PMS_T00')).ugrp", 10000); fermo(pg, "#flist")
+            wait_for_js(pg, "!ST.files.find(f => f.name.startsWith('MQ_PMS_T00')).ugrp", 10000); wait_still(pg, "#flist")
             assert slabel(pg, "MQ_PMS_T00") is None; same(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'cond'", 5000); table(pg)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'cond'", 5000); table(pg)
             assert tlabel(pg, "MQ_PMS_T00") == "PMS"; same(pg)
         step("a row dragged onto the «Ungrouped» header leaves its group; undo brings it back", ungroup)
         def menu():
             table(pg)
             b = trow(pg, "MQ_N2_T01").locator("[data-mv]"); assert b.bounding_box()["width"] >= 24
-            b.focus(); pg.keyboard.press("Enter"); attendi(pg, "!document.querySelector('#ctx').hidden", 5000)
+            b.focus(); pg.keyboard.press("Enter"); wait_for_js(pg, "!document.querySelector('#ctx').hidden", 5000)
             labs = pg.evaluate("[...document.querySelectorAll('#ctx button, #ctx [role=menuitem]')].map(x => x.textContent.trim())")
             assert "PMS" in labs and any("New group" in l for l in labs), labs
-            pg.locator("#ctx", has_text="PMS").locator("text=PMS").first.click(); attendi(pg, "E.ugBy && E.ugBy.by === 'custom'", 5000); fermo(pg, "#flist")
+            pg.locator("#ctx", has_text="PMS").locator("text=PMS").first.click(); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'custom'", 5000); wait_still(pg, "#flist")
             assert tlabel(pg, "MQ_N2_T01") == "PMS" and slabel(pg, "MQ_N2_T01") == "PMS"; same(pg)
-            undo(pg); attendi(pg, "E.ugBy && E.ugBy.by === 'cond'", 5000); table(pg)
+            undo(pg); wait_for_js(pg, "E.ugBy && E.ugBy.by === 'cond'", 5000); table(pg)
             assert tlabel(pg, "MQ_N2_T01") == "N2"; same(pg)
         step("«Move to group ▸» (button, opened with the keyboard) puts the row in PMS; undo", menu)
         def fold():
             table(pg)
-            pg.click('#flist [data-fold="N2"]'); fermo(pg, "#flist")
+            pg.click('#flist [data-fold="N2"]'); wait_still(pg, "#flist")
             assert pg.evaluate("[...document.querySelectorAll('#flist tr[data-nm^=\"MQ_N2\"]')].every(r => r.hidden)")
             assert pg.get_attribute('#flist [data-fold="N2"]', "aria-expanded") == "false"
-            pg.click('#flist [data-fold="N2"]'); fermo(pg, "#flist")
+            pg.click('#flist [data-fold="N2"]'); wait_still(pg, "#flist")
             assert pg.evaluate("[...document.querySelectorAll('#flist tr[data-nm^=\"MQ_N2\"]')].every(r => !r.hidden)")
         step("a group folds and unfolds with its 24 px button", fold)
         def drop_table():
             table(pg)
             desktop_drop(pg, THEAD("PMS"), PATHS[30:32], "#v-workspace")
             assert pg.evaluate("window.__ext") == "Add dropped files to PMS", pg.evaluate("window.__ext")
-            attendi(pg, "ST.files.length === 32 && E.files.filter(f => !f.gone).length === 32 && UPBUSY === 0 && OPENNOW.busy() === 0", 120000); fermo(pg, "#flist")
+            wait_for_js(pg, "ST.files.length === 32 && E.files.filter(f => !f.gone).length === 32 && UPBUSY === 0 && OPENNOW.busy() === 0", 120000); wait_still(pg, "#flist")
             assert [tlabel(pg, f"QC_new_{i}") for i in (1, 2)] == ["PMS", "PMS"], pg.evaluate(TAB)
             assert [slabel(pg, f"QC_new_{i}") for i in (1, 2)] == ["PMS", "PMS"], pg.evaluate(SIDE)
             assert pg.evaluate("E.ugBy.by") == "custom"; same(pg)
@@ -152,7 +152,7 @@ try:
         step("two new files dropped from the desktop on the PMS header of the table arrive with ugrp = PMS and open into the PMS group of the side list", drop_table)
         def drop_side():
             desktop_drop(pg, '#flst .fgh[data-ug="O2"]', PATHS[32:33], "#dfiles")
-            attendi(pg, "ST.files.length === 33 && E.files.filter(f => !f.gone).length === 33 && UPBUSY === 0 && OPENNOW.busy() === 0", 120000); fermo(pg, "#flist")
+            wait_for_js(pg, "ST.files.length === 33 && E.files.filter(f => !f.gone).length === 33 && UPBUSY === 0 && OPENNOW.busy() === 0", 120000); wait_still(pg, "#flist")
             assert (tlabel(pg, "QC_new_3"), slabel(pg, "QC_new_3")) == ("O2", "O2"), (tlabel(pg, "QC_new_3"), slabel(pg, "QC_new_3"), pg.evaluate("E.ugBy"), pg.evaluate("window.__ext"))
             same(pg)
         step("a file dropped from the desktop on a header of the side list takes that group", drop_side)

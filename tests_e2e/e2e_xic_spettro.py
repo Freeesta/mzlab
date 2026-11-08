@@ -117,7 +117,7 @@ try:
         step("Esc leaves the mode «choose a peak»", esc_mode)
         def hr_extract():
             pk = hr_peak(); pg2.click(f"{S1}.el".replace(S1 + ".el", "[data-a=xicb]") if False else "[data-a=xicb] >> nth=0") if False else None
-            pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicb]').click()"); pg2.mouse.click(pk["x"], pk["y"]); ready(pg2); attendi(pg2, "!!document.querySelector('.xb-info')?.textContent")
+            pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicb]').click()"); pg2.mouse.click(pk["x"], pk["y"]); ready(pg2); wait_for_js(pg2, "!!document.querySelector('.xb-info')?.textContent")
             lab = pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicl]').textContent"); print(lab)
             assert "\u00b1 5 ppm" in lab and "m/z" in lab, lab
             t = pg2.evaluate(f"{XP}.traces[0]"); assert t["ion"] and abs(t["mz"] - pk["mz"]) < 1e-4, t
@@ -125,7 +125,7 @@ try:
             assert pg2.evaluate(f"{XP}.ints.length") >= 1, "HR: the area comes with the XIC"
         step("HR: ion with ppm window, area at once", hr_extract)
         def hr_tol():
-            pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicl]').click()"); pg2.fill("[data-f=tol]", "10"); pg2.press("[data-f=tol]", "Enter"); ready(pg2); attendi(pg2, "!!document.querySelector('.xb-info')?.textContent")
+            pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicl]').click()"); pg2.fill("[data-f=tol]", "10"); pg2.press("[data-f=tol]", "Enter"); ready(pg2); wait_for_js(pg2, "!!document.querySelector('.xb-info')?.textContent")
             t = pg2.evaluate(f"{XP}.traces[0]"); assert t["ppm"] == 10 and t["label"].endswith("\u00b1 10 ppm"), t
             assert pg2.evaluate(f"{XP}.traces.length") == 1
             a = pg2.evaluate(f"HR.xicArgs(E.files[{KH}],{XP}.traces[0],{XP})"); assert abs(a[1] - t["mz"] * 10e-6) < 1e-9, a

@@ -2,10 +2,10 @@
 import hashlib, json, shutil, subprocess
 from lib import ROOT
 
-PAGINA = ("rust-msngrafo.js", "rust-msngrafo-nativo.js", "rust-msngrafo-pagina.js", "rust-worker.js", "rust-bridge.js", "rust-bridge-info.js", "browser.js", "infusione-grafo-avanza.js", "infusione-grafo-stato.js", "infusione-grafo.js")
+PAGE_FILES = ("rust-msngrafo.js", "rust-msngrafo-nativo.js", "rust-msngrafo-pagina.js", "rust-worker.js", "rust-bridge.js", "rust-bridge-info.js", "browser.js", "infusione-grafo-avanza.js", "infusione-grafo-stato.js", "infusione-grafo.js")
 
 
-def prepara():
+def prepare():
     feat = ROOT / "site" / "static" / "wasm-feat"
     mod = feat / "msngrafo"
     if not (mod / "mzlab_msngrafo_wasm_bg.wasm").exists():
@@ -20,5 +20,5 @@ def prepara():
         m = json.loads(mp.read_text()) if mp.exists() else {}
         m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzlab_msngrafo_wasm_bg.wasm", "sha256": hashlib.sha256((mod / "mzlab_msngrafo_wasm_bg.wasm").read_bytes()).hexdigest()}
         mp.write_text(json.dumps(m, indent=1))
-    for f in PAGINA:
+    for f in PAGE_FILES:
         shutil.copy(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)

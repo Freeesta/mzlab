@@ -67,11 +67,11 @@ def _sif(self, selector, files, **k):
     if selector == "#pick" and n:
         try: self.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={n}", timeout=20000)
         except TimeoutError: pass
-        _tempi(self)
-AUTO_TEMPI = True       # False: the test looks at the raw proposals (e2e_ruoli_tempi)
-def _tempi(self):
+        _timings(self)
+AUTO_TIMES = True       # False: the test looks at the raw proposals (e2e_ruoli_tempi)
+def _timings(self):
     """Two or more samples: the tests that are not about roles and times write the missing times here (in the table, then quietly in the open files, as the old opening did)."""
-    if not AUTO_TEMPI: return
+    if not AUTO_TIMES: return
     try:
         if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && ST.files.length >= 2"): return
         self.wait_for_function("RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
@@ -101,7 +101,7 @@ def open_first(pg, timeout=120000):
     """The first file shown: the files open as soon as they are read, hidden, and the landing stays until the student shows one.
     Waits until nothing is read or opened any more, then clicks the row of the first file of the sample table that is not a blank (firstOpenK) in the side list, unless a file is already shown."""
     loaded(pg, timeout)
-    _tempi(pg)
+    _timings(pg)
     # in the order of the sample table (by time), not the order the files were read
     k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const at = f => ST.files.findIndex(r => r.name === f.file.split('#')[0]);
       const fs = E.files.filter(f => !f.gone).sort((a, b) => at(a) - at(b)); if (!fs.length) return -1;
@@ -146,9 +146,9 @@ from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
 _np, _nc = _Br.new_page, _Br.new_context
 # The public site hides the desktop-app download (sito.js); the tests run with it on, as the code still offers it.
 # MZLAB_SITO_PRODUZIONE=1 (e2e_sito_pubblico) leaves the production values.
-_SITO = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true})"
-def _sito():
-    return None if os.environ.get("MZLAB_SITO_PRODUZIONE") else _SITO
+_SITE = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true})"
+def _site():
+    return None if os.environ.get("MZLAB_SITO_PRODUZIONE") else _SITE
 def _start_prefs(k):
     """The site starts in Italian with the light theme whatever the browser says. A test that asks for an English locale or a dark system scheme
     wants that UI, so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` leaves the real defaults."""
@@ -163,14 +163,14 @@ def _new_page(self, *a, **k):
     sp = _start_prefs(k)
     pg = _np(self, *a, **k); pg.add_init_script(_TRACK)
     if sp: pg.add_init_script(sp)
-    if _sito(): pg.add_init_script(_sito())
+    if _site(): pg.add_init_script(_site())
     return pg
 def _new_context(self, *a, **k):
     k.setdefault("locale", "it-IT")
     sp = _start_prefs(k)
     c = _nc(self, *a, **k); c.add_init_script(_TRACK)
     if sp: c.add_init_script(sp)
-    if _sito(): c.add_init_script(_sito())
+    if _site(): c.add_init_script(_site())
     return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
 
@@ -188,7 +188,7 @@ class _PersistentWebKit:
         c = self._bt.launch_persistent_context(d, **self._kw, **k)
         self._open.append((c, d)); c.add_init_script(_TRACK)
         if sp: c.add_init_script(sp)
-        if _sito(): c.add_init_script(_sito())
+        if _site(): c.add_init_script(_site())
         return c
     def new_page(self, **k):
         c = self.new_context(**k)
@@ -205,7 +205,7 @@ def stage(pg, files, timeout=90000):
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
 
 
-def attendi(pg, expr, timeout=30000):
+def wait_for_js(pg, expr, timeout=30000):
     """Wait until the JavaScript expression is truthy: the state-based way to wait (never a fixed pause, never a raised timeout)."""
     pg.wait_for_function(expr, timeout=timeout)
 
@@ -215,7 +215,7 @@ def frames(pg, n=2):
     pg.evaluate("n => new Promise(ok => { const f = () => (--n > 0 ? requestAnimationFrame(f) : ok()); requestAnimationFrame(f); })", n)
 
 
-def fermo(pg, sel, ms=300, timeout=30000):
+def wait_still(pg, sel, ms=300, timeout=30000):
     """Wait until the first element matching `sel` has had the same position and size for `ms` milliseconds (it is not moving or growing any more)."""
     pg.evaluate("window.__fermo = null")
     pg.wait_for_function("function (a) { const e = document.querySelector(a.sel); if (!e) return false; const r = e.getBoundingClientRect(), k = [r.x, r.y, r.width, r.height].map(v => Math.round(v * 10)).join(), t = performance.now(); "
@@ -336,14 +336,14 @@ def free_port() -> int:
     import socket
     with socket.socket() as so:
         so.bind(("127.0.0.1", 0)); return so.getsockname()[1]
-def copia(src, dst):
+def copy_file(src, dst):
     """Copy a file into the shared site/ only when it differs, by an atomic rename: tests that run together (every one makes sure the site has the current sources) never see a half-written file."""
     src, dst = Path(src), Path(dst)
     b = src.read_bytes()
     if dst.exists() and dst.read_bytes() == b: return
     t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)
-def scrivi(dst, text):
-    """As copia(), for a text."""
+def write_file(dst, text):
+    """As copy_file(), for a text."""
     dst = Path(dst); b = text.encode("utf-8")
     if dst.exists() and dst.read_bytes() == b: return
     t = dst.with_name(f".{dst.name}.{os.getpid()}.tmp"); t.write_bytes(b); os.replace(t, dst)

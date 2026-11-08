@@ -12,10 +12,10 @@ try:
         asked = []
         pg.on("request", lambda q: asked.append(q.url))
         pg.wait_for_selector("#drop", timeout=120000)
-        rotte = lambda: [u for u in asked if "/wasm-feat/rotte/" in u and u.endswith("_bg.wasm")]
+        routes = lambda: [u for u in asked if "/wasm-feat/rotte/" in u and u.endswith("_bg.wasm")]
         post = """async ([path, body]) => { const x = await fetch(path, { method: 'POST', body }); return [x.status, await x.text()]; }"""
         call = lambda path, body: pg.evaluate(post, [path, body])
-        assert not rotte(), rotte()
+        assert not routes(), routes()
         print("OK  the module is not fetched at start-up")
 
         # a failed fetch is an error, and the next request fetches it again
@@ -30,8 +30,8 @@ try:
 
         st, txt = call("api/molecules/carica", json.dumps({"catalogo": pg.evaluate("fetch('static/molecole/catalogo.csv').then(r => r.text())")}))
         assert st == 200 and json.loads(txt)["totale"] == 1228, (st, txt[:200])
-        assert len(rotte()) >= 1
-        n = len(rotte())
+        assert len(routes()) >= 1
+        n = len(routes())
         # a second use of every kind of route: no new fetch of the module
         st, txt = call("api/molecules/cerca", json.dumps({"q": "paracetamol"}))
         assert st == 200 and json.loads(txt)[0]["nome"] == "acetaminophen", txt[:200]
@@ -41,7 +41,7 @@ try:
         assert st in (200, 400), st                          # the route exists in the module; an empty body is a keyed error
         st, txt = call("api/flow/line", json.dumps({"plan": {"formato": "mzflow/2", "passi": []}}))
         assert st in (200, 400), (st, txt[:200])
-        assert len(rotte()) == n, (n, rotte())
+        assert len(routes()) == n, (n, routes())
         print("OK  the routes answer in the module, which is fetched once")
 
         assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("window.MZLAB_LR_MISS")

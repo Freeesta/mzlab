@@ -14,14 +14,14 @@ try:
             v = pg.evaluate("E.files.map(f=>[f.file,f.kind,f.vis])")
             assert len(v) == 5 and len({x[1] for x in v}) == 3, v
             assert [x[0] for x in v if x[2]] == [FILES[0] + ".mzML"], v      # the first of the drop, whatever file was read first
-            attendi(pg, "E.panels.length > 0"); assert pg.evaluate("E.panels.every(p=>p.tab==='full')"), pg.evaluate("E.panels.map(p=>p.tab)")      # no block for the closed types
+            wait_for_js(pg, "E.panels.length > 0"); assert pg.evaluate("E.panels.every(p=>p.tab==='full')"), pg.evaluate("E.panels.map(p=>p.tab)")      # no block for the closed types
         step("Full Scan + MS2 + MRM: only the first file is open", only_first)
         def click_opens():
             if not pg.is_visible("#flst"): pg.click("#stbar [data-cmd=file]")
             pg.wait_for_selector("#flst .fl", state="visible")
             if not pg.is_visible("#flst .fl:has-text('MRM')"): pg.click("#flst .fgh[data-gt='mrm']")      # only the first group starts open (#2488): open the MRM one as a student would
             pg.click("#flst .fl:has-text('MRM')")
-            attendi(pg, "E.files.filter(f=>f.vis).length === 2 && E.files.some(f=>f.vis&&f.kind==='mrm') && E.panels.some(p=>p.tab==='mrm')")
+            wait_for_js(pg, "E.files.filter(f=>f.vis).length === 2 && E.files.some(f=>f.vis&&f.kind==='mrm') && E.panels.some(p=>p.tab==='mrm')")
         step("a click on a closed file opens it", click_opens)
 finally:
     r.close(); r.report()

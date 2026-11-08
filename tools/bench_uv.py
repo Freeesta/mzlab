@@ -49,7 +49,7 @@ def main():
     ap.add_argument("--json", action="store_true"); ap.add_argument("--port", type=int, default=8893)
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
-    from lib import stage, open_first, ready, attendi, pick_kind
+    from lib import stage, open_first, ready, wait_for_js, pick_kind
     wd = Path(tempfile.mkdtemp(prefix="bench_uv_"))
     files = [wd / f"DAD_s{i + 1}.mzML" for i in range(a.files)]
     for i, f in enumerate(files): du.write(f, a.uv, a.wl, a.scans, 500, i + 1)
@@ -65,13 +65,13 @@ def main():
             pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()"); ready(pg, timeout=600000)
             pick_kind(pg, "pda"); ready(pg, timeout=600000)
             C = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')"
-            attendi(pg, f"!!({C} && {C}._a)", 600000); pg.evaluate("__U.wrap()")
+            wait_for_js(pg, f"!!({C} && {C}._a)", 600000); pg.evaluate("__U.wrap()")
 
             def dbl(rt, lam=False):
                 box = pg.evaluate(f"(()=>{{const p={C};p.cv.scrollIntoView({{block:'center'}});const b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X({rt}),y:b.y+M.t+(a.H-M.t-M.b)/2}}}})()")
                 n0 = pg.evaluate("E.panels.filter(q=>q.uv).length")
                 pg.mouse.dblclick(box["x"], box["y"])
-                attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length>{n0} && __U.dr.some(d=>d.ok&&d.id===Math.max(...E.panels.filter(q=>q.uv).map(q=>q.id)))", TMO)
+                wait_for_js(pg, f"E.panels.filter(q=>q.uv&&q._a).length>{n0} && __U.dr.some(d=>d.ok&&d.id===Math.max(...E.panels.filter(q=>q.uv).map(q=>q.id)))", TMO)
                 v = pg.evaluate("__U"); nid = pg.evaluate("Math.max(...E.panels.filter(q=>q.uv).map(q=>q.id))"); t = min(d["t1"] for d in v["dr"] if d["id"] == nid and d["ok"])
                 ntr = pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id==={nid}); return s._a.uvd.ser ? s._a.uvd.ser.length : 1}})()")
                 return {**phases(v, t), "traces": ntr}
@@ -89,7 +89,7 @@ def main():
                 pg.evaluate("__U.ev=performance.now(); __U.fe=[]; __U.dr=[]")
                 ids = pg.evaluate("E.panels.map(q=>q.id)")
                 pg.evaluate(f"wlOpen({C}, {nm}, {nm})")
-                attendi(pg, f"__U.dr.some(d=>d.lam&&d.ok&&!{json.dumps(ids)}.includes(d.id))", TMO)
+                wait_for_js(pg, f"__U.dr.some(d=>d.lam&&d.ok&&!{json.dumps(ids)}.includes(d.id))", TMO)
                 v = pg.evaluate("__U"); return phases(v, min(d["t1"] for d in v["dr"] if d["lam"] and d["ok"] and d["id"] not in ids))
             run("L1 first λ trace", lam, 254)
             run("L2 next λ trace", lam, 280)

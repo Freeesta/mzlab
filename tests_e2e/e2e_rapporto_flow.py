@@ -11,7 +11,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_rapporto_flow.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:1500]))
 
-def corsa(n_steps=3, n_params=2, rows=4):
+def run_doc(n_steps=3, n_params=2, rows=4):
     hx = lambda k: ("%064x" % k)
     st = [{"instance": f"s{i}", "step": "features.detect@1", "algorithm": "masstrace@1", "status": "error" if i == 2 else "ok", "ms": 100.5 * (i + 1),
            "params_sha256": hx(i), "params": [{"name": f"p{j}", "value": j * 1.5, "state": "estimated" if j == 0 else "fixed", **({"proof": {"hist": [1, 2]}} if j == 0 else {})} for j in range(n_params)]}
@@ -41,7 +41,7 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: errs.append(m.text) if m.type in ("error", "warning") else None)
         pg.goto(f"http://127.0.0.1:{port}/")
         R = "RAPPORTO_FLOW.render(document.getElementById('m'), %s)"
-        pg.evaluate(R % json.dumps(corsa()))
+        pg.evaluate(R % json.dumps(run_doc()))
         def sections():
             ids = pg.evaluate("[...document.querySelectorAll('section')].map(s => s.id)")
             assert ids == ["rf-summary", "rf-inputs", "rf-plan", "rf-timing", "rf-counts", "rf-qc"], ids
@@ -62,17 +62,17 @@ try:
         step("file names are escaped", escape)
         def same():
             a = pg.evaluate("document.getElementById('m').innerHTML")
-            pg.evaluate(R % json.dumps(corsa())); c = pg.evaluate("document.getElementById('m').innerHTML")
+            pg.evaluate(R % json.dumps(run_doc())); c = pg.evaluate("document.getElementById('m').innerHTML")
             norm = lambda s: " ".join(s.split())
             assert norm(a) == norm(c) and len(a) > 2000
-            pg.evaluate(R % json.dumps({**corsa(), "report": None})); assert "no table report" in pg.inner_text("#rf-qc")
-            pg.evaluate(R % json.dumps(corsa()))
+            pg.evaluate(R % json.dumps({**run_doc(), "report": None})); assert "no table report" in pg.inner_text("#rf-qc")
+            pg.evaluate(R % json.dumps(run_doc()))
         step("same JSON, same HTML (normalized innerHTML); a run with no table report says so", same)
         def toggle():
             pg.uncheck("input[data-sec=timing]"); assert pg.evaluate("document.getElementById('rf-timing').hidden") and not pg.is_visible("#rf-timing")
             pg.check("input[data-sec=timing]"); assert pg.is_visible("#rf-timing")
-            pg.evaluate("RAPPORTO_FLOW.render(document.getElementById('m'), %s, {sections: {qc: false}})" % json.dumps(corsa())); assert not pg.is_visible("#rf-qc")
-            pg.evaluate(R % json.dumps(corsa()))
+            pg.evaluate("RAPPORTO_FLOW.render(document.getElementById('m'), %s, {sections: {qc: false}})" % json.dumps(run_doc())); assert not pg.is_visible("#rf-qc")
+            pg.evaluate(R % json.dumps(run_doc()))
         step("each section can be turned off and on", toggle)
         def download():
             with pg.expect_download() as d: pg.click("button[data-rf=json]")
@@ -93,7 +93,7 @@ try:
             r = pg.evaluate("[...document.querySelectorAll('.rf button, .rf label')].map(e => e.getBoundingClientRect()).filter(r => r.width < 24 || r.height < 24).length"); assert r == 0, r
         step("WCAG 2.5.8: buttons and labels at least 24 x 24 px", small)
         def speed():
-            big = corsa(50, 100, 5000); t0 = time.time()
+            big = run_doc(50, 100, 5000); t0 = time.time()
             pg.evaluate(R % json.dumps(big)); ms = pg.evaluate("performance.now()") and (time.time() - t0) * 1000
             assert ms < 3000, ms
             print(f"MISURA rapporto_flow: 50 steps x 100 parameters (5000), 5000 parameter rows -> {ms:.0f} ms")

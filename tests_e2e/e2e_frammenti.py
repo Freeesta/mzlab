@@ -38,7 +38,7 @@ try:
             menu_at("bond", 0); pg.wait_for_selector("#ctx div:has-text('Legame di un anello')", timeout=5000)
         step("a ring bond says it does not split alone", ring)
         def charged():
-            pg.evaluate(f"{KJ}.setMolecule('C[NH3+]')"); attendi(pg, f"{KJ}.editor.struct().atoms.size === 2")
+            pg.evaluate(f"{KJ}.setMolecule('C[NH3+]')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 2")
             for i in range(20):
                 menu_at("bond", 0)
                 if pg.locator("#ctx div", has_text="m/z").count() >= 2: break

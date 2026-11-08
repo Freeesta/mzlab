@@ -177,11 +177,11 @@ def load_sources() -> list[dict]:
     return json.loads(CATALOG_SOURCES.read_text(encoding="utf-8"))["fonti"]
 
 
-def check_sources(fonti: list[dict]) -> list[str]:
+def check_sources(sources: list[dict]) -> list[str]:
     """Problems of the hand-written list: ids unique and plain, fields present, `site` only with a free licence, `external` only with a download, `verificato` a date."""
     bad, seen = [], set()
     need = ("id", "gruppo", "nome", "url", "licenza", "formato", "kind", "tech", "pol", "doi", "verificato", "modo", "download", "dimensione", "sha256")
-    for f in fonti:
+    for f in sources:
         i = f.get("id", "?")
         miss = [k for k in need if k not in f]
         if miss:
@@ -203,17 +203,17 @@ def check_sources(fonti: list[dict]) -> list[str]:
     return bad
 
 
-def external_entries(fonti: list[dict]) -> list[dict]:
+def external_entries(sources: list[dict]) -> list[dict]:
     """The `external` sources in the shape the readers of `librerie/1` know (the desktop app downloads these)."""
     keys = ("id", "nome", "url", "formato", "dimensione", "sha256", "licenza")
-    return [{**{k: f[k] for k in keys}, "url": f["download"], "sorgente": f["nome"]} for f in fonti if f["modo"] == "external"]
+    return [{**{k: f[k] for k in keys}, "url": f["download"], "sorgente": f["nome"]} for f in sources if f["modo"] == "external"]
 
 
-def sources_with_packages(fonti: list[dict], libs: list[dict]) -> list[dict]:
+def sources_with_packages(sources: list[dict], libs: list[dict]) -> list[dict]:
     """`site` sources take size and SHA-256 from the package built here; one whose package was not built is left out."""
     by = {p["id"]: p for p in libs}
     out = []
-    for f in fonti:
+    for f in sources:
         if f["modo"] != "site":
             out.append(f)
         elif f["id"] in by:
@@ -274,11 +274,11 @@ def run(out_dir: Path, zip_path: Path | None, builder: list[str] | None, version
             build_mzlib(builder, work / "unito.txt", mz)
             libs.append(entry("unito-standard", "Standard dell'Università di Torino (esempio HR)", 0, "1", "Università di Torino", "https://github.com/Freeesta/mzlab",
                               "CC BY 4.0", lic_merged, {"UniTO": n_merged}, mz, out_dir, MERGED_ATTRIBUTION))
-        fonti = load_sources()
-        bad = check_sources(fonti)
+        sources = load_sources()
+        bad = check_sources(sources)
         if bad:
             raise SystemExit("tools/librerie_catalogo.json: " + "; ".join(bad))
-        cat = {"formato": CATALOG_FORMAT, "pezzo": PIECE, "librerie": libs, "esterne": external_entries(fonti), "fonti": sources_with_packages(fonti, libs)}
+        cat = {"formato": CATALOG_FORMAT, "pezzo": PIECE, "librerie": libs, "esterne": external_entries(sources), "fonti": sources_with_packages(sources, libs)}
         (out_dir / "catalogo.json").write_text(json.dumps(cat, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         total = sum(sum(p["dimensione"] for p in lib["pezzi"]) for lib in libs)
         print(f"catalogo.json: {len(libs)} packages, {total / 1e6:.1f} MB in {sum(len(lib['pezzi']) for lib in libs)} pieces")

@@ -20,7 +20,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1200})
         load(pg, [F], 6000, 1)
-        attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 120000)
+        wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 120000)
         drawer(pg, "alb"); pg.wait_for_selector("#inf-tree tbody tr", timeout=30000)
         def sup():
             t = pg.evaluate("""[...document.querySelectorAll('#inf-tree tbody tr')].map(tr => { const c = tr.cells[1]; return [c.textContent, !!c.querySelector('sup'), c.querySelector('[aria-label]')?.getAttribute('aria-label')] })""")
@@ -45,7 +45,7 @@ try:
             assert pg.evaluate("getComputedStyle(document.activeElement).outlineStyle") != "none"
             pg.keyboard.press("Enter")
             assert pg.evaluate("document.querySelector('#inf-tree tbody tr[aria-selected=true]').dataset.id") == now
-            attendi(pg, f"E.panels.every(p=>!p.filt || p.filt==='msn:{now}')", 20000)
+            wait_for_js(pg, f"E.panels.every(p=>!p.filt || p.filt==='msn:{now}')", 20000)
         step("arrows move the focus, Enter selects the row (visible focus)", keys)
         def controls():
             m = pg.evaluate("""async () => { const ms = async (id, v) => { const s = document.getElementById(id), n0 = document.querySelectorAll('#inf-tree tbody tr').length, t0 = performance.now();
@@ -56,12 +56,12 @@ try:
             assert m[0][1] < m[0][0] and m[1][1] == m[1][0] + (m[0][0] - m[0][1]), m
             assert all(x[2] < 50 for x in m), m
             for sid, v in (("inf-ce", "0"), ("inf-ce", "1"), ("inf-tol", "0.01"), ("inf-tol", "nom")):
-                pg.select_option("#" + sid, v); attendi(pg, "document.querySelectorAll('#inf-tree tbody tr').length > 1 && !document.querySelector('#hri-body > .muted')", 10000)
+                pg.select_option("#" + sid, v); wait_for_js(pg, "document.querySelectorAll('#inf-tree tbody tr').length > 1 && !document.querySelector('#hri-body > .muted')", 10000)
                 assert 1 < pg.locator("#inf-tree tbody tr").count() <= NODES + 1, sid
         step("Level, Tolerance, Energies and Spectrum redraw the table at once", controls)
         def copy():
             pg.evaluate("window.__clip = null; navigator.clipboard.writeText = async t => { window.__clip = t; }; navigator.clipboard.write = async it => { window.__clip = await (await it[0].getType('text/plain')).text(); }; 0")
-            pg.click("#inf-copy"); attendi(pg, "window.__clip !== null", 10000)
+            pg.click("#inf-copy"); wait_for_js(pg, "window.__clip !== null", 10000)
             lines = [l for l in pg.evaluate("window.__clip").split("\n") if not l.startswith("# ")]
             n = pg.locator("#inf-tree tbody tr").count()
             assert len(lines) == n + 1 and all(len(l.split("\t")) == 6 for l in lines), (n, lines[:3])
@@ -70,23 +70,23 @@ try:
         def sort():
             col = lambda: pg.evaluate("[...document.querySelectorAll('#inf-tree tbody tr')].slice(1).map(t => parseFloat(t.cells[4].textContent))")
             ids = lambda: pg.evaluate("[...document.querySelectorAll('#inf-tree tbody tr')].map(t => t.dataset.id)")
-            tree = ids(); pg.click("#inf-sort"); attendi(pg, "document.querySelector('#inf-tree th[aria-sort=descending]')", 10000)
+            tree = ids(); pg.click("#inf-sort"); wait_for_js(pg, "document.querySelector('#inf-tree th[aria-sort=descending]')", 10000)
             d = col(); assert d == sorted(d, reverse=True) and sorted(ids()) == sorted(tree) and ids()[0] == tree[0], d
             assert pg.evaluate("document.querySelector('#inf-tree tbody tr[data-id]:not([data-id=\"\"])').getAttribute('aria-level')") == "2"
-            pg.click("#inf-sort"); attendi(pg, "document.querySelector('#inf-tree th[aria-sort=ascending]')", 10000)
+            pg.click("#inf-sort"); wait_for_js(pg, "document.querySelector('#inf-tree th[aria-sort=ascending]')", 10000)
             a = col(); assert a == sorted(a), a
-            pg.click("#inf-sort"); attendi(pg, "document.querySelector('#inf-tree th[aria-sort=none]')", 10000)
+            pg.click("#inf-sort"); wait_for_js(pg, "document.querySelector('#inf-tree th[aria-sort=none]')", 10000)
             assert ids() == tree, "the third click gives back the tree"
         step("the Intensity column sorts the rows (highest, lowest, back to the tree)", sort)
         def graph():
-            pg.click("#inf-graph"); attendi(pg, "BARRA.curTab === 'gra'", 10000)
+            pg.click("#inf-graph"); wait_for_js(pg, "BARRA.curTab === 'gra'", 10000)
             drawer(pg, "alb"); pg.wait_for_selector("#inf-tree tbody tr", timeout=30000)
         def late_graph():
             # the graph module arrives AFTER the student went back to the tree: it must not repaint the body
             pg.evaluate("""() => { window.__lateGraph = false; const o = window.carica; window.carica = async n => { const r = await o(n); if (/infusione-grafo/.test(n)) { await new Promise(f => setTimeout(f, 1200)); window.__lateGraph = true; } return r; }; }""")
-            pg.evaluate("BARRA.setTab('gra', {noFocus: true, instant: true})"); attendi(pg, "BARRA.curTab === 'gra'", 10000)
-            pg.evaluate("BARRA.setTab('alb', {noFocus: true, instant: true})"); attendi(pg, "BARRA.curTab === 'alb' && !!document.querySelector('#inf-tree tbody tr')", 10000)
-            attendi(pg, "window.__lateGraph === true", 10000); frames(pg, 5)
+            pg.evaluate("BARRA.setTab('gra', {noFocus: true, instant: true})"); wait_for_js(pg, "BARRA.curTab === 'gra'", 10000)
+            pg.evaluate("BARRA.setTab('alb', {noFocus: true, instant: true})"); wait_for_js(pg, "BARRA.curTab === 'alb' && !!document.querySelector('#inf-tree tbody tr')", 10000)
+            wait_for_js(pg, "window.__lateGraph === true", 10000); frames(pg, 5)
             assert pg.evaluate("!!document.querySelector('#inf-tree tbody tr') && !document.querySelector('#ig-open')"), "the late graph repainted the tree tab"
         step("«Fragmentation graph» in the tree controls opens the graph tab", graph)
         step("a graph that arrives late does not repaint the tree tab", late_graph)
@@ -98,7 +98,7 @@ try:
         for w, theme in ((900, "light"), (900, "dark"), (480, "light"), (480, "dark")):
             def fit(w=w, theme=theme):
                 pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate(f"document.getElementById('dfiles').style.width='{620 if w >= 900 else 300}px'"); pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
-                drawer(pg, "alb"); pg.wait_for_selector(".inf-ctl", timeout=10000); attendi(pg, "document.getElementById('hri-body').clientWidth > 200", 10000); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+                drawer(pg, "alb"); pg.wait_for_selector(".inf-ctl", timeout=10000); wait_for_js(pg, "document.getElementById('hri-body').clientWidth > 200", 10000); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
                 g = pg.evaluate("""() => { const c = document.querySelector('.inf-ctl'), b = document.getElementById('hri-body'); const tops = [...c.querySelectorAll('.inf-f')].map(x => Math.round(x.getBoundingClientRect().top));
                   return {tops, over: b.scrollWidth > b.clientWidth + 1, cw: c.getBoundingClientRect().width} }""")
                 if os.environ.get("ALBERO_SHOTS"): pg.locator("#hrinfo").screenshot(path=f"{os.environ['ALBERO_SHOTS']}/albero_{w}_{theme}.png")

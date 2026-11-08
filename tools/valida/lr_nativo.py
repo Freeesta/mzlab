@@ -15,14 +15,14 @@ from .lr_criteri import Mrm, classifica, livello_da_nome
 EXAMPLE_MRM = ROOT / "target" / "release" / "examples" / "nativo_mrm"
 
 
-def indici_lr(mzml: list[Path], cartella: Path) -> list[str]:
+def indici_lr(mzml: list[Path], folder: Path) -> list[str]:
     """`nativo.indici` for names that carry the time after `-` or `_` (`B_FullMass-t30`): the index is named `..._t30min`."""
     from mzlab.reader import mzidx
     from mzlab.reader.mzml import Run
-    cartella.mkdir(parents=True, exist_ok=True)
+    folder.mkdir(parents=True, exist_ok=True)
     out = []
     for p in mzml:
-        dest = cartella / (re.sub(r"[_\-]t(\d+(?:\.\d+)?)$", r"_t\1min", p.stem) + ".mzidx")
+        dest = folder / (re.sub(r"[_\-]t(\d+(?:\.\d+)?)$", r"_t\1min", p.stem) + ".mzidx")
         if not dest.exists():
             run = Run(p, index_path=dest)
             mzidx.build(run, dest)
@@ -39,16 +39,16 @@ def ordina_per_tempo(idx: list[str]) -> list[str]:
     return sorted(idx, key=chiave)
 
 
-def esegui_mrm(mzml: list[Path], uscita: Path) -> dict:
+def esegui_mrm(mzml: list[Path], output: Path) -> dict:
     """Runs the MRM example on the files (in this order); returns {'sha': {file: digest}, 'tabella': bytes of series.mzfeat}."""
     subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo_mrm"], cwd=ROOT, check=True)
-    uscita.mkdir(parents=True, exist_ok=True)
-    subprocess.run([str(EXAMPLE_MRM), str(uscita), *map(str, mzml)], cwd=ROOT, check=True, capture_output=True)
+    output.mkdir(parents=True, exist_ok=True)
+    subprocess.run([str(EXAMPLE_MRM), str(output), *map(str, mzml)], cwd=ROOT, check=True, capture_output=True)
     sha = {}
-    for p in sorted(uscita.glob("*.mzfeat*")):
+    for p in sorted(output.glob("*.mzfeat*")):
         import hashlib
         sha[p.name] = hashlib.sha256(p.read_bytes()).hexdigest()
-    return {"sha": sha, "tabella": (uscita / "series.mzfeat").read_bytes()}
+    return {"sha": sha, "tabella": (output / "series.mzfeat").read_bytes()}
 
 
 def leggi_mrm(tabella: bytes, nomi: list[str]) -> Mrm:
