@@ -2,7 +2,7 @@
 //! `RunEvent::Opened` on macOS) and the commands the page calls (`predefinito.js`). The rules are in `apertura.rs`.
 
 use super::{data_dir, register, save_config, PickedFile};
-use mzlab_desktop::apertura::{self, Pending, Risposta};
+use mzlab_desktop::apertura::{self, NoticeAnswer, Pending};
 use mzlab_desktop::librerie;
 use mzlab_desktop::State;
 use serde::Serialize;
@@ -28,7 +28,7 @@ pub fn take_opened(
     let ask = !files.is_empty()
         && data_dir(&app).is_ok_and(|d| {
             let mut c = librerie::read_config(&d);
-            let ask = apertura::registra_apertura(&mut c);
+            let ask = apertura::record_opening(&mut c);
             let _ = librerie::write_config(&d, &c);
             ask
         });
@@ -61,18 +61,18 @@ pub fn assoc_get(app: AppHandle) -> serde_json::Value {
 #[tauri::command]
 pub fn assoc_answer(app: AppHandle, answer: String) -> Result<(), String> {
     let r = match answer.as_str() {
-        "si" => Some(Risposta::Si),
-        "mai" => Some(Risposta::Mai),
+        "si" => Some(NoticeAnswer::Yes),
+        "mai" => Some(NoticeAnswer::Never),
         "no" => None,
         _ => return Err("bad answer".into()),
     };
-    save_config(&app, |c| apertura::rispondi(c, r))
+    save_config(&app, |c| apertura::answer_notice(c, r))
 }
 
 /// The setting «ask again»: forgets the answer, so the next file opened from outside asks.
 #[tauri::command]
 pub fn assoc_reset(app: AppHandle) -> Result<(), String> {
-    save_config(&app, apertura::rifai)
+    save_config(&app, apertura::ask_again)
 }
 
 /// Registered first: a second launch (double click on a file with the app open) gives its arguments to this window and exits.

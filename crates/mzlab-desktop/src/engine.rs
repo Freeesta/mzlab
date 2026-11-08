@@ -82,7 +82,7 @@ pub struct State {
     /// what the steps of mzFinder leave between two calls (`feat.rs`): the `.mzfeatf`, the table, the hypotheses, the Dig
     pub(crate) feat: Mutex<crate::feat::FeatState>,
     /// the background conversion of the maker's files to mzML (`conv_coda.rs`)
-    pub(crate) coda: crate::conv_coda::Coda,
+    pub(crate) queue: crate::conv_coda::Queue,
     /// the indexes built ahead for the files of the pointed folder, waiting for their file to be opened (`rpc_warm.rs`)
     pub(crate) warm: Mutex<std::collections::HashMap<String, crate::rpc_warm::Warm>>,
     /// where the Flow keeps its `in`, `out` and `probe` folders (`set_flow_folder`; `mzlab-flow` in the system temp dir until then)

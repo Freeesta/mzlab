@@ -46,7 +46,7 @@ pub struct Config {
     #[serde(default)]
     pub aperture: u32,
     #[serde(default)]
-    pub risposta: Option<crate::apertura::Risposta>,
+    pub risposta: Option<crate::apertura::NoticeAnswer>,
 }
 
 pub fn read_config(data_dir: &Path) -> Config {

@@ -24,7 +24,7 @@ use crate::rpc::{io_error, map_file, text, Answer, Eng, MapAt};
 use crate::store::Nat;
 
 /// Default window of the cleavages (`ppm_struttura`), ppm; as in the `.wasm`.
-const PPM_STRUTTURA: f64 = 10.0;
+const STRUCTURE_PPM: f64 = 10.0;
 
 impl State {
     /// `msngrafo {slot, name, fid, query, esporta?, cerca?, libreria?, molecola?}`: the graph of the file `name` (its `.mzidx` and the mzML at `slot`), or its export as text,
@@ -64,10 +64,10 @@ impl State {
             };
         }
         let (g, j, _) = run()?;
-        let (l, doppione) = aggiungi(s("libreria"), s("molecola"), &g, &j)?;
+        let (l, duplicate) = aggiungi(s("libreria"), s("molecola"), &g, &j)?;
         let mut o = Out::default();
         o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
-        o.raw(if doppione { "true}" } else { "false}" });
+        o.raw(if duplicate { "true}" } else { "false}" });
         text(o.0)
     }
 
@@ -283,7 +283,7 @@ fn with_keys(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> Result<String>
             }
         };
         let par = mzlab_feat::chem::rotture::Parametri {
-            ppm: num("ppm_struttura", PPM_STRUTTURA)?,
+            ppm: num("ppm_struttura", STRUCTURE_PPM)?,
             h_max: num("h_max", 2.0)?.min(4.0) as u8,
             max_legami: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
         };
@@ -297,9 +297,9 @@ fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     let (g, j, o) = run()?;
     match q.some("strutture") {
         None => Ok(j),
-        Some(nodo) => {
+        Some(node) => {
             let ppm = match q.some("ppm_struttura") {
-                None => PPM_STRUTTURA,
+                None => STRUCTURE_PPM,
                 Some(v) => v
                     .parse::<f64>()
                     .ok()
@@ -308,7 +308,7 @@ fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
                         Error::new("err.request.badNumber").with("name", "ppm_struttura")
                     })?,
             };
-            strutture_testo(&g, &j, o.smiles.as_deref(), (nodo, ppm))
+            strutture_testo(&g, &j, o.smiles.as_deref(), (node, ppm))
         }
     }
 }
@@ -316,20 +316,20 @@ fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
 /// `msn_graph_export` of the `.wasm`: the spectra of the graph as text, a table of it (`vista`) or the tree as a library (`formato=massbank`, `libreria=1`).
 fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     let clean = q.get("pulito") == Some("1");
-    if let Some(vista) = q.some("vista") {
+    if let Some(view) = q.some("vista") {
         let (_, j, _) = run()?;
         return Ok(table_text(
             &mzlab_core::json::parse(j.as_bytes())?,
-            vista,
+            view,
             clean,
         ));
     }
-    let formato = q.get("formato").unwrap_or("");
-    if formato == "massbank" || q.get("libreria") == Some("1") {
+    let format = q.get("formato").unwrap_or("");
+    if format == "massbank" || q.get("libreria") == Some("1") {
         let (_, j, _) = run()?;
         let v = mzlab_core::json::parse(j.as_bytes())?;
         let get = |k: &str, d: &'static str| q.some(k).unwrap_or(d);
-        let formato = if formato == "massbank" {
+        let format = if format == "massbank" {
             "massbank"
         } else {
             "msp"
@@ -339,14 +339,14 @@ fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
             &j,
             (
                 get("id", ""),
-                formato,
+                format,
                 get("livelli", "all"),
                 clean,
                 get("annota", "1") != "0",
             ),
         );
     }
-    let (f, pulito, nodo) = da_richiesta_export(&|k| q.get(k).map(String::from))?;
+    let (f, clean, node) = da_richiesta_export(&|k| q.get(k).map(String::from))?;
     let (g, _, _) = run()?;
-    Ok(esporta(&g, f, pulito, nodo.as_deref()))
+    Ok(esporta(&g, f, clean, node.as_deref()))
 }
