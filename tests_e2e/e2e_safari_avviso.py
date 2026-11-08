@@ -27,10 +27,17 @@ def ctx(b, gesture=True, tour=False, **k):
     if not tour: c.add_init_script(SKIP_TOUR)
     else: c.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
     if gesture: c.add_init_script(GESTURE)
+    return c, page(c)
+
+def page(c):
     pg = c.new_page()
     pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
     pg.on("console", lambda m: r.errs.append(("console." + m.type, m.text)) if m.type == "error" else None)
-    return c, pg
+    return pg
+
+def visit(c):
+    """A later visit: a new tab of the same browser storage. Not a reload: in WebKit a reload right after the first load had the engine worker refused under COEP."""
+    pg = page(c); pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg); return pg
 
 def shown(pg):
     wait_for_js(pg, f"!!document.querySelector('{BOX}')", 30000)
@@ -60,13 +67,14 @@ try:
             assert pg.evaluate("!!document.querySelector('header')"), "the page is gone"
         step("keyboard: Esc inside the notice closes it", keyboard)
         def again():
-            pg.reload(); ready(pg); hold(pg, 1500)
-            assert not pg.evaluate(STATE)["on"], "the notice came back on a second visit"
+            p2 = visit(c); hold(p2, 1500)
+            assert not p2.evaluate(STATE)["on"], "the notice came back on a second visit"
+            p2.evaluate("localStorage.removeItem('mzlab.safari.seen')"); p2.close()
         step("second visit: no notice", again)
         def reset():
-            pg.evaluate("localStorage.removeItem('mzlab.safari.seen')"); pg.reload(); ready(pg)
-            s = shown(pg); assert s["seen"] == "1", s
-            pg.click(f"{BOX} button.x"); wait_for_js(pg, f"!document.querySelector('{BOX}')", 5000)
+            p3 = visit(c)
+            s = shown(p3); assert s["seen"] == "1", s
+            p3.click(f"{BOX} button.x"); wait_for_js(p3, f"!document.querySelector('{BOX}')", 5000)
         step("storage cleared: shown again; the X closes it", reset)
         c.close()
 
