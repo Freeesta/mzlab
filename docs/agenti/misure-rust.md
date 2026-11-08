@@ -116,3 +116,6 @@ Gesti del visualizzatore, sito e nativo: `tools/bench_visore.py`; tabella in `vi
 
 ## Librerie spettrali: `libset_bench` (nativo, 1 milione di spettri sintetici, `cargo run --release -p mzlab-lib --example libset_bench -- 1000000 unit|hr [librerie]`)
 hr, 1 libreria: identità 0.06 ms/query a caldo (0.28 a freddo); analoghi 51 ms; ricerca aperta ibrida con accumulatori piatti 49–52 ms contro 138 ms della versione a coppie (×2.8). unit, 1 libreria: identità 1.4 ms (1.7 a freddo); analoghi 73–93 ms; ibrida aperta 77–106 ms (la macchina varia) contro 207–230 ms a coppie (×2.1–2.8). unit, 3 librerie da 1M ciascuna fuse: identità 1.5 ms, ibrida aperta 70–81 ms per libreria cercata.
+
+## Rapporto `corsa/1` di una corsa grande (`mzlab-cli flow report RUNDIR`)
+Un file HR sintetico denso (`dati_sintetici_grandi.py --files 1 --scans 12000 --compounds 20000`): il passo `features.group` scrive un `ionnet/1` di 631 MB (7,5 milioni di archi «MS1 correlation»: con meno di `min_corr_samples` file ogni coppia coeluita è un arco). `corsa_build` legge di ogni `.json` solo i membri che usa (`json::parse_members`, gli altri valori controllati ma non costruiti): 9,1 s e 5 581 MB di picco RSS prima, 2,0 s e 636 MB dopo; `corsa/1` identico byte per byte su tre cartelle (1, 2 e 24 file); `main` `e6bdc0e4c7dc4da88b5901a2729ee9d624d5fb42`.
