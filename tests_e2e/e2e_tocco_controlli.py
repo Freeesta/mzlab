@@ -38,9 +38,10 @@ try:
         opened = lambda: pg.evaluate("_opened")
         def close():
             pg.evaluate("for (const d of document.querySelectorAll('dialog[open]')) d.close()"); frames(pg, 4)
-        def no_zoom():
-            assert pg.evaluate("getComputedStyle(document.documentElement).touchAction") == "manipulation"
-        step("the page has no double-tap zoom (pinch stays)", no_zoom)
+        def zoom_scope():
+            ta = pg.evaluate(f"[getComputedStyle(document.documentElement).touchAction, getComputedStyle(document.body).touchAction, getComputedStyle({SP}.el.querySelector('.hd')).touchAction, getComputedStyle({XP}.leg).touchAction]")
+            assert ta[:2] == ["auto", "auto"] and ta[2:] == ["manipulation", "manipulation"], ("only the double-click controls drop the double-tap zoom", ta)
+        step("the page keeps its zooms; the double-click controls drop only the double-tap one", zoom_scope)
         def title():
             x, y = centre(f"{SP}.el.querySelector('.ttl')"); n = opened(); dtap(x, y)
             assert opened() == n + 1 and pg.evaluate("Q('#askdlg').open"), ("one rename dialog", opened() - n)
@@ -62,6 +63,14 @@ try:
             assert opened() == n + 1 and pg.evaluate("TOCCO_CONTROLLI.fired()") == f, "the mouse double click is the browser's own, untouched"
             close()
         step("a mouse double click works as before", mouse_same)
+        def keyboard():
+            pg.evaluate(f"{SP}.el.querySelector('.ttl').focus()"); n = opened(); pg.keyboard.press("F2"); frames(pg, 8)
+            assert opened() == n + 1, "F2 on a focused panel title renames it"; close()
+            pg.evaluate(f"{XP}.leg.querySelector('[data-t]').focus()"); n = opened(); pg.keyboard.press("Enter"); frames(pg, 8)
+            assert opened() == n + 1, "Enter on a focused legend trace renames it"; close()
+            ax = pg.evaluate(f"[{SP}.el.querySelector('.ttl').tabIndex, {XP}.leg.querySelector('[data-t]').getAttribute('role')]")
+            assert ax == [0, "button"], ("the title is in the tab order, a trace is a button", ax)
+        step("the keyboard reaches the same renames (F2 / Enter)", keyboard)
         def as_ios():
             pg.evaluate("addEventListener('dblclick', e => { if (e.isTrusted) e.stopImmediatePropagation(); }, true)")      # iOS sends no dblclick for a double tap
             x, y = centre(f"{XP}.el.querySelector('.ttl')"); n = opened(); dtap(x, y)

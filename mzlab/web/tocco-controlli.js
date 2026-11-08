@@ -1,8 +1,8 @@
 // @ts-check
 // Touch and pen outside the graphs (lazy ES module, loaded by touch.js at the first touch): a double tap is a double click, as touch.js does on the canvases.
 // iOS sends no dblclick for a double tap, so renaming a panel or a trace, resetting a divider or opening a table row had no finger path.
-// The page has no double-tap zoom (app.css, html touch-action), so both taps arrive as clicks; pinch zoom stays. A long press on the rows that have a
-// right-click menu opens it (iPadOS has no long-press contextmenu; Android sends its own, which then wins).
+// The controls with a double-click action have no double-tap zoom (app.css, touch-action:manipulation), so both taps arrive as clicks; elsewhere the page zooms as usual.
+// A long press on the rows that have a right-click menu opens it (iPadOS has no long-press contextmenu; Android sends its own, which then wins).
 const MOVE = 8, DTAP = 350, NEAR = 28, LONG = 550;
 const MENU_ROWS = "#inf-tree tbody tr, #mincl tr[data-i], #flst .fgh[data-ug]";
 const W = /** @type {any} */ (window);
