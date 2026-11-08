@@ -259,8 +259,10 @@ const DDA = (() => {
   // survey scans, only those of this precursor (/api/dda_window mz&tol over the parents' RT)
   async function pints(/** @type {number} */ k, /** @type {Bag} */ D, /** @type {number[]} */ idx, /** @type {number} */ mz, /** @type {number} */ tol) {
     const own = (/** @type {number} */ i) => D.pint[i] || 0;
-    const t = idx.filter(i => D.pint[i] == null && D.prt[i] != null).map(i => D.prt[i]); if (!t.length) return own;
-    const w = await J(`api/dda_window?k=${k}&r0=${Math.min(...t) - 1e-3}&r1=${Math.max(...t) + 1e-3}&mz=${mz}&tol=${tol}` + HR.q()), m = new Map();
+    let r0 = Infinity, r1 = -Infinity;
+    for (const i of idx) if (D.pint[i] == null && D.prt[i] != null) { r0 = Math.min(r0, D.prt[i]); r1 = Math.max(r1, D.prt[i]); }
+    if (r0 > r1) return own;
+    const w = await J(`api/dda_window?k=${k}&r0=${r0 - 1e-3}&r1=${r1 + 1e-3}&mz=${mz}&tol=${tol}` + HR.q()), m = new Map();
     for (const g of (w && w.groups) || []) g.sid.forEach((/** @type {number} */ s, /** @type {number} */ n) => m.set(s, g.pint[n]));
     return (/** @type {number} */ i) => D.pint[i] ?? m.get(D.sid[i]) ?? 0;
   }
