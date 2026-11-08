@@ -16,7 +16,7 @@ use wasm_bindgen::prelude::*;
 mod membro;
 
 use crate::esterno::{errore_del_modulo, LettoreEsterno, ModuloJs};
-use crate::{error_json, Accorpa, BlockWriter, JsOutput, JsReader};
+use crate::{error_json, Accorpa, BlockWriter, JsReader};
 
 /// Readers kept open at once (a `.wiff` holds its container in memory).
 const OPEN: usize = 4;
@@ -251,7 +251,35 @@ impl Passata {
     }
 }
 
-/// The scratch file of the index builder (`mzidx_spill`): `put(offset, Uint8Array)` and `get(offset, length) -> Uint8Array` (a second file of OPFS in the worker).
+/// `f(offset, bytes)` with `bytes` a view of this module's memory, not a copy: valid during the call only (a later allocation can move or reuse it),
+/// so `f` writes it at once and keeps nothing (`writeFull` of the worker, a sync OPFS write; `fs.writeSync` in Node). `what` names a refused write.
+/// Made with the safe `wasm_bindgen::memory()` (the crate forbids `unsafe`); `data` outlives the call, and the callbacks never call the engine, so nothing moves meanwhile.
+fn lend(f: &Function, offset: u64, data: &[u8], what: &str) -> mzlab_core::Result<()> {
+    let bad = || mzlab_core::Error::new("err.file.index").with("detail", what);
+    let mem: js_sys::WebAssembly::Memory = wasm_bindgen::memory().unchecked_into();
+    let (at, n) = (data.as_ptr() as usize, data.len());
+    let (at, n) = u32::try_from(at)
+        .ok()
+        .zip(u32::try_from(n).ok())
+        .ok_or_else(bad)?;
+    let v = Uint8Array::new_with_byte_offset_and_length(&mem.buffer(), at, n);
+    f.call2(&JsValue::NULL, &(offset as f64).into(), &v)
+        .map(|_| ())
+        .map_err(|_| bad())
+}
+
+/// Writes to JS at offsets: `write(offset, Uint8Array)` (the worker puts them in a file of OPFS), the bytes lent (`lend`).
+pub(crate) struct JsOutput {
+    pub(crate) write: Function,
+}
+
+impl mzlab_core::mzidx::Output for JsOutput {
+    fn write_at(&mut self, offset: u64, data: &[u8]) -> mzlab_core::Result<()> {
+        lend(&self.write, offset, data, "write")
+    }
+}
+
+/// The scratch file of the index builder (`mzidx_spill`): `put(offset, Uint8Array)` (lent, `lend`) and `get(offset, length) -> Uint8Array` (a second file of OPFS in the worker).
 pub(crate) struct JsSpill {
     pub(crate) put: Function,
     pub(crate) get: Function,
@@ -259,14 +287,7 @@ pub(crate) struct JsSpill {
 
 impl Spill for JsSpill {
     fn put(&mut self, offset: u64, data: &[u8]) -> mzlab_core::Result<()> {
-        self.put
-            .call2(
-                &JsValue::NULL,
-                &(offset as f64).into(),
-                &Uint8Array::from(data),
-            )
-            .map(|_| ())
-            .map_err(|_| mzlab_core::Error::new("err.file.index").with("detail", "spill write"))
+        lend(&self.put, offset, data, "spill write")
     }
     fn get(&mut self, offset: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
         let bad = || mzlab_core::Error::new("err.file.index").with("detail", "spill read");
