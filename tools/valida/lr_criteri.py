@@ -176,13 +176,13 @@ def candidati_lr(identita: list[dict]) -> list[dict]:
     return [i for i in identita if i.get("formula")]
 
 
-def isomeri_separati(coppie: list[tuple], rows_mz, rows_rt) -> tuple[int, int]:
-    """(pairs with two distinct rows, pairs): `coppie` are ((mz, rt), (mz, rt)) of isomers that the profile separates; two distinct rows match the two points."""
+def isomeri_separati(pairs: list[tuple], rows_mz, rows_rt) -> tuple[int, int]:
+    """(pairs with two distinct rows, pairs): `pairs` are ((mz, rt), (mz, rt)) of isomers that the profile separates; two distinct rows match the two points."""
     ok = 0
-    for a, b in coppie:
+    for a, b in pairs:
         ra, rb = righe_vicine(*a, rows_mz, rows_rt), righe_vicine(*b, rows_mz, rows_rt)
         ok += any(x != y for x in ra for y in rb)
-    return ok, len(coppie)
+    return ok, len(pairs)
 
 
 def valle(ca: float, sa: float, aa: float, cb: float, sb: float, ab: float) -> float:
@@ -202,14 +202,14 @@ def coppie_isomeri(rif: list[dict], tol_rt: float = TOL_RT) -> list[tuple]:
     return out
 
 
-def criteri_fullscan(rif: list[dict] | None, rows_mz, rows_rt, identita: list[dict], coppie: list[tuple]) -> tuple[list[dict], dict]:
+def criteri_fullscan(rif: list[dict] | None, rows_mz, rows_rt, identita: list[dict], pairs: list[tuple]) -> tuple[list[dict], dict]:
     """The three full scan criteria and their details; `rif` None (no reference run): not measured."""
     if rif is None:
         return [crit("lr_ioni_python_in_tabella", None, 0.95, ">="), crit("lr_candidati_con_prove", None, 1.0, ">="), crit("lr_isomeri_due_righe", None, 1.0, ">=")], {}
     found, n, miss = copertura(rif, rows_mz, rows_rt)
     cand = candidati_lr(identita)
     with_tests = sum(candidate_tests(i) for i in cand)
-    iso, np_ = isomeri_separati(coppie, rows_mz, rows_rt)
+    iso, np_ = isomeri_separati(pairs, rows_mz, rows_rt)
     det = {"ioni_riferimento": n, "ioni_trovati": found, "ioni_mancanti": [{"mz": round(x["mz"], 2), "rt": round(x["rt"], 2)} for x in miss],
            "candidati": len(cand), "candidati_con_prove": with_tests, "coppie_isomeri": np_, "coppie_separate": iso, "righe": len(rows_mz)}
     return [crit("lr_ioni_python_in_tabella", found / n if n else None, 0.95, ">="),

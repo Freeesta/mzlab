@@ -121,7 +121,7 @@ impl Wiff {
     ) -> Result<Vec<Chromatogram>> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
         let mut n = 0;
-        for r in &self.records {
+        for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
             if let Some(p) = scan::read_scan(scan, self.scan_len, r.at, r.end)? {
                 if p.mz.is_empty() {
                     continue;
@@ -179,7 +179,12 @@ impl Wiff {
         counts: Option<&[Option<u32>]>,
     ) -> Result<Vec<Chromatogram>> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
-        for (i, r) in self.records.iter().enumerate() {
+        for (i, r) in self
+            .records
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| !r.cut(self.scan_len))
+        {
             let count = match counts.and_then(|c| c.get(i)) {
                 Some(&c) => c,
                 None => scan::point_count(scan, self.scan_len, r.at, r.end)?,
@@ -207,7 +212,7 @@ impl Wiff {
     /// How many spectra `visit` will give (reads the head of each block only).
     pub fn spectrum_count<R: ReadAt>(&self, scan: &mut R) -> Result<usize> {
         let mut n = 0;
-        for r in &self.records {
+        for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
             n += scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some_and(|c| c > 0)
                 as usize;
         }

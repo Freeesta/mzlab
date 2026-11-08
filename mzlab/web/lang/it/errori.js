@@ -1,6 +1,13 @@
 I18N.add("it", {
   "err.file.notWiff": "{name} non è un file .wiff valido.",
   "err.file.wiffNoScan": "Manca il file .wiff.scan di {name}: servono tutti e due, con lo stesso nome.",
+  "err.file.wiffTruncated": "Il file {name} è troncato: è lungo {size} byte ma la sua tabella ne richiede {needed}, quindi campioni e metodo non si possono leggere per intero e non è stato caricato nulla. Copia di nuovo il .wiff per intero (con il suo .wiff.scan).",
+  "err.file.cutShort": "Il file {name} è troncato: è lungo {size} byte ma la sua tabella ne richiede {needed}, quindi le scansioni non si possono leggere per intero e non è stato caricato nulla. Copia di nuovo il file per intero.",
+  "err.file.functionsCut": "La cartella {name} elenca {listed} funzioni in _FUNCTNS.INF ma contiene i dati di altre: l'elenco è troncato, quindi non è stato caricato nulla. Copia di nuovo l'intera cartella .raw.",
+  "err.file.indexCut": "Nella cartella {name} l'indice {file} è troncato o danneggiato: non corrisponde al suo file di dati, quindi non è stato caricato nulla. Copia di nuovo l'intera cartella.",
+  "err.file.functionsEmpty": "Nella cartella {name} il file _FUNCTNS.INF è vuoto: è l'elenco delle funzioni di acquisizione della corsa e senza di esso nessuna funzione si può leggere, quindi non è stato caricato nulla. Copia di nuovo l'intera cartella.",
+  "err.file.recordVariant": "Nella cartella {name} la funzione {function} (tipo {type}) registra i dati in una variante di record che il programma non legge ancora, quindi non è stato caricato nulla. Converti la cartella in mzML con il programma dello strumento e apri quel file.",
+  "err.file.headerCut": "Nella cartella {name} il file {file} è troncato (vuoto, o una riga di taratura incompleta): contiene la taratura delle masse, quindi gli m/z non sarebbero affidabili e non è stato caricato nulla. Copia di nuovo l'intera cartella.",
   "err.file.moduleLoad": "Il lettore di questo formato non si è scaricato ({family}): controlla la connessione, poi ricarica la pagina (Ctrl/Cmd+Maiusc+R) e riprova.",
   "err.file.wiffLoad": "Il motore di calcolo non si è caricato: ricarica la pagina (Ctrl/Cmd+Maiusc+R) e riprova.",
   "err.file.wiffEngine": "Il motore di calcolo non è pronto per leggere il .wiff: ricarica la pagina (Ctrl+Maiusc+R) e riprova.",

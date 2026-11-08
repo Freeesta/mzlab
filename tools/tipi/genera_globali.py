@@ -26,11 +26,11 @@ def leggi(p):
         return f.read()
 
 
-def first_level_names(testo):
+def first_level_names(text):
     ris = set()   # a one-line JSDoc may precede the declaration
-    for m in re.finditer(r"^(?:/\*\*.*?\*/\s*)?(?:async\s+)?(?:const|let|var|function\*?|class)\s+([A-Za-z_$][\w$]*)", testo, re.M):
+    for m in re.finditer(r"^(?:/\*\*.*?\*/\s*)?(?:async\s+)?(?:const|let|var|function\*?|class)\s+([A-Za-z_$][\w$]*)", text, re.M):
         ris.add(m.group(1))
-    for row in re.finditer(r"^(?:/\*\*.*?\*/\s*)?(?:const|let|var)\s[^\n]*", testo, re.M):   # const A = {...}, B = null, C = 0 ...: every name after a value
+    for row in re.finditer(r"^(?:/\*\*.*?\*/\s*)?(?:const|let|var)\s[^\n]*", text, re.M):   # const A = {...}, B = null, C = 0 ...: every name after a value
         for m in re.finditer(r"(?:[}\])]|\bnull|\btrue|\bfalse|\d|[\"'])\s*,\s*([A-Za-z_$][\w$]*)\s*=(?=[^=>])", row.group(0)):
             ris.add(m.group(1))
     return ris

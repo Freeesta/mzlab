@@ -77,11 +77,11 @@ def alogenati(c, st, rng) -> None:
         halogenated_products(c, st, rng, p, f, alog, nome)
 
 
-def n_fragments(rng, mz: float, n: int, evita=()) -> tuple:
-    """`n` invented fragments of a precursor (sorted), none near an `evita` m/z."""
+def n_fragments(rng, mz: float, n: int, avoid=()) -> tuple:
+    """`n` invented fragments of a precursor (sorted), none near an `avoid` m/z."""
     f, r = [], []
     while len(f) < n:
-        a, b = frammenti_di(rng, mz, evita=list(evita) + f)
+        a, b = frammenti_di(rng, mz, avoid=list(avoid) + f)
         f += [x for x in a[:n - len(f)]]
         r += [x for x in b[:n - len(r)]]
     o = np.argsort(f, kind="stable")
@@ -94,7 +94,7 @@ def fragments_group(rng, mz: float, quota: float, base=None, n: int = 10) -> tup
         return n_fragments(rng, mz, n)
     k = int(round(quota * n))
     sel = sorted(rng.permutation(len(base[0]))[:k].tolist())
-    new = n_fragments(rng, mz, n - k, evita=base[0])
+    new = n_fragments(rng, mz, n - k, avoid=base[0])
     f = np.concatenate([base[0][sel], new[0]])
     r = np.concatenate([base[1][sel], new[1]])
     o = np.argsort(f, kind="stable")

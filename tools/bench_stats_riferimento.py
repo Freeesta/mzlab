@@ -52,13 +52,13 @@ def holm_exact(p: list[float], alfa: float = 0.05) -> tuple[list[float], list[bo
     return adj, [x < alfa for x in adj]
 
 
-def non_inferiore(ic_basso: float, ic_alto: float, direzione_alto: bool, margine: float) -> bool:
-    return bool(ic_basso > margine) if direzione_alto else bool(ic_alto < margine)
+def non_inferiore(ic_basso: float, ci_high: float, direction_up: bool, margin: float) -> bool:
+    return bool(ic_basso > margin) if direction_up else bool(ci_high < margin)
 
 
-def superiore(ic_basso: float, ic_alto: float, direzione_alto: bool, rifiutata: bool) -> bool:
-    side = ic_basso > 0.0 if direzione_alto else ic_alto < 0.0
-    return bool(side and rifiutata)
+def superiore(ic_basso: float, ci_high: float, direction_up: bool, refused: bool) -> bool:
+    side = ic_basso > 0.0 if direction_up else ci_high < 0.0
+    return bool(side and refused)
 
 
 def bootstrap_indices(n: int, n_boot: int, seed: int) -> list[list[int]]:
@@ -147,14 +147,14 @@ def make_decision_cases() -> list[dict]:
         (0.00, 0.05, 0.0),
         (-0.05, 0.00, 0.0),
     ]
-    for lo, hi, margine in triplets:
+    for lo, hi, margin in triplets:
         for dir_high in [True, False]:
             for rej in [True, False]:
-                ni = non_inferiore(lo, hi, dir_high, margine)
+                ni = non_inferiore(lo, hi, dir_high, margin)
                 sup = superiore(lo, hi, dir_high, rej)
                 cases.append({
                     "ic_basso": lo, "ic_alto": hi,
-                    "direzione_alto": dir_high, "margine": margine,
+                    "direzione_alto": dir_high, "margine": margin,
                     "rifiutata": rej, "non_inferiore": ni, "superiore": sup,
                 })
     return cases

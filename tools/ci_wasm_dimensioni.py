@@ -16,19 +16,19 @@ def tetti() -> dict[str, int]:
     return out
 
 
-def misura(sito: Path) -> dict[str, dict]:
+def misura(site: Path) -> dict[str, dict]:
     cap = tetti()
     out = {}
-    for w in sorted(sito.rglob("*.wasm")):
-        if "vendor" in w.relative_to(sito).parts:          # third-party modules (Ketcher's Indigo) have no cap of ours
+    for w in sorted(site.rglob("*.wasm")):
+        if "vendor" in w.relative_to(site).parts:          # third-party modules (Ketcher's Indigo) have no cap of ours
             continue
         # the cap of a module is the limit_<name> whose name appears in its folder or file name
         keys = [k for k in cap if k in (w.parent.name, w.stem) or k == w.parent.name.replace("-", "_")]
-        out[w.relative_to(sito).as_posix()] = {"byte": w.stat().st_size, "tetto": cap[keys[0]] if keys else None}
+        out[w.relative_to(site).as_posix()] = {"byte": w.stat().st_size, "tetto": cap[keys[0]] if keys else None}
     return out
 
 
 if __name__ == "__main__":
-    dati = misura(Path(sys.argv[1]))
-    if dati:
-        Path(sys.argv[2] if len(sys.argv) > 2 else "wasm-dimensioni.json").write_text(json.dumps(dati, separators=(",", ":")), encoding="utf-8")
+    data = misura(Path(sys.argv[1]))
+    if data:
+        Path(sys.argv[2] if len(sys.argv) > 2 else "wasm-dimensioni.json").write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")

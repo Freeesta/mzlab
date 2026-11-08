@@ -130,17 +130,17 @@ def costruisci(nome: str, lav: Path, thermo: bool) -> dict:
     crudo = bg.stat().st_size
     # the site's own wasm-opt (npm wasm-opt, flags of tools/wasm_opt.sh); the size gate is set out of reach
     run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(bg), str(2**40), nome], env={**os.environ, "RUNNER_TEMP": str(lav / "tmp"), "MZLAB_WASM_OPT_LEVEL": level})
-    dati = bg.read_bytes()
-    return {"variant": nome, "raw_bytes": crudo, "opt_bytes": len(dati), "gzip_bytes": len(gzip.compress(dati, 9))}
+    data = bg.read_bytes()
+    return {"variant": nome, "raw_bytes": crudo, "opt_bytes": len(data), "gzip_bytes": len(gzip.compress(data, 9))}
 
 
-def in_node(nome: str, lav: Path, giri: int) -> dict:
+def in_node(nome: str, lav: Path, rounds: int) -> dict:
     for f in ("suite.js", "node_bench.mjs"):
         shutil.copy(BANCO / "js" / f, lav / f)
-    return json.loads(run(["node", str(lav / "node_bench.mjs"), str(lav / "v" / nome), str(giri), str(lav / "data")]).strip().splitlines()[-1])
+    return json.loads(run(["node", str(lav / "node_bench.mjs"), str(lav / "v" / nome), str(rounds), str(lav / "data")]).strip().splitlines()[-1])
 
 
-def in_browser(motore: str, nomi: list[str], lav: Path, giri: int) -> dict:
+def in_browser(motore: str, names: list[str], lav: Path, rounds: int) -> dict:
     """Run the suite of every variant in Chromium, Firefox or WebKit (compileStreaming) from a local server; its PID is saved and it is stopped by that PID."""
     from playwright.sync_api import sync_playwright
     for f in ("suite.js", "run.html"):
@@ -162,9 +162,9 @@ def in_browser(motore: str, nomi: list[str], lav: Path, giri: int) -> dict:
                 if motore != "chromium":
                     raise   # Playwright of another build than the installed browsers: use the system Chromium if there is one
                 br = p.chromium.launch(executable_path=os.environ.get("CHROMIUM_PATH", "/opt/pw-browsers/chromium"))
-            for n in nomi:
+            for n in names:
                 pg = br.new_page()
-                pg.goto(f"http://127.0.0.1:{porta}/run.html?v={n}&reps={giri}")
+                pg.goto(f"http://127.0.0.1:{porta}/run.html?v={n}&reps={rounds}")
                 pg.wait_for_function("window.RESULT", timeout=3_600_000)
                 results[n] = pg.evaluate("window.RESULT")
                 pg.close()
@@ -183,9 +183,9 @@ def confronta(righe: list[dict], motore: str) -> list[str]:
     rif = righe[0]
     for r in righe[1:]:
         a, b = rif[motore].get("check", {}), r[motore].get("check", {})
-        for lavoro in sorted(set(a) | set(b)):
-            if a.get(lavoro) != b.get(lavoro):
-                errors.append(f"{motore}: {lavoro} differs between {rif['variant']} ({a.get(lavoro)!r}) and {r['variant']} ({b.get(lavoro)!r})")
+        for work in sorted(set(a) | set(b)):
+            if a.get(work) != b.get(work):
+                errors.append(f"{motore}: {work} differs between {rif['variant']} ({a.get(work)!r}) and {r['variant']} ({b.get(work)!r})")
     return errors
 
 
@@ -212,8 +212,8 @@ def main():
     ap.add_argument("--raw", action="store_true", help="also the .raw jobs, with a file of the private data repository (skipped without it)")
     ap.add_argument("--lavoro", help="work folder kept between runs (default: a temporary one, removed at the end)")
     a = ap.parse_args()
-    nomi = a.varianti.split(",")
-    for n in nomi:
+    names = a.varianti.split(",")
+    for n in names:
         if n not in VARIANTI:
             sys.exit(f"unknown variant {n}")
     check_tools()
@@ -225,13 +225,13 @@ def main():
     try:
         prepare_data(lav, raw)
         righe = []
-        for n in nomi:
+        for n in names:
             r = costruisci(n, lav, raw is not None)
             r["node"] = in_node(n, lav, a.giri)
             righe.append(r)
         motori = [m for m in ("chromium", "firefox", "webkit") if getattr(a, m)]
         for m in motori:
-            br = in_browser(m, nomi, lav, a.giri)
+            br = in_browser(m, names, lav, a.giri)
             for r in righe:
                 r[m] = br[r["variant"]]
                 if "error" in r[m]:
