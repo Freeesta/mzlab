@@ -62,6 +62,9 @@ pub struct AgilentD {
     pub missing: usize,
 }
 
+/// `ScanType` of a QqQ MRM visit (the twin of `agilent_ext::lcms::SCAN_MRM`).
+const SCAN_MRM: i32 = 256;
+
 impl AgilentD {
     /// `name`: the folder name (`xxx.D`). A folder without `AcqData/MSScan.bin` is `err.file.notAgilentD`, an index that is not understood is `err.file.agilent`.
     pub fn open(name: &str, f: &Files) -> Result<AgilentD> {
@@ -87,6 +90,13 @@ impl AgilentD {
             } else {
                 Error::new("err.file.agilent").with("detail", "no scans")
             });
+        }
+        // QqQ MRM visits make the SRM chromatograms that only the `agilent` module builds: refused here, the site hands the run to it, as the CLI reads it.
+        if let Some(r) = records.iter().find(|r| r.scan_type == SCAN_MRM) {
+            return Err(Error::new("err.file.agilent").with(
+                "detail",
+                format!("scan {}: ScanType {SCAN_MRM} (MRM)", r.id),
+            ));
         }
         Ok(AgilentD {
             name: name.to_string(),
