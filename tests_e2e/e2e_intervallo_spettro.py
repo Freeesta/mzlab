@@ -61,6 +61,16 @@ try:
             assert pg.evaluate(NS) == n0 + 1, "Enter opens the range spectrum"
             r01 = new_spec(b); s = sel(); assert abs(r01[0] - s[0]) < 1e-6 and abs(r01[1] - s[1]) < 1e-6, (r01, s)
         step("Enter on the focused chart with a range opens its spectrum", enter)
+        def late():
+            # the click of the pair asks for its nearest scan; a reply that comes after the double click must not overwrite the range spectrum
+            drag(lo, hi); s, b = sel(), ids()
+            pg.evaluate("(() => { const f = nearScan; window._nsF = f; window._nsGo = []; window.nearScan = (k, x) => new Promise(ok => window._nsGo.push(() => f(k, x).then(ok))); })()")
+            pg.mouse.dblclick((X(lo) + X(hi)) / 2, Ymid()); ready(pg)
+            assert pg.evaluate("window._nsGo.length") >= 1, "the click asked for its nearest scan"
+            pg.evaluate("(async () => { const g = window._nsGo; window.nearScan = window._nsF; for (const go of g) await go(); })()"); frames(pg, 3); ready(pg)
+            r01 = new_spec(b); assert r01 and abs(r01[0] - s[0]) < 1e-6 and abs(r01[1] - s[1]) < 1e-6, (r01, s)
+            assert sel() == s, "the selection stays"
+        step("a late nearest-scan reply after the double click leaves the range spectrum alone", late)
         def tap2():
             drag(lo, hi); n0 = pg.evaluate(NS); x, y = (X(lo) + X(hi)) / 2, Ymid()
             for _ in range(2): T("touchStart", [(x, y)]); T("touchEnd", [])
