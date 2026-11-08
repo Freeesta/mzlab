@@ -77,14 +77,15 @@ run = tmp / "run"; run.mkdir()
 for i, n in enumerate(NAMES): write_mzml(run / (n + ".mzML"), i, 100 + i)
 FEW = {"min_corr_samples": 7}   # more than the six files: no correlation can be tested
 (run / "group.json").write_text(json.dumps(plan(True))); (run / "view.json").write_text(json.dumps(plan(True, True))); (run / "samples.json").write_text(SAMPLES)
-(run / "few.json").write_text(json.dumps(plan(True, params=FEW)))
-out, out_view, out_few = run / "out", run / "out_view", run / "out_few"
-for name, to in (("group.json", out), ("view.json", out_view), ("few.json", out_few)):
+RAISE = {"ions_pos": "[M+H]+,[M+NH4]+"}   # a run the page refuses at its safe budget and makes again with the high one
+(run / "few.json").write_text(json.dumps(plan(True, params=FEW))); (run / "raise.json").write_text(json.dumps(plan(True, params=RAISE)))
+out, out_view, out_few, out_raise = run / "out", run / "out_view", run / "out_few", run / "out_raise"
+for name, to in (("group.json", out), ("view.json", out_view), ("few.json", out_few), ("raise.json", out_raise)):
     nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / name), "--in", str(run), "--out", str(to)], cwd=ROOT, capture_output=True, text=True)
     assert nat_run.returncode == 0, (name, nat_run.stderr[-1500:])
 data = site / "static" / "dati_flow_group"; data.mkdir()
 for n in NAMES: shutil.copy2(next(out.glob("*-" + n + ".mzidx")), data / (n + ".mzidx"))
-NATIVE, NATIVE_VIEW, NATIVE_FEW = (out / "grp.json").read_bytes(), (out_view / "grpv.json").read_bytes(), (out_few / "grp.json").read_bytes()
+NATIVE, NATIVE_VIEW, NATIVE_FEW, NATIVE_RAISE = (out / "grp.json").read_bytes(), (out_view / "grpv.json").read_bytes(), (out_few / "grp.json").read_bytes(), (out_raise / "grp.json").read_bytes()
 assert "warn.flow.group.corrFiles" in (out_few / "prov.json").read_text() and b"MS1 correlation" not in NATIVE_FEW and b"MS1 correlation" in NATIVE
 
 PUT = """async (names) => {
@@ -102,10 +103,10 @@ RUN = """async ([plan, samples]) => {
   catch (e) { return { ev, err: { key: e.key, params: e.params, msg: String(e && e.message || e) } }; }
   finally { document.removeEventListener('flow:web-step', on); }
 }"""
-# the texts the run kept in OPFS (mzlab/flow/msn/<key>.json = {name, text}), by name
+# the texts of the last run, by name (mzlab/flow/<name>: the newest one of each name; the cache under mzlab/flow/msn/ holds every run, in no order)
 KEPT = """async () => {
-  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), msn = await d.getDirectoryHandle('msn'), out = {};
-  for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
+  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), out = {};
+  for await (const [n, h] of d.entries()) if (h.kind === 'file' && n.endsWith('.json')) out[n] = await (await h.getFile()).text();
   return out;
 }"""
 PORT = lib.free_port()
@@ -186,6 +187,39 @@ try:
             err = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('grp')).title")
             assert "Not enough memory for the «group» phase" in err, err
         step("past the budget features.group is refused as the alignment is", budget)
+
+        # a safe budget that cannot hold the grouping and a high one that can (the levels of the engine's choice): Run asks once, the yes runs it again with the high budget
+        LEVELS = "() => { const r = window.MZLAB_RUST; window.__lv = [r.budgetMb, r.choice]; r.budgetMb = 0; r.choice = { ...(r.choice || {}), mb: 0.0001, high_mb: 4096 }; }"
+        UNDO = "() => { const r = window.MZLAB_RUST; [r.budgetMb, r.choice] = window.__lv; }"
+
+        def raise_yes():
+            pg.evaluate(LEVELS)
+            try:
+                pg.evaluate("([plan, samples]) => { window.__run = (" + RUN + ")([plan, samples]); }", [plan(True, params=RAISE), SAMPLES])
+                pg.wait_for_selector("#memmore", timeout=120000)
+                text = pg.inner_text("#memmore #mm-p")
+                assert "ion grouping" in text or "raggruppamento degli ioni" in text, text
+                card = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('grp')).word")
+                assert card == "Allow more memory: Run now", card
+                pg.click("#memmore #mm-yes")
+                r = pg.evaluate("() => window.__run")
+            finally: pg.evaluate(UNDO)
+            assert not r.get("err"), (r.get("err"), r["ev"][-6:])
+            web = pg.evaluate(KEPT).get("grp.json"); assert web is not None
+            assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE_RAISE).hexdigest(), (web[:300], NATIVE_RAISE[:300])
+            assert NATIVE_RAISE != NATIVE, "the raised run gave the text of the default run: the case proves nothing"
+        step("past the safe budget and within the high one, Run asks and the yes gives the native ionnet/1", raise_yes)
+
+        def raise_no():
+            pg.evaluate(LEVELS); pg.evaluate("() => { window.__ask = window.mzlabAskMore; window.__asked = []; window.mzlabAskMore = async i => { window.__asked.push(i); return false; }; }")
+            try: r = pg.evaluate(RUN, [plan(True, params={"min_corr": 0.9}), SAMPLES])
+            finally: pg.evaluate(UNDO); pg.evaluate("() => { window.mzlabAskMore = window.__ask; }")
+            asked = pg.evaluate("window.__asked")
+            assert len(asked) == 1 and asked[0]["fase"] == "group" and asked[0]["high_mb"] == 4096 and asked[0]["stima_mb"] > 0, asked
+            assert r.get("err") and r["err"]["key"] == "error.featMemory", r.get("err")
+            err = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('grp')).title")
+            assert "Not enough memory for the «group» phase" in err, err
+        step("a no keeps features.group refused, as for the alignment", raise_no)
 
         def template():
             got = pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, F = FLOW;
