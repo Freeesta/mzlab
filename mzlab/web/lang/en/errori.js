@@ -1,6 +1,8 @@
 I18N.add("en", {
   "err.file.notWiff": "{name} is not a valid .wiff file.",
   "err.file.wiffNoScan": "The .wiff.scan file of {name} is missing: both are needed, with the same name.",
+  "err.file.wiffTruncated": "The file {name} is cut short: it is {size} bytes long but its own table needs {needed}, so the samples and the method cannot be read whole and nothing was loaded. Copy the whole .wiff again (with its .wiff.scan).",
+  "err.file.cutShort": "The file {name} is cut short: it is {size} bytes long but its own table needs {needed}, so its scans cannot be read whole and nothing was loaded. Copy the whole file again.",
   "err.file.moduleLoad": "The reader of this format did not download ({family}): check the connection, then reload the page (Ctrl/Cmd+Shift+R) and try again.",
   "err.file.wiffLoad": "The calculation engine did not load: reload the page (Ctrl/Cmd+Shift+R) and try again.",
   "err.file.wiffEngine": "The calculation engine is not ready to read the .wiff: reload the page (Ctrl+Shift+R) and try again.",

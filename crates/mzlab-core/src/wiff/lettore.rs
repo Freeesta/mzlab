@@ -196,7 +196,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     }
     fn missing(&mut self, c: usize) -> usize {
         let n = self.scan_len;
-        self.parti.get(c).map_or(0, |p| p.w.records.iter().filter(|r| r.end > n || r.at >= n).count())
+        self.parti.get(c).map_or(0, |p| p.w.records.iter().filter(|r| r.cut(n)).count())
     }
     fn samples(&self) -> &[Campione] { &self.campioni }
     fn index(&mut self, c: usize) -> Result<&[VoceScansione]> { Ok(&self.pronta(c)?.indice) }
@@ -388,7 +388,12 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
     #[cfg(feature = "sciex")]
     let (mut other, mut mrm_seen) = (false, vec![false; w.experiments.len().max(1)]);
     for (i, r) in w.records.iter().enumerate() {
-        let points = scan::point_count(&mut win, scan_len, r.at, r.end)?;
+        // a block cut by the end of the file is counted by `missing`, never read short
+        let points = if r.cut(scan_len) {
+            None
+        } else {
+            scan::point_count(&mut win, scan_len, r.at, r.end)?
+        };
         counts.push(points);
         // the first MRM block of each experiment: a sparse (scheduled) one starts with `-(N + 0.01)`, even when the method has no `sMRM` stream to say so
         #[cfg(feature = "sciex")]
