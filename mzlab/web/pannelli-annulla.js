@@ -30,7 +30,7 @@ COMANDI.gestore("xic.traces", {
 });
 // keyboard of the double-click actions: F2 or Enter on a panel title or a legend trace renames it, Enter on a row of the map table opens its spectrum (as a double click).
 // The map table is one tab stop: the arrows, Home and End move between its rows (roving tabindex).
-const ROVE = { ArrowDown: 1, ArrowUp: -1, Home: -1e9, End: 1e9 };
+{ const ROVE = { ArrowDown: 1, ArrowUp: -1, Home: -1e9, End: 1e9 };
 document.addEventListener("keydown", e => {
   const t = /** @type {HTMLElement} */ (e.target), ren = t.matches && t.matches(".pnl .ttl, .pnl .leg [data-t]"), row = !ren && t.matches && t.matches(".mztab tbody tr[data-i]");
   if (row && e.key in ROVE) {
@@ -40,3 +40,4 @@ document.addEventListener("keydown", e => {
   if (!(ren && (e.key === "F2" || e.key === "Enter")) && !(row && e.key === "Enter")) return;
   e.preventDefault(); if (row) t.click(); t.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, view: window, detail: 2 }));
 });
+}
