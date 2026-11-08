@@ -32,14 +32,14 @@ from mzlab.reader.mzml import Run  # noqa: E402
 def plans() -> dict[str, tuple[int, list[tuple], float]]:
     """name -> (seed, ions (m/z, RT, sigma, amplitude), RT end)."""
     rng = np.random.default_rng(11)
-    deboli = [(float(m), float(c), 0.05, float(a)) for m, c, a in zip(rng.uniform(150, 800, 40), rng.uniform(1, 9, 40), 10 ** rng.uniform(5.3, 7, 40))]
+    weak = [(float(m), float(c), 0.05, float(a)) for m, c, a in zip(rng.uniform(150, 800, 40), rng.uniform(1, 9, 40), 10 ** rng.uniform(5.3, 7, 40))]
     intensi = [(300.1234, 4.0, 0.06, 4e8), (300.1234 * (1 + 60e-6), 4.0, 0.06, 5e6),       # a side lobe 60 ppm from an intense ion
                (455.2, 6.0, 0.05, 9e7), (455.2 * (1 + 3e-6), 6.02, 0.05, 2e7),           # two ions 3 ppm apart
                (610.31, 2.5, 0.2, 3e7)]
-    fondo = [(250.05, 0.5 + 0.001, 40.0, 3e6), (420.4, 1.0, 40.0, 2.5e5)]                 # continuous background (sigma 40 min = whole run)
-    vicini = [(500.0 + 0.0012 * k, 5.0 + 0.3 * (k % 3), 0.04, 5e5 * (1 + k)) for k in range(6)]
-    return {"deboli": (21, deboli, 12.0), "intensi": (22, intensi + deboli[:10], 12.0), "fondo": (23, fondo + deboli[:15], 6.0),
-            "vicini": (24, vicini, 10.0), "vuoto": (25, [], 3.0)}
+    background = [(250.05, 0.5 + 0.001, 40.0, 3e6), (420.4, 1.0, 40.0, 2.5e5)]                 # continuous background (sigma 40 min = whole run)
+    neighbours = [(500.0 + 0.0012 * k, 5.0 + 0.3 * (k % 3), 0.04, 5e5 * (1 + k)) for k in range(6)]
+    return {"deboli": (21, weak, 12.0), "intensi": (22, intensi + weak[:10], 12.0), "fondo": (23, background + weak[:15], 6.0),
+            "vicini": (24, neighbours, 10.0), "vuoto": (25, [], 3.0)}
 
 
 def indice(mz: Path, ix: Path) -> None:

@@ -29,25 +29,25 @@ VERSIONE = 1   # field `v`; bump when a field changes meaning
 STEM = "metriche"
 
 
-def comprimi(dati: bytes) -> dict:
+def comprimi(data: bytes) -> dict:
     """Raw, gzip -9 and brotli -q 11 sizes; brotli only if the `brotli` tool is installed (CI runners have it), else None."""
-    out = {"raw": len(dati), "gz": len(gzip.compress(dati, 9, mtime=0)), "br": None}
+    out = {"raw": len(data), "gz": len(gzip.compress(data, 9, mtime=0)), "br": None}
     exe = shutil.which("brotli")
     if exe:
-        r = subprocess.run([exe, "-c", "-q", "11"], input=dati, capture_output=True)
+        r = subprocess.run([exe, "-c", "-q", "11"], input=data, capture_output=True)
         if r.returncode == 0:
             out["br"] = len(r.stdout)
     return out
 
 
-def misura_wasm(sito: Path) -> dict:
+def misura_wasm(site: Path) -> dict:
     """Every built .wasm: raw/gz/br next to its cap and the headroom in bytes and %. Caps come from tools/ci_wasm_dimensioni.py."""
     import ci_wasm_dimensioni as dim
     out = {}
-    for nome, m in dim.misura(sito).items():
-        c = comprimi((sito / nome).read_bytes())
-        tetto = m["tetto"]
-        c.update({"cap": tetto, "head_b": tetto - m["byte"] if tetto else None, "head_pct": round(100 * (1 - m["byte"] / tetto), 2) if tetto else None})
+    for nome, m in dim.misura(site).items():
+        c = comprimi((site / nome).read_bytes())
+        cap = m["tetto"]
+        c.update({"cap": cap, "head_b": cap - m["byte"] if cap else None, "head_pct": round(100 * (1 - m["byte"] / cap), 2) if cap else None})
         out[nome] = c
     return out
 
@@ -59,11 +59,11 @@ def misura_avvio(radice: Path = RADICE) -> dict:
     names = [n[2:] if n.startswith("m:") else n for n in re.findall(r'"([^"]+)"', body)]
     raw = gz = 0
     for n in names:
-        dati = (web / n).read_bytes()
-        raw += len(dati)
-        gz += len(gzip.compress(dati, 9, mtime=0))
-    tetto = int(re.search(r"^MAX_TOTAL\s*=\s*([\d_]+)", (radice / "tests" / "test_peso_avvio.py").read_text(encoding="utf-8"), re.M).group(1).replace("_", ""))
-    return {"files": len(names), "raw": raw, "gz": gz, "cap": tetto, "head_b": tetto - raw, "head_pct": round(100 * (1 - raw / tetto), 2)}
+        data = (web / n).read_bytes()
+        raw += len(data)
+        gz += len(gzip.compress(data, 9, mtime=0))
+    cap = int(re.search(r"^MAX_TOTAL\s*=\s*([\d_]+)", (radice / "tests" / "test_peso_avvio.py").read_text(encoding="utf-8"), re.M).group(1).replace("_", ""))
+    return {"files": len(names), "raw": raw, "gz": gz, "cap": cap, "head_b": cap - raw, "head_pct": round(100 * (1 - raw / cap), 2)}
 
 
 def conta_test(radice: Path = RADICE) -> dict:
@@ -97,52 +97,52 @@ def riga(part: str, sha: str, ts: str, **sections) -> dict:
     return {"v": VERSIONE, "sha": sha, "ts": ts, "part": part, "recorded": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), **sections}
 
 
-def file_active(dati: str, ora: datetime | None = None, stem: str = STEM) -> str:
-    return f"{dati}/{stem}-{(ora or datetime.now(timezone.utc)).strftime('%Y-%m')}.jsonl"
+def file_active(data: str, ora: datetime | None = None, stem: str = STEM) -> str:
+    return f"{data}/{stem}-{(ora or datetime.now(timezone.utc)).strftime('%Y-%m')}.jsonl"
 
 
-def copilot_righe(dati: str) -> list[dict]:
+def copilot_righe(data: str) -> list[dict]:
     """Rows of the Copilot section (one per PR, the latest line of a PR wins when the report reads them)."""
-    return read_rows(dati, "copilot")
+    return read_rows(data, "copilot")
 
 
-def registra_copilot(dati: str, api, giorni: int = 14, root: Path = RADICE, now: datetime | None = None) -> int:
+def registra_copilot(data: str, api, giorni: int = 14, root: Path = RADICE, now: datetime | None = None) -> int:
     """Append a row for every PR closed in the last `giorni` days that has none yet (Copilot PRs and our chat PRs, the baseline)."""
     import metriche_copilot as mcp
     now = now or datetime.now(timezone.utc)
-    known = {r["pr"]: r for r in copilot_righe(dati)}
+    known = {r["pr"]: r for r in copilot_righe(data)}
     wf = mcp.secret_workflows(root)
     righe = [r for n in mcp.recent_closed(api, now - timedelta(days=giorni), known) if (r := mcp.pr_row(n, api, wf, now))]
-    os.makedirs(dati, exist_ok=True)
-    with open(file_active(dati, now, "copilot"), "a", encoding="utf-8") as f:
+    os.makedirs(data, exist_ok=True)
+    with open(file_active(data, now, "copilot"), "a", encoding="utf-8") as f:
         for r in righe:
             f.write(json.dumps({**r, "recorded": now.strftime("%Y-%m-%dT%H:%M:%SZ")}, ensure_ascii=False, separators=(",", ":")) + "\n")
     return len(righe)
 
 
-def accoda(righe: list[dict], dati: str) -> int:
+def accoda(righe: list[dict], data: str) -> int:
     """Append lines to this month's file; a (sha, part) that is already there with the same content is skipped."""
-    os.makedirs(dati, exist_ok=True)
-    seen = {(r["sha"], r["part"], json.dumps({k: v for k, v in r.items() if k != "recorded"}, sort_keys=True)) for r in read_rows(dati)}
+    os.makedirs(data, exist_ok=True)
+    seen = {(r["sha"], r["part"], json.dumps({k: v for k, v in r.items() if k != "recorded"}, sort_keys=True)) for r in read_rows(data)}
     new = [r for r in righe if (r["sha"], r["part"], json.dumps({k: v for k, v in r.items() if k != "recorded"}, sort_keys=True)) not in seen]
-    with open(file_active(dati), "a", encoding="utf-8") as f:
+    with open(file_active(data), "a", encoding="utf-8") as f:
         for r in new:
             f.write(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n")
     return len(new)
 
 
-def read_rows(dati: str, stem: str = STEM) -> list[dict]:
+def read_rows(data: str, stem: str = STEM) -> list[dict]:
     out = []
-    for p in sorted(glob.glob(f"{dati}/{stem}-????-??.jsonl")):
+    for p in sorted(glob.glob(f"{data}/{stem}-????-??.jsonl")):
         with open(p, encoding="utf-8") as f:
             out += [json.loads(r) for r in f if r.strip()]
     return out
 
 
-def leggi_commit(dati: str) -> list[dict]:
+def leggi_commit(data: str) -> list[dict]:
     """One merged record per commit, oldest first: the parts are merged section by section, the latest line wins."""
     per_sha: dict[str, dict] = {}
-    for r in sorted(read_rows(dati), key=lambda r: r.get("recorded", "")):
+    for r in sorted(read_rows(data), key=lambda r: r.get("recorded", "")):
         m = per_sha.setdefault(r["sha"], {"sha": r["sha"], "ts": r["ts"]})
         for k, v in r.items():
             if k in ("v", "sha", "ts", "part", "recorded"):

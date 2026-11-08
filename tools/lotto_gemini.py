@@ -49,14 +49,14 @@ def leggi_elenco(testo: str, lotto: int | None = None, radice: Path = ROOT) -> l
     return out
 
 
-def unisci(percorsi: list[str], radice: Path = ROOT) -> tuple[str, int]:
+def unisci(paths: list[str], radice: Path = ROOT) -> tuple[str, int]:
     """The joined document and its size in bytes. A missing file raises FileNotFoundError."""
     parts: list[str] = []
-    for i, p in enumerate(percorsi, 1):
+    for i, p in enumerate(paths, 1):
         f = radice / p
         if not f.is_file():
             raise FileNotFoundError(p)
-        parts.append(HEADER.format(path=p, n=i, tot=len(percorsi)) + "\n" + f.read_text(encoding="utf-8", errors="replace").rstrip("\n") + "\n" + FINE + "\n")
+        parts.append(HEADER.format(path=p, n=i, tot=len(paths)) + "\n" + f.read_text(encoding="utf-8", errors="replace").rstrip("\n") + "\n" + FINE + "\n")
     doc = "\n".join(parts)
     return doc, len(doc.encode("utf-8"))
 
@@ -70,20 +70,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--strict", action="store_true", help="exit code 1 when over the limit")
     ap.add_argument("--controlla", action="store_true", help="only print the sizes, write nothing")
     a = ap.parse_args(argv)
-    percorsi = leggi_elenco(Path(a.elenco).read_text(encoding="utf-8"), a.lotto)
-    if not percorsi:
+    paths = leggi_elenco(Path(a.elenco).read_text(encoding="utf-8"), a.lotto)
+    if not paths:
         print("no files in the list", file=sys.stderr)
         return 1
     try:
-        doc, n = unisci(percorsi)
+        doc, n = unisci(paths)
     except FileNotFoundError as e:
         print(f"missing file: {e}", file=sys.stderr)
         return 1
     kb = n / 1024
     if a.controlla:
-        for p in percorsi:
+        for p in paths:
             print(f"{(ROOT / p).stat().st_size / 1024:7.1f} KB  {p}")
-    print(f"{len(percorsi)} files, {kb:.1f} KB", file=sys.stderr)
+    print(f"{len(paths)} files, {kb:.1f} KB", file=sys.stderr)
     over = kb > a.max_kb
     if over:
         print(f"WARNING: {kb:.1f} KB is over the limit of {a.max_kb} KB", file=sys.stderr)

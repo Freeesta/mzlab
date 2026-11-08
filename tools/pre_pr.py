@@ -100,9 +100,9 @@ def main() -> int:
     solo_doc = ci_solo_doc.solo(files_cambiati())
     if solo_doc:
         print("solo documenti: only the checks the documents need")
-    elenco = passi_solo_doc() if solo_doc else passi("--senza-e2e" not in sys.argv and not veloce, veloce)
-    for i, (name, cmd) in enumerate(elenco, 1):
-        print(f"...  [{i}/{len(elenco)}] {name}", flush=True)
+    listing = passi_solo_doc() if solo_doc else passi("--senza-e2e" not in sys.argv and not veloce, veloce)
+    for i, (name, cmd) in enumerate(listing, 1):
+        print(f"...  [{i}/{len(listing)}] {name}", flush=True)
         t0 = time.time()
         r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
         dt = time.time() - t0
