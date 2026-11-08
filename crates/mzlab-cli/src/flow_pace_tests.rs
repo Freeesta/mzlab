@@ -100,3 +100,47 @@ fn a_tiny_budget_spills_to_a_scratch_file_that_is_removed_and_changes_no_byte() 
     );
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// A file read through the registry (mzXML, ANDI) has its fingerprints taken by a second thread while its scans are decoded: the index is the same
+/// bytes as with the fingerprints taken first (`upload::impronte`), and a job cancelled before it starts ends with `err.flow.cancelled`.
+#[test]
+fn the_fingerprints_taken_beside_the_scans_change_no_byte_and_a_cancel_stops() {
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
+    let d = folder("pace_prints");
+    let src = makers(&d, false);
+    let budget = mzlab_core::mzidx::DEFAULT_BUDGET;
+    for f in ["a.mzXML", "b.cdf"] {
+        let p = src.join(f);
+        let a = d.join(format!("{f}.mzidx"));
+        crate::build_index_of(&p, "", &a, budget).unwrap();
+        let mut fs = crate::flow_set::file_set(&p).unwrap();
+        let imp = mzlab_core::upload::impronte(&mut fs).unwrap();
+        let mut l = mzlab_lettori::apri(fs, &mzlab_core::lettori::Limiti::desktop()).unwrap();
+        let mut out = std::io::Cursor::new(Vec::new());
+        mzlab_core::upload::indicizza_lettore_con(
+            &mut *l,
+            0,
+            &mut || Ok(imp.clone()),
+            f,
+            &mut out,
+            budget,
+            None,
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(std::fs::read(&a).unwrap(), out.into_inner(), "{f}");
+        let stop = Some(Arc::new(AtomicBool::new(true)));
+        let e = crate::flow_pace::build_index_with(
+            &p,
+            "",
+            &d.join("x.mzidx"),
+            budget,
+            &mut |_, _| {},
+            &stop,
+        )
+        .unwrap_err();
+        assert_eq!(e.key, "err.flow.cancelled", "{f}");
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
