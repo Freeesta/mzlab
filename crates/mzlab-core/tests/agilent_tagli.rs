@@ -49,7 +49,11 @@ fn scansioni(l: &mut Box<dyn Lettore>) -> Vec<(String, Vec<f64>, Vec<f64>)> {
 }
 
 /// The keys a folder cut too short may give.
-const CHIAVI: [&str; 2] = ["err.file.agilent", "err.file.agilentCut"];
+const CHIAVI: [&str; 3] = [
+    "err.file.agilent",
+    "err.file.agilentCut",
+    "err.file.agilentNoPeaks",
+];
 
 /// Opens the cut folder and checks it against the whole one; returns whether it opened.
 fn controlla(
@@ -123,6 +127,9 @@ fn a_cut_folder_keeps_its_whole_scans_and_counts_the_rest() {
         "{:?}",
         e.params
     );
+    // A whole index with an empty spectrum file names that file, not a cut.
+    let e = apri(&idx, &[], true).err().expect("refused");
+    assert_eq!(e.key, "err.file.agilentNoPeaks");
 }
 
 #[test]

@@ -99,7 +99,10 @@ impl AgilentD {
         let announced = Some(segments.iter().map(|s| s.scans).sum::<usize>());
         let (records, missing) = scan::parse(f.ms_scan, &layout, f.ms_peak_len, announced)?;
         if records.is_empty() {
-            return Err(if missing > 0 {
+            // An index with no spectrum file behind it is not a cut copy: name the empty file.
+            return Err(if missing > 0 && f.ms_peak_len == 0 {
+                Error::new("err.file.agilentNoPeaks").with("name", name)
+            } else if missing > 0 {
                 Error::new("err.file.agilentCut").with("name", name)
             } else {
                 Error::new("err.file.agilent").with("detail", "no scans")
