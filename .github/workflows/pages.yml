@@ -31,6 +31,10 @@ concurrency:
   group: ${{ github.ref == 'refs/heads/main' && 'pages-build' || format('pages-build-{0}', github.ref) }}
   cancel-in-progress: false
 
+# production builds: tools/wasm_opt.sh fails closed here, so no .wasm is tested or published without wasm-opt and its size gate
+env:
+  MZLAB_WASM_OPT_STRICT: "1"
+
 # The site is built in parallel jobs and put together by `assemble`: `wasm-core` (engine, libraries, readers), `wasm-feat-a` and `wasm-feat-b` (mzFinder, the two halves of tools/build_feat_wasm.sh), `packages` (spectral libraries and suspect index); each hands its static/ subtree over as an artifact.
 jobs:
 
@@ -39,6 +43,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # the binaryen tarball of tools/wasm_opt.sh, one cache per version: a GitHub release outage does not stop the build, and the script still checks its SHA-256
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/binaryen-133.tar.gz
+          key: binaryen-version_133-${{ runner.os }}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
@@ -107,6 +116,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # the binaryen tarball of tools/wasm_opt.sh, one cache per version: a GitHub release outage does not stop the build, and the script still checks its SHA-256
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/binaryen-133.tar.gz
+          key: binaryen-version_133-${{ runner.os }}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
@@ -166,6 +180,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # the binaryen tarball of tools/wasm_opt.sh, one cache per version: a GitHub release outage does not stop the build, and the script still checks its SHA-256
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/binaryen-133.tar.gz
+          key: binaryen-version_133-${{ runner.os }}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
