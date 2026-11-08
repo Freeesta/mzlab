@@ -2,8 +2,8 @@
 use super::*;
 
 /// The counting `ms2_exps` did before the map (`==` on the values), kept to compare.
-fn by_scan(ms2: &[&Scan]) -> Vec<((Option<f64>, Option<f64>), usize)> {
-    let mut cnt: Vec<((Option<f64>, Option<f64>), usize)> = vec![];
+fn by_scan(ms2: &[&Scan]) -> Vec<KeyCount> {
+    let mut cnt: Vec<KeyCount> = vec![];
     for s in ms2 {
         let k = (
             s.precursor.filter(|p| *p != 0.0).map(|p| round(p, 1)),

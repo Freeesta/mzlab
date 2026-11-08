@@ -371,6 +371,9 @@ fn acq(sc1: &[&Scan], sc2: &[&Scan]) -> Vec<&'static str> {
     out
 }
 
+/// A (precursor, CE) key of `ms2_exps` and its count.
+type KeyCount = ((Option<f64>, Option<f64>), usize);
+
 /// The bits of a key of `ms2_exps` that are equal exactly when the values are `==`: -0.0 is 0.0; `None` for a NaN, which equals nothing.
 fn same_key((p, ce): (Option<f64>, Option<f64>)) -> Option<(Option<u64>, Option<u64>)> {
     let b = |x: Option<f64>| match x {
@@ -383,8 +386,8 @@ fn same_key((p, ce): (Option<f64>, Option<f64>)) -> Option<(Option<u64>, Option<
 
 /// The (precursor, CE) keys of the MS2 scans and their counts, in the order each key is first seen; a map finds the key (a DDA run has thousands of
 /// precursors: a scan of the list for each was quadratic).
-fn count_keys(ms2: &[&Scan]) -> Vec<((Option<f64>, Option<f64>), usize)> {
-    let mut cnt: Vec<((Option<f64>, Option<f64>), usize)> = vec![];
+fn count_keys(ms2: &[&Scan]) -> Vec<KeyCount> {
+    let mut cnt: Vec<KeyCount> = vec![];
     let mut at: std::collections::HashMap<(Option<u64>, Option<u64>), usize> =
         std::collections::HashMap::new();
     for s in ms2 {
