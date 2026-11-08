@@ -11,7 +11,7 @@ from datetime import datetime
 
 import ci_metrics_data as dati_ci
 
-LIMITE_B = 50_000_000   # a data file this big is frozen (never appended to or rewritten): GitHub refuses files over 100 MB
+LIMIT_B = 50_000_000   # a data file this big is frozen (never appended to or rewritten): GitHub refuses files over 100 MB
 
 
 def leggi(path: str) -> list[dict]:
@@ -33,23 +33,23 @@ def segmenti(data: str) -> list[str]:
     return ([data] if os.path.exists(data) else []) + [p for _, _, p in sorted(found)]
 
 
-def leggi_tutti(data: str) -> list[dict]:
+def read_all(data: str) -> list[dict]:
     return [r for p in segmenti(data) for r in leggi(p)]
 
 
-def attivo(data: str, ora: datetime | None = None) -> str:
+def active(data: str, ora: datetime | None = None) -> str:
     """File that receives the new rows: this month's, or the next part of it once the current one reaches LIMITE_B."""
     base, ext = os.path.splitext(data)
     mese = (ora or dati_ci.adesso_dt()).strftime("%Y-%m")
     n = 1
     while True:
         p = f"{base}-{mese}{'' if n == 1 else f'-{n}'}{ext}"
-        if not os.path.exists(p) or os.path.getsize(p) < LIMITE_B:
+        if not os.path.exists(p) or os.path.getsize(p) < LIMIT_B:
             return p
         n += 1
 
 
-def eventi_ramo(ramo: str = "origin/stat-ci", repo: str | None = None) -> list[dict]:
+def branch_events(ramo: str = "origin/stat-ci", repo: str | None = None) -> list[dict]:
     """All rows of every events file on a git branch (legacy `eventi.jsonl` and the monthly parts), for the read-only tools."""
     names = subprocess.run(["git", "ls-tree", "--name-only", ramo], cwd=repo, capture_output=True, text=True).stdout.split()
     with tempfile.TemporaryDirectory() as d:
@@ -57,4 +57,4 @@ def eventi_ramo(ramo: str = "origin/stat-ci", repo: str | None = None) -> list[d
             if re.fullmatch(r"eventi(-\d{4}-\d{2}(-\d+)?)?\.jsonl", n):
                 with open(os.path.join(d, n), "w", encoding="utf-8") as f:
                     f.write(subprocess.run(["git", "show", f"{ramo}:{n}"], cwd=repo, capture_output=True, text=True).stdout)
-        return leggi_tutti(os.path.join(d, "eventi.jsonl"))
+        return read_all(os.path.join(d, "eventi.jsonl"))

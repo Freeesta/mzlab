@@ -405,4 +405,8 @@ fn a_run_header_with_no_scan_has_no_finished_run() {
         "{}",
         refused(&b)
     );
+    let e = mzlab_core::raw::thermo_error(&refused(&b));
+    assert_eq!(e.key, "err.file.rawUnfinished");
+    let p: Vec<&str> = e.params.iter().map(|(k, _)| *k).collect();
+    assert_eq!(p, ["detail", "size"]);
 }

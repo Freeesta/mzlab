@@ -9,8 +9,8 @@ import time
 from collections import Counter, defaultdict
 from datetime import datetime
 
-NON_VERI = ("annullato", "aggregato")      # failed-job categories that are not a real red: superseded by a push / the gate repeating another red
-COLONNE_COO = ["date", "merged", "median_open_to_merge_min", "max_open_to_merge_min", "open_prs_end", "chats_running", "note"]
+NOT_REAL = ("annullato", "aggregato")      # failed-job categories that are not a real red: superseded by a push / the gate repeating another red
+COO_COLUMNS = ["date", "merged", "median_open_to_merge_min", "max_open_to_merge_min", "open_prs_end", "chats_running", "note"]
 
 
 def _ok(v: list) -> list:
@@ -46,7 +46,7 @@ def open_at_end_of_day(ev: list[dict], days: list[str]) -> dict[str, int]:
     return out
 
 
-def giornaliero(ev: list[dict]) -> list[dict]:
+def daily(ev: list[dict]) -> list[dict]:
     """One row per UTC day: runs, re-runs, mean queue, failed jobs by category (`rossi_veri` leaves out cancelled runs and the aggregate gate), PRs opened that day
     and open at the end of it, PRs merged, open-to-merge and green-to-merge as mean, median and max, commits per merged PR, conflicts."""
     days: dict[str, dict] = defaultdict(lambda: {"run": 0, "rilanci": 0, "coda": [], "job_rossi": Counter(), "pr_rosse": set(), "pr_aperte": 0, "pr_unite": 0,
@@ -60,7 +60,7 @@ def giornaliero(ev: list[dict]) -> list[dict]:
             g["coda"].append(r.get("coda_s"))
         elif t == "job_fallito":
             g["job_rossi"][r["categoria"]] += 1
-            if r["categoria"] not in NON_VERI and r.get("pr"):
+            if r["categoria"] not in NOT_REAL and r.get("pr"):
                 g["pr_rosse"].add(r["pr"])
         elif t == "conflitto":
             g["conflitti"] += 1
@@ -77,27 +77,27 @@ def giornaliero(ev: list[dict]) -> list[dict]:
              "aperta_media_s": round(media(g["aperta_s"])), "aperta_mediana_s": round(mediana(g["aperta_s"])), "aperta_max_s": round(massimo(g["aperta_s"])),
              "verde_a_unione_media_s": round(media(g["verde_a_unione_s"])), "verde_a_unione_mediana_s": round(mediana(g["verde_a_unione_s"])),
              "verde_a_unione_max_s": round(massimo(g["verde_a_unione_s"])), "commit_per_pr_media": round(media(g["commit_n"]), 1), "conflitti": g["conflitti"],
-             "rossi_veri": sum(n for c, n in g["job_rossi"].items() if c not in NON_VERI), "pr_con_rosso_vero": len(g["pr_rosse"]),
+             "rossi_veri": sum(n for c, n in g["job_rossi"].items() if c not in NOT_REAL), "pr_con_rosso_vero": len(g["pr_rosse"]),
              **{"rossi_" + c: g["job_rossi"][c] for c in cat}} for d, g in sorted(days.items())]
 
 
-def righe_coo(ev: list[dict]) -> list[dict]:
+def coo_rows(ev: list[dict]) -> list[dict]:
     """The daily row in the column layout of the COO's `misure/giornaliero.csv`; chats_running and note are for the COO to fill."""
     return [{"date": g["giorno"], "merged": g["pr_unite"], "median_open_to_merge_min": round(g["aperta_mediana_s"] / 60, 1),
              "max_open_to_merge_min": round(g["aperta_max_s"] / 60, 1), "open_prs_end": g["pr_aperte_fine_giorno"], "chats_running": "", "note": ""}
-            for g in giornaliero(ev)]
+            for g in daily(ev)]
 
 
-def pr_con_rosso_vero(ev: list[dict]) -> tuple[int, int]:
+def prs_with_real_red(ev: list[dict]) -> tuple[int, int]:
     """(PRs with at least one real red job, PRs with at least one recorded run)."""
     views = {r["pr"] for r in ev if r["tipo"] == "run" and r.get("pr")}
-    rosse = {r["pr"] for r in ev if r["tipo"] == "job_fallito" and r.get("pr") and r["categoria"] not in NON_VERI}
+    rosse = {r["pr"] for r in ev if r["tipo"] == "job_fallito" and r.get("pr") and r["categoria"] not in NOT_REAL}
     return len(rosse), len(views | rosse)
 
 
-def righe_coda(api, ora: str, wait=time.sleep) -> list[dict]:
+def queue_rows(api, ora: str, wait=time.sleep) -> list[dict]:
     """Snapshot of the open (non-draft) PRs: how many, behind main, in conflict, green and waiting to be merged, the oldest open and the oldest green."""
-    from ci_metrics import secs, verde_il
+    from ci_metrics import secs, green_at
     prs = [p for p in api("/pulls?state=open&per_page=100") if not p.get("draft")]
     back = sporche = greens = 0
     eta_open, eta_green = [], []
@@ -111,7 +111,7 @@ def righe_coda(api, ora: str, wait=time.sleep) -> list[dict]:
         back += stato == "behind"
         sporche += stato == "dirty"
         eta_open.append(secs(p["created_at"], ora))
-        green = verde_il(p["head"]["sha"], api) if stato != "dirty" else None
+        green = green_at(p["head"]["sha"], api) if stato != "dirty" else None
         if green:
             greens += 1
             eta_green.append(secs(green, ora))
@@ -119,7 +119,7 @@ def righe_coda(api, ora: str, wait=time.sleep) -> list[dict]:
              "piu_vecchia_aperta_s": max(_ok(eta_open), default=None), "piu_vecchia_verde_s": max(_ok(eta_green), default=None)}]
 
 
-def tabella_coda(ev: list[dict], out=print) -> None:
+def queue_table(ev: list[dict], out=print) -> None:
     """Latest queue snapshot and the mean/max of each count over the window."""
     from ci_metrics import hm
     co = [r for r in ev if r["tipo"] == "coda"]

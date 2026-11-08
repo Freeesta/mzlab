@@ -246,7 +246,7 @@
       };
     });
     if (p._canFocus) { const key = p._canFocus, r = [...pop.querySelectorAll(".can-row")].find(x => /** @type {HTMLElement} */ (x).dataset.omo === key || /** @type {HTMLElement} */ (x).dataset.kind === key); p._canFocus = null; if (r && p._canOpen) focusRow(r); }
-    if (!p._canAway) { p._canAway = (/** @type {Event} */ e) => { if (p._canOpen && p.el.isConnected && !(/** @type {HTMLElement} */ (e.target)).closest(".can")) { p._canOpen = false; const q = p.el.querySelector(".can-pop"); if (q) { /** @type {HTMLElement} */ (q).hidden = true; } const bb = p.el.querySelector('[data-o="canali"],[data-o="kind"]'); if (bb) bb.setAttribute("aria-expanded", "false"); } }; document.addEventListener("mousedown", p._canAway, { capture: true, signal: p._ac && p._ac.signal }); }
+    if (!p._canAway) { p._canAway = (/** @type {Event} */ e) => { if (p._canOpen && p.el.isConnected && !(/** @type {HTMLElement} */ (e.target)).closest(".can")) { p._canOpen = false; const q = p.el.querySelector(".can-pop"); if (q) { /** @type {HTMLElement} */ (q).hidden = true; } const bb = p.el.querySelector('[data-o="canali"],[data-o="kind"]'); if (bb) bb.setAttribute("aria-expanded", "false"); } }; document.addEventListener("pointerdown", p._canAway, { capture: true, signal: p._ac && p._ac.signal }); }
   }
   ESC.registra({ id: "canali", prio: 27, aperto: () => E.panels.some(/** @param {any} p */ p => p._canOpen && p.el.isConnected), chiudi: () => {
     const p = E.panels.find(/** @param {any} q */ q => q._canOpen && q.el.isConnected); if (!p) return;

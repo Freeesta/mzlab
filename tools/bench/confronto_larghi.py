@@ -23,7 +23,7 @@ RIGHE = (("P1_narrow (recall)", "P1_narrow", "richiamo", "{:.2f}"), ("P1_broad (
          ("P5_fp (share of the rows)", "P5_fp", "frazione", "{:.2f}"))
 
 
-def confronto(truth: list[dict], tabelle: dict[str, dict]) -> dict:
+def comparison(truth: list[dict], tabelle: dict[str, dict]) -> dict:
     """{column name: endpoints} for the tables given, in order."""
     return {name: metriche.larghi(truth, t) for name, t in tabelle.items()}
 
@@ -42,7 +42,7 @@ def main() -> None:
     ap.add_argument("--tabelle", nargs="+", required=True, metavar="NOME=FILE")
     a = ap.parse_args()
     tab = {n: leggi(p) for n, p in (x.split("=", 1) for x in a.tabelle)}
-    print(a_markdown(confronto(da_json(a.verita), tab)), end="")
+    print(a_markdown(comparison(da_json(a.verita), tab)), end="")
 
 
 if __name__ == "__main__":

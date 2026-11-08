@@ -363,6 +363,8 @@ jobs:
           # the graph view of a mol/1 record is not a default feature either
           cargo test --locked --release -p mzlab-feat --features record --test grafo_record --test posizioni_record --test frammenti_record
           cargo test --locked --release -p mzlab-feat --features record,interp --test interp_record
+          # the Attributio cascade and its neighbours compile only with the feature `attributio` (one feature set, one build)
+          cargo test --locked --release -p mzlab-feat --features attributio,untargeted,record --test attributio_auto2b --test attributio_checks --test attributio_confirm --test attributio_export --test attributio_formula --test attributio_identita --test attributio_letture --test attributio_livelli --test attributio_matching --test attributio_ms2_engine --test attributio_proposte --test attributio_reglists --test attributio_regole --test attributio_screen --test attributio_sirius --test attributio_spiegazioni --test attributio_standard --test attributio_tox --test normative_official --test score_terms_insilico --test score_terms_rt --test untargeted_to_attributio --test steps_attributio_parity --test rt_descriptors
       # main saves at most once every 6 h per job kind (tools/ci_cache_fresca.py); a pull request still seeds a cache with no tree record
       - id: fresca
         name: Skip the save while the cache of main is fresh

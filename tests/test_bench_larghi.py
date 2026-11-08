@@ -10,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
 from bench import confronto_larghi as CL, metriche as M  # noqa: E402
-from bench.verita import da_json, da_righe  # noqa: E402
+from bench.verita import da_json, from_rows  # noqa: E402
 from valida import sintetici_mzml as SM  # noqa: E402
 from valida.abbina import abbina, abbina_larghi  # noqa: E402
 
@@ -22,7 +22,7 @@ def _real(id_, role, mz, rt, fwhm_s, rt_min, rt_max, area, morf, su=None):
     return r if su is None else dict(r, su=su)
 
 
-TRUTH = da_righe([
+TRUTH = from_rows([
     _real("B1", "broad", 300.0, 10.0, 120, 8.0, 12.0, [0, 100, 100], "a_gauss"),
     _real("B2", "broad", 400.0, 15.0, 60, 14.0, 16.0, [0, 50, 50], "b_doppio"),
     _real("N1", "narrow", 500.0, 20.0, 8, 19.9, 20.1, [0, 10, 10], "stretto"),
@@ -93,7 +93,7 @@ def test_narrow_ones_stay_as_abbina():
 
 def test_oracle_table_scores_the_maximum():
     rows, _, _ = SM.costruisci_larghi(5, n_larghi=18, n_stretti=6, n_fondo=10, n_campioni=2)
-    verita = da_righe(rows)
+    verita = from_rows(rows)
     oracle = _tab([_row(r["mz"], r["rt"], r["area_attesa"], r["rt_min"], r["rt_max"]) for r in rows])
     m = M.larghi(verita, oracle)
     assert m["P1_narrow"]["richiamo"] == 1.0 and m["P1_broad"]["richiamo"] == 1.0
@@ -104,7 +104,7 @@ def test_three_column_comparison_table(tmp_path):
     (tmp_path / "v.json").write_text(json.dumps({"ioni": [dict(r, rt_obs=[r["rt"]]) for r in TRUTH]}))
     verita = da_json(tmp_path / "v.json")
     assert verita[0]["fwhm_s"] is not None and verita[0]["rt_min"] is not None            # the lot's fields survive the loader
-    md = CL.a_markdown(CL.confronto(verita, {"MZmine default": TAB, "MZmine wide": _tab([]), "mzLab default": TAB}))
+    md = CL.a_markdown(CL.comparison(verita, {"MZmine default": TAB, "MZmine wide": _tab([]), "mzLab default": TAB}))
     rows = md.strip().split("\n")
     assert rows[0] == "| endpoint | MZmine default | MZmine wide | mzLab default |" and len(rows) == 2 + len(CL.RIGHE)
     assert "| P1_broad (recall) | 0.50 | 0.00 | 0.50 |" in rows and "| P2_broad (median rel. area error) | 0.10 | - | 0.10 |" in rows

@@ -21,7 +21,7 @@
 
   /** one live session: the plan sent, the items (one per .mzidx), the keys and the states the scheduler reported @param {any} S */
   const session = S => ({
-    S, plan: S.plan, items: /** @type {any[]} */ ([]), ok: false, q: Promise.resolve(), seq: 0, sent: "", keys: new Map(), nodes: new Map(), info: new Map(), errors: new Map(), last: new Map(),
+    S, plan: S.plan, items: /** @type {any[]} */ ([]), ok: false, q: Promise.resolve(), seq: 0, sent: "", keys: new Map(), nodes: new Map(), info: new Map(), errors: new Map(), notes: new Map(), last: new Map(),
     running: new Map(), observing: new Map(), waitingInput: new Set(), memAsk: new Map(), allowed: new Set(), loading: new Map(), listeners: new Set(), log: /** @type {any[]} */ ([]), logFrom: 0,
     waitingProfile: new Set(), waitingSource: new Set(), files: new Map(), pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
   });
@@ -55,9 +55,10 @@
     if (!inst) return;
     const known = here(inst), memory = n.state === "blocked" && [...x.memAsk.values()].some((/** @type {any} */ a) => a.spec.instance === n.instance);
     const stato = memory ? "blocked" : WEB[n.state] || "waiting", info = x.info.get(n.instance) || {};
-    const ev = { passo: n.instance, stato, via: known ? "browser" : "computer", parte: n.parte || 0, di: n.di || 0, mb: base(inst) === "features.detect" ? x.peak || null : info.mb ?? null, modo: info.modo ?? null };
+    const note = n.note;
+    const ev = { passo: n.instance, stato, via: known ? "browser" : "computer", parte: n.parte || 0, di: n.di || 0, mb: base(inst) === "features.detect" ? x.peak || null : info.mb ?? null, modo: info.modo ?? null, ...(note ? { note } : {}) };
     const was = x.last.get(n.instance);
-    if (was && was.stato === ev.stato && was.parte === ev.parte && was.di === ev.di && was.mb === ev.mb) return;
+    if (was && was.stato === ev.stato && was.parte === ev.parte && was.di === ev.di && was.mb === ev.mb && was.note === ev.note) return;
     // the last file counted before the end, as the runner of a plan has always reported
     if (stato === "done" && was && was.stato === "running" && was.parte < ev.di) { const last = { ...was, parte: ev.di }; x.last.set(n.instance, last); emitWeb(x, last); }
     x.last.set(n.instance, ev);
@@ -69,6 +70,8 @@
   const onEvent = (x, e) => {
     if (e.kind === "job" && e.key) x.keys.set(jk(e), e.key);
     if (e.kind === "job" && (e.state === "done" || e.state === "reused" || e.state === "error")) x.allowed.delete(jk(e));
+    // the warnings of a step that ended (`x.notes`, set by its executor) go with its card: the scheduler keeps only the state
+    if (e.kind === "node" && (e.state === "done" || e.state === "reused") && x.notes.has(e.instance)) e.note = x.notes.get(e.instance);
     if (e.kind === "node") { x.nodes.set(e.instance, e); fromNode(x, e); }
   };
   const view = () => F.liveView;
@@ -261,11 +264,11 @@
   /** the record of the run of `x` (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run @param {any} x */
   const recordOf = async (/** @type {any} */ x) => F.webProv ? F.webProv.record(x, /** @type {any[]} */ (await call(x, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
   const refused = (/** @type {any} */ x, /** @type {string} */ instance) => x.errors.get(instance) || Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: {} });
-  /** the page asks to use more memory for the blocked alignments; the user answers once, and only here (never in the middle of an edit) @param {any} x @param {any} o */
+  /** the page asks to use more memory for the blocked alignments and groupings; the user answers once, and only here (never in the middle of an edit) @param {any} x @param {any} o */
   const answerAsks = async (x, o) => {
     for (const [key, a] of [...x.memAsk]) {
-      const high = kit().highMb(), budget = budgetMb(), job = jobOf(key);
-      const ok = o.askMore ? await o.askMore({ fase: "align", stima_mb: a.est.mb, budget_mb: budget, libero_mb: budget, high_mb: high }) : false;
+      const high = kit().highMb(), q = a.err.params || {}, budget = Number(q.budget_mb) || budgetMb(), job = jobOf(key);
+      const ok = o.askMore ? await o.askMore({ fase: a.fase || "align", stima_mb: a.est.mb, budget_mb: budget, libero_mb: Number(q.libero_mb) || budget, high_mb: high }) : false;
       x.memAsk.delete(key);
       if (ok) x.allowed.add(key);
       await call(x, "unblock", { job });

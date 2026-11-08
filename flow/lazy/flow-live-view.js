@@ -45,8 +45,8 @@
     const mk = (/** @type {string} */ icon, /** @type {string} */ word, /** @type {string} */ tone, /** @type {string} */ title = word) => ({ state: st, icon, word, title, tone, frac });
     switch (st) {
       case "running": return mk("run", frac === null ? files || "working" : [files, percent(frac) + " %"].filter(Boolean).join(" · "), "run");
-      case "done": return mk("ok", e.ms ? "done in " + seconds(e.ms) : "done", "ok");
-      case "reused": return mk("again", "Up to date (nothing changed)", "ok");
+      case "done": return e.note ? mk("warn", "done, with a note", "warn", e.note) : mk("ok", e.ms ? "done in " + seconds(e.ms) : "done", "ok");
+      case "reused": return e.note ? mk("warn", "Up to date, with a note", "warn", e.note) : mk("again", "Up to date (nothing changed)", "ok");
       case "stale": return mk("stale", "Settings changed: press Run", "warn", "Settings changed: runs again on Run");
       case "error": return mk("bad", "This step failed", "bad", why(e) || "This step failed");
       case "refused": return mk("bad", "This step was refused", "bad", why(e) || "This step was refused");

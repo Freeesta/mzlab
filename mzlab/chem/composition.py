@@ -68,6 +68,18 @@ def _mass(sym: str) -> float:
     return ISOTOPES[sym][0] if sym in ISOTOPES else MASS[sym]
 
 
+def _clip_to_mass(els: dict, limit: float) -> None:
+    """Lowers the top of every element other than C and H to the count whose mass alone passes ``limit`` (ion mass + tolerance), plus one for rounding.
+    A grid row is a hit only if the ion mass minus its mass is at least -tolerance, and carbons and hydrogens only add mass: the rows cut never were hits."""
+    for sym, (lo, hi) in els.items():
+        if sym in ("C", "H"):
+            continue
+        m = _mass(sym)
+        q = limit / m if m > 0 else math.nan
+        if math.isfinite(q) and math.floor(q) + 1 < hi:          # NaN or infinity: no cut, as in Rust
+            els[sym] = (lo, max(math.floor(q) + 1, lo))
+
+
 def _base(sym: str) -> str:
     return ISOTOPES[sym][1] if sym in ISOTOPES else sym
 
@@ -141,7 +153,7 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
                by mass error are scored, then sorted); without them the order is the mass error. The terms are always listed, never a verdict.
     iso_min_rel, iso_noise_rel  % of the base peak below which a theoretical / an observed isotope peak is not required / ignored (isotope_score); frag_ppm
                tolerance of the fragment match (default: the mass tolerance, at least 5 ppm); norm  how the observed intensities are scaled to the theory (isotope_score).
-    Returns {mz, charge, tol, unit, n_candidates, results: [...]}; each result: formula (ion), neutral, mz_calc, delta_mda, delta_ppm, rdb, rules_ok,
+    Returns {mz, charge, tol, unit, n_candidates, scored (only when the pool left candidates out), results: [...]}; each result: formula (ion), neutral, mz_calc, delta_mda, delta_ppm, rdb, rules_ok,
     rules_failed, iso {m1, m2, err1, err2, ok, score, peaks, extra, ...}, frag {explained, n_explained, n_peaks}, score {mass, iso, frag, total}.
     """
     if not (mz > 0):
@@ -167,13 +179,14 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
             hi = par.get(sym, 0)
             els[sym] = (min(els[sym][0], hi), min(els[sym][1], hi))
         els = {s: v for s, v in els.items() if v[1] >= v[0]}
+    _clip_to_mass(els, T + tol_da)
     cmin, cmax = els.get("C", (0, int(T // 12)))
     hmin, hmax = els.get("H", (0, int(T // MASS["H"]) + 1))
     others = [s for s in els if s not in ("C", "H")]
     ranges = [range(els[s][0], els[s][1] + 1) for s in others]
     size = int(np.prod([len(r) for r in ranges])) if ranges else 1
     if size > MAX_GRID:
-        raise UserError("err.comp.many", text="too many combinations: narrow the ranges of the elements")
+        raise UserError("err.comp.many", {"n": size, "max": MAX_GRID}, "too many combinations: narrow the ranges of the elements")
     grid = (np.stack(np.meshgrid(*[np.arange(r.start, r.stop, dtype=np.int32) for r in ranges], indexing="ij"), -1).reshape(size, len(others))
             if others else np.zeros((1, 0), dtype=np.int32))
     mo = np.array([_mass(s) for s in others], float)
@@ -274,7 +287,12 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
                 sc["total"] = round(combined(sc["mass"], sc["iso"], fr, weights), 4)
             out.sort(key=lambda r: -r["score"]["total"])
         out = out[:max_results]
-    return {"mz": mz, "charge": z, "tol": tol, "unit": unit, "ion": ion, "n_candidates": int(len(idx)), "results": out}
+    res = {"mz": mz, "charge": z, "tol": tol, "unit": unit, "ion": ion, "n_candidates": int(len(idx))}
+    take = max(max_results, pool)
+    if scored and len(idx) > take:                    # the pool left some out: say how many were scored
+        res["scored"] = take
+    res["results"] = out
+    return res
 
 
 def _rules_matrix(form: np.ndarray, bases: list[str], r_db: np.ndarray, half_ok: bool = False) -> dict[str, np.ndarray]:

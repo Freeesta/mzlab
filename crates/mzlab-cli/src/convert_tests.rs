@@ -226,6 +226,56 @@ fn an_empty_injection_keeps_its_number_and_gives_an_empty_mzml() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A `.wiff` the readers refuse (a TOF experiment, a method of two periods) gives code 1 and a key whose catalogue text, the one the site shows, has its parameters filled in.
+#[test]
+fn a_refused_wiff_is_told_with_the_text_of_the_site() {
+    let dir = folder("rifiuti");
+    let src = dir.join("in");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let made = Command::new("python3")
+        .arg(root.join("tools/wiff_riferimento.py"))
+        .arg(&src)
+        .output();
+    if !made.is_ok_and(|o| o.status.success()) {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        return;
+    }
+    for (name, text) in [
+        (
+            "tof",
+            "Experiment 1 of this .wiff uses a scan type (code 8) this program does not read yet",
+        ),
+        (
+            "periodi",
+            "The method of this .wiff has 2 periods and this program reads one-period methods only",
+        ),
+    ] {
+        let o = convert(&[
+            p(&src.join(format!("{name}.wiff"))),
+            "--out",
+            p(&dir.join("out")),
+        ]);
+        assert_eq!(o.code, 1, "{name}: {}", o.stderr);
+        // the summary keeps the key for scripts; the progress line shows it through `umano`
+        let cause = o
+            .stderr
+            .lines()
+            .next()
+            .and_then(|l| l.split_once(".wiff: "))
+            .map(|c| c.1)
+            .unwrap_or_default();
+        assert!(
+            crate::testo_errore::umano(cause).contains(text),
+            "{name}: {}",
+            o.stderr
+        );
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn usage_errors_and_a_missing_input_have_their_codes() {
     let dir = folder("usage");
@@ -374,4 +424,38 @@ fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
         assert_eq!((n, conv.as_deref()), (7, Some("{\"a\":1}")), "blob {blob}");
     }
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn the_files_are_converted_on_the_workers_of_the_computer_unless_workers_says_otherwise() {
+    let args = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    let auto = crate::convert::parse_args(args(&["a.raw", "--out", "x"]))
+        .unwrap()
+        .unwrap();
+    assert_eq!(auto.workers, None);
+    let wanted = mzlab_core::budget_auto::convert_wanted();
+    assert_eq!(crate::convert::workers_for(8192.0, None), (wanted, None));
+    let one = crate::convert::parse_args(args(&["a.raw", "--out", "x", "--workers", "1"]))
+        .unwrap()
+        .unwrap();
+    assert_eq!(one.workers, Some(1));
+    // --workers is kept even where the budget would lower the default, and says nothing
+    assert_eq!(crate::convert::workers_for(100.0, Some(3)), (3, None));
+}
+
+#[test]
+fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so() {
+    let n = crate::convert::fewer_workers(256.0, 4).unwrap();
+    assert_eq!(n.key, "warn.convert.fewerWorkers");
+    assert_eq!(
+        crate::testo_errore::avviso(&n),
+        "2 files are converted at once instead of 4, so that each conversion has its share of the memory budget of this computer (256 MB). The files written are the same; it only takes longer. (warn.convert.fewerWorkers)"
+    );
+    assert_eq!(crate::convert::fewer_workers(1024.0, 4), None);
+    let (w, note) = crate::convert::workers_for(100.0, None);
+    assert_eq!(w, 1);
+    assert_eq!(
+        note.is_some(),
+        mzlab_core::budget_auto::convert_wanted() > 1
+    );
 }

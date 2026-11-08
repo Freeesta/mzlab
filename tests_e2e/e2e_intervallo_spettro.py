@@ -32,12 +32,13 @@ try:
             for k in range(1, 9): pg.mouse.move(X(a) + (X(b) - X(a)) * k / 8, Ymid()); frames(pg, 1)
             pg.mouse.up(); ready(pg)
         def sel(): return pg.evaluate(f"{CH}.sel")
-        def last_spec(): return pg.evaluate("(() => { const s = E.panels.filter(p => p.type === 'spec'); const q = s[s.length - 1]; return q ? [q.r0, q.r1] : null; })()")
+        def ids(): return pg.evaluate("E.panels.filter(p => p.type === 'spec').map(p => p.id)")
+        def new_spec(before): return pg.evaluate("(b => { const q = E.panels.find(p => p.type === 'spec' && !b.includes(p.id)); return q ? [q.r0, q.r1] : null; })", before)      # the new panel, wherever it goes: in the DDA trio the MS2 panel stays last
         def inside():
             drag(lo, hi); s = sel(); assert s and abs(s[0] - lo) < 0.5 and abs(s[1] - hi) < 0.5, s
-            n0 = pg.evaluate(NS); pg.mouse.dblclick((X(lo) + X(hi)) / 2, Ymid()); ready(pg)
+            n0, b = pg.evaluate(NS), ids(); pg.mouse.dblclick((X(lo) + X(hi)) / 2, Ymid()); ready(pg)
             assert pg.evaluate(NS) == n0 + 1, "a new spectrum panel"
-            r01 = last_spec(); assert abs(r01[0] - s[0]) < 1e-6 and abs(r01[1] - s[1]) < 1e-6, (r01, s)
+            r01 = new_spec(b); assert abs(r01[0] - s[0]) < 1e-6 and abs(r01[1] - s[1]) < 1e-6, (r01, s)
             assert sel() == s, "the selection stays"
         step("double click inside the range: spectrum of that range in a new panel", inside)
         def outside():
@@ -54,12 +55,22 @@ try:
             assert pg.evaluate(f"{CH}.zoom") is None, "outside the range the zoomed chart still resets"
         step("zoomed + selection: the selection wins; outside it the zoom resets", zoomed)
         def enter():
-            drag(lo, hi); n0 = pg.evaluate(NS)
+            drag(lo, hi); n0, b = pg.evaluate(NS), ids()
             assert pg.evaluate(f"!!{CH}.cv.getAttribute('aria-label')")
             pg.evaluate(f"{CH}.cv.focus()"); pg.keyboard.press("Enter"); ready(pg)
             assert pg.evaluate(NS) == n0 + 1, "Enter opens the range spectrum"
-            r01 = last_spec(); s = sel(); assert abs(r01[0] - s[0]) < 1e-6 and abs(r01[1] - s[1]) < 1e-6, (r01, s)
+            r01 = new_spec(b); s = sel(); assert abs(r01[0] - s[0]) < 1e-6 and abs(r01[1] - s[1]) < 1e-6, (r01, s)
         step("Enter on the focused chart with a range opens its spectrum", enter)
+        def late():
+            # the click of the pair asks for its nearest scan; a reply that comes after the double click must not overwrite the range spectrum
+            drag(lo, hi); s, b = sel(), ids()
+            pg.evaluate("(() => { const f = nearScan; window._nsF = f; window._nsGo = []; window.nearScan = (k, x) => new Promise(ok => window._nsGo.push(() => f(k, x).then(ok))); })()")
+            pg.mouse.dblclick((X(lo) + X(hi)) / 2, Ymid()); ready(pg)
+            assert pg.evaluate("window._nsGo.length") >= 1, "the click asked for its nearest scan"
+            pg.evaluate("(async () => { const g = window._nsGo; window.nearScan = window._nsF; for (const go of g) await go(); })()"); frames(pg, 3); ready(pg)
+            r01 = new_spec(b); assert r01 and abs(r01[0] - s[0]) < 1e-6 and abs(r01[1] - s[1]) < 1e-6, (r01, s)
+            assert sel() == s, "the selection stays"
+        step("a late nearest-scan reply after the double click leaves the range spectrum alone", late)
         def tap2():
             drag(lo, hi); n0 = pg.evaluate(NS); x, y = (X(lo) + X(hi)) / 2, Ymid()
             for _ in range(2): T("touchStart", [(x, y)]); T("touchEnd", [])

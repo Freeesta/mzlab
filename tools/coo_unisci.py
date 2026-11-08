@@ -44,7 +44,7 @@ def ci_green(events: list[dict], sha: str) -> tuple[bool, str | None]:
     return True, None
 
 
-def rischi(file: list[str], index_html_csp: bool) -> list[str]:
+def risks(file: list[str], index_html_csp: bool) -> list[str]:
     out = [f"VIA richiesto: {f}" for f in file if any(fnmatch.fnmatch(f, p) for p in RISKS)]
     if index_html_csp:
         out.append(f"VIA richiesto: CSP in {CSP}")
@@ -76,7 +76,7 @@ def combine(repo: Path, sha: str) -> tuple[bool, str]:
         shutil.rmtree(base, ignore_errors=True)
 
 
-def valuta(repo: Path, pr: int, sha: str) -> dict:
+def evaluate(repo: Path, pr: int, sha: str) -> dict:
     git(repo, "fetch", "-q", "origin", "main", "stat-ci")
     git(repo, "fetch", "-q", "origin", f"pull/{pr}/head")
     head = git(repo, "rev-parse", "FETCH_HEAD").stdout.strip()
@@ -84,12 +84,12 @@ def valuta(repo: Path, pr: int, sha: str) -> dict:
     if head != sha:
         res["motivo"] = f"head SHA differs: PR is at {head}"
         return res
-    events = ci_metrics.eventi_ramo(repo=str(repo))
+    events = ci_metrics.branch_events(repo=str(repo))
     res["verde"], job = ci_green(events, sha)
     if not res["verde"]:
         res["motivo"] = f"CI non verde: {job}"
         return res
-    res["rischi"] = rischi(git(repo, "diff", "--name-only", f"origin/main...{sha}").stdout.split(), csp_changed(repo, sha))
+    res["rischi"] = risks(git(repo, "diff", "--name-only", f"origin/main...{sha}").stdout.split(), csp_changed(repo, sha))
     res["combine"], reason = combine(repo, sha)
     res["motivo"] = reason or "; ".join(res["rischi"])
     res["unire"] = bool(res["combine"] and not res["rischi"])
@@ -102,7 +102,7 @@ def main() -> int:
     ap.add_argument("sha")
     ap.add_argument("--repo", default=".")
     a = ap.parse_args()
-    res = valuta(Path(a.repo).resolve(), a.pr, a.sha)
+    res = evaluate(Path(a.repo).resolve(), a.pr, a.sha)
     print(json.dumps(res, ensure_ascii=False))
     return 0 if res["unire"] else 1
 
