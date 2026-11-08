@@ -93,6 +93,19 @@ fn rifiuto(detail: &str) -> Error {
     Error::new("err.file.shimadzu").with("detail", detail)
 }
 
+/// A copy cut before its directory (its header points past the end, `Ole::header_cut`): the same notice as a cut found after `open`.
+fn tagliato_prima(m: &mut mzlab_core::lettori::Membro) -> Option<Error> {
+    let mut h = vec![0u8; m.dim.min(512) as usize];
+    m.dati.read_at(0, &mut h).ok()?;
+    let need = Ole::header_cut(&h).filter(|&n| n > m.dim)?;
+    Some(
+        Error::new("err.file.cutShort")
+            .with("name", &m.nome)
+            .with("size", m.dim)
+            .with("needed", need),
+    )
+}
+
 fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let (i, c) = trova(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted"))?;
     match &c {
@@ -103,19 +116,8 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         }
         Contenuto::Rotto => {
             let m = &mut fs.membri[i];
-            // a header that points past the end is a copy cut before its directory: the same notice as a cut found after `open`
-            let mut h = vec![0u8; m.dim.min(512) as usize];
-            let cut = m
-                .dati
-                .read_at(0, &mut h)
-                .ok()
-                .and_then(|_| Ole::header_cut(&h))
-                .filter(|&n| n > m.dim);
-            if let Some(need) = cut {
-                return Err(Error::new("err.file.cutShort")
-                    .with("name", &m.nome)
-                    .with("size", m.dim)
-                    .with("needed", need));
+            if let Some(e) = tagliato_prima(m) {
+                return Err(e);
             }
             let d = m.dim;
             return Err(rifiuto(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
