@@ -21,33 +21,13 @@ pub(crate) struct Seg {
     pub(crate) broad: bool,
 }
 
-/// The peaks of a slab in the order (scan, table position): a stable counting sort of `pos`, which `segments` uses instead of sorting each channel.
-pub(crate) fn by_scan(pos: &[u32]) -> Result<Vec<u32>> {
-    let nscan = pos.iter().max().map_or(0, |&m| m as usize + 1);
-    let mut next = filled(nscan + 1, 0u32)?;
-    for &s in pos {
-        next[s as usize + 1] += 1;
-    }
-    for k in 0..nscan {
-        next[k + 1] += next[k];
-    }
-    let mut out = filled(pos.len(), 0u32)?;
-    for (i, &s) in pos.iter().enumerate() {
-        out[next[s as usize] as usize] = i as u32;
-        next[s as usize] += 1;
-    }
-    Ok(out)
-}
-
-/// The channels that can make a run: (first peak, end, next free slot of its block of the order) and the channel of every peak.
 // (a, last, tot, mzw, n, mx, apexI, apex): the segment being grown.
 type OpenSeg = (u32, u32, f64, f64, u32, f64, f64, u32);
-type Chans = (Vec<(u32, u32, u32)>, Vec<u32>);
 
-fn find_channels(lmz: &[f64], it: &[f64], shift: f64, keep_floor: f64) -> Result<Chans> {
+/// The channels that can make a run, as (first peak, end) of their block of the table.
+fn find_channels(lmz: &[f64], it: &[f64], shift: f64, keep_floor: f64) -> Result<Vec<(u32, u32)>> {
     let n = lmz.len();
-    let mut chans: Vec<(u32, u32, u32)> = Vec::new();
-    let mut chan_of = filled(n, u32::MAX)?;
+    let mut chans: Vec<(u32, u32)> = Vec::new();
     let mut s = 0;
     while s < n {
         let b = libm::floor(lmz[s] + shift) as i32;
@@ -61,44 +41,50 @@ fn find_channels(lmz: &[f64], it: &[f64], shift: f64, keep_floor: f64) -> Result
         // A lone peak cannot make a run of 2 points.
         if e - s >= 2 && cmax >= keep_floor {
             reserve(&mut chans, 1)?;
-            chan_of[s..e].fill(chans.len() as u32);
-            chans.push((s as u32, e as u32, s as u32));
+            chans.push((s as u32, e as u32));
         }
         s = e;
     }
-    Ok((chans, chan_of))
+    Ok(chans)
+}
+
+/// The peaks `s..e` of one channel in the order (scan, table position), into `order`: one sort of `(scan, position)` keys in `keys`, which stays in
+/// the cache, where scattering the whole slab by scan would not.
+pub(crate) fn by_scan_in(
+    pos: &[u32],
+    (s, e): (usize, usize),
+    keys: &mut Vec<u64>,
+    order: &mut Vec<u32>,
+) -> Result<()> {
+    keys.clear();
+    reserve(keys, e - s)?;
+    keys.extend((s..e).map(|i| (u64::from(pos[i]) << 32) | i as u64));
+    keys.sort_unstable();
+    order.clear();
+    reserve(order, e - s)?;
+    order.extend(keys.iter().map(|&k| k as u32));
+    Ok(())
 }
 
 /// Runs of consecutive scans in each channel of a slab (`_segments`). `mz` ascending; channels whose strongest peak is below
-/// `keep_floor` are dropped first. Only the runs with at least 2 points and a height of `min_height`. `scan_order` is `by_scan(pos)`:
-/// the peaks of a channel are a block of the table, and walking `scan_order` once puts each of them in its channel by scan, ties in table order.
-#[allow(clippy::too_many_arguments)]
+/// `keep_floor` are dropped first. Only the runs with at least 2 points and a height of `min_height`. The peaks of a channel are a block of the
+/// table, walked by scan (`by_scan_in`), ties in table order.
 pub(crate) fn segments(
     lmz: &[f64],
     mz: &[f64],
     it: &[f64],
     pos: &[u32],
-    scan_order: &[u32],
     shift: f64,
     p: &Params,
     out: &mut Vec<Seg>,
 ) -> Result<()> {
-    let n = lmz.len();
-    let (chans, chan_of) = find_channels(lmz, it, shift, p.min_height / 4.0)?;
-    let mut chans = chans;
-    let mut order = filled(n, 0u32)?;
-    for &i in scan_order {
-        let c = chan_of[i as usize];
-        if c != u32::MAX {
-            let slot = &mut chans[c as usize].2;
-            order[*slot as usize] = i;
-            *slot += 1;
-        }
-    }
-    for &(s, e, _) in &chans {
+    let chans = find_channels(lmz, it, shift, p.min_height / 4.0)?;
+    let (mut keys, mut order) = (Vec::new(), Vec::new());
+    for &(s, e) in &chans {
         let (s, e) = (s as usize, e as usize);
         let b = libm::floor(lmz[s] + shift) as i32;
-        let order = &order[s..e];
+        by_scan_in(pos, (s, e), &mut keys, &mut order)?;
+        let order = &order[..];
         let mut k = 0;
         // current segment
         let mut cur: Option<OpenSeg> = None; // (a, last, tot, mzw, n, mx, apexI, apex)
@@ -111,7 +97,7 @@ pub(crate) fn segments(
                 mw += it[i] * mz[i];
                 k += 1;
             }
-            // `order` is sorted by scan (`by_scan`), so `ps >= c.1` and the subtraction cannot underflow.
+            // `order` is sorted by scan (`by_scan_in`), so `ps >= c.1` and the subtraction cannot underflow.
             match cur.as_mut() {
                 Some(c) if ps - c.1 <= p.max_gap + 1 => {
                     c.1 = ps;

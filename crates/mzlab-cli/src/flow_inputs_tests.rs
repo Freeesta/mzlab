@@ -85,3 +85,59 @@ fn the_first_input_that_fails_in_plan_order_is_reported() {
     assert!(e.to_string().contains("missing.txt"), "{e}");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+fn one_step(names: &[&str], step: &str) -> Plan {
+    let mut p = plan(names);
+    p.steps = vec![mzlab_core::flow::Instance {
+        id: "s".into(),
+        step: step.into(),
+        version: 1,
+        algorithm: None,
+        preset: None,
+        label: None,
+        ins: Vec::new(),
+        params: Vec::new(),
+    }];
+    p
+}
+
+#[test]
+fn a_plan_that_converts_takes_the_sha1_of_its_inputs_in_the_same_read() {
+    let d = files("sha1_convert", 2);
+    let mut p = one_step(&["f0.txt", "f1.txt"], "convert.mzml");
+    fill_inputs(&mut p, |n| d.join(n)).unwrap();
+    for n in ["f0.txt", "f1.txt"] {
+        let path = d.join(n);
+        let (_, sha256, sha1) =
+            mzlab_core::hashio::hash_read(&mut std::fs::File::open(&path).unwrap()).unwrap();
+        assert_eq!(crate::flow_set::known_sha1(&path), Some(sha1), "{n}");
+        assert_eq!(crate::flow_set::known_sha(&path), Some(sha256), "{n}");
+    }
+    // a later plan that does not convert keeps the SHA-1 already taken of the same file
+    let mut q = one_step(&["f0.txt"], "features.table");
+    fill_inputs(&mut q, |n| d.join(n)).unwrap();
+    assert!(crate::flow_set::known_sha1(&d.join("f0.txt")).is_some());
+}
+
+#[test]
+fn a_plan_that_writes_no_mzml_takes_the_sha256_alone() {
+    let d = files("sha1_table", 2);
+    for step in ["features.detect", "index.mzidx", "import.raw"] {
+        let mut p = one_step(&["f0.txt", "f1.txt"], step);
+        fill_inputs(&mut p, |n| d.join(n)).unwrap();
+        for (k, f) in p.inputs.iter().enumerate() {
+            let path = d.join(&f.name);
+            assert_eq!(
+                f.sha256,
+                sha256_hex(&std::fs::read(&path).unwrap()),
+                "{step} {k}"
+            );
+            assert_eq!(crate::flow_set::known_sha(&path).as_ref(), Some(&f.sha256));
+            assert_eq!(crate::flow_set::known_sha1(&path), None, "{step} {k}");
+        }
+    }
+    assert!(crate::flow_set::wants_sha1(&one_step(
+        &[],
+        "spectra.msn_graph"
+    )));
+}

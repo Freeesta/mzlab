@@ -15,7 +15,7 @@ use crate::axis::MassAxis;
 use crate::broad_blank::BlankBank;
 use crate::broad_gt::{share, TraceBank};
 use crate::centwave::{self, Peak};
-use crate::channels::{by_scan, segments, stitch};
+use crate::channels::{segments, stitch};
 use crate::post::{finish, median_interval, Row};
 use crate::table::FileFeatures;
 
@@ -118,11 +118,10 @@ fn run_slab(slab: &Slab, rt: &[f64], dt: f64, p: &Params, rows: &mut [Vec<Row>; 
     reserve(&mut lmz, slab.mz.len())?;
     let den = libm::log1p(CHANNEL_PPM);
     lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
-    let scan_order = by_scan(&slab.pos)?;
     let (low, high) = rows.split_at_mut(1);
     let (r0, r1) = mzlab_core::spare::join2(
-        || one_grid(slab, &lmz, &scan_order, (rt, dt), p, 0, &mut low[0]),
-        || one_grid(slab, &lmz, &scan_order, (rt, dt), p, 1, &mut high[0]),
+        || one_grid(slab, &lmz, (rt, dt), p, 0, &mut low[0]),
+        || one_grid(slab, &lmz, (rt, dt), p, 1, &mut high[0]),
     );
     r0.and(r1)
 }
@@ -131,7 +130,6 @@ fn run_slab(slab: &Slab, rt: &[f64], dt: f64, p: &Params, rows: &mut [Vec<Row>; 
 fn one_grid(
     slab: &Slab,
     lmz: &[f64],
-    scan_order: &[u32],
     (rt, dt): (&[f64], f64),
     p: &Params,
     g: usize,
@@ -139,9 +137,7 @@ fn one_grid(
 ) -> Result<()> {
     let shift = if g == 0 { 0.0f64 } else { 0.5 };
     let mut segs = Vec::new();
-    segments(
-        lmz, &slab.mz, &slab.it, &slab.pos, scan_order, shift, p, &mut segs,
-    )?;
+    segments(lmz, &slab.mz, &slab.it, &slab.pos, shift, p, &mut segs)?;
     let mut segs = stitch(segs, p)?;
     if let Peak::CentWave(cw) = &p.peak {
         segs = centwave::refine(segs, &slab.mz, &slab.it, &slab.pos, dt, p, cw)?;
@@ -256,11 +252,8 @@ fn blank_bank<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<Option<Arc<
         let mut lmz: Vec<f64> = Vec::new();
         reserve(&mut lmz, slab.mz.len())?;
         lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
-        let order = by_scan(&slab.pos)?;
         let mut segs = Vec::new();
-        segments(
-            &lmz, &slab.mz, &slab.it, &slab.pos, &order, 0.0, p, &mut segs,
-        )?;
+        segments(&lmz, &slab.mz, &slab.it, &slab.pos, 0.0, p, &mut segs)?;
         for s in stitch(segs, p)? {
             if ((s.z - s.a + 1) as usize) < cw.broad.min_scans {
                 continue;
@@ -356,11 +349,8 @@ fn common_mode_params<R: ReadAt>(
         let mut lmz: Vec<f64> = Vec::new();
         reserve(&mut lmz, slab.mz.len())?;
         lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
-        let order = by_scan(&slab.pos)?;
         let mut segs = Vec::new();
-        segments(
-            &lmz, &slab.mz, &slab.it, &slab.pos, &order, 0.0, p, &mut segs,
-        )?;
+        segments(&lmz, &slab.mz, &slab.it, &slab.pos, 0.0, p, &mut segs)?;
         for s in stitch(segs, p)? {
             let len = (s.z - s.a + 1) as usize;
             // the series is built only for the traces that the bank keeps (a stride of them)
