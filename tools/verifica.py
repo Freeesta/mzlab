@@ -147,25 +147,25 @@ def noti_rossi() -> dict[str, str]:
 NOTI_VERDI_GIRI = 3
 
 
-def noti_verdi(results, noti: dict[str, str]):
+def noti_verdi(results, known: dict[str, str]):
     """A line of noti_rossi.txt whose e2e passes for NOTI_VERDI_GIRI runs in a row becomes a FAIL until the line is removed (streaks in .verifica/noti_verdi.json)."""
     f = OUT / "noti_verdi.json"
     try:
-        serie = json.loads(f.read_text(encoding="utf-8"))
+        series = json.loads(f.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        serie = {}
+        series = {}
     stato = {n: st for n, st, _dt, _notes in results}
-    serie = {n: c for n, c in serie.items() if n in noti}
-    for n in noti:
+    series = {n: c for n, c in series.items() if n in known}
+    for n in known:
         if stato.get(n) == "OK":
-            serie[n] = serie.get(n, 0) + 1
+            series[n] = series.get(n, 0) + 1
         elif stato.get(n) == "FAIL":
-            serie[n] = 0
+            series[n] = 0
     try:
-        f.write_text(json.dumps(serie), encoding="utf-8")
+        f.write_text(json.dumps(series), encoding="utf-8")
     except OSError:
         pass
-    return [(f"noti_rossi: {n}", "FAIL", 0, [f"green for {c} runs in a row: remove the line from tools/noti_rossi.txt"]) for n, c in serie.items() if c >= NOTI_VERDI_GIRI]
+    return [(f"noti_rossi: {n}", "FAIL", 0, [f"green for {c} runs in a row: remove the line from tools/noti_rossi.txt"]) for n, c in series.items() if c >= NOTI_VERDI_GIRI]
 
 
 def js_syntax(results) -> None:
@@ -415,9 +415,9 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
                 results.append((f"cargo build {' '.join(pkg)} (prima degli e2e)", "FAIL", dt, ["vedi .verifica/log/precompila.log"])); return
     # every test takes a free port and its own work folder (tests_e2e/lib.py), the site tests too: they all run in the same pool, the slowest first
     from concurrent.futures import ThreadPoolExecutor
-    lenti = [n for n in SLOW if n in todo]
+    slow = [n for n in SLOW if n in todo]
     with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
-        for r in ex.map(one, lenti + [n for n in todo if n not in lenti and n not in SOLI]):
+        for r in ex.map(one, slow + [n for n in todo if n not in slow and n not in SOLI]):
             out_by[r[0]] = r
     out_by.update({n: one(n) for n in SOLI if n in todo}); results.extend(out_by[n] for n in names)
     results.append(("dati usati per gli e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · nessun .dam")]))
@@ -470,9 +470,9 @@ def main() -> None:
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
         if run and not (a.ultimi_falliti and not only):
             e2e(results, only, a.timeout, "", a.paralleli, parte)
-    noti = noti_rossi()
-    extra = noti_verdi(results, noti)
-    results = [(n, "NOTO", dt, ["known: " + noti[n]] + notes[:1]) if st == "FAIL" and n in noti else
+    known = noti_rossi()
+    extra = noti_verdi(results, known)
+    results = [(n, "NOTO", dt, ["known: " + known[n]] + notes[:1]) if st == "FAIL" and n in known else
                (n, "FAIL", dt, (["NUOVO"] if n.startswith("e2e") else []) + notes) if st == "FAIL" else (n, st, dt, notes)
                for n, st, dt, notes in results] + extra
     fails = [r for r in results if r[1] == "FAIL"]
