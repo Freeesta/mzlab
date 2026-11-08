@@ -6,6 +6,9 @@ use std::path::Path;
 
 use crate::flow_run_tests::{fixture, flow_run, folder, p};
 
+/// The files of a run folder, by name.
+type Files = Vec<(String, Vec<u8>)>;
+
 /// `flow run` of the base chain with `extra` arguments in the folder `dir`: its outcome.
 fn run_in(dir: &Path, extra: &[&str]) -> crate::Outcome {
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
@@ -16,15 +19,7 @@ fn run_in(dir: &Path, extra: &[&str]) -> crate::Outcome {
 
 /// The base chain in the mode `mode` at the automatic budget, then again in the same folder with `extra` after removing the table and the gap-filled
 /// one, so that the detection comes from the cache and only the alignment runs under `extra`: the two run folders and the outcome of the second run.
-fn cached_rerun(
-    tag: &str,
-    mode: &str,
-    extra: &[&str],
-) -> (
-    Vec<(String, Vec<u8>)>,
-    Vec<(String, Vec<u8>)>,
-    crate::Outcome,
-) {
+fn cached_rerun(tag: &str, mode: &str, extra: &[&str]) -> (Files, Files, crate::Outcome) {
     let (dir, _) = fixture(tag);
     let set = format!("ali.mode={mode}");
     let o = run_in(&dir, &["--set", &set]);
