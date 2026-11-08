@@ -1,4 +1,5 @@
-// Drives createBridge (mzlab/web/rust-bridge.js) with a scripted fake Worker: D1 (a stale open must not touch a respawned slot) and V8 (xic/mrm requests overlap).
+// Drives createBridge (mzlab/web/rust-bridge.js) with a scripted fake Worker: D1 (a stale open must not touch a respawned slot), M1 (a memory refusal
+// reaches the notice with its numbers) and V8 (xic/mrm requests overlap).
 import assert from "node:assert/strict";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
@@ -20,10 +21,10 @@ const sent = (w, op) => w.log.filter(m => m.op === op);
 const blob = new Blob(["x"]);
 function make() {
   workers.length = 0;
-  const notes = [];
-  const b = createBridge({ workerUrl: new URL("file:///x/rust-worker.js"), notify: k => notes.push(k) });
+  const notes = [], withParams = [];
+  const b = createBridge({ workerUrl: new URL("file:///x/rust-worker.js"), notify: (k, p) => { notes.push(k); withParams.push([k, p]); } });
   b.start();
-  return { b, notes };
+  return { b, notes, withParams };
 }
 const session = (b, n) => { b.noteUpload("a.mzML", blob); b.noteExplore({ samples: Array.from({ length: n }, () => ({ file: "a.mzML" })) }); };
 
@@ -62,6 +63,20 @@ const out = {};
   assert.ok(notes.includes("error.engineFallback"));
   assert.equal(b.stats.mzml, 1, "D1: the fallback of the open that survives is kept");
   out.d1_off_fallback = b.stats.mzml;
+}
+
+// M1: the mzML open is refused for memory: the notice gets the phase, the estimate and the budget, so its text can say by how much
+{
+  const { b, withParams } = make();
+  session(b, 1);
+  const w = workers[0];
+  const params = { fase: "table", stima_mb: "900", budget_mb: "512", libero_mb: "400", eccesso_mb: "500" };
+  w.auto = m => { if (m.op === "open") w.reply({ id: m.id, error: JSON.stringify({ error_key: "error.memoryBudget", params }) }); };
+  await until(() => sent(w, "idxopen").length === 1);
+  w.reply({ id: sent(w, "idxopen")[0].id, error: "no index" });
+  await until(() => withParams.some(([k]) => k === "error.memoryBudget"));
+  assert.deepEqual(withParams.find(([k]) => k === "error.memoryBudget")[1], params);
+  out.m1_params = true;
 }
 
 // V8: the requests of /api/xic and /api/mrm overlap, the parts keep the order of k, the first error gives null
