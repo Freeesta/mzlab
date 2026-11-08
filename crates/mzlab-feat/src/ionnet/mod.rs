@@ -8,6 +8,7 @@ mod pairs;
 
 use crate::store::{origin_from_meta, read_table};
 use crate::table::Aligned;
+use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::json::{Out, Value};
 
@@ -66,10 +67,36 @@ pub struct Grouping {
     pub edges: Vec<Edge>,
 }
 
+/// The warning of a table with fewer files than `min_corr_samples`: no pair can be tested, so no correlation edge is written.
+pub const WARN_CORR_FILES: &str = "warn.flow.group.corrFiles";
+
+/// Bytes the step holds per row (the columns of the result and of its text), per correlating pair (the pair and its sorted copy) and per
+/// correlation edge (the edge, its sorted copy and its text, about 90 characters); the estimate of the refusal `error.memoryBudget` (phase `group`).
+const ROW: usize = 128;
+const PAIR: usize = 48;
+const EDGE: usize = 200;
+
+/// The `ionnet/1` text and the warnings of the step.
+#[derive(Debug, Clone)]
+pub struct Grouped {
+    pub text: String,
+    pub warnings: Vec<&'static str>,
+}
+
+/// True when the table has enough files to test a correlation: below it every pair is untested, and an untested pair is no edge.
+pub fn corr_tested(t: &Aligned, p: &Params) -> bool {
+    t.n_files >= p.min_corr_samples
+}
+
 /// Groups the rows of `t` (any row count; a family-mode table is read by its reference ions).
 pub fn group(t: &Aligned, p: &Params) -> Grouping {
+    group_within(t, p, usize::MAX).unwrap_or_default()
+}
+
+/// `group` under a cap on the correlating pairs; `Err(count)` past it.
+fn group_within(t: &Aligned, p: &Params, cap: usize) -> std::result::Result<Grouping, usize> {
     let n = t.len();
-    let corr = pairs::all(t, p);
+    let corr = pairs::all(t, p, cap)?;
     let (mut iso, mut charge) = (vec![0u8; n], vec![0i8; n]);
     let iso_edges = net::isotopes(t, p, &corr, &mut iso, &mut charge);
     let (mut ion, mut neutral) = (vec![None; n], vec![f64::NAN; n]);
@@ -82,7 +109,9 @@ pub fn group(t: &Aligned, p: &Params) -> Grouping {
     let mut linked: Vec<(usize, usize)> =
         edges.iter().map(|e| (e.a.min(e.b), e.a.max(e.b))).collect();
     crate::sortc::by(&mut linked, |x, y| x.cmp(y));
-    for c in &corr {
+    // with fewer files than `min_corr_samples` no pair is tested: the pairs still lead the isotopes, ions and `corr_group`, but are no edge
+    let shown = if corr_tested(t, p) { &corr[..] } else { &[] };
+    for c in shown {
         if linked.binary_search(&(c.a, c.b)).is_err() {
             edges.push(Edge {
                 a: c.a,
@@ -99,7 +128,7 @@ pub fn group(t: &Aligned, p: &Params) -> Grouping {
     crate::sortc::any_by(&mut edges, |x, y| {
         x.a.cmp(&y.a).then(x.b.cmp(&y.b)).then(x.kind.cmp(&y.kind))
     });
-    Grouping {
+    Ok(Grouping {
         group,
         corr_group,
         ion,
@@ -107,7 +136,7 @@ pub fn group(t: &Aligned, p: &Params) -> Grouping {
         charge,
         iso,
         edges,
-    }
+    })
 }
 
 fn num(params: &[(String, Value)], k: &str, d: f64) -> f64 {
@@ -150,8 +179,9 @@ pub fn params_of(params: &[(String, Value)], file_polarity: i8) -> Result<(Param
     Ok((p, positive))
 }
 
-/// The `ionnet/1` text of the `.mzfeat` `table` under the parameters of the step.
-pub fn group_text(params: &[(String, Value)], table: &[u8]) -> Result<String> {
+/// The `ionnet/1` text of the `.mzfeat` `table` under the parameters of the step, within `budget`: past it the refusal `error.memoryBudget`
+/// (phase `group`) with the estimate of the whole step, counted without holding the pairs.
+pub fn group_text(params: &[(String, Value)], table: &[u8], budget: &MemBudget) -> Result<Grouped> {
     let (t, meta) = read_table(table)?;
     let pol: i64 = origin_from_meta(&meta)
         .facts
@@ -159,7 +189,21 @@ pub fn group_text(params: &[(String, Value)], table: &[u8]) -> Result<String> {
         .map(|f| i64::from(f.polarity.signum()))
         .sum();
     let (p, positive) = params_of(params, pol.signum() as i8)?;
-    Ok(to_json(&t, &p, positive, &group(&t, &p)))
+    let tested = corr_tested(&t, &p);
+    let per_pair = PAIR + if tested { EDGE } else { 0 };
+    let rows = t.len().saturating_mul(ROW);
+    let cap = budget.left().saturating_sub(rows) / per_pair;
+    let g = group_within(&t, &p, cap).map_err(|count| {
+        budget.refuse("group", rows.saturating_add(count.saturating_mul(per_pair)))
+    })?;
+    Ok(Grouped {
+        text: to_json(&t, &p, positive, &g),
+        warnings: if tested {
+            Vec::new()
+        } else {
+            vec![WARN_CORR_FILES]
+        },
+    })
 }
 
 fn opt_num(o: &mut Out, v: f64, nd: usize) {
