@@ -62,10 +62,28 @@ MANIFEST = {
 PROXY_HOST = re.compile(r'^export const PROXY_HOST = "(https://[a-z0-9.-]+(?::[0-9]{1,5})?)?";$', re.M)
 
 
-def check_proxy_host(static: Path) -> None:
+def proxy_host(static: Path) -> str:
     """The host of the proxy of the public demo (`llm/proxy-host.js`, empty or `https://<host>` without a path): the placeholder of the provider `mzlab-demo` is replaced by Rust at send time."""
-    if not PROXY_HOST.search((static / "llm" / "proxy-host.js").read_text(encoding="utf-8")):
+    m = PROXY_HOST.search((static / "llm" / "proxy-host.js").read_text(encoding="utf-8"))
+    if not m:
         raise SystemExit("llm/proxy-host.js: PROXY_HOST must be empty or https://<host> with no path")
+    return m.group(1) or ""
+
+
+def transport_csp(html: str, host: str) -> str:
+    """The transport document with the proxy host added to its `connect-src` (unchanged while the host is empty): proxy-host.js stays the one place of the host."""
+    if not host:
+        return html
+    out, n = re.subn(r"(connect-src 'self' http://localhost:\* http://127\.0\.0\.1:\*)(;)", lambda m: f"{m.group(1)} {host}{m.group(2)}", html, count=1)
+    if n != 1:
+        raise SystemExit("llm/trasporto.html: connect-src not found")
+    return out
+
+
+def check_proxy_host(static: Path) -> None:
+    """Checks the host and writes it into the CSP of the transport document of the built site."""
+    page = static / "llm" / "trasporto.html"
+    page.write_text(transport_csp(page.read_text(encoding="utf-8"), proxy_host(static)), encoding="utf-8")
 
 
 def python_files(out: Path) -> list[str]:
