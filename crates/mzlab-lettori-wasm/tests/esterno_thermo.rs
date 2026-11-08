@@ -1,5 +1,5 @@
 #![cfg(feature = "thermo")]
-//! The external reader of the engine (`mzlab_wasm::esterno::LettoreEsterno`) over the session of the `thermo` module gives, for a real `.raw`, exactly what the Thermo reader gives when it is linked
+//! The external reader of the engine (`mzlab_wasm::esterno::ExternalReader`) over the session of the `thermo` module gives, for a real `.raw`, exactly what the Thermo reader gives when it is linked
 //! in the engine: the index, the scans, the headers, the TIC, the `metodo/1` document, the header of the mzML and the whole mzML byte for byte. Needs the private data repository
 //! (MZLAB_DATI, or `mzlab-dati` beside this one); skipped without it. Run in release: `cargo test --release -p mzlab-lettori-wasm --features thermo --test esterno_thermo`.
 #![allow(clippy::indexing_slicing)]
@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
 use mzlab_core::{lettori_mzml, rawlettore, Result};
 use mzlab_lettori_wasm::sessione::Sessions;
-use mzlab_wasm::esterno::{LettoreEsterno, Modulo};
+use mzlab_wasm::esterno::{ExternalReader, Module};
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
@@ -48,13 +48,13 @@ fn set(path: &Path) -> FileSet {
     }
 }
 
-/// The session of the module as the `Modulo` the engine sees (what `ModuloJs` does through the JS functions).
+/// The session of the module as the `Module` the engine sees (what `JsModule` does through the JS functions).
 struct ViaSession {
     s: Sessions,
     h: u32,
 }
 
-impl Modulo for ViaSession {
+impl Module for ViaSession {
     fn samples(&mut self) -> Result<String> {
         self.s.samples(self.h)
     }
@@ -157,7 +157,7 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         let mut diretto = (rawlettore::VOCE.apri)(set(f), &Limiti::sito()).unwrap();
         let mut s = Sessions::default();
         let h = s.insert(mzlab_lettori::apri_nudo(set(f), &Limiti::sito()).unwrap());
-        let mut ext = LettoreEsterno::new(ViaSession { s, h }).unwrap();
+        let mut ext = ExternalReader::new(ViaSession { s, h }).unwrap();
         let nome = f.display();
         assert_eq!(ext.format(), diretto.format(), "{nome}");
         assert_eq!(ext.samples(), diretto.samples(), "{nome}");

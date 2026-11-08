@@ -6,11 +6,11 @@ use wasm_bindgen::prelude::*;
 
 /// Bytes a member is read in when a reader asks less: every `read` of the page is an OPFS sync-handle read with a fixed cost per call (about 0.25 ms),
 /// and the `.D` reader asks a few hundred bytes per scan (6000 calls for 6000 scans).
-const LETTURA: usize = 256 << 10;
+const READ_AHEAD: usize = 256 << 10;
 /// One block per member: the `.wiff` and `.D` readers go along one member at a time, a second block saved no read.
-const BLOCCHI: usize = 1;
+const BLOCKS: usize = 1;
 /// The longest block a run of reads in order grows to (`BlockCache::read_ahead`): at most this many bytes held per member.
-const LETTURA_MAX: usize = 4 << 20;
+const READ_AHEAD_MAX: usize = 4 << 20;
 /// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`, or `read.into(i, offset, view)` when the page has it (`rust-nativo.js`, over OPFS handles):
 /// the handle reads straight into the engine's memory. The view (as `lend` of `nativi.rs`, the other way) is valid during the call only: JS fills it at once, never keeps it,
 /// makes no call into the engine meanwhile, and answers the bytes it put.
@@ -50,7 +50,7 @@ impl ReadAt for JsMember {
 }
 
 /// Member `i` (of `dim` bytes) as the readers of the registry read it.
-pub(super) fn membro(read: &Function, i: u32, dim: u64) -> Box<dyn ReadAt> {
+pub(super) fn member(read: &Function, i: u32, dim: u64) -> Box<dyn ReadAt> {
     let mut m = JsMember {
         read: read.clone(),
         into: js_sys::Reflect::get(read, &JsValue::from_str("into"))
@@ -62,9 +62,9 @@ pub(super) fn membro(read: &Function, i: u32, dim: u64) -> Box<dyn ReadAt> {
         mzlab_core::blocchi::BlockCache::new(
             move |off: u64, buf: &mut [u8]| m.read_at(off, buf),
             dim,
-            LETTURA,
-            BLOCCHI,
+            READ_AHEAD,
+            BLOCKS,
         )
-        .read_ahead(LETTURA_MAX),
+        .read_ahead(READ_AHEAD_MAX),
     )
 }

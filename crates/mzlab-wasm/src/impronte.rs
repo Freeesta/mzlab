@@ -9,50 +9,50 @@ use wasm_bindgen::prelude::*;
 
 use crate::error_json;
 
-pub(crate) struct Impronte {
-    ora: Option<Vec<Impronta>>,
-    tardi: Option<Function>,
+pub(crate) struct Fingerprints {
+    now: Option<Vec<Impronta>>,
+    later: Option<Function>,
 }
 
-impl Impronte {
+impl Fingerprints {
     /// From `prints` (the flat `[sha256, sha1, probe]` of each member, a function, or nothing) for the set `fs` the reader opens; `tell(1)` when
     /// the members are read here now. With a function the set carries an empty SHA-1 (`senza_sha1`): the table does not read it.
-    pub(crate) fn nuove(
+    pub(crate) fn new(
         fs: &mut FileSet,
         prints: &JsValue,
         tell: &dyn Fn(u32),
-    ) -> Result<Impronte, JsValue> {
+    ) -> Result<Fingerprints, JsValue> {
         if let Some(f) = prints.dyn_ref::<Function>() {
             upload::senza_sha1(fs);
-            return Ok(Impronte {
-                ora: None,
-                tardi: Some(f.clone()),
+            return Ok(Fingerprints {
+                now: None,
+                later: Some(f.clone()),
             });
         }
-        let ora = match upload::impronte_note(fs, &stampe(prints)) {
+        let now = match upload::impronte_note(fs, &prints_of(prints)) {
             Some(i) => i,
             None => {
                 tell(1);
                 upload::impronte(fs).map_err(|e| error_json(&e))?
             }
         };
-        Ok(Impronte {
-            ora: Some(ora),
-            tardi: None,
+        Ok(Fingerprints {
+            now: Some(now),
+            later: None,
         })
     }
 
     /// The fingerprints when the table is done; `set` makes a fresh set of the members (read here when the late value is not usable).
-    pub(crate) fn date(&self, set: impl Fn() -> FileSet) -> mzlab_core::Result<Vec<Impronta>> {
-        if let Some(i) = &self.ora {
+    pub(crate) fn given(&self, set: impl Fn() -> FileSet) -> mzlab_core::Result<Vec<Impronta>> {
+        if let Some(i) = &self.now {
             return Ok(i.clone());
         }
         let v = self
-            .tardi
+            .later
             .as_ref()
             .and_then(|f| f.call0(&JsValue::NULL).ok());
         let mut fs = set();
-        match upload::impronte_note(&mut fs, &stampe(&v.unwrap_or(JsValue::NULL))) {
+        match upload::impronte_note(&mut fs, &prints_of(&v.unwrap_or(JsValue::NULL))) {
             Some(i) => Ok(i),
             None => upload::impronte(&mut fs),
         }
@@ -60,7 +60,7 @@ impl Impronte {
 }
 
 /// `[sha256, sha1, probe]` of each member from the flat array of the page; nothing when it is not one or a value is empty.
-fn stampe(v: &JsValue) -> Vec<(String, String, String)> {
+fn prints_of(v: &JsValue) -> Vec<(String, String, String)> {
     let Some(a) = v.dyn_ref::<js_sys::Array>() else {
         return vec![];
     };

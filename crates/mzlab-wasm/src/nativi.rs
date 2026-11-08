@@ -15,7 +15,7 @@ use wasm_bindgen::prelude::*;
 
 mod membro;
 
-use crate::esterno::{errore_del_modulo, LettoreEsterno, ModuloJs};
+use crate::esterno::{module_error, ExternalReader, JsModule};
 use crate::{error_json, Accorpa, BlockWriter, JsReader};
 
 /// Readers kept open at once (a `.wiff` holds its container in memory).
@@ -25,30 +25,30 @@ pub(crate) const SHELLS: usize = 32 << 20;
 
 thread_local! {
     /// The function of the page that opens a dataset on a readers module (`native_external`).
-    static ESTERNO: std::cell::RefCell<Option<Function>> = const { std::cell::RefCell::new(None) };
+    static EXTERNAL: std::cell::RefCell<Option<Function>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Registers `open(names, sizes, read)`: the page's function that, for a dataset the engine has no reader for (a Thermo `.raw`), opens it on the readers module of its family and
 /// returns the object of the session (`campioni`, `indice`, `scansione`, `intestazione`, `cromatogrammi`, `cromatogramma`, `metodo`, `testata`, `chiudi`), or `null` when no module reads it.
-/// The engine then reads the dataset through `LettoreEsterno` like any other (`Membri::open`, `build_mzidx_native`, `native_srm`, `native_to_mzml`).
+/// The engine then reads the dataset through `ExternalReader` like any other (`Members::open`, `build_mzidx_native`, `native_srm`, `native_to_mzml`).
 #[wasm_bindgen]
 pub fn native_external(open: Function) {
-    ESTERNO.with(|f| *f.borrow_mut() = Some(open));
+    EXTERNAL.with(|f| *f.borrow_mut() = Some(open));
 }
 
 /// The members of a dataset as the page describes them: names (relative to the dataset), sizes, the read function.
-pub(crate) struct Membri {
+pub(crate) struct Members {
     names: Vec<String>,
     sizes: Vec<f64>,
     read: Function,
 }
 
-impl Membri {
+impl Members {
     pub(crate) fn new(
         names: js_sys::Array,
         sizes: &[f64],
         read: Function,
-    ) -> Result<Membri, JsValue> {
+    ) -> Result<Members, JsValue> {
         let names: Vec<String> = names.iter().flat_map(|v| v.as_string()).collect();
         if names.len() != sizes.len() || names.is_empty() {
             return Err(error_json(
@@ -56,7 +56,7 @@ impl Membri {
                     .with("name", names.first().cloned().unwrap_or_default()),
             ));
         }
-        Ok(Membri {
+        Ok(Members {
             names,
             sizes: sizes.to_vec(),
             read,
@@ -72,7 +72,7 @@ impl Membri {
             .map(|(i, (n, &s))| Membro {
                 nome: n.clone(),
                 dim: s as u64,
-                dati: membro::membro(&self.read, i as u32, s as u64),
+                dati: membro::member(&self.read, i as u32, s as u64),
                 sha1: None,
             })
             .collect();
@@ -81,49 +81,49 @@ impl Membri {
 }
 
 pub(crate) struct Dataset {
-    pub(crate) membri: Membri,
+    pub(crate) members: Members,
     pub(crate) centroid: bool,
     pub(crate) l: Option<Box<dyn Lettore>>,
     pub(crate) used: u64,
 }
 
-impl Membri {
+impl Members {
     /// The reader of `fs` (this dataset's members): the engine's own, and when none recognises it the one of the readers module the page registered with `native_external`.
-    fn apri_fs(&self, fs: FileSet) -> mzlab_core::Result<Box<dyn Lettore>> {
+    fn open_fs(&self, fs: FileSet) -> mzlab_core::Result<Box<dyn Lettore>> {
         let sha1: Vec<String> = fs
             .membri
             .iter()
             .map(|m| m.sha1.clone().unwrap_or_default())
             .collect();
         match lettori::apri(fs, &Limiti::sito()) {
-            Err(e) if e.key == "err.file.notAccepted" => self.esterno(&sha1).unwrap_or(Err(e)),
+            Err(e) if e.key == "err.file.notAccepted" => self.external(&sha1).unwrap_or(Err(e)),
             r => r,
         }
     }
 
     /// The session of the module for this dataset; `None` when the page registered no function or no module reads it.
     /// `sha1`: the SHA-1 of each member when known (empty text when not), for the header of the mzML.
-    fn esterno(&self, sha1: &[String]) -> Option<mzlab_core::Result<Box<dyn Lettore>>> {
-        let f = ESTERNO.with(|f| f.borrow().clone())?;
+    fn external(&self, sha1: &[String]) -> Option<mzlab_core::Result<Box<dyn Lettore>>> {
+        let f = EXTERNAL.with(|f| f.borrow().clone())?;
         let names: js_sys::Array = self.names.iter().map(|n| JsValue::from_str(n)).collect();
         let sizes = js_sys::Float64Array::from(&self.sizes[..]);
         let sha1: js_sys::Array = sha1.iter().map(|n| JsValue::from_str(n)).collect();
-        let sessione = match f.call4(&JsValue::NULL, &names, &sizes, &self.read, &sha1) {
+        let session = match f.call4(&JsValue::NULL, &names, &sizes, &self.read, &sha1) {
             Ok(v) if v.is_null() || v.is_undefined() => return None,
             Ok(v) => v,
             Err(e) => {
                 return Some(Err(e.as_string().map_or_else(
                     || mzlab_core::Error::new("err.file.notAccepted"),
-                    |t| errore_del_modulo(&t),
+                    |t| module_error(&t),
                 )))
             }
         };
-        Some(LettoreEsterno::new(ModuloJs::new(sessione)).map(|l| Box::new(l) as Box<dyn Lettore>))
+        Some(ExternalReader::new(JsModule::new(session)).map(|l| Box::new(l) as Box<dyn Lettore>))
     }
 
     /// The reader of the dataset; with `centroid` its profile scans become centroids (as the conversion of a `.wiff` does by default).
     pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Lettore>, JsValue> {
-        let l = self.apri_fs(self.fileset()).map_err(|e| error_json(&e))?;
+        let l = self.open_fs(self.fileset()).map_err(|e| error_json(&e))?;
         Ok(if centroid {
             lettori_centroidi::centroidato(l)
         } else {
@@ -134,7 +134,7 @@ impl Membri {
 
 /// The datasets of the session and which sample of which dataset each slot is.
 #[derive(Default)]
-pub(crate) struct Nativi {
+pub(crate) struct Natives {
     pub(crate) sets: HashMap<String, Dataset>,
     pub(crate) slots: HashMap<u32, (String, usize)>,
     pub(crate) shells: HashMap<(String, usize), Rc<Vec<u8>>>,
@@ -174,7 +174,7 @@ impl ReadAt for Src<'_> {
 }
 
 /// The open reader of dataset `ds` (opened again when it was closed; the least used ones are closed beyond `OPEN`).
-pub(crate) fn reader(n: &mut Nativi, ds: String) -> Result<&mut dyn Lettore, JsValue> {
+pub(crate) fn reader(n: &mut Natives, ds: String) -> Result<&mut dyn Lettore, JsValue> {
     n.clock += 1;
     let open = n.sets.values().filter(|d| d.l.is_some()).count();
     if open >= OPEN
@@ -193,7 +193,7 @@ pub(crate) fn reader(n: &mut Nativi, ds: String) -> Result<&mut dyn Lettore, JsV
         .ok_or_else(|| error_json(&mzlab_core::Error::new("error.badIndex")))?;
     d.used = n.clock;
     if d.l.is_none() {
-        d.l = Some(d.membri.open(d.centroid)?);
+        d.l = Some(d.members.open(d.centroid)?);
     }
     match d.l.as_deref_mut() {
         Some(l) => Ok(l),
@@ -209,7 +209,7 @@ pub fn native_samples(
     read: Function,
 ) -> Result<String, JsValue> {
     use mzlab_core::json::Out;
-    let l = Membri::new(names, sizes, read)?.open(false)?;
+    let l = Members::new(names, sizes, read)?.open(false)?;
     let mut o = Out::default();
     o.raw("{\"format\":")
         .str(&format!("{:?}", l.format()))
@@ -332,12 +332,12 @@ pub fn build_mzidx_native(
     step: Option<Function>,
 ) -> Result<String, JsValue> {
     let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
-    let m = Membri::new(names, sizes, read)?;
+    let m = Members::new(names, sizes, read)?;
     let mut fs = m.fileset();
-    let impronte = crate::impronte::Impronte::nuove(&mut fs, &prints, &tell)?;
-    let mut membri = || impronte.date(|| m.fileset());
+    let fingerprints = crate::impronte::Fingerprints::new(&mut fs, &prints, &tell)?;
+    let mut members = || fingerprints.given(|| m.fileset());
     let c = c as usize;
-    let mut l = crate::contato::apri(fs, |fs| m.apri_fs(fs), &tell, step, c)?;
+    let mut l = crate::contato::open(fs, |fs| m.open_fs(fs), &tell, step, c)?;
     let cm = (c, l.missing(c));
     let mut out = Accorpa::flussi(JsOutput { write });
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round; OPFS writes in 1 MiB blocks (`accorpa`)
@@ -346,8 +346,8 @@ pub fn build_mzidx_native(
         .map(|(put, get)| Accorpa::new(JsSpill { put, get }));
     let spill = spill.as_mut().map(|s| s as &mut dyn Spill);
     // a profile sample that the page also wants as centroids: both indexes from one decoding of the scans
-    if let Some(wc) = write_cen.filter(|_| !centroid && primo_ms1_profilo(&mut *l, c)) {
-        return doppio(l, cm, &mut membri, name, out, wc, budget_mb, spill, &tell);
+    if let Some(wc) = write_cen.filter(|_| !centroid && first_ms1_is_profile(&mut *l, c)) {
+        return index_both(l, cm, &mut members, name, out, wc, budget_mb, spill, &tell);
     }
     let mut l = if centroid {
         lettori_centroidi::centroidato(l)
@@ -358,7 +358,7 @@ pub fn build_mzidx_native(
     let (st, sha256) = upload::indicizza_lettore_con(
         &mut *l,
         c,
-        &mut membri,
+        &mut members,
         name,
         &mut out,
         (budget_mb as usize) << 20,
@@ -375,10 +375,10 @@ pub fn build_mzidx_native(
 
 /// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`); `missing`: `Lettore::missing` of sample `c`.
 #[allow(clippy::too_many_arguments)]
-fn doppio(
+fn index_both(
     l: Box<dyn mzlab_core::lettori::Lettore>,
     (c, missing): (usize, usize),
-    membri: &mut dyn FnMut() -> mzlab_core::Result<Vec<upload::Impronta>>,
+    members: &mut dyn FnMut() -> mzlab_core::Result<Vec<upload::Impronta>>,
     name: &str,
     mut out: Accorpa<JsOutput>,
     write_cen: Function,
@@ -392,7 +392,7 @@ fn doppio(
     let ((st, sha256), (sc, _)) = upload::indicizza_lettore_doppio(
         &mut lc,
         c,
-        membri,
+        members,
         name,
         &mut out,
         &mut out_cen,
@@ -410,7 +410,7 @@ fn doppio(
 }
 
 /// The first MS1 scan of sample `c` is profile (false when it cannot be told: no MS1, a scan that does not decode).
-fn primo_ms1_profilo(l: &mut dyn mzlab_core::lettori::Lettore, c: usize) -> bool {
+fn first_ms1_is_profile(l: &mut dyn mzlab_core::lettori::Lettore, c: usize) -> bool {
     let Some(k) = l
         .index(c)
         .ok()
@@ -431,7 +431,7 @@ pub fn native_srm(
     centroid: bool,
     sink: Function,
 ) -> Result<(), JsValue> {
-    let mut l = Membri::new(names, sizes, read)?.open(centroid)?;
+    let mut l = Members::new(names, sizes, read)?.open(centroid)?;
     let mut t = SorgenteLettore {
         l: &mut *l,
         c: c as usize,
@@ -455,7 +455,7 @@ pub fn native_to_mzml(
     sink: Function,
     progress: Function,
 ) -> Result<(), JsValue> {
-    let mut l = Membri::new(names, sizes, read)?.open(centroid)?;
+    let mut l = Members::new(names, sizes, read)?.open(centroid)?;
     let mut out = BlockWriter {
         sink,
         buf: Vec::new(),
@@ -467,9 +467,9 @@ pub fn native_to_mzml(
             &(total as f64).into(),
         );
     };
-    let opz = mzlab_core::mzmlwrite::opzioni_compressione(compression)
+    let opt = mzlab_core::mzmlwrite::opzioni_compressione(compression)
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
-    lettori_mzml::scrivi_con(&mut *l, c as usize, &mut out, &mut tell, opz)
+    lettori_mzml::scrivi_con(&mut *l, c as usize, &mut out, &mut tell, opt)
         .map_err(|e| error_json(&e))?;
     std::io::Write::flush(&mut out).map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))

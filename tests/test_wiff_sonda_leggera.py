@@ -24,7 +24,7 @@ PROBE = ("const fs=require('fs'),path=require('path'),w=require(process.argv[1]+
          "process.stdout.write(JSON.stringify({info,reads:n}));")
 
 
-# 3000 points per scan: each injection fills more than the 256 KB the module reads ahead (LETTURA), or the read of sample 0 runs into the others anyway
+# 3000 points per scan: each injection fills more than the 256 KB the module reads ahead (READ_AHEAD), or the read of sample 0 runs into the others anyway
 POINTS = [(2 * k + 1, 100 + k) for k in range(3000)]
 
 

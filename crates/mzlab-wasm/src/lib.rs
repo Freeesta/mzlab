@@ -97,7 +97,7 @@ pub struct Engine {
     /// Bytes the cache (maps, arrays and blocks of the indexes) may hold (`set_budget_mb`; 0 = the default).
     pub(crate) cache_cap: usize, pub(crate) work_cap: usize,    // work_cap: what the files opened whole may hold together
     /// The slots read straight from the files of a maker (`nativi.rs`).
-    pub(crate) nat: nativi::Nativi,
+    pub(crate) nat: nativi::Natives,
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.

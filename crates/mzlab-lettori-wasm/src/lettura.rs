@@ -401,7 +401,7 @@ pub fn open_with_sha1(
     open_members(fs)
 }
 fn open_members(fs: FileSet) -> Result<u32, JsValue> {
-    // as it is, without the SRM traces of `mzlab_lettori::apri`: the engine reads the module through `LettoreEsterno` and decides itself what it does with them
+    // as it is, without the SRM traces of `mzlab_lettori::apri`: the engine reads the module through `ExternalReader` and decides itself what it does with them
     let l = mzlab_lettori::apri_nudo(fs, &Limiti::sito()).map_err(|e| error_json(&e))?;
     with_sessions(|s| Ok(s.insert(l)))
 }

@@ -2,9 +2,9 @@
 use super::*;
 use mzlab_core::lettori::Posizione;
 
-struct Finto;
+struct Fake;
 
-impl Modulo for Finto {
+impl Module for Fake {
     fn samples(&mut self) -> Result<String> {
         Ok(r#"{"formato":"thermo-raw","campioni":[{"id":1,"name":"a","scans":2}]}"#.into())
     }
@@ -79,8 +79,8 @@ impl Modulo for Finto {
 }
 
 #[test]
-fn le_risposte_diventano_i_tipi_del_contratto() {
-    let mut l = LettoreEsterno::new(Finto).unwrap();
+fn the_replies_become_the_types_of_the_contract() {
+    let mut l = ExternalReader::new(Fake).unwrap();
     assert_eq!(l.format(), Formato::ThermoRaw);
     assert_eq!(l.samples()[0].scansioni, 2);
     let i = l.index(0).unwrap().to_vec();
@@ -132,9 +132,9 @@ fn le_risposte_diventano_i_tipi_del_contratto() {
 }
 
 #[test]
-fn un_modulo_di_un_altro_protocollo_si_rifiuta() {
-    struct Vecchio(Finto);
-    impl Modulo for Vecchio {
+fn a_module_of_another_protocol_is_refused() {
+    struct Old(Fake);
+    impl Module for Old {
         fn protocol(&mut self) -> Result<u32> {
             Ok(PROTOCOLLO - 1)
         }
@@ -163,7 +163,7 @@ fn un_modulo_di_un_altro_protocollo_si_rifiuta() {
             self.0.file_header(c)
         }
     }
-    let e = LettoreEsterno::new(Vecchio(Finto)).err().unwrap();
+    let e = ExternalReader::new(Old(Fake)).err().unwrap();
     assert_eq!(
         (e.key, e.params),
         (
@@ -177,15 +177,15 @@ fn un_modulo_di_un_altro_protocollo_si_rifiuta() {
 }
 
 #[test]
-fn l_errore_del_modulo_conserva_chiave_e_parametri() {
-    let e = errore_del_modulo(r#"{"error_key":"err.file.raw","params":{"detail":"member"}}"#);
+fn the_module_error_keeps_key_and_params() {
+    let e = module_error(r#"{"error_key":"err.file.raw","params":{"detail":"member"}}"#);
     assert_eq!(
         (e.key, e.params),
         ("err.file.raw", vec![("detail", "member".to_string())])
     );
-    assert_eq!(errore_del_modulo("boom").key, "err.file.notAccepted");
+    assert_eq!(module_error("boom").key, "err.file.notAccepted");
     assert_eq!(
-        statica("err.file.raw").as_ptr(),
-        statica("err.file.raw").as_ptr()
+        interned("err.file.raw").as_ptr(),
+        interned("err.file.raw").as_ptr()
     );
 }

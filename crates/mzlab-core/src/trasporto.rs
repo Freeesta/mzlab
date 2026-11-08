@@ -1,4 +1,4 @@
-//! The binary transport between a readers module (`wasm-lettori/<family>/`) and the engine that reads it through `LettoreEsterno` (docs/agenti/lettori-modulo.md): the index of a sample
+//! The binary transport between a readers module (`wasm-lettori/<family>/`) and the engine that reads it through `ExternalReader` (docs/agenti/lettori-modulo.md): the index of a sample
 //! and a scan travel as one byte array each, little-endian, written by the module (`encode_*`) and read by the engine (`decode_*`). Nothing is text but the strings of the index.
 //!
 //! Index (`PROTOCOLLO`, then in this order; the columns are 8-byte numbers, so the whole block of numbers is aligned):
