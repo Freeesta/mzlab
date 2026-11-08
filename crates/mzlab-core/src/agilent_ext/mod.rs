@@ -70,6 +70,8 @@ pub struct AgilentD {
     pub file_sha1: Vec<(String, String)>,
     /// The points of every scan when the run comes from `data.ms` (m/z and abundances; `MSPeak.bin` does not exist then).
     pub(crate) inline: Option<Vec<(Vec<f64>, Vec<f64>)>>,
+    /// Scans of a copy cut short that are left out (`scan::parse`): announced or begun in `MSScan.bin` but not whole in it or in `MSPeak.bin`.
+    pub missing: usize,
     /// The mass calibration of a Q-TOF run (`with_calibration`).
     pub(crate) calibration: lcms::Calibration,
     /// The LC/MS method of `AcqData/AcqMethod.xml` (`with_lc_files`).
@@ -95,9 +97,13 @@ impl AgilentD {
             None => scan::Layout::builtin(),
         };
         let announced = Some(segments.iter().map(|s| s.scans).sum::<usize>());
-        let records = scan::parse(f.ms_scan, &layout, f.ms_peak_len, announced)?;
+        let (records, missing) = scan::parse(f.ms_scan, &layout, f.ms_peak_len, announced)?;
         if records.is_empty() {
-            return Err(Error::new("err.file.agilent").with("detail", "no scans"));
+            return Err(if missing > 0 {
+                Error::new("err.file.agilentCut").with("name", name)
+            } else {
+                Error::new("err.file.agilent").with("detail", "no scans")
+            });
         }
         Ok(AgilentD {
             name: name.to_string(),
@@ -111,6 +117,7 @@ impl AgilentD {
             extra_names: layout.extra_names(),
             file_sha1: hashes(f),
             inline: None,
+            missing,
             calibration: Default::default(),
             lcm: None,
             devices_all: Vec::new(),

@@ -117,10 +117,19 @@ fn what_it_cannot_read_is_an_error_with_the_numbers() {
             .key,
         "err.file.agilent"
     );
+    // the last spectrum past the end of MSPeak.bin is a copy cut short: the whole scans are kept and the last is counted
+    let cut = open(&idx, peak.len() as u64 - 1).unwrap();
+    assert_eq!((cut.records.len(), cut.missing), (3, 1));
+    // a spectrum past the end with whole ones after it is not a cut
+    let mut swapped = idx.clone();
+    let (a, b) = (160..160 + 184, 160 + 3 * 184..160 + 4 * 184);
+    let first = swapped[a.clone()].to_vec();
+    swapped.copy_within(b.clone(), a.start);
+    swapped[b].copy_from_slice(&first);
     assert_eq!(
-        open(&idx, peak.len() as u64 - 1).err().unwrap().key,
+        open(&swapped, peak.len() as u64 - 1).err().unwrap().key,
         "err.file.agilent",
-        "a spectrum past the end of MSPeak.bin"
+        "a spectrum past the end of MSPeak.bin before whole ones"
     );
     assert_eq!(
         open(&idx[..160], 0).err().unwrap().key,
