@@ -133,11 +133,11 @@ fn a_wiff_cut_short_is_refused_with_its_own_notice() {
     let wiff = std::fs::read(dir.join("one.wiff")).unwrap();
     let scan = std::fs::read(dir.join("one.wiff.scan")).unwrap();
     let mut told = 0;
-    // whole sectors of the container missing: the samples would read as none
+    // whole sectors of the container missing, its directory too: the samples would read as none, never «not a .wiff»
     for cut in (512..wiff.len() - 512).step_by(64) {
         match read(&wiff[..cut], &scan) {
             Err("err.file.wiffTruncated") => told += 1,
-            Err(key) => assert!(key.starts_with("err."), "one.wiff cut at {cut}: {key}"),
+            Err(key) => panic!("one.wiff cut at {cut}: {key}"),
             Ok(s) => assert!(
                 !s.is_empty(),
                 "one.wiff cut at {cut}: opened with no sample and no notice"

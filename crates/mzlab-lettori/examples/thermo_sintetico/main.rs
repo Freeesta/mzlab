@@ -1,7 +1,7 @@
 //! A synthetic Orbitrap `.raw` (format v66, invented numbers) of any size, for the speed benches of the Thermo reader: MS1 scans in profile with the
 //! centroid list, resolutions and noise nodes (`FTMS + p`), each followed by `--ms2` dependent HCD scans with centroids only (`FTMS + c`), a scan trailer
-//! of `--trailer` bytes per scan. Laid out the way `vendor/opentfraw` reads a Q Exactive file (uniform events of 288 bytes). Written as a stream (bounded memory).
-//! `cargo run --profile cli -p mzlab-lettori --features thermo --example thermo_sintetico -- OUT.raw [--scans N] [--peaks P] [--bins B] [--ms2 K] [--ms2-peaks Q] [--trailer T] [--seed S]`
+//! of `--trailer` bytes per scan; with `--dda` the precursors are the most intense centroids of the survey scan (top N), else random m/z. Laid out the way `vendor/opentfraw` reads a Q Exactive file (uniform events of 288 bytes). Written as a stream (bounded memory).
+//! `cargo run --profile cli -p mzlab-lettori --features thermo --example thermo_sintetico -- OUT.raw [--scans N] [--peaks P] [--bins B] [--ms2 K] [--ms2-peaks Q] [--trailer T] [--seed S] [--dda]`
 
 use std::fs::File;
 use std::io::{BufWriter, Seek, SeekFrom, Write};
@@ -29,6 +29,7 @@ struct Opt {
     ms2_peaks: u32,
     trailer: u32,
     seed: u64,
+    dda: bool,
 }
 
 fn args() -> Opt {
@@ -42,6 +43,7 @@ fn args() -> Opt {
         ms2_peaks: 200,
         trailer: 600,
         seed: 1,
+        dda: false,
     };
     while let Some(x) = a.next() {
         let mut num = || {
@@ -57,6 +59,7 @@ fn args() -> Opt {
             "--ms2-peaks" => o.ms2_peaks = num() as u32,
             "--trailer" => o.trailer = num() as u32,
             "--seed" => o.seed = num(),
+            "--dda" => o.dda = true,
             _ if !x.starts_with("--") => o.out = x,
             _ => panic!("unknown option {x}"),
         }
@@ -210,11 +213,18 @@ fn packets(o: &Opt, rng: &mut Rng, w: &mut impl Write) -> std::io::Result<(Vec<R
     let mut entries: Vec<Row> = Vec::with_capacity(o.scans as usize);
     let mut offset = 0u64;
     let mut last_base = 500.0;
+    let mut top: Vec<f64> = Vec::new();
     for k in 0..o.scans {
         let s = if k.is_multiple_of(o.ms2 + 1) {
             let s = ms1(o, rng);
             last_base = s.base_mz.max(LOW + 50.0);
+            let mut c = s.cents.clone();
+            c.sort_by(|a, b| b.1.total_cmp(&a.1));
+            top = c.iter().map(|x| f64::from(x.0)).collect();
             s
+        } else if o.dda && !top.is_empty() {
+            let r = (k % (o.ms2 + 1) - 1) as usize;
+            ms2(o, rng, top[r % top.len()])
         } else {
             let p = LOW + 50.0 + (last_base - LOW - 50.0) * rng.unit();
             ms2(o, rng, p.max(LOW + 50.0))

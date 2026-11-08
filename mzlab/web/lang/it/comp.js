@@ -43,6 +43,7 @@ I18N.add("it", {
   "comp.none": "Nessuna formula entro la tolleranza con questi elementi e limiti.",
   "comp.count": "{n, plural, one {# candidato} other {# candidati}}",
   "comp.first": "(primi {n})",
+  "comp.scored": "Confronto con isotopi e frammenti fatto solo per le {n} masse più vicine su {m}: restringi la tolleranza o gli elementi per confrontarle tutte.",
   "comp.confidence": "Livello di confidenza: formula compatibile con la massa, non identificata.",
   "comp.col.ion": "Formula dello ione",
   "comp.col.neutral": "Neutro",
