@@ -43,12 +43,12 @@ def _env() -> dict:
     return dict(os.environ)
 
 
-def converti(parser: str, raw: Path, uscita: Path) -> Path:
+def converti(parser: str, raw: Path, output: Path) -> Path:
     """Convert one `.raw` into `uscita/<stem>.mzML` (peak picking on, no compression); return the mzML path."""
-    uscita.mkdir(parents=True, exist_ok=True)
-    dest = uscita / (raw.stem + ".mzML")
+    output.mkdir(parents=True, exist_ok=True)
+    dest = output / (raw.stem + ".mzML")
     dest.unlink(missing_ok=True)
-    r = subprocess.run([parser, "-i", str(raw), "-o", str(uscita), "-f", INDEXED_MZML_FORMAT], capture_output=True, text=True, env=_env())
+    r = subprocess.run([parser, "-i", str(raw), "-o", str(output), "-f", INDEXED_MZML_FORMAT], capture_output=True, text=True, env=_env())
     if r.returncode != 0 or not dest.exists() or dest.stat().st_size == 0:
         raise SystemExit(f"conversion of {raw.name} failed (exit {r.returncode}):\n{(r.stderr or r.stdout)[-800:]}")
     return dest

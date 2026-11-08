@@ -23,9 +23,9 @@ RIGHE = (("P1_narrow (recall)", "P1_narrow", "richiamo", "{:.2f}"), ("P1_broad (
          ("P5_fp (share of the rows)", "P5_fp", "frazione", "{:.2f}"))
 
 
-def confronto(verita: list[dict], tabelle: dict[str, dict]) -> dict:
+def confronto(truth: list[dict], tabelle: dict[str, dict]) -> dict:
     """{column name: endpoints} for the tables given, in order."""
-    return {name: metriche.larghi(verita, t) for name, t in tabelle.items()}
+    return {name: metriche.larghi(truth, t) for name, t in tabelle.items()}
 
 
 def a_markdown(misure: dict[str, dict]) -> str:

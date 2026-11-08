@@ -26,9 +26,9 @@ ENDPOINT = {"P1": ("richiamo", "alto", "media"), "P2": ("mediana", "basso", "med
 VALUE = {"P1": "richiamo", "P2": "mediana", "P3": "integrita", "P4": "richiamo_candidati", "P5": "falsi"}
 
 
-def misura(verita: list[dict], t: dict, gruppi: dict | None = None) -> dict:
+def misura(truth: list[dict], t: dict, groups: dict | None = None) -> dict:
     """The measures of one table: P1-P5 per compound and the secondary numbers."""
-    return {"strumento": t["strumento"], "config": t["config"], "dataset": t["dataset"], **metriche.tutte(verita, t, gruppi)}
+    return {"strumento": t["strumento"], "config": t["config"], "dataset": t["dataset"], **metriche.tutte(truth, t, groups)}
 
 
 def unisci(misure: list[dict]) -> dict:
@@ -59,17 +59,17 @@ def riassunto(m: dict) -> dict:
     return out
 
 
-def confronto(a: dict, altri: list[dict]) -> list[dict]:
+def confronto(a: dict, others: list[dict]) -> list[dict]:
     """Paired comparisons a - b for each competitor and primary endpoint (the same compounds), with Holm over all of them. A positive difference is better for
     the endpoints where higher is better (P1, P3, P4); for P2 and P5 a negative one is better."""
     rows = []
-    for b in altri:
-        for p, (_, direzione, which) in ENDPOINT.items():
+    for b in others:
+        for p, (_, direction, which) in ENDPOINT.items():
             va, vb = _vec(a, p), _vec(b, p)
             if len(va) != len(vb):
                 raise ValueError(f"{p}: the tools are not measured on the same compounds")
             d = S.differenza(va, vb, which, _layers(a, p))
-            row = {"endpoint": p, "contro": f"{b['strumento']}/{b['config']}", "direzione": direzione, "differenza": d}
+            row = {"endpoint": p, "contro": f"{b['strumento']}/{b['config']}", "direzione": direction, "differenza": d}
             if which == "media" and set(x for x in va + vb if x == x) <= {0, 1}:
                 row["mcnemar"] = S.mcnemar_esatto([int(x) for x in va], [int(x) for x in vb])
             rows.append(row)
@@ -83,11 +83,11 @@ def confronto(a: dict, altri: list[dict]) -> list[dict]:
     return rows
 
 
-def rapporto(dataset: str, misura_a: dict, altri: list[dict] | None = None) -> dict:
+def rapporto(dataset: str, measure_a: dict, others: list[dict] | None = None) -> dict:
     """The document `bench-rapporto/1` of one dataset: the summary of every tool and the comparisons of the first with the others."""
-    altri = altri or []
+    others = others or []
     return {"formato": "bench-rapporto/1", "tabella": FORMATO, "dataset": dataset, "bootstrap": {"n": S.N_BOOT, "seme": S.SEME}, "margini": {k: list(v) for k, v in S.MARGINI.items()},
-            "strumenti": {f"{m['strumento']}/{m['config']}": riassunto(m) for m in [misura_a] + altri}, "confronti": confronto(misura_a, altri) if altri else []}
+            "strumenti": {f"{m['strumento']}/{m['config']}": riassunto(m) for m in [measure_a] + others}, "confronti": confronto(measure_a, others) if others else []}
 
 
 def a_json(r: dict) -> str:
@@ -111,11 +111,11 @@ def a_markdown(r: dict) -> str:
     return "\n".join(L) + "\n"
 
 
-def identificazione_affiancata(verita: list[dict], tabelle: list[dict], strutture: dict[str, str]) -> dict:
+def identificazione_affiancata(truth: list[dict], tabelle: list[dict], structures: dict[str, str]) -> dict:
     """Identification endpoints of every table side by side. Each tool keeps its own levels (`livelli`: standards per level reached): they are never converted."""
     out = {}
     for t in tabelle:
-        m = metriche.identificazione(verita, t, strutture)
+        m = metriche.identificazione(truth, t, structures)
         out[f"{t['strumento']}/{t['config']}"] = {k: m[k] for k in ("n", "richiamo_colpi", "mrr", "falsi", "livelli")}
     return out
 
@@ -138,18 +138,18 @@ def truth_of(path, tipo: str, only_seen: bool = True) -> list[dict]:
     return da_json(path)
 
 
-def from_tables(verita: list[dict], percorsi: list[str], gruppi: dict | None, rt_tol: float, dataset: str) -> dict:
+def from_tables(truth: list[dict], paths: list[str], groups: dict | None, rt_tol: float, dataset: str) -> dict:
     """The report of tables written by the runners (`bench/1` files): the first is compared with the others."""
     from .adatta import leggi
-    ms = [measure_tol(verita, leggi(p), gruppi, rt_tol) for p in percorsi]
+    ms = [measure_tol(truth, leggi(p), groups, rt_tol) for p in paths]
     return rapporto(dataset, ms[0], ms[1:])
 
 
-def measure_tol(verita: list[dict], t: dict, gruppi: dict | None, rt_tol: float) -> dict:
-    """`gruppi` give file names; the metrics want column indices of the table."""
-    if gruppi:
-        gruppi = {k: [t["file"].index(n) for n in v] for k, v in gruppi.items()}
-    return {"strumento": t["strumento"], "config": t["config"], "dataset": t["dataset"], **metriche.tutte(verita, t, gruppi, rt_tol=rt_tol)}
+def measure_tol(truth: list[dict], t: dict, groups: dict | None, rt_tol: float) -> dict:
+    """`groups` give file names; the metrics want column indices of the table."""
+    if groups:
+        groups = {k: [t["file"].index(n) for n in v] for k, v in groups.items()}
+    return {"strumento": t["strumento"], "config": t["config"], "dataset": t["dataset"], **metriche.tutte(truth, t, groups, rt_tol=rt_tol)}
 
 
 def main(argv=None) -> int:
@@ -173,9 +173,9 @@ def main(argv=None) -> int:
         (out / "rapporto.md").write_text(a_markdown(r), encoding="utf-8")
         print(a_markdown(r))
         return 0
-    t, verita = corri_mzfinder_sintetico(a.seme, a.profilo, out / "lavoro")
+    t, truth = corri_mzfinder_sintetico(a.seme, a.profilo, out / "lavoro")
     (out / "bench1.json").write_text(table_to_json(t), encoding="utf-8")
-    r = rapporto(f"D2/{a.profilo}/{a.seme}", misura(verita, t))
+    r = rapporto(f"D2/{a.profilo}/{a.seme}", misura(truth, t))
     (out / "rapporto.json").write_text(a_json(r), encoding="utf-8")
     (out / "rapporto.md").write_text(a_markdown(r), encoding="utf-8")
     print(a_markdown(r))
