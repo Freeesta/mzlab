@@ -375,7 +375,11 @@ fn carica(
     let idx_b = opzionale(c, &nome("IDX"));
     let ha_idx = idx_b.is_some();
     let mut righe = match idx_b {
-        Some(b) => idx::leggi(&b, &c.limiti)?,
+        Some(b) => idx::leggi(&b, &c.limiti)?.ok_or_else(|| {
+            Error::new("err.file.indexCut")
+                .with("name", &c.nome)
+                .with("file", nome("IDX"))
+        })?,
         None => Vec::new(),
     };
     *spesa += righe.len() as u64;
@@ -427,18 +431,27 @@ fn carica(
     Ok((fun, avviso))
 }
 
+/// A folder without `_FUNCTNS.INF`, which every run has: a copy that left files behind.
+fn incompleta(c: &Cartella, file: &str) -> Error {
+    Error::new("err.file.folderIncomplete")
+        .with("name", &c.nome)
+        .with("file", file)
+}
+
 fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let mut c = Cartella::new(fs, *limiti);
-    let inf = c
-        .leggi(FUNCTNS)?
-        .ok_or_else(|| errore("_FUNCTNS.INF is missing"))?;
+    let inf = c.leggi(FUNCTNS)?.ok_or_else(|| incompleta(&c, FUNCTNS))?;
     if c.cerca(PRIMA_DAT).is_none() {
         return Err(errore("_FUNC001.DAT is missing"));
     }
     if inf.is_empty() {
         return Err(Error::new("err.file.functionsEmpty").with("name", &c.nome));
     }
-    let lista = funzioni::leggi(&inf, limiti)?;
+    let lista = funzioni::leggi(&inf, limiti)?.ok_or_else(|| {
+        Error::new("err.file.folderFileCut")
+            .with("name", &c.nome)
+            .with("file", FUNCTNS)
+    })?;
     elenco_intero(&c, lista.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
     testata_intera(&c, header.as_deref())?;
