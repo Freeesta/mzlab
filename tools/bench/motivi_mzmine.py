@@ -21,7 +21,7 @@ sys.path[:0] = [str(Path(__file__).resolve().parents[1])]
 from bench import corri, corri_mzmine  # noqa: E402
 from valida import PPM, ROOT, nativo  # noqa: E402
 from valida import cancello_misure as M  # noqa: E402
-from valida.tabelle import Tabella, leggi_mzmine  # noqa: E402
+from valida.tabelle import Table, read_mzmine  # noqa: E402
 
 RT_TOL = 0.1
 REASONS = ("below", "family", "background", "split", "align", "other")
@@ -42,11 +42,11 @@ def _neighbors(mz_list, rt_list, mz: float, rt: float, rt_tol: float = RT_TOL) -
     return np.flatnonzero((np.abs(mz_list - mz) <= mz * PPM * 1e-6) & (np.abs(rt_list - rt) <= rt_tol))
 
 
-def _in_columns(tab: Tabella, row: int, columns) -> list[int]:
+def _in_columns(tab: Table, row: int, columns) -> list[int]:
     return [k for k in columns if tab.area[row, k] > 0]
 
 
-def _below(tab_other: Tabella, mz: float, rt: float, columns, min_height: float) -> bool:
+def _below(tab_other: Table, mz: float, rt: float, columns, min_height: float) -> bool:
     """The other table has the row but under the floor."""
     i = _neighbors(tab_other.mz, tab_other.rt, mz, rt)
     return bool(len(i)) and float(tab_other.massimo_altezza(columns)[i].max()) < min_height
@@ -98,12 +98,12 @@ def _split_nat(mm_file: list[FileList], nat_file: list[FileList], columns_row: l
     return any(_contiene(nat_file[k], mm_file[k], mz, rt) for k in columns_row)
 
 
-def classifica(native: Tabella, mzmine: Tabella, columns, min_height: float, nat_file: list[FileList], mm_file: list[FileList], adap: list[FileList] | None = None,
+def classifica(native: Table, mzmine: Table, columns, min_height: float, nat_file: list[FileList], mm_file: list[FileList], adap: list[FileList] | None = None,
                members=None, fondo_min: float = 5.0) -> dict:
     """{"mzmine": {reason: [rows of mzmine without a partner]}, "nativa": {reason: [rows of ours without a partner]}, "area": [(row mzmine, row ours)], "senza_feature": [rows of mzmine in
     `other` of which we have no feature in any file, i.e. lost by the detection]}; the rows are indices of the full tables. `adap`: the chromatograms of mzmine per file (None = the reason `background` is not looked for)."""
     columns = list(columns)
-    fm, fn, ia, ib = M.abbina_ioni(native, mzmine, columns, min_height)
+    fm, fn, ia, ib = M.match_ions(native, mzmine, columns, min_height)
     without_m = np.setdiff1d(np.arange(len(fm)), ia)
     without_n = np.setdiff1d(np.arange(len(fn)), ib)
     out: dict = {"mzmine": {m: [] for m in REASONS}, "nativa": {m: [] for m in REASONS}, "area": [], "senza_feature": []}
@@ -162,19 +162,19 @@ def conteggi(outcome: dict) -> dict:
 def _native_list(folder: Path, names: list[str]) -> list[FileList]:
     out = []
     for n in names:
-        _, f = nativo.apri((folder / f"{n}.mzfeatf").read_bytes())
+        _, f = nativo.open_data((folder / f"{n}.mzfeatf").read_bytes())
         out.append(FileList(f["mz"].astype(float), f["rt"].astype(float), f["left"].astype(float), f["right"].astype(float)))
     return out
 
 
 def _native_table(folder: Path, names: list[str]):
-    meta, a = nativo.apri((folder / "series.mzfeat").read_bytes())
+    meta, a = nativo.open_data((folder / "series.mzfeat").read_bytes())
     n, k = meta["rows"], meta["files"]
     stato = a["state"].reshape(n, k)
     area = np.where(stato == nativo.CELLA_ASSENTE, 0.0, np.nan_to_num(a["area"].reshape(n, k)))
     altezza = np.where(stato == nativo.CELLA_ASSENTE, 0.0, np.nan_to_num(a["height"].reshape(n, k).astype(float)))
     members = (a["member_start"].astype(int), a["member_mz"].astype(float), a["member_rt"].astype(float)) if len(a["member_start"]) else None
-    return Tabella("nativo", [Path(x).stem for x in names], a["mz"].astype(float), a["rt"].astype(float), area, altezza=altezza), members
+    return Table("nativo", [Path(x).stem for x in names], a["mz"].astype(float), a["rt"].astype(float), area, altezza=altezza), members
 
 
 def _list_mzmine(phases: Path, prefix: str, stems: list[str]) -> list[FileList]:
@@ -190,8 +190,8 @@ def _list_mzmine(phases: Path, prefix: str, stems: list[str]) -> list[FileList]:
 
 def run_native(idx: list[str], output: Path, recipe: str) -> None:
     output.mkdir(parents=True, exist_ok=True)
-    nativo.costruisci_esempio()
-    subprocess.run([str(nativo.ESEMPIO), str(output), *idx, *(["--recipe", recipe] if recipe else [])], cwd=ROOT, check=True, capture_output=True)
+    nativo.build_example()
+    subprocess.run([str(nativo.EXAMPLE), str(output), *idx, *(["--recipe", recipe] if recipe else [])], cwd=ROOT, check=True, capture_output=True)
 
 
 def misura(mzml: Path, work: Path, min_height: float, solo: list[str] | None = None, ciclo: float | None = None) -> dict:
@@ -199,7 +199,7 @@ def misura(mzml: Path, work: Path, min_height: float, solo: list[str] | None = N
     fs = corri.file_mzml(mzml, solo)
     stems = [f.stem for f in fs]
     series = [{"nome": s} for s in stems]
-    idx = nativo.indici(fs, work / "indici")
+    idx = nativo.indexes(fs, work / "indici")
     names = [Path(x).name for x in idx]
     run_native(idx, work / "ion", json.dumps({"mode": "ion"}))
     run_native(idx, work / "famiglia", "")
@@ -217,10 +217,10 @@ def misura(mzml: Path, work: Path, min_height: float, solo: list[str] | None = N
     final = phases / "riempimento_Aligned_feature_list_gap-filled.csv"
     if r.returncode or not final.exists():
         raise SystemExit(f"mzmine failed:\n{(r.stdout + r.stderr)[-2000:]}")
-    table_mm = leggi_mzmine(final, series)
+    table_mm = read_mzmine(final, series)
     columns = list(range(len(stems)))
     out = {"altezza_min": min_height, "file": stems, "per_serie": {}, "per_file": {}}
-    cfg = lambda c: {"vecchio": M.concordanza_mzmine(fam, table_mm, c, 50.0), "nuovo": M.concordanza_mzmine_ioni(ion, table_mm, c, min_height)}
+    cfg = lambda c: {"vecchio": M.agreement_mzmine(fam, table_mm, c, 50.0), "nuovo": M.agreement_mzmine_ions(ion, table_mm, c, min_height)}
     out["per_serie"] = cfg(columns)
     out["per_file"] = {s: cfg([k]) for k, s in enumerate(stems)}
     nat_file = _native_list(work / "ion", names)

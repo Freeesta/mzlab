@@ -13,13 +13,13 @@ import re
 import numpy as np
 
 from . import PPM, RT_TOL
-from .cancello_misure import _identita_di, _parametro
-from .nativo import Serie
+from .cancello_misure import _identity_of, _parameter
+from .nativo import Series
 
 CODE_GENERATION = {1: 0, 2: 1, 3: 1}                 # true generation (1, 2, 3) -> code of the kinetic evidence (0 first, 1 later)
 
 
-def _identity_tp(t: dict, series: Serie):
+def _identity_tp(t: dict, series: Series):
     """The identity with a member at the mz of the product and any of its RT (the m/z alone if it has none)."""
     mz = float(t["mz"])
     for rt in (t.get("rt_obs") or [None]):
@@ -39,7 +39,7 @@ def rilevabili(truth: dict, field: str) -> list[dict]:
     return [t for t in truth.get("tps", []) if isinstance(t, dict) and t.get(field) is not None and t.get("rilevabile", True) and not t.get("debole")]
 
 
-def misure_motore(truth: dict, series: Serie, series2: Serie | None = None) -> dict:
+def engine_measures(truth: dict, series: Series, series2: Series | None = None) -> dict:
     """The numbers of the criteria; a key is missing when the truth has no field for it, `None` when nothing could be counted."""
     m: dict = {}
     gen = rilevabili(truth, "gen_attesa")
@@ -49,7 +49,7 @@ def misure_motore(truth: dict, series: Serie, series2: Serie | None = None) -> d
             i = _identity_tp(t, series)
             if i is None:
                 continue
-            g = _parametro(i, "generation")
+            g = _parameter(i, "generation")
             n += 1
             ok += int(g is not None and int(g) in (CODE_GENERATION.get(int(t["gen_attesa"]), 1), 2))
         m["generazione"], m["generazione_n"] = (ok / n if n else None), n

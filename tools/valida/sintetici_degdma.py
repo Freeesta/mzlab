@@ -17,7 +17,7 @@ NEUTRAL = {"C": 13, "H": 20, "O": 5}
 FRAGMENT = {"C": 9, "H": 9, "O": 2}
 
 
-def aggiungi(c, somma, modello, Ione, frammenti_di) -> None:
+def add(c, formula_sum, model, Ion, fragments_of) -> None:
     rng = np.random.default_rng(c.seme + 4242)
     mid = c.id_mol()
     c.formule.append(NEUTRAL)
@@ -30,18 +30,18 @@ def aggiungi(c, somma, modello, Ione, frammenti_di) -> None:
         c.ione(f"{mid}_{name}", "addotto", mid, NEUTRAL, rt + float(rng.uniform(-0.008, 0.008)), 0.06, amp * r, adduct=ad, progenitore=mid, forma="come_progenitore",
                note=f"ratio={r};delta_mz={delta}")
     # in-source fragment: the base peak of the MS1, and a fragment of the MS2 of the molecule
-    frag = Ione(id=f"{mid}_ISF1", ruolo="isf", famiglia=mid, rt=rt + float(rng.uniform(-0.008, 0.008)), sg=0.06, progenitore=mid, forma="come_progenitore", isf_in_ms2=1,
+    frag = Ion(id=f"{mid}_ISF1", ruolo="isf", famiglia=mid, rt=rt + float(rng.uniform(-0.008, 0.008)), sg=0.06, progenitore=mid, forma="come_progenitore", isf_in_ms2=1,
                 amp=amp * 12.0, note="ratio=12.0;picco_base")
     frag.ion = E.fmt(FRAGMENT)
-    frag.picchi, mz, _ = modello(frag.ion)
+    frag.picchi, mz, _ = model(frag.ion)
     frag.mz = float(mz[0])
     c.ioni.append(frag)
-    m.frammenti = frammenti_di(rng, m.mz, extra=[(frag.mz, 0.9)])
+    m.frammenti = fragments_of(rng, m.mz, extra=[(frag.mz, 0.9)])
     # a product of the molecule that eluates later and gives the same fragment in the source (its MS2 does not have it)
     tp, f = c.prodotto(m, NEUTRAL, forma="monotona", rt=rt + 6.0)
     c.formule.append(f)
     c.rt_cursor = max(c.rt_cursor, tp.rt + 1.0)          # the run must reach the product
-    twin = Ione(id=f"{tp.id}_ISFF1", ruolo="isf_finto", famiglia=tp.id, rt=tp.rt + float(rng.uniform(-0.008, 0.008)), sg=tp.sg, progenitore=tp.id, forma="come_progenitore",
+    twin = Ion(id=f"{tp.id}_ISFF1", ruolo="isf_finto", famiglia=tp.id, rt=tp.rt + float(rng.uniform(-0.008, 0.008)), sg=tp.sg, progenitore=tp.id, forma="come_progenitore",
                 isf_in_ms2=0, amp=tp.amp * 0.8, mz=frag.mz, ion=frag.ion, picchi=list(frag.picchi), note="ratio=0.8;stesso_mz_di=" + frag.id)
     c.ioni.append(twin)
-    tp.frammenti = frammenti_di(rng, tp.mz, avoid=[frag.mz])
+    tp.frammenti = fragments_of(rng, tp.mz, avoid=[frag.mz])

@@ -45,7 +45,7 @@ def verita(small):
 @pytest.mark.parametrize("profile", ["piccolo", "completo"])
 def test_v1_is_unchanged(profile, tmp_path):
     c = SI.costruisci(SEME, profile)
-    SI.scrivi_verita(tmp_path, c, SEME, profile)
+    SI.write_truth(tmp_path, c, SEME, profile)
     assert c.vx is None and (_sha(tmp_path)["verita.csv"], _sha(tmp_path)["verita.json"]) == V1[(profile, SEME)]
 
 
@@ -97,12 +97,12 @@ def test_chains(full):
             continue
         pred = por[o.progenitore]
         assert pred.generazione == o.generazione - 1 and o.generazione in (2, 3)
-        delta = {k: v for k, v in XV.delta_ioni(o, pred).items()}
-        assert XV.classe_di(delta) is not None or st.meta[o.id]["via"] == "scissione"                      # each step is a rule of the table
+        delta = {k: v for k, v in XV.delta_ions(o, pred).items()}
+        assert XV.class_of(delta) is not None or st.meta[o.id]["via"] == "scissione"                      # each step is a rule of the table
         tot = st.tot[o.id]
-        assert X.chiave(tot) not in X.UN_PASSO                                                              # never one rule from the progenitor
+        assert X.chiave(tot) not in X.ONE_STEP                                                              # never one rule from the progenitor
         if o.generazione == 3:
-            assert X.chiave(tot) not in X.DUE_PASSI and st.meta[o.id]["raggiungibile"] is False         # nor two: the observed network is needed
+            assert X.chiave(tot) not in X.TWO_STEPS and st.meta[o.id]["raggiungibile"] is False         # nor two: the observed network is needed
     tm = {o.id: st.meta[o.id]["t_max"] for o in full.ioni if o.id in st.meta and st.meta[o.id].get("t_max") is not None and o.ruolo in ("tp1", "tp2", "tp3")}
     for o in gen3:                                                                                          # delayed maxima
         assert tm[o.id] > tm[o.progenitore] > tm[por[o.progenitore].progenitore]

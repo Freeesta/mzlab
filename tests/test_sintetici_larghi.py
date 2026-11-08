@@ -1,4 +1,4 @@
-"""Bench lot of smeared peaks (tools/valida/sintetici_mzml.py `genera_larghi`): determinism, exact areas, morphologies, blank, gradient background, and the area read back from a file."""
+"""Bench lot of smeared peaks (tools/valida/sintetici_mzml.py `generate_wide`): determinism, exact areas, morphologies, blank, gradient background, and the area read back from a file."""
 import hashlib
 import json
 import sys
@@ -26,14 +26,14 @@ def _sha(d: Path) -> dict:
 @pytest.fixture(scope="module")
 def lotto(tmp_path_factory):
     d = tmp_path_factory.mktemp("larghi")
-    return d, SM.genera_larghi(d, **SMALL)
+    return d, SM.generate_wide(d, **SMALL)
 
 
 def test_same_seed_same_bytes(lotto, tmp_path):
     d, _ = lotto
-    SM.genera_larghi(tmp_path, **SMALL)
+    SM.generate_wide(tmp_path, **SMALL)
     assert _sha(d) == _sha(tmp_path)
-    SM.genera_larghi(tmp_path / "altro", **{**SMALL, "seme": 6})
+    SM.generate_wide(tmp_path / "altro", **{**SMALL, "seme": 6})
     assert _sha(tmp_path / "altro")["verita.json"] != _sha(d)["verita.json"]
 
 
@@ -62,7 +62,7 @@ def test_double_plateau_saddle_at_60_percent(lotto):
         c = r["componenti"]
         assert len(c) == 2 and (c[1]["mu"] - c[0]["mu"]) * 60 == pytest.approx(90, abs=0.01)
         t = np.arange(c[0]["mu"] - 3, c[1]["mu"] + 3, 0.001)
-        y = SM._curva(c, t)
+        y = SM._curve(c, t)
         m = np.flatnonzero((y[1:-1] > y[:-2]) & (y[1:-1] >= y[2:])) + 1
         assert len(m) == 2 and y[m[0]:m[1] + 1].min() / min(y[m]) == pytest.approx(0.60, abs=0.005)
 
@@ -72,7 +72,7 @@ def test_expected_area_is_the_numeric_integral(lotto):
     for r in v["ioni"]:
         c = r["componenti"]
         t = np.arange(min(x["mu"] - 12 * x["sigma"] for x in c), max(x["mu"] + 12 * x["sigma"] + 30 * x["tau"] for x in c), 0.0005)
-        assert _trapz(SM._curva(c, t), t) == pytest.approx(r["area_attesa"][1], rel=0.01)
+        assert _trapz(SM._curve(c, t), t) == pytest.approx(r["area_attesa"][1], rel=0.01)
     assert any(r["morfologia"] == "a_emg" for r in v["ioni"])                            # the EMG normalisation is among those checked
 
 

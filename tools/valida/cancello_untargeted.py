@@ -17,54 +17,54 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from valida import ROOT, cancello_misure as M, nativo  # noqa: E402
-from valida.cancello import a_json, versione_crate  # noqa: E402
+from valida.cancello import a_json, crate_version  # noqa: E402
 
-PROTOCOLLO = "ion/height-floor/counts-s"
+PROTOCOL = "ion/height-floor/counts-s"
 NEW_THRESHOLDS = {"richiamo": (">=", 0.95), "precisione": (">=", 0.95), "spearman": (">=", 0.95), "log2_mediano": ("<=", 0.10)}
 OLD_THRESHOLDS = {"richiamo": (">=", 0.90), "precisione": (">=", 0.80), "spearman": (">=", 0.90), "log2_mediano": ("<=", 0.25)}
-ESEMPIO = ROOT / "target" / "release" / "examples" / "untargeted"
+EXAMPLE = ROOT / "target" / "release" / "examples" / "untargeted"
 
 
-def costruisci_esempio() -> None:
+def build_example() -> None:
     subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--features", "untargeted", "--example", "untargeted"], cwd=ROOT, check=True)
 
 
-def esegui(idx_paths: list[str], output: Path, parametri: str = "") -> None:
+def esegui(idx_paths: list[str], output: Path, parameters: str = "") -> None:
     """Runs the example on the indexes (in this order); writes `series.mzfeat` and the `.mzfeatf` in `output`."""
-    costruisci_esempio()
+    build_example()
     output.mkdir(parents=True, exist_ok=True)
-    subprocess.run([str(ESEMPIO), str(output), *idx_paths] + (["--params", parametri] if parametri else []), cwd=ROOT, check=True, capture_output=True)
+    subprocess.run([str(EXAMPLE), str(output), *idx_paths] + (["--params", parameters] if parameters else []), cwd=ROOT, check=True, capture_output=True)
 
 
 def tabella(output: Path, nomi: list[str]):
     """`series.mzfeat` as a table of the validation (areas in counts x s, the cells absent at zero)."""
     import numpy as np
-    from valida.tabelle import Tabella
-    meta, a = nativo.apri((output / "series.mzfeat").read_bytes())
+    from valida.tabelle import Table
+    meta, a = nativo.open_data((output / "series.mzfeat").read_bytes())
     n, k = meta["rows"], meta["files"]
     stato = a["state"].reshape(n, k)
     area = np.where(stato == nativo.CELLA_ASSENTE, 0.0, np.nan_to_num(a["area"].reshape(n, k)))
     alt = np.where(stato == nativo.CELLA_ASSENTE, 0.0, np.nan_to_num(a["height"].reshape(n, k).astype(float)))
-    return Tabella("untargeted", nomi, a["mz"].copy(), a["rt"].copy(), area, altezza=alt), meta["crate"]
+    return Table("untargeted", nomi, a["mz"].copy(), a["rt"].copy(), area, altezza=alt), meta["crate"]
 
 
 def _pass(c: dict, thresholds: dict) -> bool:
     return all(k in c and (c[k] >= v if op == ">=" else c[k] <= v) for k, (op, v) in thresholds.items())
 
 
-def sezione(native, mzmine, columns: list[int], min_height: float, crate: str) -> dict:
+def section(native, mzmine, columns: list[int], min_height: float, crate: str) -> dict:
     """The section `untargeted` from the native table and the one of mzmine (the columns are the treated samples)."""
-    new = M.concordanza_mzmine_ioni(native, mzmine, columns, min_height)
-    old = M.concordanza_mzmine(native, mzmine, columns, 50.0)
+    new = M.agreement_mzmine_ions(native, mzmine, columns, min_height)
+    old = M.agreement_mzmine(native, mzmine, columns, 50.0)
     ok = _pass(new, NEW_THRESHOLDS) and _pass(old, OLD_THRESHOLDS)
     return {"ok": ok, "crate_version": crate, "recall": new.get("richiamo"), "precision": new.get("precisione"), "spearman": new.get("spearman"), "log2": new.get("log2_mediano"),
-            "protocol": PROTOCOLLO, "old_protocol": {k: old.get(k) for k in ("richiamo", "precisione", "spearman", "log2_mediano")}, "floor": min_height,
+            "protocol": PROTOCOL, "old_protocol": {k: old.get(k) for k in ("richiamo", "precisione", "spearman", "log2_mediano")}, "floor": min_height,
             "rows_mzmine": new.get("righe_mzmine"), "rows_native": new.get("righe_native"), "files": len(columns)}
 
 
 def vuota() -> dict:
     """Not measured: nothing is claimed."""
-    return {"ok": None, "crate_version": versione_crate(), "recall": None, "precision": None, "spearman": None, "log2": None, "protocol": PROTOCOLLO}
+    return {"ok": None, "crate_version": crate_version(), "recall": None, "precision": None, "spearman": None, "log2": None, "protocol": PROTOCOL}
 
 
 def scrivi(sez: dict, destino: Path) -> None:
@@ -89,15 +89,15 @@ def main(argv: list[str] | None = None) -> int:
         print("section untargeted: not measured (no --mzml-dir and --mzmine)")
         return 0
     from bench import corri
-    from valida.tabelle import leggi_mzmine
+    from valida.tabelle import read_mzmine
     fs = corri.file_mzml(Path(a.mzml_dir), a.solo)
     work = Path(a.lavoro)
-    idx = nativo.indici(fs, work / "indici")
+    idx = nativo.indexes(fs, work / "indici")
     nomi = [Path(x).stem for x in idx]
     esegui(idx, work / "uscita", a.params)
     native, crate = tabella(work / "uscita", nomi)
-    mm = leggi_mzmine(a.mzmine, [{"nome": f.stem} for f in fs])      # mzmine names the columns after the mzML; the indexes may carry `min` after the time
-    sez = sezione(native, mm, list(range(len(nomi))), a.altezza_min, crate)
+    mm = read_mzmine(a.mzmine, [{"nome": f.stem} for f in fs])      # mzmine names the columns after the mzML; the indexes may carry `min` after the time
+    sez = section(native, mm, list(range(len(nomi))), a.altezza_min, crate)
     scrivi(sez, Path(a.json))
     print(json.dumps(sez, indent=1))
     return 0

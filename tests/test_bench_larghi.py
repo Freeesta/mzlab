@@ -1,4 +1,4 @@
-"""Smeared-peak endpoints of the benchmark (valida.abbina.abbina_larghi, bench.metriche.larghi, bench.confronto_larghi): hand-built cases for every endpoint, the
+"""Smeared-peak endpoints of the benchmark (valida.abbina.match_wide, bench.metriche.larghi, bench.confronto_larghi): hand-built cases for every endpoint, the
 narrow matching unchanged, an oracle table that must score perfectly."""
 import json
 import sys
@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
 from bench import confronto_larghi as CL, metriche as M  # noqa: E402
 from bench.verita import da_json, from_rows  # noqa: E402
 from valida import sintetici_mzml as SM  # noqa: E402
-from valida.abbina import abbina, abbina_larghi  # noqa: E402
+from valida.abbina import match_points, match_wide  # noqa: E402
 
 NAN = float("nan")
 
@@ -73,7 +73,7 @@ def test_without_rows_and_without_compounds():
 def test_window_of_the_wide_ones():
     # band FWHM 2 min at RT 10, interval 8-12: tolerance max(0.15, 0.7) = 0.7 min
     def find(rt, rt_min=NAN, rt_max=NAN, wide_one=True):
-        ia, _ = abbina_larghi([300.0], [10.0], [2.0], [wide_one], [8.0], [12.0], [300.0], [rt], [rt_min], [rt_max])
+        ia, _ = match_wide([300.0], [10.0], [2.0], [wide_one], [8.0], [12.0], [300.0], [rt], [rt_min], [rt_max])
         return len(ia) == 1
     assert find(10.69) and not find(10.75)                       # 0.35 * FWHM
     assert find(8.2, 8.0, 10.0) and not find(8.2, 8.0, 8.9)       # beyond the tolerance: only the overlap (IoU 0.5 vs 0.225) accepts
@@ -86,13 +86,13 @@ def test_narrow_ones_stay_as_abbina():
         na, nb = int(rng.integers(1, 12)), int(rng.integers(1, 12))
         mz_a, rt_a = 300 + rng.uniform(0, 0.004, na), rng.uniform(5, 5.4, na)
         mz_b, rt_b = 300 + rng.uniform(0, 0.004, nb), rng.uniform(5, 5.4, nb)
-        a = abbina(mz_a, rt_a, mz_b, rt_b)
-        b = abbina_larghi(mz_a, rt_a, np.full(na, NAN), np.zeros(na, bool), np.full(na, NAN), np.full(na, NAN), mz_b, rt_b, np.full(nb, NAN), np.full(nb, NAN))
+        a = match_points(mz_a, rt_a, mz_b, rt_b)
+        b = match_wide(mz_a, rt_a, np.full(na, NAN), np.zeros(na, bool), np.full(na, NAN), np.full(na, NAN), mz_b, rt_b, np.full(nb, NAN), np.full(nb, NAN))
         assert all(np.array_equal(x, y) for x, y in zip(a, b))
 
 
 def test_oracle_table_scores_the_maximum():
-    rows, _, _ = SM.costruisci_larghi(5, n_larghi=18, n_stretti=6, n_fondo=10, n_campioni=2)
+    rows, _, _ = SM.build_wide(5, n_larghi=18, n_stretti=6, n_fondo=10, n_campioni=2)
     verita = from_rows(rows)
     oracle = _tab([_row(r["mz"], r["rt"], r["area_attesa"], r["rt_min"], r["rt_max"]) for r in rows])
     m = M.larghi(verita, oracle)

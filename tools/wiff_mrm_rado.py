@@ -17,7 +17,7 @@ TRANSITIONS = 136
 CYCLES = 40
 
 
-def blocco(c: int) -> list:
+def block(c: int) -> list:
     """Cycle `c`: the transitions within 12 of `3.5 * c` were acquired (window of a made-up schedule), the others skipped."""
     out, jump = [-(TRANSITIONS + 0.01)], 0
     for j in range(TRANSITIONS):
@@ -44,7 +44,7 @@ def main():
     for n in range(1, samples + 1):
         blocks = []
         for c in range(CYCLES):
-            b = blocco(c)
+            b = block(c)
             blocks.append(("mrm", b, 3000.0 * c, sum(x for x in b if x > 0)))
         w.sample(n, blocks, method)
     w.save(out, "mrmrado")

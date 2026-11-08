@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from valida import ROOT, rapporto      # noqa: E402
 
 
-def carica_verita(path) -> list[dict]:
+def load_truth(path) -> list[dict]:
     """Truth ions as [{id, mz, ion, rt_obs[], parent}]: the parent ('parent' key) and the products ('tps' or 'ioni')."""
     d = json.loads(Path(path).read_text(encoding="utf-8"))
     out = []
@@ -34,10 +34,10 @@ def carica_verita(path) -> list[dict]:
 def main_gate(a) -> int:
     import datetime
     from valida import cancello
-    ioni = carica_verita(a.verita) if a.verita else []
+    ioni = load_truth(a.verita) if a.verita else []
     work = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello"
     c, det = cancello.misura(Path(a.serie) if a.serie else None, ioni, a.mzmine, a.sintetico, a.seme, a.debole, work, a.data or datetime.date.today().isoformat(), not a.senza_wasm)
-    for p in rapporto.scrivi_cancello(Path(a.uscita) if a.uscita else work, c, det, a.cancello_json):
+    for p in rapporto.write_gate(Path(a.uscita) if a.uscita else work, c, det, a.cancello_json):
         print(p)
     return 0
 
@@ -49,10 +49,10 @@ def main_gate_tp(a) -> int:
         raise SystemExit("--cancello-tp needs --serie and --verita")
     truth = json.loads(Path(a.verita).read_text(encoding="utf-8"))
     work = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_tp"
-    _, run, handled = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), work)
-    _, run2, _ = cancello.esegui_reale(Path(a.serie), carica_verita(a.verita), work / "bis")          # a second run: determinism of the TP view
+    _, run, handled = cancello.run_real(Path(a.serie), load_truth(a.verita), work)
+    _, run2, _ = cancello.run_real(Path(a.serie), load_truth(a.verita), work / "bis")          # a second run: determinism of the TP view
     c, det = cancello_tp.misura(truth, run, handled, a.dataset, a.data or datetime.date.today().isoformat(), run2)
-    for p in rapporto.scrivi_cancello_tp(Path(a.uscita) if a.uscita else work, c, det, a.cancello_tp_json):
+    for p in rapporto.write_gate_tp(Path(a.uscita) if a.uscita else work, c, det, a.cancello_tp_json):
         print(p)
     return 0
 
@@ -62,9 +62,9 @@ def main_lr(a) -> int:
     from valida import lr, nativo
     parent = None
     if a.verita:
-        p = next((x for x in carica_verita(a.verita) if x.get("parent")), None)
+        p = next((x for x in load_truth(a.verita) if x.get("parent")), None)
         if p and p.get("ion"):
-            parent = (nativo.neutra_da_ione(p["ion"]), p["mz"], (p["rt_obs"] or [None])[0])
+            parent = (nativo.neutral_from_ion(p["ion"]), p["mz"], (p["rt_obs"] or [None])[0])
     work = Path(a.lavoro) if a.lavoro else ROOT / ".verifica" / "cancello_lr"
     c, det = lr.misura(a.serie_lr, parent, work, a.data or datetime.date.today().isoformat(), a.seme)
     print(f"vista_tabella_lr: {c['vista_tabella_lr']}  (real data: {det['dati_reali']})")

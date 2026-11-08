@@ -21,21 +21,21 @@ def test_a_strict3_error_fails_even_when_the_base_is_silent(monkeypatch, tmp_pat
 
 
 def test_strict3_files_are_generated_and_merged_by_the_tool():
-    assert set(gg.stretti()) >= {"stretto3.json", "stretto3-worker.json"}
+    assert set(gg.strict_all()) >= {"stretto3.json", "stretto3-worker.json"}
     assert {"tools/tipi/stretto3.json", "tools/tipi/stretto3-worker.json"} <= set(fm.GENERATI)
     assert {"stretto3", "stretto3-worker"} <= set(ct.PROGETTI)
 
 
 def test_a_noany_file_is_in_strict3_only():
-    marked = [p for n in ("pagina", "moduli") for p in gg.elenco(n) if gg.NOANY_TESTA in "\n".join(gg.leggi(p).split("\n")[:3])]
+    marked = [p for n in ("pagina", "moduli") for p in gg.read_list(n) if gg.NOANY_HEAD in "\n".join(gg.read(p).split("\n")[:3])]
     assert marked, "no file carries // @ts-noany"
-    inc = {n: json.loads(gg.stretti()[n])["include"] for n in ("stretto.json", "stretto2.json", "stretto3.json")}
+    inc = {n: json.loads(gg.strict_all()[n])["include"] for n in ("stretto.json", "stretto2.json", "stretto3.json")}
     for p in marked:
         f = "../../" + p
         assert f in inc["stretto3.json"] and f not in inc["stretto.json"] and f not in inc["stretto2.json"]
-    assert json.loads(gg.stretti()["stretto3.json"])["compilerOptions"]["noImplicitAny"] is True
+    assert json.loads(gg.strict_all()["stretto3.json"])["compilerOptions"]["noImplicitAny"] is True
 
 
 def test_the_committed_strict3_matches_the_generator():
-    for name, text in gg.stretti().items():
+    for name, text in gg.strict_all().items():
         assert (ROOT / "tools" / "tipi" / name).read_text() == text, name

@@ -7,19 +7,19 @@ Fails when a file has more errors than its base, or has errors and is not in the
 import json, os, re, signal, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 
-RADICE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-BASE = os.path.join(RADICE, "tools", "tipi", "base_errori.json")
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE = os.path.join(ROOT, "tools", "tipi", "base_errori.json")
 PROGETTI = ("pagina", "moduli", "worker", "stretto", "stretto-worker", "stretto2", "stretto2-worker", "stretto3", "stretto3-worker")
 TSC = ["npx", "--yes", "-p", "typescript@5.9.3", "tsc", "-p"]
 INSTALL_S, INSTALL_TESTS = 60, 3      # the install of tsc by npx sometimes hangs on the runner: 60 s per try, the first plus 2 retries
-RIGA = re.compile(r"^(\S+?)\(\d+,\d+\): error TS\d+")
+ROW = re.compile(r"^(\S+?)\(\d+,\d+\): error TS\d+")
 
 
-def installa(cmd=None, timeout=INSTALL_S, prove=INSTALL_TESTS):
+def install(cmd=None, timeout=INSTALL_S, prove=INSTALL_TESTS):
     """Runs `npx ... tsc -v` (which installs tsc) with a timeout; a hung try is killed with its whole process group (npx leaves children behind) and retried."""
     cmd = cmd or TSC[:-1] + ["-v"]
     for n in range(1, prove + 1):
-        p = subprocess.Popen(cmd, cwd=RADICE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+        p = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
         try:
             p.communicate(timeout=timeout)
             return
@@ -31,12 +31,12 @@ def installa(cmd=None, timeout=INSTALL_S, prove=INSTALL_TESTS):
 
 
 def esegui(nome):
-    r = subprocess.run(TSC + ["tools/tipi/%s.json" % nome], cwd=RADICE, capture_output=True, text=True)
+    r = subprocess.run(TSC + ["tools/tipi/%s.json" % nome], cwd=ROOT, capture_output=True, text=True)
     if r.returncode not in (0, 1, 2) or (r.returncode and not r.stdout.strip()):
         sys.exit("tsc failed on %s:\n%s%s" % (nome, r.stdout, r.stderr))
     count = {}
     for row in r.stdout.splitlines():
-        m = RIGA.match(row)
+        m = ROW.match(row)
         if m and "/vendor/" not in m.group(1) and "/wasm/" not in m.group(1):
             k = "%s:%s" % (nome, m.group(1))
             count[k] = count.get(k, 0) + 1
@@ -44,7 +44,7 @@ def esegui(nome):
 
 
 def misura():
-    installa()   # installs tsc once: three npx at the same time corrupt its cache
+    install()   # installs tsc once: three npx at the same time corrupt its cache
     ris = {}
     with ThreadPoolExecutor(len(PROGETTI)) as ex:
         for c in ex.map(esegui, PROGETTI):

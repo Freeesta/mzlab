@@ -14,7 +14,7 @@ from . import ROOT
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici as DS     # noqa: E402
 
-LIVELLI = (1.0, 2.0, 5.0, 10.0, 20.0, 50.0)                      # mg/L, the six standards
+LEVELS = (1.0, 2.0, 5.0, 10.0, 20.0, 50.0)                      # mg/L, the six standards
 TRATTATI = (3.0, 7.0)                                            # mg/L equivalent of the treated files t0, t30
 TRANSITIONS = ((263.1, 181.1, 5.00, 60.0, True, "Quant"), (263.1, 152.0, 5.02, 24.0, True, "Qual"), (300.2, 120.1, 8.00, 400.0, False, "Flat"))
 
@@ -23,7 +23,7 @@ def _chrom(i: int, q1: float, q3: float, t: np.ndarray, y: np.ndarray, name: str
     return DS._chrom(i, f"SRM SIC Q1={q1} Q3={q3} sample=1 period=1 experiment=1 transition={i} ce=20 name={name}", t, y)
 
 
-def scrivi_mrm(path: Path, conc: float, seme: int, below_threshold: bool = False, broken_value: float | None = None, piatta: bool = False) -> None:
+def write_mrm(path: Path, conc: float, seme: int, below_threshold: bool = False, broken_value: float | None = None, piatta: bool = False) -> None:
     """One MRM file at the concentration `conc` (mg/L): Gaussian peaks and a little noise; `broken_value` replaces the quantifier amplitude (a broken growth)."""
     rng = np.random.default_rng(seme)
     t = 0.5 + 0.02 * np.arange(600)
@@ -39,16 +39,16 @@ def scrivi_mrm(path: Path, conc: float, seme: int, below_threshold: bool = False
     DS._write(Path(path), [], chroms)
 
 
-def serie_mrm(folder: Path, seme: int = 5, guasto: bool = False, piatta: bool = False) -> list[Path]:
+def mrm_series(folder: Path, seme: int = 5, guasto: bool = False, piatta: bool = False) -> list[Path]:
     """The files `S_MRM-STD_L1..L6` (the lowest below the threshold) and `S_MRM-t0`, `S_MRM-t30`; with `guasto` the quantifier of L4 is as weak as L2's; `piatta` adds the transition that does not depend on the level (it must fail the growth criterion)."""
     folder.mkdir(parents=True, exist_ok=True)
     out = []
-    for k, c in enumerate(LIVELLI):
+    for k, c in enumerate(LEVELS):
         p = folder / f"S_MRM-STD_L{k + 1}-{c:g}ppm.mzML"
-        scrivi_mrm(p, c, seme + k, below_threshold=(k == 0), broken_value=(60.0 * LIVELLI[1] if guasto and k == 3 else None), piatta=piatta)
+        write_mrm(p, c, seme + k, below_threshold=(k == 0), broken_value=(60.0 * LEVELS[1] if guasto and k == 3 else None), piatta=piatta)
         out.append(p)
     for t, c in zip((0, 30), TRATTATI):
         p = folder / f"S_MRM-t{t}.mzML"
-        scrivi_mrm(p, c, seme + 10 + t, piatta=piatta)
+        write_mrm(p, c, seme + 10 + t, piatta=piatta)
         out.append(p)
     return out

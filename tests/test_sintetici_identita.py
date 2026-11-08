@@ -50,7 +50,7 @@ def test_truth_format(series, verita):
     assert list(rows[0]) == SI.COLONNE and len(rows) == len(verita["ioni"])
     assert {r["ruolo"] for r in rows} >= {"progenitore", "tp1", "isotopo", "addotto", "isf", "isf_finto", "isomero", "chimerica", "fondo"}
     assert all(r["id"].startswith("SIN-") for r in rows)                                    # invented molecules, no compound names
-    ions = VF.carica_verita(series / "verita.json")                                           # V0 reads the new truth as it is
+    ions = VF.load_truth(series / "verita.json")                                           # V0 reads the new truth as it is
     assert ions[0]["parent"] and {x["id"] for x in ions[1:]} == {r["id"] for r in verita["tps"]}
     assert {r["ruolo"] for r in verita["tps"]} <= {"tp1", "tp2", "isomero"}
     assert all(r["ion"] and r["rt_obs"] for r in verita["tps"])
@@ -98,7 +98,7 @@ def test_isomers_valley(verita):
         b = _row(verita, a["note"].split("isomero_di=")[1])
         d, v, sg = (float(a["note"].split(k + "=")[1].split(";")[0]) for k in ("delta_rt", "valle", "sigma"))
         assert b["rt_obs"][0] - a["rt_obs"][0] == pytest.approx(d, abs=1e-3) and a["ion"] == b["ion"] and a["mz"] == b["mz"]
-        assert SI.valle_relativa(d, sg, 0.8) == pytest.approx(v, abs=0.02)
+        assert SI.relative_valley(d, sg, 0.8) == pytest.approx(v, abs=0.02)
 
 
 def test_chimeric_purity(series, verita):
@@ -148,8 +148,8 @@ def test_kinetics_shapes():
     assert flat[3:].std() / flat[3:].mean() < 0.02 and flat[1] == 0                      # constant once formed
     assert decr[0] == 0 and decr[1] == decr[2] > decr[3] > decr[4] > decr[5] > 0               # present from t0, decays
     g = np.linspace(0.1, 200, 4000)
-    assert g[np.argmax(SI.curva("ritardo", g, dict(kp=por["bateman"].k_form, ka=por["bateman"].k_dec, kb=por["ritardo"].k_dec)))] > \
-        g[np.argmax(SI.curva("bateman", g, dict(kf=por["bateman"].k_form, kd=por["bateman"].k_dec)))]      # second generation: delayed
+    assert g[np.argmax(SI.curve("ritardo", g, dict(kp=por["bateman"].k_form, ka=por["bateman"].k_dec, kb=por["ritardo"].k_dec)))] > \
+        g[np.argmax(SI.curve("bateman", g, dict(kf=por["bateman"].k_form, kd=por["bateman"].k_dec)))]      # second generation: delayed
     assert por["ritardo"].generazione == 2 and por["ritardo"].progenitore == por["bateman"].id
     assert par[0] == 0 and par[1] == par[2] > par[3] > par[4] > par[5]                         # first-order decay, stable in the dark
 
@@ -188,7 +188,7 @@ def test_decoys_are_not_in_the_data(series, verita):
 def test_full_profile_has_the_numbers_of_the_plan():
     c = SI.costruisci(SEME, "completo")
     assert len(c.tempi) == 15 and len({t for t in c.tempi if t > 0}) == 12                       # 13 times (t0 and 12 treated) + blank + dark
-    rows = SI.righe_verita(c)
+    rows = SI.truth_rows(c)
     roles = [r["ruolo"] for r in rows]
     assert len({r["famiglia"] for r in rows if r["ruolo"] in ("progenitore", "tp1", "tp2")}) >= 40
     for d in (0.05, 0.1, 0.2, 0.3):
