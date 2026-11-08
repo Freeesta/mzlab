@@ -122,7 +122,7 @@ def test_pending_to_failed_no_exceptions_resolves_false():
     assert res["inAttesa"] == 0
 
 
-def test_double_segna_pronto_idempotent():
+def test_double_mark_ready_idempotent():
     code = f"""
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
@@ -141,7 +141,7 @@ def test_double_segna_pronto_idempotent():
     assert res["st2"] == "ready"
 
 
-def test_segna_fallito_after_ready_ignored():
+def test_mark_failed_after_ready_ignored():
     code = f"""
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
@@ -164,7 +164,7 @@ def test_segna_fallito_after_ready_ignored():
     assert res["errore"] is None
 
 
-def test_annulla_cancels_waiting_uploads():
+def test_cancel_cancels_waiting_uploads():
     code = f"""
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
@@ -194,7 +194,7 @@ def test_annulla_cancels_waiting_uploads():
     assert res["stato"] == "pending"
 
 
-def test_segna_fallito_translates_catalog_key_before_fail():
+def test_mark_failed_translates_catalog_key_before_fail():
     code = f"""
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
@@ -254,7 +254,7 @@ global.I18N = {
 """
 
 
-def test_render_drop_stato_coda_e_annulla_dom():
+def test_render_drop_state_queue_and_cancel_dom():
     """DOM test of renderDropStato queue counts with parameters and cancel button."""
     code = f"""
     {DOM_HELPERS}
@@ -297,7 +297,7 @@ def test_render_drop_stato_coda_e_annulla_dom():
     assert res["hasBtnCancel"] is False and res["txtCancel"] == ""
 
 
-def test_render_drop_stato_transizioni_e_fallback_dom():
+def test_render_drop_state_transitions_and_fallback_dom():
     """DOM test of renderDropStato state transitions and fallback without I18N."""
     code = f"""
     {DOM_HELPERS}
@@ -394,7 +394,7 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
     assert res["st_files"] == 1
 
 
-def test_segna_fallito_object_and_fallback_without_i18n():
+def test_mark_failed_object_and_fallback_without_i18n():
     code = f"""
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
     AVVIO._resetTest('pending');
@@ -417,7 +417,7 @@ def test_segna_fallito_object_and_fallback_without_i18n():
     assert res["withoutI18N"] == "Calculation engine startup failed"
 
 
-def test_render_fase_dom_and_sessione_ripristino():
+def test_render_phase_dom_and_session_restore():
     code = f"""
     {DOM_HELPERS}
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');

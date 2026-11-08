@@ -42,35 +42,35 @@ def _tab(rows, name="t"):
 TAB = _tab([_row(300.0, 10.4, [0, 90, 130], 8.5, 12.5), _row(300.0005, 10.2, [0, 9, 9], 10.1, 10.3), _row(300.0, 9.2, [0, 5, 5], 8.0, 10.0), _row(250.0, 5.0, [0, 1, 1])])
 
 
-def test_p1_separato_stretti_e_larghi():
+def test_p1_narrow_and_wide_separated():
     m = M.larghi(TRUTH, TAB)
     assert m["P1_narrow"]["richiamo"] == 0.5 and m["P1_narrow"]["n"] == 2
     assert m["P1_narrow"]["per_morfologia"] == {"stretto": {"n": 1, "richiamo": 0.0}, "stretto_su_banda": {"n": 1, "richiamo": 1.0}}
     assert m["P1_broad"]["richiamo"] == 0.5 and m["P1_broad"]["per_morfologia"]["b_doppio"]["richiamo"] == 0.0
 
 
-def test_p2_errore_relativo_mediano_d_area():
+def test_p2_median_relative_area_error():
     p2 = M.larghi(TRUTH, TAB)["P2_broad"]
     assert p2["per_composto"] == [pytest.approx(0.10), None] and p2["mediana"] == pytest.approx(0.10) and p2["n_misurati"] == 1 and p2["n"] == 2
 
 
-def test_p3_righe_per_banda_senza_il_picco_stretto_sopra():
+def test_p3_rows_per_band_without_the_narrow_peak_on_top():
     p3 = M.larghi(TRUTH, TAB)["P3_split"]
     assert p3["per_composto"] == [2, 0] and p3["media"] == 1.0 and p3["mediana"] == 1.0 and p3["divise"] == 0.5
 
 
-def test_p5_righe_spurie():
+def test_p5_spurious_rows():
     assert M.larghi(TRUTH, TAB)["P5_fp"] == {"righe": 4, "spurie": 1, "frazione": 0.25}
 
 
-def test_senza_righe_e_senza_composti():
+def test_without_rows_and_without_compounds():
     m = M.larghi(TRUTH, _tab([]))
     assert m["P1_broad"]["richiamo"] == 0.0 and m["P2_broad"]["mediana"] is None and m["P3_split"]["per_composto"] == [0, 0] and m["P5_fp"]["frazione"] is None
     m = M.larghi([], TAB)
     assert m["P1_broad"]["richiamo"] is None and m["P5_fp"]["spurie"] == 4
 
 
-def test_finestra_dei_larghi():
+def test_window_of_the_wide_ones():
     # band FWHM 2 min at RT 10, interval 8-12: tolerance max(0.15, 0.7) = 0.7 min
     def find(rt, rt_min=NAN, rt_max=NAN, wide_one=True):
         ia, _ = abbina_larghi([300.0], [10.0], [2.0], [wide_one], [8.0], [12.0], [300.0], [rt], [rt_min], [rt_max])
@@ -80,7 +80,7 @@ def test_finestra_dei_larghi():
     assert find(10.1, wide_one=False) and not find(10.2, wide_one=False)     # a narrow truth keeps +-0.15
 
 
-def test_i_stretti_restano_come_abbina():
+def test_narrow_ones_stay_as_abbina():
     rng = np.random.default_rng(3)
     for _ in range(40):
         na, nb = int(rng.integers(1, 12)), int(rng.integers(1, 12))
@@ -91,7 +91,7 @@ def test_i_stretti_restano_come_abbina():
         assert all(np.array_equal(x, y) for x, y in zip(a, b))
 
 
-def test_tabella_oracolo_vale_il_massimo():
+def test_oracle_table_scores_the_maximum():
     rows, _, _ = SM.costruisci_larghi(5, n_larghi=18, n_stretti=6, n_fondo=10, n_campioni=2)
     verita = da_righe(rows)
     oracle = _tab([_row(r["mz"], r["rt"], r["area_attesa"], r["rt_min"], r["rt_max"]) for r in rows])
@@ -100,7 +100,7 @@ def test_tabella_oracolo_vale_il_massimo():
     assert m["P2_broad"]["mediana"] == 0.0 and m["P3_split"]["media"] == 1.0 and m["P3_split"]["divise"] == 0.0 and m["P5_fp"]["spurie"] == 0
 
 
-def test_tabella_di_confronto_a_tre_colonne(tmp_path):
+def test_three_column_comparison_table(tmp_path):
     (tmp_path / "v.json").write_text(json.dumps({"ioni": [dict(r, rt_obs=[r["rt"]]) for r in TRUTH]}))
     verita = da_json(tmp_path / "v.json")
     assert verita[0]["fwhm_s"] is not None and verita[0]["rt_min"] is not None            # the lot's fields survive the loader

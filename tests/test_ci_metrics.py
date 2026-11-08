@@ -30,7 +30,7 @@ def test_run_con_job_falliti():
     assert all(r["run_attempt"] == 2 for r in rows) and sum(r["tipo"] == "job" for r in rows) == 4
 
 
-def test_pr_unita():
+def test_pr_unit_record():
     pr = {"number": 5, "created_at": "2026-10-21T08:00:00Z", "merged_at": "2026-10-21T11:00:00Z", "closed_at": "2026-10-21T11:00:00Z",
           "merged": True, "head": {"sha": "abc"}}
 
@@ -56,7 +56,7 @@ def test_pr_unita():
     assert (p["azione"], p["merge_main"], p["aree"]) == ("push", True, {"docs": 1})
 
 
-def test_conflitti_e_dedup(tmp_path):
+def test_conflicts_and_dedup(tmp_path):
     dati = tmp_path / "e.jsonl"
 
     def api(p):
@@ -82,7 +82,7 @@ def test_conflitti_e_dedup(tmp_path):
     assert s.righe_conflitti({"ref": "refs/heads/x", "after": "m1"}, str(dati), api) == []
 
 
-def test_riepilogo(tmp_path, capsys):
+def test_summary(tmp_path, capsys):
     ev = s.righe_run(RUN, lambda p: {"jobs": JOBS})
     ev += [{"ts_utc": "2026-10-21T11:00:00Z", "tipo": "pr", "pr": 5, "azione": "unita", "aperta_s": 10800, "merge_main": 2, "verde_a_unione_s": 600},
            {"ts_utc": "2026-10-21T12:00:00Z", "tipo": "conflitto", "pr": 5, "file_comuni": ["a.js", "b.js"]}]
@@ -93,7 +93,7 @@ def test_riepilogo(tmp_path, capsys):
     assert s.colli(ev)[0][0].startswith("job failed: rust") or s.colli(ev)[0][2] >= s.colli(ev)[-1][2]
 
 
-def test_job_passi_cache_e_annullo():
+def test_job_steps_cache_and_cancel():
     j = {"id": 11, "name": "pytest (3.11)", "status": "completed", "conclusion": "cancelled", "created_at": "2026-10-21T10:00:00Z",
          "started_at": "2026-10-21T10:00:20Z", "completed_at": "2026-10-21T10:05:20Z",
          "steps": [{"name": "Run actions/cache/restore@v4", "conclusion": "success", "started_at": "2026-10-21T10:00:30Z", "completed_at": "2026-10-21T10:01:30Z"}]}
@@ -130,7 +130,7 @@ def test_junit_per_file():
     assert r["fasi"]["tests/test_a.py"] == [1.0, 7.5, 0.5] and r["worker_occupato_s"] == {"gw0": 0.5, "gw1": 9.0}
 
 
-def test_wasm_dimensioni(tmp_path):
+def test_wasm_sizes(tmp_path):
     import io
     import json
     import zipfile
@@ -148,7 +148,7 @@ def test_wasm_dimensioni(tmp_path):
     assert r["byte_totali"] == 1000 and r["margine_min_pct"] > 99
 
 
-def test_recenti_cursore_carico_compatta_esporta(tmp_path):
+def test_recent_cursor_load_compact_export(tmp_path):
     dati = tmp_path / "eventi.jsonl"
     old = dict(RUN["workflow_run"], id=1, updated_at="2026-10-21T09:00:00Z")
     new = dict(RUN["workflow_run"], id=2, updated_at="2026-10-21T10:30:30Z")
@@ -178,7 +178,7 @@ def test_recenti_cursore_carico_compatta_esporta(tmp_path):
     assert any("Runner load" in o for o in out) and any("Jobs: queue" in o for o in out)
 
 
-def test_file_conflitto_merge_tree(tmp_path):
+def test_conflict_files_merge_tree(tmp_path):
     import subprocess
 
     def sh(cwd, *a):
@@ -203,7 +203,7 @@ def test_file_conflitto_merge_tree(tmp_path):
     assert s.dati_ci.file_conflitto(3, str(c)) == ["a.txt"]
 
 
-def test_timeout_tipizzato_e_giornaliero():
+def test_typed_and_daily_timeout():
     long = job("tipi (tsc)", "cancelled", "2026-10-21T10:00:00Z", "2026-10-21T10:05:30Z", [("tsc", "cancelled")])
     corto = job("browser", "cancelled", "2026-10-21T10:00:00Z", "2026-10-21T10:01:00Z")
     assert s.categoria(long) == ("timeout", "tsc")
@@ -223,7 +223,7 @@ def test_rust_ok_e_aggregato():
     assert s.categoria(ok)[0] == "aggregato"
 
 
-def test_cursore_non_arretra(tmp_path):
+def test_cursor_never_goes_back(tmp_path):
     old, new = tmp_path / "a.json", tmp_path / "b.json"
     old.write_text('{"ultimo": "2026-10-22T05:00:00Z"}')
     new.write_text('{"ultimo": "2026-10-22T03:00:00Z"}')
@@ -234,7 +234,7 @@ def test_cursore_non_arretra(tmp_path):
     assert "06:00" in old.read_text()
 
 
-def test_percorso_critico_per_tipo():
+def test_critical_path_by_kind():
     def pr(sha, doc, aree):
         return {"tipo": "pr", "azione": "unita", "sha": sha, "solo_doc": doc, "aree": aree}
 
@@ -249,7 +249,7 @@ def test_percorso_critico_per_tipo():
     assert s.dati_ci.percorso_critico(ev, "2026-10-23") == {}
 
 
-def test_riempi_verde_una_volta_sola():
+def test_fill_green_only_once():
     rows = [{"tipo": "pr", "azione": "unita", "pr": 1, "sha": "a", "ts_utc": "2026-10-21T11:00:00Z", "verde_a_unione_s": None},
              {"tipo": "pr", "azione": "unita", "pr": 2, "sha": "b", "ts_utc": "2026-10-21T11:00:00Z", "verde_a_unione_s": 5},
              {"tipo": "pr", "azione": "unita", "pr": 3, "sha": "c", "ts_utc": "2026-10-21T11:00:00Z", "verde_a_unione_s": None}]
@@ -270,7 +270,7 @@ def _row(i, **kw):
     return {"tipo": "run", "run_id": i, "run_attempt": 1, "ts_utc": "2026-10-01T00:00:00Z", **kw}
 
 
-def test_rotazione_mensile_e_file_vecchio_congelato(tmp_path, monkeypatch):
+def test_monthly_rotation_and_old_file_frozen(tmp_path, monkeypatch):
     dati = str(tmp_path / "eventi.jsonl")
     s.scrivi_righe(dati, [_row(1), _row(2)])           # legacy single file
     ottobre = s.datetime(2026, 10, 30, tzinfo=s.timezone.utc)
@@ -286,7 +286,7 @@ def test_rotazione_mensile_e_file_vecchio_congelato(tmp_path, monkeypatch):
     assert [Path(p).name for p in s.segmenti(dati)] == ["eventi.jsonl", "eventi-2026-10.jsonl", "eventi-2026-11.jsonl"]
 
 
-def test_parte_successiva_oltre_il_limite(tmp_path, monkeypatch):
+def test_next_part_past_the_limit(tmp_path, monkeypatch):
     dati = str(tmp_path / "eventi.jsonl")
     mese = s.datetime(2026, 10, 5, tzinfo=s.timezone.utc)
     monkeypatch.setattr(s.ci_metrics_file, "LIMITE_B", 100)
@@ -297,7 +297,7 @@ def test_parte_successiva_oltre_il_limite(tmp_path, monkeypatch):
     assert [Path(p).name for p in s.segmenti(dati)] == ["eventi-2026-10.jsonl", "eventi-2026-10-2.jsonl"]
 
 
-def test_comandi_saltano_i_file_congelati(tmp_path, monkeypatch):
+def test_commands_skip_frozen_files(tmp_path, monkeypatch):
     dati = tmp_path / "eventi.jsonl"
     s.scrivi_righe(str(dati), [{"tipo": "pr", "azione": "unita", "pr": 1, "sha": "a", "ts_utc": "2026-10-01T00:00:00Z"}])
     monkeypatch.setattr(s.ci_metrics_file, "LIMITE_B", 10)                # the legacy file counts as oversized
@@ -312,7 +312,7 @@ def _pr(ts, pr, action, **kw):
     return {"ts_utc": ts, "tipo": "pr", "pr": pr, "azione": action, "sha": f"s{pr}", **kw}
 
 
-def test_flusso_critico_include_sito_rust_e_desktop():
+def test_critical_flow_includes_site_rust_and_desktop():
     assert {"test", "rust", "sito-rust", "desktop"} <= set(s.dati_ci.WORKFLOW_CRITICI) <= set(s.dati_ci.WORKFLOW_MISURATI)
     run = dict(RUN["workflow_run"], id=4, name="sito-rust", updated_at="2026-10-21T10:30:30Z")
 
@@ -327,7 +327,7 @@ def test_flusso_critico_include_sito_rust_e_desktop():
     assert r["mediana"] == 35.0 and r["lenti"][0] == ("sito-e2e", 35.0)
 
 
-def test_coda_istantanea_e_riepilogo():
+def test_queue_snapshot_and_summary():
     ora = "2026-11-03T12:00:00Z"
     prs = {1: ("behind", "2026-11-03T06:00:00Z", False), 2: ("dirty", "2026-11-02T12:00:00Z", False), 3: ("clean", "2026-11-03T10:00:00Z", False), 4: ("clean", "2026-11-03T11:00:00Z", True)}
 
@@ -346,7 +346,7 @@ def test_coda_istantanea_e_riepilogo():
     assert any("Queue of open PRs" in o for o in out) and any("behind 1" in o for o in out)
 
 
-def test_rossi_veri_senza_annullati():
+def test_real_reds_without_cancelled():
     def red(cat, pr):
         return {"ts_utc": "2026-11-03T10:00:00Z", "tipo": "job_fallito", "pr": pr, "categoria": cat, "job": "j", "durata_s": 5}
 
@@ -363,7 +363,7 @@ def test_rossi_veri_senza_annullati():
     assert all("annullato" not in n for n, _, _ in s.colli(ev))
 
 
-def test_giornaliero_mediana_max_e_aperte_a_fine_giorno(tmp_path):
+def test_daily_median_max_and_open_at_end_of_day(tmp_path):
     ev = [_pr("2026-11-01T08:00:00Z", 1, "aperta"), _pr("2026-11-01T09:00:00Z", 2, "aperta"), _pr("2026-11-01T10:00:00Z", 3, "aperta"),
           _pr("2026-11-02T08:00:00Z", 1, "unita", aperta_s=3600 * 24, verde_a_unione_s=600),
           _pr("2026-11-02T09:00:00Z", 2, "unita", aperta_s=3600 * 2, verde_a_unione_s=1200),
@@ -378,7 +378,7 @@ def test_giornaliero_mediana_max_e_aperte_a_fine_giorno(tmp_path):
     assert (d2["verde_a_unione_mediana_s"], d2["verde_a_unione_max_s"]) == (600, 1200)
 
 
-def test_esporta_riga_coo(tmp_path):
+def test_export_coo_row(tmp_path):
     ev = [_pr("2026-11-02T08:00:00Z", 1, "unita", aperta_s=3600 * 4), _pr("2026-11-02T09:00:00Z", 2, "unita", aperta_s=90 * 60),
           _pr("2026-11-02T10:00:00Z", 9, "aperta")]
     files = s.dati_ci.esporta(ev, str(tmp_path))

@@ -29,31 +29,31 @@ def node(js: str):
     ("decode", "zlib: invalid stored block lengths in scan 55", "decode"),
     ("open", "something odd", "unknown"),
 ])
-def test_causa_per_fase(phase, raw, cause):
+def test_cause_per_phase(phase, raw, cause):
     d = node(f"D.da({{key:'err.engine.index',params:{{fase:{phase!r},raw:{json.dumps(raw)}}}}},{{name:'a.mzML',size:5}})")
     assert d["causa"] == cause and d["fase"] == phase and d["codice"] == "err.engine.index"
     assert set(d) == {"codice", "fase", "causa", "dettagli"}
 
 
-def test_nessun_dato_personale():
+def test_no_personal_data():
     t = node(r"D.pulisci('read /Users/mario.rossi/Desktop/a.raw and C:\\Users\\Mario\\x.mzML and /home/luca/x and file:///Users/a/b')")
     assert "mario" not in t.lower() and "luca" not in t and "Users" not in t and t.count("<path>") == 4
 
 
-def test_testa_senza_dati():
+def test_head_without_data():
     xml = '<?xml version="1.0"?>\n<mzML id="Run1">\n<softwareList>\n</softwareList>\n<spectrumList count="9"><spectrum><binary>QUJD</binary>\n<spectrum>SECRET'
     t = node(f"D.testa({json.dumps(xml)})")
     assert "Run1" in t and "spectrumList" in t and "QUJD" not in t and "SECRET" not in t
     assert node("D.testa('\\u0000\\u0001binary')") == ""
 
 
-def test_testo_da_copiare():
+def test_text_to_copy():
     t = node("D.testo(D.da({key:'k',params:{fase:'index',raw:'boom /home/x/y'}},{name:'privato.mzML',size:7},'<mzML>'),'1.2')")
     assert "phase: index" in t and "privato" not in t and "/home/x" not in t and "<mzML>" in t
 
 
 @pytest.mark.parametrize("variante", sorted(gen.VARIANTI))
-def test_sintetico_varianti(tmp_path, variante):
+def test_synthetic_variants(tmp_path, variante):
     p = tmp_path / f"{variante}.mzML"
     n = gen.scrivi(p, scans=24, peaks1=50, peaks2=10, variante=variante)
     s = p.read_bytes()

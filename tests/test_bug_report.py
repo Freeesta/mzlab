@@ -17,39 +17,39 @@ def node(js: str):
     return json.loads(r.stdout)
 
 
-def test_anonimizza_toglie_nomi_e_file():
+def test_anonymize_strips_names_and_files():
     out = node("B.anonimizza('Cannot read Paziente_Rossi_t0.mzML and rossi_t0.raw\\nsecond line', ['Paziente_Rossi_t0.mzML','Campione Rossi'])")
     assert "Rossi" not in out and ".mzML" not in out and ".raw" not in out and "second" not in out and "<file>" in out
     assert node("B.anonimizza('x'.repeat(500), [], s=>s, 50).length") == 51
 
 
-def test_riassunto_file_senza_nomi():
+def test_file_summary_without_names():
     out = node("B.riassuntoFile([{file:'Segreto_Mario.mzML',size:2097152},{file:'altro.wiff.scan#2',size:512,format:'wiff'}])")
     assert out == "2 (mzML 2.0 MB, wiff 512 B)" and "Segreto" not in out
 
 
-def test_rapporto_e_diagnostica():
+def test_report_and_diagnostics():
     out = node("(()=>{const d=B.righeDiagnostica({version:'1.0.0',commit:'abc',date:'D',ua:'UA',mode:'web',view:'data (#/data)',files:'0',sw:'none',errors:[]});return B.rapporto({what:'boom',diag:d},k=>k)})()")
     assert "## bug.r.what\n\nboom" in out and "- Mode: web" in out and "- Recent errors: none" in out and "expected" not in out
     assert "## bug.r.diag" not in node("B.rapporto({what:'a',diag:null},k=>k)")
     assert "bug.r.none" in node("B.rapporto({what:' ',diag:null},k=>k)")
 
 
-def test_url_issue_attesa_e_limite():
+def test_issue_url_expected_and_limit():
     u = node("B.urlIssue({title:'[Bug] x',body:'hello',ambiente:'UA',cut:'CUT'})")
     assert u["url"].startswith("https://github.com/Freeesta/mzlab/issues/new?template=bug.yml&labels=bug&title=%5BBug%5D%20x&ambiente=UA&cosa=hello") and not u["troncato"]
     big = node("B.urlIssue({title:'t',body:'à€😀'.repeat(3000),ambiente:'UA',cut:'CUT'})")
     assert big["troncato"] and len(big["url"]) <= 6000 and big["url"].endswith("CUT")
 
 
-def test_url_email_attesa_e_limite():
+def test_email_url_expected_and_limit():
     u = node("B.urlEmail({user:'a.b',host:'c.it',subject:'[Bug] x',body:'hello world',cut:'CUT'})")
     assert u["url"] == "mailto:a.b@c.it?subject=%5BBug%5D%20x&body=hello%20world" and not u["troncato"]
     big = node("B.urlEmail({user:'a.b',host:'c.it',subject:'t',body:'à€😀'.repeat(3000),cut:'CUT'})")
     assert big["troncato"] and len(big["url"]) <= 1900 and big["url"].endswith("CUT")
 
 
-def test_titolo():
+def test_title():
     assert node("B.titolo('', 'vuoto')") == "[Bug] vuoto"
     assert node("B.titolo('linea uno\\nlinea due', 'v')") == "[Bug] linea uno"
     assert len(node("B.titolo('parola '.repeat(40), 'v')")) < 90

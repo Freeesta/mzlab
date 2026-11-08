@@ -61,7 +61,7 @@ def test_text_mac_and_windows():
     assert mac == ["⌘O", "⌥1", "X", "Enter"] and win == ["Ctrl+O", "Alt+1", "X", "Enter"]
 
 
-def test_premuto():
+def test_pressed():
     js = (f"const fs=require('fs');const A=new Function(fs.readFileSync({str(WEB / 'azioni.js')!r},'utf8')+';return AZIONI;')();"
           "const e=(o)=>Object.assign({key:'',code:'',ctrlKey:false,metaKey:false,altKey:false,shiftKey:false},o);"
           "console.log(JSON.stringify([A.premuto({tasto:'x'},e({key:'x'})),A.premuto({tasto:'x'},e({key:'X',shiftKey:true})),A.premuto({tasto:'x'},e({key:'x',ctrlKey:true})),"

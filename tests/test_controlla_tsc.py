@@ -34,7 +34,7 @@ def test_install_returns_at_the_first_good_try():
     ct.installa([sys.executable, "-c", "pass"], timeout=5, prove=3)
 
 
-def test_a_stretto2_error_fails_even_when_the_base_is_silent(monkeypatch, tmp_path, capsys):
+def test_a_strict2_error_fails_even_when_the_base_is_silent(monkeypatch, tmp_path, capsys):
     base = tmp_path / "base.json"
     base.write_text("{}")
     monkeypatch.setattr(ct, "BASE", str(base))
@@ -43,7 +43,7 @@ def test_a_stretto2_error_fails_even_when_the_base_is_silent(monkeypatch, tmp_pa
     assert ct.main() == 1 and "stretto2:mzlab/web/x.js: 1 errors" in capsys.readouterr().out
 
 
-def test_stretto_keys_are_ignored_in_the_base(monkeypatch, tmp_path):
+def test_strict_keys_are_ignored_in_the_base(monkeypatch, tmp_path):
     base = tmp_path / "base.json"
     base.write_text('{"stretto2:mzlab/web/x.js": 5}')
     monkeypatch.setattr(ct, "BASE", str(base))

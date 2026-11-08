@@ -40,7 +40,7 @@ def _without_variables(d: dict) -> dict:
     return d
 
 
-def test_la_verita_del_sintetico_e_valida_e_uguale_a_quella_nel_repository():
+def test_the_synthetic_truth_is_valid_and_equal_to_the_committed_one():
     d = verita.da_mzml(FIX / "sintetico.mzML", ("generatore sintetico", "1", "tools/mzml_msconvert_sintetico.py"), FIX / "sintetico.mzML", None)
     assert verita.valida(d) == []
     assert _without_variables(d) == _without_variables(json.loads((FIX / "sintetico.verita.json").read_text()))
@@ -48,7 +48,7 @@ def test_la_verita_del_sintetico_e_valida_e_uguale_a_quella_nel_repository():
     assert len(d["punti"]) <= 8 and all(0 <= int(k) < len(d["scansioni"]) for k in d["punti"])
 
 
-def test_il_validatore_rifiuta_una_verita_rotta():
+def test_the_validator_rejects_a_broken_truth():
     d = json.loads((FIX / "sintetico.verita.json").read_text())
     d["scansioni"][0]["polarita"] = 2
     del d["conteggi"]
@@ -59,13 +59,13 @@ def test_il_validatore_rifiuta_una_verita_rotta():
         assert atteso in problems, problems
 
 
-def test_da_riga_di_comando_la_verita_e_json_valido(tmp_path):
+def test_from_command_line_the_truth_is_valid_json(tmp_path):
     out = subprocess.run([sys.executable, str(STR / "verita.py"), str(FIX / "sintetico.mzML"), "--oracolo", "msconvert", "3.0.24", "-", "--campione", "2"], capture_output=True, text=True, check=True)
     d = json.loads(out.stdout)
     assert d["oracolo"]["nome"] == "msconvert" and d["file"]["campione"] == 2 and out.stderr == ""
 
 
-def test_un_array_numpress_o_senza_larghezza_e_un_errore_chiaro(tmp_path):
+def test_a_numpress_or_widthless_array_is_a_clear_error(tmp_path):
     p = tmp_path / "x.mzML"
     p.write_text(
         '<mzML xmlns="http://psi.hupo.org/ms/mzml"><run><spectrumList><spectrum id="s"><binaryDataArrayList><binaryDataArray>'
@@ -76,7 +76,7 @@ def test_un_array_numpress_o_senza_larghezza_e_un_errore_chiaro(tmp_path):
         verita.da_mzml(p, ("x", "1", ""), None, None)
 
 
-def test_trfp_appiattisce_il_json_senza_conoscerne_la_forma(tmp_path):
+def test_trfp_flattens_the_json_without_knowing_its_shape(tmp_path):
     meta = tmp_path / "m.json"
     meta.write_text(json.dumps({"FileProperties": [{"Name": "Instrument model", "Value": "Q Exactive"}], "Sample": {"Vial": "A1", "Inj": 5}, "Lista": [{"x": 1}]}))
     d = truth_trfp.da_trfp(FIX / "sintetico.mzML", meta, "1.4.5", None)
@@ -86,7 +86,7 @@ def test_trfp_appiattisce_il_json_senza_conoscerne_la_forma(tmp_path):
     assert d["oracolo"]["nome"] == "ThermoRawFileParser" and verita.valida(d) == []
 
 
-def test_timsdata_aggiunge_la_tabella_di_mobilita(tmp_path):
+def test_timsdata_adds_the_mobility_table(tmp_path):
     t = tmp_path / "k0.tsv"
     t.write_text("scan\tone_over_k0\n0\t1.45\n1\t1.449\n")
     assert truth_timsdata.leggi_tabella(t) == {"scan": [0, 1], "one_over_k0": [1.45, 1.449]}
@@ -110,7 +110,7 @@ def _large(tmp_path, rows):
     return p
 
 
-def test_scarica_riprende_un_file_parziale_e_controlla_il_checksum(tmp_path, monkeypatch):
+def test_download_resumes_a_partial_file_and_checks_the_checksum(tmp_path, monkeypatch):
     body = BODY
     monkeypatch.setattr(scarica.urllib.request, "urlopen", lambda req, timeout=0: _http(req, body))
     dest = tmp_path / "dest"
@@ -148,7 +148,7 @@ def _http(req, body):
     return _Reply(body, 200)
 
 
-def test_scarica_rifiuta_il_tetto_i_percorsi_che_escono_e_gli_url_non_https(tmp_path, capsys):
+def test_download_rejects_the_cap_escaping_paths_and_non_https_urls(tmp_path, capsys):
     tsv = _large(tmp_path, [["a", "https://x.test/a", "a.bin", 30_000_000_000, ""]])
     assert scarica.main([str(tsv), str(tmp_path / "d"), "--tetto-gb", "20"]) == 2
     assert "ceiling" in capsys.readouterr().err
@@ -175,7 +175,7 @@ def _index(tmp_path, *rows):
     return p
 
 
-def test_indice_accetta_una_riga_giusta_e_scrive_il_markdown(tmp_path):
+def test_index_accepts_a_correct_row_and_writes_the_markdown(tmp_path):
     p = _index(tmp_path, ROW)
     md = tmp_path / "INDICE.md"
     assert index.main([str(p), "--md", str(md)]) == 0
@@ -195,13 +195,13 @@ def test_indice_accetta_una_riga_giusta_e_scrive_il_markdown(tmp_path):
         ("percorso", "", "empty percorso"),
     ],
 )
-def test_indice_rifiuta_cio_che_il_vocabolario_non_ammette(tmp_path, capsys, field, value, messaggio):
+def test_index_rejects_what_the_vocabulary_does_not_allow(tmp_path, capsys, field, value, messaggio):
     p = _index(tmp_path, {**ROW, field: value})
     assert index.main([str(p), "--controlla"]) == 1
     assert messaggio in capsys.readouterr().err
 
 
-def test_indice_rifiuta_percorsi_ripetuti_e_colonne_mancanti(tmp_path, capsys):
+def test_index_rejects_repeated_paths_and_missing_columns(tmp_path, capsys):
     assert index.main([str(_index(tmp_path, ROW, ROW)), "--controlla"]) == 1
     assert "repeated" in capsys.readouterr().err
     p = tmp_path / "corto.tsv"
@@ -210,7 +210,7 @@ def test_indice_rifiuta_percorsi_ripetuti_e_colonne_mancanti(tmp_path, capsys):
     assert "missing column" in capsys.readouterr().err
 
 
-def test_la_mappa_dei_metadati_copre_ogni_riga_delle_schede():
+def test_the_metadata_map_covers_every_row_of_the_cards():
     with (STR / "mappa_metadati.tsv").open(newline="", encoding="utf-8") as f:
         mappa = list(csv.DictReader(f, delimiter="\t"))
     expectations = {}

@@ -127,7 +127,7 @@ def test_gzip_and_report_and_aggregate(tmp_path):
     assert compare.main(["--aggregate", str(out), "--out", str(tmp_path / "t.json")]) == 0
 
 
-def test_verita_from_dump():
+def test_truth_from_dump():
     d = truth_scandump.da_scandump(ORACLE, ("", "", "scandump/1"))
     assert truth_scandump._verita().valida(d) == []
     assert d["conteggi"] == {"spettri": {"ms1": 2, "ms2": 1}, "cromatogrammi": {"tic": 1}}
