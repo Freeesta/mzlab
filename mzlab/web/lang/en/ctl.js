@@ -93,6 +93,7 @@ I18N.add("en", {
   "dda.nav.group": "MS² of the same precursor",
   "dda.nav.prev": "Previous MS² of this precursor ({i}/{n}). Shift+click: previous in time, like ←",
   "dda.nav.next": "Next MS² of this precursor ({i}/{n}). Shift+click: next in time, like →",
+  "dda.win.cut": "Precursor intensity read for the first {n} Full Scans; narrow the time window for the others.",
   "dda.nav.first": "First MS² of this precursor",
   "dda.nav.last": "Last MS² of this precursor",
   "dda.nav.only": "No other MS² of this precursor",
