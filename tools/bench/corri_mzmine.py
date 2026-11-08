@@ -25,7 +25,7 @@ FL = '<parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>'
 RAW = '<parameter name="Raw data files" type="BATCH_LAST_FILES"/>'
 
 
-def _scarica(url: str, dest: Path, sha256: str | None = None) -> None:
+def _download(url: str, dest: Path, sha256: str | None = None) -> None:
     with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "mzlab-bench"}), timeout=600) as r, open(dest, "wb") as f:
         while block := r.read(1 << 20):
             f.write(block)
@@ -34,7 +34,7 @@ def _scarica(url: str, dest: Path, sha256: str | None = None) -> None:
         raise SystemExit(f"sha256 of {url} differs from {sha256}")
 
 
-def installa_39(folder: Path | str = CASA_39) -> tuple[Path, Path]:
+def install_39(folder: Path | str = CASA_39) -> tuple[Path, Path]:
     """(mzmine folder with `bin/MZmine`, JAVA_HOME): mzmine 3.9.0 from the bioconda package (sha256 checked) and the OpenJDK 20 of Adoptium, in `folder`.
     Nothing is downloaded when both are already there; the archives are deleted after the extraction to spare the disk."""
     folder = Path(folder)
@@ -42,14 +42,14 @@ def installa_39(folder: Path | str = CASA_39) -> tuple[Path, Path]:
     folder.mkdir(parents=True, exist_ok=True)
     if not (mm / "bin" / "MZmine").exists():
         tar = folder / "mzmine.tar.bz2"
-        _scarica(BIOCONDA_URL, tar, BIOCONDA_SHA256)
+        _download(BIOCONDA_URL, tar, BIOCONDA_SHA256)
         with tarfile.open(tar, "r:bz2") as t:
             t.extractall(mm, filter="data")
         tar.unlink()
         (mm / "bin" / "MZmine").chmod(0o755)
     if not list(jdk.glob("*/bin/java")):
         tar = folder / "jdk20.tar.gz"
-        _scarica(JDK20_URL, tar)
+        _download(JDK20_URL, tar)
         with tarfile.open(tar, "r:gz") as t:
             t.extractall(jdk, filter="data")
         tar.unlink()
@@ -62,7 +62,7 @@ def _tolerance_mz(nome: str, common: bytes) -> bool:
     return bool(m) and m.group(1).encode() in common
 
 
-def parametri_non_letti(xml: Path | str, mzmine: Path | str) -> list[str]:
+def unread_parameters(xml: Path | str, mzmine: Path | str) -> list[str]:
     """The parameters of a batch that mzmine would ignore: mzmine reads the batch without a word for a parameter whose name is not in the parameter classes of the module
     (the log never lists the values it applied), so the names of every step are searched in the classes of the package of its module and of the packages below it.
     One line `<module>: <name>` per unknown name; an empty list = every name exists."""
@@ -170,7 +170,7 @@ def _with_phases(steps: list, par: dict, phases: Path | None, isotopi: bool) -> 
     return out
 
 
-def esegui_batch(xml: Path, mzmine: Path | str, java_home: Path | str, tmp: Path) -> subprocess.CompletedProcess:
+def run_batch(xml: Path, mzmine: Path | str, java_home: Path | str, tmp: Path) -> subprocess.CompletedProcess:
     """`bin/MZmine -b xml` without interface; the log (stdout and stderr) goes next to the batch as `<xml>.log`."""
     env = dict(os.environ, JAVA_HOME=str(java_home), PATH=f"{java_home}/bin:{os.environ['PATH']}")
     r = subprocess.run([str(Path(mzmine) / "bin" / "MZmine"), "-b", str(xml), "-t", str(tmp)], capture_output=True, text=True, env=env)
@@ -185,15 +185,15 @@ def extra(ap) -> None:
 
 def main() -> None:
     a = corri.argomenti(__doc__, extra)
-    par = corri.parametri("mzmine", a.config)
+    par = corri.parameters("mzmine", a.config)
     fs = corri.file_mzml(a.mzml_dir, a.solo)
-    nat = corri.cartella_nativa(a.out_dir, "mzmine", a.config)
+    nat = corri.native_folder(a.out_dir, "mzmine", a.config)
     output = nat / "feature_list.csv"
     for old in nat.glob("feature_list*.csv"):
         old.unlink()
     (nat / "batch.xml").write_text(batch_xml(fs, output, par), encoding="utf-8")
-    mm, jh = (Path(a.mzmine), Path(a.java_home)) if a.mzmine and a.java_home else installa_39()
-    r = esegui_batch(nat / "batch.xml", mm, jh, nat / "tmp")
+    mm, jh = (Path(a.mzmine), Path(a.java_home)) if a.mzmine and a.java_home else install_39()
+    r = run_batch(nat / "batch.xml", mm, jh, nat / "tmp")
     if not output.exists():
         raise SystemExit(f"MZmine wrote no table (exit {r.returncode}):\n{(r.stderr or r.stdout)[-2000:]}")
     t = adatta.da_csv("mzmine", output, [f.stem for f in fs], a.dataset, a.config)

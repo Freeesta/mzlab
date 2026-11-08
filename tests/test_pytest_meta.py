@@ -10,12 +10,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_slow_files_go_to_the_lighter_half():
     slow = [("tests/s1.py", 100.0), ("tests/s2.py", 60.0), ("tests/s3.py", 50.0), ("tests/s4.py", 5.0), ("tests/solo.py", 500.0)]
-    assert m.assegna(slow, frozenset({"tests/solo.py"})) == {"tests/s1.py": "a", "tests/s2.py": "b", "tests/s3.py": "b", "tests/s4.py": "a"}
+    assert m.assign(slow, frozenset({"tests/solo.py"})) == {"tests/s1.py": "a", "tests/s2.py": "b", "tests/s3.py": "b", "tests/s4.py": "a"}
 
 
 def test_halves_partition_the_tests():
     assigned = {"tests/s1.py": "a", "tests/s2.py": "b"}
-    split = next(iter(m.DIVISI))
+    split = next(iter(m.SPLIT_FILES))
     ids = ([f"tests/s{i}.py::t{j}" for i in (1, 2) for j in range(3)] + [f"tests/test_{i}.py::t" for i in range(200)]
            + [f"{split}::t[{k}]" for k in "dcba"])
     halves = m.metà(ids, assigned)
@@ -30,12 +30,12 @@ def test_the_list_parses_with_and_without_seconds():
 
 
 def test_the_committed_list_gives_balanced_halves():
-    slow = m.leggi(m.LISTA.read_text(encoding="utf-8"))
-    outside = m.fuori_dal_rest()
-    assigned = m.assegna(slow, outside)
+    slow = m.leggi(m.LIST.read_text(encoding="utf-8"))
+    outside = m.outside_rest()
+    assigned = m.assign(slow, outside)
     weight = {"a": 0.0, "b": 0.0}
     for f, s in slow:
-        if f in m.DIVISI:
+        if f in m.SPLIT_FILES:
             weight["a"] += s / 2
             weight["b"] += s / 2
         elif f not in outside:
@@ -44,5 +44,5 @@ def test_the_committed_list_gives_balanced_halves():
 
 
 def test_divided_files_exist_and_are_not_solo_311():
-    for f in m.DIVISI:
-        assert (ROOT / f).is_file() and f not in m.fuori_dal_rest(), f
+    for f in m.SPLIT_FILES:
+        assert (ROOT / f).is_file() and f not in m.outside_rest(), f

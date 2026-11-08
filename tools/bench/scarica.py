@@ -18,7 +18,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-GRUPPI = ("file_grezzi", "file_verita", "file_metadati")
+GROUPS = ("file_grezzi", "file_verita", "file_metadati")
 BLOCK = 1 << 20
 TENTATIVI = 5
 
@@ -31,7 +31,7 @@ def sha256_file(path, block: int = BLOCK) -> str:
     return h.hexdigest()
 
 
-def voci(manifest: dict, groups=GRUPPI, solo=None) -> list[dict]:
+def voci(manifest: dict, groups=GROUPS, solo=None) -> list[dict]:
     """Entries `{nome, url, sha256, byte?}` of the chosen groups, in manifest order."""
     out = [dict(v) for g in groups for v in manifest.get(g, [])]
     if solo:
@@ -67,7 +67,7 @@ def _download_part(url: str, parte: Path, expected: int | None) -> None:
     raise SystemExit(f"download failed: {url}")
 
 
-def scarica(item: dict, folder: Path) -> Path:
+def download(item: dict, folder: Path) -> Path:
     """Download one entry into `folder` and verify it; return the path. An existing file with the right hash is kept."""
     folder.mkdir(parents=True, exist_ok=True)
     dest = folder / item["nome"]
@@ -94,7 +94,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("manifesto")
     ap.add_argument("cartella")
-    ap.add_argument("--gruppo", action="append", choices=GRUPPI, help="default: file_grezzi")
+    ap.add_argument("--gruppo", action="append", choices=GROUPS, help="default: file_grezzi")
     ap.add_argument("--solo", nargs="*", help="only these file names")
     ap.add_argument("--elimina", nargs="*", help="delete these downloaded files and exit")
     a = ap.parse_args(argv)
@@ -106,7 +106,7 @@ def main(argv=None) -> int:
     m = json.loads(Path(a.manifesto).read_text(encoding="utf-8"))
     for v in voci(m, a.gruppo or ("file_grezzi",), a.solo):
         print(f"{v['nome']} ...", flush=True)
-        p = scarica(v, folder)
+        p = download(v, folder)
         print(f"  ok {p.stat().st_size} B sha256 {v.get('sha256', '')[:12]}", flush=True)
     return 0
 

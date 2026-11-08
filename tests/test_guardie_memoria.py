@@ -86,7 +86,7 @@ def test_peak_memory_of_each_phase_stays_under_the_recorded_value(tmp_path):
 
 def test_a_new_exported_function_that_returns_a_whole_vec_is_refused(monkeypatch, tmp_path):
     import controlla
-    assert controlla.regole_statiche() == []
+    assert controlla.static_rules() == []
     monkeypatch.setattr(controlla, "BYTE_API", tmp_path / "vuoto.txt")
-    bad = controlla.regole_statiche()
+    bad = controlla.static_rules()
     assert any("scanbin" in b for b in bad) and any("build_evidence" in b for b in bad), bad

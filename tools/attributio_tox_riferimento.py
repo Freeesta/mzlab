@@ -298,16 +298,16 @@ def stage_tox_b3(dir_: Path, frame_rows):
             "formulas": [[f, CF.parse_formula(f)] for f in ["C9H10N2O", "N2OC9H10", "ClC6H5", "C6H5Cl", "Cl10", "", "H2O", "NaCl", "CSi"]]}
 
 
-def stadi_tox(frame_rows, scrivi, load_tox) -> dict:
+def tox_stages(frame_rows, write, load_tox) -> dict:
     """The stage table: name -> function writing its golden file."""
     return {
-        "tox-ghs": lambda: scrivi(OUTPUT_TOX, "ghs.json", stage_tox_ghs()),
-        "tox-istantanee": lambda: scrivi(OUTPUT_TOX, "istantanee.json", stage_tox_snapshots(SNAPSHOTS, frame_rows)),
-        "tox-amenabilita": lambda: scrivi(OUTPUT_TOX, "amenabilita.json", stage_tox_amenability()),
-        "tox-schema": lambda: scrivi(OUTPUT_TOX, "schema.json", stage_tox_schema(SNAPSHOTS, frame_rows)),
-        "tox-b2": lambda: scrivi(OUTPUT_TOX, "b2.json", stage_tox_b2(SNAPSHOTS, frame_rows)),
-        "tox-b3": lambda: scrivi(OUTPUT_TOX, "b3.json", stage_tox_b3(SNAPSHOTS, frame_rows)),
-        "tox-b1": lambda: scrivi(OUTPUT_TOX, "b1.json", stage_tox_b1(SNAPSHOTS, frame_rows, load_tox)),
-        "tox-pericolo": lambda: scrivi(OUTPUT_TOX, "pericolo.json", stage_tox_hazard(SNAPSHOTS)),
-        "tox-registro": lambda: scrivi(OUTPUT_TOX, "registro.json", stage_tox_registry()),
+        "tox-ghs": lambda: write(OUTPUT_TOX, "ghs.json", stage_tox_ghs()),
+        "tox-istantanee": lambda: write(OUTPUT_TOX, "istantanee.json", stage_tox_snapshots(SNAPSHOTS, frame_rows)),
+        "tox-amenabilita": lambda: write(OUTPUT_TOX, "amenabilita.json", stage_tox_amenability()),
+        "tox-schema": lambda: write(OUTPUT_TOX, "schema.json", stage_tox_schema(SNAPSHOTS, frame_rows)),
+        "tox-b2": lambda: write(OUTPUT_TOX, "b2.json", stage_tox_b2(SNAPSHOTS, frame_rows)),
+        "tox-b3": lambda: write(OUTPUT_TOX, "b3.json", stage_tox_b3(SNAPSHOTS, frame_rows)),
+        "tox-b1": lambda: write(OUTPUT_TOX, "b1.json", stage_tox_b1(SNAPSHOTS, frame_rows, load_tox)),
+        "tox-pericolo": lambda: write(OUTPUT_TOX, "pericolo.json", stage_tox_hazard(SNAPSHOTS)),
+        "tox-registro": lambda: write(OUTPUT_TOX, "registro.json", stage_tox_registry()),
     }

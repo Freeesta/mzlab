@@ -24,18 +24,18 @@ from pathlib import Path
 
 import numpy as np
 
-RADICE = Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(RADICE / "tools"), str(RADICE / "tools" / "bench")]
+ROOT = Path(__file__).resolve().parents[2]
+sys.path[:0] = [str(ROOT / "tools"), str(ROOT / "tools" / "bench")]
 import dati_sintetici as ds  # noqa: E402
 from valida import sintetici_mzml as sm  # noqa: E402
 from bench import corri, corri_mzmine  # noqa: E402
 
-DEST = RADICE / "tests" / "data" / "untargeted" / "mzmine39"
+DEST = ROOT / "tests" / "data" / "untargeted" / "mzmine39"
 SEME = 20261015
-CICLO = 0.01                  # min between two scans
+CYCLE = 0.01                  # min between two scans
 FINE = 6.0                    # min
 ISO = 1.003355                # mass of one 13C - 12C
-DERIVA = {"oro_1": 0.0, "oro_2": 0.05, "oro_3": -0.05, "oro_4": 0.0}
+DRIFT = {"oro_1": 0.0, "oro_2": 0.05, "oro_3": -0.05, "oro_4": 0.0}
 SCALA = {"oro_1": 1.0, "oro_2": 0.8, "oro_3": 1.2, "oro_4": 0.9}
 
 
@@ -50,26 +50,26 @@ def _arr(acc, name, data, f4=False) -> str:
 sm._arr = _arr
 
 
-def _valle(sigma: float, rapporto: float) -> float:
+def _valley(sigma: float, rapporto: float) -> float:
     """Distance between the apices of two equal Gaussians whose valley is `rapporto` of the apex."""
     return sigma * float(np.sqrt(-8 * np.log(rapporto / 2)))
 
 
-FONDO, BUCO = 7, 6            # indices in `componenti` of the long trace and of the trace with a hole
+BACKGROUND, BUCO = 7, 6            # indices in `componenti` of the long trace and of the trace with a hole
 # (m/z, RT, sigma, height): the isolated ones, the touching pairs, the hole, the peak over the background, the isotopes
-def componenti(nome: str) -> list[tuple[float, float, float, float]]:
-    d, s = DERIVA[nome], SCALA[nome]
+def components(nome: str) -> list[tuple[float, float, float, float]]:
+    d, s = DRIFT[nome], SCALA[nome]
     c = [(200.1000, 1.00, 0.05, 5e5), (250.2000, 1.50, 0.04, 2e5 if nome != "oro_3" else 2.5e4)]
     sg = 0.05
-    c += [(300.1500, 2.40, sg, 3e5), (300.1500, 2.40 + _valle(sg, 0.4), sg, 3e5)]
-    c += [(350.1700, 2.40, sg, 3e5), (350.1700, 2.40 + _valle(sg, 0.7), sg, 3e5)]
+    c += [(300.1500, 2.40, sg, 3e5), (300.1500, 2.40 + _valley(sg, 0.4), sg, 3e5)]
+    c += [(350.1700, 2.40, sg, 3e5), (350.1700, 2.40 + _valley(sg, 0.7), sg, 3e5)]
     c += [(400.2000, 3.50, 0.06, 4e5), (450.3000, 4.50, 0.05, 5e5)]
     c += [(500.2500, 5.00, 0.05, 6e5), (500.2500 + ISO, 5.00, 0.05, 6e5 * 0.30), (500.2500 + 2 * ISO, 5.00, 0.05, 6e5 * 0.05)]
     c += [(600.3000, 5.40, 0.05, 4e5), (600.3000 + ISO / 2, 5.40, 0.05, 4e5 * 0.60), (600.3000 + ISO, 5.40, 0.05, 4e5 * 0.20)]
     return [(m * (1 + 0.5e-6 * (k % 3 - 1)), rt + d, w, h * s) for k, (m, rt, w, h) in enumerate(c)]
 
 
-def sha_contenuto(dati: bytes) -> str:
+def content_sha(dati: bytes) -> str:
     """sha256 of the mzML with every binary array decoded and written as text with 6 significant digits: neither the zlib bytes nor the last bits of the floats (libm and SIMD paths change with the CPU of the machine) enter the hash, the content does."""
     def rounded(m: re.Match) -> bytes:
         head, payload = m.group(1), m.group(2)
@@ -79,18 +79,18 @@ def sha_contenuto(dati: bytes) -> str:
     return hashlib.sha256(re.sub(rb"(<binaryDataArray[^>]*>.*?)<binary>([^<]+)</binary>", rounded, dati, flags=re.S)).hexdigest()
 
 
-def scrivi(path: Path) -> str:
+def write(path: Path) -> str:
     nome = path.stem
     rng = np.random.default_rng([SEME, int(nome[-1])])
-    comp = componenti(nome)
-    rts = np.arange(0.2, FINE, CICLO)
-    buco = int(np.argmin(np.abs(rts - (3.50 + DERIVA[nome]))))      # the scan at the apex of the trace with a hole
+    comp = components(nome)
+    rts = np.arange(0.2, FINE, CYCLE)
+    buco = int(np.argmin(np.abs(rts - (3.50 + DRIFT[nome]))))      # the scan at the apex of the trace with a hole
     specs, tic = [], []
     for n, rt in enumerate(rts):
         mz, it = [], []
         for k, (m, rc, w, h) in enumerate(comp):
             y = h * np.exp(-0.5 * ((rt - rc) / w) ** 2)
-            if k == FONDO:
+            if k == BACKGROUND:
                 y += 6e4 * (1 + 0.15 * np.sin(rt * 3))                 # trace present in the whole run, with a peak on top
             if k == BUCO and n == buco:
                 y = 0.0
@@ -105,12 +105,12 @@ def scrivi(path: Path) -> str:
     chroms = [ds._chrom(0, "TIC", rts, np.array(tic))]
     path.write_text(ds._hr_head("exploris", False, nome) + f'<spectrumList count="{len(specs)}" defaultDataProcessingRef="pwiz_Reader_Thermo_conversion">' + "".join(specs) + "</spectrumList>"
                     + f'<chromatogramList count="{len(chroms)}" defaultDataProcessingRef="pwiz_Reader_Thermo_conversion">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8", newline="\n")      # LF on every system: the sha256 below must not depend on the platform
-    return sha_contenuto(path.read_bytes())
+    return content_sha(path.read_bytes())
 
 
-def genera(folder: Path) -> dict[str, str]:
+def generate(folder: Path) -> dict[str, str]:
     folder.mkdir(parents=True, exist_ok=True)
-    return {f"{n}.mzML": scrivi(folder / f"{n}.mzML") for n in DERIVA}
+    return {f"{n}.mzML": write(folder / f"{n}.mzML") for n in DRIFT}
 
 
 def _read(path: Path) -> list[dict]:
@@ -133,7 +133,7 @@ def _per_file(phases: Path, prefix: str) -> list[tuple[str, list[dict]]]:
     return out
 
 
-def _scrivi_csv(path: Path, columns: list[str], rows: list[list], chiave: tuple[str, ...]) -> None:
+def _write_csv(path: Path, columns: list[str], rows: list[list], chiave: tuple[str, ...]) -> None:
     """Rows sorted by the named columns (numbers as numbers), so that two runs write the same bytes."""
     def k(r):
         return tuple((0, float(v), "") if _number(v) is not None else (1, 0.0, str(v)) for v in (r[columns.index(c)] for c in chiave))
@@ -144,13 +144,13 @@ def _scrivi_csv(path: Path, columns: list[str], rows: list[list], chiave: tuple[
         w.writerows(rows)
 
 
-def _fase_per_file(phases: Path, prefix: str, area: bool) -> tuple[list[str], list[list]]:
+def _per_file_phase(phases: Path, prefix: str, area: bool) -> tuple[list[str], list[list]]:
     col = ["file", "id", "mz", "rt", "rt_start", "rt_end", "height"] + (["area"] if area else [])
     rows = [[f, r["id"], r["mz"], r["rt"], r["rt_range:min"], r["rt_range:max"], r["height"]] + ([r["area"]] if area else []) for f, rs in _per_file(phases, prefix) for r in rs]
     return col, rows
 
 
-def _fase_allineata(csv_path: Path) -> tuple[list[str], list[list]]:
+def _aligned_phase(csv_path: Path) -> tuple[list[str], list[list]]:
     """The aligned table in long form: one line per cell with a feature (detected or estimated)."""
     col = ["row", "mz", "rt", "aligned_features", "score", "file", "mz_file", "rt_file", "height", "area", "state"]
     rows = []
@@ -163,7 +163,7 @@ def _fase_allineata(csv_path: Path) -> tuple[list[str], list[list]]:
     return col, rows
 
 
-def _fase_isotopi(phases: Path) -> tuple[list[str], list[list]]:
+def _isotope_phase(phases: Path) -> tuple[list[str], list[list]]:
     """Per file: the rows that the grouper keeps (charge > 0: principal; charge 0: alone) and the ones it removes (isotopologues, attached to the principal of their charge)."""
     col = ["file", "id", "mz", "rt", "height", "charge", "role", "principal"]
     rows = []
@@ -181,46 +181,46 @@ def _fase_isotopi(phases: Path) -> tuple[list[str], list[list]]:
     return col, rows
 
 
-def _sostituisci(testo: str, dir_: Path) -> str:
+def _replace(testo: str, dir_: Path) -> str:
     return testo.replace(str(dir_), "<DIR>")
 
 
-def scrivi_oro(dest: Path) -> None:
+def write_gold(dest: Path) -> None:
     """Runs mzmine 3.9.0 on the four files and writes the CSV of the stages and the LEGGIMI of provenance in `dest`."""
-    mm, jh = corri_mzmine.installa_39()
-    par = corri.parametri("mzmine", "predefinita")
+    mm, jh = corri_mzmine.install_39()
+    par = corri.parameters("mzmine", "predefinita")
     with tempfile.TemporaryDirectory() as t:
         t = Path(t)
-        shas = genera(t / "mzml")
+        shas = generate(t / "mzml")
         fs = sorted((t / "mzml").glob("*.mzML"))
         phases = t / "fasi"
         phases.mkdir()
         xml_a, xml_b = phases / "fasi.xml", phases / "isotopi.xml"
         xml_a.write_text(corri_mzmine.batch_xml(fs, phases / "finale.csv", par, phases=phases), encoding="utf-8")
         xml_b.write_text(corri_mzmine.batch_xml(fs, phases / "finale.csv", par, phases=phases, isotopi=True), encoding="utf-8")
-        ignoti = corri_mzmine.parametri_non_letti(xml_a, mm) + corri_mzmine.parametri_non_letti(xml_b, mm)
+        ignoti = corri_mzmine.unread_parameters(xml_a, mm) + corri_mzmine.unread_parameters(xml_b, mm)
         if ignoti:
             raise SystemExit("mzmine would ignore these parameters: " + "; ".join(ignoti))
         for x in (xml_a, xml_b):
-            r = corri_mzmine.esegui_batch(x, mm, jh, t / "tmp")
+            r = corri_mzmine.run_batch(x, mm, jh, t / "tmp")
             if r.returncode or "SEVERE" in r.stdout + r.stderr:
                 raise SystemExit(f"mzmine failed on {x.name}:\n{(r.stdout + r.stderr)[-2000:]}")
         dest.mkdir(parents=True, exist_ok=True)
         per_file, aligned = ("file", "id"), ("mz", "rt", "file")
-        for nome, (col, rows), chiave in [("adap.csv", _fase_per_file(phases, "adap", False), per_file), ("resolved.csv", _fase_per_file(phases, "risolutore", True), per_file),
-                                           ("aligned.csv", _fase_allineata(phases / "join_Aligned_feature_list.csv"), aligned),
-                                           ("gapfilled.csv", _fase_allineata(phases / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
-                                           ("isotopes.csv", _fase_isotopi(phases), per_file)]:
-            _scrivi_csv(dest / nome, col, rows, chiave)
+        for nome, (col, rows), chiave in [("adap.csv", _per_file_phase(phases, "adap", False), per_file), ("resolved.csv", _per_file_phase(phases, "risolutore", True), per_file),
+                                           ("aligned.csv", _aligned_phase(phases / "join_Aligned_feature_list.csv"), aligned),
+                                           ("gapfilled.csv", _aligned_phase(phases / "riempimento_Aligned_feature_list_gap-filled.csv"), aligned),
+                                           ("isotopes.csv", _isotope_phase(phases), per_file)]:
+            _write_csv(dest / nome, col, rows, chiave)
         java = subprocess.run([str(jh / "bin" / "java"), "-version"], capture_output=True, text=True).stderr.strip().splitlines()
         java = [x for x in java if x.startswith(("openjdk version", "OpenJDK Runtime"))]
-        (dest / "LEGGIMI.md").write_text(_leggimi(shas, [java[0], java[1]] if len(java) > 1 else java, _sostituisci(xml_a.read_text(), t), _sostituisci(xml_b.read_text(), t)), encoding="utf-8")
+        (dest / "LEGGIMI.md").write_text(_readme(shas, [java[0], java[1]] if len(java) > 1 else java, _replace(xml_a.read_text(), t), _replace(xml_b.read_text(), t)), encoding="utf-8")
 
 
 def write_real(folder: Path, dest: Path, quanti: int = 2) -> None:
     """Runs mzmine 3.9.0 on the first `quanti` mzML of `folder` and writes `adap_<file>.csv` (columns of `adap.csv`) in `dest`: the lists the real-data test of the ADAP builder reads."""
-    mm, jh = corri_mzmine.installa_39()
-    par = corri.parametri("mzmine", "predefinita")
+    mm, jh = corri_mzmine.install_39()
+    par = corri.parameters("mzmine", "predefinita")
     fs = sorted(folder.glob("*.mzML"))[:quanti]
     if not fs:
         raise SystemExit(f"no mzML in {folder}")
@@ -230,19 +230,19 @@ def write_real(folder: Path, dest: Path, quanti: int = 2) -> None:
         phases.mkdir()
         xml = phases / "fasi.xml"
         xml.write_text(corri_mzmine.batch_xml(fs, phases / "finale.csv", par, phases=phases), encoding="utf-8")
-        ignoti = corri_mzmine.parametri_non_letti(xml, mm)
+        ignoti = corri_mzmine.unread_parameters(xml, mm)
         if ignoti:
             raise SystemExit("mzmine would ignore these parameters: " + "; ".join(ignoti))
-        r = corri_mzmine.esegui_batch(xml, mm, jh, t / "tmp")
+        r = corri_mzmine.run_batch(xml, mm, jh, t / "tmp")
         if r.returncode or "SEVERE" in r.stdout + r.stderr:
             raise SystemExit(f"mzmine failed:\n{(r.stdout + r.stderr)[-2000:]}")
         dest.mkdir(parents=True, exist_ok=True)
-        col, rows = _fase_per_file(phases, "adap", False)
+        col, rows = _per_file_phase(phases, "adap", False)
         for f in sorted({r[0] for r in rows}):
-            _scrivi_csv(dest / f"adap_{f}.csv", col, [r for r in rows if r[0] == f], ("id",))
+            _write_csv(dest / f"adap_{f}.csv", col, [r for r in rows if r[0] == f], ("id",))
 
 
-def _leggimi(shas: dict[str, str], java: list[str], xml_a: str, xml_b: str) -> str:
+def _readme(shas: dict[str, str], java: list[str], xml_a: str, xml_b: str) -> str:
     file = "".join(f"- `{n}`: `{h}`\n" for n, h in shas.items())
     return f"""# Gold data of mzmine 3.9.0 per stage (synthetic files)
 
@@ -283,10 +283,10 @@ def main() -> None:
     ap.add_argument("--reale", nargs=2, metavar=("MZML_DIR", "DEST"), help="ADAP lists of mzmine on the first mzML of a folder (for the real-data test)")
     a = ap.parse_args()
     if a.genera:
-        for n, h in genera(Path(a.genera)).items():
+        for n, h in generate(Path(a.genera)).items():
             print(h, n)
     if a.oro:
-        scrivi_oro(Path(a.oro))
+        write_gold(Path(a.oro))
     if a.reale:
         write_real(Path(a.reale[0]), Path(a.reale[1]))
 

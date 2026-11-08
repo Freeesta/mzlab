@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 import ci_metrics_data as dati_ci
 import ci_metrics_file as file_ci
 import ci_metrics_giorno as giorno_ci
-from ci_metrics_file import attivo, eventi_ramo, leggi, leggi_tutti, segmenti  # noqa: F401
+from ci_metrics_file import active, branch_events, leggi, read_all, segmenti  # noqa: F401
 
 # Estimated minutes lost for the events that have no measured duration (printed with the summary).
 CONFLICT_S = 900
@@ -43,7 +43,7 @@ RILETTURA_S = 60
 OK = ("success", "skipped", "neutral")
 KEY = ("tipo", "run_id", "run_attempt", "job", "pr", "azione", "sha", "k")
 TIMEOUT_S = 240       # a cancelled job running at least this long, inside a run that was not cancelled, is counted as a timeout
-VERSIONE = 1        # field `v` of every line; bump when a field changes meaning
+VERSION = 1        # field `v` of every line; bump when a field changes meaning
 
 # Category of a failed job from the name of its failed step (no log is read).
 CATEGORIE = [
@@ -86,7 +86,7 @@ def adesso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def categoria(job: dict, run_annullato: bool = False) -> tuple[str, str | None]:
+def category(job: dict, run_annullato: bool = False) -> tuple[str, str | None]:
     """(category, failed step name) of a job that did not succeed; `run_annullato`: the whole run was cancelled (concurrency)."""
     if job.get("conclusion") == "timed_out":
         return "timeout", None
@@ -102,11 +102,11 @@ def categoria(job: dict, run_annullato: bool = False) -> tuple[str, str | None]:
     return "altro", passo
 
 
-def righe_run(event: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
-    return righe_run_obj(event["workflow_run"], api, fetch)
+def run_rows(event: dict, api=api_get, fetch=dati_ci.download) -> list[dict]:
+    return run_obj_rows(event["workflow_run"], api, fetch)
 
 
-def righe_run_obj(run: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
+def run_obj_rows(run: dict, api=api_get, fetch=dati_ci.download) -> list[dict]:
     jobs = api(f"/actions/runs/{run['id']}/jobs?per_page=100")["jobs"]
     pr = ((run.get("pull_requests") or [{}])[0]).get("number")
     base = {"pr": pr, "sha": run["head_sha"], "run_id": run["id"], "run_attempt": run.get("run_attempt", 1)}
@@ -117,18 +117,18 @@ def righe_run_obj(run: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
             "attivo_s": sum(durations.values()), "coda_s": max(code, default=0), "jobs": durations, **base}]
     for j in jobs:
         if j.get("status") == "completed" and j.get("conclusion") not in OK:
-            cat, passo = categoria(j, run.get("conclusion") == "cancelled")
+            cat, passo = category(j, run.get("conclusion") == "cancelled")
             out.append({"ts_utc": j["completed_at"], "tipo": "job_fallito", "workflow": run["name"], "job": j["name"],
                         "esito": j["conclusion"], "durata_s": durations[j["name"]], "categoria": cat, "passo": passo, **base})
-    out += dati_ci.righe_job(run, jobs, base) + dati_ci.righe_cache(run, jobs, base, fetch)
+    out += dati_ci.job_rows(run, jobs, base) + dati_ci.cache_rows(run, jobs, base, fetch)
     if run.get("conclusion") == "cancelled":
-        out += dati_ci.riga_annullo(run, jobs, base, api)
+        out += dati_ci.cancel_row(run, jobs, base, api)
     if run["name"] == "test":
-        out += dati_ci.righe_junit(run, base, api, fetch) + dati_ci.righe_wasm(run, base, api, fetch)
+        out += dati_ci.junit_rows(run, base, api, fetch) + dati_ci.wasm_rows(run, base, api, fetch)
     return out
 
 
-def righe_recenti(data: str, api=api_get, fetch=dati_ci.scarica, ora: datetime | None = None, massimo: int = 40) -> tuple[list[dict], str]:
+def recent_rows(data: str, api=api_get, fetch=dati_ci.download, ora: datetime | None = None, massimo: int = 40) -> tuple[list[dict], str]:
     """Rows of the runs completed after the cursor (`cursore.json` next to the data file), oldest first, plus the runner load; returns the new cursor too."""
     ora = ora or dati_ci.adesso_dt()
     cur = os.path.join(os.path.dirname(data) or ".", "cursore.json")
@@ -145,8 +145,8 @@ def righe_recenti(data: str, api=api_get, fetch=dati_ci.scarica, ora: datetime |
         if len(r) < 100:
             break
     runs = sorted(runs, key=lambda x: x["updated_at"])[:massimo]
-    out = [row for run in runs for row in righe_run_obj(run, api, fetch)]
-    out += dati_ci.righe_carico(api, ora.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    out = [row for run in runs for row in run_obj_rows(run, api, fetch)]
+    out += dati_ci.load_rows(api, ora.strftime("%Y-%m-%dT%H:%M:%SZ"))
     return out, runs[-1]["updated_at"] if runs else last
 
 
@@ -165,7 +165,7 @@ def cause_commit(n: int, api) -> dict[str, int]:
     return dict(out)
 
 
-def verde_il(sha: str, api) -> str | None:
+def green_at(sha: str, api) -> str | None:
     """Time at which the last check of `sha` finished, when all the latest checks passed; None otherwise.
     The `registra` job of stat-ci is left out: the event being recorded is that job itself, still running."""
     latest = {}
@@ -177,7 +177,7 @@ def verde_il(sha: str, api) -> str | None:
     return max(c["completed_at"] for c in latest.values())
 
 
-def righe_pr(event: dict, api=api_get) -> list[dict]:
+def pr_rows(event: dict, api=api_get) -> list[dict]:
     pr, action = event["pull_request"], event["action"]
     row = {"tipo": "pr", "pr": pr["number"], "sha": pr["head"]["sha"]}
     if action in ("opened", "reopened"):
@@ -191,11 +191,11 @@ def righe_pr(event: dict, api=api_get) -> list[dict]:
              "cause_commit": (cause := cause_commit(pr["number"], api)), "merge_main": cause.get("merge di main", 0)}
     row |= dati_ci.forma_pr(pr["number"], pr, api, file_pr)
     if pr.get("merged"):
-        row["verde_a_unione_s"] = secs(verde_il(pr["head"]["sha"], api), fine)
+        row["verde_a_unione_s"] = secs(green_at(pr["head"]["sha"], api), fine)
     return [row]
 
 
-def riempi_verde(righe: list[dict], api=api_get, massimo: int = 30) -> int:
+def fill_green(righe: list[dict], api=api_get, massimo: int = 30) -> int:
     """Best effort: fill `verde_a_unione_s` of merged-PR rows that lack it, at most `massimo` rows per call (one API call each).
     A row is tried once: `verde_provato` marks it, whether or not the checks of its head are still readable."""
     fatte = 0
@@ -207,7 +207,7 @@ def riempi_verde(righe: list[dict], api=api_get, massimo: int = 30) -> int:
         fatte += 1
         r["verde_provato"] = True
         try:
-            r["verde_a_unione_s"] = secs(verde_il(r["sha"], api), r["ts_utc"])
+            r["verde_a_unione_s"] = secs(green_at(r["sha"], api), r["ts_utc"])
         except Exception:
             pass
     return fatte
@@ -215,7 +215,7 @@ def riempi_verde(righe: list[dict], api=api_get, massimo: int = 30) -> int:
 
 def state_conflicts(data: str) -> dict[int, bool]:
     stato: dict[int, bool] = {}
-    for r in leggi_tutti(data):
+    for r in read_all(data):
         if r["tipo"] in ("conflitto", "conflitto_risolto"):
             stato[r["pr"]] = r["tipo"] == "conflitto"
     return stato
@@ -231,7 +231,7 @@ def file_pr(n: int, api) -> set[str]:
     return out
 
 
-def righe_conflitti(event: dict, data: str, api=api_get, wait=time.sleep, provare: bool = False) -> list[dict]:
+def conflict_rows(event: dict, data: str, api=api_get, wait=time.sleep, provare: bool = False) -> list[dict]:
     if event.get("ref") != "refs/heads/main":
         return []
     sha = event["after"]
@@ -250,7 +250,7 @@ def righe_conflitti(event: dict, data: str, api=api_get, wait=time.sleep, provar
         return d.get("mergeable_state") == "dirty"
 
     def row(n: int, common: list[str]) -> dict:
-        true = dati_ci.file_conflitto(n) if provare else []
+        true = dati_ci.file_conflict(n) if provare else []
         return {"ts_utc": adesso(), "tipo": "conflitto", "pr": n, "sha": sha, "pr_unita": unit,
                 "file_comuni": common[:5], "n_file_comuni": len(common), "file_conflitto": true}
 
@@ -277,16 +277,16 @@ def chiave(r: dict) -> tuple:
     return tuple(r.get(k) for k in KEY)
 
 
-def accoda(righe: list[dict], data: str) -> int:
-    seen = {chiave(r) for r in leggi_tutti(data)}
-    new = [{"v": VERSIONE, **r} for r in righe if chiave(r) not in seen]
-    with open(attivo(data), "a", encoding="utf-8") as f:
+def enqueue(righe: list[dict], data: str) -> int:
+    seen = {chiave(r) for r in read_all(data)}
+    new = [{"v": VERSION, **r} for r in righe if chiave(r) not in seen]
+    with open(active(data), "a", encoding="utf-8") as f:
         for r in new:
             f.write(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n")
     return len(new)
 
 
-def avanza_cursore(nuovo: str, attuale: str) -> None:
+def advance_cursor(nuovo: str, attuale: str) -> None:
     """Copy cursor file `nuovo` over `attuale` unless it is older: polls on push and on schedule run concurrently."""
     try:
         with open(attuale, encoding="utf-8") as f:
@@ -374,8 +374,8 @@ def riepilogo(ev: list[dict], da: str | None = None, out=print) -> None:
     chiusi = [r for r in prs if r["azione"] in ("unita", "chiusa")]
     out("  pushes per PR by cause (commits after the first): " + (", ".join(f"{k} {v / len(chiusi):.1f}" for k, v in cause.most_common()) if chiusi else "-"))
     out(f"  merges of main per PR (closed PRs): mean {media([r.get('merge_main') for r in prs if r['azione'] in ('unita', 'chiusa')]):.1f}; PRs seen {len(pr_seen)}")
-    fall = [r for r in ev if r["tipo"] == "job_fallito" and r["categoria"] not in giorno_ci.NON_VERI]
-    rosse, views = giorno_ci.pr_con_rosso_vero(ev)
+    fall = [r for r in ev if r["tipo"] == "job_fallito" and r["categoria"] not in giorno_ci.NOT_REAL]
+    rosse, views = giorno_ci.prs_with_real_red(ev)
     everything = sum(r["tipo"] == "job_fallito" for r in ev)
     out(f"\nJobs failing most often (real reds only: {everything - len(fall)} of {everything} failed jobs left out as cancelled or aggregate)")
     out(f"  PRs with a real red: {rosse} of {views} ({100 * rosse / views:.0f}%)" if views else "  PRs with a real red: -")
@@ -399,13 +399,13 @@ def riepilogo(ev: list[dict], da: str | None = None, out=print) -> None:
     out("  hours: " + (", ".join(f"{h}h:{n}" for h, n in ore.most_common(5)) or "-"))
     out("  days:  " + (", ".join(f"{g}:{n}" for g, n in Counter(r["ts_utc"][:10] for r in fall).most_common(5)) or "-"))
     dati_ci.tabelle(ev, out)
-    giorno_ci.tabella_coda(ev, out)
+    giorno_ci.queue_table(ev, out)
     out(f"\nTop 10 bottlenecks by estimated time lost (conflict = {CONFLICT_S // 60} min, merge of main = {FUSIONE_S // 60} min; the others are measured)")
     for name, n, perso in colli(ev)[:10]:
         out(f"  {hm(perso):>7}  x{n:<4d} {name}")
 
 
-def scrivi_righe(path: str, righe: list[dict]) -> None:
+def write_rows(path: str, righe: list[dict]) -> None:
     with open(path, "w", encoding="utf-8") as f:
         f.writelines(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n" for r in righe)
 
@@ -424,52 +424,52 @@ def main() -> int:
     ap.add_argument("--massimo", type=int, default=30, help="riempi-verde: rows tried per call")
     a = ap.parse_args()
     if a.comando in ("riepilogo", "esporta", "percorso"):
-        ev = leggi_tutti(a.dati) if a.dati else eventi_ramo()
+        ev = read_all(a.dati) if a.dati else branch_events()
         if a.comando == "esporta":
-            print("\n".join(dati_ci.esporta(ev, a.out)))
+            print("\n".join(dati_ci.export(ev, a.out)))
         elif a.comando == "percorso":
-            for tipo, r in dati_ci.percorso_critico(ev, a.da or "").items():
+            for tipo, r in dati_ci.critical_path(ev, a.da or "").items():
                 print(f"{tipo}: n={r['n']} median {r['mediana']} min, max {r['max']}; slowest jobs: " + ", ".join(f"{n} {m}" for n, m in r["lenti"]))
         else:
             riepilogo(ev, a.da)
         return 0
     data = a.dati or "eventi.jsonl"
     if a.comando == "accoda":
-        print(f"{accoda(leggi(a.file), data)} new lines")
+        print(f"{enqueue(leggi(a.file), data)} new lines")
         if a.cursore and os.path.exists(a.cursore):
-            avanza_cursore(a.cursore, os.path.join(os.path.dirname(data) or ".", "cursore.json"))
+            advance_cursor(a.cursore, os.path.join(os.path.dirname(data) or ".", "cursore.json"))
         return 0
     if a.comando == "compatta":
         for p in segmenti(data):
-            if os.path.getsize(p) < file_ci.LIMITE_B:
-                scrivi_righe(p, dati_ci.compatta(leggi(p), dati_ci.adesso_dt(), a.giorni))
+            if os.path.getsize(p) < file_ci.LIMIT_B:
+                write_rows(p, dati_ci.compact(leggi(p), dati_ci.adesso_dt(), a.giorni))
         return 0
     if a.comando == "riempi-verde":
         remain = a.massimo
         for p in reversed(segmenti(data)):
-            if remain <= 0 or os.path.getsize(p) >= file_ci.LIMITE_B:
+            if remain <= 0 or os.path.getsize(p) >= file_ci.LIMIT_B:
                 continue
             righe = leggi(p)
-            remain -= riempi_verde(righe, massimo=remain)
-            scrivi_righe(p, righe)
+            remain -= fill_green(righe, massimo=remain)
+            write_rows(p, righe)
         print(f"{a.massimo - remain} rows tried")
         return 0
     if a.comando == "registra-recenti":
-        righe, cursor = righe_recenti(data)
+        righe, cursor = recent_rows(data)
         if a.cursore:
             with open(a.cursore, "w", encoding="utf-8") as f:
                 json.dump({"ultimo": cursor}, f)
     elif a.comando == "registra-coda":
-        righe = giorno_ci.righe_coda(api_get, adesso())
+        righe = giorno_ci.queue_rows(api_get, adesso())
     else:
         with open(a.evento, encoding="utf-8") as f:
             event = json.load(f)
-        righe = {"registra-run": lambda: righe_run(event), "registra-pr": lambda: righe_pr(event),
-                 "registra-conflitti": lambda: righe_conflitti(event, data, provare=True)}[a.comando]()
+        righe = {"registra-run": lambda: run_rows(event), "registra-pr": lambda: pr_rows(event),
+                 "registra-conflitti": lambda: conflict_rows(event, data, provare=True)}[a.comando]()
     if a.nuovi:
-        scrivi_righe(a.nuovi, righe)
+        write_rows(a.nuovi, righe)
     else:
-        accoda(righe, data)
+        enqueue(righe, data)
     print(f"{len(righe)} events")
     return 0
 

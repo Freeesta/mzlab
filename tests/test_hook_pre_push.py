@@ -54,7 +54,7 @@ def test_hot_files_warn_from_90_percent(tmp_path, monkeypatch):
     doc.mkdir(parents=True)
     (doc / "d.md").write_text("y" * 24000)
     tocchi = {"a.js": 6, "b.js": 9, "c.js": 5, "docs/agenti/d.md": 7, "gone.js": 8}
-    out = controlla.vicini_caldi(tocchi)
+    out = controlla.hot_neighbors(tocchi)
     assert len(out) == 2 and any(o.startswith("a.js has 456 lines") for o in out)
     assert any(o.startswith("docs/agenti/d.md is 23.4 KB") for o in out)
 
