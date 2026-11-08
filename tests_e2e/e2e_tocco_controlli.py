@@ -1,5 +1,6 @@
-"""Double tap outside the graphs (tocco-controlli.js): a finger double tap on a panel title or a legend trace opens the rename dialog once, as a mouse double
-click does; a slow pair or a moved finger does nothing; the page has no double-tap zoom. Real touches (CDP Input.dispatchTouchEvent), synthetic data."""
+"""Touch outside the graphs (tocco-controlli.js, mappa.js): a finger double tap on a panel title or a legend trace opens the rename dialog once, as a mouse double
+click does; a slow pair or a moved finger does nothing; the page has no double-tap zoom; a long press on a file group header opens its menu, which stays open
+after the lift; a tap on a label of the map's side spectrum shows its S/N. Real touches (CDP Input.dispatchTouchEvent), anonymous example files."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -11,6 +12,8 @@ def step(name, fn):
 r = Run(port=8849, wd="/tmp/wd_tocco_controlli")
 SP = "E.panels.find(p => p.type === 'spec')"
 XP = "E.panels.find(p => p.type === 'xic')"
+MP = "E.panels.find(p => p.type === 'map')"
+EX = ROOT / "mzlab" / "web" / "esempi"
 try:
     with sync_playwright() as p:
         r.b = p.chromium.launch()
@@ -22,7 +25,7 @@ try:
         def wait(ms=250): hold(pg, ms)        # gestures are timed (double tap): real pauses
         def dtap(x, y, gap=110, dx=0):
             T("touchStart", [(x, y)]); T("touchEnd", []); wait(gap); T("touchStart", [(x + dx, y)]); T("touchEnd", []); wait(600)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0")]); frames(pg, 30)
+        pg.set_input_files("#pick", [str(EX / f"FullScan_t{t}.mzML") for t in (0, 15, 30)])      # a group of two files has a header; frames(pg, 30)
         pg.click("#opbtn"); ready(pg)
         pg.click("#np-xic"); pg.fill("#xic-mz", "200"); pg.click("#xic-go"); ready(pg)
         pg.evaluate(f"openXic({XP})"); pg.fill("#xic-mz", "250"); pg.click("#xic-go"); ready(pg)      # a second trace: the legend lists them
@@ -65,6 +68,34 @@ try:
             assert opened() == n + 1, ("the double tap alone opens it", opened() - n)
             close()
         step("without the browser's own double click (as on iOS) a double tap still works", as_ios)
+        def group_menu():
+            pg.evaluate("async () => { await carica('gruppi.js'); return GRUPPI.set([fileBase(E.files[0].file), fileBase(E.files[1].file)], 'Blanks') }"); ready(pg); drawer(pg)
+            pg.wait_for_selector('#flst .fgh[data-ug="Blanks"]', state="attached", timeout=10000)
+            x, y = centre("document.querySelector('#flst .fgh[data-ug=\"Blanks\"]')")
+            pg.mouse.click(x, y, button="right"); frames(pg, 6)
+            assert not pg.evaluate("Q('#ctx').hidden"), "the right click opens the menu"
+            n = pg.evaluate("Q('#ctx').querySelectorAll('[role^=menuitem]').length"); pg.keyboard.press("Escape"); frames(pg, 6)
+            pg.evaluate("addEventListener('contextmenu', e => { if (e.isTrusted) e.stopImmediatePropagation(); }, true)")      # iOS sends no contextmenu for a long press
+            T("touchStart", [(x, y)]); T("touchEnd", []); wait(700)
+            assert pg.evaluate("Q('#ctx').hidden"), "a short tap is not a long press"
+            T("touchStart", [(x, y)]); pg.wait_for_function("!Q('#ctx').hidden", timeout=4000); T("touchEnd", []); wait(500)
+            assert not pg.evaluate("Q('#ctx').hidden"), "the menu stays open after the lift"
+            assert pg.evaluate("Q('#ctx').querySelectorAll('[role^=menuitem]').length") == n, "the same menu as the right click"
+            pg.keyboard.press("Escape"); frames(pg, 6)
+        step("a long press on a file group header opens its menu", group_menu)
+        def map_label():
+            pg.click("#np-map"); ready(pg); frames(pg, 20)
+            pg.evaluate(MP + ".el.scrollIntoView({block:'center'})"); pg.evaluate(MP + ".cv.focus()"); pg.keyboard.press("f"); wait(900); ready(pg)
+            c = pg.evaluate(f"(() => {{ const r = {MP}.cv.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }})()")
+            pg.mouse.move(c[0], c[1]); wait(500); ready(pg); wait(300)                     # the mouse picks the scan of the side spectrum
+            L = pg.evaluate(f"(() => {{ const s = {MP}._mz, r = s.sp.getBoundingClientRect(); return (s.lbls || []).filter(l => s.snr && s.snr.has(l.i)).map(l => [r.left + l.x + l.w / 2, r.top + l.y + l.h / 2]); }})()")
+            assert L, "the side spectrum has labels"
+            x, y = L[0]; pg.mouse.move(x, y); wait(200)
+            tip = pg.evaluate(f"{MP}._mz.sp.title"); assert "S/N" in tip and pg.evaluate(f"{MP}.tip.hidden"), ("the mouse keeps the title tooltip", tip)
+            T("touchStart", [(x, y)]); T("touchEnd", []); wait(400)
+            assert pg.evaluate(f"[{MP}.tip.hidden, {MP}.tip.textContent]") == [False, tip], "a tap shows the same text"
+            wait(3000); assert pg.evaluate(f"{MP}.tip.hidden"), "and it goes after a moment"
+        step("a tap on a label of the map's side spectrum shows its S/N", map_label)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

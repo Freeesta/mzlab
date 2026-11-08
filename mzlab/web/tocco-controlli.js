@@ -1,8 +1,10 @@
 // @ts-check
 // Touch and pen outside the graphs (lazy ES module, loaded by touch.js at the first touch): a double tap is a double click, as touch.js does on the canvases.
 // iOS sends no dblclick for a double tap, so renaming a panel or a trace, resetting a divider or opening a table row had no finger path.
-// The page has no double-tap zoom (app.css, html touch-action), so both taps arrive as clicks; pinch zoom stays.
-const MOVE = 8, DTAP = 350, NEAR = 28;
+// The page has no double-tap zoom (app.css, html touch-action), so both taps arrive as clicks; pinch zoom stays. A long press on the rows that have a
+// right-click menu opens it (iPadOS has no long-press contextmenu; Android sends its own, which then wins).
+const MOVE = 8, DTAP = 350, NEAR = 28, LONG = 550;
+const MENU_ROWS = "#inf-tree tbody tr, #mincl tr[data-i], #flst .fgh[data-ug]";
 const W = /** @type {any} */ (window);
 const dblclick = (/** @type {Element} */ el, /** @type {number} */ x, /** @type {number} */ y) =>
   el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0, buttons: 0, detail: 2 }));
@@ -31,6 +33,38 @@ document.addEventListener("click", e => {
 }, true);
 // the browser's own double click, when it sends one, would run the action twice
 document.addEventListener("dblclick", e => { if (e.isTrusted && Date.now() - fired < 700) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+
+// ---- a long press on a row with a menu = right click
+/** @type {{ id: number, x: number, y: number, el: Element, t: number } | null} */ let lp = null;
+let menuAt = 0;
+document.addEventListener("pointerdown", e => {
+  if (!isTouch(e) || !e.isPrimary) return;
+  const el = /** @type {Element} */ (e.target), row = el.closest && el.closest(MENU_ROWS); if (!row) return;
+  const x = e.clientX, y = e.clientY;
+  lp = { id: e.pointerId, x, y, el, t: window.setTimeout(() => {
+    if (!lp) return; lp = null; menuAt = Date.now();
+    el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 2, buttons: 0 }));
+    if (navigator.vibrate) { try { navigator.vibrate(15); } catch (_) { /* none */ } }
+  }, LONG) };
+}, true);
+const lpStop = () => { if (lp) { clearTimeout(lp.t); lp = null; } };
+addEventListener("pointermove", e => { if (lp && e.pointerId === lp.id && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > MOVE) lpStop(); }, true);
+addEventListener("pointerup", lpStop, true); addEventListener("pointercancel", lpStop, true);
+// Android's own long-press menu comes first: it is the one used; after ours, the compat click of the lift would close the menu just opened
+document.addEventListener("contextmenu", e => { if (e.isTrusted && lp) lpStop(); }, true);
+["mousedown", "mouseup", "click"].forEach(t => document.addEventListener(t, e => { if (e.isTrusted && Date.now() - menuAt < 700) { e.stopPropagation(); e.preventDefault(); if (t === "click") menuAt = 0; } }, true));
+
+// ---- the labels of the spectrum at the side of the map tell m/z and S/N in a hover title (mappa.js): a tap shows it in the tooltip of the panel
+let lblT = 0;
+document.addEventListener("click", e => {
+  const sp = /** @type {HTMLElement} */ (e.target);
+  if (!sp.matches || !sp.matches(".pnl canvas.mzside") || !document.documentElement.classList.contains("ptr-touch")) return;
+  sp.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: e.clientX, clientY: e.clientY, view: window }));   // mappa.js writes the title of the label under the finger
+  const t = sp.title, pnl = /** @type {HTMLElement} */ (sp.closest(".pnl")), tip = /** @type {HTMLElement | null} */ (pnl.querySelector(".tip")); if (!t || !tip) return;
+  const r = pnl.getBoundingClientRect(); tip.textContent = t; tip.hidden = false;
+  tip.style.left = Math.max(4, Math.min(pnl.clientWidth - tip.offsetWidth - 4, e.clientX - r.left - tip.offsetWidth - 10)) + "px"; tip.style.top = Math.max(4, e.clientY - r.top - 30) + "px";
+  clearTimeout(lblT); lblT = window.setTimeout(() => { tip.hidden = true; }, 2800);
+}, true);
 
 W.TOCCO_CONTROLLI = { fired: () => fired };
 export {};
