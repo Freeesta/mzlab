@@ -83,11 +83,11 @@ impl Lettore for Finto {
 }
 
 fn finto(filtro: &str) -> SrmDaScansioni {
-    finto_con(filtro, 1, "")
+    fake_with(filtro, 1, "")
 }
 
 /// Four scans with `filtro` and polarity `pol`; `metodo` is the `metodo/1` document the reader gives.
-fn finto_con(filtro: &str, pol: i8, metodo: &str) -> SrmDaScansioni {
+fn fake_with(filtro: &str, pol: i8, metodo: &str) -> SrmDaScansioni {
     let indice = (0..4)
         .map(|k| {
             let mut v = voce(
@@ -113,7 +113,7 @@ fn finto_con(filtro: &str, pol: i8, metodo: &str) -> SrmDaScansioni {
 }
 
 #[test]
-fn una_traccia_per_transizione() {
+fn one_trace_per_transition() {
     let mut l = finto("+ c SRM ms2 300.0@cid25.0 [100.0-100.0]");
     let v = l.chromatograms(0).unwrap();
     let ids: Vec<&str> = v.iter().map(|c| c.id.as_str()).collect();
@@ -135,7 +135,7 @@ fn una_traccia_per_transizione() {
 }
 
 /// A TSQ filter as the vendor writes it: no collision energy in it, the product window in brackets.
-const FILTRO_TSQ: &str = "+ c ESI SRM ms2 300.000 [100.000-100.000, 150.000-150.002]";
+const TSQ_FILTER: &str = "+ c ESI SRM ms2 300.000 [100.000-100.000, 150.000-150.002]";
 
 const METODO_TSQ: &str = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
 {"q1":300,"q3":100,"ce_eV":18.5,"polarita":"negative"},
@@ -143,8 +143,8 @@ const METODO_TSQ: &str = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
 {"q1":400,"q3":200,"ce_eV":22,"polarita":"negative"}]}]}]}}"#;
 
 #[test]
-fn filtro_tsq_senza_ce_prende_ce_e_polarita_dal_metodo() {
-    let mut l = finto_con(FILTRO_TSQ, 1, METODO_TSQ);
+fn a_tsq_filter_without_ce_takes_ce_and_polarity_from_the_method() {
+    let mut l = fake_with(TSQ_FILTER, 1, METODO_TSQ);
     let ids: Vec<String> = l
         .chromatograms(0)
         .unwrap()
@@ -162,8 +162,8 @@ fn filtro_tsq_senza_ce_prende_ce_e_polarita_dal_metodo() {
 }
 
 #[test]
-fn filtro_tsq_senza_metodo_non_inventa_il_ce() {
-    let mut l = finto_con(FILTRO_TSQ, 1, "");
+fn a_tsq_filter_without_method_does_not_invent_the_ce() {
+    let mut l = fake_with(TSQ_FILTER, 1, "");
     let ids: Vec<String> = l
         .chromatograms(0)
         .unwrap()
@@ -171,7 +171,7 @@ fn filtro_tsq_senza_metodo_non_inventa_il_ce() {
         .map(|c| c.id)
         .collect();
     assert_eq!(ids[0], "SRM SIC Q1=300 Q3=100");
-    let mut l = finto_con(FILTRO_TSQ, -1, "not json");
+    let mut l = fake_with(TSQ_FILTER, -1, "not json");
     assert_eq!(
         l.chromatograms(0).unwrap()[0].id,
         "SRM SIC Q1=300 Q3=100 polarity=negative"
@@ -179,34 +179,34 @@ fn filtro_tsq_senza_metodo_non_inventa_il_ce() {
 }
 
 #[test]
-fn transizione_duplicata_nel_metodo_resta_come_le_scansioni() {
+fn a_transition_duplicated_in_the_method_stays_as_the_scans() {
     let m = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
 {"q1":300,"q3":100,"ce_eV":10,"polarita":"positive"},
 {"q1":300,"q3":100,"ce_eV":40,"polarita":"negative"}]}]}]}}"#;
-    let mut l = finto_con(FILTRO_TSQ, 1, m);
+    let mut l = fake_with(TSQ_FILTER, 1, m);
     assert_eq!(l.chromatograms(0).unwrap()[0].id, "SRM SIC Q1=300 Q3=100");
 }
 
 #[test]
-fn crm_conta_come_srm() {
+fn crm_counts_as_srm() {
     let mut l = finto("+ c ESI CRM ms2 300.0@cid25.0 [100.0-100.0]");
     assert_eq!(l.chromatograms(0).unwrap().len(), 3);
 }
 
 #[test]
-fn senza_filtro_srm_niente_tracce() {
+fn without_srm_filter_no_traces() {
     let mut l = finto("+ c Full ms2 300.0@cid25.0 [50.0-400.0]");
     assert!(l.chromatograms(0).unwrap().is_empty());
     assert!(!ha_scansioni_srm(&mut l, 0));
 }
 
 #[test]
-fn il_resoconto_dei_non_portati_e_quello_del_lettore_avvolto() {
+fn the_report_of_the_not_carried_is_that_of_the_wrapped_reader() {
     assert_eq!(finto("").not_carried(), &[("campo finto", "motivo finto")]);
 }
 
 #[test]
-fn il_profilo_e_la_testata_leggera_passano_il_lettore_avvolto() {
+fn the_profile_and_the_light_header_pass_through_the_wrapped_reader() {
     // a Thermo `.raw` keeps its profile next to the centroids: `--peaks profile` must reach it through the wrapper
     let mut l = finto("+ c SRM ms2 300.000 [99.5-100.5]");
     assert!(l.scan_profile(0, 0).unwrap().is_some_and(|s| s.profile));

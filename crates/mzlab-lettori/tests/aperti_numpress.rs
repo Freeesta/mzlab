@@ -13,13 +13,20 @@ use mzlab_core::numpress::{self, Np};
 #[test]
 fn ogni_codec_si_apre_e_torna_entro_la_sua_precisione() {
     let scan = scansioni();
-    for (intensita, z) in [
+    for (intensities, z) in [
         (Np::Slof, false),
         (Np::Slof, true),
         (Np::Pic, false),
         (Np::Pic, true),
     ] {
-        let mut l = apri(mzml_di(&scan, Cod::Np { intensita, zlib: z }, None));
+        let mut l = apri(mzml_di(
+            &scan,
+            Cod::Np {
+                intensities,
+                zlib: z,
+            },
+            None,
+        ));
         assert_eq!(l.samples()[0].scansioni, scan.len());
         for (k, x) in scan.iter().enumerate() {
             let s = l.scan(0, k).unwrap();
@@ -29,16 +36,19 @@ fn ogni_codec_si_apre_e_torna_entro_la_sua_precisione() {
                 assert!((a - b).abs() <= 0.5 / fp + 1e-9, "mz {a} {b}");
             }
             for i in 0..s.mz.len() {
-                let (a, b) = (s.intensity_f64(i), x.intensita[i]);
-                let tol = match intensita {
+                let (a, b) = (s.intensity_f64(i), x.intensities[i]);
+                let tol = match intensities {
                     Np::Pic => 0.5,
                     Np::Slof => {
-                        (b + 1.0) * ((0.5 / numpress::slof_fixed_point(&x.intensita)).exp() - 1.0)
+                        (b + 1.0) * ((0.5 / numpress::slof_fixed_point(&x.intensities)).exp() - 1.0)
                             + 1e-6
                     }
-                    Np::Linear => 0.5 / numpress::linear_fixed_point(&x.intensita) + 1e-6,
+                    Np::Linear => 0.5 / numpress::linear_fixed_point(&x.intensities) + 1e-6,
                 };
-                assert!((a - b).abs() <= tol, "{intensita:?} {z} intensity {a} {b}");
+                assert!(
+                    (a - b).abs() <= tol,
+                    "{intensities:?} {z} intensity {a} {b}"
+                );
             }
             assert_eq!(s.level, x.livello);
             assert_eq!(s.precursor, x.precursore);
@@ -53,7 +63,7 @@ fn l_indice_dice_livello_precursore_tic_senza_leggere_i_picchi() {
     let mut l = apri(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: false,
         },
         None,
@@ -64,7 +74,7 @@ fn l_indice_dice_livello_precursore_tic_senza_leggere_i_picchi() {
         assert_eq!(v.livello, x.livello);
         assert_eq!(v.precursore, x.precursore);
         assert_eq!(v.polarita, 1);
-        assert!((v.tic - x.intensita.iter().sum::<f64>()).abs() < 1e-6);
+        assert!((v.tic - x.intensities.iter().sum::<f64>()).abs() < 1e-6);
         assert!(v.id.starts_with("controllerType=0"));
         assert!(v.posizione.is_some_and(|p| p.lunghezza > 0));
     }
@@ -76,7 +86,7 @@ fn riscritto_come_mzml_zlib_senza_numpress_e_uguale_al_gemello() {
     let mut np = apri(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: true,
         },
         None,
@@ -124,7 +134,7 @@ fn la_testata_originale_resta_e_mzlab_scrive() {
     let mut np = apri(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: false,
         },
         None,
@@ -164,7 +174,7 @@ fn il_metodo_si_ripete_solo_se_l_mzml_lo_porta() {
     let mut con = apri(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Pic,
+            intensities: Np::Pic,
             zlib: false,
         },
         Some(doc),
@@ -175,7 +185,7 @@ fn il_metodo_si_ripete_solo_se_l_mzml_lo_porta() {
     let mut senza = apri(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Pic,
+            intensities: Np::Pic,
             zlib: false,
         },
         None,
@@ -201,7 +211,7 @@ fn i_cromatogrammi_numpress_si_leggono() {
     let mut l = apri(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Linear,
+            intensities: Np::Linear,
             zlib: false,
         },
         None,
@@ -221,7 +231,7 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
     let mut src = apri(mzml_di(
         &scansioni(),
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: true,
         },
         None,
@@ -251,7 +261,7 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
 fn un_numpress_troncato_dichiara_gli_spettri_mancanti() {
     let scan = scansioni();
     let cod = Cod::Np {
-        intensita: Np::Slof,
+        intensities: Np::Slof,
         zlib: false,
     };
     let b = mzml_di(&scan, cod, None);

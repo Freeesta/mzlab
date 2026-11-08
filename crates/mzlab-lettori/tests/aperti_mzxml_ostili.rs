@@ -28,8 +28,8 @@ fn gli_offset_dell_indice_non_contano_le_scansioni_vengono_dalla_passata() {
         assert_eq!(l.samples()[0].scansioni, 5);
         assert_eq!(l.scan(0, 4).unwrap().mz.len(), 10);
     }
-    let fuori = buono.replacen("<indexOffset>", "<indexOffset>9999999", 1);
-    assert_eq!(apri_mzxml(fuori.into_bytes()).samples()[0].scansioni, 5);
+    let outside = buono.replacen("<indexOffset>", "<indexOffset>9999999", 1);
+    assert_eq!(apri_mzxml(outside.into_bytes()).samples()[0].scansioni, 5);
 }
 
 #[test]
@@ -104,8 +104,8 @@ fn un_annidamento_profondo_e_un_errore_con_chiave() {
 
 #[test]
 fn senza_scansioni_o_con_un_altro_xml_non_si_apre() {
-    let vuoto = format!("{}</msRun></mzXML>", TESTA_SENZA_SCAN());
-    assert_eq!(errore_mzxml(vuoto.into_bytes()), "err.file.xml");
+    let empty = format!("{}</msRun></mzXML>", TESTA_SENZA_SCAN());
+    assert_eq!(errore_mzxml(empty.into_bytes()), "err.file.xml");
     // named .mzXML but not one: a cut or damaged copy, said with its name and size; an empty one is told apart
     let r = mzlab_lettori::apri(insieme("x.mzXML", b"<altro/>".to_vec()), &Limiti::sito());
     let e = r.err().unwrap();
@@ -249,9 +249,9 @@ fn ogni_mzxml_vero_dice_quello_che_dice_il_suo_mzml() {
     for (x, m) in coppie() {
         let nome = x.file_name().unwrap().to_string_lossy().into_owned();
         let mut l = apri_mzxml(std::fs::read(&x).unwrap());
-        let rif = mzml_spettri(&m);
-        assert_eq!(l.samples()[0].scansioni, rif.len(), "{nome}");
-        for (k, r) in rif.iter().enumerate() {
+        let reference = mzml_spettri(&m);
+        assert_eq!(l.samples()[0].scansioni, reference.len(), "{nome}");
+        for (k, r) in reference.iter().enumerate() {
             let s = l.scan(0, k).unwrap();
             assert_eq!(
                 (s.level, s.polarity),

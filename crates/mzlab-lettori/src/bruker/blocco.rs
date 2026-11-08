@@ -14,7 +14,7 @@ fn guasto(m: &str) -> Error {
 /// The peaks of a frame, in scan order: the points of scan `s` (0-based) are `inizio[s]..inizio[s + 1]`, each a TOF index and an intensity.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Picchi {
-    pub inizio: Vec<usize>,
+    pub start: Vec<usize>,
     pub tof: Vec<u32>,
     pub int: Vec<u32>,
 }
@@ -22,7 +22,7 @@ pub struct Picchi {
 impl Default for Picchi {
     fn default() -> Picchi {
         Picchi {
-            inizio: vec![0],
+            start: vec![0],
             tof: Vec::new(),
             int: Vec::new(),
         }
@@ -32,10 +32,10 @@ impl Default for Picchi {
 impl Picchi {
     /// Room for `ns` scans and `np` points (both already checked against `Limiti`).
     fn con(ns: usize, np: usize) -> Picchi {
-        let mut inizio = Vec::with_capacity(ns + 1);
-        inizio.push(0);
+        let mut start = Vec::with_capacity(ns + 1);
+        start.push(0);
         Picchi {
-            inizio,
+            start,
             tof: Vec::with_capacity(np),
             int: Vec::with_capacity(np),
         }
@@ -52,16 +52,16 @@ impl Picchi {
     }
     /// Closes the current scan.
     fn fine_scan(&mut self) {
-        self.inizio.push(self.tof.len());
+        self.start.push(self.tof.len());
     }
     /// The points of the scans `a..b` (cut to the scans of the frame).
-    pub fn punti(&self, a: u32, b: u32) -> std::ops::Range<usize> {
-        let n = self.inizio.len().saturating_sub(1);
+    pub fn points(&self, a: u32, b: u32) -> std::ops::Range<usize> {
+        let n = self.start.len().saturating_sub(1);
         let (a, b) = ((a as usize).min(n), (b as usize).min(n));
         if a >= b {
             return 0..0;
         }
-        self.inizio[a]..self.inizio[b]
+        self.start[a]..self.start[b]
     }
 }
 
@@ -70,7 +70,7 @@ fn u32_le(b: &[u8], o: usize) -> Option<u32> {
 }
 
 /// Reads the block at `offset` of a `tdf_bin` of `dim` bytes: the whole block, header included.
-pub fn leggi_blocco(d: &mut dyn ReadAt, dim: u64, offset: u64, limiti: &Limiti) -> Result<Vec<u8>> {
+pub fn leggi_blocco(d: &mut dyn ReadAt, dim: u64, offset: u64, limits: &Limiti) -> Result<Vec<u8>> {
     let mut h = [0u8; 8];
     if offset.checked_add(8).is_none_or(|e| e > dim) {
         return Err(guasto("block past the end of the file"));
@@ -80,7 +80,7 @@ pub fn leggi_blocco(d: &mut dyn ReadAt, dim: u64, offset: u64, limiti: &Limiti) 
     if len < 8 {
         return Ok(h.to_vec());
     }
-    if offset + len > dim || len > limiti.byte {
+    if offset + len > dim || len > limits.byte {
         return Err(guasto("block length"));
     }
     let mut b = vec![0u8; len as usize];
@@ -89,15 +89,15 @@ pub fn leggi_blocco(d: &mut dyn ReadAt, dim: u64, offset: u64, limiti: &Limiti) 
 }
 
 /// The peaks of a block. `num_scans` and `num_peaks` come from the `Frames` row and are checked against the block and the limits.
-pub fn decodifica(
+pub fn decode(
     blocco: &[u8],
     tipo: u32,
     num_scans: u64,
     num_peaks: u64,
-    limiti: &Limiti,
+    limits: &Limiti,
 ) -> Result<Picchi> {
-    limiti.voci_ok(num_scans)?;
-    limiti.voci_ok(num_peaks)?;
+    limits.voci_ok(num_scans)?;
+    limits.voci_ok(num_peaks)?;
     if blocco.len() <= 8 {
         return if num_peaks == 0 {
             Ok(Picchi::default())
@@ -106,21 +106,21 @@ pub fn decodifica(
         };
     }
     let ns = u64::from(u32_le(blocco, 4).unwrap_or(u32::MAX));
-    limiti.voci_ok(ns)?;
+    limits.voci_ok(ns)?;
     // type 2 repeats the scan count of the frame table; type 1 lists the whole ramp
     if tipo == 2 && ns != num_scans {
         return Err(guasto("scan count differs from the frame table"));
     }
     let num_scans = ns;
     match tipo {
-        2 => decodifica2(&blocco[8..], num_scans as usize, num_peaks as usize, limiti),
-        1 => decodifica1(blocco, num_scans as usize, num_peaks as usize, limiti),
+        2 => decodifica2(&blocco[8..], num_scans as usize, num_peaks as usize, limits),
+        1 => decodifica1(blocco, num_scans as usize, num_peaks as usize, limits),
         _ => Err(guasto("unknown compression type")),
     }
 }
 
 /// The window a zstd frame announces for its decoder (None: not a zstd frame). A hostile header cannot make the decoder allocate more than the limit.
-fn finestra_zstd(z: &[u8]) -> Option<u64> {
+fn zstd_window(z: &[u8]) -> Option<u64> {
     if z.get(..4)? != [0x28, 0xb5, 0x2f, 0xfd] {
         return None;
     }
@@ -150,9 +150,9 @@ fn finestra_zstd(z: &[u8]) -> Option<u64> {
 }
 
 /// One zstd frame that must decompress to exactly `attesi` bytes (the frame header and the output are bounded by `limiti` before any allocation).
-pub fn zstd(z: &[u8], attesi: usize, limiti: &Limiti) -> Result<Vec<u8>> {
+pub fn zstd(z: &[u8], attesi: usize, limits: &Limiti) -> Result<Vec<u8>> {
     use std::io::Read;
-    if attesi as u64 > limiti.byte || finestra_zstd(z).is_none_or(|w| w > limiti.byte) {
+    if attesi as u64 > limits.byte || zstd_window(z).is_none_or(|w| w > limits.byte) {
         return Err(guasto("zstd frame"));
     }
     let mut dec = ruzstd::decoding::StreamingDecoder::new(z).map_err(|_| guasto("zstd"))?;
@@ -167,37 +167,37 @@ pub fn zstd(z: &[u8], attesi: usize, limiti: &Limiti) -> Result<Vec<u8>> {
     Ok(inner)
 }
 
-fn decodifica2(z: &[u8], ns: usize, np: usize, limiti: &Limiti) -> Result<Picchi> {
-    let parole = ns
+fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limiti) -> Result<Picchi> {
+    let words = ns
         .checked_add(np.checked_mul(2).ok_or_else(|| guasto("peaks"))?)
         .ok_or_else(|| guasto("peaks"))?;
-    let attesi = parole.checked_mul(4).ok_or_else(|| guasto("peaks"))?;
-    let inner = zstd(z, attesi, limiti)?;
-    let parola = |i: usize| {
+    let attesi = words.checked_mul(4).ok_or_else(|| guasto("peaks"))?;
+    let inner = zstd(z, attesi, limits)?;
+    let word = |i: usize| {
         u32::from(inner[i])
-            | u32::from(inner[parole + i]) << 8
-            | u32::from(inner[2 * parole + i]) << 16
-            | u32::from(inner[3 * parole + i]) << 24
+            | u32::from(inner[words + i]) << 8
+            | u32::from(inner[2 * words + i]) << 16
+            | u32::from(inner[3 * words + i]) << 24
     };
     // the zstd frame gave exactly the announced words, so the counts below are bounded by the block
     let mut out = Picchi::con(ns, np);
-    let mut letti = 0usize;
+    let mut read_items = 0usize;
     for scan in 0..ns {
         let n = if scan + 1 < ns {
-            (parola(scan + 1) / 2) as usize
+            (word(scan + 1) / 2) as usize
         } else {
             np.checked_sub(out.len())
                 .ok_or_else(|| guasto("peak counts"))?
         };
-        let fine = letti
+        let fine = read_items
             .checked_add(n.checked_mul(2).ok_or_else(|| guasto("peak counts"))?)
-            .filter(|&f| f <= parole - ns)
+            .filter(|&f| f <= words - ns)
             .ok_or_else(|| guasto("peak counts"))?;
         let mut tof = u32::MAX;
-        while letti < fine {
-            tof = tof.wrapping_add(parola(ns + letti));
-            out.push(tof, parola(ns + letti + 1));
-            letti += 2;
+        while read_items < fine {
+            tof = tof.wrapping_add(word(ns + read_items));
+            out.push(tof, word(ns + read_items + 1));
+            read_items += 2;
         }
         out.fine_scan();
     }
@@ -207,16 +207,16 @@ fn decodifica2(z: &[u8], ns: usize, np: usize, limiti: &Limiti) -> Result<Picchi
     Ok(out)
 }
 
-fn decodifica1(b: &[u8], ns: usize, np: usize, limiti: &Limiti) -> Result<Picchi> {
+fn decodifica1(b: &[u8], ns: usize, np: usize, limits: &Limiti) -> Result<Picchi> {
     let tab = (ns + 1) * 4;
-    let inizio = 8 + tab;
-    if inizio > b.len() {
+    let start = 8 + tab;
+    if start > b.len() {
         return Err(guasto("offset table"));
     }
     let mut off = Vec::with_capacity(ns + 1);
     for i in 0..=ns {
         let o = u32_le(b, 8 + 4 * i).ok_or_else(|| guasto("offset table"))? as usize;
-        if o < inizio || o > b.len() || off.last().is_some_and(|&p| o < p) {
+        if o < start || o > b.len() || off.last().is_some_and(|&p| o < p) {
             return Err(guasto("scan offset"));
         }
         off.push(o);
@@ -229,7 +229,7 @@ fn decodifica1(b: &[u8], ns: usize, np: usize, limiti: &Limiti) -> Result<Picchi
             continue;
         }
         buf.clear();
-        lzf(&b[off[scan]..off[scan + 1]], &mut buf, limiti.byte as usize)?;
+        lzf(&b[off[scan]..off[scan + 1]], &mut buf, limits.byte as usize)?;
         if buf.len() % 4 != 0 {
             return Err(guasto("scan size"));
         }

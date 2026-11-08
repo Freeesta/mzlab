@@ -4,7 +4,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
 
-use super::mzxml::{numero, TETTO};
+use super::mzxml::{numero, CAP};
 use super::mzxml_scan as scan;
 
 /// The window of the pass that builds the index.
@@ -12,12 +12,12 @@ const FINESTRA: u64 = 512 << 10;
 
 /// A window over the file that serves the many short reads of the index (one per scan) from a few large ones.
 #[derive(Default)]
-pub(super) struct Finestra {
+pub(super) struct Window {
     da: u64,
     byte: Vec<u8>,
 }
 
-impl Finestra {
+impl Window {
     /// The `n` bytes at `da` (the caller keeps `da + n` within the file).
     pub(super) fn leggi(
         &mut self,
@@ -27,8 +27,8 @@ impl Finestra {
         n: u64,
     ) -> Result<&[u8]> {
         let fine = da.checked_add(n).ok_or_else(Error::memory_budget)?;
-        let dentro = da >= self.da && fine <= self.da + self.byte.len() as u64;
-        if !dentro {
+        let inside = da >= self.da && fine <= self.da + self.byte.len() as u64;
+        if !inside {
             let voluta = n.max(FINESTRA).min(dim.saturating_sub(da));
             let mut b = Vec::new();
             b.try_reserve_exact(usize::try_from(voluta).map_err(|_| Error::memory_budget())?)
@@ -43,17 +43,17 @@ impl Finestra {
 }
 
 /// `(TIC, base peak intensity)` of the scan whose bytes are `byte`, as its spectrum would give them (a 32-bit file's values are `f32`), without building the spectrum.
-pub(super) fn somme_picchi(byte: &[u8], limiti: &Limiti) -> Result<(f64, f64)> {
+pub(super) fn peak_sums(byte: &[u8], limits: &Limiti) -> Result<(f64, f64)> {
     let testo = String::from_utf8_lossy(byte);
-    let t = scan::testa(&testo, TETTO)?;
+    let t = scan::testa(&testo, CAP)?;
     let Some((g, corpo)) = t.picchi else {
         return Ok((0.0, 0.0));
     };
     let conteggio = numero(t.scan, "peaksCount").map(|n| n.max(0.0) as usize);
-    let p = scan::picchi(g, corpo, conteggio, limiti)?;
+    let p = scan::picchi(g, corpo, conteggio, limits)?;
     let y = |&x: &f64| if p.a_64_bit { x } else { f64::from(x as f32) };
     Ok((
-        p.intensita.iter().map(y).sum(),
-        p.intensita.iter().map(y).fold(0.0, f64::max),
+        p.intensities.iter().map(y).sum(),
+        p.intensities.iter().map(y).fold(0.0, f64::max),
     ))
 }

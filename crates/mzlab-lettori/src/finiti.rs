@@ -6,36 +6,36 @@ use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, 
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
-pub struct Finiti {
+pub struct Finished {
     inner: Box<dyn Lettore>,
     /// The samples whose index has been checked (an index is read once and asked for many times).
-    visti: Vec<bool>,
+    seen: Vec<bool>,
 }
 
-impl Finiti {
+impl Finished {
     pub fn new(inner: Box<dyn Lettore>) -> Self {
-        Finiti {
+        Finished {
             inner,
-            visti: Vec::new(),
+            seen: Vec::new(),
         }
     }
 }
 
-fn guasto(dove: &str, chi: impl ToString, cosa: &str, v: f64) -> Error {
+fn guasto(dove: &str, who: impl ToString, what: &str, v: f64) -> Error {
     let (key, param) = if dove == "scan" {
         ("err.file.nonFinite", "scan")
     } else {
         ("err.file.nonFiniteTrace", "trace")
     };
     Error::new(key)
-        .with(param, chi)
-        .with("what", cosa)
+        .with(param, who)
+        .with("what", what)
         .with("value", v)
 }
 
 fn spettro(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
     let s = s?;
-    let chi = || {
+    let who = || {
         if s.id.is_empty() {
             (k + 1).to_string()
         } else {
@@ -43,21 +43,21 @@ fn spettro(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
         }
     };
     if !s.rt.is_finite() {
-        return Err(guasto("scan", chi(), "rt", s.rt));
+        return Err(guasto("scan", who(), "rt", s.rt));
     }
     if let Some(v) = s.mz.iter().find(|x| !x.is_finite()) {
-        return Err(guasto("scan", chi(), "mz", *v));
+        return Err(guasto("scan", who(), "mz", *v));
     }
     if let Some(v) = s.intensity.iter().find(|x| !x.is_finite()) {
-        return Err(guasto("scan", chi(), "intensity", f64::from(*v)));
+        return Err(guasto("scan", who(), "intensity", f64::from(*v)));
     }
     if let Some(v) = s.wide.iter().flatten().find(|x| !x.is_finite()) {
-        return Err(guasto("scan", chi(), "intensity", *v));
+        return Err(guasto("scan", who(), "intensity", *v));
     }
     Ok(s)
 }
 
-impl Lettore for Finiti {
+impl Lettore for Finished {
     fn format(&self) -> Formato {
         self.inner.format()
     }
@@ -65,28 +65,28 @@ impl Lettore for Finiti {
         self.inner.samples()
     }
     fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        if !self.visti.get(c).copied().unwrap_or(false) {
+        if !self.seen.get(c).copied().unwrap_or(false) {
             for v in self.inner.index(c)? {
-                for (cosa, x) in [("rt", v.rt), ("tic", v.tic)] {
+                for (what, x) in [("rt", v.rt), ("tic", v.tic)] {
                     if !x.is_finite() {
-                        return Err(guasto("scan", &v.id, cosa, x));
+                        return Err(guasto("scan", &v.id, what, x));
                     }
                 }
             }
-            if self.visti.len() <= c {
-                self.visti.resize(c + 1, false);
+            if self.seen.len() <= c {
+                self.seen.resize(c + 1, false);
             }
-            self.visti[c] = true;
+            self.seen[c] = true;
         }
         self.inner.index(c)
     }
     // the same check on the rows the reader gives; `visti` stays unset, the full rows of `indice` are checked when asked for
     fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        if !self.visti.get(c).copied().unwrap_or(false) {
+        if !self.seen.get(c).copied().unwrap_or(false) {
             for v in self.inner.index_without_tic(c)? {
-                for (cosa, x) in [("rt", v.rt), ("tic", v.tic)] {
+                for (what, x) in [("rt", v.rt), ("tic", v.tic)] {
                     if !x.is_finite() {
-                        return Err(guasto("scan", &v.id, cosa, x));
+                        return Err(guasto("scan", &v.id, what, x));
                     }
                 }
             }

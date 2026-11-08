@@ -21,15 +21,15 @@ fn verita_di(scan: &[Scan]) -> Value {
                 "id": format!("controllerType=0 controllerNumber=1 scan={}", k + 1),
                 "rt_min": x.rt_min, "livello": x.livello, "polarita": 1,
                 "precursore_mz": x.precursore, "profilo": false,
-                "n_punti": x.mz.len(), "tic": x.intensita.iter().sum::<f64>()
+                "n_punti": x.mz.len(), "tic": x.intensities.iter().sum::<f64>()
             })
         })
         .collect();
-    let mut punti = serde_json::Map::new();
+    let mut points = serde_json::Map::new();
     for k in [0, scan.len() / 2, scan.len() - 1] {
-        punti.insert(
+        points.insert(
             k.to_string(),
-            json!({"mz": scan[k].mz, "intensita": scan[k].intensita}),
+            json!({"mz": scan[k].mz, "intensita": scan[k].intensities}),
         );
     }
     json!({
@@ -37,7 +37,7 @@ fn verita_di(scan: &[Scan]) -> Value {
         "file": {"nome": "sintetico.mzML"},
         "conteggi": {"spettri": {"ms1": scan.iter().filter(|s| s.livello == 1).count(), "ms2": scan.iter().filter(|s| s.livello == 2).count()}, "cromatogrammi": {}},
         "scansioni": sc,
-        "punti": punti,
+        "punti": points,
         "cromatogrammi": [],
         "metadati": {"mzml:run@startTimeStamp": {"valore": "2024-03-05T10:11:12Z", "metodo": "origine.file_creato"}}
     })
@@ -58,7 +58,7 @@ fn apri_file(scan: &[Scan]) -> Box<dyn mzlab_core::lettori::Lettore> {
     apri(mzml_di(
         scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: false,
         },
         Some(metodo),
@@ -171,7 +171,7 @@ fn il_corpus_si_scorre_su_una_cartella_costruita() {
         mzml_di(
             &scan,
             Cod::Np {
-                intensita: Np::Slof,
+                intensities: Np::Slof,
                 zlib: false,
             },
             Some(metodo),
@@ -233,7 +233,7 @@ fn la_verita_di_verita_py_concorda_con_il_parser_mzml() {
     }
     for (t, c) in v["cromatogrammi"].as_array().unwrap().iter().zip(&croms) {
         assert_eq!(t["n"].as_u64(), Some(c.intensity.len() as u64));
-        let somma: f64 = c.intensity.iter().sum();
-        assert!((t["somma"].as_f64().unwrap() - somma).abs() <= 1e-6 * somma.abs().max(1.0));
+        let summed: f64 = c.intensity.iter().sum();
+        assert!((t["somma"].as_f64().unwrap() - summed).abs() <= 1e-6 * summed.abs().max(1.0));
     }
 }

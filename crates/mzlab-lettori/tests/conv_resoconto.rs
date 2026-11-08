@@ -26,7 +26,7 @@ fn conv_di(l: &mut dyn Lettore) -> json::Value {
     json::parse(v.as_bytes()).unwrap()
 }
 
-fn controlla(l: &mut dyn Lettore, id: &str) {
+fn check(l: &mut dyn Lettore, id: &str) {
     assert_eq!(l.format().id(), id);
     let doc = conv_di(l);
     assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conv/1"));
@@ -44,10 +44,10 @@ fn controlla(l: &mut dyn Lettore, id: &str) {
         declared.len(),
         "{id}: every declared gap is written"
     );
-    for (campo, motivo) in declared {
+    for (field, motivo) in declared {
         assert!(
-            !campo.is_empty() && !motivo.is_empty(),
-            "{id}: a gap without a reason: {campo:?}"
+            !field.is_empty() && !motivo.is_empty(),
+            "{id}: a gap without a reason: {field:?}"
         );
     }
 }
@@ -57,19 +57,19 @@ fn controlla(l: &mut dyn Lettore, id: &str) {
 fn mzxml_and_numpress_mzml_carry_conv() {
     use comune::mzxml::{apri_mzxml, corsa, mzxml, PIATTO};
     use comune::{apri, mzml_di, scansioni, Cod};
-    controlla(&mut *apri_mzxml(mzxml(&corsa(), PIATTO)), "mzxml");
+    check(&mut *apri_mzxml(mzxml(&corsa(), PIATTO)), "mzxml");
     let np = Cod::Np {
-        intensita: mzlab_core::numpress::Np::Slof,
+        intensities: mzlab_core::numpress::Np::Slof,
         zlib: true,
     };
-    controlla(&mut *apri(mzml_di(&scansioni(), np, None)), "mzml-numpress");
+    check(&mut *apri(mzml_di(&scansioni(), np, None)), "mzml-numpress");
 }
 
 #[cfg(feature = "andi")]
 #[test]
 fn andi_carries_conv() {
     use comune::andi::{andi_ms, apri_andi, PIATTA};
-    controlla(&mut *apri_andi(andi_ms(&PIATTA)), "andi-ms");
+    check(&mut *apri_andi(andi_ms(&PIATTA)), "andi-ms");
 }
 
 #[cfg(feature = "shimadzu")]
@@ -86,7 +86,7 @@ fn shimadzu_carries_conv() {
             sha1: None,
         }],
     };
-    controlla(
+    check(
         &mut *mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap(),
         "shimadzu",
     );
@@ -98,5 +98,5 @@ fn waters_carries_conv() {
     use mzlab_core::lettori::Limiti;
     let mut l =
         mzlab_lettori::apri_nudo(comune_waters::insieme_sintetico(), &Limiti::sito()).unwrap();
-    controlla(&mut *l, "waters-raw");
+    check(&mut *l, "waters-raw");
 }

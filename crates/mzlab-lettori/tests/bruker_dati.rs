@@ -43,20 +43,20 @@ fn spettri_mzml(p: &Path) -> Vec<Spectrum> {
     out
 }
 
-fn somma(s: &Spectrum) -> f64 {
+fn summed(s: &Spectrum) -> f64 {
     (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum()
 }
 
 /// Every point of `rif` has a point of `s` within `ppm`, and the sums are equal.
-fn confronta(s: &Spectrum, rif: &Spectrum, ppm: f64, etichetta: &str) {
+fn confronta(s: &Spectrum, reference: &Spectrum, ppm: f64, label: &str) {
     assert!(
-        (somma(s) - somma(rif)).abs() < 0.5,
-        "{etichetta}: sum {} vs {}",
-        somma(s),
-        somma(rif)
+        (summed(s) - summed(reference)).abs() < 0.5,
+        "{label}: sum {} vs {}",
+        summed(s),
+        summed(reference)
     );
     let mut peggiore = 0.0f64;
-    for &m in &rif.mz {
+    for &m in &reference.mz {
         let j = s.mz.partition_point(|&x| x < m);
         let vicino = [j.checked_sub(1), Some(j)]
             .into_iter()
@@ -66,11 +66,8 @@ fn confronta(s: &Spectrum, rif: &Spectrum, ppm: f64, etichetta: &str) {
             .fold(f64::INFINITY, f64::min);
         peggiore = peggiore.max(vicino);
     }
-    assert!(peggiore <= ppm, "{etichetta}: worst point {peggiore} ppm");
-    eprintln!(
-        "{etichetta}: {} points, worst {peggiore:.2} ppm",
-        s.mz.len()
-    );
+    assert!(peggiore <= ppm, "{label}: worst point {peggiore} ppm");
+    eprintln!("{label}: {} points, worst {peggiore:.2} ppm", s.mz.len());
 }
 
 fn confronta_cartella(cartella: &str, mzml_rif: &str) {
@@ -80,17 +77,17 @@ fn confronta_cartella(cartella: &str, mzml_rif: &str) {
         return;
     };
     let mut l = mzlab_lettori::apri_nudo(set_of(&base.join(cartella)), &Limiti::desktop()).unwrap();
-    let rif = spettri_mzml(&base.join(mzml_rif));
+    let reference = spettri_mzml(&base.join(mzml_rif));
     // the copy of the test data keeps only the first 400 kB of `analysis.tdf_bin`: the spectra of the frames past its end leave the index and are counted
     let n = l.index(0).unwrap().len();
-    assert_eq!(n + l.missing(0), rif.len(), "{cartella}");
-    if n < rif.len() {
+    assert_eq!(n + l.missing(0), reference.len(), "{cartella}");
+    if n < reference.len() {
         eprintln!(
             "{cartella}: {} spectra past the end of the cut tdf_bin",
-            rif.len() - n
+            reference.len() - n
         );
     }
-    for (k, r) in rif.iter().enumerate().take(n) {
+    for (k, r) in reference.iter().enumerate().take(n) {
         let s = l.scan(0, k).unwrap();
         assert_eq!(s.level, r.level, "{cartella} {k}");
         assert!((s.rt - r.rt).abs() < 1e-6, "{cartella} {k}: rt");
@@ -138,10 +135,10 @@ fn percorri(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
             1.0 + ix[k].tic * 1e-9
         };
         assert!(
-            (somma(&s) - ix[k].tic).abs() <= tol,
+            (summed(&s) - ix[k].tic).abs() <= tol,
             "{rel} #{k}: TIC {} vs {}",
             ix[k].tic,
-            somma(&s)
+            summed(&s)
         );
     }
     eprintln!("{rel}: {} spectra, levels {livelli:?}", ix.len());

@@ -6,7 +6,7 @@ impl Sqlite {
     /// Rows of `t` with only the columns `colonne` (positions in the table, `None` = a column the file lacks, read as NULL), in that order and with the same values `righe` gives for them: the
     /// `INTEGER PRIMARY KEY` filled in from the rowid and the key of a `WITHOUT ROWID` table put back in its place. The other columns of the record are skipped, not decoded, and `f` gets a vector
     /// that is reused from row to row.
-    pub fn righe_cols<F>(&mut self, t: &Tabella, colonne: &[Option<usize>], mut f: F) -> Result<()>
+    pub fn rows_cols<F>(&mut self, t: &Tabella, colonne: &[Option<usize>], mut f: F) -> Result<()>
     where
         F: FnMut(&[Val]) -> Result<bool>,
     {
@@ -28,7 +28,7 @@ impl Sqlite {
             .collect();
         let alias = t.alias_rowid.filter(|_| t.ordine.is_none());
         let mut out: Vec<Val> = Vec::with_capacity(colonne.len());
-        self.scorri_con(t.radice, Some(&mascherati), |rowid, v| {
+        self.walk_with(t.radice, Some(&mascherati), |rowid, v| {
             out.clear();
             for (j, p) in pos.iter().enumerate() {
                 out.push(match p.and_then(|p| v.get_mut(p).map(|x| (p, x))) {
@@ -47,7 +47,7 @@ impl Sqlite {
 /// is still checked, so a damaged one is refused the same way.
 pub(super) fn record_in(
     b: &[u8],
-    limiti: &Limiti,
+    limits: &Limiti,
     voglio: Option<&[bool]>,
     out: &mut Vec<Val>,
 ) -> Result<()> {
@@ -63,7 +63,7 @@ pub(super) fn record_in(
         let (_, k) = varint(&b[o..hl]).ok_or_else(|| guasto("serial type"))?;
         o += k;
         n += 1;
-        limiti.voci_ok(n)?;
+        limits.voci_ok(n)?;
     }
     out.reserve(n as usize);
     let (mut o, mut corpo) = (o0, hl);

@@ -5,7 +5,7 @@ use mzlab_core::lettori::Limiti;
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 /// The most cvParams of a spectrum kept as header fields.
-const CAMPI_MAX: usize = 64;
+const FIELDS_MAX: usize = 64;
 
 // ---- a tiny scanner of tags: the header of an mzML is cut before `<run` (and so not a document), and the module may not take a new XML crate ----
 
@@ -13,7 +13,7 @@ pub(super) struct Tag {
     pub(super) nome: String,
     pub(super) attr: Vec<(String, String)>,
     pub(super) chiusura: bool,
-    pub(super) vuoto: bool,
+    pub(super) empty: bool,
 }
 
 impl Tag {
@@ -66,17 +66,17 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
             Some(r) => (true, r),
             None => (false, corpo),
         };
-        let (vuoto, corpo) = match corpo.strip_suffix('/') {
+        let (empty, corpo) = match corpo.strip_suffix('/') {
             Some(r) => (true, r),
             None => (false, corpo),
         };
-        let mut parti = corpo.splitn(2, |c: char| c.is_whitespace());
-        let nome = parti.next().unwrap_or("").to_string();
+        let mut parts = corpo.splitn(2, |c: char| c.is_whitespace());
+        let nome = parts.next().unwrap_or("").to_string();
         let mut attr = Vec::new();
-        let mut resto = parti.next().unwrap_or("");
-        while let Some(e) = resto.find('=') {
-            let chiave = resto[..e].trim().to_string();
-            let v = resto[e + 1..].trim_start();
+        let mut remainder = parts.next().unwrap_or("");
+        while let Some(e) = remainder.find('=') {
+            let chiave = remainder[..e].trim().to_string();
+            let v = remainder[e + 1..].trim_start();
             let Some(virgolette) = v.chars().next().filter(|c| *c == '"' || *c == '\'') else {
                 break;
             };
@@ -84,20 +84,20 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
                 break;
             };
             attr.push((chiave, unescape(&v[1..1 + fine])));
-            resto = &v[fine + 2..];
+            remainder = &v[fine + 2..];
         }
         out.push(Tag {
             nome,
             attr,
             chiusura,
-            vuoto,
+            empty,
         });
     }
     out
 }
 
 /// The cvParams of a spectrum header (everything before `<binaryDataArrayList`) and what the writer cannot say with its own fields.
-pub(super) struct Parametro {
+pub(super) struct Parameter {
     pub(super) acc: String,
     pub(super) nome: String,
     pub(super) valore: String,
@@ -128,14 +128,14 @@ const SCRITTI: [&str; 20] = [
     "MS:1000744",
 ];
 
-pub(super) fn parametri(spettro: &[u8]) -> Vec<Parametro> {
+pub(super) fn param_list(spettro: &[u8]) -> Vec<Parameter> {
     let t = String::from_utf8_lossy(spettro);
     let fine = t.find("<binaryDataArrayList").unwrap_or(t.len());
     tag_di(&t[..fine])
         .into_iter()
         .filter(|g| !g.chiusura && g.nome == "cvParam")
-        .take(CAMPI_MAX)
-        .map(|g| Parametro {
+        .take(FIELDS_MAX)
+        .map(|g| Parameter {
             acc: g.get("accession").to_string(),
             nome: g.get("name").to_string(),
             valore: g.get("value").to_string(),
@@ -148,7 +148,7 @@ pub(super) fn parametri(spettro: &[u8]) -> Vec<Parametro> {
 pub(super) fn extra_di(spettro: &[u8]) -> SpectrumExtra {
     let mut e = SpectrumExtra::default();
     let (mut lo, mut hi) = (None, None);
-    for p in parametri(spettro) {
+    for p in param_list(spettro) {
         let numero = p.valore.parse::<f64>().ok();
         match p.acc.as_str() {
             "MS:1000501" => lo = numero,
@@ -171,16 +171,16 @@ type Gruppo = (String, Vec<(String, String, String)>);
 #[derive(Default)]
 struct Stato {
     gruppi: Vec<Gruppo>,
-    ic_visti: usize,
-    componente_con_cv: bool,
+    ic_seen: usize,
+    component_with_cv: bool,
     /// The `software` being read: its version and its first term.
     soft: Option<(String, Option<(String, String)>)>,
 }
 
 /// A `cvParam` of the header, by the element that holds it.
-fn cv_param(h: &mut Header, st: &mut Stato, genitore: &str, g: &Tag) {
+fn cv_param(h: &mut Header, st: &mut Stato, parent: &str, g: &Tag) {
     let (a, n, v) = (g.get("accession"), g.get("name"), g.get("value"));
-    match genitore {
+    match parent {
         "fileContent" if a != "MS:1000579" => h.content.push((a.into(), n.into())),
         "sourceFile" if a == "MS:1000569" => h.source_sha1.push(v.into()),
         "sourceFile" => {
@@ -193,11 +193,10 @@ fn cv_param(h: &mut Header, st: &mut Stato, genitore: &str, g: &Tag) {
                 cvs.push((a.into(), n.into(), v.into()));
             }
         }
-        "instrumentConfiguration" if st.ic_visti == 1 => modello(h, a, n, v),
-        "source" | "analyzer" | "detector" if st.ic_visti == 1 && !st.componente_con_cv => {
-            st.componente_con_cv = true;
-            h.components
-                .push((genitore.to_string(), a.into(), n.into()));
+        "instrumentConfiguration" if st.ic_seen == 1 => modello(h, a, n, v),
+        "source" | "analyzer" | "detector" if st.ic_seen == 1 && !st.component_with_cv => {
+            st.component_with_cv = true;
+            h.components.push((parent.to_string(), a.into(), n.into()));
         }
         "software" => {
             if let Some((_, c @ None)) = st.soft.as_mut() {
@@ -209,7 +208,7 @@ fn cv_param(h: &mut Header, st: &mut Stato, genitore: &str, g: &Tag) {
 }
 
 /// The header of the mzML we write: the instrument, the sources with their SHA-1, the software and the run of the original, and mzLab as the program that wrote this file.
-pub(super) fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Header> {
+pub(super) fn testata_da(head: &str, nome: &str, limits: &Limiti) -> Result<Header> {
     let mut h = Header {
         run: nome.rsplit_once('.').map_or(nome, |(s, _)| s).to_string(),
         software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
@@ -227,10 +226,10 @@ pub(super) fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Head
             }
             continue;
         }
-        let genitore = pila.last().cloned().unwrap_or_default();
+        let parent = pila.last().cloned().unwrap_or_default();
         match g.nome.as_str() {
             "referenceableParamGroup" => st.gruppi.push((g.get("id").to_string(), Vec::new())),
-            "instrumentConfiguration" => st.ic_visti += 1,
+            "instrumentConfiguration" => st.ic_seen += 1,
             "sourceFile" => h.sources.push(g.get("name").to_string()),
             "sample" if h.sample.is_none() => {
                 h.sample = Some((g.get("id").to_string(), g.get("name").to_string()))
@@ -240,9 +239,9 @@ pub(super) fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Head
                 h.run = g.get("id").to_string();
                 h.acquired = Some(g.get("startTimeStamp").to_string()).filter(|t| !t.is_empty());
             }
-            "source" | "analyzer" | "detector" if st.ic_visti == 1 => st.componente_con_cv = false,
+            "source" | "analyzer" | "detector" if st.ic_seen == 1 => st.component_with_cv = false,
             "referenceableParamGroupRef"
-                if st.ic_visti == 1 && genitore == "instrumentConfiguration" =>
+                if st.ic_seen == 1 && parent == "instrumentConfiguration" =>
             {
                 let r = g.get("ref");
                 if let Some((_, cvs)) = st.gruppi.iter().find(|(id, _)| id == r) {
@@ -251,15 +250,15 @@ pub(super) fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Head
                     }
                 }
             }
-            "userParam" if genitore == "run" => {
+            "userParam" if parent == "run" => {
                 h.run_params
                     .push((g.get("name").to_string(), g.get("value").to_string()));
             }
-            "cvParam" => cv_param(&mut h, &mut st, &genitore, &g),
+            "cvParam" => cv_param(&mut h, &mut st, &parent, &g),
             _ => {}
         }
-        if !g.vuoto {
-            limiti.profondita_ok(pila.len() + 1)?;
+        if !g.empty {
+            limits.profondita_ok(pila.len() + 1)?;
             pila.push(g.nome);
         }
     }

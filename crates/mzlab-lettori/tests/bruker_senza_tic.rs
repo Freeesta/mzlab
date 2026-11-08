@@ -60,9 +60,9 @@ fn indice_dopo_le_righe_leggere_ha_il_tic_delle_ms2() {
     for (k, (a, b)) in dopo.iter().zip(&pieno).enumerate() {
         assert_eq!(a.tic, b.tic, "#{k}");
         let s = l.scan(0, k).unwrap();
-        let somma: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+        let summed: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
         if s.level > 1 {
-            assert_eq!(somma, b.tic, "#{k}");
+            assert_eq!(summed, b.tic, "#{k}");
         }
     }
 }

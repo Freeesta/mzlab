@@ -5,7 +5,7 @@
 mod comune;
 mod comune_waters;
 
-use comune::andi::{andi_ms, punti, PIATTA};
+use comune::andi::{andi_ms, points, PIATTA};
 use comune::mzxml::{corsa, mzxml, PIATTO};
 use comune::*;
 use mzlab_core::lettori::Limiti;
@@ -76,8 +76,8 @@ fn un_andi_con_intensita_nan_e_un_errore() {
     let b = andi_ms(&PIATTA);
     assert_eq!(chiave(insieme("x.cdf", b.clone())), "ok");
     // the intensities are f32 big-endian (nc_type 5): the first one of the first scan
-    let primo = (punti(0)[0].1 as f32).to_be_bytes();
-    let m = sostituisci(&b, &primo, &f32::NAN.to_be_bytes());
+    let first_one = (points(0)[0].1 as f32).to_be_bytes();
+    let m = sostituisci(&b, &first_one, &f32::NAN.to_be_bytes());
     assert_eq!(chiave(insieme("x.cdf", m)), "err.file.nonFinite");
 }
 
@@ -86,7 +86,7 @@ fn un_mzml_numpress_con_tempo_infinito_e_un_errore() {
     let b = mzml_di(
         &scansioni(),
         Cod::Np {
-            intensita: mzlab_core::numpress::Np::Slof,
+            intensities: mzlab_core::numpress::Np::Slof,
             zlib: false,
         },
         None,

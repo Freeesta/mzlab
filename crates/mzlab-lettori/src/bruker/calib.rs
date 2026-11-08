@@ -26,7 +26,7 @@ impl MzCal {
     }
 
     /// The factor of the m/z of a frame measured at temperatures `t1`, `t2`: `1 - 1e-6·(dC1·(t1 - T1) + dC2·(t2 - T2))`.
-    pub fn fattore(&self, t1: f64, t2: f64) -> f64 {
+    pub fn factor(&self, t1: f64, t2: f64) -> f64 {
         let f =
             1.0 - 1e-6 * (self.coef[0] * (t1 - self.temp[0]) + self.coef[1] * (t2 - self.temp[1]));
         if f.is_finite() {

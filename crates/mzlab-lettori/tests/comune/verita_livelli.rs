@@ -27,11 +27,11 @@ pub fn rel_ok(a: f64, b: f64, rel: f64) -> bool {
     (a - b).abs() <= rel * a.abs().max(b.abs()).max(1e-300)
 }
 
-pub fn livello(esito_difetti: Vec<String>, manca: Vec<String>) -> Esito {
+pub fn livello(esito_difetti: Vec<String>, absent: Vec<String>) -> Esito {
     if !esito_difetti.is_empty() {
         Esito::Difetto(esito_difetti)
-    } else if !manca.is_empty() {
-        Esito::Manca(manca)
+    } else if !absent.is_empty() {
+        Esito::Manca(absent)
     } else {
         Esito::Ok
     }
@@ -161,11 +161,11 @@ pub fn f2_intestazioni(
 /// F3: the points of the chosen scans.
 pub fn f3_punti(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol) -> Esito {
     let (mut d3, mut m3) = (Vec::new(), Vec::new());
-    let punti = v["punti"].as_object().cloned().unwrap_or_default();
-    if punti.is_empty() {
+    let points = v["punti"].as_object().cloned().unwrap_or_default();
+    if points.is_empty() {
         m3.push("no points in the truth".into());
     }
-    for (chiave, p) in &punti {
+    for (chiave, p) in &points {
         let Ok(k) = chiave.parse::<usize>() else {
             continue;
         };
@@ -186,14 +186,14 @@ pub fn f3_punti(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol) -> Esito {
             d3.push(format!("scan {k}: {} points vs {}", s.mz.len(), mz.len()));
             continue;
         }
-        let massimo = it.iter().copied().fold(0.0f64, f64::max).max(1e-300);
+        let maximum = it.iter().copied().fold(0.0f64, f64::max).max(1e-300);
         for (i, (&a, &b)) in s.mz.iter().zip(&mz).enumerate() {
             let y = s.intensity_f64(i);
             if !tol.mz_ok(a, b) {
                 d3.push(format!("scan {k}[{i}]: m/z {a} vs {b}"));
                 break;
             }
-            if (y - it[i]).abs() > tol.intensita_rel * massimo {
+            if (y - it[i]).abs() > tol.intensita_rel * maximum {
                 d3.push(format!("scan {k}[{i}]: intensity {y} vs {}", it[i]));
                 break;
             }
@@ -218,11 +218,11 @@ fn f4_traccia(
         ));
         return;
     }
-    let somma: f64 = ch.intensity.iter().sum();
-    let massimo = ch.intensity.iter().copied().fold(0.0f64, f64::max);
+    let summed: f64 = ch.intensity.iter().sum();
+    let maximum = ch.intensity.iter().copied().fold(0.0f64, f64::max);
     for (nome, ours, theirs) in [
-        ("sum", somma, num(&t["somma"])),
-        ("maximum", massimo, num(&t["massimo"])),
+        ("sum", summed, num(&t["somma"])),
+        ("maximum", maximum, num(&t["massimo"])),
     ] {
         if let Some(b) = theirs
             && !rel_ok(ours, b, tol.cromatogramma_rel)
@@ -333,10 +333,10 @@ pub fn metadati(l: &mut dyn Lettore, v: &Value, c: usize) -> Esito {
         Some(m) => m,
         None => return Esito::Difetto(vec!["metodo/1 cannot be read".into()]),
     };
-    let (mut difetti, mut manca) = (Vec::new(), Vec::new());
+    let (mut difetti, mut absent) = (Vec::new(), Vec::new());
     for (nome, f) in campi {
         let Some(path) = f["metodo"].as_str() else {
-            manca.push(format!("{nome} (not mapped)"));
+            absent.push(format!("{nome} (not mapped)"));
             continue;
         };
         let Some(a) = percorso_json(&metodo, path).and_then(testo) else {
@@ -355,5 +355,5 @@ pub fn metadati(l: &mut dyn Lettore, v: &Value, c: usize) -> Esito {
             difetti.push(format!("{nome}: {path} = {a:?} vs {b:?}"));
         }
     }
-    livello(difetti, manca)
+    livello(difetti, absent)
 }

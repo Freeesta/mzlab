@@ -78,16 +78,16 @@ fn mse_and_lock_mass_match_the_msconvert_oracle() {
         // msconvert's 775 +- 725 m/z "precursor" of every MSe spectrum is the scan range, not an isolation.
         assert!(v.precursore.is_none(), "{id}: no precursor");
         let s = l.scan(0, k).unwrap();
-        let (mut somma, mut pesata) = (0.0, 0.0);
+        let (mut summed, mut pesata) = (0.0, 0.0);
         for (m, i) in s.mz.iter().zip(&s.intensity) {
-            somma += f64::from(*i);
+            summed += f64::from(*i);
             pesata += m * f64::from(*i);
         }
         assert!(
-            (somma - tic).abs() <= 2e-3 * tic,
-            "{id}: sum {somma} vs {tic}"
+            (summed - tic).abs() <= 2e-3 * tic,
+            "{id}: sum {summed} vs {tic}"
         );
-        let medio = pesata / somma;
+        let medio = pesata / summed;
         assert!(
             (medio - mz_medio).abs() <= 1e-6 * mz_medio,
             "{id}: mean m/z {medio} vs {mz_medio}"

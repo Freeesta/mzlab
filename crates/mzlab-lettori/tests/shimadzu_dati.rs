@@ -30,13 +30,13 @@ fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
 /// Every scan: the decoded intensities add up to the TIC of the index, the times do not go back.
 fn controlla_scansioni(l: &mut dyn Lettore) -> usize {
     let idx = l.index(0).unwrap().to_vec();
-    let mut prima = -1.0;
+    let mut before = -1.0;
     for (k, v) in idx.iter().enumerate() {
         let s = l.scan(0, k).unwrap();
         let tot: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
         assert_eq!(tot, v.tic, "TIC of scan {k}");
-        assert!(v.rt >= prima, "time of scan {k}");
-        prima = v.rt;
+        assert!(v.rt >= before, "time of scan {k}");
+        before = v.rt;
         assert!(s.mz.windows(2).all(|w| w[0] <= w[1]) || s.mz.is_empty() || k > 0);
     }
     idx.len()

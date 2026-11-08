@@ -241,7 +241,7 @@ pub const PIATTA: Corsa = Corsa {
 };
 
 /// The points of scan `k` (m/z, intensity).
-pub fn punti(k: usize) -> Vec<(f64, f64)> {
+pub fn points(k: usize) -> Vec<(f64, f64)> {
     (0..3 + k % 4)
         .map(|i| {
             (
@@ -284,28 +284,28 @@ pub fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
 }
 
 pub fn andi_ms(c: &Corsa) -> Vec<u8> {
-    andi_ms_con(c, SCANSIONI, punti, true)
+    andi_ms_con(c, SCANSIONI, points, true)
 }
 
 /// An ANDI-MS file of `scansioni` scans whose points are `punti(k)`; `tic`: whether it has `total_intensity`.
 pub fn andi_ms_con(
     c: &Corsa,
     scansioni: usize,
-    punti: impl Fn(usize) -> Vec<(f64, f64)>,
+    points: impl Fn(usize) -> Vec<(f64, f64)>,
     tic: bool,
 ) -> Vec<u8> {
-    let conti: Vec<usize> = (0..scansioni).map(|k| punti(k).len()).collect();
-    let totale: usize = conti.iter().sum();
+    let conti: Vec<usize> = (0..scansioni).map(|k| points(k).len()).collect();
+    let total: usize = conti.iter().sum();
     let mut inizi = vec![0usize];
     for &n in &conti[..conti.len() - 1] {
         inizi.push(inizi.last().unwrap() + n);
     }
     let mz: Vec<f64> = (0..scansioni)
-        .flat_map(|k| punti(k).into_iter().map(|p| p.0))
+        .flat_map(|k| points(k).into_iter().map(|p| p.0))
         .map(|x| c.scala_mz.map_or(x, |f| x / f))
         .collect();
     let it: Vec<f64> = (0..scansioni)
-        .flat_map(|k| punti(k).into_iter().map(|p| p.1))
+        .flat_map(|k| points(k).into_iter().map(|p| p.1))
         .collect();
     // dimensions: 0 point_number (unlimited), 1 scan_number, 2 instrument_number, 3 _32_byte_string, 4 range
     let dims = [
@@ -324,7 +324,7 @@ pub fn andi_ms_con(
     let mut vi = var("intensity_values", &[0], c.tipo_it, it.clone());
     vi.att
         .push(("units".into(), t("Arbitrary Intensity Units")));
-    let mut tempo = per_scan(
+    let mut moment = per_scan(
         "scan_acquisition_time",
         6,
         (0..scansioni)
@@ -335,17 +335,17 @@ pub fn andi_ms_con(
             .collect(),
     );
     if let Some((f, o)) = c.scala_tempo {
-        tempo.att.push(("scale_factor".into(), At::N(6, vec![f])));
-        tempo.att.push(("add_offset".into(), At::N(6, vec![o])));
+        moment.att.push(("scale_factor".into(), At::N(6, vec![f])));
+        moment.att.push(("add_offset".into(), At::N(6, vec![o])));
     }
     let mut vars = vec![
-        tempo,
+        moment,
         per_scan(
             "total_intensity",
             6,
             (0..scansioni)
                 // a NaN point (the tests of the BPC) leaves the TIC of the file finite
-                .map(|k| punti(k).iter().map(|p| p.1).filter(|x| !x.is_nan()).sum())
+                .map(|k| points(k).iter().map(|p| p.1).filter(|x| !x.is_nan()).sum())
                 .collect(),
         ),
         per_scan("mass_range_min", 6, vec![40.0; scansioni]),
@@ -363,8 +363,8 @@ pub fn andi_ms_con(
         vars.retain(|v| v.nome != "total_intensity");
     }
     let g = globali_ms(c);
-    let _ = totale;
-    cdf(c.v2, &dims, &g, &vars, totale as u32)
+    let _ = total;
+    cdf(c.v2, &dims, &g, &vars, total as u32)
 }
 
 /// An ANDI-Chromatography file: `n` points of one FID trace, uniform sampling.

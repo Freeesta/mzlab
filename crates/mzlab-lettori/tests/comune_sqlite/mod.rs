@@ -53,18 +53,18 @@ pub fn record(vals: &[V<'_>]) -> Vec<u8> {
 }
 
 /// A b-tree page of `tipo` (13 leaf table, 10 leaf index, 5 interior table) with its `celle`, the header at `base`.
-pub fn pagina(tipo: u8, base: usize, celle: &[Vec<u8>], destra: u32) -> Vec<u8> {
+pub fn page(tipo: u8, base: usize, cell_list: &[Vec<u8>], destra: u32) -> Vec<u8> {
     let mut p = vec![0u8; PAG];
     let mut fine = PAG;
     let mut ptr = Vec::new();
-    for c in celle {
+    for c in cell_list {
         fine -= c.len();
         p[fine..fine + c.len()].copy_from_slice(c);
         ptr.push(fine as u16);
     }
     let intest = if tipo == 5 { 12 } else { 8 };
     p[base] = tipo;
-    p[base + 3..base + 5].copy_from_slice(&(celle.len() as u16).to_be_bytes());
+    p[base + 3..base + 5].copy_from_slice(&(cell_list.len() as u16).to_be_bytes());
     p[base + 5..base + 7].copy_from_slice(&(fine as u16).to_be_bytes());
     if tipo == 5 {
         p[base + 8..base + 12].copy_from_slice(&destra.to_be_bytes());
@@ -89,7 +89,7 @@ pub fn foglia(righe: &[Vec<V<'_>>]) -> Vec<u8> {
         .enumerate()
         .map(|(i, r)| cella_foglia(i as u64 + 1, &record(r)))
         .collect();
-    pagina(13, 0, &c, 0)
+    page(13, 0, &c, 0)
 }
 
 /// A database whose tables are `(name, CREATE text, page image)`; table `i` is rooted at page `i + 2`.
@@ -110,7 +110,7 @@ pub fn db(tabelle: &[(&str, &str, Vec<u8>)]) -> Vec<u8> {
             )
         })
         .collect();
-    let mut p1 = pagina(13, 100, &schema, 0);
+    let mut p1 = page(13, 100, &schema, 0);
     p1[..16].copy_from_slice(b"SQLite format 3\0");
     p1[16..18].copy_from_slice(&(PAG as u16).to_be_bytes());
     p1[18] = 1;
@@ -126,7 +126,7 @@ pub fn db(tabelle: &[(&str, &str, Vec<u8>)]) -> Vec<u8> {
     out
 }
 
-pub fn limiti() -> Limiti {
+pub fn limits() -> Limiti {
     Limiti::sito()
 }
 
@@ -136,7 +136,7 @@ pub fn apri_db(b: Vec<u8>, wal: Option<Vec<u8>>) -> mzlab_core::error::Result<Sq
         let n = w.len() as u64;
         (Box::new(w) as Box<dyn ReadAt>, n)
     });
-    Sqlite::apri(Box::new(b), dim, w, &limiti())
+    Sqlite::apri(Box::new(b), dim, w, &limits())
 }
 
 // ---- a whole `.d` folder ----
@@ -151,10 +151,10 @@ pub fn zstd_grezzo(d: &[u8]) -> Vec<u8> {
 
 /// A codec-2 block of 2 scans: scan 0 has TOF 100 and 150, scan 1 has TOF 100.
 pub fn blocco2() -> Vec<u8> {
-    let parole: [u32; 8] = [0, 4, 101, 10, 50, 20, 101, 5];
+    let words: [u32; 8] = [0, 4, 101, 10, 50, 20, 101, 5];
     let mut piani = Vec::new();
     for k in 0..4 {
-        piani.extend(parole.iter().map(|w| (w >> (8 * k)) as u8));
+        piani.extend(words.iter().map(|w| (w >> (8 * k)) as u8));
     }
     let z = zstd_grezzo(&piani);
     let mut b = ((z.len() + 8) as u32).to_le_bytes().to_vec();
@@ -218,14 +218,14 @@ pub fn db_righe(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
     let mut pagine: Vec<Vec<u8>> = Vec::new();
     let mut radici = Vec::new();
     for (_, _, righe) in tabelle {
-        let celle: Vec<Vec<u8>> = righe
+        let cell_list: Vec<Vec<u8>> = righe
             .iter()
             .enumerate()
             .map(|(i, r)| cella_foglia(i as u64 + 1, &record(r)))
             .collect();
         let mut foglie: Vec<(Vec<Vec<u8>>, u64)> = vec![(Vec::new(), 0)];
         let mut usati = 8;
-        for (i, c) in celle.into_iter().enumerate() {
+        for (i, c) in cell_list.into_iter().enumerate() {
             if usati + c.len() + 2 > PAG && !foglie.last().unwrap().0.is_empty() {
                 foglie.push((Vec::new(), 0));
                 usati = 8;
@@ -236,12 +236,12 @@ pub fn db_righe(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
             f.1 = i as u64 + 1;
         }
         // pages are numbered from 2 (page 1 is the schema)
-        let primo = pagine.len() as u32 + 2;
+        let first_one = pagine.len() as u32 + 2;
         for (c, _) in &foglie {
-            pagine.push(pagina(13, 0, c, 0));
+            pagine.push(page(13, 0, c, 0));
         }
         if foglie.len() == 1 {
-            radici.push(primo);
+            radici.push(first_one);
             continue;
         }
         let n = foglie.len() as u32;
@@ -249,7 +249,7 @@ pub fn db_righe(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
             .iter()
             .enumerate()
             .map(|(j, (_, max))| {
-                let mut c = (primo + j as u32).to_be_bytes().to_vec();
+                let mut c = (first_one + j as u32).to_be_bytes().to_vec();
                 c.extend(varint(*max));
                 c
             })
@@ -259,7 +259,7 @@ pub fn db_righe(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
             "table too large for one interior page"
         );
         radici.push(pagine.len() as u32 + 2);
-        pagine.push(pagina(5, 0, &interne, primo + n - 1));
+        pagine.push(page(5, 0, &interne, first_one + n - 1));
     }
     let schema: Vec<Vec<u8>> = tabelle
         .iter()
@@ -278,7 +278,7 @@ pub fn db_righe(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
             )
         })
         .collect();
-    let mut p1 = pagina(13, 100, &schema, 0);
+    let mut p1 = page(13, 100, &schema, 0);
     p1[..16].copy_from_slice(b"SQLite format 3\0");
     p1[16..18].copy_from_slice(&(PAG as u16).to_be_bytes());
     p1[18] = 1;

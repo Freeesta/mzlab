@@ -19,7 +19,7 @@ fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
     let ok = mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Pic,
+            intensities: Np::Pic,
             zlib: true,
         },
         None,

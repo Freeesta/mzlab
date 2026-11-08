@@ -10,11 +10,11 @@ use mzlab_core::metodo_campi::Campo;
 use mzlab_core::mzmlwrite::Header;
 
 /// The most fields kept from a file.
-const CAMPI_MAX: usize = 2000;
+const FIELDS_MAX: usize = 2000;
 
 impl Testata {
     /// The attributes and the instrument variables of `cdf`.
-    pub(super) fn leggi(cdf: &Cdf, dati: &mut dyn ReadAt, limiti: &Limiti) -> Result<Testata> {
+    pub(super) fn leggi(cdf: &Cdf, dati: &mut dyn ReadAt, limits: &Limiti) -> Result<Testata> {
         let mut t = Testata::default();
         for a in &cdf.att {
             let v = match &a.val {
@@ -25,7 +25,7 @@ impl Testata {
                     .collect::<Vec<_>>()
                     .join(" "),
             };
-            if v.is_empty() || t.campi.len() >= CAMPI_MAX {
+            if v.is_empty() || t.campi.len() >= FIELDS_MAX {
                 continue;
             }
             let c = Campo::new("andi:global", &a.nome, &v);
@@ -33,20 +33,20 @@ impl Testata {
             t.campi.push(if identita(&a.nome) { c.id() } else { c });
         }
         t.titolo = cdf.testo("experiment_title").map(str::to_string);
-        t.creato = cdf.testo("experiment_date_time_stamp").map(str::to_string);
-        t.utente = cdf.testo("operator_name").map(str::to_string);
+        t.created = cdf.testo("experiment_date_time_stamp").map(str::to_string);
+        t.user = cdf.testo("operator_name").map(str::to_string);
         t.ionizzazione = cdf.testo("test_ionization_mode").map(str::to_string);
-        t.rivelatore = cdf.testo("test_detector_type").map(str::to_string);
+        t.detector = cdf.testo("test_detector_type").map(str::to_string);
         for v in cdf.var.iter().filter(|v| v.nome.starts_with("instrument_")) {
-            let s = unico(cdf.stringhe(dati, limiti, v)?).unwrap_or_default();
-            if s.is_empty() || t.campi.len() >= CAMPI_MAX {
+            let s = unico(cdf.stringhe(dati, limits, v)?).unwrap_or_default();
+            if s.is_empty() || t.campi.len() >= FIELDS_MAX {
                 continue;
             }
             let c = Campo::new("andi:instrument", &v.nome, &s);
             t.campi.push(if identita(&v.nome) { c.id() } else { c });
             let ch = Some(s);
             match v.nome.as_str() {
-                "instrument_mfr" => t.produttore = ch,
+                "instrument_mfr" => t.maker = ch,
                 "instrument_model" => t.modello = ch,
                 "instrument_serial_no" => t.serie = ch,
                 "instrument_sw_version" => t.software = ch,
@@ -61,7 +61,7 @@ impl Testata {
     }
 
     /// The `metodo/1` document of the file `nome` (`dim` bytes, `sha1` when read).
-    pub(super) fn documento(&self, nome: &str, dim: u64, sha1: Option<String>) -> String {
+    pub(super) fn document(&self, nome: &str, dim: u64, sha1: Option<String>) -> String {
         let src = Source {
             format: "andi-ms",
             files: vec![SrcFile {
@@ -78,12 +78,12 @@ impl Testata {
         ]);
         let doc = obj(vec![
             ("schema", Some(V::s(metodo::SCHEMA))),
-            ("origine", metodo::origin(&src, self.creato.as_deref())),
+            ("origine", metodo::origin(&src, self.created.as_deref())),
             ("campione", obj(vec![("nome", s(&self.titolo))])),
             (
                 "strumento",
                 obj(vec![
-                    ("produttore", s(&self.produttore)),
+                    ("produttore", s(&self.maker)),
                     ("modello", s(&self.modello)),
                     ("serie", s(&self.serie)),
                     ("firmware", s(&self.firmware)),
@@ -95,7 +95,7 @@ impl Testata {
                     ),
                 ]),
             ),
-            ("operatore", obj(vec![("utente", s(&self.utente))])),
+            ("operatore", obj(vec![("utente", s(&self.user))])),
             (
                 "ms",
                 obj(vec![(
@@ -118,7 +118,7 @@ impl Testata {
             software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
             instrument: self.modello.clone().map(|m| ("MS:1000031".to_string(), m)),
             serial: self.serie.clone(),
-            acquired: self.creato.as_deref().and_then(iso),
+            acquired: self.created.as_deref().and_then(iso),
             sources: vec![nome.to_string()],
             source_sha1: sha1.into_iter().collect(),
             ..Header::default()
@@ -130,7 +130,7 @@ impl Testata {
                 "MS:1000008",
                 "ionization type",
             ),
-            ("detector", &self.rivelatore, "MS:1000026", "detector type"),
+            ("detector", &self.detector, "MS:1000026", "detector type"),
         ] {
             if let Some(v) = v {
                 h.components
@@ -146,15 +146,15 @@ impl Testata {
 pub(super) struct Testata {
     pub(super) campi: Vec<Campo>,
     pub(super) titolo: Option<String>,
-    pub(super) creato: Option<String>,
-    pub(super) utente: Option<String>,
-    pub(super) produttore: Option<String>,
+    pub(super) created: Option<String>,
+    pub(super) user: Option<String>,
+    pub(super) maker: Option<String>,
     pub(super) modello: Option<String>,
     pub(super) serie: Option<String>,
     pub(super) software: Option<String>,
     pub(super) firmware: Option<String>,
     pub(super) ionizzazione: Option<String>,
-    pub(super) rivelatore: Option<String>,
+    pub(super) detector: Option<String>,
 }
 
 /// The attribute names that identify a person, a computer or a path of the acquisition.
@@ -186,7 +186,7 @@ fn iso(t: &str) -> Option<String> {
     if d.len() != 14 || !d.bytes().all(|c| c.is_ascii_digit()) {
         return None;
     }
-    let zona = match z.len() {
+    let zone = match z.len() {
         0 => String::new(),
         5 if z[1..].bytes().all(|c| c.is_ascii_digit()) => {
             format!("{}{}:{}", &z[..1], &z[1..3], &z[3..])
@@ -194,7 +194,7 @@ fn iso(t: &str) -> Option<String> {
         _ => return None,
     };
     Some(format!(
-        "{}-{}-{}T{}:{}:{}{zona}",
+        "{}-{}-{}T{}:{}:{}{zone}",
         &d[..4],
         &d[4..6],
         &d[6..8],

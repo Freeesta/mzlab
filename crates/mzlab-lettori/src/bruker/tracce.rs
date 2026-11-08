@@ -1,10 +1,10 @@
 //! The TIC and BPC of a timsTOF run (docs/agenti/bruker.md): the TIC of a survey scan from `Frames`, of the other spectra from their points;
 //! the BPC from the maxima the reader keeps of the spectra already decoded, decoding only the frames not read yet.
-use super::{indice_cattivo, LettoreBruker, UNITA};
+use super::{bad_index, BrukerReader, UNITA};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
-impl LettoreBruker {
+impl BrukerReader {
     pub(super) fn traccia(&mut self, id: &str) -> Result<Chromatogram> {
         let (tic, kind, index) = match id {
             "TIC" => (true, ChromKind::Tic, 0),
@@ -25,13 +25,13 @@ impl LettoreBruker {
             intensity.push(if tic {
                 self.indice[k].tic
             } else {
-                match self.massimi[k] {
+                match self.maxima[k] {
                     Some(m) => m,
                     // the peaks of the spectrum, without the m/z axis the maximum does not need
                     None => {
-                        let d = self.desc.get(k).cloned().ok_or_else(|| indice_cattivo(k))?;
-                        let m = massimo(&self.punti(&d)?.1);
-                        self.massimi[k] = Some(m);
+                        let d = self.desc.get(k).cloned().ok_or_else(|| bad_index(k))?;
+                        let m = maximum(&self.points(&d)?.1);
+                        self.maxima[k] = Some(m);
                         m
                     }
                 }
@@ -51,6 +51,6 @@ impl LettoreBruker {
 }
 
 /// The base peak intensity of a spectrum, over its intensities as 32-bit numbers (those of `Spectrum::intensity`).
-pub(super) fn massimo(y: &[f64]) -> f64 {
+pub(super) fn maximum(y: &[f64]) -> f64 {
     y.iter().fold(0.0f64, |m, &x| m.max(f64::from(x as f32)))
 }

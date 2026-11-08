@@ -21,16 +21,16 @@ pub(super) struct Riga {
 }
 
 /// Whether `b` is variant A: only when its size fits and, if it fits both, when every record carries a known mark and the offsets never go back.
-fn variante_a(b: &[u8]) -> bool {
+fn variant_a(b: &[u8]) -> bool {
     match (b.len().is_multiple_of(A), b.len().is_multiple_of(B)) {
         (true, false) => true,
         (false, _) => false,
         (true, true) => {
-            let mut prima = 0u32;
+            let mut before = 0u32;
             b.chunks_exact(A).all(|r| {
                 let o = u32_at(r, 0);
-                let ok = MARCHI.contains(&r[7]) && o >= prima;
-                prima = o;
+                let ok = MARCHI.contains(&r[7]) && o >= before;
+                before = o;
                 ok
             })
         }
@@ -38,16 +38,16 @@ fn variante_a(b: &[u8]) -> bool {
 }
 
 /// The rows of `b`; `None` when its size is no whole number of rows of either variant (an index cut inside a row).
-pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Option<Vec<Riga>>> {
+pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Riga>>> {
     if b.is_empty() {
         return Ok(Some(Vec::new()));
     }
     if !b.len().is_multiple_of(A) && !b.len().is_multiple_of(B) {
         return Ok(None);
     }
-    let a = variante_a(b);
+    let a = variant_a(b);
     let passo = if a { A } else { B };
-    limiti.voci_ok((b.len() / passo) as u64)?;
+    limits.voci_ok((b.len() / passo) as u64)?;
     Ok(Some(
         b.chunks_exact(passo)
             .map(|r| Riga {
@@ -77,7 +77,7 @@ pub(super) fn larghezza(righe: &[Riga], dat_len: u64) -> Option<u64> {
 }
 
 /// (offset, length) of scan `k` given the record width, inside a DAT of `dat_len` bytes.
-pub(super) fn estensione(
+pub(super) fn extension(
     righe: &[Riga],
     k: usize,
     larghezza: u64,

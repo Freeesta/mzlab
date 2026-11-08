@@ -20,21 +20,21 @@ impl Caso {
 /// A codec-2 block: `per_scan[s]` sorted TOF indices with their intensities.
 pub fn blocco(per_scan: &[Vec<(u32, u32)>]) -> Vec<u8> {
     let ns = per_scan.len();
-    let mut parole: Vec<u32> = vec![0; ns];
+    let mut words: Vec<u32> = vec![0; ns];
     for s in 0..ns.saturating_sub(1) {
-        parole[s + 1] = 2 * per_scan[s].len() as u32;
+        words[s + 1] = 2 * per_scan[s].len() as u32;
     }
     for p in per_scan {
-        let mut prima = u32::MAX;
+        let mut before = u32::MAX;
         for &(t, y) in p {
-            parole.push(t.wrapping_sub(prima));
-            parole.push(y);
-            prima = t;
+            words.push(t.wrapping_sub(before));
+            words.push(y);
+            before = t;
         }
     }
-    let mut piani = Vec::with_capacity(parole.len() * 4);
+    let mut piani = Vec::with_capacity(words.len() * 4);
     for k in 0..4 {
-        piani.extend(parole.iter().map(|w| (w >> (8 * k)) as u8));
+        piani.extend(words.iter().map(|w| (w >> (8 * k)) as u8));
     }
     let z =
         ruzstd::encoding::compress_to_vec(&piani[..], ruzstd::encoding::CompressionLevel::Fastest);
@@ -50,8 +50,8 @@ fn picchi(c: &mut Caso, n: usize, finestre: &[(u32, u32)]) -> (Vec<Vec<(u32, u32
     for i in 0..n {
         let (a, b) = finestre[i % finestre.len()];
         let s = a + (c.n() % u64::from(b - a)) as u32;
-        let linea = (c.n() % 400) as u32 * 1000 + 20_000;
-        let t = linea + (c.n() % 40) as u32;
+        let line = (c.n() % 400) as u32 * 1000 + 20_000;
+        let t = line + (c.n() % 40) as u32;
         let y = 10 + (c.n() % 500) as u32;
         per_scan[s as usize].push((t, y));
     }
@@ -64,7 +64,7 @@ fn picchi(c: &mut Caso, n: usize, finestre: &[(u32, u32)]) -> (Vec<Vec<(u32, u32
 }
 
 /// The `Frames` row of frame `id`.
-fn riga_frame(id: i64, ms1: bool, pos: i64, somma: u64, np: u64) -> Vec<V<'static>> {
+fn riga_frame(id: i64, ms1: bool, pos: i64, summed: u64, np: u64) -> Vec<V<'static>> {
     vec![
         V::N,
         V::R(0.1 * id as f64),
@@ -72,7 +72,7 @@ fn riga_frame(id: i64, ms1: bool, pos: i64, somma: u64, np: u64) -> Vec<V<'stati
         V::I(8),
         V::I(if ms1 { 0 } else { 8 }),
         V::I(pos),
-        V::I(somma as i64),
+        V::I(summed as i64),
         V::I(500),
         V::I(i64::from(SCANSIONI)),
         V::I(np as i64),
@@ -135,10 +135,10 @@ pub fn cartella(cicli: usize, n1: usize, n2: usize) -> (Vec<u8>, Vec<u8>) {
                     .collect()
             };
             let (per_scan, np) = picchi(&mut c, if ms1 { n1 } else { n2 }, &fin);
-            let somma: u64 = per_scan.iter().flatten().map(|x| u64::from(x.1)).sum();
+            let summed: u64 = per_scan.iter().flatten().map(|x| u64::from(x.1)).sum();
             let pos = bin.len() as i64;
             bin.extend(blocco(&per_scan));
-            frames.push(riga_frame(id, ms1, pos, somma, np));
+            frames.push(riga_frame(id, ms1, pos, summed, np));
             if !ms1 {
                 for (p, &(a, b)) in fin.iter().enumerate() {
                     let pid = (ciclo * PASEF_PER_CICLO * PRECURSORI_PER_FRAME

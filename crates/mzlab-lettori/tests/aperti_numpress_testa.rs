@@ -31,13 +31,13 @@ fn fixture(n: usize, mz_piano: bool) -> Vec<u8> {
     let it: Vec<f64> = mz.iter().map(|m| 50.0 + (m * 7.0) % 900.0).collect();
     let scan = vec![Scan {
         mz: mz.clone(),
-        intensita: it,
+        intensities: it,
         livello: 1,
         rt_min: 1.0,
         precursore: None,
     }];
     let np = Cod::Np {
-        intensita: Np::Slof,
+        intensities: Np::Slof,
         zlib: false,
     };
     let completo = String::from_utf8(mzml_di(&scan, np, None)).unwrap();
@@ -69,7 +69,7 @@ fn numpress_solo_nelle_intensita_dopo_un_mz_lungo_si_riconosce() {
 fn uno_spettro_senza_id_conserva_la_finestra() {
     let scan = scansioni();
     let np = Cod::Np {
-        intensita: Np::Slof,
+        intensities: Np::Slof,
         zlib: false,
     };
     let testo = String::from_utf8(mzml_di(&scan, np, None)).unwrap();
@@ -95,19 +95,19 @@ impl ReadAt for Contatore {
 
 fn letti_da_testata(byte: Vec<u8>) -> (u64, u64) {
     let dim = byte.len() as u64;
-    let letti = Rc::new(Cell::new(0));
+    let read_items = Rc::new(Cell::new(0));
     let fs = FileSet {
         membri: vec![Membro {
             nome: "campione.mzML".into(),
             dim,
-            dati: Box::new(Contatore(byte, letti.clone())),
+            dati: Box::new(Contatore(byte, read_items.clone())),
             sha1: None,
         }],
     };
     let mut l = mzlab_lettori::apri(fs, &Limiti::sito()).unwrap();
-    let prima = letti.get();
+    let before = read_items.get();
     l.mzml_header(0).unwrap();
-    (letti.get() - prima, dim)
+    (read_items.get() - before, dim)
 }
 
 #[test]
@@ -135,7 +135,7 @@ fn un_mzml_normale_non_e_catturato_dal_modulo_numpress() {
     x[0].mz = (0..30_000)
         .map(|i| 100.0 + f64::from(i as u32) * 0.011)
         .collect();
-    x[0].intensita = x[0].mz.iter().map(|m| 50.0 + (m * 7.0) % 900.0).collect();
+    x[0].intensities = x[0].mz.iter().map(|m| 50.0 + (m * 7.0) % 900.0).collect();
     let r = mzlab_lettori::apri(
         insieme("campione.mzML", mzml_di(&x, Cod::Piano, None)),
         &Limiti::sito(),

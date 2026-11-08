@@ -87,7 +87,7 @@ fn le_estensioni_dei_lettori_stanno_nella_tabella_della_pagina() {
         .into_iter()
         .filter(|v| v.id != "mzxml-gz")
     {
-        let in_tabella = [
+        let in_table = [
             "agilent", "sciex", "thermo", "aperti", "andi", "waters", "shimadzu", "bruker",
         ]
         .iter()
@@ -96,6 +96,6 @@ fn le_estensioni_dei_lettori_stanno_nella_tabella_della_pagina() {
                 .iter()
                 .all(|e| riga(f).contains(&format!("\"{e}\"")))
         });
-        assert!(in_tabella, "{}", v.id);
+        assert!(in_table, "{}", v.id);
     }
 }

@@ -1,13 +1,13 @@
 //! The `Lettore` of a MassLynx `.raw` folder: the functions of `_FUNCTNS.INF`, the scans of the scanning ones (MS, MSe, DDA) by position in `_FUNCnnn.DAT`, and the SIR/MRM channels,
 //! the TIC, the lock mass and the analog traces as chromatograms (`cromi.rs`). The lock mass function is also in the spectra (level 1, filter "lock mass", as msconvert does); its correction is not applied.
 
-use super::cartella::{errore, testo, Cartella};
-use super::dat::{decodifica, Codifica, Taratura};
+use super::cartella::{errore, testo, Folder};
+use super::dat::{decode, Calibration, Codifica};
 use super::funzioni::{self, Funzione};
 use super::idx::{self, Riga};
 use super::inf::{self, Extern, FunzioneExt, Inlet, Modo, Testata};
-use super::lati::{nomi_composti, Tabella};
-use super::tagli::{elenco_intero, nel_file, tagli, testata_intera};
+use super::lati::{compound_names, Tabella};
+use super::tagli::{nel_file, tagli, whole_header, whole_list};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{
     Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
@@ -17,7 +17,7 @@ use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
 
 const FUNCTNS: &str = "_FUNCTNS.INF";
-const PRIMA_DAT: &str = "_FUNC001.DAT";
+const FIRST_DAT: &str = "_FUNC001.DAT";
 
 pub const VOCE: VoceLettore = VoceLettore {
     id: "waters-raw",
@@ -27,9 +27,9 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
-impl LettoreWaters {
+impl WatersReader {
     /// The spectra: every scan with points of a scanning function (the lock mass included, marked in its filter), in the order of time.
-    fn costruisci_indice(&mut self) {
+    fn build_index(&mut self) {
         let mut v: Vec<(f32, usize, usize)> = Vec::new();
         for (i, f) in self.funs.iter().enumerate() {
             if f.f.mirato() || f.cod.is_none() || f.dat.is_none() {
@@ -94,7 +94,7 @@ impl LettoreWaters {
     }
 }
 
-impl Lettore for LettoreWaters {
+impl Lettore for WatersReader {
     fn format(&self) -> Formato {
         Formato::Altro("waters-raw")
     }
@@ -134,13 +134,13 @@ impl Lettore for LettoreWaters {
             f.cod.ok_or_else(|| errore("record width"))?,
             f.dat.ok_or_else(|| errore("no DAT"))?,
         );
-        let (off, len) = idx::estensione(&f.righe, r, cod.larghezza() as u64, f.dat_len)?;
+        let (off, len) = idx::extension(&f.righe, r, cod.larghezza() as u64, f.dat_len)?;
         let (tar, livello, polarity, rt, precursor) =
             (f.tar.clone(), v.livello, v.polarita, v.rt, v.precursore);
         let id = v.id.clone();
         let filter = v.filtro.clone();
-        let b = self.c.leggi_a(dat, off, len)?;
-        let (mz, intensity) = decodifica(cod, &b, &tar)?;
+        let b = self.c.read_from(dat, off, len)?;
+        let (mz, intensity) = decode(cod, &b, &tar)?;
         Ok(Spectrum {
             index: k,
             id,
@@ -158,18 +158,18 @@ impl Lettore for LettoreWaters {
 
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
         let (f, r, v) = self.voce(c, k)?;
-        let campo = |nome: &str, valore: String, unita: Option<&str>| Campo {
+        let field = |nome: &str, valore: String, unita: Option<&str>| Campo {
             nome: nome.into(),
             valore,
             unita: unita.map(Into::into),
             cv: None,
         };
         let mut out = vec![
-            campo("function", f.f.indice.to_string(), None),
-            campo("scan", (r + 1).to_string(), None),
+            field("function", f.f.indice.to_string(), None),
+            field("scan", (r + 1).to_string(), None),
         ];
         if let Some((a, b)) = f.f.intervallo() {
-            out.push(campo("scan range", format!("{a}-{b}"), Some("m/z")));
+            out.push(field("scan range", format!("{a}-{b}"), Some("m/z")));
         }
         let ce = f
             .sts
@@ -178,27 +178,27 @@ impl Lettore for LettoreWaters {
             .filter(|&x| x > 0.0)
             .or(f.ext.ce);
         if let Some(ce) = ce {
-            out.push(campo("collision energy", ce.to_string(), Some("eV")));
+            out.push(field("collision energy", ce.to_string(), Some("eV")));
         }
         if let Some((a, b)) = f.ext.rampa {
-            out.push(campo(
+            out.push(field(
                 "collision energy ramp",
                 format!("{a}-{b}"),
                 Some("eV"),
             ));
         }
         if f.f.riferimento() {
-            out.push(campo("role", "lock mass reference".into(), None));
+            out.push(field("role", "lock mass reference".into(), None));
         } else if f.livello == 2 && v.precursore.is_none() {
             // MSe: the whole range is fragmented, msconvert's 775 +- 725 m/z "precursor" is only the scan range
-            out.push(campo(
+            out.push(field(
                 "acquisition",
                 "MSe, no precursor selection".into(),
                 None,
             ));
         }
         if let Some(p) = v.precursore {
-            out.push(campo("precursor", p.to_string(), Some("m/z")));
+            out.push(field("precursor", p.to_string(), Some("m/z")));
         }
         if let Some(t) = &f.sts {
             for (n, x) in t
@@ -206,7 +206,7 @@ impl Lettore for LettoreWaters {
                 .into_iter()
                 .filter(|(n, _)| n.contains("ock mass"))
             {
-                out.push(campo(&format!("{n} (not applied)"), x.to_string(), None));
+                out.push(field(&format!("{n} (not applied)"), x.to_string(), None));
             }
         }
         Ok(out)
@@ -214,7 +214,7 @@ impl Lettore for LettoreWaters {
 
     fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         Ok(self
-            .cromatogrammi_tutti(c)?
+            .all_chromatograms(c)?
             .iter()
             .map(|h| VoceCromatogramma {
                 id: h.id.clone(),
@@ -225,7 +225,7 @@ impl Lettore for LettoreWaters {
     }
 
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.cromatogrammi_tutti(c)?
+        self.all_chromatograms(c)?
             .iter()
             .find(|h| h.id == id)
             .cloned()
@@ -243,18 +243,18 @@ impl Lettore for LettoreWaters {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
-        super::doc::documento(self)
+        super::doc::document(self)
     }
 }
 
-impl LettoreWaters {
+impl WatersReader {
     /// The chromatograms of the folder, built once.
-    fn cromatogrammi_tutti(&mut self, c: usize) -> Result<&[Chromatogram]> {
+    fn all_chromatograms(&mut self, c: usize) -> Result<&[Chromatogram]> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         if self.chroms.is_none() {
-            let v = super::cromi::tutte(self)?;
+            let v = super::cromi::all_of_them(self)?;
             self.chroms = Some(v);
         }
         Ok(self.chroms.as_deref().unwrap_or_default())
@@ -285,7 +285,7 @@ pub(super) struct Fun {
     /// Bytes per record, from the index.
     pub(super) larg: Option<u64>,
     pub(super) cod: Option<Codifica>,
-    pub(super) tar: Taratura,
+    pub(super) tar: Calibration,
     pub(super) sts: Option<Tabella>,
     pub(super) ee: Option<Tabella>,
     pub(super) nomi: Vec<String>,
@@ -295,8 +295,8 @@ pub(super) struct Fun {
     pub(super) tagliate: usize,
 }
 
-pub struct LettoreWaters {
-    pub(super) c: Cartella,
+pub struct WatersReader {
+    pub(super) c: Folder,
     pub(super) funs: Vec<Fun>,
     pub(super) testata: Testata,
     pub(super) ext: Extern,
@@ -307,16 +307,16 @@ pub struct LettoreWaters {
     /// For each row of `indice`: (function, row of its IDX).
     mappa: Vec<(usize, usize)>,
     /// What the reader did not decode: (key of the notice, where).
-    pub(super) avvisi: Vec<(String, String)>,
+    pub(super) warnings: Vec<(String, String)>,
     pub(super) sha1: Option<Vec<Option<String>>>,
     chroms: Option<Vec<Chromatogram>>,
 }
 
-fn opzionale(c: &mut Cartella, nome: &str) -> Option<Vec<u8>> {
+fn opzionale(c: &mut Folder, nome: &str) -> Option<Vec<u8>> {
     c.leggi(nome).ok().flatten()
 }
 
-fn livello_di(funs: &[Fun], i: usize) -> u8 {
+fn level_of(funs: &[Fun], i: usize) -> u8 {
     let (f, x) = (&funs[i].f, &funs[i].ext);
     if f.riferimento() {
         return 1;
@@ -344,9 +344,9 @@ fn livello_di(funs: &[Fun], i: usize) -> u8 {
 
 /// A folder that gives nothing (no scan, no channel, no analogue trace) because a function with data has records of a width not read yet is refused with
 /// that function named, rather than opened empty.
-fn variante_ignota(nome: &str, funs: &[Fun], senza_analogiche: bool) -> Result<()> {
+fn unknown_variant(nome: &str, funs: &[Fun], without_analog: bool) -> Result<()> {
     let dati = |f: &Fun| f.dat.is_some() && f.righe.iter().any(|r| r.conta > 0);
-    if !senza_analogiche
+    if !without_analog
         || funs
             .iter()
             .any(|f| dati(f) && (f.f.mirato() || f.cod.is_some()))
@@ -364,38 +364,38 @@ fn variante_ignota(nome: &str, funs: &[Fun], senza_analogiche: bool) -> Result<(
 
 /// Everything of function `f`: its index, the DAT and the side tables.
 fn carica(
-    c: &mut Cartella,
+    c: &mut Folder,
     f: Funzione,
     ext: &Extern,
     tars: &Testata,
-    spesa: &mut u64,
+    spent: &mut u64,
 ) -> Result<(Fun, Option<String>)> {
     let n = f.indice;
     let nome = |e: &str| format!("_FUNC{n:03}.{e}");
     let idx_b = opzionale(c, &nome("IDX"));
     let ha_idx = idx_b.is_some();
     let mut righe = match idx_b {
-        Some(b) => idx::leggi(&b, &c.limiti)?
+        Some(b) => idx::leggi(&b, &c.limits)?
             .ok_or_else(|| nel_file(c, "err.file.indexCut", &nome("IDX")))?,
         None => Vec::new(),
     };
-    *spesa += righe.len() as u64;
-    c.limiti.voci_ok(*spesa)?;
+    *spent += righe.len() as u64;
+    c.limits.voci_ok(*spent)?;
     let dat = c.cerca(&nome("DAT"));
     let dat_len = dat.map_or(0, |i| c.fs.membri[i].dim);
     let larg = idx::larghezza(&righe, dat_len);
     let cod = if f.mirato() {
         None
     } else {
-        larg.and_then(Codifica::da_larghezza)
+        larg.and_then(Codifica::from_width)
     };
     let tagliate = tagli(&mut righe, larg, dat.is_some(), dat_len, ha_idx)
         .ok_or_else(|| nel_file(c, "err.file.indexCut", &nome("IDX")))?;
-    let lim = c.limiti;
+    let lim = c.limits;
     let tab =
-        |c: &mut Cartella, e: &str| opzionale(c, &nome(e)).and_then(|b| Tabella::leggi(&b, &lim));
+        |c: &mut Folder, e: &str| opzionale(c, &nome(e)).and_then(|b| Tabella::leggi(&b, &lim));
     let (sts, ee) = (tab(c, "STS"), tab(c, "EE"));
-    let nomi = opzionale(c, &nome("CMP")).map_or(Vec::new(), |b| nomi_composti(&b, &lim));
+    let nomi = opzionale(c, &nome("CMP")).map_or(Vec::new(), |b| compound_names(&b, &lim));
     let x = ext.funzioni.get(&n).cloned().unwrap_or_default();
     let avviso = if dat.is_none() || righe.is_empty() {
         Some(format!("function {n}: no scans"))
@@ -425,32 +425,32 @@ fn carica(
     Ok((fun, avviso))
 }
 
-fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
-    let mut c = Cartella::new(fs, *limiti);
+fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+    let mut c = Folder::new(fs, *limits);
     // Every run has `_FUNCTNS.INF`: a folder without it is a copy that left files behind.
     let inf = c
         .leggi(FUNCTNS)?
         .ok_or_else(|| nel_file(&c, "err.file.folderIncomplete", FUNCTNS))?;
-    if c.cerca(PRIMA_DAT).is_none() {
+    if c.cerca(FIRST_DAT).is_none() {
         return Err(errore("_FUNC001.DAT is missing"));
     }
     if inf.is_empty() {
         return Err(Error::new("err.file.functionsEmpty").with("name", &c.nome));
     }
-    let lista = funzioni::leggi(&inf, limiti)?
+    let lista = funzioni::leggi(&inf, limits)?
         .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
-    elenco_intero(&c, lista.len())?;
+    whole_list(&c, lista.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
-    testata_intera(&c, header.as_deref())?;
+    whole_header(&c, header.as_deref())?;
     let testata = header.map_or_else(Testata::default, |b| inf::file_header(&testo(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
         .map_or_else(Extern::default, |b| inf::extern_inf(&testo(&b)));
     let inlet = opzionale(&mut c, "_INLET.INF").map(|b| inf::inlet(&testo(&b)));
-    let (mut funs, mut avvisi, mut spesa) = (Vec::new(), Vec::new(), 0u64);
+    let (mut funs, mut warnings, mut spent) = (Vec::new(), Vec::new(), 0u64);
     for f in lista {
-        let (fun, av) = carica(&mut c, f, &ext, &testata, &mut spesa)?;
+        let (fun, av) = carica(&mut c, f, &ext, &testata, &mut spent)?;
         if let Some(a) = av {
-            avvisi.push((
+            warnings.push((
                 "meta.nonDecodificato".to_string(),
                 format!("{}: {a}", c.nome),
             ));
@@ -458,17 +458,17 @@ fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         funs.push(fun);
     }
     for i in 0..funs.len() {
-        funs[i].livello = livello_di(&funs, i);
+        funs[i].livello = level_of(&funs, i);
     }
     if funs.iter().any(|f| f.ext.mobilita) {
-        avvisi.push((
+        warnings.push((
             "meta.nonDecodificato".into(),
             format!("{}: ion mobility", c.nome),
         ));
     }
     let analogiche = super::cromi::analogiche(&mut c);
-    variante_ignota(&c.nome, &funs, analogiche.is_empty())?;
-    let mut l = LettoreWaters {
+    unknown_variant(&c.nome, &funs, analogiche.is_empty())?;
+    let mut l = WatersReader {
         c,
         funs,
         testata,
@@ -478,11 +478,11 @@ fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         campioni: Vec::new(),
         indice: Vec::new(),
         mappa: Vec::new(),
-        avvisi,
+        warnings,
         sha1: None,
         chroms: None,
     };
-    l.costruisci_indice();
+    l.build_index();
     let nome = l
         .testata
         .get("Acquired Name")

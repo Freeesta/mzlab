@@ -38,11 +38,11 @@ fn sito(b: &[u8]) -> String {
             Err(e) => return e.key.to_string(),
         }
     }
-    let (resto, intero) = match g.finish() {
+    let (remainder, intero) = match g.finish() {
         Ok(f) => f,
         Err(e) => return e.key.to_string(),
     };
-    out.extend(resto);
+    out.extend(remainder);
     if !intero && g.written() == 0 {
         return "err.file.zlib".into();
     }

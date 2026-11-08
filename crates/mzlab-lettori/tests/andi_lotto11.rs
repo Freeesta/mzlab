@@ -30,7 +30,7 @@ fn file(
     tic: bool,
 ) -> Vec<u8> {
     let conti: Vec<usize> = spettri.iter().map(Vec::len).collect();
-    let totale: usize = conti.iter().sum();
+    let total: usize = conti.iter().sum();
     let mut inizi = vec![0usize];
     for &n in &conti[..conti.len() - 1] {
         inizi.push(inizi.last().unwrap() + n);
@@ -39,7 +39,7 @@ fn file(
     let mz: Vec<f64> = spettri.iter().flatten().map(|p| p.0).collect();
     let it: Vec<f64> = spettri.iter().flatten().map(|p| p.1).collect();
     let dims = [
-        ("point_number", if registri { 0u32 } else { totale as u32 }),
+        ("point_number", if registri { 0u32 } else { total as u32 }),
         ("scan_number", n as u32),
         ("instrument_number", 1),
         ("_32_byte_string", 32),
@@ -91,7 +91,7 @@ fn file(
         &dims,
         &g,
         &vars,
-        if registri { totale as u32 } else { 0 },
+        if registri { total as u32 } else { 0 },
     )
 }
 
@@ -154,15 +154,15 @@ fn the_tic_summed_from_the_points_is_that_of_the_scans_read() {
         let indice = l.index(0).unwrap().to_vec();
         for (k, v) in indice.iter().enumerate() {
             let sp = l.scan(0, k).unwrap();
-            let somma: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
-            assert_eq!(v.tic, somma, "type {tipo_it} scan {k}");
+            let summed: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
+            assert_eq!(v.tic, summed, "type {tipo_it} scan {k}");
         }
     }
 }
 
 #[test]
 fn a_long_spectrum_crosses_windows_and_takes_few_reads() {
-    let punti = |k: usize| -> Vec<(f64, f64)> {
+    let points = |k: usize| -> Vec<(f64, f64)> {
         (0..40_000)
             .map(|i| {
                 (
@@ -172,7 +172,7 @@ fn a_long_spectrum_crosses_windows_and_takes_few_reads() {
             })
             .collect()
     };
-    let s = vec![punti(0), punti(1)];
+    let s = vec![points(0), points(1)];
     for registri in [true, false] {
         let (mut l, letture) = apri(file(&s, 6, 6, registri, true));
         let aperte = letture.get();
@@ -215,14 +215,14 @@ fn every_type_of_the_arrays_reads_the_same_in_any_layout() {
             let (mut l, _) = apri(file(&s, tm, ti, registri, true));
             for (k, scan) in s.iter().enumerate().take(4) {
                 let sp = l.scan(0, k).unwrap();
-                let mut atteso = scan.clone();
-                atteso.sort_by(|a, b| a.0.total_cmp(&b.0));
+                let mut expected = scan.clone();
+                expected.sort_by(|a, b| a.0.total_cmp(&b.0));
                 assert_eq!(
                     sp.mz,
-                    atteso.iter().map(|p| p.0).collect::<Vec<_>>(),
+                    expected.iter().map(|p| p.0).collect::<Vec<_>>(),
                     "types {tm}/{ti} scan {k}"
                 );
-                for (i, p) in atteso.iter().enumerate() {
+                for (i, p) in expected.iter().enumerate() {
                     assert_eq!(
                         sp.intensity_f64(i),
                         p.1,

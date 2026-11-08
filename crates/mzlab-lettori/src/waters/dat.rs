@@ -7,21 +7,21 @@ use mzlab_core::error::Result;
 
 /// The `Cal Function N` polynomial of `_HEADER.TXT`. `T0` is no correction.
 #[derive(Debug, Clone, Default)]
-pub(super) struct Taratura {
+pub(super) struct Calibration {
     pub(super) coef: Vec<f64>,
     pub(super) t1: bool,
 }
 
-impl Taratura {
+impl Calibration {
     /// The `c0,c1,...,ck,T1` of a `Cal Function` line; `None` when the text is not that.
-    pub(super) fn da_testo(v: &str) -> Option<Taratura> {
-        let mut parti: Vec<&str> = v.split(',').map(str::trim).collect();
-        let tipo = parti.pop()?;
+    pub(super) fn from_text(v: &str) -> Option<Calibration> {
+        let mut parts: Vec<&str> = v.split(',').map(str::trim).collect();
+        let tipo = parts.pop()?;
         if tipo != "T0" && tipo != "T1" {
             return None;
         }
-        let coef: Option<Vec<f64>> = parti.iter().map(|p| p.parse().ok()).collect();
-        Some(Taratura {
+        let coef: Option<Vec<f64>> = parts.iter().map(|p| p.parse().ok()).collect();
+        Some(Calibration {
             coef: coef?,
             t1: tipo == "T1",
         })
@@ -48,7 +48,7 @@ pub(super) enum Codifica {
 }
 
 impl Codifica {
-    pub(super) fn da_larghezza(w: u64) -> Option<Codifica> {
+    pub(super) fn from_width(w: u64) -> Option<Codifica> {
         match w {
             6 => Some(Codifica::A),
             8 => Some(Codifica::D),
@@ -89,7 +89,7 @@ fn mz_a(r: &[u8]) -> Result<f64> {
 }
 
 /// The points of one scan: calibrated m/z and intensity. Records without intensity are left out.
-pub(super) fn decodifica(c: Codifica, b: &[u8], t: &Taratura) -> Result<(Vec<f64>, Vec<f32>)> {
+pub(super) fn decode(c: Codifica, b: &[u8], t: &Calibration) -> Result<(Vec<f64>, Vec<f32>)> {
     let w = c.larghezza();
     if !b.len().is_multiple_of(w) {
         return Err(errore("scan size is no multiple of the record"));

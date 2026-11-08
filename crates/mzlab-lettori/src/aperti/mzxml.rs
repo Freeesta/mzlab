@@ -17,7 +17,7 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
-use super::mzxml_finestra::{somme_picchi, Finestra};
+use super::mzxml_finestra::{peak_sums, Window};
 use super::mzxml_indice::{self, Riga};
 use super::mzxml_precursori::precursori_di;
 use super::mzxml_voce::voce;
@@ -32,7 +32,7 @@ const TESTA: usize = 4096;
 const TESTA_SCANSIONE: u64 = 1 << 20;
 const UNITA: &str = "number of detector counts";
 /// The most `nameValue`/`precursorMz` elements kept for a scan.
-pub(super) const TETTO: usize = 256;
+pub(super) const CAP: usize = 256;
 
 pub const VOCE: VoceLettore = VoceLettore {
     id: "mzxml",
@@ -42,8 +42,8 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
-impl LettoreMzxml {
-    fn uno(&self, c: usize) -> Result<()> {
+impl MzxmlReader {
+    fn one(&self, c: usize) -> Result<()> {
         (c == 0)
             .then_some(())
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))
@@ -64,7 +64,7 @@ impl LettoreMzxml {
             .righe
             .get(k)
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
-        if r.end - r.start > self.limiti.byte {
+        if r.end - r.start > self.limits.byte {
             return Err(Error::memory_budget());
         }
         let b = self.leggi(r.start, r.end - r.start)?;
@@ -78,13 +78,13 @@ impl LettoreMzxml {
     fn spettro(&mut self, k: usize) -> Result<(Spectrum, SpectrumExtra)> {
         let byte = self.byte(k)?;
         let testo = String::from_utf8_lossy(&byte);
-        let t = scan::testa(&testo, TETTO)?;
+        let t = scan::testa(&testo, CAP)?;
         let conteggio = numero(t.scan, "peaksCount").map(|n| n.max(0.0) as usize);
         let p = match t.picchi {
-            Some((g, corpo)) => scan::picchi(g, corpo, conteggio, &self.limiti)?,
+            Some((g, corpo)) => scan::picchi(g, corpo, conteggio, &self.limits)?,
             None => scan::Picchi {
                 mz: Vec::new(),
-                intensita: Vec::new(),
+                intensities: Vec::new(),
                 a_64_bit: false,
             },
         };
@@ -107,29 +107,29 @@ impl LettoreMzxml {
             profile: profilo,
             filter: v.filtro,
             precursor: v.precursore,
-            intensity: p.intensita.iter().map(|&x| x as f32).collect(),
-            wide: p.a_64_bit.then_some(p.intensita),
+            intensity: p.intensities.iter().map(|&x| x as f32).collect(),
+            wide: p.a_64_bit.then_some(p.intensities),
             mz: p.mz,
         };
         Ok((s, extra_di(&t, &self.indice)))
     }
 }
 
-impl LettoreMzxml {
+impl MzxmlReader {
     /// Fills in the TIC (`tic`) or the base peak intensity of the scans whose attributes do not say it, from their peaks; a scan parsed for one
     /// also gets the other, so the second pass finds nothing left to parse.
     fn completa(&mut self, tic: bool) -> Result<()> {
         for k in 0..self.indice.len() {
-            let (manca_tic, manca_bpi) = (!self.tic_noto[k], self.bpi[k].is_none());
-            if !(if tic { manca_tic } else { manca_bpi }) {
+            let (missing_tic, missing_bpi) = (!self.known_tic[k], self.bpi[k].is_none());
+            if !(if tic { missing_tic } else { missing_bpi }) {
                 continue;
             }
-            let (tic_k, bpi_k) = self.somme(k)?;
-            if manca_tic {
+            let (tic_k, bpi_k) = self.sums(k)?;
+            if missing_tic {
                 self.indice[k].tic = tic_k;
-                self.tic_noto[k] = true;
+                self.known_tic[k] = true;
             }
-            if manca_bpi {
+            if missing_bpi {
                 self.bpi[k] = Some(bpi_k);
             }
         }
@@ -137,20 +137,20 @@ impl LettoreMzxml {
     }
 
     /// TIC and base peak intensity of scan `k` from its peaks, without building the spectrum.
-    fn somme(&mut self, k: usize) -> Result<(f64, f64)> {
+    fn sums(&mut self, k: usize) -> Result<(f64, f64)> {
         let byte = self.byte(k)?;
-        somme_picchi(&byte, &self.limiti)
+        peak_sums(&byte, &self.limits)
     }
 
     /// The scans a chromatogram sums: the MS1 ones, or all of them when the file has no MS1.
     fn scelte(&self) -> Vec<usize> {
-        let uno: Vec<usize> = (0..self.indice.len())
+        let one: Vec<usize> = (0..self.indice.len())
             .filter(|&k| self.indice[k].livello == 1)
             .collect();
-        if uno.is_empty() {
+        if one.is_empty() {
             (0..self.indice.len()).collect()
         } else {
-            uno
+            one
         }
     }
 
@@ -192,7 +192,7 @@ impl LettoreMzxml {
     }
 }
 
-impl Lettore for LettoreMzxml {
+impl Lettore for MzxmlReader {
     fn format(&self) -> Formato {
         Formato::Altro("mzxml")
     }
@@ -215,47 +215,47 @@ impl Lettore for LettoreMzxml {
         }
         self.dichiarati
             .saturating_sub(self.indice.len())
-            .max(self.scartate)
+            .max(self.discarded)
     }
 
     fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        self.uno(c)?;
+        self.one(c)?;
         self.completa(true)?;
         Ok(&self.indice)
     }
 
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.uno(c)?;
+        self.one(c)?;
         let (s, e) = self.spettro(k)?;
         *self.ultima.borrow_mut() = Some((k, e));
         Ok(s)
     }
 
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.uno(c)?;
+        self.one(c)?;
         let byte = self.byte(k)?;
         let testo = String::from_utf8_lossy(&byte);
-        let t = scan::testa(&testo, TETTO)?;
+        let t = scan::testa(&testo, CAP)?;
         let mut out = Vec::new();
         let aggiungi = |out: &mut Vec<Campo>, pre: &str, g: Tag| {
-            each(g, &mut |n, v| out.push(campo(&format!("{pre}{n}"), v)))
+            each(g, &mut |n, v| out.push(field(&format!("{pre}{n}"), v)))
         };
         aggiungi(&mut out, "", t.scan);
         for (g, corpo) in &t.precursori {
             aggiungi(&mut out, "precursorMz.", g);
-            out.push(campo("precursorMz", corpo));
+            out.push(field("precursorMz", corpo));
         }
         if let Some((g, _)) = t.picchi {
             aggiungi(&mut out, "peaks.", g);
         }
-        for g in &t.valori {
-            out.push(campo(attr(g, "name"), attr(g, "value")));
+        for g in &t.values {
+            out.push(field(attr(g, "name"), attr(g, "value")));
         }
         Ok(out)
     }
 
     fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        self.uno(c)?;
+        self.one(c)?;
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
@@ -268,20 +268,20 @@ impl Lettore for LettoreMzxml {
     }
 
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.uno(c)?;
+        self.one(c)?;
         self.traccia(id)
     }
 
     fn method(&mut self, c: usize) -> Result<String> {
-        self.uno(c)?;
+        self.one(c)?;
         let sha1 = self.sha1();
-        Ok(testata::documento(&self.cabina, &self.nome, self.dim, sha1))
+        Ok(testata::document(&self.cabina, &self.nome, self.dim, sha1))
     }
 
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
-        self.uno(c)?;
+        self.one(c)?;
         let sha1 = self.sha1();
-        let doc = testata::documento(&self.cabina, &self.nome, self.dim, sha1.clone());
+        let doc = testata::document(&self.cabina, &self.nome, self.dim, sha1.clone());
         Ok(Some(testata::header(&self.cabina, &self.nome, sha1, doc)))
     }
 
@@ -293,13 +293,13 @@ impl Lettore for LettoreMzxml {
     }
 }
 
-impl LettoreMzxml {
+impl MzxmlReader {
     /// The header of the file (before the first scan).
-    fn leggi_testa(&mut self) -> Result<()> {
+    fn read_head(&mut self) -> Result<()> {
         let fine = self.righe[0].start.min(TESTA_SCANSIONE);
         let b = self.leggi(0, fine)?;
         let testo = String::from_utf8_lossy(&b);
-        self.cabina = testata::leggi(&testo, &self.limiti)?;
+        self.cabina = testata::leggi(&testo, &self.limits)?;
         scan::tags(&testo, &mut |g, _| {
             if scan::nome(g) == "msRun" {
                 let n = numero(g, "scanCount").map_or(0, |n| n.max(0.0) as usize);
@@ -311,12 +311,12 @@ impl LettoreMzxml {
     }
 
     /// The index entries, from the attributes at the start of each scan.
-    fn costruisci_indice(&mut self) -> Result<()> {
-        let mut fin = Finestra::default();
+    fn build_index(&mut self) -> Result<()> {
+        let mut fin = Window::default();
         for k in 0..self.righe.len() {
             let r = self.righe[k];
             let mut n = 4096u64;
-            let (noto, bpi, v) = loop {
+            let (known, bpi, v) = loop {
                 let b = fin.leggi(
                     self.dati.as_mut(),
                     self.dim,
@@ -328,7 +328,7 @@ impl LettoreMzxml {
                     || n >= TESTA_SCANSIONE
                 {
                     let testo = String::from_utf8_lossy(b);
-                    let t = scan::testa(&testo, TETTO)?;
+                    let t = scan::testa(&testo, CAP)?;
                     break (
                         numero(t.scan, "totIonCurrent").is_some(),
                         numero(t.scan, "basePeakIntensity"),
@@ -337,7 +337,7 @@ impl LettoreMzxml {
                 }
                 n *= 4;
             };
-            self.tic_noto.push(noto);
+            self.known_tic.push(known);
             self.bpi.push(bpi);
             self.indice.push(v);
         }
@@ -345,20 +345,20 @@ impl LettoreMzxml {
     }
 }
 
-pub struct LettoreMzxml {
+pub struct MzxmlReader {
     dati: Box<dyn ReadAt>,
     dim: u64,
     nome: String,
-    limiti: Limiti,
+    limits: Limiti,
     campioni: Vec<Campione>,
     righe: Vec<Riga>,
     indice: Vec<VoceScansione>,
     /// Whether the file says the TIC / the base peak intensity of each scan (`false`: computed from the peaks when asked).
-    tic_noto: Vec<bool>,
+    known_tic: Vec<bool>,
     bpi: Vec<Option<f64>>,
     /// The scans the file says it has (`scanCount`, the `<offset>`s of its index) and those the pass left out as damaged, to count those a damaged copy lacks.
     dichiarati: usize,
-    scartate: usize,
+    discarded: usize,
     cabina: Cabina,
     sha1: Option<Option<String>>,
     /// The extra of the spectrum `scansione` read last (the writer asks for it right after).
@@ -417,7 +417,7 @@ fn extra_di(t: &Testa, indice: &[VoceScansione]) -> SpectrumExtra {
     e
 }
 
-fn campo(nome: &str, valore: &str) -> Campo {
+fn field(nome: &str, valore: &str) -> Campo {
     Campo {
         nome: nome.into(),
         valore: valore.into(),
@@ -426,7 +426,7 @@ fn campo(nome: &str, valore: &str) -> Campo {
     }
 }
 
-fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
     let i = fs
         .trova(".mzxml")
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
@@ -444,30 +444,30 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
     let mzxml_indice::Passata {
         righe,
-        scartate,
+        discarded,
         indicizzate,
-    } = mzxml_indice::righe(&mut dati, dim, limiti)?;
+    } = mzxml_indice::righe(&mut dati, dim, limits)?;
     if righe.is_empty() {
         return Err(Error::new("err.file.xml").with("detail", "no scans"));
     }
-    let mut l = LettoreMzxml {
+    let mut l = MzxmlReader {
         dati,
         dim,
         nome,
-        limiti: *limiti,
+        limits: *limits,
         campioni: Vec::new(),
         righe,
         indice: Vec::new(),
-        tic_noto: Vec::new(),
+        known_tic: Vec::new(),
         bpi: Vec::new(),
         dichiarati: indicizzate,
-        scartate,
+        discarded,
         cabina: Cabina::default(),
         sha1: None,
         ultima: RefCell::new(None),
     };
-    l.leggi_testa()?;
-    l.costruisci_indice()?;
+    l.read_head()?;
+    l.build_index()?;
     let stem = l
         .nome
         .rsplit_once('.')

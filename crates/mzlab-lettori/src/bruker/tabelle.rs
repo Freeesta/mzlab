@@ -13,36 +13,36 @@ use std::collections::{BTreeMap, HashMap};
 
 impl Frame {
     /// The sum of the counts of the frame as `tdf_bin` holds them (the table's sum, undone from the normalisation to 100 ms).
-    pub fn somma_grezza(&self) -> f64 {
+    pub fn raw_sum(&self) -> f64 {
         if self.accumulo > 0.0 {
-            self.somma * self.accumulo / 100.0
+            self.summed * self.accumulo / 100.0
         } else {
-            self.somma
+            self.summed
         }
     }
 }
 
 impl Dati {
-    pub fn leggi(db: &mut Sqlite, limiti: &Limiti) -> Result<Dati> {
+    pub fn leggi(db: &mut Sqlite, limits: &Limiti) -> Result<Dati> {
         let mut d = Dati::default();
-        righe(db, limiti, "GlobalMetadata", &["Key", "Value"], |r| {
-            if let (Some(k), Some(v)) = (r[0].testo(), r[1].come_testo()) {
+        righe(db, limits, "GlobalMetadata", &["Key", "Value"], |r| {
+            if let (Some(k), Some(v)) = (r[0].testo(), r[1].as_text()) {
                 d.meta.insert(k.to_string(), v);
             }
         })?;
-        d.frames_e_calibrazioni(db, limiti)?;
-        d.msms(db, limiti)?;
-        d.dia_prm(db, limiti)?;
-        d.proprieta(db, limiti)?;
+        d.frames_e_calibrazioni(db, limits)?;
+        d.msms(db, limits)?;
+        d.dia_prm(db, limits)?;
+        d.proprieta(db, limits)?;
         Ok(d)
     }
 
-    fn frames_e_calibrazioni(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
-        self.frames(db, limiti)?;
-        self.calibrazioni(db, limiti)
+    fn frames_e_calibrazioni(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+        self.frames(db, limits)?;
+        self.calibrazioni(db, limits)
     }
 
-    fn frames(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
+    fn frames(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
         let mut fr = Vec::new();
         let c = [
             "Id",
@@ -60,10 +60,10 @@ impl Dati {
             "T2",
             "AccumulationTime",
         ];
-        righe(db, limiti, "Frames", &c, |r| {
+        righe(db, limits, "Frames", &c, |r| {
             fr.push(Frame {
                 id: i(&r[0]),
-                tempo: n(&r[1]),
+                moment: n(&r[1]),
                 polarita: match r[2].testo() {
                     Some("+") => 1,
                     Some("-") => -1,
@@ -72,7 +72,7 @@ impl Dati {
                 modo: i(&r[3]),
                 tipo: i(&r[4]),
                 pos: i(&r[5]),
-                somma: n(&r[6]),
+                summed: n(&r[6]),
                 max: n(&r[7]),
                 scansioni: i(&r[8]).max(0) as u64,
                 picchi: i(&r[9]).max(0) as u64,
@@ -87,7 +87,7 @@ impl Dati {
         Ok(())
     }
 
-    fn calibrazioni(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
+    fn calibrazioni(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
         let mut cal = HashMap::new();
         let c = [
             "Id",
@@ -104,7 +104,7 @@ impl Dati {
             "dC1",
             "dC2",
         ];
-        righe(db, limiti, "MzCalibration", &c, |r| {
+        righe(db, limits, "MzCalibration", &c, |r| {
             let m = MzCal {
                 modello: i(&r[1]),
                 timebase: n(&r[2]),
@@ -122,10 +122,10 @@ impl Dati {
             .unwrap_or_default();
         let cn: Vec<&str> = cols.iter().map(String::as_str).collect();
         let mut tims = Vec::new();
-        righe(db, limiti, "TimsCalibration", &cn, |r| {
+        righe(db, limits, "TimsCalibration", &cn, |r| {
             if tims.is_empty() {
                 for (k, v) in cn.iter().zip(r) {
-                    if let Some(t) = v.come_testo() {
+                    if let Some(t) = v.as_text() {
                         tims.push((k.to_string(), t));
                     }
                 }
@@ -135,7 +135,7 @@ impl Dati {
         Ok(())
     }
 
-    fn msms(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
+    fn msms(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
         let mut prec = HashMap::new();
         let c = [
             "Id",
@@ -144,14 +144,14 @@ impl Dati {
             "Charge",
             "Intensity",
         ];
-        righe(db, limiti, "Precursors", &c, |r| {
+        righe(db, limits, "Precursors", &c, |r| {
             let mz = r[1].f64().or_else(|| r[2].f64());
             prec.insert(
                 i(&r[0]),
                 Precursore {
                     mz,
                     carica: r[3].i64(),
-                    intensita: r[4].f64(),
+                    intensities: r[4].f64(),
                 },
             );
         })?;
@@ -166,15 +166,15 @@ impl Dati {
             "IsolationWidth",
             "CollisionEnergy",
         ];
-        righe(db, limiti, "PasefFrameMsMsInfo", &c, |r| {
+        righe(db, limits, "PasefFrameMsMsInfo", &c, |r| {
             p.push((i(&r[0]), i(&r[1]), finestra(&r[2..])))
         })?;
         self.pasef = p;
         Ok(())
     }
 
-    fn dia_prm(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
-        let mut g: HashMap<i64, Vec<Finestra>> = HashMap::new();
+    fn dia_prm(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+        let mut g: HashMap<i64, Vec<Window>> = HashMap::new();
         let c = [
             "WindowGroup",
             "ScanNumBegin",
@@ -183,14 +183,14 @@ impl Dati {
             "IsolationWidth",
             "CollisionEnergy",
         ];
-        righe(db, limiti, "DiaFrameMsMsWindows", &c, |r| {
+        righe(db, limits, "DiaFrameMsMsWindows", &c, |r| {
             g.entry(i(&r[0])).or_default().push(finestra(&r[1..]))
         })?;
-        self.dia_gruppi = g;
+        self.dia_groups = g;
         let mut df = HashMap::new();
         righe(
             db,
-            limiti,
+            limits,
             "DiaFrameMsMsInfo",
             &["Frame", "WindowGroup"],
             |r| {
@@ -208,7 +208,7 @@ impl Dati {
             "IsolationWidth",
             "CollisionEnergy",
         ];
-        righe(db, limiti, "PrmFrameMsMsInfo", &c, |r| {
+        righe(db, limits, "PrmFrameMsMsInfo", &c, |r| {
             p.push((i(&r[0]), i(&r[1]), finestra(&r[2..])))
         })?;
         self.prm = p;
@@ -220,7 +220,7 @@ impl Dati {
             "PrecursorCharge",
             "CollisionEnergy",
         ];
-        righe(db, limiti, "FrameMsMsInfo", &c, |r| {
+        righe(db, limits, "FrameMsMsInfo", &c, |r| {
             m.insert(
                 i(&r[0]),
                 InfoFrame {
@@ -236,18 +236,18 @@ impl Dati {
     }
 
     /// The properties of the property group of the first frame (the method settings that stay constant), with the names and units the file defines.
-    fn proprieta(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
-        let mut gruppo = None;
-        righe_fino(db, limiti, "Frames", &["PropertyGroup"], |r| {
-            gruppo = r[0].i64();
-            gruppo.is_none()
+    fn proprieta(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+        let mut group = None;
+        rows_until(db, limits, "Frames", &["PropertyGroup"], |r| {
+            group = r[0].i64();
+            group.is_none()
         })?;
-        let Some(gruppo) = gruppo else {
+        let Some(group) = group else {
             return Ok(());
         };
         let mut def: HashMap<i64, (String, String)> = HashMap::new();
         let c = ["Id", "PermanentName", "DisplayName", "DisplayDimension"];
-        righe(db, limiti, "PropertyDefinitions", &c, |r| {
+        righe(db, limits, "PropertyDefinitions", &c, |r| {
             let nome = r[1].testo().unwrap_or_default().to_string();
             let vis = r[2].testo().unwrap_or_default();
             let unita = r[3].testo().unwrap_or_default();
@@ -266,14 +266,14 @@ impl Dati {
         let mut out = Vec::new();
         righe(
             db,
-            limiti,
+            limits,
             "GroupProperties",
             &["PropertyGroup", "Property", "Value"],
             |r| {
-                if i(&r[0]) != gruppo {
+                if i(&r[0]) != group {
                     return;
                 }
-                if let (Some((nome, unita)), Some(v)) = (def.get(&i(&r[1])), r[2].come_testo()) {
+                if let (Some((nome, unita)), Some(v)) = (def.get(&i(&r[1])), r[2].as_text()) {
                     out.push((nome.clone(), v, unita.clone()));
                 }
             },
@@ -287,13 +287,13 @@ impl Dati {
 pub struct Frame {
     pub id: i64,
     /// Seconds.
-    pub tempo: f64,
+    pub moment: f64,
     pub polarita: i8,
     pub modo: i64,
     pub tipo: i64,
     /// Offset of the block in `*_bin`.
     pub pos: i64,
-    pub somma: f64,
+    pub summed: f64,
     pub max: f64,
     pub scansioni: u64,
     pub picchi: u64,
@@ -306,7 +306,7 @@ pub struct Frame {
 
 /// An isolation window with the scans of the mobility ramp it covers.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Finestra {
+pub struct Window {
     pub scan: (u32, u32),
     pub mz: f64,
     pub larghezza: f64,
@@ -317,7 +317,7 @@ pub struct Finestra {
 pub struct Precursore {
     pub mz: Option<f64>,
     pub carica: Option<i64>,
-    pub intensita: Option<f64>,
+    pub intensities: Option<f64>,
 }
 
 /// `FrameMsMsInfo` (isolation of a whole frame: MRM and MALDI MS/MS).
@@ -336,11 +336,11 @@ pub struct Dati {
     pub meta: BTreeMap<String, String>,
     pub precursori: HashMap<i64, Precursore>,
     /// `(frame, precursor, window)` of DDA-PASEF.
-    pub pasef: Vec<(i64, i64, Finestra)>,
-    pub dia_gruppi: HashMap<i64, Vec<Finestra>>,
+    pub pasef: Vec<(i64, i64, Window)>,
+    pub dia_groups: HashMap<i64, Vec<Window>>,
     pub dia_frame: HashMap<i64, i64>,
     /// `(frame, target, window)` of PRM-PASEF.
-    pub prm: Vec<(i64, i64, Finestra)>,
+    pub prm: Vec<(i64, i64, Window)>,
     pub info_frame: HashMap<i64, InfoFrame>,
     /// `(name, value, unit)` of the properties of the first frame's group.
     pub proprieta: Vec<(String, String, String)>,
@@ -349,20 +349,20 @@ pub struct Dati {
 }
 
 /// The rows of `nome` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows. The other columns of a row are skipped, not decoded.
-fn righe<F>(db: &mut Sqlite, limiti: &Limiti, nome: &str, colonne: &[&str], mut f: F) -> Result<()>
+fn righe<F>(db: &mut Sqlite, limits: &Limiti, nome: &str, colonne: &[&str], mut f: F) -> Result<()>
 where
     F: FnMut(&[Val]),
 {
-    righe_fino(db, limiti, nome, colonne, |r| {
+    rows_until(db, limits, nome, colonne, |r| {
         f(r);
         true
     })
 }
 
 /// `righe` that stops at the first row `f` answers `false` for.
-fn righe_fino<F>(
+fn rows_until<F>(
     db: &mut Sqlite,
-    limiti: &Limiti,
+    limits: &Limiti,
     nome: &str,
     colonne: &[&str],
     mut f: F,
@@ -375,9 +375,9 @@ where
     };
     let idx: Vec<Option<usize>> = colonne.iter().map(|c| t.col(c)).collect();
     let mut n = 0u64;
-    db.righe_cols(&t, &idx, |r| {
+    db.rows_cols(&t, &idx, |r| {
         n += 1;
-        limiti.voci_ok(n)?;
+        limits.voci_ok(n)?;
         Ok(f(r))
     })
 }
@@ -394,8 +394,8 @@ fn scan(v: &Val) -> u32 {
     u32::try_from(i(v).max(0)).unwrap_or(u32::MAX)
 }
 
-fn finestra(r: &[Val]) -> Finestra {
-    Finestra {
+fn finestra(r: &[Val]) -> Window {
+    Window {
         scan: (scan(&r[0]), scan(&r[1])),
         mz: n(&r[2]),
         larghezza: n(&r[3]),

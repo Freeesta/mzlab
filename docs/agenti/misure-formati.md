@@ -15,7 +15,7 @@ Tempo di index → detect → align → gapfill su 12 file sintetici (1365 scans
 Come si leggono le colonne: i secondi per passo sono la somma sulle 12 istanze (tempo di CPU, non di muro); «totale» è il muro dell'intera corsa con 4 worker; «index MB/s per core» è MB / index s. (*) Il .cdf è scritto da un codificatore CDF1 di `misura_formati.py` (non è un file di strumento) e non ha l'analizzatore: la ricetta di rilevamento è quella a risoluzione unitaria, quindi detect, align e gapfill NON sono confrontabili con le altre righe; vale solo la colonna index.
 
 ## Il peggiore e perché
-- **Più lento: mzXML con zlib, passo index, 18 MB/s per core** (mzXML raw 31, mzML 45-68). Profilo (callgrind, un file): `LettoreMzxml::completa` gira 3 volte per ogni scansione (da `scansione`, `indice` e `cromatogramma`, 21 % ciascuna del totale) e ogni volta decodifica base64 e inflate dei picchi; in più memset/memcpy 24 %, ricerca di caratteri e conversione UTF-8 12 %, SHA-256 + SHA-1 del file 26 % (in mzML la SHA-1 non c'è più, e senza SHA-NI il costo qui è sovrastimato).
+- **Più lento: mzXML con zlib, passo index, 18 MB/s per core** (mzXML raw 31, mzML 45-68). Profilo (callgrind, un file): `MzxmlReader::completa` gira 3 volte per ogni scansione (da `scansione`, `indice` e `cromatogramma`, 21 % ciascuna del totale) e ogni volta decodifica base64 e inflate dei picchi; in più memset/memcpy 24 %, ricerca di caratteri e conversione UTF-8 12 %, SHA-256 + SHA-1 del file 26 % (in mzML la SHA-1 non c'è più, e senza SHA-NI il costo qui è sovrastimato).
 - Il passo detect è uguale per tutti i formati centroidati (0.44-0.51 s): il formato pesa solo sull'index.
 - Align e gapfill non dipendono dal formato.
 
@@ -30,7 +30,7 @@ Come si leggono le colonne: i secondi per passo sono la somma sulle 12 istanze (
 | tutti gli spettri | 910 | — |
 | mzML (`lettori_mzml::scrivi`, nuova apertura) | 1 610 | 6 040 |
 
-- Profilo (callgrind, 88 frame, tutte le fasi): la decodifica dei frame è il 50 % delle istruzioni e zstd ne è il 58 %; il deflate dell'mzML scritto il 33 %. L'unione per indice TOF (radix a 11 bit da 1024 punti, `spettri::ordina_tof`) e il taglio per scansioni (offset `Picchi::inizio`) pesano meno del 10 %, contro il 41 % di ordinamento e filtro punto per punto che c'erano prima (stesse misure: indice 670 → 423 ms, BPC 335 → 245, tutti gli spettri 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8,97 → 6,04 s, stesso SHA-256).
+- Profilo (callgrind, 88 frame, tutte le fasi): la decodifica dei frame è il 50 % delle istruzioni e zstd ne è il 58 %; il deflate dell'mzML scritto il 33 %. L'unione per indice TOF (radix a 11 bit da 1024 punti, `spettri::sort_tof`) e il taglio per scansioni (offset `Picchi::inizio`) pesano meno del 10 %, contro il 41 % di ordinamento e filtro punto per punto che c'erano prima (stesse misure: indice 670 → 423 ms, BPC 335 → 245, tutti gli spettri 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8,97 → 6,04 s, stesso SHA-256).
 - Il passo indice decodifica ogni frame PASEF una volta per il TIC degli MS2, e la conversione li decodifica di nuovo: il doppio passaggio resta.
 
 ## Non misurato (servono i file del Mac di Federico)

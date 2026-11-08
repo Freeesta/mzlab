@@ -14,7 +14,7 @@ pub(super) struct Funzione {
     pub(super) tipo: u8,
     pub(super) sotto: u8,
     /// Seconds per scan cycle (`+0x002`).
-    pub(super) ciclo_s: f32,
+    pub(super) cycle_s: f32,
     pub(super) tof_depth: u16,
     /// Slots of channels: Q1 (`+0xA0`), Q3 (`+0x120`) and dwell time in seconds (`+0x20`); only the slots with Q1 > 0 are channels.
     pub(super) q1: Vec<f32>,
@@ -49,11 +49,11 @@ impl Funzione {
 }
 
 /// The functions of `bytes` (`apri` refuses an empty file first); `None` when the size is no multiple of the record (a file cut inside a record).
-pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Option<Vec<Funzione>>> {
+pub(super) fn leggi(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Funzione>>> {
     if !b.len().is_multiple_of(RECORD) {
         return Ok(None);
     }
-    let n = limiti.voci_ok((b.len() / RECORD) as u64)?;
+    let n = limits.voci_ok((b.len() / RECORD) as u64)?;
     Ok(Some(
         (0..n)
             .map(|i| {
@@ -65,7 +65,7 @@ pub(super) fn leggi(b: &[u8], limiti: &Limiti) -> Result<Option<Vec<Funzione>>> 
                     indice: i as u32 + 1,
                     tipo: r[0],
                     sotto: r[1],
-                    ciclo_s: f32_at(r, 2),
+                    cycle_s: f32_at(r, 2),
                     tof_depth: u16_at(r, 0x10),
                     q1: slot(0xA0),
                     q3: slot(0x120),

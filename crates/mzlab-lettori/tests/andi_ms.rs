@@ -7,14 +7,14 @@ use comune::andi::*;
 use mzlab_core::lettori_mzml;
 use mzlab_core::mzml::ChromKind;
 
-fn controlla(c: &Corsa) {
+fn check(c: &Corsa) {
     let mut l = apri_andi(andi_ms(c));
     assert_eq!(l.format().id(), "andi-ms");
     assert_eq!(l.samples()[0].scansioni, SCANSIONI);
     let indice = l.index(0).unwrap().to_vec();
     for (k, voce) in indice.iter().enumerate() {
         let s = l.scan(0, k).unwrap();
-        let p = punti(k);
+        let p = points(k);
         assert_eq!(s.mz.len(), p.len(), "scan {k}");
         for (i, (mz, it)) in p.iter().enumerate() {
             // short m/z with a scale factor keeps the precision of the factor, the others are exact (floats within f32)
@@ -44,7 +44,7 @@ fn controlla(c: &Corsa) {
 fn cdf1_e_cdf2_con_ogni_tipo_di_dato() {
     for v2 in [false, true] {
         for (tipo_mz, tipo_it) in [(5, 5), (6, 4), (5, 3), (4, 6)] {
-            controlla(&Corsa {
+            check(&Corsa {
                 v2,
                 tipo_mz,
                 tipo_it,
@@ -56,12 +56,12 @@ fn cdf1_e_cdf2_con_ogni_tipo_di_dato() {
 
 #[test]
 fn mz_corti_con_scale_factor_sim_e_profilo() {
-    controlla(&Corsa {
+    check(&Corsa {
         tipo_mz: 3,
         scala_mz: Some(0.25),
         ..PIATTA
     });
-    controlla(&Corsa {
+    check(&Corsa {
         sim: true,
         profilo: true,
         v2: true,
@@ -92,7 +92,7 @@ fn tic_e_bpc_vengono_dalle_scansioni() {
     let bpc = l.chromatogram(0, "BPC").unwrap();
     assert_eq!((tic.kind, bpc.kind), (ChromKind::Tic, ChromKind::Bpc));
     for k in 0..SCANSIONI {
-        let p = punti(k);
+        let p = points(k);
         assert!((tic.intensity[k] - p.iter().map(|x| x.1).sum::<f64>()).abs() < 1e-9);
         assert!((bpc.intensity[k] - p.iter().map(|x| x.1).fold(0.0, f64::max)).abs() < 1e-9);
         assert!((tic.time[k] - (60.0 + 1.5 * k as f64) / 60.0).abs() < 1e-9);
@@ -108,7 +108,7 @@ fn l_intestazione_porta_le_variabili_della_scansione() {
     assert_eq!(v("mass_range_max").as_deref(), Some("400"));
     assert_eq!(
         v("point_count").as_deref(),
-        Some(punti(2).len().to_string().as_str())
+        Some(points(2).len().to_string().as_str())
     );
     assert!(l.scan_header(0, SCANSIONI).is_err());
 }
@@ -204,8 +204,8 @@ fn l_intestazione_applica_scale_factor_e_add_offset() {
             .iter()
             .find(|c| c.nome == "scan_acquisition_time")
             .unwrap();
-        let atteso = 60.0 + 1.5 * k as f64;
-        assert_eq!(t.valore.parse::<f64>().unwrap(), atteso, "scan {k}");
+        let expected = 60.0 + 1.5 * k as f64;
+        assert_eq!(t.valore.parse::<f64>().unwrap(), expected, "scan {k}");
     }
 }
 
@@ -234,7 +234,7 @@ fn l_indice_e_l_asse_dei_tempi_applicano_scale_factor_e_add_offset() {
 
 #[test]
 fn il_tempo_dei_punti_e_la_ritenzione_analogica_applicano_scale_factor_e_add_offset() {
-    let scala = |v: &mut Vb| {
+    let scale = |v: &mut Vb| {
         v.att.push(("scale_factor".into(), At::N(6, vec![0.5])));
         v.att.push(("add_offset".into(), At::N(6, vec![10.0])));
     };
@@ -249,7 +249,7 @@ fn il_tempo_dei_punti_e_la_ritenzione_analogica_applicano_scale_factor_e_add_off
             .map(|k| (60.0 + 1.5 * k as f64 - 10.0) / 0.5)
             .collect(),
     );
-    scala(&mut tv);
+    scale(&mut tv);
     let vars = vec![
         var("scan_index", &[1], 4, (0..n).map(|k| k as f64).collect()),
         var("point_count", &[1], 4, vec![1.0; n]),
@@ -274,7 +274,7 @@ fn il_tempo_dei_punti_e_la_ritenzione_analogica_applicano_scale_factor_e_add_off
         6,
         (0..m).map(|i| (30.0 + i as f64 - 10.0) / 0.5).collect(),
     );
-    scala(&mut r);
+    scale(&mut r);
     let vars = vec![var("ordinate_values", &[0], 6, vec![1.0; m]), r];
     let g = vec![("detector_name".to_string(), t("FID1A"))];
     let mut l = apri_andi(cdf(false, &dims, &g, &vars, m as u32));

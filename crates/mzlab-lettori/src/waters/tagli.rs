@@ -1,7 +1,7 @@
 //! Checks that a Waters folder is not cut short: an IDX cut at a whole row, a DAT cut inside a scan, a `_FUNCTNS.INF` that lists fewer functions than the folder holds,
 //! a `_HEADER.TXT` emptied or cut inside a calibration line. Each gives one keyed error or the count of scans left out, never data read short.
 
-use super::cartella::Cartella;
+use super::cartella::Folder;
 use super::idx::Riga;
 use mzlab_core::error::{Error, Result};
 
@@ -15,7 +15,7 @@ pub(super) fn tagli(
     dat_len: u64,
     ha_idx: bool,
 ) -> Option<usize> {
-    let coda = match righe.last() {
+    let tail = match righe.last() {
         Some(r) => {
             let l = larg.map_or(0, |w| u64::from(r.conta).saturating_mul(w));
             l > 0 && dat_len.saturating_sub(r.offset.saturating_add(l)) >= l
@@ -24,7 +24,7 @@ pub(super) fn tagli(
     };
     let storte = righe.windows(2).any(|w| w[1].offset < w[0].offset)
         || righe.iter().any(|r| r.offset >> 40 != 0);
-    if coda || (ha_dat && storte) {
+    if tail || (ha_dat && storte) {
         return None;
     }
     let mut tagliate = 0;
@@ -43,7 +43,7 @@ pub(super) fn tagli(
 }
 
 /// A `_FUNCTNS.INF` cut short at a whole record still parses: the data of the next function tell that functions are missing.
-pub(super) fn elenco_intero(c: &Cartella, n: usize) -> Result<()> {
+pub(super) fn whole_list(c: &Folder, n: usize) -> Result<()> {
     let dopo = n + 1;
     if [format!("_FUNC{dopo:03}.IDX"), format!("_FUNC{dopo:03}.DAT")]
         .iter()
@@ -57,7 +57,7 @@ pub(super) fn elenco_intero(c: &Cartella, n: usize) -> Result<()> {
 }
 
 /// The calibration of every function is a line of `_HEADER.TXT`: one emptied, or cut inside a calibration line, would give other m/z unsaid.
-pub(super) fn testata_intera(c: &Cartella, header: Option<&[u8]>) -> Result<()> {
+pub(super) fn whole_header(c: &Folder, header: Option<&[u8]>) -> Result<()> {
     let tronca = |b: &[u8]| {
         b.is_empty()
             || (b.last() != Some(&b'\n')
@@ -72,6 +72,6 @@ pub(super) fn testata_intera(c: &Cartella, header: Option<&[u8]>) -> Result<()> 
 }
 
 /// The error `chiave` about one `file` of the folder, with the folder name.
-pub(super) fn nel_file(c: &Cartella, chiave: &'static str, file: &str) -> Error {
+pub(super) fn nel_file(c: &Folder, chiave: &'static str, file: &str) -> Error {
     Error::new(chiave).with("name", &c.nome).with("file", file)
 }

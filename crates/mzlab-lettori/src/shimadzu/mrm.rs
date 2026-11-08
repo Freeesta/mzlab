@@ -15,7 +15,7 @@ const UNITA: &str = "number of detector counts";
 const RECORD_MAX: u64 = 1 << 24;
 /// Bytes of the head of a decompressed record, and of one point in it.
 const TESTA: usize = 44;
-const PUNTO: usize = 12;
+const POINT: usize = 12;
 
 /// One transition and its points.
 pub(super) struct Serie {
@@ -31,7 +31,7 @@ pub(super) struct Serie {
 pub(super) struct Tracce {
     chiavi: HashMap<(u32, u32, i8), usize>,
     pub serie: Vec<Serie>,
-    punti: usize,
+    points: usize,
 }
 
 impl Tracce {
@@ -39,21 +39,21 @@ impl Tracce {
     pub(super) fn aggiungi(
         &mut self,
         (q1, q3): (u32, u32),
-        scala: f64,
+        scale: f64,
         pol: i8,
         t_min: f64,
         y: f64,
-        limiti: &Limiti,
+        limits: &Limiti,
     ) -> Result<()> {
-        self.punti += 1;
-        limiti.voci_ok(self.punti as u64)?;
+        self.points += 1;
+        limits.voci_ok(self.points as u64)?;
         let j = match self.chiavi.get(&(q1, q3, pol)) {
             Some(&j) => j,
             None => {
-                limiti.voci_ok(self.serie.len() as u64 + 1)?;
+                limits.voci_ok(self.serie.len() as u64 + 1)?;
                 self.serie.push(Serie {
-                    q1: f64::from(q1) / scala,
-                    q3: f64::from(q3) / scala,
+                    q1: f64::from(q1) / scale,
+                    q3: f64::from(q3) / scale,
                     pol,
                     t: Vec::new(),
                     y: Vec::new(),
@@ -120,15 +120,15 @@ pub(super) fn record(raw: &[u8], off: usize) -> Option<Vec<u8>> {
 }
 
 /// The points (Q1 × 100, Q3 × 100, counts) of a decompressed record; `None` when its length is not `head + n × 12`.
-pub(super) fn punti(r: &[u8]) -> Option<Vec<(u32, u32, u64)>> {
+pub(super) fn points(r: &[u8]) -> Option<Vec<(u32, u32, u64)>> {
     let n = usize::try_from(u32_at(r, 40)?).ok()?;
-    if n.checked_mul(PUNTO)?.checked_add(TESTA)? != r.len() {
+    if n.checked_mul(POINT)?.checked_add(TESTA)? != r.len() {
         return None;
     }
     Some(
         (0..n)
             .filter_map(|j| {
-                let p = TESTA + j * PUNTO;
+                let p = TESTA + j * POINT;
                 Some((
                     u32_at(r, p)?,
                     u32_at(r, p + 4)?,
@@ -140,8 +140,8 @@ pub(super) fn punti(r: &[u8]) -> Option<Vec<(u32, u32, u64)>> {
 }
 
 /// The entries of `Spectrum Index` of `TLM Raw Data`: (offset of the record in `MS Raw Data`) of each, 24 bytes per record `(length, scan, offset, 0, a, b)`.
-pub(super) fn offset_tlm(idx: &[u8], n: usize, limiti: &Limiti) -> Result<Vec<usize>> {
-    limiti.voci_ok(n as u64)?;
+pub(super) fn offset_tlm(idx: &[u8], n: usize, limits: &Limiti) -> Result<Vec<usize>> {
+    limits.voci_ok(n as u64)?;
     if idx.len() < 24 * n {
         return Err(Error::new("err.file.shimadzu").with("detail", "Spectrum Index is short"));
     }
@@ -171,7 +171,7 @@ mod tests {
         raw.extend_from_slice(&(z.len() as u32).to_le_bytes());
         raw.extend_from_slice(&z);
         let d = record(&raw, 0).expect("record");
-        assert_eq!(punti(&d), Some(vec![(17610, 15910, 42)]));
+        assert_eq!(points(&d), Some(vec![(17610, 15910, 42)]));
         assert_eq!(polarita_tlm(&d), -1);
         assert!(record(&raw[..raw.len() - 3], 0).is_none());
     }

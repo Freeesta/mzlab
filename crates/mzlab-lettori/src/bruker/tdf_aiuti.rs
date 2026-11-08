@@ -1,6 +1,6 @@
 //! Small helpers of `tdf`: the folder of a member name, the sum of the points of a spectrum, the frames a cut copy of `*_bin` lacks, and the recognition of a folder.
 use super::blocco::Picchi;
-use super::spettri::tratti;
+use super::spettri::stretches;
 use mzlab_core::error::Error;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{Fiducia, FileSet, Membro};
@@ -12,42 +12,42 @@ pub(super) fn cartella(nome: &str) -> Option<&str> {
 
 /// For each frame offset in `pos`, whether its block does not end inside the `*_bin` of `dim` bytes (a copy cut short). Blocks follow one another, so a block ends
 /// where a later offset starts: only the last block that starts inside the file has its header read (`tsf`: two sizes after it; TDF: the length counts the header).
-pub(super) fn tagliati(pos: &[i64], bin: &mut dyn ReadAt, dim: u64, tsf: bool) -> Vec<bool> {
-    let dentro = |p: i64| {
+pub(super) fn cut_ones(pos: &[i64], bin: &mut dyn ReadAt, dim: u64, tsf: bool) -> Vec<bool> {
+    let inside = |p: i64| {
         u64::try_from(p)
             .ok()
             .filter(|&p| p.checked_add(8).is_some_and(|e| e <= dim))
     };
-    let Some(ultimo) = pos.iter().filter_map(|&p| dentro(p)).max() else {
+    let Some(last_one) = pos.iter().filter_map(|&p| inside(p)).max() else {
         return vec![true; pos.len()];
     };
     let mut h = [0u8; 8];
     // a header that cannot be read is left to the spectrum, which says why
-    let ultimo_tagliato = bin.read_at(ultimo, &mut h).is_ok() && {
+    let last_cut = bin.read_at(last_one, &mut h).is_ok() && {
         let a = u64::from(u32::from_le_bytes([h[0], h[1], h[2], h[3]]));
         let b = u64::from(u32::from_le_bytes([h[4], h[5], h[6], h[7]]));
         let fine = if tsf {
-            ultimo + 8 + a + b
+            last_one + 8 + a + b
         } else {
-            ultimo + a.max(8)
+            last_one + a.max(8)
         };
         fine > dim
     };
     pos.iter()
-        .map(|&p| match dentro(p) {
+        .map(|&p| match inside(p) {
             None => true,
-            Some(p) => p == ultimo && ultimo_tagliato,
+            Some(p) => p == last_one && last_cut,
         })
         .collect()
 }
 
-pub(super) fn indice_cattivo(k: impl std::fmt::Display) -> Error {
+pub(super) fn bad_index(k: impl std::fmt::Display) -> Error {
     Error::new("error.badIndex").with("k", k)
 }
 
 /// The sum of the intensities of the points of `p` in the scan ranges `scan`: the counts are whole numbers, so the order of the sum does not matter.
-pub(super) fn somma_scan(p: &Picchi, scan: &[(u32, u32)]) -> f64 {
-    let t: u64 = tratti(p, scan)
+pub(super) fn sum_scan(p: &Picchi, scan: &[(u32, u32)]) -> f64 {
+    let t: u64 = stretches(p, scan)
         .into_iter()
         .flat_map(|r| p.int[r].iter().map(|&y| u64::from(y)))
         .sum();
@@ -79,7 +79,7 @@ pub(super) fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
 }
 
 /// The error of a folder that lacks `file` (`analysis.tsf`, `analysis.tdf_bin`, ...); `nome`: a member of the folder.
-pub(super) fn manca(nome: &str, file: &str) -> Error {
+pub(super) fn absent(nome: &str, file: &str) -> Error {
     Error::new("err.file.brukerNoBin")
         .with("name", cartella(nome).unwrap_or(nome))
         .with("file", file)

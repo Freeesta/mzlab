@@ -71,10 +71,10 @@ fn voci<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Voce>, Vec<&'a Vec<u8>>) {
     let mut dati: Vec<&Vec<u8>> = Vec::new();
     for (p, b) in flussi {
         let mut padre = 0;
-        let parti: Vec<&str> = p.split('/').collect();
-        for (i, n) in parti.iter().enumerate() {
-            let ultimo = i + 1 == parti.len();
-            let t = if ultimo { 2 } else { 1 };
+        let parts: Vec<&str> = p.split('/').collect();
+        for (i, n) in parts.iter().enumerate() {
+            let last_one = i + 1 == parts.len();
+            let t = if last_one { 2 } else { 1 };
             let es =
                 (1..v.len()).find(|&j| v[j].padre == padre && v[j].nome == *n && v[j].tipo == t);
             padre = match es {
@@ -89,7 +89,7 @@ fn voci<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Voce>, Vec<&'a Vec<u8>>) {
                         figlio: FREE,
                         destro: FREE,
                     });
-                    if ultimo {
+                    if last_one {
                         dati.push(b);
                     }
                     v.len() - 1
@@ -104,12 +104,12 @@ fn voci<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Voce>, Vec<&'a Vec<u8>>) {
 pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
     let (mut v, dati) = voci(flussi);
     // siblings: the first child of a parent is its `figlio`, each next one the `destro` of the one before
-    let mut ultimo: std::collections::HashMap<usize, usize> = Default::default();
+    let mut last_one: std::collections::HashMap<usize, usize> = Default::default();
     for j in 1..v.len() {
         let p = v[j].padre;
-        match ultimo.insert(p, j) {
+        match last_one.insert(p, j) {
             None => v[p].figlio = j as u32,
-            Some(prima) => v[prima].destro = j as u32,
+            Some(before) => v[before].destro = j as u32,
         }
     }
     let nd = v.len().div_ceil(4);

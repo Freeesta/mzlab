@@ -18,7 +18,7 @@ fn piu_valori_di_quelli_dichiarati_e_un_errore() {
     let mut b = String::from_utf8(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: false,
         },
         None,
@@ -34,7 +34,7 @@ fn uno_zlib_che_si_gonfia_oltre_il_dichiarato_e_un_errore() {
     let mut b = String::from_utf8(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: true,
         },
         None,
@@ -54,7 +54,7 @@ fn base64_rotta_e_dati_troncati_sono_errori_con_chiave() {
     let ok = String::from_utf8(mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: false,
         },
         None,
@@ -75,7 +75,7 @@ fn un_file_troncato_non_manda_in_panico() {
     let ok = mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Pic,
+            intensities: Np::Pic,
             zlib: true,
         },
         None,
@@ -88,7 +88,7 @@ fn un_file_troncato_non_manda_in_panico() {
 #[test]
 fn righe_oltre_il_limite_sono_un_errore() {
     let scan = scansioni();
-    let limiti = Limiti {
+    let limits = Limiti {
         voci: 2,
         ..Limiti::sito()
     };
@@ -98,13 +98,13 @@ fn righe_oltre_il_limite_sono_un_errore() {
             mzml_di(
                 &scan,
                 Cod::Np {
-                    intensita: Np::Pic,
+                    intensities: Np::Pic,
                     zlib: false,
                 },
                 None,
             ),
         ),
-        &limiti,
+        &limits,
     );
     assert_eq!(r.err().map(|e| e.key), Some("error.memoryBudget"));
 }
@@ -135,10 +135,10 @@ fn openms_lineare_e_slof_hanno_il_tic_dell_intestazione() {
         assert!(s.intensity.iter().all(|x| *x >= 0.0));
         let tic = l.index(0).unwrap()[k].tic;
         if tic > 0.0 {
-            let somma: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+            let summed: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
             assert!(
-                (somma - tic).abs() <= tic * 1e-3,
-                "scan {k}: sum {somma} TIC {tic}"
+                (summed - tic).abs() <= tic * 1e-3,
+                "scan {k}: sum {summed} TIC {tic}"
             );
         }
     }

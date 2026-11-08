@@ -62,7 +62,7 @@ fn un_mzml_numpress_vero_e_i_suoi_troncamenti_ritornano() {
     let file = mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: false,
         },
         None,
