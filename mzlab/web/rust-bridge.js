@@ -81,8 +81,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (s.gen !== gen) return;                                              // answered for a worker that was replaced since: the new open owns the slot
       if (r.dead || r.error) {
         s.bad = true;
-        let key = ""; try { key = JSON.parse(r.error).error_key; } catch (_) { /* not an engine error */ }
-        if (key === "error.memoryBudget") notify("error.memoryBudget");           // this file is not opened (the page tells the user)
+        let e = {}; try { e = JSON.parse(r.error) || {}; } catch (_) { /* not an engine error */ }
+        if (e.error_key === "error.memoryBudget") notify("error.memoryBudget", e.params);   // this file is not opened: the notice names the phase, the estimate and the budget
         return;
       }
       s.info = JSON.parse(r.info);

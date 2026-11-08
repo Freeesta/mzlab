@@ -1,6 +1,6 @@
 // Checks the fallbacks of mzlab/web/compat.js on fake globals (what Safari/iPadOS lacks: AbortSignal.any, createWritable, a refused clipboard, the accept
-// list of the iPad file picker, a copy handed over inside the click, the gesture* pinch of a Mac trackpad, the canvas area cap); prints one JSON object of named checks. See tests/test_compat.py.
-import { installa, anySignal, freeAccept, copyNow, pinchWheel, canvasScale, MAX_CANVAS_PX } from "../mzlab/web/compat.js";
+// list of the iPad file picker, a copy handed over inside the click, the gesture* pinch of a Mac trackpad, the canvas area cap, who gets the Safari notice); prints one JSON object of named checks. See tests/test_compat.py.
+import { installa, anySignal, freeAccept, copyNow, pinchWheel, canvasScale, MAX_CANVAS_PX, safariKind } from "../mzlab/web/compat.js";
 
 const out = {};
 const check = async (name, fn) => { try { out[name] = (await fn()) === true ? true : "false"; } catch (e) { out[name] = "threw: " + (e && e.message || e); } };
@@ -180,6 +180,12 @@ await check("pinch: left alone outside a zoomable surface, when a view handles i
 await check("canvas: a scale that would pass Safari's 16.7 Mpx cap is lowered, a small one kept", () => {
   const big = canvasScale(1600, 1400, 3), w = Math.round(1600 * big), h = Math.round(1400 * big);
   return MAX_CANVAS_PX === 16777216 && big < 3 && w * h <= MAX_CANVAS_PX && w * h > 0.99 * MAX_CANVAS_PX && canvasScale(400, 300, 8) === 8 && canvasScale(0, 10, 2) === 2;
+});
+
+await check("Safari notice: mac, ipad (touch-only or several touch points), none elsewhere (other engine, desktop app, phone layout, frame)", () => {
+  const g = (o = {}, coarse = false) => { const w = { GestureEvent: function () {}, navigator: { maxTouchPoints: 0 }, matchMedia: () => ({ matches: coarse }), ...o }; if (!("parent" in o)) w.parent = w; return w; };
+  return safariKind(g()) === "mac" && safariKind(g({}, true)) === "ipad" && safariKind(g({ navigator: { maxTouchPoints: 5 } })) === "ipad" &&
+    [g({ GestureEvent: undefined }), g({ MZLAB_DESKTOP: true }), g({ MZLAB_PHONE: true }), g({ parent: {} })].every(x => safariKind(x) === "");
 });
 
 process.stdout.write(JSON.stringify(out));

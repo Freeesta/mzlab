@@ -141,7 +141,7 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
                by mass error are scored, then sorted); without them the order is the mass error. The terms are always listed, never a verdict.
     iso_min_rel, iso_noise_rel  % of the base peak below which a theoretical / an observed isotope peak is not required / ignored (isotope_score); frag_ppm
                tolerance of the fragment match (default: the mass tolerance, at least 5 ppm); norm  how the observed intensities are scaled to the theory (isotope_score).
-    Returns {mz, charge, tol, unit, n_candidates, results: [...]}; each result: formula (ion), neutral, mz_calc, delta_mda, delta_ppm, rdb, rules_ok,
+    Returns {mz, charge, tol, unit, n_candidates, scored (only when the pool left candidates out), results: [...]}; each result: formula (ion), neutral, mz_calc, delta_mda, delta_ppm, rdb, rules_ok,
     rules_failed, iso {m1, m2, err1, err2, ok, score, peaks, extra, ...}, frag {explained, n_explained, n_peaks}, score {mass, iso, frag, total}.
     """
     if not (mz > 0):
@@ -274,7 +274,12 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
                 sc["total"] = round(combined(sc["mass"], sc["iso"], fr, weights), 4)
             out.sort(key=lambda r: -r["score"]["total"])
         out = out[:max_results]
-    return {"mz": mz, "charge": z, "tol": tol, "unit": unit, "ion": ion, "n_candidates": int(len(idx)), "results": out}
+    res = {"mz": mz, "charge": z, "tol": tol, "unit": unit, "ion": ion, "n_candidates": int(len(idx))}
+    take = max(max_results, pool)
+    if scored and len(idx) > take:                    # the pool left some out: say how many were scored
+        res["scored"] = take
+    res["results"] = out
+    return res
 
 
 def _rules_matrix(form: np.ndarray, bases: list[str], r_db: np.ndarray, half_ok: bool = False) -> dict[str, np.ndarray]:

@@ -25,7 +25,7 @@ const TOUCH = (() => {
   const kind = e => { const t = e.pointerType === "mouse" ? "ptr-mouse" : e.pointerType === "touch" || e.pointerType === "pen" ? "ptr-touch" : null; if (!t) return; const c = document.documentElement.classList; if (!c.contains(t)) { c.add(t); c.remove(t === "ptr-mouse" ? "ptr-touch" : "ptr-mouse"); } };
   addEventListener("pointerdown", kind, true); addEventListener("pointermove", kind, true);
 
-  function touchMode() { if (seen) return; seen = true; document.documentElement.classList.add("touch"); }
+  function touchMode() { if (seen) return; seen = true; document.documentElement.classList.add("touch"); carica("m:tocco-controlli.js").catch(() => {}); }   // double taps outside the graphs
 
   // ============================================================ the engine: one per document (the page, the editor)
   // hooks.surface(target) -> { el, ctx } | null   the element that takes the mouse events, and what the page knows about it
