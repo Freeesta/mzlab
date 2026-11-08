@@ -164,5 +164,11 @@ fn a_dataset_hashed_before_its_index_is_not_read_again_for_its_prints_and_gives_
     assert_eq!(crate::flow_set::known_prints(&src).unwrap(), Some(read));
     crate::build_index_of(&src, "w.wiff@2", &b, budget).unwrap();
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
+    // a member that changed since `digest` (another size) is read again, never taken from the stale hash
+    let scan = d.join("w.wiff.scan");
+    let mut bytes = std::fs::read(&scan).unwrap();
+    bytes.push(0);
+    std::fs::write(&scan, bytes).unwrap();
+    assert!(crate::flow_set::known_prints(&src).unwrap().is_none());
     let _ = std::fs::remove_dir_all(&d);
 }
