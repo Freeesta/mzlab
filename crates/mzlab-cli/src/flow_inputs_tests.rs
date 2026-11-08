@@ -41,6 +41,16 @@ fn results_keep_the_order_of_the_items() {
 }
 
 #[test]
+fn one_item_is_read_in_place_without_a_thread() {
+    // the path of WASI (`flow.wasm`), where spawning a thread fails: the caller's own thread does the work
+    let me = std::thread::current().id();
+    assert_eq!(
+        map_par(&[7u8], |x| (*x, std::thread::current().id())),
+        [(7, me)]
+    );
+}
+
+#[test]
 fn every_input_gets_the_hash_of_its_own_file() {
     let d = files("hash", 7);
     let names: Vec<String> = (0..7).map(|k| format!("f{k}.txt")).collect();
