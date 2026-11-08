@@ -7,9 +7,14 @@ use mzlab_core::json::{self, round, Out, Value};
 use mzlab_lib::flowmatch::{query_id, read_spectra, Named};
 
 use crate::attributio::ms2_engine::rearrange::attribute;
-use crate::attributio::review::explain::{explain, fmt_formula, parse_formula, prep_ms2};
+use crate::attributio::review::explain::{
+    explain, fmt_formula, match_adduct, parse_formula, prep_ms2, too_many_subformulas, Formula,
+};
 use crate::attributio::review::settings::ReviewSettings;
 use crate::flow_ms2::num;
+
+/// The warning of a candidate whose ion has more sub-formulas than `max_subformulas`: kept, with no fragment explained.
+pub const WARN_SUB: &str = "warn.flow.formula.subformulas";
 
 /// One candidate formula of a `formulas/1` file with the feature it belongs to.
 struct Cand {
@@ -50,8 +55,28 @@ struct Explained {
     frac: f64,
     decoy: Option<f64>,
     score: f64,
+    too_many: bool,
     // m/z and intensity of the peak, formula, theoretical m/z, ppm, loss, hydrogens moved
     frags: Vec<(f64, f64, String, f64, f64, String, i32)>,
+}
+
+/// A candidate whose ion fits but whose sub-formula grid is over `max_subformulas`: kept with no fragment and the warning, as `subformula`
+/// does, never dropped in silence; any other reason `attribute` gives nothing stays a candidate that is not listed.
+fn over_the_limit(fd: &Formula, prec: f64, pol: &str, s: &ReviewSettings) -> Option<Explained> {
+    let am = match_adduct(fd, prec, pol)?;
+    if am.ppm.abs() > s.ppm_ion || !too_many_subformulas(&am.ion, s.max_subformulas) {
+        return None;
+    }
+    Some(Explained {
+        adduct: am.adduct,
+        ion: fmt_formula(&am.ion),
+        ppm: am.ppm,
+        frac: 0.0,
+        decoy: None,
+        score: 0.0,
+        too_many: true,
+        frags: vec![],
+    })
 }
 
 fn run_candidate(
@@ -64,9 +89,10 @@ fn run_candidate(
 ) -> Option<Explained> {
     let fd = parse_formula(&c.formula);
     if alg == "h_rearrangement" {
-        let a = attribute(&fd, prec, pol, peaks, s)?;
-        let ppm =
-            crate::attributio::review::explain::match_adduct(&fd, prec, pol).map_or(0.0, |m| m.ppm);
+        let Some(a) = attribute(&fd, prec, pol, peaks, s) else {
+            return over_the_limit(&fd, prec, pol, s);
+        };
+        let ppm = match_adduct(&fd, prec, pol).map_or(0.0, |m| m.ppm);
         let frags = a
             .hits
             .iter()
@@ -92,6 +118,7 @@ fn run_candidate(
             frac: a.frac_explained,
             decoy: None,
             score: a.score,
+            too_many: false,
             frags,
         });
     }
@@ -125,6 +152,7 @@ fn run_candidate(
         frac: e.frac_expl,
         decoy: Some(e.decoy_frac),
         score: e.frac_expl,
+        too_many: e.too_many,
         frags,
     })
 }
@@ -147,8 +175,11 @@ fn write_explained(o: &mut Out, c: &Cand, x: &Explained) {
     o.raw(",\"decoy_frac\":")
         .opt(x.decoy.map(|d| round(d, 4)))
         .raw(",\"score\":")
-        .num(round(x.score, 4))
-        .raw(",\"fragments\":[");
+        .num(round(x.score, 4));
+    if x.too_many {
+        o.raw(",\"warning\":").str(WARN_SUB);
+    }
+    o.raw(",\"fragments\":[");
     for (k, f) in x.frags.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" })
             .raw("{\"mz\":")

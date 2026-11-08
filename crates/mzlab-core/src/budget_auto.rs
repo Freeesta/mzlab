@@ -210,6 +210,20 @@ pub fn share_mb(auto_mb: f64, workers: usize) -> f64 {
         .max(auto_mb.min(128.0))
 }
 
+/// The memory in MB one file conversion is given: it reads one scan at a time, so its peak (about 50 MB) does not grow with the file; the rest is margin.
+pub const CONVERT_JOB_MB: f64 = 128.0;
+
+/// The conversions that run at once by default (`mzlab-cli convert` and the queue of the desktop app): the cores but one, 1 to 4.
+pub fn convert_wanted() -> usize {
+    std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4))
+}
+
+/// `wanted` conversions at once, or fewer when the native budget `auto_mb` does not give each `CONVERT_JOB_MB`; never 0. The bytes written do not depend on it.
+pub fn convert_workers(auto_mb: f64, wanted: usize) -> usize {
+    let fit = (auto_mb / CONVERT_JOB_MB).floor().max(1.0) as usize;
+    wanted.max(1).min(fit)
+}
+
 /// The automatic budget in MB of a native process (desktop app, `mzlab-cli`) on this computer.
 pub fn native_auto_mb() -> f64 {
     let cores = std::thread::available_parallelism().map_or(0, |n| n.get() as u32);
