@@ -7,7 +7,6 @@ use crate::metodo::V;
 pub use crate::metodo_campi::{Campo, Ident};
 use opentfraw::generic_data::GenericValue;
 use opentfraw::RawFileReader;
-use std::io::{Read, Seek};
 
 fn shown(v: &GenericValue) -> String {
     match v {
@@ -62,43 +61,50 @@ fn numeric_step(c: &mut Col, v: &GenericValue) {
     }
 }
 
-/// The 62 fields of the scan trailer: the value when it is the same in every scan, else `min..max` (numbers) or the number of distinct values. One pass over the
-/// records of the file (the trailer is not kept in memory), a chunk at a time.
-fn trailer<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Campo> {
-    use opentfraw::GenericType as T;
-    const FROM: &str = "thermo-raw:ScanParameters";
-    let fields = &raw.scan_parameters_header.fields;
-    let mut cols: Vec<Col> = fields
-        .iter()
-        .map(|d| Col {
-            first: None,
-            all_empty: true,
-            same: true,
-            numeric: matches!(
-                d.field_type,
-                T::Int8
-                    | T::UInt8
-                    | T::Int16
-                    | T::UInt16
-                    | T::Int32
-                    | T::UInt32
-                    | T::Float32
-                    | T::Float64
-            ),
-            lo: f64::INFINITY,
-            hi: f64::NEG_INFINITY,
-            distinct: Default::default(),
-            first_bits: 0,
-        })
-        .collect();
-    raw.scan_parameters.for_each(source, &mut |_, rec| {
-        for (i, c) in cols.iter_mut().enumerate() {
-            let Some(v) = rec.value(i) else { continue };
+/// The 62 fields of the scan trailer: the value when it is the same in every scan, else `min..max` (numbers) or the number of distinct values. Fed one record
+/// at a time by the single pass over the trailer of `metodo_raw` (the trailer is not kept in memory), which also feeds the series.
+pub(super) struct Trailer(Vec<Col>);
+
+impl Trailer {
+    pub(super) fn new(raw: &RawFileReader) -> Trailer {
+        use opentfraw::GenericType as T;
+        let fields = &raw.scan_parameters_header.fields;
+        Trailer(
+            fields
+                .iter()
+                .map(|d| Col {
+                    first: None,
+                    all_empty: true,
+                    same: true,
+                    numeric: matches!(
+                        d.field_type,
+                        T::Int8
+                            | T::UInt8
+                            | T::Int16
+                            | T::UInt16
+                            | T::Int32
+                            | T::UInt32
+                            | T::Float32
+                            | T::Float64
+                    ),
+                    lo: f64::INFINITY,
+                    hi: f64::NEG_INFINITY,
+                    distinct: Default::default(),
+                    first_bits: 0,
+                })
+                .collect(),
+        )
+    }
+
+    /// One record: `vals[i]` is field `i` decoded (`None` when it cannot be).
+    pub(super) fn step(&mut self, vals: &[Option<GenericValue>]) {
+        for (c, v) in self.0.iter_mut().zip(vals) {
+            let Some(v) = v else { continue };
             if c.numeric {
-                numeric_step(c, &v);
+                numeric_step(c, v);
                 continue;
             }
-            let t = shown(&v);
+            let t = shown(v);
             c.all_empty &= t.is_empty();
             match &c.first {
                 None => c.first = Some(t.clone()),
@@ -106,27 +112,31 @@ fn trailer<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Campo> {
             }
             c.distinct.insert(t);
         }
-    });
-    let mut out = Vec::new();
-    for (d, c) in fields.iter().zip(cols) {
-        let label = d.label.trim().trim_end_matches(':').trim();
-        let Some(first) = c.first else { continue };
-        if label.is_empty() || c.all_empty {
-            continue;
-        }
-        let (value, key) = if c.same {
-            (first, label.to_string())
-        } else if c.numeric {
-            (format!("{}..{}", c.lo, c.hi), format!("{label} (min..max)"))
-        } else {
-            (
-                c.distinct.len().to_string(),
-                format!("{label} (distinct values)"),
-            )
-        };
-        out.push(Campo::new(FROM, &key, value));
     }
-    out
+
+    pub(super) fn finish(self, raw: &RawFileReader) -> Vec<Campo> {
+        const FROM: &str = "thermo-raw:ScanParameters";
+        let mut out = Vec::new();
+        for (d, c) in raw.scan_parameters_header.fields.iter().zip(self.0) {
+            let label = d.label.trim().trim_end_matches(':').trim();
+            let Some(first) = c.first else { continue };
+            if label.is_empty() || c.all_empty {
+                continue;
+            }
+            let (value, key) = if c.same {
+                (first, label.to_string())
+            } else if c.numeric {
+                (format!("{}..{}", c.lo, c.hi), format!("{label} (min..max)"))
+            } else {
+                (
+                    c.distinct.len().to_string(),
+                    format!("{label} (distinct values)"),
+                )
+            };
+            out.push(Campo::new(FROM, &key, value));
+        }
+        out
+    }
 }
 
 /// Seconds since the epoch of a clock reading without zone → `YYYY-MM-DDTHH:MM:SS`.
@@ -299,9 +309,9 @@ fn script_map(key: &str) -> Option<&'static str> {
 }
 
 /// All the fields of the file, in a stable order (origin, key); the ones that name a person or a computer carry `identita`.
-pub fn fields<R: Read + Seek>(
+pub fn fields(
     raw: &RawFileReader,
-    source: &mut R,
+    trailer: Vec<Campo>,
     traces: &[opentfraw::AnalogTrace],
     pairs: &[super::script::Pair],
     xml: &[Item],
@@ -311,7 +321,7 @@ pub fn fields<R: Read + Seek>(
     all.extend(instid(raw));
     all.extend(run_header(raw));
     all.extend(analog(traces));
-    all.extend(trailer(raw, source));
+    all.extend(trailer);
     if let Some(log) = &raw.status_log {
         all.extend(status::fields(log));
     }
