@@ -19,7 +19,7 @@ if __package__ in (None, ""):
 
 from . import FORMATO, metriche, statistica as S  # noqa: E402
 from valida.rapporto import a_json as _a_json  # noqa: E402  (after `.`: it puts tools/ on the path)
-from .adatta import a_json as table_to_json, corri_mzfinder_sintetico  # noqa: E402
+from .adatta import a_json as table_to_json, run_mzfinder_synthetic  # noqa: E402
 
 ENDPOINT = {"P1": ("richiamo", "alto", "media"), "P2": ("mediana", "basso", "mediana"), "P3": ("integrita", "alto", "media"),
             "P4": ("richiamo_candidati", "alto", "media"), "P5": ("falsi", "basso", "media")}
@@ -59,7 +59,7 @@ def riassunto(m: dict) -> dict:
     return out
 
 
-def confronto(a: dict, others: list[dict]) -> list[dict]:
+def comparison(a: dict, others: list[dict]) -> list[dict]:
     """Paired comparisons a - b for each competitor and primary endpoint (the same compounds), with Holm over all of them. A positive difference is better for
     the endpoints where higher is better (P1, P3, P4); for P2 and P5 a negative one is better."""
     rows = []
@@ -68,26 +68,26 @@ def confronto(a: dict, others: list[dict]) -> list[dict]:
             va, vb = _vec(a, p), _vec(b, p)
             if len(va) != len(vb):
                 raise ValueError(f"{p}: the tools are not measured on the same compounds")
-            d = S.differenza(va, vb, which, _layers(a, p))
+            d = S.difference(va, vb, which, _layers(a, p))
             row = {"endpoint": p, "contro": f"{b['strumento']}/{b['config']}", "direzione": direction, "differenza": d}
             if which == "media" and set(x for x in va + vb if x == x) <= {0, 1}:
-                row["mcnemar"] = S.mcnemar_esatto([int(x) for x in va], [int(x) for x in vb])
+                row["mcnemar"] = S.mcnemar_exact([int(x) for x in va], [int(x) for x in vb])
             rows.append(row)
     h = S.holm([r["differenza"]["p"] if r["differenza"]["p"] is not None else 1.0 for r in rows])
     for r, adj, rif in zip(rows, h["p_corretto"], h["rifiutata"]):
         r["p_holm"], r["rifiutata_holm"] = adj, rif
-        if r["endpoint"] in S.MARGINI:
-            dirz, marg = S.MARGINI[r["endpoint"]]
-            r["margine"], r["non_inferiore"] = marg, S.non_inferiore(r["differenza"], dirz, marg)
-        r["superiore"] = S.superiore(r["differenza"], r["direzione"], rif)
+        if r["endpoint"] in S.MARGINS:
+            dirz, marg = S.MARGINS[r["endpoint"]]
+            r["margine"], r["non_inferiore"] = marg, S.non_inferior(r["differenza"], dirz, marg)
+        r["superiore"] = S.upper(r["differenza"], r["direzione"], rif)
     return rows
 
 
 def rapporto(dataset: str, measure_a: dict, others: list[dict] | None = None) -> dict:
     """The document `bench-rapporto/1` of one dataset: the summary of every tool and the comparisons of the first with the others."""
     others = others or []
-    return {"formato": "bench-rapporto/1", "tabella": FORMATO, "dataset": dataset, "bootstrap": {"n": S.N_BOOT, "seme": S.SEME}, "margini": {k: list(v) for k, v in S.MARGINI.items()},
-            "strumenti": {f"{m['strumento']}/{m['config']}": riassunto(m) for m in [measure_a] + others}, "confronti": confronto(measure_a, others) if others else []}
+    return {"formato": "bench-rapporto/1", "tabella": FORMATO, "dataset": dataset, "bootstrap": {"n": S.N_BOOT, "seme": S.SEME}, "margini": {k: list(v) for k, v in S.MARGINS.items()},
+            "strumenti": {f"{m['strumento']}/{m['config']}": riassunto(m) for m in [measure_a] + others}, "confronti": comparison(measure_a, others) if others else []}
 
 
 def a_json(r: dict) -> str:
@@ -111,16 +111,16 @@ def a_markdown(r: dict) -> str:
     return "\n".join(L) + "\n"
 
 
-def identificazione_affiancata(truth: list[dict], tabelle: list[dict], structures: dict[str, str]) -> dict:
+def identification_side_by_side(truth: list[dict], tabelle: list[dict], structures: dict[str, str]) -> dict:
     """Identification endpoints of every table side by side. Each tool keeps its own levels (`livelli`: standards per level reached): they are never converted."""
     out = {}
     for t in tabelle:
-        m = metriche.identificazione(truth, t, structures)
+        m = metriche.identification(truth, t, structures)
         out[f"{t['strumento']}/{t['config']}"] = {k: m[k] for k in ("n", "richiamo_colpi", "mrr", "falsi", "livelli")}
     return out
 
 
-def identificazione_markdown(r: dict) -> str:
+def identification_markdown(r: dict) -> str:
     L = ["| tool | standards | suspect-hit recall | mean reciprocal rank | decoy false positives | levels reached (own scale) |", "|---|---|---|---|---|---|"]
     for name, e in r.items():
         L.append(f"| {name} | {e['n']} | {_f(e['richiamo_colpi'])} | {_f(e['mrr'])} | {_f(e['falsi'])} | {', '.join(f'{k}: {v}' for k, v in e['livelli'].items())} |")
@@ -173,7 +173,7 @@ def main(argv=None) -> int:
         (out / "rapporto.md").write_text(a_markdown(r), encoding="utf-8")
         print(a_markdown(r))
         return 0
-    t, truth = corri_mzfinder_sintetico(a.seme, a.profilo, out / "lavoro")
+    t, truth = run_mzfinder_synthetic(a.seme, a.profilo, out / "lavoro")
     (out / "bench1.json").write_text(table_to_json(t), encoding="utf-8")
     r = rapporto(f"D2/{a.profilo}/{a.seme}", misura(truth, t))
     (out / "rapporto.json").write_text(a_json(r), encoding="utf-8")

@@ -15,7 +15,7 @@ CONFIG = ("mzmine_default", "mzmine_wide")
 
 
 def _par(name):
-    return corri.parametri("mzmine", name)
+    return corri.parameters("mzmine", name)
 
 
 def _solver(xml: str) -> dict:

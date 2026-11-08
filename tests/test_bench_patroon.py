@@ -54,14 +54,14 @@ def test_patroon_csv_to_bench1_with_hits(tmp_path):
 def test_identification_endpoints_known_values(tmp_path):
     fg, su = write(tmp_path)
     t = A.da_csv("patroon", fg, ["S1", "S2"], "T", "openms", sospetti=su)
-    m = M.identificazione(TRUTH, t, STRUCTURES)
+    m = M.identification(TRUTH, t, STRUCTURES)
     assert m["standard"] == ["par", "a", "b"] and m["colpo"] == [1, 1, 0] and m["rango"] == [1, 2, None] and m["livello"] == ["3a", "3a", None]
     assert m["richiamo_colpi"] == 2 / 3 and m["mrr"] == (1 + 0.5 + 0) / 3
     assert m["esche"] == ["e1"] and m["falso"] == [1] and m["falsi"] == 1.0 and m["livelli"] == {"3a": 2, "none": 1}
     e = M.endpoint_nts(TRUTH, t, STRUCTURES)
     assert e["P1"]["richiamo"] == 1.0 and e["P1"]["n"] == 3 and e["ID"]["n"] == 3
-    r = R.identificazione_affiancata(TRUTH, [t], STRUCTURES)
-    assert r["patroon/openms"]["livelli"] == {"3a": 2, "none": 1} and "| patroon/openms | 3 |" in R.identificazione_markdown(r)
+    r = R.identification_side_by_side(TRUTH, [t], STRUCTURES)
+    assert r["patroon/openms"]["livelli"] == {"3a": 2, "none": 1} and "| patroon/openms | 3 |" in R.identification_markdown(r)
 
 
 def test_runner_skips_without_docker_and_refuses_unpinned(tmp_path, monkeypatch):

@@ -5,11 +5,11 @@ import os
 import zlib
 from pathlib import Path
 
-LISTA = Path(__file__).with_name("pytest_lenti.txt")
+LIST = Path(__file__).with_name("pytest_lenti.txt")
 SOLO_311 = Path(__file__).with_name("pytest_solo_311.txt")
 # one file longer than a quarter of its half sets the floor of that half (xdist --dist loadfile keeps a file in one worker): the 8 families of
 # test_lettori_parita are 8 cargo builds of mzlab-lettori-wasm, about 14 min on a cold cache
-DIVISI = {"tests/test_lettori_parita.py"}
+SPLIT_FILES = {"tests/test_lettori_parita.py"}
 
 
 def leggi(text: str) -> list[tuple[str, float]]:
@@ -22,14 +22,14 @@ def leggi(text: str) -> list[tuple[str, float]]:
     return out
 
 
-def assegna(lenti: list[tuple[str, float]], outside: frozenset = frozenset()) -> dict[str, str]:
+def assign(lenti: list[tuple[str, float]], outside: frozenset = frozenset()) -> dict[str, str]:
     """Half of each slow file: slowest first, each to the half with fewer seconds so far (a DIVISI file weighs half on each side; `outside`: files the rest shard never runs)."""
     weight = {"a": 0.0, "b": 0.0}
     out = {}
     for f, s in sorted(lenti, key=lambda x: (-x[1], x[0])):
         if f in outside:
             continue
-        if f in DIVISI:
+        if f in SPLIT_FILES:
             weight["a"] += s / 2
             weight["b"] += s / 2
             continue
@@ -49,11 +49,11 @@ def metà(items_nodeid: list[str], assigned: dict[str, str]) -> list[str]:
     per_file: dict[str, list[str]] = {}
     for n in items_nodeid:
         per_file.setdefault(n.split("::", 1)[0], []).append(n)
-    place = {n: i for f, ns in per_file.items() if f in DIVISI for i, n in enumerate(sorted(ns))}
+    place = {n: i for f, ns in per_file.items() if f in SPLIT_FILES for i, n in enumerate(sorted(ns))}
     return ["ab"[place[n] % 2] if n in place else meta_di(n.split("::", 1)[0], assigned) for n in items_nodeid]
 
 
-def fuori_dal_rest() -> frozenset:
+def outside_rest() -> frozenset:
     """Whole files of tools/pytest_solo_311.txt: only the solo311 shard runs them."""
     return frozenset(r.strip() for r in SOLO_311.read_text(encoding="utf-8").splitlines() if r.strip() and "::" not in r)
 
@@ -62,7 +62,7 @@ def pytest_collection_modifyitems(config, items):
     mita = os.environ.get("CI_PYTEST_MITA")
     if not mita:
         return
-    assigned = assegna(leggi(LISTA.read_text(encoding="utf-8")), fuori_dal_rest())
+    assigned = assign(leggi(LIST.read_text(encoding="utf-8")), outside_rest())
     halves = metà([it.nodeid for it in items], assigned)
     tenuti = [it for it, h in zip(items, halves) if h == mita]
     discarded = [it for it, h in zip(items, halves) if h != mita]

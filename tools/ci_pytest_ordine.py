@@ -2,11 +2,11 @@
 xdist (`--dist loadfile`) starts them at once instead of leaving one to the tail of the run. Only the order changes; no test is added or dropped."""
 from pathlib import Path
 
-LISTA = Path(__file__).with_name("pytest_lenti.txt")
+LIST = Path(__file__).with_name("pytest_lenti.txt")
 
 
 def pytest_collection_modifyitems(items):
-    place = {row.split()[0]: i for i, row in enumerate(r for r in LISTA.read_text(encoding="utf-8").splitlines() if r.strip())}
+    place = {row.split()[0]: i for i, row in enumerate(r for r in LIST.read_text(encoding="utf-8").splitlines() if r.strip())}
     fine = len(place)
     # sort is stable: inside a file and among the other files the order stays the collected one
     items.sort(key=lambda it: place.get(it.nodeid.split("::", 1)[0], fine))

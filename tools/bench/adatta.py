@@ -44,14 +44,14 @@ def leggi(path) -> dict:
     return t
 
 
-def matrici(t: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def matrices(t: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """(m/z, RT, areas (rows x files)) of a table as arrays."""
     r = t["righe"]
     return (np.array([x["mz"] for x in r], float), np.array([x["rt"] for x in r], float), np.array([x["aree"] for x in r], float).reshape(len(r), len(t["file"])))
 
 
 # ---------------------------------------------------------------------------------------------------------------- mzFinder
-def da_serie(series, dataset: str, config: str = "predefinita") -> dict:
+def from_series(series, dataset: str, config: str = "predefinita") -> dict:
     """The table of a native run (`valida.nativo.Serie`): the areas of the aligned table (absent cells 0), and for each row whether its identity is a candidate
     (a proof in favour), its best level and its points."""
     tab = series.tabella
@@ -65,18 +65,18 @@ def da_serie(series, dataset: str, config: str = "predefinita") -> dict:
     return tabella("mzfinder", dataset, config, list(tab.campioni), righe)
 
 
-def corri_mzfinder_sintetico(seme: int, profile: str, work, dataset: str = "D2", config: str = "predefinita") -> tuple[dict, list[dict]]:
+def run_mzfinder_synthetic(seme: int, profile: str, work, dataset: str = "D2", config: str = "predefinita") -> tuple[dict, list[dict]]:
     """Generates the synthetic series (D2), runs mzFinder on it and returns (the `bench/1` table, the truth in the common format)."""
     from valida import cancello
     from valida import sintetici_identita as si
-    from .verita import da_righe
+    from .verita import from_rows
     c, series, _, _ = cancello.esegui_sintetico(seme, profile, Path(work))
-    return da_serie(series, dataset, config), da_righe(si.righe_verita(c))
+    return from_series(series, dataset, config), from_rows(si.righe_verita(c))
 
 
 # ---------------------------------------------------------------------------------------------------------------- other tools
 # column rules: (m/z column, RT column, regex of an area column with the file name in group 1, RT in seconds)
-REGOLE = {
+RULES = {
     "mzmine": ("mz", "rt", r"^datafile:(.+?):area$", False),
     "xcms": ("mzmed", "rtmed", r"^(?!mz|rt|npeaks)(.+)$", True),
     "openms": ("mz", "rt", r"^intensity_(.+)$", True),
@@ -89,7 +89,7 @@ def _name(x: str) -> str:
     return re.sub(r"\.(mzml|raw|mzxml)$", "", x.strip(), flags=re.I)
 
 
-def colpi_patroon(path) -> dict[str, list[dict]]:
+def patroon_hits(path) -> dict[str, list[dict]]:
     """patRoon suspect hits (`screenInfo` as CSV: `group`, `name`, `estIDLevel`, optional `score`) -> {group: hits, best first}. Levels stay patRoon's own strings
     (e.g. "3a", "5"): they are never converted to the levels of mzLab. Best = higher score, then the better (lower) level, then the name."""
     out: dict[str, list[dict]] = {}
@@ -110,8 +110,8 @@ def da_csv(tool: str, path, file: list[str], dataset: str, config: str = "predef
     `full_feature_table`, patRoon `featureGroups` as CSV) -> `bench/1`. `file`: the names of the files, in the output order; their area columns are found
     by name (extension ignored); a missing file gets zeros. `sospetti` (patRoon only): the suspect hits CSV (`colpi_patroon`), joined to the rows by `group`:
     `candidato` = the group has a hit, `livello`/`punteggio` those of its best hit, and the document lists all the hits (`identificazioni`)."""
-    hits = colpi_patroon(sospetti) if sospetti else None
-    mz_c, rt_c, rx, seconds = REGOLE[tool]
+    hits = patroon_hits(sospetti) if sospetti else None
+    mz_c, rt_c, rx, seconds = RULES[tool]
     sep = sep or ("\t" if str(path).endswith((".tsv", ".txt")) else ",")
     with open(path, newline="", encoding="utf-8") as f:
         rd = csv.DictReader(f, delimiter=sep)
@@ -122,13 +122,13 @@ def da_csv(tool: str, path, file: list[str], dataset: str, config: str = "predef
                 mz, rt = float(r[mz_c]), float(r[rt_c])
             except (KeyError, ValueError, TypeError):
                 continue
-            aree = []
+            areas = []
             for n in file:
                 try:
-                    aree.append(float(r[col[_name(n)]] or 0.0))
+                    areas.append(float(r[col[_name(n)]] or 0.0))
                 except (KeyError, ValueError):
-                    aree.append(0.0)
-            riga = {"mz": mz, "rt": rt / 60.0 if seconds else rt, "aree": [a if np.isfinite(a) else 0.0 for a in aree]}
+                    areas.append(0.0)
+            riga = {"mz": mz, "rt": rt / 60.0 if seconds else rt, "aree": [a if np.isfinite(a) else 0.0 for a in areas]}
             if tool == "patroon":
                 riga["gruppo"] = r.get("group")
                 if hits is not None:

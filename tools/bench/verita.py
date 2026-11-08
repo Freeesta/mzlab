@@ -11,12 +11,12 @@ import csv
 import json
 from pathlib import Path
 
-RUOLI_FEATURE = ("progenitore", "tp1", "tp2", "isomero", "addotto", "isf")
-RUOLI_TP = ("tp1", "tp2", "isomero")
+FEATURE_ROLES = ("progenitore", "tp1", "tp2", "isomero", "addotto", "isf")
+TP_ROLES = ("tp1", "tp2", "isomero")
 ROLES_DECOY = ("esca", "isf_finto")
 WIDE_ROLES = ("broad", "narrow")             # the smeared-peak lot (`valida.sintetici_mzml.genera_larghi`): measured by `metriche.larghi`, not by P1-P5
 EXTRA_WIDE = ("morfologia", "fwhm_s", "rt_min", "rt_max", "su")
-RUOLI_SPIEGANO = RUOLI_FEATURE + ("isotopo", "isf_finto", "chimerica", "coincidenza", "fondo")
+EXPLAINING_ROLES = FEATURE_ROLES + ("isotopo", "isf_finto", "chimerica", "coincidenza", "fondo")
 
 
 def _rts(r: dict) -> list:
@@ -26,7 +26,7 @@ def _rts(r: dict) -> list:
     return [float(x) for x in v] if isinstance(v, (list, tuple)) else [float(v)]
 
 
-def da_righe(righe: list[dict], default_role: str = "tp1") -> list[dict]:
+def from_rows(righe: list[dict], default_role: str = "tp1") -> list[dict]:
     """Compounds of the rows of a synthetic truth (`ioni`) or of the `tps` of a real one (no `ruolo`: products). A compound observed at several times gives one
     entry per time (`id`, `id#2`, ...). Rows with `presente` 0 have no RT: they are decoys by m/z. Optional per-row `fascia` and `area_attesa` are kept."""
     out = []
@@ -45,11 +45,11 @@ def da_json(path) -> list[dict]:
     """Truth file of D2 (`ioni`) or D3 (`parent` + `tps`)."""
     d = json.loads(Path(path).read_text(encoding="utf-8"))
     if "ioni" in d:
-        return da_righe(d["ioni"])
-    return da_righe([dict(d["parent"], ruolo="progenitore")] + list(d["tps"]))
+        return from_rows(d["ioni"])
+    return from_rows([dict(d["parent"], ruolo="progenitore")] + list(d["tps"]))
 
 
-def rapporto_atteso(v) -> float:
+def expected_report(v) -> float:
     """Expected concentration ratio: a number, or `a\\b` as written in the MAF of D1 (SA\\SB), read as a/b."""
     t = str(v).strip().replace(",", ".")
     if "\\" in t or "/" in t:
@@ -65,30 +65,30 @@ def da_maf(path, mz: str = "mass_to_charge", rt: str = "retention_time", atteso:
     with open(path, newline="", encoding="utf-8") as f:
         for i, r in enumerate(csv.DictReader(f, delimiter=sep)):
             try:
-                m, t, a = float(r[mz]), float(r[rt]), rapporto_atteso(r[atteso])
+                m, t, a = float(r[mz]), float(r[rt]), expected_report(r[atteso])
             except (KeyError, ValueError, TypeError, ZeroDivisionError):
                 continue
             out.append({"id": str(r.get(nome) or f"maf{i}") + f"@{i}", "mz": m, "rt": t / 60.0 if rt_secondi else t, "ruolo": "progenitore", "fascia": None, "atteso": a, "area_attesa": None})
     return sorted(out, key=lambda c: (c["mz"], c["rt"], c["id"]))
 
 
-def con_ruolo(truth: list[dict], roles) -> list[dict]:
+def with_role(truth: list[dict], roles) -> list[dict]:
     return [c for c in truth if c["ruolo"] in roles]
 
 
 def larghi(truth: list[dict]) -> list[dict]:
     """The compounds of the smeared-peak lot with a known RT: broad bands and narrow peaks (free or on a band)."""
-    return [c for c in con_ruolo(truth, WIDE_ROLES) if c["rt"] is not None]
+    return [c for c in with_role(truth, WIDE_ROLES) if c["rt"] is not None]
 
 
-def feature_vere(truth: list[dict]) -> list[dict]:
+def true_features(truth: list[dict]) -> list[dict]:
     """The compounds P1, P2 and P3 are measured on: those with a known RT."""
-    return [c for c in con_ruolo(truth, RUOLI_FEATURE) if c["rt"] is not None]
+    return [c for c in with_role(truth, FEATURE_ROLES) if c["rt"] is not None]
 
 
-def prodotti(truth: list[dict]) -> list[dict]:
-    return [c for c in con_ruolo(truth, RUOLI_TP) if c["rt"] is not None]
+def products(truth: list[dict]) -> list[dict]:
+    return [c for c in with_role(truth, TP_ROLES) if c["rt"] is not None]
 
 
 def esche(truth: list[dict]) -> list[dict]:
-    return con_ruolo(truth, ROLES_DECOY)
+    return with_role(truth, ROLES_DECOY)
