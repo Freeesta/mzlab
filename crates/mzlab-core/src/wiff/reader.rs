@@ -328,7 +328,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     let mut raw_names = Vec::new();
     let sha1 = ole.sha1_hex();
     for (i, s) in samples(&ole).into_iter().enumerate() {
-        let mut w = Wiff::open(&ole, &name, Some(scan_len), s)?;
+        let mut w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
         w.wiff_sha1 = Some(sha1.clone());
         total += w.records.len() as u64;
         limits.ok_entries(total)?;
@@ -350,6 +350,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         });
         parti.push(part);
     }
+    Wiff::all_refused(parti.iter().map(|p| &p.w))?;
     for (c, n) in campioni
         .iter_mut()
         .zip(super::names::display_names(&name, &raw_names))
@@ -459,6 +460,9 @@ fn header_tic(l: &WiffReader, s: &Spectrum) -> Option<f64> {
     (same && r.tic.is_finite() && r.tic > 0.0).then_some(r.tic)
 }
 
+/// The userParam of an MS3 spectrum that holds the m/z of its first precursor (`Spectrum::precursor` is the second).
+pub const PARENT_PARAM: &str = "ms3 first precursor m/z";
+
 /// What the mzML says of a spectrum besides its points: the collision energy and isolation window of its experiment, and (readers module) the spectrum
 /// type (CV term) of precursor-ion and neutral-loss scans.
 fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
@@ -473,6 +477,9 @@ fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
     };
     let Some(e) = e else { return extra };
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
+    if let Some(p) = e.parent {
+        extra.params.push((PARENT_PARAM.into(), p.to_string()));
+    }
     if let Some(sg) = super::modes::tag(e.code) {
         extra
             .params

@@ -46,7 +46,7 @@ I18N.add("it", {
   "predef.guide.linux.cmd": "xdg-mime default mzlab.desktop application/x-mzml application/x-thermo-raw",
   "predef.settings.label": "App predefinita",
   "predef.settings.button": "Chiedi di nuovo",
-  "predef.settings.title": "Torna a proporre di rendere mzLab l'app predefinita per i file .mzML e .raw Thermo",
+  "predef.settings.title": "Riproponi mzLab come app per .mzML e .raw",
   "memory.phase.table": "tabella delle scansioni",
   "memory.phase.index": "indice",
   "memory.phase.indexPeaks": "picchi dell'indice",

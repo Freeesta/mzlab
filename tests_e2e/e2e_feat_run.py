@@ -29,10 +29,10 @@ shutil.copy(ROOT / "TP_Mine/data/regole_tp_2.json", data / "regole_tp_2.json")
 nat = tmp / "nat"; nat.mkdir()
 RECIPE = os.environ.get("MZLAB_FEAT_RECIPE") or '{"polarity":1,"mode":"family"}'
 args = ["--recipe", RECIPE] + (["--parent", fm, "--rules", str(data / "regole_tp_2.json"), "--parent-mz", mz, "--parent-rt", rt] if fm else [])
-out = sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in idx], *args)
+out = sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "native", "--", str(nat), *[str(data / n) for n in idx], *args)
 native = dict(l.split(" ")[:2] for l in out.splitlines() if len(l.split(" ")) == 2 and len(l.split(" ")[1]) == 64)
 ION = '{"polarity":1,"mode":"ion"}'
-out_ion = sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in idx], "--recipe", ION, *args[2:])
+out_ion = sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "native", "--", str(nat), *[str(data / n) for n in idx], "--recipe", ION, *args[2:])
 native_ion = dict(l.split(" ")[:2] for l in out_ion.splitlines() if len(l.split(" ")) == 2 and len(l.split(" ")[1]) == 64)
 sizes = build_wasm(tmp)
 srv, URL = serve(tmp)

@@ -1,4 +1,4 @@
-"""Times the site load of a maker's file (a synthetic Thermo .raw of crates/mzlab-lettori/examples/thermo_sintetico, no laboratory data): from the drop to the
+"""Times the site load of a maker's file (a synthetic Thermo .raw of crates/mzlab-lettori/examples/thermo_synthetic, no laboratory data): from the drop to the
 sample row being usable, the last event of phase «read» (the copy, or the builder hashing a member itself), and the SHA-256 of the .mzidx (it must not change).
 A Playwright context is ephemeral like a private window: Chromium keeps about 1 GiB of OPFS there, so a bigger file is read in place; --profilo runs in a
 persistent profile (a normal window). Each run reloads the page after the last sample was removed. Needs the site with the readers modules

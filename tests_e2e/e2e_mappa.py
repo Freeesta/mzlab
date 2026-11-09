@@ -57,7 +57,7 @@ try:
             pg.keyboard.press("Backspace"); wait_for_js(pg, M + ".zoom===null")
             pg.keyboard.press("0"); wait_for_js(pg, ZNULL); assert z() == [None, None], z()
             pg.mouse.move(*at(.5, .5)); ctrl_wheel(pg, 0, -300); wait_for_js(pg, f"{M}.zoom"); assert z()[0]
-            pg.click(".pnl.map [data-a=fit]"); wait_for_js(pg, ZNULL); assert z() == [None, None], z()
+            hd_click(pg, ".pnl.map [data-a=fit]"); wait_for_js(pg, ZNULL); assert z() == [None, None], z()
         step("box zoom, Backspace = whole view, 0 and the button = whole view", boxz)
         def full():
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); wait_for_js(pg, f"{M}.el.classList.contains('max') && {M}.el.classList.contains('mzmir')")
@@ -187,9 +187,9 @@ try:
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.mappa')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
             bgs = pg.evaluate(M + ".leg.querySelector('.cbar').style.background"); assert "rgb(0, 32, 76)" in bgs, bgs
             assert pg.evaluate(M + ".leg.querySelectorAll('.cbar').length") == 1 and pg.evaluate("/\\d/.test(" + M + ".leg.textContent)")     # colour bar with values
-            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); wait_for_js(pg, f"{M}.corr === 'auto' && ({M}._img.key.includes('true') || {M}._img.key.includes('bg=1')) && {M}._img.v.length === {v0}")
+            hd_click(pg, ".pnl.map [data-o=corr]", keep=True); pg.click(".pnl.map .corrm [data-c=snip]"); wait_for_js(pg, f"{M}.corr === 'auto' && ({M}._img.key.includes('true') || {M}._img.key.includes('bg=1')) && {M}._img.v.length === {v0}")
             assert pg.evaluate(M + ".corr") == "auto" and pg.evaluate(M + "._img.key.includes('true') || " + M + "._img.key.includes('bg=1')") and pg.evaluate(M + "._img.v.length") == v0     # background removed: same grid, other values
-            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c='']"); ready(pg)
+            hd_click(pg, ".pnl.map [data-o=corr]", keep=True); pg.click(".pnl.map .corrm [data-c='']"); ready(pg)
         step("2D panel: groups, one «3D» button, palette, constant background, colour bar with values", panel2d)
         def height():
             h = pg.evaluate("(()=>{const q=" + M + ";return q.h})()")

@@ -213,8 +213,9 @@ def main():
     variante, refusals = variants(out)
     total = full_tic(out)
     blocchi = blocks_v13(out)
+    ms3 = ms3_file(out)
     dad = dad_method(out)
-    (out / "riferimento.json").write_text(json.dumps({"dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi}))
+    (out / "riferimento.json").write_text(json.dumps({"dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi, "ms3": ms3}))
 
 
 def energy(out: Path):
@@ -363,6 +364,22 @@ def blocks_v13(out: Path):
     w.sample(1, blocks, ex)
     w.save(out, "blocchi")
     return {"polarity": [1, -1, 1], "spectra": want}
+
+
+def ms3_file(out: Path):
+    """Three samples of a QTRAP 3200-like pair: a survey scan (code 15), an MS3 experiment (code 13: first precursor in `ExperimentHeader` +42, second one in `ExperimentHeaderQTrapEX` +64,
+    scan blocks V3, one empty) and a sample of an unknown code (21): the third must not stop the first two from opening."""
+    q = bytearray(136)
+    q[64:72] = struct.pack("<d", 194.1)
+    ms3 = [[(60, 5), (400, 70)], [], [(61, 9), (1300, 3000)]]
+    w = Writer()
+    w.sample(1, [("scan", FULL, 100.0, 1.0, 2)], {"Experiment0/ExperimentHeader": header(15, 30.0)}, data_name="ms2 sample")
+    w.sample(2, [("scan", p, 100.0 * k, float(sum(c for _, c in p)), 3) for k, p in enumerate(ms3)],
+             {"Experiment0/ExperimentHeader": header(13, 237.1), "Experiment0/ExperimentHeaderQTrapEX": bytes(q)}, data_name="*ms3 sample")
+    w.sample(3, [("scan", FULL, 100.0, 1.0, 2)], {"Experiment0/ExperimentHeader": header(21, 0.0)}, data_name="odd sample")
+    w.save(out, "ms3")
+    spectra = [spectrum(f"sample=2 period=1 cycle={k + 1} experiment=1", 3, 194.1, 100.0 * k, p, 3) | {"parent": 237.1} for k, p in enumerate(ms3) if p]
+    return {"spectra": spectra, "names": ["ms2 sample", "*ms3 sample", "odd sample"]}
 
 
 def lc_method() -> bytes:

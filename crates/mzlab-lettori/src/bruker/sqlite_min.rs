@@ -384,7 +384,7 @@ impl Sqlite {
 }
 
 pub(super) fn broken(m: &str) -> Error {
-    Error::new("err.dam.unreadable").with("message", format!("sqlite: {m}"))
+    Error::new("err.file.brukerDamaged").with("detail", format!("sqlite: {m}"))
 }
 
 /// A value of a record.

@@ -4,7 +4,7 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 #![forbid(unsafe_code)]
-mod xicbin; mod labels; mod fondo_cr; mod info; mod diff; mod items; mod metodo; mod budget_js;
+mod xicbin; mod labels; mod background_cr; mod info; mod diff; mod items; mod method; mod budget_js;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -15,7 +15,7 @@ use std::io::Write;
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod centroids; mod panic; mod ricerca; mod adduct;
+mod centroids; mod panic; mod search; mod adduct;
 pub mod external;
 mod counted;
 mod zip;

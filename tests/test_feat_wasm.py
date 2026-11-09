@@ -1,5 +1,5 @@
 """The pipeline of mzFinder in WebAssembly (crates/mzlab-feat-wasm) gives the same bytes as the native engine: the `.mzfeatf` of every file, the `.mzfeat` of the
-series and the one with the graph of the proofs have the same SHA-256 whether the example `nativo` or the `.wasm` (through Node) makes them. The series is the
+series and the one with the graph of the proofs have the same SHA-256 whether the example `native` or the `.wasm` (through Node) makes them. The series is the
 synthetic one of tools/feat_mirato.py (profile `piccolo`; the tests of the `Spill` of the page use the profile `debole`). Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
 import re
 import shutil
@@ -27,7 +27,7 @@ def built(tmp_path_factory):
     # the series (python) is independent of the two builds (cargo takes the lock of the target folder one after the other): they run at the same time
     with ThreadPoolExecutor(2) as pool:
         made = pool.submit(run, "python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
-        run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo")
+        run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "native")
         run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm")
         made.result()
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
@@ -40,7 +40,7 @@ def built(tmp_path_factory):
 def native(root, idx, name, *extra):
     out = root / name
     out.mkdir(exist_ok=True)
-    got = run("target/release/examples/nativo", str(out), *idx, *PARENT, *extra)
+    got = run("target/release/examples/native", str(out), *idx, *PARENT, *extra)
     return got, out
 
 
@@ -194,11 +194,11 @@ def weak(built):
     return idx, ref
 
 
-def spilling(built, idx, name, mb, spill):
+def spilling(built, idx, name, mb, spill, *extra):
     root, _, pkg = built
     out = root / name
     out.mkdir(exist_ok=True)
-    args = ["--budget-mb", str(mb)] + (["--spill", spill] if spill else [])
+    args = ["--budget-mb", str(mb)] + (["--spill", spill] if spill else []) + list(extra)
     return subprocess.run(["node", str(ROOT / "tests" / "feat_wasm_node.js"), str(pkg), str(out), *idx, *PARENT, "--recipe", '{"mode":"family"}', *args],
                           cwd=ROOT, capture_output=True, encoding="utf-8")
 
@@ -214,6 +214,19 @@ def test_the_weak_tables_in_a_spill_of_the_page_give_the_same_sha256(built, weak
     puts, gets = map(int, re.search(r"spill puts (\d+) gets (\d+)", p.stderr).groups())
     assert puts == len(idx)
     assert gets >= 2 * len(idx) and gets % len(idx) == 0       # more than one slab, each reading every file
+
+
+@pytest.mark.parametrize("mb,spill", [(192, None), (1.5, "1")])
+def test_the_weak_candidates_of_the_detection_give_the_same_sha256_with_fewer_reads(built, weak, mb, spill):
+    """The weak candidates the worker keeps from each detection (`detect_weak_file_to`, as the app keeps its `.weak` files), handed to `align_series_to`,
+    give the bytes of the alignment that detects every file again, in memory and with the weak tables in a spill; the alignment then reads the indexes less."""
+    idx, ref = weak
+    again = spilling(built, idx, f"again-{mb}", mb, spill)
+    p = spilling(built, idx, f"kept-{mb}", mb, spill, "--weak", "1")
+    assert again.returncode == 0 and p.returncode == 0, p.stderr
+    assert p.stdout == ref == again.stdout, f"{mb} MB"
+    reads = [int(re.search(r"align reads (\d+)", q.stderr).group(1)) for q in (p, again)]
+    assert reads[0] < reads[1], reads
 
 
 def test_a_budget_where_the_weak_tables_do_not_fit_is_refused_without_a_spill(built, weak):

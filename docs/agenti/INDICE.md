@@ -36,7 +36,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | mzFinder: Dig in diretta (`js/24_tpmine_diretta.js`, `TPLIVE`), coppie progenitore-TP e interfaccia HR (`js/21_tpmine_hr.js`, `mass_network`, previsione) | `docs/agenti/mzfinder-diretta.md`, `mzfinder-coppie.md` (nucleo: `mzfinder.md`) |
 | mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` (famiglia di un file a richiesta, `family_record`: `mzfeat-wasm-famiglia.md`; pannello «Pipeline»: `mzfeat-wasm-pannello.md`) |
 | scandump, oracolo RFR | `docs/agenti/scandump.md` |
-| velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_banco`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
+| velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_bench`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
 | conversione `.raw` → mzML: banco `raw_mzml_bench`, `tools/bench/raw_mzml.py`, T_min, punti di partenza V1-V9, cause di D8 e D11, caso denso sintetico | `docs/agenti/raw-mzml.md` |
 | tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` (lettori dei produttori, `.raw`, `.wiff`, `.D`: `misure-velocita-raw.md`; tentativi scartati: `ottimizzazioni-tentate.md`) |
 | caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`) | `docs/agenti/misure-caricamento.md` |
@@ -104,7 +104,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | Dependabot, CodeQL, impostazioni di sicurezza da accendere a mano | `docs/agenti/sicurezza.md` |
 | sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`, `tests_e2e/e2e_lab_vuoto.py` = giro senza file) |
 | contratto dei lettori dei produttori (`readers.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
-| modulo «aperti» (mzML con numpress, mzXML: `crates/mzlab-lettori/src/aperti/`, `numpress.rs`) | `docs/agenti/lettori-aperti.md` |
+| modulo «aperti» (mzML con numpress, mzXML: `crates/mzlab-lettori/src/open/`, `numpress.rs`) | `docs/agenti/lettori-aperti.md` |
 | matrice di conformità mzML (varianti, fixture `tools/mzml_varianti.py`, buchi noti) | `docs/agenti/mzml-matrice.md` |
 | modulo «andi» (netCDF/ANDI `.cdf`: `crates/mzlab-lettori/src/andi/`) | `docs/agenti/lettori-andi.md` |
 | moduli lettori, uno per famiglia (`crates/mzlab-lettori*`, `.wasm` a parte in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, regola R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, tetti) | `docs/agenti/lettori-modulo.md` |
@@ -120,7 +120,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
 | pulsante «XIC» nella barra dello spettro, lente XIC al passaggio sul picco (`xic-lente.js`), banco e tabella di partenza dei tempi del visualizzatore (`tools/bench_visore.py`, `viewer_times.rs`) | `docs/agenti/visore-veloce.md` |
 | pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusion.rs` (chiavi, blocchi, nome), comando `infusion_diagnosis` | `docs/agenti/infusione-lente.md` |
-| scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset` | `docs/agenti/xic-scarto.md` |
+| scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), intervallo `250.8-251.5`, `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; campi «m/z da / a» dell'intestazione XIC (`xic-bordi.js`) | `docs/agenti/xic-scarto.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
 | Safari e iPadOS (WebKit): API usate × versione minima × ripiego, pavimento 16.4, ripieghi di `compat.js` (`AbortSignal.any`, `createWritable`, appunti, `accept` sull'iPad) | `docs/agenti/compat-safari.md` |

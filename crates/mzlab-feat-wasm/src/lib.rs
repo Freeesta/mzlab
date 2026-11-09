@@ -190,7 +190,36 @@ impl Stored for JsStored {
         self.files.length() as usize
     }
     fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
-        Ok(Uint8Array::new(&self.files.get(k as u32)).to_vec())
+        Ok(self.file(k).to_vec())
+    }
+    fn part(&mut self, k: usize) -> Result<Option<(Box<dyn ReadAt + '_>, u64)>> {
+        let a = self.file(k);
+        let size = a.length() as u64;
+        Ok(Some((Box::new(JsPart(a)), size)))
+    }
+}
+
+impl JsStored {
+    /// File `k` as the page holds it: `new Uint8Array(x)` would copy a `Uint8Array` whole, so only another kind of value (an `ArrayBuffer`) is wrapped.
+    fn file(&self, k: usize) -> Uint8Array {
+        self.files
+            .get(k as u32)
+            .dyn_into()
+            .unwrap_or_else(|v| Uint8Array::new(&v))
+    }
+}
+
+/// One `.mzfeatf` held in JavaScript read by parts: only the bytes asked for cross into the module.
+struct JsPart(Uint8Array);
+
+impl ReadAt for JsPart {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        let end = off
+            .checked_add(buf.len() as u64)
+            .filter(|&e| e <= self.0.length() as u64)
+            .ok_or_else(|| Error::new("error.badIndex"))?;
+        self.0.subarray(off as u32, end as u32).copy_to(buf);
+        Ok(())
     }
 }
 
@@ -276,8 +305,10 @@ pub fn drift_series(
 #[cfg(feature = "detect")]
 /// L4-L6: alignment and gap filling of the `.mzfeatf` of a series (an `Array` of `Uint8Array`, in the order of the indexes) written to
 /// `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeat`. The same bytes whatever `budget_mb` (0/NaN = 192): in memory, in slabs of m/z, or
-/// the error `error.memoryBudget` with `{fase, stima_mb, budget_mb}`. The optional `spill` keeps the weak tables outside the module (`spill_js`).
+/// the error `error.memoryBudget` with `{fase, stima_mb, budget_mb}`. The optional `spill` keeps the weak tables outside the module (`spill_js`); the
+/// optional `weak` holds the weak candidates of each file from its detection (`series_js::detect_weak_file_to`), the same bytes with or without them.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn align_series_to(
     files: Array,
     read: Function,
@@ -286,10 +317,11 @@ pub fn align_series_to(
     write: Function,
     budget_mb: f64,
     spill: Option<js_sys::Object>,
+    weak: Option<Array>,
 ) -> std::result::Result<String, JsValue> {
     let (r, facts) = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
-    let mut src = JsStored { files };
+    let mut src = series_js::WithWeak { files: JsStored { files }, weak };
     let (open, mut spill) = (|k| open_one(&read, k, sizes[k]), spill_js::of(spill.as_ref())?);
     to_sink(write, |sink| run::align_to_spilling(&mut src, &budget, &r, Some(facts), open, sink, spill_js::borrow(&mut spill)))
 }

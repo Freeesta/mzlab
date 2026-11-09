@@ -1,4 +1,4 @@
-"""The native run of the pipeline of the site (`mzlab-feat-wasm`, example `nativo`) on a series of mzML files, and the readers of what it writes.
+"""The native run of the pipeline of the site (`mzlab-feat-wasm`, example `native`) on a series of mzML files, and the readers of what it writes.
 
 `.mzfeat` (series) and `.mzfeatf` (one file) are the containers of crates/mzlab-feat/src/store.rs: the magic `MZFEAT01`, the length of the JSON meta, the meta,
 padding to 64 bytes, the arrays at the offsets of the meta. The table is read into the `Table` of tabelle.py; the candidates are the identities that
@@ -21,7 +21,7 @@ from .tabelle import Table
 
 DTYPE = {"f64": "<f8", "f32": "<f4", "u32": "<u4", "u16": "<u2", "u8": "u1", "i8": "i1"}
 CELLA_RILEVATA, TARGETED_CELL, FILLED_CELL, CELLA_ASSENTE = 0, 1, 2, 3
-EXAMPLE = ROOT / "target" / "release" / "examples" / "nativo"
+EXAMPLE = ROOT / "target" / "release" / "examples" / "native"
 REGOLE = Path(os.environ.get("MZLAB_REGOLE") or ROOT / "TP_Mine" / "data" / "regole_tp_2.json")
 
 
@@ -97,7 +97,7 @@ def indexes(mzml: list[Path], folder: Path) -> list[str]:
 
 
 def build_example() -> None:
-    subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "native"], cwd=ROOT, check=True)
 
 
 def esegui(idx_paths: list[str], neutral_formula: str, parent_mz: float, parent_rt: float, output: Path, smiles: str = "") -> Series:

@@ -284,6 +284,10 @@ def main() -> None:
     tel = '<script src="static/telefono.js"></script>'
     assert tel in html
     html = html.replace(tel, tel + '\n<script src="static/browser.js"></script>', 1)
+    # and preloaded with the other head scripts: Chrome's early scan does not look past nomi.js, so each head script cost a round trip
+    pre = '<link rel="preload" as="script" href="static/sito.js">'
+    assert pre in html
+    html = html.replace(pre, pre + '<link rel="preload" as="script" href="static/browser.js">', 1)
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
     html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} • {TITLE_TAG}</title>", html, count=1)
     if lab:

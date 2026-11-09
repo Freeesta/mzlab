@@ -1,5 +1,5 @@
 """Private validation of the Rust library engine (crates/mzlab-lib) against the data repository: the same checks as tests/test_hr_identificazione.py
-(which runs the JS search), through `cargo run --example valida`. Skipped without the data repository or without cargo. The compound is never
+(which runs the JS search), through `cargo run --example validate`. Skipped without the data repository or without cargo. The compound is never
 named here: the expected library entry is read from the data (the highest-scoring identity of the parent)."""
 import importlib.util
 import json
@@ -27,7 +27,7 @@ def result(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("rust_ident")
     qf = tmp / "q.json"
     qf.write_text(json.dumps({"queries": q, "all": allq}))
-    p = subprocess.run(["cargo", "run", "--release", "--quiet", "-p", "mzlab-lib", "--example", "valida", "--", str(d["lib"]), str(qf)],
+    p = subprocess.run(["cargo", "run", "--release", "--quiet", "-p", "mzlab-lib", "--example", "validate", "--", str(d["lib"]), str(qf)],
                        capture_output=True, encoding="utf-8", check=True, cwd=ROOT)
     return json.loads(p.stdout)
 

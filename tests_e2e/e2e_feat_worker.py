@@ -24,7 +24,7 @@ idx = sorted(p.name for p in data.glob("*.mzidx"))
 shutil.copy(ROOT / "TP_Mine/data/regole_tp_2.json", data / "regole_tp_2.json")
 nat = tmp / "nat"; nat.mkdir()
 PARENT = ["--parent", "C21H32N2O2", "--rules", str(data / "regole_tp_2.json"), "--parent-mz", "345.253655", "--parent-rt", "1.0"]
-native = dict(l.split(" ")[:2] for l in sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in idx], "--recipe", '{"polarity":1,"mode":"family"}', *PARENT).splitlines() if l.endswith(tuple("0123456789abcdef")) and " " in l and "hypotheses" not in l)
+native = dict(l.split(" ")[:2] for l in sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "native", "--", str(nat), *[str(data / n) for n in idx], "--recipe", '{"polarity":1,"mode":"family"}', *PARENT).splitlines() if l.endswith(tuple("0123456789abcdef")) and " " in l and "hypotheses" not in l)
 sizes = build_wasm(tmp)
 srv, URL = serve(tmp)
 

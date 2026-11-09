@@ -41,11 +41,11 @@
   }
   /** A section with a small-caps title: `grid` is the class of the row of buttons (seg2, seg3, f3, f4). */
   const section = (title, body) => `<fieldset><legend>${title}</legend>${body}</fieldset>`;
-  const opts = (grid, html) => `<div class="opts ${grid}">${html}</div>`;
+  const opts = (grid, html, tip) => `<div class="opts ${grid}"${tip ? ` title="${esc(tip)}"` : ""}>${html}</div>`;
   /** A wide switch; `attr` is what the panel binds on (data-k="…", id="…"); `icon` an optional key of GICON. */
   const sw = (text, hint, attr, on, icon) => `<label class="swrow"${hint ? ` title="${esc(hint)}"` : ""}><span>${icon && GICON[icon] ? `<span class="ic">${GICON[icon]}</span>` : ""}${text}</span><input type="checkbox" role="switch" ${attr}${on ? " checked" : ""}></label>`;
-  /** A folding group with an icon; `id` is also the key under which the panel remembers if it was left open. */
-  const group = (id, icon, title, body, open) => `<details class="imp-g" id="${id}"${open ? " open" : ""}><summary><span class="gi">${GICON[icon] || ""}</span>${title}<span class="car">${GICON.chev}</span></summary><div class="imp-b">${body}</div></details>`;
+  /** A folding group with an icon; `id` is also the key under which the panel remembers if it was left open; `tip` the tooltip of its title. */
+  const group = (id, icon, title, body, open, tip) => `<details class="imp-g" id="${id}"${open ? " open" : ""}><summary${tip ? ` title="${esc(tip)}"` : ""}><span class="gi">${GICON[icon] || ""}</span>${title}<span class="car">${GICON.chev}</span></summary><div class="imp-b">${body}</div></details>`;
   /** A flat group: icon + title over its controls, always open, no fold. */
   const flat = (id, icon, title, body) => `<div class="imp-s" id="${id}" role="group" aria-labelledby="${id}-h"><h3 class="imp-h" id="${id}-h"><span class="gi">${GICON[icon] || ""}</span>${title}</h3>${body}</div>`;
   /** A group that folds into nothing: no controls → "", one control → a plain row (no title), several → a flat group with its title. */
@@ -54,7 +54,7 @@
   const langRow = (label, tip, cur) => `<div class="imp-fld imp-lang" title="${esc(tip)}"><span id="uip-lang-l">${label}</span><div class="seglang" role="radiogroup" aria-labelledby="uip-lang-l">`
     + [["it", "Italiano", "IT"], ["en", "English", "EN"]].map(([v, name, code]) => `<label class="lg" title="${esc(name)}"><input type="radio" name="uip-lang" value="${v}" aria-label="${esc(name)}"${cur === v ? " checked" : ""}><span aria-hidden="true">${code}</span></label>`).join("") + "</div></div>";
   /** The bug-report row: a plain button that shows the form (fetched at the first click through `load`) in #uip-bug. */
-  const bugRow = label => `<div class="imp-fld imp-solo" id="uip-g-bug"><button id="uip-bugbtn" type="button" aria-expanded="false" aria-controls="uip-bug"><span class="ic">${GICON.bug}</span>${label}</button></div><div id="uip-bug" hidden></div>`;
+  const bugRow = (label, tip) => `<div class="imp-fld imp-solo" id="uip-g-bug"><button id="uip-bugbtn" type="button" title="${esc(tip)}" aria-expanded="false" aria-controls="uip-bug"><span class="ic">${GICON.bug}</span>${label}</button></div><div id="uip-bug" hidden></div>`;
   const bugBind = (root, load) => {
     const btn = root.querySelector("#uip-bugbtn"), box = root.querySelector("#uip-bug"); let done = false;
     if (btn && box) btn.addEventListener("click", () => {

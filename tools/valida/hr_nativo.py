@@ -13,7 +13,7 @@ import numpy as np
 from . import ROOT, nativo
 from .tabelle import Table
 
-PREVIEW = ROOT / "target" / "release" / "examples" / "anteprima"
+PREVIEW = ROOT / "target" / "release" / "examples" / "preview"
 
 
 def run_without_parent(idx: list[str], output: Path) -> dict:
@@ -32,6 +32,6 @@ def run_without_parent(idx: list[str], output: Path) -> dict:
 
 def preview(idx: str) -> dict:
     """The JSON of the preview of one file (`noise.floor` is the proposed threshold, `ppm.value` and `fwhm.value` the estimated tolerances)."""
-    subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat", "--example", "anteprima"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat", "--example", "preview"], cwd=ROOT, check=True)
     out = subprocess.run([str(PREVIEW), idx], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out[out.index("{"):])

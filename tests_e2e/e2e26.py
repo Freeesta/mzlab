@@ -44,7 +44,7 @@ try:
                 assert pg.evaluate("!document.querySelector('.pnl.max')"), (i, pg.evaluate("[!!document.querySelector('dialog[open]'), !!document.querySelector('#helppop:not([hidden])'), !!document.querySelector('#ctx:not([hidden])')]"))
         step("full screen on every panel (incl. XIC added later), Esc leaves it", fs)
         def still(el):
-            # any scroll hides the tooltip and stops its timer (eventi.js): the smooth scroll to a panel just added must be over before the hover
+            # any scroll hides the tooltip and stops its timer (tooltip.js): the smooth scroll to a panel just added must be over before the hover
             el.scroll_into_view_if_needed()
             wait_for_js(pg, "(() => { if (window._ls26 == null) { window._ls26 = performance.now(); addEventListener('scroll', () => { window._ls26 = performance.now(); }, true); } return performance.now() - window._ls26 > 300; })()", 10000)
         def tip():

@@ -23,8 +23,8 @@ mod smiles;
 mod smiles_parse;
 mod smiles_stereo;
 mod smiles_write;
-mod trasf;
-mod trasf_chain;
+mod transform;
+mod transform_chain;
 mod valence;
 mod validate;
 
@@ -36,4 +36,4 @@ pub use model::{
     StereoGroup, FORMAT,
 };
 pub use sites::Site;
-pub use trasf::{Evidence, TRegion, TSite, Transformation, TRANSFORMATION_FORMAT};
+pub use transform::{Evidence, TRegion, TSite, Transformation, TRANSFORMATION_FORMAT};

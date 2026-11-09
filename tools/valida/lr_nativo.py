@@ -1,4 +1,4 @@
-"""The native runs of the low-resolution pipeline (the full scan one of `nativo.py`, the MRM one of the example `nativo_mrm`) and the readers of their tables.
+"""The native runs of the low-resolution pipeline (the full scan one of `nativo.py`, the MRM one of the example `native_mrm`) and the readers of their tables.
 
 The example reads the minutes from `..._t30min` in the name, so `B_FullMass-t30` is indexed as `B_FullMass_t30min`; files without a time are controls."""
 from __future__ import annotations
@@ -12,7 +12,7 @@ import numpy as np
 from . import ROOT, nativo
 from .lr_criteri import Mrm, classifica, level_from_name
 
-EXAMPLE_MRM = ROOT / "target" / "release" / "examples" / "nativo_mrm"
+EXAMPLE_MRM = ROOT / "target" / "release" / "examples" / "native_mrm"
 
 
 def lr_indexes(mzml: list[Path], folder: Path) -> list[str]:
@@ -41,7 +41,7 @@ def sort_by_time(idx: list[str]) -> list[str]:
 
 def run_mrm(mzml: list[Path], output: Path) -> dict:
     """Runs the MRM example on the files (in this order); returns {'sha': {file: digest}, 'tabella': bytes of series.mzfeat}."""
-    subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo_mrm"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "native_mrm"], cwd=ROOT, check=True)
     output.mkdir(parents=True, exist_ok=True)
     subprocess.run([str(EXAMPLE_MRM), str(output), *map(str, mzml)], cwd=ROOT, check=True, capture_output=True)
     sha = {}

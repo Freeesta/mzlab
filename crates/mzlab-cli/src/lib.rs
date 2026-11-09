@@ -89,7 +89,7 @@ mod flow_match_tree;
 #[cfg(test)]
 mod flow_match_web_tests;
 mod flow_ms2;
-mod flow_msnfigura;
+mod flow_msnfigure;
 mod flow_msngraph;
 mod flow_msnlib;
 #[cfg(test)]
@@ -465,7 +465,7 @@ mod flow_mzrun_tests;
 #[cfg(test)]
 mod flow_network_tests;
 #[cfg(test)]
-mod flow_picchi_tests;
+mod flow_peaks_tests;
 #[cfg(test)]
 mod flow_report_tests;
 #[cfg(test)]

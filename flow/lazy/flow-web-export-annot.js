@@ -17,7 +17,7 @@
   const run = async (x, spec, inst) => {
     const j = J().job(spec), p = await kit().getPool();
     const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    const alKey = isTable ? x.tableKey(up0) : null;
     /** @type {{ port: string, name: string, text: string }[]} */ const files = [];
     let missing = false;
     for (const port of PORTS) {

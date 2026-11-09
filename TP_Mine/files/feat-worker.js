@@ -216,7 +216,7 @@ function rowOps(submit, call) {
 }
 
 export function createFeatPool(opts) {
-  const { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText, budget } = createCore(opts);
+  const { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText, budget } = createCore(opts), weak = new WeakMap();   // weak: .mzfeatf bytes of `detectAll` -> their weak candidates, for `align`
   return {
     notify: (k, p) => (opts.notify || (() => {}))(k, p),
     // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx), `mb` = the budget of this call (else the pool's). Resolves with the .mzfeatf bytes in the order of `files`.
@@ -227,7 +227,7 @@ export function createFeatPool(opts) {
         const t0 = performance.now();
         const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe, budgetMb: mb || budgetOf(opts) }, undefined, detectStep(opts, f));   // `mb` (the high level the user agreed to), else the whole budget of the page, not a share: the Rust estimate of one detection (`trace_stima`) refuses a file it cannot hold
         if (opts.onProgress) opts.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
-        return r.bytes;
+        if (r.weak) weak.set(r.bytes, r.weak); return r.bytes;
       }, f.id)));
     },
     // The pipeline after mzmine 3.9.0 (admin mode, `.wasm` `untargeted`): the same two steps as `detectAll` and `align`; `params` = JSON string of the recipe {"engine": "untargeted", ...}.
@@ -286,7 +286,7 @@ export function createFeatPool(opts) {
         await load("feat");
         if (recycle) slot.recycle = true;
         const t0 = performance.now();
-        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budget() });
+        const held = stored.map(b => weak.get(b) || null), r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budget(), weak: held.some(Boolean) ? held : undefined });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       }, id);
@@ -373,13 +373,14 @@ async function init(m) {
   const ex = await mod.default({ module_or_path: bytes });
   mods[m.which] = mod; mems[m.which] = ex.memory;
 }
+function weakOf(f, recipe) { const o = memSink(); try { mods.feat.detect_weak_file_to(f.read, f.sizes[0], recipe, o.write); return o.bytes(); } catch (e) { if (e instanceof WebAssembly.RuntimeError) throw e; return null; } }   // the weak candidates of the file just detected, as the app's `.weak`: the alignment does not detect it again (without them it does, the same bytes)
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []), arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 const OPS = {
   async init(m) { await init(m); const x = mods[m.which]; return { version: x.version?.(), crate: x.crate_version?.() }; },
   async alias(m) { mods[m.which] = mods[m.of]; mems[m.which] = mems[m.of]; return {}; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
-    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write, (d, t) => self.postMessage({ id: m.id, progress: [d, t] }), m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }   // the .wasm calls back at most once per 1 %; the pool hands `progress` to the step of the call
+    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write, (d, t) => self.postMessage({ id: m.id, progress: [d, t] }), m.budgetMb || 0); return { bytes: out.bytes(), weak: weakOf(f, m.recipe) }; } finally { f.close(); }   // the .wasm calls back at most once per 1 %; the pool hands `progress` to the step of the call
   },
   async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async tp_link_evidence(m) { const f = await openAll(m.paths); try { const r = mods.proofs.tp_link_evidence(m.rules, m.parent, m.structure, m.hypotheses, new Uint8Array(m.table), m.samples, m.recipe, m.polarity, m.budgetMb || 0, arrays(m.peaks), f.read, f.sizes), o = { table: r.table(), registry: r.registry(), parent: r.parent(), polarity: r.polarity(), infusion: r.infusion() }; r.free(); return o; } finally { f.close(); } },
@@ -412,7 +413,7 @@ const OPS = {
   },
   async align(m) {
     const f = await openAll(m.paths), out = memSink();
-    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined); return { bytes: out.bytes() }; } finally { f.close(); }
+    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined, m.weak ? m.weak.map(w => (w ? new Uint8Array(w) : null)) : undefined); return { bytes: out.bytes() }; } finally { f.close(); }
   },
   async hypotheses(m) {
     if (hypo) { hypo.free(); hypo = null; }
@@ -489,8 +490,7 @@ if (IN_WORKER) self.onmessage = async ev => {
   try {
     const r = await OPS[m.op](m);
     r.mem = Math.max(0, ...Object.values(mems).map(x => x.buffer.byteLength));   // linear memory of the .wasm (it only grows): the peak of this worker
-    const transfer = [];
-    if (r.bytes && r.bytes.buffer instanceof ArrayBuffer) transfer.push(r.bytes.buffer);
+    const transfer = [r.bytes, r.weak].filter(b => b && b.buffer instanceof ArrayBuffer).map(b => b.buffer);
     reply(m.id, r, transfer);
   } catch (e) {
     const trap = e instanceof WebAssembly.RuntimeError;      // a trap (or an abort for lack of memory) leaves the .wasm unusable: the supervisor replaces this worker

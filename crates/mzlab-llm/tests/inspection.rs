@@ -3,9 +3,9 @@
 //! (table G01-G09 of `docs/studi/assistente-dati/06-valutazione.md`), the QC series gives its drift, no private field goes out and the same input gives
 //! the same bytes. `MZLAB_UPDATE_LLM=1 cargo test -p mzlab-llm` rewrites the golden file.
 
-mod ispez;
+mod inspect;
 
-use ispez::*;
+use inspect::*;
 use mzlab_core::json::Out;
 use mzlab_llm::inspect::{build, build_text, MAX_STR};
 use std::path::Path;

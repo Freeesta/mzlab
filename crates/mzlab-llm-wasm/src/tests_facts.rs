@@ -1,11 +1,11 @@
 //! The facts without a model: `inspect_build` gives the bytes of `mzlab_llm::inspect` and of its golden file on the synthetic files (skipped without
 //! python3 and numpy), `params_propose` with the registry `docs/schemi/steps-1.json` gives the proposal the CLI writes with `flow::steps()`.
 
-#[path = "../../mzlab-llm/tests/ispez/mod.rs"]
-mod ispez;
+#[path = "../../mzlab-llm/tests/inspect/mod.rs"]
+mod inspect;
 
 use super::*;
-use ispez::*;
+use inspect::*;
 
 fn data(name: &str) -> String {
     std::fs::read_to_string(format!(

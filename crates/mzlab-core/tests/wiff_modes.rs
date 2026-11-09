@@ -181,7 +181,7 @@ fn every_mode_is_read_or_refused_exactly_as_the_matrix_says() {
     assert_eq!(confirmed, read);
     assert_eq!(
         read,
-        ["EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1", "Q1MI", "Q3MI"]
+        ["EMS", "EPI", "MRM", "MS3", "NL", "PI", "PREC", "Q1", "Q1MI", "Q3MI"]
     );
 }
 
