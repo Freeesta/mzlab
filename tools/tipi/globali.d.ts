@@ -267,6 +267,7 @@ interface Window {
   HR: typeof HR;
   INF: typeof INF;
   KMD: typeof KMD;
+  KMDCLOUD: typeof KMDCLOUD;
   KMDVIEW: typeof KMDVIEW;
   LIB: typeof LIB;
   PALETTE: typeof PALETTE;

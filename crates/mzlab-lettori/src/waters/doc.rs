@@ -2,9 +2,9 @@
 //! collision energy, channels Q1/Q3/dwell/CE), the LC of `_INLET.INF`, the lock mass (declared, never applied). The user and the paths of the acquisition computer are marked `identita`.
 //! Every line of the text files goes to `campi` with the section it comes from; what the reader does not decode is named in `avvisi`.
 
-use super::cartella::{base, errore};
+use super::folder::{base, errore};
 use super::inf::Entry;
-use super::lettore::{Fun, WatersReader};
+use super::reader::{Fun, WatersReader};
 use mzlab_core::error::Result;
 use mzlab_core::metodo::{self, num, obj, sha1_hex, text, Source, SrcFile, V};
 use mzlab_core::metodo_campi::Field;

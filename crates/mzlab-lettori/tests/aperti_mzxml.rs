@@ -1,11 +1,11 @@
 //! The module `aperti` reads an mzXML (docs/agenti/lettori-aperti.md): files built here in every form (32 and 64 bit, zlib or not, with and without `<index>`, flat and nested), SRM scans,
-//! the `metodo/1` document and the header of the mzML we write. The real-data parity is in `aperti_mzxml_ostili.rs` (it needs `MZLAB_DATI`).
+//! the `metodo/1` document and the header of the mzML we write. The real-data parity is in `aperti_mzxml_hostile.rs` (it needs `MZLAB_DATI`).
 #![cfg(feature = "aperti")]
 
-mod comune;
+mod common;
 
-use comune::mzxml::*;
-use comune::{file_set, written_mzml};
+use common::mzxml::*;
+use common::{file_set, written_mzml};
 use mzlab_core::lettori::Fiducia;
 use mzlab_core::mzml::ChromKind;
 
