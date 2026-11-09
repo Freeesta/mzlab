@@ -19,7 +19,9 @@ def field(pg, k): return pg.locator(f"#dpanels .pnl.xic .hd [data-o={k}]")
 def write(pg, k, txt, key=None):
     f = field(pg, k); f.click(); f.press("ControlOrMeta+a"); f.press_sequentially(txt)
     if key: f.press(key)
-    frames(pg, 3); pg.wait_for_timeout(150)
+    # Enter: the header is drawn again (fresh fields); Tab: the focus is on the other edge, which waits
+    q = f"document.querySelector('#dpanels .pnl.xic .hd [data-o={k}]')"
+    wait_for_js(pg, f"{q}.value === {q}.defaultValue" if key == "Enter" else f"document.activeElement && document.activeElement.dataset.o === '{'xhi' if k == 'xlo' else 'xlo'}'", 5000); frames(pg, 3)
 def drawn(pg):  # highest point of the drawn XIC: an empty window draws a flat trace with ymax near 1e-9
     frames(pg, 4); ready(pg); pg.wait_for_function(f"{X}._a && {X}._a.ymax != null", timeout=30000)
     return pg.evaluate(f"{X}._a.ymax")
