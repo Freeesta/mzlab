@@ -37,7 +37,7 @@ LOG = OUT / "log"
 E2E = ROOT / "tests_e2e"
 
 # What each e2e needs besides a browser. "veri" = the asserts depend on the real lab data (skipped with synthetic data);
-# "dam" = needs a .dam method file (QQQ_DAM); "sito" = builds the static site (no network);
+# "dam" = needs a .dam method file (QQQ_DAM); "sito" = builds the static site (no network); "wasm" = needs a .wasm the CI builds in its own jobs (never skipped here, left out of `e2e-cambiati`);
 # Keep this table up to date when you add an e2e (default: no needs).
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
@@ -46,7 +46,7 @@ NEEDS: dict[str, set[str]] = {
     "e2e_flow_web": {"sito"}, "e2e_flow_web_drift": {"sito"}, "e2e_flow_web_estimate": {"sito"}, "e2e_flow_web_export": {"sito"}, "e2e_flow_web_group": {"sito"}, "e2e_flow_web_ident": {"sito"}, "e2e_flow_web_ident2": {"sito"}, "e2e_flow_web_modelli": {"sito"}, "e2e_flow_web_prov": {"sito"}, "e2e_flow_web_stat": {"sito"}, "e2e_flow_web_struct": {"sito"}, "e2e_flow_web_tabella": {"sito"}, "e2e_flow_centroid_web": {"sito"}, "e2e_flow_motore": {"sito"}, "e2e_lab": {"sito"}, "e2e_lab_vuoto": {"sito"}, "e2e_normative_scarica": {"sito"},      # the Flow tests of «This browser» build every mzFinder .wasm when site/static has none (lib.build_feat): they run where the CI builds it
     "e2e_tpmine_progresso": {"sito"}, "e2e_pannelli_stabili": {"sito"}, "e2e_memoria_sonda": {"sito"},
     "e2e_raw_riaggiunto": {"sito"}, "e2e_agilent_riaggiunto": {"sito"},
-    "e2e_avvio_lento": {"sito"}, "e2e_flow_transitions": {"sito"},          # flow_transitions builds the .wasm of mzFinder (lib.py build_feat): longer than one e2e may take in the changed-files job
+    "e2e_avvio_lento": {"sito"}, "e2e_flow_transitions": {"sito"}, "e2e_flow_neg_lr": {"wasm"}, "e2e_llm_consenso": {"wasm"},  # flow_transitions builds the .wasm of mzFinder (lib.py build_feat); wasm: mzFinder built with cargo (over 600 s on a cold runner), the llm module
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 # the slowest e2e (seconds, measured in the CI): they start first, so the pool does not end waiting for one of them
