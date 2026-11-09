@@ -72,16 +72,14 @@ try:
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop", timeout=120000)
-                st = "[E.files.map(f => f.kind + ':' + String(f.file).slice(-30)), [...document.querySelectorAll('#flist [data-k=use]')].map(i => (i.closest('tr,li,label,div') || i).textContent.trim().slice(0, 40))]"
-                print("MSN-0", q.evaluate(st))
-                q.set_input_files("#pick", [str(F)]); q.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=180000)
-                print("MSN-1", q.evaluate(st))
-                q.click("text=Carica dati"); q.wait_for_function("E.files.length>=1", timeout=90000)
-                print("MSN-2", q.evaluate(st))
+                # WebKit on macOS may open this page with the main page's session restored: wait for the MSn file itself, not for any row
+                q.set_input_files("#pick", [str(F)])
+                q.wait_for_function("[...document.querySelectorAll('#flist input[data-k=use]')].some(i => (i.closest('tr,li,label,div') || i).textContent.includes('MSn_synth_t01'))", timeout=180000)
+                q.click("text=Carica dati"); q.wait_for_function("E.files.some(f => f.kind === 'infusion')", timeout=90000)
                 q.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'))")
                 try: q.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
-                except Exception:   # where the window stopped: the file kinds, the text of the output, whether the tree tab is hidden
-                    print("MSN-STATE", q.evaluate("[E.files.map(f => f.kind + (f.dda ? '/dda' : '')), String((document.querySelector('#mt-out') || {}).textContent).slice(0, 400), !!document.querySelector('#mt-ptree[hidden]'), document.querySelectorAll('#mt-tbl tr[data-n]').length]")); raise
+                except Exception:   # where the window stopped: the file kinds and the text of the output
+                    print("MSN-STATE", q.evaluate("[E.files.map(f => f.kind + (f.dda ? '/dda' : '')), String((document.querySelector('#mt-out') || {}).textContent).slice(0, 400)]")); raise
                 q.add_script_tag(path=AXE); axe_ok(q, "#bigdlg")
             finally: q.close()
         step("axe: MSn tree window", msn)
