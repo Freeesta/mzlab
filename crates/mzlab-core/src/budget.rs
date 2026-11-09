@@ -179,6 +179,30 @@ pub fn sha256_hex(b: &[u8]) -> String {
     sha256(b).iter().map(|x| format!("{x:02x}")).collect()
 }
 
+/// SHA-256 (hex) of the first `size` bytes of `r`, read in blocks of 1 MiB: a whole table or index is hashed without a copy of it in memory.
+pub fn sha256_hex_at<R: crate::idxread::ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<String> {
+    let (mut h, mut buf, mut off) = (Sha256::new(), vec![0u8; MB.min(size as usize)], 0u64);
+    while off < size {
+        let n = (size - off).min(buf.len() as u64) as usize;
+        r.read_at(off, &mut buf[..n])?;
+        h.update(&buf[..n]);
+        off += n as u64;
+    }
+    Ok(h.finalize().iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// SHA-256 (hex) of everything `r` gives, in blocks of 1 MiB (a file hashed without reading it whole).
+pub fn sha256_hex_read<R: std::io::Read>(mut r: R) -> std::io::Result<String> {
+    let (mut h, mut buf) = (Sha256::new(), vec![0u8; MB]);
+    loop {
+        match r.read(&mut buf)? {
+            0 => break,
+            n => h.update(&buf[..n]),
+        }
+    }
+    Ok(h.finalize().iter().map(|b| format!("{b:02x}")).collect())
+}
+
 /// SHA-256 of a byte string, raw (the HMAC of the proxy ledger builds on it).
 pub fn sha256(b: &[u8]) -> [u8; 32] {
     Sha256::digest(b).into()
@@ -187,6 +211,28 @@ pub fn sha256(b: &[u8]) -> [u8; 32] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A reader over bytes that keeps the largest block asked of it.
+    struct Bytes(Vec<u8>, usize);
+    impl crate::idxread::ReadAt for Bytes {
+        fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+            self.1 = self.1.max(buf.len());
+            buf.copy_from_slice(&self.0[off as usize..off as usize + buf.len()]);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn the_hashes_in_blocks_are_the_hash_of_the_whole_and_read_no_more_than_a_block() {
+        for n in [0, 1, MB - 1, MB, 2 * MB + 3] {
+            let b: Vec<u8> = (0..n).map(|i| (i * 31 % 251) as u8).collect();
+            let whole = sha256_hex(&b);
+            let mut r = Bytes(b.clone(), 0);
+            assert_eq!(sha256_hex_at(&mut r, n as u64).unwrap(), whole, "{n}");
+            assert!(r.1 <= MB, "{n}: {}", r.1);
+            assert_eq!(sha256_hex_read(&b[..]).unwrap(), whole, "{n}");
+        }
+    }
 
     #[test]
     fn reserve_gives_back_and_refuses_in_order() {
