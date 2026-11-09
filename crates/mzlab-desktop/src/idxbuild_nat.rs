@@ -21,6 +21,10 @@ impl IdxBuilder {
             } else {
                 l
             };
+            // an index that would not fit the budget of this machine is refused in order before a scan is decoded (`error.memoryBudget`)
+            let cap = mzlab_core::budget::MemBudget::mb(crate::ram::native_budget_mb());
+            let peaks = mzlab_core::budget_auto::native_index_budget();
+            mzlab_core::estimate::check_reader(&cap, &mut *l, nat.c, peaks, 1)?;
             let members = nat.members.clone();
             upload::with_parallel_prints(
                 move || natives::fileset(&members),
@@ -31,7 +35,7 @@ impl IdxBuilder {
                         impronte,
                         name,
                         out,
-                        mzlab_core::budget_auto::native_index_budget(),
+                        peaks,
                         Some(spill),
                         &mut |_| {},
                     )?;

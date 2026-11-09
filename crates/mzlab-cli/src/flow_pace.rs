@@ -277,6 +277,9 @@ fn index_reader(
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     let sample = flow_set::sample_index(label, &ids)?;
     let mut l = Scans::new(l, sample, pace).stopping(stop);
+    // as the site and the desktop: an index that would not fit the budget of this machine is refused in order before a scan is decoded
+    let cap = mzlab_core::budget::MemBudget::mb(mzlab_core::budget_auto::native_auto_mb());
+    mzlab_core::estimate::check_reader(&cap, &mut l, sample, budget, 1)?;
     let scratch_path = idx.with_extension("mzidx.scratch");
     let mut scratch = std::fs::OpenOptions::new()
         .read(true)

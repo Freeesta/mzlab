@@ -690,10 +690,10 @@ function ctl(/** @type {Pannello} */ p) {
   const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = I18N.t("ctl.oneFile");
   const view = `<select data-o="mode" aria-label="${I18N.t("ctl.mode.aria")}"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="${I18N.t("ctl.mode.title")}"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>${I18N.t("ctl.mode.ovl")}</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>${I18N.t("ctl.mode.stk")}</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>${I18N.t("ctl.mode.cas")}</option></select>`;
   // low resolution: the gradient delay and the PDA alignment are in this popover (in high resolution they are in «Opzioni di visualizzazione»)
-  const num = (/** @type {number | string} */ k, /** @type {number | string} */ v, /** @type {number | string} */ lo, /** @type {number | string} */ hi, /** @type {number | string} */ st) => `<input data-o="${k}" type="number" class="mzf" min="${lo}" max="${hi}" step="${st}" value="${v}" style="width:5em">`;
+  const num = (/** @type {number | string} */ k, /** @type {number | string} */ v, /** @type {number | string} */ lo, /** @type {number | string} */ hi, /** @type {number | string} */ st, vu = false) => `<input data-o="${k}" class="mzf" inputmode="decimal" autocomplete="off" data-num data-min="${lo}" data-max="${hi}"${vu ? " data-vuoto" : ""} value="${v ?? ""}" style="width:5em">`;
   const lrExtra = window.BANCO && BANCO.on() ? "" :
     (p.overlay === "grad" ? `<label class="muted" title="${I18N.t("disp.gdelay.title")}">${I18N.t("disp.gdelay", { input: num("gdelay", p.gdelay || 0, 0, 10, 0.1) })}</label>` : "") +
-    (p.kind === "pda" && window.DISP && DISP.pdaHere(p) ? `<label class="muted" title="${I18N.t("disp.pdaDelay.title")}">${I18N.t("disp.pdaDelay", { input: num("pdadelay", DISP.pdaDelayValue(p), -2, 2, 0.01) })}</label>${chk("pdaAlign", I18N.t("disp.pdaAlign"), false, "", I18N.t("disp.pdaAlign.title"))}` : "");
+    (p.kind === "pda" && window.DISP && DISP.pdaHere(p) ? `<label class="muted" title="${I18N.t("disp.pdaDelay.title")}">${I18N.t("disp.pdaDelay", { input: num("pdadelay", DISP.pdaDelayValue(p), -2, 2, 0.01, true) })}</label>${chk("pdaAlign", I18N.t("disp.pdaAlign"), false, "", I18N.t("disp.pdaAlign.title"))}` : "");
   const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = minOf(sfl.map((/** @type {MzFile} */ x) => x.mz_min ?? Infinity)), mhi = maxOf(sfl.map((/** @type {MzFile} */ x) => x.mz_max ?? -Infinity));
   const mzbar = `<label class="muted" title="${I18N.t("ctl.mz.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(mzd(p)) : ""}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(mzd(p)) : ""}"></label>`;
   const rtbar = p.type === "map" ? "" : `<label class="muted" title="${I18N.t("ctl.rt.title")}"><i>RT</i> ${I18N.t("ctl.range.from")} <input data-o="rt0" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[0]) : ""}" placeholder="${I18N.t("ctl.rt.min")}"> ${I18N.t("ctl.range.to")} <input data-o="rt1" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[1]) : ""}" placeholder="${I18N.t("ctl.rt.max")}"> min</label>`;
@@ -708,7 +708,7 @@ function ctl(/** @type {Pannello} */ p) {
   const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), idle: "file", dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
     + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
     + corrInfo(p)
-    + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
+    + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" inputmode="decimal" autocomplete="off" data-num data-min="0.2" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
@@ -739,7 +739,7 @@ function ctl(/** @type {Pannello} */ p) {
     c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<span class="mzfs">${mapNav(p, sf, fol, isF ? +mc.now.slice(1) : null, -1)}<select data-o="k" aria-label="${I18N.t("ctl.map.file")}" title="${fol ? I18N.t("ctl.map.follow") : I18N.t("ctl.map.file")}">${sf.map((/** @type {MzFile} */ x) => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select>${mapNav(p, sf, fol, isF ? +mc.now.slice(1) : null, 1)}</span>${kindSel}`) + mCorr + corrInfo(p) +
       mPar(`<label class="muted" title="${isF ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${I18N.t("ctl.map.norm.lab")} <select data-o="norm"${isF ? "" : " disabled"}>${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select></label><span data-mzslot="diff"></span>` +
         `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
-        `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" type="number" class="mzf" min="0.1" max="3" step="0.05" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
+        `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" class="mzf" inputmode="decimal" autocomplete="off" data-num data-min="0.1" data-max="3" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
   }
   if (p.type === "spec" && !p.uv) {  // a UV spectrum (uv-spettro.js) has no file, level or background menus
     const f = TF, hasMs2 = f.some((/** @type {MzFile} */ x) => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;  // the «fondo» menu starts from the reference of the session
@@ -794,7 +794,7 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "corr") corrWire(x, (/** @type {string} */ v) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
     else if (k === "bkg") corrWire(x, (/** @type {string} */ v) => setFondo(p, v));
     else if (k === "cinfo") corrInfoWire(p, x);
-    else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, +x.value || 1); draw(p); uiSave(); };
+    else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
         else x.onchange = () => choosePanelOption(p, k, x);
   });
   window.CANALI?.wire(p, c);
@@ -885,11 +885,11 @@ function addTrace(p, mz, label, w) {
   COMANDI.fai("xic.traces", p, () => p.traces.push({ id: E.seq++, mz, w: w ?? null, label: label || "m/z " + mz.toFixed(mzd(p)) }));
   ctl(p); draw(p);
 }
-const numMz = (/** @type {string} */ t) => { const v = numIt(t); return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
+const numMz = (/** @type {string} */ t) => { const v = CAMPI.num(t); return v != null && isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
 // ONE rounding rule everywhere (half up on the decimal text, like mzlab.chem round_half_up): 364.15 gives 364.2 although 364.15*10 is 3641.4999... in binary
 const rh = (/** @type {unknown} */ v, d = 1) => { const n = Number(v); if (!isFinite(n)) return n; const sg = n < 0 ? -1 : 1; return sg * Number(Math.round(Number(Number(Math.abs(n).toFixed(9)) + "e" + d)) + "e-" + d); };   // the 9-digit prefilter is the same as round_half_up in elements.py
 window.rh = rh;
-const numMz1 = (/** @type {string} */ t) => { const v = numIt(t); return isFinite(v) && v > 0 ? rh(v, 1) : null; };  // XIC fields: one decimal only
+const numMz1 = (/** @type {string} */ t) => { const v = CAMPI.num(t); return v != null && isFinite(v) && v > 0 ? rh(v, 1) : null; };  // XIC fields: one decimal only
 const mzd = (/** @type {Pannello | null | undefined} */ p, lv = 1) => window.HR ? HR.dec(scanFiles(tabFiles(p ? p.tab || E.tab : E.tab)), p && p.level ? p.level : lv) : 1;
 const fmt2 = (/** @type {number | string} */ v) => String(+(+v).toFixed(2));
 /** @param {number | string} v @param {Pannello | null} [p] @param {number} [lv] */
@@ -1050,7 +1050,7 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
       }
       COMANDI.fai("panel.source", p, () => {  // one undo step: the choice with what it resets (measures, zoom, background)
       if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco"); else if (k === "mode") fondoOnStack(p, x.value);
-      p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
+      p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.hasAttribute("data-num") ? CAMPI.num(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && k === "k") p.kSet = true;  // the file chosen in the menu stays until another choice or a click on a trace of the TIC
       if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;  // the measures belong to the spectrum they were made on

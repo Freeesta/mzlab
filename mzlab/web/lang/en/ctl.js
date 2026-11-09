@@ -100,5 +100,11 @@ I18N.add("en", {
   "dda.nav.last": "Last MS² of this precursor",
   "dda.nav.only": "No other MS² of this precursor",
   "dda.peak.near": "MS² of this ion from a scan {d} min away",
-  "dda.tri.btn": "▲ MS²"
+  "dda.tri.btn": "▲ MS²",
+  "campo.num": "Write a number, for example 250.8 or 250,8: the previous value is back.",
+  "campo.empty": "This field cannot be left empty: the previous value is back.",
+  "campo.gt": "Write a number above {a}: the previous value is back.",
+  "campo.range": "Write a number from {a} to {b}: the previous value is back.",
+  "campo.min": "Write a number of at least {a}: the previous value is back.",
+  "campo.max": "Write a number of at most {b}: the previous value is back."
 });
