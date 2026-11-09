@@ -84,7 +84,7 @@
           let path = D + alKey + ".mzfeat";
           if (id === "features.align" && x.plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill")) {
             // the file kept under the key of the alignment is the filled table: the table of the alignment alone is made again without the gap filling
-            const recipe = { ...JSON.parse(k.recipeOf(plan, al)), fill: false };
+            const recipe = JSON.parse(await k.recipeOf(plan, x.registry, al, false));
             const stored = await Promise.all(up.map((/** @type {any} */ u) => p.fs.read(D + u.key + ".mzfeatf")));
             const table = await p.align(stored, up.map((/** @type {any} */ u) => u.path), JSON.stringify(recipe), x.jk(j), !!meta.mem && meta.mem.via === "slabs");
             alone = path = OUT + "alone.mzfeat";

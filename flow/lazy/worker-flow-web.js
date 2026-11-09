@@ -43,6 +43,8 @@ async function open(paths) {
 
 /** the answer of the facts above @param {any} m */
 async function facts(m) {
+  // the recipe text of a job reads no file: a JSON string, so the page gets the text the engine wrote
+  if (m.op === "recipe") return JSON.stringify(mod.flow_job_recipe(m.plan, m.registry, m.instance, m.filled !== false));
   const f = await open(m.paths);
   try {
     if (m.op === "sha") return mod.flow_file_sha(f.read, f.sizes[0]);

@@ -52,7 +52,7 @@ impl Walk<'_> {
         let head = format!(
             "sched/1\nstep:{}\nalgorithm:{algorithm}\nparams:{}\nprogram:{}\n",
             inst.step_ref(),
-            resolved.params_sha256(),
+            resolved.run_sha256(),
             self.program
         );
         let shape = Shape {

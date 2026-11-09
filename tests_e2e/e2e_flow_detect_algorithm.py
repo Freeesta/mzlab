@@ -86,7 +86,7 @@ try:
 
         def recipe_carries_algorithm():
             pg.evaluate("document.querySelector('.flx-list').__flow.plan.steps.find(s => String(s.step).split('@')[0] === 'features.detect').algorithm = 'centwave'")
-            recipe = pg.evaluate("FLOW.runners.web.recipeOf(document.querySelector('.flx-list').__flow.plan)")
+            recipe = pg.evaluate("(() => { const S = document.querySelector('.flx-list').__flow, al = S.plan.steps.find(s => String(s.step).split('@')[0] === 'features.align'); return FLOW.runners.web.recipeOf(S.plan, S.reg.steps, al); })()")
             assert '"algorithm":"centwave"' in recipe, recipe
         step("the recipe of the browser carries the algorithm of the detect step", recipe_carries_algorithm)
 
