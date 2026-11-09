@@ -48,7 +48,7 @@ async function viaHandles(st, files, fn) {
   try { return fn(reader(files, undefined, fonti)); } finally { fonti.forEach(f => f.close()); }
 }
 
-/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it (`bytes`, and those of `spill.put` and `writeCen`, are views of the engine's memory valid during the call only: written at once, never kept, no call to the engine meanwhile); `progress({frac, phase, done, total})` is told the overall fraction 0..1 and, in the phases that read the scans, how many of the sample's scans are done */
+/** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it (`bytes`, and those of `spill.put` and `writeCen`, are views of the engine's memory valid during the call only: written at once, never kept, no call to the engine meanwhile); `progress({frac, phase, done, total})` is told the overall fraction 0..1 and, in the phases that read the scans, how many of the sample's scans are done; `cap`: the budget of the instance in MB (an index that would not fit ends in error.memoryBudget before a scan is decoded; 0 the default) */
 // the fingerprints a builder waits for once its first pass is done (`lateJob`): Int32 [state (0 waiting, 1 there, 2 none), length], then their JSON
 const LATE_BYTES = 64 << 10, LATE_WAIT_MS = 600000;
 /** the shared buffer of `lateJob` gets the fingerprints (null: none, the builder reads the members itself) */
@@ -64,7 +64,7 @@ function waitLate(/** @type {SharedArrayBuffer} */ sab) {
   return Atomics.load(i, 0) === 1 ? JSON.parse(new TextDecoder().decode(new Uint8Array(sab, 8, i[1]).slice())) : null;
 }
 
-export async function buildNative(/** @type {Function} */ build_mzidx_native, /** @type {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} */ ext, /** @type {{ st: Stub, files: Blob[], late?: SharedArrayBuffer }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string, done: number, total: number }) => void} */ progress, /** @type {number} */ budget, /** @type {{ put: (o: number, d: Uint8Array) => void, get: (o: number, n: number) => Uint8Array } | null} */ spill = null, /** @type {((o: number, d: Uint8Array) => void) | undefined} */ writeCen = undefined) {
+export async function buildNative(/** @type {Function} */ build_mzidx_native, /** @type {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} */ ext, /** @type {{ st: Stub, files: Blob[], late?: SharedArrayBuffer }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string, done: number, total: number }) => void} */ progress, /** @type {number} */ budget, /** @type {{ put: (o: number, d: Uint8Array) => void, get: (o: number, n: number) => Uint8Array } | null} */ spill = null, /** @type {((o: number, d: Uint8Array) => void) | undefined} */ writeCen = undefined, /** @type {number} */ cap = 0) {
   await ext.prepara(j.st.members.map(x => x.name), j.st.members);
   const sizes = j.files.map(f => f.size), all = sizes.reduce((a, b) => a + b, 0) || 1, high = sizes.map(() => 0);
   const given = prints(j.st.members) || (j.late ? () => waitLate(/** @type {SharedArrayBuffer} */ (j.late)) : undefined), w = given ? { ...W, sha: 0, scans: W.scans + W.sha } : W;          // the fingerprints of the copy, now or once the first pass is done: no phase to read the members again
@@ -87,7 +87,7 @@ export async function buildNative(/** @type {Function} */ build_mzidx_native, /*
   try {
     const stats = build_mzidx_native(j.st.members.map(x => x.name), Float64Array.from(sizes), rd, j.st.c, name, j.st.centroid, write, budget,
       (/** @type {number} */ p) => { phase = PHASES[p] || phase; high.fill(0); from = done; tell(true); }, given, put, get, writeCen,
-      (/** @type {number} */ d, /** @type {number} */ n) => { done = d; total = n; tell(false); });
+      (/** @type {number} */ d, /** @type {number} */ n) => { done = d; total = n; tell(false); }, cap);
     return stats;
   } finally { fonti.forEach(f => f.close()); }
 }

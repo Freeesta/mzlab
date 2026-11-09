@@ -100,5 +100,11 @@ I18N.add("it", {
   "dda.nav.last": "Ultima MS² di questo precursore",
   "dda.nav.only": "Nessun'altra MS² di questo precursore",
   "dda.peak.near": "MS² di questo ione da una scansione a {d} min",
-  "dda.tri.btn": "▲ MS²"
+  "dda.tri.btn": "▲ MS²",
+  "campo.num": "Scrivi un numero, per esempio 250.8 o 250,8: ho rimesso il valore di prima.",
+  "campo.empty": "Questo campo non può restare vuoto: ho rimesso il valore di prima.",
+  "campo.gt": "Scrivi un numero maggiore di {a}: ho rimesso il valore di prima.",
+  "campo.range": "Scrivi un numero da {a} a {b}: ho rimesso il valore di prima.",
+  "campo.min": "Scrivi un numero non minore di {a}: ho rimesso il valore di prima.",
+  "campo.max": "Scrivi un numero non maggiore di {b}: ho rimesso il valore di prima."
 });

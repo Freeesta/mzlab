@@ -18,7 +18,7 @@ export const conv = (s, text) => ({ schema: "llm-conv/1", provider: s.provider, 
 export function sectionHtml(C, T, s, provs, p, m) {
   const esc = /** @type {(s: string) => string} */ (C.esc);
   const sel = (/** @type {string} */ id, /** @type {string} */ label, /** @type {string[][]} */ opts, /** @type {string} */ cur) => `<div class="imp-fld"><label for="${id}">${label}</label><select id="${id}">${opts.map(o => `<option value="${esc(o[0])}"${o[0] === cur ? " selected" : ""}>${esc(o[1])}</option>`).join("")}</select></div>`;
-  const num = (/** @type {string} */ id, /** @type {string} */ label, /** @type {number} */ v, /** @type {number} */ min, /** @type {number} */ max) => `<div class="imp-fld"><label for="${id}">${label}</label><input type="number" id="${id}" min="${min}" max="${max}" step="1" value="${v}" style="width:84px"></div>`;
+  const num = (/** @type {string} */ id, /** @type {string} */ label, /** @type {number} */ v, /** @type {number} */ min, /** @type {number} */ max) => `<div class="imp-fld"><label for="${id}">${label}</label><input id="${id}" inputmode="decimal" autocomplete="off" data-num data-min="${min}" data-max="${max}" value="${v}" style="width:84px"></div>`;
   const html = C.sw(T("llm.on.label"), T("llm.on.title"), 'id="llm-on"', true, "")
     + sel("llm-prov", T("llm.provider"), provs.map(x => [x.id, x.id + (x.local ? " · " + T("llm.local") : "")]), p.id)
     + sel("llm-model", T("llm.model"), p.models.map(x => [x.id, x.id]), m ? m.id : "")

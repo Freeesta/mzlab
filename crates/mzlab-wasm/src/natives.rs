@@ -312,7 +312,7 @@ impl Spill for JsSpill {
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
 /// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`counted.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
-/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::missing`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
+/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::missing`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once). `cap_mb`: the budget of the instance (`MemBudget::from_request`; absent or 0 the default).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -330,6 +330,7 @@ pub fn build_mzidx_native(
     spill_get: Option<Function>,
     write_cen: Option<Function>,
     step: Option<Function>,
+    cap_mb: Option<f64>,
 ) -> Result<String, JsValue> {
     let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
     let m = Members::new(names, sizes, read)?;
@@ -346,7 +347,18 @@ pub fn build_mzidx_native(
         .map(|(put, get)| Accorpa::new(JsSpill { put, get }));
     let spill = spill.as_mut().map(|s| s as &mut dyn Spill);
     // a profile sample that the page also wants as centroids: both indexes from one decoding of the scans
-    if let Some(wc) = write_cen.filter(|_| !centroid && first_ms1_is_profile(&mut *l, c)) {
+    let both = write_cen.filter(|_| !centroid && first_ms1_is_profile(&mut *l, c));
+    // a sample whose index would not fit the budget of the page ends in the calm `error.memoryBudget` before a scan is decoded, not in a dead tab
+    let cap = mzlab_core::budget::MemBudget::from_request(cap_mb.unwrap_or(0.0));
+    mzlab_core::estimate::check_reader(
+        &cap,
+        &mut *l,
+        c,
+        (budget_mb as usize) << 20,
+        1 + both.is_some() as usize,
+    )
+    .map_err(|e| error_json(&e))?;
+    if let Some(wc) = both {
         return index_both(l, cm, &mut members, name, out, wc, budget_mb, spill, &tell);
     }
     let mut l = if centroid {

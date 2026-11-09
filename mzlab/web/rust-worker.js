@@ -281,7 +281,7 @@ async function lrIndexOwn(m) {
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
-  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, budget: idxBudget(), onProgress }
+  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, cap: BUDGET_MB, budget: idxBudget(), onProgress }
     : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
@@ -323,7 +323,7 @@ async function lrOp(m) {
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
       const job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".cen.mzidx.part";
       if (!job) jerr("err.session.fileNotFound");
-      const res = await idxPool().build({ name: m.name, nat: { ...job, st: { ...job.st, centroid: true } }, part });
+      const res = await idxPool().build({ name: m.name, nat: { ...job, st: { ...job.st, centroid: true } }, part, cap: BUDGET_MB });
       if (!res.ok) { await ARCH.remove("idx", part); throw JSON.stringify({ error_key: "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } }); }
       await ARCH.promote("idx", part, m.name + ".cen.mzidx");
       return { info: "{}" };

@@ -222,10 +222,10 @@ function ibkChip(p) {
   const chip = document.createElement("span"); chip.className = "ibk"; const flat = ib && ib.flat ? FONDOP.chip(p, ib, l0 ? ibkLevels(l0) : "", chip) : null;
   chip.title = I18N.t(ib ? "ibk.chip.title" : "fondo.chip.auto.title");
   const main = flat || (ib ? I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) }) : bl ? I18N.t("fondo.chip.auto", { min: fmtA(bl.min), max: fmtA(bl.max) }) : "");
-  chip.innerHTML = `${main} <label title="${I18N.t("fondo.zone.title")}">${I18N.t("fondo.zone.label")} <input type="number" data-ib="zd" min="0" step="0.1" value="${+zd.toFixed(2)}" style="width:4.2em" aria-label="${I18N.t("fondo.zone.title")}"> min</label> <button data-ib="det" title="${I18N.t("fondo.zone.detect.title")}">${I18N.t("fondo.zone.detect")}</button> <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label>` +
+  chip.innerHTML = `${main} <label title="${I18N.t("fondo.zone.title")}">${I18N.t("fondo.zone.label")} <input data-ib="zd" inputmode="decimal" autocomplete="off" data-num data-min="0" value="${+zd.toFixed(2)}" style="width:4.2em" aria-label="${I18N.t("fondo.zone.title")}"> min</label> <button data-ib="det" title="${I18N.t("fondo.zone.detect.title")}">${I18N.t("fondo.zone.detect")}</button> <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label>` +
     (ib ? ` <button data-ib="spec" title="${I18N.t("ibk.spec.title")}">${I18N.t("ibk.spec")}</button>` : "") + ` <button data-ib="off">${I18N.t("ibk.off")}</button>`;
   chip.querySelector("[data-ib=clip]").onchange = e => { p.clipDraw = e.target.checked; draw(p); uiSave(); };
-  chip.querySelector("[data-ib=zd]").onchange = e => { fo.zd = Math.max(0, +e.target.value || 0); draw(p); uiSave(); };
+  chip.querySelector("[data-ib=zd]").onchange = e => { fo.zd = Math.max(0, numIt(e.target.value) || 0); draw(p); uiSave(); };
   chip.querySelector("[data-ib=det]").onclick = () => { const z = s0 ? FONDO.front(s0.x, s0.yraw || s0.y) : null; if (z == null) return info(I18N.t("fondo.zone.none")); fo.zd = z; draw(p); uiSave(); };
   const sp = chip.querySelector("[data-ib=spec]"); if (sp) sp.onclick = () => ibkSpectra(p);
   chip.querySelector("[data-ib=off]").onclick = () => { setFondo(p, ""); };
