@@ -279,7 +279,7 @@ function freezeSpec(s) {
   if (!s.link) return;
   s.src = s.src || s.link; s.link = null;
   if (/^@(spec|product)/.test(s.title) && s.r0 != null) s.title = s.level === 2 ? ptProduct(s.prec) : PT.spec;   // the time is written once, next to the title (.rtl)
-  ctl(s);
+  ctl(s); rtLabel(s);   // the retention time next to the title: freezing redraws nothing (drawSized), so afterDraw would not write it
 }
 function liveSpec(s, from) {
   E.panels.filter(q => q !== s && q.type === "spec" && q.link === from.id).forEach(freezeSpec);
@@ -287,7 +287,7 @@ function liveSpec(s, from) {
   if (from.cur != null && (s.uv || s.r0 == null)) { const dt = s.uv ? 0 : scanStep() / 2, sh = s.uv && from.kind === "pda" && window.DISP ? DISP.pdaShift(from) : 0; s.r0 = from.cur - dt - sh; s.r1 = from.cur + dt - sh; }
   draw(s); uiSave();
 }
-COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one
+COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); rtLabel(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one
 /** @param {any} s */
 const spLinkFreeze = s => COMANDI.fai("panel.link", s, () => freezeSpec(s));
 /** @param {any} s @param {any} from */
