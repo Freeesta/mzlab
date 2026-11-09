@@ -71,8 +71,8 @@ pub(crate) struct Inner {
 #[derive(Default)]
 pub struct State {
     inner: Mutex<Inner>,
-    /// the folder of the spectral libraries (`librerie.rs`)
-    pub libs: crate::librerie::Folder,
+    /// the folder of the spectral libraries (`libraries.rs`)
+    pub libs: crate::libraries::Folder,
     /// where the `.mzidx` of the picked files are built (`set_index_folder`; a folder of the system temp dir until then)
     idx: Mutex<Option<Arc<crate::idxbuild::IdxBuilder>>>,
     /// the indexes by slot, the methods: the operations of `rpc.rs`

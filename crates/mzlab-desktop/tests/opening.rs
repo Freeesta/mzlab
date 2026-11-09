@@ -1,6 +1,6 @@
 //! Files opened from outside (`src/opening.rs`): which arguments count, the queue, and the alternate notice «make mzLab the default app?».
 
-use mzlab_desktop::librerie::{read_config, write_config, Config};
+use mzlab_desktop::libraries::{read_config, write_config, Config};
 use mzlab_desktop::opening::{
     answer_notice, ask_again, paths_from_args, record_opening, NoticeAnswer, Pending,
 };

@@ -49,7 +49,7 @@ Campioni nativi (`.raw`, `.wiff`, `.D`): `lr_put` con `nat` copia i membri in OP
 
 ## 3. App desktop
 
-- **Ingresso**: clic su `#drop` o `#dropdam` intercettato da `shim/desktop-shim.js` → comando Tauri `pick_files` (dialogo in `spawn_blocking`, filtro dal registro dei lettori); trascinamento: `register_paths` (`main.rs` 116, solo `metadata`); doppio clic dal sistema: `apri.rs` (`single_instance`, argv, macOS `RunEvent::Opened`; coda `Pending`, `opening.rs`; solo estensioni del registro). La pagina non vede mai il percorso: `State::pick` (`engine.rs` 137) assegna un numero, `toFile` crea un `File` vuoto con `type=application/x-mzlab-file;id=N`. Nessun dato letto in questo passo.
+- **Ingresso**: clic su `#drop` o `#dropdam` intercettato da `shim/desktop-shim.js` → comando Tauri `pick_files` (dialogo in `spawn_blocking`, filtro dal registro dei lettori); trascinamento: `register_paths` (`main.rs` 116, solo `metadata`); doppio clic dal sistema: `open.rs` (`single_instance`, argv, macOS `RunEvent::Opened`; coda `Pending`, `opening.rs`; solo estensioni del registro). La pagina non vede mai il percorso: `State::pick` (`engine.rs` 137) assegna un numero, `toFile` crea un `File` vuoto con `type=application/x-mzlab-file;id=N`. Nessun dato letto in questo passo.
 - **Trasporto**: `desktop-worker.js` (thread Worker JS) fa `fetch` su `mzlab://` (POST con JSON; risposte JSON o binarie per `tic`/`xic`/`spectra`, `scanbin`, `idxxicbin`, `natsrm`); coda unica dei messaggi (`line`), fuori coda solo `lr_index`, `lr_index_cen`, `nat2mzml`, `mzml2cen`. Lato Rust ogni richiesta ha un `std::thread::spawn` (`main.rs` 456). `State::rpc` (`rpc.rs` 340): le operazioni lunghe vanno SENZA il lock `Mutex<Eng>`; `lr_put`, `lr_entry`, `idxopen`, `route`, `scanbin` lo prendono e sono seriali.
 - **mzML**: `lr_put` (`rpc_lr.rs` 65) non copia (stamp size+mtime in `store.rs`), tranne un file temporaneo dell'app (`fs::copy`); cancella l'indice del nome. `lr_index` (`rpc.rs` 125) → `IdxBuilder::build`: `Mapped::open` (mmap, `mapped.rs`), `upload::prepare_parallelo` (tabella + SHA-256 su un secondo thread), `ram::check_index`, `mzidx::build_mzml_spill` (budget 64 MB, scorta `.sp.part`), scrive `.part` poi `rename`. Pool rayon: min(core−1, 4), 1 minimo (`idxbuild.rs` 23-28). Decodifica con
   `parse_helped` (3 thread, `mzml/help/pool.rs`) e ordinamento dei secchi fino a 8 thread (`mzidx_order.rs`).
@@ -199,7 +199,7 @@ crates/mzlab-desktop/src/ram.rs
 crates/mzlab-desktop/src/natives.rs
 crates/mzlab-desktop/src/natives_slots.rs
 crates/mzlab-desktop/src/conv_queue.rs
-crates/mzlab-desktop/src/apri.rs
+crates/mzlab-desktop/src/open.rs
 crates/mzlab-desktop/src/opening.rs
 crates/mzlab-desktop/src/startup.rs
 crates/mzlab-desktop/src/folder.rs

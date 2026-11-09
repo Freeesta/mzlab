@@ -76,7 +76,7 @@ Un solo modello Rust dei ruoli e dei tempi dei file di una serie, per la vista D
 - Matrice = prima parola di sole lettere (non ruolo né condizione) con 2-6 valori su ≥ 2 file ciascuno; condizione = i token fra matrice e tempo (senza tempo nessun valore: `BTZ`, `mid`, `Wash` non sono condizioni); replica = numero ≤ 20 in coda se lo stesso nome senza di esso compare con un altro numero.
 - Punteggio = copertura × equilibrio (1 − Σp² normalizzato, solo + × /: stessi bit in `.wasm` e app). Nascoste: costanti, identificatori (categoriche con un file per valore, ≥ 3), punteggio < 0,05. Ordine: sopra 0,25 quello fisso `matrix cond time role matcond folder`, poi per punteggio (`conc`, `rep`).
 - `has`: token intero (`O2` non prende `H2O2`) o `substring`; un file va al primo termine, chi ne ha più sta in `multipli`, chi nessuno in `senza`. CLI `mzlab-cli samples vars|group`.
-- Prove: `crates/mzlab-core/tests/samples_variables.rs` (elenco dello studio in `crates/mzlab-core/tests/samples_variables/federico.json`), `crates/mzlab-cli/src/samples_cmd_tests.rs`, parità `.wasm` = app in `parita_rotte.rs` (`name_steps`).
+- Prove: `crates/mzlab-core/tests/samples_variables.rs` (elenco dello studio in `crates/mzlab-core/tests/samples_variables/federico.json`), `crates/mzlab-cli/src/samples_cmd_tests.rs`, parità `.wasm` = app in `parity_routes.rs` (`name_steps`).
 
 ## `campioni/3` (`docs/schemi/campioni-3.json`, `sample_id.rs`, `columns.rs`, `json3.rs`, `validate3.rs`, `csv.rs`, `model.rs`, `regex.rs`, `from_file.rs`)
 - Un file = una voce; un campione fisico misurato nelle due polarità sono DUE file con lo stesso `campione_id`.
