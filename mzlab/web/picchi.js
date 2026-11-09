@@ -332,7 +332,7 @@ async function drawSpec(p, snapped) {
   let files = scanFiles(base.filter(Boolean));
   if (!files.length) return say(I18N.t("spec.isMrm"));
   if (!isDda && p.level === 1) {          // an MS2-only file has no MS1 scans to give: while browsing, the current file can be one; the panel keeps its own file then
-    const ms1 = (/** @type {Bag[]} */ l) => l.filter((/** @type {Bag} */ f) => f && f.kind !== "ms2");
+    const ms1 = (/** @type {Bag[]} */ l) => l.filter((/** @type {Bag} */ f) => f && f.kind !== ESP.ms2);
     files = ms1(files).length ? ms1(files) : ms1(scanFiles([E.files[/** @type {number} */ (p.k)]].filter(Boolean)));
     if (!files.length) return say(I18N.t("spec.noScan"));
   }
