@@ -2,12 +2,12 @@
 //! comparison with the tree, the calibration and the registry of the filters, and the block in the `.mzfeat` (written, read by row, replaced).
 
 use mzlab_core::elements::parse_formula;
-use mzlab_feat::interp::albero::{states, LibNode};
-use mzlab_feat::interp::confronto::by_formula;
-use mzlab_feat::interp::filtri::{calibrate, first_hidden, out_of_tolerance, RowFacts};
-use mzlab_feat::interp::modifica::{candidates, diff, iso_check, label};
+use mzlab_feat::interp::comparison::by_formula;
+use mzlab_feat::interp::edit::{candidates, diff, iso_check, label};
+use mzlab_feat::interp::filters::{calibrate, first_hidden, out_of_tolerance, RowFacts};
 use mzlab_feat::interp::ms2link::{interpolate, parse_filter, pearson, separate, Isomers, Ms2Scan};
 use mzlab_feat::interp::store::{append, read_meta, read_row};
+use mzlab_feat::interp::tree::{states, LibNode};
 use mzlab_feat::legacy::ms2::Consensus;
 use mzlab_feat::legacy::series::Hyp;
 use mzlab_feat::recipe::Recipe;
@@ -323,7 +323,7 @@ fn the_block_is_written_read_by_row_and_replaced() {
 
 #[test]
 fn decoys_stay_beyond_ten_ppm_of_every_rule_and_count_the_passing_matches() {
-    use mzlab_feat::interp::filtri::{
+    use mzlab_feat::interp::filters::{
         decoy_masses, registry_decoys, DECOY_K, DECOY_PPM, DECOY_STEP,
     };
     let rules = [333.1591, 349.1540, 303.1485];

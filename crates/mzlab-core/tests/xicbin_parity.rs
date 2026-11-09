@@ -2,7 +2,7 @@
 //! `.mzidx`: every window of a spread of m/z, a window with no peaks, a level that does not exist, a buffer that is too short.
 #![allow(clippy::indexing_slicing)]
 
-#[path = "lettore_finto/mod.rs"]
+#[path = "fake_reader/mod.rs"]
 mod finto;
 
 use std::io::BufWriter;

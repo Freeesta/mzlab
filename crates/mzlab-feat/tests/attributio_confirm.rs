@@ -3,8 +3,8 @@
 //! B2 candidate from synthetic SIRIUS tables, a MetFrag summary and the chemist's decisions, the accepted ones and the formula parser.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::reglists::confirm::*;
 use mzlab_feat::attributio::reglists::screen::Hit;
 use serde_json::{json, Value};

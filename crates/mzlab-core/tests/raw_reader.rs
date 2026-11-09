@@ -1,0 +1,308 @@
+#![cfg(feature = "thermo")]
+//! The Thermo `.raw` read through the `Lettore` contract gives the same spectra as `raw::read`, with an index built without reading peaks, and is
+//! recognised by the registry from its first bytes. Needs the private data repository (MZLAB_DATI or `mzlab-dati` beside this one); skipped without it.
+#![allow(clippy::indexing_slicing)]
+#![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
+
+use std::path::{Path, PathBuf};
+
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::{lettori_mzml, metodo, raw};
+
+#[path = "../../../tools/dati_percorsi.rs"]
+mod dati_percorsi;
+
+fn raw_files() -> Vec<PathBuf> {
+    let Some(hrms) = dati_percorsi::percorso("dati/HRMS") else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    let mut stack = vec![hrms];
+    while let Some(dir) = stack.pop() {
+        for e in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                stack.push(p);
+            } else if p.extension().is_some_and(|x| x.eq_ignore_ascii_case("raw")) {
+                out.push(p);
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+fn set(path: &Path) -> FileSet {
+    let bytes = std::fs::read(path).unwrap();
+    let name = path.file_name().unwrap().to_string_lossy().to_string();
+    FileSet {
+        membri: vec![Member {
+            nome: name,
+            dim: bytes.len() as u64,
+            dati: Box::new(bytes),
+            sha1: None,
+        }],
+    }
+}
+
+#[test]
+fn a_real_raw_reads_the_same_through_the_registry() {
+    let files = raw_files();
+    if files.is_empty() {
+        eprintln!("SKIP raw_reader: no data repository (MZLAB_DATI)");
+        return;
+    }
+    for f in files.iter().take(2) {
+        let want = raw::read(std::fs::File::open(f).unwrap()).unwrap();
+        let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+        assert_eq!(l.format().id(), "thermo-raw");
+        assert_eq!(l.samples().len(), 1);
+        let index = l.index(0).unwrap().to_vec();
+        assert!(index.len() >= want.spectra.len());
+        let mut checked = 0;
+        for w in &want.spectra {
+            let k = index
+                .iter()
+                .position(|r| r.id == w.id)
+                .unwrap_or_else(|| panic!("{}: not in the index", w.id));
+            assert_eq!(
+                (index[k].livello, index[k].rt, index[k].polarita),
+                (w.level, w.rt, w.polarity),
+                "{}",
+                w.id
+            );
+            assert_eq!(index[k].filtro, w.filter);
+            assert!(index[k].position.is_some_and(|p| p.lunghezza > 0));
+            if checked % 7 == 0 {
+                let got = l.scan(0, k).unwrap();
+                assert_eq!(
+                    (
+                        &got.id,
+                        got.level,
+                        got.profile,
+                        got.precursor,
+                        &got.mz,
+                        &got.intensity
+                    ),
+                    (&w.id, w.level, w.profile, w.precursor, &w.mz, &w.intensity)
+                );
+                assert!(!l.scan_header(0, k).unwrap().is_empty());
+            }
+            checked += 1;
+        }
+        let tic = l.chromatogram(0, "TIC").unwrap();
+        assert_eq!(tic.time.len(), tic.intensity.len());
+        assert!(!tic.time.is_empty());
+        let doc = l.method(0).unwrap();
+        assert!(doc.contains("thermo-raw"), "{doc}");
+        eprintln!("{}: {} scans checked", f.display(), checked);
+    }
+}
+
+/// `scansione_profilo`: the same scan as `scansione` (id, level, RT, precursor) with the profile points of the file, never fewer than the centroids.
+#[test]
+fn the_profile_scan_is_the_same_scan_with_the_points_of_the_file() {
+    let files = raw_files();
+    let Some(f) = files.first() else {
+        eprintln!("SKIP raw_reader: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+    let n = l.index(0).unwrap().len();
+    for k in (0..n).step_by((n / 20).max(1)) {
+        let a = l.scan(0, k).unwrap();
+        let b = l.scan_profile(0, k).unwrap().expect("a .raw has a profile");
+        assert_eq!(
+            (&a.id, a.level, a.rt, a.precursor),
+            (&b.id, b.level, b.rt, b.precursor)
+        );
+        assert!(b.mz.len() >= a.mz.len() || !b.profile, "scan {k}");
+    }
+}
+
+#[test]
+fn not_a_raw_is_refused() {
+    let mut fs = FileSet {
+        membri: vec![Member {
+            nome: "x.raw".into(),
+            dim: 20,
+            dati: Box::new(vec![7u8; 20]),
+            sha1: None,
+        }],
+    };
+    assert!(lettori::riconosci(&mut fs).is_none());
+}
+
+#[test]
+fn the_noise_and_baseline_of_an_ft_scan_come_with_the_header_and_leave_the_peaks_alone() {
+    let files = raw_files();
+    if files.is_empty() {
+        eprintln!("SKIP raw_reader: no data repository (MZLAB_DATI)");
+        return;
+    }
+    let mut seen = 0;
+    for f in files.iter().take(2) {
+        let direct = opentfraw::RawFileReader::open(std::io::BufReader::new(
+            std::fs::File::open(f).unwrap(),
+        ))
+        .unwrap();
+        let mut src = std::io::BufReader::new(std::fs::File::open(f).unwrap());
+        let first = direct.run_header.sample_info.first_scan_number;
+        let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+        let n = l.index(0).unwrap().len();
+        for k in (0..n).step_by((n / 12).max(1)) {
+            let head = l.scan_header(0, k).unwrap();
+            let get = |name: &str| {
+                head.iter()
+                    .find(|c| c.nome == name)
+                    .map(|c| c.valore.clone())
+            };
+            let nodes = direct
+                .read_scan_labels(&mut src, first + k as u32)
+                .map(|p| p.noise_nodes)
+                .unwrap_or_default();
+            if nodes.is_empty() {
+                assert!(
+                    get("thermo:noise_function").is_none(),
+                    "{k}: no nodes, no field"
+                );
+                continue;
+            }
+            seen += 1;
+            let want = nodes
+                .iter()
+                .map(|x| format!("{},{},{}", x.mz, x.noise, x.baseline))
+                .collect::<Vec<_>>()
+                .join(";");
+            assert_eq!(
+                get("thermo:noise_function").as_deref(),
+                Some(want.as_str()),
+                "scan {k}"
+            );
+            let noise: f32 = get("thermo:noise").unwrap().parse().unwrap();
+            let (lo, hi) = nodes.iter().fold((f32::MAX, f32::MIN), |a, x| {
+                (a.0.min(x.noise), a.1.max(x.noise))
+            });
+            assert!(
+                noise >= lo && noise <= hi,
+                "scan {k}: median outside the nodes"
+            );
+            assert!(get("thermo:baseline").is_some());
+        }
+    }
+    eprintln!("scans with noise nodes checked: {seen}");
+}
+
+/// A sink that keeps the first bytes and refuses the rest: the header of the mzML is what the test reads.
+struct Head(Vec<u8>);
+
+impl std::io::Write for Head {
+    fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+        if self.0.len() > (4 << 20) {
+            return Err(std::io::Error::other("enough"));
+        }
+        self.0.extend_from_slice(b);
+        Ok(b.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+#[test]
+fn the_mzml_of_a_raw_carries_the_instrument_the_hash_the_start_and_the_method() {
+    let files = raw_files();
+    let Some(f) = files.first() else {
+        eprintln!("SKIP raw_reader: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+    let mut head = Head(Vec::new());
+    let _ = lettori_mzml::scrivi(&mut *l, 0, &mut head, &mut |_, _| {});
+    let xml = String::from_utf8_lossy(&head.0).into_owned();
+    let top = &xml[..xml.find("<spectrumList").unwrap()];
+    let want = mzlab_core::metodo::sha1_hex(
+        &mut std::fs::read(f).unwrap(),
+        std::fs::metadata(f).unwrap().len(),
+    )
+    .unwrap();
+    assert!(
+        top.contains(&format!(
+            "accession=\"MS:1000569\" name=\"SHA-1\" value=\"{want}\""
+        )),
+        "{top}"
+    );
+    assert!(top.contains("MS:1000563"), "source file format");
+    assert!(top.contains("startTimeStamp=\""), "start of the run");
+    assert!(top.contains("opentfraw.computer_name"), "run terms");
+    let doc = metodo::from_userparam(top).expect("metodo/1 in the run");
+    assert!(doc.contains("\"schema\":\"metodo/1\""));
+    assert!(
+        doc.contains(&want),
+        "the document names the file by its hash"
+    );
+    // the start is the one the method document gives as the creation of the file
+    let start = top
+        .split("startTimeStamp=\"")
+        .nth(1)
+        .and_then(|t| t.split('"').next())
+        .unwrap();
+    assert!(
+        doc.contains(&format!("\"file_creato\":\"{start}\"")),
+        "{start}"
+    );
+}
+
+#[test]
+fn the_series_of_the_instrument_log_are_served_by_id_and_are_not_chromatograms_of_the_file() {
+    let files = raw_files();
+    if files.is_empty() {
+        eprintln!("SKIP raw_reader: no data repository (MZLAB_DATI)");
+        return;
+    }
+    for f in files.iter().take(3) {
+        let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+        let doc = mzlab_core::json::parse(l.method(0).unwrap().as_bytes()).unwrap();
+        let listed: Vec<String> = l
+            .chromatograms(0)
+            .unwrap()
+            .into_iter()
+            .map(|v| v.id)
+            .collect();
+        for s in doc.get("serie_registro").map_or(&[][..], |a| a.arr()) {
+            let id = s.get("id").and_then(|i| i.str()).unwrap();
+            assert!(!listed.iter().any(|x| x == id), "{id} is in the mzML list");
+            let c = l.chromatogram(0, id).unwrap();
+            assert_eq!(c.time.len(), c.intensity.len());
+            assert_eq!(
+                c.time.len() as f64,
+                s.get("n").and_then(|n| n.f64()).unwrap(),
+                "{id}"
+            );
+            assert!(c.time.windows(2).all(|w| w[0] <= w[1]), "{id}: time order");
+        }
+        assert!(l.chromatogram(0, "status:nothing/here").is_err());
+    }
+}
+
+#[test]
+fn the_sha1_given_with_the_member_gives_the_same_header_as_the_one_the_reader_reads() {
+    let files = raw_files();
+    let Some(f) = files.first() else {
+        eprintln!("SKIP raw_reader: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let header = |mut fs: FileSet| {
+        let mut l = lettori::apri(std::mem::take(&mut fs), &Limits::sito()).unwrap();
+        let mut head = Head(Vec::new());
+        let _ = lettori_mzml::scrivi(&mut *l, 0, &mut head, &mut |_, _| {});
+        let xml = String::from_utf8_lossy(&head.0).into_owned();
+        xml[..xml.find("<spectrumList").unwrap()].to_string()
+    };
+    let read = header(set(f));
+    let mut fs = set(f);
+    let imp = mzlab_core::upload::impronte(&mut fs).unwrap();
+    assert_eq!(fs.membri[0].sha1.as_deref(), Some(imp[0].sha1.as_str()));
+    assert_eq!(header(fs), read, "SHA-1 given or read: the same header");
+    assert!(read.contains(&imp[0].sha1));
+}

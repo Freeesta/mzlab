@@ -23,11 +23,11 @@ const KMD = (() => {
     const el = box.querySelector("#kmd-res");
     if (!el) return;
     if (!res) { el.innerHTML = ""; return; }
-    const inSer = res.rows.filter(r => r.series).length;
-    el.innerHTML = `<p class="sm" role="status">${eh(t("kmd.sum", { n: res.rows.length, s: res.series.length, k: inSer, unit: res.unit.id }))}</p>${KMDVIEW.plotSvg(res, selSer, selRow)}<p class="sm">${t("kmd.plot.note")}</p>`
+    const rest = `<p class="sm">${t("kmd.plot.note")}</p>`
       + `<h4 class="sm" style="margin:8px 0 2px">${t("kmd.series.title")}</h4>${KMDVIEW.seriesTable(res, selSer)}<p class="sm">${t("kmd.evidence")}</p>`
       + `<h4 class="sm" style="margin:8px 0 2px">${t("kmd.feat.title")}${selSer != null ? ` <button type="button" id="kmd-all" class="sec">${t("kmd.all")}</button>` : ""}</h4>${KMDVIEW.featTable(res, selSer, selRow)}`
       + `<div class="qq-form"><button type="button" id="kmd-xlsx">Excel</button></div>`;
+    KMDCLOUD.paint(el, res, selSer, selRow, `<p class="sm" role="status">${eh(t("kmd.sum", { n: res.rows.length, s: res.series.length, k: res.rows.filter(r => r.series).length, unit: res.unit.id }))}</p>`, rest);
   }
   function paint(box) {
     const tb = TABELLA.table;
@@ -69,6 +69,7 @@ const KMD = (() => {
       const el = e.target.closest("#kmd-tab tbody tr, #kmd-plot g[data-i]");
       if (el && res) selectRow(+el.dataset.i, box);
     };
+    KMDCLOUD.bind(box, () => res, i => selectRow(i, box));          // the dense plot: nearest ion on click and hover
     box.onkeydown = e => { const el = e.target.closest && e.target.closest("#kmd-tab tbody tr, #kmd-series tbody tr, #kmd-plot g[data-i]"); if (el && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } };
   }
   function xlsx() {

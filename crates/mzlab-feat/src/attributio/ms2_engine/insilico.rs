@@ -6,7 +6,7 @@
 
 use crate::attributio::frame::Frame;
 use crate::attributio::review::fragmenter::fragment_molecule;
-use crate::chem::grafo::Mol;
+use crate::chem::graph::Mol;
 use crate::sortc::SortC;
 use mzlab_core::elements;
 use mzlab_core::score_terms::ScoreTerms;

@@ -273,7 +273,7 @@ pub use par::{align_to_par, align_to_par_progress};
 pub struct HypoRun {
     pub registry: Registry,
     pub result: TargetResult,
-    /// The rules as read (bytes of the file) and the profile chosen: the proofs look for their differences of mass among the rows (`tp::rete`).
+    /// The rules as read (bytes of the file) and the profile chosen: the proofs look for their differences of mass among the rows (`tp::network`).
     pub rules_src: Vec<u8>,
     pub profile: Option<String>,
     /// Neutral formula of the parent: the formula candidates of the rows formed and not explained start from it (empty = none).

@@ -426,7 +426,7 @@ NEVER_RE = re.compile(r"FreeStyle|Xcalibur|Analyst|MassHunter|Skyline|mzmine|MS-
 VENDOR_RE = re.compile(r"Thermo|Agilent|Bruker|Waters|Shimadzu|SCIEX", re.I)
 TOOL_RE = re.compile(r"MSConvert|ProteoWizard|PubChem|BioTransformer|Ketcher|OpenChemLib|MassBank", re.I)
 NAME_FORMAT_OK = {"cart.method", "cart.method.one", "cart.none", "conv.help.step1", "err.file.agilent", "err.file.agilentNoEngine", "err.file.brukerBaf",
-             "err.file.brukerNoBin", "err.file.raw", "err.file.rawTruncated", "err.file.rawUnfinished", "err.file.rawVersion", "err.file.shimadzu", "err.file.wiff",
+             "err.file.brukerNoBin", "err.file.raw", "err.file.rawDamaged", "err.file.rawTruncated", "err.file.rawUnfinished", "err.file.rawVersion", "err.file.shimadzu", "err.file.wiff",
              "help.filegrandi.body", "method.m.title", "predef.guide.linux.cmd", "predef.settings.title", "predef.text", "uv.none"}
 NAME_TOOL_OK = {"cmd.bio.kw", "cmd.bio.lab", "cmd.bio.name", "cmd.bio.tip", "cmd.more.tip", "cmd.pubchem.kw", "cmd.pubchem.lab", "cmd.pubchem.name",
            "cmd.pubchem.tip", "conv.help.step1", "conv.help.step2", "ctx.spec.exportMassbank", "draw.error.ketcherNotStarted", "draw.tools.file",

@@ -1,5 +1,5 @@
 """«+D», «-D», «+2D» in the list of transformations: the mzFinder .wasm (through Node) answers `finder_transf_rows` with the same bytes as the native engine, which
-crates/mzlab-feat/tests/delta_deuterio.rs compares with the same golden. Skipped without cargo, the wasm32 target, wasm-bindgen or node."""
+crates/mzlab-feat/tests/delta_deuterium.rs compares with the same golden. Skipped without cargo, the wasm32 target, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess

@@ -1,6 +1,6 @@
 """The Dati page draws its shell before the engine: with the .wasm held back, the drop area is visible and usable-looking while the engine is still
-pending, the .wasm is asked for only once the page is parsed (not from the head, where it competes with the first paint), and once released
-the engine comes up on its own. Build first: python tools/build_site.py"""
+pending, the .wasm is asked for only once the page is parsed (not from the head, where it competes with the first paint) and once, from the
+start of the engine's module graph (preload of browser.js); once released, the engine comes up on its own. Build first: python tools/build_site.py"""
 from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
@@ -28,7 +28,8 @@ held, head_held, asked_urls = [], [], []
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce")
+        # no service worker: Firefox and WebKit send the page's requests through it, and context.route never sees those (the .wasm is not held)
+        ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", service_workers="block")
         ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")   # no isolation reload (browser.js isolateOnce): the held .wasm and the watched fetch belong to the page that stays
         ctx.add_init_script(WATCH)
         ctx.route("**/*.wasm", lambda r: held.append(r))
@@ -55,6 +56,8 @@ try:
         step("shell visible while the .wasm is held back", shell_before_engine)
 
         def wasm_after_parse():
+            deadline = time.time() + 30                                         # the preload is the held request; the engine's fetch() follows its module graph
+            while not pg.evaluate("window.__wasmAsked.length") and time.time() < deadline: hold(pg, 50)
             asked = pg.evaluate("window.__wasmAsked")
             assert asked and all(s != "loading" for s in asked), f"the .wasm was asked for while the page was being parsed: {asked}"
         step(".wasm asked for only after the page is parsed", wasm_after_parse)
@@ -66,6 +69,15 @@ try:
             assert pg.evaluate("AVVIO.stato") == "ready", "the engine did not come up after the .wasm was released"
             assert pg.is_visible("#start")
         step("released, the engine comes up on its own", engine_follows)
+
+        def wasm_once_and_early():
+            # the page's own requests (the service worker also fetches the .wasm, to fill its cache)
+            res = pg.evaluate("performance.getEntriesByType('resource').map(e => [e.name, e.startTime])")
+            wasm = [t for u, t in res if u.endswith("/mzlab_wasm_bg.wasm")]
+            bridge = [t for u, t in res if u.endswith("/rust-bridge.js")]
+            assert len(wasm) == 1, f"the engine's .wasm went over the network {len(wasm)} times (the engine's fetch must take the preload of browser.js)"
+            assert bridge and wasm[0] <= bridge[0], "the .wasm download waited for the module graph of the engine"
+        step(".wasm downloaded once, from the start of the engine's module graph", wasm_once_and_early)
         b.close()
 finally:
     srv.terminate()

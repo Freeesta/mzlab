@@ -45,7 +45,7 @@ pub fn run(args: Vec<String>) -> Outcome {
             Err(e) => return Outcome::fail(&format!("{src}: {e}")),
         }
     };
-    match mzlab_feat::chem::etichette::labels_json(&text) {
+    match mzlab_feat::chem::labels::labels_json(&text) {
         Ok(j) => crate::emit(format!("{j}\n"), &out),
         Err(e) => Outcome::fail(&e.to_string()),
     }
@@ -67,7 +67,7 @@ mod tests {
         let o = run(&["mol-label", p.to_str().unwrap()]);
         std::fs::remove_file(&p).ok();
         assert_eq!(o.code, 0);
-        let want = mzlab_feat::chem::etichette::labels_json(req).unwrap();
+        let want = mzlab_feat::chem::labels::labels_json(req).unwrap();
         assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{want}\n"));
     }
 

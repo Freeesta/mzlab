@@ -1,10 +1,10 @@
 //! The native executor of `export.inclusion`: the expected products (a JSON array of `{formula, rt, priority?}`, or the `.mzfeat` of `tp.link`) become the inclusion list
-//! of `mzlab_feat::export_inclusione`, in the columns of the list of mzFinder.
+//! of `mzlab_feat::export_inclusion`, in the columns of the list of mzFinder.
 
 use mzlab_core::error::Result;
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
-use mzlab_feat::export_inclusione_tp::inclusion_csv_of;
+use mzlab_feat::export_inclusion_tp::inclusion_csv_of;
 
 use crate::flow::{io, read_one, FileRunner};
 

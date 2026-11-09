@@ -3,7 +3,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_synth;
-mod conv_aiuto;
+mod conv_help;
 
 use agilent_synth::*;
 use mzlab_core::agilent::{AgilentD, Files};
@@ -42,10 +42,10 @@ fn sim_scans_give_one_sic_per_ion_and_it_is_written() {
         (sic[0].intensity.clone(), sic[1].time.len()),
         (vec![10.0, 20.0, 30.0], 3)
     );
-    let out = conv_aiuto::mzml(FileSet {
+    let out = conv_help::mzml(FileSet {
         membri: vec![
-            conv_aiuto::member("x.D/AcqData/MSScan.bin", &idx),
-            conv_aiuto::member("x.D/AcqData/MSPeak.bin", &peak),
+            conv_help::member("x.D/AcqData/MSScan.bin", &idx),
+            conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     });
     // through the registry the SICs are the ones of the SIM groups of the method: this folder has none, the TIC and the scans are written

@@ -9,8 +9,8 @@ use mzlab_core::msngrafo::{
     graph_from_peaks, tabella_regole, valuta_regole, Evaluation, Expectation, Graph, Options,
     RuleParams,
 };
-use mzlab_feat::chem::grafo::Mol;
-use mzlab_feat::chem::regole::attese_mol;
+use mzlab_feat::chem::graph::Mol;
+use mzlab_feat::chem::rules::attese_mol;
 
 /// Shift of the losses of the third decoy, Da (no loss of the table is near it).
 pub const SHIFT_LOSSES: f64 = 0.0137;

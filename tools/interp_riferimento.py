@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reference for the candidate sites of `chem::posizioni` (test only, never in the site): with RDKit, lists the atoms where +O, -CH2 and -2H can sit on
+"""Reference for the candidate sites of `chem::positions` (test only, never in the site): with RDKit, lists the atoms where +O, -CH2 and -2H can sit on
 20 textbook molecules, as the number of atoms per kind and the symmetry classes (Morgan ranks with breakTies=False), to compare with the Rust side."""
 import json
 import sys

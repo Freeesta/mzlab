@@ -303,12 +303,12 @@ pub fn msn_graph_text(
         .iter()
         .any(|(k, v)| k == "breaks" && v.bool() == Some(true))
     {
-        let p = mzlab_feat::chem::rotture::Params {
+        let p = mzlab_feat::chem::breaks::Params {
             ppm: number(job, "struct_ppm", crate::msn_graph::PPM_STRUCTURE),
             h_max: number(job, "h_max", 2.0) as u8,
             max_bonds: number(job, "max_bonds", 2.0) as u8,
         };
-        json = mzlab_feat::chem::rotture::breaks_text(&g, &json, o.smiles.as_deref(), p)?;
+        json = mzlab_feat::chem::breaks::breaks_text(&g, &json, o.smiles.as_deref(), p)?;
     }
     match text(job, "structures") {
         Some(node) => {

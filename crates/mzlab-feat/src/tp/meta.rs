@@ -45,7 +45,7 @@ impl TpBlock {
                 j.raw(if i > 0 { ",{\"riga\":" } else { "{\"riga\":" })
                     .int(i64::from(*row) + 1)
                     .raw(",\"c\":");
-                candidati::candidates_json(&mut j, c);
+                candidates::candidates_json(&mut j, c);
                 j.raw("}");
             }
             j.raw("]");
@@ -84,7 +84,9 @@ impl TpBlock {
                     let row = num(x, "riga", 1.0) as u32 - 1;
                     (
                         row,
-                        candidati::candidates_from(x.get("c").map(|c| c.arr()).unwrap_or_default()),
+                        candidates::candidates_from(
+                            x.get("c").map(|c| c.arr()).unwrap_or_default(),
+                        ),
                     )
                 })
                 .collect(),

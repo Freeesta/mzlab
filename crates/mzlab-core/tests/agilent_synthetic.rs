@@ -9,7 +9,7 @@ use mzlab_core::lettori::FileSet;
 use mzlab_core::mzml;
 
 mod agilent_synth;
-mod conv_aiuto;
+mod conv_help;
 use agilent_synth::*;
 
 #[test]
@@ -43,10 +43,10 @@ fn synthetic_folder_reads_back() {
     assert_eq!(tic.time, vec![3.0, 3.01, 3.02, 3.03]);
     assert_eq!(tic.intensity[1], 1661.0);
     // mzML written and read back
-    let out = conv_aiuto::mzml(FileSet {
+    let out = conv_help::mzml(FileSet {
         membri: vec![
-            conv_aiuto::member("x.D/AcqData/MSScan.bin", &idx),
-            conv_aiuto::member("x.D/AcqData/MSPeak.bin", &peak),
+            conv_help::member("x.D/AcqData/MSScan.bin", &idx),
+            conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     });
     let back = mzml::read(&out[..]).unwrap();
@@ -392,8 +392,8 @@ fn a_run_with_only_data_ms_opens() {
             .any(|i| i.origin == "data.ms#after-records" && i.name == "undecoded sha1"),
         "the bytes after the records are declared"
     );
-    let mzml = conv_aiuto::mzml(FileSet {
-        membri: vec![conv_aiuto::member("old.D/data.ms", &bytes)],
+    let mzml = conv_help::mzml(FileSet {
+        membri: vec![conv_help::member("old.D/data.ms", &bytes)],
     });
     assert_eq!(mzlab_core::mzml::read(&mzml[..]).unwrap().spectra.len(), 2);
     // another record length is an error that names the numbers
@@ -438,10 +438,10 @@ fn single_precision_centroids_read_like_the_double_ones() {
         .unwrap();
         let mut p = peak.clone();
         let run = d.run(&mut p).unwrap();
-        let out = conv_aiuto::mzml(FileSet {
+        let out = conv_help::mzml(FileSet {
             membri: vec![
-                conv_aiuto::member("x.D/AcqData/MSScan.bin", &idx),
-                conv_aiuto::member("x.D/AcqData/MSPeak.bin", &peak),
+                conv_help::member("x.D/AcqData/MSScan.bin", &idx),
+                conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
             ],
         });
         (run, mzml::read(&out[..]).unwrap())

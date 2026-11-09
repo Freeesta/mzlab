@@ -2,8 +2,8 @@
 //! Parity of the Level 1 standards and of the feature decisions with the golden data of the reference tool, and the hand cases of the decision file.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::readers::feature_decisions::{
     all_columns, load_feature_decisions, match_decisions, merge_decisions, write_feature_decisions,
     DecisionTable, FeatureKey, OPTIONAL_COLUMNS,

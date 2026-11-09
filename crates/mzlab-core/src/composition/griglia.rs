@@ -1,5 +1,5 @@
 //! The grid of `compose`: the ranges of the elements other than C and H, narrowed to the parent formula and to the ion mass, then counted
-//! against the limit, which gives the number of rows. The mass cut drops only rows that could never be hits, so it changes no answer (`tests/composizione_taglio.rs`).
+//! against the limit, which gives the number of rows. The mass cut drops only rows that could never be hits, so it changes no answer (`tests/composition_cut.rs`).
 
 use super::{sym_mass, Ranges, MAX_GRID};
 use crate::elements::Formula;

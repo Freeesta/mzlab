@@ -1,14 +1,14 @@
 //! `structure.render@1` in a plan: a `sites/1` file of invented rows of a textbook molecule (4-ethylphenol, `+O`) gives, for each row, the bytes of the
-//! `drawing` that `interp::disegno` makes from the report (a site, a ring region, an undetermined row, a row with no site), twice the same.
+//! `drawing` that `interp::drawing` makes from the report (a site, a ring region, an undetermined row, a row with no site), twice the same.
 
 use std::path::Path;
 
 use mzlab_core::elements::parse_formula;
-use mzlab_feat::chem::grafo::Mol;
-use mzlab_feat::chem::posizioni::{expected_fragments, sites, Peak, Pol};
-use mzlab_feat::interp::disegno::drawing;
-use mzlab_feat::interp::sito::{analyse, candidates, undetermined, Facts, SiteReport};
-use mzlab_feat::interp::sito_json::{drawing_json, site_json};
+use mzlab_feat::chem::graph::Mol;
+use mzlab_feat::chem::positions::{expected_fragments, sites, Peak, Pol};
+use mzlab_feat::interp::drawing::drawing;
+use mzlab_feat::interp::site::{analyse, candidates, undetermined, Facts, SiteReport};
+use mzlab_feat::interp::site_json::{drawing_json, site_json};
 
 const PHENOL: &str = "CCc1ccc(O)cc1";
 const FACTS: Facts = Facts {

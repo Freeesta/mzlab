@@ -1,6 +1,7 @@
 // @ts-check
 // Touch and pen outside the graphs (lazy ES module, loaded by touch.js at the first touch): a double tap is a double click, as touch.js does on the canvases.
 // iOS sends no dblclick for a double tap, so renaming a panel or a trace, resetting a divider or opening a table row had no finger path.
+// While the soft keyboard is up, a modal dialog sits in the part of the window the keyboard leaves.
 // The controls with a double-click action have no double-tap zoom (app.css, touch-action:manipulation), so both taps arrive as clicks; elsewhere the page zooms as usual.
 // A long press on the rows that have a right-click menu opens it (iPadOS has no long-press contextmenu; Android sends its own, which then wins).
 const MOVE = 8, DTAP = 350, NEAR = 28, LONG = 550;
@@ -65,6 +66,22 @@ document.addEventListener("click", e => {
   tip.style.left = Math.max(4, Math.min(pnl.clientWidth - tip.offsetWidth - 4, e.clientX - r.left - tip.offsetWidth - 10)) + "px"; tip.style.top = Math.max(4, e.clientY - r.top - 30) + "px";
   clearTimeout(lblT); lblT = window.setTimeout(() => { tip.hidden = true; }, 2800);
 }, true);
+
+// ---- the soft keyboard: iOS keeps the layout viewport and shrinks only the visual one, so a modal dialog centred in the window sat under the keyboard
+// with its field and its OK button; while a keyboard is up (over 100 px gone, no pinch zoom) html.kb and --vv-top/--vv-bottom (app.css) hold it in the band left above
+function keyboardBand() {
+  const v = window.visualViewport; if (!v) return;
+  const root = document.documentElement; let was = "";
+  const fit = () => {
+    const top = Math.max(0, v.offsetTop), below = Math.max(0, root.clientHeight - v.offsetTop - v.height), up = v.scale < 1.01 && below > 100;
+    const now = up ? `${Math.round(top)}/${Math.round(below)}` : ""; if (now === was) return; was = now;
+    root.classList.toggle("kb", up); root.style.setProperty("--vv-top", up ? top + "px" : "0px"); root.style.setProperty("--vv-bottom", up ? below + "px" : "0px");
+    const f = /** @type {HTMLElement | null} */ (document.activeElement);
+    if (up && f && f.closest && f.closest("dialog[open]")) FRAME.next(() => f.scrollIntoView({ block: "nearest" }));   // the dialog got shorter: its field stays in sight
+  };
+  v.addEventListener("resize", fit); v.addEventListener("scroll", fit); fit();
+}
+keyboardBand();
 
 W.TOCCO_CONTROLLI = { fired: () => fired };
 export {};

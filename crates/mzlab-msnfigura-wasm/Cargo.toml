@@ -1,6 +1,6 @@
 [package]
 name = "mzlab-msnfigura-wasm"
-description = "wasm-bindgen bridge of mzlab_feat::msnfigura (the SVG and the stand-alone HTML of a fragmentation graph msngrafo/1); a .wasm of its own, loaded by the pool of the Flow for msn.figure"
+description = "wasm-bindgen bridge of mzlab_feat::msnfigure (the SVG and the stand-alone HTML of a fragmentation graph msngrafo/1); a .wasm of its own, loaded by the pool of the Flow for msn.figure"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

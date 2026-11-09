@@ -198,7 +198,7 @@ impl State {
         let structure = par
             .smiles
             .as_deref()
-            .and_then(|x| mzlab_feat::chem::grafo::analyse_json(x).ok())
+            .and_then(|x| mzlab_feat::chem::graph::analyse_json(x).ok())
             .unwrap_or_default();
         let mut o = mzlab_core::json::Out::default();
         o.raw("{\"lc\":[");

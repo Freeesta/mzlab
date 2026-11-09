@@ -5,7 +5,7 @@
 //! (the test then compares `<folder>/livelli.json` with no tolerance).
 
 #[macro_use]
-mod attributio_comune;
+mod attributio_common;
 use mzlab_feat::attributio::annotate::{gnps_comparer, load_annotations, BasicCuration, Feature};
 use mzlab_feat::attributio::campaign::{Campaign, Env};
 use mzlab_feat::attributio::checks::*;

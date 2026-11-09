@@ -1,5 +1,5 @@
 //! An mzXML file (ISB, versions 2.x and 3.x) as a `Lettore`: spectra with level, precursor, polarity and retention time, TIC and BPC chromatograms computed from the scans, the header of the file
-//! as `metodo/1`. The index comes from `<index name="scan">` or from one pass over the bytes (`mzxml_indice.rs`); `scansione(c, k)` reads only the bytes of scan `k` (`mzxml_scan.rs`).
+//! as `metodo/1`. The index comes from `<index name="scan">` or from one pass over the bytes (`mzxml_index.rs`); `scansione(c, k)` reads only the bytes of scan `k` (`mzxml_scan.rs`).
 //! SRM/MRM scans become chromatograms through `mzlab_lettori::srm::SrmFromScans`, which wraps every reader of this crate. Written from the mzXML schema (ISB); not from any program's code.
 
 use std::cell::RefCell;
@@ -17,14 +17,14 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
-use super::mzxml_finestra::{peak_sums, Window};
-use super::mzxml_indice::{self, Row};
-use super::mzxml_precursori::precursors_of;
-use super::mzxml_voce::entry;
+use super::mzxml_entry::entry;
+use super::mzxml_index::{self, Row};
+use super::mzxml_precursors::precursors_of;
+use super::mzxml_window::{peak_sums, Window};
 
 use super::mzxml_scan::{self as scan, attr, each, Head, Tag};
 
-use super::mzxml_testata::{self as testata, Cabin};
+use super::mzxml_header::{self as header, Cabin};
 
 /// The bytes of the start of the file that `riconosci` looks at.
 const HEAD: usize = 4096;
@@ -275,14 +275,14 @@ impl Reader for MzxmlReader {
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         let sha1 = self.sha1();
-        Ok(testata::document(&self.cabin, &self.name, self.dim, sha1))
+        Ok(header::document(&self.cabin, &self.name, self.dim, sha1))
     }
 
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.one(c)?;
         let sha1 = self.sha1();
-        let doc = testata::document(&self.cabin, &self.name, self.dim, sha1.clone());
-        Ok(Some(testata::header(&self.cabin, &self.name, sha1, doc)))
+        let doc = header::document(&self.cabin, &self.name, self.dim, sha1.clone());
+        Ok(Some(header::header(&self.cabin, &self.name, sha1, doc)))
     }
 
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
@@ -299,7 +299,7 @@ impl MzxmlReader {
         let fine = self.rows[0].start.min(SCAN_HEAD);
         let b = self.read(0, fine)?;
         let text = String::from_utf8_lossy(&b);
-        self.cabin = testata::read(&text, &self.limits)?;
+        self.cabin = header::read(&text, &self.limits)?;
         scan::tags(&text, &mut |g, _| {
             if scan::name(g) == "msRun" {
                 let n = number(g, "scanCount").map_or(0, |n| n.max(0.0) as usize);
@@ -439,11 +439,11 @@ fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .to_string();
     let dim = m.dim;
     let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
-    let mzxml_indice::Pass {
+    let mzxml_index::Pass {
         rows: righe,
         discarded,
         indexed: indicizzate,
-    } = mzxml_indice::rows(&mut dati, dim, limits)?;
+    } = mzxml_index::rows(&mut dati, dim, limits)?;
     if righe.is_empty() {
         return Err(Error::new("err.file.xml").with("detail", "no scans"));
     }

@@ -3,7 +3,7 @@
 
 use mzlab_core::error::{Error, Result};
 
-use super::grafo::{Atom, Bond};
+use super::graph::{Atom, Bond};
 
 pub(super) fn bad(smiles: &str) -> Error {
     Error::new("error.grafo.smiles").with("smiles", smiles)

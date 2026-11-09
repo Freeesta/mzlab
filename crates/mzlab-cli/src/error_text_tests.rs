@@ -22,7 +22,7 @@ fn a_key_becomes_its_english_text_with_the_key_kept() {
 /// step without the reader's English detail; the detail and the size stay after the key for scripts.
 #[test]
 fn an_unfinished_raw_is_the_text_of_the_page() {
-    // as `mzlab_core::raw::thermo_error` builds it (its parameters: `robustezza_thermo_aperture.rs`)
+    // as `mzlab_core::raw::thermo_error` builds it (its parameters: `robustness_thermo_openings.rs`)
     let e = Error::new("err.file.rawUnfinished")
         .with("detail", "the run header declares no scan")
         .with("size", 5_670_000);
@@ -42,6 +42,26 @@ fn an_unfinished_raw_is_the_text_of_the_page() {
     );
 }
 
+/// A .raw whose counts point past its end: the calm text of the page, the reader's detail and the stage after the key.
+#[test]
+fn a_damaged_raw_is_the_text_of_the_page() {
+    let e = Error::new("err.file.rawDamaged")
+        .with("stage", "SeqRow")
+        .with("detail", "refusing to allocate");
+    let t = human(&e.to_string());
+    assert_eq!(
+        t,
+        format!(
+            "{} (err.file.rawDamaged, stage=SeqRow, detail=refusing to allocate)",
+            text_of("err.file.rawDamaged").unwrap()
+        )
+    );
+    assert!(
+        t.contains("is damaged") && t.contains("instrument PC"),
+        "{t}"
+    );
+}
+
 /// A .cdf whose header describes more data than the file holds: the calm text of the page, the reader's detail after the key.
 #[test]
 fn a_damaged_cdf_is_the_text_of_the_page() {
@@ -56,6 +76,24 @@ fn a_damaged_cdf_is_the_text_of_the_page() {
     );
     assert!(
         t.contains("damaged or cut short") && t.contains("netCDF-3/AIA"),
+        "{t}"
+    );
+}
+
+/// A record of a .raw folder that no acquisition writes: the calm text of the page, the reader's detail after the key.
+#[test]
+fn a_damaged_folder_is_the_text_of_the_page() {
+    let e = Error::new("err.file.folderDamaged").with("detail", "intensity word of the record");
+    let t = human(&e.to_string());
+    assert_eq!(
+        t,
+        format!(
+            "{} (err.file.folderDamaged, detail=intensity word of the record)",
+            text_of("err.file.folderDamaged").unwrap()
+        )
+    );
+    assert!(
+        t.contains("is damaged") && t.contains("whole folder"),
         "{t}"
     );
 }

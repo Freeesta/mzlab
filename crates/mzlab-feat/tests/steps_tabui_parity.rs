@@ -1,9 +1,9 @@
-//! The defaults of `tp.link`, `tp.position`, `tp.network` (`rete::NetworkParams`) and `tp.filter` are the constants of `interp` (`ms2link`, `sito`, `filtri`, `modifica`), and those of
+//! The defaults of `tp.link`, `tp.position`, `tp.network` (`network::NetworkParams`) and `tp.filter` are the constants of `interp` (`ms2link`, `site`, `filters`, `edit`), and those of
 //! `tp.generate` the fields of `HypoParams::default()`. A constant that moves in the code fails here until the descriptor follows.
 
 use mzlab_core::step::Step;
 use mzlab_feat::hypo::HypoParams;
-use mzlab_feat::interp::{filtri, modifica, ms2link, sito};
+use mzlab_feat::interp::{edit, filters, ms2link, site};
 use mzlab_feat::steps::tabui;
 
 fn step(id: &str) -> Step {
@@ -33,11 +33,11 @@ fn hypotheses() {
 #[test]
 fn filters() {
     for (name, want) in [
-        ("tol_min", filtri::TOL_MIN),
-        ("tol_max", filtri::TOL_MAX),
-        ("decoy_step", filtri::DECOY_STEP),
-        ("decoy_k", f64::from(filtri::DECOY_K)),
-        ("decoy_ppm", filtri::DECOY_PPM),
+        ("tol_min", filters::TOL_MIN),
+        ("tol_max", filters::TOL_MAX),
+        ("decoy_step", filters::DECOY_STEP),
+        ("decoy_k", f64::from(filters::DECOY_K)),
+        ("decoy_ppm", filters::DECOY_PPM),
     ] {
         assert_eq!(num("tp.filter", name), want, "{name}");
     }
@@ -55,7 +55,7 @@ fn link() {
         ("select_ppm", ms2link::SELECT_PPM),
         ("purity_ppm", ms2link::PURITY_PPM),
         ("purity_min", ms2link::PURITY_MIN),
-        ("match_ppm", modifica::MATCH_PPM),
+        ("match_ppm", edit::MATCH_PPM),
         ("iso_corr", ms2link::ISO_CORR),
         ("iso_min_scans", ms2link::ISO_MIN_SCANS as f64),
         ("iso_fragments", ms2link::ISO_FRAGMENTS as f64),
@@ -67,12 +67,12 @@ fn link() {
 #[test]
 fn position() {
     for (name, want) in [
-        ("match_ppm", sito::MATCH_PPM),
-        ("min_rel", sito::MIN_REL),
-        ("min_informative", sito::MIN_INFORMATIVE as f64),
-        ("margin", sito::MARGIN),
-        ("ll_support", sito::LL_SUPPORT),
-        ("ll_against", sito::LL_AGAINST),
+        ("match_ppm", site::MATCH_PPM),
+        ("min_rel", site::MIN_REL),
+        ("min_informative", site::MIN_INFORMATIVE as f64),
+        ("margin", site::MARGIN),
+        ("ll_support", site::LL_SUPPORT),
+        ("ll_against", site::LL_AGAINST),
     ] {
         assert_eq!(num("tp.position", name), want, "{name}");
     }
@@ -80,7 +80,7 @@ fn position() {
 
 #[test]
 fn network() {
-    let d = mzlab_feat::rete::NetworkParams::default();
+    let d = mzlab_feat::network::NetworkParams::default();
     assert_eq!(num("tp.network", "ppm"), d.ppm);
     assert_eq!(num("tp.network", "min_fragments"), d.min_fragments as f64);
 }

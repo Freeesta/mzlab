@@ -1,6 +1,6 @@
 //! The bond breaks of the structure of the user that explain the ions of an `msngrafo/1` (key `rotture`): per node the sets of atoms (one or
 //! two bonds cut, a few hydrogens moved) whose m/z is the node's, per arc whether the child's set lies inside the parent's, per spectrum the
-//! share of the intensity so explained. Hypotheses with their evidence, never an assignment. The calculation is `mzlab_feat::chem::rotture`
+//! share of the intensity so explained. Hypotheses with their evidence, never an assignment. The calculation is `mzlab_feat::chem::breaks`
 //! (it needs the structure); here the types and the JSON, used by `mzlab-cli msn-graph --rotture` and the `.wasm` `msngrafo`.
 
 use crate::json::{round, Out};

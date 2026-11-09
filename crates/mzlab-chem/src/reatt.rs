@@ -9,7 +9,7 @@ use crate::protomer::{self, Protomer};
 use crate::xtb::{alpb, System};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out};
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 
 /// Version of the engine written in `engine` and returned by the `.wasm` (`version()`).
 pub const ENGINE: &str = "mzlab-chem/1";
