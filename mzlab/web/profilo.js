@@ -156,7 +156,8 @@ ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("
   // used by the other tools (the PCA loadings): fill the form, open the panel and run
   async function show(mz, rt) {
     st.text = String(mz); st.rt = String(rt); save();
-    if (window.BARRA) BARRA.setTab("stat", { noFocus: true, instant: true });
+    // opening the tab paints the whole «Statistica» panel again: only when it is not already the open one (a click on a point of its own plots)
+    if (window.BARRA && !BARRA.isOpen("stat")) BARRA.setTab("stat", { noFocus: true, instant: true });
     const box = document.querySelector("#stat-profile");
     if (box) { paint(box); try { await run(st.text, st.rt); paintRes(box); } catch (err_) { fail(box, err_); } }
     return res;
