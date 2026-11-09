@@ -1,6 +1,6 @@
 //! The pipeline of the bridge on files, natively (the recipe fits the first index: high or unit resolution, as the site chooses it): the reference of the byte-for-byte test against the `.wasm` (`tests/test_feat_wasm.py`).
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example nativo -- OUT_DIR file.mzidx... [--recipe JSON] [--budget-mb N]
+//!     cargo run --release -p mzlab-feat-wasm --example native -- OUT_DIR file.mzidx... [--recipe JSON] [--budget-mb N]
 //!
 //! With `--budget-mb` the steps run as the browser runs them under that memory budget: outputs written at offsets to files (hashed on the way), the series
 //! read file by file, slabs and streams when the budget asks for them. The lines printed are the same as without it.

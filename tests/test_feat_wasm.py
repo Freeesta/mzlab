@@ -1,5 +1,5 @@
 """The pipeline of mzFinder in WebAssembly (crates/mzlab-feat-wasm) gives the same bytes as the native engine: the `.mzfeatf` of every file, the `.mzfeat` of the
-series and the one with the graph of the proofs have the same SHA-256 whether the example `nativo` or the `.wasm` (through Node) makes them. The series is the
+series and the one with the graph of the proofs have the same SHA-256 whether the example `native` or the `.wasm` (through Node) makes them. The series is the
 synthetic one of tools/feat_mirato.py (profile `piccolo`; the tests of the `Spill` of the page use the profile `debole`). Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
 import re
 import shutil
@@ -27,7 +27,7 @@ def built(tmp_path_factory):
     # the series (python) is independent of the two builds (cargo takes the lock of the target folder one after the other): they run at the same time
     with ThreadPoolExecutor(2) as pool:
         made = pool.submit(run, "python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
-        run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo")
+        run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "native")
         run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm")
         made.result()
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
@@ -40,7 +40,7 @@ def built(tmp_path_factory):
 def native(root, idx, name, *extra):
     out = root / name
     out.mkdir(exist_ok=True)
-    got = run("target/release/examples/nativo", str(out), *idx, *PARENT, *extra)
+    got = run("target/release/examples/native", str(out), *idx, *PARENT, *extra)
     return got, out
 
 

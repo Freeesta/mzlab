@@ -1,6 +1,6 @@
 //! Preview of the parameters of one file (the same JSON the panel "Pipeline" of mzFinder shows):
 //!
-//!     cargo run --release -p mzlab-feat --example anteprima -- file.mzidx [floor]
+//!     cargo run --release -p mzlab-feat --example preview -- file.mzidx [floor]
 //!
 //! Prints the time and the JSON of `params::preview` (the floor is the estimated one unless it is given).
 

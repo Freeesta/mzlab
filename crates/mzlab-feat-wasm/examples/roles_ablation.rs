@@ -1,7 +1,7 @@
 //! Ablation of the roles of the files in the view of the products (`tp/1`): how many rows the view keeps, and how many of them are not in the truth, when a
 //! kind of file (t0, blank, dark, infusion) is taken out of the run. The recipe, the rules and every threshold are the defaults, the same in every configuration.
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example ruoli_ablazione -- SPEC.json [--ruoli]
+//!     cargo run --release -p mzlab-feat-wasm --example roles_ablation -- SPEC.json [--ruoli]
 //!
 //! `SPEC.json`: `parent` {`formula` (neutral), `mz`, `rt` (the row of the table nearest to them, within `tol`, is the parent), `smiles`?}, `rules` (path of regole_tp_2.json), `tol` {`ppm` | `da`, `rt`} (matching with the truth),
 //! `files` [{`path` (.mzidx), `role` (treated | t0 | blank | dark | infusion), `minutes` (treated)}], `truth`? (a `verita_tp/1` document or the `verita.json` of

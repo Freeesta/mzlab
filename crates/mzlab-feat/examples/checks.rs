@@ -1,6 +1,6 @@
 //! The graph of the proofs on a series of `.mzidx` files: analysis, families, alignment per family, hypotheses of the parent, kinetics, `evid/1`.
 //!
-//!     cargo run --release -p mzlab-feat --example prove -- <file.mzidx>... --parent-formula FORMULA [--truth truth.json] [--out FILE.mzfeat] [--twice]
+//!     cargo run --release -p mzlab-feat --example checks -- <file.mzidx>... --parent-formula FORMULA [--truth truth.json] [--out FILE.mzfeat] [--twice]
 //!
 //! The file names give the times (`tNNNmin` = treated, `dark` = control). With a truth file (`parent {mz, rt_obs}`, `tps [{id, mz, rt_obs[]}]`) it
 //! prints, for the candidates (rows that confirm a hypothesis), the rank of the true products ordered by the largest area and ordered by the graph, and

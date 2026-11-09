@@ -1,4 +1,4 @@
-"""mzLab (the native run of the pipeline of the site, example `nativo`) on the mzML of a series -> `bench/1`. See `corri.py`.
+"""mzLab (the native run of the pipeline of the site, example `native`) on the mzML of a series -> `bench/1`. See `corri.py`.
 
 Without `--genitore` only the feature table is produced (`series.mzfeat`); with `--genitore FORMULA_NEUTRA [--mz-genitore X --rt-genitore Y --smiles S]` the run also
 tests the hypotheses and the table carries the identities (`candidato`, `livello`, `punteggio`). The cells «absent» of the table are zero areas."""

@@ -1,6 +1,6 @@
-"""The table bridge of mzFinder in WebAssembly (crates/mzlab-feat-table-wasm) gives the same bytes as the native example `tabella`: the view, the report, the CSV
+"""The table bridge of mzFinder in WebAssembly (crates/mzlab-feat-table-wasm) gives the same bytes as the native example `table`: the view, the report, the CSV
 full (with the words of mzmine too), the FBMN quantification table, the MGF and the SIRIUS `.ms` have the same SHA-256 through Node as natively. The series is the
-synthetic one of tools/feat_mirato.py (profile `piccolo`), aligned by the native example `nativo`. Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
+synthetic one of tools/feat_mirato.py (profile `piccolo`), aligned by the native example `native`. Skipped without cargo, the wasm32 target, wasm-bindgen, node or numpy."""
 import json
 import shutil
 import subprocess
@@ -30,14 +30,14 @@ def built(tmp_path_factory):
     ser = root / "ser"
     run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(ser))
     idx = sorted(str(p) for p in ser.glob("*.mzidx"))
-    run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo")
-    run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-table-wasm", "--example", "tabella")
+    run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "native")
+    run("cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-table-wasm", "--example", "table")
     run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-table-wasm")
     pkg = root / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_table_wasm.wasm")
     series = root / "series"
     series.mkdir()
-    run("target/release/examples/nativo", str(series), *idx)
+    run("target/release/examples/native", str(series), *idx)
     (root / "campioni.json").write_text(samples_json(idx))
     (root / "spec.json").write_text(json.dumps(SPEC))
     return root, idx, pkg, series / "series.mzfeat"
@@ -48,7 +48,7 @@ def test_wasm_and_native_write_the_same_files(built, spec):
     root, idx, pkg, table = built
     args = [str(table), str(root / "campioni.json"), "-" if spec == "-" else str(root / spec), "1", *idx]
     outs = {}
-    for name, cmd in (("nat", ["target/release/examples/tabella"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
+    for name, cmd in (("nat", ["target/release/examples/table"]), ("wasm", ["node", str(ROOT / "tests/feat_table_node.js"), str(pkg)])):
         out = root / f"{name}-{spec}"
         out.mkdir()
         got = run(*cmd, str(out), *args)

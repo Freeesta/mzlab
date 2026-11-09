@@ -22,7 +22,7 @@ try:
     counts, rt = {}, {}
     for name, recipe in recipes.items():
         out = nat / name; out.mkdir()
-        subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(out), *idx, "--recipe", recipe],
+        subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "native", "--", str(out), *idx, "--recipe", recipe],
                        check=True, cwd=ROOT, stdout=subprocess.DEVNULL)
         counts[name] = Counter(array(out / "series.mzfeat", "state")[0])
         rts = array(out / "series.mzfeat", "rt")
