@@ -6,7 +6,7 @@
 
 use super::explain::Formula;
 use crate::attributio::annotate::Feature;
-use crate::chem::grafo::Mol;
+use crate::chem::graph::Mol;
 use mzlab_core::elements;
 
 /// What the review reads from a SMILES.

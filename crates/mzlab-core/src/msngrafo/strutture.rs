@@ -1,5 +1,5 @@
 //! The cleavages of a structure (the SMILES of the user) that explain the m/z of ONE node of the graph: the types of the answer, the input taken from
-//! the graph and the `strutture` key of `msngrafo/1`. The cleaving itself is `mzlab_feat::chem::strutture` (the fragmenter of mzLab, which this crate
+//! the graph and the `strutture` key of `msngrafo/1`. The cleaving itself is `mzlab_feat::chem::structures` (the fragmenter of mzLab, which this crate
 //! cannot depend on). Candidates, never identifications: a broken bond is a hypothesis.
 
 use super::{GNode, Graph};

@@ -3,7 +3,7 @@
 
 For the 20 public molecules of docs/studi/CC_MOTORE_NEL_BROWSER.md section 6: RDKit ETKDGv3 + MMFF94 geometry (seed 42) and tblite GFN2-xTB
 charges of N, N+1 and N-1 electrons, in ALPB water and in the gas phase, with f(+) = q(N) - q(N+1) and f(-) = q(N-1) - q(N).
-Atoms are in the order of `mzlab_feat::chem::grafo::Mol` (heavy atoms in SMILES order) followed by the hydrogens of each heavy atom in turn.
+Atoms are in the order of `mzlab_feat::chem::graph::Mol` (heavy atoms in SMILES order) followed by the hydrogens of each heavy atom in turn.
 
 Needs a venv with tblite 0.7.0, rdkit and numpy:
     python3 tools/cc_riferimento.py [crates/mzlab-chem/tests/data/cc_ref.json]

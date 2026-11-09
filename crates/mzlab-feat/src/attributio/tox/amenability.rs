@@ -5,7 +5,7 @@
 //! builder takes those fields from the source.
 
 use crate::attributio::annotate::text::fmt_g;
-use crate::chem::grafo::Mol;
+use crate::chem::graph::Mol;
 use mzlab_core::elements;
 
 pub const MASS_MIN: f64 = 50.0;

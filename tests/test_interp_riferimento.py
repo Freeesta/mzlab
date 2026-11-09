@@ -1,4 +1,4 @@
-"""The classes of candidate sites of +O, -CH2 and -2H (crates/mzlab-feat/src/chem/posizioni) against RDKit on 20 textbook molecules. Skipped without RDKit."""
+"""The classes of candidate sites of +O, -CH2 and -2H (crates/mzlab-feat/src/chem/positions) against RDKit on 20 textbook molecules. Skipped without RDKit."""
 import json
 import os
 import subprocess

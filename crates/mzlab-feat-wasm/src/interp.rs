@@ -6,15 +6,15 @@ use mzlab_core::elements::parse_formula;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::{Out, Value};
-use mzlab_feat::chem::posizioni::Pol;
-use mzlab_feat::interp::filtri::DecoyParams;
+use mzlab_feat::chem::positions::Pol;
+use mzlab_feat::interp::filters::DecoyParams;
 use mzlab_feat::interp::json::filters_json;
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::refilter::{refilter, FilterParams};
 use mzlab_feat::interp::reposition::reposition;
 use mzlab_feat::interp::review;
 use mzlab_feat::interp::run::{run_to, run_to_with};
-use mzlab_feat::interp::sito::SiteParams;
+use mzlab_feat::interp::site::SiteParams;
 use mzlab_feat::legacy::series;
 use mzlab_feat::store::{read_table_from, Slice};
 use wasm_bindgen::prelude::*;
@@ -274,13 +274,13 @@ pub fn tp_position(
 }
 
 /// `export.inclusion` in the browser: the inclusion list of `products` (a JSON list, or the bytes of the `.mzfeat` of `tp.link`) under the step's parameters merged with its defaults;
-/// an empty `adducts` takes the default of the polarity of the products (`mzlab_feat::export_inclusione_tp`, the function `flow run` calls).
+/// an empty `adducts` takes the default of the polarity of the products (`mzlab_feat::export_inclusion_tp`, the function `flow run` calls).
 #[wasm_bindgen]
 pub fn flow_inclusion(params: &str, products: &[u8]) -> std::result::Result<String, JsValue> {
     let set = getter(params)?;
     let adducts = set.get("adducts").and_then(Value::str);
     let half = set.get("rt_window").and_then(Value::f64).unwrap_or(0.5);
-    mzlab_feat::export_inclusione_tp::inclusion_csv_of(products, adducts, half).map_err(js_err)
+    mzlab_feat::export_inclusion_tp::inclusion_csv_of(products, adducts, half).map_err(js_err)
 }
 
 /// `structure.render` in the browser: `drawings/1` of the `sites/1` file over the parent file (`mzlab_feat::interp::redraw::render_text`, the function

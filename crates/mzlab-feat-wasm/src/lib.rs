@@ -50,7 +50,7 @@ pub mod run_tab;
 pub mod run_stat;
 #[cfg(feature = "detect")]
 pub mod run_estimate;
-pub mod run_tp; pub mod stima;
+pub mod run_tp; pub mod estimate;
 #[cfg(feature = "proofs")]
 pub mod state;
 #[cfg(feature = "untargeted")]
@@ -212,7 +212,7 @@ pub fn detect_file_to(
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
     let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
     let cap = mzlab_core::budget::MemBudget::from_request(budget_mb.unwrap_or(0.0)).cap();
-    stima::detect_fits(&mut ix, &r, cap).map_err(js_err)?;
+    estimate::detect_fits(&mut ix, &r, cap).map_err(js_err)?;
     to_sink(write, |sink| progress_js::detect_to(&mut ix, name, &r, sink, progress))
 }
 

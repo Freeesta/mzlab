@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 use mzlab_feat::hypo::*;
 
 const PARENT: &str = "CC(C)(C)NCC(COc1nsnc1N1CCOCC1)O";
@@ -156,7 +156,7 @@ fn without_the_structure_only_the_fallback_and_plain_rules_work() {
 
 #[test]
 fn the_structure_json_of_the_page() {
-    let s = Structure::parse(&mzlab_feat::chem::grafo::analyse_json(PARENT).unwrap()).unwrap();
+    let s = Structure::parse(&mzlab_feat::chem::graph::analyse_json(PARENT).unwrap()).unwrap();
     assert_eq!(s.formula.as_deref(), Some(FORMULA));
     assert!(s.groups.as_ref().unwrap().iter().any(|g| g == "n_tbutyl") && !s.fragments.is_empty());
     s.check_parent("C13H24N4S1O3").unwrap();

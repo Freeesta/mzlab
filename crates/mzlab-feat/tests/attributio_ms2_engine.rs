@@ -3,8 +3,8 @@
 #![cfg(feature = "attributio")]
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::annotate::{gnps_comparer, load_annotations, BasicCuration};
 use mzlab_feat::attributio::campaign::Env;
 use mzlab_feat::attributio::io::Io;

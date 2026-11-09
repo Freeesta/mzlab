@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "gruppi/1",
  "title": "gruppi/1: the same degradation in several conditions, compared on one alignment",
- "description": "Output of mzlab-feat gruppi::build (crates/mzlab-feat/src/gruppi/): per row and condition the presence, mean area of the replicates, ratio to a reference condition, shape over time and the controls as 'Prev.' suggestions; the exact sets of conditions; the decay of the parent per condition. Keys in English, fixed order, only for Tabui. A condition is a non-empty `serie` of a `sample` of campioni/2, in order of first injection; a control of `serie == ''` is shared by all. Ratios, cv and rate_rel are rounded to 6 decimals. Never a confirmation of a product and never a Schymanski level.",
+ "description": "Output of mzlab-feat gruppi::build (crates/mzlab-feat/src/groups/): per row and condition the presence, mean area of the replicates, ratio to a reference condition, shape over time and the controls as 'Prev.' suggestions; the exact sets of conditions; the decay of the parent per condition. Keys in English, fixed order, only for Tabui. A condition is a non-empty `serie` of a `sample` of campioni/2, in order of first injection; a control of `serie == ''` is shared by all. Ratios, cv and rate_rel are rounded to 6 decimals. Never a confirmation of a product and never a Schymanski level.",
  "type": "object",
  "required": ["format", "version", "reference", "norm", "conditions", "rows", "sets", "warnings"],
  "properties": {

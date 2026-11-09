@@ -3,8 +3,8 @@
 //! stages `tox-ghs` and `tox-istantanee`) on the invented snapshots in `tests/data/attributio/istantanee_sintetiche/`.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::tox::ghs;
 use mzlab_feat::attributio::tox::snapshot::*;
 use mzlab_feat::attributio::tox::vocab::canon;

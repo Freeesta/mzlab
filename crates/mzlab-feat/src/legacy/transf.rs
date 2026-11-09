@@ -164,7 +164,7 @@ fn member<'a>(v: &'a mut Value, key: &str) -> Option<&'a mut Value> {
 
 /// The `regole_tp` file `base` (`/1` list or the default profile of `/2`) with the rows of `text` as rules.
 pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
-    let rows = crate::liste::from_legacy_text(text)?.transformation_rows();
+    let rows = crate::lists::from_legacy_text(text)?.transformation_rows();
     let unreadable = || "the rules of Tabui cannot be read".to_string();
     let mut file = json::parse(base).map_err(|_| unreadable())?;
     let default = file

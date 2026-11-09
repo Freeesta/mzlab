@@ -1,4 +1,4 @@
-//! `flow/liste` for the kind `transitions` (`liste::route` hands it over): the rows a person typed (or the CSV they imported) in, the checked table out
+//! `flow/liste` for the kind `transitions` (`lists::route` hands it over): the rows a person typed (or the CSV they imported) in, the checked table out
 //! (`rows` as written, the `csv` the plan keeps, a `json` to export and its `sha256`), or the errors of the wrong rows. The row order is kept: it is the
 //! order of the outputs.
 
@@ -6,7 +6,7 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::json::{Out, Value};
 
 use super::table::{parse, to_csv, Row, HEADER};
-use crate::liste::errors_json;
+use crate::lists::errors_json;
 
 fn cell(r: &Value, k: &str) -> String {
     match r.get(k) {

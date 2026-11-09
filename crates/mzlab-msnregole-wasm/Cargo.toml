@@ -1,6 +1,6 @@
 [package]
 name = "mzlab-msnregole-wasm"
-description = "wasm-bindgen bridge of the structure rules of the fragmentation graph (SMILES -> the expectations `attese` of mzlab_feat::chem::regole); a .wasm of its own, loaded by the page only when the user gives a SMILES"
+description = "wasm-bindgen bridge of the structure rules of the fragmentation graph (SMILES -> the expectations `attese` of mzlab_feat::chem::rules); a .wasm of its own, loaded by the page only when the user gives a SMILES"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

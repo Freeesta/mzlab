@@ -3,8 +3,8 @@
 //! the false-positive rate of the `2b-strong` rule on decoys (a wrong structure explains as many fragments as a decoy list does, by chance).
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::annotate::decide::{apply_decisions, feature_keys};
 use mzlab_feat::attributio::annotate::{AnnotationSettings, BasicCuration, Feature};
 use mzlab_feat::attributio::io::Io;

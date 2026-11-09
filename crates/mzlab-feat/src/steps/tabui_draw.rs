@@ -1,11 +1,11 @@
 //! `structure.render` and `structure.draw`: how the modification of a product is drawn and the editor where the student draws a structure. The first runs
-//! in the `.wasm` `interp` (`interp::disegno`), the second is the page only (Ketcher in a `sandbox` iframe, `draw.js`): it has no engine and no ceiling.
+//! in the `.wasm` `interp` (`interp::drawing`), the second is the page only (Ketcher in a `sandbox` iframe, `draw.js`): it has no engine and no ceiling.
 
 use mzlab_core::step::{Algorithm, DataType, Port, RunsIn, Status, Step};
 
 use super::tabui::{algorithm, tabui_step, INTERP_CEILING, INTERP_WASM};
 
-/// `structure.render`: ONE form per product row that tells the truth about the position (`interp::disegno::drawing`, `drawing` of `interp/1`).
+/// `structure.render`: ONE form per product row that tells the truth about the position (`interp::drawing::drawing`, `drawing` of `interp/1`).
 pub(super) fn render() -> Step {
     Step {
         ins: vec![
@@ -30,7 +30,7 @@ fn simplest_form() -> Algorithm {
     algorithm(
         "simplest_form",
         "Structure, multicenter or bracket",
-        "The mode follows the position report: structure for a site, multicenter for candidates in one ring, bracket otherwise; atoms a loss removes are drawn faint and dashed (drawing in crates/mzlab-feat/src/interp/disegno.rs).",
+        "The mode follows the position report: structure for a site, multicenter for candidates in one ring, bracket otherwise; atoms a loss removes are drawn faint and dashed (drawing in crates/mzlab-feat/src/interp/drawing.rs).",
         Status::Available,
     )
 }

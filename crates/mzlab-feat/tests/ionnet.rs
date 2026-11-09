@@ -197,7 +197,7 @@ fn ion_identity_edges_are_found() {
     }
 }
 
-#[path = "ionnet_parti/files.rs"]
+#[path = "ionnet_parts/files.rs"]
 mod files;
 
 #[test]

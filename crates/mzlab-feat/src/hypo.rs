@@ -114,7 +114,7 @@ pub struct Inputs<'a> {
     pub imported: &'a [Imported],
     /// Formulas of cleavage products of the parent (the caller knows the structure; formulas alone give no fragments).
     pub fragments: &'a [String],
-    /// Functional groups of the parent (`chem::grafo`), when its structure is known: the rules with groups are used, the `fallback` ones are not.
+    /// Functional groups of the parent (`chem::graph`), when its structure is known: the rules with groups are used, the `fallback` ones are not.
     pub groups: Option<&'a [String]>,
 }
 

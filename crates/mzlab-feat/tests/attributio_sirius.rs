@@ -2,8 +2,8 @@
 //! The SIRIUS input (`.ms` and MGF) of the synthetic campaign.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::io::Io;
 
 #[test]
