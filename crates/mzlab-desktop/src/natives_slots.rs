@@ -1,4 +1,4 @@
-//! The slots of `Nativi`: which sample of which dataset each one is, its reader and its `guscio` (see `nativi.rs`).
+//! The slots of `Nativi`: which sample of which dataset each one is, its reader and its `guscio` (see `natives.rs`).
 
 use std::sync::Arc;
 
@@ -6,7 +6,7 @@ use mzlab_core::lettori::Reader;
 use mzlab_core::{lettori_mzml, Error, Result};
 
 use crate::mapped::Held;
-use crate::nativi::{open, Dataset, Nativi, Src, OPEN, SHELLS};
+use crate::natives::{open, Dataset, Nativi, Src, OPEN, SHELLS};
 use crate::store::Nat;
 
 impl Nativi {

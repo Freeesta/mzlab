@@ -1,4 +1,4 @@
-// The tests of esterno.rs: the answers of a fake module become the types of the contract (no JS).
+// The tests of external.rs: the answers of a fake module become the types of the contract (no JS).
 use super::*;
 use mzlab_core::lettori::Position;
 

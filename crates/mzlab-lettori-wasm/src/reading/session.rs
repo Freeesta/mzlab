@@ -2,7 +2,7 @@
 //! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON, or one byte array for the index and a scan (`mzlab_core::trasporto`); an error is `{error_key, params}`.
 use std::collections::HashMap;
 
-use super::json_testo::{chromatograms_json, fields_json, header_json, samples_json};
+use super::json_text::{chromatograms_json, fields_json, header_json, samples_json};
 use mzlab_core::json::Out;
 use mzlab_core::lettori::Reader;
 use mzlab_core::mzml::Spectrum;
@@ -104,9 +104,9 @@ impl Sessions {
 }
 
 #[cfg(test)]
-#[path = "sessione_duro.rs"]
-mod duro;
+#[path = "session_hard.rs"]
+mod hard;
 
 #[cfg(test)]
-#[path = "sessione_prove.rs"]
+#[path = "session_tests.rs"]
 mod tests;

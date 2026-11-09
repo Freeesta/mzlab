@@ -1,6 +1,6 @@
 //! `mzlab-cli msn-rules`: a synthetic MassBank record through the command, the strata, the decoys and the sums. Synthetic spectra only.
 
-use super::somma::summed;
+use super::sum::summed;
 use crate::execute;
 use mzlab_core::json::parse;
 

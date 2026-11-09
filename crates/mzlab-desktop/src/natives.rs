@@ -1,5 +1,5 @@
 //! The samples of a maker's file (`.raw`, `.wiff` + `.wiff.scan`, a `.D` folder) read as they are, no mzML written: the native twin of
-//! `mzlab-wasm/src/nativi.rs`. A dataset is a `FileSet` of memory-mapped members opened with the readers of the registry (`lettori::apri`); a slot is
+//! `mzlab-wasm/src/natives.rs`. A dataset is a `FileSet` of memory-mapped members opened with the readers of the registry (`lettori::apri`); a slot is
 //! sample `c` of a dataset, and the routes that read the file besides its index read the `guscio` of the sample (the mzML without its spectra) and the
 //! reader. The registered file of such a sample is an entry of the store with `nat` (`store.rs`).
 

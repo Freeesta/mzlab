@@ -12,7 +12,7 @@ const BLOCKS: usize = 1;
 /// The longest block a run of reads in order grows to (`BlockCache::read_ahead`): at most this many bytes held per member.
 const READ_AHEAD_MAX: usize = 4 << 20;
 /// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`, or `read.into(i, offset, view)` when the page has it (`rust-nativo.js`, over OPFS handles):
-/// the handle reads straight into the engine's memory. The view (as `lend` of `nativi.rs`, the other way) is valid during the call only: JS fills it at once, never keeps it,
+/// the handle reads straight into the engine's memory. The view (as `lend` of `natives.rs`, the other way) is valid during the call only: JS fills it at once, never keeps it,
 /// makes no call into the engine meanwhile, and answers the bytes it put.
 struct JsMember {
     read: Function,

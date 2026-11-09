@@ -235,7 +235,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     match table(&c, &mut warn) {
         Err(e) => Outcome::fail(&format!(
             "{warn}{}",
-            crate::testo_errore::human(&e.to_string())
+            crate::error_text::human(&e.to_string())
         )),
         Ok(t) => {
             let mut o = crate::emit(t, &c.out);

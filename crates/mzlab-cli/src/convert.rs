@@ -184,7 +184,7 @@ fn progress(names: Vec<String>, ended: Arc<Mutex<Vec<Option<Ended>>>>) -> DoneFn
         let k = item.unwrap_or(0);
         let n = count.fetch_add(1, Ordering::Relaxed) + 1;
         let what = match (&err, cached) {
-            (Some(e), _) => format!("failed: {}", crate::testo_errore::human(e)),
+            (Some(e), _) => format!("failed: {}", crate::error_text::human(e)),
             (None, true) => "skipped (already converted)".to_string(),
             (None, false) => format!("done in {:.1} s", ms / 1e3),
         };
@@ -222,8 +222,7 @@ pub(crate) fn workers_for(auto_mb: f64, given: Option<usize>) -> (usize, Option<
     let wanted = mzlab_core::budget_auto::convert_wanted();
     (
         mzlab_core::budget_auto::convert_workers(auto_mb, wanted),
-        fewer_workers(auto_mb, wanted)
-            .map(|n| format!("note: {}", crate::testo_errore::warning(&n))),
+        fewer_workers(auto_mb, wanted).map(|n| format!("note: {}", crate::error_text::warning(&n))),
     )
 }
 

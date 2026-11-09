@@ -1,10 +1,10 @@
-//! The index of a native sample (a maker's file read as it is): built straight from its reader, version 2 (see `nativi.rs`).
+//! The index of a native sample (a maker's file read as it is): built straight from its reader, version 2 (see `natives.rs`).
 use mzlab_core::lettori::Limits;
 use mzlab_core::mzidx::Stats;
 use mzlab_core::{lettori_centroidi, upload, Error};
 
 use crate::idxbuild::IdxBuilder;
-use crate::nativi;
+use crate::natives;
 use crate::store::Nat;
 
 impl IdxBuilder {
@@ -13,7 +13,7 @@ impl IdxBuilder {
         self.write(name, |out, spill, _| {
             // the fingerprints are taken by a second thread (its own mapping of the members) while the scans are decoded; the members this one opens say
             // they have a SHA-1 already (empty): the index never reads it
-            let mut fs = nativi::fileset(&nat.members)?;
+            let mut fs = natives::fileset(&nat.members)?;
             upload::without_sha1(&mut fs);
             let l = mzlab_lettori::apri(fs, &Limits::desktop())?;
             let mut l = if nat.centroid {
@@ -23,7 +23,7 @@ impl IdxBuilder {
             };
             let members = nat.members.clone();
             upload::with_parallel_prints(
-                move || nativi::fileset(&members),
+                move || natives::fileset(&members),
                 |impronte| {
                     let (mut st, _) = upload::index_reader_with(
                         &mut *l,

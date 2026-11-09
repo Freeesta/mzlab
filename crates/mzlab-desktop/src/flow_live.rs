@@ -1,5 +1,5 @@
 //! The routes `flow/live/<op>` of `rpc`: a plan that runs on this computer and takes changes while it runs (`mzlab_cli::flow::live::LiveRun`), with the
-//! very bodies and answers of `api/flow/sched/<op>` of the site (`new` is `start`) and `cancel`. The conversions the background queue (`conv_coda.rs`)
+//! very bodies and answers of `api/flow/sched/<op>` of the site (`new` is `start`) and `cancel`. The conversions the background queue (`conv_queue.rs`)
 //! makes are the `convert.mzml` jobs of the plan: the workers leave them to the queue, which tells how they stand (`sync_queue`). One run at a time; its folders
 //! are the ones of `flow/run`, so `flow/read` and `flow/report` read what it made, and `finish` gives the `prov/1` of the plan as it stands.
 

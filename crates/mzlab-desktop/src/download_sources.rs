@@ -1,4 +1,4 @@
-//! A source of the catalog `librerie/2` (read by `scarica.rs`, shown by the library window).
+//! A source of the catalog `librerie/2` (read by `download.rs`, shown by the library window).
 use serde::{Deserialize, Serialize};
 
 /// One source of the catalog `librerie/2` (`tools/librerie_catalogo.json`): `modo` is `site` (pieces of the site), `external` (desktop app only) or `link`.

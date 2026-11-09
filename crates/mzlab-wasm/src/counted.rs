@@ -1,4 +1,4 @@
-//! The reader of a dataset that counts the scans it decodes for the page (`build_mzidx_native` in `nativi.rs`).
+//! The reader of a dataset that counts the scans it decodes for the page (`build_mzidx_native` in `natives.rs`).
 use js_sys::Function;
 use mzlab_core::lettori::{self, FileSet, Limits, Reader};
 use mzlab_core::wiff;

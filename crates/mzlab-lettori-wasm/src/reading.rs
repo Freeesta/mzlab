@@ -1,5 +1,5 @@
 //! The readers module of ONE family in the browser (the family is chosen by the Cargo feature the .wasm is built with): opens the files of a maker that the engine does not read and writes their mzML to the page piece by piece.
-//! A dataset is described as in `crates/mzlab-wasm/src/nativi.rs`: names (relative to the dataset), sizes, `read(i, offset, length) -> Uint8Array`.
+//! A dataset is described as in `crates/mzlab-wasm/src/natives.rs`: names (relative to the dataset), sizes, `read(i, offset, length) -> Uint8Array`.
 use std::io::Write;
 
 use js_sys::Function;
@@ -7,9 +7,9 @@ use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::lettori_mzml;
 use wasm_bindgen::prelude::*;
 
-mod json_testo;
-pub mod sessione;
-use sessione::Sessions;
+mod json_text;
+pub mod session;
+use session::Sessions;
 
 /// Bytes sent to `sink` at a time (each call is an OPFS write in the page: 1 MiB blocks cost a quarter of 64 KiB ones per byte).
 const BLOCK: usize = 1 << 20;
@@ -45,7 +45,7 @@ fn from_js(read: &Function, i: u32, off: u64, n: usize) -> mzlab_core::Result<js
 }
 
 /// `read.into(i, offset, view)` of the page (`rust-nativo.js`, over OPFS handles): the bytes go from the handle straight into this module's memory. The view (as `lend` of
-/// `crates/mzlab-wasm/src/nativi.rs`, the other way) is valid during the call only: JS fills it at once, never keeps it, makes no call into the module meanwhile, and answers the bytes it put.
+/// `crates/mzlab-wasm/src/natives.rs`, the other way) is valid during the call only: JS fills it at once, never keeps it, makes no call into the module meanwhile, and answers the bytes it put.
 fn into_of(read: &Function) -> Option<Function> {
     js_sys::Reflect::get(read, &JsValue::from_str("into"))
         .ok()?
@@ -271,7 +271,7 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
     o.raw("{\"formato\":")
         .str(l.format().id())
         .raw(",\"campioni\":");
-    json_testo::samples_json(&mut o, l.samples());
+    json_text::samples_json(&mut o, l.samples());
     o.raw(",\"motivi\":[");
     for (i, m) in motivi.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(m);

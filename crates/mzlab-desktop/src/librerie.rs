@@ -39,14 +39,14 @@ pub struct Config {
     /// «Scarica librerie pubbliche da fonti esterne»: off until the user turns it on
     #[serde(default)]
     pub esterne: bool,
-    /// the folder of the data pointed at by the user (`cartella.rs`)
+    /// the folder of the data pointed at by the user (`folder.rs`)
     #[serde(default)]
     pub dati: Option<String>,
-    /// the notice «make mzLab the default app?» (`apertura.rs`): files opened from outside so far, and the answer that ends the notice
+    /// the notice «make mzLab the default app?» (`opening.rs`): files opened from outside so far, and the answer that ends the notice
     #[serde(default)]
     pub aperture: u32,
     #[serde(default)]
-    pub risposta: Option<crate::apertura::NoticeAnswer>,
+    pub risposta: Option<crate::opening::NoticeAnswer>,
 }
 
 pub fn read_config(data_dir: &Path) -> Config {

@@ -111,5 +111,5 @@ impl<F: Fetch> Seek for BlockReader<F> {
 }
 
 #[cfg(test)]
-#[path = "blocchi_prove.rs"]
+#[path = "blocks_tests.rs"]
 mod tests;

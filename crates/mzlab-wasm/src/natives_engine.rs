@@ -1,4 +1,4 @@
-// The methods of `Natives` (the slots read straight from the files of a maker) and of `Engine` that attach a slot to its reader (see nativi.rs).
+// The methods of `Natives` (the slots read straight from the files of a maker) and of `Engine` that attach a slot to its reader (see natives.rs).
 use std::rc::Rc;
 
 use js_sys::Function;
@@ -6,7 +6,7 @@ use mzlab_core::lettori_mzml;
 use mzlab_core::lettori_sessione::{attacca, stacca};
 use wasm_bindgen::prelude::*;
 
-use crate::nativi::{reader, Dataset, Members, Natives, Src, SHELLS};
+use crate::natives::{reader, Dataset, Members, Natives, Src, SHELLS};
 use crate::{error_json, Engine, JsReader};
 use mzlab_core::json::Value;
 use mzlab_core::mzmlhead::Mzml;

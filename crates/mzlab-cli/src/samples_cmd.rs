@@ -126,5 +126,5 @@ pub fn run(args: Vec<String>) -> Outcome {
 }
 
 #[cfg(test)]
-#[path = "campioni_cmd_tests.rs"]
+#[path = "samples_cmd_tests.rs"]
 mod tests;

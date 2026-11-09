@@ -5,8 +5,8 @@
 use mzlab_feat::legacy::lr;
 use std::sync::OnceLock;
 
-mod comune;
-use comune::*;
+mod common;
+use common::*;
 use mzlab_feat_wasm::run;
 
 /// (m/z, RT) of products of one transformation of the parent (`regole_tp_2.json`): two near the dead volume (rt_min 0.5 min).
