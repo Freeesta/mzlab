@@ -33,7 +33,8 @@
   const holdRead = async (x, spec, err, claimed = true) => {
     const q = (err && err.params) || {}, need = Number(q.stima_mb), high = kit().highMb(), jk = x.jk(spec), j = job(spec);
     const key = err && (err.key === "error.memoryBudget" ? "error.featMemory" : err.key);
-    if (key !== "error.featMemory" || x.allowed.has(jk) || !(need <= high && high > Number(q.budget_mb))) throw err;
+    // a refusal with its phase is told by the notice of that phase (error.memoryBudgetFase.*), also when the pool handed it on as error.featMemory
+    if (key !== "error.featMemory" || x.allowed.has(jk) || !(need <= high && high > Number(q.budget_mb))) throw key === "error.featMemory" && q.fase ? Object.assign(err, { key: "error.memoryBudget" }) : err;
     x.memAsk.set(jk, { spec, est: { mb: need }, err, fase: q.fase || "read" });
     if (!claimed) await x.call("started", { job: j });
     await x.call("finished", { job: j, result: { error_key: "error.featMemory", params: strings(q) } });

@@ -142,7 +142,9 @@ try:
 
         def read_refused():
             pg.evaluate(DROP); pg.evaluate(LEVELS, 8)
-            try: r = pg.evaluate(RUN, [PLAN, SAMPLES])
+            # another min_detected than the plan's: a refused job is not tried again by Run under the same plan (read_raised runs the plan itself)
+            other = json.loads(json.dumps(PLAN)); next(s for s in other["steps"] if s["id"] == "flt")["params"]["min_detected"] = 2
+            try: r = pg.evaluate(RUN, [other, SAMPLES])
             finally: pg.evaluate(UNDO)
             assert any(e["passo"] == "flt" and e["stato"] in ("error", "refused") for e in r["ev"]), r["ev"][-6:]
             title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('flt')).title")

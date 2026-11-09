@@ -116,7 +116,7 @@ try:
         UNDO = "() => { const r = window.MZLAB_RUST; [r.budgetMb, r.choice] = window.__lv; }"
         def read_refused():
             pg.evaluate(LEVELS, 8)
-            try: r = pg.evaluate(RUN, plan("table"))
+            try: r = pg.evaluate(RUN, plan("candidates"))   # not the plan of read_raised: Run does not try a refused job again under the same plan
             finally: pg.evaluate(UNDO)
             assert any(e["passo"] == "tr" and e["stato"] in ("error", "refused") for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "tr"][-3:]
             title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('tr')).title")
