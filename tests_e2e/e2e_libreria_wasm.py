@@ -1,6 +1,7 @@
 """Spectral libraries with the WebAssembly engine (crates/mzlab-lib-wasm) on the built site: a synthetic MSP is imported into a .mzlib in OPFS, identity and
 analogues are searched, the library survives a reload, an old MZL1 archive (made with ?libjs=1) is converted once and its old files go, a dead engine is
-replaced (and a second death within a minute sends the page to the JavaScript path), and the .wasm stays under 600 KB.
+replaced (and a second death within a minute sends the page to the JavaScript path), the .wasm stays under 600 KB, and an iPad with the Mac user agent gets the
+block cache of tablets (the page names the device to the worker).
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm-lib)."""
 from pathlib import Path
 import json, os, shutil, subprocess, sys, time
@@ -60,6 +61,16 @@ try:
             size = (ROOT / "site" / "static" / "wasm-lib" / "mzlab_lib_wasm_bg.wasm").stat().st_size
             if not built_here: assert size < 600 * 1024, f"the .wasm is {size} bytes (limit 600 KB)"      # built here without wasm-opt: the size is only checked in the CI, which optimises it
         step("the WebAssembly engine loads (the .wasm is under 600 KB)", engine)
+        def tablet():
+            # iPadOS Safari sends the Mac user agent; only the page sees its touch points (a worker has no maxTouchPoints), so the page names the device
+            mac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
+            for touch, small in ((5, True), (0, False)):
+                c = b.new_context(user_agent=mac, viewport={"width": 1180, "height": 820})
+                c.add_init_script("Object.defineProperty(Navigator.prototype,'platform',{get:()=>'MacIntel'});Object.defineProperty(Navigator.prototype,'maxTouchPoints',{get:()=>%d});" % touch)
+                q = c.new_page(); q.goto(URL); q.wait_for_function("window.LIB !== undefined && LIB.engine !== undefined", timeout=60000)
+                e = q.evaluate("LIB.engine.info()"); c.close()
+                assert e["wasm"] is True and e["small"] is small and e["cache_mb"] == (32 if small else 64), (touch, e)
+        step("an iPad with the Mac user agent gets the 32 MB block cache of tablets, a Mac the 64 MB", tablet)
         def imp():
             info = pg.evaluate(ADD, ["prova.msp", MSP])
             assert info["store"] == "mzlib" and info["n"] == 5 and info["dropped"] == 1 and info["noPrec"] == 1 and info["pos"] == 4 and info["neg"] == 1 and info["cut"] == 0, info
