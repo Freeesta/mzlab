@@ -42,6 +42,26 @@ fn an_unfinished_raw_is_the_text_of_the_page() {
     );
 }
 
+/// A .raw whose counts point past its end: the calm text of the page, the reader's detail and the stage after the key.
+#[test]
+fn a_damaged_raw_is_the_text_of_the_page() {
+    let e = Error::new("err.file.rawDamaged")
+        .with("stage", "SeqRow")
+        .with("detail", "refusing to allocate");
+    let t = human(&e.to_string());
+    assert_eq!(
+        t,
+        format!(
+            "{} (err.file.rawDamaged, stage=SeqRow, detail=refusing to allocate)",
+            text_of("err.file.rawDamaged").unwrap()
+        )
+    );
+    assert!(
+        t.contains("is damaged") && t.contains("instrument PC"),
+        "{t}"
+    );
+}
+
 #[test]
 fn every_key_of_the_catalogue_is_found() {
     let keys: Vec<&str> = CATALOG

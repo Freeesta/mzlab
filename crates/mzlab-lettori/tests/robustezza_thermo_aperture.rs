@@ -410,3 +410,25 @@ fn a_run_header_with_no_scan_has_no_finished_run() {
     let p: Vec<&str> = e.params.iter().map(|(k, _)| *k).collect();
     assert_eq!(p, ["detail", "size"]);
 }
+
+/// A count or an address stamped anywhere past the header (a file damaged in a copy): one calm key, never the reader's «refusing to allocate» shown as it is.
+#[test]
+fn a_stamped_count_is_a_damaged_file() {
+    let b = Raw::tsq(63, 20).bytes();
+    let mut x = b.clone();
+    x[1420..1424].copy_from_slice(&0x7fff_fff0u32.to_le_bytes());
+    let e = mzlab_core::raw::thermo_error(&refused(&x));
+    assert_eq!(e.key, "err.file.rawDamaged");
+    assert!(
+        e.params.iter().any(|(k, v)| *k == "stage" && v == "SeqRow"),
+        "{e}"
+    );
+    for i in (1356..b.len() - 4).step_by(2) {
+        let mut x = b.clone();
+        x[i..i + 4].copy_from_slice(&0x7fff_fff0u32.to_le_bytes());
+        if let Err(e) = open(&x) {
+            let k = mzlab_core::raw::thermo_error(&e).key;
+            assert_ne!(k, "err.file.raw", "byte {i}: {e}");
+        }
+    }
+}
