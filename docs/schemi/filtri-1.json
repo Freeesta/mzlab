@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "filtri/1",
  "title": "filtri/1: the filters that hide rows of the feature table, in order, with the rows each one hid",
- "description": "The `filtri` key of the `interp` object in the meta of the `.mzfeat` (crates/mzlab-feat/src/interp/filtri.rs). A row is hidden by the first filter that applies; nothing is deleted and every hidden row keeps its id. English only.",
+ "description": "The `filtri` key of the `interp` object in the meta of the `.mzfeat` (crates/mzlab-feat/src/interp/filters.rs). A row is hidden by the first filter that applies; nothing is deleted and every hidden row keeps its id. English only.",
  "type": "object",
  "required": ["schema", "stages", "decoys"],
  "properties": {

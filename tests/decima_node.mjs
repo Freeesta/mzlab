@@ -1,5 +1,5 @@
 // Checks mzlab/web/decima.js against the point-by-point loop it replaced (grafici.js drawLines), on synthetic traces; prints one JSON object. See tests/test_decima.py.
-import { amax, amin, hairline, isSorted, m4, polyline, polylineScan, windowIdx } from "../mzlab/web/decima.js";
+import { amax, amin, clipY, extent, extentScan, hairline, isSorted, m4, polyline, polylineScan, rangeExtent, runsAbove, windowIdx } from "../mzlab/web/decima.js";
 
 let seed = 12345;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -39,7 +39,7 @@ function traces() {
   return T;
 }
 
-const out = { traces: 0, windows: 0, mismatches: [], lost_apex: [] };
+const out = { traces: 0, windows: 0, mismatches: [], lost_apex: [], extent_bad: [] };
 const log = v => (v <= 1 ? 0 : Math.log10(v));
 for (const [name, x, y] of traces()) {
   const lo = x[0], hi = x[x.length - 1];
@@ -49,6 +49,7 @@ for (const [name, x, y] of traces()) {
     const X = r => 66 + (r - x0) / (x1 - x0) * (W - 80), ymax = 1e6;
     const V = kind === "lin" ? v => 300 - (v - 0) / ymax * 250 : v => 300 - log(Math.max(v, 1)) / 6 * 250;
     const [i0, i1] = windowIdx(x, x0, x1);
+    if (W === 300 && kind === "lin" && !same(extent(x, y, x0, x1, 7, 3), extentScan(x, y, x0, x1, 7, 3))) out.extent_bad.push(`${name} [${x0.toFixed(3)},${x1.toFixed(3)}]`);
     const got = m4(x, y, i0, i1, X, V), want = reference(Array.from(x), Array.from(y), x0, x1, X, V);
     if (!same(polylineScan(x, y, x0, x1, X, V), want) || !same(polyline(x, y, x0, x1, X, V), want)) out.mismatches.push(`polyline ${name} [${x0.toFixed(3)},${x1.toFixed(3)}] W=${W} ${kind}`);
     if (!same(got, want)) out.mismatches.push(`${name} [${x0.toFixed(3)},${x1.toFixed(3)}] W=${W} ${kind}`);
@@ -71,6 +72,13 @@ for (let t = 0; t < 100000; t++) {
   if (i0 !== wantLo || i1 !== wantHi || (idx.length === 0 && i1 > i0 && b >= a)) bad++;
 }
 out.window_idx_bad = bad;
+// the block extremes against the plain scan: random ranges (short ones are scanned, long ones read the blocks), NaN, a starting bound, an array that grows
+{ let eb = 0; const a = Array.from({ length: 70000 }, (_, i) => (i % 911 === 0 ? NaN : 1000 * rnd() - 500));
+  for (let t = 0; t < 20000; t++) { const i0 = Math.floor(rnd() * a.length), i1 = i0 + Math.floor(rnd() * (a.length - i0 + 1)), m = rnd() < 0.5 ? -Infinity : 400, n = rnd() < 0.5 ? Infinity : -400;
+    if (!same(rangeExtent(a, i0, i1, m, n), [amax(a, i0, i1, m), amin(a, i0, i1, n)])) eb++; }
+  rangeExtent(a, 0, a.length); a.push(9e9, -9e9); if (!same(rangeExtent(a, 0, a.length), [9e9, -9e9])) eb++;
+  const nan = new Float64Array(5000).fill(NaN); if (!same(rangeExtent(nan, 0, 5000), [-Infinity, Infinity])) eb++;
+  out.range_bad = eb; }
 // an unsorted axis goes through the scan and still gives the old vertices
 { const xs = [5, 1, 3, 3, 9, 2, 8], ys = [1, 7, 2, 9, 4, 4, 6], X = r => r * 10, V = v => 100 - v; out.unsorted_ok = same(polyline(xs, ys, 0, 9, X, V), reference(xs, ys, 0, 9, X, V)); }
 
@@ -81,4 +89,23 @@ out.sorted = [isSorted([1, 2, 2, 3]), isSorted([1, 3, 2])];
 // 1 px above half a point per pixel column, in the window only: 1000 points on 1000 px, 400 of them in a zoom 1000 px wide, 300 on 1000 px, an unsorted axis
 { const x = Array.from({ length: 1000 }, (_, i) => i), X = r => r, Z = r => (r - 300) * 2.5;
   out.hair = [hairline(x, 0, 999, X), hairline(x, 300, 700, Z), hairline(x, 300, 700, r => (r - 300) * 0.5), hairline(x.slice(0, 300), 0, 299, r => r * 3.4), hairline([3, 1, 2], 1, 3, r => r)]; }
+// clipY against the version that sorted the two crossings of every segment; runsAbove against the point-by-point loop of the y zoom triangles (grafici.js)
+{ const clipRef = (v, lo, hi) => { let i = 1; while (i < v.length && v[i] >= lo && v[i] <= hi) i += 2; if (i >= v.length) return v;
+    const cl = y => y < lo ? lo : y > hi ? hi : y, o = [v[0], cl(v[1])];
+    for (let k = 2; k < v.length; k += 2) { const xa = v[k - 2], ya = v[k - 1], xb = v[k], yb = v[k + 1];
+      for (const t of [lo, hi].filter(b => (ya - b) * (yb - b) < 0).map(b => (b - ya) / (yb - ya)).sort((a, b) => a - b)) o.push(xa + (xb - xa) * t, ya + (yb - ya) * t); o.push(xb, cl(yb)); }
+    return o; };
+  let cb = 0;
+  for (let t = 0; t < 300; t++) { const n = 2 + Math.floor(rnd() * 400), v = []; for (let k = 0; k < n; k++) v.push(k * 1.5, rnd() < 0.3 ? -5000 + 10000 * rnd() : rnd() < 0.05 ? NaN : 300 * rnd());
+    if (!same(clipY(v, 5, 290), clipRef(v, 5, 290))) cb++; }
+  out.clip_bad = cb;
+  const runsRef = (x, y, x0, x1, f, lim) => { const o = []; let seg = null;
+    x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = f(y[i]); if (v > lim) { if (!seg || v > seg.v) seg = { v, i }; } else if (seg) { o.push(seg.i); seg = null; } });
+    if (seg) o.push(seg.i); return o; };
+  let rb = 0;
+  for (let t = 0; t < 400; t++) { const n = 1 + Math.floor(rnd() * 6000), x = Array.from({ length: n }, (_, i) => i * 0.01), lim = 50 + 100 * rnd(), off = rnd() < 0.5 ? 0 : 0.3, sc = 0.5 + rnd();
+    const y = x.map((_, i) => (i % 211 < 3 + (t % 5) ? 1000 * rnd() : rnd() < 0.01 ? NaN : t % 7 === 0 ? 100 : 40 * rnd()));
+    const a = x[Math.floor(rnd() * n)] - 0.5, b = a + rnd() * n * 0.012, f = v => off + v / sc, [i0, i1] = windowIdx(x, a, b);
+    if (!same(runsAbove(y, i0, i1, f, lim), runsRef(x, y, a, b, f, lim))) rb++; }
+  out.runs_bad = rb; }
 console.log(JSON.stringify(out));

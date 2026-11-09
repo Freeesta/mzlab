@@ -1,9 +1,9 @@
 // Ported from Attributio src/attributio/review/fragmenter.py. Lives in `chem` so a module without Attributio can cleave a structure; `attributio::review::fragmenter` re-exports it.
 //! In-silico systematic bond cleavage: every acyclic single bond of a candidate structure is cut, each side takes a hydrogen, and the ion forms and neutral-loss
-//! variants of both sides are matched against the experimental MS/MS peaks within a ppm tolerance. Built on the molecular graph of mzLab (`chem::grafo`), no
+//! variants of both sides are matched against the experimental MS/MS peaks within a ppm tolerance. Built on the molecular graph of mzLab (`chem::graph`), no
 //! RDKit; the drawing of a fragment is not made here (the page draws the atoms listed in `atoms`).
 
-use super::grafo::Mol;
+use super::graph::Mol;
 use crate::sortc::SortC;
 use mzlab_core::elements::{self, Formula};
 

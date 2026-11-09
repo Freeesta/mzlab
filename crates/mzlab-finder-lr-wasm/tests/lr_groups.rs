@@ -303,8 +303,8 @@ fn the_order_of_the_files_does_not_change_the_block() {
 
 #[test]
 fn the_other_polarity_pairs_equal_neutral_masses() {
-    use lr::gruppi_out::other_polarity;
-    use mzlab_feat::gruppi::RowMeta;
+    use lr::groups_out::other_polarity;
+    use mzlab_feat::groups::RowMeta;
     let row = |id: u32, mz: f64, rt: f64, p: &str| RowMeta {
         id,
         mz,

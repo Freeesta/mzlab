@@ -82,7 +82,7 @@ const ALIASES: &[(&str, &str)] = &[
 /// Default window of the cleavages of `--structures`, ppm.
 pub const PPM_STRUCTURE: f64 = 10.0;
 
-use mzlab_feat::chem::rotture::Params;
+use mzlab_feat::chem::breaks::Params;
 
 /// The flags of the bond breaks and the window shared with `--structures`.
 struct Rot {
@@ -130,7 +130,7 @@ pub struct Args {
     interpret: Option<f64>,
     cleavages: Option<Params>,
     figure: Vec<crate::msn_outputs::Format>,
-    view: mzlab_feat::msnfigura::View,
+    view: mzlab_feat::msnfigure::View,
     pub out: Option<PathBuf>,
 }
 
@@ -147,8 +147,8 @@ fn number(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
 
 /// The arguments after `msn-graph`; `Ok(None)` = `--help`.
 /// The view named after `--view`.
-fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigura::View, String> {
-    mzlab_feat::msnfigura::View::da_nome(&n.unwrap_or_default())
+fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigure::View, String> {
+    mzlab_feat::msnfigure::View::da_nome(&n.unwrap_or_default())
         .ok_or_else(|| "--view needs tree or radial".into())
 }
 
@@ -165,7 +165,7 @@ pub fn parse_args(
     let (mut structures, mut rot) = (None, Rot::default());
     let (mut interpret, mut loss_ppm) = (false, PPM_PERDITA);
     let (mut rules, mut rules_p) = (false, RuleParams::default());
-    let (mut figure, mut view) = (Vec::new(), mzlab_feat::msnfigura::View::Albero);
+    let (mut figure, mut view) = (Vec::new(), mzlab_feat::msnfigure::View::Albero);
     while let Some(x) = a.next().map(|x| crate::msn_outputs::canonical(ALIASES, x)) {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -259,7 +259,7 @@ pub fn graph(file: &Path, o: &Options, tmp: &Path) -> Result<(Graph, String)> {
     let sha = sha256_hex_read(std::fs::File::open(&idx).map_err(io)?).map_err(io)?;
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
-    let o = &mzlab_feat::chem::regole::with_expected(o);
+    let o = &mzlab_feat::chem::rules::with_expected(o);
     graph_json(&scans, &mut m, (&name, &sha), (o, &Grouping::default()))
 }
 
@@ -374,7 +374,7 @@ pub fn structures_text(
     o: &Options,
     (nodo, ppm): (&str, f64),
 ) -> Result<String> {
-    mzlab_feat::chem::strutture::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
+    mzlab_feat::chem::structures::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
 }
 
 /// `msn-graph complete IN.json [--out PATH]`: the graph of the file with the key `vista` added; the text and the file to write it to.
@@ -401,7 +401,7 @@ pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
         j = with_interpretation(&j, g, ppm);
     }
     if let Some(p) = a.cleavages {
-        j = mzlab_feat::chem::rotture::breaks_text(g, &j, a.o.smiles.as_deref(), p)?;
+        j = mzlab_feat::chem::breaks::breaks_text(g, &j, a.o.smiles.as_deref(), p)?;
     }
     Ok(j)
 }

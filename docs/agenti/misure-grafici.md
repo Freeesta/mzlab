@@ -34,6 +34,19 @@ Con lo zoom verticale i picchi (10^5) finivano ~10^5 px sopra la tela e la tela 
 
 Un file da 10^6 punti (stessa macchina): draw della vista intera 11 ms, dello zoom 0,9 ms; rotella, trascinamento e passaggio del mouse a 16,7 ms per fotogramma senza attività lunghe; ridimensionare ×10 = 15 chiamate a `draw()` (fotogrammi fino a 50 ms).
 
+## HR, 120 tracce da 50 000 scansioni, CPU 1x (`tools/bench_grafici.py --only hr`; `main` `28c73e8b1aa0932cd786d7b44eaf71d4a8518269` → massimi e minimi a blocchi in `decima.js`, Ctrl+rotella con `drawSoon`)
+Un file Orbitrap sintetico di 50 000 scansioni aperto 6 volte, tutti spuntati; un pannello XIC di 20 ioni = 120 tracce.
+| azione | prima | dopo |
+|---|---|---|
+| draw, vista intera, ms | 105.5 | 58.4 |
+| draw, zoom y 0-300, ms | 244.9 | 101.3 |
+| Ctrl+rotella ×30: fotogrammi p95 / max, ms; attività lunghe | 116.7 / 183.3; 15 (192) | 50.0 / 66.7; 14 (77) |
+| ridimensiona ×10: fotogrammi mediana / max, ms; attività lunghe | 166.7 / 200.0; 6 (190) | 83.3 / 100.0; 6 (94) |
+
+Prima la scala y di ogni traccia scorreva due volte tutti i 50 000 punti a ogni disegno (`amax`/`amin`, 70 ms su 105) e i triangoli dello zoom verticale chiamavano una funzione per ogni punto di ogni traccia anche fuori dalla finestra (55 ms). Ora i blocchi da 128 punti (`rangeExtent`, `runsAbove`) danno gli stessi valori leggendo ~1/60 dei punti; `clipY` non crea più due array per segmento (36 ms); gli scatti di rotella di un fotogramma fanno un disegno.
+
+Il resto è `m4` (~27 ms, ~38 punti per colonna: i blocchi non aiutano) e la rasterizzazione delle 120 linee. Il cromatogramma TIC, la mappa e il passaggio del mouse erano già a 16,7 ms per fotogramma; aprire i 20 XIC costa ~1 s (copia degli array del motore e smoothing, una volta).
+
 ## Memoria su cicli ripetuti, un file LR sintetico (`main` `1913013` → `corrInfoWire` in `pannelli.js` chiude il vecchio ascoltatore con `abort(0)`; prova `e2e_memoria_zoom`)
 | 30 cicli zoom → zoom intero dopo 5 di riscaldamento, dopo GC | prima | dopo |
 |---|---|---|

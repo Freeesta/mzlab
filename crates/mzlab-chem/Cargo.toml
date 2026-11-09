@@ -1,6 +1,6 @@
 [package]
 name = "mzlab-chem"
-description = "mzLab chemistry engine: 3D geometry from SMILES (ETKDG + MMFF94, conformers), numbered like mzlab_feat::chem::grafo::Mol"
+description = "mzLab chemistry engine: 3D geometry from SMILES (ETKDG + MMFF94, conformers), numbered like mzlab_feat::chem::graph::Mol"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

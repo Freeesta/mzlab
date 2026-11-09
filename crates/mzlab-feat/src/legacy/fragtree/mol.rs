@@ -13,7 +13,7 @@ pub struct Graph {
 
 impl Graph {
     pub fn parse(smiles: &str) -> Option<Graph> {
-        let m = grafo::Mol::parse(smiles).ok()?;
+        let m = graph::Mol::parse(smiles).ok()?;
         let bonds: Vec<(usize, usize, f32)> = m.bonds.iter().map(|b| (b.a, b.b, b.order)).collect();
         let mut adj = vec![Vec::new(); m.atoms.len()];
         for (k, &(a, b, _)) in bonds.iter().enumerate() {

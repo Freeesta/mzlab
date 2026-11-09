@@ -1,4 +1,4 @@
-//! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::etichette::labels_json` (the function of the `.wasm`
+//! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
 //! `grafo` and of `mzlab-cli mol-label`), with the request as an object or as text, and keeps the key of an error.
 
 use mzlab_desktop::rpc::Answer;
@@ -16,7 +16,7 @@ fn text(a: Answer) -> String {
 fn labels_route_equals_the_function() {
     let st = State::new();
     let req = r#"{"structures":[[{"el":"Cl"},{"el":"Pt"},{"el":"Cl"},{"el":"N","h":2},{"el":"N","h":2}],[{"el":"C","iso":13,"h":4}]],"arrows":[[0,1]]}"#;
-    let direct = mzlab_feat::chem::etichette::labels_json(req).unwrap();
+    let direct = mzlab_feat::chem::labels::labels_json(req).unwrap();
     let as_object = json!({"kind": "labels", "request": serde_json::from_str::<serde_json::Value>(req).unwrap()});
     let as_text = json!({"kind": "labels", "request": req});
     assert_eq!(text(st.rpc("feat/grafo", &as_object, &[]).unwrap()), direct);

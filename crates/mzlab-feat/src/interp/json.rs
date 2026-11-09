@@ -4,7 +4,7 @@
 use mzlab_core::json::{round, Out};
 
 use super::build::{Output, RowInterp};
-use super::filtri::{Registry, STAGES};
+use super::filters::{Registry, STAGES};
 use super::{ms2link, SCHEMA, VERSION};
 use crate::legacy::series::Parent;
 
@@ -50,7 +50,7 @@ pub fn row_json(r: &RowInterp, parent: &Parent) -> String {
     ms2(&mut o, r);
     vs_parent(&mut o, r);
     tree(&mut o, r);
-    super::sito_json::write(&mut o, r);
+    super::site_json::write(&mut o, r);
     o.raw(",\"hidden\":");
     match r.hidden {
         Some(h) => o.str(h),
@@ -208,7 +208,7 @@ fn tree(o: &mut Out, r: &RowInterp) {
 pub fn filters_json(reg: &Registry) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":")
-        .str(super::filtri::SCHEMA)
+        .str(super::filters::SCHEMA)
         .raw(",\"stages\":[");
     for (i, (id, name, why)) in STAGES.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })

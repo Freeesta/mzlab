@@ -27,7 +27,7 @@ pub const ISO_MIN_SCANS: usize = 4;
 /// Fragments whose traces are compared.
 pub const ISO_FRAGMENTS: usize = 5;
 
-/// The thresholds of the link (`tp.link`): `Default` is the constants above and `modifica::MATCH_PPM`, which the page always uses.
+/// The thresholds of the link (`tp.link`): `Default` is the constants above and `edit::MATCH_PPM`, which the page always uses.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LinkParams {
     pub select_ppm: f64,
@@ -46,7 +46,7 @@ impl Default for LinkParams {
             select_ppm: SELECT_PPM,
             purity_ppm: PURITY_PPM,
             purity_min: PURITY_MIN,
-            match_ppm: super::modifica::MATCH_PPM,
+            match_ppm: super::edit::MATCH_PPM,
             iso_corr: ISO_CORR,
             iso_min_scans: ISO_MIN_SCANS,
             iso_fragments: ISO_FRAGMENTS,

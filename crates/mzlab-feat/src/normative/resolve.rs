@@ -5,7 +5,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::chem::grafo::Mol;
+use crate::chem::graph::Mol;
 use mzlab_core::elements;
 
 impl Resolver {

@@ -10,7 +10,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{read_one, Exec, FileRunner};
 use crate::msn_outputs::{bytes, Format};
-use mzlab_feat::msnfigura::{figure_text, View};
+use mzlab_feat::msnfigure::{figure_text, View};
 
 /// The executor of the step, read by the runner after its own list.
 pub(crate) const EXECUTORS: &[(&str, Exec)] = &[("msn.figure", Exec::File("figure", figure_job))];

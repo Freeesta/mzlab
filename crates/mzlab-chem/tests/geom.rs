@@ -1,7 +1,7 @@
 //! Geometry of `embed` for the 20 public molecules of `tests/data/cc_ref.json` (RDKit ETKDGv3 + MMFF94, seed 42).
 
 use mzlab_chem::{embed, Mol3d, DEFAULT_CONFORMERS};
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 use nalgebra::{Matrix3, Vector3};
 use std::time::Instant;
 

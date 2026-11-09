@@ -1,6 +1,6 @@
 # Posizione della sostituzione (classi compatibili con la MS2)
 
-Codice: `crates/mzlab-feat/src/chem/posizioni.rs` e `posizioni/` (feature `chem`, sopra `grafo::Mol`); prove: `crates/mzlab-feat/tests/posizioni.rs` e `posizioni_prior.rs`. Il pannello «Substitution position» di Tabui (amministratore) sta in `TP_Mine/js/44_posizioni.js`; prova: `tests_e2e/e2e_posizioni.py`. Studio: `docs/studi/CHIMICA_COMPUTAZIONALE.md`.
+Codice: `crates/mzlab-feat/src/chem/positions.rs` e `posizioni/` (feature `chem`, sopra `grafo::Mol`); prove: `crates/mzlab-feat/tests/positions.rs` e `positions_prior.rs`. Il pannello «Substitution position» di Tabui (amministratore) sta in `TP_Mine/js/44_posizioni.js`; prova: `tests_e2e/e2e_posizioni.py`. Studio: `docs/studi/CHIMICA_COMPUTAZIONALE.md`.
 
 ## Scopo
 - Dato un genitore (SMILES), una trasformazione e la MS2 osservata del TP, elenca gli atomi dove la modifica può stare, li raggruppa e dice quali gruppi lo spettro sostiene, esclude o non distingue. Non sceglie mai una posizione e non assegna livelli: `proposal.sublevel` è una proposta 3a/3b per il chimico (nessun campo si chiama `level`).

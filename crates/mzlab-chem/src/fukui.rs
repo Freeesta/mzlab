@@ -3,8 +3,8 @@
 
 use crate::mol3d::Mol3d;
 use mzlab_core::sortc::SortC;
-use mzlab_feat::chem::grafo::Mol;
-use mzlab_feat::chem::posizioni::symmetry_classes;
+use mzlab_feat::chem::graph::Mol;
+use mzlab_feat::chem::positions::symmetry_classes;
 
 /// Two sites whose f(−) differ by less than this are a tie.
 pub const TIE: f64 = 0.005;

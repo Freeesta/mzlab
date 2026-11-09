@@ -4,7 +4,7 @@
 
 use std::fmt::Write;
 
-use mzlab_feat::interp::filtri::{first_hidden, row_facts, STAGES};
+use mzlab_feat::interp::filters::{first_hidden, row_facts, STAGES};
 use mzlab_feat::table::{Aligned, CELL_DETECTED, CELL_FILLED};
 
 use crate::Outcome;
@@ -93,7 +93,7 @@ fn cells(t: &Aligned, row: usize) -> (usize, usize, f32, f64) {
 /// What every line reads of the table: the facts of the filters and the place of each row in the view (rows of status 0 by kinship, then area).
 struct Cx<'a> {
     t: &'a Aligned,
-    facts: Vec<mzlab_feat::interp::filtri::RowFacts>,
+    facts: Vec<mzlab_feat::interp::filters::RowFacts>,
     /// Place of each row of the view under `KEYS` (`None` = not in the view).
     rank: Vec<[Option<usize>; KEYS]>,
     view: usize,

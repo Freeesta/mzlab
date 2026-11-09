@@ -3,8 +3,8 @@
 //! campaigns, the hand cases, and a read of the real campaigns when `MZLAB_DATI` points at the private data (skipped without).
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::campaign::{Campaign, Env};
 use mzlab_feat::attributio::detection::detection_table;
 use mzlab_feat::attributio::io::{Entry, Io};

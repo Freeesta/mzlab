@@ -8,10 +8,10 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{parse, Value};
 
-use super::sito::{analyse_with, candidates, undetermined, Facts, SiteParams};
-use super::sito_json::site_json;
+use super::site::{analyse_with, candidates, undetermined, Facts, SiteParams};
+use super::site_json::site_json;
 use super::store;
-use crate::chem::posizioni::{Peak, Pol};
+use crate::chem::positions::{Peak, Pol};
 
 /// The site of one row as JSON, and whether it was made again.
 pub struct Positioned {

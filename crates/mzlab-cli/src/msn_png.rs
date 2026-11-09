@@ -1,4 +1,4 @@
-//! The PNG of a figure of the graph: the SVG of `mzlab_feat::msnfigura` rasterised by `resvg` (pure Rust), only when `mzlab-cli` is built with the cargo feature `png`
+//! The PNG of a figure of the graph: the SVG of `mzlab_feat::msnfigure` rasterised by `resvg` (pure Rust), only when `mzlab-cli` is built with the cargo feature `png`
 //! (not in the default build, never in a .wasm). Without it the answer is an error whose key says how to get it.
 
 use mzlab_core::error::{Error, Result};

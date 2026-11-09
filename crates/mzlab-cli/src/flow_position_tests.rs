@@ -6,10 +6,10 @@ use std::path::Path;
 
 use mzlab_core::elements::parse_formula;
 use mzlab_core::json::{round, Out};
-use mzlab_feat::chem::grafo::Mol;
-use mzlab_feat::chem::posizioni::{expected_fragments, sites, Peak, Pol};
-use mzlab_feat::interp::sito::{analyse_with, candidates, Facts, SiteParams};
-use mzlab_feat::interp::sito_json::site_json;
+use mzlab_feat::chem::graph::Mol;
+use mzlab_feat::chem::positions::{expected_fragments, sites, Peak, Pol};
+use mzlab_feat::interp::site::{analyse_with, candidates, Facts, SiteParams};
+use mzlab_feat::interp::site_json::site_json;
 use mzlab_feat::interp::store::append;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{write_table, Origin, Slice};

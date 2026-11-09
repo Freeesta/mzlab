@@ -2,7 +2,7 @@
 //! gets a decision row with `decided_by = auto`. The rows are an ordinary decisions table placed BEFORE the chemist's own, so any row of the chemist
 //! supersedes them (deleting an `auto` row restores the programme's level); `annotate::decide` marks those features `auto-2b` and keeps them in the audit log.
 
-use super::banco::Run;
+use super::bench::Run;
 use crate::attributio::annotate::Feature;
 use crate::attributio::campaign::Env;
 use crate::attributio::error::{CampaignError, Result};

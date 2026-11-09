@@ -15,6 +15,11 @@ pub(super) fn errore(detail: &str) -> Error {
     Error::new("err.file.raw").with("detail", detail)
 }
 
+/// Bytes of a data file that no acquisition writes (a record word, a size or a range that does not fit): damage of the copy, not a missing file.
+pub(super) fn danno(detail: &str) -> Error {
+    Error::new("err.file.folderDamaged").with("detail", detail)
+}
+
 /// The members of one folder.
 pub(super) struct Folder {
     pub(super) fs: FileSet,
@@ -64,9 +69,9 @@ impl Folder {
     /// `len` bytes of member `i` from `off`; the range must lie inside the member.
     pub(super) fn read_from(&mut self, i: usize, off: u64, len: u64) -> Result<Vec<u8>> {
         let m = self.fs.membri.get_mut(i).ok_or_else(|| errore("member"))?;
-        let fine = off.checked_add(len).ok_or_else(|| errore("range"))?;
+        let fine = off.checked_add(len).ok_or_else(|| danno("range"))?;
         if fine > m.dim {
-            return Err(errore("range past the end of the file"));
+            return Err(danno("range past the end of the file"));
         }
         if len > self.limits.byte {
             return Err(Error::memory_budget());

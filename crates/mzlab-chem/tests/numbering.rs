@@ -2,7 +2,7 @@
 //! same elements and bonds as the RDKit reference (`tests/data/cc_ref.json`) for the 20 molecules.
 
 use mzlab_chem::mol3d::{atomic_number, Mol3d};
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 
 fn reference() -> serde_json::Value {
     let text = std::fs::read_to_string(concat!(

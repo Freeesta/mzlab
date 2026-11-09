@@ -9,7 +9,7 @@
 use std::fs::File;
 
 use mzlab_core::idxread::Index;
-use mzlab_feat::trace_stima;
+use mzlab_feat::trace_estimate;
 use mzlab_feat_wasm::run;
 
 fn kb(field: &str) -> f64 {
@@ -34,8 +34,8 @@ fn main() {
         let size = f.metadata().expect("size").len();
         let mut ix = Index::open(f, size).expect("index");
         let r = run::recipe_for_estimated("", &mut ix).expect("recipe");
-        let x = trace_stima::inputs(&mut ix, &r).expect("inputs");
-        let est = trace_stima::bytes(&x, &r) as f64 / 1048576.0;
+        let x = trace_estimate::inputs(&mut ix, &r).expect("inputs");
+        let est = trace_estimate::bytes(&x, &r) as f64 / 1048576.0;
         // the high-water mark starts again from the memory in use now (Linux: 5 > clear_refs)
         let _ = std::fs::write("/proc/self/clear_refs", "5");
         let base = kb("VmRSS:");

@@ -130,7 +130,7 @@ fn main() {
             "--parent" => parent = next(),
             "--rules" => rules = next(),
             "--smiles" => {
-                structure = mzlab_feat::chem::grafo::analyse_json(&next()).expect("smiles")
+                structure = mzlab_feat::chem::graph::analyse_json(&next()).expect("smiles")
             }
             "--parent-mz" => pmz = next().parse().expect("number"),
             "--parent-rt" => prt = next().parse().expect("number"),
