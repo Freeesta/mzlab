@@ -78,7 +78,7 @@ impl Natives {
 impl Engine {
     /// Makes `slot` sample `c` of the dataset `ds` (`names`, `sizes`, `read(member, offset, length)`): the routes that read the file besides its index
     /// (`open_index`) read it through its reader. `centroid`: the profile scans become centroids (the same value the index was built with).
-    /// Refuses (`error.badIndex`) the index of the slot when it was built by an older generation of the readers (`upload::GENERAZIONE_LETTORI`).
+    /// Refuses (`error.badIndex`) the index of the slot when it was built by an older generation of the readers (`upload::READERS_GENERATION`).
     #[allow(clippy::too_many_arguments)]
     pub fn native_attach(
         &mut self,
@@ -98,7 +98,7 @@ impl Engine {
                 .and_then(Value::f64)
                 .unwrap_or(0.0)
         });
-        if reader.is_some_and(|g| g < f64::from(upload::GENERAZIONE_LETTORI)) {
+        if reader.is_some_and(|g| g < f64::from(upload::READERS_GENERATION)) {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         }
         if self.nat.slots.get(&slot) == Some(&(ds.to_string(), c as usize))

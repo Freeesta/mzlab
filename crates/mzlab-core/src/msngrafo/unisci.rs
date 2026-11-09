@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use super::{
-    Counts, Edge, GNode, Graph, Input, Measure, Options, Spettro, SpettroG, Warning, PERDITE,
+    Counts, Edge, GNode, Graph, Input, Measure, Options, Spettro, SpettroG, Warning, LOSSES,
 };
 
 /// 13C - 12C.
@@ -13,7 +13,7 @@ const C13: f64 = crate::elements::C13_STEP;
 /// The isolated precursor is the most intense peak of the parent within this many Da of the m/z of the filter (as `msntree.rs`).
 const WINDOW: f64 = 0.5;
 /// A second peak in the isolation window above this fraction of the first one: the window took both.
-const SECONDO: f64 = 0.3;
+const SECOND: f64 = 0.3;
 
 /// One peak of one spectrum, or the precursor of a node of the tree (`prec_di`).
 struct Oss {
@@ -53,7 +53,7 @@ fn precursore(s: Option<&Spettro>, nominal: f64) -> (Option<(f64, f64)>, bool) {
         .filter(|(m, _)| (m - nominal).abs() <= WINDOW)
         .collect();
     crate::sortc::by(&mut w, |a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
-    let amb = w.len() > 1 && w[1].1 >= SECONDO * w[0].1;
+    let amb = w.len() > 1 && w[1].1 >= SECOND * w[0].1;
     (w.first().copied(), amb)
 }
 
@@ -102,14 +102,14 @@ fn peaks(
 }
 
 /// The spectra of this activation are in the graph (all with no choice).
-fn attiva(o: &Options, att: &str) -> bool {
+fn active(o: &Options, att: &str) -> bool {
     o.activation
         .as_deref()
         .is_none_or(|a| att.eq_ignore_ascii_case(a))
 }
 
 /// All the observations of the tree, with the notes on the precursors.
-fn osserva(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>) -> Vec<Oss> {
+fn observe(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>) -> Vec<Oss> {
     let nodes = &ing.albero.nodi;
     let mut obs: Vec<Oss> = vec![];
     for (t, n) in nodes.iter().enumerate() {
@@ -118,7 +118,7 @@ fn osserva(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>
             Some(g) => ing.spettri.get(g),
             None => ing.ms1,
         };
-        let (trovato, amb) = precursore(par, n.key.last().unwrap().0);
+        let (found, amb) = precursore(par, n.key.last().unwrap().0);
         if amb {
             warnings.push(Warning {
                 chiave: "warn.msngrafo.isolation",
@@ -126,14 +126,14 @@ fn osserva(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>
                 nodo: None,
             });
         }
-        if trovato.is_none() {
+        if found.is_none() {
             warnings.push(Warning {
                 chiave: "warn.msngrafo.precNotFound",
                 albero: n.id.clone(),
                 nodo: None,
             });
         }
-        let (pm, pr) = trovato.unwrap_or((n.key.last().unwrap().0, 0.0));
+        let (pm, pr) = found.unwrap_or((n.key.last().unwrap().0, 0.0));
         let lp = n.genitore.map_or(1, |g| nodes[g].livello);
         obs.push(Oss {
             mz: pm,
@@ -144,7 +144,7 @@ fn osserva(ing: &Input, o: &Options, c: &mut Counts, warnings: &mut Vec<Warning>
             iso_di: None,
             m1: None,
         });
-        let Some(s) = ing.spettri.get(t).filter(|_| attiva(o, att)) else {
+        let Some(s) = ing.spettri.get(t).filter(|_| active(o, att)) else {
             continue;
         };
         let base = obs.len();
@@ -170,15 +170,15 @@ fn groups(obs: &[Oss], o: &Options) -> Vec<Vec<usize>> {
     crate::sortc::by(&mut ord, |a, b| {
         obs[*a].mz.total_cmp(&obs[*b].mz).then(a.cmp(b))
     });
-    let mut grezzi: Vec<Vec<usize>> = vec![];
+    let mut raw: Vec<Vec<usize>> = vec![];
     for (j, &i) in ord.iter().enumerate() {
         if j == 0 || obs[i].mz - obs[ord[j - 1]].mz > o.tol(obs[i].mz) {
-            grezzi.push(vec![]);
+            raw.push(vec![]);
         }
-        grezzi.last_mut().unwrap().push(i);
+        raw.last_mut().unwrap().push(i);
     }
     let mut out = vec![];
-    let mut pila: Vec<Vec<usize>> = grezzi.into_iter().rev().collect();
+    let mut pila: Vec<Vec<usize>> = raw.into_iter().rev().collect();
     while let Some(gr) = pila.pop() {
         let (a, b) = (obs[gr[0]].mz, obs[*gr.last().unwrap()].mz);
         if gr.len() < 2 || b - a <= 2.0 * o.tol((a + b) / 2.0) {
@@ -229,12 +229,12 @@ fn node(gr: &[usize], obs: &[Oss], ing: &Input) -> GNode {
             .fold(0.0, f64::max),
         livello: gr.iter().map(|&i| obs[i].level).min().unwrap_or(1),
         albero,
-        osservazioni: sorg.len(),
+        observations: sorg.len(),
         rel_max: gr.iter().map(|&i| obs[i].rel).fold(0.0, f64::max),
         isotope_of: None,
         // the M+1 of the most intense peak of the node, and the windows that let it through
         m1: forte.and_then(|x| x.m1),
-        larghezza: gr
+        width: gr
             .iter()
             .filter_map(|&i| obs[i].prec_di.and_then(|t| larghezza(ing, t)))
             .reduce(f64::max),
@@ -271,7 +271,7 @@ fn spettri(ing: &Input, o: &Options, obs: &[Oss], di: &[usize], prec: &[usize]) 
             .last()
             .cloned()
             .expect("a node of the tree has a path");
-        if ing.spettri.get(t).is_none() || !attiva(o, &att) {
+        if ing.spettri.get(t).is_none() || !active(o, &att) {
             continue;
         }
         let peaks = obs
@@ -286,7 +286,7 @@ fn spettri(ing: &Input, o: &Options, obs: &[Oss], di: &[usize], prec: &[usize]) 
             att,
             ce,
             precursore: Some(prec[t]),
-            larghezza: larghezza(ing, t),
+            width: larghezza(ing, t),
             picchi: peaks,
         });
     }
@@ -321,7 +321,7 @@ fn edges(
     for (i, x) in obs.iter().enumerate() {
         let Some(s) = x
             .sorg
-            .filter(|&s| attiva(o, &ing.albero.nodi[s].key.last().unwrap().1))
+            .filter(|&s| active(o, &ing.albero.nodi[s].key.last().unwrap().1))
         else {
             continue;
         };
@@ -356,7 +356,7 @@ fn edges(
                 da,
                 a,
                 perdita: loss,
-                compatibili: PERDITE
+                compatibili: LOSSES
                     .iter()
                     .filter(|(_, pm)| (loss - pm).abs() <= t)
                     .map(|(f, _)| *f)
@@ -372,7 +372,7 @@ fn edges(
 /// The graph without the drawing.
 pub(super) fn merge(ing: &Input, o: &Options) -> Graph {
     let (mut discarded, mut warnings) = (Counts::default(), vec![]);
-    let obs = osserva(ing, o, &mut discarded, &mut warnings);
+    let obs = observe(ing, o, &mut discarded, &mut warnings);
     let gr = groups(&obs, o);
     let mut nodes: Vec<(GNode, usize)> = gr
         .iter()
@@ -398,8 +398,8 @@ pub(super) fn merge(ing: &Input, o: &Options) -> Graph {
     let mut nodi: Vec<GNode> = nodes.into_iter().map(|(n, _)| n).collect();
     // a node made only of M+1 peaks (never isolated) is the isotope of the node of the first of them
     for (k, g) in gr.iter().enumerate() {
-        let solo_iso = g.iter().all(|&i| obs[i].iso_di.is_some());
-        if solo_iso {
+        let iso_only = g.iter().all(|&i| obs[i].iso_di.is_some());
+        if iso_only {
             nodi[rank[k]].isotope_of = obs[g[0]].iso_di.map(|i| di[i]);
         }
     }

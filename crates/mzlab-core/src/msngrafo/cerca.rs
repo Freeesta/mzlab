@@ -61,7 +61,7 @@ pub(super) struct G {
 }
 
 /// The options of the search from a request (`ppm_prec`, `tol_mz`, `min_prove`, `top`, `delta_max`; the route `api/msnlib/cerca`): absent = the default, not a number = `err.request.badNumber`.
-pub fn opzioni_da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<Options> {
+pub fn options_from_request(get: &dyn Fn(&str) -> Option<String>) -> Result<Options> {
     let num = |k: &str, por: f64| match get(k).filter(|v| !v.is_empty()) {
         None => Ok(por),
         Some(v) => v

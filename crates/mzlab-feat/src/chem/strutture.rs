@@ -7,8 +7,8 @@ use super::grafo::Mol;
 use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{
-    con_strutture, con_strutture_tutti, CandidatoStruttura, Graph, IngressoStrutture,
-    PiccoSpiegato, Strutture, Taglio,
+    with_all_structures, with_structures, Cut, ExplainedPeak, Graph, StructureCandidate,
+    Structures, StructuresInput,
 };
 
 /// Cleavable bonds taken at most (the fragmenter cuts the first ones in the order of the SMILES).
@@ -17,17 +17,17 @@ const MAX_LEGAMI: usize = 400;
 const STESSA_MASSA: f64 = 2e-4;
 
 fn taglio(
-    ing: &IngressoStrutture,
+    ing: &StructuresInput,
     legame: (usize, (usize, usize), &str),
     lato: u8,
     (side, other): (&FragmentSide, &FragmentSide),
     m: &FragMatch,
-) -> Taglio {
+) -> Cut {
     let picchi = side
         .matches
         .iter()
         .filter(|x| x.peak != ing.mz)
-        .map(|x| PiccoSpiegato {
+        .map(|x| ExplainedPeak {
             mz: x.peak,
             rel: ing
                 .picchi
@@ -39,7 +39,7 @@ fn taglio(
             loss: x.loss.clone(),
         })
         .collect();
-    Taglio {
+    Cut {
         legame: legame.0,
         atoms: legame.1,
         label: legame.2.to_string(),
@@ -68,30 +68,30 @@ pub fn strutture_testo(
     if nodo == "tutti" || nodo == "all" {
         let mut tutti = vec![];
         for (k, _) in g.nodi.iter().enumerate().filter(|(_, n)| n.livello >= 2) {
-            let ing = g.ingresso_strutture(k).ok_or_else(bad)?;
+            let ing = g.structures_input(k).ok_or_else(bad)?;
             let s = strutture(smiles, &ing, ppm)
                 .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
             if !s.candidates.is_empty() {
                 tutti.push(s);
             }
         }
-        return Ok(con_strutture_tutti(j, &tutti));
+        return Ok(with_all_structures(j, &tutti));
     }
     let k: usize = nodo.trim_start_matches('n').parse().map_err(|_| bad())?;
-    let ing = g.ingresso_strutture(k).ok_or_else(bad)?;
+    let ing = g.structures_input(k).ok_or_else(bad)?;
     let s = strutture(smiles, &ing, ppm)
         .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
-    Ok(con_strutture(j, &s))
+    Ok(with_structures(j, &s))
 }
 
 /// The cleavages of `smiles` that give the m/z of the node `ing` within `ppm`. `Err` = the SMILES cannot be read.
-pub fn strutture(smiles: &str, ing: &IngressoStrutture, ppm: f64) -> Result<Strutture, String> {
+pub fn strutture(smiles: &str, ing: &StructuresInput, ppm: f64) -> Result<Structures, String> {
     let mut peaks = vec![ing.mz];
     peaks.extend(ing.picchi.iter().map(|p| p.0).filter(|&mz| mz != ing.mz));
     let pol = if ing.polarita < 0 { "NEG" } else { "POS" };
     let frag = fragment_molecule(smiles, pol, &peaks, ppm, MAX_LEGAMI)?;
     let mixture = smiles.split('.').filter(|p| !p.trim().is_empty()).count() > 1;
-    let mut out = Strutture {
+    let mut out = Structures {
         node: ing.nodo,
         smiles: smiles.to_string(),
         mz: ing.mz,
@@ -123,7 +123,7 @@ pub fn strutture(smiles: &str, ing: &IngressoStrutture, ppm: f64) -> Result<Stru
                     .find(|c| (c.theoretical_mz - t.theoretical_mz).abs() < STESSA_MASSA)
                 {
                     Some(c) => c.cuts.push(t),
-                    None => out.candidates.push(CandidatoStruttura {
+                    None => out.candidates.push(StructureCandidate {
                         formula: ing
                             .formule
                             .iter()

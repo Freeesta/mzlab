@@ -1,13 +1,13 @@
 //! `chem::strutture`: the cleavages of a public molecule (ethyl indole-3-carboxylate) that give the m/z of a node, with the peaks of its spectrum
 //! that the same piece explains by a neutral loss.
 
-use mzlab_core::msngrafo::IngressoStrutture;
+use mzlab_core::msngrafo::StructuresInput;
 use mzlab_feat::chem::strutture::strutture;
 
 const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";
 
-fn nodo(mz: f64, picchi: Vec<(f64, f64)>) -> IngressoStrutture {
-    IngressoStrutture {
+fn nodo(mz: f64, picchi: Vec<(f64, f64)>) -> StructuresInput {
+    StructuresInput {
         nodo: 3,
         mz,
         polarita: 1,

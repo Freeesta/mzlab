@@ -19,7 +19,7 @@ fn sum_is_mean_times_n() {
             .unwrap()
             .unwrap();
         let sum = r
-            .con_opz(&Query::parse("modo=somma"), |r| {
+            .with_opts(&Query::parse("modo=somma"), |r| {
                 r.binned(n.livello, 0.0, 1e9, None, 0.1, Some(&f))
             })
             .unwrap()

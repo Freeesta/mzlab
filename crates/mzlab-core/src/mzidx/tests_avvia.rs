@@ -51,7 +51,7 @@ fn the_run_merge_writes_the_bytes_of_the_peak_merge() {
             let g = &mut gs[(s % 7 % 3) as usize];
             for k in 0..(s % 50) {
                 let mz = 100.0 + f64::from((k * 7919 + s) % 90000) / 100.0;
-                g.metti(
+                g.put(
                     true,
                     Peak {
                         mz,

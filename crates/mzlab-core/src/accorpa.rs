@@ -1,5 +1,5 @@
 //! Write coalescing for outputs whose every call is costly (the browser's OPFS callbacks: a JS call, a sync write and a read-back each time).
-//! `Accorpa` wraps an `mzidx::Output` or an `mzidx_spill::Spill` and joins contiguous writes into blocks of up to `BLOCCO` bytes, one pending block per
+//! `Accorpa` wraps an `mzidx::Output` or an `mzidx_spill::Spill` and joins contiguous writes into blocks of up to `BLOCK` bytes, one pending block per
 //! stream of writes (the columns of the sections of a `.mzidx` are written in turn, each continuing where it stopped). A write sends first the pending blocks
 //! it overlaps, so pending blocks never overlap and the bytes on the destination stay those of direct writes; a read of the scratch area and `fine()` send them all.
 
@@ -8,7 +8,7 @@ use crate::mzidx::Output;
 use crate::mzidx_spill::Spill;
 
 /// Bytes joined before a block is sent (OPFS: 1 MiB writes cost about half of 256 KiB ones, a quarter of 64 KiB ones, per byte).
-pub const BLOCCO: usize = 1 << 20;
+pub const BLOCK: usize = 1 << 20;
 /// Pending blocks of an output: a `.mzidx` interleaves the writes of up to about 20 columns, and 8 streams join them into blocks of about 1 MiB (557 writes become 178 on 422 MB of a `.raw`).
 pub const FLUSSI: usize = 8;
 /// Every put of the scratch area (`mzidx_spill`) starts a slot of `CHUNK` bytes, is shorter than one and is the only put of its slot: a put that starts
@@ -38,11 +38,11 @@ pub struct Accorpa<O> {
 impl<O> Accorpa<O> {
     /// One pending block (the scratch area, whose puts follow each other).
     pub fn new(dest: O) -> Self {
-        Self::with_block(dest, BLOCCO)
+        Self::with_block(dest, BLOCK)
     }
     /// `FLUSSI` pending blocks (the `.mzidx`).
     pub fn flussi(dest: O) -> Self {
-        Self::with_streams(dest, BLOCCO, FLUSSI)
+        Self::with_streams(dest, BLOCK, FLUSSI)
     }
     pub fn with_block(dest: O, cap: usize) -> Self {
         Self::with_streams(dest, cap, 1)

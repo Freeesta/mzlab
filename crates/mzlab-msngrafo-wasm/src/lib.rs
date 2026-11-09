@@ -8,10 +8,10 @@ use mzlab_core::error::Error;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
-    aggiungi, cerca, da_richiesta, da_richiesta_export, esporta, grafo_json, opzioni_cerca,
+    aggiungi, cerca, esporta, from_export_request, from_request, graph_json, opzioni_cerca,
 };
 use mzlab_core::msngrafo::{
-    con_interpretazione, library_text, table_text, Graph, Options, PPM_PERDITA,
+    library_text, table_text, with_interpretation, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
 use mzlab_feat::chem::strutture::strutture_testo;
@@ -76,7 +76,7 @@ fn compute_with(
     name: &str,
     q: &Query,
 ) -> mzlab_core::Result<(Graph, String, Options)> {
-    let req = da_richiesta(&|k| q.get(k).map(String::from))?;
+    let req = from_request(&|k| q.get(k).map(String::from))?;
     let bad = || Error::new("error.badIndex");
     if idx_size.is_nan() || idx_size < 0.0 {
         return Err(bad());
@@ -91,7 +91,7 @@ fn compute_with(
     drop(bytes);
     let scans = Index::open(JsReader { read: read_idx }, size)?.scans;
     let mut m = JsReader { read: read_file };
-    let (g, j) = grafo_json(&scans, &mut m, (name, &sha), (&req.0, &req.1))?;
+    let (g, j) = graph_json(&scans, &mut m, (name, &sha), (&req.0, &req.1))?;
     let j = with_query_keys(&g, j, &req.0, q)?;
     Ok((g, j, req.0))
 }
@@ -108,7 +108,7 @@ fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_co
                 .filter(|p| p.is_finite() && *p > 0.0)
                 .ok_or_else(|| Error::new("err.request.badNumber").with("name", "ppm_perdita"))?,
         };
-        j = con_interpretazione(&j, g, ppm);
+        j = with_interpretation(&j, g, ppm);
     }
     // `rotture=1` (with `h_max`, `max_legami` and the window `ppm_struttura`) adds the key `rotture`, as `mzlab-cli msn-graph --rotture` does
     if q.get("rotture").is_some_and(|v| v == "1") {
@@ -207,7 +207,7 @@ pub fn msn_graph_export(
         )
         .map_err(js_err);
     }
-    let (f, clean, node) = da_richiesta_export(&|k| q.get(k).map(String::from)).map_err(js_err)?;
+    let (f, clean, node) = from_export_request(&|k| q.get(k).map(String::from)).map_err(js_err)?;
     let (g, _) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
     Ok(esporta(&g, f, clean, node.as_deref()))
 }

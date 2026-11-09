@@ -29,7 +29,7 @@ fn noise(i: usize) -> f64 {
 }
 
 /// (nodes with a candidate, nodes with one chosen formula) of the graph of one MS2 whose fragments are moved by `spostamento` Da.
-fn conteggi(shift: f64) -> (usize, usize) {
+fn counts(shift: f64) -> (usize, usize) {
     let peaks: Vec<(f64, f64)> = FRAMMENTI
         .iter()
         .enumerate()
@@ -56,19 +56,19 @@ fn conteggi(shift: f64) -> (usize, usize) {
 #[test]
 fn an_even_electron_candidate_is_preferred_to_a_radical_one_without_evidence() {
     // the root and the 16 fragments: every node has exactly one formula, the radical alternatives of the low masses are gone
-    assert_eq!(conteggi(0.0), (17, 17));
+    assert_eq!(counts(0.0), (17, 17));
 }
 
 #[test]
 fn decoys_do_not_gain_a_choice_from_the_preference() {
     // a decoy that matches a sub-formula is kept (the window is 10 ppm) but a radical candidate never adds a second one
-    let (con, unici) = conteggi(0.02);
+    let (con, unici) = counts(0.02);
     assert!(con < 17 && con == unici, "{con} {unici}");
 }
 
 /// Decoys among the targets (the same spectrum): how many of the 16 decoys, the fragments moved by `spostamento` Da, get a candidate, and how
 /// many of the 16 targets keep theirs.
-fn misto(shift: f64) -> (usize, usize) {
+fn mixed(shift: f64) -> (usize, usize) {
     let mz = |i: usize, f: &str| ion(f) * (1.0 + (-2.5 + noise(i)) * 1e-6);
     let mut peaks: Vec<(f64, f64)> = vec![];
     for (i, f) in FRAMMENTI.iter().enumerate() {
@@ -94,7 +94,7 @@ fn misto(shift: f64) -> (usize, usize) {
 fn the_systematic_error_is_taken_out_and_decoys_among_targets_mostly_leave() {
     let mut decoys = 0;
     for d in [0.02, 0.03, 0.05, 0.07, 0.11] {
-        let (bersagli, e) = misto(d);
+        let (bersagli, e) = mixed(d);
         assert_eq!(bersagli, 16, "targets at {d}");
         decoys += e;
     }
@@ -104,7 +104,7 @@ fn the_systematic_error_is_taken_out_and_decoys_among_targets_mostly_leave() {
 
 /// The infusion of a root whose MS2 holds a strong fragment A (C4H7N2) and an ion P (C5H6N3O) that is isolated for an MS3, where A appears
 /// too although it is no sub-formula of P (a co-isolated ion): A must keep its formula, it is under the root.
-fn grafo_coisolato() -> Graph {
+fn coisolated_graph() -> Graph {
     use crate::msnalbero::{albero_di, Grouping};
     let step = |v: &[(f64, &str, f64)]| -> Vec<(f64, String, f64)> {
         v.iter().map(|&(m, a, c)| (m, a.to_string(), c)).collect()
@@ -157,7 +157,7 @@ fn grafo_coisolato() -> Graph {
 
 #[test]
 fn a_fragment_under_the_root_survives_a_precursor_it_is_not_under() {
-    let g = grafo_coisolato();
+    let g = coisolated_graph();
     let m = ion("C4H7N2");
     let n = g.nodi.iter().find(|n| (n.mz - m).abs() < 1e-4);
     let f = n.and_then(|n| n.formula.as_ref());

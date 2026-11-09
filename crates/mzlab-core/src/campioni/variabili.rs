@@ -2,20 +2,20 @@
 //! (`nomivar/1`, `docs/agenti/campioni.md`). Role, time and concentration come from the parser of `nomi.rs`; the pieces are cut by `variabili_classi.rs`.
 //! The same answer for every order of the files (the order only decides the order of `files[]` and the indices that follow it).
 
-use super::nomi::ruolo_e_tempo;
+use super::nomi::role_and_time;
 use super::ordine::{base, stem};
 use super::variabili_classi::{
     fold, is_blank_word, is_cond_word, is_role_word, natural, split, time_token, tokenize, Tok,
     UNITS,
 };
-pub(super) use super::variabili_uscita::route_nome_gruppo;
+pub(super) use super::variabili_uscita::route_group_name;
 use super::variabili_uscita::{by_position, by_terms, common, write_var};
 use crate::error::{Error, Result};
 use crate::json::{fmt_g, parse, Out, Value};
 use crate::project::guess_conc;
 use std::collections::BTreeMap;
 
-pub const SCHEMA_NOMIVAR: &str = "nomivar/1";
+pub const VARNAME_SCHEMA: &str = "nomivar/1";
 const MAX_NAMES: usize = 5000;
 const MAX_LEN: usize = 256;
 /// The automatic variables in the order they are listed when their score is good.
@@ -109,7 +109,7 @@ pub(super) fn read_file(name: &str) -> Fl {
             class: "word",
         })
         .collect();
-    let (kind, time) = ruolo_e_tempo(name);
+    let (kind, time) = role_and_time(name);
     let mut time = time.map(|(m, a, b)| (m, (a + from).min(to), (b + from).min(to)));
     // the parser reads a time after a separator: a name glued together (`MQH2O2T00`) has its time in the last token
     if time.is_none() && matches!(kind, "sample" | "t0") {
@@ -472,7 +472,7 @@ pub(super) fn route_variabili(input: &str) -> Result<String> {
         write_var(&mut o, &var, n);
     }
     o.raw(",\"schema\":")
-        .str(SCHEMA_NOMIVAR)
+        .str(VARNAME_SCHEMA)
         .raw(",\"variabili\":[");
     for (i, var) in variables(&fs).iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });

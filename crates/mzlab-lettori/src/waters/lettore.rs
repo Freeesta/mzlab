@@ -100,10 +100,10 @@ impl Reader for WatersReader {
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        use mzlab_core::conv::{FUORI_MODELLO, IDENTITA, NON_DECODIFICATO};
+        use mzlab_core::conv::{IDENTITA, NON_DECODIFICATO, OUT_OF_MODEL};
         &[
             ("drift time and mobility calibration", NON_DECODIFICATO),
-            ("lock mass correction of the m/z", FUORI_MODELLO),
+            ("lock mass correction of the m/z", OUT_OF_MODEL),
             ("FUNC rows beyond Set Mass and Collision Energy, _HISTORY.INF, ramp parameters beyond _extern.inf, MALDI functions", NON_DECODIFICATO),
             ("User Name, Submitter, Laboratory Name and computer paths", IDENTITA),
         ]

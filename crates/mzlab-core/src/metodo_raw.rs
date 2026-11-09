@@ -305,7 +305,7 @@ fn trailer_pass<R: Read + Seek>(
             vals.clear();
             vals.extend((0..n).map(|i| rec.value(i)));
             t.step(&vals);
-            row(k, &|i| vals.get(i)?.as_ref().and_then(serie::numero_di));
+            row(k, &|i| vals.get(i)?.as_ref().and_then(serie::number_of));
         });
     });
     (t.finish(raw), entries)

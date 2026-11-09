@@ -143,7 +143,7 @@ fn by_inchikey(ms: &[Molecule], q: &str) -> Vec<usize> {
 
 /// `cerca` for a box that picks a molecule: the same hits first, then the molecules of an InChIKey (score 0), and, only when nothing was found, the names one
 /// typing slip away (score 4 whole name, 5 start of a name, from four characters on).
-pub fn cerca_ampia(ms: &[Molecule], q: &str, limit: usize, ppm: f64) -> Vec<(usize, f64)> {
+pub fn search_wide(ms: &[Molecule], q: &str, limit: usize, ppm: f64) -> Vec<(usize, f64)> {
     let q = q.trim();
     let mut hits = cerca(ms, q, usize::MAX, ppm);
     for k in by_inchikey(ms, q) {

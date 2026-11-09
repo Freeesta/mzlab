@@ -241,10 +241,9 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
         numpress: true,
         ..Options::default()
     };
-    let plain = lettori_mzml::scrivi_con(&mut *src, 0, Vec::new(), &mut |_, _| {}, np).unwrap();
+    let plain = lettori_mzml::write_with(&mut *src, 0, Vec::new(), &mut |_, _| {}, np).unwrap();
     let indexed =
-        lettori_mzml::scrivi_indicizzato(&mut *src, 0, Vec::new(), &mut |_, _| {}, np, &[])
-            .unwrap();
+        lettori_mzml::write_indexed(&mut *src, 0, Vec::new(), &mut |_, _| {}, np, &[]).unwrap();
     assert!(
         indexed.starts_with(b"<?xml") && String::from_utf8_lossy(&indexed).contains("<indexedmzML")
     );

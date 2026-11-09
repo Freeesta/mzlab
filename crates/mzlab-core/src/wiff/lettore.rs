@@ -97,7 +97,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
 /// Injection `c` is of a variant: its method (any time) or a block of another version (once its index is built; `apri_solo` leaves the other injections unbuilt,
 /// and the probe of the page does not read their blocks: the method says it for a pair of one instrument).
 #[cfg(feature = "sciex")]
-fn variante_di(parts: &[Part], c: usize) -> bool {
+fn variant_of(parts: &[Part], c: usize) -> bool {
     parts
         .get(c)
         .is_some_and(|p| p.w.variant() || (p.ready && p.other_version))
@@ -188,7 +188,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variante_di(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) }
+#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) }
     fn format(&self) -> Format { Format::SciexWiff }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
@@ -245,7 +245,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
         Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
     }
-    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> { con_metodo(self, c).map(Some) }
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> { with_method(self, c).map(Some) }
     fn table_header(&mut self, c: usize) -> Result<Option<Header>> { file_header(self, c).map(Some) }
     fn method(&mut self, c: usize) -> Result<String> {
         let sample = self.part(c)?.w.sample;
@@ -264,7 +264,7 @@ fn field(name: &str, value: impl ToString) -> Field {
 
 /// The header of the mzML with the `metodo/1` document in the run: the method (pumps, gradient, detectors) travels in the mzML, as for `.raw` and `.D`,
 /// so the page reads it back from a converted file.
-fn con_metodo(l: &mut WiffReader, c: usize) -> Result<Header> {
+fn with_method(l: &mut WiffReader, c: usize) -> Result<Header> {
     let mut h = file_header(l, c)?;
     let doc = l.method(c)?;
     if !doc.is_empty() {

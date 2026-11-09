@@ -275,7 +275,7 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         ("origine", crate::metodo::origin(src, prop(12))),
         ("campione", campione(&data, get("", "Injection Volume"))),
         ("strumento", strumento(cfg, version)),
-        ("operatore", operatore(user, computer)),
+        ("operatore", operator(user, computer)),
         ("ms", ms_sec(method.as_ref(), source_type.as_deref())),
         ("lc", lc),
         (
@@ -395,7 +395,7 @@ fn strumento(cfg: Option<&String>, version: Option<&String>) -> Option<V> {
 }
 
 /// The `operatore` section.
-fn operatore(user: Option<&str>, computer: Option<&str>) -> Option<V> {
+fn operator(user: Option<&str>, computer: Option<&str>) -> Option<V> {
     obj(vec![
         ("utente", user.and_then(text)),
         ("computer", computer.and_then(text)),

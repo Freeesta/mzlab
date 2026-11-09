@@ -32,25 +32,25 @@ pub fn merge(catalog: &[Molecule], altri: &[Molecule]) -> Vec<Molecule> {
 
 /// What `carica` leaves in the engine.
 #[derive(Default)]
-pub struct Archivio {
+pub struct Archive {
     pub catalog: Vec<Molecule>,
     pub altri: Vec<Molecule>,
     /// `unisci(catalogo, altri)`.
     pub tutte: Vec<Molecule>,
 }
 
-pub static ARCHIVIO: Mutex<Archivio> = Mutex::new(Archivio {
+pub static ARCHIVE: Mutex<Archive> = Mutex::new(Archive {
     catalog: Vec::new(),
     altri: Vec::new(),
     tutte: Vec::new(),
 });
 
 /// Runs `f` on the archive (a lock left by a panic is not an error).
-pub fn con<R>(f: impl FnOnce(&mut Archivio) -> R) -> R {
-    f(&mut ARCHIVIO.lock().unwrap_or_else(|e| e.into_inner()))
+pub fn con<R>(f: impl FnOnce(&mut Archive) -> R) -> R {
+    f(&mut ARCHIVE.lock().unwrap_or_else(|e| e.into_inner()))
 }
 
-impl Archivio {
+impl Archive {
     pub fn update(&mut self) {
         self.tutte = merge(&self.catalog, &self.altri);
     }

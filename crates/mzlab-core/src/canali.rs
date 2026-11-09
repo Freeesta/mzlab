@@ -15,7 +15,7 @@ mod wiff;
 pub(crate) use rotte::State;
 
 /// More distinct MSn keys than this at one level: one `dd:<level>` channel (the same cap as `infusione`).
-pub const MAX_CHIAVI: usize = 64;
+pub const MAX_KEYS: usize = 64;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Famiglia {
@@ -99,7 +99,7 @@ pub struct Channels {
 }
 
 /// `tic` (and `bpc` when there are scans): from the scan table, else from the TIC chromatogram, else the sum of the MRM traces.
-fn canali_tic(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Channel> {
+fn tic_channels(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Channel> {
     let ha_scan = !scans.is_empty();
     let srm: Vec<&Chrom> = chroms.iter().filter(|c| c.kind == "srm").collect();
     if !ha_scan && srm.is_empty() {
@@ -160,13 +160,7 @@ fn canali_tic(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Channel> {
 }
 
 /// Parents of the MSn channels (`v[base + k]` is group `rango[k]`): the channel of the precursor, else the DDA aggregate of the level before, else the TIC.
-fn collega_genitori(
-    v: &mut [Channel],
-    base: usize,
-    rank: &[u32],
-    finali: &[Group],
-    root: Option<u32>,
-) {
+fn link_parents(v: &mut [Channel], base: usize, rank: &[u32], finali: &[Group], root: Option<u32>) {
     for (k, g) in rank.iter().enumerate() {
         let f = &finali[*g as usize];
         v[base + k].parent = root;
@@ -200,7 +194,7 @@ fn collega_genitori(
 }
 
 /// The MRM transitions of the file, one channel each.
-fn canali_srm(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Option<u32>) {
+fn srm_channels(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Option<u32>) {
     for c in chroms.iter().filter(|c| c.kind == "srm") {
         if c.q3.is_none() && c.id.starts_with("SIM SIC ") {
             // the same ion in every sample: m/z and polarity, not the sample of the id
@@ -214,7 +208,7 @@ fn canali_srm(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Optio
                 |q| format!("{q:.1}"),
             );
             let omologo = format!("sim|1|{ion}|{pol}");
-            v.push(canale_sim(c, facts, root, omologo));
+            v.push(sim_channel(c, facts, root, omologo));
             continue;
         }
         let ce = c.ce.filter(|x| x.is_finite());
@@ -298,19 +292,19 @@ fn sim_label(id: &str) -> String {
 }
 
 /// The SIM / SIC chromatograms of the file, one channel each.
-fn canali_sim(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Option<u32>) {
+fn sim_channels(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Option<u32>) {
     for c in chroms.iter().filter(|c| {
         c.kind != "srm"
             && c.id
                 .get(..3)
                 .is_some_and(|p| p.eq_ignore_ascii_case("sic") || p.eq_ignore_ascii_case("sim"))
     }) {
-        v.push(canale_sim(c, facts, root, format!("sim|1|{}", c.id)));
+        v.push(sim_channel(c, facts, root, format!("sim|1|{}", c.id)));
     }
 }
 
 /// The channel of one SIM / SIC chromatogram.
-fn canale_sim(c: &Chrom, facts: &Facts, root: Option<u32>, omologo: String) -> Channel {
+fn sim_channel(c: &Chrom, facts: &Facts, root: Option<u32>, omologo: String) -> Channel {
     Channel {
         id: format!("sim:{}", c.id),
         famiglia: Famiglia::Sim,
@@ -336,7 +330,7 @@ impl Channels {
         let (rank, pos_di) = sort(&finali);
         let (start, scan_ids) = partiziona(scans.len(), &finali, &rank, &pos_di, &di, &direction);
         drop(di);
-        let mut v = canali_tic(scans, chroms, facts);
+        let mut v = tic_channels(scans, chroms, facts);
         let base = v.len();
         for g in &rank {
             let f = &finali[*g as usize];
@@ -364,9 +358,9 @@ impl Channels {
             });
         }
         let root = if v.is_empty() { None } else { Some(0u32) };
-        collega_genitori(&mut v, base, &rank, &finali, root);
-        canali_srm(&mut v, chroms, facts, root);
-        canali_sim(&mut v, chroms, facts, root);
+        link_parents(&mut v, base, &rank, &finali, root);
+        srm_channels(&mut v, chroms, facts, root);
+        sim_channels(&mut v, chroms, facts, root);
         crate::canali_uv::add(&mut v, chroms, facts);
         let tipo = tipo_di(scans, &v, facts, name);
         Channels { v, scan_ids, tipo }

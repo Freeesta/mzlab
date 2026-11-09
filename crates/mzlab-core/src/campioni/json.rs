@@ -1,7 +1,7 @@
 //! The canonical JSON of `campioni/2` (keys in alphabetical order: the same metadata give the same bytes and the same SHA-256), its reader,
 //! and the migration of the old places where roles and times were kept.
 
-use super::{number_replicates, Sample, SCHEMA, TIPI, TIPI_BIANCO, UNITA_TEMPO};
+use super::{number_replicates, Sample, BLANK_TYPES, SCHEMA, TIME_UNITS, TYPES};
 use crate::budget::sha256_hex;
 use crate::error::{Error, Result};
 use crate::json::{parse, Out, Value};
@@ -107,10 +107,10 @@ fn read_one(v: &Value) -> Result<Sample> {
     );
     c.kind = text(v, "tipo")?;
     c.time_unit = text(v, "unita_tempo")?;
-    if !TIPI.contains(&c.kind.as_str()) || !UNITA_TEMPO.contains(&c.time_unit.as_str()) {
+    if !TYPES.contains(&c.kind.as_str()) || !TIME_UNITS.contains(&c.time_unit.as_str()) {
         return Err(bad());
     }
-    c.blank_kind = opt_text(v, "tipo_bianco", &TIPI_BIANCO)?;
+    c.blank_kind = opt_text(v, "tipo_bianco", &BLANK_TYPES)?;
     let unit = c.time_unit.clone();
     c.set_time(number(v, "tempo")?, &unit);
     if c.kind == "t0" && c.time.is_none() {
@@ -127,7 +127,7 @@ fn read_one(v: &Value) -> Result<Sample> {
     c.istd = v.get("istd").and_then(|x| x.bool()).ok_or_else(bad)?;
     c.note = text(v, "note")?;
     c.compound = text(v, "composto")?;
-    super::json3::leggi_nuovi(v, &mut c)?;
+    super::json3::read_new(v, &mut c)?;
     Ok(c)
 }
 

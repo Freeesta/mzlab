@@ -11,7 +11,7 @@ use crate::mzmlwrite::{CvPar, Precursore, SpectrumExtra};
 use opentfraw::RawFileReader;
 
 /// The dissociation terms the Thermo activation maps to (as the converters of the maker's data write them); none for the ones PSI-MS has no term for.
-fn termini_attivazione(a: Activation, analyzer: Option<Analyzer>) -> Vec<(String, String)> {
+fn activation_terms(a: Activation, analyzer: Option<Analyzer>) -> Vec<(String, String)> {
     const BEAM: (&str, &str) = ("MS:1000422", "beam-type collision-induced dissociation");
     const ETD: (&str, &str) = ("MS:1000598", "electron transfer dissociation");
     let t: &[(&str, &str)] = match a {
@@ -87,7 +87,7 @@ fn extra_di_scansione(l: &mut RawReader, k: usize, s: &Spectrum) -> Option<Spect
             iso_upper: half,
             activation: p
                 .activation
-                .map(|a| termini_attivazione(a, p.analyzer))
+                .map(|a| activation_terms(a, p.analyzer))
                 .unwrap_or_default(),
             energy: p.collision_energy.map(|v| {
                 (

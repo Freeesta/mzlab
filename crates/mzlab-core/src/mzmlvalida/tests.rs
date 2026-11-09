@@ -103,7 +103,7 @@ pub(super) fn show_all(r: &Report) -> String {
 
 #[test]
 fn the_vocabulary_table_is_loaded() {
-    assert!(termini() > 5000);
+    assert!(terms() > 5000);
 }
 
 #[test]

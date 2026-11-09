@@ -56,7 +56,7 @@ pub enum Peaks {
 
 /// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam).
 #[cfg(not(target_family = "wasm"))]
-fn centroidi_di(l: &mut dyn Reader, c: usize, h: &mut Header) -> Result<Option<Params>> {
+fn centroids_of(l: &mut dyn Reader, c: usize, h: &mut Header) -> Result<Option<Params>> {
     if l.index_without_tic(c)?.is_empty() || !l.scan(c, 0)?.profile {
         return Ok(None);
     }
@@ -82,7 +82,7 @@ struct Pick;
 #[cfg(not(target_family = "wasm"))]
 fn pick_di(peaks: Peaks, l: &mut dyn Reader, c: usize, h: &mut Header) -> Result<Pick> {
     let p = match peaks {
-        Peaks::Mzlab => centroidi_di(l, c, h)?,
+        Peaks::Mzlab => centroids_of(l, c, h)?,
         _ => None,
     };
     Ok(Pick(p, Buf::default()))
@@ -264,7 +264,7 @@ pub fn scrivi<W: Write>(
 }
 
 /// `scrivi` with the zlib level and the numpress choice of `opz` (`mzmlwrite::Opzioni`).
-pub fn scrivi_con<W: Write>(
+pub fn write_with<W: Write>(
     l: &mut dyn Reader,
     c: usize,
     out: W,
@@ -280,7 +280,7 @@ pub fn scrivi_con<W: Write>(
 
 /// The mzML of the `convert.mzml` step: `indexedmzML` (PSI-MS 4.2.6, offsets, SHA-1 checksum) with one `processingMethod` per entry of `steps`
 /// after the conversion. The spectra and chromatograms are those of `scrivi_con`.
-pub fn scrivi_indicizzato<W: Write>(
+pub fn write_indexed<W: Write>(
     l: &mut dyn Reader,
     c: usize,
     out: W,

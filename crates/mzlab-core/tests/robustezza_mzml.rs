@@ -23,14 +23,14 @@ fn f64s(v: &[f64]) -> Vec<u8> {
     v.iter().flat_map(|x| x.to_le_bytes()).collect()
 }
 
-fn array(accessione: &str, name: &str, zlib: bool, text: &str) -> String {
+fn array(accession: &str, name: &str, zlib: bool, text: &str) -> String {
     let compression = if zlib {
         r#"<cvParam accession="MS:1000574" name="zlib compression"/>"#
     } else {
         r#"<cvParam accession="MS:1000576" name="no compression"/>"#
     };
     format!(
-        r#"<binaryDataArray><cvParam accession="MS:1000523" name="64-bit float"/>{compression}<cvParam accession="{accessione}" name="{name}"/><binary>{text}</binary></binaryDataArray>"#
+        r#"<binaryDataArray><cvParam accession="MS:1000523" name="64-bit float"/>{compression}<cvParam accession="{accession}" name="{name}"/><binary>{text}</binary></binaryDataArray>"#
     )
 }
 
@@ -43,7 +43,7 @@ fn mzml_with(length: &str, mz: &str, inten: &str, zlib: bool) -> String {
     )
 }
 
-fn valido() -> String {
+fn valid() -> String {
     let (mz, inten) = (
         b64(&f64s(&[100.0, 200.0, 300.0])),
         b64(&f64s(&[1.0, 2.0, 3.0])),
@@ -65,9 +65,9 @@ struct Repeat {
 }
 
 impl Repeat {
-    fn nuovo(testa: &str, piece: &str, n: usize, coda: &str) -> Repeat {
+    fn nuovo(testa: &str, piece: &str, n: usize, tail: &str) -> Repeat {
         Repeat {
-            parts: vec![(testa.into(), 1), (piece.into(), n), (coda.into(), 1)],
+            parts: vec![(testa.into(), 1), (piece.into(), n), (tail.into(), 1)],
             part: 0,
             pos: 0,
         }
@@ -112,13 +112,13 @@ fn verde(guasti: Vec<String>) {
 #[test]
 fn the_valid_mzml_reads() {
     let mut k = Vec::new();
-    let run = note(mzml::read(valido().as_bytes()), &mut k).unwrap();
+    let run = note(mzml::read(valid().as_bytes()), &mut k).unwrap();
     assert!(k.is_empty() && run.spectra.len() == 1 && run.spectra[0].mz.len() == 3);
 }
 
 #[test]
 fn false_offsets_of_the_index() {
-    let v = valido();
+    let v = valid();
     let index = r#"<indexList count="1"><index name="spectrum"><offset idRef="scan=1">99999999999999</offset></index></indexList><indexListOffset>18446744073709551615</indexListOffset><fileChecksum>0</fileChecksum>"#;
     verde(case(
         "indexed",
@@ -158,7 +158,7 @@ fn the_declared_length_at_the_maximum() {
 
 #[test]
 fn tags_that_never_close() {
-    let v = valido();
+    let v = valid();
     let mut g = Vec::new();
     for (name, t) in [
         (

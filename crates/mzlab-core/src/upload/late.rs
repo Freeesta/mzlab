@@ -21,7 +21,7 @@ pub(super) fn source_text(name: &str, size: u64, probe: &str, sha256: &str) -> S
     source.0
 }
 
-pub(super) fn tabella_con(mut t: Table, source_json: String) -> ScanTable {
+pub(super) fn table_with(mut t: Table, source_json: String) -> ScanTable {
     let (json, c) = t.drain_json();
     let run = t.run_json();
     ScanTable {
@@ -52,7 +52,7 @@ pub fn prepare_late<R: ReadAt, R2: ReadAt + Send + 'static>(
     let t = scantable::read(&mut Windowed::new(r, size), size)?;
     let name = name.to_string();
     let mut prints = Some(prints);
-    Ok((tabella_con(t, String::new()), move || {
+    Ok((table_with(t, String::new()), move || {
         let h = prints
             .take()
             .ok_or_else(|| Error::new("err.file.unknown"))?;

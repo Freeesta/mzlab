@@ -6,7 +6,7 @@ use crate::msngrafo::{Graph, Options};
 
 /// A node with an even-electron candidate within the window loses its radical-ion candidates that have no evidence (the even-electron rule:
 /// most fragments are even-electron ions); a node with only radical candidates keeps them. True when a candidate left.
-pub(super) fn preferisci_pari(g: &Graph, st: &mut State, o: &Options) -> bool {
+pub(super) fn prefer_even(g: &Graph, st: &mut State, o: &Options) -> bool {
     let mut changed = false;
     for k in 1..st.order.len() {
         let j = st.order[k];

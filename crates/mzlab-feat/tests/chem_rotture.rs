@@ -12,11 +12,11 @@ fn nodo(mz: f64, livello: u8) -> GNode {
         dev_ppm: 0.0,
         livello,
         albero: vec![],
-        osservazioni: 1,
+        observations: 1,
         rel_max: 100.0,
         isotope_of: None,
         m1: None,
-        larghezza: None,
+        width: None,
         upstream: None,
         unexplained: None,
         pos: (0, 0),
@@ -53,7 +53,7 @@ fn grafo() -> Graph {
             att: "cid".into(),
             ce: 35.0,
             precursore: Some(0),
-            larghezza: None,
+            width: None,
             picchi: vec![
                 (162.055, 60.0, Some(1)),
                 (120.5, 20.0, Some(3)),
@@ -79,7 +79,7 @@ fn the_pieces_of_the_bond_breaks_explain_the_arcs_they_cover() {
     // 60 of the 100 % of the spectrum sits on an explained arc
     assert_eq!(r.spettri[0].explained, 60.0);
     assert_eq!(r.spettri[0].total, 100.0);
-    let (sp, tot, int) = r.conteggi();
+    let (sp, tot, int) = r.counts();
     assert_eq!((sp, tot), (2, 3));
     assert!((int - 60.0).abs() < 1e-9);
 }

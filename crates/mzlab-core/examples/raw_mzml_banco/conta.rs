@@ -7,8 +7,8 @@ pub struct Tally;
 /// Counting off (`--senza-conta`) leaves the system allocator alone: the four shared atomics per allocation contend across threads and slow a multi-thread run by up to 2×.
 static ACTIVE: AtomicBool = AtomicBool::new(true);
 
-pub fn imposta(attivo: bool) {
-    ACTIVE.store(attivo, Ordering::Relaxed);
+pub fn set_to(active_one: bool) {
+    ACTIVE.store(active_one, Ordering::Relaxed);
 }
 static ALLOC: AtomicU64 = AtomicU64::new(0);
 static LIBERE: AtomicU64 = AtomicU64::new(0);
@@ -89,7 +89,7 @@ impl std::ops::AddAssign for Alloc {
 }
 
 /// Peak live heap in MB since the last call.
-pub fn heap_picco_mb() -> f64 {
+pub fn heap_peak_mb() -> f64 {
     PEAK.swap(VIVI.load(Ordering::Relaxed), Ordering::Relaxed) as f64 / 1048576.0
 }
 
@@ -125,12 +125,12 @@ fn status_mb(key: &str) -> f64 {
         .map_or(f64::NAN, |kb| kb / 1024.0)
 }
 
-/// Peak resident set (MB) since `azzera_rss_picco`.
-pub fn rss_picco_mb() -> f64 {
+/// Peak resident set (MB) since `reset_rss_peak`.
+pub fn rss_peak_mb() -> f64 {
     status_mb("VmHWM:")
 }
 
 /// Sets the peak of the resident set back to the current one; false when the system refuses (the peak is then cumulative).
-pub fn azzera_rss_picco() -> bool {
+pub fn reset_rss_peak() -> bool {
     std::fs::write("/proc/self/clear_refs", "5").is_ok()
 }

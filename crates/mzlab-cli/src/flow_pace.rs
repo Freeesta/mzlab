@@ -14,7 +14,7 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzidx::build_mzml_late;
 use mzlab_core::upload::{
-    con_impronte_parallele, index_reader_with, prepare_con, probe, without_sha1,
+    index_reader_with, prepare_with, probe, with_parallel_prints, without_sha1,
 };
 
 use crate::{flow_set, io};
@@ -165,7 +165,7 @@ fn prepare_unknown(
     #[cfg(target_arch = "wasm32")]
     {
         let _ = path;
-        Ok((prepare_con(file, size, name, None)?.table, None))
+        Ok((prepare_with(file, size, name, None)?.table, None))
     }
 }
 
@@ -215,7 +215,7 @@ pub(crate) fn build_index_with(
         let (table, mut late) = match flow_set::known_sha(path) {
             Some(sha) => {
                 let known = Some((sha, probe(&mut file, size)?));
-                (prepare_con(&mut file, size, &name, known)?.table, None)
+                (prepare_with(&mut file, size, &name, known)?.table, None)
             }
             None => prepare_unknown(path, &mut file, size, &name)?,
         };
@@ -305,7 +305,7 @@ fn index_reader(
                 &mut |_| {},
             )
         }
-        None => con_impronte_parallele(
+        None => with_parallel_prints(
             move || hashing.file_set(path),
             |imp| {
                 let r = index_reader_with(

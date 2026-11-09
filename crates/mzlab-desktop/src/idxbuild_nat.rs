@@ -22,7 +22,7 @@ impl IdxBuilder {
                 l
             };
             let members = nat.members.clone();
-            upload::con_impronte_parallele(
+            upload::with_parallel_prints(
                 move || nativi::fileset(&members),
                 |impronte| {
                     let (mut st, _) = upload::index_reader_with(

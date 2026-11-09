@@ -12,7 +12,7 @@ fn array(acc: &str, vals: &[f64]) -> String {
 }
 
 /// Three MS1 spectra and a TIC chromatogram; `rt`, `tic`, `mz` and `tempo` replace the values of the second spectrum and of the trace.
-fn file(rt: &str, tic: &str, mz: f64, tempo: f64) -> Vec<u8> {
+fn file(rt: &str, tic: &str, mz: f64, time: f64) -> Vec<u8> {
     let mut s = String::from(
         r#"<?xml version="1.0" encoding="utf-8"?>
 <mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0"><run id="r"><spectrumList count="3">
@@ -35,7 +35,7 @@ fn file(rt: &str, tic: &str, mz: f64, tempo: f64) -> Vec<u8> {
     s += &format!(
         r#"</spectrumList><chromatogramList count="1"><chromatogram index="0" id="TIC" defaultArrayLength="3"><cvParam accession="MS:1000235" name="total ion current chromatogram"/><binaryDataArrayList count="2">{}{}</binaryDataArrayList></chromatogram></chromatogramList></run></mzML>
 "#,
-        array("MS:1000595", &[0.5, tempo, 2.5]).replace(
+        array("MS:1000595", &[0.5, time, 2.5]).replace(
             r#"accession="MS:1000595"/>"#,
             r#"accession="MS:1000595" unitAccession="UO:0000031" unitName="minute"/>"#
         ),
@@ -48,7 +48,7 @@ fn buono() -> Vec<u8> {
     file("1.5", "1000", 150.0, 1.5)
 }
 
-fn chiave_tabella(b: &[u8]) -> String {
+fn table_key(b: &[u8]) -> String {
     let mut v = b.to_vec();
     match mzlab_core::scantable::read(&mut v, b.len() as u64) {
         Ok(_) => "ok".into(),
@@ -56,14 +56,14 @@ fn chiave_tabella(b: &[u8]) -> String {
     }
 }
 
-fn chiave_parser(b: &[u8]) -> String {
+fn parser_key(b: &[u8]) -> String {
     match parse(std::io::Cursor::new(b), |_: Item| {}) {
         Ok(()) => "ok".into(),
         Err(e) => e.key.to_string(),
     }
 }
 
-fn chiave_cromatogramma(b: &[u8]) -> String {
+fn chromatogram_key(b: &[u8]) -> String {
     let mut m = mzlab_core::mzmlhead::Mzml::new(b.to_vec(), b.len() as u64);
     let v = match m.chromatograms(0) {
         Ok(v) => v,
@@ -78,15 +78,15 @@ fn chiave_cromatogramma(b: &[u8]) -> String {
 }
 
 #[test]
-fn il_file_buono_passa_ovunque() {
+fn the_good_file_passes_everywhere() {
     let b = buono();
-    assert_eq!(chiave_tabella(&b), "ok");
-    assert_eq!(chiave_parser(&b), "ok");
-    assert_eq!(chiave_cromatogramma(&b), "ok");
+    assert_eq!(table_key(&b), "ok");
+    assert_eq!(parser_key(&b), "ok");
+    assert_eq!(chromatogram_key(&b), "ok");
 }
 
 #[test]
-fn un_tempo_o_un_tic_non_finito_ferma_la_tabella_delle_scansioni() {
+fn a_non_finite_time_or_tic_stops_the_scan_table() {
     for (rt, tic) in [
         ("NaN", "1000"),
         ("inf", "1000"),
@@ -95,33 +95,29 @@ fn un_tempo_o_un_tic_non_finito_ferma_la_tabella_delle_scansioni() {
         ("1.5", "NaN"),
     ] {
         let b = file(rt, tic, 150.0, 1.5);
-        assert_eq!(
-            chiave_tabella(&b),
-            "err.file.nonFinite",
-            "rt {rt} tic {tic}"
-        );
+        assert_eq!(table_key(&b), "err.file.nonFinite", "rt {rt} tic {tic}");
     }
 }
 
 #[test]
-fn un_tempo_non_finito_ferma_il_parser() {
+fn a_non_finite_time_stops_the_parser() {
     for rt in ["NaN", "inf", "-inf"] {
         let b = file(rt, "1000", 150.0, 1.5);
-        assert_eq!(chiave_parser(&b), "err.file.nonFinite", "rt {rt}");
+        assert_eq!(parser_key(&b), "err.file.nonFinite", "rt {rt}");
     }
 }
 
 #[test]
-fn un_picco_non_finito_ferma_il_parser() {
+fn a_non_finite_peak_stops_the_parser() {
     for mz in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
         let b = file("1.5", "1000", mz, 1.5);
-        assert_eq!(chiave_parser(&b), "err.file.nonFinite", "mz {mz}");
+        assert_eq!(parser_key(&b), "err.file.nonFinite", "mz {mz}");
     }
 }
 
 #[test]
-fn un_punto_non_finito_del_cromatogramma_e_un_errore_della_traccia() {
+fn a_non_finite_chromatogram_point_is_an_error_of_the_trace() {
     let b = file("1.5", "1000", 150.0, f64::NAN);
-    assert_eq!(chiave_cromatogramma(&b), "err.file.nonFiniteTrace");
-    assert_eq!(chiave_parser(&b), "err.file.nonFiniteTrace");
+    assert_eq!(chromatogram_key(&b), "err.file.nonFiniteTrace");
+    assert_eq!(parser_key(&b), "err.file.nonFiniteTrace");
 }

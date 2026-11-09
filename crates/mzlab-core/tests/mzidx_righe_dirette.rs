@@ -36,34 +36,34 @@ fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
 
 /// Index through the mzML (the oracle) and the two ways straight from the reader, with several budgets.
 fn trial(label: &str, l: Finto) {
-    prova_con(label, l, true);
+    try_with(label, l, true);
 }
 
-/// `con_mzml`: false when the mzML of the reader is not valid (then only the two ways straight from the reader are compared).
-fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
+/// `with_mzml`: false when the mzML of the reader is not valid (then only the two ways straight from the reader are compared).
+fn try_with(label: &str, mut l: Finto, with_mzml: bool) {
     let name = format!("{label}.mzML");
-    let a = con_mzml.then(|| {
+    let a = with_mzml.then(|| {
         let mzml = lettori_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, &name).unwrap();
         let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG)
             .unwrap_or_else(|e| panic!("{label}: mzML path {e:?}"));
-        mzml_con_scratch(label, &pa.table, &mzml, &idx);
+        mzml_with_scratch(label, &pa.table, &mzml, &idx);
         idx
     });
 
     let pb = upload::prepare_reader(&mut l, 0, &[], &name).unwrap();
-    let due = |l: &mut Finto, budget: usize| {
+    let two = |l: &mut Finto, budget: usize| {
         let mut out = std::io::Cursor::new(Vec::new());
         mzidx::build_reader(&pb.table, l, 0, &mut out, budget).map(|st| (out.into_inner(), st))
     };
-    let (b, _) = due(&mut l, BIG).unwrap();
+    let (b, _) = two(&mut l, BIG).unwrap();
     // the same index in one call, whatever the budget (one pass, or the rounds)
     let mut saw_many = false;
     for budget in [BIG, 1 << 22, 1 << 20, 1 << 18, 1 << 16, 1 << 14, 1 << 12] {
         let mut out = std::io::Cursor::new(Vec::new());
         let mut phases = Vec::new();
         let Ok((st, sha)) =
-            upload::indicizza_lettore(&mut l, 0, &[], &name, &mut out, budget, &mut |f| {
+            upload::index_reader(&mut l, 0, &[], &name, &mut out, budget, &mut |f| {
                 phases.push(f)
             })
         else {
@@ -76,7 +76,7 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
             out.into_inner() == b,
             "{label}: the one-call index differs at budget {budget}"
         );
-        if let Ok((x, _)) = due(&mut l, budget) {
+        if let Ok((x, _)) = two(&mut l, budget) {
             assert!(x == b, "{label}: build_lettore differs at budget {budget}");
         }
     }
@@ -107,7 +107,7 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
 }
 
 /// The mzML path with a scratch file (`build_mzml_spill`): the same bytes at every budget, the file decoded once.
-fn mzml_con_scratch(label: &str, table: &mzidx::ScanTable, mzml: &[u8], idx: &[u8]) {
+fn mzml_with_scratch(label: &str, table: &mzidx::ScanTable, mzml: &[u8], idx: &[u8]) {
     for budget in [1 << 20, 1 << 16, 1 << 12] {
         let (mut out, mut sp) = (
             std::io::Cursor::new(Vec::new()),
@@ -132,7 +132,7 @@ fn mzml_con_scratch(label: &str, table: &mzidx::ScanTable, mzml: &[u8], idx: &[u
 
 /// The same index with a scratch file: the peaks that do not fit go to it, the scans are decoded once, the bytes are the same.
 fn with_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b: &[u8]) {
-    // a wrong guess of 32-bit MS1 peaks (`primo_ms1_diverso`) throws away what pass 1 kept or spilled: the rounds decode again
+    // a wrong guess of 32-bit MS1 peaks (`first_ms1_different`) throws away what pass 1 kept or spilled: the rounds decode again
     let ripassa = label == "primo FTMS";
     let mut spilled = false;
     for budget in [BIG, 1 << 22, 1 << 20, 1 << 18, 1 << 16, 1 << 14, 1 << 12] {
@@ -184,7 +184,7 @@ fn testata_orbitrap() -> Header {
 }
 
 #[test]
-fn vario_senza_testata() {
+fn varied_without_header() {
     for (n, peaks, seed) in [
         (0, 10, 1),
         (1, 10, 2),
@@ -198,15 +198,15 @@ fn vario_senza_testata() {
 }
 
 #[test]
-fn vario_con_testata_orbitrap() {
+fn varied_with_orbitrap_header() {
     trial(
         "orbitrap",
-        Finto::vario(300, 50, 7).con_testata(testata_orbitrap()),
+        Finto::vario(300, 50, 7).with_header(testata_orbitrap()),
     );
 }
 
 #[test]
-fn vario_a_bassa_risoluzione() {
+fn varied_at_low_resolution() {
     let mut l = Finto::vario(300, 50, 8);
     for s in &mut l.cards {
         s.spettro.filter = s
@@ -219,18 +219,18 @@ fn vario_a_bassa_risoluzione() {
 }
 
 #[test]
-fn testata_con_nomi_che_chiedono_il_testo() {
+fn header_with_names_that_ask_for_the_text() {
     let mut h = testata_orbitrap();
     h.components.push((
         "analyzer".into(),
         "MS:1000079".into(),
         "quad\"rupole".into(),
     ));
-    prova_con("nomi", Finto::vario(120, 20, 9).con_testata(h), false);
+    try_with("nomi", Finto::vario(120, 20, 9).with_header(h), false);
 }
 
 #[test]
-fn un_solo_campione_di_una_polarita() {
+fn a_single_sample_of_one_polarity() {
     let mut l = Finto::vario(150, 30, 10);
     for s in &mut l.cards {
         s.spettro.polarity = 1;
@@ -239,16 +239,16 @@ fn un_solo_campione_di_una_polarita() {
 }
 
 #[test]
-fn array_di_lunghezza_diversa() {
-    prova_con(
+fn arrays_of_different_length() {
+    try_with(
         "lunghezze",
-        Finto::vario(200, 30, 11).con_lunghezze_diverse(),
+        Finto::vario(200, 30, 11).with_different_lengths(),
         false,
     );
 }
 
 #[test]
-fn uguali_dopo_l_arrotondamento_tra_due_bucket() {
+fn equal_after_rounding_between_two_buckets() {
     // every MS1 scan holds 100.0 and every other one 99.9999999 too (bucket 99 in 64 bits, 100 in 32): with the scratch file the partitions of the two
     // buckets are read one after the other, and the equal 32-bit m/z must still come in scan order
     let mut l = Finto::vario(600, 10, 13);
@@ -268,33 +268,33 @@ fn uguali_dopo_l_arrotondamento_tra_due_bucket() {
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "uguali.mzML").unwrap();
     assert!(pa.table.hr1, "the MS1 sections hold f32");
     let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();
-    mzml_con_scratch("uguali", &pa.table, &mzml, &idx);
+    mzml_with_scratch("uguali", &pa.table, &mzml, &idx);
 }
 
 /// MS1 filters where the first scan says the opposite of the file: a reader keeps the MS1 peaks of pass 1 by what its first MS1 scan says
 /// (`Prima::indovina`), and a wrong guess must not change a byte.
-fn primo_ms1_diverso(seed: u64, first: &str, altri: &str) -> Finto {
+fn first_ms1_different(seed: u64, first: &str, altri: &str) -> Finto {
     let mut l = Finto::vario(400, 40, seed);
-    let mut primo_visto = false;
+    let mut first_seen = false;
     for s in l.cards.iter_mut().filter(|s| s.spettro.level == 1) {
-        let a = if primo_visto { altri } else { first };
+        let a = if first_seen { altri } else { first };
         s.spettro.filter = format!("{a} + p ESI Full ms [100.0000-1000.0000]");
-        primo_visto = true;
+        first_seen = true;
     }
     l
 }
 
 #[test]
-fn primo_ms1_ad_alta_risoluzione_in_un_file_a_bassa() {
-    let mut l = primo_ms1_diverso(21, "FTMS", "ITMS");
+fn first_ms1_high_resolution_in_a_low_file() {
+    let mut l = first_ms1_different(21, "FTMS", "ITMS");
     let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").unwrap();
     assert!(!p.table.hr1);
     trial("primo FTMS", l);
 }
 
 #[test]
-fn primo_ms1_a_bassa_risoluzione_in_un_file_ad_alta() {
-    let mut l = primo_ms1_diverso(22, "ITMS", "FTMS");
+fn first_ms1_low_resolution_in_a_high_file() {
+    let mut l = first_ms1_different(22, "ITMS", "FTMS");
     let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").unwrap();
     assert!(p.table.hr1);
     trial("primo ITMS", l);

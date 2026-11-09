@@ -72,7 +72,7 @@ const MB: usize = 1 << 20;
 const SCANS: usize = 6000;
 
 #[test]
-fn mzml_grande_entra_nel_budget() {
+fn large_mzml_fits_the_budget() {
     let path = std::env::temp_dir().join(format!("mzlab_grande_{}.mzML", std::process::id()));
     let mut l = Finto::vario(SCANS, 60, 777);
     let w = BufWriter::new(File::create(&path).unwrap());

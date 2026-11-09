@@ -18,7 +18,7 @@ Atrazina;;C8H14ClN5;MXWJVTOOROXGIU-UHFFFAOYSA-N
 ";
 
 fn first_names(ms: &[Molecule], q: &str) -> Vec<String> {
-    mzlab_core::molecules::cerca_ampia(ms, q, 8, 10.0)
+    mzlab_core::molecules::search_wide(ms, q, 8, 10.0)
         .iter()
         .map(|h| ms[h.0].nome.clone())
         .collect()

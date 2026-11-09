@@ -16,7 +16,7 @@ fn sintetico_json(order: &[usize]) -> String {
     shifted_graph(&con(Some("C8H10N4O2+H")), order, false, 0.0).1
 }
 
-fn vista_di(j: &str) -> Value {
+fn view_of(j: &str) -> Value {
     parse(j.as_bytes()).unwrap().get("vista").unwrap().clone()
 }
 
@@ -31,7 +31,7 @@ fn node<'a>(v: &'a Value, id: &str) -> &'a Value {
 
 #[test]
 fn the_view_says_levels_intensities_and_the_best_path_of_each_ion() {
-    let v = vista_di(&sintetico_json(&[0, 1, 2, 3]));
+    let v = view_of(&sintetico_json(&[0, 1, 2, 3]));
     assert_eq!(
         v.get("algoritmo").and_then(|x| x.str()),
         Some("best-path/1")
@@ -112,16 +112,16 @@ fn the_same_inputs_give_the_same_bytes_and_the_view_completes_an_old_graph() {
 fn keys_added_later_stay_before_the_view() {
     let o = con(Some("C8H10N4O2+H"));
     let (g, j) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
-    let k = con_interpretazione(&j, &g, PPM_PERDITA);
+    let k = with_interpretation(&j, &g, PPM_PERDITA);
     assert!(k.ends_with(&j[j.find(",\"vista\":").unwrap()..]));
     assert_eq!(completa(&k).unwrap(), k);
 }
 
-fn edge(da: usize, a: usize, rel: f64, isolato: bool) -> EdgeD {
+fn edge(da: usize, a: usize, rel: f64, isolated: bool) -> EdgeD {
     EdgeD {
         da,
         a,
-        isolato,
+        isolato: isolated,
         rel,
         levels: vec![2],
     }
@@ -178,7 +178,7 @@ fn the_best_path_takes_the_fewest_steps_then_the_strongest_weakest_arc_then_isol
 
 /// How many nodes would change parent if each took its single most intense entering arc (the arborescence of least cost of Chu-Liu/Edmonds
 /// on a DAG degenerates to this local choice): the number that tells how much the rule of the best path changes the picture.
-fn cambiano_genitore(d: &Data) -> usize {
+fn parent_changes(d: &Data) -> usize {
     let b = paths(d);
     (0..d.id.len())
         .filter(|&v| {
@@ -195,7 +195,7 @@ fn cambiano_genitore(d: &Data) -> usize {
 fn how_many_nodes_the_local_best_arc_would_move_in_the_synthetic_infusion() {
     let j = sintetico_json(&[0, 1, 2, 3]);
     let d = read(&parse(j.as_bytes()).unwrap()).unwrap();
-    assert_eq!(cambiano_genitore(&d), 2);
+    assert_eq!(parent_changes(&d), 2);
 }
 
 /// A layered graph of `n` nodes per level made with a fixed generator: every node has a precursor in the level above and one in five a second one.
@@ -282,6 +282,6 @@ fn the_usual_name_of_a_loss_is_written_not_hill_order() {
         ("O2S", "SO2"),
     ] {
         let c = e.conta(&parse_formula(d).unwrap()).unwrap();
-        assert_eq!(e.testo_perdita(&c), name, "{d}");
+        assert_eq!(e.loss_text(&c), name, "{d}");
     }
 }

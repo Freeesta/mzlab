@@ -95,7 +95,7 @@ impl Reader for Finto {
     }
 }
 
-fn converti(l: &mut Finto, peaks: Peaks) -> Result<(String, Vec<Spectrum>)> {
+fn convert(l: &mut Finto, peaks: Peaks) -> Result<(String, Vec<Spectrum>)> {
     let conv = Conversion {
         peaks,
         ..Conversion::default()
@@ -112,7 +112,7 @@ fn converti(l: &mut Finto, peaks: Peaks) -> Result<(String, Vec<Spectrum>)> {
 
 #[test]
 fn lettori_mzml_picchi_mzlab_gives_the_centres_within_half_a_ppm() {
-    let (doc, spettri) = converti(&mut finto(true), Peaks::Mzlab).unwrap();
+    let (doc, spettri) = convert(&mut finto(true), Peaks::Mzlab).unwrap();
     assert!(doc.contains("MS:1000035") && !doc.contains("MS:1000128"));
     assert!(doc.contains("mzLab centroids"));
     assert_eq!(spettri.len(), 5);
@@ -126,16 +126,16 @@ fn lettori_mzml_picchi_mzlab_gives_the_centres_within_half_a_ppm() {
 
 #[test]
 fn lettori_mzml_picchi_profilo_gives_the_profile_points() {
-    let (doc, spettri) = converti(&mut finto(true), Peaks::Profilo).unwrap();
+    let (doc, spettri) = convert(&mut finto(true), Peaks::Profilo).unwrap();
     assert!(doc.contains("MS:1000128") && !doc.contains("MS:1000035"));
     assert!(spettri.iter().all(|s| s.profile && s.mz.len() == 400));
-    let e = converti(&mut finto(false), Peaks::Profilo).unwrap_err();
+    let e = convert(&mut finto(false), Peaks::Profilo).unwrap_err();
     assert_eq!(e.key, "err.conv.noProfile");
 }
 
 #[test]
 fn lettori_mzml_picchi_file_keeps_the_scans_of_the_reader() {
-    let (doc, spettri) = converti(&mut finto(true), Peaks::File).unwrap();
+    let (doc, spettri) = convert(&mut finto(true), Peaks::File).unwrap();
     assert!(doc.contains("MS:1000128") && !doc.contains("MS:1000035"));
     assert!(spettri.iter().all(|s| s.mz.len() == 400));
 }

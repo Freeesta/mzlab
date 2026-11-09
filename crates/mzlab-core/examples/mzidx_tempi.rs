@@ -122,7 +122,7 @@ fn main() {
         out.sha()
     );
     let t = Instant::now();
-    let st = upload::indicizza_lettore(
+    let st = upload::index_reader(
         &mut l,
         0,
         &imp,

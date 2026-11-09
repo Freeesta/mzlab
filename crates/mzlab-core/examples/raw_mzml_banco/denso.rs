@@ -43,7 +43,7 @@ impl Parameters {
     }
 
     /// The shape of a typical `Q Exactive` run at 17 500 resolution: centroid list only (about 530 peaks per scan).
-    pub fn forma_lab_a(scansioni: usize) -> Self {
+    pub fn lab_shape_a(scansioni: usize) -> Self {
         Parameters {
             scansioni,
             peaks: 526,
@@ -54,7 +54,7 @@ impl Parameters {
     }
 
     /// The shape of a Fusion run with profile: about 64 peaks of 4-8 bins per scan.
-    pub fn forma_lab_b(scansioni: usize) -> Self {
+    pub fn lab_shape_b(scansioni: usize) -> Self {
         Parameters {
             scansioni,
             peaks: 64,
@@ -112,7 +112,7 @@ fn points(
 }
 
 /// The noise nodes (m/z, noise, baseline) spread over the scan range.
-fn nodi_di_rumore(rng: &mut Rng, first_mz: f64, last_mz: f64) -> Vec<u8> {
+fn noise_nodes(rng: &mut Rng, first_mz: f64, last_mz: f64) -> Vec<u8> {
     let mut nodes = Vec::with_capacity(NODES * 12);
     for i in 0..NODES {
         let mz = first_mz + (last_mz - first_mz) * i as f64 / (NODES - 1) as f64;
@@ -130,13 +130,13 @@ fn scan_header(
     n: usize,
     (primo_mz, ultimo_mz): (f64, f64),
 ) {
-    let parole = |b: &Vec<u8>| (b.len() / 4) as u32;
+    let words = |b: &Vec<u8>| (b.len() / 4) as u32;
     u32s(
         out,
         &[
             0,
-            parole(profilo),
-            parole(lista),
+            words(profilo),
+            words(lista),
             LAYOUT,
             n as u32,
             n as u32 + 1,
@@ -161,7 +161,7 @@ pub fn packet(out: &mut Vec<u8>, p: &Parameters, k: usize, mut verita: Option<&m
     let mut bin = 1 + (rng.next() % 40) as u32;
     let (mut descr, mut risol) = (Vec::with_capacity(n * 4), Vec::with_capacity(n * 4 + 4));
     u32s(&mut risol, &[n as u32]);
-    let mut totale_bin = 0u32;
+    let mut bin_total = 0u32;
     let (mut first_mz, mut last_mz) = (0.0f64, 0.0f64);
     for i in 0..n {
         let len = p.bin.0 + (rng.next() % u64::from(p.bin.1 - p.bin.0 + 1)) as u32;
@@ -179,8 +179,8 @@ pub fn packet(out: &mut Vec<u8>, p: &Parameters, k: usize, mut verita: Option<&m
                 verita.as_deref_mut(),
             );
         }
-        let centro = bin as f64 + c;
-        let mz = freq_to_mz(F0 + centro * STEP, &COEFF) + f64::from(fudge);
+        let centre = bin as f64 + c;
+        let mz = freq_to_mz(F0 + centre * STEP, &COEFF) + f64::from(fudge);
         if i == 0 {
             first_mz = mz;
         }
@@ -202,14 +202,14 @@ pub fn packet(out: &mut Vec<u8>, p: &Parameters, k: usize, mut verita: Option<&m
             v.risoluzioni.push(r);
         }
         bin += len + 1 + (rng.next() % 50) as u32;
-        totale_bin = bin;
+        bin_total = bin;
     }
     if p.with_profile {
-        profilo[20..24].copy_from_slice(&totale_bin.to_le_bytes());
+        profilo[20..24].copy_from_slice(&bin_total.to_le_bytes());
     } else {
         profilo.clear();
     }
-    let nodes = nodi_di_rumore(&mut rng, first_mz, last_mz);
+    let nodes = noise_nodes(&mut rng, first_mz, last_mz);
     scan_header(out, &[&profilo, &list], n, (first_mz, last_mz));
     out.extend_from_slice(&profilo);
     out.extend_from_slice(&list);
@@ -219,11 +219,11 @@ pub fn packet(out: &mut Vec<u8>, p: &Parameters, k: usize, mut verita: Option<&m
 }
 
 /// The offset table (offset, length), the bytes written and the SHA-256 of the file when asked.
-pub type Generato = (Vec<(u64, u32)>, u64, Option<String>);
+pub type Generated = (Vec<(u64, u32)>, u64, Option<String>);
 
 /// Writes the case to `path`: a table of (offset, length) of the packets, then the packets. Returns the table, the bytes and the SHA-256 of the file
 /// (`with_sha`: it costs a pass of the file).
-pub fn generate(path: &Path, p: &Parameters, with_sha: bool) -> std::io::Result<Generato> {
+pub fn generate(path: &Path, p: &Parameters, with_sha: bool) -> std::io::Result<Generated> {
     let mut f = BufWriter::with_capacity(4 << 20, File::create(path)?);
     let mut sha = Sha256::new();
     let mut write = |f: &mut BufWriter<File>, b: &[u8]| -> std::io::Result<()> {

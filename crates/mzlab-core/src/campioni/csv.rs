@@ -119,7 +119,7 @@ fn flag(v: &str) -> Option<bool> {
 }
 
 fn unit_of(v: &str) -> Option<&'static str> {
-    super::UNITA_TEMPO.iter().copied().find(|u| *u == lower(v))
+    super::TIME_UNITS.iter().copied().find(|u| *u == lower(v))
 }
 
 fn whole(v: &str) -> Option<u32> {
@@ -162,7 +162,7 @@ fn put(c: &mut Sample, f: &str, v: &str) -> bool {
         }
         "tipo_bianco" => {
             return v.is_empty()
-                || super::TIPI_BIANCO
+                || super::BLANK_TYPES
                     .contains(&v)
                     .then(|| c.blank_kind = Some(v.into()))
                     .is_some()
@@ -259,7 +259,7 @@ pub fn read(text: &str, sep: Option<char>, declared: &[Column]) -> Result<Table>
         minutes: at("tempo_min"),
         confirmed: at("tempo_confermato"),
     };
-    let replica = at("replica");
+    let replicate = at("replica");
     // the free column of each header position (the names are distinct, in header order)
     let free_at: Vec<usize> = heads
         .iter()
@@ -298,7 +298,7 @@ pub fn read(text: &str, sep: Option<char>, declared: &[Column]) -> Result<Table>
             }
         }
         time_of(&mut c, row, &tc, &cell)?;
-        written.push(replica.and_then(|i| whole(cell(i))));
+        written.push(replicate.and_then(|i| whole(cell(i))));
         cs.push(c);
     }
     number_replicates(&mut cs);

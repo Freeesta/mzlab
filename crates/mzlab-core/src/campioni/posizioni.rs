@@ -286,7 +286,7 @@ impl Spans {
 }
 
 /// `{"campioni":<campioni/2>,"posizioni":[[{"campo","inizio","fine"}]]}`: one list of spans per file, in the order of the files.
-pub fn proposte_json(p: &[Proposal]) -> String {
+pub fn proposals_json(p: &[Proposal]) -> String {
     let cs: Vec<Sample> = p.iter().map(|x| x.sample.clone()).collect();
     let mut j = crate::json::Out::default();
     j.raw("{\"campioni\":")

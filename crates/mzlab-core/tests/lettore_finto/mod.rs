@@ -16,7 +16,7 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{CvPar, Header, Precursore, SpectrumExtra};
 
 /// The maker's totals, an injection time and a precursor chain on some scans: the rows are then read from the text the writer gives them.
-fn con_totali(extra: &mut SpectrumExtra, k: usize, level: u8, precursor: Option<f64>) {
+fn with_totals(extra: &mut SpectrumExtra, k: usize, level: u8, precursor: Option<f64>) {
     // the maker's totals, an injection time and a precursor chain: the rows are then read from the text the writer gives them
     if k % 17 == 6 {
         extra.tic = Some(1234.5);
@@ -207,16 +207,16 @@ impl Finto {
             if k % 29 == 4 {
                 extra.params.push(("note".into(), "see MS:1000744".into()));
             }
-            con_totali(&mut extra, k, level, sp.precursor);
+            with_totals(&mut extra, k, level, sp.precursor);
             if k % 23 == 7 {
                 extra.params.push(("scan \"mode\"".into(), "a<b&c".into()));
             }
             cards.push(Card { spettro: sp, extra });
         }
-        Finto::da_schede(cards)
+        Finto::from_sheets(cards)
     }
 
-    pub fn da_schede(cards: Vec<Card>) -> Finto {
+    pub fn from_sheets(cards: Vec<Card>) -> Finto {
         let indice = cards
             .iter()
             .enumerate()
@@ -284,7 +284,7 @@ impl Finto {
     }
 
     /// Some scans with one intensity more than m/z values (what `mzidx_lettore::spettro` cuts); the mzML of such a reader is not valid.
-    pub fn con_lunghezze_diverse(mut self) -> Finto {
+    pub fn with_different_lengths(mut self) -> Finto {
         for (k, s) in self.cards.iter_mut().enumerate() {
             if k % 17 == 9 && s.spettro.wide.is_none() {
                 s.spettro.intensity.push(1.0);
@@ -294,7 +294,7 @@ impl Finto {
     }
 
     /// The header of a Q-TOF run with a serial number and an acquisition program that names the normalised collision energy.
-    pub fn con_testata(mut self, h: Header) -> Finto {
+    pub fn with_header(mut self, h: Header) -> Finto {
         self.testata = Some(h);
         self
     }

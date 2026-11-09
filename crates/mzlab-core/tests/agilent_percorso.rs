@@ -10,11 +10,11 @@ use agilent_synth::{encode, sample};
 use mzlab_core::lettori::{self, FileSet, Limits, Member};
 
 fn apri(scan: Vec<u8>, peak: Vec<u8>) -> mzlab_core::error::Result<Box<dyn lettori::Reader>> {
-    apri_con(scan, "MSPeak.bin", peak)
+    open_with(scan, "MSPeak.bin", peak)
 }
 
 /// The run with its points in `AcqData/<punti>` (`MSPeak.bin`, or `MSProfile.bin` of a folder without peaks).
-fn apri_con(
+fn open_with(
     scan: Vec<u8>,
     points: &str,
     peak: Vec<u8>,
@@ -104,7 +104,7 @@ fn a_plain_run_reads_the_same_on_both_builds() {
 #[test]
 fn a_profile_only_folder_takes_the_module_route() {
     let (scan, peak) = encode(&sample());
-    let r = apri_con(scan, "MSProfile.bin", peak);
+    let r = open_with(scan, "MSProfile.bin", peak);
     #[cfg(not(feature = "estesi"))]
     assert_eq!(r.err().expect("refused").key, "err.file.agilentNoPeaks");
     #[cfg(feature = "estesi")]

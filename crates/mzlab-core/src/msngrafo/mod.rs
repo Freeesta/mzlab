@@ -28,29 +28,29 @@ mod tabelle;
 mod unisci;
 mod vista;
 
-pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Options as OpzioniCerca};
+pub use cerca::{cerca, options_from_request as opzioni_cerca, Options as OpzioniCerca};
 pub use cerca_ms2::{search_ms2, Ms2Hit};
 pub use da_picchi::graph_from_peaks;
-pub use esporta::{da_richiesta_export, esporta, Format};
+pub use esporta::{esporta, from_export_request, Format};
 pub use interpreta::{
-    con_interpretazione, interpreta, interpretazione_json, perdite_note, EdgeInterp, EdgeLoss,
+    interpreta, interpretation_json, known_losses, with_interpretation, EdgeInterp, EdgeLoss,
     KnownLoss, PPM as PPM_PERDITA,
 };
 pub use json::json;
-pub use leggi::{read, Letto};
+pub use leggi::{read, ReadDone};
 pub use lib_export::{export_text, Format as LibFormato};
 pub use libreria::aggiungi;
-pub use radice::{root_candidates, CandidatoRadice};
+pub use radice::{root_candidates, RootCandidate};
 pub use regole::{read_table, table as tabella_regole, Rule, Table, Tipo};
-pub use regole_json::{con_regole, regole_json};
+pub use regole_json::{rules_json, with_rules};
 pub use regole_valuta::{valuta as valuta_regole, Evaluation, Expectation, RuleParams};
-pub use rotta::{da_richiesta, grafo_json};
+pub use rotta::{from_request, graph_json};
 pub use rotture::{
-    con_rotture, rotture_json, Ipotesi, RotturaArco, RotturaNodo, RotturaSpettro, Rotture,
+    breaks_json, with_breaks, Breaks, EdgeBreak, Hypothesis, NodeBreak, SpectrumBreak,
 };
 pub use strutture::{
-    con_strutture, con_strutture_tutti, strutture_json, CandidatoStruttura, IngressoStrutture,
-    PiccoSpiegato, Strutture, Taglio,
+    structures_json, with_all_structures, with_structures, Cut, ExplainedPeak, StructureCandidate,
+    Structures, StructuresInput,
 };
 pub use tabelle::{library_text, table_text};
 pub use vista::completa;
@@ -60,18 +60,18 @@ use crate::json::Value;
 use crate::msnalbero::Albero;
 
 /// The newest `msngrafo/N` this engine reads; `/1` (Italian `opzioni` keys) is read too.
-pub const VERSIONE_MAX: u32 = 2;
+pub const MAX_VERSION: u32 = 2;
 
 /// The version of the graph `v`: 1 or 2. A newer one is `error.newerFormat {kind: msngrafo, version}` (opened by a newer program, never rewritten),
 /// anything else `err.msngrafo.badGraph`.
-pub fn versione(v: &Value) -> Result<u32> {
+pub fn version(v: &Value) -> Result<u32> {
     let f = v.get("formato").and_then(Value::str).unwrap_or_default();
     let n: u32 = f
         .strip_prefix("msngrafo/")
         .and_then(|n| n.parse().ok())
         .filter(|n| *n >= 1)
         .ok_or_else(|| Error::new("err.msngrafo.badGraph"))?;
-    if n > VERSIONE_MAX {
+    if n > MAX_VERSION {
         return Err(Error::new("error.newerFormat")
             .with("kind", "msngrafo")
             .with("version", n));
@@ -204,17 +204,17 @@ pub struct GNode {
     /// The nodes of the tree whose precursor it is (sorted); empty = only observed.
     pub albero: Vec<String>,
     /// Number of spectra with the peak.
-    pub osservazioni: usize,
+    pub observations: usize,
     pub rel_max: f64,
     pub isotope_of: Option<usize>,
     /// The M+1 of its most intense observation, % of it.
     pub m1: Option<f64>,
     /// Its own isolation window (Da), when it is isolated and the file says.
-    pub larghezza: Option<f64>,
+    pub width: Option<f64>,
     /// The narrowest window on the path to the spectrum of its most intense observation: below `STRETTA` its M+1 is not expected there.
     pub upstream: Option<f64>,
     /// With a formula: the peaks of its spectra that no sub-formula explains (their nodes left the graph).
-    pub unexplained: Option<NonSpiegati>,
+    pub unexplained: Option<Unexplained>,
     /// Column and row of the drawing.
     pub pos: (usize, usize),
     pub formula: Option<NodeFormula>,
@@ -222,7 +222,7 @@ pub struct GNode {
 
 /// The unexplained peaks of the spectra of a node: how many, and the 3 most intense (m/z, % of the base peak).
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct NonSpiegati {
+pub struct Unexplained {
     pub n: usize,
     pub peaks: Vec<(f64, f64)>,
 }
@@ -238,7 +238,7 @@ pub struct SpettroG {
     pub ce: f64,
     /// The node of its precursor.
     pub precursore: Option<usize>,
-    pub larghezza: Option<f64>,
+    pub width: Option<f64>,
     /// (m/z in this spectrum, % of its base peak, node).
     pub picchi: Vec<(f64, f64, Option<usize>)>,
 }
@@ -276,7 +276,7 @@ pub struct NodeFormula {
 pub struct Ione {
     pub formula: String,
     pub theoretical_mz: f64,
-    pub mz_osservato: f64,
+    pub mz_observed: f64,
     pub ppm: f64,
 }
 
@@ -310,12 +310,12 @@ pub struct Graph {
     pub avvisi: Vec<Warning>,
     pub ione: Option<Ione>,
     /// Formulas for the root when the options gave none.
-    pub candidati_radice: Vec<CandidatoRadice>,
+    pub candidati_radice: Vec<RootCandidate>,
     pub spettri: Vec<SpettroG>,
 }
 
 /// Losses a chemist expects in ESI CID/HCD, even-electron first; matched by mass only.
-pub(crate) const PERDITE: [(&str, f64); 16] = [
+pub(crate) const LOSSES: [(&str, f64); 16] = [
     ("H2", 2.01565),
     ("CH4", 16.0313),
     ("NH3", 17.02655),
@@ -337,7 +337,7 @@ pub(crate) const PERDITE: [(&str, f64); 16] = [
 /// The graph of the tree and its spectra (`spettri[i]` = consensus of `albero.nodi[i]`).
 pub fn build(ing: &Input, o: &Options) -> Graph {
     let mut g = unisci::merge(ing, o);
-    formule::assegna(&mut g, o);
+    formule::assign(&mut g, o);
     g.candidati_radice = root_candidates(&g, o);
     posa::posa(&mut g);
     g

@@ -37,7 +37,7 @@ pub fn mzml_file(path: &Path, name: &str) -> Vec<u8> {
 }
 
 /// The mzML of a vendor folder (`x.D`): every file below it is a member named `x.D/<relative path>`.
-pub fn mzml_cartella(folder: &Path) -> Vec<u8> {
+pub fn mzml_folder(folder: &Path) -> Vec<u8> {
     let base = folder.file_name().unwrap().to_string_lossy().into_owned();
     let mut members = Vec::new();
     let mut stack = vec![folder.to_path_buf()];

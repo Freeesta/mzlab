@@ -18,7 +18,7 @@ impl Network<'_> {
 }
 
 /// Row of each node over the height of its column, 0..1.
-fn alto(cols: &[Vec<usize>], n: usize) -> Vec<f64> {
+fn high(cols: &[Vec<usize>], n: usize) -> Vec<f64> {
     let mut h = vec![0.0; n];
     for c in cols {
         let d = (c.len().max(2) - 1) as f64;
@@ -30,10 +30,16 @@ fn alto(cols: &[Vec<usize>], n: usize) -> Vec<f64> {
 }
 
 /// Orders column `c` by the mean height of the neighbours of each node that are in `altre` columns (the node keeps its height without).
-fn riordina(r: &Network, cols: &mut [Vec<usize>], c: usize, vicini: &[Vec<usize>], before: bool) {
-    let h = alto(cols, r.mz.len());
+fn reorder(
+    r: &Network,
+    cols: &mut [Vec<usize>],
+    c: usize,
+    neighbours: &[Vec<usize>],
+    before: bool,
+) {
+    let h = high(cols, r.mz.len());
     let key = |i: usize| {
-        let v: Vec<f64> = vicini[i]
+        let v: Vec<f64> = neighbours[i]
             .iter()
             .filter(|&&j| if before { r.col(j) < c } else { r.col(j) > c })
             .map(|&j| h[j])
@@ -71,10 +77,10 @@ fn baricentro(r: &Network, giri: usize) -> Vec<Vec<usize>> {
     }
     for _ in 0..giri {
         for c in 1..ncol {
-            riordina(r, &mut cols, c, &su, true);
+            reorder(r, &mut cols, c, &su, true);
         }
         for c in (0..ncol.saturating_sub(1)).rev() {
-            riordina(r, &mut cols, c, &giu, false);
+            reorder(r, &mut cols, c, &giu, false);
         }
     }
     cols
@@ -111,7 +117,7 @@ pub(super) fn posa(g: &mut Graph) {
 }
 
 /// The arcs between two different columns as (lower column end, higher column end).
-fn tra_colonne(r: &Network) -> Vec<(usize, usize)> {
+fn between_columns(r: &Network) -> Vec<(usize, usize)> {
     r.edges
         .iter()
         .filter(|&&(a, b)| r.col(a) != r.col(b))
@@ -138,7 +144,7 @@ fn si_incrociano(
 
 /// How many pairs of arcs of the same pair of columns cross (arcs that share an end never do).
 pub(super) fn incroci(r: &Network, pos: &[(usize, usize)]) -> usize {
-    let v = tra_colonne(r);
+    let v = between_columns(r);
     let mut k = 0;
     for (i, &x) in v.iter().enumerate() {
         k += v[i + 1..]
@@ -158,16 +164,16 @@ pub(super) fn albero(r: &Network) -> Vec<(usize, usize)> {
     let n = r.mz.len();
     // more sweeps of the barycentre while they leave fewer crossings
     let mut cols = baricentro(r, 1);
-    let mut meno = incroci(r, &posizioni(&cols, n));
+    let mut minus = incroci(r, &posizioni(&cols, n));
     for giri in 2..=GIRI {
         let c = baricentro(r, giri);
         let k = incroci(r, &posizioni(&c, n));
-        if k < meno {
-            (cols, meno) = (c, k);
+        if k < minus {
+            (cols, minus) = (c, k);
         }
     }
     let mut inc: Vec<Vec<(usize, usize)>> = vec![vec![]; n];
-    for (a, b) in tra_colonne(r) {
+    for (a, b) in between_columns(r) {
         inc[a].push((a, b));
         inc[b].push((a, b));
     }

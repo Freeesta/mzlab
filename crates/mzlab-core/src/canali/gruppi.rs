@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use super::{wiff, MAX_CHIAVI};
+use super::{wiff, MAX_KEYS};
 use crate::idxread::Scan;
 
 /// A group of scans while the channels are being counted.
@@ -25,7 +25,7 @@ pub(super) fn nominal(m: f64) -> i64 {
 }
 
 /// `MS²`, `MS³`, ...: the level as a superscript.
-pub(super) fn apice(level: u8) -> String {
+pub(super) fn apex(level: u8) -> String {
     const SUP: [char; 10] = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
     let digits: String = level
         .to_string()
@@ -37,7 +37,7 @@ pub(super) fn apice(level: u8) -> String {
 }
 
 /// Nominal masses of the path of an MSn scan: the stages of the filter, else the precursor alone.
-pub(super) fn percorso_di(s: &Scan) -> Vec<i64> {
+pub(super) fn path_of(s: &Scan) -> Vec<i64> {
     match s.path.as_deref() {
         Some(p) if !p.is_empty() => p.iter().map(|x| nominal(x.0)).collect(),
         _ => {
@@ -52,7 +52,7 @@ pub(super) fn percorso_di(s: &Scan) -> Vec<i64> {
 }
 
 /// Activation (lower case) and collision energy of the last stage of an MSn scan.
-pub(super) fn attivazione_di(s: &Scan) -> (String, Option<f64>) {
+pub(super) fn activation_of(s: &Scan) -> (String, Option<f64>) {
     let last = s.path.as_ref().and_then(|p| p.last());
     let act = s
         .act
@@ -84,7 +84,7 @@ pub(super) fn id_ms(s: &Scan, path: &[i64]) -> String {
     }
 }
 
-pub(super) fn sigla_di(s: &Scan) -> Option<&'static str> {
+pub(super) fn code_of(s: &Scan) -> Option<&'static str> {
     if s.level <= 1 && s.filter.to_ascii_lowercase().contains(" sim ") {
         return Some("SIM");
     }
@@ -100,10 +100,10 @@ pub(super) fn pol_label(pol: i8) -> &'static str {
 }
 
 /// The group a first scan opens.
-pub(super) fn nuovo_gruppo(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
-    let (act, ce) = attivazione_di(s);
+pub(super) fn new_group(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
+    let (act, ce) = activation_of(s);
     let ce_int = ce.map(|c| c.round() as i64);
-    let sigla = sigla_di(s);
+    let sigla = code_of(s);
     if id == wiff::ID_IDA {
         return Group {
             id,
@@ -113,7 +113,7 @@ pub(super) fn nuovo_gruppo(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
             pol: s.polarity,
             path: percorso,
             tag: sigla,
-            etichetta: format!("{} IDA", apice(s.level)),
+            etichetta: format!("{} IDA", apex(s.level)),
             omologo: format!("dd|{}|{}", s.level, sigla.unwrap_or_default()),
         };
     }
@@ -122,7 +122,7 @@ pub(super) fn nuovo_gruppo(id: String, s: &Scan, percorso: Vec<i64>) -> Group {
         .map(i64::to_string)
         .collect::<Vec<_>>()
         .join(">");
-    let mut label = apice(s.level.max(1));
+    let mut label = apex(s.level.max(1));
     if s.level >= 2 && !percorso.is_empty() {
         label += &format!(
             " {}",
@@ -166,15 +166,11 @@ pub(super) fn group(scans: &[Scan]) -> (Vec<Group>, Vec<u32>) {
     let mut per_id: HashMap<String, u32> = HashMap::new();
     let mut di: Vec<u32> = Vec::with_capacity(scans.len());
     for s in scans {
-        let path = if s.level >= 2 {
-            percorso_di(s)
-        } else {
-            Vec::new()
-        };
+        let path = if s.level >= 2 { path_of(s) } else { Vec::new() };
         let id = id_ms(s, &path);
         let key = format!("{id}\u{1}{}", s.polarity);
         let g = *per_id.entry(key).or_insert_with(|| {
-            groups.push(nuovo_gruppo(id, s, path));
+            groups.push(new_group(id, s, path));
             (groups.len() - 1) as u32
         });
         let x = &mut groups[g as usize];
@@ -207,17 +203,17 @@ pub(super) fn fondi_dd(groups: Vec<Group>) -> (Vec<Group>, Vec<u32>) {
     {
         *keys.entry(g.level).or_default() += 1;
     }
-    let mut dd_livelli: Vec<u8> = keys
+    let mut dd_levels: Vec<u8> = keys
         .iter()
-        .filter(|(_, n)| **n > MAX_CHIAVI)
+        .filter(|(_, n)| **n > MAX_KEYS)
         .map(|(l, _)| *l)
         .collect();
-    crate::sortc::slice_ord(&mut dd_livelli);
+    crate::sortc::slice_ord(&mut dd_levels);
     let mut finali: Vec<Group> = Vec::new();
     let mut direction: Vec<u32> = vec![0; groups.len()];
     let mut dd_pos: HashMap<u8, u32> = HashMap::new();
     for (k, g) in groups.into_iter().enumerate() {
-        if !dd_livelli.contains(&g.level) || g.id.starts_with("dd:") {
+        if !dd_levels.contains(&g.level) || g.id.starts_with("dd:") {
             finali.push(g);
             direction[k] = (finali.len() - 1) as u32;
             continue;
@@ -231,7 +227,7 @@ pub(super) fn fondi_dd(groups: Vec<Group>) -> (Vec<Group>, Vec<u32>) {
                 pol: g.pol,
                 path: Vec::new(),
                 tag: Some("DDA"),
-                etichetta: format!("{} DDA", apice(g.level)),
+                etichetta: format!("{} DDA", apex(g.level)),
                 omologo: format!("dd|{}", g.level),
             });
             (finali.len() - 1) as u32

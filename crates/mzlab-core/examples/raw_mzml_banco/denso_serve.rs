@@ -35,13 +35,13 @@ impl Reader for Denso {
         let Some(profilo) = packet.profile else {
             return Ok(None);
         };
-        let coppie = profilo.to_mz_intensity(&COEFF);
-        let mz = coppie
+        let pairs = profilo.to_mz_intensity(&COEFF);
+        let mz = pairs
             .iter()
             .filter(|(m, _)| *m > 0.0)
             .map(|(m, _)| *m)
             .collect();
-        let int = coppie
+        let int = pairs
             .iter()
             .filter(|(m, _)| *m > 0.0)
             .map(|(_, i)| *i as f32)

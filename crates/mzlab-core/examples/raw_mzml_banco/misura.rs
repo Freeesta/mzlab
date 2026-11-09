@@ -49,10 +49,10 @@ pub fn iqr(v: &[f64]) -> f64 {
 /// Runs `f` `giri` times; the value of the last run is returned.
 pub fn repeat<R>(giri: usize, mut f: impl FnMut() -> R) -> (Vec<Lap>, R) {
     let mut out = Vec::new();
-    let mut ultimo = None;
+    let mut last = None;
     for _ in 0..giri.max(1) {
-        let rss_ok = conta::azzera_rss_picco();
-        conta::heap_picco_mb();
+        let rss_ok = conta::reset_rss_peak();
+        conta::heap_peak_mb();
         let (cpu0, (g0, m0), a0) = (conta::cpu_s(), conta::guasti(), Alloc::ora());
         let t = Instant::now();
         let r = f();
@@ -63,18 +63,18 @@ pub fn repeat<R>(giri: usize, mut f: impl FnMut() -> R) -> (Vec<Lap>, R) {
             s,
             cpu: conta::cpu_s() - cpu0,
             rss_mb: if rss_ok {
-                conta::rss_picco_mb()
+                conta::rss_peak_mb()
             } else {
                 f64::NAN
             },
-            heap_mb: conta::heap_picco_mb(),
+            heap_mb: conta::heap_peak_mb(),
             alloc: Alloc::ora().da(a0),
             guasti_minori: g1 - g0,
             guasti_maggiori: m1 - m0,
         });
-        ultimo = Some(r);
+        last = Some(r);
     }
-    (out, ultimo.expect("at least one run"))
+    (out, last.expect("at least one run"))
 }
 
 fn tondo(x: f64) -> Value {

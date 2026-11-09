@@ -61,14 +61,14 @@ fn chiudi(mut w: MzmlWriter<Vec<u8>>) -> Vec<u8> {
 }
 
 /// The file without the pool: one `spectrum_with` after the other.
-fn senza_gruppo(s: &[(Spectrum, SpectrumExtra)], opz: Options, indexed: bool) -> Vec<u8> {
+fn without_group(s: &[(Spectrum, SpectrumExtra)], opz: Options, indexed: bool) -> Vec<u8> {
     let mut w = apri(opz, indexed, s.len());
     s.iter()
         .for_each(|(sp, ex)| w.spectrum_with(sp, ex).unwrap());
     chiudi(w)
 }
 
-fn con_gruppo(
+fn with_group(
     s: &[(Spectrum, SpectrumExtra)],
     opz: Options,
     indexed: bool,
@@ -94,9 +94,9 @@ fn the_bytes_are_the_same_with_1_2_7_threads_and_without_the_pool() {
             numpress,
             ..Options::default()
         };
-        let expected = senza_gruppo(&s, opz, indexed);
+        let expected = without_group(&s, opz, indexed);
         for thread in [1, 2, 7] {
-            let b = con_gruppo(&s, opz, indexed, thread);
+            let b = with_group(&s, opz, indexed, thread);
             assert_eq!(
                 sha(&b),
                 sha(&expected),
@@ -110,10 +110,10 @@ fn the_bytes_are_the_same_with_1_2_7_threads_and_without_the_pool() {
 #[test]
 fn no_threads_and_an_empty_run_work() {
     let opz = Options::default();
-    let empty = con_gruppo(&[], opz, true, 3);
-    assert!(empty == senza_gruppo(&[], opz, true));
+    let empty = with_group(&[], opz, true, 3);
+    assert!(empty == without_group(&[], opz, true));
     let s = spettri(5);
-    assert!(con_gruppo(&s, opz, false, 0) == senza_gruppo(&s, opz, false));
+    assert!(with_group(&s, opz, false, 0) == without_group(&s, opz, false));
 }
 
 /// What the writer has written when the pool stopped: the file up to the first `n` spectra, never closed.
@@ -145,7 +145,7 @@ fn an_error_at_spectrum_1500_is_the_error_returned_and_the_file_is_not_closed() 
                 enc.spettro(k, sp, ex, t)
             };
         let e = w
-            .spettri_con(s.iter().cloned().map(Ok), &guasto)
+            .spectra_with(s.iter().cloned().map(Ok), &guasto)
             .unwrap_err();
         assert_eq!(
             (e.key, e.params),
@@ -175,14 +175,14 @@ fn the_first_error_in_the_order_wins_over_a_later_one_and_over_the_reader() {
             }
             enc.spettro(k, sp, ex, t)
         };
-    let da_leggere = s.iter().cloned().enumerate().map(|(k, v)| {
+    let to_read = s.iter().cloned().enumerate().map(|(k, v)| {
         if k == 200 {
             Err(Error::new("err.test.reader"))
         } else {
             Ok(v)
         }
     });
-    let e = w.spettri_con(da_leggere, &guasto).unwrap_err();
+    let e = w.spectra_with(to_read, &guasto).unwrap_err();
     assert_eq!(
         (e.key, e.params),
         ("err.test.injected", vec![("k", "120".to_string())])
@@ -201,14 +201,14 @@ fn a_reader_error_is_returned_after_the_spectra_before_it() {
         false,
         s.len(),
     );
-    let da_leggere = s.iter().cloned().enumerate().map(|(k, v)| {
+    let to_read = s.iter().cloned().enumerate().map(|(k, v)| {
         if k == 200 {
             Err(Error::new("err.test.reader"))
         } else {
             Ok(v)
         }
     });
-    let e = w.spettri(da_leggere).unwrap_err();
+    let e = w.spettri(to_read).unwrap_err();
     assert_eq!(e.key, "err.test.reader");
     assert!(w.out == fino_a(&s, 200, false));
 }
@@ -231,10 +231,10 @@ fn blocks_closed_by_points_write_the_same_bytes_and_stop_at_the_same_error() {
         s[i].0.wide = None;
     }
     let opz = Options::default();
-    let expected = senza_gruppo(&s, opz, true);
+    let expected = without_group(&s, opz, true);
     for thread in [1, 3] {
         assert!(
-            con_gruppo(&s, opz, true, thread) == expected,
+            with_group(&s, opz, true, thread) == expected,
             "threads={thread}"
         );
     }
@@ -247,7 +247,7 @@ fn blocks_closed_by_points_write_the_same_bytes_and_stop_at_the_same_error() {
             enc.spettro(k, sp, ex, t)
         };
     let e = w
-        .spettri_con(s.iter().cloned().map(Ok), &guasto)
+        .spectra_with(s.iter().cloned().map(Ok), &guasto)
         .unwrap_err();
     assert_eq!(e.key, "err.test.injected");
     assert!(w.out == fino_a(&s, 41, false));

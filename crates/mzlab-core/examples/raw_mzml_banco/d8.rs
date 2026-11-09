@@ -27,7 +27,7 @@ fn reset_in_parallelo(t: usize, ops: usize) -> f64 {
     start.elapsed().as_secs_f64() / ops as f64 * 1e9
 }
 
-fn calibra_lavoro() -> f64 {
+fn calibrate_job() -> f64 {
     let mut x = 1.0f64;
     ns_per_op(|| {
         for _ in 0..100 {
@@ -115,7 +115,7 @@ fn allocazione_incrociata(t: usize, blocks: usize, incrociata: bool) -> f64 {
 }
 
 pub fn all(thread: &[usize]) -> Value {
-    let ns_iter = calibra_lavoro();
+    let ns_iter = calibrate_job();
     let reset: Vec<Value> = thread
         .iter()
         .map(|&t| json!({"thread": t, "ns_per_reset": round_to(reset_in_parallelo(t, 40_000))}))

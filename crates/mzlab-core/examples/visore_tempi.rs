@@ -25,7 +25,7 @@ fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
     match a.first().map(String::as_str) {
         Some("genera") => generate(&a),
-        Some("indicizza") => indicizza(
+        Some("indicizza") => index_into(
             std::path::Path::new(a.get(1).expect("usage: indicizza FILE.mzML OUT.mzidx")),
             std::path::Path::new(a.get(2).expect("usage: indicizza FILE.mzML OUT.mzidx")),
         ),
@@ -56,11 +56,11 @@ fn generate(a: &[String]) {
         t.elapsed().as_secs_f64()
     );
     drop(l);
-    indicizza(&mzml, &idx);
+    index_into(&mzml, &idx);
 }
 
 /// The scan table and the `.mzidx` of an mzML with a spool next to it (the way the desktop builds it), every step timed.
-fn indicizza(mzml: &std::path::Path, idx: &std::path::Path) {
+fn index_into(mzml: &std::path::Path, idx: &std::path::Path) {
     let size = std::fs::metadata(mzml).expect("size").len();
     let t = Instant::now();
     let p = upload::prepare(&mut File::open(mzml).expect("open"), size, "visore.mzML")

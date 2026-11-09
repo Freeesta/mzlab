@@ -228,7 +228,7 @@ fn desktop_phase(path: &str, name: &str, tmp: &std::path::Path, c: &Counters) {
     let mut out = Cursor::new(Vec::new());
     let mut sp = scratch(tmp);
     let file = path.to_string();
-    let (st, _) = upload::con_impronte_parallele(
+    let (st, _) = upload::with_parallel_prints(
         move || {
             let dim = std::fs::metadata(&file)
                 .map_err(|_| mzlab_core::Error::new("error.badIndex"))?
@@ -364,7 +364,7 @@ fn mzml(l: &mut dyn Reader, n: usize, c: &Counters) {
         thread: threads(),
         ..Default::default()
     };
-    lettori_mzml::scrivi_con(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
+    lettori_mzml::write_with(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
     line(
         "write mzML (scrivi)",
         t.elapsed().as_secs_f64(),
@@ -447,7 +447,7 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     // phases 2 and 3 in one call, as the site does: the table and pass 1 share one decoding of the scans
     let t = Instant::now();
     let mut out = Cursor::new(Vec::new());
-    let (st, _) = upload::indicizza_lettore(
+    let (st, _) = upload::index_reader(
         &mut *l,
         0,
         &imp,

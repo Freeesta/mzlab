@@ -11,7 +11,7 @@ use crate::json::{parse, round, Out, Value};
 use std::collections::BTreeMap;
 
 /// The rule of the best path as written in the JSON (`vista.regola`).
-const REGOLA: &str = "Fewest steps from a root; ties: the highest smallest relative intensity along the path (the most intense measure of each arc), then more isolated arcs, then the smaller precursor id";
+const RULE: &str = "Fewest steps from a root; ties: the highest smallest relative intensity along the path (the most intense measure of each arc), then more isolated arcs, then the smaller precursor id";
 
 pub(super) struct EdgeD {
     pub(super) da: usize,
@@ -40,7 +40,7 @@ fn num(v: &Value, k: &str) -> Result<f64> {
 }
 
 pub(super) fn read(v: &Value) -> Result<Data> {
-    super::versione(v)?;
+    super::version(v)?;
     let nodes = v.get("nodi").ok_or_else(bad)?.arr();
     let mut d = Data {
         id: vec![],
@@ -96,7 +96,7 @@ pub(super) struct Best {
 }
 
 /// Whether the path `x` beats `y`: fewer steps, then the higher smallest intensity, then more isolated arcs, then the smaller precursor.
-fn meglio(x: &Best, y: &Best) -> bool {
+fn better(x: &Best, y: &Best) -> bool {
     let rel = |b: &Best| b.min_rel.unwrap_or(f64::INFINITY);
     x.steps
         .cmp(&y.steps)
@@ -148,7 +148,7 @@ pub(super) fn paths(d: &Data) -> Vec<Best> {
         su[a.a].push(a);
     }
     for i in topologico(n, &d.edges) {
-        let mut scelto: Option<Best> = None;
+        let mut chosen: Option<Best> = None;
         for a in &su[i] {
             if !done[a.da] {
                 continue;
@@ -160,11 +160,11 @@ pub(super) fn paths(d: &Data) -> Vec<Best> {
                 min_rel: Some(p.min_rel.map_or(a.rel, |m| m.min(a.rel))),
                 isolati: p.isolati + a.isolato as usize,
             };
-            if scelto.as_ref().is_none_or(|s| meglio(&c, s)) {
-                scelto = Some(c);
+            if chosen.as_ref().is_none_or(|s| better(&c, s)) {
+                chosen = Some(c);
             }
         }
-        best[i] = scelto.unwrap_or(root);
+        best[i] = chosen.unwrap_or(root);
         done[i] = true;
     }
     best
@@ -185,7 +185,7 @@ fn opt(o: &mut Out, v: Option<f64>) {
 }
 
 /// One element of `vista.nodi`: node `i` with its best path, its tree position (column, row) and its radial place (ring, angle).
-fn nodo_json(
+fn node_json(
     o: &mut Out,
     d: &Data,
     i: usize,
@@ -260,14 +260,14 @@ fn view(d: &Data) -> String {
     crate::sortc::any_by(&mut order, |a, b| pos[*a].cmp(&pos[*b]).then(a.cmp(b)));
     let mut o = Out::default();
     o.raw("{\"versione\":1,\"algoritmo\":\"best-path/1\",\"regola\":")
-        .str(REGOLA)
+        .str(RULE)
         .raw(",\"ordine\":[");
     for (k, &i) in order.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).str(&d.id[i]);
     }
     o.raw("],\"nodi\":[");
     for i in 0..n {
-        nodo_json(&mut o, d, i, (&best[i], pos[i], rad[i]));
+        node_json(&mut o, d, i, (&best[i], pos[i], rad[i]));
     }
     o.raw("],\"archi\":[");
     for (k, a) in d.edges.iter().enumerate() {
@@ -287,7 +287,7 @@ fn view(d: &Data) -> String {
 }
 
 /// `completa` for the text the engine just wrote (always a valid graph).
-pub(super) fn con_vista(json: String) -> String {
+pub(super) fn with_view(json: String) -> String {
     completa(&json).unwrap_or(json)
 }
 
@@ -305,9 +305,9 @@ pub fn completa(json: &str) -> Result<String> {
 
 /// `grafo` with the key `chiave` (its value is `valore`) added after the keys that are there, and before `vista`, which stays the last.
 pub(super) fn with_key(graph: &str, key: &str, value: &str) -> String {
-    let (testa, coda) = match graph.rfind(",\"vista\":{") {
+    let (testa, tail) = match graph.rfind(",\"vista\":{") {
         Some(p) => graph.split_at(p),
         None => (graph.strip_suffix('}').unwrap_or(graph), "}"),
     };
-    format!("{testa},\"{key}\":{value}{coda}")
+    format!("{testa},\"{key}\":{value}{tail}")
 }

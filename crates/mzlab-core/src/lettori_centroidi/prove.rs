@@ -134,7 +134,7 @@ fn double_index_equals_the_two_apart() {
         let mut l = Centroidato::nuovo(Box::new(alternato(n)));
         let (mut a, mut b) = (Cursor::new(Vec::new()), Cursor::new(Vec::new()));
         let mut sp = Cursor::new(Vec::new());
-        let ((sa, sha_a), (sb, sha_b)) = crate::upload::indicizza_lettore_doppio(
+        let ((sa, sha_a), (sb, sha_b)) = crate::upload::index_reader_twice(
             &mut l,
             0,
             &mut || Ok(vec![]),

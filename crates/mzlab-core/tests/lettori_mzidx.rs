@@ -120,7 +120,7 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
 }
 
 /// Index `b` (from the reader) against `a` (from the mzML): header, sections, rows from the third column, metadata and source.
-fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_membri: usize, id: u32) {
+fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_members: usize, id: u32) {
     // header: version and flags, the same layout of the sections
     assert_eq!((u32_at(a, 8), u32_at(a, 12)), (1, 0), "{label}");
     assert_eq!((u32_at(b, 8), u32_at(b, 12)), (2, READER_FLAG), "{label}");
@@ -147,7 +147,7 @@ fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_membri: usize, id: u
     );
     assert_eq!(mb.get("version").and_then(Value::f64), Some(2.0));
     let src = mb.get("source").unwrap();
-    assert_eq!(src.get("members").unwrap().arr().len(), n_membri);
+    assert_eq!(src.get("members").unwrap().arr().len(), n_members);
     assert_eq!(src.get("sha256").and_then(Value::str), Some(sha256));
     assert_eq!(
         src.get("sample")

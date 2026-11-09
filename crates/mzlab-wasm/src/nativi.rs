@@ -373,7 +373,7 @@ pub fn build_mzidx_native(
     ))
 }
 
-/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`); `missing`: `Lettore::missing` of sample `c`.
+/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`index_reader_twice`); `missing`: `Lettore::missing` of sample `c`.
 #[allow(clippy::too_many_arguments)]
 fn index_both(
     l: Box<dyn mzlab_core::lettori::Reader>,
@@ -389,7 +389,7 @@ fn index_both(
     let mut lc = lettori_centroidi::Centroidato::nuovo(l);
     let mut out_cen = Accorpa::flussi(JsOutput { write: write_cen });
     tell(2);
-    let ((st, sha256), (sc, _)) = upload::indicizza_lettore_doppio(
+    let ((st, sha256), (sc, _)) = upload::index_reader_twice(
         &mut lc,
         c,
         members,
@@ -469,7 +469,7 @@ pub fn native_to_mzml(
     };
     let opt = mzlab_core::mzmlwrite::compression_options(compression)
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
-    lettori_mzml::scrivi_con(&mut *l, c as usize, &mut out, &mut tell, opt)
+    lettori_mzml::write_with(&mut *l, c as usize, &mut out, &mut tell, opt)
         .map_err(|e| error_json(&e))?;
     std::io::Write::flush(&mut out).map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))

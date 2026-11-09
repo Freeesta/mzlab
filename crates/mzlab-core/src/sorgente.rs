@@ -36,7 +36,7 @@ impl<M: ReadAt> Scansioni for M {
         if sc.k.is_some() && self.reader().is_some() {
             return Ok(None);
         }
-        let buf = leggi_riga(self, sc)?;
+        let buf = read_line(self, sc)?;
         let mut found = None;
         crate::mzml::parse(&buf[..], |it| {
             if let crate::mzml::Item::Mobility(m) = it {
@@ -50,7 +50,7 @@ impl<M: ReadAt> Scansioni for M {
         if let (Some(_), Some((l, c))) = (sc.k, self.reader()) {
             return Ok((ReaderSource { l, c }.spettro(sc)?, None));
         }
-        spettro_e_mobilita(&leggi_riga(self, sc)?)
+        spettro_e_mobilita(&read_line(self, sc)?)
     }
 
     fn scan_header(&mut self, sc: &Scan) -> Result<Vec<Field>> {
@@ -65,7 +65,7 @@ impl<M: ReadAt> Scansioni for M {
 type Peaks = (Vec<f64>, Vec<f64>);
 
 /// The bytes `start..end` of the `<spectrum>` of a row.
-fn leggi_riga<M: ReadAt + ?Sized>(m: &mut M, sc: &Scan) -> Result<Vec<u8>> {
+fn read_line<M: ReadAt + ?Sized>(m: &mut M, sc: &Scan) -> Result<Vec<u8>> {
     let mut buf = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
     m.read_at(sc.start, &mut buf)?;
     Ok(buf)
@@ -108,7 +108,7 @@ pub trait Traces {
     fn file_header(&mut self) -> Result<String>;
     /// The SRM chromatograms with Q1 and Q3, in the order of the file (`srm::leggi`).
     fn srm(&mut self) -> Result<Vec<crate::srm::Trace>> {
-        crate::srm::da_voci(self)
+        crate::srm::from_entries(self)
     }
 }
 

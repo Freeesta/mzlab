@@ -86,7 +86,7 @@ pub(super) fn shifted_graph(
 /// formulas, 2 electrons heavier).
 #[derive(Default)]
 pub(super) struct Strumento {
-    pub larghezza: Option<f64>,
+    pub width: Option<f64>,
     pub negativo: bool,
 }
 
@@ -132,7 +132,7 @@ pub(super) fn graph_with(
             albero: &al,
             ms1: Some(&ms1),
             spettri: &per_node,
-            widths: &vec![st.larghezza; al.nodi.len()],
+            widths: &vec![st.width; al.nodi.len()],
             polarita: if st.negativo { -1 } else { 1 },
         },
         o,
@@ -274,13 +274,13 @@ fn a_chain_of_close_peaks_is_split() {
         },
         &Options::default(),
     );
-    let vicino: Vec<f64> = g
+    let near: Vec<f64> = g
         .nodi
         .iter()
         .map(|n| n.mz)
         .filter(|m| (m - 1000.0).abs() < 0.1)
         .collect();
-    assert_eq!(vicino.len(), 2, "{vicino:?}");
+    assert_eq!(near.len(), 2, "{near:?}");
 }
 
 #[test]

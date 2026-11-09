@@ -25,11 +25,11 @@ pub(super) fn addotto(text: &str, pol: i8) -> Option<&'static str> {
     if t.ends_with("[M]+") || t.ends_with("[M]-") {
         return None;
     }
-    let trovato = ADDOTTI[7..].iter().find(|x| t.ends_with(x.0)).or_else(|| {
+    let found = ADDOTTI[7..].iter().find(|x| t.ends_with(x.0)).or_else(|| {
         let a = embedded_adduct(&t).1?;
         ADDOTTI.iter().find(|x| x.0 == a)
     });
-    Some(match (trovato, pol) {
+    Some(match (found, pol) {
         (Some(x), _) => x.0,
         (None, 1) => "[M+H]+",
         _ => "[M-H]-",
@@ -68,11 +68,11 @@ pub(super) fn ione(text: &str, pol: i8) -> Result<Formula, &'static str> {
         Some(x) => (base, Some(x.3)),
         None => {
             let t = base.trim_end_matches(['+', '-']);
-            let segno = base[t.len()..]
+            let sign = base[t.len()..]
                 .chars()
                 .next()
                 .map(|c| if c == '+' { 1 } else { -1 });
-            (t.to_string(), segno)
+            (t.to_string(), sign)
         }
     };
     if load.is_some_and(|c| c != pol) {
@@ -110,7 +110,7 @@ fn root(g: &Graph, teo: f64, o: &Options) -> Option<(usize, bool)> {
 }
 
 /// Fills `ione`, the formulas of the nodes and of the losses when `o.formula` is given; the nodes with no formula leave the graph.
-pub(super) fn assegna(g: &mut Graph, o: &Options) {
+pub(super) fn assign(g: &mut Graph, o: &Options) {
     let Some(text) = o.formula.as_deref() else {
         return;
     };
@@ -131,7 +131,7 @@ pub(super) fn assegna(g: &mut Graph, o: &Options) {
     g.ione = Some(Ione {
         formula: e.testo(&rc),
         theoretical_mz: teo,
-        mz_osservato: oss,
+        mz_observed: oss,
         ppm: (oss - teo) / teo * 1e6,
     });
     annota::annotate(g, &e, r, rc, o);

@@ -3,7 +3,7 @@
 
 use super::livelli::con;
 use super::{
-    cerca, cerca_ampia, digest, errors_json, from_csv, from_json, hits_json, ione, record_json,
+    cerca, digest, errors_json, from_csv, from_json, hits_json, ione, record_json, search_wide,
     to_csv, to_json, Molecule, RowError,
 };
 use crate::elements::{adducts, ion_mz};
@@ -63,7 +63,7 @@ fn search(v: &Value) -> String {
     let ampia = v.get("ampia").is_some_and(|x| x.bool() == Some(true));
     con(|a| {
         let hits = if ampia {
-            cerca_ampia(&a.tutte, q, limit, ppm)
+            search_wide(&a.tutte, q, limit, ppm)
         } else {
             cerca(&a.tutte, q, limit, ppm)
         };

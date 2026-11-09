@@ -53,7 +53,7 @@ pub struct Step {
 
 /// Rows per identification level, `auto` (the level came from `annot.level`) apart from the others.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct Livelli {
+pub struct Levels {
     pub files: u32,
     pub rows: u32,
     pub auto: Vec<(String, u32)>,
@@ -70,7 +70,7 @@ pub struct RunReport {
     pub inputs: Vec<Input>,
     pub lists: Vec<Input>,
     pub steps: Vec<Step>,
-    pub levels: Livelli,
+    pub levels: Levels,
     /// The `report/1` text of the table, as the table wrote it.
     pub report: Option<String>,
     /// The lists the run screened against and the candidates they name (`screen/1`, `annot/1`).
@@ -232,7 +232,7 @@ pub fn build(prov: &Value, uscite: &[Output]) -> Result<RunReport> {
         Some(Value::Obj(a)) => a.iter().map(|(k, v)| passo(k, v)).collect(),
         _ => Vec::new(),
     };
-    let mut levels = Livelli::default();
+    let mut levels = Levels::default();
     let (mut report, mut regulatory) = (None, super::corsa_reg::Regulatory::default());
     for u in uscite {
         // only the members read below are built: a group step's `ionnet/1` of millions of edges would otherwise be a tree of gigabytes

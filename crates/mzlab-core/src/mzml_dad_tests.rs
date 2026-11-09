@@ -197,7 +197,7 @@ fn convert(dad: bool, matrix: Option<DadData>) -> Vec<u8> {
         dad,
         ..Default::default()
     };
-    crate::lettori_mzml::scrivi_con(&mut Ottico(matrix), 0, Vec::new(), &mut |_, _| {}, opz)
+    crate::lettori_mzml::write_with(&mut Ottico(matrix), 0, Vec::new(), &mut |_, _| {}, opz)
         .unwrap()
 }
 

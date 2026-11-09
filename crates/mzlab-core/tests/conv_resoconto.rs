@@ -25,7 +25,7 @@ pub fn conv_di(xml: &[u8]) -> json::Value {
 }
 
 /// Every declared gap has a field and a reason; the document names the reader and the version of the program.
-pub fn controlla(doc: &json::Value, reader: &str) {
+pub fn check(doc: &json::Value, reader: &str) {
     assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conv/1"));
     assert_eq!(doc.get("lettore").and_then(|s| s.str()), Some(reader));
     assert_eq!(
@@ -54,7 +54,7 @@ fn an_agilent_conversion_carries_conv_with_its_gaps_and_reasons() {
         ],
     });
     let doc = conv_di(&xml);
-    controlla(&doc, "agilent-d");
+    check(&doc, "agilent-d");
     assert!(
         !doc.get("non_portati").unwrap().arr().is_empty(),
         "the format declares what it leaves out"

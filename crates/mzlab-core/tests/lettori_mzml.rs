@@ -79,7 +79,7 @@ fn indexed_form_has_the_same_scans_and_a_working_index() {
         params: vec![("min_height".into(), "1000".into())],
     };
     let run = |l: &mut dyn lettori::Reader| {
-        lettori_mzml::scrivi_indicizzato(
+        lettori_mzml::write_indexed(
             l,
             0,
             Vec::new(),

@@ -10,7 +10,7 @@ use crate::error::{Error, Result};
 
 pub const SCHEMA: &str = "disegno/1";
 /// The batch given to every file when the user says nothing.
-pub const LOTTO_PREDEFINITO: &str = "1";
+pub const DEFAULT_BATCH: &str = "1";
 /// Fewer replicates than this per time point give `fewReplicates`.
 pub const MIN_REPLICHE: u32 = 3;
 
@@ -138,7 +138,7 @@ pub fn propose(cs: &[Sample]) -> Design {
                 file: c.file.clone(),
                 sha256: c.sha256.clone(),
                 batch: if c.batch.is_empty() {
-                    LOTTO_PREDEFINITO.into()
+                    DEFAULT_BATCH.into()
                 } else {
                     c.batch.clone()
                 },
@@ -177,7 +177,7 @@ fn batch_of<'a>(d: &'a Design, c: &Sample) -> &'a str {
                 l.file == c.file
             }
         })
-        .map_or(LOTTO_PREDEFINITO, |l| l.batch.as_str())
+        .map_or(DEFAULT_BATCH, |l| l.batch.as_str())
 }
 
 /// A QC before the first sample and another after the last one, in the order of injection.

@@ -9,7 +9,7 @@ use crate::error::{Error, Result};
 use crate::json::{parse, Value};
 
 /// The table shipped with the program.
-const TABELLA: &str = include_str!("../../data/fragrules-1.json");
+const TABLE: &str = include_str!("../../data/fragrules-1.json");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tipo {
@@ -63,7 +63,7 @@ pub struct Rule {
 
 impl Rule {
     /// The rule has a condition on the structure (groups, excluded groups or a site): without a structure it is not decided.
-    pub fn legge_struttura(&self) -> bool {
+    pub fn structure_law(&self) -> bool {
         !self.all_groups.is_empty()
             || !self.any_groups.is_empty()
             || self.site.is_some()
@@ -72,7 +72,7 @@ impl Rule {
     }
 
     /// The rule needs no structure: only the formula, the adduct and the polarity decide.
-    pub fn solo_formula(&self) -> bool {
+    pub fn formula_only(&self) -> bool {
         self.all_groups.is_empty()
             && self.any_groups.is_empty()
             && self.site.is_none()
@@ -83,19 +83,19 @@ impl Rule {
 
 /// A numeric threshold of the global rules with what the table says of it: why, where its value comes from and whether it is still to be calibrated.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Soglia {
+pub struct Threshold {
     pub id: String,
     pub value: f64,
     pub perche: String,
     pub origin: Option<String>,
-    pub da_calibrare: bool,
+    pub to_calibrate: bool,
     pub refs: Vec<Rif>,
 }
 
 /// The global rules with their values (the defaults of the study when the table omits one).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Globali {
-    pub thresholds: Vec<Soglia>,
+    pub thresholds: Vec<Threshold>,
     pub even_electron: bool,
     pub trap_cutoff_q: f64,
     pub beam_composite: bool,
@@ -109,8 +109,8 @@ pub struct Table {
     pub globali: Globali,
 }
 
-fn error(key: &'static str, dettaglio: impl ToString) -> Error {
-    Error::new(key).with("detail", dettaglio)
+fn error(key: &'static str, detail: impl ToString) -> Error {
+    Error::new(key).with("detail", detail)
 }
 
 fn only(v: &Value, ammesse: &[&str], at: &str) -> Result<()> {
@@ -147,7 +147,7 @@ fn opzionale(v: Option<&Value>) -> Option<String> {
     v.and_then(Value::str).map(str::to_string)
 }
 
-fn riferimenti(v: &Value, at: &str) -> Result<Vec<Rif>> {
+fn references(v: &Value, at: &str) -> Result<Vec<Rif>> {
     let mut out = vec![];
     for r in v.get("refs").map_or(&[][..], Value::arr) {
         only(r, &["key", "pmid", "doi", "check"], at)?;
@@ -232,7 +232,7 @@ fn rule(v: &Value) -> Result<Rule> {
         load: text(v, "charge", &id)?,
         priorita,
         after: list(v, "after", &id)?,
-        refs: riferimenti(v, &id)?,
+        refs: references(v, &id)?,
         perche: text(v, "why", &id)?,
         id,
     })
@@ -257,12 +257,12 @@ fn globali(v: &Value) -> Result<Globali> {
         let (num, flag) = (valore.and_then(Value::f64), valore.and_then(Value::bool));
         let id = text(x, "id", "globals")?;
         if let (true, Some(valore)) = (id == "trap_cutoff" || id == "loss_tolerance_mda", num) {
-            g.thresholds.push(Soglia {
+            g.thresholds.push(Threshold {
                 value: valore,
                 perche: text(x, "why", &id)?,
                 origin: opzionale(x.get("origine")),
-                da_calibrare: x.get("da_calibrare").and_then(Value::bool).unwrap_or(false),
-                refs: riferimenti(x, &id)?,
+                to_calibrate: x.get("da_calibrare").and_then(Value::bool).unwrap_or(false),
+                refs: references(x, &id)?,
                 id: id.clone(),
             });
         }
@@ -279,8 +279,8 @@ fn globali(v: &Value) -> Result<Globali> {
 }
 
 /// Reads a `fragrules/1` text: the format, the keys, the kinds and the formulas are all checked, a key that is not in the schema is an error.
-pub fn read_table(testo_json: &str) -> Result<Table> {
-    let v = parse(testo_json.as_bytes())?;
+pub fn read_table(text_json: &str) -> Result<Table> {
+    let v = parse(text_json.as_bytes())?;
     only(&v, &["format", "rules", "globals"], "root")?;
     if v.get("format").and_then(Value::str) != Some("fragrules/1") {
         return Err(error("err.fragrules.badFormat", "format"));
@@ -305,5 +305,5 @@ pub fn read_table(testo_json: &str) -> Result<Table> {
 /// The embedded table.
 pub fn table() -> &'static Table {
     static T: OnceLock<Table> = OnceLock::new();
-    T.get_or_init(|| read_table(TABELLA).expect("the embedded fragrules table is valid"))
+    T.get_or_init(|| read_table(TABLE).expect("the embedded fragrules table is valid"))
 }

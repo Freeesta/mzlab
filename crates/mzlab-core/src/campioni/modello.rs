@@ -23,7 +23,7 @@ pub struct Pos {
 
 /// The files with the model applied, the spans per file and the indices of the files the model did not match.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Applicato {
+pub struct Applied {
     pub table: Table,
     pub positions: Vec<Vec<Pos>>,
     pub unmatched: Vec<usize>,
@@ -198,7 +198,7 @@ fn one(re: &Regex, c: &mut Sample, cols: &[Column]) -> Option<Vec<Pos>> {
 }
 
 /// Applies `model` to the files of `t`; a bad model is `error.badModello`.
-pub fn apply(model: &str, mut t: Table) -> Result<Applicato> {
+pub fn apply(model: &str, mut t: Table) -> Result<Applied> {
     let re = compile(model)?;
     let mut positions = Vec::with_capacity(t.campioni.len());
     let mut unmatched = Vec::new();
@@ -224,7 +224,7 @@ pub fn apply(model: &str, mut t: Table) -> Result<Applicato> {
             c.replicate = r;
         }
     }
-    Ok(Applicato {
+    Ok(Applied {
         table: t,
         positions,
         unmatched,
@@ -233,7 +233,7 @@ pub fn apply(model: &str, mut t: Table) -> Result<Applicato> {
 
 /// The binding: `{"modello", "campioni": <campioni/2 or /3>}` or `{"modello", "files":[{"name","sha256","kind"}]}` (proposed from the names first)
 /// → `{"campioni":<campioni/3>,"posizioni":[[{"campo","fine","inizio"}]],"senza_corrispondenza":[index]}`.
-pub fn applica_modello(input: &str) -> Result<String> {
+pub fn apply_model(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let model = v
         .get("modello")

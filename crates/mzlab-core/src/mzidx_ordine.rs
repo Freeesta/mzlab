@@ -123,7 +123,7 @@ pub(crate) fn sort<T: Num>(
 
 /// Orders every bucket of `round` (`ends`: where each bucket ends, in order; the first begins at `start`) as `ordina` does. The buckets are independent,
 /// so on a computer with several cores (not in the browser) groups of them are ordered at the same time; the result is the same.
-pub(crate) fn ordina_secchi<T: Num>(
+pub(crate) fn sort_buckets<T: Num>(
     round: &mut [Peak<T>],
     start: usize,
     ends: &[usize],
@@ -195,13 +195,13 @@ fn in_parallelo<T: Num>(
             .into_iter()
             .map(|(h, rel)| s.spawn(move || sequenziale(h, 0, &rel, per_scan)))
             .collect();
-        primo_errore(hs)
+        first_error(hs)
     })
 }
 
 // Joins every thread (the scope would anyway) and keeps the first error.
 #[cfg(not(target_arch = "wasm32"))]
-fn primo_errore(hs: Vec<std::thread::ScopedJoinHandle<'_, Result<()>>>) -> Result<()> {
+fn first_error(hs: Vec<std::thread::ScopedJoinHandle<'_, Result<()>>>) -> Result<()> {
     let mut res = Ok(());
     for h in hs {
         let r = h.join().unwrap_or_else(|_| Err(Error::memory_budget()));
@@ -246,7 +246,7 @@ mod tests_secchi {
         }
         for per_scan in [false, true] {
             let (mut a, mut b) = (round.clone(), round.clone());
-            ordina_secchi(&mut a, 0, &ends, per_scan).unwrap();
+            sort_buckets(&mut a, 0, &ends, per_scan).unwrap();
             sequenziale(&mut b, 0, &ends, per_scan).unwrap();
             assert!(a
                 .iter()

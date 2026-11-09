@@ -3,12 +3,12 @@
 //! wide low-mass window needs its evidences), the choices of the user, then the nodes with no candidate leave the graph. No score, no proposal.
 
 mod ricalibra;
-use ricalibra::{preferisci_pari, ricalibra};
+use ricalibra::{prefer_even, ricalibra};
 
-use super::candidati::{below, m1_coerente, perdita_nota, Elementi};
+use super::candidati::{below, known_loss, m1_consistent, Elementi};
 use super::formule::warning;
-use super::regole_valuta::{addotto_radice, loss_vectors};
-use super::{Candidate, Graph, NodeFormula, NonSpiegati, Options, Warning, STRETTA};
+use super::regole_valuta::{loss_vectors, root_adduct};
+use super::{Candidate, Graph, NodeFormula, Options, Unexplained, Warning, STRETTA};
 use crate::elements::parse_formula;
 
 struct Cand {
@@ -65,7 +65,7 @@ fn cand(e: &Elementi, o: &Options, mz: f64, c: Vec<u32>) -> Cand {
     }
 }
 
-fn stato<'a>(g: &Graph, e: &'a Elementi, r: usize, rc: &[u32], o: &Options) -> State<'a> {
+fn state<'a>(g: &Graph, e: &'a Elementi, r: usize, rc: &[u32], o: &Options) -> State<'a> {
     let n = g.nodi.len();
     let vivo = raggiunti(g, r);
     let (mut genitori, mut figli) = (vec![vec![]; n], vec![vec![]; n]);
@@ -137,17 +137,17 @@ fn evidence(g: &Graph, st: &State, o: &Options, j: usize, c: &[u32]) -> Vec<&'st
     let loss = st.genitori[j].iter().any(|&p| {
         st.cand[p]
             .iter()
-            .any(|q| below(c, &q.c) && perdita_nota(st.e, &q.c, c))
+            .any(|q| below(c, &q.c) && known_loss(st.e, &q.c, c))
     });
     if loss {
         v.push("perdita");
     }
-    if o.regole.is_some() && perdita_regola(g, st, o, j, c) {
+    if o.regole.is_some() && rule_loss(g, st, o, j, c) {
         v.push("regola");
     }
     // behind a window narrower than the M+1 the isotopes are not expected: no evidence for or against
     let stretta = g.nodi[j].upstream.is_some_and(|w| w < STRETTA);
-    if !stretta && g.nodi[j].m1.is_some_and(|x| m1_coerente(st.e, c, x)) {
+    if !stretta && g.nodi[j].m1.is_some_and(|x| m1_consistent(st.e, c, x)) {
         v.push("isotopi");
     }
     let msn = !g.nodi[j].albero.is_empty()
@@ -161,8 +161,8 @@ fn evidence(g: &Graph, st: &State, o: &Options, j: usize, c: &[u32]) -> Vec<&'st
 }
 
 /// The loss from a candidate of a precursor of node `j` to `c` is the one of a rule of `fragrules/1`.
-fn perdita_regola(g: &Graph, st: &State, o: &Options, j: usize, c: &[u32]) -> bool {
-    let add = addotto_radice(o, g.polarita);
+fn rule_loss(g: &Graph, st: &State, o: &Options, j: usize, c: &[u32]) -> bool {
+    let add = root_adduct(o, g.polarita);
     st.genitori[j].iter().any(|&p| {
         let vs = loss_vectors(st.e, g.polarita, add, g.radici.contains(&p));
         st.cand[p].iter().any(|q| {
@@ -224,11 +224,11 @@ fn step(g: &Graph, st: &mut State, o: &Options) -> bool {
         st.cand[j].retain(|x| x.strict || x.evidence.len() >= o.evidence_min);
         changed |= st.cand[j].len() < n;
     }
-    changed | contiene(g, st)
+    changed | contains(g, st)
 }
 
 /// A candidate of an isolated precursor contains a candidate of each fragment that has some (unless none would be left).
-fn contiene(g: &Graph, st: &mut State) -> bool {
+fn contains(g: &Graph, st: &mut State) -> bool {
     let mut changed = false;
     for k in 1..st.order.len() {
         let p = st.order[k];
@@ -306,7 +306,7 @@ fn losses(g: &mut Graph, st: &State) {
             let d: Vec<u32> = p.iter().zip(&c).map(|(x, y)| x - y).collect();
             let oss = g.nodi[a.da].mz - g.nodi[a.a].mz;
             let teo = st.e.mass(&d);
-            Some((st.e.testo_perdita(&d), (oss - teo) / g.nodi[a.da].mz * 1e6))
+            Some((st.e.loss_text(&d), (oss - teo) / g.nodi[a.da].mz * 1e6))
         })
         .collect();
     for (a, f) in g.archi.iter_mut().zip(v) {
@@ -341,7 +341,7 @@ fn unexplained(g: &mut Graph, tieni: &[bool]) {
         crate::sortc::slice_by(&mut v, |a, b| a.0.cmp(&b.0).then(b.2.total_cmp(&a.2)));
         v.dedup_by_key(|x| x.0);
         crate::sortc::slice_by(&mut v, |a, b| b.2.total_cmp(&a.2).then(a.1.total_cmp(&b.1)));
-        g.nodi[p].unexplained = Some(NonSpiegati {
+        g.nodi[p].unexplained = Some(Unexplained {
             n: v.len(),
             peaks: v.iter().take(3).map(|x| (x.1, x.2)).collect(),
         });
@@ -349,7 +349,7 @@ fn unexplained(g: &mut Graph, tieni: &[bool]) {
 }
 
 /// Share of the fragment intensity (sum of % of the base peak, spectra of kept precursors) left without a node above which the graph warns.
-const QUOTA_NON_SPIEGATA: f64 = 0.5;
+const UNEXPLAINED_SHARE: f64 = 0.5;
 
 /// A graph-level note when the formula leaves most of the fragment intensity unexplained (a wrong ion formula or adduct looks like this).
 fn muchi_non_spiegati(g: &mut Graph) {
@@ -362,7 +362,7 @@ fn muchi_non_spiegati(g: &mut Graph) {
             }
         }
     }
-    if tot > 0.0 && outside / tot >= QUOTA_NON_SPIEGATA {
+    if tot > 0.0 && outside / tot >= UNEXPLAINED_SHARE {
         warning(g, "warn.msngrafo.mostUnexplained", None);
     }
 }
@@ -378,7 +378,7 @@ fn togli(g: &mut Graph, tieni: &[bool]) {
             k += 1;
         }
     }
-    let mut tolti: Vec<String> = g
+    let mut removed: Vec<String> = g
         .nodi
         .iter()
         .zip(tieni)
@@ -405,8 +405,8 @@ fn togli(g: &mut Graph, tieni: &[bool]) {
         a.nodo = a.nodo.and_then(|x| new[x]);
     }
     muchi_non_spiegati(g);
-    crate::sortc::slice_ord(&mut tolti);
-    g.avvisi.extend(tolti.into_iter().map(|albero| Warning {
+    crate::sortc::slice_ord(&mut removed);
+    g.avvisi.extend(removed.into_iter().map(|albero| Warning {
         chiave: "warn.msngrafo.isolatedUnexplained",
         albero,
         nodo: None,
@@ -415,10 +415,10 @@ fn togli(g: &mut Graph, tieni: &[bool]) {
 
 /// The formulas of the nodes below root `r` (counts `rc`) and of their losses; the nodes they do not explain leave the graph.
 pub(super) fn annotate(g: &mut Graph, e: &Elementi, r: usize, rc: Vec<u32>, o: &Options) {
-    let mut st = stato(g, e, r, &rc, o);
+    let mut st = state(g, e, r, &rc, o);
     choices(g, &mut st, o);
     while step(g, &mut st, o) {}
-    if preferisci_pari(g, &mut st, o) {
+    if prefer_even(g, &mut st, o) {
         while step(g, &mut st, o) {}
     }
     if ricalibra(&mut st, o) {

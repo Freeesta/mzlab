@@ -199,7 +199,7 @@ fn old_spectrum_exact(r: &mut Routes<File>, q: &Query, mzml: &mut File) -> Optio
 
 /// The mzML written from `schede`, its index and a `Routes` on it.
 fn open(dir: &Path, name: &str, cards: Vec<Card>) -> (Routes<File>, File, Vec<ScanRow>) {
-    let mut l = Finto::da_schede(cards);
+    let mut l = Finto::from_sheets(cards);
     let scans: Vec<_> = l
         .cards
         .iter()

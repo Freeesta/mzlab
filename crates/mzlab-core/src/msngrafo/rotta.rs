@@ -2,7 +2,7 @@
 //! tree, the scans and their spectra become the `msngrafo/1`. Used by the `.wasm` module of the page and by the command line, so both
 //! write the same bytes.
 
-use super::{build, con_regole, json, read, Expectation, Graph, Input, Options, RuleParams};
+use super::{build, json, read, with_rules, Expectation, Graph, Input, Options, RuleParams};
 use crate::error::{Error, Result};
 use crate::idxread::Scan;
 use crate::json::parse;
@@ -69,7 +69,7 @@ fn attese(text: &str) -> Result<Vec<Expectation>> {
 }
 
 /// The options and the grouping of a request; `get(name)` is the value of a parameter, the defaults are those of `Opzioni::default()`.
-pub fn da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<(Options, Grouping)> {
+pub fn from_request(get: &dyn Fn(&str) -> Option<String>) -> Result<(Options, Grouping)> {
     let d = Options::default();
     let text = |k: &str| get(k).filter(|v| !v.is_empty());
     let o = Options {
@@ -103,7 +103,7 @@ pub fn da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<(Options, Gr
 }
 
 /// The graph of the scans of a file and its `msngrafo/1`; `nome` and `sha` (SHA-256 of its `.mzidx`) go in the `sorgente`.
-pub fn grafo_json<M: Scansioni + ?Sized>(
+pub fn graph_json<M: Scansioni + ?Sized>(
     scans: &[Scan],
     m: &mut M,
     (nome, sha): (&str, &str),
@@ -122,7 +122,7 @@ pub fn grafo_json<M: Scansioni + ?Sized>(
     );
     let j = json(&g, o, Some((nome, sha)));
     let j = match &o.regole {
-        Some(p) => con_regole(&j, &g, o, p),
+        Some(p) => with_rules(&j, &g, o, p),
         None => j,
     };
     Ok((g, j))
@@ -134,7 +134,7 @@ mod tests {
 
     fn con(q: &'static str) -> Result<(Options, Grouping)> {
         let q = crate::routes::Query::parse(q);
-        da_richiesta(&|k| q.get(k).map(String::from))
+        from_request(&|k| q.get(k).map(String::from))
     }
 
     #[test]

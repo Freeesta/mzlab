@@ -198,10 +198,10 @@ impl Reader for MzxmlReader {
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        use mzlab_core::conv::FUORI_MODELLO;
+        use mzlab_core::conv::OUT_OF_MODEL;
         &[(
             "text of the header elements, scanOrigin, maldi, separation, spotting and processingOperation",
-            FUORI_MODELLO,
+            OUT_OF_MODEL,
         )]
     }
 

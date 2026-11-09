@@ -12,7 +12,7 @@ use crate::mzmlhead::Chrom;
 use crate::routes::{trace, Query, Routes};
 
 /// The routes that take `canale=`.
-const CON_CANALE: [&str; 5] = [
+const WITH_CHANNEL: [&str; 5] = [
     "/api/chrom",
     "/api/xic",
     "/api/scanlist",
@@ -43,7 +43,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `filt=canale:<id>`: the scans of the channel as a mask over the scan table.
-    pub(crate) fn filtro_canale(&mut self, id: &str) -> Result<Filter<'static>> {
+    pub(crate) fn channel_filter(&mut self, id: &str) -> Result<Filter<'static>> {
         let c = self.canali();
         let i = c
             .find(id)
@@ -57,7 +57,12 @@ impl<R: ReadAt> Routes<R> {
 
     /// The request `path` with `canale=<id>`: the same request with the level and the filter of the channel; `None` for a channel with no scans here
     /// (a transition, a UV trace): the readers of the chromatograms answer it.
-    pub(crate) fn con_canale(&mut self, path: &str, q: &Query, id: &str) -> Result<Option<String>> {
+    pub(crate) fn with_channel(
+        &mut self,
+        path: &str,
+        q: &Query,
+        id: &str,
+    ) -> Result<Option<String>> {
         let channels = self.canali();
         let i = channels
             .find(id)
@@ -73,7 +78,7 @@ impl<R: ReadAt> Routes<R> {
                     r.push(("kind".into(), c.famiglia.name().into()));
                 }
                 if matches!(path, "/api/chrom" | "/api/xic") && !ha(&r, "level") {
-                    return self.tutti_i_livelli(path, &Query(r));
+                    return self.all_levels(path, &Query(r));
                 }
             }
             Famiglia::Ms | Famiglia::Dd => {
@@ -94,7 +99,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The trace of `tic` / `bpc` over every level: the traces of the levels joined in time order.
-    fn tutti_i_livelli(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
+    fn all_levels(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
         let mut levels: Vec<u8> = self.idx.sections.iter().map(|s| s.level).collect();
         crate::sortc::slice_ord(&mut levels);
         levels.dedup();
@@ -149,12 +154,16 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/canali` and the routes that take `canale=`; `None` = not a channel request.
-    pub(crate) fn canali_route(&mut self, path: &str, q: &Query) -> Option<Result<Option<String>>> {
+    pub(crate) fn route_channels(
+        &mut self,
+        path: &str,
+        q: &Query,
+    ) -> Option<Result<Option<String>>> {
         if path == "/api/canali" {
             return Some(Ok(Some(self.canali().json())));
         }
-        let id = q.some("canale").filter(|_| CON_CANALE.contains(&path))?;
-        Some(self.con_canale(path, q, id))
+        let id = q.some("canale").filter(|_| WITH_CHANNEL.contains(&path))?;
+        Some(self.with_channel(path, q, id))
     }
 }
 

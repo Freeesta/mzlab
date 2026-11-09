@@ -105,12 +105,12 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
         let d = Folder::load(&f).open();
         let doc = parse(&d.method(&source(&d)));
         let fields = doc["campi"].as_array().unwrap();
-        let in_campi = |i: &&mzlab_core::agilent::meta::Item| {
+        let in_fields = |i: &&mzlab_core::agilent::meta::Item| {
             !(i.name == "text" && TEXTS.contains(&i.origin.as_str())) && !i.value.is_empty()
         };
-        let wanted = d.metadata.iter().filter(in_campi).count();
+        let wanted = d.metadata.iter().filter(in_fields).count();
         assert_eq!(fields.len(), wanted, "{}: fields in campi", d.name);
-        for i in d.metadata.iter().filter(in_campi) {
+        for i in d.metadata.iter().filter(in_fields) {
             assert!(
                 fields.iter().any(|c| c["origine"] == i.origin.as_str()
                     && c["chiave"] == i.name.as_str()
@@ -142,7 +142,7 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
 #[test]
 fn the_mzml_carries_the_same_document() {
     let Some(all) = folders() else { return };
-    let out = conv_aiuto::mzml_cartella(&all[0]);
+    let out = conv_aiuto::mzml_folder(&all[0]);
     let text = String::from_utf8(out).unwrap();
     let head = &text[text.find("<run ").unwrap()..];
     let doc = from_userparam(head).expect("the mzML has the document");

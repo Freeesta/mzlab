@@ -1,7 +1,7 @@
 //! The two `.mzidx` of a sample whose scans may be profile (as they are, and centroided) from one decoding of its scans, with the fingerprints of the
 //! members asked for at the end, as `index_reader_with`.
 
-use super::{campione_di, sorgente, table, Fingerprint};
+use super::{sample_of, sorgente, table, Fingerprint};
 use crate::error::Result;
 use crate::lettori::Reader as _;
 use crate::mzidx_lettore;
@@ -10,7 +10,7 @@ use crate::mzidx_lettore;
 /// `index_reader_with` writes) and `out_cen` the one with the profile scans as centroids (what it writes for a reader wrapped by `centroidato`).
 /// The bytes are those of the two separate builds; the budget is shared (half each) and so is the scratch file (`mzidx_spill::Meta`).
 #[allow(clippy::too_many_arguments)]
-pub fn indicizza_lettore_doppio(
+pub fn index_reader_twice(
     l: &mut crate::lettori_centroidi::Centroidato,
     c: usize,
     members: &mut dyn FnMut() -> Result<Vec<Fingerprint>>,
@@ -27,9 +27,9 @@ pub fn indicizza_lettore_doppio(
     let mut m0 = cell.as_ref().map(|sp| Meta { sp, which: 0 });
     let mut m1 = cell.as_ref().map(|sp| Meta { sp, which: 1 });
     let mut before = crate::mzidx::First::new(meta, m0.as_mut().map(|m| m as &mut dyn Spill));
-    let mut prima_cen = crate::mzidx::First::new(meta, m1.as_mut().map(|m| m as &mut dyn Spill));
-    let (t, t_cen) = mzidx_lettore::righe_prima_doppie(l, c, &mut before, &mut prima_cen)?;
-    let sample = campione_di(l.simple(), c)?;
+    let mut first_cen = crate::mzidx::First::new(meta, m1.as_mut().map(|m| m as &mut dyn Spill));
+    let (t, t_cen) = mzidx_lettore::rows_before_double(l, c, &mut before, &mut first_cen)?;
+    let sample = sample_of(l.simple(), c)?;
     let none = String::new;
     let p = table(t, l.simple(), c, none(), none(), none())?;
     let mut p_cen = table(t_cen, l.simple(), c, none(), none(), none())?;
@@ -37,24 +37,24 @@ pub fn indicizza_lettore_doppio(
     let n = l.index(c)?.len();
     // as `index_reader_with`: the members are asked for once, where the first source is written; the second index has the same
     let (mut sha256, mut src) = (String::new(), String::new());
-    let mut tardi = || -> Result<String> {
+    let mut late = || -> Result<String> {
         let (source, sha, _) = sorgente(&members()?, &sample, name);
         (sha256, src) = (sha, source.clone());
         Ok(source)
     };
-    let st = crate::mzidx::build_dopo(
+    let st = crate::mzidx::build_after(
         &p.table,
         before,
         &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l.simple(), c, k).map(&mut *on)),
         out,
         meta,
         true,
-        Some(&mut tardi),
+        Some(&mut late),
     )?;
     p_cen.table.source_json = src;
-    let st_cen = crate::mzidx::build_dopo(
+    let st_cen = crate::mzidx::build_after(
         &p_cen.table,
-        prima_cen,
+        first_cen,
         &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l, c, k).map(&mut *on)),
         out_cen,
         meta,

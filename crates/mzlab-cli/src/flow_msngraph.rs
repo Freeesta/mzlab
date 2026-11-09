@@ -295,7 +295,7 @@ pub fn msn_graph_text(
         .any(|(k, v)| k == "interpret" && v.bool() == Some(true))
     {
         let ppm = number(job, "loss_ppm", mzlab_core::msngrafo::PPM_PERDITA);
-        json = mzlab_core::msngrafo::con_interpretazione(&json, &g, ppm);
+        json = mzlab_core::msngrafo::with_interpretation(&json, &g, ppm);
     }
     if job
         .resolved

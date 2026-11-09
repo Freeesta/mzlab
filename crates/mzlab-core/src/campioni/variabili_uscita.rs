@@ -130,7 +130,7 @@ pub(super) fn common(fs: &[Fl]) -> String {
 }
 
 /// `campioni(op="nome_gruppo", {"names":[...]})` → `{"nome"}`: the tokens every name has, in the order of the first, joined with the commonest separator.
-pub(super) fn route_nome_gruppo(input: &str) -> Result<String> {
+pub(super) fn route_group_name(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let names = names_of(&v, "names", "nome_gruppo")?;
     let fs: Vec<Fl> = names.iter().map(|n| read_file(n)).collect();

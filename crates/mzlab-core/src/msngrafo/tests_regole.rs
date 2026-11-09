@@ -37,7 +37,7 @@ fn con(att: Option<&str>) -> Options {
 fn the_embedded_table_is_read_with_recomputed_masses() {
     let t = table();
     assert_eq!(t.rules.len(), 43);
-    assert_eq!(t.rules.iter().filter(|r| r.solo_formula()).count(), 5);
+    assert_eq!(t.rules.iter().filter(|r| r.formula_only()).count(), 5);
     let nh3 = t.rules.iter().find(|r| r.id == "loss_nh3_ammonium_adduct");
     assert!((nh3.unwrap().massa - 17.02655).abs() < 1e-5);
     assert_eq!(
@@ -102,8 +102,8 @@ fn a_rule_explains_the_loss_of_an_arc_by_formula_and_adduct() {
     // CO leaves a fragment of the m/z 138, so the adduct of the root plays no part: the rule asks for it only on the root
     assert!(leads("C6H8N3O", "C5H8N3").is_empty());
     assert_eq!(leads("C5H8N3", "C4H7N2"), ["hcn"]);
-    assert_eq!(v.explained + v.senza_regola, g.archi.len());
-    assert!(v.intensita_spiegata > 0.0 && v.intensita_spiegata < 1.0);
+    assert_eq!(v.explained + v.without_rule, g.archi.len());
+    assert!(v.explained_intensity > 0.0 && v.explained_intensity < 1.0);
     let e = v.edges.iter().flat_map(|a| &a.rules).next().unwrap();
     assert!(e.mda_error.abs() < 1.0 && !e.radical && e.perche == "test");
 }
@@ -112,7 +112,7 @@ fn a_rule_explains_the_loss_of_an_arc_by_formula_and_adduct() {
 fn a_loss_that_is_the_sum_of_two_rules_is_composite_only_in_a_beam() {
     let t = tavola(&[rule("co", "CO", "", "both"), rule("hcn", "CHN", "", "both")]);
     // C6H8N3O -> C4H7N2 is C2HNO = CO + HCN
-    let fra = |att: Option<&str>| {
+    let among = |att: Option<&str>| {
         let o = con(att);
         let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
         let v = evaluate_with(t, &g, &o, &RuleParams::default());
@@ -120,8 +120,8 @@ fn a_loss_that_is_the_sum_of_two_rules_is_composite_only_in_a_beam() {
         let i = g.archi.iter().position(|x| x.da == p && x.a == f).unwrap();
         v.edges[i].composta.clone()
     };
-    assert_eq!(fra(None), [("co", "hcn"), ("hcn", "co")]);
-    assert!(fra(Some("cid")).is_empty());
+    assert_eq!(among(None), [("co", "hcn"), ("hcn", "co")]);
+    assert!(among(Some("cid")).is_empty());
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn the_trap_cutoff_hides_what_is_below_it_and_follows_q() {
     let t = tavola(&[rule("big", "C6H6N2O2", "", "both")]);
     let o = con(Some("cid"));
     let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
-    let con_q = |q: f64| {
+    let with_q = |q: f64| {
         let p = RuleParams {
             cutoff_q: q,
             ..RuleParams::default()
@@ -138,12 +138,12 @@ fn the_trap_cutoff_hides_what_is_below_it_and_follows_q() {
         evaluate_with(t, &g, &o, &p).non_osservabili
     };
     let root = g.radici[0];
-    let della_radice = |q: f64| {
-        let v = con_q(q);
+    let of_root = |q: f64| {
+        let v = with_q(q);
         v.into_iter().filter(|x| x.node == root).collect::<Vec<_>>()
     };
-    assert!(della_radice(0.25).is_empty());
-    let n = della_radice(0.5);
+    assert!(of_root(0.25).is_empty());
+    let n = of_root(0.5);
     assert_eq!(n.len(), 1);
     assert_eq!(n[0].rule, "big");
     assert!((n[0].threshold - 0.5 / 0.908 * g.nodi[root].mz).abs() < 1e-6);
@@ -161,7 +161,7 @@ fn the_trap_cutoff_hides_what_is_below_it_and_follows_q() {
 fn the_key_is_added_at_the_end_and_a_graph_without_it_keeps_its_bytes() {
     let o = con(None);
     let (g, j) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
-    let k = con_regole(&j, &g, &o, &RuleParams::default());
+    let k = with_rules(&j, &g, &o, &RuleParams::default());
     assert!(k.starts_with(j.split(",\"vista\":").next().unwrap()));
     assert!(k.ends_with(&j[j.find(",\"vista\":").unwrap()..]));
     let v = crate::json::parse(k.as_bytes()).unwrap();
@@ -178,7 +178,7 @@ fn the_key_is_added_at_the_end_and_a_graph_without_it_keeps_its_bytes() {
             && s.get("origine").and_then(|x| x.str()).is_some()
     ));
     // every reference cited by a rule of an arc has its source
-    let fonti: Vec<&str> = r
+    let sources: Vec<&str> = r
         .get("fonti")
         .unwrap()
         .arr()
@@ -189,7 +189,7 @@ fn the_key_is_added_at_the_end_and_a_graph_without_it_keeps_its_bytes() {
         for x in a.get("regole").unwrap().arr() {
             assert!(x.get("perche").and_then(|p| p.str()).is_some());
             for k in x.get("refs").unwrap().arr() {
-                assert!(fonti.contains(&k.str().unwrap()));
+                assert!(sources.contains(&k.str().unwrap()));
             }
         }
     }
@@ -206,8 +206,8 @@ fn the_loss_vectors_of_the_rules_hold_only_from_the_adduct_of_the_root() {
     let f = parse_formula("C8H15N5O2").unwrap();
     let e = elementi(&f, 1);
     let nh3 = e.conta(&parse_formula("NH3").unwrap()).unwrap();
-    let da_radice = loss_vectors(&e, 1, Some("[M+NH4]+"), true);
-    assert!(da_radice.contains(&nh3));
+    let from_root = loss_vectors(&e, 1, Some("[M+NH4]+"), true);
+    assert!(from_root.contains(&nh3));
     assert!(loss_vectors(&e, 1, Some("[M+NH4]+"), false).is_empty());
     assert!(loss_vectors(&e, 1, Some("[M+H]+"), true).is_empty());
 }
@@ -216,7 +216,7 @@ fn the_loss_vectors_of_the_rules_hold_only_from_the_adduct_of_the_root() {
 fn the_request_reads_the_rules_and_their_numbers() {
     let q = |s: &'static str| {
         let q = crate::routes::Query::parse(s);
-        da_richiesta(&|k| q.get(k).map(String::from))
+        from_request(&|k| q.get(k).map(String::from))
     };
     assert_eq!(q("").unwrap().0.regole, None);
     let p = q("regole=1&cutoff_q=0.4&toll_perdita_mda=5")

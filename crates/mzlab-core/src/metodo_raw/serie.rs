@@ -16,7 +16,7 @@ pub const TRAILER: &str = "trailer:";
 pub struct Entry {
     pub id: String,
     /// The section of the status log (`Ion Source`); empty for the trailer and for a channel before any title.
-    pub gruppo: String,
+    pub group: String,
     pub name: String,
     pub unita: String,
     pub n: usize,
@@ -60,7 +60,7 @@ struct Statistics {
     min: f64,
     max: f64,
     first: f64,
-    diverso: bool,
+    different: bool,
 }
 
 impl Statistics {
@@ -70,13 +70,13 @@ impl Statistics {
         } else {
             self.min = self.min.min(y);
             self.max = self.max.max(y);
-            self.diverso |= y != self.first;
+            self.different |= y != self.first;
         }
         self.n += 1;
     }
 }
 
-pub(super) fn numero_di(v: &GenericValue) -> Option<f64> {
+pub(super) fn number_of(v: &GenericValue) -> Option<f64> {
     if matches!(v, GenericValue::Bool(_)) {
         return None;
     }
@@ -84,13 +84,13 @@ pub(super) fn numero_di(v: &GenericValue) -> Option<f64> {
 }
 
 fn number(r: &GenericRecord, field: usize) -> Option<f64> {
-    numero_di(&r.values.get(field)?.1)
+    number_of(&r.values.get(field)?.1)
 }
 
 /// The records of the scan trailer, one after the other: the number of the scan and the numeric value of a field of it. The trailer is read from the file a chunk at a time (`GenericRecordStream::for_each`),
 /// so a pass over it holds no more than a chunk; the series ask for two passes (the list, then the points of one series).
-pub type Riga<'a> = &'a mut dyn FnMut(usize, &dyn Fn(usize) -> Option<f64>);
-pub type Righe<'a> = &'a mut dyn FnMut(Riga<'_>);
+pub type Row<'a> = &'a mut dyn FnMut(usize, &dyn Fn(usize) -> Option<f64>);
+pub type Rows<'a> = &'a mut dyn FnMut(Row<'_>);
 
 fn spec(
     id: String,
@@ -101,10 +101,10 @@ fn spec(
     campo: usize,
     livello: Option<u8>,
 ) -> Option<Spec> {
-    (s.n >= 2 && s.diverso).then_some(Spec {
+    (s.n >= 2 && s.different).then_some(Spec {
         entry: Entry {
             id,
-            gruppo,
+            group: gruppo,
             name: nome,
             unita,
             n: s.n,
@@ -128,14 +128,14 @@ fn unico(base: String, used: &mut Vec<String>) -> String {
     id
 }
 
-fn specs_stato(log: &StatusLog) -> Vec<Spec> {
+fn status_specs(log: &StatusLog) -> Vec<Spec> {
     if log.times_min().len() != log.records().len() {
         return Vec::new();
     }
-    let (mut out, mut used, mut sezione) = (Vec::new(), Vec::new(), String::new());
+    let (mut out, mut used, mut section) = (Vec::new(), Vec::new(), String::new());
     for (i, d) in log.header.fields.iter().enumerate() {
         if d.field_type == GenericType::Gap {
-            sezione = titolo(&d.label);
+            section = titolo(&d.label);
             continue;
         }
         let (name, unita) = split_label(&d.label);
@@ -148,16 +148,16 @@ fn specs_stato(log: &StatusLog) -> Vec<Spec> {
                 s.push(y);
             }
         }
-        let base = format!("{STATUS}{sezione}/{name}");
-        if s.n >= 2 && s.diverso {
+        let base = format!("{STATUS}{section}/{name}");
+        if s.n >= 2 && s.different {
             let id = unico(base, &mut used);
-            out.extend(spec(id, sezione.clone(), name, unita, &s, i, None));
+            out.extend(spec(id, section.clone(), name, unita, &s, i, None));
         }
     }
     out
 }
 
-fn specs_trailer(h: &GenericDataHeader, scans: &[Scansione], rows: Righe) -> Vec<Spec> {
+fn specs_trailer(h: &GenericDataHeader, scans: &[Scansione], rows: Rows) -> Vec<Spec> {
     let levels: Vec<u8> = scans
         .iter()
         .map(|s| s.level)
@@ -194,14 +194,14 @@ fn specs_trailer(h: &GenericDataHeader, scans: &[Scansione], rows: Righe) -> Vec
         let mut per_level: Vec<(u8, Statistics)> = Vec::new();
         for (li, l) in levels.iter().enumerate() {
             let s = std::mem::take(&mut stat[i][li]);
-            if s.n >= 2 && s.diverso {
+            if s.n >= 2 && s.different {
                 per_level.push((*l, s));
             }
         }
         // a field that changes at one level only keeps its plain name; at several levels each one is a series of its own
-        let separati = per_level.len() > 1;
+        let separate = per_level.len() > 1;
         for (l, s) in &per_level {
-            let (base, label) = if separati {
+            let (base, label) = if separate {
                 (format!("{TRAILER}{name}@MS{l}"), format!("{name} (MS{l})"))
             } else {
                 (format!("{TRAILER}{name}"), name.clone())
@@ -222,12 +222,12 @@ fn specs_trailer(h: &GenericDataHeader, scans: &[Scansione], rows: Righe) -> Vec
 }
 
 /// The status series that vary, in the order of the file.
-pub fn indice_stato(log: &StatusLog) -> Vec<Entry> {
-    specs_stato(log).into_iter().map(|s| s.entry).collect()
+pub fn status_index(log: &StatusLog) -> Vec<Entry> {
+    status_specs(log).into_iter().map(|s| s.entry).collect()
 }
 
 /// The trailer series that vary, in the order of the file.
-pub fn indice_trailer(h: &GenericDataHeader, scans: &[Scansione], rows: Righe) -> Vec<Entry> {
+pub fn trailer_index(h: &GenericDataHeader, scans: &[Scansione], rows: Rows) -> Vec<Entry> {
     specs_trailer(h, scans, rows)
         .into_iter()
         .map(|s| s.entry)
@@ -235,8 +235,8 @@ pub fn indice_trailer(h: &GenericDataHeader, scans: &[Scansione], rows: Righe) -
 }
 
 /// The points of the status series `id` (`None` when the id is not one of the list).
-pub fn serie_stato(log: &StatusLog, id: &str) -> Option<Series> {
-    let s = specs_stato(log).into_iter().find(|s| s.entry.id == id)?;
+pub fn status_series(log: &StatusLog, id: &str) -> Option<Series> {
+    let s = status_specs(log).into_iter().find(|s| s.entry.id == id)?;
     let (mut t, mut y) = (Vec::new(), Vec::new());
     for (r, tm) in log.records().iter().zip(log.times_min()) {
         if let (Some(v), true) = (number(r, s.field), tm.is_finite()) {
@@ -252,10 +252,10 @@ pub fn serie_stato(log: &StatusLog, id: &str) -> Option<Series> {
 }
 
 /// The points of the trailer series `id`, one per scan of its level.
-pub fn serie_trailer(
+pub fn trailer_series(
     h: &GenericDataHeader,
     scans: &[Scansione],
-    rows: Righe,
+    rows: Rows,
     id: &str,
 ) -> Option<Series> {
     let s = specs_trailer(h, scans, &mut *rows)
@@ -280,13 +280,13 @@ pub fn serie_trailer(
 }
 
 /// The trailer of `raw` as rows for `Righe`: read from `source` a chunk at a time.
-fn righe_di<'a, R: Read + Seek>(
+fn rows_of<'a, R: Read + Seek>(
     raw: &'a RawFileReader,
     source: &'a mut R,
-) -> impl FnMut(Riga<'_>) + 'a {
+) -> impl FnMut(Row<'_>) + 'a {
     move |f| {
         raw.scan_parameters.for_each(source, &mut |k, rec| {
-            f(k, &|i| rec.value(i).as_ref().and_then(numero_di));
+            f(k, &|i| rec.value(i).as_ref().and_then(number_of));
         });
     }
 }
@@ -310,13 +310,13 @@ fn scansioni(raw: &RawFileReader) -> Vec<Scansione> {
 }
 
 /// Every series of the file: the status log first, then the trailer, whose records `righe` gives (the single pass of `metodo_raw` over it).
-pub fn index(raw: &RawFileReader, rows: Righe) -> Vec<Entry> {
+pub fn index(raw: &RawFileReader, rows: Rows) -> Vec<Entry> {
     let mut out = raw
         .status_log
         .as_ref()
-        .map(indice_stato)
+        .map(status_index)
         .unwrap_or_default();
-    out.extend(indice_trailer(
+    out.extend(trailer_index(
         &raw.scan_parameters_header,
         &scansioni(raw),
         rows,
@@ -331,7 +331,7 @@ pub fn sezione(entries: &[Entry]) -> Vec<V> {
         .filter_map(|v| {
             obj(vec![
                 ("id", text(&v.id)),
-                ("gruppo", text(&v.gruppo)),
+                ("gruppo", text(&v.group)),
                 ("nome", text(&v.name)),
                 ("unita", text(&v.unita)),
                 ("n", num(Some(v.n as f64))),
@@ -345,12 +345,12 @@ pub fn sezione(entries: &[Entry]) -> Vec<V> {
 /// The points of the series `id` of the list (`None` for any other id).
 pub fn series<R: Read + Seek>(raw: &RawFileReader, source: &mut R, id: &str) -> Option<Series> {
     if id.starts_with(STATUS) {
-        serie_stato(raw.status_log.as_ref()?, id)
+        status_series(raw.status_log.as_ref()?, id)
     } else if id.starts_with(TRAILER) {
-        serie_trailer(
+        trailer_series(
             &raw.scan_parameters_header,
             &scansioni(raw),
-            &mut righe_di(raw, source),
+            &mut rows_of(raw, source),
             id,
         )
     } else {

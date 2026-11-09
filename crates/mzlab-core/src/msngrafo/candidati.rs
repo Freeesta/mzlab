@@ -1,11 +1,11 @@
 //! Candidate formulas of a fragment: every sub-formula of the ion of the root within a window of m/z, with its DBE, its electron parity
 //! and its expected M+1, and the known losses. A formula here is a vector of counts aligned with the elements of the root (`Elementi`).
 
-use super::PERDITE;
+use super::LOSSES;
 use crate::elements::{fmt, mass_of, parse_formula, Formula, ELECTRON};
 
-/// Losses outside `PERDITE` that Hill order writes in an unusual way (Hill form, usual name); the others keep their Hill form (`C4H8`).
-const NOMI: [(&str, &str); 5] = [
+/// Losses outside `LOSSES` that Hill order writes in an unusual way (Hill form, usual name); the others keep their Hill form (`C4H8`).
+const NAMES: [(&str, &str); 5] = [
     ("CHNO", "HNCO"),
     ("FH", "HF"),
     ("ClH", "HCl"),
@@ -14,7 +14,7 @@ const NOMI: [(&str, &str); 5] = [
 ];
 
 /// Atomic number (electrons of the neutral atom) and valence of the elements of `elements::MASS`.
-pub(super) const ATOMI: [(&str, u32, u32); 14] = [
+pub(super) const ATOMS: [(&str, u32, u32); 14] = [
     ("H", 1, 1),
     ("C", 6, 4),
     ("N", 7, 3),
@@ -32,7 +32,7 @@ pub(super) const ATOMI: [(&str, u32, u32); 14] = [
 ];
 
 /// The enumeration stops here: a window of a few ppm never holds so many sub-formulas of one ion.
-const MAX_CANDIDATI: usize = 4096;
+const MAX_CANDIDATES: usize = 4096;
 
 /// The elements of the ion of the root, heaviest first (the enumeration cuts on the mass).
 pub(super) struct Elementi {
@@ -73,12 +73,12 @@ impl Elementi {
     }
 
     /// The formula of a loss: its usual name when it is a known loss (`NH3`, not `H3N`), otherwise Hill order.
-    pub fn testo_perdita(&self, d: &[u32]) -> String {
+    pub fn loss_text(&self, d: &[u32]) -> String {
         match self.losses.iter().find(|(_, c)| c == d) {
             Some((n, _)) => n.to_string(),
             None => {
                 let hill = self.testo(d);
-                match NOMI.iter().find(|(h, _)| *h == hill) {
+                match NAMES.iter().find(|(h, _)| *h == hill) {
                     Some((_, n)) => n.to_string(),
                     None => hill,
                 }
@@ -145,7 +145,7 @@ impl Elementi {
         c: &mut Vec<u32>,
         out: &mut Vec<Vec<u32>>,
     ) {
-        if out.len() >= MAX_CANDIDATI {
+        if out.len() >= MAX_CANDIDATES {
             return;
         }
         if i == c.len() {
@@ -174,7 +174,7 @@ pub(super) fn elementi(f: &Formula, pol: i8) -> Elementi {
         .iter()
         .filter(|(_, n)| *n > 0)
         .map(|(e, n)| {
-            let (_, z, val) = ATOMI
+            let (_, z, val) = ATOMS
                 .iter()
                 .find(|a| a.0 == e)
                 .copied()
@@ -192,7 +192,7 @@ pub(super) fn elementi(f: &Formula, pol: i8) -> Elementi {
         pol,
         losses: vec![],
     };
-    e.losses = PERDITE
+    e.losses = LOSSES
         .iter()
         .filter_map(|(n, _)| {
             parse_formula(n)
@@ -220,7 +220,7 @@ const M1_REL: f64 = 0.3;
 const M1_ABS: f64 = 2.0;
 
 /// The M+1 of the formula, % of the monoisotopic peak.
-pub(super) fn m1_atteso(e: &Elementi, c: &[u32]) -> f64 {
+pub(super) fn m1_expected(e: &Elementi, c: &[u32]) -> f64 {
     e.sim
         .iter()
         .zip(c)
@@ -229,13 +229,13 @@ pub(super) fn m1_atteso(e: &Elementi, c: &[u32]) -> f64 {
 }
 
 /// The observed M+1 (% of the peak) agrees with the formula.
-pub(super) fn m1_coerente(e: &Elementi, c: &[u32], osservato: f64) -> bool {
-    let a = m1_atteso(e, c);
-    (osservato - a).abs() <= (M1_REL * a).max(M1_ABS)
+pub(super) fn m1_consistent(e: &Elementi, c: &[u32], observed: f64) -> bool {
+    let a = m1_expected(e, c);
+    (observed - a).abs() <= (M1_REL * a).max(M1_ABS)
 }
 
 /// The loss from `p` to `c` (`c` under `p`) is a known one.
-pub(super) fn perdita_nota(e: &Elementi, p: &[u32], c: &[u32]) -> bool {
+pub(super) fn known_loss(e: &Elementi, p: &[u32], c: &[u32]) -> bool {
     let d: Vec<u32> = p.iter().zip(c).map(|(a, b)| a - b).collect();
     e.losses.iter().any(|(_, x)| *x == d)
 }

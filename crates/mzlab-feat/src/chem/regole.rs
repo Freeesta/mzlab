@@ -21,7 +21,7 @@ pub fn attese_mol(m: &Mol, t: &Table) -> Vec<Expectation> {
     for r in t
         .rules
         .iter()
-        .filter(|r| r.legge_struttura() && (r.tipo != Tipo::Cleavage || r.site.is_some()))
+        .filter(|r| r.structure_law() && (r.tipo != Tipo::Cleavage || r.site.is_some()))
     {
         if !soddisfa(m, &groups, r) {
             continue;
