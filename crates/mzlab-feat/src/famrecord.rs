@@ -1,5 +1,5 @@
 //! The family of every peak as a record, `famiglia/1`: the members of each family (m/z, RT, role, parent row) and, for every arc, the readings of
-//! its step, the shape correlation and the proofs of its label. Numbers and words only, no verdict. Read by `examples/famiglie.rs`; the size of a
+//! its step, the shape correlation and the proofs of its label. Numbers and words only, no verdict. Read by `examples/families.rs`; the size of a
 //! family is the length of `members`. Same input gives the same bytes.
 
 use mzlab_core::json::{round, Out};

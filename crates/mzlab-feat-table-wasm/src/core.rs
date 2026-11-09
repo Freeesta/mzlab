@@ -1,4 +1,4 @@
-//! The steps of the bridge on any `ReadAt`, shared with the native example `tabella`, so the browser and the desktop write the same bytes.
+//! The steps of the bridge on any `ReadAt`, shared with the native example `table`, so the browser and the desktop write the same bytes.
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;

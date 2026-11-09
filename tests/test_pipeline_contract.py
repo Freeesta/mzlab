@@ -1,5 +1,5 @@
 """Contract of the Feature table of mzFinder with the table engine: every key of the JSON of `qc/1`, of the view and of the rows of the sheet that TP_Mine/js/36_feature_qc.js and
-37_feature_table.js and 38_feature_export.js read (`PIPEQC.CONTRACT`) is in the real output of the engine (the native example `tabella`, the same bytes as the .wasm: tests/test_feat_table_wasm.py), so a number the
+37_feature_table.js and 38_feature_export.js read (`PIPEQC.CONTRACT`) is in the real output of the engine (the native example `table`, the same bytes as the .wasm: tests/test_feat_table_wasm.py), so a number the
 page shows cannot come from anywhere but the engine. Skipped without cargo, wasm-bindgen or node (the series is the one of test_feat_table_wasm.py)."""
 import json
 import shutil
@@ -22,7 +22,7 @@ def contract():
 def outs(built, tmp_path_factory):
     root, idx, _pkg, table = built
     out = tmp_path_factory.mktemp("contract")
-    run("target/release/examples/tabella", str(out), str(table), str(root / "campioni.json"), str(root / "spec.json"), "1", *idx)
+    run("target/release/examples/table", str(out), str(table), str(root / "campioni.json"), str(root / "spec.json"), "1", *idx)
     return {p.name: json.loads(p.read_text()) for p in out.glob("*.json")}
 
 

@@ -69,7 +69,7 @@ try:
             # the detections carry the name of the file in the plan (`<stem>.mzML`), as `flow run` writes it
             named = tmp / "named"; named.mkdir(exist_ok=True)
             for n in names: shutil.copy2(data / n, named / (n.rsplit(".", 1)[0] + ".mzML"))
-            out = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(named / p.name) for p in sorted(named.iterdir())], "--recipe", recipe],
+            out = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "native", "--", str(nat), *[str(named / p.name) for p in sorted(named.iterdir())], "--recipe", recipe],
                                  cwd=ROOT, check=True, capture_output=True, text=True).stdout
             return dict(l.split(" ")[:2] for l in out.splitlines() if len(l.split(" ")) == 2 and len(l.split(" ")[1]) == 64).get("series.mzfeat")
 

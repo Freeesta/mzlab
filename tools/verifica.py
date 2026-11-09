@@ -195,9 +195,9 @@ def js_syntax(results) -> None:
 def pytest(results, timeout) -> None:
     if not has("pytest"):
         results.append(("pytest", "SKIP", 0, ["pytest non installato: python3 tools/verifica.py --setup"])); return
-    # serial pytest needs 20+ min on 4 CPUs (1800 s with xdist); one serial cargo build up front: under xdist the tests that call cargo built together and one worker sat 1800 s on `--example nativo` (test_valida_hr.py); the cargo shim first in PATH as in test.yml, so no `cargo run` holds the lock for minutes (night 43)
+    # serial pytest needs 20+ min on 4 CPUs (1800 s with xdist); one serial cargo build up front: under xdist the tests that call cargo built together and one worker sat 1800 s on `--example native` (test_valida_hr.py); the cargo shim first in PATH as in test.yml, so no `cargo run` holds the lock for minutes (night 43)
     env = None if os.name == "nt" else {**os.environ, "PATH": str(ROOT / "tools" / "ci_cargo") + os.pathsep + os.environ.get("PATH", "")}; par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
-    for pkg in (["-p", "mzlab-feat-wasm", "--example", "nativo"], ["-p", "mzlab-cli"]) if shutil.which("cargo") else []:
+    for pkg in (["-p", "mzlab-feat-wasm", "--example", "native"], ["-p", "mzlab-cli"]) if shutil.which("cargo") else []:
         rc, out, dt = sh(["cargo", "build", "--release", "--locked", *pkg], LOG / "pytest-cargo.log", 1500, env=env)
         if rc: results.append(("pytest (cargo build)", "FAIL", dt, out.strip().splitlines()[-6:])); return
     # faulthandler dumps the stack of a test that runs for over 7 min, so a hang names its test in the log (the dots do not)
@@ -409,7 +409,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         if rc:
             results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
     if shutil.which("cargo") and any("cargo" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo):      # the tests that call `cargo run` would each wait on cargo's build-folder lock, or rebuild a stale tree, inside the timeout of their own: build the two binaries once
-        for pkg in (["-p", "mzlab-cli"], ["-p", "mzlab-feat-wasm", "--example", "nativo"]):
+        for pkg in (["-p", "mzlab-cli"], ["-p", "mzlab-feat-wasm", "--example", "native"]):
             rc, _out, dt = sh(["cargo", "build", "--release", "-q", *pkg], LOG / "precompila.log", 3000, env=env)
             if rc:
                 results.append((f"cargo build {' '.join(pkg)} (prima degli e2e)", "FAIL", dt, ["vedi .verifica/log/precompila.log"])); return

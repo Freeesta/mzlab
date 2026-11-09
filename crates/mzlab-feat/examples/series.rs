@@ -1,6 +1,6 @@
 //! A series of `.mzidx` files to the aligned table `.mzfeat`: analysis of each file, alignment, gap filling, with the times of each step.
 //!
-//!     cargo run --release -p mzlab-feat --example serie -- <file.mzidx>... [--neg] [--ion] [--out FILE.mzfeat] [--twice]
+//!     cargo run --release -p mzlab-feat --example series -- <file.mzidx>... [--neg] [--ion] [--out FILE.mzfeat] [--twice]
 //!
 //! Prints rows, cells by state, the SHA-256 of the `.mzfeat` and whether reading it back gives the same table; `--twice` builds it a second time and
 //! compares the digests; `--ion` aligns per ion instead of per family. The meta of the file carries no times, so two runs give the same bytes.

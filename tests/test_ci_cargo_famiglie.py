@@ -19,7 +19,7 @@ def test_families():
     f = load().famiglia
     assert f(["build", "--release", "-p", "mzlab-cli", "--example", "flow"]) == "cli"
     assert f(["run", "--release", "-q", "-p", "mzlab-cli", "--", "msn-graph"]) == "cli"
-    assert f(["build", "--release", "-p", "mzlab-feat-wasm", "--example", "nativo"]) == "feat"
+    assert f(["build", "--release", "-p", "mzlab-feat-wasm", "--example", "native"]) == "feat"
     assert f(["build", "--release", "-p", "mzlab-feat-wasm", "--features", "untargeted"]) == "feat-untargeted"
     assert f(["build", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm"]) == "wasm"
     assert f(["build", "--release", "-p", "mzlab-core", "--example", "mzidx"]) is None
@@ -30,11 +30,11 @@ def test_families():
 def test_rispecchia(tmp_path):
     fam, radice = tmp_path / "fam", tmp_path / "target"
     (fam / "release" / "examples").mkdir(parents=True)
-    (fam / "release" / "examples" / "nativo").write_bytes(b"bin")
-    (fam / "release" / "examples" / "nativo.d").write_text("dep")
+    (fam / "release" / "examples" / "native").write_bytes(b"bin")
+    (fam / "release" / "examples" / "native.d").write_text("dep")
     (fam / "release" / "mzlab-cli").write_bytes(b"cli")
     load().rispecchia(str(radice), str(fam))
-    assert (radice / "release" / "examples" / "nativo").read_bytes() == b"bin"
+    assert (radice / "release" / "examples" / "native").read_bytes() == b"bin"
     assert (radice / "release" / "mzlab-cli").read_bytes() == b"cli"
-    assert not (radice / "release" / "examples" / "nativo.d").exists()
+    assert not (radice / "release" / "examples" / "native.d").exists()
     assert os.path.samefile(fam / "release" / "mzlab-cli", radice / "release" / "mzlab-cli")
