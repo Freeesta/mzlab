@@ -388,7 +388,7 @@ async function xicBin(/** @type {string} */ url) {
   if (!r.ok) { let m = new Error(I18N.t("err.http", { status: r.status })); try { const j = await r.json(); if (j && j.error) m = I18N.err(j); } catch (e) { /* not JSON */ } throw m; }
   const buf = await r.arrayBuffer(), hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
   let off = (4 + hl + 7) & ~7;
-  const traces = head.traces.map((/** @type {Bag} */ t) => { const rt = f64Arr(new Float64Array(buf, off, t.n)), y = f64Arr(new Float64Array(buf, off + 8 * t.n, t.n)); off += 16 * t.n; return { k: t.k, rt, y }; });
+  const traces = head.traces.map((/** @type {Bag} */ t) => { const rt = rtArr(t.k, new Float64Array(buf, off, t.n)), y = f64Arr(new Float64Array(buf, off + 8 * t.n, t.n)); off += 16 * t.n; return { k: t.k, rt, y }; });
   return { mz: head.mz, tol: head.tol, traces };
 }
 // the caller in grafici.js spreads [mz, tol] from HR.xicArgs, so the middle arguments are a rest list for tsc
