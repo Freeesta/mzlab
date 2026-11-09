@@ -35,6 +35,13 @@ async function tableBytes(total) {
   for (let off = 0; off < total; off += CHUNK) out.set(new Uint8Array(await (await call("feat/table", { kind: "bytes", off, len: CHUNK })).arrayBuffer()), off);
   return out;
 }
+/** `run()` (a `feat/align` of the app) with `tell` handed the step `feat/progress` answers every half second while it runs, as the .wasm hands the site's worker @template T @param {() => Promise<T>} run @param {(s: any) => void} tell @returns {Promise<T>} */
+async function aligning(run, tell) {
+  let on = true;
+  const poll = async () => { while (on) { await new Promise(r => setTimeout(r, 500)); if (on) try { tell(await json("feat/progress")); } catch (_) { /* a missed step: the next one says it */ } } };
+  poll();
+  try { return await run(); } finally { on = false; }
+}
 /** the name the app knows a file by, from the OPFS-like path or name of the panel (`mzlab/idx/<name>.mzidx`) @param {string} s */
 const nameOf = s => s.replace(/^.*\//, "").replace(/\.mzidx$/, "");
 /** the recipe is the JSON text of the six numbers (or empty) @param {any} r */
@@ -84,7 +91,7 @@ export function createDesktopPool(opts = {}) {
     /** L4-L6 @param {Uint8Array[]} _stored @param {string[]} paths @param {any} recipe */
     async align(_stored, paths, recipe) {
       const t0 = performance.now();
-      const r = await json("feat/align", { names: paths.map(nameOf), recipe: recipeText(recipe) });
+      const r = await aligning(() => json("feat/align", { names: paths.map(nameOf), recipe: recipeText(recipe) }), s => { if (pool.onProgress && s.total > 1) pool.onProgress({ phase: "align", done: s.done, total: s.total }); });
       if (pool.onProgress) pool.onProgress({ phase: "align", ms: Math.round(performance.now() - t0) });
       return tableBytes(r.bytes);
     },

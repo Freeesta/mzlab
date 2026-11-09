@@ -286,7 +286,7 @@ export function createFeatPool(opts) {
         await load("feat");
         if (recycle) slot.recycle = true;
         const t0 = performance.now();
-        const held = stored.map(b => weak.get(b) || null), r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budget(), weak: held.some(Boolean) ? held : undefined });
+        const held = stored.map(b => weak.get(b) || null), r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budget(), weak: held.some(Boolean) ? held : undefined }, undefined, (d, t) => opts.onProgress?.({ phase: "align", done: d, total: t }));   // the step: slabs and files of gap filling, at most once per 1 %
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       }, id);
@@ -413,7 +413,7 @@ const OPS = {
   },
   async align(m) {
     const f = await openAll(m.paths), out = memSink();
-    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined, m.weak ? m.weak.map(w => (w ? new Uint8Array(w) : null)) : undefined); return { bytes: out.bytes() }; } finally { f.close(); }
+    try { mods.feat.align_series_to(arrays(m.files), f.read, f.sizes, m.recipe, out.write, m.budgetMb || 0, m.campioni || undefined, m.weak ? m.weak.map(w => (w ? new Uint8Array(w) : null)) : undefined, (d, t) => self.postMessage({ id: m.id, progress: [d, t] })); return { bytes: out.bytes() }; } finally { f.close(); }
   },
   async hypotheses(m) {
     if (hypo) { hypo.free(); hypo = null; }

@@ -61,10 +61,16 @@ try:
             pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 8", timeout=300000)
             pg.fill("#tp-smi", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
             pg.evaluate(WATCH)
+            # the alignment tells how far it is (slabs and files of gap filling, from `align_series_to`), not one step at the end
+            pg.evaluate("""() => { window.__al = []; const m = document.getElementById('tp-msg');
+              new MutationObserver(() => { const t = m.textContent; if (/^Aligning the series: \\d+ %$/.test(t) && window.__al[window.__al.length - 1] !== t) window.__al.push(t); })
+                .observe(m, {subtree: true, childList: true, characterData: true}); }""")
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
             v = pg.evaluate("window.__lv")
             assert v["done"] >= 1 and v["cands"] >= 1 and v["nodes"] >= 2 and v["finished"], v
-        step("HR: tree grows node by node, candidates and phases before the results", hr)
+            al = pg.evaluate("window.__al")
+            assert al and al[-1] == "Aligning the series: 100 %", al
+        step("HR: tree grows node by node, candidates, phases and the percentage of the alignment before the results", hr)
         b.close()
 finally:
     srv.terminate()

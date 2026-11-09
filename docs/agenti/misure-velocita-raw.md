@@ -37,7 +37,6 @@ One row per speed change of a vendor reader (Thermo `.raw`, `.wiff`, `.D`: open,
 
 Synthetic HR series (`dati_sintetici_grandi.py`, 18.9 MB index per file) at 20, 60 and 150 files; site = `hr` module in Node (4 vCPU), app = `mzlab-cli flow run`. Memory grows linearly (site RSS 170 / 270 / 465 MB at 20 / 60 / 150 files); `budget_mb` 8 ends in the calm `error.memoryBudget` in 5 s, no crash. Stored bytes at 150 files: 2.84 GB of `.mzidx`, 103 MB of `.mzfeatf`, 12.5 MB of `.mzfeat`.
 
-1. Alignment reports no progress: the page gets one `align` step at the end (done 1 of 1), so at 150 files and 64 MB nothing moves for 12 s after detection (in family slabs); detection already reports every 1 %. Cure: a step callback per slab or per file from `align_series_to` and the native route.
-2. Gap filling reads 25 MB per file in 31 reads (1500 MB for 60 files, 3749 MB for 150) against an 18.9 MB index: each index is read more than once. Not timed alone.
-3. Each slab parses again the JSON meta of every `.mzfeatf` (`read_file_dyn`); not timed alone, it grows with slabs × files.
-4. The `hr` module is 281 B under `limit_hr`: the next function in it needs its size recorded first (`wasm-tetti.md`).
+1. Gap filling reads 25 MB per file in 31 reads (1500 MB for 60 files, 3749 MB for 150) against an 18.9 MB index: each index is read more than once. Not timed alone.
+2. Each slab parses again the JSON meta of every `.mzfeatf` (`read_file_dyn`); not timed alone, it grows with slabs × files.
+3. The `hr` module is 49 B under `limit_hr`: the next function in it needs its size recorded first (`wasm-tetti.md`).

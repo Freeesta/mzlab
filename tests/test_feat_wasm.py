@@ -182,6 +182,21 @@ def test_a_reduced_budget_gives_the_same_sha256_native_and_in_node(built, mode):
         assert got == ref, f"wasm, {mb} MB"
 
 
+def test_the_alignment_tells_the_page_the_same_steps_native_and_in_node(built):
+    """The progress of `align_series_to` (slabs and files of gap filling, at most once per 1 %) ends where the native one ends, with the same bytes."""
+    root, idx, pkg = built
+    args = (*idx, *PARENT, "--recipe", '{"mode":"family"}', "--budget-mb", "1.5")
+    got = []
+    for name, cmd in (("nat-steps", ["target/release/examples/native"]), ("wasm-steps", ["node", str(ROOT / "tests" / "feat_wasm_node.js"), str(pkg)])):
+        (root / name).mkdir(exist_ok=True)
+        p = subprocess.run([*cmd, str(root / name), *args], cwd=ROOT, capture_output=True, encoding="utf-8")
+        assert p.returncode == 0, p.stderr
+        steps, done, total = map(int, re.search(r"align steps (\d+) last (\d+) of (\d+)", p.stderr).groups())
+        got.append((p.stdout, steps, done, total))
+    assert got[0] == got[1]
+    _, steps, done, total = got[0]
+    assert total > 1 and done == total and 1 < steps <= 102, got[0][1:]
+
 @pytest.fixture(scope="module")
 def weak(built):
     """The series `debole` (tools/feat_mirato.py: `piccolo` plus thousands of weak features in every file) and the bytes of the native engine in memory."""

@@ -14,7 +14,7 @@ use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{align_and_fill, analyse_file_with, source_sha256, weak_candidates};
-use mzlab_feat::slabs::{align_and_fill_spilling, Stored};
+use mzlab_feat::slabs::{align_and_fill_progress, Stored};
 use mzlab_feat::spill::Spill;
 use mzlab_feat::store::{
     origin_from_meta, read_file, read_meta_mz, write_file_to, write_table_to,
@@ -248,11 +248,13 @@ pub fn align_to<R: ReadAt, W: WriteAt>(
     open: impl FnMut(usize) -> Result<Index<R>>,
     sink: &mut W,
 ) -> Result<()> {
-    align_to_spilling(src, budget, r, None, open, sink, None)
+    align_to_spilling(src, budget, r, None, open, sink, None, &mut |_, _| {})
 }
 
 /// `align_to` with a `Spill` for the weak tables of the files (the page keeps them outside the memory of the module) and the `facts` of the
-/// files when the caller has them (`series_js::series_recipe`), so their scan tables are not parsed again for them.
+/// files when the caller has them (`series_js::series_recipe`), so their scan tables are not parsed again for them; `progress(done, total)` as
+/// `slabs::align_and_fill_progress` tells it (the same bytes with any `progress`).
+#[allow(clippy::too_many_arguments)]
 pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
     src: &mut dyn Stored,
     budget: &MemBudget,
@@ -261,13 +263,14 @@ pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
     mut open: impl FnMut(usize) -> Result<Index<R>>,
     sink: &mut W,
     spill: Option<&mut dyn Spill>,
+    progress: &mut dyn FnMut(usize, usize),
 ) -> Result<()> {
     let mut origin = origin_of(src)?;
     origin.facts = match facts {
         Some(f) => f,
         None => facts_of(src.count(), &mut open)?,
     };
-    let (table, _) = align_and_fill_spilling(src, budget, r, open, spill)?;
+    let (table, _) = align_and_fill_progress(src, budget, r, open, spill, None, progress)?;
     write_table_to(sink, &table, r, &origin, &mut (&[][..]))
 }
 
