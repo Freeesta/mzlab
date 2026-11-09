@@ -9,7 +9,7 @@ use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{read_one, Exec, FileRunner};
-use crate::msn_uscite::{bytes, Formato};
+use crate::msn_uscite::{bytes, Format};
 use mzlab_feat::msnfigura::{figure_text, Vista};
 
 /// The executor of the step, read by the runner after its own list.
@@ -61,7 +61,7 @@ fn figure_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         let text = String::from_utf8(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
         let view = Vista::da_nome(view)
             .ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
-        bytes(&text, Formato::Png, view)?
+        bytes(&text, Format::Png, view)?
     } else {
         figure_text(&graph, format, view)?.into_bytes()
     };

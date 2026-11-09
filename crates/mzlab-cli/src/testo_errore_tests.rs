@@ -1,5 +1,5 @@
 //! `testo_errore`: catalogue keys to English text, the parameters filled in, the hint of the command run.
-use super::{testo_di, umano, CATALOGO};
+use super::{text_of, umano, CATALOG};
 use mzlab_core::error::Error;
 
 #[test]
@@ -31,7 +31,7 @@ fn an_unfinished_raw_is_the_text_of_the_page() {
         t,
         format!(
             "{} (err.file.rawUnfinished, detail=the run header declares no scan, size=5670000)",
-            testo_di("err.file.rawUnfinished").unwrap()
+            text_of("err.file.rawUnfinished").unwrap()
         )
     );
     assert!(
@@ -44,7 +44,7 @@ fn an_unfinished_raw_is_the_text_of_the_page() {
 
 #[test]
 fn every_key_of_the_catalogue_is_found() {
-    let keys: Vec<&str> = CATALOGO
+    let keys: Vec<&str> = CATALOG
         .lines()
         .filter_map(|l| {
             l.trim()
@@ -57,7 +57,7 @@ fn every_key_of_the_catalogue_is_found() {
     assert!(keys.len() > 300, "{}", keys.len());
     for k in keys {
         assert!(
-            testo_di(k).is_some_and(|t| !t.is_empty() && !t.contains("\n")),
+            text_of(k).is_some_and(|t| !t.is_empty() && !t.contains("\n")),
             "{k}"
         );
     }
@@ -119,19 +119,19 @@ fn a_missing_input_names_its_path_in_english() {
 fn a_memory_refusal_reads_as_in_the_desktop_app() {
     let f: serde_json::Value =
         serde_json::from_str(include_str!("../../../tests/dati/avvisi_memoria.json")).unwrap();
-    for caso in f["casi"].as_array().unwrap() {
+    for case in f["casi"].as_array().unwrap() {
         let mut e = Error::memory_budget();
-        for p in caso["params"].as_array().unwrap() {
+        for p in case["params"].as_array().unwrap() {
             let k: &'static str = Box::leak(p[0].as_str().unwrap().to_string().into_boxed_str());
             e = e.with(k, p[1].as_str().unwrap());
         }
         // after the text, the key and the parameters the text does not use, as for every key (the phase by its id, for scripts)
         let resa = umano(&e.to_string());
-        let (testo, coda) = resa.split_once(" (error.memoryBudget").unwrap();
-        assert_eq!(testo, caso["testo"].as_str().unwrap());
+        let (text, tail) = resa.split_once(" (error.memoryBudget").unwrap();
+        assert_eq!(text, case["testo"].as_str().unwrap());
         assert!(
-            !coda.contains("stima_mb") && !coda.contains("index peaks"),
-            "{coda}"
+            !tail.contains("stima_mb") && !tail.contains("index peaks"),
+            "{tail}"
         );
     }
 }

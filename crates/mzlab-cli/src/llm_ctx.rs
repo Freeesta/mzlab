@@ -61,8 +61,8 @@ fn sources(dir: &Path, hide: bool) -> Value {
         ("profile".into(), Value::Str("ricerca".into())),
         ("hide_names".into(), Value::Bool(hide)),
     ];
-    let corsa = json(&dir.join("corsa.json"));
-    if let Some(c) = &corsa {
+    let run = json(&dir.join("corsa.json"));
+    if let Some(c) = &run {
         let files = c.get("inputs").map_or(&[][..], Value::arr).iter().map(|i| {
             Value::Obj(vec![(
                 "name".into(),

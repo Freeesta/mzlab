@@ -448,7 +448,7 @@ fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so()
     let n = crate::convert::fewer_workers(256.0, 4).unwrap();
     assert_eq!(n.key, "warn.convert.fewerWorkers");
     assert_eq!(
-        crate::testo_errore::avviso(&n),
+        crate::testo_errore::warning(&n),
         "2 files are converted at once instead of 4, so that each conversion has its share of the memory budget of this computer (256 MB). The files written are the same; it only takes longer. (warn.convert.fewerWorkers)"
     );
     assert_eq!(crate::convert::fewer_workers(1024.0, 4), None);

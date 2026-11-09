@@ -111,9 +111,9 @@ impl Rot {
     ) -> std::result::Result<bool, String> {
         match x {
             "--breaks" => self.on = true,
-            "--h-max" => self.p.h_max = numero(a.next(), x)?.clamp(0.0, 4.0) as u8,
-            "--max-bonds" => self.p.max_legami = numero(a.next(), x)?.clamp(1.0, 2.0) as u8,
-            "--struct-ppm" => self.p.ppm = numero(a.next(), x)?,
+            "--h-max" => self.p.h_max = number(a.next(), x)?.clamp(0.0, 4.0) as u8,
+            "--max-bonds" => self.p.max_legami = number(a.next(), x)?.clamp(1.0, 2.0) as u8,
+            "--struct-ppm" => self.p.ppm = number(a.next(), x)?,
             _ => return Ok(false),
         }
         Ok(true)
@@ -124,36 +124,36 @@ pub struct Args {
     pub(crate) file: PathBuf,
     pub(crate) o: Opzioni,
     verita: Option<PathBuf>,
-    riassunto: bool,
+    summary: bool,
     export: Option<(Formato, bool, Option<String>)>,
-    strutture: Option<(String, f64)>,
+    structures: Option<(String, f64)>,
     interpreta: Option<f64>,
-    rotture: Option<Parametri>,
-    figura: Vec<crate::msn_uscite::Formato>,
-    vista: mzlab_feat::msnfigura::Vista,
+    cleavages: Option<Parametri>,
+    figure: Vec<crate::msn_uscite::Format>,
+    view: mzlab_feat::msnfigura::Vista,
     pub out: Option<PathBuf>,
 }
 
 /// The value of `--structures`: `all` is the engine's `tutti`.
 #[rustfmt::skip]
-fn tutti(v: String) -> String {
+fn all(v: String) -> String {
     if v == "all" { "tutti".into() } else { v }
 }
 
-fn numero(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
+fn number(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
     v.and_then(|x| x.parse().ok())
         .ok_or(format!("{k} needs a number"))
 }
 
 /// The arguments after `msn-graph`; `Ok(None)` = `--help`.
 /// The view named after `--view`.
-fn vista_di(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigura::Vista, String> {
+fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigura::Vista, String> {
     mzlab_feat::msnfigura::Vista::da_nome(&n.unwrap_or_default())
         .ok_or_else(|| "--view needs tree or radial".into())
 }
 
 /// The refusal of `--figure` without `--out` or together with an output that is not the graph.
-const FIGURA_USO: &str =
+const FIGURE_USAGE: &str =
     "--figure needs --out and the graph itself (not --summary, --export or --structures)";
 
 pub fn parse_args(
@@ -161,10 +161,10 @@ pub fn parse_args(
 ) -> std::result::Result<Option<Args>, String> {
     let (mut file, mut o) = (None, Opzioni::default());
     let (mut verita, mut riassunto, mut out) = (None, false, None);
-    let (mut export, mut pulito, mut nodo) = (None, false, None);
+    let (mut export, mut clean, mut node) = (None, false, None);
     let (mut strutture, mut rot) = (None, Rot::default());
-    let (mut interpreta, mut ppm_perdita) = (false, PPM_PERDITA);
-    let (mut regole, mut regole_p) = (false, ParamRegole::default());
+    let (mut interpreta, mut loss_ppm) = (false, PPM_PERDITA);
+    let (mut rules, mut rules_p) = (false, ParamRegole::default());
     let (mut figura, mut vista) = (Vec::new(), mzlab_feat::msnfigura::Vista::Albero);
     while let Some(x) = a.next().map(|x| crate::msn_uscite::canonical(ALIASES, x)) {
         match x.as_str() {
@@ -175,16 +175,16 @@ pub fn parse_args(
                 let p = a.next().ok_or("--molfile needs a file")?;
                 o.molfile = Some(std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))?);
             }
-            "--ppm-formula" => o.ppm_formula = numero(a.next(), &x)?,
-            "--low-mz" => o.mz_basso = numero(a.next(), &x)?,
-            "--wide-ppm" => o.ppm_basso = numero(a.next(), &x)?,
-            "--min-evidence" => o.prove_min = numero(a.next(), &x)? as usize,
+            "--ppm-formula" => o.ppm_formula = number(a.next(), &x)?,
+            "--low-mz" => o.mz_basso = number(a.next(), &x)?,
+            "--wide-ppm" => o.ppm_basso = number(a.next(), &x)?,
+            "--min-evidence" => o.prove_min = number(a.next(), &x)? as usize,
             "--activation" => o.attivazione = a.next(),
             "--isotopes" => o.isotopi = true,
             "--pick" => {
                 let v = a.next().unwrap_or_default();
                 let (m, f) = v.split_once('=').ok_or("--pick needs MZ=ION")?;
-                o.scelte.push((numero(Some(m.into()), &x)?, f.into()));
+                o.scelte.push((number(Some(m.into()), &x)?, f.into()));
             }
             "--truth" => verita = a.next().map(PathBuf::from),
             "--summary" => riassunto = true,
@@ -194,17 +194,17 @@ pub fn parse_args(
                         .map_err(|_| "--export needs csv, mgf or msp")?,
                 )
             }
-            "--clean" => pulito = true,
-            "--node" => nodo = a.next(),
-            "--structures" => strutture = a.next().map(tutti),
+            "--clean" => clean = true,
+            "--node" => node = a.next(),
+            "--structures" => strutture = a.next().map(all),
             "--interpret" => interpreta = true,
-            "--loss-ppm" => ppm_perdita = numero(a.next(), &x)?,
-            "--rules" => regole = true,
-            "--cutoff-q" => regole_p.cutoff_q = numero(a.next(), &x)?,
-            "--loss-tol-mda" => regole_p.toll_mda = numero(a.next(), &x)?,
+            "--loss-ppm" => loss_ppm = number(a.next(), &x)?,
+            "--rules" => rules = true,
+            "--cutoff-q" => rules_p.cutoff_q = number(a.next(), &x)?,
+            "--loss-tol-mda" => rules_p.toll_mda = number(a.next(), &x)?,
             x if rot.flag(x, &mut a)? => {}
-            "--figure" => figura = crate::msn_uscite::formati(&a.next().unwrap_or_default())?,
-            "--view" => vista = vista_di(a.next())?,
+            "--figure" => figura = crate::msn_uscite::formats(&a.next().unwrap_or_default())?,
+            "--view" => vista = view_of(a.next())?,
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
@@ -213,26 +213,26 @@ pub fn parse_args(
     let file = file.ok_or("an infusion file is needed")?;
     if !figura.is_empty() && (out.is_none() || riassunto || export.is_some() || strutture.is_some())
     {
-        return Err(FIGURA_USO.into());
+        return Err(FIGURE_USAGE.into());
     }
     if riassunto && verita.is_none() {
         return Err("--summary needs --truth".into());
     }
-    o.regole = regole.then_some(regole_p);
-    let export = export.map(|f| (f, pulito, nodo));
+    o.regole = rules.then_some(rules_p);
+    let export = export.map(|f| (f, clean, node));
     let strutture = strutture.map(|n| (n, rot.p.ppm));
-    let interpreta = interpreta.then_some(ppm_perdita);
+    let interpreta = interpreta.then_some(loss_ppm);
     Ok(Some(Args {
         file,
         o,
         verita,
-        riassunto,
+        summary: riassunto,
         export,
-        strutture,
+        structures: strutture,
         interpreta,
-        rotture: rot.on.then_some(rot.p),
-        figura,
-        vista,
+        cleavages: rot.on.then_some(rot.p),
+        figure: figura,
+        view: vista,
         out,
     }))
 }
@@ -243,12 +243,12 @@ fn io(e: std::io::Error) -> Error {
 
 /// The graph of `file`, its index built in `tmp`: an mzML is read as it is, any other dataset a reader takes (a Thermo `.raw`, ...) is first written to
 /// `tmp` as mzML with the peaks of the file.
-pub fn grafo(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
-    let nome = file
+pub fn graph(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
+    let name = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let converted = tmp.join("0.mzML");
-    let is_mzml = nome.to_lowercase().ends_with(".mzml");
+    let is_mzml = name.to_lowercase().ends_with(".mzml");
     if !is_mzml {
         let (peaks, opz) = (Picchi::File, MzmlOpzioni::default());
         crate::flow_base::write_mzml(file, None, &converted, peaks, opz)?;
@@ -260,11 +260,11 @@ pub fn grafo(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
     let o = &mzlab_feat::chem::regole::con_attese(o);
-    grafo_json(&scans, &mut m, (&nome, &sha), (o, &Raggruppa::default()))
+    grafo_json(&scans, &mut m, (&name, &sha), (o, &Raggruppa::default()))
 }
 
 /// The nominal path of a node of the tree (`317@cid35>261@cid35` → [317, 261]).
-fn percorso(id: &str) -> Vec<i64> {
+fn file_path(id: &str) -> Vec<i64> {
     id.split('>')
         .filter_map(|p| p.split('@').next()?.parse::<f64>().ok())
         .map(|m| m.round() as i64)
@@ -289,7 +289,7 @@ fn per_livello(o: &mut Out, g: &Grafo) {
     // peaks of the spectra of each MS level: kept (with a node) and discarded (unexplained)
     o.raw("},\"picchi_per_livello\":{");
     let lv = g.spettri.iter().map(|s| s.livello).max().unwrap_or(0);
-    let mut primo = true;
+    let mut first_one = true;
     for l in 2..=lv {
         let pk = g
             .spettri
@@ -304,16 +304,16 @@ fn per_livello(o: &mut Out, g: &Grafo) {
             }
         });
         if t + d > 0 {
-            o.raw(if primo { "" } else { "," }).str(&l.to_string());
+            o.raw(if first_one { "" } else { "," }).str(&l.to_string());
             o.raw(":[").int(t).raw(",").int(d).raw("]");
-            primo = false;
+            first_one = false;
         }
     }
     o.raw("}");
 }
 
 /// One line of numbers: the graph against the paths of a truth file.
-pub fn riassunto(g: &Grafo, verita: &str) -> Result<String> {
+pub fn summary(g: &Grafo, verita: &str) -> Result<String> {
     let v = parse(verita.as_bytes())?;
     let attesi: Vec<(Vec<i64>, String)> = v
         .get("nodes")
@@ -330,35 +330,35 @@ pub fn riassunto(g: &Grafo, verita: &str) -> Result<String> {
             Some((p, hill(n.get("formula")?.str()?)))
         })
         .collect();
-    let (mut trovati, mut fra, mut unica, mut ppm_max) = (0, 0, 0, 0.0f64);
+    let (mut found, mut between, mut single, mut ppm_max) = (0, 0, 0, 0.0f64);
     for (p, f) in &attesi {
         let Some(n) = g
             .nodi
             .iter()
-            .find(|n| n.albero.iter().any(|t| percorso(t) == *p))
+            .find(|n| n.albero.iter().any(|t| file_path(t) == *p))
         else {
             continue;
         };
-        trovati += 1;
+        found += 1;
         let Some(x) = &n.formula else { continue };
         if let Some(c) = x.candidati.iter().find(|c| c.formula == *f) {
-            fra += 1;
+            between += 1;
             ppm_max = ppm_max.max(c.ppm.abs());
         }
         if x.scelta.as_deref() == Some(f) {
-            unica += 1;
+            single += 1;
         }
     }
     let mut o = Out::default();
     o.raw("{\"percorsi_verita\":").int(attesi.len() as i64);
-    o.raw(",\"percorsi_trovati\":").int(trovati);
-    o.raw(",\"formula_giusta_fra_candidati\":").int(fra);
-    o.raw(",\"unica_e_giusta\":").int(unica);
+    o.raw(",\"percorsi_trovati\":").int(found);
+    o.raw(",\"formula_giusta_fra_candidati\":").int(between);
+    o.raw(",\"unica_e_giusta\":").int(single);
     o.raw(",\"ppm_max_giuste\":")
         .num(mzlab_core::json::round(ppm_max, 2));
-    let annotati = g.nodi.iter().filter(|n| n.formula.is_some()).count();
+    let annotated = g.nodi.iter().filter(|n| n.formula.is_some()).count();
     o.raw(",\"frammenti_annotati\":")
-        .int(annotati.saturating_sub(1) as i64);
+        .int(annotated.saturating_sub(1) as i64);
     o.raw(",\"scartati_formula\":")
         .int(g.scartati.formula as i64);
     o.raw(",\"avvisi\":").int(g.avvisi.len() as i64).raw(",");
@@ -368,7 +368,7 @@ pub fn riassunto(g: &Grafo, verita: &str) -> Result<String> {
 }
 
 /// The graph text `j` of `g` with the key `strutture` of node `nodo` (`nK` or `K`): the cleavages of `o.smiles` that give its m/z within `ppm`.
-pub fn strutture_testo(
+pub fn structures_text(
     g: &Grafo,
     j: &str,
     o: &Opzioni,
@@ -378,7 +378,7 @@ pub fn strutture_testo(
 }
 
 /// `msn-graph complete IN.json [--out PATH]`: the graph of the file with the key `vista` added; the text and the file to write it to.
-pub fn completa_cmd(
+pub fn complete_cmd(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<(String, Option<PathBuf>), String> {
     let (mut file, mut out) = (None, None);
@@ -396,40 +396,40 @@ pub fn completa_cmd(
 }
 
 /// The graph text `j` of `g` with the keys `interpretazione` and `rotture` the options ask for (also used by `msn-lib add`).
-pub fn con_chiavi(a: &Args, g: &Grafo, mut j: String) -> Result<String> {
+pub fn with_keys(a: &Args, g: &Grafo, mut j: String) -> Result<String> {
     if let Some(ppm) = a.interpreta {
         j = con_interpretazione(&j, g, ppm);
     }
-    if let Some(p) = a.rotture {
+    if let Some(p) = a.cleavages {
         j = mzlab_feat::chem::rotture::rotture_testo(g, &j, a.o.smiles.as_deref(), p)?;
     }
     Ok(j)
 }
 
 /// The text the command prints: the graph, or the line of numbers.
-pub fn esegui(a: &Args, tmp: &Path) -> Result<String> {
-    let (g, j) = grafo(&a.file, &a.o, tmp)?;
-    let j = con_chiavi(a, &g, j)?;
+pub fn execute(a: &Args, tmp: &Path) -> Result<String> {
+    let (g, j) = graph(&a.file, &a.o, tmp)?;
+    let j = with_keys(a, &g, j)?;
     if let Some((f, pulito, nodo)) = &a.export {
         return Ok(esporta(&g, *f, *pulito, nodo.as_deref()));
     }
-    if let Some((nodo, ppm)) = &a.strutture {
-        return Ok(strutture_testo(&g, &j, &a.o, (nodo, *ppm))? + "\n");
+    if let Some((nodo, ppm)) = &a.structures {
+        return Ok(structures_text(&g, &j, &a.o, (nodo, *ppm))? + "\n");
     }
-    if !a.riassunto {
+    if !a.summary {
         return Ok(j + "\n");
     }
     let v =
         std::fs::read_to_string(a.verita.as_ref().expect("checked by parse_args")).map_err(io)?;
-    riassunto(&g, &v)
+    summary(&g, &v)
 }
 
 /// With `--figura`: writes the figures of the graph text `graph` next to the file of `--out`; the lines for the standard output (the files made).
 pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String> {
-    let Some(out) = a.out.as_ref().filter(|_| !a.figura.is_empty()) else {
+    let Some(out) = a.out.as_ref().filter(|_| !a.figure.is_empty()) else {
         return Ok(String::new());
     };
-    let made = crate::msn_uscite::scrivi(graph, &a.figura, a.vista, &out.with_extension(""))
+    let made = crate::msn_uscite::scrivi(graph, &a.figure, a.view, &out.with_extension(""))
         .map_err(|e| e.to_string())?;
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }
@@ -444,7 +444,7 @@ pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
         };
     }
     if args.next_if(|a| a == "complete").is_some() {
-        return match completa_cmd(args) {
+        return match complete_cmd(args) {
             Ok((t, out)) => crate::emit(t, &out),
             Err(e) => Outcome::fail(&e),
         };
@@ -464,7 +464,7 @@ pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
     let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-msn{k}", std::process::id()));
     let r = std::fs::create_dir_all(&tmp)
         .map_err(crate::io)
-        .and_then(|_| esegui(&a, &tmp));
+        .and_then(|_| execute(&a, &tmp));
     let _ = std::fs::remove_dir_all(&tmp);
     let r = r
         .map_err(|e| e.to_string())

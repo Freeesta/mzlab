@@ -286,7 +286,7 @@ fn the_step_writes_the_bytes_of_the_command() {
         let (g, got) = run(format, view);
         let want = crate::msn_uscite::bytes(
             std::str::from_utf8(&g).unwrap(),
-            crate::msn_uscite::Formato::da_nome(format).unwrap(),
+            crate::msn_uscite::Format::from_name(format).unwrap(),
             Vista::da_nome(view).unwrap(),
         )
         .unwrap();

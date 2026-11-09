@@ -1,6 +1,6 @@
 //! `mzlab-cli msn-rules`: a synthetic MassBank record through the command, the strata, the decoys and the sums. Synthetic spectra only.
 
-use super::somma::somma;
+use super::somma::summed;
 use crate::execute;
 use mzlab_core::json::parse;
 
@@ -9,24 +9,24 @@ fn run(a: &[&str]) -> crate::Outcome {
 }
 
 /// A MassBank record of a synthetic acetanilide-like standard: the precursor and the loss of ketene.
-fn registro(id: &str, strumento: &str, modo: &str, addotto: &str, smiles: &str) -> String {
+fn registry(id: &str, strumento: &str, mode: &str, addotto: &str, smiles: &str) -> String {
     format!(
         "ACCESSION: {id}\nRECORD_TITLE: synthetic\nLICENSE: CC0\nCH$FORMULA: C8H9NO\nCH$SMILES: {smiles}\nAC$INSTRUMENT_TYPE: {strumento}\n\
-         AC$MASS_SPECTROMETRY: MS_TYPE MS2\nAC$MASS_SPECTROMETRY: ION_MODE POSITIVE\nAC$MASS_SPECTROMETRY: FRAGMENTATION_MODE {modo}\n\
+         AC$MASS_SPECTROMETRY: MS_TYPE MS2\nAC$MASS_SPECTROMETRY: ION_MODE POSITIVE\nAC$MASS_SPECTROMETRY: FRAGMENTATION_MODE {mode}\n\
          AC$MASS_SPECTROMETRY: COLLISION_ENERGY 35 (nominal)\nMS$FOCUSED_ION: PRECURSOR_M/Z 136.0757\nMS$FOCUSED_ION: PRECURSOR_TYPE {addotto}\n\
          PK$PEAK: m/z int. rel.int.\n  94.0651 1000 999\n  136.0757 60 60\n//\n"
     )
 }
 
-fn scrivi(nome: &str, testo: &str) -> String {
+fn scrivi(name: &str, text: &str) -> String {
     let d = std::env::temp_dir().join(format!("mzlab_msn_rules_{}", std::process::id()));
     std::fs::create_dir_all(&d).unwrap();
-    let p = d.join(nome);
-    std::fs::write(&p, testo).unwrap();
+    let p = d.join(name);
+    std::fs::write(&p, text).unwrap();
     p.to_str().unwrap().to_string()
 }
 
-fn righe(o: &crate::Outcome) -> Vec<mzlab_core::json::Value> {
+fn rows(o: &crate::Outcome) -> Vec<mzlab_core::json::Value> {
     String::from_utf8_lossy(&o.stdout)
         .lines()
         .map(|l| parse(l.as_bytes()).unwrap())
@@ -37,11 +37,11 @@ fn righe(o: &crate::Outcome) -> Vec<mzlab_core::json::Value> {
 fn a_record_gives_a_line_of_numbers_with_the_rule_that_explains_the_loss() {
     let f = scrivi(
         "a.txt",
-        &registro("SYN-A", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
+        &registry("SYN-A", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
     let o = run(&["msn-rules", &f, "--regole"]);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    let l = &righe(&o)[0];
+    let l = &rows(&o)[0];
     assert_eq!(l.get("strato").unwrap().str(), Some("hcd"));
     let v = l.get("v").unwrap();
     let n = |k: &str| v.get(k).unwrap().f64().unwrap();
@@ -65,7 +65,7 @@ fn the_stratum_comes_from_the_instrument_and_the_mode() {
     for (k, (strumento, modo, atteso)) in casi.iter().enumerate() {
         let f = scrivi(
             &format!("s{k}.txt"),
-            &registro(
+            &registry(
                 &format!("SYN-S{k}"),
                 strumento,
                 modo,
@@ -73,7 +73,7 @@ fn the_stratum_comes_from_the_instrument_and_the_mode() {
                 "CC(=O)Nc1ccccc1",
             ),
         );
-        let l = righe(&run(&["msn-rules", &f])).remove(0);
+        let l = rows(&run(&["msn-rules", &f])).remove(0);
         assert_eq!(
             l.get("strato").unwrap().str(),
             Some(*atteso),
@@ -88,19 +88,19 @@ fn the_stratum_comes_from_the_instrument_and_the_mode() {
 
 #[test]
 fn a_record_that_cannot_be_judged_says_why() {
-    let senza = registro("SYN-N", "LC-ESI-QFT", "HCD", "[M+H]+", "N/A");
-    let aduct = registro(
+    let without = registry("SYN-N", "LC-ESI-QFT", "HCD", "[M+H]+", "N/A");
+    let aduct = registry(
         "SYN-D",
         "LC-ESI-QFT",
         "HCD",
         "[M+H-H2O]+",
         "CC(=O)Nc1ccccc1",
     );
-    let modo = registro("SYN-M", "LC-ESI-QFT", "ETD", "[M+H]+", "CC(=O)Nc1ccccc1");
-    for (t, motivo) in [(senza, "smiles"), (aduct, "ione"), (modo, "attivazione")] {
+    let mode = registry("SYN-M", "LC-ESI-QFT", "ETD", "[M+H]+", "CC(=O)Nc1ccccc1");
+    for (t, reason) in [(without, "smiles"), (aduct, "ione"), (mode, "attivazione")] {
         let f = scrivi("x.txt", &t);
-        let l = righe(&run(&["msn-rules", &f])).remove(0);
-        assert_eq!(l.get("saltato").unwrap().str(), Some(motivo));
+        let l = rows(&run(&["msn-rules", &f])).remove(0);
+        assert_eq!(l.get("saltato").unwrap().str(), Some(reason));
     }
 }
 
@@ -108,17 +108,17 @@ fn a_record_that_cannot_be_judged_says_why() {
 fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
     let a = scrivi(
         "d1.txt",
-        &registro("SYN-D1", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
+        &registry("SYN-D1", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
     let b = scrivi(
         "d2.txt",
-        &registro("SYN-D2", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1O")
+        &registry("SYN-D2", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1O")
             .replace("C8H9NO", "C8H9NO2"),
     );
     let args = ["msn-rules", &a, "--regole", "--decoy", "5"];
     let (x, y) = (run(&args), run(&args));
     assert_eq!(x.stdout, y.stdout);
-    let l = &righe(&run(&["msn-rules", &a, "--regole", "--decoy", "5"]))[0];
+    let l = &rows(&run(&["msn-rules", &a, "--regole", "--decoy", "5"]))[0];
     // the losses shifted by 13.7 mDa fall out of every window: nothing is explained
     let dl = l.get("dl").unwrap();
     assert_eq!(dl.get("a").unwrap().f64(), Some(0.0));
@@ -126,14 +126,14 @@ fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
     // a lone record has no other spectrum of its nominal precursor
     assert!(l.get("dp").is_none());
     // two records with the same nominal precursor but another structure give each other the spectrum
-    let l2 = righe(&run(&["msn-rules", &a, &b, "--regole", "--decoy", "5"]));
+    let l2 = rows(&run(&["msn-rules", &a, &b, "--regole", "--decoy", "5"]));
     assert!(l2.iter().all(|l| l.get("dp").is_some()));
     // the same compound at another energy (same neutral formula) is not a decoy
     let a2 = scrivi(
         "d3.txt",
-        &registro("SYN-D3", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
+        &registry("SYN-D3", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
-    let l3 = righe(&run(&["msn-rules", &a, &a2, "--regole", "--decoy", "5"]));
+    let l3 = rows(&run(&["msn-rules", &a, &a2, "--regole", "--decoy", "5"]));
     assert!(l3.iter().all(|l| l.get("dp").is_none()));
 }
 
@@ -147,7 +147,7 @@ fn a_nominal_mass_record_is_counted_apart() {
         m(20.0),
         m(90.0)
     );
-    let s = parse(somma(&t).unwrap().as_bytes()).unwrap();
+    let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
     let st = &s.get("strati").unwrap().arr()[0];
     assert_eq!(st.get("nominali").unwrap().f64(), Some(1.0));
     assert_eq!(st.get("registri").unwrap().f64(), Some(1.0));
@@ -173,7 +173,7 @@ fn the_sum_applies_the_thresholds_of_the_protocol() {
         );
     }
     t += "{\"id\":\"X\",\"saltato\":\"smiles\"}\n";
-    let s = parse(somma(&t).unwrap().as_bytes()).unwrap();
+    let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
     assert_eq!(
         s.get("saltati").unwrap().get("smiles").unwrap().f64(),
         Some(1.0)
@@ -203,7 +203,7 @@ fn a_rule_with_fewer_than_twenty_applications_is_not_measured() {
     let m = "{\"n\":1,\"it\":10,\"a\":1,\"ia\":10,\"b\":0,\"ib\":0,\"c\":1,\"ic\":10,\"r\":{\"loss_c2h2o_acetyl\":1}}";
     let t =
         format!("{{\"id\":\"R\",\"strato\":\"cid_trappola\",\"pol\":-1,\"v\":{m},\"dl\":{m}}}\n");
-    let s = parse(somma(&t).unwrap().as_bytes()).unwrap();
+    let s = parse(summed(&t).unwrap().as_bytes()).unwrap();
     let st = &s.get("strati").unwrap().arr()[0];
     assert_eq!(
         st.get("regole").unwrap().arr()[0]
@@ -220,7 +220,7 @@ fn a_rule_with_fewer_than_twenty_applications_is_not_measured() {
 fn old_names_are_aliases_of_the_english_ones() {
     let f = scrivi(
         "al.txt",
-        &registro("SYN-AL", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
+        &registry("SYN-AL", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
     let list = scrivi("al.lst", &format!("{f}\n"));
     let lines = run(&["msn-rules", &f, "--rules"]);

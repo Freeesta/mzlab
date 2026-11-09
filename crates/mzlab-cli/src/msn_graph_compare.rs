@@ -11,20 +11,20 @@ use mzlab_lib::scores::{entropy_from_pairs, match_peaks};
 /// Matching window of nodes, arcs and paths, ppm.
 const PPM: f64 = 5.0;
 /// Least relative intensity of an arc to count.
-const REL_ARCO: f64 = 10.0;
+const EDGE_REL: f64 = 10.0;
 /// Least MS2 entropy similarity of two spectra of the same energy.
-const ENTROPIA_MIN: f64 = 0.8;
+const ENTROPY_MIN: f64 = 0.8;
 /// Largest m/z shift of a matched node, ppm.
-const SCARTO_MAX: f64 = 3.0;
+const DEVIATION_MAX: f64 = 3.0;
 
-struct Nodo {
+struct Node {
     mz: f64,
-    isolato: bool,
+    isolated: bool,
     path: Vec<String>,
     formula: Option<String>,
 }
 
-struct Arco {
+struct Edge {
     da: f64,
     a: f64,
     rel: f64,
@@ -34,12 +34,12 @@ struct Spettro {
     att: String,
     ce: f64,
     path: Vec<String>,
-    picchi: Vec<(f64, f64)>,
+    peaks: Vec<(f64, f64)>,
 }
 
-struct Grafo {
-    nodi: Vec<Nodo>,
-    archi: Vec<Arco>,
+struct Graph {
+    nodes: Vec<Node>,
+    edges: Vec<Edge>,
     spettri: Vec<Spettro>,
 }
 
@@ -48,7 +48,7 @@ fn bad() -> Error {
 }
 
 /// The m/z labels of the steps of a tree path (`305@cid35>244@cid35` → ["305", "244"]): the labels are rounded, the precise m/z is the one of the node.
-fn passi(albero: &str) -> Vec<String> {
+fn steps(albero: &str) -> Vec<String> {
     albero
         .split('>')
         .filter_map(|s| Some(s.split('@').next()?.to_string()))
@@ -59,8 +59,8 @@ fn num(v: &Value, k: &str) -> f64 {
     v.get(k).and_then(|x| x.f64()).unwrap_or(0.0)
 }
 
-fn carica(testo: &str) -> Result<Grafo> {
-    let v = parse(testo.as_bytes())?;
+fn load(text: &str) -> Result<Graph> {
+    let v = parse(text.as_bytes())?;
     mzlab_core::msngrafo::versione(&v).map_err(|e| {
         if e.key == "error.newerFormat" {
             e
@@ -68,17 +68,17 @@ fn carica(testo: &str) -> Result<Grafo> {
             bad()
         }
     })?;
-    let lista = |k: &str| v.get(k).map_or(&[][..], |x| x.arr());
-    let nodi = lista("nodi")
+    let list = |k: &str| v.get(k).map_or(&[][..], |x| x.arr());
+    let nodi = list("nodi")
         .iter()
-        .map(|n| Nodo {
+        .map(|n| Node {
             mz: num(n, "mz"),
-            isolato: n.get("isolato").and_then(|b| b.bool()).unwrap_or(false),
+            isolated: n.get("isolato").and_then(|b| b.bool()).unwrap_or(false),
             path: n
                 .get("albero")
                 .and_then(|a| a.arr().first())
                 .and_then(|p| p.str())
-                .map(passi)
+                .map(steps)
                 .unwrap_or_default(),
             formula: n
                 .get("formula")
@@ -90,7 +90,7 @@ fn carica(testo: &str) -> Result<Grafo> {
         let k = id?.strip_prefix('n')?.parse::<usize>().ok()?;
         nodi.get(k).map(|n| n.mz)
     };
-    let archi = lista("archi")
+    let archi = list("archi")
         .iter()
         .filter_map(|a| {
             let rel = a
@@ -99,14 +99,14 @@ fn carica(testo: &str) -> Result<Grafo> {
                 .iter()
                 .map(|m| num(m, "rel"))
                 .fold(0.0, f64::max);
-            Some(Arco {
+            Some(Edge {
                 da: mz_di(a.get("da")?.str())?,
                 a: mz_di(a.get("a")?.str())?,
                 rel,
             })
         })
         .collect();
-    let spettri = lista("spettri")
+    let spettri = list("spettri")
         .iter()
         .filter(|s| num(s, "livello") == 2.0)
         .map(|s| {
@@ -120,14 +120,14 @@ fn carica(testo: &str) -> Result<Grafo> {
             Spettro {
                 att: s.get("att").and_then(|x| x.str()).unwrap_or("").into(),
                 ce: num(s, "ce"),
-                path: passi(s.get("albero").and_then(|x| x.str()).unwrap_or("")),
-                picchi,
+                path: steps(s.get("albero").and_then(|x| x.str()).unwrap_or("")),
+                peaks: picchi,
             }
         })
         .collect();
-    Ok(Grafo {
-        nodi,
-        archi,
+    Ok(Graph {
+        nodes: nodi,
+        edges: archi,
         spettri,
     })
 }
@@ -140,11 +140,11 @@ fn ppm(a: f64, b: f64) -> f64 {
 fn accoppia(
     na: usize,
     nb: usize,
-    costo: impl Fn(usize, usize) -> Option<f64>,
+    cost: impl Fn(usize, usize) -> Option<f64>,
 ) -> Vec<(usize, usize, f64)> {
     let mut c: Vec<(usize, usize, f64)> = (0..na)
         .flat_map(|i| (0..nb).map(move |j| (i, j)))
-        .filter_map(|(i, j)| Some((i, j, costo(i, j)?)))
+        .filter_map(|(i, j)| Some((i, j, cost(i, j)?)))
         .collect();
     c.sort_by(|x, y| x.2.total_cmp(&y.2));
     let (mut ua, mut ub) = (vec![false; na], vec![false; nb]);
@@ -158,9 +158,9 @@ fn accoppia(
     c
 }
 
-fn criterio(o: &mut Out, nome: &str, ok: bool, campi: &[(&str, f64)]) {
-    o.raw(",\"").raw(nome).raw("\":{");
-    for (k, v) in campi {
+fn criterio(o: &mut Out, name: &str, ok: bool, fields: &[(&str, f64)]) {
+    o.raw(",\"").raw(name).raw("\":{");
+    for (k, v) in fields {
         o.raw("\"").raw(k).raw("\":").num(round(*v, 4)).raw(",");
     }
     o.raw("\"ok\":")
@@ -168,131 +168,131 @@ fn criterio(o: &mut Out, nome: &str, ok: bool, campi: &[(&str, f64)]) {
         .raw("}");
 }
 
-fn forti(g: &Grafo) -> Vec<&Arco> {
-    g.archi.iter().filter(|a| a.rel >= REL_ARCO).collect()
+fn forti(g: &Graph) -> Vec<&Edge> {
+    g.edges.iter().filter(|a| a.rel >= EDGE_REL).collect()
 }
 
-fn c_nodi(ga: &Grafo, gb: &Grafo, corpo: &mut Out) -> bool {
-    let (ia, ib): (Vec<&Nodo>, Vec<&Nodo>) = (
-        ga.nodi.iter().filter(|n| n.isolato).collect(),
-        gb.nodi.iter().filter(|n| n.isolato).collect(),
+fn c_nodes(ga: &Graph, gb: &Graph, corpo: &mut Out) -> bool {
+    let (ia, ib): (Vec<&Node>, Vec<&Node>) = (
+        ga.nodes.iter().filter(|n| n.isolated).collect(),
+        gb.nodes.iter().filter(|n| n.isolated).collect(),
     );
-    let comuni = accoppia(ia.len(), ib.len(), |i, j| {
+    let common = accoppia(ia.len(), ib.len(), |i, j| {
         let m = ppm(ia[i].mz, ib[j].mz).abs();
         (!ia[i].path.is_empty() && ia[i].path == ib[j].path && m <= PPM).then_some(m)
     })
     .len();
-    let ok = comuni == ia.len() && comuni == ib.len();
-    let campi = [
+    let ok = common == ia.len() && common == ib.len();
+    let fields = [
         ("a", ia.len() as f64),
         ("b", ib.len() as f64),
-        ("comuni", comuni as f64),
+        ("comuni", common as f64),
     ];
-    criterio(corpo, "nodi_isolati", ok, &campi);
+    criterio(corpo, "nodi_isolati", ok, &fields);
     ok
 }
 
-fn c_archi(ga: &Grafo, gb: &Grafo, corpo: &mut Out) -> bool {
+fn c_edges(ga: &Graph, gb: &Graph, corpo: &mut Out) -> bool {
     let (fa, fb) = (forti(ga), forti(gb));
-    let comuni = accoppia(fa.len(), fb.len(), |i, j| {
+    let common = accoppia(fa.len(), fb.len(), |i, j| {
         let m = ppm(fa[i].da, fb[j].da)
             .abs()
             .max(ppm(fa[i].a, fb[j].a).abs());
         (m <= PPM).then_some(m)
     })
     .len();
-    let ok = comuni == fa.len() && comuni == fb.len();
-    let campi = [
+    let ok = common == fa.len() && common == fb.len();
+    let fields = [
         ("forti_a", fa.len() as f64),
         ("forti_b", fb.len() as f64),
-        ("comuni", comuni as f64),
+        ("comuni", common as f64),
     ];
-    criterio(corpo, "archi", ok, &campi);
+    criterio(corpo, "archi", ok, &fields);
     ok
 }
 
 /// Nodes paired by m/z, shared by the formula and the shift checks.
-fn coppie_nodi(ga: &Grafo, gb: &Grafo) -> Vec<(usize, usize, f64)> {
-    accoppia(ga.nodi.len(), gb.nodi.len(), |i, j| {
-        let m = ppm(ga.nodi[i].mz, gb.nodi[j].mz).abs();
+fn node_pairs(ga: &Graph, gb: &Graph) -> Vec<(usize, usize, f64)> {
+    accoppia(ga.nodes.len(), gb.nodes.len(), |i, j| {
+        let m = ppm(ga.nodes[i].mz, gb.nodes[j].mz).abs();
         (m <= PPM).then_some(m)
     })
 }
 
-fn c_formule(ga: &Grafo, gb: &Grafo, coppie: &[(usize, usize, f64)], corpo: &mut Out) -> bool {
-    let (mut visti, mut diversi) = (0, 0);
-    for &(i, j, _) in coppie {
-        let (x, y) = (&ga.nodi[i].formula, &gb.nodi[j].formula);
+fn c_formule(ga: &Graph, gb: &Graph, pairs: &[(usize, usize, f64)], corpo: &mut Out) -> bool {
+    let (mut seen, mut different) = (0, 0);
+    for &(i, j, _) in pairs {
+        let (x, y) = (&ga.nodes[i].formula, &gb.nodes[j].formula);
         if x.is_some() || y.is_some() {
-            visti += 1;
-            diversi += usize::from(x != y);
+            seen += 1;
+            different += usize::from(x != y);
         }
     }
-    let campi = [("confrontati", visti as f64), ("diversi", diversi as f64)];
-    criterio(corpo, "formule", diversi == 0, &campi);
-    diversi == 0
+    let fields = [("confrontati", seen as f64), ("diversi", different as f64)];
+    criterio(corpo, "formule", different == 0, &fields);
+    different == 0
 }
 
-fn c_entropia(ga: &Grafo, gb: &Grafo, corpo: &mut Out) -> bool {
+fn c_entropy(ga: &Graph, gb: &Graph, corpo: &mut Out) -> bool {
     let sp = accoppia(ga.spettri.len(), gb.spettri.len(), |i, j| {
         let (x, y) = (&ga.spettri[i], &gb.spettri[j]);
         (x.path == y.path && x.att == y.att && (x.ce - y.ce).abs() < 0.01).then_some(0.0)
     });
     let ent: Vec<f64> = sp
         .iter()
-        .map(|&(i, j, _)| entropia(&ga.spettri[i], &gb.spettri[j]))
+        .map(|&(i, j, _)| entropy(&ga.spettri[i], &gb.spettri[j]))
         .collect();
-    let minimo = ent.iter().copied().fold(1.0, f64::min);
-    let senza = ga.spettri.len() + gb.spettri.len() - 2 * sp.len();
-    let ok = senza == 0 && minimo >= ENTROPIA_MIN;
-    let campi = [
-        ("minimo", minimo),
-        ("soglia", ENTROPIA_MIN),
+    let minimum = ent.iter().copied().fold(1.0, f64::min);
+    let without = ga.spettri.len() + gb.spettri.len() - 2 * sp.len();
+    let ok = without == 0 && minimum >= ENTROPY_MIN;
+    let fields = [
+        ("minimo", minimum),
+        ("soglia", ENTROPY_MIN),
         ("coppie", sp.len() as f64),
-        ("senza_controparte", senza as f64),
+        ("senza_controparte", without as f64),
     ];
-    criterio(corpo, "entropia_ms2", ok, &campi);
+    criterio(corpo, "entropia_ms2", ok, &fields);
     ok
 }
 
-fn c_scarto(coppie: &[(usize, usize, f64)], corpo: &mut Out) -> bool {
-    let massimo = coppie.iter().map(|c| c.2).fold(0.0, f64::max);
-    let ok = massimo <= SCARTO_MAX;
-    let campi = [
-        ("massimo", massimo),
-        ("soglia", SCARTO_MAX),
-        ("coppie", coppie.len() as f64),
+fn c_deviation(pairs: &[(usize, usize, f64)], corpo: &mut Out) -> bool {
+    let maximum = pairs.iter().map(|c| c.2).fold(0.0, f64::max);
+    let ok = maximum <= DEVIATION_MAX;
+    let fields = [
+        ("massimo", maximum),
+        ("soglia", DEVIATION_MAX),
+        ("coppie", pairs.len() as f64),
     ];
-    criterio(corpo, "scarto_ppm", ok, &campi);
+    criterio(corpo, "scarto_ppm", ok, &fields);
     ok
 }
 
 /// The comparison text for two graph texts.
-pub fn confronta(a: &str, b: &str) -> Result<String> {
-    let (ga, gb) = (carica(a)?, carica(b)?);
+pub fn compare(a: &str, b: &str) -> Result<String> {
+    let (ga, gb) = (load(a)?, load(b)?);
     let mut corpo = Out::default();
-    let coppie = coppie_nodi(&ga, &gb);
+    let pairs = node_pairs(&ga, &gb);
     // Every criterion is evaluated (no short-circuit) so the outcome lists all numbers.
     let oks = [
-        c_nodi(&ga, &gb, &mut corpo),
-        c_archi(&ga, &gb, &mut corpo),
-        c_formule(&ga, &gb, &coppie, &mut corpo),
-        c_entropia(&ga, &gb, &mut corpo),
-        c_scarto(&coppie, &mut corpo),
+        c_nodes(&ga, &gb, &mut corpo),
+        c_edges(&ga, &gb, &mut corpo),
+        c_formule(&ga, &gb, &pairs, &mut corpo),
+        c_entropy(&ga, &gb, &mut corpo),
+        c_deviation(&pairs, &mut corpo),
     ];
-    let tutti = oks.iter().all(|&k| k);
+    let all = oks.iter().all(|&k| k);
     let mut o = Out::default();
     o.raw("{\"formato\":\"msnconfronto/1\",\"ppm\":").num(PPM);
     o.raw(",\"convalidata\":")
-        .raw(if tutti { "true" } else { "false" });
+        .raw(if all { "true" } else { "false" });
     o.raw(&corpo.0).raw("}\n");
     Ok(o.0)
 }
 
 /// Entropy similarity of two MS2 spectra, peaks matched within `PPM` of the largest m/z.
-fn entropia(a: &Spettro, b: &Spettro) -> f64 {
-    let (am, ai): (Vec<f64>, Vec<f64>) = a.picchi.iter().copied().unzip();
-    let (bm, bi): (Vec<f64>, Vec<f64>) = b.picchi.iter().copied().unzip();
+fn entropy(a: &Spettro, b: &Spettro) -> f64 {
+    let (am, ai): (Vec<f64>, Vec<f64>) = a.peaks.iter().copied().unzip();
+    let (bm, bi): (Vec<f64>, Vec<f64>) = b.peaks.iter().copied().unzip();
     let top = am.iter().chain(&bm).copied().fold(0.0, f64::max);
     let pairs = match_peaks(&am, &ai, &bm, &bi, top * PPM * 1e-6);
     entropy_from_pairs(&ai, &bi, &pairs)
@@ -315,9 +315,9 @@ pub fn esegui(args: impl Iterator<Item = String>) -> Result<(String, Option<Path
             "usage: mzlab-cli msn-graph compare A.json B.json [--out PATH]",
         ));
     };
-    let leggi = |p: &PathBuf| {
+    let read = |p: &PathBuf| {
         std::fs::read_to_string(p)
             .map_err(|e| Error::new("err.flow.param.type").with("detail", e.to_string()))
     };
-    Ok((confronta(&leggi(a)?, &leggi(b)?)?, out))
+    Ok((compare(&read(a)?, &read(b)?)?, out))
 }

@@ -223,7 +223,7 @@ pub(crate) fn workers_for(auto_mb: f64, given: Option<usize>) -> (usize, Option<
     (
         mzlab_core::budget_auto::convert_workers(auto_mb, wanted),
         fewer_workers(auto_mb, wanted)
-            .map(|n| format!("note: {}", crate::testo_errore::avviso(&n))),
+            .map(|n| format!("note: {}", crate::testo_errore::warning(&n))),
     )
 }
 

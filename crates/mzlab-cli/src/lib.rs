@@ -414,7 +414,7 @@ fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
 
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
-    testo_errore::con_aiuto(args, eseguito(args))
+    testo_errore::with_help(args, eseguito(args))
 }
 
 fn eseguito(args: &[String]) -> Outcome {

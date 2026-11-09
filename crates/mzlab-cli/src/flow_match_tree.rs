@@ -117,9 +117,9 @@ fn write_hit(o: &mut Out, qid: &str, label: &str, e: Option<&Value>, h: &Value) 
     };
     // the score is the MS2 entropy similarity (the scale of spectral_entropy); the tree and the losses are in the block
     let main = score("ms2").or_else(|| score("albero")).unwrap_or(0.0);
-    let prove = h.get("prove");
+    let evidence = h.get("prove");
     let proof = |k: &str| {
-        prove
+        evidence
             .and_then(|p| p.get(k))
             .and_then(Value::f64)
             .unwrap_or(0.0)

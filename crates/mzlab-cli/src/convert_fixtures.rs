@@ -32,10 +32,10 @@ pub fn zlib(b: &[u8]) -> Vec<u8> {
     b.to_vec()
 }
 
-pub fn file_set(nome: &str, byte: Vec<u8>) -> FileSet {
+pub fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
         membri: vec![Membro {
-            nome: nome.into(),
+            nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
             sha1: None,
