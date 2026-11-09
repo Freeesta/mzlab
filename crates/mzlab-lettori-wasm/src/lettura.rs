@@ -111,8 +111,8 @@ struct JsMember {
     into: Option<Function>,
     i: u32,
     dim: u64,
-    inizio: u64,
-    blocco: Vec<u8>,
+    start: u64,
+    block: Vec<u8>,
 }
 
 #[cfg(not(feature = "thermo"))]
@@ -122,38 +122,34 @@ fn member_js(read: Function, i: u32, dim: u64) -> JsMember {
         read,
         i,
         dim,
-        inizio: 0,
-        blocco: Vec::new(),
+        start: 0,
+        block: Vec::new(),
     }
 }
 
 #[cfg(not(feature = "thermo"))]
 impl mzlab_core::idxread::ReadAt for JsMember {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
-        let fine = off + buf.len() as u64;
-        let dentro = off >= self.inizio && fine <= self.inizio + self.blocco.len() as u64;
-        if !dentro {
+        let end = off + buf.len() as u64;
+        let inside = off >= self.start && end <= self.start + self.block.len() as u64;
+        if !inside {
             let n = self.dim.saturating_sub(off).min(READ_AHEAD as u64) as usize;
             if buf.len() >= READ_AHEAD || n < buf.len() {
                 // big (or past the end, for JS to refuse): as asked
                 return read_member(&self.read, self.into.as_ref(), self.i, off, buf);
             }
-            self.blocco.resize(n, 0);
+            self.block.resize(n, 0);
             // a failed read leaves no block: its bytes may be half written
-            if let Err(e) = read_member(
-                &self.read,
-                self.into.as_ref(),
-                self.i,
-                off,
-                &mut self.blocco,
-            ) {
-                self.blocco.clear();
+            if let Err(e) =
+                read_member(&self.read, self.into.as_ref(), self.i, off, &mut self.block)
+            {
+                self.block.clear();
                 return Err(e);
             }
-            self.inizio = off;
+            self.start = off;
         }
-        let da = (off - self.inizio) as usize;
-        buf.copy_from_slice(&self.blocco[da..da + buf.len()]);
+        let from = (off - self.start) as usize;
+        buf.copy_from_slice(&self.block[from..from + buf.len()]);
         Ok(())
     }
 }
