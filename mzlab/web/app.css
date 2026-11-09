@@ -381,6 +381,8 @@ html.touch #inf-tree tbody tr,html.touch #mincl tr[data-i],html.touch #flst .fgh
  .pnl .hd select,.pnl .hd input,#tools button,#tools select,header button,.seg button,.tbg button{min-height:40px}
  .fl{padding:11px 4px}
 }
+/* soft keyboard up (tocco-controlli.js): a modal dialog in the band the keyboard leaves, scrolling inside it */
+html.kb dialog:modal{top:var(--vv-top,0px)!important;bottom:var(--vv-bottom,0px)!important;max-height:calc(100% - var(--vv-top,0px) - var(--vv-bottom,0px) - 16px)!important;overflow:auto}
 @media (pointer:coarse),(max-width:1100px){body.hrw #flst .fl{padding:3px 4px}body.hrw #flst .fgh{margin:4px 0 1px}body.hrw #flst .fgh[data-gg]:focus-visible{outline:2px solid var(--accent)}}
 
 /* smartphone (telefono.js): only the header with logo and info, and the card with the open-anyway button; nothing else is built or downloaded */
