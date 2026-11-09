@@ -5,7 +5,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::json::{self, Value};
-use mzlab_core::{chromeleon, metodo, mzml, raw};
+use mzlab_core::{chromeleon, method, mzml, raw};
 mod conv_help;
 
 use std::fs::File;
@@ -118,7 +118,7 @@ fn the_conversion_carries_the_document() {
         let out = conv_help::mzml_file(&raw_path, "sample.raw");
         let head = String::from_utf8_lossy(&out[..out.len().min(2 << 20)]).into_owned();
         assert_eq!(
-            metodo::from_userparam(&head).as_deref(),
+            method::from_userparam(&head).as_deref(),
             Some(full.as_str()),
             "document in the mzML of {raw_path:?}"
         );

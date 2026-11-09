@@ -9,8 +9,8 @@ use crate::idxread::ReadAt;
 use crate::iteminfo::hr_profile;
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
-use crate::sorgente::Scansioni;
 use crate::sortc;
+use crate::source::Scansioni;
 
 /// Parent survey scans read at most for one window: past them the missing intensities stay null (a wide average stays fast).
 const MAX_PARENTS: usize = 400;

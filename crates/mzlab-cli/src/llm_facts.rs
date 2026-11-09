@@ -4,12 +4,12 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::campioni;
 use mzlab_core::idxread::Index;
 use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::lr::{open_items, Sample};
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::samples;
 use mzlab_core::upload::prepare;
 use mzlab_llm::inspect::build;
 use mzlab_llm::params_rules::propose;
@@ -116,7 +116,7 @@ pub(crate) fn sources(dir: &Path, hide: bool) -> Result<String, String> {
             )
         })
         .collect();
-    let proposed = campioni::route("proponi", &format!("{{\"files\":[{}]}}", names.join(",")))
+    let proposed = samples::route("proponi", &format!("{{\"files\":[{}]}}", names.join(",")))
         .map_err(|e| e.to_string())?;
     let proposed = parse(proposed.as_bytes()).map_err(|e| e.to_string())?;
     let samples = proposed.get("campioni").map_or(&[][..], Value::arr);

@@ -2,9 +2,9 @@
 //! the best hypothesis of each row, and the treated files of each condition for the network. Nothing here is read with fewer than two conditions: one
 //! condition (or none) leaves `tptab/1` and the network exactly as they are.
 
-use mzlab_core::campioni::Sample;
 use mzlab_core::error::Result;
 use mzlab_core::json::Value;
+use mzlab_core::samples::Sample;
 
 use super::*;
 use crate::groups::{self, CondFiles, GroupOpts, GroupTable, RowMeta};

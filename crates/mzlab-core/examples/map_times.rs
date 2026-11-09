@@ -5,11 +5,11 @@ use std::fs::{File, OpenOptions};
 use std::time::Instant;
 
 use mzlab_core::idxread::Index;
-use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
 use mzlab_core::maproute::map_route;
 use mzlab_core::originroute::ItemMeta;
+use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::{lettori_centroidi, upload};
+use mzlab_core::{readers_centroids, upload};
 
 fn rss_mb() -> f64 {
     std::fs::read_to_string("/proc/self/status")
@@ -56,9 +56,9 @@ fn run(wiff: &str, c: usize, cen: bool) {
         wiff.rsplit('/').next().unwrap(),
         if cen { "CENTROIDS" } else { "PROFILE" }
     );
-    let mut l = lettori::apri(fileset(wiff), &Limits::sito()).expect("open");
+    let mut l = readers::apri(fileset(wiff), &Limits::sito()).expect("open");
     if cen {
-        l = lettori_centroidi::centroidato(l);
+        l = readers_centroids::centroidato(l);
     }
     let n = l.index(c).unwrap().len();
     let t = Instant::now();

@@ -1,11 +1,11 @@
-//! Labels of the main peaks of a chromatogram for the page (etichette-picchi.js through qualita.js): wasm-bindgen wrappers of `mzlab_core::etichette_picchi`.
+//! Labels of the main peaks of a chromatogram for the page (etichette-picchi.js through qualita.js): wasm-bindgen wrappers of `mzlab_core::peak_labels`.
 
 use wasm_bindgen::prelude::*;
 
 /// Fields per label written by `label_peaks`: apex index, RT, height, S/N.
 pub const LABEL_FIELDS: usize = 4;
 
-/// The peaks of a trace that deserve a label (`etichette_picchi::select`): records of `LABEL_FIELDS` numbers by increasing RT; returns how many fit in `out`.
+/// The peaks of a trace that deserve a label (`peak_labels::select`): records of `LABEL_FIELDS` numbers by increasing RT; returns how many fit in `out`.
 /// `skip_ends`: chromatograms (RT in minutes) leave out the solvent front and the end of the run; false for a spectrum.
 #[wasm_bindgen]
 pub fn label_peaks(
@@ -17,8 +17,7 @@ pub fn label_peaks(
     skip_ends: bool,
     out: &mut [f64],
 ) -> u32 {
-    let found =
-        mzlab_core::etichette_picchi::select(rt, y, max_n as usize, rel_min, snr_min, skip_ends);
+    let found = mzlab_core::peak_labels::select(rt, y, max_n as usize, rel_min, snr_min, skip_ends);
     let room = out.len() / LABEL_FIELDS;
     for (i, l) in found.iter().take(room).enumerate() {
         out[i * LABEL_FIELDS..(i + 1) * LABEL_FIELDS].copy_from_slice(&[
@@ -31,10 +30,10 @@ pub fn label_peaks(
     found.len().min(room) as u32
 }
 
-/// Tallest point of a spectrum (`etichette_picchi::main_peak`): `[x, y]` into `out`; returns 2, or 0 when there is none. `refine` = parabola (UV curves).
+/// Tallest point of a spectrum (`peak_labels::main_peak`): `[x, y]` into `out`; returns 2, or 0 when there is none. `refine` = parabola (UV curves).
 #[wasm_bindgen]
 pub fn main_peak(x: &[f64], y: &[f64], refine: bool, out: &mut [f64]) -> u32 {
-    match mzlab_core::etichette_picchi::main_peak(x, y, refine) {
+    match mzlab_core::peak_labels::main_peak(x, y, refine) {
         Some((a, b)) if out.len() >= 2 => {
             out[..2].copy_from_slice(&[a, b]);
             2

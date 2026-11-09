@@ -3,7 +3,7 @@ use super::block::Peaks;
 use super::spectra::stretches;
 use mzlab_core::error::Error;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{Fiducia, FileSet, Member};
+use mzlab_core::readers::{Fiducia, FileSet, Member};
 
 /// The folder part of a member name; both `/` and `\` separate (a folder picked on Windows names its members with `\`).
 pub(super) fn cartella(name: &str) -> Option<&str> {

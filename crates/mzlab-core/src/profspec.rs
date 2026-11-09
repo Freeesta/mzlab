@@ -7,7 +7,7 @@ use crate::error::Result;
 use crate::idxread::{ReadAt, Scan};
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
-use crate::sorgente::Scansioni;
+use crate::source::Scansioni;
 use crate::specpeaks::{pad_zeros, profile_peaks};
 
 const MAX_SCANS: usize = 60;

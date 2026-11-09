@@ -1,9 +1,9 @@
 //! What a table file is written with, one rule for `flow run` and the browser: the samples as `campioni/1` and the polarity, the recipe of the table when it names one, else the sign of the
 //! polarities of the files of its lineage, positive when neither says.
-use mzlab_core::campioni;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::parse;
+use mzlab_core::samples as core_samples;
 use mzlab_feat::facts::file_facts;
 use mzlab_feat::samples::{self, Sample};
 use mzlab_feat::store::read_table_from;
@@ -26,10 +26,10 @@ pub fn of_table<R: ReadAt, I: ReadAt>(r: &mut R, size: u64, indexes: &[Index<I>]
     Ok(if sum < 0 { -1 } else { 1 })
 }
 
-/// The samples text with its files in the order of the files of the table (`campioni::order_like` on the names its meta records): the readers pair them by position.
+/// The samples text with its files in the order of the files of the table (`core_samples::order_like` on the names its meta records): the readers pair them by position.
 pub fn samples_like<R: ReadAt>(r: &mut R, size: u64, bytes: &[u8]) -> Result<String> {
     let names = mzlab_feat::store::table_names(r, size)?;
-    campioni::order_like(&String::from_utf8_lossy(bytes), &names)
+    core_samples::order_like(&String::from_utf8_lossy(bytes), &names)
 }
 
 /// The samples as `campioni/1` text, whichever of the schemas the file has (`campioni/3` too: its batch and matrix are read by `filterspec`).
@@ -37,14 +37,14 @@ pub fn samples_v1(bytes: &[u8]) -> Result<String> {
     let doc = parse(bytes)?;
     if !matches!(
         doc.get("schema").and_then(|v| v.str()),
-        Some("campioni/2") | Some(campioni::SCHEMA3)
+        Some("campioni/2") | Some(core_samples::SCHEMA3)
     ) {
         return Ok(String::from_utf8_lossy(bytes).into_owned());
     }
     let mut out: Vec<Sample> = Vec::new();
-    for c in campioni::from_json(bytes)? {
+    for c in core_samples::from_json(bytes)? {
         let kind = match c.kind.as_str() {
-            "infusion" => campioni::tipo_v1(&c.file).to_string(),
+            "infusion" => core_samples::tipo_v1(&c.file).to_string(),
             k => k.to_string(),
         };
         let group = if matches!(kind.as_str(), "sample" | "std" | "calibration") {

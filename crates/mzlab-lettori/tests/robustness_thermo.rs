@@ -2,7 +2,7 @@
 //! Hostile `.raw` for the Thermo module: a real file (when the data repository is there) cut at many points and with bytes flipped gives an error with a key or a
 //! reading, never a panic, and what is read (index, SRM traces, UV channels, method) never panics either. Without the data the seed is a bare header, which must
 //! be refused with a key. No data of the laboratory is copied: the mutations are made in memory.
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 

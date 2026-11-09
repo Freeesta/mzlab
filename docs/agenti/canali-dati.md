@@ -1,8 +1,8 @@
 # Canali dei dati: un file = un insieme di canali
-Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta e un'euristica per i default; gli strumenti lavorano sul canale selezionato. Il motore (§2: `canali.rs`, `canali_uv.rs`, `api/canali`, `canale=`, `mzlab-cli channels`) è realizzato; le sezioni 1, 3-4 descrivono stato e piano, la 6 i prompt dei DEV.
+Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta e un'euristica per i default; gli strumenti lavorano sul canale selezionato. Il motore (§2: `channels.rs`, `channels_uv.rs`, `api/canali`, `canale=`, `mzlab-cli channels`) è realizzato; le sezioni 1, 3-4 descrivono stato e piano, la 6 i prompt dei DEV.
 
 ## 1. Stato attuale (prove nel codice)
-**Classificazione (Rust).** `item_info` (`crates/mzlab-core/src/iteminfo.rs:459-530`) dà a ogni elemento `kind` ∈ `full|ms2|mrm|infusion|empty`: `infusion` se `infusione::infusione` (`infusione.rs:110`) riconosce precursori fissi (B: ≤64 chiavi MSn, mediana ≥10 scan) e blocchi lunghi (C) o metodo `.raw` senza LC o nome `infus|fia|direct|syringe`; poi `ms2` (MSn), `full` (solo MS1), `mrm` (solo SRM). Un file «misto» è spezzato in elementi (`file_parts`, `iteminfo.rs:92`: livello × tipo di scan PREC/NL/NG/EMC/TDF/ER × polarità + «MRM»), ognuno con il suo `kind`.
+**Classificazione (Rust).** `item_info` (`crates/mzlab-core/src/iteminfo.rs:459-530`) dà a ogni elemento `kind` ∈ `full|ms2|mrm|infusion|empty`: `infusion` se `infusion::infusione` (`infusion.rs:110`) riconosce precursori fissi (B: ≤64 chiavi MSn, mediana ≥10 scan) e blocchi lunghi (C) o metodo `.raw` senza LC o nome `infus|fia|direct|syringe`; poi `ms2` (MSn), `full` (solo MS1), `mrm` (solo SRM). Un file «misto» è spezzato in elementi (`file_parts`, `iteminfo.rs:92`: livello × tipo di scan PREC/NL/NG/EMC/TDF/ER × polarità + «MRM»), ognuno con il suo `kind`.
 
 **Dove il kind cambia l'interfaccia (JS).** Registro unico `ESP` in `mzlab/web/esperimenti.js:6-16` (`spettri`, `vista`, `nodi`).
 - Tabella «1. Data files» (`shell.js`): ordine `GORD` (85), gruppi (87-88), colonna Experiment `expCell` (99-102), avviso nome≠kind (103), apribili solo i 4 kind (139), concentrazione solo `mrm` (71).
@@ -17,8 +17,8 @@ Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta 
 - `Scan::key()` (`idxread.rs:132`) = filtro senza intervallo per MS1, `ms{n} <masse nominali> @act` per MSn; `/api/filters` (`routes.rs:212`) raggruppa gli scan per chiave `{key, level, n, rt0, rt1, pol}`, calcolato a richiesta, non salvato.
 - `/api/chrom?kind=tic|bpc&level&prec&filt&mz0&mz1` (`routes.rs:151`) filtra per chiave (`Filtro::Testo`) o per nodo dell'albero (`filt=msn:<id>`, `msnroute.rs:55`); `/api/scanlist?filt` idem.
 - Cromatogrammi non-scan: `mzml::ChromKind{Tic,Bpc,Pda,Pressure,Srm,Sic,Analog,Other}` (`mzml.rs:57`), lista a richiesta `mzmlhead::Chrom{index,id,kind,q1,q3,ce,name,dwell,n}` (`mzmlhead.rs:96`), nei `Facts` come `srm`, `pda`, `analog[]`.
-- Lettura dei cromatogrammi SRM in blocco: `Mzml::chromatograms_each` (tempi e intensità) e `chromatograms_times` (solo tempi) leggono i cromatogrammi vicini insieme, in tratti fino a 16 MiB (`lettura.rs::in_spans`), e decodificano ognuno dalla sua fetta: array identici bit per bit a `chromatogram`/`chromatogram_times`; uno oltre il tratto o fuori ordine fa tratto a sé. Usati da `facts_from` (`srm_rt`), `fileroutes::mrm_transitions` (`api/mrm`) e `Sorgente::srm`: nel sito ogni lettura è una fetta di Blob, quindi migliaia di transizioni costano poche letture (`lettura_tests.rs`: 4000 SRM, <60).
-- `.wiff`: modi in `wiff/modi.rs:42-60` (Q1, Q1MI, Q3, Q3MI, MRM, Prec, PI, NL, EPI, ER, MS3, TDF, EMS, EMC; confermati i codici 0, 4, 5, 6, 7, 11, 15); MRM → un TIC + un cromatogramma `SRM SIC Q1= Q3= … experiment= transition=` per transizione (`wiff/run.rs:25-49`); DAD → `DadData` (`wiff/dad.rs:33`).
+- Lettura dei cromatogrammi SRM in blocco: `Mzml::chromatograms_each` (tempi e intensità) e `chromatograms_times` (solo tempi) leggono i cromatogrammi vicini insieme, in tratti fino a 16 MiB (`reading.rs::in_spans`), e decodificano ognuno dalla sua fetta: array identici bit per bit a `chromatogram`/`chromatogram_times`; uno oltre il tratto o fuori ordine fa tratto a sé. Usati da `facts_from` (`srm_rt`), `fileroutes::mrm_transitions` (`api/mrm`) e `Sorgente::srm`: nel sito ogni lettura è una fetta di Blob, quindi migliaia di transizioni costano poche letture (`reading_tests.rs`: 4000 SRM, <60).
+- `.wiff`: modi in `wiff/modes.rs:42-60` (Q1, Q1MI, Q3, Q3MI, MRM, Prec, PI, NL, EPI, ER, MS3, TDF, EMS, EMC; confermati i codici 0, 4, 5, 6, 7, 11, 15); MRM → un TIC + un cromatogramma `SRM SIC Q1= Q3= … experiment= transition=` per transizione (`wiff/run.rs:25-49`); DAD → `DadData` (`wiff/dad.rs:33`).
 - Thermo: filtro testuale in `Scan.filter`, `path` da `filter_path` (`scantable.rs:238`); SRM/CRM a scan → cromatogrammi per transizione (`mzlab-lettori/src/srm.rs`).
 
 **Dove si perde o si mescola informazione.**
@@ -28,7 +28,7 @@ Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta 
 4. Quattro meccanismi per «quale sottoinsieme di scan»: `prec` (0,6 Da), `tr` MS2 (`ms2tr`), `filt`/`msn:` (solo HR e infusione), pannello `mrm`.
 5. `.mzidx`: nessun id di esperimento, periodo o ciclo (per il `.wiff` stanno solo nel testo `native`, `wiff/run.rs:107-113`); si legge solo il `Period0` (`wiff/mod.rs:120`); finestra di scan, `p/c` e `[a-b]` del filtro Thermo non sono campi.
 6. Cromatogrammi mzML non indicizzati (solo il numero in `run.n_chromatograms`): ogni lista rilegge la coda del file.
-7. PDA Agilent e Shimadzu non decodificati (`agilent_ext/lettore_lc.rs:11`, `mzlab-lettori/src/shimadzu/reader.rs:20`): oggi il canale manca, non è nascosto.
+7. PDA Agilent e Shimadzu non decodificati (`agilent_ext/reader_lc.rs:11`, `mzlab-lettori/src/shimadzu/reader.rs:20`): oggi il canale manca, non è nascosto.
 
 ## 2. Modello «file → canali»
 **Principio.** Ogni file espone un elenco di canali; ogni canale ha una traccia (tempo → intensità) e, se li ha, i suoi scan con lo spettro (di massa o UV). Gli strumenti chiedono «canale + file», mai «kind».
@@ -36,11 +36,11 @@ Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta 
 **Famiglie e id stabili (stringhe, uguali in CLI, wasm e pagina).**
 - `tic` (tutti gli scan MS, ordine del tempo; per un file solo MRM = somma delle transizioni, il TIC del costruttore se c'è), `bpc`.
 - `ms:<chiave>`: un gruppo di scan con la stessa `Scan::key()` (MS1 full, SIM, EMS, EPI a precursore fisso, MS2/MS3… di un percorso). Figli di `tic`; per MSn il genitore è il canale del precursore (`ms:<chiave>` di livello n-1), così l'albero dei precursori È la gerarchia dei canali.
-- `dd:<livello>[:<sigla>]`: aggregato degli MSn dipendenti dai dati (DDA, IDA EMS→EPI) quando le chiavi distinte di quel livello superano 64 (stesso tetto di `infusione.rs`): un solo canale con gli scan e i precursori come sotto-vista a richiesta (non 3 000 canali).
+- `dd:<livello>[:<sigla>]`: aggregato degli MSn dipendenti dai dati (DDA, IDA EMS→EPI) quando le chiavi distinte di quel livello superano 64 (stesso tetto di `infusion.rs`): un solo canale con gli scan e i precursori come sotto-vista a richiesta (non 3 000 canali).
 - `srm:<q1>><q3>[@ce]` (una transizione MRM/SRM/CRM), `sim:<id>` (cromatogrammi SIC), `uv:twc`, `uv:<nm>[±bw]` (lunghezza d'onda chiesta dall'utente: canale derivato), `an:<i>` (pressione, flusso, UV singolo).
 - `omologo`: chiave per sovrapporre file diversi (livello + masse nominali del percorso + attivazione + CE arrotondata; q1/q3 a 0,1; nm). Due file condividono un canale se hanno lo stesso `omologo`.
 
-**Struttura in Rust (`crates/mzlab-core/src/canali.rs`, ≤500 righe, nuovo).**
+**Struttura in Rust (`crates/mzlab-core/src/channels.rs`, ≤500 righe, nuovo).**
 ```rust
 pub enum Famiglia { Tic, Bpc, Ms, Dd, Srm, Sim, Uv, Analog }
 pub struct Canale {
@@ -49,7 +49,7 @@ pub struct Canale {
     pub genitore: Option<u32>, // indice del canale padre (tic, precursore)
     pub livello: u8,           // 0 per uv/analog
     pub pol: i8,
-    pub sigla: Option<&'static str>, // EMS, EPI, MRM, Prec, NL, Q1MI… (modi.rs) o "SIM", "DDA"
+    pub sigla: Option<&'static str>, // EMS, EPI, MRM, Prec, NL, Q1MI… (modes.rs) o "SIM", "DDA"
     pub etichetta: String,     // breve, per la lista: "MS3 317→261 @CID30"
     pub omologo: String,
     pub n: u32,                // scan o punti
@@ -62,7 +62,7 @@ pub struct Canali { pub v: Vec<Canale>, pub scan_ids: Vec<u32>, pub tipo: Tipo }
 ```
 `scan_ids` è una partizione degli scan MS ordinata per canale (`Sorgente::Scan{da,a}` = fetta): 4 B per scan, nessun dato spettrale copiato. Costruzione O(n scan) dalla tabella già in memoria (`idx.scans`, ~640 B/scan) + la lista dei cromatogrammi (`Facts`/`mzmlhead::Chrom`); fatta una volta per file e tenuta nelle `Routes` (100 000 scan → 400 KB + qualche centinaio di canali). Niente cambio di formato del `.mzidx` nel primo passo; in un passo successivo (DEV-b) una colonna `exp` facoltativa (esperimento/periodo del `.wiff`) se il testo `native` non basta.
 
-**Tipo di esperimento come etichetta (`Tipo`).** `Tipo { proposto: &'static str, motivo, utente: Option<..> }` con valori descrittivi `lc-full`, `lc-ms2-mirato`, `lc-dda`, `lc-mrm`, `lc-sim` (solo cromatogrammi SIM, anche con una traccia UV), `infusione-msn`, `misto`, `solo-uv`; calcolato da `infusione.rs` + canali; il valore dell'utente (menu di VISORE-ZOOM) vince e sta nella sessione. Serve SOLO ai default (§3): canale iniziale, lente XIC proposta o no, scheda «alb» aperta all'avvio.
+**Tipo di esperimento come etichetta (`Tipo`).** `Tipo { proposto: &'static str, motivo, utente: Option<..> }` con valori descrittivi `lc-full`, `lc-ms2-mirato`, `lc-dda`, `lc-mrm`, `lc-sim` (solo cromatogrammi SIM, anche con una traccia UV), `infusione-msn`, `misto`, `solo-uv`; calcolato da `infusion.rs` + canali; il valore dell'utente (menu di VISORE-ZOOM) vince e sta nella sessione. Serve SOLO ai default (§3): canale iniziale, lente XIC proposta o no, scheda «alb» aperta all'avvio.
 
 **API (rotte `/api`, stesse in wasm e desktop; JSON con versione).**
 - `GET api/canali?k` → `{"v":"canali/1","tipo":{…},"canali":[{id,fam,gen,liv,pol,sigla,et,omo,n,rt0,rt1,spettri}]}`.
@@ -73,7 +73,7 @@ Adattatore: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<nodo>` resta, `level`/`
 
 **Costruzione per formato.**
 - mzML/mzXML e Thermo `.raw`: chiavi da `Scan::key()`; SIM = chiave MS1 con «SIM»; cromatogrammi `srm`/`pda`/`pressure` dalla coda (`mzmlhead`).
-- `.wiff` (realizzato per EMS, EPI, MRM; `canali/wiff.rs`): sigla da `modi.rs` per livello; MRM → `srm:` dai cromatogrammi per transizione (nome del metodo come etichetta); EMS/EPI → `ms:`, o `dd:2:EPI` se IDA; Prec/NL → `ms:` con sigla; DAD → `uv:`.
+- `.wiff` (realizzato per EMS, EPI, MRM; `channels/wiff.rs`): sigla da `modes.rs` per livello; MRM → `srm:` dai cromatogrammi per transizione (nome del metodo come etichetta); EMS/EPI → `ms:`, o `dd:2:EPI` se IDA; Prec/NL → `ms:` con sigla; DAD → `uv:`.
 - Shimadzu/Agilent `.D`/Waters: dai cromatogrammi dei lettori (`ChromKind`); PDA appena decodificato (fuori da questo piano).
 
 ## 3. Interfaccia proposta
@@ -109,7 +109,7 @@ Canale                         Sigla   n     RT (min)
 **Schede dei kind.** Nel primo giro restano (adattatore: la scheda sceglie il canale iniziale); quando i pannelli usano solo canali, le schede `full/ms2/mrm` si fondono in un'area di lavoro unica (decisione di Federico, §5).
 
 ## 4. Migrazione senza rompere
-1. **Motore (DEV-a)**: `canali.rs` + `api/canali` + parametro `canale=` su `chrom`, `xic`, `scanlist`, `spectrum`, accanto ai parametri vecchi; parità CLI; nessun JS. Nessun test esistente cambia.
+1. **Motore (DEV-a)**: `channels.rs` + `api/canali` + parametro `canale=` su `chrom`, `xic`, `scanlist`, `spectrum`, accanto ai parametri vecchi; parità CLI; nessun JS. Nessun test esistente cambia.
 2. **.wiff (DEV-b)**: sigle, IDA, periodi > 0, esperimento come campo; utile subito alle priorità 1-2 (lettura nativa, `.wiff`→mzML: gli id SRM restano quelli di msconvert).
 3. **UV/analogici (DEV-c)**: `uv:` e `an:` nella stessa lista; `uv:<nm>` derivato.
 4. **Selettore (DEV-d)**: `canali.js` + selettore nel pannello cromatogramma; i selettori `kind/prec/tr` restano dietro l'adattatore finché `e2e` li usa, poi si spengono per primi (sono i doppioni).

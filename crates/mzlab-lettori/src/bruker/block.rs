@@ -5,10 +5,10 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 fn broken(m: &str) -> Error {
-    Error::new("err.dam.unreadable").with("message", format!("tdf_bin: {m}"))
+    Error::new("err.file.brukerDamaged").with("detail", format!("tdf_bin: {m}"))
 }
 
 /// The peaks of a frame, in scan order: the points of scan `s` (0-based) are `inizio[s]..inizio[s + 1]`, each a TOF index and an intensity.

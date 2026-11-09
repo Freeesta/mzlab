@@ -1,8 +1,8 @@
 //! A sample as the `Run` that the rest of the program reads: scans become spectra (profile, empty ones left out as msconvert does)
-//! and the chromatograms are those of `cromatogrammi.rs` (a TIC per experiment, SRM / SIM per transition or ion, BPC of a full scan).
+//! and the chromatograms are those of `chromatograms.rs` (a TIC per experiment, SRM / SIM per transition or ion, BPC of a full scan).
 
 #[cfg(not(feature = "estesi"))]
-use super::cromatogrammi::Blocks;
+use super::chromatograms::Blocks;
 use super::{scan, Wiff};
 use crate::error::Result;
 use crate::idxread::ReadAt;
@@ -89,7 +89,7 @@ impl Wiff {
         j: usize,
         t: Option<&Transition>,
     ) -> (String, crate::mzml::ChromKind, Option<f64>, Option<f64>) {
-        if super::modi::sim(self.experiments.get(e).and_then(|x| x.code)) {
+        if super::modes::sim(self.experiments.get(e).and_then(|x| x.code)) {
             let id = self.sim_id(e, j, t);
             return (id, crate::mzml::ChromKind::Sic, t.map(|t| t.q1), None);
         }
@@ -264,7 +264,7 @@ impl Wiff {
 }
 
 /// The cps of an MRM block, read dense. A scheduled (sMRM) block, which starts with `-(N + 0.01)`, is `err.file.wiff`: only the readers module
-/// (`scan_estesi.rs`) reads it, and its skip markers must never become intensities.
+/// (`scan_extended.rs`) reads it, and its skip markers must never become intensities.
 #[cfg(not(feature = "estesi"))]
 fn dense_mrm<R: ReadAt>(
     scan: &mut R,
@@ -299,5 +299,5 @@ impl Blocks {
 }
 
 #[cfg(feature = "estesi")]
-#[path = "run_estesi.rs"]
+#[path = "run_extended.rs"]
 mod estesi_run;

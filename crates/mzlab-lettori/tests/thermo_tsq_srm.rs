@@ -7,9 +7,9 @@
 
 use std::path::PathBuf;
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::{self, ChromKind, Spectrum};
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 const RAW: &str = "thermo/raw/PXD043691_mrm/201208_15.raw";
 const TRFP: &str = "_oracoli/trfp/201208_15.mzML";
@@ -25,7 +25,7 @@ fn data(rel: &str) -> Option<PathBuf> {
     roots.into_iter().map(|r| r.join(rel)).find(|p| p.is_file())
 }
 
-fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Reader> {
+fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::readers::Reader> {
     let bytes = std::fs::read(raw).unwrap();
     let set = FileSet {
         membri: vec![Member {

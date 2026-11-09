@@ -47,7 +47,7 @@ impl Decode for Plain {
     }
 }
 
-pub(crate) mod corriere;
+pub(crate) mod courier;
 #[cfg(not(target_family = "wasm"))]
 pub(crate) mod pool;
 

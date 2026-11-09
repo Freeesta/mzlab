@@ -7,7 +7,7 @@ use super::doc::param;
 use super::lcmethod::{LcMethod, MsTable, Rc};
 use super::lcmodules::{detectors, lc, sampler};
 use super::{meta, AgilentD};
-use crate::metodo::{num, obj, text, V};
+use crate::method::{num, obj, text, V};
 
 pub(super) const RC_ORIGIN: &str = "AcqData/AcqMethod.xml#RC";
 pub(super) const MS_ORIGIN: &str = "AcqData/AcqMethod.xml#MS";

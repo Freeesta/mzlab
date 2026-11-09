@@ -5,7 +5,7 @@
 use mzlab_core::error::Result;
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::sorgente::{MzmlTraces, Traces};
+use mzlab_core::source::{MzmlTraces, Traces};
 
 /// One chromatogram of a transition or SIM ion: times in minutes.
 #[derive(Debug, Clone, PartialEq, Default)]

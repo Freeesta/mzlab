@@ -1,4 +1,4 @@
-//! The recognition of an infusion (`infusione.rs`) on whole files: the committed cycled MSn file (`tests/golden/ref/msntree_rotta`) is NOT an
+//! The recognition of an infusion (`infusion.rs`) on whole files: the committed cycled MSn file (`tests/golden/ref/msntree_rotta`) is NOT an
 //! infusion without a hint, the synthetic infusion of `TP_Mine/tests/msn_synth.py` (one path at a time) is (skipped without python3 and
 //! numpy), and the files of the private data repository answer as `scratchpad/verita_infusione_msn.json` says (skipped without it).
 
@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::idxread::{Index, Scan};
-use mzlab_core::infusione::infusione;
+use mzlab_core::infusion::infusione;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
 

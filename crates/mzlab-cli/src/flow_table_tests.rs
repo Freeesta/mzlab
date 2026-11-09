@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use mzlab_core::campioni;
+use mzlab_core::samples as core_samples;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::samples::{self, propose};
 use mzlab_feat::store::{write_table, Origin, Slice};
@@ -112,7 +112,7 @@ fn campioni_2_gives_the_same_view_and_a_rule_that_cannot_be_read_fails() {
         .collect();
     std::fs::write(
         d.join("samples.json"),
-        campioni::to_json(&campioni::proponi(&named)),
+        core_samples::to_json(&core_samples::proponi(&named)),
     )
     .unwrap();
     let got = run(&d, r#"{"blank_ratio":3}"#).unwrap();
@@ -160,11 +160,11 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
         .into_iter()
         .map(|(n, s)| (n, s, String::new()))
         .collect();
-    let mut cs = campioni::proponi(&named);
+    let mut cs = core_samples::proponi(&named);
     for (c, b) in cs.iter_mut().zip(["B1", "B1", "B2", "B2"]) {
         c.batch = b.into();
     }
-    let samples = campioni::to_json3(&campioni::Table {
+    let samples = core_samples::to_json3(&core_samples::Table {
         campioni: cs,
         colonne: Vec::new(),
     });

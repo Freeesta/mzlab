@@ -8,7 +8,7 @@ use std::process::Command;
 use std::rc::Rc;
 
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::wiff;
 
 const SAMPLES: usize = 14;
@@ -98,13 +98,13 @@ fn opening_every_sample_of_a_wiff_pair_reads_it_about_once() {
     };
     let c = Rc::new(Conti::default());
     // the list of samples (`native_samples`)
-    let l = lettori::apri(set(&dati, &c), &Limits::sito()).unwrap();
+    let l = readers::apri(set(&dati, &c), &Limits::sito()).unwrap();
     assert_eq!(l.samples().len(), SAMPLES);
     drop(l);
     let list = (c.reads.get(), c.bytes.get());
     // one index builder per sample, each in its own worker (`build_mzidx_native`)
     for s in 0..SAMPLES {
-        let mut l = wiff::lettore::open_only(set(&dati, &c), &Limits::sito(), Some(s)).unwrap();
+        let mut l = wiff::reader::open_only(set(&dati, &c), &Limits::sito(), Some(s)).unwrap();
         assert!(!l.index(s).unwrap().is_empty());
     }
     let all = (c.reads.get(), c.bytes.get());

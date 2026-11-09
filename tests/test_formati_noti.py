@@ -1,5 +1,5 @@
 """The one table of recognised instrument formats (mzlab/web/formati-noti.js, run by node): vendor and format of each, readable or not, and its agreement with
-ordine.rs (EXT), tools/converti.py and the file-like words of the bug report."""
+order.rs (EXT), tools/converti.py and the file-like words of the bug report."""
 import json
 import re
 import shutil
@@ -42,7 +42,7 @@ def test_classify_unknown(name):
 
 def test_table_agrees_with_other_lists():
     exts = node("F.FORMATI.map(f=>f.ext)")
-    order = (ROOT / "crates/mzlab-core/src/campioni/ordine.rs").read_text(encoding="utf-8")
+    order = (ROOT / "crates/mzlab-core/src/samples/order.rs").read_text(encoding="utf-8")
     rust = set(re.findall(r'"(\w+)"', re.search(r"const EXT: \[&str; \d+\] = \[(.*?)\];", order, re.S).group(1)))
     assert {"raw", "wiff", "wiff2", "d", "cdf"} <= rust and {"raw", "wiff", "wiff2", "d", "cdf"} <= {e.lstrip(".") for e in exts}
     conv = (ROOT / "tools/converti.py").read_text(encoding="utf-8")

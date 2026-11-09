@@ -106,7 +106,7 @@ pub fn instrument_method_text<R: Read + Seek>(mut source: R) -> Result<Option<St
     Ok(raw.instrument_method_text(&mut source))
 }
 
-/// The `metodo/1` document of a `.raw` (`metodo_raw.rs`); `name` is the file name.
+/// The `metodo/1` document of a `.raw` (`method_raw.rs`); `name` is the file name.
 pub fn method<R: Read + Seek>(mut source: R, name: &str) -> Result<String> {
     let raw = open(&mut source)?;
     Ok(metodo_of(&raw, &mut source, name))
@@ -124,16 +124,16 @@ pub(crate) fn metodo_sha1<R: Read + Seek>(
     sha1: Option<String>,
 ) -> String {
     let bytes = source.seek(SeekFrom::End(0)).unwrap_or(0);
-    let src = crate::metodo::Source {
+    let src = crate::method::Source {
         format: "thermo-raw",
-        files: vec![crate::metodo::SrcFile {
+        files: vec![crate::method::SrcFile {
             name: name.to_string(),
             sha1,
             bytes,
         }],
         sample: None,
     };
-    crate::metodo_raw::from_raw(raw, source, &src)
+    crate::method_raw::from_raw(raw, source, &src)
 }
 
 /// Streams the spectra one at a time (centroids); `on` gets each before the next is read.

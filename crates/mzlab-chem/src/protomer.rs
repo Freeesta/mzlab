@@ -1,5 +1,5 @@
 //! Protonation state at pH 7 from a small table of typical pKa values (no quantum pKa): the single most probable charge form of
-//! the parent, used before the reactivity calculation (`reatt/1`, field `protomer`). Used by `reatt.rs`.
+//! the parent, used before the reactivity calculation (`reatt/1`, field `protomer`). Used by `react.rs`.
 //!
 //! Rule: an acid is deprotonated when its pKa < 7, a base is protonated when its pKa > 7; each base already protonated within a
 //! few bonds lowers the pKa of the next one. One form is returned, never an ensemble. Charges written in the SMILES are kept.

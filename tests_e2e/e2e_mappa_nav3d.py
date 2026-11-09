@@ -31,7 +31,7 @@ try:
         npan = lambda t: pg.evaluate(f"E.panels.filter(q=>q.type==='{t}').length")
         def open3d():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); frames(pg, 3)
-            pg.locator(BTN).click()
+            hd_click(pg, BTN)
             pg.wait_for_function("document.querySelector('dialog.m3d[open]') && window.__m3d && window.__m3d.V.g && window.__m3d.V.Z", timeout=60000)
             wait_for_js(pg, f"({SPOT}) !== null")      # the picking grid is drawn
         items = lambda: pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(d=>[d.textContent.trim(),d.classList.contains('dim'),d.getAttribute('aria-checked')])")

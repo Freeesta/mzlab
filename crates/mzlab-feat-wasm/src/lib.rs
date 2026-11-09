@@ -210,7 +210,7 @@ pub fn detect_file(
 
 #[cfg(feature = "detect")]
 /// L1-L3 of one file written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeatf`. `progress(done, total)` (optional) is called at most once per 1 % of the peaks.
-/// A file whose detection does not fit in `budget_mb` (0 or absent: the default of the `.wasm`) is refused first (`stima::detect_fits`).
+/// A file whose detection does not fit in `budget_mb` (0 or absent: the default of the `.wasm`) is refused first (`estimate::detect_fits`).
 #[wasm_bindgen]
 pub fn detect_file_to(
     read: Function, size: f64, name: &str, recipe: &str, write: Function, progress: Option<Function>, budget_mb: Option<f64>,
@@ -276,8 +276,10 @@ pub fn drift_series(
 #[cfg(feature = "detect")]
 /// L4-L6: alignment and gap filling of the `.mzfeatf` of a series (an `Array` of `Uint8Array`, in the order of the indexes) written to
 /// `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeat`. The same bytes whatever `budget_mb` (0/NaN = 192): in memory, in slabs of m/z, or
-/// the error `error.memoryBudget` with `{fase, stima_mb, budget_mb}`. The optional `spill` keeps the weak tables outside the module (`spill_js`).
+/// the error `error.memoryBudget` with `{fase, stima_mb, budget_mb}`. The optional `spill` keeps the weak tables outside the module (`spill_js`); the
+/// optional `weak` holds the weak candidates of each file from its detection (`series_js::detect_weak_file_to`), the same bytes with or without them.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn align_series_to(
     files: Array,
     read: Function,
@@ -286,10 +288,11 @@ pub fn align_series_to(
     write: Function,
     budget_mb: f64,
     spill: Option<js_sys::Object>,
+    weak: Option<Array>,
 ) -> std::result::Result<String, JsValue> {
     let (r, facts) = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
-    let mut src = JsStored { files };
+    let mut src = series_js::WithWeak { files: JsStored { files }, weak };
     let (open, mut spill) = (|k| open_one(&read, k, sizes[k]), spill_js::of(spill.as_ref())?);
     to_sink(write, |sink| run::align_to_spilling(&mut src, &budget, &r, Some(facts), open, sink, spill_js::borrow(&mut spill)))
 }

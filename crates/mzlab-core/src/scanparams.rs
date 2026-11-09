@@ -26,7 +26,7 @@ fn med(mut v: Vec<f64>) -> Option<f64> {
 fn vals<M: ReadAt>(sc: &[&crate::idxread::Scan], acc: &str, mzml: &mut M) -> Result<Vec<f64>> {
     let mut out = Vec::new();
     for s in sc.iter().step_by((sc.len() / 300).max(1)) {
-        let h = crate::sorgente::scan_text(mzml, s)?;
+        let h = crate::source::scan_text(mzml, s)?;
         if let Some(v) = cv_value(&h, acc).and_then(|v| v.trim().parse::<f64>().ok()) {
             out.push(v);
         }

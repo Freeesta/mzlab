@@ -1,12 +1,12 @@
 //! The session interface of a module, in plain Rust (the `wasm_bindgen` functions of `lib.rs` only convert): a reader stays open under a handle, and the engine's external reader asks it for the
-//! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON, or one byte array for the index and a scan (`mzlab_core::trasporto`); an error is `{error_key, params}`.
+//! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON, or one byte array for the index and a scan (`mzlab_core::transport`); an error is `{error_key, params}`.
 use std::collections::HashMap;
 
 use super::json_text::{chromatograms_json, fields_json, header_json, samples_json};
 use mzlab_core::json::Out;
-use mzlab_core::lettori::Reader;
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::trasporto::{encode_index, encode_scansione};
+use mzlab_core::readers::Reader;
+use mzlab_core::transport::{encode_index, encode_scansione};
 use mzlab_core::Result;
 
 #[derive(Default)]
@@ -47,12 +47,12 @@ impl Sessions {
         Ok(std::mem::take(&mut o.0))
     }
 
-    /// The index of sample `c` as one block of bytes in columns (`trasporto.rs`).
+    /// The index of sample `c` as one block of bytes in columns (`transport.rs`).
     pub fn index(&mut self, h: u32, c: usize) -> Result<Vec<u8>> {
         Ok(encode_index(self.reader(h)?.index(c)?))
     }
 
-    /// Scan `k` of sample `c` as one block of bytes: a fixed head, the m/z, the intensities (`trasporto.rs`). The id and the filter are those of the index.
+    /// Scan `k` of sample `c` as one block of bytes: a fixed head, the m/z, the intensities (`transport.rs`). The id and the filter are those of the index.
     pub fn scan(&mut self, h: u32, c: usize, k: usize) -> Result<Vec<u8>> {
         Ok(encode_scansione(&self.reader(h)?.scan_data(c, k)?))
     }

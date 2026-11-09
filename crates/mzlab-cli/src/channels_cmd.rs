@@ -97,19 +97,19 @@ fn read(c: &Request, tmp: &std::path::Path) -> Result<String> {
         let chroms = m.chromatograms(scans_end)?;
         if let Some(id) = &c.channel {
             return match c.rt {
-                Some((a, b)) => mzlab_core::canali_uv::spettro(&mut m, id, a, b),
-                None => mzlab_core::canali_uv::trace(&mut m, &chroms, id, c.n),
+                Some((a, b)) => mzlab_core::channels_uv::spettro(&mut m, id, a, b),
+                None => mzlab_core::channels_uv::trace(&mut m, &chroms, id, c.n),
             };
         }
         let facts = mzlab_core::iteminfo::facts_from(&mut m, scans_end, chroms.len() as i64, true)?;
         r.pon_cromatogrammi(&name, &chroms, &facts);
     } else {
-        // the first sample, as the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`lettori_mzml::guscio`)
+        // the first sample, as the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`readers_mzml::guscio`)
         let mut l = mzlab_lettori::apri(
             crate::flow_set::file_set(file)?,
-            &mzlab_core::lettori::Limits::desktop(),
+            &mzlab_core::readers::Limits::desktop(),
         )?;
-        let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), 0)?;
+        let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), 0)?;
         let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
         let size = shell.len() as u64;
         let mut m = Mzml::new(shell, size);

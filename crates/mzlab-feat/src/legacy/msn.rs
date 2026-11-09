@@ -10,7 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use super::fragtree::{elements_of, fmt, substructures, vec_of, Graph, Space, Subs};
 use super::ms2::consensus_arrays;
 use super::Res;
-use mzlab_core::msnalbero::{albero_di, Grouping};
+use mzlab_core::msntree_build::{albero_di, Grouping};
 
 mod atoms;
 pub mod json;
@@ -111,7 +111,7 @@ fn argmax(v: &[f64], idx: &[usize]) -> usize {
     best
 }
 
-/// `node_key` of a path of the tree (`mzlab_core::msnalbero`): nominal m/z, activation, collision energy (as bits, to be hashed).
+/// `node_key` of a path of the tree (`mzlab_core::msntree_build`): nominal m/z, activation, collision energy (as bits, to be hashed).
 fn key_of(key: &[(f64, String, f64)]) -> Key {
     key.iter()
         .map(|(mz, act, ce)| (mz.round_ties_even() as i64, act.clone(), ce.to_bits()))

@@ -96,7 +96,7 @@ try:
         def no_hr(x):   # `hr` (high-resolution flag of a file, `sniff.rs`) is the engine's alone, in every `files` list
             if isinstance(x, dict): return {k: ([{a: b for a, b in f.items() if a != "hr"} if isinstance(f, dict) else f for f in no_hr(v)] if k == "files" and isinstance(v, list) else no_hr(v)) for k, v in x.items()}
             return [no_hr(v) for v in x] if isinstance(x, list) else x
-        def no_msn(x):   # `msn` (infusion recognised from the index, `infusione.rs`) is the engine's alone, wherever a file is described: the reference has no such field
+        def no_msn(x):   # `msn` (infusion recognised from the index, `infusion.rs`) is the engine's alone, wherever a file is described: the reference has no such field
             if isinstance(x, dict): return {k: no_msn(v) for k, v in x.items() if k != "msn"}
             return [no_msn(v) for v in x] if isinstance(x, list) else x
         def classic():

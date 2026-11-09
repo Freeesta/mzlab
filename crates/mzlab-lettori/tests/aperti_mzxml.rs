@@ -6,8 +6,8 @@ mod common;
 
 use common::mzxml::*;
 use common::{file_set, written_mzml};
-use mzlab_core::lettori::Fiducia;
 use mzlab_core::mzml::ChromKind;
+use mzlab_core::readers::Fiducia;
 
 fn options() -> Vec<Opz> {
     let mut v = Vec::new();

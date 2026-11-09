@@ -1,11 +1,11 @@
-//! `/api/scaninfo`: every name / value pair of the header of one scan as the source has it (`sorgente::Scansioni`), plus the fields of the scan table
+//! `/api/scaninfo`: every name / value pair of the header of one scan as the source has it (`source::Scansioni`), plus the fields of the scan table
 //! (`Item.scan_header` in `mzlab/explore.py`). Only the header up to `<binaryDataArrayList` is read from the mzML, never the arrays.
 
 use crate::error::{Error, Result};
 use crate::idxread::{ReadAt, Scan};
 use crate::json::{round, Out};
-use crate::lettori::Field;
-use crate::sorgente::Scansioni;
+use crate::readers::Field;
+use crate::source::Scansioni;
 
 const MARK: &[u8] = b"<binaryDataArrayList";
 

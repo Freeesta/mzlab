@@ -69,10 +69,10 @@ export async function mount(host) {
   box = host;
   host.innerHTML = `<div class="bg-box">
 <label for="bug-what" class="sr-only" data-i18n="bug.what"></label>
-<textarea id="bug-what" rows="4" data-i18n-placeholder="bug.what"></textarea>
+<textarea id="bug-what" rows="4" data-i18n-placeholder="bug.what" data-i18n-title="bug.what.tip"></textarea>
 <p class="hint" data-i18n="bug.info"></p>
-<details><summary data-i18n="bug.info.btn"></summary><pre id="bug-diagtxt"></pre></details>
-<div class="bg-act"><a id="bug-go" class="bg-go" target="_blank" rel="noopener noreferrer" href="#">${ICO.gh}<span data-i18n="bug.open"></span></a><button type="button" id="bug-copy">${ICO.copy}<span data-i18n="bug.copy"></span></button><button type="button" id="bug-mail">${ICO.mail}<span data-i18n="bug.mail"></span></button></div>
+<details><summary data-i18n="bug.info.btn" data-i18n-title="bug.info.tip"></summary><pre id="bug-diagtxt"></pre></details>
+<div class="bg-act"><a id="bug-go" class="bg-go" target="_blank" rel="noopener noreferrer" href="#" data-i18n-title="bug.open.tip">${ICO.gh}<span data-i18n="bug.open"></span></a><button type="button" id="bug-copy" data-i18n-title="bug.copy.tip">${ICO.copy}<span data-i18n="bug.copy"></span></button><button type="button" id="bug-mail" data-i18n-title="bug.mail.tip">${ICO.mail}<span data-i18n="bug.mail"></span></button></div>
 <div class="bg-st" id="bug-st" role="status" aria-live="polite"></div></div>`;
   if (W.I18N) W.I18N.apply(host);
   q("#bug-what").addEventListener("input", aggiorna);

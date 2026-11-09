@@ -6,8 +6,8 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
-use mzlab_core::{lettori_mzml, metodo, raw};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
+use mzlab_core::{method, raw, readers_mzml};
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
@@ -54,7 +54,7 @@ fn a_real_raw_reads_the_same_through_the_registry() {
     }
     for f in files.iter().take(2) {
         let want = raw::read(std::fs::File::open(f).unwrap()).unwrap();
-        let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+        let mut l = readers::apri(set(f), &Limits::sito()).unwrap();
         assert_eq!(l.format().id(), "thermo-raw");
         assert_eq!(l.samples().len(), 1);
         let index = l.index(0).unwrap().to_vec();
@@ -107,7 +107,7 @@ fn the_profile_scan_is_the_same_scan_with_the_points_of_the_file() {
         eprintln!("SKIP raw_reader: no data repository (MZLAB_DATI)");
         return;
     };
-    let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+    let mut l = readers::apri(set(f), &Limits::sito()).unwrap();
     let n = l.index(0).unwrap().len();
     for k in (0..n).step_by((n / 20).max(1)) {
         let a = l.scan(0, k).unwrap();
@@ -130,7 +130,7 @@ fn not_a_raw_is_refused() {
             sha1: None,
         }],
     };
-    assert!(lettori::riconosci(&mut fs).is_none());
+    assert!(readers::riconosci(&mut fs).is_none());
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn the_noise_and_baseline_of_an_ft_scan_come_with_the_header_and_leave_the_peaks
         .unwrap();
         let mut src = std::io::BufReader::new(std::fs::File::open(f).unwrap());
         let first = direct.run_header.sample_info.first_scan_number;
-        let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+        let mut l = readers::apri(set(f), &Limits::sito()).unwrap();
         let n = l.index(0).unwrap().len();
         for k in (0..n).step_by((n / 12).max(1)) {
             let head = l.scan_header(0, k).unwrap();
@@ -216,12 +216,12 @@ fn the_mzml_of_a_raw_carries_the_instrument_the_hash_the_start_and_the_method() 
         eprintln!("SKIP raw_reader: no data repository (MZLAB_DATI)");
         return;
     };
-    let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+    let mut l = readers::apri(set(f), &Limits::sito()).unwrap();
     let mut head = Head(Vec::new());
-    let _ = lettori_mzml::scrivi(&mut *l, 0, &mut head, &mut |_, _| {});
+    let _ = readers_mzml::scrivi(&mut *l, 0, &mut head, &mut |_, _| {});
     let xml = String::from_utf8_lossy(&head.0).into_owned();
     let top = &xml[..xml.find("<spectrumList").unwrap()];
-    let want = mzlab_core::metodo::sha1_hex(
+    let want = mzlab_core::method::sha1_hex(
         &mut std::fs::read(f).unwrap(),
         std::fs::metadata(f).unwrap().len(),
     )
@@ -235,7 +235,7 @@ fn the_mzml_of_a_raw_carries_the_instrument_the_hash_the_start_and_the_method() 
     assert!(top.contains("MS:1000563"), "source file format");
     assert!(top.contains("startTimeStamp=\""), "start of the run");
     assert!(top.contains("opentfraw.computer_name"), "run terms");
-    let doc = metodo::from_userparam(top).expect("metodo/1 in the run");
+    let doc = method::from_userparam(top).expect("metodo/1 in the run");
     assert!(doc.contains("\"schema\":\"metodo/1\""));
     assert!(
         doc.contains(&want),
@@ -261,7 +261,7 @@ fn the_series_of_the_instrument_log_are_served_by_id_and_are_not_chromatograms_o
         return;
     }
     for f in files.iter().take(3) {
-        let mut l = lettori::apri(set(f), &Limits::sito()).unwrap();
+        let mut l = readers::apri(set(f), &Limits::sito()).unwrap();
         let doc = mzlab_core::json::parse(l.method(0).unwrap().as_bytes()).unwrap();
         let listed: Vec<String> = l
             .chromatograms(0)
@@ -293,9 +293,9 @@ fn the_sha1_given_with_the_member_gives_the_same_header_as_the_one_the_reader_re
         return;
     };
     let header = |mut fs: FileSet| {
-        let mut l = lettori::apri(std::mem::take(&mut fs), &Limits::sito()).unwrap();
+        let mut l = readers::apri(std::mem::take(&mut fs), &Limits::sito()).unwrap();
         let mut head = Head(Vec::new());
-        let _ = lettori_mzml::scrivi(&mut *l, 0, &mut head, &mut |_, _| {});
+        let _ = readers_mzml::scrivi(&mut *l, 0, &mut head, &mut |_, _| {});
         let xml = String::from_utf8_lossy(&head.0).into_owned();
         xml[..xml.find("<spectrumList").unwrap()].to_string()
     };

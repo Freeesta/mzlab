@@ -11,9 +11,9 @@
 )]
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Position, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{CvPar, Header, Precursore, SpectrumExtra};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Position, Reader, Sample, ScanEntry};
 
 /// The maker's totals, an injection time and a precursor chain on some scans: the rows are then read from the text the writer gives them.
 fn with_totals(extra: &mut SpectrumExtra, k: usize, level: u8, precursor: Option<f64>) {
@@ -283,7 +283,7 @@ impl Finto {
         }
     }
 
-    /// Some scans with one intensity more than m/z values (what `mzidx_lettore::spettro` cuts); the mzML of such a reader is not valid.
+    /// Some scans with one intensity more than m/z values (what `mzidx_reader::spettro` cuts); the mzML of such a reader is not valid.
     pub fn with_different_lengths(mut self) -> Finto {
         for (k, s) in self.cards.iter_mut().enumerate() {
             if k % 17 == 9 && s.spettro.wide.is_none() {

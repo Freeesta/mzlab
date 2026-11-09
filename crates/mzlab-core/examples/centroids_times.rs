@@ -2,7 +2,7 @@
 //! `cargo run --release --example centroids_times -p mzlab-core -- [POINTS] [SCANS] [PEAKS]`
 use std::time::Instant;
 
-use mzlab_core::centroidi::{centroids, Buf, Mode, Params};
+use mzlab_core::centroids::{centroids, Buf, Mode, Params};
 
 fn main() {
     let a: Vec<usize> = std::env::args()

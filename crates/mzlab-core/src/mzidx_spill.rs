@@ -283,5 +283,5 @@ pub(crate) fn read_parts(
 }
 
 #[cfg(test)]
-#[path = "mzidx_spill_prove.rs"]
-mod prove;
+#[path = "mzidx_spill_tests.rs"]
+mod tests;

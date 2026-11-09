@@ -24,7 +24,7 @@ Il piano (concorrenti, dataset D1-D5, endpoint, margini, insiemi) e la pre-regis
 - **Rapporto da tabelle**: `rapporto.py --verita V --tipo d1|d3 --rt-tol T --gruppi A=SA1,.. B=SB1,.. --tabelle PRIMA ALTRE.. --out DIR` misura tabelle già scritte dai runner (la prima è lo strumento in prova); D1 conta solo i composti `visto` nei dati.
 
 ## Identification truth (test 5 of the workflow study)
-- `tools/bench/verita_identificazione.py LIB QUERIES [--out FILE]` runs `cargo run -p mzlab-lib --example verita_lib` (the calculation is Rust): queries of one public library against another with fragment decoys, truth = first block of the InChIKey.
+- `tools/bench/verita_identificazione.py LIB QUERIES [--out FILE]` runs `cargo run -p mzlab-lib --example truth_lib` (the calculation is Rust): queries of one public library against another with fragment decoys, truth = first block of the InChIKey.
 - Per score (cosine, modified cosine, spectral entropy): rank-1 count and hits at q <= 1 %. The record is `prov/1`-style: input SHA-256, parameters, outcomes (entropy rank-1 not below cosine; same answer on a second run).
 - Without the files it skips; they stay outside git and the numbers go to the private repository. Test: `tests/test_verita_identificazione.py` (invented libraries).
 - **Batch mzmine 4.10** (`oro_mzmine410.batch_xml`): `Scan filters` con `selected="true"` in mass detection e ADAP e `selected_item` sul rivelatore; `check_filter`/`controlla_selected` rifiutano il batch altrimenti (4.10 ignora in silenzio i nomi 3.9 e processa anche le MS2). Prova: `tests/test_bench.py`.

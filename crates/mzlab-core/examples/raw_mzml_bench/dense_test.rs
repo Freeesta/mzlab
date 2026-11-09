@@ -1,7 +1,7 @@
 //! Tests of the dense case: the real decoders re-read the generated values bit for bit, the generator is deterministic, the reader serves the scans.
 use crate::dense::*;
 use crate::dense_reader::Denso;
-use mzlab_core::lettori::Reader;
+use mzlab_core::readers::Reader;
 use opentfraw::pacchetto::{decodifica, decodifica_picchi};
 
 const SMALL: Parameters = Parameters {

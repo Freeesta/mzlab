@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use mzlab_core::campioni::{proponi, to_json};
+use mzlab_core::samples::{proponi, to_json};
 use mzlab_core::step::{DataType, Step};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{write_table, Origin};
@@ -184,7 +184,7 @@ fn fixture(out: &Path) -> Fixture {
     add(
         "design.json",
         "design",
-        mzlab_core::disegno::to_json(&mzlab_core::disegno::propose(&camp)).as_bytes(),
+        mzlab_core::drawing::to_json(&mzlab_core::drawing::propose(&camp)).as_bytes(),
     );
     add(
         "parent.json",
