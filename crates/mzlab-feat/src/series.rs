@@ -8,7 +8,9 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
-use crate::gapfill::{fill_apply, fill_file, fill_find};
+use crate::gapfill::fill_file;
+#[cfg(not(target_family = "wasm"))]
+use crate::gapfill::{fill_apply, fill_find};
 use crate::pipeline::analyse_with;
 use crate::prog::Prog;
 use crate::quality::assess;
@@ -101,6 +103,13 @@ pub(crate) struct StrongFile {
     pub(crate) table: FileFeatures,
     pub(crate) weak: Option<Vec<u8>>,
 }
+
+/// The opener of the gap filling (`finish`): shared between threads where there are threads; in wasm there are none, so it needs no `Sync` and the
+/// page opens each index without its scan table (`Index::open_lean`).
+#[cfg(not(target_family = "wasm"))]
+pub type FillOpen<'a, R> = dyn Fn(usize) -> Result<Index<R>> + Sync + 'a;
+#[cfg(target_family = "wasm")]
+pub type FillOpen<'a, R> = dyn Fn(usize) -> Result<Index<R>> + 'a;
 
 /// Aligns the tables in the mode of the recipe and fills the cells without a peak, file by file: `open(k)` gives the index of file `k`.
 /// Returns the table and the number of cells filled.
@@ -208,6 +217,7 @@ fn peak_finder<R: ReadAt>(
 }
 
 /// The cells a file fills: (row, area).
+#[cfg(not(target_family = "wasm"))]
 type Cells = Vec<(usize, f64)>;
 
 /// Waits for the `n` files counted in `finished` and tells `prog` how many are done, as they finish; gives up when `stalled` says the workers are gone.
@@ -239,7 +249,8 @@ fn report_finished(
 }
 
 /// The gap filling of every file, a few threads at a time (`open` can be called from any thread): the cells of a file are found without changing the table and written in file order,
-/// the cells `fill_file` fills one file after the other. Where threads are missing (wasm) the files go one by one.
+/// the cells `fill_file` fills one file after the other.
+#[cfg(not(target_family = "wasm"))]
 fn fill_threads<R: ReadAt>(
     table: &mut Aligned,
     n: usize,
@@ -248,7 +259,6 @@ fn fill_threads<R: ReadAt>(
     open: &(dyn Fn(usize) -> Result<Index<R>> + Sync),
     prog: &mut Prog,
 ) -> Result<usize> {
-    #[cfg(not(target_family = "wasm"))]
     let workers = std::thread::available_parallelism().map_or(1, |w| w.get());
     let mut found: Vec<Option<Result<Cells>>> = (0..n).map(|_| None).collect();
     {
@@ -256,7 +266,6 @@ fn fill_threads<R: ReadAt>(
         let find = |k: usize| {
             open(k).and_then(|mut ix| fill_find(&mut ix, al, k, map, &r.detect, &r.fill))
         };
-        #[cfg(not(target_family = "wasm"))]
         if workers > 1 && n > 1 {
             let next = std::sync::atomic::AtomicUsize::new(0);
             let slots = std::sync::Mutex::new(&mut found);
@@ -307,7 +316,7 @@ pub(crate) fn finish<R: ReadAt>(
     budget: Option<&MemBudget>,
     spill: Option<&mut dyn Spill>,
     mut open: impl FnMut(usize) -> Result<Index<R>>,
-    par_open: Option<&(dyn Fn(usize) -> Result<Index<R>> + Sync)>,
+    par_open: Option<&FillOpen<R>>,
     prog: &mut Prog,
 ) -> Result<(Aligned, usize)> {
     if r.weak_files > 0 {
@@ -338,15 +347,19 @@ pub(crate) fn finish<R: ReadAt>(
     if let (true, Some(f)) = (r.fill_gaps, &r.peak_finder) {
         filled = peak_finder(&mut table, n, r, f, &mut open, prog)?;
     } else if r.fill_gaps {
-        match par_open {
-            Some(po) => filled = fill_threads(&mut table, n, map, r, po, prog)?,
-            None => {
-                for k in 0..n {
-                    let mut index = open(k)?;
-                    filled += fill_file(&mut index, &mut table, k, map, &r.detect, &r.fill)?;
-                    prog.tick(1);
-                }
-            }
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(po) = par_open {
+            let filled = fill_threads(&mut table, n, map, r, po, prog)?;
+            table.sort_rows();
+            return Ok((table, filled));
+        }
+        for k in 0..n {
+            let mut index = match par_open {
+                Some(po) => po(k)?,
+                None => open(k)?,
+            };
+            filled += fill_file(&mut index, &mut table, k, map, &r.detect, &r.fill)?;
+            prog.tick(1);
         }
     }
     table.sort_rows();

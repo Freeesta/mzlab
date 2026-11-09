@@ -96,7 +96,7 @@ fn budgeted(
         last = (d, t);
     };
     let mut pace = mzlab_core::pace::Pace::new(&mut tell);
-    run::align_to_spilling(&mut stored, &budget, &r, None, |k| Ok(open(&files[k])), &mut s, None, &mut |d, t| pace.at(d, t))
+    run::align_to_spilling(&mut stored, &budget, &r, None, |k| Ok(open(&files[k])), &mut s, None, None, &mut |d, t| pace.at(d, t))
         .unwrap_or_else(|e| panic!("align: {e}"));
     eprintln!("align steps {steps} last {} of {}", last.0, last.1);
     println!("series.mzfeat {}", s.finish().2);

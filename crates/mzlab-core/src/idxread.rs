@@ -281,12 +281,17 @@ pub struct Head {
     h: [u8; HEADER],
     size: u64,
     meta: Vec<u8>,
-    rows: Vec<u8>,
+    rows: Option<Vec<u8>>,
 }
 
 impl Head {
     /// `size` = size of the index file (the header says how long it must be).
     pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Head> {
+        Self::read_rows(r, size, true)
+    }
+
+    /// `read`, with the scan table only when `rows` (`None` in `Head::rows` when it was left unread, `Index::open_lean`).
+    fn read_rows<R: ReadAt>(r: &mut R, size: u64, rows: bool) -> Result<Head> {
         let bad = || Error::new("error.badIndex");
         let mut h = [0u8; HEADER];
         if size < HEADER as u64 {
@@ -316,13 +321,13 @@ impl Head {
             h,
             size,
             meta: read_span(r, moff, mlen)?,
-            rows: read_span(r, soff, slen)?,
+            rows: rows.then(|| read_span(r, soff, slen)).transpose()?,
         })
     }
 
     /// Bytes held: the meta and the scan table.
     pub fn len(&self) -> usize {
-        self.meta.len() + self.rows.len()
+        self.meta.len() + self.rows.as_ref().map_or(0, Vec::len)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -341,16 +346,20 @@ impl<R: ReadAt> Index<R> {
         Self::open_head(r, &head)
     }
 
+    /// `open` without the scan table, neither read nor parsed (`scans` empty): for a reader of the arrays only (the gap filling of the page).
+    pub fn open_lean(mut r: R, size: u64) -> Result<Self> {
+        let head = Head::read_rows(&mut r, size, false)?;
+        Self::open_head(r, &head)
+    }
+
     /// `open` of the file whose `Head` was read through `r`.
     pub fn open_head(r: R, head: &Head) -> Result<Self> {
         let bad = || Error::new("error.badIndex");
         let size = head.size;
         let nativo = nativo(&head.h).ok_or_else(bad)?;
         let meta = json::parse(&head.meta)?;
-        let rows = json::parse(&head.rows)?;
-        let scans: Vec<Scan> = rows
-            .arr()
-            .iter()
+        let rows = head.rows.as_deref().map(json::parse).transpose()?;
+        let scans: Vec<Scan> = (rows.as_ref().map_or(&[][..], Value::arr).iter())
             .map(|r| crate::scanrow::scan_of_row(r, nativo))
             .collect::<Option<_>>()
             .ok_or_else(bad)?;

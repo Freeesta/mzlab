@@ -214,7 +214,7 @@ pub fn align_and_fill_with<R: ReadAt>(
     r: &Recipe,
     open: impl FnMut(usize) -> Result<Index<R>>,
     spill: Option<&mut dyn Spill>,
-    par_open: Option<&(dyn Fn(usize) -> Result<Index<R>> + Sync)>,
+    par_open: Option<&crate::series::FillOpen<R>>,
 ) -> Result<(Aligned, usize)> {
     align_and_fill_progress(src, budget, r, open, spill, par_open, &mut |_, _| {})
 }
@@ -227,7 +227,7 @@ pub fn align_and_fill_progress<R: ReadAt>(
     r: &Recipe,
     open: impl FnMut(usize) -> Result<Index<R>>,
     spill: Option<&mut dyn Spill>,
-    par_open: Option<&(dyn Fn(usize) -> Result<Index<R>> + Sync)>,
+    par_open: Option<&crate::series::FillOpen<R>>,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<(Aligned, usize)> {
     let mut prog = Prog::new(progress);

@@ -248,12 +248,12 @@ pub fn align_to<R: ReadAt, W: WriteAt>(
     open: impl FnMut(usize) -> Result<Index<R>>,
     sink: &mut W,
 ) -> Result<()> {
-    align_to_spilling(src, budget, r, None, open, sink, None, &mut |_, _| {})
+    align_to_spilling(src, budget, r, None, open, sink, None, None, &mut |_, _| {})
 }
 
 /// `align_to` with a `Spill` for the weak tables of the files (the page keeps them outside the memory of the module) and the `facts` of the
-/// files when the caller has them (`series_js::series_recipe`), so their scan tables are not parsed again for them; `progress(done, total)` as
-/// `slabs::align_and_fill_progress` tells it (the same bytes with any `progress`).
+/// files when the caller has them (`series_js::series_recipe`), so their scan tables are not parsed again for them; `fill` opens a file for the gap
+/// filling in place of `open`; `progress(done, total)` as `slabs::align_and_fill_progress` tells it (the same bytes with any `progress` or `fill`).
 #[allow(clippy::too_many_arguments)]
 pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
     src: &mut dyn Stored,
@@ -263,6 +263,7 @@ pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
     mut open: impl FnMut(usize) -> Result<Index<R>>,
     sink: &mut W,
     spill: Option<&mut dyn Spill>,
+    fill: Option<&mzlab_feat::series::FillOpen<R>>,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<()> {
     let mut origin = origin_of(src)?;
@@ -270,7 +271,7 @@ pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
         Some(f) => f,
         None => facts_of(src.count(), &mut open)?,
     };
-    let (table, _) = align_and_fill_progress(src, budget, r, open, spill, None, progress)?;
+    let (table, _) = align_and_fill_progress(src, budget, r, open, spill, fill, progress)?;
     write_table_to(sink, &table, r, &origin, &mut (&[][..]))
 }
 
