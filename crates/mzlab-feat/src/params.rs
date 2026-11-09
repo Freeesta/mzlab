@@ -203,14 +203,16 @@ const PIECE: u64 = 1 << 16;
 pub fn intensity_hist<R: ReadAt>(index: &mut Index<R>, si: usize) -> Result<Hist> {
     let mut h = Hist::new();
     let n = index.sections[si].n_peaks;
+    // the m/z are not needed: `each_inten` does not read them
+    let mut add = |_p: usize, it: f64| h.add(it);
     if n <= SAMPLE_PEAKS {
-        index.each_peak(si, 0, n, |_p, _mz, it| h.add(it))?;
-        return Ok(h);
-    }
-    let pieces = SAMPLE_PEAKS / PIECE;
-    for k in 0..pieces {
-        let a = (n - PIECE) / (pieces - 1) * k;
-        index.each_peak(si, a, a + PIECE, |_p, _mz, it| h.add(it))?;
+        index.each_inten(si, 0, n, &mut add)?;
+    } else {
+        let pieces = SAMPLE_PEAKS / PIECE;
+        for k in 0..pieces {
+            let a = (n - PIECE) / (pieces - 1) * k;
+            index.each_inten(si, a, a + PIECE, &mut add)?;
+        }
     }
     Ok(h)
 }
