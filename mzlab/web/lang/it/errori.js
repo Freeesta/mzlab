@@ -53,6 +53,7 @@ I18N.add("it", {
   "err.file.notThisFormat": "L'inizio di {name} ({size} byte) non è quello di un file {ext}: la copia è probabilmente troncata o rovinata. Copia di nuovo il file per intero, o esportalo di nuovo dal software dello strumento.",
   "err.file.notAccepted": "Tipo di file non accettato: {name}. Si accettano: .mzML, .mzXML, .cdf, .wiff insieme al suo .wiff.scan, .raw, cartelle .d e metodi .dam. Qualsiasi altro file: convertilo prima in mzML con MSConvert.",
   "err.file.notMzml": "{name} non sembra un file mzML.",
+  "err.file.cdfDamaged": "Questo file .cdf è danneggiato o troncato: la sua intestazione descrive più dati di quanti il file ne contenga, quindi non è stato caricato nulla. Copia di nuovo il file, oppure esportalo di nuovo come netCDF-3/AIA dal software dello strumento.",
   "err.file.netcdf4": "Questo è un file netCDF-4 (HDF5): esportalo in netCDF-3/AIA (.cdf) dal programma dello strumento.",
   "err.file.numpress": "La compressione Numpress non è supportata: converti con zlib o senza compressione.",
   "err.file.notDam": "{name} non è un metodo .dam valido.",

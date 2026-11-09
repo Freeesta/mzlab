@@ -1,6 +1,7 @@
 """tools/wasm_opt.sh fails closed in the production workflows: with MZLAB_WASM_OPT_STRICT=1 and no wasm-opt it is an error, without it a warning.
 The binaryen tarball cached by actions/cache is reused when its SHA-256 is the pinned one; a wrong hash stays an error.
-Every job of pages.yml, sito-rust.yml and release.yml that runs wasm-opt sets the strict variable and restores the tarball cache."""
+Every job of pages.yml, sito-rust.yml and release.yml that runs wasm-opt sets the strict variable and restores the tarball cache;
+the nightly restores the same cache but stays lenient."""
 import hashlib
 import io
 import platform
@@ -109,5 +110,9 @@ def test_production_workflows_fail_closed_and_cache_binaryen(wf):
         assert len(CACHE_STEP.findall(job)) == 1, (wf, name)
 
 
-def test_the_night_stays_lenient():
+def test_the_night_stays_lenient_and_caches_binaryen():
     assert "MZLAB_WASM_OPT_STRICT" not in (ROOT / ".github/workflows/notte.yml").read_text(encoding="utf-8")
+    _, jobs = _env_and_jobs("notte")
+    wasm = {n: j for n, j in jobs.items() if "tools/wasm_opt.sh" in j or "tools/build_feat_wasm.sh site/static \"" in j}
+    assert set(wasm) == {"sito"}, sorted(wasm)
+    assert len(CACHE_STEP.findall(wasm["sito"])) == 1

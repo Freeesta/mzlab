@@ -143,6 +143,7 @@
   "err.engine.indexCrash": "Il lavoratore che costruisce l'indice è morto (di solito memoria). {name} = nome del file.",
   "err.file.notMzml": "{name} = nome del file.",
   "err.file.notDam": "{name} = nome del file.",
+  "err.file.cdfDamaged": "Nessun segnaposto nel testo. L’errore porta {detail} (quale parte dell’intestazione non torna, in inglese dal lettore): il CLI lo scrive tra parentesi dopo la chiave, la pagina no.",
   "err.dam.unreadable": "Mostrato nella finestra del metodo; {message} = testo tecnico (inglese).",
   "err.session.fileNotFound": "{name} = nome del file.",
   "err.file.removedElsewhere": "{name} = nome del file tolto in un'altra scheda o finestra.",
