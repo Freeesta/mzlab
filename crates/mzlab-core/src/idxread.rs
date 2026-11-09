@@ -263,23 +263,30 @@ fn nativo(h: &[u8]) -> Option<bool> {
     }
 }
 
-/// The JSON of `len` bytes at `off`.
-fn read_json<R: ReadAt>(r: &mut R, off: u64, len: u64) -> Result<Value> {
+/// The `len` bytes at `off`.
+fn read_span<R: ReadAt>(r: &mut R, off: u64, len: u64) -> Result<Vec<u8>> {
     let mut b = Vec::new();
     b.try_reserve_exact(len as usize)
         .map_err(|_| Error::memory_budget())?;
     b.resize(len as usize, 0);
     r.read_at(off, &mut b)?;
-    json::parse(&b)
+    Ok(b)
 }
 
-fn u64_at(b: &[u8], at: usize) -> u64 {
-    u64::from_le_bytes(b[at..at + 8].try_into().unwrap())
+/// What `Index::open` parses, as read from the file: the header and the bytes of the meta and of the scan table. Two reads with the same `Head`
+/// give the same `Index` (the peaks are read from the file when asked), so a caller that keeps a parsed index compares heads and does not parse
+/// the scan table again (`Index::over`).
+#[derive(PartialEq, Eq)]
+pub struct Head {
+    h: [u8; HEADER],
+    size: u64,
+    meta: Vec<u8>,
+    rows: Vec<u8>,
 }
 
-impl<R: ReadAt> Index<R> {
+impl Head {
     /// `size` = size of the index file (the header says how long it must be).
-    pub fn open(mut r: R, size: u64) -> Result<Self> {
+    pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Head> {
         let bad = || Error::new("error.badIndex");
         let mut h = [0u8; HEADER];
         if size < HEADER as u64 {
@@ -295,7 +302,7 @@ impl<R: ReadAt> Index<R> {
         if &h[..8] != b"MZIDX001" || u64_at(&h, 48) != size {
             return Err(bad());
         }
-        let nativo = nativo(&h).ok_or_else(bad)?;
+        nativo(&h).ok_or_else(bad)?;
         let (moff, mlen, soff, slen) = (
             u64_at(&h, 16),
             u64_at(&h, 24),
@@ -305,8 +312,42 @@ impl<R: ReadAt> Index<R> {
         if moff.saturating_add(mlen) > size || soff.saturating_add(slen) > size {
             return Err(bad());
         }
-        let meta = read_json(&mut r, moff, mlen)?;
-        let rows = read_json(&mut r, soff, slen)?;
+        Ok(Head {
+            h,
+            size,
+            meta: read_span(r, moff, mlen)?,
+            rows: read_span(r, soff, slen)?,
+        })
+    }
+
+    /// Bytes held: the meta and the scan table.
+    pub fn len(&self) -> usize {
+        self.meta.len() + self.rows.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+fn u64_at(b: &[u8], at: usize) -> u64 {
+    u64::from_le_bytes(b[at..at + 8].try_into().unwrap())
+}
+
+impl<R: ReadAt> Index<R> {
+    /// `size` = size of the index file (the header says how long it must be).
+    pub fn open(mut r: R, size: u64) -> Result<Self> {
+        let head = Head::read(&mut r, size)?;
+        Self::open_head(r, &head)
+    }
+
+    /// `open` of the file whose `Head` was read through `r`.
+    pub fn open_head(r: R, head: &Head) -> Result<Self> {
+        let bad = || Error::new("error.badIndex");
+        let size = head.size;
+        let nativo = nativo(&head.h).ok_or_else(bad)?;
+        let meta = json::parse(&head.meta)?;
+        let rows = json::parse(&head.rows)?;
         let scans: Vec<Scan> = rows
             .arr()
             .iter()

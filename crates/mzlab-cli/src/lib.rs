@@ -2,12 +2,10 @@
 //! A thin wrapper: the index of each file is built as the desktop app builds it, the recipe comes from `run::recipe_for` (the one behind the panel
 //! "Pipeline"), the steps are `run::detect` and `run::align`, and the CSV is the export "full" of the table (`core::table_file`), so the numbers are the ones of the page.
 
-use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use mzlab_core::budget::{sha256_hex, MemBudget};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::idxread::Index;
 use mzlab_core::json::Out;
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
@@ -135,6 +133,7 @@ mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
 mod flow_transitions;
+mod idx_open;
 pub mod insilico_pack;
 mod ion_pattern_cmd;
 pub mod llm;
@@ -210,11 +209,7 @@ pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> 
     build_index_of(path, "", idx, budget)
 }
 
-pub(crate) fn open(idx: &Path) -> Result<Index<File>> {
-    let f = File::open(idx).map_err(io)?;
-    let size = f.metadata().map_err(io)?.len();
-    Index::open(f, size)
-}
+pub(crate) use idx_open::open;
 
 /// The CSV of the series `files`, indexes kept in `tmp` (the caller owns it: WASI has no temporary folder).
 pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
