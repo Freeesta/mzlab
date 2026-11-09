@@ -1,6 +1,6 @@
-"""The read estimate of the `.wasm` (crates/mzlab-feat-wasm, nodejs target) on the fixture tests/dati/stima_lettura.json: `flow_ms2` refuses `spectra.ms2`
+"""The read estimate of the `.wasm` (crates/mzlab-feat-wasm, nodejs target) on the fixture tests/dati/read_estimate.json: `flow_ms2` refuses `spectra.ms2`
 with `error.memoryBudget` (phase `read`) and the expected estimate where the fixture says `refused` and writes the MGF where it says `memory`, as the Rust
-route and `flow run` do (their tests read the same fixture). The example `stima_lettura --fixture` writes the mzML. Skipped without cargo, the wasm32
+route and `flow run` do (their tests read the same fixture). The example `read_estimate --fixture` writes the mzML. Skipped without cargo, the wasm32
 target, wasm-bindgen or node."""
 import json
 import shutil
@@ -20,7 +20,7 @@ const bytes = new Uint8Array(fs.readFileSync(file));
 const out = [];
 for (const c of JSON.parse(cases)) {
   let n = 0, err = null;
-  try { n = m.flow_ms2("{}", "stima.mzML", bytes, undefined, c.budget_mb).length; } catch (e) { err = JSON.parse(String(e && e.message || e)); }
+  try { n = m.flow_ms2("{}", "estimate.mzML", bytes, undefined, c.budget_mb).length; } catch (e) { err = JSON.parse(String(e && e.message || e)); }
   out.push({ n, err });
 }
 console.log(JSON.stringify(out));
@@ -32,9 +32,9 @@ def run(*a):
 
 
 def test_the_wasm_read_refusal_follows_the_fixture(tmp_path):
-    spec = json.loads((ROOT / "tests/dati/stima_lettura.json").read_text(encoding="utf-8"))
-    mzml = tmp_path / "stima.mzML"
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "stima_lettura", "--", "--fixture", str(mzml))
+    spec = json.loads((ROOT / "tests/dati/read_estimate.json").read_text(encoding="utf-8"))
+    mzml = tmp_path / "estimate.mzML"
+    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "read_estimate", "--", "--fixture", str(mzml))
     run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm")
     pkg = tmp_path / "pkg"
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
