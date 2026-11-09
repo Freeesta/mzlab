@@ -7,10 +7,10 @@ pub mod cerca;
 pub mod csv;
 pub mod entry;
 pub mod indice;
-pub mod valida;
+pub mod validate;
 
 pub use cerca::{search_targets, TargetMatch, TargetSearchOptions};
 pub use csv::{parse_rfc4180_str, parse_target_csv, ParseError};
 pub use entry::{AdductType, CheckFlags, TargetEntry};
 pub use indice::TargetList;
-pub use valida::{validate_entries, ValidationError, ValidationReport};
+pub use validate::{validate_entries, ValidationError, ValidationReport};

@@ -29,7 +29,9 @@ SPAN = f"""(async () => {{ const p = {P}, C = CanvasRenderingContext2D.prototype
 # the same draw with clipY switched off (the lines as they were): pixels that differ by more than 64 levels, and the largest shift of the top of the ink per column.
 # The two can differ by anti-aliasing only: a software canvas rounds a stroke that ends 10^5 px away a little differently near the top edge of the plot.
 SAME = f"""(async () => {{ const p = {P}, real = window.DECIMA ||= await import('./decima.js'), w = p.cv.width, h = p.cv.height;
-  const px = () => p.cv.getContext('2d').getImageData(0, 0, w, h).data;
+  // read through one scratch canvas made for readback: repeated getImageData on the chart's own canvas makes Chromium log a willReadFrequently warning, a browser error for lib.Run
+  const g = Object.assign(document.createElement('canvas'), {{ width: w, height: h }}).getContext('2d', {{ willReadFrequently: true }});
+  const px = () => {{ g.clearRect(0, 0, w, h); g.drawImage(p.cv, 0, 0); return g.getImageData(0, 0, w, h).data; }};
   await draw(p); const a = px();
   window.DECIMA = {{ ...real, clipY: (/** @type {{number[]}} */ v) => v }}; try {{ await draw(p); }} finally {{ window.DECIMA = real; }}
   const b = px(); await draw(p);

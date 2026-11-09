@@ -2,14 +2,14 @@
 //! Files are memory-mapped from the disk (`memmap2` lives only in this crate, never in the WASM graph); the answers are binary
 //! (little-endian `f64` arrays with the layout of `mzlab-wasm`, no JSON) except errors and file summaries.
 
-pub mod apertura;
-pub mod cartella;
-mod conv_coda;
+mod conv_queue;
 #[cfg(test)]
-mod conv_coda_tests;
+mod conv_queue_tests;
 mod conv_stamp;
 #[cfg(feature = "app")]
-pub mod dialogo;
+pub mod dialog;
+pub mod download;
+pub mod download_sources;
 pub mod engine;
 mod feat;
 mod feat_attributio;
@@ -23,15 +23,17 @@ mod flow_progress;
 mod flow_reuse;
 mod flow_run;
 mod flow_stage;
+pub mod folder;
 pub mod idxbuild;
 mod idxbuild_nat;
 pub mod insilico;
 pub mod librerie;
 mod llm;
 pub mod mapped;
-mod nativi;
-mod nativi_slots;
+mod natives;
+mod natives_slots;
 pub mod normative;
+pub mod opening;
 pub mod protocol;
 mod ram;
 pub mod release;
@@ -41,8 +43,6 @@ mod rpc_masscal;
 mod rpc_msn;
 mod rpc_nat;
 mod rpc_warm;
-pub mod scarica;
-pub mod scarica_fonti;
 pub mod store;
 pub mod update;
 

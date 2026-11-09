@@ -18,7 +18,7 @@ use serde_json::Value;
 
 use crate::engine::State;
 use crate::mapped::Mapped;
-use crate::nativi::{Nativi, Src};
+use crate::natives::{Nativi, Src};
 
 /// The slots of the files of the page's list (not of the session) start here, as in `rust-worker.js`.
 pub(crate) const LR_BASE: u32 = 1_000_000;

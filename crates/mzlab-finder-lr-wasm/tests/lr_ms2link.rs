@@ -13,8 +13,8 @@ use mzlab_feat::legacy::lr::plan::FileLr;
 use mzlab_feat::legacy::lr::{self, detail::detail, ms2::pool};
 use serde_json::Value;
 
-mod comune;
-use comune::*;
+mod common;
+use common::*;
 #[path = "lr_ms2link/assoc.rs"]
 mod assoc;
 #[path = "lr_ms2link/mz.rs"]

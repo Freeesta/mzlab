@@ -119,7 +119,7 @@
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
     // a refusal of the memory contract names the phase, the estimate and the budget: its own text says by how much the file overshoots
     // (a phase with a text of its own, `error.memoryBudgetFase.<id>`, names its real limit)
-    // in the desktop app the limit is the memory of the computer, not of the browser: a key with a `.native` text uses that one (testo_errore.rs, same choice)
+    // in the desktop app the limit is the memory of the computer, not of the browser: a key with a `.native` text uses that one (error_text.rs, same choice)
     const nat = key => (typeof window !== "undefined" && window.MZLAB_DESKTOP && NATIVE.has(key + ".native") ? key + ".native" : key), FP = "error.memoryBudgetFase.";
     const fase = j.error_key === "error.memoryBudget" && j.params && j.params.fase, own = fase && (cat[lang][FP + fase] || cat.it[FP + fase]) && nat(FP + fase).slice(FP.length);
     const k = nat(fase ? "error.memoryBudgetFase" : j.error_key);
