@@ -1,9 +1,9 @@
 //! The module `aperti` reads a gzip-compressed mzML (`x.mzML.gz`): plain and numpress arrays inside, and the hostile cases (docs/agenti/lettori-aperti.md).
 #![cfg(feature = "aperti")]
 
-mod comune;
+mod common;
 
-use comune::*;
+use common::*;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use mzlab_core::lettori::Limits;
@@ -111,7 +111,7 @@ fn hostile_cases_give_a_key() {
 #[cfg(feature = "tutte")]
 #[test]
 fn an_mzxml_gz_opens_like_its_mzxml() {
-    let flat = comune::mzxml::mzxml(&comune::mzxml::run(), comune::mzxml::FLAT);
+    let flat = common::mzxml::mzxml(&common::mzxml::run(), common::mzxml::FLAT);
     let mut from_gz = abre("run.mzXML.gz", gz(&flat), &Limits::sito()).unwrap();
     let mut from_flat = abre("run.mzXML", flat.clone(), &Limits::sito()).unwrap();
     let n = from_flat.samples()[0].scansioni;

@@ -6,7 +6,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limits;
 
-mod pezzi;
+mod pieces;
 
 /// The bytes of the window the header is read through.
 const WINDOW: u64 = 1 << 16;

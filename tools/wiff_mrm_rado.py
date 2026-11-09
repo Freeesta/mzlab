@@ -1,5 +1,5 @@
 """Synthetic chromatogram-only MRM .wiff + .wiff.scan whose blocks are sparse (scheduled) while the method has no `sMRM` stream to say so
-(crates/mzlab-lettori/tests/sciex_sonda.rs).
+(crates/mzlab-lettori/tests/sciex_probe.rs).
 
     python3 tools/wiff_mrm_rado.py OUT [SAMPLES]
 

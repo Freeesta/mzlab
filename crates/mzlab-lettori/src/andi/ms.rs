@@ -1,10 +1,10 @@
 //! An ANDI-MS file (ASTM E2077, netCDF-3, `.cdf`) as a `Lettore`: the scans of `scan_index`/`point_count` over `mass_values` and `intensity_values`, the TIC of `total_intensity`, the header
-//! of the file as `metodo/1`. A file with `ordinate_values` and no `mass_values` is ANDI-Chromatography (ASTM E1947): one sample without scans and one analog chromatogram (`cromato.rs`).
+//! of the file as `metodo/1`. A file with `ordinate_values` and no `mass_values` is ANDI-Chromatography (ASTM E1947): one sample without scans and one analog chromatogram (`chromato.rs`).
 //! Written from the two ASTM specifications and the netCDF documentation, checked against files exported by ChemStation and MassHunter.
 
-use super::cromato;
+use super::chromato;
+use super::header::AndiHeader;
 use super::netcdf::{scale, Cdf};
-use super::testata::AndiHeader;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
@@ -325,7 +325,7 @@ impl Reader for AndiReader {
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         if self.indice.is_empty() && self.cut == 0 {
-            return Ok(cromato::entries(&self.cdf, &mut self.data, &self.limits));
+            return Ok(chromato::entries(&self.cdf, &mut self.data, &self.limits));
         }
         Ok(["TIC", "BPC"]
             .into_iter()
@@ -341,7 +341,7 @@ impl Reader for AndiReader {
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
         if self.indice.is_empty() && self.cut == 0 {
-            return cromato::trace(&self.cdf, &mut self.data, &self.limits, id);
+            return chromato::trace(&self.cdf, &mut self.data, &self.limits, id);
         }
         self.traccia(id)
     }
