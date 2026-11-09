@@ -2,13 +2,13 @@
 //! result or an error, never panic or loop. Kept apart from `ingressi.rs` (which `mzlab-lib` includes in its tests) because it needs `mzlab-lettori`;
 //! `crates/mzlab-lettori/tests/fuzz_lettori.rs` runs the same functions on a few inputs in `cargo test`.
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 
 fn insieme(membri: Vec<(&str, Vec<u8>)>) -> FileSet {
     FileSet {
         membri: membri
             .into_iter()
-            .map(|(nome, b)| Membro {
+            .map(|(nome, b)| Member {
                 nome: nome.into(),
                 dim: b.len() as u64,
                 dati: Box::new(b),
@@ -34,7 +34,7 @@ fn lettori_famiglia(nomi: &[&str], data: &[u8]) {
         _ => return,
     };
     let _ = mzlab_lettori::riconosci(&mut insieme(membri.clone()));
-    let Ok(mut l) = mzlab_lettori::apri(insieme(membri), &Limiti::sito()) else {
+    let Ok(mut l) = mzlab_lettori::apri(insieme(membri), &Limits::sito()) else {
         return;
     };
     let _ = l.method(0);
