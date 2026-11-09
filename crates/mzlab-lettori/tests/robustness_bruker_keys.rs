@@ -13,7 +13,7 @@ use std::sync::{Mutex, OnceLock};
 
 use common_sqlite::*;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 use robustness::*;
 
 #[global_allocator]
@@ -55,7 +55,7 @@ fn read_all(m: &[(String, Vec<u8>)]) -> Vec<String> {
         keep(l.chromatogram(0, &v.id), &mut k);
     }
     keep(
-        mzlab_core::lettori_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {}),
+        mzlab_core::readers_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {}),
         &mut k,
     );
     k
