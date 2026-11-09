@@ -16,7 +16,7 @@ const CALCQUIHTML = (() => {
   function ctrlHtml(idp, o) {
     const on = (/** @type {boolean} */ b) => ` class="${b ? "on" : ""}" aria-pressed="${b}"`;
     return `<div class="cadd cq-ctl" data-mode="${o.hr ? "hr" : "lr"}" role="group" aria-label="${EH(T("cq.ctl"))}">
-      <label class="cadd-f cq-tolf" title="${EH(T("cq.tol.tip"))}"><input id="${idp}tol" inputmode="decimal" autocomplete="off" value="${o.tol}"><span class="cq-tl">${T("calc.tol.plain")}</span></label>
+      <label class="cadd-f cq-tolf" title="${EH(T("cq.tol.tip"))}"><input id="${idp}tol" data-num=">0" value="${o.tol}"><span class="cq-tl">${T("calc.tol.plain")}</span></label>
       <span class="seg" id="${idp}unit" role="group" aria-label="${EH(T("cq.unit"))}" title="${EH(T("cq.unit"))}"><button type="button" data-u="da"${on(o.unit === "da")}>Da</button><button type="button" data-u="ppm"${on(o.unit === "ppm")}>ppm</button></span>
       <span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}" title="${EH(T("cq.pol.tip"))}"><button type="button" data-p="1"${on(o.pol !== -1)}>ESI+</button><button type="button" data-p="-1"${on(o.pol !== 1)}>ESI&minus;</button></span>
       </div>`;
