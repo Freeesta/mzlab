@@ -91,7 +91,7 @@
  </aside>
 </section>
 <dialog id="refdlg"><div class="top" style="display:flex;align-items:center;gap:8px"><h3 id="reftitle"></h3><span class="sp"></span><button id="refx" class="x" data-i18n-title="common.close" title="Chiudi">&times;</button></div><div id="refbody"></div></dialog>
-<dialog id="bigdlg"><div class="top"><h3 id="bigtt" style="margin:0;flex:1"></h3><button id="bigx" class="x" data-i18n-title="common.close" title="Chiudi">&times;</button></div><div id="bigbody"></div></dialog>
+<dialog id="bigdlg" aria-labelledby="bigtt"><div class="top"><h3 id="bigtt" style="margin:0;flex:1"></h3><button id="bigx" class="x" data-i18n-title="common.close" title="Chiudi">&times;</button></div><div id="bigbody"></div></dialog>
 <div id="loading" aria-busy="true" hidden><canvas aria-hidden="true" id="ldion" width="420" height="120"></canvas><div id="ldmsg" role="status" aria-live="off"></div><div id="ldact" hidden></div></div>
 <script src="static/avvio.js"></script>
 <div id="calcdlg" class="card" hidden role="dialog" data-i18n-aria-label="header.calc.long" aria-label="Calcolatrice"><div class="top" style="display:flex"><h3 style="margin:0;flex:1" data-i18n="header.calc.long">Calcolatrice</h3><button class="x" id="calcx" data-i18n-title="common.close" title="Chiudi">&times;</button></div>
@@ -108,11 +108,11 @@
   <button data-k="0">0</button><button data-k=",">,</button><button data-k="=" class="eq" data-i18n-title="calc.eq" title="Risultato (Invio)">=</button><button data-k="+" class="op">+</button></div>
  <div id="calctape" hidden></div>
  <div id="calcqui" class="cq"><div id="calcctl"></div><div id="calcout"></div></div></div>
-<dialog id="xicdlg" style="max-width:520px"><h3 style="margin:0 0 6px" data-i18n="xicdlg.title">Estrai ioni (XIC)</h3>
+<dialog id="xicdlg" style="max-width:520px" aria-labelledby="xicdlg-t"><h3 id="xicdlg-t" style="margin:0 0 6px" data-i18n="xicdlg.title">Estrai ioni (XIC)</h3>
  <div id="xic-rows"></div>
  <div class="xrow" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="xic-add" type="button" data-i18n-title="xicdlg.add.title" title="Fino a 10 ioni nello stesso grafico" data-i18n="xicdlg.add">+ ione</button>
   <label class="muted"><span data-i18n="side.file">File</span> <select id="xic-file" data-i18n-title="xicdlg.file.title" title="File da cui estrarre gli XIC"></select></label></div>
- <div id="xic-err" class="fail sm"></div>
+ <div id="xic-err" class="fail sm" role="status" aria-live="polite"></div>
  <div class="row"><button id="xic-no" data-i18n="common.cancel">Annulla</button><button class="go" id="xic-go" data-i18n="xicdlg.go">Estrai</button></div></dialog>
 <dialog id="askdlg"><div id="asktxt"></div><input id="askin"><div class="row"><button id="askno" data-i18n="common.cancel">Annulla</button><button class="go" id="askok">OK</button></div></dialog>
 <div id="ctx" hidden></div>

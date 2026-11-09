@@ -22,9 +22,24 @@ try:
             pg.locator("#xic-rows .xr-x").nth(0).focus(); pg.keyboard.press("Space")
             assert pg.locator("#xic-rows .xrw").count() == 1 and pg.evaluate(fo) == 0
         step("× from the keyboard on the last row: the one before; on the first: the one after", last)
+        def named():
+            name = pg.evaluate("(()=>{const d=document.querySelector('#xicdlg'),id=d.getAttribute('aria-labelledby');return id&&document.getElementById(id)?document.getElementById(id).textContent:''})()")
+            assert name == pg.evaluate("I18N.t('xicdlg.title')"), f"the window has no accessible name: {name!r}"
+            e = pg.evaluate("(()=>{const e=document.querySelector('#xic-err');return [e.getAttribute('role'),e.getAttribute('aria-live')]})()")
+            assert e == ["status", "polite"], f"the message line is not announced: {e}"
+            pg.click("#xic-add")
+            small = pg.evaluate("[...document.querySelectorAll('#xicdlg button,#xicdlg select,#xicdlg input')].filter(n=>n.offsetParent).map(n=>n.getBoundingClientRect()).filter(b=>b.width<24||b.height<24).length")
+            assert small == 0, f"{small} targets under 24x24 px"
+        step("the window is named, its message line is a polite status, every target is at least 24x24 px", named)
         def esc():
             pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
         step("Esc still closes the window", esc)
+        def back():
+            pg.evaluate("(()=>{const b=document.createElement('button');b.id='xf-opener';b.textContent='x';document.body.appendChild(b);b.focus();b.onclick=()=>openXic(null)})()")
+            pg.keyboard.press("Enter"); wait_for_js(pg, "document.querySelector('#xicdlg').open")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
+            assert pg.evaluate("document.activeElement.id") == "xf-opener", pg.evaluate("document.activeElement.outerHTML.slice(0, 120)")
+        step("Esc gives the focus back to what opened the window", back)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
