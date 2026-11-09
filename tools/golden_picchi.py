@@ -2,7 +2,7 @@
 """Golden data for the peak finders (tests/golden/picchi_qualita.json): synthetic traces (single peak, partly resolved doubles, shoulder,
 tail, noise) with the limits and areas of the CWT detector of the Python engine (the reference of the Rust port).
 The "prominence + local minimum" mode has no Python twin: its expectations (peaks, limits at the valley) are asserted in
-crates/mzlab-core/tests/picchi_golden.rs. No compound names. Usage: python3 tools/golden_picchi.py [--scrivi]"""
+crates/mzlab-core/tests/peaks_golden.rs. No compound names. Usage: python3 tools/golden_picchi.py [--scrivi]"""
 import json, sys
 from pathlib import Path
 import numpy as np

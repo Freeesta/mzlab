@@ -1,4 +1,4 @@
-"""Reference answers of mzlab/chem/composition.py (compose without obs/frags, parse_elements) for crates/mzlab-core/tests/composizione_parity.rs.
+"""Reference answers of mzlab/chem/composition.py (compose without obs/frags, parse_elements) for crates/mzlab-core/tests/composition_parity.rs.
 
     python3 tools/composizione_riferimento.py OUT.json
 

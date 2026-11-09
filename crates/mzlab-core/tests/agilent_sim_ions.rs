@@ -3,7 +3,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_synth;
-mod conv_aiuto;
+mod conv_help;
 
 use agilent_synth::*;
 use mzlab_core::error::Result;
@@ -43,7 +43,7 @@ fn sim(t: f64, k: f64) -> Scan {
 
 fn set(reads: &Rc<Cell<usize>>) -> FileSet {
     let (idx, peak) = encode(&[sim(1.0, 1.0), sim(1.1, 2.0), sim(1.2, 3.0)]);
-    let m = |name: &str, b: &[u8]| conv_aiuto::member(name, b);
+    let m = |name: &str, b: &[u8]| conv_help::member(name, b);
     let mut peak_m = m("x.D/AcqData/MSPeak.bin", &peak);
     peak_m.dati = Box::new(Counting(peak, reads.clone()));
     FileSet {
@@ -70,7 +70,7 @@ fn an_ion_with_no_points_is_an_empty_sic() {
 #[test]
 fn the_mzml_of_a_run_with_a_missing_ion_converts_and_leaves_that_trace_out() {
     let reads = Rc::new(Cell::new(0));
-    let back = mzml::read(&conv_aiuto::mzml(set(&reads))[..]).unwrap();
+    let back = mzml::read(&conv_help::mzml(set(&reads))[..]).unwrap();
     let ids: Vec<_> = back.chromatograms.iter().map(|c| c.id.as_str()).collect();
     // the writer leaves out empty traces: only the ion with no points is missing
     assert_eq!(ids, ["TIC", "BPC", "SIC 57.00", "SIC 71.00"]);

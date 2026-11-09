@@ -1,7 +1,7 @@
 //! Memory estimates of the load of a big mzML, made BEFORE the memory is taken: the scan table (`scantable::read`, phase `table`) and the `.mzidx`
 //! builder (phase `index`). A load that does not fit in the budget of the instance ends with the orderly `error.memoryBudget`
 //! (`budget::refusal`: phase, estimate and budget in MB), never with a worker that dies. The per-scan figures are measured with
-//! `examples/mzml_memoria.rs` on files of 0.5 to 4 GB (heap peak divided by the scans, rounded up); `docs/agenti/memoria.md` has the table.
+//! `examples/mzml_memory.rs` on files of 0.5 to 4 GB (heap peak divided by the scans, rounded up); `docs/agenti/memoria.md` has the table.
 
 use crate::budget::{refusal, MemBudget};
 use crate::error::Result;

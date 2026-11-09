@@ -10,7 +10,7 @@ that shows the result): G1 click on the TIC -> spectrum; G2 `AZIONI.esegui("spec
 files of the tab visible (multi-file cases); G4 pointer sweep over the spectrum (frames only: the lens does not exist yet); G5 Ctrl+wheel zoom and Shift+drag
 pan of the TIC, the spectrum and XIC traces of 3k, 50k and 1M points (served by the bench, see SYN); G6 ArrowRight; M heap of the page and of the engine
 before and after MREPS XICs (default 1000). Phases per gesture: request (wall time of the `api/` fetches), engine (`X-Py-Ms`), JSON (`Response.json`), rest = drawing.
-`--trace` adds the phases of the opening (engine operations and their times, empty answers, errors, `MZLAB_LR_MISS`, memory) to each case. `--native` also runs `visore_tempi` on the `.mzidx` of the first file of each case; `--g7 DIR` builds the >= 2 GB file in DIR and times the native engine on it.
+`--trace` adds the phases of the opening (engine operations and their times, empty answers, errors, `MZLAB_LR_MISS`, memory) to each case. `--native` also runs `viewer_times` on the `.mzidx` of the first file of each case; `--g7 DIR` builds the >= 2 GB file in DIR and times the native engine on it.
 Nothing of the product is changed: the hooks wrap global functions of the page (draw, fetch, Response.json, Worker)."""
 import argparse, glob, json, os, platform, re, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -328,17 +328,17 @@ def run_case(pg, port, name, files, reps, mreps, one_synthetic):
 
 
 def native(idx_of, json_out):
-    """`visore_tempi` on the `.mzidx` of a file (built from the mzML of the case by the same example)."""
-    exe = ROOT / "target" / "release" / "examples" / "visore_tempi"
-    subprocess.run(["cargo", "build", "--locked", "--release", "-p", "mzlab-core", "--example", "visore_tempi"], cwd=ROOT, check=True)
+    """`viewer_times` on the `.mzidx` of a file (built from the mzML of the case by the same example)."""
+    exe = ROOT / "target" / "release" / "examples" / "viewer_times"
+    subprocess.run(["cargo", "build", "--locked", "--release", "-p", "mzlab-core", "--example", "viewer_times"], cwd=ROOT, check=True)
     r = subprocess.run([str(exe), str(idx_of), "200", "--json"], capture_output=True, text=True, check=True)
     return json.loads(r.stdout.strip().splitlines()[-1])
 
 
 def g7(dir_, scans, peaks):
-    """The >= 2 GB mzML of the native check (G7): written, indexed and timed by `visore_tempi`, then the 200 m/z timings on its `.mzidx`."""
-    exe = ROOT / "target" / "release" / "examples" / "visore_tempi"
-    subprocess.run(["cargo", "build", "--locked", "--release", "-p", "mzlab-core", "--example", "visore_tempi"], cwd=ROOT, check=True)
+    """The >= 2 GB mzML of the native check (G7): written, indexed and timed by `viewer_times`, then the 200 m/z timings on its `.mzidx`."""
+    exe = ROOT / "target" / "release" / "examples" / "viewer_times"
+    subprocess.run(["cargo", "build", "--locked", "--release", "-p", "mzlab-core", "--example", "viewer_times"], cwd=ROOT, check=True)
     dir_.mkdir(parents=True, exist_ok=True)
     gen = subprocess.run([str(exe), "genera", str(dir_), str(scans), str(peaks)], capture_output=True, text=True, check=True).stdout
     res = dict(p.split("=") for line in gen.split() for p in [line] if "=" in p)
@@ -451,7 +451,7 @@ def main():
                     o["page_errors"] = errs[:3]; o["case_s"] = round(time.time() - t); o["lr_miss"] = pg.evaluate("window.MZLAB_LR_MISS || []")
                     if a.native:
                         idx = wd / f"visore_{nm}.mzidx"
-                        subprocess.run([str(ROOT / "target" / "release" / "examples" / "visore_tempi"), "indicizza", str(files[0]), str(idx)], check=True, stdout=subprocess.DEVNULL)
+                        subprocess.run([str(ROOT / "target" / "release" / "examples" / "viewer_times"), "indicizza", str(files[0]), str(idx)], check=True, stdout=subprocess.DEVNULL)
                         o["native"] = native(idx, None)
                     print(json.dumps(o) if a.json else table(o) + (f"\ntrace: {json.dumps(o['trace'])}" if "trace" in o else ""), flush=True)
                 except Exception as e:                                                       # a case that does not open in time (hrp in the browser) is a result, not a crash

@@ -1,5 +1,5 @@
 //! A region map folded from the per-scan columns of its window (`mapzoom`) is the one the peaks give, bit by bit: same window, other RT stretches, linear and log axes.
-#[path = "lettore_finto/mod.rs"]
+#[path = "fake_reader/mod.rs"]
 mod finto;
 
 use std::io::Cursor;

@@ -1,4 +1,4 @@
-"""Reference answers of mzlab/chem (elements, subformulas) for crates/mzlab-core/tests/chimica_parity.rs.
+"""Reference answers of mzlab/chem (elements, subformulas) for crates/mzlab-core/tests/chemistry_parity.rs.
 
     python3 tools/chimica_riferimento.py OUT.json
 
