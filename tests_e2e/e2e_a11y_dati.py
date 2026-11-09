@@ -72,8 +72,12 @@ try:
             q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             try:
                 q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop", timeout=120000)
+                st = "[E.files.map(f => f.kind + ':' + String(f.file).slice(-30)), [...document.querySelectorAll('#flist [data-k=use]')].map(i => (i.closest('tr,li,label,div') || i).textContent.trim().slice(0, 40))]"
+                print("MSN-0", q.evaluate(st))
                 q.set_input_files("#pick", [str(F)]); q.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=180000)
+                print("MSN-1", q.evaluate(st))
                 q.click("text=Carica dati"); q.wait_for_function("E.files.length>=1", timeout=90000)
+                print("MSN-2", q.evaluate(st))
                 q.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'))")
                 try: q.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
                 except Exception:   # where the window stopped: the file kinds, the text of the output, whether the tree tab is hidden
