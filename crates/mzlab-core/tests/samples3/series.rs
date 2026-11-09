@@ -2,7 +2,7 @@
 
 use super::codes;
 use super::model::run as run_model;
-use mzlab_core::campioni::{self, table_from_json, Sample};
+use mzlab_core::samples::{self, table_from_json, Sample};
 use serde_json::Value;
 
 const MODEL: &str = "{data}_{polarita}_{n}_{campione_id}";
@@ -80,17 +80,17 @@ fn several_samples_in_one_file_are_not_duplicates() {
         c.sub = sub.into();
         c
     };
-    let t = |subs: &[&str]| campioni::Table {
+    let t = |subs: &[&str]| samples::Table {
         campioni: subs.iter().map(|s| row(s)).collect(),
         colonne: Vec::new(),
     };
     let ok = t(&["0", "1", "2"]);
     assert!(!codes(&ok).iter().any(|c| c == "duplicateKey"));
     assert!(codes(&t(&["1", "1"])).iter().any(|c| c == "duplicateKey"));
-    let again = campioni::to_json3(&ok);
+    let again = samples::to_json3(&ok);
     assert!(again.contains("\"campione\":\"2\""));
     assert_eq!(
-        campioni::to_json3(&table_from_json(again.as_bytes()).unwrap()),
+        samples::to_json3(&table_from_json(again.as_bytes()).unwrap()),
         again
     );
 }
@@ -101,7 +101,7 @@ fn valida_warns_about_an_unknown_condition_and_a_bad_time() {
     a.sample_id = "TW-XYZ-T5".into();
     let mut b = Sample::new("b.mzML", "", 2);
     b.sample_id = "TW-PMS-T5x".into();
-    let t = campioni::Table {
+    let t = samples::Table {
         campioni: vec![a, b],
         colonne: Vec::new(),
     };
@@ -168,7 +168,7 @@ fn a_p_in_a_time_is_the_decimal_point_and_the_order_is_numeric() {
 
 #[test]
 fn blank_words_make_a_blank_only_without_a_time_or_a_series() {
-    let kind = |n: &str| mzlab_core::campioni::role_and_minutes(n).0;
+    let kind = |n: &str| mzlab_core::samples::role_and_minutes(n).0;
     for n in [
         "MQ_Wash_1.mzML",
         "MQ_blk.mzML",
@@ -209,7 +209,7 @@ fn washes_are_blanks_of_kind_wash_and_no_reference() {
         ],
         "{kinds:?}"
     );
-    let p = mzlab_core::campioni::per_tp(&cs);
+    let p = mzlab_core::samples::per_tp(&cs);
     assert_eq!(p.blank, [2]);
     assert_eq!(p.treated, [3]);
 }
@@ -251,7 +251,7 @@ fn a_single_first_word_proposes_no_matrix() {
 fn proponi3_gives_a_campioni_3_with_the_matrix() {
     let input = r#"{"files":[{"name":"TW_PMS_T00.mzML"},{"name":"TW_PMS_T05.mzML"},{"name":"TW_blk.mzML"},{"name":"MQ_PMS_T00.mzML"},{"name":"MQ_PMS_T05.mzML"},{"name":"MQ_Wash_1.mzML"}]}"#;
     let v: serde_json::Value =
-        serde_json::from_str(&mzlab_core::campioni::route("proponi3", input).unwrap()).unwrap();
+        serde_json::from_str(&mzlab_core::samples::route("proponi3", input).unwrap()).unwrap();
     assert_eq!(v["schema"], "campioni/3");
     let cs = v["campioni"].as_array().unwrap();
     let f = |i: usize, k: &str| cs[i][k].clone();

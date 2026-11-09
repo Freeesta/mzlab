@@ -3,7 +3,7 @@
 
 use crate::error::{Error, Result};
 use crate::json::{self, Value};
-use crate::lettori::Position;
+use crate::readers::Position;
 
 pub const BLOCK: u64 = 16384;
 const HEADER: usize = 64;
@@ -13,8 +13,8 @@ pub const READER_FLAG: u32 = 1;
 /// Bytes at an offset. `&mut self` so that a JS callback or a cache can keep state.
 pub trait ReadAt {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()>;
-    /// The reader and the sample behind the bytes when they are not an mzML (`sorgente::Scansioni` reads the scans from it): `None` for a file read as it is.
-    fn reader(&mut self) -> Option<(&mut dyn crate::lettori::Reader, usize)> {
+    /// The reader and the sample behind the bytes when they are not an mzML (`source::Scansioni` reads the scans from it): `None` for a file read as it is.
+    fn reader(&mut self) -> Option<(&mut dyn crate::readers::Reader, usize)> {
         None
     }
 }
@@ -23,7 +23,7 @@ impl<T: ReadAt + ?Sized> ReadAt for Box<T> {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         (**self).read_at(off, buf)
     }
-    fn reader(&mut self) -> Option<(&mut dyn crate::lettori::Reader, usize)> {
+    fn reader(&mut self) -> Option<(&mut dyn crate::readers::Reader, usize)> {
         (**self).reader()
     }
 }
@@ -293,7 +293,7 @@ impl Head {
             return Err(bad());
         }
         r.read_at(0, &mut h)?;
-        if let Some(v) = crate::idxnuovo::newer_version(&h) {
+        if let Some(v) = crate::idx_newer::newer_version(&h) {
             // never taken for damaged: it is a file of a newer program, to be left as it is
             return Err(Error::new("error.newerFormat")
                 .with("kind", "mzidx")

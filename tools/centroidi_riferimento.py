@@ -1,4 +1,4 @@
-"""Python reference of crates/mzlab-core/src/centroidi (profile scan -> centroids), same operations in the same order, for
+"""Python reference of crates/mzlab-core/src/centroids (profile scan -> centroids), same operations in the same order, for
 crates/mzlab-core/tests/centroids_parity.rs. Only a reference for the tests: the program uses the Rust version.
 
     python3 tools/centroidi_riferimento.py OUT.json

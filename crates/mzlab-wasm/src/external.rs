@@ -1,29 +1,29 @@
 //! A reader that lives in a readers module (`wasm-lettori/<family>/`, docs/agenti/lettori-modulo.md) and not in the engine: `ExternalReader` is a `Lettore` over the synchronous
 //! functions of the session interface of the module, which the page loads in the same worker (`rust-nativo.js`). The conversion of the answers (JSON, typed arrays) into the types of
 //! the contract is in `Replies` and does not touch JS, so it is tried natively with a fake `Module`; `JsModule` is the one that calls the functions. The index and the scans cross as
-//! one byte array each (`mzlab_core::trasporto`), the rest as JSON.
+//! one byte array each (`mzlab_core::transport`), the rest as JSON.
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use js_sys::{Array, Float32Array, Float64Array, Function, Reflect, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
-use mzlab_core::trasporto::{
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
+use mzlab_core::transport::{
     decode_index, decode_scansione, scan_from_parts, Intensity, PROTOCOLLO,
 };
 use wasm_bindgen::prelude::*;
 
 /// The session interface of a module, as the engine uses it: JSON texts, and the index and the scans as bytes. An error is the `Error` of the module (same key).
 pub trait Module {
-    /// The version of the transport the module speaks (`trasporto::PROTOCOLLO`).
+    /// The version of the transport the module speaks (`transport::PROTOCOLLO`).
     fn protocol(&mut self) -> Result<u32>;
     fn samples(&mut self) -> Result<String>;
-    /// The index of sample `c` (`trasporto::encode_index`).
+    /// The index of sample `c` (`transport::encode_index`).
     fn index(&mut self, c: usize) -> Result<Vec<u8>>;
-    /// Scan `k` of sample `c` (`trasporto::encode_scansione`).
+    /// Scan `k` of sample `c` (`transport::encode_scansione`).
     fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>>;
     /// Scan `k` of sample `c` decoded: from the block of `scan`, unless the module hands its columns over apart (`JsModule`).
     fn scan_spectrum(&mut self, c: usize, k: usize) -> Result<Spectrum> {
@@ -157,7 +157,7 @@ impl Replies {
         Ok((format(&text(v.get("formato"))), c))
     }
 
-    /// The index as the module wrote it (`trasporto::decode_index`).
+    /// The index as the module wrote it (`transport::decode_index`).
     pub(crate) fn index(b: &[u8]) -> Result<Vec<ScanEntry>> {
         decode_index(b)
     }

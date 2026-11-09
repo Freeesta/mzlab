@@ -450,7 +450,7 @@ fn gap_the_samples_are_matched_to_the_files_of_the_table_by_name() {
                 .rev()
                 .map(|n| (format!("{n}.mzML"), String::new(), String::new()))
                 .collect();
-            let text = mzlab_core::campioni::to_json(&mzlab_core::campioni::proponi(&files));
+            let text = mzlab_core::samples::to_json(&mzlab_core::samples::proponi(&files));
             std::fs::write(d.join("samples.json"), text).unwrap();
         }
         let prov = run(&d, &with(tail));
@@ -480,7 +480,7 @@ fn a_sample_naming_a_file_the_table_lacks_is_refused_with_its_name() {
             )
         })
         .collect();
-    let text = mzlab_core::campioni::to_json(&mzlab_core::campioni::proponi(&files));
+    let text = mzlab_core::samples::to_json(&mzlab_core::samples::proponi(&files));
     std::fs::write(d.join("samples.json"), text).unwrap();
     let prov = run(&d, &with(tail));
     assert_eq!(error_of(&prov, "csv").as_deref(), Some("error.badCampioni"));

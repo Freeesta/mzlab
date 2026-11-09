@@ -1,7 +1,7 @@
 //! The name model of `campioni/3`: template and regex, the spans, a model that does not match, the free columns, the 30 000 generated names.
 
 use super::many;
-use mzlab_core::campioni::{self, table_from_json, Cell};
+use mzlab_core::samples::{self, table_from_json, Cell};
 use serde_json::{json, Value};
 
 pub(super) fn run(model: &str, names: &[&str]) -> Value {
@@ -10,7 +10,7 @@ pub(super) fn run(model: &str, names: &[&str]) -> Value {
         .map(|n| json!({"name": n, "sha256": ""}))
         .collect();
     serde_json::from_str(
-        &campioni::route_all(
+        &samples::route_all(
             "modello",
             &json!({"modello": model, "files": files}).to_string(),
         )
@@ -101,7 +101,7 @@ fn bad_models_and_runaway_models_are_safe() {
         "(?P<a>x))",
         "(?P<a>\\",
     ] {
-        let e = campioni::route_all("modello", &json!({"modello": m, "files": []}).to_string())
+        let e = samples::route_all("modello", &json!({"modello": m, "files": []}).to_string())
             .unwrap_err();
         assert_eq!(e.key, "error.badModello", "{m}");
     }

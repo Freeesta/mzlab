@@ -1,5 +1,5 @@
 //! The scan table and the `.mzidx` of a reader built without the mzML text (`Rows::lettore`, one decoding for the table and pass 1) equal the old way:
-//! the mzML `lettori_mzml::scrivi` writes, read back by `scantable` and indexed by `build_mzml`. A made-up reader (`fake_reader`) carries every optional
+//! the mzML `readers_mzml::scrivi` writes, read back by `scantable` and indexed by `build_mzml`. A made-up reader (`fake_reader`) carries every optional
 //! field: precursor with and without a value, every polarity, empty scans, equal m/z in several scans, out-of-range m/z, 64-bit intensities,
 //! arrays of unequal length, extras that name accessions the rows read. Header variants too (analyzer components, `MS:1000768`, names that need the text).
 #![allow(clippy::indexing_slicing)]
@@ -9,9 +9,9 @@ mod fake_reader;
 
 use fake_reader::Finto;
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori::Reader;
 use mzlab_core::mzmlwrite::Header;
-use mzlab_core::{lettori_mzml, mzidx, upload};
+use mzlab_core::readers::Reader;
+use mzlab_core::{mzidx, readers_mzml, upload};
 
 const BIG: usize = mzidx::DEFAULT_BUDGET;
 
@@ -43,7 +43,7 @@ fn trial(label: &str, l: Finto) {
 fn try_with(label: &str, mut l: Finto, with_mzml: bool) {
     let name = format!("{label}.mzML");
     let a = with_mzml.then(|| {
-        let mzml = lettori_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let mzml = readers_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, &name).unwrap();
         let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG)
             .unwrap_or_else(|e| panic!("{label}: mzML path {e:?}"));
@@ -264,7 +264,7 @@ fn equal_after_rounding_between_two_buckets() {
             sp.intensity = (0..sp.mz.len()).map(|j| (k * 10 + j) as f32).collect();
         }
     }
-    let mzml = lettori_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mzml = readers_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "uguali.mzML").unwrap();
     assert!(pa.table.hr1, "the MS1 sections hold f32");
     let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();

@@ -5,10 +5,10 @@
 use std::path::PathBuf;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::Limits;
 use mzlab_core::mzidx::DEFAULT_BUDGET;
+use mzlab_core::readers::Limits;
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::sorgente::ReaderSource;
+use mzlab_core::source::ReaderSource;
 
 use crate::Outcome;
 

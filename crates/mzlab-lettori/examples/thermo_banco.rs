@@ -3,8 +3,8 @@
 //!   thermo_banco FILE.raw [--sha MAIN_SHA_40] [--reps 5] [--machine TEXT] [--profile TEXT] [--target native|wasm]
 use std::time::Instant;
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
-use mzlab_core::rawlettore;
+use mzlab_core::rawreader;
+use mzlab_core::readers::{FileSet, Limits, Member};
 use serde_json::{json, Value};
 
 fn fileset(name: &str, bytes: Vec<u8>) -> FileSet {
@@ -40,7 +40,7 @@ struct Lap {
 fn lap(name: &str, bytes: &[u8]) -> (Lap, usize) {
     let t0 = Instant::now();
     let mut l =
-        (rawlettore::ENTRY.apri)(fileset(name, bytes.to_vec()), &Limits::desktop()).expect("open");
+        (rawreader::ENTRY.apri)(fileset(name, bytes.to_vec()), &Limits::desktop()).expect("open");
     let n = l.index(0).expect("index").len();
     let open = ms(t0);
 

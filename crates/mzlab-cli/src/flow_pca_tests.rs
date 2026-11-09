@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use mzlab_core::campioni;
+use mzlab_core::samples;
 use mzlab_feat::stat::pca_json;
 
 use crate::flow_stats_tests::{campioni_2, rows, table, NAMES};
@@ -13,7 +13,7 @@ fn dir(tag: &str) -> std::path::PathBuf {
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(d.join("work")).unwrap();
     std::fs::write(d.join("table.mzfeat"), table()).unwrap();
-    std::fs::write(d.join("samples.json"), campioni::to_json(&campioni_2())).unwrap();
+    std::fs::write(d.join("samples.json"), samples::to_json(&campioni_2())).unwrap();
     d
 }
 
@@ -70,7 +70,7 @@ fn too_few_samples_fail_with_the_key_of_the_engine() {
     let d = dir("few");
     let mut few = campioni_2();
     few.iter_mut().for_each(|c| c.kind = "blank".into());
-    std::fs::write(d.join("samples.json"), campioni::to_json(&few)).unwrap();
+    std::fs::write(d.join("samples.json"), samples::to_json(&few)).unwrap();
     let (out, prov) = run(&d, "{}");
     assert!(
         out.is_empty() && prov.contains("err.stat.pca.few"),

@@ -8,8 +8,8 @@ mod raw_records;
 use std::time::Instant;
 
 use flate2::{write::GzEncoder, Compression};
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
-use mzlab_core::rawlettore;
+use mzlab_core::rawreader;
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 use opentfraw::generic_data::GenericValue;
 use opentfraw::{RawFileReader, ScanMetadata, ScanParams};
 use serde_json::{json, Map, Value};
@@ -412,7 +412,7 @@ fn main() {
     let t0 = Instant::now();
     let mut src = Cursor::new(bytes.as_slice());
     let raw = RawFileReader::open(&mut src).expect("open");
-    let mut l = (rawlettore::ENTRY.apri)(fileset(&name, bytes.clone()), &Limits::desktop())
+    let mut l = (rawreader::ENTRY.apri)(fileset(&name, bytes.clone()), &Limits::desktop())
         .expect("lettore");
     let open_ms = t0.elapsed().as_secs_f64() * 1e3;
     let n = l.index(0).expect("index").len();

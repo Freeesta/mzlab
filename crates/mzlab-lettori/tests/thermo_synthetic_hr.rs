@@ -2,8 +2,8 @@
 //! The synthetic Orbitrap v66 writer (`examples/thermo_sintetico.rs`, the stand-in for the speed benches of high-resolution `.raw`) gives a file the reader opens:
 //! the scan count, the MS1/MS2 cycle, profile MS1 with centroids at the m/z it wrote, MS2 with a precursor. Small file in a temporary folder, removed afterwards.
 //! A pinned hash of every decoded scan (centroids and profile) is the gate of any change to the decoder: it must give the same values.
-use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::Spectrum;
+use mzlab_core::readers::{FileSet, Limits, Member};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -216,8 +216,8 @@ fn dda_windows(
 ) -> Vec<(String, String, String)> {
     use mzlab_core::idxread::Index;
     use mzlab_core::routes::{Query, Routes};
-    use mzlab_core::sorgente::ReaderSource;
-    use mzlab_core::{lettori_mzml, mzidx, upload};
+    use mzlab_core::source::ReaderSource;
+    use mzlab_core::{mzidx, readers_mzml, upload};
     let d = folder(name);
     let f = d.join("dda.raw");
     generate(&f, args);
@@ -233,7 +233,7 @@ fn dda_windows(
     };
     let members = upload::impronte(&mut set).unwrap();
     let mut l = mzlab_lettori::apri(set, &Limits::desktop()).expect("open");
-    let mzml = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mzml = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "dda.mzML").unwrap();
     let (ia, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, mzidx::DEFAULT_BUDGET).unwrap();
     let pb = upload::prepare_reader(&mut *l, 0, &members, "dda.mzML").unwrap();

@@ -10,11 +10,11 @@ pub mod agilent;
 pub mod agilent;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod analog;
-pub mod abbina;
+pub mod pairing;
 pub mod bench_stats;
 pub mod budget;
 pub mod budget_auto;
-pub mod centroidi;
+pub mod centroids;
 pub mod adduct_table;
 pub mod analysis;
 pub mod axisroutes;
@@ -22,7 +22,7 @@ pub mod components;
 pub mod comproute;
 pub mod composition;
 pub mod ddafinestra;
-pub mod differenza;
+pub mod difference;
 pub mod diffroute;
 pub mod elements;
 pub mod entropy;
@@ -31,9 +31,9 @@ pub mod fileroutes;
 pub mod hrroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod chromeleon;
-pub mod chrom_fondo;
+pub mod chrom_background;
 #[cfg(test)]
-mod chrom_fondo_test;
+mod chrom_background_test;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod hashio;
 pub mod hrscanbin;
@@ -44,8 +44,8 @@ pub mod gradient;
 pub mod gunzip;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod idxcache;
-pub mod idxnuovo;
-pub mod blocchi;
+pub mod idx_newer;
+pub mod blocks;
 mod idxcheck;
 pub mod idxread;
 pub mod idxsearch;
@@ -55,9 +55,9 @@ pub mod isofine;
 pub mod isoscore;
 #[cfg(feature = "isotopi-tutti")]
 pub mod isotable;
-pub mod nuclidi;
+pub mod nuclides;
 pub mod itemroutes;
-pub mod infusione;
+pub mod infusion;
 pub mod iteminfo;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod json;
@@ -84,36 +84,36 @@ pub mod origin;
 pub mod originroute;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzidx;
-pub mod mzidx_lettore;
-mod mzidx_ordine;
+pub mod mzidx_reader;
+mod mzidx_order;
 pub mod mzidx_spill;
-pub mod accorpa;
-pub mod msnalbero;
-pub mod msngrafo;
+pub mod coalesce;
+pub mod msntree_build;
+pub mod msngraph;
 pub mod msnroute;
 pub mod msntree;
 pub mod methodcheck;
 pub mod methodinfo;
 pub mod methodjson;
-pub mod lettori;
-pub mod trasporto;
-pub mod lettori_centroidi;
-pub mod lettori_mzml;
-pub mod lettori_sessione;
+pub mod readers;
+pub mod transport;
+pub mod readers_centroids;
+pub mod readers_mzml;
+pub mod readers_session;
 pub mod conv;
-pub mod metodo;
-pub mod metodo_campi;
-pub mod metodo_mzml;
+pub mod method;
+pub mod method_fields;
+pub mod method_mzml;
 #[cfg(feature = "thermo")]
-pub mod metodo_raw;
-pub mod metodo_wiff;
+pub mod method_raw;
+pub mod method_wiff;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzml;
 pub mod mzml_estimate;
 mod mzmlarray;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
-pub(crate) mod unita_traccia;
+pub(crate) mod trace_unit;
 pub mod mzmlsrm;
 pub mod simtab;
 #[cfg(feature = "mappa-dad")]
@@ -121,10 +121,10 @@ mod mzml_dad;
 pub mod numarray;
 pub mod numfmt;
 pub mod numpress;
-pub mod attivazioni;
+pub mod activations;
 pub mod mzmlwrite;
 #[cfg(any(not(target_family = "wasm"), feature = "valida"))]
-pub mod mzmlvalida;
+pub mod mzml_validate;
 pub mod pace;
 pub mod peak1d;
 pub mod baseline;
@@ -137,7 +137,7 @@ mod peakq_reach_test;
 mod peakq_auto_test;
 pub use mzlab_picchi::peaks;
 pub mod peakext;
-pub mod etichette_picchi;
+pub mod peak_labels;
 pub use mzlab_picchi::signal;
 pub use mzlab_picchi::sortc;
 pub mod spare;
@@ -153,17 +153,17 @@ pub mod raw;
 #[cfg(feature = "thermo")]
 pub mod rawfilter;
 #[cfg(feature = "thermo")]
-pub mod rawlettore;
+pub mod rawreader;
 #[cfg(feature = "thermo")]
-mod rawlettore_reazioni;
+mod rawreader_reactions;
 pub mod rng;
 pub mod rois;
 pub mod roi_cluster;
 pub mod roles;
-pub mod ricerca;
+pub mod search;
 pub mod jsonround;
-pub mod canali;
-pub mod canali_uv;
+pub mod channels;
+pub mod channels_uv;
 pub mod routes;
 pub mod routes_xicbin;
 pub mod scaninfo;
@@ -174,9 +174,9 @@ pub mod scanparams;
 pub mod mrmroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod sniff;
-pub mod sorgente;
+pub mod source;
 pub mod srm;
-pub mod stima;
+pub mod estimate;
 pub mod flow;
 pub mod mzrun;
 pub mod step;
@@ -195,7 +195,7 @@ pub mod similarity;
 pub mod ratio;
 pub mod pca;
 pub mod qaqc;
-pub mod statistica;
+pub mod statistics;
 pub mod statmat;
 pub mod statref;
 pub mod statroute;
@@ -203,9 +203,9 @@ pub mod kendrick;
 pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
-pub mod campioni;
+pub mod samples;
 pub mod molecules;
-pub mod disegno;
+pub mod drawing;
 pub mod tpmine_irls;
 
 pub use error::{Error, Result};

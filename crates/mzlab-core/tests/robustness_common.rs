@@ -14,9 +14,9 @@ use std::sync::OnceLock;
 
 use agilent_synth::{encode, sample};
 use mzlab_core::idxread::Index;
-use mzlab_core::lettori::{self, Limits};
 use mzlab_core::ole::Ole;
-use mzlab_core::{lettori_mzml, methodinfo, mzml, wiff};
+use mzlab_core::readers::{self, Limits};
+use mzlab_core::{methodinfo, mzml, readers_mzml, wiff};
 use robustness::*;
 
 #[global_allocator]
@@ -30,8 +30,8 @@ const MZIDX: &[u8] = include_bytes!("../../../tests/golden/ref/msntree_rotta/msn
 /// Everything a reader of the registry offers, on whatever the set is: the keys of the errors it met.
 fn run_registry(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
-    let _ = lettori::riconosci(&mut fileset(m));
-    let Some(mut l) = note(lettori::apri(fileset(m), &Limits::sito()), &mut k) else {
+    let _ = readers::riconosci(&mut fileset(m));
+    let Some(mut l) = note(readers::apri(fileset(m), &Limits::sito()), &mut k) else {
         return k;
     };
     let _ = l.format();
@@ -51,7 +51,7 @@ fn run_registry(m: &[(String, Vec<u8>)]) -> Vec<String> {
         }
         note(l.method(c), &mut k);
         note(
-            lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}),
+            readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}),
             &mut k,
         );
     }
@@ -150,7 +150,7 @@ fn trial(name: &str, seme: &Members, text: &[bool], execute: Execute) {
 fn the_valid_seeds_are_read() {
     let mut set = fileset(&agilent_path());
     assert_eq!(
-        lettori::riconosci(&mut set).map(|v| v.id),
+        readers::riconosci(&mut set).map(|v| v.id),
         Some("agilent-d")
     );
     assert!(
@@ -161,7 +161,7 @@ fn the_valid_seeds_are_read() {
     assert!(execute_mzidx(&[("a.mzidx".into(), MZIDX.to_vec())]).is_empty());
     if let Some(w) = wiff_pair() {
         assert_eq!(
-            lettori::riconosci(&mut fileset(w)).map(|v| v.id),
+            readers::riconosci(&mut fileset(w)).map(|v| v.id),
             Some("sciex-wiff")
         );
     }

@@ -1,7 +1,7 @@
 //! `chem::structures`: the cleavages of a public molecule (ethyl indole-3-carboxylate) that give the m/z of a node, with the peaks of its spectrum
 //! that the same piece explains by a neutral loss.
 
-use mzlab_core::msngrafo::StructuresInput;
+use mzlab_core::msngraph::StructuresInput;
 use mzlab_feat::chem::structures::structures;
 
 const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";

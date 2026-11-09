@@ -1,5 +1,5 @@
 //! The native executor of `spectra.msn_graph@2`: the fragmentation graph `msngrafo/2` of an MSn infusion (mzML or a vendor file such as a Thermo `.raw`),
-//! the same bytes as `mzlab-cli msn-graph FILE`. The step takes the options of `msngrafo::Opzioni` that the command has, plus the name of the molecule
+//! the same bytes as `mzlab-cli msn-graph FILE`. The step takes the options of `msngraph::Opzioni` that the command has, plus the name of the molecule
 //! looked up in a molecules list the user gives; its output is read by the page and by `msn-lib`.
 
 use std::path::Path;
@@ -7,7 +7,7 @@ use std::path::Path;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::molecules::{cerca, from_csv};
-use mzlab_core::msngrafo::{Options, RuleParams};
+use mzlab_core::msngraph::{Options, RuleParams};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{one_input, write_made, FileRunner};
@@ -159,7 +159,7 @@ fn params() -> Vec<Param> {
                 .label("Loss window")
                 .tip("Maximum distance in ppm, relative to the precursor m/z, for matching a loss by mass.")
                 .min(0.0)
-                .default_num(mzlab_core::msngrafo::PPM_PERDITA)
+                .default_num(mzlab_core::msngraph::PPM_PERDITA)
                 .unit("ppm")
                 .doc("Window of the loss match by mass, ppm of the precursor m/z"),
             Param::boolean("rules", "Apply the fragmentation rules")
@@ -294,8 +294,8 @@ pub fn msn_graph_text(
         .iter()
         .any(|(k, v)| k == "interpret" && v.bool() == Some(true))
     {
-        let ppm = number(job, "loss_ppm", mzlab_core::msngrafo::PPM_PERDITA);
-        json = mzlab_core::msngrafo::with_interpretation(&json, &g, ppm);
+        let ppm = number(job, "loss_ppm", mzlab_core::msngraph::PPM_PERDITA);
+        json = mzlab_core::msngraph::with_interpretation(&json, &g, ppm);
     }
     if job
         .resolved

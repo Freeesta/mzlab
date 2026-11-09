@@ -3,9 +3,9 @@
 
 use std::path::Path;
 
-use mzlab_core::campioni;
 use mzlab_core::json::parse;
 use mzlab_core::mzrun::{build, verify, Parts};
+use mzlab_core::samples;
 
 use crate::Outcome;
 
@@ -38,7 +38,7 @@ pub fn record(args: Vec<String>) -> Outcome {
         let e = |e: mzlab_core::error::Error| e.to_string();
         let prov = parse(&read(&format!("{dir}/prov.json"))?).map_err(e)?;
         let plan = parse(&read(&format!("{dir}/plan.json"))?).map_err(e)?;
-        let roles = campioni::from_json(&read(roles)?).map_err(e)?;
+        let roles = samples::from_json(&read(roles)?).map_err(e)?;
         let text = build(&Parts {
             plan: &plan,
             prov: &prov,

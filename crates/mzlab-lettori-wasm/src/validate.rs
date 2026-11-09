@@ -1,5 +1,5 @@
 //! The module `valida` of the page: the mzML validation of `mzlab-cli validate` (action «Validate mzML»), reading the file through the page's `read` callback.
-//! `validate_mzml` returns the JSON text the command prints with `--json` for one file (`mzlab_core::mzmlvalida::json_un_file`). A module of its own because of the PSI-MS table.
+//! `validate_mzml` returns the JSON text the command prints with `--json` for one file (`mzlab_core::mzml_validate::json_un_file`). A module of its own because of the PSI-MS table.
 use std::io::Read;
 
 use js_sys::Function;
@@ -58,8 +58,8 @@ pub fn validate_mzml(name: &str, size: f64, read: Function) -> Result<String, Js
         dim: size as u64,
         pos: 0,
     };
-    let r = mzlab_core::mzmlvalida::validate(s).map_err(|e| {
+    let r = mzlab_core::mzml_validate::validate(s).map_err(|e| {
         JsValue::from_str(&format!("{{\"error_key\":\"{}\",\"params\":{{}}}}", e.key))
     })?;
-    Ok(mzlab_core::mzmlvalida::json_un_file(name, &r))
+    Ok(mzlab_core::mzml_validate::json_un_file(name, &r))
 }

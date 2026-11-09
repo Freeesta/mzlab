@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 
 use mzlab_core::idxread::Index;
-use mzlab_core::infusione::{infusione, with_msn};
+use mzlab_core::infusion::{infusione, with_msn};
 use mzlab_core::mzidx::build_mzml;
 use mzlab_core::upload;
 

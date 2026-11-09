@@ -4,8 +4,8 @@
 use super::{Ctx, GroupOpts, GroupTable, ParentOut};
 use crate::legacy::lr::kin::{decay, Point};
 use crate::table::{CELL_DETECTED, CELL_TARGETED};
-use mzlab_core::campioni::Sample;
 use mzlab_core::json::round;
+use mzlab_core::samples::Sample;
 
 /// The controls of a condition: its own by kind, else the shared ones (`serie == ""`).
 #[derive(Debug, Clone, Default, PartialEq)]

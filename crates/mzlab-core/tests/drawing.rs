@@ -2,8 +2,8 @@
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
-use mzlab_core::campioni::{proponi, Sample};
-use mzlab_core::disegno::{self, digest, from_json, to_json, validate, Confronto, Design};
+use mzlab_core::drawing::{self, digest, from_json, to_json, validate, Confronto, Design};
+use mzlab_core::samples::{proponi, Sample};
 use serde_json::Value;
 
 /// Files with a name, a SHA-256 made from the position and the roles `proponi` guesses.
@@ -58,7 +58,7 @@ fn proposal_from_the_names() {
         "gas_t005_b",
         "QC_1",
     ]);
-    let d = disegno::propose(&cs);
+    let d = drawing::propose(&cs);
     let names: Vec<&str> = d.conditions.iter().map(|c| c.name.as_str()).collect();
     assert_eq!(names, ["ref", "gas"]);
     assert_eq!(d.reference.as_deref(), Some("ref"));
@@ -66,29 +66,29 @@ fn proposal_from_the_names() {
     assert_eq!(d.conditions[0].replicates, 2);
     assert!(d.batches.iter().all(|l| l.batch == "1") && d.batches.len() == cs.len());
     // one series without a name: one condition called ""
-    let one = disegno::propose(&series(&["a_t5", "a_t10"]));
+    let one = drawing::propose(&series(&["a_t5", "a_t10"]));
     assert_eq!((one.conditions.len(), one.reference.is_none()), (1, true));
 }
 
 #[test]
 fn canonical_for_every_permutation_of_the_files() {
     let cs = series(&FULL);
-    let want = to_json(&disegno::propose(&cs));
-    let sha = digest(&disegno::propose(&cs));
+    let want = to_json(&drawing::propose(&cs));
+    let sha = digest(&drawing::propose(&cs));
     assert_eq!(sha.len(), 64);
     for k in 1..cs.len() {
         let mut p = cs.clone();
         p.rotate_left(k);
-        assert_eq!(to_json(&disegno::propose(&p)), want, "rotation {k}");
+        assert_eq!(to_json(&drawing::propose(&p)), want, "rotation {k}");
         p.reverse();
-        assert_eq!(to_json(&disegno::propose(&p)), want, "reversed {k}");
+        assert_eq!(to_json(&drawing::propose(&p)), want, "reversed {k}");
     }
     let back = from_json(want.as_bytes()).unwrap();
     assert_eq!(to_json(&back), want);
-    assert_eq!(disegno::route("canonico", &want).unwrap(), want);
-    assert_eq!(disegno::route("digest", &want).unwrap(), sha);
+    assert_eq!(drawing::route("canonico", &want).unwrap(), want);
+    assert_eq!(drawing::route("digest", &want).unwrap(), sha);
     assert_eq!(
-        disegno::route("nope", "{}").unwrap_err().key,
+        drawing::route("nope", "{}").unwrap_err().key,
         "error.badDisegno"
     );
 }
@@ -97,7 +97,7 @@ fn canonical_for_every_permutation_of_the_files() {
 fn five_cases_of_findings() {
     // 1: complete, nothing to say
     let cs = series(&FULL);
-    let d = disegno::propose(&cs);
+    let d = drawing::propose(&cs);
     assert_eq!(codes(&d, &cs), []);
     // 2: two replicates
     let cs2 = series(&[
@@ -110,7 +110,7 @@ fn five_cases_of_findings() {
         "QC_2",
     ]);
     assert_eq!(
-        codes(&disegno::propose(&cs2), &cs2),
+        codes(&drawing::propose(&cs2), &cs2),
         code_list(&[("fewReplicates", "ref")])
     );
     // 3: no QC at the end of the batch
@@ -124,11 +124,11 @@ fn five_cases_of_findings() {
         "gas_t005_c",
     ]);
     assert_eq!(
-        codes(&disegno::propose(&cs3), &cs3),
+        codes(&drawing::propose(&cs3), &cs3),
         code_list(&[("batchNoQc", "1")])
     );
     // 4: a second batch without QC
-    let mut d4 = disegno::propose(&cs);
+    let mut d4 = drawing::propose(&cs);
     for l in d4.batches.iter_mut().filter(|l| l.file.starts_with("gas")) {
         l.batch = "2".into();
     }
@@ -136,7 +136,7 @@ fn five_cases_of_findings() {
     d4.comparisons.clear();
     assert_eq!(codes(&d4, &cs), code_list(&[("batchNoQc", "2")]));
     // 5: comparisons with an empty condition and without reference
-    let mut d5 = disegno::propose(&cs);
+    let mut d5 = drawing::propose(&cs);
     d5.comparisons = vec![Confronto::Pair("ref".into(), "ghost".into())];
     assert_eq!(codes(&d5, &cs), code_list(&[("emptyComparison", "ghost")]));
     d5.comparisons = vec![Confronto::VsReference];
@@ -149,10 +149,10 @@ fn five_cases_of_findings() {
 #[test]
 fn route_valida_and_schema() {
     let cs = series(&FULL);
-    let d = disegno::propose(&cs);
-    let camp = mzlab_core::campioni::to_json(&cs);
+    let d = drawing::propose(&cs);
+    let camp = mzlab_core::samples::to_json(&cs);
     let j = to_json(&d);
-    let out = disegno::route(
+    let out = drawing::route(
         "valida",
         &format!("{{\"campioni\":{camp},\"disegno\":{j}}}"),
     )

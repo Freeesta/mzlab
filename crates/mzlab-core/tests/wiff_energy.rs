@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::wiff::{container, samples, Wiff};
 use serde_json::Value;
 
@@ -74,9 +74,9 @@ fn the_collision_energy_of_each_experiment_is_read_and_written() {
         .all(|e| e.iso_half.is_some() == (e.level == 2)));
 
     // the mzML: one activation per product-ion spectrum, with its energy and the offsets of the isolation window
-    let mut l = lettori::apri(pair(&dir, "energia"), &Limits::sito()).unwrap();
+    let mut l = readers::apri(pair(&dir, "energia"), &Limits::sito()).unwrap();
     let mzml = String::from_utf8(
-        mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     assert_eq!(mzml.matches("<activation>").count(), 6);
@@ -98,8 +98,8 @@ fn the_collision_energy_of_each_experiment_is_read_and_written() {
     );
 
     // the scan table of the index: energy (column 7), isolation window (11) and activation (12) of each product-ion row
-    let mut t = mzlab_core::mzidx_lettore::righe(&mut *l, 0).unwrap();
-    let rows: Value = serde_json::from_str(&mzlab_core::mzidx_lettore::rows_json(
+    let mut t = mzlab_core::mzidx_reader::righe(&mut *l, 0).unwrap();
+    let rows: Value = serde_json::from_str(&mzlab_core::mzidx_reader::rows_json(
         &mut t,
         l.index(0).unwrap(),
     ))

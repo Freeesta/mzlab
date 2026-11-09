@@ -1,4 +1,4 @@
-"""Flat-window background of a chromatogram (fondo-piatto.js, Rust chrom_fondo.rs through qualita.js) on the built site: the program picks the window, the student moves it
+"""Flat-window background of a chromatogram (fondo-piatto.js, Rust chrom_background.rs through qualita.js) on the built site: the program picks the window, the student moves it
 (arrows, handle) and goes back to the automatic one. Needs the site and the .wasm (python tools/build_site.py; the CI builds the .wasm in site/static/wasm)."""
 import subprocess, sys, time, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -7,7 +7,7 @@
 mod agilent_synth;
 
 use agilent_synth::{encode, sample};
-use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
+use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
 
 const MSTS: &[u8] =
     b"<?xml version=\"1.0\"?><TimeSegments><TimeSegment><StartTime>3</StartTime><EndTime>3.1</EndTime><NumOfScans>4</NumOfScans></TimeSegment></TimeSegments>";
@@ -20,7 +20,7 @@ fn apri(scan: &[u8], peak: &[u8], ts: bool) -> mzlab_core::error::Result<Box<dyn
     if ts {
         members.push(("x.D/AcqData/MSTS.xml", MSTS.to_vec()));
     }
-    lettori::apri(
+    readers::apri(
         FileSet {
             membri: members
                 .into_iter()

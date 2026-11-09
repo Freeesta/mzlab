@@ -1,4 +1,4 @@
-//! `mzlab-cli samples vars|group`: the two name operations of `campioni::route` (`variabili`, `nome_gruppo`), printing the JSON the page gets
+//! `mzlab-cli samples vars|group`: the two name operations of `samples::route` (`variabili`, `nome_gruppo`), printing the JSON the page gets
 //! from `api/campioni/<op>`. The names come one per line from a file or the standard input.
 
 use std::io::Read;
@@ -118,7 +118,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Some(c) => return Outcome::fail(&format!("unknown samples operation {c}")),
     };
     match body.and_then(|b| {
-        mzlab_core::campioni::route_all(op, &b).map_err(|e| format!("{} {:?}", e.key, e.params))
+        mzlab_core::samples::route_all(op, &b).map_err(|e| format!("{} {:?}", e.key, e.params))
     }) {
         Ok(t) => Outcome::ok((t + "\n").into_bytes()),
         Err(e) => Outcome::fail(&e),

@@ -4,8 +4,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 use serde_json::Value;
 
 /// The reference files of test `tag`: one folder per test, since the tests run in parallel and the script rewrites its folder.
@@ -56,8 +56,8 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
         return;
     };
     let want = want["transizioni"]["transitions"].as_array().unwrap();
-    let mut l = lettori::apri(pair(&dir, "transizioni"), &Limits::sito()).unwrap();
-    let bytes = mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mut l = readers::apri(pair(&dir, "transizioni"), &Limits::sito()).unwrap();
+    let bytes = mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let text = String::from_utf8_lossy(&bytes);
     // every precursor of a transition has its activation, the energy and the dwell are written for the readers that know them
     assert_eq!(text.matches("<activation>").count(), want.len());

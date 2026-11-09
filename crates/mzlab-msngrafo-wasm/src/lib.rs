@@ -1,4 +1,4 @@
-//! wasm-bindgen bridge of `mzlab_core::msngrafo`: the `.mzidx` of an infusion and its mzML (both read through `read(offset, length)`) give the
+//! wasm-bindgen bridge of `mzlab_core::msngraph`: the `.mzidx` of an infusion and its mzML (both read through `read(offset, length)`) give the
 //! `msngrafo/1` of a request, with the same functions as `mzlab-cli msn-graph` (same bytes). A `.wasm` of its own, loaded by the worker of the
 //! engine on the first request of the graph; `strutture=<id>` (and `ppm_struttura`) adds the cleavages of the SMILES that explain a node; `interpreta=1` adds the interpretation of the losses. Memory: the index is read once for its SHA-256 and once to open it; the output is one JSON string,
 //! no offsets (`docs/agenti/memoria.md`). Errors are JSON `{"error_key", "params"}` strings.
@@ -7,10 +7,10 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::Error;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
-use mzlab_core::msngrafo::{
+use mzlab_core::msngraph::{
     aggiungi, cerca, esporta, from_export_request, from_request, graph_json, opzioni_cerca,
 };
-use mzlab_core::msngrafo::{
+use mzlab_core::msngraph::{
     library_text, table_text, with_interpretation, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
@@ -55,7 +55,7 @@ pub fn version() -> String {
 /// `complete`: the text of an `msngrafo/1` with the key `vista` (the bytes `mzlab-cli msn-graph complete` writes); a keyed error for what is not one.
 #[wasm_bindgen]
 pub fn complete(json: &str) -> Result<String, JsValue> {
-    mzlab_core::msngrafo::completa(json).map_err(js_err)
+    mzlab_core::msngraph::completa(json).map_err(js_err)
 }
 
 fn compute(

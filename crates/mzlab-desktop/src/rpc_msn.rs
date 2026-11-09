@@ -8,13 +8,13 @@ use std::sync::Arc;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
-use mzlab_core::msngrafo::{
+use mzlab_core::msngraph::{
     aggiungi, cerca, esporta, from_export_request, from_request, graph_json, library_text,
     opzioni_cerca, tabella_regole, table_text, with_interpretation, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
-use mzlab_core::sorgente::ReaderSource;
-use mzlab_core::{lettori_mzml, Error, Result};
+use mzlab_core::source::ReaderSource;
+use mzlab_core::{readers_mzml, Error, Result};
 use mzlab_feat::chem::structures::strutture_testo;
 use serde_json::{json, Value};
 
@@ -106,7 +106,7 @@ impl State {
             let mut l = natives::open(&nat.members, nat.centroid)?;
             let mut out =
                 std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?);
-            lettori_mzml::write_with(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
+            readers_mzml::write_with(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
             std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
             drop(out);
             indexer.build(&tmp, &key, None)?;
@@ -164,7 +164,7 @@ impl State {
             pr.scans_total.store(total as u64, Ordering::Relaxed);
         };
         let bytes = map.0.clone();
-        let did = mzlab_core::centroidi::mzml_to_centroids(
+        let did = mzlab_core::centroids::mzml_to_centroids(
             || Ok(std::io::Cursor::new(bytes.bytes())),
             &mut out,
             name,

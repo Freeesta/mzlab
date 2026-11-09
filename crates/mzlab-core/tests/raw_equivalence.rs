@@ -1,11 +1,11 @@
-//! RV-01: the memory work on the `.raw` reader (trailers and indexes kept compact) changes no result. For each real file the `.mzidx` (as `raw_times` builds it), the mzML of `lettori_mzml::scrivi`, the
+//! RV-01: the memory work on the `.raw` reader (trailers and indexes kept compact) changes no result. For each real file the `.mzidx` (as `raw_times` builds it), the mzML of `readers_mzml::scrivi`, the
 //! `metodo/1` document and the header of an array of scans have the SHA-256 recorded before the change. Needs the private data repository (`MZLAB_DATI`, `dati/formati/raw_veloce_alias.tsv` for LAB-A);
 //! the big DDA is looked for as `$MZLAB_RAW_BAF` or `dati/formati/thermo/raw/BAF_GEE_37.raw`. A file that is missing skips its case. `RAW_EQ_PRINT=1` prints the hashes instead of checking them.
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
-use mzlab_core::{lettori_mzml, mzidx, upload};
+use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
+use mzlab_core::{mzidx, readers_mzml, upload};
 use sha2::{Digest, Sha256};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -32,13 +32,13 @@ fn hashes(path: &Path) -> (String, String, String, String) {
     };
     let mut fs = set();
     let imp = upload::impronte(&mut fs).expect("fingerprint");
-    let mut l: Box<dyn Reader> = lettori::apri(set(), &Limits::sito()).expect("open");
+    let mut l: Box<dyn Reader> = readers::apri(set(), &Limits::sito()).expect("open");
     let p = upload::prepare_reader(&mut *l, 0, &imp, &format!("{name}.mzML")).expect("table");
     let mut out = Cursor::new(Vec::new());
     mzidx::build_reader(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("mzidx");
     let mzidx = hex(&out.into_inner());
     let mut mz = Sha256Sink::default();
-    lettori_mzml::scrivi(&mut *l, 0, &mut mz, &mut |_, _| {}).expect("mzML");
+    readers_mzml::scrivi(&mut *l, 0, &mut mz, &mut |_, _| {}).expect("mzML");
     let metodo = hex(l.method(0).expect("metodo").as_bytes());
     let n = l.index(0).unwrap().len();
     let mut h = Sha256::new();
@@ -177,10 +177,10 @@ fn scan_data_and_transport_give_the_same_scan() {
                 sha1: None,
             }],
         };
-        let mut l = lettori::apri(fs, &Limits::sito()).unwrap();
+        let mut l = readers::apri(fs, &Limits::sito()).unwrap();
         let index = l.index(0).unwrap().to_vec();
         let riletto =
-            mzlab_core::trasporto::decode_index(&mzlab_core::trasporto::encode_index(&index))
+            mzlab_core::transport::decode_index(&mzlab_core::transport::encode_index(&index))
                 .unwrap();
         assert_eq!(riletto, index, "{case}: index through the transport");
         let step = (index.len() / 300).max(1);
@@ -217,9 +217,9 @@ fn scan_data_and_transport_give_the_same_scan() {
                 (&index[k].id, &index[k].filtro),
                 "{case}: row {k}"
             );
-            let t = mzlab_core::trasporto::decode_scansione(
+            let t = mzlab_core::transport::decode_scansione(
                 k,
-                &mzlab_core::trasporto::encode_scansione(&b),
+                &mzlab_core::transport::encode_scansione(&b),
             )
             .unwrap();
             assert_eq!(
@@ -254,7 +254,7 @@ fn the_table_header_has_the_fields_of_the_full_header() {
                 sha1: None,
             }],
         };
-        let Ok(mut l) = lettori::apri(fs, &Limits::sito()) else {
+        let Ok(mut l) = readers::apri(fs, &Limits::sito()) else {
             continue;
         };
         let full = l.mzml_header(0).unwrap().expect("full header");

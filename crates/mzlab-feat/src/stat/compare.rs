@@ -4,7 +4,7 @@
 
 use super::special::{f_upper, t_two_sided};
 use super::{Layout, Matrix};
-use mzlab_core::disegno::MIN_REPLICHE;
+use mzlab_core::drawing::MIN_REPLICHE;
 use mzlab_core::error::{Error, Result};
 
 /// Smallest pseudocount (area units), also the one used when no file gives a noise level.

@@ -4,10 +4,10 @@
 use super::netcdf::{Cdf, Val};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limits;
-use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
-use mzlab_core::metodo_campi::Field;
+use mzlab_core::method::{self, obj, text, Source, SrcFile, V};
+use mzlab_core::method_fields::Field;
 use mzlab_core::mzmlwrite::Header;
+use mzlab_core::readers::Limits;
 
 /// The most fields kept from a file.
 const FIELDS_MAX: usize = 2000;
@@ -77,8 +77,8 @@ impl AndiHeader {
             ("versione", s(&self.software)),
         ]);
         let doc = obj(vec![
-            ("schema", Some(V::s(metodo::SCHEMA))),
-            ("origine", metodo::origin(&src, self.created.as_deref())),
+            ("schema", Some(V::s(method::SCHEMA))),
+            ("origine", method::origin(&src, self.created.as_deref())),
             ("campione", obj(vec![("nome", s(&self.title))])),
             (
                 "strumento",
@@ -137,7 +137,7 @@ impl AndiHeader {
                     .push((k.to_string(), acc.to_string(), format!("{cv}: {v}")));
             }
         }
-        h.run_params.push((metodo::USERPARAM.to_string(), doc));
+        h.run_params.push((method::USERPARAM.to_string(), doc));
         h
     }
 }

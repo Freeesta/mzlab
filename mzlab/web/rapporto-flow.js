@@ -115,7 +115,7 @@ window.RAPPORTO_FLOW = (() => {
     return h;
   }
 
-  // The words are Rust's (`corsa_reg.rs`, study §7): this only lays them out. A row is a candidate with its evidence, never a finding about the sample.
+  // The words are Rust's (`run_report_reg.rs`, study §7): this only lays them out. A row is a candidate with its evidence, never a finding about the sample.
   /** @param {any} g */
   function regulatory(g) {
     let h = `<p>${esc(g.header)}</p><ul>${(g.coverage || []).map((/** @type {string} */ x) => `<li>${esc(x)}</li>`).join("")}</ul>`;

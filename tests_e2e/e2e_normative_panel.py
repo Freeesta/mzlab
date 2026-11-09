@@ -28,7 +28,7 @@ LISTS = [lst("T_LIST_A", "in_force", 70, 61, 6, 3, "EU"), lst("T_LIST_B", "adopt
 CAT = {"format": "normative/1", "piece": 4194304, "size": len(raw), "size_compressed": len(z), "sha256": sha(raw), "rows": 1, "lists": LISTS, "attributions": [],
        "pieces": [{"file": "000.bin", "size": len(z), "sha256": sha(z)}]}
 (tmp / "normative").mkdir(); (tmp / "normative/000.bin").write_bytes(z); (tmp / "normative/catalogo.json").write_text(json.dumps(CAT))
-DISC = (ROOT / "crates/mzlab-core/src/flow/corsa_reg.rs").read_text(encoding="utf-8").split('pub const DISCLAIMER: &str = "')[1].split('";')[0]
+DISC = (ROOT / "crates/mzlab-core/src/flow/run_report_reg.rs").read_text(encoding="utf-8").split('pub const DISCLAIMER: &str = "')[1].split('";')[0]
 HOST = """<!doctype html><html lang="en"><head><meta charset="utf-8"><link rel="icon" href="data:,"><title>host</title>
 <style>:root{--ink:#1a1a1a;--line:#999}body{background:#fff;color:var(--ink);margin:8px}button,input{min-width:24px;min-height:24px}</style></head>
 <body><main><fieldset id="lib-reg" aria-label="Regulatory lists"></fieldset></main>

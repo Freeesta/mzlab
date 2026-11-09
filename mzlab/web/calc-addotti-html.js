@@ -36,7 +36,7 @@ const CALCADDHTML = (() => {
         + (hasM ? (mz ? `<td><button type="button" class="cxic" data-i="${idx(r)}" title="${I18N.t("calc.xic.title")}" aria-label="${EH(I18N.t("calc.xic.aria", { adduct: r.n, mz }))}">XIC</button></td>` : "<td></td>") : "") + "</tr>";       // no m/z (below zero): nothing to extract
     };
     const common = mine.filter(r => r.common), rare = mine.filter(r => !r.common), open = st.more || (best != null && rare.includes(best));
-    const more = `<tr class="cmore"><td colspan="${cols}"><button type="button" class="cadd-more" aria-expanded="${open}">${I18N.t("tbl.add.more")}</button></td></tr>`;
+    const more = `<tr class="cmore"><td colspan="${cols}"><button type="button" class="cadd-more" title="${EH(I18N.t("tbl.add.more.tip"))}" aria-expanded="${open}">${I18N.t("tbl.add.more")}</button></td></tr>`;
     let line = "";
     if (hasM) line = `<p>${I18N.t("calc.neutral", { formula: fmtFormula(t.formula || ""), mass: (t.neutral || 0).toFixed(lr ? 1 : 4), nominal: Math.round(t.neutral || 0) })}</p>`;
     if (hasM && hasObs) {
@@ -50,7 +50,7 @@ const CALCADDHTML = (() => {
   /** @param {AdTable} t @param {{ diffs: boolean, delta: string, pol?: number }} st */
   function diffsHtml(t, st) {
     const rows = t.diffs.map(d => `<tr><th scope="row" class="num">${sgn(d.d)}${Math.abs(d.d).toFixed(4)}</th><td>${fmtFormula(d.pair)}</td><td>${d.pol > 0 ? "ESI+" : "ESI−"}</td></tr>`).join("");
-    return `<details class="cadd-diffs" id="cadd-diffs"${st.diffs ? " open" : ""}><summary>${I18N.t("tbl.diff.title")}</summary>
+    return `<details class="cadd-diffs" id="cadd-diffs"${st.diffs ? " open" : ""}><summary title="${EH(I18N.t("tbl.diff.tip"))}">${I18N.t("tbl.diff.title")}</summary>
       <table class="cadt"><thead><tr><th scope="col" class="num">Δ</th><th scope="col">${I18N.t("calc.diff.name")}</th><th scope="col">${I18N.t("calc.diff.pol")}</th></tr></thead><tbody>${rows}</tbody></table>
       <label class="cadd-f"><span>${I18N.t("calc.delta")}</span><input id="cadd-delta" inputmode="decimal" autocomplete="off" value="${EH(st.delta)}" title="${I18N.t("calc.delta.title")}"></label>
       <div id="cadd-dres" aria-live="polite">${deltaHtml(t)}</div></details>`;

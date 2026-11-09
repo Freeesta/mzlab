@@ -1,6 +1,6 @@
 use super::*;
-use crate::campioni::Sample;
 use crate::json::parse;
+use crate::samples::Sample;
 
 const EXAMPLE: &str = include_str!("../../../../tests/data/mzrun/record.mzrun.json");
 

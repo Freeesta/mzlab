@@ -3,8 +3,8 @@
 
 use std::path::Path;
 
-use mzlab_core::campioni::{self, Sample};
-use mzlab_core::disegno::{self, Condition, Confronto, Design};
+use mzlab_core::drawing::{self, Condition, Confronto, Design};
+use mzlab_core::samples::{self as core_samples, Sample};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::samples;
 use mzlab_feat::stat::{compare, stats_json, write_stats, Layout, StatsOpts};
@@ -93,8 +93,8 @@ fn dir(tag: &str) -> std::path::PathBuf {
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(d.join("work")).unwrap();
     std::fs::write(d.join("table.mzfeat"), table()).unwrap();
-    std::fs::write(d.join("design.json"), disegno::to_json(&design())).unwrap();
-    std::fs::write(d.join("samples.json"), campioni::to_json(&campioni_2())).unwrap();
+    std::fs::write(d.join("design.json"), drawing::to_json(&design())).unwrap();
+    std::fs::write(d.join("samples.json"), core_samples::to_json(&campioni_2())).unwrap();
     d
 }
 
@@ -183,7 +183,7 @@ fn a_design_with_a_condition_that_is_not_there_fails() {
     let d = dir("bad");
     let mut bad = design();
     bad.comparisons = vec![Confronto::Pair("ref".into(), "nope".into())];
-    std::fs::write(d.join("design.json"), disegno::to_json(&bad)).unwrap();
+    std::fs::write(d.join("design.json"), drawing::to_json(&bad)).unwrap();
     let plan = r#"{"format":"mzflow/2","inputs":[{"name":"table.mzfeat","type":"table"},{"name":"samples.json","type":"samples"},{"name":"design.json","type":"design"}],"steps":[
     {"id":"s","step":"table.stats@1","in":{"table":"file:table.mzfeat","samples":"file:samples.json","design":"file:design.json"}}]}"#;
     let (_, prov) = crate::flow::run_plan(plan.as_bytes(), &d, &d.join("work"), 1, None).unwrap();

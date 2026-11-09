@@ -4,9 +4,9 @@
 
 use std::path::Path;
 
-use mzlab_core::campioni::{self, Sample};
-use mzlab_core::disegno::{self, Batch, Design};
+use mzlab_core::drawing::{self, Batch, Design};
 use mzlab_core::json::{parse, Value};
+use mzlab_core::samples::{self, Sample};
 use mzlab_feat::drift::{batches_of, correct, Method};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{write_table, Origin};
@@ -105,12 +105,8 @@ fn dir(tag: &str, files: &[File], areas: &[Vec<f64>]) -> std::path::PathBuf {
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(d.join("work")).unwrap();
     std::fs::write(d.join("table.mzfeat"), table(areas)).unwrap();
-    std::fs::write(d.join("design.json"), disegno::to_json(&design(files))).unwrap();
-    std::fs::write(
-        d.join("samples.json"),
-        campioni::to_json(&campioni_2(files)),
-    )
-    .unwrap();
+    std::fs::write(d.join("design.json"), drawing::to_json(&design(files))).unwrap();
+    std::fs::write(d.join("samples.json"), samples::to_json(&campioni_2(files))).unwrap();
     d
 }
 
@@ -135,7 +131,7 @@ fn run(d: &Path, params: &str) -> String {
 fn engine(files: &[File], areas: &[Vec<f64>], method: Method) -> String {
     let (_, meta) = mzlab_feat::store::read_table(&table(areas)).unwrap();
     let inputs = mzlab_feat::store::origin_from_meta(&meta).inputs;
-    let json = campioni::to_json(&campioni_2(files));
+    let json = samples::to_json(&campioni_2(files));
     let all = mzlab_feat::samples::samples_of(json.as_bytes()).unwrap();
     let cols = mzlab_feat::samples::columns(&inputs, &all);
     let b = batches_of(&cols, &design(files));

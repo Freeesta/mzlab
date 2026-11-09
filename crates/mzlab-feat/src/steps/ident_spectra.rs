@@ -241,7 +241,7 @@ pub(super) fn match_spectra() -> Step {
     }
 }
 
-/// `tree`: the fragmentation graph of an infusion (`msngrafo/1`, `spectra.msn_graph`) against an MSn library (`msnlib/1`), `msngrafo::cerca`.
+/// `tree`: the fragmentation graph of an infusion (`msngrafo/1`, `spectra.msn_graph`) against an MSn library (`msnlib/1`), `msngraph::cerca`.
 fn tree() -> Algorithm {
     Algorithm {
         applicability: Applicability {
