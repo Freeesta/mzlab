@@ -6,6 +6,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
+  // a settled proposal greys its border, not its text: an opacity would drop the muted notes below 4.5:1
   const CSS = `
 .flx .flx-facts{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:6px 8px;margin-top:6px}
 .flx .flx-facts>summary{min-height:24px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px}
@@ -17,7 +18,7 @@
 .flx .flx-facts-file.bad{border-left-color:var(--bad)}.flx .flx-facts dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:1px 8px;font-size:12px}
 .flx .flx-facts dt{color:var(--muted)}.flx .flx-facts dd{margin:0;overflow-wrap:anywhere}
 .flx .flx-facts h4{margin:0 0 2px;font-size:13px;overflow-wrap:anywhere}.flx .flx-facts .note{color:var(--muted);font-size:12px;margin:2px 0}
-.flx .flx-facts .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.flx .flx-facts .done{opacity:.7}
+.flx .flx-facts .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.flx .flx-facts .done{border-left-color:var(--line)}
 @media (prefers-reduced-motion:reduce){.flx .flx-facts,.flx .flx-facts *{transition:none!important;animation:none!important}}
 `;
   /** the budget of the inspection, in tokens (`mzlab-cli llm inspect`'s default) */
