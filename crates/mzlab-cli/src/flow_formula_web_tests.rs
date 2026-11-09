@@ -73,7 +73,10 @@ fn formulas_and_levels_in_the_libraries_give_the_bytes_of_the_cli() {
     let web = ms1_rows(&p1, &table, &["caf.mzML"], (0, &mzml), (mzml.len(), cap)).unwrap_err();
     assert_eq!((cli.key, &cli.params), (web.key, &web.params));
     assert_eq!(cli.key, "error.memoryBudget");
-    assert!(cli.params.contains(&("fase", "read".to_string())), "{cli:?}");
+    assert!(
+        cli.params.contains(&("fase", "read".to_string())),
+        "{cli:?}"
+    );
 
     // formula.ms2, both algorithms
     let f1_text = made("f1.json");

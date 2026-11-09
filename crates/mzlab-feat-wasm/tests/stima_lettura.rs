@@ -26,7 +26,11 @@ fn the_read_is_refused_below_the_estimate_of_the_fixture() {
         let q = |k: &str| e.params.iter().find(|p| p.0 == k).map(|p| p.1.clone());
         assert_eq!(
             (q("fase"), q("stima_mb"), q("budget_mb")),
-            (Some("read".into()), Some(mb.to_string()), Some(budget.to_string())),
+            (
+                Some("read".into()),
+                Some(mb.to_string()),
+                Some(budget.to_string())
+            ),
             "{e:?}"
         );
     }
