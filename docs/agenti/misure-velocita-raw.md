@@ -40,4 +40,4 @@ Synthetic HR series (`dati_sintetici_grandi.py`, 18.9 MB index per file) at 20, 
 
 1. Gap filling reads 19 MB per file in 24 reads against an 18.9 MB index: the scan table (1.4 MB) is read twice, by the recipe of the series and by the gap filling. Not timed alone.
 2. Each slab parses again the JSON meta of every `.mzfeatf` (`read_file_dyn`); not timed alone, it grows with slabs × files.
-3. The `hr` module is 51 B under `limit_hr`: the next function in it needs its size recorded first (`wasm-tetti.md`).
+3. The `hr` module is 10 B under `limit_hr`: the next function in it needs its size recorded first (`wasm-tetti.md`).

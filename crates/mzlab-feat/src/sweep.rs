@@ -342,7 +342,6 @@ fn slab_parts<R: ReadAt>(
             break;
         }
         let from = if joins { run.1 } else { a };
-        reserve(mz, e.saturating_sub(from) as usize)?;
         index.mz_into(si, from, e, mz)?;
         if joins {
             run.1 = run.1.max(e);

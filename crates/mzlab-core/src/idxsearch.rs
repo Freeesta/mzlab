@@ -47,6 +47,10 @@ impl<R: ReadAt> Index<R> {
     /// The m/z of the peaks `a..b` appended to `out`, through the block cache: a slab copies each run while it searches it, so the run is not
     /// read again with the intensities.
     pub fn mz_into(&mut self, si: usize, a: u64, b: u64, out: &mut Vec<f64>) -> Result<()> {
+        // steps of an eighth, not doubling: a slab holds about its peaks (wasm memory never shrinks)
+        let need = (b.saturating_sub(a) as usize).max(out.len() / 8);
+        out.try_reserve_exact(need)
+            .map_err(|_| crate::error::Error::memory_budget())?;
         for i in a..b {
             out.push(self.mz_at(si, i)?);
         }
