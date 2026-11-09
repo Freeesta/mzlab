@@ -9,16 +9,16 @@ fn run(a: &[&str]) -> crate::Outcome {
 }
 
 /// A MassBank record of a synthetic acetanilide-like standard: the precursor and the loss of ketene.
-fn registry(id: &str, strumento: &str, mode: &str, addotto: &str, smiles: &str) -> String {
+fn registry(id: &str, instrument: &str, mode: &str, addotto: &str, smiles: &str) -> String {
     format!(
-        "ACCESSION: {id}\nRECORD_TITLE: synthetic\nLICENSE: CC0\nCH$FORMULA: C8H9NO\nCH$SMILES: {smiles}\nAC$INSTRUMENT_TYPE: {strumento}\n\
+        "ACCESSION: {id}\nRECORD_TITLE: synthetic\nLICENSE: CC0\nCH$FORMULA: C8H9NO\nCH$SMILES: {smiles}\nAC$INSTRUMENT_TYPE: {instrument}\n\
          AC$MASS_SPECTROMETRY: MS_TYPE MS2\nAC$MASS_SPECTROMETRY: ION_MODE POSITIVE\nAC$MASS_SPECTROMETRY: FRAGMENTATION_MODE {mode}\n\
          AC$MASS_SPECTROMETRY: COLLISION_ENERGY 35 (nominal)\nMS$FOCUSED_ION: PRECURSOR_M/Z 136.0757\nMS$FOCUSED_ION: PRECURSOR_TYPE {addotto}\n\
          PK$PEAK: m/z int. rel.int.\n  94.0651 1000 999\n  136.0757 60 60\n//\n"
     )
 }
 
-fn scrivi(name: &str, text: &str) -> String {
+fn write_outputs(name: &str, text: &str) -> String {
     let d = std::env::temp_dir().join(format!("mzlab_msn_rules_{}", std::process::id()));
     std::fs::create_dir_all(&d).unwrap();
     let p = d.join(name);
@@ -35,7 +35,7 @@ fn rows(o: &crate::Outcome) -> Vec<mzlab_core::json::Value> {
 
 #[test]
 fn a_record_gives_a_line_of_numbers_with_the_rule_that_explains_the_loss() {
-    let f = scrivi(
+    let f = write_outputs(
         "a.txt",
         &registry("SYN-A", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
@@ -56,14 +56,14 @@ fn a_record_gives_a_line_of_numbers_with_the_rule_that_explains_the_loss() {
 
 #[test]
 fn the_stratum_comes_from_the_instrument_and_the_mode() {
-    let casi = [
+    let cases = [
         ("LC-ESI-ITFT", "CID", "cid_trappola"),
         ("LC-ESI-ITFT", "HCD", "hcd"),
         ("LC-ESI-QTOF", "CID", "qtof"),
         ("LC-ESI-QQ", "CID", "fascio"),
     ];
-    for (k, (strumento, modo, atteso)) in casi.iter().enumerate() {
-        let f = scrivi(
+    for (k, (strumento, modo, atteso)) in cases.iter().enumerate() {
+        let f = write_outputs(
             &format!("s{k}.txt"),
             &registry(
                 &format!("SYN-S{k}"),
@@ -98,7 +98,7 @@ fn a_record_that_cannot_be_judged_says_why() {
     );
     let mode = registry("SYN-M", "LC-ESI-QFT", "ETD", "[M+H]+", "CC(=O)Nc1ccccc1");
     for (t, reason) in [(without, "smiles"), (aduct, "ione"), (mode, "attivazione")] {
-        let f = scrivi("x.txt", &t);
+        let f = write_outputs("x.txt", &t);
         let l = rows(&run(&["msn-rules", &f])).remove(0);
         assert_eq!(l.get("saltato").unwrap().str(), Some(reason));
     }
@@ -106,11 +106,11 @@ fn a_record_that_cannot_be_judged_says_why() {
 
 #[test]
 fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
-    let a = scrivi(
+    let a = write_outputs(
         "d1.txt",
         &registry("SYN-D1", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
-    let b = scrivi(
+    let b = write_outputs(
         "d2.txt",
         &registry("SYN-D2", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1O")
             .replace("C8H9NO", "C8H9NO2"),
@@ -129,7 +129,7 @@ fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
     let l2 = rows(&run(&["msn-rules", &a, &b, "--regole", "--decoy", "5"]));
     assert!(l2.iter().all(|l| l.get("dp").is_some()));
     // the same compound at another energy (same neutral formula) is not a decoy
-    let a2 = scrivi(
+    let a2 = write_outputs(
         "d3.txt",
         &registry("SYN-D3", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
@@ -218,13 +218,13 @@ fn a_rule_with_fewer_than_twenty_applications_is_not_measured() {
 /// Every old flag and the subcommand `somma` give the same bytes and exit code as `--list`, `--activation`, `--rules` and `sum`.
 #[test]
 fn old_names_are_aliases_of_the_english_ones() {
-    let f = scrivi(
+    let f = write_outputs(
         "al.txt",
         &registry("SYN-AL", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
     );
-    let list = scrivi("al.lst", &format!("{f}\n"));
+    let list = write_outputs("al.lst", &format!("{f}\n"));
     let lines = run(&["msn-rules", &f, "--rules"]);
-    let lf = scrivi(
+    let lf = write_outputs(
         "al.lines",
         &String::from_utf8(lines.stdout.clone()).unwrap(),
     );

@@ -58,7 +58,7 @@ pub fn bytes(graph: &str, f: Format, view: View) -> Result<Vec<u8>> {
 }
 
 /// Writes the figures next to `stem` (`stem.svg`, `stem.html`, `stem.png`); returns the files.
-pub fn scrivi(graph: &str, fs: &[Format], view: View, stem: &Path) -> Result<Vec<PathBuf>> {
+pub fn write_outputs(graph: &str, fs: &[Format], view: View, stem: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     for &f in fs {
         let p = PathBuf::from(format!("{}.{}", stem.display(), f.extension()));
@@ -101,6 +101,6 @@ pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<St
     let file = file.ok_or("figure needs an msngrafo/1 file")?;
     let json = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let stem = out.unwrap_or_else(|| file.with_extension(""));
-    let made = scrivi(&json, &fs, view, &stem).map_err(|e| e.to_string())?;
+    let made = write_outputs(&json, &fs, view, &stem).map_err(|e| e.to_string())?;
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }

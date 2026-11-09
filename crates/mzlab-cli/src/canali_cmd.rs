@@ -22,7 +22,7 @@ usage: mzlab-cli channels FILE [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH
 old names still accepted: canali, --canale";
 
 /// What was asked: the file, the channel to read (`--channel`, `--rt`, `--n`) and where to write.
-struct Chiesta {
+struct Request {
     file: PathBuf,
     out: Option<PathBuf>,
     channel: Option<String>,
@@ -30,15 +30,15 @@ struct Chiesta {
     n: i64,
 }
 
-fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
-    let (mut file, mut out, mut canale, mut rt, mut n) = (None, None, None, None, 2000);
+fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
+    let (mut file, mut out, mut channel, mut rt, mut n) = (None, None, None, None, 2000);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Ok(None),
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
             "--channel" | "--canale" => {
-                canale = Some(it.next().ok_or("--channel needs a channel id")?)
+                channel = Some(it.next().ok_or("--channel needs a channel id")?)
             }
             "--rt" => {
                 let v = it.next().ok_or("--rt needs minutes")?;
@@ -59,13 +59,13 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
             _ => return Err("channels takes one file".into()),
         }
     }
-    if canale.is_none() && (rt.is_some() || n != 2000) {
+    if channel.is_none() && (rt.is_some() || n != 2000) {
         return Err("--rt and --n need --channel".into());
     }
-    Ok(Some(Chiesta {
+    Ok(Some(Request {
         file: file.ok_or("channels needs a file")?,
         out,
-        channel: canale,
+        channel,
         rt,
         n,
     }))
@@ -77,7 +77,7 @@ fn io(e: std::io::Error) -> Error {
 
 /// The JSON of `api/canali` for `file`, indexes kept in `tmp`; with `--channel`, the trace (or with `--rt` the UV spectrum) of that UV or analog channel
 /// of an mzML: what `api/chrom?canale=` and `api/uvspec?canale=` answer.
-fn read(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
+fn read(c: &Request, tmp: &std::path::Path) -> Result<String> {
     let file = &c.file;
     let idx = tmp.join("0.mzidx");
     crate::build_index(file, &idx, mzlab_core::budget_auto::native_index_budget())?;

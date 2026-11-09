@@ -71,17 +71,17 @@ pub(crate) fn members(path: &Path) -> Result<Vec<(String, PathBuf)>> {
 
 /// The `FileSet` of the dataset at `path`, its members opened on the disk.
 pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
-    let mut membri = Vec::new();
+    let mut list = Vec::new();
     for (name, p) in members(path)? {
         let f = File::open(&p).map_err(io)?;
-        membri.push(Member {
+        list.push(Member {
             nome: name,
             dim: f.metadata().map_err(io)?.len(),
             dati: Box::new(f),
             sha1: known_sha1(&p),
         });
     }
-    Ok(FileSet { membri })
+    Ok(FileSet { membri: list })
 }
 
 /// Size and SHA-256 of the file `p`; with `sha1` its SHA-1 comes with them in the same read. Both are kept for `file_set` and `known_prints`, so

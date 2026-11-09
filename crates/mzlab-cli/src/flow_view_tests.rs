@@ -187,7 +187,7 @@ fn the_table_of_a_view_keeps_the_rows_and_the_areas_of_the_view() {
     let d = dir("cells");
     let (view, mat) = page_table(&d, FILTER);
     let (t, meta) = read_table(&mat).unwrap();
-    let (orig, ometa) = read_table(&std::fs::read(d.join("table.mzfeat")).unwrap()).unwrap();
+    let (orig, orig_meta) = read_table(&std::fs::read(d.join("table.mzfeat")).unwrap()).unwrap();
     let v = mzlab_core::json::parse(view.as_bytes()).unwrap();
     let ids: Vec<usize> = v
         .get("righe")
@@ -219,11 +219,11 @@ fn the_table_of_a_view_keeps_the_rows_and_the_areas_of_the_view() {
     // the recipe and the files of the table stay, so the next step finds them
     assert_eq!(
         meta.get("recipe").unwrap().str(),
-        ometa.get("recipe").unwrap().str()
+        orig_meta.get("recipe").unwrap().str()
     );
     assert_eq!(
         mzlab_feat::store::input_names(&meta),
-        mzlab_feat::store::input_names(&ometa)
+        mzlab_feat::store::input_names(&orig_meta)
     );
     // another table, or a view without its samples, is refused
     let other = table_of_view(&mat, &view).unwrap_err();

@@ -95,7 +95,7 @@ fn parse_args(mut a: impl Iterator<Item = String>) -> Result<Option<Args>, Strin
 }
 
 /// Why a record is left out (written in its line, counted by `somma`).
-type Salto = &'static str;
+type Skip = &'static str;
 
 /// The first number of a text («35 (nominal)», «20 eV»); 0 when there is none.
 fn first_number(t: &str) -> f64 {
@@ -116,19 +116,19 @@ fn field(text: &str, key: &str) -> Option<String> {
 }
 
 /// The stratum and the activation (`CID` trap type, `HCD` beam type) from the instrument and the fragmentation mode.
-fn strato(strumento: &str, mode: &str) -> Option<(&'static str, &'static str)> {
-    let s = strumento.to_ascii_uppercase();
-    let tipo = s.rsplit('-').next().unwrap_or("");
+fn layer(instrument: &str, mode: &str) -> Option<(&'static str, &'static str)> {
+    let s = instrument.to_ascii_uppercase();
+    let kind = s.rsplit('-').next().unwrap_or("");
     match mode.to_ascii_uppercase().as_str() {
         "HCD" => Some(("hcd", "HCD")),
-        "CID" if tipo.starts_with("IT") || tipo.starts_with("QIT") => Some(("cid_trappola", "CID")),
-        "CID" if tipo.contains("TOF") => Some(("qtof", "HCD")),
+        "CID" if kind.starts_with("IT") || kind.starts_with("QIT") => Some(("cid_trappola", "CID")),
+        "CID" if kind.contains("TOF") => Some(("qtof", "HCD")),
         "CID" => Some(("fascio", "HCD")),
         _ => None,
     }
 }
 
-fn leggi(p: &PathBuf, a: &Args) -> Result<Registry, Salto> {
+fn read_registry(p: &PathBuf, a: &Args) -> Result<Registry, Skip> {
     let data = std::fs::read(p).map_err(|_| "file")?;
     let name = p
         .file_name()
@@ -146,7 +146,7 @@ fn leggi(p: &PathBuf, a: &Args) -> Result<Registry, Salto> {
     let mode = field(&text, "FRAGMENTATION_MODE")
         .or(a.att.clone())
         .ok_or("attivazione")?;
-    let (strato, att) = strato(&s.meta.instrument, &mode).ok_or("attivazione")?;
+    let (layer_name, att) = layer(&s.meta.instrument, &mode).ok_or("attivazione")?;
     let smiles = a.smiles.clone().unwrap_or(s.meta.smiles.clone());
     if smiles.is_empty() || smiles == "N/A" {
         return Err("smiles");
@@ -164,7 +164,7 @@ fn leggi(p: &PathBuf, a: &Args) -> Result<Registry, Salto> {
         } else {
             s.meta.accession.clone()
         },
-        strato,
+        layer_name,
         pol: s.pol,
         prec: s.prec,
         ce: first_number(&s.meta.ce),
@@ -182,7 +182,7 @@ fn neutra(r: &Registry) -> &str {
 
 /// The spectrum of another record of the batch with the same nominal precursor and polarity (the next one, in the order of the ids, with another
 /// neutral formula and structure); `None` when there is none.
-fn altro_spettro<'a>(r: &Registry, all: &'a [Registry]) -> Option<&'a [(f64, f64)]> {
+fn other_spectrum<'a>(r: &Registry, all: &'a [Registry]) -> Option<&'a [(f64, f64)]> {
     let group: Vec<&Registry> = all
         .iter()
         .filter(|x| {
@@ -199,21 +199,21 @@ fn altro_spettro<'a>(r: &Registry, all: &'a [Registry]) -> Option<&'a [(f64, f64
 }
 
 fn row(r: &Registry, all: &[Registry], a: &Args) -> String {
-    let Some(attese) = registry_expectations(r) else {
+    let Some(expected) = registry_expectations(r) else {
         return format!("{{\"id\":{:?},\"saltato\":\"smiles\"}}", r.id);
     };
     let mut o = Out::default();
     o.raw("{\"id\":")
         .str(&r.id)
         .raw(",\"strato\":")
-        .str(r.strato);
+        .str(r.layer_name);
     o.raw(",\"pol\":").int(r.pol as i64).raw(",\"v\":");
-    measure(r, &r.peaks, &attese, a.rules).json(&mut o, a.rules);
-    if let Some(seme) = a.decoy {
-        let d = decoy(r, seme, altro_spettro(r, all), &attese);
+    measure(r, &r.peaks, &expected, a.rules).json(&mut o, a.rules);
+    if let Some(seed) = a.decoy {
+        let d = decoy(r, seed, other_spectrum(r, all), &expected);
         for (k, m) in [
-            ("ds", &d.struttura),
-            ("dp", &d.spettro),
+            ("ds", &d.structure),
+            ("dp", &d.spectrum),
             ("dl", &Some(d.losses)),
         ] {
             if let Some(m) = m {
@@ -239,20 +239,20 @@ fn rows(a: &Args) -> Result<String, String> {
     if files.is_empty() {
         return Err("a record is needed".into());
     }
-    let (mut read_items, mut saltati): (Vec<Registry>, BTreeMap<String, Salto>) =
+    let (mut read_items, mut skipped): (Vec<Registry>, BTreeMap<String, Skip>) =
         (vec![], BTreeMap::new());
     for f in &files {
-        match leggi(f, a) {
+        match read_registry(f, a) {
             Ok(r) => read_items.push(r),
             Err(s) => {
-                saltati.insert(f.display().to_string(), s);
+                skipped.insert(f.display().to_string(), s);
             }
         }
     }
     read_items.sort_by(|x, y| x.id.cmp(&y.id));
     let mut out: Vec<String> = read_items.iter().map(|r| row(r, &read_items, a)).collect();
     out.extend(
-        saltati
+        skipped
             .iter()
             .map(|(f, s)| format!("{{\"id\":{f:?},\"saltato\":\"{s}\"}}")),
     );
@@ -286,6 +286,6 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match rows(&a) {
         Err(e) => failed(e),
-        Ok(t) => somma::emetti(t, &a.out),
+        Ok(t) => somma::emit(t, &a.out),
     }
 }

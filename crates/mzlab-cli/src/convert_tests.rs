@@ -268,7 +268,7 @@ fn a_refused_wiff_is_told_with_the_text_of_the_site() {
             .map(|c| c.1)
             .unwrap_or_default();
         assert!(
-            crate::testo_errore::umano(cause).contains(text),
+            crate::testo_errore::human(cause).contains(text),
             "{name}: {}",
             o.stderr
         );

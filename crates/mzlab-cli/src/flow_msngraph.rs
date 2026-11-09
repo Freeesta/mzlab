@@ -147,7 +147,7 @@ fn params() -> Vec<Param> {
                 .label("Cleavage window")
                 .tip("Maximum distance in ppm between a cleaved piece and the m/z of the node.")
                 .min(0.0)
-                .default_num(crate::msn_graph::PPM_STRUTTURA)
+                .default_num(crate::msn_graph::PPM_STRUCTURE)
                 .unit("ppm")
                 .doc("Distance of a cleaved piece from the m/z of the node"),
             Param::boolean("interpret", "Interpret the losses")
@@ -304,7 +304,7 @@ pub fn msn_graph_text(
         .any(|(k, v)| k == "breaks" && v.bool() == Some(true))
     {
         let p = mzlab_feat::chem::rotture::Params {
-            ppm: number(job, "struct_ppm", crate::msn_graph::PPM_STRUTTURA),
+            ppm: number(job, "struct_ppm", crate::msn_graph::PPM_STRUCTURE),
             h_max: number(job, "h_max", 2.0) as u8,
             max_bonds: number(job, "max_bonds", 2.0) as u8,
         };
@@ -312,7 +312,7 @@ pub fn msn_graph_text(
     }
     match text(job, "structures") {
         Some(node) => {
-            let ppm = number(job, "struct_ppm", crate::msn_graph::PPM_STRUTTURA);
+            let ppm = number(job, "struct_ppm", crate::msn_graph::PPM_STRUCTURE);
             Ok(crate::msn_graph::structures_text(&g, &json, &o, (&node, ppm))? + "\n")
         }
         None => Ok(json + "\n"),

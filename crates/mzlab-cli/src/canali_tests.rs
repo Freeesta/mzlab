@@ -89,7 +89,7 @@ fn usage_errors_exit_with_2() {
 }
 
 /// The files of `tools/dati_sintetici.py` the tests need, in a new folder; `None` without python3 and numpy.
-fn sintetici() -> Option<PathBuf> {
+fn synthetic() -> Option<PathBuf> {
     // one directory per call: the tests run in parallel
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -119,7 +119,7 @@ fn sintetici() -> Option<PathBuf> {
 
 #[test]
 fn mrm_file_lists_its_uv_trace_as_a_root() {
-    let Some(d) = sintetici() else { return };
+    let Some(d) = synthetic() else { return };
     // MRM: the TIC of the maker, one channel per transition
     let v = channels_of(&d.join("B_MRM.mzML"));
     assert_eq!(
@@ -135,7 +135,7 @@ fn mrm_file_lists_its_uv_trace_as_a_root() {
 
 #[test]
 fn channels_of_the_synthetic_files() {
-    let Some(d) = sintetici() else { return };
+    let Some(d) = synthetic() else { return };
     // targeted MS2 in LC: the survey scan and one channel per fixed precursor, each hanging from the survey
     let v = channels_of(&d.join("canali/K_MIRATO-t0.mzML"));
     assert_eq!(

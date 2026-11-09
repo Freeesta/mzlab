@@ -28,11 +28,11 @@ pub fn report(dir: &Path) -> Result<String> {
             bytes,
         ));
     }
-    let uscite: Vec<Output> = kept
+    let outputs: Vec<Output> = kept
         .iter()
         .map(|(n, b)| Output { name: n, bytes: b })
         .collect();
-    Ok(corsa_build(&parse(&prov)?, &uscite)?.json())
+    Ok(corsa_build(&parse(&prov)?, &outputs)?.json())
 }
 
 /// The arguments after `flow report`.

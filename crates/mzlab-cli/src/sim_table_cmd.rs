@@ -33,7 +33,7 @@ Areas and heights in scientific notation with a decimal point (7.84077E+04), rea
 Peaks: every resolved peak of the whole trace, up to 10 per channel (smoothing 1-2-1 over 3 points, at least 3 points across, S/N at least 3);
 an empty cell = the sample has no such channel, or no peak for area_max, height_max and apex_rt.";
 
-struct Chiesta {
+struct Request {
     files: Vec<PathBuf>,
     output: String,
     layout: String,
@@ -42,7 +42,7 @@ struct Chiesta {
     out: Option<PathBuf>,
 }
 
-fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
+fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let (mut files, mut output, mut layout, mut out, mut groups) = (
         Vec::new(),
         "area_sum".to_string(),
@@ -94,7 +94,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
     if files.is_empty() {
         return Err("sim-table needs at least one file".into());
     }
-    Ok(Some(Chiesta {
+    Ok(Some(Request {
         files,
         output,
         layout,
@@ -202,7 +202,7 @@ fn samples_of(
     Ok(out)
 }
 
-fn table(c: &Chiesta, warn: &mut String) -> Result<String> {
+fn table(c: &Request, warn: &mut String) -> Result<String> {
     let mut taken = Vec::new();
     let mut o = Out::default();
     o.raw("[");
@@ -235,7 +235,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     match table(&c, &mut warn) {
         Err(e) => Outcome::fail(&format!(
             "{warn}{}",
-            crate::testo_errore::umano(&e.to_string())
+            crate::testo_errore::human(&e.to_string())
         )),
         Ok(t) => {
             let mut o = crate::emit(t, &c.out);

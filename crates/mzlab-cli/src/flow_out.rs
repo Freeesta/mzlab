@@ -79,9 +79,9 @@ pub(crate) fn write_run(
             "--out must be a folder that can be written",
         );
     }
-    let corsa = crate::flow_report::report(&out)
+    let run_report = crate::flow_report::report(&out)
         .and_then(|c| std::fs::write(out.join("corsa.json"), c).map_err(crate::flow::io));
-    if let Err(e) = corsa {
+    if let Err(e) = run_report {
         let err = Error::new("err.cli.out").with("path", out.join("corsa.json").display());
         let hint = "prov.json and the files of the steps are written";
         return fail(st, 1, &err, &format!("corsa.json: {e}"), hint);
