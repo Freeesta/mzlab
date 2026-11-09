@@ -279,6 +279,7 @@ pub fn drift_series(
 /// the error `error.memoryBudget` with `{fase, stima_mb, budget_mb}`. The optional `spill` keeps the weak tables outside the module (`spill_js`); the
 /// optional `weak` holds the weak candidates of each file from its detection (`series_js::detect_weak_file_to`), the same bytes with or without them.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn align_series_to(
     files: Array,
     read: Function,
