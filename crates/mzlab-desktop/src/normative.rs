@@ -1,5 +1,5 @@
 //! The regulatory-list package in the desktop app: the same package as the site (`static/normative/`, written by `mzlab-cli normative pack`), kept as
-//! `normative.mzsus` in the folder of the libraries (`librerie.rs`) with its catalogue in `.mzlab/normative.catalogo.json`. First use fetches it from the site
+//! `normative.mzsus` in the folder of the libraries (`libraries.rs`) with its catalogue in `.mzlab/normative.catalogo.json`. First use fetches it from the site
 //! (pieces checked one by one with their SHA-256, the inflated file checked as a whole) or takes a package folder or `.mzsus` the user picked; after that
 //! it is read from disk, offline. Routes `normative/*` in `protocol.rs`. Every error is a key `normative.dl.err.*` of `lang/`.
 
@@ -11,7 +11,7 @@ use mzlab_feat::suspects::Suspects;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::librerie::Folder;
+use crate::libraries::Folder;
 use crate::update::Source;
 
 pub const CATALOG: &str = "static/normative/catalogo.json";

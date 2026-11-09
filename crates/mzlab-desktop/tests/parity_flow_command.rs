@@ -1,5 +1,5 @@
 //! The copyable command of a Flow plan (`api/flow/command`, op `lr_flow_command`) in the app and in the site: the same `mzflow/2` plans go to the app's rpc, to the
-//! core function the CLI uses and, when `MZLAB_WASM_PKG` names the built `.wasm` (see `parita_rotte.rs`), to the module of the site; the answers must be the same bytes.
+//! core function the CLI uses and, when `MZLAB_WASM_PKG` names the built `.wasm` (see `parity_routes.rs`), to the module of the site; the answers must be the same bytes.
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use serde_json::{json, Value};

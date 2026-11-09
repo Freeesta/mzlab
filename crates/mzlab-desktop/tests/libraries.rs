@@ -1,7 +1,7 @@
 //! The folder of the libraries through the `mzlab://` routes `lib/*` (what the page and its worker call): write in pieces, read memory-mapped,
 //! list, rename, remove, and never leave the folder.
 
-use mzlab_desktop::librerie::{default_dir, read_config, write_config, Config, Folder};
+use mzlab_desktop::libraries::{default_dir, read_config, write_config, Config, Folder};
 use mzlab_desktop::{handle, handle_body, State};
 
 fn state(dir: &std::path::Path) -> State {

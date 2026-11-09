@@ -127,7 +127,7 @@ const CARTELLA = (() => {
     });
     return self;
   }
-  // the folder of the desktop app, through mzlab://localhost/lib/<route> (crates/mzlab-desktop/src/librerie.rs)
+  // the folder of the desktop app, through mzlab://localhost/lib/<route> (crates/mzlab-desktop/src/libraries.rs)
   function nativeDir(/** @type {string} */ base) {
     const url = (/** @type {string} */ route, /** @type {LibQuery} */ p) => base + "lib/" + route + "?" + Object.entries(p || {}).map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&");
     const get = async (/** @type {string} */ route, /** @type {LibQuery} */ p) => { const r = await fetch(url(route, p)); if (r.status !== 200) throw new Error(await r.text()); return r; };

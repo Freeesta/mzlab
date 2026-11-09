@@ -302,7 +302,7 @@ try:
             pg.evaluate("window.__UPD.delay = 0")
         step("settings: a click during the silent check takes it over", upd_click_during_silent)
         step("silent check: nothing when up to date, a small notice when an update exists", upd_silent)
-        # ---- the native folder of the libraries (crates/mzlab-desktop/src/librerie.rs behind lib/*, read by libreria-worker.js with the same code as the browsers)
+        # ---- the native folder of the libraries (crates/mzlab-desktop/src/libraries.rs behind lib/*, read by libreria-worker.js with the same code as the browsers)
         def rec(name, prec): return f"Name: {name}\nPrecursorMZ: {prec}\nIon_mode: Positive\nPrecursor_type: [M+H]+\nNum Peaks: 4\n60.5\t100\n100.1\t400\n150.2\t900\n200.3\t300\n"
         Q = [[60.5, 100], [100.1, 400], [150.2, 900], [200.3, 300]]
         def states(): return pg.evaluate("LIB.call('list').then(r => ({ mode: r.folder.mode, dir: r.folder.name, v: r.voci.map(v => [v.nome, v.tipo, v.stato]) }))")

@@ -2,7 +2,7 @@
 //! the app can open, the queue the page empties when it is ready, and the rule of the notice «make mzLab the default app?».
 //! Pure logic (no window): `main.rs` feeds it, `tests/opening.rs` proves it.
 
-use crate::librerie::Config;
+use crate::libraries::Config;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
