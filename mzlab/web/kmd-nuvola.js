@@ -57,6 +57,10 @@ const KMDCLOUD = (() => {
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
     return nearest(res, pt.x, pt.y);
   }
+  return { W, H, L, R, T, B, SHAPES, CLOUD, isCloud, geom, paths, nearest, hit, at: (res, k) => [geom(res).px[k], geom(res).py[k]] };
+})();
+// the painting of #kmd-res and the pointer of the dense plot, on top of the geometry above
+const KMDCLOUD_PAINT = (() => {
   // the result in #kmd-res: summary, plot, the rest (tables). A new selection on a dense plot of the same result keeps the plot in place, only the dimming
   // and the selected ion change: taking it out of the page, or parsing its paths again, costs more than the whole rest of the panel. The summary, a live
   // region that depends only on the result, is then left alone (not announced again)
@@ -65,34 +69,35 @@ const KMDCLOUD = (() => {
     if (svg && svg._kmdRes === res && restEl) {
       svg.querySelectorAll("path.kmd-cloud").forEach(p => { const n = +(p.getAttribute("data-s") || 0) || null; p.setAttribute("opacity", selSer != null && n !== selSer ? "0.3" : "1"); });
       svg.querySelectorAll("g[data-i]").forEach(g => g.remove());
-      const g = geom(res), k = selRow == null ? -1 : res.rows.findIndex(r => r.i === selRow);
+      const g = KMDCLOUD.geom(res), k = selRow == null ? -1 : res.rows.findIndex(r => r.i === selRow);
       if (k >= 0) svg.insertAdjacentHTML("beforeend", KMDVIEW.pointG(res.rows[k], g.px[k], g.py[k], true, selSer != null && res.rows[k].series !== selSer));
       restEl.innerHTML = rest;
       return;
     }
-    el.innerHTML = `${sum}${KMDVIEW.plotSvg(res, selSer, selRow)}<div class="kmd-rest">${rest}</div>`;
+    el.innerHTML = h`${raw(sum)}${raw(KMDVIEW.plotSvg(res, selSer, selRow))}<div class="kmd-rest">${raw(rest)}</div>`;
     const nsvg = /** @type {any} */ (el.querySelector("#kmd-plot[data-cloud]")); if (nsvg) nsvg._kmdRes = res;
   }
   // a pointer click takes the nearest ion, also inside the target of the selected one (Enter on that one, detail 0, keeps it); the hover target (#kmd-hov, a transparent circle with its tooltip) follows the nearest ion, at most once a frame
   function bind(box, getRes, pick) {
     if (box._kmdCloud) return;
     box._kmdCloud = true;
-    box.addEventListener("click", e => { const near = e.detail > 0 && hit(getRes(), e); if (near) { e.stopPropagation(); pick(near.row.i); } }, true);
+    box.addEventListener("click", e => { const near = e.detail > 0 && KMDCLOUD.hit(getRes(), e); if (near) { e.stopPropagation(); pick(near.row.i); } }, true);
     let ev = null, queued = false;
     box.onmousemove = e => {
       const res = getRes();
-      if (!res || !isCloud(res)) return;
+      if (!res || !KMDCLOUD.isCloud(res)) return;
       ev = e; if (queued) return; queued = true;
       FRAME.next(() => {
         queued = false;
         const hov = box.querySelector("#kmd-hov"), res = getRes(); if (!hov || !res) return;
-        const near = hit(res, ev);
+        const near = KMDCLOUD.hit(res, ev);
         if (!near) { hov.setAttribute("visibility", "hidden"); return; }
         hov.setAttribute("transform", `translate(${near.x.toFixed(1)} ${near.y.toFixed(1)})`); hov.setAttribute("visibility", "visible");
         const tip = KMDVIEW.tipOf(near.row), tt = hov.querySelector("title"); if (tt && tt.textContent !== tip) tt.textContent = tip;
       });
     };
   }
-  return { W, H, L, R, T, B, SHAPES, CLOUD, isCloud, geom, paths, nearest, hit, paint, bind, at: (res, k) => [geom(res).px[k], geom(res).py[k]] };
+  return { paint, bind };
 })();
+Object.assign(KMDCLOUD, KMDCLOUD_PAINT);
 window.KMDCLOUD = KMDCLOUD;
