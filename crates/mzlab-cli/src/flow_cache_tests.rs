@@ -123,6 +123,33 @@ fn a_second_run_in_the_same_folder_reuses_every_step() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// The detection measures what the plan leaves out: naming its default preset writes the values of the preset, so it is another run and the cache must
+/// not give back the detection made without it (the parameters resolve the same, the bytes differ).
+#[test]
+fn naming_the_default_preset_runs_the_detection_again() {
+    let (dir, _) = fixture("cache_preset");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let run = || {
+        let o = flow_run(&[p(&plan), "--in", p(&data), "--out", p(&out)]);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+    };
+    run();
+    let first = std::fs::read(out.join("gap.mzfeat")).unwrap();
+    let text = std::fs::read_to_string(&plan).unwrap();
+    let named = text.replace(
+        r#""step":"features.detect@1","#,
+        r#""step":"features.detect@1","preset":"hr","#,
+    );
+    assert_ne!(named, text);
+    std::fs::write(&plan, named).unwrap();
+    run();
+    let c = cached(&out);
+    let of = |id: &str| c.iter().find(|x| x.0 == id).unwrap().1;
+    assert!(of("idx") && !of("det") && !of("ali") && !of("gap"), "{c:?}");
+    assert_ne!(std::fs::read(out.join("gap.mzfeat")).unwrap(), first);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn a_file_added_in_the_middle_does_not_run_the_others_again() {
     let (dir, files) = fixture("cache_middle");

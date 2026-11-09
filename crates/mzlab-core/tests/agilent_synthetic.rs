@@ -5,8 +5,8 @@
 
 use mzlab_core::agilent::scan::Layout;
 use mzlab_core::agilent::{AgilentD, Files};
-use mzlab_core::lettori::FileSet;
 use mzlab_core::mzml;
+use mzlab_core::readers::FileSet;
 
 mod agilent_synth;
 mod conv_help;

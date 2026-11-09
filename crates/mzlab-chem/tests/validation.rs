@@ -2,7 +2,7 @@
 //! runs `reactivity_json` on every molecule and counts how often the experimental site is in the top 1, 3 and 5 of the predicted
 //! ranking, per reaction type and tier. The numbers are a starting point, not a verdict; the baseline is locked in the same file.
 
-use mzlab_chem::reatt::reactivity_json;
+use mzlab_chem::react::reactivity_json;
 use mzlab_feat::chem::graph::Mol;
 use mzlab_feat::chem::positions::symmetry_classes;
 use serde_json::Value;

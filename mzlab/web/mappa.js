@@ -836,7 +836,7 @@ window.MAPPA = (() => {
   /** @type {Record<string, string[]>} */ const BAR = { "2d": ["mapzin", "mapzout", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };
   // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(/** @type {() => Record<string, any>} */ getAd, kind = "2d") {
-    const b = document.createElement("span"); b.className = "tbg mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
+    const b = document.createElement("span"); b.className = "tbg mznav hdkeep"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));  // hdkeep: zoom and gestures stay in sight, fitHd moves the other groups first
     b.innerHTML = BAR[kind].map((/** @type {string} */ id) => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[/** @type {any} */ (AZIONI.voce(id)).ic])}</button>`).join("");
     b.addEventListener("click", e => { const x = /** @type {any} */ (e.target).closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
     b.addEventListener("mousemove", e => e.stopPropagation());
@@ -1024,8 +1024,8 @@ if (window.BARRA && BARRA.late) BARRA.late();
   const H0 = 300, HMIN = 190, h0 = (/** @type {Pannello} */ p) => p.type === "map" ? 360 : H0;
   const css = document.createElement("style");
   css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:24px;z-index:5;cursor:ns-resize;touch-action:none}" +
-    // 24 px box as before (WCAG 2.5.8, axe target-size) but clipped so that only 5 px of it, along the panel edge, take the pointer: the header stays draggable
-    ".pnl .pgrip.t{top:-11px;clip-path:inset(0 0 8px 0)}.pnl .pgrip.b{bottom:-11px;clip-path:inset(8px 0 0 0)}.pnl .pgrip.t::after{top:12px}.pnl .pgrip.b::after{top:8px}.pnl .pgrip::after{content:'';position:absolute;left:50%;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
+    // 24 px box (WCAG 2.5.8, axe target-size) clipped so that the top one ends where the header starts (border 1 + padding 3): the header stays draggable in every engine
+    ".pnl .pgrip.t{top:-11px;clip-path:inset(0 0 10px 0)}.pnl .pgrip.b{bottom:-11px;clip-path:inset(8px 0 0 0)}.pnl .pgrip.t::after{top:10px}.pnl .pgrip.b::after{top:8px}.pnl .pgrip::after{content:'';position:absolute;left:50%;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
     ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip::after{opacity:.8}}" +
     "@media (prefers-reduced-motion:reduce){.pnl .pgrip::after{transition:none}}";
   document.head.appendChild(css);

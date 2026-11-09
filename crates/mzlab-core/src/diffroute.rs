@@ -2,7 +2,7 @@
 //! (`_diff_opts`), the scale (`_diff_scale`, `_mrm_area`) and the JSON of the answer. A request Python must word itself (a parameter that
 //! does not parse) is `None`; an error with a key is the JSON of `api._fail` (`Err`).
 
-use crate::differenza::{area, cut, norm_factor, subtract_trace};
+use crate::difference::{area, cut, norm_factor, subtract_trace};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::json::{parse, round, Value};

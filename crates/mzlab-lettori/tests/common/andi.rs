@@ -1,7 +1,7 @@
 //! A netCDF-3 encoder for the tests of the family `andi` (classic and 64-bit offset, record variables, every `nc_type`) and the ANDI-MS / ANDI-Chromatography files built with it.
 #![allow(dead_code)]
 
-use mzlab_core::lettori::{Limits, Reader};
+use mzlab_core::readers::{Limits, Reader};
 
 #[derive(Clone)]
 pub enum At {

@@ -1,8 +1,8 @@
 //! An mzML with MS-Numpress arrays opened by the app: the core reader refuses it (`err.file.numpress`), the module `aperti` reads it (the same reader the site
 //! loads on demand), so the app goes through the readers of the registry like for a maker's file. Its answers must be those of the plain twin within the codec's precision.
-use mzlab_core::lettori::{FileSet, Member};
 use mzlab_core::mzml::Spectrum;
 use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
+use mzlab_core::readers::{FileSet, Member};
 use mzlab_desktop::mapped::Mapped;
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::rpc::MapAt;
@@ -115,9 +115,9 @@ fn a_numpress_mzml_opens_in_the_app_and_answers_as_its_plain_twin() {
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &mzlab_core::lettori::Limits::desktop()).unwrap();
+    let mut l = mzlab_lettori::apri(set, &mzlab_core::readers::Limits::desktop()).unwrap();
     let mut out = Vec::new();
-    mzlab_core::lettori_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
+    mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
     std::fs::write(&again, out).unwrap();
     let (tic2, sp2) =
         answers(dir.path(), &again, "again.mzML", false).expect("the module's mzML opens");

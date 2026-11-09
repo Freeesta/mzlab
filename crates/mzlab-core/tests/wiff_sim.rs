@@ -5,9 +5,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
@@ -125,7 +125,7 @@ fn the_registry_and_the_mzml_keep_the_sim_channels() {
         return;
     };
     let ions = want["ioni"].as_array().unwrap();
-    let mut l = lettori::apri(pair(&dir), &Limits::sito()).unwrap();
+    let mut l = readers::apri(pair(&dir), &Limits::sito()).unwrap();
     assert_eq!(l.samples().len(), 2);
     for c in 0..2 {
         let list = l.chromatograms(c).unwrap();
@@ -135,7 +135,7 @@ fn the_registry_and_the_mzml_keep_the_sim_channels() {
             .id
             .starts_with(&format!("SIM SIC Q1=237.1 sample={} ", c + 1)));
     }
-    let bytes = mzlab_core::lettori_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).unwrap();
+    let bytes = mzlab_core::readers_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).unwrap();
     let text = String::from_utf8_lossy(&bytes);
     assert_eq!(text.matches("MS:1000627").count(), ions.len());
     let size = bytes.len() as u64;

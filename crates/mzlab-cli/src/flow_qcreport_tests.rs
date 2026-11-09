@@ -3,8 +3,8 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::campioni::{self, Sample};
 use mzlab_core::json::Value;
+use mzlab_core::samples::{self, Sample};
 use mzlab_feat::methods::{generic_sentence, methods_text, placeholders, template, templated};
 use mzlab_feat::runorder::runorder_text;
 
@@ -41,7 +41,7 @@ fn samples() -> String {
             c
         })
         .collect();
-    campioni::to_json(&cs)
+    samples::to_json(&cs)
 }
 
 #[test]

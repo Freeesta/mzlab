@@ -1,9 +1,9 @@
 //! `_FUNCnnn.IDX`: one record per scan, in two layouts. Variant A (22 bytes) holds the offset in the DAT as `u32`; variant B (30 bytes) holds it as `u64` at byte 22. In both, bytes 4-7
 //! hold the number of records of the scan in their low 24 bits, then the TIC (`f32`) and the retention time in minutes (`f32`).
 
-use super::folder::{danno, errore, f32_at, u32_at};
+use super::folder::{damage, f32_at, read_error, u32_at};
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 const A: usize = 22;
 const B: usize = 30;
@@ -78,12 +78,12 @@ pub(super) fn width(rows: &[Row], dat_len: u64) -> Option<u64> {
 
 /// (offset, length) of scan `k` given the record width, inside a DAT of `dat_len` bytes.
 pub(super) fn extension(rows: &[Row], k: usize, width: u64, dat_len: u64) -> Result<(u64, u64)> {
-    let r = rows.get(k).ok_or_else(|| errore("scan out of range"))?;
+    let r = rows.get(k).ok_or_else(|| read_error("scan out of range"))?;
     let len = (r.count as u64)
         .checked_mul(width)
-        .ok_or_else(|| danno("scan size"))?;
+        .ok_or_else(|| damage("scan size"))?;
     match r.offset.checked_add(len) {
         Some(fine) if fine <= dat_len => Ok((r.offset, len)),
-        _ => Err(danno("scan past the end of the DAT")),
+        _ => Err(damage("scan past the end of the DAT")),
     }
 }

@@ -6,7 +6,7 @@ use crate::composition::{compose, Opts, Ranges};
 use crate::elements::MASS;
 use crate::error::{Error, Result};
 use crate::json::{self, fmt_g, round, Out, Value};
-use crate::msnalbero::{albero_di, consenso, Grouping};
+use crate::msntree_build::{albero_di, consenso, Grouping};
 
 const MAX_SCANS: usize = 60;
 const MAX_PEAKS: usize = 120;

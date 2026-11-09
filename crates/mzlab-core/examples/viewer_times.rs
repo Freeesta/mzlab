@@ -12,7 +12,7 @@ use std::time::Instant;
 
 use mzlab_core::idxread::Index;
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::{lettori_mzml, mzidx, upload};
+use mzlab_core::{mzidx, readers_mzml, upload};
 
 /// Median and 95th percentile of a list of samples (sorted in place).
 fn stat(v: &mut [f64]) -> (f64, f64) {
@@ -43,7 +43,7 @@ fn generate(a: &[String]) {
     let (mzml, idx) = (dir.join("visore.mzML"), dir.join("visore.mzidx"));
     let mut l = finto::Finto::vario(n, peaks, 12345);
     let t = Instant::now();
-    lettori_mzml::scrivi(
+    readers_mzml::scrivi(
         &mut l,
         0,
         BufWriter::new(File::create(&mzml).expect("create")),

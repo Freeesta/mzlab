@@ -49,7 +49,7 @@ function numberPanels() {
   st.forEach((/** @type {Pannello} */ q, /** @type {number} */ i) => { const n = q.el.querySelector(".pnum"); q.num = i + 1; n.textContent = i + 1; n.hidden = false; n.title = I18N.t("panel.num.title", { n: i + 1 }); });
   markPairs(st);
 }
-// a spectrum that follows a chromatogram (MS2: precursor chromatogram + product-ion spectrum, but also Full Scan): the two panels share a coloured side bar and a «→ n» / «← n» tag in the title (not colour alone), and hovering or focusing one lights up the other
+// a spectrum that follows a chromatogram (MS2 or Full Scan): both panels share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hovering or focusing one lights up the other
 function markPairs(/** @type {Pannello[]} */ st) {
   let ord = 0; const idx = new Map();
   E.panels.forEach((/** @type {Pannello} */ q) => { if (q.el) { delete q.el.dataset.pair; q.el.querySelectorAll(".ppair").forEach((/** @type {Element} */ x) => x.remove()); } });
@@ -105,7 +105,7 @@ function movePanel(/** @type {Pannello} */ p, /** @type {number} */ dir) {
 }
 const apply = (/** @type {Pannello} */ p) => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; p.el.style.width = p.w + "px"; p.el.style.height = p.h + "px"; };
 
-// a panel the student has just asked for may be below the fold: the page scrolls to it and its border flashes for a second (only a scroll if the system asks for less motion)
+// a panel just asked for may be below the fold: the page scrolls to it and its border flashes (only the scroll under reduced motion)
 function reveal(/** @type {Pannello} */ p) {
   if (!p || !p.el) return p;
   const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -293,7 +293,7 @@ function addPanel(type, o, after) {
     const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button>${window.SIMUI ? SIMUI.areaBtn(type) : ""}</span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
     const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
-    const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
+    const more = `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
     return `<span class="tbs">${gxb + gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
   })()}</div><canvas></canvas><div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${["chrom", "xic", "mrm", "spec", "map"].includes(type) ? `<div class="corrbar" role="dialog" hidden aria-label="${EH(I18N.t("corr.info.dlg"))}"></div>` : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p._ac = new AbortController();
@@ -506,7 +506,7 @@ function stepScan(/** @type {Pannello} */ p, /** @type {number} */ d, /** @type 
 }
 /** @param {Pannello} p @param {string} t @param {boolean} [keep] @param {boolean} [notice] */
 function stepMsg(p, t, keep, notice) { if (p.rd) { p.rd.textContent = t; p.rd.classList.toggle("show", !!notice); } if (keep) p._msg = t; }   // the line under the graph is gone: only the "nearest scan with data" notice of MS2 still shows
-// the legend lives INSIDE the graph (top right) for chromatograms, XIC and MRM; for the spectrum the scan line sits on the row of the x axis title and the file legend inside the graph
+// the legend sits INSIDE the graph (top right) for chromatograms, XIC and MRM; for the spectrum the scan line is on the x-axis title row, the file legend inside
 function placeLeg(/** @type {Pannello} */ p) {
   if (!p.cv || p.type === "map") return;
   if (p.type === "spec") {
@@ -516,17 +516,20 @@ function placeLeg(/** @type {Pannello} */ p) {
   const el = p.type === "spec" ? p.leg2 : p.leg;
   if (el && LEGENDE.place(p, el)) drawSoon(p);
 }
+function rtLabel(/** @type {Pannello} */ p) {
+  const rl = p.el.querySelector(".rtl");
+  if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? I18N.t("panel.rt.held", { rt }) : rt; } }
+}
 // "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button
 function afterDraw(/** @type {Pannello} */ p) {
-  const rl = p.el.querySelector(".rtl");           // retention time of the spectrum, next to the title
-  if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? I18N.t("panel.rt.held", { rt }) : rt; } }
+  rtLabel(p);
   if (window.BANCO) BANCO.header(p);
   const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
   if (p.type !== "spec" && p.type !== "map" && p._rngOn != null && p._rngOn !== rngIsOn(p)) ctl(p);  // the «Range» button follows zooming too
   if (btn) btn.disabled = !z;  // always there (the layout does not jump), active only when zoomed
   lockButton(p); cursorLine(p);
   placeLeg(p);
-  { const hd = p.el.querySelector(".hd"); if (hd && hd.scrollWidth > hd.clientWidth + 1) fitHdSoon(p); }  // the title or the reading changed the width of the header: fit it again
+  { const hd = p.el.querySelector(".hd"); if (hd && hdOver(hd, hd.querySelector(".ctl"))) fitHdSoon(p); }  // the header changed: fit it again
   if (window.TDATI_P) TDATI_P.update(p);  // table of the data and description for screen readers (tdati.js)
   const tb = p.el.querySelector('[data-a="itab"]'); if (tb) tb.hidden = !p.ints.length;
   const cb = p.el.querySelector('[data-a="iclr"]'); if (cb) cb.hidden = !p.ints.length;
@@ -631,7 +634,7 @@ function corrWire(/** @type {HTMLElement & { disabled: boolean }} */ x, /** @typ
     e.preventDefault(); const l = items(), i = l.indexOf(document.activeElement); if (l.length) l[(i + (e.key === "ArrowDown" ? 1 : l.length - 1)) % l.length].focus();
   };
 }
-  // «Corrections» summary: ONE icon in the command bar opens a compact popover (the .corrbar of the panel) with what is active (reference file, factor, background of a stretch, notes); a dot on the icon says that a correction is active
+  // «Corrections» summary: ONE icon opens the panel's .corrbar popover with what is active (reference file, factor, background, notes); a dot on the icon marks an active correction
 CIC.sub = ICN('<circle cx="9" cy="9" r="6.5"/><path d="M5.9 9h6.2"/>');
 function corrActive(/** @type {Pannello} */ p) {
   if (p.corrbar && p.corrbar.querySelector(".subchip,.ibk")) return true;
@@ -827,14 +830,19 @@ function syncTb(/** @type {Pannello} */ p) {
     lg.disabled = off; lg.classList.toggle("on", !!p.log && !off); lg.setAttribute("aria-pressed", String(!!p.log && !off)); lg.title = off && ms2c ? I18N.t("ctl.noMs2") : I18N.t("ctl.log.title");
   }
 }
-// ---- one low header row: when the groups do not fit in the width of the panel the least needed ones go into the «⋯» menu (the nodes are moved, so they keep their
-// handlers, and put back in place when there is room again); nothing wraps and nothing is cut. Order: the NL note, then the icon groups from the right, then the controls from the right.
+// ---- one header row: what does not fit goes into the «⋯» menu (nodes are moved, keeping their handlers, and put back when there is room); nothing wraps or is cut.
+// Order: the NL note, then the icon groups from the right, then the controls from the right.
 function hdRestore(/** @type {Pannello} */ p) {
   const l = p._hm || []; p._hm = [];
   l.slice().reverse().forEach((/** @type {HTMLElement & Bag} */ n) => { if (n._ph) { n._ph.replaceWith(n); n._ph = null; } n.classList.remove("hd-ov"); });
   const m = p.el && p.el.querySelector(".hmore"), b = p.el && p.el.querySelector('[data-a="more"]');
   if (m) m.hidden = true; if (b) { b.hidden = true; b.setAttribute("aria-expanded", "false"); }
   p.el?.querySelector(".hd")?.classList.remove("hd-tight");
+}
+// over-full header: the row, .ctl or a group whose in-flow children spill (not an open absolute pop-up)
+const hdSp = (/** @type {Element} */ e) => e.scrollWidth > e.clientWidth + 1;
+function hdOver(/** @type {Element} */ hd, /** @type {Element | null} */ c) {
+  return hdSp(hd) || !!c && (hdSp(c) || [...c.children].some(g => { const r = g.getBoundingClientRect().right + 1; return [...g.children].some(k => k instanceof HTMLElement && k.offsetWidth > 0 && k.getBoundingClientRect().right > r && getComputedStyle(k).position !== "absolute"); }));
 }
 function fitHd(/** @type {Pannello} */ p) {
   const el = p.el; if (!el || !el.isConnected || p._fitBusy) return;
@@ -845,10 +853,10 @@ function fitHd(/** @type {Pannello} */ p) {
     hdRestore(p);
     if (!hd.offsetParent && getComputedStyle(el).position !== "fixed") return;  // tab not shown
     const c = el.querySelector(".ctl");
-    const over = () => hd.scrollWidth > hd.clientWidth + 1 || (c && c.scrollWidth > c.clientWidth + 1);
+    const over = () => hdOver(hd, c);
     if (!over()) return;
     mb.hidden = false;
-    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
+    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     for (const n of [...cands, ...groups, ...kids]) {
       if (!over()) break;
       if (n.hidden || !n.offsetWidth) continue;
@@ -893,7 +901,7 @@ const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trai
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
 const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
-const XIC_BELOW = 0.2;  // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (CLAUDE.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)
+const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose ions whose defect plus drift passes +0.5; this keeps them and still leaves out n-1 and n+1
 const XIC_DRIFT = 0.25;  // mean offset (Da) of the observed centroids over the calculated m/z, used only to go from a CLICKED centroid back to the calculated nominal mass (364.37 -> 364.12 -> n = 364, not 365)
 const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };

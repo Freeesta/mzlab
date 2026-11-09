@@ -4,10 +4,10 @@
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
 mod cv;
-mod picchi;
+mod peaks;
 pub(crate) mod help;
 use help::Decode;
-pub use help::corriere::{Corriere, Decodificatore};
+pub use help::courier::{Corriere, Decodificatore};
 use crate::numarray::Num;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -226,8 +226,8 @@ struct Chrom {
 }
 
 fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobility>)> {
-    let p = picchi::decode_peaks(s.arrays.iter().map(Array::arr), s.len, inf)?;
-    picchi::assemble(s, p)
+    let p = peaks::decode_peaks(s.arrays.iter().map(Array::arr), s.len, inf)?;
+    peaks::assemble(s, p)
 }
 
 
@@ -307,7 +307,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
 
 /// `parse` with the arrays decoded by another instance through `c` (the browser's helper workers, `help::corriere`): the same items in the same order.
 pub fn parse_corriere<R: Read, F: FnMut(Item)>(reader: R, mut f: F, c: &mut dyn Corriere) -> Result<()> {
-    help::parse_with(reader, &mut f, &mut help::corriere::Sent::new(c))
+    help::parse_with(reader, &mut f, &mut help::courier::Sent::new(c))
 }
 
 fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode) -> Result<()> {

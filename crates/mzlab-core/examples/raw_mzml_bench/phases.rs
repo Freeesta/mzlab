@@ -10,9 +10,9 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 use mzlab_core::error::Result;
-use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
-use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
+use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
+use mzlab_core::readers_mzml::{Conversion, Peaks};
 
 use crate::count::Alloc;
 use crate::dense_reader::Denso;
@@ -47,7 +47,7 @@ impl Source {
                         sha1: None,
                     }],
                 };
-                lettori::apri(fs, &Limits::desktop()).expect("the reader opens the file")
+                readers::apri(fs, &Limits::desktop()).expect("the reader opens the file")
             }
         }
     }

@@ -1,5 +1,5 @@
 """Flow «This browser» export.table_csv, export.mztab and table.filter (flow-live-jobs.js `tableExport`, `tableFilter`, `export_table_auto` and `table_view_auto` of the `table` .wasm): over the five demo full-scan files the browser writes the CSV (full and
-FBMN quant), the mzTab-M and the filter view that `mzlab-cli flow run` writes of the same plan, byte for byte; a second run takes them from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without).
+FBMN quant), the mzTab-M and the filter view that `mzlab-cli flow run` writes of the same plan, byte for byte; a second run takes them from OPFS; a plan with two branches (a preset and a gap filling on one) gives the CSV of `flow run` for each. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web_export.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -33,6 +33,15 @@ PLAN = {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "ty
                   {"id": "flt", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 3, "normalize": "sum"}},
                   {"id": "flt2", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_replicate_fraction": 0.5, "normalize": "istd", "istd_id": 1}}]}
 
+# two branches over the same indexes, one with a preset and a gap filling, the other with its own detection parameters: each table takes only its own line
+BRANCHES = {"format": "mzflow/2", "inputs": PLAN["inputs"], "steps": [PLAN["steps"][0],
+            {"id": "detb", "step": "features.detect@1", "in": {"index": ["idx.index"]}, "params": {"min_points": 3}},
+            {"id": "deta", "step": "features.detect@1", "preset": "hr", "in": {"index": ["idx.index"]}},
+            {"id": "alia", "step": "features.align@1", "in": {"peaks": ["deta.peaks"]}},
+            {"id": "alib", "step": "features.align@1", "in": {"peaks": ["detb.peaks"]}, "params": {"rt_gap": 0.05}},
+            {"id": "gapa", "step": "features.gapfill@1", "in": {"table": "alia.table", "index": ["idx.index"]}},
+            {"id": "csva", "step": "export.table_csv@1", "in": {"table": "gapa.table", "samples": "file:samples.json"}},
+            {"id": "csvb", "step": "export.table_csv@1", "in": {"table": "alib.table", "samples": "file:samples.json"}}]}
 tmp = Path(tempfile.mkdtemp(prefix="flow_web_export_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)], check=True)
@@ -42,6 +51,8 @@ run = tmp / "run"; run.mkdir()
 for n, t in zip(NAMES, TIMES): shutil.copy2(ROOT / "mzlab" / "web" / "esempi" / ("FullScan_t%d.mzML" % t), run / (n + ".mzML"))
 (run / "plan.json").write_text(json.dumps(PLAN)); (run / "samples.json").write_text(SAMPLES)
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "plan.json"), "--in", str(run), "--out", str(run / "out")], cwd=ROOT, check=True, capture_output=True)
+(run / "branches.json").write_text(json.dumps(BRANCHES))
+subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "branches.json"), "--in", str(run), "--out", str(run / "out_b")], cwd=ROOT, check=True, capture_output=True)
 print("native outputs:", sorted(x.name for x in (run / "out").iterdir() if not x.name.endswith(".mzidx")))
 data = site / "static" / "dati_flow_exp"; data.mkdir()
 for n in NAMES: shutil.copy2(run / "out" / ("idx-" + n + ".mzidx"), data / (n + ".mzidx"))
@@ -65,6 +76,14 @@ KEPT = """async () => {
   const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), msn = await d.getDirectoryHandle('msn'), out = {};
   for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
   return out;
+}"""
+NODES = """async () => (await (await fetch('api/flow/sched/nodes', { method: 'POST', body: '{}' })).json()).map(n => [n.instance, n.item, n.state, n.error_key || n.by || ''])"""
+# the kept files of mzlab/flow/msn/ and the keys index.json lists: the same set (jobs that end together must not drop each other's key)
+LISTED = """async () => {
+  const msn = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow')).getDirectoryHandle('msn'), files = [];
+  for await (const n of msn.keys()) if (n !== 'index.json') files.push(n.replace(/\\.json$/, ''));
+  const list = JSON.parse(await (await (await msn.getFileHandle('index.json')).getFile()).text());
+  return [files.sort(), [...list].sort()];
 }"""
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -95,12 +114,26 @@ try:
                 nat = (run / "out" / nat_name).read_text(); web = kept[name]
                 at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
                 assert nat == web and len(nat) > 100, (name, "first difference at", at, len(nat), len(web), nat[max(0, at - 100):at + 100], web[max(0, at - 100):at + 100])
+            files, listed = pg.evaluate(LISTED)
+            assert files == listed and len(files) >= 5, (files, listed)
         step("the CSV, the quant CSV, the mzTab-M and the filter views (the second with the replicate fraction and the internal standard) of the browser are the files of the native flow run", first)
 
         def again():
             r = pg.evaluate(RUN, [PLAN, SAMPLES]); assert not r.get("err"), r
             assert not [e for e in r["ev"] if e["passo"] in ("csv", "quant", "mzt", "flt", "flt2") and e["stato"] == "running"], r["ev"]
         step("a second run takes the files from OPFS", again)
+
+        def branches():
+            r = pg.evaluate(RUN, [BRANCHES, SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            kept = pg.evaluate(KEPT)
+            for name in ("csva.csv", "csvb.csv"):
+                assert name in kept, (name, list(kept), [(e["passo"], e["stato"], e.get("modo")) for e in r["ev"] if e["passo"] in ("deta", "alia", "gapa", "csva")], pg.evaluate(NODES))
+                nat = (run / "out_b" / name).read_text(); web = kept[name]
+                at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
+                assert nat == web and len(nat) > 100, (name, "first difference at", at, len(nat), len(web), nat[max(0, at - 100):at + 100], web[max(0, at - 100):at + 100])
+            assert kept["csva.csv"] != kept["csvb.csv"]
+        step("a plan with two branches (a preset and a gap filling on one, other detection parameters on the other) gives the CSV of the native flow run for each", branches)
+
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

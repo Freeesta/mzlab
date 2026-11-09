@@ -2,10 +2,10 @@
 
 use super::{results_digest, self_sha256};
 use crate::budget::sha256_hex;
-use crate::campioni::{digest, Sample};
 use crate::error::{Error, Result};
 use crate::flow::value_text;
 use crate::json::Value;
+use crate::samples::{digest, Sample};
 
 /// What a record is made of beyond the plan and the `prov/1`; resources, decisions and limits are written as the schema has them.
 pub struct Parts<'a> {

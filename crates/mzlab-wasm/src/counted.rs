@@ -1,6 +1,6 @@
 //! The reader of a dataset that counts the scans it decodes for the page (`build_mzidx_native` in `natives.rs`).
 use js_sys::Function;
-use mzlab_core::lettori::{self, FileSet, Limits, Reader};
+use mzlab_core::readers::{self, FileSet, Limits, Reader};
 use mzlab_core::wiff;
 use wasm_bindgen::JsValue;
 
@@ -46,15 +46,15 @@ impl Counting {
 
 #[rustfmt::skip]
 impl Reader for Counting {
-    fn format(&self) -> lettori::Format { self.l.format() }
-    fn samples(&self) -> &[lettori::Sample] { self.l.samples() }
+    fn format(&self) -> readers::Format { self.l.format() }
+    fn samples(&self) -> &[readers::Sample] { self.l.samples() }
     fn unindexed(&self) -> (usize, usize) { self.l.unindexed() }
-    fn index(&mut self, c: usize) -> mzlab_core::Result<&[lettori::ScanEntry]> { self.l.index(c) }
-    fn index_without_tic(&mut self, c: usize) -> mzlab_core::Result<&[lettori::ScanEntry]> { self.l.index_without_tic(c) }
+    fn index(&mut self, c: usize) -> mzlab_core::Result<&[readers::ScanEntry]> { self.l.index(c) }
+    fn index_without_tic(&mut self, c: usize) -> mzlab_core::Result<&[readers::ScanEntry]> { self.l.index_without_tic(c) }
     fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan(c, k); self.count(c); s }
     fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan_data(c, k); self.count(c); s }
-    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Field>> { self.l.scan_header(c, k) }
-    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::ChromatogramEntry>> { self.l.chromatograms(c) }
+    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<readers::Field>> { self.l.scan_header(c, k) }
+    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<readers::ChromatogramEntry>> { self.l.chromatograms(c) }
     fn chromatogram(&mut self, c: usize, id: &str) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> { self.l.chromatogram(c, id) }
     fn method(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.method(c) }
     fn missing(&mut self, c: usize) -> usize { self.l.missing(c) }
@@ -73,8 +73,8 @@ pub(crate) fn open(
     c: usize,
 ) -> Result<Box<dyn Reader>, JsValue> {
     tell(4);
-    let l = if lettori::riconosci(&mut fs).is_some_and(|v| v.id == wiff::lettore::ENTRY.id) {
-        wiff::lettore::open_only(fs, &Limits::sito(), Some(c))
+    let l = if readers::riconosci(&mut fs).is_some_and(|v| v.id == wiff::reader::ENTRY.id) {
+        wiff::reader::open_only(fs, &Limits::sito(), Some(c))
     } else {
         open_fs(fs)
     }

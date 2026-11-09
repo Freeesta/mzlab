@@ -2,7 +2,7 @@
 //! A MassLynx folder built in the test (`comune_waters`): the scans, the MRM channels, the TIC and the method are read back to the values that were encoded.
 mod common_waters;
 use common_waters::*;
-use mzlab_core::lettori::{Limits, Reader};
+use mzlab_core::readers::{Limits, Reader};
 
 fn open() -> Box<dyn Reader> {
     mzlab_lettori::open_bare(synthetic_set(), &Limits::sito())

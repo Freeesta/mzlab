@@ -5,18 +5,18 @@
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
 mod bpc;
-mod cromatogrammi;
+mod chromatograms;
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
 pub mod idx;
-pub mod lettore;
-mod lettore_extra;
-mod metodo_nome;
-pub mod modi;
-pub mod nomi;
+pub mod reader;
+mod reader_extra;
+mod method_name;
+pub mod modes;
+pub mod names;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
@@ -33,11 +33,11 @@ const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
 /// Offset of the polarity in `ExperimentHeader`.
 const HEADER_POLARITY: usize = 86;
-use modi::{Output, CODE_PRODUCT};
+use modes::{Output, CODE_PRODUCT};
 /// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
 /// method), the nearest one before it if it acquires what the sample's own blocks hold (scans or MRM); otherwise none is borrowed.
 pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
-    if let Some(k) = metodo_nome::by_name(ole, sample) {
+    if let Some(k) = method_name::by_name(ole, sample) {
         return k;
     }
     let has = |k: u32| {
@@ -64,7 +64,7 @@ fn borrow_agrees(ole: &Ole, sample: u32, k: u32) -> bool {
     let own_scans = rows.iter().any(|r| r.points > 0.0);
     let method_scans = experiments(ole, k).iter().any(|e| {
         e.code
-            .and_then(modi::mode)
+            .and_then(modes::mode)
             .is_some_and(|m| m.output == Output::Spettro)
     });
     own_scans == method_scans
@@ -74,9 +74,9 @@ impl Wiff {
     /// The method says experiment `e` acquires scans: a block of it that is not a readable scan is not an MRM block.
     pub(crate) fn scan_experiment(&self, e: usize) -> bool {
         let code = self.experiments.get(e).and_then(|x| x.code);
-        modi::nativo(code)
+        modes::nativo(code)
             && code
-                .and_then(modi::mode)
+                .and_then(modes::mode)
                 .is_some_and(|m| m.output == Output::Spettro)
     }
 
@@ -88,7 +88,7 @@ impl Wiff {
             .experiments
             .iter()
             .enumerate()
-            .find(|(_, e)| e.code.is_some() && !modi::nativo(e.code))
+            .find(|(_, e)| e.code.is_some() && !modes::nativo(e.code))
         {
             return Err(scan_type_error(e.code.unwrap_or(0), k + 1));
         }
@@ -98,7 +98,7 @@ impl Wiff {
     #[cfg(not(feature = "estesi"))]
     /// A row of a SIM experiment without values: left out, so that it does not cut the columns of the ions.
     pub(crate) fn empty_sim_row(&self, r: &Record) -> bool {
-        r.size == 0 && modi::sim(self.experiments.get(r.experiment).and_then(|x| x.code))
+        r.size == 0 && modes::sim(self.experiments.get(r.experiment).and_then(|x| x.code))
     }
 }
 
@@ -172,7 +172,7 @@ pub struct Wiff {
 
 /// A scan type the reader does not read: the code, the experiment and the name of the type (`modi`), so that the message says what it is.
 pub(crate) fn scan_type_error(code: u32, experiment: usize) -> Error {
-    let kind = modi::mode(code).map_or("unknown", |m| m.tag);
+    let kind = modes::mode(code).map_or("unknown", |m| m.tag);
     Error::new("err.file.wiffScanType").with("code", code).with("experiment", experiment).with("type", kind)
 }
 
@@ -318,12 +318,12 @@ fn polarity(method: &Option<Method>) -> i8 {
         })
 }
 
-/// A SIM method of several periods is `periods=N`: only Period0 is read, so its cycles would be laid out wrong.
+/// A SIM method of several periods is `err.file.wiffPeriods`, as the readers module refuses it: only Period0 is read, so its cycles would be laid out wrong.
 fn sim_periods(ole: &Ole, sample: u32, experiments: &[Experiment]) -> Result<()> {
-    if experiments.iter().any(|e| modi::sim(e.code)) {
+    if experiments.iter().any(|e| modes::sim(e.code)) {
         let p = period_count(ole, sample);
         if p > 1 {
-            return Err(bad(&format!("periods={p}")));
+            return Err(Error::new("err.file.wiffPeriods").with("periods", p));
         }
     }
     Ok(())
@@ -350,8 +350,8 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     }
     #[cfg(feature = "estesi")]
     {
-        experiments = estesi::refine(ole, sample, experiments)?;
-        estesi::mark_windows(ole, sample, &mut experiments);
+        experiments = extended::refine(ole, sample, experiments)?;
+        extended::mark_windows(ole, sample, &mut experiments);
     }
     sim_periods(ole, sample, &experiments)?;
     let n_exp = experiments.len().max(1);
@@ -374,7 +374,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);
     let dad = dad::DadData::read(ole, sample);
-    let (model, created, serial, source_type) = crate::metodo_wiff::run_facts_full(ole, sample);
+    let (model, created, serial, source_type) = crate::method_wiff::run_facts_full(ole, sample);
     Ok(Wiff {
         sample,
         records,
@@ -401,9 +401,9 @@ impl Wiff {
 }
 
 #[cfg(feature = "estesi")]
-pub(crate) mod estesi;
+pub(crate) mod extended;
 #[cfg(feature = "estesi")]
-#[path = "scan_estesi.rs"]
+#[path = "scan_extended.rs"]
 pub mod scan;
 
 impl Wiff {

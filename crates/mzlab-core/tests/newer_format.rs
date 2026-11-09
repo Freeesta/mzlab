@@ -1,7 +1,7 @@
 //! An index written by a newer program is refused with the typed error `error.newerFormat` (never `error.badIndex`, which means damaged): the caller leaves it as it is.
 //! A known version still opens. Synthetic data only.
 
-use mzlab_core::idxnuovo::newer_version;
+use mzlab_core::idx_newer::newer_version;
 use mzlab_core::idxread::Index;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::mzml::Spectrum;

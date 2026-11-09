@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "msngrafo/2",
  "title": "msngrafo/2: the fragmentation graph of an MSn infusion",
- "description": "Format «msngrafo/2» (the English opzioni keys of msngrafo/1, docs/schemi/msngrafo-1.json) (crates/mzlab-core/src/msngrafo/, docs/agenti/msn-grafo.md): one node per ion seen at any level, energy or path, one arc per precursor → fragment with the neutral loss. With the formula of the ion of the root given by the user (opzioni.formula) every fragment gets the sub-formulas of the root within its window (candidates, never a proposal) and the fragments with none leave the graph; without it the formulas are null. Same input, same bytes.",
+ "description": "Format «msngrafo/2» (the English opzioni keys of msngrafo/1, docs/schemi/msngrafo-1.json) (crates/mzlab-core/src/msngraph/, docs/agenti/msn-grafo.md): one node per ion seen at any level, energy or path, one arc per precursor → fragment with the neutral loss. With the formula of the ion of the root given by the user (opzioni.formula) every fragment gets the sub-formulas of the root within its window (candidates, never a proposal) and the fragments with none leave the graph; without it the formulas are null. Same input, same bytes.",
  "type": "object",
  "required": [
   "formato",

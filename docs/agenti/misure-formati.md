@@ -28,7 +28,7 @@ Come si leggono le colonne: i secondi per passo sono la somma sulle 12 istanze (
 | indice (TIC degli MS2: decodifica di ogni frame) | 423 | — |
 | BPC | 245 | — |
 | tutti gli spettri | 910 | — |
-| mzML (`lettori_mzml::scrivi`, nuova apertura) | 1 610 | 6 040 |
+| mzML (`readers_mzml::scrivi`, nuova apertura) | 1 610 | 6 040 |
 
 - Profilo (callgrind, 88 frame, tutte le fasi): la decodifica dei frame è il 50 % delle istruzioni e zstd ne è il 58 %; il deflate dell'mzML scritto il 33 %. L'unione per indice TOF (radix a 11 bit da 1024 punti, `spettri::sort_tof`) e il taglio per scansioni (offset `Picchi::inizio`) pesano meno del 10 %, contro il 41 % di ordinamento e filtro punto per punto che c'erano prima (stesse misure: indice 670 → 423 ms, BPC 335 → 245, tutti gli spettri 1 450 → 910, mzML 2 560 → 1 610; `.wasm` 8,97 → 6,04 s, stesso SHA-256).
 - Il passo indice decodifica ogni frame PASEF una volta per il TIC degli MS2, e la conversione li decodifica di nuovo: il doppio passaggio resta.

@@ -4,8 +4,8 @@
 mod common;
 
 use common::*;
-use mzlab_core::lettori::Limits;
 use mzlab_core::numpress::Np;
+use mzlab_core::readers::Limits;
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;

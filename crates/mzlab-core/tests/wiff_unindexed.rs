@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
+use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
 use serde_json::Value;
 
 fn reference() -> Option<(PathBuf, Value)> {
@@ -46,7 +46,7 @@ fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
             member(format!("{name}.wiff.scan")),
         ],
     };
-    lettori::apri(set, &Limits::sito()).unwrap()
+    readers::apri(set, &Limits::sito()).unwrap()
 }
 
 fn trace(l: &mut Box<dyn Reader>, c: usize, tail: &str) -> (Vec<f64>, Vec<f64>) {

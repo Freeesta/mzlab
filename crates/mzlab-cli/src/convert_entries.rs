@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{Format, Limits};
+use mzlab_core::readers::{Format, Limits};
 
 use crate::flow_set::file_set;
 

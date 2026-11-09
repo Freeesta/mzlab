@@ -1,7 +1,7 @@
 //! The members of a `.raw` folder as the reader needs them: found by their file name (the case of the names varies between MassLynx versions) and read whole when small.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{FileSet, Limits};
+use mzlab_core::readers::{FileSet, Limits};
 
 /// The largest side file read whole (`_extern.inf`, an index, a table of channels).
 const SMALL_MAX: u64 = 8 << 20;
@@ -11,12 +11,12 @@ pub(super) fn base(n: &str) -> &str {
     n.rsplit(['/', '\\']).next().unwrap_or(n)
 }
 
-pub(super) fn errore(detail: &str) -> Error {
+pub(super) fn read_error(detail: &str) -> Error {
     Error::new("err.file.raw").with("detail", detail)
 }
 
 /// Bytes of a data file that no acquisition writes (a record word, a size or a range that does not fit): damage of the copy, not a missing file.
-pub(super) fn danno(detail: &str) -> Error {
+pub(super) fn damage(detail: &str) -> Error {
     Error::new("err.file.folderDamaged").with("detail", detail)
 }
 
@@ -68,10 +68,14 @@ impl Folder {
 
     /// `len` bytes of member `i` from `off`; the range must lie inside the member.
     pub(super) fn read_from(&mut self, i: usize, off: u64, len: u64) -> Result<Vec<u8>> {
-        let m = self.fs.membri.get_mut(i).ok_or_else(|| errore("member"))?;
-        let fine = off.checked_add(len).ok_or_else(|| danno("range"))?;
+        let m = self
+            .fs
+            .membri
+            .get_mut(i)
+            .ok_or_else(|| read_error("member"))?;
+        let fine = off.checked_add(len).ok_or_else(|| damage("range"))?;
         if fine > m.dim {
-            return Err(danno("range past the end of the file"));
+            return Err(damage("range past the end of the file"));
         }
         if len > self.limits.byte {
             return Err(Error::memory_budget());
@@ -108,7 +112,7 @@ pub(super) fn text(b: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mzlab_core::lettori::Member;
+    use mzlab_core::readers::Member;
 
     #[test]
     fn windows_member_path_names_the_folder() {

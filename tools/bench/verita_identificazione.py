@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Test 5 of the workflow study (`docs/studi/WORKFLOW_MODULARI.md` §7): library match against an external truth. The spectra of one public library are the
-queries, another is the library (decoys of `decoy.rs`); the Rust example `verita_lib` measures, per score (cosine, modified cosine, spectral entropy), the
+queries, another is the library (decoys of `decoy.rs`); the Rust example `truth_lib` measures, per score (cosine, modified cosine, spectral entropy), the
 rank-1 rate and the hits at q <= 1 %. This script only runs it, hashes the inputs and writes a `prov/1`-style record; it calculates nothing.
 Declared beforehand: entropy rank-1 >= cosine rank-1, and the answer is the same on every run. The licences of the files are read by Federico, the files stay
 outside git, and the numbers go to the PRIVATE repository. Without the files it prints a message and exits 0.
@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-EXAMPLE = ["cargo", "run", "--release", "-q", "-p", "mzlab-lib", "--example", "verita_lib", "--"]
+EXAMPLE = ["cargo", "run", "--release", "-q", "-p", "mzlab-lib", "--example", "truth_lib", "--"]
 
 
 def sha256(path) -> str:

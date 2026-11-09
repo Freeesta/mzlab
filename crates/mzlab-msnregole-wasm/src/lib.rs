@@ -3,7 +3,7 @@
 //! chemistry. Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
 use mzlab_core::json::Out;
-use mzlab_core::msngrafo::tabella_regole;
+use mzlab_core::msngraph::tabella_regole;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.

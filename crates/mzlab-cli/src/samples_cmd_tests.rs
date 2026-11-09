@@ -1,6 +1,6 @@
-//! `mzlab-cli campioni`: the answers are the ones of `campioni::route` on the same names.
+//! `mzlab-cli campioni`: the answers are the ones of `samples::route` on the same names.
 
-use mzlab_core::campioni::route_all as route;
+use mzlab_core::samples::route_all as route;
 
 use crate::execute;
 

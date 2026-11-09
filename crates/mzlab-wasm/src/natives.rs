@@ -1,5 +1,5 @@
 //! The files of a maker read as they are (`.wiff` + `.wiff.scan`, the members of a `.raw` or of a `.D` folder): no mzML is written. A dataset is a
-//! `FileSet` whose members JS reads by offset (`read(member, offset, length)`); the engine opens it with the readers of the registry (`lettori::apri`),
+//! `FileSet` whose members JS reads by offset (`read(member, offset, length)`); the engine opens it with the readers of the registry (`readers::apri`),
 //! builds the `.mzidx` of one sample straight from the reader, and answers the routes that read the file besides its index from the reader and the
 //! `guscio` of the sample (the mzML without its spectra: header, chromatograms, polarities). «Scarica .mzML» writes the whole mzML on request.
 use std::collections::{HashMap, VecDeque};
@@ -7,10 +7,10 @@ use std::rc::Rc;
 
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
 use mzlab_core::mzidx_spill::Spill;
-use mzlab_core::sorgente::ReaderSource;
-use mzlab_core::{lettori_centroidi, lettori_mzml, upload};
+use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
+use mzlab_core::source::ReaderSource;
+use mzlab_core::{readers_centroids, readers_mzml, upload};
 use wasm_bindgen::prelude::*;
 
 mod member;
@@ -95,7 +95,7 @@ impl Members {
             .iter()
             .map(|m| m.sha1.clone().unwrap_or_default())
             .collect();
-        match lettori::apri(fs, &Limits::sito()) {
+        match readers::apri(fs, &Limits::sito()) {
             Err(e) if e.key == "err.file.notAccepted" => self.external(&sha1).unwrap_or(Err(e)),
             r => r,
         }
@@ -125,7 +125,7 @@ impl Members {
     pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Reader>, JsValue> {
         let l = self.open_fs(self.fileset()).map_err(|e| error_json(&e))?;
         Ok(if centroid {
-            lettori_centroidi::centroidato(l)
+            readers_centroids::centroidato(l)
         } else {
             l
         })
@@ -371,7 +371,7 @@ pub fn build_mzidx_native(
         return index_both(l, cm, &mut members, name, out, wc, budget_mb, spill, &tell);
     }
     let mut l = if centroid {
-        lettori_centroidi::centroidato(l)
+        readers_centroids::centroidato(l)
     } else {
         l
     };
@@ -397,7 +397,7 @@ pub fn build_mzidx_native(
 /// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`index_reader_twice`); `missing`: `Lettore::missing` of sample `c`.
 #[allow(clippy::too_many_arguments)]
 fn index_both(
-    l: Box<dyn mzlab_core::lettori::Reader>,
+    l: Box<dyn mzlab_core::readers::Reader>,
     (c, missing): (usize, usize),
     members: &mut dyn FnMut() -> mzlab_core::Result<Vec<upload::Fingerprint>>,
     name: &str,
@@ -407,7 +407,7 @@ fn index_both(
     spill: Option<&mut dyn Spill>,
     tell: &dyn Fn(u32),
 ) -> Result<String, JsValue> {
-    let mut lc = lettori_centroidi::Centroidato::nuovo(l);
+    let mut lc = readers_centroids::Centroidato::nuovo(l);
     let mut out_cen = Accorpa::flussi(JsOutput { write: write_cen });
     tell(2);
     let ((st, sha256), (sc, _)) = upload::index_reader_twice(
@@ -431,7 +431,7 @@ fn index_both(
 }
 
 /// The first MS1 scan of sample `c` is profile (false when it cannot be told: no MS1, a scan that does not decode).
-fn first_ms1_is_profile(l: &mut dyn mzlab_core::lettori::Reader, c: usize) -> bool {
+fn first_ms1_is_profile(l: &mut dyn mzlab_core::readers::Reader, c: usize) -> bool {
     let Some(k) = l
         .index(c)
         .ok()
@@ -490,7 +490,7 @@ pub fn native_to_mzml(
     };
     let opt = mzlab_core::mzmlwrite::compression_options(compression)
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
-    lettori_mzml::write_with(&mut *l, c as usize, &mut out, &mut tell, opt)
+    readers_mzml::write_with(&mut *l, c as usize, &mut out, &mut tell, opt)
         .map_err(|e| error_json(&e))?;
     std::io::Write::flush(&mut out).map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))

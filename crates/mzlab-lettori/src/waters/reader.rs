@@ -3,18 +3,18 @@
 
 use super::cuts::{cuts, nel_file, whole_header, whole_list};
 use super::dat::{decode, Calibration, Encoding};
-use super::folder::{errore, text, Folder};
+use super::folder::{read_error, text, Folder};
 use super::functions::{self, Function};
 use super::idx::{self, Row};
 use super::inf::{self, Extern, FunctionExt, Inlet, Mode, WatersHeader};
 use super::sides::{compound_names, Table};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{
+use mzlab_core::mzml::{Chromatogram, Spectrum};
+use mzlab_core::mzmlwrite::Header;
+use mzlab_core::readers::{
     ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
     Sample, ScanEntry, CONTRATTO,
 };
-use mzlab_core::mzml::{Chromatogram, Spectrum};
-use mzlab_core::mzmlwrite::Header;
 
 const FUNCTNS: &str = "_FUNCTNS.INF";
 const FIRST_DAT: &str = "_FUNC001.DAT";
@@ -131,8 +131,8 @@ impl Reader for WatersReader {
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let (f, r, v) = self.entry(c, k)?;
         let (cod, dat) = (
-            f.cod.ok_or_else(|| errore("record width"))?,
-            f.dat.ok_or_else(|| errore("no DAT"))?,
+            f.cod.ok_or_else(|| read_error("record width"))?,
+            f.dat.ok_or_else(|| read_error("no DAT"))?,
         );
         let (off, len) = idx::extension(&f.righe, r, cod.width() as u64, f.dat_len)?;
         let (tar, livello, polarity, rt, precursor) =
@@ -259,7 +259,7 @@ impl WatersReader {
 
 /// A folder with `_FUNC001.DAT` is a MassLynx folder; it is surer when `_FUNCTNS.INF` is there and has whole records.
 fn recognize(fs: &mut FileSet) -> Fiducia {
-    let base = |m: &mzlab_core::lettori::Member| super::folder::base(&m.nome).to_ascii_lowercase();
+    let base = |m: &mzlab_core::readers::Member| super::folder::base(&m.nome).to_ascii_lowercase();
     if !fs.membri.iter().any(|m| base(m) == "_func001.dat") {
         return Fiducia::No;
     }
@@ -426,7 +426,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .read(FUNCTNS)?
         .ok_or_else(|| nel_file(&c, "err.file.folderIncomplete", FUNCTNS))?;
     if c.search(FIRST_DAT).is_none() {
-        return Err(errore("_FUNC001.DAT is missing"));
+        return Err(read_error("_FUNC001.DAT is missing"));
     }
     if inf.is_empty() {
         return Err(Error::new("err.file.functionsEmpty").with("name", &c.name));

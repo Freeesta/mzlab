@@ -1,6 +1,6 @@
 # Agilent `.D` LC/MS: QqQ (MRM, dMRM), Q-TOF (profilo, centroidi, MS/MS), metodo LC/MS
 
-Codice in `crates/mzlab-core/src/agilent_ext/` (`mod.rs`, `run.rs`, `lettore.rs`, `doc.rs`, `datams.rs` copie con il ramo LC/MS di quelli di `agilent/`; `lcms.rs`, `lcmethod.rs`, `lcdoc.rs` nuovi), che `lib.rs` sceglie al posto di `agilent/` con la feature `estesi` (la accende solo il modulo `agilent`, `lettori-modulo.md`); `info`, `meta`, `method`, `peak`, `quant` e `scan` sono gli stessi file di `agilent/` (`#[path]`; `scan.rs` porta in fondo i layout LC/MS dietro `cfg`).
+Codice in `crates/mzlab-core/src/agilent_ext/` (`mod.rs`, `run.rs`, `reader.rs`, `doc.rs`, `datams.rs` copie con il ramo LC/MS di quelli di `agilent/`; `lcms.rs`, `lcmethod.rs`, `lcdoc.rs` nuovi), che `lib.rs` sceglie al posto di `agilent/` con la feature `estesi` (la accende solo il modulo `agilent`, `lettori-modulo.md`); `info`, `meta`, `method`, `peak`, `quant` e `scan` sono gli stessi file di `agilent/` (`#[path]`; `scan.rs` porta in fondo i layout LC/MS dietro `cfg`).
 
 `agilent/` non cambia, così `mzlab_wasm.wasm` resta identico bit per bit (i numeri di riga dei panic entrano nel binario: un'aggiunta a metà file di `agilent/` lo cambia): una correzione ai cinque file copiati va fatta in entrambe le cartelle. Il GC/MS e `data.ms` sono in `agilent.md`. Formati ricavati da quattordici corse vere (repository dati privato, `dati/formati/agilent/D/`: QqQ 6460, 6470, 6490, 6495; Q-TOF 6520, 6530, 6550) e dagli mzML di msconvert di quattro coppie; nessun dato nel repository pubblico.
 

@@ -7,8 +7,8 @@ mod conv_help;
 
 use agilent_synth::*;
 use mzlab_core::agilent::{AgilentD, Files};
-use mzlab_core::lettori::FileSet;
 use mzlab_core::mzml;
+use mzlab_core::readers::FileSet;
 
 #[test]
 fn sim_scans_give_one_sic_per_ion_and_it_is_written() {

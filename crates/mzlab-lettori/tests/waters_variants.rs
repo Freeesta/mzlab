@@ -4,7 +4,7 @@
 mod common_waters;
 
 use common_waters::{file_set, folder_file, function_record};
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 /// One row of `_FUNCnnn.IDX`, variant B (30 bytes, offset as `u64` at byte 22).
 fn row_b(offset: u64, count: u32, tic: f32, rt_min: f32) -> Vec<u8> {

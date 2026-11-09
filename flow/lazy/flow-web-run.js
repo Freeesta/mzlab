@@ -8,11 +8,11 @@
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
   /** the steps this runner knows, and the ones that need a computer */
   const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill", ...(F.webMsn ? F.webMsn.STEPS : []), ...(F.webTp ? F.webTp.STEPS : []), ...(F.webIdent ? F.webIdent.STEPS : []), ...(F.webQc ? F.webQc.STEPS : []), ...(F.webSuspects ? F.webSuspects.STEPS : []), ...(F.webInsilico ? F.webInsilico.STEPS : []), ...(F.webDrift ? F.webDrift.STEPS : []), ...(F.webGroup ? F.webGroup.STEPS : []), ...(F.webStat ? F.webStat.STEPS : []), ...(F.webStruct ? F.webStruct.STEPS : []), ...(F.webEstimate ? F.webEstimate.STEPS : []), ...(F.webTransitions ? F.webTransitions.STEPS : []), ...(F.webInclusion ? F.webInclusion.STEPS : []), ...(F.webQcReport ? F.webQcReport.STEPS : []), ...(F.webExportAnnot ? F.webExportAnnot.STEPS : []), "export.table_csv", "export.mztab", "table.filter"];
-  const LAYERED = ["features.detect", "features.align", "features.gapfill"];
   /** @type {any} */ let pool = null;
   /** @type {any} */ let estimator = null;
+  let asked = 0;
+  /** @type {Map<string, Promise<string>>} */ const recipes = new Map();
 
-  const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
   /** a phone or a tablet: mzFlow and the high-resolution series are made for computers */
   const small = () => { const n = /** @type {any} */ (navigator); return !!G.MZLAB_PHONE || /iPad|iPhone|iPod|Android/i.test(n.userAgent || "") || (n.platform === "MacIntel" && n.maxTouchPoints > 1); };
   /** the high budget of the engine of the page in MB (0 = unknown) */
@@ -73,13 +73,15 @@
     if (!estimator) estimator = new Worker(new URL("mzfinder/lazy/worker-flow-web.js", G.QTOOLS.ctx.base), { type: "module" });
     const w = estimator;
     return new Promise((resolve, reject) => {
-      const done = (/** @type {MessageEvent} */ ev) => {
+      // each answer carries the id of its question: two questions in flight never take each other's answer
+      const id = ++asked, done = (/** @type {MessageEvent} */ ev) => {
+        if (ev.data.id !== id) return;
         w.removeEventListener("message", done);
         if (ev.data.error) reject(Object.assign(new Error(ev.data.error.text), ev.data.error)); else resolve(JSON.parse(ev.data.json));
       };
       w.addEventListener("message", done);
       w.addEventListener("error", () => { estimator = null; reject(Object.assign(new Error("estimator"), { key: "error.featWorker", params: {} })); }, { once: true });
-      w.postMessage({ id: 1, wasm: p.featWasm, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0, ...m }, move);
+      w.postMessage({ id, wasm: p.featWasm, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0, ...m }, move);
     });
   };
 
@@ -92,16 +94,18 @@
   /** what detecting the index at the OPFS `path` asks for: { mb, via } from the Rust rule (`trace_stima`), read from its header @param {string} path @param {string} recipe */
   const stimaDetect = async (path, recipe) => ask({ op: "detect", paths: [path], recipe });
 
-  /** the recipe text the pool reads for the steps of `plan` up to `upto` (all when none): the layers of the feature steps, which the Rust side applies as `flow run` does, and no gap filling when the plan has no `features.gapfill` @param {any} plan @param {any} [upto] */
-  const recipeOf = (plan, upto) => {
-    const layers = [];
-    for (const inst of plan.steps) {
-      const id = base(inst);
-      // the algorithm of the detection is a parameter of its layer (as `flow run` writes it): without it the pool computes the default one
-      if (LAYERED.includes(id)) layers.push({ step: id, params: id === "features.detect" && inst.algorithm ? { algorithm: inst.algorithm, ...inst.params } : inst.params || {} });
-      if (inst === upto) break;
+  /** the recipe text the pool runs the job of `inst` with (`flow_job_recipe` of the engine, the recipe `flow run` builds from the lineage of the job: its line of the plan, presets
+   * included); with `filled` (the default) an alignment a gap filling reads takes the recipe of that filling, since the pool aligns and fills in one call @param {any} plan @param {any} registry @param {any} inst @param {boolean} [filled] */
+  const recipeOf = (plan, registry, inst, filled = true) => {
+    const text = JSON.stringify(F.exportPlan(plan)), key = [inst.id, filled, text].join("\n");
+    let r = recipes.get(key);
+    if (!r) {
+      r = ask({ op: "recipe", paths: [], plan: text, registry: JSON.stringify(registry), instance: inst.id, filled });
+      r.catch(() => recipes.delete(key));
+      if (recipes.size > 64) recipes.clear();
+      recipes.set(key, r);
     }
-    return JSON.stringify({ fill: plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill"), layers });
+    return r;
   };
 
   /** runs the plan of S: every plan in the live session (flow-live.js), which starts the jobs the browser can do as soon as the plan allows and

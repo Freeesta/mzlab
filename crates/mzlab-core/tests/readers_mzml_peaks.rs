@@ -2,9 +2,9 @@
 //! `File` the centroids of the file.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
-use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzml::{self, Chromatogram, Item, Spectrum};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
+use mzlab_core::readers_mzml::{Conversion, Peaks};
 
 const CENTRI: [f64; 3] = [101.0, 102.5, 104.0];
 

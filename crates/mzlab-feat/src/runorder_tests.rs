@@ -1,8 +1,8 @@
 //! `qc.run_order@1`: the facts and warnings of the injection sequence on synthetic sample tables.
 
 use super::runorder_text;
-use mzlab_core::campioni::{self, Sample, Table};
 use mzlab_core::json::{parse, Value};
+use mzlab_core::samples::{self, Sample, Table};
 
 /// A file of the table: name, role, injection order, batch and concentration.
 fn file(name: &str, kind: &str, order: u32, batch: &str, conc: Option<f64>) -> Sample {
@@ -32,11 +32,11 @@ fn batch(name: &str, from: u32, n: u32, qc_every: u32, blank: bool, levels: &[f6
 }
 
 fn v2(cs: &[Sample]) -> Vec<u8> {
-    campioni::to_json(cs).into_bytes()
+    samples::to_json(cs).into_bytes()
 }
 
 fn v3(cs: &[Sample]) -> Vec<u8> {
-    campioni::to_json3(&Table {
+    samples::to_json3(&Table {
         campioni: cs.to_vec(),
         colonne: Vec::new(),
     })

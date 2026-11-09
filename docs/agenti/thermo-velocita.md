@@ -25,7 +25,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - **B1** La perdita profilo → centroidi esiste solo nel passo `spectra.centroid` (D6/L8, parametri in `prov/1`); lettore, colonne e matrice non perdono nulla.
 - **B2 Colonne senza perdite**: m/z e intensità in colonne separate, delta + rimescolamento dei byte + zstd, MAI Numpress né arrotondamenti; decodificate ridanno le impronte A4. Blocco opzionale nuovo del `.mzidx` con versione dichiarata (`error.newerFormat`); i `.mzidx` esistenti restano uguali byte per byte. Numeri: dimensione contro `.raw` e mzML, MB/s di scrittura e lettura.
 - **B3 Matrice scansione × bin (CSR)**: un XIC è una fetta di colonna, uguale al bit alla somma a forza bruta; la feature table dalla matrice è uguale byte per byte a quella della via mzML.
-- **B4 Centroidatura fusa**: decodifica e centroidatura in un passo, centroidi uguali al bit a `lettori_centroidi.rs`; un algoritmo nuovo è un parametro del passo, spento di base, dichiarato con perdita e confrontato con `meta.compare`.
+- **B4 Centroidatura fusa**: decodifica e centroidatura in un passo, centroidi uguali al bit a `readers_centroids.rs`; un algoritmo nuovo è un parametro del passo, spento di base, dichiarato con perdita e confrontato con `meta.compare`.
 - **B5 Flow contro mzmine**: tempo e memoria di picco `.raw` → centroidi → feature table contro mzmine (`tools/bench/corri_mzmine.py`) e contro la nostra via `.raw` → mzML → feature, stessi file e parametri.
 
 ## Banco
@@ -115,7 +115,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 
 **B-2 · Cloud 4 vCPU, `wasm`, site `.mzidx` build in Node 22** (`build_mzidx_native` of the engine with the `thermo` module as external reader, `fs.readSync` reads on demand, spill to file, 64 MB budget, fingerprints given; modules without `wasm-opt`; 10 alternating runs, median [min-max] in ms; same `.mzidx` bytes). `thermo_sintetico` files: normal 288 MB (`--scans 5400 --peaks 600`), heavy 2.14 GB (`--scans 82500 --peaks 3000 --ms2 10`).
 
-Measured with the blocks no longer zero-filled and without the adaptive window of `rawlettore::Stream`, whose numbers are in `misure-velocita-raw.md`.
+Measured with the blocks no longer zero-filled and without the adaptive window of `rawreader::Stream`, whose numbers are in `misure-velocita-raw.md`.
 
 | file | open | scans | chromatograms | total |
 |---|---|---|---|---|

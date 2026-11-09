@@ -8,7 +8,7 @@ use crate::json::Value;
 use crate::jsonb::{int, num, opt, text, Obj};
 use crate::roles::{ADDUCTS, NEUTRAL_LOSSES};
 use crate::stats::{psum, rankdata};
-use crate::statistica::{blank_filter, bad, mean, ncols, user, BlankOut, R};
+use crate::statistics::{blank_filter, bad, mean, ncols, user, BlankOut, R};
 
 pub const FLOOR: f64 = 1000.0;
 const NOISE_FACTOR: f64 = 3.0;

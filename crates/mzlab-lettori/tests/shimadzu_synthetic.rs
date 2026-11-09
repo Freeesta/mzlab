@@ -3,8 +3,8 @@
 mod common;
 
 use common::shimadzu::*;
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::ChromKind;
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 
 fn open(name: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Reader>> {
     mzlab_lettori::open_bare(

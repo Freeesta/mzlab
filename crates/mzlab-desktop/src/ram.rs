@@ -2,7 +2,7 @@
 
 use mzlab_core::budget::MemBudget;
 use mzlab_core::mzidx::ScanTable;
-use mzlab_core::{budget_auto, stima, Error};
+use mzlab_core::{budget_auto, estimate, Error};
 
 /// The budget in MB the program chooses for this computer (`budget_auto`, mode Automatic).
 pub(crate) fn native_budget_mb() -> f64 {
@@ -12,7 +12,7 @@ pub(crate) fn native_budget_mb() -> f64 {
 /// Refuses in order, before the builder takes memory, a file whose index would not fit the budget chosen for this machine (`error.memoryBudget`, phase `index`).
 pub(crate) fn check_index(table: &ScanTable) -> Result<(), Error> {
     let budget = MemBudget::mb(native_budget_mb());
-    stima::check_index(
+    estimate::check_index(
         &budget,
         table.level.len(),
         table.scans_json.len(),

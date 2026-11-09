@@ -231,7 +231,7 @@ fn describe_lists_the_structures_and_the_result() {
     assert!(t.contains("open: file cut at 2000 bytes"), "{t}");
 }
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 /// Everything the module does with a file, on whatever opens: the index, some scans, their headers, the chromatograms and the method. None of it may panic.
 fn through_the_module(bytes: Vec<u8>) {

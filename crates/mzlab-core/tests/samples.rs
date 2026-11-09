@@ -3,10 +3,8 @@
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
-use mzlab_core::campioni::{
-    self, da_legacy, from_json, per_tp, proponi, to_json, validate, Sample,
-};
 use mzlab_core::project::guess_sample;
+use mzlab_core::samples::{self, da_legacy, from_json, per_tp, proponi, to_json, validate, Sample};
 use serde_json::Value;
 
 fn one(name: &str, kind: &str) -> Sample {
@@ -205,7 +203,7 @@ fn findings() {
         .any(|g| g.0 == "noT0" || g.0 == "noDark" || g.0 == "noInfusion"));
     let ok = confirmed(many(&names));
     assert_eq!(codes(&ok), [("noBlank", None, String::new())]);
-    assert!(campioni::validate_json(&validate(&ok)).ends_with("\"bloccante\":false}"));
+    assert!(samples::validate_json(&validate(&ok)).ends_with("\"bloccante\":false}"));
     assert_eq!(
         codes(&confirmed(many(&["x", "t0"])))[0],
         ("timeMissing", Some(0), String::new())
@@ -276,7 +274,7 @@ fn indices_for_the_tp_path() {
         p.minutes,
         [Some(0.0), Some(5.0), Some(30.0), n, n, n, n, n, n]
     );
-    let j = campioni::route("per_tp", &to_json(&cs)).unwrap();
+    let j = samples::route("per_tp", &to_json(&cs)).unwrap();
     assert!(
         j.ends_with("\"minuti\":[0,5,30,null,null,null,null,null,null]}"),
         "{j}"
@@ -395,7 +393,7 @@ fn canonical_json_and_schema() {
     cs[4].compound = "C13H24N4O3S".into();
     let j = to_json(&cs);
     assert_eq!(from_json(j.as_bytes()).unwrap(), cs);
-    assert_eq!(campioni::digest(&cs).len(), 64);
+    assert_eq!(samples::digest(&cs).len(), 64);
     let schema: Value = serde_json::from_str(
         &std::fs::read_to_string(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -424,18 +422,18 @@ fn canonical_json_and_schema() {
     assert!(from_json(bad.to_string().as_bytes()).is_err());
     let input =
         r#"{"files":[{"name":"t0","sha256":"ab"},{"name":"X_parent","sha256":"cd","kind":"msn"}]}"#;
-    let p = from_json(campioni::route("proponi", input).unwrap().as_bytes()).unwrap();
+    let p = from_json(samples::route("proponi", input).unwrap().as_bytes()).unwrap();
     assert_eq!((p[0].kind.as_str(), p[1].kind.as_str()), ("t0", "infusion"));
-    assert!(campioni::route("valida", &j)
+    assert!(samples::route("valida", &j)
         .unwrap()
         .contains("\"codice\":\"timeUnconfirmed\""));
-    assert_eq!(campioni::route("canonico", &j).unwrap(), j);
+    assert_eq!(samples::route("canonico", &j).unwrap(), j);
     assert_eq!(
-        campioni::route("digest", &j).unwrap(),
-        campioni::digest(&from_json(j.as_bytes()).unwrap())
+        samples::route("digest", &j).unwrap(),
+        samples::digest(&from_json(j.as_bytes()).unwrap())
     );
     assert_eq!(
-        campioni::route("nope", "{}").unwrap_err().key,
+        samples::route("nope", "{}").unwrap_err().key,
         "error.badCampioni"
     );
 }

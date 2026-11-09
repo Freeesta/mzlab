@@ -5,7 +5,7 @@
 Writes OUT/misto.wiff(.scan): s1 Full Scan, s2 Product Ion (one precursor, 12 cycles), s3 MRM (3 transitions), s4 Full Scan, s5 Product Ion (one scan),
 s6 Product Ion without a method of its own, s7 Product Ion whose scan blocks do not start with the scan marker (unreadable: not an MRM). Each sample has its own method with the header code of its experiment (15 full, 11 product ion);
 OUT/tipi.json: the type the list must show for each sample (full | ms2 | mrm | infusion | empty). Today s2 (12 cycles of one precursor, no column) is a
-targeted MS2 by the rule of infusione.rs (one key over the whole run is not an infusion); s3 and s6 have no method: s3 (MRM blocks) never borrows the
+targeted MS2 by the rule of infusion.rs (one key over the whole run is not an infusion); s3 and s6 have no method: s3 (MRM blocks) never borrows the
 product-ion method before it, s6 (scan blocks) borrows the one of s5 and is an MS2. Built with the Writer of wiff_riferimento.py. No laboratory data is used.
 """
 import json

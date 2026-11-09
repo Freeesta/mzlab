@@ -19,8 +19,8 @@ use mzlab_core::json::{round, Out};
 use mzlab_core::mzml::Spectrum;
 use mzlab_core::mzmlwrite::SpectrumExtra;
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::sorgente::Scansioni;
-use mzlab_core::{lettori_mzml, mzidx, upload};
+use mzlab_core::source::Scansioni;
+use mzlab_core::{mzidx, readers_mzml, upload};
 
 const EMPTY: &str =
     "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}";
@@ -213,7 +213,7 @@ fn open(dir: &Path, name: &str, cards: Vec<Card>) -> (Routes<File>, File, Vec<Sc
         })
         .collect();
     let mzml = dir.join(format!("{name}.mzML"));
-    lettori_mzml::scrivi(
+    readers_mzml::scrivi(
         &mut l,
         0,
         BufWriter::new(File::create(&mzml).unwrap()),

@@ -1,8 +1,8 @@
-//! `sorgente::scan_text` reads the header of a `<spectrum>` only (up to its arrays), not the base64 of the arrays.
+//! `source::scan_text` reads the header of a `<spectrum>` only (up to its arrays), not the base64 of the arrays.
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{ReadAt, Scan};
-use mzlab_core::sorgente::scan_text;
+use mzlab_core::source::scan_text;
 
 struct Counting {
     data: Vec<u8>,
@@ -34,7 +34,7 @@ fn scan_text_stops_before_the_arrays() {
 
 #[test]
 fn spectrum_and_mobility_come_from_one_read() {
-    use mzlab_core::sorgente::Scansioni;
+    use mzlab_core::source::Scansioni;
     let data = b"<spectrum index=\"0\" id=\"scan=1\"><cvParam accession=\"MS:1002815\" name=\"inverse reduced ion mobility\" value=\"0.85\"/></spectrum>".to_vec();
     let sc = Scan {
         start: 0,

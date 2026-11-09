@@ -5,8 +5,8 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::campioni;
-use mzlab_core::disegno;
+use mzlab_core::drawing;
+use mzlab_core::samples;
 use mzlab_core::step::DataType;
 use mzlab_feat::store::read_table;
 use mzlab_feat_table_wasm::core::table_of_view;
@@ -34,8 +34,8 @@ fn dir(tag: &str) -> PathBuf {
     std::fs::write(d.join("table.mzfeat"), table()).unwrap();
     // the plan names it; the tests write the table of the view over it
     std::fs::write(d.join("mat.mzfeat"), table()).unwrap();
-    std::fs::write(d.join("design.json"), disegno::to_json(&design())).unwrap();
-    std::fs::write(d.join("samples.json"), campioni::to_json(&campioni_2())).unwrap();
+    std::fs::write(d.join("design.json"), drawing::to_json(&design())).unwrap();
+    std::fs::write(d.join("samples.json"), samples::to_json(&campioni_2())).unwrap();
     d
 }
 

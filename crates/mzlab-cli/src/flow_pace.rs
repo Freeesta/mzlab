@@ -11,18 +11,18 @@ use std::sync::Arc;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzidx::build_mzml_late;
+use mzlab_core::readers::{FileSet, Limits, Member};
 use mzlab_core::upload::{
     index_reader_with, prepare_with, probe, with_parallel_prints, without_sha1,
 };
 
 use crate::{flow_set, io};
 
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::pace::Pace;
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 
 /// The flag that cancels a live job (none: a job of `flow run`).
 pub(crate) type Stop = Option<Arc<AtomicBool>>;

@@ -2,7 +2,7 @@
 //! and the full index asked afterwards still carries the TIC summed from the points (synthetic DDA-PASEF folder, no lab data).
 #![cfg(feature = "bruker")]
 
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 
 mod common_sqlite;
 
@@ -22,7 +22,7 @@ fn open() -> Box<dyn Reader> {
 
 fn mzml(l: &mut dyn Reader) -> Vec<u8> {
     let mut out = Vec::new();
-    mzlab_core::lettori_mzml::scrivi(l, 0, &mut out, &mut |_, _| {}).unwrap();
+    mzlab_core::readers_mzml::scrivi(l, 0, &mut out, &mut |_, _| {}).unwrap();
     out
 }
 

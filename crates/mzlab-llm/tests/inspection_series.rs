@@ -1,8 +1,8 @@
 //! `ispezione/1` for a series: the QC files give their drift, the blanks their own signal, and a small budget drops the curves first.
 
-mod ispez;
+mod inspect;
 
-use ispez::*;
+use inspect::*;
 use mzlab_core::json::Value;
 use mzlab_llm::inspect::build;
 

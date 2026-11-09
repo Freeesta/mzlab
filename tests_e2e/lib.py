@@ -220,6 +220,14 @@ def frames(pg, n=2):
     pg.evaluate("n => new Promise(ok => { const f = () => (--n > 0 ? requestAnimationFrame(f) : ok()); requestAnimationFrame(f); })", n)
 
 
+def hd_click(pg, sel, keep=False):
+    """Click a header control (CSS `sel`) the way a user reaches it: when a narrow header has moved it into the «⋯» menu, open that menu first and close it
+    afterwards (`keep=True` leaves it open, for a control that opens a pop-up of its own inside the menu)."""
+    opened = pg.evaluate("s => { const m = document.querySelector(s)?.closest('.hmore'); if (!m || !m.hidden) return false; m.closest('.pnl').querySelector('[data-a=more]').click(); return true; }", sel)
+    pg.click(sel)
+    if opened and not keep:
+        pg.evaluate("s => { const m = document.querySelector(s)?.closest('.hmore'); if (m && !m.hidden) m.closest('.pnl').querySelector('[data-a=more]').click(); }", sel)
+
 def wait_still(pg, sel, ms=300, timeout=30000):
     """Wait until the first element matching `sel` has had the same position and size for `ms` milliseconds (it is not moving or growing any more)."""
     pg.evaluate("window.__fermo = null")

@@ -7,8 +7,8 @@
 use std::path::PathBuf;
 
 use mzlab_core::idxread::Index;
-use mzlab_core::msnalbero::{albero_di, blocks, Grouping, Tol};
 use mzlab_core::msntree::{msn_tree, TreeScan};
+use mzlab_core::msntree_build::{albero_di, blocks, Grouping, Tol};
 use mzlab_core::routes::{Query, Routes};
 use serde_json::Value;
 
@@ -101,7 +101,7 @@ fn tree_route_and_node_filter() {
     let nodes = t["nodi"].as_array().unwrap();
     assert!(nodes.len() >= 3, "{t}");
     assert_eq!(t["livelli"], serde_json::json!([2, 3]));
-    let tree = mzlab_core::msnalbero::albero(&r.idx.scans, &Grouping::default());
+    let tree = mzlab_core::msntree_build::albero(&r.idx.scans, &Grouping::default());
     for (n, want) in nodes.iter().zip(&tree.nodi) {
         let (id, level) = (n["id"].as_str().unwrap(), n["livello"].as_u64().unwrap());
         assert_eq!(id, want.id);
@@ -210,7 +210,7 @@ fn msntree_hangs_a_lone_node_from_the_nearest_ancestor() {
 fn nodes_carry_the_mean_tic_per_scan() {
     let mut r = routes();
     let t = get(&mut r, "/api/msn_albero", "k=0");
-    let tree = mzlab_core::msnalbero::albero(&r.idx.scans, &Grouping::default());
+    let tree = mzlab_core::msntree_build::albero(&r.idx.scans, &Grouping::default());
     for (n, want) in t["nodi"].as_array().unwrap().iter().zip(&tree.nodi) {
         let mean = want
             .scansioni

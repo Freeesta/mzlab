@@ -340,7 +340,7 @@
     if (!up.length || up.length < live.items.length) return null;
     const stored = [];
     for (const u of up) { const path = F.liveJobs.DIR + u.key + ".mzfeatf"; if (!await F.liveJobs.has(p, path)) return null; stored.push(await p.fs.read(path)); }
-    return kit().stima(stored, kit().recipeOf(S.plan));
+    return kit().stima(stored, await kit().recipeOf(S.plan, live.registry, al));
   };
 
   // ------------------------------------------------------------------ the controls of the bar

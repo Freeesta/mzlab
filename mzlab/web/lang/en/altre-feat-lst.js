@@ -418,6 +418,7 @@ I18N.add("en", {
   "inf.copy.tip": "Copy the table (tab-separated text)",
   "inf.skip": "{n, plural, one {# generation missing} other {# generations missing}}",
   "llm.g": "Assistant",
+  "llm.g.tip": "Advice on the Flow steps",
   "llm.on.label": "Assistant (off by default)",
   "llm.on.title": "Turns on the language model that advises Flow steps",
   "llm.off.hint": "The assistant is off: nothing is downloaded and nothing leaves this computer.",

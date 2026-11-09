@@ -1,8 +1,8 @@
-//! `conv/1`: what a conversion carried into the mzML and what it left out (and the zlib implementation that wrote the arrays), written in the `<run>` by `lettori_mzml::Conversione`.
+//! `conv/1`: what a conversion carried into the mzML and what it left out (and the zlib implementation that wrote the arrays), written in the `<run>` by `readers_mzml::Conversione`.
 //! Each reader declares what its format holds and the mzML does not (`Lettore::not_carried`), always with the reason.
 
 use crate::error::Result;
-use crate::lettori::{Field, Reader};
+use crate::readers::{Field, Reader};
 
 /// Reasons shared by the readers: one text each, so a module carries it once.
 pub const NON_DECODIFICATO: &str = "layout not decoded";

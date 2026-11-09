@@ -2,7 +2,7 @@
 
 use crate::idxread::{Scan, KINDS};
 use crate::json::Value;
-use crate::lettori::Position;
+use crate::readers::Position;
 
 /// `[membro, offset, lunghezza]` of a row of version 2, or `null`.
 fn posizione(v: &Value) -> Option<Option<Position>> {

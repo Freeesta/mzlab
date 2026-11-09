@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::time::Instant;
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 #[path = "../tests/common_sqlite/mod.rs"]
 mod common_sqlite;
@@ -74,7 +74,7 @@ fn measure(dir: &Path, rounds: usize) {
         let all = ms(t);
         let t = Instant::now();
         let mut l = mzlab_lettori::apri(file_set(dir), &Limits::desktop()).unwrap();
-        mzlab_core::lettori_mzml::scrivi(&mut *l, 0, std::io::sink(), &mut |_, _| {}).unwrap();
+        mzlab_core::readers_mzml::scrivi(&mut *l, 0, std::io::sink(), &mut |_, _| {}).unwrap();
         let mzml = ms(t);
         println!(
             "{{\"giro\":{g},\"spettri\":{n},\"punti\":{points},\"firma\":\"{signature:016x}\",\"apri_ms\":{open:.1},\"indice_ms\":{index:.1},\"tic_ms\":{tic:.1},\"bpc_ms\":{bpc:.1},\"primo_ms\":{first_one:.2},\"tutti_ms\":{all:.1},\"mzml_ms\":{mzml:.1}}}"

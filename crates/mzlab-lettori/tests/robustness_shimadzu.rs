@@ -5,7 +5,7 @@
 mod common;
 
 use common::shimadzu::*;
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 

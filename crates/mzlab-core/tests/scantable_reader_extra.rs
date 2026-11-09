@@ -1,6 +1,6 @@
 //! The row of a reader's scan whose extras carry the maker's TIC (every `.wiff` scan) and, with `precursori`, a base peak: built straight from the
-//! scan (`mzidx_lettore::righe`) it equals, field by field and bit for bit, the row read back from the header text `mzmlwrite::spectrum_head` writes
-//! (the same scans with a userParam that sends them to the text) and the row of the mzML `lettori_mzml::scrivi` writes (finite totals: it refuses
+//! scan (`mzidx_reader::righe`) it equals, field by field and bit for bit, the row read back from the header text `mzmlwrite::spectrum_head` writes
+//! (the same scans with a userParam that sends them to the text) and the row of the mzML `readers_mzml::scrivi` writes (finite totals: it refuses
 //! the others). Totals that no short decimal holds, 0 and -0, subnormals, huge, negative, infinite and NaN with any payload (written `NaN`).
 #![allow(clippy::indexing_slicing)]
 #![allow(clippy::disallowed_methods)]
@@ -8,11 +8,11 @@
 #![allow(clippy::field_reassign_with_default)]
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::scantable::{Row, Table};
-use mzlab_core::{lettori_mzml, mzidx_lettore, scantable};
+use mzlab_core::{mzidx_reader, readers_mzml, scantable};
 
 struct One {
     campioni: Vec<Sample>,
@@ -232,8 +232,8 @@ const CASI: [(usize, u64); 4] = [(1, 1), (40, 2), (500, 3), (3000, 4)];
 #[test]
 fn reader_tic_as_from_text() {
     for (n, seed) in CASI {
-        let direct = mzidx_lettore::righe(&mut reader(n, seed, false, false), 0).unwrap();
-        let text = mzidx_lettore::righe(&mut reader(n, seed, false, true), 0).unwrap();
+        let direct = mzidx_reader::righe(&mut reader(n, seed, false, false), 0).unwrap();
+        let text = mzidx_reader::righe(&mut reader(n, seed, false, true), 0).unwrap();
         compare(&format!("{n} scans"), &direct, &text);
     }
 }
@@ -243,8 +243,8 @@ fn reader_tic_as_from_text() {
 fn reader_tic_as_from_mzml() {
     for (n, seed) in CASI {
         let mut l = reader(n, seed, true, false);
-        let direct = mzidx_lettore::righe(&mut l, 0).unwrap();
-        let mut mzml = lettori_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let direct = mzidx_reader::righe(&mut l, 0).unwrap();
+        let mut mzml = readers_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let size = mzml.len() as u64;
         let text = scantable::read(&mut mzml, size).unwrap();
         compare(&format!("{n} scans, mzML"), &direct, &text);

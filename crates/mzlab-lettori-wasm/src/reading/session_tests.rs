@@ -1,8 +1,8 @@
 // The tests of session.rs.
 use super::*;
 use crate::session::hard::{Hard, ODD_CHARS};
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 use serde_json::Value;
 
 struct Fake {
@@ -93,9 +93,9 @@ fn the_session_answers_and_closes() {
     let c: serde_json::Value = serde_json::from_str(&s.samples(h).unwrap()).unwrap();
     assert_eq!(c["formato"], "finto");
     assert_eq!(c["campioni"][0]["scans"], 1);
-    let i = mzlab_core::trasporto::decode_index(&s.index(h, 0).unwrap()).unwrap();
+    let i = mzlab_core::transport::decode_index(&s.index(h, 0).unwrap()).unwrap();
     assert_eq!((i[0].id.as_str(), i[0].filtro.as_str()), ("scan=0", "f"));
-    let sc = mzlab_core::trasporto::decode_scansione(0, &s.scan(h, 0, 0).unwrap()).unwrap();
+    let sc = mzlab_core::transport::decode_scansione(0, &s.scan(h, 0, 0).unwrap()).unwrap();
     assert_eq!((sc.mz, sc.intensity), (vec![100.0, 200.0], vec![1.5, 2.5]));
     assert_eq!((sc.level, sc.polarity), (1, 1));
     assert!(s.scan_header(h, 0, 0).unwrap().contains("MS:1"));
@@ -119,7 +119,7 @@ fn the_session_answers_and_closes() {
 /// The index crosses as bytes and comes back as it was, with every column (NaN, infinities, 64-bit offsets, the repeated filter once).
 #[test]
 fn the_index_bytes_round_trip() {
-    use mzlab_core::lettori::Position;
+    use mzlab_core::readers::Position;
     let entries = vec![
         ScanEntry {
             id: "scan=1 \"q\"\n\u{8}é".into(),
@@ -154,7 +154,7 @@ fn the_index_bytes_round_trip() {
         index: entries.clone(),
     }));
     let b = s.index(h, 0).unwrap();
-    assert_eq!(mzlab_core::trasporto::decode_index(&b).unwrap(), entries);
+    assert_eq!(mzlab_core::transport::decode_index(&b).unwrap(), entries);
 }
 
 // `3` and `3.0` are the same number for the page (`JSON.parse`): compare every number as a double

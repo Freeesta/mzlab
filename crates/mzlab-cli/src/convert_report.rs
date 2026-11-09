@@ -59,7 +59,7 @@ pub(crate) fn head_of(path: &Path) -> (usize, Option<String>) {
     let conv = text
         .split_once("name=\"mzLab conv/1\" value=\"")
         .and_then(|(_, r)| r.split_once('"'))
-        .map(|(v, _)| mzlab_core::metodo::xml_unescape(v));
+        .map(|(v, _)| mzlab_core::method::xml_unescape(v));
     (spectra, conv)
 }
 
