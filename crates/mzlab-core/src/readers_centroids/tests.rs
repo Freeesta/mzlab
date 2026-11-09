@@ -161,3 +161,20 @@ fn double_index_equals_the_two_apart() {
         assert_eq!((sha_a, sha_b), (sha.clone(), sha));
     }
 }
+
+/// An index straight from a reader is refused in order before a scan is decoded when it does not fit (a small fake budget), and fits a large one;
+/// the double build (profile and centroids) counts twice the per-scan part.
+#[test]
+fn reader_index_refused_in_order_with_a_tiny_budget() {
+    use crate::budget::MemBudget;
+    use crate::estimate::{check_reader, reader_index_bytes};
+    let mut l = alternato(301);
+    let e = check_reader(&MemBudget::mb(8.0), &mut l, 0, 1 << 20, 1).unwrap_err();
+    assert_eq!(e.key, "error.memoryBudget");
+    assert!(e.params.iter().any(|(k, v)| *k == "fase" && v == "index"));
+    assert!(check_reader(&MemBudget::mb(64.0), &mut l, 0, 1 << 20, 2).is_ok());
+    assert!(reader_index_bytes(1000, 0, 2) > reader_index_bytes(1000, 0, 1));
+    // 300 000 scans with 48 MB for the peaks: over the 192 MB of a phone or an iPad
+    assert!(reader_index_bytes(300_000, 48 << 20, 1) > 192 << 20);
+    assert!(reader_index_bytes(100_000, 48 << 20, 1) < 192 << 20);
+}

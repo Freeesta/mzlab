@@ -1,7 +1,7 @@
 // The .mzidx the engine (mzlab-wasm, `build_mzidx_native`, what the site writes in OPFS) builds for sample C of a dataset whose members are files on disk.
 // node tests/mzidx_nativo_node.js PKG_DIR OUT.mzidx C NAME MEMBER...   (MEMBER: a path; its name in the dataset is its file name)
 // MZIDX_PRINTS: "given" (the page took them, `Passata`), "late" (a function the build calls after its first pass), "bad" (a late function giving nothing);
-// unset: the engine takes them.
+// unset: the engine takes them. MZIDX_CAP: the budget of the instance in MB (`cap_mb`); a refusal is written to stderr and the exit code is 3.
 const fs = require("fs"), path = require("path");
 const [pkg, out, c, name, ...members] = process.argv.slice(2);
 const w = require(path.resolve(pkg, "mzlab_wasm.js"));
@@ -18,7 +18,10 @@ const taken = () => members.flatMap(m => { const p = new w.Passata(fs.statSync(m
   return Array.from(p.fine()); });
 const mode = process.env.MZIDX_PRINTS, called = () => process.stderr.write("late prints asked\n"), late = { late: () => (called(), taken()), bad: () => (called(), null) };
 const prints = mode === "given" ? taken() : late[mode] || null;
-const stats = w.build_mzidx_native(members.map(m => path.basename(m)), Float64Array.from(sizes), read, Number(c), name, false, write, 256, () => {}, prints);
+const cap = process.env.MZIDX_CAP ? Number(process.env.MZIDX_CAP) : undefined;
+let stats;
+try { stats = w.build_mzidx_native(members.map(m => path.basename(m)), Float64Array.from(sizes), read, Number(c), name, false, write, 256, () => {}, prints, undefined, undefined, undefined, undefined, cap); }
+catch (e) { process.stderr.write(String(e)); process.exit(3); }
 for (const [o, d] of kept) fs.writeSync(fd, d, 0, d.length, o);
 if (viewsMode) process.stderr.write(`views ${views} of ${writes}\n`);
 fs.closeSync(fd);

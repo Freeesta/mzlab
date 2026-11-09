@@ -85,6 +85,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | service worker, cache per versione del sito, `sw-manifest.json`, aggiornamenti | `docs/agenti/service-worker.md` |
 | esportazione di tutti i dati dell'utente: inventario dello storage nel browser, scrittore ZIP (`zip.rs`) | `docs/agenti/esporta-dati.md` |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
+| memoria su Safari, iPad e iPhone (budget senza `deviceMemory`, rifiuto calmo per percorso, stima dell'indice dai file del produttore `estimate::check_reader`) | `docs/agenti/memoria-safari.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |

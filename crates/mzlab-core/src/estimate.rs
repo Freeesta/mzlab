@@ -1,5 +1,5 @@
 //! Memory estimates of the load of a big mzML, made BEFORE the memory is taken: the scan table (`scantable::read`, phase `table`) and the `.mzidx`
-//! builder (phase `index`). A load that does not fit in the budget of the instance ends with the orderly `error.memoryBudget`
+//! builder (phase `index`), also when it is built straight from a maker's reader (`check_reader`). A load that does not fit in the budget of the instance ends with the orderly `error.memoryBudget`
 //! (`budget::refusal`: phase, estimate and budget in MB), never with a worker that dies. The per-scan figures are measured with
 //! `examples/mzml_memory.rs` on files of 0.5 to 4 GB (heap peak divided by the scans, rounded up); `docs/agenti/memoria.md` has the table.
 
@@ -60,6 +60,31 @@ pub fn check_index(
     peaks_budget: usize,
 ) -> Result<()> {
     let est = index_bytes(scans, scans_json, peaks_budget);
+    if est > budget.cap() {
+        return Err(refusal("index", est, budget.cap()));
+    }
+    Ok(())
+}
+
+/// Peak heap of an index built straight from a maker's reader (`upload::index_reader_with`): the table of the rows as `table_bytes` counts it, what
+/// the builder holds per scan, and half of `peaks_budget`; `copies` is 2 when the centroid index comes from the same decoding (`index_reader_twice`).
+pub fn reader_index_bytes(scans: usize, peaks_budget: usize, copies: usize) -> usize {
+    let per = TABLE_PER_SCAN + INDEX_PER_SCAN + 18;
+    FIXED
+        .saturating_add(scans.saturating_mul(per).saturating_mul(copies.max(1)))
+        .saturating_add(peaks_budget / 2)
+}
+
+/// Refuses in order (phase `index`), before a scan is decoded, the index of sample `c` of `l` that would not fit in the budget: the scan count is
+/// the one of `Reader::index`. Site (`build_mzidx_native`), desktop (`idxbuild_nat.rs`) and CLI (`flow_pace.rs`) call it before `index_reader_with`.
+pub fn check_reader(
+    budget: &MemBudget,
+    l: &mut dyn crate::readers::Reader,
+    c: usize,
+    peaks_budget: usize,
+    copies: usize,
+) -> Result<()> {
+    let est = reader_index_bytes(l.index(c)?.len(), peaks_budget, copies);
     if est > budget.cap() {
         return Err(refusal("index", est, budget.cap()));
     }
