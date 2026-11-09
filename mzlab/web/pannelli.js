@@ -293,7 +293,7 @@ function addPanel(type, o, after) {
     const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button>${window.SIMUI ? SIMUI.areaBtn(type) : ""}</span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
     const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
-    const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
+    const more = `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
     return `<span class="tbs">${gxb + gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
   })()}</div><canvas></canvas><div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${["chrom", "xic", "mrm", "spec", "map"].includes(type) ? `<div class="corrbar" role="dialog" hidden aria-label="${EH(I18N.t("corr.info.dlg"))}"></div>` : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p._ac = new AbortController();
@@ -526,7 +526,7 @@ function afterDraw(/** @type {Pannello} */ p) {
   if (btn) btn.disabled = !z;  // always there (the layout does not jump), active only when zoomed
   lockButton(p); cursorLine(p);
   placeLeg(p);
-  { const hd = p.el.querySelector(".hd"); if (hd && hd.scrollWidth > hd.clientWidth + 1) fitHdSoon(p); }  // the title or the reading changed the width of the header: fit it again
+  { const hd = p.el.querySelector(".hd"); if (hd && hdOver(hd, hd.querySelector(".ctl"))) fitHdSoon(p); }  // the title, the reading or the integration controls changed what the header holds: fit it again
   if (window.TDATI_P) TDATI_P.update(p);  // table of the data and description for screen readers (tdati.js)
   const tb = p.el.querySelector('[data-a="itab"]'); if (tb) tb.hidden = !p.ints.length;
   const cb = p.el.querySelector('[data-a="iclr"]'); if (cb) cb.hidden = !p.ints.length;
@@ -836,6 +836,9 @@ function hdRestore(/** @type {Pannello} */ p) {
   if (m) m.hidden = true; if (b) { b.hidden = true; b.setAttribute("aria-expanded", "false"); }
   p.el?.querySelector(".hd")?.classList.remove("hd-tight");
 }
+// the header holds more than its width: the row itself, or the controls (.ctl and its groups shrink with the row, so what they hold spills over the buttons beside them)
+const hdSpills = (/** @type {Element} */ e) => e.scrollWidth > e.clientWidth + 1;
+function hdOver(/** @type {HTMLElement} */ hd, /** @type {HTMLElement | null} */ c) { return hdSpills(hd) || !!(c && (hdSpills(c) || [...c.children].some(hdSpills))); }
 function fitHd(/** @type {Pannello} */ p) {
   const el = p.el; if (!el || !el.isConnected || p._fitBusy) return;
   const hd = el.querySelector(".hd"), more = el.querySelector(".hmore"), mb = el.querySelector('[data-a="more"]'); if (!hd || !more || !mb) return;
@@ -845,7 +848,7 @@ function fitHd(/** @type {Pannello} */ p) {
     hdRestore(p);
     if (!hd.offsetParent && getComputedStyle(el).position !== "fixed") return;  // tab not shown
     const c = el.querySelector(".ctl");
-    const over = () => hd.scrollWidth > hd.clientWidth + 1 || (c && c.scrollWidth > c.clientWidth + 1);
+    const over = () => hdOver(hd, c);
     if (!over()) return;
     mb.hidden = false;
     const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
