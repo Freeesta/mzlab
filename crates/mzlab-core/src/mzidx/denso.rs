@@ -1,5 +1,5 @@
 //! The limits of one 1-Da bucket of the `.mzidx` builder: the round that holds it when the peaks are in a scratch file, and the refusal of a bucket
-//! too dense for any round, given by pass 1 as soon as the peaks it counted prove it (`tests/mzidx_denso.rs`).
+//! too dense for any round, given by pass 1 as soon as the peaks it counted prove it (`tests/mzidx_dense.rs`).
 
 use super::{First, Peak, DEFAULT_BUDGET, NB};
 use crate::error::{Error, Result};

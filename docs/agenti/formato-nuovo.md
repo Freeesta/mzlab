@@ -4,4 +4,4 @@
 - Il file non si apre con questa versione, non si ricostruisce e non si sovrascrive: `archivio.promote` rifiuta di sostituirlo (`manifesto.js`: `MASSIMI`, `nuovo`), `lrPut` non ne toglie l'indice, `lr_index` risponde con l'avviso (it/en) senza costruire; il sorgente resta caricato.
 - Una versione minore si ricostruisce dal sorgente come sempre (`pulizia.js`, `vecchio`).
 - I `.mzfeat`/`.mzfeatf` scritti da `feat-worker.js` (mzFinder, nascosto) non passano da `archivio.promote`: nessuna guardia in scrittura.
-- Prova: `crates/mzlab-core/tests/formato_nuovo.rs`, `crates/mzlab-feat/tests/new_format.rs`, `tests_e2e/e2e_formato_nuovo.py`.
+- Prova: `crates/mzlab-core/tests/newer_format.rs`, `crates/mzlab-feat/tests/new_format.rs`, `tests_e2e/e2e_formato_nuovo.py`.

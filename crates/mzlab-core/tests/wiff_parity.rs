@@ -7,7 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-mod conv_aiuto;
+mod conv_help;
 
 use mzlab_core::mzml::{self, ChromKind, Run};
 use mzlab_core::wiff::{container, samples, Wiff};
@@ -73,7 +73,7 @@ fn synthetic_pairs_match_the_reference() {
                 }
             }
             // the mzML written from the sample reads back as the same run
-            let bytes = conv_aiuto::mzml_wiff(&dir, name, ci, false);
+            let bytes = conv_help::mzml_wiff(&dir, name, ci, false);
             let back = mzml::read(&bytes[..]).unwrap();
             assert_eq!(back.spectra.len(), run.spectra.len(), "{name}/{s}: mzML spectra");
             for (b, g) in back.spectra.iter().zip(&run.spectra) {
@@ -165,7 +165,7 @@ fn the_mzml_of_a_sample_reads_back_the_same() {
         for (ci, s) in samples(&ole).into_iter().enumerate() {
             let (w, mut scan) = open(&dir, name, s);
             let want = w.run(&mut scan).unwrap();
-            let xml = conv_aiuto::mzml_wiff(&dir, name, ci, false);
+            let xml = conv_help::mzml_wiff(&dir, name, ci, false);
             let got = mzml::read(&xml[..]).unwrap();
             assert_eq!(got.spectra.len(), want.spectra.len(), "{name}/{s}: spectra");
             for (g, e) in got.spectra.iter().zip(&want.spectra) {
@@ -185,7 +185,7 @@ fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
     let want = w.run(&mut scan).unwrap();
     let ole = container(std::fs::read(dir.join("serie.wiff")).unwrap(), "serie").unwrap();
     let ci = samples(&ole).iter().position(|&s| s == 1).unwrap();
-    let xml = conv_aiuto::mzml_wiff(&dir, "serie", ci, true);
+    let xml = conv_help::mzml_wiff(&dir, "serie", ci, true);
     let text = String::from_utf8_lossy(&xml);
     assert!(text.contains("MS:1000035") && text.contains("mzLab centroidi"));
     let got = mzml::read(&xml[..]).unwrap();
@@ -214,7 +214,7 @@ fn the_header_of_a_real_file_carries_model_time_and_hashes() {
     let s = samples(&ole)[0];
     let mut w = Wiff::open(&ole, "MRM.wiff", Some(scan.len() as u64), s).unwrap();
     w.wiff_sha1 = Some(ole.sha1_hex());
-    let xml = conv_aiuto::mzml_wiff(&folder, "MRM", 0, false);
+    let xml = conv_help::mzml_wiff(&folder, "MRM", 0, false);
     let head = String::from_utf8_lossy(&xml[..xml.len().min(20000)]).to_string();
     assert!(w.model.as_deref().is_some_and(|m| m.replace(' ', "").contains("QTRAP")), "{:?}", w.model);
     assert!(head.contains("MS:1000651") && head.contains("startTimeStamp=\"20"), "{head}");

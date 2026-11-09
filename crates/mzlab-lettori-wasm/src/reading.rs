@@ -82,7 +82,7 @@ fn read_member(
 }
 
 /// Blocks kept by the `thermo` module: the reader alternates between the packets of the scans, the trailer records and the index, and a block thrown away by a far read is read
-/// again at the next (`raw_tempi`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145). The other families keep
+/// again at the next (`raw_times`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145). The other families keep
 /// the one block they had: their gain is not measured and their `.wasm` limits leave no room for the cache.
 #[cfg(feature = "thermo")]
 const BLOCKS: usize = 3;

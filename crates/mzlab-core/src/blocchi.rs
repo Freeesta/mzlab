@@ -1,6 +1,6 @@
 //! A read cache of a few blocks over a member read from far apart: a reader like `opentfraw` asks a few bytes at a time and alternates between regions (the
 //! packets of the scans, the trailer records, the index), so one block thrown away at every far read is read again at the next. Used by the `thermo` module's
-//! `JsMember` (each fetch is a JS call) and by the `raw_tempi` simulator; it holds `slots` blocks and replaces the least recently used. With `read_ahead`, a miss that
+//! `JsMember` (each fetch is a JS call) and by the `raw_times` simulator; it holds `slots` blocks and replaces the least recently used. With `read_ahead`, a miss that
 //! continues a block or lands a little after it (the reader going on in order, as along the scans) refills that same slot with a block twice as long, up to the cap: fewer and larger fetches.
 use crate::idxread::ReadAt;
 use crate::Result;
