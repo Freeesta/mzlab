@@ -32,22 +32,22 @@ impl<T: Read + Write + Seek> Spill for T {
 /// Half of a scratch file shared by two builders (`quale` 0 or 1): the slots of the two alternate, so each sees its own file and neither knows about the other.
 pub struct Meta<'a, 'b> {
     pub sp: &'a std::cell::RefCell<&'b mut dyn Spill>,
-    pub quale: u64,
+    pub which: u64,
 }
 
 impl Meta<'_, '_> {
-    fn dove(&self, offset: u64) -> u64 {
+    fn at(&self, offset: u64) -> u64 {
         let c = CHUNK as u64;
-        (offset / c * 2 + self.quale) * c + offset % c
+        (offset / c * 2 + self.which) * c + offset % c
     }
 }
 
 impl Spill for Meta<'_, '_> {
     fn put(&mut self, offset: u64, data: &[u8]) -> Result<()> {
-        self.sp.borrow_mut().put(self.dove(offset), data)
+        self.sp.borrow_mut().put(self.at(offset), data)
     }
     fn get(&mut self, offset: u64, buf: &mut [u8]) -> Result<()> {
-        self.sp.borrow_mut().get(self.dove(offset), buf)
+        self.sp.borrow_mut().get(self.at(offset), buf)
     }
 }
 
@@ -62,7 +62,7 @@ const PER_CHUNK: [usize; 2] = [CHUNK / REC[0], CHUNK / REC[1]];
 const PARTS: usize = 64;
 
 /// The peaks of pass 1 after the budget ran out, split by m/z (the bounds follow the peaks seen up to then, so the partitions are about as big as each other).
-pub(crate) struct Parti {
+pub(crate) struct Parts {
     /// The first bucket of every partition (`PARTS + 1` values, the last is `NB`).
     first: Vec<usize>,
     of_bucket: Vec<u8>,
@@ -96,9 +96,9 @@ fn confini(counts: &[u64]) -> Vec<usize> {
     first
 }
 
-impl Parti {
+impl Parts {
     /// `counts`: the peaks seen so far in every 1-unit bucket of m/z.
-    pub(crate) fn new(counts: &[u64]) -> Parti {
+    pub(crate) fn new(counts: &[u64]) -> Parts {
         let first = confini(counts);
         let mut of_bucket = vec![0u8; NB];
         for (p, w) in first.windows(2).enumerate() {
@@ -106,7 +106,7 @@ impl Parti {
                 cells.fill(p as u8);
             }
         }
-        Parti {
+        Parts {
             first,
             of_bucket,
             bufs: (0..2 * PARTS).map(|_| Vec::new()).collect(),
@@ -168,7 +168,7 @@ fn u32_at(r: &[u8], at: usize) -> u32 {
         .map_or(0, u32::from_le_bytes)
 }
 
-impl Parti {
+impl Parts {
     /// A peak kept in 64 bits; `ms1`: of an MS1 scan.
     pub(crate) fn push(
         &mut self,
@@ -216,13 +216,13 @@ impl Parti {
 /// With a scratch file (`parti`): `hi` lowered to the last partition boundary in `lo + 1..=hi` (none: `hi`), so that every partition is read by one round when the rounds can hold one;
 /// `used` lowered by the `cost` of the buckets left out. At the end of the axis `hi` stays.
 pub(crate) fn allinea(
-    parti: Option<&Parti>,
+    parts: Option<&Parts>,
     lo: usize,
     hi: usize,
     used: usize,
     cost: &dyn Fn(usize) -> usize,
 ) -> (usize, usize) {
-    let Some(first) = parti.map(|p| &p.first) else {
+    let Some(first) = parts.map(|p| &p.first) else {
         return (hi, used);
     };
     match first
@@ -239,28 +239,28 @@ pub(crate) fn allinea(
 /// written; `f` keeps the peaks whose bucket it wants. The 32-bit peaks are split by the bucket their section takes; a 64-bit peak of an MS1 scan
 /// rounded to 32 bits by its section can only go up one bucket (`f32` holds every integer m/z and rounding keeps the order), so bucket `lo - 1` is read too.
 pub(crate) fn leggi_parti(
-    parti: &Parti,
+    parts: &Parts,
     sp: &mut dyn Spill,
     lo: usize,
     hi: usize,
     f: &mut dyn FnMut(f64, f64, u32) -> Result<()>,
 ) -> Result<()> {
-    let lo0 = lo.saturating_sub(usize::from(parti.ms1_larghe));
+    let lo0 = lo.saturating_sub(usize::from(parts.ms1_larghe));
     let mut buf = Vec::new();
     buf.try_reserve_exact(CHUNK)
         .map_err(|_| Error::memory_budget())?;
     buf.resize(CHUNK, 0);
     for p in 0..PARTS {
-        if parti.first[p] >= parti.first[p + 1] || parti.first[p] >= hi {
+        if parts.first[p] >= parts.first[p + 1] || parts.first[p] >= hi {
             continue;
         }
         for kind in 0..2 {
-            if parti.first[p + 1] <= [lo0, lo][kind] {
+            if parts.first[p + 1] <= [lo0, lo][kind] {
                 continue;
             }
             let q = kind * PARTS + p;
-            let mut left = parti.records[q];
-            for &slot in &parti.slots[q] {
+            let mut left = parts.records[q];
+            for &slot in &parts.slots[q] {
                 let n = left.min(PER_CHUNK[kind] as u64) as usize;
                 let bytes = &mut buf[..n * REC[kind]];
                 sp.get(u64::from(slot) * CHUNK as u64, bytes)?;

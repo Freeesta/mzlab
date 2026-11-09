@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::json::{round, Out};
-use crate::msnalbero::{albero, blocchi, Albero, Raggruppa, Tol};
+use crate::msnalbero::{albero, blocks, Albero, Grouping, Tol};
 use crate::msntree::{msn_tree, TreeScan};
 use crate::routes::{Query, Routes};
 use crate::sorgente::Scansioni;
@@ -29,7 +29,7 @@ impl<R: ReadAt> Routes<R> {
     /// Runs `f` with the options of `q` (`Opz`), then puts back the ones before: what a request asks never leaks into the next.
     pub(crate) fn con_opz<T>(&mut self, q: &Query, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let opz = Opz {
-            raggruppa: raggruppa_of(q, "mtol", "mce")?,
+            group: raggruppa_of(q, "mtol", "mce")?,
             somma: q.get("modo") == Some("somma"),
         };
         let before = std::mem::replace(&mut self.msn.opz, opz);
@@ -39,7 +39,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The tree of the file for a grouping, built once (memory: the scan indices of the nodes).
-    pub(crate) fn albero_per(&mut self, r: &Raggruppa) -> Arc<Albero> {
+    pub(crate) fn albero_per(&mut self, r: &Grouping) -> Arc<Albero> {
         if let Some((_, a)) = self.msn.alberi.iter().find(|(k, _)| k == r) {
             return a.clone();
         }
@@ -52,22 +52,22 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The filter of a request; `msn:<id>` is a node of the tree of the grouping of the request (`err.msn.node` when there is none).
-    pub(crate) fn filtro<'a>(&mut self, f: Option<&'a str>) -> Result<Option<Filtro<'a>>> {
+    pub(crate) fn filtro<'a>(&mut self, f: Option<&'a str>) -> Result<Option<Filter<'a>>> {
         let Some(f) = f else { return Ok(None) };
         if let Some(id) = f.strip_prefix("canale:") {
             return self.filtro_canale(id).map(Some);
         }
         let Some(id) = f.strip_prefix("msn:") else {
-            return Ok(Some(Filtro::Testo(f)));
+            return Ok(Some(Filter::Testo(f)));
         };
-        let r = self.msn.opz.raggruppa.clone();
+        let r = self.msn.opz.group.clone();
         let a = self.albero_per(&r);
         let Some(n) = a.nodi.iter().find(|n| n.id == id) else {
             return Err(Error::new("err.msn.node").with("id", id));
         };
         let mut mask = vec![false; self.idx.scans.len()];
         n.scansioni.iter().for_each(|&i| mask[i] = true);
-        Ok(Some(Filtro::Nodo(Arc::new(mask))))
+        Ok(Some(Filter::Node(Arc::new(mask))))
     }
 
     /// `/api/msn_albero?k&tol=nom|<Da>|<n>ppm&ce=1|0`: the tree of the precursors of the file from its index alone (no spectrum), `msn_albero/1`.
@@ -88,12 +88,12 @@ impl<R: ReadAt> Routes<R> {
         // mean total ion current per scan of a group of scans
         let mean_tic = |ix: &[usize]| if ix.is_empty() { 0.0 } else { ix.iter().map(|&i| scans[i].tic).sum::<f64>() / ix.len() as f64 };
         o.raw(",\"tic\":").num(round(mean_tic(&a.ms1), 1));
-        let mut livelli: Vec<u8> = a.nodi.iter().map(|n| n.livello).collect();
-        crate::sortc::slice_ord(&mut livelli);
-        livelli.dedup();
-        o.raw("},\"livelli\":[").raw(&livelli.iter().map(|l| l.to_string()).collect::<Vec<_>>().join(",")).raw("],\"nodi\":[");
-        for (k, (n, bl)) in a.nodi.iter().zip(blocchi(&a, scans.len())).enumerate() {
-            let (m, act, ce) = n.chiave.last().cloned().unwrap_or((0.0, String::new(), f64::NAN));
+        let mut levels: Vec<u8> = a.nodi.iter().map(|n| n.livello).collect();
+        crate::sortc::slice_ord(&mut levels);
+        levels.dedup();
+        o.raw("},\"livelli\":[").raw(&levels.iter().map(|l| l.to_string()).collect::<Vec<_>>().join(",")).raw("],\"nodi\":[");
+        for (k, (n, bl)) in a.nodi.iter().zip(blocks(&a, scans.len())).enumerate() {
+            let (m, act, ce) = n.key.last().cloned().unwrap_or((0.0, String::new(), f64::NAN));
             o.raw(if k > 0 { "," } else { "" }).raw("{\"id\":").str(&n.id).raw(",\"genitore\":");
             match n.genitore {
                 Some(g) => o.str(&a.nodi[g].id),
@@ -119,23 +119,23 @@ impl<R: ReadAt> Routes<R> {
 /// and `modo=somma` (the spectra of a window summed per cell instead of averaged). Set for the time of one request (`Routes::con_opz`).
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Opz {
-    pub raggruppa: Raggruppa,
+    pub group: Grouping,
     pub somma: bool,
 }
 
 /// What `filt` / `filter` keeps: a filter string or scan key, or the scans of a node of the MSn tree (`msn:<id>`, a mask over the scans).
-pub(crate) enum Filtro<'a> {
+pub(crate) enum Filter<'a> {
     Testo(&'a str),
-    Nodo(Arc<Vec<bool>>),
+    Node(Arc<Vec<bool>>),
 }
 
 /// The MSn state of a file: the trees already built, by grouping (the filter `msn:<id>` reads its scans from here), and the options of the request.
 #[derive(Default)]
 pub(crate) struct Msn {
-    pub alberi: Vec<(Raggruppa, Arc<Albero>)>,
+    pub alberi: Vec<(Grouping, Arc<Albero>)>,
     pub opz: Opz,
     /// The chromatogram headers the page gave and the channels built from them (`canali::rotte`).
-    pub canali: crate::canali::Stato,
+    pub channels: crate::canali::State,
 }
 
 /// `nom` (or absent), `0.01` (Da) or `10ppm`.
@@ -154,10 +154,10 @@ fn tol_of(v: Option<&str>) -> Result<Tol> {
     }
 }
 
-fn raggruppa_of(q: &Query, tol: &str, ce: &str) -> Result<Raggruppa> {
-    Ok(Raggruppa {
+fn raggruppa_of(q: &Query, tol: &str, ce: &str) -> Result<Grouping> {
+    Ok(Grouping {
         tol: tol_of(q.get(tol))?,
-        energie: q.get(ce) != Some("0"),
+        energies: q.get(ce) != Some("0"),
     })
 }
 

@@ -4,7 +4,7 @@
 //! the reader writes one per cycle, so the oracle is compared on cycle sums: TIC, RT and the intensity-weighted mean m/z.
 use std::path::PathBuf;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 
 fn folder() -> Option<FileSet> {
     let base = std::env::var_os("MZLAB_ROSINA_DATI")
@@ -23,7 +23,7 @@ fn folder() -> Option<FileSet> {
             continue;
         }
         let f = std::fs::File::open(&p).ok()?;
-        members.push(Membro {
+        members.push(Member {
             nome: format!("{name}/{}", p.file_name()?.to_string_lossy()),
             dim: f.metadata().ok()?.len(),
             dati: Box::new(f),
@@ -49,7 +49,7 @@ const ORACOLO: &[(u32, u32, f64, f64, f64)] = &[
 #[test]
 fn mse_and_lock_mass_match_the_msconvert_oracle() {
     let Some(fs) = folder() else { return };
-    let mut l = mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap();
+    let mut l = mzlab_lettori::apri_nudo(fs, &Limits::sito()).unwrap();
     let idx = l.index(0).unwrap().to_vec();
     // Cycles per function: 48400/200, 48200/200 and 19400/200 spectra of the oracle.
     for (f, n) in [(1, 242), (2, 241), (3, 97)] {

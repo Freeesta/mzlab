@@ -3,8 +3,8 @@
 
 use std::path::Path;
 
-use mzlab_core::campioni::{self, Campione};
-use mzlab_core::disegno::{self, Condizione, Confronto, Disegno};
+use mzlab_core::campioni::{self, Sample};
+use mzlab_core::disegno::{self, Condition, Confronto, Design};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::samples;
 use mzlab_feat::stat::{compare, stats_json, write_stats, Layout, StatsOpts};
@@ -57,12 +57,12 @@ pub(crate) fn table() -> Vec<u8> {
     write_table(&t, &Recipe::default(), &origin)
 }
 
-pub(crate) fn campioni_2() -> Vec<Campione> {
+pub(crate) fn campioni_2() -> Vec<Sample> {
     NAMES
         .iter()
         .enumerate()
         .map(|(i, n)| {
-            let mut c = Campione::new(n, &format!("{i:064x}"), i as u32 + 1);
+            let mut c = Sample::new(n, &format!("{i:064x}"), i as u32 + 1);
             match i {
                 0 => c.kind = "blank".into(),
                 1..=3 => c.series = "ref".into(),
@@ -73,13 +73,13 @@ pub(crate) fn campioni_2() -> Vec<Campione> {
         .collect()
 }
 
-pub(crate) fn design() -> Disegno {
-    let condition = |name: &str| Condizione {
+pub(crate) fn design() -> Design {
+    let condition = |name: &str| Condition {
         name: name.into(),
         replicates: 3,
         levels: Vec::new(),
     };
-    Disegno {
+    Design {
         conditions: vec![condition("ref"), condition("trt")],
         reference: Some("ref".into()),
         comparisons: vec![Confronto::VsReference],

@@ -4,24 +4,24 @@
 use crate::metodo::{num, obj, text, V};
 use opentfraw::error_log::ErrorEntry;
 
-const LIVELLI: [&str; 3] = ["Warning", "Info", "Error"];
+const LEVELS: [&str; 3] = ["Warning", "Info", "Error"];
 
 /// The level a text announces at its start (`Warning: …`), as written in the list above.
-fn livello(testo: &str) -> Option<&'static str> {
-    let t = testo.trim_start();
-    LIVELLI.into_iter().find(|l| {
+fn level(text: &str) -> Option<&'static str> {
+    let t = text.trim_start();
+    LEVELS.into_iter().find(|l| {
         t.get(..l.len()).is_some_and(|p| p.eq_ignore_ascii_case(l))
             && !t[l.len()..].starts_with(|c: char| c.is_alphanumeric())
     })
 }
 
-pub fn voci(log: &[ErrorEntry]) -> Vec<V> {
+pub fn entries(log: &[ErrorEntry]) -> Vec<V> {
     log.iter()
         .filter_map(|e| {
             obj(vec![
                 ("t_min", num(Some(f64::from(e.time)))),
                 ("testo", text(&e.message)),
-                ("livello", livello(&e.message).map(V::s)),
+                ("livello", level(&e.message).map(V::s)),
             ])
         })
         .collect()

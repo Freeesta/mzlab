@@ -229,7 +229,7 @@ fn the_srm_bytes_and_the_centroid_index_of_a_native_sample() {
             .iter()
             .map(|(n, p)| {
                 let bytes = std::fs::read(p).unwrap();
-                mzlab_core::lettori::Membro {
+                mzlab_core::lettori::Member {
                     nome: n.clone(),
                     dim: bytes.len() as u64,
                     dati: Box::new(bytes),
@@ -238,8 +238,8 @@ fn the_srm_bytes_and_the_centroid_index_of_a_native_sample() {
             })
             .collect(),
     };
-    let mut l = mzlab_lettori::apri(set, &mzlab_core::lettori::Limiti::desktop()).unwrap();
-    let mut t = mzlab_core::sorgente::SorgenteLettore { l: &mut *l, c: 0 };
+    let mut l = mzlab_lettori::apri(set, &mzlab_core::lettori::Limits::desktop()).unwrap();
+    let mut t = mzlab_core::sorgente::ReaderSource { l: &mut *l, c: 0 };
     let want = mzlab_core::srm::leggi(&mut t).map(|v| mzlab_core::srm::impacchetta(&v));
     match (r("natsrm", json!({"name": "x"})), want) {
         (Ok(Answer::Bytes(b)), Ok(w)) => assert_eq!(b, w),

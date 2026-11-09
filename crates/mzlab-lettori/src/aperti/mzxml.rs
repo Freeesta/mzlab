@@ -8,8 +8,8 @@ use mzlab_core::error::{Error, Result};
 
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, VoceCromatogramma, VoceLettore,
-    VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Reader, ReaderEntry, Sample,
+    ScanEntry, CONTRATTO,
 };
 
 use mzlab_core::metodo::sha1_hex;
@@ -34,7 +34,7 @@ const UNITA: &str = "number of detector counts";
 /// The most `nameValue`/`precursorMz` elements kept for a scan.
 pub(super) const CAP: usize = 256;
 
-pub const ENTRY: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "mzxml",
     contratto: CONTRATTO,
     estensioni: &[".mzxml"],
@@ -192,9 +192,9 @@ impl MzxmlReader {
     }
 }
 
-impl Lettore for MzxmlReader {
-    fn format(&self) -> Formato {
-        Formato::Altro("mzxml")
+impl Reader for MzxmlReader {
+    fn format(&self) -> Format {
+        Format::Altro("mzxml")
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
@@ -205,7 +205,7 @@ impl Lettore for MzxmlReader {
         )]
     }
 
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.samples
     }
 
@@ -218,7 +218,7 @@ impl Lettore for MzxmlReader {
             .max(self.discarded)
     }
 
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.one(c)?;
         self.complete(true)?;
         Ok(&self.indice)
@@ -231,13 +231,13 @@ impl Lettore for MzxmlReader {
         Ok(s)
     }
 
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.one(c)?;
         let byte = self.byte(k)?;
         let text = String::from_utf8_lossy(&byte);
         let t = scan::testa(&text, CAP)?;
         let mut out = Vec::new();
-        let add = |out: &mut Vec<Campo>, pre: &str, g: Tag| {
+        let add = |out: &mut Vec<Field>, pre: &str, g: Tag| {
             each(g, &mut |n, v| out.push(field(&format!("{pre}{n}"), v)))
         };
         add(&mut out, "", t.scan);
@@ -254,12 +254,12 @@ impl Lettore for MzxmlReader {
         Ok(out)
     }
 
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
-            .map(|(id, tipo)| VoceCromatogramma {
+            .map(|(id, tipo)| ChromatogramEntry {
                 id: id.into(),
                 tipo,
                 unita: UNITA.into(),
@@ -349,10 +349,10 @@ pub struct MzxmlReader {
     data: Box<dyn ReadAt>,
     dim: u64,
     name: String,
-    limits: Limiti,
-    samples: Vec<Campione>,
+    limits: Limits,
+    samples: Vec<Sample>,
     rows: Vec<Row>,
-    indice: Vec<VoceScansione>,
+    indice: Vec<ScanEntry>,
     /// Whether the file says the TIC / the base peak intensity of each scan (`false`: computed from the peaks when asked).
     known_tic: Vec<bool>,
     bpi: Vec<Option<f64>>,
@@ -366,7 +366,7 @@ pub struct MzxmlReader {
 }
 
 fn riconosci(fs: &mut FileSet) -> Fiducia {
-    let Some(i) = fs.trova(".mzxml") else {
+    let Some(i) = fs.find(".mzxml") else {
         return Fiducia::No;
     };
     let head = fs.testa(i, TESTA);
@@ -386,7 +386,7 @@ pub(super) fn number(t: Tag, n: &str) -> Option<f64> {
 }
 
 /// The `userParam`s, the window and the precursors of a scan for the mzML we write.
-fn extra_di(t: &Testa, index: &[VoceScansione]) -> SpectrumExtra {
+fn extra_di(t: &Testa, index: &[ScanEntry]) -> SpectrumExtra {
     let mut e = SpectrumExtra {
         sim: attr(t.scan, "scanType").eq_ignore_ascii_case("SIM"),
         observed: number(t.scan, "lowMz").is_some() && number(t.scan, "highMz").is_some(),
@@ -417,8 +417,8 @@ fn extra_di(t: &Testa, index: &[VoceScansione]) -> SpectrumExtra {
     e
 }
 
-fn field(name: &str, value: &str) -> Campo {
-    Campo {
+fn field(name: &str, value: &str) -> Field {
+    Field {
         nome: name.into(),
         valore: value.into(),
         unita: None,
@@ -426,9 +426,9 @@ fn field(name: &str, value: &str) -> Campo {
     }
 }
 
-fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs
-        .trova(".mzxml")
+        .find(".mzxml")
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
     let m = fs
         .membri
@@ -473,11 +473,11 @@ fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
         .rsplit_once('.')
         .map_or(l.name.as_str(), |(s, _)| s)
         .to_string();
-    l.samples = vec![Campione {
+    l.samples = vec![Sample {
         id: 1,
         nome: stem,
         scansioni: l.indice.len(),
-        dimensione: None,
+        size: None,
     }];
     Ok(Box::new(l))
 }

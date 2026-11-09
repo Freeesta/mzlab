@@ -3,7 +3,7 @@
 //! and the same SHA-256 whatever the order they were written in.
 
 use super::json::{bad, number, opt_text, text};
-use super::{Campione, Cell, Colonna, DatiFile, Tabella, TipoColonna};
+use super::{Cell, Column, ColumnType, FileData, Sample, Table};
 use crate::budget::sha256_hex;
 use crate::error::Result;
 use crate::json::{parse, Out, Value};
@@ -29,7 +29,7 @@ fn range(j: &mut Out, a: &str, b: &str, v: Option<(f64, f64)>) {
     j.raw(",\"").raw(b).raw("\":").opt(v.map(|x| x.0));
 }
 
-fn file_data(j: &mut Out, d: &DatiFile) {
+fn file_data(j: &mut Out, d: &FileData) {
     j.raw("{\"metodo\":").str(&d.method);
     j.raw(",\"modello\":").str(&d.instrument);
     range(j, "mz_max", "mz_min", d.mz);
@@ -40,7 +40,7 @@ fn file_data(j: &mut Out, d: &DatiFile) {
 }
 
 /// One file, keys in alphabetical order.
-fn one(c: &Campione) -> String {
+fn one(c: &Sample) -> String {
     let mut j = Out::default();
     j.raw("{\"acquisito\":");
     opt_str(&mut j, c.acquired.as_deref());
@@ -85,7 +85,7 @@ fn one(c: &Campione) -> String {
     j.0
 }
 
-fn column(j: &mut Out, c: &Colonna) {
+fn column(j: &mut Out, c: &Column) {
     j.raw("{\"nome\":").str(&c.name);
     if c.required {
         j.raw(",\"obbligatoria\":true");
@@ -105,10 +105,10 @@ fn column(j: &mut Out, c: &Colonna) {
 }
 
 /// `{"campioni":[...],"colonne":[...],"schema":"campioni/3"}`; the files are sorted by `ordine_iniezione`, then by their own bytes.
-pub fn to_json3(t: &Tabella) -> String {
+pub fn to_json3(t: &Table) -> String {
     let mut files: Vec<(u32, String)> = t.campioni.iter().map(|c| (c.order, one(c))).collect();
     crate::sortc::slice_ord(&mut files);
-    let mut cols: Vec<&Colonna> = t.colonne.iter().collect();
+    let mut cols: Vec<&Column> = t.colonne.iter().collect();
     crate::sortc::slice_by(&mut cols, |a, b| a.name.cmp(&b.name));
     let mut j = Out::default();
     j.raw("{\"campioni\":[");
@@ -125,7 +125,7 @@ pub fn to_json3(t: &Tabella) -> String {
 }
 
 /// SHA-256 of the canonical JSON.
-pub fn digest3(t: &Tabella) -> String {
+pub fn digest3(t: &Table) -> String {
     sha256_hex(to_json3(t).as_bytes())
 }
 
@@ -150,7 +150,7 @@ fn range_of(d: &Value, hi: &str, lo: &str) -> Result<Option<(f64, f64)>> {
 }
 
 /// The fields `campioni/3` adds, all optional (a `campioni/2` has none): read into `c`.
-pub(super) fn leggi_nuovi(v: &Value, c: &mut Campione) -> Result<()> {
+pub(super) fn leggi_nuovi(v: &Value, c: &mut Sample) -> Result<()> {
     let s = |k: &str| -> Result<String> { Ok(opt_text(v, k, &[])?.unwrap_or_default()) };
     c.sub = s("campione")?;
     c.reinjection = v.get("reiniezione").and_then(|x| x.bool()).unwrap_or(false);
@@ -166,7 +166,7 @@ pub(super) fn leggi_nuovi(v: &Value, c: &mut Campione) -> Result<()> {
         }
     }
     if let Some(d @ Value::Obj(_)) = v.get("dati_file") {
-        c.file_data = Some(DatiFile {
+        c.file_data = Some(FileData {
             instrument: opt_text(d, "modello", &[])?.unwrap_or_default(),
             method: opt_text(d, "metodo", &[])?.unwrap_or_default(),
             mz: range_of(d, "mz_max", "mz_min")?,
@@ -177,9 +177,9 @@ pub(super) fn leggi_nuovi(v: &Value, c: &mut Campione) -> Result<()> {
     Ok(())
 }
 
-fn read_column(v: &Value) -> Result<Colonna> {
-    let kind = TipoColonna::from_name(&text(v, "tipo")?).ok_or_else(bad)?;
-    let mut c = Colonna::new(&text(v, "nome")?, kind);
+fn read_column(v: &Value) -> Result<Column> {
+    let kind = ColumnType::from_name(&text(v, "tipo")?).ok_or_else(bad)?;
+    let mut c = Column::new(&text(v, "nome")?, kind);
     c.required = v
         .get("obbligatoria")
         .and_then(|x| x.bool())
@@ -196,16 +196,19 @@ fn read_column(v: &Value) -> Result<Colonna> {
 }
 
 /// Reads a `campioni/3` document or migrates a `campioni/2` one (the new fields empty, no columns): files in the order written.
-pub fn tabella_da_value(doc: &Value) -> Result<Tabella> {
-    let campioni = super::from_value(doc)?;
-    let colonne = doc
+pub fn table_from_value(doc: &Value) -> Result<Table> {
+    let samples = super::from_value(doc)?;
+    let columns = doc
         .get("colonne")
         .map(|a| a.arr().iter().map(read_column).collect::<Result<_>>())
         .transpose()?
         .unwrap_or_default();
-    Ok(Tabella { campioni, colonne })
+    Ok(Table {
+        campioni: samples,
+        colonne: columns,
+    })
 }
 
-pub fn tabella_da_json(bytes: &[u8]) -> Result<Tabella> {
-    tabella_da_value(&parse(bytes)?)
+pub fn table_from_json(bytes: &[u8]) -> Result<Table> {
+    table_from_value(&parse(bytes)?)
 }

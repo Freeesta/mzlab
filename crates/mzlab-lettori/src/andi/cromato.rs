@@ -3,13 +3,13 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{Limiti, VoceCromatogramma};
+use mzlab_core::lettori::{ChromatogramEntry, Limits};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
 use super::netcdf::{scale, Cdf};
 
 /// A text the file keeps as a global attribute or as a `char` variable.
-fn text(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti, name: &str) -> Option<String> {
+fn text(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits, name: &str) -> Option<String> {
     cdf.text(name).map(str::to_string).or_else(|| {
         let v = cdf.find(name)?;
         cdf.stringhe(data, limits, v)
@@ -20,7 +20,7 @@ fn text(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti, name: &str) -> Option
 }
 
 /// A scalar variable (or global attribute) as a number.
-fn scalare(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti, name: &str) -> Option<f64> {
+fn scalare(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits, name: &str) -> Option<f64> {
     cdf.number(name).or_else(|| {
         let v = cdf.find(name)?;
         cdf.read(data, limits, v, 0, cdf.elementi(v).min(1))
@@ -30,11 +30,11 @@ fn scalare(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti, name: &str) -> Opt
     })
 }
 
-fn id(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti) -> String {
+fn id(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> String {
     text(cdf, data, limits, "detector_name").unwrap_or_else(|| "Detector".into())
 }
 
-fn unita(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti) -> String {
+fn unita(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> String {
     let da_var = cdf
         .find("ordinate_values")
         .and_then(|v| v.text("units"))
@@ -46,8 +46,8 @@ fn unita(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti) -> String {
 }
 
 /// The one chromatogram of the file.
-pub(super) fn entries(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti) -> Vec<VoceCromatogramma> {
-    vec![VoceCromatogramma {
+pub(super) fn entries(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> Vec<ChromatogramEntry> {
+    vec![ChromatogramEntry {
         id: id(cdf, data, limits),
         tipo: ChromKind::Analog,
         unita: unita(cdf, data, limits),
@@ -58,7 +58,7 @@ pub(super) fn entries(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti) -> Vec<
 pub(super) fn trace(
     cdf: &Cdf,
     data: &mut dyn ReadAt,
-    limits: &Limiti,
+    limits: &Limits,
     name: &str,
 ) -> Result<Chromatogram> {
     let id = id(cdf, data, limits);
@@ -66,7 +66,7 @@ pub(super) fn trace(
         .find("ordinate_values")
         .filter(|_| name == id)
         .ok_or_else(|| Error::new("error.badIndex").with("id", name))?;
-    let n = limits.voci_ok(cdf.elementi(v))? as u64;
+    let n = limits.ok_entries(cdf.elementi(v))? as u64;
     let mut y = cdf.read(data, limits, v, 0, n)?;
     scale(&mut y, v);
     let retention = cdf

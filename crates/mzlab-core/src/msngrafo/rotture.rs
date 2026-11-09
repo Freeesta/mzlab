@@ -6,7 +6,7 @@
 use crate::json::{round, Out};
 
 /// Version of the `rotture` key.
-pub const VERSIONE: u32 = 1;
+pub const VERSION: u32 = 1;
 
 /// One set of atoms of the structure that gives the m/z of a node.
 #[derive(Debug, Clone, PartialEq)]
@@ -14,19 +14,19 @@ pub struct Ipotesi {
     /// Indices of the bonds cut (empty = the whole molecule).
     pub legami: Vec<usize>,
     /// Heavy atoms of the piece (0-based, as in the SMILES), ascending.
-    pub pezzo: Vec<usize>,
+    pub piece: Vec<usize>,
     /// Neutral formula of the piece with the hydrogens of the cuts and of the transfer.
     pub formula: String,
     /// Hydrogens moved beyond the plain cleavage (−2..2); 0 = the plain one.
     pub h: i8,
-    pub mz_teorico: f64,
+    pub theoretical_mz: f64,
     pub ppm: f64,
 }
 
 /// The hypotheses of one node (at most `max_ipotesi` kept, `n` counts all).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RotturaNodo {
-    pub nodo: usize,
+    pub node: usize,
     pub n: usize,
     pub ipotesi: Vec<Ipotesi>,
 }
@@ -43,8 +43,8 @@ pub struct RotturaArco {
 #[derive(Debug, Clone, PartialEq)]
 pub struct RotturaSpettro {
     pub albero: String,
-    pub spiegata: f64,
-    pub totale: f64,
+    pub explained: f64,
+    pub total: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -53,31 +53,31 @@ pub struct Rotture {
     pub ppm: f64,
     pub h_max: u8,
     pub max_legami: u8,
-    pub atomi: usize,
+    pub atoms: usize,
     pub legami: usize,
-    pub avvisi: Vec<&'static str>,
-    pub nodi: Vec<RotturaNodo>,
-    pub archi: Vec<RotturaArco>,
+    pub warnings: Vec<&'static str>,
+    pub nodes: Vec<RotturaNodo>,
+    pub edges: Vec<RotturaArco>,
     pub spettri: Vec<RotturaSpettro>,
 }
 
 impl Rotture {
     /// Arcs explained, arcs, and the explained share of the total intensity (%).
     pub fn conteggi(&self) -> (usize, usize, f64) {
-        let sp = self.archi.iter().filter(|a| a.spiegato).count();
+        let sp = self.edges.iter().filter(|a| a.spiegato).count();
         let (s, t) = self
             .spettri
             .iter()
-            .fold((0.0, 0.0), |(s, t), x| (s + x.spiegata, t + x.totale));
+            .fold((0.0, 0.0), |(s, t), x| (s + x.explained, t + x.total));
         (
             sp,
-            self.archi.len(),
+            self.edges.len(),
             if t > 0.0 { 100.0 * s / t } else { 0.0 },
         )
     }
 }
 
-fn lista(o: &mut Out, v: &[usize]) {
+fn list(o: &mut Out, v: &[usize]) {
     o.raw("[");
     for (i, x) in v.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).int(*x as i64);
@@ -90,7 +90,7 @@ pub fn rotture_json(r: &Rotture) -> String {
     let (sp, tot, int) = r.conteggi();
     let mut o = Out::default();
     o.raw("{\"versione\":")
-        .int(VERSIONE as i64)
+        .int(VERSION as i64)
         .raw(",\"smiles\":")
         .str(&r.smiles)
         .raw(",\"ppm\":")
@@ -100,11 +100,11 @@ pub fn rotture_json(r: &Rotture) -> String {
         .raw(",\"max_legami\":")
         .int(r.max_legami as i64)
         .raw(",\"atomi\":")
-        .int(r.atomi as i64)
+        .int(r.atoms as i64)
         .raw(",\"legami\":")
         .int(r.legami as i64)
         .raw(",\"avvisi\":[");
-    for (i, a) in r.avvisi.iter().enumerate() {
+    for (i, a) in r.warnings.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a);
     }
     o.raw("],\"conteggi\":{\"archi_spiegati\":")
@@ -114,24 +114,24 @@ pub fn rotture_json(r: &Rotture) -> String {
         .raw(",\"intensita_spiegata\":")
         .num(round(int, 1))
         .raw("},\"nodi\":[");
-    for (i, n) in r.nodi.iter().enumerate() {
+    for (i, n) in r.nodes.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"nodo\":")
-            .str(&format!("n{}", n.nodo))
+            .str(&format!("n{}", n.node))
             .raw(",\"n\":")
             .int(n.n as i64)
             .raw(",\"ipotesi\":[");
         for (k, h) in n.ipotesi.iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" }).raw("{\"legami\":");
-            lista(&mut o, &h.legami);
+            list(&mut o, &h.legami);
             o.raw(",\"pezzo\":");
-            lista(&mut o, &h.pezzo);
+            list(&mut o, &h.piece);
             o.raw(",\"formula\":")
                 .str(&h.formula)
                 .raw(",\"h\":")
                 .int(h.h as i64)
                 .raw(",\"mz_teorico\":")
-                .num(round(h.mz_teorico, 5))
+                .num(round(h.theoretical_mz, 5))
                 .raw(",\"ppm\":")
                 .num(round(h.ppm, 2))
                 .raw("}");
@@ -139,7 +139,7 @@ pub fn rotture_json(r: &Rotture) -> String {
         o.raw("]}");
     }
     o.raw("],\"archi\":[");
-    for (i, a) in r.archi.iter().enumerate() {
+    for (i, a) in r.edges.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"da\":")
             .str(&format!("n{}", a.da))
@@ -155,9 +155,9 @@ pub fn rotture_json(r: &Rotture) -> String {
             .raw("{\"albero\":")
             .str(&s.albero)
             .raw(",\"spiegata\":")
-            .num(round(s.spiegata, 1))
+            .num(round(s.explained, 1))
             .raw(",\"totale\":")
-            .num(round(s.totale, 1))
+            .num(round(s.total, 1))
             .raw("}");
     }
     o.raw("]}");
@@ -165,6 +165,6 @@ pub fn rotture_json(r: &Rotture) -> String {
 }
 
 /// `grafo` (the text of an `msngrafo/1`) with the key `rotture` added at the end; the text of a graph without it does not change.
-pub fn con_rotture(grafo: &str, r: &Rotture) -> String {
-    super::vista::con_chiave(grafo, "rotture", &rotture_json(r))
+pub fn con_rotture(graph: &str, r: &Rotture) -> String {
+    super::vista::with_key(graph, "rotture", &rotture_json(r))
 }

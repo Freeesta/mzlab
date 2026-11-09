@@ -174,7 +174,7 @@ fn the_indexed_file_with_a_chain_validates_against_the_psi_schema() {
             run: "x".into(),
             ..Default::default()
         },
-        Opzioni::default(),
+        Options::default(),
     )
     .unwrap();
     w.open_spectra(3).unwrap();
@@ -182,5 +182,5 @@ fn the_indexed_file_with_a_chain_validates_against_the_psi_schema() {
     w.spectrum_with(&ms2, &extra2).unwrap();
     w.spectrum_with(&ms3, &extra3).unwrap();
     w.close_spectra().unwrap();
-    super::tests_xsd::valida(&w.finish().unwrap());
+    super::tests_xsd::validate(&w.finish().unwrap());
 }

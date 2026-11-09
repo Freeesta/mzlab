@@ -28,7 +28,7 @@ impl Ident {
     }
 }
 
-pub struct Campo {
+pub struct Field {
     pub origine: String,
     pub chiave: String,
     pub valore: String,
@@ -37,31 +37,31 @@ pub struct Campo {
     pub identita: bool,
 }
 
-impl Campo {
-    pub fn new(origine: &str, chiave: &str, valore: impl ToString) -> Campo {
-        Campo {
-            origine: origine.into(),
-            chiave: chiave.into(),
-            valore: valore.to_string(),
+impl Field {
+    pub fn new(origin: &str, key: &str, value: impl ToString) -> Field {
+        Field {
+            origine: origin.into(),
+            chiave: key.into(),
+            valore: value.to_string(),
             unita: None,
             mappato: None,
             identita: false,
         }
     }
-    pub fn unit(mut self, u: &str) -> Campo {
+    pub fn unit(mut self, u: &str) -> Field {
         self.unita = text(u).map(|_| u.to_string());
         self
     }
-    pub fn map(mut self, to: &'static str) -> Campo {
+    pub fn map(mut self, to: &'static str) -> Field {
         self.mappato = Some(to);
         self
     }
     #[cfg(feature = "thermo")]
-    pub(crate) fn map_opt(mut self, to: Option<&'static str>) -> Campo {
+    pub(crate) fn map_opt(mut self, to: Option<&'static str>) -> Field {
         self.mappato = to;
         self
     }
-    pub fn id(mut self) -> Campo {
+    pub fn id(mut self) -> Field {
         self.identita = true;
         self
     }

@@ -7,7 +7,7 @@ use std::io::Read;
 
 use flate2::read::ZlibDecoder;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
 const UNITA: &str = "number of detector counts";
@@ -43,14 +43,14 @@ impl Traces {
         pol: i8,
         t_min: f64,
         y: f64,
-        limits: &Limiti,
+        limits: &Limits,
     ) -> Result<()> {
         self.points += 1;
-        limits.voci_ok(self.points as u64)?;
+        limits.ok_entries(self.points as u64)?;
         let j = match self.chiavi.get(&(q1, q3, pol)) {
             Some(&j) => j,
             None => {
-                limits.voci_ok(self.series.len() as u64 + 1)?;
+                limits.ok_entries(self.series.len() as u64 + 1)?;
                 self.series.push(Series {
                     q1: f64::from(q1) / scale,
                     q3: f64::from(q3) / scale,
@@ -140,8 +140,8 @@ pub(super) fn points(r: &[u8]) -> Option<Vec<(u32, u32, u64)>> {
 }
 
 /// The entries of `Spectrum Index` of `TLM Raw Data`: (offset of the record in `MS Raw Data`) of each, 24 bytes per record `(length, scan, offset, 0, a, b)`.
-pub(super) fn offset_tlm(idx: &[u8], n: usize, limits: &Limiti) -> Result<Vec<usize>> {
-    limits.voci_ok(n as u64)?;
+pub(super) fn offset_tlm(idx: &[u8], n: usize, limits: &Limits) -> Result<Vec<usize>> {
+    limits.ok_entries(n as u64)?;
     if idx.len() < 24 * n {
         return Err(Error::new("err.file.shimadzu").with("detail", "Spectrum Index is short"));
     }

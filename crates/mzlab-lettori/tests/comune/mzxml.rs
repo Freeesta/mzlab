@@ -169,10 +169,10 @@ pub fn annida(scans: &[Sc]) -> Vec<Sc> {
     out
 }
 
-pub fn apri_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::lettori::Lettore> {
+pub fn apri_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::lettori::Reader> {
     mzlab_lettori::apri(
         super::file_set("campione.mzXML", byte),
-        &mzlab_core::lettori::Limiti::sito(),
+        &mzlab_core::lettori::Limits::sito(),
     )
     .unwrap()
 }
@@ -180,7 +180,7 @@ pub fn apri_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::lettori::Lettore> {
 pub fn mzxml_error(byte: Vec<u8>) -> &'static str {
     match mzlab_lettori::apri(
         super::file_set("campione.mzXML", byte),
-        &mzlab_core::lettori::Limiti::sito(),
+        &mzlab_core::lettori::Limits::sito(),
     ) {
         Err(e) => e.key,
         Ok(mut l) => {

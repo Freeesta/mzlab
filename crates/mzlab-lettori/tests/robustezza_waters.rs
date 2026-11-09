@@ -3,12 +3,12 @@
 //! reading, never a panic, and what is read from it (index, scans, chromatograms, method, header) never panics either. No data of the laboratory is copied: the mutations are made in memory.
 mod comune_waters;
 use comune_waters::*;
-use mzlab_core::lettori::{Limiti, Membro};
+use mzlab_core::lettori::{Limits, Member};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
 fn everything(file: Vec<(String, Vec<u8>)>) {
-    let Ok(mut l) = mzlab_lettori::apri_nudo(file_set(file), &Limiti::sito()) else {
+    let Ok(mut l) = mzlab_lettori::apri_nudo(file_set(file), &Limits::sito()) else {
         return;
     };
     let n = l.samples().len();
@@ -113,9 +113,9 @@ fn absurd_index_numbers_are_refused_not_allocated() {
     idx.1[4..8].copy_from_slice(&0x18FF_FFFFu32.to_le_bytes());
     everything(f);
     // A budget of a few entries refuses the folder with a key.
-    let tiny = Limiti {
+    let tiny = Limits {
         profondita: 4,
-        voci: 2,
+        entries: 2,
         byte: 1 << 10,
     };
     if let Err(e) = mzlab_lettori::apri_nudo(synthetic_set(), &tiny) {
@@ -131,20 +131,20 @@ fn absurd_index_numbers_are_refused_not_allocated() {
 fn a_folder_without_functions_is_refused_with_a_key() {
     let mut f = folder_file();
     f.retain(|(n, _)| n != "_FUNCTNS.INF");
-    let e = mzlab_lettori::apri_nudo(file_set(f), &Limiti::sito())
+    let e = mzlab_lettori::apri_nudo(file_set(f), &Limits::sito())
         .err()
         .expect("refused");
     assert!(e.key.starts_with("err.file."), "{}", e.key);
     let e = mzlab_lettori::apri_nudo(
         mzlab_core::lettori::FileSet {
-            membri: vec![Membro {
+            membri: vec![Member {
                 nome: "X.raw/_FUNC001.DAT".into(),
                 dim: 0,
                 dati: Box::new(Vec::<u8>::new()),
                 sha1: None,
             }],
         },
-        &Limiti::sito(),
+        &Limits::sito(),
     )
     .err()
     .expect("refused");

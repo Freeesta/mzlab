@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::sync::{mpsc, Mutex};
 
-use super::{Codifica, MzmlWriter, SpectrumExtra};
+use super::{Encoding, MzmlWriter, SpectrumExtra};
 use crate::error::{Error, Result};
 use crate::mzml::Spectrum;
 
@@ -16,7 +16,7 @@ use crate::mzml::Spectrum;
 const SPETTRI_BLOCCO: usize = 32;
 const PUNTI_BLOCCO: usize = 100_000;
 
-type Voce = (Spectrum, SpectrumExtra);
+type Entry = (Spectrum, SpectrumExtra);
 
 impl<W: Write> MzmlWriter<W> {
     /// Writes the spectra of `it` in order with `Opzioni::thread` encoding threads; the same bytes as `spectrum_with` on each. The first error in the order of the
@@ -29,31 +29,31 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     /// `spettri` with the encoder as a parameter, so that a test can make one spectrum fail.
-    pub(super) fn spettri_con<I, F>(&mut self, mut it: I, codifica: &F) -> Result<()>
+    pub(super) fn spettri_con<I, F>(&mut self, mut it: I, encoding: &F) -> Result<()>
     where
         I: Iterator<Item = Result<(Spectrum, SpectrumExtra)>>,
-        F: Fn(&mut Codifica, usize, &Spectrum, &SpectrumExtra, &mut String) -> Result<()> + Sync,
+        F: Fn(&mut Encoding, usize, &Spectrum, &SpectrumExtra, &mut String) -> Result<()> + Sync,
     {
         let n = self.opz.thread.max(1);
-        let (opz, base, finestra) = (self.opz, self.spectra, 4 * n);
-        let (tx_lavoro, rx_lavoro) = mpsc::channel::<(usize, Vec<Voce>)>();
-        let (tx_pronti, rx_pronti) = mpsc::channel::<Pronto>();
+        let (opz, base, window) = (self.opz, self.spectra, 4 * n);
+        let (tx_lavoro, rx_lavoro) = mpsc::channel::<(usize, Vec<Entry>)>();
+        let (tx_pronti, rx_pronti) = mpsc::channel::<Ready>();
         let rx_lavoro = Mutex::new(rx_lavoro);
         std::thread::scope(|sc| {
             for _ in 0..n {
                 let (tx, rx) = (tx_pronti.clone(), &rx_lavoro);
                 sc.spawn(move || {
-                    let mut enc = Codifica::new(opz);
+                    let mut enc = Encoding::new(opz);
                     // the text of the last block, to start the next one with room for it (a string that starts empty doubles a dozen times)
                     let mut capacita = 0usize;
                     loop {
                         // the lock is held only while waiting for the next block
-                        let voce = rx.lock().unwrap_or_else(|e| e.into_inner()).recv();
-                        let Ok((primo, blocco)) = voce else { break };
-                        let pronto =
-                            codifica_blocco(&mut enc, base, primo, blocco, codifica, capacita);
-                        capacita = pronto.testo.len() + pronto.testo.len() / 8;
-                        if tx.send(pronto).is_err() {
+                        let entry = rx.lock().unwrap_or_else(|e| e.into_inner()).recv();
+                        let Ok((primo, blocco)) = entry else { break };
+                        let ready =
+                            codifica_blocco(&mut enc, base, primo, blocco, encoding, capacita);
+                        capacita = ready.text.len() + ready.text.len() / 8;
+                        if tx.send(ready).is_err() {
                             break;
                         }
                     }
@@ -61,22 +61,22 @@ impl<W: Write> MzmlWriter<W> {
             }
             drop(tx_pronti);
             // `dati` spectra sent in `lotti` blocks, `scritti` blocks written; `errore_lettura` is the reader's error, kept until the spectra before it are written
-            let (mut dati, mut lotti, mut scritti, mut errore_lettura, mut finito) =
+            let (mut data, mut lotti, mut scritti, mut errore_lettura, mut finished) =
                 (0usize, 0usize, 0usize, None, false);
-            let mut attesa: BTreeMap<usize, Pronto> = BTreeMap::new();
+            let mut expectation: BTreeMap<usize, Ready> = BTreeMap::new();
             // an inner closure so that every way out, an error included, drops `tx_lavoro` and lets the threads end
             let esito = (|| -> Result<()> {
                 loop {
-                    while !finito && lotti - scritti < finestra {
-                        let blocco = leggi_blocco(&mut it, &mut finito, &mut errore_lettura);
-                        if blocco.is_empty() {
+                    while !finished && lotti - scritti < window {
+                        let block = leggi_blocco(&mut it, &mut finished, &mut errore_lettura);
+                        if block.is_empty() {
                             continue;
                         }
-                        let primo = dati;
-                        dati += blocco.len();
+                        let first = data;
+                        data += block.len();
                         lotti += 1;
                         tx_lavoro
-                            .send((primo, blocco))
+                            .send((first, block))
                             .map_err(|_| Error::new("err.file.mzmlWrite"))?;
                     }
                     if scritti == lotti {
@@ -85,12 +85,13 @@ impl<W: Write> MzmlWriter<W> {
                     let pronto = rx_pronti
                         .recv()
                         .map_err(|_| Error::new("err.file.mzmlWrite"))?;
-                    attesa.insert(pronto.primo, pronto);
+                    expectation.insert(pronto.primo, pronto);
                     while let Ok(pronto) = rx_pronti.try_recv() {
-                        attesa.insert(pronto.primo, pronto);
+                        expectation.insert(pronto.primo, pronto);
                     }
                     // the blocks come back in any order; they are written in the order of their first spectrum
-                    while let Some(pronto) = attesa.remove(&self.spectra.saturating_sub(base)) {
+                    while let Some(pronto) = expectation.remove(&self.spectra.saturating_sub(base))
+                    {
                         self.scrivi_blocco(&pronto)?;
                         scritti += 1;
                     }
@@ -102,84 +103,88 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     /// The spectra of one encoded block in order, then the error that stopped it, if any.
-    fn scrivi_blocco(&mut self, pronto: &Pronto) -> Result<()> {
+    fn scrivi_blocco(&mut self, ready: &Ready) -> Result<()> {
         let mut da = 0;
-        for (id, a) in &pronto.fine {
+        for (id, a) in &ready.fine {
             self.spectra += 1;
             self.mark(true, id);
-            self.put(&pronto.testo.as_bytes()[da..*a])?;
+            self.put(&ready.text.as_bytes()[da..*a])?;
             da = *a;
         }
-        pronto.errore.as_ref().map_or(Ok(()), |e| Err(e.clone()))
+        ready.error.as_ref().map_or(Ok(()), |e| Err(e.clone()))
     }
 }
 
 /// What a thread sends back for a block: its first position, the text of the spectra that were encoded (one string, `fine` the end of each with its id) and the
 /// error of the one that failed, whose text is not in `testo`.
-struct Pronto {
+struct Ready {
     primo: usize,
-    testo: String,
+    text: String,
     fine: Vec<(String, usize)>,
-    errore: Option<Error>,
+    error: Option<Error>,
     /// The spectra of the block, consumed: the writer thread drops them, so that the memory the reader allocated is freed by the thread that allocated it.
-    usati: Vec<Voce>,
+    used: Vec<Entry>,
 }
 
 /// The text of the spectra of `blocco` (positions `base + primo` on) in one string; it stops at the first encoding error.
 fn codifica_blocco<F>(
-    enc: &mut Codifica,
+    enc: &mut Encoding,
     base: usize,
-    primo: usize,
-    mut blocco: Vec<Voce>,
-    codifica: &F,
+    first: usize,
+    mut block: Vec<Entry>,
+    encoding: &F,
     capacita: usize,
-) -> Pronto
+) -> Ready
 where
-    F: Fn(&mut Codifica, usize, &Spectrum, &SpectrumExtra, &mut String) -> Result<()>,
+    F: Fn(&mut Encoding, usize, &Spectrum, &SpectrumExtra, &mut String) -> Result<()>,
 {
-    let mut pronto = Pronto {
-        primo,
-        testo: String::with_capacity(capacita),
-        fine: Vec::with_capacity(blocco.len()),
-        errore: None,
-        usati: Vec::new(),
+    let mut ready = Ready {
+        primo: first,
+        text: String::with_capacity(capacita),
+        fine: Vec::with_capacity(block.len()),
+        error: None,
+        used: Vec::new(),
     };
-    for (i, (sp, extra)) in blocco.iter_mut().enumerate() {
-        let prima = pronto.testo.len();
-        if let Err(e) = codifica(enc, base + primo + i, sp, extra, &mut pronto.testo) {
-            pronto.testo.truncate(prima);
-            pronto.errore = Some(e);
+    for (i, (sp, extra)) in block.iter_mut().enumerate() {
+        let before = ready.text.len();
+        if let Err(e) = encoding(enc, base + first + i, sp, extra, &mut ready.text) {
+            ready.text.truncate(before);
+            ready.error = Some(e);
             break;
         }
-        pronto
+        ready
             .fine
-            .push((std::mem::take(&mut sp.id), pronto.testo.len()));
+            .push((std::mem::take(&mut sp.id), ready.text.len()));
     }
-    pronto.usati = blocco;
-    pronto
+    ready.used = block;
+    ready
 }
 
 /// The next block of spectra from `it`: up to `SPETTRI_BLOCCO` of them or `PUNTI_BLOCCO` points. The end of the input or the reader's error stops it and is
 /// recorded in `finito` / `errore_lettura`, to be handled after the spectra before it.
-fn leggi_blocco<I>(it: &mut I, finito: &mut bool, errore_lettura: &mut Option<Error>) -> Vec<Voce>
+fn leggi_blocco<I>(
+    it: &mut I,
+    finished: &mut bool,
+    errore_lettura: &mut Option<Error>,
+) -> Vec<Entry>
 where
-    I: Iterator<Item = Result<Voce>>,
+    I: Iterator<Item = Result<Entry>>,
 {
-    let (mut blocco, mut punti) = (Vec::new(), 0usize);
-    while blocco.len() < SPETTRI_BLOCCO && punti < PUNTI_BLOCCO {
+    let (mut block, mut points) = (Vec::new(), 0usize);
+    while block.len() < SPETTRI_BLOCCO && points < PUNTI_BLOCCO {
         match it.next() {
-            None => *finito = true,
+            None => *finished = true,
             Some(Err(e)) => {
                 *errore_lettura = Some(e);
-                *finito = true;
+                *finished = true;
             }
             Some(Ok((sp, extra))) => {
-                punti += sp.mz.len();
-                blocco.push((sp, extra));
+                points += sp.mz.len();
+                block.push((sp, extra));
                 continue;
             }
         }
         break;
     }
-    blocco
+    block
 }

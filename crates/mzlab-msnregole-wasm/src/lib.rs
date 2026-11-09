@@ -27,7 +27,7 @@ pub fn expectations(smiles: &str) -> std::result::Result<String, JsValue> {
     for (i, x) in a.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("[")
-            .str(&x.regola)
+            .str(&x.rule)
             .raw(",")
             .str(&x.formula);
         o.raw(if x.ione { ",1]" } else { ",0]" });

@@ -2,7 +2,7 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 use super::mzxml::{number, CAP};
 use super::mzxml_scan as scan;
@@ -43,7 +43,7 @@ impl Window {
 }
 
 /// `(TIC, base peak intensity)` of the scan whose bytes are `byte`, as its spectrum would give them (a 32-bit file's values are `f32`), without building the spectrum.
-pub(super) fn peak_sums(byte: &[u8], limits: &Limiti) -> Result<(f64, f64)> {
+pub(super) fn peak_sums(byte: &[u8], limits: &Limits) -> Result<(f64, f64)> {
     let text = String::from_utf8_lossy(byte);
     let t = scan::testa(&text, CAP)?;
     let Some((g, corpo)) = t.peaks else {

@@ -1,11 +1,11 @@
 //! The chain of reactions of an MS3+ scan as header fields of the raw reader (`rawlettore.rs`).
 
-use crate::lettori::Campo;
+use crate::lettori::Field;
 
-fn field(nome: &str, valore: String) -> Campo {
-    Campo {
-        nome: nome.into(),
-        valore,
+fn field(name: &str, value: String) -> Field {
+    Field {
+        nome: name.into(),
+        valore: value,
         unita: None,
         cv: None,
     }
@@ -14,7 +14,7 @@ fn field(nome: &str, valore: String) -> Campo {
 /// The chain of reactions of an MS3+ scan as `opentfraw.reaction.N.*` values, N counting from 1: precursor, activation (and the
 /// supplemental one), energy with its unit, the steps of a stepped NCE, the isolation width of the final step and the flags not yet understood.
 /// Nothing for a scan with fewer than two reactions (MS2, stepped NCE included), whose header stays as it was.
-pub(crate) fn reaction_fields(p: &opentfraw::PrecursorInfo) -> Vec<Campo> {
+pub(crate) fn reaction_fields(p: &opentfraw::PrecursorInfo) -> Vec<Field> {
     if p.reactions.len() < 2 {
         return Vec::new();
     }

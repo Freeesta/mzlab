@@ -52,7 +52,7 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
                     .map(|b| f64::from_le_bytes(b.try_into().unwrap_or([0; 8])))
                     .filter(|m| m.is_finite() && *m > 0.0);
             }
-            Some(c) if !super::modi::confermato(Some(c)) => {
+            Some(c) if !super::modi::confirmed(Some(c)) => {
                 if crate::wiff::dad::wiff2_sample_info(ole, sample).is_some() {
                     return Err(Error::new("err.file.wiffNeeds2"));
                 }

@@ -8,7 +8,7 @@ use agilent_synth::{encode, sample};
 use mzlab_core::json;
 use mzlab_core::lettori::FileSet;
 use mzlab_core::mzml::{self, ChromKind, Chromatogram};
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 
 /// The `conv/1` document of an mzML as `Conversione` writes it.
 pub fn conv_di(xml: &[u8]) -> json::Value {
@@ -25,9 +25,9 @@ pub fn conv_di(xml: &[u8]) -> json::Value {
 }
 
 /// Every declared gap has a field and a reason; the document names the reader and the version of the program.
-pub fn controlla(doc: &json::Value, lettore: &str) {
+pub fn controlla(doc: &json::Value, reader: &str) {
     assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conv/1"));
-    assert_eq!(doc.get("lettore").and_then(|s| s.str()), Some(lettore));
+    assert_eq!(doc.get("lettore").and_then(|s| s.str()), Some(reader));
     assert_eq!(
         doc.get("versione").and_then(|s| s.str()),
         Some(env!("CARGO_PKG_VERSION"))
@@ -35,11 +35,11 @@ pub fn controlla(doc: &json::Value, lettore: &str) {
     assert!(doc.get("campi_cv").and_then(|n| n.f64()).is_some());
     assert!(doc.get("campi_user").and_then(|n| n.f64()).is_some());
     for g in doc.get("non_portati").expect("non_portati").arr() {
-        let campo = g.get("campo").and_then(|s| s.str()).unwrap_or("");
-        let motivo = g.get("motivo").and_then(|s| s.str()).unwrap_or("");
+        let field = g.get("campo").and_then(|s| s.str()).unwrap_or("");
+        let reason = g.get("motivo").and_then(|s| s.str()).unwrap_or("");
         assert!(
-            !campo.is_empty() && !motivo.is_empty(),
-            "a gap without a reason: {campo:?}"
+            !field.is_empty() && !reason.is_empty(),
+            "a gap without a reason: {field:?}"
         );
     }
 }
@@ -49,8 +49,8 @@ fn an_agilent_conversion_carries_conv_with_its_gaps_and_reasons() {
     let (idx, peak) = encode(&sample());
     let xml = conv_aiuto::mzml(FileSet {
         membri: vec![
-            conv_aiuto::membro("x.D/AcqData/MSScan.bin", &idx),
-            conv_aiuto::membro("x.D/AcqData/MSPeak.bin", &peak),
+            conv_aiuto::member("x.D/AcqData/MSScan.bin", &idx),
+            conv_aiuto::member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     });
     let doc = conv_di(&xml);
@@ -74,7 +74,7 @@ fn pressure_and_device_traces_are_written_with_their_term_and_unit() {
         intensity: vec![10.0, 20.0, 30.0],
     };
     let mut w =
-        MzmlWriter::con_opzioni(Vec::new(), &Header::default(), Opzioni::default()).unwrap();
+        MzmlWriter::with_options(Vec::new(), &Header::default(), Options::default()).unwrap();
     w.open_chromatograms(2).unwrap();
     w.chromatogram(&trace("Pump Pressure", ChromKind::Pressure, "pascal"))
         .unwrap();
@@ -108,26 +108,26 @@ fn pressure_and_device_traces_are_written_with_their_term_and_unit() {
 
 #[test]
 fn a_reader_without_profile_refuses_the_profile_route_with_a_key() {
-    use mzlab_core::lettori::{self, Limiti};
-    use mzlab_core::lettori_mzml::{Conversione, Picchi};
+    use mzlab_core::lettori::{self, Limits};
+    use mzlab_core::lettori_mzml::{Conversion, Peaks};
     let (idx, peak) = encode(&sample());
     let mut l = lettori::apri(
         FileSet {
             membri: vec![
-                conv_aiuto::membro("x.D/AcqData/MSScan.bin", &idx),
-                conv_aiuto::membro("x.D/AcqData/MSPeak.bin", &peak),
+                conv_aiuto::member("x.D/AcqData/MSScan.bin", &idx),
+                conv_aiuto::member("x.D/AcqData/MSPeak.bin", &peak),
             ],
         },
-        &Limiti::sito(),
+        &Limits::sito(),
     )
     .unwrap();
     assert!(l.scan_profile(0, 0).unwrap().is_none());
-    let conv = Conversione {
-        peaks: Picchi::Profilo,
-        ..Conversione::default()
+    let conv = Conversion {
+        peaks: Peaks::Profilo,
+        ..Conversion::default()
     };
     let e = conv
-        .scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {})
+        .write(&mut *l, 0, Vec::new(), &mut |_, _| {})
         .unwrap_err();
     assert_eq!(e.key, "err.conv.noProfile");
 }

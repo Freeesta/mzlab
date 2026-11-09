@@ -37,9 +37,9 @@ fn main() {
     );
     let mut l = finto::Finto::vario(n, peaks, 12345);
     let imp = vec![];
-    let p = upload::prepare_lettore(&mut l, 0, &imp, "x.mzML").expect("table");
+    let p = upload::prepare_reader(&mut l, 0, &imp, "x.mzML").expect("table");
     let mut out = Cursor::new(Vec::new());
-    mzidx::build_lettore(&p.table, &mut l, 0, &mut out, 192 << 20).expect("index");
+    mzidx::build_reader(&p.table, &mut l, 0, &mut out, 192 << 20).expect("index");
     let bytes = out.into_inner();
     let size = bytes.len() as u64;
     let (reads, volume) = (Rc::new(Cell::new(0)), Rc::new(Cell::new(0)));

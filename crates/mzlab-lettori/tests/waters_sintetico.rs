@@ -2,10 +2,10 @@
 //! A MassLynx folder built in the test (`comune_waters`): the scans, the MRM channels, the TIC and the method are read back to the values that were encoded.
 mod comune_waters;
 use comune_waters::*;
-use mzlab_core::lettori::{Lettore, Limiti};
+use mzlab_core::lettori::{Limits, Reader};
 
-fn apri() -> Box<dyn Lettore> {
-    mzlab_lettori::apri_nudo(synthetic_set(), &Limiti::sito())
+fn apri() -> Box<dyn Reader> {
+    mzlab_lettori::apri_nudo(synthetic_set(), &Limits::sito())
         .unwrap_or_else(|e| panic!("{}", e.key))
 }
 

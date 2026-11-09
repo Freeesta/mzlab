@@ -2,18 +2,18 @@
 //! (`err.file.nonFinite`, `err.file.nonFiniteTrace`, with the scan or trace and what is wrong), never a number passed on to the index, the charts or the mzML. A finite but odd value (negative RT, RT out
 //! of order) is the file's own and goes through.
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 pub struct Finished {
-    inner: Box<dyn Lettore>,
+    inner: Box<dyn Reader>,
     /// The samples whose index has been checked (an index is read once and asked for many times).
     seen: Vec<bool>,
 }
 
 impl Finished {
-    pub fn new(inner: Box<dyn Lettore>) -> Self {
+    pub fn new(inner: Box<dyn Reader>) -> Self {
         Finished {
             inner,
             seen: Vec::new(),
@@ -57,14 +57,14 @@ fn spettro(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
     Ok(s)
 }
 
-impl Lettore for Finished {
-    fn format(&self) -> Formato {
+impl Reader for Finished {
+    fn format(&self) -> Format {
         self.inner.format()
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         self.inner.samples()
     }
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         if !self.seen.get(c).copied().unwrap_or(false) {
             for v in self.inner.index(c)? {
                 for (what, x) in [("rt", v.rt), ("tic", v.tic)] {
@@ -81,7 +81,7 @@ impl Lettore for Finished {
         self.inner.index(c)
     }
     // the same check on the rows the reader gives; `visti` stays unset, the full rows of `indice` are checked when asked for
-    fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index_without_tic(&mut self, c: usize) -> Result<&[ScanEntry]> {
         if !self.seen.get(c).copied().unwrap_or(false) {
             for v in self.inner.index_without_tic(c)? {
                 for (what, x) in [("rt", v.rt), ("tic", v.tic)] {
@@ -105,10 +105,10 @@ impl Lettore for Finished {
             .map(|s| spettro(Ok(s), k))
             .transpose()
     }
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.inner.scan_header(c, k)
     }
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.inner.chromatograms(c)
     }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {

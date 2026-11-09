@@ -1,14 +1,14 @@
 //! Tests of the dense case: the real decoders re-read the generated values bit for bit, the generator is deterministic, the reader serves the scans.
 use crate::denso::*;
 use crate::denso_lettore::Denso;
-use mzlab_core::lettori::Lettore;
+use mzlab_core::lettori::Reader;
 use opentfraw::pacchetto::{decodifica, decodifica_picchi};
 
-const PICCOLO: Parametri = Parametri {
+const SMALL: Parameters = Parameters {
     scansioni: 3,
-    picchi: 50,
+    peaks: 50,
     seme: 7,
-    con_profilo: true,
+    with_profile: true,
     bin: (8, 12),
 };
 
@@ -21,12 +21,12 @@ fn bits(v: &[(f64, f32)]) -> Vec<(u64, u32)> {
 fn il_decoder_rilegge_i_valori_generati_al_bit() {
     for k in 0..3 {
         let (mut b, mut v) = (Vec::new(), Verita::default());
-        pacchetto(&mut b, &PICCOLO, k, Some(&mut v));
+        packet(&mut b, &SMALL, k, Some(&mut v));
         let pk = decodifica(&b).unwrap();
         let profilo = pk.profile.as_ref().unwrap();
         assert_eq!(profilo.first_value.to_bits(), F0.to_bits());
-        assert_eq!(profilo.step.to_bits(), PASSO.to_bits());
-        let letti: Vec<(u32, f32, f32)> = profilo
+        assert_eq!(profilo.step.to_bits(), STEP.to_bits());
+        let n_read: Vec<(u32, f32, f32)> = profilo
             .chunks
             .iter()
             .flat_map(|c| {
@@ -36,15 +36,15 @@ fn il_decoder_rilegge_i_valori_generati_al_bit() {
                     .map(|(j, s)| (c.first_bin + j as u32, *s, c.fudge.unwrap()))
             })
             .collect();
-        assert_eq!(letti.len(), v.profilo.len());
-        for (a, b) in letti.iter().zip(&v.profilo) {
+        assert_eq!(n_read.len(), v.profilo.len());
+        for (a, b) in n_read.iter().zip(&v.profilo) {
             assert_eq!(
                 (a.0, a.1.to_bits(), a.2.to_bits()),
                 (b.0, b.1.to_bits(), b.2.to_bits())
             );
         }
-        let picchi: Vec<(f64, f32)> = pk.peaks.iter().map(|p| (p.mz, p.abundance)).collect();
-        assert_eq!(bits(&picchi), bits(&v.picchi));
+        let peaks: Vec<(f64, f32)> = pk.peaks.iter().map(|p| (p.mz, p.abundance)).collect();
+        assert_eq!(bits(&peaks), bits(&v.picchi));
         assert_eq!(
             pk.resolutions
                 .iter()
@@ -55,11 +55,11 @@ fn il_decoder_rilegge_i_valori_generati_al_bit() {
                 .map(|r| r.to_bits())
                 .collect::<Vec<_>>()
         );
-        assert_eq!(pk.noise_nodes.len(), NODI);
+        assert_eq!(pk.noise_nodes.len(), NODES);
         // the list-only entry point gives the same peaks
-        let solo = decodifica_picchi(&b).unwrap();
+        let only = decodifica_picchi(&b).unwrap();
         assert_eq!(
-            bits(&solo.iter().map(|p| (p.mz, p.abundance)).collect::<Vec<_>>()),
+            bits(&only.iter().map(|p| (p.mz, p.abundance)).collect::<Vec<_>>()),
             bits(&v.picchi)
         );
     }
@@ -71,8 +71,8 @@ fn il_generatore_da_lo_stesso_sha256_a_ogni_giro() {
     let dir = std::env::temp_dir().join(format!("raw_mzml_denso_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let (a, b) = (dir.join("a.bin"), dir.join("b.bin"));
-    let (_, _, sa) = genera(&a, &PICCOLO, true).unwrap();
-    let (_, _, sb) = genera(&b, &PICCOLO, true).unwrap();
+    let (_, _, sa) = generate(&a, &SMALL, true).unwrap();
+    let (_, _, sb) = generate(&b, &SMALL, true).unwrap();
     assert_eq!(sa, sb);
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
     assert_eq!(sa.as_deref(), Some(SHA_ATTESO));
@@ -85,12 +85,12 @@ fn il_lettore_finto_serve_le_scansioni_generate() {
     let dir = std::env::temp_dir().join(format!("raw_mzml_denso_l_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("d.bin");
-    genera(&f, &PICCOLO, false).unwrap();
+    generate(&f, &SMALL, false).unwrap();
     let mut l = Denso::apri(&f).unwrap();
     assert_eq!(l.index(0).unwrap().len(), 3);
     for k in 0..3 {
         let (mut b, mut v) = (Vec::new(), Verita::default());
-        pacchetto(&mut b, &PICCOLO, k, Some(&mut v));
+        packet(&mut b, &SMALL, k, Some(&mut v));
         let s = l.scan(0, k).unwrap();
         assert!(!s.profile);
         assert_eq!(
@@ -111,10 +111,10 @@ fn il_lettore_finto_serve_le_scansioni_generate() {
             p.mz.windows(2).all(|w| w[0] < w[1]),
             "m/z must grow with the bin"
         );
-        let atteso: Vec<u32> = v.profilo.iter().map(|x| x.1.to_bits()).collect();
+        let expected: Vec<u32> = v.profilo.iter().map(|x| x.1.to_bits()).collect();
         assert_eq!(
             p.intensity.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
-            atteso
+            expected
         );
     }
     std::fs::remove_dir_all(&dir).unwrap();
@@ -124,7 +124,7 @@ fn il_lettore_finto_serve_le_scansioni_generate() {
 #[test]
 fn il_caso_denso_ha_almeno_200000_punti_per_scansione() {
     let (mut b, mut v) = (Vec::new(), Verita::default());
-    pacchetto(&mut b, &Parametri::denso(1), 0, Some(&mut v));
+    packet(&mut b, &Parameters::denso(1), 0, Some(&mut v));
     assert!(v.profilo.len() >= 200_000, "{}", v.profilo.len());
 }
 
@@ -136,12 +136,12 @@ fn la_variante_da_8_gb_si_genera_e_si_cancella() {
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("d8.bin");
     let mut b = Vec::new();
-    pacchetto(&mut b, &Parametri::denso(1), 0, None);
+    packet(&mut b, &Parameters::denso(1), 0, None);
     let scansioni = (8.0e9 / b.len() as f64).ceil() as usize;
-    let (tabella, byte, _) = genera(&f, &Parametri::denso(scansioni), false).unwrap();
+    let (table, byte, _) = generate(&f, &Parameters::denso(scansioni), false).unwrap();
     let su_disco = std::fs::metadata(&f).unwrap().len();
     std::fs::remove_dir_all(&dir).unwrap();
-    assert_eq!(tabella.len(), scansioni);
+    assert_eq!(table.len(), scansioni);
     // packet sizes vary a little around the first one used to count the scans
     assert!(byte >= 7_900_000_000, "{byte}");
     assert_eq!(su_disco, byte);

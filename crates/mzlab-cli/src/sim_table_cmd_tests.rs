@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::json::{parse, Value};
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 
 use crate::execute;
 
@@ -142,7 +142,7 @@ fn the_wiff_and_its_mzml_give_the_same_bytes() {
     let Some(d) = fixture("mzml") else { return };
     let member = |file: &str| {
         let bytes = std::fs::read(d.join(file)).unwrap();
-        Membro {
+        Member {
             nome: file.into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -152,7 +152,7 @@ fn the_wiff_and_its_mzml_give_the_same_bytes() {
     let set = FileSet {
         membri: vec![member("sim3.wiff"), member("sim3.wiff.scan")],
     };
-    let mut l = lettori::apri(set, &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(set, &Limits::sito()).unwrap();
     let mut files = Vec::new();
     for (c, name) in ["Blank", "Sample_A", "Sample_B", "Sample_C"]
         .iter()

@@ -4,7 +4,7 @@
 use super::livelli::con;
 use super::{
     cerca, cerca_ampia, digest, errors_json, from_csv, from_json, hits_json, ione, record_json,
-    to_csv, to_json, Molecola, RowError,
+    to_csv, to_json, Molecule, RowError,
 };
 use crate::elements::{adducts, ion_mz};
 use crate::error::{Error, Result};
@@ -15,7 +15,7 @@ fn errors_doc(e: &[RowError]) -> String {
 }
 
 /// Records from a document given as JSON text or as an object.
-fn doc_of(v: &Value) -> std::result::Result<Vec<Molecola>, Vec<RowError>> {
+fn doc_of(v: &Value) -> std::result::Result<Vec<Molecule>, Vec<RowError>> {
     match v {
         Value::Str(s) => from_json(s.as_bytes()),
         Value::Null => Ok(Vec::new()),
@@ -23,7 +23,7 @@ fn doc_of(v: &Value) -> std::result::Result<Vec<Molecola>, Vec<RowError>> {
     }
 }
 
-fn carica(v: &Value) -> Result<String> {
+fn load(v: &Value) -> Result<String> {
     let cat = match v.get("catalogo").and_then(|c| c.str()) {
         Some(t) => match from_csv(t, "catalogo", None) {
             Ok(mut ms) => {
@@ -41,13 +41,13 @@ fn carica(v: &Value) -> Result<String> {
         None => None,
     };
     Ok(con(|a| {
-        a.catalogo = cat.unwrap_or(std::mem::take(&mut a.catalogo));
+        a.catalog = cat.unwrap_or(std::mem::take(&mut a.catalog));
         a.altri = altri.unwrap_or(std::mem::take(&mut a.altri));
-        a.aggiorna();
+        a.update();
         format!(
             "{{\"altri\":{},\"catalogo\":{},\"errori\":[],\"totale\":{}}}",
             a.altri.len(),
-            a.catalogo.len(),
+            a.catalog.len(),
             a.tutte.len()
         )
     }))
@@ -55,7 +55,7 @@ fn carica(v: &Value) -> Result<String> {
 
 fn search(v: &Value) -> String {
     let q = v.get("q").and_then(|x| x.str()).unwrap_or("");
-    let limite = v
+    let limit = v
         .get("limite")
         .and_then(|x| x.f64())
         .map_or(8, |x| x as usize);
@@ -63,9 +63,9 @@ fn search(v: &Value) -> String {
     let ampia = v.get("ampia").is_some_and(|x| x.bool() == Some(true));
     con(|a| {
         let hits = if ampia {
-            cerca_ampia(&a.tutte, q, limite, ppm)
+            cerca_ampia(&a.tutte, q, limit, ppm)
         } else {
-            cerca(&a.tutte, q, limite, ppm)
+            cerca(&a.tutte, q, limit, ppm)
         };
         hits_json(&a.tutte, &hits)
     })
@@ -94,20 +94,20 @@ fn list(v: &Value) -> std::result::Result<String, Vec<RowError>> {
         .filter_map(|x| x.str())
         .collect();
     let own = v.get("molecole").map(doc_of).transpose()?;
-    let pick = |all: &[Molecola]| -> String {
+    let pick = |all: &[Molecule]| -> String {
         let mut j = Out::default();
         j.raw("[");
         let sel = all.iter().filter(|m| {
             own.is_some()
                 || (cat.is_some() || col.is_some())
-                    && cat.is_none_or(|c| m.origine.catalogo.iter().any(|x| x == c))
-                    && col.is_none_or(|c| m.raccolte.iter().any(|x| x == c))
+                    && cat.is_none_or(|c| m.origine.catalog.iter().any(|x| x == c))
+                    && col.is_none_or(|c| m.collections.iter().any(|x| x == c))
         });
         for (i, m) in sel.enumerate() {
             j.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" });
             j.str(&m.id).raw(",\"nome\":").str(&m.nome);
             j.raw(",\"sinonimi\":[");
-            for (k, s) in m.sinonimi.iter().enumerate() {
+            for (k, s) in m.synonyms.iter().enumerate() {
                 j.raw(if k > 0 { "," } else { "" }).str(s);
             }
             j.raw("],\"formula\":").str(&m.formula);
@@ -137,7 +137,7 @@ pub fn route(op: &str, input: &str) -> Result<String> {
     let v = || parse(input.as_bytes()).map_err(|_| bad(op));
     let docs = || from_json(input.as_bytes());
     match op {
-        "carica" => carica(&v()?),
+        "carica" => load(&v()?),
         "cerca" => Ok(search(&v()?)),
         "get" => Ok(one(&v()?)),
         "addotti" => {
@@ -164,8 +164,8 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 Ok(mut ms) if op == "da_csv" => {
                     if let Some(c) = s("raccolta").filter(|c| !c.is_empty()) {
                         for m in &mut ms {
-                            if !m.raccolte.iter().any(|x| x == c) {
-                                m.raccolte.push(c.to_string());
+                            if !m.collections.iter().any(|x| x == c) {
+                                m.collections.push(c.to_string());
                             }
                         }
                     }

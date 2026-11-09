@@ -5,7 +5,7 @@ mod comune;
 use comune::thermo::Raw;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -24,14 +24,14 @@ fn opening_and_indexing_a_run_takes_few_reads() {
     let bytes = Raw::tsq(63, scans).bytes();
     let calls = Rc::new(Cell::new(0));
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.raw".into(),
             dim: bytes.len() as u64,
             dati: Box::new(Contato(bytes.clone(), calls.clone())),
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limiti::sito()).unwrap();
+    let mut l = mzlab_lettori::apri(set, &Limits::sito()).unwrap();
     let n = l.index(0).unwrap().len();
     assert_eq!(n, scans as usize);
     eprintln!(
@@ -44,14 +44,14 @@ fn opening_and_indexing_a_run_takes_few_reads() {
     // the rows are the same as from a plain slice
     let mut r = mzlab_lettori::apri(
         FileSet {
-            membri: vec![Membro {
+            membri: vec![Member {
                 nome: "x.raw".into(),
                 dim: bytes.len() as u64,
                 dati: Box::new(bytes),
                 sha1: None,
             }],
         },
-        &Limiti::sito(),
+        &Limits::sito(),
     )
     .unwrap();
     assert_eq!(l.index(0).unwrap(), r.index(0).unwrap());

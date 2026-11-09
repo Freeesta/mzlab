@@ -1,31 +1,31 @@
 //! `chem::rotture`: the bond breaks of a public molecule (ethyl indole-3-carboxylate) on a graph built by hand: M+H 190.08626, the acid 162.05495
 //! (ester bond), the acylium 144.04439 (the acid piece without its OH, two hydrogens moved) and a node no piece gives.
 
-use mzlab_core::msngrafo::{Arco, Grafo, NodoG, SpettroG};
+use mzlab_core::msngrafo::{Edge, GNode, Graph, SpettroG};
 use mzlab_feat::chem::rotture::{rotture, Parametri};
 
 const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";
 
-fn nodo(mz: f64, livello: u8) -> NodoG {
-    NodoG {
+fn nodo(mz: f64, livello: u8) -> GNode {
+    GNode {
         mz,
         dev_ppm: 0.0,
         livello,
         albero: vec![],
         osservazioni: 1,
         rel_max: 100.0,
-        isotopo_di: None,
+        isotope_of: None,
         m1: None,
         larghezza: None,
-        a_monte: None,
-        non_spiegati: None,
+        upstream: None,
+        unexplained: None,
         pos: (0, 0),
         formula: None,
     }
 }
 
-fn arco(da: usize, a: usize) -> Arco {
-    Arco {
+fn arco(da: usize, a: usize) -> Edge {
+    Edge {
         da,
         a,
         perdita: 0.0,
@@ -36,8 +36,8 @@ fn arco(da: usize, a: usize) -> Arco {
     }
 }
 
-fn grafo() -> Grafo {
-    Grafo {
+fn grafo() -> Graph {
+    Graph {
         nodi: vec![
             nodo(190.08626, 1),
             nodo(162.05495, 2),
@@ -49,7 +49,7 @@ fn grafo() -> Grafo {
         polarita: 1,
         spettri: vec![SpettroG {
             albero: "190@cid35".into(),
-            livello: 2,
+            level: 2,
             att: "cid".into(),
             ce: 35.0,
             precursore: Some(0),
@@ -67,18 +67,18 @@ fn grafo() -> Grafo {
 #[test]
 fn the_pieces_of_the_bond_breaks_explain_the_arcs_they_cover() {
     let r = rotture(&grafo(), SMILES, Parametri::default()).unwrap();
-    let nodi: Vec<usize> = r.nodi.iter().map(|n| n.nodo).collect();
+    let nodi: Vec<usize> = r.nodes.iter().map(|n| n.node).collect();
     assert_eq!(nodi, [0, 1, 2]);
-    assert_eq!(r.nodi[0].ipotesi[0].legami, Vec::<usize>::new());
-    assert_eq!(r.nodi[1].ipotesi[0].formula, "C9H7NO2");
-    assert_eq!(r.nodi[1].ipotesi[0].h, 0);
-    assert_eq!(r.nodi[2].ipotesi[0].h, -2);
-    assert!(r.nodi[2].ipotesi[0].ppm.abs() < 1.0);
-    let spiegati: Vec<bool> = r.archi.iter().map(|a| a.spiegato).collect();
+    assert_eq!(r.nodes[0].ipotesi[0].legami, Vec::<usize>::new());
+    assert_eq!(r.nodes[1].ipotesi[0].formula, "C9H7NO2");
+    assert_eq!(r.nodes[1].ipotesi[0].h, 0);
+    assert_eq!(r.nodes[2].ipotesi[0].h, -2);
+    assert!(r.nodes[2].ipotesi[0].ppm.abs() < 1.0);
+    let spiegati: Vec<bool> = r.edges.iter().map(|a| a.spiegato).collect();
     assert_eq!(spiegati, [true, false, true]);
     // 60 of the 100 % of the spectrum sits on an explained arc
-    assert_eq!(r.spettri[0].spiegata, 60.0);
-    assert_eq!(r.spettri[0].totale, 100.0);
+    assert_eq!(r.spettri[0].explained, 60.0);
+    assert_eq!(r.spettri[0].total, 100.0);
     let (sp, tot, int) = r.conteggi();
     assert_eq!((sp, tot), (2, 3));
     assert!((int - 60.0).abs() < 1e-9);
@@ -92,8 +92,8 @@ fn no_hydrogen_transfer_loses_the_acylium_and_one_bond_is_enough_for_the_acid() 
         ..Parametri::default()
     };
     let r = rotture(&grafo(), SMILES, p).unwrap();
-    assert!(r.nodi.iter().all(|n| n.nodo != 2));
-    assert!(r.nodi.iter().any(|n| n.nodo == 1));
+    assert!(r.nodes.iter().all(|n| n.node != 2));
+    assert!(r.nodes.iter().any(|n| n.node == 1));
     assert_eq!(r, rotture(&grafo(), SMILES, p).unwrap());
 }
 
@@ -105,7 +105,7 @@ fn a_mixture_gives_no_pieces_and_a_bad_smiles_is_an_error() {
         Parametri::default(),
     )
     .unwrap();
-    assert!(r.nodi.is_empty());
-    assert_eq!(r.avvisi, ["warn.msngrafo.structMixture"]);
+    assert!(r.nodes.is_empty());
+    assert_eq!(r.warnings, ["warn.msngrafo.structMixture"]);
     assert!(rotture(&grafo(), "C(C", Parametri::default()).is_err());
 }

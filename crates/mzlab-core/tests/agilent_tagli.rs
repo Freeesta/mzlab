@@ -7,24 +7,24 @@
 mod agilent_synth;
 
 use agilent_synth::{encode, sample};
-use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
 
 const MSTS: &[u8] =
     b"<?xml version=\"1.0\"?><TimeSegments><TimeSegment><StartTime>3</StartTime><EndTime>3.1</EndTime><NumOfScans>4</NumOfScans></TimeSegment></TimeSegments>";
 
-fn apri(scan: &[u8], peak: &[u8], ts: bool) -> mzlab_core::error::Result<Box<dyn Lettore>> {
-    let mut membri = vec![
+fn apri(scan: &[u8], peak: &[u8], ts: bool) -> mzlab_core::error::Result<Box<dyn Reader>> {
+    let mut members = vec![
         ("x.D/AcqData/MSScan.bin", scan.to_vec()),
         ("x.D/AcqData/MSPeak.bin", peak.to_vec()),
     ];
     if ts {
-        membri.push(("x.D/AcqData/MSTS.xml", MSTS.to_vec()));
+        members.push(("x.D/AcqData/MSTS.xml", MSTS.to_vec()));
     }
     lettori::apri(
         FileSet {
-            membri: membri
+            membri: members
                 .into_iter()
-                .map(|(n, b)| Membro {
+                .map(|(n, b)| Member {
                     nome: n.into(),
                     dim: b.len() as u64,
                     dati: Box::new(b),
@@ -32,12 +32,12 @@ fn apri(scan: &[u8], peak: &[u8], ts: bool) -> mzlab_core::error::Result<Box<dyn
                 })
                 .collect(),
         },
-        &Limiti::sito(),
+        &Limits::sito(),
     )
 }
 
 /// (id, m/z, intensities) of every scan of the index.
-fn scansioni(l: &mut Box<dyn Lettore>) -> Vec<(String, Vec<f64>, Vec<f64>)> {
+fn scansioni(l: &mut Box<dyn Reader>) -> Vec<(String, Vec<f64>, Vec<f64>)> {
     let ix = l.index(0).expect("index").to_vec();
     (0..ix.len())
         .map(|j| {
@@ -56,33 +56,28 @@ const CHIAVI: [&str; 3] = [
 ];
 
 /// Opens the cut folder and checks it against the whole one; returns whether it opened.
-fn controlla(
-    scan: &[u8],
-    peak: &[u8],
-    intere: &[(String, Vec<f64>, Vec<f64>)],
-    dove: &str,
-) -> bool {
+fn controlla(scan: &[u8], peak: &[u8], intere: &[(String, Vec<f64>, Vec<f64>)], at: &str) -> bool {
     match apri(scan, peak, true) {
         Ok(mut l) => {
             let s = scansioni(&mut l);
             assert!(
                 s.len() < intere.len() || l.missing(0) == 0,
-                "{dove}: nothing counted"
+                "{at}: nothing counted"
             );
-            assert_eq!(s[..], intere[..s.len()], "{dove}: the scans kept differ");
+            assert_eq!(s[..], intere[..s.len()], "{at}: the scans kept differ");
             // three scans with points and one empty of four: what is not kept is missing
             assert!(
                 l.missing(0) >= intere.len() - s.len(),
-                "{dove}: {} missing",
+                "{at}: {} missing",
                 l.missing(0)
             );
-            assert!(l.missing(0) <= 4, "{dove}: {} missing", l.missing(0));
+            assert!(l.missing(0) <= 4, "{at}: {} missing", l.missing(0));
             true
         }
         // a cut inside the 160-byte header leaves nothing that says Agilent: the folder is not recognised
         Err(e) if scan.len() < 160 && e.key == "err.file.notAccepted" => false,
         Err(e) => {
-            assert!(CHIAVI.contains(&e.key), "{dove}: {}", e.key);
+            assert!(CHIAVI.contains(&e.key), "{at}: {}", e.key);
             false
         }
     }

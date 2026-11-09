@@ -47,7 +47,7 @@ impl Sqlite {
 /// is still checked, so a damaged one is refused the same way.
 pub(super) fn record_in(
     b: &[u8],
-    limits: &Limiti,
+    limits: &Limits,
     voglio: Option<&[bool]>,
     out: &mut Vec<Val>,
 ) -> Result<()> {
@@ -63,7 +63,7 @@ pub(super) fn record_in(
         let (_, k) = varint(&b[o..hl]).ok_or_else(|| guasto("serial type"))?;
         o += k;
         n += 1;
-        limits.voci_ok(n)?;
+        limits.ok_entries(n)?;
     }
     out.reserve(n as usize);
     let (mut o, mut corpo) = (o0, hl);

@@ -73,7 +73,7 @@ fn node_json(o: &mut Out, n: &NodeView) {
     o.raw("{\"instance\":").str(&n.instance);
     o.raw(",\"state\":").str(n.state.name());
     o.raw(",\"frac\":").opt(n.frac);
-    o.raw(",\"parte\":").int(n.parte as i64);
+    o.raw(",\"parte\":").int(n.part as i64);
     o.raw(",\"di\":").int(n.di as i64);
     o.raw(",\"ms\":").num(n.ms).raw("}");
 }

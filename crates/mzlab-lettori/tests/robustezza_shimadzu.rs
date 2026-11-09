@@ -5,13 +5,13 @@
 mod comune;
 
 use comune::shimadzu::*;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
 fn file_set(byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.lcd".into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
@@ -63,7 +63,7 @@ fn semi() -> Vec<Vec<u8>> {
 }
 
 fn everything(byte: Vec<u8>) {
-    let Ok(mut l) = mzlab_lettori::apri(file_set(byte), &Limiti::sito()) else {
+    let Ok(mut l) = mzlab_lettori::apri(file_set(byte), &Limits::sito()) else {
         return;
     };
     let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
@@ -120,7 +120,7 @@ fn every_refusal_has_a_key() {
     for s in semi() {
         for cut in [0, 7, 511, 512, 1024, s.len() / 3] {
             if let Err(e) =
-                mzlab_lettori::apri(file_set(s[..cut.min(s.len())].to_vec()), &Limiti::sito())
+                mzlab_lettori::apri(file_set(s[..cut.min(s.len())].to_vec()), &Limits::sito())
             {
                 assert!(e.key.starts_with("err."), "{}", e.key);
             }
@@ -130,9 +130,9 @@ fn every_refusal_has_a_key() {
 
 #[test]
 fn a_table_over_the_limit_is_refused_with_a_key() {
-    let l = Limiti {
-        voci: 4,
-        ..Limiti::sito()
+    let l = Limits {
+        entries: 4,
+        ..Limits::sito()
     };
     for b in [qgd(6), lcd2020(3), lcd_tlm(8)] {
         let e = mzlab_lettori::apri_nudo(file_set(b), &l)
@@ -149,7 +149,7 @@ fn a_table_over_the_limit_is_refused_with_a_key() {
 #[test]
 fn a_cut_empty_or_foreign_container_says_what_it_is() {
     let key = |b: Vec<u8>| {
-        mzlab_lettori::apri(file_set(b), &Limiti::sito())
+        mzlab_lettori::apri(file_set(b), &Limits::sito())
             .err()
             .map(|e| (e.key, e.params))
     };

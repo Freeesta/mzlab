@@ -5,7 +5,7 @@
 mod comune_waters;
 use std::path::Path;
 
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::{self, Chromatogram, Item};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -26,7 +26,7 @@ pub fn folder(rel: &str) -> Option<FileSet> {
             continue;
         }
         let f = std::fs::File::open(&p).ok()?;
-        members.push(Membro {
+        members.push(Member {
             nome: format!("{name}/{}", p.file_name()?.to_string_lossy()),
             dim: f.metadata().ok()?.len(),
             dati: Box::new(f),
@@ -36,10 +36,10 @@ pub fn folder(rel: &str) -> Option<FileSet> {
     Some(FileSet { membri: members })
 }
 
-pub fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
+pub fn apri(rel: &str) -> Option<Box<dyn Reader>> {
     let fs = folder(rel)?;
     Some(
-        mzlab_lettori::apri_nudo(fs, &Limiti::sito())
+        mzlab_lettori::apri_nudo(fs, &Limits::sito())
             .unwrap_or_else(|e| panic!("{rel}: {}", e.key)),
     )
 }
@@ -198,7 +198,7 @@ fn folders_without_function_table_are_refused_with_a_key() {
         "waters/raw/cyclic_ims_PXD052561/20230920_NM4_1187_ECD_2_CID_25.raw",
     ] {
         let Some(fs) = folder(rel) else { continue };
-        match mzlab_lettori::apri_nudo(fs, &Limiti::sito()) {
+        match mzlab_lettori::apri_nudo(fs, &Limits::sito()) {
             Ok(mut l) => eprintln!("{rel}: opens, {} scans", l.index(0).map_or(0, <[_]>::len)),
             Err(e) => assert!(e.key.starts_with("err.file."), "{rel}: {}", e.key),
         }

@@ -1,12 +1,12 @@
 //! What a series lacks, as stable codes (the pages put the words), and what the TP path needs: indices by role and the minutes of
 //! `feature_pipeline/1` (`genitore.minuti`: the time of a sample or a time zero, null otherwise; the infusion is never a control).
 
-use super::Campione;
+use super::Sample;
 use crate::json::Out;
 
 /// One finding: `code` (`timeMissing`, `noT0`, ...), `severity` (`error` blocks mzFinder, `warning`, `info`), the file (index) or the series.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Avviso {
+pub struct Warning {
     pub code: &'static str,
     pub severity: &'static str,
     pub file: Option<usize>,
@@ -16,13 +16,13 @@ pub struct Avviso {
 }
 
 fn push(
-    out: &mut Vec<Avviso>,
+    out: &mut Vec<Warning>,
     code: &'static str,
     severity: &'static str,
     file: Option<usize>,
     series: &str,
 ) {
-    out.push(Avviso {
+    out.push(Warning {
         code,
         severity,
         file,
@@ -32,7 +32,7 @@ fn push(
 }
 
 /// The checks of one file: a sample needs a confirmed time, a time zero has no other time.
-fn file_checks(out: &mut Vec<Avviso>, i: usize, c: &Campione) {
+fn file_checks(out: &mut Vec<Warning>, i: usize, c: &Sample) {
     match c.role() {
         "sample" if c.time_min.is_none() => push(out, "timeMissing", "error", Some(i), &c.series),
         "sample" if !c.time_confirmed => push(out, "timeUnconfirmed", "error", Some(i), &c.series),
@@ -47,10 +47,10 @@ fn file_checks(out: &mut Vec<Avviso>, i: usize, c: &Campione) {
 }
 
 /// The checks of one series: the files of `series` and the ones of no series (shared by all).
-fn series_checks(out: &mut Vec<Avviso>, cs: &[Campione], series: &str) {
-    let member = |c: &&Campione| series.is_empty() || c.series.is_empty() || c.series == series;
+fn series_checks(out: &mut Vec<Warning>, cs: &[Sample], series: &str) {
+    let member = |c: &&Sample| series.is_empty() || c.series.is_empty() || c.series == series;
     let has = |role: &str| cs.iter().filter(member).any(|c| c.role() == role);
-    let treated: Vec<&Campione> = cs
+    let treated: Vec<&Sample> = cs
         .iter()
         .filter(member)
         .filter(|c| c.role() == "sample" && c.time_min.is_some_and(|t| t > 0.0))
@@ -74,7 +74,7 @@ fn series_checks(out: &mut Vec<Avviso>, cs: &[Campione], series: &str) {
             push(out, "noDark", "info", None, series);
         }
     }
-    let same = |a: &Campione, b: &Campione| a.time_min == b.time_min && a.conc == b.conc;
+    let same = |a: &Sample, b: &Sample| a.time_min == b.time_min && a.conc == b.conc;
     if treated
         .iter()
         .enumerate()
@@ -85,7 +85,7 @@ fn series_checks(out: &mut Vec<Avviso>, cs: &[Campione], series: &str) {
 }
 
 /// The findings of a series of files, errors first per file, then per series, then for the whole set.
-pub fn valida(cs: &[Campione]) -> Vec<Avviso> {
+pub fn validate(cs: &[Sample]) -> Vec<Warning> {
     let mut out = Vec::new();
     for (i, c) in cs.iter().enumerate() {
         file_checks(&mut out, i, c);
@@ -115,7 +115,7 @@ pub fn valida(cs: &[Campione]) -> Vec<Avviso> {
 }
 
 /// `{"avvisi":[{"codice","gravita","file","serie"[,"colonna"]}],"bloccante"}`: `bloccante` when one finding is an error (mzFinder does not start).
-pub fn valida_json(a: &[Avviso]) -> String {
+pub fn validate_json(a: &[Warning]) -> String {
     let mut j = Out::default();
     j.raw("{\"avvisi\":[");
     for (i, x) in a.iter().enumerate() {
@@ -161,7 +161,7 @@ pub struct PerTp {
     pub minutes: Vec<Option<f64>>,
 }
 
-pub fn per_tp(cs: &[Campione]) -> PerTp {
+pub fn per_tp(cs: &[Sample]) -> PerTp {
     let mut p = PerTp::default();
     for (i, c) in cs.iter().enumerate() {
         let mut minutes = None;

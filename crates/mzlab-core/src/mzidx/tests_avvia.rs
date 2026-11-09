@@ -8,19 +8,19 @@
 use super::*;
 
 /// `avvia` one peak at a time: the reference of the run-wise merge.
-fn per_peak(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
+fn per_peak(groups: &mut [Group], sp: &mut dyn Spill) -> Result<Parts> {
     let mut counts = vec![0u64; NB];
-    for g in gruppi.iter() {
+    for g in groups.iter() {
         for (c, &x) in counts.iter_mut().zip(&g.counts) {
             *c += u64::from(x);
         }
     }
-    let mut parti = Parti::new(&counts);
-    let mut next = vec![0usize; gruppi.len()];
+    let mut parts = Parts::new(&counts);
+    let mut next = vec![0usize; groups.len()];
     loop {
         let mut best: Option<(usize, (f64, f64, u32))> = None;
-        for (i, g) in gruppi.iter().enumerate() {
-            if let Some(p) = g.picco(next[i])
+        for (i, g) in groups.iter().enumerate() {
+            if let Some(p) = g.peak(next[i])
                 && best.is_none_or(|(_, b)| p.2 < b.2)
             {
                 best = Some((i, p));
@@ -30,21 +30,21 @@ fn per_peak(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
             break;
         };
         next[i] += 1;
-        if gruppi[i].f32 {
-            parti.push32(sp, mz as f32, it as f32, pos)?;
+        if groups[i].f32 {
+            parts.push32(sp, mz as f32, it as f32, pos)?;
         } else {
-            parti.push(sp, mz, it, pos, gruppi[i].level == 1)?;
+            parts.push(sp, mz, it, pos, groups[i].level == 1)?;
         }
     }
-    Ok(parti)
+    Ok(parts)
 }
 #[test]
 fn the_run_merge_writes_the_bytes_of_the_peak_merge() {
     for f32 in [false, true] {
         let mut gs = vec![
-            Gruppo::nuovo(1, 1, f32),
-            Gruppo::nuovo(2, 1, false),
-            Gruppo::nuovo(1, -1, f32),
+            Group::nuovo(1, 1, f32),
+            Group::nuovo(2, 1, false),
+            Group::nuovo(1, -1, f32),
         ];
         let mut pos = 0u32;
         for s in 0..300u32 {
@@ -68,7 +68,7 @@ fn the_run_merge_writes_the_bytes_of_the_peak_merge() {
         let mut pa = per_peak(&mut gs, &mut a).unwrap();
         pa.fine(&mut a).unwrap();
         let mut b = std::io::Cursor::new(Vec::new());
-        let mut pb = avvia(&mut gs, &mut b).unwrap();
+        let mut pb = start(&mut gs, &mut b).unwrap();
         pb.fine(&mut b).unwrap();
         assert!(!a.get_ref().is_empty());
         assert_eq!(a.get_ref(), b.get_ref(), "f32={f32}");

@@ -203,7 +203,7 @@ impl Rows {
     }
 
     /// Level and polarity of the row added last: what the `.mzidx` builder groups the scan by (the text of an extra can say more than the scan does).
-    pub(crate) fn ultima(&self) -> Option<(u8, i8)> {
+    pub(crate) fn last(&self) -> Option<(u8, i8)> {
         self.rows.last().map(|r| (r.level, r.polarity))
     }
 
@@ -361,7 +361,7 @@ impl Rows {
         let row = Row {
             start: a,
             end: b,
-            dove: None,
+            at: None,
             level,
             rt,
             polarity: pol,
@@ -398,7 +398,7 @@ impl Rows {
     /// One scan of a reader, as `spectrum` would read the header `mzmlwrite::spectrum_head(k, sp, extra)` writes for it, without writing it: the same
     /// fields from the same values (`sp` with its arrays cut to the shorter one, `tic` the total the writer writes: `extra.tic`, else the sum of the
     /// intensities). `false` and nothing added when an extra could change what the text says (`extra_inerte`): the caller then gives `spectrum` the text.
-    pub(crate) fn lettore(&mut self, sp: &Spectrum, extra: &SpectrumExtra, tic: f64) -> bool {
+    pub(crate) fn reader(&mut self, sp: &Spectrum, extra: &SpectrumExtra, tic: f64) -> bool {
         if !extra_inerte(sp, extra) {
             return false;
         }
@@ -433,7 +433,7 @@ impl Rows {
         let row = Row {
             start: 0,
             end: 0,
-            dove: None,
+            at: None,
             level,
             rt: sp.rt,
             polarity,

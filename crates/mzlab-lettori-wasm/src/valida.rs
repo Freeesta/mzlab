@@ -58,7 +58,7 @@ pub fn validate_mzml(name: &str, size: f64, read: Function) -> Result<String, Js
         dim: size as u64,
         pos: 0,
     };
-    let r = mzlab_core::mzmlvalida::valida(s).map_err(|e| {
+    let r = mzlab_core::mzmlvalida::validate(s).map_err(|e| {
         JsValue::from_str(&format!("{{\"error_key\":\"{}\",\"params\":{{}}}}", e.key))
     })?;
     Ok(mzlab_core::mzmlvalida::json_un_file(name, &r))

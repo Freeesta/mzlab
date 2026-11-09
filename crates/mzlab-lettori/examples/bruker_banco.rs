@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::time::Instant;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 
 #[path = "../tests/comune_sqlite/mod.rs"]
 mod comune_sqlite;
@@ -27,7 +27,7 @@ fn file_set(dir: &Path) -> FileSet {
         .map(|m| {
             let f = std::fs::File::open(dir.join(m)).unwrap();
             let dim = f.metadata().unwrap().len();
-            Membro {
+            Member {
                 nome: format!("{name}/{m}"),
                 dim,
                 dati: Box::new(f),
@@ -45,7 +45,7 @@ fn ms(t: Instant) -> f64 {
 fn measure(dir: &Path, giri: usize) {
     for g in 0..giri {
         let t = Instant::now();
-        let mut l = mzlab_lettori::apri(file_set(dir), &Limiti::desktop()).unwrap();
+        let mut l = mzlab_lettori::apri(file_set(dir), &Limits::desktop()).unwrap();
         let apri = ms(t);
         let t = Instant::now();
         let n = l.index(0).unwrap().len();
@@ -73,7 +73,7 @@ fn measure(dir: &Path, giri: usize) {
         }
         let all = ms(t);
         let t = Instant::now();
-        let mut l = mzlab_lettori::apri(file_set(dir), &Limiti::desktop()).unwrap();
+        let mut l = mzlab_lettori::apri(file_set(dir), &Limits::desktop()).unwrap();
         mzlab_core::lettori_mzml::scrivi(&mut *l, 0, std::io::sink(), &mut |_, _| {}).unwrap();
         let mzml = ms(t);
         println!(

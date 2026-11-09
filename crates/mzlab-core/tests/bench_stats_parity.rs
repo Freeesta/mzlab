@@ -166,7 +166,7 @@ fn parity_bootstrap_confidence_interval() {
 
         let tipo_str = c["tipo"].as_str().unwrap_or("media");
         let tipo = if tipo_str == "mediana" {
-            StatTipo::Mediana
+            StatTipo::Median
         } else {
             StatTipo::Media
         };
@@ -174,15 +174,15 @@ fn parity_bootstrap_confidence_interval() {
         let res = intervallo(&x, tipo, 200, 20261012);
         assert_eq!(res.n, x.len());
         assert!(
-            close(res.valore.expect("val"), want_pt, 1e-9),
+            close(res.value.expect("val"), want_pt, 1e-9),
             "boot case {i} value"
         );
         assert!(
-            close(res.ic_basso.expect("lo"), want_lo, 1e-9),
+            close(res.ci_low.expect("lo"), want_lo, 1e-9),
             "boot case {i} lo"
         );
         assert!(
-            close(res.ic_alto.expect("hi"), want_hi, 1e-9),
+            close(res.ci_high.expect("hi"), want_hi, 1e-9),
             "boot case {i} hi"
         );
     }
@@ -195,7 +195,7 @@ fn edge_cases_and_robustness() {
     assert_eq!(holm(&[], 0.05), (Vec::new(), Vec::new()));
     let empty_int = intervallo(&[], StatTipo::Media, 100, 1);
     assert_eq!(empty_int.n, 0);
-    assert!(empty_int.valore.is_none());
+    assert!(empty_int.value.is_none());
 
     let empty_diff = differenza(&[], &[], StatTipo::Media, 100, 1);
     assert!(empty_diff.is_some());

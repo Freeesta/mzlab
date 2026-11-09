@@ -19,7 +19,7 @@ pub use kmd::{
 };
 
 use crate::samples::Sample;
-use mzlab_core::disegno::{Confronto, Disegno};
+use mzlab_core::disegno::{Confronto, Design};
 use mzlab_core::error::{Error, Result};
 
 pub const SCHEMA: &str = "stat/1";
@@ -46,7 +46,7 @@ impl Layout {
 }
 
 /// The layout of a design: conditions by name, sample files by their group, blanks by their type; the reference of the design.
-pub fn layout_from_design(samples: &[Sample], d: &Disegno) -> Layout {
+pub fn layout_from_design(samples: &[Sample], d: &Design) -> Layout {
     let names: Vec<String> = d.conditions.iter().map(|c| c.name.clone()).collect();
     Layout {
         group_of: samples
@@ -67,7 +67,7 @@ pub fn layout_from_design(samples: &[Sample], d: &Disegno) -> Layout {
 }
 
 /// The comparisons of a design as pairs `(a, b)` of conditions (`b` against `a`); "every condition against the reference" needs a reference.
-pub fn comparisons_from_design(d: &Disegno, lay: &Layout) -> Result<Vec<(usize, usize)>> {
+pub fn comparisons_from_design(d: &Design, lay: &Layout) -> Result<Vec<(usize, usize)>> {
     let find = |n: &str| {
         lay.names
             .iter()

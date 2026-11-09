@@ -1,15 +1,15 @@
-//! The BPC of the full scan experiments of a `.wiff`: the mzML writer reads every scan once and `LettoreWiff::watch`
+//! The BPC of the full scan experiments of a `.wiff`: the mzML writer reads every scan once and `WiffReader::watch`
 //! notes its base peak on the way, so the chromatograms are listed with the BPC only after that pass and no scan is ever decoded twice.
 
-use super::lettore::LettoreWiff;
+use super::lettore::WiffReader;
 use crate::error::Result;
-use crate::lettori::VoceCromatogramma;
+use crate::lettori::ChromatogramEntry;
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 
-impl LettoreWiff {
+impl WiffReader {
     /// Notes the base peak of scan `k` of injection `c` (the mzML writer reads every scan once, in order; the BPC comes from these).
     pub(super) fn watch(&mut self, c: usize, k: usize, s: &Spectrum) {
-        let Some(p) = self.parti.get_mut(c) else {
+        let Some(p) = self.parts.get_mut(c) else {
             return;
         };
         if p.bpc.len() != p.scans.len() {
@@ -24,14 +24,14 @@ impl LettoreWiff {
 
     /// The BPC of each full scan experiment of injection `c`, in the order and with the times of its TIC; none until every scan went through `watch`.
     pub(super) fn bpc_chroms(&mut self, c: usize) -> Result<Vec<Chromatogram>> {
-        self.pronta(c)?;
+        self.ready(c)?;
         let many = self
             .chromatograms(c)?
             .iter()
             .filter(|h| h.kind == ChromKind::Tic)
             .count()
             > 1;
-        let p = self.parte(c)?;
+        let p = self.part(c)?;
         if p.bpc.is_empty() || p.bpc_seen != p.scans.len() {
             return Ok(Vec::new());
         }
@@ -64,7 +64,7 @@ impl LettoreWiff {
     }
 
     /// Adds the BPC chromatograms of injection `c` to the list `v` (before the optical trace, as `Wiff::visit` orders them).
-    pub(super) fn list_bpc(&mut self, c: usize, v: &mut Vec<VoceCromatogramma>) -> Result<()> {
+    pub(super) fn list_bpc(&mut self, c: usize, v: &mut Vec<ChromatogramEntry>) -> Result<()> {
         let bpc = self.bpc_chroms(c)?;
         let at = v
             .iter()
@@ -72,7 +72,7 @@ impl LettoreWiff {
             .unwrap_or(v.len());
         v.splice(
             at..at,
-            bpc.iter().map(|h| VoceCromatogramma {
+            bpc.iter().map(|h| ChromatogramEntry {
                 id: h.id.clone(),
                 tipo: h.kind,
                 unita: h.unit.clone(),

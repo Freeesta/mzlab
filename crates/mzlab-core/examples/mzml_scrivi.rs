@@ -1,6 +1,6 @@
 //! Writer benchmark: `mzml_scrivi [SCANS] [PEAKS]` writes synthetic profile-like spectra at each zlib level (and with numpress) and prints size and time.
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 use std::time::Instant;
 
 fn spectra(scans: usize, peaks: usize) -> Vec<Spectrum> {
@@ -41,42 +41,42 @@ fn main() {
     let scans: usize = a.get(1).and_then(|x| x.parse().ok()).unwrap_or(2000);
     let peaks: usize = a.get(2).and_then(|x| x.parse().ok()).unwrap_or(5000);
     let spectra = spectra(scans, peaks);
-    for (nome, opz) in [
+    for (name, opz) in [
         (
             "zlib1",
-            Opzioni {
+            Options {
                 livello: 1,
                 numpress: false,
-                ..Opzioni::default()
+                ..Options::default()
             },
         ),
         (
             "zlib3",
-            Opzioni {
+            Options {
                 livello: 3,
                 numpress: false,
-                ..Opzioni::default()
+                ..Options::default()
             },
         ),
         (
             "zlib6",
-            Opzioni {
+            Options {
                 livello: 6,
                 numpress: false,
-                ..Opzioni::default()
+                ..Options::default()
             },
         ),
         (
             "numpress",
-            Opzioni {
+            Options {
                 livello: 1,
                 numpress: true,
-                ..Opzioni::default()
+                ..Options::default()
             },
         ),
     ] {
         let t = Instant::now();
-        let mut w = MzmlWriter::con_opzioni(
+        let mut w = MzmlWriter::with_options(
             Vec::new(),
             &Header {
                 run: "x".into(),
@@ -92,7 +92,7 @@ fn main() {
         w.close_spectra().unwrap();
         let n = w.finish().unwrap().len();
         println!(
-            "{nome:9} {:8.1} MB {:6.2} s",
+            "{name:9} {:8.1} MB {:6.2} s",
             n as f64 / 1e6,
             t.elapsed().as_secs_f64()
         );

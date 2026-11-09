@@ -190,6 +190,6 @@ fn timing_of_the_parsers() {
     };
     let old = best(&|| records_ref(&t, ',').unwrap().len());
     let new = best(&|| records(&t, ',').unwrap().len());
-    let all = best(&|| leggi(&t, None, &[]).unwrap().campioni.len() + 1);
+    let all = best(&|| read(&t, None, &[]).unwrap().campioni.len() + 1);
     eprintln!("records old {old:.2} ms · new {new:.2} ms · leggi (whole) {all:.2} ms");
 }

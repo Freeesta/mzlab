@@ -164,7 +164,7 @@ fn the_nts_rules_read_the_batches_of_campioni_3_and_match_the_page() {
     for (c, b) in cs.iter_mut().zip(["B1", "B1", "B2", "B2"]) {
         c.batch = b.into();
     }
-    let samples = campioni::to_json3(&campioni::Tabella {
+    let samples = campioni::to_json3(&campioni::Table {
         campioni: cs,
         colonne: Vec::new(),
     });

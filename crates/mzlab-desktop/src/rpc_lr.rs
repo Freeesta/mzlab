@@ -171,7 +171,7 @@ impl State {
                 Some(Ok(j)) => text(j),
                 Some(Err(j)) => text(format!("E{j}")),
             },
-            "lr_campioni" => text(mzlab_core::campioni::route_tutto(s("cop"), s("body"))?),
+            "lr_campioni" => text(mzlab_core::campioni::route_all(s("cop"), s("body"))?),
             "lr_molecole_archivio" => text(self.store.lock().unwrap_or_else(|e| e.into_inner()).molecules(s("mop"), s("body"))?),
             "lr_molecules" => text(mzlab_core::molecules::route(s("mop"), s("body"))?),
             "lr_formula" => {
@@ -211,7 +211,7 @@ impl State {
         let entry = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).filter(|e| e.nat.is_none());
         let entry = entry.ok_or_else(|| Error::new("err.file.unknown").with("detail", name))?;
         let file = std::fs::File::open(&entry.path).map_err(|e| Error::new("err.file.unknown").with("detail", e.to_string()))?;
-        let report = mzlab_core::mzmlvalida::valida(std::io::BufReader::new(file))?;
+        let report = mzlab_core::mzmlvalida::validate(std::io::BufReader::new(file))?;
         text(mzlab_core::mzmlvalida::json_un_file(name, &report))
     }
 

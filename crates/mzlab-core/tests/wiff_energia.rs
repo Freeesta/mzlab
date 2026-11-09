@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::wiff::{container, samples, Wiff};
 use serde_json::Value;
 
@@ -33,7 +33,7 @@ fn reference() -> Option<(PathBuf, Value)> {
 fn pair(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
-        Membro {
+        Member {
             nome: file,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -74,7 +74,7 @@ fn the_collision_energy_of_each_experiment_is_read_and_written() {
         .all(|e| e.iso_half.is_some() == (e.level == 2)));
 
     // the mzML: one activation per product-ion spectrum, with its energy and the offsets of the isolation window
-    let mut l = lettori::apri(pair(&dir, "energia"), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(pair(&dir, "energia"), &Limits::sito()).unwrap();
     let mzml = String::from_utf8(
         mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )

@@ -4,7 +4,7 @@
 
 use crate::agilent::meta::Item;
 use crate::metodo::V;
-pub use crate::metodo_campi::{Campo, Ident};
+pub use crate::metodo_campi::{Field, Ident};
 use opentfraw::generic_data::GenericValue;
 use opentfraw::RawFileReader;
 
@@ -114,7 +114,7 @@ impl Trailer {
         }
     }
 
-    pub(super) fn finish(self, raw: &RawFileReader) -> Vec<Campo> {
+    pub(super) fn finish(self, raw: &RawFileReader) -> Vec<Field> {
         const FROM: &str = "thermo-raw:ScanParameters";
         let mut out = Vec::new();
         for (d, c) in raw.scan_parameters_header.fields.iter().zip(self.0) {
@@ -133,7 +133,7 @@ impl Trailer {
                     format!("{label} (distinct values)"),
                 )
             };
-            out.push(Campo::new(FROM, &key, value));
+            out.push(Field::new(FROM, &key, value));
         }
         out
     }
@@ -164,49 +164,49 @@ pub fn clock(secs: f64) -> Option<String> {
 }
 
 /// The fixed places of the container.
-fn container(raw: &RawFileReader) -> Vec<Campo> {
+fn container(raw: &RawFileReader) -> Vec<Field> {
     let (h, s, i) = (&raw.header, &raw.seq_row, &raw.seq_row.injection);
-    let mut v = vec![Campo::new("thermo-raw:FileHeader", "Version", h.version)];
+    let mut v = vec![Field::new("thermo-raw:FileHeader", "Version", h.version)];
     for (tag, a) in [("AuditStart", &h.audit_start), ("AuditEnd", &h.audit_end)] {
         let from = format!("thermo-raw:FileHeader/{tag}");
         let when = clock(a.time).unwrap_or_default();
         v.push(if tag == "AuditStart" {
-            Campo::new(&from, "time", when).map("origine.file_creato")
+            Field::new(&from, "time", when).map("origine.file_creato")
         } else {
-            Campo::new(&from, "time", when)
+            Field::new(&from, "time", when)
         });
-        v.push(Campo::new(&from, "tag1", &a.tag1).id());
+        v.push(Field::new(&from, "tag1", &a.tag1).id());
         v.push(if tag == "AuditStart" {
-            Campo::new(&from, "tag2", &a.tag2)
+            Field::new(&from, "tag2", &a.tag2)
                 .map("operatore.utente")
                 .id()
         } else {
-            Campo::new(&from, "tag2", &a.tag2).id()
+            Field::new(&from, "tag2", &a.tag2).id()
         });
     }
     let q = "thermo-raw:SeqRow";
-    v.push(Campo::new(q, "RowNumber", i.row_number));
-    v.push(Campo::new(q, "InjectionVial", &i.vial));
+    v.push(Field::new(q, "RowNumber", i.row_number));
+    v.push(Field::new(q, "InjectionVial", &i.vial));
     v.push(
-        Campo::new(q, "InjectionVolume", i.injection_volume)
+        Field::new(q, "InjectionVolume", i.injection_volume)
             .unit("µL")
             .map("campione.iniezione_uL"),
     );
-    v.push(Campo::new(q, "SampleWeight", i.sample_weight));
-    v.push(Campo::new(q, "SampleVolume", i.sample_volume));
-    v.push(Campo::new(q, "IstdAmount", i.istd_amount));
-    v.push(Campo::new(q, "DilutionFactor", i.dilution_factor));
-    v.push(Campo::new(q, "Id", &s.id).map("campione.id"));
-    v.push(Campo::new(q, "Comment", &s.comment).map("campione.commento"));
-    v.push(Campo::new(q, "Vial", &s.vial).map("campione.vial"));
+    v.push(Field::new(q, "SampleWeight", i.sample_weight));
+    v.push(Field::new(q, "SampleVolume", i.sample_volume));
+    v.push(Field::new(q, "IstdAmount", i.istd_amount));
+    v.push(Field::new(q, "DilutionFactor", i.dilution_factor));
+    v.push(Field::new(q, "Id", &s.id).map("campione.id"));
+    v.push(Field::new(q, "Comment", &s.comment).map("campione.commento"));
+    v.push(Field::new(q, "Vial", &s.vial).map("campione.vial"));
     v.push(
-        Campo::new(q, "InstMethod", &s.inst_method)
+        Field::new(q, "InstMethod", &s.inst_method)
             .map("campione.metodo_file")
             .id(),
     );
-    v.push(Campo::new(q, "ProcMethod", &s.proc_method).id());
-    v.push(Campo::new(q, "FileName", &s.file_name).id());
-    v.push(Campo::new(q, "Path", &s.path).id());
+    v.push(Field::new(q, "ProcMethod", &s.proc_method).id());
+    v.push(Field::new(q, "FileName", &s.file_name).id());
+    v.push(Field::new(q, "Path", &s.path).id());
     for (n, value) in s.user_labels.iter().enumerate() {
         let name = raw
             .raw_file_info
@@ -215,10 +215,10 @@ fn container(raw: &RawFileReader) -> Vec<Campo> {
             .filter(|h| !h.is_empty())
             .cloned()
             .unwrap_or_else(|| format!("UserLabel{n}"));
-        v.push(Campo::new("thermo-raw:SeqRow/UserLabels", &name, value).id());
+        v.push(Field::new("thermo-raw:SeqRow/UserLabels", &name, value).id());
     }
     if !raw.as_info.text.trim().is_empty() {
-        v.push(Campo::new(
+        v.push(Field::new(
             "thermo-raw:ASInfo",
             "Text",
             raw.as_info.text.trim(),
@@ -226,11 +226,11 @@ fn container(raw: &RawFileReader) -> Vec<Campo> {
     }
     let r = "thermo-raw:RawFileInfo";
     v.push(
-        Campo::new(r, "ComputerName", &raw.raw_file_info.computer_name)
+        Field::new(r, "ComputerName", &raw.raw_file_info.computer_name)
             .map("operatore.computer")
             .id(),
     );
-    v.push(Campo::new(
+    v.push(Field::new(
         r,
         "MethodFilePresent",
         raw.raw_file_info.preamble.method_file_present,
@@ -239,7 +239,7 @@ fn container(raw: &RawFileReader) -> Vec<Campo> {
 }
 
 /// InstID strings by position (measured on v66: model twice, serial number, software, hardware).
-fn instid(raw: &RawFileReader) -> Vec<Campo> {
+fn instid(raw: &RawFileReader) -> Vec<Field> {
     const NAMES: [(&str, Option<&str>); 5] = [
         ("Model", None),
         ("Model (2)", None),
@@ -255,45 +255,45 @@ fn instid(raw: &RawFileReader) -> Vec<Campo> {
             let from = format!("thermo-raw:InstID#{n}");
             match NAMES.get(n) {
                 Some((k, m)) => {
-                    let c = Campo::new(&from, k, t).map_opt(*m);
+                    let c = Field::new(&from, k, t).map_opt(*m);
                     if n == 2 {
                         c.id()
                     } else {
                         c
                     }
                 }
-                None => Campo::new(&from, &format!("String{n}"), t),
+                None => Field::new(&from, &format!("String{n}"), t),
             }
         })
         .collect()
 }
 
 /// The analog controllers (pump pressure ...): the channel, its unit and the device it comes from.
-fn analog(traces: &[opentfraw::AnalogTrace]) -> Vec<Campo> {
+fn analog(traces: &[opentfraw::AnalogTrace]) -> Vec<Field> {
     let mut v = Vec::new();
     for t in traces {
         let from = format!("thermo-raw:Controller{}", t.controller);
-        v.push(Campo::new(&from, "ChannelName", &t.name));
-        v.push(Campo::new(&from, "Unit", &t.unit));
-        v.push(Campo::new(&from, "Samples", t.values.len()));
-        v.push(Campo::new(&from, "DeviceDriver", &t.driver));
-        v.push(Campo::new(&from, "DeviceModel", &t.model));
-        v.push(Campo::new(&from, "DeviceSerialNumber", &t.serial).id());
+        v.push(Field::new(&from, "ChannelName", &t.name));
+        v.push(Field::new(&from, "Unit", &t.unit));
+        v.push(Field::new(&from, "Samples", t.values.len()));
+        v.push(Field::new(&from, "DeviceDriver", &t.driver));
+        v.push(Field::new(&from, "DeviceModel", &t.model));
+        v.push(Field::new(&from, "DeviceSerialNumber", &t.serial).id());
     }
     v
 }
 
-fn run_header(raw: &RawFileReader) -> Vec<Campo> {
+fn run_header(raw: &RawFileReader) -> Vec<Field> {
     let i = &raw.run_header.sample_info;
     let q = "thermo-raw:RunHeader/SampleInfo";
     vec![
-        Campo::new(q, "FirstScan", i.first_scan_number),
-        Campo::new(q, "LastScan", i.last_scan_number),
-        Campo::new(q, "LowMz", i.low_mz).unit("m/z"),
-        Campo::new(q, "HighMz", i.high_mz).unit("m/z"),
-        Campo::new(q, "StartTime", i.start_time).unit("min"),
-        Campo::new(q, "EndTime", i.end_time).unit("min"),
-        Campo::new(q, "MaxIonCurrent", i.max_ion_current),
+        Field::new(q, "FirstScan", i.first_scan_number),
+        Field::new(q, "LastScan", i.last_scan_number),
+        Field::new(q, "LowMz", i.low_mz).unit("m/z"),
+        Field::new(q, "HighMz", i.high_mz).unit("m/z"),
+        Field::new(q, "StartTime", i.start_time).unit("min"),
+        Field::new(q, "EndTime", i.end_time).unit("min"),
+        Field::new(q, "MaxIonCurrent", i.max_ion_current),
     ]
 }
 
@@ -311,7 +311,7 @@ fn script_map(key: &str) -> Option<&'static str> {
 /// All the fields of the file, in a stable order (origin, key); the ones that name a person or a computer carry `identita`.
 pub fn fields(
     raw: &RawFileReader,
-    trailer: Vec<Campo>,
+    trailer: Vec<Field>,
     traces: &[opentfraw::AnalogTrace],
     pairs: &[super::script::Pair],
     xml: &[Item],
@@ -330,13 +330,13 @@ pub fn fields(
             format!("thermo-raw:InstrumentMethod/Script@{t}min")
         });
         all.push(
-            Campo::new(&from, k, v)
+            Field::new(&from, k, v)
                 .unit(u.as_deref().unwrap_or(""))
                 .map_opt(script_map(k)),
         );
     }
     for it in xml {
-        let c = Campo::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value);
+        let c = Field::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value);
         all.push(if it.name.contains("/ScanEvent/") {
             c.map("ms.periodi")
         } else {
@@ -350,7 +350,7 @@ pub fn fields(
     crate::sortc::slice_by(&mut all, |a, b| {
         (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
     });
-    all.iter().filter_map(Campo::json).collect()
+    all.iter().filter_map(Field::json).collect()
 }
 
 mod status;

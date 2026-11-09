@@ -7,7 +7,7 @@ use super::grafo::Mol;
 use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{
-    con_strutture, con_strutture_tutti, CandidatoStruttura, Grafo, IngressoStrutture,
+    con_strutture, con_strutture_tutti, CandidatoStruttura, Graph, IngressoStrutture,
     PiccoSpiegato, Strutture, Taglio,
 };
 
@@ -36,28 +36,28 @@ fn taglio(
                 .map_or(0.0, |p| p.1),
             ppm: x.ppm,
             formula: x.formula.clone(),
-            perdita: x.loss.clone(),
+            loss: x.loss.clone(),
         })
         .collect();
     Taglio {
         legame: legame.0,
-        atomi: legame.1,
-        etichetta: legame.2.to_string(),
+        atoms: legame.1,
+        label: legame.2.to_string(),
         lato,
-        pezzo: side.atoms.clone(),
-        resto: other.atoms.clone(),
+        piece: side.atoms.clone(),
+        rest: other.atoms.clone(),
         formula: side.formula.clone(),
         variante: m.var.to_string(),
         perdita: m.loss.clone(),
-        mz_teorico: m.mz_th,
+        theoretical_mz: m.mz_th,
         ppm: m.ppm,
-        picchi,
+        peaks: picchi,
     }
 }
 
 /// The graph text `j` of `g` with the key `strutture` of node `nodo` (`nK` or `K`): the cleavages of `smiles` that give its m/z within `ppm`.
 pub fn strutture_testo(
-    g: &Grafo,
+    g: &Graph,
     j: &str,
     smiles: Option<&str>,
     (nodo, ppm): (&str, f64),
@@ -71,7 +71,7 @@ pub fn strutture_testo(
             let ing = g.ingresso_strutture(k).ok_or_else(bad)?;
             let s = strutture(smiles, &ing, ppm)
                 .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
-            if !s.candidati.is_empty() {
+            if !s.candidates.is_empty() {
                 tutti.push(s);
             }
         }
@@ -92,18 +92,18 @@ pub fn strutture(smiles: &str, ing: &IngressoStrutture, ppm: f64) -> Result<Stru
     let frag = fragment_molecule(smiles, pol, &peaks, ppm, MAX_LEGAMI)?;
     let mixture = smiles.split('.').filter(|p| !p.trim().is_empty()).count() > 1;
     let mut out = Strutture {
-        nodo: ing.nodo,
+        node: ing.nodo,
         smiles: smiles.to_string(),
         mz: ing.mz,
         ppm_tol: ppm,
-        atomi: if mixture {
+        atoms: if mixture {
             0
         } else {
             Mol::parse(smiles).map_or(0, |m| m.atoms.len())
         },
         legami: frag.bonds.len(),
-        candidati: vec![],
-        avvisi: if mixture {
+        candidates: vec![],
+        warnings: if mixture {
             vec!["warn.msngrafo.structMixture"]
         } else {
             vec![]
@@ -118,40 +118,40 @@ pub fn strutture(smiles: &str, ing: &IngressoStrutture, ppm: f64) -> Result<Stru
             for m in pair.0.matches.iter().filter(|m| m.peak == ing.mz) {
                 let t = taglio(ing, (b.bond_idx, b.atoms, &b.label), lato, pair, m);
                 match out
-                    .candidati
+                    .candidates
                     .iter_mut()
-                    .find(|c| (c.mz_teorico - t.mz_teorico).abs() < STESSA_MASSA)
+                    .find(|c| (c.theoretical_mz - t.theoretical_mz).abs() < STESSA_MASSA)
                 {
-                    Some(c) => c.tagli.push(t),
-                    None => out.candidati.push(CandidatoStruttura {
+                    Some(c) => c.cuts.push(t),
+                    None => out.candidates.push(CandidatoStruttura {
                         formula: ing
                             .formule
                             .iter()
-                            .find(|f| (f.1 - t.mz_teorico).abs() < STESSA_MASSA)
+                            .find(|f| (f.1 - t.theoretical_mz).abs() < STESSA_MASSA)
                             .map(|f| f.0.clone()),
-                        mz_teorico: t.mz_teorico,
+                        theoretical_mz: t.theoretical_mz,
                         ppm: t.ppm,
-                        tagli: vec![t],
+                        cuts: vec![t],
                     }),
                 }
             }
         }
     }
-    for c in &mut out.candidati {
-        c.tagli
+    for c in &mut out.candidates {
+        c.cuts
             .sortc_by_key(|t| (t.legame, t.lato, t.variante.clone()));
         c.ppm = c
-            .tagli
+            .cuts
             .iter()
             .map(|t| t.ppm)
             .min_by(|a, b| a.abs().total_cmp(&b.abs()))
             .unwrap_or(c.ppm);
     }
-    out.candidati.sortc_by(|a, b| {
+    out.candidates.sortc_by(|a, b| {
         a.ppm
             .abs()
             .total_cmp(&b.ppm.abs())
-            .then(a.mz_teorico.total_cmp(&b.mz_teorico))
+            .then(a.theoretical_mz.total_cmp(&b.theoretical_mz))
     });
     Ok(out)
 }

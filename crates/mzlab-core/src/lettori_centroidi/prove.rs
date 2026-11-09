@@ -4,32 +4,32 @@ use super::*;
 
 /// A reader that gives centroid and profile scans alternately (even scans are the file's own centroid list).
 struct Alternato {
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
 }
 
-fn voce(k: usize) -> VoceScansione {
-    VoceScansione {
+fn entry(k: usize) -> ScanEntry {
+    ScanEntry {
         id: k.to_string(),
         rt: k as f64,
         livello: 1,
         polarita: 1,
         tic: 0.0,
-        picco_base: None,
+        base_peak: None,
         filtro: String::new(),
         precursore: None,
-        posizione: None,
+        position: None,
     }
 }
 
-impl Lettore for Alternato {
-    fn format(&self) -> Formato {
-        Formato::Altro("finto")
+impl Reader for Alternato {
+    fn format(&self) -> Format {
+        Format::Altro("finto")
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn index(&mut self, _c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _c: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
     fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
@@ -53,10 +53,10 @@ impl Lettore for Alternato {
             ..Spectrum::default()
         })
     }
-    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Field>> {
         Ok(Vec::new())
     }
-    fn chromatograms(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(Vec::new())
     }
     fn chromatogram(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
@@ -71,13 +71,13 @@ impl Lettore for Alternato {
 fn centroids_of_the_reader_are_not_touched() {
     let n = 6;
     let l = Alternato {
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 0,
             nome: "a".into(),
             scansioni: n,
-            dimensione: None,
+            size: None,
         }],
-        indice: (0..n).map(voce).collect(),
+        indice: (0..n).map(entry).collect(),
     };
     let mut c = centroidato(Box::new(l));
     for k in 0..n {
@@ -94,30 +94,30 @@ fn centroids_of_the_reader_are_not_touched() {
 
 fn alternato(n: usize) -> Alternato {
     Alternato {
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 0,
             nome: "a".into(),
             scansioni: n,
-            dimensione: None,
+            size: None,
         }],
-        indice: (0..n).map(voce).collect(),
+        indice: (0..n).map(entry).collect(),
     }
 }
 
 /// The two indexes of one decoding are the two built apart, whatever the budget (rounds, scratch file shared by the two builders).
 #[test]
 fn double_index_equals_the_two_apart() {
-    use crate::upload::indicizza_lettore_con;
+    use crate::upload::index_reader_with;
     use std::io::Cursor;
     let n = 301;
     let apart = |centroid: bool, budget: usize, spill: bool| {
-        let mut l: Box<dyn Lettore> = Box::new(alternato(n));
+        let mut l: Box<dyn Reader> = Box::new(alternato(n));
         if centroid {
             l = centroidato(l);
         }
         let mut out = Cursor::new(Vec::new());
         let mut sp = Cursor::new(Vec::new());
-        let (st, sha) = indicizza_lettore_con(
+        let (st, sha) = index_reader_with(
             &mut *l,
             0,
             &mut || Ok(vec![]),

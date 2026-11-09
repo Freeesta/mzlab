@@ -12,6 +12,7 @@ Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.
 - gzip: `gunzip::Gunzip` 1 990 598 → 2 000 110 (`mzxml-gz` solo nella feature `tutte`); zeri dopo un membro 2 023 535 → 2 023 693.
 - `.wiff`: `Ole::header_cut` 2 069 711 → 2 071 192; cromatogrammi uguali a `convert` 2 061 661 → 2 074 104; `Ole::cut_short`, `wiff::Record::cut` 2 067 222 → 2 067 852; `.wiff.scan` letto una volta 2 058 262 → 2 058 695; `Wiff::readable` 2 057 544 → 2 058 213; `header_tic` 2 053 459 → 2 054 280; sMRM senza Log (`dense_mrm`) 2 053 459 → 2 053 769; blocchi MRM radi 2 021 608 → 2 021 573; iniezione senza `Idx` grezzo 3 045 809 → 3 044 960; metodo nella conversione nativa 1 985 228 → 1 985 743.
 - Agilent `.D`: copia tagliata (`scan::parse` `missing`) 2 067 852 → 2 068 740; mobilità ionica (`scan::ims`) 2 068 370 → 2 068 385; rifiuto MRM e `agilentNoPeaks` 2 069 258 → 2 069 682.
+- Nomi inglesi di `mzlab-core` (parte 1), file `wasm-dimensioni` della CI: motore 3 136 752 → 3 136 375, `rotte` 1 027 241 → 1 027 215, librerie identico (964 977).
 - Calcolo: `mzlab_core::baseline` 2 084 454 → 2 086 832, Tabella SIM 2 042 701 → 2 044 414; `elements::split_offset`, `formula_mz` 2 040 714 → 2 044 792; deuterio 1 992 809 → 1 992 864; `opentfraw::Error::NoRun` 2 035 980 → 2 035 945; `libm` in `mzlab-core` grezzo 3 460 140 → 3 455 488. Il codice di `thermo` e di numpress non è nel motore.
 
 ## Lettori

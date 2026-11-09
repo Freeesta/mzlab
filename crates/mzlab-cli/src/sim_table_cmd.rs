@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::fileroutes::mrm_transitions;
 use mzlab_core::json::Out;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzmlhead::Mzml;
 
 use crate::Outcome;
@@ -174,7 +174,7 @@ fn samples_of(
         taken.push(name.clone());
         return Ok(vec![(name, mrm_transitions(&mut m, &chroms)?)]);
     }
-    let mut l = mzlab_lettori::apri(crate::flow_set::file_set(p)?, &Limiti::desktop())?;
+    let mut l = mzlab_lettori::apri(crate::flow_set::file_set(p)?, &Limits::desktop())?;
     let stem = name
         .rsplit_once('.')
         .map_or(name.as_str(), |s| s.0)

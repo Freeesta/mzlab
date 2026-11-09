@@ -4,7 +4,7 @@
 use base64::Engine;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::lettori_mzml;
 use mzlab_core::numpress::{self, Np};
 use std::io::Write;
@@ -160,7 +160,7 @@ pub fn mzml_di(scan: &[Scan], cod: Cod, method: Option<&str>) -> Vec<u8> {
 
 pub fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
@@ -169,12 +169,12 @@ pub fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     }
 }
 
-pub fn apri(byte: Vec<u8>) -> Box<dyn Lettore> {
-    mzlab_lettori::apri(file_set("campione.mzML", byte), &Limiti::sito()).unwrap()
+pub fn apri(byte: Vec<u8>) -> Box<dyn Reader> {
+    mzlab_lettori::apri(file_set("campione.mzML", byte), &Limits::sito()).unwrap()
 }
 
 pub fn error(byte: Vec<u8>) -> &'static str {
-    match mzlab_lettori::apri(file_set("campione.mzML", byte), &Limiti::sito()) {
+    match mzlab_lettori::apri(file_set("campione.mzML", byte), &Limits::sito()) {
         Err(e) => e.key,
         Ok(mut l) => {
             // a hostile array is found when the scan is read
@@ -188,7 +188,7 @@ pub fn error(byte: Vec<u8>) -> &'static str {
     }
 }
 
-pub fn written_mzml(l: &mut Box<dyn Lettore>) -> Vec<u8> {
+pub fn written_mzml(l: &mut Box<dyn Reader>) -> Vec<u8> {
     lettori_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {}).unwrap()
 }
 

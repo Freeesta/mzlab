@@ -4,38 +4,38 @@
 
 use crate::centroidi::{self, Buf, Params};
 use crate::error::Result;
-use crate::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use crate::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use crate::mzml::{Chromatogram, Spectrum};
 use crate::mzmlwrite::{Header, SpectrumExtra};
 
 pub struct Centroidato {
-    l: Box<dyn Lettore>,
+    l: Box<dyn Reader>,
     params: Vec<Option<Params>>,
     buf: Buf,
     /// The scan last given by `grezza`, kept for the `scansione` that asks for the same one (the two versions of an index from one decoding).
-    ultima: Option<(usize, usize, Spectrum)>,
+    last: Option<(usize, usize, Spectrum)>,
 }
 
 impl Centroidato {
-    pub fn nuovo(l: Box<dyn Lettore>) -> Centroidato {
+    pub fn nuovo(l: Box<dyn Reader>) -> Centroidato {
         let n = l.samples().len();
         Centroidato {
             l,
             params: vec![None; n],
             buf: Buf::default(),
-            ultima: None,
+            last: None,
         }
     }
 
     /// The reader underneath: the one of the version with the scans as the file has them (profile stays profile).
-    pub fn semplice(&mut self) -> &mut dyn Lettore {
+    pub fn simple(&mut self) -> &mut dyn Reader {
         &mut *self.l
     }
 
     /// Scan `k` of sample `c` as the reader gives it, decoded now and kept: the next `scansione(c, k)` centroids this one instead of decoding it again.
     pub fn grezza(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let s = self.l.scan(c, k)?;
-        self.ultima = Some((c, k, s.clone()));
+        self.last = Some((c, k, s.clone()));
         Ok(s)
     }
 
@@ -52,7 +52,7 @@ impl Centroidato {
 }
 
 /// The parameters of the peak picking of sample `c`, estimated on at most 64 equally spaced scans of its index.
-pub(crate) fn stima(l: &mut dyn Lettore, c: usize) -> Result<Params> {
+pub(crate) fn stima(l: &mut dyn Reader, c: usize) -> Result<Params> {
     let len = l.index(c)?.len();
     let n = len.min(64);
     let mut scans = Vec::new();
@@ -93,21 +93,21 @@ fn narrow(x: f64) -> f32 {
     x as f32
 }
 
-impl Lettore for Centroidato {
-    fn format(&self) -> Formato {
+impl Reader for Centroidato {
+    fn format(&self) -> Format {
         self.l.format()
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         self.l.samples()
     }
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.l.index(c)
     }
-    fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index_without_tic(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.l.index_without_tic(c)
     }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let mut s = match self.ultima.take() {
+        let mut s = match self.last.take() {
             Some((cc, kk, s)) if cc == c && kk == k => s,
             _ => self.l.scan(c, k)?,
         };
@@ -117,10 +117,10 @@ impl Lettore for Centroidato {
         }
         Ok(s)
     }
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.l.scan_header(c, k)
     }
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.l.chromatograms(c)
     }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
@@ -153,7 +153,7 @@ impl Lettore for Centroidato {
 }
 
 /// `l` with its profile scans as centroids.
-pub fn centroidato(l: Box<dyn Lettore>) -> Box<dyn Lettore> {
+pub fn centroidato(l: Box<dyn Reader>) -> Box<dyn Reader> {
     Box::new(Centroidato::nuovo(l))
 }
 

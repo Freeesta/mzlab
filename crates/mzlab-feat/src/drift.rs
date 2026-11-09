@@ -7,7 +7,7 @@
 //! factors there (no guess). Sums run in a fixed order, so equal inputs give equal bytes. Reference: `tools/deriva_riferimento.py` (golden `deriva.json`).
 
 use crate::sortc::SortC;
-use mzlab_core::disegno::{Disegno, LOTTO_PREDEFINITO};
+use mzlab_core::disegno::{Design, LOTTO_PREDEFINITO};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{round, Out};
 
@@ -100,7 +100,7 @@ impl Drift {
 }
 
 /// The batch of every file: the one the design gives (by SHA-256 when known, else by name), else the default batch.
-pub fn batches_of(samples: &[Sample], d: &Disegno) -> Vec<String> {
+pub fn batches_of(samples: &[Sample], d: &Design) -> Vec<String> {
     samples
         .iter()
         .map(|s| {

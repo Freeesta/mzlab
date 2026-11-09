@@ -1,7 +1,7 @@
 //! Writes the synthetic Thermo, Bruker and ANDI datasets of the reader tests (invented numbers, no lab data) to a folder, so that
 //! tests/test_lettori_parita.py can feed the same bytes to the .wasm modules and to `mzlab-cli convert`. A test tool: it never enters a .wasm.
 //!   sintetici OUTDIR
-use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::lettori::{FileSet, Member};
 use std::path::Path;
 
 #[path = "../tests/comune/andi.rs"]
@@ -14,7 +14,7 @@ mod thermo;
 /// The helper the shared ANDI module expects from its parent.
 fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),

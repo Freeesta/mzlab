@@ -5,10 +5,10 @@
 use std::path::PathBuf;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::sorgente::SorgenteLettore;
+use mzlab_core::sorgente::ReaderSource;
 
 use crate::Outcome;
 
@@ -83,11 +83,11 @@ fn read(c: &Ask, tmp: &std::path::Path) -> Result<String> {
                 .map_err(|e| Error::new("err.flow.io").with("detail", e))?,
         )?
     } else {
-        let mut l = mzlab_lettori::apri(crate::flow_set::file_set(&c.file)?, &Limiti::desktop())?;
+        let mut l = mzlab_lettori::apri(crate::flow_set::file_set(&c.file)?, &Limits::desktop())?;
         r.mzml_route(
             "/api/dda_window",
             &q,
-            &mut SorgenteLettore {
+            &mut ReaderSource {
                 l: l.as_mut(),
                 c: 0,
             },

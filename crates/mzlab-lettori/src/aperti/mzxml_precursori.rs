@@ -1,13 +1,13 @@
 //! The precursor chain of an mzXML scan as the mzML we write has it (`SpectrumExtra::precursors`); used by `mzxml`.
 
-use mzlab_core::lettori::VoceScansione;
+use mzlab_core::lettori::ScanEntry;
 use mzlab_core::mzmlwrite::{attivazione_da_nome, Precursore};
 
 use super::mzxml::number;
 use super::mzxml_scan::{attr, Testa};
 
 /// Whether the file has the scan `id` (`scan=N`): the scans come in ascending number, so a bisection finds it.
-fn nel_file(index: &[VoceScansione], id: &str) -> bool {
+fn nel_file(index: &[ScanEntry], id: &str) -> bool {
     let n = |s: &str| s.strip_prefix("scan=").and_then(|x| x.parse::<u64>().ok());
     let Some(want) = n(id) else { return false };
     index
@@ -17,7 +17,7 @@ fn nel_file(index: &[VoceScansione], id: &str) -> bool {
 
 /// The precursors of a scan as the mzML has them, outermost first: the m/z, charge, intensity, isolation width and activation of each `precursorMz`
 /// and the collision energy of the scan (on the last one). The parent scan is named only if the file has it.
-pub(super) fn precursori_di(t: &Testa, index: &[VoceScansione]) -> Vec<Precursore> {
+pub(super) fn precursori_di(t: &Testa, index: &[ScanEntry]) -> Vec<Precursore> {
     let mut v: Vec<Precursore> = t
         .precursori
         .iter()

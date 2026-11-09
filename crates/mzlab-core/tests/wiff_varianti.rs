@@ -7,7 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
@@ -55,7 +55,7 @@ fn close(a: f64, b: f64) -> bool {
 fn set(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
-        Membro {
+        Member {
             nome: file,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -138,7 +138,7 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
     let Some((dir, want)) = reference() else {
         return;
     };
-    let mut l = lettori::apri(set(&dir, "variante"), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(set(&dir, "variante"), &Limits::sito()).unwrap();
     assert!(l.variant(0));
     let xml = String::from_utf8(
         mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
@@ -186,10 +186,10 @@ fn a_3200_with_version_3_blocks_is_a_variant() {
     let Some((dir, _)) = reference() else {
         return;
     };
-    let mut l = lettori::apri(set(&dir, "epi3200"), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(set(&dir, "epi3200"), &Limits::sito()).unwrap();
     assert!(l.variant(0));
     assert_eq!(l.samples()[0].scansioni, 2);
-    let mut l = lettori::apri(set(&dir, "prodotto"), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(set(&dir, "prodotto"), &Limits::sito()).unwrap();
     assert!(!l.variant(0));
 }
 
@@ -209,7 +209,7 @@ fn what_the_reader_does_not_know_is_refused_never_read_as_a_full_scan() {
                 .unwrap_or_else(|| panic!("{name}: read")),
         };
         assert_eq!(detail(&err), text, "{name}");
-        let via = lettori::apri(set(&dir, name), &Limiti::sito());
+        let via = lettori::apri(set(&dir, name), &Limits::sito());
         assert_eq!(
             detail(&via.err().unwrap_or_else(|| panic!("{name}: registry"))),
             text,
@@ -261,16 +261,16 @@ fn damaged_files_are_refused_or_read_never_a_panic() {
 #[test]
 fn wiff_campioni_nomi_data() {
     let Some((dir, _)) = reference() else { return };
-    let l = lettori::apri(set(&dir, "nomi"), &Limiti::sito()).unwrap();
-    let campioni = l.samples();
-    assert_eq!(campioni.len(), 5);
-    assert_eq!(campioni[0].nome, "Sample_A");
-    assert_eq!(campioni[1].nome, "Sample_B");
-    assert_eq!(campioni[2].nome, "nomi_s3");
-    assert_eq!(campioni[3].nome, "nomi_s4");
-    assert_eq!(campioni[4].nome, "Sample_A");
-    for c in campioni {
-        assert_eq!(c.dimensione, None);
+    let l = lettori::apri(set(&dir, "nomi"), &Limits::sito()).unwrap();
+    let samples = l.samples();
+    assert_eq!(samples.len(), 5);
+    assert_eq!(samples[0].nome, "Sample_A");
+    assert_eq!(samples[1].nome, "Sample_B");
+    assert_eq!(samples[2].nome, "nomi_s3");
+    assert_eq!(samples[3].nome, "nomi_s4");
+    assert_eq!(samples[4].nome, "Sample_A");
+    for c in samples {
+        assert_eq!(c.size, None);
     }
 }
 
@@ -299,9 +299,9 @@ fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
         .iter()
         .zip(nums(&want["bpc"]))
         .all(|(a, b)| close(*a, b)));
-    let mut l = lettori::apri(set(&dir, "totale"), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(set(&dir, "totale"), &Limits::sito()).unwrap();
     // listing the chromatograms decodes no scan: the BPC is there once the writer has gone through the scans
-    let ids = |l: &mut dyn lettori::Lettore| {
+    let ids = |l: &mut dyn lettori::Reader| {
         l.chromatograms(0)
             .unwrap()
             .into_iter()

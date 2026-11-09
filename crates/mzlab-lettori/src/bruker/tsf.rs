@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 
 use mzlab_core::idxread::ReadAt;
 
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 fn guasto(m: &str) -> Error {
     Error::new("err.dam.unreadable").with("message", format!("tsf_bin: {m}"))
@@ -30,7 +30,7 @@ pub fn read_frame(
     pos: u64,
     peaks: u64,
     samples: u64,
-    limits: &Limiti,
+    limits: &Limits,
 ) -> Result<Lines> {
     let mut h = [0u8; 8];
     if pos.checked_add(8).is_none_or(|e| e > dim) {
@@ -47,7 +47,7 @@ pub fn read_frame(
         Ok(b)
     };
     if row > 0 && peaks > 0 {
-        let n = limits.voci_ok(peaks)?;
+        let n = limits.ok_entries(peaks)?;
         let z = read(d, pos + 8, row)?;
         return lines(&z, n, limits);
     }
@@ -58,13 +58,13 @@ pub fn read_frame(
             profilo: false,
         });
     }
-    let n = limits.voci_ok(samples)?;
+    let n = limits.ok_entries(samples)?;
     let z = read(d, pos + 8 + row, prof)?;
     profilo(&z, n, limits)
 }
 
 /// The line spectrum of a block: `n` TOF positions (f64) then `n` intensities (f32).
-fn lines(z: &[u8], n: usize, limits: &Limiti) -> Result<Lines> {
+fn lines(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
     let b = zstd(z, n.checked_mul(12).ok_or_else(|| guasto("peaks"))?, limits)?;
     let tof = (0..n)
         .map(|i| f64::from_le_bytes(b[8 * i..8 * i + 8].try_into().unwrap_or([0; 8])))
@@ -85,7 +85,7 @@ fn lines(z: &[u8], n: usize, limits: &Limiti) -> Result<Lines> {
 }
 
 /// The profile of a block: `n` samples (u32), kept where there is signal or a neighbour has it (the rest is zero).
-fn profilo(z: &[u8], n: usize, limits: &Limiti) -> Result<Lines> {
+fn profilo(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
     let b = zstd(
         z,
         n.checked_mul(4).ok_or_else(|| guasto("samples"))?,
@@ -115,6 +115,6 @@ mod prove {
         let mut b = vec![0u8; 16];
         b[0] = 0xff;
         b[1] = 0xff;
-        assert!(read_frame(&mut b.clone(), 16, 0, 1, 1, &Limiti::sito()).is_err());
+        assert!(read_frame(&mut b.clone(), 16, 0, 1, 1, &Limits::sito()).is_err());
     }
 }

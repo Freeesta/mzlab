@@ -1,23 +1,23 @@
 // The tests of sessione.rs.
 use super::*;
 use crate::sessione::duro::{Hard, ODD_CHARS};
-use mzlab_core::lettori::{Campione, Campo, Formato, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use serde_json::Value;
 
 struct Fake {
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
 }
 
-impl Lettore for Fake {
-    fn format(&self) -> Formato {
-        Formato::Altro("finto")
+impl Reader for Fake {
+    fn format(&self) -> Format {
+        Format::Altro("finto")
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
     fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
@@ -35,16 +35,16 @@ impl Lettore for Fake {
             wide: None,
         })
     }
-    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
-        Ok(vec![Campo {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
+        Ok(vec![Field {
             nome: "a".into(),
             valore: "b".into(),
             unita: None,
             cv: Some("MS:1".into()),
         }])
     }
-    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
-        Ok(vec![VoceCromatogramma {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
+        Ok(vec![ChromatogramEntry {
             id: "TIC".into(),
             tipo: ChromKind::Tic,
             unita: "u".into(),
@@ -71,29 +71,29 @@ impl Lettore for Fake {
 fn the_session_answers_and_closes() {
     let mut s = Sessions::default();
     let fin = Fake {
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 1,
             nome: "a".into(),
             scansioni: 1,
-            dimensione: None,
+            size: None,
         }],
-        indice: vec![VoceScansione {
+        indice: vec![ScanEntry {
             id: "scan=0".into(),
             rt: 0.5,
             livello: 1,
             polarita: 1,
             tic: 4.0,
-            picco_base: Some(200.0),
+            base_peak: Some(200.0),
             filtro: "f".into(),
             precursore: None,
-            posizione: None,
+            position: None,
         }],
     };
     let h = s.insert(Box::new(fin));
     let c: serde_json::Value = serde_json::from_str(&s.samples(h).unwrap()).unwrap();
     assert_eq!(c["formato"], "finto");
     assert_eq!(c["campioni"][0]["scans"], 1);
-    let i = mzlab_core::trasporto::decode_indice(&s.index(h, 0).unwrap()).unwrap();
+    let i = mzlab_core::trasporto::decode_index(&s.index(h, 0).unwrap()).unwrap();
     assert_eq!((i[0].id.as_str(), i[0].filtro.as_str()), ("scan=0", "f"));
     let sc = mzlab_core::trasporto::decode_scansione(0, &s.scan(h, 0, 0).unwrap()).unwrap();
     assert_eq!((sc.mz, sc.intensity), (vec![100.0, 200.0], vec![1.5, 2.5]));
@@ -119,33 +119,33 @@ fn the_session_answers_and_closes() {
 /// The index crosses as bytes and comes back as it was, with every column (NaN, infinities, 64-bit offsets, the repeated filter once).
 #[test]
 fn the_index_bytes_round_trip() {
-    use mzlab_core::lettori::Posizione;
+    use mzlab_core::lettori::Position;
     let entries = vec![
-        VoceScansione {
+        ScanEntry {
             id: "scan=1 \"q\"\n\u{8}é".into(),
             rt: 1.0,
             livello: 2,
             polarita: -1,
             tic: 1e21,
-            picco_base: None,
+            base_peak: None,
             filtro: "FTMS + c ESI Full ms2 445.12@hcd30.00 [50.00-500.00]".into(),
             precursore: Some(445.12),
-            posizione: Some(Posizione {
+            position: Some(Position {
                 membro: 3,
                 offset: 1 << 40,
                 lunghezza: 77,
             }),
         },
-        VoceScansione {
+        ScanEntry {
             id: String::new(),
             rt: 0.1 + 0.2,
             livello: 1,
             polarita: 0,
             tic: 0.1 + 0.2,
-            picco_base: Some(f64::INFINITY),
+            base_peak: Some(f64::INFINITY),
             filtro: String::new(),
             precursore: None,
-            posizione: None,
+            position: None,
         },
     ];
     let mut s = Sessions::default();
@@ -154,7 +154,7 @@ fn the_index_bytes_round_trip() {
         indice: entries.clone(),
     }));
     let b = s.index(h, 0).unwrap();
-    assert_eq!(mzlab_core::trasporto::decode_indice(&b).unwrap(), entries);
+    assert_eq!(mzlab_core::trasporto::decode_index(&b).unwrap(), entries);
 }
 
 // `3` and `3.0` are the same number for the page (`JSON.parse`): compare every number as a double
@@ -268,23 +268,23 @@ fn the_json_texts_equal_serde_json() {
 #[ignore]
 fn measure_a_chromatogram_of_a_million_points() {
     struct Long(Vec<f64>);
-    impl Lettore for Long {
-        fn format(&self) -> Formato {
-            Formato::Altro("lungo")
+    impl Reader for Long {
+        fn format(&self) -> Format {
+            Format::Altro("lungo")
         }
-        fn samples(&self) -> &[Campione] {
+        fn samples(&self) -> &[Sample] {
             &[]
         }
-        fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
+        fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
             Ok(&[])
         }
         fn scan(&mut self, _: usize, _: usize) -> Result<Spectrum> {
             Err(mzlab_core::Error::new("error.badIndex"))
         }
-        fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+        fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
             Ok(vec![])
         }
-        fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+        fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
             Ok(vec![])
         }
         fn chromatogram(&mut self, _: usize, id: &str) -> Result<Chromatogram> {

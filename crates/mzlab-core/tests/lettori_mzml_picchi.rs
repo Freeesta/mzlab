@@ -2,38 +2,38 @@
 //! `File` the centroids of the file.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
-use mzlab_core::lettori_mzml::{Conversione, Picchi};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
+use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzml::{self, Chromatogram, Item, Spectrum};
 
 const CENTRI: [f64; 3] = [101.0, 102.5, 104.0];
 
 struct Finto {
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
     profilo_ok: bool,
 }
 
 fn finto(profilo_ok: bool) -> Finto {
     let n = 5;
     Finto {
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 0,
             nome: "a".into(),
             scansioni: n,
-            dimensione: None,
+            size: None,
         }],
         indice: (0..n)
-            .map(|k| VoceScansione {
+            .map(|k| ScanEntry {
                 id: k.to_string(),
                 rt: k as f64,
                 livello: 1,
                 polarita: 1,
                 tic: 0.0,
-                picco_base: None,
+                base_peak: None,
                 filtro: String::new(),
                 precursore: None,
-                posizione: None,
+                position: None,
             })
             .collect(),
         profilo_ok,
@@ -64,14 +64,14 @@ fn spettro(k: usize, profile: bool) -> Spectrum {
     }
 }
 
-impl Lettore for Finto {
-    fn format(&self) -> Formato {
-        Formato::Altro("finto")
+impl Reader for Finto {
+    fn format(&self) -> Format {
+        Format::Altro("finto")
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn index(&mut self, _c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _c: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
     // The scans as the reader gives them: profile, or the centroids of the maker when `profilo_ok` is false.
@@ -81,10 +81,10 @@ impl Lettore for Finto {
     fn scan_profile(&mut self, _c: usize, k: usize) -> Result<Option<Spectrum>> {
         Ok(self.profilo_ok.then(|| spettro(k, true)))
     }
-    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Field>> {
         Ok(Vec::new())
     }
-    fn chromatograms(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(Vec::new())
     }
     fn chromatogram(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
@@ -95,12 +95,12 @@ impl Lettore for Finto {
     }
 }
 
-fn converti(l: &mut Finto, peaks: Picchi) -> Result<(String, Vec<Spectrum>)> {
-    let conv = Conversione {
+fn converti(l: &mut Finto, peaks: Peaks) -> Result<(String, Vec<Spectrum>)> {
+    let conv = Conversion {
         peaks,
-        ..Conversione::default()
+        ..Conversion::default()
     };
-    let bytes = conv.scrivi(l, 0, Vec::new(), &mut |_, _| {})?;
+    let bytes = conv.write(l, 0, Vec::new(), &mut |_, _| {})?;
     let mut v = Vec::new();
     mzml::parse(bytes.as_slice(), |i| {
         if let Item::Spectrum(s) = i {
@@ -112,7 +112,7 @@ fn converti(l: &mut Finto, peaks: Picchi) -> Result<(String, Vec<Spectrum>)> {
 
 #[test]
 fn lettori_mzml_picchi_mzlab_gives_the_centres_within_half_a_ppm() {
-    let (doc, spettri) = converti(&mut finto(true), Picchi::Mzlab).unwrap();
+    let (doc, spettri) = converti(&mut finto(true), Peaks::Mzlab).unwrap();
     assert!(doc.contains("MS:1000035") && !doc.contains("MS:1000128"));
     assert!(doc.contains("mzLab centroids"));
     assert_eq!(spettri.len(), 5);
@@ -126,16 +126,16 @@ fn lettori_mzml_picchi_mzlab_gives_the_centres_within_half_a_ppm() {
 
 #[test]
 fn lettori_mzml_picchi_profilo_gives_the_profile_points() {
-    let (doc, spettri) = converti(&mut finto(true), Picchi::Profilo).unwrap();
+    let (doc, spettri) = converti(&mut finto(true), Peaks::Profilo).unwrap();
     assert!(doc.contains("MS:1000128") && !doc.contains("MS:1000035"));
     assert!(spettri.iter().all(|s| s.profile && s.mz.len() == 400));
-    let e = converti(&mut finto(false), Picchi::Profilo).unwrap_err();
+    let e = converti(&mut finto(false), Peaks::Profilo).unwrap_err();
     assert_eq!(e.key, "err.conv.noProfile");
 }
 
 #[test]
 fn lettori_mzml_picchi_file_keeps_the_scans_of_the_reader() {
-    let (doc, spettri) = converti(&mut finto(true), Picchi::File).unwrap();
+    let (doc, spettri) = converti(&mut finto(true), Peaks::File).unwrap();
     assert!(doc.contains("MS:1000128") && !doc.contains("MS:1000035"));
     assert!(spettri.iter().all(|s| s.mz.len() == 400));
 }

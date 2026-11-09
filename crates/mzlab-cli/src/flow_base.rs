@@ -12,10 +12,10 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::hashio::HashWrite;
 use mzlab_core::idxread::Index;
-use mzlab_core::lettori::Limiti;
-use mzlab_core::lettori_mzml::{Conversione, Picchi};
+use mzlab_core::lettori::Limits;
+use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
-use mzlab_core::mzmlwrite::{Opzioni, LIVELLO_ZLIB};
+use mzlab_core::mzmlwrite::{Options, LIVELLO_ZLIB};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
@@ -267,7 +267,7 @@ fn number(job: &Job, name: &str, default: f64) -> f64 {
 /// the input `NAME@ID` names the sample `ID`, else the first one is written.
 pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
-    let opz = Opzioni {
+    let opz = Options {
         livello: number(job, "zlib_level", f64::from(LIVELLO_ZLIB)) as u32,
         numpress: job
             .resolved
@@ -279,7 +279,7 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
             .params
             .iter()
             .any(|(k, v)| k == "dad" && v.bool() == Some(true)),
-        ..Opzioni::default()
+        ..Options::default()
     };
     let out = r.work.join(convert_file(
         &job.instance.id,
@@ -292,9 +292,9 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
         .find(|p| p.0 == "peaks")
         .and_then(|p| p.1.str())
     {
-        Some("profile") => Picchi::Profilo,
-        Some("mzlab") => Picchi::Mzlab,
-        _ => Picchi::File,
+        Some("profile") => Peaks::Profilo,
+        Some("mzlab") => Peaks::Mzlab,
+        _ => Peaks::File,
     };
     let gate = r.gate(job);
     let (path, label) = (r.path(input), input.label.as_deref());
@@ -315,8 +315,8 @@ pub(crate) fn write_mzml(
     path: &Path,
     label: Option<&str>,
     out: &Path,
-    peaks: Picchi,
-    opz: Opzioni,
+    peaks: Peaks,
+    opz: Options,
 ) -> Result<bool> {
     write_mzml_with(path, label, out, (peaks, opz), &mut |_, _| {}, &None).map(|w| w.0)
 }
@@ -328,12 +328,12 @@ pub(crate) fn write_mzml_with(
     path: &Path,
     label: Option<&str>,
     out: &Path,
-    (peaks, opz): (Picchi, Opzioni),
+    (peaks, opz): (Peaks, Options),
     step: &mut dyn FnMut(usize, usize),
     stop: &Stop,
 ) -> Result<(bool, u64, String)> {
     let mut pace = mzlab_core::pace::Pace::new(step);
-    let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limiti::desktop())?;
+    let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
     let lacking = reader.missing(sample);
@@ -346,17 +346,17 @@ pub(crate) fn write_mzml_with(
         );
     }
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
-    let profile = peaks == Picchi::File
+    let profile = peaks == Peaks::File
         && !reader.index(sample)?.is_empty()
         && reader.scan(sample, 0)?.profile;
-    let conv = Conversione {
+    let conv = Conversion {
         peaks,
         opz,
         steps: Some(&[]),
     };
     let written = File::create(out).map_err(io).and_then(|f| {
         let sink = BufWriter::new(HashWrite::new(Stopping::new(f, stop.clone())));
-        let mut w = conv.scrivi(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))?;
+        let mut w = conv.write(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))?;
         w.flush().map_err(io)?;
         let (_, bytes, sha256) = w.into_inner().map_err(|e| io(e.into_error()))?.finish();
         Ok((bytes, sha256))

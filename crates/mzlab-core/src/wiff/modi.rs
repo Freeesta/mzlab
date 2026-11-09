@@ -17,7 +17,7 @@ pub const CODE_Q3MI: u32 = 3;
 
 /// What an experiment of this type writes into the mzML.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Uscita {
+pub enum Output {
     Spettro,
     Srm,
     Sim,
@@ -27,23 +27,23 @@ pub enum Uscita {
 pub struct Modo {
     pub code: u32,
     /// Analyst abbreviation (EMS, EPI, MRM, MS3, NL, Prec, PI, Q1, Q3, Q1MI, Q3MI, EMC, ER, TDF).
-    pub sigla: &'static str,
+    pub tag: &'static str,
     pub level: u8,
     /// CV `(accession, name)` of the spectrum type, when it needs one.
     pub term: Term,
-    pub uscita: Uscita,
+    pub output: Output,
     /// Seen in a real file: only these are read by the readers module.
-    pub confermato: bool,
+    pub confirmed: bool,
 }
 
 type Term = Option<(&'static str, &'static str)>;
 
 #[rustfmt::skip]
-const fn m(code: u32, sigla: &'static str, level: u8, term: Term, uscita: Uscita, confermato: bool) -> Modo {
-    Modo { code, sigla, level, term, uscita, confermato }
+const fn m(code: u32, sigla: &'static str, level: u8, term: Term, uscita: Output, confermato: bool) -> Modo {
+    Modo { code, tag: sigla, level, term, output: uscita, confirmed: confermato }
 }
 
-use Uscita::{Sim, Spettro, Srm};
+use Output::{Sim, Spettro, Srm};
 
 #[rustfmt::skip]
 pub const MODI: [Modo; 17] = [
@@ -67,7 +67,7 @@ pub const MODI: [Modo; 17] = [
 ];
 
 /// The row of `code`, `None` outside the table.
-pub fn modo(code: u32) -> Option<&'static Modo> {
+pub fn mode(code: u32) -> Option<&'static Modo> {
     MODI.get(usize::try_from(code).ok()?)
         .filter(|x| x.code == code)
 }
@@ -82,17 +82,17 @@ pub fn nativo(code: Option<u32>) -> bool {
 
 /// True for the SIM experiments (Q1MI, Q3MI): their blocks are one value per ion and become SIM chromatograms, not SRM ones.
 pub fn sim(code: Option<u32>) -> bool {
-    code.and_then(modo).is_some_and(|x| x.uscita == Uscita::Sim)
+    code.and_then(mode).is_some_and(|x| x.output == Output::Sim)
 }
 
 /// The readers module accepts a code only when its row is confirmed.
-pub fn confermato(code: Option<u32>) -> bool {
-    code.and_then(modo).is_some_and(|x| x.confermato)
+pub fn confirmed(code: Option<u32>) -> bool {
+    code.and_then(mode).is_some_and(|x| x.confirmed)
 }
 
 /// The Analyst abbreviation of an experiment's scan type (`None` for a code outside the table).
-pub fn sigla(code: Option<u32>) -> Option<&'static str> {
-    code.and_then(modo).map(|x| x.sigla)
+pub fn tag(code: Option<u32>) -> Option<&'static str> {
+    code.and_then(mode).map(|x| x.tag)
 }
 
 /// The userParam of every spectrum of a `.wiff` that names the Analyst abbreviation of its experiment: PSI-MS has no term for an EPI (product ions
@@ -122,7 +122,7 @@ fn scan_type_named(v: &str) -> Option<&'static str> {
 
 /// The CV term of the spectrum type of an experiment: `None` for the types that need none (full scan, product-ion scan).
 pub fn spectrum_term(code: Option<u32>) -> Option<(&'static str, &'static str)> {
-    code.and_then(modo).and_then(|x| x.term)
+    code.and_then(mode).and_then(|x| x.term)
 }
 
 #[cfg(test)]
@@ -132,18 +132,18 @@ mod tests {
     #[test]
     fn table_is_indexed_by_code() {
         assert!(MODI.iter().enumerate().all(|(i, x)| x.code as usize == i));
-        assert!(modo(17).is_none());
-        assert_eq!(sigla(Some(11)), Some("EPI"));
-        assert_eq!(sigla(Some(15)), Some("EMS"));
+        assert!(mode(17).is_none());
+        assert_eq!(tag(Some(11)), Some("EPI"));
+        assert_eq!(tag(Some(15)), Some("EMS"));
         assert!(
-            confermato(Some(5))
-                && confermato(Some(6))
-                && confermato(Some(0))
-                && !confermato(Some(1))
-                && !confermato(None)
+            confirmed(Some(5))
+                && confirmed(Some(6))
+                && confirmed(Some(0))
+                && !confirmed(Some(1))
+                && !confirmed(None)
         );
         assert!(nativo(Some(4)) && nativo(Some(0)) && !nativo(Some(5)));
         assert!(nativo(Some(1)) && sim(Some(1)) && sim(Some(3)) && !sim(Some(4)) && !sim(None));
-        assert_eq!(sigla(Some(0)), Some("Q1"));
+        assert_eq!(tag(Some(0)), Some("Q1"));
     }
 }

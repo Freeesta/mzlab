@@ -9,8 +9,8 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufReader;
 
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
-use mzlab_core::lettori_mzml::{Conversione, Picchi};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzml;
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -289,19 +289,19 @@ fn compare() -> Option<Report> {
     {
         let out = std::io::BufWriter::new(File::create(&ours_p).unwrap());
         let set = FileSet {
-            membri: vec![Membro {
+            membri: vec![Member {
                 nome: "profile.raw".into(),
                 dim: std::fs::metadata(&rawp).unwrap().len(),
                 dati: Box::new(File::open(&rawp).unwrap()),
                 sha1: None,
             }],
         };
-        let mut l = lettori::apri(set, &Limiti::sito()).unwrap();
-        let conv = Conversione {
-            peaks: Picchi::Profilo,
-            ..Conversione::default()
+        let mut l = lettori::apri(set, &Limits::sito()).unwrap();
+        let conv = Conversion {
+            peaks: Peaks::Profilo,
+            ..Conversion::default()
         };
-        conv.scrivi(&mut *l, 0, out, &mut |_, _| {}).unwrap();
+        conv.write(&mut *l, 0, out, &mut |_, _| {}).unwrap();
     }
     // msconvert was asked for the scan times 0-600 s only: those scans of the whole file are compared
     let (all, b) = (heads(&ours_p), heads(&refp));

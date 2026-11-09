@@ -16,12 +16,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use agilent_synth::{encode, sample};
 use lettori_rotte::{mzml_of, same_routes};
-use mzlab_core::idxread::{Index, Scan, FLAG_LETTORE};
+use mzlab_core::idxread::{Index, Scan, READER_FLAG};
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro, VoceCromatogramma};
+use mzlab_core::lettori::{self, ChromatogramEntry, FileSet, Limits, Member};
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::sorgente::{Scansioni, SorgenteLettore, Tracce, TracceMzml};
+use mzlab_core::sorgente::{MzmlTraces, ReaderSource, Scansioni, Traces};
 use mzlab_core::{lettori_mzml, mzidx, upload};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -55,18 +55,18 @@ fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
     }
 }
 
-fn file(nome: &str, bytes: Vec<u8>) -> Membro {
-    Membro {
-        nome: nome.into(),
+fn file(name: &str, bytes: Vec<u8>) -> Member {
+    Member {
+        nome: name.into(),
         dim: bytes.len() as u64,
         dati: Box::new(bytes),
         sha1: None,
     }
 }
 
-fn on_disk(dir: &Path, rel: &str) -> Membro {
+fn on_disk(dir: &Path, rel: &str) -> Member {
     let f = std::fs::File::open(dir.join(rel)).unwrap();
-    Membro {
+    Member {
         nome: rel.into(),
         dim: f.metadata().unwrap().len(),
         dati: Box::new(f),
@@ -77,8 +77,8 @@ fn on_disk(dir: &Path, rel: &str) -> Membro {
 /// Index of sample `c` from `make()` both ways; returns the number of scans compared.
 fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
     let mut fs = make();
-    let membri = upload::impronte(&mut fs).unwrap();
-    let mut l = lettori::apri(fs, &Limiti::desktop()).unwrap();
+    let members = upload::impronte(&mut fs).unwrap();
+    let mut l = lettori::apri(fs, &Limits::desktop()).unwrap();
     let name = format!("{label}.mzML");
     // A: through the mzML
     let mzml = lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
@@ -86,10 +86,10 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
     let (a, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();
     same_sources(label, mzml, &a, &mut *l, c);
     // B: straight from the reader, with a large and a small budget
-    let pb = upload::prepare_lettore(&mut *l, c, &membri, &name).unwrap();
-    let build = |l: &mut dyn lettori::Lettore, budget: usize| {
+    let pb = upload::prepare_reader(&mut *l, c, &members, &name).unwrap();
+    let build = |l: &mut dyn lettori::Reader, budget: usize| {
         let mut out = Cursor::new(Vec::new());
-        let st = mzidx::build_lettore(&pb.table, l, c, &mut out, budget)?;
+        let st = mzidx::build_reader(&pb.table, l, c, &mut out, budget)?;
         Ok::<_, mzlab_core::error::Error>((out.into_inner(), st))
     };
     let (b, _) = build(&mut *l, BIG).unwrap();
@@ -103,27 +103,27 @@ fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
     }
     assert!(small == b, "{label}: the budget changes the index");
 
-    compare(label, &a, &b, &pb.sha256, membri.len(), l.samples()[c].id);
-    let voci = l.index(c).unwrap().to_vec();
+    compare(label, &a, &b, &pb.sha256, members.len(), l.samples()[c].id);
+    let entries = l.index(c).unwrap().to_vec();
     // the reader of the index takes it, with the positions of the reader
     let idx = Index::open(b.clone(), b.len() as u64).unwrap();
-    assert_eq!(idx.scans.len(), voci.len());
-    for (k, (s, v)) in idx.scans.iter().zip(&voci).enumerate() {
+    assert_eq!(idx.scans.len(), entries.len());
+    for (k, (s, v)) in idx.scans.iter().zip(&entries).enumerate() {
         assert_eq!(
-            (s.k, s.posizione, s.start),
-            (Some(k), v.posizione, 0),
+            (s.k, s.position, s.start),
+            (Some(k), v.position, 0),
             "{label}: {k}"
         );
     }
     same_routes(label, &mzml_of(&mut *l, c), &a, &b, &mut *l, c);
-    voci.len()
+    entries.len()
 }
 
 /// Index `b` (from the reader) against `a` (from the mzML): header, sections, rows from the third column, metadata and source.
 fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_membri: usize, id: u32) {
     // header: version and flags, the same layout of the sections
     assert_eq!((u32_at(a, 8), u32_at(a, 12)), (1, 0), "{label}");
-    assert_eq!((u32_at(b, 8), u32_at(b, 12)), (2, FLAG_LETTORE), "{label}");
+    assert_eq!((u32_at(b, 8), u32_at(b, 12)), (2, READER_FLAG), "{label}");
     assert_eq!(u64_at(b, 48), b.len() as u64);
     let scans_off = u64_at(a, 32) as usize;
     assert_eq!(u64_at(b, 32) as usize, scans_off, "{label}: sections");
@@ -158,12 +158,12 @@ fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_membri: usize, id: u
 }
 
 /// `Scansioni` and `Tracce` give the same peaks and traces from the mzML by offset (rows of version 1) and from the reader (rows of version 2).
-fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Lettore, c: usize) {
+fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Reader, c: usize) {
     let size = mzml.len() as u64;
     let rows = Index::open(a.to_vec(), a.len() as u64).unwrap().scans;
     let n = rows.len();
     let mut by_offset = mzml;
-    let mut src = SorgenteLettore { l, c };
+    let mut src = ReaderSource { l, c };
     for k in (0..n).step_by((n / 40).max(1)) {
         let native = Scan {
             k: Some(k),
@@ -175,8 +175,8 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Letto
         );
     }
     let mut m = Mzml::new(by_offset, size);
-    let mut tr = TracceMzml::new(&mut m, rows.last().map_or(0, |s| s.end));
-    let written: Vec<VoceCromatogramma> = src
+    let mut tr = MzmlTraces::new(&mut m, rows.last().map_or(0, |s| s.end));
+    let written: Vec<ChromatogramEntry> = src
         .chromatograms()
         .unwrap()
         .into_iter()
@@ -219,7 +219,7 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Letto
 
 /// Every sample of a set.
 fn same_all(label: &str, make: &dyn Fn() -> FileSet) -> usize {
-    let n = lettori::apri(make(), &Limiti::desktop())
+    let n = lettori::apri(make(), &Limits::desktop())
         .unwrap()
         .samples()
         .len();
@@ -333,7 +333,7 @@ fn the_real_files_give_the_index_of_their_mzml() {
     let ext = |p: &Path, e: &str| p.extension().is_some_and(|x| x.eq_ignore_ascii_case(e));
     let (mut samples, mut scans) = (0usize, 0usize);
     let mut count = |label: &str, make: &dyn Fn() -> FileSet| {
-        let n = lettori::apri(make(), &Limiti::desktop())
+        let n = lettori::apri(make(), &Limits::desktop())
             .unwrap()
             .samples()
             .len();

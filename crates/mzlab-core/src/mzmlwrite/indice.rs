@@ -5,10 +5,10 @@ use std::io::Write;
 
 use sha1::{Digest as _, Sha1};
 
-use super::{io, Header, MzmlWriter, Opzioni, Result};
+use super::{io, Header, MzmlWriter, Options, Result};
 
 /// The positions and the running checksum of an indexed mzML being written.
-pub(super) struct Indice {
+pub(super) struct Index {
     /// Bytes written so far.
     pub pos: u64,
     pub spectra: Vec<(String, u64)>,
@@ -16,9 +16,9 @@ pub(super) struct Indice {
     sha: Sha1,
 }
 
-impl Indice {
+impl Index {
     pub fn new() -> Self {
-        Indice {
+        Index {
             pos: 0,
             spectra: Vec::new(),
             chroms: Vec::new(),
@@ -34,7 +34,7 @@ impl Indice {
 }
 
 /// The text after `</mzML>`: index list, its offset and the checksum of every byte up to and including the opening `<fileChecksum>` tag.
-fn tail(mut i: Indice) -> String {
+fn tail(mut i: Index) -> String {
     let mut lists = String::new();
     let mut n = 0;
     for (name, v) in [("spectrum", &i.spectra), ("chromatogram", &i.chroms)] {
@@ -70,8 +70,8 @@ fn tail(mut i: Indice) -> String {
 impl<W: Write> MzmlWriter<W> {
     /// As `con_opzioni`, wrapped in `indexedmzML`: PSI-MS CV 4.2.6, byte offsets of every spectrum and chromatogram, SHA-1 `fileChecksum`, and one
     /// `processingMethod` for each of `Header::steps` after the conversion.
-    pub fn indicizzato(out: W, h: &Header, opz: Opzioni) -> Result<Self> {
-        Self::avvia(out, h, opz, true)
+    pub fn indicizzato(out: W, h: &Header, opz: Options) -> Result<Self> {
+        Self::start(out, h, opz, true)
     }
 
     /// Writes `b`, counting and hashing it when the file is indexed.

@@ -1,7 +1,7 @@
 //! The scanner of tags and the readers of the header and of the parameters of an mzML for `mzml_numpress.rs` (the header of the original file, the cvParams of a spectrum).
 
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 /// The most cvParams of a spectrum kept as header fields.
@@ -208,7 +208,7 @@ fn cv_param(h: &mut Header, st: &mut State, parent: &str, g: &Tag) {
 }
 
 /// The header of the mzML we write: the instrument, the sources with their SHA-1, the software and the run of the original, and mzLab as the program that wrote this file.
-pub(super) fn testata_da(head: &str, name: &str, limits: &Limiti) -> Result<Header> {
+pub(super) fn testata_da(head: &str, name: &str, limits: &Limits) -> Result<Header> {
     let mut h = Header {
         run: name.rsplit_once('.').map_or(name, |(s, _)| s).to_string(),
         software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),

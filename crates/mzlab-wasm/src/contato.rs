@@ -1,6 +1,6 @@
 //! The reader of a dataset that counts the scans it decodes for the page (`build_mzidx_native` in `nativi.rs`).
 use js_sys::Function;
-use mzlab_core::lettori::{self, FileSet, Lettore, Limiti};
+use mzlab_core::lettori::{self, FileSet, Limits, Reader};
 use mzlab_core::wiff;
 use wasm_bindgen::JsValue;
 
@@ -8,7 +8,7 @@ use wasm_bindgen::JsValue;
 /// of the sample has got by its own scans, not by the bytes of the members (a `.wiff.scan` holds every sample, the open reads the heads of all of them).
 /// A later pass of the builder counts on from where the first one ended; the page counts from the start of each phase.
 struct Counting {
-    l: Box<dyn Lettore>,
+    l: Box<dyn Reader>,
     step: Function,
     c: usize,
     n: u32,
@@ -17,7 +17,7 @@ struct Counting {
 }
 
 impl Counting {
-    fn new(mut l: Box<dyn Lettore>, step: Function, c: usize) -> Counting {
+    fn new(mut l: Box<dyn Reader>, step: Function, c: usize) -> Counting {
         let n = l.index(c).map_or(0, |v| v.len() as u32);
         drop(step.call2(&JsValue::NULL, &0.into(), &n.into()));
         Counting {
@@ -45,15 +45,15 @@ impl Counting {
 }
 
 #[rustfmt::skip]
-impl Lettore for Counting {
-    fn format(&self) -> lettori::Formato { self.l.format() }
-    fn samples(&self) -> &[lettori::Campione] { self.l.samples() }
-    fn index(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.index(c) }
-    fn index_without_tic(&mut self, c: usize) -> mzlab_core::Result<&[lettori::VoceScansione]> { self.l.index_without_tic(c) }
+impl Reader for Counting {
+    fn format(&self) -> lettori::Format { self.l.format() }
+    fn samples(&self) -> &[lettori::Sample] { self.l.samples() }
+    fn index(&mut self, c: usize) -> mzlab_core::Result<&[lettori::ScanEntry]> { self.l.index(c) }
+    fn index_without_tic(&mut self, c: usize) -> mzlab_core::Result<&[lettori::ScanEntry]> { self.l.index_without_tic(c) }
     fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan(c, k); self.count(c); s }
     fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan_data(c, k); self.count(c); s }
-    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Campo>> { self.l.scan_header(c, k) }
-    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::VoceCromatogramma>> { self.l.chromatograms(c) }
+    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<lettori::Field>> { self.l.scan_header(c, k) }
+    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<lettori::ChromatogramEntry>> { self.l.chromatograms(c) }
     fn chromatogram(&mut self, c: usize, id: &str) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> { self.l.chromatogram(c, id) }
     fn method(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.method(c) }
     fn missing(&mut self, c: usize) -> usize { self.l.missing(c) }
@@ -66,14 +66,14 @@ impl Lettore for Counting {
 /// a container may hold dozens of samples, one builder each; any other set with `open_fs`), and it counts its scans for `step` when the page gave one.
 pub(crate) fn open(
     mut fs: FileSet,
-    open_fs: impl FnOnce(FileSet) -> mzlab_core::Result<Box<dyn Lettore>>,
+    open_fs: impl FnOnce(FileSet) -> mzlab_core::Result<Box<dyn Reader>>,
     tell: &dyn Fn(u32),
     step: Option<Function>,
     c: usize,
-) -> Result<Box<dyn Lettore>, JsValue> {
+) -> Result<Box<dyn Reader>, JsValue> {
     tell(4);
-    let l = if lettori::riconosci(&mut fs).is_some_and(|v| v.id == wiff::lettore::VOCE.id) {
-        wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(c))
+    let l = if lettori::riconosci(&mut fs).is_some_and(|v| v.id == wiff::lettore::ENTRY.id) {
+        wiff::lettore::open_only(fs, &Limits::sito(), Some(c))
     } else {
         open_fs(fs)
     }

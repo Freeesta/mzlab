@@ -2,7 +2,7 @@
 use super::sqlite_min::{guasto, read, u32_be};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use std::collections::HashMap;
 
 /// The checksum of SQLite's log over `b` (a multiple of 8 bytes), continuing from `(s0, s1)`; the words are read little-endian when `le`.
@@ -25,7 +25,7 @@ fn summed(b: &[u8], le: bool, mut s0: u32, mut s1: u32) -> (u32, u32) {
 /// The write-ahead log: (page size, offset of the latest committed frame of each page, pages of the database at the last commit). `None` for a log without frames; frames after the last
 /// commit, with another salt or a wrong checksum are left out, as SQLite does.
 pub(super) type Wal = (usize, HashMap<u32, u64>, u64);
-pub(super) fn read_wal(w: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Option<Wal>> {
+pub(super) fn read_wal(w: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Option<Wal>> {
     if dim < 32 {
         return Ok(None);
     }
@@ -45,7 +45,7 @@ pub(super) fn read_wal(w: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<
         return Err(guasto("log page size"));
     }
     let step = 24 + page as u64;
-    limits.voci_ok((dim - 32) / step)?;
+    limits.ok_entries((dim - 32) / step)?;
     let (mut c0, mut c1) = (s0, s1);
     let mut mappa: HashMap<u32, u64> = HashMap::new();
     let mut pending: Vec<(u32, u64)> = Vec::new();

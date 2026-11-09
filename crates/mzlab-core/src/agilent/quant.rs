@@ -6,7 +6,7 @@
 
 use super::meta::{self, text_of, tree, Node};
 use crate::metodo::{self, num, obj, text, Source, SrcFile, V};
-use crate::metodo_campi::Campo;
+use crate::metodo_campi::Field;
 use sha1::{Digest as _, Sha1};
 
 /// The compound-level elements the section carries (the rest stays in `campi` only).
@@ -230,11 +230,11 @@ pub fn metodo_m(name: &str, files: &[(&str, &[u8])]) -> String {
         .find(|(n, _)| n.eq_ignore_ascii_case(QUANT))
         .and_then(|(_, b)| tree(&text_of(b)))
         .and_then(|top| top.kids.into_iter().next()); // `tree` returns a holder whose only child is the document element
-    let mut fields: Vec<Campo> = items
+    let mut fields: Vec<Field> = items
         .iter()
         .filter(|i| i.name != "text" && !i.value.is_empty())
         .map(|i| {
-            let mut c = Campo::new(&i.origin, &i.name, &i.value);
+            let mut c = Field::new(&i.origin, &i.name, &i.value);
             c.mappato = mapped(&i.origin, &i.name);
             c
         })
@@ -266,7 +266,7 @@ pub fn metodo_m(name: &str, files: &[(&str, &[u8])]) -> String {
         ("quantificazione", quant.as_ref().and_then(section)),
         (
             "campi",
-            Some(V::Arr(fields.iter().filter_map(Campo::json).collect())),
+            Some(V::Arr(fields.iter().filter_map(Field::json).collect())),
         ),
         (
             "avvisi",

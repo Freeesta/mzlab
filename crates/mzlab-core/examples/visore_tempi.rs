@@ -24,18 +24,18 @@ fn stat(v: &mut [f64]) -> (f64, f64) {
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
     match a.first().map(String::as_str) {
-        Some("genera") => genera(&a),
+        Some("genera") => generate(&a),
         Some("indicizza") => indicizza(
             std::path::Path::new(a.get(1).expect("usage: indicizza FILE.mzML OUT.mzidx")),
             std::path::Path::new(a.get(2).expect("usage: indicizza FILE.mzML OUT.mzidx")),
         ),
-        Some(p) => misura(p, &a[1..]),
+        Some(p) => measure(p, &a[1..]),
         None => panic!("usage: visore_tempi genera DIR [SCANS] [PEAKS] | FILE.mzidx [N] [--json]"),
     }
 }
 
 /// `genera DIR [SCANS] [PEAKS]`: the mzML of `mzml_tempi genera` and its `.mzidx` (with a spool, as the desktop builds it), every step timed.
-fn genera(a: &[String]) {
+fn generate(a: &[String]) {
     let dir = std::path::Path::new(a.get(1).expect("usage: genera DIR [SCANS] [PEAKS]"));
     std::fs::create_dir_all(dir).expect("dir");
     let n: usize = a.get(2).and_then(|s| s.parse().ok()).unwrap_or(8000);
@@ -180,7 +180,7 @@ fn spectrum_row(
 }
 
 /// Times the gestures on `path`: opening (5 times), then for N m/z `xic_raw` (arrays), `xic` (JSON) and for N scans one spectrum.
-fn misura(path: &str, a: &[String]) {
+fn measure(path: &str, a: &[String]) {
     let n: usize = a.iter().find_map(|s| s.parse().ok()).unwrap_or(200);
     let json = a.iter().any(|s| s == "--json");
     let size = std::fs::metadata(path).expect("file").len();

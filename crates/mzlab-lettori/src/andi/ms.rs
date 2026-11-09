@@ -8,8 +8,8 @@ use super::testata::Testata;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
-    VoceLettore, VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
 };
 use mzlab_core::metodo::sha1_hex;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
@@ -21,7 +21,7 @@ mod bpc;
 const TESTA: usize = 1 << 18;
 const UNITA: &str = "Arbitrary Intensity Units";
 
-pub const ENTRY: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "andi-ms",
     contratto: CONTRATTO,
     estensioni: &[".cdf", ".nc"],
@@ -37,7 +37,7 @@ impl AndiReader {
         let sx = cdf
             .find("scan_index")
             .ok_or_else(|| Error::new("err.dam.unreadable").with("message", "no scan_index"))?;
-        let n = limits.voci_ok(cdf.elementi(sx))?;
+        let n = limits.ok_entries(cdf.elementi(sx))?;
         let points = cdf.find("mass_values").map_or(0, |v| cdf.elementi(v));
         let inizi: Vec<u64> = cdf
             .read(&mut self.data, &limits, sx, 0, n as u64)?
@@ -107,20 +107,20 @@ impl AndiReader {
             };
             let v = |c: &Option<Vec<f64>>| c.as_ref().and_then(|c| c.get(k).copied());
             self.windows.push(v(&lo).zip(v(&hi)));
-            self.indice.push(VoceScansione {
+            self.indice.push(ScanEntry {
                 id: format!("scan={}", k + 1),
                 rt: rt.unwrap_or(0.0) / 60.0,
                 livello: 1,
                 polarita: pol,
                 tic: v(&tot).unwrap_or(0.0),
-                picco_base: None,
+                base_peak: None,
                 filtro: if self.sim {
                     "SIM".into()
                 } else {
                     String::new()
                 },
                 precursore: None,
-                posizione: Some(Posizione {
+                position: Some(Position {
                     membro: 0,
                     offset: self.inizi[k],
                     lunghezza: u32::try_from(self.conti[k]).unwrap_or(u32::MAX),
@@ -261,9 +261,9 @@ impl AndiReader {
     }
 }
 
-impl Lettore for AndiReader {
-    fn format(&self) -> Formato {
-        Formato::Altro("andi-ms")
+impl Reader for AndiReader {
+    fn format(&self) -> Format {
+        Format::Altro("andi-ms")
     }
 
     fn missing(&mut self, c: usize) -> usize {
@@ -274,11 +274,11 @@ impl Lettore for AndiReader {
         }
     }
 
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.samples
     }
 
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.one(c)?;
         self.complete()?;
         Ok(&self.indice)
@@ -290,7 +290,7 @@ impl Lettore for AndiReader {
     }
 
     /// Every per-scan variable of the file (times, ranges, counts) at scan `k`, with its unit.
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.one(c)?;
         if k >= self.indice.len() {
             return Err(bad_index(k));
@@ -309,7 +309,7 @@ impl Lettore for AndiReader {
                 .cdf
                 .read(&mut self.data, &self.limits, v, k as u64, 1)?;
             scale(&mut x, v);
-            out.push(Campo {
+            out.push(Field {
                 nome: v.nome.clone(),
                 valore: x.first().map(|x| x.to_string()).unwrap_or_default(),
                 unita: v
@@ -322,7 +322,7 @@ impl Lettore for AndiReader {
         Ok(out)
     }
 
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         if self.indice.is_empty() && self.tagliate == 0 {
             return Ok(cromato::entries(&self.cdf, &mut self.data, &self.limits));
@@ -330,7 +330,7 @@ impl Lettore for AndiReader {
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
-            .map(|(id, tipo)| VoceCromatogramma {
+            .map(|(id, tipo)| ChromatogramEntry {
                 id: id.into(),
                 tipo,
                 unita: UNITA.into(),
@@ -373,11 +373,11 @@ pub struct AndiReader {
     data: Box<dyn ReadAt>,
     dim: u64,
     name: String,
-    limits: Limiti,
+    limits: Limits,
     cdf: Cdf,
     testata: Testata,
-    samples: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    samples: Vec<Sample>,
+    indice: Vec<ScanEntry>,
     /// First point and number of points of each scan.
     inizi: Vec<u64>,
     conti: Vec<u64>,
@@ -396,7 +396,7 @@ pub struct AndiReader {
 }
 
 fn riconosci(fs: &mut FileSet) -> Fiducia {
-    let Some(i) = fs.trova(".cdf").or_else(|| fs.trova(".nc")) else {
+    let Some(i) = fs.find(".cdf").or_else(|| fs.find(".nc")) else {
         return Fiducia::No;
     };
     let head = fs.testa(i, TESTA);
@@ -418,7 +418,7 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
 fn column(
     cdf: &Cdf,
     data: &mut dyn ReadAt,
-    limits: &Limiti,
+    limits: &Limits,
     name: &str,
 ) -> Result<Option<Vec<f64>>> {
     let Some(v) = cdf.find(name) else {
@@ -433,10 +433,10 @@ fn bad_index(k: usize) -> Error {
     Error::new("error.badIndex").with("k", k)
 }
 
-fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs
-        .trova(".cdf")
-        .or_else(|| fs.trova(".nc"))
+        .find(".cdf")
+        .or_else(|| fs.find(".nc"))
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
     let m = fs
         .membri
@@ -484,11 +484,11 @@ fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
         .rsplit_once('.')
         .map_or(l.name.as_str(), |(s, _)| s)
         .to_string();
-    l.samples = vec![Campione {
+    l.samples = vec![Sample {
         id: 1,
         nome: l.testata.titolo.clone().unwrap_or(stem),
         scansioni,
-        dimensione: None,
+        size: None,
     }];
     Ok(Box::new(l))
 }

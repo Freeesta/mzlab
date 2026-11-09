@@ -4,7 +4,7 @@
 use super::Spettro;
 use crate::error::Result;
 use crate::idxread::Scan;
-use crate::msnalbero::{albero, consenso, Albero, Raggruppa};
+use crate::msnalbero::{albero, consenso, Albero, Grouping};
 use crate::sorgente::Scansioni;
 
 /// The consensus of a set of scans: peaks within `CONSENSO_PPM`, present in at least half of the scans.
@@ -38,17 +38,17 @@ pub struct Letto {
 }
 
 /// The tree of the scans and the consensus spectra of its nodes.
-pub fn leggi<M: Scansioni + ?Sized>(scans: &[Scan], m: &mut M, r: &Raggruppa) -> Result<Letto> {
+pub fn read<M: Scansioni + ?Sized>(scans: &[Scan], m: &mut M, r: &Grouping) -> Result<Letto> {
     let a = albero(scans, r);
     let ms1 = if a.ms1.is_empty() {
         None
     } else {
         Some(consenso_di(scans, &a.ms1, m)?)
     };
-    let (mut spettri, mut larghezze) = (Vec::with_capacity(a.nodi.len()), vec![]);
+    let (mut spettri, mut widths) = (Vec::with_capacity(a.nodi.len()), vec![]);
     for n in &a.nodi {
         spettri.push(consenso_di(scans, &n.scansioni, m)?);
-        larghezze.push(
+        widths.push(
             n.scansioni
                 .iter()
                 .filter_map(|&i| scans[i].iso.map(|(lo, hi)| hi - lo))
@@ -61,7 +61,7 @@ pub fn leggi<M: Scansioni + ?Sized>(scans: &[Scan], m: &mut M, r: &Raggruppa) ->
         albero: a,
         ms1,
         spettri,
-        larghezze,
+        larghezze: widths,
         polarita: pol,
     })
 }

@@ -6,13 +6,13 @@ mod modello;
 mod serie;
 
 use mzlab_core::campioni::{
-    self, from_json, per_tp, tabella_da_json, to_json, to_json3, valida, Cell, Colonna, Tabella,
-    TipoColonna,
+    self, from_json, per_tp, table_from_json, to_json, to_json3, validate, Cell, Column,
+    ColumnType, Table,
 };
-use mzlab_core::campioni::{proponi, Campione};
+use mzlab_core::campioni::{proponi, Sample};
 use serde_json::Value;
 
-pub fn many(names: &[&str]) -> Vec<Campione> {
+pub fn many(names: &[&str]) -> Vec<Sample> {
     let v: Vec<(String, String, String)> = names
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
@@ -20,7 +20,7 @@ pub fn many(names: &[&str]) -> Vec<Campione> {
     proponi(&v)
 }
 
-fn codes(t: &Tabella) -> Vec<String> {
+fn codes(t: &Table) -> Vec<String> {
     let j = campioni::route("valida", &to_json3(t)).unwrap();
     let v: Value = serde_json::from_str(&j).unwrap();
     v["avvisi"]
@@ -34,8 +34,8 @@ fn codes(t: &Tabella) -> Vec<String> {
         .collect()
 }
 
-fn table(names: &[&str]) -> Tabella {
-    Tabella {
+fn table(names: &[&str]) -> Table {
+    Table {
         campioni: many(names),
         colonne: Vec::new(),
     }
@@ -52,7 +52,7 @@ fn a_campioni_2_migrates_with_the_same_per_tp() {
         "std_5ppm",
     ]);
     let v2 = to_json(&cs);
-    let t = tabella_da_json(v2.as_bytes()).unwrap();
+    let t = table_from_json(v2.as_bytes()).unwrap();
     assert_eq!(t.campioni, cs);
     assert_eq!(
         per_tp(&t.campioni),
@@ -60,7 +60,7 @@ fn a_campioni_2_migrates_with_the_same_per_tp() {
     );
     let v3 = campioni::route("migra", &v2).unwrap();
     assert!(v3.contains("\"schema\":\"campioni/3\""));
-    let back = tabella_da_json(v3.as_bytes()).unwrap();
+    let back = table_from_json(v3.as_bytes()).unwrap();
     assert_eq!(per_tp(&back.campioni), per_tp(&cs));
     // a /2 asked for its canonical form stays a /2, a /3 stays a /3
     assert_eq!(campioni::route("canonico", &v2).unwrap(), v2);
@@ -68,7 +68,7 @@ fn a_campioni_2_migrates_with_the_same_per_tp() {
     assert_eq!(campioni::route("digest", &v3).unwrap().len(), 64);
 }
 
-fn rich() -> Tabella {
+fn rich() -> Table {
     let mut t = table(&["A1_pos_t005", "A1_neg_t005", "B2_pos_t005", "B2_neg_t005"]);
     for (i, c) in t.campioni.iter_mut().enumerate() {
         c.sample_id = ["A1", "A1", "B2", "B2"][i].into();
@@ -82,10 +82,10 @@ fn rich() -> Tabella {
         c.set_extra("alfa", Cell::Testo(format!("v{i}")));
     }
     t.colonne = vec![
-        Colonna::new("zeta", TipoColonna::Numero),
-        Colonna {
+        Column::new("zeta", ColumnType::Numero),
+        Column {
             name: "alfa".into(),
-            kind: TipoColonna::Categoria,
+            kind: ColumnType::Categoria,
             values: Some(vec!["v3".into(), "v0".into(), "v1".into(), "v2".into()]),
             required: true,
         },
@@ -121,7 +121,7 @@ fn canonical_bytes_do_not_depend_on_the_order_written() {
     )
     .unwrap();
     assert!(super::fits(&serde_json::from_str(&want).unwrap(), &schema));
-    assert_eq!(tabella_da_json(want.as_bytes()).unwrap().campioni.len(), 4);
+    assert_eq!(table_from_json(want.as_bytes()).unwrap().campioni.len(), 4);
     for p in permutations(4) {
         for q in [vec![0, 1], vec![1, 0]] {
             let mut u = t.clone();
@@ -132,12 +132,12 @@ fn canonical_bytes_do_not_depend_on_the_order_written() {
         }
     }
     assert_eq!(
-        tabella_da_json(want.as_bytes()).unwrap().campioni[3].extra[0].0,
+        table_from_json(want.as_bytes()).unwrap().campioni[3].extra[0].0,
         "alfa"
     );
     assert_eq!(
         campioni::digest3(&t),
-        campioni::digest3(&tabella_da_json(want.as_bytes()).unwrap())
+        campioni::digest3(&table_from_json(want.as_bytes()).unwrap())
     );
 }
 
@@ -183,7 +183,7 @@ fn valida_checks_columns_keys_and_pairs() {
         campioni::route("valida", &v2).unwrap(),
         campioni::route("valida", &campioni::route("migra", &v2).unwrap()).unwrap()
     );
-    assert!(!valida(&many(&["X_t000min", "X_t005min"])).is_empty());
+    assert!(!validate(&many(&["X_t000min", "X_t005min"])).is_empty());
 }
 
 #[test]
@@ -201,7 +201,7 @@ fn dal_file_fills_what_the_file_says() {
         t.campioni[1].file
     );
     let out: Value =
-        serde_json::from_str(&campioni::route_tutto("dal_file", &input).unwrap()).unwrap();
+        serde_json::from_str(&campioni::route_all("dal_file", &input).unwrap()).unwrap();
     let c = &out["campioni"]["campioni"];
     let by = |f: &str| {
         c.as_array()
@@ -260,6 +260,6 @@ fn errors_are_json_keys_not_panics() {
         ("dal_file", "{}"),
         ("canonico", r#"{"schema":"campioni/9"}"#),
     ] {
-        assert!(campioni::route_tutto(op, input).is_err(), "{op} {input}");
+        assert!(campioni::route_all(op, input).is_err(), "{op} {input}");
     }
 }

@@ -2,7 +2,7 @@
 //! The synthetic Orbitrap v66 writer (`examples/thermo_sintetico.rs`, the stand-in for the speed benches of high-resolution `.raw`) gives a file the reader opens:
 //! the scan count, the MS1/MS2 cycle, profile MS1 with centroids at the m/z it wrote, MS2 with a precursor. Small file in a temporary folder, removed afterwards.
 //! A pinned hash of every decoded scan (centroids and profile) is the gate of any change to the decoder: it must give the same values.
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::Spectrum;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -69,14 +69,14 @@ fn the_synthetic_orbitrap_file_opens_with_its_cycle() {
     let b = std::fs::read(&f).unwrap();
     let _ = std::fs::remove_dir_all(&d);
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "hr.raw".into(),
             dim: b.len() as u64,
             dati: Box::new(b),
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limiti::sito()).expect("open");
+    let mut l = mzlab_lettori::apri(set, &Limits::sito()).expect("open");
     let ix = l.index(0).expect("index").to_vec();
     assert_eq!(ix.len(), 66);
     for (k, v) in ix.iter().enumerate() {
@@ -148,14 +148,14 @@ fn the_decoded_scans_of_a_profile_file_keep_their_pinned_hash() {
     let _ = std::fs::remove_dir_all(&d);
     let file = hex(&Sha256::digest(&b));
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "p.raw".into(),
             dim: b.len() as u64,
             dati: Box::new(b),
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limiti::sito()).expect("open");
+    let mut l = mzlab_lettori::apri(set, &Limits::sito()).expect("open");
     let n = l.index(0).expect("index").len();
     let mut h = Sha256::new();
     for k in 0..n {
@@ -216,7 +216,7 @@ fn dda_windows(
 ) -> Vec<(String, String, String)> {
     use mzlab_core::idxread::Index;
     use mzlab_core::routes::{Query, Routes};
-    use mzlab_core::sorgente::SorgenteLettore;
+    use mzlab_core::sorgente::ReaderSource;
     use mzlab_core::{lettori_mzml, mzidx, upload};
     let d = folder(name);
     let f = d.join("dda.raw");
@@ -224,7 +224,7 @@ fn dda_windows(
     let b = std::fs::read(&f).unwrap();
     let _ = std::fs::remove_dir_all(&d);
     let mut set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "dda.raw".into(),
             dim: b.len() as u64,
             dati: Box::new(b),
@@ -232,13 +232,13 @@ fn dda_windows(
         }],
     };
     let members = upload::impronte(&mut set).unwrap();
-    let mut l = mzlab_lettori::apri(set, &Limiti::desktop()).expect("open");
+    let mut l = mzlab_lettori::apri(set, &Limits::desktop()).expect("open");
     let mzml = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "dda.mzML").unwrap();
     let (ia, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, mzidx::DEFAULT_BUDGET).unwrap();
-    let pb = upload::prepare_lettore(&mut *l, 0, &members, "dda.mzML").unwrap();
+    let pb = upload::prepare_reader(&mut *l, 0, &members, "dda.mzML").unwrap();
     let mut ib = std::io::Cursor::new(Vec::new());
-    mzidx::build_lettore(&pb.table, &mut *l, 0, &mut ib, mzidx::DEFAULT_BUDGET).unwrap();
+    mzidx::build_reader(&pb.table, &mut *l, 0, &mut ib, mzidx::DEFAULT_BUDGET).unwrap();
     let ib = ib.into_inner();
     let mut ra = Routes::new(Index::open(ia.clone(), ia.len() as u64).unwrap());
     let mut rb = Routes::new(Index::open(ib.clone(), ib.len() as u64).unwrap());
@@ -255,7 +255,7 @@ fn dda_windows(
                 .mzml_route(
                     "/api/dda_window",
                     &q,
-                    &mut SorgenteLettore { l: &mut *l, c: 0 },
+                    &mut ReaderSource { l: &mut *l, c: 0 },
                 )
                 .unwrap()
                 .unwrap();

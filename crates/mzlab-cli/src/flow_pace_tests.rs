@@ -1,8 +1,8 @@
 //! Progress of the native index build (`flow_pace::build_index_with`) and of `write_mzml_with`: monotone, at most one report per 1 %, ends at the total, and
 //! the file made is the same bytes as without a callback.
 
-use mzlab_core::lettori_mzml::Picchi;
-use mzlab_core::mzmlwrite::Opzioni;
+use mzlab_core::lettori_mzml::Peaks;
+use mzlab_core::mzmlwrite::Options;
 
 use crate::convert_fixtures::{folder, makers, wiff};
 
@@ -35,10 +35,10 @@ fn the_conversion_reports_monotone_progress_and_is_the_same_bytes() {
     let d = folder("pace_conv");
     let src = makers(&d, false).join("a.mzXML");
     let (a, b) = (d.join("a.mzML"), d.join("b.mzML"));
-    crate::flow_base::write_mzml(&src, None, &a, Picchi::File, Opzioni::default()).unwrap();
+    crate::flow_base::write_mzml(&src, None, &a, Peaks::File, Options::default()).unwrap();
     let mut seen = Vec::new();
     let step = &mut |d, t| seen.push((d, t));
-    let how = (Picchi::File, Opzioni::default());
+    let how = (Peaks::File, Options::default());
     crate::flow_base::write_mzml_with(&src, None, &b, how, step, &None).unwrap();
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
     well_formed(&seen);
@@ -50,7 +50,7 @@ fn the_hash_taken_while_writing_is_the_hash_of_the_file_and_the_memo_of_the_inpu
 {
     let d = folder("pace_hash");
     let src = makers(&d, false).join("a.mzXML");
-    let how = (Picchi::File, Opzioni::default());
+    let how = (Peaks::File, Options::default());
     // no memo of the input yet: the reader takes the SHA-1 of the header itself
     let a = d.join("a.mzML");
     let (_, bytes, sha) =
@@ -116,9 +116,9 @@ fn the_fingerprints_taken_beside_the_scans_change_no_byte_and_a_cancel_stops() {
         crate::build_index_of(&p, "", &a, budget).unwrap();
         let mut fs = crate::flow_set::file_set(&p).unwrap();
         let imp = mzlab_core::upload::impronte(&mut fs).unwrap();
-        let mut l = mzlab_lettori::apri(fs, &mzlab_core::lettori::Limiti::desktop()).unwrap();
+        let mut l = mzlab_lettori::apri(fs, &mzlab_core::lettori::Limits::desktop()).unwrap();
         let mut out = std::io::Cursor::new(Vec::new());
-        mzlab_core::upload::indicizza_lettore_con(
+        mzlab_core::upload::index_reader_with(
             &mut *l,
             0,
             &mut || Ok(imp.clone()),

@@ -4,14 +4,14 @@ use std::collections::HashMap;
 
 use super::json_testo::{chromatograms_json, fields_json, header_json, samples_json};
 use mzlab_core::json::Out;
-use mzlab_core::lettori::Lettore;
+use mzlab_core::lettori::Reader;
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::trasporto::{encode_indice, encode_scansione};
+use mzlab_core::trasporto::{encode_index, encode_scansione};
 use mzlab_core::Result;
 
 #[derive(Default)]
 pub struct Sessions {
-    open: HashMap<u32, Box<dyn Lettore>>,
+    open: HashMap<u32, Box<dyn Reader>>,
     next: u32,
     // the last scan of `scan_parts`, whose columns the engine reads in place
     last: Option<Spectrum>,
@@ -19,7 +19,7 @@ pub struct Sessions {
 
 impl Sessions {
     /// Keeps `l` open and gives its handle.
-    pub fn insert(&mut self, l: Box<dyn Lettore>) -> u32 {
+    pub fn insert(&mut self, l: Box<dyn Reader>) -> u32 {
         self.next += 1;
         self.open.insert(self.next, l);
         self.next
@@ -29,7 +29,7 @@ impl Sessions {
         self.open.remove(&h);
     }
 
-    fn reader(&mut self, h: u32) -> Result<&mut Box<dyn Lettore>> {
+    fn reader(&mut self, h: u32) -> Result<&mut Box<dyn Reader>> {
         self.open
             .get_mut(&h)
             .ok_or_else(|| mzlab_core::Error::new("error.badIndex").with("h", h))
@@ -49,7 +49,7 @@ impl Sessions {
 
     /// The index of sample `c` as one block of bytes in columns (`trasporto.rs`).
     pub fn index(&mut self, h: u32, c: usize) -> Result<Vec<u8>> {
-        Ok(encode_indice(self.reader(h)?.index(c)?))
+        Ok(encode_index(self.reader(h)?.index(c)?))
     }
 
     /// Scan `k` of sample `c` as one block of bytes: a fixed head, the m/z, the intensities (`trasporto.rs`). The id and the filter are those of the index.

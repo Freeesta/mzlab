@@ -7,7 +7,7 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::{lettori_mzml, rawlettore, Result};
 use mzlab_lettori_wasm::sessione::Sessions;
 use mzlab_wasm::esterno::{ExternalReader, Module};
@@ -39,7 +39,7 @@ fn set(path: &Path) -> FileSet {
     let bytes = std::fs::read(path).unwrap();
     let name = path.file_name().unwrap().to_string_lossy().to_string();
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: name,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -100,14 +100,14 @@ impl Write for Fingerprint {
     }
 }
 
-fn mzml(l: &mut dyn Lettore) -> (u64, u64) {
+fn mzml(l: &mut dyn Reader) -> (u64, u64) {
     let w =
         lettori_mzml::scrivi(l, 0, Fingerprint(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
     (w.0, w.1)
 }
 
 /// Scan `k` and its header, from the external reader and from the linked one.
-fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, name: &str) {
+fn same_scan(ext: &mut dyn Reader, diretto: &mut dyn Reader, k: usize, name: &str) {
     let (a, b) = (ext.scan(0, k).unwrap(), diretto.scan(0, k).unwrap());
     assert_eq!(
         (
@@ -154,9 +154,9 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         return;
     }
     for f in &files {
-        let mut diretto = (rawlettore::VOCE.apri)(set(f), &Limiti::sito()).unwrap();
+        let mut diretto = (rawlettore::ENTRY.apri)(set(f), &Limits::sito()).unwrap();
         let mut s = Sessions::default();
-        let h = s.insert(mzlab_lettori::apri_nudo(set(f), &Limiti::sito()).unwrap());
+        let h = s.insert(mzlab_lettori::apri_nudo(set(f), &Limits::sito()).unwrap());
         let mut ext = ExternalReader::new(ViaSession { s, h }).unwrap();
         let name = f.display();
         assert_eq!(ext.format(), diretto.format(), "{name}");

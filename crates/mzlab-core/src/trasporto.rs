@@ -9,7 +9,7 @@
 //! Scan: `u8 level, i8 polarity, u8 flags (1 profile, 2 intensities are f64, 4 has a precursor), u8 0, u32 points, f64 rt, f64 precursor`, then `f64 mz[points]` and
 //! the intensities (`f32[points]`, or `f64[points]` with flag 2: the file holds 64-bit ones). The id and the filter are not sent: the engine has them in the index.
 use crate::error::{Error, Result};
-use crate::lettori::{Posizione, VoceScansione};
+use crate::lettori::{Position, ScanEntry};
 use crate::mzml::Spectrum;
 
 /// Version of this format; the module answers it (`protocollo()`) and the first word of an index repeats it.
@@ -31,57 +31,62 @@ fn u32_di(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
 
-fn colonna(o: &mut Vec<u8>, v: impl Iterator<Item = f64>) {
+fn column(o: &mut Vec<u8>, v: impl Iterator<Item = f64>) {
     for x in v {
         o.extend_from_slice(&x.to_le_bytes());
     }
 }
 
 /// The index of a sample as a block of bytes.
-pub fn encode_indice(v: &[VoceScansione]) -> Vec<u8> {
-    let mut filtri: Vec<&str> = Vec::new();
+pub fn encode_index(v: &[ScanEntry]) -> Vec<u8> {
+    let mut filters: Vec<&str> = Vec::new();
     let mut di_filtro: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
-    let mut quale: Vec<u32> = Vec::with_capacity(v.len());
+    let mut which: Vec<u32> = Vec::with_capacity(v.len());
     for r in v {
         let k = *di_filtro.entry(r.filtro.as_str()).or_insert_with(|| {
-            filtri.push(r.filtro.as_str());
-            u32_di(filtri.len() - 1)
+            filters.push(r.filtro.as_str());
+            u32_di(filters.len() - 1)
         });
-        quale.push(k);
+        which.push(k);
     }
-    let byte_filtri: usize = filtri.iter().map(|f| f.len()).sum();
+    let byte_filtri: usize = filters.iter().map(|f| f.len()).sum();
     let byte_id: usize = v.iter().map(|r| r.id.len()).sum();
     let n = v.len();
     let mut o: Vec<u8> = Vec::with_capacity(
-        TESTA_INDICE + n * (7 * 8 + 4 + 4 + 2) + (filtri.len() + 1) * 4 + 4 + byte_filtri + byte_id,
+        TESTA_INDICE
+            + n * (7 * 8 + 4 + 4 + 2)
+            + (filters.len() + 1) * 4
+            + 4
+            + byte_filtri
+            + byte_id,
     );
     for x in [
         PROTOCOLLO,
         u32_di(n),
-        u32_di(filtri.len()),
+        u32_di(filters.len()),
         u32_di(byte_filtri),
         u32_di(byte_id),
         0,
     ] {
         o.extend_from_slice(&x.to_le_bytes());
     }
-    colonna(&mut o, v.iter().map(|r| r.rt));
-    colonna(&mut o, v.iter().map(|r| r.tic));
-    colonna(&mut o, v.iter().map(|r| r.picco_base.unwrap_or(f64::NAN)));
-    colonna(&mut o, v.iter().map(|r| r.precursore.unwrap_or(f64::NAN)));
+    column(&mut o, v.iter().map(|r| r.rt));
+    column(&mut o, v.iter().map(|r| r.tic));
+    column(&mut o, v.iter().map(|r| r.base_peak.unwrap_or(f64::NAN)));
+    column(&mut o, v.iter().map(|r| r.precursore.unwrap_or(f64::NAN)));
     for r in v {
-        let (m, off, len) = match r.posizione {
+        let (m, off, len) = match r.position {
             Some(p) => (f64::from(p.membro), p.offset as f64, f64::from(p.lunghezza)),
             None => (-1.0, 0.0, 0.0),
         };
-        colonna(&mut o, [m, off, len].into_iter());
+        column(&mut o, [m, off, len].into_iter());
     }
-    for k in &quale {
+    for k in &which {
         o.extend_from_slice(&k.to_le_bytes());
     }
     let mut a = 0u32;
     o.extend_from_slice(&a.to_le_bytes());
-    for f in &filtri {
+    for f in &filters {
         a = a.saturating_add(u32_di(f.len()));
         o.extend_from_slice(&a.to_le_bytes());
     }
@@ -93,7 +98,7 @@ pub fn encode_indice(v: &[VoceScansione]) -> Vec<u8> {
     }
     o.extend(v.iter().map(|r| r.livello));
     o.extend(v.iter().map(|r| r.polarita as u8));
-    for f in &filtri {
+    for f in &filters {
         o.extend_from_slice(f.as_bytes());
     }
     for r in v {
@@ -103,12 +108,12 @@ pub fn encode_indice(v: &[VoceScansione]) -> Vec<u8> {
 }
 
 /// A cursor over the blocks of an index, each read checked against the end.
-struct Lettura<'a> {
+struct Reading<'a> {
     b: &'a [u8],
     p: usize,
 }
 
-impl<'a> Lettura<'a> {
+impl<'a> Reading<'a> {
     fn prendi(&mut self, n: usize) -> Result<&'a [u8]> {
         let fine = self.p.checked_add(n).filter(|&f| f <= self.b.len());
         let fine = fine.ok_or_else(|| guasto("index"))?;
@@ -139,15 +144,15 @@ fn f64_di(c: &[u8]) -> f64 {
     f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]])
 }
 
-fn testo(blocco: &[u8], off: &[u32], i: usize) -> Result<String> {
+fn text(block: &[u8], off: &[u32], i: usize) -> Result<String> {
     let (a, b) = (off[i] as usize, off[i + 1] as usize);
-    let s = blocco.get(a..b).ok_or_else(|| guasto("index"))?;
+    let s = block.get(a..b).ok_or_else(|| guasto("index"))?;
     Ok(String::from_utf8_lossy(s).into_owned())
 }
 
-/// The rows of an index written by `encode_indice`.
-pub fn decode_indice(b: &[u8]) -> Result<Vec<VoceScansione>> {
-    let mut l = Lettura { b, p: 0 };
+/// The rows of an index written by `encode_index`.
+pub fn decode_index(b: &[u8]) -> Result<Vec<ScanEntry>> {
+    let mut l = Reading { b, p: 0 };
     if l.u32()? != PROTOCOLLO {
         return Err(guasto("protocol"));
     }
@@ -164,32 +169,32 @@ pub fn decode_indice(b: &[u8]) -> Result<Vec<VoceScansione>> {
     let base = l.f64s(n)?;
     let prec = l.f64s(n)?;
     let pos = l.f64s(n * 3)?;
-    let quale = l.u32s(n)?;
+    let which = l.u32s(n)?;
     let off_f = l.u32s(nf.checked_add(1).ok_or_else(|| guasto("index"))?)?;
     let off_i = l.u32s(n + 1)?;
     let liv = l.prendi(n)?;
     let pol = l.prendi(n)?;
     let t_f = l.prendi(byte_f)?;
     let t_i = l.prendi(byte_i)?;
-    let filtri = (0..nf)
-        .map(|i| testo(t_f, &off_f, i))
+    let filters = (0..nf)
+        .map(|i| text(t_f, &off_f, i))
         .collect::<Result<Vec<_>>>()?;
     let opz = |x: f64| (!x.is_nan()).then_some(x);
     (0..n)
         .map(|i| {
-            Ok(VoceScansione {
-                id: testo(t_i, &off_i, i)?,
+            Ok(ScanEntry {
+                id: text(t_i, &off_i, i)?,
                 rt: rt[i],
                 livello: liv[i],
                 polarita: pol[i] as i8,
                 tic: tic[i],
-                picco_base: opz(base[i]),
-                filtro: filtri
-                    .get(quale[i] as usize)
+                base_peak: opz(base[i]),
+                filtro: filters
+                    .get(which[i] as usize)
                     .ok_or_else(|| guasto("index"))?
                     .clone(),
                 precursore: opz(prec[i]),
-                posizione: (pos[3 * i] >= 0.0).then(|| Posizione {
+                position: (pos[3 * i] >= 0.0).then(|| Position {
                     membro: pos[3 * i] as u16,
                     offset: pos[3 * i + 1] as u64,
                     lunghezza: pos[3 * i + 2] as u32,
@@ -225,9 +230,9 @@ pub fn encode_scansione(s: &Spectrum) -> Vec<u8> {
     let mut o: Vec<u8> =
         Vec::with_capacity(TESTA_SCANSIONE + n * if s.wide.is_some() { 16 } else { 12 });
     o.extend_from_slice(&testa_scansione(s));
-    colonna(&mut o, s.mz.iter().copied());
+    column(&mut o, s.mz.iter().copied());
     match &s.wide {
-        Some(w) => colonna(&mut o, w.iter().take(n).copied()),
+        Some(w) => column(&mut o, w.iter().take(n).copied()),
         None => {
             for y in s.intensity.iter().take(n) {
                 o.extend_from_slice(&y.to_le_bytes());
@@ -238,21 +243,21 @@ pub fn encode_scansione(s: &Spectrum) -> Vec<u8> {
 }
 
 /// The intensities of a scan as the module sends them: 32-bit, or 64-bit (`Larghe`) when the file stores them so.
-pub enum Intensita {
+pub enum Intensity {
     Strette(Vec<f32>),
     Larghe(Vec<f64>),
 }
 
 /// The scan `k` from its head and its columns, as `decode_scansione` gives it from the block (the columns cross separately, without the block).
-pub fn scansione_da_parti(k: usize, t: &[u8], mz: Vec<f64>, y: Intensita) -> Result<Spectrum> {
+pub fn scan_from_parts(k: usize, t: &[u8], mz: Vec<f64>, y: Intensity) -> Result<Spectrum> {
     if t.len() != TESTA_SCANSIONE {
         return Err(guasto("scan"));
     }
     let flag = t[2];
     let n = u32::from_le_bytes([t[4], t[5], t[6], t[7]]) as usize;
     let (intensity, wide) = match y {
-        Intensita::Larghe(y) if flag & LARGHE != 0 && y.len() == n => larghe(y),
-        Intensita::Strette(f) if flag & LARGHE == 0 && f.len() == n => (f, None),
+        Intensity::Larghe(y) if flag & LARGHE != 0 && y.len() == n => larghe(y),
+        Intensity::Strette(f) if flag & LARGHE == 0 && f.len() == n => (f, None),
         _ => return Err(guasto("scan")),
     };
     if mz.len() != n {
@@ -301,18 +306,17 @@ pub fn decode_scansione(k: usize, b: &[u8]) -> Result<Spectrum> {
         .chunks_exact(8)
         .map(f64_di)
         .collect();
-    let resto = &b[TESTA_SCANSIONE + 8 * n..];
+    let rest = &b[TESTA_SCANSIONE + 8 * n..];
     let y = if larghe {
-        Intensita::Larghe(resto.chunks_exact(8).map(f64_di).collect())
+        Intensity::Larghe(rest.chunks_exact(8).map(f64_di).collect())
     } else {
-        Intensita::Strette(
-            resto
-                .chunks_exact(4)
+        Intensity::Strette(
+            rest.chunks_exact(4)
                 .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
                 .collect(),
         )
     };
-    scansione_da_parti(k, &b[..TESTA_SCANSIONE], mz, y)
+    scan_from_parts(k, &b[..TESTA_SCANSIONE], mz, y)
 }
 
 #[cfg(test)]

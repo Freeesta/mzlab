@@ -8,7 +8,7 @@ use std::sync::Arc;
 use crate::budget::MemBudget;
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use crate::lettori::Posizione;
+use crate::lettori::Position;
 use crate::stima;
 use head_read::read_head;
 
@@ -77,7 +77,7 @@ impl Detail {
 #[derive(Debug, Clone, Copy)]
 pub struct Dove {
     pub k: usize,
-    pub posizione: Option<Posizione>,
+    pub position: Option<Position>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -85,7 +85,7 @@ pub struct Row {
     pub start: u64,
     pub end: u64,
     /// A row of a vendor file (`mzidx_lettore::rows_json`).
-    pub dove: Option<Box<Dove>>,
+    pub at: Option<Box<Dove>>,
     pub level: u8,
     pub rt: f64,
     pub polarity: i8,
@@ -745,18 +745,18 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
         None => read_walked(&mut src, &mut rows, budget)?,
     };
     let n_chrom = count_chromatograms(&mut src, last_end)?;
-    finiti(rows.finish(n_chrom))
+    finished(rows.finish(n_chrom))
 }
 
 /// A NaN or infinite retention time or TIC is a damaged file (`err.file.nonFinite`, the scan by its position), like the readers' guard
 /// (`mzlab_lettori::finiti`): it never reaches the index, the TIC or the charts.
-fn finiti(t: Table) -> Result<Table> {
+fn finished(t: Table) -> Result<Table> {
     for (k, r) in t.rows.iter().enumerate() {
-        for (cosa, x) in [("rt", r.rt), ("tic", r.tic)] {
+        for (what, x) in [("rt", r.rt), ("tic", r.tic)] {
             if !x.is_finite() {
                 return Err(crate::error::Error::new("err.file.nonFinite")
                     .with("scan", k + 1)
-                    .with("what", cosa)
+                    .with("what", what)
                     .with("value", x));
             }
         }

@@ -18,13 +18,13 @@ pub(super) fn scan(level: u8, rt: f64, stages: &[(f64, f64)]) -> Scan {
 }
 
 /// (id, family, level, n, parent) of every channel.
-pub(super) fn riassunto(c: &Canali) -> Vec<(String, &'static str, u8, u32, Option<u32>)> {
+pub(super) fn summary(c: &Channels) -> Vec<(String, &'static str, u8, u32, Option<u32>)> {
     c.v.iter()
-        .map(|x| (x.id.clone(), x.famiglia.nome(), x.livello, x.n, x.genitore))
+        .map(|x| (x.id.clone(), x.famiglia.name(), x.livello, x.n, x.parent))
         .collect()
 }
 
-pub(super) fn voce(
+pub(super) fn entry(
     id: &str,
     f: &'static str,
     l: u8,
@@ -34,8 +34,8 @@ pub(super) fn voce(
     (id.to_string(), f, l, n, g)
 }
 
-pub(super) fn da(scans: &[Scan]) -> Canali {
-    Canali::da(scans, &[], &Facts::default(), "x.mzML")
+pub(super) fn da(scans: &[Scan]) -> Channels {
+    Channels::da(scans, &[], &Facts::default(), "x.mzML")
 }
 
 #[test]
@@ -43,21 +43,21 @@ fn full_scan_file() {
     let scans: Vec<Scan> = (0..30).map(|i| scan(1, i as f64 * 0.1, &[])).collect();
     let c = da(&scans);
     assert_eq!(
-        riassunto(&c),
+        summary(&c),
         [
-            voce("tic", "tic", 0, 30, None),
-            voce("bpc", "bpc", 0, 30, Some(0)),
-            voce("ms:ms1", "ms", 1, 30, Some(0))
+            entry("tic", "tic", 0, 30, None),
+            entry("bpc", "bpc", 0, 30, Some(0)),
+            entry("ms:ms1", "ms", 1, 30, Some(0))
         ]
     );
     assert_eq!(
         c.tipo,
         Tipo {
-            proposto: "lc-full",
-            motivo: "ms1_only"
+            proposed: "lc-full",
+            reason: "ms1_only"
         }
     );
-    assert_eq!(c.v[2].etichetta, "MS¹");
+    assert_eq!(c.v[2].label, "MS¹");
     assert_eq!(c.v[2].omologo, "ms|1|||||");
     assert!(c.v[2].spettri && !c.v[0].spettri);
 }
@@ -74,17 +74,17 @@ fn targeted_ms2_in_lc_has_one_channel_per_precursor() {
     }
     let c = da(&scans);
     assert_eq!(
-        riassunto(&c),
+        summary(&c),
         [
-            voce("tic", "tic", 0, 60, None),
-            voce("bpc", "bpc", 0, 60, Some(0)),
-            voce("ms:ms1", "ms", 1, 20, Some(0)),
-            voce("ms:ms2 222 @cid", "ms", 2, 20, Some(2)),
-            voce("ms:ms2 300 @cid", "ms", 2, 20, Some(2)),
+            entry("tic", "tic", 0, 60, None),
+            entry("bpc", "bpc", 0, 60, Some(0)),
+            entry("ms:ms1", "ms", 1, 20, Some(0)),
+            entry("ms:ms2 222 @cid", "ms", 2, 20, Some(2)),
+            entry("ms:ms2 300 @cid", "ms", 2, 20, Some(2)),
         ]
     );
-    assert_eq!(c.tipo.proposto, "lc-ms2-mirato");
-    assert_eq!(c.v[3].etichetta, "MS² 222 @CID35");
+    assert_eq!(c.tipo.proposed, "lc-ms2-mirato");
+    assert_eq!(c.v[3].label, "MS² 222 @CID35");
     assert_eq!(c.v[3].omologo, "ms|2|222|cid|35||");
     // the partition: scans of the channel in file order, 4 bytes per scan
     assert_eq!(
@@ -118,24 +118,24 @@ fn msn_in_blocks_is_a_tree_of_channels() {
     }
     let c = da(&scans);
     assert_eq!(
-        riassunto(&c),
+        summary(&c),
         [
-            voce("tic", "tic", 0, 63, None),
-            voce("bpc", "bpc", 0, 63, Some(0)),
-            voce("ms:ms1", "ms", 1, 3, Some(0)),
-            voce("ms:ms2 317 @cid", "ms", 2, 20, Some(2)),
-            voce("ms:ms3 317 > 261 @cid30", "ms", 3, 20, Some(3)),
-            voce("ms:ms3 317 > 299 @cid30", "ms", 3, 20, Some(3)),
+            entry("tic", "tic", 0, 63, None),
+            entry("bpc", "bpc", 0, 63, Some(0)),
+            entry("ms:ms1", "ms", 1, 3, Some(0)),
+            entry("ms:ms2 317 @cid", "ms", 2, 20, Some(2)),
+            entry("ms:ms3 317 > 261 @cid30", "ms", 3, 20, Some(3)),
+            entry("ms:ms3 317 > 299 @cid30", "ms", 3, 20, Some(3)),
         ]
     );
     assert_eq!(
         c.tipo,
         Tipo {
-            proposto: "infusione-msn",
-            motivo: "blocks"
+            proposed: "infusione-msn",
+            reason: "blocks"
         }
     );
-    assert_eq!(c.v[4].etichetta, "MS³ 317→261 @CID30");
+    assert_eq!(c.v[4].label, "MS³ 317→261 @CID30");
     assert_eq!(c.v[4].omologo, "ms|3|317>261|cid|30||");
 }
 
@@ -151,22 +151,22 @@ fn many_precursors_make_one_dda_channel() {
     scans.push(scan(3, 4.0, &[(200.0, 30.0), (150.0, 30.0)]));
     let c = da(&scans);
     assert_eq!(
-        riassunto(&c),
+        summary(&c),
         [
-            voce("tic", "tic", 0, 141, None),
-            voce("bpc", "bpc", 0, 141, Some(0)),
-            voce("ms:ms1", "ms", 1, 70, Some(0)),
-            voce("dd:2", "dd", 2, 70, Some(0)),
-            voce("ms:ms3 200 > 150 @cid30", "ms", 3, 1, Some(3)),
+            entry("tic", "tic", 0, 141, None),
+            entry("bpc", "bpc", 0, 141, Some(0)),
+            entry("ms:ms1", "ms", 1, 70, Some(0)),
+            entry("dd:2", "dd", 2, 70, Some(0)),
+            entry("ms:ms3 200 > 150 @cid30", "ms", 3, 1, Some(3)),
         ]
     );
     assert_eq!(c.v[3].sigla, Some("DDA"));
-    assert_eq!(c.v[3].etichetta, "MS² DDA");
+    assert_eq!(c.v[3].label, "MS² DDA");
     assert_eq!(
         c.tipo,
         Tipo {
-            proposto: "lc-dda",
-            motivo: "many_precursors"
+            proposed: "lc-dda",
+            reason: "many_precursors"
         }
     );
     assert_eq!(c.scan_ids.len(), 141);
@@ -213,25 +213,25 @@ fn mrm_file_has_a_summed_tic_and_one_channel_per_transition() {
         srm_rt: Some((0.0, 20.0)),
         ..Default::default()
     };
-    let c = Canali::da(&[], &chroms, &facts, "m.mzML");
+    let c = Channels::da(&[], &chroms, &facts, "m.mzML");
     assert_eq!(
-        riassunto(&c),
+        summary(&c),
         [
-            voce("tic", "tic", 0, 400, None),
-            voce("srm:230>162@25", "srm", 2, 400, Some(0)),
-            voce("srm:230>190@18", "srm", 2, 400, Some(0)),
+            entry("tic", "tic", 0, 400, None),
+            entry("srm:230>162@25", "srm", 2, 400, Some(0)),
+            entry("srm:230>190@18", "srm", 2, 400, Some(0)),
         ]
     );
-    assert_eq!(c.v[0].sorgente, Sorgente::Somma);
-    assert_eq!(c.v[1].sorgente, Sorgente::Cromatogramma(0));
-    assert_eq!(c.v[1].etichetta, "MRM 230→162 @25 «bentazone 1»");
+    assert_eq!(c.v[0].source, Source::Somma);
+    assert_eq!(c.v[1].source, Source::Cromatogramma(0));
+    assert_eq!(c.v[1].label, "MRM 230→162 @25 «bentazone 1»");
     assert_eq!(c.v[1].omologo, "srm|2|230.0>162.0||25||");
     assert!(!c.v[1].spettri);
     assert_eq!(
         c.tipo,
         Tipo {
-            proposto: "lc-mrm",
-            motivo: "srm_only"
+            proposed: "lc-mrm",
+            reason: "srm_only"
         }
     );
     // the TIC of the maker is the TIC of the file
@@ -242,8 +242,8 @@ fn mrm_file_has_a_summed_tic_and_one_channel_per_transition() {
         kind: "tic".into(),
         ..Default::default()
     });
-    let c = Canali::da(&[], &con_tic, &facts, "m.mzML");
-    assert_eq!(c.v[0].sorgente, Sorgente::Cromatogramma(2));
+    let c = Channels::da(&[], &con_tic, &facts, "m.mzML");
+    assert_eq!(c.v[0].source, Source::Cromatogramma(2));
 }
 
 #[test]
@@ -251,13 +251,13 @@ fn mrm_with_product_ion_scans_is_mixed() {
     let scans: Vec<Scan> = (0..10)
         .map(|i| scan(2, i as f64 * 0.1, &[(364.1 + (i % 2) as f64, 30.0)]))
         .collect();
-    let c = Canali::da(
+    let c = Channels::da(
         &scans,
         &[srm(1, 364.1, 194.1, 20.0, "Quant")],
         &Facts::default(),
         "c.mzML",
     );
-    assert_eq!(c.tipo.proposto, "misto");
+    assert_eq!(c.tipo.proposed, "misto");
     let ids: Vec<&str> = c.v.iter().map(|x| x.id.as_str()).collect();
     assert_eq!(
         ids,
@@ -273,7 +273,7 @@ fn mrm_with_product_ion_scans_is_mixed() {
 
 #[test]
 fn a_uv_flag_without_the_trace_header_lists_no_channel() {
-    let c = Canali::da(
+    let c = Channels::da(
         &[],
         &[],
         &Facts {
@@ -283,7 +283,7 @@ fn a_uv_flag_without_the_trace_header_lists_no_channel() {
         "u.mzML",
     );
     assert!(c.v.is_empty());
-    assert_eq!(c.tipo.proposto, "solo-uv");
+    assert_eq!(c.tipo.proposed, "solo-uv");
 }
 
 #[test]
@@ -324,7 +324,7 @@ fn wiff_ems_and_epi_at_fixed_precursors_are_ms_channels_with_a_sigla() {
     let ms: Vec<_> = c.v.iter().filter(|x| x.famiglia == Famiglia::Ms).collect();
     assert_eq!(ms.len(), 3);
     assert_eq!((ms[0].sigla, ms[0].livello), (Some("EMS"), 1));
-    assert_eq!(ms[0].etichetta, "MS¹");
+    assert_eq!(ms[0].label, "MS¹");
     assert!(ms[1..].iter().all(|x| x.sigla == Some("EPI") && x.n == 10));
     assert!(c.v.iter().all(|x| x.famiglia != Famiglia::Dd));
 }
@@ -349,11 +349,11 @@ fn wiff_ida_dependent_scans_are_one_dd_channel() {
         (dd[0].id.as_str(), dd[0].sigla, dd[0].n),
         ("dd:2:EPI", Some("EPI"), n_epi)
     );
-    assert_eq!(dd[0].genitore, Some(0));
+    assert_eq!(dd[0].parent, Some(0));
     assert_eq!(dd[0].omologo, "dd|2|EPI");
     assert!(dd[0].spettri);
     assert_eq!(c.v.iter().filter(|x| x.famiglia == Famiglia::Ms).count(), 1);
-    assert_eq!(c.tipo.proposto, "lc-dda");
+    assert_eq!(c.tipo.proposed, "lc-dda");
 }
 
 #[test]
@@ -387,9 +387,9 @@ fn mrm_label_is_the_method_name_else_the_transition() {
             }
         })
         .collect();
-    let c = Canali::da(&[], &chroms, &Facts::default(), "m.mzML");
-    assert_eq!(c.v[1].etichetta, "MRM 230→162 @25 «bentazone 1»");
-    assert_eq!(c.v[2].etichetta, "MRM 230→190 @18");
+    let c = Channels::da(&[], &chroms, &Facts::default(), "m.mzML");
+    assert_eq!(c.v[1].label, "MRM 230→162 @25 «bentazone 1»");
+    assert_eq!(c.v[2].label, "MRM 230→190 @18");
 }
 
 #[test]
@@ -416,7 +416,7 @@ fn sim_channels_without_q1_stay_apart_by_their_place_in_the_experiment() {
             ..Default::default()
         })
         .collect();
-    let c = Canali::da(&[], &chroms, &Facts::default(), "m.mzML");
+    let c = Channels::da(&[], &chroms, &Facts::default(), "m.mzML");
     let sim: Vec<&str> =
         c.v.iter()
             .filter(|x| x.id.starts_with("sim:"))
@@ -433,7 +433,7 @@ fn sim_channels_without_q1_stay_apart_by_their_place_in_the_experiment() {
     assert_eq!(
         c.v.iter()
             .find(|x| x.omologo == "sim|1|#2|positive")
-            .map(|x| x.etichetta.as_str()),
+            .map(|x| x.label.as_str()),
         Some("SIM #3 (+)")
     );
 }
@@ -454,9 +454,9 @@ fn a_file_of_sim_chromatograms_only_is_typed_sim_also_with_a_uv_trace() {
             pda,
             ..Default::default()
         };
-        let c = Canali::da(&[], &chroms, &facts, "s.mzML");
+        let c = Channels::da(&[], &chroms, &facts, "s.mzML");
         assert_eq!(
-            (c.tipo.proposto, c.tipo.motivo),
+            (c.tipo.proposed, c.tipo.reason),
             ("lc-sim", "sim_only"),
             "pda={pda}"
         );

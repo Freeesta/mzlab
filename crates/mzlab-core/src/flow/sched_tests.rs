@@ -163,7 +163,7 @@ fn the_barrier_waits_for_the_last_file() {
     run(&mut s, "det|f1.raw");
     assert_eq!(state(&s, "aln"), "waiting");
     let n = s.nodes().into_iter().find(|n| n.instance == "det").unwrap();
-    assert_eq!((n.parte, n.di), (1, 2));
+    assert_eq!((n.part, n.di), (1, 2));
     run(&mut s, "det|f2.raw");
     assert_eq!(state(&s, "aln"), "ready");
 }

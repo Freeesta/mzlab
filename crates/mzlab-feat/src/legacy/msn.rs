@@ -10,7 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use super::fragtree::{elements_of, fmt, substructures, vec_of, Graph, Space, Subs};
 use super::ms2::consensus_arrays;
 use super::Res;
-use mzlab_core::msnalbero::{albero_di, Raggruppa};
+use mzlab_core::msnalbero::{albero_di, Grouping};
 
 mod atoms;
 pub mod json;
@@ -310,7 +310,7 @@ pub fn build_tree(
     let ion_mz = ion_mass(&top, &els);
     let a = albero_di(
         scans.iter().map(|s| (s.level, s.path.as_deref())),
-        &Raggruppa::default(),
+        &Grouping::default(),
     );
     let mut keys: Vec<Key> = Vec::new();
     let mut groups: HashMap<Key, Vec<usize>> = HashMap::new();
@@ -319,8 +319,8 @@ pub fn build_tree(
         groups.insert(Vec::new(), a.ms1.clone());
     }
     for n in &a.nodi {
-        keys.push(key_of(&n.chiave));
-        groups.insert(key_of(&n.chiave), n.scansioni.clone());
+        keys.push(key_of(&n.key));
+        groups.insert(key_of(&n.key), n.scansioni.clone());
     }
     let cons: HashMap<Key, Cons> = keys
         .iter()
@@ -348,9 +348,9 @@ pub fn build_tree(
     tree.nodes.push(r);
     info.insert(Vec::new(), ri);
     for n in &a.nodi {
-        let k = &key_of(&n.chiave);
+        let k = &key_of(&n.key);
         let (pk, parent) = match n.genitore {
-            Some(g) => (key_of(&a.nodi[g].chiave), a.nodi[g].id.clone()),
+            Some(g) => (key_of(&a.nodi[g].key), a.nodi[g].id.clone()),
             None => (Vec::new(), "MS1".to_string()),
         };
         let c = &cons[k];

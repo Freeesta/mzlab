@@ -30,25 +30,25 @@ impl Passata {
         }
     }
     /// Only the SHA-256 and the `probe`: `fine` gives an empty SHA-1.
-    pub fn senza_sha1(size: u64) -> Passata {
+    pub fn without_sha1(size: u64) -> Passata {
         Passata {
             sha1: None,
             ..Passata::new(size)
         }
     }
-    /// Only the SHA-1 and the `probe`: `fine` gives an empty SHA-256. With `senza_sha1` on a second core, the two halves of `new` (the site's two hash workers).
+    /// Only the SHA-1 and the `probe`: `fine` gives an empty SHA-256. With `without_sha1` on a second core, the two halves of `new` (the site's two hash workers).
     pub fn solo_sha1(size: u64) -> Passata {
         Passata {
             sha256: None,
             ..Passata::new(size)
         }
     }
-    /// `senza_sha1`, `solo_sha1` (the SHA-1 half of a member that two workers hash) or `new` by the page's flags.
-    pub fn scelta(size: u64, senza: Option<bool>, solo: Option<bool>) -> Passata {
-        if solo == Some(true) {
+    /// `without_sha1`, `solo_sha1` (the SHA-1 half of a member that two workers hash) or `new` by the page's flags.
+    pub fn scelta(size: u64, without: Option<bool>, only: Option<bool>) -> Passata {
+        if only == Some(true) {
             Passata::solo_sha1(size)
-        } else if senza == Some(true) {
-            Passata::senza_sha1(size)
+        } else if without == Some(true) {
+            Passata::without_sha1(size)
         } else {
             Passata::new(size)
         }
@@ -97,7 +97,7 @@ pub(super) fn due_fili(
     step: u64,
 ) -> crate::Result<(String, String, String)> {
     use std::sync::{mpsc, Arc};
-    let mut x = Passata::senza_sha1(size);
+    let mut x = Passata::without_sha1(size);
     std::thread::scope(|s| {
         let (tx, rx) = mpsc::sync_channel::<Arc<Vec<u8>>>(4);
         let half = s.spawn(move || {

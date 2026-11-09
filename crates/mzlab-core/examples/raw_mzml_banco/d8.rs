@@ -8,11 +8,11 @@ use flate2::{Compress, Compression};
 use serde_json::{json, Value};
 
 use crate::micro::ns_per_op;
-use crate::misura::arrotonda;
+use crate::misura::round_to;
 
 /// `ops` resets of a level-1 zlib stream on each of `t` threads at once; the time one reset takes when the threads run together.
 fn reset_in_parallelo(t: usize, ops: usize) -> f64 {
-    let inizio = Instant::now();
+    let start = Instant::now();
     std::thread::scope(|sc| {
         for _ in 0..t {
             sc.spawn(|| {
@@ -24,7 +24,7 @@ fn reset_in_parallelo(t: usize, ops: usize) -> f64 {
             });
         }
     });
-    inizio.elapsed().as_secs_f64() / ops as f64 * 1e9
+    start.elapsed().as_secs_f64() / ops as f64 * 1e9
 }
 
 fn calibra_lavoro() -> f64 {
@@ -36,7 +36,7 @@ fn calibra_lavoro() -> f64 {
     }) / 100.0
 }
 
-fn lavoro(iter: u64) -> f64 {
+fn job(iter: u64) -> f64 {
     let mut x = 1.0f64;
     for _ in 0..iter {
         x = black_box(x * 1.0000001 + 1e-9);
@@ -46,12 +46,12 @@ fn lavoro(iter: u64) -> f64 {
 
 /// The pool of `mzmlwrite/pool.rs` reduced to its channels: a producer sends `compiti` tasks of about `us` microseconds to `t` workers that share the receiver
 /// behind a mutex and answer on a second channel; `blocco` tasks travel together. Returns the wall seconds.
-fn canale(t: usize, compiti: usize, us: f64, blocco: usize, ns_iter: f64) -> f64 {
+fn canale(t: usize, compiti: usize, us: f64, block: usize, ns_iter: f64) -> f64 {
     let iter = (us * 1e3 / ns_iter) as u64;
     let (tx, rx) = mpsc::channel::<Vec<usize>>();
     let (txr, rxr) = mpsc::channel::<Vec<usize>>();
     let rx = Mutex::new(rx);
-    let inizio = Instant::now();
+    let start = Instant::now();
     std::thread::scope(|sc| {
         for _ in 0..t {
             let (txr, rx) = (txr.clone(), &rx);
@@ -60,7 +60,7 @@ fn canale(t: usize, compiti: usize, us: f64, blocco: usize, ns_iter: f64) -> f64
                     break;
                 };
                 for _ in &v {
-                    black_box(lavoro(iter));
+                    black_box(job(iter));
                 }
                 if txr.send(v).is_err() {
                     break;
@@ -69,33 +69,33 @@ fn canale(t: usize, compiti: usize, us: f64, blocco: usize, ns_iter: f64) -> f64
         }
         drop(txr);
         let mut spediti = 0;
-        let mut finiti = 0;
+        let mut finished = 0;
         let mut k = 0;
-        while finiti < compiti {
-            while spediti < compiti && spediti - finiti < 4 * t * blocco {
-                let n = blocco.min(compiti - spediti);
+        while finished < compiti {
+            while spediti < compiti && spediti - finished < 4 * t * block {
+                let n = block.min(compiti - spediti);
                 tx.send((k..k + n).collect()).expect("send");
                 k += n;
                 spediti += n;
             }
             let v = rxr.recv().expect("answer");
-            finiti += v.len();
+            finished += v.len();
         }
         drop(tx);
     });
-    inizio.elapsed().as_secs_f64()
+    start.elapsed().as_secs_f64()
 }
 
 /// Blocks of 8 KB allocated on `t` threads and freed either on the same thread or on the main thread (the text of a spectrum is built by a worker and
 /// dropped by the writer). Nanoseconds per block.
-fn allocazione_incrociata(t: usize, blocchi: usize, incrociata: bool) -> f64 {
-    let inizio = Instant::now();
+fn allocazione_incrociata(t: usize, blocks: usize, incrociata: bool) -> f64 {
+    let start = Instant::now();
     let (tx, rx) = mpsc::sync_channel::<Vec<u8>>(1024);
     std::thread::scope(|sc| {
         for _ in 0..t {
             let tx = tx.clone();
             sc.spawn(move || {
-                for i in 0..blocchi {
+                for i in 0..blocks {
                     let mut v = Vec::with_capacity(8192);
                     v.push(i as u8);
                     if incrociata {
@@ -111,25 +111,25 @@ fn allocazione_incrociata(t: usize, blocchi: usize, incrociata: bool) -> f64 {
             black_box(&v);
         }
     });
-    inizio.elapsed().as_secs_f64() / (blocchi * t) as f64 * 1e9
+    start.elapsed().as_secs_f64() / (blocks * t) as f64 * 1e9
 }
 
-pub fn tutti(thread: &[usize]) -> Value {
+pub fn all(thread: &[usize]) -> Value {
     let ns_iter = calibra_lavoro();
     let reset: Vec<Value> = thread
         .iter()
-        .map(|&t| json!({"thread": t, "ns_per_reset": arrotonda(reset_in_parallelo(t, 40_000))}))
+        .map(|&t| json!({"thread": t, "ns_per_reset": round_to(reset_in_parallelo(t, 40_000))}))
         .collect();
-    let mut canali = Vec::new();
+    let mut channels = Vec::new();
     for us in [10.0, 50.0, 200.0] {
         for &t in thread {
-            for blocco in [1usize, 32] {
+            for block in [1usize, 32] {
                 let compiti = 20_000;
-                let s = canale(t, compiti, us, blocco, ns_iter);
+                let s = canale(t, compiti, us, block, ns_iter);
                 let ideale = compiti as f64 * us * 1e-6 / t as f64;
-                canali.push(json!({
-                    "compito_us": us, "thread": t, "compiti_per_messaggio": blocco, "secondi": arrotonda(s), "ideale_s": arrotonda(ideale),
-                    "sovraccosto_us_per_compito": arrotonda((s - ideale) / compiti as f64 * 1e6),
+                channels.push(json!({
+                    "compito_us": us, "thread": t, "compiti_per_messaggio": block, "secondi": round_to(s), "ideale_s": round_to(ideale),
+                    "sovraccosto_us_per_compito": round_to((s - ideale) / compiti as f64 * 1e6),
                 }));
             }
         }
@@ -137,8 +137,8 @@ pub fn tutti(thread: &[usize]) -> Value {
     let alloc: Vec<Value> = thread
         .iter()
         .flat_map(|&t| {
-            [false, true].map(|inc| json!({"thread": t, "liberato_su_altro_thread": inc, "ns_per_blocco": arrotonda(allocazione_incrociata(t, 100_000, inc))}))
+            [false, true].map(|inc| json!({"thread": t, "liberato_su_altro_thread": inc, "ns_per_blocco": round_to(allocazione_incrociata(t, 100_000, inc))}))
         })
         .collect();
-    json!({"ns_per_iterazione_lavoro": arrotonda(ns_iter), "reset_zlib_in_parallelo": reset, "canale_del_pool": canali, "allocazione_8kb": alloc})
+    json!({"ns_per_iterazione_lavoro": round_to(ns_iter), "reset_zlib_in_parallelo": reset, "canale_del_pool": channels, "allocazione_8kb": alloc})
 }

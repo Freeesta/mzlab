@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use mzlab_core::idxread::Index;
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni, SpectrumExtra};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options, SpectrumExtra};
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{mzidx, upload};
 
@@ -55,8 +55,8 @@ fn fnv(b: &[u8]) -> u64 {
     })
 }
 
-fn write(sp: &[Spectrum], opz: Opzioni) -> Vec<u8> {
-    let mut w = MzmlWriter::con_opzioni(
+fn write(sp: &[Spectrum], opz: Options) -> Vec<u8> {
+    let mut w = MzmlWriter::with_options(
         Vec::new(),
         &Header {
             run: "x".into(),
@@ -83,17 +83,17 @@ fn main() {
         for (label, opz) in [
             (
                 "plain",
-                Opzioni {
+                Options {
                     thread: 1,
-                    ..Opzioni::default()
+                    ..Options::default()
                 },
             ),
             (
                 "numpress",
-                Opzioni {
+                Options {
                     thread: 1,
                     numpress: true,
-                    ..Opzioni::default()
+                    ..Options::default()
                 },
             ),
         ] {

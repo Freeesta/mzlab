@@ -1,6 +1,6 @@
 //! `variabili` and `nome_gruppo` of `campioni::route` (`nomivar/1`, study `docs/studi/RAGGRUPPAMENTO_FILE.md` §3): the worked list of the study,
 //! permutations, noise, spellings, manual variables, the limits and the speed.
-use mzlab_core::campioni::route_tutto as route;
+use mzlab_core::campioni::route_all as route;
 use serde_json::Value;
 use std::collections::BTreeMap;
 

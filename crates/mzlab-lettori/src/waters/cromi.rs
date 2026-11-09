@@ -30,7 +30,7 @@ pub(super) fn analogiche(c: &mut Folder) -> Vec<Analogica> {
         return Vec::new();
     };
     let n = b.len().saturating_sub(INTESTAZIONE) / RECORD_INF;
-    if c.limits.voci_ok(n as u64).is_err() {
+    if c.limits.ok_entries(n as u64).is_err() {
         return Vec::new();
     }
     (0..n)
@@ -71,7 +71,7 @@ fn trace(c: &mut Folder, a: &Analogica, indice: usize) -> Result<Option<Chromato
         return Ok(None);
     };
     let n = b.len().saturating_sub(INTESTAZIONE) / RECORD_DAT;
-    c.limits.voci_ok(n as u64)?;
+    c.limits.ok_entries(n as u64)?;
     let (mut time, mut intensity) = (Vec::with_capacity(n), Vec::with_capacity(n));
     for r in b[INTESTAZIONE..].chunks_exact(RECORD_DAT) {
         let (t, v) = (f64::from(f32_at(r, 0)), f64::from(f32_at(r, 4)) * a.scale);
@@ -121,7 +121,7 @@ fn channels(l: &mut WatersReader, i: usize, first_one: usize) -> Result<Option<V
     let rows: Vec<_> = f.righe.iter().copied().filter(|r| r.count > 0).collect();
     let n = rows.iter().map(|r| r.count as usize).max().unwrap_or(0);
     l.c.limits
-        .voci_ok((n as u64).saturating_mul(rows.len() as u64))?;
+        .ok_entries((n as u64).saturating_mul(rows.len() as u64))?;
     let datum = l.c.read_from(dat, 0, f.dat_len)?;
     let f = &l.funs[i];
     let mut col: Vec<Vec<f64>> = vec![Vec::with_capacity(rows.len()); n];

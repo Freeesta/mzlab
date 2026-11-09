@@ -1,5 +1,5 @@
 //! `upload::Passata` (SHA-256, SHA-1 and probe in one pass, fed in pieces) gives what the three separate reads gave: the same values whatever the pieces.
-use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::lettori::{FileSet, Member};
 use mzlab_core::upload::{self, Passata};
 use sha1::{Digest as _, Sha1};
 use sha2::Sha256;
@@ -56,7 +56,10 @@ fn the_two_halves_of_two_workers_give_the_three_values_of_one_pass() {
     for n in [0, 1, 65537, 3_145_733] {
         let b = bytes(n);
         let (sha256, sha1, probe) = reference(&b);
-        let (mut x, mut y) = (Passata::senza_sha1(n as u64), Passata::solo_sha1(n as u64));
+        let (mut x, mut y) = (
+            Passata::without_sha1(n as u64),
+            Passata::solo_sha1(n as u64),
+        );
         for c in b.chunks(100_000) {
             x.aggiorna(c);
             y.aggiorna(c);
@@ -79,7 +82,7 @@ fn a_short_or_long_pass_gives_nothing() {
 
 fn set(b: &[u8]) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.raw".into(),
             dim: b.len() as u64,
             dati: Box::new(b.to_vec()),

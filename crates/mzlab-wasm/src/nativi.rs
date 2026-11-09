@@ -7,9 +7,9 @@ use std::rc::Rc;
 
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
 use mzlab_core::mzidx_spill::Spill;
-use mzlab_core::sorgente::SorgenteLettore;
+use mzlab_core::sorgente::ReaderSource;
 use mzlab_core::{lettori_centroidi, lettori_mzml, upload};
 use wasm_bindgen::prelude::*;
 
@@ -69,7 +69,7 @@ impl Members {
             .iter()
             .zip(&self.sizes)
             .enumerate()
-            .map(|(i, (n, &s))| Membro {
+            .map(|(i, (n, &s))| Member {
                 nome: n.clone(),
                 dim: s as u64,
                 dati: membro::member(&self.read, i as u32, s as u64),
@@ -83,19 +83,19 @@ impl Members {
 pub(crate) struct Dataset {
     pub(crate) members: Members,
     pub(crate) centroid: bool,
-    pub(crate) l: Option<Box<dyn Lettore>>,
+    pub(crate) l: Option<Box<dyn Reader>>,
     pub(crate) used: u64,
 }
 
 impl Members {
     /// The reader of `fs` (this dataset's members): the engine's own, and when none recognises it the one of the readers module the page registered with `native_external`.
-    fn open_fs(&self, fs: FileSet) -> mzlab_core::Result<Box<dyn Lettore>> {
+    fn open_fs(&self, fs: FileSet) -> mzlab_core::Result<Box<dyn Reader>> {
         let sha1: Vec<String> = fs
             .membri
             .iter()
             .map(|m| m.sha1.clone().unwrap_or_default())
             .collect();
-        match lettori::apri(fs, &Limiti::sito()) {
+        match lettori::apri(fs, &Limits::sito()) {
             Err(e) if e.key == "err.file.notAccepted" => self.external(&sha1).unwrap_or(Err(e)),
             r => r,
         }
@@ -103,7 +103,7 @@ impl Members {
 
     /// The session of the module for this dataset; `None` when the page registered no function or no module reads it.
     /// `sha1`: the SHA-1 of each member when known (empty text when not), for the header of the mzML.
-    fn external(&self, sha1: &[String]) -> Option<mzlab_core::Result<Box<dyn Lettore>>> {
+    fn external(&self, sha1: &[String]) -> Option<mzlab_core::Result<Box<dyn Reader>>> {
         let f = EXTERNAL.with(|f| f.borrow().clone())?;
         let names: js_sys::Array = self.names.iter().map(|n| JsValue::from_str(n)).collect();
         let sizes = js_sys::Float64Array::from(&self.sizes[..]);
@@ -118,11 +118,11 @@ impl Members {
                 )))
             }
         };
-        Some(ExternalReader::new(JsModule::new(session)).map(|l| Box::new(l) as Box<dyn Lettore>))
+        Some(ExternalReader::new(JsModule::new(session)).map(|l| Box::new(l) as Box<dyn Reader>))
     }
 
     /// The reader of the dataset; with `centroid` its profile scans become centroids (as the conversion of a `.wiff` does by default).
-    pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Lettore>, JsValue> {
+    pub(crate) fn open(&self, centroid: bool) -> Result<Box<dyn Reader>, JsValue> {
         let l = self.open_fs(self.fileset()).map_err(|e| error_json(&e))?;
         Ok(if centroid {
             lettori_centroidi::centroidato(l)
@@ -147,7 +147,7 @@ pub(crate) enum Src<'a> {
     Js(JsReader),
     Nat {
         g: Rc<Vec<u8>>,
-        l: &'a mut dyn Lettore,
+        l: &'a mut dyn Reader,
         c: usize,
     },
 }
@@ -165,7 +165,7 @@ impl ReadAt for Src<'_> {
             }
         }
     }
-    fn lettore(&mut self) -> Option<(&mut dyn Lettore, usize)> {
+    fn reader(&mut self) -> Option<(&mut dyn Reader, usize)> {
         match self {
             Src::Js(_) => None,
             Src::Nat { l, c, .. } => Some((&mut **l, *c)),
@@ -174,7 +174,7 @@ impl ReadAt for Src<'_> {
 }
 
 /// The open reader of dataset `ds` (opened again when it was closed; the least used ones are closed beyond `OPEN`).
-pub(crate) fn reader(n: &mut Natives, ds: String) -> Result<&mut dyn Lettore, JsValue> {
+pub(crate) fn reader(n: &mut Natives, ds: String) -> Result<&mut dyn Reader, JsValue> {
     n.clock += 1;
     let open = n.sets.values().filter(|d| d.l.is_some()).count();
     if open >= OPEN
@@ -222,7 +222,7 @@ pub fn native_samples(
             .str(&s.nome)
             .raw(",\"scans\":")
             .int(s.scansioni as i64);
-        if let Some(dim) = s.dimensione {
+        if let Some(dim) = s.size {
             o.raw(",\"size\":").int(dim as i64);
         }
         o.raw("}");
@@ -355,7 +355,7 @@ pub fn build_mzidx_native(
         l
     };
     tell(2);
-    let (st, sha256) = upload::indicizza_lettore_con(
+    let (st, sha256) = upload::index_reader_with(
         &mut *l,
         c,
         &mut members,
@@ -376,9 +376,9 @@ pub fn build_mzidx_native(
 /// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`indicizza_lettore_doppio`); `missing`: `Lettore::missing` of sample `c`.
 #[allow(clippy::too_many_arguments)]
 fn index_both(
-    l: Box<dyn mzlab_core::lettori::Lettore>,
+    l: Box<dyn mzlab_core::lettori::Reader>,
     (c, missing): (usize, usize),
-    members: &mut dyn FnMut() -> mzlab_core::Result<Vec<upload::Impronta>>,
+    members: &mut dyn FnMut() -> mzlab_core::Result<Vec<upload::Fingerprint>>,
     name: &str,
     mut out: Accorpa<JsOutput>,
     write_cen: Function,
@@ -410,7 +410,7 @@ fn index_both(
 }
 
 /// The first MS1 scan of sample `c` is profile (false when it cannot be told: no MS1, a scan that does not decode).
-fn first_ms1_is_profile(l: &mut dyn mzlab_core::lettori::Lettore, c: usize) -> bool {
+fn first_ms1_is_profile(l: &mut dyn mzlab_core::lettori::Reader, c: usize) -> bool {
     let Some(k) = l
         .index(c)
         .ok()
@@ -432,7 +432,7 @@ pub fn native_srm(
     sink: Function,
 ) -> Result<(), JsValue> {
     let mut l = Members::new(names, sizes, read)?.open(centroid)?;
-    let mut t = SorgenteLettore {
+    let mut t = ReaderSource {
         l: &mut *l,
         c: c as usize,
     };
@@ -467,7 +467,7 @@ pub fn native_to_mzml(
             &(total as f64).into(),
         );
     };
-    let opt = mzlab_core::mzmlwrite::opzioni_compressione(compression)
+    let opt = mzlab_core::mzmlwrite::compression_options(compression)
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     lettori_mzml::scrivi_con(&mut *l, c as usize, &mut out, &mut tell, opt)
         .map_err(|e| error_json(&e))?;

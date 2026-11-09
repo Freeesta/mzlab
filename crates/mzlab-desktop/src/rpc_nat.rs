@@ -87,7 +87,7 @@ impl State {
             pr.scans.store(done as u64, Ordering::Relaxed);
             pr.scans_total.store(total as u64, Ordering::Relaxed);
         };
-        let opz = mzlab_core::mzmlwrite::opzioni_compressione(
+        let opz = mzlab_core::mzmlwrite::compression_options(
             p["compression"].as_str().unwrap_or("standard"),
         )
         .ok_or_else(|| Error::new("err.file.mzmlWrite"))?;

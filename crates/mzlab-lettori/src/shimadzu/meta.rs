@@ -2,7 +2,7 @@
 //! the `metodo/1` document and the header of the mzML we write (the operator and the paths are in the document of the reader, not in the one of the mzML).
 
 use mzlab_core::metodo::{self, num, obj, text, Source, SrcFile, V};
-use mzlab_core::metodo_campi::Campo;
+use mzlab_core::metodo_campi::Field;
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::ole::Ole;
 
@@ -25,7 +25,7 @@ pub(super) struct Meta {
     pub vial: Option<String>,
     pub injection_ul: Option<f64>,
     pub metodo_file: Option<String>,
-    pub fields: Vec<Campo>,
+    pub fields: Vec<Field>,
     /// The parts of the file that are not decoded (`meta.nonDecodificato`).
     pub warnings: Vec<String>,
 }
@@ -95,7 +95,7 @@ fn field(m: &mut Meta, origin: &str, k: &str, v: &str) {
     if v.is_empty() {
         return;
     }
-    let c = Campo::new(origin, k, v);
+    let c = Field::new(origin, k, v);
     m.fields.push(if e_identita(k, v) { c.id() } else { c });
 }
 
@@ -170,7 +170,7 @@ fn gc(ole: &Ole, m: &mut Meta) {
             }
             // an instrument serial is a string with digits and letters, no more than a name
             let series = t.len() >= 8 && t.chars().any(|c| c.is_ascii_digit());
-            let c = Campo::new(&format!("shimadzu:{n}"), &format!("text{i}"), &t);
+            let c = Field::new(&format!("shimadzu:{n}"), &format!("text{i}"), &t);
             m.fields.push(if series { c.id() } else { c });
         }
     }
@@ -218,7 +218,7 @@ fn lc(ole: &Ole, m: &mut Meta) {
         if let Some(t) = get("dwLowGeneratedDateTime").zip(get("dwHighGeneratedDateTime"))
             && let Some(d) = prop::filetime_xml(t.0, t.1)
         {
-            m.fields.push(Campo::new(&o, "generatedTime", d));
+            m.fields.push(Field::new(&o, "generatedTime", d));
         }
     }
     for p in ole
@@ -228,7 +228,7 @@ fn lc(ole: &Ole, m: &mut Meta) {
         let t = ole.read(p).map(|b| texts(&b)).unwrap_or_default();
         if let Some(n) = t.iter().find_map(|t| model_name(t, "LCMS-")) {
             m.fields
-                .push(Campo::new(&format!("shimadzu:{p}"), "model", &n));
+                .push(Field::new(&format!("shimadzu:{p}"), "model", &n));
             // 2020/2050, 80xx and 90xx are instruments; the name of an older family (3030 for an 8040) is only kept as a field
             if m.model.is_none()
                 && n.chars()
@@ -374,7 +374,7 @@ pub(super) fn document(
                 m.fields
                     .iter()
                     .filter(|c| with_identity || !c.identita)
-                    .filter_map(Campo::json)
+                    .filter_map(Field::json)
                     .collect(),
             )),
         ),

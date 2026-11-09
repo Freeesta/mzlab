@@ -4,7 +4,7 @@
 use super::{Ctx, GroupOpts, GroupTable, ParentOut};
 use crate::legacy::lr::kin::{decay, Point};
 use crate::table::{CELL_DETECTED, CELL_TARGETED};
-use mzlab_core::campioni::Campione;
+use mzlab_core::campioni::Sample;
 use mzlab_core::json::round;
 
 /// The controls of a condition: its own by kind, else the shared ones (`serie == ""`).
@@ -54,7 +54,7 @@ pub(crate) fn detected(state: u8) -> bool {
     state == CELL_DETECTED || state == CELL_TARGETED
 }
 
-fn sort_files(v: &mut [usize], cs: &[Campione]) {
+fn sort_files(v: &mut [usize], cs: &[Sample]) {
     mzlab_core::sortc::by(v, |&a, &b| {
         cs[a]
             .order
@@ -64,11 +64,11 @@ fn sort_files(v: &mut [usize], cs: &[Campione]) {
     });
 }
 
-fn is_treated(c: &Campione) -> bool {
+fn is_treated(c: &Sample) -> bool {
     c.role() == "sample"
 }
 
-fn groups_of(files: &[usize], cs: &[Campione]) -> Vec<Group> {
+fn groups_of(files: &[usize], cs: &[Sample]) -> Vec<Group> {
     let mut gs: Vec<Group> = Vec::new();
     for &f in files {
         let t = cs[f].time_min;
@@ -84,7 +84,7 @@ fn groups_of(files: &[usize], cs: &[Campione]) -> Vec<Group> {
     ix.into_iter().filter_map(|i| slots[i].take()).collect()
 }
 
-fn controls_of(cs: &[Campione], id: &str) -> Controls {
+fn controls_of(cs: &[Sample], id: &str) -> Controls {
     let pick = |role: &str| {
         let by = |own: bool| {
             let mut v: Vec<usize> = (0..cs.len())
@@ -113,7 +113,7 @@ fn controls_of(cs: &[Campione], id: &str) -> Controls {
 }
 
 /// The conditions in order of first appearance (smallest injection order of their samples).
-pub(crate) fn conditions(cs: &[Campione]) -> Vec<CondModel> {
+pub(crate) fn conditions(cs: &[Sample]) -> Vec<CondModel> {
     let mut found: Vec<(u32, String)> = Vec::new();
     for c in cs.iter().filter(|c| is_treated(c) && !c.series.is_empty()) {
         match found.iter_mut().find(|(_, s)| s == &c.series) {

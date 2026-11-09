@@ -4,8 +4,8 @@
 
 use std::path::Path;
 
-use mzlab_core::campioni::{self, Campione};
-use mzlab_core::disegno::{self, Disegno, Lotto};
+use mzlab_core::campioni::{self, Sample};
+use mzlab_core::disegno::{self, Batch, Design};
 use mzlab_core::json::{parse, Value};
 use mzlab_feat::drift::{batches_of, correct, Method};
 use mzlab_feat::recipe::Recipe;
@@ -69,21 +69,21 @@ fn table(areas: &[Vec<f64>]) -> Vec<u8> {
     write_table(&t, &Recipe::default(), &origin)
 }
 
-fn campioni_2(files: &[File]) -> Vec<Campione> {
+fn campioni_2(files: &[File]) -> Vec<Sample> {
     files
         .iter()
         .enumerate()
         .map(|(k, (kind, order, _))| {
             let (name, sha) = ident(k);
-            let mut c = Campione::new(&name, &sha, *order);
+            let mut c = Sample::new(&name, &sha, *order);
             c.kind = kind.clone();
             c
         })
         .collect()
 }
 
-fn design(files: &[File]) -> Disegno {
-    Disegno {
+fn design(files: &[File]) -> Design {
+    Design {
         conditions: Vec::new(),
         reference: None,
         comparisons: Vec::new(),
@@ -91,7 +91,7 @@ fn design(files: &[File]) -> Disegno {
         batches: files
             .iter()
             .enumerate()
-            .map(|(k, f)| Lotto {
+            .map(|(k, f)| Batch {
                 file: ident(k).0,
                 sha256: ident(k).1,
                 batch: f.2.clone(),

@@ -1,6 +1,6 @@
 # Prove delle regole di frammentazione (`mzlab-cli msn-rules`)
 
-Solo numeri e criteri; nessuno spettro. Comando: `python3 tools/convalida_regole.py` (MassBank 2026.03, Zenodo 19590880, record CC0/CC BY con SMILES; dettagli in `msn-interpreta.md`). Ogni record diventa un grafo a un livello (`grafo_da_picchi`) con la sua formula e il suo SMILES; i picchi frammento escludono quello del precursore.
+Solo numeri e criteri; nessuno spettro. Comando: `python3 tools/convalida_regole.py` (MassBank 2026.03, Zenodo 19590880, record CC0/CC BY con SMILES; dettagli in `msn-interpreta.md`). Ogni record diventa un grafo a un livello (`graph_from_peaks`) con la sua formula e il suo SMILES; i picchi frammento escludono quello del precursore.
 
 ## Criteri
 - Strati separati per attivazione e polarità: `cid_trappola` (CID su trappola), `hcd`, `qtof` (CID su TOF, letto come fascio), `fascio` (CID su altri strumenti, letto come fascio). Mai mescolati.

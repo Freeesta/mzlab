@@ -1,8 +1,8 @@
 //! An mzML with MS-Numpress arrays opened by the app: the core reader refuses it (`err.file.numpress`), the module `aperti` reads it (the same reader the site
 //! loads on demand), so the app goes through the readers of the registry like for a maker's file. Its answers must be those of the plain twin within the codec's precision.
-use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::lettori::{FileSet, Member};
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 use mzlab_desktop::mapped::Mapped;
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::rpc::MapAt;
@@ -21,11 +21,11 @@ fn run(numpress: bool) -> Vec<u8> {
         software: ("mzLab".into(), "0".into()),
         ..Default::default()
     };
-    let opz = Opzioni {
+    let opz = Options {
         numpress,
         ..Default::default()
     };
-    let mut w = MzmlWriter::con_opzioni(Vec::new(), &h, opz).unwrap();
+    let mut w = MzmlWriter::with_options(Vec::new(), &h, opz).unwrap();
     w.open_spectra(SCANS).unwrap();
     for t in 0..SCANS {
         let n = 30 + t;
@@ -108,14 +108,14 @@ fn a_numpress_mzml_opens_in_the_app_and_answers_as_its_plain_twin() {
     let map = Mapped::open(&np).unwrap();
     let dim = map.bytes().len() as u64;
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "np.mzML".into(),
             dim,
             dati: Box::new(MapAt(Arc::new(map))),
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &mzlab_core::lettori::Limiti::desktop()).unwrap();
+    let mut l = mzlab_lettori::apri(set, &mzlab_core::lettori::Limits::desktop()).unwrap();
     let mut out = Vec::new();
     mzlab_core::lettori_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
     std::fs::write(&again, out).unwrap();

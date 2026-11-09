@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Limiti, VoceScansione};
+use mzlab_core::lettori::{Limits, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 use mzlab_core::ole::Ole;
 
@@ -61,7 +61,7 @@ pub(super) struct Data {
     pub raw: Vec<u8>,
     /// (offset, length) in `raw` and layout of each scan of the index.
     pub pos: Vec<(usize, usize, Shape)>,
-    pub indice: Vec<VoceScansione>,
+    pub indice: Vec<ScanEntry>,
     pub cromat: Vec<Chromatogram>,
     pub eventi: Vec<Evento>,
     /// (Q1, Q3, polarity) of the SRM chromatograms.
@@ -87,7 +87,7 @@ fn moment(rt: &[u8], i: usize) -> f64 {
 }
 
 /// Reads the streams of `fam` and builds the index and the chromatograms.
-pub(super) fn load(ole: &Ole, fam: Fam, limits: &Limiti) -> Result<Data> {
+pub(super) fn load(ole: &Ole, fam: Fam, limits: &Limits) -> Result<Data> {
     let g = fam.storage();
     let get = |n: &str| ole.read(&format!("{g}/{n}")).ok_or_else(|| absent(n));
     let (raw, idx, rt, tic) = (
@@ -96,7 +96,7 @@ pub(super) fn load(ole: &Ole, fam: Fam, limits: &Limiti) -> Result<Data> {
         get("Retention Time")?,
         get("TIC Data")?,
     );
-    let n = limits.voci_ok((rt.len() / 4) as u64)?;
+    let n = limits.ok_entries((rt.len() / 4) as u64)?;
     let mut d = Data {
         raw: Vec::new(),
         pos: Vec::new(),
@@ -141,7 +141,7 @@ fn tlm(
     rt: &[u8],
     n: usize,
     srm: &mut Traces,
-    limits: &Limiti,
+    limits: &Limits,
 ) -> Result<usize> {
     let mut bad = 0;
     for (i, off) in mrm::offset_tlm(idx, n, limits)?.into_iter().enumerate() {
@@ -186,7 +186,7 @@ fn scansioni(
     (fam, raw, idx, rt, tic): (Fam, &[u8], &[u8], &[u8], &[u8]),
     n: usize,
     srm: &mut Traces,
-    limits: &Limiti,
+    limits: &Limits,
 ) -> Result<Vec<(u64, (f64, f64))>> {
     let offs = rec::offset(idx, n).ok_or_else(|| {
         Error::new("err.file.shimadzu").with("detail", "Spectrum Index does not fit the records")
@@ -230,17 +230,17 @@ fn scansioni(
         } else {
             format!("Q1 event {}", usize::from(f.ev) + 1)
         };
-        limits.voci_ok(d.indice.len() as u64 + 1)?;
-        d.indice.push(VoceScansione {
+        limits.ok_entries(d.indice.len() as u64 + 1)?;
+        d.indice.push(ScanEntry {
             id: format!("scan={}", i + 1),
             rt: t,
             livello: 1,
             polarita: 0,
             tic: u64_at(tic, i),
-            picco_base: None,
+            base_peak: None,
             filtro: format!("{filter} scan"),
             precursore: None,
-            posizione: None,
+            position: None,
         });
         d.pos.push((a, b - a, f));
         let h = if f.npk <= SIM_POINTS {

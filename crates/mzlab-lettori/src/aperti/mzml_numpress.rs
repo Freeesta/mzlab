@@ -8,8 +8,8 @@ use std::cell::RefCell;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
-    VoceLettore, VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
 };
 use mzlab_core::metodo::{self, sha1_hex};
 use mzlab_core::mzml::{self, ChromKind, Chromatogram, Item, Spectrum};
@@ -32,7 +32,7 @@ const ACCESSION: [&str; 6] = [
 /// The bytes of the start of the file that `riconosci` looks at first; it reads on (doubling) up to the end of the first spectrum, never past `TESTA_MAX`.
 const TESTA: usize = 64 << 10;
 const TESTA_MAX: usize = 16 << 20;
-pub const ENTRY: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "mzml-numpress",
     contratto: CONTRATTO,
     estensioni: &[".mzml"],
@@ -53,14 +53,14 @@ pub struct NumpressReader {
     data: Box<dyn ReadAt>,
     dim: u64,
     name: String,
-    limits: Limiti,
-    campioni: Vec<Campione>,
+    limits: Limits,
+    campioni: Vec<Sample>,
     rows: Vec<Row>,
     /// Spectra the run header declares (0: not declared), to count those a truncated file lacks.
     dichiarati: usize,
     /// The file does not end with its closing tag: a TIC lost with the cut is built from the whole scans.
     cut: bool,
-    indice: Vec<VoceScansione>,
+    indice: Vec<ScanEntry>,
     traces: Option<Vec<Chrom>>,
     /// SHA-1 of the file, read the first time the header of the mzML is asked for (`Some(None)`: it could not be read).
     sha1: Option<Option<String>>,
@@ -107,8 +107,8 @@ impl NumpressReader {
     }
 }
 
-fn field(name: &str, value: impl ToString, unita: Option<&str>, cv: Option<&str>) -> Campo {
-    Campo {
+fn field(name: &str, value: impl ToString, unita: Option<&str>, cv: Option<&str>) -> Field {
+    Field {
         nome: name.into(),
         valore: value.to_string(),
         unita: unita.map(str::to_string),
@@ -118,11 +118,11 @@ fn field(name: &str, value: impl ToString, unita: Option<&str>, cv: Option<&str>
 
 impl NumpressReader {
     /// The chromatograms of the file with their kind and unit.
-    fn trace_entries(&mut self) -> Result<Vec<VoceCromatogramma>> {
+    fn trace_entries(&mut self) -> Result<Vec<ChromatogramEntry>> {
         let traces = self.chromatograms_of_the_file()?.to_vec();
         let mut out = Vec::new();
         if self.tic_from_the_index(&traces) {
-            out.push(VoceCromatogramma {
+            out.push(ChromatogramEntry {
                 id: "TIC".into(),
                 tipo: ChromKind::Tic,
                 unita: UNITA_TIC.into(),
@@ -130,7 +130,7 @@ impl NumpressReader {
         }
         let mut m = Mzml::new(Prestito(&mut *self.data), self.dim);
         for t in traces {
-            out.push(VoceCromatogramma {
+            out.push(ChromatogramEntry {
                 tipo: tipo(&t.kind),
                 unita: m.chromatogram_unit(&t)?,
                 id: t.id,
@@ -274,7 +274,7 @@ impl NumpressReader {
 
 /// Yes when a numpress accession shows up before the end of the first spectrum (the m/z array may be plain and hundreds of KB while only the intensities are numpress).
 fn riconosci(fs: &mut FileSet) -> Fiducia {
-    let Some(i) = fs.trova(".mzml") else {
+    let Some(i) = fs.find(".mzml") else {
         return Fiducia::No;
     };
     let dim = fs.membri.get(i).map_or(0, |m| m.dim);
@@ -307,16 +307,16 @@ fn ha_numpress(text: &str) -> bool {
         .any(|a| text.contains(&format!("accession=\"{a}\"")))
 }
 
-impl Lettore for NumpressReader {
-    fn format(&self) -> Formato {
-        Formato::Altro("mzml-numpress")
+impl Reader for NumpressReader {
+    fn format(&self) -> Format {
+        Format::Altro("mzml-numpress")
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::non_portati::NUMPRESS
     }
 
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
 
@@ -327,7 +327,7 @@ impl Lettore for NumpressReader {
         self.dichiarati.saturating_sub(self.rows.len())
     }
 
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.one(c)?;
         Ok(&self.indice)
     }
@@ -337,7 +337,7 @@ impl Lettore for NumpressReader {
         self.spettro(k)
     }
 
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.one(c)?;
         let byte = self.byte(k)?;
         Ok(param_list(&byte)
@@ -346,7 +346,7 @@ impl Lettore for NumpressReader {
             .collect())
     }
 
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         self.trace_entries()
     }
@@ -376,9 +376,9 @@ impl Lettore for NumpressReader {
     }
 }
 
-pub(super) fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+pub(super) fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs
-        .trova(".mzml")
+        .find(".mzml")
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
     let m = fs
         .membri
@@ -393,14 +393,14 @@ pub(super) fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>>
     let dim = m.dim;
     let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
     let table = scantable::read(&mut dati, dim)?;
-    limits.voci_ok(table.rows.len() as u64)?;
+    limits.ok_entries(table.rows.len() as u64)?;
     let mut index = Vec::with_capacity(table.rows.len());
     for (k, r) in table.rows.iter().enumerate() {
         if r.end <= r.start || r.end > dim {
             return Err(Error::new("err.file.xml").with("detail", "spectrum out of the file"));
         }
         let length = u32::try_from(r.end - r.start).map_err(|_| Error::memory_budget())?;
-        index.push(VoceScansione {
+        index.push(ScanEntry {
             id: if r.native.is_empty() {
                 format!("index={k}")
             } else {
@@ -410,10 +410,10 @@ pub(super) fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>>
             livello: r.level,
             polarita: r.polarity,
             tic: r.tic,
-            picco_base: None,
+            base_peak: None,
             filtro: r.filter.to_string(),
             precursore: r.precursor(),
-            posizione: Some(Posizione {
+            position: Some(Position {
                 membro: 0,
                 offset: r.start,
                 lunghezza: length,
@@ -428,11 +428,11 @@ pub(super) fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>>
     Ok(Box::new(NumpressReader {
         data: dati,
         dim,
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 1,
             nome: stem,
             scansioni: index.len(),
-            dimensione: None,
+            size: None,
         }],
         name: nome,
         limits: *limits,

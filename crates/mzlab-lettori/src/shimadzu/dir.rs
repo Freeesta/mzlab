@@ -1,7 +1,7 @@
 //! The names in the directory of an OLE2 container, read from a few sectors of the file (never the whole of it): what `riconosci` looks at, so that a Shimadzu file is told by its storages
 //! (`GCMS Raw Data`, `Mass Raw Data`, `TLM Raw Data`, `QTFL RawData`) and not by its extension.
 
-use mzlab_core::lettori::Membro;
+use mzlab_core::lettori::Member;
 
 const MAGIC: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 /// The most directory sectors followed (each holds 4 or 32 entries).
@@ -13,7 +13,7 @@ fn u32_at(b: &[u8], at: usize) -> Option<u32> {
     Some(u32::from_le_bytes(b.get(at..at + 4)?.try_into().ok()?))
 }
 
-fn settore(m: &mut Membro, ss: usize, id: u32) -> Option<Vec<u8>> {
+fn settore(m: &mut Member, ss: usize, id: u32) -> Option<Vec<u8>> {
     let off = (u64::from(id) + 1).checked_mul(ss as u64)?;
     if off + ss as u64 > m.dim {
         return None;
@@ -24,13 +24,13 @@ fn settore(m: &mut Membro, ss: usize, id: u32) -> Option<Vec<u8>> {
 }
 
 /// Whether the member starts as an OLE2 container.
-pub(super) fn ole(m: &mut Membro) -> bool {
+pub(super) fn ole(m: &mut Member) -> bool {
     let mut h = [0u8; 8];
     m.dim >= 8 && m.dati.read_at(0, &mut h).is_ok() && h == MAGIC
 }
 
 /// The names of the entries (storages and streams) of the file, `None` when it is not an OLE2 container or its directory cannot be followed.
-pub(super) fn names(m: &mut Membro) -> Option<Vec<String>> {
+pub(super) fn names(m: &mut Member) -> Option<Vec<String>> {
     let mut h = [0u8; 512];
     if m.dim < 512 || m.dati.read_at(0, &mut h).is_err() || h[..8] != MAGIC {
         return None;

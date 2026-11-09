@@ -1,14 +1,14 @@
 //! Shared builders of the proofs of `gruppi`: files of `campioni/2`, cells and the synthetic scenario of the fixture. Synthetic data only.
 #![allow(dead_code)]
 
-use mzlab_core::campioni::{self, number_replicates, Campione};
+use mzlab_core::campioni::{self, number_replicates, Sample};
 use mzlab_core::json::Out;
 use mzlab_feat::gruppi::{GroupOpts, GroupTable, RowMeta};
 use mzlab_feat::table::{CELL_ABSENT, CELL_DETECTED, CELL_FILLED};
 
 /// A file of `kind` in `series` (`""` = shared) at `minutes` (None = unknown), injected at position `order`.
-pub fn file(name: &str, kind: &str, series: &str, minutes: Option<f64>, order: u32) -> Campione {
-    let mut c = Campione::new(name, "", order);
+pub fn file(name: &str, kind: &str, series: &str, minutes: Option<f64>, order: u32) -> Sample {
+    let mut c = Sample::new(name, "", order);
     c.kind = kind.into();
     c.series = series.into();
     c.set_time(minutes, "min");
@@ -16,7 +16,7 @@ pub fn file(name: &str, kind: &str, series: &str, minutes: Option<f64>, order: u
 }
 
 /// Files with the replicates numbered.
-pub fn files(mut v: Vec<Campione>) -> Vec<Campione> {
+pub fn files(mut v: Vec<Sample>) -> Vec<Sample> {
     number_replicates(&mut v);
     v
 }
@@ -79,7 +79,7 @@ pub fn permute(tb: &GroupTable, perm: &[usize]) -> GroupTable {
 
 /// The synthetic degradation of the fixture: a shared blank, time zero and parent standard, then six conditions at the end point only
 /// (`Air` in triplicate). Files 0..=10.
-pub fn scenario_files() -> Vec<Campione> {
+pub fn scenario_files() -> Vec<Sample> {
     files(vec![
         file("blank.mzML", "blank", "", None, 1),
         file("t0.mzML", "t0", "", Some(0.0), 2),
@@ -145,7 +145,7 @@ pub fn scenario_opts() -> GroupOpts {
     }
 }
 
-pub fn scenario() -> (GroupTable, Vec<Campione>, GroupOpts) {
+pub fn scenario() -> (GroupTable, Vec<Sample>, GroupOpts) {
     (
         table(scenario_rows(), 11),
         scenario_files(),
@@ -167,7 +167,7 @@ fn matrix(o: &mut Out, tb: &GroupTable, cell: impl Fn(usize) -> f64) {
 }
 
 /// The JSON input of `run_json` for a table, its files and options.
-pub fn input_json(tb: &GroupTable, cs: &[Campione], opts: &GroupOpts) -> String {
+pub fn input_json(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> String {
     let mut o = Out::default();
     o.raw("{\"table\":{\"n_rows\":").int(tb.n_rows as i64);
     o.raw(",\"n_files\":")

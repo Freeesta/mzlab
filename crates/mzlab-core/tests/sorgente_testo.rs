@@ -1,8 +1,8 @@
-//! `sorgente::testo_scansione` reads the header of a `<spectrum>` only (up to its arrays), not the base64 of the arrays.
+//! `sorgente::scan_text` reads the header of a `<spectrum>` only (up to its arrays), not the base64 of the arrays.
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{ReadAt, Scan};
-use mzlab_core::sorgente::testo_scansione;
+use mzlab_core::sorgente::scan_text;
 
 struct Counting {
     data: Vec<u8>,
@@ -27,7 +27,7 @@ fn scan_text_stops_before_the_arrays() {
         ..Scan::default()
     };
     let mut m = Counting { data, read: 0 };
-    let text = testo_scansione(&mut m, &sc).unwrap();
+    let text = scan_text(&mut m, &sc).unwrap();
     assert_eq!(text, head);
     assert!(m.read <= 16_384, "read {} bytes", m.read);
 }

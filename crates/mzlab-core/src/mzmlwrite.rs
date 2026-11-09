@@ -16,36 +16,36 @@ pub const LIVELLO_ZLIB: u32 = 2;
 
 /// How the arrays are written.
 #[derive(Debug, Clone, Copy)]
-pub struct Opzioni {
+pub struct Options {
     /// zlib level 0-9 (`LIVELLO_ZLIB`).
     pub livello: u32,
     /// m/z of the spectra with MS-Numpress linear prediction (MS:1002312) and intensities with short logged float (MS:1002314), each followed by zlib (MS:1002746,
     /// MS:1002748) when that is smaller. Lossy: the relative error of the intensities is about 1e-4 and the m/z are rounded to 1e-7 of their range's fixed point.
     pub numpress: bool,
-    /// Threads that encode the arrays when the spectra come through `MzmlWriter::spettri` (`thread_predefinito`); 0 and 1 encode on the calling thread. The bytes written do not depend on it.
+    /// Threads that encode the arrays when the spectra come through `MzmlWriter::spettri` (`default_threads`); 0 and 1 encode on the calling thread. The bytes written do not depend on it.
     pub thread: usize,
     /// Also write the optical (DAD / PDA) matrix of the sample, one `MS:1000804` spectrum per instant, after the scans (`MzmlWriter::uv_spectrum`). Off: the file is the same as without it.
     pub dad: bool,
 }
 
-impl Default for Opzioni {
+impl Default for Options {
     fn default() -> Self {
-        Opzioni { livello: LIVELLO_ZLIB, numpress: false, thread: thread_predefinito(), dad: false }
+        Options { livello: LIVELLO_ZLIB, numpress: false, thread: default_threads(), dad: false }
     }
 }
 
 impl<W: Write> MzmlWriter<W> {
     /// Writes the header and opens `<run>`.
     pub fn new(out: W, h: &Header) -> Result<Self> {
-        Self::con_opzioni(out, h, Opzioni::default())
+        Self::with_options(out, h, Options::default())
     }
 
     /// As `new`, with the zlib level and the numpress choice of `opz`.
-    pub fn con_opzioni(out: W, h: &Header, opz: Opzioni) -> Result<Self> {
-        Self::avvia(out, h, opz, false)
+    pub fn with_options(out: W, h: &Header, opz: Options) -> Result<Self> {
+        Self::start(out, h, opz, false)
     }
 
-    fn avvia(out: W, h: &Header, opz: Opzioni, indexed: bool) -> Result<Self> {
+    fn start(out: W, h: &Header, opz: Options, indexed: bool) -> Result<Self> {
         let indexed = indexed && cfg!(any(not(target_family = "wasm"), feature = "indice"));
         let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
         if indexed { s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n"; }
@@ -77,7 +77,7 @@ impl<W: Write> MzmlWriter<W> {
         for (k, v) in &h.run_params {
             s += &format!("<userParam name=\"{}\" value=\"{}\"/>\n", esc(k), esc(v));
         }
-        let mut w = MzmlWriter { out, spectra: 0, chroms: 0, opz, enc: Codifica::new(opz), text: String::new(), idx: indexed.then(indice::Indice::new) };
+        let mut w = MzmlWriter { out, spectra: 0, chroms: 0, opz, enc: Encoding::new(opz), text: String::new(), idx: indexed.then(indice::Index::new) };
         w.put(s.as_bytes())?;
         Ok(w)
     }
@@ -255,13 +255,13 @@ pub struct MzmlWriter<W: Write> {
     out: W,
     spectra: usize,
     chroms: usize,
-    opz: Opzioni,
-    enc: Codifica,
+    opz: Options,
+    enc: Encoding,
     /// The text of the spectrum, kept from one spectrum to the next.
     text: String,
     /// Positions and checksum, only for `MzmlWriter::indicizzato`.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
-    idx: Option<indice::Indice>,
+    idx: Option<indice::Index>,
 }
 
 pub(crate) fn io(_: std::io::Error) -> Error {
@@ -421,13 +421,13 @@ fn component_list(h: &Header) -> String {
 
 mod codifica;
 mod compressione;
-pub use compressione::opzioni_compressione;
+pub use compressione::compression_options;
 mod matrice;
 #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
 mod uv;
 mod thread;
-pub use thread::thread_predefinito;
-use codifica::{Codifica, Data};
+pub use thread::default_threads;
+use codifica::{Encoding, Data};
 #[cfg(not(target_family = "wasm"))]
 mod pool;
 mod testa;

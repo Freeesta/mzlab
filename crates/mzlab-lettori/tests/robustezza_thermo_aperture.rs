@@ -231,19 +231,19 @@ fn describe_lists_the_structures_and_the_result() {
     assert!(t.contains("open: file cut at 2000 bytes"), "{t}");
 }
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 
 /// Everything the module does with a file, on whatever opens: the index, some scans, their headers, the chromatograms and the method. None of it may panic.
 fn through_the_module(bytes: Vec<u8>) {
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.raw".into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
             sha1: None,
         }],
     };
-    let Ok(mut l) = mzlab_lettori::apri(set, &Limiti::sito()) else {
+    let Ok(mut l) = mzlab_lettori::apri(set, &Limits::sito()) else {
         return;
     };
     let n = l.index(0).map_or(0, <[_]>::len);

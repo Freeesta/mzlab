@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 
 use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
-    grafo_da_picchi, tabella_regole, valuta_regole, Attesa, Grafo, Opzioni, ParamRegole,
-    Valutazione,
+    graph_from_peaks, tabella_regole, valuta_regole, Evaluation, Expectation, Graph, Options,
+    RuleParams,
 };
 use mzlab_feat::chem::grafo::Mol;
 use mzlab_feat::chem::regole::attese_mol;
@@ -66,21 +66,21 @@ impl Measure {
     }
 }
 
-fn options(r: &Registry, rules: bool, attese: &[Attesa]) -> Opzioni {
-    Opzioni {
+fn options(r: &Registry, rules: bool, attese: &[Expectation]) -> Options {
+    Options {
         formula: Some(r.ione.clone()),
-        regole: rules.then(ParamRegole::default),
+        regole: rules.then(RuleParams::default),
         attese: attese.to_vec(),
-        ..Opzioni::default()
+        ..Options::default()
     }
 }
 
-fn graph(r: &Registry, peaks: &[(f64, f64)], o: &Opzioni) -> Grafo {
-    grafo_da_picchi((r.prec, r.pol), (r.att, r.ce), peaks, o)
+fn graph(r: &Registry, peaks: &[(f64, f64)], o: &Options) -> Graph {
+    graph_from_peaks((r.prec, r.pol), (r.att, r.ce), peaks, o)
 }
 
 /// The fragment peaks of the spectrum of the graph with their node (the peak of the precursor itself is not a fragment): (% of base peak, node).
-fn frammenti(g: &Grafo) -> Vec<(f64, Option<usize>)> {
+fn frammenti(g: &Graph) -> Vec<(f64, Option<usize>)> {
     let Some(s) = g.spettri.first() else {
         return vec![];
     };
@@ -92,7 +92,7 @@ fn frammenti(g: &Grafo) -> Vec<(f64, Option<usize>)> {
 }
 
 /// Peaks that a rule explains (an arc with a rule, a composite loss or an ion rule on the node): count, intensity, and the rules.
-fn with_rule(g: &Grafo, v: &Valutazione, rules: &mut BTreeMap<String, usize>) -> (usize, f64) {
+fn with_rule(g: &Graph, v: &Evaluation, rules: &mut BTreeMap<String, usize>) -> (usize, f64) {
     let Some(prec) = g.spettri.first().and_then(|s| s.precursore) else {
         return (0, 0.0);
     };
@@ -111,14 +111,14 @@ fn with_rule(g: &Grafo, v: &Valutazione, rules: &mut BTreeMap<String, usize>) ->
     (n, it)
 }
 
-fn peak_ids(g: &Grafo, v: &Valutazione, prec: usize, node: usize) -> Vec<String> {
+fn peak_ids(g: &Graph, v: &Evaluation, prec: usize, node: usize) -> Vec<String> {
     let mut ids: Vec<String> = vec![];
     if let Some(i) = g.archi.iter().position(|x| x.da == prec && x.a == node) {
-        ids.extend(v.archi[i].regole.iter().map(|r| r.id.to_string()));
-        ids.extend(v.archi[i].composta.iter().map(|(x, y)| format!("{x}+{y}")));
+        ids.extend(v.edges[i].rules.iter().map(|r| r.id.to_string()));
+        ids.extend(v.edges[i].composta.iter().map(|(x, y)| format!("{x}+{y}")));
     }
     ids.extend(
-        v.ioni
+        v.ions
             .iter()
             .filter(|x| x.nodo == node)
             .map(|x| x.regola.to_string()),
@@ -129,7 +129,7 @@ fn peak_ids(g: &Grafo, v: &Valutazione, prec: usize, node: usize) -> Vec<String>
 }
 
 /// The three counts of the record on `picchi`, with the expectations of a structure (`attese`; the rules are evaluated only with `regole`).
-pub fn measure(r: &Registry, peaks: &[(f64, f64)], attese: &[Attesa], rules: bool) -> Measure {
+pub fn measure(r: &Registry, peaks: &[(f64, f64)], attese: &[Expectation], rules: bool) -> Measure {
     let ga = graph(r, peaks, &options(r, false, &[]));
     let fr = frammenti(&ga);
     let mut m = Measure {
@@ -144,7 +144,7 @@ pub fn measure(r: &Registry, peaks: &[(f64, f64)], attese: &[Attesa], rules: boo
     if rules {
         let (ob, oc) = (options(r, true, &[]), options(r, true, attese));
         let (gb, gc) = (graph(r, peaks, &ob), graph(r, peaks, &oc));
-        let p = ParamRegole::default();
+        let p = RuleParams::default();
         m.b = with_rule(&gb, &valuta_regole(&gb, &ob, &p), &mut BTreeMap::new());
         m.c = with_rule(&gc, &valuta_regole(&gc, &oc, &p), &mut m.rules);
     }
@@ -152,7 +152,7 @@ pub fn measure(r: &Registry, peaks: &[(f64, f64)], attese: &[Attesa], rules: boo
 }
 
 /// The expectations of the structure of the record (`None` when the SMILES cannot be read).
-pub fn registry_expectations(r: &Registry) -> Option<Vec<Attesa>> {
+pub fn registry_expectations(r: &Registry) -> Option<Vec<Expectation>> {
     let m = Mol::parse(&r.smiles).ok()?;
     Some(attese_mol(&m, tabella_regole()))
 }
@@ -188,7 +188,12 @@ pub struct Decoy {
     pub losses: Measure,
 }
 
-pub fn decoy(r: &Registry, seme: u64, altro: Option<&[(f64, f64)]>, attese: &[Attesa]) -> Decoy {
+pub fn decoy(
+    r: &Registry,
+    seme: u64,
+    altro: Option<&[(f64, f64)]>,
+    attese: &[Expectation],
+) -> Decoy {
     let struttura = Mol::parse(&r.smiles).ok().map(|m| {
         let d = attese_mol(&m.rimescola(seme_di(seme, &r.id)), tabella_regole());
         measure(r, &r.peaks, &d, true)

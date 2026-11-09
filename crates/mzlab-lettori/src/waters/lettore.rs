@@ -10,8 +10,8 @@ use super::lati::{compound_names, Table};
 use super::tagli::{cuts, nel_file, whole_header, whole_list};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
-    VoceLettore, VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
 };
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
@@ -19,7 +19,7 @@ use mzlab_core::mzmlwrite::Header;
 const FUNCTNS: &str = "_FUNCTNS.INF";
 const FIRST_DAT: &str = "_FUNC001.DAT";
 
-pub const ENTRY: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "waters-raw",
     contratto: CONTRATTO,
     estensioni: &[".raw"],
@@ -56,20 +56,20 @@ impl WatersReader {
                         .or(f.ext.set_mass)
                 })
                 .flatten();
-            self.indice.push(VoceScansione {
+            self.indice.push(ScanEntry {
                 id: format!("function={} process=0 scan={}", f.f.indice, k + 1),
                 rt: f64::from(r.rt),
                 livello: f.livello,
                 polarita: f.polarita,
                 tic: f64::from(r.tic),
-                picco_base: None,
+                base_peak: None,
                 filtro: if f.f.riferimento() {
                     format!("function {} lock mass", f.f.indice)
                 } else {
                     format!("function {}", f.f.indice)
                 },
                 precursore,
-                posizione: f.dat.map(|m| Posizione {
+                position: f.dat.map(|m| Position {
                     membro: u16::try_from(m).unwrap_or(0),
                     offset: r.offset,
                     lunghezza: u32::try_from(
@@ -82,7 +82,7 @@ impl WatersReader {
         }
     }
 
-    fn entry(&self, c: usize, k: usize) -> Result<(&Fun, usize, &VoceScansione)> {
+    fn entry(&self, c: usize, k: usize) -> Result<(&Fun, usize, &ScanEntry)> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
@@ -94,9 +94,9 @@ impl WatersReader {
     }
 }
 
-impl Lettore for WatersReader {
-    fn format(&self) -> Formato {
-        Formato::Altro("waters-raw")
+impl Reader for WatersReader {
+    fn format(&self) -> Format {
+        Format::Altro("waters-raw")
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
@@ -117,11 +117,11 @@ impl Lettore for WatersReader {
         }
     }
 
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.samples
     }
 
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
@@ -156,9 +156,9 @@ impl Lettore for WatersReader {
         })
     }
 
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         let (f, r, v) = self.entry(c, k)?;
-        let field = |name: &str, value: String, unita: Option<&str>| Campo {
+        let field = |name: &str, value: String, unita: Option<&str>| Field {
             nome: name.into(),
             valore: value,
             unita: unita.map(Into::into),
@@ -208,11 +208,11 @@ impl Lettore for WatersReader {
         Ok(out)
     }
 
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(self
             .all_chromatograms(c)?
             .iter()
-            .map(|h| VoceCromatogramma {
+            .map(|h| ChromatogramEntry {
                 id: h.id.clone(),
                 tipo: h.kind,
                 unita: h.unit.clone(),
@@ -260,7 +260,7 @@ impl WatersReader {
 /// A folder with `_FUNC001.DAT` is a MassLynx folder; it is surer when `_FUNCTNS.INF` is there and has whole records.
 fn riconosci(fs: &mut FileSet) -> Fiducia {
     let base =
-        |m: &mzlab_core::lettori::Membro| super::cartella::base(&m.nome).to_ascii_lowercase();
+        |m: &mzlab_core::lettori::Member| super::cartella::base(&m.nome).to_ascii_lowercase();
     if !fs.membri.iter().any(|m| base(m) == "_func001.dat") {
         return Fiducia::No;
     }
@@ -298,8 +298,8 @@ pub struct WatersReader {
     pub(super) ext: Extern,
     pub(super) inlet: Option<Inlet>,
     pub(super) analogiche: Vec<super::cromi::Analogica>,
-    samples: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    samples: Vec<Sample>,
+    indice: Vec<ScanEntry>,
     /// For each row of `indice`: (function, row of its IDX).
     mappa: Vec<(usize, usize)>,
     /// What the reader did not decode: (key of the notice, where).
@@ -376,7 +376,7 @@ fn load(
         None => Vec::new(),
     };
     *spent += rows.len() as u64;
-    c.limits.voci_ok(*spent)?;
+    c.limits.ok_entries(*spent)?;
     let dat = c.search(&name("DAT"));
     let dat_len = dat.map_or(0, |i| c.fs.membri[i].dim);
     let larg = idx::width(&rows, dat_len);
@@ -420,7 +420,7 @@ fn load(
     Ok((fun, warning))
 }
 
-fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let mut c = Folder::new(fs, *limits);
     // Every run has `_FUNCTNS.INF`: a folder without it is a copy that left files behind.
     let inf = c
@@ -482,11 +482,11 @@ fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
         .testata
         .get("Acquired Name")
         .map_or_else(|| l.c.name.clone(), str::to_string);
-    l.samples = vec![Campione {
+    l.samples = vec![Sample {
         id: 0,
         nome: name,
         scansioni: l.indice.len(),
-        dimensione: None,
+        size: None,
     }];
     Ok(Box::new(l))
 }

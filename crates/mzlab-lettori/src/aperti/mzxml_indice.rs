@@ -5,7 +5,7 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 /// The bytes of one scan.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,7 +28,7 @@ pub(super) struct Passata {
 }
 
 /// The rows of the scans of the file, from one pass over its bytes.
-pub(super) fn rows(data: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Passata> {
+pub(super) fn rows(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Passata> {
     passata(data, dim, limits)
 }
 
@@ -55,13 +55,13 @@ fn tag(b: &[u8]) -> u8 {
 }
 
 /// The `<offset` tags in the bytes after the end of the run (at most `limiti.byte` of them read).
-fn offset_after(data: &mut dyn ReadAt, da: u64, dim: u64, limits: &Limiti) -> Result<usize> {
+fn offset_after(data: &mut dyn ReadAt, da: u64, dim: u64, limits: &Limits) -> Result<usize> {
     let b = read(data, da, (dim - da).min(limits.byte))?;
     Ok(b.windows(7).filter(|w| w == b"<offset").count())
 }
 
 /// One pass over the file in blocks of 1 MB: the starts of the scans, the nesting depth against the limit, the end of the run, and what is damaged.
-fn passata(data: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Passata> {
+fn passata(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Passata> {
     let (mut starts, mut fine_run): (Vec<u64>, Option<u64>) = (Vec::new(), None);
     let (mut pos, mut profondita, mut closed) = (0u64, 0usize, 0u64);
     let (mut remainder, mut nul): (Vec<u8>, Vec<u64>) = (Vec::new(), Vec::new());
@@ -94,7 +94,7 @@ fn passata(data: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Passata> 
                 1 => {
                     profondita += 1;
                     limits.profondita_ok(profondita)?;
-                    limits.voci_ok(starts.len() as u64 + 1)?;
+                    limits.ok_entries(starts.len() as u64 + 1)?;
                     starts.push(base + at as u64);
                 }
                 2 => {

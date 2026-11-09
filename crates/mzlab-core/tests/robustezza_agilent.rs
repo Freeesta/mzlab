@@ -9,47 +9,47 @@ mod robustezza;
 #[cfg(feature = "estesi")]
 use agilent_synth::lc;
 use agilent_synth::{encode, sample};
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use robustezza::*;
 
 #[global_allocator]
-static ALLOCATORE: Contatore = Contatore;
+static ALLOCATORE: Counter = Counter;
 
 /// A member whose declared size (`dim`) can differ from its bytes.
-fn membro(nome: &str, b: &[u8], dim: Option<u64>) -> Membro {
-    Membro {
-        nome: nome.into(),
+fn member(name: &str, b: &[u8], dim: Option<u64>) -> Member {
+    Member {
+        nome: name.into(),
         dim: dim.unwrap_or(b.len() as u64),
         dati: Box::new(Letture(b.to_vec())),
         sha1: None,
     }
 }
 
-fn legge(membri: Vec<(String, Vec<u8>, Option<u64>)>) -> Vec<String> {
+fn reads(members: Vec<(String, Vec<u8>, Option<u64>)>) -> Vec<String> {
     let mut k = Vec::new();
     let mut fs = FileSet {
-        membri: membri.iter().map(|(n, b, d)| membro(n, b, *d)).collect(),
+        membri: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
     };
     let _ = lettori::riconosci(&mut fs);
     let fs = FileSet {
-        membri: membri.iter().map(|(n, b, d)| membro(n, b, *d)).collect(),
+        membri: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
     };
-    if let Some(mut l) = nota(lettori::apri(fs, &Limiti::sito()), &mut k) {
-        if let Some(ix) = nota(l.index(0), &mut k).map(<[_]>::to_vec) {
-            (0..ix.len()).for_each(|j| drop(nota(l.scan(0, j), &mut k)));
+    if let Some(mut l) = note(lettori::apri(fs, &Limits::sito()), &mut k) {
+        if let Some(ix) = note(l.index(0), &mut k).map(<[_]>::to_vec) {
+            (0..ix.len()).for_each(|j| drop(note(l.scan(0, j), &mut k)));
         }
-        nota(l.method(0), &mut k);
+        note(l.method(0), &mut k);
     }
     k
 }
 
-fn caso(nome: &str, m: Vec<(&str, Vec<u8>, Option<u64>)>) -> Vec<String> {
-    let totale = m.iter().map(|x| x.1.len()).sum();
+fn case(name: &str, m: Vec<(&str, Vec<u8>, Option<u64>)>) -> Vec<String> {
+    let total = m.iter().map(|x| x.1.len()).sum();
     let m = m
         .into_iter()
         .map(|(n, b, d)| (n.to_string(), b, d))
         .collect();
-    uno(nome, totale, Box::new(move || legge(m)))
+    one(name, total, Box::new(move || reads(m)))
 }
 
 #[test]
@@ -57,59 +57,59 @@ fn folders_that_are_not_what_they_say() {
     let (idx, peak) = encode(&sample());
     let (scan, pk) = ("x.D/AcqData/MSScan.bin", "x.D/AcqData/MSPeak.bin");
     let mut g = Vec::new();
-    g.extend(caso(
+    g.extend(case(
         "no AcqData",
         vec![("x.D/readme.txt", b"hello".to_vec(), None)],
     ));
-    g.extend(caso("no members", vec![]));
-    g.extend(caso(
+    g.extend(case("no members", vec![]));
+    g.extend(case(
         "empty files",
         vec![(scan, vec![], None), (pk, vec![], None)],
     ));
-    g.extend(caso(
+    g.extend(case(
         "declared 16 EB",
         vec![
             (scan, idx.clone(), Some(u64::MAX)),
             (pk, peak.clone(), None),
         ],
     ));
-    g.extend(caso(
+    g.extend(case(
         "peak declared 16 EB",
         vec![
             (scan, idx.clone(), None),
             (pk, peak.clone(), Some(u64::MAX)),
         ],
     ));
-    g.extend(caso(
+    g.extend(case(
         "peak declared 4 GB",
         vec![(scan, idx.clone(), None), (pk, peak.clone(), Some(1 << 32))],
     ));
     let mut storto = idx.clone();
     storto.truncate(idx.len() - 7);
-    g.extend(caso(
+    g.extend(case(
         "size not a multiple of the record",
         vec![(scan, storto, None), (pk, peak.clone(), None)],
     ));
-    g.extend(caso(
+    g.extend(case(
         "peak shorter than the records",
         vec![
             (scan, idx.clone(), None),
             (pk, peak[..peak.len() / 2].to_vec(), None),
         ],
     ));
-    g.extend(caso(
+    g.extend(case(
         "peak with the header only",
         vec![(scan, idx.clone(), None), (pk, peak[..68].to_vec(), None)],
     ));
-    g.extend(caso(
+    g.extend(case(
         "DATA.MS with its magic only",
         vec![("x.D/DATA.MS", vec![0x01, 0x32], None)],
     ));
-    g.extend(caso(
+    g.extend(case(
         "DATA.MS declared 16 EB",
         vec![("x.D/DATA.MS", vec![0x01, 0x32, 0, 0], Some(u64::MAX))],
     ));
-    verifica("agilent", 11, &g);
+    verify("agilent", 11, &g);
 }
 
 /// A folder of LC/MS files: (member name, bytes, declared size).
@@ -254,7 +254,7 @@ fn lc_ms_folders_that_are_not_what_they_say() {
     let n = cases.len();
     let g: Vec<String> = cases
         .into_iter()
-        .flat_map(|(name, m)| caso(name, m))
+        .flat_map(|(name, m)| case(name, m))
         .collect();
-    verifica("agilent", n, &g);
+    verify("agilent", n, &g);
 }

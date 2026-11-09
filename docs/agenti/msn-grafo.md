@@ -11,7 +11,7 @@ Contratto delle PR che lo realizzano (§9): le parti già nel codice descrivono 
 ## 1. Cosa c'è e cosa manca
 | Pezzo | Dove | Cosa fa oggi | Cosa manca per il grafo |
 |---|---|---|---|
-| Riconoscimento | `infusione.rs` (`infusione`, `con_msn`) | file d'infusione = un elemento `kind: "infusion"` | niente |
+| Riconoscimento | `infusione.rs` (`infusione`, `with_msn`) | file d'infusione = un elemento `kind: "infusion"` | niente |
 | Albero dei precursori | `msnalbero.rs` (`albero`, `Raggruppa {tol, energie}`, `blocchi`) | nodi per cammino del filtro (nominale, Da o ppm; energie separate o unite), genitore = antenato più vicino (`salto`) | niente: è l'ingresso del grafo |
 | Consenso di un nodo | `msnalbero::consenso` (5 ppm, picco in ≥ 50 % delle scansioni) | spettro medio del nodo | riuso tale e quale |
 | Rotta dei nodi | `msnroute.rs` (`/api/msn_albero`, filtro `msn:<id>`, `modo=somma`) | albero dalla sola tabella delle scansioni; spettro e TIC di un nodo | niente: la vista del grafo li usa per lo spettro del nodo |

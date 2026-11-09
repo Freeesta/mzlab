@@ -8,11 +8,11 @@ mod comune_waters;
 use comune::andi::{andi_ms, points, FLAT_RUN};
 use comune::mzxml::{mzxml, run, FLAT};
 use comune::*;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 /// The key of the first error met reading index, every scan and every trace; `"ok"` when none.
 fn key(fs: mzlab_core::lettori::FileSet) -> String {
-    let mut l = match mzlab_lettori::apri(fs, &Limiti::sito()) {
+    let mut l = match mzlab_lettori::apri(fs, &Limits::sito()) {
         Ok(l) => l,
         Err(e) => return e.key.to_string(),
     };

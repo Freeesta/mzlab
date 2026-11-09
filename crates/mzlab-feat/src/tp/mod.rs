@@ -139,7 +139,7 @@ pub struct TpRoles {
 }
 
 impl TpRoles {
-    pub fn of(cs: &[mzlab_core::campioni::Campione]) -> TpRoles {
+    pub fn of(cs: &[mzlab_core::campioni::Sample]) -> TpRoles {
         let p = mzlab_core::campioni::per_tp(cs);
         TpRoles {
             blank_kinds: p.blank.iter().map(|&i| cs[i].blank_kind.clone().unwrap_or_default()).collect(),

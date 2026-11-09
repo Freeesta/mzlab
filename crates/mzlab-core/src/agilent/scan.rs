@@ -391,10 +391,10 @@ pub fn parse(
     let n = layout.record_len;
     let rest = bytes.len().saturating_sub(start);
     let whole = rest / n;
-    let frammento = !rest.is_multiple_of(n);
+    let fragment = !rest.is_multiple_of(n);
     if start < DATA_OFFSET_AT + 4
         || start > bytes.len()
-        || (frammento && !scans.is_some_and(|a| a > whole))
+        || (fragment && !scans.is_some_and(|a| a > whole))
     {
         let seen = scans
             .filter(|s| *s > 0 && start <= bytes.len())
@@ -410,7 +410,7 @@ pub fn parse(
             bytes.len()
         )));
     }
-    let fuori = |k: usize| {
+    let outside = |k: usize| {
         bad(format!(
             "scan record {} points outside MSPeak.bin or has no time",
             k + 1
@@ -419,31 +419,31 @@ pub fn parse(
     let mut out = Vec::new();
     out.try_reserve_exact(whole)
         .map_err(|_| Error::memory_budget())?;
-    let mut primo_fuori = None;
+    let mut first_out = None;
     for (k, r) in bytes[start..].chunks_exact(n).enumerate() {
         let rec = record(layout, r);
-        let dentro = rec
+        let inside = rec
             .offset
             .checked_add(rec.bytes as u64)
             .is_some_and(|e| e <= peak_len);
-        if !rec.time_min.is_finite() || (dentro && primo_fuori.is_some()) {
-            return Err(fuori(primo_fuori.unwrap_or(k)));
+        if !rec.time_min.is_finite() || (inside && first_out.is_some()) {
+            return Err(outside(first_out.unwrap_or(k)));
         }
-        if !dentro && primo_fuori.is_none() {
-            primo_fuori = Some(k);
+        if !inside && first_out.is_none() {
+            first_out = Some(k);
         }
         out.push(rec);
     }
-    let tenute = primo_fuori.unwrap_or(whole);
-    if !frammento && tenute == whole && !scans.is_some_and(|a| a > whole) {
+    let kept = first_out.unwrap_or(whole);
+    if !fragment && kept == whole && !scans.is_some_and(|a| a > whole) {
         return Ok((out, 0));
     }
-    if out[..tenute].windows(2).any(|w| w[1].offset < w[0].offset) {
-        return Err(fuori(tenute));
+    if out[..kept].windows(2).any(|w| w[1].offset < w[0].offset) {
+        return Err(outside(kept));
     }
-    out.truncate(tenute);
-    let attese = scans.unwrap_or(0).max(whole + usize::from(frammento));
-    Ok((out, attese - tenute))
+    out.truncate(kept);
+    let attese = scans.unwrap_or(0).max(whole + usize::from(fragment));
+    Ok((out, attese - kept))
 }
 
 #[cfg(feature = "estesi")]

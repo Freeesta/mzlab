@@ -1,16 +1,16 @@
-//! `Codifica::array`: one `<binaryDataArray>` of a spectrum or a chromatogram (floats or numpress, zlib, base64).
+//! `Encoding::array`: one `<binaryDataArray>` of a spectrum or a chromatogram (floats or numpress, zlib, base64).
 
 use std::fmt::Write as _;
 
 use base64::Engine;
 
-use super::codifica::{Codifica, Data};
+use super::codifica::{Data, Encoding};
 use super::{spectrum_head_into, SpectrumExtra};
 use crate::error::Result;
 use crate::mzml::Spectrum;
 use crate::numpress::{self, Np};
 
-impl Codifica {
+impl Encoding {
     /// Appends to `s` the whole `<spectrum>` number `index`: head, the m/z and intensity arrays, closing tags.
     pub fn spettro(
         &mut self,

@@ -32,7 +32,7 @@ fn zlib(b: &[u8]) -> Vec<u8> {
 #[allow(dead_code)]
 fn file_set(name: &str, byte: Vec<u8>) -> mzlab_core::lettori::FileSet {
     mzlab_core::lettori::FileSet {
-        membri: vec![mzlab_core::lettori::Membro {
+        membri: vec![mzlab_core::lettori::Member {
             nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),

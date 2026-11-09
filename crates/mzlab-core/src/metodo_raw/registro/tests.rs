@@ -9,7 +9,7 @@ fn e(time: f32, message: &str) -> ErrorEntry {
 
 #[test]
 fn an_entry_keeps_its_time_and_text_and_the_level_only_when_the_text_says_it() {
-    let v = voci(&[
+    let v = entries(&[
         e(1.5, "Warning: spray unstable"),
         e(12.0, "Info - reagent vial 1 configuration:"),
         e(20.25, "Calibration failed"),

@@ -2,9 +2,9 @@
 //! header of the mzML we write; every attribute of every element goes into `campi` (nothing is lost), the identifying ones (operator, paths) marked `identita`.
 
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
-use mzlab_core::metodo_campi::Campo;
+use mzlab_core::metodo_campi::Field;
 use mzlab_core::mzmlwrite::Header;
 
 use super::mzxml_scan::{attr, each, name, tags, Tag};
@@ -14,7 +14,7 @@ const FIELDS_MAX: usize = 2000;
 
 #[derive(Default)]
 pub(super) struct Cabina {
-    pub(super) fields: Vec<Campo>,
+    pub(super) fields: Vec<Field>,
     pub(super) maker: Option<String>,
     pub(super) model: Option<String>,
     pub(super) ionizzazione: Option<String>,
@@ -49,10 +49,10 @@ fn last_one(n: &str) -> &str {
 }
 
 /// The fields of one element: `category`/`value` pairs (`msModel`…) are one field, any other attribute is one.
-fn fields_of(o: &str, n: &str, g: Tag, dest: &mut Vec<Campo>) {
+fn fields_of(o: &str, n: &str, g: Tag, dest: &mut Vec<Field>) {
     let (cat, val) = (attr(g, "category"), attr(g, "value"));
     if !cat.is_empty() && !val.is_empty() {
-        let f = Campo::new(o, cat, val);
+        let f = Field::new(o, cat, val);
         dest.push(match mappa(cat) {
             Some(m) => f.map(m),
             None => f,
@@ -60,7 +60,7 @@ fn fields_of(o: &str, n: &str, g: Tag, dest: &mut Vec<Campo>) {
         return;
     }
     each(g, &mut |k, v| {
-        let f = Campo::new(o, k, v);
+        let f = Field::new(o, k, v);
         let identita = n == "operator" || (n == "parentFile" && k == "fileName" && file_path(v));
         dest.push(if identita { f.id() } else { f });
     });
@@ -93,7 +93,7 @@ fn annotate(c: &mut Cabina, n: &str, g: Tag) {
 }
 
 /// The cabin of `head`, the text of the file before its first scan.
-pub(super) fn read(head: &str, limits: &Limiti) -> Result<Cabina> {
+pub(super) fn read(head: &str, limits: &Limits) -> Result<Cabina> {
     let mut c = Cabina::default();
     let mut pila: Vec<&str> = Vec::new();
     let mut error = None;
@@ -160,7 +160,7 @@ pub(super) fn document(c: &Cabina, nome: &str, dim: u64, sha1: Option<String>) -
         ),
         (
             "campi",
-            Some(V::Arr(c.fields.iter().filter_map(Campo::json).collect())),
+            Some(V::Arr(c.fields.iter().filter_map(Field::json).collect())),
         ),
     ]);
     doc.map_or_else(String::new, |d| d.json())

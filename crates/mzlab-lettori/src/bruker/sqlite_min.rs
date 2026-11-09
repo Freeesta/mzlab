@@ -11,7 +11,7 @@ use mzlab_core::error::{Error, Result};
 
 use mzlab_core::idxread::ReadAt;
 
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 use std::collections::{HashMap, HashSet};
 
@@ -76,7 +76,7 @@ impl Sqlite {
         main: Box<dyn ReadAt>,
         dim: u64,
         wal: Option<(Box<dyn ReadAt>, u64)>,
-        limits: &Limiti,
+        limits: &Limits,
     ) -> Result<Sqlite> {
         let mut s = Sqlite {
             main,
@@ -111,7 +111,7 @@ impl Sqlite {
         }
         s.pagine_main = dim / s.page as u64;
         s.pagine = commit.filter(|&n| n > 0).unwrap_or(s.pagine_main);
-        limits.voci_ok(s.pagine)?;
+        limits.ok_entries(s.pagine)?;
         // page 1 may live in the log only: its first 100 bytes are the header of the database
         let p1 = s.page_n(1)?;
         if p1.len() < 100 || &p1[..16] != MAGIC {
@@ -422,7 +422,7 @@ pub struct Sqlite {
     useful: usize,
     pagine: u64,
     tabelle: Vec<Table>,
-    limits: Limiti,
+    limits: Limits,
 }
 
 /// Reads `n` bytes at `off` (an error when the file is shorter).
@@ -465,7 +465,7 @@ pub(super) fn u32_be(b: &[u8], o: usize) -> Option<u32> {
 }
 
 /// The values of a record: header (size, serial types) then the bodies.
-pub fn record(b: &[u8], limits: &Limiti) -> Result<Vec<Val>> {
+pub fn record(b: &[u8], limits: &Limits) -> Result<Vec<Val>> {
     let mut out = Vec::new();
     record_in(b, limits, None, &mut out)?;
     Ok(out)

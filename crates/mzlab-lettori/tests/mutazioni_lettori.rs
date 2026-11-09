@@ -10,7 +10,7 @@ mod comune_waters;
 use comune::andi::{andi_cromato, andi_ms, FLAT_RUN};
 use comune::mzxml::{mzxml, run, FLAT};
 use comune::*;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -39,7 +39,7 @@ fn set_of(members: &[(String, Vec<u8>)]) -> FileSet {
     FileSet {
         membri: members
             .iter()
-            .map(|(name, b)| Membro {
+            .map(|(name, b)| Member {
                 nome: name.clone(),
                 dim: b.len() as u64,
                 dati: Box::new(b.clone()),
@@ -51,7 +51,7 @@ fn set_of(members: &[(String, Vec<u8>)]) -> FileSet {
 
 /// Reads everything a page and the CLI read; `Err` names the first non-finite number met.
 fn read_all(members: &[(String, Vec<u8>)]) -> Result<(), String> {
-    let Ok(mut l) = mzlab_lettori::apri(set_of(members), &Limiti::sito()) else {
+    let Ok(mut l) = mzlab_lettori::apri(set_of(members), &Limits::sito()) else {
         return Ok(());
     };
     for c in 0..l.samples().len() {

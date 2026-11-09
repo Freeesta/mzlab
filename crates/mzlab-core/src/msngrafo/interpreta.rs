@@ -1,12 +1,12 @@
 //! The interpretation of the arcs of the graph `msngrafo/1`: each neutral loss gets its common name, formula, exact mass and error, with the reason
 //! and a confidence, and the activations that observed it. Evidence, never a verdict: the user can always override it. Used by `mzlab-cli msn-graph`.
 
-use super::Grafo;
+use super::Graph;
 use crate::elements::{fmt, mass, parse_formula};
 use crate::json::{round, Out};
 
 /// Version of the `interpretazione` key.
-pub const VERSIONE: u32 = 1;
+pub const VERSION: u32 = 1;
 /// Default window of the loss match by mass, ppm of the m/z of the precursor.
 pub const PPM: f64 = 10.0;
 /// Smallest window in Da (low m/z, where a few ppm are below the scatter of the peaks).
@@ -52,20 +52,20 @@ const NOTE: [(&str, &str); 34] = [
 
 /// A neutral loss of the table.
 #[derive(Debug, Clone, PartialEq)]
-pub struct PerditaNota {
+pub struct KnownLoss {
     pub formula: String,
-    pub nome: &'static str,
+    pub name: &'static str,
     pub massa: f64,
 }
 
 /// The table of the known neutral losses, in the order of the source (Hill formulas).
-pub fn perdite_note() -> Vec<PerditaNota> {
+pub fn perdite_note() -> Vec<KnownLoss> {
     NOTE.iter()
         .filter_map(|(f, nome)| {
             let p = parse_formula(f).ok()?;
-            Some(PerditaNota {
+            Some(KnownLoss {
                 formula: fmt(&p),
-                nome,
+                name: nome,
                 massa: mass(&p),
             })
         })
@@ -74,33 +74,33 @@ pub fn perdite_note() -> Vec<PerditaNota> {
 
 /// The interpreted loss of one arc.
 #[derive(Debug, Clone, PartialEq)]
-pub struct PerditaArco {
+pub struct EdgeLoss {
     /// Name of the known loss, `None` when the formula is not in the table.
-    pub nome: Option<&'static str>,
+    pub name: Option<&'static str>,
     pub formula: Option<String>,
     /// Exact mass of the loss from the table, or the observed Δ m/z when it is not listed.
-    pub massa: f64,
+    pub mass: f64,
     /// Error in ppm of the m/z of the precursor (observed Δ against the exact mass).
-    pub errore_ppm: f64,
+    pub ppm_error: f64,
     /// `formula` (from the formulas of the two nodes) or `mass` (only the Δ m/z).
-    pub fonte: &'static str,
+    pub provenance: &'static str,
     /// `high`, `medium`, `low`.
-    pub confidenza: &'static str,
+    pub confidence: &'static str,
     /// Other known losses within the window, by mass only.
     pub alternative: Vec<String>,
 }
 
 /// The interpretation of one arc: the loss (if any) and the distinct activations that observed it.
 #[derive(Debug, Clone, PartialEq)]
-pub struct InterpArco {
+pub struct EdgeInterp {
     pub da: usize,
     pub a: usize,
-    pub perdita: Option<PerditaArco>,
+    pub loss: Option<EdgeLoss>,
     pub attivazioni: Vec<String>,
 }
 
 /// The loss of every arc of the graph, in the order of `g.archi`.
-pub fn interpreta(g: &Grafo, ppm: f64) -> Vec<InterpArco> {
+pub fn interpreta(g: &Graph, ppm: f64) -> Vec<EdgeInterp> {
     let tab = perdite_note();
     g.archi
         .iter()
@@ -109,10 +109,10 @@ pub fn interpreta(g: &Grafo, ppm: f64) -> Vec<InterpArco> {
             let mut att: Vec<String> = a.misure.iter().map(|m| m.att.clone()).collect();
             crate::sortc::slice_ord(&mut att);
             att.dedup();
-            InterpArco {
+            EdgeInterp {
                 da: a.da,
                 a: a.a,
-                perdita: perdita_arco(&tab, a.perdita, a.formula.as_ref(), mz, ppm),
+                loss: perdita_arco(&tab, a.perdita, a.formula.as_ref(), mz, ppm),
                 attivazioni: att,
             }
         })
@@ -120,22 +120,22 @@ pub fn interpreta(g: &Grafo, ppm: f64) -> Vec<InterpArco> {
 }
 
 fn perdita_arco(
-    tab: &[PerditaNota],
+    tab: &[KnownLoss],
     delta: f64,
     formula: Option<&(String, f64)>,
     mz: f64,
     ppm: f64,
-) -> Option<PerditaArco> {
+) -> Option<EdgeLoss> {
     if let Some((f, ppm_f)) = formula {
         let canon = parse_formula(f).ok().map(|p| fmt(&p));
-        let nota = tab.iter().find(|n| Some(&n.formula) == canon.as_ref());
-        return Some(PerditaArco {
-            nome: nota.map(|n| n.nome),
+        let note = tab.iter().find(|n| Some(&n.formula) == canon.as_ref());
+        return Some(EdgeLoss {
+            name: note.map(|n| n.name),
             formula: canon,
-            massa: nota.map_or(delta, |n| n.massa),
-            errore_ppm: *ppm_f,
-            fonte: "formula",
-            confidenza: if nota.is_some() && ppm_f.abs() <= ppm {
+            mass: note.map_or(delta, |n| n.massa),
+            ppm_error: *ppm_f,
+            provenance: "formula",
+            confidence: if note.is_some() && ppm_f.abs() <= ppm {
                 "high"
             } else {
                 "low"
@@ -144,7 +144,7 @@ fn perdita_arco(
         });
     }
     let tol = (mz * ppm * 1e-6).max(DA_MIN);
-    let mut v: Vec<(&PerditaNota, f64)> = tab
+    let mut v: Vec<(&KnownLoss, f64)> = tab
         .iter()
         .map(|n| (n, delta - n.massa))
         .filter(|(_, d)| d.abs() <= tol)
@@ -155,20 +155,20 @@ fn perdita_arco(
             .then(x.0.formula.cmp(&y.0.formula))
     });
     let (n, d) = *v.first()?;
-    Some(PerditaArco {
-        nome: Some(n.nome),
+    Some(EdgeLoss {
+        name: Some(n.name),
         formula: Some(n.formula.clone()),
-        massa: n.massa,
-        errore_ppm: d / mz * 1e6,
-        fonte: "mass",
-        confidenza: if v.len() == 1 { "medium" } else { "low" },
+        mass: n.massa,
+        ppm_error: d / mz * 1e6,
+        provenance: "mass",
+        confidence: if v.len() == 1 { "medium" } else { "low" },
         alternative: v[1..].iter().map(|(n, _)| n.formula.clone()).collect(),
     })
 }
 
-fn perdita_json(o: &mut Out, p: &PerditaArco) {
+fn perdita_json(o: &mut Out, p: &EdgeLoss) {
     o.raw("{\"nome\":");
-    match p.nome {
+    match p.name {
         Some(n) => o.str(n),
         None => o.raw("null"),
     };
@@ -178,13 +178,13 @@ fn perdita_json(o: &mut Out, p: &PerditaArco) {
         None => o.raw("null"),
     };
     o.raw(",\"massa\":")
-        .num(round(p.massa, 5))
+        .num(round(p.mass, 5))
         .raw(",\"errore_ppm\":")
-        .num(round(p.errore_ppm, 2))
+        .num(round(p.ppm_error, 2))
         .raw(",\"fonte\":")
-        .str(p.fonte)
+        .str(p.provenance)
         .raw(",\"confidenza\":")
-        .str(p.confidenza)
+        .str(p.confidence)
         .raw(",\"alternative\":[");
     for (i, f) in p.alternative.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(f);
@@ -193,10 +193,10 @@ fn perdita_json(o: &mut Out, p: &PerditaArco) {
 }
 
 /// The value of the key `interpretazione` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
-pub fn interpretazione_json(v: &[InterpArco], ppm: f64) -> String {
+pub fn interpretazione_json(v: &[EdgeInterp], ppm: f64) -> String {
     let mut o = Out::default();
     o.raw("{\"versione\":")
-        .int(VERSIONE as i64)
+        .int(VERSION as i64)
         .raw(",\"ppm\":")
         .num(ppm)
         .raw(",\"archi\":[");
@@ -211,7 +211,7 @@ pub fn interpretazione_json(v: &[InterpArco], ppm: f64) -> String {
             o.raw(if j > 0 { "," } else { "" }).str(t);
         }
         o.raw("],\"perdita\":");
-        match &a.perdita {
+        match &a.loss {
             Some(p) => perdita_json(&mut o, p),
             None => {
                 o.raw("null");
@@ -224,9 +224,9 @@ pub fn interpretazione_json(v: &[InterpArco], ppm: f64) -> String {
 }
 
 /// `grafo` (the text of an `msngrafo/1`) with the key `interpretazione` added at the end; the text of a graph without it does not change.
-pub fn con_interpretazione(grafo: &str, g: &Grafo, ppm: f64) -> String {
-    super::vista::con_chiave(
-        grafo,
+pub fn con_interpretazione(graph: &str, g: &Graph, ppm: f64) -> String {
+    super::vista::with_key(
+        graph,
         "interpretazione",
         &interpretazione_json(&interpreta(g, ppm), ppm),
     )

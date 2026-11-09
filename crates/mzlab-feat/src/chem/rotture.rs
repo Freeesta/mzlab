@@ -8,7 +8,7 @@ use crate::sortc::SortC;
 use mzlab_core::elements::{self, Formula};
 use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{
-    con_rotture, Grafo, Ipotesi, RotturaArco, RotturaNodo, RotturaSpettro, Rotture,
+    con_rotture, Graph, Ipotesi, RotturaArco, RotturaNodo, RotturaSpettro, Rotture,
 };
 
 const ION_H: f64 = mzlab_core::elements::PROTON;
@@ -75,27 +75,27 @@ fn sottoinsieme(a: &[usize], b: &[usize]) -> bool {
 }
 
 /// The hypotheses of every node, the explained arcs and the explained intensity of `g` for the structure `smiles`. `Err` = the SMILES cannot be read.
-pub fn rotture(g: &Grafo, smiles: &str, p: Parametri) -> Result<Rotture, String> {
+pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Rotture, String> {
     let mixture = smiles.split('.').filter(|s| !s.trim().is_empty()).count() > 1;
     let mut out = Rotture {
         smiles: smiles.to_string(),
         ppm: p.ppm,
         h_max: p.h_max,
         max_legami: p.max_legami.clamp(1, 2),
-        atomi: 0,
+        atoms: 0,
         legami: 0,
-        avvisi: vec![],
-        nodi: vec![],
-        archi: vec![],
+        warnings: vec![],
+        nodes: vec![],
+        edges: vec![],
         spettri: vec![],
     };
     let mut ipotesi: Vec<Vec<Ipotesi>> = vec![vec![]; g.nodi.len()];
     if mixture {
         Mol::parse(smiles.split('.').next().unwrap_or("")).map_err(|_| "Invalid SMILES")?;
-        out.avvisi.push("warn.msngrafo.structMixture");
+        out.warnings.push("warn.msngrafo.structMixture");
     } else {
         let m = Mol::parse(smiles).map_err(|_| "Invalid SMILES")?;
-        out.atomi = m.atoms.len();
+        out.atoms = m.atoms.len();
         out.legami = m.bonds.len();
         enumera(g, &m, &mut out, &mut ipotesi, p);
     }
@@ -105,14 +105,14 @@ pub fn rotture(g: &Grafo, smiles: &str, p: Parametri) -> Result<Rotture, String>
                 .abs()
                 .total_cmp(&b.ppm.abs())
                 .then(a.legami.len().cmp(&b.legami.len()))
-                .then(a.pezzo.cmp(&b.pezzo))
+                .then(a.piece.cmp(&b.piece))
                 .then(a.h.cmp(&b.h))
         });
         if v.is_empty() {
             continue;
         }
-        out.nodi.push(RotturaNodo {
-            nodo: k,
+        out.nodes.push(RotturaNodo {
+            node: k,
             n: v.len(),
             ipotesi: vec![],
         });
@@ -120,10 +120,10 @@ pub fn rotture(g: &Grafo, smiles: &str, p: Parametri) -> Result<Rotture, String>
     for a in &g.archi {
         let spiegato = ipotesi[a.a].iter().any(|c| {
             ipotesi[a.da].iter().any(|q| {
-                sottoinsieme(&c.pezzo, &q.pezzo) && (c.pezzo.len() < q.pezzo.len() || c.h != q.h)
+                sottoinsieme(&c.piece, &q.piece) && (c.piece.len() < q.piece.len() || c.h != q.h)
             })
         });
-        out.archi.push(RotturaArco {
+        out.edges.push(RotturaArco {
             da: a.da,
             a: a.a,
             spiegato,
@@ -135,7 +135,7 @@ pub fn rotture(g: &Grafo, smiles: &str, p: Parametri) -> Result<Rotture, String>
         for &(_, rel, nodo) in &s.picchi {
             tot += rel;
             if nodo.is_some_and(|n| {
-                out.archi
+                out.edges
                     .iter()
                     .any(|a| a.da == pr && a.a == n && a.spiegato)
             }) {
@@ -144,19 +144,19 @@ pub fn rotture(g: &Grafo, smiles: &str, p: Parametri) -> Result<Rotture, String>
         }
         out.spettri.push(RotturaSpettro {
             albero: s.albero.clone(),
-            spiegata: sp,
-            totale: tot,
+            explained: sp,
+            total: tot,
         });
     }
-    for n in &mut out.nodi {
-        n.ipotesi = ipotesi[n.nodo].iter().take(MAX_IPOTESI).cloned().collect();
+    for n in &mut out.nodes {
+        n.ipotesi = ipotesi[n.node].iter().take(MAX_IPOTESI).cloned().collect();
     }
     Ok(out)
 }
 
 /// What the cuts need: the molecule, the nodes by m/z, the mass of each atom with its hydrogens, the ion shift.
 struct Ctx<'a> {
-    g: &'a Grafo,
+    g: &'a Graph,
     m: &'a Mol,
     ordine: Vec<usize>,
     massa_atomo: Vec<f64>,
@@ -224,7 +224,7 @@ fn nodi_a(
         .take_while(|&&n| g.nodi[n].mz <= mz + tol)
     {
         // the fewest cuts come first, so a repeated piece keeps the simplest way to get it
-        if ipotesi[n].iter().any(|x| x.pezzo == pezzo && x.h == k) {
+        if ipotesi[n].iter().any(|x| x.piece == pezzo && x.h == k) {
             continue;
         }
         let mut f: Formula = cx.m.formula_of(keep);
@@ -236,17 +236,17 @@ fn nodi_a(
         }
         ipotesi[n].push(Ipotesi {
             legami: tagli.to_vec(),
-            pezzo: pezzo.to_vec(),
+            piece: pezzo.to_vec(),
             formula: elements::fmt(&f),
             h: k,
-            mz_teorico: mz,
+            theoretical_mz: mz,
             ppm: (g.nodi[n].mz - mz) / mz * 1e6,
         });
     }
 }
 
 /// Cuts the sets of bonds and collects, per node, the pieces that give its m/z.
-fn enumera(g: &Grafo, m: &Mol, out: &mut Rotture, ipotesi: &mut [Vec<Ipotesi>], p: Parametri) {
+fn enumera(g: &Graph, m: &Mol, out: &mut Rotture, ipotesi: &mut [Vec<Ipotesi>], p: Parametri) {
     let on_ring = m.ring_bonds();
     let mut cand: Vec<usize> = (0..m.bonds.len())
         .filter(|&k| {
@@ -278,7 +278,7 @@ fn enumera(g: &Grafo, m: &Mol, out: &mut Rotture, ipotesi: &mut [Vec<Ipotesi>], 
     }
     if cand.len() > MAX_COPPIE {
         cand.truncate(MAX_COPPIE);
-        out.avvisi.push("warn.msngrafo.rottureCapped");
+        out.warnings.push("warn.msngrafo.rottureCapped");
     }
     for (i, &a) in cand.iter().enumerate() {
         for &b in &cand[i + 1..] {
@@ -288,7 +288,7 @@ fn enumera(g: &Grafo, m: &Mol, out: &mut Rotture, ipotesi: &mut [Vec<Ipotesi>], 
 }
 
 /// The graph text `j` of `g` with the key `rotture` for `smiles`.
-pub fn rotture_testo(g: &Grafo, j: &str, smiles: Option<&str>, p: Parametri) -> CoreResult<String> {
+pub fn rotture_testo(g: &Graph, j: &str, smiles: Option<&str>, p: Parametri) -> CoreResult<String> {
     let smiles = smiles.filter(|s| !s.trim().is_empty());
     let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
     let r = rotture(g, smiles, p)

@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::mzmlhead::Mzml;
 use serde_json::Value;
 
@@ -34,7 +34,7 @@ fn reference(tag: &str) -> Option<(PathBuf, Value)> {
 fn pair(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
-        Membro {
+        Member {
             nome: file,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -56,7 +56,7 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
         return;
     };
     let want = want["transizioni"]["transitions"].as_array().unwrap();
-    let mut l = lettori::apri(pair(&dir, "transizioni"), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(pair(&dir, "transizioni"), &Limits::sito()).unwrap();
     let bytes = mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let text = String::from_utf8_lossy(&bytes);
     // every precursor of a transition has its activation, the energy and the dwell are written for the readers that know them

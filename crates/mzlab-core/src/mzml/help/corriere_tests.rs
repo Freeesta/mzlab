@@ -2,12 +2,12 @@
 use super::*;
 use crate::mzidx;
 use crate::mzml::{self, Item, Spectrum};
-use crate::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use crate::mzmlwrite::{Header, MzmlWriter, Options};
 use std::collections::HashMap;
 use std::io::Cursor;
 
 /// A courier that decodes in this process: `refuse` every n-th send, `lose` every n-th answer (0 = never).
-struct Locale {
+struct Local {
     window: usize,
     dec: Decodificatore,
     answers: HashMap<u64, Option<Vec<u8>>>,
@@ -16,9 +16,9 @@ struct Locale {
     lose: u64,
 }
 
-impl Locale {
+impl Local {
     fn new(window: usize, refuse: u64, lose: u64) -> Self {
-        Locale {
+        Local {
             window,
             dec: Decodificatore::default(),
             answers: HashMap::new(),
@@ -29,7 +29,7 @@ impl Locale {
     }
 }
 
-impl Corriere for Locale {
+impl Corriere for Local {
     fn window(&self) -> usize {
         self.window
     }
@@ -117,15 +117,15 @@ fn file(f64_intensity: bool) -> Vec<u8> {
             }
         }
     }
-    let mut w = MzmlWriter::con_opzioni(
+    let mut w = MzmlWriter::with_options(
         Vec::new(),
         &Header {
             run: "x".into(),
             ..Default::default()
         },
-        Opzioni {
+        Options {
             livello: 1,
-            ..Opzioni::default()
+            ..Options::default()
         },
     )
     .unwrap();
@@ -159,7 +159,7 @@ fn courier_gives_the_spectra_of_parse() {
         let want = spectra(&b, None);
         assert!(want.len() > 100 && want.iter().any(|s| s.wide.is_some()) == wide);
         for (window, refuse, lose) in [(0, 0, 0), (1, 0, 0), (3, 0, 0), (12, 5, 3), (2, 2, 2)] {
-            let mut c = Locale::new(window, refuse, lose);
+            let mut c = Local::new(window, refuse, lose);
             assert_eq!(
                 spectra(&b, Some(&mut c)),
                 want,
@@ -180,7 +180,7 @@ fn courier_gives_the_same_index() {
         let (want, st) = mzidx::build_mzml_to_vec(&p.table, &b, budget).unwrap();
         for spill in [false, true] {
             for window in [1, 4] {
-                let mut c = Locale::new(window, 7, 5);
+                let mut c = Local::new(window, 7, 5);
                 let mut out = Cursor::new(Vec::new());
                 let mut sp = Cursor::new(Vec::new());
                 let got = mzidx::build_mzml_corriere(

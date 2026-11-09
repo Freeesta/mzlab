@@ -2,7 +2,7 @@
 //! The readers of a family sit in `src/<family>/` behind the Cargo feature of the same name and implement `mzlab_core::lettori::Lettore`; variants of the readers that live
 //! in `mzlab-core` sit behind its `estesi` feature, which this crate turns on and the engine leaves off.
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{self, Fiducia, FileSet, Lettore, Limiti, VoceLettore};
+use mzlab_core::lettori::{self, Fiducia, FileSet, Limits, Reader, ReaderEntry};
 
 #[cfg(any(feature = "andi", feature = "tutte"))]
 pub mod andi;
@@ -19,32 +19,32 @@ pub mod srm;
 #[cfg(any(feature = "waters", feature = "tutte"))]
 pub mod waters;
 
-// The readers of each family, one `static` per `VoceLettore` of the registry; a family without readers yet is born with its own package.
+// The readers of each family, one `static` per `ReaderEntry` of the registry; a family without readers yet is born with its own package.
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZML_NUMPRESS: VoceLettore = aperti::mzml_numpress::ENTRY;
+static ENTRY_MZML_NUMPRESS: ReaderEntry = aperti::mzml_numpress::ENTRY;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZXML: VoceLettore = aperti::mzxml::ENTRY;
+static ENTRY_MZXML: ReaderEntry = aperti::mzxml::ENTRY;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZML_GZ: VoceLettore = aperti::mzml_gz::ENTRY;
+static ENTRY_MZML_GZ: ReaderEntry = aperti::mzml_gz::ENTRY;
 // the page gunzips an mzXML.gz itself (OPFS): only the app and the CLI carry this voice, so the module `aperti` keeps its size
 #[cfg(feature = "tutte")]
-static ENTRY_MZXML_GZ: VoceLettore = aperti::mzml_gz::ENTRY_MZXML;
+static ENTRY_MZXML_GZ: ReaderEntry = aperti::mzml_gz::ENTRY_MZXML;
 #[cfg(any(feature = "andi", feature = "tutte"))]
-static ENTRY_ANDI: VoceLettore = andi::ms::ENTRY;
+static ENTRY_ANDI: ReaderEntry = andi::ms::ENTRY;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
-static ENTRY_AGILENT: VoceLettore = mzlab_core::agilent::lettore::VOCE;
+static ENTRY_AGILENT: ReaderEntry = mzlab_core::agilent::lettore::ENTRY;
 #[cfg(any(feature = "sciex", feature = "tutte"))]
-static ENTRY_SCIEX: VoceLettore = mzlab_core::wiff::lettore::VOCE;
+static ENTRY_SCIEX: ReaderEntry = mzlab_core::wiff::lettore::ENTRY;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
-static ENTRY_SHIMADZU: VoceLettore = shimadzu::ENTRY;
+static ENTRY_SHIMADZU: ReaderEntry = shimadzu::ENTRY;
 #[cfg(any(feature = "thermo", feature = "tutte"))]
-static ENTRY_THERMO: VoceLettore = mzlab_core::rawlettore::VOCE;
+static ENTRY_THERMO: ReaderEntry = mzlab_core::rawlettore::ENTRY;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
-static ENTRY_BRUKER_TDF: VoceLettore = bruker::tdf::ENTRY;
+static ENTRY_BRUKER_TDF: ReaderEntry = bruker::tdf::ENTRY;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
-static ENTRY_BRUKER_TSF: VoceLettore = bruker::tdf::ENTRY_TSF;
+static ENTRY_BRUKER_TSF: ReaderEntry = bruker::tdf::ENTRY_TSF;
 #[cfg(any(feature = "waters", feature = "tutte"))]
-static ENTRY_WATERS: VoceLettore = waters::ENTRY;
+static ENTRY_WATERS: ReaderEntry = waters::ENTRY;
 
 /// The name of the family this build serves (`"tutte"` for the desktop app and for tests).
 pub fn famiglia() -> &'static str {
@@ -72,8 +72,8 @@ pub fn famiglia() -> &'static str {
 }
 
 /// The formats of the families that are on: `agilent` and `sciex` repeat the ones of the engine's registry (and serve their variants), `thermo` is the only home of the `.raw` reader of the web engine (the desktop app has it in the core with the default features).
-pub fn registry() -> Vec<&'static VoceLettore> {
-    let entries: &[Option<&'static VoceLettore>] = &[
+pub fn registry() -> Vec<&'static ReaderEntry> {
+    let entries: &[Option<&'static ReaderEntry>] = &[
         #[cfg(any(feature = "aperti", feature = "tutte"))]
         Some(&ENTRY_MZML_NUMPRESS),
         #[cfg(any(feature = "aperti", feature = "tutte"))]
@@ -103,8 +103,8 @@ pub fn registry() -> Vec<&'static VoceLettore> {
 }
 
 /// The reader of `registro` that is surest of `fs` (the first among equals; like `lettori::riconosci_in`, which takes a slice and not this list).
-pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
-    let mut best: Option<(Fiducia, &'static VoceLettore)> = None;
+pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
+    let mut best: Option<(Fiducia, &'static ReaderEntry)> = None;
     for v in registry()
         .into_iter()
         .filter(|v| v.contratto == lettori::CONTRATTO)
@@ -120,7 +120,7 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static VoceLettore> {
 /// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans), except
 /// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmDaScansioni`). Every reader
 /// answers through `finiti::Finiti`: a NaN or infinite number of the file is an error, not a value.
-pub fn apri_nudo(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+pub fn apri_nudo(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let name = fs
         .membri
         .first()
@@ -128,7 +128,7 @@ pub fn apri_nudo(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
         .unwrap_or_default();
     let v = riconosci(&mut fs).ok_or_else(|| rifiuto(&fs, name))?;
     let mut l = (v.apri)(fs, limits)?;
-    if l.format() == lettori::Formato::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
+    if l.format() == lettori::Format::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
         l = Box::new(srm::SrmDaScansioni::new(l));
     }
     Ok(Box::new(finiti::Finished::new(l)))
@@ -175,7 +175,7 @@ fn rifiuto(fs: &FileSet, name: String) -> Error {
 }
 
 /// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).
-pub fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     Ok(Box::new(srm::SrmDaScansioni::new(apri_nudo(fs, limits)?)))
 }
 
@@ -192,7 +192,7 @@ pub fn estensioni() -> Vec<&'static str> {
 
 /// Why the engine does not do for sample `c` of `l`: `"srm"` when its SRM traces exist only as scans, `"variante"` when the file is of an instrument or a scan type the engine's reader
 /// was not written for (SCIEX other than the 3200 QTRAP, scheduled MRM), in sample `c` or in any other sample: the page hands the whole pair to one reader.
-pub fn motivi(l: &mut dyn Lettore, c: usize) -> Vec<&'static str> {
+pub fn motivi(l: &mut dyn Reader, c: usize) -> Vec<&'static str> {
     let mut m = Vec::new();
     if srm::ha_scansioni_srm(l, c) {
         m.push("srm");

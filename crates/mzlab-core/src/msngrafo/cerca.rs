@@ -10,25 +10,25 @@ use crate::json::{parse, round, Out, Value};
 
 /// The knobs of the search.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Opzioni {
+pub struct Options {
     /// Window of the precursor, in ppm of the unknown.
     pub ppm_prec: f64,
     /// Window of the peaks, of the precursors in the tree and of the losses by mass, in Da.
     pub tol_mz: f64,
     /// A candidate needs at least this many peaks shared with the unknown in its best MS2 pair.
-    pub min_prove: usize,
+    pub min_evidence: usize,
     /// The candidates kept.
     pub top: usize,
     /// Analogues: entries whose precursor is up to this many Da away (0 = not searched), with the fragments split in shifted and not shifted.
     pub delta_max: f64,
 }
 
-impl Default for Opzioni {
+impl Default for Options {
     fn default() -> Self {
-        Opzioni {
+        Options {
             ppm_prec: 10.0,
             tol_mz: 0.01,
-            min_prove: 1,
+            min_evidence: 1,
             top: 10,
             delta_max: 0.0,
         }
@@ -61,7 +61,7 @@ pub(super) struct G {
 }
 
 /// The options of the search from a request (`ppm_prec`, `tol_mz`, `min_prove`, `top`, `delta_max`; the route `api/msnlib/cerca`): absent = the default, not a number = `err.request.badNumber`.
-pub fn opzioni_da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<Opzioni> {
+pub fn opzioni_da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<Options> {
     let num = |k: &str, por: f64| match get(k).filter(|v| !v.is_empty()) {
         None => Ok(por),
         Some(v) => v
@@ -70,11 +70,11 @@ pub fn opzioni_da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<Opzi
             .filter(|x| x.is_finite() && *x >= 0.0)
             .ok_or_else(|| Error::new("err.request.badNumber").with("name", k)),
     };
-    let d = Opzioni::default();
-    Ok(Opzioni {
+    let d = Options::default();
+    Ok(Options {
         ppm_prec: num("ppm_prec", d.ppm_prec)?,
         tol_mz: num("tol_mz", d.tol_mz)?,
-        min_prove: num("min_prove", d.min_prove as f64)? as usize,
+        min_evidence: num("min_prove", d.min_evidence as f64)? as usize,
         top: num("top", d.top as f64)? as usize,
         delta_max: num("delta_max", d.delta_max)?,
     })
@@ -341,7 +341,7 @@ fn rank(a: &Option<f64>, b: &Option<f64>) -> std::cmp::Ordering {
     }
 }
 
-fn hits(lib: &Value, u: &G, o: &Opzioni) -> Result<Vec<Hit>> {
+fn hits(lib: &Value, u: &G, o: &Options) -> Result<Vec<Hit>> {
     let mut out = Vec::new();
     for v in lib.get("voci").map_or(&[][..], |x| x.arr()) {
         let e = read_graph(v.get("grafo").ok_or_else(bad)?)?;
@@ -351,13 +351,13 @@ fn hits(lib: &Value, u: &G, o: &Opzioni) -> Result<Vec<Hit>> {
         }
         let s = score(u, &e, o.tol_mz);
         let analog = if ppm.abs() <= o.ppm_prec {
-            if s.shared < o.min_prove {
+            if s.shared < o.min_evidence {
                 continue;
             }
             None
         } else if o.delta_max > 0.0 && (u.mz - e.mz).abs() <= o.delta_max {
             match analog(u, &e, o.tol_mz) {
-                Some(a) if a.shifted + a.unshifted >= o.min_prove && a.shifted > 0 => Some(a),
+                Some(a) if a.shifted + a.unshifted >= o.min_evidence && a.shifted > 0 => Some(a),
                 _ => continue,
             }
         } else {
@@ -436,8 +436,8 @@ fn write(o: &mut Out, h: &Hit) {
 }
 
 /// The candidates of the library text `libreria` (`msnlib/1`) for the graph text `ignoto` (`msngrafo/1`), as the JSON `msncerca/1`.
-pub fn cerca(libreria: &str, ignoto: &str, o: &Opzioni) -> Result<String> {
-    let lib = parse(libreria.as_bytes()).map_err(|_| bad())?;
+pub fn cerca(library: &str, ignoto: &str, o: &Options) -> Result<String> {
+    let lib = parse(library.as_bytes()).map_err(|_| bad())?;
     let g = parse(ignoto.as_bytes()).map_err(|_| bad())?;
     let u = read_graph(&g)?;
     let found = hits(&lib, &u, o)?;
@@ -445,7 +445,7 @@ pub fn cerca(libreria: &str, ignoto: &str, o: &Opzioni) -> Result<String> {
     out.raw("{\"formato\":\"msncerca/1\",\"opzioni\":{\"ppm_prec\":")
         .num(o.ppm_prec);
     out.raw(",\"tol_mz\":").num(o.tol_mz);
-    out.raw(",\"min_prove\":").int(o.min_prove as i64);
+    out.raw(",\"min_prove\":").int(o.min_evidence as i64);
     out.raw(",\"top\":").int(o.top as i64);
     out.raw(",\"delta_max\":")
         .num(o.delta_max)

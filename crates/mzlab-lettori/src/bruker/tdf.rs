@@ -10,8 +10,8 @@ use super::tsf;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, VoceCromatogramma, VoceLettore,
-    VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Reader, ReaderEntry, Sample,
+    ScanEntry, CONTRATTO,
 };
 use mzlab_core::metodo::SrcFile;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
@@ -24,7 +24,7 @@ mod tracce;
 
 const UNITA: &str = "Arbitrary Intensity Units";
 
-pub const ENTRY: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "bruker-tdf",
     contratto: CONTRATTO,
     estensioni: &[".d"],
@@ -32,7 +32,7 @@ pub const ENTRY: VoceLettore = VoceLettore {
     apri: apri_tdf,
 };
 
-pub const ENTRY_TSF: VoceLettore = VoceLettore {
+pub const ENTRY_TSF: ReaderEntry = ReaderEntry {
     id: "bruker-tsf",
     contratto: CONTRATTO,
     estensioni: &[".d"],
@@ -41,7 +41,7 @@ pub const ENTRY_TSF: VoceLettore = VoceLettore {
 };
 
 impl BrukerReader {
-    fn apri(mut fs: FileSet, limits: &Limiti, tsf: bool) -> Result<BrukerReader> {
+    fn apri(mut fs: FileSet, limits: &Limits, tsf: bool) -> Result<BrukerReader> {
         let base = if tsf { "analysis.tsf" } else { "analysis.tdf" };
         let bin = format!("{base}_bin");
         let first_one = fs
@@ -50,7 +50,7 @@ impl BrukerReader {
             .map(|m| m.nome.clone())
             .unwrap_or_default();
         let Some(db_m) = prendi(&mut fs, base) else {
-            return Err(match fs.trova(&bin) {
+            return Err(match fs.find(&bin) {
                 Some(_) => absent(&first_one, base),
                 None => Error::new("err.file.brukerBaf"),
             });
@@ -61,7 +61,7 @@ impl BrukerReader {
         let mut db = db?;
         let data = Data::read(&mut db, limits)?;
         let mut desc = build(&data);
-        limits.voci_ok(desc.len() as u64)?;
+        limits.ok_entries(desc.len() as u64)?;
         // a copy of `*_bin` cut short: the spectra of the frames past its end leave the index and are counted, the rest reads
         let mut bin = bin_m.dati;
         let pos: Vec<i64> = data.frames.iter().map(|f| f.pos).collect();
@@ -75,11 +75,11 @@ impl BrukerReader {
             .get("TimsCompressionType")
             .and_then(|v| v.parse().ok())
             .unwrap_or(2);
-        let samples = vec![Campione {
+        let samples = vec![Sample {
             id: 0,
             nome: cartella(&db_m.nome).unwrap_or("").to_string(),
             scansioni: desc.len(),
-            dimensione: None,
+            size: None,
         }];
         let mut l = BrukerReader {
             tsf,
@@ -109,16 +109,16 @@ impl BrukerReader {
     fn build_index(&mut self) {
         for d in &self.desc {
             let f = &self.dati.frames[d.frame];
-            self.indice.push(VoceScansione {
+            self.indice.push(ScanEntry {
                 id: d.id.clone(),
                 rt: f.moment / 60.0,
                 livello: d.livello,
                 polarita: f.polarita,
                 tic: if d.livello == 1 { f.raw_sum() } else { 0.0 },
-                picco_base: None,
+                base_peak: None,
                 filtro: d.filter.clone(),
                 precursore: d.mz_prec,
-                posizione: None,
+                position: None,
             });
         }
         self.known_tic = self.desc.iter().all(|d| d.livello == 1);
@@ -263,16 +263,16 @@ impl BrukerReader {
     }
 }
 
-impl Lettore for BrukerReader {
-    fn format(&self) -> Formato {
-        Formato::Altro(if self.tsf { "bruker-tsf" } else { "bruker-tdf" })
+impl Reader for BrukerReader {
+    fn format(&self) -> Format {
+        Format::Altro(if self.tsf { "bruker-tsf" } else { "bruker-tdf" })
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::non_portati::BRUKER
     }
 
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
 
@@ -280,14 +280,14 @@ impl Lettore for BrukerReader {
         self.missing_ones
     }
 
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.one(c)?;
         self.complete()?;
         Ok(&self.indice)
     }
 
     // the decoding of every MS2 frame for its TIC is left to the callers that read it
-    fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index_without_tic(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.one(c)?;
         Ok(&self.indice)
     }
@@ -298,11 +298,11 @@ impl Lettore for BrukerReader {
     }
 
     /// Frame, scan range, isolation and collision energy of spectrum `k`.
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.one(c)?;
         let d = self.desc.get(k).ok_or_else(|| bad_index(k))?;
         let f = &self.dati.frames[d.frame];
-        let field = |name: &str, value: String, unita: Option<&str>, cv: Option<&str>| Campo {
+        let field = |name: &str, value: String, unita: Option<&str>, cv: Option<&str>| Field {
             nome: name.into(),
             valore: value,
             unita: unita.map(Into::into),
@@ -353,12 +353,12 @@ impl Lettore for BrukerReader {
         Ok(o)
     }
 
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
-            .map(|(id, tipo)| VoceCromatogramma {
+            .map(|(id, tipo)| ChromatogramEntry {
                 id: id.into(),
                 tipo,
                 unita: UNITA.into(),
@@ -431,12 +431,12 @@ fn riconosci_tsf(fs: &mut FileSet) -> Fiducia {
     riconosci(fs, "analysis.tsf")
 }
 
-fn apri_tdf(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
-    BrukerReader::apri(fs, limits, false).map(|l| Box::new(l) as Box<dyn Lettore>)
+fn apri_tdf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    BrukerReader::apri(fs, limits, false).map(|l| Box::new(l) as Box<dyn Reader>)
 }
 
-fn apri_tsf(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
-    BrukerReader::apri(fs, limits, true).map(|l| Box::new(l) as Box<dyn Lettore>)
+fn apri_tsf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    BrukerReader::apri(fs, limits, true).map(|l| Box::new(l) as Box<dyn Reader>)
 }
 
 pub struct BrukerReader {
@@ -450,10 +450,10 @@ pub struct BrukerReader {
     dim_db: u64,
     dati: Data,
     desc: Vec<Desc>,
-    limits: Limiti,
+    limits: Limits,
     testata: Testata,
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
     known_tic: bool,
     /// The base peak intensity of every spectrum already decoded: the BPC after a full pass (index, mzML) decodes no frame again.
     maxima: Vec<Option<f64>>,

@@ -4,17 +4,17 @@
 //! the `Posizione` of the scan in the members of the set and its number `k` in `Lettore::index`.
 
 use crate::error::Result;
-use crate::lettori::{Lettore, VoceScansione};
+use crate::lettori::{Reader, ScanEntry};
 use crate::lettori_centroidi::Centroidato;
 use crate::lettori_mzml;
-use crate::mzidx::Prima;
+use crate::mzidx::First;
 use crate::mzidx_spill::Spill;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{self, MzmlWriter};
 use crate::scantable::{Dove, Rows, Table};
 
 /// Scan `k` of sample `c` as the mzML written by `lettori_mzml::scrivi` reads back: the arrays cut to the shorter of m/z and intensity.
-pub(crate) fn spettro(l: &mut dyn Lettore, c: usize, k: usize) -> Result<Spectrum> {
+pub(crate) fn spettro(l: &mut dyn Reader, c: usize, k: usize) -> Result<Spectrum> {
     taglia(l.scan(c, k)?)
 }
 
@@ -35,34 +35,34 @@ pub(crate) fn taglia(mut s: Spectrum) -> Result<Spectrum> {
 /// reads from the header text `mzmlwrite::spectrum_head` would write (the writer is only used for a scan whose extras could change that text: precursors
 /// and cvParams of `precursori`, accessions in ids, filters or userParams).
 /// `n_chromatograms` counts, as in the mzML, the chromatograms the writer writes (a kind it knows, at least one point).
-pub fn righe(l: &mut dyn Lettore, c: usize) -> Result<Table> {
-    tabella(l, c, None)
+pub fn righe(l: &mut dyn Reader, c: usize) -> Result<Table> {
+    table(l, c, None)
 }
 
 /// The table and pass 1 of the `.mzidx` builder in one decoding of the scans: what `righe` gives and the groups `mzidx::build_dopo` needs.
 pub(crate) fn righe_prima<'a>(
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     c: usize,
     budget: usize,
     spill: Option<&'a mut dyn Spill>,
-) -> Result<(Table, Prima<'a>)> {
-    let mut prima = Prima::new(budget, spill);
-    let t = tabella(l, c, Some(&mut prima))?;
-    Ok((t, prima))
+) -> Result<(Table, First<'a>)> {
+    let mut before = First::new(budget, spill);
+    let t = table(l, c, Some(&mut before))?;
+    Ok((t, before))
 }
 
-fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima<'_>>) -> Result<Table> {
+fn table(l: &mut dyn Reader, c: usize, mut before: Option<&mut First<'_>>) -> Result<Table> {
     let mut rows = righe_vuote(l, c)?;
     let n = l.index(c)?.len();
     for k in 0..n {
         let s = spettro(l, c, k)?;
-        riga(&mut rows, l, k, &s, prima.as_deref_mut())?;
+        row(&mut rows, l, k, &s, before.as_deref_mut())?;
     }
     Ok(rows.finish(cromatogrammi_scritti(l, c)?))
 }
 
 /// The rows of a table with no scan yet, from the header of the reader.
-fn righe_vuote(l: &mut dyn Lettore, c: usize) -> Result<Rows> {
+fn righe_vuote(l: &mut dyn Reader, c: usize) -> Result<Rows> {
     let h = lettori_mzml::table_header(l, c)?;
     Ok(match Rows::da_testata(&h) {
         Some(r) => r,
@@ -71,24 +71,24 @@ fn righe_vuote(l: &mut dyn Lettore, c: usize) -> Result<Rows> {
 }
 
 /// The row of scan `k` (`s`), and the scan given to the groups of the builder.
-fn riga(
+fn row(
     rows: &mut Rows,
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     k: usize,
     s: &Spectrum,
-    prima: Option<&mut Prima<'_>>,
+    before: Option<&mut First<'_>>,
 ) -> Result<()> {
     let extra = l.extra_mzml(s);
     // the total `spectrum_head` writes: the maker's, else the sum of the points
     let tic = extra
         .tic
         .unwrap_or_else(|| (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum());
-    if !rows.lettore(s, &extra, tic) {
+    if !rows.reader(s, &extra, tic) {
         rows.spectrum(0, 0, &mzmlwrite::spectrum_head(k, s, &extra));
     }
-    if let Some(p) = prima {
+    if let Some(p) = before {
         // the level and polarity of the row, as `build` reads them from the table
-        let (level, pol) = rows.ultima().unwrap_or((s.level, 0));
+        let (level, pol) = rows.last().unwrap_or((s.level, 0));
         if level == 1 {
             p.indovina(rows.ultima_hr());
         }
@@ -97,7 +97,7 @@ fn riga(
     Ok(())
 }
 
-fn cromatogrammi_scritti(l: &mut dyn Lettore, c: usize) -> Result<usize> {
+fn cromatogrammi_scritti(l: &mut dyn Reader, c: usize) -> Result<usize> {
     let mut n_chromatograms = 0;
     for v in l.chromatograms(c)? {
         let t = l.chromatogram(c, &v.id)?;
@@ -113,29 +113,29 @@ fn cromatogrammi_scritti(l: &mut dyn Lettore, c: usize) -> Result<usize> {
 pub(crate) fn righe_prima_doppie(
     l: &mut Centroidato,
     c: usize,
-    prima: &mut Prima<'_>,
-    prima_cen: &mut Prima<'_>,
+    before: &mut First<'_>,
+    prima_cen: &mut First<'_>,
 ) -> Result<(Table, Table)> {
-    let mut rows = righe_vuote(l.semplice(), c)?;
+    let mut rows = righe_vuote(l.simple(), c)?;
     let mut rows_cen = righe_vuote(l, c)?;
     let n = l.index(c)?.len();
     for k in 0..n {
         let s = taglia(l.grezza(c, k)?)?;
-        riga(&mut rows, l.semplice(), k, &s, Some(&mut *prima))?;
+        row(&mut rows, l.simple(), k, &s, Some(&mut *before))?;
         drop(s);
         let s = spettro(l, c, k)?;
-        riga(&mut rows_cen, l, k, &s, Some(&mut *prima_cen))?;
+        row(&mut rows_cen, l, k, &s, Some(&mut *prima_cen))?;
     }
-    let ncr = cromatogrammi_scritti(l.semplice(), c)?;
+    let ncr = cromatogrammi_scritti(l.simple(), c)?;
     Ok((rows.finish(ncr), rows_cen.finish(ncr)))
 }
 
 /// The rows of version 2: `[membro, offset, lunghezza]` (or `null` when the reader gives no position) and `k` in place of `start, end`.
-pub fn rows_json(t: &mut Table, voci: &[VoceScansione]) -> String {
+pub fn rows_json(t: &mut Table, entries: &[ScanEntry]) -> String {
     for (k, r) in t.rows.iter_mut().enumerate() {
-        r.dove = Some(Box::new(Dove {
+        r.at = Some(Box::new(Dove {
             k,
-            posizione: voci.get(k).and_then(|v| v.posizione),
+            position: entries.get(k).and_then(|v| v.position),
         }));
     }
     t.rows_json()

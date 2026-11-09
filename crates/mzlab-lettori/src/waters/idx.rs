@@ -3,7 +3,7 @@
 
 use super::cartella::{errore, f32_at, u32_at};
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 const A: usize = 22;
 const B: usize = 30;
@@ -38,7 +38,7 @@ fn variant_a(b: &[u8]) -> bool {
 }
 
 /// The rows of `b`; `None` when its size is no whole number of rows of either variant (an index cut inside a row).
-pub(super) fn read(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Row>>> {
+pub(super) fn read(b: &[u8], limits: &Limits) -> Result<Option<Vec<Row>>> {
     if b.is_empty() {
         return Ok(Some(Vec::new()));
     }
@@ -47,7 +47,7 @@ pub(super) fn read(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Row>>> {
     }
     let a = variant_a(b);
     let step = if a { A } else { B };
-    limits.voci_ok((b.len() / step) as u64)?;
+    limits.ok_entries((b.len() / step) as u64)?;
     Ok(Some(
         b.chunks_exact(step)
             .map(|r| Row {

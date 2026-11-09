@@ -3,36 +3,36 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
-pub struct Conta;
+pub struct Tally;
 /// Counting off (`--senza-conta`) leaves the system allocator alone: the four shared atomics per allocation contend across threads and slow a multi-thread run by up to 2×.
-static ATTIVO: AtomicBool = AtomicBool::new(true);
+static ACTIVE: AtomicBool = AtomicBool::new(true);
 
 pub fn imposta(attivo: bool) {
-    ATTIVO.store(attivo, Ordering::Relaxed);
+    ACTIVE.store(attivo, Ordering::Relaxed);
 }
 static ALLOC: AtomicU64 = AtomicU64::new(0);
 static LIBERE: AtomicU64 = AtomicU64::new(0);
 static BYTE: AtomicU64 = AtomicU64::new(0);
 static VIVI: AtomicUsize = AtomicUsize::new(0);
-static PICCO: AtomicUsize = AtomicUsize::new(0);
+static PEAK: AtomicUsize = AtomicUsize::new(0);
 
 // SAFETY: every call forwards to `System` with the same layout; the counters are atomics.
-unsafe impl GlobalAlloc for Conta {
+unsafe impl GlobalAlloc for Tally {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
         unsafe {
-            if !ATTIVO.load(Ordering::Relaxed) {
+            if !ACTIVE.load(Ordering::Relaxed) {
                 return System.alloc(l);
             }
             ALLOC.fetch_add(1, Ordering::Relaxed);
             BYTE.fetch_add(l.size() as u64, Ordering::Relaxed);
             let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-            PICCO.fetch_max(v, Ordering::Relaxed);
+            PEAK.fetch_max(v, Ordering::Relaxed);
             System.alloc(l)
         }
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
         unsafe {
-            if !ATTIVO.load(Ordering::Relaxed) {
+            if !ACTIVE.load(Ordering::Relaxed) {
                 return System.dealloc(p, l);
             }
             LIBERE.fetch_add(1, Ordering::Relaxed);
@@ -42,14 +42,14 @@ unsafe impl GlobalAlloc for Conta {
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
         unsafe {
-            if !ATTIVO.load(Ordering::Relaxed) {
+            if !ACTIVE.load(Ordering::Relaxed) {
                 return System.realloc(p, l, n);
             }
             ALLOC.fetch_add(1, Ordering::Relaxed);
             BYTE.fetch_add(n as u64, Ordering::Relaxed);
             let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
             VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-            PICCO.fetch_max(v, Ordering::Relaxed);
+            PEAK.fetch_max(v, Ordering::Relaxed);
             System.realloc(p, l, n)
         }
     }
@@ -71,11 +71,11 @@ impl Alloc {
             byte: BYTE.load(Ordering::Relaxed),
         }
     }
-    pub fn da(self, prima: Alloc) -> Alloc {
+    pub fn da(self, before: Alloc) -> Alloc {
         Alloc {
-            chiamate: self.chiamate - prima.chiamate,
-            libere: self.libere - prima.libere,
-            byte: self.byte - prima.byte,
+            chiamate: self.chiamate - before.chiamate,
+            libere: self.libere - before.libere,
+            byte: self.byte - before.byte,
         }
     }
 }
@@ -90,14 +90,14 @@ impl std::ops::AddAssign for Alloc {
 
 /// Peak live heap in MB since the last call.
 pub fn heap_picco_mb() -> f64 {
-    PICCO.swap(VIVI.load(Ordering::Relaxed), Ordering::Relaxed) as f64 / 1048576.0
+    PEAK.swap(VIVI.load(Ordering::Relaxed), Ordering::Relaxed) as f64 / 1048576.0
 }
 
 fn stat() -> Vec<String> {
     let s = std::fs::read_to_string("/proc/self/stat").unwrap_or_default();
     // the command name sits in parentheses and may hold spaces: the fields count from the closing one
-    let dopo = s.rsplit_once(')').map_or("", |x| x.1);
-    dopo.split_whitespace().map(str::to_string).collect()
+    let after = s.rsplit_once(')').map_or("", |x| x.1);
+    after.split_whitespace().map(str::to_string).collect()
 }
 
 /// User + system CPU seconds of the whole process, threads that ended included (10 ms resolution).
@@ -114,12 +114,12 @@ pub fn guasti() -> (u64, u64) {
     (t(7), t(9))
 }
 
-fn status_mb(chiave: &str) -> f64 {
+fn status_mb(key: &str) -> f64 {
     std::fs::read_to_string("/proc/self/status")
         .ok()
         .and_then(|s| {
             s.lines()
-                .find(|l| l.starts_with(chiave))
+                .find(|l| l.starts_with(key))
                 .and_then(|l| l.split_whitespace().nth(1)?.parse::<f64>().ok())
         })
         .map_or(f64::NAN, |kb| kb / 1024.0)

@@ -48,9 +48,9 @@ mod tests {
     fn one_slot_visiting_the_samples_of_a_dataset_opens_it_once() {
         let (mut sets, mut slots) = (HashMap::new(), HashMap::new());
         let mut aperti = 0;
-        for giro in 0..2 {
+        for lap in 0..2 {
             for c in 0..14 {
-                let _ = giro;
+                let _ = lap;
                 let r: Result<_, ()> = attacca(&mut sets, &mut slots, 1, "ReRun", c, || {
                     aperti += 1;
                     Ok(())

@@ -6,16 +6,16 @@ mod finto;
 
 use std::time::Instant;
 
-use mzlab_core::lettori::Lettore;
+use mzlab_core::lettori::Reader;
 use mzlab_core::{mzidx, upload};
 
 /// The index goes to a temporary file, as on the desktop (a sparse file: nothing is zeroed in memory); `sha` is the SHA-256 of what was written (a change
 /// of speed must not change a byte).
-struct Nulla(std::fs::File);
-impl Default for Nulla {
+struct Sink(std::fs::File);
+impl Default for Sink {
     fn default() -> Self {
         let f = tempfile_in_tmp();
-        Nulla(f)
+        Sink(f)
     }
 }
 fn tempfile_in_tmp() -> std::fs::File {
@@ -32,7 +32,7 @@ fn tempfile_in_tmp() -> std::fs::File {
     let _ = std::fs::remove_file(&path);
     f
 }
-impl mzidx::Output for Nulla {
+impl mzidx::Output for Sink {
     fn write_at(&mut self, o: u64, d: &[u8]) -> mzlab_core::Result<()> {
         use std::io::{Seek, SeekFrom, Write};
         if std::env::var_os("DISCARD").is_some() {
@@ -43,7 +43,7 @@ impl mzidx::Output for Nulla {
         Ok(())
     }
 }
-impl Nulla {
+impl Sink {
     fn sha(&mut self) -> String {
         use sha2::Digest as _;
         use std::io::{Read, Seek, SeekFrom};
@@ -77,11 +77,11 @@ fn main() {
     );
     let mut l = finto::Finto::vario(n, peaks, 12345);
     if std::env::var_os("TIC").is_some() {
-        for (k, s) in l.schede.iter_mut().enumerate() {
+        for (k, s) in l.cards.iter_mut().enumerate() {
             s.extra.tic = Some(1000.0 + k as f64 * 0.1);
         }
     }
-    let np: usize = l.schede.iter().map(|s| s.spettro.mz.len()).sum();
+    let np: usize = l.cards.iter().map(|s| s.spettro.mz.len()).sum();
     println!("{n} scans, {np} peaks, budget {budget} MB");
     let t = Instant::now();
     let mut s = 0usize;
@@ -95,25 +95,25 @@ fn main() {
     let imp = vec![];
     // `SOLO=scratch`: only the run with a scratch file (the way the site and the desktop build the index), for a profiler
     if std::env::var("SOLO").as_deref() == Ok("scratch") {
-        con_scratch(&mut l, budget);
+        with_scratch(&mut l, budget);
         return;
     }
     if let Some(r) = std::env::var("RIPETI")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
     {
-        ripeti(&mut l, r);
+        repeat(&mut l, r);
         return;
     }
     let t = Instant::now();
-    let mut out = Nulla::default();
-    let p = upload::prepare_lettore(&mut l, 0, &imp, "x.mzML").expect("table");
+    let mut out = Sink::default();
+    let p = upload::prepare_reader(&mut l, 0, &imp, "x.mzML").expect("table");
     println!(
         "scan table                 {:>8.3} s",
         t.elapsed().as_secs_f64()
     );
     let t = Instant::now();
-    let st = mzidx::build_lettore(&p.table, &mut l, 0, &mut out, budget << 20).expect("index");
+    let st = mzidx::build_reader(&p.table, &mut l, 0, &mut out, budget << 20).expect("index");
     println!(
         ".mzidx                     {:>8.3} s ({:.1} MB, {} passes, sha256 {})",
         t.elapsed().as_secs_f64(),
@@ -139,16 +139,16 @@ fn main() {
         st.bytes as f64 / 1e6,
         st.passes
     );
-    con_scratch(&mut l, budget);
+    with_scratch(&mut l, budget);
 }
 
 /// `upload::prepare_lettore` `r` times: median and range in ms.
 #[allow(clippy::disallowed_methods)]
-fn ripeti(l: &mut finto::Finto, r: usize) {
+fn repeat(l: &mut finto::Finto, r: usize) {
     let mut ms: Vec<f64> = (0..r)
         .map(|_| {
             let t = Instant::now();
-            let p = upload::prepare_lettore(l, 0, &[], "x.mzML").expect("table");
+            let p = upload::prepare_reader(l, 0, &[], "x.mzML").expect("table");
             std::hint::black_box(p);
             t.elapsed().as_secs_f64() * 1e3
         })
@@ -163,8 +163,8 @@ fn ripeti(l: &mut finto::Finto, r: usize) {
 }
 
 /// The same with a scratch file (a temporary file): the scans are decoded once whatever the budget.
-fn con_scratch(l: &mut finto::Finto, budget: usize) {
-    let mut out = Nulla::default();
+fn with_scratch(l: &mut finto::Finto, budget: usize) {
+    let mut out = Sink::default();
     let path = std::env::temp_dir().join(format!("mzidx_tempi_{}.sp", std::process::id()));
     let mut sp = std::fs::OpenOptions::new()
         .read(true)
@@ -174,7 +174,7 @@ fn con_scratch(l: &mut finto::Finto, budget: usize) {
         .open(&path)
         .expect("scratch");
     let t = Instant::now();
-    let st = upload::indicizza_lettore_con(
+    let st = upload::index_reader_with(
         l,
         0,
         &mut || Ok(vec![]),
