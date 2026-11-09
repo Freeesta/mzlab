@@ -1,6 +1,6 @@
 """Chooses the e2e of the job `e2e-cambiati` of test.yml: the tests that cover the files a pull request changes, minus what other jobs already run.
 `python3 tools/ci_e2e_cambiati.py <base sha>` prints what it chose and why, and appends `e2e=<names, comma-separated>` to $GITHUB_OUTPUT (empty: run nothing).
-The map from files to tests is `changed_tests` of tools/verifica.py (its AREAS); the smoke tests (job `browser`) and the tests that need the CI .wasm build, a .dam
+The map from files to tests is `changed_tests` of tools/verifica.py (its AREAS); the smoke tests (job `browser`) and the tests that need the site build, the CI .wasm build (`wasm`), a .dam
 or the lab data (sito-e2e and notte.yml) are left out. A core file selects every e2e: that is the complete round of notte.yml, so this job runs none."""
 import os
 import subprocess
@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verifica  # noqa: E402
 
-ELSEWHERE = {"sito", "dam", "veri"}
+ELSEWHERE = {"sito", "dam", "veri", "wasm"}
 
 
 def pick(files: set[str]) -> tuple[list[str], str]:

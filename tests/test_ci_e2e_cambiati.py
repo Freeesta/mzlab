@@ -32,6 +32,13 @@ def test_tests_of_other_jobs_are_left_out():
     assert tests == [] and "nothing left to run" in why
 
 
+def test_tests_that_need_the_ci_wasm_are_left_out_but_run_by_verifica():
+    wasm = next(n for n, need in verifica.NEEDS.items() if "wasm" in need)
+    tests, why = ci.pick({f"tests_e2e/{wasm}.py"})
+    assert tests == [] and "nothing left to run" in why
+    assert not verifica.NEEDS[wasm] & {"sito", "dam", "veri"}          # the complete round of the night still runs it
+
+
 def test_a_changed_e2e_runs_itself():
     tests, _ = ci.pick({"tests_e2e/e2e_disegno_chimica.py"})
     assert tests == ["e2e_disegno_chimica"]
