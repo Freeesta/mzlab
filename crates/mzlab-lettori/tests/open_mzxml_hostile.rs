@@ -202,7 +202,7 @@ fn a_cut_or_zeroed_copy_says_how_many_scans_are_missing() {
 /// The pairs (mzXML, mzML of the same raw file) of `dati/formati/aperti/mzXML/`.
 fn pairs() -> Vec<(PathBuf, PathBuf)> {
     let Some(d) = dati_percorsi::percorso("dati/formati/aperti/mzXML") else {
-        eprintln!("SKIP aperti_mzxml: no data repository (MZLAB_DATI)");
+        eprintln!("SKIP open_mzxml: no data repository (MZLAB_DATI)");
         return Vec::new();
     };
     let mut out = Vec::new();
@@ -282,7 +282,7 @@ fn every_real_mzxml_says_what_its_mzml_says() {
 #[test]
 fn real_mzxmls_open_and_the_counts_match() {
     let Some(d) = dati_percorsi::percorso("dati/formati/aperti/mzXML") else {
-        eprintln!("SKIP aperti_mzxml: no data repository (MZLAB_DATI)");
+        eprintln!("SKIP open_mzxml: no data repository (MZLAB_DATI)");
         return;
     };
     for e in std::fs::read_dir(d).into_iter().flatten().flatten() {

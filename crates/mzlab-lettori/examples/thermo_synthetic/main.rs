@@ -1,7 +1,7 @@
 //! A synthetic Orbitrap `.raw` (format v66, invented numbers) of any size, for the speed benches of the Thermo reader: MS1 scans in profile with the
 //! centroid list, resolutions and noise nodes (`FTMS + p`), each followed by `--ms2` dependent HCD scans with centroids only (`FTMS + c`), a scan trailer
 //! of `--trailer` bytes per scan; with `--dda` the precursors are the most intense centroids of the survey scan (top N), else random m/z. Laid out the way `vendor/opentfraw` reads a Q Exactive file (uniform events of 288 bytes). Written as a stream (bounded memory).
-//! `cargo run --profile cli -p mzlab-lettori --features thermo --example thermo_sintetico -- OUT.raw [--scans N] [--peaks P] [--bins B] [--ms2 K] [--ms2-peaks Q] [--trailer T] [--seed S] [--dda]`
+//! `cargo run --profile cli -p mzlab-lettori --features thermo --example thermo_synthetic -- OUT.raw [--scans N] [--peaks P] [--bins B] [--ms2 K] [--ms2-peaks Q] [--trailer T] [--seed S] [--dda]`
 
 use std::fs::File;
 use std::io::{BufWriter, Seek, SeekFrom, Write};
@@ -66,7 +66,7 @@ fn args() -> Opt {
     }
     assert!(
         !o.out.is_empty(),
-        "usage: thermo_sintetico OUT.raw [--scans N] ..."
+        "usage: thermo_synthetic OUT.raw [--scans N] ..."
     );
     o
 }
