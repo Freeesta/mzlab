@@ -3,7 +3,7 @@
 // @ts-noany
 "use strict";
 // Download of the public library packages into the folder (docs/agenti/librerie.md), for the web page (the worker loads this file with importScripts; node loads it in
-// tests/test_libreria_scarica.py). The desktop app does the same in Rust (crates/mzlab-desktop/src/scarica.rs): same catalog, same pieces, same checks.
+// tests/test_libreria_scarica.py). The desktop app does the same in Rust (crates/mzlab-desktop/src/download.rs): same catalog, same pieces, same checks.
 // The catalog `static/librerie/catalogo.json` and its pieces `static/librerie/<id>/NNN.bin` come from the site itself (CSP unchanged) and are only requested on a click.
 // Pieces of 4 MiB are checked one by one with their SHA-256, kept in `.mzlab/` while the package is incomplete (resume = the first piece that is missing or wrong),
 // assembled into `.mzlab/<id>.new`, checked as a whole and swapped for the old `<id>.mzlib` in one step: the old package stays until the new one is verified.

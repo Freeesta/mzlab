@@ -26,10 +26,20 @@ use mzlab_feat_wasm::run::meta::{recipe, written, Estimate};
 #[path = "flow_record_tests.rs"]
 mod flow_record_tests;
 
+#[path = "flow_indexes.rs"]
+pub(crate) mod flow_indexes;
+
+#[cfg(test)]
+#[path = "flow_indexes_tests.rs"]
+pub(crate) mod flow_indexes_tests;
+
 use crate::flow::{io, FileRunner, Lineage, Made};
 use crate::flow_pace::{Gate, Gated, Stop, Stopping};
+use flow_indexes::Indexes;
 
 pub(crate) fn open(path: &PathBuf) -> Result<Index<File>> {
+    #[cfg(test)]
+    flow_indexes_tests::opened(path);
     let f = File::open(path).map_err(io)?;
     let size = f.metadata().map_err(io)?.len();
     Index::open(f, size)
@@ -157,8 +167,14 @@ fn weak_path(peaks: &Path) -> PathBuf {
 }
 
 /// Aligns the peaks of `lin` with `recipe` under the memory budget of the runner and writes the table of `job`; the table hands on `lin` with the
-/// parameters of `job`.
-fn table(r: &FileRunner, job: &Job, recipe: &Recipe, mut lin: Lineage) -> Result<Made> {
+/// parameters of `job`. `indexes` are those of `lin`, already opened.
+fn table(
+    r: &FileRunner,
+    job: &Job,
+    recipe: &Recipe,
+    mut lin: Lineage,
+    indexes: &Indexes,
+) -> Result<Made> {
     let budget = MemBudget::mb(r.budget.job_mb());
     let mut bytes = Vec::new();
     let mut src = Files(lin.peaks.clone());
@@ -168,7 +184,7 @@ fn table(r: &FileRunner, job: &Job, recipe: &Recipe, mut lin: Lineage) -> Result
         &mut src,
         &budget,
         recipe,
-        &|k| open(&lin.index[k]),
+        &|k| indexes.get(k),
         &mut bytes,
         &mut pace,
     )?;
@@ -180,48 +196,68 @@ fn table(r: &FileRunner, job: &Job, recipe: &Recipe, mut lin: Lineage) -> Result
     Ok(Made::new("table", a))
 }
 
-/// The recipe, the lineage and the estimates a step of the alignment runs with: `features.align` reads the peaks it is given, `features.gapfill` the ones
-/// that made its table.
-fn align_setup(r: &FileRunner, job: &Job) -> Result<(Recipe, Lineage, Vec<Estimate>)> {
+/// The lineage a step of the alignment runs on: `features.align` reads the peaks it is given, `features.gapfill` the ones that made its table.
+fn align_lineage(r: &FileRunner, job: &Job) -> Result<Lineage> {
     let mut lin = Lineage::default();
-    let fill = job.step.id == "features.gapfill";
-    if fill {
+    if job.step.id == "features.gapfill" {
         let input = job
             .inputs
             .iter()
             .find(|(p, _)| p == "table")
             .and_then(|(_, v)| v.first());
-        lin = input
+        return input
             .and_then(|a| r.lineage(a))
             .filter(|l| l.first.is_some() && !l.peaks.is_empty())
-            .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
-    } else {
-        for p in job.inputs.iter().flat_map(|(_, v)| v) {
-            let l = r
-                .lineage(p)
-                .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
-            if lin.first.is_none() {
-                (lin.first, lin.layers) = (l.first, l.layers);
-            }
-            lin.index.extend(l.index);
-            lin.peaks.push(r.path(p));
-        }
+            .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id));
     }
-    // one table holds one polarity and one resolution, as in the browser (`align_series_to`)
-    let indexes = lin.index.iter().map(open).collect::<Result<Vec<_>>>()?;
-    mzlab_feat::nature::one_kind_of(&indexes)?;
-    let base = rebuild(&lin).map_err(|e| e.with("step", job.step.id))?;
+    for p in job.inputs.iter().flat_map(|(_, v)| v) {
+        let l = r
+            .lineage(p)
+            .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
+        if lin.first.is_none() {
+            (lin.first, lin.layers) = (l.first, l.layers);
+        }
+        lin.index.extend(l.index);
+        lin.peaks.push(r.path(p));
+    }
+    Ok(lin)
+}
+
+/// The recipe and the estimates of a step of the alignment on `lin`, from `first`, the first index of its series (`rebuild`).
+fn align_recipe(
+    job: &Job,
+    lin: &Lineage,
+    first: &mut Index<File>,
+) -> Result<(Recipe, Vec<Estimate>)> {
+    let base =
+        run::recipe_of_layers(first, &lin.layers).map_err(|e| e.with("step", job.step.id))?;
     let (mut recipe, estimates) = recipe(job, base)?;
-    recipe.fill_gaps = fill;
-    Ok((recipe, lin, estimates))
+    recipe.fill_gaps = job.step.id == "features.gapfill";
+    Ok((recipe, estimates))
 }
 
 /// `features.align` (the table of the series without gap filling) and `features.gapfill` (the table of `features.align` with its gaps filled: the stored
 /// table is not filled after the fact, alignment and filling run again on the peaks of that table, which gives the bytes of the page's single call).
+/// Each index is opened once: the check of the kind, the recipe, the facts of the files and the filling read copies of it (`flow_indexes`).
 pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
-    let (recipe, lin, estimates) = align_setup(r, job)?;
+    let lin = align_lineage(r, job)?;
+    let mut indexes = Indexes::open(&lin.index)?;
+    // one table holds one polarity and one resolution, as in the browser (`align_series_to`)
+    mzlab_feat::nature::one_kind_of(indexes.all())?;
+    indexes.keep(flow_indexes::KEEP_BYTES);
+    let first = lin
+        .first
+        .as_ref()
+        .ok_or_else(|| Error::new("err.flow.lineage").with("step", job.step.id))?;
+    let mut first = match indexes.position(first) {
+        Some(k) => indexes.get(k),
+        None => open(first),
+    }
+    .map_err(|e| e.with("step", job.step.id))?;
+    let (recipe, estimates) = align_recipe(job, &lin, &mut first)?;
+    drop(first);
     let peaks = lin.peaks.clone();
-    let made = table(r, job, &recipe, lin)?;
+    let made = table(r, job, &recipe, lin, &indexes)?;
     Ok(Made {
         estimates,
         mem: mem_of(r, &recipe, peaks),
@@ -230,7 +266,8 @@ pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
 }
 
 /// The memory the alignment of `job` asks for under the budget of the runner and the way it takes (`slabs::stima`); none for another step or when the
-/// inputs cannot be read yet (the step itself reports why); `known` is the figure the step worked out while it ran, kept as it is.
+/// inputs cannot be read yet (the step itself reports why); `known` is the figure the step worked out while it ran, kept as it is. Only the first index of
+/// the series is opened, for the recipe.
 pub(crate) fn align_mem(r: &FileRunner, job: &Job, known: Option<Mem>) -> Option<Mem> {
     if known.is_some() {
         return known;
@@ -238,7 +275,9 @@ pub(crate) fn align_mem(r: &FileRunner, job: &Job, known: Option<Mem>) -> Option
     if !matches!(job.step.id, "features.align" | "features.gapfill") {
         return None;
     }
-    let (recipe, lin, _) = align_setup(r, job).ok()?;
+    let lin = align_lineage(r, job).ok()?;
+    let mut first = open(lin.first.as_ref()?).ok()?;
+    let (recipe, _) = align_recipe(job, &lin, &mut first).ok()?;
     mem_of(r, &recipe, lin.peaks)
 }
 

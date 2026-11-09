@@ -7,14 +7,14 @@ use std::path::PathBuf;
 use mzlab_core::json::Out;
 use mzlab_lib::parse::{detect, parse_all};
 
-use self::prova::{decoy, measure, registry_expectations, Registry};
-use crate::msn_uscite::canonical;
+use self::trial::{decoy, measure, registry_expectations, Registry};
+use crate::msn_outputs::canonical;
 use crate::Outcome;
 
-mod prova;
-mod somma;
+mod sum;
 #[cfg(test)]
 mod tests;
+mod trial;
 
 /// Old flag and subcommand names of `msn-rules` (old, new); resolved before the match.
 const ALIASES: &[(&str, &str)] = &[
@@ -271,7 +271,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         .as_deref()
         == Some("sum")
     {
-        return somma::run(args[1..].to_vec());
+        return sum::run(args[1..].to_vec());
     }
     let a = match parse_args(args.into_iter()) {
         Ok(Some(a)) => a,
@@ -286,6 +286,6 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match rows(&a) {
         Err(e) => failed(e),
-        Ok(t) => somma::emit(t, &a.out),
+        Ok(t) => sum::emit(t, &a.out),
     }
 }

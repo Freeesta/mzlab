@@ -145,23 +145,23 @@ fn the_automatic_budget_is_shared_by_the_workers_and_budget_mb_is_kept_as_given(
     assert_eq!(given.job_mb(), 24.0);
 }
 
-#[path = "../../mzlab-feat-wasm/tests/stima_comune/mod.rs"]
-mod comune;
+#[path = "../../mzlab-feat-wasm/tests/estimate_common/mod.rs"]
+mod common;
 
 /// `flow run` of the fixture `tests/dati/stima_detect.json` (index, detect) at each of its budgets: a budget below the estimate refuses the detection
 /// before it starts, with the phase, the numbers of the page and the next step; one above it detects.
 #[test]
 fn the_detection_is_refused_with_its_numbers_below_the_estimate_of_the_fixture() {
-    let s = comune::spec();
+    let s = common::spec();
     let mb = s["mb"].as_u64().unwrap();
-    for (budget, via) in comune::cases(&s) {
+    for (budget, via) in common::cases(&s) {
         let dir = std::env::temp_dir().join(format!(
             "mzlab_cli_stima_detect_{budget}_{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("data")).unwrap();
-        std::fs::write(dir.join("data/stima.mzML"), comune::mzml(&s)).unwrap();
+        std::fs::write(dir.join("data/stima.mzML"), common::mzml(&s)).unwrap();
         let plan = r#"{"format":"mzflow/2","inputs":[{"name":"stima.mzML","type":"raw"}],"steps":[
 {"id":"idx","step":"index.mzidx@1","in":{"source":["file:stima.mzML"]}},
 {"id":"det","step":"features.detect@1","in":{"index":["idx.index"]}}]}"#;

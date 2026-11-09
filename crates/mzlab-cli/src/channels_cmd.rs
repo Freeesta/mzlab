@@ -1,0 +1,144 @@
+//! `mzlab-cli channels FILE [--out PATH]`: the channels (`canali/1`) of a file, the JSON of `api/canali`. An mzML also gives its SRM and SIC chromatograms;
+//! any other file the app reads gives the channels of its scans and the chromatograms of its first sample (the mzML shell the site reads).
+
+use std::fs::File;
+use std::path::PathBuf;
+
+use mzlab_core::error::{Error, Result};
+use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::routes::Routes;
+
+use crate::Outcome;
+
+pub const HELP: &str = "mzlab-cli channels: the channels of a file (TIC, BPC, one per scan type or precursor, one per SRM transition) as JSON (canali/1).
+
+usage: mzlab-cli channels FILE [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH]
+
+  FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
+  --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc
+  --n N       points at most per extreme of an analog trace (default 2000)
+  --out PATH  write there instead of the standard output
+
+old names still accepted: canali, --canale";
+
+/// What was asked: the file, the channel to read (`--channel`, `--rt`, `--n`) and where to write.
+struct Request {
+    file: PathBuf,
+    out: Option<PathBuf>,
+    channel: Option<String>,
+    rt: Option<(f64, f64)>,
+    n: i64,
+}
+
+fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
+    let (mut file, mut out, mut channel, mut rt, mut n) = (None, None, None, None, 2000);
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--help" | "-h" => return Ok(None),
+            "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
+            "--channel" | "--canale" => {
+                channel = Some(it.next().ok_or("--channel needs a channel id")?)
+            }
+            "--rt" => {
+                let v = it.next().ok_or("--rt needs minutes")?;
+                let num = |x: &str| x.parse::<f64>().ok().filter(|x| x.is_finite());
+                let (a, b) = v.split_once(',').unwrap_or((&v, &v));
+                rt = Some((
+                    num(a).ok_or("--rt needs minutes")?,
+                    num(b).ok_or("--rt needs minutes")?,
+                ));
+            }
+            "--n" => {
+                n = (it.next().ok_or("--n needs a number")?)
+                    .parse()
+                    .map_err(|_| "--n needs a number")?
+            }
+            o if o.starts_with("--") => return Err(format!("unknown option {o}")),
+            _ if file.is_none() => file = Some(PathBuf::from(a)),
+            _ => return Err("channels takes one file".into()),
+        }
+    }
+    if channel.is_none() && (rt.is_some() || n != 2000) {
+        return Err("--rt and --n need --channel".into());
+    }
+    Ok(Some(Request {
+        file: file.ok_or("channels needs a file")?,
+        out,
+        channel,
+        rt,
+        n,
+    }))
+}
+
+fn io(e: std::io::Error) -> Error {
+    Error::new("err.file.index").with("detail", e)
+}
+
+/// The JSON of `api/canali` for `file`, indexes kept in `tmp`; with `--channel`, the trace (or with `--rt` the UV spectrum) of that UV or analog channel
+/// of an mzML: what `api/chrom?canale=` and `api/uvspec?canale=` answer.
+fn read(c: &Request, tmp: &std::path::Path) -> Result<String> {
+    let file = &c.file;
+    let idx = tmp.join("0.mzidx");
+    crate::build_index(file, &idx, mzlab_core::budget_auto::native_index_budget())?;
+    let mut r = Routes::new(crate::open(&idx)?);
+    let name = file
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let mzml = name.to_lowercase().ends_with(".mzml");
+    if let (Some(id), false) = (&c.channel, mzml) {
+        return Err(Error::new("err.canali.unknown").with("id", id));
+    }
+    if mzml {
+        let scans_end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
+        let f = File::open(file).map_err(io)?;
+        let size = f.metadata().map_err(io)?.len();
+        let mut m = Mzml::new(f, size);
+        let chroms = m.chromatograms(scans_end)?;
+        if let Some(id) = &c.channel {
+            return match c.rt {
+                Some((a, b)) => mzlab_core::canali_uv::spettro(&mut m, id, a, b),
+                None => mzlab_core::canali_uv::trace(&mut m, &chroms, id, c.n),
+            };
+        }
+        let facts = mzlab_core::iteminfo::facts_from(&mut m, scans_end, chroms.len() as i64, true)?;
+        r.pon_cromatogrammi(&name, &chroms, &facts);
+    } else {
+        // the first sample, as the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`lettori_mzml::guscio`)
+        let mut l = mzlab_lettori::apri(
+            crate::flow_set::file_set(file)?,
+            &mzlab_core::lettori::Limits::desktop(),
+        )?;
+        let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), 0)?;
+        let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
+        let size = shell.len() as u64;
+        let mut m = Mzml::new(shell, size);
+        let chroms = m.chromatograms(end)?;
+        let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
+        r.pon_cromatogrammi(&name, &chroms, &facts);
+    }
+    Ok(r.canali().json())
+}
+
+pub fn run(args: Vec<String>) -> Outcome {
+    let c = match parse(args) {
+        Ok(Some(a)) => a,
+        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
+        Err(e) => return Outcome::fail(&e),
+    };
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-canali{k}", std::process::id()));
+    let r = std::fs::create_dir_all(&tmp)
+        .map_err(io)
+        .and_then(|_| read(&c, &tmp));
+    let _ = std::fs::remove_dir_all(&tmp);
+    match r {
+        Err(e) => Outcome::fail(&e.to_string()),
+        Ok(t) => crate::emit(t + "\n", &c.out),
+    }
+}
+
+#[cfg(test)]
+#[path = "channels_tests.rs"]
+mod tests;

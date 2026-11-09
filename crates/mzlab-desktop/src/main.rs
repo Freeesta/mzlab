@@ -9,18 +9,18 @@
 )]
 
 mod apri;
-mod avvio;
+mod startup;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use mzlab_desktop::apertura::{self, Pending};
+use mzlab_desktop::opening::{self, Pending};
 use mzlab_desktop::librerie::{self, Config};
 use mzlab_desktop::release;
-use mzlab_desktop::scarica::{self, Policy};
+use mzlab_desktop::download::{self, Policy};
 use mzlab_desktop::update::{self, Http, Source, UpdateError};
-use mzlab_desktop::{cartella, dialogo};
+use mzlab_desktop::{folder, dialog};
 use mzlab_desktop::{handle_body, State};
 use serde::Serialize;
 use tauri::http::{header, Response};
@@ -55,11 +55,11 @@ async fn pick_files(
     state: tauri::State<'_, Arc<State>>,
     dam: bool,
 ) -> Result<Vec<PickedFile>, String> {
-    let dlg = dialogo::at_desktop(&app);
+    let dlg = dialog::at_desktop(&app);
     let dlg = if dam {
         dlg.add_filter("DAM", &["dam", "DAM"])
     } else {
-        let exts = apertura::dialog_extensions();
+        let exts = opening::dialog_extensions();
         let refs: Vec<&str> = exts.iter().map(String::as_str).collect();
         dlg.add_filter("Data files", &refs)
     };
@@ -103,7 +103,7 @@ async fn save_mzml_folder(
     app: tauri::AppHandle,
     state: tauri::State<'_, Arc<State>>,
 ) -> Result<Option<usize>, String> {
-    let dlg = dialogo::at_desktop(&app);
+    let dlg = dialog::at_desktop(&app);
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
         .await
         .map_err(|e| e.to_string())?;
@@ -136,7 +136,7 @@ fn folder_name(p: &std::path::Path) -> String {
 /// System dialog to point at the folder of the data; its name, None if the user cancels. The path stays in this side: the page only sees the name.
 #[tauri::command]
 async fn data_choose_dir(app: AppHandle) -> Result<Option<String>, String> {
-    let dlg = dialogo::at_desktop(&app);
+    let dlg = dialog::at_desktop(&app);
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
         .await
         .map_err(|e| e.to_string())?;
@@ -154,11 +154,11 @@ fn data_get_dir(app: AppHandle) -> Option<String> {
     data_root(&app).map(|p| folder_name(&p))
 }
 
-/// The compatible files of the remembered folder (`cartella.rs`).
+/// The compatible files of the remembered folder (`folder.rs`).
 #[tauri::command]
-fn data_list(app: AppHandle) -> Vec<cartella::Item> {
+fn data_list(app: AppHandle) -> Vec<folder::Item> {
     data_root(&app)
-        .map(|r| cartella::list(&r))
+        .map(|r| folder::list(&r))
         .unwrap_or_default()
 }
 
@@ -170,7 +170,7 @@ fn data_register(
     path: String,
 ) -> Result<PickedFile, String> {
     let root = data_root(&app).ok_or("no folder")?;
-    let full = cartella::resolve(&root, &path).ok_or("bad path")?;
+    let full = folder::resolve(&root, &path).ok_or("bad path")?;
     register(&state, vec![full])
         .pop()
         .ok_or_else(|| "cannot open".to_string())
@@ -306,7 +306,7 @@ async fn lib_choose_dir(
     app: AppHandle,
     state: tauri::State<'_, Arc<State>>,
 ) -> Result<Option<String>, String> {
-    let dlg = dialogo::at_desktop(&app);
+    let dlg = dialog::at_desktop(&app);
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_folder())
         .await
         .map_err(|e| e.to_string())?;
@@ -336,7 +336,7 @@ fn err_json(key: &str, detail: &str) -> String {
 /// The list of the public packages of the site (a network call, only when the user asks for it).
 #[tauri::command]
 async fn lib_catalog() -> String {
-    tauri::async_runtime::spawn_blocking(|| match scarica::fetch_catalog_raw(&Http::new()) {
+    tauri::async_runtime::spawn_blocking(|| match download::fetch_catalog_raw(&Http::new()) {
         Ok((_, raw)) => serde_json::json!({"status": "ok", "catalog": raw}).to_string(),
         Err(e) => e.to_json(),
     })
@@ -347,7 +347,7 @@ async fn lib_catalog() -> String {
 fn do_download(app: &AppHandle, state: &State, cancel: &AtomicBool, ids: Vec<String>) -> String {
     cancel.store(false, Ordering::Relaxed);
     let src = Http::new();
-    let cat = match scarica::fetch_catalog(&src) {
+    let cat = match download::fetch_catalog(&src) {
         Ok(c) => c,
         Err(e) => return e.to_json(),
     };
@@ -359,7 +359,7 @@ fn do_download(app: &AppHandle, state: &State, cancel: &AtomicBool, ids: Vec<Str
             );
             continue;
         };
-        match scarica::download_package(&state.libs, &src, pkg, cancel, &mut |p| {
+        match download::download_package(&state.libs, &src, pkg, cancel, &mut |p| {
             let _ = app.emit("lib-progress", p);
         }) {
             Ok(()) => done.push(id),
@@ -406,14 +406,14 @@ async fn lib_download_external(
             return err_json("lib.dl.err.externalOff", "");
         }
         flag.store(false, Ordering::Relaxed);
-        let cat = match scarica::fetch_catalog(&Http::new()) {
+        let cat = match download::fetch_catalog(&Http::new()) {
             Ok(c) => c,
             Err(e) => return e.to_json(),
         };
         let Some(ext) = cat.esterne.iter().find(|e| e.id == id) else {
             return err_json("lib.dl.err.catalog", &id);
         };
-        match scarica::download_external(&st.libs, ext, &Policy::default(), &flag, &mut |p| {
+        match download::download_external(&st.libs, ext, &Policy::default(), &flag, &mut |p| {
             let _ = app.emit("lib-progress", p);
         }) {
             Ok(sha) => serde_json::json!({"status": "ok", "sha256": sha}).to_string(),
@@ -464,7 +464,7 @@ fn main() {
             apri::assoc_answer,
             apri::assoc_reset
         ])
-        .setup(avvio::setup)
+        .setup(startup::setup)
         .register_asynchronous_uri_scheme_protocol("mzlab", move |_ctx, request, responder| {
             let state = for_protocol.clone();
             // the engine can take long on a big file: never on the thread of the webview

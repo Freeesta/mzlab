@@ -1,4 +1,4 @@
-//! The operations of `rpc` about the samples of a maker's file read as they are (`nativi.rs`): the samples of a dataset the page describes (`natsamples`) and
+//! The operations of `rpc` about the samples of a maker's file read as they are (`natives.rs`): the samples of a dataset the page describes (`natsamples`) and
 //! the samples already registered from the same members (`natsame`), «Download .mzML» (`nat2mzml`: the mzML of one sample written on request to the temporary folder, registered like a picked file; progress by `rawprogress`)
 //! and one series of the instrument log of a `.raw` (`natregistro`, the same text as the readers module of the site).
 
@@ -10,7 +10,7 @@ use mzlab_core::{lettori_mzml, Error, Result};
 use serde_json::{json, Value};
 
 use crate::engine::{CountWrite, Picked, Progress, State};
-use crate::nativi;
+use crate::natives;
 use crate::rpc::{io_error, text, Answer, Eng};
 
 impl State {
@@ -34,7 +34,7 @@ impl State {
         if members.is_empty() {
             return Err(Error::new("err.file.notAccepted").with("name", ""));
         }
-        text(nativi::samples(&members)?)
+        text(natives::samples(&members)?)
     }
 
     /// `natsame {members: [{name, fid}], names}`: `{"names"}`, those of `names` that are samples of these very members (same names and paths, unchanged since
@@ -76,7 +76,7 @@ impl State {
             .ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let progress = Arc::new(Progress::default());
         self.lock_inner().progress.insert(pid, progress.clone());
-        let mut l = nativi::open(&nat.members, nat.centroid)?;
+        let mut l = natives::open(&nat.members, nat.centroid)?;
         let tmp = std::env::temp_dir().join(format!("mzlab-{}-n{}.mzML", std::process::id(), pid));
         let mut out = CountWrite {
             inner: std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?),
@@ -127,7 +127,7 @@ impl State {
             .get(name)
             .and_then(|e| e.nat)
             .ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
-        let mut l = nativi::open(&nat.members, false)?;
+        let mut l = natives::open(&nat.members, false)?;
         let c = l.chromatogram(nat.c, p["serie"].as_str().unwrap_or(""))?;
         text(mzlab_lettori::json::chromatogram_json(&c))
     }

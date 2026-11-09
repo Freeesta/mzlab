@@ -20,13 +20,13 @@ fn kb(field: &str) -> f64 {
         .unwrap_or(0.0)
 }
 
-#[path = "../tests/stima_comune/mod.rs"]
-mod comune;
+#[path = "../tests/estimate_common/mod.rs"]
+mod common;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("--fixture") {
-        std::fs::write(&args[1], comune::index(&comune::spec())).expect("write");
+        std::fs::write(&args[1], common::index(&common::spec())).expect("write");
         return;
     }
     for path in args {

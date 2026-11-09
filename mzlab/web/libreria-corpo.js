@@ -20,7 +20,9 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
     };
     me.onerror = e => { const er = new Error(I18N.t("lib.err.worker", { message: e.message || "error" })); /** @type {any} */ (er).fatal = true; pend.forEach(r => r.no(er)); pend.clear(); if (worker === me) worker = null; };
     // the engine's .wasm exists only in the built site (window.MZLAB_BROWSER, browser.js) and in the app
-    me.postMessage({ cmd: "config", reqId: 0, forceJs, wasm: !!(window.MZLAB_BROWSER || window.MZLAB_DESKTOP) });
+    // phone or tablet as the page sees it (the rule of rust-budget.js device()): the worker cannot see the touch points of an iPad with the Mac user agent
+    const n = /** @type {any} */ (navigator), small = !!(/** @type {any} */ (window).MZLAB_PHONE) || /iPad|iPhone|iPod|Android/i.test(n.userAgent || "") || (n.platform === "MacIntel" && n.maxTouchPoints > 1);
+    me.postMessage({ cmd: "config", reqId: 0, forceJs, small, wasm: !!(window.MZLAB_BROWSER || window.MZLAB_DESKTOP) });
     // the folder of the libraries (chosen before the first call: call1 waits for folderStart)
     me.postMessage({ cmd: "folder", reqId: 0, ...folderMsg });
     return me;
