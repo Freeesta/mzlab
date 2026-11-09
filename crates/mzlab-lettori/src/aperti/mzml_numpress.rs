@@ -17,8 +17,8 @@ use mzlab_core::mzmlhead::{Chrom, Mzml};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::scantable::{self, Row};
 
-use super::mzml_testata::{extra_di, header_from, param_list};
-use super::np_riscrivi;
+use super::mzml_header::{extra_di, header_from, param_list};
+use super::np_rewrite;
 
 /// The accessions that make an array numpress (the three codecs, alone and followed by zlib).
 const ACCESSION: [&str; 6] = [
@@ -156,7 +156,7 @@ impl NumpressReader {
         let mut piece =
             vec![0u8; usize::try_from(t.end - t.start).map_err(|_| Error::memory_budget())?];
         self.data.read_at(t.start, &mut piece)?;
-        let simple = np_riscrivi::rewrite(&piece, &self.limits)?.into_owned();
+        let simple = np_rewrite::rewrite(&piece, &self.limits)?.into_owned();
         let length = simple.len() as u64;
         let local = Chrom {
             start: 0,
@@ -233,7 +233,7 @@ impl NumpressReader {
     /// Spectrum `k`: its bytes with the numpress arrays plain, read by the engine's parser; its extra is kept for the writer.
     fn spectrum(&mut self, k: usize) -> Result<Spectrum> {
         let byte = self.byte(k)?;
-        let simple = np_riscrivi::rewrite(&byte, &self.limits)?;
+        let simple = np_rewrite::rewrite(&byte, &self.limits)?;
         let mut spettro = None;
         mzml::parse(&simple[..], |it| {
             if let Item::Spectrum(s) = it {
@@ -313,7 +313,7 @@ impl Reader for NumpressReader {
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        crate::non_portati::NUMPRESS
+        crate::not_carried::NUMPRESS
     }
 
     fn samples(&self) -> &[Sample] {

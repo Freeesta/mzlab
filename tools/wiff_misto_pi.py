@@ -1,4 +1,4 @@
-"""Synthetic .wiff + .wiff.scan whose first sample the engine reads and whose second it does not (crates/mzlab-lettori/tests/sciex_sonda.rs).
+"""Synthetic .wiff + .wiff.scan whose first sample the engine reads and whose second it does not (crates/mzlab-lettori/tests/sciex_probe.rs).
 
     python3 tools/wiff_misto_pi.py OUT
 

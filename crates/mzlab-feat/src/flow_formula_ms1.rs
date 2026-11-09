@@ -6,6 +6,7 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 use mzlab_core::mzml::Run;
+use mzlab_core::mzml_estimate;
 
 use crate::flow_ms2::{num, read_table, Named, Table};
 use crate::untargeted::formula_id::{identify, to_json, Opts};
@@ -176,12 +177,14 @@ fn row_text(o: &Opts, warn: bool, t: &Table, n: usize, name: &str, run: &Run) ->
     Ok(out.0)
 }
 
-/// The objects of the features that read the file `file.0` of `names` (`file.1` are its bytes), with their position in the table. A file no feature reads is not parsed.
+/// The objects of the features that read the file `file.0` of `names` (`file.1` are its bytes), with their position in the table. A file no feature reads is not parsed;
+/// one whose decoding (`mzml_estimate`, with `held` bytes of files in memory, at least its own) does not fit in `cap` bytes is refused with `error.memoryBudget` (phase `read`).
 pub fn ms1_rows(
     params: &[(String, Value)],
     features: &[u8],
     names: &[&str],
     file: (usize, &[u8]),
+    (held, cap): (usize, usize),
 ) -> Result<Vec<(usize, String)>> {
     let t = read_table(features)?;
     let (mut o, mine) = (opts(params), file_of_rows(&t, names)?);
@@ -189,6 +192,8 @@ pub fn ms1_rows(
     if rows.is_empty() {
         return Ok(Vec::new());
     }
+    let x = mzml_estimate::inputs(file.1);
+    mzml_estimate::check(mzml_estimate::bytes(&x, held.max(file.1.len())), cap)?;
     let run = mzlab_core::mzml::read(file.1)?;
     let warn;
     (o.ion, warn) = ion_of_file(params, &run);
@@ -205,14 +210,21 @@ pub fn ms1_join(rows: &[String]) -> String {
     out.0
 }
 
-/// `formula.ms1`: for each feature the MS1 scan at the apex, in the file where the feature is largest, goes to `formula_id::identify`.
-pub fn ms1_text(params: &[(String, Value)], features: &[u8], files: &[Named]) -> Result<String> {
+/// `formula.ms1`: for each feature the MS1 scan at the apex, in the file where the feature is largest, goes to `formula_id::identify`. All the files are in memory
+/// while each is decoded, in `cap` bytes.
+pub fn ms1_text(
+    params: &[(String, Value)],
+    features: &[u8],
+    files: &[Named],
+    cap: usize,
+) -> Result<String> {
+    let held = files.iter().map(|f| f.1.len()).sum();
     let names: Vec<&str> = files.iter().map(|f| f.0).collect();
     let t = read_table(features)?;
     file_of_rows(&t, &names)?;
     let mut rows = vec![String::new(); t.rows.len()];
     for (k, f) in files.iter().enumerate() {
-        for (n, s) in ms1_rows(params, features, &names, (k, f.1))? {
+        for (n, s) in ms1_rows(params, features, &names, (k, f.1), (held, cap))? {
             rows[n] = s;
         }
     }

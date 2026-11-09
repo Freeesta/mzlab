@@ -28,11 +28,11 @@ Un solo worker del motore serve TUTTE le richieste (`rust-worker.js` `handle`): 
 |---|---|---|---|---|
 | mzML | `.mzml` | §1, motore `.wasm` | `lr_index` → `IdxBuilder::build` (`idxbuild.rs` 131): `mmap`, `prepare_parallelo`, `build_mzml_spill` | testata, indice, intestazioni (§1 passo 5); array solo nell'indice |
 | mzML con MS-Numpress | `.mzml` | il motore rifiuta (`err.file.numpress`); la pagina lo apre come campione nativo (`numpressToNat` in `shell.js`) e il motore lo indicizza dal lettore del modulo `aperti` (`aperti/mzml_numpress.rs`), senza riscrivere l'mzML | CLI: `flow_pace::is_numpress_mzml` manda l'indice al lettore `mzml-numpress` del registro; app: `moduliToNat` (`shell.js`) → campione nativo (`natsamples`, `lr_put` con `nat`; `tests/numpress_mzml.rs`, passo «module types» di `e2e_shim.py`) | tabella (`scantable::read`) + byte di ogni spettro |
-| mzXML | `.mzxml` | solo modulo `aperti` (`soloModulo`, `lettori-famiglie.js`): conversione in mzML in OPFS, poi §1 | campione nativo (`moduliToNat`, lettore `mzxml` del registro); `pick_files` lo offre | `mzxml_indice.rs`: un passaggio sequenziale a blocchi da 1 MiB (l'`<index>` finale non è usato) |
+| mzXML | `.mzxml` | solo modulo `aperti` (`soloModulo`, `lettori-famiglie.js`): conversione in mzML in OPFS, poi §1 | campione nativo (`moduliToNat`, lettore `mzxml` del registro); `pick_files` lo offre | `mzxml_index.rs`: un passaggio sequenziale a blocchi da 1 MiB (l'`<index>` finale non è usato) |
 | Thermo `.raw` | `.raw` | modulo `thermo` caricato a richiesta (`lettore-esterno.js`, `carica-modulo.js`, SHA-256 verificato), il motore lo legge via `native_external` SENZA mzML; indice v2 dal lettore | lettore nel core (feature `thermo`), `build_nat` (`idxbuild_nat.rs`) | `rawlettore.rs`: indici e tabella eventi, nessun picco; pacchetto per offset a richiesta; finestra 64 KB (3 blocchi da 256 KB nel modulo) |
 | Waters `.raw` (cartella) | cartella con `_FUNC001.DAT` | modulo `waters` (conversione in mzML) | lettore nativo | `_FUNCTNS.INF` e indici; `.DAT` per posizione |
 | SCIEX `.wiff` + `.wiff.scan` | coppia | motore (3200 QTRAP) come campione nativo; varianti → modulo `sciex` | `build_nat` | `.wiff` INTERO in un `Vec` (tetto `Limiti`), `.wiff.scan` mai intero (per blocchi); `apri_solo`: un campione |
-| Agilent `.D` | cartella | motore base; varianti (QqQ MRM, Q-TOF, compressi) → modulo `agilent` | nativo | `MSScan.bin` intero (con tetto), `MSPeak.bin` per offset. Cartelle `.D` nel desktop: non trovato un percorso di apertura (`cartella.rs`, `apertura.rs` le escludono) |
+| Agilent `.D` | cartella | motore base; varianti (QqQ MRM, Q-TOF, compressi) → modulo `agilent` | nativo | `MSScan.bin` intero (con tetto), `MSPeak.bin` per offset. Cartelle `.D` nel desktop: non trovato un percorso di apertura (`folder.rs`, `opening.rs` le escludono) |
 | Bruker `.d` TDF/TSF | cartella | modulo `bruker` | nativo | tabelle SQLite, frame per offset; `.baf` rifiutato (`err.file.brukerBaf`) |
 | Shimadzu | `.qgd`, `.lcd` | modulo `shimadzu` (conversione) | nativo (`moduliToNat`) | file INTERO in memoria (`dim*2 > limiti.byte` rifiuta); non a offset |
 | ANDI/netCDF | `.cdf`, `.nc` | modulo `andi` | nativo (`moduliToNat`) | colonne intere delle variabili di scansione |
@@ -49,12 +49,12 @@ Campioni nativi (`.raw`, `.wiff`, `.D`): `lr_put` con `nat` copia i membri in OP
 
 ## 3. App desktop
 
-- **Ingresso**: clic su `#drop` o `#dropdam` intercettato da `shim/desktop-shim.js` → comando Tauri `pick_files` (dialogo in `spawn_blocking`, filtro dal registro dei lettori); trascinamento: `register_paths` (`main.rs` 116, solo `metadata`); doppio clic dal sistema: `apri.rs` (`single_instance`, argv, macOS `RunEvent::Opened`; coda `Pending`, `apertura.rs`; solo estensioni del registro). La pagina non vede mai il percorso: `State::pick` (`engine.rs` 137) assegna un numero, `toFile` crea un `File` vuoto con `type=application/x-mzlab-file;id=N`. Nessun dato letto in questo passo.
+- **Ingresso**: clic su `#drop` o `#dropdam` intercettato da `shim/desktop-shim.js` → comando Tauri `pick_files` (dialogo in `spawn_blocking`, filtro dal registro dei lettori); trascinamento: `register_paths` (`main.rs` 116, solo `metadata`); doppio clic dal sistema: `apri.rs` (`single_instance`, argv, macOS `RunEvent::Opened`; coda `Pending`, `opening.rs`; solo estensioni del registro). La pagina non vede mai il percorso: `State::pick` (`engine.rs` 137) assegna un numero, `toFile` crea un `File` vuoto con `type=application/x-mzlab-file;id=N`. Nessun dato letto in questo passo.
 - **Trasporto**: `desktop-worker.js` (thread Worker JS) fa `fetch` su `mzlab://` (POST con JSON; risposte JSON o binarie per `tic`/`xic`/`spectra`, `scanbin`, `idxxicbin`, `natsrm`); coda unica dei messaggi (`line`), fuori coda solo `lr_index`, `lr_index_cen`, `nat2mzml`, `mzml2cen`. Lato Rust ogni richiesta ha un `std::thread::spawn` (`main.rs` 456). `State::rpc` (`rpc.rs` 340): le operazioni lunghe vanno SENZA il lock `Mutex<Eng>`; `lr_put`, `lr_entry`, `idxopen`, `route`, `scanbin` lo prendono e sono seriali.
 - **mzML**: `lr_put` (`rpc_lr.rs` 65) non copia (stamp size+mtime in `store.rs`), tranne un file temporaneo dell'app (`fs::copy`); cancella l'indice del nome. `lr_index` (`rpc.rs` 125) → `IdxBuilder::build`: `Mapped::open` (mmap, `mapped.rs`), `upload::prepare_parallelo` (tabella + SHA-256 su un secondo thread), `ram::check_index`, `mzidx::build_mzml_spill` (budget 64 MB, scorta `.sp.part`), scrive `.part` poi `rename`. Pool rayon: min(core−1, 4), 1 minimo (`idxbuild.rs` 23-28). Decodifica con
   `parse_helped` (3 thread, `mzml/help/pool.rs`) e ordinamento dei secchi fino a 8 thread (`mzidx_ordine.rs`).
-- **Nativi**: nessuna copia dei membri (mappati); `build_nat` (`idxbuild_nat.rs` 207) con impronte su un secondo thread; `lr_entry` legge da `Src::Nat` (`nativi.rs` 91): al più 4 lettori aperti e 32 MB di gusci, LRU (`nativi_slots.rs`). Dopo il caricamento ogni campione entra nella coda di conversione in sottofondo (`conv_coda.rs`: core−1 thread, aspetta con sleep di 100 ms finché si indicizza).
-- **Cache dell'indice**: `app_cache_dir()/mzidx/<nome>.mzidx` (`avvio.rs` 17-20), validità size+mtime (`store.rs` 107, `lr_boot` `rpc_lr.rs` 51-63), poi `Index::open` controlla magic e dimensione. A freddo (nuovo processo) il codice trovato fa `?riparti=1` → `lr_clear` che rimuove gli indici (`rpc_lr.rs` 182): l'indice non sopravvive al riavvio dell'app (da confermare a mano).
+- **Nativi**: nessuna copia dei membri (mappati); `build_nat` (`idxbuild_nat.rs` 207) con impronte su un secondo thread; `lr_entry` legge da `Src::Nat` (`natives.rs` 91): al più 4 lettori aperti e 32 MB di gusci, LRU (`natives_slots.rs`). Dopo il caricamento ogni campione entra nella coda di conversione in sottofondo (`conv_queue.rs`: core−1 thread, aspetta con sleep di 100 ms finché si indicizza).
+- **Cache dell'indice**: `app_cache_dir()/mzidx/<nome>.mzidx` (`startup.rs` 17-20), validità size+mtime (`store.rs` 107, `lr_boot` `rpc_lr.rs` 51-63), poi `Index::open` controlla magic e dimensione. A freddo (nuovo processo) il codice fa `?riparti=1` → `lr_clear` che rimuove gli indici (`rpc_lr.rs` 182): l'indice non sopravvive al riavvio (da confermare a mano).
 - **Letture successive** (`mzmlroute`, `scanbin`, `specexact`): `map_file` (`rpc.rs` 399) rifà `open`+`mmap` a ogni richiesta, nessuna cache della mappa.
 - **Memoria**: budget `native_auto_mb` = RAM/4 tra 1024 e 16384 MB (`ram.rs`, `budget_auto.rs`); `check_index` rifiuta prima con `error.memoryBudget`. `ram_mb()` legge `/proc/meminfo` o `sysctl`: su Windows probabilmente 0 → 1024 MB (non verificato). `Limiti::desktop()`: 1024 MB, 50 M voci. Il vecchio `State::open` (`engine.rs` 165) legge TUTTO il file in RAM (`mzml::read`/`raw::read`) ed è solo ripiego.
 
@@ -137,10 +137,10 @@ mzlab/web/impronta-worker.js
 mzlab/web/lettura-sync.js
 mzlab/web/rust-opfs.js
 crates/mzlab-wasm/src/lib.rs
-crates/mzlab-wasm/src/nativi.rs
-crates/mzlab-wasm/src/nativi_motore.rs
-crates/mzlab-wasm/src/contato.rs
-crates/mzlab-wasm/src/corriere.rs
+crates/mzlab-wasm/src/natives.rs
+crates/mzlab-wasm/src/natives_engine.rs
+crates/mzlab-wasm/src/counted.rs
+crates/mzlab-wasm/src/courier.rs
 crates/mzlab-wasm/src/cache.rs
 
 @lotto 3
@@ -168,19 +168,19 @@ mzlab/web/lettori-famiglie.js
 mzlab/web/lettore-esterno.js
 mzlab/web/carica-modulo.js
 mzlab/web/cartella-puntata.js
-crates/mzlab-wasm/src/esterno.rs
+crates/mzlab-wasm/src/external.rs
 crates/mzlab-lettori/src/lib.rs
 crates/mzlab-lettori-wasm/src/lib.rs
-crates/mzlab-lettori-wasm/src/sessione.rs
+crates/mzlab-lettori-wasm/src/reading/session.rs
 crates/mzlab-core/src/trasporto.rs
 crates/mzlab-core/src/rawlettore.rs
 crates/mzlab-core/src/wiff/lettore.rs
 crates/mzlab-core/src/agilent/lettore.rs
-crates/mzlab-lettori/src/waters/lettore.rs
+crates/mzlab-lettori/src/waters/reader.rs
 crates/mzlab-lettori/src/shimadzu/mod.rs
 crates/mzlab-lettori/src/andi/ms.rs
 crates/mzlab-lettori/src/aperti/mzxml.rs
-crates/mzlab-lettori/src/aperti/mzxml_indice.rs
+crates/mzlab-lettori/src/aperti/mzxml_index.rs
 crates/mzlab-lettori/src/aperti/mzml_numpress.rs
 
 @lotto 5
@@ -196,13 +196,13 @@ crates/mzlab-desktop/src/idxbuild.rs
 crates/mzlab-desktop/src/idxbuild_nat.rs
 crates/mzlab-desktop/src/mapped.rs
 crates/mzlab-desktop/src/ram.rs
-crates/mzlab-desktop/src/nativi.rs
-crates/mzlab-desktop/src/nativi_slots.rs
-crates/mzlab-desktop/src/conv_coda.rs
+crates/mzlab-desktop/src/natives.rs
+crates/mzlab-desktop/src/natives_slots.rs
+crates/mzlab-desktop/src/conv_queue.rs
 crates/mzlab-desktop/src/apri.rs
-crates/mzlab-desktop/src/apertura.rs
-crates/mzlab-desktop/src/avvio.rs
-crates/mzlab-desktop/src/cartella.rs
+crates/mzlab-desktop/src/opening.rs
+crates/mzlab-desktop/src/startup.rs
+crates/mzlab-desktop/src/folder.rs
 
 @lotto 6
 mzlab/web/explore.js

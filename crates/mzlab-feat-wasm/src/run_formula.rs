@@ -6,7 +6,8 @@ use mzlab_feat::flow_ms2::json_params;
 use wasm_bindgen::prelude::*;
 
 /// The rows of the features whose largest area is in `mzml` (the `index`-th of the `names_json` array of file names), one per line as `position TAB object`. `features` is the CSV of
-/// `export.table_csv`; the parameters are the ones of the step as JSON merged with its defaults, without `ion` when the plan does not write it (each file then gives its own). Errors are JSON `{"error_key","params"}` texts.
+/// `export.table_csv`; the parameters are the ones of the step as JSON merged with its defaults, without `ion` when the plan does not write it (each file then gives its own).
+/// `budget_mb` is the memory of the engine (0 = the default of the page). Errors are JSON `{"error_key","params"}` texts (`error.memoryBudget`, phase `read`).
 #[wasm_bindgen]
 pub fn flow_ms1_rows(
     params_json: &str,
@@ -14,6 +15,7 @@ pub fn flow_ms1_rows(
     names_json: &str,
     index: usize,
     mzml: &[u8],
+    budget_mb: f64,
 ) -> std::result::Result<String, JsValue> {
     let params = json_params(params_json).map_err(crate::js_err)?;
     let names = json_params(&format!("{{\"n\":{names_json}}}")).map_err(crate::js_err)?;
@@ -24,7 +26,9 @@ pub fn flow_ms1_rows(
         .iter()
         .map(|v| v.str().unwrap_or(""))
         .collect();
-    let rows = ms1_rows(&params, features, &names, (index, mzml)).map_err(crate::js_err)?;
+    let cap = mzlab_core::budget::MemBudget::from_request(budget_mb).cap();
+    let rows = ms1_rows(&params, features, &names, (index, mzml), (mzml.len(), cap))
+        .map_err(crate::js_err)?;
     Ok(rows.iter().map(|(n, s)| format!("{n}\t{s}\n")).collect())
 }
 

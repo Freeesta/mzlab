@@ -1,7 +1,7 @@
 //! The detection estimate in the app on the fixture `tests/dati/stima_detect.json`: the route `feat/estimate_detect` answers the JSON of the `.wasm`
 //! `estimate_detect` at each budget of the fixture, and `feat/detect`, under the budget of this computer, writes the bytes of the direct step.
-#[path = "../../mzlab-feat-wasm/tests/stima_comune/mod.rs"]
-mod comune;
+#[path = "../../mzlab-feat-wasm/tests/estimate_common/mod.rs"]
+mod common;
 
 use mzlab_core::idxread::Index;
 use mzlab_desktop::rpc::Answer;
@@ -19,11 +19,11 @@ fn text(a: Answer) -> String {
 
 #[test]
 fn the_route_answers_the_estimate_of_the_fixture_and_detects_what_fits() {
-    let s = comune::spec();
+    let s = common::spec();
     let mb = s["mb"].as_u64().unwrap();
     let data = tempfile::tempdir().unwrap();
     let file = data.path().join("stima.mzML");
-    std::fs::write(&file, comune::mzml(&s)).unwrap();
+    std::fs::write(&file, common::mzml(&s)).unwrap();
     let st = State::new();
     st.set_data_folder(data.path().join("app"));
     st.set_index_folder(data.path().join("idx")).unwrap();
@@ -32,7 +32,7 @@ fn the_route_answers_the_estimate_of_the_fixture_and_detects_what_fits() {
     st.rpc("lr_put", &json!({"name": name, "fid": id}), &[])
         .unwrap();
     st.rpc("lr_index", &json!({"name": name}), &[]).unwrap();
-    for (budget, via) in comune::cases(&s) {
+    for (budget, via) in common::cases(&s) {
         let got = text(
             st.rpc(
                 "feat/estimate_detect",

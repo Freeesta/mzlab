@@ -1,4 +1,4 @@
-//! Source reads and bytes of opening a multi-sample `.wiff` pair the way the page does (`crates/mzlab-wasm/src/nativi.rs`): the list of samples, one index
+//! Source reads and bytes of opening a multi-sample `.wiff` pair the way the page does (`crates/mzlab-wasm/src/natives.rs`): the list of samples, one index
 //! builder per sample, the engine's reader. A counting `ReadAt` stands in for the browser's synchronous reads. The synthetic pair needs python3
 //! (`tools/wiff_riferimento.py`) and skips without it.
 

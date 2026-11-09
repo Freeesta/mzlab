@@ -1,7 +1,7 @@
 //! `_FUNCnnn.IDX`: one record per scan, in two layouts. Variant A (22 bytes) holds the offset in the DAT as `u32`; variant B (30 bytes) holds it as `u64` at byte 22. In both, bytes 4-7
 //! hold the number of records of the scan in their low 24 bits, then the TIC (`f32`) and the retention time in minutes (`f32`).
 
-use super::cartella::{errore, f32_at, u32_at};
+use super::folder::{errore, f32_at, u32_at};
 use mzlab_core::error::Result;
 use mzlab_core::lettori::Limits;
 

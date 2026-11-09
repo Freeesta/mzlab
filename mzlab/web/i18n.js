@@ -113,13 +113,13 @@
   const num = (x, dec) => (x === null || x === undefined || Number.isNaN(+x)) ? "" : (dec === undefined ? String(+x) : (+x).toFixed(dec));
 
   // the texts written for the desktop app, where the limit is the memory of the computer and not of the browser
-  const NATIVE = new Set(["error.memoryBudget.native", "error.memoryBudgetFase.native", "error.memoryBudgetFase.indexPeaks.native", "error.memoryBudgetFase.detect.native"]);
+  const NATIVE = new Set(["error.memoryBudget.native", "error.memoryBudgetFase.native", "error.memoryBudgetFase.indexPeaks.native", "error.memoryBudgetFase.detect.native", "error.memoryBudgetFase.read.native"]);
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
   function err(j) {
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
     // a refusal of the memory contract names the phase, the estimate and the budget: its own text says by how much the file overshoots
     // (a phase with a text of its own, `error.memoryBudgetFase.<id>`, names its real limit)
-    // in the desktop app the limit is the memory of the computer, not of the browser: a key with a `.native` text uses that one (testo_errore.rs, same choice)
+    // in the desktop app the limit is the memory of the computer, not of the browser: a key with a `.native` text uses that one (error_text.rs, same choice)
     const nat = key => (typeof window !== "undefined" && window.MZLAB_DESKTOP && NATIVE.has(key + ".native") ? key + ".native" : key), FP = "error.memoryBudgetFase.";
     const fase = j.error_key === "error.memoryBudget" && j.params && j.params.fase, own = fase && (cat[lang][FP + fase] || cat.it[FP + fase]) && nat(FP + fase).slice(FP.length);
     const k = nat(fase ? "error.memoryBudgetFase" : j.error_key);

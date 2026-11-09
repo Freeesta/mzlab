@@ -6,6 +6,7 @@ use crate::dia::{pseudo_ms2, DiaParams, DiaScan, Prec};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
 use mzlab_core::mzml::{self, Spectrum};
+use mzlab_core::mzml_estimate;
 
 /// A file the step reads: its name and its bytes.
 pub type Named<'a> = (&'a str, &'a [u8]);
@@ -59,6 +60,8 @@ pub struct Ms2Params {
     pub dia_min_corr: f64,
     pub dia_min_points: f64,
     pub dia_frag_ppm: f64,
+    /// Bytes the step may hold: the files, what decoding one of them asks for and the text (`mzml_estimate`); past it, `error.memoryBudget` (phase `read`).
+    pub cap: usize,
 }
 
 impl Ms2Params {
@@ -75,6 +78,7 @@ impl Ms2Params {
             dia_min_corr: num("dia_min_corr").unwrap_or(0.9),
             dia_min_points: num("dia_min_points").unwrap_or(5.0),
             dia_frag_ppm: num("dia_frag_ppm").unwrap_or(10.0),
+            cap: usize::MAX,
         }
     }
 }
@@ -211,13 +215,16 @@ pub fn ms2_text(p: &Ms2Params, files: &[Named], features: Option<&[u8]>) -> Resu
     let widest = p.max_isolation;
     let tol = (p.tol_da, p.rt_tol);
     let table = features.map(read_table).transpose()?;
+    let text_bytes = fits(p, files)?;
     if p.dia_pseudo {
         let table =
             table.ok_or_else(|| Error::new("err.flow.port.missing").with("port", "features"))?;
         return dia_text(p, files, &table, tol.1);
     }
     let mut out = String::new();
-    for (name, bytes) in files {
+    for ((name, bytes), reserve) in files.iter().zip(text_bytes) {
+        // the text is reserved once from its bound, not grown by doubling (a copy of it at each step)
+        out.reserve_exact(reserve);
         let run = mzml::read(*bytes)?;
         let text = String::from_utf8_lossy(bytes);
         let extra = extras(&text);
@@ -254,6 +261,26 @@ pub fn ms2_text(p: &Ms2Params, files: &[Named], features: Option<&[u8]>) -> Resu
         return Err(Error::new("err.flow.port.missing").with("port", "source"));
     }
     Ok(out)
+}
+
+/// `Ok` with the bound of the text of each file when every file, decoded with all of them in memory, fits in `p.cap` with the text of the files before it
+/// (reserved, and copied once when it grows), else `error.memoryBudget` (phase `read`) before anything is decoded.
+fn fits(p: &Ms2Params, files: &[Named]) -> Result<Vec<usize>> {
+    let held: usize = files.iter().map(|f| f.1.len()).sum();
+    let mut before = 0;
+    let mut bounds = Vec::with_capacity(files.len());
+    for (_, bytes) in files {
+        let x = mzml_estimate::inputs(bytes);
+        let text = if p.dia_pseudo {
+            mzml_estimate::f64_copy_bytes(&x)
+        } else {
+            mzml_estimate::mgf_bytes(&x)
+        };
+        mzml_estimate::check(mzml_estimate::bytes(&x, held) + 2 * before + text, p.cap)?;
+        before += text;
+        bounds.push(if p.dia_pseudo { 0 } else { text });
+    }
+    Ok(bounds)
 }
 
 /// The features of the table present in the file `file` (area above zero) as precursors with the RT range `rt ± rt_tol`, and their m/z.

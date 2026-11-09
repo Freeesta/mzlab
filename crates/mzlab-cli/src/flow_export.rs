@@ -38,7 +38,11 @@ pub(crate) fn table_by_sha(r: &FileRunner, sha: &str) -> Option<PathBuf> {
         .chain(r.inputs.values().cloned())
         .chain(near)
         .filter(|p| p.extension().is_some_and(|x| x == "mzfeat"))
-        .find(|p| std::fs::read(p).is_ok_and(|b| sha256_hex(&b) == sha))
+        .find(|p| {
+            std::fs::File::open(p)
+                .and_then(mzlab_core::budget::sha256_hex_read)
+                .is_ok_and(|h| h == sha)
+        })
 }
 
 /// The text of the file `kind` of the table under the view `spec` (empty: the whole table).

@@ -1,11 +1,11 @@
 //! A Bruker timsTOF `.d` folder as a `Lettore` (docs/agenti/bruker.md): `analysis.tdf` + `analysis.tdf_bin` (TIMS on) and `analysis.tsf` + `analysis.tsf_bin` (TIMS off, MALDI).
 //! The tables come from `sqlite_min`, the peaks of a frame from `blocco` (TDF) or `tsf`, the cut of a frame into spectra from `spettri`.
-use super::blocco::{decode, read_block, Peaks};
-use super::spettri::{build, summed, Desc};
+use super::block::{decode, read_block, Peaks};
+use super::header::BrukerHeader;
+use super::spectra::{build, summed, Desc};
 use super::sqlite_min::Sqlite;
-use super::tabelle::Data;
-use super::tdf_aiuti::{absent, bad_index, cartella, cut_ones, recognize, sum_scan, take};
-use super::testata::BrukerHeader;
+use super::tables::Data;
+use super::tdf_helpers::{absent, bad_index, cartella, cut_ones, recognize, sum_scan, take};
 use super::tsf;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
@@ -17,10 +17,10 @@ use mzlab_core::metodo::SrcFile;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
-use tracce::maximum;
+use traces::maximum;
 
-#[path = "tracce.rs"]
-mod tracce;
+#[path = "traces.rs"]
+mod traces;
 
 const UNITS: &str = "Arbitrary Intensity Units";
 
@@ -269,7 +269,7 @@ impl Reader for BrukerReader {
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        crate::non_portati::BRUKER
+        crate::not_carried::BRUKER
     }
 
     fn samples(&self) -> &[Sample] {

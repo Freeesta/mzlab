@@ -198,7 +198,8 @@ body.sb-resizing{-webkit-user-select:none!important;user-select:none!important;c
 #sb-panel-qaqc .qq-tab{width:100%;font-size:11px;border-collapse:collapse}
 #sb-panel-qaqc .qq-tab th,#sb-panel-qaqc .qq-tab td{padding:2px 4px;border-bottom:1px solid var(--line);text-align:left}
 #sb-panel-qaqc .qq-tab td.num{text-align:right;font-variant-numeric:tabular-nums}
-#sb-panel-qaqc .qq-scroll{overflow-x:auto}
+/* contain:paint: a scroller that is not composited made the browser re-layer its whole table at every frame of the page (500 rows: 125 ms a frame) */
+#sb-panel-qaqc .qq-scroll{overflow-x:auto;contain:paint}
 #sb-panel-qaqc .qq-form{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:flex-end;margin:4px 0}
 #sb-panel-qaqc .qq-form label{display:flex;flex-direction:column;font-size:11px;color:var(--muted)}
 #sb-panel-qaqc .qq-form input{max-width:100%;box-sizing:border-box}
@@ -214,7 +215,7 @@ body.sb-resizing{-webkit-user-select:none!important;user-select:none!important;c
 #sb-panel-stat .qq-tab{width:100%;font-size:11px;border-collapse:collapse}
 #sb-panel-stat .qq-tab th,#sb-panel-stat .qq-tab td{padding:2px 4px;border-bottom:1px solid var(--line);text-align:left}
 #sb-panel-stat .qq-tab td.num{text-align:right;font-variant-numeric:tabular-nums}
-#sb-panel-stat .qq-scroll{overflow-x:auto}.qq-scroll:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#sb-panel-stat .qq-scroll{overflow-x:auto;contain:paint}.qq-scroll:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #sb-panel-stat :is(input:not([type=file]),select){min-height:24px}
 #sb-panel-stat .qq-form{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:flex-end;margin:4px 0}
 #sb-panel-stat .qq-form label{display:flex;flex-direction:column;font-size:11px;color:var(--muted)}
@@ -359,6 +360,7 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 #xic-rows{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content max-content;column-gap:8px}
 .xrw{display:grid;grid-column:1/-1;grid-template-columns:subgrid;gap:2px 8px;align-items:center;margin:var(--sp-3) 0}.xrw>label{font-weight:600;grid-column:1}.xrw .xin{display:contents}.xrw .xin input{grid-column:2;min-width:0}.xrw .xin select{grid-column:3}.xrw .xr-x{grid-column:4;padding:0 7px}.xrw .xr-sum{grid-column:2/-1;font-size:11px;color:var(--muted);min-height:1.2em}
 @media (max-width:480px){#xic-rows{grid-template-columns:max-content minmax(0,1fr) max-content}.xrw .xin select{grid-column:2;grid-row:2}.xrw .xr-x{grid-column:3;grid-row:1}.xrw .xr-sum{grid-row:3;grid-column:1/-1}}
+@supports not (grid-template-columns:subgrid){.xrw{grid-template-columns:minmax(2ch,max-content) minmax(0,1fr) max-content max-content}@media (max-width:480px){.xrw{grid-template-columns:minmax(2ch,max-content) minmax(0,1fr) max-content}}}      /* Chrome/Edge 111-116: no subgrid, so each row repeats the columns of #xic-rows (the label column at least 2ch, so the rows line up) */
 .sb-search-box{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 8px;flex:1;min-width:0}.sb-search-box:focus-within{border-color:var(--accent)}.sb-search-box svg{color:var(--muted);flex:none}.sb-search-box input{border:0;background:transparent;padding:2px 0;width:100%;outline:none;font:inherit;color:var(--ink)}
 .nlbar{display:flex;gap:8px;align-items:center;margin:var(--sp-1) 0 var(--sp-3)}.nlr{border-bottom:1px solid var(--line)}.nlr.hit{background:color-mix(in srgb,var(--warn) 15%,var(--panel))}.nlrow{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:var(--sp-2) 6px;margin:0;border:0;border-radius:4px;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}.nlrow:hover{background:var(--sel)}.nlrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.nlm{flex:none;min-width:2.4ch;font-size:17px;font-weight:700;color:var(--accent);line-height:1;font-variant-numeric:tabular-nums}.nlm small{font-size:10.5px;font-weight:400;margin-left:4px}.nlf{flex:none;font-size:15px;white-space:nowrap}.nlsep{color:var(--muted)}.nls{flex:1 1 0;min-width:0;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nlrd{flex:none;width:8px;height:8px;border-radius:50%;background:var(--warn)}.nlch{flex:none;color:var(--muted);transition:transform .15s}.nlrow[aria-expanded=true] .nlch{transform:rotate(180deg)}@media (prefers-reduced-motion:reduce){.nlch{transition:none}}@media (pointer:coarse){.nlrow{min-height:40px}}.nlrad-t{color:var(--warn);margin-top:2px}.nldet{background:var(--bg);border-radius:6px;padding:var(--sp-2) 8px;margin:0 0 var(--sp-2);font-size:12px;line-height:1.4}.nldet[hidden]{display:none}.nld-it+.nld-it{margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}.nld-name{margin-bottom:3px;color:var(--ink)}.nlp{font-style:normal;display:inline-block;min-width:16px;text-align:center;border:1px solid var(--line);border-radius:8px;font-size:11px;margin-right:2px}
 
@@ -380,7 +382,11 @@ html.touch #inf-tree tbody tr,html.touch #mincl tr[data-i],html.touch #flst .fgh
  .pnl .bt,.pnl .lk,.pnl .x{min-width:40px;min-height:40px;font-size:13px}.pnl .bt svg{width:20px;height:20px}
  .pnl .hd select,.pnl .hd input,#tools button,#tools select,header button,.seg button,.tbg button{min-height:40px}
  .fl{padding:11px 4px}
+ /* the finger floor of 24 px (WCAG 2.5.8) for what the compact rules above shrink: folds, check boxes in their label, a panel title (double tap renames it) */
+ summary,label:has(>input[type=checkbox]),label:has(>input[type=radio]),.liste-panel .seg button,.xrw .xr-x{min-height:24px}.hd .ttl{line-height:24px}
 }
+/* soft keyboard up (tocco-controlli.js): a modal dialog in the band the keyboard leaves, scrolling inside it */
+html.kb dialog:modal{top:var(--vv-top,0px)!important;bottom:var(--vv-bottom,0px)!important;max-height:calc(100% - var(--vv-top,0px) - var(--vv-bottom,0px) - 16px)!important;overflow:auto}
 @media (pointer:coarse),(max-width:1100px){body.hrw #flst .fl{padding:3px 4px}body.hrw #flst .fgh{margin:4px 0 1px}body.hrw #flst .fgh[data-gg]:focus-visible{outline:2px solid var(--accent)}}
 
 /* smartphone (telefono.js): only the header with logo and info, and the card with the open-anyway button; nothing else is built or downloaded */
@@ -645,7 +651,7 @@ html.in-draw #sb-toggle{display:none}
 #tools #fsel{flex:1 1 auto;min-width:9ch;max-width:min(36ch,30cqw)}
 #tools>#g-add{flex:0 6 auto;min-width:min(100%,7.5rem);overflow-x:auto;scrollbar-width:none;padding:3px 3px 3px 8px;margin:-3px -3px -3px 0}
 #tools>#g-add::-webkit-scrollbar{display:none}
-@container tools (max-width:1180px){#tools>#g-add{mask-image:linear-gradient(to right,#000 calc(100% - 14px),transparent)}}
+@container tools (max-width:1180px){#tools>#g-add{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 14px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 14px),transparent)}}
 /* the tick boxes of the side list (file, precursor row, group header) are one control: a 24 px target (WCAG 2.2 target size) that draws a 14 px box (checked, indeterminate, hover and focus included) */
 #flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall){appearance:none;-webkit-appearance:none;position:relative;width:24px;height:24px;margin:0;flex:none;border:0;background:none;cursor:pointer}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall)::before{content:"";position:absolute;inset:5px;box-sizing:border-box;border:1.5px solid var(--muted);border-radius:3px;background:var(--panel)}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall):checked::before{background:var(--accent);border-color:var(--accent)}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall):checked::after{content:"";position:absolute;left:9.5px;top:6px;width:4px;height:8px;border:solid var(--on-accent);border-width:0 2px 2px 0;transform:rotate(45deg)}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall):disabled{cursor:default}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall):disabled::before{opacity:.5}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall):focus-visible{outline:2px solid var(--accent);outline-offset:-2px}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall):not(:disabled):hover::before{border-color:var(--ink)}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall):indeterminate::before{background:var(--accent);border-color:var(--accent)}#flst :is(.fl,.fgh)>input[type=checkbox]:is([data-k],[data-pr],.gall):indeterminate::after{content:"";position:absolute;left:7px;top:11px;width:10px;height:2px;background:var(--on-accent)}
 /* narrow screens: tighter tab padding so the four tabs plus the tools still fit two header rows; #nav keeps one fixed width (widest label set measured: 250 px) */

@@ -1,4 +1,4 @@
-//! Times every phase the site goes through for a Thermo `.raw` (`crates/mzlab-wasm/src/nativi.rs`): fingerprint, scan table, `.mzidx`,
+//! Times every phase the site goes through for a Thermo `.raw` (`crates/mzlab-wasm/src/natives.rs`): fingerprint, scan table, `.mzidx`,
 //! «Scarica .mzML», each with the reader as it is and with the centroids of `lettori_centroidi`. The member is read through a 256 KB block
 //! cache like the `thermo` module's `JsMember` (`--blocks N` blocks, 3 by default), and the number of reads asked of it, the blocks fetched and the bytes asked, fetched and
 //! fetched again are counted (in the browser each fetch is a JS call).

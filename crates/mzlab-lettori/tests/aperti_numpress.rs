@@ -3,9 +3,9 @@
 #![cfg(feature = "aperti")]
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
-mod comune;
+mod common;
 
-use comune::*;
+use common::*;
 use mzlab_core::lettori::Limits;
 use mzlab_core::mzml;
 use mzlab_core::numpress::{self, Np};

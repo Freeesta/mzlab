@@ -43,3 +43,13 @@ Un file da 10^6 punti (stessa macchina): draw della vista intera 11 ms, dello zo
 Ogni zoom ricostruisce l'intestazione del pannello; `abort()` senza argomento crea una `DOMException` la cui pila trattiene la NodeList dell'intestazione, e il segnale interrotto resta raggiungibile da `AbortSignal.any` sul segnale del pannello: ogni intestazione vecchia restava in memoria, senza limite. Con una ragione senza pila (`0`) nodi e ascoltatori restano fermi (sonda a 50 cicli: 2797 nodi al ciclo 20 e al 40).
 
 Aprire, usare e chiudere 50 XIC trattiene invece ~280 nodi per ciclo nelle voci di annullamento (`storia.js`), che hanno un tetto (100 voci): si ferma a ~50 cicli, la memoria JS resta ~9 MB; nessuna modifica.
+
+## Tabella HR di 100 000 righe nella «Statistica», CPU 1x (`tools/bench_tabella_hr.py`; `main` `3f613c149d136538f016a75257d92c341975859a` → grafico KMD denso `kmd-nuvola.js`, tabella «Dati» a blocchi, `contain:paint` sui riquadri delle tabelle; prova `e2e_kmd_denso`)
+| azione | prima | dopo |
+|---|---|---|
+| tabella caricata e pannello dipinto: fotogramma più lungo, ms | 4211 | 423 |
+| grafico di Kendrick: elementi SVG | 500 008 | 178 |
+| clic su un punto (XIC, profilo, pannello), ms; attività lunghe | 9164; 2 (6987) | 99; 1 (85) |
+| tabella «Dati» del grafico, ms; righe scritte | 10 595; 100 000 | 173; 1000 |
+
+Dove andava il tempo: un elemento focalizzabile per punto (5 nodi ciascuno), il pannello ridipinto per intero a ogni clic (`PROFILO.show` riapriva la scheda già aperta) e il riquadro `overflow-x:auto` della tabella del riferimento (500 righe), che senza `contain:paint` il browser ristratificava a ogni fotogramma della pagina (`PaintArtifactCompositor::Update`, ~125 ms).

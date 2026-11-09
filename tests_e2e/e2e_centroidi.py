@@ -44,11 +44,13 @@ try:
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
         def card_profile():
             pg.wait_for_function("typeof ST !== 'undefined' && ST.files.length === 1 && ST.files[0].spectrum_mode === 'profile'", timeout=60000)
-            assert "Profilo" not in pg.inner_text("#flst") and "Profilo" not in pg.get_attribute("#flst .fl:not(.pr)", "data-tip"), "no mode word on the row or in its tooltip"
+            pg.wait_for_selector("#flst .fl[data-k]")      # the file's card, not the upload row that stands before it
+            assert "Profilo" not in pg.inner_text("#flst") and "Profilo" not in pg.get_attribute("#flst .fl[data-k]", "data-tip"), "no mode word on the row or in its tooltip"
         step("the card of a profile file carries no Profilo word", card_profile)
         def convert():
             pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.wait_for_selector("#uip-cen")
-            assert "Centroidazione" in pg.get_attribute("#uip-cen", "title")
+            want = pg.evaluate("I18N.t('settings.cen.title')")
+            assert want and want != "settings.cen.title" and pg.get_attribute("#uip-cen", "title") == want, pg.get_attribute("#uip-cen", "title")      # the tooltip says what the command does
             pg.click("#uip-cen"); pg.click("#askok")
             pg.wait_for_function("typeof ST !== 'undefined' && ST.files.length === 2", timeout=60000)
             names = sorted(f["name"] for f in pg.evaluate("ST.files"))
