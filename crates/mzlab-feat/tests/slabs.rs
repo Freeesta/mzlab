@@ -357,3 +357,60 @@ fn the_progress_of_the_alignment_ends_at_the_total_and_changes_nothing() {
         }
     }
 }
+
+/// A source that reads its files by parts (`Stored::part`), counting the bytes read that way and the whole files asked for.
+struct Parts(Vec<Vec<u8>>, usize, std::rc::Rc<std::cell::Cell<u64>>);
+
+struct Counted<'a>(&'a [u8], std::rc::Rc<std::cell::Cell<u64>>);
+
+impl mzlab_core::idxread::ReadAt for Counted<'_> {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        self.1.set(self.1.get() + buf.len() as u64);
+        mzlab_feat::store::Slice(self.0).read_at(off, buf)
+    }
+}
+
+impl Stored for Parts {
+    fn count(&self) -> usize {
+        self.0.len()
+    }
+    fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
+        self.1 += 1;
+        Ok(self.0[k].clone())
+    }
+    fn part(
+        &mut self,
+        k: usize,
+    ) -> Result<Option<(Box<dyn mzlab_core::idxread::ReadAt + '_>, u64)>> {
+        let b = &self.0[k];
+        Ok(Some((Box::new(Counted(b, self.2.clone())), b.len() as u64)))
+    }
+}
+
+#[test]
+fn slabs_read_by_parts_give_the_same_bytes_and_read_only_their_rows() {
+    for (mode, of, mb) in [
+        (Mode::Ion, series(), 0.3),
+        (Mode::Family, family_series(), 0.4),
+    ] {
+        let r = recipe(mode);
+        let reference = aligned_bytes(&mut Counting(of.0.clone(), 0), 1024.0, &r).unwrap();
+        let mut whole = Counting(of.0.clone(), 0);
+        aligned_bytes(&mut whole, mb, &r).unwrap();
+        let mut p = Parts(of.0.clone(), 0, Default::default());
+        let open =
+            |_: usize| -> Result<Index<Vec<u8>>> { unreachable!("no weak tier, no filling") };
+        let (t, _) = align_and_fill_stored(&mut p, &MemBudget::mb(mb), &r, open).unwrap();
+        let mut got = Vec::new();
+        write_table_to(&mut got, &t, &r, &Origin::default(), &mut (&[][..])).unwrap();
+        assert!(got == reference, "{mode:?}: different bytes");
+        assert_eq!(p.1, FILES, "{mode:?}: only the survey asks for whole files");
+        let size: u64 = of.0.iter().map(|b| b.len() as u64).sum();
+        let before = (whole.1 - FILES) as u64 * size / FILES as u64;
+        assert!(
+            p.2.get() * 2 < before,
+            "{mode:?}: {} bytes read by parts, {before} as whole files",
+            p.2.get()
+        );
+    }
+}

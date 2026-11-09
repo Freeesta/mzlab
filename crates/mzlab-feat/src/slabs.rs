@@ -40,6 +40,11 @@ pub trait Stored {
     fn weak(&mut self, _k: usize) -> Result<Option<Vec<u8>>> {
         Ok(None)
     }
+    /// A reader of file `k` and its size, when the source reads a part of a file without the rest (a file on disk, an array of the page): a slab
+    /// then reads its rows and not the whole file again. `None`: `bytes`.
+    fn part(&mut self, _k: usize) -> Result<Option<(Box<dyn ReadAt + '_>, u64)>> {
+        Ok(None)
+    }
 }
 
 impl Stored for Vec<Vec<u8>> {
@@ -49,16 +54,27 @@ impl Stored for Vec<Vec<u8>> {
     fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
         Ok(self[k].clone())
     }
+    fn part(&mut self, k: usize) -> Result<Option<(Box<dyn ReadAt + '_>, u64)>> {
+        Ok(Some((Box::new(Slice(&self[k])), self[k].len() as u64)))
+    }
+}
+
+/// The rows of file `k` that `want` asks for, through `Stored::part` when the source has it.
+pub(crate) fn read_want(src: &mut dyn Stored, k: usize, want: Want) -> Result<FileFeatures> {
+    if let Some((mut r, size)) = src.part(k)? {
+        return Ok(read_file_from(&mut r, size, want)?.0);
+    }
+    let b = src.bytes(k)?;
+    Ok(read_file_from(&mut Slice(&b), b.len() as u64, want)?.0)
 }
 
 /// The lean table of file `k`, only the rows with m/z in `range`.
 fn lean(src: &mut dyn Stored, k: usize, range: Option<(f64, f64)>) -> Result<FileFeatures> {
-    let b = src.bytes(k)?;
     let want = Want {
         lean: true,
         mz: range,
     };
-    Ok(read_file_from(&mut Slice(&b), b.len() as u64, want)?.0)
+    read_want(src, k, want)
 }
 
 /// What the series is: rows of each file and all the m/z, and whether every file is sorted by m/z (the slabs need it).
@@ -270,12 +286,11 @@ pub fn align_and_fill_progress<R: ReadAt>(
         &mut prog,
     )?;
     crate::rowmeta::compute_in(&mut table, r.row_window(), &mut |k, range| {
-        let b = src.bytes(k)?;
         let want = Want {
             lean: false,
             mz: Some(range),
         };
-        Ok(read_file_from(&mut Slice(&b), b.len() as u64, want)?.0)
+        read_want(src, k, want)
     })?;
     Ok((table, filled))
 }
