@@ -46,10 +46,10 @@ fn log() -> StatusLog {
 
 #[test]
 fn only_the_channels_that_change_are_series_with_their_section_and_unit() {
-    let v = indice_stato(&log());
+    let v = status_index(&log());
     let got: Vec<(&str, &str, &str, usize)> = v
         .iter()
-        .map(|x| (x.id.as_str(), x.gruppo.as_str(), x.unita.as_str(), x.n))
+        .map(|x| (x.id.as_str(), x.group.as_str(), x.unita.as_str(), x.n))
         .collect();
     assert_eq!(
         got,
@@ -63,23 +63,23 @@ fn only_the_channels_that_change_are_series_with_their_section_and_unit() {
 
 #[test]
 fn the_points_of_a_status_series_carry_the_time_of_each_record() {
-    let s = serie_stato(&log(), "status:Vacuum/Fore Vacuum").expect("series");
+    let s = status_series(&log(), "status:Vacuum/Fore Vacuum").expect("series");
     assert_eq!(
         (s.unita.as_str(), s.t, s.y),
         ("mbar", vec![0.0, 1.0, 2.5], vec![1.0, 1.5, 2.0])
     );
-    assert!(serie_stato(&log(), "status:Ion Source/Vaporizer").is_none());
+    assert!(status_series(&log(), "status:Ion Source/Vaporizer").is_none());
 }
 
 #[test]
 fn a_log_without_time_has_no_series() {
     let l = log();
     let l = StatusLog::new(l.header.clone(), Vec::new(), l.records().to_vec().into());
-    assert!(indice_stato(&l).is_empty());
+    assert!(status_index(&l).is_empty());
 }
 
 /// The records as the rows a file gives: the numeric value of each field by position.
-fn rows(recs: &[GenericRecord]) -> impl FnMut(Riga<'_>) + '_ {
+fn rows(recs: &[GenericRecord]) -> impl FnMut(Row<'_>) + '_ {
     move |f| {
         for (k, r) in recs.iter().enumerate() {
             f(k, &|i| number(r, i));
@@ -123,7 +123,7 @@ fn trailer() -> (GenericDataHeader, Vec<GenericRecord>, Vec<Scansione>) {
 #[test]
 fn a_trailer_field_that_changes_at_several_levels_is_one_series_per_level() {
     let (h, recs, scans) = trailer();
-    let v = indice_trailer(&h, &scans, &mut rows(&recs));
+    let v = trailer_index(&h, &scans, &mut rows(&recs));
     let got: Vec<(&str, &str, usize)> = v
         .iter()
         .map(|x| (x.id.as_str(), x.name.as_str(), x.n))
@@ -149,7 +149,7 @@ fn a_trailer_field_that_changes_at_several_levels_is_one_series_per_level() {
 #[test]
 fn the_points_of_a_trailer_series_are_the_scans_of_its_level() {
     let (h, recs, scans) = trailer();
-    let s = serie_trailer(
+    let s = trailer_series(
         &h,
         &scans,
         &mut rows(&recs),
@@ -160,9 +160,9 @@ fn the_points_of_a_trailer_series_are_the_scans_of_its_level() {
         (s.unita.as_str(), s.t, s.y),
         ("ms", vec![0.2, 0.3, 0.5], vec![50.0, 60.0, 70.0])
     );
-    let c = serie_trailer(&h, &scans, &mut rows(&recs), "trailer:Charge State").expect("series");
+    let c = trailer_series(&h, &scans, &mut rows(&recs), "trailer:Charge State").expect("series");
     assert_eq!((c.t, c.y), (vec![0.2, 0.3, 0.5], vec![2.0, 3.0, 2.0]));
-    assert!(serie_trailer(&h, &scans, &mut rows(&recs), "trailer:AGC Target").is_none());
+    assert!(trailer_series(&h, &scans, &mut rows(&recs), "trailer:AGC Target").is_none());
 }
 
 /// A stream laid out like a v66 file with two sections: a title, a changing channel, a constant one, a second title, a changing channel.
@@ -203,7 +203,7 @@ fn the_sections_of_a_log_read_from_bytes_give_the_series() {
     let region = bytes.len() as u64 - addr;
     let log = opentfraw::status_log::decode(std::io::Cursor::new(&bytes), addr, 4, region)
         .expect("decoded");
-    let ids: Vec<String> = indice_stato(&log).into_iter().map(|v| v.id).collect();
+    let ids: Vec<String> = status_index(&log).into_iter().map(|v| v.id).collect();
     assert_eq!(
         ids,
         [
@@ -211,7 +211,7 @@ fn the_sections_of_a_log_read_from_bytes_give_the_series() {
             "status:Vacuum/Fore Vacuum"
         ]
     );
-    let s = serie_stato(&log, "status:Ion Source/Spray Voltage").expect("series");
+    let s = status_series(&log, "status:Ion Source/Spray Voltage").expect("series");
     assert_eq!(
         (s.unita.as_str(), s.t, s.y),
         (

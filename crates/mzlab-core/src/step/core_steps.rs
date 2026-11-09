@@ -1,5 +1,5 @@
 //! Descriptors of the steps whose code lives in this crate: `import.raw` (`lettori::apri`), `convert.mzml` (`lettori_mzml::scrivi`) and
-//! `index.mzidx` (`upload::indicizza_lettore`, or `mzidx::build_mzml_spill` from an mzML). The defaults are literals; a test compares them with the code.
+//! `index.mzidx` (`upload::index_reader`, or `mzidx::build_mzml_spill` from an mzML). The defaults are literals; a test compares them with the code.
 
 use super::{DataType, Param, Port, RunsIn, Step};
 
@@ -102,7 +102,7 @@ fn index_mzidx() -> Step {
 mod tests {
     use super::*;
     use crate::mzidx::DEFAULT_BUDGET;
-    use crate::mzmlwrite::{Options, LIVELLO_ZLIB};
+    use crate::mzmlwrite::{Options, ZLIB_LEVEL};
 
     #[test]
     fn defaults_are_the_ones_of_the_code() {
@@ -114,7 +114,7 @@ mod tests {
             conv.param("zlib_level").unwrap().default_f64(),
             Some(f64::from(o.livello))
         );
-        assert_eq!(o.livello, LIVELLO_ZLIB);
+        assert_eq!(o.livello, ZLIB_LEVEL);
         assert_eq!(
             conv.param("numpress").unwrap().default,
             Some(crate::json::Value::Bool(o.numpress))

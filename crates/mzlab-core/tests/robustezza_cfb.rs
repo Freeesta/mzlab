@@ -21,7 +21,7 @@ fn put(b: &mut [u8], at: usize, v: u32) {
     b[at..at + 4].copy_from_slice(&v.to_le_bytes());
 }
 
-fn entrata(name: &str, tipo: u8, figlio: u32, start: u32, dim: u32) -> Vec<u8> {
+fn entrata(name: &str, tipo: u8, child: u32, start: u32, dim: u32) -> Vec<u8> {
     let mut e = vec![0u8; 128];
     let u: Vec<u8> = name.encode_utf16().flat_map(|c| c.to_le_bytes()).collect();
     e[..u.len()].copy_from_slice(&u);
@@ -29,7 +29,7 @@ fn entrata(name: &str, tipo: u8, figlio: u32, start: u32, dim: u32) -> Vec<u8> {
     e[0x42] = tipo;
     put(&mut e, 0x44, FREE);
     put(&mut e, 0x48, FREE);
-    put(&mut e, 0x4C, figlio);
+    put(&mut e, 0x4C, child);
     put(&mut e, 0x74, start);
     put(&mut e, 0x78, dim);
     e
@@ -129,7 +129,7 @@ fn chains_that_loop_sectors_outside_the_file_and_sizes_of_4_gb() {
 
 /// A DIFAT chain of `k` sectors, all of 127 entries that point to the FAT sector: the FAT grows by 16 000 entries per 512 bytes of file, and a chain that loops
 /// in it (here the directory) is followed for as many sectors as the FAT has entries.
-fn con_difat(k: usize) -> Vec<u8> {
+fn with_difat(k: usize) -> Vec<u8> {
     let mut b = contenitore(&[(1, 1)], 5000, 2);
     put(&mut b, 0x2C, 109 + 127 * k as u32);
     (0..109).for_each(|i| put(&mut b, 0x4C + 4 * i, 0));
@@ -146,5 +146,5 @@ fn con_difat(k: usize) -> Vec<u8> {
 
 #[test]
 fn a_difat_that_makes_the_fat_larger_than_the_file() {
-    verify("difat", 1, &case("difat 10 sectors", con_difat(10)));
+    verify("difat", 1, &case("difat 10 sectors", with_difat(10)));
 }

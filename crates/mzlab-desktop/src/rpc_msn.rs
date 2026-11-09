@@ -9,8 +9,8 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
-    aggiungi, cerca, con_interpretazione, da_richiesta, da_richiesta_export, esporta, grafo_json,
-    library_text, opzioni_cerca, tabella_regole, table_text, Graph, Options, PPM_PERDITA,
+    aggiungi, cerca, esporta, from_export_request, from_request, graph_json, library_text,
+    opzioni_cerca, tabella_regole, table_text, with_interpretation, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
 use mzlab_core::sorgente::ReaderSource;
@@ -106,7 +106,7 @@ impl State {
             let mut l = nativi::open(&nat.members, nat.centroid)?;
             let mut out =
                 std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?);
-            lettori_mzml::scrivi_con(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
+            lettori_mzml::write_with(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
             std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
             drop(out);
             indexer.build(&tmp, &key, None)?;
@@ -238,13 +238,13 @@ type Computed = Result<(Graph, String, Options)>;
 
 /// The graph of the query over the index and the mzML (`calcola_con` of the `.wasm`).
 fn graph(mut idx: MapAt, idx_size: u64, mzml: &mut dyn ReadAt, name: &str, q: &Query) -> Computed {
-    let req = da_richiesta(&|k| q.get(k).map(String::from))?;
+    let req = from_request(&|k| q.get(k).map(String::from))?;
     let mut bytes = vec![0u8; idx_size as usize];
     idx.read_at(0, &mut bytes)?;
     let sha = sha256_hex(&bytes);
     drop(bytes);
     let scans = Index::open(idx, idx_size)?.scans;
-    let (g, j) = grafo_json(&scans, &mut DynRead(mzml), (name, &sha), (&req.0, &req.1))?;
+    let (g, j) = graph_json(&scans, &mut DynRead(mzml), (name, &sha), (&req.0, &req.1))?;
     let j = with_keys(&g, j, &req.0, q)?;
     Ok((g, j, req.0))
 }
@@ -269,7 +269,7 @@ fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String>
                 .filter(|p| p.is_finite() && *p > 0.0)
                 .ok_or_else(|| Error::new("err.request.badNumber").with("name", "ppm_perdita"))?,
         };
-        j = con_interpretazione(&j, g, ppm);
+        j = with_interpretation(&j, g, ppm);
     }
     if q.get("rotture") == Some("1") {
         let num = |k: &str, d: f64| -> Result<f64> {
@@ -346,7 +346,7 @@ fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
             ),
         );
     }
-    let (f, clean, node) = da_richiesta_export(&|k| q.get(k).map(String::from))?;
+    let (f, clean, node) = from_export_request(&|k| q.get(k).map(String::from))?;
     let (g, _, _) = run()?;
     Ok(esporta(&g, f, clean, node.as_deref()))
 }

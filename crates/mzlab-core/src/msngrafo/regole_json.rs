@@ -35,7 +35,7 @@ fn applicata_json(o: &mut Out, r: &Applicata) {
     o.raw("}");
 }
 
-fn arco_json(o: &mut Out, g: &Graph, i: usize, a: &EdgeVal) {
+fn edge_json(o: &mut Out, g: &Graph, i: usize, a: &EdgeVal) {
     o.raw("{\"da\":")
         .str(&format!("n{}", g.archi[i].da))
         .raw(",\"a\":")
@@ -57,7 +57,7 @@ fn arco_json(o: &mut Out, g: &Graph, i: usize, a: &EdgeVal) {
     o.raw("}");
 }
 
-fn testo_opz(o: &mut Out, v: Option<&str>) {
+fn opts_text(o: &mut Out, v: Option<&str>) {
     match v {
         Some(x) => o.str(x),
         None => o.raw("null"),
@@ -66,19 +66,19 @@ fn testo_opz(o: &mut Out, v: Option<&str>) {
 
 /// `fonti` (the references the rules of the arcs and the thresholds cite, by key, with their DOI and PMID) and `soglie` (the numeric thresholds of the table
 /// with their origin and whether they are still to be calibrated): what the page shows next to a rule, so it does not carry the table.
-fn fonti_e_soglie(o: &mut Out, v: &Evaluation) {
+fn sources_and_thresholds(o: &mut Out, v: &Evaluation) {
     let t = table();
     let mut keys: Vec<&str> = vec![];
     let citate = v
         .edges
         .iter()
         .flat_map(|a| a.rules.iter().flat_map(|r| r.refs.iter().copied()));
-    let delle_soglie = t
+    let of_thresholds = t
         .globali
         .thresholds
         .iter()
         .flat_map(|s| s.refs.iter().map(|r| r.key.as_str()));
-    for k in citate.chain(delle_soglie) {
+    for k in citate.chain(of_thresholds) {
         if !keys.contains(&k) {
             keys.push(k);
         }
@@ -97,9 +97,9 @@ fn fonti_e_soglie(o: &mut Out, v: &Evaluation) {
             .raw("{\"key\":")
             .str(k)
             .raw(",\"doi\":");
-        testo_opz(o, r.doi.as_deref());
+        opts_text(o, r.doi.as_deref());
         o.raw(",\"pmid\":");
-        testo_opz(o, r.pmid.as_deref());
+        opts_text(o, r.pmid.as_deref());
         o.raw("}");
     }
     o.raw("],\"soglie\":[");
@@ -112,9 +112,9 @@ fn fonti_e_soglie(o: &mut Out, v: &Evaluation) {
             .raw(",\"perche\":")
             .str(&s.perche)
             .raw(",\"origine\":");
-        testo_opz(o, s.origin.as_deref());
+        opts_text(o, s.origin.as_deref());
         o.raw(",\"da_calibrare\":")
-            .raw(if s.da_calibrare { "true" } else { "false" })
+            .raw(if s.to_calibrate { "true" } else { "false" })
             .raw(",\"refs\":");
         let ks: Vec<&str> = s.refs.iter().map(|r| r.key.as_str()).collect();
         list(o, &ks);
@@ -124,7 +124,7 @@ fn fonti_e_soglie(o: &mut Out, v: &Evaluation) {
 }
 
 /// The value of the key `regole` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
-pub fn regole_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
+pub fn rules_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
     let mut o = Out::default();
     o.raw("{\"versione\":")
         .int(VERSION as i64)
@@ -140,7 +140,7 @@ pub fn regole_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
     o.raw(",\"archi\":[");
     for (i, a) in v.edges.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
-        arco_json(&mut o, g, i, a);
+        edge_json(&mut o, g, i, a);
     }
     o.raw("],\"ioni\":[");
     for (i, x) in v.ions.iter().enumerate() {
@@ -169,16 +169,16 @@ pub fn regole_json(g: &Graph, v: &Evaluation, p: &RuleParams) -> String {
     o.raw("],\"conteggi\":{\"archi_spiegati\":")
         .int(v.explained as i64)
         .raw(",\"archi_senza_regola\":")
-        .int(v.senza_regola as i64)
+        .int(v.without_rule as i64)
         .raw(",\"intensita_spiegata\":")
-        .num(round(v.intensita_spiegata, 3))
+        .num(round(v.explained_intensity, 3))
         .raw("}");
-    fonti_e_soglie(&mut o, v);
+    sources_and_thresholds(&mut o, v);
     o.raw("}");
     o.0
 }
 
 /// `grafo` (the text of an `msngrafo/1`) with the key `regole` added at the end; the text of a graph without it does not change.
-pub fn con_regole(graph: &str, g: &Graph, o: &Options, p: &RuleParams) -> String {
-    super::vista::with_key(graph, "regole", &regole_json(g, &valuta(g, o, p), p))
+pub fn with_rules(graph: &str, g: &Graph, o: &Options, p: &RuleParams) -> String {
+    super::vista::with_key(graph, "regole", &rules_json(g, &valuta(g, o, p), p))
 }

@@ -21,12 +21,12 @@ pub(super) fn radiale(parent: &[Option<usize>], steps: &[usize], mz: &[f64]) -> 
         order(f);
     }
     // leaves of each subtree: deepest nodes first
-    let mut per_passi: Vec<usize> = (0..n).collect();
-    crate::sortc::any_by(&mut per_passi, |a, b| {
+    let mut by_steps: Vec<usize> = (0..n).collect();
+    crate::sortc::any_by(&mut by_steps, |a, b| {
         steps[*b].cmp(&steps[*a]).then(a.cmp(b))
     });
     let mut foglie = vec![0usize; n];
-    for &i in &per_passi {
+    for &i in &by_steps {
         foglie[i] = if figli[i].is_empty() {
             1
         } else {

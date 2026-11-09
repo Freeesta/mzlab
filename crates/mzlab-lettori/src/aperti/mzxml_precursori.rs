@@ -1,7 +1,7 @@
 //! The precursor chain of an mzXML scan as the mzML we write has it (`SpectrumExtra::precursors`); used by `mzxml`.
 
 use mzlab_core::lettori::ScanEntry;
-use mzlab_core::mzmlwrite::{attivazione_da_nome, Precursore};
+use mzlab_core::mzmlwrite::{activation_from_name, Precursore};
 
 use super::mzxml::number;
 use super::mzxml_scan::{attr, Testa};
@@ -34,7 +34,7 @@ pub(super) fn precursori_di(t: &Testa, index: &[ScanEntry]) -> Vec<Precursore> {
                 iso_target: Some(mz),
                 iso_lower: meta,
                 iso_upper: meta,
-                activation: attivazione_da_nome(attr(g, "activationMethod"))
+                activation: activation_from_name(attr(g, "activationMethod"))
                     .map(|(a, n)| vec![(a.to_string(), n.to_string())])
                     .unwrap_or_default(),
                 energy: None,

@@ -49,14 +49,14 @@ fn scansioni(l: &mut Box<dyn Reader>) -> Vec<(String, Vec<f64>, Vec<f64>)> {
 }
 
 /// The keys a folder cut too short may give.
-const CHIAVI: [&str; 3] = [
+const KEYS: [&str; 3] = [
     "err.file.agilent",
     "err.file.agilentCut",
     "err.file.agilentNoPeaks",
 ];
 
 /// Opens the cut folder and checks it against the whole one; returns whether it opened.
-fn controlla(scan: &[u8], peak: &[u8], intere: &[(String, Vec<f64>, Vec<f64>)], at: &str) -> bool {
+fn check(scan: &[u8], peak: &[u8], intere: &[(String, Vec<f64>, Vec<f64>)], at: &str) -> bool {
     match apri(scan, peak, true) {
         Ok(mut l) => {
             let s = scansioni(&mut l);
@@ -77,7 +77,7 @@ fn controlla(scan: &[u8], peak: &[u8], intere: &[(String, Vec<f64>, Vec<f64>)], 
         // a cut inside the 160-byte header leaves nothing that says Agilent: the folder is not recognised
         Err(e) if scan.len() < 160 && e.key == "err.file.notAccepted" => false,
         Err(e) => {
-            assert!(CHIAVI.contains(&e.key), "{at}: {}", e.key);
+            assert!(KEYS.contains(&e.key), "{at}: {}", e.key);
             false
         }
     }
@@ -92,7 +92,7 @@ fn a_cut_folder_keeps_its_whole_scans_and_counts_the_rest() {
     assert_eq!(intere.len(), 3);
     let mut aperte = 0;
     for n in 0..idx.len() {
-        aperte += usize::from(controlla(
+        aperte += usize::from(check(
             &idx[..n],
             &peak,
             &intere,
@@ -100,7 +100,7 @@ fn a_cut_folder_keeps_its_whole_scans_and_counts_the_rest() {
         ));
     }
     for n in 0..peak.len() {
-        aperte += usize::from(controlla(
+        aperte += usize::from(check(
             &idx,
             &peak[..n],
             &intere,

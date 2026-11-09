@@ -107,14 +107,14 @@ fn opening_every_sample_of_a_wiff_pair_reads_it_about_once() {
         let mut l = wiff::lettore::open_only(set(&dati, &c), &Limits::sito(), Some(s)).unwrap();
         assert!(!l.index(s).unwrap().is_empty());
     }
-    let tutto = (c.reads.get(), c.bytes.get());
+    let all = (c.reads.get(), c.bytes.get());
     eprintln!(
         "dataset {total} B: list {} reads {} B; + {SAMPLES} builders: {} reads {} B ({:.2}x)",
         list.0,
         list.1,
-        tutto.0,
-        tutto.1,
-        tutto.1 as f64 / total as f64
+        all.0,
+        all.1,
+        all.1 as f64 / total as f64
     );
     // the list: the container and the heads of every block, each byte about once (a window used to run 1 MB past the end of each injection)
     assert!(
@@ -124,7 +124,7 @@ fn opening_every_sample_of_a_wiff_pair_reads_it_about_once() {
     );
     // a builder reads the container and the heads of its own injection only
     let (contenitore, scan) = (dati[0].len() as u64, dati[1].len() as u64);
-    let builders = tutto.1 - list.1;
+    let builders = all.1 - list.1;
     assert!(
         builders <= SAMPLES as u64 * contenitore + scan + scan / 10,
         "the builders read {builders} B of {total}"

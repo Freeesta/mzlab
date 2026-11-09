@@ -18,7 +18,7 @@ fn text(n: usize) -> Vec<u8> {
         .into_bytes()
 }
 
-fn a_pezzi(file: &[u8], piece: usize) -> (Vec<u8>, bool) {
+fn in_pieces(file: &[u8], piece: usize) -> (Vec<u8>, bool) {
     let mut g = Gunzip::new(u64::MAX);
     let mut out = Vec::new();
     for p in file.chunks(piece) {
@@ -42,7 +42,7 @@ fn same_bytes_as_the_reader_of_the_app_for_any_piece_size() {
     assert_eq!(app(&file).unwrap(), expected);
     assert_eq!(expected.len(), a.len() + b.len());
     for piece in [1, 7, 4096, 1 << 20, file.len()] {
-        let (out, integer) = a_pezzi(&file, piece);
+        let (out, integer) = in_pieces(&file, piece);
         assert!(integer);
         assert_eq!(out, expected, "piece {piece}");
     }
@@ -51,7 +51,7 @@ fn same_bytes_as_the_reader_of_the_app_for_any_piece_size() {
 #[test]
 fn a_cut_file_keeps_what_it_inflated() {
     let file = gz(&text(20_000));
-    let (out, integer) = a_pezzi(&file[..file.len() / 2], 1000);
+    let (out, integer) = in_pieces(&file[..file.len() / 2], 1000);
     assert!(!integer);
     assert!(!out.is_empty());
     assert!(text(20_000).starts_with(&out));
@@ -84,7 +84,7 @@ fn zero_padding_after_a_member_ends_the_stream_on_both_sides() {
     assert_eq!(app(&file).unwrap(), expected);
     for piece in [1, 7, 4096, file.len()] {
         assert_eq!(
-            a_pezzi(&file, piece),
+            in_pieces(&file, piece),
             (expected.clone(), true),
             "piece {piece}"
         );

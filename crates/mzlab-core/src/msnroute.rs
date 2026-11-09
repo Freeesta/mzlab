@@ -27,9 +27,9 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// Runs `f` with the options of `q` (`Opz`), then puts back the ones before: what a request asks never leaks into the next.
-    pub(crate) fn con_opz<T>(&mut self, q: &Query, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+    pub(crate) fn with_opts<T>(&mut self, q: &Query, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let opz = Opz {
-            group: raggruppa_of(q, "mtol", "mce")?,
+            group: group_of(q, "mtol", "mce")?,
             somma: q.get("modo") == Some("somma"),
         };
         let before = std::mem::replace(&mut self.msn.opz, opz);
@@ -39,12 +39,12 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The tree of the file for a grouping, built once (memory: the scan indices of the nodes).
-    pub(crate) fn albero_per(&mut self, r: &Grouping) -> Arc<Albero> {
+    pub(crate) fn tree_per(&mut self, r: &Grouping) -> Arc<Albero> {
         if let Some((_, a)) = self.msn.alberi.iter().find(|(k, _)| k == r) {
             return a.clone();
         }
         let a = Arc::new(albero(&self.idx.scans, r));
-        if self.msn.alberi.len() >= ALBERI {
+        if self.msn.alberi.len() >= TREES {
             self.msn.alberi.remove(0);
         }
         self.msn.alberi.push((r.clone(), a.clone()));
@@ -55,13 +55,13 @@ impl<R: ReadAt> Routes<R> {
     pub(crate) fn filtro<'a>(&mut self, f: Option<&'a str>) -> Result<Option<Filter<'a>>> {
         let Some(f) = f else { return Ok(None) };
         if let Some(id) = f.strip_prefix("canale:") {
-            return self.filtro_canale(id).map(Some);
+            return self.channel_filter(id).map(Some);
         }
         let Some(id) = f.strip_prefix("msn:") else {
             return Ok(Some(Filter::Testo(f)));
         };
         let r = self.msn.opz.group.clone();
-        let a = self.albero_per(&r);
+        let a = self.tree_per(&r);
         let Some(n) = a.nodi.iter().find(|n| n.id == id) else {
             return Err(Error::new("err.msn.node").with("id", id));
         };
@@ -72,9 +72,9 @@ impl<R: ReadAt> Routes<R> {
 
     /// `/api/msn_albero?k&tol=nom|<Da>|<n>ppm&ce=1|0`: the tree of the precursors of the file from its index alone (no spectrum), `msn_albero/1`.
     pub(crate) fn msn_albero_route(&mut self, q: &Query) -> Result<Option<String>> {
-        let r = raggruppa_of(q, "tol", "ce")?;
-        let a = self.albero_per(&r);
-        if a.nodi.len() > MAX_NODI {
+        let r = group_of(q, "tol", "ce")?;
+        let a = self.tree_per(&r);
+        if a.nodi.len() > MAX_NODES {
             return Err(Error::new("err.tree.tooMany").with("n", a.nodi.len()));
         }
         let scans = &self.idx.scans;
@@ -116,7 +116,7 @@ impl<R: ReadAt> Routes<R> {
 }
 
 /// What a request asks of the helpers deep in the routes: the grouping that `filt=msn:<id>` refers to (`mtol=nom|<Da>|<n>ppm`, `mce=1|0`)
-/// and `modo=somma` (the spectra of a window summed per cell instead of averaged). Set for the time of one request (`Routes::con_opz`).
+/// and `modo=somma` (the spectra of a window summed per cell instead of averaged). Set for the time of one request (`Routes::with_opts`).
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Opz {
     pub group: Grouping,
@@ -154,7 +154,7 @@ fn tol_of(v: Option<&str>) -> Result<Tol> {
     }
 }
 
-fn raggruppa_of(q: &Query, tol: &str, ce: &str) -> Result<Grouping> {
+fn group_of(q: &Query, tol: &str, ce: &str) -> Result<Grouping> {
     Ok(Grouping {
         tol: tol_of(q.get(tol))?,
         energies: q.get(ce) != Some("0"),
@@ -162,11 +162,11 @@ fn raggruppa_of(q: &Query, tol: &str, ce: &str) -> Result<Grouping> {
 }
 
 /// The trees already built, at most this many groupings per file.
-const ALBERI: usize = 4;
+const TREES: usize = 4;
 
 
 /// More nodes than this: `err.tree.tooMany` (energies merged or a wider tolerance make fewer).
-const MAX_NODI: usize = 400;
+const MAX_NODES: usize = 400;
 
 #[cfg(test)]
 mod tests;

@@ -58,7 +58,7 @@ fn the_two_halves_of_two_workers_give_the_three_values_of_one_pass() {
         let (sha256, sha1, probe) = reference(&b);
         let (mut x, mut y) = (
             Passata::without_sha1(n as u64),
-            Passata::solo_sha1(n as u64),
+            Passata::sha1_only(n as u64),
         );
         for c in b.chunks(100_000) {
             x.aggiorna(c);
@@ -118,7 +118,7 @@ fn impronte_gives_the_sha1_to_the_member_and_the_known_ones_replace_the_read() {
     assert!(upload::impronte_note(&mut set(&b), &[]).is_none());
 }
 
-/// The fingerprints taken while the file is copied (`Passata` fed in pieces) given to `prepare_con` give the same `Prepared` as the full read, and the file is read once less.
+/// The fingerprints taken while the file is copied (`Passata` fed in pieces) given to `prepare_with` give the same `Prepared` as the full read, and the file is read once less.
 #[test]
 fn prepare_with_known_fingerprints_is_identical_and_skips_the_reread() {
     use mzlab_core::idxread::ReadAt;
@@ -164,7 +164,7 @@ fn prepare_with_known_fingerprints_is_identical_and_skips_the_reread() {
     }
     let (sha256, _, probe) = pass.fine().unwrap();
     let mut quick = Counting(mzml, 0);
-    let b = upload::prepare_con(
+    let b = upload::prepare_with(
         &mut quick,
         size,
         "x.mzML",

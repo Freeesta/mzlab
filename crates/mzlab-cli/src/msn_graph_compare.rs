@@ -61,7 +61,7 @@ fn num(v: &Value, k: &str) -> f64 {
 
 fn load(text: &str) -> Result<Graph> {
     let v = parse(text.as_bytes())?;
-    mzlab_core::msngrafo::versione(&v).map_err(|e| {
+    mzlab_core::msngrafo::version(&v).map_err(|e| {
         if e.key == "error.newerFormat" {
             e
         } else {

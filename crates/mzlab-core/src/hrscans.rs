@@ -24,7 +24,7 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         self.prime_steps(mzml)?;
-        self.con_opz(q, |r| r.mzml_route_in(path, q, mzml))
+        self.with_opts(q, |r| r.mzml_route_in(path, q, mzml))
     }
 
     fn mzml_route_in<M: Scansioni + ?Sized>(&mut self, path: &str, q: &Query, mzml: &mut M) -> Result<Option<String>> {

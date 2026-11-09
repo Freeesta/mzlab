@@ -167,7 +167,7 @@ fn check_metadata(d: &AgilentD) {
 }
 
 fn check_mzml_round_trip(folder: &std::path::Path, run: &mzlab_core::mzml::Run, label: &str) {
-    let out = conv_aiuto::mzml_cartella(folder);
+    let out = conv_aiuto::mzml_folder(folder);
     let back = mzml::read(&out[..]).unwrap();
     assert_eq!(back.spectra.len(), run.spectra.len(), "{label}");
     for (a, b) in back.spectra.iter().zip(&run.spectra) {

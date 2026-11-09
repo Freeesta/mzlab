@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use super::inerte::{extra_inerte, tic_letto};
+use super::inerte::{extra_inerte, tic_read};
 use super::*;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, SpectrumExtra};
@@ -208,7 +208,7 @@ impl Rows {
     }
 
     /// Whether the last row alone makes the file high-resolution (`Table::hr1` takes the rows of every MS1 scan).
-    pub(crate) fn ultima_hr(&self) -> bool {
+    pub(crate) fn last_hr(&self) -> bool {
         self.rows.last().is_some_and(|r| super::is_hr(&[r]))
     }
 }
@@ -437,7 +437,7 @@ impl Rows {
             level,
             rt: sp.rt,
             polarity,
-            tic: Some(tic_letto(tic)).filter(|v| *v != 0.0).unwrap_or(0.0),
+            tic: Some(tic_read(tic)).filter(|v| *v != 0.0).unwrap_or(0.0),
             an: self.head.analyzer(filt, None),
             kind: (level > 1)
                 .then(|| super::kind_of("", filt))

@@ -308,7 +308,7 @@ fn degenerate_inputs() {
 }
 
 #[test]
-fn nome_gruppo_cases() {
+fn group_name_cases() {
     let g = |names: &[&str]| {
         let v: Vec<String> = strs(names);
         let b = format!("{{\"names\":{}}}", serde_json::to_string(&v).unwrap());

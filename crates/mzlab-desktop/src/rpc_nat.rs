@@ -91,7 +91,7 @@ impl State {
             p["compression"].as_str().unwrap_or("standard"),
         )
         .ok_or_else(|| Error::new("err.file.mzmlWrite"))?;
-        lettori_mzml::scrivi_con(&mut *l, nat.c, &mut out, &mut tell, opz)?;
+        lettori_mzml::write_with(&mut *l, nat.c, &mut out, &mut tell, opz)?;
         std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
         drop(out);
         let size = std::fs::metadata(&tmp).map_err(|e| io_error(&e))?.len();

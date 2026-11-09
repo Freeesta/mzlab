@@ -35,7 +35,7 @@ struct Args {
     denso: Option<PathBuf>,
     gb: f64,
     shape: String,
-    cancella: bool,
+    delete: bool,
     etichetta: String,
     giri: usize,
     only: Vec<String>,
@@ -66,7 +66,7 @@ fn args() -> Args {
             "--denso" => a.denso = Some(v(&mut it, &x).into()),
             "--gb" => a.gb = v(&mut it, &x).parse().expect("--gb"),
             "--forma" => a.shape = v(&mut it, &x),
-            "--cancella" => a.cancella = true,
+            "--cancella" => a.delete = true,
             "--etichetta" => a.etichetta = v(&mut it, &x),
             "--giri" => a.giri = v(&mut it, &x).parse().expect("--giri"),
             "--solo" => a.only = v(&mut it, &x).split(',').map(str::to_string).collect(),
@@ -86,7 +86,7 @@ fn args() -> Args {
             }
             "--json" => a.json = Some(v(&mut it, &x).into()),
             "--senza-impronte" => a.impronte = false,
-            "--senza-conta" => conta::imposta(false),
+            "--senza-conta" => conta::set_to(false),
             "--tmp" => a.tmp = v(&mut it, &x).into(),
             _ => panic!("unknown option {x}"),
         }
@@ -115,7 +115,7 @@ fn macchina() -> Value {
     })
 }
 
-fn thread_elenco(a: &Args) -> Vec<usize> {
+fn thread_list(a: &Args) -> Vec<usize> {
     if !a.thread.is_empty() {
         return a.thread.clone();
     }
@@ -153,8 +153,8 @@ fn source(a: &Args) -> Option<(Source, Value)> {
     std::fs::create_dir_all(dir).expect("folder");
     let mut b = Vec::new();
     let shape = |n| match a.shape.as_str() {
-        "lab-a" => denso::Parameters::forma_lab_a(n),
-        "lab-b" => denso::Parameters::forma_lab_b(n),
+        "lab-a" => denso::Parameters::lab_shape_a(n),
+        "lab-b" => denso::Parameters::lab_shape_b(n),
         _ => denso::Parameters::denso(n),
     };
     denso::packet(&mut b, &shape(1), 0, None);
@@ -198,8 +198,8 @@ fn source(a: &Args) -> Option<(Source, Value)> {
     ))
 }
 
-struct Scarta;
-impl WriteAt for Scarta {
+struct Discard;
+impl WriteAt for Discard {
     fn write_at(&mut self, _: u64, _: &[u8]) -> mzlab_core::Result<()> {
         Ok(())
     }
@@ -209,7 +209,7 @@ impl WriteAt for Scarta {
 fn file_sha256(p: &Path) -> String {
     use std::io::Read;
     let mut f = std::fs::File::open(p).expect("open");
-    let mut h = Hashing::new(Scarta);
+    let mut h = Hashing::new(Discard);
     let mut buf = vec![0u8; 1 << 20];
     let mut at = 0u64;
     loop {
@@ -323,7 +323,7 @@ fn tmin(phases: &Value, testata_s: f64, byte_in: u64, a: &Args, micro: Option<&V
 }
 
 /// The sections that need a source (open, header, phases, scaling, CLI) added to the document.
-fn sezioni_sorgente(
+fn source_sections(
     doc: &mut Map<String, Value>,
     a: &Args,
     src: &Source,
@@ -337,7 +337,7 @@ fn sezioni_sorgente(
         json!({"etichetta": src.label, "peaks": format!("{:?}", src.picchi()), "origine": info}),
     );
     let mut before = Map::new();
-    before.insert("apertura".into(), fasi::apertura(src, a.giri));
+    before.insert("apertura".into(), fasi::opening(src, a.giri));
     let (th, h) = fasi::file_header(src, a.giri);
     let testata_s = th["misura"]["mediana_s"].as_f64().unwrap_or(f64::NAN);
     before.insert("testata".into(), th);
@@ -350,7 +350,7 @@ fn sezioni_sorgente(
         before.insert("fasi".into(), f);
     }
     if voglio("scala") {
-        let mut s = vec![fasi::scala(
+        let mut s = vec![fasi::scale(
             src,
             a.giri,
             "scrivi_con",
@@ -359,7 +359,7 @@ fn sezioni_sorgente(
             false,
             a.impronte,
         )];
-        s.push(fasi::scala(
+        s.push(fasi::scale(
             src,
             a.giri,
             "indicizzato",
@@ -384,7 +384,7 @@ fn main() {
         a.only.is_empty() && !["micro", "d8"].contains(&s)
             || a.only.iter().any(|x| x == s || x == "tutto")
     };
-    let thread = thread_elenco(&a);
+    let thread = thread_list(&a);
     let mut doc = Map::new();
     doc.insert("banco".into(), json!("raw_mzml_banco/1"));
     doc.insert("macchina".into(), macchina());
@@ -399,7 +399,7 @@ fn main() {
     doc.insert("giri".into(), json!(a.giri));
     doc.insert(
         "rss_picco_azzerabile".into(),
-        json!(conta::azzera_rss_picco()),
+        json!(conta::reset_rss_peak()),
     );
     let mut micro_json = None;
     if voglio("micro") {
@@ -424,7 +424,7 @@ fn main() {
         if let Origin::Denso(p) = &src.origin {
             denso_path = Some(p.clone());
         }
-        sezioni_sorgente(
+        source_sections(
             &mut doc,
             &a,
             &src,
@@ -434,7 +434,7 @@ fn main() {
             micro_json.as_ref(),
         );
     }
-    if a.cancella
+    if a.delete
         && let Some(p) = denso_path
     {
         let _ = std::fs::remove_file(p);

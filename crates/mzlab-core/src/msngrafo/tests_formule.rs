@@ -173,7 +173,7 @@ fn an_isolated_precursor_left_unexplained_is_noted() {
         ..con("C8H11N4O2")
     };
     let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 15.0);
-    let tolti: Vec<(&str, &str)> = g
+    let removed: Vec<(&str, &str)> = g
         .avvisi
         .iter()
         .map(|a| (a.chiave, a.albero.as_str()))
@@ -182,7 +182,7 @@ fn an_isolated_precursor_left_unexplained_is_noted() {
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@cid30"),
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@hcd45"),
     ];
-    assert!(attesi.iter().all(|x| tolti.contains(x)), "{tolti:?}");
+    assert!(attesi.iter().all(|x| removed.contains(x)), "{removed:?}");
     assert!(node(&g, "C6H8N3O").is_none());
 }
 
@@ -193,16 +193,16 @@ fn most_intensity_unexplained_is_noted_on_the_graph_only_then() {
             .iter()
             .any(|a| a.chiave == "warn.msngrafo.mostUnexplained")
     };
-    let (bene, _) = shifted_graph(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 0.0);
-    assert!(!note(&bene), "{:?}", bene.avvisi);
+    let (good, _) = shifted_graph(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 0.0);
+    assert!(!note(&good), "{:?}", good.avvisi);
     // fragments 15 ppm off with a 3 ppm window: none has a candidate
     let stretta = Options {
         ppm_formula: 3.0,
         ppm_low: 3.0,
         ..con("C8H11N4O2")
     };
-    let (male, _) = shifted_graph(&stretta, &[0, 1, 2, 3], false, 15.0);
-    assert!(note(&male), "{:?} {:?}", male.avvisi, male.scartati);
+    let (bad, _) = shifted_graph(&stretta, &[0, 1, 2, 3], false, 15.0);
+    assert!(note(&bad), "{:?} {:?}", bad.avvisi, bad.scartati);
 }
 
 #[test]
@@ -309,13 +309,13 @@ fn a_negative_infusion_is_read_the_same_way() {
 fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
     // 15 ppm off (the wide window): the 138 has only its M+1 as evidence
     let stretta = Strumento {
-        larghezza: Some(1.0),
+        width: Some(1.0),
         ..Strumento::default()
     };
     let (g, j) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &stretta);
     assert!(node(&g, "C6H8N3O").is_none());
     let r = root(&g);
-    assert_eq!(g.nodi[r].larghezza, Some(1.0));
+    assert_eq!(g.nodi[r].width, Some(1.0));
     let n124 = &g.nodi[node(&g, "C7H8O2").unwrap()];
     assert_eq!(n124.upstream, Some(1.0));
     let v = crate::json::parse(j.as_bytes()).unwrap();
@@ -332,11 +332,11 @@ fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
         crate::json::Value::Bool(true)
     );
     // a window that takes the M+1: the evidence counts
-    let larga = Strumento {
-        larghezza: Some(3.0),
+    let wide = Strumento {
+        width: Some(3.0),
         ..Strumento::default()
     };
-    let (g, _) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &larga);
+    let (g, _) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &wide);
     let n = f(&g, node(&g, "C6H8N3O").unwrap());
     assert_eq!(n.candidates[0].prove, vec!["isotopi"]);
 }

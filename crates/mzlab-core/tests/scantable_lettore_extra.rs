@@ -14,13 +14,13 @@ use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::scantable::{Row, Table};
 use mzlab_core::{lettori_mzml, mzidx_lettore, scantable};
 
-struct Uno {
+struct One {
     campioni: Vec<Sample>,
     indice: Vec<ScanEntry>,
     cards: Vec<(Spectrum, SpectrumExtra)>,
 }
 
-impl Reader for Uno {
+impl Reader for One {
     fn format(&self) -> Format {
         Format::Altro("uno")
     }
@@ -75,7 +75,7 @@ impl Case {
 
 /// A total of scan `k`: fixed edge values first, then any bit pattern (every NaN payload and sign, subnormals, infinities) and decimals with no short text.
 fn total(r: &mut Case, k: usize) -> f64 {
-    const BORDI: [f64; 14] = [
+    const EDGES: [f64; 14] = [
         0.0,
         -0.0,
         0.1,
@@ -92,16 +92,16 @@ fn total(r: &mut Case, k: usize) -> f64 {
         123456789012345680.0,
     ];
     match k {
-        k if k < BORDI.len() => BORDI[k],
+        k if k < EDGES.len() => EDGES[k],
         _ if k.is_multiple_of(7) => f64::from_bits(0x7ff0_0000_0000_0001 | r.next()), // NaN, any payload and sign
         _ if k.is_multiple_of(3) => f64::from_bits(r.next()),
         _ => (r.unit() - 0.25) * 10f64.powi((r.next() % 40) as i32 - 10),
     }
 }
 
-/// `n` scans; `finiti`: the totals the mzML converter accepts; `al_testo`: a userParam naming an accession in every scan, so `righe` reads the row
+/// `n` scans; `finiti`: the totals the mzML converter accepts; `to_text`: a userParam naming an accession in every scan, so `righe` reads the row
 /// from the header text (it names no accession a row reads: the row is the same).
-fn reader(n: usize, seed: u64, finished: bool, al_testo: bool) -> Uno {
+fn reader(n: usize, seed: u64, finished: bool, to_text: bool) -> One {
     let fin = |v: f64| if finished && !v.is_finite() { 0.5 } else { v };
     let mut r = Case(seed | 1);
     let mut schede = Vec::new();
@@ -131,7 +131,7 @@ fn reader(n: usize, seed: u64, finished: bool, al_testo: bool) -> Uno {
         let mut extra = SpectrumExtra::default();
         // one scan in eleven without the maker's TIC: the sum of the points
         extra.tic = (k % 11 != 10).then(|| fin(total(&mut r, k)));
-        if al_testo {
+        if to_text {
             extra.params.push(("note".into(), "see MS:1000927".into()));
         }
         extra.window = k.is_multiple_of(2).then_some((50.0, 1050.0));
@@ -160,7 +160,7 @@ fn reader(n: usize, seed: u64, finished: bool, al_testo: bool) -> Uno {
             position: None,
         })
         .collect();
-    Uno {
+    One {
         campioni: vec![Sample {
             id: 1,
             nome: "uno".into(),
@@ -177,7 +177,7 @@ fn bits(v: Option<f64>) -> Option<u64> {
 }
 
 /// Every field of the two rows but the bytes of the scan in the mzML (a reader's row has none); the floats by their bits.
-fn uguali(k: usize, a: &Row, b: &Row) {
+fn equal(k: usize, a: &Row, b: &Row) {
     assert_eq!(a.level, b.level, "row {k}: level");
     assert_eq!(a.rt.to_bits(), b.rt.to_bits(), "row {k}: rt");
     assert_eq!(a.polarity, b.polarity, "row {k}: polarity");
@@ -217,10 +217,10 @@ fn uguali(k: usize, a: &Row, b: &Row) {
     assert_eq!(without(a), without(b), "row {k}");
 }
 
-fn confronta(label: &str, a: &Table, b: &Table) {
+fn compare(label: &str, a: &Table, b: &Table) {
     assert_eq!(a.rows.len(), b.rows.len(), "{label}: rows");
     for (k, (x, y)) in a.rows.iter().zip(&b.rows).enumerate() {
-        uguali(k, x, y);
+        equal(k, x, y);
     }
     assert_eq!(a.hr1, b.hr1, "{label}: hr1");
     assert_eq!(a.run_json(), b.run_json(), "{label}: run");
@@ -230,30 +230,30 @@ const CASI: [(usize, u64); 4] = [(1, 1), (40, 2), (500, 3), (3000, 4)];
 
 /// Any total, against the header text `righe` writes and reads back for a scan it cannot build straight.
 #[test]
-fn tic_del_lettore_come_dal_testo() {
+fn reader_tic_as_from_text() {
     for (n, seed) in CASI {
-        let diretta = mzidx_lettore::righe(&mut reader(n, seed, false, false), 0).unwrap();
+        let direct = mzidx_lettore::righe(&mut reader(n, seed, false, false), 0).unwrap();
         let text = mzidx_lettore::righe(&mut reader(n, seed, false, true), 0).unwrap();
-        confronta(&format!("{n} scans"), &diretta, &text);
+        compare(&format!("{n} scans"), &direct, &text);
     }
 }
 
 /// Finite totals, against the mzML the converter writes, read back by `scantable`.
 #[test]
-fn tic_del_lettore_come_dal_mzml() {
+fn reader_tic_as_from_mzml() {
     for (n, seed) in CASI {
         let mut l = reader(n, seed, true, false);
-        let diretta = mzidx_lettore::righe(&mut l, 0).unwrap();
+        let direct = mzidx_lettore::righe(&mut l, 0).unwrap();
         let mut mzml = lettori_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let size = mzml.len() as u64;
         let text = scantable::read(&mut mzml, size).unwrap();
-        confronta(&format!("{n} scans, mzML"), &diretta, &text);
+        compare(&format!("{n} scans, mzML"), &direct, &text);
     }
 }
 
 /// The edges are in the scans: a NaN with a payload or a sign (the text keeps neither), -0, the infinities, subnormals, negative totals.
 #[test]
-fn i_bordi_ci_sono() {
+fn the_edges_are_there() {
     let l = reader(3000, 4, false, false);
     let tic: Vec<f64> = l.cards.iter().filter_map(|s| s.1.tic).collect();
     assert!(tic

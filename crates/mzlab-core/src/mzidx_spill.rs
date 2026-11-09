@@ -72,7 +72,7 @@ pub(crate) struct Parts {
     slots: Vec<Vec<u32>>,
     records: Vec<u64>,
     next_slot: u32,
-    /// Whether 64-bit peaks of MS1 scans were written: an MS1 section of 32 bits may take one into the bucket above its own (`leggi_parti`).
+    /// Whether 64-bit peaks of MS1 scans were written: an MS1 section of 32 bits may take one into the bucket above its own (`read_parts`).
     ms1_larghe: bool,
 }
 
@@ -215,7 +215,7 @@ impl Parts {
 
 /// With a scratch file (`parti`): `hi` lowered to the last partition boundary in `lo + 1..=hi` (none: `hi`), so that every partition is read by one round when the rounds can hold one;
 /// `used` lowered by the `cost` of the buckets left out. At the end of the axis `hi` stays.
-pub(crate) fn allinea(
+pub(crate) fn align(
     parts: Option<&Parts>,
     lo: usize,
     hi: usize,
@@ -238,7 +238,7 @@ pub(crate) fn allinea(
 /// Calls `f(mz, intensity, scan)` for every peak of the partitions that may hold buckets `lo..hi`, partition by partition, each in the order it was
 /// written; `f` keeps the peaks whose bucket it wants. The 32-bit peaks are split by the bucket their section takes; a 64-bit peak of an MS1 scan
 /// rounded to 32 bits by its section can only go up one bucket (`f32` holds every integer m/z and rounding keeps the order), so bucket `lo - 1` is read too.
-pub(crate) fn leggi_parti(
+pub(crate) fn read_parts(
     parts: &Parts,
     sp: &mut dyn Spill,
     lo: usize,

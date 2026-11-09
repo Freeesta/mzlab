@@ -1,5 +1,5 @@
 //! The BPC of an ANDI-MS file comes from the base peaks noted while the scans are decoded: one decode per scan for the `.mzidx` build and the BPC
-//! asked after it (`cromatogrammi_scritti` included), and the same bits as the BPC of a reader that decodes the scans only to answer it.
+//! asked after it (`chromatograms_written` included), and the same bits as the BPC of a reader that decodes the scans only to answer it.
 
 mod comune;
 
@@ -7,7 +7,7 @@ use comune::andi::*;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
-use mzlab_core::upload::indicizza_lettore;
+use mzlab_core::upload::index_reader;
 use std::cell::Cell;
 use std::io::Cursor;
 use std::rc::Rc;
@@ -63,7 +63,7 @@ fn index_and_bpc(l: &mut dyn Reader, read_items: &Cell<u64>) -> (u64, Vec<f64>) 
     l.method(0).unwrap();
     read_items.set(0);
     let mut out = Cursor::new(Vec::new());
-    indicizza_lettore(l, 0, &[], "campione.cdf", &mut out, 64 << 20, &mut |_| {}).unwrap();
+    index_reader(l, 0, &[], "campione.cdf", &mut out, 64 << 20, &mut |_| {}).unwrap();
     let bpc = l.chromatogram(0, "BPC").unwrap().intensity;
     (read_items.get(), bpc)
 }
@@ -154,7 +154,7 @@ fn the_annotated_bpc_has_the_bits_of_the_decoded_one() {
             assert_eq!(bpc0.len(), 40);
             let mut l = apri_andi(b);
             let mut out = Cursor::new(Vec::new());
-            indicizza_lettore(
+            index_reader(
                 &mut *l,
                 0,
                 &[],

@@ -23,7 +23,7 @@ pub fn leggi<T: Traces>(t: &mut T) -> Result<Vec<Trace>> {
 }
 
 /// `Tracce::srm` for a reader of chromatograms: the list, then each of kind SRM.
-pub(crate) fn da_voci<T: Traces + ?Sized>(t: &mut T) -> Result<Vec<Trace>> {
+pub(crate) fn from_entries<T: Traces + ?Sized>(t: &mut T) -> Result<Vec<Trace>> {
     let mut out = Vec::new();
     for v in t.chromatograms()? {
         if v.tipo != ChromKind::Srm {
@@ -64,9 +64,9 @@ pub fn impacchetta(v: &[Trace]) -> Vec<u8> {
     b
 }
 
-struct Cursore<'a>(&'a [u8]);
+struct Cursor<'a>(&'a [u8]);
 
-impl Cursore<'_> {
+impl Cursor<'_> {
     fn prendi(&mut self, n: usize) -> Result<&[u8]> {
         if self.0.len() < n {
             return Err(Error::new("error.badIndex"));
@@ -90,7 +90,7 @@ impl Cursore<'_> {
 
 /// The traces `impacchetta` wrote.
 pub fn spacchetta(b: &[u8]) -> Result<Vec<Trace>> {
-    let mut c = Cursore(b);
+    let mut c = Cursor(b);
     let n = c.u32()?;
     let mut out = Vec::new();
     for _ in 0..n {

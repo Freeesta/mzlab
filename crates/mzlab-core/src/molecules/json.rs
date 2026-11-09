@@ -24,11 +24,11 @@ fn origin(j: &mut Out, o: &Origin) {
     j.raw("{\"catalogo\":");
     strs(j, &o.catalog);
     j.raw(",\"creato\":");
-    opt_str(j, &o.creato);
+    opt_str(j, &o.created);
     j.raw(",\"file\":");
     opt_str(j, &o.file);
     j.raw(",\"modificato\":");
-    opt_str(j, &o.modificato);
+    opt_str(j, &o.modified);
     j.raw(",\"tipo\":").str(&o.tipo).raw("}");
 }
 
@@ -220,8 +220,8 @@ fn read_one(v: &Value) -> Result<Molecule, (&'static str, String)> {
         tipo: text(&o, "tipo"),
         catalog: list(&o, "catalogo"),
         file: opt(&o, "file"),
-        creato: opt(&o, "creato"),
-        modificato: opt(&o, "modificato"),
+        created: opt(&o, "creato"),
+        modified: opt(&o, "modificato"),
     };
     let control = v
         .get("massa")

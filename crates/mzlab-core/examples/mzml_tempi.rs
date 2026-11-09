@@ -1,7 +1,7 @@
 //! Times the load of an mzML (scan table, fingerprints, `.mzidx`) and its writing, with no real file.
 //! `cargo run --release --example mzml_tempi -p mzlab-core -- genera OUT.mzML [SCANS] [PEAKS_PER_SCAN]` writes a synthetic mzML (made-up reader of
 //! `tests/lettore_finto`, timed); `cargo run --release --example mzml_tempi -p mzlab-core -- FILE.mzML [BUDGET_MB]` times, on any mzML, the
-//! scan table (`upload::prepare`, `upload::prepare_con` with the fingerprints known as on the site, and `upload::prepare_parallelo` with the fingerprints on a second thread), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
+//! scan table (`upload::prepare`, `upload::prepare_with` with the fingerprints known as on the site, and `upload::prepare_parallelo` with the fingerprints on a second thread), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
 #[path = "../tests/lettore_finto/mod.rs"]
 mod finto;
 
@@ -109,7 +109,7 @@ fn main() {
     // the site's open: the page took the fingerprints while it copied the file, so only the scan table is read
     let t = Instant::now();
     let known = Some((p.sha256.clone(), String::new()));
-    let p3 = upload::prepare_con(&mut File::open(path).expect("open"), size, "x.mzML", known)
+    let p3 = upload::prepare_with(&mut File::open(path).expect("open"), size, "x.mzML", known)
         .expect("prepare");
     println!(
         "prepare (prints known)  {:>8.3} s",
@@ -130,11 +130,11 @@ fn main() {
         "prepare (prints apart)  {:>8.3} s",
         t.elapsed().as_secs_f64()
     );
-    indici(path, &p, budget);
+    indices(path, &p, budget);
 }
 
 /// Times the `.mzidx` build without and with a spool, and prints the heap peak of each.
-fn indici(path: &str, p: &upload::Prepared, budget: usize) {
+fn indices(path: &str, p: &upload::Prepared, budget: usize) {
     // without a spool every round decodes the file again; with a spool (a scratch file next to the mzML) it is decoded once
     for con in [false, true] {
         let spool_path = format!("{path}.spool");

@@ -58,13 +58,13 @@ fn run_registry(m: &[(String, Vec<u8>)]) -> Vec<String> {
     k
 }
 
-fn esegui_mzml(m: &[(String, Vec<u8>)]) -> Vec<String> {
+fn execute_mzml(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
     note(mzml::read(&m[0].1[..]), &mut k);
     k
 }
 
-fn esegui_mzidx(m: &[(String, Vec<u8>)]) -> Vec<String> {
+fn execute_mzidx(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
     let size = m[0].1.len() as u64;
     let Some(mut ix) = note(Index::open(Letture(m[0].1.clone()), size), &mut k) else {
@@ -81,7 +81,7 @@ fn esegui_mzidx(m: &[(String, Vec<u8>)]) -> Vec<String> {
 }
 
 /// The container of a `.wiff` and the methods read from it (the `.dam` parser).
-fn esegui_ole(m: &[(String, Vec<u8>)]) -> Vec<String> {
+fn execute_ole(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
     if let Some(ole) = note(Ole::open(m[0].1.clone(), "x.wiff"), &mut k) {
         let paths: Vec<String> = ole.paths_list().map(String::from).collect();
@@ -101,7 +101,7 @@ fn root() -> PathBuf {
 }
 
 /// A synthetic `.wiff` pair from `tools/wiff_riferimento.py`; `None` without python3.
-fn coppia_wiff() -> Option<&'static Members> {
+fn wiff_pair() -> Option<&'static Members> {
     static C: OnceLock<Option<Members>> = OnceLock::new();
     C.get_or_init(|| {
         let out = std::env::temp_dir().join(format!("mzlab_robustezza_{}", std::process::id()));
@@ -113,19 +113,19 @@ fn coppia_wiff() -> Option<&'static Members> {
             .filter(|o| o.status.success())?;
         drop(ok);
         let leggi = |n: &str| std::fs::read(out.join(n)).ok();
-        let coppia = (|| {
+        let pair = (|| {
             Some(vec![
                 ("one.wiff".into(), leggi("one.wiff")?),
                 ("one.wiff.scan".into(), leggi("one.wiff.scan")?),
             ])
         })();
         let _ = std::fs::remove_dir_all(&out);
-        coppia
+        pair
     })
     .as_ref()
 }
 
-fn percorso_agilent() -> Members {
+fn agilent_path() -> Members {
     let (idx, peak) = encode(&sample());
     vec![
         ("x.D/AcqData/MSScan.bin".into(), idx),
@@ -134,32 +134,32 @@ fn percorso_agilent() -> Members {
 }
 
 /// Magic of the format followed by a body of pseudo-random bytes (a real file cannot be built without the vendor's writer).
-fn con_magic(name: &str, magic: &[u8], corpo: usize) -> Members {
+fn with_magic(name: &str, magic: &[u8], corpo: usize) -> Members {
     let mut b = magic.to_vec();
     let mut r = Rng(0xA5A5_1234_DEAD_BEEF);
     b.extend((0..corpo).map(|_| r.next() as u8));
     vec![(name.into(), b)]
 }
 
-fn trial(name: &str, seme: &Members, text: &[bool], esegui: Esegui) {
-    let (casi, guasti) = corri(seme, text, esegui);
+fn trial(name: &str, seme: &Members, text: &[bool], execute: Execute) {
+    let (casi, guasti) = corri(seme, text, execute);
     verify(name, casi, &guasti);
 }
 
 #[test]
 fn the_valid_seeds_are_read() {
-    let mut set = fileset(&percorso_agilent());
+    let mut set = fileset(&agilent_path());
     assert_eq!(
         lettori::riconosci(&mut set).map(|v| v.id),
         Some("agilent-d")
     );
     assert!(
-        run_registry(&percorso_agilent()).is_empty(),
+        run_registry(&agilent_path()).is_empty(),
         "the Agilent seed must read without errors"
     );
     assert!(mzml::read(MZML).is_ok());
-    assert!(esegui_mzidx(&[("a.mzidx".into(), MZIDX.to_vec())]).is_empty());
-    if let Some(w) = coppia_wiff() {
+    assert!(execute_mzidx(&[("a.mzidx".into(), MZIDX.to_vec())]).is_empty());
+    if let Some(w) = wiff_pair() {
         assert_eq!(
             lettori::riconosci(&mut fileset(w)).map(|v| v.id),
             Some("sciex-wiff")
@@ -169,17 +169,12 @@ fn the_valid_seeds_are_read() {
 
 #[test]
 fn agilent_d_folder() {
-    trial(
-        "agilent-d",
-        &percorso_agilent(),
-        &[false, false],
-        run_registry,
-    );
+    trial("agilent-d", &agilent_path(), &[false, false], run_registry);
 }
 
 #[test]
 fn agilent_data_ms() {
-    let seme = con_magic("x.D/DATA.MS", &[0x01, 0x32], 2000);
+    let seme = with_magic("x.D/DATA.MS", &[0x01, 0x32], 2000);
     trial("agilent DATA.MS", &seme, &[false], run_registry);
 }
 
@@ -188,13 +183,13 @@ fn thermo_raw() {
     let magic = [
         0x01, 0xA1, b'F', 0, b'i', 0, b'n', 0, b'n', 0, b'i', 0, b'g', 0, b'a', 0, b'n', 0,
     ];
-    let seme = con_magic("x.raw", &magic, 6000);
+    let seme = with_magic("x.raw", &magic, 6000);
     trial("thermo-raw", &seme, &[false], run_registry);
 }
 
 #[test]
 fn sciex_wiff_pair() {
-    let Some(w) = coppia_wiff() else {
+    let Some(w) = wiff_pair() else {
         return eprintln!("SKIP robustezza wiff: no python3");
     };
     trial("sciex-wiff", w, &[false, false], run_registry);
@@ -202,10 +197,10 @@ fn sciex_wiff_pair() {
 
 #[test]
 fn ole_container_and_methods() {
-    let Some(w) = coppia_wiff() else {
+    let Some(w) = wiff_pair() else {
         return eprintln!("SKIP robustezza ole: no python3");
     };
-    trial("ole", &w[..1].to_vec(), &[false], esegui_ole);
+    trial("ole", &w[..1].to_vec(), &[false], execute_ole);
 }
 
 #[test]
@@ -214,7 +209,7 @@ fn mzml_text() {
         "mzml",
         &vec![("msn.mzML".into(), MZML.to_vec())],
         &[true],
-        esegui_mzml,
+        execute_mzml,
     );
 }
 
@@ -224,7 +219,7 @@ fn mzidx_index() {
         "mzidx",
         &vec![("msn.mzidx".into(), MZIDX.to_vec())],
         &[false],
-        esegui_mzidx,
+        execute_mzidx,
     );
 }
 

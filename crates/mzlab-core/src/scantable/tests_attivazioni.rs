@@ -7,15 +7,18 @@ use crate::attivazioni::ATTIVAZIONI;
 #[test]
 fn every_activation_the_writer_writes_is_named_back_by_the_reader() {
     use crate::mzml::Spectrum;
-    use crate::mzmlwrite::{attivazione_da_nome, spectrum_head, Precursore, SpectrumExtra};
+    use crate::mzmlwrite::{activation_from_name, spectrum_head, Precursore, SpectrumExtra};
     for (name, acc, term) in ATTIVAZIONI {
         let p = Precursore {
             selected_mz: Some(300.25),
             activation: vec![(acc.into(), term.into())],
             ..Default::default()
         };
-        assert_eq!(attivazione_da_nome(name), Some((acc, term)));
-        assert_eq!(attivazione_da_nome(&name.to_lowercase()), Some((acc, term)));
+        assert_eq!(activation_from_name(name), Some((acc, term)));
+        assert_eq!(
+            activation_from_name(&name.to_lowercase()),
+            Some((acc, term))
+        );
         let sp = Spectrum {
             level: 2,
             mz: vec![100.0],

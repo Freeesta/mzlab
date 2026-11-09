@@ -235,14 +235,14 @@ fn mrm_file_has_a_summed_tic_and_one_channel_per_transition() {
         }
     );
     // the TIC of the maker is the TIC of the file
-    let mut con_tic = chroms.clone();
-    con_tic.push(Chrom {
+    let mut with_tic = chroms.clone();
+    with_tic.push(Chrom {
         index: 2,
         id: "TIC".into(),
         kind: "tic".into(),
         ..Default::default()
     });
-    let c = Channels::da(&[], &con_tic, &facts, "m.mzML");
+    let c = Channels::da(&[], &with_tic, &facts, "m.mzML");
     assert_eq!(c.v[0].source, Source::Cromatogramma(2));
 }
 

@@ -9,8 +9,8 @@ use std::cmp::Ordering;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
-use crate::mzidx_ordine::ordina_secchi;
-use crate::mzidx_spill::{allinea, leggi_parti, Parts, Spill};
+use crate::mzidx_ordine::sort_buckets;
+use crate::mzidx_spill::{align, read_parts, Parts, Spill};
 use crate::mzml::Spectrum;
 mod late;
 pub use late::{build_mzml_corriere, build_mzml_late};
@@ -388,7 +388,7 @@ impl<T: Num> Sect for Sec<T> {
             .map(|b| get0(&self.base, b) + get0(&self.counts, b) as usize)
             .collect();
         let first = get0(&self.base, self.lo);
-        ordina_secchi(&mut round, first, &ends, self.per_scansione)?;
+        sort_buckets(&mut round, first, &ends, self.per_scansione)?;
         let r = self.emit(out, off, &round);
         self.round = Vec::new();
         r
@@ -476,7 +476,7 @@ impl Group {
 
     /// One peak: counted, then kept (`keep`) or sent to the scratch file (`scorta`, when there is one).
     #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // `bucket` is below `NB`; `f32` peaks are what the section writes
-    fn metti(
+    fn put(
         &mut self,
         keep: bool,
         Peak { mz, it, pos }: Peak<f64>,
@@ -508,7 +508,7 @@ impl Group {
             + self.kept32.capacity() * std::mem::size_of::<Peak<f32>>()
     }
 
-    fn lascia(&mut self) {
+    fn leave(&mut self) {
         self.kept = Vec::new();
         self.kept32 = Vec::new();
     }
@@ -542,7 +542,7 @@ impl<'a> First<'a> {
     }
 
     /// `hr1` as the table says it (an mzML) or as the scans seen so far say it (a reader), if it is not known yet; the groups made from now on keep their peaks so.
-    pub(crate) fn indovina(&mut self, hr1: bool) {
+    pub(crate) fn guess(&mut self, hr1: bool) {
         self.hr1.get_or_insert(hr1);
     }
 
@@ -575,11 +575,11 @@ impl<'a> First<'a> {
             let spill = self.spill.as_deref_mut().map(|s| s as &mut dyn Spill);
             let scorta = self.parts.as_mut().zip(spill);
             let (mz, it) = (sp.mz[j], sp.intensity_f64(j));
-            g.metti(self.keep, Peak { mz, it, pos }, scorta)?;
+            g.put(self.keep, Peak { mz, it, pos }, scorta)?;
         }
         g.n += n as u64;
         self.visti += 1;
-        self.troppo_denso()?;
+        self.too_dense()?;
         if self.keep {
             let held: usize = self.groups.iter().map(Group::held).sum();
             if held > self.budget / 4 {
@@ -587,7 +587,7 @@ impl<'a> First<'a> {
                 if let Some(sp) = self.spill.as_deref_mut() {
                     self.parts = Some(start(&mut self.groups, sp)?);
                 }
-                self.groups.iter_mut().for_each(Group::lascia);
+                self.groups.iter_mut().for_each(Group::leave);
             }
         }
         Ok(())
@@ -661,14 +661,14 @@ pub fn build(
     budget: usize,
     nativo: bool,
 ) -> Result<Stats> {
-    build_con_spill(table, pass, out, budget, nativo, None, None, None)
+    build_with_spill(table, pass, out, budget, nativo, None, None, None)
 }
 
 /// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size. `stop` is set
 /// when pass 1 fails (a refusal, a bad scan): a pass that can stop reading there (`late::Fermabile`) skips the rest. Indexes come from the table.
 #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)]
 #[allow(clippy::too_many_arguments)]
-pub fn build_con_spill(
+pub fn build_with_spill(
     table: &ScanTable,
     pass: &mut Pass,
     out: &mut dyn Output,
@@ -684,7 +684,7 @@ pub fn build_con_spill(
     }
     // -- pass 1: count (and keep, while it fits)
     let mut before = First::new(budget, spill);
-    before.indovina(table.hr1);
+    before.guess(table.hr1);
     let mut failure: Option<Error> = None;
     {
         let mut on = |sp: Spectrum| {
@@ -706,13 +706,13 @@ pub fn build_con_spill(
         let read = pass(&mut on);
         failure.map_or(read, Err)?;
     }
-    build_dopo(table, before, pass, out, budget, nativo, late_source)
+    build_after(table, before, pass, out, budget, nativo, late_source)
 }
 
 /// The rest of the build once pass 1 has run (`prima`, which counted `table.level.len()` scans): the layout, the arrays of the scans and the peaks,
 /// in rounds of buckets decoded again by `pass` when they did not fit.
 #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
-pub(crate) fn build_dopo(
+pub(crate) fn build_after(
     table: &ScanTable,
     mut before: First,
     pass: &mut Pass,
@@ -741,7 +741,7 @@ pub(crate) fn build_dopo(
         before.keep = false;
         before.parts = None;
         before.spill = None;
-        before.groups.iter_mut().for_each(Group::lascia);
+        before.groups.iter_mut().for_each(Group::leave);
     }
     let keep = before.keep;
     let mut passes = 1usize;
@@ -887,7 +887,7 @@ pub(crate) fn build_dopo(
             if hi == lo {
                 return Err(slice_refusal(cost(lo), budget));
             }
-            (hi, used) = allinea(parts.as_ref(), lo, hi, used, &cost);
+            (hi, used) = align(parts.as_ref(), lo, hi, used, &cost);
             if used > 0 {
                 for sec in secs.iter_mut() {
                     sec.begin_round(lo, hi)?;
@@ -897,7 +897,7 @@ pub(crate) fn build_dopo(
                 if let (Some(p), Some(sp)) = (parts.as_ref(), spill.as_deref_mut()) {
                     // the peaks are in the scratch file: no decoding
                     secs.iter_mut().for_each(|s| s.per_scan());
-                    leggi_parti(p, sp, lo, hi, &mut |mz, it, pos| {
+                    read_parts(p, sp, lo, hi, &mut |mz, it, pos| {
                         member[pos as usize]
                             .iter()
                             .try_for_each(|&(si, q)| secs[si].fill_pk(mz, it, q))

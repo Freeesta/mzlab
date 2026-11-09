@@ -168,7 +168,7 @@ fn a_p_in_a_time_is_the_decimal_point_and_the_order_is_numeric() {
 
 #[test]
 fn blank_words_make_a_blank_only_without_a_time_or_a_series() {
-    let kind = |n: &str| mzlab_core::campioni::ruolo_e_minuti(n).0;
+    let kind = |n: &str| mzlab_core::campioni::role_and_minutes(n).0;
     for n in [
         "MQ_Wash_1.mzML",
         "MQ_blk.mzML",

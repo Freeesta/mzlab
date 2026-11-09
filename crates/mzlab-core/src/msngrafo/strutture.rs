@@ -7,7 +7,7 @@ use crate::json::{round, Out};
 
 /// A peak of the spectrum of the node that the same piece of a cleavage also explains (`rel` in % of the base peak).
 #[derive(Clone, Debug, PartialEq)]
-pub struct PiccoSpiegato {
+pub struct ExplainedPeak {
     pub mz: f64,
     pub rel: f64,
     pub ppm: f64,
@@ -17,7 +17,7 @@ pub struct PiccoSpiegato {
 
 /// One cleaved bond and the piece that carries the charge.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Taglio {
+pub struct Cut {
     /// Index of the bond in the structure graph and of its two atoms (0-based, as the atoms of the SMILES).
     pub legame: usize,
     pub atoms: (usize, usize),
@@ -32,21 +32,21 @@ pub struct Taglio {
     pub perdita: String,
     pub theoretical_mz: f64,
     pub ppm: f64,
-    pub peaks: Vec<PiccoSpiegato>,
+    pub peaks: Vec<ExplainedPeak>,
 }
 
 /// The cleavages that give the same m/z; `formula` is the candidate formula of the node with that m/z, if there is one.
 #[derive(Clone, Debug, PartialEq)]
-pub struct CandidatoStruttura {
+pub struct StructureCandidate {
     pub formula: Option<String>,
     pub theoretical_mz: f64,
     pub ppm: f64,
-    pub cuts: Vec<Taglio>,
+    pub cuts: Vec<Cut>,
 }
 
 /// The answer for one node.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Strutture {
+pub struct Structures {
     pub node: usize,
     pub smiles: String,
     pub mz: f64,
@@ -54,7 +54,7 @@ pub struct Strutture {
     /// Heavy atoms of the structure and bonds that can be cleaved (acyclic single bonds).
     pub atoms: usize,
     pub legami: usize,
-    pub candidates: Vec<CandidatoStruttura>,
+    pub candidates: Vec<StructureCandidate>,
     /// Keys `warn.msngrafo.*`.
     pub warnings: Vec<&'static str>,
 }
@@ -62,7 +62,7 @@ pub struct Strutture {
 /// What the cleaving needs from the graph: the m/z of the node, its polarity, the peaks of its own spectrum (m/z, % of the base peak) and the
 /// candidate formulas it already has (formula, theoretical m/z).
 #[derive(Clone, Debug, PartialEq)]
-pub struct IngressoStrutture {
+pub struct StructuresInput {
     pub nodo: usize,
     pub mz: f64,
     pub polarita: i8,
@@ -74,7 +74,7 @@ pub struct IngressoStrutture {
 impl Graph {
     /// The input of the cleavages of node `nodo`; `None` when there is no such node. The peaks are those of the spectra of which the node is the precursor
     /// (the highest relative intensity when several energies give the same m/z), ordered by m/z.
-    pub fn ingresso_strutture(&self, node: usize) -> Option<IngressoStrutture> {
+    pub fn structures_input(&self, node: usize) -> Option<StructuresInput> {
         let n: &GNode = self.nodi.get(node)?;
         let mut peaks: Vec<(f64, f64)> = Vec::new();
         for s in self.spettri.iter().filter(|s| s.precursore == Some(node)) {
@@ -92,7 +92,7 @@ impl Graph {
                 .map(|c| (c.formula.clone(), c.theoretical_mz))
                 .collect()
         });
-        Some(IngressoStrutture {
+        Some(StructuresInput {
             nodo: node,
             mz: n.mz,
             polarita: self.polarita,
@@ -111,7 +111,7 @@ fn atoms(o: &mut Out, a: &[usize]) {
     o.raw("]");
 }
 
-fn taglio(o: &mut Out, t: &Taglio) {
+fn cut_at(o: &mut Out, t: &Cut) {
     o.raw("{\"legame\":{\"idx\":").int(t.legame as i64);
     o.raw(",\"atomi\":[")
         .int(t.atoms.0 as i64)
@@ -154,7 +154,7 @@ fn taglio(o: &mut Out, t: &Taglio) {
 }
 
 /// The value of the key `strutture` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
-pub fn strutture_json(s: &Strutture) -> String {
+pub fn structures_json(s: &Structures) -> String {
     let mut o = Out::default();
     o.raw("{\"nodo\":")
         .str(&format!("n{}", s.node))
@@ -186,7 +186,7 @@ pub fn strutture_json(s: &Strutture) -> String {
             .raw(",\"tagli\":[");
         for (k, t) in c.cuts.iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" });
-            taglio(&mut o, t);
+            cut_at(&mut o, t);
         }
         o.raw("]}");
     }
@@ -195,12 +195,12 @@ pub fn strutture_json(s: &Strutture) -> String {
 }
 
 /// `grafo` with the key `strutture_tutti`: the cleavages of every node of level 2 or more (`strutture=tutti`), one `strutture` value each, by node.
-pub fn con_strutture_tutti(graph: &str, s: &[Strutture]) -> String {
-    let v: Vec<String> = s.iter().map(strutture_json).collect();
+pub fn with_all_structures(graph: &str, s: &[Structures]) -> String {
+    let v: Vec<String> = s.iter().map(structures_json).collect();
     super::vista::with_key(graph, "strutture_tutti", &format!("[{}]", v.join(",")))
 }
 
 /// `grafo` (the text of an `msngrafo/1`) with the key `strutture` added at the end; the text of a graph without it does not change.
-pub fn con_strutture(graph: &str, s: &Strutture) -> String {
-    super::vista::with_key(graph, "strutture", &strutture_json(s))
+pub fn with_structures(graph: &str, s: &Structures) -> String {
+    super::vista::with_key(graph, "strutture", &structures_json(s))
 }

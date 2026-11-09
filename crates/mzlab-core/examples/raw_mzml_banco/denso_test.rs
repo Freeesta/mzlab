@@ -18,7 +18,7 @@ fn bits(v: &[(f64, f32)]) -> Vec<(u64, u32)> {
 
 /// The decoders of the real reader give back, bit for bit, what the generator wrote (profile, centroids, resolutions, nodes) for 3 scans.
 #[test]
-fn il_decoder_rilegge_i_valori_generati_al_bit() {
+fn the_decoder_reads_back_the_generated_values_to_the_bit() {
     for k in 0..3 {
         let (mut b, mut v) = (Vec::new(), Verita::default());
         packet(&mut b, &SMALL, k, Some(&mut v));
@@ -67,7 +67,7 @@ fn il_decoder_rilegge_i_valori_generati_al_bit() {
 
 /// The same parameters give the same file: the bytes of the 3-scan case hash to a fixed value.
 #[test]
-fn il_generatore_da_lo_stesso_sha256_a_ogni_giro() {
+fn the_generator_gives_the_same_sha256_every_round() {
     let dir = std::env::temp_dir().join(format!("raw_mzml_denso_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let (a, b) = (dir.join("a.bin"), dir.join("b.bin"));
@@ -75,13 +75,13 @@ fn il_generatore_da_lo_stesso_sha256_a_ogni_giro() {
     let (_, _, sb) = generate(&b, &SMALL, true).unwrap();
     assert_eq!(sa, sb);
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
-    assert_eq!(sa.as_deref(), Some(SHA_ATTESO));
+    assert_eq!(sa.as_deref(), Some(EXPECTED_SHA));
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
 /// The `Lettore` serves the scans of the file with the values generated, centroids and profile points (m/z converted from the bins).
 #[test]
-fn il_lettore_finto_serve_le_scansioni_generate() {
+fn the_fake_reader_serves_the_generated_scans() {
     let dir = std::env::temp_dir().join(format!("raw_mzml_denso_l_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("d.bin");
@@ -122,7 +122,7 @@ fn il_lettore_finto_serve_le_scansioni_generate() {
 
 /// The full-size case reaches the density the criteria ask for.
 #[test]
-fn il_caso_denso_ha_almeno_200000_punti_per_scansione() {
+fn the_dense_case_has_at_least_200000_points_per_scan() {
     let (mut b, mut v) = (Vec::new(), Verita::default());
     packet(&mut b, &Parameters::denso(1), 0, Some(&mut v));
     assert!(v.profilo.len() >= 200_000, "{}", v.profilo.len());
@@ -131,7 +131,7 @@ fn il_caso_denso_ha_almeno_200000_punti_per_scansione() {
 /// The 8 GB variant of the memory proof: generated, checked for size and deleted (`cargo test --profile cli -- --ignored`; about a minute and 8 GB of disk).
 #[test]
 #[ignore]
-fn la_variante_da_8_gb_si_genera_e_si_cancella() {
+fn the_8_gb_variant_is_generated_and_deleted() {
     let dir = std::env::temp_dir().join(format!("raw_mzml_denso_8g_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let f = dir.join("d8.bin");
@@ -139,12 +139,12 @@ fn la_variante_da_8_gb_si_genera_e_si_cancella() {
     packet(&mut b, &Parameters::denso(1), 0, None);
     let scansioni = (8.0e9 / b.len() as f64).ceil() as usize;
     let (table, byte, _) = generate(&f, &Parameters::denso(scansioni), false).unwrap();
-    let su_disco = std::fs::metadata(&f).unwrap().len();
+    let on_disk = std::fs::metadata(&f).unwrap().len();
     std::fs::remove_dir_all(&dir).unwrap();
     assert_eq!(table.len(), scansioni);
     // packet sizes vary a little around the first one used to count the scans
     assert!(byte >= 7_900_000_000, "{byte}");
-    assert_eq!(su_disco, byte);
+    assert_eq!(on_disk, byte);
 }
 
-const SHA_ATTESO: &str = "5ae7271d7a6da6693ae677ce9593b7cdcd75a5469314b719989e6b45e009e182";
+const EXPECTED_SHA: &str = "5ae7271d7a6da6693ae677ce9593b7cdcd75a5469314b719989e6b45e009e182";

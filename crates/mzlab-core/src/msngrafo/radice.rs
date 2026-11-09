@@ -10,7 +10,7 @@ const MAX: usize = 8;
 
 /// A formula of the ion of the root that fits its m/z.
 #[derive(Debug, Clone, PartialEq)]
-pub struct CandidatoRadice {
+pub struct RootCandidate {
     /// Written as the option `formula` takes it: `C8H11N4O2+`.
     pub formula: String,
     pub theoretical_mz: f64,
@@ -18,11 +18,11 @@ pub struct CandidatoRadice {
 }
 
 /// The candidates for the first root of a graph with no ion formula; none when it has one, or no root.
-pub fn root_candidates(g: &Graph, o: &Options) -> Vec<CandidatoRadice> {
+pub fn root_candidates(g: &Graph, o: &Options) -> Vec<RootCandidate> {
     let Some(&r) = g.radici.first().filter(|_| g.ione.is_none()) else {
         return vec![];
     };
-    let segno = if g.polarita < 0 { '-' } else { '+' };
+    let sign = if g.polarita < 0 { '-' } else { '+' };
     let c = Opts {
         ion: if g.polarita < 0 { "[M]-" } else { "[M]+" },
         tol: o.ppm_formula,
@@ -44,8 +44,8 @@ pub fn root_candidates(g: &Graph, o: &Options) -> Vec<CandidatoRadice> {
         .take(MAX)
         .filter_map(|x| {
             let f = x.get("formula")?.str()?.trim_end_matches(['+', '-']);
-            Some(CandidatoRadice {
-                formula: format!("{f}{segno}"),
+            Some(RootCandidate {
+                formula: format!("{f}{sign}"),
                 theoretical_mz: x.get("mz_calc")?.f64()?,
                 ppm: x.get("delta_ppm")?.f64()?,
             })

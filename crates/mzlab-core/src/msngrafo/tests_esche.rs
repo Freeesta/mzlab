@@ -31,7 +31,7 @@ fn noise(i: usize) -> f64 {
 
 /// Decoys among the targets (the same spectrum): how many of the 16 decoys, the fragments moved by `spostamento` Da, get a candidate, and how
 /// many of the 16 targets keep theirs.
-fn misto(shift: f64) -> (usize, usize) {
+fn mixed(shift: f64) -> (usize, usize) {
     let mz = |i: usize, f: &str| ion(f) * (1.0 + (-2.5 + noise(i)) * 1e-6);
     let mut peaks: Vec<(f64, f64)> = vec![];
     for (i, f) in FRAMMENTI.iter().enumerate() {
@@ -55,7 +55,7 @@ fn misto(shift: f64) -> (usize, usize) {
 
 /// The co-isolated infusion (a root whose MS2 holds a strong fragment A (C4H7N2) and an ion P (C5H6N3O) that is isolated for an MS3, where A appears
 /// too although it is no sub-formula of P (a co-isolated ion): A is under the root), with invented peaks `esche` added to every spectrum.
-fn grafo_coisolato(decoys: &[f64]) -> Graph {
+fn coisolated_graph(decoys: &[f64]) -> Graph {
     use crate::msnalbero::{albero_di, Grouping};
     let step = |v: &[(f64, &str, f64)]| -> Vec<(f64, String, f64)> {
         v.iter().map(|&(m, a, c)| (m, a.to_string(), c)).collect()
@@ -68,16 +68,16 @@ fn grafo_coisolato(decoys: &[f64]) -> Graph {
         mz: p.iter().map(|x| x.0).collect(),
         rel: p.iter().map(|x| x.1).collect(),
     };
-    let con_esche = |mut v: Vec<(f64, f64)>| {
+    let with_decoys = |mut v: Vec<(f64, f64)>| {
         v.extend(decoys.iter().map(|&m| (m, 25.0)));
         v
     };
-    let ms2 = sp(&con_esche(vec![
+    let ms2 = sp(&with_decoys(vec![
         (ion("C8H11N4O2"), 20.0),
         (ion("C4H7N2"), 100.0),
         (ion("C5H6N3O"), 30.0),
     ]));
-    let ms3 = sp(&con_esche(vec![
+    let ms3 = sp(&with_decoys(vec![
         (ion("C5H6N3O"), 100.0),
         (ion("C4H7N2"), 40.0),
     ]));
@@ -117,7 +117,7 @@ fn grafo_coisolato(decoys: &[f64]) -> Graph {
 fn invented_peaks_get_no_formula_where_a_co_isolated_fragment_keeps_it() {
     // half-integer defects (the sub-formulas of a CHNO root of this size lie within -0.1..+0.25 of the integer): no formula can fit them
     let decoys = [97.45, 110.48, 123.41, 136.46, 149.43];
-    let g = grafo_coisolato(&decoys);
+    let g = coisolated_graph(&decoys);
     let con = |m: f64| {
         g.nodi
             .iter()
@@ -133,7 +133,7 @@ fn decoys_mixed_with_the_fragments_leave_most_of_them_without_a_formula() {
     // measured on a drug-sized root: 10 ppm alone lets 28 of the 80 decoys (shifts of 0.02-0.11 Da) hold a candidate; with the recalibration 18 do, and the 16 targets all keep theirs
     let mut decoys = 0;
     for d in [0.02, 0.03, 0.05, 0.07, 0.11] {
-        let (bersagli, e) = misto(d);
+        let (bersagli, e) = mixed(d);
         assert_eq!(bersagli, 16, "targets at {d}");
         decoys += e;
     }
@@ -182,7 +182,7 @@ fn ion_s(c: i32, h: i32, n: i32, o: i32, s: i32) -> f64 {
 }
 
 /// (targets, decoys) among `n` targets of the sulfur root and their decoys moved by `d` Da, in one spectrum, that keep a formula candidate.
-fn misto_s(n: usize, d: f64) -> (usize, usize) {
+fn mixed_s(n: usize, d: f64) -> (usize, usize) {
     let ts = bersagli_s(n);
     let sc = |i: usize| (((i * 37) % 7) as f64 * 0.5 - 1.5) * 0.3e-6;
     let mut peaks = vec![];
@@ -216,7 +216,7 @@ fn decoys_among_the_targets_of_a_dense_lattice_are_fewer_with_the_recalibration_
     // (108 with the floor at 3 ppm and the quartile), and every target keeps its formula
     let (mut bersagli, mut decoys) = (0, 0);
     for d in [0.02, 0.03, 0.04, 0.05] {
-        let (b, e) = misto_s(44, d);
+        let (b, e) = mixed_s(44, d);
         bersagli += b;
         decoys += e;
     }

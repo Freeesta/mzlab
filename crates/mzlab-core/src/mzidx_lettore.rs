@@ -11,15 +11,15 @@ use crate::mzidx::First;
 use crate::mzidx_spill::Spill;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{self, MzmlWriter};
-use crate::scantable::{Dove, Rows, Table};
+use crate::scantable::{Rows, Table, Where};
 
 /// Scan `k` of sample `c` as the mzML written by `lettori_mzml::scrivi` reads back: the arrays cut to the shorter of m/z and intensity.
 pub(crate) fn spettro(l: &mut dyn Reader, c: usize, k: usize) -> Result<Spectrum> {
-    taglia(l.scan(c, k)?)
+    cut(l.scan(c, k)?)
 }
 
 /// The arrays of `s` cut to the shorter of m/z and intensity.
-pub(crate) fn taglia(mut s: Spectrum) -> Result<Spectrum> {
+pub(crate) fn cut(mut s: Spectrum) -> Result<Spectrum> {
     let n =
         s.mz.len()
             .min(s.wide.as_ref().map_or(s.intensity.len(), Vec::len));
@@ -40,7 +40,7 @@ pub fn righe(l: &mut dyn Reader, c: usize) -> Result<Table> {
 }
 
 /// The table and pass 1 of the `.mzidx` builder in one decoding of the scans: what `righe` gives and the groups `mzidx::build_dopo` needs.
-pub(crate) fn righe_prima<'a>(
+pub(crate) fn rows_before<'a>(
     l: &mut dyn Reader,
     c: usize,
     budget: usize,
@@ -52,17 +52,17 @@ pub(crate) fn righe_prima<'a>(
 }
 
 fn table(l: &mut dyn Reader, c: usize, mut before: Option<&mut First<'_>>) -> Result<Table> {
-    let mut rows = righe_vuote(l, c)?;
+    let mut rows = empty_rows(l, c)?;
     let n = l.index(c)?.len();
     for k in 0..n {
         let s = spettro(l, c, k)?;
         row(&mut rows, l, k, &s, before.as_deref_mut())?;
     }
-    Ok(rows.finish(cromatogrammi_scritti(l, c)?))
+    Ok(rows.finish(chromatograms_written(l, c)?))
 }
 
 /// The rows of a table with no scan yet, from the header of the reader.
-fn righe_vuote(l: &mut dyn Reader, c: usize) -> Result<Rows> {
+fn empty_rows(l: &mut dyn Reader, c: usize) -> Result<Rows> {
     let h = lettori_mzml::table_header(l, c)?;
     Ok(match Rows::da_testata(&h) {
         Some(r) => r,
@@ -90,14 +90,14 @@ fn row(
         // the level and polarity of the row, as `build` reads them from the table
         let (level, pol) = rows.last().unwrap_or((s.level, 0));
         if level == 1 {
-            p.indovina(rows.ultima_hr());
+            p.guess(rows.last_hr());
         }
         p.add(level, pol, s)?;
     }
     Ok(())
 }
 
-fn cromatogrammi_scritti(l: &mut dyn Reader, c: usize) -> Result<usize> {
+fn chromatograms_written(l: &mut dyn Reader, c: usize) -> Result<usize> {
     let mut n_chromatograms = 0;
     for v in l.chromatograms(c)? {
         let t = l.chromatogram(c, &v.id)?;
@@ -110,30 +110,30 @@ fn cromatogrammi_scritti(l: &mut dyn Reader, c: usize) -> Result<usize> {
 
 /// The two tables of a sample (the scans as the file has them, and as centroids) and pass 1 of the two `.mzidx` builders, from ONE decoding of the scans:
 /// every scan is decoded by the reader beneath `l` and `l` centroids that same scan.
-pub(crate) fn righe_prima_doppie(
+pub(crate) fn rows_before_double(
     l: &mut Centroidato,
     c: usize,
     before: &mut First<'_>,
-    prima_cen: &mut First<'_>,
+    first_cen: &mut First<'_>,
 ) -> Result<(Table, Table)> {
-    let mut rows = righe_vuote(l.simple(), c)?;
-    let mut rows_cen = righe_vuote(l, c)?;
+    let mut rows = empty_rows(l.simple(), c)?;
+    let mut rows_cen = empty_rows(l, c)?;
     let n = l.index(c)?.len();
     for k in 0..n {
-        let s = taglia(l.grezza(c, k)?)?;
+        let s = cut(l.grezza(c, k)?)?;
         row(&mut rows, l.simple(), k, &s, Some(&mut *before))?;
         drop(s);
         let s = spettro(l, c, k)?;
-        row(&mut rows_cen, l, k, &s, Some(&mut *prima_cen))?;
+        row(&mut rows_cen, l, k, &s, Some(&mut *first_cen))?;
     }
-    let ncr = cromatogrammi_scritti(l.simple(), c)?;
+    let ncr = chromatograms_written(l.simple(), c)?;
     Ok((rows.finish(ncr), rows_cen.finish(ncr)))
 }
 
 /// The rows of version 2: `[membro, offset, lunghezza]` (or `null` when the reader gives no position) and `k` in place of `start, end`.
 pub fn rows_json(t: &mut Table, entries: &[ScanEntry]) -> String {
     for (k, r) in t.rows.iter_mut().enumerate() {
-        r.at = Some(Box::new(Dove {
+        r.at = Some(Box::new(Where {
             k,
             position: entries.get(k).and_then(|v| v.position),
         }));

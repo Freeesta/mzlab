@@ -47,20 +47,20 @@ pub fn ns_per_op(mut f: impl FnMut()) -> f64 {
 
 fn shape(name: &str) -> Parameters {
     match name {
-        "lab-a" => Parameters::forma_lab_a(1),
-        "lab-b" => Parameters::forma_lab_b(1),
+        "lab-a" => Parameters::lab_shape_a(1),
+        "lab-b" => Parameters::lab_shape_b(1),
         _ => Parameters::denso(1),
     }
 }
 
 const FORME: [&str; 3] = ["lab-a", "lab-b", "denso"];
 
-fn decodifica_ft() -> Value {
+fn decode_ft() -> Value {
     let mut out = Vec::new();
     for name in FORME {
         let mut b = Vec::new();
         packet(&mut b, &shape(name), 0, None);
-        let completo = ns_per_op(|| {
+        let complete = ns_per_op(|| {
             black_box(decodifica(black_box(&b)).ok());
         });
         let list_only = ns_per_op(|| {
@@ -68,14 +68,14 @@ fn decodifica_ft() -> Value {
         });
         out.push(json!({
             "forma": name, "byte_pacchetto": b.len(),
-            "pacchetto_intero_ns": round_to(completo), "pacchetto_intero_mb_s": round_to(b.len() as f64 / completo * 1e3),
+            "pacchetto_intero_ns": round_to(complete), "pacchetto_intero_mb_s": round_to(b.len() as f64 / complete * 1e3),
             "solo_lista_ns": round_to(list_only), "solo_lista_mb_s": round_to(b.len() as f64 / list_only * 1e3),
         }));
     }
     json!(out)
 }
 
-fn conversione_mz() -> Value {
+fn mz_conversion() -> Value {
     let mut b = Vec::new();
     packet(&mut b, &Parameters::denso(1), 0, None);
     let pk = decodifica(&b).expect("packet");
@@ -203,7 +203,7 @@ fn deflate(z: &mut Compress, inside: &[u8], block: &mut [u8], outside: &mut Vec<
 }
 
 fn compression() -> Value {
-    let motore = if cfg!(feature = "banco-zlib-rs") {
+    let engine = if cfg!(feature = "banco-zlib-rs") {
         "zlib-rs"
     } else {
         "miniz_oxide"
@@ -224,7 +224,7 @@ fn compression() -> Value {
             let mut block = vec![0u8; 32 * 1024];
             let mut outside = Vec::new();
             let mut z = Compress::new(Compression::new(level), true);
-            let con_reset = ns_per_op(|| {
+            let with_reset = ns_per_op(|| {
                 for a in [&mz, &int] {
                     z.reset();
                     deflate(&mut z, black_box(a), &mut block, &mut outside);
@@ -237,22 +237,22 @@ fn compression() -> Value {
                     deflate(&mut zn, black_box(a), &mut block, &mut outside);
                 }
             });
-            let mut compressi = 0;
+            let mut compressed = 0;
             for a in [&mz, &int] {
                 z.reset();
                 deflate(&mut z, a, &mut block, &mut outside);
-                compressi += outside.len();
+                compressed += outside.len();
             }
             rows.push(json!({
-                "caso": name, "livello": level, "byte_array": total, "rapporto": round_to(compressi as f64 / total as f64),
-                "con_reset_us_per_coppia": round_to(con_reset / 1e3), "con_reset_mb_s": round_to(total as f64 / con_reset * 1e3),
+                "caso": name, "livello": level, "byte_array": total, "rapporto": round_to(compressed as f64 / total as f64),
+                "con_reset_us_per_coppia": round_to(with_reset / 1e3), "con_reset_mb_s": round_to(total as f64 / with_reset * 1e3),
                 "nuovo_ogni_array_us_per_coppia": round_to(nuovo / 1e3),
             }));
         }
     }
     let mut z = Compress::new(Compression::new(1), true);
     let reset_ns = ns_per_op(|| z.reset());
-    json!({"motore": motore, "prove": rows, "reset_livello1_ns": round_to(reset_ns)})
+    json!({"motore": engine, "prove": rows, "reset_livello1_ns": round_to(reset_ns)})
 }
 
 fn impronte() -> Value {
@@ -273,7 +273,7 @@ fn impronte() -> Value {
     json!({"sha1_mb_s": round_to(sha1), "sha256_mb_s": round_to(sha256), "cpu_sha_ni": sha_ni})
 }
 
-fn memoria() -> Value {
+fn memory() -> Value {
     let ns_malloc = ns_per_op(|| {
         black_box(Vec::<u8>::with_capacity(black_box(4096)));
     });
@@ -288,7 +288,7 @@ fn memoria() -> Value {
 /// All the micro-benchmarks.
 pub fn tutti() -> Value {
     json!({
-        "decodifica_ft": decodifica_ft(), "conversione_mz": conversione_mz(), "xml_spettro": xml(), "base64": base64(),
-        "compressione": compression(), "impronte": impronte(), "memoria": memoria(),
+        "decodifica_ft": decode_ft(), "conversione_mz": mz_conversion(), "xml_spettro": xml(), "base64": base64(),
+        "compressione": compression(), "impronte": impronte(), "memoria": memory(),
     })
 }

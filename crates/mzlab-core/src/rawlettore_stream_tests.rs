@@ -22,12 +22,12 @@ fn data(n: usize) -> Vec<u8> {
 }
 
 fn flow(d: &[u8]) -> (Stream, Rc<Cell<usize>>) {
-    let (s, c, _) = flusso_byte(d);
+    let (s, c, _) = byte_stream(d);
     (s, c)
 }
 
 /// The stream, its count of `read_at` calls and of the bytes they asked for.
-fn flusso_byte(d: &[u8]) -> (Stream, Rc<Cell<usize>>, Rc<Cell<usize>>) {
+fn byte_stream(d: &[u8]) -> (Stream, Rc<Cell<usize>>, Rc<Cell<usize>>) {
     let (c, b) = (Rc::new(Cell::new(0)), Rc::new(Cell::new(0)));
     (
         Stream::new(
@@ -50,9 +50,9 @@ fn short_reads_share_a_window_and_match_the_source() {
     }
     assert_eq!(got[..], d[..got.len()]);
     // the window starts at FINESTRA_SALTO and doubles up to FINESTRA: a few more calls than whole windows
-    let crescita = (WINDOW / SKIP_WINDOW).ilog2() as usize;
+    let growth = (WINDOW / SKIP_WINDOW).ilog2() as usize;
     assert!(
-        calls.get() <= d.len() / WINDOW + 1 + crescita,
+        calls.get() <= d.len() / WINDOW + 1 + growth,
         "{} calls",
         calls.get()
     );
@@ -63,20 +63,20 @@ fn a_skipped_profile_is_not_read() {
     // the centroid path of an Orbitrap scan: the packet header, a jump over the profile, then the centroid list
     let (packet, testa, list) = (220_000usize, 40usize, 24_000usize);
     let d = data(packet * 10);
-    let (mut s, _, byte) = flusso_byte(&d);
+    let (mut s, _, byte) = byte_stream(&d);
     for k in 0..10 {
         let start = k * packet;
         s.seek(SeekFrom::Start(start as u64)).unwrap();
         let mut t = vec![0u8; testa];
         s.read_exact(&mut t).unwrap();
         assert_eq!(t[..], d[start..start + testa]);
-        let lista_da = start + packet - list - 4;
-        s.seek(SeekFrom::Start(lista_da as u64)).unwrap();
+        let list_from = start + packet - list - 4;
+        s.seek(SeekFrom::Start(list_from as u64)).unwrap();
         let mut count = [0u8; 4];
         s.read_exact(&mut count).unwrap();
         let mut l = vec![0u8; list];
         s.read_exact(&mut l).unwrap();
-        assert_eq!(l[..], d[lista_da + 4..lista_da + 4 + list]);
+        assert_eq!(l[..], d[list_from + 4..list_from + 4 + list]);
     }
     // each scan asks for the header window, the list window and the list: never the 64 KiB windows over the profile
     let per_scan = byte.get() / 10;

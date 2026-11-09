@@ -30,14 +30,14 @@ mod variabili_uscita;
 
 pub use colonne::{Cell, Column, ColumnType, FileData, Table};
 pub use csv::{csv_read, csv_write};
-pub use dal_file::{from_file, riassunto_da_scansioni, FileSummary};
+pub use dal_file::{from_file, summary_from_scans, FileSummary};
 pub use json::{da_legacy, digest, from_json, from_value, to_json};
 pub use json3::{digest3, table_from_json, table_from_value, to_json3, SCHEMA3};
-pub use modello::{applica_modello, Applicato};
-pub use nomi::{proponi, propose_explained, ruolo_e_minuti, tipo_v1};
+pub use modello::{apply_model, Applied};
+pub use nomi::{proponi, propose_explained, role_and_minutes, tipo_v1};
 pub use ordine::order_like;
-pub use posizioni::{proposte_json, Position, Proposal};
-pub use ricollega::{relink, ricollega_json, Abbinamento};
+pub use posizioni::{proposals_json, Position, Proposal};
+pub use ricollega::{relink, relink_json, Abbinamento};
 pub use valida::{per_tp, per_tp_json, validate, validate_json, PerTp, Warning};
 pub use valida3::valida3;
 
@@ -45,7 +45,7 @@ use crate::error::{Error, Result};
 
 pub const SCHEMA: &str = "campioni/2";
 /// Roles of a file, in the order of the schema.
-pub const TIPI: [&str; 9] = [
+pub const TYPES: [&str; 9] = [
     "sample",
     "t0",
     "blank",
@@ -57,9 +57,9 @@ pub const TIPI: [&str; 9] = [
     "pool",
 ];
 /// Kinds of blank (optional: a solvent and a procedure blank are subtracted the same way; a wash only cleans the system and is no reference).
-pub const TIPI_BIANCO: [&str; 3] = ["solvent", "procedure", "wash"];
+pub const BLANK_TYPES: [&str; 3] = ["solvent", "procedure", "wash"];
 /// Units of a time as written: seconds, minutes, hours, days.
-pub const UNITA_TEMPO: [&str; 4] = ["s", "min", "h", "d"];
+pub const TIME_UNITS: [&str; 4] = ["s", "min", "h", "d"];
 
 /// One file of the series.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -73,11 +73,11 @@ pub struct Sample {
     pub sha256: String,
     /// One of `TIPI`.
     pub kind: String,
-    /// One of `TIPI_BIANCO`, only for a blank; None when not said.
+    /// One of `BLANK_TYPES`, only for a blank; None when not said.
     pub blank_kind: Option<String>,
     /// The time as written or confirmed, in `time_unit`.
     pub time: Option<f64>,
-    /// One of `UNITA_TEMPO`.
+    /// One of `TIME_UNITS`.
     pub time_unit: String,
     /// Derived from `time` and `time_unit`: the only time used in the computations.
     pub time_min: Option<f64>,
@@ -239,7 +239,7 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 .map(|f| (s(f, "name"), s(f, "sha256"), s(f, "kind")))
                 .collect();
             if op == "proponi_spiegato" {
-                return Ok(proposte_json(&propose_explained(&files)));
+                return Ok(proposals_json(&propose_explained(&files)));
             }
             if op == "proponi3" {
                 let table = Table {
@@ -267,7 +267,7 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                     (t("percorso"), t("sha256"))
                 })
                 .collect();
-            Ok(ricollega_json(&relink(&cs, &cand)))
+            Ok(relink_json(&relink(&cs, &cand)))
         }
         "canonico" | "digest" | "migra" => {
             let doc = crate::json::parse(input.as_bytes())?;
@@ -289,11 +289,11 @@ pub fn route(op: &str, input: &str) -> Result<String> {
 pub fn route_all(op: &str, input: &str) -> Result<String> {
     match op {
         "dal_file" => from_file(input),
-        "modello" => applica_modello(input),
+        "modello" => apply_model(input),
         "csv_leggi" => csv_read(input),
         "csv_scrivi" => csv_write(input),
         "variabili" => variabili::route_variabili(input),
-        "nome_gruppo" => variabili::route_nome_gruppo(input),
+        "nome_gruppo" => variabili::route_group_name(input),
         _ => route(op, input),
     }
 }

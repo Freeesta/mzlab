@@ -15,7 +15,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::lettori::Limits;
 use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
-use mzlab_core::mzmlwrite::{Options, LIVELLO_ZLIB};
+use mzlab_core::mzmlwrite::{Options, ZLIB_LEVEL};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
@@ -268,7 +268,7 @@ fn number(job: &Job, name: &str, default: f64) -> f64 {
 pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let opz = Options {
-        livello: number(job, "zlib_level", f64::from(LIVELLO_ZLIB)) as u32,
+        livello: number(job, "zlib_level", f64::from(ZLIB_LEVEL)) as u32,
         numpress: job
             .resolved
             .params

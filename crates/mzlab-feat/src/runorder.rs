@@ -6,7 +6,7 @@ use crate::drift::batches_of;
 use crate::samples::Sample;
 use crate::sortc::SortC;
 use mzlab_core::campioni;
-use mzlab_core::disegno::{self, LOTTO_PREDEFINITO};
+use mzlab_core::disegno::{self, DEFAULT_BATCH};
 use mzlab_core::error::Result;
 use mzlab_core::json::{parse, Out, Value};
 
@@ -217,7 +217,7 @@ fn write_batch(batch: &Batch, o: &mut Out) {
             None => roles.push((c.role(), 1)),
         }
     }
-    roles.sortc_by_key(|(r, _)| campioni::TIPI.iter().position(|t| t == r));
+    roles.sortc_by_key(|(r, _)| campioni::TYPES.iter().position(|t| t == r));
     for (k, (role, count)) in roles.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" })
             .str(role)
@@ -293,7 +293,7 @@ fn batches_for(cs: &[campioni::Sample], design: Option<&[u8]>) -> Result<Vec<Str
             .iter()
             .map(|c| {
                 if c.batch.is_empty() {
-                    LOTTO_PREDEFINITO.to_string()
+                    DEFAULT_BATCH.to_string()
                 } else {
                     c.batch.clone()
                 }

@@ -15,13 +15,13 @@ use crate::mzml::Spectrum;
 /// Version of this format; the module answers it (`protocollo()`) and the first word of an index repeats it.
 pub const PROTOCOLLO: u32 = 2;
 
-const TESTA_INDICE: usize = 24;
+const INDEX_HEAD: usize = 24;
 /// Bytes of the fixed head of a scan.
 pub const TESTA_SCANSIONE: usize = 24;
 
 const PROFILO: u8 = 1;
 const LARGHE: u8 = 2;
-const CON_PRECURSORE: u8 = 4;
+const WITH_PRECURSOR: u8 = 4;
 
 fn guasto(what: &str) -> Error {
     Error::new("err.file.notAccepted").with("detail", what)
@@ -40,32 +40,32 @@ fn column(o: &mut Vec<u8>, v: impl Iterator<Item = f64>) {
 /// The index of a sample as a block of bytes.
 pub fn encode_index(v: &[ScanEntry]) -> Vec<u8> {
     let mut filters: Vec<&str> = Vec::new();
-    let mut di_filtro: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
+    let mut of_filter: std::collections::HashMap<&str, u32> = std::collections::HashMap::new();
     let mut which: Vec<u32> = Vec::with_capacity(v.len());
     for r in v {
-        let k = *di_filtro.entry(r.filtro.as_str()).or_insert_with(|| {
+        let k = *of_filter.entry(r.filtro.as_str()).or_insert_with(|| {
             filters.push(r.filtro.as_str());
             u32_di(filters.len() - 1)
         });
         which.push(k);
     }
-    let byte_filtri: usize = filters.iter().map(|f| f.len()).sum();
-    let byte_id: usize = v.iter().map(|r| r.id.len()).sum();
+    let filter_bytes: usize = filters.iter().map(|f| f.len()).sum();
+    let id_bytes: usize = v.iter().map(|r| r.id.len()).sum();
     let n = v.len();
     let mut o: Vec<u8> = Vec::with_capacity(
-        TESTA_INDICE
+        INDEX_HEAD
             + n * (7 * 8 + 4 + 4 + 2)
             + (filters.len() + 1) * 4
             + 4
-            + byte_filtri
-            + byte_id,
+            + filter_bytes
+            + id_bytes,
     );
     for x in [
         PROTOCOLLO,
         u32_di(n),
         u32_di(filters.len()),
-        u32_di(byte_filtri),
-        u32_di(byte_id),
+        u32_di(filter_bytes),
+        u32_di(id_bytes),
         0,
     ] {
         o.extend_from_slice(&x.to_le_bytes());
@@ -214,7 +214,7 @@ pub fn testa_scansione(s: &Spectrum) -> [u8; TESTA_SCANSIONE] {
         flag |= LARGHE;
     }
     if s.precursor.is_some() {
-        flag |= CON_PRECURSORE;
+        flag |= WITH_PRECURSOR;
     }
     let mut t = [0u8; TESTA_SCANSIONE];
     t[..4].copy_from_slice(&[s.level, s.polarity as u8, flag, 0]);
@@ -272,7 +272,7 @@ pub fn scan_from_parts(k: usize, t: &[u8], mz: Vec<f64>, y: Intensity) -> Result
         polarity: t[1] as i8,
         profile: flag & PROFILO != 0,
         filter: String::new(),
-        precursor: (flag & CON_PRECURSORE != 0).then_some(prec),
+        precursor: (flag & WITH_PRECURSOR != 0).then_some(prec),
         mz,
         intensity,
         wide,
@@ -282,11 +282,11 @@ pub fn scan_from_parts(k: usize, t: &[u8], mz: Vec<f64>, y: Intensity) -> Result
 /// 64-bit intensities as 32-bit ones, kept as they are only when a 32-bit one cannot hold them.
 fn larghe(y: Vec<f64>) -> (Vec<f32>, Option<Vec<f64>>) {
     let f: Vec<f32> = y.iter().map(|&x| x as f32).collect();
-    let senza_perdita = y
+    let without_loss = y
         .iter()
         .zip(&f)
         .all(|(&a, &c)| a == f64::from(c) || (a.is_nan() && c.is_nan()));
-    (f, (!senza_perdita).then_some(y))
+    (f, (!without_loss).then_some(y))
 }
 
 /// The scan `k` of a block written by `encode_scansione`; its `id` and `filter` are empty (the index has them).

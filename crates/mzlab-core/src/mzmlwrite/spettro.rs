@@ -80,7 +80,7 @@ pub struct Precursore {
 }
 
 /// The dissociation term of a method named as the file formats name it (`CID`, `HCD`, ...); `None` for a name without a PSI-MS term.
-pub fn attivazione_da_nome(name: &str) -> Option<(&'static str, &'static str)> {
+pub fn activation_from_name(name: &str) -> Option<(&'static str, &'static str)> {
     crate::attivazioni::from_name(name)
 }
 

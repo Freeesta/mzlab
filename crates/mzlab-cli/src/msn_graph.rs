@@ -13,7 +13,7 @@ use mzlab_core::json::{parse, Out};
 use mzlab_core::lettori_mzml::Peaks;
 use mzlab_core::msnalbero::Grouping;
 use mzlab_core::msngrafo::{
-    con_interpretazione, esporta, grafo_json, Format, Graph, Options, RuleParams, PPM_PERDITA,
+    esporta, graph_json, with_interpretation, Format, Graph, Options, RuleParams, PPM_PERDITA,
 };
 use mzlab_core::mzmlwrite::Options as MzmlOpzioni;
 
@@ -260,7 +260,7 @@ pub fn graph(file: &Path, o: &Options, tmp: &Path) -> Result<(Graph, String)> {
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
     let o = &mzlab_feat::chem::regole::con_attese(o);
-    grafo_json(&scans, &mut m, (&name, &sha), (o, &Grouping::default()))
+    graph_json(&scans, &mut m, (&name, &sha), (o, &Grouping::default()))
 }
 
 /// The nominal path of a node of the tree (`317@cid35>261@cid35` → [317, 261]).
@@ -398,7 +398,7 @@ pub fn complete_cmd(
 /// The graph text `j` of `g` with the keys `interpretazione` and `rotture` the options ask for (also used by `msn-lib add`).
 pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
     if let Some(ppm) = a.interpreta {
-        j = con_interpretazione(&j, g, ppm);
+        j = with_interpretation(&j, g, ppm);
     }
     if let Some(p) = a.cleavages {
         j = mzlab_feat::chem::rotture::rotture_testo(g, &j, a.o.smiles.as_deref(), p)?;

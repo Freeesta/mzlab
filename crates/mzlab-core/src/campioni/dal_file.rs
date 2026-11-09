@@ -1,5 +1,5 @@
 //! What a file says about itself, put into `campioni/3` (`dal_file`): polarity, date and time of the acquisition, instrument model, method name,
-//! range of m/z and of RT, number of scans (`FileData`, never edited by the user). The summary of a file comes from its scans (`riassunto_da_scansioni`,
+//! range of m/z and of RT, number of scans (`FileData`, never edited by the user). The summary of a file comes from its scans (`summary_from_scans`,
 //! the `.mzidx`) and from its `metodo/1`; the JSON binding takes the summary already made. Polarity and date replace what the names proposed, and
 //! the replaced values are reported (`discordanze`).
 
@@ -34,7 +34,7 @@ fn hull(a: Option<(f64, f64)>, b: (f64, f64)) -> (f64, f64) {
 }
 
 /// The polarity, RT range, m/z range (from the filter strings) and number of the scans of an index.
-pub fn riassunto_da_scansioni(scans: &[Scan]) -> FileSummary {
+pub fn summary_from_scans(scans: &[Scan]) -> FileSummary {
     let mut r = FileSummary::default();
     let mut pols: Vec<i8> = Vec::new();
     for s in scans {

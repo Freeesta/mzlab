@@ -59,7 +59,7 @@ pub struct KnownLoss {
 }
 
 /// The table of the known neutral losses, in the order of the source (Hill formulas).
-pub fn perdite_note() -> Vec<KnownLoss> {
+pub fn known_losses() -> Vec<KnownLoss> {
     NOTE.iter()
         .filter_map(|(f, nome)| {
             let p = parse_formula(f).ok()?;
@@ -101,7 +101,7 @@ pub struct EdgeInterp {
 
 /// The loss of every arc of the graph, in the order of `g.archi`.
 pub fn interpreta(g: &Graph, ppm: f64) -> Vec<EdgeInterp> {
-    let tab = perdite_note();
+    let tab = known_losses();
     g.archi
         .iter()
         .map(|a| {
@@ -112,14 +112,14 @@ pub fn interpreta(g: &Graph, ppm: f64) -> Vec<EdgeInterp> {
             EdgeInterp {
                 da: a.da,
                 a: a.a,
-                loss: perdita_arco(&tab, a.perdita, a.formula.as_ref(), mz, ppm),
+                loss: edge_loss(&tab, a.perdita, a.formula.as_ref(), mz, ppm),
                 attivazioni: att,
             }
         })
         .collect()
 }
 
-fn perdita_arco(
+fn edge_loss(
     tab: &[KnownLoss],
     delta: f64,
     formula: Option<&(String, f64)>,
@@ -166,7 +166,7 @@ fn perdita_arco(
     })
 }
 
-fn perdita_json(o: &mut Out, p: &EdgeLoss) {
+fn loss_json(o: &mut Out, p: &EdgeLoss) {
     o.raw("{\"nome\":");
     match p.name {
         Some(n) => o.str(n),
@@ -193,7 +193,7 @@ fn perdita_json(o: &mut Out, p: &EdgeLoss) {
 }
 
 /// The value of the key `interpretazione` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
-pub fn interpretazione_json(v: &[EdgeInterp], ppm: f64) -> String {
+pub fn interpretation_json(v: &[EdgeInterp], ppm: f64) -> String {
     let mut o = Out::default();
     o.raw("{\"versione\":")
         .int(VERSION as i64)
@@ -212,7 +212,7 @@ pub fn interpretazione_json(v: &[EdgeInterp], ppm: f64) -> String {
         }
         o.raw("],\"perdita\":");
         match &a.loss {
-            Some(p) => perdita_json(&mut o, p),
+            Some(p) => loss_json(&mut o, p),
             None => {
                 o.raw("null");
             }
@@ -224,10 +224,10 @@ pub fn interpretazione_json(v: &[EdgeInterp], ppm: f64) -> String {
 }
 
 /// `grafo` (the text of an `msngrafo/1`) with the key `interpretazione` added at the end; the text of a graph without it does not change.
-pub fn con_interpretazione(graph: &str, g: &Graph, ppm: f64) -> String {
+pub fn with_interpretation(graph: &str, g: &Graph, ppm: f64) -> String {
     super::vista::with_key(
         graph,
         "interpretazione",
-        &interpretazione_json(&interpreta(g, ppm), ppm),
+        &interpretation_json(&interpreta(g, ppm), ppm),
     )
 }

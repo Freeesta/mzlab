@@ -259,7 +259,7 @@ fn damaged_files_are_refused_or_read_never_a_panic() {
 }
 
 #[test]
-fn wiff_campioni_nomi_data() {
+fn wiff_sample_names_date() {
     let Some((dir, _)) = reference() else { return };
     let l = lettori::apri(set(&dir, "nomi"), &Limits::sito()).unwrap();
     let samples = l.samples();

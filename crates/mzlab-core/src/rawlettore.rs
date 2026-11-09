@@ -158,8 +158,8 @@ fn analogiche(l: &mut RawReader) -> &[(String, ChromKind, opentfraw::AnalogTrace
         let traces = l.raw.analog_traces(&mut l.src).unwrap_or_default();
         let mut out: Vec<(String, ChromKind, opentfraw::AnalogTrace)> = Vec::new();
         for t in traces {
-            let doppio = out.iter().any(|(id, ..)| *id == t.name);
-            let id = if doppio {
+            let double = out.iter().any(|(id, ..)| *id == t.name);
+            let id = if double {
                 format!("{} #{}", t.name, t.controller)
             } else {
                 t.name.clone()
@@ -172,7 +172,7 @@ fn analogiche(l: &mut RawReader) -> &[(String, ChromKind, opentfraw::AnalogTrace
 }
 
 /// The TIC, then the analog channels.
-fn elenco_cromatogrammi(l: &mut RawReader) -> Vec<ChromatogramEntry> {
+fn chromatogram_list(l: &mut RawReader) -> Vec<ChromatogramEntry> {
     let mut v = vec![ChromatogramEntry {
         id: "TIC".into(),
         tipo: ChromKind::Tic,
@@ -187,7 +187,7 @@ fn elenco_cromatogrammi(l: &mut RawReader) -> Vec<ChromatogramEntry> {
 }
 
 /// A series of the instrument log (status log or trailer, `metodo_raw/serie.rs`): not in the list above, so neither the mzML nor the `.mzidx` carry it; computed here when asked for.
-fn registro_di(l: &mut RawReader, id: &str) -> Option<Chromatogram> {
+fn log_of(l: &mut RawReader, id: &str) -> Option<Chromatogram> {
     let s = crate::metodo_raw::serie::series(&l.raw, &mut l.src, id)?;
     Some(Chromatogram {
         index: 0,
@@ -202,7 +202,7 @@ fn registro_di(l: &mut RawReader, id: &str) -> Option<Chromatogram> {
 }
 
 fn cromatogramma_di(l: &mut RawReader, id: &str) -> Result<Chromatogram> {
-    if let Some(c) = registro_di(l, id) {
+    if let Some(c) = log_of(l, id) {
         return Ok(c);
     }
     if id != "TIC" {
@@ -326,7 +326,7 @@ impl Reader for RawReader {
 
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
-        Ok(elenco_cromatogrammi(self))
+        Ok(chromatogram_list(self))
     }
 
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {

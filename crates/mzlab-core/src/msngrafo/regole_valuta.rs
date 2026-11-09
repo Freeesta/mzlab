@@ -1,8 +1,8 @@
 //! The rules of `fragrules/1` evaluated on the graph `msngrafo/1` (by the formula alone, or with the products the structure expects): which rule
 //! explains the loss of an arc, the even-electron check, the trap cut-off, composite and stepped losses, `after` chains. Evidence with its reason and source, never a verdict.
-//! Used by `grafo_json` (so by the `.wasm` module and the command line) when the option `regole` is on.
+//! Used by `graph_json` (so by the `.wasm` module and the command line) when the option `regole` is on.
 
-use super::candidati::{Elementi, ATOMI};
+use super::candidati::{Elementi, ATOMS};
 use super::formule::addotto;
 use super::regole::{table, Activation, Globali, Rule, Table, Tipo};
 use super::{Graph, Options};
@@ -11,7 +11,7 @@ use crate::elements::{fmt, mass, parse_formula, ELECTRON};
 /// Version of the key `regole`.
 pub const VERSION: u32 = 1;
 /// The fragments of a trap CID are stable above q / this factor of the precursor m/z (the Mathieu limit of the stable ions).
-const LIMITE_Q: f64 = 0.908;
+const Q_LIMIT: f64 = 0.908;
 
 /// The parameters of the rules: the q of the trap cut-off and the tolerance of a loss against a rule, in mDa.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -59,7 +59,7 @@ pub struct EdgeVal {
 
 /// A rule whose product would fall below the trap cut-off of the spectrum of node `nodo`: it cannot be observed there.
 #[derive(Debug, Clone, PartialEq)]
-pub struct NonOsservabile {
+pub struct Unobservable {
     pub node: usize,
     pub rule: &'static str,
     pub mz: f64,
@@ -68,7 +68,7 @@ pub struct NonOsservabile {
 
 /// A rule of kind `ion` that a node of the graph matches by m/z.
 #[derive(Debug, Clone, PartialEq)]
-pub struct IoneRegola {
+pub struct RuleIon {
     pub nodo: usize,
     pub regola: &'static str,
     pub errore_mda: f64,
@@ -78,16 +78,16 @@ pub struct IoneRegola {
 pub struct Evaluation {
     pub addotto: Option<&'static str>,
     pub edges: Vec<EdgeVal>,
-    pub ions: Vec<IoneRegola>,
-    pub non_osservabili: Vec<NonOsservabile>,
+    pub ions: Vec<RuleIon>,
+    pub non_osservabili: Vec<Unobservable>,
     pub explained: usize,
-    pub senza_regola: usize,
+    pub without_rule: usize,
     /// Share of the intensity of the arcs (their most intense observation) that a rule explains.
-    pub intensita_spiegata: f64,
+    pub explained_intensity: f64,
 }
 
 /// The adduct of the ion of the root as typed; `None` for the ion itself or when the options give no formula.
-pub(super) fn addotto_radice(o: &Options, pol: i8) -> Option<&'static str> {
+pub(super) fn root_adduct(o: &Options, pol: i8) -> Option<&'static str> {
     addotto(o.formula.as_deref()?, pol)
 }
 
@@ -135,7 +135,7 @@ fn applicabili(c: &Ctx, pol: i8, root: bool, tipo: Tipo) -> Vec<Cand> {
     let mut v: Vec<Cand> =
         c.t.rules
             .iter()
-            .filter(|r| r.tipo == tipo && !r.legge_struttura() && ok(r))
+            .filter(|r| r.tipo == tipo && !r.structure_law() && ok(r))
             .filter_map(|r| cand(r, &r.formula))
             .collect();
     for a in c.attese.iter().filter(|a| a.ione == (tipo == Tipo::Ion)) {
@@ -159,7 +159,7 @@ pub(super) fn loss_vectors(
         .iter()
         .filter(|r| {
             r.tipo == Tipo::Loss
-                && r.solo_formula()
+                && r.formula_only()
                 && (r.polarita == 0 || r.polarita == pol)
                 && (r.ions.is_empty()
                     || (root && addotto.is_some_and(|a| r.ions.iter().any(|i| i == a))))
@@ -172,14 +172,14 @@ fn attivazioni(g: &Graph, i: usize) -> Vec<Activation> {
     let mut v: Vec<Activation> = g.archi[i]
         .misure
         .iter()
-        .map(|m| tipo_attivazione(&m.att))
+        .map(|m| activation_type(&m.att))
         .collect();
     v.dedup();
     v
 }
 
 /// `CID` is the trap type (cut-off), anything else (`HCD`, ...) the beam type.
-fn tipo_attivazione(att: &str) -> Activation {
+fn activation_type(att: &str) -> Activation {
     if att.eq_ignore_ascii_case("CID") {
         Activation::CidTrap
     } else {
@@ -187,7 +187,7 @@ fn tipo_attivazione(att: &str) -> Activation {
     }
 }
 
-fn compatibile(r: &Rule, att: &[Activation]) -> bool {
+fn compatible(r: &Rule, att: &[Activation]) -> bool {
     r.activation == Activation::Both || att.is_empty() || att.contains(&r.activation)
 }
 
@@ -198,7 +198,7 @@ pub(super) fn radicale(formula: &str) -> bool {
     };
     let z: u64 = f
         .iter()
-        .map(|(e, n)| ATOMI.iter().find(|a| a.0 == e).map_or(0, |a| a.1 as u64) * n)
+        .map(|(e, n)| ATOMS.iter().find(|a| a.0 == e).map_or(0, |a| a.1 as u64) * n)
         .sum();
     z % 2 == 1
 }
@@ -241,7 +241,7 @@ fn after(c: &Ctx, prev: Option<&[EdgeVal]>, i: usize, r: &Rule) -> bool {
         })
 }
 
-fn valuta_arco(c: &Ctx, i: usize, prev: Option<&[EdgeVal]>) -> EdgeVal {
+fn score_edge(c: &Ctx, i: usize, prev: Option<&[EdgeVal]>) -> EdgeVal {
     let (g, glob) = (c.g, &c.t.globali);
     let a = &g.archi[i];
     let att = attivazioni(g, i);
@@ -249,7 +249,7 @@ fn valuta_arco(c: &Ctx, i: usize, prev: Option<&[EdgeVal]>) -> EdgeVal {
     let regole: Vec<Applicata> = applicabili(c, g.polarita, root, Tipo::Loss)
         .iter()
         .filter(|x| {
-            compatibile(x.r, &att) && after(c, prev, i, x.r) && coincide(g, i, x, c.p.toll_mda)
+            compatible(x.r, &att) && after(c, prev, i, x.r) && coincide(g, i, x, c.p.toll_mda)
         })
         .map(|x| applicata(x, a.perdita))
         .collect();
@@ -260,7 +260,7 @@ fn valuta_arco(c: &Ctx, i: usize, prev: Option<&[EdgeVal]>) -> EdgeVal {
         vec![]
     };
     let mut avvisi = vec![];
-    let da_pari = g.nodi[a.da]
+    let from_even = g.nodi[a.da]
         .formula
         .as_ref()
         .and_then(|f| {
@@ -271,7 +271,7 @@ fn valuta_arco(c: &Ctx, i: usize, prev: Option<&[EdgeVal]>) -> EdgeVal {
         .is_some_and(|c| c.even);
     let formula = a.formula.as_ref().map(|(f, _)| f.as_str());
     if glob.even_electron
-        && da_pari
+        && from_even
         && formula.is_some_and(radicale)
         && !regole.iter().any(|r| r.radical)
     {
@@ -291,13 +291,13 @@ fn composte(c: &Ctx, i: usize, root: bool) -> Vec<(&'static str, &'static str)> 
     let semplici = |radice: bool| -> Vec<Cand> {
         applicabili(c, c.g.polarita, radice, Tipo::Loss)
             .into_iter()
-            .filter(|x| compatibile(x.r, &att) && x.r.after.is_empty())
+            .filter(|x| compatible(x.r, &att) && x.r.after.is_empty())
             .collect()
     };
-    let (primi, secondi) = (semplici(root), semplici(false));
+    let (firsts, seconds) = (semplici(root), semplici(false));
     let mut v = vec![];
-    for r1 in &primi {
-        for r2 in &secondi {
+    for r1 in &firsts {
+        for r2 in &seconds {
             if (c.g.archi[i].perdita - r1.massa - r2.massa).abs() <= c.p.toll_mda / 1000.0 {
                 v.push((&r1.r.id[..], &r2.r.id[..]));
             }
@@ -307,27 +307,27 @@ fn composte(c: &Ctx, i: usize, root: bool) -> Vec<(&'static str, &'static str)> 
 }
 
 /// The product of every loss rule from each precursor of a trap CID spectrum below `q / 0.908` of its m/z: not observable there.
-fn sotto_soglia(c: &Ctx) -> Vec<NonOsservabile> {
+fn below_threshold(c: &Ctx) -> Vec<Unobservable> {
     let g = c.g;
-    let mut v: Vec<NonOsservabile> = vec![];
+    let mut v: Vec<Unobservable> = vec![];
     for s in g
         .spettri
         .iter()
-        .filter(|s| tipo_attivazione(&s.att) == Activation::CidTrap)
+        .filter(|s| activation_type(&s.att) == Activation::CidTrap)
     {
         let Some(n) = s.precursore else { continue };
         let mz = g.nodi[n].mz;
-        let soglia = c.p.cutoff_q / LIMITE_Q * mz;
+        let soglia = c.p.cutoff_q / Q_LIMIT * mz;
         for r in applicabili(c, g.polarita, g.radici.contains(&n), Tipo::Loss)
             .iter()
             .filter(|x| x.r.activation != Activation::Beam && x.r.after.is_empty())
         {
-            let prodotto = mz - r.massa;
-            if prodotto < soglia && !v.iter().any(|x| x.node == n && x.rule == r.r.id) {
-                v.push(NonOsservabile {
+            let product = mz - r.massa;
+            if product < soglia && !v.iter().any(|x| x.node == n && x.rule == r.r.id) {
+                v.push(Unobservable {
                     node: n,
                     rule: &r.r.id,
-                    mz: prodotto,
+                    mz: product,
                     threshold: soglia,
                 });
             }
@@ -337,7 +337,7 @@ fn sotto_soglia(c: &Ctx) -> Vec<NonOsservabile> {
 }
 
 /// The nodes that are the ion of an `ion` rule (a sodium adduct that leaves as Na+, a tropylium or an acylium of the structure).
-fn ioni_regola(c: &Ctx) -> Vec<IoneRegola> {
+fn rule_ions(c: &Ctx) -> Vec<RuleIon> {
     let g = c.g;
     let mut v = vec![];
     if g.radici.is_empty() {
@@ -349,9 +349,9 @@ fn ioni_regola(c: &Ctx) -> Vec<IoneRegola> {
             let giu = (x.mz - mz) * 1000.0;
             let gia = v
                 .iter()
-                .any(|y: &IoneRegola| y.nodo == n && y.regola == r.r.id);
+                .any(|y: &RuleIon| y.nodo == n && y.regola == r.r.id);
             if giu.abs() <= c.p.toll_mda && !gia {
-                v.push(IoneRegola {
+                v.push(RuleIon {
                     nodo: n,
                     regola: &r.r.id,
                     errore_mda: giu,
@@ -374,7 +374,7 @@ pub(super) fn evaluate_with(
     o: &Options,
     p: &RuleParams,
 ) -> Evaluation {
-    let add = addotto_radice(o, g.polarita);
+    let add = root_adduct(o, g.polarita);
     let c = Ctx {
         t,
         g,
@@ -384,40 +384,40 @@ pub(super) fn evaluate_with(
     };
     // a second pass lets a rule that follows another (`after`) see the arcs the first one explained
     let mut archi: Vec<EdgeVal> = (0..g.archi.len())
-        .map(|i| valuta_arco(&c, i, None))
+        .map(|i| score_edge(&c, i, None))
         .collect();
     archi = (0..g.archi.len())
-        .map(|i| valuta_arco(&c, i, Some(&archi)))
+        .map(|i| score_edge(&c, i, Some(&archi)))
         .collect();
     let forza = |i: usize| g.archi[i].misure.iter().map(|m| m.rel).fold(0.0, f64::max);
-    let (mut tutta, mut spiegata) = (0.0, 0.0);
+    let (mut whole, mut spiegata) = (0.0, 0.0);
     let mut spiegati = 0;
     for (i, a) in archi.iter().enumerate() {
-        tutta += forza(i);
+        whole += forza(i);
         if !a.rules.is_empty() || !a.composta.is_empty() {
             spiegati += 1;
             spiegata += forza(i);
         }
     }
     for (i, a) in archi.iter_mut().enumerate() {
-        let soglia_nodo = |n: usize| {
+        let node_threshold = |n: usize| {
             g.spettri.iter().any(|s| {
                 s.precursore == Some(g.archi[i].da)
-                    && tipo_attivazione(&s.att) == Activation::CidTrap
-                    && g.nodi[n].mz < p.cutoff_q / LIMITE_Q * g.nodi[g.archi[i].da].mz
+                    && activation_type(&s.att) == Activation::CidTrap
+                    && g.nodi[n].mz < p.cutoff_q / Q_LIMIT * g.nodi[g.archi[i].da].mz
             })
         };
-        if soglia_nodo(g.archi[i].a) {
+        if node_threshold(g.archi[i].a) {
             a.warnings.push("warn.msngrafo.belowCutoff");
         }
     }
     Evaluation {
         addotto: add,
-        senza_regola: archi.len() - spiegati,
+        without_rule: archi.len() - spiegati,
         explained: spiegati,
-        intensita_spiegata: if tutta > 0.0 { spiegata / tutta } else { 0.0 },
-        ions: ioni_regola(&c),
-        non_osservabili: sotto_soglia(&c),
+        explained_intensity: if whole > 0.0 { spiegata / whole } else { 0.0 },
+        ions: rule_ions(&c),
+        non_osservabili: below_threshold(&c),
         edges: archi,
     }
 }

@@ -46,7 +46,7 @@ impl Encoding {
         let mut done = 0;
         loop {
             let (inside, outside) = (self.z.total_in(), self.z.total_out());
-            let stato = self
+            let state = self
                 .z
                 .compress(&self.raw[done..], &mut self.block, FlushCompress::Finish)
                 .map_err(|_| io(std::io::ErrorKind::Other.into()))?;
@@ -56,7 +56,7 @@ impl Encoding {
             );
             done += n_read;
             self.packed.extend_from_slice(&self.block[..scritti]);
-            if stato == flate2::Status::StreamEnd {
+            if state == flate2::Status::StreamEnd {
                 return Ok(());
             }
             if n_read == 0 && scritti == 0 {

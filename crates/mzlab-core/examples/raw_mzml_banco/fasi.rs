@@ -93,7 +93,7 @@ impl Write for Sink {
     }
 }
 
-pub fn apertura(src: &Source, giri: usize) -> Value {
+pub fn opening(src: &Source, giri: usize) -> Value {
     let (g, l) = repeat(giri, || src.apri());
     let mut l = l;
     let n = l.index(0).map_or(0, |v| v.len());
@@ -142,7 +142,7 @@ struct Parts {
     a_scr: Alloc,
 }
 
-fn ciclo(
+fn cycle(
     l: &mut dyn Reader,
     h: &Header,
     profilo: bool,
@@ -214,7 +214,7 @@ fn ciclo(
 }
 
 /// The byte count of a variant written to a sink (the file variant knows it from the file).
-fn byte_di(l: &mut dyn Reader, h: &Header, profilo: bool, v: Variant) -> u64 {
+fn bytes_of(l: &mut dyn Reader, h: &Header, profilo: bool, v: Variant) -> u64 {
     let mut v = v;
     v.su_file = false;
     let n = l.index(0).map_or(0, |x| x.len());
@@ -269,7 +269,7 @@ pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> V
     let mut l = src.apri();
     let mut mediane: Vec<Median> = Vec::new();
     for var in varianti {
-        let (row, m) = misura_variante(src, &mut *l, giri, h, tmp, var);
+        let (row, m) = measure_variant(src, &mut *l, giri, h, tmp, var);
         rows.push(row);
         mediane.push(m);
     }
@@ -314,14 +314,14 @@ pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> V
 
 /// The whole conversion through `Conversione::scrivi` at each number of threads and zlib level, into a sink: time, CPU, memory, allocations and the
 /// SHA-256 of the output (the same at every thread count: F9).
-pub fn scala(
+pub fn scale(
     src: &Source,
     giri: usize,
-    h_nome: &str,
+    h_name: &str,
     thread: &[usize],
     levels: &[u32],
     indexed: bool,
-    con_impronta: bool,
+    with_print: bool,
 ) -> Value {
     let mut evidence = Vec::new();
     for &lv in levels {
@@ -347,7 +347,7 @@ pub fn scala(
                 byte = s.n;
             });
             // one more run, outside the clock, for the determinism fingerprint
-            let impronta = con_impronta.then(|| {
+            let print = with_print.then(|| {
                 let s = conv
                     .write(&mut *l, 0, Sink::nuovo(true), &mut |_, _| {})
                     .expect("conversion");
@@ -355,18 +355,18 @@ pub fn scala(
             });
             evidence.push(json!({
                 "thread": t, "livello": lv, "indicizzato": indexed, "peaks": format!("{:?}", src.picchi()),
-                "byte_uscita": byte, "sha256_uscita": impronta.flatten(), "misura": summary(&g),
+                "byte_uscita": byte, "sha256_uscita": print.flatten(), "misura": summary(&g),
             }));
         }
     }
-    json!({"nome": h_nome, "prove": evidence})
+    json!({"nome": h_name, "prove": evidence})
 }
 
 /// Medians of one variant: name, decoding, extra, writing, total, scans.
 type Median = (&'static str, f64, f64, f64, f64, usize);
 
 /// One variant of the loop measured `giri` times: its JSON row and its medians.
-fn misura_variante(
+fn measure_variant(
     src: &Source,
     l: &mut dyn Reader,
     giri: usize,
@@ -376,7 +376,7 @@ fn misura_variante(
 ) -> (Value, Median) {
     let mut parts: Vec<Parts> = Vec::new();
     let (g, _) = repeat(giri, || {
-        let p = ciclo(&mut *l, h, src.profilo, var, tmp).expect("loop");
+        let p = cycle(&mut *l, h, src.profilo, var, tmp).expect("loop");
         parts.push(p);
     });
     let med = |f: fn(&Parts) -> f64| median(&parts.iter().map(f).collect::<Vec<_>>());
@@ -390,7 +390,7 @@ fn misura_variante(
     let byte = if var.su_file {
         p0.byte
     } else {
-        byte_di(&mut *l, h, src.profilo, var)
+        bytes_of(&mut *l, h, src.profilo, var)
     };
     let row = json!({
         "variante": var.name, "livello": var.level, "indicizzato": var.indexed, "su_file": var.su_file, "xml_solo": var.empty,

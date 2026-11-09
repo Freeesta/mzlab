@@ -1,5 +1,5 @@
 //! The fingerprints of the members of a dataset for `build_mzidx_native`: given by the page (taken while the members were copied, `Passata`),
-//! given late by a function the build calls once the first pass is done (the copy's hash still running, as `con_impronte_parallele` in the app),
+//! given late by a function the build calls once the first pass is done (the copy's hash still running, as `with_parallel_prints` in the app),
 //! or taken here. A late value that is missing, empty or does not match: the members are read again here, never an index without them.
 
 use js_sys::Function;

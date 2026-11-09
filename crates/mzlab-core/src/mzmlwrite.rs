@@ -12,12 +12,12 @@ use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 const CV_VERSION: &str = "4.2.6";
 
 /// The zlib level of the arrays (zlib-rs). Level 1 of zlib-rs is its quick mode and writes a 35 % larger file than level 2 on the noisy profile matrix of `mzml_dad_tests`; level 2 costs the same time and 7 % more bytes than miniz at level 1.
-pub const LIVELLO_ZLIB: u32 = 2;
+pub const ZLIB_LEVEL: u32 = 2;
 
 /// How the arrays are written.
 #[derive(Debug, Clone, Copy)]
 pub struct Options {
-    /// zlib level 0-9 (`LIVELLO_ZLIB`).
+    /// zlib level 0-9 (`ZLIB_LEVEL`).
     pub livello: u32,
     /// m/z of the spectra with MS-Numpress linear prediction (MS:1002312) and intensities with short logged float (MS:1002314), each followed by zlib (MS:1002746,
     /// MS:1002748) when that is smaller. Lossy: the relative error of the intensities is about 1e-4 and the m/z are rounded to 1e-7 of their range's fixed point.
@@ -30,7 +30,7 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Options { livello: LIVELLO_ZLIB, numpress: false, thread: default_threads(), dad: false }
+        Options { livello: ZLIB_LEVEL, numpress: false, thread: default_threads(), dad: false }
     }
 }
 
@@ -435,7 +435,7 @@ pub(crate) use testa::{spectrum_head, spectrum_head_into};
 #[cfg(feature = "precursori")]
 mod spettro;
 #[cfg(feature = "precursori")]
-pub use spettro::{attivazione_da_nome, CvPar, Precursore};
+pub use spettro::{activation_from_name, CvPar, Precursore};
 #[cfg(feature = "precursori")]
 use spettro::{params_into, precursor_list_into};
 

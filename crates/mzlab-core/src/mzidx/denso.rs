@@ -27,7 +27,7 @@ impl First<'_> {
     /// cost at most `budget * 2`, and every scan is in its level's "all" section (12 B a peak if that section holds `f32`, else 24). So the rest of
     /// the file is neither decoded, kept nor spilled for an index that cannot be built.
     #[allow(clippy::indexing_slicing)] // `counts` and `counts32` have NB items
-    pub(super) fn troppo_denso(&self) -> Result<()> {
+    pub(super) fn too_dense(&self) -> Result<()> {
         if !self.visti.is_multiple_of(DENSE_EVERY) {
             return Ok(());
         }

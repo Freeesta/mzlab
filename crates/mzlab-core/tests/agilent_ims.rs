@@ -3,7 +3,7 @@
 
 use mzlab_core::agilent::{AgilentD, Files};
 
-const CAMPI: [(&str, &str); 22] = [
+const FIELDS: [(&str, &str); 22] = [
     ("ScanID", "int"),
     ("FrameID", "short"),
     ("BaseAbund", "int"),
@@ -29,7 +29,7 @@ const CAMPI: [(&str, &str); 22] = [
 ];
 
 fn xsd() -> String {
-    let els: String = CAMPI
+    let els: String = FIELDS
         .iter()
         .map(|(n, t)| format!("<xs:element name=\"{n}\" type=\"xs:{t}\"/>"))
         .collect();

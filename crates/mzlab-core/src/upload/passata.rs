@@ -10,7 +10,7 @@ use super::{hex, probe_hex, PROBE};
 pub struct Passata {
     size: u64,
     seen: u64,
-    /// `None` for the SHA-1 half of a member hashed by two workers (`solo_sha1`).
+    /// `None` for the SHA-1 half of a member hashed by two workers (`sha1_only`).
     sha256: Option<Sha256>,
     /// `None` when the caller does not want the SHA-1 of every byte (an mzML upload: only the SHA-256 and the `probe` are used).
     sha1: Option<Sha1>,
@@ -37,16 +37,16 @@ impl Passata {
         }
     }
     /// Only the SHA-1 and the `probe`: `fine` gives an empty SHA-256. With `without_sha1` on a second core, the two halves of `new` (the site's two hash workers).
-    pub fn solo_sha1(size: u64) -> Passata {
+    pub fn sha1_only(size: u64) -> Passata {
         Passata {
             sha256: None,
             ..Passata::new(size)
         }
     }
-    /// `without_sha1`, `solo_sha1` (the SHA-1 half of a member that two workers hash) or `new` by the page's flags.
+    /// `without_sha1`, `sha1_only` (the SHA-1 half of a member that two workers hash) or `new` by the page's flags.
     pub fn scelta(size: u64, without: Option<bool>, only: Option<bool>) -> Passata {
         if only == Some(true) {
-            Passata::solo_sha1(size)
+            Passata::sha1_only(size)
         } else if without == Some(true) {
             Passata::without_sha1(size)
         } else {
@@ -89,9 +89,9 @@ impl Passata {
     }
 }
 
-/// Native `upload::fingerprint3`: the SHA-1 is taken on a second thread from the same pieces (`solo_sha1`), as the site's second hash worker does; one read of the file.
+/// Native `upload::fingerprint3`: the SHA-1 is taken on a second thread from the same pieces (`sha1_only`), as the site's second hash worker does; one read of the file.
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn due_fili(
+pub(super) fn two_threads(
     r: &mut dyn crate::idxread::ReadAt,
     size: u64,
     step: u64,
@@ -101,7 +101,7 @@ pub(super) fn due_fili(
     std::thread::scope(|s| {
         let (tx, rx) = mpsc::sync_channel::<Arc<Vec<u8>>>(4);
         let half = s.spawn(move || {
-            let mut y = Passata::solo_sha1(size);
+            let mut y = Passata::sha1_only(size);
             for piece in rx {
                 y.aggiorna(&piece);
             }

@@ -104,7 +104,7 @@ fn vecchia(bytes: &[u8], coeff: &[f64]) -> Option<(Vec<f64>, Vec<f32>)> {
     Some((mz, int))
 }
 
-fn nuova(bytes: &[u8], coeff: &[f64]) -> Option<(Vec<f64>, Vec<f32>)> {
+fn new_one(bytes: &[u8], coeff: &[f64]) -> Option<(Vec<f64>, Vec<f32>)> {
     let (mut mz, mut int) = (Vec::new(), Vec::new());
     let c = decodifica_profilo(bytes, coeff, &mut mz, &mut int).ok()?;
     c.then_some((mz, int))
@@ -146,7 +146,7 @@ fn the_direct_profile_gives_the_points_of_the_chunks_to_the_bit() {
         };
         let bytes = packet(&mut rng, fudge, fv, st);
         for c in coeffs {
-            let (a, b) = (vecchia(&bytes, c), nuova(&bytes, c));
+            let (a, b) = (vecchia(&bytes, c), new_one(&bytes, c));
             assert!(a.is_some(), "giro {lap}");
             points += a.as_ref().map_or(0, |p| p.0.len());
             assert_eq!(bit(&a), bit(&b), "giro {lap}, {} coefficients", c.len());
@@ -161,7 +161,7 @@ fn a_cut_packet_is_refused_by_both_ways_at_the_same_lengths() {
     let bytes = packet(&mut rng, true, 258_000.0, -0.25);
     let c: &[f64] = &[0.0, 0.0, -0.25, 1.0e13, 3.0e6];
     for n in 0..bytes.len() {
-        let (a, b) = (vecchia(&bytes[..n], c), nuova(&bytes[..n], c));
+        let (a, b) = (vecchia(&bytes[..n], c), new_one(&bytes[..n], c));
         assert_eq!(bit(&a), bit(&b), "{n} of {}", bytes.len());
     }
 }

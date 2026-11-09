@@ -295,7 +295,7 @@ fn assign_matrix(out: &mut [Sample]) {
 }
 
 /// The role (`proponi` names) and the time of one name as `(minutes, start, end)`, the span in characters of the file stem: what `variabili` needs.
-pub(crate) fn ruolo_e_tempo(name: &str) -> (&'static str, Option<(f64, usize, usize)>) {
+pub(crate) fn role_and_time(name: &str) -> (&'static str, Option<(f64, usize, usize)>) {
     let (stem, guess) = guess_kind(name);
     let lowc: Vec<char> = stem.to_lowercase().chars().collect();
     let time = (guess == "sample").then(|| time_of(&lowc)).flatten();
@@ -307,8 +307,8 @@ pub(crate) fn ruolo_e_tempo(name: &str) -> (&'static str, Option<(f64, usize, us
 }
 
 /// The role (`proponi` names) and the minutes of one name, without the series, replicates and positions: what a caller that only classifies a name needs.
-pub fn ruolo_e_minuti(name: &str) -> (&'static str, Option<f64>) {
-    let (kind, time) = ruolo_e_tempo(name);
+pub fn role_and_minutes(name: &str) -> (&'static str, Option<f64>) {
+    let (kind, time) = role_and_time(name);
     (kind, time.map(|t| t.0))
 }
 

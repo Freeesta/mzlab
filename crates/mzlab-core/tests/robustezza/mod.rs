@@ -13,17 +13,17 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{FileSet, Member};
 
-/// Counts, per thread, the bytes alive, the peak and the largest single request. A request over `TETTO_REALE` is refused (null), so that a hostile count cannot
+/// Counts, per thread, the bytes alive, the peak and the largest single request. A request over `REAL_CAP` is refused (null), so that a hostile count cannot
 /// bring the machine to its knees: the reader that handles the refusal is flagged all the same, because its count was never compared with the file.
 pub struct Counter;
 
-const TETTO_REALE: usize = 256 << 20;
+const REAL_CAP: usize = 256 << 20;
 
 thread_local! {
     static VIVI: Cell<isize> = const { Cell::new(0) };
     static PEAK: Cell<isize> = const { Cell::new(0) };
-    static GRANDE: Cell<usize> = const { Cell::new(0) };
-    static RICHIESTA: Cell<u64> = const { Cell::new(0) };
+    static LARGE: Cell<usize> = const { Cell::new(0) };
+    static REQUEST: Cell<u64> = const { Cell::new(0) };
 }
 
 fn count(delta: isize, size: usize) {
@@ -31,12 +31,12 @@ fn count(delta: isize, size: usize) {
         v.set(v.get().saturating_add(delta));
         PEAK.with(|p| p.set(p.get().max(v.get())));
     });
-    GRANDE.with(|g| g.set(g.get().max(size)));
+    LARGE.with(|g| g.set(g.get().max(size)));
 }
 
 unsafe impl GlobalAlloc for Counter {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
-        if l.size() > TETTO_REALE {
+        if l.size() > REAL_CAP {
             count(0, l.size());
             return std::ptr::null_mut();
         }
@@ -47,7 +47,7 @@ unsafe impl GlobalAlloc for Counter {
         p
     }
     unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
-        if l.size() > TETTO_REALE {
+        if l.size() > REAL_CAP {
             count(0, l.size());
             return std::ptr::null_mut();
         }
@@ -62,7 +62,7 @@ unsafe impl GlobalAlloc for Counter {
         count(-(l.size() as isize), 0);
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, new: usize) -> *mut u8 {
-        if new > TETTO_REALE {
+        if new > REAL_CAP {
             count(0, new);
             return std::ptr::null_mut();
         }
@@ -79,7 +79,7 @@ pub struct Letture(pub Vec<u8>);
 
 impl ReadAt for Letture {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
-        RICHIESTA.with(|r| r.set(r.get().max(buf.len() as u64)));
+        REQUEST.with(|r| r.set(r.get().max(buf.len() as u64)));
         self.0.read_at(off, buf)
     }
 }
@@ -145,7 +145,7 @@ pub enum Mutazione {
     },
 }
 
-const GRANDI: [&str; 2] = ["4294967295", "18446744073709551615"];
+const LARGE_ONES: [&str; 2] = ["4294967295", "18446744073709551615"];
 
 pub fn apply(m: &Mutazione, s: &[u8]) -> Vec<u8> {
     match m {
@@ -220,7 +220,7 @@ pub fn mutazioni(s: &[u8], text: bool) -> Vec<Mutazione> {
         let step = (digits.len() / 60).max(1);
         for &(da, a) in digits.iter().step_by(step) {
             out.extend(
-                GRANDI
+                LARGE_ONES
                     .iter()
                     .map(|&val| Mutazione::NumeroGrande { da, a, val }),
             );
@@ -252,10 +252,10 @@ pub fn mutazioni(s: &[u8], text: bool) -> Vec<Mutazione> {
     }
     // flipped bytes: single and in groups
     for k in 0..160 {
-        let cambi = (0..if k < 100 { 1 } else { 8 })
+        let changes = (0..if k < 100 { 1 } else { 8 })
             .map(|_| (r.below(n), r.next() as u8))
             .collect();
-        out.push(Mutazione::Cambia(cambi));
+        out.push(Mutazione::Cambia(changes));
     }
     // a valid head and a random body
     for (testa, lunghezza) in [(64, n), (512, n), (512, 4 * n), (n / 4, n)] {
@@ -287,15 +287,15 @@ fn cifre(s: &[u8]) -> Vec<(usize, usize)> {
 }
 
 /// What a case did: the keys of the errors it met, the peak and the largest request of memory, the largest read asked of a member.
-pub struct Esito {
+pub struct Outcome {
     pub keys: Vec<String>,
     pub peak: usize,
     pub large: usize,
-    pub richiesta: u64,
+    pub request: u64,
 }
 
 /// The keys of the errors are `err.*` (the older ones `error.*`).
-pub fn chiave_ok(k: &str) -> bool {
+pub fn key_ok(k: &str) -> bool {
     k.starts_with("err.") || k.starts_with("error.")
 }
 
@@ -305,19 +305,19 @@ pub fn note<T>(r: Result<T>, keys: &mut Vec<String>) -> Option<T> {
 }
 
 /// The code under test: it receives the members of a case and gives the keys of the errors it met.
-pub type Esegui = fn(&[(String, Vec<u8>)]) -> Vec<String>;
+pub type Execute = fn(&[(String, Vec<u8>)]) -> Vec<String>;
 
-fn un_caso(job: Box<dyn FnOnce() -> Vec<String> + Send>) -> Esito {
+fn one_case(job: Box<dyn FnOnce() -> Vec<String> + Send>) -> Outcome {
     VIVI.with(|v| v.set(0));
     PEAK.with(|v| v.set(0));
-    GRANDE.with(|v| v.set(0));
-    RICHIESTA.with(|v| v.set(0));
+    LARGE.with(|v| v.set(0));
+    REQUEST.with(|v| v.set(0));
     let chiavi = job();
-    Esito {
+    Outcome {
         keys: chiavi,
         peak: PEAK.with(Cell::get).max(0) as usize,
-        large: GRANDE.with(Cell::get),
-        richiesta: RICHIESTA.with(Cell::get),
+        large: LARGE.with(Cell::get),
+        request: REQUEST.with(Cell::get),
     }
 }
 
@@ -327,7 +327,7 @@ pub fn cap(total: usize) -> usize {
 }
 
 /// Runs every mutation of every member of `seme` (the other members unchanged) and returns the failures, one line each.
-pub fn corri(seme: &[(String, Vec<u8>)], text: &[bool], esegui: Esegui) -> (usize, Vec<String>) {
+pub fn corri(seme: &[(String, Vec<u8>)], text: &[bool], execute: Execute) -> (usize, Vec<String>) {
     let (mut casi, mut guasti) = (0, Vec::new());
     let tracciato = std::env::var_os("ROBUSTEZZA_TRACCIA").is_some();
     for (i, (nome, base)) in seme.iter().enumerate() {
@@ -340,7 +340,7 @@ pub fn corri(seme: &[(String, Vec<u8>)], text: &[bool], esegui: Esegui) -> (usiz
                 eprintln!("caso {label}");
             }
             casi += 1;
-            guasti.extend(one(&label, total, Box::new(move || esegui(&members))));
+            guasti.extend(one(&label, total, Box::new(move || execute(&members))));
         }
     }
     (casi, guasti)
@@ -352,20 +352,20 @@ pub fn one(label: &str, total: usize, job: Box<dyn FnOnce() -> Vec<String> + Sen
     let h = std::thread::Builder::new()
         .stack_size(8 << 20)
         .spawn(move || {
-            let _ = tx.send(un_caso(job));
+            let _ = tx.send(one_case(job));
         })
         .expect("thread");
     match rx.recv_timeout(Duration::from_secs(20)) {
         Err(mpsc::RecvTimeoutError::Timeout) => vec![format!("{label}: no answer in 20 s")],
-        Err(_) => vec![format!("{label}: panic {}", panico(h))],
+        Err(_) => vec![format!("{label}: panic {}", panic_case(h))],
         Ok(e) => {
             let _ = h.join();
-            giudica(label, &e, total)
+            judge(label, &e, total)
         }
     }
 }
 
-fn panico(h: std::thread::JoinHandle<()>) -> String {
+fn panic_case(h: std::thread::JoinHandle<()>) -> String {
     match h.join() {
         Err(p) => p
             .downcast_ref::<String>()
@@ -376,10 +376,10 @@ fn panico(h: std::thread::JoinHandle<()>) -> String {
     }
 }
 
-fn giudica(label: &str, e: &Esito, total: usize) -> Vec<String> {
+fn judge(label: &str, e: &Outcome, total: usize) -> Vec<String> {
     let mut out = Vec::new();
     let t = cap(total);
-    for k in e.keys.iter().filter(|k| !chiave_ok(k)) {
+    for k in e.keys.iter().filter(|k| !key_ok(k)) {
         out.push(format!("{label}: key without err.* prefix: {k}"));
     }
     if e.peak > t || e.large > t {
@@ -388,10 +388,10 @@ fn giudica(label: &str, e: &Esito, total: usize) -> Vec<String> {
             e.peak, e.large
         ));
     }
-    if e.richiesta > total as u64 {
+    if e.request > total as u64 {
         out.push(format!(
             "{label}: read of {} B from a member of at most {total} B",
-            e.richiesta
+            e.request
         ));
     }
     out

@@ -110,7 +110,7 @@ pub fn validate<R: Read>(reader: R) -> Result<Report> {
 }
 
 /// The number of terms in the vocabulary table.
-pub fn termini() -> usize {
+pub fn terms() -> usize {
     cv::get().len()
 }
 

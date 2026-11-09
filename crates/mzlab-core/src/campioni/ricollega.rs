@@ -68,7 +68,7 @@ pub fn relink(cs: &[Sample], candidates: &[(String, String)]) -> Vec<Abbinamento
 }
 
 /// `{"abbinati":[{"indice","percorso","per_nome"}]}`.
-pub fn ricollega_json(a: &[Abbinamento]) -> String {
+pub fn relink_json(a: &[Abbinamento]) -> String {
     let mut j = Out::default();
     j.raw("{\"abbinati\":[");
     for (i, x) in a.iter().enumerate() {

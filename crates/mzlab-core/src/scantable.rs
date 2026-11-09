@@ -75,7 +75,7 @@ impl Detail {
 
 /// Where a scan of a vendor file lies: the number of the scan in `Lettore::index` and its place (written in place of `start`, `end`).
 #[derive(Debug, Clone, Copy)]
-pub struct Dove {
+pub struct Where {
     pub k: usize,
     pub position: Option<Position>,
 }
@@ -85,7 +85,7 @@ pub struct Row {
     pub start: u64,
     pub end: u64,
     /// A row of a vendor file (`mzidx_lettore::rows_json`).
-    pub at: Option<Box<Dove>>,
+    pub at: Option<Box<Where>>,
     pub level: u8,
     pub rt: f64,
     pub polarity: i8,
@@ -279,7 +279,7 @@ fn precursor_element(e: &str, refer: Option<Arc<str>>) -> Prec {
         selected: get("744"),
         charge: ch.filter(|c| *c != 0.0).map(|c| c as i64),
         refer,
-        act: crate::attivazioni::nome_in(e),
+        act: crate::attivazioni::name_in(e),
         ce: get("045"),
         pint: get("042"),
     }

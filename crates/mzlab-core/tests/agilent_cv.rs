@@ -56,7 +56,7 @@ fn slice<'a>(x: &'a str, from: &str, to: &str) -> &'a str {
 }
 
 fn ours(folder: &Path) -> String {
-    String::from_utf8(conv_aiuto::mzml_cartella(folder)).unwrap()
+    String::from_utf8(conv_aiuto::mzml_folder(folder)).unwrap()
 }
 
 #[test]

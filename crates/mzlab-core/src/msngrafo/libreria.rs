@@ -7,7 +7,7 @@ use crate::error::{Error, Result};
 use crate::json::{parse, Out};
 
 const TESTA: &str = "{\"formato\":\"msnlib/1\",\"voci\":[";
-const CODA: &str = "]}";
+const TAIL: &str = "]}";
 
 /// The activations of the spectra of the graph, sorted and without repeats.
 fn attivazioni(spettri: &[SpettroG]) -> Vec<&str> {
@@ -45,7 +45,7 @@ fn entry(id: &str, g: &Graph, graph: &str) -> Result<(String, String)> {
 }
 
 /// The key of an entry already in the library, read from its line.
-fn chiave_di(row: &str) -> Result<String> {
+fn key_of(row: &str) -> Result<String> {
     let bad = || Error::new("err.msnlib.bad");
     let v = parse(row.as_bytes()).map_err(|_| bad())?;
     let id = v.get("id").and_then(|x| x.str()).ok_or_else(bad)?;
@@ -68,13 +68,13 @@ fn rows(library: &str) -> Result<Vec<(String, String)>> {
     let corpo = library
         .trim_end()
         .strip_prefix(TESTA)
-        .and_then(|t| t.strip_suffix(CODA))
+        .and_then(|t| t.strip_suffix(TAIL))
         .ok_or_else(bad)?;
     corpo
         .lines()
         .map(|l| l.trim().trim_end_matches(','))
         .filter(|l| !l.is_empty())
-        .map(|l| Ok((l.to_string(), chiave_di(l)?)))
+        .map(|l| Ok((l.to_string(), key_of(l)?)))
         .collect()
 }
 
@@ -89,7 +89,7 @@ pub fn aggiungi(library: &str, id: &str, g: &Graph, graph: &str) -> Result<(Stri
     v.push((row, k));
     crate::sortc::slice_by(&mut v, |a, b| a.1.cmp(&b.1));
     let corpo: Vec<&str> = v.iter().map(|(r, _)| r.as_str()).collect();
-    Ok((format!("{TESTA}\n{}\n{CODA}\n", corpo.join(",\n")), false))
+    Ok((format!("{TESTA}\n{}\n{TAIL}\n", corpo.join(",\n")), false))
 }
 
 #[cfg(test)]
@@ -103,7 +103,7 @@ mod tests {
             ione: Some(Ione {
                 formula: formula.into(),
                 theoretical_mz: 195.0877,
-                mz_osservato: 195.0878,
+                mz_observed: 195.0878,
                 ppm: 0.5,
             }),
             ..Graph::default()
@@ -114,7 +114,7 @@ mod tests {
             att: att.into(),
             ce: 30.0,
             precursore: None,
-            larghezza: None,
+            width: None,
             picchi: vec![],
         });
         g
@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn an_entry_is_added_once_and_the_library_stays_sorted() {
         let (l1, d1) = aggiungi("", "STD-2", &graph("C8H11N4O2+", "hcd"), "{}").unwrap();
-        assert!(!d1 && l1.starts_with(TESTA) && l1.trim_end().ends_with(CODA));
+        assert!(!d1 && l1.starts_with(TESTA) && l1.trim_end().ends_with(TAIL));
         let (l2, d2) = aggiungi(&l1, "STD-1", &graph("C8H11N4O2+", "hcd"), "{}").unwrap();
         assert!(!d2 && l2.find("STD-1").unwrap() < l2.find("STD-2").unwrap());
         // the same standard, ion and activation is a duplicate and leaves the text as it was

@@ -150,7 +150,7 @@ fn range_of(d: &Value, hi: &str, lo: &str) -> Result<Option<(f64, f64)>> {
 }
 
 /// The fields `campioni/3` adds, all optional (a `campioni/2` has none): read into `c`.
-pub(super) fn leggi_nuovi(v: &Value, c: &mut Sample) -> Result<()> {
+pub(super) fn read_new(v: &Value, c: &mut Sample) -> Result<()> {
     let s = |k: &str| -> Result<String> { Ok(opt_text(v, k, &[])?.unwrap_or_default()) };
     c.sub = s("campione")?;
     c.reinjection = v.get("reiniezione").and_then(|x| x.bool()).unwrap_or(false);

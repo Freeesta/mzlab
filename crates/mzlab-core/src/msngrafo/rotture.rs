@@ -10,7 +10,7 @@ pub const VERSION: u32 = 1;
 
 /// One set of atoms of the structure that gives the m/z of a node.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ipotesi {
+pub struct Hypothesis {
     /// Indices of the bonds cut (empty = the whole molecule).
     pub legami: Vec<usize>,
     /// Heavy atoms of the piece (0-based, as in the SMILES), ascending.
@@ -25,15 +25,15 @@ pub struct Ipotesi {
 
 /// The hypotheses of one node (at most `max_ipotesi` kept, `n` counts all).
 #[derive(Debug, Clone, PartialEq)]
-pub struct RotturaNodo {
+pub struct NodeBreak {
     pub node: usize,
     pub n: usize,
-    pub ipotesi: Vec<Ipotesi>,
+    pub ipotesi: Vec<Hypothesis>,
 }
 
 /// An arc and whether a hypothesis of its child lies inside a hypothesis of its parent.
 #[derive(Debug, Clone, PartialEq)]
-pub struct RotturaArco {
+pub struct EdgeBreak {
     pub da: usize,
     pub a: usize,
     pub spiegato: bool,
@@ -41,14 +41,14 @@ pub struct RotturaArco {
 
 /// The intensity of one spectrum (% of its base peak, summed) and the part of it on explained arcs.
 #[derive(Debug, Clone, PartialEq)]
-pub struct RotturaSpettro {
+pub struct SpectrumBreak {
     pub albero: String,
     pub explained: f64,
     pub total: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Rotture {
+pub struct Breaks {
     pub smiles: String,
     pub ppm: f64,
     pub h_max: u8,
@@ -56,14 +56,14 @@ pub struct Rotture {
     pub atoms: usize,
     pub legami: usize,
     pub warnings: Vec<&'static str>,
-    pub nodes: Vec<RotturaNodo>,
-    pub edges: Vec<RotturaArco>,
-    pub spettri: Vec<RotturaSpettro>,
+    pub nodes: Vec<NodeBreak>,
+    pub edges: Vec<EdgeBreak>,
+    pub spettri: Vec<SpectrumBreak>,
 }
 
-impl Rotture {
+impl Breaks {
     /// Arcs explained, arcs, and the explained share of the total intensity (%).
-    pub fn conteggi(&self) -> (usize, usize, f64) {
+    pub fn counts(&self) -> (usize, usize, f64) {
         let sp = self.edges.iter().filter(|a| a.spiegato).count();
         let (s, t) = self
             .spettri
@@ -86,8 +86,8 @@ fn list(o: &mut Out, v: &[usize]) {
 }
 
 /// The value of the key `rotture` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
-pub fn rotture_json(r: &Rotture) -> String {
-    let (sp, tot, int) = r.conteggi();
+pub fn breaks_json(r: &Breaks) -> String {
+    let (sp, tot, int) = r.counts();
     let mut o = Out::default();
     o.raw("{\"versione\":")
         .int(VERSION as i64)
@@ -165,6 +165,6 @@ pub fn rotture_json(r: &Rotture) -> String {
 }
 
 /// `grafo` (the text of an `msngrafo/1`) with the key `rotture` added at the end; the text of a graph without it does not change.
-pub fn con_rotture(graph: &str, r: &Rotture) -> String {
-    super::vista::with_key(graph, "rotture", &rotture_json(r))
+pub fn with_breaks(graph: &str, r: &Breaks) -> String {
+    super::vista::with_key(graph, "rotture", &breaks_json(r))
 }

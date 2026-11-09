@@ -9,7 +9,7 @@ mod json;
 mod livelli;
 mod rotte;
 
-pub use cerca::{cerca, cerca_ampia};
+pub use cerca::{cerca, search_wide};
 pub use csv::{from_csv, to_csv};
 pub use ione::ione;
 pub use json::{digest, errors_json, from_json, hits_json, record_json, to_json};
@@ -42,8 +42,8 @@ pub struct Origin {
     pub tipo: String,
     pub catalog: Vec<String>,
     pub file: Option<String>,
-    pub creato: Option<String>,
-    pub modificato: Option<String>,
+    pub created: Option<String>,
+    pub modified: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

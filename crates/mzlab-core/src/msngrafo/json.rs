@@ -29,7 +29,7 @@ fn id(o: &mut Out, i: Option<usize>) {
     };
 }
 
-fn opzioni(o: &mut Out, op: &Options) {
+fn options(o: &mut Out, op: &Options) {
     o.raw(",\"opzioni\":{\"ppm\":")
         .num(op.ppm)
         .raw(",\"da_min\":")
@@ -82,7 +82,7 @@ fn ione(o: &mut Out, g: &Graph) {
             .raw(",\"mz_teorico\":")
             .num(round(i.theoretical_mz, 5))
             .raw(",\"mz_osservato\":")
-            .num(round(i.mz_osservato, 5))
+            .num(round(i.mz_observed, 5))
             .raw(",\"ppm\":")
             .num(round(i.ppm, 2))
             .raw("}"),
@@ -118,7 +118,7 @@ fn testa(o: &mut Out, g: &Graph, op: &Options, source: Option<(&str, &str)>) {
             .raw("}"),
         None => o.raw("null"),
     };
-    opzioni(o, op);
+    options(o, op);
     o.raw(",\"polarita\":")
         .int(g.polarita as i64)
         .raw(",\"radici\":[");
@@ -169,7 +169,7 @@ fn node(o: &mut Out, i: usize, n: &GNode) {
         o.raw(if j > 0 { "," } else { "" }).str(t);
     }
     o.raw("],\"osservazioni\":")
-        .int(n.osservazioni as i64)
+        .int(n.observations as i64)
         .raw(",\"rel_max\":")
         .num(round(n.rel_max, 1));
     o.raw(",\"isotopo_di\":");
@@ -177,7 +177,7 @@ fn node(o: &mut Out, i: usize, n: &GNode) {
     o.raw(",\"m1\":");
     opt_num(o, n.m1, 1);
     o.raw(",\"isolamento\":{\"larghezza\":");
-    opt_num(o, n.larghezza, 3);
+    opt_num(o, n.width, 3);
     o.raw(",\"a_monte\":");
     opt_num(o, n.upstream, 3);
     o.raw(",\"stretto\":");
@@ -214,7 +214,7 @@ fn node(o: &mut Out, i: usize, n: &GNode) {
     o.raw("}");
 }
 
-fn candidato(o: &mut Out, c: &Candidate) {
+fn candidate(o: &mut Out, c: &Candidate) {
     o.raw("{\"formula\":")
         .str(&c.formula)
         .raw(",\"mz_teorico\":")
@@ -238,7 +238,7 @@ fn formula(o: &mut Out, f: &NodeFormula) {
         if i > 0 {
             o.raw(",");
         }
-        candidato(o, c);
+        candidate(o, c);
     }
     o.raw("],\"scelta\":");
     opt_str(o, f.choice.as_deref());
@@ -299,7 +299,7 @@ fn spettro(o: &mut Out, s: &SpettroG) {
         .raw(",\"precursore\":");
     id(o, s.precursore);
     o.raw(",\"larghezza\":");
-    opt_num(o, s.larghezza, 3);
+    opt_num(o, s.width, 3);
     o.raw(",\"picchi\":[");
     for (i, (mz, rel, n)) in s.picchi.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
@@ -340,5 +340,5 @@ pub fn json(g: &Graph, op: &Options, source: Option<(&str, &str)>) -> String {
         spettro(&mut o, s);
     }
     o.raw("]}");
-    super::vista::con_vista(o.0)
+    super::vista::with_view(o.0)
 }

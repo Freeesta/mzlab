@@ -93,11 +93,11 @@ fn a_rule_that_follows_another_holds_only_after_it() {
     );
     let only = tavola(&[regola("hcn_after_co", "loss", "CHN", "", "\"co\"")]);
     assert!(leads(only, &o, "C5H8N3", "C4H7N2").is_empty());
-    let altra = tavola(&[
+    let other = tavola(&[
         regola("nh3", "loss", "NH3", "", ""),
         regola("hcn_after_co", "loss", "CHN", "", "\"nh3\""),
     ]);
-    assert!(leads(altra, &o, "C5H8N3", "C4H7N2").is_empty());
+    assert!(leads(other, &o, "C5H8N3", "C4H7N2").is_empty());
 }
 
 #[test]

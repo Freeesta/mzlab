@@ -5,7 +5,7 @@ use crate::mzml::Spectrum;
 use crate::mzmlwrite::SpectrumExtra;
 
 /// The accessions `spectrum` looks for in the text of a header (as substrings: `h.contains` too): an extra that carries one of them would change the row.
-const LETTI: [&str; 26] = [
+const READ_ONES: [&str; 26] = [
     "MS:1000341",
     "MS:1000326",
     "MS:1000325",
@@ -53,14 +53,14 @@ pub(super) fn extra_inerte(sp: &Spectrum, extra: &SpectrumExtra) -> bool {
         .params
         .iter()
         .all(|(k, v)| match k.strip_prefix("cv:") {
-            Some(a) => !bad(a) && !bad(v) && !acc(v) && !LETTI.iter().any(|l| a.contains(l)),
+            Some(a) => !bad(a) && !bad(v) && !acc(v) && !READ_ONES.iter().any(|l| a.contains(l)),
             None => !acc(k) && !acc(v),
         })
 }
 
 /// A total as `spectrum` reads it back from the text the writer gives: `{}` of an `f64` is the shortest text that parses to the same bits (`inf` too),
 /// but every NaN is written `NaN`, which parses to the one `f64::NAN`.
-pub(super) fn tic_letto(v: f64) -> f64 {
+pub(super) fn tic_read(v: f64) -> f64 {
     if v.is_nan() {
         f64::NAN
     } else {

@@ -66,7 +66,7 @@ impl std::io::Write for Sha256Sink {
 }
 
 /// (case, hashes before the change: mzidx, mzml, metodo, intestazioni).
-const PRIMA: &[(&str, [&str; 4])] = &[
+const BEFORE: &[(&str, [&str; 4])] = &[
     (
         "LAB-A",
         [
@@ -130,13 +130,13 @@ fn file(case: &str) -> Option<PathBuf> {
 }
 
 #[test]
-fn la_memoria_compatta_non_cambia_nessun_risultato() {
+fn the_compact_memory_changes_no_result() {
     let Some(_) = dati_percorsi::radice() else {
         eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
         return;
     };
     let print = std::env::var_os("RAW_EQ_PRINT").is_some();
-    for (case, before) in PRIMA {
+    for (case, before) in BEFORE {
         let Some(p) = file(case) else {
             eprintln!("SKIP raw_equivalenza {case}: file not found");
             continue;
@@ -157,7 +157,7 @@ fn la_memoria_compatta_non_cambia_nessun_risultato() {
 /// RV-05: `scansione_dati` (what the module sends: points, level, polarity, profile, RT and precursor from the index row) gives the same scan as `scansione`, and the transport
 /// (`trasporto`) returns it as it is, for a sample of the scans of each file.
 #[test]
-fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
+fn scan_data_and_transport_give_the_same_scan() {
     let Some(_) = dati_percorsi::radice() else {
         eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
         return;
@@ -234,7 +234,7 @@ fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
 /// The light header of the scan table (`testata_tabella`) has the fields `Head::da_testata` reads exactly as the full header of the mzML (`testata_mzml`), so the
 /// table is the same, for every `.raw` of the data repository.
 #[test]
-fn la_testata_della_tabella_ha_i_campi_della_testata_completa() {
+fn the_table_header_has_the_fields_of_the_full_header() {
     let Some(dir) = dati_percorsi::percorso("dati/formati/thermo/raw") else {
         eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
         return;
@@ -257,7 +257,7 @@ fn la_testata_della_tabella_ha_i_campi_della_testata_completa() {
         let Ok(mut l) = lettori::apri(fs, &Limits::sito()) else {
             continue;
         };
-        let piena = l.mzml_header(0).unwrap().expect("full header");
+        let full = l.mzml_header(0).unwrap().expect("full header");
         let leggera = l.table_header(0).unwrap().expect("light header");
         let fields = |h: &mzlab_core::mzmlwrite::Header| {
             format!(
@@ -272,7 +272,7 @@ fn la_testata_della_tabella_ha_i_campi_della_testata_completa() {
                 )
             )
         };
-        assert_eq!(fields(&leggera), fields(&piena), "{name}");
+        assert_eq!(fields(&leggera), fields(&full), "{name}");
         seen += 1;
     }
     assert!(seen > 0, "no .raw opened");

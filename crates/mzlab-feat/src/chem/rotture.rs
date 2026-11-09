@@ -8,7 +8,7 @@ use crate::sortc::SortC;
 use mzlab_core::elements::{self, Formula};
 use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{
-    con_rotture, Graph, Ipotesi, RotturaArco, RotturaNodo, RotturaSpettro, Rotture,
+    with_breaks, Breaks, EdgeBreak, Graph, Hypothesis, NodeBreak, SpectrumBreak,
 };
 
 const ION_H: f64 = mzlab_core::elements::PROTON;
@@ -75,9 +75,9 @@ fn sottoinsieme(a: &[usize], b: &[usize]) -> bool {
 }
 
 /// The hypotheses of every node, the explained arcs and the explained intensity of `g` for the structure `smiles`. `Err` = the SMILES cannot be read.
-pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Rotture, String> {
+pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Breaks, String> {
     let mixture = smiles.split('.').filter(|s| !s.trim().is_empty()).count() > 1;
-    let mut out = Rotture {
+    let mut out = Breaks {
         smiles: smiles.to_string(),
         ppm: p.ppm,
         h_max: p.h_max,
@@ -89,7 +89,7 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Rotture, String>
         edges: vec![],
         spettri: vec![],
     };
-    let mut ipotesi: Vec<Vec<Ipotesi>> = vec![vec![]; g.nodi.len()];
+    let mut ipotesi: Vec<Vec<Hypothesis>> = vec![vec![]; g.nodi.len()];
     if mixture {
         Mol::parse(smiles.split('.').next().unwrap_or("")).map_err(|_| "Invalid SMILES")?;
         out.warnings.push("warn.msngrafo.structMixture");
@@ -111,7 +111,7 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Rotture, String>
         if v.is_empty() {
             continue;
         }
-        out.nodes.push(RotturaNodo {
+        out.nodes.push(NodeBreak {
             node: k,
             n: v.len(),
             ipotesi: vec![],
@@ -123,7 +123,7 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Rotture, String>
                 sottoinsieme(&c.piece, &q.piece) && (c.piece.len() < q.piece.len() || c.h != q.h)
             })
         });
-        out.edges.push(RotturaArco {
+        out.edges.push(EdgeBreak {
             da: a.da,
             a: a.a,
             spiegato,
@@ -142,7 +142,7 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Rotture, String>
                 sp += rel;
             }
         }
-        out.spettri.push(RotturaSpettro {
+        out.spettri.push(SpectrumBreak {
             albero: s.albero.clone(),
             explained: sp,
             total: tot,
@@ -166,7 +166,7 @@ struct Ctx<'a> {
 
 impl Ctx<'_> {
     /// Cuts the bonds `tagli` and adds, per node, the pieces (and hydrogen shifts) that give its m/z.
-    fn prova(&self, tagli: &[usize], ipotesi: &mut [Vec<Ipotesi>]) {
+    fn prova(&self, tagli: &[usize], ipotesi: &mut [Vec<Hypothesis>]) {
         let m = self.m;
         let (lab, nc) = componenti(m, tagli);
         if tagli
@@ -215,7 +215,7 @@ fn nodi_a(
     mz: f64,
     (tagli, pezzo, keep, nh): (&[usize], &[usize], &[bool], i64),
     k: i8,
-    ipotesi: &mut [Vec<Ipotesi>],
+    ipotesi: &mut [Vec<Hypothesis>],
 ) {
     let (g, tol) = (cx.g, mz * cx.p.ppm * 1e-6);
     let lo = cx.ordine.partition_point(|&n| g.nodi[n].mz < mz - tol);
@@ -234,7 +234,7 @@ fn nodi_a(
                 None => f.push(("H".to_string(), nh.max(0) as u64)),
             }
         }
-        ipotesi[n].push(Ipotesi {
+        ipotesi[n].push(Hypothesis {
             legami: tagli.to_vec(),
             piece: pezzo.to_vec(),
             formula: elements::fmt(&f),
@@ -246,7 +246,7 @@ fn nodi_a(
 }
 
 /// Cuts the sets of bonds and collects, per node, the pieces that give its m/z.
-fn enumera(g: &Graph, m: &Mol, out: &mut Rotture, ipotesi: &mut [Vec<Ipotesi>], p: Parametri) {
+fn enumera(g: &Graph, m: &Mol, out: &mut Breaks, ipotesi: &mut [Vec<Hypothesis>], p: Parametri) {
     let on_ring = m.ring_bonds();
     let mut cand: Vec<usize> = (0..m.bonds.len())
         .filter(|&k| {
@@ -293,5 +293,5 @@ pub fn rotture_testo(g: &Graph, j: &str, smiles: Option<&str>, p: Parametri) -> 
     let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
     let r = rotture(g, smiles, p)
         .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
-    Ok(con_rotture(j, &r))
+    Ok(with_breaks(j, &r))
 }

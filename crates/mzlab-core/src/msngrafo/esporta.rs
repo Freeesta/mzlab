@@ -25,7 +25,7 @@ impl Format {
 }
 
 /// `formato=csv|mgf|msp&pulito=1&nodo=<id>` of `api/msn_grafo/export`; `get(name)` is the value of a parameter.
-pub fn da_richiesta_export(
+pub fn from_export_request(
     get: &dyn Fn(&str) -> Option<String>,
 ) -> Result<(Format, bool, Option<String>)> {
     let f = Format::from_name(&get("formato").unwrap_or_default())?;
@@ -84,7 +84,7 @@ fn blocks(g: &Graph, sel: &[&SpettroG], clean: bool, mgf: bool) -> String {
 
 /// Whether a spectrum is kept by `nodo`: `nK` (a node of the graph) = the spectra of which it is the precursor; `msn:<id>` or a bare tree id =
 /// the spectra of that node of the tree (`SpettroG::albero`); `tutto`, empty or absent = all.
-fn voluto(s: &SpettroG, node: Option<&str>) -> bool {
+fn wanted(s: &SpettroG, node: Option<&str>) -> bool {
     let Some(n) = node.filter(|n| !n.is_empty() && *n != "tutto") else {
         return true;
     };
@@ -96,7 +96,7 @@ fn voluto(s: &SpettroG, node: Option<&str>) -> bool {
 
 /// The text of the export; `nodo` as in `voluto`.
 pub fn esporta(g: &Graph, format: Format, clean: bool, node: Option<&str>) -> String {
-    let sel: Vec<&SpettroG> = g.spettri.iter().filter(|s| voluto(s, node)).collect();
+    let sel: Vec<&SpettroG> = g.spettri.iter().filter(|s| wanted(s, node)).collect();
     match format {
         Format::Csv => csv(g, &sel, clean),
         Format::Mgf => blocks(g, &sel, clean, true),
@@ -116,7 +116,7 @@ mod tests {
             att: "hcd".into(),
             ce: 30.0,
             precursore: None,
-            larghezza: None,
+            width: None,
             picchi: vec![(100.0, 100.0, Some(0)), (50.5, 20.0, None)],
         });
         g

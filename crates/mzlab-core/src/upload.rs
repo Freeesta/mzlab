@@ -20,7 +20,7 @@ mod non_mzml;
 mod passata;
 #[cfg(test)]
 mod tests;
-pub use doppio::indicizza_lettore_doppio;
+pub use doppio::index_reader_twice;
 #[cfg(not(target_arch = "wasm32"))]
 pub use late::prepare_late;
 pub use passata::Passata;
@@ -74,10 +74,10 @@ pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, St
     fingerprint(r, size, Passata::new(size))
 }
 
-/// Native: SHA-256 and SHA-1 on two threads (`passata::due_fili`).
+/// Native: SHA-256 and SHA-1 on two threads (`passata::two_threads`).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
-    passata::due_fili(r, size, STEP)
+    passata::two_threads(r, size, STEP)
 }
 
 fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String, String, String)> {
@@ -94,11 +94,11 @@ fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String,
 
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
 pub fn prepare<R: ReadAt>(r: &mut R, size: u64, name: &str) -> Result<Prepared> {
-    prepare_con(r, size, name, None)
+    prepare_with(r, size, name, None)
 }
 
 /// `prepare` with the `(sha256, probe)` of the file when the page took them while it copied the file (`Passata`): the file is then not read again for them.
-pub fn prepare_con<R: ReadAt>(
+pub fn prepare_with<R: ReadAt>(
     r: &mut R,
     size: u64,
     name: &str,
@@ -107,7 +107,7 @@ pub fn prepare_con<R: ReadAt>(
     prepare_in(r, size, name, known, None)
 }
 
-/// `prepare_con` that refuses in order (`error.memoryBudget`, phase `table`, `stima`) a file whose scan table does not fit in `budget`.
+/// `prepare_with` that refuses in order (`error.memoryBudget`, phase `table`, `stima`) a file whose scan table does not fit in `budget`.
 pub fn prepare_in<R: ReadAt>(
     r: &mut R,
     size: u64,
@@ -124,7 +124,7 @@ pub fn prepare_in<R: ReadAt>(
             (sha256, probe)
         }
     };
-    Ok(da_tabella_mzml(t, name, size, sha256, probe))
+    Ok(from_mzml_table(t, name, size, sha256, probe))
 }
 
 /// Native only: `prepare` with the fingerprints taken by a second thread (`r2`, a second reader of the same file) while the scan table is read.
@@ -143,12 +143,12 @@ pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
             .join()
             .unwrap_or_else(|_| Err(Error::new("err.file.unknown")));
         let (sha256, _, probe) = prints?;
-        Ok(da_tabella_mzml(t?, name, size, sha256, probe))
+        Ok(from_mzml_table(t?, name, size, sha256, probe))
     })
 }
 
-fn da_tabella_mzml(t: Table, name: &str, size: u64, sha256: String, probe: String) -> Prepared {
-    let table = late::tabella_con(t, late::source_text(name, size, &probe, &sha256));
+fn from_mzml_table(t: Table, name: &str, size: u64, sha256: String, probe: String) -> Prepared {
+    let table = late::table_with(t, late::source_text(name, size, &probe, &sha256));
     Prepared {
         table,
         sha256,
@@ -227,15 +227,15 @@ pub fn impronte(fs: &mut FileSet) -> Result<Vec<Fingerprint>> {
 /// the SHA-1 goes to the members. `None` when they do not match the members (the caller takes them with `impronte`).
 pub fn impronte_note(
     fs: &mut FileSet,
-    valori: &[(String, String, String)],
+    values: &[(String, String, String)],
 ) -> Option<Vec<Fingerprint>> {
-    if valori.len() != fs.membri.len() {
+    if values.len() != fs.membri.len() {
         return None;
     }
     Some(
         fs.membri
             .iter_mut()
-            .zip(valori)
+            .zip(values)
             .map(|(m, (sha256, sha1, probe))| {
                 m.sha1 = Some(sha1.clone());
                 Fingerprint {
@@ -252,7 +252,7 @@ pub fn impronte_note(
 
 /// `sha256` and `probe` of a set: those of its member when it has one; otherwise SHA-256 (SHA-1 for the probe) of the members' values, each
 /// followed by a newline, then the id of the sample (a `.wiff` gives one index per sample).
-fn impronta_insieme(members: &[Fingerprint], sample: u32) -> (String, String) {
+fn set_print(members: &[Fingerprint], sample: u32) -> (String, String) {
     if let [m] = members {
         return (m.sha256.clone(), m.probe.clone());
     }
@@ -275,13 +275,13 @@ pub fn prepare_reader(
     name: &str,
 ) -> Result<Prepared> {
     let t = mzidx_lettore::righe(l, c)?;
-    dalla_tabella(t, l, c, members, name)
+    from_the_table(t, l, c, members, name)
 }
 
 /// The table, the index and the SHA-256 of sample `c` of a vendor file set with one decoding of the scans for the table and for pass 1 of the builder
 /// (the later passes, when the peaks do not fit in `budget`, decode again). `fase(3)` is called when the table is done and the index starts.
 /// Returns the statistics of the build and the `sha256` of the set. The index is the one `prepare_lettore` + `mzidx::build_lettore` write.
-pub fn indicizza_lettore(
+pub fn index_reader(
     l: &mut dyn Reader,
     c: usize,
     members: &[Fingerprint],
@@ -302,8 +302,8 @@ pub fn indicizza_lettore(
     )
 }
 
-/// `indicizza_lettore` for a caller that gives the fingerprints late and a scratch file:
-/// - `membri` is called once, when the table is done: a desktop build hashes the members in another thread while the scans are decoded (`con_impronte_parallele`);
+/// `index_reader` for a caller that gives the fingerprints late and a scratch file:
+/// - `membri` is called once, when the table is done: a desktop build hashes the members in another thread while the scans are decoded (`with_parallel_prints`);
 /// - `spill`: where the peaks go when they do not fit in `budget` (`mzidx_spill`), so the scans are decoded ONCE whatever the size of the file; without it the later rounds decode again.
 #[allow(clippy::too_many_arguments)]
 pub fn index_reader_with(
@@ -316,26 +316,26 @@ pub fn index_reader_with(
     spill: Option<&mut dyn crate::mzidx_spill::Spill>,
     fase: &mut dyn FnMut(u32),
 ) -> Result<(crate::mzidx::Stats, String)> {
-    let (t, before) = mzidx_lettore::righe_prima(l, c, budget, spill)?;
-    let sample = campione_di(l, c)?;
+    let (t, before) = mzidx_lettore::rows_before(l, c, budget, spill)?;
+    let sample = sample_of(l, c)?;
     let p = table(t, l, c, String::new(), String::new(), String::new())?;
     fase(3);
     let n = l.index(c)?.len();
     // the members are asked for last, where the source is written (`build_dopo`): their hash may still be running
     let mut sha256 = String::new();
-    let mut tardi = || -> Result<String> {
+    let mut late = || -> Result<String> {
         let (source, sha, _) = sorgente(&members()?, &sample, name);
         sha256 = sha;
         Ok(source)
     };
-    let st = crate::mzidx::build_dopo(
+    let st = crate::mzidx::build_after(
         &p.table,
         before,
         &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l, c, k).map(&mut *on)),
         out,
         budget,
         true,
-        Some(&mut tardi),
+        Some(&mut late),
     )?;
     Ok((st, sha256))
 }
@@ -344,7 +344,7 @@ pub fn index_reader_with(
 /// while `lavoro` decodes the scans. `lavoro` gets the function that waits for them (to hand to `index_reader_with`); the members of the set
 /// it opens carry an empty SHA-1 (`without_sha1`): the table does not read it. SHA-256 and SHA-1 are the same as `impronte` gives.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn con_impronte_parallele<R>(
+pub fn with_parallel_prints<R>(
     recipe: impl FnOnce() -> Result<FileSet> + Send,
     job: impl FnOnce(&mut dyn FnMut() -> Result<Vec<Fingerprint>>) -> Result<R>,
 ) -> Result<R> {
@@ -362,7 +362,7 @@ pub fn con_impronte_parallele<R>(
 
 /// WASI and the browser cannot spawn a thread: the fingerprints are taken in place when `lavoro` asks for them, the same bytes as the native build.
 #[cfg(target_arch = "wasm32")]
-pub fn con_impronte_parallele<R>(
+pub fn with_parallel_prints<R>(
     recipe: impl FnOnce() -> Result<FileSet> + Send,
     job: impl FnOnce(&mut dyn FnMut() -> Result<Vec<Fingerprint>>) -> Result<R>,
 ) -> Result<R> {
@@ -383,7 +383,7 @@ pub fn without_sha1(fs: &mut FileSet) {
 
 /// The name of the dataset the members make, the one `mzlab-cli` gives the path: the shortest first component of their names (`X.raw`; `X.wiff` beside
 /// `X.wiff.scan`; the folder `X.D`), whatever name the page gives its list entry; `None` without members.
-pub fn nome_insieme(members: &[Fingerprint]) -> Option<&str> {
+pub fn set_name(members: &[Fingerprint]) -> Option<&str> {
     members
         .iter()
         .filter_map(|m| m.nome.split('/').next().filter(|s| !s.is_empty()))
@@ -392,16 +392,16 @@ pub fn nome_insieme(members: &[Fingerprint]) -> Option<&str> {
 
 /// The generation of what the readers give besides the scans (the chromatogram list: `wiff/cromatogrammi.rs`), written in the `source` of an index of a
 /// vendor file set (`"reader"`): an index of an older generation (or without one) is built again once (`native_attach` of mzlab-wasm refuses it).
-pub const GENERAZIONE_LETTORI: u32 = 2;
+pub const READERS_GENERATION: u32 = 2;
 
-fn dalla_tabella(
+fn from_the_table(
     t: Table,
     l: &mut dyn Reader,
     c: usize,
     members: &[Fingerprint],
     name: &str,
 ) -> Result<Prepared> {
-    let (source, sha256, probe) = sorgente(members, &campione_di(l, c)?, name);
+    let (source, sha256, probe) = sorgente(members, &sample_of(l, c)?, name);
     table(t, l, c, source, sha256, probe)
 }
 
@@ -417,7 +417,7 @@ fn table(
     Ok(prepared(&t, scans_json, source, sha256, probe))
 }
 
-fn campione_di(l: &mut dyn Reader, c: usize) -> Result<crate::lettori::Sample> {
+fn sample_of(l: &mut dyn Reader, c: usize) -> Result<crate::lettori::Sample> {
     l.samples()
         .get(c)
         .cloned()
@@ -430,11 +430,11 @@ fn sorgente(
     sample: &crate::lettori::Sample,
     name: &str,
 ) -> (String, String, String) {
-    let (sha256, probe) = impronta_insieme(members, sample.id);
+    let (sha256, probe) = set_print(members, sample.id);
     let mut source = Out::default();
     source_head(
         &mut source,
-        nome_insieme(members).unwrap_or(name),
+        set_name(members).unwrap_or(name),
         members.iter().map(|m| m.dim).sum(),
         &probe,
         &sha256,
@@ -454,7 +454,7 @@ fn sorgente(
     }
     source
         .raw("],\"reader\":")
-        .int(i64::from(GENERAZIONE_LETTORI))
+        .int(i64::from(READERS_GENERATION))
         .raw(",\"sample\":{\"id\":")
         .int(i64::from(sample.id))
         .raw(",\"nome\":")

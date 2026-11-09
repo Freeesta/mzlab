@@ -280,7 +280,7 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     } else {
         (None, None)
     };
-    crate::mzmlarray::punti_finiti(&c.id, &t, &y)?;
+    crate::mzmlarray::finite_points(&c.id, &t, &y)?;
     Ok(Chromatogram {
         index: c.index,
         id: c.id,
