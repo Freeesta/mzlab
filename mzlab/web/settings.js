@@ -144,8 +144,8 @@ function uipOpen(btn) {
     ? `<div class="imp-fld"><button id="uip-cen" type="button" title="${esc(T("settings.cen.title"))}">${T("settings.cen.btn")}</button><button id="uip-cen-x" type="button" title="${esc(T("settings.cen.stop.tip"))}" hidden>${T("settings.cen.stop")}</button></div><div class="hint" id="uip-cen-st" role="status" aria-live="polite"></div>` : "";
   const dataItems = [(!files.length || files.some(f => f.spectrum_mode !== "profile" || (window.HR && HR.isHr(f)))) ? C.sw(T("settings.merge"), T("settings.merge.tip"), 'id="uip-merge"', UIP.merge, "cont") : "",
     ...(hr ? [fld(`<span class="ic">${C.GICON.lib}</span>${T("settings.libs.label")}`, T("settings.libs.title"), `<button id="uip-lib" type="button">${T("settings.libs.button")}</button>`),
-      fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`),
-      fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`)] : []), cen];
+      fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input id="uip-ppm" inputmode="decimal" autocomplete="off" data-num data-min="1" data-max="50" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`),
+      fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input id="uip-hdec" inputmode="decimal" autocomplete="off" data-num data-min="3" data-max="5" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`)] : []), cen];
   const tourOn = !(window.BANCO && BANCO.on());
   const prof = uipProfile();
   const appItems = [window.DESKUPD ? DESKUPD.row() : "", window.DESKDEF ? DESKDEF.row() : "", window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : ""];
@@ -207,8 +207,8 @@ function uipOpen(btn) {
     if (typeof renderFileList === "function" && E.files.length) renderFileList();
     if (typeof redrawAll === "function") redrawAll();
   };
-  on("#uip-ppm", "change", e => { uipDo(() => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); }); e.target.value = UIP.hrPpm; hrChanged(); });
-  on("#uip-hdec", "change", e => { uipDo(() => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); }); e.target.value = UIP.hrDec; hrChanged(); });
+  on("#uip-ppm", "change", e => { uipDo(() => { UIP.hrPpm = Math.min(50, Math.max(1, numIt(e.target.value) || 5)); }); e.target.value = UIP.hrPpm; hrChanged(); });
+  on("#uip-hdec", "change", e => { uipDo(() => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(numIt(e.target.value) || 4))); }); e.target.value = UIP.hrDec; hrChanged(); });
   on("#uip-reset", "click", () => { uipRestore(); d.remove(); uipOpen(btn); });
   const close = () => { d.remove(); if (btn.isConnected) btn.focus(); };
   on("#uip-x", "click", close);

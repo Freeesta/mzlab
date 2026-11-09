@@ -12,7 +12,7 @@
       const lo = nm(q[0].value), hi = nm(q[1].value), ok = lo != null && hi != null && hi > lo, d = hrE ? 5 : 2;
       if (ok) COMANDI.fai("xic.traces", p, () => { t.mz = rh((lo + hi) / 2, d); t.w = rh((hi - lo) / 2, d); t.label = `m/z ${hrE ? t.mz.toFixed(4) : t.mz.toFixed(mzd(p))}`; delete t.ion; delete t.obs; });
       ctl(p); draw(p); if (ok) uiSave();
-      else note(p, I18N.t(lo == null || hi == null ? "xic.edge.num" : "xic.edge.order"));
+      else CAMPI.note(I18N.t(lo == null || hi == null ? "xic.edge.num" : "xic.edge.order"), p.el);
     });
     x.onchange = go; x.onblur = go;
   }
@@ -22,11 +22,11 @@
     const go = () => setTimeout(() => {
       const q = /** @type {HTMLInputElement[]} */ (ks.map(k => c.querySelector(`[data-o="${k}"]`))), a = /** @type {any} */ (document.activeElement);
       if (!x.isConnected || q.some(i => !i) || (q.includes(a) && a !== x) || q.every(i => i.value === i.defaultValue)) return;   // the other end has the focus: wait for it
-      const rd = (/** @type {string} */ v) => { if (!v.trim()) return null; const n = numIt(v); return isFinite(n) && (rt ? n >= 0 : n > 0) ? n : NaN; };
+      const rd = (/** @type {string} */ v) => { if (!v.trim()) return null; const n = CAMPI.num(v); return n != null && isFinite(n) && (rt ? n >= 0 : n > 0) ? n : NaN; };
       let [lo, hi] = q.map(i => rd(i.value)), bad = Number.isNaN(lo) || Number.isNaN(hi) ? "num" : "";
       if (!bad && rt && (lo != null || hi != null)) { const A = p._a || {}; lo ??= A.xmin ?? A.x0; hi ??= A.xmax ?? A.x1; }   // one RT end: the other is the edge of the data
       if (!bad && lo != null && hi != null && (pda ? hi < lo : hi <= lo)) bad = "order";   // one wavelength is a range of its own
-      if (bad) { q.forEach(i => { i.value = i.defaultValue; }); note(p, I18N.t(bad === "num" ? "ctl.range.num" : "ctl.range.order"), /** @type {HTMLElement} */ (x.closest(".cpop"))); return; }
+      if (bad) { q.forEach(i => { i.value = i.defaultValue; }); CAMPI.note(I18N.t(bad === "num" ? "ctl.range.num" : "ctl.range.order"), x); return; }
       keepFocus(p, () => {
         if (rt) { pushZh(p); if (lo == null) { p.zoom = null; p.zoomY = null; draw(p); } else zoomTo(p, lo, hi); }
         else { const r2 = (/** @type {number | null} */ v) => v == null ? null : Math.round(v * 100) / 100; COMANDI.fai("panel.source", p, () => { p.mz0 = r2(lo); p.mz1 = r2(hi); ctl(p); }); draw(p); }
@@ -42,17 +42,6 @@
     const sel = d?.o ? `[data-o="${d.o}"]` : d?.a ? `[data-a="${d.a}"]` : "";
     fn();
     if (sel && a && !a.isConnected) /** @type {HTMLElement | null} */ (p.el.querySelector(sel))?.focus();
-  }
-  /** a short status line under the header of panel p (inside the popover when host is one); it goes away by itself @param {any} p @param {string} msg @param {HTMLElement | null} [host] */
-  function note(p, msg, host) {
-    const box = host || p.el;
-    let m = /** @type {HTMLElement | null} */ (box.querySelector(".xr-msg"));
-    if (!m) { m = document.createElement("div"); m.className = host ? "xr-msg xr-in" : "xr-msg"; m.setAttribute("role", "status"); box.appendChild(m); }
-    const hd = /** @type {HTMLElement} */ (p.el.querySelector(".hd")), el = m;
-    if (!host) el.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px";
-    el.hidden = false; el.textContent = "";
-    setTimeout(() => { el.textContent = msg; }, 20);   // set after the clear: a screen reader announces every refusal
-    clearTimeout(p._xrNote); p._xrNote = setTimeout(() => { el.hidden = true; }, 6000);
   }
   /** @type {any} */ (window).XICBORDI = { wire, range };
 })();
