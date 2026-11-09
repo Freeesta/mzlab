@@ -44,6 +44,7 @@ try:
         wait_for_js(pg, "!!document.querySelector('#np-calc2') && !!document.querySelector('#np-calc2').offsetParent")
         def calc_here():
             pg.click("#np-calc2"); wait_for_js(pg, "!document.querySelector('#calcdlg').hidden && typeof CALCQUI !== 'undefined' && CALCQUI.calc")
+            wait_for_js(pg, "document.querySelector('#calctol').value === String(CALCQUI.opts(CALCQUI.arg('', null)).tol)", 10000)   # the field follows the unit of the open files
             sweep(pg, "#calcdlg", "JSON.stringify(CALCQUI.st)")
             typed(pg, "#calctol", "0,3"); wait_for_js(pg, "Object.values(CALCQUI.st).includes('0,3')", 5000)
             pg.keyboard.press("Escape")
