@@ -161,9 +161,9 @@ fn the_detection_is_refused_with_its_numbers_below_the_estimate_of_the_fixture()
         ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("data")).unwrap();
-        std::fs::write(dir.join("data/stima.mzML"), common::mzml(&s)).unwrap();
-        let plan = r#"{"format":"mzflow/2","inputs":[{"name":"stima.mzML","type":"raw"}],"steps":[
-{"id":"idx","step":"index.mzidx@1","in":{"source":["file:stima.mzML"]}},
+        std::fs::write(dir.join("data/estimate.mzML"), common::mzml(&s)).unwrap();
+        let plan = r#"{"format":"mzflow/2","inputs":[{"name":"estimate.mzML","type":"raw"}],"steps":[
+{"id":"idx","step":"index.mzidx@1","in":{"source":["file:estimate.mzML"]}},
 {"id":"det","step":"features.detect@1","in":{"index":["idx.index"]}}]}"#;
         std::fs::write(dir.join("plan.json"), plan).unwrap();
         let (data, out) = (dir.join("data"), dir.join("out"));
@@ -202,25 +202,25 @@ fn the_detection_is_refused_with_its_numbers_below_the_estimate_of_the_fixture()
     }
 }
 
-#[path = "../../mzlab-feat-wasm/tests/lettura_comune/mod.rs"]
-mod lettura;
+#[path = "../../mzlab-feat-wasm/tests/read_common/mod.rs"]
+mod read_common;
 
-/// `flow run` of `spectra.ms2` on the fixture `tests/dati/stima_lettura.json` at each of its budgets: below the read estimate the step is refused before
+/// `flow run` of `spectra.ms2` on the fixture `tests/dati/read_estimate.json` at each of its budgets: below the read estimate the step is refused before
 /// the file is decoded, with the phase `read`, the numbers of the page and the next step; above it the MGF is written.
 #[test]
 fn the_read_is_refused_with_its_numbers_below_the_estimate_of_the_fixture() {
-    let s = lettura::spec();
+    let s = read_common::spec();
     let mb = s["mb"].as_u64().unwrap();
-    for (budget, via) in lettura::cases(&s) {
+    for (budget, via) in read_common::cases(&s) {
         let dir = std::env::temp_dir().join(format!(
-            "mzlab_cli_stima_lettura_{budget}_{}",
+            "mzlab_cli_read_estimate_{budget}_{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("data")).unwrap();
-        std::fs::write(dir.join("data/stima.mzML"), lettura::mzml(&s)).unwrap();
-        let plan = r#"{"format":"mzflow/2","inputs":[{"name":"stima.mzML","type":"mzml"}],"steps":[
-{"id":"m","step":"spectra.ms2@1","in":{"source":["file:stima.mzML"]}}]}"#;
+        std::fs::write(dir.join("data/estimate.mzML"), read_common::mzml(&s)).unwrap();
+        let plan = r#"{"format":"mzflow/2","inputs":[{"name":"estimate.mzML","type":"mzml"}],"steps":[
+{"id":"m","step":"spectra.ms2@1","in":{"source":["file:estimate.mzML"]}}]}"#;
         std::fs::write(dir.join("plan.json"), plan).unwrap();
         let (data, out) = (dir.join("data"), dir.join("out"));
         let mb_arg = budget.to_string();

@@ -117,11 +117,17 @@ impl ReadAt for JsReader {
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
 /// Index `k` of `together` open at the same time (their blocks share one budget, `blocks_js::shape`).
 fn open_in(read: &Function, k: usize, size: f64, together: usize) -> Result<Index<blocks_js::Blocks>> {
+    Index::open(blocks_of(read, k, size, together), size as u64)
+}
+
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+/// The reader of index `k` that `open_in` opens.
+fn blocks_of(read: &Function, k: usize, size: f64, together: usize) -> blocks_js::Blocks {
     let r = JsReader {
         read: read.clone(),
         k: k as u32,
     };
-    Index::open(blocks_js::Blocks::over(r, size as u64, together), size as u64)
+    blocks_js::Blocks::over(r, size as u64, together)
 }
 
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
@@ -281,11 +287,11 @@ pub fn align_series_to(
     budget_mb: f64,
     spill: Option<js_sys::Object>,
 ) -> std::result::Result<String, JsValue> {
-    let r = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
+    let (r, facts) = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
     let (open, mut spill) = (|k| open_one(&read, k, sizes[k]), spill_js::of(spill.as_ref())?);
-    to_sink(write, |sink| run::align_to_spilling(&mut src, &budget, &r, open, sink, spill_js::borrow(&mut spill)))
+    to_sink(write, |sink| run::align_to_spilling(&mut src, &budget, &r, Some(facts), open, sink, spill_js::borrow(&mut spill)))
 }
 
 #[cfg(feature = "detect")]
@@ -297,7 +303,7 @@ pub fn align_series(
     sizes: Vec<f64>,
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let r = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
+    let (r, _) = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut src = JsStored { files };

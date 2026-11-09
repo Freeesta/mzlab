@@ -63,7 +63,8 @@ impl Cur {
                     arr.seconds = seconds;
                 }
                 "MS:1000574" => arr.zlib = true,
-                "MS:1002312" | "MS:1002313" | "MS:1002314" => {
+                // numpress alone and followed by zlib: read as plain floats, a zlib variant gives garbage or an infinity
+                a if crate::numpress::ACCESSIONS.contains(&a) => {
                     return Err(Error::new("err.file.numpress"))
                 }
                 _ => {

@@ -18,5 +18,21 @@ I18N.add("en", {
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "no adduct within {tol} Da",
   "icon.ad": "Adducts",
-  "cq.g.combos": "Combinations of losses"
+  "cq.g.combos": "Combinations of losses",
+  "cq.calc.tip": "Shows or hides the calculator",
+  "calc.pad.tip": "Types into the field; the keyboard works too",
+  "al.t.adducts.tip": "Ions the molecule can form",
+  "al.t.losses.tip": "Neutral pieces the ion can lose",
+  "al.t.cont.tip": "Frequent background ions in LC-MS",
+  "cq.tol.tip": "Largest gap accepted from the value",
+  "cq.pol.tip": "Positive ions, negative ones or both",
+  "cq.all.tip": "Also the farther matches",
+  "cq.loss.tip": "Where it is seen, and why",
+  "cq.g.liste.tip": "Known compounds at this m/z",
+  "cq.g.perdite.tip": "Neutral losses that give this mass",
+  "cq.g.diff.tip": "Adduct pairs with this difference",
+  "tbl.add.more.tip": "Also the rare adducts",
+  "tbl.diff.tip": "Δm between adducts of one ion",
+  "cq.link.ad.tip": "Opens the Adducts tab",
+  "cq.link.loss.tip": "Opens the Neutral losses tab"
 });

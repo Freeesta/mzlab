@@ -59,7 +59,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 ## Speed
 - A speed gain counts, even a few percent, when measured beyond the noise (repeated, median, same result) with small readable code: the PR gives the % on the step and on the total and adds a row to `misure-velocita.md`.
 - A dependency for speed is accepted if it gains ≥ 3 % measured on its target, has a permissive licence (`cargo deny`) and the PR shows the Cargo lines and the before/after numbers.
-- Load time of a file: `cargo run --release --example carico -- FILE.mzML`; other timing examples sit in `crates/mzlab-core/examples/*_tempi.rs`; WASM benches across browsers: `tools/banco_wasm.py` (`banco-wasm.yml`).
+- Load time of a file: `cargo run --release --example load -- FILE.mzML`; other timing examples sit in `crates/mzlab-core/examples/*_tempi.rs`; WASM benches across browsers: `tools/banco_wasm.py` (`banco-wasm.yml`).
 
 ## Build and test
 - Native: `cargo test --release -p mzlab-core` (or `-p <crate>`); CI splits the workspace into `rust` (mzlab-feat), `rust-core` (core, lettori, lib, mol, target), `rust-misc-a` (Attributio, chem, llm), `rust-misc-b` (the rest).
