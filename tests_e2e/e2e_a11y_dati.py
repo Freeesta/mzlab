@@ -107,16 +107,16 @@ try:
         step("keyboard: Tab reaches the visible controls, each with a visible focus indicator", tab_reach)
         def no_trap():
             # Tab and Shift+Tab leave each chart's canvas (and the panel itself within a few presses); Escape on a canvas does not pin the focus.
-            # The last panel's last control is the page's last tab stop: past it the focus goes to the browser (document.hasFocus() false), which is
-            # leaving too. The trail of each press ([document focused, element, inside the panel]) is printed, so a red shows where the focus went
+            # A tab stop after the last panel: past the page's last control each engine sends the focus to its own chrome (Firefox keeps
+            # activeElement there), which reads like a trap. The trail of each press ([element, inside the panel]) is printed on a red
+            pg.evaluate("(() => { const b = document.createElement('button'); b.id = 'e2e-fine'; b.textContent = 'end'; document.body.appendChild(b); })()")
             def leaves(pid, key):
                 trail = []
                 for i in range(60):
                     pg.keyboard.press(key)
-                    st = pg.evaluate(f"(() => {{ const a = document.activeElement, p = document.querySelector('[data-pid=\"{pid}\"]') || E.panels.find(q => q.id === {pid}).el; return [document.hasFocus(), a ? a.tagName + '.' + String(a.className).split(' ')[0] : '', !!a && p.contains(a)]; }})()")
+                    st = pg.evaluate(f"(() => {{ const a = document.activeElement, p = document.querySelector('[data-pid=\"{pid}\"]') || E.panels.find(q => q.id === {pid}).el; return [a ? a.tagName + '.' + (a.id || String(a.className).split(' ')[0]) : '', !!a && p.contains(a)]; }})()")
                     trail.append(st)
-                    if not st[0] or st[1] and not st[1].startswith("BODY") and not st[2]:
-                        print("FOCUS-TRAIL", pid, key, trail); return True
+                    if st[0] and not st[0].startswith("BODY") and not st[1]: return True
                 print("FOCUS-TRAIL", pid, key, trail[:12]); return False
             # a real trap (Tab sent back to the canvas inside the panel) must still be caught
             first = pg.evaluate("E.panels.find(p => p.el && p.el.offsetParent && p.el.querySelector('canvas[tabindex=\"0\"]')).id")
@@ -141,7 +141,7 @@ try:
                 for key in ("Tab", "Shift+Tab"):
                     pg.evaluate(f"E.panels.find(q => q.id === {pid}).el.querySelector('canvas[tabindex=\"0\"]').focus()")
                     assert leaves(pid, key), f"keyboard trap in the {typ} chart (panel {pid}) with {key}"
-            pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'")
+            pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'"); pg.evaluate("document.getElementById('e2e-fine').remove()")
         step("keyboard: no trap in the chart views (Tab and Shift+Tab leave each chart)", no_trap)
         def reflow():
             ctx = r.b.new_context(viewport={"width": 320, "height": 800}, locale="it-IT"); q = ctx.new_page()
