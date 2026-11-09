@@ -172,7 +172,7 @@ fn synthetic_timsrust_folders() {
         assert!(!l.index(0).unwrap().is_empty());
         assert_eq!(
             l.scan(0, 0).err().map(|e| e.key),
-            Some("err.dam.unreadable")
+            Some("err.file.brukerDamaged")
         );
     }
 }

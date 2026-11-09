@@ -10,7 +10,7 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limits;
 
 fn broken(m: &str) -> Error {
-    Error::new("err.dam.unreadable").with("message", format!("tsf_bin: {m}"))
+    Error::new("err.file.brukerDamaged").with("detail", format!("tsf_bin: {m}"))
 }
 
 /// A frame as TOF positions and intensities; `profilo` when there was no line spectrum and the samples of the profile stand in.

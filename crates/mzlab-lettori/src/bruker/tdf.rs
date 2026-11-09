@@ -189,7 +189,7 @@ impl BrukerReader {
             .get(&f.cal)
             .filter(|c| c.validate())
             .ok_or_else(|| {
-                Error::new("err.dam.unreadable").with("message", "no usable MzCalibration")
+                Error::new("err.file.brukerDamaged").with("detail", "no usable MzCalibration")
             })?
             .clone();
         let (tof, y, profilo) = self.points(&d)?;
