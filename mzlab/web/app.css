@@ -381,6 +381,8 @@ html.touch #inf-tree tbody tr,html.touch #mincl tr[data-i],html.touch #flst .fgh
  .pnl .bt,.pnl .lk,.pnl .x{min-width:40px;min-height:40px;font-size:13px}.pnl .bt svg{width:20px;height:20px}
  .pnl .hd select,.pnl .hd input,#tools button,#tools select,header button,.seg button,.tbg button{min-height:40px}
  .fl{padding:11px 4px}
+ /* the finger floor of 24 px (WCAG 2.5.8) for what the compact rules above shrink: folds, check boxes in their label, a panel title (double tap renames it) */
+ summary,label:has(>input[type=checkbox]),label:has(>input[type=radio]),.liste-panel .seg button,.xrw .xr-x{min-height:24px}.hd .ttl{line-height:24px}
 }
 /* soft keyboard up (tocco-controlli.js): a modal dialog in the band the keyboard leaves, scrolling inside it */
 html.kb dialog:modal{top:var(--vv-top,0px)!important;bottom:var(--vv-bottom,0px)!important;max-height:calc(100% - var(--vv-top,0px) - var(--vv-bottom,0px) - 16px)!important;overflow:auto}
