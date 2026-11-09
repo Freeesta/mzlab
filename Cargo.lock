@@ -2616,8 +2616,6 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
- "rand",
- "rand_distr",
  "simba 0.8.1",
  "typenum",
 ]
@@ -2740,7 +2738,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
- "libm",
 ]
 
 [[package]]
@@ -3391,16 +3388,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rand_distr"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32cb0b9bc82b0a0876c2dd994a7e7a2683d3e7390ca40e6886785ef0c7e3ee31"
-dependencies = [
- "num-traits",
- "rand",
-]
-
-[[package]]
 name = "raw-window-handle"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3782,9 +3769,9 @@ dependencies = [
 
 [[package]]
 name = "sci-form"
-version = "0.15.2"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbf726ff1475a8e9b3a3cc847247ee57da8963f3efd41e6cd1363451da14fc6d"
+checksum = "1bbc29caaa9b57e02c94e914abbe43b0b6f54c18226cb36f6610f72045cee8d5"
 dependencies = [
  "flate2",
  "nalgebra 0.32.6",
