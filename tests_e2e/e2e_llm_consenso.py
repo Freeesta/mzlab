@@ -139,7 +139,7 @@ try:
                 # phase 0: the proxy is closed to visitors (403) -> the owner passphrase field
                 q.click('#flx-llm [data-chip="llm.chip.explain"]')
                 q.wait_for_selector("#flx-llm #llm-owner-box:not([hidden]) iframe", timeout=60000)
-                attendi(q, "!document.getElementById('flx-llm-stop') || document.getElementById('flx-llm-stop').hidden")
+                wait_for_js(q, "!document.getElementById('flx-llm-stop') || document.getElementById('flx-llm-stop').hidden")
                 assert "closed" in q.inner_text("#flx-llm-log").lower(), q.inner_text("#flx-llm-log")[-300:]
                 fr = q.frame_locator("#llm-owner-box iframe")
                 fr.locator("#key").fill("a phrase only the owner knows")          # OWNER of proxy/test/helpers.mjs
@@ -148,12 +148,12 @@ try:
                 q.fill("#flx-llm-input", "Explain these files"); q.click("#flx-llm button:has-text('Send')")
                 q.wait_for_selector("#flx-llm-spend:not([hidden])", timeout=60000)
                 assert re.search(r"Demo spend: \$\d+\.\d\d / \$2\.00", q.inner_text("#flx-llm-spend")), q.inner_text("#flx-llm-spend")
-                attendi(q, "document.getElementById('flx-llm-stop').hidden", timeout=60000)
+                wait_for_js(q, "document.getElementById('flx-llm-stop').hidden", timeout=60000)
                 # switched off (503): «Assistant not available» once, the rules only, no retry
                 urllib.request.urlopen("http://127.0.0.1:%d/__vars?ASSIST_OFF=1" % np).read()
                 n0 = len([u for u in urls if u.startswith(host)])
                 q.fill("#flx-llm-input", "Set up mzFlow for me"); q.click("#flx-llm button:has-text('Send')")
-                q.wait_for_selector("#flx-llm-unavail", timeout=60000); attendi(q, "document.getElementById('flx-llm-stop').hidden")
+                q.wait_for_selector("#flx-llm-unavail", timeout=60000); wait_for_js(q, "document.getElementById('flx-llm-stop').hidden")
                 assert q.locator("#flx-llm-unavail").count() == 1 and "Assistant not available" in q.inner_text("#flx-llm-unavail")
                 assert q.locator("#flx-llm-input").is_hidden() and q.locator("#flx-llm [data-chip]").first.is_hidden(), "the model parts stay open"
                 assert len([u for u in urls if u.startswith(host)]) - n0 == 1, "one request, no retry"
