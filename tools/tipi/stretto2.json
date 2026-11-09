@@ -123,6 +123,7 @@
     "../../mzlab/web/riferimento-corpo.js",
     "../../mzlab/web/pca.js",
     "../../mzlab/web/kmd-calc.js",
+    "../../mzlab/web/kmd-nuvola.js",
     "../../mzlab/web/kmd-vista.js",
     "../../mzlab/web/kmd.js",
     "../../mzlab/web/rapporto.js",

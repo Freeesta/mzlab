@@ -6,6 +6,7 @@
 const T = (k, p) => I18N.t(k, p);
 const EH_ = s => EH(s ?? "");
 let live = null, seq = 0;
+const CHUNK = 1000;
 
 // ---- the description of a chart, linked to its canvas (aria-describedby); the live region announces it only when asked
 function describe(cv, text) {
@@ -31,13 +32,27 @@ function table(o) {
   const opener = /** @type {HTMLElement | null} */ (document.activeElement);
   const d = document.createElement("dialog"); d.id = "tdati"; d.className = "tdati"; d.setAttribute("aria-labelledby", "tdati-h");
   const head = (o.head || []).map(h => `<th scope="col">${EH_(h)}</th>`).join("");
-  const rows = (o.rows || []).map(r => `<tr>${r.map((v, i) => (i === 0 && o.rowHeader ? `<th scope="row">${EH_(v)}</th>` : `<td>${EH_(v)}</td>`)).join("")}</tr>`).join("");
+  // a long table is written CHUNK rows at a time, the next ones when the reader scrolls near the end (all rows at once froze the page for seconds at 100k);
+  // the count and the Copy button always cover every row
+  const all = o.rows || [], rowHtml = r => `<tr>${r.map((v, i) => (i === 0 && o.rowHeader ? `<th scope="row">${EH_(v)}</th>` : `<td>${EH_(v)}</td>`)).join("")}</tr>`;
+  const rows = all.slice(0, CHUNK).map(rowHtml).join("") + (all.length > CHUNK ? `<tr class="td-more" aria-hidden="true"><td colspan="${Math.max(1, (o.head || []).length)}">…</td></tr>` : "");
   d.innerHTML = `<div class="td-hd"><h3 id="tdati-h">${EH_(o.title || T("tdati.title"))}</h3><button type="button" class="bt" data-td="x" aria-label="${T("tdati.close")}" title="${T("tdati.close")}">&times;</button></div>
     ${o.note ? `<p class="sm muted">${EH_(o.note)}</p>` : ""}
     <div class="td-sc" tabindex="0" role="region" aria-label="${EH_(T("tdati.region", { title: o.title || "" }))}"><table><caption class="sr-only">${EH_(o.title || "")}</caption><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>
     <div class="td-ft"><span class="sm muted" id="tdati-n">${T("tdati.rows", { n: (o.rows || []).length })}</span><button type="button" class="go" data-td="c">${T("tdati.copy")}</button><button type="button" class="go" data-td="x">${T("tdati.close")}</button></div>`;
   document.body.appendChild(d);
-  const close = () => { d.close(); d.remove(); if (opener && opener.focus && document.contains(opener)) opener.focus(); };
+  const more = d.querySelector("tr.td-more");
+  let io = null;
+  if (more) {
+    let shown = CHUNK;
+    io = new IntersectionObserver(es => {
+      if (!es.some(e => e.isIntersecting)) return;
+      more.insertAdjacentHTML("beforebegin", all.slice(shown, shown + CHUNK).map(rowHtml).join("")); shown += CHUNK;
+      if (shown >= all.length) { io.disconnect(); more.remove(); }
+    }, { root: d.querySelector(".td-sc"), rootMargin: "0px 0px 400px 0px" });
+    io.observe(more);
+  }
+  const close = () => { if (io) io.disconnect(); d.close(); d.remove(); if (opener && opener.focus && document.contains(opener)) opener.focus(); };
   d.querySelectorAll('[data-td="x"]').forEach(b => { b.onclick = close; });
   d.addEventListener("cancel", e => { e.preventDefault(); close(); });
   d.querySelector('[data-td="c"]').onclick = async () => {
@@ -103,12 +118,14 @@ function fromDom(tbl, title) {
 // SVG charts are drawn from strings and replaced at every refresh: one observer gives each new chart its button
 const watchers = [];
 function watch(selector, provider) { watchers.push([selector, provider]); scan(document); }
+// the added node itself may be the chart (a section that writes its SVG straight into its box), not only one of its descendants
 function scan(root) {
-  watchers.forEach(([sel, prov]) => root.querySelectorAll ? root.querySelectorAll(sel).forEach(el => {
+  if (!root.querySelectorAll) return;
+  watchers.forEach(([sel, prov]) => [...(root.matches && root.matches(sel) ? [root] : []), ...root.querySelectorAll(sel)].forEach(el => {
     if (el._tdWatched) return; el._tdWatched = true;
     const t = el.getAttribute("aria-label") || el.querySelector("title")?.textContent || "";
     addButton(el, () => prov(el, t));
-  }) : null);
+  }));
 }
 new MutationObserver(ms => { if (!watchers.length) return; for (const m of ms) m.addedNodes.forEach(n => { if (n.nodeType === 1) scan(n); }); }).observe(document.documentElement, { childList: true, subtree: true });
 const num = (v, n = 3) => (v == null || !isFinite(v) ? "" : String(+Number(v).toFixed(n)));
