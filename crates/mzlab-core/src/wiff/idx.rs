@@ -15,6 +15,8 @@ pub struct Entry {
     pub size: u32,
     pub time_ms: f64,
     pub tic: f64,
+    /// The point count of a scan block; 0 for an empty scan and for an MRM block.
+    pub points: f64,
 }
 
 fn u32_at(b: &[u8], at: usize) -> u32 {
@@ -43,6 +45,7 @@ pub fn parse(data: &[u8]) -> Vec<Entry> {
             size: u32_at(r, 4),
             time_ms: f64_at(r, 8),
             tic: f64_at(r, 18),
+            points: f64_at(r, 26),
         })
         .collect()
 }

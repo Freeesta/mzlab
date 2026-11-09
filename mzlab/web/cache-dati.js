@@ -26,3 +26,12 @@ const memo = (/** @type {string} */ key, /** @type {() => Promise<unknown>} */ f
 };
 // a plain Array from doubles: the consumers push, map and stringify it; the loop is several times faster than Array.from on a typed array
 const f64Arr = (/** @type {Float64Array} */ a) => { const o = new Array(a.length); for (let i = 0; i < o.length; i++) o[i] = a[i]; return o; };
+// the scan times of a file are the same for every ion: an rt equal (bit for bit) to the last one of the same file returns that array, one copy instead of one per ion
+// (20 ions x 6 files of 50 000 scans: half the copies and the garbage; isSorted in decima.js is cached per array). No caller edits a trace array in place.
+/** @type {Map<number, { arr: number[], bits: Int32Array }>} */
+const RT_LAST = new Map();
+const rtArr = (/** @type {number} */ k, /** @type {Float64Array} */ a) => {
+  const o = RT_LAST.get(k), u = new Int32Array(a.buffer, a.byteOffset, 2 * a.length);        // the words of the doubles: an integer compare is several times faster
+  if (o && o.bits.length === u.length) { const b = o.bits, n = u.length; let i = 0; for (; i < n; i++) if (b[i] !== u[i]) break; if (i === n) return o.arr; }
+  const arr = f64Arr(a); RT_LAST.set(k, { arr, bits: u.slice() }); return arr;
+};

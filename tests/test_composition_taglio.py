@@ -1,5 +1,5 @@
 """The element ranges cut to the ion mass lose nothing in the Python reference either: every grid that runs without the cut gives the same answer
-(the same cases as crates/mzlab-core/tests/composizione_taglio.rs), and a grid still over the limit names its size and the limit. Synthetic m/z values."""
+(the same cases as crates/mzlab-core/tests/composition_cut.rs), and a grid still over the limit names its size and the limit. Synthetic m/z values."""
 import json
 
 import pytest

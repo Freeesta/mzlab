@@ -44,8 +44,8 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
   `profile`: the profile points (`scansione_profilo`, else the profile scans of the reader, else `err.conv.noProfile`).
   `mzlab`: our centroids (`lettori_centroidi::stima` on at most 64 scans, then `picchi` scan by scan); the file says `MS:1000035` and the estimated parameters in the userParam `mzLab centroids` of the run.
   The warning key is shown as it is by `rapporto-flow.js` (no `lang/` text until a screen shows it).
-- Tests of `peaks`: `cargo test -p mzlab-core --test lettori_mzml_picchi` (gaussian profile at known centres), `cargo test -p mzlab-cli picchi` (`--set c.peaks=…`, the warning).
-- Tests: `cargo test -p mzlab-core --lib mzmlwrite` (offsets, checksum, read back, steps; `tests_xsd.rs` validates the indexed file against `mzML1.1.2_idx.xsd` with `xmllint`, schema fetched into `MZLAB_XSD_DIR` or the temp folder, skipped without `xmllint`, `curl` or network), `--test lettori_mzml` (Agilent synthetic), `cargo test -p mzlab-lettori --features aperti --test aperti_numpress` (indexed file reopened by the reader of open mzML), `cargo test -p mzlab-cli --lib` (plan `convert.mzml` then `features.table`).
+- Tests of `peaks`: `cargo test -p mzlab-core --test readers_mzml_peaks` (gaussian profile at known centres), `cargo test -p mzlab-cli picchi` (`--set c.peaks=…`, the warning).
+- Tests: `cargo test -p mzlab-core --lib mzmlwrite` (offsets, checksum, read back, steps; `tests_xsd.rs` validates the indexed file against `mzML1.1.2_idx.xsd` with `xmllint`, schema fetched into `MZLAB_XSD_DIR` or the temp folder, skipped without `xmllint`, `curl` or network), `--test readers_mzml` (Agilent synthetic), `cargo test -p mzlab-lettori --features aperti --test aperti_numpress` (indexed file reopened by the reader of open mzML), `cargo test -p mzlab-cli --lib` (plan `convert.mzml` then `features.table`).
 - A header with no source file or no components leaves out `sourceFileList` or `componentList` (the schema wants at least one child); the XSD test covers an empty and a full header.
 - Checks on real files, outside CI: `docs/studi/workflow/PROVE_W3.md`.
 

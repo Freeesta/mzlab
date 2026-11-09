@@ -2,6 +2,7 @@
 // @ts-strict
 // Pure helpers of the drawing loop of the chromatograms (grafici.js drawLines): the window of a zoomed trace by binary search, the four vertices per pixel column
 // (first, lowest, highest, last: no apex is lost) read without calling X/Y per point, and max/min of a range without a spread (which throws RangeError on 10^6 values).
+// The caches (sorted x, block extremes) are per array: trace arrays are never edited in place, a change makes a new array (as the smooth/clip caches of grafici.js assume).
 
 /** @typedef {ArrayLike<number>} Vec */
 
