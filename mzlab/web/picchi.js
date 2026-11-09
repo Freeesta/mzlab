@@ -331,6 +331,11 @@ async function drawSpec(p, snapped) {
   const base = isDda ? [E.files[/** @type {number} */ (p.k)]] : p.all ? shownFor(p) : [E.files[targetK]];
   let files = scanFiles(base.filter(Boolean));
   if (!files.length) return say(I18N.t("spec.isMrm"));
+  if (!isDda && p.level === 1) {          // an MS2-only file has no MS1 scans to give: while browsing, the current file can be one; the panel keeps its own file then
+    const ms1 = (/** @type {Bag[]} */ l) => l.filter((/** @type {Bag} */ f) => f && f.kind !== ESP.ms2);
+    files = ms1(files).length ? ms1(files) : ms1(scanFiles([E.files[/** @type {number} */ (p.k)]].filter(Boolean)));
+    if (!files.length) return say(I18N.t("spec.noScan"));
+  }
   if (!isDda && p.level === 2 && p.prec != null && p.prec !== "") {          // an MS2 experiment is a precursor: only the files that have it (as the chromatograms)
     const owns = (/** @type {Bag} */ f) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - p.prec) < 0.6);
     // a file without a precursor list counts only if it has MS2 scans: a Full Scan sample has none to give, also when it is the target
