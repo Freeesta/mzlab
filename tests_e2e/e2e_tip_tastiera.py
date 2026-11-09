@@ -1,5 +1,5 @@
 """Keyboard focus shows the same tooltip as the pointer (WCAG 1.4.13): Tab onto a control with a tip brings up #qtip with its text after the rest delay,
-clear of the control; leaving the control hides it; Esc hides only the tooltip and leaves the Settings panel open (a second Esc closes the panel); a click does not."""
+clear of the control, and the control keeps its accessible name; leaving the control hides it; Esc hides only the tooltip and leaves the Settings panel open (a second Esc closes the panel); a click does not."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -43,6 +43,8 @@ try:
         def main_page():
             pg.evaluate("document.activeElement && document.activeElement.blur()"); f = tab_to_tip(pg, "body", 40)
             shown(pg, f["tip"])
+            # the keyboard path leaves title in place: it is the accessible name of the icon-only buttons (axe button-name)
+            assert pg.evaluate("(() => { const e = document.activeElement; return !!(e.getAttribute('aria-label') || e.getAttribute('title') || e.textContent.trim()); })()"), "the focused control keeps its accessible name"
         step("main page: the first control with a tip reached by Tab shows it", main_page)
         def click_no_tip():
             pg.keyboard.press("Escape"); pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.mouse.move(2, 2)

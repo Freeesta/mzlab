@@ -11,7 +11,7 @@
   const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; cur = null; };
   // draws the tooltip of t: below, else above, else beside it (never over the element it describes); a tooltip made of HTML (data-tiph) wins over the plain text
   const show = (/** @type {HTMLElement} */ t) => {
-    const txt = t.dataset.tip, html = t.dataset.tiph;
+    const txt = t.dataset.tip || t.getAttribute("title"), html = t.dataset.tiph;
     if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
     tip.hidden = false;
     // a control of a toolbar keeps the tooltip clear of the whole toolbar (the outermost one), not only of itself: it must not hide the neighbouring buttons
@@ -44,8 +44,8 @@
     const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
     if (!byKey || !t || t === cur || t.closest("dialog[open]")) return;
     hide();
-    if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
-    if (!t.dataset.tip && !t.dataset.tiph) return;
+    // the title stays: it is the accessible name of icon-only buttons, and the browser's own tooltip shows only on hover
+    if (!t.dataset.tip && !t.dataset.tiph && !t.getAttribute("title")) return;
     cur = t; timer = setTimeout(() => show(t), TIP_DELAY);
   });
   document.addEventListener("focusout", e => { if (cur && cur.contains(/** @type {Node} */ (e.target)) && !(e.relatedTarget && cur.contains(/** @type {Node} */ (e.relatedTarget)))) hide(); });
