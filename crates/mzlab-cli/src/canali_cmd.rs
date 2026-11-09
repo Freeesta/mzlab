@@ -25,7 +25,7 @@ old names still accepted: canali, --canale";
 struct Chiesta {
     file: PathBuf,
     out: Option<PathBuf>,
-    canale: Option<String>,
+    channel: Option<String>,
     rt: Option<(f64, f64)>,
     n: i64,
 }
@@ -65,7 +65,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
     Ok(Some(Chiesta {
         file: file.ok_or("channels needs a file")?,
         out,
-        canale,
+        channel: canale,
         rt,
         n,
     }))
@@ -77,16 +77,16 @@ fn io(e: std::io::Error) -> Error {
 
 /// The JSON of `api/canali` for `file`, indexes kept in `tmp`; with `--channel`, the trace (or with `--rt` the UV spectrum) of that UV or analog channel
 /// of an mzML: what `api/chrom?canale=` and `api/uvspec?canale=` answer.
-fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
+fn read(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
     let file = &c.file;
     let idx = tmp.join("0.mzidx");
     crate::build_index(file, &idx, mzlab_core::budget_auto::native_index_budget())?;
     let mut r = Routes::new(crate::open(&idx)?);
-    let nome = file
+    let name = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let mzml = nome.to_lowercase().ends_with(".mzml");
-    if let (Some(id), false) = (&c.canale, mzml) {
+    let mzml = name.to_lowercase().ends_with(".mzml");
+    if let (Some(id), false) = (&c.channel, mzml) {
         return Err(Error::new("err.canali.unknown").with("id", id));
     }
     if mzml {
@@ -95,14 +95,14 @@ fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
         let size = f.metadata().map_err(io)?.len();
         let mut m = Mzml::new(f, size);
         let chroms = m.chromatograms(scans_end)?;
-        if let Some(id) = &c.canale {
+        if let Some(id) = &c.channel {
             return match c.rt {
                 Some((a, b)) => mzlab_core::canali_uv::spettro(&mut m, id, a, b),
                 None => mzlab_core::canali_uv::traccia(&mut m, &chroms, id, c.n),
             };
         }
         let facts = mzlab_core::iteminfo::facts_from(&mut m, scans_end, chroms.len() as i64, true)?;
-        r.pon_cromatogrammi(&nome, &chroms, &facts);
+        r.pon_cromatogrammi(&name, &chroms, &facts);
     } else {
         // the first sample, as the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`lettori_mzml::guscio`)
         let mut l = mzlab_lettori::apri(
@@ -115,7 +115,7 @@ fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
         let mut m = Mzml::new(shell, size);
         let chroms = m.chromatograms(end)?;
         let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
-        r.pon_cromatogrammi(&nome, &chroms, &facts);
+        r.pon_cromatogrammi(&name, &chroms, &facts);
     }
     Ok(r.canali().json())
 }
@@ -131,7 +131,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-canali{k}", std::process::id()));
     let r = std::fs::create_dir_all(&tmp)
         .map_err(io)
-        .and_then(|_| leggi(&c, &tmp));
+        .and_then(|_| read(&c, &tmp));
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
         Err(e) => Outcome::fail(&e.to_string()),

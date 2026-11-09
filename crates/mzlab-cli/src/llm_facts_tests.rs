@@ -11,7 +11,7 @@ use crate::execute;
 use crate::llm::facts::{inspection, BUDGET};
 
 /// The files the page test opens, in this order.
-pub(crate) const FATTI: [&str; 3] = ["B_FullMass-t0.mzML", "B_MRM-t0.mzML", "C_IDA-t0.mzML"];
+pub(crate) const DONE: [&str; 3] = ["B_FullMass-t0.mzML", "B_MRM-t0.mzML", "C_IDA-t0.mzML"];
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -48,7 +48,7 @@ fn folder() -> Option<PathBuf> {
     }
     let dir = all.join("fatti");
     std::fs::create_dir_all(&dir).unwrap();
-    for f in FATTI {
+    for f in DONE {
         std::fs::copy(all.join(f), dir.join(f)).unwrap();
     }
     Some(dir)
@@ -77,7 +77,7 @@ fn llm_inspect_and_params_give_the_golden_bytes() {
     // the same bytes twice, and hidden names leave no file name
     assert_eq!(cli(&["llm", "inspect", d]), insp);
     let hidden = cli(&["llm", "inspect", d, "--hide-names"]);
-    assert!(FATTI.iter().all(|f| !hidden.contains(f)), "{hidden}");
+    assert!(DONE.iter().all(|f| !hidden.contains(f)), "{hidden}");
 }
 
 #[test]

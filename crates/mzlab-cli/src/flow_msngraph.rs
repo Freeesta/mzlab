@@ -43,7 +43,7 @@ pub fn msn_graph_step() -> Step {
 
 /// The parameters of the step: one per option of the command.
 /// The parameters of the bond breaks (`breaks`).
-fn rotture_params() -> Vec<Param> {
+fn cleavage_params() -> Vec<Param> {
     vec![
             Param::boolean("breaks", "Break the bonds of the structure")
                 .label("Break the bonds")
@@ -186,7 +186,7 @@ fn params() -> Vec<Param> {
                 .default_str("")
                 .doc("MZ=ION pairs separated by commas: the formula chosen for the node at that m/z"),
         ]);
-    v.extend(rotture_params());
+    v.extend(cleavage_params());
     v
 }
 
@@ -233,7 +233,7 @@ fn molecule(name: &str, adduct: &str, list: &str) -> Result<(String, Option<Stri
 }
 
 /// The options of the command from the resolved parameters; `molecules` is the text of the list the port gives, if any.
-fn opzioni(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
+fn options(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
     let mut o = Opzioni {
         formula: text(job, "formula"),
         smiles: text(job, "smiles"),
@@ -286,8 +286,8 @@ pub fn msn_graph_text(
     molecules: Option<&str>,
     tmp: &Path,
 ) -> Result<String> {
-    let o = opzioni(job, molecules)?;
-    let (g, mut json) = crate::msn_graph::grafo(file, &o, tmp)?;
+    let o = options(job, molecules)?;
+    let (g, mut json) = crate::msn_graph::graph(file, &o, tmp)?;
     if job
         .resolved
         .params
@@ -311,9 +311,9 @@ pub fn msn_graph_text(
         json = mzlab_feat::chem::rotture::rotture_testo(&g, &json, o.smiles.as_deref(), p)?;
     }
     match text(job, "structures") {
-        Some(nodo) => {
+        Some(node) => {
             let ppm = number(job, "struct_ppm", crate::msn_graph::PPM_STRUTTURA);
-            Ok(crate::msn_graph::strutture_testo(&g, &json, &o, (&nodo, ppm))? + "\n")
+            Ok(crate::msn_graph::structures_text(&g, &json, &o, (&node, ppm))? + "\n")
         }
         None => Ok(json + "\n"),
     }

@@ -35,7 +35,7 @@ fn cli(args: &[&str]) -> String {
         .unwrap()
         .unwrap();
     let tmp = tempfile::tempdir().unwrap();
-    mzlab_cli::msn_graph::esegui(&a, tmp.path()).unwrap()
+    mzlab_cli::msn_graph::execute(&a, tmp.path()).unwrap()
 }
 
 #[test]

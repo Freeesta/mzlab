@@ -22,7 +22,7 @@ fn the_graph_of_a_file_with_the_formula_of_its_ion() {
         v.get("sorgente").unwrap().get("nome").unwrap().str(),
         Some("msn.mzML")
     );
-    let scelte: Vec<&str> = v
+    let choices: Vec<&str> = v
         .get("nodi")
         .unwrap()
         .arr()
@@ -30,7 +30,7 @@ fn the_graph_of_a_file_with_the_formula_of_its_ion() {
         .filter_map(|n| n.get("formula")?.get("scelta")?.str())
         .collect();
     assert_eq!(
-        scelte,
+        choices,
         [
             "C14H15N3O5",
             "C12H15N3O",

@@ -140,9 +140,9 @@ fn the_rules_are_a_parameter_of_the_step_and_without_them_the_bytes_do_not_chang
     assert!(
         got.contains("\"regole\":{\"versione\":1,\"tabella\":\"fragrules/1\",\"cutoff_q\":0.3,")
     );
-    let senza = graph(&d, r#"{"formula":"C14H15N3O5+"}"#).unwrap();
-    assert_eq!(senza, cli(&["--formula", "C14H15N3O5+"]));
-    assert!(!senza.contains("\"regole\""));
+    let without = graph(&d, r#"{"formula":"C14H15N3O5+"}"#).unwrap();
+    assert_eq!(without, cli(&["--formula", "C14H15N3O5+"]));
+    assert!(!without.contains("\"regole\""));
     let _ = std::fs::remove_dir_all(&d);
 }
 

@@ -2,33 +2,33 @@
 //! and the key kept in brackets so the message can still be searched or matched by scripts. A message that does not start with a known key passes
 //! unchanged (usage errors, file-system errors).
 
-const CATALOGO: &str = include_str!("../../../mzlab/web/lang/en/errori.js");
+const CATALOG: &str = include_str!("../../../mzlab/web/lang/en/errori.js");
 
 /// The people's names of the memory phases (`memory.phase.<id>`), the ones the page puts in the same sentence.
-const FASI: &str = include_str!("../../../mzlab/web/lang/en/altre-lv-predef.js");
+const PHASES: &str = include_str!("../../../mzlab/web/lang/en/altre-lv-predef.js");
 
 /// The text of `key` in a catalogue of one `"key": "text",` per line, without escapes.
-fn testo_in(catalogo: &'static str, key: &str) -> Option<&'static str> {
-    let segno = format!("\n  \"{key}\": \"");
-    let da = catalogo.find(&segno)? + segno.len();
-    let riga = catalogo[da..].lines().next()?.trim_end();
-    let riga = riga.strip_suffix(',').unwrap_or(riga);
+fn text_in(catalog: &'static str, key: &str) -> Option<&'static str> {
+    let sign = format!("\n  \"{key}\": \"");
+    let da = catalog.find(&sign)? + sign.len();
+    let row = catalog[da..].lines().next()?.trim_end();
+    let riga = row.strip_suffix(',').unwrap_or(row);
     riga.strip_suffix('"')
 }
 
 /// The catalogue text of `key`.
-fn testo_di(key: &str) -> Option<&'static str> {
-    testo_in(CATALOGO, key)
+fn text_of(key: &str) -> Option<&'static str> {
+    text_in(CATALOG, key)
 }
 
 /// The key whose text the terminal shows, the same choice as `I18N.err` in the desktop app: a memory refusal that names its phase has the
 /// sentence with the numbers (`error.memoryBudgetFase[.<fase>]`), and a key with a `.native` text uses it (the limit is this computer's memory).
-fn chiave_resa(key: &str, fase: Option<&str>) -> String {
+fn returned_key(key: &str, fase: Option<&str>) -> String {
     let base = match fase {
         Some(f) if key == "error.memoryBudget" => {
-            let propria = format!("error.memoryBudgetFase.{f}");
-            if testo_di(&propria).is_some() {
-                propria
+            let own = format!("error.memoryBudgetFase.{f}");
+            if text_of(&own).is_some() {
+                own
             } else {
                 "error.memoryBudgetFase".to_string()
             }
@@ -36,7 +36,7 @@ fn chiave_resa(key: &str, fase: Option<&str>) -> String {
         _ => key.to_string(),
     };
     let nativa = format!("{base}.native");
-    if testo_di(&nativa).is_some() {
+    if text_of(&nativa).is_some() {
         nativa
     } else {
         base
@@ -44,18 +44,18 @@ fn chiave_resa(key: &str, fase: Option<&str>) -> String {
 }
 
 /// The parameters of `Error`'s `Display` form (` k=v k2=v2`): a word that starts with `name=` opens a parameter, the others continue its value.
-fn parametri(resto: &str) -> Vec<(String, String)> {
+fn params(remainder: &str) -> Vec<(String, String)> {
     let mut v: Vec<(String, String)> = Vec::new();
-    for parola in resto.split(' ').filter(|p| !p.is_empty()) {
-        let nome = parola
+    for word in remainder.split(' ').filter(|p| !p.is_empty()) {
+        let name = word
             .split_once('=')
             .map(|(k, _)| k)
             .filter(|k| !k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'));
-        match (nome, v.last_mut()) {
-            (Some(k), _) => v.push((k.to_string(), parola[k.len() + 1..].to_string())),
+        match (name, v.last_mut()) {
+            (Some(k), _) => v.push((k.to_string(), word[k.len() + 1..].to_string())),
             (None, Some((_, val))) => {
                 val.push(' ');
-                val.push_str(parola);
+                val.push_str(word);
             }
             (None, None) => return Vec::new(),
         }
@@ -65,37 +65,37 @@ fn parametri(resto: &str) -> Vec<(String, String)> {
 
 /// `msg` with its leading error key rendered: «text (key, unused=params)».
 pub(crate) fn umano(msg: &str) -> String {
-    let (key, resto) = msg.split_once(' ').unwrap_or((msg, ""));
+    let (key, remainder) = msg.split_once(' ').unwrap_or((msg, ""));
     if !(key.starts_with("err.") || key.starts_with("error.")) {
         return msg.to_string();
     }
-    rendi(msg, key, resto)
+    rendi(msg, key, remainder)
 }
 
 /// A calm notice (the one the desktop app gives its page as `{"key", "params"}`) as the terminal line: «text (key)».
-pub fn avviso(n: &crate::convert::Notice) -> String {
-    let resto: String = n.params.iter().map(|(k, v)| format!(" {k}={v}")).collect();
-    rendi(n.key, n.key, &resto)
+pub fn warning(n: &crate::convert::Notice) -> String {
+    let remainder: String = n.params.iter().map(|(k, v)| format!(" {k}={v}")).collect();
+    rendi(n.key, n.key, &remainder)
 }
 
-fn rendi(msg: &str, key: &str, resto: &str) -> String {
-    let par = parametri(resto);
+fn rendi(msg: &str, key: &str, remainder: &str) -> String {
+    let par = params(remainder);
     let fase = par
         .iter()
         .find(|(k, _)| k == "fase")
         .map(|(_, v)| v.as_str());
-    let Some(testo) = testo_di(&chiave_resa(key, fase)) else {
+    let Some(text) = text_of(&returned_key(key, fase)) else {
         return msg.to_string();
     };
-    let mut t = testo.to_string();
+    let mut t = text.to_string();
     let mut avanzo = String::new();
     for (k, v) in par {
-        let segno = format!("{{{k}}}");
-        if t.contains(&segno) {
-            let nome = (k == "fase")
-                .then(|| testo_in(FASI, &format!("memory.phase.{v}")))
+        let sign = format!("{{{k}}}");
+        if t.contains(&sign) {
+            let name = (k == "fase")
+                .then(|| text_in(PHASES, &format!("memory.phase.{v}")))
                 .flatten();
-            t = t.replace(&segno, nome.unwrap_or(&v));
+            t = t.replace(&sign, name.unwrap_or(&v));
         } else {
             avanzo += &format!(", {k}={v}");
         }
@@ -104,7 +104,7 @@ fn rendi(msg: &str, key: &str, resto: &str) -> String {
 }
 
 /// A usage or engine error (`Outcome::fail`, code 2) ends with the help of the command that was run: `(mzlab-cli channels --help)`, not another's.
-pub(crate) fn con_aiuto(args: &[String], mut o: crate::Outcome) -> crate::Outcome {
+pub(crate) fn with_help(args: &[String], mut o: crate::Outcome) -> crate::Outcome {
     if o.code != 2 || !o.stderr.starts_with("error: ") || o.stderr.contains("--help)") {
         return o;
     }
@@ -112,12 +112,12 @@ pub(crate) fn con_aiuto(args: &[String], mut o: crate::Outcome) -> crate::Outcom
         o.stderr += "(mzlab-cli --help)\n";
         return o;
     }
-    let parola = |i: usize| {
+    let word = |i: usize| {
         args.get(i)
             .map(|a| crate::plain::canonical(a))
             .filter(|a| !a.is_empty() && a.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
     };
-    let comando = match (parola(0), parola(1)) {
+    let comando = match (word(0), word(1)) {
         (Some(c @ ("flow" | "llm")), Some(sub)) => format!("{c} {sub} "),
         (Some(c), _) if c != "-h" && c != "--help" && !c.starts_with('-') => format!("{c} "),
         _ => String::new(),

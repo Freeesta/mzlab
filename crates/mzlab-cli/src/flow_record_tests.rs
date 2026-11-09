@@ -164,9 +164,9 @@ fn same_record(out: &Path, plan: &str, jobs: &[String]) -> String {
     assert_eq!(untimed(&prov), untimed(&native));
     let mut c = Out::default();
     c.raw("{\"prov\":").str(&prov).raw(",\"uscite\":[]}");
-    let corsa = mzlab_core::flow::sched_route("record_corsa", &c.0).unwrap();
+    let run = mzlab_core::flow::sched_route("record_corsa", &c.0).unwrap();
     let native = without_modules(&std::fs::read_to_string(out.join("corsa.json")).unwrap());
-    assert_eq!(untimed(&corsa), untimed(&native));
+    assert_eq!(untimed(&run), untimed(&native));
     prov
 }
 

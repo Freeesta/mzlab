@@ -72,10 +72,10 @@ pub(crate) fn members(path: &Path) -> Result<Vec<(String, PathBuf)>> {
 /// The `FileSet` of the dataset at `path`, its members opened on the disk.
 pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
     let mut membri = Vec::new();
-    for (nome, p) in members(path)? {
+    for (name, p) in members(path)? {
         let f = File::open(&p).map_err(io)?;
         membri.push(Membro {
-            nome,
+            nome: name,
             dim: f.metadata().map_err(io)?.len(),
             dati: Box::new(f),
             sha1: known_sha1(&p),
