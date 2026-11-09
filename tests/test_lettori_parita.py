@@ -1,5 +1,5 @@
 """Parity of the readers: the mzML that a readers module (.wasm, `to_mzml`, what the site writes in OPFS) gives for a dataset is byte for byte the one `mzlab-cli convert` writes
-(what the desktop app writes). One synthetic dataset per family (no laboratory data): Python generators for aperti, agilent, waters, shimadzu, sciex; the Rust example `sintetici`
+(what the desktop app writes). One synthetic dataset per family (no laboratory data): Python generators for aperti, agilent, waters, shimadzu, sciex; the Rust example `synthetic`
 (crates/mzlab-lettori/examples, the writers of the reader tests) for thermo, bruker, andi. The modules run in Node (wasm-bindgen --target nodejs). Needs the wasm32 target and wasm-bindgen-cli (the version of Cargo.lock); without them the test is skipped,
 with MZLAB_GOLDEN_STRICT=1 it fails."""
 import base64
@@ -142,7 +142,7 @@ def create(fam: str, d: Path) -> Path:
         return d / "synt.wiff"
     if fam in SYNTHETIC_RUST:
         synthetic(d.parent)
-        return d.parent / "sintetici" / SYNTHETIC_RUST[fam]
+        return d.parent / "synthetic" / SYNTHETIC_RUST[fam]
     raise AssertionError(fam)
 
 
@@ -151,8 +151,8 @@ SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "bruker": "bruker/synt.d", "bruke
 
 def synthetic(base: Path):
     """Runs the example that writes the Thermo, Bruker and ANDI datasets (once per test run)."""
-    if not (base / "sintetici").exists():
-        r = run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-lettori", "--features", "tutte", "--example", "sintetici", "--", str(base / "sintetici")])
+    if not (base / "synthetic").exists():
+        r = run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-lettori", "--features", "tutte", "--example", "synthetic", "--", str(base / "synthetic")])
         assert r.returncode == 0, r.stderr[-2000:]
 
 

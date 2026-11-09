@@ -27,7 +27,7 @@ Un solo worker del motore serve TUTTE le richieste (`rust-worker.js` `handle`): 
 | Formato | Estensioni | Strada nel sito | Strada nel desktop | Cosa legge all'apertura |
 |---|---|---|---|---|
 | mzML | `.mzml` | §1, motore `.wasm` | `lr_index` → `IdxBuilder::build` (`idxbuild.rs` 131): `mmap`, `prepare_parallelo`, `build_mzml_spill` | testata, indice, intestazioni (§1 passo 5); array solo nell'indice |
-| mzML con MS-Numpress | `.mzml` | il motore rifiuta (`err.file.numpress`); la pagina lo apre come campione nativo (`numpressToNat` in `shell.js`) e il motore lo indicizza dal lettore del modulo `aperti` (`aperti/mzml_numpress.rs`), senza riscrivere l'mzML | CLI: `flow_pace::is_numpress_mzml` manda l'indice al lettore `mzml-numpress` del registro; app: `moduliToNat` (`shell.js`) → campione nativo (`natsamples`, `lr_put` con `nat`; `tests/numpress_mzml.rs`, passo «module types» di `e2e_shim.py`) | tabella (`scantable::read`) + byte di ogni spettro |
+| mzML con MS-Numpress | `.mzml` | il motore rifiuta (`err.file.numpress`); la pagina lo apre come campione nativo (`numpressToNat` in `shell.js`) e il motore lo indicizza dal lettore del modulo `aperti` (`open/mzml_numpress.rs`), senza riscrivere l'mzML | CLI: `flow_pace::is_numpress_mzml` manda l'indice al lettore `mzml-numpress` del registro; app: `moduliToNat` (`shell.js`) → campione nativo (`natsamples`, `lr_put` con `nat`; `tests/numpress_mzml.rs`, passo «module types» di `e2e_shim.py`) | tabella (`scantable::read`) + byte di ogni spettro |
 | mzXML | `.mzxml` | solo modulo `aperti` (`soloModulo`, `lettori-famiglie.js`): conversione in mzML in OPFS, poi §1 | campione nativo (`moduliToNat`, lettore `mzxml` del registro); `pick_files` lo offre | `mzxml_index.rs`: un passaggio sequenziale a blocchi da 1 MiB (l'`<index>` finale non è usato) |
 | Thermo `.raw` | `.raw` | modulo `thermo` caricato a richiesta (`lettore-esterno.js`, `carica-modulo.js`, SHA-256 verificato), il motore lo legge via `native_external` SENZA mzML; indice v2 dal lettore | lettore nel core (feature `thermo`), `build_nat` (`idxbuild_nat.rs`) | `rawreader.rs`: indici e tabella eventi, nessun picco; pacchetto per offset a richiesta; finestra 64 KB (3 blocchi da 256 KB nel modulo) |
 | Waters `.raw` (cartella) | cartella con `_FUNC001.DAT` | modulo `waters` (conversione in mzML) | lettore nativo | `_FUNCTNS.INF` e indici; `.DAT` per posizione |
@@ -179,9 +179,9 @@ crates/mzlab-core/src/agilent/reader.rs
 crates/mzlab-lettori/src/waters/reader.rs
 crates/mzlab-lettori/src/shimadzu/mod.rs
 crates/mzlab-lettori/src/andi/ms.rs
-crates/mzlab-lettori/src/aperti/mzxml.rs
-crates/mzlab-lettori/src/aperti/mzxml_index.rs
-crates/mzlab-lettori/src/aperti/mzml_numpress.rs
+crates/mzlab-lettori/src/open/mzxml.rs
+crates/mzlab-lettori/src/open/mzxml_index.rs
+crates/mzlab-lettori/src/open/mzml_numpress.rs
 
 @lotto 5
 crates/mzlab-desktop/shim/desktop-worker.js

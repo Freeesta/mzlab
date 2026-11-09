@@ -6,13 +6,13 @@ use mzlab_core::readers::{self, Fiducia, FileSet, Limits, Reader, ReaderEntry};
 
 #[cfg(any(feature = "andi", feature = "tutte"))]
 pub mod andi;
-#[cfg(any(feature = "aperti", feature = "tutte"))]
-pub mod aperti;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 pub mod bruker;
 pub mod finite;
 pub mod json;
 pub mod not_carried;
+#[cfg(any(feature = "aperti", feature = "tutte"))]
+pub mod open;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
 pub mod shimadzu;
 pub mod srm;
@@ -21,14 +21,14 @@ pub mod waters;
 
 // The readers of each family, one `static` per `ReaderEntry` of the registry; a family without readers yet is born with its own package.
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZML_NUMPRESS: ReaderEntry = aperti::mzml_numpress::ENTRY;
+static ENTRY_MZML_NUMPRESS: ReaderEntry = open::mzml_numpress::ENTRY;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZXML: ReaderEntry = aperti::mzxml::ENTRY;
+static ENTRY_MZXML: ReaderEntry = open::mzxml::ENTRY;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
-static ENTRY_MZML_GZ: ReaderEntry = aperti::mzml_gz::ENTRY;
+static ENTRY_MZML_GZ: ReaderEntry = open::mzml_gz::ENTRY;
 // the page gunzips an mzXML.gz itself (OPFS): only the app and the CLI carry this voice, so the module `aperti` keeps its size
 #[cfg(feature = "tutte")]
-static ENTRY_MZXML_GZ: ReaderEntry = aperti::mzml_gz::ENTRY_MZXML;
+static ENTRY_MZXML_GZ: ReaderEntry = open::mzml_gz::ENTRY_MZXML;
 #[cfg(any(feature = "andi", feature = "tutte"))]
 static ENTRY_ANDI: ReaderEntry = andi::ms::ENTRY;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
