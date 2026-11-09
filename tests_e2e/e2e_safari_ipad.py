@@ -21,6 +21,12 @@ TAKE_AWAY = "try{delete AbortSignal.any;delete FileSystemFileHandle.prototype.cr
 # a private window of Safari: the private storage of the site is refused
 NO_STORAGE = "try{const e=()=>Promise.reject(Object.assign(new Error('The operation is insecure.'),{name:'SecurityError'}));Object.defineProperty(StorageManager.prototype,'getDirectory',{value:e,configurable:true});}catch(_){}"
 WIDE = "document.documentElement.scrollWidth - document.documentElement.clientWidth"
+# the visual viewport of iOS, which alone shrinks when the soft keyboard comes up: __kb(height, top) moves it
+FAKE_VV = """(() => { const t = new EventTarget(), st = { h: null, top: 0 };
+  Object.defineProperties(t, { height: { get: () => st.h ?? innerHeight }, width: { get: () => innerWidth }, offsetTop: { get: () => st.top }, offsetLeft: { value: 0 },
+    pageTop: { get: () => st.top }, pageLeft: { value: 0 }, scale: { value: 1 } });
+  Object.defineProperty(window, "visualViewport", { value: t, configurable: true });
+  window.__kb = (h, top) => { st.h = h; st.top = top; t.dispatchEvent(new Event("resize")); }; })()"""
 
 def ipad(b, w=1180, h=820, extra=""):
     k = dict(viewport={"width": w, "height": h}, has_touch=True, device_scale_factor=2, reduced_motion="reduce")
@@ -104,13 +110,18 @@ try:
                 w, h = pg.evaluate(f"(r => [r.width, r.height])(document.querySelector({sel!r}).getBoundingClientRect())")
                 if w < 24 or h < 24: small.append((sel, round(w), round(h)))
                 pg.evaluate(closer)
+            # what the compact rules shrink: a panel title (a double tap renames it), a fold, a check box in its label, the × of an XIC row, while the charts are on screen
+            size(".pnl.spec .hd .ttl", "void 0", "void 0")
+            size("#bigbody summary", "document.getElementById('np-method').click()")
+            size("#lst-src-checks label", "BARRA.show('lists',{noFocus:true,instant:true})", "BARRA.close()")
+            size("#xic-rows .xr-x", "document.getElementById('np-xic').click()")
             size("#bigx", "peakParams()")
             size("#lib-x", "LIB.open()")
             size("#refx", "document.getElementById('np-pt').click()")
             size("#flist input[data-k=use]", "BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()", "BARRA.close()")
             size("#tour-btn-skip", "TOUR.inizia(1,0)", "document.getElementById('tour-btn-skip').click()")
             assert not small, f"touch targets under 24x24 px: {small}"
-        step("iPad: the × of the dialogs, «Skip the tour» and the file checkbox are at least 24x24 px", targets)
+        step("iPad: the × of the dialogs, «Skip the tour», the check boxes, folds, panel titles and XIC rows are at least 24x24 px", targets)
         def tap_outside():
             pg = ipad(b, extra=IOS_TOUCH); cdp = pg.context.new_cdp_session(pg) if BROWSER == "chromium" else None
             def touch(x, y, ms=0):
@@ -187,6 +198,31 @@ try:
             assert not ta, f"controls a double tap would zoom: {ta[:6]}"
             assert canv == "none", f"the chart canvas lost its own gestures: {canv}"
         step("iPad: the side bar handle is 24 px wide, a double tap on a control does not zoom the page, the charts keep their gestures", touch_css)
+        def keyboard():
+            # Chromium has no soft keyboard: the visual viewport of iOS is stood in for, and __kb(height, top) is the keyboard coming up (top: iOS scrolled to the field)
+            pg = ipad(b, 1024, 768, extra=FAKE_VV)
+            pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")])
+            pg.click("#opbtn"); ready(pg); wait_for_js(pg, "E.panels.some(q => q.type === 'chrom' && q._a)", 60000); ready(pg)
+            pg.touchscreen.tap(8, innerh := pg.evaluate("innerHeight") - 8); wait_for_js(pg, "!!window.TOCCO_CONTROLLI", 20000)      # the first touch loads tocco-controlli.js
+            box = lambda sel: pg.evaluate(f"(r => [r.top, r.bottom])(document.querySelector({sel!r}).getBoundingClientRect())")
+            got = {}
+            for name, opener, parts in (("XIC", "document.getElementById('np-xic').click()", ["#xicdlg", "#xic-rows input", "#xic-go"]),
+                                        ("library", "LIB.open()", ["#libdlg"])):
+                pg.evaluate(opener); wait_for_js(pg, f"(d => !!d && d.open)(document.querySelector({parts[0]!r}))", 20000); frames(pg, 2)
+                for top in (0, 200):
+                    pg.evaluate(f"__kb({innerh - 400 - top}, {top})"); frames(pg, 3)
+                    got[(name, top)] = ([box(s) for s in parts], pg.evaluate(f"(d => d.scrollHeight > d.clientHeight + 1)(document.querySelector({parts[0]!r}))"))
+                pg.evaluate(f"__kb({innerh}, 0)"); frames(pg, 3)
+                got[(name, "down")] = (box(parts[0]), pg.evaluate("document.documentElement.classList.contains('kb')"))
+                pg.evaluate("for (const d of document.querySelectorAll('dialog[open]')) d.close()")
+            pg.context.close()
+            for (name, top), v in got.items():
+                if top == "down": assert abs(v[0][0] - (innerh + 8 - v[0][1])) <= 1 and not v[1], f"{name}: the dialog is not centred again when the keyboard goes {v}"; continue   # a modal dialog is centred: the same margin above and below
+                band = (top, innerh - 400)
+                out = [p for p, (a, z) in zip(["dialog", "field", "button"], v[0]) if (a < band[0] - 1 or z > band[1] + 1) and not (p == "button" and v[1])]
+                assert not out, f"{name}, keyboard up (visible band {band}): {out} outside it {v[0]} (a button may be under the scroll of a dialog that scrolls)"
+            assert got[("library", 0)][1], "the library dialog is cut by the keyboard and does not scroll"
+        step("iPad: with the soft keyboard up a dialog stays in the part of the window left above it, its field and its button in sight", keyboard)
         def fallbacks():
             pg = ipad(b, extra=TAKE_AWAY)
             got = pg.evaluate("window.__compat || []")

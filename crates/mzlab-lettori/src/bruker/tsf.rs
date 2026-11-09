@@ -1,7 +1,7 @@
 //! `analysis.tsf` + `analysis.tsf_bin` (timsTOF fleX MALDI, TIMS off): one block per frame at `Frames.TimsId`, `u32` size of the profile, `u32` size of the line spectrum, then the line
 //! spectrum (zstd: `NumPeaks` `f64` TOF positions and as many `f32` intensities) and the profile (zstd: `DigitizerNumSamples` `u32` samples). Same tables and calibration as the TDF.
 
-use super::blocco::zstd;
+use super::block::zstd;
 
 use mzlab_core::error::{Error, Result};
 

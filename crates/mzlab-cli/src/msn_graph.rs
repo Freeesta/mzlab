@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::Outcome;
 
-use mzlab_core::budget::sha256_hex;
+use mzlab_core::budget::sha256_hex_read;
 use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
@@ -129,7 +129,7 @@ pub struct Args {
     structures: Option<(String, f64)>,
     interpret: Option<f64>,
     cleavages: Option<Params>,
-    figure: Vec<crate::msn_uscite::Format>,
+    figure: Vec<crate::msn_outputs::Format>,
     view: mzlab_feat::msnfigura::View,
     pub out: Option<PathBuf>,
 }
@@ -166,7 +166,7 @@ pub fn parse_args(
     let (mut interpret, mut loss_ppm) = (false, PPM_PERDITA);
     let (mut rules, mut rules_p) = (false, RuleParams::default());
     let (mut figure, mut view) = (Vec::new(), mzlab_feat::msnfigura::View::Albero);
-    while let Some(x) = a.next().map(|x| crate::msn_uscite::canonical(ALIASES, x)) {
+    while let Some(x) = a.next().map(|x| crate::msn_outputs::canonical(ALIASES, x)) {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
             "--formula" => o.formula = a.next(),
@@ -203,7 +203,7 @@ pub fn parse_args(
             "--cutoff-q" => rules_p.cutoff_q = number(a.next(), &x)?,
             "--loss-tol-mda" => rules_p.toll_mda = number(a.next(), &x)?,
             x if rot.flag(x, &mut a)? => {}
-            "--figure" => figure = crate::msn_uscite::formats(&a.next().unwrap_or_default())?,
+            "--figure" => figure = crate::msn_outputs::formats(&a.next().unwrap_or_default())?,
             "--view" => view = view_of(a.next())?,
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
@@ -256,7 +256,7 @@ pub fn graph(file: &Path, o: &Options, tmp: &Path) -> Result<(Graph, String)> {
     let source = if is_mzml { file } else { &converted };
     let idx = tmp.join("0.mzidx");
     crate::build_index(source, &idx, mzlab_core::budget_auto::native_index_budget())?;
-    let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
+    let sha = sha256_hex_read(std::fs::File::open(&idx).map_err(io)?).map_err(io)?;
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
     let o = &mzlab_feat::chem::regole::with_expected(o);
@@ -429,7 +429,7 @@ pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String
     let Some(out) = a.out.as_ref().filter(|_| !a.figure.is_empty()) else {
         return Ok(String::new());
     };
-    let made = crate::msn_uscite::write_outputs(graph, &a.figure, a.view, &out.with_extension(""))
+    let made = crate::msn_outputs::write_outputs(graph, &a.figure, a.view, &out.with_extension(""))
         .map_err(|e| e.to_string())?;
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }
@@ -450,7 +450,7 @@ pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
         };
     }
     if args.next_if(|a| a == "figure").is_some() {
-        return crate::msn_uscite::figure_cmd(args)
+        return crate::msn_outputs::figure_cmd(args)
             .map_or_else(|e| Outcome::fail(&e), |t| Outcome::ok(t.into_bytes()));
     }
     let a = match parse_args(args) {
@@ -480,5 +480,5 @@ pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
 }
 
 #[cfg(test)]
-#[path = "msn_graph_rotture_tests.rs"]
-mod rotture_tests;
+#[path = "msn_graph_breaks_tests.rs"]
+mod breaks_tests;

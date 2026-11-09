@@ -125,6 +125,8 @@ declare var JSONSCAN: any;
 declare var KEY: any;
 declare var KIND: any;
 declare var KMD: any;
+declare var KMDCLOUD: any;
+declare var KMDCLOUD_PAINT: any;
 declare var KMDVIEW: any;
 declare var LAYOUT: any;
 declare var LD_AN: any;

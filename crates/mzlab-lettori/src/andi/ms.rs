@@ -1,10 +1,10 @@
 //! An ANDI-MS file (ASTM E2077, netCDF-3, `.cdf`) as a `Lettore`: the scans of `scan_index`/`point_count` over `mass_values` and `intensity_values`, the TIC of `total_intensity`, the header
-//! of the file as `metodo/1`. A file with `ordinate_values` and no `mass_values` is ANDI-Chromatography (ASTM E1947): one sample without scans and one analog chromatogram (`cromato.rs`).
+//! of the file as `metodo/1`. A file with `ordinate_values` and no `mass_values` is ANDI-Chromatography (ASTM E1947): one sample without scans and one analog chromatogram (`chromato.rs`).
 //! Written from the two ASTM specifications and the netCDF documentation, checked against files exported by ChemStation and MassHunter.
 
-use super::cromato;
-use super::netcdf::{scale, Cdf};
-use super::testata::AndiHeader;
+use super::chromato;
+use super::header::AndiHeader;
+use super::netcdf::{broken, scale, Cdf};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
@@ -36,8 +36,8 @@ impl AndiReader {
         let (cdf, limits) = (&self.cdf, self.limits);
         let sx = cdf
             .find("scan_index")
-            .ok_or_else(|| Error::new("err.dam.unreadable").with("message", "no scan_index"))?;
-        let n = limits.ok_entries(cdf.elements(sx))?;
+            .ok_or_else(|| broken("no scan_index"))?;
+        let n = cdf.count(sx, &limits)?;
         let points = cdf.find("mass_values").map_or(0, |v| cdf.elements(v));
         let starts: Vec<u64> = cdf
             .read(&mut self.data, &limits, sx, 0, n as u64)?
@@ -170,7 +170,7 @@ impl AndiReader {
             self.cdf.find("intensity_values"),
         );
         let (Some(m), Some(y)) = (m, y) else {
-            return Err(Error::new("err.dam.unreadable").with("message", "no intensity_values"));
+            return Err(broken("no intensity_values"));
         };
         let mut mz = self.cdf.read(&mut self.data, &self.limits, m, da, n)?;
         let mut it = self.cdf.read(&mut self.data, &self.limits, y, da, n)?;
@@ -325,7 +325,7 @@ impl Reader for AndiReader {
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         if self.indice.is_empty() && self.cut == 0 {
-            return Ok(cromato::entries(&self.cdf, &mut self.data, &self.limits));
+            return Ok(chromato::entries(&self.cdf, &mut self.data, &self.limits));
         }
         Ok(["TIC", "BPC"]
             .into_iter()
@@ -341,7 +341,7 @@ impl Reader for AndiReader {
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
         if self.indice.is_empty() && self.cut == 0 {
-            return cromato::trace(&self.cdf, &mut self.data, &self.limits, id);
+            return chromato::trace(&self.cdf, &mut self.data, &self.limits, id);
         }
         self.traccia(id)
     }

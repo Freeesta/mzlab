@@ -409,7 +409,9 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     try { if (typeof WebAssembly !== "object") throw new Error("no WebAssembly"); const mod = await import("./wasm-lib/mzlab_lib_wasm.js"); await mod.default(); W = mod; } catch (e) { W = null; }
     return W;
   }
-  const smallDevice = () => { const ua = (self.navigator && navigator.userAgent) || ""; return /iPad|iPhone|Android|Mobile/i.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1); };
+  // a worker has no `maxTouchPoints`, so an iPad with the Mac user agent looks like a computer here: the page names the device in `config` (as rust-worker.js takes it from the policy)
+  let pageSmall = false;
+  const smallDevice = () => { const ua = (self.navigator && navigator.userAgent) || ""; return pageSmall || /iPad|iPhone|Android|Mobile/i.test(ua) || (/Macintosh/.test(ua) && (/** @type {any} */ (navigator).maxTouchPoints || 0) > 1); };
   const isW = (/** @type {{ store?: string } | null | undefined} */ info) => !!(info && info.store === "mzlib");
   // Small reads are served from one 256 KiB window per reader (a FileReaderSync round trip per few KB dominates the cost of reading a library), large ones go straight to the Blob.
   const blobReader = (/** @type {Blob} */ blob) => {
@@ -688,8 +690,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     return { info: await foldAdd(w, await FOLD.dir.file(m.name), reqId) };
   }
   const COMMANDS = /** @type {Record<string, (m: LibMsg, reqId: unknown) => object | Promise<object>>} */ ({
-    config: m => { forceJs = !!m.forceJs; allowWasm = !!m.wasm; return {}; },
-    engine: async () => ({ wasm: !!(await wasm()) }),
+    config: m => { forceJs = !!m.forceJs; allowWasm = !!m.wasm; pageSmall = !!m.small; return {}; },
+    engine: async () => { const w = await wasm(); return { wasm: !!w, small: smallDevice(), cache_mb: w ? w.total_cache_budget(smallDevice()) / 1048576 : 0 }; },
     crash: async () => { const w = await wasm(); if (w) w.crash(); return {}; },
     folder: async () => { await FOLD.pending; return {}; },
     catalog: m => catalogCmd(m),

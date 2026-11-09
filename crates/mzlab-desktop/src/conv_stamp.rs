@@ -1,4 +1,4 @@
-//! The stamp of a dataset for the conversion queue (`conv_coda.rs`): size and date over every file that makes it.
+//! The stamp of a dataset for the conversion queue (`conv_queue.rs`): size and date over every file that makes it.
 
 use std::path::{Path, PathBuf};
 

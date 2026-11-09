@@ -3,25 +3,25 @@
 //! the numbers of the estimate.
 #![cfg(feature = "detect")]
 
-#[path = "stima_comune/mod.rs"]
-mod comune;
+#[path = "estimate_common/mod.rs"]
+mod common;
 
 use mzlab_core::idxread::Index;
 use mzlab_feat_wasm::{run, stima};
 
 fn open() -> Index<Vec<u8>> {
-    let b = comune::index(&comune::spec());
+    let b = common::index(&common::spec());
     let n = b.len() as u64;
     Index::open(b, n).unwrap()
 }
 
 #[test]
 fn the_estimate_and_the_refusal_follow_the_fixture_at_every_budget() {
-    let s = comune::spec();
+    let s = common::spec();
     let mb = s["mb"].as_u64().unwrap();
     let mut ix = open();
     let r = run::recipe_for("", &mut ix).unwrap();
-    for (budget, via) in comune::cases(&s) {
+    for (budget, via) in common::cases(&s) {
         let got = stima::detect_estimate_json(&mut ix, &r, budget).unwrap();
         assert_eq!(
             got,

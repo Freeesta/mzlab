@@ -7,6 +7,8 @@
     {"params": [["fase", "indexPeaks"], ["stima_mb", "300"], ["budget_mb", "256"], ["libero_mb", "200"], ["eccesso_mb", "100"]],
      "testo": "In one narrow m/z range (1 Da) this file has at least 300 MB of peaks, more than the index of one file holds on this computer (256 MB of one range). Close other programs and process fewer files at once, or convert the file again with fewer scans (for example only the useful RT range)."},
     {"params": [["fase", "detect"], ["stima_mb", "300"], ["budget_mb", "192"], ["libero_mb", "150"], ["eccesso_mb", "110"]],
-     "testo": "Detecting the features of this file would need about 300 MB, and the memory chosen for the engine on this computer is 192 MB: the detection did not start and nothing was lost. Detect a narrower RT range or with a higher noise floor, close other programs, or give the engine more memory."}
+     "testo": "Detecting the features of this file would need about 300 MB, and the memory chosen for the engine on this computer is 192 MB: the detection did not start and nothing was lost. Detect a narrower RT range or with a higher noise floor, close other programs, or give the engine more memory."},
+    {"params": [["fase", "read"], ["stima_mb", "700"], ["budget_mb", "512"], ["libero_mb", "512"], ["eccesso_mb", "188"]],
+     "testo": "Reading the mzML files of this step whole would need about 700 MB, and the memory chosen for the engine on this computer is 512 MB: the step did not start and nothing was lost. Give the step fewer files, convert them again with fewer scans (for example only the useful RT range), close other programs, or give the engine more memory."}
   ]
 }

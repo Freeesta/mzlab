@@ -1,7 +1,7 @@
 //! The scans of a SIR or MRM function: one value per channel, no m/z. Two widths, told by the IDX like the scanning records: 4 bytes (22-bit mantissa, 10-bit exponent: `m * 2^(e-21)`,
 //! exact against the TIC of the index) and 2 bytes (13-bit mantissa, 3-bit exponent in base 4: `m * 4^e`, within its quantisation).
 
-use super::cartella::errore;
+use super::folder::errore;
 use mzlab_core::error::Result;
 
 /// The `n` channel values of a scan of `b`, whose records are `larghezza` bytes wide.

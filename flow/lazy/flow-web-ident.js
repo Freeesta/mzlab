@@ -3,7 +3,8 @@
 // spectra.match with the algorithms other than `tree` runs `flow_match` of the `lib` .wasm, table.match builds the MGF of the rows of the alignment with the `table` .wasm (`table_match_rows`, in the pool,
 // the indexes read from OPFS) and then matches it the same way; formula.ms2 and
 // annot.level run `flow_formula_ms2` and `flow_level` of the `attributio` .wasm on the texts of the steps upstream: the Rust functions are the ones `flow run` calls, so the text is the same byte for byte. The library is a file the user gave
-// the plan (its text in S.samplesJson, like a parent or a sample list); nothing is bundled or fetched. Results are kept in OPFS under the key of the job (flow-live-jobs.js). English only.
+// the plan (its text in S.samplesJson, like a parent or a sample list); nothing is bundled or fetched. Results are kept in OPFS under the key of the job (flow-live-jobs.js). spectra.ms2 and formula.ms1
+// read each mzML whole within the safe budget of the page; a refusal (phase `read`) that fits in the high budget waits for the user's yes, as features.group does. English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
@@ -16,6 +17,21 @@
   const fail = (/** @type {string} */ key, /** @type {any} */ params = {}) => Object.assign(new Error(key), { key, params });
   /** an error of a .wasm ({error_key, params} as text) as the page's {key, params} @param {any} e */
   const asError = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return j && j.error_key ? fail(j.error_key, j.params || {}) : e; };
+  /** the safe working memory of a step, as the pool gives it (as flow-web-group.js) */
+  const safeMb = () => { const r = G.MZLAB_RUST; return r ? Number(r.budgetMb || (r.choice && r.choice.mb)) || 0 : 0; };
+  /** the memory a step that reads whole mzML files works in: the high budget once the user said yes, else the safe one @param {any} x @param {any} spec */
+  const budgetOf = (x, spec) => x.allowed.has(x.jk(spec)) ? kit().highMb() : safeMb();
+  /** a refusal of the read (`error.memoryBudget`, phase `read`) that fits in the high budget: the job ends refused, waits for the user's yes (`permission.memory`, asked on Run)
+   * and goes back in line, as features.group does. Any other error is thrown @param {any} x @param {any} spec @param {any} e */
+  const holdRead = async (x, spec, e) => {
+    const err = asError(e), q = (err && err.params) || {}, need = Number(q.stima_mb), high = kit().highMb(), jk = x.jk(spec), j = J().job(spec);
+    const key = err && (err.key === "error.memoryBudget" ? "error.featMemory" : err.key);
+    if (key !== "error.featMemory" || x.allowed.has(jk) || !(need <= high && high > Number(q.budget_mb))) throw err;
+    x.memAsk.set(jk, { spec, est: { mb: need }, err, fase: "read" });
+    await x.call("finished", { job: j, result: { error_key: "error.featMemory", params: J().strings(q) } });
+    await x.call("block", { job: j, by: "permission.memory" });
+    await x.call("retry", { job: j });
+  };
 
   /** @type {Promise<any> | null} */ let libP = null;
   /** the `lib` .wasm (the one of the library page), loaded once */
@@ -57,9 +73,10 @@
     const t0 = performance.now(), params = paramsOf(x, inst), features = feat ? enc(feat.text) : null;
     return J().detached(x, spec, inst, async () => {
       let text = "";
+      const budgetMb = budgetOf(x, spec);
       for (let k = 0; k < blobs.length; k++) {
         const mzml = new Uint8Array(await blobs[k].arrayBuffer());
-        try { text += await p.ident("proofs", "flow_ms2", { params, name: names[k].slice(5), mzml, features }); } catch (e) { throw asError(e); }
+        try { text += await p.ident("proofs", "flow_ms2", { params, name: names[k].slice(5), mzml, features, budgetMb }); } catch (e) { await holdRead(x, spec, e); return; }
         x.call("progress", { job: j, frac: (k + 1) / blobs.length }).catch(() => {});
       }
       const r = { name: inst.id + ".mgf", text };
@@ -148,10 +165,11 @@
     const t0 = performance.now(), params = JSON.stringify(own), features = enc(feat.text), fileNames = JSON.stringify(names.map((/** @type {string} */ r) => r.slice(5)));
     return J().detached(x, spec, inst, async () => {
       /** @type {string[]} */ const rows = [];
+      const budgetMb = budgetOf(x, spec);
       for (let k = 0; k < blobs.length; k++) {
         const mzml = new Uint8Array(await blobs[k].arrayBuffer());
         let part;
-        try { part = await p.ident("formula", "flow_ms1_rows", { params, features, names: fileNames, index: k, mzml }); } catch (e) { throw asError(e); }
+        try { part = await p.ident("formula", "flow_ms1_rows", { params, features, names: fileNames, index: k, mzml, budgetMb }); } catch (e) { await holdRead(x, spec, e); return; }
         for (const line of part.split("\n")) { if (!line) continue; const t = line.indexOf("\t"); rows[Number(line.slice(0, t))] = line.slice(t + 1); }
         x.call("progress", { job: j, frac: (k + 1) / blobs.length }).catch(() => {});
       }

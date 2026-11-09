@@ -145,23 +145,23 @@ fn the_automatic_budget_is_shared_by_the_workers_and_budget_mb_is_kept_as_given(
     assert_eq!(given.job_mb(), 24.0);
 }
 
-#[path = "../../mzlab-feat-wasm/tests/stima_comune/mod.rs"]
-mod comune;
+#[path = "../../mzlab-feat-wasm/tests/estimate_common/mod.rs"]
+mod common;
 
 /// `flow run` of the fixture `tests/dati/stima_detect.json` (index, detect) at each of its budgets: a budget below the estimate refuses the detection
 /// before it starts, with the phase, the numbers of the page and the next step; one above it detects.
 #[test]
 fn the_detection_is_refused_with_its_numbers_below_the_estimate_of_the_fixture() {
-    let s = comune::spec();
+    let s = common::spec();
     let mb = s["mb"].as_u64().unwrap();
-    for (budget, via) in comune::cases(&s) {
+    for (budget, via) in common::cases(&s) {
         let dir = std::env::temp_dir().join(format!(
             "mzlab_cli_stima_detect_{budget}_{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("data")).unwrap();
-        std::fs::write(dir.join("data/stima.mzML"), comune::mzml(&s)).unwrap();
+        std::fs::write(dir.join("data/stima.mzML"), common::mzml(&s)).unwrap();
         let plan = r#"{"format":"mzflow/2","inputs":[{"name":"stima.mzML","type":"raw"}],"steps":[
 {"id":"idx","step":"index.mzidx@1","in":{"source":["file:stima.mzML"]}},
 {"id":"det","step":"features.detect@1","in":{"index":["idx.index"]}}]}"#;
@@ -194,6 +194,64 @@ fn the_detection_is_refused_with_its_numbers_below_the_estimate_of_the_fixture()
         assert!(
             o.stderr.contains(&format!(
                 "detecting this file needs about {mb} MB and the budget is {budget} MB"
+            )),
+            "{}",
+            o.stderr
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[path = "../../mzlab-feat-wasm/tests/lettura_comune/mod.rs"]
+mod lettura;
+
+/// `flow run` of `spectra.ms2` on the fixture `tests/dati/stima_lettura.json` at each of its budgets: below the read estimate the step is refused before
+/// the file is decoded, with the phase `read`, the numbers of the page and the next step; above it the MGF is written.
+#[test]
+fn the_read_is_refused_with_its_numbers_below_the_estimate_of_the_fixture() {
+    let s = lettura::spec();
+    let mb = s["mb"].as_u64().unwrap();
+    for (budget, via) in lettura::cases(&s) {
+        let dir = std::env::temp_dir().join(format!(
+            "mzlab_cli_stima_lettura_{budget}_{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("data")).unwrap();
+        std::fs::write(dir.join("data/stima.mzML"), lettura::mzml(&s)).unwrap();
+        let plan = r#"{"format":"mzflow/2","inputs":[{"name":"stima.mzML","type":"mzml"}],"steps":[
+{"id":"m","step":"spectra.ms2@1","in":{"source":["file:stima.mzML"]}}]}"#;
+        std::fs::write(dir.join("plan.json"), plan).unwrap();
+        let (data, out) = (dir.join("data"), dir.join("out"));
+        let mb_arg = budget.to_string();
+        let o = flow_run(&[
+            p(&dir.join("plan.json")),
+            "--in",
+            p(&data),
+            "--out",
+            p(&out),
+            "--budget-mb",
+            &mb_arg,
+        ]);
+        let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
+        if via == "memory" {
+            assert_eq!(o.code, 0, "{}", o.stderr);
+            assert!(out.join("m.mgf").exists(), "{prov}");
+            let _ = std::fs::remove_dir_all(&dir);
+            continue;
+        }
+        assert_eq!(o.code, 1, "{}", o.stderr);
+        for want in [
+            "\"error.memoryBudget\"",
+            "\"fase\":\"read\"",
+            &format!("\"stima_mb\":\"{mb}\""),
+            &format!("\"budget_mb\":\"{budget}\""),
+        ] {
+            assert!(prov.contains(want), "{want} {prov}");
+        }
+        assert!(
+            o.stderr.contains(&format!(
+                "reading the mzML files of this step whole needs about {mb} MB and the budget is {budget} MB"
             )),
             "{}",
             o.stderr

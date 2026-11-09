@@ -1,7 +1,7 @@
 //! The methods (`.dam`) of the session and the routes of one item that read how it was acquired (`api/method`, `api/method_warnings`, `api/analog`,
 //! `api/delay`, `api/chrom?kind=pda`, `api/gradient`): the same answers as `mzlab/app.py`, from the index and the mzML (low resolution only).
 use super::{error_json, Engine};
-use crate::nativi::Src;
+use crate::natives::Src;
 use js_sys::Function;
 use mzlab_core::gradient::{self, Gradient};
 use mzlab_core::json::{self, Out};

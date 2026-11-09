@@ -4,7 +4,7 @@ Studio d'architettura (sola lettura del prodotto). Ogni scelta è una raccomanda
 
 ## 1. Cosa c'è già (misurato, da non rifare)
 - **Formato `.mzlib` v1** (`crates/mzlab-lib`, ~5000 righe, senza `unsafe`): record di spettro da 32 B (precursore, polarità, licenza `u8`, RT `f32` facoltativo), picchi m/z quantizzati a 1e-5 Da (`u32`) e intensità `u16` in blocchi da 512 spettri compressi zstd, metadati (10 campi: nome, addotto, CE, strumento, formula, InChIKey, SMILES, accessione, autori, licenza) in blocchi da 128, **indici Flash su frammenti e perdite neutre** (voci da 10 B in pagine da 64 KB, ordinate per m/z).
-  Lettura a fette con cache LRU (64 MB, 32 MB su telefono/iPad: `read.rs`). Costruzione a memoria limitata (`build.rs`, scratch su disco). Pulizia alla Flash (`clean.rs`: precursore − 1,6 Da, rumore < 1 %, fusione 0,05 Da, ≤ 500 picchi).
+  Lettura a fette con cache LRU (64 MB, 32 MB su telefono/iPad: `read.rs`); il dispositivo lo dice la pagina nel messaggio `config` (`libreria-corpo.js`, regola di `rust-budget.js` `device()`), perché nel worker un iPad con lo user agent del Mac non ha `maxTouchPoints`. Costruzione a memoria limitata (`build.rs`, scratch su disco). Pulizia alla Flash (`clean.rs`: precursore − 1,6 Da, rumore < 1 %, fusione 0,05 Da, ≤ 500 picchi).
 - **Parser** (`parse.rs`): MSP, MGF, MassBank `.txt`, JSON MoNA/GNPS/mzMine, riconosciuti dal contenuto (`detect_format`).
 - **Punteggi** (`scores.rs`, `prep.rs`): entropia spettrale (Li 2021), coseno (radice delle intensità), forward/reverse, intensità spiegata, picchi comuni, perdite neutre comuni, coseno modificato (32 picchi), coseno GNPS; contributi per picco (`contrib.rs`, `score_terms`). Tolleranza Da o ppm (`frag_tol.rs`).
 - **Ricerche** (`search.rs`): `identity` (finestra del precursore, ogni candidato punteggiato), `flash_scores` (aperta / perdite neutre / ibrida sull'indice), `analogs` (ibrida nella finestra ±200 Da, poi coseno modificato ≥ 4 picchi). FDR target-decoy (`decoy.rs`).
@@ -101,7 +101,7 @@ Banco (scratch, non committato): libreria sintetica deterministica di `identity_
 | c | nodo Attribution: `table.match` multi-libreria + `table.attribute@1` + CLI | b | `flow_attribute.rs` in `crates/mzlab-cli/src/`, `mzlab-feat/src/steps/` |
 | d | wasm `LibSet.search` + pannello laterale (su IDENT-LIBRERIE-UI) | b, pannello IDENT | `crates/mzlab-lib-wasm`, `libreria-worker.js` |
 | e | analoghi: `modifiche-1.json`, ΔFormula vincolata, kit proprietà | b (c, d per le colonne) | `mzlab-core`, `matching.rs` |
-| f | catalogo `librerie/2`, verifica URL/licenze, preset | a | `tools/librerie_*`, `libreria-scarica.js`, `scarica.rs` |
+| f | catalogo `librerie/2`, verifica URL/licenze, preset | a | `tools/librerie_*`, `libreria-scarica.js`, `download.rs` |
 
 a e f possono partire insieme; c, d, e dopo b; d attende anche la PR di IDENT-LIBRERIE-UI.
 
