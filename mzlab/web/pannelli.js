@@ -516,9 +516,8 @@ function placeLeg(/** @type {Pannello} */ p) {
   const el = p.type === "spec" ? p.leg2 : p.leg;
   if (el && LEGENDE.place(p, el)) drawSoon(p);
 }
-// retention time of the spectrum next to the title; «fermo a» once it no longer follows its line. Freezing redraws nothing, so it writes this too
 function rtLabel(/** @type {Pannello} */ p) {
-  const rl = p.el.querySelector(".rtl");           // retention time of the spectrum, next to the title
+  const rl = p.el.querySelector(".rtl");
   if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? I18N.t("panel.rt.held", { rt }) : rt; } }
 }
 // "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button

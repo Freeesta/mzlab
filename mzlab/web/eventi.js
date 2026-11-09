@@ -279,7 +279,7 @@ function freezeSpec(s) {
   if (!s.link) return;
   s.src = s.src || s.link; s.link = null;
   if (/^@(spec|product)/.test(s.title) && s.r0 != null) s.title = s.level === 2 ? ptProduct(s.prec) : PT.spec;   // the time is written once, next to the title (.rtl)
-  ctl(s); rtLabel(s);
+  ctl(s); rtLabel(s);   // the retention time next to the title: freezing redraws nothing (drawSized), so afterDraw would not write it
 }
 function liveSpec(s, from) {
   E.panels.filter(q => q !== s && q.type === "spec" && q.link === from.id).forEach(freezeSpec);
