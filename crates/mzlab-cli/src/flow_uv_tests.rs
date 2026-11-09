@@ -100,3 +100,32 @@ fn a_file_without_a_matrix_is_refused() {
     assert!(prov.contains("err.pda.none"), "{prov}");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn a_budget_below_the_read_estimate_is_refused_before_the_file_is_decoded() {
+    use crate::flow_run_tests::{flow_run, p};
+    let d = dir("budget");
+    std::fs::create_dir_all(d.join("data")).unwrap();
+    std::fs::write(d.join("data/run.mzML"), example()).unwrap();
+    let plan = r#"{"format":"mzflow/2","inputs":[{"name":"run.mzML","type":"mzml"}],"steps":[
+        {"id":"uv","step":"chrom.uv_peaks@1","in":{"source":["file:run.mzML"]}}]}"#;
+    std::fs::write(d.join("plan.json"), plan).unwrap();
+    let (plan, data, out) = (d.join("plan.json"), d.join("data"), d.join("out"));
+    let o = flow_run(&[
+        p(&plan),
+        "--in",
+        p(&data),
+        "--out",
+        p(&out),
+        "--budget-mb",
+        "1",
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
+    assert!(
+        prov.contains("error.memoryBudget") && prov.contains("\"read\""),
+        "{prov}"
+    );
+    assert!(!out.join("uv.csv").exists());
+    let _ = std::fs::remove_dir_all(&d);
+}

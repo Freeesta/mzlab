@@ -17,21 +17,10 @@
   const fail = (/** @type {string} */ key, /** @type {any} */ params = {}) => Object.assign(new Error(key), { key, params });
   /** an error of a .wasm ({error_key, params} as text) as the page's {key, params} @param {any} e */
   const asError = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return j && j.error_key ? fail(j.error_key, j.params || {}) : e; };
-  /** the safe working memory of a step, as the pool gives it (as flow-web-group.js) */
-  const safeMb = () => { const r = G.MZLAB_RUST; return r ? Number(r.budgetMb || (r.choice && r.choice.mb)) || 0 : 0; };
-  /** the memory a step that reads whole mzML files works in: the high budget once the user said yes, else the safe one @param {any} x @param {any} spec */
-  const budgetOf = (x, spec) => x.allowed.has(x.jk(spec)) ? kit().highMb() : safeMb();
-  /** a refusal of the read (`error.memoryBudget`, phase `read`) that fits in the high budget: the job ends refused, waits for the user's yes (`permission.memory`, asked on Run)
-   * and goes back in line, as features.group does. Any other error is thrown @param {any} x @param {any} spec @param {any} e */
-  const holdRead = async (x, spec, e) => {
-    const err = asError(e), q = (err && err.params) || {}, need = Number(q.stima_mb), high = kit().highMb(), jk = x.jk(spec), j = J().job(spec);
-    const key = err && (err.key === "error.memoryBudget" ? "error.featMemory" : err.key);
-    if (key !== "error.featMemory" || x.allowed.has(jk) || !(need <= high && high > Number(q.budget_mb))) throw err;
-    x.memAsk.set(jk, { spec, est: { mb: need }, err, fase: "read" });
-    await x.call("finished", { job: j, result: { error_key: "error.featMemory", params: J().strings(q) } });
-    await x.call("block", { job: j, by: "permission.memory" });
-    await x.call("retry", { job: j });
-  };
+  /** the memory a step that reads whole mzML files works in, and the hold of a refusal of the read that fits in the high budget (flow-live-jobs.js) @param {any} x @param {any} spec */
+  const budgetOf = (x, spec) => J().readBudget(x, spec);
+  /** @param {any} x @param {any} spec @param {any} e */
+  const holdRead = (x, spec, e) => J().holdRead(x, spec, asError(e));
 
   /** @type {Promise<any> | null} */ let libP = null;
   /** the `lib` .wasm (the one of the library page), loaded once */

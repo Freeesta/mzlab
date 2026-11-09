@@ -270,3 +270,29 @@ fn purity_min_is_a_parameter_of_the_flag() {
         ("true".into(), "medium".into())
     );
 }
+
+#[test]
+fn a_budget_below_the_texts_read_whole_is_refused_before_they_are_read() {
+    use crate::flow_run_tests::{flow_run, p};
+    let dir = fixture("chimeric_budget");
+    std::fs::write(dir.join("chi.mzML"), dda_mzml()).unwrap();
+    let plan = r#"{"format":"mzflow/2","inputs":[{"name":"chi.mzML","type":"mzml"}],"steps":[
+        {"id":"idx","step":"index.mzidx@1","in":{"source":["file:chi.mzML"]}},
+        {"id":"s","step":"spectra.ms2@1","in":{"source":["file:chi.mzML"]}},
+        {"id":"c","step":"spectra.chimeric@1","in":{"spectra":"s.spectra","index":["idx.index"]}}]}"#;
+    std::fs::write(dir.join("plan.json"), plan).unwrap();
+    let (plan, out) = (dir.join("plan.json"), dir.join("out"));
+    let args = [p(&plan), "--in", p(&dir), "--out", p(&out)];
+    assert_eq!(flow_run(&args).code, 0);
+    std::fs::remove_file(out.join("c.mgf")).unwrap();
+    // the index and the MGF come from the cache: only the chimeric step runs under the small budget
+    let o = flow_run(&[&args[..], &["--budget-mb", "1"]].concat());
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
+    assert!(
+        prov.contains("error.memoryBudget") && prov.contains("\"read\""),
+        "{prov}"
+    );
+    assert!(!out.join("c.mgf").exists());
+    let _ = std::fs::remove_dir_all(&dir);
+}

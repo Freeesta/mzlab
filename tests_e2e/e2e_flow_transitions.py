@@ -1,6 +1,6 @@
 """Flow «This browser» runs chrom.transitions@1 (flow/lazy/flow-web-transitions.js, `flow_transitions` of the `flowtab` .wasm): the two samples of the synthetic SIM .wiff
 (tools/wiff_sim.py) converted to mzML by `mzlab-cli convert`, a transition table with two isomers on one ion, a negative ion and a row without RT; the CSV the browser keeps is
-the one of `mzlab-cli flow run` byte for byte for the three outputs and for the areas from zero (`baseline` = zero), the job runs `via: "browser"` and no request is left unserved (`MZLAB_LR_MISS`). Builds the site and the
+the one of `mzlab-cli flow run` byte for byte for the three outputs and for the areas from zero (`baseline` = zero), the job runs `via: "browser"`, past the memory budget the read is refused or asked for (`error.memoryBudget`, phase read) and no request is left unserved (`MZLAB_LR_MISS`). Builds the site and the
 .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_transitions.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -111,6 +111,28 @@ try:
         for o in OUTPUTS: step(f"the browser gives the {o} CSV of the native flow run, byte for byte", same(o))
         step("the areas from zero (baseline = zero) are the native ones, byte for byte", same(ZERO))
         step("the three outputs give three different CSVs in the browser", lambda: (len(WEBS) == 4 and len(set(WEBS.values())) == 4) or (_ for _ in ()).throw(AssertionError(sorted(WEBS))))
+        # the read estimate of the engine (error.memoryBudget, phase read): the two files of the plan are run here only, so nothing comes from the cache
+        LEVELS = "(high) => { const r = window.MZLAB_RUST; window.__lv = [r.budgetMb, r.choice]; r.budgetMb = 0; r.choice = { ...(r.choice || {}), mb: 8, high_mb: high }; }"
+        UNDO = "() => { const r = window.MZLAB_RUST; [r.budgetMb, r.choice] = window.__lv; }"
+        def read_refused():
+            pg.evaluate(LEVELS, 8)
+            try: r = pg.evaluate(RUN, plan("table"))
+            finally: pg.evaluate(UNDO)
+            assert any(e["passo"] == "tr" and e["stato"] in ("error", "refused") for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "tr"][-3:]
+            title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('tr')).title")
+            assert "Reading this mzML file whole would need about" in title and "the browser gives the engine 8 MB" in title, title
+        step("past the budget and the high level, the mzML files are refused before they are read, with the numbers of the read", read_refused)
+        def read_raised():
+            pg.evaluate(LEVELS, 4096)
+            try:
+                pg.evaluate("(plan) => { window.__run = (" + RUN + ")(plan); }", plan("table"))
+                pg.wait_for_selector("#memmore", timeout=120000)
+                pg.click("#memmore #mm-yes")
+                r = pg.evaluate("() => window.__run")
+            finally: pg.evaluate(UNDO)
+            assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            assert sha(pg.evaluate(KEPT)["tr.csv"]) == sha(NAT["table"]), pg.evaluate(KEPT)["tr.csv"][:400]
+        step("past the safe budget and within the high one, Run asks once and the yes gives the CSV of the native flow run", read_raised)
         step("no request was left unserved by the engine", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         b.close()
 finally:

@@ -106,7 +106,7 @@ fn the_cli_writes_the_bytes_of_the_shared_text_and_each_isomer_keeps_its_rt() {
     let p = vec![("output".to_string(), Value::Str("peaks".into()))];
     assert_eq!(
         csv,
-        mzlab_feat::transitions::transitions_text(&p, TABLE, &named).unwrap()
+        mzlab_feat::transitions::transitions_text(&p, TABLE, &named, usize::MAX).unwrap()
     );
     for (sample, name, apex) in [
         ("s1.mzML", "isoA", 2.5),
@@ -172,6 +172,7 @@ fn the_browser_entry_on_packed_files_gives_the_same_bytes() {
         TABLE,
         &manifest,
         &blob,
+        usize::MAX,
     )
     .unwrap();
     assert_eq!(packed, csv);
@@ -180,6 +181,7 @@ fn the_browser_entry_on_packed_files_gives_the_same_bytes() {
         TABLE,
         r#"[{"name":"x","len":9e12}]"#,
         &blob,
+        usize::MAX,
     )
     .unwrap_err();
     assert_eq!(e.key, "err.transitions.manifest");
@@ -227,8 +229,77 @@ fn from_zero_the_cli_and_the_browser_entry_agree_and_say_so() {
         TABLE,
         &manifest,
         &[a, b].concat(),
+        usize::MAX,
     )
     .unwrap();
     assert_eq!(packed, zero);
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn below_the_read_estimate_the_cli_and_the_browser_refuse_the_same_way() {
+    use mzlab_core::mzml_estimate::{bytes, inputs};
+    let Some(d) = fixture("budget") else {
+        return;
+    };
+    let (a, b) = (
+        std::fs::read(d.join("s1.mzML")).unwrap(),
+        std::fs::read(d.join("s2.mzML")).unwrap(),
+    );
+    let p = vec![("output".to_string(), Value::Str("table".into()))];
+    let named = [("s1.mzML", a.as_slice()), ("s2.mzML", b.as_slice())];
+    let need = bytes(&inputs(&a), 2 * a.len() + b.len());
+    let cli = mzlab_feat::transitions::transitions_text(&p, TABLE, &named, need - 1).unwrap_err();
+    let manifest = format!(
+        r#"[{{"name":"s1.mzML","len":{}}},{{"name":"s2.mzML","len":{}}}]"#,
+        a.len(),
+        b.len()
+    );
+    let web = mzlab_feat::transitions::transitions_packed(
+        r#"{"output":"table"}"#,
+        TABLE,
+        &manifest,
+        &[a.clone(), b.clone()].concat(),
+        need - 1,
+    )
+    .unwrap_err();
+    assert_eq!((cli.key, &cli.params), (web.key, &web.params));
+    assert_eq!(cli.key, "error.memoryBudget");
+    assert!(
+        cli.params.contains(&("fase", "read".to_string())),
+        "{cli:?}"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn flow_run_below_the_read_estimate_refuses_the_step() {
+    use crate::flow_run_tests::{flow_run, p};
+    let Some(d) = fixture("budget_cli") else {
+        return;
+    };
+    let plan = format!(
+        r#"{{"format":"mzflow/2","inputs":[{{"name":"s1.mzML","type":"mzml"}},{{"name":"s2.mzML","type":"mzml"}}],"steps":[
+        {{"id":"tr","step":"chrom.transitions@1","in":{{"source":["file:s1.mzML","file:s2.mzML"]}}{}}}]}}"#,
+        params("table", TABLE)
+    );
+    std::fs::write(d.join("plan.json"), plan).unwrap();
+    let (plan, out) = (d.join("plan.json"), d.join("out"));
+    let o = flow_run(&[
+        p(&plan),
+        "--in",
+        p(&d),
+        "--out",
+        p(&out),
+        "--budget-mb",
+        "1",
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    let prov = std::fs::read_to_string(out.join("prov.json")).unwrap();
+    assert!(
+        prov.contains("error.memoryBudget") && prov.contains("\"read\""),
+        "{prov}"
+    );
+    assert!(!out.join("tr.csv").exists());
     let _ = std::fs::remove_dir_all(&d);
 }
