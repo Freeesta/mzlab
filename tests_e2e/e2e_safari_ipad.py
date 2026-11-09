@@ -104,13 +104,18 @@ try:
                 w, h = pg.evaluate(f"(r => [r.width, r.height])(document.querySelector({sel!r}).getBoundingClientRect())")
                 if w < 24 or h < 24: small.append((sel, round(w), round(h)))
                 pg.evaluate(closer)
+            # what the compact rules shrink: a panel title (a double tap renames it), a fold, a check box in its label, the × of an XIC row, while the charts are on screen
+            size(".pnl.spec .hd .ttl", "void 0", "void 0")
+            size("#bigbody summary", "document.getElementById('np-method').click()")
+            size("#lst-src-checks label", "BARRA.show('lists',{noFocus:true,instant:true})", "BARRA.close()")
+            size("#xic-rows .xr-x", "document.getElementById('np-xic').click()")
             size("#bigx", "peakParams()")
             size("#lib-x", "LIB.open()")
             size("#refx", "document.getElementById('np-pt').click()")
             size("#flist input[data-k=use]", "BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()", "BARRA.close()")
             size("#tour-btn-skip", "TOUR.inizia(1,0)", "document.getElementById('tour-btn-skip').click()")
             assert not small, f"touch targets under 24x24 px: {small}"
-        step("iPad: the × of the dialogs, «Skip the tour» and the file checkbox are at least 24x24 px", targets)
+        step("iPad: the × of the dialogs, «Skip the tour», the check boxes, folds, panel titles and XIC rows are at least 24x24 px", targets)
         def tap_outside():
             pg = ipad(b, extra=IOS_TOUCH); cdp = pg.context.new_cdp_session(pg) if BROWSER == "chromium" else None
             def touch(x, y, ms=0):
