@@ -321,7 +321,7 @@ pub fn index_reader_with(
     let p = table(t, l, c, String::new(), String::new(), String::new())?;
     fase(3);
     let n = l.index(c)?.len();
-    // the members are asked for last, where the source is written (`build_dopo`): their hash may still be running
+    // the members are asked for last, where the source is written (`build_after`): their hash may still be running
     let mut sha256 = String::new();
     let mut late = || -> Result<String> {
         let (source, sha, _) = sorgente(&members()?, &sample, name);

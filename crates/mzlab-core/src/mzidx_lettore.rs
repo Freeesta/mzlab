@@ -39,7 +39,7 @@ pub fn righe(l: &mut dyn Reader, c: usize) -> Result<Table> {
     table(l, c, None)
 }
 
-/// The table and pass 1 of the `.mzidx` builder in one decoding of the scans: what `righe` gives and the groups `mzidx::build_dopo` needs.
+/// The table and pass 1 of the `.mzidx` builder in one decoding of the scans: what `righe` gives and the groups `mzidx::build_after` needs.
 pub(crate) fn rows_before<'a>(
     l: &mut dyn Reader,
     c: usize,

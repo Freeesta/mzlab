@@ -524,7 +524,7 @@ pub(crate) struct First<'a> {
     spill: Option<&'a mut dyn Spill>,
     parts: Option<Parts>,
     /// Whether the MS1 sections will hold `f32` (`ScanTable::hr1`): known before pass 1 for an mzML, guessed from the first MS1 scan for a reader
-    /// (`indovina`); a wrong guess of `true` is undone by `build_dopo`.
+    /// (`indovina`); a wrong guess of `true` is undone by `build_after`.
     hr1: Option<bool>,
 }
 
