@@ -8,7 +8,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:240]))
 N = 30
-# the tooltip layer moves title to data-tip on hover (eventi.js): the same attribute under another name, not a different list
+# the tooltip layer moves title to data-tip on hover (tooltip.js): the same attribute under another name, not a different list
 SAME = "() => { const h = () => document.querySelector('#flst').innerHTML.replace(/ data-tip=/g, ' title='); const a = h(); renderFileList.now(); return a === h(); }"
 r = Run(port=8903, wd="/tmp/wd_lista_molti_e2e")
 try:

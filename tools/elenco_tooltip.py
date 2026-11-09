@@ -152,7 +152,7 @@ def render():
           "- **Sites** (`tools/inventario_tooltip.py`): `title=`, `.title =`, `setAttribute('title')`, `data-tip`/`data-tiph`, `tip:` fields, `data-i18n-title` and SVG `<title>` in `mzlab/web`, `TP_Mine/js`, `TP_Mine/lazy`, `flow/lazy`; keys resolved in `lang/it` and `lang/en`.",
           "- **Catalog keys** ending `.title`, `.tip`, `.tt`, `.hint` or `Title` (and `tip.*`) that no site names are added as `catalog-only` (headings, tour, help and dialog titles are not tooltips and are left out).",
           "- **Flow**: the hover help of each step (`doc`) and parameter (`x-tip`, else `description`) from `docs/schemi/steps-*.json` (English only).",
-          "- **aria-label**: the program's tooltip reads only `title`, `data-tip` and `data-tiph` (`eventi.js`), so an `aria-label` is hover text only where code copies it into a `title` (those `.title =` sites are in the list).",
+          "- **aria-label**: the program's tooltip reads only `title`, `data-tip` and `data-tiph` (`tooltip.js`), so an `aria-label` is hover text only where code copies it into a `title` (those `.title =` sites are in the list).",
           "- **Desktop app**: it serves the same pages; `crates/mzlab-desktop/shim` and `src` set no tooltip text (the window title is the page title).",
           "", "| source | entries |", "|---|---|"]
     L += [f"| {s} | {srcs[s]} |" for s in ("site", "i18n-title", "svg", "catalog-only", "flow-step", "flow-param")]

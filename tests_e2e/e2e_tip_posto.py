@@ -1,4 +1,4 @@
-"""A tooltip never covers the toolbar of the control it describes: below it, else above it, else beside it (eventi.js show())."""
+"""A tooltip never covers the toolbar of the control it describes: below it, else above it, else beside it (tooltip.js show())."""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
