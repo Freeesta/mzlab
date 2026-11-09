@@ -10,10 +10,10 @@ pub mod mol3d;
 #[cfg(feature = "record")]
 pub mod mol3d_record;
 pub mod protomer;
-pub mod reatt;
+pub mod react;
 pub mod step;
 pub mod xtb;
 
 pub use embed::{embed, Conf, DEFAULT_CONFORMERS};
 pub use mol3d::Mol3d;
-pub use reatt::{reactivity_json, ENGINE};
+pub use react::{reactivity_json, ENGINE};

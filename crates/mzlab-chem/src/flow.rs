@@ -5,7 +5,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 use mzlab_feat::parent::parent_smiles;
 
-use crate::reatt::reactivity_json;
+use crate::react::reactivity_json;
 
 /// The options the engine reads (`Opts::parse`), from the parameters the step resolved.
 fn opts_json(params: &[(String, Value)]) -> String {

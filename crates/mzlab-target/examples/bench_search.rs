@@ -1,5 +1,5 @@
 // Timing and output fingerprint of the target screen on a synthetic run (1000 targets x 3 adducts, 3000 MS1 scans of ~1500 peaks).
-// Run with `cargo run --release -p mzlab-target --example bench_cerca`; the printed hash must not change between versions.
+// Run with `cargo run --release -p mzlab-target --example bench_search`; the printed hash must not change between versions.
 
 use std::time::Instant;
 

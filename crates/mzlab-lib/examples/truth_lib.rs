@@ -1,4 +1,4 @@
-//! `cargo run --release -p mzlab-lib --example verita_lib -- LIB QUERIES [DECOY_SEED]` -> JSON on stdout (test 5 of the workflow study).
+//! `cargo run --release -p mzlab-lib --example truth_lib -- LIB QUERIES [DECOY_SEED]` -> JSON on stdout (test 5 of the workflow study).
 //! LIB and QUERIES are MassBank/MSP/MGF/JSON files of two different public libraries; the truth is the first block of the InChIKey. For each score
 //! (entropy, cosine, modified cosine) it counts the rank-1 hits among the targets and the correct ones at q <= 1 % with fragment decoys. No clock.
 use mzlab_lib::build::{build_in_memory, BuildOpts};

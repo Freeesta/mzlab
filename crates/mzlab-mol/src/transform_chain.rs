@@ -4,7 +4,7 @@
 use crate::codec::MolError;
 use crate::delta;
 use crate::model::{Mol, Status, Stereo};
-use crate::trasf::{Evidence, TRegion, TSite, Transformation};
+use crate::transform::{Evidence, TRegion, TSite, Transformation};
 use std::collections::BTreeSet;
 
 impl Stereo {

@@ -5,7 +5,7 @@ use mzlab_core::step::{
     Algorithm, Applicability, DataType, Param, Port, Reference, RunsIn, Status, Step,
 };
 
-use crate::reatt::Opts;
+use crate::react::Opts;
 
 /// The `.wasm` of the chemistry engine and its fixed ceiling in bytes (`limit_chem` of `tools/build_feat_wasm.sh`).
 const CHEM_WASM: &str = "chem";

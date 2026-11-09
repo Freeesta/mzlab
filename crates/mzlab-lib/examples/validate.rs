@@ -1,4 +1,4 @@
-//! `cargo run --release -p mzlab-lib --example valida -- LIB.msp QUERIES.json` -> JSON on stdout.
+//! `cargo run --release -p mzlab-lib --example validate -- LIB.msp QUERIES.json` -> JSON on stdout.
 //! Used by tests/test_librerie_rust.py (private validation against the data repository): builds the library in memory, then for every query list
 //! of `{prec, peaks}` gives the best identity, the best analogues and the time. QUERIES.json = `{"queries": {name: [q…]}, "all": [q…]}`.
 use mzlab_lib::build::{build_in_memory, BuildOpts};

@@ -1,6 +1,6 @@
 //! GFN2-xTB (Bannwarth, Ehlert, Grimme 2019, doi:10.1021/acs.jctc.8b01176) for any total charge, in the gas phase or in ALPB water.
 //! Parameters: `sci_form::xtb::gfn2_params` (sci-form 0.15.2, MIT), checked number by number against the GFN2 parameter file of
-//! dxtb 0.4.0 (`param/gfn2/gfn2-xtb.toml`, Apache-2.0) by `tests/parametri_gfn2.rs`. The geometry-dependent matrices are built
+//! dxtb 0.4.0 (`param/gfn2/gfn2-xtb.toml`, Apache-2.0) by `tests/parameters_gfn2.rs`. The geometry-dependent matrices are built
 //! once per `System` and shared by the neutral molecule, the cation and the anion.
 
 mod aes;
