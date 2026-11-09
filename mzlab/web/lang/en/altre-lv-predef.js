@@ -52,6 +52,7 @@ I18N.add("en", {
   "memory.phase.indexPeaks": "index peaks",
   "memory.phase.detect": "feature detection",
   "memory.phase.group": "ion grouping",
+  "memory.phase.read": "reading of the mzML file",
   "pol.positive": "ESI positive",
   "pol.negative": "ESI negative",
   "pol.mixed": "ESI positive and negative in the same file",
