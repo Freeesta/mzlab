@@ -288,7 +288,14 @@ pub(crate) fn windows_by_slab<R: ReadAt>(
     let mut i = 0;
     while i < ranges.len() {
         slab.mz.clear();
-        let j = slab_parts(index, si, &ranges[i..], max_peaks as u64, &mut parts, &mut slab.mz)? + i;
+        let j = slab_parts(
+            index,
+            si,
+            &ranges[i..],
+            max_peaks as u64,
+            &mut parts,
+            &mut slab.mz,
+        )? + i;
         slab.load(index, si, &parts)?;
         hits.clear();
         for (k, r) in ranges.iter().enumerate().take(j).skip(i) {
@@ -334,15 +341,16 @@ fn slab_parts<R: ReadAt>(
         if n > 0 && total + (run.1 - run.0) + grow > max_peaks {
             break;
         }
+        let from = if joins { run.1 } else { a };
+        reserve(mz, e.saturating_sub(from) as usize)?;
+        index.mz_into(si, from, e, mz)?;
         if joins {
-            index.mz_into(si, run.1, e, mz)?;
             run.1 = run.1.max(e);
         } else {
             if n > 0 {
                 parts.push(run);
                 total += run.1 - run.0;
             }
-            index.mz_into(si, a, e, mz)?;
             run = (a, e);
         }
         n += 1;
