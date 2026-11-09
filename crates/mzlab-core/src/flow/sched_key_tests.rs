@@ -33,7 +33,9 @@ fn a_preset_named_or_a_value_written_is_another_run_of_a_step_that_measures() {
             "test-1",
             &[],
         );
-        s.key(&JobId::new("det", Some("f1.raw"))).unwrap().to_string()
+        s.key(&JobId::new("det", Some("f1.raw")))
+            .unwrap()
+            .to_string()
     };
     let bare = plan_text(&["f1.raw"], 1, 1).replace(
         "\"params\":{\"q\":1},\"in\":{\"index\"",

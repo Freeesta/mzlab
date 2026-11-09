@@ -87,9 +87,7 @@ fn the_recipe_text_holds_only_the_line_of_the_job() {
     );
     assert!(!text("alib").contains("gapfill") && text("alib").starts_with(r#"{"fill":false"#));
     assert_eq!(text("alia"), text("gapa"));
-    assert!(
-        text("gapa").starts_with(r#"{"fill":true"#) && !text("gapa").contains("min_points")
-    );
+    assert!(text("gapa").starts_with(r#"{"fill":true"#) && !text("gapa").contains("min_points"));
     // the alignment alone (the record of a run makes it again without the filling)
     let alone = job_recipe_text(PLAN.as_bytes(), &reg, "alia", false).unwrap();
     assert!(

@@ -121,7 +121,12 @@ fn upstream(ctx: &Ctx, plan: &Plan, inst: &Instance) -> Vec<Layer> {
 
 /// The recipe text the browser pool runs `instance` with (`{"fill": bool, "layers": [{"step", "params"}]}`), the recipe `flow run` builds for that job. The
 /// browser keeps one table per alignment, aligned and filled in one call: with `filled`, an alignment a gap filling reads takes the recipe of the first such filling.
-pub fn job_recipe_text(plan_text: &[u8], registry: &[Step], instance: &str, filled: bool) -> Result<String> {
+pub fn job_recipe_text(
+    plan_text: &[u8],
+    registry: &[Step],
+    instance: &str,
+    filled: bool,
+) -> Result<String> {
     let plan = parse(plan_text)?;
     let sched = Sched::new(&plan, registry, env!("CARGO_PKG_VERSION"), &[]);
     let ctx = Ctx::new(&plan, registry, &sched)?;
@@ -133,7 +138,10 @@ pub fn job_recipe_text(plan_text: &[u8], registry: &[Step], instance: &str, fill
     let reads = |s: &&Instance| {
         s.step == "features.gapfill"
             && s.ins.iter().any(|(p, refs)| {
-                p == "table" && refs.iter().any(|r| matches!(r, Ref::Out { instance, .. } if *instance == inst.id))
+                p == "table"
+                    && refs
+                        .iter()
+                        .any(|r| matches!(r, Ref::Out { instance, .. } if *instance == inst.id))
             })
     };
     let target = match inst.step.as_str() {
@@ -142,11 +150,19 @@ pub fn job_recipe_text(plan_text: &[u8], registry: &[Step], instance: &str, fill
     };
     let mut o = Out::default();
     o.raw("{\"fill\":")
-        .raw(if target.step == "features.gapfill" { "true" } else { "false" })
+        .raw(if target.step == "features.gapfill" {
+            "true"
+        } else {
+            "false"
+        })
         .raw(",\"layers\":[");
     for (i, (step, params)) in carried(&ctx, &plan, target, 0).iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"step\":").str(step);
-        o.raw(",\"params\":").raw(&value_text(&Value::Obj(params.clone()))).raw("}");
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"step\":")
+            .str(step);
+        o.raw(",\"params\":")
+            .raw(&value_text(&Value::Obj(params.clone())))
+            .raw("}");
     }
     o.raw("]}");
     Ok(o.0.clone())
