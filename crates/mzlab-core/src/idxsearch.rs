@@ -40,6 +40,32 @@ impl<R: ReadAt> Index<R> {
         })
     }
 
+    /// The m/z of the peaks `a..b` (as `mz_at`) appended to `out`, read straight from the array: a slab copies each run while it searches it,
+    /// so the run is not read again with the intensities.
+    pub fn mz_into(&mut self, si: usize, a: u64, b: u64, out: &mut Vec<f64>) -> Result<()> {
+        let s = &self.sections[si];
+        let (f4, off, b) = (s.f4, s.off[7], b.min(s.n_peaks));
+        let w = if f4 { 4 } else { 8 };
+        let n = b.saturating_sub(a) as usize;
+        out.try_reserve(n).map_err(|_| crate::error::Error::memory_budget())?;
+        let mut buf = vec![0u8; n.min(BLOCK as usize) * w];
+        let mut i = a;
+        while i < b {
+            let c = (b - i).min(BLOCK) as usize;
+            let buf = &mut buf[..c * w];
+            self.r.read_at(off + i * w as u64, buf)?;
+            out.extend(buf.chunks_exact(w).map(|c| {
+                if f4 {
+                    f64::from(f32::from_le_bytes(c.try_into().unwrap()))
+                } else {
+                    f64::from_le_bytes(c.try_into().unwrap())
+                }
+            }));
+            i += c as u64;
+        }
+        Ok(())
+    }
+
     /// Lowest and highest m/z of a section (`mz[0]`, `mz[-1]` of its peak table), None when it has no peaks.
     pub fn mz_range(&mut self, si: usize) -> Result<Option<(f64, f64)>> {
         let n = self.sections[si].n_peaks;
