@@ -10,11 +10,11 @@ use mzlab_core::json::Out;
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
-mod campioni_cmd;
-mod canali_cmd;
+mod channels_cmd;
 pub mod convert;
 mod convert_entries;
 mod convert_report;
+pub mod error_text;
 pub mod flow;
 #[cfg(test)]
 mod flow_align_join_tests;
@@ -133,22 +133,22 @@ mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
 mod flow_transitions;
-pub mod insilico_pack;
 mod idx_open;
+pub mod insilico_pack;
 mod ion_pattern_cmd;
 pub mod llm;
 mod llm_ctx;
 mod mol_label_cmd;
 #[cfg(test)]
-mod msn_figura_tests;
+mod msn_figure_tests;
 pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
+pub mod msn_outputs;
 mod msn_png;
 mod msn_rules;
-pub mod msn_uscite;
 #[cfg(test)]
-mod mzml_varianti_tests;
+mod mzml_variants_tests;
 #[cfg(test)]
 mod name_rule_tests;
 #[cfg(not(target_family = "wasm"))]
@@ -157,9 +157,9 @@ mod par;
 mod peaks_auto_cmd;
 mod peaks_edges_cmd;
 mod plain;
+mod samples_cmd;
 mod sim_table_cmd;
 mod steps_cmd;
-pub mod testo_errore;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
 
@@ -317,7 +317,7 @@ impl Outcome {
         Outcome {
             code: 2,
             stdout: Vec::new(),
-            stderr: format!("error: {}\n", testo_errore::human(msg)),
+            stderr: format!("error: {}\n", error_text::human(msg)),
         }
     }
 }
@@ -409,7 +409,7 @@ fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
 
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
-    testo_errore::with_help(args, executed(args))
+    error_text::with_help(args, executed(args))
 }
 
 fn executed(args: &[String]) -> Outcome {
@@ -485,7 +485,7 @@ mod llm_tools_tests;
 #[cfg(test)]
 mod msn_graph_compare_tests;
 #[cfg(test)]
-mod msn_graph_strutture_tests;
+mod msn_graph_structures_tests;
 #[cfg(test)]
 mod msn_graph_tests;
 #[cfg(test)]

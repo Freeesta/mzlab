@@ -1,6 +1,6 @@
 //! The ops of `rpc` that the site serves with the `msngrafo`, `msnregole` and centroid code of `rust-worker.js`: `msngrafo` (the fragmentation graph, its exports
 //! and the library entry/search of `api/msn_grafo*`, `api/msnlib/*`), `mzml2cen` (a profile mzML as a centroid copy), `lr_index_cen` and `natsrm`.
-//! `msngrafo` is the twin of `crates/mzlab-msngrafo-wasm` (same `mzlab-core` / `mzlab-feat` calls, files read through memory maps); `tests/parita_msn.rs` holds the bytes together.
+//! `msngrafo` is the twin of `crates/mzlab-msngrafo-wasm` (same `mzlab-core` / `mzlab-feat` calls, files read through memory maps); `tests/parity_msn.rs` holds the bytes together.
 
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -19,7 +19,7 @@ use mzlab_feat::chem::strutture::strutture_testo;
 use serde_json::{json, Value};
 
 use crate::engine::{CountWrite, Picked, Progress, State};
-use crate::nativi;
+use crate::natives;
 use crate::rpc::{io_error, map_file, text, Answer, Eng, MapAt};
 use crate::store::Nat;
 
@@ -103,7 +103,7 @@ impl State {
         let ready =
             std::fs::metadata(&tmp).is_ok_and(|m| m.len() > 0) && indexer.size(&key).is_some();
         if !ready {
-            let mut l = nativi::open(&nat.members, nat.centroid)?;
+            let mut l = natives::open(&nat.members, nat.centroid)?;
             let mut out =
                 std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?);
             lettori_mzml::write_with(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
@@ -134,7 +134,7 @@ impl State {
     /// `natsrm {name}`: the SRM traces of a sample of a maker's file as `srm::impacchetta` writes them.
     pub(crate) fn nat_srm(&self, p: &Value) -> Result<Answer> {
         let nat = self.nat_of(p["name"].as_str().unwrap_or(""))?;
-        let mut l = nativi::open(&nat.members, nat.centroid)?;
+        let mut l = natives::open(&nat.members, nat.centroid)?;
         let mut t = ReaderSource {
             l: &mut *l,
             c: nat.c,

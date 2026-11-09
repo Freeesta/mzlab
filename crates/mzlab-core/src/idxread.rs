@@ -275,7 +275,7 @@ fn read_span<R: ReadAt>(r: &mut R, off: u64, len: u64) -> Result<Vec<u8>> {
 
 /// What `Index::open` parses, as read from the file: the header and the bytes of the meta and of the scan table. Two reads with the same `Head`
 /// give the same `Index` (the peaks are read from the file when asked), so a caller that keeps a parsed index compares heads and does not parse
-/// the scan table again (`Index::reopen`).
+/// the scan table again (`Index::over`).
 #[derive(PartialEq, Eq)]
 pub struct Head {
     h: [u8; HEADER],
@@ -394,9 +394,9 @@ impl<R: ReadAt> Index<R> {
         })
     }
 
-    /// The same index read through `r`, another handle on the same file: the scan table and the sections are copied, not parsed again; the caches
-    /// of blocks and arrays start empty, as after `open`.
-    pub fn reopen<S: ReadAt>(&self, r: S) -> Index<S> {
+    /// This index over `r`, another reader of the same bytes: the tables `open` read, with empty caches, so it is what `open` would give on
+    /// `r` without reading and parsing the file again.
+    pub fn over<S: ReadAt>(&self, r: S) -> Index<S> {
         let n = self.sections.len();
         Index {
             r,

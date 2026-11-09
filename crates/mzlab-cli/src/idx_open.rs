@@ -30,7 +30,7 @@ pub(crate) fn open(idx: &Path) -> Result<Index<File>> {
         let mut kept = lock();
         if let Some(i) = kept.iter().position(|(p, h, _)| p == idx && *h == head) {
             let e = kept.remove(i);
-            let ix = e.2.reopen(f);
+            let ix = e.2.over(f);
             kept.push(e);
             return Ok(ix);
         }
@@ -41,7 +41,7 @@ pub(crate) fn open(idx: &Path) -> Result<Index<File>> {
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .push(idx.to_path_buf());
-    let out = ix.reopen(f);
+    let out = ix.over(f);
     let mut kept = lock();
     kept.retain(|(p, _, _)| p != idx);
     kept.push((idx.to_path_buf(), head, ix));

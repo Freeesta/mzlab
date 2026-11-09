@@ -1,4 +1,4 @@
-//! `Index::reopen` gives the index `open` gives (scan table, sections, peaks) without parsing again, and `Head` tells two files apart by the bytes
+//! `Index::over` gives the index `open` gives (scan table, sections, peaks) without parsing again, and `Head` tells two files apart by the bytes
 //! `open` parses: the same file read twice has one head, an index of other scans another.
 #![allow(clippy::indexing_slicing)]
 #![allow(clippy::disallowed_methods)]
@@ -35,10 +35,10 @@ fn peaks(ix: &mut Index<Vec<u8>>) -> Vec<(usize, usize, u64, u64)> {
 fn a_reopened_index_is_the_index_opened() {
     let b = index_bytes(300, 200, 777);
     let mut opened = Index::open(b.clone(), b.len() as u64).unwrap();
-    let mut first = opened.reopen(b.clone());
+    let mut first = opened.over(b.clone());
     // the caches of the first reader do not pass to the copy
     let before = peaks(&mut opened);
-    let mut copy = opened.reopen(b.clone());
+    let mut copy = opened.over(b.clone());
     assert_eq!(format!("{:?}", copy.scans), format!("{:?}", opened.scans));
     assert_eq!(
         format!("{:?}", copy.sections),

@@ -1,9 +1,9 @@
-//! Files opened from outside the window and the notice «make mzLab the default app?»: the glue between Tauri and `apertura.rs` (single instance, the command line,
-//! `RunEvent::Opened` on macOS) and the commands the page calls (`predefinito.js`). The rules are in `apertura.rs`.
+//! Files opened from outside the window and the notice «make mzLab the default app?»: the glue between Tauri and `opening.rs` (single instance, the command line,
+//! `RunEvent::Opened` on macOS) and the commands the page calls (`predefinito.js`). The rules are in `opening.rs`.
 
 use super::{data_dir, register, save_config, PickedFile};
-use mzlab_desktop::apertura::{self, NoticeAnswer, Pending};
 use mzlab_desktop::librerie;
+use mzlab_desktop::opening::{self, NoticeAnswer, Pending};
 use mzlab_desktop::State;
 use serde::Serialize;
 use std::path::PathBuf;
@@ -28,7 +28,7 @@ pub fn take_opened(
     let ask = !files.is_empty()
         && data_dir(&app).is_ok_and(|d| {
             let mut c = librerie::read_config(&d);
-            let ask = apertura::record_opening(&mut c);
+            let ask = opening::record_opening(&mut c);
             let _ = librerie::write_config(&d, &c);
             ask
         });
@@ -66,13 +66,13 @@ pub fn assoc_answer(app: AppHandle, answer: String) -> Result<(), String> {
         "no" => None,
         _ => return Err("bad answer".into()),
     };
-    save_config(&app, |c| apertura::answer_notice(c, r))
+    save_config(&app, |c| opening::answer_notice(c, r))
 }
 
 /// The setting «ask again»: forgets the answer, so the next file opened from outside asks.
 #[tauri::command]
 pub fn assoc_reset(app: AppHandle) -> Result<(), String> {
-    save_config(&app, apertura::ask_again)
+    save_config(&app, opening::ask_again)
 }
 
 /// Registered first: a second launch (double click on a file with the app open) gives its arguments to this window and exits.
@@ -81,7 +81,7 @@ pub fn single_instance() -> tauri::plugin::TauriPlugin<tauri::Wry> {
         let cwd = PathBuf::from(cwd);
         hand_over(
             app,
-            apertura::paths_from_args(args.get(1..).unwrap_or_default(), Some(&cwd)),
+            opening::paths_from_args(args.get(1..).unwrap_or_default(), Some(&cwd)),
         );
     })
 }
@@ -90,7 +90,7 @@ pub fn single_instance() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 pub fn queue_command_line(app: &AppHandle) {
     let args: Vec<String> = std::env::args().skip(1).collect();
     app.state::<Pending>()
-        .push(apertura::paths_from_args(&args, None));
+        .push(opening::paths_from_args(&args, None));
 }
 
 /// macOS gives the files of a double click (or «Open with») as events, also with the app already open.
@@ -102,7 +102,7 @@ pub fn run_event(app: &AppHandle, event: &tauri::RunEvent) {
             app,
             urls.iter()
                 .filter_map(|u| u.to_file_path().ok())
-                .filter(|p| apertura::is_openable(p))
+                .filter(|p| opening::is_openable(p))
                 .collect(),
         );
     }
