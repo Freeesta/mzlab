@@ -414,3 +414,22 @@ fn slabs_read_by_parts_give_the_same_bytes_and_read_only_their_rows() {
         );
     }
 }
+
+/// Many files per family: the table of the ions fits the budget once but not twice. The slabs keep many rows (before, they fell to the minimum of 16 rows
+/// and every file was read over 3000 times), and give the bytes of the alignment in memory.
+#[test]
+fn families_whose_table_fits_once_keep_slabs_of_many_rows() {
+    let r = recipe(Mode::Family);
+    let files = 40;
+    let reference = aligned_bytes(&mut family_series_of(files, 1500, false), 1024.0, &r).unwrap();
+    for mb in [3.0, 4.0] {
+        let mut s = family_series_of(files, 1500, false);
+        let got = aligned_bytes(&mut s, mb, &r).unwrap();
+        assert!(got == reference, "{mb} MB: different bytes");
+        assert!(
+            s.1 > 4 * files && s.1 < 200 * files,
+            "{mb} MB: {} reads of files",
+            s.1
+        );
+    }
+}
