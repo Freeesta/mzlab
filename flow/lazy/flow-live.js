@@ -111,7 +111,7 @@
         const list = [].concat(/** @type {any} */ (v)), at = list.indexOf("file:" + first.name);
         if (at < 0) continue;
         const many = (F.stepOf(S.reg, s) || { in: {} }).in[port]?.many;
-        s.in[port] = many ? [...list.slice(0, at), ...refs, ...list.slice(at + 1)] : msnSteps.includes(base(s)) && refs.includes("file:" + infusion) ? "file:" + infusion : refs[0];
+        s.in[port] = many ? [...new Set([...list.slice(0, at), ...refs, ...list.slice(at + 1)])] : msnSteps.includes(base(s)) && refs.includes("file:" + infusion) ? "file:" + infusion : refs[0];
       }
     }
     return { plan, items, ids: Object.fromEntries(items.map((/** @type {any} */ i) => [i.input, i.idx ? `${i.idx.key}:${i.mode}` : "loading"])) };

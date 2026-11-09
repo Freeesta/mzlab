@@ -20,7 +20,7 @@ fn transitions_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         .find(|(k, _)| k == "transitions")
         .and_then(|(_, v)| v.str())
         .unwrap_or("");
-    let text = transitions_text(params, table, &named(&files))?;
+    let text = transitions_text(params, table, &named(&files), r.cap())?;
     let out = r.work.join(format!("{}.csv", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Report)
