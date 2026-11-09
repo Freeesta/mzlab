@@ -78,12 +78,12 @@
           if (!it || !key) return null;
           r = { outputs: [await fileOut(inst, D + key + ".mzfeatf", "mzfeatf")], ...(await ask(w, wasm, { op: "meta", paths: [first, x.source(it).path], plan: planText, registry: JSON.stringify(x.registry), instance: j.instance, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0 })) };
         } else {
-          const al = x.alignOf(inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
+          const al = x.alignOf(inst), alKey = x.onlyFilled(inst) ? x.keys.get(x.jk(j)) : x.tableKey(inst), up = x.upstream(al);
           if (!alKey) return null;
           const meta = await ask(w, wasm, { op: "meta", paths: [first, first], stored: up.map((/** @type {any} */ u) => D + u.key + ".mzfeatf"), plan: planText, registry: JSON.stringify(x.registry), instance: j.instance, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0 });
           let path = D + alKey + ".mzfeat";
-          if (id === "features.align" && x.plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill")) {
-            // the file kept under the key of the alignment is the filled table: the table of the alignment alone is made again without the gap filling
+          if (x.onlyFilled(inst)) {
+            // an alignment only gap fillings read keeps no table: the table of the alignment alone is made again without the gap filling
             const recipe = JSON.parse(await k.recipeOf(plan, x.registry, al, false));
             const stored = await Promise.all(up.map((/** @type {any} */ u) => p.fs.read(D + u.key + ".mzfeatf")));
             const table = await p.align(stored, up.map((/** @type {any} */ u) => u.path), JSON.stringify(recipe), x.jk(j), !!meta.mem && meta.mem.via === "slabs");

@@ -41,7 +41,7 @@
     const j = J().job(spec), p = await kit().getPool(), files = rawFiles(x, inst);
     const wired = F.refs(inst, "table").length > 0, samples = fileText(x, inst, "samples"), csv = fileText(x, inst, "references");
     const up0 = wired ? x.inst(String(F.refs(inst, "table")[0]).split(".")[0]) : null, isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    const alKey = isTable ? x.tableKey(up0) : null;
     const needs = (F.refs(inst, "samples").length > 0 && samples === null) || (F.refs(inst, "references").length > 0 && csv === null) || (wired && (!isTable || !alKey));
     if (!files.length || files.length !== x.items.length || needs) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     const key = await J().sha(spec.key + "\n" + await J().sha(samples || "") + "\n" + await J().sha(csv || "") + "\n" + (alKey || "")), hit = await J().recall(p, key);
