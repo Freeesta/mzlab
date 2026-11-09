@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 
 use mzlab_core::idxread::Index;
-use mzlab_core::msnalbero::{albero_di, blocchi, Raggruppa, Tol};
+use mzlab_core::msnalbero::{albero_di, blocks, Grouping, Tol};
 use mzlab_core::msntree::{msn_tree, TreeScan};
 use mzlab_core::routes::{Query, Routes};
 use serde_json::Value;
@@ -40,14 +40,14 @@ fn tolerance_energies_and_blocks() {
         (2, Some(&a)),
     ];
     // the default is that of mzFinder: nominal masses, one energy one node
-    let t = albero_di(scans.clone(), &Raggruppa::default());
+    let t = albero_di(scans.clone(), &Grouping::default());
     let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
     assert_eq!(ids, ["195@cid30", "195@cid35", "195@cid30>138@cid35"]);
     assert_eq!(t.nodi[0].scansioni, [1, 2, 4, 6, 8]);
     // within 0.01 Da: 195.0876 and 195.0880 are one precursor, 195.2101 another
-    let da = Raggruppa {
+    let da = Grouping {
         tol: Tol::Da(0.01),
-        energie: true,
+        energies: true,
     };
     let t = albero_di(scans.clone(), &da);
     let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
@@ -62,9 +62,9 @@ fn tolerance_energies_and_blocks() {
     );
     assert_eq!((t.nodi[3].genitore, t.nodi[3].salto), (Some(0), 0));
     // 10 ppm (2 mDa at m/z 195) does the same; energies merged: one node per precursor
-    let ppm = Raggruppa {
+    let ppm = Grouping {
         tol: Tol::Ppm(10.0),
-        energie: false,
+        energies: false,
     };
     let t = albero_di(scans.clone(), &ppm);
     let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
@@ -73,10 +73,10 @@ fn tolerance_energies_and_blocks() {
         ["195.0878@cid", "195.2101@cid", "195.0878@cid>138.0662@cid"]
     );
     assert_eq!(t.nodi[0].scansioni, [1, 2, 4, 5, 8]);
-    assert!(t.nodi[0].chiave[0].2.is_nan());
+    assert!(t.nodi[0].key[0].2.is_nan());
     // blocks: runs with no scan of another node between them (an MS1 does not break a run)
-    let t = albero_di(scans, &Raggruppa::default());
-    assert_eq!(blocchi(&t, 9)[0], [(1, 4), (6, 6), (8, 8)]);
+    let t = albero_di(scans, &Grouping::default());
+    assert_eq!(blocks(&t, 9)[0], [(1, 4), (6, 6), (8, 8)]);
 }
 
 fn golden() -> PathBuf {
@@ -101,7 +101,7 @@ fn tree_route_and_node_filter() {
     let nodes = t["nodi"].as_array().unwrap();
     assert!(nodes.len() >= 3, "{t}");
     assert_eq!(t["livelli"], serde_json::json!([2, 3]));
-    let tree = mzlab_core::msnalbero::albero(&r.idx.scans, &Raggruppa::default());
+    let tree = mzlab_core::msnalbero::albero(&r.idx.scans, &Grouping::default());
     for (n, want) in nodes.iter().zip(&tree.nodi) {
         let (id, level) = (n["id"].as_str().unwrap(), n["livello"].as_u64().unwrap());
         assert_eq!(id, want.id);
@@ -210,7 +210,7 @@ fn msntree_hangs_a_lone_node_from_the_nearest_ancestor() {
 fn nodes_carry_the_mean_tic_per_scan() {
     let mut r = routes();
     let t = get(&mut r, "/api/msn_albero", "k=0");
-    let tree = mzlab_core::msnalbero::albero(&r.idx.scans, &Raggruppa::default());
+    let tree = mzlab_core::msnalbero::albero(&r.idx.scans, &Grouping::default());
     for (n, want) in t["nodi"].as_array().unwrap().iter().zip(&tree.nodi) {
         let mean = want
             .scansioni

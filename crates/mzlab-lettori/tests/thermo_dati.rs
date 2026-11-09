@@ -5,7 +5,7 @@
 //! found beside the `.raw` (or in `dati/formati/aperti/mzml_msconvert/`), and is skipped otherwise.
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::{self, ChromKind, Item};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -19,17 +19,17 @@ fn file(rel: &str) -> Option<PathBuf> {
     p
 }
 
-fn apri(p: &Path) -> Box<dyn mzlab_core::lettori::Lettore> {
+fn apri(p: &Path) -> Box<dyn mzlab_core::lettori::Reader> {
     let bytes = std::fs::read(p).unwrap();
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: p.file_name().unwrap().to_string_lossy().into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
             sha1: None,
         }],
     };
-    mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap()
+    mzlab_lettori::open_bare(fs, &Limits::sito()).unwrap()
 }
 
 #[test]
@@ -38,14 +38,14 @@ fn a_tsq_file_gives_srm_chromatograms_with_q1_q3_and_ce() {
         return;
     };
     let mut l = apri(&p);
-    let v = l.cromatogrammi(0).unwrap();
+    let v = l.chromatograms(0).unwrap();
     let srm: Vec<_> = v.iter().filter(|c| c.tipo == ChromKind::Srm).collect();
     assert!(srm.len() >= 20, "{} SRM traces", srm.len());
     for c in &srm {
         let (q1, q3, ce, _) = mzlab_core::mzmlhead::srm_id(&c.id);
         assert!(q1.is_some() && q3.is_some(), "{}", c.id);
         assert!(ce.is_some_and(|x| x > 0.0), "no collision energy: {}", c.id);
-        let t = l.cromatogramma(0, &c.id).unwrap();
+        let t = l.chromatogram(0, &c.id).unwrap();
         assert_eq!(t.time.len(), t.intensity.len());
         assert!(t.time.windows(2).all(|w| w[0] <= w[1]), "{}", c.id);
         assert!(t.q1.is_some() && t.q3.is_some());
@@ -59,7 +59,7 @@ fn polarity_comes_from_the_method_table() {
     };
     let mut l = apri(&p);
     let ids: Vec<String> = l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .into_iter()
         .map(|c| c.id)
@@ -68,7 +68,7 @@ fn polarity_comes_from_the_method_table() {
     assert!(ids
         .iter()
         .any(|i| i.starts_with("SRM") && !i.ends_with("polarity=negative")));
-    let m = l.metodo(0).unwrap();
+    let m = l.method(0).unwrap();
     assert!(m.contains(r#""transizioni""#) && m.contains("negative"));
 }
 
@@ -78,19 +78,19 @@ fn uv_channels_are_pda_traces_and_the_3d_field_is_a_warning() {
         return;
     };
     let mut l = apri(&p);
-    let v = l.cromatogrammi(0).unwrap();
+    let v = l.chromatograms(0).unwrap();
     let uv: Vec<_> = v.iter().filter(|c| c.tipo == ChromKind::Pda).collect();
     assert_eq!(uv.len(), 4);
     for c in uv {
-        let t = l.cromatogramma(0, &c.id).unwrap();
+        let t = l.chromatogram(0, &c.id).unwrap();
         assert!(t.time.len() > 1000 && t.time.len() == t.intensity.len());
         assert!(t.time.last().is_some_and(|x| *x > 17.0), "minutes");
     }
     assert!(v.iter().any(|c| c.tipo == ChromKind::Pressure));
-    let m = l.metodo(0).unwrap();
+    let m = l.method(0).unwrap();
     assert!(m.contains("rivelatori") && m.contains("UV 3D field"));
     // UV never shows up as a mass spectrum
-    let idx = l.indice(0).unwrap();
+    let idx = l.index(0).unwrap();
     assert!(idx
         .iter()
         .all(|r| r.livello >= 1 && !r.id.to_ascii_lowercase().contains("uv")));
@@ -101,7 +101,7 @@ fn lock_mass_is_in_the_method() {
     let Some(p) = file("thermo/pda/MTBLS775_StandardsMix-b-carbolin_4-CTC_10ng-ml_1.raw") else {
         return;
     };
-    let m = apri(&p).metodo(0).unwrap();
+    let m = apri(&p).method(0).unwrap();
     assert!(
         m.contains("lock_mass") && m.contains("214.08943") && m.contains("correzione_ppm"),
         "{m:.200}"
@@ -147,7 +147,7 @@ fn the_chromatograms_match_the_msconvert_mzml_when_there_is_one() {
         .unwrap();
         let mut l = apri(&raw);
         let mine: Vec<_> = l
-            .cromatogrammi(0)
+            .chromatograms(0)
             .unwrap()
             .into_iter()
             .filter(|c| matches!(c.tipo, ChromKind::Srm | ChromKind::Pda))
@@ -157,7 +157,7 @@ fn the_chromatograms_match_the_msconvert_mzml_when_there_is_one() {
             let m = mine
                 .iter()
                 .filter(|c| c.tipo == t.kind)
-                .map(|c| l.cromatogramma(0, &c.id).unwrap())
+                .map(|c| l.chromatogram(0, &c.id).unwrap())
                 .find(|c| match (c.q1, c.q3, t.q1, t.q3) {
                     (Some(a), Some(b), Some(x), Some(y)) => {
                         (a - x).abs() < 1e-3 && (b - y).abs() < 1e-3

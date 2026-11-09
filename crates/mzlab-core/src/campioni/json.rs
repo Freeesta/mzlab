@@ -1,7 +1,7 @@
 //! The canonical JSON of `campioni/2` (keys in alphabetical order: the same metadata give the same bytes and the same SHA-256), its reader,
 //! and the migration of the old places where roles and times were kept.
 
-use super::{number_replicates, Campione, SCHEMA, TIPI, TIPI_BIANCO, UNITA_TEMPO};
+use super::{number_replicates, Sample, BLANK_TYPES, SCHEMA, TIME_UNITS, TYPES};
 use crate::budget::sha256_hex;
 use crate::error::{Error, Result};
 use crate::json::{parse, Out, Value};
@@ -13,7 +13,7 @@ fn opt_str(j: &mut Out, v: Option<&str>) {
     };
 }
 
-fn one(j: &mut Out, c: &Campione) {
+fn one(j: &mut Out, c: &Sample) {
     j.raw("{\"composto\":")
         .str(&c.compound)
         .raw(",\"concentrazione\":")
@@ -48,7 +48,7 @@ fn one(j: &mut Out, c: &Campione) {
 }
 
 /// `{"campioni":[...],"schema":"campioni/2"}` with the keys of every file in alphabetical order.
-pub fn to_json(cs: &[Campione]) -> String {
+pub fn to_json(cs: &[Sample]) -> String {
     let mut j = Out::default();
     j.raw("{\"campioni\":[");
     for (i, c) in cs.iter().enumerate() {
@@ -60,7 +60,7 @@ pub fn to_json(cs: &[Campione]) -> String {
 }
 
 /// SHA-256 of the canonical JSON (what the `campioni` operation of the `.mzflow` records).
-pub fn digest(cs: &[Campione]) -> String {
+pub fn digest(cs: &[Sample]) -> String {
     sha256_hex(to_json(cs).as_bytes())
 }
 
@@ -99,18 +99,18 @@ pub(super) fn opt_text(v: &Value, k: &str, allowed: &[&str]) -> Result<Option<St
     }
 }
 
-fn read_one(v: &Value) -> Result<Campione> {
-    let mut c = Campione::new(
+fn read_one(v: &Value) -> Result<Sample> {
+    let mut c = Sample::new(
         &text(v, "file")?,
         &text(v, "sha256")?,
         whole(v, "ordine_iniezione")?,
     );
     c.kind = text(v, "tipo")?;
     c.time_unit = text(v, "unita_tempo")?;
-    if !TIPI.contains(&c.kind.as_str()) || !UNITA_TEMPO.contains(&c.time_unit.as_str()) {
+    if !TYPES.contains(&c.kind.as_str()) || !TIME_UNITS.contains(&c.time_unit.as_str()) {
         return Err(bad());
     }
-    c.blank_kind = opt_text(v, "tipo_bianco", &TIPI_BIANCO)?;
+    c.blank_kind = opt_text(v, "tipo_bianco", &BLANK_TYPES)?;
     let unit = c.time_unit.clone();
     c.set_time(number(v, "tempo")?, &unit);
     if c.kind == "t0" && c.time.is_none() {
@@ -127,18 +127,18 @@ fn read_one(v: &Value) -> Result<Campione> {
     c.istd = v.get("istd").and_then(|x| x.bool()).ok_or_else(bad)?;
     c.note = text(v, "note")?;
     c.compound = text(v, "composto")?;
-    super::json3::leggi_nuovi(v, &mut c)?;
+    super::json3::read_new(v, &mut c)?;
     Ok(c)
 }
 
 /// Reads a `campioni/2` (or `/3`, the new fields apart) document: the roles, kinds of blank and units must be the ones of the schema; `tempo_min` is derived again from
 /// `tempo` and `unita_tempo` (a time zero without a time has 0 minutes).
-pub fn from_json(bytes: &[u8]) -> Result<Vec<Campione>> {
+pub fn from_json(bytes: &[u8]) -> Result<Vec<Sample>> {
     from_value(&parse(bytes)?)
 }
 
 /// The same as `from_json` on a document already parsed (a part of a larger document).
-pub fn from_value(doc: &Value) -> Result<Vec<Campione>> {
+pub fn from_value(doc: &Value) -> Result<Vec<Sample>> {
     if !matches!(
         doc.get("schema").and_then(|v| v.str()),
         Some(SCHEMA) | Some(super::SCHEMA3)
@@ -170,12 +170,12 @@ pub(super) fn legacy_kind(t: &str) -> Option<&'static str> {
 }
 
 /// The entry of `name`, made at the end when it is new.
-fn slot<'a>(cs: &'a mut Vec<Campione>, name: &str) -> &'a mut Campione {
+fn slot<'a>(cs: &'a mut Vec<Sample>, name: &str) -> &'a mut Sample {
     match cs.iter().position(|c| c.file == name) {
         Some(i) => &mut cs[i],
         None => {
             let n = cs.len() as u32 + 1;
-            let mut c = Campione::new(name, "", n);
+            let mut c = Sample::new(name, "", n);
             c.replicate = 0; // 0 = not written: numbered at the end
             cs.push(c);
             cs.last_mut().unwrap()
@@ -194,7 +194,7 @@ struct Old<'a> {
     confirmed: bool,
 }
 
-fn apply(cs: &mut Vec<Campione>, o: &Old) -> Result<()> {
+fn apply(cs: &mut Vec<Sample>, o: &Old) -> Result<()> {
     let s = |k: &str| o.v.get(k).and_then(|x| x.str()).filter(|x| !x.is_empty());
     let Some(name) = s(o.name) else { return Ok(()) };
     let c = slot(cs, name);
@@ -230,12 +230,12 @@ fn list(a: Option<&Value>) -> &[Value] {
 /// (every part optional). The order of the files is the one of the session, then the `.mzflow`, then `campioni/1`; a field is taken from
 /// the session first, then the `.mzflow`, then `campioni/1`, and the QA/QC role wins (it kept the QC and dark roles the session saved as
 /// `sample`). The times of the session and of the `.mzflow` were written by the user (confirmed); those of `campioni/1` were proposed.
-pub fn da_legacy(bytes: &[u8]) -> Result<Vec<Campione>> {
+pub fn da_legacy(bytes: &[u8]) -> Result<Vec<Sample>> {
     let doc = parse(bytes)?;
     let session = list(doc.get("session"));
     let flow = list(doc.get("mzflow").and_then(|m| m.get("files")));
     let c1 = list(doc.get("campioni1").and_then(|m| m.get("campioni")));
-    let mut cs: Vec<Campione> = Vec::new();
+    let mut cs: Vec<Sample> = Vec::new();
     for (v, k) in session
         .iter()
         .map(|v| (v, "file"))
@@ -301,7 +301,7 @@ pub fn da_legacy(bytes: &[u8]) -> Result<Vec<Campione>> {
 }
 
 /// The QA/QC roles, a time zero for a sample at 0 minutes, no time for the files that have none, the replicates not written.
-fn finish(cs: &mut [Campione], qaqc: Option<&Value>) {
+fn finish(cs: &mut [Sample], qaqc: Option<&Value>) {
     let roles = qaqc.and_then(|q| q.get("roles").or_else(|| q.get("ruoli")));
     let mut written = Vec::with_capacity(cs.len());
     for c in cs.iter_mut() {

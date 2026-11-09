@@ -1,5 +1,5 @@
 #![cfg(feature = "thermo")]
-//! The external reader of the engine (`mzlab_wasm::esterno::LettoreEsterno`) over the session of the `thermo` module gives, for a real `.raw`, exactly what the Thermo reader gives when it is linked
+//! The external reader of the engine (`mzlab_wasm::esterno::ExternalReader`) over the session of the `thermo` module gives, for a real `.raw`, exactly what the Thermo reader gives when it is linked
 //! in the engine: the index, the scans, the headers, the TIC, the `metodo/1` document, the header of the mzML and the whole mzML byte for byte. Needs the private data repository
 //! (MZLAB_DATI, or `mzlab-dati` beside this one); skipped without it. Run in release: `cargo test --release -p mzlab-lettori-wasm --features thermo --test esterno_thermo`.
 #![allow(clippy::indexing_slicing)]
@@ -7,10 +7,10 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::{lettori_mzml, rawlettore, Result};
-use mzlab_lettori_wasm::sessione::Sessioni;
-use mzlab_wasm::esterno::{LettoreEsterno, Modulo};
+use mzlab_lettori_wasm::sessione::Sessions;
+use mzlab_wasm::esterno::{ExternalReader, Module};
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
@@ -37,10 +37,10 @@ fn raw_files() -> Vec<PathBuf> {
 
 fn set(path: &Path) -> FileSet {
     let bytes = std::fs::read(path).unwrap();
-    let nome = path.file_name().unwrap().to_string_lossy().to_string();
+    let name = path.file_name().unwrap().to_string_lossy().to_string();
     FileSet {
-        membri: vec![Membro {
-            nome,
+        membri: vec![Member {
+            nome: name,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
             sha1: None,
@@ -48,46 +48,46 @@ fn set(path: &Path) -> FileSet {
     }
 }
 
-/// The session of the module as the `Modulo` the engine sees (what `ModuloJs` does through the JS functions).
-struct ViaSessione {
-    s: Sessioni,
+/// The session of the module as the `Module` the engine sees (what `JsModule` does through the JS functions).
+struct ViaSession {
+    s: Sessions,
     h: u32,
 }
 
-impl Modulo for ViaSessione {
-    fn campioni(&mut self) -> Result<String> {
-        self.s.campioni(self.h)
+impl Module for ViaSession {
+    fn samples(&mut self) -> Result<String> {
+        self.s.samples(self.h)
     }
-    fn protocollo(&mut self) -> Result<u32> {
+    fn protocol(&mut self) -> Result<u32> {
         Ok(mzlab_core::trasporto::PROTOCOLLO)
     }
-    fn indice(&mut self, c: usize) -> Result<Vec<u8>> {
-        self.s.indice(self.h, c)
+    fn index(&mut self, c: usize) -> Result<Vec<u8>> {
+        self.s.index(self.h, c)
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
-        self.s.scansione(self.h, c, k)
+    fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
+        self.s.scan(self.h, c, k)
     }
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<String> {
-        self.s.intestazione(self.h, c, k)
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<String> {
+        self.s.scan_header(self.h, c, k)
     }
-    fn cromatogrammi(&mut self, c: usize) -> Result<String> {
-        self.s.cromatogrammi(self.h, c)
+    fn chromatograms(&mut self, c: usize) -> Result<String> {
+        self.s.chromatograms(self.h, c)
     }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<String> {
-        self.s.cromatogramma(self.h, c, id)
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<String> {
+        self.s.chromatogram(self.h, c, id)
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.s.metodo(self.h, c)
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.s.method(self.h, c)
     }
-    fn testata(&mut self, c: usize) -> Result<String> {
-        self.s.testata(self.h, c)
+    fn file_header(&mut self, c: usize) -> Result<String> {
+        self.s.file_header(self.h, c)
     }
 }
 
 /// FNV-1a over what is written, and how much.
-struct Impronta(u64, u64);
+struct Fingerprint(u64, u64);
 
-impl Write for Impronta {
+impl Write for Fingerprint {
     fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
         for &x in b {
             self.0 = (self.0 ^ u64::from(x)).wrapping_mul(0x100_0000_01b3);
@@ -100,17 +100,15 @@ impl Write for Impronta {
     }
 }
 
-fn mzml(l: &mut dyn Lettore) -> (u64, u64) {
-    let w = lettori_mzml::scrivi(l, 0, Impronta(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
+fn mzml(l: &mut dyn Reader) -> (u64, u64) {
+    let w =
+        lettori_mzml::scrivi(l, 0, Fingerprint(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
     (w.0, w.1)
 }
 
 /// Scan `k` and its header, from the external reader and from the linked one.
-fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, nome: &str) {
-    let (a, b) = (
-        ext.scansione(0, k).unwrap(),
-        diretto.scansione(0, k).unwrap(),
-    );
+fn same_scan(ext: &mut dyn Reader, diretto: &mut dyn Reader, k: usize, name: &str) {
+    let (a, b) = (ext.scan(0, k).unwrap(), diretto.scan(0, k).unwrap());
     assert_eq!(
         (
             a.index,
@@ -134,17 +132,17 @@ fn same_scan(ext: &mut dyn Lettore, diretto: &mut dyn Lettore, k: usize, nome: &
             b.precursor,
             &b.mz
         ),
-        "{nome}: scan {k}"
+        "{name}: scan {k}"
     );
     assert_eq!(
         (&a.intensity, &a.wide),
         (&b.intensity, &b.wide),
-        "{nome}: scan {k} intensities"
+        "{name}: scan {k} intensities"
     );
     assert_eq!(
-        ext.intestazione(0, k).unwrap(),
-        diretto.intestazione(0, k).unwrap(),
-        "{nome}: header {k}"
+        ext.scan_header(0, k).unwrap(),
+        diretto.scan_header(0, k).unwrap(),
+        "{name}: header {k}"
     );
 }
 
@@ -156,44 +154,44 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         return;
     }
     for f in &files {
-        let mut diretto = (rawlettore::VOCE.apri)(set(f), &Limiti::sito()).unwrap();
-        let mut s = Sessioni::default();
-        let h = s.inserisci(mzlab_lettori::apri_nudo(set(f), &Limiti::sito()).unwrap());
-        let mut ext = LettoreEsterno::new(ViaSessione { s, h }).unwrap();
-        let nome = f.display();
-        assert_eq!(ext.formato(), diretto.formato(), "{nome}");
-        assert_eq!(ext.campioni(), diretto.campioni(), "{nome}");
-        let indice = diretto.indice(0).unwrap().to_vec();
-        assert_eq!(ext.indice(0).unwrap(), &indice[..], "{nome}: index");
-        let passo = (indice.len() / 20).max(1);
-        for k in (0..indice.len()).step_by(passo) {
-            same_scan(&mut ext, &mut *diretto, k, &nome.to_string());
+        let mut diretto = (rawlettore::ENTRY.apri)(set(f), &Limits::sito()).unwrap();
+        let mut s = Sessions::default();
+        let h = s.insert(mzlab_lettori::open_bare(set(f), &Limits::sito()).unwrap());
+        let mut ext = ExternalReader::new(ViaSession { s, h }).unwrap();
+        let name = f.display();
+        assert_eq!(ext.format(), diretto.format(), "{name}");
+        assert_eq!(ext.samples(), diretto.samples(), "{name}");
+        let index = diretto.index(0).unwrap().to_vec();
+        assert_eq!(ext.index(0).unwrap(), &index[..], "{name}: index");
+        let step = (index.len() / 20).max(1);
+        for k in (0..index.len()).step_by(step) {
+            same_scan(&mut ext, &mut *diretto, k, &name.to_string());
         }
         assert_eq!(
-            ext.cromatogrammi(0).unwrap(),
-            diretto.cromatogrammi(0).unwrap(),
-            "{nome}"
+            ext.chromatograms(0).unwrap(),
+            diretto.chromatograms(0).unwrap(),
+            "{name}"
         );
         assert_eq!(
-            ext.cromatogramma(0, "TIC").unwrap(),
-            diretto.cromatogramma(0, "TIC").unwrap(),
-            "{nome}: TIC"
+            ext.chromatogram(0, "TIC").unwrap(),
+            diretto.chromatogram(0, "TIC").unwrap(),
+            "{name}: TIC"
         );
         assert_eq!(
-            ext.metodo(0).unwrap(),
-            diretto.metodo(0).unwrap(),
-            "{nome}: metodo/1"
+            ext.method(0).unwrap(),
+            diretto.method(0).unwrap(),
+            "{name}: metodo/1"
         );
         assert_eq!(
-            format!("{:?}", ext.testata_mzml(0).unwrap()),
-            format!("{:?}", diretto.testata_mzml(0).unwrap()),
-            "{nome}: header of the mzML"
+            format!("{:?}", ext.mzml_header(0).unwrap()),
+            format!("{:?}", diretto.mzml_header(0).unwrap()),
+            "{name}: header of the mzML"
         );
         let (a, b) = (mzml(&mut ext), mzml(&mut *diretto));
-        assert_eq!(a, b, "{nome}: the mzML");
+        assert_eq!(a, b, "{name}: the mzML");
         eprintln!(
-            "{nome}: {} scans, mzML of {} bytes identical",
-            indice.len(),
+            "{name}: {} scans, mzML of {} bytes identical",
+            index.len(),
             a.1
         );
     }

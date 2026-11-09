@@ -3,15 +3,15 @@
 
 use mzlab_core::error::{Error, Result};
 
-use super::{molecola_svg, svg, Vista};
+use super::{molecule_svg, svg, View};
 
-const MODELLO: &str = include_str!("html.html");
-const VISTA_JS: &str = include_str!("../../../../mzlab/web/msngrafo-vista.js");
-const PAGINA_JS: &str = include_str!("pagina.js");
+const MODEL: &str = include_str!("html.html");
+const VIEW_JS: &str = include_str!("../../../../mzlab/web/msngrafo-vista.js");
+const PAGE_JS: &str = include_str!("pagina.js");
 
 /// The drawer as classic script text: the `export` keywords go (the page is not a module), the rest is the file as it is.
-fn vista_js() -> String {
-    VISTA_JS
+fn view_js() -> String {
+    VIEW_JS
         .lines()
         .map(|l| l.strip_prefix("export ").unwrap_or(l))
         .collect::<Vec<_>>()
@@ -27,26 +27,26 @@ fn in_script(t: &str) -> String {
 }
 
 /// The HTML of the graph `graph` (the key `vista` is added when missing), opened on the view `vista`.
-pub fn html(graph: &str, vista: Vista) -> Result<String> {
+pub fn html(graph: &str, view: View) -> Result<String> {
     let done =
         mzlab_core::msngrafo::completa(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
-    let (albero, radiale) = (svg(&done, Vista::Albero)?, svg(&done, Vista::Radiale)?);
-    let root = molecola_svg(&done)?.unwrap_or_default();
-    let apri = if vista == Vista::Radiale {
+    let (albero, radial) = (svg(&done, View::Albero)?, svg(&done, View::Radial)?);
+    let root = molecule_svg(&done)?.unwrap_or_default();
+    let apri = if view == View::Radial {
         "radial"
     } else {
         "tree"
     };
-    let page = format!("{PAGINA_JS}\nsetMode(\"{apri}\");");
+    let page = format!("{PAGE_JS}\nsetMode(\"{apri}\");");
     // the pieces go in one by one with the bytes of the template between them: a marker inside a piece is not looked for again
     let mut out = String::new();
-    let mut rest = MODELLO;
+    let mut rest = MODEL;
     for (marker, text) in [
         ("/*DATA*/", in_script(done.trim_end())),
         ("/*ROOT*/", in_script(&root)),
         ("/*SVG_TREE*/", in_script(&albero)),
-        ("/*SVG_RADIAL*/", in_script(&radiale)),
-        ("/*VISTA_JS*/", in_script(&vista_js())),
+        ("/*SVG_RADIAL*/", in_script(&radial)),
+        ("/*VISTA_JS*/", in_script(&view_js())),
         ("/*PAGE_JS*/", in_script(&page)),
     ] {
         let (a, b) = rest

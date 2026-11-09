@@ -27,7 +27,7 @@ fn nodes_parents_and_skipped_generations() {
         (3, Some(&bad)),
         (2, None),
     ];
-    let t = albero_di(scans, &Raggruppa::default());
+    let t = albero_di(scans, &Grouping::default());
     assert_eq!((t.ms1.clone(), t.scartate), (vec![0], 2));
     let ids: Vec<&str> = t.nodi.iter().map(|n| n.id.as_str()).collect();
     assert_eq!(

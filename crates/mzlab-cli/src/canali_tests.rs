@@ -8,7 +8,7 @@ use mzlab_core::json::{parse, Value};
 
 use crate::execute;
 
-fn canali_di(file: &Path) -> Value {
+fn channels_of(file: &Path) -> Value {
     let o = execute(&["canali".to_string(), file.to_string_lossy().into_owned()]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     parse(&o.stdout).unwrap()
@@ -30,7 +30,7 @@ fn run_new(p: &str, extra: &[&str]) -> crate::Outcome {
     execute(&a)
 }
 
-fn campo(v: &Value, i: usize, k: &str) -> f64 {
+fn field(v: &Value, i: usize, k: &str) -> f64 {
     v.get("canali").unwrap().arr()[i]
         .get(k)
         .unwrap()
@@ -38,7 +38,7 @@ fn campo(v: &Value, i: usize, k: &str) -> f64 {
         .unwrap()
 }
 
-fn proposto(v: &Value) -> &str {
+fn proposed(v: &Value) -> &str {
     v.get("tipo")
         .unwrap()
         .get("proposto")
@@ -67,7 +67,7 @@ fn cli_gives_the_json_of_the_engine() {
         String::from_utf8(o.stdout).unwrap(),
         r.canali().json() + "\n"
     );
-    assert_eq!(ids(&canali_di(&f)), ["tic", "bpc", "ms:+ p ESI Q1MS"]);
+    assert_eq!(ids(&channels_of(&f)), ["tic", "bpc", "ms:+ p ESI Q1MS"]);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -89,7 +89,7 @@ fn usage_errors_exit_with_2() {
 }
 
 /// The files of `tools/dati_sintetici.py` the tests need, in a new folder; `None` without python3 and numpy.
-fn sintetici() -> Option<PathBuf> {
+fn synthetic() -> Option<PathBuf> {
     // one directory per call: the tests run in parallel
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -98,7 +98,7 @@ fn sintetici() -> Option<PathBuf> {
     std::fs::create_dir_all(&d).unwrap();
     let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
     let script = "import sys; from pathlib import Path; import numpy as np; sys.path.insert(0, sys.argv[1]); import dati_sintetici as d, dati_sintetici_canali as k; o = Path(sys.argv[2]); \
-                  k.canali_casi(o / 'canali'); r = np.random.default_rng(3); d.ms2(o / 'B_MS2.mzML', r, 15); d.mrm(o / 'B_MRM.mzML', 1e5, r, 1); \
+                  k.channel_cases(o / 'canali'); r = np.random.default_rng(3); d.ms2(o / 'B_MS2.mzML', r, 15); d.mrm(o / 'B_MRM.mzML', 1e5, r, 1); \
                   d.mixed_ida(o / 'C_IDA.mzML', r); d.mixed_mrm_epi(o / 'C_MRM-EPI.mzML', r)";
     let ok = Command::new("python3")
         .args(["-c", script])
@@ -119,14 +119,14 @@ fn sintetici() -> Option<PathBuf> {
 
 #[test]
 fn mrm_file_lists_its_uv_trace_as_a_root() {
-    let Some(d) = sintetici() else { return };
+    let Some(d) = synthetic() else { return };
     // MRM: the TIC of the maker, one channel per transition
-    let v = canali_di(&d.join("B_MRM.mzML"));
+    let v = channels_of(&d.join("B_MRM.mzML"));
     assert_eq!(
         ids(&v),
         ["tic", "srm:364.1>194.1@20", "srm:364.1>152.1@20", "uv:twc"]
     );
-    assert_eq!(proposto(&v), "lc-mrm");
+    assert_eq!(proposed(&v), "lc-mrm");
     let uv = ids(&v).iter().position(|i| i == "uv:twc").unwrap();
     let c = &v.get("canali").unwrap().arr()[uv];
     assert!(matches!(c.get("gen"), Some(g) if g.f64().is_none()));
@@ -135,9 +135,9 @@ fn mrm_file_lists_its_uv_trace_as_a_root() {
 
 #[test]
 fn channels_of_the_synthetic_files() {
-    let Some(d) = sintetici() else { return };
+    let Some(d) = synthetic() else { return };
     // targeted MS2 in LC: the survey scan and one channel per fixed precursor, each hanging from the survey
-    let v = canali_di(&d.join("canali/K_MIRATO-t0.mzML"));
+    let v = channels_of(&d.join("canali/K_MIRATO-t0.mzML"));
     assert_eq!(
         ids(&v),
         [
@@ -149,13 +149,13 @@ fn channels_of_the_synthetic_files() {
         ]
     );
     assert_eq!(
-        (campo(&v, 2, "n"), campo(&v, 3, "n"), campo(&v, 4, "n")),
+        (field(&v, 2, "n"), field(&v, 3, "n"), field(&v, 4, "n")),
         (100.0, 100.0, 100.0)
     );
-    assert_eq!((campo(&v, 3, "gen"), campo(&v, 4, "gen")), (2.0, 2.0));
-    assert_eq!(proposto(&v), "lc-ms2-mirato");
+    assert_eq!((field(&v, 3, "gen"), field(&v, 4, "gen")), (2.0, 2.0));
+    assert_eq!(proposed(&v), "lc-ms2-mirato");
     // MSn in blocks: MS3 hangs from the MS2 of its first precursor
-    let v = canali_di(&d.join("canali/K_BLOCCHI-t0.mzML"));
+    let v = channels_of(&d.join("canali/K_BLOCCHI-t0.mzML"));
     assert_eq!(
         ids(&v),
         [
@@ -167,22 +167,22 @@ fn channels_of_the_synthetic_files() {
             "ms:ITMS + ms3 317 > 299 @cid30"
         ]
     );
-    assert_eq!((campo(&v, 4, "gen"), campo(&v, 5, "gen")), (3.0, 3.0));
-    assert_eq!(proposto(&v), "infusione-msn");
+    assert_eq!((field(&v, 4, "gen"), field(&v, 5, "gen")), (3.0, 3.0));
+    assert_eq!(proposed(&v), "infusione-msn");
     // 70 distinct precursors: one channel for all of them
-    let v = canali_di(&d.join("canali/K_DDA-t0.mzML"));
+    let v = channels_of(&d.join("canali/K_DDA-t0.mzML"));
     assert_eq!(ids(&v), ["tic", "bpc", "ms:FTMS + p ESI Full ms", "dd:2"]);
-    assert_eq!((campo(&v, 3, "n"), campo(&v, 3, "liv")), (70.0, 2.0));
-    assert_eq!(proposto(&v), "lc-dda");
+    assert_eq!((field(&v, 3, "n"), field(&v, 3, "liv")), (70.0, 2.0));
+    assert_eq!(proposed(&v), "lc-dda");
     // the lab-like MS2 file: two precursors, no survey scan
-    let v = canali_di(&d.join("B_MS2.mzML"));
+    let v = channels_of(&d.join("B_MS2.mzML"));
     assert_eq!(
         ids(&v),
         ["tic", "bpc", "ms:ms2 229", "ms:ms2 305", "uv:twc"]
     );
-    assert_eq!((campo(&v, 2, "n"), campo(&v, 3, "n")), (503.0, 502.0));
+    assert_eq!((field(&v, 2, "n"), field(&v, 3, "n")), (503.0, 502.0));
     // MRM + EPI: the triggered scans next to the transitions
-    let v = canali_di(&d.join("C_MRM-EPI.mzML"));
+    let v = channels_of(&d.join("C_MRM-EPI.mzML"));
     assert_eq!(
         ids(&v),
         [
@@ -194,9 +194,9 @@ fn channels_of_the_synthetic_files() {
             "srm:364.1>152.1@20"
         ]
     );
-    assert_eq!(proposto(&v), "misto");
+    assert_eq!(proposed(&v), "misto");
     // IDA with a few precursors: the survey scan and the MS2 channels that add up to the product-ion scans
-    let v = canali_di(&d.join("C_IDA.mzML"));
+    let v = channels_of(&d.join("C_IDA.mzML"));
     let c = v.get("canali").unwrap().arr();
     assert_eq!(c[2].get("id").unwrap().str(), Some("ms:ms1"));
     assert_eq!(c[2].get("n").unwrap().f64(), Some(160.0));
@@ -251,12 +251,12 @@ fn canale_reads_a_uv_and_an_analog_trace() {
         a.extend(extra.iter().map(|s| s.to_string()));
         execute(&a)
     };
-    let ids = ids(&canali_di(&f));
+    let ids = ids(&channels_of(&f));
     assert!(
         ids.contains(&"uv:twc".to_string()) && ids.contains(&"an:1".to_string()),
         "{ids:?}"
     );
-    assert_eq!(proposto(&canali_di(&f)), "solo-uv");
+    assert_eq!(proposed(&channels_of(&f)), "solo-uv");
     // The new and the old spellings answer with the same bytes and exit code.
     let old = |extra: &[&str]| {
         let mut a = vec!["canali".to_string(), p.clone()];

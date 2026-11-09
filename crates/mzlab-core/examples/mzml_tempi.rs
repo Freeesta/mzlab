@@ -1,7 +1,7 @@
 //! Times the load of an mzML (scan table, fingerprints, `.mzidx`) and its writing, with no real file.
 //! `cargo run --release --example mzml_tempi -p mzlab-core -- genera OUT.mzML [SCANS] [PEAKS_PER_SCAN]` writes a synthetic mzML (made-up reader of
 //! `tests/lettore_finto`, timed); `cargo run --release --example mzml_tempi -p mzlab-core -- FILE.mzML [BUDGET_MB]` times, on any mzML, the
-//! scan table (`upload::prepare`, `upload::prepare_con` with the fingerprints known as on the site, and `upload::prepare_parallelo` with the fingerprints on a second thread), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
+//! scan table (`upload::prepare`, `upload::prepare_with` with the fingerprints known as on the site, and `upload::prepare_parallelo` with the fingerprints on a second thread), pass-by-pass `.mzidx` (`mzidx::build_mzml`) and the plain parse (`mzml::parse`).
 #[path = "../tests/lettore_finto/mod.rs"]
 mod finto;
 
@@ -14,14 +14,14 @@ use std::time::Instant;
 use mzlab_core::{lettori_mzml, mzidx, mzml, upload};
 
 /// Counts the live and peak heap bytes: the WASM instance has a hard 256 MB, so the peak of each phase is what matters.
-struct Conta;
+struct Tally;
 static VIVI: AtomicUsize = AtomicUsize::new(0);
-static PICCO: AtomicUsize = AtomicUsize::new(0);
-unsafe impl GlobalAlloc for Conta {
+static PEAK: AtomicUsize = AtomicUsize::new(0);
+unsafe impl GlobalAlloc for Tally {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
         unsafe {
             let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-            PICCO.fetch_max(v, Ordering::Relaxed);
+            PEAK.fetch_max(v, Ordering::Relaxed);
             System.alloc(l)
         }
     }
@@ -35,23 +35,23 @@ unsafe impl GlobalAlloc for Conta {
         unsafe {
             let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
             VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-            PICCO.fetch_max(v, Ordering::Relaxed);
+            PEAK.fetch_max(v, Ordering::Relaxed);
             System.realloc(p, l, n)
         }
     }
 }
 #[global_allocator]
-static A: Conta = Conta;
+static A: Tally = Tally;
 
 /// Peak heap in MB since the last call.
-fn picco() -> f64 {
-    let p = PICCO.swap(VIVI.load(Ordering::Relaxed), Ordering::Relaxed);
+fn peak() -> f64 {
+    let p = PEAK.swap(VIVI.load(Ordering::Relaxed), Ordering::Relaxed);
     p as f64 / 1048576.0
 }
 
 /// Discards what is written (the benchmark is not about the memory of the sink).
-struct Nulla;
-impl mzidx::Output for Nulla {
+struct Sink;
+impl mzidx::Output for Sink {
     fn write_at(&mut self, _o: u64, _d: &[u8]) -> mzlab_core::Result<()> {
         Ok(())
     }
@@ -60,7 +60,7 @@ impl mzidx::Output for Nulla {
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
     if a.first().map(String::as_str) == Some("genera") {
-        return genera(&a);
+        return generate(&a);
     }
     let path = a.first().expect("usage: mzml_tempi FILE.mzML [BUDGET_MB]");
     let budget: usize = a.get(1).and_then(|s| s.parse().ok()).unwrap_or(192);
@@ -95,7 +95,7 @@ fn main() {
         "parse (one thread)      {:>8.3} s",
         t.elapsed().as_secs_f64()
     );
-    let _ = picco();
+    let _ = peak();
     let t = Instant::now();
     let mut f = File::open(path).expect("open");
     let p = upload::prepare(&mut f, size, "x.mzML").expect("prepare");
@@ -104,12 +104,12 @@ fn main() {
         t.elapsed().as_secs_f64(),
         p.table.level.len(),
         p.table.scans_json.len() as f64 / 1048576.0,
-        picco()
+        peak()
     );
     // the site's open: the page took the fingerprints while it copied the file, so only the scan table is read
     let t = Instant::now();
     let known = Some((p.sha256.clone(), String::new()));
-    let p3 = upload::prepare_con(&mut File::open(path).expect("open"), size, "x.mzML", known)
+    let p3 = upload::prepare_with(&mut File::open(path).expect("open"), size, "x.mzML", known)
         .expect("prepare");
     println!(
         "prepare (prints known)  {:>8.3} s",
@@ -130,11 +130,11 @@ fn main() {
         "prepare (prints apart)  {:>8.3} s",
         t.elapsed().as_secs_f64()
     );
-    indici(path, &p, budget);
+    indices(path, &p, budget);
 }
 
 /// Times the `.mzidx` build without and with a spool, and prints the heap peak of each.
-fn indici(path: &str, p: &upload::Prepared, budget: usize) {
+fn indices(path: &str, p: &upload::Prepared, budget: usize) {
     // without a spool every round decodes the file again; with a spool (a scratch file next to the mzML) it is decoded once
     for con in [false, true] {
         let spool_path = format!("{path}.spool");
@@ -147,12 +147,12 @@ fn indici(path: &str, p: &upload::Prepared, budget: usize) {
                 .open(&spool_path)
                 .expect("spool")
         });
-        let _ = picco();
+        let _ = peak();
         let t = Instant::now();
         let st = mzidx::build_mzml_spill(
             &p.table,
             BufReader::new(File::open(path).expect("open")),
-            &mut Nulla,
+            &mut Sink,
             budget << 20,
             spool
                 .as_mut()
@@ -168,7 +168,7 @@ fn indici(path: &str, p: &upload::Prepared, budget: usize) {
         );
         println!(
             "  heap peak {:.0} MB (table {:.0} MB kept)",
-            picco(),
+            peak(),
             p.table.scans_json.len() as f64 / 1048576.0
         );
         let _ = std::fs::remove_file(&spool_path);
@@ -176,7 +176,7 @@ fn indici(path: &str, p: &upload::Prepared, budget: usize) {
 }
 
 /// `genera OUT.mzML [SCANS] [PEAKS]`: writes a synthetic mzML to time.
-fn genera(a: &[String]) {
+fn generate(a: &[String]) {
     let out = a.get(1).expect("usage: genera OUT.mzML [SCANS] [PEAKS]");
     let n: usize = a.get(2).and_then(|s| s.parse().ok()).unwrap_or(20000);
     let peaks: usize = a.get(3).and_then(|s| s.parse().ok()).unwrap_or(2000);

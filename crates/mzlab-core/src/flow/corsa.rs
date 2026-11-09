@@ -4,17 +4,17 @@
 
 use super::canon::value_text;
 use crate::error::{Error, Result};
-use crate::json::{parse, Out, Value};
+use crate::json::{parse_members, Out, Value};
 
 /// A named output file of the run folder.
-pub struct Uscita<'a> {
+pub struct Output<'a> {
     pub name: &'a str,
     pub bytes: &'a [u8],
 }
 
 /// A file read by the plan.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ingresso {
+pub struct Input {
     pub name: String,
     pub bytes: u64,
     pub sha256: String,
@@ -31,7 +31,7 @@ pub struct Param {
 
 /// One instance of the plan.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Passo {
+pub struct Step {
     pub instance: String,
     pub step: String,
     pub algorithm: Option<String>,
@@ -53,7 +53,7 @@ pub struct Passo {
 
 /// Rows per identification level, `auto` (the level came from `annot.level`) apart from the others.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct Livelli {
+pub struct Levels {
     pub files: u32,
     pub rows: u32,
     pub auto: Vec<(String, u32)>,
@@ -62,15 +62,15 @@ pub struct Livelli {
 
 /// The report of a run.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Corsa {
+pub struct RunReport {
     pub engine: Vec<(String, String)>,
     /// `engine.modules` of the record: name -> SHA-256, in the order of the record.
     pub modules: Vec<(String, String)>,
     pub plan_sha256: Option<String>,
-    pub inputs: Vec<Ingresso>,
-    pub lists: Vec<Ingresso>,
-    pub steps: Vec<Passo>,
-    pub levels: Livelli,
+    pub inputs: Vec<Input>,
+    pub lists: Vec<Input>,
+    pub steps: Vec<Step>,
+    pub levels: Levels,
     /// The `report/1` text of the table, as the table wrote it.
     pub report: Option<String>,
     /// The lists the run screened against and the candidates they name (`screen/1`, `annot/1`).
@@ -91,7 +91,7 @@ fn bump(list: &mut Vec<(String, u32)>, level: &str) {
     }
 }
 
-fn passo(name: &str, a: &Value) -> Passo {
+fn passo(name: &str, a: &Value) -> Step {
     let proofs: &[(String, Value)] = match a.get("estimates") {
         Some(Value::Obj(o)) => o,
         _ => &[],
@@ -113,7 +113,7 @@ fn passo(name: &str, a: &Value) -> Passo {
         .and_then(|k| k.str())
         .map(str::to_string);
     let cached = a.get("cached").and_then(|c| c.bool()).unwrap_or(false);
-    Passo {
+    Step {
         instance: name.to_string(),
         step: text(a, "step").unwrap_or_default(),
         algorithm: text(a, "algorithm"),
@@ -186,8 +186,18 @@ fn modules_json(o: &mut Out, modules: &[(String, String)], comma: bool) {
     o.raw("}");
 }
 
+/// The top-level members of an output file that the report and its regulatory section read.
+const OUTPUT_KEYS: &[&str] = &[
+    "schema",
+    "format",
+    "regulatory",
+    "suspect_files",
+    "hits",
+    "rows",
+];
+
 /// Builds the report from the `prov/1` of a run and the output files that go with it; a file that is not JSON of a known format is ignored.
-pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
+pub fn build(prov: &Value, uscite: &[Output]) -> Result<RunReport> {
     if prov.get("schema").and_then(|s| s.str()) != Some("prov/1") {
         return Err(Error::new("err.corsa.prov"));
     }
@@ -205,7 +215,7 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
             let Some(name) = key.strip_prefix("file:") else {
                 continue;
             };
-            let f = Ingresso {
+            let f = Input {
                 name: name.to_string(),
                 bytes: e.get("bytes").and_then(|b| b.f64()).unwrap_or(0.0) as u64,
                 sha256: text(e, "sha256").unwrap_or_default(),
@@ -222,10 +232,13 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
         Some(Value::Obj(a)) => a.iter().map(|(k, v)| passo(k, v)).collect(),
         _ => Vec::new(),
     };
-    let mut levels = Livelli::default();
+    let mut levels = Levels::default();
     let (mut report, mut regulatory) = (None, super::corsa_reg::Regulatory::default());
     for u in uscite {
-        let Ok(v) = parse(u.bytes) else { continue };
+        // only the members read below are built: a group step's `ionnet/1` of millions of edges would otherwise be a tree of gigabytes
+        let Ok(v) = parse_members(u.bytes, OUTPUT_KEYS) else {
+            continue;
+        };
         regulatory.read(&v);
         if v.get("schema").and_then(|s| s.str()) == Some("report/1") {
             report = Some(String::from_utf8_lossy(u.bytes).trim_end().to_string());
@@ -251,7 +264,7 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     }
     crate::sortc::slice_ord(&mut levels.auto);
     crate::sortc::slice_ord(&mut levels.other);
-    Ok(Corsa {
+    Ok(RunReport {
         engine,
         modules,
         plan_sha256: text(prov, "plan_sha256"),
@@ -264,7 +277,7 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     })
 }
 
-fn files(o: &mut Out, list: &[Ingresso]) {
+fn files(o: &mut Out, list: &[Input]) {
     o.raw("[");
     for (k, f) in list.iter().enumerate() {
         o.raw(if k > 0 { ",{\"name\":" } else { "{\"name\":" })
@@ -309,7 +322,7 @@ fn param(o: &mut Out, p: &Param) {
 }
 
 /// The memory and the warnings of a step, when it has any.
-fn notes(o: &mut Out, s: &Passo) {
+fn notes(o: &mut Out, s: &Step) {
     if let (Some(mb), Some(via)) = (s.mem_mb, &s.via) {
         o.raw(",\"mem_mb\":").num(mb).raw(",\"via\":").str(via);
     }
@@ -332,7 +345,7 @@ fn notes(o: &mut Out, s: &Passo) {
     }
 }
 
-fn step(o: &mut Out, s: &Passo) {
+fn step(o: &mut Out, s: &Step) {
     o.raw("{\"instance\":")
         .str(&s.instance)
         .raw(",\"step\":")
@@ -359,7 +372,7 @@ fn step(o: &mut Out, s: &Passo) {
     o.raw("]}");
 }
 
-impl Corsa {
+impl RunReport {
     /// The `corsa/1` text: fixed key order, shortest numbers, one line and a newline; the same run gives the same bytes.
     pub fn json(&self) -> String {
         let mut o = Out::default();

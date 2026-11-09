@@ -15,7 +15,7 @@ K = (0, 1, 2)
 
 
 @dataclass
-class Picco:
+class Peak:
     """One true ion at one observed RT, with its three isotopologue windows."""
     ion_id: str
     rt_obs: float
@@ -40,7 +40,7 @@ def componenti(formula: str) -> tuple[list, list]:
     return mz, rel
 
 
-def picchi_da_verita(ioni: list[dict]) -> list[Picco]:
+def peaks_from_truth(ioni: list[dict]) -> list[Peak]:
     """One Picco per (true ion, observed RT); ions without an observed RT or formula cannot be extracted and are left out."""
     out = []
     for ion in ioni:
@@ -48,5 +48,5 @@ def picchi_da_verita(ioni: list[dict]) -> list[Picco]:
             continue
         mz, rel = componenti(ion["ion"])
         for rt in ion.get("rt_obs") or []:
-            out.append(Picco(ion_id=str(ion["id"]), rt_obs=float(rt), mz=mz, rel=rel))
+            out.append(Peak(ion_id=str(ion["id"]), rt_obs=float(rt), mz=mz, rel=rel))
     return out

@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 use crate::flow_set::file_set;
 
@@ -18,9 +18,9 @@ pub(crate) struct Entry {
 
 /// The ids of the samples of a dataset with more than one (each with whether it has no scans), else none (a dataset the reader cannot open is converted as one and fails there).
 fn sample_ids(p: &Path) -> Vec<(u32, bool)> {
-    let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limiti::desktop()));
+    let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limits::desktop()));
     let ids: Vec<(u32, bool)> = opened.map_or(Vec::new(), |l| {
-        l.campioni()
+        l.samples()
             .iter()
             .map(|s| (s.id, s.scansioni == 0))
             .collect()

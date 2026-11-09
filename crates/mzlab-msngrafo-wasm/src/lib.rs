@@ -8,10 +8,10 @@ use mzlab_core::error::Error;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
-    aggiungi, cerca, da_richiesta, da_richiesta_export, esporta, grafo_json, opzioni_cerca,
+    aggiungi, cerca, esporta, from_export_request, from_request, graph_json, opzioni_cerca,
 };
 use mzlab_core::msngrafo::{
-    con_interpretazione, library_text, table_text, Grafo, Opzioni, PPM_PERDITA,
+    library_text, table_text, with_interpretation, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
 use mzlab_feat::chem::strutture::strutture_testo;
@@ -52,31 +52,31 @@ pub fn version() -> String {
     format!("mzlab-msngrafo/1 {}", env!("CARGO_PKG_VERSION"))
 }
 
-/// `completa`: the text of an `msngrafo/1` with the key `vista` (the bytes `mzlab-cli msn-graph complete` writes); a keyed error for what is not one.
+/// `complete`: the text of an `msngrafo/1` with the key `vista` (the bytes `mzlab-cli msn-graph complete` writes); a keyed error for what is not one.
 #[wasm_bindgen]
-pub fn completa(json: &str) -> Result<String, JsValue> {
+pub fn complete(json: &str) -> Result<String, JsValue> {
     mzlab_core::msngrafo::completa(json).map_err(js_err)
 }
 
-fn calcola(
+fn compute(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
-    nome: &str,
+    name: &str,
     q: &Query,
-) -> mzlab_core::Result<(Grafo, String)> {
-    let (g, j, _) = calcola_con(read_idx, idx_size, read_file, nome, q)?;
+) -> mzlab_core::Result<(Graph, String)> {
+    let (g, j, _) = compute_with(read_idx, idx_size, read_file, name, q)?;
     Ok((g, j))
 }
 
-fn calcola_con(
+fn compute_with(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
-    nome: &str,
+    name: &str,
     q: &Query,
-) -> mzlab_core::Result<(Grafo, String, Opzioni)> {
-    let req = da_richiesta(&|k| q.get(k).map(String::from))?;
+) -> mzlab_core::Result<(Graph, String, Options)> {
+    let req = from_request(&|k| q.get(k).map(String::from))?;
     let bad = || Error::new("error.badIndex");
     if idx_size.is_nan() || idx_size < 0.0 {
         return Err(bad());
@@ -91,13 +91,13 @@ fn calcola_con(
     drop(bytes);
     let scans = Index::open(JsReader { read: read_idx }, size)?.scans;
     let mut m = JsReader { read: read_file };
-    let (g, j) = grafo_json(&scans, &mut m, (nome, &sha), (&req.0, &req.1))?;
-    let j = con_chiavi(&g, j, &req.0, q)?;
+    let (g, j) = graph_json(&scans, &mut m, (name, &sha), (&req.0, &req.1))?;
+    let j = with_query_keys(&g, j, &req.0, q)?;
     Ok((g, j, req.0))
 }
 
 /// The optional keys of the query on the graph text `j`: `interpreta=1` and `rotture=1`, shared by the graph and its exports.
-fn con_chiavi(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> mzlab_core::Result<String> {
+fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_core::Result<String> {
     // `interpreta=1` (and `ppm_perdita`) adds the key `interpretazione`, as `mzlab-cli msn-graph --interpreta` does
     if q.get("interpreta").is_some_and(|v| v == "1") {
         let ppm = match q.get("ppm_perdita").filter(|v| !v.is_empty()) {
@@ -108,7 +108,7 @@ fn con_chiavi(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> mzlab_core::R
                 .filter(|p| p.is_finite() && *p > 0.0)
                 .ok_or_else(|| Error::new("err.request.badNumber").with("name", "ppm_perdita"))?,
         };
-        j = con_interpretazione(&j, g, ppm);
+        j = with_interpretation(&j, g, ppm);
     }
     // `rotture=1` (with `h_max`, `max_legami` and the window `ppm_struttura`) adds the key `rotture`, as `mzlab-cli msn-graph --rotture` does
     if q.get("rotture").is_some_and(|v| v == "1") {
@@ -122,23 +122,23 @@ fn con_chiavi(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> mzlab_core::R
                     .ok_or_else(|| Error::new("err.request.badNumber").with("name", k)),
             }
         };
-        let p = mzlab_feat::chem::rotture::Parametri {
-            ppm: num("ppm_struttura", PPM_STRUTTURA)?,
+        let p = mzlab_feat::chem::rotture::Params {
+            ppm: num("ppm_struttura", PPM_STRUCTURE)?,
             h_max: num("h_max", 2.0)?.min(4.0) as u8,
-            max_legami: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
+            max_bonds: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
         };
-        j = mzlab_feat::chem::rotture::rotture_testo(g, &j, o.smiles.as_deref(), p)?;
+        j = mzlab_feat::chem::rotture::breaks_text(g, &j, o.smiles.as_deref(), p)?;
     }
     Ok(j)
 }
 
 /// Default window of the cleavages (`ppm_struttura`), ppm; the same as `mzlab-cli msn-graph --strutture`.
-const PPM_STRUTTURA: f64 = 10.0;
+const PPM_STRUCTURE: f64 = 10.0;
 
 /// The `msngrafo/1` of the file `nome` for the query string `query` (`formula`, `tol`, `ce`, `ppm_formula`, ..., `scelte`; `api/msn_grafo`).
 /// `read_idx` reads the `.mzidx` (`idx_size` bytes) and `read_file` the mzML the index points into.
 #[wasm_bindgen]
-pub fn msn_grafo(
+pub fn msn_graph(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
@@ -146,12 +146,12 @@ pub fn msn_grafo(
     query: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
-    let (g, j, o) = calcola_con(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (g, j, o) = compute_with(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
     match q.get("strutture").filter(|n| !n.is_empty()) {
         None => Ok(j),
-        Some(nodo) => {
+        Some(node) => {
             let ppm = match q.get("ppm_struttura").filter(|v| !v.is_empty()) {
-                None => PPM_STRUTTURA,
+                None => PPM_STRUCTURE,
                 Some(v) => v
                     .parse::<f64>()
                     .ok()
@@ -160,7 +160,7 @@ pub fn msn_grafo(
                         js_err(Error::new("err.request.badNumber").with("name", "ppm_struttura"))
                     })?,
             };
-            strutture_testo(&g, &j, o.smiles.as_deref(), (nodo, ppm)).map_err(js_err)
+            strutture_testo(&g, &j, o.smiles.as_deref(), (node, ppm)).map_err(js_err)
         }
     }
 }
@@ -169,7 +169,7 @@ pub fn msn_grafo(
 /// The texts of the Flow steps come from the same route: `formato=massbank` (or `msp` with `libreria=1`) is the tree as a library (`msn.library_export`:
 /// `livelli=all|ms2`, `annota=0|1`, `id`), `vista=modifications|nodes|peaks` the CSV table of the graph (`msn.table_export`).
 #[wasm_bindgen]
-pub fn msn_grafo_export(
+pub fn msn_graph_export(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
@@ -177,45 +177,45 @@ pub fn msn_grafo_export(
     query: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
-    let pulito_flag = q.get("pulito").is_some_and(|v| v == "1");
-    if let Some(vista) = q.get("vista").filter(|v| !v.is_empty()) {
-        let (_, j) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let clean_flag = q.get("pulito").is_some_and(|v| v == "1");
+    if let Some(view) = q.get("vista").filter(|v| !v.is_empty()) {
+        let (_, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
         let v = mzlab_core::json::parse(j.as_bytes()).map_err(js_err)?;
-        return Ok(table_text(&v, vista, pulito_flag));
+        return Ok(table_text(&v, view, clean_flag));
     }
-    let formato = q.get("formato").unwrap_or("");
-    if formato == "massbank" || q.get("libreria").is_some_and(|v| v == "1") {
-        let (_, j) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let format = q.get("formato").unwrap_or("");
+    if format == "massbank" || q.get("libreria").is_some_and(|v| v == "1") {
+        let (_, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
         let v = mzlab_core::json::parse(j.as_bytes()).map_err(js_err)?;
         let get = |k: &str, d: &'static str| q.get(k).filter(|s| !s.is_empty()).unwrap_or(d);
-        let formato = if formato == "massbank" {
+        let format = if format == "massbank" {
             "massbank"
         } else {
             "msp"
         };
-        let annota = get("annota", "1") != "0";
+        let annotate = get("annota", "1") != "0";
         return library_text(
             &v,
             &j,
             (
                 get("id", ""),
-                formato,
+                format,
                 get("livelli", "all"),
-                pulito_flag,
-                annota,
+                clean_flag,
+                annotate,
             ),
         )
         .map_err(js_err);
     }
-    let (f, pulito, nodo) = da_richiesta_export(&|k| q.get(k).map(String::from)).map_err(js_err)?;
-    let (g, _) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
-    Ok(esporta(&g, f, pulito, nodo.as_deref()))
+    let (f, clean, node) = from_export_request(&|k| q.get(k).map(String::from)).map_err(js_err)?;
+    let (g, _) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    Ok(esporta(&g, f, clean, node.as_deref()))
 }
 
 /// `api/msnlib/aggiungi`: the library text `libreria` ("" = none yet) with the entry of `molecola_id` for the graph of the query added;
 /// `{"libreria": text, "doppione": bool}` (the text unchanged when the same entry was already there).
 #[wasm_bindgen]
-pub fn msnlib_aggiungi(
+pub fn msnlib_add(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
@@ -225,18 +225,18 @@ pub fn msnlib_aggiungi(
     molecola_id: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
-    let (g, j) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
-    let (l, doppione) = aggiungi(libreria, molecola_id, &g, &j).map_err(js_err)?;
+    let (g, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (l, duplicate) = aggiungi(libreria, molecola_id, &g, &j).map_err(js_err)?;
     let mut o = Out::default();
     o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
-    o.raw(if doppione { "true}" } else { "false}" });
+    o.raw(if duplicate { "true}" } else { "false}" });
     Ok(o.0)
 }
 
 /// `api/msnlib/cerca`: the candidates of the library text `libreria` for the graph of the query (`msncerca/1`); the query carries the options of the graph and
 /// those of the search (`ppm_prec`, `tol_mz`, `min_prove`, `top`, `delta_max`).
 #[wasm_bindgen]
-pub fn msnlib_cerca(
+pub fn msnlib_search(
     read_idx: Function,
     idx_size: f64,
     read_file: Function,
@@ -246,6 +246,6 @@ pub fn msnlib_cerca(
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
     let o = opzioni_cerca(&|k| q.get(k).map(String::from)).map_err(js_err)?;
-    let (_, j) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    let (_, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
     cerca(libreria, &j, &o).map_err(js_err)
 }

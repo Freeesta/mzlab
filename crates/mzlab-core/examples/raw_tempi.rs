@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 
 use mzlab_core::blocchi::BlockCache;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
 use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
 
 const BLOCK: usize = 256 << 10;
@@ -105,7 +105,7 @@ fn threads() -> usize {
         .position(|x| x == "--threads")
         .and_then(|i| a.get(i + 1))
         .and_then(|n| n.parse().ok())
-        .unwrap_or_else(mzlab_core::mzmlwrite::thread_predefinito)
+        .unwrap_or_else(mzlab_core::mzmlwrite::default_threads)
 }
 
 fn set(path: &str) -> (FileSet, Counters) {
@@ -129,15 +129,15 @@ fn set(path: &str) -> (FileSet, Counters) {
         calls: c.calls.clone(),
         bytes: c.bytes.clone(),
     };
-    let nome = std::path::Path::new(path)
+    let name = std::path::Path::new(path)
         .file_name()
         .unwrap()
         .to_string_lossy()
         .into_owned();
     (
         FileSet {
-            membri: vec![Membro {
-                nome,
+            membri: vec![Member {
+                nome: name,
                 dim,
                 dati: Box::new(b),
                 sha1: None,
@@ -175,10 +175,10 @@ fn peak_rss_mb() -> f64 {
         .map_or(f64::NAN, |kb| kb / 1024.0)
 }
 
-fn open(path: &str, cen: bool) -> (Box<dyn Lettore>, Counters, f64) {
+fn open(path: &str, cen: bool) -> (Box<dyn Reader>, Counters, f64) {
     let (fs, c) = set(path);
     let t = Instant::now();
-    let l = lettori::apri(fs, &Limiti::sito()).expect("open");
+    let l = lettori::apri(fs, &Limits::sito()).expect("open");
     let l = if cen {
         lettori_centroidi::centroidato(l)
     } else {
@@ -222,20 +222,20 @@ fn scratch(tmp: &std::path::Path) -> File {
 fn desktop_phase(path: &str, name: &str, tmp: &std::path::Path, c: &Counters) {
     let t = Instant::now();
     let (mut fs, _) = set(path);
-    upload::senza_sha1(&mut fs);
-    let l2 = lettori::apri(fs, &Limiti::sito()).expect("open");
+    upload::without_sha1(&mut fs);
+    let l2 = lettori::apri(fs, &Limits::sito()).expect("open");
     let mut l2 = l2;
     let mut out = Cursor::new(Vec::new());
     let mut sp = scratch(tmp);
     let file = path.to_string();
-    let (st, _) = upload::con_impronte_parallele(
+    let (st, _) = upload::with_parallel_prints(
         move || {
             let dim = std::fs::metadata(&file)
                 .map_err(|_| mzlab_core::Error::new("error.badIndex"))?
                 .len();
             let f = File::open(&file).map_err(|_| mzlab_core::Error::new("error.badIndex"))?;
             Ok(FileSet {
-                membri: vec![Membro {
+                membri: vec![Member {
                     nome: file.rsplit('/').next().unwrap_or("").to_string(),
                     dim,
                     dati: Box::new(f),
@@ -244,7 +244,7 @@ fn desktop_phase(path: &str, name: &str, tmp: &std::path::Path, c: &Counters) {
             })
         },
         |imp| {
-            upload::indicizza_lettore_con(
+            upload::index_reader_with(
                 &mut *l2,
                 0,
                 imp,
@@ -269,8 +269,8 @@ fn scratch_phases(
     path: &str,
     name: &str,
     cen: bool,
-    l: &mut dyn Lettore,
-    imp: &[upload::Impronta],
+    l: &mut dyn Reader,
+    imp: &[upload::Fingerprint],
     c: &Counters,
 ) {
     // the same with a scratch file for the peaks that do not fit in the budget (the browser's second OPFS file, a temporary file on the desktop): the scans are decoded once
@@ -278,7 +278,7 @@ fn scratch_phases(
     let t = Instant::now();
     let mut out = Cursor::new(Vec::new());
     let mut sp = scratch(&tmp);
-    let (st, _) = upload::indicizza_lettore_con(
+    let (st, _) = upload::index_reader_with(
         &mut *l,
         0,
         &mut || Ok(imp.to_vec()),
@@ -336,12 +336,12 @@ fn main() {
 }
 
 /// The producer of the mzML writer alone: every scan and its extras, nothing written (the part of the writer that stays on one thread).
-fn producer(l: &mut dyn Lettore, n: usize, c: &Counters) {
+fn producer(l: &mut dyn Reader, n: usize, c: &Counters) {
     let t = Instant::now();
     let mut pts = 0usize;
     for k in 0..n {
-        let s = l.scansione(0, k).unwrap();
-        let extra = l.extra_scansione(0, k, &s);
+        let s = l.scan(0, k).unwrap();
+        let extra = l.scan_extra(0, k, &s);
         pts += s.mz.len() + extra.params.len();
     }
     line(
@@ -353,18 +353,18 @@ fn producer(l: &mut dyn Lettore, n: usize, c: &Counters) {
 }
 
 /// The mzML writer: its producer alone, the header, then the whole write (with `--threads N` encoding threads and, with `--sha`, the SHA-256 of the file).
-fn mzml(l: &mut dyn Lettore, n: usize, c: &Counters) {
+fn mzml(l: &mut dyn Reader, n: usize, c: &Counters) {
     producer(&mut *l, n, c);
     let t = Instant::now();
-    let _ = l.testata_mzml(0).expect("header");
+    let _ = l.mzml_header(0).expect("header");
     line("header (testata_mzml)", t.elapsed().as_secs_f64(), c, "");
     let t = Instant::now();
     let mut sink = Sink(0, std::env::args().any(|a| a == "--sha").then(Sha256::new));
-    let opz = mzlab_core::mzmlwrite::Opzioni {
+    let opz = mzlab_core::mzmlwrite::Options {
         thread: threads(),
         ..Default::default()
     };
-    lettori_mzml::scrivi_con(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
+    lettori_mzml::write_with(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
     line(
         "write mzML (scrivi)",
         t.elapsed().as_secs_f64(),
@@ -400,7 +400,7 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     let imp = upload::impronte(&mut fs).expect("fingerprint");
     line("fingerprint (SHA-256)", t.elapsed().as_secs_f64(), &c, "");
     let (mut l, c, t_open) = open(path, cen);
-    let n = l.indice(0).unwrap().len();
+    let n = l.index(0).unwrap().len();
     line("open (indexes)", t_open, &c, &format!("{n} scans"));
 
     // the decoding alone: every scan once
@@ -408,7 +408,7 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     let mut peaks = 0u64;
     let mut levels = [0usize; 4];
     for k in 0..n {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         peaks += s.mz.len() as u64;
         levels[usize::from(s.level.min(3))] += 1;
     }
@@ -424,13 +424,13 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
 
     // phase 2: the scan table (`righe`: every scan decoded once, the rows built from the scan with no mzML text)
     let t = Instant::now();
-    let p = upload::prepare_lettore(&mut *l, 0, &imp, &format!("{name}.mzML")).expect("table");
+    let p = upload::prepare_reader(&mut *l, 0, &imp, &format!("{name}.mzML")).expect("table");
     line("scan table (righe)", t.elapsed().as_secs_f64(), &c, "");
 
     // phase 3: the .mzidx by itself (pass 1 and the rounds decode the scans again)
     let t = Instant::now();
     let mut out = Cursor::new(Vec::new());
-    let st = mzidx::build_lettore(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("build");
+    let st = mzidx::build_reader(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("build");
     line(
         "build .mzidx",
         t.elapsed().as_secs_f64(),
@@ -447,7 +447,7 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     // phases 2 and 3 in one call, as the site does: the table and pass 1 share one decoding of the scans
     let t = Instant::now();
     let mut out = Cursor::new(Vec::new());
-    let (st, _) = upload::indicizza_lettore(
+    let (st, _) = upload::index_reader(
         &mut *l,
         0,
         &imp,

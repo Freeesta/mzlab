@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use mzlab_core::mzml::Spectrum;
 use mzlab_target::{
-    cerca_targets, AdductType, CheckFlags, TargetEntry, TargetList, TargetSearchOptions,
+    search_targets, AdductType, CheckFlags, TargetEntry, TargetList, TargetSearchOptions,
 };
 
 struct Lcg(u64);
@@ -101,7 +101,7 @@ fn main() {
     }
     let list = TargetList::from_entries(entries);
     let t = Instant::now();
-    let m = cerca_targets(&list, &spectra, &TargetSearchOptions::default());
+    let m = search_targets(&list, &spectra, &TargetSearchOptions::default());
     let el = t.elapsed();
     let mut h: u64 = 0xcbf29ce484222325;
     for b in format!("{m:?}").bytes() {

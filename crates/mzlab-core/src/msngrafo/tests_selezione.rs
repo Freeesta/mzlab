@@ -24,29 +24,29 @@ const FRAMMENTI: [&str; 16] = [
 ];
 
 /// Scatter of the measurement around the systematic error, ppm (deterministic, within ±1.5).
-fn rumore(i: usize) -> f64 {
+fn noise(i: usize) -> f64 {
     ((i * 37) % 7) as f64 * 0.5 - 1.5
 }
 
 /// (nodes with a candidate, nodes with one chosen formula) of the graph of one MS2 whose fragments are moved by `spostamento` Da.
-fn conteggi(spostamento: f64) -> (usize, usize) {
+fn counts(shift: f64) -> (usize, usize) {
     let peaks: Vec<(f64, f64)> = FRAMMENTI
         .iter()
         .enumerate()
         .map(|(i, f)| {
             (
-                ion(f) * (1.0 + (-2.5 + rumore(i)) * 1e-6) + spostamento,
+                ion(f) * (1.0 + (-2.5 + noise(i)) * 1e-6) + shift,
                 100.0 - i as f64 * 5.0,
             )
         })
         .collect();
-    let o = Opzioni {
+    let o = Options {
         formula: Some("C17H21N3O5+H".into()),
-        ..Opzioni::default()
+        ..Options::default()
     };
-    let g = grafo_da_picchi((ion("C17H22N3O5"), 1), ("CID", 30.0), &peaks, &o);
-    let con = |n: &&NodoG| n.formula.as_ref().is_some_and(|f| !f.candidati.is_empty());
-    let unici = |n: &&NodoG| n.formula.as_ref().is_some_and(|f| f.scelta.is_some());
+    let g = graph_from_peaks((ion("C17H22N3O5"), 1), ("CID", 30.0), &peaks, &o);
+    let con = |n: &&GNode| n.formula.as_ref().is_some_and(|f| !f.candidates.is_empty());
+    let unici = |n: &&GNode| n.formula.as_ref().is_some_and(|f| f.choice.is_some());
     (
         g.nodi.iter().filter(con).count(),
         g.nodi.iter().filter(unici).count(),
@@ -56,67 +56,62 @@ fn conteggi(spostamento: f64) -> (usize, usize) {
 #[test]
 fn an_even_electron_candidate_is_preferred_to_a_radical_one_without_evidence() {
     // the root and the 16 fragments: every node has exactly one formula, the radical alternatives of the low masses are gone
-    assert_eq!(conteggi(0.0), (17, 17));
+    assert_eq!(counts(0.0), (17, 17));
 }
 
 #[test]
 fn decoys_do_not_gain_a_choice_from_the_preference() {
     // a decoy that matches a sub-formula is kept (the window is 10 ppm) but a radical candidate never adds a second one
-    let (con, unici) = conteggi(0.02);
+    let (con, unici) = counts(0.02);
     assert!(con < 17 && con == unici, "{con} {unici}");
 }
 
 /// Decoys among the targets (the same spectrum): how many of the 16 decoys, the fragments moved by `spostamento` Da, get a candidate, and how
 /// many of the 16 targets keep theirs.
-fn misto(spostamento: f64) -> (usize, usize) {
-    let mz = |i: usize, f: &str| ion(f) * (1.0 + (-2.5 + rumore(i)) * 1e-6);
+fn mixed(shift: f64) -> (usize, usize) {
+    let mz = |i: usize, f: &str| ion(f) * (1.0 + (-2.5 + noise(i)) * 1e-6);
     let mut peaks: Vec<(f64, f64)> = vec![];
     for (i, f) in FRAMMENTI.iter().enumerate() {
         peaks.push((mz(i, f), 100.0 - i as f64 * 5.0));
-        peaks.push((mz(i, f) + spostamento, 97.0 - i as f64 * 5.0));
+        peaks.push((mz(i, f) + shift, 97.0 - i as f64 * 5.0));
     }
-    let o = Opzioni {
+    let o = Options {
         formula: Some("C17H21N3O5+H".into()),
-        ..Opzioni::default()
+        ..Options::default()
     };
-    let g = grafo_da_picchi((ion("C17H22N3O5"), 1), ("CID", 30.0), &peaks, &o);
-    let trovati = |(m, _): &(f64, f64)| {
+    let g = graph_from_peaks((ion("C17H22N3O5"), 1), ("CID", 30.0), &peaks, &o);
+    let found = |(m, _): &(f64, f64)| {
         g.nodi
             .iter()
             .any(|n| (n.mz - m).abs() < 1e-4 && n.formula.is_some())
     };
-    let bersagli = peaks.iter().step_by(2).filter(|p| trovati(p)).count();
-    let esche = peaks
-        .iter()
-        .skip(1)
-        .step_by(2)
-        .filter(|p| trovati(p))
-        .count();
-    (bersagli, esche)
+    let bersagli = peaks.iter().step_by(2).filter(|p| found(p)).count();
+    let decoys = peaks.iter().skip(1).step_by(2).filter(|p| found(p)).count();
+    (bersagli, decoys)
 }
 
 #[test]
 fn the_systematic_error_is_taken_out_and_decoys_among_targets_mostly_leave() {
-    let mut esche = 0;
+    let mut decoys = 0;
     for d in [0.02, 0.03, 0.05, 0.07, 0.11] {
-        let (bersagli, e) = misto(d);
+        let (bersagli, e) = mixed(d);
         assert_eq!(bersagli, 16, "targets at {d}");
-        esche += e;
+        decoys += e;
     }
     // 10 ppm alone lets 28 of the 80 decoys keep a candidate; around the systematic error, with the residue read from the scatter, 18
-    assert!(esche <= 20, "{esche} of 80 decoys");
+    assert!(decoys <= 20, "{decoys} of 80 decoys");
 }
 
 /// The infusion of a root whose MS2 holds a strong fragment A (C4H7N2) and an ion P (C5H6N3O) that is isolated for an MS3, where A appears
 /// too although it is no sub-formula of P (a co-isolated ion): A must keep its formula, it is under the root.
-fn grafo_coisolato() -> Grafo {
-    use crate::msnalbero::{albero_di, Raggruppa};
-    let passo = |v: &[(f64, &str, f64)]| -> Vec<(f64, String, f64)> {
+fn coisolated_graph() -> Graph {
+    use crate::msnalbero::{albero_di, Grouping};
+    let step = |v: &[(f64, &str, f64)]| -> Vec<(f64, String, f64)> {
         v.iter().map(|&(m, a, c)| (m, a.to_string(), c)).collect()
     };
     let paths = [
-        passo(&[(195.0, "CID", 30.0)]),
-        passo(&[(195.0, "CID", 30.0), (124.0, "CID", 30.0)]),
+        step(&[(195.0, "CID", 30.0)]),
+        step(&[(195.0, "CID", 30.0), (124.0, "CID", 30.0)]),
     ];
     let sp = |p: &[(f64, f64)]| Spettro {
         mz: p.iter().map(|x| x.0).collect(),
@@ -135,8 +130,8 @@ fn grafo_coisolato() -> Grafo {
             scans.push(((p.len() + 1) as u8, Some(&p[..])));
         }
     }
-    let al = albero_di(scans, &Raggruppa::default());
-    let per_nodo: Vec<Spettro> = al
+    let al = albero_di(scans, &Grouping::default());
+    let per_node: Vec<Spettro> = al
         .nodi
         .iter()
         .map(|n| match n.id.as_str() {
@@ -144,16 +139,16 @@ fn grafo_coisolato() -> Grafo {
             _ => ms3.clone(),
         })
         .collect();
-    let o = Opzioni {
+    let o = Options {
         formula: Some("C8H10N4O2+H".into()),
-        ..Opzioni::default()
+        ..Options::default()
     };
-    costruisci(
-        &Ingresso {
+    build(
+        &Input {
             albero: &al,
             ms1: Some(&ms1),
-            spettri: &per_nodo,
-            larghezze: &vec![None; al.nodi.len()],
+            spettri: &per_node,
+            widths: &vec![None; al.nodi.len()],
             polarita: 1,
         },
         &o,
@@ -162,12 +157,12 @@ fn grafo_coisolato() -> Grafo {
 
 #[test]
 fn a_fragment_under_the_root_survives_a_precursor_it_is_not_under() {
-    let g = grafo_coisolato();
+    let g = coisolated_graph();
     let m = ion("C4H7N2");
     let n = g.nodi.iter().find(|n| (n.mz - m).abs() < 1e-4);
     let f = n.and_then(|n| n.formula.as_ref());
     assert_eq!(
-        f.and_then(|f| f.scelta.as_deref()),
+        f.and_then(|f| f.choice.as_deref()),
         Some("C4H7N2"),
         "{:?}",
         g.nodi.iter().map(|n| n.mz).collect::<Vec<_>>()

@@ -10,8 +10,8 @@ use super::{AgilentD, Files, SCAN_SIM};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
-    VoceLettore, VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
 };
 use crate::metodo::{Source, SrcFile};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
@@ -20,31 +20,31 @@ use crate::window::Windowed;
 
 #[path = "lettore_lc.rs"]
 mod lc;
-pub use lc::variante;
+pub use lc::variant;
 use lc::PROFILE;
 
-impl LettoreAgilent {
+impl AgilentReader {
     fn new(d: AgilentD, peak: Option<Box<dyn ReadAt>>, peak_member: u16, peak_len: u64) -> Self {
         let scans: Vec<usize> = (0..d.records.len())
             .filter(|&i| d.listed(&d.records[i]))
             .collect();
-        let indice = build_index(&d, &scans, peak_member);
-        let nome = d
+        let index = build_index(&d, &scans, peak_member);
+        let name = d
             .sample_name()
             .map_or_else(|| d.name.clone(), str::to_string);
-        let campioni = vec![Campione {
+        let samples = vec![Sample {
             id: 1,
-            nome,
+            nome: name,
             scansioni: scans.len(),
-            dimensione: None,
+            size: None,
         }];
-        LettoreAgilent {
+        AgilentReader {
             d,
             peak,
             peak_len,
             scans,
-            campioni,
-            indice,
+            campioni: samples,
+            indice: index,
             srm: None,
             sic: None,
         }
@@ -173,8 +173,8 @@ fn read_all(fs: &mut FileSet, i: usize, left: &mut u64) -> Result<Vec<u8>> {
     Ok(b)
 }
 
-fn field(name: &str, value: impl ToString, unit: Option<&str>, cv: Option<&str>) -> Campo {
-    Campo {
+fn field(name: &str, value: impl ToString, unit: Option<&str>, cv: Option<&str>) -> Field {
+    Field {
         nome: name.into(),
         valore: value.to_string(),
         unita: unit.map(str::to_string),
@@ -183,7 +183,7 @@ fn field(name: &str, value: impl ToString, unit: Option<&str>, cv: Option<&str>)
 }
 
 /// Every field of the record of a scan, the extra ones of the xsd included.
-fn header_fields(d: &AgilentD, r: &ScanRec) -> Vec<Campo> {
+fn header_fields(d: &AgilentD, r: &ScanRec) -> Vec<Field> {
     let mut v = vec![
         field("ScanID", r.id, None, None),
         field("ScanMethodID", r.method_id, None, None),
@@ -219,22 +219,22 @@ fn header_fields(d: &AgilentD, r: &ScanRec) -> Vec<Campo> {
 }
 
 /// The index of the scans that have points: what is known of each before its peaks are read.
-fn build_index(d: &AgilentD, scans: &[usize], peak_member: u16) -> Vec<VoceScansione> {
+fn build_index(d: &AgilentD, scans: &[usize], peak_member: u16) -> Vec<ScanEntry> {
     scans
         .iter()
         .map(|&i| {
             let r = &d.records[i];
-            VoceScansione {
+            ScanEntry {
                 id: format!("scan={}", r.id),
                 rt: r.time_min,
                 livello: r.level.clamp(1, 255) as u8,
                 polarita: d.polarity_of(r),
                 tic: r.tic,
-                picco_base: Some(r.base_mz).filter(|m| *m > 0.0),
+                base_peak: Some(r.base_mz).filter(|m| *m > 0.0),
                 // a SIM scan says its ions only in its spectrum
                 filtro: d.filter_of(r.scan_type, &[]).trim_end().to_string(),
                 precursore: (r.level >= 2 && r.mz_of_interest > 0.0).then_some(r.mz_of_interest),
-                posizione: d.inline.is_none().then_some(Posizione {
+                position: d.inline.is_none().then_some(Position {
                     membro: peak_member,
                     offset: r.offset,
                     lunghezza: r.bytes,
@@ -245,7 +245,7 @@ fn build_index(d: &AgilentD, scans: &[usize], peak_member: u16) -> Vec<VoceScans
 }
 
 /// The `metodo/1` document; `MSPeak.bin` is listed without a SHA-1 (hashing it would read the whole file).
-fn document(l: &LettoreAgilent) -> String {
+fn document(l: &AgilentReader) -> String {
     let mut files: Vec<SrcFile> =
         l.d.file_sha1
             .iter()
@@ -263,7 +263,7 @@ fn document(l: &LettoreAgilent) -> String {
             bytes: l.peak_len,
         });
     }
-    l.d.metodo(&Source {
+    l.d.method(&Source {
         format: "agilent-d",
         files,
         sample: None,
@@ -271,7 +271,7 @@ fn document(l: &LettoreAgilent) -> String {
 }
 
 /// The chromatogram `id`: the TIC and the BPC from the records, a SIC by reading the SIM scans.
-fn trace(l: &mut LettoreAgilent, id: &str) -> Result<Chromatogram> {
+fn trace(l: &mut AgilentReader, id: &str) -> Result<Chromatogram> {
     let bad = || Error::new("error.badIndex").with("id", id);
     if let Some(h) = l.d.survey_chromatograms().into_iter().find(|h| h.id == id) {
         return Ok(h);
@@ -315,10 +315,10 @@ fn trace(l: &mut LettoreAgilent, id: &str) -> Result<Chromatogram> {
     Ok(super::run::sic_chromatogram(index, key, time, intensity))
 }
 
-fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let name = folder_name(&fs);
-    limiti.voci_ok(fs.membri.len() as u64)?;
-    let mut left = limiti.byte;
+    limits.ok_entries(fs.membri.len() as u64)?;
+    let mut left = limits.byte;
     let mut small: Vec<(&str, Vec<u8>)> = Vec::new();
     for n in [SCAN, XSD, TS, DEVICES, CONTENTS, TREE, ACQMETH, DATA_MS]
         .into_iter()
@@ -362,13 +362,13 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         acqmeth: get(ACQMETH),
         others: &others,
     };
-    limiti.voci_ok((files.ms_scan.len() / 8) as u64)?;
+    limits.ok_entries((files.ms_scan.len() / 8) as u64)?;
     let d = AgilentD::open(&name, &files)?;
     let d = lc.apply(d, get(DEVICES), data_file);
-    limiti.voci_ok(d.records.len() as u64)?;
+    limits.ok_entries(d.records.len() as u64)?;
     let peak =
         peak_at.map(|i| std::mem::replace(&mut fs.membri[i].dati, Box::new(Vec::<u8>::new())));
-    Ok(Box::new(LettoreAgilent::new(
+    Ok(Box::new(AgilentReader::new(
         d,
         peak,
         peak_at.unwrap_or(0) as u16,
@@ -376,7 +376,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     )))
 }
 
-pub const VOCE: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "agilent-d",
     contratto: CONTRATTO,
     estensioni: &[".d"],
@@ -387,14 +387,14 @@ pub const VOCE: VoceLettore = VoceLettore {
 /// The time and intensity of the SIC of each ion (key: m/z x 100).
 type SicTraces = BTreeMap<i64, (Vec<f64>, Vec<f64>)>;
 
-pub struct LettoreAgilent {
+pub struct AgilentReader {
     d: AgilentD,
     peak: Option<Box<dyn ReadAt>>,
     peak_len: u64,
     /// Indexes into `d.records` of the scans that have points (the ones the index lists).
     scans: Vec<usize>,
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
     /// The SRM chromatograms of an MRM run, read on first use.
     srm: Option<Vec<Chromatogram>>,
     /// The SIC of every ion found in the SIM scans, built on the first request so the data are read once.
@@ -402,21 +402,21 @@ pub struct LettoreAgilent {
 }
 
 /// The chromatograms of the run without their points: the TIC, the BPC and one SIC per ion of the SIM groups.
-fn listed(l: &mut LettoreAgilent) -> Result<Vec<VoceCromatogramma>> {
+fn listed(l: &mut AgilentReader) -> Result<Vec<ChromatogramEntry>> {
     let survey = l.d.survey_chromatograms().into_iter();
-    let mut v: Vec<VoceCromatogramma> = survey
-        .map(|h| VoceCromatogramma {
+    let mut v: Vec<ChromatogramEntry> = survey
+        .map(|h| ChromatogramEntry {
             id: h.id,
             tipo: h.kind,
             unita: h.unit,
         })
         .collect();
-    v.extend(l.sim_ions().into_iter().map(|key| VoceCromatogramma {
+    v.extend(l.sim_ions().into_iter().map(|key| ChromatogramEntry {
         id: format!("SIC {:.2}", key as f64 / 100.0),
         tipo: ChromKind::Sic,
         unita: "number of detector counts".into(),
     }));
-    v.extend(l.srm()?.iter().map(|h| VoceCromatogramma {
+    v.extend(l.srm()?.iter().map(|h| ChromatogramEntry {
         id: h.id.clone(),
         tipo: h.kind,
         unita: h.unit.clone(),
@@ -424,52 +424,59 @@ fn listed(l: &mut LettoreAgilent) -> Result<Vec<VoceCromatogramma>> {
     Ok(v)
 }
 
-impl Lettore for LettoreAgilent {
-    fn formato(&self) -> Formato {
-        Formato::AgilentD
+impl Reader for AgilentReader {
+    fn format(&self) -> Format {
+        Format::AgilentD
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::conv::AGILENT_EXT
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.one(c)?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
         let r = self.record(k)?.1.clone();
         let (mz, it) = self.points(&r)?;
         Ok(self.d.spectrum_of(k, &r, mz, it))
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.one(c)?;
         Ok(header_fields(&self.d, self.record(k)?.1))
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn missing(&mut self, c: usize) -> usize {
+        if c == 0 {
+            self.d.missing
+        } else {
+            0
+        }
+    }
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         listed(self)
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
         trace(self, id)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         Ok(document(self))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.one(c)?;
         let sha = match (&mut self.peak, self.d.inline.is_some()) {
             (Some(p), false) => sha1_of(&mut Windowed::new(p, self.peak_len), self.peak_len)?,

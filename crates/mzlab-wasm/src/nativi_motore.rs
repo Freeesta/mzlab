@@ -1,4 +1,4 @@
-// The methods of `Nativi` (the slots read straight from the files of a maker) and of `Engine` that attach a slot to its reader (see nativi.rs).
+// The methods of `Natives` (the slots read straight from the files of a maker) and of `Engine` that attach a slot to its reader (see nativi.rs).
 use std::rc::Rc;
 
 use js_sys::Function;
@@ -6,13 +6,13 @@ use mzlab_core::lettori_mzml;
 use mzlab_core::lettori_sessione::{attacca, stacca};
 use wasm_bindgen::prelude::*;
 
-use crate::nativi::{reader, Dataset, Membri, Nativi, Src, SHELLS};
+use crate::nativi::{reader, Dataset, Members, Natives, Src, SHELLS};
 use crate::{error_json, Engine, JsReader};
 use mzlab_core::json::Value;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::upload;
 
-impl Nativi {
+impl Natives {
     pub(crate) fn forget(&mut self, slot: u32) {
         if let Some(ds) = stacca(&mut self.sets, &mut self.slots, slot) {
             self.drop_shells(&ds);
@@ -26,7 +26,7 @@ impl Nativi {
     }
 
     pub(crate) fn clear(&mut self) {
-        *self = Nativi::default();
+        *self = Natives::default();
     }
 
     /// What the routes read for `slot`: the `guscio` and the reader of its sample when it is native, else the mzML through `read`; with its size.
@@ -78,7 +78,7 @@ impl Nativi {
 impl Engine {
     /// Makes `slot` sample `c` of the dataset `ds` (`names`, `sizes`, `read(member, offset, length)`): the routes that read the file besides its index
     /// (`open_index`) read it through its reader. `centroid`: the profile scans become centroids (the same value the index was built with).
-    /// Refuses (`error.badIndex`) the index of the slot when it was built by an older generation of the readers (`upload::GENERAZIONE_LETTORI`).
+    /// Refuses (`error.badIndex`) the index of the slot when it was built by an older generation of the readers (`upload::READERS_GENERATION`).
     #[allow(clippy::too_many_arguments)]
     pub fn native_attach(
         &mut self,
@@ -98,7 +98,7 @@ impl Engine {
                 .and_then(Value::f64)
                 .unwrap_or(0.0)
         });
-        if reader.is_some_and(|g| g < f64::from(upload::GENERAZIONE_LETTORI)) {
+        if reader.is_some_and(|g| g < f64::from(upload::READERS_GENERATION)) {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         }
         if self.nat.slots.get(&slot) == Some(&(ds.to_string(), c as usize))
@@ -115,7 +115,7 @@ impl Engine {
             c as usize,
             || {
                 Ok::<_, JsValue>(Dataset {
-                    membri: Membri::new(names, sizes, read)?,
+                    members: Members::new(names, sizes, read)?,
                     centroid,
                     l: None,
                     used: 0,
@@ -134,6 +134,22 @@ impl Engine {
             return Ok(String::new());
         };
         let l = reader(&mut self.nat, ds)?;
-        l.metodo(c).map_err(|e| error_json(&e))
+        l.method(c).map_err(|e| error_json(&e))
     }
+}
+
+/// The provisional TIC of sample `c` of a dataset (`names`, `sizes`, `read` as for `native_samples`), from its scan index alone: `rt[n]` then `tic[n]`
+/// (`lettori::tic_ms1`). The page reads it from the dropped files while they are copied, before the `.mzidx` exists.
+#[wasm_bindgen]
+pub fn native_early_tic(
+    names: js_sys::Array,
+    sizes: &[f64],
+    read: Function,
+    c: u32,
+) -> Result<js_sys::Float64Array, JsValue> {
+    let mut l = Members::new(names, sizes, read)?.open(false)?;
+    let (mut rt, tic) =
+        mzlab_core::lettori::tic_ms1(l.index(c as usize).map_err(|e| error_json(&e))?);
+    rt.extend(tic);
+    Ok(js_sys::Float64Array::from(&rt[..]))
 }

@@ -5,7 +5,7 @@
 
 use super::AgilentD;
 use crate::metodo::{self, num, obj, text, Source, V};
-use crate::metodo_campi::{Campo, Ident};
+use crate::metodo_campi::{Field, Ident};
 
 const GRAW_MAX: usize = 256 * 1024;
 /// The files whose text goes whole to `grezzo` (origin, title).
@@ -211,12 +211,12 @@ fn ident(d: &AgilentD) -> Ident {
 }
 
 fn fields(d: &AgilentD, ident: &Ident) -> Vec<V> {
-    let mut all: Vec<Campo> = d
+    let mut all: Vec<Field> = d
         .metadata
         .iter()
         .filter(|i| !(i.name == "text" && TEXTS.iter().any(|(o, _)| *o == i.origin)))
         .map(|i| {
-            let mut c = Campo::new(&i.origin, &i.name, &i.value);
+            let mut c = Field::new(&i.origin, &i.name, &i.value);
             c.mappato = mapped(&i.origin, &i.name);
             if c.mappato.is_none() {
                 c.mappato = super::lcdoc::mapped(&i.origin, &i.name, &i.value);
@@ -229,7 +229,7 @@ fn fields(d: &AgilentD, ident: &Ident) -> Vec<V> {
     crate::sortc::slice_by(&mut all, |a, b| {
         (&a.origine, &a.chiave).cmp(&(&b.origine, &b.chiave))
     });
-    all.iter().filter_map(Campo::json).collect()
+    all.iter().filter_map(Field::json).collect()
 }
 
 /// The texts the folder holds whole (method report, run start, converter log), cut to `GRAW_MAX` in all.
@@ -279,7 +279,7 @@ fn warnings(d: &AgilentD) -> Vec<V> {
 
 impl AgilentD {
     /// The `metodo/1` document of the run. Never an error: what is missing is absent.
-    pub fn metodo(&self, src: &Source) -> String {
+    pub fn method(&self, src: &Source) -> String {
         let ident = ident(self);
         let created = self
             .acquired()

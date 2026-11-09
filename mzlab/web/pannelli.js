@@ -2,7 +2,7 @@
 // @ts-noany
 // @ts-check
 // Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split from explore.js: classic script, loaded right after it (shared globals).
-// ------------------------------------------------------------------ pannelli mobili
+// ------------------------------------------------------------------ floating panels
 /** @param {number} [w] @param {number} [h] */
 function place(w, h) {
   // a new panel goes under the existing ones, as wide as the page
@@ -281,7 +281,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" title="${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
+  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" tabindex="0" title="${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
     // button groups, separated by a vertical bar: [zoom + reset] | [integration] | [XIC] | [PNG / Excel] □ ×
     const lens = type === "chrom" || type === "xic" || type === "mrm";
     const fit = `<button class="bt" data-a="fit" disabled title="${I18N.t("panel.fit.title")}">${IC_FIT}</button>`;
@@ -300,7 +300,7 @@ function addPanel(type, o, after) {
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
   Q("#dpanels").appendChild(el);
   STATO.aggiungi(p, "open"); apply(p); fitHost();
-  // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
+  // move (drag the header), bring to front, resize (handle at the bottom right), maximize
   el.addEventListener("mousedown", () => { front(el); setActive(p); });
   el.querySelector(".hd").addEventListener("mousedown", (/** @type {MouseEvent} */ e) => {
     if (/** @type {Element} */ (e.target).closest("input,select,button,label,option") || el.classList.contains("max")) return;
@@ -663,7 +663,7 @@ function corrInfoWire(/** @type {Pannello} */ p, /** @type {HTMLElement} */ b) {
   if (p._cinfoOff) p._cinfoOff();
   const ac = new AbortController(); p._cinfoOff = () => ac.abort(0);  // no stack: an abort() DOMException kept old headers
   const sig = { signal: AbortSignal.any([ac.signal, p._ac.signal]) };
-  document.addEventListener("mousedown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!m.hidden && p.el.isConnected && !t.closest(".corrbar,#subpop,#ctx") && !t.closest('[data-o="cinfo"]')) shut(false); }, { capture: true, ...sig });
+  document.addEventListener("pointerdown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!m.hidden && p.el.isConnected && !t.closest(".corrbar,#subpop,#ctx") && !t.closest('[data-o="cinfo"]')) shut(false); }, { capture: true, ...sig });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !m.hidden && p.el.isConnected && !document.querySelector("#subpop:not([hidden])")) { e.stopPropagation(); shut(true); } }, { capture: true, ...sig });
   if (!p._cinfoMo) { p._cinfoMo = new MutationObserver(() => corrInfoSync(p)); p._cinfoMo.observe(m, { childList: true, subtree: true }); }
 }
@@ -775,7 +775,7 @@ function ctl(/** @type {Pannello} */ p) {
   const parToggle = (/** @type {boolean} */ on) => { p._parOpen = on; if (cpB) cpB.setAttribute("aria-expanded", String(!!on)); if (cpP) { cpP.hidden = !on; if (on) { const q = cpP.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'); if (q.length === 2) { q[0].value = p.zoom ? fmt2(p.zoom[0]) : ""; q[1].value = p.zoom ? fmt2(p.zoom[1]) : ""; } } parPlace(); } };
   if (cpB) { cpB.onclick = () => parToggle(!p._parOpen); parPlace();
     const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { COMANDI.fai("panel.source", p, () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; p.zoom = null; p.zoomY = null; }); p._parOpen = false; ctl(p); draw(p); uiSave(); };
-    if (!p._parAway) { p._parAway = (/** @type {Event} */ e) => { if (p._parOpen && p.el.isConnected && !/** @type {Element} */ (e.target).closest(".cpop") && !/** @type {Element} */ (e.target).closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("mousedown", p._parAway, { capture: true, signal: p._ac.signal }); } }
+    if (!p._parAway) { p._parAway = (/** @type {Event} */ e) => { if (p._parOpen && p.el.isConnected && !/** @type {Element} */ (e.target).closest(".cpop") && !/** @type {Element} */ (e.target).closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("pointerdown", p._parAway, { capture: true, signal: p._ac.signal }); } }
   c.querySelectorAll("[data-o]").forEach((/** @type {HTMLInputElement} */ x) => {
     const k = /** @type {string} */ (x.dataset.o);
     if (k === "fpop") x.onclick = (/** @type {MouseEvent} */ e) => { e.stopPropagation(); fileMenu(x); };
@@ -848,7 +848,7 @@ function fitHd(/** @type {Pannello} */ p) {
     const over = () => hd.scrollWidth > hd.clientWidth + 1 || (c && c.scrollWidth > c.clientWidth + 1);
     if (!over()) return;
     mb.hidden = false;
-    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
+    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     for (const n of [...cands, ...groups, ...kids]) {
       if (!over()) break;
       if (n.hidden || !n.offsetWidth) continue;
@@ -870,7 +870,7 @@ function hdMoreInit(/** @type {Pannello} */ p) {
   mb.onclick = (/** @type {MouseEvent} */ e) => { e.stopPropagation(); if (m.hidden) { m.hidden = false; mb.setAttribute("aria-expanded", "true"); hdMorePlace(p); } else close(false); };
   m.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => { if (e.key === "Escape") { e.stopPropagation(); close(true); } });
   p._moreAway = (/** @type {Event} */ e) => { if (!m.hidden && p.el.isConnected && !/** @type {Element} */ (e.target).closest(".hmore") && !/** @type {Element} */ (e.target).closest('[data-a="more"]') && !/** @type {Element} */ (e.target).closest(".corrm,.cpop,#fpop,#ctx")) close(false); };
-  document.addEventListener("mousedown", p._moreAway, { capture: true, signal: p._ac.signal });
+  document.addEventListener("pointerdown", p._moreAway, { capture: true, signal: p._ac.signal });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !m.hidden && p.el.isConnected) { close(true); } }, { signal: p._ac.signal });
 }
 /** @param {Pannello} p @param {number} mz @param {string} [label] @param {number | null} [w] */

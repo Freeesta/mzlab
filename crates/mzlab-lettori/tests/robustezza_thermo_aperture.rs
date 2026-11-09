@@ -231,33 +231,33 @@ fn describe_lists_the_structures_and_the_result() {
     assert!(t.contains("open: file cut at 2000 bytes"), "{t}");
 }
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 
 /// Everything the module does with a file, on whatever opens: the index, some scans, their headers, the chromatograms and the method. None of it may panic.
 fn through_the_module(bytes: Vec<u8>) {
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.raw".into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
             sha1: None,
         }],
     };
-    let Ok(mut l) = mzlab_lettori::apri(set, &Limiti::sito()) else {
+    let Ok(mut l) = mzlab_lettori::apri(set, &Limits::sito()) else {
         return;
     };
-    let n = l.indice(0).map_or(0, <[_]>::len);
+    let n = l.index(0).map_or(0, <[_]>::len);
     for k in [0, n / 2, n.saturating_sub(1)] {
-        let _ = l.scansione(0, k);
-        let _ = l.intestazione(0, k);
+        let _ = l.scan(0, k);
+        let _ = l.scan_header(0, k);
     }
-    if let Ok(v) = l.cromatogrammi(0) {
+    if let Ok(v) = l.chromatograms(0) {
         for c in v.iter().take(3) {
-            let _ = l.cromatogramma(0, &c.id);
+            let _ = l.chromatogram(0, &c.id);
         }
     }
-    let _ = l.mancanti(0);
-    let _ = l.metodo(0);
+    let _ = l.missing(0);
+    let _ = l.method(0);
 }
 
 struct Rng(u64);
@@ -405,4 +405,8 @@ fn a_run_header_with_no_scan_has_no_finished_run() {
         "{}",
         refused(&b)
     );
+    let e = mzlab_core::raw::thermo_error(&refused(&b));
+    assert_eq!(e.key, "err.file.rawUnfinished");
+    let p: Vec<&str> = e.params.iter().map(|(k, _)| *k).collect();
+    assert_eq!(p, ["detail", "size"]);
 }

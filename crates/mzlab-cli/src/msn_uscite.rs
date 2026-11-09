@@ -5,39 +5,39 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
 
-use mzlab_feat::msnfigura::Vista;
+use mzlab_feat::msnfigura::View;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Formato {
+pub enum Format {
     Svg,
     Html,
     Png,
 }
 
-impl Formato {
-    pub fn estensione(self) -> &'static str {
+impl Format {
+    pub fn extension(self) -> &'static str {
         match self {
-            Formato::Svg => "svg",
-            Formato::Html => "html",
-            Formato::Png => "png",
+            Format::Svg => "svg",
+            Format::Html => "html",
+            Format::Png => "png",
         }
     }
 
-    pub fn da_nome(n: &str) -> Option<Formato> {
+    pub fn from_name(n: &str) -> Option<Format> {
         match n.trim() {
-            "svg" => Some(Formato::Svg),
-            "html" => Some(Formato::Html),
-            "png" => Some(Formato::Png),
+            "svg" => Some(Format::Svg),
+            "html" => Some(Format::Html),
+            "png" => Some(Format::Png),
             _ => None,
         }
     }
 }
 
 /// `svg,html,png` → the formats, in the order given, each once.
-pub fn formati(lista: &str) -> std::result::Result<Vec<Formato>, String> {
+pub fn formats(list: &str) -> std::result::Result<Vec<Format>, String> {
     let mut out = Vec::new();
-    for n in lista.split(',') {
-        let f = Formato::da_nome(n).ok_or(format!(
+    for n in list.split(',') {
+        let f = Format::from_name(n).ok_or(format!(
             "--figure needs svg, html or png, not \"{}\"",
             n.trim()
         ))?;
@@ -49,20 +49,20 @@ pub fn formati(lista: &str) -> std::result::Result<Vec<Formato>, String> {
 }
 
 /// The bytes of the figure of `graph` in the format `f`.
-pub fn bytes(graph: &str, f: Formato, vista: Vista) -> Result<Vec<u8>> {
+pub fn bytes(graph: &str, f: Format, view: View) -> Result<Vec<u8>> {
     match f {
-        Formato::Svg => Ok(mzlab_feat::msnfigura::svg(graph, vista)?.into_bytes()),
-        Formato::Html => Ok(mzlab_feat::msnfigura::html::html(graph, vista)?.into_bytes()),
-        Formato::Png => crate::msn_png::png(&mzlab_feat::msnfigura::svg(graph, vista)?),
+        Format::Svg => Ok(mzlab_feat::msnfigura::svg(graph, view)?.into_bytes()),
+        Format::Html => Ok(mzlab_feat::msnfigura::html::html(graph, view)?.into_bytes()),
+        Format::Png => crate::msn_png::png(&mzlab_feat::msnfigura::svg(graph, view)?),
     }
 }
 
 /// Writes the figures next to `stem` (`stem.svg`, `stem.html`, `stem.png`); returns the files.
-pub fn scrivi(graph: &str, fs: &[Formato], vista: Vista, stem: &Path) -> Result<Vec<PathBuf>> {
+pub fn write_outputs(graph: &str, fs: &[Format], view: View, stem: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     for &f in fs {
-        let p = PathBuf::from(format!("{}.{}", stem.display(), f.estensione()));
-        std::fs::write(&p, bytes(graph, f, vista)?)
+        let p = PathBuf::from(format!("{}.{}", stem.display(), f.extension()));
+        std::fs::write(&p, bytes(graph, f, view)?)
             .map_err(|e| Error::new("err.file.index").with("detail", e))?;
         out.push(p);
     }
@@ -83,15 +83,15 @@ pub fn canonical(aliases: &[(&str, &str)], x: String) -> String {
 /// `msn-graph figure IN.json [--figure svg,html,png] [--view tree|radial] [--out STEM]`: the figures of a graph already made; the stem defaults to the file
 /// without its extension. Returns the message for the standard output.
 pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<String, String> {
-    let (mut file, mut out, mut fs, mut vista) =
-        (None, None, vec![Formato::Svg, Formato::Html], Vista::Albero);
+    let (mut file, mut out, mut fs, mut view) =
+        (None, None, vec![Format::Svg, Format::Html], View::Albero);
     while let Some(x) = a.next() {
         let x = canonical(ALIASES, x);
         match x.as_str() {
             "--out" => out = a.next().map(PathBuf::from),
-            "--figure" => fs = formati(&a.next().unwrap_or_default())?,
+            "--figure" => fs = formats(&a.next().unwrap_or_default())?,
             "--view" => {
-                vista = Vista::da_nome(&a.next().unwrap_or_default())
+                view = View::da_nome(&a.next().unwrap_or_default())
                     .ok_or("--view needs tree or radial")?
             }
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
@@ -101,6 +101,6 @@ pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<St
     let file = file.ok_or("figure needs an msngrafo/1 file")?;
     let json = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
     let stem = out.unwrap_or_else(|| file.with_extension(""));
-    let made = scrivi(&json, &fs, vista, &stem).map_err(|e| e.to_string())?;
+    let made = write_outputs(&json, &fs, view, &stem).map_err(|e| e.to_string())?;
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }

@@ -311,6 +311,7 @@ const LISTE = (() => {
   // the compatible entries of a peak: vis = those not excluded (the peak keeps its mark); hid = there are some, and all are excluded (the peak is hidden)
   const split = (/** @type {Bag[]} */ ms) => { const vis = ms.filter((/** @type {Bag} */ x) => !isExcluded(x)); return { vis, hid: ms.length > 0 && !vis.length }; };
   function setOn(/** @type {unknown} */ v) { wr(KEY_ON, !!v); document.querySelectorAll("#lst-cont-signs").forEach(el => { el.checked = !!v; }); if (typeof redrawAll === "function") redrawAll(); }
+  const LAB_MAX = 5000;                                              // rows taken from one imported CSV: the rest is named in the toast, never dropped silently
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = (/** @type {Bag[]} */ rows) => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
@@ -485,7 +486,7 @@ const LISTE = (() => {
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
+            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n, all; try { all = csvParse(await FILESICURI.readText(f)); n = all.slice(0, LAB_MAX); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat", x.params)); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(all.length > LAB_MAX ? I18N.t("lst.lab.importedCut", { max: LAB_MAX, m: all.length, rest: all.length - LAB_MAX }) : I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }
@@ -596,7 +597,7 @@ const LISTE = (() => {
 
         <div id="lst-userlists-bar" style="font-size:12px;padding:4px 8px;background:var(--panel,#fff);border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
         <div id="lst-excl" class="sm" style="padding:4px 8px;border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
-        <span id="lst-count" hidden></span>
+        <span id="lst-count" class="sm muted" role="status" hidden></span>
 
         <div id="lst-table-wrap" style="flex:1;min-height:220px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-radius:6px;background:var(--panel,#fff)">
           <table class="lct" style="width:100%;border-collapse:collapse;font-size:12px">
@@ -762,7 +763,11 @@ const LISTE = (() => {
 
       const limit = 400;
       const shown = items.slice(0, limit);
-      if (elCount) elCount.innerHTML = "";
+      if (elCount) {                                          // a calm note on the cut, never a silent one
+        const cut = items.length > limit;
+        elCount.hidden = !cut;
+        elCount.textContent = cut ? I18N.t("lst.cut", { n: limit, m: items.length }) : "";
+      }
 
       if (!shown.length) {
         elTbody.innerHTML = `<tr><td colspan="${isNom ? 4 : 9}" class="muted">${/** @type {any} */ (window).EMPTYLEAF("empty.lists")}</td></tr>`;

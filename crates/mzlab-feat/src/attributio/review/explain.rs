@@ -211,12 +211,23 @@ impl SubTable {
     }
 }
 
+/// Cells of the sub-formula grid of `ion`: the product of (count + 1) over its elements.
+fn grid_cells(ion: &Formula) -> f64 {
+    ion.values().fold(1f64, |a, v| a * (*v + 1) as f64)
+}
+
+/// The grid of `ion` is too large to build under `max_n` (or for a `u32` row index).
+pub fn too_many_subformulas(ion: &Formula, max_n: i64) -> bool {
+    let total = grid_cells(ion);
+    total > max_n as f64 || total >= u32::MAX as f64
+}
+
 /// The sub-formulas of `ion`, or `None` when the grid would hold more than `max_n` cells (or an element is outside the 16). A Na/K adduct keeps its cation.
 pub fn subformula_table(ion: &Formula, pol: &str, adduct: &str, max_n: i64) -> Option<SubTable> {
     let els: Vec<String> = ion.keys().cloned().collect();
     let radix: Vec<i64> = els.iter().map(|e| ion[e] + 1).collect();
-    let total = radix.iter().fold(1f64, |a, r| a * *r as f64);
-    if total > max_n as f64 || total >= u32::MAX as f64 {
+    let total = grid_cells(ion);
+    if too_many_subformulas(ion, max_n) {
         return None;
     }
     let mass: Vec<f64> = els.iter().map(|e| atom_mass(e)).collect::<Option<_>>()?;
@@ -283,10 +294,40 @@ pub fn assign(mzs: &[f64], table: &SubTable, ppm: f64) -> Vec<Option<(usize, f64
         .collect()
 }
 
-/// (M+1/M, M+2/M) of an ion formula at the natural abundances (`composition::isotope_ratios`).
+/// (M+1/M, M+2/M) of an ion formula: nominal-mass isotopologue sums over the elements Attributio 1.12.0 `explain` lists, the others monoisotopic.
+/// Its own table, not `composition::isotope_ratios`: the reference keeps the IUPAC 1997 S and Si abundances here (S 0.9493/0.0076/0.0429),
+/// and the parity with it (`tests/attributio_spiegazioni.rs`) is the contract of this proof.
 pub fn iso_pattern(ion: &Formula) -> (f64, f64) {
-    let counts: Vec<(String, i64)> = ion.iter().map(|(e, n)| (e.clone(), *n)).collect();
-    mzlab_core::composition::isotope_ratios(&counts)
+    fn table(e: &str) -> [f64; 3] {
+        match e {
+            "C" => [0.9893, 0.0107, 0.0],
+            "H" => [0.999885, 0.000115, 0.0],
+            "N" => [0.99636, 0.00364, 0.0],
+            "O" => [0.99757, 0.00038, 0.00205],
+            "S" => [0.9493, 0.0076, 0.0429],
+            "Cl" => [0.7576, 0.0, 0.2424],
+            "Br" => [0.5069, 0.0, 0.4931],
+            "K" => [0.932581, 0.0, 0.067302],
+            "Si" => [0.9223, 0.0468, 0.0309],
+            _ => [1.0, 0.0, 0.0],
+        }
+    }
+    let mut dist = [1.0, 0.0, 0.0];
+    for (e, n) in ion {
+        let a = table(e);
+        for _ in 0..*n {
+            let mut next = [0.0; 3];
+            for (i, d) in dist.iter().enumerate() {
+                for (j, x) in a.iter().enumerate() {
+                    if i + j < 3 {
+                        next[i + j] += d * x;
+                    }
+                }
+            }
+            dist = next;
+        }
+    }
+    (dist[1] / dist[0], dist[2] / dist[0])
 }
 
 // ------------------------------------------------------------------------------ spectra
@@ -413,6 +454,8 @@ pub struct Explanation {
     pub n_expl: usize,
     pub frac_expl: f64,
     pub decoy_frac: f64,
+    /// The sub-formula grid of the ion is larger than `max_subformulas`: no peak could be tried.
+    pub too_many: bool,
 }
 
 impl Explanation {
@@ -426,6 +469,7 @@ impl Explanation {
             n_expl: 0,
             frac_expl: 0.0,
             decoy_frac: 0.0,
+            too_many: false,
         }
     }
     /// The precursor is explained within `ppm_ion`.
@@ -459,6 +503,7 @@ pub fn explain(
         return o;
     }
     let Some(table) = subformula_table(&am.ion, pol, &am.adduct, s.max_subformulas) else {
+        o.too_many = too_many_subformulas(&am.ion, s.max_subformulas);
         return o;
     };
     let total: f64 = exp.1.iter().sum();

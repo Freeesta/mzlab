@@ -1,7 +1,7 @@
 //! The one search of the molecules: a number is a mass (within `ppm`), a valid formula is the same formula in Hill order and then also a text, anything else is
 //! a text over the name and the synonyms (the ranking of the Tabui name box: equal, starts with, starts a word, contains).
 
-use super::Molecola;
+use super::Molecule;
 use crate::elements::{fmt, parse_formula};
 
 /// Text score of `w` (lower case) in one name, as the Tabui box gave it: 0 equal, 1 starts with, 2 starts a word, 3 contains; None when absent.
@@ -22,11 +22,11 @@ fn score(name: &str, w: &str) -> Option<u8> {
     })
 }
 
-fn by_text(ms: &[Molecola], w: &str) -> Vec<(usize, u8)> {
+fn by_text(ms: &[Molecule], w: &str) -> Vec<(usize, u8)> {
     let mut hits: Vec<(usize, u8, usize)> = Vec::new();
     for (k, m) in ms.iter().enumerate() {
         let best = std::iter::once(&m.nome)
-            .chain(&m.sinonimi)
+            .chain(&m.synonyms)
             .filter_map(|n| score(&n.to_lowercase(), w))
             .min();
         if let Some(b) = best {
@@ -37,7 +37,7 @@ fn by_text(ms: &[Molecola], w: &str) -> Vec<(usize, u8)> {
     hits.into_iter().map(|h| (h.0, h.1)).collect()
 }
 
-fn by_mass(ms: &[Molecola], q: f64, ppm: f64) -> Vec<(usize, f64)> {
+fn by_mass(ms: &[Molecule], q: f64, ppm: f64) -> Vec<(usize, f64)> {
     let mut hits: Vec<(usize, f64)> = ms
         .iter()
         .enumerate()
@@ -56,7 +56,7 @@ fn formula_of(q: &str) -> Option<String> {
 
 /// The indices (in `ms`) and scores of the best `limite` molecules for `q`: the error in ppm for a mass, 0 for the same formula, 0..3 for a text. Fewer than
 /// two characters of text give nothing.
-pub fn cerca(ms: &[Molecola], q: &str, limite: usize, ppm: f64) -> Vec<(usize, f64)> {
+pub fn cerca(ms: &[Molecule], q: &str, limit: usize, ppm: f64) -> Vec<(usize, f64)> {
     let q = q.trim();
     let mut hits: Vec<(usize, f64)> = Vec::new();
     if let Some(mass) = q.parse::<f64>().ok().filter(|x| x.is_finite() && *x > 0.0) {
@@ -81,7 +81,7 @@ pub fn cerca(ms: &[Molecola], q: &str, limite: usize, ppm: f64) -> Vec<(usize, f
             );
         }
     }
-    hits.truncate(limite);
+    hits.truncate(limit);
     hits
 }
 
@@ -100,12 +100,12 @@ fn within_one(a: &[char], b: &[char]) -> bool {
 }
 
 /// Molecules whose name or synonym is one typing slip away from `w` (lower case), as a whole name (4) or as the start of one (5): "bentazan" finds "bentazone".
-fn by_typo(ms: &[Molecola], w: &str) -> Vec<(usize, u8)> {
+fn by_typo(ms: &[Molecule], w: &str) -> Vec<(usize, u8)> {
     let q: Vec<char> = w.chars().collect();
     let mut hits: Vec<(usize, u8, usize)> = Vec::new();
     for (k, m) in ms.iter().enumerate() {
         let best = std::iter::once(&m.nome)
-            .chain(&m.sinonimi)
+            .chain(&m.synonyms)
             .filter_map(|n| {
                 let c: Vec<char> = n.to_lowercase().chars().collect();
                 if within_one(&q, &c) {
@@ -125,7 +125,7 @@ fn by_typo(ms: &[Molecola], w: &str) -> Vec<(usize, u8)> {
 }
 
 /// Molecules whose InChIKey is `q` (27 characters) or starts with it when `q` is the 14-character first block, in any case.
-fn by_inchikey(ms: &[Molecola], q: &str) -> Vec<usize> {
+fn by_inchikey(ms: &[Molecule], q: &str) -> Vec<usize> {
     let q = q.to_ascii_uppercase();
     let full = q.len() == 27 && q.as_bytes()[14] == b'-';
     if !(full || q.len() == 14) || !q.bytes().all(|b| b.is_ascii_uppercase() || b == b'-') {
@@ -143,7 +143,7 @@ fn by_inchikey(ms: &[Molecola], q: &str) -> Vec<usize> {
 
 /// `cerca` for a box that picks a molecule: the same hits first, then the molecules of an InChIKey (score 0), and, only when nothing was found, the names one
 /// typing slip away (score 4 whole name, 5 start of a name, from four characters on).
-pub fn cerca_ampia(ms: &[Molecola], q: &str, limite: usize, ppm: f64) -> Vec<(usize, f64)> {
+pub fn search_wide(ms: &[Molecule], q: &str, limit: usize, ppm: f64) -> Vec<(usize, f64)> {
     let q = q.trim();
     let mut hits = cerca(ms, q, usize::MAX, ppm);
     for k in by_inchikey(ms, q) {
@@ -158,6 +158,6 @@ pub fn cerca_ampia(ms: &[Molecola], q: &str, limite: usize, ppm: f64) -> Vec<(us
             .map(|(k, s)| (k, f64::from(s)))
             .collect();
     }
-    hits.truncate(limite);
+    hits.truncate(limit);
     hits
 }

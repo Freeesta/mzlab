@@ -14,7 +14,7 @@ use crate::engine::State;
 use crate::rpc::{text, Answer};
 
 impl State {
-    pub(crate) fn op_grafo(&self, p: &Value) -> Result<Answer> {
+    pub(crate) fn op_graph(&self, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let n = |k: &str| p[k].as_i64().map_or(-1, |v| v as i32);
         match s("kind") {

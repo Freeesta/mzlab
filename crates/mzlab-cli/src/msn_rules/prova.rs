@@ -6,19 +6,19 @@ use std::collections::BTreeMap;
 
 use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
-    grafo_da_picchi, tabella_regole, valuta_regole, Attesa, Grafo, Opzioni, ParamRegole,
-    Valutazione,
+    graph_from_peaks, tabella_regole, valuta_regole, Evaluation, Expectation, Graph, Options,
+    RuleParams,
 };
 use mzlab_feat::chem::grafo::Mol;
 use mzlab_feat::chem::regole::attese_mol;
 
 /// Shift of the losses of the third decoy, Da (no loss of the table is near it).
-pub const SPOSTA_PERDITE: f64 = 0.0137;
+pub const SHIFT_LOSSES: f64 = 0.0137;
 
 /// A record ready to be judged: the ion as the graph reads it, the activation and the peaks.
-pub struct Registro {
+pub struct Registry {
     pub id: String,
-    pub strato: &'static str,
+    pub layer_name: &'static str,
     pub pol: i8,
     pub prec: f64,
     pub ce: f64,
@@ -26,35 +26,35 @@ pub struct Registro {
     pub att: &'static str,
     pub ione: String,
     pub smiles: String,
-    pub picchi: Vec<(f64, f64)>,
+    pub peaks: Vec<(f64, f64)>,
 }
 
 /// Peaks explained by (a) sub-formulas, (b) + rules of the formula, (c) + rules of the structure: counts and % of the base peak, and the rules that fired
 /// (peaks per rule id).
 #[derive(Default)]
-pub struct Misura {
+pub struct Measure {
     pub n: usize,
-    pub totale: f64,
+    pub total: f64,
     pub a: (usize, f64),
     pub b: (usize, f64),
     pub c: (usize, f64),
-    pub regole: BTreeMap<String, usize>,
+    pub rules: BTreeMap<String, usize>,
 }
 
-impl Misura {
-    pub fn json(&self, o: &mut Out, con_regole: bool) {
+impl Measure {
+    pub fn json(&self, o: &mut Out, with_rules: bool) {
         let n = |x: f64| mzlab_core::json::round(x, 2) + 0.0;
         o.raw("{\"n\":").int(self.n as i64);
-        o.raw(",\"it\":").num(n(self.totale));
+        o.raw(",\"it\":").num(n(self.total));
         o.raw(",\"a\":").int(self.a.0 as i64);
         o.raw(",\"ia\":").num(n(self.a.1));
-        if con_regole {
+        if with_rules {
             o.raw(",\"b\":").int(self.b.0 as i64);
             o.raw(",\"ib\":").num(n(self.b.1));
             o.raw(",\"c\":").int(self.c.0 as i64);
             o.raw(",\"ic\":").num(n(self.c.1));
             o.raw(",\"r\":{");
-            for (i, (k, v)) in self.regole.iter().enumerate() {
+            for (i, (k, v)) in self.rules.iter().enumerate() {
                 o.raw(if i > 0 { "," } else { "" })
                     .str(k)
                     .raw(":")
@@ -66,21 +66,21 @@ impl Misura {
     }
 }
 
-fn opzioni(r: &Registro, regole: bool, attese: &[Attesa]) -> Opzioni {
-    Opzioni {
+fn options(r: &Registry, rules: bool, expected: &[Expectation]) -> Options {
+    Options {
         formula: Some(r.ione.clone()),
-        regole: regole.then(ParamRegole::default),
-        attese: attese.to_vec(),
-        ..Opzioni::default()
+        regole: rules.then(RuleParams::default),
+        attese: expected.to_vec(),
+        ..Options::default()
     }
 }
 
-fn grafo(r: &Registro, picchi: &[(f64, f64)], o: &Opzioni) -> Grafo {
-    grafo_da_picchi((r.prec, r.pol), (r.att, r.ce), picchi, o)
+fn graph(r: &Registry, peaks: &[(f64, f64)], o: &Options) -> Graph {
+    graph_from_peaks((r.prec, r.pol), (r.att, r.ce), peaks, o)
 }
 
 /// The fragment peaks of the spectrum of the graph with their node (the peak of the precursor itself is not a fragment): (% of base peak, node).
-fn frammenti(g: &Grafo) -> Vec<(f64, Option<usize>)> {
+fn frammenti(g: &Graph) -> Vec<(f64, Option<usize>)> {
     let Some(s) = g.spettri.first() else {
         return vec![];
     };
@@ -92,35 +92,35 @@ fn frammenti(g: &Grafo) -> Vec<(f64, Option<usize>)> {
 }
 
 /// Peaks that a rule explains (an arc with a rule, a composite loss or an ion rule on the node): count, intensity, and the rules.
-fn con_regola(g: &Grafo, v: &Valutazione, regole: &mut BTreeMap<String, usize>) -> (usize, f64) {
+fn with_rule(g: &Graph, v: &Evaluation, rules: &mut BTreeMap<String, usize>) -> (usize, f64) {
     let Some(prec) = g.spettri.first().and_then(|s| s.precursore) else {
         return (0, 0.0);
     };
     let (mut n, mut it) = (0, 0.0);
-    for (rel, nodo) in frammenti(g) {
-        let Some(nodo) = nodo else { continue };
-        let ids = ids_del_picco(g, v, prec, nodo);
+    for (rel, node) in frammenti(g) {
+        let Some(found_node) = node else { continue };
+        let ids = peak_ids(g, v, prec, found_node);
         if !ids.is_empty() {
             n += 1;
             it += rel;
         }
         for id in ids {
-            *regole.entry(id).or_default() += 1;
+            *rules.entry(id).or_default() += 1;
         }
     }
     (n, it)
 }
 
-fn ids_del_picco(g: &Grafo, v: &Valutazione, prec: usize, nodo: usize) -> Vec<String> {
+fn peak_ids(g: &Graph, v: &Evaluation, prec: usize, node: usize) -> Vec<String> {
     let mut ids: Vec<String> = vec![];
-    if let Some(i) = g.archi.iter().position(|x| x.da == prec && x.a == nodo) {
-        ids.extend(v.archi[i].regole.iter().map(|r| r.id.to_string()));
-        ids.extend(v.archi[i].composta.iter().map(|(x, y)| format!("{x}+{y}")));
+    if let Some(i) = g.archi.iter().position(|x| x.da == prec && x.a == node) {
+        ids.extend(v.edges[i].rules.iter().map(|r| r.id.to_string()));
+        ids.extend(v.edges[i].composta.iter().map(|(x, y)| format!("{x}+{y}")));
     }
     ids.extend(
-        v.ioni
+        v.ions
             .iter()
-            .filter(|x| x.nodo == nodo)
+            .filter(|x| x.nodo == node)
             .map(|x| x.regola.to_string()),
     );
     ids.sort();
@@ -129,49 +129,54 @@ fn ids_del_picco(g: &Grafo, v: &Valutazione, prec: usize, nodo: usize) -> Vec<St
 }
 
 /// The three counts of the record on `picchi`, with the expectations of a structure (`attese`; the rules are evaluated only with `regole`).
-pub fn misura(r: &Registro, picchi: &[(f64, f64)], attese: &[Attesa], regole: bool) -> Misura {
-    let ga = grafo(r, picchi, &opzioni(r, false, &[]));
+pub fn measure(
+    r: &Registry,
+    peaks: &[(f64, f64)],
+    expected: &[Expectation],
+    rules: bool,
+) -> Measure {
+    let ga = graph(r, peaks, &options(r, false, &[]));
     let fr = frammenti(&ga);
-    let mut m = Misura {
+    let mut m = Measure {
         n: fr.len(),
-        totale: fr.iter().map(|p| p.0).sum(),
+        total: fr.iter().map(|p| p.0).sum(),
         a: (
             fr.iter().filter(|p| p.1.is_some()).count(),
             fr.iter().filter(|p| p.1.is_some()).map(|p| p.0).sum(),
         ),
-        ..Misura::default()
+        ..Measure::default()
     };
-    if regole {
-        let (ob, oc) = (opzioni(r, true, &[]), opzioni(r, true, attese));
-        let (gb, gc) = (grafo(r, picchi, &ob), grafo(r, picchi, &oc));
-        let p = ParamRegole::default();
-        m.b = con_regola(&gb, &valuta_regole(&gb, &ob, &p), &mut BTreeMap::new());
-        m.c = con_regola(&gc, &valuta_regole(&gc, &oc, &p), &mut m.regole);
+    if rules {
+        let (ob, oc) = (options(r, true, &[]), options(r, true, expected));
+        let (gb, gc) = (graph(r, peaks, &ob), graph(r, peaks, &oc));
+        let p = RuleParams::default();
+        m.b = with_rule(&gb, &valuta_regole(&gb, &ob, &p), &mut BTreeMap::new());
+        m.c = with_rule(&gc, &valuta_regole(&gc, &oc, &p), &mut m.rules);
     }
     m
 }
 
 /// The expectations of the structure of the record (`None` when the SMILES cannot be read).
-pub fn attese_del_registro(r: &Registro) -> Option<Vec<Attesa>> {
+pub fn registry_expectations(r: &Registry) -> Option<Vec<Expectation>> {
     let m = Mol::parse(&r.smiles).ok()?;
     Some(attese_mol(&m, tabella_regole()))
 }
 
 /// FNV-1a of the id: a seed per record that does not depend on the order of the batch.
-pub fn seme_di(seme: u64, id: &str) -> u64 {
-    id.bytes().fold(seme ^ 0xcbf2_9ce4_8422_2325, |h, b| {
+pub fn seed_of(seed: u64, id: &str) -> u64 {
+    id.bytes().fold(seed ^ 0xcbf2_9ce4_8422_2325, |h, b| {
         (h ^ b as u64).wrapping_mul(0x0100_0000_01b3)
     })
 }
 
 /// The peaks with the losses moved by `SPOSTA_PERDITE` (every peak below the precursor; the precursor stays).
-pub fn picchi_spostati(r: &Registro) -> Vec<(f64, f64)> {
-    r.picchi
+pub fn shifted_peaks(r: &Registry) -> Vec<(f64, f64)> {
+    r.peaks
         .iter()
         .map(|&(m, i)| {
             (
                 if m < r.prec - 0.5 {
-                    m - SPOSTA_PERDITE
+                    m - SHIFT_LOSSES
                 } else {
                     m
                 },
@@ -183,19 +188,24 @@ pub fn picchi_spostati(r: &Registro) -> Vec<(f64, f64)> {
 
 /// The decoys of a record: (rewired structure, spectrum of another record, losses shifted). The structure decoy is evaluated only for (c).
 pub struct Decoy {
-    pub struttura: Option<Misura>,
-    pub spettro: Option<Misura>,
-    pub perdite: Misura,
+    pub structure: Option<Measure>,
+    pub spectrum: Option<Measure>,
+    pub losses: Measure,
 }
 
-pub fn decoy(r: &Registro, seme: u64, altro: Option<&[(f64, f64)]>, attese: &[Attesa]) -> Decoy {
-    let struttura = Mol::parse(&r.smiles).ok().map(|m| {
-        let d = attese_mol(&m.rimescola(seme_di(seme, &r.id)), tabella_regole());
-        misura(r, &r.picchi, &d, true)
+pub fn decoy(
+    r: &Registry,
+    seed: u64,
+    other: Option<&[(f64, f64)]>,
+    expected: &[Expectation],
+) -> Decoy {
+    let structure = Mol::parse(&r.smiles).ok().map(|m| {
+        let d = attese_mol(&m.rimescola(seed_of(seed, &r.id)), tabella_regole());
+        measure(r, &r.peaks, &d, true)
     });
     Decoy {
-        struttura,
-        spettro: altro.map(|p| misura(r, p, attese, true)),
-        perdite: misura(r, &picchi_spostati(r), attese, true),
+        structure,
+        spectrum: other.map(|p| measure(r, p, expected, true)),
+        losses: measure(r, &shifted_peaks(r), expected, true),
     }
 }

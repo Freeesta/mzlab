@@ -1,7 +1,7 @@
 //! The rows of the network from the interpretation of the rows (`interp/1`) and the table: the formula of the best hypothesis of each row and the
 //! fragments of its MS2 that equal or are shifted from the parent's.
 
-use super::ReteRow;
+use super::NetworkRow;
 use crate::interp::RowInterp;
 use crate::legacy::series::Parent;
 use crate::table::Aligned;
@@ -16,7 +16,7 @@ pub fn rows_from_interp(
     parent: &Parent,
     interp: &[RowInterp],
     tmax: &[Option<f64>],
-) -> (ReteRow, Vec<ReteRow>) {
+) -> (NetworkRow, Vec<NetworkRow>) {
     let at = |row: usize| {
         (
             table.mz[row],
@@ -26,7 +26,7 @@ pub fn rows_from_interp(
     };
     let p = tp.parent_row as usize;
     let (mz, rt, t) = at(p);
-    let parent_row = ReteRow {
+    let parent_row = NetworkRow {
         row: p,
         id: p as u32 + 1,
         mz,
@@ -34,7 +34,7 @@ pub fn rows_from_interp(
         tmax: t.or(Some(0.0)),
         neutral_formula: fmt(&parent.neutral),
         ion_formula: fmt(&parent.ion),
-        ..ReteRow::default()
+        ..NetworkRow::default()
     };
     let rows = interp
         .iter()
@@ -42,7 +42,7 @@ pub fn rows_from_interp(
             let c = r.change.first()?;
             let (mz, rt, tmax) = at(r.row);
             let v = r.vs_parent.as_ref();
-            Some(ReteRow {
+            Some(NetworkRow {
                 row: r.row,
                 id: r.id,
                 mz,

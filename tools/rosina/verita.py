@@ -14,11 +14,11 @@ import xml.etree.ElementTree as ET
 import zlib
 from pathlib import Path
 
-PUNTI_SCANSIONE = 8
-PUNTI_CROMATOGRAMMA = 16
+SCAN_POINTS = 8
+CHROMATOGRAM_POINTS = 16
 
 # cvParam accessions that matter here (PSI-MS)
-MS_LIVELLO, MS_PROFILO, MS_CENTROIDI = "MS:1000511", "MS:1000128", "MS:1000127"
+MS_LEVEL, MS_PROFILE, MS_CENTROIDS = "MS:1000511", "MS:1000128", "MS:1000127"
 MS_POS, MS_NEG = "MS:1000130", "MS:1000129"
 MS_RT, MS_TIC, MS_BPMZ, MS_BPI = "MS:1000016", "MS:1000285", "MS:1000504", "MS:1000505"
 MS_ISO_TARGET, MS_ISO_LOW, MS_ISO_HIGH = "MS:1000827", "MS:1000828", "MS:1000829"
@@ -40,7 +40,7 @@ SECONDO = "UO:0000010"
 
 
 # fields of the mzML header whose place in metodo/1 is known (metodo_mzml.rs); the others are declared "not mapped" by the bench, never silently skipped
-METODO_MZML = {
+METHOD_MZML = {
     "mzml:run@startTimeStamp": "origine.file_creato",
     "mzml:instrument:instrument serial number": "strumento.serie",
 }
@@ -71,11 +71,11 @@ def _float(v, default=None):
         return default
 
 
-def _minuti(valore: str, unita: str):
-    x = _float(valore)
+def _minutes(value: str, unit: str):
+    x = _float(value)
     if x is None:
         return None
-    return x / 60.0 if unita == SECONDO else x
+    return x / 60.0 if unit == SECONDO else x
 
 
 def _array(b: ET.Element):
@@ -96,7 +96,7 @@ def _array(b: ET.Element):
     return kind, list(struct.unpack("<" + fmt * n, raw[: n * w]))
 
 
-def _spettro(sp: ET.Element) -> dict:
+def _spectrum(sp: ET.Element) -> dict:
     cv = _cv(sp)
     kind_vals = {}
     for b in _iter(sp, "binaryDataArray"):
@@ -109,8 +109,8 @@ def _spettro(sp: ET.Element) -> dict:
     if scan is not None:
         c = _cv(scan).get(MS_RT)
         if c:
-            rt = _minuti(c[0], c[1])
-    liv = int(_float(cv.get(MS_LIVELLO, ("1",))[0], 1))
+            rt = _minutes(c[0], c[1])
+    liv = int(_float(cv.get(MS_LEVEL, ("1",))[0], 1))
     pol = 1 if MS_POS in cv else -1 if MS_NEG in cv else 0
     d = {
         "id": sp.get("id", ""),
@@ -121,7 +121,7 @@ def _spettro(sp: ET.Element) -> dict:
         "isolamento": None,
         "ce": None,
         "attivazione": None,
-        "profilo": MS_PROFILO in cv,
+        "profilo": MS_PROFILE in cv,
         "n_punti": len(mz),
         "tic": _float(cv.get(MS_TIC, ("",))[0], sum(inten)),
         "bpi_mz": _float(cv.get(MS_BPMZ, ("",))[0]),
@@ -145,7 +145,7 @@ def _spettro(sp: ET.Element) -> dict:
     return d, mz, inten
 
 
-def _tipo_cromatogramma(cv: dict, cid: str) -> str:
+def _type_chromatogram(cv: dict, cid: str) -> str:
     if MS_TIC_CHROM in cv:
         return "tic"
     if MS_BPC_CHROM in cv:
@@ -161,25 +161,25 @@ def _tipo_cromatogramma(cv: dict, cid: str) -> str:
     return "altro"
 
 
-def _cromatogramma(ch: ET.Element) -> dict:
+def _chromatogram(ch: ET.Element) -> dict:
     cv = _cv(ch)
     arr = {}
-    unita_t = ""
+    unit_t = ""
     for b in _iter(ch, "binaryDataArray"):
         k, v = _array(b)
         if k:
             arr[k] = v
             if k == MS_TIME_ARR:
-                unita_t = _cv(b).get(MS_TIME_ARR, ("", "", ""))[1]
+                unit_t = _cv(b).get(MS_TIME_ARR, ("", "", ""))[1]
     t, y = arr.get(MS_TIME_ARR, []), arr.get(MS_INT_ARR, [])
-    if unita_t == SECONDO:
+    if unit_t == SECONDO:
         t = [x / 60.0 for x in t]
     n = len(y)
-    idx = sorted({round(i * (n - 1) / (PUNTI_CROMATOGRAMMA - 1)) for i in range(PUNTI_CROMATOGRAMMA)}) if n > 1 else list(range(n))
+    idx = sorted({round(i * (n - 1) / (CHROMATOGRAM_POINTS - 1)) for i in range(CHROMATOGRAM_POINTS)}) if n > 1 else list(range(n))
     cid = ch.get("id", "")
     return {
         "id": cid,
-        "tipo": _tipo_cromatogramma(cv, cid),
+        "tipo": _type_chromatogram(cv, cid),
         "n": n,
         "somma": sum(y),
         "massimo": max(y) if y else 0.0,
@@ -187,33 +187,33 @@ def _cromatogramma(ch: ET.Element) -> dict:
     }
 
 
-def _scelta_punti(scansioni: list) -> list:
+def _choice_points(scans: list) -> list:
     """First, last, median, maximum TIC and one per level, at most 8 distinct indices."""
-    n = len(scansioni)
+    n = len(scans)
     if n == 0:
         return []
-    scelte = [0, n - 1, n // 2, max(range(n), key=lambda i: scansioni[i]["tic"])]
-    visti = set()
-    for i, s in enumerate(scansioni):
-        if s["livello"] not in visti:
-            visti.add(s["livello"])
-            scelte.append(i)
+    choices = [0, n - 1, n // 2, max(range(n), key=lambda i: scans[i]["tic"])]
+    seen = set()
+    for i, s in enumerate(scans):
+        if s["livello"] not in seen:
+            seen.add(s["livello"])
+            choices.append(i)
     out = []
-    for i in scelte:
+    for i in choices:
         if i not in out:
             out.append(i)
-    return out[:PUNTI_SCANSIONE]
+    return out[:SCAN_POINTS]
 
 
-def _metadati(root: ET.Element) -> dict:
+def _metadata(root: ET.Element) -> dict:
     """The header of the mzML as the oracle wrote it: name -> value. Keys follow tools/rosina/mappa_metadati.tsv (`mzml:` prefix)."""
     out = {}
 
-    def put(nome, valore, produttore=None):
-        if valore not in (None, ""):
-            out[nome] = {"valore": valore, **({"produttore": produttore} if produttore else {})}
-            if nome in METODO_MZML:
-                out[nome]["metodo"] = METODO_MZML[nome]
+    def put(nome, value, vendor=None):
+        if value not in (None, ""):
+            out[nome] = {"valore": value, **({"produttore": vendor} if vendor else {})}
+            if nome in METHOD_MZML:
+                out[nome]["metodo"] = METHOD_MZML[nome]
 
     for sw in _iter(root, "software"):
         put(f"mzml:software:{sw.get('id')}", sw.get("version"))
@@ -238,37 +238,37 @@ def _metadati(root: ET.Element) -> dict:
     return out
 
 
-def da_mzml(path: Path, oracolo: tuple, nativo: Path | None, campione: int | None) -> dict:
-    scansioni, cromatogrammi = [], []
-    tutte = []
+def da_mzml(path: Path, oracle: tuple, nativo: Path | None, sample: int | None) -> dict:
+    scans, chromatograms = [], []
+    all_items = []
     root = ET.parse(path).getroot()
     if _loc(root.tag) == "indexedmzML":
         root = root.find("{*}mzML")
     for sp in _iter(root, "spectrum"):
-        d, mz, inten = _spettro(sp)
-        scansioni.append(d)
-        tutte.append((mz, inten))
+        d, mz, inten = _spectrum(sp)
+        scans.append(d)
+        all_items.append((mz, inten))
     pt = {}
-    for i in _scelta_punti(scansioni):
-        pt[str(i)] = {"mz": tutte[i][0], "intensita": tutte[i][1]}
+    for i in _choice_points(scans):
+        pt[str(i)] = {"mz": all_items[i][0], "intensita": all_items[i][1]}
     for ch in _iter(root, "chromatogram"):
-        cromatogrammi.append(_cromatogramma(ch))
-    conteggi_s, conteggi_c = {}, {}
-    for s in scansioni:
-        conteggi_s[f"ms{s['livello']}"] = conteggi_s.get(f"ms{s['livello']}", 0) + 1
-    for c in cromatogrammi:
-        conteggi_c[c["tipo"]] = conteggi_c.get(c["tipo"], 0) + 1
+        chromatograms.append(_chromatogram(ch))
+    counts_s, counts_c = {}, {}
+    for s in scans:
+        counts_s[f"ms{s['livello']}"] = counts_s.get(f"ms{s['livello']}", 0) + 1
+    for c in chromatograms:
+        counts_c[c["tipo"]] = counts_c.get(c["tipo"], 0) + 1
     sha = None
     if nativo and nativo.is_file():
         h = hashlib.sha256()
         with nativo.open("rb") as f:
-            for blocco in iter(lambda: f.read(1 << 20), b""):
-                h.update(blocco)
+            for block in iter(lambda: f.read(1 << 20), b""):
+                h.update(block)
         sha = h.hexdigest()
-    nome, ver, opz = oracolo
+    nome, ver, opz = oracle
     return {
         "schema": "verita/1",
-        "file": {"nome": (nativo or path).name, "sha256": sha, "campione": campione},
+        "file": {"nome": (nativo or path).name, "sha256": sha, "campione": sample},
         "oracolo": {
             "nome": nome,
             "versione": ver,
@@ -276,70 +276,70 @@ def da_mzml(path: Path, oracolo: tuple, nativo: Path | None, campione: int | Non
             "data": datetime.date.today().isoformat(),
             "piattaforma": f"{platform.system()} {platform.machine()}",
         },
-        "conteggi": {"spettri": conteggi_s, "cromatogrammi": conteggi_c},
-        "scansioni": scansioni,
+        "conteggi": {"spettri": counts_s, "cromatogrammi": counts_c},
+        "scansioni": scans,
         "punti": pt,
-        "cromatogrammi": cromatogrammi,
-        "metadati": _metadati(root),
+        "cromatogrammi": chromatograms,
+        "metadati": _metadata(root),
     }
 
 
-def valida(doc, schema=None, qui="verita") -> list:
+def validate(doc, schema=None, here="verita") -> list:
     """Problems of `doc` against `verita-1.json` (the subset of JSON Schema that file uses: type, enum, const, required, properties, additionalProperties, items, oneOf,
     minimum, minItems, maxItems, pattern). An empty list: valid."""
     import re
 
     if schema is None:
         schema = json.loads((Path(__file__).with_name("verita-1.json")).read_text(encoding="utf-8"))
-    tipi = {"object": dict, "array": list, "string": str, "boolean": bool, "null": type(None)}
-    errori = []
+    types = {"object": dict, "array": list, "string": str, "boolean": bool, "null": type(None)}
+    errors = []
     if "oneOf" in schema:
-        if sum(1 for alt in schema["oneOf"] if not valida(doc, alt, qui)) != 1:
-            errori.append(f"{qui}: matches none or several alternatives")
-        return errori
+        if sum(1 for alt in schema["oneOf"] if not validate(doc, alt, here)) != 1:
+            errors.append(f"{here}: matches none or several alternatives")
+        return errors
     if "const" in schema and doc != schema["const"]:
-        errori.append(f"{qui}: must be {schema['const']!r}")
+        errors.append(f"{here}: must be {schema['const']!r}")
     if "enum" in schema and doc not in schema["enum"]:
-        errori.append(f"{qui}: {doc!r} not in {schema['enum']}")
+        errors.append(f"{here}: {doc!r} not in {schema['enum']}")
     t = schema.get("type")
     if t is not None:
-        ammessi = t if isinstance(t, list) else [t]
+        allowed = t if isinstance(t, list) else [t]
 
         def ok(nome):
             if nome == "integer":
                 return isinstance(doc, int) and not isinstance(doc, bool)
             if nome == "number":
                 return isinstance(doc, (int, float)) and not isinstance(doc, bool)
-            return isinstance(doc, tipi[nome]) and not (nome != "boolean" and isinstance(doc, bool))
+            return isinstance(doc, types[nome]) and not (nome != "boolean" and isinstance(doc, bool))
 
-        if not any(ok(n) for n in ammessi):
-            errori.append(f"{qui}: type {type(doc).__name__} is not {ammessi}")
-            return errori
+        if not any(ok(n) for n in allowed):
+            errors.append(f"{here}: type {type(doc).__name__} is not {allowed}")
+            return errors
     if isinstance(doc, (int, float)) and not isinstance(doc, bool) and "minimum" in schema and doc < schema["minimum"]:
-        errori.append(f"{qui}: below {schema['minimum']}")
+        errors.append(f"{here}: below {schema['minimum']}")
     if isinstance(doc, str) and "pattern" in schema and not re.search(schema["pattern"], doc):
-        errori.append(f"{qui}: does not match {schema['pattern']}")
+        errors.append(f"{here}: does not match {schema['pattern']}")
     if isinstance(doc, dict):
         for k in schema.get("required", []):
             if k not in doc:
-                errori.append(f"{qui}: missing {k}")
+                errors.append(f"{here}: missing {k}")
         extra = schema.get("additionalProperties")
         for k, v in doc.items():
             if k in schema.get("properties", {}):
-                errori += valida(v, schema["properties"][k], f"{qui}.{k}")
+                errors += validate(v, schema["properties"][k], f"{here}.{k}")
             elif extra is False:
-                errori.append(f"{qui}: unexpected {k}")
+                errors.append(f"{here}: unexpected {k}")
             elif isinstance(extra, dict):
-                errori += valida(v, extra, f"{qui}.{k}")
+                errors += validate(v, extra, f"{here}.{k}")
     if isinstance(doc, list):
         if "minItems" in schema and len(doc) < schema["minItems"]:
-            errori.append(f"{qui}: fewer than {schema['minItems']} items")
+            errors.append(f"{here}: fewer than {schema['minItems']} items")
         if "maxItems" in schema and len(doc) > schema["maxItems"]:
-            errori.append(f"{qui}: more than {schema['maxItems']} items")
+            errors.append(f"{here}: more than {schema['maxItems']} items")
         if "items" in schema:
             for i, v in enumerate(doc):
-                errori += valida(v, schema["items"], f"{qui}[{i}]")
-    return errori
+                errors += validate(v, schema["items"], f"{here}[{i}]")
+    return errors
 
 
 def main(argv=None) -> int:
@@ -350,7 +350,7 @@ def main(argv=None) -> int:
     ap.add_argument("--campione", type=int)
     a = ap.parse_args(argv)
     d = da_mzml(a.mzml, tuple(a.oracolo), a.nativo, a.campione)
-    for problema in valida(d):
+    for problema in validate(d):
         print(problema, file=sys.stderr)
     json.dump(d, sys.stdout, indent=1, ensure_ascii=False)
     sys.stdout.write("\n")

@@ -27,11 +27,11 @@ def _out(cmd: list[str], env=None) -> str:
     return "\n".join(l for l in (r.stdout + r.stderr).splitlines() if not l.startswith("Picked up")).strip() or "unavailable"
 
 
-def raccogli(mzmine: str | None = None, java_home: str | None = None) -> dict:
+def collect(mzmine: str | None = None, java_home: str | None = None) -> dict:
     v = {"python": platform.python_version(), "sistema": platform.platform()}
-    for nome, pacchetto in (("pyopenms", "pyopenms"), ("asari", "asari-metabolomics"), ("numpy", "numpy")):
+    for nome, package in (("pyopenms", "pyopenms"), ("asari", "asari-metabolomics"), ("numpy", "numpy")):
         try:
-            v[nome] = metadata.version(pacchetto)
+            v[nome] = metadata.version(package)
         except metadata.PackageNotFoundError:
             v[nome] = "unavailable"
     if shutil.which("Rscript"):
@@ -61,7 +61,7 @@ def main() -> None:
     ap.add_argument("--mzmine")
     ap.add_argument("--java-home")
     a = ap.parse_args()
-    Path(a.out).write_text(json.dumps(raccogli(a.mzmine, a.java_home), indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    Path(a.out).write_text(json.dumps(collect(a.mzmine, a.java_home), indent=1, sort_keys=True) + "\n", encoding="utf-8")
     print(a.out)
 
 

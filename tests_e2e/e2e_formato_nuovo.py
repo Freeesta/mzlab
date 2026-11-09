@@ -23,18 +23,18 @@ try:
         pg.set_input_files("#pick", [str(F)])
         pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         def again():
-            pg.goto(pg.url); attendi(pg, "document.querySelector('#pick')")
-            pg.set_input_files("#pick", [str(F)]); attendi(pg, "(UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)) || /formato 3/.test(document.body.innerText)", timeout=60000)
+            pg.goto(pg.url); wait_for_js(pg, "document.querySelector('#pick')")
+            pg.set_input_files("#pick", [str(F)]); wait_for_js(pg, "(UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)) || /formato 3/.test(document.body.innerText)", timeout=60000)
         def newer():
             before = pg.evaluate(HASH); pg.evaluate(VERSION, 3); patched = pg.evaluate(HASH); assert patched != before
             again()
-            attendi(pg, "/formato 3/.test(document.body.innerText)", timeout=60000)
+            wait_for_js(pg, "/formato 3/.test(document.body.innerText)", timeout=60000)
             assert pg.evaluate(HASH) == patched, "the index of the newer program was not touched"
             assert pg.evaluate("window.MZLAB_LR_MISS || []") == [], "no route unavailable"
         step("a newer index: warning, index untouched", newer)
         def known():
             pg.evaluate(VERSION, 1); again()
-            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)", timeout=60000)
+            wait_for_js(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)", timeout=60000)
             assert "formato 3" not in pg.evaluate("document.body.innerText"), "no warning for a known version"
         step("a known version: no warning", known)
     r.close()

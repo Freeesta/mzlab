@@ -11,13 +11,15 @@ use std::sync::Arc;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzidx::build_mzml_late;
-use mzlab_core::upload::{impronte, indicizza_lettore_con, prepare_con, probe};
+use mzlab_core::upload::{
+    index_reader_with, prepare_with, probe, with_parallel_prints, without_sha1,
+};
 
 use crate::{flow_set, io};
 
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::pace::Pace;
@@ -163,7 +165,7 @@ fn prepare_unknown(
     #[cfg(target_arch = "wasm32")]
     {
         let _ = path;
-        Ok((prepare_con(file, size, name, None)?.table, None))
+        Ok((prepare_with(file, size, name, None)?.table, None))
     }
 }
 
@@ -174,6 +176,14 @@ fn is_numpress_mzml(path: &Path) -> bool {
         .ok()
         .and_then(|mut fs| mzlab_lettori::riconosci(&mut fs).map(|v| v.id == "mzml-numpress"))
         .unwrap_or(false)
+}
+
+/// True when the index of `path` comes from its mzML text (scan rows by offset), not from a reader (scan rows by number).
+pub(crate) fn reads_as_mzml(path: &Path) -> bool {
+    let name = path
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().to_lowercase());
+    !path.is_dir() && name.ends_with(".mzml") && !is_numpress_mzml(path)
 }
 
 /// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
@@ -199,13 +209,13 @@ pub(crate) fn build_index_with(
         Error::new("err.flow.io").with("detail", format!("{}: {e}", path.display()))
     })?;
     let mut out = File::create(idx).map_err(io)?;
-    if !path.is_dir() && name.to_lowercase().ends_with(".mzml") && !is_numpress_mzml(path) {
+    if reads_as_mzml(path) {
         let size = std::fs::metadata(path).map_err(io)?.len();
         let mut file = File::open(path).map_err(io)?;
         let (table, mut late) = match flow_set::known_sha(path) {
             Some(sha) => {
                 let known = Some((sha, probe(&mut file, size)?));
-                (prepare_con(&mut file, size, &name, known)?.table, None)
+                (prepare_with(&mut file, size, &name, known)?.table, None)
             }
             None => prepare_unknown(path, &mut file, size, &name)?,
         };
@@ -247,7 +257,8 @@ pub(crate) fn build_index_with(
 }
 
 /// The index of a file read through the registry (maker's files, Numpress, gzip). The peaks that do not fit in `budget` wait in a scratch file, so the
-/// scans are decoded once and not once per round (a Numpress file decodes slowly: rounds made it quadratic).
+/// scans are decoded once and not once per round (a Numpress file decodes slowly: rounds made it quadratic). The fingerprints are taken by a second
+/// thread while the scans are decoded, as the desktop does (`idxbuild_nat.rs`); it stops at its next read once the job is cancelled or the build fails.
 fn index_reader(
     path: &Path,
     label: &str,
@@ -261,9 +272,9 @@ fn index_reader(
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let mut fs = flow_set::file_set(path)?;
-    let imp = impronte(&mut fs)?;
-    let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-    let ids: Vec<u32> = l.campioni().iter().map(|s| s.id).collect();
+    without_sha1(&mut fs);
+    let l = mzlab_lettori::apri(fs, &Limits::desktop())?;
+    let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     let sample = flow_set::sample_index(label, &ids)?;
     let mut l = Scans::new(l, sample, pace).stopping(stop);
     let scratch_path = idx.with_extension("mzidx.scratch");
@@ -274,24 +285,95 @@ fn index_reader(
         .truncate(true)
         .open(&scratch_path)
         .map_err(io)?;
-    let built = indicizza_lettore_con(
-        &mut l,
-        sample,
-        &mut || Ok(imp.clone()),
-        &name,
-        out,
-        budget,
-        Some(&mut scratch),
-        &mut |_| {},
-    );
+    let halt = Arc::new(AtomicBool::new(false));
+    let hashing = Halting {
+        stop: stop.clone(),
+        halt: halt.clone(),
+    };
+    // the members hashed before the index (`flow_set::digest`) are not read again: only their probes
+    let built = match flow_set::known_prints(path)? {
+        Some(prints) => {
+            let mut prints = Some(prints);
+            index_reader_with(
+                &mut l,
+                sample,
+                &mut || prints.take().ok_or_else(|| Error::new("err.file.unknown")),
+                &name,
+                out,
+                budget,
+                Some(&mut scratch),
+                &mut |_| {},
+            )
+        }
+        None => with_parallel_prints(
+            move || hashing.file_set(path),
+            |imp| {
+                let r = index_reader_with(
+                    &mut l,
+                    sample,
+                    imp,
+                    &name,
+                    out,
+                    budget,
+                    Some(&mut scratch),
+                    &mut |_| {},
+                );
+                if r.is_err() {
+                    halt.store(true, Ordering::Relaxed);
+                }
+                r
+            },
+        ),
+    };
     drop(scratch);
     let _ = std::fs::remove_file(&scratch_path);
     built.map(|_| ())
 }
 
+/// The members as the fingerprint thread reads them: each read fails with `err.flow.cancelled` once the job is cancelled (`stop`) or the build has
+/// failed (`halt`), so the job does not wait for the whole hash of a big file.
+struct Halting {
+    stop: Stop,
+    halt: Arc<AtomicBool>,
+}
+
+impl Halting {
+    fn file_set(self, path: &Path) -> Result<FileSet> {
+        let mut fs = flow_set::file_set(path)?;
+        fs.membri = fs
+            .membri
+            .into_iter()
+            .map(|m| Member {
+                dati: Box::new(HaltingAt {
+                    r: m.dati,
+                    stop: self.stop.clone(),
+                    halt: self.halt.clone(),
+                }),
+                ..m
+            })
+            .collect();
+        Ok(fs)
+    }
+}
+
+struct HaltingAt {
+    r: Box<dyn ReadAt>,
+    stop: Stop,
+    halt: Arc<AtomicBool>,
+}
+
+impl ReadAt for HaltingAt {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        if up(&self.stop) || self.halt.load(Ordering::Relaxed) {
+            return Err(cancelled());
+        }
+        self.r.read_at(off, buf)
+    }
+}
+
 /// A reader that tells `pace` how many scans of sample `c` it has decoded (as many as the sample has in pass 1; a later pass counts past the total and is clamped).
 pub(crate) struct Scans<'a, 'b> {
-    l: Box<dyn Lettore>,
+    l: Box<dyn Reader>,
     c: usize,
     n: usize,
     done: usize,
@@ -300,8 +382,8 @@ pub(crate) struct Scans<'a, 'b> {
 }
 
 impl<'a, 'b> Scans<'a, 'b> {
-    pub(crate) fn new(mut l: Box<dyn Lettore>, c: usize, pace: &'a mut Pace<'b>) -> Self {
-        let n = l.indice(c).map_or(0, |v| v.len());
+    pub(crate) fn new(mut l: Box<dyn Reader>, c: usize, pace: &'a mut Pace<'b>) -> Self {
+        let n = l.index(c).map_or(0, |v| v.len());
         pace.at(0, n);
         Scans {
             l,
@@ -335,26 +417,26 @@ impl<'a, 'b> Scans<'a, 'b> {
 }
 
 #[rustfmt::skip]
-impl Lettore for Scans<'_, '_> {
-    fn formato(&self) -> Formato { self.l.formato() }
-    fn campioni(&self) -> &[Campione] { self.l.campioni() }
-    fn indice(&mut self, c: usize) -> mzlab_core::Result<&[VoceScansione]> { self.l.indice(c) }
-    fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scansione(c, k); self.count(c); s }
-    fn scansione_dati(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scansione_dati(c, k); self.count(c); s }
-    fn scansione_profilo(&mut self, c: usize, k: usize) -> mzlab_core::Result<Option<Spectrum>> { self.l.scansione_profilo(c, k) }
-    fn intestazione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<Campo>> { self.l.intestazione(c, k) }
-    fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<VoceCromatogramma>> { self.l.cromatogrammi(c) }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> mzlab_core::Result<Chromatogram> { self.l.cromatogramma(c, id) }
+impl Reader for Scans<'_, '_> {
+    fn format(&self) -> Format { self.l.format() }
+    fn samples(&self) -> &[Sample] { self.l.samples() }
+    fn index(&mut self, c: usize) -> mzlab_core::Result<&[ScanEntry]> { self.l.index(c) }
+    fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scan(c, k); self.count(c); s }
+    fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scan_data(c, k); self.count(c); s }
+    fn scan_profile(&mut self, c: usize, k: usize) -> mzlab_core::Result<Option<Spectrum>> { self.l.scan_profile(c, k) }
+    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<Field>> { self.l.scan_header(c, k) }
+    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<ChromatogramEntry>> { self.l.chromatograms(c) }
+    fn chromatogram(&mut self, c: usize, id: &str) -> mzlab_core::Result<Chromatogram> { self.l.chromatogram(c, id) }
     fn dad_map(&mut self, c: usize) -> mzlab_core::Result<Option<String>> { self.l.dad_map(c) }
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_spectrum(c, rt0, rt1) }
     fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_wavelength(c, nm0, nm1) }
-    fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.metodo(c) }
-    fn testata_mzml(&mut self, c: usize) -> mzlab_core::Result<Option<Header>> { self.l.testata_mzml(c) }
+    fn method(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.method(c) }
+    fn mzml_header(&mut self, c: usize) -> mzlab_core::Result<Option<Header>> { self.l.mzml_header(c) }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra { self.l.extra_mzml(s) }
-    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra { self.l.extra_scansione(c, k, s) }
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] { self.l.non_portati() }
-    fn mancanti(&mut self, c: usize) -> usize { self.l.mancanti(c) }
-    fn variante(&mut self, c: usize) -> bool { self.l.variante(c) }
+    fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra { self.l.scan_extra(c, k, s) }
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] { self.l.not_carried() }
+    fn missing(&mut self, c: usize) -> usize { self.l.missing(c) }
+    fn variant(&mut self, c: usize) -> bool { self.l.variant(c) }
 }
 
 /// A `Read` that tells `pace` how many of the `size` bytes of the file it has handed out.

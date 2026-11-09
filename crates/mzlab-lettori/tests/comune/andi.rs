@@ -1,7 +1,7 @@
 //! A netCDF-3 encoder for the tests of the family `andi` (classic and 64-bit offset, record variables, every `nc_type`) and the ANDI-MS / ANDI-Chromatography files built with it.
 #![allow(dead_code)]
 
-use mzlab_core::lettori::{Lettore, Limiti};
+use mzlab_core::lettori::{Limits, Reader};
 
 #[derive(Clone)]
 pub enum At {
@@ -15,41 +15,41 @@ pub fn t(s: &str) -> At {
 
 #[derive(Clone)]
 pub struct Vb {
-    pub nome: String,
+    pub name: String,
     pub dims: Vec<usize>,
     /// nc_type: 1 byte, 2 char, 3 short, 4 int, 5 float, 6 double.
-    pub tipo: u32,
+    pub kind: u32,
     pub att: Vec<(String, At)>,
-    pub dati: Vec<f64>,
-    pub testo: Vec<u8>,
+    pub data: Vec<f64>,
+    pub text: Vec<u8>,
 }
 
 pub fn var(nome: &str, dims: &[usize], tipo: u32, dati: Vec<f64>) -> Vb {
     Vb {
-        nome: nome.into(),
+        name: nome.into(),
         dims: dims.to_vec(),
-        tipo,
+        kind: tipo,
         att: Vec::new(),
-        dati,
-        testo: Vec::new(),
+        data: dati,
+        text: Vec::new(),
     }
 }
 
-pub fn car(nome: &str, dims: &[usize], testo: &str, riga: usize) -> Vb {
-    let mut b = testo.as_bytes().to_vec();
-    b.resize(riga, 0);
+pub fn car(nome: &str, dims: &[usize], text: &str, row: usize) -> Vb {
+    let mut b = text.as_bytes().to_vec();
+    b.resize(row, 0);
     Vb {
-        nome: nome.into(),
+        name: nome.into(),
         dims: dims.to_vec(),
-        tipo: 2,
+        kind: 2,
         att: Vec::new(),
-        dati: Vec::new(),
-        testo: b,
+        data: Vec::new(),
+        text: b,
     }
 }
 
-pub fn larghezza(tipo: u32) -> usize {
-    [1, 1, 2, 4, 4, 8][tipo as usize - 1]
+pub fn width(kind: u32) -> usize {
+    [1, 1, 2, 4, 4, 8][kind as usize - 1]
 }
 
 fn pad(o: &mut Vec<u8>) {
@@ -58,14 +58,14 @@ fn pad(o: &mut Vec<u8>) {
     }
 }
 
-fn nome(o: &mut Vec<u8>, s: &str) {
+fn name(o: &mut Vec<u8>, s: &str) {
     o.extend((s.len() as u32).to_be_bytes());
     o.extend(s.as_bytes());
     pad(o);
 }
 
-fn elemento(o: &mut Vec<u8>, tipo: u32, x: f64) {
-    match tipo {
+fn element(o: &mut Vec<u8>, kind: u32, x: f64) {
+    match kind {
         1 => o.push(x as i8 as u8),
         2 => o.push(x as u8),
         3 => o.extend((x as i16).to_be_bytes()),
@@ -75,7 +75,7 @@ fn elemento(o: &mut Vec<u8>, tipo: u32, x: f64) {
     }
 }
 
-fn attributi(o: &mut Vec<u8>, a: &[(String, At)]) {
+fn attributes(o: &mut Vec<u8>, a: &[(String, At)]) {
     if a.is_empty() {
         o.extend([0u8; 8]);
         return;
@@ -83,7 +83,7 @@ fn attributi(o: &mut Vec<u8>, a: &[(String, At)]) {
     o.extend(0x0Cu32.to_be_bytes());
     o.extend((a.len() as u32).to_be_bytes());
     for (n, v) in a {
-        nome(o, n);
+        name(o, n);
         match v {
             At::T(s) => {
                 o.extend(2u32.to_be_bytes());
@@ -93,7 +93,7 @@ fn attributi(o: &mut Vec<u8>, a: &[(String, At)]) {
             At::N(ty, x) => {
                 o.extend(ty.to_be_bytes());
                 o.extend((x.len() as u32).to_be_bytes());
-                x.iter().for_each(|&y| elemento(o, *ty, y));
+                x.iter().for_each(|&y| element(o, *ty, y));
             }
         }
         pad(o);
@@ -101,23 +101,23 @@ fn attributi(o: &mut Vec<u8>, a: &[(String, At)]) {
 }
 
 /// The bytes of one variable's data for the elements `da..a`.
-fn dati_di(v: &Vb, da: usize, a: usize) -> Vec<u8> {
+fn data_of(v: &Vb, da: usize, a: usize) -> Vec<u8> {
     let mut o = Vec::new();
-    if v.tipo == 2 {
-        o.extend(&v.testo[da..a]);
+    if v.kind == 2 {
+        o.extend(&v.text[da..a]);
     } else {
-        v.dati[da..a]
+        v.data[da..a]
             .iter()
-            .for_each(|&x| elemento(&mut o, v.tipo, x));
+            .for_each(|&x| element(&mut o, v.kind, x));
     }
     o
 }
 
 /// The header of a file whose variables begin at `begins` and take `vsizes` bytes.
-fn testata_cdf(
+fn header_cdf(
     v2: bool,
     dims: &[(&str, u32)],
-    globali: &[(String, At)],
+    globals: &[(String, At)],
     vars: &[Vb],
     numrecs: u32,
     begins: &[u64],
@@ -128,20 +128,20 @@ fn testata_cdf(
     o.extend(0x0Au32.to_be_bytes());
     o.extend((dims.len() as u32).to_be_bytes());
     for (n, l) in dims {
-        nome(&mut o, n);
+        name(&mut o, n);
         o.extend(l.to_be_bytes());
     }
-    attributi(&mut o, globali);
+    attributes(&mut o, globals);
     o.extend(0x0Bu32.to_be_bytes());
     o.extend((vars.len() as u32).to_be_bytes());
     for (i, (v, &b)) in vars.iter().zip(begins).enumerate() {
-        nome(&mut o, &v.nome);
+        name(&mut o, &v.name);
         o.extend((v.dims.len() as u32).to_be_bytes());
         v.dims
             .iter()
             .for_each(|&d| o.extend((d as u32).to_be_bytes()));
-        attributi(&mut o, &v.att);
-        o.extend(v.tipo.to_be_bytes());
+        attributes(&mut o, &v.att);
+        o.extend(v.kind.to_be_bytes());
         o.extend((vsizes[i] as u32).to_be_bytes());
         if v2 {
             o.extend(b.to_be_bytes());
@@ -156,11 +156,11 @@ fn testata_cdf(
 pub fn cdf(
     v2: bool,
     dims: &[(&str, u32)],
-    globali: &[(String, At)],
+    globals: &[(String, At)],
     vars: &[Vb],
     numrecs: u32,
 ) -> Vec<u8> {
-    let elementi = |v: &Vb| -> usize {
+    let elements = |v: &Vb| -> usize {
         v.dims
             .iter()
             .map(|&d| {
@@ -174,20 +174,19 @@ pub fn cdf(
     };
     let record = |v: &Vb| v.dims.first().is_some_and(|&d| dims[d].1 == 0);
     let per_rec = |v: &Vb| -> usize { v.dims[1..].iter().map(|&d| dims[d].1 as usize).product() };
-    let ancora = |v: &Vb| larghezza(v.tipo) * if record(v) { per_rec(v) } else { elementi(v) };
+    let again = |v: &Vb| width(v.kind) * if record(v) { per_rec(v) } else { elements(v) };
     let un_record = vars.iter().filter(|v| record(v)).count() == 1;
     let vsize = |v: &Vb| {
         if record(v) && un_record {
-            ancora(v)
+            again(v)
         } else {
-            (ancora(v) + 3) & !3
+            (again(v) + 3) & !3
         }
     };
     let vsizes: Vec<usize> = vars.iter().map(vsize).collect();
-    let intestazione =
-        |begins: &[u64]| testata_cdf(v2, dims, globali, vars, numrecs, begins, &vsizes);
+    let header = |begins: &[u64]| header_cdf(v2, dims, globals, vars, numrecs, begins, &vsizes);
     let mut begins = vec![0u64; vars.len()];
-    let mut pos = intestazione(&begins).len() as u64;
+    let mut pos = header(&begins).len() as u64;
     for (i, v) in vars.iter().enumerate().filter(|(_, v)| !record(v)) {
         begins[i] = pos;
         pos += vsize(v) as u64;
@@ -197,15 +196,15 @@ pub fn cdf(
         begins[i] = r;
         r += vsize(v) as u64;
     }
-    let mut o = intestazione(&begins);
+    let mut o = header(&begins);
     for v in vars.iter().filter(|v| !record(v)) {
-        o.extend(dati_di(v, 0, elementi(v)));
+        o.extend(data_of(v, 0, elements(v)));
         pad(&mut o);
     }
     for k in 0..numrecs as usize {
         for v in vars.iter().filter(|v| record(v)) {
             let e = per_rec(v);
-            o.extend(dati_di(v, k * e, (k + 1) * e));
+            o.extend(data_of(v, k * e, (k + 1) * e));
             if !un_record {
                 pad(&mut o);
             }
@@ -216,32 +215,32 @@ pub fn cdf(
 
 /// The shape of a synthetic ANDI-MS run.
 #[derive(Clone)]
-pub struct Corsa {
+pub struct Run {
     pub v2: bool,
     /// nc_type of `mass_values` / `intensity_values`.
-    pub tipo_mz: u32,
-    pub tipo_it: u32,
-    pub scala_mz: Option<f64>,
+    pub kind_mz: u32,
+    pub kind_it: u32,
+    pub mz_scale: Option<f64>,
     /// `(scale_factor, add_offset)` stored on `scan_acquisition_time`; the file holds `(t - offset) / factor`.
-    pub scala_tempo: Option<(f64, f64)>,
+    pub time_scale: Option<(f64, f64)>,
     pub sim: bool,
-    pub profilo: bool,
-    pub polarita: &'static str,
+    pub profile: bool,
+    pub polarity: &'static str,
 }
 
-pub const PIATTA: Corsa = Corsa {
+pub const FLAT_RUN: Run = Run {
     v2: false,
-    tipo_mz: 5,
-    tipo_it: 5,
-    scala_mz: None,
-    scala_tempo: None,
+    kind_mz: 5,
+    kind_it: 5,
+    mz_scale: None,
+    time_scale: None,
     sim: false,
-    profilo: false,
-    polarita: "Positive Polarity",
+    profile: false,
+    polarity: "Positive Polarity",
 };
 
 /// The points of scan `k` (m/z, intensity).
-pub fn punti(k: usize) -> Vec<(f64, f64)> {
+pub fn points(k: usize) -> Vec<(f64, f64)> {
     (0..3 + k % 4)
         .map(|i| {
             (
@@ -252,9 +251,9 @@ pub fn punti(k: usize) -> Vec<(f64, f64)> {
         .collect()
 }
 
-pub const SCANSIONI: usize = 6;
+pub const SCANS: usize = 6;
 
-pub fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
+pub fn globals_ms(c: &Run) -> Vec<(String, At)> {
     vec![
         ("experiment_title".to_string(), t("run one")),
         (
@@ -264,14 +263,14 @@ pub fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
         ("operator_name".to_string(), t("Some Operator")),
         (
             "experiment_type".to_string(),
-            t(if c.profilo {
+            t(if c.profile {
                 "Continuum Mass Spectrum"
             } else {
                 "Centroided Mass Spectrum"
             }),
         ),
         ("test_ionization_mode".to_string(), t("Electron Impact")),
-        ("test_ionization_polarity".to_string(), t(c.polarita)),
+        ("test_ionization_polarity".to_string(), t(c.polarity)),
         (
             "test_scan_function".to_string(),
             t(if c.sim {
@@ -283,64 +282,75 @@ pub fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
     ]
 }
 
-pub fn andi_ms(c: &Corsa) -> Vec<u8> {
-    let conti: Vec<usize> = (0..SCANSIONI).map(|k| punti(k).len()).collect();
-    let totale: usize = conti.iter().sum();
-    let mut inizi = vec![0usize];
-    for &n in &conti[..conti.len() - 1] {
-        inizi.push(inizi.last().unwrap() + n);
+pub fn andi_ms(c: &Run) -> Vec<u8> {
+    andi_ms_with(c, SCANS, points, true)
+}
+
+/// An ANDI-MS file of `scansioni` scans whose points are `punti(k)`; `tic`: whether it has `total_intensity`.
+pub fn andi_ms_with(
+    c: &Run,
+    scans: usize,
+    points: impl Fn(usize) -> Vec<(f64, f64)>,
+    tic: bool,
+) -> Vec<u8> {
+    let counts: Vec<usize> = (0..scans).map(|k| points(k).len()).collect();
+    let total: usize = counts.iter().sum();
+    let mut starts = vec![0usize];
+    for &n in &counts[..counts.len() - 1] {
+        starts.push(starts.last().unwrap() + n);
     }
-    let mz: Vec<f64> = (0..SCANSIONI)
-        .flat_map(|k| punti(k).into_iter().map(|p| p.0))
-        .map(|x| c.scala_mz.map_or(x, |f| x / f))
+    let mz: Vec<f64> = (0..scans)
+        .flat_map(|k| points(k).into_iter().map(|p| p.0))
+        .map(|x| c.mz_scale.map_or(x, |f| x / f))
         .collect();
-    let it: Vec<f64> = (0..SCANSIONI)
-        .flat_map(|k| punti(k).into_iter().map(|p| p.1))
+    let it: Vec<f64> = (0..scans)
+        .flat_map(|k| points(k).into_iter().map(|p| p.1))
         .collect();
     // dimensions: 0 point_number (unlimited), 1 scan_number, 2 instrument_number, 3 _32_byte_string, 4 range
     let dims = [
         ("point_number", 0u32),
-        ("scan_number", SCANSIONI as u32),
+        ("scan_number", scans as u32),
         ("instrument_number", 1),
         ("_32_byte_string", 32),
         ("range", 2),
     ];
     let per_scan = |n: &str, ty: u32, x: Vec<f64>| var(n, &[1], ty, x);
-    let mut vm = var("mass_values", &[0], c.tipo_mz, mz);
+    let mut vm = var("mass_values", &[0], c.kind_mz, mz);
     vm.att.push(("units".into(), t("M/Z")));
-    if let Some(f) = c.scala_mz {
+    if let Some(f) = c.mz_scale {
         vm.att.push(("scale_factor".into(), At::N(6, vec![f])));
     }
-    let mut vi = var("intensity_values", &[0], c.tipo_it, it.clone());
+    let mut vi = var("intensity_values", &[0], c.kind_it, it.clone());
     vi.att
         .push(("units".into(), t("Arbitrary Intensity Units")));
-    let mut tempo = per_scan(
+    let mut moment = per_scan(
         "scan_acquisition_time",
         6,
-        (0..SCANSIONI)
+        (0..scans)
             .map(|k| {
                 let t = 60.0 + 1.5 * k as f64;
-                c.scala_tempo.map_or(t, |(f, o)| (t - o) / f)
+                c.time_scale.map_or(t, |(f, o)| (t - o) / f)
             })
             .collect(),
     );
-    if let Some((f, o)) = c.scala_tempo {
-        tempo.att.push(("scale_factor".into(), At::N(6, vec![f])));
-        tempo.att.push(("add_offset".into(), At::N(6, vec![o])));
+    if let Some((f, o)) = c.time_scale {
+        moment.att.push(("scale_factor".into(), At::N(6, vec![f])));
+        moment.att.push(("add_offset".into(), At::N(6, vec![o])));
     }
-    let vars = vec![
-        tempo,
+    let mut vars = vec![
+        moment,
         per_scan(
             "total_intensity",
             6,
-            (0..SCANSIONI)
-                .map(|k| punti(k).iter().map(|p| p.1).sum())
+            (0..scans)
+                // a NaN point (the tests of the BPC) leaves the TIC of the file finite
+                .map(|k| points(k).iter().map(|p| p.1).filter(|x| !x.is_nan()).sum())
                 .collect(),
         ),
-        per_scan("mass_range_min", 6, vec![40.0; SCANSIONI]),
-        per_scan("mass_range_max", 6, vec![400.0; SCANSIONI]),
-        per_scan("scan_index", 4, inizi.iter().map(|&x| x as f64).collect()),
-        per_scan("point_count", 4, conti.iter().map(|&x| x as f64).collect()),
+        per_scan("mass_range_min", 6, vec![40.0; scans]),
+        per_scan("mass_range_max", 6, vec![400.0; scans]),
+        per_scan("scan_index", 4, starts.iter().map(|&x| x as f64).collect()),
+        per_scan("point_count", 4, counts.iter().map(|&x| x as f64).collect()),
         vm,
         vi,
         car("instrument_name", &[2, 3], "GCMS Test", 32),
@@ -348,13 +358,16 @@ pub fn andi_ms(c: &Corsa) -> Vec<u8> {
         car("instrument_model", &[2, 3], "Model 7", 32),
         car("instrument_serial_no", &[2, 3], "SN-0042", 32),
     ];
-    let g = globali_ms(c);
-    let _ = totale;
-    cdf(c.v2, &dims, &g, &vars, totale as u32)
+    if !tic {
+        vars.retain(|v| v.name != "total_intensity");
+    }
+    let g = globals_ms(c);
+    let _ = total;
+    cdf(c.v2, &dims, &g, &vars, total as u32)
 }
 
 /// An ANDI-Chromatography file: `n` points of one FID trace, uniform sampling.
-pub fn andi_cromato(n: usize) -> Vec<u8> {
+pub fn andi_chromatogram(n: usize) -> Vec<u8> {
     let dims = [("point_number", 0u32), ("_32_byte_string", 32)];
     let mut y = var(
         "ordinate_values",
@@ -375,16 +388,16 @@ pub fn andi_cromato(n: usize) -> Vec<u8> {
     cdf(false, &dims, &g, &vars, n as u32)
 }
 
-pub fn apri_andi(byte: Vec<u8>) -> Box<dyn Lettore> {
-    mzlab_lettori::apri(super::insieme("campione.cdf", byte), &Limiti::sito()).unwrap()
+pub fn open_andi(byte: Vec<u8>) -> Box<dyn Reader> {
+    mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limits::sito()).unwrap()
 }
 
-pub fn errore_andi(byte: Vec<u8>) -> &'static str {
-    match mzlab_lettori::apri(super::insieme("campione.cdf", byte), &Limiti::sito()) {
+pub fn andi_error(byte: Vec<u8>) -> &'static str {
+    match mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limits::sito()) {
         Err(e) => e.key,
         Ok(mut l) => {
-            for k in 0..l.indice(0).map(|i| i.len()).unwrap_or(0) {
-                if let Err(e) = l.scansione(0, k) {
+            for k in 0..l.index(0).map(|i| i.len()).unwrap_or(0) {
+                if let Err(e) = l.scan(0, k) {
                     return e.key;
                 }
             }

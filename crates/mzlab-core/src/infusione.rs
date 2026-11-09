@@ -20,9 +20,9 @@ use crate::mzmlhead::Mzml;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Infusione {
     /// `rt_costante` | `blocchi` | `metodo_senza_lc` | `nome`
-    pub motivo: &'static str,
+    pub reason: &'static str,
     pub livelli: u8,
-    pub nodi: usize,
+    pub nodes: usize,
     /// Distinct MSn keys (energies kept), the number that `MAX_KEYS` limits.
     pub chiavi: usize,
 }
@@ -92,37 +92,37 @@ fn long_blocks(order: &[Option<&str>], n_msn: usize) -> bool {
 }
 
 /// The name of the file says infusion (lower-case base name).
-fn name_says(nome: &str) -> bool {
-    let base = nome.rsplit(['/', '\\']).next().unwrap_or(nome);
+fn name_says(name: &str) -> bool {
+    let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
     let base = base.split('#').next().unwrap_or(base).to_lowercase();
     NAME_WORDS.iter().any(|w| base.contains(w))
 }
 
 /// An infusion recognised from the structure of its MSn scans: the file the Dati view shows as one item of kind `infusion`. A file of MS1 scans
 /// only stays `full`, and one of constant RT (a product-ion scan of a low-resolution instrument) stays `ms2`.
-pub fn con_msn(scans: &[Scan], lc: Option<bool>, nome: &str) -> bool {
+pub fn with_msn(scans: &[Scan], lc: Option<bool>, name: &str) -> bool {
     scans.iter().any(|s| s.level >= 2)
-        && infusione(scans, lc, nome).is_some_and(|i| i.motivo != "rt_costante")
+        && infusione(scans, lc, name).is_some_and(|i| i.reason != "rt_costante")
 }
 
 /// Whether the scans are an infusion (see the module), with `lc` = the `.raw` method has an LC part (`None`: unknown, e.g. an mzML).
-pub fn infusione(scans: &[Scan], lc: Option<bool>, nome: &str) -> Option<Infusione> {
+pub fn infusione(scans: &[Scan], lc: Option<bool>, name: &str) -> Option<Infusione> {
     if scans.is_empty() {
         return None;
     }
     let msn: Vec<&Scan> = scans.iter().filter(|s| s.level >= 2).collect();
     let mut nominal: Vec<String> = msn.iter().map(|s| key(s, true)).collect();
     let keys: Vec<String> = msn.iter().map(|s| key(s, false)).collect();
-    let livelli = scans.iter().map(|s| s.level).max().unwrap_or(1);
+    let levels = scans.iter().map(|s| s.level).max().unwrap_or(1);
     crate::sortc::slice_ord(&mut nominal);
     nominal.dedup();
     let nodi = nominal.len();
     let chiavi = keys.iter().collect::<std::collections::HashSet<_>>().len();
     let out = |motivo| {
         Some(Infusione {
-            motivo,
-            livelli,
-            nodi,
+            reason: motivo,
+            livelli: levels,
+            nodes: nodi,
             chiavi,
         })
     };
@@ -151,7 +151,7 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, nome: &str) -> Option<Infusio
         out("blocchi")
     } else if lc == Some(false) {
         out("metodo_senza_lc")
-    } else if name_says(nome) {
+    } else if name_says(name) {
         out("nome")
     } else {
         None
@@ -164,11 +164,11 @@ pub(crate) fn json(o: &mut Out, m: Option<&Infusione>) {
     match m {
         Some(m) => o
             .raw("{\"motivo\":")
-            .str(m.motivo)
+            .str(m.reason)
             .raw(",\"livelli\":")
             .int(m.livelli as i64)
             .raw(",\"nodi\":")
-            .int(m.nodi as i64)
+            .int(m.nodes as i64)
             .raw(",\"chiavi\":")
             .int(m.chiavi as i64)
             .raw("}"),

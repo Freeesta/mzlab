@@ -327,10 +327,10 @@ fn a_cancelled_download_stops_between_pieces_and_a_newer_reader_is_refused() {
 
 #[test]
 fn the_catalog_v2_lists_sources_with_their_mode() {
-    let src = |modo: &str| {
+    let src = |mode: &str| {
         serde_json::json!({"formato": "librerie/2", "librerie": [], "fonti": [{"id": "msdial-gcms-fiehnri", "gruppo": "base", "nome": "MS-DIAL", "url": "https://zenodo.org/records/10951913",
             "download": null, "licenza": "CC-BY-4.0", "formato": "msp", "dimensione": 23073288, "sha256": null, "kind": "experimental", "tech": "gc_ei", "pol": 0,
-            "doi": "10.5281/zenodo.10951913", "verificato": "2026-10-27", "modo": modo}]})
+            "doi": "10.5281/zenodo.10951913", "verificato": "2026-10-27", "modo": mode}]})
             .to_string()
     };
     let c = parse_catalog(src("external").as_bytes()).unwrap();

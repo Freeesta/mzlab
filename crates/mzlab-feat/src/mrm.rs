@@ -10,7 +10,7 @@ use crate::sortc::SortC;
 use mzlab_core::error::Result;
 use mzlab_core::peakq::{quality, Quality};
 use mzlab_core::peaks::noise_level;
-use mzlab_core::sorgente::Tracce;
+use mzlab_core::sorgente::Traces;
 
 mod resolver;
 use resolver::{area_above, boxcar, odd_points, resolve, Span, Stabilise};
@@ -31,9 +31,9 @@ pub struct Srm {
     pub y: Vec<f64>,
 }
 
-/// The SRM chromatograms of a file read through `Tracce` (an mzML: `TracceMzml`, whose `scans_end` is where its last scan ends, 0 without scans; or a sample of a
+/// The SRM chromatograms of a file read through `Tracce` (an mzML: `MzmlTraces`, whose `scans_end` is where its last scan ends, 0 without scans; or a sample of a
 /// vendor file), ordered by Q1 then Q3.
-pub fn read_srm<T: Tracce>(t: &mut T) -> Result<Vec<Srm>> {
+pub fn read_srm<T: Traces>(t: &mut T) -> Result<Vec<Srm>> {
     let mut out: Vec<Srm> = mzlab_core::srm::leggi(t)?
         .into_iter()
         .map(|s| Srm {

@@ -29,7 +29,7 @@ impl Mapped {
 
 /// A reader of a maker's file (`Lettore`) kept between two requests of the page. The engine is behind one `Mutex`: the reader is only ever used by the
 /// thread that holds it.
-pub struct Held(pub Box<dyn mzlab_core::lettori::Lettore>);
+pub struct Held(pub Box<dyn mzlab_core::lettori::Reader>);
 
 // SAFETY: a `Lettore` is not `Send` only because the trait does not say so (the site's readers read through JavaScript). Here every member is a
 // `MapAt` (an `Arc<Mapped>`, which is `Send + Sync`), the reader is created in this crate and never cloned or shared, and it is used only under the

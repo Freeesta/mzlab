@@ -11,15 +11,15 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-TETTO_GB = 20
+CAP_GB = 20
 
 
-def leggi(tsv: Path) -> list:
+def read(tsv: Path) -> list:
     with tsv.open(newline="", encoding="utf-8") as f:
         return [r for r in csv.DictReader(f, delimiter="\t") if (r.get("url") or "").strip() and not r["url"].startswith("#")]
 
 
-def dentro(dest: Path, rel: str) -> Path:
+def inside(dest: Path, rel: str) -> Path:
     """The destination path, refused when it leaves DEST."""
     p = (dest / rel).resolve()
     if dest.resolve() not in p.parents:
@@ -35,79 +35,79 @@ def sha256(p: Path) -> str:
     return h.hexdigest()
 
 
-def totale(righe: list) -> int:
+def total(righe: list) -> int:
     return sum(int(r.get("byte") or 0) for r in righe)
 
 
-def scarica(url: str, p: Path, byte: int) -> None:
+def download(url: str, p: Path, byte: int) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
-    parziale = p.with_name(p.name + ".parte")
-    fatto = parziale.stat().st_size if parziale.exists() else 0
-    if byte and fatto > byte:
-        parziale.unlink()
-        fatto = 0
-    if byte and fatto == byte:
-        os.replace(parziale, p)
+    partial = p.with_name(p.name + ".parte")
+    done = partial.stat().st_size if partial.exists() else 0
+    if byte and done > byte:
+        partial.unlink()
+        done = 0
+    if byte and done == byte:
+        os.replace(partial, p)
         return
-    req = urllib.request.Request(url, headers={"Range": f"bytes={fatto}-"} if fatto else {})
+    req = urllib.request.Request(url, headers={"Range": f"bytes={done}-"} if done else {})
     try:
         r = urllib.request.urlopen(req, timeout=60)
     except urllib.error.HTTPError as e:
-        if e.code == 416 and fatto:
-            os.replace(parziale, p)
+        if e.code == 416 and done:
+            os.replace(partial, p)
             return
         raise
     with r:
-        if fatto and r.status != 206:
-            fatto = 0
-        with parziale.open("ab" if fatto else "wb") as f:
+        if done and r.status != 206:
+            done = 0
+        with partial.open("ab" if done else "wb") as f:
             for b in iter(lambda: r.read(1 << 20), b""):
                 f.write(b)
-    os.replace(parziale, p)
+    os.replace(partial, p)
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("tsv", type=Path)
     ap.add_argument("dest", type=Path)
-    ap.add_argument("--tetto-gb", type=float, default=TETTO_GB)
+    ap.add_argument("--tetto-gb", type=float, default=CAP_GB)
     ap.add_argument("--solo", help="only the rows whose `destinazione` contains this text")
     ap.add_argument("--prova", action="store_true", help="list what would be downloaded")
     a = ap.parse_args(argv)
-    righe = [r for r in leggi(a.tsv) if not a.solo or a.solo in (r.get("destinazione") or "")]
-    peso = totale(righe)
-    if peso > a.tetto_gb * 1e9:
-        print(f"refused: {peso / 1e9:.1f} GB asked, the ceiling is {a.tetto_gb} GB", file=sys.stderr)
+    righe = [r for r in read(a.tsv) if not a.solo or a.solo in (r.get("destinazione") or "")]
+    weight = total(righe)
+    if weight > a.tetto_gb * 1e9:
+        print(f"refused: {weight / 1e9:.1f} GB asked, the ceiling is {a.tetto_gb} GB", file=sys.stderr)
         return 2
-    errori = 0
+    errors = 0
     for r in righe:
         rel, url, byte = r.get("destinazione") or r.get("percorso") or "", r["url"].strip(), int(r.get("byte") or 0)
         if not url.startswith("https://"):
             print(f"skip (not https): {rel}", file=sys.stderr)
-            errori += 1
+            errors += 1
             continue
         try:
-            p = dentro(a.dest, rel)
+            p = inside(a.dest, rel)
         except ValueError as e:
             print(e, file=sys.stderr)
-            errori += 1
+            errors += 1
             continue
         if a.prova:
             print(f"{rel}\t{byte}")
             continue
         if not (p.exists() and (not byte or p.stat().st_size == byte)):
-            scarica(url, p, byte)
+            download(url, p, byte)
         if byte and p.stat().st_size != byte:
             print(f"wrong size: {rel} ({p.stat().st_size} of {byte})", file=sys.stderr)
-            errori += 1
+            errors += 1
             continue
-        atteso = (r.get("sha256") or "").strip().lower()
-        if len(atteso) == 64 and sha256(p) != atteso:
+        expected = (r.get("sha256") or "").strip().lower()
+        if len(expected) == 64 and sha256(p) != expected:
             print(f"wrong SHA-256: {rel}", file=sys.stderr)
-            errori += 1
+            errors += 1
             continue
         print(f"ok {rel}")
-    return 1 if errori else 0
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":

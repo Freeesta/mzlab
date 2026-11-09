@@ -7,11 +7,11 @@ from pathlib import Path
 import numpy as np
 
 
-def _pulisci(x):
+def _clean(x):
     if isinstance(x, dict):
-        return {str(k): _pulisci(v) for k, v in x.items()}
+        return {str(k): _clean(v) for k, v in x.items()}
     if isinstance(x, (list, tuple)):
-        return [_pulisci(v) for v in x]
+        return [_clean(v) for v in x]
     if isinstance(x, (np.floating, float)):
         return None if not np.isfinite(x) else float(f"{float(x):.6g}")
     if isinstance(x, np.integer):
@@ -21,13 +21,13 @@ def _pulisci(x):
     return x
 
 
-def senza_prestazioni(rapporto: dict) -> dict:
+def without_performance(rapporto: dict) -> dict:
     return {k: v for k, v in rapporto.items() if k != "prestazioni"}
 
 
-def a_json(rapporto: dict, prestazioni: bool = True) -> str:
-    r = rapporto if prestazioni else senza_prestazioni(rapporto)
-    return json.dumps(_pulisci(r), indent=1, sort_keys=True, ensure_ascii=False) + "\n"
+def a_json(rapporto: dict, performance: bool = True) -> str:
+    r = rapporto if performance else without_performance(rapporto)
+    return json.dumps(_clean(r), indent=1, sort_keys=True, ensure_ascii=False) + "\n"
 
 
 def _pct(x):
@@ -79,25 +79,25 @@ def a_markdown(r: dict) -> str:
     return "\n".join(L) + "\n"
 
 
-def scrivi(cartella, rapporto: dict, prestazioni: bool = True) -> tuple[Path, Path]:
-    d = Path(cartella)
+def scrivi(folder, rapporto: dict, performance: bool = True) -> tuple[Path, Path]:
+    d = Path(folder)
     d.mkdir(parents=True, exist_ok=True)
     j, m = d / "rapporto.json", d / "rapporto.md"
-    j.write_text(a_json(rapporto, prestazioni), encoding="utf-8")
-    m.write_text(a_markdown(rapporto if prestazioni else senza_prestazioni(rapporto)), encoding="utf-8")
+    j.write_text(a_json(rapporto, performance), encoding="utf-8")
+    m.write_text(a_markdown(rapporto if performance else without_performance(rapporto)), encoding="utf-8")
     return j, m
 
 
 # ---------------------------------------------------------------------------------------------------------------- the gate
-ESITO = {True: "PASS", False: "FAIL", None: "not measured"}
+OUTCOME = {True: "PASS", False: "FAIL", None: "not measured"}
 
 
-def cancello_markdown(c: dict, det: dict) -> str:
+def gate_markdown(c: dict, det: dict) -> str:
     """Summary of the gate: the table of the criteria with PASS / FAIL, the result and the details of the measures."""
     L = [f"# Gate of quality: crate {c['crate_version']}, {c['data']}", "",
          f"Table view: **{'open' if c.get('vista_tabella') else 'closed'}**. Candidate view: **{'open' if c['vista_candidati'] else 'closed'}**. Agreement with mzmine: {c['concordanza_mzmine']}.", "",
          "| criterion | value | threshold | outcome |", "|---|---|---|---|"]
-    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {k['soglia']} | {ESITO[k['ok']]} |" for k in c["criteri"]]
+    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {k['soglia']} | {OUTCOME[k['ok']]} |" for k in c["criteri"]]
     if det.get("timololo"):
         L += ["", "## Real series", "", "| measure | value |", "|---|---|"] + [f"| {k} | {v} |" for k, v in det["timololo"].items()]
     if det.get("mzmine"):
@@ -109,37 +109,37 @@ def cancello_markdown(c: dict, det: dict) -> str:
     return "\n".join(L) + "\n"
 
 
-def scrivi_cancello(cartella, c: dict, det: dict, cancello_json: str) -> list[Path]:
-    """Writes `cancello.json` (where the panel reads it: `cancello_json`) and, in `cartella`, the report with all the numbers (`cancello_rapporto.json` / `.md`)."""
-    d = Path(cartella)
+def write_gate(folder, c: dict, det: dict, gate_json: str) -> list[Path]:
+    """Writes `cancello.json` (where the panel reads it: `gate_json`) and, in `folder`, the report with all the numbers (`cancello_rapporto.json` / `.md`)."""
+    d = Path(folder)
     d.mkdir(parents=True, exist_ok=True)
-    testo = json.dumps(c, indent=1, sort_keys=True, ensure_ascii=False) + "\n"
-    out = [Path(cancello_json), d / "cancello_rapporto.json", d / "cancello_rapporto.md"]
+    text = json.dumps(c, indent=1, sort_keys=True, ensure_ascii=False) + "\n"
+    out = [Path(gate_json), d / "cancello_rapporto.json", d / "cancello_rapporto.md"]
     out[0].parent.mkdir(parents=True, exist_ok=True)
-    out[0].write_text(testo, encoding="utf-8")
-    out[1].write_text(json.dumps(_pulisci({"cancello": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
-    out[2].write_text(cancello_markdown(c, det), encoding="utf-8")
+    out[0].write_text(text, encoding="utf-8")
+    out[1].write_text(json.dumps(_clean({"cancello": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    out[2].write_text(gate_markdown(c, det), encoding="utf-8")
     return out
 
 
-def cancello_tp_markdown(c: dict, det: dict) -> str:
+def gate_tp_markdown(c: dict, det: dict) -> str:
     """Summary of the gate of the TP view: the criteria with PASS / FAIL / not measured and the numbers of the raw view."""
     L = [f"# Gate of the TP view: crate {c['crate_version']}, {c['dataset']}, {c['data']}", "", f"TP view: **{'open' if c['vista_tp'] else 'closed'}**.", "",
          "| criterion | value | threshold | outcome |", "|---|---|---|---|"]
-    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {'' if k['soglia'] is None else k['soglia']} | {ESITO[k['ok']]} |" for k in c["criteri"]]
+    L += [f"| {k['id']} | {'' if k['valore'] is None else k['valore']} | {'' if k['soglia'] is None else k['soglia']} | {OUTCOME[k['ok']]} |" for k in c["criteri"]]
     v = det.get("vista_grezza")
     if v:
         L += ["", "## Raw view (candidates of the pipeline)", "", "| measure | value |", "|---|---|"] + [f"| {k} | {x} |" for k, x in v.items()]
     return "\n".join(L) + "\n"
 
 
-def scrivi_cancello_tp(cartella, c: dict, det: dict, cancello_tp_json: str) -> list[Path]:
-    """Writes `cancello_tp.json` (beside `cancello.json`) and, in `cartella`, `cancello_tp_rapporto.json` / `.md`."""
-    d = Path(cartella)
+def write_gate_tp(folder, c: dict, det: dict, gate_tp_json: str) -> list[Path]:
+    """Writes `cancello_tp.json` (beside `cancello.json`) and, in `folder`, `cancello_tp_rapporto.json` / `.md`."""
+    d = Path(folder)
     d.mkdir(parents=True, exist_ok=True)
-    out = [Path(cancello_tp_json), d / "cancello_tp_rapporto.json", d / "cancello_tp_rapporto.md"]
+    out = [Path(gate_tp_json), d / "cancello_tp_rapporto.json", d / "cancello_tp_rapporto.md"]
     out[0].parent.mkdir(parents=True, exist_ok=True)
     out[0].write_text(json.dumps(c, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
-    out[1].write_text(json.dumps(_pulisci({"cancello_tp": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
-    out[2].write_text(cancello_tp_markdown(c, det), encoding="utf-8")
+    out[1].write_text(json.dumps(_clean({"cancello_tp": c, "dettagli": det}), indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    out[2].write_text(gate_tp_markdown(c, det), encoding="utf-8")
     return out

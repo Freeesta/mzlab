@@ -4,9 +4,9 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::json::{parse, Value};
-use mzlab_core::molecules::{cerca, from_csv, route, Molecola};
+use mzlab_core::molecules::{cerca, from_csv, route, Molecule};
 
-fn ms(csv: &str) -> Vec<Molecola> {
+fn ms(csv: &str) -> Vec<Molecule> {
     from_csv(csv, "utente", None).unwrap_or_else(|e| panic!("{e:?}"))
 }
 
@@ -17,8 +17,8 @@ Bentazone sodium;;C10H11N2NaO3S;AAAAAAAAAAAAAA-AAAAAAAAAA-A
 Atrazina;;C8H14ClN5;MXWJVTOOROXGIU-UHFFFAOYSA-N
 ";
 
-fn first_names(ms: &[Molecola], q: &str) -> Vec<String> {
-    mzlab_core::molecules::cerca_ampia(ms, q, 8, 10.0)
+fn first_names(ms: &[Molecule], q: &str) -> Vec<String> {
+    mzlab_core::molecules::search_wide(ms, q, 8, 10.0)
         .iter()
         .map(|h| ms[h.0].nome.clone())
         .collect()

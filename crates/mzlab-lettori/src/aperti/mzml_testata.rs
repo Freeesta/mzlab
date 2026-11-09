@@ -1,19 +1,19 @@
 //! The scanner of tags and the readers of the header and of the parameters of an mzML for `mzml_numpress.rs` (the header of the original file, the cvParams of a spectrum).
 
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 /// The most cvParams of a spectrum kept as header fields.
-const CAMPI_MAX: usize = 64;
+const FIELDS_MAX: usize = 64;
 
 // ---- a tiny scanner of tags: the header of an mzML is cut before `<run` (and so not a document), and the module may not take a new XML crate ----
 
 pub(super) struct Tag {
-    pub(super) nome: String,
+    pub(super) name: String,
     pub(super) attr: Vec<(String, String)>,
-    pub(super) chiusura: bool,
-    pub(super) vuoto: bool,
+    pub(super) closing: bool,
+    pub(super) empty: bool,
 }
 
 impl Tag {
@@ -47,65 +47,65 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
     while let Some(p) = s.get(i..).and_then(|r| r.find('<')) {
         let a = i + p + 1;
         let mut q = a;
-        let mut citato = 0u8;
+        let mut quoted = 0u8;
         while let Some(&c) = b.get(q) {
-            match (citato, c) {
-                (0, b'"') | (0, b'\'') => citato = c,
-                (x, y) if x != 0 && x == y => citato = 0,
+            match (quoted, c) {
+                (0, b'"') | (0, b'\'') => quoted = c,
+                (x, y) if x != 0 && x == y => quoted = 0,
                 (0, b'>') => break,
                 _ => {}
             }
             q += 1;
         }
-        let Some(corpo) = s.get(a..q) else { break };
+        let Some(body) = s.get(a..q) else { break };
         i = q + 1;
-        if corpo.starts_with(['?', '!']) {
+        if body.starts_with(['?', '!']) {
             continue;
         }
-        let (chiusura, corpo) = match corpo.strip_prefix('/') {
+        let (chiusura, corpo) = match body.strip_prefix('/') {
+            Some(r) => (true, r),
+            None => (false, body),
+        };
+        let (empty, corpo) = match corpo.strip_suffix('/') {
             Some(r) => (true, r),
             None => (false, corpo),
         };
-        let (vuoto, corpo) = match corpo.strip_suffix('/') {
-            Some(r) => (true, r),
-            None => (false, corpo),
-        };
-        let mut parti = corpo.splitn(2, |c: char| c.is_whitespace());
-        let nome = parti.next().unwrap_or("").to_string();
+        let mut parts = corpo.splitn(2, |c: char| c.is_whitespace());
+        let nome = parts.next().unwrap_or("").to_string();
         let mut attr = Vec::new();
-        let mut resto = parti.next().unwrap_or("");
-        while let Some(e) = resto.find('=') {
-            let chiave = resto[..e].trim().to_string();
-            let v = resto[e + 1..].trim_start();
-            let Some(virgolette) = v.chars().next().filter(|c| *c == '"' || *c == '\'') else {
+        let mut remainder = parts.next().unwrap_or("");
+        while let Some(e) = remainder.find('=') {
+            let key = remainder[..e].trim().to_string();
+            let v = remainder[e + 1..].trim_start();
+            let Some(quotes) = v.chars().next().filter(|c| *c == '"' || *c == '\'') else {
                 break;
             };
-            let Some(fine) = v[1..].find(virgolette) else {
+            let Some(fine) = v[1..].find(quotes) else {
                 break;
             };
-            attr.push((chiave, unescape(&v[1..1 + fine])));
-            resto = &v[fine + 2..];
+            attr.push((key, unescape(&v[1..1 + fine])));
+            remainder = &v[fine + 2..];
         }
         out.push(Tag {
-            nome,
+            name: nome,
             attr,
-            chiusura,
-            vuoto,
+            closing: chiusura,
+            empty,
         });
     }
     out
 }
 
 /// The cvParams of a spectrum header (everything before `<binaryDataArrayList`) and what the writer cannot say with its own fields.
-pub(super) struct Parametro {
+pub(super) struct Parameter {
     pub(super) acc: String,
-    pub(super) nome: String,
-    pub(super) valore: String,
-    pub(super) unita: Option<String>,
+    pub(super) name: String,
+    pub(super) value: String,
+    pub(super) units: Option<String>,
 }
 
 /// The cvParams that `mzmlwrite` writes itself, from the fields of the `Spectrum`.
-const SCRITTI: [&str; 20] = [
+const WRITTEN: [&str; 20] = [
     "MS:1000511",
     "MS:1000579",
     "MS:1000580",
@@ -128,34 +128,34 @@ const SCRITTI: [&str; 20] = [
     "MS:1000744",
 ];
 
-pub(super) fn parametri(spettro: &[u8]) -> Vec<Parametro> {
-    let t = String::from_utf8_lossy(spettro);
+pub(super) fn param_list(spectrum: &[u8]) -> Vec<Parameter> {
+    let t = String::from_utf8_lossy(spectrum);
     let fine = t.find("<binaryDataArrayList").unwrap_or(t.len());
     tag_di(&t[..fine])
         .into_iter()
-        .filter(|g| !g.chiusura && g.nome == "cvParam")
-        .take(CAMPI_MAX)
-        .map(|g| Parametro {
+        .filter(|g| !g.closing && g.name == "cvParam")
+        .take(FIELDS_MAX)
+        .map(|g| Parameter {
             acc: g.get("accession").to_string(),
-            nome: g.get("name").to_string(),
-            valore: g.get("value").to_string(),
-            unita: Some(g.get("unitName").to_string()).filter(|u| !u.is_empty()),
+            name: g.get("name").to_string(),
+            value: g.get("value").to_string(),
+            units: Some(g.get("unitName").to_string()).filter(|u| !u.is_empty()),
         })
         .collect()
 }
 
 /// What goes into the converted spectrum besides the fields of `Spectrum`: the scan window and, as userParams, every other cvParam with a value (collision energy, isolation width, injection time…).
-pub(super) fn extra_di(spettro: &[u8]) -> SpectrumExtra {
+pub(super) fn extra_di(spectrum: &[u8]) -> SpectrumExtra {
     let mut e = SpectrumExtra::default();
     let (mut lo, mut hi) = (None, None);
-    for p in parametri(spettro) {
-        let numero = p.valore.parse::<f64>().ok();
+    for p in param_list(spectrum) {
+        let number = p.value.parse::<f64>().ok();
         match p.acc.as_str() {
-            "MS:1000501" => lo = numero,
-            "MS:1000500" => hi = numero,
-            a if SCRITTI.contains(&a) => {}
-            _ if p.valore.is_empty() => {}
-            a => e.params.push((format!("{a} {}", p.nome), p.valore)),
+            "MS:1000501" => lo = number,
+            "MS:1000500" => hi = number,
+            a if WRITTEN.contains(&a) => {}
+            _ if p.value.is_empty() => {}
+            a => e.params.push((format!("{a} {}", p.name), p.value)),
         }
     }
     e.window = lo.zip(hi);
@@ -165,22 +165,22 @@ pub(super) fn extra_di(spettro: &[u8]) -> SpectrumExtra {
 // ---- the header of the original mzML ----
 
 /// A `referenceableParamGroup` or a component of the instrument: its id and its (accession, name, value) triples.
-type Gruppo = (String, Vec<(String, String, String)>);
+type Group = (String, Vec<(String, String, String)>);
 
 /// Where the walk over the header stands.
 #[derive(Default)]
-struct Stato {
-    gruppi: Vec<Gruppo>,
-    ic_visti: usize,
-    componente_con_cv: bool,
+struct State {
+    gruppi: Vec<Group>,
+    ic_seen: usize,
+    component_with_cv: bool,
     /// The `software` being read: its version and its first term.
     soft: Option<(String, Option<(String, String)>)>,
 }
 
 /// A `cvParam` of the header, by the element that holds it.
-fn cv_param(h: &mut Header, st: &mut Stato, genitore: &str, g: &Tag) {
+fn cv_param(h: &mut Header, st: &mut State, parent: &str, g: &Tag) {
     let (a, n, v) = (g.get("accession"), g.get("name"), g.get("value"));
-    match genitore {
+    match parent {
         "fileContent" if a != "MS:1000579" => h.content.push((a.into(), n.into())),
         "sourceFile" if a == "MS:1000569" => h.source_sha1.push(v.into()),
         "sourceFile" => {
@@ -193,11 +193,10 @@ fn cv_param(h: &mut Header, st: &mut Stato, genitore: &str, g: &Tag) {
                 cvs.push((a.into(), n.into(), v.into()));
             }
         }
-        "instrumentConfiguration" if st.ic_visti == 1 => modello(h, a, n, v),
-        "source" | "analyzer" | "detector" if st.ic_visti == 1 && !st.componente_con_cv => {
-            st.componente_con_cv = true;
-            h.components
-                .push((genitore.to_string(), a.into(), n.into()));
+        "instrumentConfiguration" if st.ic_seen == 1 => model(h, a, n, v),
+        "source" | "analyzer" | "detector" if st.ic_seen == 1 && !st.component_with_cv => {
+            st.component_with_cv = true;
+            h.components.push((parent.to_string(), a.into(), n.into()));
         }
         "software" => {
             if let Some((_, c @ None)) = st.soft.as_mut() {
@@ -209,17 +208,17 @@ fn cv_param(h: &mut Header, st: &mut Stato, genitore: &str, g: &Tag) {
 }
 
 /// The header of the mzML we write: the instrument, the sources with their SHA-1, the software and the run of the original, and mzLab as the program that wrote this file.
-pub(super) fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Header> {
+pub(super) fn header_from(head: &str, name: &str, limits: &Limits) -> Result<Header> {
     let mut h = Header {
-        run: nome.rsplit_once('.').map_or(nome, |(s, _)| s).to_string(),
+        run: name.rsplit_once('.').map_or(name, |(s, _)| s).to_string(),
         software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
         ..Header::default()
     };
-    let mut pila: Vec<String> = Vec::new();
-    let mut st = Stato::default();
+    let mut stack: Vec<String> = Vec::new();
+    let mut st = State::default();
     for g in tag_di(head) {
-        if g.chiusura {
-            if pila.pop().as_deref() == Some("software") {
+        if g.closing {
+            if stack.pop().as_deref() == Some("software") {
                 if let Some((v, Some((a, nm)))) = st.soft.take() {
                     h.extra_software.push((a, nm, v));
                 }
@@ -227,10 +226,10 @@ pub(super) fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Head
             }
             continue;
         }
-        let genitore = pila.last().cloned().unwrap_or_default();
-        match g.nome.as_str() {
+        let parent = stack.last().cloned().unwrap_or_default();
+        match g.name.as_str() {
             "referenceableParamGroup" => st.gruppi.push((g.get("id").to_string(), Vec::new())),
-            "instrumentConfiguration" => st.ic_visti += 1,
+            "instrumentConfiguration" => st.ic_seen += 1,
             "sourceFile" => h.sources.push(g.get("name").to_string()),
             "sample" if h.sample.is_none() => {
                 h.sample = Some((g.get("id").to_string(), g.get("name").to_string()))
@@ -240,37 +239,37 @@ pub(super) fn testata_da(head: &str, nome: &str, limiti: &Limiti) -> Result<Head
                 h.run = g.get("id").to_string();
                 h.acquired = Some(g.get("startTimeStamp").to_string()).filter(|t| !t.is_empty());
             }
-            "source" | "analyzer" | "detector" if st.ic_visti == 1 => st.componente_con_cv = false,
+            "source" | "analyzer" | "detector" if st.ic_seen == 1 => st.component_with_cv = false,
             "referenceableParamGroupRef"
-                if st.ic_visti == 1 && genitore == "instrumentConfiguration" =>
+                if st.ic_seen == 1 && parent == "instrumentConfiguration" =>
             {
                 let r = g.get("ref");
                 if let Some((_, cvs)) = st.gruppi.iter().find(|(id, _)| id == r) {
                     for (a, n, v) in cvs {
-                        modello(&mut h, a, n, v);
+                        model(&mut h, a, n, v);
                     }
                 }
             }
-            "userParam" if genitore == "run" => {
+            "userParam" if parent == "run" => {
                 h.run_params
                     .push((g.get("name").to_string(), g.get("value").to_string()));
             }
-            "cvParam" => cv_param(&mut h, &mut st, &genitore, &g),
+            "cvParam" => cv_param(&mut h, &mut st, &parent, &g),
             _ => {}
         }
-        if !g.vuoto {
-            limiti.profondita_ok(pila.len() + 1)?;
-            pila.push(g.nome);
+        if !g.empty {
+            limits.profondita_ok(stack.len() + 1)?;
+            stack.push(g.name);
         }
     }
     Ok(h)
 }
 
 /// A cvParam of the instrument configuration: the serial number, else the first term is the model.
-fn modello(h: &mut Header, acc: &str, nome: &str, valore: &str) {
+fn model(h: &mut Header, acc: &str, name: &str, value: &str) {
     if acc == "MS:1000529" {
-        h.serial = Some(valore.to_string()).filter(|s| !s.is_empty());
+        h.serial = Some(value.to_string()).filter(|s| !s.is_empty());
     } else if h.instrument.is_none() {
-        h.instrument = Some((acc.to_string(), nome.to_string()));
+        h.instrument = Some((acc.to_string(), name.to_string()));
     }
 }

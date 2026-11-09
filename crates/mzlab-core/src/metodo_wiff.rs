@@ -102,15 +102,15 @@ fn driver_entries(rec: &str) -> Vec<(String, String, String)> {
 }
 
 fn kv(k: &str, v: &str) -> Option<V> {
-    let (valore, unita) = match value_unit(v) {
+    let (value, unita) = match value_unit(v) {
         Some((x, u)) => (Some(V::Num(x)), text(&u)),
         None => (None, None),
     };
     obj(vec![
         ("id", text(k)),
         ("etichetta", text(k)),
-        ("valore", valore.clone()),
-        ("testo", if valore.is_none() { text(v) } else { None }),
+        ("valore", value.clone()),
+        ("testo", if value.is_none() { text(v) } else { None }),
         ("unita", unita),
     ])
 }
@@ -266,7 +266,7 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
     let (lc, det) = lc_with_pressure(method.as_ref(), get("Pumps", "P.Max 1"));
     let autosampler = autosampler(&entries);
 
-    let registro = run_records(&ms_rec);
+    let registry = run_records(&ms_rec);
     let raw = raw_log(&log);
     let warn = warnings(ole, &sample, log.is_empty());
 
@@ -275,7 +275,7 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         ("origine", crate::metodo::origin(src, prop(12))),
         ("campione", campione(&data, get("", "Injection Volume"))),
         ("strumento", strumento(cfg, version)),
-        ("operatore", operatore(user, computer)),
+        ("operatore", operator(user, computer)),
         ("ms", ms_sec(method.as_ref(), source_type.as_deref())),
         ("lc", lc),
         (
@@ -283,7 +283,7 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
             obj(vec![("parametri", Some(V::Arr(autosampler)))]),
         ),
         ("rivelatori", det),
-        ("registro", Some(V::Arr(registro))),
+        ("registro", Some(V::Arr(registry))),
         (
             "grezzo",
             obj(vec![("sezione", Some(V::s("Log"))), ("testo", text(&raw))])
@@ -395,7 +395,7 @@ fn strumento(cfg: Option<&String>, version: Option<&String>) -> Option<V> {
 }
 
 /// The `operatore` section.
-fn operatore(user: Option<&str>, computer: Option<&str>) -> Option<V> {
+fn operator(user: Option<&str>, computer: Option<&str>) -> Option<V> {
     obj(vec![
         ("utente", user.and_then(text)),
         ("computer", computer.and_then(text)),

@@ -5,18 +5,21 @@ use crate::{
     peaks_auto_cmd, peaks_edges_cmd, sim_table_cmd, steps_cmd, Outcome,
 };
 
+#[path = "dda_window_cmd.rs"]
+mod dda_window_cmd;
 #[path = "ion_mz_cmd.rs"]
 mod ion_mz_cmd;
 #[path = "peak_area_cmd.rs"]
 pub(crate) mod peak_area_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 13] = [
+pub(crate) const PLAIN: [&str; 14] = [
     "llm",
     "steps",
     "explain-missing",
     "msn-rules",
     "channels",
+    "dda-window",
     "ion-pattern",
     "ion-mz",
     "mol-label",
@@ -48,6 +51,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "explain-missing" => flow_explain::run(args),
         "msn-rules" => msn_rules::run(args),
         "channels" => canali_cmd::run(args),
+        "dda-window" => dda_window_cmd::run(args),
         "ion-pattern" => ion_pattern_cmd::run(args),
         "ion-mz" => ion_mz_cmd::run(args),
         "mol-label" => mol_label_cmd::run(args),

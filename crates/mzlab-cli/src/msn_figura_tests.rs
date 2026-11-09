@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use mzlab_feat::msnfigura::html::html;
-use mzlab_feat::msnfigura::{svg, testi, Vista};
+use mzlab_feat::msnfigura::{svg, texts, View};
 
 fn fixtures() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/msn_figura")
@@ -39,23 +39,23 @@ fn golden(name: &str, got: &str) {
 
 #[test]
 fn the_svg_of_both_views_is_the_golden_one() {
-    golden("albero.svg", &svg(&graph(), Vista::Albero).unwrap());
-    golden("radiale.svg", &svg(&graph(), Vista::Radiale).unwrap());
+    golden("albero.svg", &svg(&graph(), View::Albero).unwrap());
+    golden("radiale.svg", &svg(&graph(), View::Radial).unwrap());
     golden(
         "testi-albero.txt",
-        &(testi(&graph(), Vista::Albero).unwrap().join("\n") + "\n"),
+        &(texts(&graph(), View::Albero).unwrap().join("\n") + "\n"),
     );
     golden(
         "testi-radiale.txt",
-        &(testi(&graph(), Vista::Radiale).unwrap().join("\n") + "\n"),
+        &(texts(&graph(), View::Radial).unwrap().join("\n") + "\n"),
     );
     // a graph with ambiguous ions, a loss named by its mass, a rule label, a common ion and the negative polarity
     let g2 = std::fs::read_to_string(fixtures().join("g2.json")).unwrap();
-    for (v, n) in [(Vista::Albero, "albero"), (Vista::Radiale, "radiale")] {
+    for (v, n) in [(View::Albero, "albero"), (View::Radial, "radiale")] {
         golden(&format!("g2-{n}.svg"), &svg(&g2, v).unwrap());
         golden(
             &format!("g2-testi-{n}.txt"),
-            &(testi(&g2, v).unwrap().join("\n") + "\n"),
+            &(texts(&g2, v).unwrap().join("\n") + "\n"),
         );
     }
     // the 80-ion graph (many ions with two precursors): the texts of both views
@@ -63,13 +63,13 @@ fn the_svg_of_both_views_is_the_golden_one() {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests_e2e/fixtures/msngrafo_80.json"),
     )
     .unwrap();
-    for (v, n) in [(Vista::Albero, "albero"), (Vista::Radiale, "radiale")] {
+    for (v, n) in [(View::Albero, "albero"), (View::Radial, "radiale")] {
         golden(
             &format!("g80-testi-{n}.txt"),
-            &(testi(&g80, v).unwrap().join("\n") + "\n"),
+            &(texts(&g80, v).unwrap().join("\n") + "\n"),
         );
     }
-    let s = svg(&g2, Vista::Albero).unwrap();
+    let s = svg(&g2, View::Albero).unwrap();
     assert!(
         s.contains("+2 more")
             && s.contains("compatible with ")
@@ -82,7 +82,7 @@ fn the_svg_of_both_views_is_the_golden_one() {
 
 #[test]
 fn the_svg_lives_alone_and_says_what_it_is() {
-    let s = svg(&graph(), Vista::Albero).unwrap();
+    let s = svg(&graph(), View::Albero).unwrap();
     // colours written in the file, no style sheet, no class, nothing from outside
     assert!(
         s.starts_with("<svg xmlns=\"http://www.w3.org/2000/svg\"")
@@ -107,12 +107,12 @@ fn the_svg_lives_alone_and_says_what_it_is() {
     let nomol = graph()
         .replace(r#""molfile":"#, r#""molfile_":"#)
         .replace(r#""smiles":null"#, r#""smiles":"CCO""#);
-    assert!(svg(&nomol, Vista::Albero)
+    assert!(svg(&nomol, View::Albero)
         .unwrap()
         .contains("no 2D coordinates"));
     assert!(!svg(
         &graph().replace(r#""molfile":"#, r#""molfile_":"#),
-        Vista::Albero
+        View::Albero
     )
     .unwrap()
     .contains("no 2D coordinates"));
@@ -120,7 +120,7 @@ fn the_svg_lives_alone_and_says_what_it_is() {
 
 #[test]
 fn the_html_is_one_file_with_nothing_outside() {
-    let h = html(&graph(), Vista::Radiale).unwrap();
+    let h = html(&graph(), View::Radial).unwrap();
     assert!(h.len() < 2_000_000);
     for bad in ["src=", "<link", "@import", "http://www.w3.org/1999/xlink"] {
         assert!(!h.contains(bad), "{bad}");
@@ -146,7 +146,7 @@ fn the_html_is_one_file_with_nothing_outside() {
     );
     // the graph (an msngrafo/1 fixture: older graphs still draw) is inside, and the text of a script cannot end its element early
     assert!(h.contains("\"formato\":\"msngrafo/1\""));
-    let end = html(&graph().replace("msn.mzML", "a</script><b>"), Vista::Albero).unwrap();
+    let end = html(&graph().replace("msn.mzML", "a</script><b>"), View::Albero).unwrap();
     // the five script elements of the page, no more
     assert_eq!(end.matches("</script>").count(), 5);
 }
@@ -157,10 +157,10 @@ fn a_graph_without_vista_is_completed_first() {
     let at = j.rfind(",\"vista\":").unwrap();
     let old = format!("{}}}", &j[..at]);
     assert_eq!(
-        svg(&old, Vista::Radiale).unwrap(),
-        svg(&j, Vista::Radiale).unwrap()
+        svg(&old, View::Radial).unwrap(),
+        svg(&j, View::Radial).unwrap()
     );
-    assert!(svg("{}", Vista::Albero).is_err());
+    assert!(svg("{}", View::Albero).is_err());
 }
 
 fn dir(tag: &str) -> PathBuf {
@@ -210,7 +210,7 @@ fn the_command_and_figure_write_the_same_bytes() {
     let text = std::fs::read_to_string(&g).unwrap();
     assert_eq!(
         std::fs::read_to_string(d.join("g.svg")).unwrap(),
-        svg(&text, Vista::Radiale).unwrap()
+        svg(&text, View::Radial).unwrap()
     );
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -286,8 +286,8 @@ fn the_step_writes_the_bytes_of_the_command() {
         let (g, got) = run(format, view);
         let want = crate::msn_uscite::bytes(
             std::str::from_utf8(&g).unwrap(),
-            crate::msn_uscite::Formato::da_nome(format).unwrap(),
-            Vista::da_nome(view).unwrap(),
+            crate::msn_uscite::Format::from_name(format).unwrap(),
+            View::da_nome(view).unwrap(),
         )
         .unwrap();
         assert_eq!(got, want, "{format} {view}");

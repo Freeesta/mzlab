@@ -3,7 +3,7 @@
 
 use flate2::{Compress, Compression, FlushCompress};
 
-use super::{io, Opzioni};
+use super::{io, Options};
 use crate::error::Result;
 use crate::numpress::Np;
 
@@ -17,24 +17,24 @@ pub(super) enum Data<'a> {
     NpF32(&'a [f32]),
 }
 
-pub(super) struct Codifica {
-    pub(super) opz: Opzioni,
+pub(super) struct Encoding {
+    pub(super) opz: Options,
     /// The zlib state and the two scratch buffers are kept from one array to the next (same bytes as a new encoder each time, without the allocations).
     pub(super) z: Compress,
     pub(super) raw: Vec<u8>,
     pub(super) packed: Vec<u8>,
     /// The fixed-size output chunk of zlib.
-    pub(super) blocco: Vec<u8>,
+    pub(super) block: Vec<u8>,
 }
 
-impl Codifica {
-    pub fn new(opz: Opzioni) -> Self {
-        Codifica {
+impl Encoding {
+    pub fn new(opz: Options) -> Self {
+        Encoding {
             opz,
             z: Compress::new(Compression::new(opz.livello.min(9)), true),
             raw: Vec::new(),
             packed: Vec::new(),
-            blocco: vec![0; 32 * 1024],
+            block: vec![0; 32 * 1024],
         }
     }
 
@@ -43,23 +43,23 @@ impl Codifica {
     pub(super) fn deflate(&mut self) -> Result<()> {
         self.z.reset();
         self.packed.clear();
-        let mut fatto = 0;
+        let mut done = 0;
         loop {
-            let (dentro, fuori) = (self.z.total_in(), self.z.total_out());
-            let stato = self
+            let (inside, outside) = (self.z.total_in(), self.z.total_out());
+            let state = self
                 .z
-                .compress(&self.raw[fatto..], &mut self.blocco, FlushCompress::Finish)
+                .compress(&self.raw[done..], &mut self.block, FlushCompress::Finish)
                 .map_err(|_| io(std::io::ErrorKind::Other.into()))?;
-            let (letti, scritti) = (
-                (self.z.total_in() - dentro) as usize,
-                (self.z.total_out() - fuori) as usize,
+            let (n_read, scritti) = (
+                (self.z.total_in() - inside) as usize,
+                (self.z.total_out() - outside) as usize,
             );
-            fatto += letti;
-            self.packed.extend_from_slice(&self.blocco[..scritti]);
-            if stato == flate2::Status::StreamEnd {
+            done += n_read;
+            self.packed.extend_from_slice(&self.block[..scritti]);
+            if state == flate2::Status::StreamEnd {
                 return Ok(());
             }
-            if letti == 0 && scritti == 0 {
+            if n_read == 0 && scritti == 0 {
                 return Err(io(std::io::ErrorKind::Other.into()));
             }
         }

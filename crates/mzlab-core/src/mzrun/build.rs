@@ -2,7 +2,7 @@
 
 use super::{results_digest, self_sha256};
 use crate::budget::sha256_hex;
-use crate::campioni::{digest, Campione};
+use crate::campioni::{digest, Sample};
 use crate::error::{Error, Result};
 use crate::flow::value_text;
 use crate::json::Value;
@@ -11,7 +11,7 @@ use crate::json::Value;
 pub struct Parts<'a> {
     pub plan: &'a Value,
     pub prov: &'a Value,
-    pub roles: &'a [Campione],
+    pub roles: &'a [Sample],
     pub resources: Vec<Value>,
     pub decisions: Vec<Value>,
     pub limits: Vec<Value>,
@@ -86,7 +86,7 @@ fn resolved(prov: &Value) -> Result<(Value, Value)> {
     Ok((Value::Obj(out), Value::Obj(seeds)))
 }
 
-fn input(f: &Value, roles: &[Campione]) -> Result<Value> {
+fn input(f: &Value, roles: &[Sample]) -> Result<Value> {
     let alias = text(f, "name", "input")?;
     let sha = text(f, "sha256", "input")?;
     let c = roles

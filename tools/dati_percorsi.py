@@ -13,7 +13,7 @@ NAMES = ("mzlab-dati", "QqQ-lab-dati")
 MARKERS = ("dati/INDICE.md",)
 
 
-def _candidati() -> list[Path]:
+def _candidates() -> list[Path]:
     cands = [Path(v) for v in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI")) if v]
     for base in (ROOT.parent, ROOT.parent.parent, Path.home(), Path("/home/user"), Path("/workspace"), Path("/workspaces"), Path("/repos"), Path("/tmp")):
         cands += [base / n for n in NAMES]
@@ -22,7 +22,7 @@ def _candidati() -> list[Path]:
 
 def radice() -> Path | None:
     """The data repository, or None: MZLAB_DATI / QQQ_DATI, then a sibling folder named mzlab-dati (or the old name)."""
-    return next((c for c in _candidati() if any((c / m).exists() for m in MARKERS)), None)
+    return next((c for c in _candidates() if any((c / m).exists() for m in MARKERS)), None)
 
 
 # The data repository was tidied (reorganize-step1): folders moved. Each rule is (old prefix, new prefix, name test);

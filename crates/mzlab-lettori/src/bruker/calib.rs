@@ -3,7 +3,7 @@
 /// One row of `MzCalibration`.
 #[derive(Debug, Clone, Default)]
 pub struct MzCal {
-    pub modello: i64,
+    pub model: i64,
     /// ns per TOF index.
     pub timebase: f64,
     /// ns before the first sample.
@@ -26,7 +26,7 @@ impl MzCal {
     }
 
     /// The factor of the m/z of a frame measured at temperatures `t1`, `t2`: `1 - 1e-6·(dC1·(t1 - T1) + dC2·(t2 - T2))`.
-    pub fn fattore(&self, t1: f64, t2: f64) -> f64 {
+    pub fn factor(&self, t1: f64, t2: f64) -> f64 {
         let f =
             1.0 - 1e-6 * (self.coef[0] * (t1 - self.temp[0]) + self.coef[1] * (t2 - self.temp[1]));
         if f.is_finite() {
@@ -37,8 +37,8 @@ impl MzCal {
     }
 
     /// Whether the constants make a usable law (a hostile file may bring zeros or NaN).
-    pub fn valida(&self) -> bool {
-        self.modello == 1
+    pub fn validate(&self) -> bool {
+        self.model == 1
             && self.c[1] > 0.0
             && self.c.iter().all(|x| x.is_finite())
             && self.timebase.is_finite()
@@ -51,15 +51,15 @@ mod test {
     use super::*;
 
     #[test]
-    fn tof_e_mz_si_invertono() {
+    fn tof_and_mz_invert() {
         let c = MzCal {
-            modello: 1,
+            model: 1,
             timebase: 0.125,
             delay: 18502.75,
             c: [280.6435408329972, 150581.44261048065, 0.0, 0.0, 0.0],
             ..MzCal::default()
         };
-        assert!(c.valida());
+        assert!(c.validate());
         let m = c.mz(269196.13333333336);
         assert!((m - 405.164).abs() < 1e-3, "{m}");
         assert!(c.mz(2.0e5) < c.mz(2.1e5));

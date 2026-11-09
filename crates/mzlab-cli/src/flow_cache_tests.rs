@@ -1,11 +1,14 @@
 //! The cache of a run folder: running the same plan again in the same `--out` takes every step from the cache (`cached` in `prov/1`, `reused` on
-//! stderr) with the same bytes; a changed parameter runs that step and what follows it only; `--fresh` runs everything; the desktop route keeps it too.
+//! stderr) with the same bytes; a changed parameter runs that step and what follows it only; `--fresh` runs everything; the desktop route keeps it too;
+//! the lineage of a series keeps the place of each item, also when two items have the same bytes.
 
 use std::path::Path;
 
 use mzlab_core::json::{parse, Value};
 
+use crate::flow::{FileRunner, Lineage};
 use crate::flow_run_tests::{fixture, flow_run, folder, p};
+use mzlab_core::step::DataType;
 
 /// `instance -> cached` of the `prov.json` of `out` (`activity` is keyed by instance).
 fn cached(out: &Path) -> Vec<(String, bool)> {
@@ -26,6 +29,36 @@ fn made(out: &Path) -> Vec<(String, Vec<u8>)> {
         .into_iter()
         .filter(|(n, _)| !skip.contains(&n.as_str()))
         .collect()
+}
+
+/// One index of the series `idx`, kept and traced as `index_job` does.
+fn index(r: &FileRunner, name: &str, bytes: &[u8], item: usize) -> mzlab_core::flow::Artifact {
+    let p = r.work.join(format!("idx-{item}.mzidx"));
+    std::fs::write(&p, bytes).unwrap();
+    let a = r.keep(p, DataType::Mzidx).unwrap();
+    let l = Lineage {
+        name: name.into(),
+        instance: "idx".into(),
+        item: Some(item),
+        ..Lineage::default()
+    };
+    r.trace(&a, l);
+    a
+}
+
+/// Two items of one series with the same bytes share a lineage entry: the later one must not hide item 0 (`first_of_series`).
+#[test]
+fn a_repeated_file_keeps_item_0_the_first_of_its_series() {
+    let d = std::env::temp_dir().join(format!("mzlab_series_first_{}", std::process::id()));
+    std::fs::create_dir_all(&d).unwrap();
+    let r = FileRunner::new(&d, &d, None);
+    let x = index(&r, "x.mzML", b"same bytes", 0);
+    let y = index(&r, "y.mzML", b"other bytes", 1);
+    index(&r, "x.mzML", b"same bytes", 2);
+    let first = r.first_of_series(&y);
+    let want = r.path(&x);
+    let _ = std::fs::remove_dir_all(&d);
+    assert_eq!(first, Some(want), "item 1 must read the profile of item 0");
 }
 
 #[test]
@@ -173,5 +206,76 @@ fn a_probe_counts_the_steps_the_cache_would_give_back() {
         std::fs::read(out.join("cache").join("index.json")).unwrap(),
         index
     );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The `.weak` files beside the `.mzfeatf` of `out`, by name.
+fn weak_files(out: &Path) -> Vec<String> {
+    let mut v: Vec<String> = made(out)
+        .into_iter()
+        .map(|(n, _)| n)
+        .filter(|n| n.ends_with(".mzfeatf.weak"))
+        .collect();
+    v.sort();
+    v
+}
+
+#[test]
+fn a_detection_whose_weak_file_is_gone_or_broken_is_made_again() {
+    let (dir, _) = fixture("cache_weak");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let run = |extra: &[&str]| {
+        let mut a = vec![p(&plan), "--in", p(&data), "--out", p(&out)];
+        a.extend(extra);
+        let o = flow_run(&a);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        let c = cached(&out);
+        move |id: &str| c.iter().find(|x| x.0 == id).unwrap().1
+    };
+    // the run happens in `run`; the lookup of the cached steps it gives back is not needed here
+    let _ = run(&[]);
+    let (first, index) = (
+        made(&out),
+        std::fs::read(out.join("cache").join("index.json")).unwrap(),
+    );
+    let weak = weak_files(&out);
+    assert_eq!(
+        weak.len(),
+        3,
+        "the detection writes the weak candidates of each file"
+    );
+
+    // deleted: the detection runs again and gives the same files; the index of the cache keeps its bytes
+    std::fs::remove_file(out.join(&weak[0])).unwrap();
+    assert!(!run(&[])("det"));
+    assert_eq!(made(&out), first);
+    assert_eq!(
+        std::fs::read(out.join("cache").join("index.json")).unwrap(),
+        index
+    );
+
+    // truncated: the same
+    let b = std::fs::read(out.join(&weak[1])).unwrap();
+    std::fs::write(out.join(&weak[1]), &b[..b.len() / 2]).unwrap();
+    assert!(!run(&[])("det"));
+    assert_eq!(made(&out), first);
+
+    // the weak tier off in the alignment: an intact weak file keeps the detection, and the table is the one of a fresh run
+    let of = run(&["--set", "ali.weak_files=0"]);
+    assert!(of("det") && !of("ali"));
+    let table = std::fs::read(out.join("ali.mzfeat")).unwrap();
+    let _ = run(&["--fresh", "--set", "ali.weak_files=0"]);
+    assert_eq!(std::fs::read(out.join("ali.mzfeat")).unwrap(), table);
+
+    // a file left out of the plan: its detection is forgotten with its weak candidates
+    let text = std::fs::read_to_string(&plan).unwrap();
+    let two = text
+        .replace(r#",{"name":"s_t030.mzML","type":"raw"}"#, "")
+        .replace(r#","file:s_t030.mzML""#, "");
+    assert_ne!(two, text);
+    std::fs::write(&plan, two).unwrap();
+    let _ = run(&[]);
+    assert!(!out.join("det-s_t030.mzfeatf").exists());
+    assert_eq!(weak_files(&out), weak[..2].to_vec());
     let _ = std::fs::remove_dir_all(&dir);
 }

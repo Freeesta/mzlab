@@ -10,7 +10,7 @@ const STEPS: &str = r#"[
 {"id":"t.convert","per_item":true,"ins":["raw*"],"outs":["mz*"]},
 {"id":"t.centroid","per_item":true,"ins":["mz*"],"outs":["mz*"]},
 {"id":"t.index","per_item":true,"ins":["mz*"],"outs":["index*"]},
-{"id":"features.detect","per_item":true,"ins":["index*"],"outs":["peaks*"],"params":{"q":1}},
+{"id":"features.detect","version":2,"per_item":true,"ins":["index*"],"outs":["peaks*"],"params":{"q":1}},
 {"id":"features.align","ins":["peaks*"],"outs":["table"],"params":{"q":1}}]"#;
 
 fn leak(s: &str) -> &'static str {
@@ -38,6 +38,7 @@ fn registry_from(spec: &Value) -> Vec<Step> {
         .iter()
         .map(|s| {
             let mut st = Step::core(leak(s.get("id").and_then(Value::str).unwrap()), "", "");
+            st.version = s.get("version").and_then(Value::f64).unwrap_or(1.0) as u32;
             st.per_item = s.get("per_item").and_then(Value::bool).unwrap_or(false);
             st.runs_in.native = true;
             st.ins = ports(s.get("ins"));
@@ -69,7 +70,7 @@ pub(in crate::flow) fn plan_text(files: &[&str], dq: u32, aq: u32) -> String {
 {{\"id\":\"conv\",\"step\":\"t.convert@1\",\"in\":{{\"raw\":[{}]}}}},\
 {{\"id\":\"cen\",\"step\":\"t.centroid@1\",\"in\":{{\"mz\":[\"conv.mz\"]}}}},\
 {{\"id\":\"idx\",\"step\":\"t.index@1\",\"in\":{{\"mz\":[\"cen.mz\"]}}}},\
-{{\"id\":\"det\",\"step\":\"features.detect@1\",\"params\":{{\"q\":{dq}}},\"in\":{{\"index\":[\"idx.index\"]}}}},\
+{{\"id\":\"det\",\"step\":\"features.detect@2\",\"params\":{{\"q\":{dq}}},\"in\":{{\"index\":[\"idx.index\"]}}}},\
 {{\"id\":\"aln\",\"step\":\"features.align@1\",\"params\":{{\"q\":{aq}}},\"in\":{{\"peaks\":[\"det.peaks\"]}}}}]}}",
         inputs.join(","),
         refs.join(",")
@@ -162,7 +163,7 @@ fn the_barrier_waits_for_the_last_file() {
     run(&mut s, "det|f1.raw");
     assert_eq!(state(&s, "aln"), "waiting");
     let n = s.nodes().into_iter().find(|n| n.instance == "det").unwrap();
-    assert_eq!((n.parte, n.di), (1, 2));
+    assert_eq!((n.part, n.di), (1, 2));
     run(&mut s, "det|f2.raw");
     assert_eq!(state(&s, "aln"), "ready");
 }
@@ -312,7 +313,7 @@ fn the_order_of_the_keys_in_the_file_does_not_change_the_plan_keys() {
     // the steps in another order, the object keys in another order
     let text = "{\"steps\":[\
 {\"in\":{\"peaks\":[\"det.peaks\"]},\"params\":{\"q\":1},\"step\":\"features.align@1\",\"id\":\"aln\"},\
-{\"in\":{\"index\":[\"idx.index\"]},\"params\":{\"q\":1},\"step\":\"features.detect@1\",\"id\":\"det\"},\
+{\"in\":{\"index\":[\"idx.index\"]},\"params\":{\"q\":1},\"step\":\"features.detect@2\",\"id\":\"det\"},\
 {\"in\":{\"mz\":[\"cen.mz\"]},\"step\":\"t.index@1\",\"id\":\"idx\"},\
 {\"in\":{\"mz\":[\"conv.mz\"]},\"step\":\"t.centroid@1\",\"id\":\"cen\"},\
 {\"in\":{\"raw\":[\"file:f1.raw\",\"file:f2.raw\"]},\"step\":\"t.convert@1\",\"id\":\"conv\"}],\
@@ -354,8 +355,7 @@ fn an_input_without_sha_is_identified_by_the_text_the_caller_gives() {
     assert_ne!(a.key(&jid("conv|f1.raw")), v2.key(&jid("conv|f1.raw")));
 }
 
-/// Two files that carry the same placeholder fingerprint (the page sends `loading` for every index it is still waiting for) never share a job key: a key that held no name made
-/// every detection of the series land in one file.
+/// Two files that carry the same placeholder fingerprint (the page sends `loading` for every index it is still waiting for) never share a job key: a key that held no name made every detection of the series land in one file.
 #[test]
 fn files_with_the_same_identity_get_different_keys() {
     let text = plan_text(&["f1.raw", "f2.raw"], 1, 1)
@@ -430,6 +430,22 @@ fn cached_pause_and_a_held_job() {
     assert!(!names(&s, &ALL).contains(&"conv|f2.raw".to_string()));
     s.unblock(&jid("conv|f2.raw"));
     assert_eq!(state(&s, "conv|f2.raw"), "ready");
+}
+
+#[test]
+fn a_held_job_is_tried_again_when_its_key_changes() {
+    let mut s = sched(&["f1.raw"]);
+    run(&mut s, "conv|f1.raw");
+    run(&mut s, "cen|f1.raw");
+    run(&mut s, "idx|f1.raw");
+    run(&mut s, "det|f1.raw");
+    // the page hands the step to the computer for what it lacks now (a sample list not yet given)
+    assert!(s.block(&jid("aln"), "platform.computer"));
+    s.update(&plan(&["f1.raw"], 1, 1));
+    assert_eq!(state(&s, "aln"), "blocked", "the same key stays held");
+    // a new key is a new job: the page decides again
+    s.update(&plan(&["f1.raw"], 1, 2));
+    assert_eq!(state(&s, "aln"), "ready");
 }
 
 #[test]

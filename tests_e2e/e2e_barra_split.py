@@ -28,13 +28,13 @@ try:
             for g in state():
                 sel = f'#stbar [data-cmd-main="{g["id"]}"]'
                 grp = "document.querySelector('#stbar .tb-split[data-cmd=" + g["id"] + "]').classList.contains('on')"
-                pg.click(sel); attendi(pg, grp)
+                pg.click(sel); wait_for_js(pg, grp)
                 for th in ("light", "dark"):
                     pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", th); frames(pg)
                     now = {x["id"]: x for x in state()}
                     assert now[g["id"]]["on"], (th, now[g["id"]])
                     assert not any(x["on"] for k, x in now.items() if k != g["id"]), now
-                pg.click(sel); attendi(pg, "!" + grp)
+                pg.click(sel); wait_for_js(pg, "!" + grp)
                 now = {x["id"]: x for x in state()}
                 assert not now[g["id"]]["on"], now[g["id"]]
         step("every split button: main part and caret share the active state, and lose it together (light and dark)", each)

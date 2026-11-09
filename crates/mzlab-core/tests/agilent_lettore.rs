@@ -8,12 +8,12 @@ mod agilent_synth;
 
 use agilent_folder::*;
 use agilent_synth::*;
-use mzlab_core::lettori::{self, FileSet, Formato, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Format, Limits, Member, Reader};
 use mzlab_core::mzml::{ChromKind, Run};
 
 /// The files of a real folder as a `FileSet`: the members are read from disk by offset, never loaded.
 fn set_of(dir: &std::path::Path) -> FileSet {
-    let mut membri = Vec::new();
+    let mut members = Vec::new();
     let name = dir.file_name().unwrap().to_string_lossy().into_owned();
     for entry in walk(dir) {
         let rel = entry
@@ -22,14 +22,14 @@ fn set_of(dir: &std::path::Path) -> FileSet {
             .to_string_lossy()
             .replace('\\', "/");
         let file = std::fs::File::open(&entry).unwrap();
-        membri.push(Membro {
+        members.push(Member {
             nome: format!("{name}/{rel}"),
             dim: file.metadata().unwrap().len(),
             dati: Box::new(file),
             sha1: None,
         });
     }
-    FileSet { membri }
+    FileSet { membri: members }
 }
 
 fn walk(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
@@ -60,11 +60,11 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
             Some("agilent-d"),
             "{label}"
         );
-        let mut l = lettori::apri(set_of(&f), &Limiti::sito()).unwrap();
-        assert_eq!(l.formato(), Formato::AgilentD);
-        assert_eq!(l.campioni().len(), 1);
-        assert_eq!(l.campioni()[0].scansioni, run.spectra.len(), "{label}");
-        let index = l.indice(0).unwrap().to_vec();
+        let mut l = lettori::apri(set_of(&f), &Limits::sito()).unwrap();
+        assert_eq!(l.format(), Format::AgilentD);
+        assert_eq!(l.samples().len(), 1);
+        assert_eq!(l.samples()[0].scansioni, run.spectra.len(), "{label}");
+        let index = l.index(0).unwrap().to_vec();
         assert_eq!(index.len(), run.spectra.len(), "{label}");
         for (k, (e, s)) in index.iter().zip(&run.spectra).enumerate() {
             assert_eq!(
@@ -72,7 +72,7 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
                 (s.id.as_str(), s.rt, s.level, s.polarity),
                 "{label} {k}"
             );
-            let p = e.posizione.unwrap();
+            let p = e.position.unwrap();
             let r = d
                 .records
                 .iter()
@@ -92,14 +92,10 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
         }
         // by position, in any order: the last scan first, then the first
         for k in [index.len() - 1, 0, index.len() / 2] {
-            assert_eq!(
-                l.scansione(0, k).unwrap(),
-                run.spectra[k],
-                "{label}: scan {k}"
-            );
+            assert_eq!(l.scan(0, k).unwrap(), run.spectra[k], "{label}: scan {k}");
         }
-        assert!(l.scansione(0, index.len()).is_err() && l.scansione(1, 0).is_err());
-        let h = l.intestazione(0, 0).unwrap();
+        assert!(l.scan(0, index.len()).is_err() && l.scan(1, 0).is_err());
+        let h = l.scan_header(0, 0).unwrap();
         let r0 = d.records.iter().find(|r| r.points > 0).unwrap();
         assert!(
             h.len() >= 19 + r0.extra.len(),
@@ -115,8 +111,8 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
 }
 
 /// The TIC and the BPC from the records, one SIC per ion of a SIM method, and the `metodo/1` document.
-fn chromatograms_and_method(l: &mut dyn Lettore, run: &Run, label: &str) {
-    let listed = l.cromatogrammi(0).unwrap();
+fn chromatograms_and_method(l: &mut dyn Reader, run: &Run, label: &str) {
+    let listed = l.chromatograms(0).unwrap();
     for c in &run.chromatograms {
         if matches!(c.kind, ChromKind::Tic | ChromKind::Bpc | ChromKind::Sic) {
             assert!(
@@ -124,11 +120,11 @@ fn chromatograms_and_method(l: &mut dyn Lettore, run: &Run, label: &str) {
                 "{label}: {} is not listed",
                 c.id
             );
-            assert_eq!(&l.cromatogramma(0, &c.id).unwrap(), c, "{label}: {}", c.id);
+            assert_eq!(&l.chromatogram(0, &c.id).unwrap(), c, "{label}: {}", c.id);
         }
     }
-    assert!(l.cromatogramma(0, "nothing").is_err());
-    let doc = l.metodo(0).unwrap();
+    assert!(l.chromatogram(0, "nothing").is_err());
+    let doc = l.method(0).unwrap();
     assert!(
         doc.contains("\"formato\":\"agilent-d\"") && doc.contains("MSPeak.bin"),
         "{label}"
@@ -138,8 +134,8 @@ fn chromatograms_and_method(l: &mut dyn Lettore, run: &Run, label: &str) {
 #[test]
 fn a_damaged_or_oversized_set_is_refused_with_a_key() {
     let (idx, peak) = encode(&sample());
-    let member = |nome: &str, b: &[u8]| Membro {
-        nome: nome.into(),
+    let member = |name: &str, b: &[u8]| Member {
+        nome: name.into(),
         dim: b.len() as u64,
         dati: Box::new(b.to_vec()),
         sha1: None,
@@ -154,9 +150,9 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         .collect(),
     };
     // the good set opens and reads
-    let mut l = lettori::apri(set(&idx, true), &Limiti::sito()).unwrap();
-    assert_eq!(l.indice(0).unwrap().len(), 3);
-    assert_eq!(l.scansione(0, 1).unwrap().mz.len(), 3);
+    let mut l = lettori::apri(set(&idx, true), &Limits::sito()).unwrap();
+    assert_eq!(l.index(0).unwrap().len(), 3);
+    assert_eq!(l.scan(0, 1).unwrap().mz.len(), 3);
     // without MSPeak.bin the folder is only possible, not sure
     assert_eq!(
         lettori::riconosci(&mut set(&idx, false)).map(|v| v.id),
@@ -168,16 +164,16 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
     assert!(lettori::riconosci(&mut set(&bad, true)).is_none());
     assert!(lettori::riconosci(&mut set(b"not an index", true)).is_none());
     assert_eq!(
-        lettori::apri(set(b"not an index", true), &Limiti::sito())
+        lettori::apri(set(b"not an index", true), &Limits::sito())
             .err()
             .unwrap()
             .key,
         "err.file.notAccepted"
     );
     // a set larger than the bytes allowed is never read
-    let tiny = Limiti {
+    let tiny = Limits {
         profondita: 8,
-        voci: 5_000_000,
+        entries: 5_000_000,
         byte: 100,
     };
     assert_eq!(
@@ -185,9 +181,9 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         "error.memoryBudget"
     );
     // a table of more entries than allowed
-    let few = Limiti {
+    let few = Limits {
         profondita: 8,
-        voci: 2,
+        entries: 2,
         byte: 1 << 20,
     };
     assert!(lettori::apri(set(&idx, true), &few).is_err());
@@ -200,7 +196,7 @@ fn a_gc_run_is_not_a_variant() {
     let Some(all) = folders() else { return };
     for f in all {
         assert!(
-            !mzlab_core::agilent::lettore::variante(&mut set_of(&f)),
+            !mzlab_core::agilent::lettore::variant(&mut set_of(&f)),
             "{f:?}"
         );
     }

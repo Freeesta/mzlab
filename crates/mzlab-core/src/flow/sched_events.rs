@@ -87,7 +87,7 @@ pub struct NodeView {
     pub instance: String,
     pub state: State,
     pub frac: Option<f64>,
-    pub parte: usize,
+    pub part: usize,
     pub di: usize,
     pub ms: f64,
 }
@@ -161,7 +161,7 @@ pub(super) fn node_event(seq: u64, rev: u64, n: &NodeView) -> String {
         .raw(",\"item\":null,\"state\":");
     o.str(n.state.name()).raw(",\"frac\":").opt(n.frac);
     o.raw(",\"parte\":")
-        .int(n.parte as i64)
+        .int(n.part as i64)
         .raw(",\"di\":")
         .int(n.di as i64);
     o.raw(",\"ms\":").opt(Some(n.ms));

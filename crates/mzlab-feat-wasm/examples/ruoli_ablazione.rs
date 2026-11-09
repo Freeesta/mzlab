@@ -14,7 +14,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 
-use mzlab_core::campioni::Campione;
+use mzlab_core::campioni::Sample;
 use mzlab_core::idxread::Index;
 use mzlab_core::json::{self, Value};
 use mzlab_feat::store::read_table;
@@ -304,12 +304,12 @@ fn run_config(ctx: &Ctx, keep: &[usize]) -> Result<mzlab_feat::table::Aligned, S
 
 /// The roles of the files of the run as `campioni/2` gives them to the TP path (times confirmed, as after the loading table).
 fn roles_of(ctx: &Ctx, keep: &[usize]) -> TpRoles {
-    let cs: Vec<Campione> = keep
+    let cs: Vec<Sample> = keep
         .iter()
         .enumerate()
         .map(|(i, &k)| {
             let f = &ctx.files[k];
-            let mut c = Campione::new(f.path.rsplit('/').next().unwrap_or(""), "", i as u32 + 1);
+            let mut c = Sample::new(f.path.rsplit('/').next().unwrap_or(""), "", i as u32 + 1);
             c.kind = if f.role == "treated" {
                 "sample".into()
             } else {

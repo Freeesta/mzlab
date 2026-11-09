@@ -21,7 +21,7 @@ def visit(port, query, hold_ms):
             ctx.add_init_script(SLOW % hold_ms)
             pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
             pg.goto(f"http://127.0.0.1:{r.port}/{query}")
-            attendi(pg, f"window.MZLAB_LR !== undefined || !!window.MZLAB_LR_ERR || {ERR} !== ''", 120000)
+            wait_for_js(pg, f"window.MZLAB_LR !== undefined || !!window.MZLAB_LR_ERR || {ERR} !== ''", 120000)
             out = {"err": pg.evaluate(ERR), "lrErr": pg.evaluate("window.MZLAB_LR_ERR || ''"), "ready": pg.evaluate("window.MZLAB_LR !== undefined"), "fasi": pg.evaluate("window.__fasi")}
             assert not [e for e in r.errs if e[0] == "pageerror"], r.errs
             b.close()

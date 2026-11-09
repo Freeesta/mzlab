@@ -1,44 +1,44 @@
 // The tests of trasporto.rs: what the module writes is what the engine reads, bit by bit.
 use super::*;
 
-fn voci() -> Vec<VoceScansione> {
+fn entries() -> Vec<ScanEntry> {
     vec![
-        VoceScansione {
+        ScanEntry {
             id: "scan=1 \"q\"\né".into(),
             rt: 0.1234567890123,
             livello: 2,
             polarita: -1,
             tic: 1e300,
-            picco_base: None,
+            base_peak: None,
             filtro: "FTMS + c ESI Full ms2 445.12@hcd30.00 [50.00-500.00]".into(),
             precursore: Some(445.12),
-            posizione: Some(Posizione {
+            position: Some(Position {
                 membro: 3,
                 offset: 1 << 40,
                 lunghezza: 77,
             }),
         },
-        VoceScansione {
+        ScanEntry {
             id: String::new(),
             rt: f64::INFINITY,
             livello: 1,
             polarita: 0,
             tic: 0.1 + 0.2,
-            picco_base: Some(200.25),
+            base_peak: Some(200.25),
             filtro: String::new(),
             precursore: None,
-            posizione: None,
+            position: None,
         },
-        VoceScansione {
+        ScanEntry {
             id: "scan=3".into(),
             rt: -0.0,
             livello: 255,
             polarita: 1,
             tic: 0.0,
-            picco_base: Some(-1.5),
+            base_peak: Some(-1.5),
             filtro: "FTMS + c ESI Full ms2 445.12@hcd30.00 [50.00-500.00]".into(),
             precursore: Some(0.0),
-            posizione: Some(Posizione {
+            position: Some(Position {
                 membro: 0,
                 offset: 0,
                 lunghezza: 0,
@@ -48,35 +48,35 @@ fn voci() -> Vec<VoceScansione> {
 }
 
 #[test]
-fn l_indice_torna_uguale() {
-    let v = voci();
-    let b = encode_indice(&v);
-    assert_eq!(decode_indice(&b).unwrap(), v);
+fn the_index_comes_back_equal() {
+    let v = entries();
+    let b = encode_index(&v);
+    assert_eq!(decode_index(&b).unwrap(), v);
     // each filter text is written once
     assert_eq!(
         b.windows(4).filter(|w| *w == b"FTMS").count(),
         1,
         "the repeated filter is kept once"
     );
-    assert_eq!(decode_indice(&encode_indice(&[])).unwrap(), vec![]);
+    assert_eq!(decode_index(&encode_index(&[])).unwrap(), vec![]);
 }
 
 #[test]
-fn un_indice_troncato_o_di_un_altra_versione_si_rifiuta() {
-    let b = encode_indice(&voci());
+fn a_truncated_or_other_version_index_is_refused() {
+    let b = encode_index(&entries());
     for n in [0, 3, 23, 24, b.len() / 2, b.len() - 1] {
-        assert!(decode_indice(&b[..n]).is_err(), "{n}");
+        assert!(decode_index(&b[..n]).is_err(), "{n}");
     }
     let mut v1 = b.clone();
     v1[0] = 1;
-    assert!(decode_indice(&v1).is_err());
+    assert!(decode_index(&v1).is_err());
     // a count that no block could hold is refused before allocating
     let mut enorme = b.clone();
     enorme[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
-    assert!(decode_indice(&enorme).is_err());
+    assert!(decode_index(&enorme).is_err());
 }
 
-fn scansione(wide: Option<Vec<f64>>) -> Spectrum {
+fn scan(wide: Option<Vec<f64>>) -> Spectrum {
     Spectrum {
         index: 7,
         id: "ignored".into(),
@@ -93,8 +93,8 @@ fn scansione(wide: Option<Vec<f64>>) -> Spectrum {
 }
 
 #[test]
-fn la_scansione_torna_uguale_senza_id_e_filtro() {
-    let s = scansione(None);
+fn the_scan_comes_back_equal_without_id_and_filter() {
+    let s = scan(None);
     let b = encode_scansione(&s);
     assert_eq!(b.len(), TESTA_SCANSIONE + 3 * 12);
     let d = decode_scansione(7, &b).unwrap();
@@ -107,30 +107,30 @@ fn la_scansione_torna_uguale_senza_id_e_filtro() {
     assert_eq!(d.intensity[..2], s.intensity[..2]);
     assert!(d.intensity[2].is_nan());
     assert!(d.wide.is_none());
-    let senza = Spectrum {
+    let without = Spectrum {
         precursor: None,
         profile: false,
         ..s
     };
-    let d = decode_scansione(0, &encode_scansione(&senza)).unwrap();
+    let d = decode_scansione(0, &encode_scansione(&without)).unwrap();
     assert_eq!((d.precursor, d.profile), (None, false));
 }
 
 #[test]
-fn le_intensita_larghe_restano_larghe_solo_se_servono() {
+fn wide_intensities_stay_wide_only_when_needed() {
     let w = vec![1.5, 16777217.0, 3.0];
     let s = Spectrum {
         intensity: w.iter().map(|&x| x as f32).collect(),
-        ..scansione(Some(w.clone()))
+        ..scan(Some(w.clone()))
     };
     let b = encode_scansione(&s);
     assert_eq!(b.len(), TESTA_SCANSIONE + 3 * 16);
     assert_eq!(decode_scansione(0, &b).unwrap().wide, Some(w));
     // 64-bit values that a 32-bit one holds exactly are not kept wide
-    let esatte = vec![1.5, 2.0, 3.0];
+    let exact = vec![1.5, 2.0, 3.0];
     let s = Spectrum {
-        intensity: esatte.iter().map(|&x| x as f32).collect(),
-        ..scansione(Some(esatte))
+        intensity: exact.iter().map(|&x| x as f32).collect(),
+        ..scan(Some(exact))
     };
     assert!(decode_scansione(0, &encode_scansione(&s))
         .unwrap()
@@ -139,23 +139,23 @@ fn le_intensita_larghe_restano_larghe_solo_se_servono() {
 }
 
 #[test]
-fn una_scansione_di_misura_sbagliata_si_rifiuta() {
-    let b = encode_scansione(&scansione(None));
+fn a_scan_of_wrong_size_is_refused() {
+    let b = encode_scansione(&scan(None));
     assert!(decode_scansione(0, &b[..b.len() - 1]).is_err());
     assert!(decode_scansione(0, &b[..10]).is_err());
-    let mut lungo = b.clone();
-    lungo.push(0);
-    assert!(decode_scansione(0, &lungo).is_err());
+    let mut long = b.clone();
+    long.push(0);
+    assert!(decode_scansione(0, &long).is_err());
     let mut enorme = b;
     enorme[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
     assert!(decode_scansione(0, &enorme).is_err());
-    let vuota = Spectrum {
+    let empty = Spectrum {
         mz: vec![],
         intensity: vec![],
-        ..scansione(None)
+        ..scan(None)
     };
     assert_eq!(
-        decode_scansione(0, &encode_scansione(&vuota))
+        decode_scansione(0, &encode_scansione(&empty))
             .unwrap()
             .mz
             .len(),
@@ -166,14 +166,46 @@ fn una_scansione_di_misura_sbagliata_si_rifiuta() {
 /// The buffer of the index is allocated once at its exact size (7 columns of f64 per row, not 6).
 #[test]
 fn the_index_buffer_is_sized_exactly() {
-    let b = encode_indice(&voci());
+    let b = encode_index(&entries());
     assert_eq!(b.capacity(), b.len());
 }
 
 /// An index that declares `u32::MAX` filters is refused as corrupt (on wasm32 `nf + 1` wrapped to 0 before the offsets were read).
 #[test]
 fn an_index_with_a_filter_count_at_the_limit_is_refused() {
-    let mut b = encode_indice(&voci());
+    let mut b = encode_index(&entries());
     b[8..12].copy_from_slice(&u32::MAX.to_le_bytes());
-    assert!(decode_indice(&b).is_err());
+    assert!(decode_index(&b).is_err());
+}
+
+/// The columns crossing apart (`scan_from_parts`) give the scan that the block gives, wide or not; a part of the wrong size is refused.
+#[test]
+fn the_scan_from_its_parts_is_the_one_from_the_block() {
+    let w = vec![1.5, 16777217.0, 3.0];
+    let wide = Spectrum {
+        intensity: w.iter().map(|&x| x as f32).collect(),
+        ..scan(Some(w.clone()))
+    };
+    for s in [
+        scan(None),
+        wide,
+        Spectrum {
+            precursor: None,
+            profile: false,
+            ..scan(None)
+        },
+    ] {
+        let y = match &s.wide {
+            Some(w) => Intensity::Larghe(w.clone()),
+            None => Intensity::Strette(s.intensity.clone()),
+        };
+        let p = scan_from_parts(4, &testa_scansione(&s), s.mz.clone(), y).unwrap();
+        let b = decode_scansione(4, &encode_scansione(&s)).unwrap();
+        assert_eq!(format!("{p:?}"), format!("{b:?}"));
+    }
+    let s = scan(None);
+    let t = testa_scansione(&s);
+    assert!(scan_from_parts(0, &t, vec![1.0], Intensity::Strette(s.intensity.clone())).is_err());
+    assert!(scan_from_parts(0, &t, s.mz.clone(), Intensity::Larghe(vec![1.0; 3])).is_err());
+    assert!(scan_from_parts(0, &t[..10], s.mz.clone(), Intensity::Strette(s.intensity)).is_err());
 }

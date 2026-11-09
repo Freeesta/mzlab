@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{corsa_build, Uscita};
+use mzlab_core::flow::{corsa_build, Output};
 use mzlab_core::json::parse;
 
 fn io(e: std::io::Error) -> Error {
@@ -28,11 +28,11 @@ pub fn report(dir: &Path) -> Result<String> {
             bytes,
         ));
     }
-    let uscite: Vec<Uscita> = kept
+    let outputs: Vec<Output> = kept
         .iter()
-        .map(|(n, b)| Uscita { name: n, bytes: b })
+        .map(|(n, b)| Output { name: n, bytes: b })
         .collect();
-    Ok(corsa_build(&parse(&prov)?, &uscite)?.json())
+    Ok(corsa_build(&parse(&prov)?, &outputs)?.json())
 }
 
 /// The arguments after `flow report`.

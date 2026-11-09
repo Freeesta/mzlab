@@ -1,5 +1,5 @@
 //! The matrix of the scan modes of a QTRAP against the synthetic pairs of `tools/wiff_modi.py`: what the `.wiff` reader does today with each mode, exactly
-//! (read with level / precursor / CV type, or refused with `err.file.wiff` and the `scan type code C (experiment 1)` detail), never a panic. Whoever adds
+//! (read with level / precursor / CV type, or refused with `err.file.wiffScanType`, `code` C and `experiment` 1), never a panic. Whoever adds
 //! a mode changes its entry in `modi.json`. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![cfg(feature = "sciex")]
@@ -7,7 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
@@ -51,19 +51,34 @@ fn close(a: f64, b: f64) -> bool {
     a == b || (a - b).abs() <= 1e-9 * a.abs().max(b.abs()).max(1.0)
 }
 
+/// The cause of a refusal as one text: the keys of the readers module (`wiffScanType`, `wiffPeriods`, `wiffNeeds2`) spelled as the reference writes them, else `detail`.
 fn detail(e: &mzlab_core::error::Error) -> String {
-    assert_eq!(e.key, "err.file.wiff");
-    e.params
-        .iter()
-        .find(|(k, _)| *k == "detail")
-        .map(|(_, v)| v.clone())
-        .unwrap_or_default()
+    let p = |n: &str| {
+        e.params
+            .iter()
+            .find(|(k, _)| *k == n)
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
+    };
+    match e.key {
+        "err.file.wiffScanType" => format!(
+            "scan type code {} (experiment {})",
+            p("code"),
+            p("experiment")
+        ),
+        "err.file.wiffPeriods" => format!("periods={}", p("periods")),
+        "err.file.wiffNeeds2" => "wiff2".into(),
+        k => {
+            assert_eq!(k, "err.file.wiff");
+            p("detail")
+        }
+    }
 }
 
 fn set(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
-        Membro {
+        Member {
             nome: file,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -78,36 +93,32 @@ fn set(dir: &Path, name: &str) -> FileSet {
     }
 }
 
-fn check(dir: &Path, sigla: &str, sample: &Value) {
+fn check(dir: &Path, tag: &str, sample: &Value) {
     let n = sample["n"].as_u64().unwrap() as u32;
     let want = &sample["oggi"];
-    let ole = container(
-        std::fs::read(dir.join(format!("{sigla}.wiff"))).unwrap(),
-        sigla,
-    )
-    .unwrap();
-    let mut scan = std::fs::read(dir.join(format!("{sigla}.wiff.scan"))).unwrap();
-    let got = Wiff::open(&ole, sigla, Some(scan.len() as u64), n)
+    let ole = container(std::fs::read(dir.join(format!("{tag}.wiff"))).unwrap(), tag).unwrap();
+    let mut scan = std::fs::read(dir.join(format!("{tag}.wiff.scan"))).unwrap();
+    let got = Wiff::open(&ole, tag, Some(scan.len() as u64), n)
         .and_then(|w| w.run(&mut scan).map(|r| (w.polarity, r)));
     if want["esito"] == "rifiuto" {
-        let err = got.err().unwrap_or_else(|| panic!("{sigla}: read"));
-        assert_eq!(detail(&err), want["detail"].as_str().unwrap(), "{sigla}");
+        let err = got.err().unwrap_or_else(|| panic!("{tag}: read"));
+        assert_eq!(detail(&err), want["detail"].as_str().unwrap(), "{tag}");
         return;
     }
-    let (polarity, run) = got.unwrap_or_else(|e| panic!("{sigla}: {}", e.key));
-    assert_eq!(polarity, 1, "{sigla}: polarity");
+    let (polarity, run) = got.unwrap_or_else(|e| panic!("{tag}: {}", e.key));
+    assert_eq!(polarity, 1, "{tag}: polarity");
     assert_eq!(
         run.spectra.len() as u64,
         want["spettri"].as_u64().unwrap(),
-        "{sigla}: spectra"
+        "{tag}: spectra"
     );
     if want["spettri"] == 0 {
         let tic = run.chromatograms.iter().filter(|c| c.id == "TIC").count();
-        assert_eq!(tic, 1, "{sigla}: TIC");
+        assert_eq!(tic, 1, "{tag}: TIC");
         assert_eq!(
             run.chromatograms.len() as u64,
             want["cromatogrammi"].as_u64().unwrap(),
-            "{sigla}: chromatograms"
+            "{tag}: chromatograms"
         );
         return;
     }
@@ -117,27 +128,27 @@ fn check(dir: &Path, sigla: &str, sample: &Value) {
             s.id,
             format!("sample={n} period=1 cycle={} experiment=1", k + 1)
         );
-        assert_eq!(s.level as u64, want["livello"].as_u64().unwrap(), "{sigla}");
-        assert_eq!(s.precursor, want["precursore"].as_f64(), "{sigla}");
+        assert_eq!(s.level as u64, want["livello"].as_u64().unwrap(), "{tag}");
+        assert_eq!(s.precursor, want["precursore"].as_f64(), "{tag}");
         if k == 0 {
-            assert_eq!(s.mz.len(), mz.len(), "{sigla}: points");
+            assert_eq!(s.mz.len(), mz.len(), "{tag}: points");
             assert!(
                 (0..mz.len()).all(|j| close(s.mz[j], mz[j]) && close(s.intensity_f64(j), it[j])),
-                "{sigla}: values"
+                "{tag}: values"
             );
         }
     }
 }
 
 /// The CV type of the spectra in the mzML: only precursor-ion and neutral-loss scans have one today.
-fn check_cv(dir: &Path, sigla: &str, cv: Option<&str>) {
-    let mut l = lettori::apri(set(dir, sigla), &Limiti::sito()).unwrap();
+fn check_cv(dir: &Path, tag: &str, cv: Option<&str>) {
+    let mut l = lettori::apri(set(dir, tag), &Limits::sito()).unwrap();
     let xml = String::from_utf8(
         mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     for term in ["MS:1000341", "MS:1000326"] {
-        assert_eq!(xml.contains(term), cv == Some(term), "{sigla}: {term}");
+        assert_eq!(xml.contains(term), cv == Some(term), "{tag}: {term}");
     }
 }
 
@@ -149,15 +160,15 @@ fn every_mode_is_read_or_refused_exactly_as_the_matrix_says() {
     let modi = modi.as_object().unwrap();
     assert_eq!(modi.len(), 14);
     let mut read = Vec::new();
-    for (sigla, m) in modi {
+    for (tag, m) in modi {
         for sample in m["campioni"].as_array().unwrap() {
-            check(&dir, sigla, sample);
+            check(&dir, tag, sample);
         }
         let today = &m["campioni"][0]["oggi"];
         if today["esito"] == "letto" {
-            read.push(sigla.as_str());
+            read.push(tag.as_str());
             if today["spettri"] != 0 {
-                check_cv(&dir, sigla, today["tipo"].as_str());
+                check_cv(&dir, tag, today["tipo"].as_str());
             }
         }
     }
@@ -180,20 +191,20 @@ fn the_registry_refuses_the_same_modes_with_the_same_detail() {
     let Some((dir, modi)) = generate() else {
         return;
     };
-    for (sigla, m) in modi.as_object().unwrap() {
+    for (tag, m) in modi.as_object().unwrap() {
         let today = &m["campioni"][0]["oggi"];
         if today["esito"] == "rifiuto" {
-            let err = lettori::apri(set(&dir, sigla), &Limiti::sito())
+            let err = lettori::apri(set(&dir, tag), &Limits::sito())
                 .err()
-                .unwrap_or_else(|| panic!("{sigla}: opened"));
-            assert_eq!(detail(&err), today["detail"].as_str().unwrap(), "{sigla}");
+                .unwrap_or_else(|| panic!("{tag}: opened"));
+            assert_eq!(detail(&err), today["detail"].as_str().unwrap(), "{tag}");
         }
     }
 }
 
 /// The mzML of sample `c` (0-based) of the pair `name`, with the file name replaced so two pairs compare.
 fn mzml(dir: &Path, name: &str, c: usize) -> String {
-    let mut l = lettori::apri(set(dir, name), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(set(dir, name), &Limits::sito()).unwrap();
     let xml = String::from_utf8(
         mzlab_core::lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap(),
     )
@@ -242,7 +253,7 @@ fn q1_reads_like_ems_and_the_method_one_fallback_serves_every_sample() {
         assert_eq!(w.experiments.len(), 1, "sample {n}");
         assert_eq!(w.experiments[0].code, Some(0), "sample {n}");
         assert!(
-            !w.variante(),
+            !w.variant(),
             "sample {n}: a 3200 QTRAP Q1 scan is not a variant"
         );
         let run = w.run(&mut scan).unwrap();
@@ -261,15 +272,15 @@ fn sim_modes_give_one_sim_chromatogram_per_ion() {
     let Some((dir, modi)) = generate() else {
         return;
     };
-    for sigla in ["Q1MI", "Q3MI"] {
-        let ions = modi[sigla]["futuro"]["ioni"].as_array().unwrap().len();
-        let mut l = lettori::apri(set(&dir, sigla), &Limiti::sito()).unwrap();
-        let list = l.cromatogrammi(0).unwrap();
+    for tag in ["Q1MI", "Q3MI"] {
+        let ions = modi[tag]["futuro"]["ioni"].as_array().unwrap().len();
+        let mut l = lettori::apri(set(&dir, tag), &Limits::sito()).unwrap();
+        let list = l.chromatograms(0).unwrap();
         let sim: Vec<_> = list
             .iter()
             .filter(|v| v.tipo == mzlab_core::mzml::ChromKind::Sic)
             .collect();
-        assert_eq!(sim.len(), ions, "{sigla}");
+        assert_eq!(sim.len(), ions, "{tag}");
         assert!(list
             .iter()
             .all(|v| v.tipo != mzlab_core::mzml::ChromKind::Srm));
@@ -291,7 +302,7 @@ fn pi_and_epi_are_both_ms2_and_only_their_experiment_tells_them_apart() {
         return;
     };
     for (name, level) in [("PI", 2), ("EPI", 2), ("EMS", 1), ("Q1", 1)] {
-        let mut l = lettori::apri(set(&dir, name), &Limiti::sito()).unwrap();
+        let mut l = lettori::apri(set(&dir, name), &Limits::sito()).unwrap();
         let xml = mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let tag = format!(
             "<userParam name=\"{}\" value=\"{name}\"/>",

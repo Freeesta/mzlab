@@ -5,46 +5,46 @@
 mod comune_waters;
 use std::path::Path;
 
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::{self, Chromatogram, Item};
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
 /// The folder `rel` (under `dati/formati/`) as a set of members named `X.raw/<file>`, read from disk by position.
-pub fn cartella(rel: &str) -> Option<FileSet> {
+pub fn folder(rel: &str) -> Option<FileSet> {
     let Some(d) = dati_percorsi::percorso(&format!("dati/formati/{rel}")).filter(|p| p.is_dir())
     else {
         eprintln!("SKIP waters_dati: {rel} not found");
         return None;
     };
-    let nome = d.file_name()?.to_string_lossy().to_string();
-    let mut membri = Vec::new();
+    let name = d.file_name()?.to_string_lossy().to_string();
+    let mut members = Vec::new();
     for e in std::fs::read_dir(&d).ok()? {
         let p = e.ok()?.path();
         if !p.is_file() {
             continue;
         }
         let f = std::fs::File::open(&p).ok()?;
-        membri.push(Membro {
-            nome: format!("{nome}/{}", p.file_name()?.to_string_lossy()),
+        members.push(Member {
+            nome: format!("{name}/{}", p.file_name()?.to_string_lossy()),
             dim: f.metadata().ok()?.len(),
             dati: Box::new(f),
             sha1: None,
         });
     }
-    Some(FileSet { membri })
+    Some(FileSet { membri: members })
 }
 
-pub fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
-    let fs = cartella(rel)?;
+pub fn apri(rel: &str) -> Option<Box<dyn Reader>> {
+    let fs = folder(rel)?;
     Some(
-        mzlab_lettori::apri_nudo(fs, &Limiti::sito())
+        mzlab_lettori::open_bare(fs, &Limits::sito())
             .unwrap_or_else(|e| panic!("{rel}: {}", e.key)),
     )
 }
 
-const CARTELLE: &[&str] = &[
+const FOLDERS: &[&str] = &[
     "waters/raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038.raw",
     "waters/raw/xevo_tqxs_mrm_MTBLS12109/MTBLS12109_MP189_NAD_pos_ESI_CAL_0_1.raw",
     "waters/raw/xevo_tqs_mrm_MTBLS685/MTBLS685_MousePlasma_Set1_057.raw",
@@ -62,17 +62,17 @@ const CARTELLE: &[&str] = &[
 
 #[test]
 fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
-    for rel in CARTELLE {
+    for rel in FOLDERS {
         let Some(mut l) = apri(rel) else { continue };
-        let idx = l.indice(0).unwrap().to_vec();
+        let idx = l.index(0).unwrap().to_vec();
         assert!(
             idx.windows(2).all(|w| w[0].rt <= w[1].rt),
             "{rel}: index in time order"
         );
-        let ch = l.cromatogrammi(0).unwrap();
+        let ch = l.chromatograms(0).unwrap();
         assert!(idx.len() + ch.len() > 0, "{rel}: nothing to show");
         for k in (0..idx.len()).step_by((idx.len() / 25).max(1)) {
-            let s = l.scansione(0, k).unwrap();
+            let s = l.scan(0, k).unwrap();
             assert_eq!(s.mz.len(), s.intensity.len(), "{rel} scan {k}");
             assert!(
                 s.mz.iter().all(|m| m.is_finite() && *m > 0.0),
@@ -91,11 +91,11 @@ fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
                 );
             }
         }
-        let m = l.metodo(0).unwrap();
-        let doc = comune_waters::controlla_schema(&m, rel);
+        let m = l.method(0).unwrap();
+        let doc = comune_waters::check_schema(&m, rel);
         assert_eq!(doc["origine"]["formato"], "waters-raw", "{rel}");
         assert!(m.len() < 400_000, "{rel}: metodo of {} B", m.len());
-        let h = l.testata_mzml(0).unwrap().unwrap();
+        let h = l.mzml_header(0).unwrap().unwrap();
         assert!(
             h.run_params.iter().any(|(k, _)| k == "mzLab metodo/1"),
             "{rel}"
@@ -115,7 +115,7 @@ fn bare(id: &str) -> String {
 }
 
 /// The chromatograms of an msconvert mzML, by id.
-fn mzml_cromi(p: &Path) -> Vec<Chromatogram> {
+fn mzml_chroms(p: &Path) -> Vec<Chromatogram> {
     let mut v = Vec::new();
     mzml::parse(std::fs::File::open(p).unwrap(), |i| {
         if let Item::Chromatogram(c) = i {
@@ -140,9 +140,9 @@ fn chromatograms_match_the_msconvert_mzml() {
         eprintln!("SKIP waters_dati: no mzML for {rel}");
         return;
     };
-    let theirs = mzml_cromi(&mz);
-    assert!(l.indice(0).unwrap().is_empty(), "MRM folder has no spectra");
-    let mine = l.cromatogrammi(0).unwrap();
+    let theirs = mzml_chroms(&mz);
+    assert!(l.index(0).unwrap().is_empty(), "MRM folder has no spectra");
+    let mine = l.chromatograms(0).unwrap();
     assert_eq!(mine.len(), theirs.len(), "number of traces");
     let (mut srm, mut other) = (0, 0);
     for t in &theirs {
@@ -168,7 +168,7 @@ fn chromatograms_match_the_msconvert_mzml() {
             })
             .id
             .clone();
-        let m = l.cromatogramma(0, &id).unwrap();
+        let m = l.chromatogram(0, &id).unwrap();
         assert_eq!(m.time.len(), t.time.len(), "{}", t.id);
         for (a, b) in m
             .time
@@ -197,9 +197,9 @@ fn folders_without_function_table_are_refused_with_a_key() {
         "waters/raw/xevo_g2xs_lipid_MTBLS1584/MTBLS1584_USF_Oct18_LCMS_CMH_lipidomics_046n.raw",
         "waters/raw/cyclic_ims_PXD052561/20230920_NM4_1187_ECD_2_CID_25.raw",
     ] {
-        let Some(fs) = cartella(rel) else { continue };
-        match mzlab_lettori::apri_nudo(fs, &Limiti::sito()) {
-            Ok(mut l) => eprintln!("{rel}: opens, {} scans", l.indice(0).map_or(0, <[_]>::len)),
+        let Some(fs) = folder(rel) else { continue };
+        match mzlab_lettori::open_bare(fs, &Limits::sito()) {
+            Ok(mut l) => eprintln!("{rel}: opens, {} scans", l.index(0).map_or(0, <[_]>::len)),
             Err(e) => assert!(e.key.starts_with("err.file."), "{rel}: {}", e.key),
         }
     }

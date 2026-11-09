@@ -202,6 +202,28 @@ fn ram_mb() -> f64 {
         .map_or(0.0, |b| b / (1024.0 * 1024.0))
 }
 
+/// The working memory in MB of one of `workers` jobs that run at once on the native budget `auto_mb`: its share, never under 128 MB (nor over
+/// `auto_mb`), so that the jobs of a run fit together in the budget of the computer. The bytes written do not depend on it.
+pub fn share_mb(auto_mb: f64, workers: usize) -> f64 {
+    (auto_mb / workers.max(1) as f64)
+        .floor()
+        .max(auto_mb.min(128.0))
+}
+
+/// The memory in MB one file conversion is given: it reads one scan at a time, so its peak (about 50 MB) does not grow with the file; the rest is margin.
+pub const CONVERT_JOB_MB: f64 = 128.0;
+
+/// The conversions that run at once by default (`mzlab-cli convert` and the queue of the desktop app): the cores but one, 1 to 4.
+pub fn convert_wanted() -> usize {
+    std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4))
+}
+
+/// `wanted` conversions at once, or fewer when the native budget `auto_mb` does not give each `CONVERT_JOB_MB`; never 0. The bytes written do not depend on it.
+pub fn convert_workers(auto_mb: f64, wanted: usize) -> usize {
+    let fit = (auto_mb / CONVERT_JOB_MB).floor().max(1.0) as usize;
+    wanted.max(1).min(fit)
+}
+
 /// The automatic budget in MB of a native process (desktop app, `mzlab-cli`) on this computer.
 pub fn native_auto_mb() -> f64 {
     let cores = std::thread::available_parallelism().map_or(0, |n| n.get() as u32);
@@ -212,6 +234,20 @@ pub fn native_auto_mb() -> f64 {
         ..Default::default()
     };
     auto(&m).mb as f64
+}
+
+/// The peak budget in bytes of one `.mzidx` builder: its share of `auto_mb` with the `workers` builders that run at once, never below
+/// `mzidx::DEFAULT_BUDGET` nor above 1 GB. Rounds read from a scratch file stay small whatever it is (`mzidx::ROUND_MAX`): it raises the densest 1-Da
+/// range a file may have before the builder refuses it (the site's share is `idxpool.js::builderBudget`). The bytes written do not depend on it.
+pub fn index_budget(auto_mb: f64, workers: usize) -> usize {
+    let share = auto_mb.max(0.0) / (workers.max(1) + 1) as f64;
+    ((share as usize) << 20).clamp(crate::mzidx::DEFAULT_BUDGET, 1 << 30)
+}
+
+/// `index_budget` of this computer, for the builders of the desktop app and `mzlab-cli` (as many at once as `min(cores - 1, 4)`).
+pub fn native_index_budget() -> usize {
+    let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
+    index_budget(native_auto_mb(), cores.saturating_sub(1).clamp(1, 4))
 }
 
 #[cfg(test)]

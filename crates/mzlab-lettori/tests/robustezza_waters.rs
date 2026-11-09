@@ -3,33 +3,33 @@
 //! reading, never a panic, and what is read from it (index, scans, chromatograms, method, header) never panics either. No data of the laboratory is copied: the mutations are made in memory.
 mod comune_waters;
 use comune_waters::*;
-use mzlab_core::lettori::{Limiti, Membro};
+use mzlab_core::lettori::{Limits, Member};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn tutto(file: Vec<(String, Vec<u8>)>) {
-    let Ok(mut l) = mzlab_lettori::apri_nudo(insieme(file), &Limiti::sito()) else {
+fn everything(file: Vec<(String, Vec<u8>)>) {
+    let Ok(mut l) = mzlab_lettori::open_bare(file_set(file), &Limits::sito()) else {
         return;
     };
-    let n = l.campioni().len();
+    let n = l.samples().len();
     for c in 0..n {
-        if let Ok(ix) = l.indice(c).map(<[_]>::to_vec) {
+        if let Ok(ix) = l.index(c).map(<[_]>::to_vec) {
             for k in 0..ix.len().min(6) {
-                let _ = l.scansione(c, k);
-                let _ = l.intestazione(c, k);
+                let _ = l.scan(c, k);
+                let _ = l.scan_header(c, k);
             }
         }
-        if let Ok(v) = l.cromatogrammi(c) {
+        if let Ok(v) = l.chromatograms(c) {
             for h in v.iter().take(6) {
-                let _ = l.cromatogramma(c, &h.id);
+                let _ = l.chromatogram(c, &h.id);
             }
         }
-        let _ = l.metodo(c);
-        let _ = l.testata_mzml(c);
+        let _ = l.method(c);
+        let _ = l.mzml_header(c);
     }
 }
 
-fn reale() -> Option<Vec<(String, Vec<u8>)>> {
+fn real() -> Option<Vec<(String, Vec<u8>)>> {
     let d = dati_percorsi::percorso(
         "dati/formati/waters/raw/xevo_g2s_MTBLS1198/MTBLS1198_20190321_MS.raw",
     )
@@ -47,9 +47,9 @@ fn reale() -> Option<Vec<(String, Vec<u8>)>> {
     Some(out)
 }
 
-fn semi() -> Vec<Vec<(String, Vec<u8>)>> {
-    let mut v = vec![file_cartella()];
-    v.extend(reale());
+fn seeds() -> Vec<Vec<(String, Vec<u8>)>> {
+    let mut v = vec![folder_file()];
+    v.extend(real());
     v
 }
 
@@ -63,24 +63,24 @@ fn rng(x: &mut u64) -> u64 {
 #[test]
 fn cut_and_flipped_members_do_not_panic() {
     let mut x: u64 = 0x2545_F491_4F6C_DD1D;
-    for seme in semi() {
-        for m in 0..seme.len() {
-            let n = seme[m].1.len();
+    for seed in seeds() {
+        for m in 0..seed.len() {
+            let n = seed[m].1.len();
             for k in 0..12 {
-                let mut f = seme.clone();
+                let mut f = seed.clone();
                 f[m].1.truncate(n * k / 12);
-                tutto(f);
+                everything(f);
             }
             if n == 0 {
                 continue;
             }
             for _ in 0..25 {
-                let mut f = seme.clone();
+                let mut f = seed.clone();
                 for _ in 0..6 {
                     let i = rng(&mut x) as usize % n;
                     f[m].1[i] ^= 0xFF;
                 }
-                tutto(f);
+                everything(f);
             }
         }
     }
@@ -88,37 +88,37 @@ fn cut_and_flipped_members_do_not_panic() {
 
 #[test]
 fn a_member_missing_or_empty_is_a_key_or_a_reading() {
-    for seme in semi() {
-        for m in 0..seme.len() {
-            let mut f = seme.clone();
+    for seed in seeds() {
+        for m in 0..seed.len() {
+            let mut f = seed.clone();
             f.remove(m);
-            tutto(f);
-            let mut f = seme.clone();
+            everything(f);
+            let mut f = seed.clone();
             f[m].1.clear();
-            tutto(f);
+            everything(f);
         }
     }
 }
 
 #[test]
 fn absurd_index_numbers_are_refused_not_allocated() {
-    let mut f = file_cartella();
+    let mut f = folder_file();
     let idx = f.iter_mut().find(|(n, _)| n == "_FUNC001.IDX").unwrap();
     // Count of 0xFFFFFF records and an offset near the end of the address space in the first row.
     idx.1[4..8].copy_from_slice(&0x18FF_FFFFu32.to_le_bytes());
     idx.1[0..4].copy_from_slice(&0xFFFF_FFF0u32.to_le_bytes());
-    tutto(f);
-    let mut f = file_cartella();
+    everything(f);
+    let mut f = folder_file();
     let idx = f.iter_mut().find(|(n, _)| n == "_FUNC002.IDX").unwrap();
     idx.1[4..8].copy_from_slice(&0x18FF_FFFFu32.to_le_bytes());
-    tutto(f);
+    everything(f);
     // A budget of a few entries refuses the folder with a key.
-    let tiny = Limiti {
+    let tiny = Limits {
         profondita: 4,
-        voci: 2,
+        entries: 2,
         byte: 1 << 10,
     };
-    if let Err(e) = mzlab_lettori::apri_nudo(insieme_sintetico(), &tiny) {
+    if let Err(e) = mzlab_lettori::open_bare(synthetic_set(), &tiny) {
         assert!(
             e.key.starts_with("err.") || e.key.starts_with("error."),
             "{}",
@@ -129,22 +129,22 @@ fn absurd_index_numbers_are_refused_not_allocated() {
 
 #[test]
 fn a_folder_without_functions_is_refused_with_a_key() {
-    let mut f = file_cartella();
+    let mut f = folder_file();
     f.retain(|(n, _)| n != "_FUNCTNS.INF");
-    let e = mzlab_lettori::apri_nudo(insieme(f), &Limiti::sito())
+    let e = mzlab_lettori::open_bare(file_set(f), &Limits::sito())
         .err()
         .expect("refused");
     assert!(e.key.starts_with("err.file."), "{}", e.key);
-    let e = mzlab_lettori::apri_nudo(
+    let e = mzlab_lettori::open_bare(
         mzlab_core::lettori::FileSet {
-            membri: vec![Membro {
+            membri: vec![Member {
                 nome: "X.raw/_FUNC001.DAT".into(),
                 dim: 0,
                 dati: Box::new(Vec::<u8>::new()),
                 sha1: None,
             }],
         },
-        &Limiti::sito(),
+        &Limits::sito(),
     )
     .err()
     .expect("refused");

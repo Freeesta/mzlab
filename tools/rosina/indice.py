@@ -9,50 +9,50 @@ from pathlib import Path
 
 COLONNE = ["percorso", "produttore", "modello_nel_file", "versione_formato", "esperimenti", "fonte", "accession", "doi", "licenza", "ridistribuibile", "byte", "sha256", "url", "riferimento", "verita", "note"]
 PRODUTTORI = {"thermo", "sciex", "agilent", "waters", "bruker", "shimadzu", "leco", "aperti"}
-ESPERIMENTI = {
+EXPERIMENTS = {
     "fullscan", "sim", "mrm", "smrm", "ms2", "dda", "dia", "mse", "prm", "pis", "nl", "epi", "ms3", "ims", "uv", "analogico",
     "polarita-mista", "lockmass", "profilo", "centroidi", "gc", "imaging",
 }
-RIDISTRIBUIBILE = {"si", "no", "da-verificare"}
+REDISTRIBUTABLE = {"si", "no", "da-verificare"}
 SI_NO = {"si", "no"}
-NESSUNA_LICENZA = {"", "-", "nessuna", "non dichiarata"}
+NO_LICENSE = {"", "-", "nessuna", "non dichiarata"}
 
 
-def leggi(p: Path) -> list:
+def read(p: Path) -> list:
     with p.open(newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f, delimiter="\t"))
 
 
-def controlla(righe: list, colonne: list) -> list:
-    problemi = [f"missing column: {c}" for c in COLONNE if c not in colonne]
-    visti = set()
+def check(righe: list, columns: list) -> list:
+    problems = [f"missing column: {c}" for c in COLONNE if c not in columns]
+    seen = set()
     for i, r in enumerate(righe, start=2):
         dove = f"row {i} ({r.get('percorso', '')})"
         p = (r.get("percorso") or "").strip()
         if not p:
-            problemi.append(f"{dove}: empty percorso")
-        elif p in visti:
-            problemi.append(f"{dove}: repeated percorso")
-        visti.add(p)
+            problems.append(f"{dove}: empty percorso")
+        elif p in seen:
+            problems.append(f"{dove}: repeated percorso")
+        seen.add(p)
         if (r.get("produttore") or "") not in PRODUTTORI:
-            problemi.append(f"{dove}: produttore not in the list")
+            problems.append(f"{dove}: produttore not in the list")
         for e in (x.strip() for x in (r.get("esperimenti") or "").replace(";", ",").split(",") if x.strip()):
-            if e not in ESPERIMENTI:
-                problemi.append(f"{dove}: esperimenti outside the vocabulary: {e}")
+            if e not in EXPERIMENTS:
+                problems.append(f"{dove}: esperimenti outside the vocabulary: {e}")
         rid = r.get("ridistribuibile") or ""
-        if rid not in RIDISTRIBUIBILE:
-            problemi.append(f"{dove}: ridistribuibile must be si, no or da-verificare")
-        if rid == "si" and (r.get("licenza") or "").strip().lower() in NESSUNA_LICENZA:
-            problemi.append(f"{dove}: ridistribuibile=si without a licence")
+        if rid not in REDISTRIBUTABLE:
+            problems.append(f"{dove}: ridistribuibile must be si, no or da-verificare")
+        if rid == "si" and (r.get("licenza") or "").strip().lower() in NO_LICENSE:
+            problems.append(f"{dove}: ridistribuibile=si without a licence")
         if (r.get("verita") or "") not in SI_NO:
-            problemi.append(f"{dove}: verita must be si or no")
+            problems.append(f"{dove}: verita must be si or no")
         b = (r.get("byte") or "").strip()
         if b and not b.isdigit():
-            problemi.append(f"{dove}: byte is not a number")
+            problems.append(f"{dove}: byte is not a number")
         s = (r.get("sha256") or "").strip()
         if s and len(s) != 64:
-            problemi.append(f"{dove}: sha256 is not 64 characters")
-    return problemi
+            problems.append(f"{dove}: sha256 is not 64 characters")
+    return problems
 
 
 def markdown(righe: list) -> str:
@@ -73,12 +73,12 @@ def main(argv=None) -> int:
     ap.add_argument("--controlla", action="store_true", help="only check (do not write)")
     a = ap.parse_args(argv)
     with a.tsv.open(newline="", encoding="utf-8") as f:
-        lettore = csv.DictReader(f, delimiter="\t")
-        righe, colonne = list(lettore), lettore.fieldnames or []
-    problemi = controlla(righe, colonne)
-    for p in problemi:
+        reader = csv.DictReader(f, delimiter="\t")
+        righe, columns = list(reader), reader.fieldnames or []
+    problems = check(righe, columns)
+    for p in problems:
         print(p, file=sys.stderr)
-    if problemi:
+    if problems:
         return 1
     if a.md and not a.controlla:
         a.md.write_text(markdown(righe), encoding="utf-8")

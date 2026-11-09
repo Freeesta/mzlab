@@ -4,7 +4,7 @@
 use crate::error::{Error, Result};
 use crate::idxread::{ReadAt, Scan};
 use crate::json::{round, Out};
-use crate::lettori::Campo;
+use crate::lettori::Field;
 use crate::sorgente::Scansioni;
 
 const MARK: &[u8] = b"<binaryDataArrayList";
@@ -59,7 +59,7 @@ fn attrs(body: &str) -> Vec<(String, String)> {
 }
 
 /// `<(cvParam|userParam)\b([^>]*?)/?>`: the name, value, unit and accession of every parameter that has a name.
-pub(crate) fn campi(head: &str) -> Vec<Campo> {
+pub(crate) fn campi(head: &str) -> Vec<Field> {
     let mut out = vec![];
     let mut rest = head;
     while let Some(p) = rest.find('<') {
@@ -75,7 +75,7 @@ pub(crate) fn campi(head: &str) -> Vec<Campo> {
         let a = attrs(body);
         let get = |k: &str| a.iter().rev().find(|(n, _)| n == k).map(|(_, v)| v.clone());
         if let Some(name) = get("name").filter(|n| !n.is_empty()) {
-            out.push(Campo {
+            out.push(Field {
                 nome: name,
                 valore: get("value").unwrap_or_default(),
                 unita: get("unitName"),
@@ -90,7 +90,7 @@ pub(crate) fn campi(head: &str) -> Vec<Campo> {
 /// The JSON of `/api/scaninfo` for scan `sid` of `scans` (the rows of the index); the header fields come from the source (the mzML by offset).
 pub fn scaninfo<M: Scansioni + ?Sized>(scans: &[Scan], sid: usize, mzml: &mut M) -> Result<String> {
     let sc = scans.get(sid).ok_or_else(|| Error::new("err.scan.outside"))?;
-    let fields = mzml.intestazione(sc)?;
+    let fields = mzml.scan_header(sc)?;
     let mut o = Out::default();
     o.raw("{\"sid\":").int(sid as i64).raw(",\"no\":").int(sc.number(sid)).raw(",\"filter\":").str(&sc.filter);
     o.raw(",\"rt\":").num(round(sc.rt, 4)).raw(",\"level\":").int(sc.level as i64);

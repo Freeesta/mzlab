@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::campioni::{self, Campione};
+use mzlab_core::campioni::{self, Sample};
 use mzlab_core::json::Value;
 use mzlab_feat::methods::{generic_sentence, methods_text, placeholders, template, templated};
 use mzlab_feat::runorder::runorder_text;
@@ -26,9 +26,9 @@ fn run(d: &Path, plan: &str) -> String {
 
 /// 12 injections, a QC every 4, no blank, standards at one level.
 fn samples() -> String {
-    let cs: Vec<Campione> = (0..12)
+    let cs: Vec<Sample> = (0..12)
         .map(|k| {
-            let mut c = Campione::new(&format!("f{k:02}.mzML"), "", k + 1);
+            let mut c = Sample::new(&format!("f{k:02}.mzML"), "", k + 1);
             c.kind = if k % 4 == 3 {
                 "qc"
             } else if k == 0 {
@@ -79,11 +79,11 @@ fn run_order_in_a_plan_is_the_text_of_the_engine_and_its_parameters_reach_it() {
 #[test]
 fn methods_in_a_plan_is_the_text_of_the_engine_in_both_styles() {
     let d = dir("methods");
-    let corsa = std::fs::read(
+    let run_report = std::fs::read(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/feat/methods-corsa.json"),
     )
     .unwrap();
-    std::fs::write(d.join("run.json"), &corsa).unwrap();
+    std::fs::write(d.join("run.json"), &run_report).unwrap();
     for style in ["paragraph", "list"] {
         let plan = format!(
             r#"{{"format":"mzflow/2","inputs":[{{"name":"run.json","type":"report"}}],"steps":[{{"id":"m","step":"report.methods@1","in":{{"run":"file:run.json"}},"params":{{"style":"{style}"}}}}]}}"#
@@ -91,7 +91,7 @@ fn methods_in_a_plan_is_the_text_of_the_engine_in_both_styles() {
         run(&d, &plan);
         let got = std::fs::read_to_string(d.join("work/m.md")).unwrap();
         let want = vec![("style".to_string(), Value::Str(style.to_string()))];
-        assert_eq!(got, methods_text(&want, &corsa).unwrap(), "{style}");
+        assert_eq!(got, methods_text(&want, &run_report).unwrap(), "{style}");
     }
     let _ = std::fs::remove_dir_all(&d);
 }

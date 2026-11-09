@@ -229,7 +229,7 @@ fn write_precs(o: &mut Out, r: &Row) {
 
 /// Where the scan lies: the span of the mzML, or the place in a vendor file set.
 fn write_where(o: &mut Out, r: &Row) {
-    match r.dove.as_deref().map(|d| (d.k, d.posizione)) {
+    match r.at.as_deref().map(|d| (d.k, d.position)) {
         None => o.int(r.start as i64).raw(",").int(r.end as i64),
         Some((k, None)) => o.raw("null,").int(k as i64),
         Some((k, Some(p))) => {

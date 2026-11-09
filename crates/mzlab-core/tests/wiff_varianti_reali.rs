@@ -18,13 +18,28 @@ fn close(a: f64, b: f64) -> bool {
     a == b || (a - b).abs() <= 1e-9 * a.abs().max(b.abs()).max(1.0)
 }
 
+/// The cause of a refusal as one text: the keys of the readers module (`wiffScanType`, `wiffPeriods`, `wiffNeeds2`) spelled as the reference writes them, else `detail`.
 fn detail(e: &mzlab_core::error::Error) -> String {
-    assert_eq!(e.key, "err.file.wiff");
-    e.params
-        .iter()
-        .find(|(k, _)| *k == "detail")
-        .map(|(_, v)| v.clone())
-        .unwrap_or_default()
+    let p = |n: &str| {
+        e.params
+            .iter()
+            .find(|(k, _)| *k == n)
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
+    };
+    match e.key {
+        "err.file.wiffScanType" => format!(
+            "scan type code {} (experiment {})",
+            p("code"),
+            p("experiment")
+        ),
+        "err.file.wiffPeriods" => format!("periods={}", p("periods")),
+        "err.file.wiffNeeds2" => "wiff2".into(),
+        k => {
+            assert_eq!(k, "err.file.wiff");
+            p("detail")
+        }
+    }
 }
 
 fn pairs(dir: &Path, out: &mut Vec<PathBuf>) {

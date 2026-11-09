@@ -10,7 +10,7 @@ use crate::flow::{executable, steps};
 use crate::flow_run::apply_set;
 
 /// Steps that say `native: true` and have no executor yet. A step leaves this list when its executor lands; nothing is added.
-const BUCHI: &[&str] = &[
+const HOLES: &[&str] = &[
     // included in features.detect (pipeline::analyse links the MS2 in the same pass), not separable without changing the bytes
     "features.ms2_link",
     "annot.hazard",
@@ -127,7 +127,7 @@ fn algorithm_and_preset_are_reachable_with_set() {
 fn every_native_step_has_an_executor_but_the_known_holes() {
     let reg = steps();
     let ids: Vec<&str> = reg.iter().map(|s| s.id).collect();
-    for hole in BUCHI {
+    for hole in HOLES {
         assert!(
             ids.contains(hole),
             "{hole} is not a step: drop it from BUCHI"
@@ -139,7 +139,7 @@ fn every_native_step_has_an_executor_but_the_known_holes() {
     }
     for s in reg.iter().filter(|s| s.runs_in.native) {
         assert!(
-            executable(s.id) || BUCHI.contains(&s.id),
+            executable(s.id) || HOLES.contains(&s.id),
             "{} says native: true and has no executor (add one; BUCHI never grows)",
             s.id
         );

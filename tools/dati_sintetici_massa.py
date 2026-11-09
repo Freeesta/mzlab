@@ -7,34 +7,34 @@ import numpy as np
 
 from dati_sintetici import _U_MZ, _arr, _chrom, _cvp, _g, _hr_head
 
-LISTA = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "contaminanti.json"
+LIST = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "contaminanti.json"
 
 
-def ioni(n: int = 12, pol: int = 1) -> list[tuple[str, float]]:
+def ions(n: int = 12, pol: int = 1) -> list[tuple[str, float]]:
     """`n` singly charged [M+H]+ / [M+Na]+ (or [M-H]- for pol -1) ions of the list between m/z 150 and 900, spread over the range and at least 2 Da apart: (name, listed m/z)."""
     adducts = ("[M+H]+", "[M+Na]+") if pol > 0 else ("[M-H]-",)
-    voci = sorted({round(i["mz"], 4): i["name_en"] + " " + i["adduct"] for l in json.loads(LISTA.read_text(encoding="utf-8"))["lists"] if l.get("background", True) for i in l["items"]
+    items = sorted({round(i["mz"], 4): i["name_en"] + " " + i["adduct"] for l in json.loads(LIST.read_text(encoding="utf-8"))["lists"] if l.get("background", True) for i in l["items"]
                    if i.get("z") == 1 and i.get("pol") == pol and i["adduct"] in adducts and 150 <= i["mz"] <= 900}.items())
-    lontani = [voci[0]]
-    for m, nome in voci[1:]:
+    lontani = [items[0]]
+    for m, name in items[1:]:
         if m - lontani[-1][0] >= 2.0:
-            lontani.append((m, nome))
-    passo = max(1, len(lontani) // n)
-    return [(nome, m) for m, nome in lontani[::passo][:n]]
+            lontani.append((m, name))
+    step = max(1, len(lontani) // n)
+    return [(name, m) for m, name in lontani[::step][:n]]
 
 
-def calibrazione(path: Path, rng, offset_ppm: float = 3.0, drift_ppm: float = 2.0, rt_end: float = 10.5, cyc: float = 0.1, pol: int = 1, n_ioni: int = 12) -> list[tuple[str, float]]:
+def calibration(path: Path, rng, offset_ppm: float = 3.0, drift_ppm: float = 2.0, rt_end: float = 10.5, cyc: float = 0.1, pol: int = 1, n_ions: int = 12) -> list[tuple[str, float]]:
     """Writes the file; the error of every ion is `offset_ppm` plus `drift_ppm` spread linearly over the run. Each ion stays all along, strongest at its own time (spread over the run),
     so the error against the RT of the apex shows the drift. Returns the ions (name, theoretical m/z as listed)."""
-    lista = ioni(n_ioni, pol)
+    entries = ions(n_ions, pol)
     pre, specs, rts, tic = "controllerType=0 controllerNumber=1 scan=", [], [], []
     filt = f"FTMS {'+' if pol > 0 else '-'} p ESI Full ms [100.0000-900.0000]"
     t0 = 0.5
-    centri = np.linspace(t0 + 0.5, rt_end - 0.5, len(lista))
+    centri = np.linspace(t0 + 0.5, rt_end - 0.5, len(entries))
     for i, rt in enumerate(np.arange(t0, rt_end, cyc)):
         mz = list(rng.uniform(100, 900, 100)); it = list(rng.lognormal(np.log(3e3), 0.5, 100))
         err = offset_ppm + drift_ppm * (rt - t0) / (rt_end - t0)
-        for (nome, m), c in zip(lista, centri):
+        for (name, m), c in zip(entries, centri):
             mz.append(m * (1 + (err + rng.normal(0, 0.3)) * 1e-6)); it.append(3e4 + 3e5 * float(_g(rt, c, 2.5)))
         o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
         n, b = len(mz), int(np.argmax(it))
@@ -52,4 +52,4 @@ def calibrazione(path: Path, rng, offset_ppm: float = 3.0, drift_ppm: float = 2.
     chroms = [_chrom(0, "TIC", np.array(rts), np.array(tic))]
     Path(path).write_text(_hr_head("exploris", False, Path(path).stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
                           + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
-    return lista
+    return entries

@@ -33,8 +33,8 @@ pub(super) fn slash_group(low: &str) -> bool {
 }
 
 /// `_SERIES`: a name that groups isomers (a polyether series by formula, `isomers`, a curated union such as `(sucrose/palatinose)`).
-pub(super) fn is_series(nome: &str) -> bool {
-    let low = nome.to_lowercase();
+pub(super) fn is_series(name: &str) -> bool {
+    let low = name.to_lowercase();
     low.starts_with("peg/polyether [") || word_isomers(&low) || slash_group(&low)
 }
 
@@ -42,7 +42,7 @@ pub(super) struct FlagInput<'a, 'b> {
     pub(super) sub: &'b [&'a PFeat<'a>],
     pub(super) rep: &'b PFeat<'a>,
     pub(super) best_feats: &'b [&'a PFeat<'a>],
-    pub(super) nome: &'b str,
+    pub(super) name: &'b str,
     pub(super) lv: i32,
     pub(super) lv_sub: &'b str,
     pub(super) watch: &'b [String],
@@ -102,7 +102,7 @@ pub(super) fn tail_flags(x: &FlagInput, fl: &mut Vec<String>) {
         .filter(|p| p.f().decision.feature_decision.is_empty())
         .filter_map(|p| p.ev.name_block.as_deref())
         .collect();
-    if is_series(x.nome)
+    if is_series(x.name)
         || blocks.len() > 1
         || sub
             .iter()
@@ -122,7 +122,7 @@ pub(super) fn tail_flags(x: &FlagInput, fl: &mut Vec<String>) {
             mzlab_core::json::fmt_g(Z_FLAG)
         ));
     }
-    let mut names = vec![x.nome.to_string()];
+    let mut names = vec![x.name.to_string()];
     names.extend(
         sub.iter()
             .map(|p| p.ev.identity.clone())
@@ -167,9 +167,9 @@ pub(super) fn is_isomer_name(name: &str) -> bool {
 }
 
 /// The hazard columns of a compound that no registry knows: the fixed record with its caveats.
-pub(super) fn hazard_cells(nome: &str, lv: i32) -> Vec<Cell> {
+pub(super) fn hazard_cells(name: &str, lv: i32) -> Vec<Cell> {
     let mut caveats: Vec<&str> = Vec::new();
-    if is_isomer_name(nome) {
+    if is_isomer_name(name) {
         caveats.push("RT isomer: hazard of the named structure, the peak may be another isomer");
     }
     if lv == 3 {

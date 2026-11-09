@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::disegno::{Disegno, Lotto};
+use mzlab_core::disegno::{Batch, Design};
 use mzlab_core::json::parse;
 use mzlab_feat::drift::{self, Method};
 use mzlab_feat::samples::{propose, Sample};
@@ -221,12 +221,12 @@ fn a_known_drift_is_removed_from_the_qc() {
 #[test]
 fn the_batches_come_from_the_design() {
     let (_, s, _, _) = golden_series();
-    let d = Disegno {
+    let d = Design {
         conditions: vec![],
         reference: None,
         comparisons: vec![],
         factors: vec![],
-        batches: vec![Lotto {
+        batches: vec![Batch {
             file: s[0].file.clone(),
             sha256: s[0].sha256.clone(),
             batch: "9".into(),

@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2)
-        attendi(pg, "E.panels.some(q => q.type === 'spec' && q.link != null)")
+        wait_for_js(pg, "E.panels.some(q => q.type === 'spec' && q.link != null)")
         def bad(w):
             """The first problem found at this width, or None (the second pass of fitHd runs 300 ms after the resize: the caller retries)."""
             for h in pg.evaluate(BOXES):
@@ -31,14 +31,14 @@ try:
                 if spill: return (w, "text spills", spill)
         def no_overlap():
             for w in (1440, 1100, 900):
-                pg.set_viewport_size({"width": w, "height": 900}); attendi(pg, f"innerWidth === {w}")
+                pg.set_viewport_size({"width": w, "height": 900}); wait_for_js(pg, f"innerWidth === {w}")
                 for _ in range(10):
                     frames(pg, 10); problem = bad(w)
                     if not problem: break
                 assert not problem, problem
         step("the controls of the spectrum header do not overlap (1440, 1100, 900 px)", no_overlap)
         def menu():
-            pg.set_viewport_size({"width": 1440, "height": 900}); attendi(pg, "innerWidth === 1440"); frames(pg, 8)
+            pg.set_viewport_size({"width": 1440, "height": 900}); wait_for_js(pg, "innerWidth === 1440"); frames(pg, 8)
             w = pg.evaluate("E.panels.filter(q => q.type === 'spec').map(q => q.el.querySelector('.ctl select').getBoundingClientRect().width)")
             assert all(x >= 100 for x in w), w
         step("the file menu keeps at least 100 px", menu)

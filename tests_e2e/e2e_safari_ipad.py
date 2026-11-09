@@ -1,8 +1,8 @@
 """Safari / iPad (docs/agenti/compat-safari.md): the site on an emulated iPad (touch only, no hover) is the full site, not the phone card; the file
 picker of «Load» opens with every file (compat.js frees the accept list that iPadOS would grey out) and an example file opens with its charts; the page
-keeps its width at Split View 1/3 and 1/2 and after a rotation; the legend chip of many traces opens by tap and keyboard; a private window
+keeps its width at Split View 1/3 and 1/2 and after a rotation; a tap outside closes the menus and pop-ups; a long press on a button shows its tooltip and the lift does not run it; the side bar handle is 24 px wide and a double tap on a control does not zoom; the legend chip of many traces opens by tap and keyboard; a private window
 (storage refused) gets its own loading message; with AbortSignal.any and createWritable taken away (what Safari before 17.4 and 26
-lacks) compat.js stands in and an OPFS file written through createWritable reads back the same. No browser errors.
+lacks) compat.js stands in and an OPFS file written through createWritable reads back the same. No browser errors and no answer of 400 or more.
 The real engine of Safari is WebKit: with --browser webkit (the nightly round on macOS) every step runs in WebKit; the cloud has only Chromium, which
 emulates the iPad (touch, coarse pointer, mobile viewport) and the output says so."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +30,7 @@ def ipad(b, w=1180, h=820, extra=""):
     pg = c.new_page()
     pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
     pg.on("console", lambda m: r.errs.append(("console." + m.type, m.text)) if m.type == "error" else None)
+    pg.on("response", lambda x: r.errs.append((f"http {x.status}", x.url)) if x.status >= 400 else None)   # a worker's 404 is a console error in WebKit only
     pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg); return pg
 
 if BROWSER == "firefox":          # Playwright's Firefox cannot be a touch-only device (no isMobile, the pointer stays fine): nothing here would be an iPad
@@ -52,14 +53,14 @@ try:
             assert pg.get_attribute("#pick", "accept") is None, "the accept list is still on the input"
             assert ".wiff" in (pg.get_attribute("#pick", "data-accept") or ""), "the list is not kept in data-accept"
             fc.value.set_files([str(EX / "FullScan_t0.mzML")])
-            attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 60000)
+            wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=1", 60000)
             pg.click("#opbtn"); ready(pg)
-            attendi(pg, "E.panels.length > 0 && E.panels.some(q => q.el.querySelector('canvas') && q.el.querySelector('canvas').width > 0)", 60000)
+            wait_for_js(pg, "E.panels.length > 0 && E.panels.some(q => q.el.querySelector('canvas') && q.el.querySelector('canvas').width > 0)", 60000)
         step("iPad: «Load» shows every file and an example file opens with its charts", picker)
         def widths():
             pg = S["pg"]; out = []
             for w, h in ((1180, 820), (820, 1180), (375, 820), (590, 820), (1180, 820)):      # landscape, portrait, Split View 1/3 and 1/2, back
-                pg.set_viewport_size({"width": w, "height": h}); attendi(pg, f"innerWidth === {w}"); frames(pg, 3); ready(pg)
+                pg.set_viewport_size({"width": w, "height": h}); wait_for_js(pg, f"innerWidth === {w}"); frames(pg, 3); ready(pg)
                 out.append((w, pg.evaluate(WIDE), pg.evaluate("E.panels[0].el.getBoundingClientRect().width")))
             print("  width, horizontal overflow, first panel width:", out)
             assert all(o <= 1 for _, o, _ in out), f"the page scrolls sideways: {out}"
@@ -71,7 +72,7 @@ try:
             pg.click("#np-xic"); pg.fill("#xic-mz", "200"); pg.click("#xic-go"); ready(pg)
             for mz in ("250", "300", "350", "400"):
                 pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", mz); pg.click("#xic-go"); ready(pg)
-            attendi(pg, "!!document.querySelector('.pnl.xic .leg .lgc')")
+            wait_for_js(pg, "!!document.querySelector('.pnl.xic .leg .lgc')")
             chip, lst = pg.locator(".pnl.xic .leg .lgc").first, pg.locator(".pnl.xic .leg .lgl").first
             assert pg.evaluate("document.querySelector('.pnl.xic .leg .lgc').tagName") == "BUTTON"
             assert chip.bounding_box()["height"] >= 24, chip.bounding_box()
@@ -85,21 +86,21 @@ try:
             pg.keyboard.press("Enter"); assert not lst.is_visible()
         step("iPad: the legend chip of many traces opens by tap and Enter, Escape closes it", legend_chip)
         def drawer_fits():
-            pg = S["pg"]; pg.set_viewport_size({"width": 1024, "height": 768}); attendi(pg, "innerWidth === 1024"); frames(pg, 3)
+            pg = S["pg"]; pg.set_viewport_size({"width": 1024, "height": 768}); wait_for_js(pg, "innerWidth === 1024"); frames(pg, 3)
             pg.evaluate("BARRA.show('file',{noFocus:true,instant:true}); document.getElementById('samptab').click()")
-            attendi(pg, "(t => !!t && t.offsetWidth > 0)(document.querySelector('#flist .ldtab'))", 20000); frames(pg, 2)
+            wait_for_js(pg, "(t => !!t && t.offsetWidth > 0)(document.querySelector('#flist .ldtab'))", 20000); frames(pg, 2)
             fw = pg.evaluate("(t => [...t.rows[0].cells].find(c => /^File$/.test(c.textContent.trim())).offsetWidth)(document.querySelector('#flist .ldtab'))")
             pg.evaluate("document.getElementById('samptab').click()")                   # back to the charts: the toggle is left as found
-            pg.evaluate("BARRA.show('calc',{noFocus:true,instant:true})"); attendi(pg, "document.querySelector('#al-tabs').offsetWidth > 0", 20000); frames(pg, 2)
+            pg.evaluate("BARRA.show('calc',{noFocus:true,instant:true})"); wait_for_js(pg, "document.querySelector('#al-tabs').offsetWidth > 0", 20000); frames(pg, 2)
             tabs = pg.evaluate("(a => [a.clientWidth, a.scrollWidth])(document.querySelector('#al-tabs'))")
-            pg.evaluate("BARRA.close()"); pg.set_viewport_size({"width": 1180, "height": 820}); attendi(pg, "innerWidth === 1180")
+            pg.evaluate("BARRA.close()"); pg.set_viewport_size({"width": 1180, "height": 820}); wait_for_js(pg, "innerWidth === 1180")
             assert fw >= 120, f"the File column of the sample table is {fw} px wide at 1024 px"
             assert tabs[1] <= tabs[0], f"the calculator tabs are clipped (box, content): {tabs}"
         step("iPad 1024x768: the File column of the sample table is readable, the calculator tabs fit the drawer", drawer_fits)
         def targets():
             pg = S["pg"]; small = []
             def size(sel, opener, closer="(()=>{for(const d of document.querySelectorAll('dialog[open]'))d.close()})()"):
-                pg.evaluate(opener); attendi(pg, f"(e => !!e && e.offsetWidth > 0)(document.querySelector({sel!r}))", 20000); frames(pg, 2)
+                pg.evaluate(opener); wait_for_js(pg, f"(e => !!e && e.offsetWidth > 0)(document.querySelector({sel!r}))", 20000); frames(pg, 2)
                 w, h = pg.evaluate(f"(r => [r.width, r.height])(document.querySelector({sel!r}).getBoundingClientRect())")
                 if w < 24 or h < 24: small.append((sel, round(w), round(h)))
                 pg.evaluate(closer)
@@ -110,6 +111,82 @@ try:
             size("#tour-btn-skip", "TOUR.inizia(1,0)", "document.getElementById('tour-btn-skip').click()")
             assert not small, f"touch targets under 24x24 px: {small}"
         step("iPad: the × of the dialogs, «Skip the tour» and the file checkbox are at least 24x24 px", targets)
+        def tap_outside():
+            pg = ipad(b, extra=IOS_TOUCH); cdp = pg.context.new_cdp_session(pg) if BROWSER == "chromium" else None
+            def touch(x, y, ms=0):
+                if not cdp:     # WebKit has no CDP: a tap is Playwright's, a long press is the right click it ends in (touch.js)
+                    if ms: pg.evaluate(f"document.elementFromPoint({x}, {y}).dispatchEvent(new MouseEvent('contextmenu', {{ bubbles: true, cancelable: true, clientX: {x}, clientY: {y} }}))")
+                    else: pg.touchscreen.tap(x, y)
+                    hold(pg, 300); return
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y}]})
+                if ms: hold(pg, ms)
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); hold(pg, 300)
+            pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t5.mzML")])
+            pg.click("#opbtn"); ready(pg); wait_for_js(pg, "E.panels.some(q => q.type === 'chrom' && q._a)", 60000); ready(pg)
+            pg.evaluate("BARRA.close()"); ready(pg)
+            cv = pg.locator(".pnl.chrom canvas").first; cv.scroll_into_view_if_needed(); bb = cv.bounding_box()
+            at = lambda fx: (bb["x"] + bb["width"] * fx, bb["y"] + bb["height"] * 0.5)
+            # a point of the page that answers no click (the margin below the panels): iOS sends no click there
+            empty = pg.evaluate("""(() => { for (let y = innerHeight - 8; y > innerHeight / 2; y -= 12) for (const x of [12, innerWidth / 2, innerWidth - 12]) {
+              const e = document.elementFromPoint(x, y); if (e === document.documentElement || e === document.body) return [x, y]; } return null; })()""")
+            assert empty, "no empty point of the page to tap"
+            ctx = "(c => !!c && !c.hidden && c.offsetWidth > 0)(document.getElementById('ctx'))"
+            left = []
+            for name, opener, isopen, where in (
+                    ("chart menu, tap on the chart", lambda: touch(*at(0.5), 800), ctx, at(0.25)),
+                    ("chart menu, tap outside", lambda: touch(*at(0.5), 800), ctx, empty),
+                    ("file colour", lambda: pg.evaluate("colorFile(E.files[0], { clientX: 300, clientY: 200 })"), "!!document.getElementById('colpop')", empty),
+                    ("file chooser of a graph", lambda: pg.evaluate("fileMenu(document.querySelector('.pnl .hd button'))"), "!!document.getElementById('fpop')", empty),
+                    ("settings", lambda: touch(*(lambda r: (r["x"] + r["width"] / 2, r["y"] + r["height"] / 2))(pg.locator("#np-set").bounding_box())), "!!document.getElementById('uipset')", empty)):
+                opener(); wait_for_js(pg, isopen, 5000)
+                touch(*where)
+                if pg.evaluate(isopen): left.append(name)
+                for _ in range(2): pg.keyboard.press("Escape")
+                pg.evaluate("(() => { const c = document.getElementById('ctx'); if (c) c.hidden = true; for (const s of ['#colpop', '#fpop', '#uipset']) document.querySelector(s)?.remove(); })()")
+            assert not left, f"still open after a tap outside them: {left}"
+            touch(bb["x"] + bb["width"] - 4, bb["y"] + bb["height"] * 0.5, 800); wait_for_js(pg, ctx, 5000)       # opened at the right edge, the menu stays in the window
+            right = pg.evaluate("document.getElementById('ctx').getBoundingClientRect().right - innerWidth")
+            assert right <= 0, f"the chart menu sticks out of the window by {right} px"
+            pg.context.close()
+        step("iPad: a tap outside closes the menus and pop-ups (iOS sends no click to a plain area, touch.js keeps the click of a chart)", tap_outside)
+        def long_press_tip():
+            pg = ipad(b)
+            cdp = pg.context.new_cdp_session(pg) if BROWSER == "chromium" else None
+            LIFT = "(b => ['mouseover', 'mousedown', 'mouseup', 'click'].forEach(t => b.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }))))"
+            def touch(kind, x, y, sel=None):
+                if cdp: cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [] if kind == "touchEnd" else [{"x": x, "y": y}]}); return
+                # WebKit has no CDP: the pointer events of a finger, and on the lift what iOS sends to a button (its mouse events and the click)
+                pg.evaluate(f"""(e => {{ e.dispatchEvent(new PointerEvent({'pointerdown' if kind == 'touchStart' else 'pointerup'!r}, {{ bubbles: true, pointerType: 'touch', clientX: {x}, clientY: {y} }}));
+                  if ({'true' if kind == 'touchEnd' and sel else 'false'}) {LIFT}(e); }})(document.elementFromPoint({x}, {y}))""")
+            pg.evaluate("window.__lpClicks = 0; document.getElementById('np-pt').addEventListener('click', () => window.__lpClicks++)")
+            bb = pg.locator("#np-pt").bounding_box(); x, y = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
+            touch("touchStart", x, y)
+            # held well past the 0.6 s of the tooltip; frames keep coming meanwhile (a still headless page delivers the touch only with the next frame)
+            pg.evaluate("new Promise(r => { const t0 = performance.now(); (function f() { performance.now() - t0 > 1500 ? r() : requestAnimationFrame(f); })(); })")
+            shown = pg.evaluate("!document.getElementById('qtip').hidden")
+            touch("touchEnd", x, y, "#np-pt"); frames(pg, 2)                           # the lift: a finger sends the click of the button (Chromium and iOS alike)
+            clicks = pg.evaluate("window.__lpClicks")
+            pg.evaluate("(()=>{for(const d of document.querySelectorAll('dialog[open]'))d.close()})()")
+            pg.evaluate("document.getElementById('qtip').hidden = false")              # whatever hid it, the next touch must hide a tooltip that is up
+            touch("touchStart", 600, 500); touch("touchEnd", 600, 500); frames(pg, 2)
+            left = pg.evaluate("!document.getElementById('qtip').hidden")
+            pg.context.close()
+            assert shown, "a long press on a button shows no tooltip"
+            assert clicks == 0, "the lift after a long press ran the button (the periodic table opened)"
+            assert not left, "the tooltip of the long press stays after the next touch"
+        step("iPad: a long press on a button shows its tooltip, the lift does not run it, the next touch hides it", long_press_tip)
+        def touch_css():
+            pg = S["pg"]
+            pg.evaluate("BARRA.show('file',{noFocus:true,instant:true})"); wait_for_js(pg, "(h => !!h && h.offsetWidth > 0)(document.getElementById('sidebar-resize-handle'))", 20000); frames(pg, 2)
+            hw = pg.evaluate("document.getElementById('sidebar-resize-handle').getBoundingClientRect().width")
+            ta = pg.evaluate("""[...document.querySelectorAll('#tools button, header button, #sb-header button, #flist input, select')].filter(e => e.offsetWidth > 0)
+                .map(e => [e.id || e.tagName, getComputedStyle(e).touchAction]).filter(([, t]) => t !== 'manipulation')""")
+            canv = pg.evaluate("getComputedStyle(document.querySelector('.pnl canvas')).touchAction")
+            pg.evaluate("BARRA.close()")
+            assert hw >= 24, f"the side bar handle is {hw} px wide on a touch screen"
+            assert not ta, f"controls a double tap would zoom: {ta[:6]}"
+            assert canv == "none", f"the chart canvas lost its own gestures: {canv}"
+        step("iPad: the side bar handle is 24 px wide, a double tap on a control does not zoom the page, the charts keep their gestures", touch_css)
         def fallbacks():
             pg = ipad(b, extra=TAKE_AWAY)
             got = pg.evaluate("window.__compat || []")
@@ -130,9 +207,9 @@ try:
             c = b.new_context(**k); c.add_init_script(SKIP_TOUR)
             c.add_init_script(NO_STORAGE)
             pg = c.new_page(); pg.goto(f"http://127.0.0.1:{r.port}/")
-            attendi(pg, "!!window.qqFailed", 60000)
+            wait_for_js(pg, "!!window.qqFailed", 60000)
             assert pg.evaluate("window.qqFailed") == "load.err.noStorage", pg.evaluate("[window.qqFailed, window.MZLAB_LR_ERR]")
-            attendi(pg, "/finestra privata|private window/.test(document.body.innerText)", 10000)     # the reader sees it, in the language of the page
+            wait_for_js(pg, "/finestra privata|private window/.test(document.body.innerText)", 10000)     # the reader sees it, in the language of the page
             c.close()
         step("a private window (the browser storage refused): the loading screen says so", private_window)
         b.close()

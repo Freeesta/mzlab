@@ -1,7 +1,7 @@
 //! `flow/run` of the app: a plan of the graphical Flow runs on the registered files with the engine of `mzlab-cli`, and a file that is not registered is refused.
 use std::path::Path;
 
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use serde_json::{json, Value};
@@ -20,10 +20,10 @@ const PLAN: &str = r#"{"format":"mzflow/2","inputs":[{"name":"a.mzML","type":"ra
 fn numpress_copy(to: &Path) {
     let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
     let mut sample = mzlab_core::mzml::read(&std::fs::read(ex).unwrap()[..]).unwrap();
-    let mut w = MzmlWriter::con_opzioni(
+    let mut w = MzmlWriter::with_options(
         Vec::new(),
         &Header::default(),
-        Opzioni {
+        Options {
             numpress: true,
             ..Default::default()
         },

@@ -28,24 +28,24 @@ mod variabili;
 mod variabili_classi;
 mod variabili_uscita;
 
-pub use colonne::{Cell, Colonna, DatiFile, Tabella, TipoColonna};
-pub use csv::{csv_leggi, csv_scrivi};
-pub use dal_file::{dal_file, riassunto_da_scansioni, RiassuntoFile};
+pub use colonne::{Cell, Column, ColumnType, FileData, Table};
+pub use csv::{csv_read, csv_write};
+pub use dal_file::{from_file, summary_from_scans, FileSummary};
 pub use json::{da_legacy, digest, from_json, from_value, to_json};
-pub use json3::{digest3, tabella_da_json, tabella_da_value, to_json3, SCHEMA3};
-pub use modello::{applica_modello, Applicato};
-pub use nomi::{proponi, proponi_spiegato, ruolo_e_minuti, tipo_v1};
+pub use json3::{digest3, table_from_json, table_from_value, to_json3, SCHEMA3};
+pub use modello::{apply_model, Applied};
+pub use nomi::{proponi, propose_explained, role_and_minutes, tipo_v1};
 pub use ordine::order_like;
-pub use posizioni::{proposte_json, Posizione, Proposta};
-pub use ricollega::{ricollega, ricollega_json, Abbinamento};
-pub use valida::{per_tp, per_tp_json, valida, valida_json, Avviso, PerTp};
+pub use posizioni::{proposals_json, Position, Proposal};
+pub use ricollega::{relink, relink_json, Abbinamento};
+pub use valida::{per_tp, per_tp_json, validate, validate_json, PerTp, Warning};
 pub use valida3::valida3;
 
 use crate::error::{Error, Result};
 
 pub const SCHEMA: &str = "campioni/2";
 /// Roles of a file, in the order of the schema.
-pub const TIPI: [&str; 9] = [
+pub const TYPES: [&str; 9] = [
     "sample",
     "t0",
     "blank",
@@ -57,13 +57,13 @@ pub const TIPI: [&str; 9] = [
     "pool",
 ];
 /// Kinds of blank (optional: a solvent and a procedure blank are subtracted the same way; a wash only cleans the system and is no reference).
-pub const TIPI_BIANCO: [&str; 3] = ["solvent", "procedure", "wash"];
+pub const BLANK_TYPES: [&str; 3] = ["solvent", "procedure", "wash"];
 /// Units of a time as written: seconds, minutes, hours, days.
-pub const UNITA_TEMPO: [&str; 4] = ["s", "min", "h", "d"];
+pub const TIME_UNITS: [&str; 4] = ["s", "min", "h", "d"];
 
 /// One file of the series.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Campione {
+pub struct Sample {
     pub file: String,
     /// The sample inside a file that holds several (index or inner name); empty for one sample per file.
     pub sub: String,
@@ -73,11 +73,11 @@ pub struct Campione {
     pub sha256: String,
     /// One of `TIPI`.
     pub kind: String,
-    /// One of `TIPI_BIANCO`, only for a blank; None when not said.
+    /// One of `BLANK_TYPES`, only for a blank; None when not said.
     pub blank_kind: Option<String>,
     /// The time as written or confirmed, in `time_unit`.
     pub time: Option<f64>,
-    /// One of `UNITA_TEMPO`.
+    /// One of `TIME_UNITS`.
     pub time_unit: String,
     /// Derived from `time` and `time_unit`: the only time used in the computations.
     pub time_min: Option<f64>,
@@ -103,13 +103,13 @@ pub struct Campione {
     pub acquired: Option<String>,
     pub group: String,
     pub extra: Vec<(String, Cell)>,
-    pub file_data: Option<DatiFile>,
+    pub file_data: Option<FileData>,
 }
 
-impl Campione {
+impl Sample {
     /// An empty `sample` for `file` at position `order` (1-based).
     pub fn new(file: &str, sha256: &str, order: u32) -> Self {
-        Campione {
+        Sample {
             file: file.to_string(),
             sha256: sha256.to_string(),
             kind: "sample".into(),
@@ -169,7 +169,7 @@ type NumberKey<'a> = (
 );
 
 /// The replicates counted again: 1-based among the files with the same series, role, minutes, concentration, polarity and matrix.
-pub fn number_replicates(cs: &mut [Campione]) {
+pub fn number_replicates(cs: &mut [Sample]) {
     // NaN never equals itself, so those files keep the pairwise comparison
     if cs
         .iter()
@@ -203,7 +203,7 @@ pub fn number_replicates(cs: &mut [Campione]) {
     }
 }
 
-fn number_replicates_pairwise(cs: &mut [Campione]) {
+fn number_replicates_pairwise(cs: &mut [Sample]) {
     for i in 0..cs.len() {
         let c = &cs[i];
         let same = cs[..i]
@@ -222,7 +222,7 @@ fn number_replicates_pairwise(cs: &mut [Campione]) {
 }
 
 /// The bindings (a `campioni/2` or `/3` document is read by every operation that takes one; `canonico` and `digest` keep its schema, `migra` makes a `/3`;
-/// `valida` also gives the findings of `/3`; `route_tutto` adds `modello`, `dal_file`, `csv_leggi` and `csv_scrivi`): `op` is `proponi` or `proponi_spiegato` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`), `ricollega` (`{"campioni","file":[{"percorso","sha256"}]}`) or `da_legacy`
+/// `valida` also gives the findings of `/3`; `route_all` adds `modello`, `dal_file`, `csv_leggi` and `csv_scrivi`): `op` is `proponi` or `proponi_spiegato` (`{"files":[{"name","sha256","kind"}]}`; the second adds the spans of the name), `valida`, `per_tp`, `canonico` or `digest` (a `campioni/2`), `ricollega` (`{"campioni","file":[{"percorso","sha256"}]}`) or `da_legacy`
 /// (`{"session","qaqc","campioni1","mzflow"}`, see `json::da_legacy`); JSON in, JSON out.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
@@ -239,18 +239,18 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 .map(|f| (s(f, "name"), s(f, "sha256"), s(f, "kind")))
                 .collect();
             if op == "proponi_spiegato" {
-                return Ok(proposte_json(&proponi_spiegato(&files)));
+                return Ok(proposals_json(&propose_explained(&files)));
             }
             if op == "proponi3" {
-                let tabella = Tabella {
+                let table = Table {
                     campioni: proponi(&files),
                     colonne: Vec::new(),
                 };
-                return Ok(to_json3(&tabella));
+                return Ok(to_json3(&table));
             }
             Ok(to_json(&proponi(&files)))
         }
-        "valida" => Ok(valida_json(&valida3(&tabella_da_json(input.as_bytes())?))),
+        "valida" => Ok(validate_json(&valida3(&table_from_json(input.as_bytes())?))),
         "per_tp" => Ok(per_tp_json(&per_tp(&from_json(input.as_bytes())?))),
         "da_legacy" => Ok(to_json(&da_legacy(input.as_bytes())?)),
         "ricollega" => {
@@ -267,11 +267,11 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                     (t("percorso"), t("sha256"))
                 })
                 .collect();
-            Ok(ricollega_json(&ricollega(&cs, &cand)))
+            Ok(relink_json(&relink(&cs, &cand)))
         }
         "canonico" | "digest" | "migra" => {
             let doc = crate::json::parse(input.as_bytes())?;
-            let t = tabella_da_value(&doc)?;
+            let t = table_from_value(&doc)?;
             let v3 = op == "migra" || doc.get("schema").and_then(|v| v.str()) == Some(SCHEMA3);
             Ok(match (op, v3) {
                 ("digest", true) => digest3(&t),
@@ -286,14 +286,14 @@ pub fn route(op: &str, input: &str) -> Result<String> {
 
 /// The operations that read the names and the files (`modello`, `dal_file`, `csv_leggi`, `csv_scrivi`) and everything `route` does: the engine of the Data view
 /// serves this one. `route` alone is what mzFinder links (its .wasm has a cap: the name models and the CSV are not its business).
-pub fn route_tutto(op: &str, input: &str) -> Result<String> {
+pub fn route_all(op: &str, input: &str) -> Result<String> {
     match op {
-        "dal_file" => dal_file(input),
-        "modello" => applica_modello(input),
-        "csv_leggi" => csv_leggi(input),
-        "csv_scrivi" => csv_scrivi(input),
+        "dal_file" => from_file(input),
+        "modello" => apply_model(input),
+        "csv_leggi" => csv_read(input),
+        "csv_scrivi" => csv_write(input),
         "variabili" => variabili::route_variabili(input),
-        "nome_gruppo" => variabili::route_nome_gruppo(input),
+        "nome_gruppo" => variabili::route_group_name(input),
         _ => route(op, input),
     }
 }

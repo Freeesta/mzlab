@@ -4,26 +4,26 @@
 
 mod comune;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use std::path::Path;
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn membri(radice: &Path, dir: &Path, out: &mut Vec<Membro>) {
+fn members(root: &Path, dir: &Path, out: &mut Vec<Member>) {
     for e in std::fs::read_dir(dir).unwrap().flatten() {
         let p = e.path();
         if p.is_dir() {
-            membri(radice, &p, out);
+            members(root, &p, out);
         } else {
             let b = std::fs::read(&p).unwrap();
-            let nome = p
-                .strip_prefix(radice.parent().unwrap())
+            let name = p
+                .strip_prefix(root.parent().unwrap())
                 .unwrap()
                 .to_string_lossy()
                 .into_owned();
-            out.push(Membro {
-                nome,
+            out.push(Member {
+                nome: name,
                 dim: b.len() as u64,
                 dati: Box::new(b),
                 sha1: None,
@@ -33,8 +33,8 @@ fn membri(radice: &Path, dir: &Path, out: &mut Vec<Membro>) {
 }
 
 #[test]
-fn il_cdf_esportato_dice_quello_che_dice_la_sua_cartella_d() {
-    let Some(cartella) = dati_percorsi::percorso("dati/formati/aperti/netcdf_cdf") else {
+fn the_exported_cdf_says_what_its_d_folder_says() {
+    let Some(folder) = dati_percorsi::percorso("dati/formati/aperti/netcdf_cdf") else {
         eprintln!("SKIP andi parita: no data repository (MZLAB_DATI)");
         return;
     };
@@ -48,36 +48,36 @@ fn il_cdf_esportato_dice_quello_che_dice_la_sua_cartella_d() {
         ),
         ("MTBLS13991_Heart_16.D.zip", "MTBLS13991_Heart_16.cdf"),
     ] {
-        let sotto = tmp.join(zip);
-        std::fs::create_dir_all(&sotto).unwrap();
-        let ok = cartella.join(zip).exists()
+        let below = tmp.join(zip);
+        std::fs::create_dir_all(&below).unwrap();
+        let ok = folder.join(zip).exists()
             && std::process::Command::new("unzip")
                 .arg("-q")
                 .arg("-o")
-                .arg(cartella.join(zip))
+                .arg(folder.join(zip))
                 .arg("-d")
-                .arg(&sotto)
+                .arg(&below)
                 .status()
                 .is_ok_and(|s| s.success());
         if !ok {
             eprintln!("SKIP andi parita: {zip}");
             continue;
         }
-        let dir = std::fs::read_dir(&sotto)
+        let dir = std::fs::read_dir(&below)
             .unwrap()
             .flatten()
             .map(|e| e.path())
             .find(|p| p.is_dir())
             .unwrap();
         let mut m = Vec::new();
-        membri(&dir, &dir, &mut m);
-        let mut d_set = mzlab_lettori::apri(FileSet { membri: m }, &Limiti::desktop()).unwrap();
-        let mut c_set = comune::andi::apri_andi(std::fs::read(cartella.join(cdf)).unwrap());
-        let n = d_set.campioni()[0].scansioni;
-        assert_eq!(c_set.campioni()[0].scansioni, n, "{cdf}");
+        members(&dir, &dir, &mut m);
+        let mut d_set = mzlab_lettori::apri(FileSet { membri: m }, &Limits::desktop()).unwrap();
+        let mut c_set = comune::andi::open_andi(std::fs::read(folder.join(cdf)).unwrap());
+        let n = d_set.samples()[0].scansioni;
+        assert_eq!(c_set.samples()[0].scansioni, n, "{cdf}");
         let (id, ic) = (
-            d_set.indice(0).unwrap().to_vec(),
-            c_set.indice(0).unwrap().to_vec(),
+            d_set.index(0).unwrap().to_vec(),
+            c_set.index(0).unwrap().to_vec(),
         );
         for k in (0..n).step_by((n / 30).max(1)) {
             assert!(
@@ -92,10 +92,7 @@ fn il_cdf_esportato_dice_quello_che_dice_la_sua_cartella_d() {
                 id[k].tic,
                 ic[k].tic
             );
-            let (a, b) = (
-                d_set.scansione(0, k).unwrap(),
-                c_set.scansione(0, k).unwrap(),
-            );
+            let (a, b) = (d_set.scan(0, k).unwrap(), c_set.scan(0, k).unwrap());
             assert_eq!(a.mz.len(), b.mz.len(), "{cdf} scan {k}");
             for i in 0..a.mz.len() {
                 assert!(

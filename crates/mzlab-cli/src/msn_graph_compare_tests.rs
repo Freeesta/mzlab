@@ -1,8 +1,8 @@
-use crate::msn_graph_compare::confronta;
+use crate::msn_graph_compare::compare;
 
 /// A minimal `msngrafo/1`: a root (m/z 305.1) isolated at MS1, a fragment (244.06) isolated at MS2 and an arc between them; `shift` moves the fragment in ppm,
 /// `formula` is the one chosen for it and `peaks` the MS2 spectrum of the root.
-fn grafo(shift: f64, formula: &str, peaks: &[(f64, f64)]) -> String {
+fn graph(shift: f64, formula: &str, peaks: &[(f64, f64)]) -> String {
     let frag = 244.06 * (1.0 + shift * 1e-6);
     let p: Vec<String> = peaks
         .iter()
@@ -31,8 +31,8 @@ fn ok_of(report: &str, criterion: &str) -> bool {
 
 #[test]
 fn the_same_tree_twice_is_validated_with_its_numbers() {
-    let g = grafo(0.0, "C13H10NO4", &PEAKS);
-    let r = confronta(&g, &g).unwrap();
+    let g = graph(0.0, "C13H10NO4", &PEAKS);
+    let r = compare(&g, &g).unwrap();
     assert!(r.starts_with("{\"formato\":\"msnconfronto/1\""), "{r}");
     assert!(r.contains("\"convalidata\":true"), "{r}");
     assert!(
@@ -43,9 +43,9 @@ fn the_same_tree_twice_is_validated_with_its_numbers() {
 
 #[test]
 fn a_shift_a_formula_or_a_spectrum_that_differ_fail_their_own_criterion() {
-    let a = grafo(0.0, "C13H10NO4", &PEAKS);
+    let a = graph(0.0, "C13H10NO4", &PEAKS);
     // 4 ppm: still the same node, but past the 3 ppm limit
-    let r = confronta(&a, &grafo(4.0, "C13H10NO4", &PEAKS)).unwrap();
+    let r = compare(&a, &graph(4.0, "C13H10NO4", &PEAKS)).unwrap();
     assert!(
         !ok_of(&r, "scarto_ppm")
             && ok_of(&r, "nodi_isolati")
@@ -53,15 +53,15 @@ fn a_shift_a_formula_or_a_spectrum_that_differ_fail_their_own_criterion() {
         "{r}"
     );
     // 10 ppm: the isolated node is not found in the other graph
-    let r = confronta(&a, &grafo(10.0, "C13H10NO4", &PEAKS)).unwrap();
+    let r = compare(&a, &graph(10.0, "C13H10NO4", &PEAKS)).unwrap();
     assert!(!ok_of(&r, "nodi_isolati") && !ok_of(&r, "archi"), "{r}");
     // another formula for the same node
-    let r = confronta(&a, &grafo(0.0, "C12H8N2O4", &PEAKS)).unwrap();
+    let r = compare(&a, &graph(0.0, "C12H8N2O4", &PEAKS)).unwrap();
     assert!(!ok_of(&r, "formule") && r.contains("\"diversi\":1"), "{r}");
     // an MS2 spectrum with other peaks
-    let r = confronta(
+    let r = compare(
         &a,
-        &grafo(0.0, "C13H10NO4", &[(150.0, 100.0), (200.0, 30.0)]),
+        &graph(0.0, "C13H10NO4", &[(150.0, 100.0), (200.0, 30.0)]),
     )
     .unwrap();
     assert!(!ok_of(&r, "entropia_ms2") && ok_of(&r, "formule"), "{r}");
@@ -70,7 +70,7 @@ fn a_shift_a_formula_or_a_spectrum_that_differ_fail_their_own_criterion() {
 #[test]
 fn a_file_that_is_not_a_graph_is_a_keyed_error() {
     assert_eq!(
-        confronta("{\"formato\":\"msnlib/1\"}", "{}")
+        compare("{\"formato\":\"msnlib/1\"}", "{}")
             .err()
             .unwrap()
             .key,

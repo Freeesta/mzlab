@@ -12,64 +12,64 @@ mod rec;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{Campione, Fiducia, FileSet, Lettore, Limiti, VoceLettore, CONTRATTO};
+use mzlab_core::lettori::{Fiducia, FileSet, Limits, Reader, ReaderEntry, Sample, CONTRATTO};
 use mzlab_core::ole::Ole;
 
-use carica::{Dati, Fam};
+use carica::{Data, Fam};
 use meta::Meta;
 
 /// Above this intensity an `f32` loses counts: the spectrum then keeps the exact values.
 const F32_EXACT: u64 = 1 << 24;
 
-pub const VOCE: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "shimadzu",
     contratto: CONTRATTO,
     estensioni: &[".qgd", ".lcd"],
-    riconosci,
+    riconosci: recognize,
     apri,
 };
 
 /// What a container holds, from the names of its directory (a storage can be there and empty: the data are told by `carica::scegli`). `Ignoto` and `Rotto`: a `.qgd`/`.lcd`
-/// that is an OLE2 container of other storages (another instrument's data), or whose directory lies beyond its end (a cut copy): refused with what was found.
-enum Contenuto {
-    Dati,
+/// that is an OLE2 container of other storages (another instrument's data), or whose directory lies beyond its end: refused with what was found, or as `err.file.cutShort` when its header points past the end (a cut copy).
+enum Content {
+    Data,
     QTof,
-    SoloLc,
+    LcOnly,
     Ignoto(String),
-    Rotto,
+    Broken,
 }
 
-fn contenuto(nomi: &[String]) -> Option<Contenuto> {
-    let ha = |n: &str| nomi.iter().any(|x| x == n);
-    if carica::famiglie().iter().any(|f| ha(f.storage())) {
-        Some(Contenuto::Dati)
+fn content(names: &[String]) -> Option<Content> {
+    let ha = |n: &str| names.iter().any(|x| x == n);
+    if carica::families().iter().any(|f| ha(f.storage())) {
+        Some(Content::Data)
     } else if ha("QTFL RawData") {
-        Some(Contenuto::QTof)
+        Some(Content::QTof)
     } else if ha("LSS Raw Data") {
-        Some(Contenuto::SoloLc)
+        Some(Content::LcOnly)
     } else {
         None
     }
 }
 
 /// The member of `fs` that is a Shimadzu container, and what it holds; failing that, a `.qgd`/`.lcd` OLE2 container it cannot read the data of.
-fn trova(fs: &mut FileSet) -> Option<(usize, Contenuto)> {
+fn find(fs: &mut FileSet) -> Option<(usize, Content)> {
     (0..fs.membri.len())
         .find_map(|i| {
-            let c = contenuto(&dir::nomi(&mut fs.membri[i])?)?;
+            let c = content(&dir::names(&mut fs.membri[i])?)?;
             Some((i, c))
         })
-        .or_else(|| (0..fs.membri.len()).find_map(|i| Some((i, altro(&mut fs.membri[i])?))))
+        .or_else(|| (0..fs.membri.len()).find_map(|i| Some((i, other(&mut fs.membri[i])?))))
 }
 
 /// A member named `.qgd`/`.lcd` that starts as an OLE2 container: the storages of its root (`Ignoto`), or `Rotto` when its directory cannot be followed.
-fn altro(m: &mut mzlab_core::lettori::Membro) -> Option<Contenuto> {
+fn other(m: &mut mzlab_core::lettori::Member) -> Option<Content> {
     let n = m.nome.to_ascii_lowercase();
     if !(n.ends_with(".qgd") || n.ends_with(".lcd")) || !dir::ole(m) {
         return None;
     }
-    Some(match dir::nomi(m) {
-        Some(v) => Contenuto::Ignoto(
+    Some(match dir::names(m) {
+        Some(v) => Content::Ignoto(
             v.iter()
                 .skip(1)
                 .take(8)
@@ -77,39 +77,56 @@ fn altro(m: &mut mzlab_core::lettori::Membro) -> Option<Contenuto> {
                 .collect::<Vec<_>>()
                 .join(", "),
         ),
-        None => Contenuto::Rotto,
+        None => Content::Broken,
     })
 }
 
-fn riconosci(fs: &mut FileSet) -> Fiducia {
-    match trova(fs) {
-        Some((_, Contenuto::Dati | Contenuto::QTof)) => Fiducia::Si,
-        Some((_, Contenuto::SoloLc | Contenuto::Ignoto(_) | Contenuto::Rotto)) => Fiducia::Forse,
+fn recognize(fs: &mut FileSet) -> Fiducia {
+    match find(fs) {
+        Some((_, Content::Data | Content::QTof)) => Fiducia::Si,
+        Some((_, Content::LcOnly | Content::Ignoto(_) | Content::Broken)) => Fiducia::Forse,
         None => Fiducia::No,
     }
 }
 
-fn rifiuto(detail: &str) -> Error {
+fn refusal(detail: &str) -> Error {
     Error::new("err.file.shimadzu").with("detail", detail)
 }
 
-fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
-    let (i, c) = trova(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted"))?;
+/// A copy cut before its directory (its header points past the end, `Ole::header_cut`): the same notice as a cut found after `open`.
+fn cut_before(m: &mut mzlab_core::lettori::Member) -> Option<Error> {
+    let mut h = vec![0u8; m.dim.min(512) as usize];
+    m.dati.read_at(0, &mut h).ok()?;
+    let need = Ole::header_cut(&h).filter(|&n| n > m.dim)?;
+    Some(
+        Error::new("err.file.cutShort")
+            .with("name", &m.nome)
+            .with("size", m.dim)
+            .with("needed", need),
+    )
+}
+
+fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    let (i, c) = find(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted"))?;
     match &c {
-        Contenuto::Ignoto(v) => {
-            return Err(rifiuto(&format!(
+        Content::Ignoto(v) => {
+            return Err(refusal(&format!(
                 "not a LabSolutions/GCMSsolution data file (storages: {v})"
             )))
         }
-        Contenuto::Rotto => {
-            let d = fs.membri[i].dim;
-            return Err(rifiuto(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
+        Content::Broken => {
+            let m = &mut fs.membri[i];
+            if let Some(e) = cut_before(m) {
+                return Err(e);
+            }
+            let d = m.dim;
+            return Err(refusal(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
         }
         _ => {}
     }
     let mut m = fs.membri.swap_remove(i);
     // the container and the raw stream are both in memory
-    if m.dim.saturating_mul(2) > limiti.byte {
+    if m.dim.saturating_mul(2) > limits.byte {
         return Err(Error::memory_budget());
     }
     let mut data = Vec::new();
@@ -118,36 +135,43 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     data.resize(m.dim as usize, 0);
     m.dati.read_at(0, &mut data)?;
     let ole = Ole::open(data, &m.nome)?;
-    let Some(fam) = carica::scegli(&ole) else {
-        return Err(rifiuto(match c {
-            Contenuto::QTof => "Q-TOF data (QTFL RawData) are not read: their m/z could not be checked against a reference",
+    // sectors in use past the end: the raw stream would read short and the file would open with fewer scans, or none, unsaid
+    if let Some(need) = ole.cut_short() {
+        return Err(Error::new("err.file.cutShort")
+            .with("name", &m.nome)
+            .with("size", m.dim)
+            .with("needed", need));
+    }
+    let Some(fam) = carica::choose(&ole) else {
+        return Err(refusal(match c {
+            Content::QTof => "Q-TOF data (QTFL RawData) are not read: their m/z could not be checked against a reference",
             _ => "the file holds no mass spectrometer data",
         }));
     };
-    let d = carica::carica(&ole, fam, limiti)?;
-    let mut meta = meta::raccogli(&ole, fam);
-    if d.illeggibili > 0 {
-        meta.avvisi.push(format!(
+    let d = carica::load(&ole, fam, limits)?;
+    let mut meta = meta::collect(&ole, fam);
+    if d.unreadable > 0 {
+        meta.warnings.push(format!(
             "{} of {} records not decoded",
-            d.illeggibili, d.records
+            d.unreadable, d.records
         ));
     }
     // the file name without its folder, as the other readers keep it
-    let nome = m
+    let name = m
         .nome
         .rsplit(['/', '\\'])
         .next()
         .unwrap_or(&m.nome)
         .to_string();
-    Ok(Box::new(LettoreShimadzu {
-        campioni: vec![Campione {
+    Ok(Box::new(ShimadzuReader {
+        samples: vec![Sample {
             id: 0,
-            nome: nome.clone(),
+            nome: name.clone(),
             scansioni: d.indice.len(),
-            dimensione: None,
+            size: None,
         }],
         sha1: ole.sha1_hex(),
-        nome,
+        nome: name,
         dim: m.dim,
         fam,
         d,
@@ -155,18 +179,18 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     }))
 }
 
-pub struct LettoreShimadzu {
+pub struct ShimadzuReader {
     nome: String,
     dim: u64,
     sha1: String,
     fam: Fam,
-    campioni: Vec<Campione>,
-    d: Dati,
+    samples: Vec<Sample>,
+    d: Data,
     meta: Meta,
 }
 
-impl LettoreShimadzu {
-    fn uno(&self, c: usize) -> Result<()> {
+impl ShimadzuReader {
+    fn one(&self, c: usize) -> Result<()> {
         (c == 0)
             .then_some(())
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))

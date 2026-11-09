@@ -4,11 +4,11 @@
 use crate::error::{Error, Result};
 use crate::mzml::ChromKind;
 use crate::mzmlhead::srm_id;
-use crate::sorgente::Tracce;
+use crate::sorgente::Traces;
 
 /// The chromatogram of one transition: times in minutes.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Traccia {
+pub struct Trace {
     pub q1: f64,
     pub q3: f64,
     pub ce: Option<f64>,
@@ -18,23 +18,23 @@ pub struct Traccia {
 }
 
 /// Every SRM chromatogram with Q1 and Q3, in the order of the file.
-pub fn leggi<T: Tracce>(t: &mut T) -> Result<Vec<Traccia>> {
+pub fn leggi<T: Traces>(t: &mut T) -> Result<Vec<Trace>> {
     t.srm()
 }
 
 /// `Tracce::srm` for a reader of chromatograms: the list, then each of kind SRM.
-pub(crate) fn da_voci<T: Tracce + ?Sized>(t: &mut T) -> Result<Vec<Traccia>> {
+pub(crate) fn from_entries<T: Traces + ?Sized>(t: &mut T) -> Result<Vec<Trace>> {
     let mut out = Vec::new();
-    for v in t.cromatogrammi()? {
+    for v in t.chromatograms()? {
         if v.tipo != ChromKind::Srm {
             continue;
         }
-        let c = t.cromatogramma(&v.id)?;
+        let c = t.chromatogram(&v.id)?;
         let (_, _, ce, name) = srm_id(&c.id);
         let (Some(q1), Some(q3)) = (c.q1, c.q3) else {
             continue;
         };
-        out.push(Traccia {
+        out.push(Trace {
             q1,
             q3,
             ce,
@@ -47,7 +47,7 @@ pub(crate) fn da_voci<T: Tracce + ?Sized>(t: &mut T) -> Result<Vec<Traccia>> {
 }
 
 /// `u32 n`, then per trace `q1 q3 ce(NaN: none)` as `f64`, `u32` name length and bytes, `u32` points, the times and the intensities as `f64` (little endian).
-pub fn impacchetta(v: &[Traccia]) -> Vec<u8> {
+pub fn impacchetta(v: &[Trace]) -> Vec<u8> {
     let mut b = (v.len() as u32).to_le_bytes().to_vec();
     for s in v {
         for x in [s.q1, s.q3, s.ce.unwrap_or(f64::NAN)] {
@@ -64,9 +64,9 @@ pub fn impacchetta(v: &[Traccia]) -> Vec<u8> {
     b
 }
 
-struct Cursore<'a>(&'a [u8]);
+struct Cursor<'a>(&'a [u8]);
 
-impl Cursore<'_> {
+impl Cursor<'_> {
     fn prendi(&mut self, n: usize) -> Result<&[u8]> {
         if self.0.len() < n {
             return Err(Error::new("error.badIndex"));
@@ -83,14 +83,14 @@ impl Cursore<'_> {
             self.prendi(8)?.try_into().unwrap_or_default(),
         ))
     }
-    fn serie(&mut self, n: usize) -> Result<Vec<f64>> {
+    fn series(&mut self, n: usize) -> Result<Vec<f64>> {
         (0..n).map(|_| self.f64()).collect()
     }
 }
 
 /// The traces `impacchetta` wrote.
-pub fn spacchetta(b: &[u8]) -> Result<Vec<Traccia>> {
-    let mut c = Cursore(b);
+pub fn spacchetta(b: &[u8]) -> Result<Vec<Trace>> {
+    let mut c = Cursor(b);
     let n = c.u32()?;
     let mut out = Vec::new();
     for _ in 0..n {
@@ -98,8 +98,8 @@ pub fn spacchetta(b: &[u8]) -> Result<Vec<Traccia>> {
         let len = c.u32()?;
         let name = String::from_utf8_lossy(c.prendi(len)?).into_owned();
         let p = c.u32()?;
-        let (t, y) = (c.serie(p)?, c.serie(p)?);
-        out.push(Traccia {
+        let (t, y) = (c.series(p)?, c.series(p)?);
+        out.push(Trace {
             q1,
             q3,
             ce: (!ce.is_nan()).then_some(ce),
@@ -118,7 +118,7 @@ mod prove {
     #[test]
     fn round_trip() {
         let v = vec![
-            Traccia {
+            Trace {
                 q1: 301.1,
                 q3: 150.0,
                 ce: Some(25.0),
@@ -126,7 +126,7 @@ mod prove {
                 t: vec![0.0, 0.1],
                 y: vec![1.0, 2.0],
             },
-            Traccia::default(),
+            Trace::default(),
         ];
         assert_eq!(spacchetta(&impacchetta(&v)).unwrap(), v);
         assert!(spacchetta(&impacchetta(&v)[..20]).is_err());

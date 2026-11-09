@@ -12,6 +12,7 @@ fn d(t: GenericType, label: &str) -> GenericDataDescriptor {
 fn rec(v: Vec<(&str, GenericValue)>) -> GenericRecord {
     GenericRecord {
         values: v.into_iter().map(|(k, x)| (k.into(), x)).collect(),
+        index: None,
     }
 }
 
@@ -45,10 +46,10 @@ fn log() -> StatusLog {
 
 #[test]
 fn only_the_channels_that_change_are_series_with_their_section_and_unit() {
-    let v = indice_stato(&log());
+    let v = status_index(&log());
     let got: Vec<(&str, &str, &str, usize)> = v
         .iter()
-        .map(|x| (x.id.as_str(), x.gruppo.as_str(), x.unita.as_str(), x.n))
+        .map(|x| (x.id.as_str(), x.group.as_str(), x.unita.as_str(), x.n))
         .collect();
     assert_eq!(
         got,
@@ -62,26 +63,26 @@ fn only_the_channels_that_change_are_series_with_their_section_and_unit() {
 
 #[test]
 fn the_points_of_a_status_series_carry_the_time_of_each_record() {
-    let s = serie_stato(&log(), "status:Vacuum/Fore Vacuum").expect("series");
+    let s = status_series(&log(), "status:Vacuum/Fore Vacuum").expect("series");
     assert_eq!(
         (s.unita.as_str(), s.t, s.y),
         ("mbar", vec![0.0, 1.0, 2.5], vec![1.0, 1.5, 2.0])
     );
-    assert!(serie_stato(&log(), "status:Ion Source/Vaporizer").is_none());
+    assert!(status_series(&log(), "status:Ion Source/Vaporizer").is_none());
 }
 
 #[test]
 fn a_log_without_time_has_no_series() {
     let l = log();
     let l = StatusLog::new(l.header.clone(), Vec::new(), l.records().to_vec().into());
-    assert!(indice_stato(&l).is_empty());
+    assert!(status_index(&l).is_empty());
 }
 
 /// The records as the rows a file gives: the numeric value of each field by position.
-fn righe(recs: &[GenericRecord]) -> impl FnMut(Riga<'_>) + '_ {
+fn rows(recs: &[GenericRecord]) -> impl FnMut(Row<'_>) + '_ {
     move |f| {
         for (k, r) in recs.iter().enumerate() {
-            f(k, &|i| numero(r, i));
+            f(k, &|i| number(r, i));
         }
     }
 }
@@ -111,7 +112,10 @@ fn trailer() -> (GenericDataHeader, Vec<GenericRecord>, Vec<Scansione>) {
         r(12.0, 0, 1.0),
         r(70.0, 2, 1.0),
     ];
-    let sc = |t_min, livello| Scansione { t_min, livello };
+    let sc = |t_min, livello| Scansione {
+        t_min,
+        level: livello,
+    };
     let scans = vec![sc(0.1, 1), sc(0.2, 2), sc(0.3, 2), sc(0.4, 1), sc(0.5, 2)];
     (h, recs, scans)
 }
@@ -119,10 +123,10 @@ fn trailer() -> (GenericDataHeader, Vec<GenericRecord>, Vec<Scansione>) {
 #[test]
 fn a_trailer_field_that_changes_at_several_levels_is_one_series_per_level() {
     let (h, recs, scans) = trailer();
-    let v = indice_trailer(&h, &scans, &mut righe(&recs));
+    let v = trailer_index(&h, &scans, &mut rows(&recs));
     let got: Vec<(&str, &str, usize)> = v
         .iter()
-        .map(|x| (x.id.as_str(), x.nome.as_str(), x.n))
+        .map(|x| (x.id.as_str(), x.name.as_str(), x.n))
         .collect();
     assert_eq!(
         got,
@@ -145,10 +149,10 @@ fn a_trailer_field_that_changes_at_several_levels_is_one_series_per_level() {
 #[test]
 fn the_points_of_a_trailer_series_are_the_scans_of_its_level() {
     let (h, recs, scans) = trailer();
-    let s = serie_trailer(
+    let s = trailer_series(
         &h,
         &scans,
-        &mut righe(&recs),
+        &mut rows(&recs),
         "trailer:Ion Injection Time@MS2",
     )
     .expect("series");
@@ -156,9 +160,9 @@ fn the_points_of_a_trailer_series_are_the_scans_of_its_level() {
         (s.unita.as_str(), s.t, s.y),
         ("ms", vec![0.2, 0.3, 0.5], vec![50.0, 60.0, 70.0])
     );
-    let c = serie_trailer(&h, &scans, &mut righe(&recs), "trailer:Charge State").expect("series");
+    let c = trailer_series(&h, &scans, &mut rows(&recs), "trailer:Charge State").expect("series");
     assert_eq!((c.t, c.y), (vec![0.2, 0.3, 0.5], vec![2.0, 3.0, 2.0]));
-    assert!(serie_trailer(&h, &scans, &mut righe(&recs), "trailer:AGC Target").is_none());
+    assert!(trailer_series(&h, &scans, &mut rows(&recs), "trailer:AGC Target").is_none());
 }
 
 /// A stream laid out like a v66 file with two sections: a title, a changing channel, a constant one, a second title, a changing channel.
@@ -199,7 +203,7 @@ fn the_sections_of_a_log_read_from_bytes_give_the_series() {
     let region = bytes.len() as u64 - addr;
     let log = opentfraw::status_log::decode(std::io::Cursor::new(&bytes), addr, 4, region)
         .expect("decoded");
-    let ids: Vec<String> = indice_stato(&log).into_iter().map(|v| v.id).collect();
+    let ids: Vec<String> = status_index(&log).into_iter().map(|v| v.id).collect();
     assert_eq!(
         ids,
         [
@@ -207,7 +211,7 @@ fn the_sections_of_a_log_read_from_bytes_give_the_series() {
             "status:Vacuum/Fore Vacuum"
         ]
     );
-    let s = serie_stato(&log, "status:Ion Source/Spray Voltage").expect("series");
+    let s = status_series(&log, "status:Ion Source/Spray Voltage").expect("series");
     assert_eq!(
         (s.unita.as_str(), s.t, s.y),
         (
@@ -216,4 +220,57 @@ fn the_sections_of_a_log_read_from_bytes_give_the_series() {
             vec![3000.0, 3001.0, 3002.0, 3003.0]
         )
     );
+}
+
+/// The trailer's label index (`opentfraw::generic_data::Etichette`) gives what a scan of the fields gives: the first of equal labels, nothing for a label
+/// it lacks, and a scan when the record is not the one it was made for.
+#[test]
+fn the_label_index_finds_what_a_scan_of_the_fields_finds() {
+    let labels: Vec<std::sync::Arc<str>> = ["A:", "B:", "A:", "", "Charge State:"]
+        .iter()
+        .map(|&l| l.into())
+        .collect();
+    let values: Vec<(std::sync::Arc<str>, GenericValue)> = labels
+        .iter()
+        .enumerate()
+        .map(|(i, l)| (std::sync::Arc::clone(l), GenericValue::Int32(i as i32)))
+        .collect();
+    let plain = GenericRecord {
+        values: values.clone(),
+        index: None,
+    };
+    let fast = GenericRecord {
+        values: values.clone(),
+        index: Some(opentfraw::generic_data::Etichette::new(&labels)),
+    };
+    // an index of other labels (a record of another length) is not trusted
+    let other = GenericRecord {
+        values: values[..4].to_vec(),
+        index: Some(opentfraw::generic_data::Etichette::new(&labels)),
+    };
+    let short = GenericRecord {
+        values: values[..4].to_vec(),
+        index: None,
+    };
+    for l in [
+        "A:",
+        "B:",
+        "",
+        "Charge State:",
+        "Missing:",
+        "a:",
+        "Charge State",
+    ] {
+        assert_eq!(
+            fast.get(l).and_then(GenericValue::as_f64),
+            plain.get(l).and_then(GenericValue::as_f64),
+            "{l}"
+        );
+        assert_eq!(
+            other.get(l).and_then(GenericValue::as_f64),
+            short.get(l).and_then(GenericValue::as_f64),
+            "{l}"
+        );
+    }
+    assert_eq!(fast.get("A:").and_then(GenericValue::as_f64), Some(0.0));
 }

@@ -6,9 +6,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 
-fn genera(tool: &str) -> Option<PathBuf> {
+fn generate(tool: &str) -> Option<PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_sciex_sonda_{tool}_{}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tools")
@@ -30,11 +30,11 @@ fn genera(tool: &str) -> Option<PathBuf> {
     Some(out)
 }
 
-fn apri(dir: &Path, stem: &str) -> Box<dyn Lettore> {
-    let membro = |nome: String| {
-        let b = std::fs::read(dir.join(&nome)).unwrap();
-        Membro {
-            nome,
+fn open(dir: &Path, stem: &str) -> Box<dyn Reader> {
+    let member = |name: String| {
+        let b = std::fs::read(dir.join(&name)).unwrap();
+        Member {
+            nome: name,
             dim: b.len() as u64,
             dati: Box::new(b),
             sha1: None,
@@ -42,21 +42,21 @@ fn apri(dir: &Path, stem: &str) -> Box<dyn Lettore> {
     };
     let fs = FileSet {
         membri: vec![
-            membro(format!("{stem}.wiff")),
-            membro(format!("{stem}.wiff.scan")),
+            member(format!("{stem}.wiff")),
+            member(format!("{stem}.wiff.scan")),
         ],
     };
-    mzlab_lettori::apri(fs, &Limiti::sito()).unwrap()
+    mzlab_lettori::apri(fs, &Limits::sito()).unwrap()
 }
 
 #[test]
 fn a_scheduled_mrm_pair_without_a_log_is_a_variant() {
-    let Some(dir) = genera("wiff_riferimento.py") else {
+    let Some(dir) = generate("wiff_riferimento.py") else {
         return;
     };
-    let mut l = apri(&dir, "programmati");
+    let mut l = open(&dir, "programmati");
     assert!(
-        l.variante(0),
+        l.variant(0),
         "its sparse MRM blocks are read by the module only"
     );
     assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
@@ -64,12 +64,12 @@ fn a_scheduled_mrm_pair_without_a_log_is_a_variant() {
 
 #[test]
 fn a_pair_is_a_variant_when_any_of_its_samples_is() {
-    let Some(dir) = genera("wiff_misto_pi.py") else {
+    let Some(dir) = generate("wiff_misto_pi.py") else {
         return;
     };
-    let mut l = apri(&dir, "mistopi");
-    assert_eq!(l.campioni().len(), 2);
-    assert!(!l.variante(0) && l.variante(1));
+    let mut l = open(&dir, "mistopi");
+    assert_eq!(l.samples().len(), 2);
+    assert!(!l.variant(0) && l.variant(1));
     assert!(mzlab_lettori::motivi(&mut *l, 0).contains(&"variante"));
 }
 
@@ -77,17 +77,17 @@ fn a_pair_is_a_variant_when_any_of_its_samples_is() {
 /// says the engine cannot read it, so the probe answers `"variante"` and the module reads all 136 traces.
 #[test]
 fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
-    let Some(dir) = genera("wiff_mrm_rado.py") else {
+    let Some(dir) = generate("wiff_mrm_rado.py") else {
         return;
     };
-    let mut l = apri(&dir, "mrmrado");
+    let mut l = open(&dir, "mrmrado");
     assert!(
-        l.variante(0),
+        l.variant(0),
         "its sparse MRM blocks are read by the module only"
     );
     assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
     let srm = l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .iter()
         .filter(|c| c.id.starts_with("SRM SIC"))

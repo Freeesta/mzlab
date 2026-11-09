@@ -1,26 +1,26 @@
 // The tests of sessione.rs.
 use super::*;
-use crate::sessione::duro::{Duro, STRANI};
-use mzlab_core::lettori::{Campione, Campo, Formato, VoceCromatogramma, VoceScansione};
+use crate::sessione::duro::{Hard, ODD_CHARS};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use serde_json::Value;
 
-struct Finto {
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+struct Fake {
+    samples: Vec<Sample>,
+    index: Vec<ScanEntry>,
 }
 
-impl Lettore for Finto {
-    fn formato(&self) -> Formato {
-        Formato::Altro("finto")
+impl Reader for Fake {
+    fn format(&self) -> Format {
+        Format::Altro("finto")
     }
-    fn campioni(&self) -> &[Campione] {
-        &self.campioni
+    fn samples(&self) -> &[Sample] {
+        &self.samples
     }
-    fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
-        Ok(&self.indice)
+    fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
+        Ok(&self.index)
     }
-    fn scansione(&mut self, _: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         Ok(Spectrum {
             index: k,
             id: format!("scan={k}"),
@@ -35,22 +35,22 @@ impl Lettore for Finto {
             wide: None,
         })
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
-        Ok(vec![Campo {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
+        Ok(vec![Field {
             nome: "a".into(),
             valore: "b".into(),
             unita: None,
             cv: Some("MS:1".into()),
         }])
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
-        Ok(vec![VoceCromatogramma {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
+        Ok(vec![ChromatogramEntry {
             id: "TIC".into(),
             tipo: ChromKind::Tic,
             unita: "u".into(),
         }])
     }
-    fn cromatogramma(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
         Ok(Chromatogram {
             index: 0,
             id: id.into(),
@@ -62,46 +62,45 @@ impl Lettore for Finto {
             intensity: vec![3.0, 4.0],
         })
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok("{}".into())
     }
 }
 
 #[test]
-fn la_sessione_risponde_e_chiude() {
-    let mut s = Sessioni::default();
-    let fin = Finto {
-        campioni: vec![Campione {
+fn the_session_answers_and_closes() {
+    let mut s = Sessions::default();
+    let fin = Fake {
+        samples: vec![Sample {
             id: 1,
             nome: "a".into(),
             scansioni: 1,
-            dimensione: None,
+            size: None,
         }],
-        indice: vec![VoceScansione {
+        index: vec![ScanEntry {
             id: "scan=0".into(),
             rt: 0.5,
             livello: 1,
             polarita: 1,
             tic: 4.0,
-            picco_base: Some(200.0),
+            base_peak: Some(200.0),
             filtro: "f".into(),
             precursore: None,
-            posizione: None,
+            position: None,
         }],
     };
-    let h = s.inserisci(Box::new(fin));
-    let c: serde_json::Value = serde_json::from_str(&s.campioni(h).unwrap()).unwrap();
+    let h = s.insert(Box::new(fin));
+    let c: serde_json::Value = serde_json::from_str(&s.samples(h).unwrap()).unwrap();
     assert_eq!(c["formato"], "finto");
     assert_eq!(c["campioni"][0]["scans"], 1);
-    let i = mzlab_core::trasporto::decode_indice(&s.indice(h, 0).unwrap()).unwrap();
+    let i = mzlab_core::trasporto::decode_index(&s.index(h, 0).unwrap()).unwrap();
     assert_eq!((i[0].id.as_str(), i[0].filtro.as_str()), ("scan=0", "f"));
-    let sc = mzlab_core::trasporto::decode_scansione(0, &s.scansione(h, 0, 0).unwrap()).unwrap();
+    let sc = mzlab_core::trasporto::decode_scansione(0, &s.scan(h, 0, 0).unwrap()).unwrap();
     assert_eq!((sc.mz, sc.intensity), (vec![100.0, 200.0], vec![1.5, 2.5]));
     assert_eq!((sc.level, sc.polarity), (1, 1));
-    assert!(s.intestazione(h, 0, 0).unwrap().contains("MS:1"));
-    assert!(s.cromatogrammi(h, 0).unwrap().contains("Tic"));
-    let x: serde_json::Value =
-        serde_json::from_str(&s.cromatogramma(h, 0, "TIC").unwrap()).unwrap();
+    assert!(s.scan_header(h, 0, 0).unwrap().contains("MS:1"));
+    assert!(s.chromatograms(h, 0).unwrap().contains("Tic"));
+    let x: serde_json::Value = serde_json::from_str(&s.chromatogram(h, 0, "TIC").unwrap()).unwrap();
     assert_eq!(
         x["intensity"]
             .as_array()
@@ -111,63 +110,63 @@ fn la_sessione_risponde_e_chiude() {
             .collect::<Vec<_>>(),
         [3.0, 4.0]
     );
-    assert_eq!(s.metodo(h, 0).unwrap(), "{}");
-    assert_eq!(s.testata(h, 0).unwrap(), "null");
-    s.chiudi(h);
-    assert_eq!(s.campioni(h).err().map(|e| e.key), Some("error.badIndex"));
+    assert_eq!(s.method(h, 0).unwrap(), "{}");
+    assert_eq!(s.file_header(h, 0).unwrap(), "null");
+    s.close(h);
+    assert_eq!(s.samples(h).err().map(|e| e.key), Some("error.badIndex"));
 }
 
 /// The index crosses as bytes and comes back as it was, with every column (NaN, infinities, 64-bit offsets, the repeated filter once).
 #[test]
-fn l_indice_in_byte_torna_uguale() {
-    use mzlab_core::lettori::Posizione;
-    let voci = vec![
-        VoceScansione {
+fn the_index_bytes_round_trip() {
+    use mzlab_core::lettori::Position;
+    let entries = vec![
+        ScanEntry {
             id: "scan=1 \"q\"\n\u{8}é".into(),
             rt: 1.0,
             livello: 2,
             polarita: -1,
             tic: 1e21,
-            picco_base: None,
+            base_peak: None,
             filtro: "FTMS + c ESI Full ms2 445.12@hcd30.00 [50.00-500.00]".into(),
             precursore: Some(445.12),
-            posizione: Some(Posizione {
+            position: Some(Position {
                 membro: 3,
                 offset: 1 << 40,
                 lunghezza: 77,
             }),
         },
-        VoceScansione {
+        ScanEntry {
             id: String::new(),
             rt: 0.1 + 0.2,
             livello: 1,
             polarita: 0,
             tic: 0.1 + 0.2,
-            picco_base: Some(f64::INFINITY),
+            base_peak: Some(f64::INFINITY),
             filtro: String::new(),
             precursore: None,
-            posizione: None,
+            position: None,
         },
     ];
-    let mut s = Sessioni::default();
-    let h = s.inserisci(Box::new(Finto {
-        campioni: vec![],
-        indice: voci.clone(),
+    let mut s = Sessions::default();
+    let h = s.insert(Box::new(Fake {
+        samples: vec![],
+        index: entries.clone(),
     }));
-    let b = s.indice(h, 0).unwrap();
-    assert_eq!(mzlab_core::trasporto::decode_indice(&b).unwrap(), voci);
+    let b = s.index(h, 0).unwrap();
+    assert_eq!(mzlab_core::trasporto::decode_index(&b).unwrap(), entries);
 }
 
 // `3` and `3.0` are the same number for the page (`JSON.parse`): compare every number as a double
 /// Every number as a double, a non-finite one as null.
-fn norma(v: Value) -> Value {
+fn norm(v: Value) -> Value {
     match v {
         Value::Number(n) => n
             .as_f64()
             .and_then(serde_json::Number::from_f64)
             .map_or(Value::Null, Value::Number),
-        Value::Array(a) => Value::Array(a.into_iter().map(norma).collect()),
-        Value::Object(m) => Value::Object(m.into_iter().map(|(k, v)| (k, norma(v))).collect()),
+        Value::Array(a) => Value::Array(a.into_iter().map(norm).collect()),
+        Value::Object(m) => Value::Object(m.into_iter().map(|(k, v)| (k, norm(v))).collect()),
         v => v,
     }
 }
@@ -175,8 +174,8 @@ fn norma(v: Value) -> Value {
 /// A reader whose answers hold the awkward values: control characters, quotes, non-ASCII, NaN, infinities, `-0.0`, numbers at both ends of the range.
 /// The points of a trace text are the doubles the reader gave (the sign of zero included), NaN and infinities being null: read here with `f64::from_str`, because serde_json's own
 /// reader is not exact to the last bit (no `float_roundtrip`) while `JSON.parse` is.
-fn punti_identici(testo: &str, x: &Chromatogram) {
-    let (t_txt, i_txt) = testo
+fn identical_points(text: &str, x: &Chromatogram) {
+    let (t_txt, i_txt) = text
         .split_once("\"time\":[")
         .unwrap()
         .1
@@ -186,9 +185,9 @@ fn punti_identici(testo: &str, x: &Chromatogram) {
         (t_txt, &x.time),
         (i_txt.strip_suffix("]}").unwrap(), &x.intensity),
     ] {
-        let letti: Vec<&str> = txt.split(',').collect();
-        assert_eq!(letti.len(), orig.len());
-        for (l, o) in letti.iter().zip(orig.iter()) {
+        let read_items: Vec<&str> = txt.split(',').collect();
+        assert_eq!(read_items.len(), orig.len());
+        for (l, o) in read_items.iter().zip(orig.iter()) {
             if o.is_finite() {
                 assert_eq!(l.parse::<f64>().unwrap().to_bits(), o.to_bits(), "{o:e}");
             } else {
@@ -200,95 +199,95 @@ fn punti_identici(testo: &str, x: &Chromatogram) {
 
 /// The texts of the session are what `serde_json::json!` wrote before (kept here as the reference): same parsed values for every function, and the numbers read back bit for bit.
 #[test]
-fn i_testi_json_valgono_quelli_di_serde_json() {
+fn the_json_texts_equal_serde_json() {
     use serde_json::json;
-    let parse = |t: String| -> Value { norma(serde_json::from_str(&t).expect("valid JSON")) };
-    let json = |v: Value| norma(v);
-    let mut s = Sessioni::default();
-    let h = s.inserisci(Box::new(Duro));
-    let mut r = Duro;
+    let parse = |t: String| -> Value { norm(serde_json::from_str(&t).expect("valid JSON")) };
+    let json = |v: Value| norm(v);
+    let mut s = Sessions::default();
+    let h = s.insert(Box::new(Hard));
+    let mut r = Hard;
 
-    let vecchio: Vec<_> = r
-        .campioni()
+    let old: Vec<_> = r
+        .samples()
         .iter()
         .map(|c| json!({ "id": c.id, "name": c.nome, "scans": c.scansioni }))
         .collect();
     assert_eq!(
-        parse(s.campioni(h).unwrap()),
-        json(json!({ "formato": "duro", "campioni": vecchio }))
+        parse(s.samples(h).unwrap()),
+        json(json!({ "formato": "duro", "campioni": old }))
     );
 
-    let vecchio: Vec<_> = r
-        .intestazione(0, 0)
+    let old: Vec<_> = r
+        .scan_header(0, 0)
         .unwrap()
         .iter()
         .map(|f| json!({ "name": f.nome, "value": f.valore, "unit": f.unita, "cv": f.cv }))
         .collect();
     assert_eq!(
-        parse(s.intestazione(h, 0, 0).unwrap()),
-        json(Value::Array(vecchio))
+        parse(s.scan_header(h, 0, 0).unwrap()),
+        json(Value::Array(old))
     );
 
-    let vecchio: Vec<_> = r
-        .cromatogrammi(0)
+    let old: Vec<_> = r
+        .chromatograms(0)
         .unwrap()
         .iter()
         .map(|x| json!({ "id": x.id, "kind": format!("{:?}", x.tipo), "unit": x.unita }))
         .collect();
     assert_eq!(
-        parse(s.cromatogrammi(h, 0).unwrap()),
-        json(Value::Array(vecchio))
+        parse(s.chromatograms(h, 0).unwrap()),
+        json(Value::Array(old))
     );
 
-    let x = r.cromatogramma(0, STRANI).unwrap();
-    let mut vecchio = json!({ "id": x.id, "kind": format!("{:?}", x.kind), "q1": x.q1, "q3": x.q3, "unit": x.unit, "time": x.time, "intensity": x.intensity });
-    let testo = s.cromatogramma(h, 0, STRANI).unwrap();
-    let mut nuovo = parse(testo.clone());
-    punti_identici(&testo, &x);
-    for v in [&mut vecchio, &mut nuovo] {
+    let x = r.chromatogram(0, ODD_CHARS).unwrap();
+    let mut old = json!({ "id": x.id, "kind": format!("{:?}", x.kind), "q1": x.q1, "q3": x.q3, "unit": x.unit, "time": x.time, "intensity": x.intensity });
+    let text = s.chromatogram(h, 0, ODD_CHARS).unwrap();
+    let mut new_one = parse(text.clone());
+    identical_points(&text, &x);
+    for v in [&mut old, &mut new_one] {
         let m = v.as_object_mut().unwrap();
         m.remove("time");
         m.remove("intensity");
     }
-    assert_eq!(nuovo, json(vecchio));
+    assert_eq!(new_one, json(old));
 
-    let t = r.testata_mzml(0).unwrap().unwrap();
-    let vecchio = json!({
+    let t = r.mzml_header(0).unwrap().unwrap();
+    let old = json!({
         "run": t.run, "sources": t.sources, "instrument": t.instrument, "components": t.components,
         "software": [t.software.0, t.software.1], "acquired": t.acquired, "serial": t.serial,
         "source_sha1": t.source_sha1, "source_cv": t.source_cv, "sample": t.sample,
         "run_params": t.run_params, "content": t.content, "extra_software": t.extra_software,
         "centroided": t.centroided,
     });
-    assert_eq!(parse(s.testata(h, 0).unwrap()), json(vecchio));
-    assert_eq!(s.testata(h, 1).unwrap(), "null");
+    assert_eq!(parse(s.file_header(h, 0).unwrap()), json(old));
+    assert_eq!(s.file_header(h, 1).unwrap(), "null");
 }
 
-/// Speed of `cromatogramma` on a trace of 1M points (run with `cargo test -p mzlab-lettori-wasm --release -- --ignored --nocapture`).
+/// Speed of `chromatogram` on a trace of 1M points (run with `cargo test -p mzlab-lettori-wasm --release -- --ignored --nocapture`).
 #[test]
 #[ignore]
-fn misura_cromatogramma_un_milione_di_punti() {
-    struct Lungo(Vec<f64>);
-    impl Lettore for Lungo {
-        fn formato(&self) -> Formato {
-            Formato::Altro("lungo")
+fn measure_a_chromatogram_of_a_million_points() {
+    struct Long(Vec<f64>);
+    impl Reader for Long {
+        fn format(&self) -> Format {
+            Format::Altro("lungo")
         }
-        fn campioni(&self) -> &[Campione] {
+        fn samples(&self) -> &[Sample] {
             &[]
         }
-        fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+        fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
             Ok(&[])
         }
-        fn scansione(&mut self, _: usize, _: usize) -> Result<Spectrum> {
+        fn scan(&mut self, _: usize, _: usize) -> Result<Spectrum> {
             Err(mzlab_core::Error::new("error.badIndex"))
         }
-        fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+        fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
             Ok(vec![])
         }
-        fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+        fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
             Ok(vec![])
         }
-        fn cromatogramma(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
+        fn chromatogram(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
             Ok(Chromatogram {
                 index: 0,
                 id: id.into(),
@@ -300,17 +299,17 @@ fn misura_cromatogramma_un_milione_di_punti() {
                 intensity: self.0.clone(),
             })
         }
-        fn metodo(&mut self, _: usize) -> Result<String> {
+        fn method(&mut self, _: usize) -> Result<String> {
             Ok("{}".into())
         }
     }
-    let punti: Vec<f64> = (0..1_000_000)
+    let points: Vec<f64> = (0..1_000_000)
         .map(|i| i as f64 * 0.0013 + (i % 97) as f64 / 7.0)
         .collect();
-    let mut s = Sessioni::default();
-    let h = s.inserisci(Box::new(Lungo(punti)));
+    let mut s = Sessions::default();
+    let h = s.insert(Box::new(Long(points)));
     let t = std::time::Instant::now();
-    let n = s.cromatogramma(h, 0, "TIC").unwrap().len();
+    let n = s.chromatogram(h, 0, "TIC").unwrap().len();
     println!(
         "cromatogramma 1M points: {} ms, {} bytes",
         t.elapsed().as_millis(),

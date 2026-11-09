@@ -12,29 +12,29 @@ from bench import converti as C  # noqa: E402
 from bench import scarica as D  # noqa: E402
 
 
-def voce(tmp_path, nome, dati, sha=None, byte=None):
+def item(tmp_path, name, dati, sha=None, byte=None):
     src = tmp_path / "src"
     src.mkdir(exist_ok=True)
-    (src / nome).write_bytes(dati)
-    return {"nome": nome, "url": (src / nome).as_uri(), "sha256": sha or hashlib.sha256(dati).hexdigest(), "byte": len(dati) if byte is None else byte}
+    (src / name).write_bytes(dati)
+    return {"nome": name, "url": (src / name).as_uri(), "sha256": sha or hashlib.sha256(dati).hexdigest(), "byte": len(dati) if byte is None else byte}
 
 
 def test_download_verifies_and_keeps(tmp_path):
-    v = voce(tmp_path, "a.raw", b"abc" * 1000)
+    v = item(tmp_path, "a.raw", b"abc" * 1000)
     out = tmp_path / "out"
-    p = D.scarica(v, out)
+    p = D.download(v, out)
     assert p.read_bytes() == b"abc" * 1000 and not list(out.glob("*.part"))
     (tmp_path / "src" / "a.raw").write_bytes(b"changed")           # a file with the right hash is not downloaded again
-    assert D.scarica(v, out) == p
+    assert D.download(v, out) == p
 
 
 def test_download_rejects_wrong_hash_or_size(tmp_path):
     out = tmp_path / "out"
     with pytest.raises(SystemExit, match="SHA-256"):
-        D.scarica(voce(tmp_path, "b.raw", b"xyz", sha="0" * 64), out)
+        D.download(item(tmp_path, "b.raw", b"xyz", sha="0" * 64), out)
     assert not (out / "b.raw").exists()
     with pytest.raises(SystemExit, match="size"):
-        D.scarica(voce(tmp_path, "c.raw", b"xyz", byte=7), out)
+        D.download(item(tmp_path, "c.raw", b"xyz", byte=7), out)
     assert not (out / "c.raw").exists()
 
 
@@ -88,13 +88,13 @@ def test_conversion_failure_is_reported(tmp_path):
     bad = _parser(tmp_path, "import sys\nsys.exit(3)\n")
     (tmp_path / "S1.raw").write_bytes(b"r")
     with pytest.raises(SystemExit, match="failed"):
-        C.converti(str(bad), tmp_path / "S1.raw", tmp_path / "o")
+        C.convert(str(bad), tmp_path / "S1.raw", tmp_path / "o")
 
 
 def test_runner_parameters_and_shared_helpers(tmp_path):
     from bench import corri
-    assert corri.parametri("asari", "predefinita")["mode"] == "pos"
-    assert "FeatureFindingMetabo" in corri.parametri("openms", "predefinita")
+    assert corri.parameters("asari", "predefinita")["mode"] == "pos"
+    assert "FeatureFindingMetabo" in corri.parameters("openms", "predefinita")
     (tmp_path / "B.mzML").write_text("")
     (tmp_path / "A.mzML").write_text("")
     assert [f.stem for f in corri.file_mzml(tmp_path)] == ["A", "B"] and [f.stem for f in corri.file_mzml(tmp_path, ["B"])] == ["B"]

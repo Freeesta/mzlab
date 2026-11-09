@@ -8,21 +8,21 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
-use mzlab_core::lettori_mzml::{Conversione, Picchi};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
+use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzml::{self, Chromatogram, Spectrum};
-use mzlab_core::mzmlwrite::Opzioni;
+use mzlab_core::mzmlwrite::Options;
 use sha2::{Digest as _, Sha256};
 
-struct Conta;
+struct Tally;
 static VIVI: AtomicUsize = AtomicUsize::new(0);
-static PICCO: AtomicUsize = AtomicUsize::new(0);
+static PEAK: AtomicUsize = AtomicUsize::new(0);
 // SAFETY: forwards every call to the system allocator and only counts the bytes.
-unsafe impl GlobalAlloc for Conta {
+unsafe impl GlobalAlloc for Tally {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
         unsafe {
             let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-            PICCO.fetch_max(v, Ordering::Relaxed);
+            PEAK.fetch_max(v, Ordering::Relaxed);
             System.alloc(l)
         }
     }
@@ -36,13 +36,13 @@ unsafe impl GlobalAlloc for Conta {
         unsafe {
             let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
             VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-            PICCO.fetch_max(v, Ordering::Relaxed);
+            PEAK.fetch_max(v, Ordering::Relaxed);
             System.realloc(p, l, n)
         }
     }
 }
 #[global_allocator]
-static A: Conta = Conta;
+static A: Tally = Tally;
 
 /// Counts what the writer writes and hashes it on a helper thread, so the hash stays off the conversion's critical path as a file write would.
 struct Pozzo {
@@ -91,68 +91,68 @@ impl Write for Pozzo {
 /// A reader over the spectra of an mzML already in memory: a scan is a copy of the spectrum, as a reader gives it.
 struct DaMzml {
     run: mzml::Run,
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
 }
 
 impl DaMzml {
     fn nuovo(run: mzml::Run) -> Self {
-        let indice = run
+        let index = run
             .spectra
             .iter()
-            .map(|s| VoceScansione {
+            .map(|s| ScanEntry {
                 id: s.id.clone(),
                 rt: s.rt,
                 livello: s.level,
                 polarita: s.polarity,
                 tic: 0.0,
-                picco_base: None,
+                base_peak: None,
                 filtro: s.filter.clone(),
                 precursore: s.precursor,
-                posizione: None,
+                position: None,
             })
             .collect();
-        let campioni = vec![Campione {
+        let samples = vec![Sample {
             id: 1,
             nome: "sintetico".into(),
             scansioni: run.spectra.len(),
-            dimensione: None,
+            size: None,
         }];
         DaMzml {
             run,
-            campioni,
-            indice,
+            campioni: samples,
+            indice: index,
         }
     }
 }
 
-impl Lettore for DaMzml {
-    fn formato(&self) -> Formato {
-        Formato::Mzml
+impl Reader for DaMzml {
+    fn format(&self) -> Format {
+        Format::Mzml
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
-    fn scansione(&mut self, _: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         self.run
             .spectra
             .get(k)
             .cloned()
             .ok_or_else(|| Error::new("error.badIndex"))
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
         Ok(Vec::new())
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(Vec::new())
     }
-    fn cromatogramma(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
         Err(Error::new("error.badIndex"))
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok(String::new())
     }
 }
@@ -174,15 +174,15 @@ fn main() {
         eprintln!("usage: convert_tempi FILE [--thread N] [--peaks file|profile|mzlab]");
         std::process::exit(2);
     };
-    let dopo = |nome: &str| a.iter().position(|x| x == nome).and_then(|i| a.get(i + 1));
-    let mut opz = Opzioni::default();
-    if let Some(n) = dopo("--thread") {
+    let after = |name: &str| a.iter().position(|x| x == name).and_then(|i| a.get(i + 1));
+    let mut opz = Options::default();
+    if let Some(n) = after("--thread") {
         opz.thread = n.parse().expect("--thread N");
     }
-    let peaks = match dopo("--peaks").map(String::as_str) {
-        None | Some("file") => Picchi::File,
-        Some("profile") => Picchi::Profilo,
-        Some("mzlab") => Picchi::Mzlab,
+    let peaks = match after("--peaks").map(String::as_str) {
+        None | Some("file") => Peaks::File,
+        Some("profile") => Peaks::Profilo,
+        Some("mzlab") => Peaks::Mzlab,
         Some(x) => panic!("--peaks file|profile|mzlab, not {x}"),
     };
     let run = mzml::read(std::io::BufReader::new(
@@ -191,21 +191,21 @@ fn main() {
     .expect("read mzML");
     let mut l = DaMzml::nuovo(run);
     let base = VIVI.load(Ordering::Relaxed);
-    PICCO.store(base, Ordering::Relaxed);
+    PEAK.store(base, Ordering::Relaxed);
     let t = Instant::now();
-    let conv = Conversione {
+    let conv = Conversion {
         peaks,
         opz,
-        ..Conversione::default()
+        ..Conversion::default()
     };
     let pozzo = conv
-        .scrivi(&mut l, 0, Pozzo::nuovo(), &mut |_, _| {})
+        .write(&mut l, 0, Pozzo::nuovo(), &mut |_, _| {})
         .expect("convert");
     let s = t.elapsed().as_secs_f64();
-    let picco = PICCO.load(Ordering::Relaxed).saturating_sub(base) as f64 / 1048576.0;
+    let peak = PEAK.load(Ordering::Relaxed).saturating_sub(base) as f64 / 1048576.0;
     let (sha, byte) = pozzo.fine();
     println!(
-        "threads {} | {s:.2} s | heap peak {picco:.1} MB | process peak {:.0} MB | {} bytes | sha256 {sha}",
+        "threads {} | {s:.2} s | heap peak {peak:.1} MB | process peak {:.0} MB | {} bytes | sha256 {sha}",
         opz.thread,
         rss_max(),
         byte

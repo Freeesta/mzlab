@@ -55,12 +55,12 @@ impl<R: ReadAt> Routes<R> {
 /// The most cells of a summed spectrum (`modo=somma`).
 pub(crate) const MAX_CELLS: usize = 2_000_000;
 
-impl crate::msnroute::Filtro<'_> {
+impl crate::msnroute::Filter<'_> {
     /// The one test of `filt` / `filter` on scan `i`: the filter string or the key of the scan, or the scans of an MSn node.
-    pub(crate) fn passa(&self, i: usize, s: &crate::idxread::Scan) -> bool {
+    pub(crate) fn passes(&self, i: usize, s: &crate::idxread::Scan) -> bool {
         match self {
-            crate::msnroute::Filtro::Testo(f) => s.filter == *f || s.key() == *f,
-            crate::msnroute::Filtro::Nodo(m) => m.get(i).copied().unwrap_or(false),
+            crate::msnroute::Filter::Testo(f) => s.filter == *f || s.key() == *f,
+            crate::msnroute::Filter::Node(m) => m.get(i).copied().unwrap_or(false),
         }
     }
 }
@@ -77,7 +77,7 @@ impl<R: ReadAt> Routes<R> {
             .filter(|&j| {
                 let id = ar.scan_ids[j] as usize;
                 let s = &self.idx.scans[id];
-                fl.as_ref().is_none_or(|f| f.passa(id, s)) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
+                fl.as_ref().is_none_or(|f| f.passes(id, s)) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
             })
             .collect())
     }
@@ -98,7 +98,7 @@ impl<R: ReadAt> Routes<R> {
         let keep = |j: usize, idx: &crate::idxread::Index<R>| {
             let id = ar.scan_ids[j] as usize;
             let s = &idx.scans[id];
-            fl.as_ref().is_none_or(|f| f.passa(id, s)) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
+            fl.as_ref().is_none_or(|f| f.passes(id, s)) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
         };
         let ok: Vec<bool> = (0..ar.rt.len())
             .map(|j| ar.rt[j] >= lo && ar.rt[j] <= hi && keep(j, &self.idx))

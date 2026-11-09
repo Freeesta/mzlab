@@ -13,8 +13,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::mzidx::{self, ScanTable, Stats, DEFAULT_BUDGET};
-use mzlab_core::{upload, Error};
+use mzlab_core::mzidx::{self, ScanTable, Stats};
+use mzlab_core::{budget_auto, upload, Error};
 
 use crate::mapped::Mapped;
 use crate::rpc::MapAt;
@@ -223,10 +223,10 @@ impl IdxBuilder {
         name: &str,
         table: Option<&ScanTable>,
     ) -> Result<Stats, Error> {
-        self.scrivi(name, |out, spill, stop| {
+        self.write(name, |out, spill, stop| {
             let map = Arc::new(Mapped::open(source).map_err(|e| io_error(&e))?);
             let size = map.bytes().len() as u64;
-            let letta = match table {
+            let read_back = match table {
                 Some(_) => None,
                 None => Some(upload::prepare_parallelo(
                     &mut Fermabile::new(MapAt(map.clone()), stop),
@@ -235,13 +235,13 @@ impl IdxBuilder {
                     name,
                 )?),
             };
-            let table = table.unwrap_or_else(|| &letta.as_ref().expect("read above").table);
+            let table = table.unwrap_or_else(|| &read_back.as_ref().expect("read above").table);
             crate::ram::check_index(table)?;
             mzidx::build_mzml_spill(
                 table,
                 Fermabile::new(Cursor::new(map.bytes()), stop),
                 out,
-                DEFAULT_BUDGET,
+                budget_auto::native_index_budget(),
                 Some(spill),
             )
         })
@@ -250,7 +250,7 @@ impl IdxBuilder {
     /// Runs `f` on a thread of the pool with the index file (`<name>.mzidx.<n>.part`, renamed `<name>.mzidx` when `f` succeeds, removed when it fails)
     /// and the scratch file (`<name>.mzidx.<n>.sp.part`: the peaks past the budget wait there, so the scans are decoded once; always removed).
     /// Both fail once «Cancel» stops `name` (`stop`, for the sources `f` reads); a build stopped, even one that ended past the cancel, leaves no file.
-    pub(crate) fn scrivi(
+    pub(crate) fn write(
         &self,
         name: &str,
         f: impl FnOnce(

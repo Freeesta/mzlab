@@ -3,7 +3,7 @@
 use crate::sortc::SortC;
 use mzlab_core::json::{round, Out};
 
-use super::{Arc, Ms2Share, Node, Rete};
+use super::{Arc, Ms2Share, Network, Node};
 use crate::hypo::Counts;
 
 pub const SCHEMA: &str = "rete/1";
@@ -96,7 +96,7 @@ fn write_arcs(o: &mut Out, arcs: &[Arc]) {
     }
 }
 
-impl Rete {
+impl Network {
     /// The network as `rete/1`. Numbers are rounded as in the other views (m/z 4 decimals, RT 2, ppm 2, Δm 5).
     pub fn to_json(&self) -> String {
         let mut o = Out::default();

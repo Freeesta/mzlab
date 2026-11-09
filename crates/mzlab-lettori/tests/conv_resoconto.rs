@@ -7,12 +7,12 @@ mod comune;
 mod comune_waters;
 
 use mzlab_core::json;
-use mzlab_core::lettori::Lettore;
-use mzlab_core::lettori_mzml::Conversione;
+use mzlab_core::lettori::Reader;
+use mzlab_core::lettori_mzml::Conversion;
 
-fn conv_di(l: &mut dyn Lettore) -> json::Value {
-    let xml = Conversione::default()
-        .scrivi(l, 0, Vec::new(), &mut |_, _| {})
+fn conv_di(l: &mut dyn Reader) -> json::Value {
+    let xml = Conversion::default()
+        .write(l, 0, Vec::new(), &mut |_, _| {})
         .unwrap();
     let t = String::from_utf8_lossy(&xml);
     let key = "name=\"mzLab conv/1\" value=\"";
@@ -26,8 +26,8 @@ fn conv_di(l: &mut dyn Lettore) -> json::Value {
     json::parse(v.as_bytes()).unwrap()
 }
 
-fn controlla(l: &mut dyn Lettore, id: &str) {
-    assert_eq!(l.formato().id(), id);
+fn check(l: &mut dyn Reader, id: &str) {
+    assert_eq!(l.format().id(), id);
     let doc = conv_di(l);
     assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conv/1"));
     assert_eq!(doc.get("lettore").and_then(|s| s.str()), Some(id));
@@ -37,17 +37,17 @@ fn controlla(l: &mut dyn Lettore, id: &str) {
         .is_some_and(|v| !v.is_empty()));
     assert!(doc.get("campi_cv").and_then(|n| n.f64()).is_some());
     assert!(doc.get("campi_user").and_then(|n| n.f64()).is_some());
-    let declared = l.non_portati();
+    let declared = l.not_carried();
     let written = doc.get("non_portati").expect("non_portati").arr();
     assert_eq!(
         written.len(),
         declared.len(),
         "{id}: every declared gap is written"
     );
-    for (campo, motivo) in declared {
+    for (field, reason) in declared {
         assert!(
-            !campo.is_empty() && !motivo.is_empty(),
-            "{id}: a gap without a reason: {campo:?}"
+            !field.is_empty() && !reason.is_empty(),
+            "{id}: a gap without a reason: {field:?}"
         );
     }
 }
@@ -55,39 +55,39 @@ fn controlla(l: &mut dyn Lettore, id: &str) {
 #[cfg(feature = "aperti")]
 #[test]
 fn mzxml_and_numpress_mzml_carry_conv() {
-    use comune::mzxml::{apri_mzxml, corsa, mzxml, PIATTO};
-    use comune::{apri, mzml_di, scansioni, Cod};
-    controlla(&mut *apri_mzxml(mzxml(&corsa(), PIATTO)), "mzxml");
+    use comune::mzxml::{mzxml, open_mzxml, run, FLAT};
+    use comune::{mzml_di, open, scans, Cod};
+    check(&mut *open_mzxml(mzxml(&run(), FLAT)), "mzxml");
     let np = Cod::Np {
-        intensita: mzlab_core::numpress::Np::Slof,
+        intensities: mzlab_core::numpress::Np::Slof,
         zlib: true,
     };
-    controlla(&mut *apri(mzml_di(&scansioni(), np, None)), "mzml-numpress");
+    check(&mut *open(mzml_di(&scans(), np, None)), "mzml-numpress");
 }
 
 #[cfg(feature = "andi")]
 #[test]
 fn andi_carries_conv() {
-    use comune::andi::{andi_ms, apri_andi, PIATTA};
-    controlla(&mut *apri_andi(andi_ms(&PIATTA)), "andi-ms");
+    use comune::andi::{andi_ms, open_andi, FLAT_RUN};
+    check(&mut *open_andi(andi_ms(&FLAT_RUN)), "andi-ms");
 }
 
 #[cfg(feature = "shimadzu")]
 #[test]
 fn shimadzu_carries_conv() {
     use comune::shimadzu::qgd;
-    use mzlab_core::lettori::{FileSet, Limiti, Membro};
+    use mzlab_core::lettori::{FileSet, Limits, Member};
     let b = qgd(6);
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "a.qgd".into(),
             dim: b.len() as u64,
             dati: Box::new(b),
             sha1: None,
         }],
     };
-    controlla(
-        &mut *mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap(),
+    check(
+        &mut *mzlab_lettori::open_bare(fs, &Limits::sito()).unwrap(),
         "shimadzu",
     );
 }
@@ -95,8 +95,7 @@ fn shimadzu_carries_conv() {
 #[cfg(feature = "waters")]
 #[test]
 fn waters_carries_conv() {
-    use mzlab_core::lettori::Limiti;
-    let mut l =
-        mzlab_lettori::apri_nudo(comune_waters::insieme_sintetico(), &Limiti::sito()).unwrap();
-    controlla(&mut *l, "waters-raw");
+    use mzlab_core::lettori::Limits;
+    let mut l = mzlab_lettori::open_bare(comune_waters::synthetic_set(), &Limits::sito()).unwrap();
+    check(&mut *l, "waters-raw");
 }

@@ -6,7 +6,7 @@
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::metodo::{obj, origin, text, xml_unescape, Source, SrcFile, SCHEMA, V};
-use crate::metodo_campi::Campo;
+use crate::metodo_campi::Field;
 use crate::mzmlhead::{Metadata, Mzml};
 
 /// The most spectra read for the parameters that are constant in the whole file.
@@ -131,12 +131,12 @@ fn software(meta: &Metadata) -> Vec<V> {
 }
 
 /// `campi` from the header: the scan settings, the sample, the processing steps and the instrument components, each with its own element as origin.
-fn header_fields(head: &str) -> Vec<Campo> {
+fn header_fields(head: &str) -> Vec<Field> {
     let mut out = vec![];
     let mut add = |origin: &str, b: &str| {
         for (acc, name, value) in params(b) {
             let key = if name.is_empty() { acc } else { name };
-            out.push(Campo::new(origin, &key, value));
+            out.push(Field::new(origin, &key, value));
         }
     };
     for b in blocks(head, "scanSettings") {
@@ -158,7 +158,7 @@ fn header_fields(head: &str) -> Vec<Campo> {
     {
         for k in ["defaultInstrumentConfigurationRef", "sampleRef", "id"] {
             if let Some(v) = attr(t, k) {
-                out.push(Campo::new("mzml:run", k, v));
+                out.push(Field::new("mzml:run", k, v));
             }
         }
     }
@@ -166,7 +166,7 @@ fn header_fields(head: &str) -> Vec<Campo> {
 }
 
 /// The parameters of the sampled scans: for each MS level, the ones that never change go to `ms` and the ones that change become an interval in `campi`.
-fn scan_part(scans: &str, fields: &mut Vec<Campo>) -> Option<V> {
+fn scan_part(scans: &str, fields: &mut Vec<Field>) -> Option<V> {
     let mut levels: Vec<(u32, Vec<Vec<f64>>)> = vec![];
     for sp in blocks(scans, "spectrum") {
         let p = params(sp);
@@ -210,7 +210,7 @@ fn scan_part(scans: &str, fields: &mut Vec<Campo>) -> Option<V> {
                 } else {
                     let key = format!("MS{level} {}", pr.2);
                     fields
-                        .push(Campo::new("mzml:spectrum", &key, format!("{lo}..{hi}")).unit(pr.3));
+                        .push(Field::new("mzml:spectrum", &key, format!("{lo}..{hi}")).unit(pr.3));
                 }
             }
             obj(vec![
@@ -269,7 +269,7 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
         ("ms", ms),
         (
             "campi",
-            Some(V::Arr(fields.iter().filter_map(Campo::json).collect())),
+            Some(V::Arr(fields.iter().filter_map(Field::json).collect())),
         ),
     ]);
     doc.map_or_else(String::new, |d| d.json())
@@ -278,7 +278,7 @@ pub fn from_mzml_head(head: &str, scans: &str, name: &str, bytes: u64, meta: &Me
 impl<R: ReadAt> Mzml<R> {
     /// The `metodo/1` of an mzML: the document it carries (`userParam mzLab metodo/1`) or, when it has none, what its header and first scans say.
     /// `name` is the name of the file; `None` when the file has no header to read.
-    pub fn metodo(&mut self, name: &str, doc_max: u64) -> Result<Option<String>> {
+    pub fn method(&mut self, name: &str, doc_max: u64) -> Result<Option<String>> {
         let run = self.run_head(doc_max)?;
         if let Some(doc) = crate::metodo::from_userparam(&run) {
             return Ok(Some(doc));

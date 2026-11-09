@@ -2,13 +2,13 @@
 //! The Shimadzu module on the real files of the private data repository (`MZLAB_DATI` or `mzlab-dati` beside this repository, folder `dati/formati/shimadzu/`); every test skips
 //! without them. There is no msconvert mzML nor `.cdf` of these files in that repository, so the checks are those the files allow: the TIC stream of the container equals the sum of
 //! the intensities decoded from the records, times grow, and the SRM transitions are the ones the method lists.
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::ChromKind;
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
+fn open(rel: &str) -> Option<Box<dyn Reader>> {
     let Some(p) =
         dati_percorsi::percorso(&format!("dati/formati/shimadzu/{rel}")).filter(|p| p.is_file())
     else {
@@ -17,26 +17,26 @@ fn apri(rel: &str) -> Option<Box<dyn Lettore>> {
     };
     let bytes = std::fs::read(&p).unwrap();
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: p.file_name().unwrap().to_string_lossy().into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
             sha1: None,
         }],
     };
-    Some(mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap())
+    Some(mzlab_lettori::open_bare(fs, &Limits::sito()).unwrap())
 }
 
 /// Every scan: the decoded intensities add up to the TIC of the index, the times do not go back.
-fn controlla_scansioni(l: &mut dyn Lettore) -> usize {
-    let idx = l.indice(0).unwrap().to_vec();
-    let mut prima = -1.0;
+fn check_scans(l: &mut dyn Reader) -> usize {
+    let idx = l.index(0).unwrap().to_vec();
+    let mut before = -1.0;
     for (k, v) in idx.iter().enumerate() {
-        let s = l.scansione(0, k).unwrap();
+        let s = l.scan(0, k).unwrap();
         let tot: f64 = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
         assert_eq!(tot, v.tic, "TIC of scan {k}");
-        assert!(v.rt >= prima, "time of scan {k}");
-        prima = v.rt;
+        assert!(v.rt >= before, "time of scan {k}");
+        before = v.rt;
         assert!(s.mz.windows(2).all(|w| w[0] <= w[1]) || s.mz.is_empty() || k > 0);
     }
     idx.len()
@@ -52,11 +52,11 @@ const QGD: &[&str] = &[
 #[test]
 fn qgd_scans_add_up_to_the_tic() {
     for f in QGD {
-        let Some(mut l) = apri(f) else { return };
-        let n = controlla_scansioni(&mut *l);
+        let Some(mut l) = open(f) else { return };
+        let n = check_scans(&mut *l);
         eprintln!(
             "{f}: {n} scans, chroms {}",
-            l.cromatogrammi(0).unwrap().len()
+            l.chromatograms(0).unwrap().len()
         );
         assert!(n > 100);
     }
@@ -64,12 +64,12 @@ fn qgd_scans_add_up_to_the_tic() {
 
 #[test]
 fn lcms2020_scans_add_up_to_the_tic() {
-    let Some(mut l) = apri("lcms2020_MTBLS1960/MTBLS1960_E1.lcd") else {
+    let Some(mut l) = open("lcms2020_MTBLS1960/MTBLS1960_E1.lcd") else {
         return;
     };
-    let n = controlla_scansioni(&mut *l);
+    let n = check_scans(&mut *l);
     assert_eq!(n, 2400);
-    let m = l.metodo(0).unwrap();
+    let m = l.method(0).unwrap();
     eprintln!(
         "LEN {} {}",
         m.len(),
@@ -93,10 +93,10 @@ fn qqq_mrm_gives_srm_chromatograms() {
         "lcms8030_lcd_zenodo18256551/1_2024-05-21_2.lcd",
         "gcms_tq8040_MTBLS5383/MTBLS5383_GC0270_AtD01_20170530_17.qgd",
     ] {
-        let Some(mut l) = apri(f) else { return };
-        let v = l.cromatogrammi(0).unwrap();
+        let Some(mut l) = open(f) else { return };
+        let v = l.chromatograms(0).unwrap();
         let srm = v.iter().filter(|c| c.tipo == ChromKind::Srm).count();
-        eprintln!("{f}: scans {} srm {srm}", l.indice(0).unwrap().len());
+        eprintln!("{f}: scans {} srm {srm}", l.index(0).unwrap().len());
         if let Some(c) = v.iter().find(|c| c.tipo == ChromKind::Srm) {
             eprintln!("   {}", c.id);
         }
@@ -114,12 +114,12 @@ fn the_method_names_the_maker_and_the_mzml_header_has_no_operator() {
         "lcms8040_fia_MTBLS2376/MTBLS2376_53003918.lcd",
         "lcms8030_lcd_zenodo18256551/1_2024-05-21_2.lcd",
     ]) {
-        let Some(mut l) = apri(f) else { return };
+        let Some(mut l) = open(f) else { return };
         assert!(
-            l.metodo(0).unwrap().contains("\"produttore\":\"Shimadzu\""),
+            l.method(0).unwrap().contains("\"produttore\":\"Shimadzu\""),
             "{f}"
         );
-        let h = l.testata_mzml(0).unwrap().unwrap();
+        let h = l.mzml_header(0).unwrap().unwrap();
         assert!(!h.run_params[0].1.contains("operatore"), "{f}");
     }
 }

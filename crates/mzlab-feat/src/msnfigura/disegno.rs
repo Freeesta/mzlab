@@ -9,7 +9,7 @@ use super::*;
 // ---- molecule ---------------------------------------------------------------------------------------------------------
 
 /// The molecule of a molfile as lines and symbols from its 2D coordinates (inner SVG elements in a box of DW × DH), or None when the file has no 2D coordinates.
-pub(super) fn molecola(molfile: &str) -> Option<String> {
+pub(super) fn molecule(molfile: &str) -> Option<String> {
     let m = mzlab_mol::Mol::from_molfile(molfile).ok()?;
     let xy = &m.coords.as_ref()?.xy;
     if xy.len() != m.atoms.len() || xy.iter().any(|p| p.len() < 2) {
@@ -84,18 +84,18 @@ pub(super) fn num(v: f64) -> String {
 }
 
 /// A `<text>` with its pieces: subscripts and the charge in tspans.
-pub(super) fn testo(at: &str, parti: &[Pezzo]) -> String {
+pub(super) fn text(at: &str, parts: &[Piece]) -> String {
     let mut o = format!("<text {at}>");
-    for p in parti {
+    for p in parts {
         match p {
-            Pezzo::N(t) => o += &esc(t),
-            Pezzo::Sub(t) => {
+            Piece::N(t) => o += &esc(t),
+            Piece::Sub(t) => {
                 o += &format!(
                     "<tspan baseline-shift=\"sub\" font-size=\"75%\">{}</tspan>",
                     esc(t)
                 )
             }
-            Pezzo::Sup(t) => {
+            Piece::Sup(t) => {
                 o += &format!(
                     "<tspan baseline-shift=\"super\" font-size=\"75%\">{}</tspan>",
                     esc(t)
@@ -106,7 +106,7 @@ pub(super) fn testo(at: &str, parti: &[Pezzo]) -> String {
     o + "</text>"
 }
 
-pub(super) fn bordo(b: &Box_, tx: f64, ty: f64) -> (f64, f64) {
+pub(super) fn edge_of(b: &Box_, tx: f64, ty: f64) -> (f64, f64) {
     let (cx, cy) = (b.x + b.w / 2.0, b.y + b.h / 2.0);
     let (dx, dy) = (tx - cx, ty - cy);
     if dx == 0.0 && dy == 0.0 {
@@ -125,25 +125,25 @@ pub(super) fn bordo(b: &Box_, tx: f64, ty: f64) -> (f64, f64) {
     (cx + dx * k, cy + dy * k)
 }
 
-pub(super) fn archi_svg(sc: &Scena, d: &Disposizione, vista: Vista, vis: &HashSet<&str>) -> String {
-    let mut arcs: Vec<&Arco> = sc
-        .archi
+pub(super) fn edges_svg(sc: &Scena, d: &Layout, view: View, vis: &HashSet<&str>) -> String {
+    let mut arcs: Vec<&Edge> = sc
+        .edges
         .iter()
         .filter(|a| vis.contains(a.da.as_str()) && vis.contains(a.a.as_str()))
         .collect();
     arcs.sortc_by_key(|a| sc.best.contains(&format!("{}>{}", a.da, a.a)));
     let mut o = String::new();
     for a in arcs {
-        let (p, q) = (d.caselle[&a.da], d.caselle[&a.a]);
+        let (p, q) = (d.cells[&a.da], d.cells[&a.a]);
         let best = sc.best.contains(&format!("{}>{}", a.da, a.a));
-        let rel = a.misure.iter().map(|m| m.rel).fold(0.0f64, f64::max);
+        let rel = a.measures.iter().map(|m| m.rel).fold(0.0f64, f64::max);
         let (stroke, width, dash) = if best {
             (BEST, format!("{:.2}", 1.0 + (1.0 + rel).log10() * 1.2), "")
         } else {
             (LINE, "1".into(), " stroke-dasharray=\"4 3\"")
         };
         let (lx, ly);
-        if vista == Vista::Albero {
+        if view == View::Albero {
             let (x1, y1, x2, y2) = (p.x + p.w, p.y + p.h / 2.0, q.x, q.y + q.h / 2.0);
             let mx = (x1 + x2) / 2.0;
             o += &format!(
@@ -154,8 +154,8 @@ pub(super) fn archi_svg(sc: &Scena, d: &Disposizione, vista: Vista, vis: &HashSe
             ly = (y1 + y2) / 2.0;
         } else {
             let (s0, e0) = (
-                bordo(&p, q.x + q.w / 2.0, q.y + q.h / 2.0),
-                bordo(&q, p.x + p.w / 2.0, p.y + p.h / 2.0),
+                edge_of(&p, q.x + q.w / 2.0, q.y + q.h / 2.0),
+                edge_of(&q, p.x + p.w / 2.0, p.y + p.h / 2.0),
             );
             o += &format!(
                 "<path d=\"M{},{} L{},{}\" fill=\"none\" stroke=\"{stroke}\" stroke-width=\"{width}\"{dash} marker-end=\"url(#h-{})\"/>",
@@ -164,30 +164,30 @@ pub(super) fn archi_svg(sc: &Scena, d: &Disposizione, vista: Vista, vis: &HashSe
             lx = (s0.0 + e0.0) / 2.0;
             ly = (s0.1 + e0.1) / 2.0;
         }
-        if vista == Vista::Radiale && !best {
+        if view == View::Radial && !best {
             continue;
         }
-        let (first, second) = perdita_testo(a);
-        o += &format!("<g><title>{}</title>", esc(&tip_perdita(a)));
+        let (first, second) = loss_text(a);
+        o += &format!("<g><title>{}</title>", esc(&loss_tip(a)));
         let halo = format!("font-family=\"sans-serif\" font-size=\"10\" fill=\"{INK}\" text-anchor=\"middle\" stroke=\"#ffffff\" stroke-width=\"3\" paint-order=\"stroke\"");
-        o += &testo(
+        o += &text(
             &format!("x=\"{}\" y=\"{}\" {halo}", num(lx), num(ly - 3.0)),
             &first,
         );
         let mut dy = 9.0;
         if let Some(sec) = second {
-            o += &testo(
+            o += &text(
                 &format!("x=\"{}\" y=\"{}\" {halo}", num(lx), num(ly + dy)),
                 &sec,
             );
             dy += 11.0;
         }
-        if !a.regola.is_empty() {
+        if !a.rule.is_empty() {
             o += &format!(
                 "<text x=\"{}\" y=\"{}\" {halo}>{}</text>",
                 num(lx),
                 num(ly + dy),
-                esc(&a.regola)
+                esc(&a.rule)
             );
         }
         o += "</g>";
@@ -195,23 +195,23 @@ pub(super) fn archi_svg(sc: &Scena, d: &Disposizione, vista: Vista, vis: &HashSe
     o
 }
 
-pub(super) fn nodo_svg(sc: &Scena, i: &Ion, p: &Pos, b: &Box_, vista: Vista, mol: &Mol_) -> String {
-    let m = scatola(sc, i, p, vista == Vista::Radiale);
-    let radice = p.da.is_none();
+pub(super) fn node_svg(sc: &Scena, i: &Ion, p: &Pos, b: &Box_, view: View, mol: &Mol_) -> String {
+    let m = scatola(sc, i, p, view == View::Radial);
+    let root = p.da.is_none();
     let mut o = format!(
         "<g transform=\"translate({},{})\" role=\"img\" aria-label=\"{}\"><title>{}</title>",
         num(b.x),
         num(b.y),
         esc(&m.aria.join(", ")),
-        esc(&tip_nodo(sc, i, p))
+        esc(&node_tip(sc, i, p))
     );
-    let dash = if i.isolato {
+    let dash = if i.isolated {
         ""
     } else {
         " stroke-dasharray=\"5 3\""
     };
-    o += &format!("<rect width=\"{}\" height=\"{}\" rx=\"6\" fill=\"#ffffff\" stroke=\"{}\" stroke-width=\"1.5\"{dash}/>", num(b.w), num(b.h), if p.comune { INK } else { LINE });
-    if p.comune {
+    o += &format!("<rect width=\"{}\" height=\"{}\" rx=\"6\" fill=\"#ffffff\" stroke=\"{}\" stroke-width=\"1.5\"{dash}/>", num(b.w), num(b.h), if p.common { INK } else { LINE });
+    if p.common {
         o += &format!("<rect x=\"3\" y=\"3\" width=\"{}\" height=\"{}\" rx=\"4\" fill=\"none\" stroke=\"{LINE}\" stroke-width=\"1.5\"/>", num(b.w - 6.0), num(b.h - 6.0));
         o += &format!(
             "<text x=\"{}\" y=\"17\" font-family=\"sans-serif\" font-size=\"11\" font-weight=\"700\" fill=\"{INK}\" text-anchor=\"end\">×{}<title>Reached from {} different precursors</title></text>",
@@ -220,7 +220,7 @@ pub(super) fn nodo_svg(sc: &Scena, i: &Ion, p: &Pos, b: &Box_, vista: Vista, mol
     }
     let rel = m.rel.map_or(String::new(), |r| format!("  ·  {r:.1} %"));
     o += &format!("<text x=\"8\" y=\"17\" font-family=\"sans-serif\" font-size=\"12\" font-weight=\"700\" fill=\"{INK}\">{}</text>", esc(&format!("m/z {:.4}{rel}", i.mz)));
-    o += &format!("<text x=\"8\" y=\"31\" font-family=\"sans-serif\" font-size=\"11\" fill=\"{MUTED}\">{}</text>", esc(&livelli_testo(p)));
+    o += &format!("<text x=\"8\" y=\"31\" font-family=\"sans-serif\" font-size=\"11\" fill=\"{MUTED}\">{}</text>", esc(&level_text(p)));
     if m.amb {
         o += &format!(
             "<path d=\"M{},8 l5,9 l-10,0 z\" fill=\"{WARN}\" stroke=\"{INK}\"><title>Several candidates</title></path>",
@@ -229,28 +229,28 @@ pub(super) fn nodo_svg(sc: &Scena, i: &Ion, p: &Pos, b: &Box_, vista: Vista, mol
     }
     let mut y = 48.0;
     for r in &m.righe {
-        let mut parti = r.parti.clone();
+        let mut parts = r.parti.clone();
         let mut tail = format!("  {}", r.ppm);
-        if !r.prove.is_empty() {
-            tail += &format!("  {}", r.prove.join(" "));
+        if !r.evidence.is_empty() {
+            tail += &format!("  {}", r.evidence.join(" "));
         }
-        parti.push(Pezzo::N(tail));
+        parts.push(Piece::N(tail));
         let (fill, weight) = if r.on {
             (INK, " font-weight=\"700\"")
         } else {
             (MUTED, "")
         };
-        o += &testo(&format!("x=\"8\" y=\"{}\" font-family=\"sans-serif\" font-size=\"11\" fill=\"{fill}\"{weight}", num(y)), &parti);
+        o += &text(&format!("x=\"8\" y=\"{}\" font-family=\"sans-serif\" font-size=\"11\" fill=\"{fill}\"{weight}", num(y)), &parts);
         y += LH;
     }
-    if !m.piu.is_empty() {
-        o += &format!("<text x=\"8\" y=\"{}\" font-family=\"sans-serif\" font-size=\"11\" fill=\"{MUTED}\">{}</text>", num(y), esc(&m.piu));
+    if !m.more.is_empty() {
+        o += &format!("<text x=\"8\" y=\"{}\" font-family=\"sans-serif\" font-size=\"11\" fill=\"{MUTED}\">{}</text>", num(y), esc(&m.more));
         y += LH;
     }
-    if m.righe.is_empty() && m.piu.is_empty() {
+    if m.righe.is_empty() && m.more.is_empty() {
         y += LH;
     }
-    if radice {
+    if root {
         match mol {
             Mol_::Disegno(inner) => {
                 o += &format!(
@@ -275,9 +275,9 @@ pub(super) enum Mol_ {
     Nessuna,
 }
 
-pub(super) fn molecola_radice(sc: &Scena) -> Mol_ {
+pub(super) fn root_molecule(sc: &Scena) -> Mol_ {
     match &sc.molfile {
-        Some(m) => molecola(m).map_or(Mol_::Niente, Mol_::Disegno),
+        Some(m) => molecule(m).map_or(Mol_::Niente, Mol_::Disegno),
         None if sc.smiles => Mol_::Niente,
         None => Mol_::Nessuna,
     }

@@ -66,9 +66,9 @@ fn tune_blocks_are_an_infusion() {
     assert_eq!(
         got,
         Infusione {
-            motivo: "blocchi",
+            reason: "blocchi",
             livelli: 4,
-            nodi: 4,
+            nodes: 4,
             chiavi: 4
         }
     );
@@ -80,9 +80,9 @@ fn cycled_fixed_precursors_need_a_hint() {
     assert_eq!(infusione(&v, None, "run_t10.mzML"), None);
     assert_eq!(infusione(&v, Some(true), "run_t10.mzML"), None);
     let m = infusione(&v, Some(false), "run_t10.mzML").unwrap();
-    assert_eq!((m.motivo, m.livelli, m.nodi), ("metodo_senza_lc", 2, 10));
+    assert_eq!((m.reason, m.livelli, m.nodes), ("metodo_senza_lc", 2, 10));
     let n = infusione(&v, None, "dir/std_Infusion_MSn.mzML").unwrap();
-    assert_eq!(n.motivo, "nome");
+    assert_eq!(n.reason, "nome");
 }
 
 #[test]
@@ -106,11 +106,11 @@ fn constant_rt_or_one_scan() {
     let mut v = tune_blocks();
     v.iter_mut().for_each(|s| s.rt = 1.5);
     assert_eq!(
-        infusione(&v, Some(true), "x.mzML").unwrap().motivo,
+        infusione(&v, Some(true), "x.mzML").unwrap().reason,
         "rt_costante"
     );
     let one = infusione(&[ms1(3.0)], None, "x.mzML").unwrap();
-    assert_eq!((one.motivo, one.livelli, one.nodi), ("rt_costante", 1, 0));
+    assert_eq!((one.reason, one.livelli, one.nodes), ("rt_costante", 1, 0));
     let run: Vec<Scan> = (0..50).map(|i| ms1(i as f64 * 0.1)).collect();
     assert_eq!(infusione(&run, Some(false), "infusion.mzML"), None);
     assert_eq!(infusione(&[], None, "infusion.mzML"), None);
@@ -125,17 +125,17 @@ fn energies_split_keys_but_not_nodes() {
         }
     }
     let got = infusione(&v, None, "a.mzML").unwrap();
-    assert_eq!((got.motivo, got.nodi), ("blocchi", 1));
+    assert_eq!((got.reason, got.nodes), ("blocchi", 1));
 }
 
 #[test]
 fn an_msn_infusion_is_one_item_not_survey_plus_product_ions() {
     let v = tune_blocks();
-    assert!(con_msn(&v, None, "x.mzML"));
+    assert!(with_msn(&v, None, "x.mzML"));
     // a file of MS1 scans only, a run of constant RT and an LC run stay what they were
-    assert!(!con_msn(&[ms1(0.0), ms1(0.1), ms1(0.2)], None, "x.mzML"));
-    assert!(!con_msn(&[msn(1.0, &[(317.2, 25.0)])], None, "x.mzML"));
-    assert!(!con_msn(&prm(), None, "x.mzML"));
+    assert!(!with_msn(&[ms1(0.0), ms1(0.1), ms1(0.2)], None, "x.mzML"));
+    assert!(!with_msn(&[msn(1.0, &[(317.2, 25.0)])], None, "x.mzML"));
+    assert!(!with_msn(&prm(), None, "x.mzML"));
 }
 
 /// A cascade infusion: 90 MS1 scans over the run and, between the surveys, MSn scans down to MS8; each tree node (a path of fixed
@@ -184,7 +184,7 @@ fn a_deep_cascade_with_many_nodes_is_an_infusion() {
     assert!(keys.len() > 64, "{}", keys.len());
     let got = infusione(&v, None, "Infusione_Timololo.mzML");
     assert!(got.is_some(), "no infusion");
-    assert!(con_msn(&v, None, "x.mzML"));
+    assert!(with_msn(&v, None, "x.mzML"));
 }
 
 #[test]
@@ -194,8 +194,8 @@ fn one_fixed_precursor_over_an_lc_run_is_not_an_infusion() {
         .map(|i| msn(i as f64 * 0.03, &[(243.0, 25.0)]))
         .collect();
     assert_eq!(infusione(&v, None, "BTZ_std_10ppm.mzML"), None);
-    assert!(!con_msn(&v, None, "BTZ_std_10ppm.mzML"));
+    assert!(!with_msn(&v, None, "BTZ_std_10ppm.mzML"));
     // the same structure in a file that says infusion in its name keeps the hint, with its reason
     let n = infusione(&v, None, "BTZ_infusion.mzML").unwrap();
-    assert_eq!(n.motivo, "nome");
+    assert_eq!(n.reason, "nome");
 }

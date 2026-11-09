@@ -2,25 +2,25 @@
 //! A MassLynx folder built in the test (`comune_waters`): the scans, the MRM channels, the TIC and the method are read back to the values that were encoded.
 mod comune_waters;
 use comune_waters::*;
-use mzlab_core::lettori::{Lettore, Limiti};
+use mzlab_core::lettori::{Limits, Reader};
 
-fn apri() -> Box<dyn Lettore> {
-    mzlab_lettori::apri_nudo(insieme_sintetico(), &Limiti::sito())
+fn open() -> Box<dyn Reader> {
+    mzlab_lettori::open_bare(synthetic_set(), &Limits::sito())
         .unwrap_or_else(|e| panic!("{}", e.key))
 }
 
 #[test]
 fn the_scans_read_back_to_the_encoded_peaks() {
-    let mut l = apri();
-    assert_eq!(l.formato().id(), "waters-raw");
-    let ix = l.indice(0).unwrap().to_vec();
+    let mut l = open();
+    assert_eq!(l.format().id(), "waters-raw");
+    let ix = l.index(0).unwrap().to_vec();
     assert_eq!(ix.len(), 3, "only the scanning function has spectra");
     for (k, v) in ix.iter().enumerate() {
         assert_eq!(v.livello, 1);
         assert!((v.rt - f64::from(RT[k])).abs() < 1e-6);
         assert_eq!(v.id, format!("function=1 process=0 scan={}", k + 1));
-        let s = l.scansione(0, k).unwrap();
-        let want = picchi(k as u32);
+        let s = l.scan(0, k).unwrap();
+        let want = peaks(k as u32);
         assert_eq!(s.mz.len(), want.len());
         for (i, (mz, int)) in want.iter().enumerate() {
             assert!((s.mz[i] - mz).abs() < 1e-6, "m/z {} vs {mz}", s.mz[i]);
@@ -33,8 +33,8 @@ fn the_scans_read_back_to_the_encoded_peaks() {
 
 #[test]
 fn the_mrm_function_is_chromatograms_not_spectra() {
-    let mut l = apri();
-    let ch = l.cromatogrammi(0).unwrap();
+    let mut l = open();
+    let ch = l.chromatograms(0).unwrap();
     let ids: Vec<&str> = ch.iter().map(|c| c.id.as_str()).collect();
     assert_eq!(ids[0], "TIC");
     assert_eq!(ids.len(), 3, "{ids:?}");
@@ -43,10 +43,10 @@ fn the_mrm_function_is_chromatograms_not_spectra() {
             ids[1 + j],
             format!("SRM SIC Q1={q1} Q3={q3} function=2 offset={j}")
         );
-        let c = l.cromatogramma(0, ids[1 + j]).unwrap();
+        let c = l.chromatogram(0, ids[1 + j]).unwrap();
         assert_eq!(c.time.len(), 3);
         for (k, rt) in RT.iter().enumerate() {
-            assert_eq!(c.intensity[k] as u32, canali_mrm(k as u32)[j]);
+            assert_eq!(c.intensity[k] as u32, mrm_channels(k as u32)[j]);
             assert!((c.time[k] - f64::from(*rt)).abs() < 1e-6);
         }
     }
@@ -54,14 +54,14 @@ fn the_mrm_function_is_chromatograms_not_spectra() {
 
 #[test]
 fn the_method_and_the_header_carry_the_header_txt_and_hide_the_operator() {
-    let mut l = apri();
-    let m = l.metodo(0).unwrap();
-    let doc = controlla_schema(&m, "synthetic");
+    let mut l = open();
+    let m = l.method(0).unwrap();
+    let doc = check_schema(&m, "synthetic");
     assert_eq!(doc["origine"]["formato"], "waters-raw");
     assert_eq!(doc["campione"]["nome"], "synthetic sample");
     assert_eq!(doc["campione"]["vial"], "1:34");
     assert!(m.contains("XEVO-TQXS"), "instrument");
-    let h = l.testata_mzml(0).unwrap().unwrap();
+    let h = l.mzml_header(0).unwrap().unwrap();
     let doc = &h
         .run_params
         .iter()

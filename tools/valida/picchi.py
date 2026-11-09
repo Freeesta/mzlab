@@ -15,12 +15,12 @@ from pathlib import Path
 PPM, RT_TOL = 5e-6, 0.1
 
 
-def leggi(p: Path) -> list[dict]:
+def read(p: Path) -> list[dict]:
     with open(p, newline="", encoding="utf-8") as f:
         return [{k: float(v) for k, v in r.items()} for r in csv.DictReader(f, delimiter="\t")]
 
 
-def trova(feat: list[dict], mz: float, rt: float) -> int | None:
+def find(feat: list[dict], mz: float, rt: float) -> int | None:
     """Row of the feature at (mz, rt): the nearest in m/z among those within the tolerances, else None."""
     best = None
     for i, r in enumerate(feat):
@@ -30,27 +30,27 @@ def trova(feat: list[dict], mz: float, rt: float) -> int | None:
 
 
 def main(argv) -> int:
-    verita = json.loads((Path(argv[0]) / "verita.json").read_text(encoding="utf-8"))
-    ioni = {r["id"]: r for r in verita["ioni"]}
+    truth = json.loads((Path(argv[0]) / "verita.json").read_text(encoding="utf-8"))
+    ioni = {r["id"]: r for r in truth["ioni"]}
     pur = {"tp1": [0, 0], "chimerica": [0, 0]}
     iso = {1: [0, 0], 2: [0, 0]}
-    errori = []
-    for f in verita["file"]:
+    errors = []
+    for f in truth["file"]:
         tsv = Path(argv[1]) / f"{f['nome']}.tsv"
-        feat = leggi(tsv)
-        for r in verita["ioni"]:
+        feat = read(tsv)
+        for r in truth["ioni"]:
             if not r["rt_obs"] or not r["presente"]:
                 continue
-            i = trova(feat, r["mz"], r["rt_obs"][0])
+            i = find(feat, r["mz"], r["rt_obs"][0])
             if r["ruolo"] in ("tp1", "chimerica") and r["purezza"] and i is not None and feat[i]["ms2_n"] > 0:
-                vero = r["purezza"] if r["ruolo"] == "tp1" else 1 - r["purezza"]      # the truth of a partner is the share of the TARGET
+                true = r["purezza"] if r["ruolo"] == "tp1" else 1 - r["purezza"]      # the truth of a partner is the share of the TARGET
                 pur[r["ruolo"]][1] += 1
-                pur[r["ruolo"]][0] += abs(feat[i]["purity"] - vero) <= 0.05
-                if abs(feat[i]["purity"] - vero) > 0.05:
-                    errori.append((f["nome"], r["id"], round(vero, 3), round(feat[i]["purity"], 3)))
+                pur[r["ruolo"]][0] += abs(feat[i]["purity"] - true) <= 0.05
+                if abs(feat[i]["purity"] - true) > 0.05:
+                    errors.append((f["nome"], r["id"], round(true, 3), round(feat[i]["purity"], 3)))
             if r["ruolo"] == "isotopo" and i is not None:
                 k = int(r["id"][-1])
-                base = trova(feat, ioni[r["famiglia"]]["mz"], r["rt_obs"][0])
+                base = find(feat, ioni[r["famiglia"]]["mz"], r["rt_obs"][0])
                 if base is None:
                     continue
                 iso[k][1] += 1
@@ -59,7 +59,7 @@ def main(argv) -> int:
         print(f"purity within 0.05 ({ruolo}; the partner counts its own isotopologues in the window): {a}/{n}")
     for k, (a, n) in iso.items():
         print(f"isotopologues M+{k} grouped with the base: {a}/{n} ({100 * a / max(n, 1):.1f} %)")
-    for e in errori[:10]:
+    for e in errors[:10]:
         print("  purity off:", e)
     return 0
 

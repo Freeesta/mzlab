@@ -12,6 +12,8 @@ use crate::isoscore::SI;
 use crate::isoscore::{combined, fragment_constraint, isotope_score, Frag, IsoOpts, IsoScore};
 use crate::json::{round, Out};
 
+mod griglia;
+
 pub type Counts = Vec<(String, i64)>;
 
 const ISOTOPES: [(&str, f64, &str); 7] = [
@@ -344,6 +346,9 @@ pub struct Opts<'a> {
     pub iso_noise_rel: f64,
     pub frag_ppm: Option<f64>,
     pub norm: &'a str,
+    /// Test only: no cut of the ranges to the ion mass, to prove the cut loses nothing.
+    #[doc(hidden)]
+    pub uncut: bool,
 }
 
 impl Default for Opts<'_> {
@@ -373,6 +378,7 @@ impl Default for Opts<'_> {
             iso_noise_rel: 1.0,
             frag_ppm: None,
             norm: "fit",
+            uncut: false,
         }
     }
 }
@@ -489,29 +495,13 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
     } else {
         o.tol / 1000.0
     }) * zf.abs();
-    if let Some(p) = &par {
-        for (sym, r) in els.iter_mut() {
-            let hi = p
-                .iter()
-                .find(|(e, _)| e == sym)
-                .map_or(0, |(_, n)| *n as i64);
-            *r = (r.0.min(hi), r.1.min(hi));
-        }
-        els.retain(|(_, r)| r.1 >= r.0);
-    }
+    let size = griglia::narrow(&mut els, par.as_ref(), (!o.uncut).then_some(t + tol_da))?;
     let get = |s: &str| els.iter().find(|(e, _)| e == s).map(|(_, r)| *r);
     let mh = mass_of("H").unwrap();
     let (cmin, cmax) = get("C").unwrap_or((0, (t / 12.0).floor() as i64));
     let (hmin, hmax) = get("H").unwrap_or((0, (t / mh).floor() as i64 + 1));
     let others: Vec<&(String, (i64, i64))> =
         els.iter().filter(|(s, _)| s != "C" && s != "H").collect();
-    let mut size: u64 = 1;
-    for (_, r) in &others {
-        size = size.saturating_mul((r.1 - r.0 + 1) as u64);
-    }
-    if size > MAX_GRID {
-        return Err(Error::new("err.comp.many"));
-    }
     let mo: Vec<f64> = others.iter().map(|(s, _)| sym_mass(s)).collect();
     let empty = |ion: &str| {
         let mut e = Out::default();
@@ -822,9 +812,12 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
         .str(o.unit)
         .raw(",\"ion\":")
         .str(o.ion);
-    out.raw(",\"n_candidates\":")
-        .int(n_candidates as i64)
-        .raw(",\"results\":[");
+    out.raw(",\"n_candidates\":").int(n_candidates as i64);
+    // only the `take` closest masses get an isotope or fragment fit: say so when that left some out, never a silent cut
+    if scored && n_candidates > take {
+        out.raw(",\"scored\":").int(take as i64);
+    }
+    out.raw(",\"results\":[");
     for (i, r) in res.iter().enumerate() {
         out.raw(if i > 0 { "," } else { "" })
             .raw("{\"formula\":")

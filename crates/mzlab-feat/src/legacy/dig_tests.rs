@@ -38,7 +38,7 @@ fn parent_row_by_rt_and_by_t0() {
         time: Some(t),
         t,
         cond: String::new(),
-        replica: None,
+        replicate: None,
         order: 0,
     };
     let files = [f(0.0), f(30.0)];

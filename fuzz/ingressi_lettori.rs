@@ -2,13 +2,13 @@
 //! result or an error, never panic or loop. Kept apart from `ingressi.rs` (which `mzlab-lib` includes in its tests) because it needs `mzlab-lettori`;
 //! `crates/mzlab-lettori/tests/fuzz_lettori.rs` runs the same functions on a few inputs in `cargo test`.
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 
 fn insieme(membri: Vec<(&str, Vec<u8>)>) -> FileSet {
     FileSet {
         membri: membri
             .into_iter()
-            .map(|(nome, b)| Membro {
+            .map(|(nome, b)| Member {
                 nome: nome.into(),
                 dim: b.len() as u64,
                 dati: Box::new(b),
@@ -34,22 +34,22 @@ fn lettori_famiglia(nomi: &[&str], data: &[u8]) {
         _ => return,
     };
     let _ = mzlab_lettori::riconosci(&mut insieme(membri.clone()));
-    let Ok(mut l) = mzlab_lettori::apri(insieme(membri), &Limiti::sito()) else {
+    let Ok(mut l) = mzlab_lettori::apri(insieme(membri), &Limits::sito()) else {
         return;
     };
-    let _ = l.metodo(0);
-    let Ok(ix) = l.indice(0).map(<[_]>::to_vec) else {
+    let _ = l.method(0);
+    let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
         return;
     };
     for j in [0, ix.len() / 2, ix.len().saturating_sub(1)] {
         if j < ix.len() {
-            let _ = l.scansione(0, j);
-            let _ = l.intestazione(0, j);
+            let _ = l.scan(0, j);
+            let _ = l.scan_header(0, j);
         }
     }
-    if let Ok(cr) = l.cromatogrammi(0) {
+    if let Ok(cr) = l.chromatograms(0) {
         for v in cr.iter().take(2) {
-            let _ = l.cromatogramma(0, &v.id);
+            let _ = l.chromatogram(0, &v.id);
         }
     }
 }

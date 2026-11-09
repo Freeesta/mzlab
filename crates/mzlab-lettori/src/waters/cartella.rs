@@ -1,10 +1,10 @@
 //! The members of a `.raw` folder as the reader needs them: found by their file name (the case of the names varies between MassLynx versions) and read whole when small.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{FileSet, Limiti};
+use mzlab_core::lettori::{FileSet, Limits};
 
 /// The largest side file read whole (`_extern.inf`, an index, a table of channels).
-const PICCOLO_MAX: u64 = 8 << 20;
+const SMALL_MAX: u64 = 8 << 20;
 
 /// The last component of a logical member name.
 pub(super) fn base(n: &str) -> &str {
@@ -16,16 +16,16 @@ pub(super) fn errore(detail: &str) -> Error {
 }
 
 /// The members of one folder.
-pub(super) struct Cartella {
+pub(super) struct Folder {
     pub(super) fs: FileSet,
     /// `X.raw`, the folder the members are in.
-    pub(super) nome: String,
-    pub(super) limiti: Limiti,
+    pub(super) name: String,
+    pub(super) limits: Limits,
 }
 
-impl Cartella {
-    pub(super) fn new(fs: FileSet, limiti: Limiti) -> Cartella {
-        let nome = fs
+impl Folder {
+    pub(super) fn new(fs: FileSet, limits: Limits) -> Folder {
+        let name = fs
             .membri
             .iter()
             .find_map(|m| {
@@ -35,11 +35,11 @@ impl Cartella {
             })
             .filter(|n| !n.is_empty())
             .unwrap_or_else(|| "MassLynx.raw".to_string());
-        Cartella { fs, nome, limiti }
+        Folder { fs, name, limits }
     }
 
     /// Index of the member called `file` (case ignored).
-    pub(super) fn cerca(&self, file: &str) -> Option<usize> {
+    pub(super) fn search(&self, file: &str) -> Option<usize> {
         self.fs
             .membri
             .iter()
@@ -47,12 +47,12 @@ impl Cartella {
     }
 
     /// The whole member `file`, or `None` when the folder has none; a member over the limit is an error (no allocation).
-    pub(super) fn leggi(&mut self, file: &str) -> Result<Option<Vec<u8>>> {
-        let Some(i) = self.cerca(file) else {
+    pub(super) fn read(&mut self, file: &str) -> Result<Option<Vec<u8>>> {
+        let Some(i) = self.search(file) else {
             return Ok(None);
         };
         let m = &mut self.fs.membri[i];
-        if m.dim > PICCOLO_MAX.min(self.limiti.byte) {
+        if m.dim > SMALL_MAX.min(self.limits.byte) {
             return Err(Error::memory_budget());
         }
         let n = usize::try_from(m.dim).map_err(|_| Error::memory_budget())?;
@@ -62,13 +62,13 @@ impl Cartella {
     }
 
     /// `len` bytes of member `i` from `off`; the range must lie inside the member.
-    pub(super) fn leggi_a(&mut self, i: usize, off: u64, len: u64) -> Result<Vec<u8>> {
+    pub(super) fn read_from(&mut self, i: usize, off: u64, len: u64) -> Result<Vec<u8>> {
         let m = self.fs.membri.get_mut(i).ok_or_else(|| errore("member"))?;
         let fine = off.checked_add(len).ok_or_else(|| errore("range"))?;
         if fine > m.dim {
             return Err(errore("range past the end of the file"));
         }
-        if len > self.limiti.byte {
+        if len > self.limits.byte {
             return Err(Error::memory_budget());
         }
         let mut b = vec![0u8; usize::try_from(len).map_err(|_| Error::memory_budget())?];
@@ -93,7 +93,7 @@ pub(super) fn f32_at(b: &[u8], p: usize) -> f32 {
 }
 
 /// Text of a side file: Windows-1252 (the degree and micro signs) read as Latin-1, carriage returns dropped.
-pub(super) fn testo(b: &[u8]) -> String {
+pub(super) fn text(b: &[u8]) -> String {
     b.iter()
         .map(|&c| c as char)
         .filter(|&c| c != '\r')
@@ -103,18 +103,18 @@ pub(super) fn testo(b: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mzlab_core::lettori::Membro;
+    use mzlab_core::lettori::Member;
 
     #[test]
     fn windows_member_path_names_the_folder() {
         let fs = FileSet {
-            membri: vec![Membro {
+            membri: vec![Member {
                 nome: "campione.raw\\_FUNC001.DAT".into(),
                 dim: 0,
                 dati: Box::new(Vec::<u8>::new()),
                 sha1: None,
             }],
         };
-        assert_eq!(Cartella::new(fs, Limiti::default()).nome, "campione.raw");
+        assert_eq!(Folder::new(fs, Limits::default()).name, "campione.raw");
     }
 }

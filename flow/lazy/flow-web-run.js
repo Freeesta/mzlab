@@ -67,11 +67,11 @@
     return pool;
   };
 
-  /** what aligning `stored` (.mzfeatf bytes) asks for: { mb, via, files, rows } from the Rust rule, computed in a worker of its own @param {Uint8Array[]} stored @param {string} recipe */
-  const stima = async (stored, recipe) => {
+  /** one answer of the estimator, a worker of its own (worker-flow-web.js): the message `m` with the `feat` .wasm and the budget of the page @param {any} m @param {Transferable[]} [move] */
+  const ask = async (m, move = []) => {
     const p = await getPool();
     if (!estimator) estimator = new Worker(new URL("mzfinder/lazy/worker-flow-web.js", G.QTOOLS.ctx.base), { type: "module" });
-    const w = estimator, copy = stored.map(b => b.slice().buffer);
+    const w = estimator;
     return new Promise((resolve, reject) => {
       const done = (/** @type {MessageEvent} */ ev) => {
         w.removeEventListener("message", done);
@@ -79,9 +79,18 @@
       };
       w.addEventListener("message", done);
       w.addEventListener("error", () => { estimator = null; reject(Object.assign(new Error("estimator"), { key: "error.featWorker", params: {} })); }, { once: true });
-      w.postMessage({ id: 1, wasm: p.featWasm, files: copy, recipe, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0 }, copy);
+      w.postMessage({ id: 1, wasm: p.featWasm, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0, ...m }, move);
     });
   };
+
+  /** what aligning `stored` (.mzfeatf bytes) asks for: { mb, via, files, rows } from the Rust rule @param {Uint8Array[]} stored @param {string} recipe */
+  const stima = async (stored, recipe) => {
+    const files = stored.map(b => b.slice().buffer);
+    return ask({ files, recipe }, files);
+  };
+
+  /** what detecting the index at the OPFS `path` asks for: { mb, via } from the Rust rule (`trace_stima`), read from its header @param {string} path @param {string} recipe */
+  const stimaDetect = async (path, recipe) => ask({ op: "detect", paths: [path], recipe });
 
   /** the recipe text the pool reads for the steps of `plan` up to `upto` (all when none): the layers of the feature steps, which the Rust side applies as `flow run` does, and no gap filling when the plan has no `features.gapfill` @param {any} plan @param {any} [upto] */
   const recipeOf = (plan, upto) => {
@@ -107,7 +116,7 @@
   /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {any} S */
   const preflight = async S => (!available() || !F.live ? null : F.live.preflight(S));
 
-  /** the pieces the live session uses: the pool of workers, the list of the indexes, the estimate, the recipe */
-  const kit = { getPool, listIdx, stima, recipeOf, highMb, KNOWN, poolIfAny: () => pool };
+  /** the pieces the live session uses: the pool of workers, the list of the indexes, the estimates, the recipe */
+  const kit = { getPool, listIdx, stima, stimaDetect, recipeOf, highMb, KNOWN, poolIfAny: () => pool };
   F.runners.web = { name: "This browser", available, run, preflight, small, highMb, recipeOf, kit };
 })();

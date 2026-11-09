@@ -10,8 +10,8 @@ mod ingressi_lettori;
 use comune::*;
 use mzlab_core::numpress::Np;
 
-fn casuali(n: usize, seme: u64) -> Vec<u8> {
-    let mut x = seme | 1;
+fn random(n: usize, seed: u64) -> Vec<u8> {
+    let mut x = seed | 1;
     (0..n)
         .map(|_| {
             x ^= x << 13;
@@ -23,9 +23,9 @@ fn casuali(n: usize, seme: u64) -> Vec<u8> {
 }
 
 /// A fuzz entry: its name and the function it runs on the bytes.
-type Entrata = (&'static str, fn(&[u8]));
+type Entry = (&'static str, fn(&[u8]));
 
-fn entrate() -> Vec<Entrata> {
+fn entries() -> Vec<Entry> {
     vec![
         ("aperti", ingressi_lettori::lettori_aperti),
         ("andi", ingressi_lettori::lettori_andi),
@@ -39,46 +39,46 @@ fn entrate() -> Vec<Entrata> {
 }
 
 #[test]
-fn ogni_bersaglio_ritorna_su_byte_qualsiasi() {
-    for (nome, f) in entrate() {
+fn every_target_returns_on_arbitrary_bytes() {
+    for (name, f) in entries() {
         f(&[]);
         f(&[0]);
-        for seme in 1..6 {
+        for seed in 1..6 {
             for n in [3, 17, 4096] {
-                f(&casuali(n, seme * 7919 + n as u64));
+                f(&random(n, seed * 7919 + n as u64));
             }
         }
         // a header-like start: the readers get past `riconosci` and into their own parsing
-        let mut testa = b"<mzML><spectrum>".to_vec();
-        testa.extend(casuali(512, 99));
-        f(&testa);
-        eprintln!("fuzz entry {nome}: ok");
+        let mut head = b"<mzML><spectrum>".to_vec();
+        head.extend(random(512, 99));
+        f(&head);
+        eprintln!("fuzz entry {name}: ok");
     }
 }
 
 #[test]
-fn un_mzml_numpress_vero_e_i_suoi_troncamenti_ritornano() {
-    let scan = scansioni();
+fn a_real_numpress_mzml_and_its_truncations_return() {
+    let scan = scans();
     let file = mzml_di(
         &scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: false,
         },
         None,
     );
-    for quarti in 1..4 {
-        ingressi_lettori::lettori_aperti(&file[..file.len() * quarti / 4]);
+    for quarters in 1..4 {
+        ingressi_lettori::lettori_aperti(&file[..file.len() * quarters / 4]);
     }
     ingressi_lettori::lettori_aperti(&file);
 }
 
 // the stored crashes of the coverage-guided runs (`fuzz/regressioni/lettori_<family>/*`) return too
 #[test]
-fn i_crash_salvati_non_crashano_piu() {
-    let radice = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fuzz/regressioni");
-    for (nome, f) in entrate() {
-        let Ok(dir) = std::fs::read_dir(radice.join(format!("lettori_{nome}"))) else {
+fn saved_crashes_no_longer_crash() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fuzz/regressioni");
+    for (name, f) in entries() {
+        let Ok(dir) = std::fs::read_dir(root.join(format!("lettori_{name}"))) else {
             continue;
         };
         for e in dir.flatten() {

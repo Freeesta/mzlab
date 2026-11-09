@@ -77,7 +77,7 @@ pub struct GnpsProv {
     pub shared_peaks: Option<f64>,
     pub mz_error_ppm: Option<f64>,
     pub mass_diff: Option<f64>,
-    pub library_usi: Option<String>,
+    pub library_uses: Option<String>,
     pub inchikey: Option<String>,
 }
 
@@ -126,7 +126,7 @@ pub fn gnps_provenance(c: &Campaign, io: &Io) -> Result<HashMap<(String, i64), G
                     shared_peaks: num(r, "SharedPeaks"),
                     mz_error_ppm: num(r, "MZErrorPPM"),
                     mass_diff: num(r, "MassDiff"),
-                    library_usi: text(&g, r, "library_usi"),
+                    library_uses: text(&g, r, "library_usi"),
                     inchikey: text(&g, r, "InChIKey"),
                 });
         }
@@ -141,7 +141,7 @@ pub struct FRow<'a> {
     pub identity: Option<String>,
     pub gp: GnpsProv,
     pub mz_method: Option<String>,
-    pub mz_usi: Option<String>,
+    pub mz_uses: Option<String>,
     pub mz_entry: Option<String>,
     /// Whether the RT-logP fit flags the feature as an outlier.
     pub rt_outlier: bool,
@@ -169,8 +169,8 @@ impl FRow<'_> {
             .as_deref()
             .or(self.f.mzlib.smiles.as_deref())
     }
-    pub fn ref_usi(&self) -> Option<&str> {
-        self.gp.library_usi.as_deref().or(self.mz_usi.as_deref())
+    pub fn ref_uses(&self) -> Option<&str> {
+        self.gp.library_uses.as_deref().or(self.mz_uses.as_deref())
     }
 }
 
@@ -241,8 +241,8 @@ pub fn feature_rows<'a>(c: &Campaign, io: &Io, l: &'a Loaded) -> Result<Vec<FRow
                 mz_method: hit
                     .map(|h| h.method.clone())
                     .filter(|_| f.mzlib.name.is_some()),
-                mz_usi: hit
-                    .and_then(|h| h.usi.clone())
+                mz_uses: hit
+                    .and_then(|h| h.uses.clone())
                     .filter(|_| f.mzlib.name.is_some()),
                 mz_entry: hit
                     .and_then(|h| h.entry.clone())

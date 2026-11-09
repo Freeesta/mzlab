@@ -1,7 +1,7 @@
 //! The parts of `campioni/3` that `campioni/2` does not have: free typed columns (`Colonna`, `Cell`), the document that carries them
-//! (`Tabella`) and what the file says about itself (`DatiFile`). Used by `json3`, `csv`, `modello` and `valida3`.
+//! (`Tabella`) and what the file says about itself (`FileData`). Used by `json3`, `csv`, `modello` and `valida3`.
 
-use super::Campione;
+use super::Sample;
 
 /// The value of a free column.
 #[derive(Debug, Clone, PartialEq)]
@@ -11,26 +11,26 @@ pub enum Cell {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TipoColonna {
+pub enum ColumnType {
     Testo,
     Numero,
     Categoria,
 }
 
-impl TipoColonna {
+impl ColumnType {
     pub fn name(self) -> &'static str {
         match self {
-            TipoColonna::Testo => "testo",
-            TipoColonna::Numero => "numero",
-            TipoColonna::Categoria => "categoria",
+            ColumnType::Testo => "testo",
+            ColumnType::Numero => "numero",
+            ColumnType::Categoria => "categoria",
         }
     }
 
     pub fn from_name(s: &str) -> Option<Self> {
         Some(match s {
-            "testo" => TipoColonna::Testo,
-            "numero" => TipoColonna::Numero,
-            "categoria" => TipoColonna::Categoria,
+            "testo" => ColumnType::Testo,
+            "numero" => ColumnType::Numero,
+            "categoria" => ColumnType::Categoria,
             _ => return None,
         })
     }
@@ -38,16 +38,16 @@ impl TipoColonna {
 
 /// A free column: name, type, the allowed values of a category and whether every file must have a value.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Colonna {
+pub struct Column {
     pub name: String,
-    pub kind: TipoColonna,
+    pub kind: ColumnType,
     pub values: Option<Vec<String>>,
     pub required: bool,
 }
 
-impl Colonna {
-    pub fn new(name: &str, kind: TipoColonna) -> Self {
-        Colonna {
+impl Column {
+    pub fn new(name: &str, kind: ColumnType) -> Self {
+        Column {
             name: name.to_string(),
             kind,
             values: None,
@@ -58,8 +58,8 @@ impl Colonna {
     /// Whether `c` is a value this column accepts (a number for a number, a listed text for a category when the list is given).
     pub fn accepts(&self, c: &Cell) -> bool {
         match (self.kind, c) {
-            (TipoColonna::Numero, Cell::Numero(_)) | (TipoColonna::Testo, Cell::Testo(_)) => true,
-            (TipoColonna::Categoria, Cell::Testo(t)) => {
+            (ColumnType::Numero, Cell::Numero(_)) | (ColumnType::Testo, Cell::Testo(_)) => true,
+            (ColumnType::Categoria, Cell::Testo(t)) => {
                 self.values.as_ref().is_none_or(|v| v.contains(t))
             }
             _ => false,
@@ -69,7 +69,7 @@ impl Colonna {
 
 /// What a file says about itself (`dal_file`): the user never edits it.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct DatiFile {
+pub struct FileData {
     pub instrument: String,
     pub method: String,
     pub mz: Option<(f64, f64)>,
@@ -79,18 +79,18 @@ pub struct DatiFile {
 
 /// A `campioni/3` document: the files and the declared free columns.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Tabella {
-    pub campioni: Vec<Campione>,
-    pub colonne: Vec<Colonna>,
+pub struct Table {
+    pub campioni: Vec<Sample>,
+    pub colonne: Vec<Column>,
 }
 
-impl Tabella {
-    pub fn column(&self, name: &str) -> Option<&Colonna> {
+impl Table {
+    pub fn column(&self, name: &str) -> Option<&Column> {
         self.colonne.iter().find(|c| c.name == name)
     }
 }
 
-impl Campione {
+impl Sample {
     /// The free value of `name`, if the file has one.
     pub fn extra_of(&self, name: &str) -> Option<&Cell> {
         self.extra.iter().find(|(k, _)| k == name).map(|(_, v)| v)
@@ -106,7 +106,7 @@ impl Campione {
 }
 
 /// A free column read without a declared type: a number when every value is one written the way a number is written here.
-pub(super) fn infer(values: &[Option<&str>]) -> TipoColonna {
+pub(super) fn infer(values: &[Option<&str>]) -> ColumnType {
     let filled: Vec<&str> = values
         .iter()
         .flatten()
@@ -118,8 +118,8 @@ pub(super) fn infer(values: &[Option<&str>]) -> TipoColonna {
             .is_ok_and(|x| x.is_finite() && format!("{x}") == **v)
     };
     if !filled.is_empty() && filled.iter().all(canon) {
-        TipoColonna::Numero
+        ColumnType::Numero
     } else {
-        TipoColonna::Testo
+        ColumnType::Testo
     }
 }

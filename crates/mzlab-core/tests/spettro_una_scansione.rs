@@ -12,7 +12,7 @@ use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use finto::{Finto, Scheda};
+use finto::{Card, Finto};
 use mzlab_core::idxread::Index;
 use mzlab_core::iteminfo::hr_profile;
 use mzlab_core::json::{round, Out};
@@ -42,7 +42,7 @@ fn old_window(
     precursor: Option<f64>,
     filt: Option<&str>,
     ppm: f64,
-    somma: bool,
+    sum: bool,
 ) -> Option<Old> {
     let tol = match precursor {
         Some(p) if level > 1 && p != 0.0 => (p * ppm * 1e-6).max(1e-3),
@@ -70,7 +70,7 @@ fn old_window(
         .map(|(i, _)| i)
         .collect();
     let (mut mz, mut y) = (vec![], vec![]);
-    let div = if somma { 1.0 } else { n as f64 };
+    let div = if sum { 1.0 } else { n as f64 };
     if n > 0 {
         let (mut c0, mut sy, mut smy) = (i64::MIN, 0.0f64, 0.0f64);
         let (mut cm, mut cy) = (vec![], vec![]);
@@ -165,10 +165,10 @@ fn params(q: &Query) -> Option<Params> {
 
 /// The former `/api/spectrum` of a high-resolution centroid file: `None` for a window of one scan.
 fn old_route(r: &mut Routes<File>, q: &Query) -> Option<String> {
-    let (level, win, precursor, filt, somma) = params(q)?;
+    let (level, win, precursor, filt, sum) = params(q)?;
     let hr = hr_profile(&r.idx.scans, level == 1, q.get("hr") != Some("0"));
     assert!(hr.on);
-    match old_window(r, level, win, precursor, filt.as_deref(), hr.ppm, somma) {
+    match old_window(r, level, win, precursor, filt.as_deref(), hr.ppm, sum) {
         None => Some(EMPTY.into()),
         Some(m) if m.n == 1 => None,
         Some(m) => Some(old_json(m, hr.dec + 1)),
@@ -177,7 +177,7 @@ fn old_route(r: &mut Routes<File>, q: &Query) -> Option<String> {
 
 /// The former `spectrum_exact`: the index pass first, the scan read only when that pass found a peak.
 fn old_spectrum_exact(r: &mut Routes<File>, q: &Query, mzml: &mut File) -> Option<String> {
-    let (level, win, precursor, filt, somma) = params(q)?;
+    let (level, win, precursor, filt, sum) = params(q)?;
     let hr = hr_profile(&r.idx.scans, level == 1, q.get("hr") != Some("0"));
     if q.some("bgk").is_some()
         || !hr.on
@@ -185,7 +185,7 @@ fn old_spectrum_exact(r: &mut Routes<File>, q: &Query, mzml: &mut File) -> Optio
     {
         return None;
     }
-    let mut m = old_window(r, level, win, precursor, filt.as_deref(), hr.ppm, somma)?;
+    let mut m = old_window(r, level, win, precursor, filt.as_deref(), hr.ppm, sum)?;
     if m.n != 1 || m.in_win.len() != 1 {
         return None;
     }
@@ -198,10 +198,10 @@ fn old_spectrum_exact(r: &mut Routes<File>, q: &Query, mzml: &mut File) -> Optio
 }
 
 /// The mzML written from `schede`, its index and a `Routes` on it.
-fn open(dir: &Path, name: &str, schede: Vec<Scheda>) -> (Routes<File>, File, Vec<ScanRow>) {
-    let mut l = Finto::da_schede(schede);
+fn open(dir: &Path, name: &str, cards: Vec<Card>) -> (Routes<File>, File, Vec<ScanRow>) {
+    let mut l = Finto::from_sheets(cards);
     let scans: Vec<_> = l
-        .schede
+        .cards
         .iter()
         .map(|s| {
             (
@@ -319,7 +319,7 @@ fn queries_of(scans: &[ScanRow]) -> Vec<String> {
 
 /// A small file in the style of `hrc`: Orbitrap centroids, a cycle of MS1 + two MS2 with a precursor, an empty MS1, an empty MS2 and a scan whose
 /// peaks all have zero intensity.
-fn synthetic(n: usize) -> Vec<Scheda> {
+fn synthetic(n: usize) -> Vec<Card> {
     let mut state = 0x9E37_79B9_7F4A_7C15u64;
     let mut next = move || {
         state ^= state << 13;
@@ -370,7 +370,7 @@ fn synthetic(n: usize) -> Vec<Scheda> {
                 intensity: it,
                 wide: None,
             };
-            Scheda {
+            Card {
                 spettro: sp,
                 extra: SpectrumExtra::default(),
             }

@@ -5,7 +5,7 @@ use crate::signal::median;
 
 /// Knobs of the automatic background. `Default` is what the page uses until the user changes something.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct FondoParams {
+pub struct BackgroundParams {
     /// Window width as a fraction of the run (points), default 5 %.
     pub win_frac: f64,
     /// Smallest window in points, default 10.
@@ -16,7 +16,7 @@ pub struct FondoParams {
     pub side_tol: f64,
 }
 
-impl Default for FondoParams {
+impl Default for BackgroundParams {
     fn default() -> Self {
         Self {
             win_frac: 0.05,
@@ -82,7 +82,7 @@ fn mad(v: &[f64], med: f64) -> f64 {
 
 /// The window of `w` points with the lowest `median + k * MAD`: low and steady, so a ramp or a peak scores badly.
 /// Returns `(start, end, median)`; `None` when the trace is shorter than the window.
-pub fn flat_window(y: &[f64], p: &FondoParams) -> Option<(usize, usize, f64)> {
+pub fn flat_window(y: &[f64], p: &BackgroundParams) -> Option<(usize, usize, f64)> {
     let n = y.len();
     let w = ((n as f64 * p.win_frac).round() as usize).max(p.min_pts);
     if w > n || w == 0 {
@@ -111,7 +111,7 @@ pub fn auto_background(
     t: &[f64],
     y: &[f64],
     blank: Option<(&[f64], &[f64])>,
-    p: &FondoParams,
+    p: &BackgroundParams,
 ) -> Option<Background> {
     if !valid(t, y) {
         return None;
@@ -169,7 +169,7 @@ pub fn local_background(
     t: &[f64],
     y: &[f64],
     apex: usize,
-    p: &FondoParams,
+    p: &BackgroundParams,
 ) -> Option<LocalBackground> {
     if !valid(t, y) || apex >= y.len() {
         return None;

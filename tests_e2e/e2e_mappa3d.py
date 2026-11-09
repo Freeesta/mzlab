@@ -23,7 +23,7 @@ def viewer(pg, tag, hr):
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); frames(pg, 3)
         assert pg.locator(BTN).count() == 1
         pg.locator(BTN).click()
-        pg.wait_for_function("document.querySelector('dialog.m3d[open]') && window.__m3d && window.__m3d.V.g && window.__m3d.V.Z", timeout=60000); attendi(pg, INK + " > 6")
+        pg.wait_for_function("document.querySelector('dialog.m3d[open]') && window.__m3d && window.__m3d.V.g && window.__m3d.V.Z", timeout=60000); wait_for_js(pg, INK + " > 6")
         assert pg.evaluate("document.querySelector('dialog.m3d').matches(':modal')")
         assert pg.evaluate(INK) > 6, "the canvas draws something"
         pg.screenshot(path=SH + f"m3d_{tag}_surf.png")
@@ -36,20 +36,20 @@ def viewer(pg, tag, hr):
     step(f"{tag}: region of the 2D map, grid up to 1024 and cells in ppm only in high resolution", region)
     def rotate():
         box = pg.locator(".m3d-gl").bounding_box(); cx, cy = box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5
-        az0 = pg.evaluate("window.__m3d.V.cam.az"); pg.mouse.move(cx, cy); pg.mouse.down(); pg.mouse.move(cx + 120, cy + 20, steps=6); pg.mouse.up(); attendi(pg, f"window.__m3d.V.cam.az !== {az0}")
+        az0 = pg.evaluate("window.__m3d.V.cam.az"); pg.mouse.move(cx, cy); pg.mouse.down(); pg.mouse.move(cx + 120, cy + 20, steps=6); pg.mouse.up(); wait_for_js(pg, f"window.__m3d.V.cam.az !== {az0}")
         assert pg.evaluate("window.__m3d.V.cam.az") != az0
-        d0 = pg.evaluate("window.__m3d.V.cam.d"); pg.mouse.move(cx, cy); pg.mouse.wheel(0, -300); attendi(pg, f"window.__m3d.V.cam.d < {d0}")
+        d0 = pg.evaluate("window.__m3d.V.cam.d"); pg.mouse.move(cx, cy); pg.mouse.wheel(0, -300); wait_for_js(pg, f"window.__m3d.V.cam.d < {d0}")
         assert pg.evaluate("window.__m3d.V.cam.d") < d0
-        pg.keyboard.press("1"); attendi(pg, "window.__m3d.V.cam.el > 80"); assert pg.evaluate("window.__m3d.V.cam.el") > 80
-        pg.keyboard.press("2"); attendi(pg, "window.__m3d.V.cam.el === 0"); assert pg.evaluate("window.__m3d.V.cam.el") == 0
-        pg.keyboard.press("r"); attendi(pg, "window.__m3d.V.cam.az === 35 && window.__m3d.V.cam.el === 32")          # the reset view is set at once (nothing animates the camera); counting frames timed out where a frame of the big surface takes seconds
+        pg.keyboard.press("1"); wait_for_js(pg, "window.__m3d.V.cam.el > 80"); assert pg.evaluate("window.__m3d.V.cam.el") > 80
+        pg.keyboard.press("2"); wait_for_js(pg, "window.__m3d.V.cam.el === 0"); assert pg.evaluate("window.__m3d.V.cam.el") == 0
+        pg.keyboard.press("r"); wait_for_js(pg, "window.__m3d.V.cam.az === 35 && window.__m3d.V.cam.el === 32")          # the reset view is set at once (nothing animates the camera); counting frames timed out where a frame of the big surface takes seconds
     step(f"{tag}: drag rotates, wheel zooms, keys 1-2 and R", rotate)
     def modes():
         modes = ["fall", "cont", "surf"] + (["sticks"] if hr else [])
         for m in modes:
             pg.select_option("dialog.m3d [data-m=mode]", m)
-            if m == "sticks": attendi(pg, "window.__m3d.V.pts && window.__m3d.V.pts.n > 0")
-            attendi(pg, INK + " > 4")
+            if m == "sticks": wait_for_js(pg, "window.__m3d.V.pts && window.__m3d.V.pts.n > 0")
+            wait_for_js(pg, INK + " > 4")
             assert pg.evaluate(INK) > 4, m
             pg.screenshot(path=SH + f"m3d_{tag}_{m}.png")
         dis = pg.evaluate("document.querySelector('dialog.m3d [data-m=mode] [value=sticks]').disabled")
@@ -63,7 +63,7 @@ def viewer(pg, tag, hr):
           const i=Math.floor(bi/g.nmz),j=bi%g.nmz,q=m.project(m.px(i),m.heightAt(i,j)*m.box().y,m.pz(j)),r=document.querySelector('.m3d-gl').getBoundingClientRect();
           return {x:r.left+q[0],y:r.top+q[1],i,j,v:b,rt:m.rtAt(i),mz:m.mzAt(j)}})()""")
         pg.mouse.move(c["x"], c["y"])
-        attendi(pg, f"(()=>{{const c=window.__m3d.V.cur;return !!c&&Math.abs(c.i-{c['i']})<=2&&Math.abs(c.j-{c['j']})<=2}})()")
+        wait_for_js(pg, f"(()=>{{const c=window.__m3d.V.cur;return !!c&&Math.abs(c.i-{c['i']})<=2&&Math.abs(c.j-{c['j']})<=2}})()")
         cur = pg.evaluate("window.__m3d.V.cur")
         assert abs(cur["i"] - c["i"]) <= 2 and abs(cur["j"] - c["j"]) <= 2, (cur, c)
         txt = pg.inner_text(".m3d-read"); assert "RT" in txt and "m/z" in txt, txt
@@ -77,18 +77,18 @@ def viewer(pg, tag, hr):
         n0 = pg.evaluate(f"MAPPA.pts({M}).length"); box = pg.locator(".m3d-gl").bounding_box()
         c = pg.evaluate("""(()=>{const m=window.__m3d,V=m.V,g=V.g;let b=-1,bi=0;for(let i=0;i<V.raw.length;i++)if(V.raw[i]>b){b=V.raw[i];bi=i}
           const i=Math.floor(bi/g.nmz),j=bi%g.nmz,q=m.project(m.px(i),m.heightAt(i,j)*m.box().y,m.pz(j)),r=document.querySelector('.m3d-gl').getBoundingClientRect();return [r.left+q[0],r.top+q[1]]})()""")
-        pg.mouse.click(c[0], c[1]); attendi(pg, "window.__m3d.V.cur != null"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); assert pg.evaluate(f"MAPPA.pts({M}).length") == n0, "a click alone only fixes the point"
+        pg.mouse.click(c[0], c[1]); wait_for_js(pg, "window.__m3d.V.cur != null"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); assert pg.evaluate(f"MAPPA.pts({M}).length") == n0, "a click alone only fixes the point"
         pg.evaluate(f"MAPPA.st({M}).mark = true")                                                # «Mark» on: the click adds it
         pg.mouse.click(c[0], c[1]); pg.wait_for_function(f"MAPPA.pts({M}).length==={n0 + 1}", timeout=10000)
     step(f"{tag}: a click fixes a point (same list as the 2D map)", fix)
     def keys():
-        i0 = pg.evaluate("window.__m3d.V.cur.i"); pg.keyboard.press("ArrowRight"); attendi(pg, f"window.__m3d.V.cur.i === {i0 + 1}")
+        i0 = pg.evaluate("window.__m3d.V.cur.i"); pg.keyboard.press("ArrowRight"); wait_for_js(pg, f"window.__m3d.V.cur.i === {i0 + 1}")
         assert pg.evaluate("window.__m3d.V.cur.i") == i0 + 1 and pg.evaluate("window.__m3d.V.plane") is True
-        pg.fill("dialog.m3d [data-m=ti]", "5"); pg.dispatch_event("dialog.m3d [data-m=ti]", "input"); attendi(pg, "window.__m3d.V.cur.i === 5")
+        pg.fill("dialog.m3d [data-m=ti]", "5"); pg.dispatch_event("dialog.m3d [data-m=ti]", "input"); wait_for_js(pg, "window.__m3d.V.cur.i === 5")
         assert pg.evaluate("window.__m3d.V.cur.i") == 5
     step(f"{tag}: arrows and the time slider move the cursor and the plane", keys)
     def closes():
-        pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.m3d')")
+        pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog.m3d')")
         assert pg.evaluate("!document.querySelector('dialog.m3d')")
         assert pg.evaluate("document.activeElement && document.activeElement.dataset && document.activeElement.dataset.o==='view'"), "the focus goes back to the button"
         assert pg.locator(".pnl.map .mztab tbody tr").count() >= 1, "the point is in the table of the 2D map"
@@ -101,7 +101,7 @@ try:
         pg = b.new_context(locale="it-IT", viewport={"width": 1440, "height": 950}).new_page()
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=2")
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=2")
         pg.click("#opbtn"); ready(pg)
         pg.click("#np-map"); ready(pg)
         viewer(pg, "lr", False)
@@ -110,11 +110,11 @@ try:
             pg.wait_for_function("window.__m3d && window.__m3d.V.g", timeout=60000)
             k = pg.evaluate("E.files.filter(f=>f.kind==='full')[1].k")
             pg.select_option("dialog.m3d [data-m=ref]", str(k)); pg.wait_for_function("window.__m3d.V.signed===true && window.__m3d.V.g.ref!==undefined", timeout=60000)
-            attendi(pg, INK + " > 4")
+            wait_for_js(pg, INK + " > 4")
             assert pg.evaluate(INK) > 4
             pg.screenshot(path=SH + "m3d_lr_diff.png")
             pg.check("dialog.m3d [data-m=bg]"); pg.wait_for_function("window.__m3d.V.g.bg===true", timeout=60000)
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.m3d')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog.m3d')")
             pg.evaluate("localStorage.removeItem('mzlab.mappa')")
         step("lr: comparison A - B (signed heights) and constant background removed", diff)
         # old keys of the previous 3D view are ignored without errors
@@ -128,7 +128,7 @@ try:
         pg = r2.page(p); pg.set_viewport_size({"width": 1440, "height": 950})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         pg.evaluate("setTab('full',true)"); ready(pg)
-        pg.evaluate("reveal(addPanel('map', { k: E.files.find(f => f.kind === 'full').k }))"); ready(pg); attendi(pg, M + " && " + M + "._a")
+        pg.evaluate("reveal(addPanel('map', { k: E.files.find(f => f.kind === 'full').k }))"); ready(pg); wait_for_js(pg, M + " && " + M + "._a")
         viewer(pg, "hr", True)
     r2.close()
 except Exception as e:

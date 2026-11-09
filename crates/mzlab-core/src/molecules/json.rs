@@ -1,7 +1,7 @@
 //! The canonical JSON of `molecules/1` (keys in alphabetical order, records sorted by `id`, lists tidy: the same molecules give the same bytes and the same
 //! SHA-256), its reader, and the JSON of the answers (errors, search hits).
 
-use super::{finalizza, repeated, Molecola, Origine, Proprieta, RowError, SCHEMA};
+use super::{finalizza, repeated, Molecule, Origin, Proprieta, RowError, SCHEMA};
 use crate::budget::sha256_hex;
 use crate::json::{parse, Out, Value};
 
@@ -20,15 +20,15 @@ fn opt_str(j: &mut Out, v: &Option<String>) {
     };
 }
 
-fn origin(j: &mut Out, o: &Origine) {
+fn origin(j: &mut Out, o: &Origin) {
     j.raw("{\"catalogo\":");
-    strs(j, &o.catalogo);
+    strs(j, &o.catalog);
     j.raw(",\"creato\":");
-    opt_str(j, &o.creato);
+    opt_str(j, &o.created);
     j.raw(",\"file\":");
     opt_str(j, &o.file);
     j.raw(",\"modificato\":");
-    opt_str(j, &o.modificato);
+    opt_str(j, &o.modified);
     j.raw(",\"tipo\":").str(&o.tipo).raw("}");
 }
 
@@ -36,15 +36,15 @@ fn property(j: &mut Out, p: &Proprieta) {
     j.raw("{\"chiave\":")
         .str(&p.chiave)
         .raw(",\"condizioni\":")
-        .str(&p.condizioni);
+        .str(&p.conditions);
     j.raw(",\"fonte\":")
-        .str(&p.fonte)
+        .str(&p.provenance)
         .raw(",\"unita\":")
         .str(&p.unita);
-    j.raw(",\"valore\":").num(p.valore).raw("}");
+    j.raw(",\"valore\":").num(p.value).raw("}");
 }
 
-fn externals(j: &mut Out, m: &Molecola) {
+fn externals(j: &mut Out, m: &Molecule) {
     j.raw("{");
     if let Some(c) = &m.cas {
         j.raw("\"cas\":").str(c);
@@ -58,12 +58,12 @@ fn externals(j: &mut Out, m: &Molecola) {
 }
 
 /// One record as canonical JSON.
-pub fn record_json(m: &Molecola) -> String {
+pub fn record_json(m: &Molecule) -> String {
     let mut j = Out::default();
     j.raw("{\"addotti\":");
     strs(&mut j, &m.addotti);
     j.raw(",\"carica\":")
-        .int(i64::from(m.carica))
+        .int(i64::from(m.load))
         .raw(",\"classi\":");
     strs(&mut j, &m.classi);
     j.raw(",\"esterni\":");
@@ -88,9 +88,9 @@ pub fn record_json(m: &Molecola) -> String {
         property(&mut j, p);
     }
     j.raw("],\"raccolte\":");
-    strs(&mut j, &m.raccolte);
+    strs(&mut j, &m.collections);
     j.raw(",\"sinonimi\":");
-    strs(&mut j, &m.sinonimi);
+    strs(&mut j, &m.synonyms);
     j.raw(",\"smiles\":");
     opt_str(&mut j, &m.smiles);
     j.raw("}");
@@ -98,8 +98,8 @@ pub fn record_json(m: &Molecola) -> String {
 }
 
 /// `{"molecole":[...],"schema":"molecules/1"}`, the records sorted by `id`.
-pub fn to_json(ms: &[Molecola]) -> String {
-    let mut sorted: Vec<&Molecola> = ms.iter().collect();
+pub fn to_json(ms: &[Molecule]) -> String {
+    let mut sorted: Vec<&Molecule> = ms.iter().collect();
     crate::sortc::slice_by(&mut sorted, |a, b| a.id.cmp(&b.id));
     let mut j = Out::default();
     j.raw("{\"molecole\":[");
@@ -111,7 +111,7 @@ pub fn to_json(ms: &[Molecola]) -> String {
 }
 
 /// SHA-256 of the canonical JSON (what `prov/1` records when a step uses the molecules).
-pub fn digest(ms: &[Molecola]) -> String {
+pub fn digest(ms: &[Molecule]) -> String {
     sha256_hex(to_json(ms).as_bytes())
 }
 
@@ -134,7 +134,7 @@ pub fn errors_json(errs: &[RowError]) -> String {
 }
 
 /// The search answer: `[{id, nome, formula, carica, massa, smiles, addotti, punteggio}]`.
-pub fn hits_json(ms: &[Molecola], hits: &[(usize, f64)]) -> String {
+pub fn hits_json(ms: &[Molecule], hits: &[(usize, f64)]) -> String {
     let mut j = Out::default();
     j.raw("[");
     for (i, &(k, score)) in hits.iter().enumerate() {
@@ -142,7 +142,7 @@ pub fn hits_json(ms: &[Molecola], hits: &[(usize, f64)]) -> String {
         j.raw(if i > 0 { "," } else { "" }).raw("{\"addotti\":");
         strs(&mut j, &m.addotti);
         j.raw(",\"carica\":")
-            .int(i64::from(m.carica))
+            .int(i64::from(m.load))
             .raw(",\"formula\":")
             .str(&m.formula);
         j.raw(",\"id\":")
@@ -183,45 +183,45 @@ fn read_properties(v: &Value) -> Vec<Proprieta> {
     a.iter()
         .map(|p| Proprieta {
             chiave: text(p, "chiave"),
-            valore: n(p),
+            value: n(p),
             unita: text(p, "unita"),
-            fonte: text(p, "fonte"),
-            condizioni: text(p, "condizioni"),
+            provenance: text(p, "fonte"),
+            conditions: text(p, "condizioni"),
         })
         .collect()
 }
 
 /// One record from its JSON; `massa` is ignored (computed again) unless the record has no formula (a mass-only entry). A charge that is not a whole number is refused.
-fn read_one(v: &Value) -> Result<Molecola, (&'static str, String)> {
+fn read_one(v: &Value) -> Result<Molecule, (&'static str, String)> {
     let charge = v.get("carica").and_then(|x| x.f64()).unwrap_or(0.0);
     if charge.fract() != 0.0 || charge.abs() > 1e6 {
         return Err(("error.molecules.badCharge", charge.to_string()));
     }
     let o = v.get("origine").cloned().unwrap_or(Value::Null);
     let ext = v.get("esterni").cloned().unwrap_or(Value::Null);
-    let mut m = Molecola {
+    let mut m = Molecule {
         id: text(v, "id"),
         nome: text(v, "nome"),
-        sinonimi: list(v, "sinonimi"),
+        synonyms: list(v, "sinonimi"),
         formula: text(v, "formula"),
-        carica: charge as i32,
+        load: charge as i32,
         smiles: opt(v, "smiles"),
         inchikey: opt(v, "inchikey"),
         addotti: list(v, "addotti"),
-        raccolte: list(v, "raccolte"),
+        collections: list(v, "raccolte"),
         classi: list(v, "classi"),
         cas: opt(&ext, "cas"),
         pubchem_cid: opt(&ext, "pubchem_cid"),
         proprieta: read_properties(v),
         note: text(v, "note"),
-        ..Molecola::default()
+        ..Molecule::default()
     };
-    m.origine = Origine {
+    m.origine = Origin {
         tipo: text(&o, "tipo"),
-        catalogo: list(&o, "catalogo"),
+        catalog: list(&o, "catalogo"),
         file: opt(&o, "file"),
-        creato: opt(&o, "creato"),
-        modificato: opt(&o, "modificato"),
+        created: opt(&o, "creato"),
+        modified: opt(&o, "modificato"),
     };
     let control = v
         .get("massa")
@@ -232,7 +232,7 @@ fn read_one(v: &Value) -> Result<Molecola, (&'static str, String)> {
 }
 
 /// The records of a parsed `molecules/1` document, or an error for every wrong record (its 1-based position) or repeated `id`.
-pub fn from_value(doc: &Value) -> Result<Vec<Molecola>, Vec<RowError>> {
+pub fn from_value(doc: &Value) -> Result<Vec<Molecule>, Vec<RowError>> {
     let bad = |detail: &str| {
         vec![RowError {
             line: 0,
@@ -269,7 +269,7 @@ pub fn from_value(doc: &Value) -> Result<Vec<Molecola>, Vec<RowError>> {
 }
 
 /// Reads a `molecules/1` document (see `from_value`).
-pub fn from_json(bytes: &[u8]) -> Result<Vec<Molecola>, Vec<RowError>> {
+pub fn from_json(bytes: &[u8]) -> Result<Vec<Molecule>, Vec<RowError>> {
     match parse(bytes) {
         Ok(doc) => from_value(&doc),
         Err(_) => Err(vec![RowError {

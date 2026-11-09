@@ -9,11 +9,11 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
-    aggiungi, cerca, con_interpretazione, da_richiesta, da_richiesta_export, esporta, grafo_json,
-    library_text, opzioni_cerca, tabella_regole, table_text, Grafo, Opzioni, PPM_PERDITA,
+    aggiungi, cerca, esporta, from_export_request, from_request, graph_json, library_text,
+    opzioni_cerca, tabella_regole, table_text, with_interpretation, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
-use mzlab_core::sorgente::SorgenteLettore;
+use mzlab_core::sorgente::ReaderSource;
 use mzlab_core::{lettori_mzml, Error, Result};
 use mzlab_feat::chem::strutture::strutture_testo;
 use serde_json::{json, Value};
@@ -24,7 +24,7 @@ use crate::rpc::{io_error, map_file, text, Answer, Eng, MapAt};
 use crate::store::Nat;
 
 /// Default window of the cleavages (`ppm_struttura`), ppm; as in the `.wasm`.
-const PPM_STRUTTURA: f64 = 10.0;
+const STRUCTURE_PPM: f64 = 10.0;
 
 impl State {
     /// `msngrafo {slot, name, fid, query, esporta?, cerca?, libreria?, molecola?}`: the graph of the file `name` (its `.mzidx` and the mzML at `slot`), or its export as text,
@@ -64,10 +64,10 @@ impl State {
             };
         }
         let (g, j, _) = run()?;
-        let (l, doppione) = aggiungi(s("libreria"), s("molecola"), &g, &j)?;
+        let (l, duplicate) = aggiungi(s("libreria"), s("molecola"), &g, &j)?;
         let mut o = Out::default();
         o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
-        o.raw(if doppione { "true}" } else { "false}" });
+        o.raw(if duplicate { "true}" } else { "false}" });
         text(o.0)
     }
 
@@ -106,7 +106,7 @@ impl State {
             let mut l = nativi::open(&nat.members, nat.centroid)?;
             let mut out =
                 std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?);
-            lettori_mzml::scrivi_con(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
+            lettori_mzml::write_with(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
             std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
             drop(out);
             indexer.build(&tmp, &key, None)?;
@@ -135,7 +135,7 @@ impl State {
     pub(crate) fn nat_srm(&self, p: &Value) -> Result<Answer> {
         let nat = self.nat_of(p["name"].as_str().unwrap_or(""))?;
         let mut l = nativi::open(&nat.members, nat.centroid)?;
-        let mut t = SorgenteLettore {
+        let mut t = ReaderSource {
             l: &mut *l,
             c: nat.c,
         };
@@ -225,7 +225,7 @@ fn add_expected(q: &mut Query) {
     for (i, x) in a.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("[")
-            .str(&x.regola)
+            .str(&x.rule)
             .raw(",")
             .str(&x.formula);
         o.raw(if x.ione { ",1]" } else { ",0]" });
@@ -234,17 +234,17 @@ fn add_expected(q: &mut Query) {
     q.0.push(("attese".to_string(), o.0));
 }
 
-type Computed = Result<(Grafo, String, Opzioni)>;
+type Computed = Result<(Graph, String, Options)>;
 
 /// The graph of the query over the index and the mzML (`calcola_con` of the `.wasm`).
 fn graph(mut idx: MapAt, idx_size: u64, mzml: &mut dyn ReadAt, name: &str, q: &Query) -> Computed {
-    let req = da_richiesta(&|k| q.get(k).map(String::from))?;
+    let req = from_request(&|k| q.get(k).map(String::from))?;
     let mut bytes = vec![0u8; idx_size as usize];
     idx.read_at(0, &mut bytes)?;
     let sha = sha256_hex(&bytes);
     drop(bytes);
     let scans = Index::open(idx, idx_size)?.scans;
-    let (g, j) = grafo_json(&scans, &mut DynRead(mzml), (name, &sha), (&req.0, &req.1))?;
+    let (g, j) = graph_json(&scans, &mut DynRead(mzml), (name, &sha), (&req.0, &req.1))?;
     let j = with_keys(&g, j, &req.0, q)?;
     Ok((g, j, req.0))
 }
@@ -259,7 +259,7 @@ impl ReadAt for DynRead<'_> {
 }
 
 /// The optional keys of the query on the graph text: `interpreta=1` and `rotture=1`, shared by the graph and its exports.
-fn with_keys(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> Result<String> {
+fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String> {
     if q.get("interpreta") == Some("1") {
         let ppm = match q.some("ppm_perdita") {
             None => PPM_PERDITA,
@@ -269,7 +269,7 @@ fn with_keys(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> Result<String>
                 .filter(|p| p.is_finite() && *p > 0.0)
                 .ok_or_else(|| Error::new("err.request.badNumber").with("name", "ppm_perdita"))?,
         };
-        j = con_interpretazione(&j, g, ppm);
+        j = with_interpretation(&j, g, ppm);
     }
     if q.get("rotture") == Some("1") {
         let num = |k: &str, d: f64| -> Result<f64> {
@@ -282,24 +282,24 @@ fn with_keys(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> Result<String>
                     .ok_or_else(|| Error::new("err.request.badNumber").with("name", k)),
             }
         };
-        let par = mzlab_feat::chem::rotture::Parametri {
-            ppm: num("ppm_struttura", PPM_STRUTTURA)?,
+        let par = mzlab_feat::chem::rotture::Params {
+            ppm: num("ppm_struttura", STRUCTURE_PPM)?,
             h_max: num("h_max", 2.0)?.min(4.0) as u8,
-            max_legami: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
+            max_bonds: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
         };
-        j = mzlab_feat::chem::rotture::rotture_testo(g, &j, o.smiles.as_deref(), par)?;
+        j = mzlab_feat::chem::rotture::breaks_text(g, &j, o.smiles.as_deref(), par)?;
     }
     Ok(j)
 }
 
-/// `msn_grafo` of the `.wasm`: the graph text, with the cleavages of a node when `strutture` asks.
+/// `msn_graph` of the `.wasm`: the graph text, with the cleavages of a node when `strutture` asks.
 fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     let (g, j, o) = run()?;
     match q.some("strutture") {
         None => Ok(j),
-        Some(nodo) => {
+        Some(node) => {
             let ppm = match q.some("ppm_struttura") {
-                None => PPM_STRUTTURA,
+                None => STRUCTURE_PPM,
                 Some(v) => v
                     .parse::<f64>()
                     .ok()
@@ -308,28 +308,28 @@ fn graph_text(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
                         Error::new("err.request.badNumber").with("name", "ppm_struttura")
                     })?,
             };
-            strutture_testo(&g, &j, o.smiles.as_deref(), (nodo, ppm))
+            strutture_testo(&g, &j, o.smiles.as_deref(), (node, ppm))
         }
     }
 }
 
-/// `msn_grafo_export` of the `.wasm`: the spectra of the graph as text, a table of it (`vista`) or the tree as a library (`formato=massbank`, `libreria=1`).
+/// `msn_graph_export` of the `.wasm`: the spectra of the graph as text, a table of it (`vista`) or the tree as a library (`formato=massbank`, `libreria=1`).
 fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
     let clean = q.get("pulito") == Some("1");
-    if let Some(vista) = q.some("vista") {
+    if let Some(view) = q.some("vista") {
         let (_, j, _) = run()?;
         return Ok(table_text(
             &mzlab_core::json::parse(j.as_bytes())?,
-            vista,
+            view,
             clean,
         ));
     }
-    let formato = q.get("formato").unwrap_or("");
-    if formato == "massbank" || q.get("libreria") == Some("1") {
+    let format = q.get("formato").unwrap_or("");
+    if format == "massbank" || q.get("libreria") == Some("1") {
         let (_, j, _) = run()?;
         let v = mzlab_core::json::parse(j.as_bytes())?;
         let get = |k: &str, d: &'static str| q.some(k).unwrap_or(d);
-        let formato = if formato == "massbank" {
+        let format = if format == "massbank" {
             "massbank"
         } else {
             "msp"
@@ -339,14 +339,14 @@ fn export(q: &Query, run: &mut dyn FnMut() -> Computed) -> Result<String> {
             &j,
             (
                 get("id", ""),
-                formato,
+                format,
                 get("livelli", "all"),
                 clean,
                 get("annota", "1") != "0",
             ),
         );
     }
-    let (f, pulito, nodo) = da_richiesta_export(&|k| q.get(k).map(String::from))?;
+    let (f, clean, node) = from_export_request(&|k| q.get(k).map(String::from))?;
     let (g, _, _) = run()?;
-    Ok(esporta(&g, f, pulito, nodo.as_deref()))
+    Ok(esporta(&g, f, clean, node.as_deref()))
 }

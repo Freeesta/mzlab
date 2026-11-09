@@ -7,8 +7,8 @@
 use super::json::legacy_kind;
 use super::regex::Regex;
 use super::{
-    nomi::proponi, number_replicates, tabella_da_value, to_json3, Campione, Cell, Colonna, Tabella,
-    TipoColonna,
+    nomi::proponi, number_replicates, table_from_value, to_json3, Cell, Column, ColumnType, Sample,
+    Table,
 };
 use crate::error::{Error, Result};
 use crate::json::{parse, Out};
@@ -23,8 +23,8 @@ pub struct Pos {
 
 /// The files with the model applied, the spans per file and the indices of the files the model did not match.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Applicato {
-    pub tabella: Tabella,
+pub struct Applied {
+    pub table: Table,
     pub positions: Vec<Vec<Pos>>,
     pub unmatched: Vec<usize>,
 }
@@ -109,7 +109,7 @@ fn whole(v: &str) -> Option<u32> {
 }
 
 /// Gives `c` the value of one group; false when the value is not one the field takes.
-fn set_field(c: &mut Campione, name: &str, v: &str, cols: &[Colonna]) -> bool {
+fn set_field(c: &mut Sample, name: &str, v: &str, cols: &[Column]) -> bool {
     match name {
         "campione_id" => c.sample_id = v.into(),
         "matrice" => c.matrix = v.into(),
@@ -132,7 +132,7 @@ fn set_field(c: &mut Campione, name: &str, v: &str, cols: &[Colonna]) -> bool {
         _ => {
             let numeric = cols
                 .iter()
-                .any(|k| k.name == name && k.kind == TipoColonna::Numero);
+                .any(|k| k.name == name && k.kind == ColumnType::Numero);
             let cell = match num(v).filter(|_| numeric) {
                 Some(x) => Cell::Numero(x),
                 None => Cell::Testo(v.into()),
@@ -144,7 +144,7 @@ fn set_field(c: &mut Campione, name: &str, v: &str, cols: &[Colonna]) -> bool {
 }
 
 /// The time and its unit of one match, applied together: the unit of the name or the one the file had.
-fn set_time(c: &mut Campione, time: Option<&str>, unit: Option<&str>) {
+fn set_time(c: &mut Sample, time: Option<&str>, unit: Option<&str>) {
     let unit = unit
         .and_then(time_unit)
         .unwrap_or(&c.time_unit.clone())
@@ -160,7 +160,7 @@ fn set_time(c: &mut Campione, time: Option<&str>, unit: Option<&str>) {
     c.time_confirmed = false;
 }
 
-fn one(re: &Regex, c: &mut Campione, cols: &[Colonna]) -> Option<Vec<Pos>> {
+fn one(re: &Regex, c: &mut Sample, cols: &[Column]) -> Option<Vec<Pos>> {
     let (stem, _, _) = crate::project::guess_sample(&c.file);
     let off = c
         .file
@@ -193,12 +193,12 @@ fn one(re: &Regex, c: &mut Campione, cols: &[Colonna]) -> Option<Vec<Pos>> {
     if used.contains(&"tempo") || used.contains(&"unita_tempo") {
         set_time(c, time.as_deref(), unit.as_deref());
     }
-    super::idcampione::applica(c, &used);
+    super::idcampione::apply(c, &used);
     Some(spans)
 }
 
 /// Applies `model` to the files of `t`; a bad model is `error.badModello`.
-pub fn applica(model: &str, mut t: Tabella) -> Result<Applicato> {
+pub fn apply(model: &str, mut t: Table) -> Result<Applied> {
     let re = compile(model)?;
     let mut positions = Vec::with_capacity(t.campioni.len());
     let mut unmatched = Vec::new();
@@ -224,8 +224,8 @@ pub fn applica(model: &str, mut t: Tabella) -> Result<Applicato> {
             c.replicate = r;
         }
     }
-    Ok(Applicato {
-        tabella: t,
+    Ok(Applied {
+        table: t,
         positions,
         unmatched,
     })
@@ -233,14 +233,14 @@ pub fn applica(model: &str, mut t: Tabella) -> Result<Applicato> {
 
 /// The binding: `{"modello", "campioni": <campioni/2 or /3>}` or `{"modello", "files":[{"name","sha256","kind"}]}` (proposed from the names first)
 /// → `{"campioni":<campioni/3>,"posizioni":[[{"campo","fine","inizio"}]],"senza_corrispondenza":[index]}`.
-pub fn applica_modello(input: &str) -> Result<String> {
+pub fn apply_model(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let model = v
         .get("modello")
         .and_then(|x| x.str())
         .ok_or_else(|| Error::new("error.badModello"))?;
     let t = match v.get("campioni") {
-        Some(d) => tabella_da_value(d)?,
+        Some(d) => table_from_value(d)?,
         None => {
             let s = |f: &crate::json::Value, k: &str| {
                 f.get(k).and_then(|x| x.str()).unwrap_or("").to_string()
@@ -252,15 +252,15 @@ pub fn applica_modello(input: &str) -> Result<String> {
                 .iter()
                 .map(|f| (s(f, "name"), s(f, "sha256"), s(f, "kind")))
                 .collect();
-            Tabella {
+            Table {
                 campioni: proponi(&files),
                 colonne: Vec::new(),
             }
         }
     };
-    let a = applica(model, t)?;
+    let a = apply(model, t)?;
     let mut j = Out::default();
-    j.raw("{\"campioni\":").raw(&to_json3(&a.tabella));
+    j.raw("{\"campioni\":").raw(&to_json3(&a.table));
     j.raw(",\"posizioni\":[");
     for (i, x) in a.positions.iter().enumerate() {
         j.raw(if i > 0 { ",[" } else { "[" });

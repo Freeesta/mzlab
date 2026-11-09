@@ -22,7 +22,7 @@ def repo(tmp_path, monkeypatch):
 
 def test_no_repository_gives_none(tmp_path, monkeypatch):
     monkeypatch.setenv("MZLAB_DATI", str(tmp_path / "vuoto"))
-    monkeypatch.setattr(dp, "_candidati", lambda: [tmp_path / "vuoto"])
+    monkeypatch.setattr(dp, "_candidates", lambda: [tmp_path / "vuoto"])
     assert dp.radice() is None and dp.percorso("dati/HRMS") is None
 
 
@@ -37,8 +37,8 @@ def test_layout_is_found(repo):
 
 
 def test_old_layout_is_not_a_repository_and_missing_paths_are_none(repo):
-    for vecchio in ("mzML/B_FullMass-t0.mzML", "dati_formati/thermo_raw/a.raw", "scratchpad/x.json"):
-        _tocca(repo, vecchio)
+    for old in ("mzML/B_FullMass-t0.mzML", "dati_formati/thermo_raw/a.raw", "scratchpad/x.json"):
+        _tocca(repo, old)
     assert dp.radice() is None
     _tocca(repo, "dati/INDICE.md")
     assert dp.percorso("dati/3200 qtrap/mzML/B_FullMass-t0.mzML") is None
@@ -50,14 +50,14 @@ def test_only_the_resolver_reads_the_data_env_and_legacy_names():
     import re
     cattivi = re.compile(r"environ[^\n]*(MZLAB|QQQ)_DATI|var(_os)?\(\"(MZLAB|QQQ)_DATI|get_env\(\"DATI|dati_formati|3200 qtrap/wiff inquinanti")
     ok = {"dati_percorsi.py", "dati_percorsi.rs", "test_dati_percorsi.py"}
-    trovati = []
+    found = []
     for sub in ("tools", "tests", "tests_e2e", "crates"):
         for p in (ROOT / sub).rglob("*"):
             if p.suffix not in {".py", ".rs"} or p.name in ok or "target" in p.parts or "golden" in p.parts:
                 continue
             if cattivi.search(p.read_text(encoding="utf-8", errors="ignore")):
-                trovati.append(str(p.relative_to(ROOT)))
-    assert not trovati, trovati
+                found.append(str(p.relative_to(ROOT)))
+    assert not found, found
 
 
 def test_moved_folders_are_found_in_both_layouts(repo):
@@ -79,8 +79,8 @@ def test_moved_folders_are_found_in_both_layouts(repo):
         ("coordinamento/documenti/paper/p.md", "studio/paper/p.md"),
         ("esperimenti/altro/degdma/FILE.md", "studio/degdma/FILE.md"),
     ]
-    for novo, vecchio in pairs:
+    for novo, old in pairs:
         _tocca(repo, novo)
-        assert dp.percorso(vecchio) == repo / novo and dp.percorso(novo) == repo / novo
+        assert dp.percorso(old) == repo / novo and dp.percorso(novo) == repo / novo
     assert dp.percorso("esperimenti/loc_2026-10-22_x/manca.md") is None
     assert dp.percorso("coordinamento/CODA.md") is None

@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 
-use mzlab_core::mzmlvalida::{analizza, ChromInfo, Item, SpecInfo};
+use mzlab_core::mzmlvalida::{analyze, ChromInfo, Item, SpecInfo};
 
 #[derive(Default, Clone, Copy)]
 struct Dev {
@@ -191,7 +191,7 @@ fn options() -> Result<Options, String> {
 fn load(path: &str) -> Result<(Vec<SpecInfo>, Vec<ChromInfo>), String> {
     let (mut specs, mut chroms) = (Vec::new(), Vec::new());
     let f = File::open(path).map_err(|e| format!("{path}: {e}"))?;
-    analizza(f, &mut |i| match i {
+    analyze(f, &mut |i| match i {
         Item::Spectrum(s) => specs.push(s),
         Item::Chromatogram(c) => chroms.push(c),
     })
@@ -239,7 +239,7 @@ fn run(o: Options) -> Result<i32, String> {
     );
     let mut n_b = (0, 0);
     let f = File::open(&o.files[1]).map_err(|e| format!("{}: {e}", o.files[1]))?;
-    analizza(f, &mut |item| match item {
+    analyze(f, &mut |item| match item {
         Item::Spectrum(b) => {
             n_b.0 += 1;
             let i = if by_scan {

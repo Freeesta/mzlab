@@ -34,7 +34,7 @@ fn pairs(d: &Path) -> Vec<(PathBuf, PathBuf)> {
 }
 
 fn doc(p: &Path) -> String {
-    raw::metodo(BufReader::new(File::open(p).unwrap()), "sample.raw").unwrap()
+    raw::method(BufReader::new(File::open(p).unwrap()), "sample.raw").unwrap()
 }
 
 fn value_after(head: &str, accession: &str) -> Option<String> {
@@ -192,7 +192,7 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
         let reader =
             opentfraw::RawFileReader::open(BufReader::new(File::open(&raw_path).unwrap())).unwrap();
         let v = json::parse(doc(&raw_path).as_bytes()).unwrap();
-        let campi = v.get("campi").map_or(&[][..], |c| c.arr());
+        let fields = v.get("campi").map_or(&[][..], |c| c.arr());
         let warned = v
             .get("avvisi")
             .map_or(&[][..], |a| a.arr())
@@ -222,7 +222,7 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
             if !has_value || name.is_empty() {
                 continue;
             }
-            let found = campi.iter().any(|c| {
+            let found = fields.iter().any(|c| {
                 c.get("origine").and_then(|o| o.str()) == Some("thermo-raw:StatusLog")
                     && c.get("chiave")
                         .and_then(|k| k.str())

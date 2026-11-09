@@ -313,7 +313,7 @@ fn run_cached(d: &Path, plan: &str) -> String {
 }
 
 /// The profile files of `tools/dati_sintetici.py` (`P_FullMass-t*.mzML`) in a new folder; `None` without python3 and numpy.
-fn sintetici_profilo() -> Option<PathBuf> {
+fn synthetic_profile() -> Option<PathBuf> {
     let d = std::env::temp_dir().join(format!("mzlab_centroid_p_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
@@ -341,7 +341,7 @@ fn sintetici_profilo() -> Option<PathBuf> {
 #[test]
 fn the_step_and_the_engine_call_of_the_browser_give_the_same_bytes_on_the_synthetic_profile_files()
 {
-    let Some(d) = sintetici_profilo() else { return };
+    let Some(d) = synthetic_profile() else { return };
     for t in [0, 15, 60] {
         let name = format!("P_FullMass-t{t}.mzML");
         let src = std::fs::read(d.join(&name)).unwrap();

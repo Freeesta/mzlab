@@ -28,9 +28,9 @@ fn run(extra: &[&str]) -> String {
 fn the_ester_bond_is_a_hypothesis_of_the_node_and_the_key_keeps_the_view_last() {
     let base = run(&[]);
     let t = run(&["--rotture"]);
-    let (prefisso, vista) = base.trim_end().split_once(",\"vista\":").unwrap();
-    assert!(t.starts_with(prefisso));
-    assert!(t.trim_end().ends_with(&format!(",\"vista\":{vista}")));
+    let (prefix, view) = base.trim_end().split_once(",\"vista\":").unwrap();
+    assert!(t.starts_with(prefix));
+    assert!(t.trim_end().ends_with(&format!(",\"vista\":{view}")));
     let v = mzlab_core::json::parse(t.as_bytes()).unwrap();
     let r = v.get("rotture").unwrap();
     assert_eq!(r.get("versione").unwrap().f64(), Some(1.0));

@@ -260,7 +260,7 @@ fn warnings_cover_the_design() {
 }
 
 fn two_conditions(
-    cs: Vec<mzlab_core::campioni::Campione>,
+    cs: Vec<mzlab_core::campioni::Sample>,
     rows: Vec<(mzlab_feat::gruppi::RowMeta, Vec<(u8, f64)>)>,
 ) -> GroupTable {
     table(rows, cs.len())
@@ -373,7 +373,7 @@ fn factors_must_be_strings() {
 }
 
 /// Permutes the columns (and the files, and the files named by the MS2 links) the same way.
-fn permuted(perm: &[usize]) -> (GroupTable, Vec<mzlab_core::campioni::Campione>, GroupOpts) {
+fn permuted(perm: &[usize]) -> (GroupTable, Vec<mzlab_core::campioni::Sample>, GroupOpts) {
     let (tb, cs, opts) = scenario();
     let mut t = permute(&tb, perm);
     for m in &mut t.rows {
@@ -439,7 +439,7 @@ fn columns_in_any_order_give_the_same_bytes() {
 /// 2 000 rows x 60 files (6 conditions of 10 files): by hand with `cargo test --release -- --ignored gruppi_speed`.
 #[test]
 #[ignore]
-fn gruppi_speed() {
+fn groups_speed() {
     let mut v = vec![
         file("t0.mzML", "t0", "", Some(0.0), 1),
         file("blank.mzML", "blank", "", None, 2),

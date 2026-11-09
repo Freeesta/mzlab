@@ -1,5 +1,5 @@
 use super::*;
-use crate::canali::Canali;
+use crate::canali::Channels;
 use crate::iteminfo::facts_from;
 use base64::Engine;
 
@@ -55,43 +55,43 @@ fn file(pda: bool, analog: bool) -> Mzml<Vec<u8>> {
     Mzml::new(s, n)
 }
 
-fn canali(m: &mut Mzml<Vec<u8>>) -> (Canali, Vec<Chrom>) {
+fn channels(m: &mut Mzml<Vec<u8>>) -> (Channels, Vec<Chrom>) {
     let chroms = m.chromatograms(0).unwrap();
     let facts = facts_from(m, 0, chroms.len() as i64, false).unwrap();
-    (Canali::da(&[], &chroms, &facts, "a.mzML"), chroms)
+    (Channels::da(&[], &chroms, &facts, "a.mzML"), chroms)
 }
 
 #[test]
 fn ids_are_read_back() {
-    assert_eq!(leggi_id("uv:twc"), Some(Lettura::Twc));
-    assert_eq!(leggi_id("uv:254±4"), Some(Lettura::Nm(254.0, 4.0)));
-    assert_eq!(leggi_id("uv:254+-4.5"), Some(Lettura::Nm(254.0, 4.5)));
-    assert_eq!(leggi_id("uv:280"), Some(Lettura::Nm(280.0, 0.0)));
-    assert_eq!(leggi_id("an:3"), Some(Lettura::Analog(3)));
+    assert_eq!(read_id("uv:twc"), Some(Reading::Twc));
+    assert_eq!(read_id("uv:254±4"), Some(Reading::Nm(254.0, 4.0)));
+    assert_eq!(read_id("uv:254+-4.5"), Some(Reading::Nm(254.0, 4.5)));
+    assert_eq!(read_id("uv:280"), Some(Reading::Nm(280.0, 0.0)));
+    assert_eq!(read_id("an:3"), Some(Reading::Analog(3)));
     for no in ["tic", "uv:", "uv:x±1", "uv:254±-1", "an:x", "srm:1>2"] {
-        assert_eq!(leggi_id(no), None, "{no}");
+        assert_eq!(read_id(no), None, "{no}");
     }
 }
 
 #[test]
 fn a_file_with_uv_lists_roots_and_one_without_has_none() {
-    let (c, _) = canali(&mut file(true, true));
-    let uv = &c.v[c.trova("uv:twc").unwrap()];
+    let (c, _) = channels(&mut file(true, true));
+    let uv = &c.v[c.find("uv:twc").unwrap()];
     assert_eq!(
-        (uv.genitore, uv.famiglia, uv.spettri, uv.n),
+        (uv.parent, uv.famiglia, uv.spettri, uv.n),
         (None, Famiglia::Uv, true, 2)
     );
-    let an = &c.v[c.trova("an:1").unwrap()];
+    let an = &c.v[c.find("an:1").unwrap()];
     assert_eq!(
-        (an.genitore, an.famiglia, an.spettri),
+        (an.parent, an.famiglia, an.spettri),
         (None, Famiglia::Analog, false)
     );
-    assert_eq!(an.etichetta, "Pump Pressure (bar)");
-    assert_eq!(c.tipo.proposto, "solo-uv");
+    assert_eq!(an.label, "Pump Pressure (bar)");
+    assert_eq!(c.tipo.proposed, "solo-uv");
     // the derived channel is never listed
     assert!(c.v.iter().all(|x| !x.id.starts_with("uv:2")));
-    let (vuoto, _) = canali(&mut file(false, false));
-    assert!(vuoto
+    let (empty, _) = channels(&mut file(false, false));
+    assert!(empty
         .v
         .iter()
         .all(|x| !x.id.starts_with("uv:") && !x.id.starts_with("an:")));
@@ -100,17 +100,17 @@ fn a_file_with_uv_lists_roots_and_one_without_has_none() {
 #[test]
 fn channels_answer_what_the_old_routes_answer() {
     let mut m = file(true, true);
-    let (_, chroms) = canali(&mut m);
+    let (_, chroms) = channels(&mut m);
     assert_eq!(
-        traccia(&mut m, &chroms, "uv:twc", 2000).unwrap(),
+        trace(&mut m, &chroms, "uv:twc", 2000).unwrap(),
         pda_trace(&mut m, &chroms).unwrap()
     );
     assert_eq!(
-        traccia(&mut m, &chroms, "uv:201±1", 2000).unwrap(),
+        trace(&mut m, &chroms, "uv:201±1", 2000).unwrap(),
         pda_wavelength(&mut m, 200.0, 202.0).unwrap()
     );
     assert_eq!(
-        traccia(&mut m, &chroms, "an:1", 50).unwrap(),
+        trace(&mut m, &chroms, "an:1", 50).unwrap(),
         analog_route(&mut m, &chroms, 1, 50).unwrap()
     );
     assert_eq!(
@@ -118,7 +118,7 @@ fn channels_answer_what_the_old_routes_answer() {
         pda_spectrum(&mut m, 0.0, 0.01).unwrap()
     );
     assert_eq!(
-        traccia(&mut m, &chroms, "tic", 10).unwrap_err().key,
+        trace(&mut m, &chroms, "tic", 10).unwrap_err().key,
         "err.canali.unknown"
     );
     assert_eq!(
@@ -130,13 +130,13 @@ fn channels_answer_what_the_old_routes_answer() {
 #[test]
 fn a_file_without_uv_answers_no_pda() {
     let mut m = file(false, true);
-    let (_, chroms) = canali(&mut m);
+    let (_, chroms) = channels(&mut m);
     assert_eq!(
-        traccia(&mut m, &chroms, "uv:twc", 10).unwrap(),
+        trace(&mut m, &chroms, "uv:twc", 10).unwrap(),
         "{\"rt\":[],\"y\":[]}"
     );
     assert_eq!(
-        traccia(&mut m, &chroms, "uv:254±4", 10).unwrap_err().key,
+        trace(&mut m, &chroms, "uv:254±4", 10).unwrap_err().key,
         "err.pda.none"
     );
 }

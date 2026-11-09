@@ -96,8 +96,8 @@ fn meta_of(
     )
 }
 
-/// The reports of the jobs of the chain, as the page writes them.
-fn reports(out: &Path, plan: &str) -> Vec<String> {
+/// The reports of the steps by file of the chain (index, detection) and the detections the alignment reads.
+fn per_file(out: &Path, plan: &str) -> (Vec<String>, Vec<Vec<u8>>) {
     let (mut jobs, mut peaks) = (Vec::new(), Vec::new());
     for r in ["s_t000", "s_t010", "s_t030"] {
         let item = format!("{r}.mzML");
@@ -118,6 +118,12 @@ fn reports(out: &Path, plan: &str) -> Vec<String> {
         ));
         peaks.push(std::fs::read(out.join(det)).unwrap());
     }
+    (jobs, peaks)
+}
+
+/// The reports of the jobs of the chain, as the page writes them.
+fn reports(out: &Path, plan: &str) -> Vec<String> {
+    let (mut jobs, peaks) = per_file(out, plan);
     for (id, file) in [("ali", "ali.mzfeat"), ("gap", "gap.mzfeat")] {
         let meta = meta_of(
             out,
@@ -145,6 +151,25 @@ fn without_modules(text: &str) -> String {
     )
 }
 
+/// The record the route gives of `jobs` is the `prov.json` and the `corsa.json` of `flow run` in `out`, apart from the times; gives the prov.
+fn same_record(out: &Path, plan: &str, jobs: &[String]) -> String {
+    let mut body = Out::default();
+    body.raw("{\"plan\":")
+        .str(plan)
+        .raw(",\"registry\":")
+        .raw(&registry_json(&crate::flow::steps()));
+    body.raw(",\"jobs\":[").raw(&jobs.join(",")).raw("]}");
+    let prov = mzlab_core::flow::sched_route("record_prov", &body.0).unwrap();
+    let native = without_modules(&std::fs::read_to_string(out.join("prov.json")).unwrap());
+    assert_eq!(untimed(&prov), untimed(&native));
+    let mut c = Out::default();
+    c.raw("{\"prov\":").str(&prov).raw(",\"uscite\":[]}");
+    let run = mzlab_core::flow::sched_route("record_corsa", &c.0).unwrap();
+    let native = without_modules(&std::fs::read_to_string(out.join("corsa.json")).unwrap());
+    assert_eq!(untimed(&run), untimed(&native));
+    prov
+}
+
 #[test]
 fn the_reports_of_the_base_chain_give_the_prov_and_the_corsa_of_flow_run() {
     let (dir, _) = fixture("record");
@@ -158,22 +183,7 @@ fn the_reports_of_the_base_chain_give_the_prov_and_the_corsa_of_flow_run() {
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let plan = std::fs::read_to_string(out.join("plan.json")).unwrap();
-    let mut body = Out::default();
-    body.raw("{\"plan\":")
-        .str(&plan)
-        .raw(",\"registry\":")
-        .raw(&registry_json(&crate::flow::steps()));
-    body.raw(",\"jobs\":[")
-        .raw(&reports(&out, &plan).join(","))
-        .raw("]}");
-    let prov = mzlab_core::flow::sched_route("record_prov", &body.0).unwrap();
-    let native = without_modules(&std::fs::read_to_string(out.join("prov.json")).unwrap());
-    assert_eq!(untimed(&prov), untimed(&native));
-    let mut c = Out::default();
-    c.raw("{\"prov\":").str(&prov).raw(",\"uscite\":[]}");
-    let corsa = mzlab_core::flow::sched_route("record_corsa", &c.0).unwrap();
-    let native = without_modules(&std::fs::read_to_string(out.join("corsa.json")).unwrap());
-    assert_eq!(untimed(&corsa), untimed(&native));
+    let prov = same_record(&out, &plan, &reports(&out, &plan));
     assert!(matches!(
         mzlab_core::json::parse(prov.as_bytes()),
         Ok(Value::Obj(_))
@@ -204,4 +214,32 @@ fn prov_names_the_executable_that_ran() {
         Some(mzlab_core::budget::sha256_hex(&exe).as_str())
     );
     assert!(agent.get("target").is_some());
+}
+
+#[test]
+fn a_run_with_a_failed_job_gives_its_record_with_the_error() {
+    let (dir, _) = fixture("record_failed");
+    // a negative file in a positive series: the alignment refuses it and the gap filling does not run
+    for (k, n) in ["s_t000", "s_t010", "s_t030"].iter().enumerate() {
+        let pol = if k == 1 { -1 } else { 1 };
+        let text = crate::flow_bentazone_tests::mzml(k, pol, true);
+        std::fs::write(dir.join("data").join(format!("{n}.mzML")), text).unwrap();
+    }
+    let out = dir.join("out");
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&dir.join("data")),
+        "--out",
+        p(&out),
+    ]);
+    assert_eq!(o.code, 1, "{}", o.stderr);
+    let plan = std::fs::read_to_string(out.join("plan.json")).unwrap();
+    // the page reports the failed job with the error and the parameters the scheduler names (`jobs`); the gap filling did not run
+    let (mut jobs, _) = per_file(&out, &plan);
+    jobs.push(
+        r#"{"instance":"ali","item":null,"error_key":"err.flow.align.polarity","params":{"positive":"s_t000.mzML, s_t030.mzML","negative":"s_t010.mzML"}}"#.into(),
+    );
+    let prov = same_record(&out, &plan, &jobs);
+    assert!(prov.contains("err.flow.align.polarity"), "{prov}");
 }

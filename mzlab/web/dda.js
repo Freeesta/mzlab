@@ -105,13 +105,15 @@ const DDA = (() => {
       const mixed = p._mixed ?? (p._mixed = D.sid.map((/** @type {unknown} */ _, /** @type {number} */ i) => i).filter((/** @type {number} */ i) => D.lo[i] != null && D.lo[i] <= p.ion && D.hi[i] >= p.ion));
       return mixed.length ? txt + " " + I18N.t("dda.mixed", { n: mixed.length }) : txt;
     }
-    return I18N.t("dda.click");
+    return window.DDAMARK ? window.DDAMARK.why(_in, p) : I18N.t("dda.click");
   }
+  // the MS2 panel reads its scans by id from the Full Scan item above it (ctl() keeps a spectrum on a ticked Full Scan item; another DDA file may be shown since)
+  const own = (/** @type {Pannello} */ s2, /** @type {FileAperto} */ f) => { if (s2.k !== f.k) { s2.k = f.k; ctl(s2); } };
   async function selectMs2(/** @type {Pannello} */ s2, /** @type {string | number} */ sid, /** @type {Bag} */ o = {}) {
     try {
       const s1 = byId(s2.dda); if (!s1) return false;
       const c = s1.link != null ? byId(s1.link) : null, f = E.files[s1.k];
-      const D = await get(f.k), i = D.idx.get(sid); if (i == null) return false;
+      const D = await get(f.k), i = D.idx.get(sid); if (i == null) return false; own(s2, f);
       s2.sid = sid; s2.avg = null; s2.r0 = D.rt[i] - 1e-4; s2.r1 = D.rt[i] + 1e-4;
       s1.ddaSel = { sid, i };
       const dec = HR.prof(E.files[/** @type {number} */ (s2.k)], 2).dec;
@@ -141,9 +143,12 @@ const DDA = (() => {
   async function step(/** @type {Pannello} */ s2, /** @type {number} */ d) {
     try {
       const s1 = byId(s2.dda), f = E.files[s1.k], D = await get(f.k);
-      if (s2.sid == null) {                                                // nothing shown yet (an ion without MS2 of its own): the first / last scan that holds it in its window
+      if (s2.sid == null) {                                                // nothing shown yet: the first MS2 after (before) the chromatogram cursor, else the first / last one
         const l0 = list(s2, D); if (!l0.length) return false;
-        return selectMs2(s2, D.sid[d > 0 ? l0[0] : l0[l0.length - 1]], { zoom: false });
+        const c = s1.link != null ? byId(s1.link) : null, t = c && c.cur != null ? c.cur : s1.r0;
+        let at = d > 0 ? l0[l0.length - 1] : l0[0];
+        if (t != null) { const k = d > 0 ? l0.findIndex(i => D.rt[i] >= t) : l0.length - 1 - [...l0].reverse().findIndex(i => D.rt[i] <= t); if (k >= 0 && k < l0.length) at = l0[k]; }
+        return selectMs2(s2, D.sid[at], { zoom: false });
       }
       const lst = list(s2, D), here = D.idx.get(s2.sid); let j = -1;
       if (d > 0) j = lst.find(i => i > here) ?? -1; else for (let q = lst.length - 1; q >= 0; q--) if (lst[q] < here) { j = lst[q]; break; }
@@ -201,87 +206,36 @@ const DDA = (() => {
   }
 
   // ---------------------------------------------------------------- what is drawn on top of the spectra
-  const MARK = 6;
+  // the markers (dda-marcatori.js, loaded on the first drawing of a DDA trio; the panel is drawn again once it is there)
   function decorate(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {(v: number) => number} */ X, /** @type {(v: number) => number} */ Y, /** @type {number} */ W, /** @type {Bag} */ c) {
     try {
-      if (p.dda != null) return decorateMs2(p, g, X, Y, W, c);
-      if (p.duo != null) return decorateFull(p, g, X, Y, W, c);
+      if (p.dda == null && p.duo == null) return;
+      const K = window.DDAMARK; if (!K) { carica("m:dda-marcatori.js").then(() => drawSoon(p), (/** @type {unknown} */ e) => console.info("DDA markers", e)); return; }
+      if (p.dda != null) K.ms2(_in, p, g, X, Y, W); else K.full(_in, p, g, X, Y, W, c);
     } catch (e) { console.info("DDA decorate", e); }
-  }
-  // the Full Scan: a flag over every peak that started an MS2 (only when the panel shows ONE scan), the isolation band of the chosen MS2
-  function decorateFull(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {(v: number) => number} */ X, /** @type {(v: number) => number} */ Y, /** @type {number} */ W, /** @type {Bag} */ c) {
-    const s2 = byId(p.duo), d0 = c.d0, f = c.files[0], D = ready(f.k);
-    p._a.flags = []; if (!s2 || !D || d0.sid == null || d0.scans !== 1) return;
-    const kids = D.byParent.get(d0.sid) || [], q2 = HR.prof(E.files[s2.k], 2);
-    const ac = css("--accent"), tol = (/** @type {number} */ mz) => tolOf(f, mz), here = s2.sid != null ? D.idx.get(s2.sid) : null;
-    // band of the isolation window of the chosen MS2 when its parent is this scan
-    if (here != null && D.parent[here] === d0.sid && D.lo[here] != null) {
-      const a = Math.max(M.l, X(D.lo[here])), b = Math.min(W - M.r, X(D.hi[here]));
-      if (b > a) {
-        g.save(); g.globalAlpha = 0.10; g.fillStyle = ac; g.fillRect(a, M.t, b - a, p._a.H - M.t - M.b); g.globalAlpha = 1;
-        g.strokeStyle = ac; g.lineWidth = 1; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(D.lo[here]), M.t); g.lineTo(X(D.lo[here]), p._a.H - M.b); g.moveTo(X(D.hi[here]), M.t); g.lineTo(X(D.hi[here]), p._a.H - M.b); g.stroke();
-        const t = D.tgt[here] ?? D.prec[here]; if (t != null) { g.setLineDash([]); g.beginPath(); g.moveTo(X(t), M.t); g.lineTo(X(t), p._a.H - M.b); g.stroke(); }
-        g.restore();
-      }
-    }
-    // Nearby Precursors: peaks of this scan that were fragmented in ANOTHER scan within +-NEAR_MIN min (an open grey triangle)
-    const rt0 = D.ms1.rt[D.ms1pos.get(d0.sid)], flagged = new Set(), near = new Map();
-    kids.forEach((/** @type {number} */ j) => { const m = D.tgt[j] ?? D.prec[j]; if (m != null) { const jj = nearest(d0.mz, m); if (jj >= 0 && Math.abs(d0.mz[jj] - m) <= tol(m)) flagged.add(jj); } });
-    if (rt0 != null) {
-      const a = lowerBound(D.rt, rt0 - NEAR_MIN), b = lowerBound(D.rt, rt0 + NEAR_MIN + 1e-9);
-      for (let i = a; i < b; i++) {
-        if (D.parent[i] === d0.sid) continue;
-        const m = D.tgt[i] ?? D.prec[i]; if (m == null || m < p._a.x0 || m > p._a.x1) continue;
-        const jj = nearest(d0.mz, m); if (jj < 0 || Math.abs(d0.mz[jj] - m) > tol(m) || !(d0.y[jj] > 0) || flagged.has(jj)) continue;
-        let l = near.get(jj); if (!l) near.set(jj, l = []); l.push(i);
-      }
-    }
-    p._a.markN = kids.length + near.size;
-    const all = markOn(p), seen = (/** @type {number | string} */ k) => all || p._mk === k;           // the triangles of the peak under the pointer only, unless the switch is on
-    g.save(); g.fillStyle = ac; g.font = fpx(9.5); g.textAlign = "center";
-    const muted = css("--muted"), q2n = HR.prof(E.files[s2.k], 2);
-    near.forEach((idxs, jj) => {
-      const px = X(d0.mz[jj]), py = Math.max(M.t + MARK + 10, Math.min(Y(Math.min(d0.y[jj], p._a.ymax)), p._a.H - M.b)) - 4;
-      idxs.sort((/** @type {number} */ u, /** @type {number} */ v) => Math.abs(D.rt[u] - rt0) - Math.abs(D.rt[v] - rt0));
-      if (seen("n" + idxs[0])) { g.save(); g.strokeStyle = muted; g.lineWidth = 1.4; g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.stroke(); g.restore(); }
-      const tip = `<b>${I18N.t("dda.near.title")}</b><div class="sm">${I18N.t("dda.near.line", { n: idxs.length, min: NEAR_MIN, prec: (D.prec[idxs[0]]).toFixed(q2n.dec) })}</div><div class="sm">${I18N.t("dda.near.hint")}</div>`;
-      p._a.lbls.push({ nb: idxs, ion: D.prec[idxs[0]], x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
-    });
-    kids.forEach((/** @type {number} */ j, /** @type {number} */ n) => {
-      const m = D.tgt[j] ?? D.prec[j]; if (m == null || m < p._a.x0 || m > p._a.x1) return;
-      const px = X(m), tm = tol(m); let y0 = 0;
-      for (let i = lowerBound(d0.mz, m - tm * 1.001 - 1e-9); i < d0.mz.length && d0.mz[i] <= m + tm * 1.001 + 1e-9; i++) if (Math.abs(d0.mz[i] - m) <= tm && d0.y[i] > y0) y0 = d0.y[i];      // the peaks inside the tolerance (m/z is ascending), the exact test kept
-      const py = Math.max(M.t + MARK + 10, Math.min(Y(Math.min(y0, p._a.ymax)), p._a.H - M.b)) - 4;                // above the peak, at the top edge when the peak is cut
-      const chosen = j === here;
-      if (seen(j) || chosen) { g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.fill(); g.fillText(String(n + 1), px, py - MARK - 6); }
-      if (chosen) { g.strokeStyle = ac; g.lineWidth = 1.5; g.strokeRect(px - MARK - 2, py - MARK - 5, 2 * MARK + 4, MARK + 7); }
-      const dec = q2.dec, tip = `<b>${I18N.t("dda.kid.title", { i: n + 1, n: kids.length })}</b><div class="sm">${I18N.t("dda.kid.prec", { prec: (D.prec[j] ?? m).toFixed(dec) })}${D.act[j] ? " · " + D.act[j] : ""}${D.ce[j] != null ? " · " + (D.nce ? "NCE " + fmt1(D.ce[j]) : "CE " + fmt1(D.ce[j]) + " eV") : ""}</div><div class="sm">${I18N.t("dda.kid.hint")}</div>`;
-      p._a.flags.push({ j, px, py });
-      p._a.lbls.push({ fl: j, ion: D.prec[j], x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
-    });
-    g.restore();
-  }
-  // the MS2: a dashed line on the precursor
-  function decorateMs2(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {(v: number) => number} */ X, /** @type {(v: number) => number} */ Y, /** @type {number} */ W, /** @type {Bag} */ c) {
-    const j = p._scan; if (!j || j.prec == null || p.avg) return;
-    const ac = css("--accent"), D = ready(p.k), i = D && D.idx.get(p.sid), m = (D && D.prec[i]) ?? j.prec;
-    if (m < p._a.x0 || m > p._a.x1) return;
-    g.save(); g.strokeStyle = ac; g.fillStyle = ac; g.lineWidth = 1; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m), p._a.H - M.b); g.lineTo(X(m), M.t + 14); g.stroke(); g.setLineDash([]);
-    g.font = fpx(9.5); g.textAlign = "center"; g.fillText(I18N.t("dda.precursor"), Math.max(M.l + 26, Math.min(W - M.r - 26, X(m))), M.t + 11); g.restore();
   }
   // a click inside a flag
   function click(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number} */ py) {
     try {
       if (p.duo == null || !p._a || !p._a.lbls) return false;
-      const l = p._a.lbls.find((/** @type {Bag} */ b) => (b.fl != null || b.nb) && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h); if (!l) return false;
+      const l = p._a.lbls.find((/** @type {Bag} */ b) => (b.fl != null || b.nb) && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
       const s2 = target(p), D = ready(E.files[p.k].k); if (!s2 || !D) return false;
-      if (l.fl != null) { selectMs2(s2, D.sid[l.fl]); return true; }
+      if (!l) return peak(p, s2, D, px, py);
+      if (l.fl != null) { selectMs2(s2, D.sid[l.fl], l.keep ? { parent: false, zoom: false } : {}); return true; }      // keep: a flag of an averaged Full Scan, which stays as it is
       s2.ion = D.prec[l.nb[0]]; s2._mixed = null;                                // a peak fragmented in another scan: the closest MS2 in time, the Full Scan stays where it is
       selectMs2(s2, D.sid[l.nb[0]], { parent: false }); return true;
     } catch (e) { return fail("click", e); }
   }
 
   // ---------------------------------------------------------------- right click: average of the MS2 of an ion, follow an ion
+  // a click on a peak, away from the flags: its MS2 (dda-marcatori.js `peak`); the ruler, a measure and the waiting XIC button keep their click
+  function peak(/** @type {Bag} */ p, /** @type {Pannello} */ s2, /** @type {Bag} */ D, /** @type {number} */ px, /** @type {number} */ py) {
+    const X = window.XICBTN; if (!window.DDAMARK || !p._a.snap || p.rul || (p.meas && p.meas.ref != null) || (X && X.pending(p))) return false;
+    const b = p._a.snap(px), h = b && DDAMARK.peak(_in, p, b.m); if (!h) return false;
+    if (X) X.click(p, px, py);                                                // the peak is also the one of the XIC button, as a plain click makes it
+    if (h.near) { s2.ion = D.prec[h.j]; s2._mixed = null; nearMsg(I18N.t("dda.peak.near", { d: Math.abs(D.rt[h.j] - h.rt).toFixed(2) })); }
+    selectMs2(s2, D.sid[h.j], h.keep ? { parent: false, zoom: false } : h.near ? { parent: false } : {}); return true;
+  }
   function lowerBound(/** @type {number[]} */ a, /** @type {number} */ v) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < v) lo = m + 1; else hi = m; } return lo; }
   function nearest(/** @type {number[]} */ a, /** @type {number} */ v) { if (!a.length) return -1; const i = lowerBound(a, v); if (i <= 0) return 0; if (i >= a.length) return a.length - 1; return Math.abs(a[i] - v) < Math.abs(a[i - 1] - v) ? i : i - 1; }
   // the MS2 of an ion around a retention time: within +-NEAR_MIN min, the NEAR_MAX closest in time, in order of acquisition
@@ -294,13 +248,25 @@ const DDA = (() => {
     try {
       const s2 = byId(s1.duo), f = E.files[s1.k], D = await get(f.k), l = around(D, f, ion, rt);
       if (!s2 || !l.length) return false;
-      if (l.length === 1) return selectMs2(s2, D.sid[l[0]], { parent: false, zoom: false });
+      if (l.length === 1) return selectMs2(s2, D.sid[l[0]], { parent: false, zoom: false }); own(s2, f);
       const dec = HR.prof(E.files[s2.k], 2).dec;
       s2.ion = ion; s2.sid = null; s2.avg = l.map(i => D.sid[i]); s2._mixed = null;
       s2.title = I18N.t("dda.avgTitle", { n: l.length, mz: ion.toFixed(dec) }); s2.r0 = D.rt[l[0]]; s2.r1 = D.rt[l[l.length - 1]]; ctl(s2); draw(s2); draw(s1); uiSave();
       return true;
     } catch (e) { return fail("average", e); }
   }
+  // the precursor intensity of the MS2 `idx` of D (precursor mz): the index's, else (a Thermo .raw has none) read by Rust from their parent
+  // survey scans, only those of this precursor (/api/dda_window mz&tol over the parents' RT)
+  async function pints(/** @type {number} */ k, /** @type {Bag} */ D, /** @type {number[]} */ idx, /** @type {number} */ mz, /** @type {number} */ tol) {
+    const own = (/** @type {number} */ i) => D.pint[i] || 0;
+    let r0 = Infinity, r1 = -Infinity;
+    for (const i of idx) if (D.pint[i] == null && D.prt[i] != null) { r0 = Math.min(r0, D.prt[i]); r1 = Math.max(r1, D.prt[i]); }
+    if (r0 > r1) return own;
+    const w = await J(`api/dda_window?k=${k}&r0=${r0 - 1e-3}&r1=${r1 + 1e-3}&mz=${mz}&tol=${tol}` + HR.q()), m = new Map();
+    for (const g of (w && w.groups) || []) g.sid.forEach((/** @type {number} */ s, /** @type {number} */ n) => m.set(s, g.pint[n]));
+    return (/** @type {number} */ i) => D.pint[i] ?? m.get(D.sid[i]) ?? 0;
+  }
+  const top = (/** @type {number[]} */ idx, /** @type {(i: number) => number} */ v) => idx.reduce((b, i) => (v(i) > v(b) ? i : b), idx[0]);
   // "Segui questo ione nelle MS2": its XIC appears right under the chromatogram, the Full Scan and the MS2 follow the XIC, only its MS2 are shown
   async function follow(/** @type {Bag} */ s1, /** @type {number} */ mz) {
     try {
@@ -312,7 +278,7 @@ const DDA = (() => {
       s1.link = x.id; s1.src = x.id; x.ddaFollow = true;
       relayout(); fitHost(); ctl(x); ctl(s2); draw(c);
       const lst = list(s2, D).filter(i => D.prec[i] != null && Math.abs(D.prec[i] - mz) <= tolOf(E.files[s2.k], mz));
-      if (lst.length) await selectMs2(s2, D.sid[lst.reduce((b, i) => ((D.pint[i] || 0) > (D.pint[b] || 0) ? i : b), lst[0])]);        // the most intense one
+      if (lst.length) await selectMs2(s2, D.sid[top(lst, await pints(f.k, D, lst, mz, tolOf(E.files[s2.k], mz)))]);        // the most intense one
       else { draw(s2); draw(s1); }
       draw(x); uiSave(); return true;
     } catch (e) { return fail("follow", e); }
@@ -371,7 +337,7 @@ const DDA = (() => {
   // ---------------------------------------------------------------- list of the precursors (MS2 tab of a DDA file; the MSn Browser of Thermo, simplified)
   const listMode = () => E.tab === "ms2" && tabFiles("ms2").some((/** @type {FileAperto} */ f) => f.dda) && window.ms2Exps && ms2Exps().length > 8;
   const listBlock = () => `<div class="fgh"><span>${I18N.t("dda.list.head")}</span><em>${ms2Exps().length}</em></div><div class="fl pr" style="padding:6px 8px"><button id="ddalist" type="button" title="${I18N.t("dda.list.title")}">${I18N.t("dda.list.btn")}</button></div>`;
-  // precursors grouped within the tolerance of the profile (ppm for high resolution, 0.5 Da otherwise): [{mz, n, rt0, rt1, best}]
+  // precursors grouped within the tolerance of the profile (ppm for high resolution, 0.5 Da otherwise): [{mz, n, rt0, rt1, idx}]
   function groups(/** @type {Bag} */ D, /** @type {FileAperto} */ f, /** @type {number} */ t0, /** @type {number} */ t1) {
     const idx = D.sid.map((/** @type {unknown} */ _, /** @type {number} */ i) => i).filter((/** @type {number} */ i) => D.prec[i] != null && (t0 == null || (D.rt[i] >= t0 && D.rt[i] <= t1))).sort((/** @type {number} */ a, /** @type {number} */ b) => D.prec[a] - D.prec[b]), out = [];
     let g = null;
@@ -382,9 +348,8 @@ const DDA = (() => {
     }
     return out.map(g => {
       const v = new Map(); g.idx.forEach(i => v.set(D.prec[i], (v.get(D.prec[i]) || 0) + 1));
-      const best = g.idx.reduce((b, i) => ((D.pint[i] || 0) > (D.pint[b] || 0) ? i : b), g.idx[0]);
       let rt0 = Infinity, rt1 = -Infinity; for (const i of g.idx) { const t = D.rt[i]; if (t < rt0) rt0 = t; if (t > rt1) rt1 = t; }
-      return { mz: [...v.entries()].sort((a, b) => b[1] - a[1])[0][0], n: g.idx.length, rt0, rt1, best, idx: g.idx };
+      return { mz: [...v.entries()].sort((a, b) => b[1] - a[1])[0][0], n: g.idx.length, rt0, rt1, idx: g.idx };
     });
   }
   async function openList() {
@@ -420,7 +385,7 @@ const DDA = (() => {
     return true;
   }
   async function fromList(/** @type {FileAperto} */ f, /** @type {Bag} */ g) {
-    try { await showMs2(await get(f.k), g.mz, g.best); } catch (e) { fail("fromList", e); }
+    try { const D = await get(f.k); await showMs2(D, g.mz, top(g.idx, await pints(f.k, D, g.idx, g.mz, tolOf(f, g.mz)))); } catch (e) { fail("fromList", e); }
   }
   // "Mostra le MS2 accanto alla Full Scan": the entry of the right-click menu when the MS2 panel is not there (closed, or an old notebook)
   function menuShow(/** @type {Bag} */ p) {
@@ -447,6 +412,9 @@ const DDA = (() => {
     AZIONI.registra({ id: "chrom.ddaShow", gruppo: "link", ordine: 1, viste: ["chrom"], voci: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
     AZIONI.registra({ id: "spec.ddaShow", gruppo: "link", ordine: 1, viste: ["spec"], voci: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
   }
-  return { NEAR_MIN, NEAR_MAX, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, nearest, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, openEntry, showMs2, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
+  // the MS2 started from the survey scans of [r0, r1] min, grouped by precursor (Rust: /api/dda_window)
+  const win = (/** @type {number} */ k, /** @type {number} */ r0, /** @type {number} */ r1) => memo(`ddw|${keyOf(k)}|${r0}|${r1}|${HR.q()}`, () => J(`api/dda_window?k=${k}&r0=${r0}&r1=${r1}` + HR.q()));
+  const _in = { byId, ready, preload, tolOf, nearest, lowerBound, fmt1, NEAR_MIN, win, target, selectMs2 };
+  return { NEAR_MIN, NEAR_MAX, _in, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, nearest, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, openEntry, showMs2, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
 })();
 window.DDA = DDA;

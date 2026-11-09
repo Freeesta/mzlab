@@ -28,11 +28,11 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
-        attendi(pg, "!!(window.TPDraw && TPDraw.ready())", 60000)
-        attendi(pg, "!!document.querySelector('#kframe')?.contentDocument?.querySelector('#tp-bar')", 60000)
+        wait_for_js(pg, "!!(window.TPDraw && TPDraw.ready())", 60000)
+        wait_for_js(pg, "!!document.querySelector('#kframe')?.contentDocument?.querySelector('#tp-bar')", 60000)
         for theme in ("light", "dark"):
             def th(theme=theme):
-                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme); attendi(pg, "document.documentElement.dataset.theme === %r" % theme); axe_ok(pg)
+                pg.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme); wait_for_js(pg, "document.documentElement.dataset.theme === %r" % theme); axe_ok(pg)
             step("axe outside the editor: " + theme + " theme", th)
         pg.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
         def frame_name():

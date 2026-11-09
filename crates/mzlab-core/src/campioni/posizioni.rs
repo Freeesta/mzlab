@@ -2,11 +2,11 @@
 //! time, the series prefix, the written replicate or the concentration that decided it, so the page can highlight it. Only a locating step: it
 //! never changes a proposed value, and a field whose part cannot be found has no span.
 
-use super::Campione;
+use super::Sample;
 
 /// The part of the name that decided `field` (`tipo`, `tipo_bianco`, `tempo`, `serie`, `replica`, `concentrazione`).
 #[derive(Debug, Clone, PartialEq)]
-pub struct Posizione {
+pub struct Position {
     pub field: &'static str,
     pub start: usize,
     pub end: usize,
@@ -14,9 +14,9 @@ pub struct Posizione {
 
 /// One file with what `proponi` proposes and why.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Proposta {
-    pub campione: Campione,
-    pub positions: Vec<Posizione>,
+pub struct Proposal {
+    pub sample: Sample,
+    pub positions: Vec<Position>,
 }
 
 /// The spans found before the series and the replicates are known.
@@ -25,7 +25,7 @@ pub struct Spans {
     /// Characters of the folders before the file name: the stem starts here.
     off: usize,
     stem: Vec<char>,
-    items: Vec<Posizione>,
+    items: Vec<Position>,
 }
 
 const BLANK_WORDS: [&str; 3] = ["blank", "blk", "bianco"];
@@ -42,8 +42,8 @@ const STD_WORDS: [&str; 10] = [
     "curva",
 ];
 
-fn push(v: &mut Vec<Posizione>, field: &'static str, start: usize, end: usize) {
-    v.push(Posizione { field, start, end });
+fn push(v: &mut Vec<Position>, field: &'static str, start: usize, end: usize) {
+    v.push(Position { field, start, end });
 }
 
 /// The first alphanumeric run of `low` equal to one of `words`, or one of them followed by digits only.
@@ -157,11 +157,7 @@ fn conc_span(s: &[char], conc: f64, unit: Option<&str>) -> Option<(usize, usize)
 }
 
 /// The span that decided the role: its word, or the time for a time zero.
-fn kind_span(
-    low: &[char],
-    c: &Campione,
-    by_time: Option<(usize, usize)>,
-) -> Option<(usize, usize)> {
+fn kind_span(low: &[char], c: &Sample, by_time: Option<(usize, usize)>) -> Option<(usize, usize)> {
     let words: &[&str] = match c.kind.as_str() {
         "infusion" => &["infusion", "infusione", "fia"],
         "dark" => &["dark", "buio", "adsorption"],
@@ -183,7 +179,7 @@ fn kind_span(
 }
 
 /// The word that gave the kind of blank (`solv…` or `proc…`).
-fn blank_span(low: &[char], c: &Campione) -> Option<(usize, usize)> {
+fn blank_span(low: &[char], c: &Sample) -> Option<(usize, usize)> {
     let pre = match c.blank_kind.as_deref() {
         Some("solvent") => "solv",
         Some("wash") => "wash",
@@ -214,7 +210,7 @@ fn base_len(name: &str) -> usize {
 }
 
 /// The spans of the role, the blank kind, the time and the concentration of a file; `time` is the span of the time in the stem.
-pub fn of_file(name: &str, c: &Campione, stem: &str, time: Option<(usize, usize)>) -> Spans {
+pub fn of_file(name: &str, c: &Sample, stem: &str, time: Option<(usize, usize)>) -> Spans {
     let chars: Vec<char> = name.chars().collect();
     let low: Vec<char> = name.to_lowercase().chars().collect();
     let stem_c: Vec<char> = stem.chars().collect();
@@ -256,7 +252,7 @@ pub fn of_file(name: &str, c: &Campione, stem: &str, time: Option<(usize, usize)
 
 impl Spans {
     /// Adds the series (the prefix of the stem that `c.series` names) and the written replicate `(2)`, in the order of the fields.
-    pub fn finish(mut self, c: &Campione, written_replicate: bool) -> Vec<Posizione> {
+    pub fn finish(mut self, c: &Sample, written_replicate: bool) -> Vec<Position> {
         if !self.ok {
             return Vec::new();
         }
@@ -290,8 +286,8 @@ impl Spans {
 }
 
 /// `{"campioni":<campioni/2>,"posizioni":[[{"campo","inizio","fine"}]]}`: one list of spans per file, in the order of the files.
-pub fn proposte_json(p: &[Proposta]) -> String {
-    let cs: Vec<Campione> = p.iter().map(|x| x.campione.clone()).collect();
+pub fn proposals_json(p: &[Proposal]) -> String {
+    let cs: Vec<Sample> = p.iter().map(|x| x.sample.clone()).collect();
     let mut j = crate::json::Out::default();
     j.raw("{\"campioni\":")
         .raw(&super::to_json(&cs))

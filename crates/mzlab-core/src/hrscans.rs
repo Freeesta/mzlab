@@ -24,7 +24,7 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         self.prime_steps(mzml)?;
-        self.con_opz(q, |r| r.mzml_route_in(path, q, mzml))
+        self.with_opts(q, |r| r.mzml_route_in(path, q, mzml))
     }
 
     fn mzml_route_in<M: Scansioni + ?Sized>(&mut self, path: &str, q: &Query, mzml: &mut M) -> Result<Option<String>> {
@@ -40,6 +40,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/scan" => self.scan_route(q, mzml),
             "/api/scanavg" => self.scanavg_route(q, mzml),
             "/api/msntree" => self.msntree_route(q, mzml),
+            "/api/dda_window" => self.dda_window_src(q, mzml),
             _ => Ok(None),
         }
     }

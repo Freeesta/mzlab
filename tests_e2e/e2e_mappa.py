@@ -27,7 +27,7 @@ try:
         box = lambda: pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
         at = lambda fx, fy: (lambda c: (c[0] + c[2] * fx, c[1] + c[3] * fy))(box())
         z = lambda: pg.evaluate(f"[{M}.zoom,{M}.zoomY]")
-        def rclick(x, y): pg.mouse.click(x, y, button="right"); attendi(pg, CTX_OPEN)
+        def rclick(x, y): pg.mouse.click(x, y, button="right"); wait_for_js(pg, CTX_OPEN)
         def moved(prev, axis):
             """Wait until the zoom of one axis (0 = RT, 1 = m/z) differs from `prev`."""
             pg.wait_for_function(f"function (a) {{ return JSON.stringify([{M}.zoom, {M}.zoomY][a[0]]) !== JSON.stringify(a[1]); }}", arg=[axis, prev])
@@ -38,7 +38,7 @@ try:
         def wheel():
             x, y = at(.5, .45); pg.mouse.move(x, y)
             for _ in range(3): ctrl_wheel(pg, 0, -200); frames(pg, 2)
-            attendi(pg, ZSET); zz = z(); assert zz[0] and zz[1], zz
+            wait_for_js(pg, ZSET); zz = z(); assert zz[0] and zz[1], zz
             pg.wait_for_function(f"!!({M}._mz.reg && {M}._mz.reg.nrt > 1)", timeout=15000)     # true zoom: the region on new bins
             reg = pg.evaluate(f"[{M}._mz.reg.nrt,{M}._mz.reg.nmz,{M}._mz.reg.dmz]"); assert reg[2] <= 1 and reg[1] <= 1000 and reg[0] <= 1000, reg     # never coarser than the 1 Da of the whole map (LR cells are nominal masses)
             zy = z()[1]; pg.keyboard.down("Shift"); pg.mouse.wheel(0, -200); pg.keyboard.up("Shift"); moved(zz[0], 0)
@@ -51,21 +51,21 @@ try:
             pg.mouse.move(x0, y0); pg.mouse.down(); pg.mouse.move(x1, y1, steps=6); pg.mouse.up()
             pg.wait_for_function(f"function (b) {{ const z = {M}.zoom, y = {M}.zoomY; return z && y && z[1] - z[0] < b[0][1] - b[0][0] && y[1] - y[0] < b[1][1] - b[1][0]; }}", arg=before)
             after = z(); assert after[0][1] - after[0][0] < before[0][1] - before[0][0] and after[1][1] - after[1][0] < before[1][1] - before[1][0], (before, after)
-            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Backspace"); attendi(pg, ZNULL)
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Backspace"); wait_for_js(pg, ZNULL)
             assert z() == [None, None], z()                                                     # Backspace = whole view
-            pg.keyboard.press("Control+z"); attendi(pg, M + ".zoom!==null"); assert z() == after, (z(), after)      # Ctrl+Z takes the box zoom back
-            pg.keyboard.press("Backspace"); attendi(pg, M + ".zoom===null")
-            pg.keyboard.press("0"); attendi(pg, ZNULL); assert z() == [None, None], z()
-            pg.mouse.move(*at(.5, .5)); ctrl_wheel(pg, 0, -300); attendi(pg, f"{M}.zoom"); assert z()[0]
-            pg.click(".pnl.map [data-a=fit]"); attendi(pg, ZNULL); assert z() == [None, None], z()
+            pg.keyboard.press("Control+z"); wait_for_js(pg, M + ".zoom!==null"); assert z() == after, (z(), after)      # Ctrl+Z takes the box zoom back
+            pg.keyboard.press("Backspace"); wait_for_js(pg, M + ".zoom===null")
+            pg.keyboard.press("0"); wait_for_js(pg, ZNULL); assert z() == [None, None], z()
+            pg.mouse.move(*at(.5, .5)); ctrl_wheel(pg, 0, -300); wait_for_js(pg, f"{M}.zoom"); assert z()[0]
+            pg.click(".pnl.map [data-a=fit]"); wait_for_js(pg, ZNULL); assert z() == [None, None], z()
         step("box zoom, Backspace = whole view, 0 and the button = whole view", boxz)
         def full():
-            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); attendi(pg, f"{M}.el.classList.contains('max') && {M}.el.classList.contains('mzmir')")
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); wait_for_js(pg, f"{M}.el.classList.contains('max') && {M}.el.classList.contains('mzmir')")
             assert pg.evaluate(f"{M}.el.classList.contains('max') && {M}.el.classList.contains('mzmir')")
             x, y = at(.5, .5); pg.mouse.move(x, y); pg.mouse.move(x + 3, y + 2)
             pg.wait_for_function(f"!!({M}._mz.spec && {M}._mz.xic)", timeout=15000)
-            attendi(pg, f"[{M}._mz.sp.clientWidth,{M}._mz.sp.clientHeight,{M}._mz.xc.clientWidth,{M}._mz.xc.clientHeight,{M}.cv.clientHeight].every(v => v > 100) && {M}._mz.spec.sid != null")
-            attendi(pg, "(t => !!t && t.innerText.includes('intensity'))(document.querySelector('.pnl.map .tip'))")
+            wait_for_js(pg, f"[{M}._mz.sp.clientWidth,{M}._mz.sp.clientHeight,{M}._mz.xc.clientWidth,{M}._mz.xc.clientHeight,{M}.cv.clientHeight].every(v => v > 100) && {M}._mz.spec.sid != null")
+            wait_for_js(pg, "(t => !!t && t.innerText.includes('intensity'))(document.querySelector('.pnl.map .tip'))")
             sz = pg.evaluate(f"[{M}._mz.sp.clientWidth,{M}._mz.sp.clientHeight,{M}._mz.xc.clientWidth,{M}._mz.xc.clientHeight,{M}.cv.clientHeight]")
             assert all(v > 100 for v in sz), sz
             ali = pg.evaluate(f"(()=>{{const s={M}._mz;return [s.sp.getBoundingClientRect().top-{M}.cv.getBoundingClientRect().top, s.xc.getBoundingClientRect().left-{M}.cv.getBoundingClientRect().left]}})()")
@@ -90,21 +90,21 @@ try:
         step("arrows: next scan, one bin, Shift = apex of the XIC / next peak of the spectrum", keys)
         def lock():
             x, y = at(.4, .5); rclick(x, y)
-            pg.click("#ctx [role=menuitemcheckbox]"); attendi(pg, f"!!{M}._mz.lock")                  # right click = the menu; «Lock the sight» is in it
+            pg.click("#ctx [role=menuitemcheckbox]"); wait_for_js(pg, f"!!{M}._mz.lock")                  # right click = the menu; «Lock the sight» is in it
             lk = pg.evaluate(f"{M}._mz.lock"); assert lk, lk
             pg.mouse.move(x + 80, y + 40); frames(pg, 4); assert pg.evaluate(f"MAPPA.point({M})") == lk          # the mouse is free, the point stays
             assert pg.evaluate(f"!!{M}._mz.lock && !!{M}._mz.dot")
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"function (l) {{ return {M}._mz.lock && {M}._mz.lock.mz > l.mz; }}", arg=lk); lk2 = pg.evaluate(f"{M}._mz.lock"); assert lk2["mz"] > lk["mz"], (lk, lk2)   # arrows move the locked point
-            pg.keyboard.press("l"); attendi(pg, f"{M}._mz.lock == null"); assert pg.evaluate(f"{M}._mz.lock") is None
-            rclick(x, y); pg.click("#ctx [role=menuitemcheckbox]"); attendi(pg, f"!!{M}._mz.lock")
-            rclick(x, y); pg.click("#ctx [role=menuitemcheckbox]"); attendi(pg, f"{M}._mz.lock == null")
+            pg.keyboard.press("l"); wait_for_js(pg, f"{M}._mz.lock == null"); assert pg.evaluate(f"{M}._mz.lock") is None
+            rclick(x, y); pg.click("#ctx [role=menuitemcheckbox]"); wait_for_js(pg, f"!!{M}._mz.lock")
+            rclick(x, y); pg.click("#ctx [role=menuitemcheckbox]"); wait_for_js(pg, f"{M}._mz.lock == null")
             assert pg.evaluate(f"{M}._mz.lock") is None                                          # the same item unlocks
-            pg.keyboard.down("Shift"); pg.mouse.click(x, y, button="right"); pg.keyboard.up("Shift"); attendi(pg, "!!document.querySelector('dialog[open]')")
+            pg.keyboard.down("Shift"); pg.mouse.click(x, y, button="right"); pg.keyboard.up("Shift"); wait_for_js(pg, "!!document.querySelector('dialog[open]')")
             assert pg.evaluate("!!document.querySelector('dialog[open]')"), "Shift + right click = the XIC dialog"
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog[open]')")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog[open]')")
         step("lock: right click and L, arrows move it, the mouse is free; Shift + right click = XIC", lock)
         def leave():
-            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); attendi(pg, f"!{M}.el.classList.contains('max') && !{M}.el.classList.contains('mzmir')")
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); wait_for_js(pg, f"!{M}.el.classList.contains('max') && !{M}.el.classList.contains('mzmir')")
             assert not pg.evaluate(f"{M}.el.classList.contains('max')") and not pg.evaluate(f"{M}.el.classList.contains('mzmir')")
         step("F again: back in the page, sight off", leave)
         def diff():
@@ -122,7 +122,7 @@ try:
             pg.wait_for_function(f"MAPPA.diffOpt().thr===0.05 && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
             pg.fill(".pnl.map [data-mz=thr]", "2"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change")
             pg.wait_for_function(f"MAPPA.diffOpt().thr===0.02 && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
-            pg.click(".pnl.map [data-a=cpar]"); attendi(pg, f"!{M}._parOpen")                                   # close «Options»: the popover would cover the map
+            pg.click(".pnl.map [data-a=cpar]"); wait_for_js(pg, f"!{M}._parOpen")                                   # close «Options»: the popover would cover the map
         step("difference t30 - t0: tolerance in RT, Okabe-Ito colours, increases only and the switch for the decreases, noise threshold", diff)
         def points():
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); frames(pg, 3)
@@ -141,7 +141,7 @@ try:
             assert top["dm"] == 0 and abs(oth["dm"] - (oth["mz"] - top["mz"])) < 1e-6 and rows[2]["dm"] == 0, rows
             assert all(r["ib"] is not None for r in rows) and all(r["sn"] is not None for r in rows[:2]) and abs(rows[0]["d"] - (rows[0]["ia"] - rows[0]["ib"])) < 1e-3
             assert pg.locator(".pnl.map .mztab tbody tr[data-i]").count() == 3 and pg.locator(".pnl.map .mztab tbody tr.mzgr").count() == 1      # three points; the two of one group sit under a group row
-            pg.click(".pnl.map .mztab a[data-dm]"); attendi(pg, "(i => !!i && i.value !== '')(document.querySelector('#calcin'))")                                    # the Δm opens the neutral losses, filtered
+            pg.click(".pnl.map .mztab a[data-dm]"); wait_for_js(pg, "(i => !!i && i.value !== '')(document.querySelector('#calcin'))")                                    # the Δm opens the neutral losses, filtered
             v = pg.evaluate("(()=>{const i=document.querySelector('#calcin');return i&&i.value})()")
             assert v and abs(float(v) - abs(oth["dm"])) < 0.06, (v, oth["dm"])
             pg.screenshot(path=SH + "mappa_punti.png")
@@ -152,20 +152,30 @@ try:
             head = [c[1] for c in rows[0] if c]; assert len(rows) == 4 and "m/z" in head and "Δm" in head, rows[:2]
             assert len(xlsx_sheets(path)) == 3, xlsx_sheets(path)                                              # points + metadata + provenance
         step("the table goes to Excel with a metadata sheet", excel)
+        def rove():
+            R = ".pnl.map .mztab tbody tr[data-i]"
+            tabs = lambda: pg.evaluate(f"[...document.querySelectorAll('{R}')].map(t => t.tabIndex)")
+            assert sorted(tabs()) == [-1, -1, 0], ("the table is one tab stop", tabs())
+            pg.evaluate(f"[...document.querySelectorAll('{R}')].find(t => t.tabIndex === 0).focus()")         # the selected row, or the first
+            at = lambda: pg.evaluate(f"[...document.querySelectorAll('{R}')].indexOf(document.activeElement)")
+            pg.keyboard.press("Home"); assert at() == 0; pg.keyboard.press("ArrowDown"); assert at() == 1 and tabs()[1] == 0, ("ArrowDown moves to the next row", at(), tabs())
+            pg.keyboard.press("End"); assert at() == 2; pg.keyboard.press("ArrowDown"); assert at() == 2, "the last row stays"
+            pg.keyboard.press("Home"); assert at() == 0 and sorted(tabs()) == [-1, -1, 0], ("Home goes to the first, still one stop", tabs())
+        step("the table of the points is one tab stop; arrows, Home and End move between rows", rove)
         def persist():
             pg.locator(".pnl.map .mztab tbody input[data-note]").first.fill("prova"); pg.dispatch_event(".pnl.map .mztab tbody input[data-note] >> nth=0", "change")
-            attendi(pg, f"MAPPA.pts({M}).some(q=>q.note==='prova')"); saved(pg)
+            wait_for_js(pg, f"MAPPA.pts({M}).some(q=>q.note==='prova')"); saved(pg)
             pg.reload(); ready(pg)
             pg.wait_for_function(f"!!({M} && MAPPA.pts({M}).length===3)", timeout=20000)
             assert pg.evaluate(f"MAPPA.pts({M}).some(q=>q.note==='prova')")
             pg.wait_for_selector(".pnl.map .mztab tbody tr", timeout=15000)
-            pg.locator(".pnl.map .mztab tbody tr").nth(2).click(); attendi(pg, f"!!{M}._mz.lock")                    # the row: centred and locked
+            pg.locator(".pnl.map .mztab tbody tr").nth(2).click(); wait_for_js(pg, f"!!{M}._mz.lock")                    # the row: centred and locked
             assert pg.evaluate(f"!!{M}._mz.lock")
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Delete"); pg.wait_for_function(f"MAPPA.pts({M}).length===2", timeout=5000)
         step("points saved for the pair of files (a note too) and back after a reload; row = lock; Canc removes", persist)
         def panel2d():
             pg.evaluate("localStorage.removeItem('mzlab.mappa')"); pg.evaluate(M + ".ref=''; ctl(" + M + "); draw(" + M + ")"); ready(pg)
-            pg.evaluate(M + ".corr='';" + M + "._parOpen=false; ctl(" + M + ")"); attendi(pg, f"!{M}._parOpen && {M}.el.querySelector('.hd').getBoundingClientRect().height < 60")
+            pg.evaluate(M + ".corr='';" + M + "._parOpen=false; ctl(" + M + ")"); wait_for_js(pg, f"!{M}._parOpen && {M}.el.querySelector('.hd').getBoundingClientRect().height < 60")
             hh = pg.evaluate("(()=>{const h=" + M + ".el.querySelector('.hd').getBoundingClientRect(); return h.height})()"); assert hh < 60, hh                  # one low row
             assert pg.locator(".pnl.map [data-a=cpar]").inner_text().strip().startswith("Options") and pg.locator(".pnl.map .corrw:not(.ciw)").count() == 1
             assert pg.locator(".pnl.map .mzg").count() >= 2 and pg.locator(".pnl.map .mzleg, .pnl.map .leg .mzhelp").count() == 0, "no fixed guide text under the map"
@@ -173,11 +183,11 @@ try:
             assert pg.locator(".pnl.map [data-o=view][data-v='3d']").count() == 1 and pg.locator(".pnl.map .seg [data-o=view]").count() == 0   # a single «3D» button
             assert pg.locator(".pnl.map [data-mz=pal]").input_value() == "viridis"
             v0 = pg.evaluate(M + "._img.v.length"); img0 = pg.evaluate(M + "._img.key")
-            pg.select_option(".pnl.map [data-mz=pal]", "cividis"); attendi(pg, f"JSON.parse(localStorage.getItem('mzlab.mappa')).pal === 'cividis' && {M}._img.key !== {json.dumps(img0)} && {M}.leg.querySelector('.cbar').style.background.includes('rgb(0, 32, 76)')")
+            pg.select_option(".pnl.map [data-mz=pal]", "cividis"); wait_for_js(pg, f"JSON.parse(localStorage.getItem('mzlab.mappa')).pal === 'cividis' && {M}._img.key !== {json.dumps(img0)} && {M}.leg.querySelector('.cbar').style.background.includes('rgb(0, 32, 76)')")
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.mappa')).pal") == "cividis" and pg.evaluate(M + "._img.key") != img0
             bgs = pg.evaluate(M + ".leg.querySelector('.cbar').style.background"); assert "rgb(0, 32, 76)" in bgs, bgs
             assert pg.evaluate(M + ".leg.querySelectorAll('.cbar').length") == 1 and pg.evaluate("/\\d/.test(" + M + ".leg.textContent)")     # colour bar with values
-            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); attendi(pg, f"{M}.corr === 'auto' && ({M}._img.key.includes('true') || {M}._img.key.includes('bg=1')) && {M}._img.v.length === {v0}")
+            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); wait_for_js(pg, f"{M}.corr === 'auto' && ({M}._img.key.includes('true') || {M}._img.key.includes('bg=1')) && {M}._img.v.length === {v0}")
             assert pg.evaluate(M + ".corr") == "auto" and pg.evaluate(M + "._img.key.includes('true') || " + M + "._img.key.includes('bg=1')") and pg.evaluate(M + "._img.v.length") == v0     # background removed: same grid, other values
             pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c='']"); ready(pg)
         step("2D panel: groups, one «3D» button, palette, constant background, colour bar with values", panel2d)

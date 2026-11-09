@@ -3,15 +3,15 @@
 //   - started as a module Worker (the same URL): the worker below. It reads the .mzidx files with OPFS synchronous handles (`createSyncAccessHandle`: the only reads the
 //     .wasm can do while it runs, no SharedArrayBuffer) and hands the page byte arrays that are transferred, never views on the memory of the .wasm.
 // One worker = one file at a time (detection) or one series (alignment, hypotheses, proofs: sequential, in the same worker); at most min(cores - 1, 4) workers (2 on iPad);
-// the .wasm of each works within the budget of its step (`budgetMb`). A worker that dies (a trap of the .wasm, out of memory, a crash) is terminated and replaced, the job runs again once
+// the .wasm of each works within the budget of its step (`budgetMb`, shared by the steps that run at once: `shareOf`). A worker that dies (a trap of the .wasm, out of memory, a crash) is terminated and replaced, the job runs again once
 // and the page is told (`notify`); a second death rejects the job. The OPFS files written here have the name of a finished file only when complete (written as `.part`).
 // Messages of the worker: { op, id, ... } -> { id, ok: true, ...result } | { id, error: { key, params, text }, fatal }. Errors of the .wasm are JSON { error_key, params } (a recipe the engine refuses is "error.badRecipe").
 const IN_WORKER = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
 // ---------------------------------------------------------------- page side
 export const poolSize = (small, cores) => { const n = Math.max(1, Math.min((cores || 2) - 1, 4)); return small ? Math.min(n, 2) : n; };
 const IDLE_MS = 20000;      // the memory of a .wasm never shrinks: a pool idle for this long closes its workers (the next job starts one again, a few tens of ms)
-// Working memory of a step in MB: `budgetMb` of the pool (a number or a function), else the safe budget of the engine of the page (`MZLAB_RUST`: its choice, or the level the supervisor lowered it to), else 0 (= 192)
-export const budgetOf = o => (typeof o.budgetMb === "function" ? o.budgetMb() : o.budgetMb) || (globalThis.MZLAB_RUST && (globalThis.MZLAB_RUST.budgetMb || (globalThis.MZLAB_RUST.choice && globalThis.MZLAB_RUST.choice.mb))) || 0;
+export const budgetOf = o => (typeof o.budgetMb === "function" ? o.budgetMb() : o.budgetMb) || (globalThis.MZLAB_RUST && (globalThis.MZLAB_RUST.budgetMb || (globalThis.MZLAB_RUST.choice && globalThis.MZLAB_RUST.choice.mb))) || 0;   // Working memory of a step in MB: `budgetMb` of the pool (a number or a function), else the safe budget of the engine of the page (`MZLAB_RUST`: its choice, or the level the supervisor lowered it to), else 0 (= 192)
+export const shareOf = (mb, n) => (mb > 0 && n > 1 ? Math.max(Math.floor(mb / n), Math.min(mb, 64)) : mb);   // n steps at once share the budget of the page, never under 64 MB (a step the share cannot hold asks for more, `error.featMemory`)
 const fail = (key, params, text) => Object.assign(new Error(text || key), { key, params: params || {} });
 // nothing queued, nothing running, no call to the archive worker for `idleMs`: the workers go (the state of a job lives in the page, never in an idle worker)
 function idleRest(idleMs, st, slots, queue, kill) {
@@ -104,7 +104,7 @@ function createCore(opts) {
   }
   const cancelJob = makeCancel({ queue, slots, kill, fail });
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
-  return { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText };
+  return { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText, budget: () => shareOf(budgetOf(opts), Math.min(limit, [...slots].filter(s => s.busy).length + queue.length)) };   // budget: a step's share among the jobs running or waiting, all of it alone
 }
 // the folder of a campaign as the worker reads it
 const folder = (root, files) => JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
@@ -161,7 +161,7 @@ function previewOps(submit, call, opts) {
 function driftOps(submit, call, copy) {
   return { drift: ({ stored, parentMz, baseRtTol }) => submit(async (slot, load) => { await load("feat"); return JSON.parse((await call(slot, { op: "drift", files: copy(stored), parentMz, baseRtTol })).json); }) };
 }
-function proofOps(submit, call, copy, opts) {
+function proofOps(submit, call, copy, opts, budget) {
   return {
     // L7 (hypotheses of the parent searched in every file) and L8-L9 (graph of the proofs on the table) in two workers of their own: the hypotheses worker is closed
     // when it has answered (its memory goes back) and the state it leaves (small) is loaded by the worker of the proofs. Each can be refused with `error.featMemory`.
@@ -180,7 +180,7 @@ function proofOps(submit, call, copy, opts) {
       return submit(async (slot, load) => {
         await load("proofs");
         const t0 = performance.now();
-        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: budgetOf(opts) });
+        const e = await call(slot, { op: "evidence", table: table.slice(), state: state.slice(), minutes, parentMz, parentRt, recipe, budgetMb: budget() });
         slot.recycle = true;
         if (opts.onProgress) opts.onProgress({ phase: "proofs", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: e.mem / 1048576 });
         return { table: e.bytes };
@@ -216,16 +216,16 @@ function rowOps(submit, call) {
 }
 
 export function createFeatPool(opts) {
-  const { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText } = createCore(opts);
+  const { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText, budget } = createCore(opts);
   return {
     notify: (k, p) => (opts.notify || (() => {}))(k, p),
-    // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx). Resolves with the .mzfeatf bytes in the order of `files`.
-    async detectAll(files, recipe) {
+    // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx), `mb` = the budget of this call (else the pool's). Resolves with the .mzfeatf bytes in the order of `files`.
+    async detectAll(files, recipe, mb) {
       let done = 0;
       return Promise.all(files.map(f => submit(async (slot, load) => {
         await load("feat");
         const t0 = performance.now();
-        const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe }, undefined, detectStep(opts, f));
+        const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe, budgetMb: mb || budgetOf(opts) }, undefined, detectStep(opts, f));   // `mb` (the high level the user agreed to), else the whole budget of the page, not a share: the Rust estimate of one detection (`trace_stima`) refuses a file it cannot hold
         if (opts.onProgress) opts.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       }, f.id)));
@@ -245,7 +245,7 @@ export function createFeatPool(opts) {
       return submit(async (slot, load) => {
         await load("untargeted");
         const t0 = performance.now();
-        const r = await call(slot, { op: "align_unt", files: copy(stored), paths, params, budgetMb: budgetOf(opts) });
+        const r = await call(slot, { op: "align_unt", files: copy(stored), paths, params, budgetMb: budget() });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       });
@@ -278,7 +278,7 @@ export function createFeatPool(opts) {
     ...exportOps(submit, call),
     ...previewOps(submit, call, opts),
     ...driftOps(submit, call, copy),
-    ...proofOps(submit, call, copy, opts),
+    ...proofOps(submit, call, copy, opts, budget),
     ...rowOps(submit, call),
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
     align(stored, paths, recipe, id, recycle) {
@@ -286,7 +286,7 @@ export function createFeatPool(opts) {
         await load("feat");
         if (recycle) slot.recycle = true;
         const t0 = performance.now();
-        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budgetOf(opts) });
+        const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budget() });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       }, id);
@@ -379,7 +379,7 @@ const OPS = {
   async alias(m) { mods[m.which] = mods[m.of]; mems[m.which] = mems[m.of]; return {}; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
-    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write, (d, t) => self.postMessage({ id: m.id, progress: [d, t] })); return { bytes: out.bytes() }; } finally { f.close(); }   // the .wasm calls back at most once per 1 %; the pool hands `progress` to the step of the call
+    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write, (d, t) => self.postMessage({ id: m.id, progress: [d, t] }), m.budgetMb || 0); return { bytes: out.bytes() }; } finally { f.close(); }   // the .wasm calls back at most once per 1 %; the pool hands `progress` to the step of the call
   },
   async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async tp_link_evidence(m) { const f = await openAll(m.paths); try { const r = mods.proofs.tp_link_evidence(m.rules, m.parent, m.structure, m.hypotheses, new Uint8Array(m.table), m.samples, m.recipe, m.polarity, m.budgetMb || 0, arrays(m.peaks), f.read, f.sizes), o = { table: r.table(), registry: r.registry(), parent: r.parent(), polarity: r.polarity(), infusion: r.infusion() }; r.free(); return o; } finally { f.close(); } },
@@ -449,7 +449,7 @@ const OPS = {
   },
   async die() { throw new WebAssembly.RuntimeError("unreachable"); },       // for the tests: a trap of the .wasm
 };
-Object.assign(OPS, { flow_transitions: async m => ({ text: mods.flowtab.flow_transitions(m.params, m.table, m.manifest, new Uint8Array(m.blob)) }), flow_export_annot: async m => ({ text: mods.flowtab.flow_export_annot(m.params, new Uint8Array(m.table), m.manifest, new Uint8Array(m.blob)) }), flow_runorder: async m => ({ text: mods.flowtab.flow_runorder(m.params, new Uint8Array(m.samples), new Uint8Array(m.design)) }), flow_methods: async m => ({ text: mods.flowtab.flow_methods(m.params, new Uint8Array(m.run)) }), flow_inclusion: async m => ({ text: mods.interp.flow_inclusion(m.params, new Uint8Array(m.products)) }), flow_drift: async m => ({ text: mods.flowtab.flow_drift(m.params, new Uint8Array(m.table), new Uint8Array(m.samples), new Uint8Array(m.design)) }), flow_group: async m => ({ text: mods.flowtab.flow_group(m.params, new Uint8Array(m.table)) }), flow_table_of_view: async m => { const t = new Uint8Array(m.table); return { bytes: mods.table.flow_table_of_view((_, off, len) => t.subarray(off, off + len), t.length, m.view) }; }, flow_stats: async m => ({ text: mods.flowstat.flow_stats(m.params, new Uint8Array(m.table), new Uint8Array(m.samples), new Uint8Array(m.design)) }), flow_pca: async m => ({ text: mods.flowstat.flow_pca(m.params, new Uint8Array(m.table), new Uint8Array(m.samples)) }), flow_kmd: async m => ({ text: mods.flowstat.flow_kmd(m.params, new Uint8Array(m.table)) }), flow_render: async m => ({ text: mods.interp.flow_render(new Uint8Array(m.sites), new Uint8Array(m.parent)) }), flow_reactivity: async m => ({ text: mods.chem.flow_reactivity(m.params, new Uint8Array(m.parent)) }), flow_figure: async m => ({ text: mods.msnfigura.flow_figure(m.params, new Uint8Array(m.graph)) }), flow_estimate: async m => { const f = await openAll([m.path]); try { return { text: mods.feat.flow_estimate(f.read, f.sizes[0], m.name, m.params) }; } finally { f.close(); } }, flow_insilico_pieces: async m => ({ text: mods.attributio_ms2.flow_insilico_pieces(m.params, m.name, new Uint8Array(m.mgf), new Uint8Array(m.catalogue)) }), flow_insilico: async m => ({ text: mods.attributio_ms2.flow_insilico(m.params, m.name, new Uint8Array(m.mgf), new Uint8Array(m.suspects), file => { const b = m.pieces && m.pieces[file]; if (!b) throw new Error(file); return new Uint8Array(b); }) }), series_estimates: async m => { const f = await openAll(m.paths); try { return { text: mods.proofs.series_estimates(m.written, f.read, f.sizes) }; } finally { f.close(); } }, series_facets: async m => { const f = await openAll(m.paths); try { return { text: mods.proofs.series_estimates(["?facets"], f.read, f.sizes) }; } finally { f.close(); } }, flow_ms1_rows: async m => ({ text: mods.formula.flow_ms1_rows(m.params, new Uint8Array(m.features), m.names, m.index, new Uint8Array(m.mzml)) }), flow_ms1_join: async m => ({ text: mods.formula.flow_ms1_join(m.rows) }), flow_screen_suspects: async m => ({ text: mods.table.flow_screen_suspects(m.params, new Uint8Array(m.table), m.names, new Uint8Array(m.lists), new Uint8Array(m.mgf || 0), new Uint8Array(m.formulas || 0)) }), flow_ms2: async m => ({ text: mods.proofs.flow_ms2(m.params, m.name, new Uint8Array(m.mzml), m.features ? new Uint8Array(m.features) : undefined) }), flow_formula_ms2: async m => ({ text: mods.attributio_ms2.flow_formula_ms2(m.alg, m.params, m.name, new Uint8Array(m.mgf), new Uint8Array(m.formulas)) }), flow_level: async m => ({ text: mods.attributio_ms2.flow_level(m.params, new Uint8Array(m.hits), new Uint8Array(m.screen), new Uint8Array(m.formulas), new Uint8Array(m.standards), new Uint8Array(m.spectra)) }), flow_regulatory: async m => ({ text: mods.attributio_ms2.flow_regulatory(m.params, new Uint8Array(m.annot), new Uint8Array(m.package), m.importedNames || "[]", new Uint8Array(m.imported || 0)) }), table_match_rows: async m => { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.table_match_rows((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.params, m.sha, f.read, f.sizes) }; } finally { f.close(); } }, mass_accuracy: async m => { const f = await openAll(m.paths), t = m.table ? new Uint8Array(m.table) : null, u = x => new Uint8Array(x || 0); try { const r = mods.proofs.mass_accuracy(f.read, f.sizes, m.names, u(m.samples), u(m.contaminants), u(m.csv), (_, off, len) => (t ? t.subarray(off, off + len) : u()), t ? t.length : 0, m.params); try { return { text: r.json(), bytes: r.has_table() ? r.table() : null }; } finally { r.free(); } } finally { f.close(); } } });   // mass_accuracy: qc.mass_accuracy (flow-web-qc.js), { text: massacc/1, bytes: the table with its m/z corrected | null }; screen.suspects and annot.regulatory (flow-web-suspects.js): { text: screen/1 | annot/1 }; series_estimates: tp.generate (flow-web-tp.js), the polarity and unit mass the indexes decide; series_facets: the check of the Flow page (flow-page.js), the facets of the files (series_estimates asked for «?facets»)
+Object.assign(OPS, { flow_transitions: async m => ({ text: mods.flowtab.flow_transitions(m.params, m.table, m.manifest, new Uint8Array(m.blob)) }), flow_export_annot: async m => ({ text: mods.flowtab.flow_export_annot(m.params, new Uint8Array(m.table), m.manifest, new Uint8Array(m.blob)) }), flow_runorder: async m => ({ text: mods.flowtab.flow_runorder(m.params, new Uint8Array(m.samples), new Uint8Array(m.design)) }), flow_methods: async m => ({ text: mods.flowtab.flow_methods(m.params, new Uint8Array(m.run)) }), flow_inclusion: async m => ({ text: mods.interp.flow_inclusion(m.params, new Uint8Array(m.products)) }), flow_drift: async m => ({ text: mods.flowtab.flow_drift(m.params, new Uint8Array(m.table), new Uint8Array(m.samples), new Uint8Array(m.design)) }), flow_group: async m => { const r = mods.flowtab.flow_group(m.params, new Uint8Array(m.table), m.budgetMb || 0); try { return { text: r.take_text(), warnings: JSON.parse(r.warnings()) }; } finally { r.free(); } }, flow_table_of_view: async m => { const t = new Uint8Array(m.table); return { bytes: mods.table.flow_table_of_view((_, off, len) => t.subarray(off, off + len), t.length, m.view) }; }, flow_stats: async m => ({ text: mods.flowstat.flow_stats(m.params, new Uint8Array(m.table), new Uint8Array(m.samples), new Uint8Array(m.design)) }), flow_pca: async m => ({ text: mods.flowstat.flow_pca(m.params, new Uint8Array(m.table), new Uint8Array(m.samples)) }), flow_kmd: async m => ({ text: mods.flowstat.flow_kmd(m.params, new Uint8Array(m.table)) }), flow_render: async m => ({ text: mods.interp.flow_render(new Uint8Array(m.sites), new Uint8Array(m.parent)) }), flow_reactivity: async m => ({ text: mods.chem.flow_reactivity(m.params, new Uint8Array(m.parent)) }), flow_figure: async m => ({ text: mods.msnfigura.flow_figure(m.params, new Uint8Array(m.graph)) }), flow_estimate: async m => { const f = await openAll([m.path]); try { return { text: mods.feat.flow_estimate(f.read, f.sizes[0], m.name, m.params) }; } finally { f.close(); } }, flow_insilico_pieces: async m => ({ text: mods.attributio_ms2.flow_insilico_pieces(m.params, m.name, new Uint8Array(m.mgf), new Uint8Array(m.catalogue)) }), flow_insilico: async m => ({ text: mods.attributio_ms2.flow_insilico(m.params, m.name, new Uint8Array(m.mgf), new Uint8Array(m.suspects), file => { const b = m.pieces && m.pieces[file]; if (!b) throw new Error(file); return new Uint8Array(b); }) }), series_estimates: async m => { const f = await openAll(m.paths); try { return { text: mods.proofs.series_estimates(m.written, f.read, f.sizes) }; } finally { f.close(); } }, series_facets: async m => { const f = await openAll(m.paths); try { return { text: mods.proofs.series_estimates(["?facets"], f.read, f.sizes) }; } finally { f.close(); } }, flow_ms1_rows: async m => ({ text: mods.formula.flow_ms1_rows(m.params, new Uint8Array(m.features), m.names, m.index, new Uint8Array(m.mzml)) }), flow_ms1_join: async m => ({ text: mods.formula.flow_ms1_join(m.rows) }), flow_screen_suspects: async m => ({ text: mods.table.flow_screen_suspects(m.params, new Uint8Array(m.table), m.names, new Uint8Array(m.lists), new Uint8Array(m.mgf || 0), new Uint8Array(m.formulas || 0)) }), flow_ms2: async m => ({ text: mods.proofs.flow_ms2(m.params, m.name, new Uint8Array(m.mzml), m.features ? new Uint8Array(m.features) : undefined) }), flow_formula_ms2: async m => ({ text: mods.attributio_ms2.flow_formula_ms2(m.alg, m.params, m.name, new Uint8Array(m.mgf), new Uint8Array(m.formulas)) }), flow_level: async m => ({ text: mods.attributio_ms2.flow_level(m.params, new Uint8Array(m.hits), new Uint8Array(m.screen), new Uint8Array(m.formulas), new Uint8Array(m.standards), new Uint8Array(m.spectra)) }), flow_regulatory: async m => ({ text: mods.attributio_ms2.flow_regulatory(m.params, new Uint8Array(m.annot), new Uint8Array(m.package), m.importedNames || "[]", new Uint8Array(m.imported || 0)) }), table_match_rows: async m => { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.table_match_rows((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.params, m.sha, f.read, f.sizes) }; } finally { f.close(); } }, mass_accuracy: async m => { const f = await openAll(m.paths), t = m.table ? new Uint8Array(m.table) : null, u = x => new Uint8Array(x || 0); try { const r = mods.proofs.mass_accuracy(f.read, f.sizes, m.names, u(m.samples), u(m.contaminants), u(m.csv), (_, off, len) => (t ? t.subarray(off, off + len) : u()), t ? t.length : 0, m.params); try { return { text: r.json(), bytes: r.has_table() ? r.table() : null }; } finally { r.free(); } } finally { f.close(); } } });   // mass_accuracy: qc.mass_accuracy (flow-web-qc.js), { text: massacc/1, bytes: the table with its m/z corrected | null }; screen.suspects and annot.regulatory (flow-web-suspects.js): { text: screen/1 | annot/1 }; series_estimates: tp.generate (flow-web-tp.js), the polarity and unit mass the indexes decide; series_facets: the check of the Flow page (flow-page.js), the facets of the files (series_estimates asked for «?facets»)
 OPS.dig_lr = async m => { const f = await openAll(m.paths); try { const p = mods.proofs.tp_dig_inputs(m.rules, m.parent, m.structure, m.samples, m.names, m.recipe, arrays(m.peaks), f.read, f.sizes); try { const d = mods.finder_lr.finder_lr_dig(p.files(), p.who(), m.settings, new Uint8Array(m.table), p.registry(), f.read, f.sizes); try { return { text: d.summary("{}") + "\n" }; } finally { d.free(); } } finally { p.free(); } } finally { f.close(); } };   // tp.dig_lr: the hypotheses searched in the stored peaks (proofs) and the Dig of the series (finder_lr)
 // the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
 function memSink() {

@@ -1,6 +1,6 @@
 //! `par_map`: the independent per-file passes of `features` on a pool of threads and the index + detect stage of `features` built on it.
 
-use crate::{build_index, open, DEFAULT_BUDGET};
+use crate::{build_index, open};
 use mzlab_core::error::Result;
 use mzlab_feat_wasm::run;
 use std::path::PathBuf;
@@ -66,7 +66,13 @@ pub(crate) fn index_and_detect(
 
 fn index_one(files: &[PathBuf], idxs: &[PathBuf], k: usize) -> Result<()> {
     eprintln!("index {}", files[k].display());
-    mzlab_feat::prof::time("index", || build_index(&files[k], &idxs[k], DEFAULT_BUDGET))
+    mzlab_feat::prof::time("index", || {
+        build_index(
+            &files[k],
+            &idxs[k],
+            mzlab_core::budget_auto::native_index_budget(),
+        )
+    })
 }
 
 fn detect_one(
@@ -92,7 +98,10 @@ fn detect_strong(
     let name = files[k]
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    run::detect(&mut open(&idxs[k])?, &name, recipe)
+    let mut ix = open(&idxs[k])?;
+    let cap = mzlab_core::budget::MemBudget::mb(mzlab_core::budget_auto::native_auto_mb()).cap();
+    mzlab_feat_wasm::stima::detect_fits(&mut ix, recipe, cap)?;
+    run::detect(&mut ix, &name, recipe)
 }
 
 /// The weak candidates of file `k`, made beside the file so the alignment does not detect it again (the Flow does the same).

@@ -51,7 +51,7 @@ def one_run(p, port, rate, files, patch):
     pg.add_init_script(INIT)
     if patch: pg.add_init_script(Path(patch).read_text())
     cdp = ctx.new_cdp_session(pg)
-    pg.goto(f"http://127.0.0.1:{port}/"); attendi(pg, "window.MZLAB_LR !== undefined", timeout=240000); pg.wait_for_selector("#pick", state="attached", timeout=240000)
+    pg.goto(f"http://127.0.0.1:{port}/"); wait_for_js(pg, "window.MZLAB_LR !== undefined", timeout=240000); pg.wait_for_selector("#pick", state="attached", timeout=240000)
     cdp.send("Emulation.setCPUThrottlingRate", {"rate": rate})
     n = len(files); r = {}
     pg.evaluate("__L.wrap(); __L.on = true; window.__t0 = performance.now(); window.__rows = null; window.__ld = null;"

@@ -19,10 +19,10 @@ import sys
 from pathlib import Path
 
 PWIZ = "chambm/pwiz-skyline-i-agree-to-the-vendor-licenses"       # MSConvert with the readers of the manufacturers, in Docker (it runs under wine)
-FILTRO = 'peakPicking vendor msLevel=1-'
+FILTER = 'peakPicking vendor msLevel=1-'
 
 
-def trova_trfp(percorso: str | None = None) -> list[str] | None:
+def find_trfp(percorso: str | None = None) -> list[str] | None:
     """The command that starts ThermoRawFileParser, or None."""
     for c in (percorso, os.environ.get("THERMORAWFILEPARSER"), shutil.which("ThermoRawFileParser"), shutil.which("ThermoRawFileParser.exe")):
         if not c:
@@ -39,41 +39,41 @@ def trova_trfp(percorso: str | None = None) -> list[str] | None:
     return None
 
 
-def comando_trfp(trfp: list[str], raw: Path, uscita: Path) -> list[str]:
+def command_trfp(trfp: list[str], raw: Path, output: Path) -> list[str]:
     """One .raw -> indexed mzML (-f 2), zlib (-z), centroids of the manufacturer (peak picking is on unless -p is given)."""
-    return [*trfp, "-i", str(raw), "-o", str(uscita), "-f", "2", "-z"]
+    return [*trfp, "-i", str(raw), "-o", str(output), "-f", "2", "-z"]
 
 
-def comando_docker(cartella: Path, nome: str, uscita: str = "/dati/mzML") -> str:
+def command_docker(folder: Path, nome: str, output: str = "/dati/mzML") -> str:
     """MSConvert in Docker for a .wiff (it needs the .wiff.scan next to it) or a .d folder."""
-    return (f'docker run -it --rm -e WINEDEBUG=-all -v "{cartella}":/dati {PWIZ} wine msconvert "/dati/{nome}" --mzML --zlib '
-            f'--filter "{FILTRO}" -o {uscita}')
+    return (f'docker run -it --rm -e WINEDEBUG=-all -v "{folder}":/dati {PWIZ} wine msconvert "/dati/{nome}" --mzML --zlib '
+            f'--filter "{FILTER}" -o {output}')
 
 
-def converti(cartella: Path, uscita: Path, trfp_percorso: str | None = None, prova: bool = False, out=print) -> dict:
+def convert(folder: Path, output: Path, trfp_path: str | None = None, test: bool = False, out=print) -> dict:
     """Walks the folder. Returns {"fatti": [...], "saltati": [...], "da_fare": [comandi stampati], "errori": [...]}"""
     res = {"fatti": [], "saltati": [], "da_fare": [], "errori": []}
-    cartella = cartella.resolve(); uscita = uscita.resolve()
-    raws = sorted(p for p in cartella.rglob("*") if p.is_file() and p.suffix.lower() == ".raw")
-    wiffs = sorted(p for p in cartella.rglob("*") if p.is_file() and p.suffix.lower() in (".wiff", ".wiff2"))
-    ds = sorted(p for p in cartella.rglob("*.d") if p.is_dir())
+    folder = folder.resolve(); output = output.resolve()
+    raws = sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() == ".raw")
+    wiffs = sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in (".wiff", ".wiff2"))
+    ds = sorted(p for p in folder.rglob("*.d") if p.is_dir())
     if not (raws or wiffs or ds):
-        out(f"Nessun file .raw, .wiff o .d in {cartella}.")
+        out(f"Nessun file .raw, .wiff o .d in {folder}.")
         return res
     if raws:
-        trfp = trova_trfp(trfp_percorso)
-        if trfp is None and not prova:
+        trfp = find_trfp(trfp_path)
+        if trfp is None and not test:
             out("ThermoRawFileParser non trovato. Scaricalo da https://github.com/CompOmics/ThermoRawFileParser/releases e indicane il percorso con --trfp "
                 "(o nella variabile THERMORAWFILEPARSER). Fuori da Windows serve anche mono, oppure la versione per Linux/Mac.")
             res["errori"].append("trfp")
         else:
-            uscita.mkdir(parents=True, exist_ok=True) if not prova else None
+            output.mkdir(parents=True, exist_ok=True) if not test else None
             for r in raws:
-                dest = uscita / (r.stem + ".mzML")
+                dest = output / (r.stem + ".mzML")
                 if dest.exists():
                     out(f"già convertito: {r.name}"); res["saltati"].append(r.name); continue
-                cmd = comando_trfp(trfp or ["ThermoRawFileParser"], r, uscita)
-                if prova:
+                cmd = command_trfp(trfp or ["ThermoRawFileParser"], r, output)
+                if test:
                     out(" ".join(f'"{c}"' if " " in c else c for c in cmd)); res["da_fare"].append(cmd); continue
                 out(f"converto {r.name} …")
                 p = subprocess.run(cmd, capture_output=True, text=True)
@@ -82,9 +82,9 @@ def converti(cartella: Path, uscita: Path, trfp_percorso: str | None = None, pro
                 else:
                     res["errori"].append(r.name); out(f"  non riuscito: {(p.stderr or p.stdout).strip().splitlines()[-1:] or ''}")
     for w in wiffs:
-        c = comando_docker(w.parent, w.name); out(c); res["da_fare"].append(c)
+        c = command_docker(w.parent, w.name); out(c); res["da_fare"].append(c)
     for d in ds:
-        c = comando_docker(d.parent, d.name); out(c); res["da_fare"].append(c)
+        c = command_docker(d.parent, d.name); out(c); res["da_fare"].append(c)
     if wiffs or ds:
         out("\nI file .wiff / .d si convertono con MSConvert (ProteoWizard): il comando qui sopra usa Docker. Sul .wiff deve stare accanto il suo .wiff.scan. "
             "In alternativa: MSConvert per Windows, Output format mzML, 64-bit, zlib, Numpress spento, filtro «peakPicking vendor msLevel=1-».")
@@ -100,7 +100,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if not a.cartella.is_dir():
         print(f"{a.cartella} non è una cartella."); return 2
-    r = converti(a.cartella, a.uscita or a.cartella / "mzML", a.trfp, a.prova)
+    r = convert(a.cartella, a.uscita or a.cartella / "mzML", a.trfp, a.prova)
     return 1 if r["errori"] else 0
 
 

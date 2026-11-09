@@ -5,7 +5,7 @@
 use mzlab_core::error::Result;
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::sorgente::{Tracce, TracceMzml};
+use mzlab_core::sorgente::{MzmlTraces, Traces};
 
 /// One chromatogram of a transition or SIM ion: times in minutes.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -30,13 +30,13 @@ fn polarity_of(id: &str) -> Option<i8> {
 /// The SRM and SIM chromatograms of the mzML `bytes`, in the order of the file.
 pub fn channels(bytes: &[u8]) -> Result<Vec<Channel>> {
     let mut m = Mzml::new(bytes.to_vec(), bytes.len() as u64);
-    let mut t = TracceMzml::new(&mut m, 0);
+    let mut t = MzmlTraces::new(&mut m, 0);
     let mut out = Vec::new();
-    for v in t.cromatogrammi()? {
+    for v in t.chromatograms()? {
         if v.tipo != ChromKind::Srm {
             continue;
         }
-        let c = t.cromatogramma(&v.id)?;
+        let c = t.chromatogram(&v.id)?;
         let Some(q1) = c.q1 else {
             continue;
         };

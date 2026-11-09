@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from tools.valida.abbina import abbina
+from tools.valida.abbina import match_points
 
 
 def make_case(name: str, mz_a, rt_a, mz_b, rt_b, ppm: float = 5.0, rt_tol: float = 0.15) -> dict:
@@ -23,7 +23,7 @@ def make_case(name: str, mz_a, rt_a, mz_b, rt_b, ppm: float = 5.0, rt_tol: float
     rt_a = np.asarray(rt_a, float)
     mz_b = np.asarray(mz_b, float)
     rt_b = np.asarray(rt_b, float)
-    out_a, out_b = abbina(mz_a, rt_a, mz_b, rt_b, ppm=ppm, rt_tol=rt_tol)
+    out_a, out_b = match_points(mz_a, rt_a, mz_b, rt_b, ppm=ppm, rt_tol=rt_tol)
     return {
         "name": name,
         "mz_a": mz_a.tolist(),

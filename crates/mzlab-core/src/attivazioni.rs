@@ -1,4 +1,4 @@
-//! The dissociation methods that have a PSI-MS term: (name as the file formats spell it, accession, term name). The mzML writer (`mzmlwrite::attivazione_da_nome`) and
+//! The dissociation methods that have a PSI-MS term: (name as the file formats spell it, accession, term name). The mzML writer (`mzmlwrite::activation_from_name`) and
 //! the scan table reader (`scantable::precursor_element`) share this one table, so that what the writer can write the reader names back.
 
 /// In the order the reader looks them up: the first whose accession is in the activation wins.
@@ -19,8 +19,8 @@ pub const ATTIVAZIONI: [(&str, &str, &str); 9] = [
 ];
 
 /// The (accession, term) of the method named `nome` (any case, spaces around ignored).
-pub fn da_nome(nome: &str) -> Option<(&'static str, &'static str)> {
-    let n = nome.trim();
+pub fn from_name(name: &str) -> Option<(&'static str, &'static str)> {
+    let n = name.trim();
     ATTIVAZIONI
         .iter()
         .find(|a| a.0.eq_ignore_ascii_case(n))
@@ -28,7 +28,7 @@ pub fn da_nome(nome: &str) -> Option<(&'static str, &'static str)> {
 }
 
 /// The name of the first method of the table that the element (the text of a `<precursor>`) has as `accession="..."`.
-pub fn nome_in(e: &str) -> Option<&'static str> {
+pub fn name_in(e: &str) -> Option<&'static str> {
     ATTIVAZIONI
         .iter()
         .find(|a| ha_accession(e, a.1))

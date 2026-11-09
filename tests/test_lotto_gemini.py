@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import lotto_gemini as L  # noqa: E402
 
 
-def test_unisci_headers_and_order(tmp_path):
+def test_merge_headers_and_order(tmp_path):
     (tmp_path / "a.txt").write_text("alpha\n")
     (tmp_path / "b.txt").write_text("beta")
     doc, n = L.unisci(["a.txt", "b.txt"], tmp_path)
@@ -21,9 +21,9 @@ def test_batches_in_markdown(tmp_path):
     (tmp_path / "x.txt").write_text("x")
     (tmp_path / "y.txt").write_text("y")
     md = "Prose line with spaces\n@lotto 1\nx.txt\nnot-a-file.txt\n@lotto 2\n`y.txt`\n"
-    assert L.leggi_elenco(md, 1, tmp_path) == ["x.txt"]
-    assert L.leggi_elenco(md, 2, tmp_path) == ["y.txt"]
-    assert L.leggi_elenco(md, None, tmp_path) == ["x.txt", "y.txt"]
+    assert L.read_list(md, 1, tmp_path) == ["x.txt"]
+    assert L.read_list(md, 2, tmp_path) == ["y.txt"]
+    assert L.read_list(md, None, tmp_path) == ["x.txt", "y.txt"]
 
 
 def test_cli_warns_over_limit_and_missing(tmp_path):

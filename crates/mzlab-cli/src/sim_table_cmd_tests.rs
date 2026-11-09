@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::json::{parse, Value};
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 
 use crate::execute;
 
@@ -69,7 +69,7 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
         "the blank: every channel, no peak"
     );
     let peaks = text(&table(&[&d.join("sim3.wiff")], &["--set", "output=peaks"]));
-    let picchi = truth.get("picchi").unwrap().arr();
+    let want_peaks = truth.get("picchi").unwrap().arr();
     for (s, name) in samples.iter().enumerate() {
         for (j, ion) in ions.iter().enumerate() {
             let q1 = format!("{:.4}", ion.get("q1").and_then(Value::f64).unwrap());
@@ -78,7 +78,7 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
                 .filter(|l| l.starts_with(&format!("{name},{q1},")))
                 .filter_map(|l| l.split(',').nth(4).and_then(|v| v.parse().ok()))
                 .collect();
-            let want: Vec<f64> = picchi[s].arr()[j]
+            let want: Vec<f64> = want_peaks[s].arr()[j]
                 .arr()
                 .iter()
                 .map(|v| v.f64().unwrap())
@@ -142,7 +142,7 @@ fn the_wiff_and_its_mzml_give_the_same_bytes() {
     let Some(d) = fixture("mzml") else { return };
     let member = |file: &str| {
         let bytes = std::fs::read(d.join(file)).unwrap();
-        Membro {
+        Member {
             nome: file.into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -152,7 +152,7 @@ fn the_wiff_and_its_mzml_give_the_same_bytes() {
     let set = FileSet {
         membri: vec![member("sim3.wiff"), member("sim3.wiff.scan")],
     };
-    let mut l = lettori::apri(set, &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(set, &Limits::sito()).unwrap();
     let mut files = Vec::new();
     for (c, name) in ["Blank", "Sample_A", "Sample_B", "Sample_C"]
         .iter()

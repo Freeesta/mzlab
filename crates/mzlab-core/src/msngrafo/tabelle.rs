@@ -1,7 +1,7 @@
 //! The tables and the library text of a fragmentation graph (`msngrafo/1`) for the Flow steps `msn.table_export` and `msn.library_export`: the CSV of the nodes, of the
 //! modifications (neutral losses between ions) or of the peaks, and the MSP / MassBank text of the tree. Used by the CLI and by the `.wasm` of the page (same bytes).
 
-use super::lib_export::{export_text, Formato};
+use super::lib_export::{export_text, Format};
 use crate::error::Result;
 use crate::json::{Out, Value};
 
@@ -24,7 +24,7 @@ pub fn library_text(
     o.raw("{\"voci\":[{\"id\":").str(id);
     o.raw(",\"ione\":{\"formula\":").str(ion);
     o.raw("},\"grafo\":").raw(json.trim()).raw("}]}");
-    let formato = Formato::parse(format)?;
+    let formato = Format::parse(format)?;
     let all = levels != "ms2";
     export_text(&o.0, formato, (clean, all, annotate))
 }

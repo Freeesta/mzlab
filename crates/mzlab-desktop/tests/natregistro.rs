@@ -1,11 +1,11 @@
 //! `natregistro` (one series of the instrument log of a `.raw`, `/api/registro` of `lr-method.js`) is answered by the app as by the readers module of the
-//! site: the same reader (`mzlab_lettori::apri`) and the same writer (`mzlab_lettori::json::cromatogramma_json`, which `Sessioni::cromatogramma` of
+//! site: the same reader (`mzlab_lettori::apri`) and the same writer (`mzlab_lettori::json::chromatogram_json`, which `Sessions::chromatogram` of
 //! `mzlab-lettori-wasm` calls), byte for byte. The synthetic `.raw` (`comune/thermo.rs`, invented numbers) has no status log: the TIC id walks the same
 //! path (`rawlettore::cromatogramma_di`), an id the file lacks gives the reader's error, a name that is not a maker's sample `err.session.fileNotFound`.
 #[path = "../../mzlab-lettori/tests/comune/thermo.rs"]
 mod thermo;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use serde_json::{json, Value};
@@ -21,16 +21,16 @@ fn text(a: Answer) -> String {
 fn module_answer(path: &std::path::Path, id: &str) -> Result<String, &'static str> {
     let b = std::fs::read(path).unwrap();
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.raw".into(),
             dim: b.len() as u64,
             dati: Box::new(b),
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limiti::desktop()).unwrap();
-    l.cromatogramma(0, id)
-        .map(|c| mzlab_lettori::json::cromatogramma_json(&c))
+    let mut l = mzlab_lettori::apri(set, &Limits::desktop()).unwrap();
+    l.chromatogram(0, id)
+        .map(|c| mzlab_lettori::json::chromatogram_json(&c))
         .map_err(|e| e.key)
 }
 

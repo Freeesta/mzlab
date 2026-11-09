@@ -11,34 +11,34 @@ r = Run(port=8995, wd="/tmp/wd_pannello_vista")
 def round_trip(pg):
     for v in ("draw", "data"):
         pg.evaluate(f"setView('{v}')")
-        attendi(pg, f"S.view === '{v}'")
+        wait_for_js(pg, f"S.view === '{v}'")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 900})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Carica dati"); ready(pg)
         # the note that follows an opening fades away and would change the height of the list under the measure
-        attendi(pg, "document.getElementById('fl-note').hidden")
-        def aperto():
-            pg.evaluate("BARRA.setTab('file', {noFocus: true, instant: true})"); attendi(pg, "BARRA.open")
+        wait_for_js(pg, "document.getElementById('fl-note').hidden")
+        def open_view():
+            pg.evaluate("BARRA.setTab('file', {noFocus: true, instant: true})"); wait_for_js(pg, "BARRA.open")
             pg.evaluate("BARRA.setWidth(380)")
             pg.evaluate("(() => { const e = document.querySelector('#sb-panels'); e.style.maxHeight = '60px'; e.scrollTop = 40; })()")
             frames(pg, 3)          # the scroll event of the panel reaches the page before the view changes, as it does for a hand on the wheel
             top = pg.evaluate("document.querySelector('#sb-panels').scrollTop")
             assert top > 0, "the list must be scrolled for the test to mean something"
             round_trip(pg)
-            attendi(pg, "BARRA.open")
+            wait_for_js(pg, "BARRA.open")
             assert pg.is_visible("#dfiles"), "the panel must be open again"
             assert pg.evaluate("BARRA.width") == 380, pg.evaluate("BARRA.width")
-            attendi(pg, f"document.querySelector('#sb-panels').scrollTop === {top}")
-        step("open: Data → Drawing → Data gives it back open (width, scroll)", aperto)
-        def chiuso():
-            pg.evaluate("BARRA.close(true)"); attendi(pg, "!BARRA.open")
+            wait_for_js(pg, f"document.querySelector('#sb-panels').scrollTop === {top}")
+        step("open: Data → Drawing → Data gives it back open (width, scroll)", open_view)
+        def closed():
+            pg.evaluate("BARRA.close(true)"); wait_for_js(pg, "!BARRA.open")
             round_trip(pg)
             assert not pg.evaluate("BARRA.open") and not pg.is_visible("#dfiles"), "a shut panel must stay shut"
-        step("shut: the same trip leaves it shut", chiuso)
+        step("shut: the same trip leaves it shut", closed)
         def riavvio():
-            pg.evaluate("BARRA.setTab('file', {noFocus: true, instant: true})"); attendi(pg, "BARRA.open")
+            pg.evaluate("BARRA.setTab('file', {noFocus: true, instant: true})"); wait_for_js(pg, "BARRA.open")
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr')).open") is True
         step("the open state is saved for the next start", riavvio)
 finally:

@@ -97,10 +97,12 @@
   // the block of the «Confidence level» node: choose a folder, the table opens under the canvas
   F.extraResults.push((S, node) => {
     if (!ready() || !(node.ids || []).some((/** @type {string} */ id) => { const i = F.instanceOf(S.plan, id); return i && i.step.split("@")[0] === "annot.level"; })) return null;
-    const { el } = F, id = node.ids[0], say = el("p", { class: "fl-note", role: "status" });
+    const { el } = F, id = node.ids[0], say = el("p", { class: "fl-note", role: "status" }), cutSay = el("p", { class: "fl-note", role: "status", id: "flx-camp-cut" });
+    // a folder is read up to ATTRIBUTIO_CORE.MAX_FILES files: past it, one calm line says so (n = files in the folder, when the browser told us)
+    const cutNote = (/** @type {string} */ root, /** @type {number | null} */ n) => { const max = G.ATTRIBUTIO_CORE.MAX_FILES.toLocaleString("en"); return `${root}: only the first ${max} files${n ? ` of ${n.toLocaleString("en")}` : ""} were read, the most a campaign folder is read with; the others were left out. Keep raw data and other large folders outside the campaign folder, then open it again.`; };
     // one entry for both ways of choosing: the picker gives a folder handle (the Review can write its decisions file there), the input only the files
-    const open = async (/** @type {string} */ root, /** @type {{path: string, file: File}[]} */ files, /** @type {any} */ dir) => {
-      say.textContent = `Reading ${root} (${files.length} files)…`;
+    const open = async (/** @type {string} */ root, /** @type {{path: string, file: File}[]} */ files, /** @type {any} */ dir, /** @type {string} */ cut = "") => {
+      say.textContent = `Reading ${root} (${files.length} files)…`; cutSay.textContent = cut;
       try {
         const run = await F.campaignRun(files, root), item = { type: "annot", label: `${root} (campaign folder)`, campaign: { root, files, dir: dir || null, ...run }, text: async () => "" };
         S.results = S.results || {}; S.results[id] = [...(S.results[id] || []).filter((/** @type {any} */ r) => r.label !== item.label), item];
@@ -108,17 +110,17 @@
       } catch (err) { const x = /** @type {any} */ (err); say.textContent = "Attributio: " + ((x && x.params && x.params.detail) || (x && x.message) || String(err)); }
     };
     const pick = /** @type {HTMLInputElement} */ (el("input", { type: "file", hidden: true, webkitdirectory: true, multiple: true, "aria-label": "Choose a campaign folder", onchange: async (/** @type {any} */ e) => {
-      const list = /** @type {File[]} */ ([...e.target.files]).slice(0, G.ATTRIBUTIO_CORE.MAX_FILES);
+      const all = /** @type {File[]} */ ([...e.target.files]), list = all.slice(0, G.ATTRIBUTIO_CORE.MAX_FILES);
       if (!list.length) return;
       const { root, files } = F.campaignFiles(list);
-      await open(root, files, null);
+      await open(root, files, null, all.length > list.length ? cutNote(root, all.length) : "");
     } }));
     const choose = async () => {
       const W = /** @type {any} */ (window);
       if (typeof W.showDirectoryPicker !== "function") { pick.click(); return; }
-      try { const dir = await W.showDirectoryPicker(), files = /** @type {{path: string, file: File}[]} */ ([]); await G.ATTRIBUTIO_CORE.walk(dir, "", files); await open(dir.name, files, dir); }
+      try { const dir = await W.showDirectoryPicker(), files = /** @type {{path: string, file: File}[]} */ ([]); await G.ATTRIBUTIO_CORE.walk(dir, "", files); await open(dir.name, files, dir, files.length >= G.ATTRIBUTIO_CORE.MAX_FILES ? cutNote(dir.name, null) : ""); }
       catch (err) { if (!(err && /** @type {any} */ (err).name === "AbortError")) say.textContent = "Attributio: " + ((/** @type {any} */ (err)).message || err); }
     };
-    return el("div", { class: "fl-results" }, pick, F.btn("import", "Open a campaign folder", choose, "Open a campaign folder…"), say);
+    return el("div", { class: "fl-results" }, pick, F.btn("import", "Open a campaign folder", choose, "Open a campaign folder…"), say, cutSay);
   });
 })();

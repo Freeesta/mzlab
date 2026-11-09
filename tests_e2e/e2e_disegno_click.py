@@ -9,7 +9,7 @@ r = Run(port=8863, wd="/tmp/wd_dclick")
 OBS = """() => { window.__ev = []; new PerformanceObserver(l => l.getEntries().forEach(e => window.__ev.push([e.name, Math.round(e.duration)]))).observe({ type: 'event', buffered: true, durationThreshold: 16 }); }"""
 try:
     with sync_playwright() as p:
-        pg = r.page(p); attendi(pg, "!!document.querySelector(\"#nav button[data-v=draw]\") && typeof S !== \"undefined\"")
+        pg = r.page(p); wait_for_js(pg, "!!document.querySelector(\"#nav button[data-v=draw]\") && typeof S !== \"undefined\"")
         pg.context.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": 4})
         pg.evaluate(OBS)
         pg.click("#nav [data-v=draw]")

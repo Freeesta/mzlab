@@ -44,8 +44,8 @@ fn sim_scans_give_one_sic_per_ion_and_it_is_written() {
     );
     let out = conv_aiuto::mzml(FileSet {
         membri: vec![
-            conv_aiuto::membro("x.D/AcqData/MSScan.bin", &idx),
-            conv_aiuto::membro("x.D/AcqData/MSPeak.bin", &peak),
+            conv_aiuto::member("x.D/AcqData/MSScan.bin", &idx),
+            conv_aiuto::member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     });
     // through the registry the SICs are the ones of the SIM groups of the method: this folder has none, the TIC and the scans are written

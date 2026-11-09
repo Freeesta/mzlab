@@ -45,7 +45,7 @@ def write_mzml(path, k, seed):
                 y = h * shape * rng.normal(1, 0.01)
                 if y >= 2e3: mz.append(np.array([x * (1 + rng.normal(0, 0.8e-6))])); it.append(np.array([y]))
         mz, it = np.concatenate(mz), np.concatenate(it); o = np.argsort(mz, kind="stable")
-        specs.append(sm._scan(n, rt, 1, mz[o], it[o], filt=sm.FILTRO1, res=60000)); tic.append(float(it.sum()))
+        specs.append(sm._scan(n, rt, 1, mz[o], it[o], filt=sm.FILTER1, res=60000)); tic.append(float(it.sum()))
     chroms = [ds._chrom(0, "TIC", rts, np.array(tic))]
     path.write_text(ds._hr_head("exploris", False, path.stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
                     + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
@@ -55,8 +55,8 @@ def sample(k, n):
             "tempo_min": k, "tipo": "t0" if k == 0 else "sample", "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
 SAMPLES = json.dumps({"campioni": [sample(k, n) for k, n in enumerate(NAMES)], "schema": "campioni/2"}, separators=(",", ":"))
 
-def plan(group, view=False):
-    """The plan: index → detect → align by ion → gap filling, and (with `group`) the grouping, of the gap-filled table or (with `view`) of a filter view of it."""
+def plan(group, view=False, params=None):
+    """The plan: index → detect → align by ion → gap filling, and (with `group`) the grouping, of the gap-filled table or (with `view`) of a filter view of it, with `params`."""
     inputs = [{"name": n + ".mzML", "sha256": "", "type": "mzml"} for n in NAMES] + ([{"name": "samples.json", "sha256": "", "type": "samples"}] if view else [])
     st = [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in NAMES]}},
           {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},
@@ -65,7 +65,7 @@ def plan(group, view=False):
     if view:
         st += [{"id": "flt", "step": "table.filter@2", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 4, "normalize": "sum"}}]
     if group:
-        st += [{"id": "grpv" if view else "grp", "step": "features.group@1", "in": {"table": "flt.table" if view else "gap.table"}}]
+        st += [{"id": "grpv" if view else "grp", "step": "features.group@1", "in": {"table": "flt.table" if view else "gap.table"}, **({"params": params} if params else {})}]
     return {"format": "mzflow/2", "inputs": inputs, "steps": st}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_group_"))
@@ -75,14 +75,18 @@ from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
 for i, n in enumerate(NAMES): write_mzml(run / (n + ".mzML"), i, 100 + i)
+FEW = {"min_corr_samples": 7}   # more than the six files: no correlation can be tested
 (run / "group.json").write_text(json.dumps(plan(True))); (run / "view.json").write_text(json.dumps(plan(True, True))); (run / "samples.json").write_text(SAMPLES)
-out, out_view = run / "out", run / "out_view"
-for name, to in (("group.json", out), ("view.json", out_view)):
+RAISE = {"ions_pos": "[M+H]+,[M+NH4]+"}   # a run the page refuses at its safe budget and makes again with the high one
+(run / "few.json").write_text(json.dumps(plan(True, params=FEW))); (run / "raise.json").write_text(json.dumps(plan(True, params=RAISE)))
+out, out_view, out_few, out_raise = run / "out", run / "out_view", run / "out_few", run / "out_raise"
+for name, to in (("group.json", out), ("view.json", out_view), ("few.json", out_few), ("raise.json", out_raise)):
     nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / name), "--in", str(run), "--out", str(to)], cwd=ROOT, capture_output=True, text=True)
     assert nat_run.returncode == 0, (name, nat_run.stderr[-1500:])
 data = site / "static" / "dati_flow_group"; data.mkdir()
 for n in NAMES: shutil.copy2(next(out.glob("*-" + n + ".mzidx")), data / (n + ".mzidx"))
-NATIVE, NATIVE_VIEW = (out / "grp.json").read_bytes(), (out_view / "grpv.json").read_bytes()
+NATIVE, NATIVE_VIEW, NATIVE_FEW, NATIVE_RAISE = (out / "grp.json").read_bytes(), (out_view / "grpv.json").read_bytes(), (out_few / "grp.json").read_bytes(), (out_raise / "grp.json").read_bytes()
+assert "warn.flow.group.corrFiles" in (out_few / "prov.json").read_text() and b"MS1 correlation" not in NATIVE_FEW and b"MS1 correlation" in NATIVE
 
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -99,10 +103,10 @@ RUN = """async ([plan, samples]) => {
   catch (e) { return { ev, err: { key: e.key, params: e.params, msg: String(e && e.message || e) } }; }
   finally { document.removeEventListener('flow:web-step', on); }
 }"""
-# the texts the run kept in OPFS (mzlab/flow/msn/<key>.json = {name, text}), by name
+# the texts of the last run, by name (mzlab/flow/<name>: the newest one of each name; the cache under mzlab/flow/msn/ holds every run, in no order)
 KEPT = """async () => {
-  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), msn = await d.getDirectoryHandle('msn'), out = {};
-  for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
+  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), out = {};
+  for await (const [n, h] of d.entries()) if (h.kind === 'file' && n.endsWith('.json')) out[n] = await (await h.getFile()).text();
   return out;
 }"""
 PORT = lib.free_port()
@@ -161,6 +165,61 @@ try:
             assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE_VIEW).hexdigest(), (web[:300], NATIVE_VIEW[:300])
             assert NATIVE_VIEW != NATIVE and json.loads(web)["rows"] < json.loads(NATIVE)["rows"], "the view kept every row: the case proves nothing"
         step("features.group on a table.filter view gives the native ionnet/1 of the same plan", view)
+
+        def few():
+            r = pg.evaluate(RUN, [plan(True, params=FEW), SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+            ev = [e for e in r["ev"] if e["passo"] == "grp" and e["stato"] == "done"]; assert ev and "min_corr_samples" in (ev[-1].get("note") or ""), r["ev"][-6:]
+            web = pg.evaluate(KEPT).get("grp.json"); assert web is not None
+            assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE_FEW).hexdigest(), (web[:300], NATIVE_FEW[:300])
+            card = pg.evaluate("() => { const v = FLOW.liveView.look(FLOW.liveView.node('grp')); return [v.word, v.tone, v.title]; }")
+            assert card[0] == "done, with a note" and card[1] == "warn" and "min_corr_samples" in card[2], card
+            # the same plan again: the text comes from OPFS and the note with it
+            r = pg.evaluate(RUN, [plan(True, params=FEW), SAMPLES]); assert not r.get("err"), r
+            assert "min_corr_samples" in (pg.evaluate("() => FLOW.liveView.node('grp').note") or ""), r["ev"][-4:]
+        step("fewer files than min_corr_samples: the native text and a note on the card", few)
+
+        def budget():
+            # the tables upstream are reused; only features.group runs again, in a budget that cannot hold it
+            pg.evaluate("() => { window.__mb = window.MZLAB_RUST.budgetMb; window.MZLAB_RUST.budgetMb = 0.0001; }")
+            try: r = pg.evaluate(RUN, [plan(True, params={"min_corr": 0.8}), SAMPLES])
+            finally: pg.evaluate("() => { window.MZLAB_RUST.budgetMb = window.__mb; }")
+            assert any(e["passo"] == "grp" and e["stato"] in ("error", "refused") for e in r["ev"]), r["ev"][-6:]
+            err = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('grp')).title")
+            assert "Not enough memory for the «group» phase" in err, err
+        step("past the budget features.group is refused as the alignment is", budget)
+
+        # a safe budget that cannot hold the grouping and a high one that can (the levels of the engine's choice): Run asks once, the yes runs it again with the high budget
+        LEVELS = "() => { const r = window.MZLAB_RUST; window.__lv = [r.budgetMb, r.choice]; r.budgetMb = 0; r.choice = { ...(r.choice || {}), mb: 0.0001, high_mb: 4096 }; }"
+        UNDO = "() => { const r = window.MZLAB_RUST; [r.budgetMb, r.choice] = window.__lv; }"
+
+        def raise_yes():
+            pg.evaluate(LEVELS)
+            try:
+                pg.evaluate("([plan, samples]) => { window.__run = (" + RUN + ")([plan, samples]); }", [plan(True, params=RAISE), SAMPLES])
+                pg.wait_for_selector("#memmore", timeout=120000)
+                text = pg.inner_text("#memmore #mm-p")
+                assert "ion grouping" in text or "raggruppamento degli ioni" in text, text
+                card = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('grp')).word")
+                assert card == "Allow more memory: Run now", card
+                pg.click("#memmore #mm-yes")
+                r = pg.evaluate("() => window.__run")
+            finally: pg.evaluate(UNDO)
+            assert not r.get("err"), (r.get("err"), r["ev"][-6:])
+            web = pg.evaluate(KEPT).get("grp.json"); assert web is not None
+            assert hashlib.sha256(web.encode()).hexdigest() == hashlib.sha256(NATIVE_RAISE).hexdigest(), (web[:300], NATIVE_RAISE[:300])
+            assert NATIVE_RAISE != NATIVE, "the raised run gave the text of the default run: the case proves nothing"
+        step("past the safe budget and within the high one, Run asks and the yes gives the native ionnet/1", raise_yes)
+
+        def raise_no():
+            pg.evaluate(LEVELS); pg.evaluate("() => { window.__ask = window.mzlabAskMore; window.__asked = []; window.mzlabAskMore = async i => { window.__asked.push(i); return false; }; }")
+            try: r = pg.evaluate(RUN, [plan(True, params={"min_corr": 0.9}), SAMPLES])
+            finally: pg.evaluate(UNDO); pg.evaluate("() => { window.mzlabAskMore = window.__ask; }")
+            asked = pg.evaluate("window.__asked")
+            assert len(asked) == 1 and asked[0]["fase"] == "group" and asked[0]["high_mb"] == 4096 and asked[0]["stima_mb"] > 0, asked
+            assert r.get("err") and r["err"]["key"] == "error.featMemory", r.get("err")
+            err = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('grp')).title")
+            assert "Not enough memory for the «group» phase" in err, err
+        step("a no keeps features.group refused, as for the alignment", raise_no)
 
         def template():
             got = pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, F = FLOW;

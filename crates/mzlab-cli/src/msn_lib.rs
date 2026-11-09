@@ -5,9 +5,9 @@
 use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::msngrafo::{aggiungi, cerca, Opzioni, OpzioniCerca};
+use mzlab_core::msngrafo::{aggiungi, cerca, Options, OpzioniCerca};
 
-use mzlab_core::msngrafo::{export_text, LibFormato as Formato};
+use mzlab_core::msngrafo::{export_text, LibFormato as Format};
 
 /// Old flag names of `msn-lib` (old, new); resolved before each match. The options of `add` are those of `msn-graph`, which has its own table.
 const ALIASES: &[(&str, &str)] = &[
@@ -70,15 +70,15 @@ fn add(args: Vec<String>, tmp: &Path) -> Result<String> {
     let a = crate::msn_graph::parse_args(rest.into_iter())
         .map_err(|m| bad(&m))?
         .ok_or_else(|| bad("--help is not an option here"))?;
-    let (g, json) = crate::msn_graph::grafo(&a.file, &a.o, tmp)?;
-    let json = crate::msn_graph::con_chiavi(&a, &g, json)?;
-    let (text, doppione) = aggiungi(&read_lib(&lib)?, &id, &g, &json)?;
+    let (g, json) = crate::msn_graph::graph(&a.file, &a.o, tmp)?;
+    let json = crate::msn_graph::with_keys(&a, &g, json)?;
+    let (text, duplicate) = aggiungi(&read_lib(&lib)?, &id, &g, &json)?;
     let out = a.out.clone().unwrap_or(lib);
     std::fs::write(&out, text).map_err(io)?;
     Ok(format!(
         "{}: {id} {}\n",
         out.display(),
-        if doppione { "already there" } else { "added" }
+        if duplicate { "already there" } else { "added" }
     ))
 }
 
@@ -134,16 +134,16 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
             column(&row, "addotto_atteso")
         );
         let none = |s: &str| (!s.is_empty()).then(|| s.to_string());
-        let o = Opzioni {
+        let o = Options {
             formula: Some(ion),
             smiles: none(column(&row, "smiles")),
-            attivazione: none(column(&row, "attivazione")),
-            ..Opzioni::default()
+            activation: none(column(&row, "attivazione")),
+            ..Options::default()
         };
         if id.is_empty() || file.is_empty() {
             return Err(bad("every row needs id and file"));
         }
-        let (g, json) = crate::msn_graph::grafo(&folder.join(file), &o, tmp)?;
+        let (g, json) = crate::msn_graph::graph(&folder.join(file), &o, tmp)?;
         text = aggiungi(&text, id, &g, &json)?.0;
     }
     std::fs::write(&out, &text).map_err(io)?;
@@ -152,16 +152,16 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
 
 fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
-    let (mut lib, mut out, mut pulito, mut tutti, mut annota) = (None, None, false, false, false);
-    let mut formato = Formato::Msp;
+    let (mut lib, mut out, mut clean, mut all, mut annotate) = (None, None, false, false, false);
+    let mut lib_format = Format::Msp;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         let x = crate::msn_uscite::canonical(ALIASES, x);
         match x.as_str() {
-            "--clean" => pulito = true,
-            "--all" => tutti = true,
-            "--annotate" => annota = true,
-            "--format" => formato = Formato::parse(&it.next().unwrap_or_default())?,
+            "--clean" => clean = true,
+            "--all" => all = true,
+            "--annotate" => annotate = true,
+            "--format" => lib_format = Format::parse(&it.next().unwrap_or_default())?,
             "--out" => out = it.next().map(PathBuf::from),
             _ if lib.is_none() => lib = Some(PathBuf::from(x)),
             _ => return Err(bad(&format!("unknown argument {x}"))),
@@ -171,8 +171,8 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     Ok((
         export_text(
             &std::fs::read_to_string(&lib).map_err(io)?,
-            formato,
-            (pulito, tutti, annota),
+            lib_format,
+            (clean, all, annotate),
         )?,
         out,
     ))
@@ -193,7 +193,7 @@ fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
         match x.as_str() {
             "--ppm" => o.ppm_prec = number()?,
             "--tol" => o.tol_mz = number()?,
-            "--min-evidence" => o.min_prove = number()? as usize,
+            "--min-evidence" => o.min_evidence = number()? as usize,
             "--top" => o.top = number()? as usize,
             "--delta" => o.delta_max = number()?,
             "--out" => out = it.next().map(PathBuf::from),

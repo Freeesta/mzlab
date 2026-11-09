@@ -4,28 +4,28 @@
 use super::Spettro;
 use crate::error::Result;
 use crate::idxread::Scan;
-use crate::msnalbero::{albero, consenso, Albero, Raggruppa};
+use crate::msnalbero::{albero, consenso, Albero, Grouping};
 use crate::sorgente::Scansioni;
 
-/// The consensus of a set of scans: peaks within `CONSENSO_PPM`, present in at least half of the scans.
-const CONSENSO_PPM: f64 = 5.0;
-const CONSENSO_FRAZIONE: f64 = 0.5;
+/// The consensus of a set of scans: peaks within `CONSENSUS_PPM`, present in at least half of the scans.
+const CONSENSUS_PPM: f64 = 5.0;
+const CONSENSUS_FRACTION: f64 = 0.5;
 
-fn consenso_di<M: Scansioni + ?Sized>(
+fn consensus_of<M: Scansioni + ?Sized>(
     scans: &[Scan],
-    quali: &[usize],
+    which: &[usize],
     m: &mut M,
 ) -> Result<Spettro> {
-    let mut sp = Vec::with_capacity(quali.len());
-    for &i in quali {
+    let mut sp = Vec::with_capacity(which.len());
+    for &i in which {
         sp.push(m.spettro(&scans[i])?);
     }
-    let (mz, rel, _) = consenso(&sp, CONSENSO_PPM, CONSENSO_FRAZIONE, 0.0);
+    let (mz, rel, _) = consenso(&sp, CONSENSUS_PPM, CONSENSUS_FRACTION, 0.0);
     Ok(Spettro { mz, rel })
 }
 
 /// What the graph is built from.
-pub struct Letto {
+pub struct ReadDone {
     pub albero: Albero,
     /// The consensus of the MS1, `None` without MS1 scans.
     pub ms1: Option<Spettro>,
@@ -38,17 +38,17 @@ pub struct Letto {
 }
 
 /// The tree of the scans and the consensus spectra of its nodes.
-pub fn leggi<M: Scansioni + ?Sized>(scans: &[Scan], m: &mut M, r: &Raggruppa) -> Result<Letto> {
+pub fn read<M: Scansioni + ?Sized>(scans: &[Scan], m: &mut M, r: &Grouping) -> Result<ReadDone> {
     let a = albero(scans, r);
     let ms1 = if a.ms1.is_empty() {
         None
     } else {
-        Some(consenso_di(scans, &a.ms1, m)?)
+        Some(consensus_of(scans, &a.ms1, m)?)
     };
-    let (mut spettri, mut larghezze) = (Vec::with_capacity(a.nodi.len()), vec![]);
+    let (mut spettri, mut widths) = (Vec::with_capacity(a.nodi.len()), vec![]);
     for n in &a.nodi {
-        spettri.push(consenso_di(scans, &n.scansioni, m)?);
-        larghezze.push(
+        spettri.push(consensus_of(scans, &n.scansioni, m)?);
+        widths.push(
             n.scansioni
                 .iter()
                 .filter_map(|&i| scans[i].iso.map(|(lo, hi)| hi - lo))
@@ -57,11 +57,11 @@ pub fn leggi<M: Scansioni + ?Sized>(scans: &[Scan], m: &mut M, r: &Raggruppa) ->
     }
     let neg = scans.iter().filter(|s| s.polarity < 0).count();
     let pol = if neg * 2 > scans.len() { -1 } else { 1 };
-    Ok(Letto {
+    Ok(ReadDone {
         albero: a,
         ms1,
         spettri,
-        larghezze,
+        larghezze: widths,
         polarita: pol,
     })
 }

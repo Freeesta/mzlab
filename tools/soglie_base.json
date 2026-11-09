@@ -55,7 +55,7 @@
   "crates/mzlab-core/src/json.rs::P": 153,
   "crates/mzlab-core/src/msntree.rs::msn_tree": 252,
   "crates/mzlab-core/src/mzidx.rs::Sec": 189,
-  "crates/mzlab-core/src/mzidx.rs::build_dopo": 266,
+  "crates/mzlab-core/src/mzidx.rs::build_after": 266,
   "crates/mzlab-core/src/mzml.rs::parse_loop": 172,
   "crates/mzlab-core/src/mzmlhead.rs::metadata": 117,
   "crates/mzlab-core/src/mzmlhead.rs::mobility_kind": 292,

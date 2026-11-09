@@ -10,34 +10,34 @@ import importlib.util
 
 # the sibling `verita.py`, by path: tools/bench has a module of the same name
 _spec = importlib.util.spec_from_file_location("rosina_verita", Path(__file__).resolve().parent / "verita.py")
-verita = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(verita)
+truth = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(truth)
 
 
-def appiattisci(x, prefisso="") -> dict:
+def appiattisci(x, prefix="") -> dict:
     """Scalars of a JSON document by dotted path; an object of {Name, Value} pairs is keyed by its Name."""
     out = {}
     if isinstance(x, dict):
         if set(x) >= {"Name", "Value"} and not isinstance(x["Value"], (dict, list)):
-            out[f"{prefisso}{x['Name']}"] = x["Value"]
+            out[f"{prefix}{x['Name']}"] = x["Value"]
             return out
         for k, v in x.items():
-            out.update(appiattisci(v, f"{prefisso}{k}."))
+            out.update(appiattisci(v, f"{prefix}{k}."))
     elif isinstance(x, list):
         for i, v in enumerate(x):
             if isinstance(v, dict) and set(v) >= {"Name", "Value"}:
-                out.update(appiattisci(v, prefisso))
+                out.update(appiattisci(v, prefix))
             else:
-                out.update(appiattisci(v, f"{prefisso}{i}."))
+                out.update(appiattisci(v, f"{prefix}{i}."))
     elif x is not None:
-        out[prefisso.rstrip(".")] = x
+        out[prefix.rstrip(".")] = x
     return out
 
 
 def da_trfp(mzml: Path, meta: Path, versione: str, nativo: Path | None) -> dict:
-    d = verita.da_mzml(mzml, ("ThermoRawFileParser", versione, "-f 2 -m 0"), nativo, None)
-    for nome, v in appiattisci(json.loads(meta.read_text(encoding="utf-8-sig"))).items():
-        d["metadati"][f"trfp:{nome}"] = {"valore": v if isinstance(v, (str, int, float, bool)) else str(v), "produttore": "ThermoRawFileParser"}
+    d = truth.da_mzml(mzml, ("ThermoRawFileParser", versione, "-f 2 -m 0"), nativo, None)
+    for name, v in appiattisci(json.loads(meta.read_text(encoding="utf-8-sig"))).items():
+        d["metadati"][f"trfp:{name}"] = {"valore": v if isinstance(v, (str, int, float, bool)) else str(v), "produttore": "ThermoRawFileParser"}
     return d
 
 

@@ -25,44 +25,44 @@ FL = '<parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>'
 RAW = '<parameter name="Raw data files" type="BATCH_LAST_FILES"/>'
 
 
-def _scarica(url: str, dest: Path, sha256: str | None = None) -> None:
+def _download(url: str, dest: Path, sha256: str | None = None) -> None:
     with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "mzlab-bench"}), timeout=600) as r, open(dest, "wb") as f:
-        while blocco := r.read(1 << 20):
-            f.write(blocco)
+        while block := r.read(1 << 20):
+            f.write(block)
     if sha256 and hashlib.sha256(dest.read_bytes()).hexdigest() != sha256:
         dest.unlink()
         raise SystemExit(f"sha256 of {url} differs from {sha256}")
 
 
-def installa_39(cartella: Path | str = CASA_39) -> tuple[Path, Path]:
-    """(mzmine folder with `bin/MZmine`, JAVA_HOME): mzmine 3.9.0 from the bioconda package (sha256 checked) and the OpenJDK 20 of Adoptium, in `cartella`.
+def install_39(folder: Path | str = CASA_39) -> tuple[Path, Path]:
+    """(mzmine folder with `bin/MZmine`, JAVA_HOME): mzmine 3.9.0 from the bioconda package (sha256 checked) and the OpenJDK 20 of Adoptium, in `folder`.
     Nothing is downloaded when both are already there; the archives are deleted after the extraction to spare the disk."""
-    cartella = Path(cartella)
-    mm, jdk = cartella / "mzmine", cartella / "jdk"
-    cartella.mkdir(parents=True, exist_ok=True)
+    folder = Path(folder)
+    mm, jdk = folder / "mzmine", folder / "jdk"
+    folder.mkdir(parents=True, exist_ok=True)
     if not (mm / "bin" / "MZmine").exists():
-        tar = cartella / "mzmine.tar.bz2"
-        _scarica(BIOCONDA_URL, tar, BIOCONDA_SHA256)
+        tar = folder / "mzmine.tar.bz2"
+        _download(BIOCONDA_URL, tar, BIOCONDA_SHA256)
         with tarfile.open(tar, "r:bz2") as t:
             t.extractall(mm, filter="data")
         tar.unlink()
         (mm / "bin" / "MZmine").chmod(0o755)
     if not list(jdk.glob("*/bin/java")):
-        tar = cartella / "jdk20.tar.gz"
-        _scarica(JDK20_URL, tar)
+        tar = folder / "jdk20.tar.gz"
+        _download(JDK20_URL, tar)
         with tarfile.open(tar, "r:gz") as t:
             t.extractall(jdk, filter="data")
         tar.unlink()
     return mm, next(jdk.glob("*/bin/java")).parents[1]
 
 
-def _tolleranza_mz(nome: str, comuni: bytes) -> bool:
+def _tolerance_mz(nome: str, common: bytes) -> bool:
     """`m/z tolerance (<title>)`: the name is built from the title of a `ToleranceType`."""
     m = re.fullmatch(r"m/z tolerance \((.+)\)", nome)
-    return bool(m) and m.group(1).encode() in comuni
+    return bool(m) and m.group(1).encode() in common
 
 
-def parametri_non_letti(xml: Path | str, mzmine: Path | str) -> list[str]:
+def unread_parameters(xml: Path | str, mzmine: Path | str) -> list[str]:
     """The parameters of a batch that mzmine would ignore: mzmine reads the batch without a word for a parameter whose name is not in the parameter classes of the module
     (the log never lists the values it applied), so the names of every step are searched in the classes of the package of its module and of the packages below it.
     One line `<module>: <name>` per unknown name; an empty list = every name exists."""
@@ -70,17 +70,17 @@ def parametri_non_letti(xml: Path | str, mzmine: Path | str) -> list[str]:
     from xml.etree import ElementTree as ET
     lib = Path(mzmine) / "lib"
     jar = zipfile.ZipFile(next(iter(lib.glob("work-*.jar")), None) or next((lib / "app").glob("mzmine-community-*.jar")))      # 3.9: work-*.jar; 4.x: app/mzmine-community-*.jar
-    classi = [n for n in jar.namelist() if n.endswith("Parameters.class")]
-    comuni = b"".join(jar.read(n) for n in jar.namelist() if n.startswith("io/github/mzmine/parameters/") and n.endswith(".class"))      # names of the shared parameter types
+    classes = [n for n in jar.namelist() if n.endswith("Parameters.class")]
+    common = b"".join(jar.read(n) for n in jar.namelist() if n.startswith("io/github/mzmine/parameters/") and n.endswith(".class"))      # names of the shared parameter types
     out = []
-    for passo in ET.parse(xml).getroot().iter("batchstep"):
-        modulo = passo.get("method", "")
-        pacchetto = modulo.replace(".", "/").rsplit("/", 1)[0] + "/"
-        testo = comuni + b"".join(jar.read(n) for n in classi if n.startswith(pacchetto) or pacchetto.startswith(n.rsplit("/", 1)[0] + "/"))      # the package and the ones above it
-        for p in passo.iter("parameter"):
+    for step in ET.parse(xml).getroot().iter("batchstep"):
+        module = step.get("method", "")
+        package = module.replace(".", "/").rsplit("/", 1)[0] + "/"
+        testo = common + b"".join(jar.read(n) for n in classes if n.startswith(package) or package.startswith(n.rsplit("/", 1)[0] + "/"))      # the package and the ones above it
+        for p in step.iter("parameter"):
             nome = p.get("name", "")
-            if nome and nome.encode() not in testo and not _tolleranza_mz(nome, comuni):
-                out.append(f"{modulo.rsplit('.', 1)[-1]}: {nome}")
+            if nome and nome.encode() not in testo and not _tolerance_mz(nome, common):
+                out.append(f"{module.rsplit('.', 1)[-1]}: {nome}")
     return out
 
 
@@ -88,12 +88,12 @@ def mz_tol(nome: str, ass: float, ppm: float) -> str:
     return f'<parameter name="{nome}"><absolutetolerance>{ass}</absolutetolerance><ppmtolerance>{ppm}</ppmtolerance></parameter>'
 
 
-def batch_xml(files: list[Path], uscita: Path, par: dict, fasi: Path | None = None, isotopi: bool = False) -> str:
-    """The batch. `fasi`: a folder where the feature lists are also exported after every stage (`<stage>_{}.csv`, one per list). `isotopi`: stop after the isotope grouper."""
+def batch_xml(files: list[Path], output: Path, par: dict, phases: Path | None = None, isotopi: bool = False) -> str:
+    """The batch. `phases`: a folder where the feature lists are also exported after every stage (`<stage>_{}.csv`, one per list). `isotopi`: stop after the isotope grouper."""
     a, c, r, j, g = par["ADAPChromatogramBuilder"], par["MassDetection"], par["MinimumSearchResolver"], par["JoinAligner"], par["GapFilling"]
     pol = par["polarita"].upper()
     scans = f'<parameter name="Scans"><parameter name="Polarity">{pol}</parameter><parameter name="MS level filter" selected="MS1, level = 1">1</parameter></parameter>'
-    passi = [
+    steps = [
         (M + "io.import_rawdata_mzml.MSDKmzMLImportModule",
          "<parameter name=\"File names\">" + "".join(f"<file>{escape(str(f.resolve()))}</file>" for f in files) + "</parameter>"),
         (M + "dataprocessing.featdet_massdetection.MassDetectionModule",
@@ -129,28 +129,28 @@ def batch_xml(files: list[Path], uscita: Path, par: dict, fasi: Path | None = No
          + f'<parameter name="Retention time tolerance" unit="MINUTES">{g["rt_tol"]}</parameter>'
          f'<parameter name="Minimum scans (data points)">{g["min_data_points"]}</parameter>'),
         (M + "io.export_features_csv.CSVExportModularModule",
-         FL + f'<parameter name="Filename"><current_file>{escape(str(uscita))}</current_file></parameter>'
+         FL + f'<parameter name="Filename"><current_file>{escape(str(output))}</current_file></parameter>'
          '<parameter name="Field separator">,</parameter><parameter name="Identification separator">;</parameter>'
          '<parameter name="Filter rows">ALL</parameter>'),
     ]
-    if fasi is not None or isotopi:
-        passi = _con_fasi(passi, par, fasi, isotopi)
-    corpo = "".join(f'<batchstep method="{m}" parameter_version="{v}">{p}</batchstep>\n' for m, p in passi for v in [2 if 'MinimumSearch' in m else 1])
-    return f'<?xml version="1.0" encoding="UTF-8"?>\n<batch mzmine_version="3.9.0">\n{corpo}</batch>\n'
+    if phases is not None or isotopi:
+        steps = _with_phases(steps, par, phases, isotopi)
+    body = "".join(f'<batchstep method="{m}" parameter_version="{v}">{p}</batchstep>\n' for m, p in steps for v in [2 if 'MinimumSearch' in m else 1])
+    return f'<?xml version="1.0" encoding="UTF-8"?>\n<batch mzmine_version="3.9.0">\n{body}</batch>\n'
 
 
-def _esporta(percorso: str) -> tuple[str, str]:
+def _export(percorso: str) -> tuple[str, str]:
     return (M + "io.export_features_csv.CSVExportModularModule",
             FL + f'<parameter name="Filename"><current_file>{escape(percorso)}</current_file></parameter>'
             '<parameter name="Field separator">,</parameter><parameter name="Identification separator">;</parameter>'
             '<parameter name="Remove empty columns">false</parameter><parameter name="Filter rows">ALL</parameter>')
 
 
-def _con_fasi(passi: list, par: dict, fasi: Path | None, isotopi: bool) -> list:
+def _with_phases(steps: list, par: dict, phases: Path | None, isotopi: bool) -> list:
     """Adds the exports after every stage (and, for `isotopi`, the isotope grouper after the resolver and nothing after it)."""
-    nomi = ["import", "massa", "adap", "risolutore", "join", "riempimento", "csv"]
+    names = ["import", "massa", "adap", "risolutore", "join", "riempimento", "csv"]
     out = []
-    for nome, passo in zip(nomi, passi):
+    for nome, step in zip(names, steps):
         if nome in ("join", "riempimento") and isotopi:
             continue
         if nome == "csv":
@@ -160,17 +160,17 @@ def _con_fasi(passi: list, par: dict, fasi: Path | None, isotopi: bool) -> list:
                             '<parameter name="Mobility tolerance" selected="false"/><parameter name="Monotonic shape">false</parameter>'
                             '<parameter name="Maximum charge">2</parameter><parameter name="Representative isotope">Most intense</parameter>'
                             '<parameter name="Never remove feature with MS2">false</parameter><parameter name="Original feature list">REMOVE</parameter>'))
-                out.append(_esporta(str(fasi / "isotopi_{}.csv")))
-            if fasi is None:
-                out.append(passo)
+                out.append(_export(str(phases / "isotopi_{}.csv")))
+            if phases is None:
+                out.append(step)
             continue
-        out.append(passo)
-        if fasi is not None and nome in ("adap", "risolutore", "join", "riempimento") and not (isotopi and nome == "adap"):
-            out.append(_esporta(str(fasi / f"{nome}_{{}}.csv")))
+        out.append(step)
+        if phases is not None and nome in ("adap", "risolutore", "join", "riempimento") and not (isotopi and nome == "adap"):
+            out.append(_export(str(phases / f"{nome}_{{}}.csv")))
     return out
 
 
-def esegui_batch(xml: Path, mzmine: Path | str, java_home: Path | str, tmp: Path) -> subprocess.CompletedProcess:
+def run_batch(xml: Path, mzmine: Path | str, java_home: Path | str, tmp: Path) -> subprocess.CompletedProcess:
     """`bin/MZmine -b xml` without interface; the log (stdout and stderr) goes next to the batch as `<xml>.log`."""
     env = dict(os.environ, JAVA_HOME=str(java_home), PATH=f"{java_home}/bin:{os.environ['PATH']}")
     r = subprocess.run([str(Path(mzmine) / "bin" / "MZmine"), "-b", str(xml), "-t", str(tmp)], capture_output=True, text=True, env=env)
@@ -185,18 +185,18 @@ def extra(ap) -> None:
 
 def main() -> None:
     a = corri.argomenti(__doc__, extra)
-    par = corri.parametri("mzmine", a.config)
+    par = corri.parameters("mzmine", a.config)
     fs = corri.file_mzml(a.mzml_dir, a.solo)
-    nat = corri.cartella_nativa(a.out_dir, "mzmine", a.config)
-    uscita = nat / "feature_list.csv"
-    for vecchio in nat.glob("feature_list*.csv"):
-        vecchio.unlink()
-    (nat / "batch.xml").write_text(batch_xml(fs, uscita, par), encoding="utf-8")
-    mm, jh = (Path(a.mzmine), Path(a.java_home)) if a.mzmine and a.java_home else installa_39()
-    r = esegui_batch(nat / "batch.xml", mm, jh, nat / "tmp")
-    if not uscita.exists():
+    nat = corri.native_folder(a.out_dir, "mzmine", a.config)
+    output = nat / "feature_list.csv"
+    for old in nat.glob("feature_list*.csv"):
+        old.unlink()
+    (nat / "batch.xml").write_text(batch_xml(fs, output, par), encoding="utf-8")
+    mm, jh = (Path(a.mzmine), Path(a.java_home)) if a.mzmine and a.java_home else install_39()
+    r = run_batch(nat / "batch.xml", mm, jh, nat / "tmp")
+    if not output.exists():
         raise SystemExit(f"MZmine wrote no table (exit {r.returncode}):\n{(r.stderr or r.stdout)[-2000:]}")
-    t = adatta.da_csv("mzmine", uscita, [f.stem for f in fs], a.dataset, a.config)
+    t = adatta.da_csv("mzmine", output, [f.stem for f in fs], a.dataset, a.config)
     print(corri.salva(t, a.out_dir, "3.9.0"), len(t["righe"]), "rows")
 
 

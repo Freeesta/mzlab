@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use super::inerte::extra_inerte;
+use super::inerte::{extra_inerte, tic_read};
 use super::*;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, SpectrumExtra};
@@ -203,12 +203,12 @@ impl Rows {
     }
 
     /// Level and polarity of the row added last: what the `.mzidx` builder groups the scan by (the text of an extra can say more than the scan does).
-    pub(crate) fn ultima(&self) -> Option<(u8, i8)> {
+    pub(crate) fn last(&self) -> Option<(u8, i8)> {
         self.rows.last().map(|r| (r.level, r.polarity))
     }
 
     /// Whether the last row alone makes the file high-resolution (`Table::hr1` takes the rows of every MS1 scan).
-    pub(crate) fn ultima_hr(&self) -> bool {
+    pub(crate) fn last_hr(&self) -> bool {
         self.rows.last().is_some_and(|r| super::is_hr(&[r]))
     }
 }
@@ -361,7 +361,7 @@ impl Rows {
         let row = Row {
             start: a,
             end: b,
-            dove: None,
+            at: None,
             level,
             rt,
             polarity: pol,
@@ -396,9 +396,9 @@ fn esc(s: &str) -> String {
 
 impl Rows {
     /// One scan of a reader, as `spectrum` would read the header `mzmlwrite::spectrum_head(k, sp, extra)` writes for it, without writing it: the same
-    /// fields from the same values (`sp` with its arrays cut to the shorter one, `tic` the sum of its intensities). `false` and nothing added when an
-    /// extra could change what the text says (`extra_inerte`): the caller then gives `spectrum` the text.
-    pub(crate) fn lettore(&mut self, sp: &Spectrum, extra: &SpectrumExtra, tic: f64) -> bool {
+    /// fields from the same values (`sp` with its arrays cut to the shorter one, `tic` the total the writer writes: `extra.tic`, else the sum of the
+    /// intensities). `false` and nothing added when an extra could change what the text says (`extra_inerte`): the caller then gives `spectrum` the text.
+    pub(crate) fn reader(&mut self, sp: &Spectrum, extra: &SpectrumExtra, tic: f64) -> bool {
         if !extra_inerte(sp, extra) {
             return false;
         }
@@ -433,11 +433,11 @@ impl Rows {
         let row = Row {
             start: 0,
             end: 0,
-            dove: None,
+            at: None,
             level,
             rt: sp.rt,
             polarity,
-            tic: Some(tic).filter(|v| *v != 0.0).unwrap_or(0.0),
+            tic: Some(tic_read(tic)).filter(|v| *v != 0.0).unwrap_or(0.0),
             an: self.head.analyzer(filt, None),
             kind: (level > 1)
                 .then(|| super::kind_of("", filt))

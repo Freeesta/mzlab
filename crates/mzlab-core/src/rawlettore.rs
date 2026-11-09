@@ -2,22 +2,23 @@
 //! member (indexes only, no scan is read); a scan reads only its own packet. The index comes from the scan index and the scan events (`scan_metadata`),
 //! so listing a run touches no peak data. Peaks are what the file holds (the centroid list of a scan, its profile when it has no other), as `raw::read`.
 
-use std::io::{Read, Seek, SeekFrom};
-
 use opentfraw::extra::scan_extras_with;
 use opentfraw::mzml::{extract_arrays, extract_spectrum, scan_metadata, ScanMetadata};
 use opentfraw::{ExtraFields, RawFileReader, ScanParams};
 
 use crate::error::{Error, Result};
-use crate::idxread::ReadAt;
 use crate::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
-    VoceLettore, VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
 };
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::mzmlwrite::{Header, SpectrumExtra};
+use flusso::Stream;
+#[cfg(test)]
+use flusso::{SKIP_WINDOW, WINDOW};
 
 mod extra;
+mod flusso;
 mod testata;
 
 const MAGIC: [u8; 18] = [
@@ -25,7 +26,7 @@ const MAGIC: [u8; 18] = [
 ];
 
 fn riconosci(fs: &mut FileSet) -> Fiducia {
-    let Some(i) = fs.trova(".raw") else {
+    let Some(i) = fs.find(".raw") else {
         return Fiducia::No;
     };
     if fs.testa(i, MAGIC.len()) == MAGIC {
@@ -35,7 +36,7 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
     }
 }
 
-pub const VOCE: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "thermo-raw",
     contratto: CONTRATTO,
     estensioni: &[".raw"],
@@ -43,79 +44,12 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
-/// The window of `Stream`: `opentfraw` reads a few bytes at a time and a read of the source can cost a call into JS (the logic of `window::Windowed`, owned here because `Stream` owns its source).
-const FINESTRA: usize = 1 << 16;
-
-/// A `ReadAt` seen as `Read + Seek` (what `opentfraw` reads from), with a window that serves the short reads.
-struct Stream {
-    inner: Box<dyn ReadAt>,
-    pos: u64,
-    len: u64,
-    at: u64,
-    buf: Vec<u8>,
-}
-
-impl Stream {
-    fn new(inner: Box<dyn ReadAt>, len: u64) -> Stream {
-        Stream {
-            inner,
-            pos: 0,
-            len,
-            at: 0,
-            buf: Vec::new(),
-        }
-    }
-}
-
-impl Read for Stream {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let n = usize::try_from(self.len.saturating_sub(self.pos))
-            .unwrap_or(usize::MAX)
-            .min(buf.len());
-        let Some(out) = buf.get_mut(..n) else {
-            return Ok(0);
-        };
-        let fine = self.pos + n as u64;
-        if n > FINESTRA {
-            self.inner
-                .read_at(self.pos, out)
-                .map_err(|e| std::io::Error::other(e.key))?;
-        } else if n > 0 {
-            if self.pos < self.at || fine > self.at + self.buf.len() as u64 {
-                let w = (self.len - self.pos).min(FINESTRA as u64) as usize;
-                self.buf.resize(w, 0);
-                self.at = self.pos;
-                if let Err(e) = self.inner.read_at(self.pos, &mut self.buf) {
-                    self.buf.clear();
-                    return Err(std::io::Error::other(e.key));
-                }
-            }
-            let a = (self.pos - self.at) as usize;
-            out.copy_from_slice(&self.buf[a..a + n]);
-        }
-        self.pos = fine;
-        Ok(n)
-    }
-}
-
-impl Seek for Stream {
-    fn seek(&mut self, to: SeekFrom) -> std::io::Result<u64> {
-        let p = match to {
-            SeekFrom::Start(p) => Some(p),
-            SeekFrom::End(d) => self.len.checked_add_signed(d),
-            SeekFrom::Current(d) => self.pos.checked_add_signed(d),
-        };
-        self.pos = p.ok_or_else(|| std::io::Error::other("seek before the start"))?;
-        Ok(self.pos)
-    }
-}
-
-pub struct LettoreRaw {
+pub struct RawReader {
     raw: RawFileReader,
     src: Stream,
-    nome: String,
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    name: String,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
     /// SHA-1 of the file: the one the caller gave (`Membro::sha1`) or read the first time the mzML header is asked for (`Some(None)`: it could not be read).
     sha1: Option<Option<String>>,
     /// The traces of the analog controllers (pressure, temperatures, UV channels), read the first time they are asked for.
@@ -126,9 +60,9 @@ fn raw_error(e: impl std::fmt::Display) -> Error {
     Error::new("err.file.raw").with("detail", e)
 }
 
-fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs
-        .trova(".raw")
+        .find(".raw")
         .ok_or_else(|| Error::new("err.file.raw").with("detail", "no .raw member"))?;
     let m = fs
         .membri
@@ -146,8 +80,8 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
     );
     let sha1 = m.sha1.take().map(Some);
     let raw = RawFileReader::open(&mut src).map_err(|e| crate::raw::thermo_error(&e))?;
-    limiti.voci_ok(u64::from(raw.num_scans))?;
-    let indice: Vec<VoceScansione> = (0..raw.num_scans)
+    limits.ok_entries(u64::from(raw.num_scans))?;
+    let index: Vec<ScanEntry> = (0..raw.num_scans)
         .filter_map(|k| scan_metadata(&raw, &mut src, k))
         .map(|m| entry(&raw, &m))
         .collect();
@@ -155,30 +89,30 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .rsplit_once('.')
         .map_or(&nome[..], |(s, _)| s)
         .to_string();
-    let campioni = vec![Campione {
+    let samples = vec![Sample {
         id: 1,
         nome: stem,
-        scansioni: indice.len(),
-        dimensione: None,
+        scansioni: index.len(),
+        size: None,
     }];
-    Ok(Box::new(LettoreRaw {
+    Ok(Box::new(RawReader {
         raw,
         src,
-        nome,
-        campioni,
-        indice,
+        name: nome,
+        campioni: samples,
+        indice: index,
         sha1,
         analogiche: None,
     }))
 }
 
 /// The row of the index of a scan, from its metadata alone.
-fn entry(raw: &RawFileReader, m: &ScanMetadata) -> VoceScansione {
+fn entry(raw: &RawFileReader, m: &ScanMetadata) -> ScanEntry {
     let at = raw
         .scan_index
         .get(m.index)
         .map(|e| (raw.data_addr.saturating_add(e.offset), e.data_size));
-    VoceScansione {
+    ScanEntry {
         id: format!("controllerType=0 controllerNumber=1 scan={}", m.scan_number),
         rt: m.retention_time_min,
         livello: u8::try_from(m.ms_level).unwrap_or(u8::MAX),
@@ -188,16 +122,16 @@ fn entry(raw: &RawFileReader, m: &ScanMetadata) -> VoceScansione {
             None => 0,
         },
         tic: m.total_ion_current,
-        picco_base: Some(m.base_peak_mz).filter(|x| *x > 0.0),
+        base_peak: Some(m.base_peak_mz).filter(|x| *x > 0.0),
         filtro: m.filter.clone().unwrap_or_default(),
         precursore: m
             .precursor
             .as_ref()
             .and_then(|p| p.selected_mz.or(p.target_mz)),
-        posizione: at.map(|(offset, lunghezza)| Posizione {
+        position: at.map(|(offset, length)| Position {
             membro: 0,
             offset,
-            lunghezza,
+            lunghezza: length,
         }),
     }
 }
@@ -219,13 +153,13 @@ fn tipo_analogico(t: &opentfraw::AnalogTrace) -> ChromKind {
 }
 
 /// Id, kind and samples of every analog channel; two channels with the same name get the number of their controller after it.
-fn analogiche(l: &mut LettoreRaw) -> &[(String, ChromKind, opentfraw::AnalogTrace)] {
+fn analogiche(l: &mut RawReader) -> &[(String, ChromKind, opentfraw::AnalogTrace)] {
     if l.analogiche.is_none() {
-        let tracce = l.raw.analog_traces(&mut l.src).unwrap_or_default();
+        let traces = l.raw.analog_traces(&mut l.src).unwrap_or_default();
         let mut out: Vec<(String, ChromKind, opentfraw::AnalogTrace)> = Vec::new();
-        for t in tracce {
-            let doppio = out.iter().any(|(id, ..)| *id == t.name);
-            let id = if doppio {
+        for t in traces {
+            let double = out.iter().any(|(id, ..)| *id == t.name);
+            let id = if double {
                 format!("{} #{}", t.name, t.controller)
             } else {
                 t.name.clone()
@@ -238,13 +172,13 @@ fn analogiche(l: &mut LettoreRaw) -> &[(String, ChromKind, opentfraw::AnalogTrac
 }
 
 /// The TIC, then the analog channels.
-fn elenco_cromatogrammi(l: &mut LettoreRaw) -> Vec<VoceCromatogramma> {
-    let mut v = vec![VoceCromatogramma {
+fn chromatogram_list(l: &mut RawReader) -> Vec<ChromatogramEntry> {
+    let mut v = vec![ChromatogramEntry {
         id: "TIC".into(),
         tipo: ChromKind::Tic,
         unita: "number of detector counts".into(),
     }];
-    v.extend(analogiche(l).iter().map(|(id, tipo, t)| VoceCromatogramma {
+    v.extend(analogiche(l).iter().map(|(id, tipo, t)| ChromatogramEntry {
         id: id.clone(),
         tipo: *tipo,
         unita: t.unit.clone(),
@@ -253,8 +187,8 @@ fn elenco_cromatogrammi(l: &mut LettoreRaw) -> Vec<VoceCromatogramma> {
 }
 
 /// A series of the instrument log (status log or trailer, `metodo_raw/serie.rs`): not in the list above, so neither the mzML nor the `.mzidx` carry it; computed here when asked for.
-fn registro_di(l: &mut LettoreRaw, id: &str) -> Option<Chromatogram> {
-    let s = crate::metodo_raw::serie::serie(&l.raw, &mut l.src, id)?;
+fn log_of(l: &mut RawReader, id: &str) -> Option<Chromatogram> {
+    let s = crate::metodo_raw::serie::series(&l.raw, &mut l.src, id)?;
     Some(Chromatogram {
         index: 0,
         id: id.into(),
@@ -267,8 +201,8 @@ fn registro_di(l: &mut LettoreRaw, id: &str) -> Option<Chromatogram> {
     })
 }
 
-fn cromatogramma_di(l: &mut LettoreRaw, id: &str) -> Result<Chromatogram> {
-    if let Some(c) = registro_di(l, id) {
+fn cromatogramma_di(l: &mut RawReader, id: &str) -> Result<Chromatogram> {
+    if let Some(c) = log_of(l, id) {
         return Ok(c);
     }
     if id != "TIC" {
@@ -301,7 +235,7 @@ fn cromatogramma_di(l: &mut LettoreRaw, id: &str) -> Result<Chromatogram> {
     })
 }
 
-impl LettoreRaw {
+impl RawReader {
     fn one(&self, c: usize) -> Result<()> {
         (c == 0)
             .then_some(())
@@ -326,46 +260,46 @@ impl LettoreRaw {
     }
 }
 
-fn field(nome: &str, valore: impl ToString, unita: Option<&str>, cv: Option<&str>) -> Campo {
-    Campo {
-        nome: nome.into(),
-        valore: valore.to_string(),
+fn field(name: &str, value: impl ToString, unita: Option<&str>, cv: Option<&str>) -> Field {
+    Field {
+        nome: name.into(),
+        valore: value.to_string(),
         unita: unita.map(str::to_string),
         cv: cv.map(str::to_string),
     }
 }
 
-impl Lettore for LettoreRaw {
-    fn formato(&self) -> Formato {
-        Formato::ThermoRaw
+impl Reader for RawReader {
+    fn format(&self) -> Format {
+        Format::ThermoRaw
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::conv::THERMO
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.one(c)?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.decodificata(c, k, false)
     }
 
-    fn scansione_profilo(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
+    fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
         self.decodificata(c, k, true).map(Some)
     }
 
     /// The points of the scan and the rest from the row of the index: no trailer, no filter, no precursors read again.
-    fn scansione_dati(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+    fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
         let idx = self.row(k)?;
-        let (mz, intensity, modo) = extract_arrays(&self.raw, &mut self.src, idx)
+        let (mz, intensity, mode) = extract_arrays(&self.raw, &mut self.src, idx)
             .ok_or_else(|| raw_error("scan cannot be decoded"))?;
         let v = self
             .indice
@@ -377,7 +311,7 @@ impl Lettore for LettoreRaw {
             level: v.livello,
             rt: v.rt,
             polarity: v.polarita,
-            profile: modo == Some(opentfraw::ScanMode::Profile),
+            profile: mode == Some(opentfraw::ScanMode::Profile),
             filter: String::new(),
             precursor: v.precursore,
             mz,
@@ -386,36 +320,36 @@ impl Lettore for LettoreRaw {
         })
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        extra::intestazione(self, c, k)
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
+        extra::scan_header(self, c, k)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
-        Ok(elenco_cromatogrammi(self))
+        Ok(chromatogram_list(self))
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
         cromatogramma_di(self, id)
     }
 
-    fn mancanti(&mut self, _c: usize) -> usize {
+    fn missing(&mut self, _c: usize) -> usize {
         crate::raw::cut_scans(&self.raw)
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
+    fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
-        Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.nome))
+        Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.name))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        testata::completa(self, c)
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
+        testata::complete(self, c)
     }
-    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
+    fn table_header(&mut self, c: usize) -> Result<Option<Header>> {
         testata::leggera(self, c)
     }
 
-    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+    fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
         extra::di_scansione(self, c, k, s)
     }
 }
@@ -425,7 +359,7 @@ fn header_fields(
     raw: &RawFileReader,
     params: Option<ScanParams<'_>>,
     m: &ScanMetadata,
-) -> Vec<Campo> {
+) -> Vec<Field> {
     let mut out = Vec::new();
     if let Some(p) = &m.precursor {
         let ce = p.collision_energy.map(|ce| {

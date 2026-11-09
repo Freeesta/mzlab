@@ -1,7 +1,7 @@
 //! The validator on the files the writer and `tools/mzml_msconvert_sintetico.py` produce: valid, and the checks that must not be silent.
 use super::*;
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
-use crate::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use crate::mzmlwrite::{Header, MzmlWriter, Options};
 
 pub(super) fn spectrum(i: usize, level: u8, mz: Vec<f64>) -> Spectrum {
     let n = mz.len();
@@ -21,7 +21,7 @@ pub(super) fn spectrum(i: usize, level: u8, mz: Vec<f64>) -> Spectrum {
 }
 
 /// Three spectra (the second one MS2) and two chromatograms, written by `MzmlWriter`; `sorted: false` writes the m/z of the first spectrum backwards.
-pub(super) fn written(indexed: bool, opz: Opzioni, sorted: bool) -> Vec<u8> {
+pub(super) fn written(indexed: bool, opz: Options, sorted: bool) -> Vec<u8> {
     let h = Header {
         run: "x".into(),
         sources: vec!["x.raw".into()],
@@ -37,7 +37,7 @@ pub(super) fn written(indexed: bool, opz: Opzioni, sorted: bool) -> Vec<u8> {
     let mut w = if indexed {
         MzmlWriter::indicizzato(Vec::new(), &h, opz)
     } else {
-        MzmlWriter::con_opzioni(Vec::new(), &h, opz)
+        MzmlWriter::with_options(Vec::new(), &h, opz)
     }
     .unwrap();
     w.open_spectra(3).unwrap();
@@ -74,7 +74,7 @@ pub(super) fn written(indexed: bool, opz: Opzioni, sorted: bool) -> Vec<u8> {
 }
 
 pub(super) fn report(b: &[u8]) -> Report {
-    valida(b).unwrap()
+    validate(b).unwrap()
 }
 
 pub(super) fn errors(r: &Report) -> Vec<&'static str> {
@@ -103,12 +103,12 @@ pub(super) fn show_all(r: &Report) -> String {
 
 #[test]
 fn the_vocabulary_table_is_loaded() {
-    assert!(termini() > 5000);
+    assert!(terms() > 5000);
 }
 
 #[test]
 fn the_indexed_file_of_the_writer_is_valid() {
-    let r = report(&written(true, Opzioni::default(), true));
+    let r = report(&written(true, Options::default(), true));
     assert!(
         r.is_valid() && r.indexed && (r.spectra, r.chromatograms) == (3, 2),
         "{}",
@@ -120,10 +120,10 @@ fn the_indexed_file_of_the_writer_is_valid() {
 #[test]
 fn the_plain_file_and_the_numpress_file_are_valid() {
     for opz in [
-        Opzioni::default(),
-        Opzioni {
+        Options::default(),
+        Options {
             numpress: true,
-            ..Opzioni::default()
+            ..Options::default()
         },
     ] {
         let r = report(&written(false, opz, true));
@@ -136,7 +136,7 @@ fn the_plain_file_and_the_numpress_file_are_valid() {
 #[test]
 fn the_pass_hands_over_what_the_file_holds() {
     let mut got = Vec::new();
-    let r = analizza(&written(true, Opzioni::default(), true)[..], &mut |i| {
+    let r = analyze(&written(true, Options::default(), true)[..], &mut |i| {
         got.push(i)
     })
     .unwrap();
@@ -236,11 +236,11 @@ fn the_synthetic_variants_that_are_broken_are_caught() {
 fn scan_start_time_in_seconds_by_unit_name_or_accession() {
     let minute = "unitAccession=\"UO:0000031\" unitName=\"minute\"";
     let rts = |unit: &str| -> Vec<Option<f64>> {
-        let b = String::from_utf8(written(false, Opzioni::default(), true))
+        let b = String::from_utf8(written(false, Options::default(), true))
             .unwrap()
             .replace(minute, unit);
         let mut got = Vec::new();
-        analizza(b.as_bytes(), &mut |i| {
+        analyze(b.as_bytes(), &mut |i| {
             if let Item::Spectrum(s) = i {
                 got.push(s.rt)
             }
@@ -265,11 +265,11 @@ fn scan_start_time_in_seconds_by_unit_name_or_accession() {
 #[test]
 fn a_numpress_array_ending_on_its_prediction_has_all_its_values() {
     let h = Header::default();
-    let opz = Opzioni {
+    let opz = Options {
         numpress: true,
-        ..Opzioni::default()
+        ..Options::default()
     };
-    let mut w = MzmlWriter::con_opzioni(Vec::new(), &h, opz).unwrap();
+    let mut w = MzmlWriter::with_options(Vec::new(), &h, opz).unwrap();
     w.open_spectra(8).unwrap();
     for t in 0..8 {
         let mz: Vec<f64> = (0..40)

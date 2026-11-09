@@ -14,7 +14,7 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 
 
-def _verita():
+def _truth():
     """tools/rosina/verita.py by path: tools/bench/verita.py has the same name."""
     spec = importlib.util.spec_from_file_location("rosina_verita", _HERE / "verita.py")
     mod = importlib.util.module_from_spec(spec)
@@ -78,8 +78,8 @@ def _chrom(c: dict, points: int) -> dict:
     }
 
 
-def da_scandump(path: Path, oracolo: tuple) -> dict:
-    v = _verita()
+def da_scandump(path: Path, oracle: tuple) -> dict:
+    v = _truth()
     head, scans, peaks, chroms = None, [], {}, []
     for r in _rows(path):
         t = r.get("type")
@@ -97,17 +97,17 @@ def da_scandump(path: Path, oracolo: tuple) -> dict:
     scansioni = [_scan(s) for s in scans]
     at = {s["n"]: i for i, s in enumerate(scans)}
     pt = {str(at[n]): {"mz": p["mz"], "intensita": p["int"]} for n, p in peaks.items() if n in at}
-    cromatogrammi = [_chrom(c, v.PUNTI_CROMATOGRAMMA) for c in chroms]
+    chromatograms = [_chrom(c, v.CHROMATOGRAM_POINTS) for c in chroms]
     cs, cc = {}, {}
     for s in scansioni:
         cs[f"ms{s['livello']}"] = cs.get(f"ms{s['livello']}", 0) + 1
-    for c in cromatogrammi:
+    for c in chromatograms:
         cc[c["tipo"]] = cc.get(c["tipo"], 0) + 1
-    metadati = {}
+    metadata = {}
     for k, nome in (("instrument", "scandump:instrument"), ("format_version", "scandump:format_version")):
         if head.get(k) is not None:
-            metadati[nome] = {"valore": head[k], "produttore": head.get("producer", "")}
-    nome, ver, opz = oracolo
+            metadata[nome] = {"valore": head[k], "produttore": head.get("producer", "")}
+    nome, ver, opz = oracle
     return {
         "schema": "verita/1",
         "file": {"nome": head["name"], "sha256": head.get("sha256"), "campione": None},
@@ -121,8 +121,8 @@ def da_scandump(path: Path, oracolo: tuple) -> dict:
         "conteggi": {"spettri": cs, "cromatogrammi": cc},
         "scansioni": scansioni,
         "punti": pt,
-        "cromatogrammi": cromatogrammi,
-        "metadati": metadati,
+        "cromatogrammi": chromatograms,
+        "metadati": metadata,
     }
 
 
@@ -132,7 +132,7 @@ def main(argv=None) -> int:
     ap.add_argument("--oracolo", nargs=3, metavar=("NOME", "VERSIONE", "OPZIONI"), default=["", "", "scandump/1"])
     a = ap.parse_args(argv)
     d = da_scandump(a.dump, tuple(a.oracolo))
-    for problema in _verita().valida(d):
+    for problema in _truth().validate(d):
         print(problema, file=sys.stderr)
     json.dump(d, sys.stdout, indent=1, ensure_ascii=False)
     sys.stdout.write("\n")

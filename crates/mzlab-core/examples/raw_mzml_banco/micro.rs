@@ -10,12 +10,12 @@ use sha1::Sha1;
 use sha2::{Digest, Sha256};
 
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni, SpectrumExtra};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options, SpectrumExtra};
 use opentfraw::pacchetto::{decodifica, decodifica_picchi};
 
-use crate::denso::{pacchetto, Parametri, COEFF};
+use crate::denso::{packet, Parameters, COEFF};
 use crate::fasi::Sink;
-use crate::misura::arrotonda;
+use crate::misura::round_to;
 
 /// Seconds the repeated operation runs for, at least; the cost per operation is read from the last, longest pass.
 const MIN_S: f64 = 0.4;
@@ -45,46 +45,46 @@ pub fn ns_per_op(mut f: impl FnMut()) -> f64 {
     }
 }
 
-fn forma(nome: &str) -> Parametri {
-    match nome {
-        "lab-a" => Parametri::forma_lab_a(1),
-        "lab-b" => Parametri::forma_lab_b(1),
-        _ => Parametri::denso(1),
+fn shape(name: &str) -> Parameters {
+    match name {
+        "lab-a" => Parameters::lab_shape_a(1),
+        "lab-b" => Parameters::lab_shape_b(1),
+        _ => Parameters::denso(1),
     }
 }
 
 const FORME: [&str; 3] = ["lab-a", "lab-b", "denso"];
 
-fn decodifica_ft() -> Value {
+fn decode_ft() -> Value {
     let mut out = Vec::new();
-    for nome in FORME {
+    for name in FORME {
         let mut b = Vec::new();
-        pacchetto(&mut b, &forma(nome), 0, None);
-        let completo = ns_per_op(|| {
+        packet(&mut b, &shape(name), 0, None);
+        let complete = ns_per_op(|| {
             black_box(decodifica(black_box(&b)).ok());
         });
-        let solo_lista = ns_per_op(|| {
+        let list_only = ns_per_op(|| {
             black_box(decodifica_picchi(black_box(&b)).ok());
         });
         out.push(json!({
-            "forma": nome, "byte_pacchetto": b.len(),
-            "pacchetto_intero_ns": arrotonda(completo), "pacchetto_intero_mb_s": arrotonda(b.len() as f64 / completo * 1e3),
-            "solo_lista_ns": arrotonda(solo_lista), "solo_lista_mb_s": arrotonda(b.len() as f64 / solo_lista * 1e3),
+            "forma": name, "byte_pacchetto": b.len(),
+            "pacchetto_intero_ns": round_to(complete), "pacchetto_intero_mb_s": round_to(b.len() as f64 / complete * 1e3),
+            "solo_lista_ns": round_to(list_only), "solo_lista_mb_s": round_to(b.len() as f64 / list_only * 1e3),
         }));
     }
     json!(out)
 }
 
-fn conversione_mz() -> Value {
+fn mz_conversion() -> Value {
     let mut b = Vec::new();
-    pacchetto(&mut b, &Parametri::denso(1), 0, None);
+    packet(&mut b, &Parameters::denso(1), 0, None);
     let pk = decodifica(&b).expect("packet");
     let p = pk.profile.expect("profile");
-    let punti: usize = p.chunks.iter().map(|c| c.signal.len()).sum();
+    let points: usize = p.chunks.iter().map(|c| c.signal.len()).sum();
     let ns = ns_per_op(|| {
         black_box(p.to_mz_intensity(black_box(&COEFF)));
     });
-    json!({"punti": punti, "ns_per_punto": arrotonda(ns / punti as f64), "mpunti_s": arrotonda(punti as f64 / ns * 1e3)})
+    json!({"punti": points, "ns_per_punto": round_to(ns / points as f64), "mpunti_s": round_to(points as f64 / ns * 1e3)})
 }
 
 fn spettro(n: usize) -> Spectrum {
@@ -103,7 +103,7 @@ fn spettro(n: usize) -> Spectrum {
     }
 }
 
-fn intestazione() -> Header {
+fn scan_header() -> Header {
     Header {
         run: "bench".into(),
         software: ("mzLab".into(), "bench".into()),
@@ -124,48 +124,48 @@ fn xml() -> Value {
             .collect(),
         ..SpectrumExtra::default()
     };
-    let opz = Opzioni {
+    let opz = Options {
         livello: 0,
         numpress: false,
         thread: 1,
         dad: false,
     };
-    let mut righe = Vec::new();
-    for punti in [0usize, 64, 526] {
-        let s = spettro(punti);
+    let mut rows = Vec::new();
+    for points in [0usize, 64, 526] {
+        let s = spettro(points);
         let mut w =
-            MzmlWriter::con_opzioni(Sink::nuovo(false), &intestazione(), opz).expect("writer");
+            MzmlWriter::with_options(Sink::nuovo(false), &scan_header(), opz).expect("writer");
         w.open_spectra(1 << 30).expect("open");
         let ns = ns_per_op(|| {
             w.spectrum_with(black_box(&s), black_box(&extra))
                 .expect("spectrum");
         });
         let mut w1 =
-            MzmlWriter::con_opzioni(Sink::nuovo(false), &intestazione(), opz).expect("writer");
+            MzmlWriter::with_options(Sink::nuovo(false), &scan_header(), opz).expect("writer");
         w1.spectrum_with(&s, &extra).expect("spectrum");
         let b = w1.finish().expect("finish").n;
-        righe.push(
-            json!({"punti": punti, "ns_per_spettro": arrotonda(ns), "byte_per_spettro_circa": b}),
+        rows.push(
+            json!({"punti": points, "ns_per_spettro": round_to(ns), "byte_per_spettro_circa": b}),
         );
     }
-    json!(righe)
+    json!(rows)
 }
 
 fn base64() -> Value {
-    let dati: Vec<u8> = (0..1 << 20)
+    let data: Vec<u8> = (0..1 << 20)
         .map(|i: u32| (i.wrapping_mul(2_654_435_761) >> 13) as u8)
         .collect();
-    let mut s = String::with_capacity(dati.len() * 4 / 3 + 8);
+    let mut s = String::with_capacity(data.len() * 4 / 3 + 8);
     let ns = ns_per_op(|| {
         s.clear();
-        base64::engine::general_purpose::STANDARD.encode_string(black_box(&dati), &mut s);
+        base64::engine::general_purpose::STANDARD.encode_string(black_box(&data), &mut s);
     });
-    json!({"gb_s": arrotonda(dati.len() as f64 / ns)})
+    json!({"gb_s": round_to(data.len() as f64 / ns)})
 }
 
-/// The arrays of a spectrum as `Codifica::array` makes them before zlib: the values as little-endian floats.
-fn array_f64_f32(pk: &[u8], solo_lista: bool) -> (Vec<u8>, Vec<u8>) {
-    let (mz, int): (Vec<f64>, Vec<f32>) = if solo_lista {
+/// The arrays of a spectrum as `Encoding::array` makes them before zlib: the values as little-endian floats.
+fn array_f64_f32(pk: &[u8], list_only: bool) -> (Vec<u8>, Vec<u8>) {
+    let (mz, int): (Vec<f64>, Vec<f32>) = if list_only {
         decodifica_picchi(pk)
             .expect("list")
             .iter()
@@ -185,95 +185,95 @@ fn array_f64_f32(pk: &[u8], solo_lista: bool) -> (Vec<u8>, Vec<u8>) {
     )
 }
 
-/// zlib as `Codifica::deflate` uses it: the output through a chunk of 32 KB.
-fn deflate(z: &mut Compress, dentro: &[u8], blocco: &mut [u8], fuori: &mut Vec<u8>) {
-    fuori.clear();
-    let mut fatto = 0;
+/// zlib as `Encoding::deflate` uses it: the output through a chunk of 32 KB.
+fn deflate(z: &mut Compress, inside: &[u8], block: &mut [u8], outside: &mut Vec<u8>) {
+    outside.clear();
+    let mut done = 0;
     loop {
         let (i0, o0) = (z.total_in(), z.total_out());
         let st = z
-            .compress(&dentro[fatto..], blocco, FlushCompress::Finish)
+            .compress(&inside[done..], block, FlushCompress::Finish)
             .expect("deflate");
-        fatto += (z.total_in() - i0) as usize;
-        fuori.extend_from_slice(&blocco[..(z.total_out() - o0) as usize]);
+        done += (z.total_in() - i0) as usize;
+        outside.extend_from_slice(&block[..(z.total_out() - o0) as usize]);
         if st == flate2::Status::StreamEnd {
             return;
         }
     }
 }
 
-fn compressione() -> Value {
-    let motore = if cfg!(feature = "banco-zlib-rs") {
+fn compression() -> Value {
+    let engine = if cfg!(feature = "banco-zlib-rs") {
         "zlib-rs"
     } else {
         "miniz_oxide"
     };
-    let mut righe = Vec::new();
+    let mut rows = Vec::new();
     let casi = [
         ("lab-a-centroidi", "lab-a", true),
         ("lab-b-centroidi", "lab-b", true),
         ("lab-b-profilo", "lab-b", false),
         ("denso-profilo", "denso", false),
     ];
-    for (nome, f, lista) in casi {
+    for (name, f, list) in casi {
         let mut pk = Vec::new();
-        pacchetto(&mut pk, &forma(f), 0, None);
-        let (mz, int) = array_f64_f32(&pk, lista);
-        let totale = mz.len() + int.len();
-        for livello in [0u32, 1, 6] {
-            let mut blocco = vec![0u8; 32 * 1024];
-            let mut fuori = Vec::new();
-            let mut z = Compress::new(Compression::new(livello), true);
-            let con_reset = ns_per_op(|| {
+        packet(&mut pk, &shape(f), 0, None);
+        let (mz, int) = array_f64_f32(&pk, list);
+        let total = mz.len() + int.len();
+        for level in [0u32, 1, 6] {
+            let mut block = vec![0u8; 32 * 1024];
+            let mut outside = Vec::new();
+            let mut z = Compress::new(Compression::new(level), true);
+            let with_reset = ns_per_op(|| {
                 for a in [&mz, &int] {
                     z.reset();
-                    deflate(&mut z, black_box(a), &mut blocco, &mut fuori);
+                    deflate(&mut z, black_box(a), &mut block, &mut outside);
                 }
             });
-            let mut zn = Compress::new(Compression::new(livello), true);
+            let mut zn = Compress::new(Compression::new(level), true);
             let nuovo = ns_per_op(|| {
                 for a in [&mz, &int] {
-                    zn = Compress::new(Compression::new(livello), true);
-                    deflate(&mut zn, black_box(a), &mut blocco, &mut fuori);
+                    zn = Compress::new(Compression::new(level), true);
+                    deflate(&mut zn, black_box(a), &mut block, &mut outside);
                 }
             });
-            let mut compressi = 0;
+            let mut compressed = 0;
             for a in [&mz, &int] {
                 z.reset();
-                deflate(&mut z, a, &mut blocco, &mut fuori);
-                compressi += fuori.len();
+                deflate(&mut z, a, &mut block, &mut outside);
+                compressed += outside.len();
             }
-            righe.push(json!({
-                "caso": nome, "livello": livello, "byte_array": totale, "rapporto": arrotonda(compressi as f64 / totale as f64),
-                "con_reset_us_per_coppia": arrotonda(con_reset / 1e3), "con_reset_mb_s": arrotonda(totale as f64 / con_reset * 1e3),
-                "nuovo_ogni_array_us_per_coppia": arrotonda(nuovo / 1e3),
+            rows.push(json!({
+                "caso": name, "livello": level, "byte_array": total, "rapporto": round_to(compressed as f64 / total as f64),
+                "con_reset_us_per_coppia": round_to(with_reset / 1e3), "con_reset_mb_s": round_to(total as f64 / with_reset * 1e3),
+                "nuovo_ogni_array_us_per_coppia": round_to(nuovo / 1e3),
             }));
         }
     }
     let mut z = Compress::new(Compression::new(1), true);
     let reset_ns = ns_per_op(|| z.reset());
-    json!({"motore": motore, "prove": righe, "reset_livello1_ns": arrotonda(reset_ns)})
+    json!({"motore": engine, "prove": rows, "reset_livello1_ns": round_to(reset_ns)})
 }
 
 fn impronte() -> Value {
-    let dati: Vec<u8> = (0..64u32 << 20)
+    let data: Vec<u8> = (0..64u32 << 20)
         .map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8)
         .collect();
-    let mb = dati.len() as f64 / 1e6;
+    let mb = data.len() as f64 / 1e6;
     let t = Instant::now();
-    black_box(Sha1::digest(black_box(&dati)));
+    black_box(Sha1::digest(black_box(&data)));
     let sha1 = mb / t.elapsed().as_secs_f64();
     let t = Instant::now();
-    black_box(Sha256::digest(black_box(&dati)));
+    black_box(Sha256::digest(black_box(&data)));
     let sha256 = mb / t.elapsed().as_secs_f64();
     #[cfg(target_arch = "x86_64")]
     let sha_ni = std::arch::is_x86_feature_detected!("sha");
     #[cfg(not(target_arch = "x86_64"))]
     let sha_ni = false;
-    json!({"sha1_mb_s": arrotonda(sha1), "sha256_mb_s": arrotonda(sha256), "cpu_sha_ni": sha_ni})
+    json!({"sha1_mb_s": round_to(sha1), "sha256_mb_s": round_to(sha256), "cpu_sha_ni": sha_ni})
 }
 
-fn memoria() -> Value {
+fn memory() -> Value {
     let ns_malloc = ns_per_op(|| {
         black_box(Vec::<u8>::with_capacity(black_box(4096)));
     });
@@ -282,13 +282,13 @@ fn memoria() -> Value {
         v.fill(black_box(0));
         black_box(&v);
     });
-    json!({"malloc_free_ns": arrotonda(ns_malloc), "azzeramento_400kb_ns": arrotonda(ns_set), "azzeramento_gb_s": arrotonda(v.len() as f64 / ns_set)})
+    json!({"malloc_free_ns": round_to(ns_malloc), "azzeramento_400kb_ns": round_to(ns_set), "azzeramento_gb_s": round_to(v.len() as f64 / ns_set)})
 }
 
 /// All the micro-benchmarks.
 pub fn tutti() -> Value {
     json!({
-        "decodifica_ft": decodifica_ft(), "conversione_mz": conversione_mz(), "xml_spettro": xml(), "base64": base64(),
-        "compressione": compressione(), "impronte": impronte(), "memoria": memoria(),
+        "decodifica_ft": decode_ft(), "conversione_mz": mz_conversion(), "xml_spettro": xml(), "base64": base64(),
+        "compressione": compression(), "impronte": impronte(), "memoria": memory(),
     })
 }

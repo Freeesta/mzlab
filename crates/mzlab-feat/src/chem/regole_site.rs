@@ -7,10 +7,10 @@ use super::grafo::Mol;
 use mzlab_core::elements::fmt;
 
 /// What a `site` gives for a rule: nothing (absent), the site only (the rule's own formula holds) or products with their formula; `true` = an ion.
-pub(super) type Prodotti = Vec<(Option<String>, bool)>;
+pub(super) type Products = Vec<(Option<String>, bool)>;
 
 /// The names of the sites; a rule of the table that names another is rejected by the test of the table.
-pub const SITI: [&str; 17] = [
+pub const SITES: [&str; 17] = [
     "amide_nh2",
     "n_dimethyl",
     "n_ethyl",
@@ -31,7 +31,7 @@ pub const SITI: [&str; 17] = [
 ];
 
 /// The groups beyond `Mol::groups()` that the rules name.
-pub const GRUPPI_NUOVI: [&str; 4] = ["phosphate", "sulfate", "o_glycoside", "glucuronide"];
+pub const NEW_GROUPS: [&str; 4] = ["phosphate", "sulfate", "o_glycoside", "glucuronide"];
 
 impl Mol {
     /// `groups()` plus the groups of the rules of fragmentation (`phosphate`, `sulfate`, `o_glycoside`, `glucuronide`), sorted.
@@ -59,10 +59,10 @@ impl Mol {
         g.into_iter().collect()
     }
 
-    /// The products of the site `nome`; `None` for a name that is not one of `SITI`.
-    pub(super) fn site(&self, nome: &str) -> Option<Prodotti> {
+    /// The products of the site `nome`; `None` for a name that is not one of `SITES`.
+    pub(super) fn site(&self, name: &str) -> Option<Products> {
         let si = |b: bool| if b { vec![(None, false)] } else { vec![] };
-        Some(match nome {
+        Some(match name {
             "amide_nh2" => si(self.any_atom(|i| self.nh2_on(i, false))),
             "ureido_nh2" => si(self.any_atom(|i| self.nh2_on(i, true))),
             "n_dimethyl" => si(self.any_atom(|i| self.n_amine_h0(i) && self.methyls(i) >= 2)),
@@ -298,8 +298,8 @@ impl Mol {
     }
 
     /// The two pieces of a retro-Diels-Alder of a cyclohexene ring (the bonds two atoms away from the double bond).
-    fn rda_pieces(&self) -> Prodotti {
-        let mut out: Prodotti = vec![];
+    fn rda_pieces(&self) -> Products {
+        let mut out: Products = vec![];
         for r in self.rings() {
             let plain =
                 r.len() == 6 && r.iter().all(|i| self.el(*i) == "C" && !self.atoms[*i].arom);
@@ -338,9 +338,9 @@ impl Mol {
     }
 
     /// The alkenes an ester alkyl of two or more carbons loses by a McLafferty-type rearrangement: the alkyl piece minus one H.
-    fn mclafferty_ester(&self) -> Prodotti {
+    fn mclafferty_ester(&self) -> Products {
         let ring = self.ring_bonds();
-        let mut out: Prodotti = vec![];
+        let mut out: Products = vec![];
         for c in (0..self.atoms.len()).filter(|c| self.is_carbonyl(*c)) {
             for (o, k0) in &self.adj[c] {
                 if self.el(*o) != "O" || self.bonds[*k0].order != 1.0 || self.heavy(*o) != 2 {
@@ -385,9 +385,9 @@ impl Mol {
     }
 
     /// The tropylium ion C7H7: a benzylic carbon whose cut leaves an unsubstituted phenyl-CH2.
-    fn benzyl_ions(&self) -> Prodotti {
+    fn benzyl_ions(&self) -> Products {
         let ring = self.ring_bonds();
-        let mut out: Prodotti = vec![];
+        let mut out: Products = vec![];
         for c in (0..self.atoms.len()).filter(|c| self.sp3_c(*c) && self.atoms[*c].h >= 1) {
             if !self.adj[c]
                 .iter()
@@ -408,9 +408,9 @@ impl Mol {
     }
 
     /// The iminium ions of the alpha cleavages of the amines: the N side of each acyclic C(alpha)-C(beta) bond.
-    fn immonium_ions(&self) -> Prodotti {
+    fn immonium_ions(&self) -> Products {
         let ring = self.ring_bonds();
-        let mut out: Prodotti = vec![];
+        let mut out: Products = vec![];
         for n in (0..self.atoms.len()).filter(|n| self.n_alkyl_any(*n)) {
             for (ca, _) in self.adj[n].iter().filter(|(c, _)| self.sp3_c(*c)) {
                 for (_, k) in self.adj[*ca]
@@ -425,9 +425,9 @@ impl Mol {
     }
 
     /// The acylium ions R-C#O+: the carbonyl side of each acyclic single bond of a carbonyl carbon.
-    fn acylium_ions(&self) -> Prodotti {
+    fn acylium_ions(&self) -> Products {
         let ring = self.ring_bonds();
-        let mut out: Prodotti = vec![];
+        let mut out: Products = vec![];
         for c in (0..self.atoms.len()).filter(|c| self.is_carbonyl(*c)) {
             for (_, k) in self.adj[c]
                 .iter()
@@ -491,7 +491,7 @@ impl Mol {
     }
 }
 
-fn push_unique(out: &mut Prodotti, f: String, ione: bool) {
+fn push_unique(out: &mut Products, f: String, ione: bool) {
     if !out.iter().any(|(x, _)| x.as_deref() == Some(&f)) {
         out.push((Some(f), ione));
     }

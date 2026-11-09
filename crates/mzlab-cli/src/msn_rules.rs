@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use mzlab_core::json::Out;
 use mzlab_lib::parse::{detect, parse_all};
 
-use self::prova::{attese_del_registro, decoy, misura, Registro};
+use self::prova::{decoy, measure, registry_expectations, Registry};
 use crate::msn_uscite::canonical;
 use crate::Outcome;
 
@@ -56,10 +56,10 @@ const ADDOTTI: [&str; 8] = [
 
 struct Args {
     file: Vec<PathBuf>,
-    lista: Option<PathBuf>,
+    list: Option<PathBuf>,
     smiles: Option<String>,
     att: Option<String>,
-    regole: bool,
+    rules: bool,
     decoy: Option<u64>,
     out: Option<PathBuf>,
 }
@@ -67,10 +67,10 @@ struct Args {
 fn parse_args(mut a: impl Iterator<Item = String>) -> Result<Option<Args>, String> {
     let mut r = Args {
         file: vec![],
-        lista: None,
+        list: None,
         smiles: None,
         att: None,
-        regole: false,
+        rules: false,
         decoy: None,
         out: None,
     };
@@ -78,10 +78,10 @@ fn parse_args(mut a: impl Iterator<Item = String>) -> Result<Option<Args>, Strin
         let x = canonical(ALIASES, x);
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
-            "--list" => r.lista = a.next().map(PathBuf::from),
+            "--list" => r.list = a.next().map(PathBuf::from),
             "--smiles" => r.smiles = a.next(),
             "--activation" => r.att = a.next(),
-            "--rules" => r.regole = true,
+            "--rules" => r.rules = true,
             "--decoy" => {
                 let s = a.next().and_then(|v| v.parse().ok());
                 r.decoy = Some(s.ok_or("--decoy needs a number")?);
@@ -95,10 +95,10 @@ fn parse_args(mut a: impl Iterator<Item = String>) -> Result<Option<Args>, Strin
 }
 
 /// Why a record is left out (written in its line, counted by `somma`).
-type Salto = &'static str;
+type Skip = &'static str;
 
 /// The first number of a text («35 (nominal)», «20 eV»); 0 when there is none.
-fn primo_numero(t: &str) -> f64 {
+fn first_number(t: &str) -> f64 {
     let s: String = t
         .chars()
         .skip_while(|c| !c.is_ascii_digit())
@@ -108,45 +108,45 @@ fn primo_numero(t: &str) -> f64 {
 }
 
 /// The value after `KEY` in a line of the text (`AC$MASS_SPECTROMETRY: FRAGMENTATION_MODE HCD` → `HCD`).
-fn campo(testo: &str, chiave: &str) -> Option<String> {
-    testo.lines().find_map(|l| {
-        let (_, v) = l.split_once(chiave)?;
+fn field(text: &str, key: &str) -> Option<String> {
+    text.lines().find_map(|l| {
+        let (_, v) = l.split_once(key)?;
         Some(v.trim().to_string())
     })
 }
 
 /// The stratum and the activation (`CID` trap type, `HCD` beam type) from the instrument and the fragmentation mode.
-fn strato(strumento: &str, modo: &str) -> Option<(&'static str, &'static str)> {
-    let s = strumento.to_ascii_uppercase();
-    let tipo = s.rsplit('-').next().unwrap_or("");
-    match modo.to_ascii_uppercase().as_str() {
+fn layer(instrument: &str, mode: &str) -> Option<(&'static str, &'static str)> {
+    let s = instrument.to_ascii_uppercase();
+    let kind = s.rsplit('-').next().unwrap_or("");
+    match mode.to_ascii_uppercase().as_str() {
         "HCD" => Some(("hcd", "HCD")),
-        "CID" if tipo.starts_with("IT") || tipo.starts_with("QIT") => Some(("cid_trappola", "CID")),
-        "CID" if tipo.contains("TOF") => Some(("qtof", "HCD")),
+        "CID" if kind.starts_with("IT") || kind.starts_with("QIT") => Some(("cid_trappola", "CID")),
+        "CID" if kind.contains("TOF") => Some(("qtof", "HCD")),
         "CID" => Some(("fascio", "HCD")),
         _ => None,
     }
 }
 
-fn leggi(p: &PathBuf, a: &Args) -> Result<Registro, Salto> {
-    let dati = std::fs::read(p).map_err(|_| "file")?;
-    let nome = p
+fn read_registry(p: &PathBuf, a: &Args) -> Result<Registry, Skip> {
+    let data = std::fs::read(p).map_err(|_| "file")?;
+    let name = p
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into());
-    let fmt = detect(&nome, &dati).map_err(|_| "formato")?;
-    let testo = String::from_utf8_lossy(&dati);
-    let s = parse_all(fmt, &dati)
+    let fmt = detect(&name, &data).map_err(|_| "formato")?;
+    let text = String::from_utf8_lossy(&data);
+    let s = parse_all(fmt, &data)
         .0
         .into_iter()
         .next()
         .ok_or("spettro")?;
-    if campo(&testo, "MS_TYPE").is_some_and(|t| t != "MS2") {
+    if field(&text, "MS_TYPE").is_some_and(|t| t != "MS2") {
         return Err("ms_tipo");
     }
-    let modo = campo(&testo, "FRAGMENTATION_MODE")
+    let mode = field(&text, "FRAGMENTATION_MODE")
         .or(a.att.clone())
         .ok_or("attivazione")?;
-    let (strato, att) = strato(&s.meta.instrument, &modo).ok_or("attivazione")?;
+    let (layer_name, att) = layer(&s.meta.instrument, &mode).ok_or("attivazione")?;
     let smiles = a.smiles.clone().unwrap_or(s.meta.smiles.clone());
     if smiles.is_empty() || smiles == "N/A" {
         return Err("smiles");
@@ -158,32 +158,32 @@ fn leggi(p: &PathBuf, a: &Args) -> Result<Registro, Salto> {
     {
         return Err("ione");
     }
-    Ok(Registro {
+    Ok(Registry {
         id: if s.meta.accession.is_empty() {
-            nome
+            name
         } else {
             s.meta.accession.clone()
         },
-        strato,
+        layer_name,
         pol: s.pol,
         prec: s.prec,
-        ce: primo_numero(&s.meta.ce),
+        ce: first_number(&s.meta.ce),
         att,
         ione: format!("{} {}", s.meta.formula, s.meta.adduct),
         smiles,
-        picchi: s.mz.iter().copied().zip(s.it.iter().copied()).collect(),
+        peaks: s.mz.iter().copied().zip(s.it.iter().copied()).collect(),
     })
 }
 
 /// The neutral formula of a record (the first word of its ion): the same compound at another energy, or an isomer, is not a decoy.
-fn neutra(r: &Registro) -> &str {
+fn neutra(r: &Registry) -> &str {
     r.ione.split(' ').next().unwrap_or("")
 }
 
 /// The spectrum of another record of the batch with the same nominal precursor and polarity (the next one, in the order of the ids, with another
 /// neutral formula and structure); `None` when there is none.
-fn altro_spettro<'a>(r: &Registro, tutti: &'a [Registro]) -> Option<&'a [(f64, f64)]> {
-    let gruppo: Vec<&Registro> = tutti
+fn other_spectrum<'a>(r: &Registry, all: &'a [Registry]) -> Option<&'a [(f64, f64)]> {
+    let group: Vec<&Registry> = all
         .iter()
         .filter(|x| {
             x.pol == r.pol
@@ -191,30 +191,30 @@ fn altro_spettro<'a>(r: &Registro, tutti: &'a [Registro]) -> Option<&'a [(f64, f
                 && (x.id == r.id || neutra(x) != neutra(r))
         })
         .collect();
-    let i = gruppo.iter().position(|x| x.id == r.id)?;
-    (1..gruppo.len())
-        .map(|k| gruppo[(i + k) % gruppo.len()])
+    let i = group.iter().position(|x| x.id == r.id)?;
+    (1..group.len())
+        .map(|k| group[(i + k) % group.len()])
         .find(|x| x.smiles != r.smiles)
-        .map(|x| &x.picchi[..])
+        .map(|x| &x.peaks[..])
 }
 
-fn riga(r: &Registro, tutti: &[Registro], a: &Args) -> String {
-    let Some(attese) = attese_del_registro(r) else {
+fn row(r: &Registry, all: &[Registry], a: &Args) -> String {
+    let Some(expected) = registry_expectations(r) else {
         return format!("{{\"id\":{:?},\"saltato\":\"smiles\"}}", r.id);
     };
     let mut o = Out::default();
     o.raw("{\"id\":")
         .str(&r.id)
         .raw(",\"strato\":")
-        .str(r.strato);
+        .str(r.layer_name);
     o.raw(",\"pol\":").int(r.pol as i64).raw(",\"v\":");
-    misura(r, &r.picchi, &attese, a.regole).json(&mut o, a.regole);
-    if let Some(seme) = a.decoy {
-        let d = decoy(r, seme, altro_spettro(r, tutti), &attese);
+    measure(r, &r.peaks, &expected, a.rules).json(&mut o, a.rules);
+    if let Some(seed) = a.decoy {
+        let d = decoy(r, seed, other_spectrum(r, all), &expected);
         for (k, m) in [
-            ("ds", &d.struttura),
-            ("dp", &d.spettro),
-            ("dl", &Some(d.perdite)),
+            ("ds", &d.structure),
+            ("dp", &d.spectrum),
+            ("dl", &Some(d.losses)),
         ] {
             if let Some(m) = m {
                 o.raw(",").str(k).raw(":");
@@ -226,9 +226,9 @@ fn riga(r: &Registro, tutti: &[Registro], a: &Args) -> String {
     o.0
 }
 
-fn righe(a: &Args) -> Result<String, String> {
+fn rows(a: &Args) -> Result<String, String> {
     let mut files = a.file.clone();
-    if let Some(l) = &a.lista {
+    if let Some(l) = &a.list {
         let t = std::fs::read_to_string(l).map_err(|e| format!("{}: {e}", l.display()))?;
         files.extend(
             t.lines()
@@ -239,20 +239,20 @@ fn righe(a: &Args) -> Result<String, String> {
     if files.is_empty() {
         return Err("a record is needed".into());
     }
-    let (mut letti, mut saltati): (Vec<Registro>, BTreeMap<String, Salto>) =
+    let (mut read_items, mut skipped): (Vec<Registry>, BTreeMap<String, Skip>) =
         (vec![], BTreeMap::new());
     for f in &files {
-        match leggi(f, a) {
-            Ok(r) => letti.push(r),
+        match read_registry(f, a) {
+            Ok(r) => read_items.push(r),
             Err(s) => {
-                saltati.insert(f.display().to_string(), s);
+                skipped.insert(f.display().to_string(), s);
             }
         }
     }
-    letti.sort_by(|x, y| x.id.cmp(&y.id));
-    let mut out: Vec<String> = letti.iter().map(|r| riga(r, &letti, a)).collect();
+    read_items.sort_by(|x, y| x.id.cmp(&y.id));
+    let mut out: Vec<String> = read_items.iter().map(|r| row(r, &read_items, a)).collect();
     out.extend(
-        saltati
+        skipped
             .iter()
             .map(|(f, s)| format!("{{\"id\":{f:?},\"saltato\":\"{s}\"}}")),
     );
@@ -260,7 +260,7 @@ fn righe(a: &Args) -> Result<String, String> {
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
-    let fallito = |m: String| Outcome {
+    let failed = |m: String| Outcome {
         code: 2,
         stdout: vec![],
         stderr: format!("error: {m}\n(mzlab-cli msn-rules --help)\n"),
@@ -282,10 +282,10 @@ pub fn run(args: Vec<String>) -> Outcome {
                 stderr: String::new(),
             }
         }
-        Err(e) => return fallito(e),
+        Err(e) => return failed(e),
     };
-    match righe(&a) {
-        Err(e) => fallito(e),
-        Ok(t) => somma::emetti(t, &a.out),
+    match rows(&a) {
+        Err(e) => failed(e),
+        Ok(t) => somma::emit(t, &a.out),
     }
 }

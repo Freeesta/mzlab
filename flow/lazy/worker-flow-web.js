@@ -1,6 +1,6 @@
 // @ts-check
-// Flow web runner, worker side: loads the `feat` .wasm of mzFinder and answers `stima`, the memory that aligning a stored series asks for (Rust `stima_series`, the
-// rule of `slabs::stima`), and the facts the record of a run (prov/1) asks of the files in OPFS: `meta` (estimates and memory of a job, `flow_job_meta`), `sha` (SHA-256 and size of a file, read
+// Flow web runner, worker side: loads the `feat` .wasm of mzFinder and answers `stima`, the memory that aligning a stored series asks for (Rust `estimate_series`, the
+// rule of `slabs::stima`), `detect`, the memory that detecting one index asks for (`estimate_detect`, from its header), and the facts the record of a run (prov/1) asks of the files in OPFS: `meta` (estimates and memory of a job, `flow_job_meta`), `sha` (SHA-256 and size of a file, read
 // in pieces), `source` (the file an index was made from). Only these live here; the steps run in the pool of feat-worker.js. Used by flow-web-run.js and flow-web-prov.js.
 /** @type {any} */ let mod = null;
 
@@ -47,6 +47,7 @@ async function facts(m) {
   try {
     if (m.op === "sha") return mod.flow_file_sha(f.read, f.sizes[0]);
     if (m.op === "source") return mod.flow_idx_source(f.read, f.sizes[0]);
+    if (m.op === "detect") return mod.estimate_detect(f.read, f.sizes[0], m.recipe || "", m.budgetMb || 0);
     const stored = await Promise.all((m.stored || []).map(async (/** @type {string} */ path) => {
       const parts = path.split("/").filter(Boolean), name = /** @type {string} */ (parts.pop());
       let d = await navigator.storage.getDirectory(); for (const p of parts) d = await d.getDirectoryHandle(p);
@@ -62,7 +63,7 @@ self.onmessage = async (/** @type {MessageEvent} */ ev) => {
     await load(m.wasm);
     if (m.op) { self.postMessage({ id: m.id, ok: true, json: await facts(m) }); return; }
     const files = m.files.map((/** @type {ArrayBuffer} */ b) => new Uint8Array(b));
-    self.postMessage({ id: m.id, ok: true, json: mod.stima_series(files, m.recipe || "", m.budgetMb || 0) });
+    self.postMessage({ id: m.id, ok: true, json: mod.estimate_series(files, m.recipe || "", m.budgetMb || 0) });
   } catch (e) { self.postMessage({ id: m.id, error: describe(e) }); }
 };
 export {};

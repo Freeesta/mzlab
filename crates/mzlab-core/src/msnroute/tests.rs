@@ -11,7 +11,7 @@ fn routes() -> Routes<std::fs::File> {
 #[test]
 fn sum_is_mean_times_n() {
     let mut r = routes();
-    let tree = albero(&r.idx.scans, &Raggruppa::default());
+    let tree = albero(&r.idx.scans, &Grouping::default());
     for n in &tree.nodi {
         let f = format!("msn:{}", n.id);
         let mean = r
@@ -19,7 +19,7 @@ fn sum_is_mean_times_n() {
             .unwrap()
             .unwrap();
         let sum = r
-            .con_opz(&Query::parse("modo=somma"), |r| {
+            .with_opts(&Query::parse("modo=somma"), |r| {
                 r.binned(n.livello, 0.0, 1e9, None, 0.1, Some(&f))
             })
             .unwrap()
@@ -42,7 +42,7 @@ fn sum_is_mean_times_n() {
 #[test]
 fn scanavg_sums_too() {
     let mut r = routes();
-    let tree = albero(&r.idx.scans, &Raggruppa::default());
+    let tree = albero(&r.idx.scans, &Grouping::default());
     let sids: Vec<String> = tree.nodi[0]
         .scansioni
         .iter()

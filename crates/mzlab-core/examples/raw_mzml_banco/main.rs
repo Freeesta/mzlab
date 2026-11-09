@@ -20,25 +20,25 @@ use std::time::Instant;
 use serde_json::{json, Map, Value};
 
 use mzlab_core::budget::{Hashing, WriteAt};
-use mzlab_core::lettori_mzml::Conversione;
-use mzlab_core::mzmlwrite::Opzioni;
+use mzlab_core::lettori_mzml::Conversion;
+use mzlab_core::mzmlwrite::Options;
 
-use fasi::{Origine, Sorgente};
-use misura::arrotonda;
+use fasi::{Origin, Source};
+use misura::round_to;
 
 #[global_allocator]
-static A: conta::Conta = conta::Conta;
+static A: conta::Tally = conta::Tally;
 
 #[derive(Default)]
 struct Args {
     file: Option<PathBuf>,
     denso: Option<PathBuf>,
     gb: f64,
-    forma: String,
-    cancella: bool,
+    shape: String,
+    delete: bool,
     etichetta: String,
     giri: usize,
-    solo: Vec<String>,
+    only: Vec<String>,
     thread: Vec<usize>,
     profilo: Option<bool>,
     bw: (Option<f64>, Option<f64>),
@@ -65,11 +65,11 @@ fn args() -> Args {
             "--file" => a.file = Some(v(&mut it, &x).into()),
             "--denso" => a.denso = Some(v(&mut it, &x).into()),
             "--gb" => a.gb = v(&mut it, &x).parse().expect("--gb"),
-            "--forma" => a.forma = v(&mut it, &x),
-            "--cancella" => a.cancella = true,
+            "--forma" => a.shape = v(&mut it, &x),
+            "--cancella" => a.delete = true,
             "--etichetta" => a.etichetta = v(&mut it, &x),
             "--giri" => a.giri = v(&mut it, &x).parse().expect("--giri"),
-            "--solo" => a.solo = v(&mut it, &x).split(',').map(str::to_string).collect(),
+            "--solo" => a.only = v(&mut it, &x).split(',').map(str::to_string).collect(),
             "--thread" => {
                 a.thread = v(&mut it, &x)
                     .split(',')
@@ -86,7 +86,7 @@ fn args() -> Args {
             }
             "--json" => a.json = Some(v(&mut it, &x).into()),
             "--senza-impronte" => a.impronte = false,
-            "--senza-conta" => conta::imposta(false),
+            "--senza-conta" => conta::set_to(false),
             "--tmp" => a.tmp = v(&mut it, &x).into(),
             _ => panic!("unknown option {x}"),
         }
@@ -96,7 +96,7 @@ fn args() -> Args {
 
 fn macchina() -> Value {
     let cpu = std::fs::read_to_string("/proc/cpuinfo").unwrap_or_default();
-    let modello = cpu
+    let model = cpu
         .lines()
         .find(|l| l.starts_with("model name"))
         .and_then(|l| l.split_once(':'))
@@ -109,13 +109,13 @@ fn macchina() -> Value {
         .and_then(|l| l.split_whitespace().nth(1)?.parse::<f64>().ok())
         .map_or(0.0, |k| k / 1024.0);
     json!({
-        "cpu": modello, "core": std::thread::available_parallelism().map_or(1, |n| n.get()), "ram_mb": ram_mb.round(),
+        "cpu": model, "core": std::thread::available_parallelism().map_or(1, |n| n.get()), "ram_mb": ram_mb.round(),
         "sistema": std::env::consts::OS, "architettura": std::env::consts::ARCH,
         "backend_zlib": if cfg!(feature = "banco-zlib-rs") { "zlib-rs" } else { "miniz_oxide" },
     })
 }
 
-fn thread_elenco(a: &Args) -> Vec<usize> {
+fn thread_list(a: &Args) -> Vec<usize> {
     if !a.thread.is_empty() {
         return a.thread.clone();
     }
@@ -127,7 +127,7 @@ fn thread_elenco(a: &Args) -> Vec<usize> {
 }
 
 /// The source of the run: a real file, or the dense case generated in its folder when it is not there yet.
-fn sorgente(a: &Args) -> Option<(Sorgente, Value)> {
+fn source(a: &Args) -> Option<(Source, Value)> {
     if let Some(p) = &a.file {
         let byte = std::fs::metadata(p).expect("input").len();
         let etichetta = if a.etichetta.is_empty() {
@@ -138,11 +138,11 @@ fn sorgente(a: &Args) -> Option<(Sorgente, Value)> {
         };
         let t = Instant::now();
         let sha = file_sha256(p);
-        let info = json!({"tipo": "raw", "byte": byte, "sha256": sha, "sha256_s": arrotonda(t.elapsed().as_secs_f64())});
+        let info = json!({"tipo": "raw", "byte": byte, "sha256": sha, "sha256_s": round_to(t.elapsed().as_secs_f64())});
         return Some((
-            Sorgente {
-                etichetta,
-                origine: Origine::Raw(p.clone()),
+            Source {
+                label: etichetta,
+                origin: Origin::Raw(p.clone()),
                 byte,
                 profilo: a.profilo.unwrap_or(false),
             },
@@ -152,54 +152,54 @@ fn sorgente(a: &Args) -> Option<(Sorgente, Value)> {
     let dir = a.denso.as_ref()?;
     std::fs::create_dir_all(dir).expect("folder");
     let mut b = Vec::new();
-    let forma = |n| match a.forma.as_str() {
-        "lab-a" => denso::Parametri::forma_lab_a(n),
-        "lab-b" => denso::Parametri::forma_lab_b(n),
-        _ => denso::Parametri::denso(n),
+    let shape = |n| match a.shape.as_str() {
+        "lab-a" => denso::Parameters::lab_shape_a(n),
+        "lab-b" => denso::Parameters::lab_shape_b(n),
+        _ => denso::Parameters::denso(n),
     };
-    denso::pacchetto(&mut b, &forma(1), 0, None);
+    denso::packet(&mut b, &shape(1), 0, None);
     let scansioni = ((a.gb * 1e9) / b.len() as f64).ceil() as usize;
-    let p = forma(scansioni);
+    let p = shape(scansioni);
     let path = dir.join(format!(
         "denso_{}_{}_{:x}.bin",
-        p.scansioni, p.picchi, p.seme
+        p.scansioni, p.peaks, p.seme
     ));
     let info = if path.exists() {
         json!({"tipo": "denso-sintetico", "generato_ora": false})
     } else {
         let t = Instant::now();
         let (_, byte, sha) =
-            denso::genera(&path, &p, a.gb <= 3.0).expect("generate the dense case");
-        json!({"tipo": "denso-sintetico", "generato_ora": true, "genera_s": arrotonda(t.elapsed().as_secs_f64()), "byte": byte, "sha256": sha})
+            denso::generate(&path, &p, a.gb <= 3.0).expect("generate the dense case");
+        json!({"tipo": "denso-sintetico", "generato_ora": true, "genera_s": round_to(t.elapsed().as_secs_f64()), "byte": byte, "sha256": sha})
     };
     let byte = std::fs::metadata(&path).expect("dense file").len();
     let mut info = info;
     info["byte"] = json!(byte);
     info["scansioni"] = json!(p.scansioni);
-    info["punti_profilo_per_scansione"] = json!(if p.con_profilo { p.picchi * 10 } else { 0 });
-    info["picchi_per_scansione"] = json!(p.picchi);
+    info["punti_profilo_per_scansione"] = json!(if p.with_profile { p.peaks * 10 } else { 0 });
+    info["picchi_per_scansione"] = json!(p.peaks);
     let etichetta = if a.etichetta.is_empty() {
         format!(
             "denso-{}-{:.2}gb",
-            if a.forma.is_empty() { "std" } else { &a.forma },
+            if a.shape.is_empty() { "std" } else { &a.shape },
             byte as f64 / 1e9
         )
     } else {
         a.etichetta.clone()
     };
     Some((
-        Sorgente {
-            etichetta,
-            origine: Origine::Denso(path),
+        Source {
+            label: etichetta,
+            origin: Origin::Denso(path),
             byte,
-            profilo: a.profilo.unwrap_or(p.con_profilo),
+            profilo: a.profilo.unwrap_or(p.with_profile),
         },
         info,
     ))
 }
 
-struct Scarta;
-impl WriteAt for Scarta {
+struct Discard;
+impl WriteAt for Discard {
     fn write_at(&mut self, _: u64, _: &[u8]) -> mzlab_core::Result<()> {
         Ok(())
     }
@@ -209,7 +209,7 @@ impl WriteAt for Scarta {
 fn file_sha256(p: &Path) -> String {
     use std::io::Read;
     let mut f = std::fs::File::open(p).expect("open");
-    let mut h = Hashing::new(Scarta);
+    let mut h = Hashing::new(Discard);
     let mut buf = vec![0u8; 1 << 20];
     let mut at = 0u64;
     loop {
@@ -224,25 +224,25 @@ fn file_sha256(p: &Path) -> String {
 }
 
 /// D11: the pieces of `mzlab-cli convert` that are not the writer, each timed alone with the code the CLI calls, to be added up against the whole.
-fn cli(src: &Sorgente, a: &Args, intestazione_s: f64) -> Value {
-    let Origine::Raw(p) = &src.origine else {
+fn cli(src: &Source, a: &Args, intestazione_s: f64) -> Value {
+    let Origin::Raw(p) = &src.origin else {
         return json!({"saltato": "only for a real file"});
     };
     let sha_in = time_it(a.giri, || file_sha256(p));
     let out = a
         .tmp
         .join(format!("raw_mzml_banco_{}.mzML", std::process::id()));
-    let (scrittura, _) = misura::ripeti(a.giri, || {
+    let (writing, _) = misura::repeat(a.giri, || {
         let mut l = src.apri();
         let f = std::fs::File::create(&out).expect("create");
         let sink = std::io::BufWriter::new(f);
-        let conv = Conversione {
+        let conv = Conversion {
             peaks: src.picchi(),
-            opz: Opzioni::default(),
+            opz: Options::default(),
             steps: Some(&[]),
         };
         let mut w = conv
-            .scrivi(&mut *l, 0, sink, &mut |_, _| {})
+            .write(&mut *l, 0, sink, &mut |_, _| {})
             .expect("conversion");
         std::io::Write::flush(&mut w).expect("flush");
     });
@@ -266,28 +266,28 @@ fn cli(src: &Sorgente, a: &Args, intestazione_s: f64) -> Value {
     });
     let _ = std::fs::remove_file(&out);
     let _ = std::fs::remove_file(&work);
-    let sc = misura::mediana(&scrittura.iter().map(|g| g.s).collect::<Vec<_>>());
-    let somma = sha_in + sc + 2.0 * sha_out + place;
+    let sc = misura::median(&writing.iter().map(|g| g.s).collect::<Vec<_>>());
+    let sum = sha_in + sc + 2.0 * sha_out + place;
     json!({
-        "sha256_ingresso_s": arrotonda(sha_in), "apertura_e_scrittura_indicizzata_s": arrotonda(sc), "sha256_uscita_s": arrotonda(sha_out),
-        "hard_link_o_copia_s": arrotonda(place), "copia_dei_byte_s": arrotonda(copia), "apertura_sola_s": arrotonda(apri),
-        "testata_sha1_ingresso_e_metodo_s": arrotonda(intestazione_s), "byte_uscita": byte_out,
-        "somma_ipotesi_s": arrotonda(somma),
+        "sha256_ingresso_s": round_to(sha_in), "apertura_e_scrittura_indicizzata_s": round_to(sc), "sha256_uscita_s": round_to(sha_out),
+        "hard_link_o_copia_s": round_to(place), "copia_dei_byte_s": round_to(copia), "apertura_sola_s": round_to(apri),
+        "testata_sha1_ingresso_e_metodo_s": round_to(intestazione_s), "byte_uscita": byte_out,
+        "somma_ipotesi_s": round_to(sum),
         "ipotesi": "SHA-256 of the input (fill_inputs) + open and indexed write (SHA-1 of the input and of the output inside) + SHA-256 of the output in keep() + link + SHA-256 of the output in item()",
-        "scritture_giri_s": scrittura.iter().map(|g| arrotonda(g.s)).collect::<Vec<_>>(),
+        "scritture_giri_s": writing.iter().map(|g| round_to(g.s)).collect::<Vec<_>>(),
     })
 }
 
 fn time_it<R>(giri: usize, f: impl FnMut() -> R) -> f64 {
-    let (g, _) = misura::ripeti(giri, f);
-    misura::mediana(&g.iter().map(|x| x.s).collect::<Vec<_>>())
+    let (g, _) = misura::repeat(giri, f);
+    misura::median(&g.iter().map(|x| x.s).collect::<Vec<_>>())
 }
 
 /// `T_min = max(B_in / BW_read, B_out / BW_write, W_cpu / N, W_serial)` of `RISPOSTE.md` §1.3, from the stages measured alone.
-fn tmin(fasi: &Value, testata_s: f64, byte_in: u64, a: &Args, micro: Option<&Value>) -> Value {
-    let st = &fasi["stadi_s"];
+fn tmin(phases: &Value, testata_s: f64, byte_in: u64, a: &Args, micro: Option<&Value>) -> Value {
+    let st = &phases["stadi_s"];
     let g = |k: &str| st[k].as_f64().unwrap_or(f64::NAN);
-    let l1 = fasi["varianti"]
+    let l1 = phases["varianti"]
         .as_array()
         .and_then(|v| v.iter().find(|x| x["variante"] == "livello1"));
     let byte_out = l1
@@ -307,47 +307,50 @@ fn tmin(fasi: &Value, testata_s: f64, byte_in: u64, a: &Args, micro: Option<&Val
     let seriale = [sha1_out.unwrap_or(0.0), testata_s]
         .into_iter()
         .fold(0.0, f64::max);
-    let lettura = a.bw.0.map(|b| byte_in as f64 / 1e6 / b);
-    let scrittura = a.bw.1.map(|b| byte_out / 1e6 / b);
-    let t = [lettura, scrittura, Some(w_cpu / n), Some(seriale)]
+    let reading = a.bw.0.map(|b| byte_in as f64 / 1e6 / b);
+    let writing = a.bw.1.map(|b| byte_out / 1e6 / b);
+    let t = [reading, writing, Some(w_cpu / n), Some(seriale)]
         .into_iter()
         .flatten()
         .fold(0.0, f64::max);
     json!({
-        "t_min_s": arrotonda(t), "formula": "max(B_in/BW_lettura, B_out/BW_scrittura, W_cpu/N_core, W_seriale)",
-        "B_in": byte_in, "B_out": byte_out, "N_core": n, "W_cpu_s": arrotonda(w_cpu), "W_cpu_su_N_s": arrotonda(w_cpu / n),
-        "W_seriale_s": arrotonda(seriale), "sha1_uscita_s": sha1_out.map(arrotonda), "testata_s": arrotonda(testata_s),
-        "lettura_s": lettura.map(arrotonda), "scrittura_s": scrittura.map(arrotonda),
+        "t_min_s": round_to(t), "formula": "max(B_in/BW_lettura, B_out/BW_scrittura, W_cpu/N_core, W_seriale)",
+        "B_in": byte_in, "B_out": byte_out, "N_core": n, "W_cpu_s": round_to(w_cpu), "W_cpu_su_N_s": round_to(w_cpu / n),
+        "W_seriale_s": round_to(seriale), "sha1_uscita_s": sha1_out.map(round_to), "testata_s": round_to(testata_s),
+        "lettura_s": reading.map(round_to), "scrittura_s": writing.map(round_to),
         "bw_lettura_mb_s": a.bw.0, "bw_scrittura_mb_s": a.bw.1,
     })
 }
 
 /// The sections that need a source (open, header, phases, scaling, CLI) added to the document.
-fn sezioni_sorgente(
+fn source_sections(
     doc: &mut Map<String, Value>,
     a: &Args,
-    src: &Sorgente,
+    src: &Source,
     info: Value,
     voglio: &dyn Fn(&str) -> bool,
     thread: &[usize],
     micro_json: Option<&Value>,
 ) {
-    doc.insert("ingresso".into(), json!({"etichetta": src.etichetta, "peaks": format!("{:?}", src.picchi()), "origine": info}));
-    let mut prima = Map::new();
-    prima.insert("apertura".into(), fasi::apertura(src, a.giri));
-    let (th, h) = fasi::testata(src, a.giri);
+    doc.insert(
+        "ingresso".into(),
+        json!({"etichetta": src.label, "peaks": format!("{:?}", src.picchi()), "origine": info}),
+    );
+    let mut before = Map::new();
+    before.insert("apertura".into(), fasi::opening(src, a.giri));
+    let (th, h) = fasi::file_header(src, a.giri);
     let testata_s = th["misura"]["mediana_s"].as_f64().unwrap_or(f64::NAN);
-    prima.insert("testata".into(), th);
+    before.insert("testata".into(), th);
     if voglio("fasi") {
         let tmp = a
             .tmp
             .join(format!("raw_mzml_banco_{}.fasi.mzML", std::process::id()));
-        let f = fasi::fasi(src, a.giri, &h, &tmp);
-        prima.insert("tmin".into(), tmin(&f, testata_s, src.byte, a, micro_json));
-        prima.insert("fasi".into(), f);
+        let f = fasi::phases(src, a.giri, &h, &tmp);
+        before.insert("tmin".into(), tmin(&f, testata_s, src.byte, a, micro_json));
+        before.insert("fasi".into(), f);
     }
     if voglio("scala") {
-        let mut s = vec![fasi::scala(
+        let mut s = vec![fasi::scale(
             src,
             a.giri,
             "scrivi_con",
@@ -356,7 +359,7 @@ fn sezioni_sorgente(
             false,
             a.impronte,
         )];
-        s.push(fasi::scala(
+        s.push(fasi::scale(
             src,
             a.giri,
             "indicizzato",
@@ -365,12 +368,12 @@ fn sezioni_sorgente(
             true,
             a.impronte,
         ));
-        prima.insert("scala".into(), json!(s));
+        before.insert("scala".into(), json!(s));
     }
     if voglio("cli") {
-        prima.insert("cli".into(), cli(src, a, testata_s));
+        before.insert("cli".into(), cli(src, a, testata_s));
     }
-    for (k, v) in prima {
+    for (k, v) in before {
         doc.insert(k, v);
     }
 }
@@ -378,10 +381,10 @@ fn sezioni_sorgente(
 fn main() {
     let a = args();
     let voglio = |s: &str| {
-        a.solo.is_empty() && !["micro", "d8"].contains(&s)
-            || a.solo.iter().any(|x| x == s || x == "tutto")
+        a.only.is_empty() && !["micro", "d8"].contains(&s)
+            || a.only.iter().any(|x| x == s || x == "tutto")
     };
-    let thread = thread_elenco(&a);
+    let thread = thread_list(&a);
     let mut doc = Map::new();
     doc.insert("banco".into(), json!("raw_mzml_banco/1"));
     doc.insert("macchina".into(), macchina());
@@ -396,7 +399,7 @@ fn main() {
     doc.insert("giri".into(), json!(a.giri));
     doc.insert(
         "rss_picco_azzerabile".into(),
-        json!(conta::azzera_rss_picco()),
+        json!(conta::reset_rss_peak()),
     );
     let mut micro_json = None;
     if voglio("micro") {
@@ -407,7 +410,7 @@ fn main() {
     if voglio("d8") {
         doc.insert(
             "d8".into(),
-            d8::tutti(
+            d8::all(
                 &thread
                     .iter()
                     .copied()
@@ -417,11 +420,11 @@ fn main() {
         );
     }
     let mut denso_path = None;
-    if let Some((src, info)) = sorgente(&a) {
-        if let Origine::Denso(p) = &src.origine {
+    if let Some((src, info)) = source(&a) {
+        if let Origin::Denso(p) = &src.origin {
             denso_path = Some(p.clone());
         }
-        sezioni_sorgente(
+        source_sections(
             &mut doc,
             &a,
             &src,
@@ -431,14 +434,14 @@ fn main() {
             micro_json.as_ref(),
         );
     }
-    if a.cancella
+    if a.delete
         && let Some(p) = denso_path
     {
         let _ = std::fs::remove_file(p);
     }
-    let testo = serde_json::to_string_pretty(&Value::Object(doc)).expect("json");
+    let text = serde_json::to_string_pretty(&Value::Object(doc)).expect("json");
     match &a.json {
-        Some(p) => std::fs::write(p, testo).expect("write the JSON"),
-        None => println!("{testo}"),
+        Some(p) => std::fs::write(p, text).expect("write the JSON"),
+        None => println!("{text}"),
     }
 }

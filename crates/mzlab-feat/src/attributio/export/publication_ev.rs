@@ -71,7 +71,7 @@ pub(super) fn int_of(v: Option<f64>) -> Cell {
 // ── the evidence of one row ──────────────────────────────────────────────
 
 /// `mzspec:` USI of the mzMine `usi` field (a JSON-like list or a plain text): the first one, else the text itself.
-pub(super) fn first_usi(v: &str) -> Option<String> {
+pub(super) fn first_uses(v: &str) -> Option<String> {
     let t = v.trim();
     if t.is_empty() {
         return None;
@@ -148,9 +148,9 @@ pub(super) fn source_evidence(p: &PFeat, src: &str) -> SrcEv {
             lib: Some("MZmine spectral library".into()),
             reference: p
                 .fr
-                .mz_usi
+                .mz_uses
                 .as_deref()
-                .and_then(first_usi)
+                .and_then(first_uses)
                 .or_else(|| p.fr.mz_entry.clone()),
             cos: f.mzlib.score,
             ions: f.mzlib.peaks,

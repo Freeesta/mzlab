@@ -1,12 +1,12 @@
 //! The pieces of the JSON texts of the module (`sessione.rs`, `lib.rs`), written with `mzlab_core::json::Out`: lists of strings, rows of strings, nullable strings, the samples (a trace with its points: `mzlab_lettori::json`).
 use mzlab_core::json::Out;
-use mzlab_core::lettori::{Campione, Campo, VoceCromatogramma};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Sample};
 use mzlab_core::mzmlwrite::Header;
 
 /// `[{id,name,scans}]`, shared with the `probe` answer of `lib.rs`.
-pub fn campioni_json(o: &mut Out, campioni: &[Campione]) {
+pub fn samples_json(o: &mut Out, samples: &[Sample]) {
     o.raw("[");
-    for (i, c) in campioni.iter().enumerate() {
+    for (i, c) in samples.iter().enumerate() {
         o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
             .int(i64::from(c.id))
             .raw(",\"name\":")
@@ -45,10 +45,10 @@ pub fn rows<T>(o: &mut Out, v: &[T], row: impl Fn(&T) -> Vec<&str>) {
 }
 
 /// `[{name,value,unit,cv}]`.
-pub fn intestazione_json(campi: &[Campo]) -> String {
+pub fn fields_json(fields: &[Field]) -> String {
     let mut o = Out::default();
     o.raw("[");
-    for (i, f) in campi.iter().enumerate() {
+    for (i, f) in fields.iter().enumerate() {
         o.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
             .str(&f.nome)
             .raw(",\"value\":")
@@ -64,7 +64,7 @@ pub fn intestazione_json(campi: &[Campo]) -> String {
 }
 
 /// `[{id,kind,unit}]`.
-pub fn cromatogrammi_json(v: &[VoceCromatogramma]) -> String {
+pub fn chromatograms_json(v: &[ChromatogramEntry]) -> String {
     let mut o = Out::default();
     o.raw("[");
     for (i, x) in v.iter().enumerate() {
@@ -80,13 +80,13 @@ pub fn cromatogrammi_json(v: &[VoceCromatogramma]) -> String {
     o.0
 }
 
-/// The `Header` of the mzML as the object the page reads (`Sessioni::testata`).
-pub fn testata_json(t: &Header) -> String {
+/// The `Header` of the mzML as the object the page reads (`Sessions::file_header`).
+pub fn header_json(t: &Header) -> String {
     let mut o = Out::default();
     o.raw("{\"run\":").str(&t.run).raw(",\"sources\":");
     strs(&mut o, t.sources.iter().map(String::as_str));
     o.raw(",\"instrument\":");
-    par_opt(&mut o, &t.instrument);
+    param_opt(&mut o, &t.instrument);
     o.raw(",\"components\":");
     rows(&mut o, &t.components, |(a, b, c)| vec![a, b, c]);
     o.raw(",\"software\":");
@@ -100,7 +100,7 @@ pub fn testata_json(t: &Header) -> String {
     o.raw(",\"source_cv\":");
     rows(&mut o, &t.source_cv, |(a, b)| vec![a, b]);
     o.raw(",\"sample\":");
-    par_opt(&mut o, &t.sample);
+    param_opt(&mut o, &t.sample);
     o.raw(",\"run_params\":");
     rows(&mut o, &t.run_params, |(a, b)| vec![a, b]);
     o.raw(",\"content\":");
@@ -114,7 +114,7 @@ pub fn testata_json(t: &Header) -> String {
 }
 
 /// `[a,b]` or `null`.
-fn par_opt(o: &mut Out, v: &Option<(String, String)>) {
+fn param_opt(o: &mut Out, v: &Option<(String, String)>) {
     match v {
         Some((a, b)) => strs(o, [a.as_str(), b.as_str()]),
         None => {

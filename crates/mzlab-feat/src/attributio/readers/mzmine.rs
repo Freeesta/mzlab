@@ -32,7 +32,7 @@ pub struct MzmineHit {
     pub precursor_mz: Option<f64>,
     pub adduct: Option<String>,
     pub entry: Option<String>,
-    pub usi: Option<String>,
+    pub uses: Option<String>,
 }
 
 impl Record for MzmineHit {
@@ -65,7 +65,7 @@ impl Record for MzmineHit {
             Cell::num(self.precursor_mz),
             Cell::str(&self.adduct),
             Cell::str(&self.entry),
-            Cell::str(&self.usi),
+            Cell::str(&self.uses),
         ]
     }
 }
@@ -253,7 +253,7 @@ pub fn load_mzmine_library(c: &Campaign, io: &Io, df: &Frame, pol: &str) -> Resu
             precursor_mz: number(r, "precursor_mz"),
             adduct: bracket_adduct(field(r, "ion_adduct").as_deref(), pol),
             entry: named.and_then(|g| first_text(g.iter().map(|a| a.entry_id.as_ref()))),
-            usi: named.and_then(|g| first_text(g.iter().map(|a| a.usi.as_ref()))),
+            uses: named.and_then(|g| first_text(g.iter().map(|a| a.usi.as_ref()))),
         });
     }
     Ok(out)

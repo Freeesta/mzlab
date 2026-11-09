@@ -4,7 +4,7 @@ use super::*;
 
 /// `link` as it was before the reach of a segment was bounded: every segment of the next channel is tried.
 fn link_all(segs: &[Seg], p: &Params, parent: &mut [u32]) {
-    let max_gap = p.max_gap as i64;
+    let reach = p.max_gap as i64 + 1;
     for i in 0..segs.len() {
         let c = segs[i].chan;
         let lo = segs.partition_point(|s| s.chan < c + 1);
@@ -18,7 +18,7 @@ fn link_all(segs: &[Seg], p: &Params, parent: &mut [u32]) {
                 && hi_mx <= 10.0 * lo_mx
                 && lo_mx >= TOUCH_HEIGHT;
             let overlap = ov as f64 >= 0.5 * short as f64;
-            if overlap || (ov >= 1 - max_gap && ov <= max_gap + 1 && like) {
+            if overlap || (ov >= 1 - reach && ov <= reach + 1 && like) {
                 let (ra, rb) = (find(parent, i as u32), find(parent, j as u32));
                 if ra != rb {
                     parent[ra.max(rb) as usize] = ra.min(rb);
@@ -57,7 +57,7 @@ fn the_bounded_reach_links_the_segments_the_full_one_links() {
                     z,
                     broad: false,
                 });
-                at = z + p.max_gap + 1 + r(20) as u32;
+                at = z + p.max_gap + 2 + r(20) as u32;
             }
         }
         let mut want: Vec<u32> = (0..segs.len() as u32).collect();
@@ -76,14 +76,25 @@ fn a_segment_is_48_bytes() {
     assert_eq!(std::mem::size_of::<Seg>(), 48);
 }
 
-/// The invariant `segments` relies on: walking `by_scan` visits the scans in ascending order, so `ps - last` never underflows.
+/// The order of a slab as a stable counting sort by scan gives it: the reference for `by_scan_in`.
+fn by_scan_all(pos: &[u32]) -> Vec<u32> {
+    let mut out: Vec<u32> = (0..pos.len() as u32).collect();
+    out.sort_by_key(|&i| pos[i as usize]);
+    out
+}
+
+/// The invariant `segments` relies on: the peaks of a channel come by ascending scan, so `ps - last` never underflows, ties in table order, the
+/// order the whole slab sorted by scan gives the block.
 #[test]
-fn by_scan_visits_scans_in_ascending_order() {
-    let pos: Vec<u32> = vec![5, 0, 3, 3, 9, 0, 1, 5, 2];
-    let order = by_scan(&pos).unwrap();
-    assert_eq!(order.len(), pos.len());
-    assert!(order
-        .windows(2)
-        .all(|w| pos[w[0] as usize] <= pos[w[1] as usize]));
-    assert!(by_scan(&[]).unwrap().is_empty());
+fn by_scan_in_visits_the_scans_of_a_channel_in_ascending_order() {
+    let pos: Vec<u32> = vec![5, 0, 3, 3, 9, 0, 1, 5, 2, 7, 7, 4];
+    let (mut keys, mut order) = (Vec::new(), Vec::new());
+    for block in [(0, pos.len()), (2, 9), (4, 4), (10, 12)] {
+        by_scan_in(&pos, block, &mut keys, &mut order).unwrap();
+        let want: Vec<u32> = by_scan_all(&pos)
+            .into_iter()
+            .filter(|&i| (block.0..block.1).contains(&(i as usize)))
+            .collect();
+        assert_eq!(order, want, "{block:?}");
+    }
 }

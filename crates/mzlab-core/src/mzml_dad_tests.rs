@@ -154,50 +154,50 @@ impl Ottico {
     }
 }
 
-impl crate::lettori::Lettore for Ottico {
-    fn formato(&self) -> crate::lettori::Formato {
-        crate::lettori::Formato::Altro("prova")
+impl crate::lettori::Reader for Ottico {
+    fn format(&self) -> crate::lettori::Format {
+        crate::lettori::Format::Altro("prova")
     }
-    fn campioni(&self) -> &[crate::lettori::Campione] {
-        static C: std::sync::OnceLock<Vec<crate::lettori::Campione>> = std::sync::OnceLock::new();
+    fn samples(&self) -> &[crate::lettori::Sample] {
+        static C: std::sync::OnceLock<Vec<crate::lettori::Sample>> = std::sync::OnceLock::new();
         C.get_or_init(|| {
-            vec![crate::lettori::Campione {
+            vec![crate::lettori::Sample {
                 id: 1,
                 nome: "uv".into(),
                 scansioni: 0,
-                dimensione: None,
+                size: None,
             }]
         })
     }
-    fn indice(&mut self, _: usize) -> Result<&[crate::lettori::VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[crate::lettori::ScanEntry]> {
         Ok(&[])
     }
-    fn scansione(&mut self, _: usize, _: usize) -> Result<crate::mzml::Spectrum> {
+    fn scan(&mut self, _: usize, _: usize) -> Result<crate::mzml::Spectrum> {
         Err(crate::error::Error::new("error.badIndex"))
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<crate::lettori::Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<crate::lettori::Field>> {
         Ok(vec![])
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<crate::lettori::VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<crate::lettori::ChromatogramEntry>> {
         Ok(vec![])
     }
-    fn cromatogramma(&mut self, _: usize, _: &str) -> Result<crate::mzml::Chromatogram> {
+    fn chromatogram(&mut self, _: usize, _: &str) -> Result<crate::mzml::Chromatogram> {
         Err(crate::error::Error::new("error.badIndex"))
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok(String::new())
     }
-    fn dad_dati(&mut self, _: usize) -> Result<Option<DadData>> {
+    fn dad_data(&mut self, _: usize) -> Result<Option<DadData>> {
         Ok(self.0.clone())
     }
 }
 
 fn convert(dad: bool, matrix: Option<DadData>) -> Vec<u8> {
-    let opz = crate::mzmlwrite::Opzioni {
+    let opz = crate::mzmlwrite::Options {
         dad,
         ..Default::default()
     };
-    crate::lettori_mzml::scrivi_con(&mut Ottico(matrix), 0, Vec::new(), &mut |_, _| {}, opz)
+    crate::lettori_mzml::write_with(&mut Ottico(matrix), 0, Vec::new(), &mut |_, _| {}, opz)
         .unwrap()
 }
 

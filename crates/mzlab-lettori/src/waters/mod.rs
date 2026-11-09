@@ -13,5 +13,6 @@ mod idx;
 mod inf;
 mod lati;
 mod mrm;
+mod tagli;
 
-pub use lettore::VOCE;
+pub use lettore::ENTRY;

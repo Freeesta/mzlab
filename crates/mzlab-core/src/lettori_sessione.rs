@@ -1,4 +1,4 @@
-//! Which dataset each slot of the engine reads: the rule of `Nativi::attach` (`crates/mzlab-wasm/src/nativi_motore.rs`), kept here so it is tested without a browser.
+//! Which dataset each slot of the engine reads: the rule of `Natives::attach` (`crates/mzlab-wasm/src/nativi_motore.rs`), kept here so it is tested without a browser.
 //! A dataset (and its open reader) outlives the move of a slot between the samples of the same dataset; it is dropped only when no slot is left on it.
 use std::collections::HashMap;
 
@@ -47,18 +47,18 @@ mod tests {
     #[test]
     fn one_slot_visiting_the_samples_of_a_dataset_opens_it_once() {
         let (mut sets, mut slots) = (HashMap::new(), HashMap::new());
-        let mut aperti = 0;
-        for giro in 0..2 {
+        let mut open_ones = 0;
+        for lap in 0..2 {
             for c in 0..14 {
-                let _ = giro;
+                let _ = lap;
                 let r: Result<_, ()> = attacca(&mut sets, &mut slots, 1, "ReRun", c, || {
-                    aperti += 1;
+                    open_ones += 1;
                     Ok(())
                 });
                 assert_eq!(r, Ok(None));
             }
         }
-        assert_eq!(aperti, 1);
+        assert_eq!(open_ones, 1);
         assert_eq!(stacca(&mut sets, &mut slots, 1).as_deref(), Some("ReRun"));
         assert!(sets.is_empty() && slots.is_empty());
     }

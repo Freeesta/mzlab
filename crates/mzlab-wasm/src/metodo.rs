@@ -67,7 +67,7 @@ impl Engine {
         read: Function,
     ) -> Result<String, JsValue> {
         let mut m = Mzml::new(JsReader { read }, size as u64);
-        let doc = m.metodo(name, DOC_MAX).map_err(|e| error_json(&e))?;
+        let doc = m.method(name, DOC_MAX).map_err(|e| error_json(&e))?;
         Ok(doc.unwrap_or_default())
     }
 

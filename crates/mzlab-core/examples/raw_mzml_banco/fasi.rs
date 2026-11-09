@@ -10,53 +10,53 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 use mzlab_core::error::Result;
-use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
-use mzlab_core::lettori_mzml::{Conversione, Picchi};
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
+use mzlab_core::lettori_mzml::{Conversion, Peaks};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 
 use crate::conta::Alloc;
 use crate::denso_lettore::Denso;
-use crate::misura::{arrotonda, mediana, riassunto, ripeti};
+use crate::misura::{median, repeat, round_to, summary};
 
-pub enum Origine {
+pub enum Origin {
     Raw(PathBuf),
     Denso(PathBuf),
 }
 
 /// What is converted: a real `.raw` or the dense synthetic case, and whether its mzML carries the profile points.
-pub struct Sorgente {
-    pub etichetta: String,
-    pub origine: Origine,
+pub struct Source {
+    pub label: String,
+    pub origin: Origin,
     pub byte: u64,
     pub profilo: bool,
 }
 
-impl Sorgente {
-    pub fn apri(&self) -> Box<dyn Lettore> {
-        match &self.origine {
-            Origine::Denso(p) => Box::new(Denso::apri(p).expect("dense case")),
-            Origine::Raw(p) => {
-                let nome = p
+impl Source {
+    pub fn apri(&self) -> Box<dyn Reader> {
+        match &self.origin {
+            Origin::Denso(p) => Box::new(Denso::apri(p).expect("dense case")),
+            Origin::Raw(p) => {
+                let name = p
                     .file_name()
                     .map_or(String::new(), |s| s.to_string_lossy().into_owned());
                 let fs = FileSet {
-                    membri: vec![Membro {
-                        nome,
+                    membri: vec![Member {
+                        nome: name,
                         dim: self.byte,
                         dati: Box::new(File::open(p).expect("open input")),
                         sha1: None,
                     }],
                 };
-                lettori::apri(fs, &Limiti::desktop()).expect("the reader opens the file")
+                lettori::apri(fs, &Limits::desktop()).expect("the reader opens the file")
             }
         }
     }
 
-    pub fn picchi(&self) -> Picchi {
+    pub fn picchi(&self) -> Peaks {
         if self.profilo {
-            Picchi::Profilo
+            Peaks::Profilo
         } else {
-            Picchi::File
+            Peaks::File
         }
     }
 }
@@ -68,10 +68,10 @@ pub struct Sink {
 }
 
 impl Sink {
-    pub fn nuovo(con_sha: bool) -> Self {
+    pub fn nuovo(with_sha: bool) -> Self {
         Sink {
             n: 0,
-            sha: con_sha.then(Sha256::new),
+            sha: with_sha.then(Sha256::new),
         }
     }
     pub fn sha256(self) -> Option<String> {
@@ -93,48 +93,48 @@ impl Write for Sink {
     }
 }
 
-pub fn apertura(src: &Sorgente, giri: usize) -> Value {
-    let (g, l) = ripeti(giri, || src.apri());
+pub fn opening(src: &Source, giri: usize) -> Value {
+    let (g, l) = repeat(giri, || src.apri());
     let mut l = l;
-    let n = l.indice(0).map_or(0, |v| v.len());
-    json!({"fase": "apertura", "scansioni": n, "misura": riassunto(&g)})
+    let n = l.index(0).map_or(0, |v| v.len());
+    json!({"fase": "apertura", "scansioni": n, "misura": summary(&g)})
 }
 
 /// The header call (`testata_mzml`: SHA-1 of the whole input and the method text), on a fresh reader each run.
-pub fn testata(src: &Sorgente, giri: usize) -> (Value, Header) {
+pub fn file_header(src: &Source, giri: usize) -> (Value, Header) {
     let mut h = None;
-    let mut resto = Vec::new();
+    let mut rest = Vec::new();
     for _ in 0..giri.max(1) {
         let mut l = src.apri();
-        let (g, r) = ripeti(1, || l.testata_mzml(0));
-        resto.push(g.into_iter().next().expect("one run"));
+        let (g, r) = repeat(1, || l.mzml_header(0));
+        rest.push(g.into_iter().next().expect("one run"));
         h = r.ok().flatten();
     }
     let h = h.unwrap_or_else(|| Header {
-        run: src.etichetta.clone(),
+        run: src.label.clone(),
         software: ("mzLab".into(), "bench".into()),
         ..Header::default()
     });
-    (json!({"fase": "testata", "misura": riassunto(&resto)}), h)
+    (json!({"fase": "testata", "misura": summary(&rest)}), h)
 }
 
 /// One variant of the instrumented loop.
 #[derive(Clone, Copy)]
-pub struct Variante {
-    pub nome: &'static str,
-    pub livello: u32,
+pub struct Variant {
+    pub name: &'static str,
+    pub level: u32,
     /// The arrays are written empty: the XML of the spectrum alone.
-    pub vuoto: bool,
-    pub indicizzato: bool,
+    pub empty: bool,
+    pub indexed: bool,
     pub su_file: bool,
 }
 
 #[derive(Default, Clone)]
-struct Parti {
+struct Parts {
     dec: f64,
     extra: f64,
-    scrittura: f64,
-    totale: f64,
+    writing: f64,
+    total: f64,
     scansioni: usize,
     byte: u64,
     a_dec: Alloc,
@@ -142,21 +142,21 @@ struct Parti {
     a_scr: Alloc,
 }
 
-fn ciclo(
-    l: &mut dyn Lettore,
+fn cycle(
+    l: &mut dyn Reader,
     h: &Header,
     profilo: bool,
-    v: Variante,
+    v: Variant,
     tmp: &std::path::Path,
-) -> Result<Parti> {
-    let n = l.indice(0)?.len();
-    let opz = Opzioni {
-        livello: v.livello,
+) -> Result<Parts> {
+    let n = l.index(0)?.len();
+    let opz = Options {
+        livello: v.level,
         numpress: false,
         thread: 1,
         dad: false,
     };
-    let uscita: Box<dyn Write> = if v.su_file {
+    let output: Box<dyn Write> = if v.su_file {
         Box::new(BufWriter::with_capacity(
             1 << 20,
             File::create(tmp).map_err(|_| mzlab_core::Error::new("err.file.mzmlWrite"))?,
@@ -164,29 +164,29 @@ fn ciclo(
     } else {
         Box::new(Sink::nuovo(false))
     };
-    let mut w = if v.indicizzato {
-        MzmlWriter::indicizzato(uscita, h, opz)?
+    let mut w = if v.indexed {
+        MzmlWriter::indicizzato(output, h, opz)?
     } else {
-        MzmlWriter::con_opzioni(uscita, h, opz)?
+        MzmlWriter::with_options(output, h, opz)?
     };
-    let mut p = Parti {
+    let mut p = Parts {
         scansioni: n,
-        ..Parti::default()
+        ..Parts::default()
     };
     let t_tot = Instant::now();
     w.open_spectra(n)?;
     for k in 0..n {
         let (a0, t0) = (Alloc::ora(), Instant::now());
         let mut s = if profilo {
-            l.scansione_profilo(0, k)?
+            l.scan_profile(0, k)?
                 .ok_or_else(|| mzlab_core::Error::new("err.conv.noProfile"))?
         } else {
-            l.scansione(0, k)?
+            l.scan(0, k)?
         };
         let (a1, t1) = (Alloc::ora(), Instant::now());
-        let extra = l.extra_scansione(0, k, &s);
+        let extra = l.scan_extra(0, k, &s);
         let (a2, t2) = (Alloc::ora(), Instant::now());
-        if v.vuoto {
+        if v.empty {
             s.mz.clear();
             s.intensity.clear();
         }
@@ -194,7 +194,7 @@ fn ciclo(
         let (a3, t3) = (Alloc::ora(), Instant::now());
         p.dec += (t1 - t0).as_secs_f64();
         p.extra += (t2 - t1).as_secs_f64();
-        p.scrittura += (t3 - t2).as_secs_f64();
+        p.writing += (t3 - t2).as_secs_f64();
         p.a_dec += a1.da(a0);
         p.a_extra += a2.da(a1);
         p.a_scr += a3.da(a2);
@@ -204,7 +204,7 @@ fn ciclo(
     out.flush()
         .map_err(|_| mzlab_core::Error::new("err.file.mzmlWrite"))?;
     drop(out);
-    p.totale = t_tot.elapsed().as_secs_f64();
+    p.total = t_tot.elapsed().as_secs_f64();
     p.byte = if v.su_file {
         std::fs::metadata(tmp).map_or(0, |m| m.len())
     } else {
@@ -214,26 +214,26 @@ fn ciclo(
 }
 
 /// The byte count of a variant written to a sink (the file variant knows it from the file).
-fn byte_di(l: &mut dyn Lettore, h: &Header, profilo: bool, v: Variante) -> u64 {
+fn bytes_of(l: &mut dyn Reader, h: &Header, profilo: bool, v: Variant) -> u64 {
     let mut v = v;
     v.su_file = false;
-    let n = l.indice(0).map_or(0, |x| x.len());
-    let opz = Opzioni {
-        livello: v.livello,
+    let n = l.index(0).map_or(0, |x| x.len());
+    let opz = Options {
+        livello: v.level,
         numpress: false,
         thread: 1,
         dad: false,
     };
-    let mut w = MzmlWriter::con_opzioni(Sink::nuovo(false), h, opz).expect("writer");
+    let mut w = MzmlWriter::with_options(Sink::nuovo(false), h, opz).expect("writer");
     w.open_spectra(n).expect("open");
     for k in 0..n {
         let mut s = if profilo {
-            l.scansione_profilo(0, k).ok().flatten().expect("profile")
+            l.scan_profile(0, k).ok().flatten().expect("profile")
         } else {
-            l.scansione(0, k).expect("scan")
+            l.scan(0, k).expect("scan")
         };
-        let extra = l.extra_scansione(0, k, &s);
-        if v.vuoto {
+        let extra = l.scan_extra(0, k, &s);
+        if v.empty {
             s.mz.clear();
             s.intensity.clear();
         }
@@ -244,16 +244,16 @@ fn byte_di(l: &mut dyn Lettore, h: &Header, profilo: bool, v: Variante) -> u64 {
 }
 
 fn per_scan(a: &Alloc, n: usize) -> Value {
-    json!({"chiamate": arrotonda(a.chiamate as f64 / n.max(1) as f64), "libere": arrotonda(a.libere as f64 / n.max(1) as f64), "byte": arrotonda(a.byte as f64 / n.max(1) as f64)})
+    json!({"chiamate": round_to(a.chiamate as f64 / n.max(1) as f64), "libere": round_to(a.libere as f64 / n.max(1) as f64), "byte": round_to(a.byte as f64 / n.max(1) as f64)})
 }
 
 /// The phases of the single-thread loop in the variants that isolate each stage; the stage costs are in `stadi`.
-pub fn fasi(src: &Sorgente, giri: usize, h: &Header, tmp: &std::path::Path) -> Value {
-    let v = |nome, livello, vuoto, indicizzato, su_file| Variante {
-        nome,
-        livello,
-        vuoto,
-        indicizzato,
+pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> Value {
+    let v = |nome, livello, vuoto, indicizzato, su_file| Variant {
+        name: nome,
+        level: livello,
+        empty: vuoto,
+        indexed: indicizzato,
         su_file,
     };
     let varianti = [
@@ -265,12 +265,12 @@ pub fn fasi(src: &Sorgente, giri: usize, h: &Header, tmp: &std::path::Path) -> V
         v("livello1-su-file", 1, false, false, true),
         v("livello1-indicizzato-su-file", 1, false, true, true),
     ];
-    let mut righe = Vec::new();
+    let mut rows = Vec::new();
     let mut l = src.apri();
-    let mut mediane: Vec<Mediana> = Vec::new();
+    let mut mediane: Vec<Median> = Vec::new();
     for var in varianti {
-        let (riga, m) = misura_variante(src, &mut *l, giri, h, tmp, var);
-        righe.push(riga);
+        let (row, m) = measure_variant(src, &mut *l, giri, h, tmp, var);
+        rows.push(row);
         mediane.push(m);
     }
     let _ = std::fs::remove_file(tmp);
@@ -298,106 +298,106 @@ pub fn fasi(src: &Sorgente, giri: usize, h: &Header, tmp: &std::path::Path) -> V
         .map_or(f64::NAN, |m| m.2);
     let file = get("livello1-su-file") - l1;
     json!({
-        "varianti": righe,
+        "varianti": rows,
         "stadi_s": {
-            "decodifica": arrotonda(dec),
-            "extra_scansione": arrotonda(extra),
-            "xml_con_array_vuoti": arrotonda(xml),
-            "array_in_base64_senza_zlib": arrotonda(l0 - xml),
-            "zlib_livello1_oltre_livello0": arrotonda(l1 - l0),
-            "zlib_livello6_oltre_livello0": arrotonda(l6 - l0),
-            "sha1_uscita_e_offset": arrotonda(idx - l1),
-            "scrittura_su_file_oltre_sink": arrotonda(file),
+            "decodifica": round_to(dec),
+            "extra_scansione": round_to(extra),
+            "xml_con_array_vuoti": round_to(xml),
+            "array_in_base64_senza_zlib": round_to(l0 - xml),
+            "zlib_livello1_oltre_livello0": round_to(l1 - l0),
+            "zlib_livello6_oltre_livello0": round_to(l6 - l0),
+            "sha1_uscita_e_offset": round_to(idx - l1),
+            "scrittura_su_file_oltre_sink": round_to(file),
         },
     })
 }
 
 /// The whole conversion through `Conversione::scrivi` at each number of threads and zlib level, into a sink: time, CPU, memory, allocations and the
 /// SHA-256 of the output (the same at every thread count: F9).
-pub fn scala(
-    src: &Sorgente,
+pub fn scale(
+    src: &Source,
     giri: usize,
-    h_nome: &str,
+    h_name: &str,
     thread: &[usize],
-    livelli: &[u32],
-    indicizzato: bool,
-    con_impronta: bool,
+    levels: &[u32],
+    indexed: bool,
+    with_print: bool,
 ) -> Value {
-    let mut prove = Vec::new();
-    for &lv in livelli {
+    let mut evidence = Vec::new();
+    for &lv in levels {
         for &t in thread {
             let mut l = src.apri();
-            let opz = Opzioni {
+            let opz = Options {
                 livello: lv,
                 numpress: false,
                 thread: t,
                 dad: false,
             };
-            let conv = Conversione {
+            let conv = Conversion {
                 peaks: src.picchi(),
                 opz,
-                steps: indicizzato.then_some(&[][..]),
+                steps: indexed.then_some(&[][..]),
             };
             let mut byte = 0;
             // the timed runs do not hash: SHA-256 of the output is serial and would hide the scaling
-            let (g, _) = ripeti(giri, || {
+            let (g, _) = repeat(giri, || {
                 let s = conv
-                    .scrivi(&mut *l, 0, Sink::nuovo(false), &mut |_, _| {})
+                    .write(&mut *l, 0, Sink::nuovo(false), &mut |_, _| {})
                     .expect("conversion");
                 byte = s.n;
             });
             // one more run, outside the clock, for the determinism fingerprint
-            let impronta = con_impronta.then(|| {
+            let print = with_print.then(|| {
                 let s = conv
-                    .scrivi(&mut *l, 0, Sink::nuovo(true), &mut |_, _| {})
+                    .write(&mut *l, 0, Sink::nuovo(true), &mut |_, _| {})
                     .expect("conversion");
                 s.sha256()
             });
-            prove.push(json!({
-                "thread": t, "livello": lv, "indicizzato": indicizzato, "peaks": format!("{:?}", src.picchi()),
-                "byte_uscita": byte, "sha256_uscita": impronta.flatten(), "misura": riassunto(&g),
+            evidence.push(json!({
+                "thread": t, "livello": lv, "indicizzato": indexed, "peaks": format!("{:?}", src.picchi()),
+                "byte_uscita": byte, "sha256_uscita": print.flatten(), "misura": summary(&g),
             }));
         }
     }
-    json!({"nome": h_nome, "prove": prove})
+    json!({"nome": h_name, "prove": evidence})
 }
 
 /// Medians of one variant: name, decoding, extra, writing, total, scans.
-type Mediana = (&'static str, f64, f64, f64, f64, usize);
+type Median = (&'static str, f64, f64, f64, f64, usize);
 
 /// One variant of the loop measured `giri` times: its JSON row and its medians.
-fn misura_variante(
-    src: &Sorgente,
-    l: &mut dyn Lettore,
+fn measure_variant(
+    src: &Source,
+    l: &mut dyn Reader,
     giri: usize,
     h: &Header,
     tmp: &std::path::Path,
-    var: Variante,
-) -> (Value, Mediana) {
-    let mut parti: Vec<Parti> = Vec::new();
-    let (g, _) = ripeti(giri, || {
-        let p = ciclo(&mut *l, h, src.profilo, var, tmp).expect("loop");
-        parti.push(p);
+    var: Variant,
+) -> (Value, Median) {
+    let mut parts: Vec<Parts> = Vec::new();
+    let (g, _) = repeat(giri, || {
+        let p = cycle(&mut *l, h, src.profilo, var, tmp).expect("loop");
+        parts.push(p);
     });
-    let med = |f: fn(&Parti) -> f64| mediana(&parti.iter().map(f).collect::<Vec<_>>());
+    let med = |f: fn(&Parts) -> f64| median(&parts.iter().map(f).collect::<Vec<_>>());
     let (dec, extra, scr, tot) = (
         med(|p| p.dec),
         med(|p| p.extra),
-        med(|p| p.scrittura),
-        med(|p| p.totale),
+        med(|p| p.writing),
+        med(|p| p.total),
     );
-    let p0 = parti[0].clone();
+    let p0 = parts[0].clone();
     let byte = if var.su_file {
         p0.byte
     } else {
-        byte_di(&mut *l, h, src.profilo, var)
+        bytes_of(&mut *l, h, src.profilo, var)
     };
-    let riga = json!({
-        "variante": var.nome, "livello": var.livello, "indicizzato": var.indicizzato, "su_file": var.su_file, "xml_solo": var.vuoto,
-        "decodifica_s": arrotonda(dec), "extra_s": arrotonda(extra), "scrittura_s": arrotonda(scr), "totale_s": arrotonda(tot),
+    let row = json!({
+        "variante": var.name, "livello": var.level, "indicizzato": var.indexed, "su_file": var.su_file, "xml_solo": var.empty,
+        "decodifica_s": round_to(dec), "extra_s": round_to(extra), "scrittura_s": round_to(scr), "totale_s": round_to(tot),
         "byte_uscita": byte, "scansioni": p0.scansioni,
         "allocazioni_per_scansione": {"decodifica": per_scan(&p0.a_dec, p0.scansioni), "extra": per_scan(&p0.a_extra, p0.scansioni), "scrittura": per_scan(&p0.a_scr, p0.scansioni)},
-        "misura": riassunto(&g),
+        "misura": summary(&g),
     });
-    (riga, (var.nome, dec, extra, scr, tot, p0.scansioni))
+    (row, (var.name, dec, extra, scr, tot, p0.scansioni))
 }

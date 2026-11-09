@@ -1,6 +1,7 @@
 //! `corsa/1` on a hand-written `prov/1`: files and lists apart, estimated against fixed parameters, level counts and the included `report/1`.
 
 use super::*;
+use crate::json::parse;
 
 const PROV: &str = r#"{"schema":"prov/1","agent":{"name":"mzLab","version":"1.2.3","platform":"native"},"plan_sha256":"aa",
 "entity":{"file:a.mzML":{"sha256":"11","bytes":10,"type":"mzml"},"file:lib.msp":{"sha256":"22","bytes":5,"type":"library"},"d.table":{"sha256":"33","type":"table"}},
@@ -10,18 +11,18 @@ const PROV: &str = r#"{"schema":"prov/1","agent":{"name":"mzLab","version":"1.2.
 const ANNOT: &str = r#"{"format":"annot/1","rows":[{"id":"q0","level":"2a"},{"id":"q1","level":"3a"},{"id":"q2","level":"2a"},{"id":"q3","level":"1","auto":false}]}"#;
 const REPORT: &str = r#"{"schema":"report/1","rows":4}"#;
 
-fn corsa() -> Corsa {
+fn run() -> RunReport {
     let prov = parse(PROV.as_bytes()).unwrap();
     let u = [
-        Uscita {
+        Output {
             name: "annot.json",
             bytes: ANNOT.as_bytes(),
         },
-        Uscita {
+        Output {
             name: "report.json",
             bytes: REPORT.as_bytes(),
         },
-        Uscita {
+        Output {
             name: "notes.json",
             bytes: b"not json",
         },
@@ -31,7 +32,7 @@ fn corsa() -> Corsa {
 
 #[test]
 fn reads_inputs_lists_steps_and_parameters() {
-    let c = corsa();
+    let c = run();
     assert_eq!(c.inputs.len(), 1);
     assert_eq!(c.inputs[0].name, "a.mzML");
     assert_eq!(c.lists.len(), 1);
@@ -49,7 +50,7 @@ fn reads_inputs_lists_steps_and_parameters() {
 
 #[test]
 fn counts_levels_auto_apart() {
-    let l = corsa().levels;
+    let l = run().levels;
     assert_eq!((l.files, l.rows), (1, 4));
     assert_eq!(l.auto, vec![("2a".into(), 2), ("3a".into(), 1)]);
     assert_eq!(l.other, vec![("1".into(), 1)]);
@@ -57,8 +58,8 @@ fn counts_levels_auto_apart() {
 
 #[test]
 fn json_is_stable_and_valid() {
-    let a = corsa().json();
-    assert_eq!(a, corsa().json());
+    let a = run().json();
+    assert_eq!(a, run().json());
     let v = parse(a.as_bytes()).unwrap();
     assert_eq!(v.get("schema").unwrap().str(), Some("corsa/1"));
     assert_eq!(v.get("total_ms").unwrap().f64(), Some(15.5));
@@ -106,7 +107,7 @@ fn engine_copies_the_build_keys_of_the_agent() {
     assert!(c
         .json()
         .contains(r#""cargo_lock_sha256":"ab","modules":{"mzlab-cli":"cd"}}"#));
-    assert!(corsa().modules.is_empty());
+    assert!(run().modules.is_empty());
 }
 
 #[test]
@@ -118,11 +119,11 @@ fn names_each_regulatory_list_once() {
     );
     let annot = format!(r#"{{"format":"annot/1","regulatory":{{"lists":[{list}]}},"rows":[]}}"#);
     let u = [
-        Uscita {
+        Output {
             name: "s.json",
             bytes: screen.as_bytes(),
         },
-        Uscita {
+        Output {
             name: "r.json",
             bytes: annot.as_bytes(),
         },
@@ -135,7 +136,7 @@ fn names_each_regulatory_list_once() {
         "Screened against: T_A (version 2000-01-01, SHA-256 c1…). 1 list in force, 0 proposals."
     ));
     assert!(j.contains(crate::flow::corsa_reg::DISCLAIMER));
-    assert!(!corsa().json().contains("\"regulatory\""));
+    assert!(!run().json().contains("\"regulatory\""));
 }
 
 #[test]
@@ -149,11 +150,11 @@ fn cites_each_imported_list_file_once_with_its_sha256() {
         r#"{{"format":"annot/1","regulatory":{{"lists":[],"imported":[{{"name":"imp.mzsus","sha256":"abcdef0123456789","lists":[{list}]}}]}},"rows":[]}}"#
     );
     let u = [
-        Uscita {
+        Output {
             name: "s.json",
             bytes: screen.as_bytes(),
         },
-        Uscita {
+        Output {
             name: "r.json",
             bytes: annot.as_bytes(),
         },

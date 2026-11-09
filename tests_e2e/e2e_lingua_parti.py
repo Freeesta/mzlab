@@ -6,7 +6,7 @@ import os, re, socket, subprocess, sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import ROOT, free_port, attendi, frames  # noqa: E402  (lib also patches wait_for_function for the CSP)
+from lib import ROOT, free_port, wait_for_js, frames  # noqa: E402  (lib also patches wait_for_function for the CSP)
 sys.path.insert(0, str(ROOT / "tools")); import lang_catalogo  # noqa: E402
 
 PORT = free_port()
@@ -32,7 +32,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         for lang in ("it", "en"):
-            keys = [k for k in lang_catalogo.catalogo(lang) if re.fullmatch(r"[a-z][\w-]*(\.[\w-]+){2,}", k)]      # dotted keys long enough to never be prose
+            keys = [k for k in lang_catalogo.catalog(lang) if re.fullmatch(r"[a-z][\w-]*(\.[\w-]+){2,}", k)]      # dotted keys long enough to never be prose
             for size, kw in SIZES.items():
                 def run(lang=lang, size=size, kw=kw, keys=keys):
                     ctx = b.new_context(locale="it-IT", service_workers="block", **kw); pg = ctx.new_page(); pg.add_init_script(SKIP)
@@ -40,8 +40,8 @@ try:
                     pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "i18n" in m.text else None)
                     pg.on("response", lambda r: sizes.__setitem__(r.url.rsplit("/", 1)[-1], len(r.body())) if "/static/lang/" in r.url and r.url.endswith(".js") else None)
                     pg.goto(URL + "?lang=" + lang)
-                    attendi(pg, "window.I18N && !I18N.rest && (!!document.querySelector('#drop') || !!window.MZLAB_PHONE)", 120000)
-                    attendi(pg, "document.readyState === 'complete'", 60000); frames(pg, 3)
+                    wait_for_js(pg, "window.I18N && !I18N.rest && (!!document.querySelector('#drop') || !!window.MZLAB_PHONE)", 120000)
+                    wait_for_js(pg, "document.readyState === 'complete'", 60000); frames(pg, 3)
                     assert pg.evaluate("I18N.lang") == lang
                     assert sizes.get(f"{lang}.js", 0) < 64000 and sizes.get(f"{lang}-resto.js", 0) > 100000, sizes      # first part small, the rest fetched
                     views = pg.evaluate("[...document.querySelectorAll('#nav button')].filter(b => b.offsetParent).map(b => b.dataset.v)")

@@ -7,7 +7,7 @@ mod dati_percorsi;
 mod verita;
 
 #[test]
-fn verita_aperti() {
+fn open_truth() {
     verita::corpus(
         "aperti",
         |r| {

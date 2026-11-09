@@ -1,5 +1,5 @@
 //! `upload::Passata` (SHA-256, SHA-1 and probe in one pass, fed in pieces) gives what the three separate reads gave: the same values whatever the pieces.
-use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::lettori::{FileSet, Member};
 use mzlab_core::upload::{self, Passata};
 use sha1::{Digest as _, Sha1};
 use sha2::Sha256;
@@ -52,6 +52,24 @@ fn passata_equals_the_whole_file_hashes_whatever_the_pieces() {
 }
 
 #[test]
+fn the_two_halves_of_two_workers_give_the_three_values_of_one_pass() {
+    for n in [0, 1, 65537, 3_145_733] {
+        let b = bytes(n);
+        let (sha256, sha1, probe) = reference(&b);
+        let (mut x, mut y) = (
+            Passata::without_sha1(n as u64),
+            Passata::sha1_only(n as u64),
+        );
+        for c in b.chunks(100_000) {
+            x.aggiorna(c);
+            y.aggiorna(c);
+        }
+        assert_eq!(x.fine(), Some((sha256, String::new(), probe.clone())));
+        assert_eq!(y.fine(), Some((String::new(), sha1, probe)));
+    }
+}
+
+#[test]
 fn a_short_or_long_pass_gives_nothing() {
     let b = bytes(1000);
     let mut p = Passata::new(1001);
@@ -64,7 +82,7 @@ fn a_short_or_long_pass_gives_nothing() {
 
 fn set(b: &[u8]) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.raw".into(),
             dim: b.len() as u64,
             dati: Box::new(b.to_vec()),
@@ -100,7 +118,7 @@ fn impronte_gives_the_sha1_to_the_member_and_the_known_ones_replace_the_read() {
     assert!(upload::impronte_note(&mut set(&b), &[]).is_none());
 }
 
-/// The fingerprints taken while the file is copied (`Passata` fed in pieces) given to `prepare_con` give the same `Prepared` as the full read, and the file is read once less.
+/// The fingerprints taken while the file is copied (`Passata` fed in pieces) given to `prepare_with` give the same `Prepared` as the full read, and the file is read once less.
 #[test]
 fn prepare_with_known_fingerprints_is_identical_and_skips_the_reread() {
     use mzlab_core::idxread::ReadAt;
@@ -146,7 +164,7 @@ fn prepare_with_known_fingerprints_is_identical_and_skips_the_reread() {
     }
     let (sha256, _, probe) = pass.fine().unwrap();
     let mut quick = Counting(mzml, 0);
-    let b = upload::prepare_con(
+    let b = upload::prepare_with(
         &mut quick,
         size,
         "x.mzML",

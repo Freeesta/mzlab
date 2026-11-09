@@ -139,11 +139,11 @@ try:
             other = pg.evaluate("[...document.querySelectorAll('#tp-t tbody tr.clk')].map(r => r.dataset.id).find(i => i !== '0')")
             pg.click(f'#tp-t tr.clk[data-id="{other}"]'); pg.wait_for_selector("#tp-det .tpd-sel", timeout=60000)
             sel = pg.locator("#tp-det .tpd-sel").first
-            sel.select_option("2b"); lib.attendi(pg, "!!document.querySelector('#tp-det .tpd-msg').textContent.trim()")
-            sel.select_option("4"); lib.attendi(pg, "document.querySelectorAll('#tp-t tbody .lvb.tpt-dec').length === 1")
+            sel.select_option("2b"); lib.wait_for_js(pg, "!!document.querySelector('#tp-det .tpd-msg').textContent.trim()")
+            sel.select_option("4"); lib.wait_for_js(pg, "document.querySelectorAll('#tp-t tbody .lvb.tpt-dec').length === 1")
             assert pg.inner_text("#tp-t tbody .lvb.tpt-dec").strip() == "L4"
             assert "no level proposed" in pg.get_attribute("#tp-t tbody .lvb.tpt-dec", "aria-label")
-            sel.select_option(""); lib.attendi(pg, "document.querySelectorAll('#tp-t tbody tr:not(.tpt-exp) .lvb').length === 0")
+            sel.select_option(""); lib.wait_for_js(pg, "document.querySelectorAll('#tp-t tbody tr:not(.tpt-exp) .lvb').length === 0")
             pg.keyboard.press("Escape")
         step("Lvl stays empty until the chemist decides; 2b is refused, L4 shows in the row", decided)
 
@@ -169,18 +169,18 @@ try:
             assert pg.locator(".hero-b:nth-child(3) [role=group] button").all_inner_texts() == ["Excel (.xlsx)", "CSV", "JSON", "Copy summary"]
             bare = pg.evaluate("[...document.querySelectorAll('.hero .hc:not(.hn), .hero button')].filter(e => !e.hasAttribute('data-tt')).map(e => e.textContent)")
             assert not bare, ("every item and button has its help", bare)
-            pg.locator('.hero .hc[data-k="formula"]').focus(); lib.attendi(pg, "!document.getElementById('tph-pop').hidden && document.getElementById('tph-pop').textContent.includes('Neutral formula')")
+            pg.locator('.hero .hc[data-k="formula"]').focus(); lib.wait_for_js(pg, "!document.getElementById('tph-pop').hidden && document.getElementById('tph-pop').textContent.includes('Neutral formula')")
             if pg.locator("#tp-weak-s").count():
                 base = pg.evaluate(COUNT); pg.click("#tp-weak-s")
-                lib.attendi(pg, "document.getElementById('tp-weak-s').getAttribute('aria-pressed') === 'true'")
+                lib.wait_for_js(pg, "document.getElementById('tp-weak-s').getAttribute('aria-pressed') === 'true'")
                 assert pg.inner_text("#tp-weak-s") == "hide" and "shown" in pg.inner_text("#tp-weak-w") and pg.evaluate(COUNT) != base, pg.evaluate(COUNT)
                 assert pg.get_attribute('#tp-view .tpt-chip[data-chip="weak"]', "aria-pressed") == "true", "the card and the chip of the table say the same"
-                pg.click("#tp-weak-s"); lib.attendi(pg, "document.getElementById('tp-weak-s').getAttribute('aria-pressed') === 'false'")
+                pg.click("#tp-weak-s"); lib.wait_for_js(pg, "document.getElementById('tp-weak-s').getAttribute('aria-pressed') === 'false'")
                 assert pg.evaluate(COUNT) == base
             else: print("  SKIP no row with weak evidence in this series")
-            pg.set_viewport_size({"width": 360, "height": 800}); lib.attendi(pg, "innerWidth === 360")
+            pg.set_viewport_size({"width": 360, "height": 800}); lib.wait_for_js(pg, "innerWidth === 360")
             o = pg.evaluate("(() => { const h = document.querySelector('.hero'); return [h.scrollWidth, h.clientWidth, h.getBoundingClientRect().right, innerWidth]; })()")
-            pg.set_viewport_size({"width": 1280, "height": 1000}); lib.attendi(pg, "innerWidth === 1280")
+            pg.set_viewport_size({"width": 1280, "height": 1000}); lib.wait_for_js(pg, "innerWidth === 1280")
             assert o[0] <= o[1] + 1 and o[2] <= o[3] + 1, ("the card fits 360 px", o)
         step("summary card: Parent, Output, Download; no title of outcome, every item with its help, the weak band in one click", summary)
 
@@ -203,7 +203,7 @@ try:
             Path(out).mkdir(parents=True, exist_ok=True)
             for scheme in ("light", "dark"):
                 for w in (1280, 390):
-                    pg.emulate_media(color_scheme=scheme, reduced_motion="reduce"); pg.set_viewport_size({"width": w, "height": 1100}); lib.fermo(pg, "#tp-t")
+                    pg.emulate_media(color_scheme=scheme, reduced_motion="reduce"); pg.set_viewport_size({"width": w, "height": 1100}); lib.wait_still(pg, "#tp-t")
                     pg.locator("#tp-view").screenshot(path=str(Path(out) / f"lr_tabella_{scheme}_{w}.png"))
         step("screenshots", shots)
 

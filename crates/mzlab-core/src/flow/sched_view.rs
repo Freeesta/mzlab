@@ -66,7 +66,7 @@ impl Sched {
                     instance: inst.id.clone(),
                     state,
                     frac,
-                    parte,
+                    part: parte,
                     di: views.len(),
                     ms,
                 })

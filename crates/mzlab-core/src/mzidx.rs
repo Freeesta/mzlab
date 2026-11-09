@@ -9,8 +9,8 @@ use std::cmp::Ordering;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
-use crate::mzidx_ordine::ordina_secchi;
-use crate::mzidx_spill::{leggi_parti, Parti, Spill};
+use crate::mzidx_ordine::sort_buckets;
+use crate::mzidx_spill::{align, read_parts, Parts, Spill};
 use crate::mzml::Spectrum;
 mod late;
 pub use late::{build_mzml_corriere, build_mzml_late};
@@ -77,7 +77,8 @@ pub(crate) trait Num: Copy + Default + Send {
     const F32: bool;
     fn from64(x: f64) -> Self;
     fn to64(self) -> f64;
-    fn put(self, out: &mut Vec<u8>);
+    /// The little-endian bytes into `out`, which is `SIZE` long.
+    fn le(self, out: &mut [u8]);
 }
 fn get0<T: Copy + Default>(v: &[T], i: usize) -> T {
     v.get(i).copied().unwrap_or_default()
@@ -93,8 +94,8 @@ impl Num for f32 {
     fn to64(self) -> f64 {
         self as f64
     }
-    fn put(self, out: &mut Vec<u8>) {
-        out.extend_from_slice(&self.to_le_bytes());
+    fn le(self, out: &mut [u8]) {
+        out.copy_from_slice(&self.to_le_bytes());
     }
 }
 impl Num for f64 {
@@ -106,8 +107,8 @@ impl Num for f64 {
     fn to64(self) -> f64 {
         self
     }
-    fn put(self, out: &mut Vec<u8>) {
-        out.extend_from_slice(&self.to_le_bytes());
+    fn le(self, out: &mut [u8]) {
+        out.copy_from_slice(&self.to_le_bytes());
     }
 }
 
@@ -182,17 +183,17 @@ impl Totals {
 
 trait Sect {
     /// Adds what pass 1 counted for a group of scans of this section.
-    fn assorbi(&mut self, g: &Gruppo);
+    fn assorbi(&mut self, g: &Group);
     /// Takes the kept peaks of the groups of this section (`rank`: the number of each scan of the file in this section) into the buckets of a round
     /// that spans all of them, ready for `flush`.
-    fn carica(&mut self, da: &[&Gruppo], rank: &[u32]) -> Result<()>;
+    fn load(&mut self, da: &[&Group], rank: &[u32]) -> Result<()>;
     fn n_peaks(&self) -> u64;
     /// Bytes per peak while a round holds it.
     fn cost(&self, b: usize) -> usize;
     fn begin_round(&mut self, lo: usize, hi: usize) -> Result<()>;
     /// The round is filled from the scratch file: its partitions come one after the other, so a peak whose bucket changed by the 32-bit rounding can
     /// come before the peaks of earlier scans; equal m/z are then ordered by scan, as a round filled in scan order has them.
-    fn per_scansione(&mut self);
+    fn per_scan(&mut self);
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()>;
     /// The same for one peak (a peak read back from the scratch file).
     fn fill_pk(&mut self, mz: f64, it: f64, pos: u32) -> Result<()>;
@@ -252,7 +253,7 @@ impl<T: Num> Sec<T> {
         }
     }
 
-    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values.
+    /// Writes `peaks` (sorted, following the ones already written) and updates the sums, base peaks and fence values; one column at a time into fixed-width cells (no length check or `match` per value: this loop was the biggest cost of the rounds on the site).
     fn emit(&mut self, out: &mut dyn Output, off: &Offsets, peaks: &[Peak<T>]) -> Result<()> {
         const CHUNK: usize = 1 << 16;
         let mut g = (BLOCK - self.done % BLOCK) % BLOCK;
@@ -261,26 +262,25 @@ impl<T: Num> Sec<T> {
             g += BLOCK;
         }
         for chunk in peaks.chunks(CHUNK) {
-            let at = self.done;
-            for (field, base, width) in [
-                (0, off.mz, T::SIZE),
-                (1, off.inten, T::SIZE),
-                (2, off.pos, 4),
-            ] {
-                self.bytes.clear();
-                reserve(&mut self.bytes, chunk.len() * width)?;
-                for p in chunk {
-                    match field {
-                        0 => p.mz.put(&mut self.bytes),
-                        1 => p.it.put(&mut self.bytes),
-                        _ => self.bytes.extend_from_slice(&(p.pos as i32).to_le_bytes()),
-                    }
-                }
-                out.write_at(base + at * width as u64, &self.bytes)?;
+            let (need, at) = (chunk.len() * T::SIZE, self.done);
+            let more = need.saturating_sub(self.bytes.len());
+            reserve(&mut self.bytes, more)?;
+            self.bytes.resize(self.bytes.len().max(need), 0);
+            let b = self.bytes.get_mut(..need).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
+                p.mz.le(c);
             }
-            for p in chunk {
+            out.write_at(off.mz + at * T::SIZE as u64, b)?;
+            for (c, p) in b.chunks_exact_mut(T::SIZE).zip(chunk) {
+                p.it.le(c);
+            }
+            out.write_at(off.inten + at * T::SIZE as u64, b)?;
+            let b = self.bytes.get_mut(..chunk.len() * 4).unwrap_or_default();
+            for (c, p) in b.chunks_exact_mut(4).zip(chunk) {
+                c.copy_from_slice(&(p.pos as i32).to_le_bytes());
                 self.totals.add(p.pos as usize, p.mz.to64(), p.it.to64());
             }
+            out.write_at(off.pos + at * 4, b)?;
             self.done += chunk.len() as u64;
         }
         Ok(())
@@ -288,7 +288,7 @@ impl<T: Num> Sec<T> {
 }
 
 impl<T: Num> Sect for Sec<T> {
-    fn assorbi(&mut self, g: &Gruppo) {
+    fn assorbi(&mut self, g: &Group) {
         let counts = if T::F32 { &g.counts32 } else { &g.counts };
         for (c, x) in self.counts.iter_mut().zip(counts) {
             *c += x;
@@ -297,7 +297,7 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
-    fn carica(&mut self, da: &[&Gruppo], rank: &[u32]) -> Result<()> {
+    fn load(&mut self, da: &[&Group], rank: &[u32]) -> Result<()> {
         self.begin_round(0, NB)?;
         for g in da {
             // a group keeps one of the two (`Gruppo::f32`); `f32 -> f64 -> f32` gives back the same bits
@@ -350,7 +350,7 @@ impl<T: Num> Sect for Sec<T> {
         Ok(())
     }
 
-    fn per_scansione(&mut self) {
+    fn per_scan(&mut self) {
         self.per_scansione = true;
     }
 
@@ -388,17 +388,17 @@ impl<T: Num> Sect for Sec<T> {
             .map(|b| get0(&self.base, b) + get0(&self.counts, b) as usize)
             .collect();
         let first = get0(&self.base, self.lo);
-        ordina_secchi(&mut round, first, &ends, self.per_scansione)?;
+        sort_buckets(&mut round, first, &ends, self.per_scansione)?;
         let r = self.emit(out, off, &round);
         self.round = Vec::new();
         r
     }
 
     fn finish(&mut self, out: &mut dyn Output, off: &Offsets) -> Result<()> {
-        let mut b = Vec::new();
-        for v in &self.fence {
-            v.put(&mut b);
-        }
+        let mut b = vec![0; self.fence.len() * T::SIZE];
+        b.chunks_exact_mut(T::SIZE)
+            .zip(&self.fence)
+            .for_each(|(c, v)| v.le(c));
         out.write_at(off.fence, &b)?;
         for (at, arr) in [
             (off.sumint, &self.totals.acc),
@@ -436,7 +436,7 @@ fn ammette(kind: u8, pol: i8) -> bool {
 
 /// The scans of one level and polarity, as pass 1 of the builder sees them: the peaks per 1-unit bucket of m/z and, while they fit, the peaks themselves.
 /// A section is the union of the groups it admits, so pass 1 can run before the table (and so the sections) is known.
-struct Gruppo {
+struct Group {
     level: u8,
     polarity: i8,
     counts: Vec<u32>,
@@ -450,9 +450,9 @@ struct Gruppo {
     kept32: Vec<Peak<f32>>,
 }
 
-impl Gruppo {
-    fn nuovo(level: u8, polarity: i8, f32: bool) -> Gruppo {
-        Gruppo {
+impl Group {
+    fn nuovo(level: u8, polarity: i8, f32: bool) -> Group {
+        Group {
             level,
             polarity,
             counts: vec![0; NB],
@@ -465,7 +465,7 @@ impl Gruppo {
     }
 
     /// Peak `i` of what is kept, as `(mz, intensity, scan)`.
-    fn picco(&self, i: usize) -> Option<(f64, f64, u32)> {
+    fn peak(&self, i: usize) -> Option<(f64, f64, u32)> {
         if !self.f32 {
             return self.kept.get(i).map(|p| (p.mz, p.it, p.pos));
         }
@@ -476,11 +476,11 @@ impl Gruppo {
 
     /// One peak: counted, then kept (`keep`) or sent to the scratch file (`scorta`, when there is one).
     #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // `bucket` is below `NB`; `f32` peaks are what the section writes
-    fn metti(
+    fn put(
         &mut self,
         keep: bool,
         Peak { mz, it, pos }: Peak<f64>,
-        scorta: Option<(&mut Parti, &mut dyn Spill)>,
+        scorta: Option<(&mut Parts, &mut dyn Spill)>,
     ) -> Result<()> {
         self.counts[bucket(mz)] += 1;
         if self.level == 1 {
@@ -497,7 +497,7 @@ impl Gruppo {
         } else if keep {
             self.kept.push(Peak { mz, it, pos });
         } else if let Some((parti, spill)) = scorta {
-            parti.push(spill, mz, it, pos)?;
+            parti.push(spill, mz, it, pos, self.level == 1)?;
         }
         Ok(())
     }
@@ -508,7 +508,7 @@ impl Gruppo {
             + self.kept32.capacity() * std::mem::size_of::<Peak<f32>>()
     }
 
-    fn lascia(&mut self) {
+    fn leave(&mut self) {
         self.kept = Vec::new();
         self.kept32 = Vec::new();
     }
@@ -516,33 +516,33 @@ impl Gruppo {
 
 /// Pass 1 of the builder: the groups, filled one scan at a time. `budget / 4` bytes of peaks (counted by capacity: a growing vector briefly holds twice) are kept; past that, with a scratch file (`spill`) they go to it
 /// split by m/z (`mzidx_spill`) and the rounds read them from there; without one they are dropped and the rounds decode again.
-pub(crate) struct Prima<'a> {
-    gruppi: Vec<Gruppo>,
+pub(crate) struct First<'a> {
+    groups: Vec<Group>,
     keep: bool,
     budget: usize,
     visti: usize,
     spill: Option<&'a mut dyn Spill>,
-    parti: Option<Parti>,
+    parts: Option<Parts>,
     /// Whether the MS1 sections will hold `f32` (`ScanTable::hr1`): known before pass 1 for an mzML, guessed from the first MS1 scan for a reader
-    /// (`indovina`); a wrong guess of `true` is undone by `build_dopo`.
+    /// (`indovina`); a wrong guess of `true` is undone by `build_after`.
     hr1: Option<bool>,
 }
 
-impl<'a> Prima<'a> {
-    pub(crate) fn new(budget: usize, spill: Option<&'a mut dyn Spill>) -> Prima<'a> {
-        Prima {
-            gruppi: Vec::new(),
+impl<'a> First<'a> {
+    pub(crate) fn new(budget: usize, spill: Option<&'a mut dyn Spill>) -> First<'a> {
+        First {
+            groups: Vec::new(),
             keep: true,
             budget,
             visti: 0,
             spill,
-            parti: None,
+            parts: None,
             hr1: None,
         }
     }
 
     /// `hr1` as the table says it (an mzML) or as the scans seen so far say it (a reader), if it is not known yet; the groups made from now on keep their peaks so.
-    pub(crate) fn indovina(&mut self, hr1: bool) {
+    pub(crate) fn guess(&mut self, hr1: bool) {
         self.hr1.get_or_insert(hr1);
     }
 
@@ -550,18 +550,18 @@ impl<'a> Prima<'a> {
     #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
     pub(crate) fn add(&mut self, level: u8, polarity: i8, sp: &Spectrum) -> Result<()> {
         let gi = match self
-            .gruppi
+            .groups
             .iter()
             .position(|g| g.level == level && g.polarity == polarity)
         {
             Some(i) => i,
             None => {
-                self.gruppi
-                    .push(Gruppo::nuovo(level, polarity, self.hr1 == Some(true)));
-                self.gruppi.len() - 1
+                self.groups
+                    .push(Group::nuovo(level, polarity, self.hr1 == Some(true)));
+                self.groups.len() - 1
             }
         };
-        let g = &mut self.gruppi[gi];
+        let g = &mut self.groups[gi];
         let n = sp.mz.len();
         let pos = self.visti as u32;
         if self.keep {
@@ -573,20 +573,21 @@ impl<'a> Prima<'a> {
         }
         for j in 0..n {
             let spill = self.spill.as_deref_mut().map(|s| s as &mut dyn Spill);
-            let scorta = self.parti.as_mut().zip(spill);
+            let scorta = self.parts.as_mut().zip(spill);
             let (mz, it) = (sp.mz[j], sp.intensity_f64(j));
-            g.metti(self.keep, Peak { mz, it, pos }, scorta)?;
+            g.put(self.keep, Peak { mz, it, pos }, scorta)?;
         }
         g.n += n as u64;
         self.visti += 1;
+        self.too_dense()?;
         if self.keep {
-            let held: usize = self.gruppi.iter().map(Gruppo::held).sum();
+            let held: usize = self.groups.iter().map(Group::held).sum();
             if held > self.budget / 4 {
                 self.keep = false;
                 if let Some(sp) = self.spill.as_deref_mut() {
-                    self.parti = Some(avvia(&mut self.gruppi, sp)?);
+                    self.parts = Some(start(&mut self.groups, sp)?);
                 }
-                self.gruppi.iter_mut().for_each(Gruppo::lascia);
+                self.groups.iter_mut().for_each(Group::leave);
             }
         }
         Ok(())
@@ -595,20 +596,20 @@ impl<'a> Prima<'a> {
 
 /// The budget ran out with a scratch file: what is kept goes to it in the order of the scans (the groups merged by scan number), and the next scans follow it.
 #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the groups just counted; `f32` groups hold widened `f32` values
-fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
+fn start(groups: &mut [Group], sp: &mut dyn Spill) -> Result<Parts> {
     let mut counts = vec![0u64; NB];
-    for g in gruppi.iter() {
+    for g in groups.iter() {
         for (c, &x) in counts.iter_mut().zip(&g.counts) {
             *c += u64::from(x);
         }
     }
-    let mut parti = Parti::new(&counts);
-    let mut next = vec![0usize; gruppi.len()];
+    let mut parts = Parts::new(&counts);
+    let mut next = vec![0usize; groups.len()];
     loop {
         // the group whose next scan comes first (the first group on a tie); its peaks of that scan follow one another, so they go as a run
         let mut best: Option<(usize, u32)> = None;
-        for (i, g) in gruppi.iter().enumerate() {
-            if let Some(p) = g.picco(next[i])
+        for (i, g) in groups.iter().enumerate() {
+            if let Some(p) = g.peak(next[i])
                 && best.is_none_or(|(_, b)| p.2 < b)
             {
                 best = Some((i, p.2));
@@ -617,24 +618,27 @@ fn avvia(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
         let Some((i, pos)) = best else {
             break;
         };
-        while let Some((mz, it, p)) = gruppi[i].picco(next[i]) {
+        while let Some((mz, it, p)) = groups[i].peak(next[i]) {
             if p != pos {
                 break;
             }
             next[i] += 1;
-            if gruppi[i].f32 {
+            if groups[i].f32 {
                 // the kept values are `f32` widened: narrowing them back is exact
-                parti.push32(sp, mz as f32, it as f32, pos)?;
+                parts.push32(sp, mz as f32, it as f32, pos)?;
             } else {
-                parti.push(sp, mz, it, pos)?;
+                parts.push(sp, mz, it, pos, groups[i].level == 1)?;
             }
         }
     }
-    Ok(parti)
+    Ok(parts)
 }
 
 #[cfg(test)]
 mod tests_avvia;
+
+mod denso;
+use denso::{round_cap, slice_refusal};
 
 fn pad(n: u64) -> u64 {
     (ALIGN - n % ALIGN) % ALIGN
@@ -648,7 +652,7 @@ fn f64_bytes(v: &[f64]) -> Vec<u8> {
 pub type Pass<'a> = dyn FnMut(&mut dyn FnMut(Spectrum)) -> Result<()> + 'a;
 
 /// Builds the index. `pass` decodes the whole stream once per call (it must start from the beginning every time).
-/// `nativo`: the rows locate the scans in a vendor file set (version 2, `idxread::FLAG_LETTORE`), otherwise in an mzML (version 1).
+/// `nativo`: the rows locate the scans in a vendor file set (version 2, `idxread::READER_FLAG`), otherwise in an mzML (version 1).
 #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
 pub fn build(
     table: &ScanTable,
@@ -657,12 +661,14 @@ pub fn build(
     budget: usize,
     nativo: bool,
 ) -> Result<Stats> {
-    build_con_spill(table, pass, out, budget, nativo, None, None)
+    build_with_spill(table, pass, out, budget, nativo, None, None, None)
 }
 
-/// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size.
-#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
-pub fn build_con_spill(
+/// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size. `stop` is set
+/// when pass 1 fails (a refusal, a bad scan): a pass that can stop reading there (`late::Fermabile`) skips the rest. Indexes come from the table.
+#[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)]
+#[allow(clippy::too_many_arguments)]
+pub fn build_with_spill(
     table: &ScanTable,
     pass: &mut Pass,
     out: &mut dyn Output,
@@ -670,44 +676,45 @@ pub fn build_con_spill(
     nativo: bool,
     spill: Option<&mut dyn Spill>,
     late_source: Option<&mut dyn FnMut() -> Result<String>>,
+    stop: Option<&std::cell::Cell<bool>>,
 ) -> Result<Stats> {
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
         return Err(Error::new("err.file.index").with("detail", "scan table"));
     }
     // -- pass 1: count (and keep, while it fits)
-    let mut prima = Prima::new(budget, spill);
-    prima.indovina(table.hr1);
+    let mut before = First::new(budget, spill);
+    before.guess(table.hr1);
     let mut failure: Option<Error> = None;
     {
         let mut on = |sp: Spectrum| {
             if failure.is_some() {
                 return;
             }
-            let seen = prima.visti;
+            let seen = before.visti;
             if seen >= n_scans {
                 failure =
                     Some(Error::new("err.file.index").with("detail", "more spectra than scans"));
                 return;
             }
-            if let Err(e) = prima.add(table.level[seen], table.polarity[seen], &sp) {
+            if let Err(e) = before.add(table.level[seen], table.polarity[seen], &sp) {
                 failure = Some(e);
+                stop.inspect(|s| s.set(true));
             }
         };
-        pass(&mut on)?;
+        // a pass stopped on purpose ends with an error of its own: the failure that stopped it is the answer
+        let read = pass(&mut on);
+        failure.map_or(read, Err)?;
     }
-    if let Some(e) = failure {
-        return Err(e);
-    }
-    build_dopo(table, prima, pass, out, budget, nativo, late_source)
+    build_after(table, before, pass, out, budget, nativo, late_source)
 }
 
 /// The rest of the build once pass 1 has run (`prima`, which counted `table.level.len()` scans): the layout, the arrays of the scans and the peaks,
 /// in rounds of buckets decoded again by `pass` when they did not fit.
 #[allow(clippy::indexing_slicing, clippy::cast_possible_truncation)] // the indexes come from the table, checked against `n_scans`
-pub(crate) fn build_dopo(
+pub(crate) fn build_after(
     table: &ScanTable,
-    mut prima: Prima,
+    mut before: First,
     pass: &mut Pass,
     out: &mut dyn Output,
     budget: usize,
@@ -715,7 +722,7 @@ pub(crate) fn build_dopo(
     late_source: Option<&mut dyn FnMut() -> Result<String>>,
 ) -> Result<Stats> {
     let (version, flags) = if nativo {
-        (2u32, crate::idxread::FLAG_LETTORE)
+        (2u32, crate::idxread::READER_FLAG)
     } else {
         (1, 0)
     };
@@ -723,20 +730,20 @@ pub(crate) fn build_dopo(
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
         return Err(Error::new("err.file.index").with("detail", "scan table"));
     }
-    if prima.visti != n_scans {
+    if before.visti != n_scans {
         return Err(Error::new("err.file.index").with(
             "detail",
-            format!("{} spectra, {n_scans} scans", prima.visti),
+            format!("{} spectra, {n_scans} scans", before.visti),
         ));
     }
-    if !table.hr1 && prima.gruppi.iter().any(|g| g.f32) {
+    if !table.hr1 && before.groups.iter().any(|g| g.f32) {
         // pass 1 guessed 32-bit MS1 peaks for a file that is not high-resolution: what it kept or spilled is rounded, so the rounds decode again
-        prima.keep = false;
-        prima.parti = None;
-        prima.spill = None;
-        prima.gruppi.iter_mut().for_each(Gruppo::lascia);
+        before.keep = false;
+        before.parts = None;
+        before.spill = None;
+        before.groups.iter_mut().for_each(Group::leave);
     }
-    let keep = prima.keep;
+    let keep = before.keep;
     let mut passes = 1usize;
     // -- the groups of scans (level x polarity), those with the same members share a section
     let mut levels: Vec<u8> = table.level.clone();
@@ -788,8 +795,8 @@ pub(crate) fn build_dopo(
             } else {
                 Box::new(Sec::<f64>::new(s.ids.len()))
             };
-            for g in prima
-                .gruppi
+            for g in before
+                .groups
                 .iter()
                 .filter(|g| g.level == s.level && ammette(s.kind, g.polarity))
             {
@@ -844,8 +851,8 @@ pub(crate) fn build_dopo(
     // -- the peaks, in rounds of buckets
     if keep {
         for (s, sec) in infos.iter().zip(secs.iter_mut()) {
-            let da: Vec<&Gruppo> = prima
-                .gruppi
+            let da: Vec<&Group> = before
+                .groups
                 .iter()
                 .filter(|g| g.level == s.level && ammette(s.kind, g.polarity))
                 .collect();
@@ -853,24 +860,23 @@ pub(crate) fn build_dopo(
             for (p, &i) in s.ids.iter().enumerate() {
                 rank[i] = p as u32;
             }
-            sec.carica(&da, &rank)?;
+            sec.load(&da, &rank)?;
             sec.flush(out, &s.off)?;
         }
     } else {
-        let (mut parti, mut spill) = (prima.parti.take(), prima.spill.take());
-        if let (Some(p), Some(sp)) = (parti.as_mut(), spill.as_deref_mut()) {
+        let (mut parts, mut spill) = (before.parts.take(), before.spill.take());
+        if let (Some(p), Some(sp)) = (parts.as_mut(), spill.as_deref_mut()) {
             p.fine(sp)?;
         }
         let costs: Vec<usize> = (0..NB)
             .map(|b| secs.iter().map(|s| s.cost(b)).sum())
             .collect();
         let cost = |b: usize| costs[b];
-        // A round holds its peaks and, while it is written, the same peaks as byte arrays (about one more round): so it may use half of the
-        // budget, minus what the build holds whatever the round (table, member lists, per-scan arrays of the sections).
+        // what the build holds whatever the round (table, member lists, per-scan arrays of the sections): `round_cap`
         let fixed = table.scans_json.len()
             + n_scans * (18 + MEMBER_BYTES)
             + infos.iter().map(|s| s.ids.len() * 33).sum::<usize>();
-        let round_cap = (budget / 2).saturating_sub(fixed).max(budget / 8);
+        let round_cap = round_cap(budget, fixed, parts.is_some());
         let mut lo = 0usize;
         while lo < NB {
             let (mut hi, mut used) = (lo, 0usize);
@@ -879,26 +885,22 @@ pub(crate) fn build_dopo(
                 hi += 1;
             }
             if hi == lo {
-                return Err(crate::budget::refusal(
-                    "index",
-                    fixed + 2 * cost(lo),
-                    budget,
-                ));
+                return Err(slice_refusal(cost(lo), budget));
             }
+            (hi, used) = align(parts.as_ref(), lo, hi, used, &cost);
             if used > 0 {
                 for sec in secs.iter_mut() {
                     sec.begin_round(lo, hi)?;
                 }
                 let mut seen = 0usize;
                 let mut failure: Option<Error> = None;
-                if let (Some(p), Some(sp)) = (parti.as_ref(), spill.as_deref_mut()) {
+                if let (Some(p), Some(sp)) = (parts.as_ref(), spill.as_deref_mut()) {
                     // the peaks are in the scratch file: no decoding
-                    secs.iter_mut().for_each(|s| s.per_scansione());
-                    leggi_parti(p, sp, lo, hi, &mut |mz, it, pos| {
-                        for &(si, q) in &member[pos as usize] {
-                            secs[si].fill_pk(mz, it, q)?;
-                        }
-                        Ok(())
+                    secs.iter_mut().for_each(|s| s.per_scan());
+                    read_parts(p, sp, lo, hi, &mut |mz, it, pos| {
+                        member[pos as usize]
+                            .iter()
+                            .try_for_each(|&(si, q)| secs[si].fill_pk(mz, it, q))
                     })?;
                 } else {
                     let mut on = |sp: Spectrum| {
@@ -1015,15 +1017,15 @@ pub fn build_mzml_spill<R: std::io::Read + Seek>(
     build_mzml_late(table, src, out, budget, spill, None)
 }
 
-/// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::indice(c)` in order (`mzidx_lettore`).
-pub fn build_lettore(
+/// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::index(c)` in order (`mzidx_lettore`).
+pub fn build_reader(
     table: &ScanTable,
-    l: &mut dyn crate::lettori::Lettore,
+    l: &mut dyn crate::lettori::Reader,
     c: usize,
     out: &mut dyn Output,
     budget: usize,
 ) -> Result<Stats> {
-    let n = l.indice(c)?.len();
+    let n = l.index(c)?.len();
     build(
         table,
         &mut |on| (0..n).try_for_each(|k| crate::mzidx_lettore::spettro(l, c, k).map(&mut *on)),

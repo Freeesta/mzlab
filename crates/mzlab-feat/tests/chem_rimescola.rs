@@ -3,7 +3,7 @@
 use mzlab_core::elements::fmt;
 use mzlab_feat::chem::grafo::Mol;
 
-fn legami(m: &Mol) -> Vec<(usize, usize)> {
+fn bonds(m: &Mol) -> Vec<(usize, usize)> {
     let mut v: Vec<(usize, usize)> = m
         .bonds
         .iter()
@@ -18,7 +18,7 @@ fn the_rewired_structure_keeps_the_formula_and_changes_the_bonds() {
     let m = Mol::parse("CC(=O)Nc1ccc(O)cc1CCN").unwrap();
     let d = m.rimescola(7);
     assert_eq!(fmt(&d.formula()), fmt(&m.formula()));
-    assert_ne!(legami(&d), legami(&m));
+    assert_ne!(bonds(&d), bonds(&m));
     // every atom keeps the number of bonds and the sum of their orders
     for i in 0..m.atoms.len() {
         let ordini = |x: &Mol| {
@@ -35,12 +35,12 @@ fn the_rewired_structure_keeps_the_formula_and_changes_the_bonds() {
 #[test]
 fn the_same_seed_gives_the_same_decoy_and_another_seed_another() {
     let m = Mol::parse("CC(=O)Nc1ccc(O)cc1CCN").unwrap();
-    assert_eq!(legami(&m.rimescola(3)), legami(&m.rimescola(3)));
-    assert_ne!(legami(&m.rimescola(3)), legami(&m.rimescola(4)));
+    assert_eq!(bonds(&m.rimescola(3)), bonds(&m.rimescola(3)));
+    assert_ne!(bonds(&m.rimescola(3)), bonds(&m.rimescola(4)));
 }
 
 #[test]
 fn a_structure_with_one_bond_has_nothing_to_swap() {
     let m = Mol::parse("CO").unwrap();
-    assert_eq!(legami(&m.rimescola(1)), legami(&m));
+    assert_eq!(bonds(&m.rimescola(1)), bonds(&m));
 }

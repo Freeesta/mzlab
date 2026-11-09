@@ -5,13 +5,13 @@
 mod comune;
 
 use comune::shimadzu::*;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn insieme(byte: Vec<u8>) -> FileSet {
+fn file_set(byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.lcd".into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
@@ -20,7 +20,7 @@ fn insieme(byte: Vec<u8>) -> FileSet {
     }
 }
 
-fn reali() -> Vec<Vec<u8>> {
+fn real() -> Vec<Vec<u8>> {
     let Some(d) = dati_percorsi::percorso("dati/formati/shimadzu").filter(|p| p.is_dir()) else {
         eprintln!("SKIP robustezza_shimadzu: no data repository, synthetic seeds only");
         return Vec::new();
@@ -49,42 +49,42 @@ fn reali() -> Vec<Vec<u8>> {
     v
 }
 
-fn semi() -> Vec<Vec<u8>> {
+fn seeds() -> Vec<Vec<u8>> {
     let mut v = vec![
         qgd(6),
         qgd_mrm(4),
         lcd2020(3),
         lcd_tlm(4),
         lcd_qtof(),
-        lcd_solo_pda(),
+        lcd_pda_only(),
     ];
-    v.extend(reali());
+    v.extend(real());
     v
 }
 
-fn tutto(byte: Vec<u8>) {
-    let Ok(mut l) = mzlab_lettori::apri(insieme(byte), &Limiti::sito()) else {
+fn everything(byte: Vec<u8>) {
+    let Ok(mut l) = mzlab_lettori::apri(file_set(byte), &Limits::sito()) else {
         return;
     };
-    let Ok(ix) = l.indice(0).map(<[_]>::to_vec) else {
+    let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
         return;
     };
     for k in [0, ix.len() / 2, ix.len().saturating_sub(1)] {
         if k < ix.len() {
-            let _ = l.scansione(0, k);
-            let _ = l.intestazione(0, k);
+            let _ = l.scan(0, k);
+            let _ = l.scan_header(0, k);
         }
     }
-    if let Ok(v) = l.cromatogrammi(0) {
+    if let Ok(v) = l.chromatograms(0) {
         for c in v.iter().take(4) {
-            let _ = l.cromatogramma(0, &c.id);
+            let _ = l.chromatogram(0, &c.id);
         }
     }
-    let _ = l.metodo(0);
-    let _ = l.testata_mzml(0);
+    let _ = l.method(0);
+    let _ = l.mzml_header(0);
 }
 
-fn prossimo(x: &mut u64) -> usize {
+fn next(x: &mut u64) -> usize {
     *x = x
         .wrapping_mul(6364136223846793005)
         .wrapping_add(1442695040888963407);
@@ -93,16 +93,16 @@ fn prossimo(x: &mut u64) -> usize {
 
 #[test]
 fn truncated_flipped_and_saturated_files_do_not_panic() {
-    for s in semi() {
+    for s in seeds() {
         let n = s.len();
         for k in 0..40 {
-            tutto(s[..n * k / 40].to_vec());
+            everything(s[..n * k / 40].to_vec());
         }
         let mut x: u64 = 0x2545_F491_4F6C_DD1D;
         for r in 0..60 {
             let mut m = s.clone();
             for _ in 0..8 {
-                let i = prossimo(&mut x) % m.len();
+                let i = next(&mut x) % m.len();
                 if r % 2 == 0 {
                     m[i] ^= 0xFF;
                 } else {
@@ -110,17 +110,17 @@ fn truncated_flipped_and_saturated_files_do_not_panic() {
                     m[i..i + 4].copy_from_slice(&[0xFF; 4]);
                 }
             }
-            tutto(m);
+            everything(m);
         }
     }
 }
 
 #[test]
 fn every_refusal_has_a_key() {
-    for s in semi() {
+    for s in seeds() {
         for cut in [0, 7, 511, 512, 1024, s.len() / 3] {
             if let Err(e) =
-                mzlab_lettori::apri(insieme(s[..cut.min(s.len())].to_vec()), &Limiti::sito())
+                mzlab_lettori::apri(file_set(s[..cut.min(s.len())].to_vec()), &Limits::sito())
             {
                 assert!(e.key.starts_with("err."), "{}", e.key);
             }
@@ -130,12 +130,12 @@ fn every_refusal_has_a_key() {
 
 #[test]
 fn a_table_over_the_limit_is_refused_with_a_key() {
-    let l = Limiti {
-        voci: 4,
-        ..Limiti::sito()
+    let l = Limits {
+        entries: 4,
+        ..Limits::sito()
     };
     for b in [qgd(6), lcd2020(3), lcd_tlm(8)] {
-        let e = mzlab_lettori::apri_nudo(insieme(b), &l)
+        let e = mzlab_lettori::open_bare(file_set(b), &l)
             .err()
             .expect("over the limit");
         assert!(
@@ -148,27 +148,33 @@ fn a_table_over_the_limit_is_refused_with_a_key() {
 
 #[test]
 fn a_cut_empty_or_foreign_container_says_what_it_is() {
-    let chiave = |b: Vec<u8>| {
-        mzlab_lettori::apri(insieme(b), &Limiti::sito())
+    let key = |b: Vec<u8>| {
+        mzlab_lettori::apri(file_set(b), &Limits::sito())
             .err()
             .map(|e| (e.key, e.params))
     };
-    for s in semi() {
-        assert_eq!(chiave(Vec::new()).unwrap().0, "err.file.empty");
-        assert_eq!(chiave(s[..7].to_vec()).unwrap().0, "err.file.notThisFormat");
-        // the OLE2 header is there, the directory is not: a Shimadzu refusal that says the copy is cut, never «not accepted»
+    for s in seeds() {
+        assert_eq!(key(Vec::new()).unwrap().0, "err.file.empty");
+        assert_eq!(key(s[..7].to_vec()).unwrap().0, "err.file.notThisFormat");
+        // the OLE2 header is there, the directory is not: the copy is told as cut, never «not accepted»; a header that
+        // says how long the file must be gives the cut-short notice with that size, a shorter one the Shimadzu refusal
         for cut in [8, 511, 600] {
-            let (k, p) = chiave(s[..cut].to_vec()).unwrap();
-            assert_eq!(k, "err.file.shimadzu", "cut at {cut}");
-            assert!(
-                p.iter()
-                    .any(|(n, v)| *n == "detail" && v.contains("cut short")),
-                "{p:?}"
-            );
+            let (k, p) = key(s[..cut].to_vec()).unwrap();
+            if mzlab_core::ole::Ole::header_cut(&s[..cut]).is_some() {
+                assert_eq!(k, "err.file.cutShort", "cut at {cut}");
+                assert!(p.iter().any(|(n, _)| *n == "needed"), "{p:?}");
+            } else {
+                assert_eq!(k, "err.file.shimadzu", "cut at {cut}");
+                assert!(
+                    p.iter()
+                        .any(|(n, v)| *n == "detail" && v.contains("cut short")),
+                    "{p:?}"
+                );
+            }
         }
     }
     // an OLE2 container of another program's storages, named .lcd
-    let (k, p) = chiave(comune::ole::ole(&[("Altro/Flusso", vec![1; 64])])).unwrap();
+    let (k, p) = key(comune::ole::ole(&[("Altro/Flusso", vec![1; 64])])).unwrap();
     assert_eq!(k, "err.file.shimadzu");
     assert!(p.iter().any(|(_, v)| v.contains("Altro")), "{p:?}");
 }

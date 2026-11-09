@@ -1,16 +1,16 @@
 //! What a file says about itself, put into `campioni/3` (`dal_file`): polarity, date and time of the acquisition, instrument model, method name,
-//! range of m/z and of RT, number of scans (`DatiFile`, never edited by the user). The summary of a file comes from its scans (`riassunto_da_scansioni`,
+//! range of m/z and of RT, number of scans (`FileData`, never edited by the user). The summary of a file comes from its scans (`summary_from_scans`,
 //! the `.mzidx`) and from its `metodo/1`; the JSON binding takes the summary already made. Polarity and date replace what the names proposed, and
 //! the replaced values are reported (`discordanze`).
 
-use super::{tabella_da_value, to_json3, Campione, DatiFile, Tabella};
+use super::{table_from_value, to_json3, FileData, Sample, Table};
 use crate::error::{Error, Result};
 use crate::idxread::Scan;
 use crate::json::{parse, Out, Value};
 
 /// What is known of one file.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct RiassuntoFile {
+pub struct FileSummary {
     /// +1 or -1 when every scan has it; None when unknown or mixed.
     pub polarity: Option<i8>,
     pub rt: Option<(f64, f64)>,
@@ -34,8 +34,8 @@ fn hull(a: Option<(f64, f64)>, b: (f64, f64)) -> (f64, f64) {
 }
 
 /// The polarity, RT range, m/z range (from the filter strings) and number of the scans of an index.
-pub fn riassunto_da_scansioni(scans: &[Scan]) -> RiassuntoFile {
-    let mut r = RiassuntoFile::default();
+pub fn summary_from_scans(scans: &[Scan]) -> FileSummary {
+    let mut r = FileSummary::default();
     let mut pols: Vec<i8> = Vec::new();
     for s in scans {
         if s.polarity != 0 && !pols.contains(&s.polarity) {
@@ -110,7 +110,7 @@ fn method_mz(m: &Value) -> Option<(f64, f64)> {
 }
 
 /// The summary of one entry of the binding: what it says outright wins over what its `metodo_json` (a `metodo/1`) gives.
-fn summary(e: &Value) -> RiassuntoFile {
+fn summary(e: &Value) -> FileSummary {
     let m = e.get("metodo_json");
     let pols: Vec<i8> = e
         .get("polarita")
@@ -122,7 +122,7 @@ fn summary(e: &Value) -> RiassuntoFile {
         .filter(|p| *p != 0)
         .collect();
     let first = pols.first().copied();
-    RiassuntoFile {
+    FileSummary {
         polarity: first.filter(|f| pols.iter().all(|p| p == f)),
         rt: pair(e, "rt_min", "rt_max"),
         mz: pair(e, "mz_min", "mz_max").or_else(|| m.and_then(method_mz)),
@@ -148,10 +148,10 @@ struct Discordanza {
 }
 
 /// Puts what the file says into `c` (polarity and date replace the old ones; the rest goes to `file_data`); the replaced values are returned.
-pub fn applica(
-    c: &mut Campione,
+pub fn apply(
+    c: &mut Sample,
     i: usize,
-    r: &RiassuntoFile,
+    r: &FileSummary,
 ) -> Vec<(usize, &'static str, String, String)> {
     let mut out = Vec::new();
     let mut note = |field, before: Option<String>, after: &Option<String>| {
@@ -173,7 +173,7 @@ pub fn applica(
         note("acquisito", c.acquired.clone(), &r.acquired);
         c.acquired = r.acquired.clone();
     }
-    c.file_data = Some(DatiFile {
+    c.file_data = Some(FileData {
         instrument: r.instrument.clone(),
         method: r.method.clone(),
         mz: r.mz,
@@ -183,7 +183,7 @@ pub fn applica(
     out
 }
 
-fn find(t: &Tabella, e: &Value) -> Option<usize> {
+fn find(t: &Table, e: &Value) -> Option<usize> {
     let sha = text(e, &["sha256"]);
     let name = text(e, &["nome"]);
     t.campioni.iter().position(|c| match (&sha, &name) {
@@ -195,9 +195,9 @@ fn find(t: &Tabella, e: &Value) -> Option<usize> {
 
 /// The binding: `{"campioni": <campioni/2 or /3>, "file":[{"nome"?,"sha256"?,"polarita":[..],"rt_min","rt_max","mz_min","mz_max","scansioni","acquisito"?,
 /// "modello"?,"metodo"?,"metodo_json"?}]}` → `{"campioni":<campioni/3>,"discordanze":[{"indice","campo","prima","dopo"}],"senza_campione":[index of the entries]}`.
-pub fn dal_file(input: &str) -> Result<String> {
+pub fn from_file(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
-    let mut t = tabella_da_value(
+    let mut t = table_from_value(
         v.get("campioni")
             .ok_or_else(|| Error::new("error.badCampioni"))?,
     )?;
@@ -217,7 +217,7 @@ pub fn dal_file(input: &str) -> Result<String> {
         if t.campioni[i].sha256.is_empty() {
             t.campioni[i].sha256 = text(e, &["sha256"]).unwrap_or_default();
         }
-        for (index, field, before, after) in applica(&mut t.campioni[i], i, &summary(e)) {
+        for (index, field, before, after) in apply(&mut t.campioni[i], i, &summary(e)) {
             disc.push(Discordanza {
                 index,
                 field,

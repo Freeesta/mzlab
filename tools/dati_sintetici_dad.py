@@ -130,7 +130,7 @@ def check(path: Path) -> list[str]:
     return bad
 
 
-def esempi(root: Path) -> None:
+def examples(root: Path) -> None:
     for t in DEMOS:
         p = root / "mzlab" / "web" / "esempi" / f"FullScan_t{t}.mzML"
         n = inject_dad(p, t)
@@ -141,4 +141,4 @@ def esempi(root: Path) -> None:
 if __name__ == "__main__":
     if sys.argv[1:] != ["--esempi"]:
         sys.exit(__doc__)
-    esempi(Path(__file__).resolve().parent.parent)
+    examples(Path(__file__).resolve().parent.parent)

@@ -10,10 +10,10 @@ mod json;
 mod presenza;
 mod prev;
 
-pub use json::{campioni_from_value, gruppi_json, opts_from_value, parse_input, run_json, to_json};
+pub use json::{gruppi_json, opts_from_value, parse_input, run_json, samples_from_value, to_json};
 
 use crate::sortc::SortC;
-use mzlab_core::campioni::Campione;
+use mzlab_core::campioni::Sample;
 use mzlab_core::error::{Error, Result};
 use presenza::{CondModel, GStat};
 
@@ -178,7 +178,7 @@ pub struct CondFiles {
 }
 
 /// The conditions of `cs` (see the rules in `docs/agenti/gruppi.md`), for the callers that need the files of each.
-pub fn condition_files(cs: &[Campione]) -> Vec<CondFiles> {
+pub fn condition_files(cs: &[Sample]) -> Vec<CondFiles> {
     presenza::conditions(cs)
         .into_iter()
         .map(|c| CondFiles {
@@ -207,7 +207,7 @@ fn bad_opt(name: &'static str, value: impl ToString) -> Error {
 }
 
 /// The sizes of the arrays and the ranges of the options.
-fn check(tb: &GroupTable, cs: &[Campione], o: &GroupOpts) -> Result<()> {
+fn check(tb: &GroupTable, cs: &[Sample], o: &GroupOpts) -> Result<()> {
     let cells = tb.n_rows * tb.n_files;
     if tb.area.len() != cells {
         return Err(size_err("area"));
@@ -257,7 +257,7 @@ fn check_factors(o: &GroupOpts, conds: &[CondModel]) -> Result<()> {
 }
 
 /// The groups of a table: see the module documentation and `docs/agenti/gruppi.md`.
-pub fn build(tb: &GroupTable, cs: &[Campione], opts: &GroupOpts) -> Result<GroupsOut> {
+pub fn build(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> Result<GroupsOut> {
     check(tb, cs, opts)?;
     let conds = presenza::conditions(cs);
     if conds.is_empty() {

@@ -1,10 +1,10 @@
 //! Files broken on purpose: each one has its own error and no other.
 use super::tests::{errors, report, show_all, written};
-use crate::mzmlwrite::Opzioni;
+use crate::mzmlwrite::Options;
 use sha1::{Digest as _, Sha1};
 
 fn indexed() -> Vec<u8> {
-    written(true, Opzioni::default(), true)
+    written(true, Options::default(), true)
 }
 
 /// Replaces the first `from` with `to` of the same length.
@@ -83,7 +83,7 @@ fn broken(e: &Edit) -> Vec<u8> {
         Edit::Bump(key) => rehash(bump(indexed(), key)),
         Edit::Blank(a, b) => rehash(blank(indexed(), a, b)),
         Edit::FlipChecksum => flip_checksum(indexed()),
-        Edit::Unsorted => written(true, Opzioni::default(), false),
+        Edit::Unsorted => written(true, Options::default(), false),
         Edit::CutShort => indexed()[..4000].to_vec(),
     }
 }

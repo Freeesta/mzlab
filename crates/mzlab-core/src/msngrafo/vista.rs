@@ -4,31 +4,31 @@
 //! and the radial layout (ring, angle). Coordinates are abstract numbers: pixels and styles belong to the drawer. A proposal of a rule
 //! stated in the JSON, never a mechanism.
 
-use super::posa::{albero, Rete};
+use super::posa::{albero, Network};
 use super::posa_radiale::radiale;
 use crate::error::{Error, Result};
 use crate::json::{parse, round, Out, Value};
 use std::collections::BTreeMap;
 
 /// The rule of the best path as written in the JSON (`vista.regola`).
-const REGOLA: &str = "Fewest steps from a root; ties: the highest smallest relative intensity along the path (the most intense measure of each arc), then more isolated arcs, then the smaller precursor id";
+const RULE: &str = "Fewest steps from a root; ties: the highest smallest relative intensity along the path (the most intense measure of each arc), then more isolated arcs, then the smaller precursor id";
 
-pub(super) struct ArcoD {
+pub(super) struct EdgeD {
     pub(super) da: usize,
     pub(super) a: usize,
     pub(super) isolato: bool,
     /// The most intense measure of the arc, % of the base peak of its spectrum.
     pub(super) rel: f64,
     /// MS levels of the measures in which the fragment really is (`rel` > 0).
-    pub(super) livelli: Vec<u8>,
+    pub(super) levels: Vec<u8>,
 }
 
-pub(super) struct Dati {
+pub(super) struct Data {
     pub(super) id: Vec<String>,
     pub(super) mz: Vec<f64>,
-    pub(super) livello: Vec<u8>,
+    pub(super) level: Vec<u8>,
     pub(super) rel_max: Vec<f64>,
-    pub(super) archi: Vec<ArcoD>,
+    pub(super) edges: Vec<EdgeD>,
 }
 
 fn bad() -> Error {
@@ -39,48 +39,48 @@ fn num(v: &Value, k: &str) -> Result<f64> {
     v.get(k).and_then(|x| x.f64()).ok_or_else(bad)
 }
 
-pub(super) fn leggi(v: &Value) -> Result<Dati> {
-    super::versione(v)?;
-    let nodi = v.get("nodi").ok_or_else(bad)?.arr();
-    let mut d = Dati {
+pub(super) fn read(v: &Value) -> Result<Data> {
+    super::version(v)?;
+    let nodes = v.get("nodi").ok_or_else(bad)?.arr();
+    let mut d = Data {
         id: vec![],
         mz: vec![],
-        livello: vec![],
+        level: vec![],
         rel_max: vec![],
-        archi: vec![],
+        edges: vec![],
     };
-    let mut indice: BTreeMap<&str, usize> = BTreeMap::new();
-    for (i, n) in nodi.iter().enumerate() {
+    let mut index: BTreeMap<&str, usize> = BTreeMap::new();
+    for (i, n) in nodes.iter().enumerate() {
         let id = n.get("id").and_then(|x| x.str()).ok_or_else(bad)?;
-        indice.insert(id, i);
+        index.insert(id, i);
         d.id.push(id.to_string());
         d.mz.push(num(n, "mz")?);
-        d.livello.push((num(n, "livello")? as u8).max(1));
+        d.level.push((num(n, "livello")? as u8).max(1));
         d.rel_max.push(num(n, "rel_max")?);
     }
     for a in v.get("archi").ok_or_else(bad)?.arr() {
-        let nodo = |k: &str| {
+        let node = |k: &str| {
             a.get(k)
                 .and_then(|x| x.str())
-                .and_then(|s| indice.get(s).copied())
+                .and_then(|s| index.get(s).copied())
                 .ok_or_else(bad)
         };
-        let misure = a.get("misure").map_or(&[][..], |m| m.arr());
+        let measures = a.get("misure").map_or(&[][..], |m| m.arr());
         let mut livelli: Vec<u8> = vec![];
         let mut rel = 0.0f64;
-        for m in misure {
+        for m in measures {
             let r = num(m, "rel")?;
             rel = rel.max(r);
             if r > 0.0 {
                 livelli.push(num(m, "livello")? as u8);
             }
         }
-        d.archi.push(ArcoD {
-            da: nodo("da")?,
-            a: nodo("a")?,
+        d.edges.push(EdgeD {
+            da: node("da")?,
+            a: node("a")?,
             isolato: a.get("isolamento").and_then(|x| x.bool()).unwrap_or(false),
             rel,
-            livelli,
+            levels: livelli,
         });
     }
     Ok(d)
@@ -90,16 +90,16 @@ pub(super) fn leggi(v: &Value) -> Result<Dati> {
 #[derive(Clone, Copy)]
 pub(super) struct Best {
     pub(super) da: Option<usize>,
-    pub(super) passi: usize,
+    pub(super) steps: usize,
     pub(super) min_rel: Option<f64>,
     pub(super) isolati: usize,
 }
 
 /// Whether the path `x` beats `y`: fewer steps, then the higher smallest intensity, then more isolated arcs, then the smaller precursor.
-fn meglio(x: &Best, y: &Best) -> bool {
+fn better(x: &Best, y: &Best) -> bool {
     let rel = |b: &Best| b.min_rel.unwrap_or(f64::INFINITY);
-    x.passi
-        .cmp(&y.passi)
+    x.steps
+        .cmp(&y.steps)
         .then(rel(y).total_cmp(&rel(x)))
         .then(y.isolati.cmp(&x.isolati))
         .then(x.da.cmp(&y.da))
@@ -107,70 +107,70 @@ fn meglio(x: &Best, y: &Best) -> bool {
 }
 
 /// The nodes in topological order, the smallest index first among the ready ones; nodes in a cycle (none in a graph of the engine) come last.
-fn topologico(n: usize, archi: &[ArcoD]) -> Vec<usize> {
+fn topologico(n: usize, edges: &[EdgeD]) -> Vec<usize> {
     let mut entranti = vec![0usize; n];
     let mut giu: Vec<Vec<usize>> = vec![vec![]; n];
-    for a in archi {
+    for a in edges {
         entranti[a.a] += 1;
         giu[a.da].push(a.a);
     }
-    let mut pronti: Vec<usize> = (0..n).filter(|&i| entranti[i] == 0).collect();
+    let mut ready: Vec<usize> = (0..n).filter(|&i| entranti[i] == 0).collect();
     let mut out = vec![];
-    while !pronti.is_empty() {
-        let k = (0..pronti.len()).min_by_key(|&k| pronti[k]).unwrap_or(0);
-        let i = pronti.swap_remove(k);
+    while !ready.is_empty() {
+        let k = (0..ready.len()).min_by_key(|&k| ready[k]).unwrap_or(0);
+        let i = ready.swap_remove(k);
         out.push(i);
         for &j in &giu[i] {
             entranti[j] -= 1;
             if entranti[j] == 0 {
-                pronti.push(j);
+                ready.push(j);
             }
         }
     }
-    let visti: Vec<bool> = (0..n).map(|i| out.contains(&i)).collect();
-    out.extend((0..n).filter(|&i| !visti[i]));
+    let seen: Vec<bool> = (0..n).map(|i| out.contains(&i)).collect();
+    out.extend((0..n).filter(|&i| !seen[i]));
     out
 }
 
 /// `best-path/1`: dynamic programming on the DAG in topological order.
-pub(super) fn percorsi(d: &Dati) -> Vec<Best> {
+pub(super) fn paths(d: &Data) -> Vec<Best> {
     let n = d.id.len();
-    let radice = Best {
+    let root = Best {
         da: None,
-        passi: 0,
+        steps: 0,
         min_rel: None,
         isolati: 0,
     };
-    let mut best = vec![radice; n];
-    let mut fatto = vec![false; n];
-    let mut su: Vec<Vec<&ArcoD>> = vec![vec![]; n];
-    for a in &d.archi {
+    let mut best = vec![root; n];
+    let mut done = vec![false; n];
+    let mut su: Vec<Vec<&EdgeD>> = vec![vec![]; n];
+    for a in &d.edges {
         su[a.a].push(a);
     }
-    for i in topologico(n, &d.archi) {
-        let mut scelto: Option<Best> = None;
+    for i in topologico(n, &d.edges) {
+        let mut chosen: Option<Best> = None;
         for a in &su[i] {
-            if !fatto[a.da] {
+            if !done[a.da] {
                 continue;
             }
             let p = best[a.da];
             let c = Best {
                 da: Some(a.da),
-                passi: p.passi + 1,
+                steps: p.steps + 1,
                 min_rel: Some(p.min_rel.map_or(a.rel, |m| m.min(a.rel))),
                 isolati: p.isolati + a.isolato as usize,
             };
-            if scelto.as_ref().is_none_or(|s| meglio(&c, s)) {
-                scelto = Some(c);
+            if chosen.as_ref().is_none_or(|s| better(&c, s)) {
+                chosen = Some(c);
             }
         }
-        best[i] = scelto.unwrap_or(radice);
-        fatto[i] = true;
+        best[i] = chosen.unwrap_or(root);
+        done[i] = true;
     }
     best
 }
 
-fn id(o: &mut Out, d: &Dati, i: Option<usize>) {
+fn id(o: &mut Out, d: &Data, i: Option<usize>) {
     match i {
         Some(i) => o.str(&d.id[i]),
         None => o.raw("null"),
@@ -185,29 +185,29 @@ fn opt(o: &mut Out, v: Option<f64>) {
 }
 
 /// One element of `vista.nodi`: node `i` with its best path, its tree position (column, row) and its radial place (ring, angle).
-fn nodo_json(
+fn node_json(
     o: &mut Out,
-    d: &Dati,
+    d: &Data,
     i: usize,
     (b, pos, rad): (&Best, (usize, usize), (usize, f64)),
 ) {
     let b = *b;
-    let entranti: Vec<&ArcoD> = d.archi.iter().filter(|a| a.a == i).collect();
+    let entranti: Vec<&EdgeD> = d.edges.iter().filter(|a| a.a == i).collect();
     let mut da: Vec<usize> = entranti.iter().map(|a| a.da).collect();
     crate::sortc::any_by(&mut da, |a, b| a.cmp(b));
     da.dedup();
-    let mut livelli: Vec<u8> = entranti.iter().flat_map(|a| a.livelli.clone()).collect();
-    if b.da.is_none() && d.livello[i] == 1 {
-        livelli = vec![1];
+    let mut levels: Vec<u8> = entranti.iter().flat_map(|a| a.levels.clone()).collect();
+    if b.da.is_none() && d.level[i] == 1 {
+        levels = vec![1];
     }
-    crate::sortc::any_by(&mut livelli, |a, b| a.cmp(b));
-    livelli.dedup();
-    if livelli.is_empty() {
-        livelli.push(d.livello[i]);
+    crate::sortc::any_by(&mut levels, |a, b| a.cmp(b));
+    levels.dedup();
+    if levels.is_empty() {
+        levels.push(d.level[i]);
     }
     let rel = match b.da {
         Some(p) => d
-            .archi
+            .edges
             .iter()
             .find(|a| a.da == p && a.a == i)
             .map(|a| a.rel),
@@ -216,7 +216,7 @@ fn nodo_json(
     o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
         .str(&d.id[i])
         .raw(",\"livelli\":[");
-    for (k, l) in livelli.iter().enumerate() {
+    for (k, l) in levels.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).int(*l as i64);
     }
     o.raw("],\"rel\":");
@@ -225,8 +225,8 @@ fn nodo_json(
     opt(o, Some(d.rel_max[i]));
     o.raw(",\"best\":{\"da\":");
     id(o, d, b.da);
-    o.raw(",\"passi\":").int(b.passi as i64).raw(",\"costo\":[");
-    o.int(b.passi as i64).raw(",");
+    o.raw(",\"passi\":").int(b.steps as i64).raw(",\"costo\":[");
+    o.int(b.steps as i64).raw(",");
     opt(o, b.min_rel);
     o.raw(",").int(b.isolati as i64).raw("]},\"entranti\":");
     o.int(da.len() as i64).raw(",\"comune\":");
@@ -243,34 +243,34 @@ fn nodo_json(
 }
 
 /// The value of the key `vista` of the graph `d` (its keys in a fixed order).
-fn vista(d: &Dati) -> String {
+fn view(d: &Data) -> String {
     let n = d.id.len();
-    let best = percorsi(d);
-    let pairs: Vec<(usize, usize)> = d.archi.iter().map(|a| (a.da, a.a)).collect();
-    let rete = Rete {
-        livello: &d.livello,
+    let best = paths(d);
+    let pairs: Vec<(usize, usize)> = d.edges.iter().map(|a| (a.da, a.a)).collect();
+    let rete = Network {
+        level: &d.level,
         mz: &d.mz,
-        archi: &pairs,
+        edges: &pairs,
     };
     let pos = albero(&rete);
-    let padre: Vec<Option<usize>> = best.iter().map(|b| b.da).collect();
-    let passi: Vec<usize> = best.iter().map(|b| b.passi).collect();
-    let rad = radiale(&padre, &passi, &d.mz);
-    let mut ordine: Vec<usize> = (0..n).collect();
-    crate::sortc::any_by(&mut ordine, |a, b| pos[*a].cmp(&pos[*b]).then(a.cmp(b)));
+    let parent: Vec<Option<usize>> = best.iter().map(|b| b.da).collect();
+    let steps: Vec<usize> = best.iter().map(|b| b.steps).collect();
+    let rad = radiale(&parent, &steps, &d.mz);
+    let mut order: Vec<usize> = (0..n).collect();
+    crate::sortc::any_by(&mut order, |a, b| pos[*a].cmp(&pos[*b]).then(a.cmp(b)));
     let mut o = Out::default();
     o.raw("{\"versione\":1,\"algoritmo\":\"best-path/1\",\"regola\":")
-        .str(REGOLA)
+        .str(RULE)
         .raw(",\"ordine\":[");
-    for (k, &i) in ordine.iter().enumerate() {
+    for (k, &i) in order.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).str(&d.id[i]);
     }
     o.raw("],\"nodi\":[");
     for i in 0..n {
-        nodo_json(&mut o, d, i, (&best[i], pos[i], rad[i]));
+        node_json(&mut o, d, i, (&best[i], pos[i], rad[i]));
     }
     o.raw("],\"archi\":[");
-    for (k, a) in d.archi.iter().enumerate() {
+    for (k, a) in d.edges.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" }).raw("{\"da\":");
         id(&mut o, d, Some(a.da));
         o.raw(",\"a\":");
@@ -287,7 +287,7 @@ fn vista(d: &Dati) -> String {
 }
 
 /// `completa` for the text the engine just wrote (always a valid graph).
-pub(super) fn con_vista(json: String) -> String {
+pub(super) fn with_view(json: String) -> String {
     completa(&json).unwrap_or(json)
 }
 
@@ -295,19 +295,19 @@ pub(super) fn con_vista(json: String) -> String {
 pub fn completa(json: &str) -> Result<String> {
     let v = parse(json.as_bytes()).map_err(|_| bad())?;
     if v.get("vista").is_some() {
-        leggi(&v)?;
+        read(&v)?;
         return Ok(json.to_string());
     }
     let testa = json.trim_end();
     let testa = testa.strip_suffix('}').ok_or_else(bad)?;
-    Ok(format!("{testa},\"vista\":{}}}", vista(&leggi(&v)?)))
+    Ok(format!("{testa},\"vista\":{}}}", view(&read(&v)?)))
 }
 
 /// `grafo` with the key `chiave` (its value is `valore`) added after the keys that are there, and before `vista`, which stays the last.
-pub(super) fn con_chiave(grafo: &str, chiave: &str, valore: &str) -> String {
-    let (testa, coda) = match grafo.rfind(",\"vista\":{") {
-        Some(p) => grafo.split_at(p),
-        None => (grafo.strip_suffix('}').unwrap_or(grafo), "}"),
+pub(super) fn with_key(graph: &str, key: &str, value: &str) -> String {
+    let (testa, tail) = match graph.rfind(",\"vista\":{") {
+        Some(p) => graph.split_at(p),
+        None => (graph.strip_suffix('}').unwrap_or(graph), "}"),
     };
-    format!("{testa},\"{chiave}\":{valore}{coda}")
+    format!("{testa},\"{key}\":{value}{tail}")
 }

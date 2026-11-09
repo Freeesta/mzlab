@@ -1,7 +1,7 @@
 """The native run of the pipeline of the site (`mzlab-feat-wasm`, example `nativo`) on a series of mzML files, and the readers of what it writes.
 
 `.mzfeat` (series) and `.mzfeatf` (one file) are the containers of crates/mzlab-feat/src/store.rs: the magic `MZFEAT01`, the length of the JSON meta, the meta,
-padding to 64 bytes, the arrays at the offsets of the meta. The table is read into the `Tabella` of tabelle.py; the candidates are the identities that
+padding to 64 bytes, the arrays at the offsets of the meta. The table is read into the `Table` of tabelle.py; the candidates are the identities that
 have a proof in favour (`totale` above 0 in the `evid/1` section): the list that the panel shows once the gate is open, the others are «discarded»."""
 from __future__ import annotations
 
@@ -17,32 +17,32 @@ from pathlib import Path
 import numpy as np
 
 from . import ROOT
-from .tabelle import Tabella
+from .tabelle import Table
 
 DTYPE = {"f64": "<f8", "f32": "<f4", "u32": "<u4", "u16": "<u2", "u8": "u1", "i8": "i1"}
-CELLA_RILEVATA, CELLA_MIRATA, CELLA_RIEMPITA, CELLA_ASSENTE = 0, 1, 2, 3
-ESEMPIO = ROOT / "target" / "release" / "examples" / "nativo"
+CELLA_RILEVATA, TARGETED_CELL, FILLED_CELL, CELLA_ASSENTE = 0, 1, 2, 3
+EXAMPLE = ROOT / "target" / "release" / "examples" / "nativo"
 REGOLE = Path(os.environ.get("MZLAB_REGOLE") or ROOT / "TP_Mine" / "data" / "regole_tp_2.json")
 
 
-def apri(dati: bytes) -> tuple[dict, dict]:
+def open_data(data: bytes) -> tuple[dict, dict]:
     """(meta, arrays) of a container: the arrays by name as numpy views."""
-    if dati[:8] != b"MZFEAT01":
+    if data[:8] != b"MZFEAT01":
         raise ValueError("not a .mzfeat / .mzfeatf container")
-    n = struct.unpack("<Q", dati[8:16])[0]
-    meta = json.loads(dati[16:16 + n])
-    inizio = -(-(16 + n) // 64) * 64
+    n = struct.unpack("<Q", data[8:16])[0]
+    meta = json.loads(data[16:16 + n])
+    start = -(-(16 + n) // 64) * 64
     arr = {}
     for a in meta["arrays"]:
         dt = np.dtype(DTYPE[a["dtype"]])
-        arr[a["name"]] = np.frombuffer(dati, dtype=dt, count=a["count"], offset=inizio + a["offset"])
+        arr[a["name"]] = np.frombuffer(data, dtype=dt, count=a["count"], offset=start + a["offset"])
     return meta, arr
 
 
 @dataclass
-class Serie:
+class Series:
     """The result of a native run: table, states of the cells, identities, features of each file, digests."""
-    tabella: Tabella
+    tabella: Table
     stato: np.ndarray                      # (rows, files) uint8: 0 detected, 1 targeted, 2 filled, 3 absent
     identita: list                         # the identities of evid/1 (dicts), in the order of the graph
     candidati: np.ndarray                  # rows of the identities with a proof in favour
@@ -54,40 +54,40 @@ class Serie:
     membri: tuple | None = None            # (member_start, member_mz, member_rt) of the rows in "per family" mode; empty starts in "per ion" mode
 
 
-def leggi_serie(cartella, nomi: list[str]) -> Serie:
+def read_series(folder, nomi: list[str]) -> Series:
     """Reads `series_evid.mzfeat` and the `.mzfeatf` of the files (`nomi`: names of the index files, in the order of the run)."""
-    cartella = Path(cartella)
-    dati = (cartella / "series_evid.mzfeat").read_bytes()
-    meta, a = apri(dati)
+    folder = Path(folder)
+    data = (folder / "series_evid.mzfeat").read_bytes()
+    meta, a = open_data(data)
     n, k = meta["rows"], meta["files"]
     stato = a["state"].reshape(n, k)
     area = np.where(stato == CELLA_ASSENTE, 0.0, np.nan_to_num(a["area"].reshape(n, k)))
-    campioni = [re.sub(r"\.mzidx$", "", x) for x in nomi]
+    samples = [re.sub(r"\.mzidx$", "", x) for x in nomi]
     altezza = np.where(stato == CELLA_ASSENTE, 0.0, np.nan_to_num(a["height"].reshape(n, k).astype(float))) if "height" in a else None
-    tab = Tabella("nativo", campioni, a["mz"].copy(), a["rt"].copy(), area, altezza=altezza)
+    tab = Table("nativo", samples, a["mz"].copy(), a["rt"].copy(), area, altezza=altezza)
     ev = json.loads(a["evid"].tobytes()) if len(a["evid"]) else {"identita": []}
     ident = ev["identita"]
     cand = np.array(sorted(i["id"] for i in ident if i["totale"] > 0), dtype=int)
     per_file = []
     for nome in nomi:
-        m, f = apri((cartella / f"{nome}.mzfeatf").read_bytes())
+        m, f = open_data((folder / f"{nome}.mzfeatf").read_bytes())
         per_file.append({"nome": nome, "mz": f["mz"].astype(float), "rt": f["rt"].astype(float), "purezza": f["purity"].astype(float), "altezza": f["height"].astype(float),
                          "area": f["area"].astype(float), "rt_inizio": f["left"].astype(float), "rt_fine": f["right"].astype(float)})
-    sha = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(cartella.glob("*.mzfeat*"))}
+    sha = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(folder.glob("*.mzfeat*"))}
     tp = {"stato": a["tp_status"].astype(int), "parentela": a["tp_kinship"].astype(int), "note": a["tp_notes"].astype(int)} if "tp_status" in a else None
     membri = (a["member_start"].astype(int), a["member_mz"].astype(float), a["member_rt"].astype(float)) if "member_start" in a else None
-    return Serie(tab, stato, ident, cand, per_file, sha, meta["crate"], meta["feat_version"], tp, membri)
+    return Series(tab, stato, ident, cand, per_file, sha, meta["crate"], meta["feat_version"], tp, membri)
 
 
-def indici(mzml: list[Path], cartella: Path) -> list[str]:
-    """Builds (if missing) the `.mzidx` of every mzML in `cartella` and returns their paths. `..._t05` becomes `..._t05min`: the example reads the minutes from the name."""
+def indexes(mzml: list[Path], folder: Path) -> list[str]:
+    """Builds (if missing) the `.mzidx` of every mzML in `folder` and returns their paths. `..._t05` becomes `..._t05min`: the example reads the minutes from the name."""
     from mzlab.reader import mzidx
     from mzlab.reader.mzml import Run
-    cartella.mkdir(parents=True, exist_ok=True)
+    folder.mkdir(parents=True, exist_ok=True)
     out = []
     for p in mzml:
         stem = re.sub(r"_t(\d+(?:\.\d+)?)$", r"_t\1min", p.stem)
-        dest = cartella / f"{stem}.mzidx"
+        dest = folder / f"{stem}.mzidx"
         if not dest.exists():
             run = Run(p, index_path=dest)
             mzidx.build(run, dest)
@@ -96,28 +96,28 @@ def indici(mzml: list[Path], cartella: Path) -> list[str]:
     return out
 
 
-def costruisci_esempio() -> None:
+def build_example() -> None:
     subprocess.run(["cargo", "build", "--release", "--locked", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo"], cwd=ROOT, check=True)
 
 
-def esegui(percorsi_idx: list[str], formula_neutra: str, mz_genitore: float, rt_genitore: float, uscita: Path, smiles: str = "") -> Serie:
-    """Runs the example on the indexes (in this order) and reads the result from `uscita`; `smiles` is the structure of the parent, as the page passes it."""
-    uscita.mkdir(parents=True, exist_ok=True)
-    cmd = [str(ESEMPIO), str(uscita), *percorsi_idx, "--parent", formula_neutra, *(["--smiles", smiles] if smiles else []), "--rules", str(REGOLE), "--parent-mz", repr(mz_genitore), "--parent-rt", repr(rt_genitore)]
+def esegui(idx_paths: list[str], neutral_formula: str, parent_mz: float, parent_rt: float, output: Path, smiles: str = "") -> Series:
+    """Runs the example on the indexes (in this order) and reads the result from `output`; `smiles` is the structure of the parent, as the page passes it."""
+    output.mkdir(parents=True, exist_ok=True)
+    cmd = [str(EXAMPLE), str(output), *idx_paths, "--parent", neutral_formula, *(["--smiles", smiles] if smiles else []), "--rules", str(REGOLE), "--parent-mz", repr(parent_mz), "--parent-rt", repr(parent_rt)]
     # another xdist worker building the same target with other features can replace the binary under us: rebuild once, then say what is there
     for tentativo in range(2):
-        costruisci_esempio()
+        build_example()
         try:
             subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True)
             break
         except FileNotFoundError:
             if tentativo:
-                cartella = ESEMPIO.parent
-                raise FileNotFoundError(f"{ESEMPIO} missing after a second build; {cartella} holds {sorted(x.name for x in cartella.iterdir()) if cartella.is_dir() else 'nothing (no such folder)'}")
-    return leggi_serie(uscita, [Path(x).name for x in percorsi_idx])
+                folder = EXAMPLE.parent
+                raise FileNotFoundError(f"{EXAMPLE} missing after a second build; {folder} holds {sorted(x.name for x in folder.iterdir()) if folder.is_dir() else 'nothing (no such folder)'}")
+    return read_series(output, [Path(x).name for x in idx_paths])
 
 
-def neutra_da_ione(ione: str) -> str:
+def neutral_from_ion(ione: str) -> str:
     """Neutral formula of an [M+H]+ ion formula (one hydrogen more than the ion has in the neutral)."""
     from mzlab.chem import elements as E
     f = E.parse_formula(ione)

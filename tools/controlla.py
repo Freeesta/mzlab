@@ -2,7 +2,8 @@
 the list gets worse than the saved base (tools/soglie_base.json): a file or function over the limit that is not in the base, or one
 that grew by more than 10% (at least 10 lines) over its base. The base can only shrink.
 The agent documents (CLAUDE.md, docs/agenti/*.md except the generated mappa.md and misure-diario.md) have two more limits:
-lines over 600 characters (counted per file) and files over 25 KB.
+lines over 600 characters (counted per file) and files over 25 KB. It also fails on a web API newer than the Safari floor that
+tools/safari_api_ammesse.txt does not list (tools/safari_api.py).
 
     python3 tools/controlla.py             # report + exit 1 if worse than the base
     python3 tools/controlla.py --lista     # also print every entry over a limit
@@ -18,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import indice  # noqa: E402
 import html_sicuro  # noqa: E402
+import safari_api  # noqa: E402
 
 BASE = indice.ROOT / "tools" / "soglie_base.json"
 MAX_FILE, MAX_FUNC = 500, 80
@@ -60,11 +62,11 @@ def misura() -> dict[str, dict[str, int]]:
     return {"file": files, "funzioni": funcs, "doc_righe": long_lines, "doc_kb": big}
 
 
-def tolleranza(b: int) -> int:
+def tolerance(b: int) -> int:
     return b + max(SLACK_MIN, int(b * SLACK))
 
 
-def vicini_tolleranza(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) -> list[str]:
+def neighbor_tolerance(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) -> list[str]:
     """Files and functions already over the limit that are within NEAR_TOL lines of their tolerance (base + 10%): a warning, since the next PR to grow them turns main red."""
     out = []
     for kind in ("file", "funzioni"):
@@ -72,13 +74,13 @@ def vicini_tolleranza(now: dict[str, dict[str, int]], base: dict[str, dict[str, 
             b = base.get(kind, {}).get(k)
             if b is None:
                 continue
-            m = tolleranza(b)
+            m = tolerance(b)
             if 0 <= m - v < NEAR_TOL:
                 out.append(f"{k} is {m - v} lines from its tolerance (base {b}, max {m}): split it before adding more")
     return out
 
 
-def vicini() -> list[str]:
+def neighbors() -> list[str]:
     """Files within 25 lines of the 500-line limit and documents within 1.5 KB of 25 KB (but not over): a warning, so that two PRs growing the same file do not cross the limit together."""
     out = []
     for f in indice.tracked():
@@ -101,13 +103,13 @@ def caldi(ref: str = "origin/main") -> dict[str, int]:
     if r.returncode:
         return {}
     n: dict[str, int] = {}
-    for blocco in r.stdout.split("@"):
-        for f in set(blocco.split()):
+    for block in r.stdout.split("@"):
+        for f in set(block.split()):
             n[f] = n.get(f, 0) + 1
     return n
 
 
-def vicini_caldi(tocchi: dict[str, int]) -> list[str]:
+def hot_neighbors(tocchi: dict[str, int]) -> list[str]:
     """Hot files (more than HOT_TOUCHES of the last merges) from 90% of their cap: lines for code, bytes for the agent documents."""
     out = []
     for f, t in sorted(tocchi.items(), key=lambda x: -x[1]):
@@ -131,7 +133,7 @@ def peggiori(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) ->
             b = base.get(kind, {}).get(k)
             if b is None:
                 bad.append(f"NEW {LABEL[kind]} over the limit: {k} ({v})")
-            elif v > (tolleranza(b) if kind in ("file", "funzioni") else b):
+            elif v > (tolerance(b) if kind in ("file", "funzioni") else b):
                 bad.append(f"GREW {k}: {b} -> {v}")
     return bad
 
@@ -140,7 +142,7 @@ BYTE_API = indice.ROOT / "tools" / "api_byte_ammesse.txt"
 IDB_OK = {"mzlab/web/qqq-db.js", "mzlab/web/libreria-corpo.js", "mzlab/web/libreria-worker.js", "mzlab/web/liste.js", "mzlab/web/llm/trasporto.js", "TP_Mine/js/19_tpmine_base.js"}     # the schema point and the historical databases
 
 
-def regole_statiche() -> list[str]:
+def static_rules() -> list[str]:
     """Rules of memory that grep can keep true (docs/agenti/memoria.md): no exported WASM function returns a whole `Vec<u8>` unless it is in the list of
     tools/api_byte_ammesse.txt (`file::function`; new outputs go to a `WriteAt` sink), and IndexedDB is opened only in the files of IDB_OK."""
     import re
@@ -168,7 +170,7 @@ def regole_statiche() -> list[str]:
     return bad
 
 
-def regole_stato() -> list[str]:
+def rules_state() -> list[str]:
     """E.tab / E.active / E.cur / E.panels and S.view / S.adding are written only by the transitions of mzlab/web/stato.js (docs/agenti/dati.md)."""
     import re
     rx = re.compile(r"\b(?:E\.(?:tab|active|cur|panels)|S\.(?:view|adding)|UIP\.tog)\s*=(?!=)")
@@ -181,7 +183,7 @@ def regole_stato() -> list[str]:
     return bad
 
 
-def regole_layout() -> list[str]:
+def rules_layout() -> list[str]:
     """mzlab/web/layout.js knows rows and quotas only: it never names an experiment (no panel type, no kind of file)."""
     import re
     f = indice.ROOT / "mzlab" / "web" / "layout.js"
@@ -193,7 +195,7 @@ def regole_layout() -> list[str]:
 
 
 ESP_BASE = indice.ROOT / "tools" / "esperimenti_base.json"
-def confronti_esperimenti() -> dict[str, int]:
+def comparisons_experiments() -> dict[str, int]:
     """Per file of mzlab/web: comparisons of a variable with "full", "ms2" or "mrm" (the experiment type is data of esperimenti.js)."""
     import re
     rx = re.compile(r'[=!]==?\s*"(?:full|ms2|mrm)"|"(?:full|ms2|mrm)"\s*[=!]==?')
@@ -206,18 +208,18 @@ def confronti_esperimenti() -> dict[str, int]:
     return out
 
 
-def regole_esperimenti(aggiorna: bool = False) -> list[str]:
+def rules_experiments(update: bool = False) -> list[str]:
     """The comparisons with the experiment names outside esperimenti.js can only go down, file by file (base: tools/esperimenti_base.json)."""
-    now = confronti_esperimenti()
+    now = comparisons_experiments()
     base = json.loads(ESP_BASE.read_text(encoding="utf-8")) if ESP_BASE.exists() else dict(now)
     bad = [f"comparisons with an experiment name grew in {f}: {n} (base {base.get(f, 0)}); read it from ESP in esperimenti.js" for f, n in sorted(now.items()) if n > base.get(f, 0)]
-    if aggiorna and not bad:
+    if update and not bad:
         ESP_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return bad
 
 
 FRAME_BASE = indice.ROOT / "tools" / "frame_base.json"
-def chiamate_frame() -> dict[str, int]:
+def calls_frame() -> dict[str, int]:
     """Per file of mzlab/web: direct uses of requestAnimationFrame / cancelAnimationFrame / new ResizeObserver (frame.js owns them)."""
     import re
     rx = re.compile(r"\b(?:requestAnimationFrame|cancelAnimationFrame)\(|new ResizeObserver\(")
@@ -230,19 +232,19 @@ def chiamate_frame() -> dict[str, int]:
     return out
 
 
-def regole_frame(aggiorna: bool = False) -> list[str]:
+def rules_frame(update: bool = False) -> list[str]:
     """Direct frame-clock calls outside frame.js can only go down, file by file (base: tools/frame_base.json)."""
-    now = chiamate_frame()
+    now = calls_frame()
     base = json.loads(FRAME_BASE.read_text(encoding="utf-8")) if FRAME_BASE.exists() else dict(now)
     bad = [f"direct requestAnimationFrame/ResizeObserver calls grew in {f}: {n} (base {base.get(f, 0)}); use FRAME in frame.js" for f, n in sorted(now.items()) if n > base.get(f, 0)]
-    if aggiorna and not bad:
+    if update and not bad:
         FRAME_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return bad
 
 
-ATTESE_BASE = indice.ROOT / "tools" / "attese_base.json"
-def attese_fisse() -> dict[str, int]:
-    """Per e2e script of tests_e2e/: fixed pauses (wait_for_timeout / time.sleep); wait on the STATE instead (attendi() in lib.py)."""
+EXPECTED_BASE = indice.ROOT / "tools" / "attese_base.json"
+def fixed_expectations() -> dict[str, int]:
+    """Per e2e script of tests_e2e/: fixed pauses (wait_for_timeout / time.sleep); wait on the STATE instead (wait_for_js() in lib.py)."""
     import re
     rx = re.compile(r"\bwait_for_timeout\(|\btime\.sleep\(")
     out = {}
@@ -254,13 +256,13 @@ def attese_fisse() -> dict[str, int]:
     return out
 
 
-def regole_attese(aggiorna: bool = False) -> list[str]:
+def rules_expected(update: bool = False) -> list[str]:
     """Fixed pauses in the e2e scripts can only go down, file by file; a new script cannot have any (base: tools/attese_base.json)."""
-    now = attese_fisse()
-    base = json.loads(ATTESE_BASE.read_text(encoding="utf-8")) if ATTESE_BASE.exists() else dict(now)
-    bad = [f"fixed pauses grew in {f}: {n} (base {base.get(f, 0)}); wait on the state with attendi() in tests_e2e/lib.py" for f, n in sorted(now.items()) if n > base.get(f, 0)]
-    if aggiorna and not bad:
-        ATTESE_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    now = fixed_expectations()
+    base = json.loads(EXPECTED_BASE.read_text(encoding="utf-8")) if EXPECTED_BASE.exists() else dict(now)
+    bad = [f"fixed pauses grew in {f}: {n} (base {base.get(f, 0)}); wait on the state with wait_for_js() in tests_e2e/lib.py" for f, n in sorted(now.items()) if n > base.get(f, 0)]
+    if update and not bad:
+        EXPECTED_BASE.write_text(json.dumps({f: min(n, base.get(f, n)) for f, n in now.items()}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return bad
 
 
@@ -269,7 +271,7 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + regole_statiche() + regole_stato() + regole_layout() + regole_esperimenti("--aggiorna" in sys.argv) + regole_frame("--aggiorna" in sys.argv) + regole_attese("--aggiorna" in sys.argv) + html_sicuro.peggiori(html_sicuro.misura(), json.loads(html_sicuro.BASE.read_text(encoding="utf-8")) if html_sicuro.BASE.exists() else {})
+    bad = peggiori(now, base) + static_rules() + rules_state() + rules_layout() + rules_experiments("--aggiorna" in sys.argv) + rules_frame("--aggiorna" in sys.argv) + rules_expected("--aggiorna" in sys.argv) + safari_api.controlla() + html_sicuro.peggiori(html_sicuro.misura(), json.loads(html_sicuro.BASE.read_text(encoding="utf-8")) if html_sicuro.BASE.exists() else {})
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))
@@ -283,7 +285,7 @@ def main() -> int:
     print(f"WARN {len(now['file'])} files over {MAX_FILE} lines, {len(now['funzioni'])} functions over {MAX_FUNC} lines "
           f"(base: {len(base['file'])} / {len(base['funzioni'])}); documents: {len(now['doc_righe'])} with lines over "
           f"{MAX_DOC_LINE} characters, {len(now['doc_kb'])} over 25 KB")
-    for w in vicini() + vicini_tolleranza(now, base) + vicini_caldi(caldi()):
+    for w in neighbors() + neighbor_tolerance(now, base) + hot_neighbors(caldi()):
         print("WARN near the limit: " + w)
     if "--lista" in sys.argv:
         for kind in KINDS:

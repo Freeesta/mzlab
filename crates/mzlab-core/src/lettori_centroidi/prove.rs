@@ -4,35 +4,35 @@ use super::*;
 
 /// A reader that gives centroid and profile scans alternately (even scans are the file's own centroid list).
 struct Alternato {
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
 }
 
-fn voce(k: usize) -> VoceScansione {
-    VoceScansione {
+fn entry(k: usize) -> ScanEntry {
+    ScanEntry {
         id: k.to_string(),
         rt: k as f64,
         livello: 1,
         polarita: 1,
         tic: 0.0,
-        picco_base: None,
+        base_peak: None,
         filtro: String::new(),
         precursore: None,
-        posizione: None,
+        position: None,
     }
 }
 
-impl Lettore for Alternato {
-    fn formato(&self) -> Formato {
-        Formato::Altro("finto")
+impl Reader for Alternato {
+    fn format(&self) -> Format {
+        Format::Altro("finto")
     }
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn indice(&mut self, _c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _c: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
-    fn scansione(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
         let profile = k % 2 == 1;
         let (mz, y): (Vec<f64>, Vec<f64>) = if profile {
             (0..400)
@@ -53,16 +53,16 @@ impl Lettore for Alternato {
             ..Spectrum::default()
         })
     }
-    fn intestazione(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Field>> {
         Ok(Vec::new())
     }
-    fn cromatogrammi(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(Vec::new())
     }
-    fn cromatogramma(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
         Err(crate::error::Error::new("err.test"))
     }
-    fn metodo(&mut self, _c: usize) -> Result<String> {
+    fn method(&mut self, _c: usize) -> Result<String> {
         Ok(String::new())
     }
 }
@@ -71,17 +71,17 @@ impl Lettore for Alternato {
 fn centroids_of_the_reader_are_not_touched() {
     let n = 6;
     let l = Alternato {
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 0,
             nome: "a".into(),
             scansioni: n,
-            dimensione: None,
+            size: None,
         }],
-        indice: (0..n).map(voce).collect(),
+        indice: (0..n).map(entry).collect(),
     };
     let mut c = centroidato(Box::new(l));
     for k in 0..n {
-        let s = c.scansione(0, k).unwrap();
+        let s = c.scan(0, k).unwrap();
         assert!(!s.profile, "scan {k}");
         if k % 2 == 0 {
             assert_eq!(s.mz, vec![101.0, 102.5, 103.0], "scan {k} kept as is");
@@ -94,30 +94,30 @@ fn centroids_of_the_reader_are_not_touched() {
 
 fn alternato(n: usize) -> Alternato {
     Alternato {
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 0,
             nome: "a".into(),
             scansioni: n,
-            dimensione: None,
+            size: None,
         }],
-        indice: (0..n).map(voce).collect(),
+        indice: (0..n).map(entry).collect(),
     }
 }
 
 /// The two indexes of one decoding are the two built apart, whatever the budget (rounds, scratch file shared by the two builders).
 #[test]
 fn double_index_equals_the_two_apart() {
-    use crate::upload::indicizza_lettore_con;
+    use crate::upload::index_reader_with;
     use std::io::Cursor;
     let n = 301;
     let apart = |centroid: bool, budget: usize, spill: bool| {
-        let mut l: Box<dyn Lettore> = Box::new(alternato(n));
+        let mut l: Box<dyn Reader> = Box::new(alternato(n));
         if centroid {
             l = centroidato(l);
         }
         let mut out = Cursor::new(Vec::new());
         let mut sp = Cursor::new(Vec::new());
-        let (st, sha) = indicizza_lettore_con(
+        let (st, sha) = index_reader_with(
             &mut *l,
             0,
             &mut || Ok(vec![]),
@@ -134,7 +134,7 @@ fn double_index_equals_the_two_apart() {
         let mut l = Centroidato::nuovo(Box::new(alternato(n)));
         let (mut a, mut b) = (Cursor::new(Vec::new()), Cursor::new(Vec::new()));
         let mut sp = Cursor::new(Vec::new());
-        let ((sa, sha_a), (sb, sha_b)) = crate::upload::indicizza_lettore_doppio(
+        let ((sa, sha_a), (sb, sha_b)) = crate::upload::index_reader_twice(
             &mut l,
             0,
             &mut || Ok(vec![]),

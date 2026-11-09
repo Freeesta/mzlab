@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::{self, ChromKind, Spectrum};
 use mzlab_core::mzmlhead::Mzml;
 
@@ -16,29 +16,26 @@ const TRFP: &str = "_oracoli/trfp/201208_15.mzML";
 const MSCONVERT: &str =
     "_oracoli/msconvert_windows/centroidi/thermo/raw/PXD043691_mrm/201208_15.mzML";
 
-fn dati(rel: &str) -> Option<PathBuf> {
-    let mut radici: Vec<PathBuf> = std::env::var_os("MZLAB_ROSINA_DATI")
+fn data(rel: &str) -> Option<PathBuf> {
+    let mut roots: Vec<PathBuf> = std::env::var_os("MZLAB_ROSINA_DATI")
         .map(PathBuf::from)
         .into_iter()
         .collect();
-    radici.push(PathBuf::from("/Volumes/Fred/rosina"));
-    radici
-        .into_iter()
-        .map(|r| r.join(rel))
-        .find(|p| p.is_file())
+    roots.push(PathBuf::from("/Volumes/Fred/rosina"));
+    roots.into_iter().map(|r| r.join(rel)).find(|p| p.is_file())
 }
 
-fn lettore(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Lettore> {
+fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Reader> {
     let bytes = std::fs::read(raw).unwrap();
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "201208_15.raw".into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
             sha1: None,
         }],
     };
-    mzlab_lettori::apri_nudo(set, &Limiti::sito()).unwrap()
+    mzlab_lettori::open_bare(set, &Limits::sito()).unwrap()
 }
 
 fn close(a: f64, b: f64, rel: f64) -> bool {
@@ -47,7 +44,7 @@ fn close(a: f64, b: f64, rel: f64) -> bool {
 
 #[test]
 fn the_scans_match_thermorawfileparser() {
-    let (Some(raw), Some(oracle)) = (dati(RAW), dati(TRFP)) else {
+    let (Some(raw), Some(oracle)) = (data(RAW), data(TRFP)) else {
         eprintln!("SKIP raw_srm_tsq spectra: real file or ThermoRawFileParser oracle absent");
         return;
     };
@@ -84,7 +81,7 @@ fn the_scans_match_thermorawfileparser() {
 
 #[test]
 fn the_srm_traces_match_msconvert() {
-    let (Some(raw), Some(oracle)) = (dati(RAW), dati(MSCONVERT)) else {
+    let (Some(raw), Some(oracle)) = (data(RAW), data(MSCONVERT)) else {
         eprintln!("SKIP raw_srm_tsq traces: real file or msconvert oracle absent");
         return;
     };
@@ -103,15 +100,15 @@ fn the_srm_traces_match_msconvert() {
         want.push((q1.parse().unwrap(), q3.parse().unwrap(), t, y));
     }
     assert_eq!(want.len(), 14);
-    let mut l = lettore(&raw);
+    let mut l = reader(&raw);
     let mut got = Vec::new();
     for v in l
-        .cromatogrammi(0)
+        .chromatograms(0)
         .unwrap()
         .iter()
         .filter(|v| v.tipo == ChromKind::Srm)
     {
-        got.push(l.cromatogramma(0, &v.id).unwrap());
+        got.push(l.chromatogram(0, &v.id).unwrap());
     }
     assert_eq!(got.len(), want.len(), "number of transitions");
     for (q1, q3, t, y) in &want {

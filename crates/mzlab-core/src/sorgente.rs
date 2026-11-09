@@ -1,10 +1,10 @@
 //! One source of scans and traces for the routes, whatever the file: `Scansioni` (the peaks and the header fields of a row of the index) and
 //! `Tracce` (the chromatograms and the header of the file). Two implementations each: an mzML read by offset (every `ReadAt`, with the rows of an
-//! index of version 1; `TracceMzml`) and one sample of a `Lettore` (`SorgenteLettore`, with the rows of an index of version 2, `docs/agenti/mzidx.md`).
+//! index of version 1; `MzmlTraces`) and one sample of a `Lettore` (`ReaderSource`, with the rows of an index of version 2, `docs/agenti/mzidx.md`).
 
 use crate::error::{Error, Result};
 use crate::idxread::{ReadAt, Scan};
-use crate::lettori::{Campo, Lettore, VoceCromatogramma};
+use crate::lettori::{ChromatogramEntry, Field, Reader};
 use crate::mzml::{ChromKind, Chromatogram};
 use crate::mzmlhead::{Chrom, Mzml};
 use crate::mzmlwrite::MzmlWriter;
@@ -13,30 +13,30 @@ use crate::mzmlwrite::MzmlWriter;
 pub trait Scansioni {
     /// The peaks of the scan of row `sc`: m/z and intensity, as many as the shorter array.
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)>;
-    /// The header fields of the scan: in an mzML every `cvParam` / `userParam` with a name (with its accession), from a reader `Lettore::intestazione`.
-    fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>>;
+    /// The header fields of the scan: in an mzML every `cvParam` / `userParam` with a name (with its accession), from a reader `Lettore::scan_header`.
+    fn scan_header(&mut self, sc: &Scan) -> Result<Vec<Field>>;
     /// The ion mobility of the scan (a mobility array or a scan attribute of an mzML), `None` for a scan that has none and for a reader of a vendor file.
     fn mobilita(&mut self, _sc: &Scan) -> Result<Option<crate::mzml::Mobility>> {
         Ok(None)
     }
     /// `spettro` and `mobilita` of the same scan; a source that reads bytes overrides it to read and decode them once.
-    fn spettro_mobilita(&mut self, sc: &Scan) -> Result<(Picchi, Option<crate::mzml::Mobility>)> {
+    fn spettro_mobilita(&mut self, sc: &Scan) -> Result<(Peaks, Option<crate::mzml::Mobility>)> {
         Ok((self.spettro(sc)?, self.mobilita(sc)?))
     }
 }
 
 /// An mzML read by offset: the row gives `start..end` of the `<spectrum>`. A reader that stands for a vendor file (`ReadAt::lettore`) gives, for a row
-/// of an index of version 2, the peaks of its `Lettore` and the header fields the mzML of `lettori_mzml::scrivi` would have (`testo_scansione`).
+/// of an index of version 2, the peaks of its `Lettore` and the header fields the mzML of `lettori_mzml::scrivi` would have (`scan_text`).
 impl<M: ReadAt> Scansioni for M {
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)> {
         Ok(self.spettro_mobilita(sc)?.0)
     }
 
     fn mobilita(&mut self, sc: &Scan) -> Result<Option<crate::mzml::Mobility>> {
-        if sc.k.is_some() && self.lettore().is_some() {
+        if sc.k.is_some() && self.reader().is_some() {
             return Ok(None);
         }
-        let buf = leggi_riga(self, sc)?;
+        let buf = read_line(self, sc)?;
         let mut found = None;
         crate::mzml::parse(&buf[..], |it| {
             if let crate::mzml::Item::Mobility(m) = it {
@@ -46,33 +46,33 @@ impl<M: ReadAt> Scansioni for M {
         Ok(found)
     }
 
-    fn spettro_mobilita(&mut self, sc: &Scan) -> Result<(Picchi, Option<crate::mzml::Mobility>)> {
-        if let (Some(_), Some((l, c))) = (sc.k, self.lettore()) {
-            return Ok((SorgenteLettore { l, c }.spettro(sc)?, None));
+    fn spettro_mobilita(&mut self, sc: &Scan) -> Result<(Peaks, Option<crate::mzml::Mobility>)> {
+        if let (Some(_), Some((l, c))) = (sc.k, self.reader()) {
+            return Ok((ReaderSource { l, c }.spettro(sc)?, None));
         }
-        spettro_e_mobilita(&leggi_riga(self, sc)?)
+        spettro_e_mobilita(&read_line(self, sc)?)
     }
 
-    fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
-        if sc.k.is_some() && self.lettore().is_some() {
-            return Ok(crate::scaninfo::campi(&testo_scansione(self, sc)?));
+    fn scan_header(&mut self, sc: &Scan) -> Result<Vec<Field>> {
+        if sc.k.is_some() && self.reader().is_some() {
+            return Ok(crate::scaninfo::campi(&scan_text(self, sc)?));
         }
         let head = crate::scaninfo::header(self, sc.start, sc.end)?;
         Ok(crate::scaninfo::campi(&head))
     }
 }
 
-type Picchi = (Vec<f64>, Vec<f64>);
+type Peaks = (Vec<f64>, Vec<f64>);
 
 /// The bytes `start..end` of the `<spectrum>` of a row.
-fn leggi_riga<M: ReadAt + ?Sized>(m: &mut M, sc: &Scan) -> Result<Vec<u8>> {
+fn read_line<M: ReadAt + ?Sized>(m: &mut M, sc: &Scan) -> Result<Vec<u8>> {
     let mut buf = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
     m.read_at(sc.start, &mut buf)?;
     Ok(buf)
 }
 
 /// The peaks and the ion mobility of the first spectrum in `buf`, from one parse.
-fn spettro_e_mobilita(buf: &[u8]) -> Result<(Picchi, Option<crate::mzml::Mobility>)> {
+fn spettro_e_mobilita(buf: &[u8]) -> Result<(Peaks, Option<crate::mzml::Mobility>)> {
     let (mut found, mut mob) = (None, None);
     crate::mzml::parse(buf, |it| match it {
         crate::mzml::Item::Spectrum(s) => {
@@ -91,8 +91,8 @@ fn spettro_e_mobilita(buf: &[u8]) -> Result<(Picchi, Option<crate::mzml::Mobilit
 
 /// The text of the `<spectrum>` of a row up to its arrays, as the mzML has it: read by offset, or written for a scan of a `Lettore` as
 /// `lettori_mzml::scrivi` writes it (the header only, no arrays). For what is searched in the text of the scans (scan window, injection time).
-pub fn testo_scansione<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
-    if let (Some(k), Some((l, c))) = (sc.k, m.lettore()) {
+pub fn scan_text<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
+    if let (Some(k), Some((l, c))) = (sc.k, m.reader()) {
         let s = crate::mzidx_lettore::spettro(&mut *l, c, k)?;
         return Ok(crate::mzmlwrite::spectrum_head(k, &s, &l.extra_mzml(&s)));
     }
@@ -100,40 +100,40 @@ pub fn testo_scansione<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
 }
 
 /// The chromatograms of a file and its header.
-pub trait Tracce {
-    fn cromatogrammi(&mut self) -> Result<Vec<VoceCromatogramma>>;
+pub trait Traces {
+    fn chromatograms(&mut self) -> Result<Vec<ChromatogramEntry>>;
     /// The first chromatogram with this id.
-    fn cromatogramma(&mut self, id: &str) -> Result<Chromatogram>;
+    fn chromatogram(&mut self, id: &str) -> Result<Chromatogram>;
     /// The text of the file before its first spectrum: the header up to `<run ` and what follows the tag (instrument, sources, run parameters).
-    fn testata(&mut self) -> Result<String>;
+    fn file_header(&mut self) -> Result<String>;
     /// The SRM chromatograms with Q1 and Q3, in the order of the file (`srm::leggi`).
-    fn srm(&mut self) -> Result<Vec<crate::srm::Traccia>> {
-        crate::srm::da_voci(self)
+    fn srm(&mut self) -> Result<Vec<crate::srm::Trace>> {
+        crate::srm::from_entries(self)
     }
 }
 
 /// The traces of an mzML; `scans_end` is where its last spectrum ends (0 without spectra), as `Mzml::chromatograms` wants it.
-pub struct TracceMzml<'a, M: ReadAt> {
+pub struct MzmlTraces<'a, M: ReadAt> {
     pub m: &'a mut Mzml<M>,
     pub scans_end: u64,
-    lista: Option<Vec<Chrom>>,
+    list: Option<Vec<Chrom>>,
 }
 
-impl<'a, M: ReadAt> TracceMzml<'a, M> {
+impl<'a, M: ReadAt> MzmlTraces<'a, M> {
     pub fn new(m: &'a mut Mzml<M>, scans_end: u64) -> Self {
-        TracceMzml {
+        MzmlTraces {
             m,
             scans_end,
-            lista: None,
+            list: None,
         }
     }
 
     /// The headers of the chromatograms, read once.
     fn lista(&mut self) -> Result<&[Chrom]> {
-        if self.lista.is_none() {
-            self.lista = Some(self.m.chromatograms(self.scans_end)?);
+        if self.list.is_none() {
+            self.list = Some(self.m.chromatograms(self.scans_end)?);
         }
-        Ok(self.lista.as_deref().unwrap_or_default())
+        Ok(self.list.as_deref().unwrap_or_default())
     }
 }
 
@@ -151,12 +151,12 @@ fn kind(c: &Chrom) -> ChromKind {
     }
 }
 
-impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
-    fn cromatogrammi(&mut self) -> Result<Vec<VoceCromatogramma>> {
+impl<M: ReadAt> Traces for MzmlTraces<'_, M> {
+    fn chromatograms(&mut self) -> Result<Vec<ChromatogramEntry>> {
         let list = self.lista()?.to_vec();
         list.iter()
             .map(|c| {
-                Ok(VoceCromatogramma {
+                Ok(ChromatogramEntry {
                     id: c.id.clone(),
                     tipo: kind(c),
                     unita: self.m.chromatogram_unit(c)?,
@@ -165,7 +165,7 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
             .collect()
     }
 
-    fn cromatogramma(&mut self, id: &str) -> Result<Chromatogram> {
+    fn chromatogram(&mut self, id: &str) -> Result<Chromatogram> {
         let c = self
             .lista()?
             .iter()
@@ -185,12 +185,12 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
         })
     }
 
-    fn testata(&mut self) -> Result<String> {
+    fn file_header(&mut self) -> Result<String> {
         self.m.info_head()
     }
 
     /// Straight from the headers: the units of the other chromatograms are not read.
-    fn srm(&mut self) -> Result<Vec<crate::srm::Traccia>> {
+    fn srm(&mut self) -> Result<Vec<crate::srm::Trace>> {
         let list = self.lista()?.to_vec();
         let mut out = Vec::new();
         let srm: Vec<_> = list
@@ -198,7 +198,7 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
             .filter(|c| c.kind == "srm" && c.q1.is_some() && c.q3.is_some())
             .collect();
         self.m.chromatograms_each(&srm, |c, (t, y)| {
-            out.push(crate::srm::Traccia {
+            out.push(crate::srm::Trace {
                 q1: c.q1.unwrap_or_default(),
                 q3: c.q3.unwrap_or_default(),
                 ce: c.ce,
@@ -211,19 +211,19 @@ impl<M: ReadAt> Tracce for TracceMzml<'_, M> {
     }
 }
 
-/// Sample `c` of a reader: the rows of its index (version 2) carry `k`, the number of the scan in `Lettore::indice(c)`.
-pub struct SorgenteLettore<'a> {
-    pub l: &'a mut dyn Lettore,
+/// Sample `c` of a reader: the rows of its index (version 2) carry `k`, the number of the scan in `Lettore::index(c)`.
+pub struct ReaderSource<'a> {
+    pub l: &'a mut dyn Reader,
     pub c: usize,
 }
 
-impl SorgenteLettore<'_> {
+impl ReaderSource<'_> {
     fn k(&self, sc: &Scan) -> Result<usize> {
         sc.k.ok_or_else(|| Error::new("err.scan.outside"))
     }
 }
 
-impl Scansioni for SorgenteLettore<'_> {
+impl Scansioni for ReaderSource<'_> {
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)> {
         let k = self.k(sc)?;
         let s = crate::mzidx_lettore::spettro(&mut *self.l, self.c, k)?;
@@ -231,24 +231,24 @@ impl Scansioni for SorgenteLettore<'_> {
         Ok((s.mz, y))
     }
 
-    fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, sc: &Scan) -> Result<Vec<Field>> {
         let k = self.k(sc)?;
-        self.l.intestazione(self.c, k)
+        self.l.scan_header(self.c, k)
     }
 }
 
-impl Tracce for SorgenteLettore<'_> {
-    fn cromatogrammi(&mut self) -> Result<Vec<VoceCromatogramma>> {
-        self.l.cromatogrammi(self.c)
+impl Traces for ReaderSource<'_> {
+    fn chromatograms(&mut self) -> Result<Vec<ChromatogramEntry>> {
+        self.l.chromatograms(self.c)
     }
 
-    fn cromatogramma(&mut self, id: &str) -> Result<Chromatogram> {
-        self.l.cromatogramma(self.c, id)
+    fn chromatogram(&mut self, id: &str) -> Result<Chromatogram> {
+        self.l.chromatogram(self.c, id)
     }
 
     /// The header `lettori_mzml::scrivi` writes for the sample.
-    fn testata(&mut self) -> Result<String> {
-        let h = crate::lettori_mzml::testata(&mut *self.l, self.c)?;
+    fn file_header(&mut self) -> Result<String> {
+        let h = crate::lettori_mzml::file_header(&mut *self.l, self.c)?;
         let mut doc = MzmlWriter::new(Vec::new(), &h)?.finish()?;
         let tail = b"</run>\n</mzML>\n".len();
         doc.truncate(doc.len().saturating_sub(tail));

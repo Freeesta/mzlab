@@ -5,10 +5,10 @@ import json, subprocess, sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-USCITA = RAIZ / "tests_e2e" / "fixtures" / "msngrafo_80.json"
+OUTPUT = RAIZ / "tests_e2e" / "fixtures" / "msngrafo_80.json"
 TAGLIE = [1] + [10] * 7 + [9]
-LIVELLI = len(TAGLIE)
-INIZIO = [sum(TAGLIE[:l]) for l in range(LIVELLI)]
+LEVELS = len(TAGLIE)
+START = [sum(TAGLIE[:l]) for l in range(LEVELS)]
 
 
 def lcg(seed):
@@ -18,24 +18,24 @@ def lcg(seed):
         yield s >> 33
 
 
-def costruisci():
+def build():
     base = json.loads((RAIZ / "tests_e2e" / "fixtures" / "msngrafo_esempio.json").read_text())
-    nodo0 = base["nodi"][1]
+    node0 = base["nodi"][1]
     r = lcg(80)
     nodi, archi = [], []
-    for l in range(LIVELLI):
+    for l in range(LEVELS):
         for k in range(TAGLIE[l]):
-            i = INIZIO[l] + k
-            n = json.loads(json.dumps(nodo0))
+            i = START[l] + k
+            n = json.loads(json.dumps(node0))
             n.update(id=f"n{i}", mz=round(500.0 - l * 40.0 - k * 3.0, 5), livello=l + 1, isolato=False, albero=[], osservazioni=1,
                      rel_max=round(100.0 - k * 7.0, 1), pos={"col": l, "riga": k}, formula=None)
             nodi.append(n)
-    for l in range(LIVELLI - 1):
+    for l in range(LEVELS - 1):
         for k in range(TAGLIE[l + 1]):
-            a = INIZIO[l + 1] + k
-            padri = {INIZIO[l] + next(r) % TAGLIE[l]}
+            a = START[l + 1] + k
+            padri = {START[l] + next(r) % TAGLIE[l]}
             if next(r) % 5 == 0:
-                padri.add(INIZIO[l] + next(r) % TAGLIE[l])
+                padri.add(START[l] + next(r) % TAGLIE[l])
             for da in sorted(padri):
                 perdita = round(nodi[da]["mz"] - nodi[a]["mz"], 5)
                 archi.append({"da": f"n{da}", "a": f"n{a}", "perdita": {"da_massa": perdita, "formula": None, "ppm": None, "compatibile": []}, "isolamento": False,
@@ -53,11 +53,11 @@ def main():
     cli = RAIZ / "target" / "release" / "mzlab-cli"
     if len(sys.argv) > 1:
         cli = Path(sys.argv[1])
-    tmp = USCITA.with_suffix(".senza-vista.json")
-    tmp.write_text(json.dumps(costruisci(), indent=1))
-    subprocess.run([str(cli), "msn-graph", "complete", str(tmp), "--out", str(USCITA)], check=True)
+    tmp = OUTPUT.with_suffix(".senza-vista.json")
+    tmp.write_text(json.dumps(build(), indent=1))
+    subprocess.run([str(cli), "msn-graph", "complete", str(tmp), "--out", str(OUTPUT)], check=True)
     tmp.unlink()
-    print(USCITA)
+    print(OUTPUT)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json;
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::methodinfo::{method_of_sample, Kind};
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::wiff::dad::{
@@ -65,13 +65,13 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
         }
         let fs = FileSet {
             membri: vec![
-                Membro {
+                Member {
                     nome: format!("{name}.wiff"),
                     dim: wiff_bytes.len() as u64,
                     dati: Box::new(wiff_bytes),
                     sha1: None,
                 },
-                Membro {
+                Member {
                     nome: format!("{name}.wiff.scan"),
                     dim: scan_bytes.len() as u64,
                     dati: Box::new(scan_bytes),
@@ -79,12 +79,12 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
                 },
             ],
         };
-        let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
-        let twc = l.cromatogramma(0, "DAD TWC").unwrap();
+        let mut l = lettori::apri(fs, &Limits::sito()).unwrap();
+        let twc = l.chromatogram(0, "DAD TWC").unwrap();
         assert_eq!(twc.kind, ChromKind::Pda);
         assert_eq!(twc.unit, "mAU");
         assert_eq!(twc.time.len(), expected_pts);
-        let ch254 = l.cromatogramma(0, "DAD 254 nm").unwrap();
+        let ch254 = l.chromatogram(0, "DAD 254 nm").unwrap();
         assert_eq!(ch254.kind, ChromKind::Pda);
         assert_eq!(ch254.intensity.len(), expected_pts);
         for i in [0, 100, expected_pts / 2, expected_pts - 1] {
@@ -139,13 +139,13 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
 
     let fs = FileSet {
         membri: vec![
-            Membro {
+            Member {
                 nome: "MRM.wiff".into(),
                 dim: wiff_bytes.len() as u64,
                 dati: Box::new(wiff_bytes),
                 sha1: None,
             },
-            Membro {
+            Member {
                 nome: "MRM.wiff.scan".into(),
                 dim: scan_bytes.len() as u64,
                 dati: Box::new(scan_bytes),
@@ -153,8 +153,8 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
             },
         ],
     };
-    let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
-    let doc = json::parse(l.metodo(0).unwrap().as_bytes()).unwrap();
+    let mut l = lettori::apri(fs, &Limits::sito()).unwrap();
+    let doc = json::parse(l.method(0).unwrap().as_bytes()).unwrap();
     let tr_json = doc
         .get("ms")
         .and_then(|ms| ms.get("periodi"))

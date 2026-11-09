@@ -6,7 +6,7 @@ use mzlab_core::campioni::{proponi, to_json};
 use mzlab_core::json::parse;
 use mzlab_feat::interp::store::append;
 use mzlab_feat::recipe::Recipe;
-use mzlab_feat::rete::{network_text, ReteParams};
+use mzlab_feat::rete::{network_text, NetworkParams};
 use mzlab_feat::store::{write_table, Origin, Slice};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
 use mzlab_feat::tp::{TpBlock, KIN_PROBABLE, ST_PARENT, ST_TP};
@@ -35,7 +35,7 @@ fn rules() -> Vec<u8> {
     include_bytes!("../../../TP_Mine/data/regole_tp_2.json").to_vec()
 }
 
-fn campioni() -> String {
+fn samples() -> String {
     let files: Vec<_> = NAMES
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
@@ -94,21 +94,21 @@ fn with_interp(bytes: &[u8]) -> Vec<u8> {
     out
 }
 
-fn run(file: &[u8], campioni: &str) -> mzlab_core::error::Result<String> {
+fn run(file: &[u8], samples: &str) -> mzlab_core::error::Result<String> {
     let n = file.len() as u64;
     network_text(
         (&mut Slice(file), n),
         (&mut Slice(file), n),
-        campioni,
+        samples,
         &rules(),
-        &ReteParams::default(),
+        &NetworkParams::default(),
     )
 }
 
 #[test]
 fn the_arcs_come_from_the_interpretation_and_the_time_course_from_the_roles() {
     let file = with_interp(&table(true));
-    let v = parse(run(&file, &campioni()).unwrap().as_bytes()).unwrap();
+    let v = parse(run(&file, &samples()).unwrap().as_bytes()).unwrap();
     assert_eq!(v.get("schema").and_then(|s| s.str()), Some("rete/1"));
     let arcs: Vec<(u32, u32, &str, &str)> = v
         .get("arcs")
@@ -145,12 +145,12 @@ fn the_table_and_the_interpretation_can_be_two_files() {
     let two = network_text(
         (&mut Slice(&plain), n),
         (&mut Slice(&full), m),
-        &campioni(),
+        &samples(),
         &rules(),
-        &ReteParams::default(),
+        &NetworkParams::default(),
     )
     .unwrap();
-    assert_eq!(two, run(&full, &campioni()).unwrap());
+    assert_eq!(two, run(&full, &samples()).unwrap());
 }
 
 #[test]
@@ -172,9 +172,9 @@ fn without_the_roles_there_is_no_time_course() {
 fn a_file_without_a_block_is_an_error() {
     let no_interp = table(true);
     assert_eq!(
-        run(&no_interp, &campioni()).unwrap_err().key,
+        run(&no_interp, &samples()).unwrap_err().key,
         "error.rete.noInterp"
     );
     let no_tp = with_interp(&table(false));
-    assert_eq!(run(&no_tp, &campioni()).unwrap_err().key, "error.tpNoBlock");
+    assert_eq!(run(&no_tp, &samples()).unwrap_err().key, "error.tpNoBlock");
 }

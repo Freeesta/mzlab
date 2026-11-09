@@ -8,7 +8,7 @@ mod raw_records;
 use std::time::Instant;
 
 use flate2::{write::GzEncoder, Compression};
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::rawlettore;
 use opentfraw::generic_data::GenericValue;
 use opentfraw::{RawFileReader, ScanMetadata, ScanParams};
@@ -215,7 +215,7 @@ impl Borrow for Option<ScanParams<'static>> {
 
 fn fileset(name: &str, bytes: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: name.to_string(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -317,13 +317,13 @@ fn sequence_row(raw: &RawFileReader) -> Value {
 /// The optional rows after the scans: chromatograms, status, errors, method.
 fn write_extras(
     out: &mut Sink,
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     raw: &RawFileReader,
     src: &mut Cursor<&[u8]>,
     text: bool,
 ) {
-    for v in l.cromatogrammi(0).unwrap_or_default() {
-        if let Ok(c) = l.cromatogramma(0, &v.id) {
+    for v in l.chromatograms(0).unwrap_or_default() {
+        if let Ok(c) = l.chromatogram(0, &v.id) {
             out.row(&json!({"type": "chromatogram", "id": c.id, "kind": format!("{:?}", c.kind).to_lowercase(),
                 "unit": c.unit, "time": c.time, "values": c.intensity}));
         }
@@ -412,17 +412,17 @@ fn main() {
     let t0 = Instant::now();
     let mut src = Cursor::new(bytes.as_slice());
     let raw = RawFileReader::open(&mut src).expect("open");
-    let mut l = (rawlettore::VOCE.apri)(fileset(&name, bytes.clone()), &Limiti::desktop())
+    let mut l = (rawlettore::ENTRY.apri)(fileset(&name, bytes.clone()), &Limits::desktop())
         .expect("lettore");
     let open_ms = t0.elapsed().as_secs_f64() * 1e3;
-    let n = l.indice(0).expect("index").len();
+    let n = l.index(0).expect("index").len();
 
     // every scan once: the row of the dump and the peaks that the lettore reads
     let t1 = Instant::now();
     let mut scans: Scans = Vec::new();
     let mut spectra = Vec::new();
     for k in 0..n {
-        let s = l.scansione(0, k).expect("scan");
+        let s = l.scan(0, k).expect("scan");
         if let Some(r) = scan_row(&raw, &mut src, k as u32, s.mz.len()) {
             scans.push(r);
         }
@@ -430,7 +430,7 @@ fn main() {
     }
     let read_all_ms = t1.elapsed().as_secs_f64() * 1e3;
     let t2 = Instant::now();
-    let _ = l.scansione(0, n / 2);
+    let _ = l.scan(0, n / 2);
     let read_one_ms = t2.elapsed().as_secs_f64() * 1e3;
 
     if o.down {

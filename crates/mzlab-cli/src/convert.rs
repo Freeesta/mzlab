@@ -30,7 +30,8 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
   --zlib N, --numpress zlib level of the arrays, 0 (none) to 9 (smallest), default 2; MS-Numpress coding of m/z and intensities
   --peaks WHICH        the peaks written: file (those of the file, default; a profile file keeps its points and the run warns), profile (the
                        points of the profile) or mzlab (centroids of mzLab)
-  --workers N          files converted at once (default 1; the bytes written do not depend on it)
+  --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
+                       each its share, with a note; the bytes written do not depend on it)
   --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1; or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
@@ -40,12 +41,13 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
 progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 4 an input is missing or holds nothing to convert";
 
 #[derive(Default)]
-struct Args {
+pub(crate) struct Args {
     inputs: Vec<PathBuf>,
     out: Option<PathBuf>,
     sets: Vec<String>,
     report: Option<PathBuf>,
-    workers: usize,
+    /// `--workers`; `None` = the default of `workers_for`
+    pub(crate) workers: Option<usize>,
     fresh: bool,
 }
 
@@ -53,11 +55,8 @@ fn value(it: &mut impl Iterator<Item = String>, name: &str) -> Result<String, St
     it.next().ok_or(format!("{name} needs a value"))
 }
 
-fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
-    let mut a = Args {
-        workers: 1,
-        ..Args::default()
-    };
+pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
+    let mut a = Args::default();
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         match x.as_str() {
@@ -80,11 +79,12 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
             "--fresh" => a.fresh = true,
             "--workers" => {
                 let v = value(&mut it, &x)?;
-                a.workers = v
-                    .parse()
-                    .ok()
-                    .filter(|n| *n >= 1)
-                    .ok_or(format!("--workers {v}: expected a whole number from 1"))?;
+                a.workers = Some(
+                    v.parse()
+                        .ok()
+                        .filter(|n| *n >= 1)
+                        .ok_or(format!("--workers {v}: expected a whole number from 1"))?,
+                );
             }
             _ if x.starts_with("--") => return Err(format!("unknown option {x}")),
             _ => a.inputs.push(x.into()),
@@ -184,13 +184,47 @@ fn progress(names: Vec<String>, ended: Arc<Mutex<Vec<Option<Ended>>>>) -> DoneFn
         let k = item.unwrap_or(0);
         let n = count.fetch_add(1, Ordering::Relaxed) + 1;
         let what = match (&err, cached) {
-            (Some(e), _) => format!("failed: {}", crate::testo_errore::umano(e)),
+            (Some(e), _) => format!("failed: {}", crate::testo_errore::human(e)),
             (None, true) => "skipped (already converted)".to_string(),
             (None, false) => format!("done in {:.1} s", ms / 1e3),
         };
         eprintln!("[{n}/{total}] {} ... {what}", names[k]);
         ended.lock().unwrap_or_else(|e| e.into_inner())[k] = Some((ms, cached, err));
     })
+}
+
+/// A calm notice: its catalogue key and parameters (`lang/*/errori.js`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Notice {
+    pub key: &'static str,
+    pub params: Vec<(&'static str, String)>,
+}
+
+/// The notice of a memory budget `auto_mb` that runs fewer than `wanted` conversions at once, or `None`: the desktop queue gives it to its
+/// page, `convert` prints it (`testo_errore::avviso`).
+pub fn fewer_workers(auto_mb: f64, wanted: usize) -> Option<Notice> {
+    let workers = mzlab_core::budget_auto::convert_workers(auto_mb, wanted);
+    (workers < wanted).then(|| Notice {
+        key: "warn.convert.fewerWorkers",
+        params: vec![
+            ("workers", workers.to_string()),
+            ("wanted", wanted.to_string()),
+            ("budget_mb", format!("{}", auto_mb.floor())),
+        ],
+    })
+}
+
+/// The conversions run at once: `--workers` as given, else the default lowered by the budget `auto_mb`, with its notice line.
+pub(crate) fn workers_for(auto_mb: f64, given: Option<usize>) -> (usize, Option<String>) {
+    if let Some(n) = given {
+        return (n, None);
+    }
+    let wanted = mzlab_core::budget_auto::convert_wanted();
+    (
+        mzlab_core::budget_auto::convert_workers(auto_mb, wanted),
+        fewer_workers(auto_mb, wanted)
+            .map(|n| format!("note: {}", crate::testo_errore::warning(&n))),
+    )
 }
 
 /// `to` made from `from` without a second copy of the bytes when the folder allows it.
@@ -404,7 +438,11 @@ pub fn run(args: Vec<String>) -> Outcome {
     runner.progress = None;
     let runner = runner.with_done(Some(progress(names, ended.clone())));
     let text = plan_json(&plan);
-    if let Err(e) = run_checked(&ready, text.as_bytes(), &runner, a.workers) {
+    let (workers, note) = workers_for(mzlab_core::budget_auto::native_auto_mb(), a.workers);
+    if let Some(n) = note.filter(|_| list.len() > workers) {
+        eprintln!("{n}");
+    }
+    if let Err(e) = run_checked(&ready, text.as_bytes(), &runner, workers) {
         return fail(3, &e.to_string(), "this is a bug of mzlab-cli convert");
     }
     let ended = ended.lock().unwrap_or_else(|e| e.into_inner());

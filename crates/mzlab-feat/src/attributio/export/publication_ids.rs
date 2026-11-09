@@ -23,7 +23,7 @@ pub struct Gt {
     pub cec_category: Option<String>,
     pub in_site: Vec<bool>,
     pub formula: String,
-    pub nome: String,
+    pub name: String,
 }
 
 /// A row of the paper: all the identities that share a canonical name.
@@ -85,7 +85,7 @@ pub fn enriched_identities(l: &Loaded) -> Vec<Gt> {
                 best_level: r.best_level,
                 group: r.group,
                 formula,
-                nome,
+                name: nome,
             }
         })
         .collect()
@@ -95,10 +95,10 @@ pub fn enriched_identities(l: &Loaded) -> Vec<Gt> {
 pub fn dedup_by_canonical(gt: &[Gt], n_sites: usize) -> Vec<Dd> {
     let mut by: BTreeMap<&str, Vec<&Gt>> = BTreeMap::new();
     for g in gt {
-        by.entry(g.nome.as_str()).or_default().push(g);
+        by.entry(g.name.as_str()).or_default().push(g);
     }
     by.into_iter()
-        .map(|(nome, g)| {
+        .map(|(name, g)| {
             let contaminant = g.iter().any(|x| x.group == "contaminant");
             let best = g.iter().map(|x| x.best_level).min().unwrap_or(3);
             let subs: Vec<&str> = g
@@ -115,7 +115,7 @@ pub fn dedup_by_canonical(gt: &[Gt], n_sites: usize) -> Vec<Dd> {
                 "a"
             };
             Dd {
-                nome: nome.to_string(),
+                nome: name.to_string(),
                 best_level: best,
                 best_sub: sub.to_string(),
                 group: if contaminant {
@@ -208,14 +208,14 @@ pub fn feature_frame<'a>(
     let areas = max_areas(c, l)?;
     let to_row: HashMap<&str, &str> = gt
         .iter()
-        .map(|g| (g.identity.as_str(), g.nome.as_str()))
+        .map(|g| (g.identity.as_str(), g.name.as_str()))
         .collect();
     let mut out = Vec::new();
     for e in ev {
         let Some(fr) = by_row.get(&(e.pol.as_str(), e.id)).copied() else {
             continue;
         };
-        let nome = match to_row.get(e.identity.as_str()) {
+        let name = match to_row.get(e.identity.as_str()) {
             Some(n) if !n.is_empty() => n.to_string(),
             _ => l
                 .cur
@@ -228,7 +228,7 @@ pub fn feature_frame<'a>(
         out.push(PFeat {
             fr,
             ev: e,
-            nome,
+            nome: name,
             max_area,
         });
     }

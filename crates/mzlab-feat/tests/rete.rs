@@ -4,7 +4,7 @@
 use mzlab_core::elements::{mass, parse_formula};
 use mzlab_core::json;
 use mzlab_feat::hypo::Rules;
-use mzlab_feat::rete::{build, Rete, ReteParams, ReteRow};
+use mzlab_feat::rete::{build, Network, NetworkParams, NetworkRow};
 use mzlab_feat::tp::{TpBlock, KIN_POSSIBLE, KIN_PROBABLE, ST_PARENT, ST_TP, ST_UNEXPLAINED};
 
 const PROTON: f64 = 1.007276;
@@ -17,8 +17,8 @@ fn neutral_mass(f: &str) -> f64 {
     mass(&parse_formula(f).unwrap())
 }
 
-fn row(i: usize, neutral: &str, ion: &str, rt: f64, tmax: f64) -> ReteRow {
-    ReteRow {
+fn row(i: usize, neutral: &str, ion: &str, rt: f64, tmax: f64) -> NetworkRow {
+    NetworkRow {
         row: i,
         id: i as u32 + 1,
         mz: neutral_mass(neutral) + PROTON,
@@ -26,12 +26,12 @@ fn row(i: usize, neutral: &str, ion: &str, rt: f64, tmax: f64) -> ReteRow {
         tmax: Some(tmax),
         neutral_formula: neutral.into(),
         ion_formula: ion.into(),
-        ..ReteRow::default()
+        ..NetworkRow::default()
     }
 }
 
 /// Timolol, its hydroxylation (+O), dihydroxylation (+O2), dehydrogenation (−H2), a C3H6 loss, and an unrelated formed row.
-fn rows() -> Vec<ReteRow> {
+fn rows() -> Vec<NetworkRow> {
     vec![
         row(0, "C13H24N4O3S", "C13H25N4O3S", 5.0, 0.0),
         row(1, "C13H24N4O4S", "C13H25N4O4S", 4.5, 10.0),
@@ -53,12 +53,12 @@ fn tp() -> TpBlock {
     }
 }
 
-fn net(rows: &[ReteRow], p: &ReteParams) -> Rete {
+fn net(rows: &[NetworkRow], p: &NetworkParams) -> Network {
     let parent = rows.iter().find(|r| r.row == 0).unwrap().clone();
     build(&tp(), &parent, rows, &rules(), p)
 }
 
-fn arcs_of(r: &Rete) -> Vec<(u32, u32, &str)> {
+fn arcs_of(r: &Network) -> Vec<(u32, u32, &str)> {
     r.arcs
         .iter()
         .map(|a| (a.from, a.to, a.rule.as_str()))
@@ -67,7 +67,7 @@ fn arcs_of(r: &Rete) -> Vec<(u32, u32, &str)> {
 
 #[test]
 fn the_arcs_follow_the_rules_and_the_time_course() {
-    let r = net(&rows(), &ReteParams::default());
+    let r = net(&rows(), &NetworkParams::default());
     assert_eq!(
         arcs_of(&r),
         vec![
@@ -91,7 +91,7 @@ fn the_arcs_follow_the_rules_and_the_time_course() {
 
 #[test]
 fn the_columns_are_the_steps_and_the_places_go_by_mz() {
-    let r = net(&rows(), &ReteParams::default());
+    let r = net(&rows(), &NetworkParams::default());
     let at = |id: u32| {
         r.nodes
             .iter()
@@ -116,7 +116,7 @@ fn a_group_the_parent_does_not_reach_starts_at_step_one_from_its_earliest_node()
     t.status = vec![ST_PARENT, ST_TP, ST_TP, ST_TP, ST_TP, ST_TP, ST_TP, ST_TP];
     t.kinship = vec![0; 8];
     let parent = v[0].clone();
-    let r = build(&t, &parent, &v, &rules(), &ReteParams::default());
+    let r = build(&t, &parent, &v, &rules(), &NetworkParams::default());
     let step = |id: u32| {
         r.nodes
             .iter()
@@ -132,13 +132,13 @@ fn a_group_the_parent_does_not_reach_starts_at_step_one_from_its_earliest_node()
 fn the_ppm_and_the_fragments_filter_the_arcs() {
     let mut v = rows();
     v[1].mz += 0.01; // 30 ppm off the +O of the parent
-    let r = net(&v, &ReteParams::default());
+    let r = net(&v, &NetworkParams::default());
     assert!(!arcs_of(&r).contains(&(1, 2, "hydroxylation")));
     let loose = net(
         &v,
-        &ReteParams {
+        &NetworkParams {
             ppm: 50.0,
-            ..ReteParams::default()
+            ..NetworkParams::default()
         },
     );
     assert!(arcs_of(&loose).contains(&(1, 2, "hydroxylation")));
@@ -148,9 +148,9 @@ fn the_ppm_and_the_fragments_filter_the_arcs() {
     w[1].equal = vec![100.0];
     let strict = net(
         &w,
-        &ReteParams {
+        &NetworkParams {
             min_fragments: 3,
-            ..ReteParams::default()
+            ..NetworkParams::default()
         },
     );
     assert!(!arcs_of(&strict).contains(&(1, 2, "hydroxylation")));
@@ -163,7 +163,7 @@ fn the_reason_says_what_the_ms2_shares() {
     v[1].has_ms2 = true;
     v[1].equal = vec![100.0, 110.0, 120.0];
     v[1].shifted = vec![136.0, 146.0];
-    let r = net(&v, &ReteParams::default());
+    let r = net(&v, &NetworkParams::default());
     let a = &r.arcs[0];
     assert_eq!(
         a.ms2.as_ref().map(|m| (m.equal.len(), m.shifted.len())),
@@ -181,13 +181,13 @@ fn the_reason_says_what_the_ms2_shares() {
 #[test]
 fn the_output_is_the_same_bytes_for_every_order_of_the_rows() {
     let base = rows();
-    let want = net(&base, &ReteParams::default()).to_json();
+    let want = net(&base, &NetworkParams::default()).to_json();
     let mut idx: Vec<usize> = (0..base.len()).collect();
     let mut seen = 0;
     permute(&mut idx, 0, &mut |p| {
-        let v: Vec<ReteRow> = p.iter().map(|&i| base[i].clone()).collect();
+        let v: Vec<NetworkRow> = p.iter().map(|&i| base[i].clone()).collect();
         assert_eq!(
-            net(&v, &ReteParams::default()).to_json(),
+            net(&v, &NetworkParams::default()).to_json(),
             want,
             "order {p:?}"
         );
@@ -227,7 +227,7 @@ fn the_json_has_the_keys_of_the_schema() {
         })
         .unwrap_or_default()
     };
-    let doc = json::parse(net(&rows(), &ReteParams::default()).to_json().as_bytes()).unwrap();
+    let doc = json::parse(net(&rows(), &NetworkParams::default()).to_json().as_bytes()).unwrap();
     assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("rete/1"));
     for k in keys(schema.get("required")) {
         assert!(doc.get(&k).is_some(), "document without `{k}`");
@@ -246,7 +246,7 @@ fn the_json_has_the_keys_of_the_schema() {
 
 #[test]
 fn no_arc_leaves_the_parent_alone() {
-    let r = net(&rows()[..1], &ReteParams::default());
+    let r = net(&rows()[..1], &NetworkParams::default());
     assert_eq!((r.nodes.len(), r.arcs.len()), (1, 0));
     assert!(r.to_json().ends_with("\"n_arcs\":0}"));
 }
@@ -261,7 +261,7 @@ fn the_fixture_of_the_view_is_the_output_of_the_engine() {
     v[1].shifted = vec![132.2, 146.1];
     v[4].has_ms2 = true;
     v[4].equal = vec![100.1];
-    let got = net(&v, &ReteParams::default()).to_json();
+    let got = net(&v, &NetworkParams::default()).to_json();
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../TP_Mine/tests/rete_fixture.json");
     if std::env::var_os("MZLAB_UPDATE_FIXTURE")

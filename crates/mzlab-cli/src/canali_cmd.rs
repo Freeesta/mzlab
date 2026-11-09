@@ -5,7 +5,6 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::routes::Routes;
 
@@ -23,23 +22,23 @@ usage: mzlab-cli channels FILE [--channel ID [--rt T0[,T1]] [--n N]] [--out PATH
 old names still accepted: canali, --canale";
 
 /// What was asked: the file, the channel to read (`--channel`, `--rt`, `--n`) and where to write.
-struct Chiesta {
+struct Request {
     file: PathBuf,
     out: Option<PathBuf>,
-    canale: Option<String>,
+    channel: Option<String>,
     rt: Option<(f64, f64)>,
     n: i64,
 }
 
-fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
-    let (mut file, mut out, mut canale, mut rt, mut n) = (None, None, None, None, 2000);
+fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
+    let (mut file, mut out, mut channel, mut rt, mut n) = (None, None, None, None, 2000);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
             "--help" | "-h" => return Ok(None),
             "--out" => out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
             "--channel" | "--canale" => {
-                canale = Some(it.next().ok_or("--channel needs a channel id")?)
+                channel = Some(it.next().ok_or("--channel needs a channel id")?)
             }
             "--rt" => {
                 let v = it.next().ok_or("--rt needs minutes")?;
@@ -60,13 +59,13 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
             _ => return Err("channels takes one file".into()),
         }
     }
-    if canale.is_none() && (rt.is_some() || n != 2000) {
+    if channel.is_none() && (rt.is_some() || n != 2000) {
         return Err("--rt and --n need --channel".into());
     }
-    Ok(Some(Chiesta {
+    Ok(Some(Request {
         file: file.ok_or("channels needs a file")?,
         out,
-        canale,
+        channel,
         rt,
         n,
     }))
@@ -78,16 +77,16 @@ fn io(e: std::io::Error) -> Error {
 
 /// The JSON of `api/canali` for `file`, indexes kept in `tmp`; with `--channel`, the trace (or with `--rt` the UV spectrum) of that UV or analog channel
 /// of an mzML: what `api/chrom?canale=` and `api/uvspec?canale=` answer.
-fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
+fn read(c: &Request, tmp: &std::path::Path) -> Result<String> {
     let file = &c.file;
     let idx = tmp.join("0.mzidx");
-    crate::build_index(file, &idx, DEFAULT_BUDGET)?;
+    crate::build_index(file, &idx, mzlab_core::budget_auto::native_index_budget())?;
     let mut r = Routes::new(crate::open(&idx)?);
-    let nome = file
+    let name = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let mzml = nome.to_lowercase().ends_with(".mzml");
-    if let (Some(id), false) = (&c.canale, mzml) {
+    let mzml = name.to_lowercase().ends_with(".mzml");
+    if let (Some(id), false) = (&c.channel, mzml) {
         return Err(Error::new("err.canali.unknown").with("id", id));
     }
     if mzml {
@@ -96,19 +95,19 @@ fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
         let size = f.metadata().map_err(io)?.len();
         let mut m = Mzml::new(f, size);
         let chroms = m.chromatograms(scans_end)?;
-        if let Some(id) = &c.canale {
+        if let Some(id) = &c.channel {
             return match c.rt {
                 Some((a, b)) => mzlab_core::canali_uv::spettro(&mut m, id, a, b),
-                None => mzlab_core::canali_uv::traccia(&mut m, &chroms, id, c.n),
+                None => mzlab_core::canali_uv::trace(&mut m, &chroms, id, c.n),
             };
         }
         let facts = mzlab_core::iteminfo::facts_from(&mut m, scans_end, chroms.len() as i64, true)?;
-        r.pon_cromatogrammi(&nome, &chroms, &facts);
+        r.pon_cromatogrammi(&name, &chroms, &facts);
     } else {
         // the first sample, as the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`lettori_mzml::guscio`)
         let mut l = mzlab_lettori::apri(
             crate::flow_set::file_set(file)?,
-            &mzlab_core::lettori::Limiti::desktop(),
+            &mzlab_core::lettori::Limits::desktop(),
         )?;
         let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), 0)?;
         let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
@@ -116,7 +115,7 @@ fn leggi(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
         let mut m = Mzml::new(shell, size);
         let chroms = m.chromatograms(end)?;
         let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
-        r.pon_cromatogrammi(&nome, &chroms, &facts);
+        r.pon_cromatogrammi(&name, &chroms, &facts);
     }
     Ok(r.canali().json())
 }
@@ -132,7 +131,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-canali{k}", std::process::id()));
     let r = std::fs::create_dir_all(&tmp)
         .map_err(io)
-        .and_then(|_| leggi(&c, &tmp));
+        .and_then(|_| read(&c, &tmp));
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
         Err(e) => Outcome::fail(&e.to_string()),

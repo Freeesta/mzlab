@@ -1,5 +1,5 @@
 use super::*;
-use crate::campioni::Campione;
+use crate::campioni::Sample;
 use crate::json::parse;
 
 const EXAMPLE: &str = include_str!("../../../../tests/data/mzrun/record.mzrun.json");
@@ -8,11 +8,11 @@ fn sha(c: char) -> String {
     c.to_string().repeat(64)
 }
 
-fn sample(file: &str, sha: &str, order: u32) -> Campione {
-    Campione::new(file, sha, order)
+fn sample(file: &str, sha: &str, order: u32) -> Sample {
+    Sample::new(file, sha, order)
 }
 
-fn parts_text() -> (String, String, Vec<Campione>) {
+fn parts_text() -> (String, String, Vec<Sample>) {
     let plan = format!(
         r#"{{"format":"mzflow/2","inputs":[{{"name":"S01","sha256":"{}","bytes":10,"type":"mzml"}}],"steps":[{{"id":"detect","step":"features.detect@1","in":{{"source":["file:S01"]}}}}]}}"#,
         sha('a')
@@ -130,7 +130,7 @@ fn an_input_without_a_role_or_a_run_without_a_commit_does_not_build() {
         parse(plan.as_bytes()).unwrap(),
         parse(prov.as_bytes()).unwrap(),
     );
-    let mk = |v: &Value, roles: &[Campione]| {
+    let mk = |v: &Value, roles: &[Sample]| {
         build(&Parts {
             plan: &p,
             prov: v,
@@ -221,11 +221,14 @@ fn a_preset_at_msn_graph_1_applies_as_2_with_migrated_changes() {
 
 #[test]
 fn a_preset_with_nothing_to_migrate_keeps_its_content() {
-    let text = migrate(PRESET.as_bytes()).unwrap();
+    // the example preset at the current version of its step (it is saved at features.detect@1, which migrates)
+    let current = PRESET.replace("features.detect@1", "features.detect@2");
+    let text = migrate(current.as_bytes()).unwrap();
     assert_eq!(
         text,
-        crate::flow::value_text(&parse(PRESET.as_bytes()).unwrap()) + "\n"
+        crate::flow::value_text(&parse(current.as_bytes()).unwrap()) + "\n"
     );
+    assert_ne!(migrate(PRESET.as_bytes()).unwrap(), text);
     assert_eq!(
         migrate(b"{\"schema\":\"mzrun/1\",\"min_reader\":2}")
             .unwrap_err()

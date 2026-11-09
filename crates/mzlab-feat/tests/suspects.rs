@@ -1,4 +1,4 @@
-//! `suspects::Suspects` answers like `leggi_sospetti().cerca` of Python on a synthetic mini index (`tools/sospetti_riferimento.py`; skipped without
+//! `suspects::Suspects` answers like `read_suspects().cerca` of Python on a synthetic mini index (`tools/sospetti_riferimento.py`; skipped without
 //! python3, `MZLAB_GOLDEN_STRICT=1` fails instead), rejects bad files, and searches 10^6 synthetic rows in well under a millisecond.
 //! The `listings` extension (flag bit 0) gives the same JSON as the reference reader; a v1 file without the flag has none.
 

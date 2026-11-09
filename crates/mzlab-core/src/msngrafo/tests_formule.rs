@@ -1,4 +1,4 @@
-use super::tests::{arco, grafo_con, grafo_spostato, ion, trova, Strumento};
+use super::tests::{edge, find, graph_with, ion, shifted_graph, Strumento};
 use super::*;
 
 /// The fragments of the synthetic infusion (`tests::sintetico`) and their formulas.
@@ -6,77 +6,77 @@ const FRAMMENTI: [&str; 7] = [
     "C6H8N3O", "C5H8N3", "C5H6N3O", "C5H5N2O", "C4H7N2", "C3H5N2", "C2H4N",
 ];
 
-fn con(formula: &str) -> Opzioni {
-    Opzioni {
+fn con(formula: &str) -> Options {
+    Options {
         formula: Some(formula.into()),
-        ..Opzioni::default()
+        ..Options::default()
     }
 }
 
-fn f(g: &Grafo, i: usize) -> &FormulaNodo {
+fn f(g: &Graph, i: usize) -> &NodeFormula {
     g.nodi[i].formula.as_ref().expect("a formula")
 }
 
 /// The node whose candidates include `formula` (the m/z may be shifted).
-fn nodo(g: &Grafo, formula: &str) -> Option<usize> {
+fn node(g: &Graph, formula: &str) -> Option<usize> {
     g.nodi.iter().position(|n| {
         n.formula
             .as_ref()
-            .is_some_and(|x| x.candidati.iter().any(|c| c.formula == formula))
+            .is_some_and(|x| x.candidates.iter().any(|c| c.formula == formula))
     })
 }
 
-fn chiavi(g: &Grafo) -> Vec<(&str, Option<usize>)> {
+fn keys(g: &Graph) -> Vec<(&str, Option<usize>)> {
     g.avvisi.iter().map(|a| (a.chiave, a.nodo)).collect()
 }
 
-fn radice(g: &Grafo) -> usize {
+fn root(g: &Graph) -> usize {
     g.nodi
         .iter()
         .position(|n| {
             n.formula
                 .as_ref()
-                .is_some_and(|x| x.fonte == Some("radice"))
+                .is_some_and(|x| x.provenance == Some("radice"))
         })
         .unwrap()
 }
 
 #[test]
 fn every_fragment_gets_its_sub_formula() {
-    let o = Opzioni {
+    let o = Options {
         smiles: Some("CN1C=NC2=C1C(=O)N(C(=O)N2C)C".into()),
         ..con("C8H10N4O2+H")
     };
-    let (g, j) = grafo_spostato(&o, &[0, 1, 2, 3], false, 0.0);
+    let (g, j) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
     let ione = g.ione.as_ref().unwrap();
     assert_eq!(ione.formula, "C8H11N4O2");
     assert!(ione.ppm.abs() < 0.01);
-    let r = f(&g, trova(&g, "C8H11N4O2"));
+    let r = f(&g, find(&g, "C8H11N4O2"));
     assert_eq!(
-        (r.scelta.as_deref(), r.fonte),
+        (r.choice.as_deref(), r.provenance),
         (Some("C8H11N4O2"), Some("radice"))
     );
-    assert_eq!(r.candidati[0].dbe, 5.5);
+    assert_eq!(r.candidates[0].dbe, 5.5);
     for x in FRAMMENTI {
-        let n = f(&g, trova(&g, x));
+        let n = f(&g, find(&g, x));
         assert_eq!(
-            (n.scelta.as_deref(), n.fonte),
+            (n.choice.as_deref(), n.provenance),
             (Some(x), Some("unica")),
             "{n:?}"
         );
-        let c = &n.candidati[0];
-        assert!(c.pari && c.ppm.abs() < 0.01 && c.finestra == 10.0 && c.prove.is_empty());
+        let c = &n.candidates[0];
+        assert!(c.even && c.ppm.abs() < 0.01 && c.window == 10.0 && c.prove.is_empty());
     }
     assert_eq!(g.nodi.len(), 8);
     assert_eq!(g.scartati.formula, 0);
-    assert!(chiavi(&g).is_empty(), "{:?}", g.avvisi);
+    assert!(keys(&g).is_empty(), "{:?}", g.avvisi);
     // the M+1 of the 138 is in its spectrum
-    assert!((g.nodi[trova(&g, "C6H8N3O")].m1.unwrap() - 7.0).abs() < 1e-9);
+    assert!((g.nodi[find(&g, "C6H8N3O")].m1.unwrap() - 7.0).abs() < 1e-9);
     // the losses: a known one under its usual name, the others in Hill order
-    let perdita = |a: &str, b: &str| arco(&g, a, b).unwrap().formula.clone().unwrap().0;
-    assert_eq!(perdita("C6H8N3O", "C5H8N3"), "CO");
-    assert_eq!(perdita("C5H8N3", "C4H7N2"), "HCN");
-    assert_eq!(perdita("C8H11N4O2", "C6H8N3O"), "C2H3NO");
+    let loss = |a: &str, b: &str| edge(&g, a, b).unwrap().formula.clone().unwrap().0;
+    assert_eq!(loss("C6H8N3O", "C5H8N3"), "CO");
+    assert_eq!(loss("C5H8N3", "C4H7N2"), "HCN");
+    assert_eq!(loss("C8H11N4O2", "C6H8N3O"), "C2H3NO");
     let v = crate::json::parse(j.as_bytes()).unwrap();
     assert_eq!(
         v.get("ione").unwrap().get("formula").unwrap().str(),
@@ -90,14 +90,14 @@ fn every_fragment_gets_its_sub_formula() {
 
 #[test]
 fn the_ion_can_be_typed_in_several_ways() {
-    let base = grafo_spostato(&con("C8H11N4O2+"), &[0, 1, 2, 3], false, 0.0).0;
+    let base = shifted_graph(&con("C8H11N4O2+"), &[0, 1, 2, 3], false, 0.0).0;
     for t in [
         "C8H11N4O2",
         "C8H11N4O2 [M]+",
         "C8H10N4O2 [M+H]+",
         "C8H10N4O2+H",
     ] {
-        let g = grafo_spostato(&con(t), &[0, 1, 2, 3], false, 0.0).0;
+        let g = shifted_graph(&con(t), &[0, 1, 2, 3], false, 0.0).0;
         assert_eq!(g, base, "{t}");
     }
 }
@@ -110,8 +110,8 @@ fn an_ion_of_the_other_polarity_or_unreadable_is_noted() {
         ("C8Xx", "warn.msngrafo.badFormula"),
         ("C9H13N4O2", "warn.msngrafo.rootMissing"),
     ] {
-        let g = grafo_spostato(&con(t), &[0, 1, 2, 3], false, 0.0).0;
-        assert_eq!(chiavi(&g), vec![(k, None)], "{t}");
+        let g = shifted_graph(&con(t), &[0, 1, 2, 3], false, 0.0).0;
+        assert_eq!(keys(&g), vec![(k, None)], "{t}");
         assert!(g.nodi.iter().all(|n| n.formula.is_none()) && g.nodi.len() == 8);
     }
 }
@@ -119,44 +119,44 @@ fn an_ion_of_the_other_polarity_or_unreadable_is_noted() {
 #[test]
 fn below_mz_150_a_wider_window_needs_an_evidence() {
     // every m/z off by 15 ppm: out of the 10 ppm window, inside the 20 ppm one below m/z 150
-    let (g, _) = grafo_spostato(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0);
+    let (g, _) = shifted_graph(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0);
     assert_eq!(
-        chiavi(&g),
-        vec![("warn.msngrafo.rootMissing", Some(radice(&g)))]
+        keys(&g),
+        vec![("warn.msngrafo.rootMissing", Some(root(&g)))]
     );
-    let prove = |x: &str| {
-        let n = f(&g, nodo(&g, x).unwrap_or_else(|| panic!("{x}")));
-        let c = &n.candidati[0];
-        assert!((c.ppm - 15.0).abs() < 0.1 && c.finestra == 20.0, "{c:?}");
+    let evidence = |x: &str| {
+        let n = f(&g, node(&g, x).unwrap_or_else(|| panic!("{x}")));
+        let c = &n.candidates[0];
+        assert!((c.ppm - 15.0).abs() < 0.1 && c.window == 20.0, "{c:?}");
         c.prove.clone()
     };
     // the 138 by its M+1, the 110 and the 83 by a known loss (CO, HCN)
-    assert_eq!(prove("C6H8N3O"), vec!["isotopi"]);
-    assert_eq!(prove("C5H8N3"), vec!["perdita"]);
-    assert_eq!(prove("C4H7N2"), vec!["perdita"]);
+    assert_eq!(evidence("C6H8N3O"), vec!["isotopi"]);
+    assert_eq!(evidence("C5H8N3"), vec!["perdita"]);
+    assert_eq!(evidence("C4H7N2"), vec!["perdita"]);
     // no evidence for the others: they leave the graph...
     for x in ["C5H6N3O", "C5H5N2O", "C3H5N2", "C2H4N"] {
-        assert!(nodo(&g, x).is_none(), "{x}");
+        assert!(node(&g, x).is_none(), "{x}");
     }
     // ...but the shifted 124 is within 10 ppm of another sub-formula of the root: a candidate, not an identification
-    let n124 = f(&g, nodo(&g, "C7H8O2").unwrap());
-    assert!(n124.candidati[0].ppm.abs() < 10.0 && n124.candidati[0].prove.is_empty());
+    let n124 = f(&g, node(&g, "C7H8O2").unwrap());
+    assert!(n124.candidates[0].ppm.abs() < 10.0 && n124.candidates[0].prove.is_empty());
     assert_eq!((g.nodi.len(), g.scartati.formula), (5, 3));
     // two evidences asked: a candidate of the wide window needs both
-    let o = Opzioni {
-        prove_min: 2,
+    let o = Options {
+        evidence_min: 2,
         ..con("C8H11N4O2")
     };
-    let (g, _) = grafo_spostato(&o, &[0, 1, 2, 3], false, 15.0);
-    assert!(nodo(&g, "C6H8N3O").is_none());
+    let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 15.0);
+    assert!(node(&g, "C6H8N3O").is_none());
     for n in g
         .nodi
         .iter()
         .filter_map(|n| n.formula.as_ref())
-        .filter(|n| n.fonte != Some("radice"))
+        .filter(|n| n.provenance != Some("radice"))
     {
         assert!(
-            n.candidati
+            n.candidates
                 .iter()
                 .all(|c| c.ppm.abs() <= 10.0 || c.prove.len() >= 2),
             "{n:?}"
@@ -167,13 +167,13 @@ fn below_mz_150_a_wider_window_needs_an_evidence() {
 #[test]
 fn an_isolated_precursor_left_unexplained_is_noted() {
     // the 138 is isolated: out of every window, it leaves the graph with a note on its nodes of the tree
-    let o = Opzioni {
+    let o = Options {
         ppm_formula: 3.0,
-        ppm_basso: 3.0,
+        ppm_low: 3.0,
         ..con("C8H11N4O2")
     };
-    let (g, _) = grafo_spostato(&o, &[0, 1, 2, 3], false, 15.0);
-    let tolti: Vec<(&str, &str)> = g
+    let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 15.0);
+    let removed: Vec<(&str, &str)> = g
         .avvisi
         .iter()
         .map(|a| (a.chiave, a.albero.as_str()))
@@ -182,87 +182,87 @@ fn an_isolated_precursor_left_unexplained_is_noted() {
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@cid30"),
         ("warn.msngrafo.isolatedUnexplained", "195@cid30>138@hcd45"),
     ];
-    assert!(attesi.iter().all(|x| tolti.contains(x)), "{tolti:?}");
-    assert!(nodo(&g, "C6H8N3O").is_none());
+    assert!(attesi.iter().all(|x| removed.contains(x)), "{removed:?}");
+    assert!(node(&g, "C6H8N3O").is_none());
 }
 
 #[test]
 fn most_intensity_unexplained_is_noted_on_the_graph_only_then() {
-    let nota = |g: &Grafo| {
+    let note = |g: &Graph| {
         g.avvisi
             .iter()
             .any(|a| a.chiave == "warn.msngrafo.mostUnexplained")
     };
-    let (bene, _) = grafo_spostato(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 0.0);
-    assert!(!nota(&bene), "{:?}", bene.avvisi);
+    let (good, _) = shifted_graph(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 0.0);
+    assert!(!note(&good), "{:?}", good.avvisi);
     // fragments 15 ppm off with a 3 ppm window: none has a candidate
-    let stretta = Opzioni {
+    let stretta = Options {
         ppm_formula: 3.0,
-        ppm_basso: 3.0,
+        ppm_low: 3.0,
         ..con("C8H11N4O2")
     };
-    let (male, _) = grafo_spostato(&stretta, &[0, 1, 2, 3], false, 15.0);
-    assert!(nota(&male), "{:?} {:?}", male.avvisi, male.scartati);
+    let (bad, _) = shifted_graph(&stretta, &[0, 1, 2, 3], false, 15.0);
+    assert!(note(&bad), "{:?} {:?}", bad.avvisi, bad.scartati);
 }
 
 #[test]
 fn several_candidates_are_listed_by_ppm_and_none_is_chosen() {
-    let o = Opzioni {
+    let o = Options {
         ppm_formula: 300.0,
-        ppm_basso: 300.0,
+        ppm_low: 300.0,
         ..con("C8H11N4O2")
     };
-    let (g, _) = grafo_spostato(&o, &[0, 1, 2, 3], false, 0.0);
-    let n = f(&g, trova(&g, "C6H8N3O"));
+    let (g, _) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
+    let n = f(&g, find(&g, "C6H8N3O"));
     assert!(
-        n.candidati.len() >= 2 && n.scelta.is_none() && n.fonte.is_none(),
+        n.candidates.len() >= 2 && n.choice.is_none() && n.provenance.is_none(),
         "{n:?}"
     );
-    assert_eq!(n.candidati[0].formula, "C6H8N3O");
-    assert!(n.candidati.iter().any(|c| c.formula == "C5H6N4O"));
+    assert_eq!(n.candidates[0].formula, "C6H8N3O");
+    assert!(n.candidates.iter().any(|c| c.formula == "C5H6N4O"));
     assert!(n
-        .candidati
+        .candidates
         .windows(2)
         .all(|w| w[0].ppm.abs() <= w[1].ppm.abs()));
     // every candidate is under a candidate of each precursor
     let e = super::candidati::elementi(&crate::elements::parse_formula("C8H11N4O2").unwrap(), 1);
-    let conta = |s: &str| {
+    let count = |s: &str| {
         e.conta(&crate::elements::parse_formula(s).unwrap())
             .unwrap()
     };
     for a in &g.archi {
-        for c in &f(&g, a.a).candidati {
-            let sopra = &f(&g, a.da).candidati;
-            let ok = sopra
+        for c in &f(&g, a.a).candidates {
+            let above = &f(&g, a.da).candidates;
+            let ok = above
                 .iter()
-                .any(|q| super::candidati::sotto(&conta(&c.formula), &conta(&q.formula)));
-            assert!(ok, "{} under {:?}", c.formula, sopra);
+                .any(|q| super::candidati::below(&count(&c.formula), &count(&q.formula)));
+            assert!(ok, "{} under {:?}", c.formula, above);
         }
     }
     // with no choice, no formula of the losses
-    assert!(arco(&g, "C8H11N4O2", "C6H8N3O").unwrap().formula.is_none());
+    assert!(edge(&g, "C8H11N4O2", "C6H8N3O").unwrap().formula.is_none());
 }
 
 #[test]
 fn the_choice_of_the_user_wins_and_conflicts_are_noted() {
-    let o = Opzioni {
-        scelte: vec![
+    let o = Options {
+        choices: vec![
             (ion("C5H8N3"), "C5H8N3".into()),
             (ion("C4H7N2"), "C4H5NO".into()),
             (ion("C2H4N"), "C2H4Cl".into()),
         ],
         ..con("C8H11N4O2")
     };
-    let (g, j) = grafo_spostato(&o, &[0, 1, 2, 3], false, 0.0);
-    assert_eq!(f(&g, trova(&g, "C5H8N3")).fonte, Some("utente"));
-    let k = trova(&g, "C4H7N2");
-    assert_eq!(f(&g, k).scelta.as_deref(), Some("C4H5NO"));
-    assert!(arco(&g, "C5H8N3", "C4H7N2").unwrap().formula.is_none());
+    let (g, j) = shifted_graph(&o, &[0, 1, 2, 3], false, 0.0);
+    assert_eq!(f(&g, find(&g, "C5H8N3")).provenance, Some("utente"));
+    let k = find(&g, "C4H7N2");
+    assert_eq!(f(&g, k).choice.as_deref(), Some("C4H5NO"));
+    assert!(edge(&g, "C5H8N3", "C4H7N2").unwrap().formula.is_none());
     assert_eq!(
-        chiavi(&g),
+        keys(&g),
         vec![
             ("warn.msngrafo.userConflict", Some(k)),
-            ("warn.msngrafo.userConflict", Some(trova(&g, "C2H4N"))),
+            ("warn.msngrafo.userConflict", Some(find(&g, "C2H4N"))),
         ]
     );
     // the choices are in the JSON, so the graph can be rebuilt
@@ -286,7 +286,7 @@ fn a_negative_infusion_is_read_the_same_way() {
         "C6H8N4 [M+CH3COO]-",
         "C6H8N4+CH3COO",
     ] {
-        let (g, _) = grafo_con(&con(t), &[0, 1, 2, 3], false, 0.0, &neg);
+        let (g, _) = graph_with(&con(t), &[0, 1, 2, 3], false, 0.0, &neg);
         let ione = g
             .ione
             .as_ref()
@@ -295,29 +295,29 @@ fn a_negative_infusion_is_read_the_same_way() {
         // the electron is added, not taken: the anions are 2 electrons above the cations
         assert!(ione.ppm.abs() < 0.01, "{t}: {}", ione.ppm);
         for x in FRAMMENTI {
-            let n = f(&g, nodo(&g, x).unwrap_or_else(|| panic!("{t}: {x}")));
-            assert!(n.candidati[0].ppm.abs() < 0.01 && n.scelta.as_deref() == Some(x));
+            let n = f(&g, node(&g, x).unwrap_or_else(|| panic!("{t}: {x}")));
+            assert!(n.candidates[0].ppm.abs() < 0.01 && n.choice.as_deref() == Some(x));
         }
-        assert!(chiavi(&g).is_empty(), "{t}: {:?}", g.avvisi);
+        assert!(keys(&g).is_empty(), "{t}: {:?}", g.avvisi);
     }
     // a positive adduct on a negative file
-    let (g, _) = grafo_con(&con("C8H10N4O2 [M+H]+"), &[0, 1, 2, 3], false, 0.0, &neg);
-    assert_eq!(chiavi(&g), vec![("warn.msngrafo.polarity", None)]);
+    let (g, _) = graph_with(&con("C8H10N4O2 [M+H]+"), &[0, 1, 2, 3], false, 0.0, &neg);
+    assert_eq!(keys(&g), vec![("warn.msngrafo.polarity", None)]);
 }
 
 #[test]
 fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
     // 15 ppm off (the wide window): the 138 has only its M+1 as evidence
     let stretta = Strumento {
-        larghezza: Some(1.0),
+        width: Some(1.0),
         ..Strumento::default()
     };
-    let (g, j) = grafo_con(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &stretta);
-    assert!(nodo(&g, "C6H8N3O").is_none());
-    let r = radice(&g);
-    assert_eq!(g.nodi[r].larghezza, Some(1.0));
-    let n124 = &g.nodi[nodo(&g, "C7H8O2").unwrap()];
-    assert_eq!(n124.a_monte, Some(1.0));
+    let (g, j) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &stretta);
+    assert!(node(&g, "C6H8N3O").is_none());
+    let r = root(&g);
+    assert_eq!(g.nodi[r].width, Some(1.0));
+    let n124 = &g.nodi[node(&g, "C7H8O2").unwrap()];
+    assert_eq!(n124.upstream, Some(1.0));
     let v = crate::json::parse(j.as_bytes()).unwrap();
     let iso = |i: usize| {
         v.get("nodi").unwrap().arr()[i]
@@ -328,29 +328,29 @@ fn behind_a_narrow_window_the_isotopes_are_no_evidence() {
             .clone()
     };
     assert_eq!(
-        iso(nodo(&g, "C7H8O2").unwrap()),
+        iso(node(&g, "C7H8O2").unwrap()),
         crate::json::Value::Bool(true)
     );
     // a window that takes the M+1: the evidence counts
-    let larga = Strumento {
-        larghezza: Some(3.0),
+    let wide = Strumento {
+        width: Some(3.0),
         ..Strumento::default()
     };
-    let (g, _) = grafo_con(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &larga);
-    let n = f(&g, nodo(&g, "C6H8N3O").unwrap());
-    assert_eq!(n.candidati[0].prove, vec!["isotopi"]);
+    let (g, _) = graph_with(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0, &wide);
+    let n = f(&g, node(&g, "C6H8N3O").unwrap());
+    assert_eq!(n.candidates[0].prove, vec!["isotopi"]);
 }
 
 #[test]
 fn the_unexplained_peaks_are_counted_on_their_precursor() {
-    let (g, _) = grafo_spostato(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0);
-    let ns = |x: &str| g.nodi[nodo(&g, x).unwrap()].non_spiegati.clone().unwrap();
+    let (g, _) = shifted_graph(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 15.0);
+    let ns = |x: &str| g.nodi[node(&g, x).unwrap()].unexplained.clone().unwrap();
     // the 138 lost the 109 of its MS3; the 110 lost the 69 and the 42 of its MS4, the stronger first
     assert_eq!(ns("C6H8N3O").n, 1);
     let n110 = ns("C5H8N3");
-    assert_eq!((n110.n, n110.picchi.len()), (2, 2));
-    assert!(n110.picchi[0].1 >= n110.picchi[1].1);
-    assert!(g.nodi[radice(&g)].non_spiegati.is_none());
+    assert_eq!((n110.n, n110.peaks.len()), (2, 2));
+    assert!(n110.peaks[0].1 >= n110.peaks[1].1);
+    assert!(g.nodi[root(&g)].unexplained.is_none());
     // in the spectra a peak with no node is an unexplained one: the clean spectrum is the others
     let ms4 = g
         .spettri
@@ -358,9 +358,9 @@ fn the_unexplained_peaks_are_counted_on_their_precursor() {
         .find(|s| s.albero == "195@cid30>138@cid30>110@cid35")
         .unwrap();
     assert_eq!(ms4.picchi.iter().filter(|p| p.2.is_none()).count(), 2);
-    assert_eq!(ms4.precursore, nodo(&g, "C5H8N3"));
+    assert_eq!(ms4.precursore, node(&g, "C5H8N3"));
     // without a formula every peak has its node
-    let (g0, _) = grafo_spostato(&Opzioni::default(), &[0, 1, 2, 3], false, 15.0);
+    let (g0, _) = shifted_graph(&Options::default(), &[0, 1, 2, 3], false, 15.0);
     assert_eq!(g0.spettri.len(), 4);
     assert!(g0
         .spettri

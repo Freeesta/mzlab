@@ -6,7 +6,7 @@ use super::{record, Artifact, Ctx, Outcome, Results, Run};
 use crate::budget::sha256_hex;
 use crate::error::{Error, Result};
 use crate::flow::sched::{JobId, Sched};
-use crate::flow::{check, corsa_build, parse, plan_json, prov_json, Agent, Mem, Platform, Uscita};
+use crate::flow::{check, corsa_build, parse, plan_json, prov_json, Agent, Mem, Output, Platform};
 use crate::json::{parse as parse_json, Value};
 use crate::step::{registry_from_value, DataType, Step};
 
@@ -51,10 +51,17 @@ fn mem(v: &Value) -> Option<Mem> {
     })
 }
 
-/// The outcome of one job from its report; a report with `error_key` is a failure.
+/// The outcome of one job from its report; a report with `error_key` (and its `params`) is a failure. `warnings` are the `warn.*` keys of the job and
+/// `file` what a per-file step says of its file, as the runner gives them.
 fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
     if let Some(key) = text(r, "error_key") {
-        return Err(Error::new(crate::error::intern(key)));
+        let mut e = Error::new(crate::error::intern(key));
+        if let Some(Value::Obj(kv)) = r.get("params") {
+            for (name, v) in kv {
+                e = e.with(crate::error::intern(name), v.str().ok_or_else(bad)?);
+            }
+        }
+        return Err(e);
     }
     let mut o = Outcome::default();
     for x in r.get("outputs").map_or(&[][..], Value::arr) {
@@ -73,12 +80,24 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
     o.ms = r.get("ms").and_then(Value::f64).unwrap_or(0.0);
     o.mem = r.get("mem").and_then(mem);
     o.cached = r.get("cached").and_then(Value::bool).unwrap_or(false);
+    for w in r.get("warnings").map_or(&[][..], Value::arr) {
+        o.warnings.push(w.str().ok_or_else(bad)?.to_string());
+    }
+    o.file = r
+        .get("file")
+        .filter(|v| matches!(v, Value::Obj(_)))
+        .cloned();
     Ok(o)
 }
 
 /// The record of `plan_text` run elsewhere, and the plan as `flow run` writes it (`plan.json`, whose SHA-256 the record names). `jobs` is the array of reports
 /// `{"instance","item"?, ...}` (see `outcome`); a job with no report counts as failed (`err.flow.worker`), as in `record`. The plan is checked as `execute` checks it.
 pub fn record_jobs(plan_text: &[u8], registry: &[Step], jobs: &str) -> Result<(Run, String)> {
+    record_reports(plan_text, registry, &parse_json(jobs.as_bytes())?)
+}
+
+/// `record_jobs` of the reports as read: the parameters of an error keep the order the runner gave them.
+fn record_reports(plan_text: &[u8], registry: &[Step], reports: &Value) -> Result<(Run, String)> {
     let plan = parse(plan_text)?;
     if let Some(p) = check(&plan, registry, Platform::current()).first() {
         return Err(Error::new("err.flow.check")
@@ -87,7 +106,6 @@ pub fn record_jobs(plan_text: &[u8], registry: &[Step], jobs: &str) -> Result<(R
     }
     let sched = Sched::new(&plan, registry, env!("CARGO_PKG_VERSION"), &[]);
     let ctx = Ctx::new(&plan, registry, &sched)?;
-    let reports = parse_json(jobs.as_bytes())?;
     let mut results = Results::new();
     for r in reports.arr() {
         let id = JobId::new(text(r, "instance").unwrap_or(""), text(r, "item"));
@@ -107,8 +125,8 @@ pub fn route(op: &str, body: &str, agent: &Agent) -> Result<String> {
         "prov" => {
             let plan = field("plan")?;
             let registry = registry_from_value(b.get("registry").ok_or_else(bad)?)?;
-            let jobs = crate::flow::value_text(b.get("jobs").ok_or_else(bad)?);
-            let (run, text) = record_jobs(plan.as_bytes(), &registry, &jobs)?;
+            let jobs = b.get("jobs").ok_or_else(bad)?;
+            let (run, text) = record_reports(plan.as_bytes(), &registry, jobs)?;
             Ok(prov_json(agent, Some(&sha256_hex(text.as_bytes())), &run))
         }
         "corsa" => {
@@ -119,9 +137,9 @@ pub fn route(op: &str, body: &str, agent: &Agent) -> Result<String> {
                 .iter()
                 .filter_map(|u| Some((text(u, "name")?, text(u, "text")?)))
                 .collect();
-            let uscite: Vec<Uscita> = kept
+            let uscite: Vec<Output> = kept
                 .iter()
-                .map(|(n, t)| Uscita {
+                .map(|(n, t)| Output {
                     name: n,
                     bytes: t.as_bytes(),
                 })

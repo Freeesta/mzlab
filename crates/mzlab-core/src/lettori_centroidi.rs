@@ -4,38 +4,38 @@
 
 use crate::centroidi::{self, Buf, Params};
 use crate::error::Result;
-use crate::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use crate::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use crate::mzml::{Chromatogram, Spectrum};
 use crate::mzmlwrite::{Header, SpectrumExtra};
 
 pub struct Centroidato {
-    l: Box<dyn Lettore>,
+    l: Box<dyn Reader>,
     params: Vec<Option<Params>>,
     buf: Buf,
     /// The scan last given by `grezza`, kept for the `scansione` that asks for the same one (the two versions of an index from one decoding).
-    ultima: Option<(usize, usize, Spectrum)>,
+    last: Option<(usize, usize, Spectrum)>,
 }
 
 impl Centroidato {
-    pub fn nuovo(l: Box<dyn Lettore>) -> Centroidato {
-        let n = l.campioni().len();
+    pub fn nuovo(l: Box<dyn Reader>) -> Centroidato {
+        let n = l.samples().len();
         Centroidato {
             l,
             params: vec![None; n],
             buf: Buf::default(),
-            ultima: None,
+            last: None,
         }
     }
 
     /// The reader underneath: the one of the version with the scans as the file has them (profile stays profile).
-    pub fn semplice(&mut self) -> &mut dyn Lettore {
+    pub fn simple(&mut self) -> &mut dyn Reader {
         &mut *self.l
     }
 
     /// Scan `k` of sample `c` as the reader gives it, decoded now and kept: the next `scansione(c, k)` centroids this one instead of decoding it again.
     pub fn grezza(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let s = self.l.scansione(c, k)?;
-        self.ultima = Some((c, k, s.clone()));
+        let s = self.l.scan(c, k)?;
+        self.last = Some((c, k, s.clone()));
         Ok(s)
     }
 
@@ -52,12 +52,12 @@ impl Centroidato {
 }
 
 /// The parameters of the peak picking of sample `c`, estimated on at most 64 equally spaced scans of its index.
-pub(crate) fn stima(l: &mut dyn Lettore, c: usize) -> Result<Params> {
-    let len = l.indice(c)?.len();
+pub(crate) fn stima(l: &mut dyn Reader, c: usize) -> Result<Params> {
+    let len = l.index(c)?.len();
     let n = len.min(64);
     let mut scans = Vec::new();
     for i in 0..n {
-        let s = l.scansione(c, i * len / n)?;
+        let s = l.scan(c, i * len / n)?;
         let y = s
             .wide
             .unwrap_or_else(|| s.intensity.iter().map(|&v| f64::from(v)).collect());
@@ -93,20 +93,23 @@ fn narrow(x: f64) -> f32 {
     x as f32
 }
 
-impl Lettore for Centroidato {
-    fn formato(&self) -> Formato {
-        self.l.formato()
+impl Reader for Centroidato {
+    fn format(&self) -> Format {
+        self.l.format()
     }
-    fn campioni(&self) -> &[Campione] {
-        self.l.campioni()
+    fn samples(&self) -> &[Sample] {
+        self.l.samples()
     }
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        self.l.indice(c)
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
+        self.l.index(c)
     }
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        let mut s = match self.ultima.take() {
+    fn index_without_tic(&mut self, c: usize) -> Result<&[ScanEntry]> {
+        self.l.index_without_tic(c)
+    }
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        let mut s = match self.last.take() {
             Some((cc, kk, s)) if cc == c && kk == k => s,
-            _ => self.l.scansione(c, k)?,
+            _ => self.l.scan(c, k)?,
         };
         if s.profile {
             let p = self.params(c)?;
@@ -114,28 +117,28 @@ impl Lettore for Centroidato {
         }
         Ok(s)
     }
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.l.intestazione(c, k)
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
+        self.l.scan_header(c, k)
     }
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        self.l.cromatogrammi(c)
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
+        self.l.chromatograms(c)
     }
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.l.cromatogramma(c, id)
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+        self.l.chromatogram(c, id)
     }
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.l.metodo(c)
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.l.method(c)
     }
     /// The header of the reader, marked as centroided (the step of the processing the mzML names).
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        let h = self.l.testata_mzml(c)?;
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
+        let h = self.l.mzml_header(c)?;
         Ok(h.map(|h| Header {
             centroided: true,
             ..h
         }))
     }
-    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
-        let h = self.l.testata_tabella(c)?;
+    fn table_header(&mut self, c: usize) -> Result<Option<Header>> {
+        let h = self.l.table_header(c)?;
         Ok(h.map(|h| Header {
             centroided: true,
             ..h
@@ -144,13 +147,13 @@ impl Lettore for Centroidato {
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.l.extra_mzml(s)
     }
-    fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
-        self.l.extra_scansione(c, k, s)
+    fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+        self.l.scan_extra(c, k, s)
     }
 }
 
 /// `l` with its profile scans as centroids.
-pub fn centroidato(l: Box<dyn Lettore>) -> Box<dyn Lettore> {
+pub fn centroidato(l: Box<dyn Reader>) -> Box<dyn Reader> {
     Box::new(Centroidato::nuovo(l))
 }
 

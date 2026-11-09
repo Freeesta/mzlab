@@ -1,12 +1,12 @@
 //! `qc.run_order@1`: the facts and warnings of the injection sequence on synthetic sample tables.
 
 use super::runorder_text;
-use mzlab_core::campioni::{self, Campione, Tabella};
+use mzlab_core::campioni::{self, Sample, Table};
 use mzlab_core::json::{parse, Value};
 
 /// A file of the table: name, role, injection order, batch and concentration.
-fn file(name: &str, kind: &str, order: u32, batch: &str, conc: Option<f64>) -> Campione {
-    let mut c = Campione::new(name, "", order);
+fn file(name: &str, kind: &str, order: u32, batch: &str, conc: Option<f64>) -> Sample {
+    let mut c = Sample::new(name, "", order);
     c.kind = kind.into();
     c.batch = batch.into();
     c.conc = conc;
@@ -14,14 +14,7 @@ fn file(name: &str, kind: &str, order: u32, batch: &str, conc: Option<f64>) -> C
 }
 
 /// A batch of `n` injections starting at `from`: a QC every `qc_every`, a blank first (when `blank`) and the standards at `levels`.
-fn batch(
-    name: &str,
-    from: u32,
-    n: u32,
-    qc_every: u32,
-    blank: bool,
-    levels: &[f64],
-) -> Vec<Campione> {
+fn batch(name: &str, from: u32, n: u32, qc_every: u32, blank: bool, levels: &[f64]) -> Vec<Sample> {
     (0..n)
         .map(|k| {
             let id = format!("{name}{k:02}");
@@ -38,12 +31,12 @@ fn batch(
         .collect()
 }
 
-fn v2(cs: &[Campione]) -> Vec<u8> {
+fn v2(cs: &[Sample]) -> Vec<u8> {
     campioni::to_json(cs).into_bytes()
 }
 
-fn v3(cs: &[Campione]) -> Vec<u8> {
-    campioni::to_json3(&Tabella {
+fn v3(cs: &[Sample]) -> Vec<u8> {
+    campioni::to_json3(&Table {
         campioni: cs.to_vec(),
         colonne: Vec::new(),
     })

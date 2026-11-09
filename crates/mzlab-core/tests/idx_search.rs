@@ -23,9 +23,9 @@ impl ReadAt for Counting {
 
 fn index_bytes() -> Vec<u8> {
     let mut l = Finto::vario(900, 400, 4242);
-    let p = upload::prepare_lettore(&mut l, 0, &[], "x.mzML").unwrap();
+    let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").unwrap();
     let mut out = Cursor::new(Vec::new());
-    mzidx::build_lettore(&p.table, &mut l, 0, &mut out, mzidx::DEFAULT_BUDGET).unwrap();
+    mzidx::build_reader(&p.table, &mut l, 0, &mut out, mzidx::DEFAULT_BUDGET).unwrap();
     out.into_inner()
 }
 

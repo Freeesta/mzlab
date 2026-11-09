@@ -26,16 +26,16 @@ pub(crate) const WARN: &str = "#E69F00";
 pub(crate) struct Cand {
     pub(crate) formula: String,
     pub(crate) ppm: f64,
-    pub(crate) prove: Vec<String>,
+    pub(crate) evidence: Vec<String>,
 }
 
 pub(crate) struct Ion {
     pub(crate) id: String,
-    pub(crate) livello: i64,
+    pub(crate) level: i64,
     pub(crate) mz: f64,
-    pub(crate) isolato: bool,
+    pub(crate) isolated: bool,
     pub(crate) cands: Vec<Cand>,
-    pub(crate) scelta: Option<String>,
+    pub(crate) choice: Option<String>,
     pub(crate) has_formula: bool,
 }
 
@@ -44,37 +44,37 @@ pub(crate) struct Pos {
     pub(crate) rel: Option<f64>,
     pub(crate) da: Option<String>,
     pub(crate) entranti: i64,
-    pub(crate) comune: bool,
+    pub(crate) common: bool,
     pub(crate) col: i64,
-    pub(crate) riga: i64,
-    pub(crate) anello: i64,
+    pub(crate) row: i64,
+    pub(crate) ring: i64,
     pub(crate) angolo: f64,
 }
 
-pub(crate) struct Misura {
+pub(crate) struct Measure {
     pub(crate) livello: i64,
     pub(crate) att: Option<String>,
     pub(crate) ce: Option<f64>,
     pub(crate) rel: f64,
 }
 
-pub(crate) struct Arco {
+pub(crate) struct Edge {
     pub(crate) da: String,
     pub(crate) a: String,
-    pub(crate) misure: Vec<Misura>,
+    pub(crate) measures: Vec<Measure>,
     pub(crate) formula: Option<String>,
-    pub(crate) da_massa: f64,
+    pub(crate) from_mass: f64,
     pub(crate) compat: Vec<String>,
-    pub(crate) regola: String,
+    pub(crate) rule: String,
 }
 
 /// Everything the drawing needs, read once from the graph.
 pub(crate) struct Scena {
-    pub(crate) ioni: Vec<Ion>,
+    pub(crate) ions: Vec<Ion>,
     pub(crate) pos: HashMap<String, Pos>,
-    pub(crate) archi: Vec<Arco>,
+    pub(crate) edges: Vec<Edge>,
     pub(crate) best: HashSet<String>,
-    pub(crate) carica: String,
+    pub(crate) charge: String,
     pub(crate) molfile: Option<String>,
     pub(crate) smiles: bool,
 }
@@ -92,7 +92,7 @@ pub(crate) fn n(v: &Value, k: &str) -> Option<f64> {
 }
 
 /// The rule ids shown under a loss: at most two (the weak ones tagged), `+n` for the rest; empty when no rule explains it.
-pub(crate) fn regola_di(j: &Value, da: &str, a: &str) -> String {
+pub(crate) fn rule_of(j: &Value, da: &str, a: &str) -> String {
     let Some(r) = j.get("regole").and_then(|r| r.get("archi")).and_then(|l| {
         l.arr()
             .iter()
@@ -138,8 +138,8 @@ pub(crate) fn regola_di(j: &Value, da: &str, a: &str) -> String {
     )
 }
 
-fn leggi_ioni(j: &Value) -> Result<Vec<Ion>> {
-    let mut ioni = Vec::new();
+fn read_ions(j: &Value) -> Result<Vec<Ion>> {
+    let mut ions = Vec::new();
     for x in j.get("nodi").map_or(&[][..], |a| a.arr()) {
         let f = x.get("formula").filter(|f| !f.is_null());
         let cands = f
@@ -149,7 +149,7 @@ fn leggi_ioni(j: &Value) -> Result<Vec<Ion>> {
             .map(|c| Cand {
                 formula: s(c, "formula").unwrap_or_default(),
                 ppm: n(c, "ppm").unwrap_or(0.0),
-                prove: c
+                evidence: c
                     .get("prove")
                     .map_or(&[][..], |p| p.arr())
                     .iter()
@@ -157,25 +157,25 @@ fn leggi_ioni(j: &Value) -> Result<Vec<Ion>> {
                     .collect(),
             })
             .collect();
-        ioni.push(Ion {
+        ions.push(Ion {
             id: s(x, "id").ok_or_else(bad)?,
-            livello: n(x, "livello").unwrap_or(0.0) as i64,
+            level: n(x, "livello").unwrap_or(0.0) as i64,
             mz: n(x, "mz").ok_or_else(bad)?,
-            isolato: x.get("isolato").and_then(|b| b.bool()).unwrap_or(false),
+            isolated: x.get("isolato").and_then(|b| b.bool()).unwrap_or(false),
             cands,
-            scelta: f.and_then(|f| s(f, "scelta")),
+            choice: f.and_then(|f| s(f, "scelta")),
             has_formula: f.is_some(),
         });
     }
-    Ok(ioni)
+    Ok(ions)
 }
 
-fn leggi_pos(vista: &Value) -> Result<HashMap<String, Pos>> {
+fn read_pos(view: &Value) -> Result<HashMap<String, Pos>> {
     let mut pos = HashMap::new();
-    for x in vista.get("nodi").map_or(&[][..], |a| a.arr()) {
+    for x in view.get("nodi").map_or(&[][..], |a| a.arr()) {
         let best = x.get("best");
         let albero = x.get("albero");
-        let radiale = x.get("radiale").filter(|r| !r.is_null());
+        let radial = x.get("radiale").filter(|r| !r.is_null());
         pos.insert(
             s(x, "id").ok_or_else(bad)?,
             Pos {
@@ -189,28 +189,28 @@ fn leggi_pos(vista: &Value) -> Result<HashMap<String, Pos>> {
                 rel: n(x, "rel"),
                 da: best.and_then(|b| s(b, "da")),
                 entranti: n(x, "entranti").unwrap_or(0.0) as i64,
-                comune: x.get("comune").and_then(|b| b.bool()).unwrap_or(false),
+                common: x.get("comune").and_then(|b| b.bool()).unwrap_or(false),
                 col: albero.and_then(|a| n(a, "col")).unwrap_or(0.0) as i64,
-                riga: albero.and_then(|a| n(a, "riga")).unwrap_or(0.0) as i64,
-                anello: radiale.and_then(|a| n(a, "anello")).unwrap_or(0.0) as i64,
-                angolo: radiale.and_then(|a| n(a, "angolo")).unwrap_or(0.0),
+                row: albero.and_then(|a| n(a, "riga")).unwrap_or(0.0) as i64,
+                ring: radial.and_then(|a| n(a, "anello")).unwrap_or(0.0) as i64,
+                angolo: radial.and_then(|a| n(a, "angolo")).unwrap_or(0.0),
             },
         );
     }
     Ok(pos)
 }
 
-fn leggi_archi(j: &Value) -> Result<Vec<Arco>> {
-    let mut archi = Vec::new();
+fn read_edges(j: &Value) -> Result<Vec<Edge>> {
+    let mut edges = Vec::new();
     for a in j.get("archi").map_or(&[][..], |a| a.arr()) {
         let (da, to) = (s(a, "da").ok_or_else(bad)?, s(a, "a").ok_or_else(bad)?);
         let p = a.get("perdita");
-        archi.push(Arco {
-            misure: a
+        edges.push(Edge {
+            measures: a
                 .get("misure")
                 .map_or(&[][..], |m| m.arr())
                 .iter()
-                .map(|m| Misura {
+                .map(|m| Measure {
                     livello: n(m, "livello").unwrap_or(0.0) as i64,
                     att: s(m, "att"),
                     ce: n(m, "ce"),
@@ -218,29 +218,29 @@ fn leggi_archi(j: &Value) -> Result<Vec<Arco>> {
                 })
                 .collect(),
             formula: p.and_then(|p| s(p, "formula")),
-            da_massa: p.and_then(|p| n(p, "da_massa")).unwrap_or(0.0),
+            from_mass: p.and_then(|p| n(p, "da_massa")).unwrap_or(0.0),
             compat: p
                 .and_then(|p| p.get("compatibile"))
                 .map_or(&[][..], |c| c.arr())
                 .iter()
                 .filter_map(|c| c.str().map(str::to_string))
                 .collect(),
-            regola: regola_di(j, &da, &to),
+            rule: rule_of(j, &da, &to),
             da,
             a: to,
         });
     }
-    Ok(archi)
+    Ok(edges)
 }
 
 pub(crate) fn scena(graph: &str) -> Result<Scena> {
     let done = mzlab_core::msngrafo::completa(graph).map_err(|_| bad())?;
     let j = parse(done.as_bytes()).map_err(|_| bad())?;
-    let vista = j.get("vista").ok_or_else(bad)?;
-    let ioni = leggi_ioni(&j)?;
-    let pos = leggi_pos(vista)?;
-    let archi = leggi_archi(&j)?;
-    let best = vista
+    let view = j.get("vista").ok_or_else(bad)?;
+    let ioni = read_ions(&j)?;
+    let pos = read_pos(view)?;
+    let archi = read_edges(&j)?;
+    let best = view
         .get("archi")
         .map_or(&[][..], |a| a.arr())
         .iter()
@@ -255,11 +255,11 @@ pub(crate) fn scena(graph: &str) -> Result<Scena> {
         .collect();
     let o = j.get("opzioni");
     Ok(Scena {
-        ioni,
+        ions: ioni,
         pos,
-        archi,
+        edges: archi,
         best,
-        carica: if n(&j, "polarita") == Some(-1.0) {
+        charge: if n(&j, "polarita") == Some(-1.0) {
             "-"
         } else {
             "+"

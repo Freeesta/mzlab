@@ -1,24 +1,24 @@
 //! The structure side of the rules of `fragrules/1`: each group and site on a small synthetic molecule, the products of the rules that compute one,
 //! and the counterexamples where a rule must stay silent. Synthetic structures only.
 
-use mzlab_core::msngrafo::{tabella_regole, Attesa};
+use mzlab_core::msngrafo::{tabella_regole, Expectation};
 use mzlab_feat::chem::grafo::Mol;
-use mzlab_feat::chem::regole::{attese, nomi_sconosciuti};
+use mzlab_feat::chem::regole::{attese, unknown_names};
 
-fn tutte(smiles: &str) -> Vec<Attesa> {
+fn all_of(smiles: &str) -> Vec<Expectation> {
     attese(smiles, tabella_regole()).expect("valid SMILES")
 }
 
 fn ids(smiles: &str) -> Vec<String> {
-    let mut v: Vec<String> = tutte(smiles).into_iter().map(|a| a.regola).collect();
+    let mut v: Vec<String> = all_of(smiles).into_iter().map(|a| a.rule).collect();
     v.dedup();
     v
 }
 
-fn prodotti(smiles: &str, regola: &str) -> Vec<String> {
-    let mut v: Vec<String> = tutte(smiles)
+fn products(smiles: &str, rule: &str) -> Vec<String> {
+    let mut v: Vec<String> = all_of(smiles)
         .into_iter()
-        .filter(|a| a.regola == regola)
+        .filter(|a| a.rule == rule)
         .map(|a| a.formula)
         .collect();
     v.sort();
@@ -27,7 +27,7 @@ fn prodotti(smiles: &str, regola: &str) -> Vec<String> {
 
 #[test]
 fn every_group_and_site_of_the_table_is_known() {
-    assert_eq!(nomi_sconosciuti(tabella_regole()), Vec::<String>::new());
+    assert_eq!(unknown_names(tabella_regole()), Vec::<String>::new());
 }
 
 #[test]
@@ -96,18 +96,18 @@ fn the_sites_are_not_found_where_the_structure_lacks_them() {
 
 #[test]
 fn the_rules_compute_their_products_from_the_structure() {
-    assert_eq!(prodotti("CCOC(=O)CC", "loss_alkene_ester"), ["C2H4"]);
-    assert_eq!(prodotti("CC(C)OC(=O)CC", "loss_alkene_ester"), ["C3H6"]);
-    assert_eq!(prodotti("CC1=CCCCC1", "rda_six_ring"), ["C2H4", "C5H8"]);
-    assert_eq!(prodotti("C(NC)c1ccccc1", "ion_tropylium"), ["C7H7"]);
-    assert_eq!(prodotti("CCCN", "ion_immonium_alpha"), ["CH4N"]);
+    assert_eq!(products("CCOC(=O)CC", "loss_alkene_ester"), ["C2H4"]);
+    assert_eq!(products("CC(C)OC(=O)CC", "loss_alkene_ester"), ["C3H6"]);
+    assert_eq!(products("CC1=CCCCC1", "rda_six_ring"), ["C2H4", "C5H8"]);
+    assert_eq!(products("C(NC)c1ccccc1", "ion_tropylium"), ["C7H7"]);
+    assert_eq!(products("CCCN", "ion_immonium_alpha"), ["CH4N"]);
     assert_eq!(
-        prodotti("CC(=O)c1ccccc1", "ion_acylium"),
+        products("CC(=O)c1ccccc1", "ion_acylium"),
         ["C2H3O", "C7H5O"]
     );
-    let t = tutte("CCOC(=O)CC");
-    assert!(t.iter().any(|a| a.regola == "ion_acylium" && a.ione));
-    assert!(t.iter().all(|a| a.regola != "loss_alkene_ester" || !a.ione));
+    let t = all_of("CCOC(=O)CC");
+    assert!(t.iter().any(|a| a.rule == "ion_acylium" && a.ione));
+    assert!(t.iter().all(|a| a.rule != "loss_alkene_ester" || !a.ione));
 }
 
 #[test]
@@ -127,11 +127,11 @@ fn a_rule_that_reads_the_structure_without_a_product_gives_nothing() {
 }
 
 /// How many of the observed neutral losses the rules expect of the structure.
-fn spiegate(smiles: &str, perdite: &[&str]) -> usize {
-    let t = tutte(smiles);
+fn explained(smiles: &str, losses: &[&str]) -> usize {
+    let t = all_of(smiles);
     let hill =
         |f: &str| mzlab_core::elements::fmt(&mzlab_core::elements::parse_formula(f).unwrap());
-    perdite
+    losses
         .iter()
         .filter(|p| t.iter().any(|a| !a.ione && a.formula == hill(p)))
         .count()
@@ -141,14 +141,14 @@ fn spiegate(smiles: &str, perdite: &[&str]) -> usize {
 fn the_true_structure_expects_more_of_the_observed_losses_than_its_decoy() {
     // A: an amino acid, [M+H]+ loses NH3, H2O and HCOOH; the decoy has the same formula and no acid
     let a = ["NH3", "H2O", "CH2O2"];
-    assert_eq!(spiegate("NCCCC(=O)O", &a), 3);
-    assert!(spiegate("OCC(N)CC=O", &a) < 3);
+    assert_eq!(explained("NCCCC(=O)O", &a), 3);
+    assert!(explained("OCC(N)CC=O", &a) < 3);
     // B: an ethyl ester of an N-isopropylbenzylamine loses propene and ethene
     let b = ["C3H6", "C2H4"];
-    assert_eq!(spiegate("CCOC(=O)c1ccc(cc1)CNC(C)C", &b), 2);
-    assert!(spiegate("COCc1ccc(cc1)CNCC", &b) < 2);
+    assert_eq!(explained("CCOC(=O)c1ccc(cc1)CNC(C)C", &b), 2);
+    assert!(explained("COCc1ccc(cc1)CNCC", &b) < 2);
     // C: a nitro-chloro-arene loses NO2, NO and HCl
     let c = ["NO2", "NO", "HCl"];
-    assert_eq!(spiegate("Clc1ccc(cc1)[N+](=O)[O-]", &c), 3);
-    assert!(spiegate("Clc1ccc(cc1)CCO", &c) < 3);
+    assert_eq!(explained("Clc1ccc(cc1)[N+](=O)[O-]", &c), 3);
+    assert!(explained("Clc1ccc(cc1)CCO", &c) < 3);
 }

@@ -7,27 +7,27 @@ use mzlab_core::error::Result;
 
 /// The `Cal Function N` polynomial of `_HEADER.TXT`. `T0` is no correction.
 #[derive(Debug, Clone, Default)]
-pub(super) struct Taratura {
+pub(super) struct Calibration {
     pub(super) coef: Vec<f64>,
     pub(super) t1: bool,
 }
 
-impl Taratura {
+impl Calibration {
     /// The `c0,c1,...,ck,T1` of a `Cal Function` line; `None` when the text is not that.
-    pub(super) fn da_testo(v: &str) -> Option<Taratura> {
-        let mut parti: Vec<&str> = v.split(',').map(str::trim).collect();
-        let tipo = parti.pop()?;
-        if tipo != "T0" && tipo != "T1" {
+    pub(super) fn from_text(v: &str) -> Option<Calibration> {
+        let mut parts: Vec<&str> = v.split(',').map(str::trim).collect();
+        let kind = parts.pop()?;
+        if kind != "T0" && kind != "T1" {
             return None;
         }
-        let coef: Option<Vec<f64>> = parti.iter().map(|p| p.parse().ok()).collect();
-        Some(Taratura {
+        let coef: Option<Vec<f64>> = parts.iter().map(|p| p.parse().ok()).collect();
+        Some(Calibration {
             coef: coef?,
-            t1: tipo == "T1",
+            t1: kind == "T1",
         })
     }
 
-    pub(super) fn applica(&self, mz: f64) -> f64 {
+    pub(super) fn apply(&self, mz: f64) -> f64 {
         if !self.t1 || self.coef.is_empty() || mz <= 0.0 {
             return mz;
         }
@@ -38,7 +38,7 @@ impl Taratura {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Codifica {
+pub(super) enum Encoding {
     /// 6 bytes: ion count (`u16`) and the m/z word.
     A,
     /// 8 bytes: intensity word (21-bit mantissa, 5-bit exponent) and the m/z word.
@@ -47,27 +47,27 @@ pub(super) enum Codifica {
     E,
 }
 
-impl Codifica {
-    pub(super) fn da_larghezza(w: u64) -> Option<Codifica> {
+impl Encoding {
+    pub(super) fn from_width(w: u64) -> Option<Encoding> {
         match w {
-            6 => Some(Codifica::A),
-            8 => Some(Codifica::D),
-            12 => Some(Codifica::E),
+            6 => Some(Encoding::A),
+            8 => Some(Encoding::D),
+            12 => Some(Encoding::E),
             _ => None,
         }
     }
 
-    pub(super) fn larghezza(self) -> usize {
+    pub(super) fn width(self) -> usize {
         match self {
-            Codifica::A => 6,
-            Codifica::D => 8,
-            Codifica::E => 12,
+            Encoding::A => 6,
+            Encoding::D => 8,
+            Encoding::E => 12,
         }
     }
 
     /// Whether the points are a profile (the 12-byte records of a centroided acquisition are peaks).
     pub(super) fn profilo(self) -> bool {
-        self != Codifica::E
+        self != Encoding::E
     }
 }
 
@@ -89,8 +89,8 @@ fn mz_a(r: &[u8]) -> Result<f64> {
 }
 
 /// The points of one scan: calibrated m/z and intensity. Records without intensity are left out.
-pub(super) fn decodifica(c: Codifica, b: &[u8], t: &Taratura) -> Result<(Vec<f64>, Vec<f32>)> {
-    let w = c.larghezza();
+pub(super) fn decode(c: Encoding, b: &[u8], t: &Calibration) -> Result<(Vec<f64>, Vec<f32>)> {
+    let w = c.width();
     if !b.len().is_multiple_of(w) {
         return Err(errore("scan size is no multiple of the record"));
     }
@@ -100,14 +100,14 @@ pub(super) fn decodifica(c: Codifica, b: &[u8], t: &Taratura) -> Result<(Vec<f64
     );
     for r in b.chunks_exact(w) {
         let (x, i) = match c {
-            Codifica::A => {
+            Encoding::A => {
                 let n = u16_at(r, 0);
                 if n == 0 {
                     continue;
                 }
                 (mz_a(r)?, f32::from(n))
             }
-            Codifica::D | Codifica::E => {
+            Encoding::D | Encoding::E => {
                 let word = u32_at(r, 0);
                 let m = word & 0x001F_FFFF;
                 if m == 0 {
@@ -123,7 +123,7 @@ pub(super) fn decodifica(c: Codifica, b: &[u8], t: &Taratura) -> Result<(Vec<f64
                 )
             }
         };
-        mz.push(t.applica(x));
+        mz.push(t.apply(x));
         it.push(i);
     }
     Ok((mz, it))

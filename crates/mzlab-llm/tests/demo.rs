@@ -189,3 +189,63 @@ fn the_orchestrator_of_the_demo_asks_for_1500_tokens_and_3000_after_the_plan_pro
     let body = parse(sent.expect("the orchestrator").body.as_bytes()).unwrap();
     assert_eq!(body.get("max_tokens").and_then(|v| v.f64()), Some(3000.0));
 }
+
+#[test]
+fn the_keys_of_the_proxy_reach_the_page_with_only_their_short_params() {
+    use mzlab_llm::provider::http_error;
+    let line = |s: u16, b: &str| http_error(s, b).to_json();
+    let closed = line(
+        403,
+        r#"{"error":"err.llm.proxy.closed","error_key":"err.llm.proxy.closed","params":{}}"#,
+    );
+    assert!(closed.contains("\"err.llm.proxy.closed\""), "{closed}");
+    let budget = line(
+        503,
+        r#"{"error_key":"err.llm.proxy.budget","params":{"limit":"day"}}"#,
+    );
+    assert!(
+        budget.contains("\"err.llm.proxy.budget\"") && budget.contains("\"limit\":\"day\""),
+        "{budget}"
+    );
+    let spend = line(
+        429,
+        r#"{"error_key":"err.llm.limit.spend","params":{"limit":"session","cap":"500000"}}"#,
+    );
+    assert!(
+        spend.contains("\"err.llm.limit.spend\"")
+            && spend.contains("\"limit\":\"session\"")
+            && !spend.contains("500000"),
+        "{spend}"
+    );
+    for k in ["off", "body", "origin"] {
+        let b = format!(r#"{{"error_key":"err.llm.proxy.{k}","params":{{"field":"x y"}}}}"#);
+        let l = line(400, &b);
+        assert!(
+            l.contains(&format!("\"err.llm.proxy.{k}\"")) && !l.contains("x y"),
+            "{l}"
+        );
+    }
+    // a vendor's 403 and an unknown key stay what they were
+    assert!(line(403, r#"{"error_key":"err.llm.proxy.other"}"#).contains("\"err.llm.auth\""));
+    assert!(line(
+        403,
+        r#"{"error":{"type":"permission_error","message":"no"}}"#
+    )
+    .contains("\"err.llm.auth\""));
+}
+
+#[test]
+fn the_spend_header_is_two_whole_numbers_with_a_cap() {
+    use mzlab_llm::provider::demo::spend_json;
+    assert_eq!(
+        spend_json("120000/500000", false).as_deref(),
+        Some(r#"{"spent":120000,"cap":500000,"soft":false}"#)
+    );
+    assert_eq!(
+        spend_json(" 400000/500000 ", true).as_deref(),
+        Some(r#"{"spent":400000,"cap":500000,"soft":true}"#)
+    );
+    for bad in ["", "1/0", "a/2", "1.5/2", "-1/2", "1/2/3", "1"] {
+        assert_eq!(spend_json(bad, false), None, "{bad}");
+    }
+}

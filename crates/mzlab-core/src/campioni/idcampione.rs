@@ -1,7 +1,7 @@
 //! The sample-ID convention of the lab series (`MAT-COND-Ttt`, `MAT-STD<cc>`, `QC-MAT`, `P-<name>`, blanks), read from a `campione_id`.
 //! Used by `modello` to fill the fields the name model did not capture and by `valida3` to warn about an unknown condition or a bad time.
 
-use super::Campione;
+use super::Sample;
 
 pub(super) const MATRICES: [&str; 2] = ["TW", "MQ"];
 pub(super) const IRRADIATED: [&str; 6] = ["C", "N2", "O2", "AIR", "H2O2", "PMS"];
@@ -41,7 +41,7 @@ fn matrix_of(s: &str) -> Option<&'static str> {
 }
 
 /// Reads an ID; an ID of no known shape gives the default (nothing said). A trailing `-R` (re-injection) is ignored.
-pub fn leggi(id: &str) -> IdInfo {
+pub fn read(id: &str) -> IdInfo {
     let id = id.trim();
     let base = id
         .strip_suffix("-R")
@@ -91,8 +91,8 @@ pub fn leggi(id: &str) -> IdInfo {
 
 /// Fills the fields of `c` from its `campione_id`, except the ones named in `skip` (captured by the model): matrix, condition (`serie`), group
 /// (`MAT-COND`), time, role and the concentration of a standard (mg/L).
-pub fn applica(c: &mut Campione, skip: &[&str]) {
-    let i = leggi(&c.sample_id);
+pub fn apply(c: &mut Sample, skip: &[&str]) {
+    let i = read(&c.sample_id);
     let free = |f: &str| !skip.contains(&f);
     c.reinjection = i.reinjection;
     if let (true, Some(m)) = (free("matrice"), i.matrix) {

@@ -92,11 +92,11 @@ impl<R: ReadAt> Routes<R> {
 
     /// Answer for a path such as `/api/filters` and its query; `None` = not answered here.
     pub fn handle(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
-        if let Some(r) = self.canali_route(path, q) { return r; }
+        if let Some(r) = self.route_channels(path, q) { return r; }
         // the statistics of the scans, a source of the inspection of the assistant (docs/agenti/llm.md)
         if path == "/api/scan_stats" { return Ok(Some(crate::scanstats::scan_stats_json(&self.idx.scans))); }
         if !self.has_scans() { return Ok(crate::mrmroutes::no_scans(path, q)); }
-        self.con_opz(q, |r| match path {
+        self.with_opts(q, |r| match path {
             "/api/chrom" => r.chrom(q),
             "/api/xic" => r.xic_route(q),
             "/api/filters" => r.filters().map(Some),
@@ -106,6 +106,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/ms2tr" => r.ms2_transitions().map(Some),
             "/api/spectrum" => r.spectrum(q),
             "/api/dda" => r.dda(q),
+            "/api/dda_window" => r.dda_window(q),
             "/api/spectra" => r.spectra_profile(q),
             "/api/msn_albero" => r.msn_albero_route(q),
             _ => Ok(None),
@@ -194,7 +195,7 @@ impl<R: ReadAt> Routes<R> {
         let mut keep = vec![true; rt.len()];
         if let Some(f) = self.filtro(filt)? {
             for (j, &id) in ids.iter().enumerate() {
-                keep[j] = f.passa(id as usize, &self.idx.scans[id as usize]);
+                keep[j] = f.passes(id as usize, &self.idx.scans[id as usize]);
             }
         }
         if let (Some(p), true) = (prec, level > 1) {
@@ -281,7 +282,7 @@ impl<R: ReadAt> Routes<R> {
         let fl = self.filtro(filt)?;
         let (ar, scans) = self.idx.arrays_scans(si)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &scans[ar.scan_ids[j] as usize])))
+            .filter(|&j| fl.as_ref().is_none_or(|f| f.passes(ar.scan_ids[j] as usize, &scans[ar.scan_ids[j] as usize])))
             .collect();
         let sc = |j: usize| &scans[ar.scan_ids[j] as usize];
         o.raw("{\"level\":")
@@ -335,7 +336,7 @@ impl<R: ReadAt> Routes<R> {
         for &id in &ar.scan_ids {
             let s = &scans[id as usize];
             let ok = match (&fl, precursor) {
-                (Some(f), _) => f.passa(id as usize, s),
+                (Some(f), _) => f.passes(id as usize, s),
                 (None, Some(p)) => (s.prec(-100.0) - p).abs() <= 0.6,
                 (None, None) => true,
             };

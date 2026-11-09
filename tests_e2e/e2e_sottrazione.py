@@ -28,7 +28,7 @@ try:
             m = pg.evaluate(MINS % "xic"); assert len(m) == 3 and all(v >= 0 for v in m.values()), m
         step("before: raw traces, no chip", raw)
         def cmd():
-            pg.keyboard.press("Control+k"); pg.keyboard.type("sottrai"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg); attendi(pg, "document.querySelectorAll('.subchip').length >= 2")
+            pg.keyboard.press("Control+k"); pg.keyboard.type("sottrai"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg); wait_for_js(pg, "document.querySelectorAll('.subchip').length >= 2")
             assert pg.locator(".subchip").count() >= 2, pg.locator(".subchip").count()
             t = pg.locator(".subchip [data-s=pop]").first.inner_text()
             assert "SUB_t0" in t and "(auto)" in t and "×" in t and "senza normalizzazione" in t, t
@@ -51,32 +51,32 @@ try:
         def factor():
             a = pg.evaluate(MINS % "xic")["SUB_t10.mzML"]
             opn(); pg.locator(".subchip [data-s=pop]").first.click(); pg.wait_for_selector("#subpop:not([hidden])")
-            pg.fill("#sp-fn", "0.5"); pg.dispatch_event("#sp-fn", "change"); attendi(pg, "S.ref.factor === 0.5"); ready(pg)
+            pg.fill("#sp-fn", "0.5"); pg.dispatch_event("#sp-fn", "change"); wait_for_js(pg, "S.ref.factor === 0.5"); ready(pg)
             b = pg.evaluate(MINS % "xic")["SUB_t10.mzML"]
             assert abs(b) < abs(a) and pg.evaluate("S.ref.factor") == 0.5, (a, b)
             assert "0,50" in pg.locator(".subchip [data-s=pop]").first.inner_text() or "0.50" in pg.locator(".subchip [data-s=pop]").first.inner_text()
         step("the factor changes the curve and the chip", factor)
         def keys():
-            pg.locator("#sp-fr").focus(); pg.keyboard.press("ArrowRight"); attendi(pg, "S.ref.factor === 0.55")
+            pg.locator("#sp-fr").focus(); pg.keyboard.press("ArrowRight"); wait_for_js(pg, "S.ref.factor === 0.55")
             assert pg.evaluate("S.ref.factor") == 0.55, pg.evaluate("S.ref.factor")
             assert pg.get_attribute("#sp-fr", "aria-valuetext") and pg.get_attribute("#sp-fr", "aria-valuetext").startswith("×")
         step("the arrow keys move the slider by 0.05 and aria-valuetext says the value", keys)
         def clip():
-            pg.check("#sp-clip"); attendi(pg, "S.ref.clip === true"); ready(pg)
+            pg.check("#sp-clip"); wait_for_js(pg, "S.ref.clip === true"); ready(pg)
             m = pg.evaluate(MINS.replace("s.y)", "s.ys)") % "xic"); assert all(v >= 0 for v in m.values()), m      # drawn clipped...
             m = pg.evaluate(MINS % "xic"); assert any(v < 0 for v in m.values()), m                              # ...while the numbers keep their negatives
-            pg.uncheck("#sp-clip"); attendi(pg, "!S.ref.clip"); ready(pg)
+            pg.uncheck("#sp-clip"); wait_for_js(pg, "!S.ref.clip"); ready(pg)
         step("«clip at zero» removes the negatives", clip)
         def norm():
-            pg.select_option("#sp-norm", "tic"); attendi(pg, "document.querySelector('.subchip [data-s=pop]').innerText.includes('TIC')"); ready(pg)
+            pg.select_option("#sp-norm", "tic"); wait_for_js(pg, "document.querySelector('.subchip [data-s=pop]').innerText.includes('TIC')"); ready(pg)
             assert "TIC" in pg.locator(".subchip [data-s=pop]").first.inner_text()
             pg.select_option("#sp-norm", "istd"); assert pg.is_visible("#sp-istd")
-            pg.select_option("#sp-norm", "none"); attendi(pg, "!document.querySelector('.subchip [data-s=pop]').innerText.includes('TIC')"); ready(pg)
+            pg.select_option("#sp-norm", "none"); wait_for_js(pg, "!document.querySelector('.subchip [data-s=pop]').innerText.includes('TIC')"); ready(pg)
         step("normalization: none / TIC / internal standard (the student writes the m/z)", norm)
         def spec_map():
             pg.keyboard.press("Escape")
             pg.evaluate("addPanel('spec',{k:1,r0:5.1,r1:5.4,level:1})"); ready(pg)
-            pg.evaluate("addPanel('map',{k:1})"); ready(pg); attendi(pg, "!!E.panels.find(q=>q.type==='map')._a")
+            pg.evaluate("addPanel('map',{k:1})"); ready(pg); wait_for_js(pg, "!!E.panels.find(q=>q.type==='map')._a")
             for t in ("spec", "map"):
                 assert pg.evaluate(f"!!E.panels.find(q=>q.type==='{t}').el.querySelector('.subchip')"), t
         step("the spectrum and the map follow the same reference", spec_map)
@@ -92,7 +92,7 @@ try:
             M = "E.panels.find(q=>q.type==='map')"; pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); frames(pg, 3)
             c = pg.evaluate(f"(()=>{{const r={M}.cv.getBoundingClientRect(); return [r.left+r.width*.4, r.top+r.height*.5]}})()")
             n0 = pg.evaluate("E.panels.filter(q=>q.type==='xic').length")
-            pg.mouse.click(c[0], c[1], button="right"); pg.wait_for_selector("#ctx [role^=menuitem]:has-text('XIC')"); pg.click("#ctx [role^=menuitem]:has-text('XIC')"); attendi(pg, f"E.panels.filter(q=>q.type==='xic').length === {n0 + 1}")
+            pg.mouse.click(c[0], c[1], button="right"); pg.wait_for_selector("#ctx [role^=menuitem]:has-text('XIC')"); pg.click("#ctx [role^=menuitem]:has-text('XIC')"); wait_for_js(pg, f"E.panels.filter(q=>q.type==='xic').length === {n0 + 1}")
             assert pg.evaluate("E.panels.filter(q=>q.type==='xic').length") == n0 + 1, "the menu extracts from the difference map"
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000)
             assert pg.evaluate("MAPEX.numbers(" + M + ").height") is not None
@@ -100,7 +100,7 @@ try:
         step("the difference map works with the new menu and with «How it is extracted»", map_menu_and_explain)
         def mirror():
             q = "E.panels.find(q=>q.type==='spec')"
-            pg.evaluate(f"E.browse=true; E.cur=1; renderNav(); renderFileList(); (()=>{{const p={q}; p.k=1; p.r0=5.1; p.r1=5.4; p.si=null; ctl(p); draw(p)}})()"); ready(pg); attendi(pg, f"{q}._a.data[0].d.diff === true")
+            pg.evaluate(f"E.browse=true; E.cur=1; renderNav(); renderFileList(); (()=>{{const p={q}; p.k=1; p.r0=5.1; p.r1=5.4; p.si=null; ctl(p); draw(p)}})()"); ready(pg); wait_for_js(pg, f"{q}._a.data[0].d.diff === true")
             d = pg.evaluate(f"(()=>{{const a={q}._a; return [a.data[0].d.diff, Math.min(...a.data[0].d.y), Math.max(...a.data[0].d.y), a.ymin]}})()")
             assert d[0] is True and d[1] < 0 and d[3] < 0, d              # the parent has fallen: a bar down, the axis goes below zero
             assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--diff-pos').trim()") == "#D55E00"
@@ -127,14 +127,14 @@ try:
                 assert (b.get_attribute("aria-label") or b.inner_text().strip()), b.inner_html()
         step("every button of the chip has a name", aria)
         def off():
-            opn(); pg.locator(".subchip [data-s=off]").first.click(); ready(pg); attendi(pg, "!document.querySelector('.subchip')")
+            opn(); pg.locator(".subchip [data-s=off]").first.click(); ready(pg); wait_for_js(pg, "!document.querySelector('.subchip')")
             assert pg.locator(".subchip").count() == 0 and pg.evaluate("!SUBREF.isOn()")
             pg.evaluate("E.browse=false; E.files.forEach(f=>f.vis=true); renderNav(); renderFileList(); redrawAll()"); ready(pg)
             m = pg.evaluate(MINS % "xic"); assert len(m) == 3 and all(v >= 0 for v in m.values()), m
         step("× goes back to the raw data", off)
         def saved():
             pg.keyboard.press("Control+k"); pg.keyboard.type("sottrai"); frames(pg, 3); pg.keyboard.press("Enter"); ready(pg)
-            pg.evaluate("uiSave(true)"); attendi(pg, "NB.ui.ref.on[E.tab] === true")
+            pg.evaluate("uiSave(true)"); wait_for_js(pg, "NB.ui.ref.on[E.tab] === true")
             assert pg.evaluate("NB.ui.ref.on[E.tab]") is True and pg.evaluate("NB.ui.ref.k") == "auto"
         step("the reference is saved with the session", saved)
 finally:

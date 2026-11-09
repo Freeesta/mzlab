@@ -12,15 +12,15 @@ FIX = ROOT / "tests" / "data" / "scandump"
 ORACLE, OURS = FIX / "oracle.jsonl", FIX / "ours.jsonl"
 
 
-def _carica(nome: str):
-    spec = importlib.util.spec_from_file_location("rosina_" + nome, STR / (nome + ".py"))
+def _load(name: str):
+    spec = importlib.util.spec_from_file_location("rosina_" + name, STR / (name + ".py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
 
-compare = _carica("scandump_compare")
-verita_scandump = _carica("verita_scandump")
+compare = _load("scandump_compare")
+truth_scandump = _load("verita_scandump")
 
 # field -> (compared, equal, different, absent in A, absent in B), for --tol hr
 EXPECTED = {
@@ -127,9 +127,9 @@ def test_gzip_and_report_and_aggregate(tmp_path):
     assert compare.main(["--aggregate", str(out), "--out", str(tmp_path / "t.json")]) == 0
 
 
-def test_verita_from_dump():
-    d = verita_scandump.da_scandump(ORACLE, ("", "", "scandump/1"))
-    assert verita_scandump._verita().valida(d) == []
+def test_truth_from_dump():
+    d = truth_scandump.da_scandump(ORACLE, ("", "", "scandump/1"))
+    assert truth_scandump._truth().validate(d) == []
     assert d["conteggi"] == {"spettri": {"ms1": 2, "ms2": 1}, "cromatogrammi": {"tic": 1}}
     s = d["scansioni"][1]
     assert (s["livello"], s["precursore_mz"], s["ce"], s["attivazione"], s["isolamento"]) == (2, 500.0, 30.0, "HCD", {"mz": 500.0, "inf": 1.0, "sup": 1.0})

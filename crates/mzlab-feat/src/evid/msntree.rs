@@ -3,7 +3,7 @@
 
 use super::ExternalHit;
 use mzlab_core::error::Result;
-use mzlab_core::msngrafo::cerca_ms2;
+use mzlab_core::msngrafo::search_ms2;
 
 pub const SOURCE: &str = "MSn tree of a reference";
 const PPM: f64 = 10.0;
@@ -22,7 +22,7 @@ pub struct RowMs2<'a> {
 pub fn msn_tree_hits(library: &str, rows: &[RowMs2]) -> Result<Vec<ExternalHit>> {
     let mut out = Vec::new();
     for r in rows {
-        for h in cerca_ms2(library, r.mz, r.positive, r.peaks, PPM, TOL, MIN_SHARED)? {
+        for h in search_ms2(library, r.mz, r.positive, r.peaks, PPM, TOL, MIN_SHARED)? {
             out.push(ExternalHit {
                 row: r.row,
                 name: format!("{} {}", h.id, h.ion),

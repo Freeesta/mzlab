@@ -100,17 +100,17 @@ impl Report {
 
 /// Reads the whole mzML once, calling `sink` for every spectrum and chromatogram in file order. An error is a read that failed; a malformed file is a
 /// `Problem` of the report.
-pub fn analizza<R: Read>(reader: R, sink: &mut dyn FnMut(Item)) -> Result<Report> {
+pub fn analyze<R: Read>(reader: R, sink: &mut dyn FnMut(Item)) -> Result<Report> {
     struttura::run(reader, sink)
 }
 
 /// `analizza` with nobody listening.
-pub fn valida<R: Read>(reader: R) -> Result<Report> {
-    analizza(reader, &mut |_| {})
+pub fn validate<R: Read>(reader: R) -> Result<Report> {
+    analyze(reader, &mut |_| {})
 }
 
 /// The number of terms in the vocabulary table.
-pub fn termini() -> usize {
+pub fn terms() -> usize {
     cv::get().len()
 }
 

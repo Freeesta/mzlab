@@ -68,7 +68,7 @@ def blocks(sigla, kind, version):
     return out
 
 
-def oggi(sigla, code, kind, version):
+def today(sigla, code, kind, version):
     if sigla not in READ:
         return {"esito": "rifiuto", "detail": f"scan type code {code} (experiment 1)"}
     if kind in ("mrm", "ions"):
@@ -98,7 +98,7 @@ def main(out=None):
             wr.sample(n, blocks(sigla, kind, version), own, log="3200 QTRAP")
         wr.save(out, sigla)
         info[sigla] = {"codice": code, "codice_confermato": confirmed, "polarita": 1,
-                       "campioni": [{"n": n, "versione": v, "oggi": oggi(sigla, code, kind, v)} for n, v in samples],
+                       "campioni": [{"n": n, "versione": v, "oggi": today(sigla, code, kind, v)} for n, v in samples],
                        "futuro": {"livello": level, "tipo_cv": cv, "precursore": PREC.get(sigla), "sim": sigla in ("Q1MI", "Q3MI"),
                                   "spettri": kind == "scan", "ioni": IONS if kind == "ions" else None}}
     (out / "modi.json").write_text(json.dumps(info))

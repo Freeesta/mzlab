@@ -22,7 +22,7 @@ WINS = "(()=>{const p=E.panels.find(q=>q.type==='xic');return p.ints.map(i=>[+i.
 
 def xic(pg, mz):
     pg.evaluate("openXic(null)"); pg.wait_for_selector("#xic-mz"); pg.fill("#xic-mz", mz); pg.select_option("#xic-file", index=1); pg.click("#xic-go"); ready(pg)
-    attendi(pg, "(()=>{const p=E.panels.find(q=>q.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
+    wait_for_js(pg, "(()=>{const p=E.panels.find(q=>q.type==='xic');return !!(p&&p._a&&p._a.sr&&p._a.sr.length)})()")
 
 def click_at(pg, rt):
     v = pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.type==='xic'),r=p.cv.getBoundingClientRect();return {{x:r.left+p._a.X({rt}),y:r.top+r.height*0.5}}}})()")
@@ -39,7 +39,7 @@ for kind in ("hr", "lr"):
                 def all_peaks():
                     assert pg.evaluate("hrTrace(E.panels.find(q=>q.type==='xic')._a.sr[0])")
                     pg.locator(".pnl.xic [data-a=iauto]").first.click(); click_at(pg, 10.2)
-                    attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length>=2")
+                    wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length>=2")
                     w = pg.evaluate(WINS); assert len(w) == 2, w
                     assert w[0][0] < 9.0 < w[0][1] and w[1][0] < 11.5 < w[1][1] and w[0][1] <= w[1][0], w
                 step("one click on an empty stretch integrates both peaks of the HR trace", all_peaks)
@@ -52,20 +52,20 @@ for kind in ("hr", "lr"):
                         assert chord > 0, v
                 step("the area shown is the one of the Rust engine, over its own baseline", parity)
                 def undo_redo():
-                    pg.evaluate("STORIA.annulla()"); attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length===0")
-                    click_at(pg, 10.2); attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length===2")
-                    click_at(pg, 10.2); attendi(pg, "!document.querySelector('#qnote').hidden")
+                    pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length===0")
+                    click_at(pg, 10.2); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length===2")
+                    click_at(pg, 10.2); wait_for_js(pg, "!document.querySelector('#qnote').hidden")
                     assert pg.evaluate("E.panels.find(q=>q.type==='xic').ints.length") == 2          # a second click adds nothing over the peaks already integrated
                 step("one undo removes all of them; a second click adds no overlapping window", undo_redo)
                 def zoomed():
-                    pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='xic');p.ints=[];zoomTo(p,8,10.5)})()"); attendi(pg, "Math.abs(E.panels.find(q=>q.type==='xic')._a.x1-10.5)<0.3")
-                    click_at(pg, 9.5); attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length>=1")
+                    pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='xic');p.ints=[];zoomTo(p,8,10.5)})()"); wait_for_js(pg, "Math.abs(E.panels.find(q=>q.type==='xic')._a.x1-10.5)<0.3")
+                    click_at(pg, 9.5); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length>=1")
                     w = pg.evaluate(WINS); assert len(w) == 1 and w[0][0] < 9.0 < w[0][1], w
                 step("zoomed in, only the peaks of the stretch shown", zoomed)
                 def params():
                     pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='xic');p.ints=[];zoomTo(p,0,20);PK.hrSmooth=7;PK.hrSn=9;const f=QUALITA.autoIntegrate;window.__ai=null;QUALITA.autoIntegrate=(...a)=>{window.__ai=a[4];QUALITA.autoIntegrate=f;return f(...a)}})()")
-                    attendi(pg, "E.panels.find(q=>q.type==='xic')._a.x1>15")
-                    click_at(pg, 10.2); attendi(pg, "window.__ai!==null")
+                    wait_for_js(pg, "E.panels.find(q=>q.type==='xic')._a.x1>15")
+                    click_at(pg, 10.2); wait_for_js(pg, "window.__ai!==null")
                     assert pg.evaluate("window.__ai") == {"smooth": 7, "snr": 9}, pg.evaluate("window.__ai")   # the two settings of the dialog, nothing else
                     pg.evaluate("Object.assign(PK, PK_DEF)")
                 step("the HR settings of the dialog reach the engine", params)
@@ -74,7 +74,7 @@ for kind in ("hr", "lr"):
                 def lr_one():
                     assert not pg.evaluate("hrTrace(E.panels.find(q=>q.type==='xic')._a.sr[0])")
                     pg.locator(".pnl.xic [data-a=iauto]").first.click(); click_at(pg, 14.3)
-                    attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length>=1")
+                    wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length>=1")
                     w = pg.evaluate(WINS); assert len(w) == 1, w
                     ed = pg.evaluate("(async()=>{const p=E.panels.find(q=>q.type==='xic'),i=p.ints[0];const e=await autoEdges(p._a.sr[0],14.3);return [Math.abs(e[0]-i.a),Math.abs(e[1]-i.b)]})()")
                     assert max(ed) < 0.02, ed

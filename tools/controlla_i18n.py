@@ -31,7 +31,7 @@ import lang_catalogo
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "mzlab" / "web"
 LANG = WEB / "lang"
-ECCEZIONI = ROOT / "tools" / "i18n_eccezioni.txt"
+EXCEPTIONS = ROOT / "tools" / "i18n_eccezioni.txt"
 
 # JS files whose strings must already be free of Italian (grows as the parts of the work migrate files)
 MIGRATED = {"mzlab/web/elementare.js", "mzlab/web/elementare-pannello.js", "mzlab/web/visualizza.js", "mzlab/web/barra.js", "mzlab/web/paletta.js", "mzlab/web/browser.js", "mzlab/web/calcola.js", "mzlab/web/calc-addotti.js", "mzlab/web/calc-addotti-html.js", "mzlab/web/draw.js", "mzlab/web/mappa3d.js", "mzlab/web/explore.js", "mzlab/web/ordine.js", "mzlab/web/conversione.js", "mzlab/web/cartella-carica.js", "mzlab/web/cartella-puntata.js", "mzlab/web/cartella-puntata-desktop.js", "mzlab/web/pannelli.js", "mzlab/web/grafici.js", "mzlab/web/picchi.js", "mzlab/web/eventi.js", "mzlab/web/i18n.js", "mzlab/web/icons-modi.js", "mzlab/web/index.html", "mzlab/web/modi.js", "mzlab/web/perdite.js", "mzlab/web/perf.js", "mzlab/web/scroll.js", "mzlab/web/settings.js", "mzlab/web/spettro.js", "mzlab/web/tables.js", "mzlab/web/help.js", "mzlab/web/liste.js", "mzlab/web/libreria.js", "mzlab/web/livelli.js", "mzlab/web/dda.js", "mzlab/web/composizione.js", "mzlab/web/origine.js", "mzlab/web/banco.js", "mzlab/web/libreria-worker.js", "mzlab/web/hr.js", "mzlab/web/tabs.js", "mzlab/web/touch.js", "mzlab/web/xlsx.js", "mzlab/web/xic-spettro.js", "mzlab/web/xic-lente.js"}
@@ -65,8 +65,8 @@ scansione scansioni madre sconosciuto sconosciuta vicina vicino
 """.split())
 
 # crates that never serve the page, and the keys a student never sees (one reason per key)
-CRATE_ESCLUSI = ("mzlab-cli", "mzlab-desktop", "mzlab-llm")
-CRATE_SENZA_TESTO = {
+EXCLUDED_CRATES = ("mzlab-cli", "mzlab-desktop", "mzlab-llm")
+CRATES_WITHOUT_TEXT = {
     "err.test": "placeholder error of a unit test inside a src file",
     "err.test.interned": "string used by a unit test of the interner",
     "error.x": "key of a unit test of the JSON escaping",
@@ -80,7 +80,7 @@ def crate_keys(cli: bool = False) -> dict[str, str]:
     for p in sorted((ROOT / "crates").rglob("*.rs")):
         rel = p.relative_to(ROOT).as_posix()
         parts = rel.split("/")
-        if (parts[1] in CRATE_ESCLUSI and not (cli and parts[1] == "mzlab-cli")) or "tests" in parts or "examples" in parts or "benches" in parts or p.stem.endswith("_tests") or p.stem.startswith("tests"):
+        if (parts[1] in EXCLUDED_CRATES and not (cli and parts[1] == "mzlab-cli")) or "tests" in parts or "examples" in parts or "benches" in parts or p.stem.endswith("_tests") or p.stem.startswith("tests"):
             continue
         for k in CRATE_KEY.findall(p.read_text(encoding="utf-8", errors="replace")):
             out.setdefault(k, rel)
@@ -92,7 +92,7 @@ PARAM_RE = re.compile(r"\{([A-Za-z_][\w]*)")
 
 # ---------------------------------------------------------------- catalogs
 def load_catalog(lang: str) -> dict[str, str]:
-    return lang_catalogo.catalogo(lang)
+    return lang_catalogo.catalog(lang)
 
 
 def icu_signature(msg: str) -> tuple[list, list]:
@@ -322,8 +322,8 @@ def js_strings(src: str):
 
 def load_exceptions() -> set[tuple[str, str]]:
     out = set()
-    if ECCEZIONI.exists():
-        for ln in ECCEZIONI.read_text(encoding="utf-8").splitlines():
+    if EXCEPTIONS.exists():
+        for ln in EXCEPTIONS.read_text(encoding="utf-8").splitlines():
             ln = ln.strip()
             if ln and not ln.startswith("#"):
                 f, _, snippet = ln.partition("\t")
@@ -403,9 +403,9 @@ def has_form(text: str, forms: list[str]) -> bool:
 
 def check_glossary(it: dict, en: dict, errs: list) -> None:
     g = json.loads((LANG / "glossario.json").read_text(encoding="utf-8"))
-    fonti = g.get("fonti", {})
+    sources = g.get("fonti", {})
     for v in g["voci"]:
-        if v.get("fonte") not in fonti:
+        if v.get("fonte") not in sources:
             errs.append(f"glossary: entry «{v['id']}» without a known source")
         for k, itxt in it.items():
             for ex in v.get("escludi_it", []):               # Italian phrases where the word has another meaning ("in fondo" = at the bottom)
@@ -430,8 +430,8 @@ NAME_FORMAT_OK = {"cart.method", "cart.method.one", "cart.none", "conv.help.step
              "help.filegrandi.body", "method.m.title", "predef.guide.linux.cmd", "predef.settings.title", "predef.text", "uv.none"}
 NAME_TOOL_OK = {"cmd.bio.kw", "cmd.bio.lab", "cmd.bio.name", "cmd.bio.tip", "cmd.more.tip", "cmd.pubchem.kw", "cmd.pubchem.lab", "cmd.pubchem.name",
            "cmd.pubchem.tip", "conv.help.step1", "conv.help.step2", "ctx.spec.exportMassbank", "draw.error.ketcherNotStarted", "draw.tools.file",
-           "err.file.notAccepted", "err.memory.over4gb", "err.memory.tooBig", "fair.mb.note", "fair.mb.title", "help.filegrandi.body",
-           "help.prop.body", "help.start.body", "lib.avail.intro", "lib.intro", "load.hrnote"}
+           "err.file.notAccepted", "err.file.wiffNeeds2", "err.file.wiffPeriods", "err.file.wiffScanType", "err.memory.over4gb", "err.memory.tooBig",
+           "fair.mb.note", "fair.mb.title", "help.filegrandi.body", "help.prop.body", "help.start.body", "lib.avail.intro", "lib.intro", "load.hrnote"}
 
 
 def check_names(cats: dict[str, dict[str, str]], errs: list) -> None:
@@ -471,7 +471,7 @@ def run(listing: bool = False) -> list[str]:
         if k not in used and k not in sent and not any(k.startswith(p) for p in prefixes):
             errs.append(f"orphan key (nobody uses it): {k}")
     for k, rel in sorted(crate_keys().items()):
-        if k not in CRATE_SENZA_TESTO and (k not in it or k not in en):
+        if k not in CRATES_WITHOUT_TEXT and (k not in it or k not in en):
             errs.append(f"engine message without a text in both languages: {k}  ({rel})")
     check_paramless_calls(it, errs)
     check_static_html(it, errs)

@@ -73,7 +73,7 @@ try:
             pg.click("#rmall"); pg.wait_for_selector("#askdlg[open]"); pg.click("#askno"); frames(pg, 3)
             assert pg.evaluate("E.files.every(f => !f.gone)"), "Cancel keeps the files"
             pg.click("#rmall"); pg.wait_for_selector("#askdlg[open]"); pg.click("#askok")
-            attendi(pg, "E.files.every(f => f.gone)", 30000)
+            wait_for_js(pg, "E.files.every(f => f.gone)", 30000)
         step("«Remove all files» asks first, Cancel keeps them, OK removes them all", remove_all)
 finally:
     r.close(); r.report()

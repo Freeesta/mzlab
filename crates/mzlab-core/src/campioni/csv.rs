@@ -9,7 +9,7 @@ use super::colonne::infer;
 use super::csv_campi::{records, Cells};
 use super::json::legacy_kind;
 use super::{
-    number_replicates, tabella_da_value, to_json3, Campione, Cell, Colonna, Tabella, TipoColonna,
+    number_replicates, table_from_value, to_json3, Cell, Column, ColumnType, Sample, Table,
 };
 use crate::error::{Error, Result};
 use crate::json::{parse, Out};
@@ -119,7 +119,7 @@ fn flag(v: &str) -> Option<bool> {
 }
 
 fn unit_of(v: &str) -> Option<&'static str> {
-    super::UNITA_TEMPO.iter().copied().find(|u| *u == lower(v))
+    super::TIME_UNITS.iter().copied().find(|u| *u == lower(v))
 }
 
 fn whole(v: &str) -> Option<u32> {
@@ -137,7 +137,7 @@ fn dose(v: &str) -> Option<(f64, Option<String>)> {
 }
 
 /// Gives `c` the value of one fixed column; false when the value is not one the column takes.
-fn put(c: &mut Campione, f: &str, v: &str) -> bool {
+fn put(c: &mut Sample, f: &str, v: &str) -> bool {
     let pol = |p: &str| match lower(p).as_ref() {
         "1" | "+1" | "+" | "pos" | "positive" => Some(1),
         "-1" | "-" | "neg" | "negative" => Some(-1),
@@ -162,7 +162,7 @@ fn put(c: &mut Campione, f: &str, v: &str) -> bool {
         }
         "tipo_bianco" => {
             return v.is_empty()
-                || super::TIPI_BIANCO
+                || super::BLANK_TYPES
                     .contains(&v)
                     .then(|| c.blank_kind = Some(v.into()))
                     .is_some()
@@ -196,7 +196,7 @@ struct TimeCols {
 
 /// The times of one row: `tempo` + `unita_tempo`, else `tempo_min`; confirmed as written, else when there is one.
 fn time_of<'a>(
-    c: &mut Campione,
+    c: &mut Sample,
     row: usize,
     tc: &TimeCols,
     cell: &dyn Fn(usize) -> &'a str,
@@ -237,10 +237,10 @@ fn heads_of(head: &Cells) -> Result<Vec<std::result::Result<&'static str, String
 }
 
 /// Reads `text`; `sep` None = detected; `declared` gives the type of the free columns it names (the others are inferred).
-pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabella> {
+pub fn read(text: &str, sep: Option<char>, declared: &[Column]) -> Result<Table> {
     let recs = records(text, sep.unwrap_or_else(|| detect(text)))?;
     let Some((head, rows)) = recs.split_first() else {
-        return Ok(Tabella {
+        return Ok(Table {
             campioni: Vec::new(),
             colonne: declared.to_vec(),
         });
@@ -259,7 +259,7 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
         minutes: at("tempo_min"),
         confirmed: at("tempo_confermato"),
     };
-    let replica = at("replica");
+    let replicate = at("replica");
     // the free column of each header position (the names are distinct, in header order)
     let free_at: Vec<usize> = heads
         .iter()
@@ -275,7 +275,7 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
             return Err(bad(row, ""));
         }
         let cell = |i: usize| cells.get(i).map(|c| c.0.as_ref()).unwrap_or("");
-        let mut c = Campione::new("", "", r as u32 + 1);
+        let mut c = Sample::new("", "", r as u32 + 1);
         for (i, h) in heads.iter().enumerate() {
             match h {
                 Ok(f)
@@ -298,7 +298,7 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
             }
         }
         time_of(&mut c, row, &tc, &cell)?;
-        written.push(replica.and_then(|i| whole(cell(i))));
+        written.push(replicate.and_then(|i| whole(cell(i))));
         cs.push(c);
     }
     number_replicates(&mut cs);
@@ -307,40 +307,40 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
             c.replicate = n;
         }
     }
-    let colonne = place_free(&mut cs, &free, declared);
-    Ok(Tabella {
+    let columns = place_free(&mut cs, &free, declared);
+    Ok(Table {
         campioni: cs,
-        colonne,
+        colonne: columns,
     })
 }
 
 /// Gives each free column its type (declared, else inferred) and stores its values as extras; returns the columns of the table.
 fn place_free(
-    cs: &mut [Campione],
+    cs: &mut [Sample],
     free: &[(String, Vec<Option<&str>>)],
-    declared: &[Colonna],
-) -> Vec<Colonna> {
-    let mut colonne = declared.to_vec();
+    declared: &[Column],
+) -> Vec<Column> {
+    let mut columns = declared.to_vec();
     for (name, values) in free {
         let col = match declared.iter().find(|d| &d.name == name) {
             Some(d) => d.clone(),
             None => {
-                let c = Colonna::new(name, infer(values));
-                colonne.push(c.clone());
+                let c = Column::new(name, infer(values));
+                columns.push(c.clone());
                 c
             }
         };
         for (c, v) in cs.iter_mut().zip(values) {
             if let Some(v) = v {
                 let cell = match (col.kind, num(v)) {
-                    (TipoColonna::Numero, Some(x)) => Cell::Numero(x),
+                    (ColumnType::Numero, Some(x)) => Cell::Numero(x),
                     _ => Cell::Testo((*v).to_string()),
                 };
                 c.set_extra(name, cell);
             }
         }
     }
-    colonne
+    columns
 }
 
 fn quote(s: &str, sep: char, force: bool) -> String {
@@ -352,7 +352,7 @@ fn quote(s: &str, sep: char, force: bool) -> String {
     }
 }
 
-fn fixed(c: &Campione, f: &str) -> String {
+fn fixed(c: &Sample, f: &str) -> String {
     let n = |x: Option<f64>| x.map(|v| format!("{v}")).unwrap_or_default();
     match f {
         "file" => c.file.clone(),
@@ -382,7 +382,7 @@ fn fixed(c: &Campione, f: &str) -> String {
 }
 
 /// The table as CSV, the files in the order given, the free columns sorted by name after the fixed ones; `\n` ends every line.
-pub fn scrivi(t: &Tabella, sep: char) -> String {
+pub fn write(t: &Table, sep: char) -> String {
     let mut names: Vec<&str> = t.colonne.iter().map(|c| c.name.as_str()).collect();
     names.extend(
         t.campioni
@@ -428,7 +428,7 @@ fn sep_of(v: &crate::json::Value) -> Result<Option<char>> {
 }
 
 /// `{"testo", "separatore"?, "colonne"?: [declared columns]}` → a `campioni/3`.
-pub fn csv_leggi(input: &str) -> Result<String> {
+pub fn csv_read(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let text = v
         .get("testo")
@@ -442,21 +442,21 @@ pub fn csv_leggi(input: &str) -> Result<String> {
                 "{{\"campioni\":[],\"colonne\":{},\"schema\":\"campioni/3\"}}",
                 o.0
             );
-            tabella_da_value(&parse(doc.as_bytes())?)?.colonne
+            table_from_value(&parse(doc.as_bytes())?)?.colonne
         }
         None => Vec::new(),
     };
-    Ok(to_json3(&leggi(text, sep_of(&v)?, &declared)?))
+    Ok(to_json3(&read(text, sep_of(&v)?, &declared)?))
 }
 
 /// `{"campioni": <campioni/2 or /3>, "separatore"?}` → `{"testo": "..."}`.
-pub fn csv_scrivi(input: &str) -> Result<String> {
+pub fn csv_write(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let doc = v
         .get("campioni")
         .ok_or_else(|| Error::new("error.badCsv"))?;
-    let t = tabella_da_value(doc)?;
-    let text = scrivi(&t, sep_of(&v)?.unwrap_or(','));
+    let t = table_from_value(doc)?;
+    let text = write(&t, sep_of(&v)?.unwrap_or(','));
     let mut j = Out::default();
     j.raw("{\"testo\":").str(&text).raw("}");
     Ok(j.0)

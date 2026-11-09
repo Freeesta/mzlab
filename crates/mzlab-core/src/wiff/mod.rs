@@ -31,7 +31,7 @@ const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
 /// Offset of the polarity in `ExperimentHeader`.
 const HEADER_POLARITY: usize = 86;
-use modi::{Uscita, CODE_PRODUCT};
+use modi::{Output, CODE_PRODUCT};
 /// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
 /// method), the nearest one before it.
 pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
@@ -55,8 +55,8 @@ impl Wiff {
         let code = self.experiments.get(e).and_then(|x| x.code);
         modi::nativo(code)
             && code
-                .and_then(modi::modo)
-                .is_some_and(|m| m.uscita == Uscita::Spettro)
+                .and_then(modi::mode)
+                .is_some_and(|m| m.output == Output::Spettro)
     }
 
     /// The engine (no `estesi`) reads the native scan types only: a sample with an experiment of another code is refused when its data are read, never
@@ -111,11 +111,22 @@ pub struct Record {
     /// Start of the payload and of the next one (the end of the data of this block).
     pub at: u64,
     pub end: u64,
+    /// Length of the payload as the index row tells it.
     pub size: u32,
     pub time_min: f64,
     pub tic: f64,
     pub cycle: usize,
     pub experiment: usize,
+}
+
+impl Record {
+    /// The block does not lie whole in a `.wiff.scan` of `scan_len` bytes (a copy cut short): the last block ends at the end of the file, so its own
+    /// length tells whether it was cut.
+    pub fn cut(&self, scan_len: u64) -> bool {
+        self.at >= scan_len
+            || self.end > scan_len
+            || self.at.saturating_add(u64::from(self.size)) > scan_len
+    }
 }
 
 /// One sample (injection) of a `.wiff`.
@@ -144,9 +155,26 @@ fn bad(detail: &str) -> Error {
     Error::new("err.file.wiff").with("detail", detail)
 }
 
-/// The container of a `.wiff`.
+/// The container of a `.wiff`; one cut short (sectors its header or its FAT use lie past the end) is refused whole: its streams would read empty or short,
+/// so the samples, the index or the method would be missing unsaid.
 pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
-    Ole::open(wiff, name).map_err(|_| Error::new("err.file.notWiff").with("name", name))
+    let size = wiff.len();
+    let cut = Ole::header_cut(&wiff);
+    let ole = Ole::open(wiff, name).map_err(|_| match cut {
+        Some(needed) => truncated(name, size, needed),
+        None => Error::new("err.file.notWiff").with("name", name),
+    })?;
+    match ole.cut_short() {
+        Some(needed) => Err(truncated(name, size, needed)),
+        None => Ok(ole),
+    }
+}
+
+fn truncated(name: &str, size: usize, needed: u64) -> Error {
+    Error::new("err.file.wiffTruncated")
+        .with("name", name)
+        .with("size", size)
+        .with("needed", needed)
 }
 
 /// The numbers of the samples of the sample table, in order: an injection that acquired nothing (no `Idx` stream) is a sample with no scans,

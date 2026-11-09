@@ -8,7 +8,7 @@ use std::process::Command;
 use std::rc::Rc;
 
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::wiff;
 
 const SAMPLES: usize = 14;
@@ -20,19 +20,19 @@ struct Conti {
 }
 
 struct Contato {
-    dati: Vec<u8>,
+    data: Vec<u8>,
     c: Rc<Conti>,
 }
 
 impl ReadAt for Contato {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
         if std::env::var("TRACE_READS").is_ok() && buf.len() > 4096 {
-            eprintln!("read len={} off={} of {}", buf.len(), off, self.dati.len());
+            eprintln!("read len={} off={} of {}", buf.len(), off, self.data.len());
         }
         self.c.reads.set(self.c.reads.get() + 1);
         self.c.bytes.set(self.c.bytes.get() + buf.len() as u64);
         let s = self
-            .dati
+            .data
             .get(off as usize..off as usize + buf.len())
             .ok_or_else(|| mzlab_core::Error::new("error.badIndex"))?;
         buf.copy_from_slice(s);
@@ -72,16 +72,16 @@ fn pair() -> Option<(Vec<Vec<u8>>, u64)> {
 }
 
 fn set(dati: &[Vec<u8>], c: &Rc<Conti>) -> FileSet {
-    let nomi = ["multi.wiff", "multi.wiff.scan"];
+    let names = ["multi.wiff", "multi.wiff.scan"];
     FileSet {
         membri: dati
             .iter()
-            .zip(nomi)
-            .map(|(d, n)| Membro {
+            .zip(names)
+            .map(|(d, n)| Member {
                 nome: n.into(),
                 dim: d.len() as u64,
                 dati: Box::new(Contato {
-                    dati: d.clone(),
+                    data: d.clone(),
                     c: c.clone(),
                 }),
                 sha1: None,
@@ -98,33 +98,33 @@ fn opening_every_sample_of_a_wiff_pair_reads_it_about_once() {
     };
     let c = Rc::new(Conti::default());
     // the list of samples (`native_samples`)
-    let l = lettori::apri(set(&dati, &c), &Limiti::sito()).unwrap();
-    assert_eq!(l.campioni().len(), SAMPLES);
+    let l = lettori::apri(set(&dati, &c), &Limits::sito()).unwrap();
+    assert_eq!(l.samples().len(), SAMPLES);
     drop(l);
-    let lista = (c.reads.get(), c.bytes.get());
+    let list = (c.reads.get(), c.bytes.get());
     // one index builder per sample, each in its own worker (`build_mzidx_native`)
     for s in 0..SAMPLES {
-        let mut l = wiff::lettore::apri_solo(set(&dati, &c), &Limiti::sito(), Some(s)).unwrap();
-        assert!(!l.indice(s).unwrap().is_empty());
+        let mut l = wiff::lettore::open_only(set(&dati, &c), &Limits::sito(), Some(s)).unwrap();
+        assert!(!l.index(s).unwrap().is_empty());
     }
-    let tutto = (c.reads.get(), c.bytes.get());
+    let all = (c.reads.get(), c.bytes.get());
     eprintln!(
         "dataset {total} B: list {} reads {} B; + {SAMPLES} builders: {} reads {} B ({:.2}x)",
-        lista.0,
-        lista.1,
-        tutto.0,
-        tutto.1,
-        tutto.1 as f64 / total as f64
+        list.0,
+        list.1,
+        all.0,
+        all.1,
+        all.1 as f64 / total as f64
     );
     // the list: the container and the heads of every block, each byte about once (a window used to run 1 MB past the end of each injection)
     assert!(
-        lista.1 <= total + total / 10,
+        list.1 <= total + total / 10,
         "the list read {} B of {total}",
-        lista.1
+        list.1
     );
     // a builder reads the container and the heads of its own injection only
     let (contenitore, scan) = (dati[0].len() as u64, dati[1].len() as u64);
-    let builders = tutto.1 - lista.1;
+    let builders = all.1 - list.1;
     assert!(
         builders <= SAMPLES as u64 * contenitore + scan + scan / 10,
         "the builders read {builders} B of {total}"

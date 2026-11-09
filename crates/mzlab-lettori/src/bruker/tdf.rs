@@ -1,151 +1,147 @@
 //! A Bruker timsTOF `.d` folder as a `Lettore` (docs/agenti/bruker.md): `analysis.tdf` + `analysis.tdf_bin` (TIMS on) and `analysis.tsf` + `analysis.tsf_bin` (TIMS off, MALDI).
 //! The tables come from `sqlite_min`, the peaks of a frame from `blocco` (TDF) or `tsf`, the cut of a frame into spectra from `spettri`.
-use super::blocco::{decodifica, leggi_blocco, Picchi};
-use super::spettri::{costruisci, somma, Desc};
+use super::blocco::{decode, read_block, Peaks};
+use super::spettri::{build, summed, Desc};
 use super::sqlite_min::Sqlite;
-use super::tabelle::Dati;
-use super::tdf_aiuti::{cartella, indice_cattivo, manca, prendi, riconosci, somma_scan, tagliati};
-use super::testata::Testata;
+use super::tabelle::Data;
+use super::tdf_aiuti::{absent, bad_index, cartella, cut_ones, recognize, sum_scan, take};
+use super::testata::BrukerHeader;
 use super::tsf;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, VoceCromatogramma, VoceLettore,
-    VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Reader, ReaderEntry, Sample,
+    ScanEntry, CONTRATTO,
 };
 use mzlab_core::metodo::SrcFile;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
-use tracce::massimo;
+use tracce::maximum;
 
 #[path = "tracce.rs"]
 mod tracce;
 
-const UNITA: &str = "Arbitrary Intensity Units";
+const UNITS: &str = "Arbitrary Intensity Units";
 
-pub const VOCE: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "bruker-tdf",
     contratto: CONTRATTO,
     estensioni: &[".d"],
-    riconosci: riconosci_tdf,
-    apri: apri_tdf,
+    riconosci: recognize_tdf,
+    apri: open_tdf,
 };
 
-pub const VOCE_TSF: VoceLettore = VoceLettore {
+pub const ENTRY_TSF: ReaderEntry = ReaderEntry {
     id: "bruker-tsf",
     contratto: CONTRATTO,
     estensioni: &[".d"],
-    riconosci: riconosci_tsf,
-    apri: apri_tsf,
+    riconosci: recognize_tsf,
+    apri: open_tsf,
 };
 
-impl LettoreBruker {
-    fn apri(mut fs: FileSet, limiti: &Limiti, tsf: bool) -> Result<LettoreBruker> {
+impl BrukerReader {
+    fn apri(mut fs: FileSet, limits: &Limits, tsf: bool) -> Result<BrukerReader> {
         let base = if tsf { "analysis.tsf" } else { "analysis.tdf" };
         let bin = format!("{base}_bin");
-        let primo = fs
+        let first_one = fs
             .membri
             .first()
             .map(|m| m.nome.clone())
             .unwrap_or_default();
-        let Some(db_m) = prendi(&mut fs, base) else {
-            return Err(match fs.trova(&bin) {
-                Some(_) => manca(&primo, base),
+        let Some(db_m) = take(&mut fs, base) else {
+            return Err(match fs.find(&bin) {
+                Some(_) => absent(&first_one, base),
                 None => Error::new("err.file.brukerBaf"),
             });
         };
-        let bin_m = prendi(&mut fs, &bin).ok_or_else(|| manca(&db_m.nome, &bin))?;
-        let wal = prendi(&mut fs, &format!("{base}-wal")).map(|m| (m.dati, m.dim));
-        let db = Sqlite::apri(db_m.dati, db_m.dim, wal, limiti);
+        let bin_m = take(&mut fs, &bin).ok_or_else(|| absent(&db_m.nome, &bin))?;
+        let wal = take(&mut fs, &format!("{base}-wal")).map(|m| (m.dati, m.dim));
+        let db = Sqlite::open(db_m.dati, db_m.dim, wal, limits);
         let mut db = db?;
-        let dati = Dati::leggi(&mut db, limiti)?;
-        let mut desc = costruisci(&dati);
-        limiti.voci_ok(desc.len() as u64)?;
+        let data = Data::read(&mut db, limits)?;
+        let mut desc = build(&data);
+        limits.ok_entries(desc.len() as u64)?;
         // a copy of `*_bin` cut short: the spectra of the frames past its end leave the index and are counted, the rest reads
         let mut bin = bin_m.dati;
-        let pos: Vec<i64> = dati.frames.iter().map(|f| f.pos).collect();
-        let cut = tagliati(&pos, &mut *bin, bin_m.dim, tsf);
-        let tutti = desc.len();
+        let pos: Vec<i64> = data.frames.iter().map(|f| f.pos).collect();
+        let cut = cut_ones(&pos, &mut *bin, bin_m.dim, tsf);
+        let all = desc.len();
         desc.retain(|d| !cut[d.frame]);
-        let mancanti = tutti - desc.len();
-        let testata = Testata::leggi(&dati, tsf);
-        let compressione = dati
+        let missing_ones = all - desc.len();
+        let header = BrukerHeader::read(&data, tsf);
+        let compression = data
             .meta
             .get("TimsCompressionType")
             .and_then(|v| v.parse().ok())
             .unwrap_or(2);
-        let campioni = vec![Campione {
+        let samples = vec![Sample {
             id: 0,
             nome: cartella(&db_m.nome).unwrap_or("").to_string(),
             scansioni: desc.len(),
-            dimensione: None,
+            size: None,
         }];
-        let mut l = LettoreBruker {
+        let mut l = BrukerReader {
             tsf,
             nome: db_m.nome,
-            nome_bin: bin_m.nome,
+            bin_name: bin_m.nome,
             db,
             bin,
             dim_bin: bin_m.dim,
             dim_db: db_m.dim,
-            dati,
+            dati: data,
             desc,
-            limiti: *limiti,
-            testata,
-            campioni,
+            limits: *limits,
+            testata: header,
+            campioni: samples,
             indice: Vec::new(),
-            tic_noto: false,
-            massimi: Vec::new(),
+            known_tic: false,
+            maxima: Vec::new(),
             cache: None,
             sha1: None,
-            compressione,
-            mancanti,
+            compressione: compression,
+            missing_ones,
         };
-        l.costruisci_indice();
+        l.build_index();
         Ok(l)
     }
 
-    fn costruisci_indice(&mut self) {
+    fn build_index(&mut self) {
         for d in &self.desc {
             let f = &self.dati.frames[d.frame];
-            self.indice.push(VoceScansione {
+            self.indice.push(ScanEntry {
                 id: d.id.clone(),
-                rt: f.tempo / 60.0,
+                rt: f.moment / 60.0,
                 livello: d.livello,
-                polarita: f.polarita,
-                tic: if d.livello == 1 {
-                    f.somma_grezza()
-                } else {
-                    0.0
-                },
-                picco_base: None,
-                filtro: d.filtro.clone(),
+                polarita: f.polarity,
+                tic: if d.livello == 1 { f.raw_sum() } else { 0.0 },
+                base_peak: None,
+                filtro: d.filter.clone(),
                 precursore: d.mz_prec,
-                posizione: None,
+                position: None,
             });
         }
-        self.tic_noto = self.desc.iter().all(|d| d.livello == 1);
-        self.massimi = vec![None; self.desc.len()];
+        self.known_tic = self.desc.iter().all(|d| d.livello == 1);
+        self.maxima = vec![None; self.desc.len()];
     }
 
-    fn uno(&self, c: usize) -> Result<()> {
+    fn one(&self, c: usize) -> Result<()> {
         (c == 0)
             .then_some(())
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))
     }
 
     /// The peaks of frame `fi` (TDF), kept for the next call: the spectra of a frame come one after the other.
-    fn picchi(&mut self, fi: usize) -> Result<&Picchi> {
+    fn peaks(&mut self, fi: usize) -> Result<&Peaks> {
         if self.cache.as_ref().is_none_or(|c| c.0 != fi) {
             let f = &self.dati.frames[fi];
-            let b = leggi_blocco(
+            let b = read_block(
                 &mut *self.bin,
                 self.dim_bin,
                 u64::try_from(f.pos).unwrap_or(u64::MAX),
-                &self.limiti,
+                &self.limits,
             )?;
-            let p = decodifica(&b, self.compressione, f.scansioni, f.picchi, &self.limiti)?;
+            let p = decode(&b, self.compressione, f.scans, f.peaks, &self.limits)?;
             self.cache = Some((fi, p));
         }
         Ok(self
@@ -156,7 +152,7 @@ impl LettoreBruker {
     }
 
     /// TOF positions and intensities of spectrum `d`, and whether they are a profile.
-    fn punti(&mut self, d: &Desc) -> Result<(Vec<f64>, Vec<f64>, bool)> {
+    fn points(&mut self, d: &Desc) -> Result<(Vec<f64>, Vec<f64>, bool)> {
         if self.tsf {
             let f = &self.dati.frames[d.frame];
             let camp = self
@@ -165,18 +161,18 @@ impl LettoreBruker {
                 .get("DigitizerNumSamples")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0);
-            let l = tsf::leggi_frame(
+            let l = tsf::read_frame(
                 &mut *self.bin,
                 self.dim_bin,
                 u64::try_from(f.pos).unwrap_or(u64::MAX),
-                f.picchi,
+                f.peaks,
                 camp,
-                &self.limiti,
+                &self.limits,
             )?;
-            return Ok((l.tof, l.int, l.profilo));
+            return Ok((l.tof, l.int, l.profile));
         }
         let scan = d.scan.clone();
-        let s = somma(self.picchi(d.frame)?, &scan);
+        let s = summed(self.peaks(d.frame)?, &scan);
         Ok((
             s.iter().map(|x| f64::from(x.0)).collect(),
             s.iter().map(|x| x.1 as f64).collect(),
@@ -184,23 +180,23 @@ impl LettoreBruker {
         ))
     }
 
-    fn spettro(&mut self, k: usize) -> Result<Spectrum> {
-        let d = self.desc.get(k).cloned().ok_or_else(|| indice_cattivo(k))?;
+    fn spectrum(&mut self, k: usize) -> Result<Spectrum> {
+        let d = self.desc.get(k).cloned().ok_or_else(|| bad_index(k))?;
         let f = self.dati.frames[d.frame].clone();
         let cal = self
             .dati
             .cal
             .get(&f.cal)
-            .filter(|c| c.valida())
+            .filter(|c| c.validate())
             .ok_or_else(|| {
                 Error::new("err.dam.unreadable").with("message", "no usable MzCalibration")
             })?
             .clone();
-        let (tof, y, profilo) = self.punti(&d)?;
-        self.massimi[k] = Some(massimo(&y));
-        let largo = y.iter().any(|&x| x > 16_777_216.0);
-        let fattore = cal.fattore(f.t1, f.t2);
-        let mz: Vec<f64> = tof.iter().map(|&t| cal.mz(t) * fattore).collect();
+        let (tof, y, profilo) = self.points(&d)?;
+        self.maxima[k] = Some(maximum(&y));
+        let broad = y.iter().any(|&x| x > 16_777_216.0);
+        let factor = cal.factor(f.t1, f.t2);
+        let mz: Vec<f64> = tof.iter().map(|&t| cal.mz(t) * factor).collect();
         let v = &self.indice[k];
         Ok(Spectrum {
             index: k,
@@ -213,35 +209,35 @@ impl LettoreBruker {
             precursor: d.mz_prec,
             mz,
             intensity: y.iter().map(|&x| x as f32).collect(),
-            wide: largo.then_some(y),
+            wide: broad.then_some(y),
         })
     }
 
     /// The TIC of the spectra cut from a frame, summed from their points (a frame's own sum is in `Frames`).
-    fn completa(&mut self) -> Result<()> {
-        if self.tic_noto {
+    fn complete(&mut self) -> Result<()> {
+        if self.known_tic {
             return Ok(());
         }
         for k in 0..self.desc.len() {
             if self.desc[k].livello != 1 {
                 // a frame that cannot be read leaves a 0: the error comes when the spectrum itself is asked for
                 let d = self.desc[k].clone();
-                if let Some(t) = self.somma_punti(&d) {
+                if let Some(t) = self.sum_points(&d) {
                     self.indice[k].tic = t;
                 }
             }
         }
-        self.tic_noto = true;
+        self.known_tic = true;
         Ok(())
     }
 
     /// The sum of the intensities of spectrum `d`; for a TDF frame straight from the points of its scan ranges (the counts are whole numbers, so the order of the sum does not matter).
-    fn somma_punti(&mut self, d: &Desc) -> Option<f64> {
+    fn sum_points(&mut self, d: &Desc) -> Option<f64> {
         if self.tsf {
-            return self.punti(d).ok().map(|(_, y, _)| y.iter().sum());
+            return self.points(d).ok().map(|(_, y, _)| y.iter().sum());
         }
-        let p = self.picchi(d.frame).ok()?;
-        Some(somma_scan(p, &d.scan))
+        let p = self.peaks(d.frame).ok()?;
+        Some(sum_scan(p, &d.scan))
     }
 
     fn file(&mut self) -> (Vec<SrcFile>, Vec<(String, Option<String>)>) {
@@ -257,130 +253,131 @@ impl LettoreBruker {
                     bytes: self.dim_db,
                 },
                 SrcFile {
-                    name: self.nome_bin.clone(),
+                    name: self.bin_name.clone(),
                     sha1: None,
                     bytes: self.dim_bin,
                 },
             ],
-            vec![(self.nome.clone(), sha), (self.nome_bin.clone(), None)],
+            vec![(self.nome.clone(), sha), (self.bin_name.clone(), None)],
         )
     }
 }
 
-impl Lettore for LettoreBruker {
-    fn formato(&self) -> Formato {
-        Formato::Altro(if self.tsf { "bruker-tsf" } else { "bruker-tdf" })
+impl Reader for BrukerReader {
+    fn format(&self) -> Format {
+        Format::Altro(if self.tsf { "bruker-tsf" } else { "bruker-tdf" })
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         crate::non_portati::BRUKER
     }
 
-    fn campioni(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
 
-    fn mancanti(&mut self, _c: usize) -> usize {
-        self.mancanti
+    fn missing(&mut self, _c: usize) -> usize {
+        self.missing_ones
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        self.uno(c)?;
-        self.completa()?;
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
+        self.one(c)?;
+        self.complete()?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.uno(c)?;
-        self.spettro(k)
+    // the decoding of every MS2 frame for its TIC is left to the callers that read it
+    fn index_without_tic(&mut self, c: usize) -> Result<&[ScanEntry]> {
+        self.one(c)?;
+        Ok(&self.indice)
+    }
+
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.one(c)?;
+        self.spectrum(k)
     }
 
     /// Frame, scan range, isolation and collision energy of spectrum `k`.
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.uno(c)?;
-        let d = self.desc.get(k).ok_or_else(|| indice_cattivo(k))?;
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
+        self.one(c)?;
+        let d = self.desc.get(k).ok_or_else(|| bad_index(k))?;
         let f = &self.dati.frames[d.frame];
-        let campo = |nome: &str, valore: String, unita: Option<&str>, cv: Option<&str>| Campo {
-            nome: nome.into(),
-            valore,
-            unita: unita.map(Into::into),
+        let field = |name: &str, value: String, units: Option<&str>, cv: Option<&str>| Field {
+            nome: name.into(),
+            valore: value,
+            unita: units.map(Into::into),
             cv: cv.map(Into::into),
         };
-        let mut o = vec![campo("frame", f.id.to_string(), None, None)];
+        let mut o = vec![field("frame", f.id.to_string(), None, None)];
         if !self.tsf {
             let r: Vec<String> = d.scan.iter().map(|s| format!("{}-{}", s.0, s.1)).collect();
-            o.push(campo("mobility scans [begin-end)", r.join(","), None, None));
-            o.push(campo(
-                "accumulation scans",
-                f.scansioni.to_string(),
-                None,
-                None,
-            ));
+            o.push(field("mobility scans [begin-end)", r.join(","), None, None));
+            o.push(field("accumulation scans", f.scans.to_string(), None, None));
         }
         if let Some(w) = d.iso {
-            o.push(campo(
+            o.push(field(
                 "isolation window target m/z",
                 w.mz.to_string(),
                 Some("m/z"),
                 Some("MS:1000827"),
             ));
-            o.push(campo(
+            o.push(field(
                 "isolation window width",
-                w.larghezza.to_string(),
+                w.width.to_string(),
                 Some("m/z"),
                 None,
             ));
-            o.push(campo(
+            o.push(field(
                 "collision energy",
                 w.ce.to_string(),
                 Some("eV"),
                 Some("MS:1000045"),
             ));
         }
-        if let Some(z) = d.carica {
-            o.push(campo(
+        if let Some(z) = d.load {
+            o.push(field(
                 "charge state",
                 z.to_string(),
                 None,
                 Some("MS:1000041"),
             ));
         }
-        if let Some(p) = d.precursore {
-            o.push(campo("precursor", p.to_string(), None, None));
+        if let Some(p) = d.precursor {
+            o.push(field("precursor", p.to_string(), None, None));
         }
         Ok(o)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        self.uno(c)?;
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
+        self.one(c)?;
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
-            .map(|(id, tipo)| VoceCromatogramma {
+            .map(|(id, kind)| ChromatogramEntry {
                 id: id.into(),
-                tipo,
-                unita: UNITA.into(),
+                tipo: kind,
+                unita: UNITS.into(),
             })
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.uno(c)?;
-        self.traccia(id)
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+        self.one(c)?;
+        self.trace(id)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.uno(c)?;
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.one(c)?;
         let (f, _) = self.file();
-        Ok(self.testata.documento(f))
+        Ok(self.testata.document(f))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        self.uno(c)?;
-        let (f, nomi) = self.file();
-        let doc = self.testata.documento(f);
-        let cartella = cartella(&self.nome).unwrap_or(&self.nome).to_string();
-        Ok(Some(self.testata.header(&cartella, &nomi, doc)))
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
+        self.one(c)?;
+        let (f, names) = self.file();
+        let doc = self.testata.document(f);
+        let folder = cartella(&self.nome).unwrap_or(&self.nome).to_string();
+        Ok(Some(self.testata.header(&folder, &names, doc)))
     }
 
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
@@ -395,11 +392,11 @@ impl Lettore for LettoreBruker {
             if let Some(w) = d.iso {
                 params.push((
                     "mzLab isolation width (m/z)".to_string(),
-                    w.larghezza.to_string(),
+                    w.width.to_string(),
                 ));
                 params.push(("mzLab collision energy (eV)".to_string(), w.ce.to_string()));
                 // the window the instrument isolated and the energy it applied; the dissociation method is not said in the file
-                let meta = w.larghezza / 2.0;
+                let meta = w.width / 2.0;
                 precursors.extend(s.precursor.map(|mz| Precursore {
                     selected_mz: Some(mz),
                     iso_target: Some(mz),
@@ -421,43 +418,43 @@ impl Lettore for LettoreBruker {
     }
 }
 
-fn riconosci_tdf(fs: &mut FileSet) -> Fiducia {
-    riconosci(fs, "analysis.tdf")
+fn recognize_tdf(fs: &mut FileSet) -> Fiducia {
+    recognize(fs, "analysis.tdf")
 }
 
-fn riconosci_tsf(fs: &mut FileSet) -> Fiducia {
-    riconosci(fs, "analysis.tsf")
+fn recognize_tsf(fs: &mut FileSet) -> Fiducia {
+    recognize(fs, "analysis.tsf")
 }
 
-fn apri_tdf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
-    LettoreBruker::apri(fs, limiti, false).map(|l| Box::new(l) as Box<dyn Lettore>)
+fn open_tdf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    BrukerReader::apri(fs, limits, false).map(|l| Box::new(l) as Box<dyn Reader>)
 }
 
-fn apri_tsf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
-    LettoreBruker::apri(fs, limiti, true).map(|l| Box::new(l) as Box<dyn Lettore>)
+fn open_tsf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    BrukerReader::apri(fs, limits, true).map(|l| Box::new(l) as Box<dyn Reader>)
 }
 
-pub struct LettoreBruker {
+pub struct BrukerReader {
     tsf: bool,
     /// Name of the database file as given (`x.d/analysis.tdf`).
     nome: String,
-    nome_bin: String,
+    bin_name: String,
     db: Sqlite,
     bin: Box<dyn ReadAt>,
     dim_bin: u64,
     dim_db: u64,
-    dati: Dati,
+    dati: Data,
     desc: Vec<Desc>,
-    limiti: Limiti,
-    testata: Testata,
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
-    tic_noto: bool,
+    limits: Limits,
+    testata: BrukerHeader,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
+    known_tic: bool,
     /// The base peak intensity of every spectrum already decoded: the BPC after a full pass (index, mzML) decodes no frame again.
-    massimi: Vec<Option<f64>>,
-    cache: Option<(usize, Picchi)>,
+    maxima: Vec<Option<f64>>,
+    cache: Option<(usize, Peaks)>,
     sha1: Option<Option<String>>,
     compressione: u32,
     /// Spectra of frames whose block lies past the end of `*_bin`: not in the index.
-    mancanti: usize,
+    missing_ones: usize,
 }

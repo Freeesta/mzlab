@@ -12,10 +12,10 @@ mod gruppi;
 mod rotte;
 mod uscita;
 mod wiff;
-pub(crate) use rotte::Stato;
+pub(crate) use rotte::State;
 
 /// More distinct MSn keys than this at one level: one `dd:<level>` channel (the same cap as `infusione`).
-pub const MAX_CHIAVI: usize = 64;
+pub const MAX_KEYS: usize = 64;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Famiglia {
@@ -31,7 +31,7 @@ pub enum Famiglia {
 }
 
 impl Famiglia {
-    pub fn nome(self) -> &'static str {
+    pub fn name(self) -> &'static str {
         match self {
             Famiglia::Tic => "tic",
             Famiglia::Bpc => "bpc",
@@ -47,7 +47,7 @@ impl Famiglia {
 
 /// Where the trace of a channel lives.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Sorgente {
+pub enum Source {
     /// A slice `da..a` of `Canali::scan_ids`.
     Scan {
         da: u32,
@@ -62,44 +62,44 @@ pub enum Sorgente {
 }
 
 #[derive(Debug, Clone)]
-pub struct Canale {
+pub struct Channel {
     pub id: String,
     pub famiglia: Famiglia,
     /// Index of the parent channel (`tic`, or the channel of the precursor).
-    pub genitore: Option<u32>,
+    pub parent: Option<u32>,
     /// 0 for UV and analog channels.
     pub livello: u8,
     /// +1, -1 or 0 (both, or none).
     pub pol: i8,
     pub sigla: Option<&'static str>,
-    pub etichetta: String,
+    pub label: String,
     /// Same value in two files = the same channel (level, nominal masses of the path, activation, collision energy rounded; q1/q3 to 0.1).
     pub omologo: String,
     pub n: u32,
     pub rt: (f64, f64),
     /// The channel has scans with a spectrum (`ms`, `dd`, `uv`).
     pub spettri: bool,
-    pub sorgente: Sorgente,
+    pub source: Source,
 }
 
 /// A proposal for the default tools, never a verdict: the user's own value (CANALI-F) wins.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tipo {
     /// `lc-full` | `lc-ms2-mirato` | `lc-dda` | `lc-mrm` | `infusione-msn` | `misto` | `solo-uv`
-    pub proposto: &'static str,
-    pub motivo: &'static str,
+    pub proposed: &'static str,
+    pub reason: &'static str,
 }
 
 #[derive(Debug, Clone)]
-pub struct Canali {
-    pub v: Vec<Canale>,
+pub struct Channels {
+    pub v: Vec<Channel>,
     /// The indices of the scans (in `idx.scans`) partitioned by leaf channel, file order inside each channel: 4 B per scan.
     pub scan_ids: Vec<u32>,
     pub tipo: Tipo,
 }
 
 /// `tic` (and `bpc` when there are scans): from the scan table, else from the TIC chromatogram, else the sum of the MRM traces.
-fn canali_tic(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Canale> {
+fn tic_channels(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Channel> {
     let ha_scan = !scans.is_empty();
     let srm: Vec<&Chrom> = chroms.iter().filter(|c| c.kind == "srm").collect();
     if !ha_scan && srm.is_empty() {
@@ -124,34 +124,34 @@ fn canali_tic(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Canale> {
         )
     };
     let sorgente = match (ha_scan, chroms.iter().find(|c| c.kind == "tic")) {
-        (true, _) => Sorgente::Scan {
+        (true, _) => Source::Scan {
             da: 0,
             a: scans.len() as u32,
         },
-        (false, Some(c)) => Sorgente::Cromatogramma(c.index as i64),
-        (false, None) => Sorgente::Somma,
+        (false, Some(c)) => Source::Cromatogramma(c.index as i64),
+        (false, None) => Source::Somma,
     };
-    let tic = Canale {
+    let tic = Channel {
         id: "tic".into(),
         famiglia: Famiglia::Tic,
-        genitore: None,
+        parent: None,
         livello: 0,
         pol: 0,
         sigla: None,
-        etichetta: "TIC".into(),
+        label: "TIC".into(),
         omologo: "tic".into(),
         n,
         rt,
         spettri: false,
-        sorgente,
+        source: sorgente,
     };
     let mut v = vec![tic];
     if ha_scan {
-        v.push(Canale {
+        v.push(Channel {
             id: "bpc".into(),
             famiglia: Famiglia::Bpc,
-            genitore: Some(0),
-            etichetta: "BPC".into(),
+            parent: Some(0),
+            label: "BPC".into(),
             omologo: "bpc".into(),
             ..v[0].clone()
         });
@@ -160,20 +160,14 @@ fn canali_tic(scans: &[Scan], chroms: &[Chrom], facts: &Facts) -> Vec<Canale> {
 }
 
 /// Parents of the MSn channels (`v[base + k]` is group `rango[k]`): the channel of the precursor, else the DDA aggregate of the level before, else the TIC.
-fn collega_genitori(
-    v: &mut [Canale],
-    base: usize,
-    rango: &[u32],
-    finali: &[Gruppo],
-    radice: Option<u32>,
-) {
-    for (k, g) in rango.iter().enumerate() {
+fn link_parents(v: &mut [Channel], base: usize, rank: &[u32], finali: &[Group], root: Option<u32>) {
+    for (k, g) in rank.iter().enumerate() {
         let f = &finali[*g as usize];
-        v[base + k].genitore = radice;
+        v[base + k].parent = root;
         if f.level < 2 || f.id.starts_with("dd:") {
             continue;
         }
-        let padre = rango
+        let parent = rank
             .iter()
             .enumerate()
             .filter(|(_, h)| {
@@ -182,26 +176,25 @@ fn collega_genitori(
             })
             .filter(|(_, h)| {
                 let p = &finali[**h as usize];
-                p.percorso == f.percorso[..f.percorso.len().saturating_sub(1)]
+                p.path == f.path[..f.path.len().saturating_sub(1)]
                     && (p.pol == f.pol || p.pol == 0 || f.pol == 0)
             });
-        let padre = padre
+        let padre = parent
             .max_by_key(|&(j, h)| (finali[*h as usize].n, std::cmp::Reverse(j)))
             .map(|(j, _)| base + j)
             .or_else(|| {
-                rango
-                    .iter()
+                rank.iter()
                     .position(|h| finali[*h as usize].id == format!("dd:{}", f.level - 1))
                     .map(|j| base + j)
             });
         if let Some(p) = padre {
-            v[base + k].genitore = Some(p as u32);
+            v[base + k].parent = Some(p as u32);
         }
     }
 }
 
 /// The MRM transitions of the file, one channel each.
-fn canali_srm(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Option<u32>) {
+fn srm_channels(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Option<u32>) {
     for c in chroms.iter().filter(|c| c.kind == "srm") {
         if c.q3.is_none() && c.id.starts_with("SIM SIC ") {
             // the same ion in every sample: m/z and polarity, not the sample of the id
@@ -215,7 +208,7 @@ fn canali_srm(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Opti
                 |q| format!("{q:.1}"),
             );
             let omologo = format!("sim|1|{ion}|{pol}");
-            v.push(canale_sim(c, facts, radice, omologo));
+            v.push(sim_channel(c, facts, root, omologo));
             continue;
         }
         let ce = c.ce.filter(|x| x.is_finite());
@@ -242,19 +235,19 @@ fn canali_srm(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Opti
             ce.map(|x| (x.round() as i64).to_string())
                 .unwrap_or_default()
         );
-        v.push(Canale {
+        v.push(Channel {
             id,
             famiglia: Famiglia::Srm,
-            genitore: radice,
+            parent: root,
             livello: 2,
             pol: 0,
             sigla: Some("MRM"),
-            etichetta,
+            label: etichetta,
             omologo,
             n: c.n.unwrap_or(0).max(0) as u32,
             rt,
             spettri: false,
-            sorgente: Sorgente::Cromatogramma(c.index as i64),
+            source: Source::Cromatogramma(c.index as i64),
         });
     }
 }
@@ -299,95 +292,98 @@ fn sim_label(id: &str) -> String {
 }
 
 /// The SIM / SIC chromatograms of the file, one channel each.
-fn canali_sim(v: &mut Vec<Canale>, chroms: &[Chrom], facts: &Facts, radice: Option<u32>) {
+fn sim_channels(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts, root: Option<u32>) {
     for c in chroms.iter().filter(|c| {
         c.kind != "srm"
             && c.id
                 .get(..3)
                 .is_some_and(|p| p.eq_ignore_ascii_case("sic") || p.eq_ignore_ascii_case("sim"))
     }) {
-        v.push(canale_sim(c, facts, radice, format!("sim|1|{}", c.id)));
+        v.push(sim_channel(c, facts, root, format!("sim|1|{}", c.id)));
     }
 }
 
 /// The channel of one SIM / SIC chromatogram.
-fn canale_sim(c: &Chrom, facts: &Facts, radice: Option<u32>, omologo: String) -> Canale {
-    Canale {
+fn sim_channel(c: &Chrom, facts: &Facts, root: Option<u32>, omologo: String) -> Channel {
+    Channel {
         id: format!("sim:{}", c.id),
         famiglia: Famiglia::Sim,
-        genitore: radice,
+        parent: root,
         livello: 1,
         pol: 0,
         sigla: Some("SIM"),
-        etichetta: sim_label(&c.id),
+        label: sim_label(&c.id),
         omologo,
         n: c.n.unwrap_or(0).max(0) as u32,
         rt: facts.srm_rt.unwrap_or((0.0, 0.0)),
         spettri: false,
-        sorgente: Sorgente::Cromatogramma(c.index as i64),
+        source: Source::Cromatogramma(c.index as i64),
     }
 }
 
-impl Canali {
+impl Channels {
     /// The channels of a file from its scan table and the headers of its chromatograms (`chroms` may be empty); `nome` is the file name (the infusion hint).
-    pub fn da(scans: &[Scan], chroms: &[Chrom], facts: &Facts, nome: &str) -> Canali {
-        let (mut gruppi, di) = raggruppa(scans);
-        distingui_polarita(&mut gruppi);
-        let (finali, verso) = fondi_dd(gruppi);
-        let (rango, pos_di) = ordina(&finali);
-        let (inizio, scan_ids) = partiziona(scans.len(), &finali, &rango, &pos_di, &di, &verso);
+    pub fn da(scans: &[Scan], chroms: &[Chrom], facts: &Facts, name: &str) -> Channels {
+        let (mut groups, di) = group(scans);
+        distingui_polarita(&mut groups);
+        let (finali, direction) = fondi_dd(groups);
+        let (rank, pos_di) = sort(&finali);
+        let (start, scan_ids) = partiziona(scans.len(), &finali, &rank, &pos_di, &di, &direction);
         drop(di);
-        let mut v = canali_tic(scans, chroms, facts);
+        let mut v = tic_channels(scans, chroms, facts);
         let base = v.len();
-        for g in &rango {
+        for g in &rank {
             let f = &finali[*g as usize];
             let r = pos_di[*g as usize] as usize;
-            v.push(Canale {
+            v.push(Channel {
                 id: f.id.clone(),
                 famiglia: if f.id.starts_with("dd:") {
                     Famiglia::Dd
                 } else {
                     Famiglia::Ms
                 },
-                genitore: Some(0),
+                parent: Some(0),
                 livello: f.level,
                 pol: f.pol,
-                sigla: f.sigla,
-                etichetta: f.etichetta.clone(),
+                sigla: f.tag,
+                label: f.etichetta.clone(),
                 omologo: f.omologo.clone(),
                 n: f.n,
                 rt: f.rt,
                 spettri: true,
-                sorgente: Sorgente::Scan {
-                    da: inizio[r],
-                    a: inizio[r + 1],
+                source: Source::Scan {
+                    da: start[r],
+                    a: start[r + 1],
                 },
             });
         }
-        let radice = if v.is_empty() { None } else { Some(0u32) };
-        collega_genitori(&mut v, base, &rango, &finali, radice);
-        canali_srm(&mut v, chroms, facts, radice);
-        canali_sim(&mut v, chroms, facts, radice);
-        crate::canali_uv::aggiungi(&mut v, chroms, facts);
-        let tipo = tipo_di(scans, &v, facts, nome);
-        Canali { v, scan_ids, tipo }
+        let root = if v.is_empty() { None } else { Some(0u32) };
+        link_parents(&mut v, base, &rank, &finali, root);
+        srm_channels(&mut v, chroms, facts, root);
+        sim_channels(&mut v, chroms, facts, root);
+        crate::canali_uv::add(&mut v, chroms, facts);
+        let tipo = tipo_di(scans, &v, facts, name);
+        Channels { v, scan_ids, tipo }
     }
 
     /// Index of the channel `id`.
-    pub fn trova(&self, id: &str) -> Option<usize> {
+    pub fn find(&self, id: &str) -> Option<usize> {
         self.v.iter().position(|c| c.id == id)
     }
 }
 
 /// The proposed type of experiment from the structure of the channels (`infusione` decides the infusions).
-fn tipo_di(scans: &[Scan], v: &[Canale], facts: &Facts, nome: &str) -> Tipo {
+fn tipo_di(scans: &[Scan], v: &[Channel], facts: &Facts, name: &str) -> Tipo {
     let srm = v.iter().any(|c| c.famiglia == Famiglia::Srm);
     let sim = v.iter().any(|c| c.famiglia == Famiglia::Sim);
-    let ms: Vec<&Canale> = v
+    let ms: Vec<&Channel> = v
         .iter()
         .filter(|c| matches!(c.famiglia, Famiglia::Ms | Famiglia::Dd))
         .collect();
-    let t = |proposto, motivo| Tipo { proposto, motivo };
+    let t = |proposto, motivo| Tipo {
+        proposed: proposto,
+        reason: motivo,
+    };
     if scans.is_empty() {
         // SIM channels are MS data: a SIM file is never "UV only" or "empty"
         return match (srm, sim, facts.pda) {
@@ -400,8 +396,8 @@ fn tipo_di(scans: &[Scan], v: &[Canale], facts: &Facts, nome: &str) -> Tipo {
     if srm {
         return t("misto", "srm_and_scans");
     }
-    if crate::infusione::con_msn(scans, facts.lc, nome) {
-        let motivo = match crate::infusione::infusione(scans, facts.lc, nome).map(|i| i.motivo) {
+    if crate::infusione::with_msn(scans, facts.lc, name) {
+        let motivo = match crate::infusione::infusione(scans, facts.lc, name).map(|i| i.reason) {
             Some("blocchi") => "blocks",
             Some("metodo_senza_lc") => "method_without_lc",
             _ => "name",

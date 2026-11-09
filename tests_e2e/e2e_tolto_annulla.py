@@ -24,63 +24,63 @@ try:
         FK = "E.files.find(f => f.kind === 'full' && !f.gone).k"
         def file_undo():
             k = pg.evaluate(FK); assert notice() == 0
-            pg.evaluate(f"removeFile(E.files[{k}])"); attendi(pg, f"E.files[{k}].gone === true && {pending}")
+            pg.evaluate(f"removeFile(E.files[{k}])"); wait_for_js(pg, f"E.files[{k}].gone === true && {pending}")
             assert dialogs() == 0, "no question"
             assert notice() == 0, "no visible notice"
             # the live region is cleared and filled again 30 ms later (storia.js say) so that the same text is announced twice: wait for it
-            attendi(pg, "/Removed|Tolto/.test(document.getElementById('sb-live').textContent)", 3000)
-            pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.files[{k}].gone === false")
+            wait_for_js(pg, "/Removed|Tolto/.test(document.getElementById('sb-live').textContent)", 3000)
+            pg.keyboard.press(f"{mod}+z"); wait_for_js(pg, f"E.files[{k}].gone === false")
             assert pg.evaluate(f"E.files[{k}].vis") is True, "Ctrl+Z puts the file back"
-            pg.keyboard.press(f"{mod}+Shift+z"); attendi(pg, f"E.files[{k}].gone === true")
+            pg.keyboard.press(f"{mod}+Shift+z"); wait_for_js(pg, f"E.files[{k}].gone === true")
         step("file: no question, no notice, Ctrl+Z puts it back, Shift+Ctrl+Z removes it", file_undo)
         def file_button():
             k = pg.evaluate("E.files.findIndex(f => f.gone)")
-            pg.evaluate(f"E.files[{k}].gone=false;E.files[{k}].vis=true;renderFileList()"); pg.evaluate(f"removeFile(E.files[{k}])"); attendi(pg, f"E.files[{k}].gone === true")
-            pg.click("#np-undo"); attendi(pg, f"E.files[{k}].gone === false")
+            pg.evaluate(f"E.files[{k}].gone=false;E.files[{k}].vis=true;renderFileList()"); pg.evaluate(f"removeFile(E.files[{k}])"); wait_for_js(pg, f"E.files[{k}].gone === true")
+            pg.click("#np-undo"); wait_for_js(pg, f"E.files[{k}].gone === false")
         step("file: the Undo button of the panel bar", file_button)
         def panel_close():
             pg.evaluate("reveal(addPanel('chrom', { k: E.files.find(f => f.kind === 'full' && !f.gone).k }))"); ready(pg)
             pid = pg.evaluate("E.panels.filter(q => q.type === 'chrom').slice(-1)[0].id")
             pg.evaluate(f"(()=>{{const q=E.panels.find(x=>x.id=={pid});q.zoom=[2,6];q.title='Prova tolto'}})()")
             n0 = pg.evaluate("E.panels.length"); y0 = pg.evaluate(f"E.panels.find(x=>x.id=={pid}).y")
-            pg.evaluate(f"E.panels.find(x=>x.id=={pid}).el.querySelector('.x').click()"); attendi(pg, f"E.panels.length === {n0 - 1}")
+            pg.evaluate(f"E.panels.find(x=>x.id=={pid}).el.querySelector('.x').click()"); wait_for_js(pg, f"E.panels.length === {n0 - 1}")
             assert dialogs() == 0
-            pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.panels.length === {n0} && E.panels.some(x => x.title === 'Prova tolto')"); ready(pg)
+            pg.keyboard.press(f"{mod}+z"); wait_for_js(pg, f"E.panels.length === {n0} && E.panels.some(x => x.title === 'Prova tolto')"); ready(pg)
             q = pg.evaluate("(()=>{const q=E.panels.find(x=>x.title==='Prova tolto');return {zoom:q.zoom,tab:q.tab,y:q.y,in:q.el.isConnected}})()")
             assert q["zoom"] == [2, 6] and q["in"], q
             assert abs(q["y"] - y0) < 2, (q, y0)
-            pg.keyboard.press(f"{mod}+Shift+z"); attendi(pg, f"E.panels.length === {n0 - 1}")
+            pg.keyboard.press(f"{mod}+Shift+z"); wait_for_js(pg, f"E.panels.length === {n0 - 1}")
         step("panel: the X asks nothing, Ctrl+Z reopens it in place with its zoom", panel_close)
         def marks():
             pg.click("#np-map"); ready(pg)
             pg.evaluate(M + ".el.scrollIntoView({block:'start'})")
             pg.evaluate(f"MAPPA.addPointAt({M}, 9.0, 305.07, 0.2)"); pg.evaluate(f"MAPPA.addPointAt({M}, 14.3, 364.4, 0.2)")
-            attendi(pg, f"({M}._mz.rows || []).length === 2 && !!document.querySelector('.pnl.map .mztab')")
-            pg.click(".pnl.map .mztab [data-t=clear]"); attendi(pg, f"MAPPA.pts({M}).length === 0")
+            wait_for_js(pg, f"({M}._mz.rows || []).length === 2 && !!document.querySelector('.pnl.map .mztab')")
+            pg.click(".pnl.map .mztab [data-t=clear]"); wait_for_js(pg, f"MAPPA.pts({M}).length === 0")
             assert dialogs() == 0
-            pg.click("#np-undo"); attendi(pg, f"MAPPA.pts({M}).length === 2")
-            pg.click(".pnl.map .mztab [data-t=clear]"); attendi(pg, f"MAPPA.pts({M}).length === 0")
+            pg.click("#np-undo"); wait_for_js(pg, f"MAPPA.pts({M}).length === 2")
+            pg.click(".pnl.map .mztab [data-t=clear]"); wait_for_js(pg, f"MAPPA.pts({M}).length === 0")
             pg.evaluate("document.activeElement && document.activeElement.blur()")
-            pg.keyboard.press(f"{mod}+z"); attendi(pg, f"MAPPA.pts({M}).length === 2")
+            pg.keyboard.press(f"{mod}+z"); wait_for_js(pg, f"MAPPA.pts({M}).length === 2")
         step("marks: clearing them asks nothing, Undo and Ctrl+Z put them back", marks)
         def timed():
-            pg.evaluate("removeFile(E.files[E.files.findIndex(f => !f.gone && f.kind === 'full')])"); attendi(pg, pending)
+            pg.evaluate("removeFile(E.files[E.files.findIndex(f => !f.gone && f.kind === 'full')])"); wait_for_js(pg, pending)
             t0 = time.time()
-            attendi(pg, f"!({pending})", 12000)
+            wait_for_js(pg, f"!({pending})", 12000)
             assert 5 <= time.time() - t0 <= 9, time.time() - t0
         step("the undo window of a file lasts 6 s", timed)
         def keys_in_field():
             live = lambda: pg.evaluate("document.getElementById('sb-live').textContent")
             pg.evaluate("document.activeElement && document.activeElement.blur()")
-            pg.keyboard.press("Alt+Shift+ArrowRight"); ready(pg); pg.keyboard.press("Alt+Shift+ArrowLeft"); attendi(pg, "document.getElementById('sb-live').textContent !== ''")
+            pg.keyboard.press("Alt+Shift+ArrowRight"); ready(pg); pg.keyboard.press("Alt+Shift+ArrowLeft"); wait_for_js(pg, "document.getElementById('sb-live').textContent !== ''")
             pg.evaluate("(()=>{const i=document.createElement('input');i.id='tmpin';document.body.appendChild(i);i.focus();document.getElementById('sb-live').textContent=''})()")
             pg.keyboard.press("Alt+Shift+ArrowRight"); ready(pg)
             assert live() == "", "inside a text field Alt+Shift+arrows are the field's: " + live()
             pg.evaluate("document.getElementById('tmpin').remove()")
         step("Alt+Shift+arrows in a text field are left alone", keys_in_field)
         def reload():
-            pg.evaluate("removeFile(E.files[E.files.findIndex(f => !f.gone && f.kind === 'full')])"); attendi(pg, "STORIA.pila.v.length > 0")
-            pg.reload(); attendi(pg, "typeof STORIA !== 'undefined' && STORIA !== null")
+            pg.evaluate("removeFile(E.files[E.files.findIndex(f => !f.gone && f.kind === 'full')])"); wait_for_js(pg, "STORIA.pila.v.length > 0")
+            pg.reload(); wait_for_js(pg, "typeof STORIA !== 'undefined' && STORIA !== null")
             assert pg.evaluate("STORIA.pila.v.length") == 0 and pg.evaluate("STORIA.pila.r.length") == 0, "a reload empties the stack"
         step("a reload empties the stack", reload)
 finally:

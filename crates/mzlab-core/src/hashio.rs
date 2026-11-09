@@ -47,7 +47,12 @@ impl<W: Write> Write for HashWrite<W> {
 
 /// Size, SHA-256 and SHA-1 (hex) of everything `r` gives, read once in pieces of 1 MiB.
 pub fn hash_read<R: Read>(r: &mut R) -> Result<(u64, String, String)> {
-    let (mut sha256, mut sha1) = (Sha256::new(), Sha1::new());
+    hash_read_with(r, true).map(|(n, sha256, sha1)| (n, sha256, sha1.unwrap_or_default()))
+}
+
+/// `hash_read` that takes the SHA-1 only when `sha1` asks for it: the SHA-256 alone costs about half the time.
+pub fn hash_read_with<R: Read>(r: &mut R, sha1: bool) -> Result<(u64, String, Option<String>)> {
+    let (mut sha256, mut sha1) = (Sha256::new(), sha1.then(Sha1::new));
     let (mut buf, mut bytes) = (vec![0u8; 1 << 20], 0u64);
     loop {
         let n = r.read(&mut buf)?;
@@ -56,10 +61,16 @@ pub fn hash_read<R: Read>(r: &mut R) -> Result<(u64, String, String)> {
         }
         let piece = buf.get(..n).unwrap_or_default();
         sha256.update(piece);
-        sha1.update(piece);
+        if let Some(h) = sha1.as_mut() {
+            h.update(piece);
+        }
         bytes += n as u64;
     }
-    Ok((bytes, hex(&sha256.finalize()), hex(&sha1.finalize())))
+    Ok((
+        bytes,
+        hex(&sha256.finalize()),
+        sha1.map(|h| hex(&h.finalize())),
+    ))
 }
 
 #[cfg(test)]
@@ -93,6 +104,8 @@ mod tests {
             assert_eq!(bytes, n as u64);
             assert_eq!(sha256, hex(&Sha256::digest(&data)), "n={n}");
             assert_eq!(sha1, hex(&Sha1::digest(&data)), "n={n}");
+            let (alone, sha256_alone, none) = hash_read_with(&mut data.as_slice(), false).unwrap();
+            assert_eq!((alone, sha256_alone, none), (bytes, sha256, None), "n={n}");
         }
     }
 }

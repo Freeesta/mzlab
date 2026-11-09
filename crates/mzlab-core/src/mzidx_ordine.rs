@@ -95,15 +95,15 @@ fn finish_runs<P: Copy>(s: &mut [P], key: &impl Fn(&P) -> u64, tie: Tie<P>) {
 }
 
 /// Orders the peaks of a bucket by m/z (and by scan when `per_scansione`; equal ones keep their order): the radix sort on the 32-bit order bits
-/// of an `f32` m/z (and the scan below them), or on the high half of the order bits of an `f64` and then the runs of equal halves by comparison.
+/// of an `f32` m/z (and the scan below them), or on the high 48 order bits of an `f64` (about 1e-8 Th at m/z 500, so HR ions repeated across scans rarely tie) and then the runs of equal keys by comparison.
 #[allow(clippy::disallowed_methods)] // hot path: per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
-pub(crate) fn ordina<T: Num>(
+pub(crate) fn sort<T: Num>(
     s: &mut [Peak<T>],
     tmp: &mut Vec<Peak<T>>,
-    per_scansione: bool,
+    per_scan: bool,
 ) -> Result<()> {
     let cmp = |x: &Peak<T>, y: &Peak<T>| {
-        if per_scansione {
+        if per_scan {
             by_mz(x, y).then(x.pos.cmp(&y.pos))
         } else {
             by_mz(x, y)
@@ -115,19 +115,19 @@ pub(crate) fn ordina<T: Num>(
     }
     if T::F32 {
         // the scan goes below the order bits; without `per_scansione` the digits of the scan are not looked at
-        radix(s, tmp, key32::<T>, usize::from(!per_scansione) * 4, None)
+        radix(s, tmp, key32::<T>, usize::from(!per_scan) * 4, None)
     } else {
-        radix(s, tmp, key64::<T>, 4, Some(&cmp))
+        radix(s, tmp, key64::<T>, 2, Some(&cmp))
     }
 }
 
 /// Orders every bucket of `round` (`ends`: where each bucket ends, in order; the first begins at `start`) as `ordina` does. The buckets are independent,
 /// so on a computer with several cores (not in the browser) groups of them are ordered at the same time; the result is the same.
-pub(crate) fn ordina_secchi<T: Num>(
+pub(crate) fn sort_buckets<T: Num>(
     round: &mut [Peak<T>],
     start: usize,
     ends: &[usize],
-    per_scansione: bool,
+    per_scan: bool,
 ) -> Result<()> {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -136,21 +136,21 @@ pub(crate) fn ordina_secchi<T: Num>(
             .map_or(1, usize::from)
             .min(8);
         if t > 1 && n >= PARALLELO {
-            return in_parallelo(round, start, ends, per_scansione, t);
+            return in_parallelo(round, start, ends, per_scan, t);
         }
     }
-    sequenziale(round, start, ends, per_scansione)
+    sequenziale(round, start, ends, per_scan)
 }
 
 fn sequenziale<T: Num>(
     round: &mut [Peak<T>],
     start: usize,
     ends: &[usize],
-    per_scansione: bool,
+    per_scan: bool,
 ) -> Result<()> {
     let (mut tmp, mut a) = (Vec::new(), start);
     for &z in ends {
-        ordina(&mut round[a..z], &mut tmp, per_scansione)?;
+        sort(&mut round[a..z], &mut tmp, per_scan)?;
         a = z;
     }
     Ok(())
@@ -166,7 +166,7 @@ fn in_parallelo<T: Num>(
     round: &mut [Peak<T>],
     start: usize,
     ends: &[usize],
-    per_scansione: bool,
+    per_scan: bool,
     t: usize,
 ) -> Result<()> {
     let total = ends.last().map_or(0, |e| e - start);
@@ -193,15 +193,15 @@ fn in_parallelo<T: Num>(
     std::thread::scope(|s| {
         let hs: Vec<_> = parts
             .into_iter()
-            .map(|(h, rel)| s.spawn(move || sequenziale(h, 0, &rel, per_scansione)))
+            .map(|(h, rel)| s.spawn(move || sequenziale(h, 0, &rel, per_scan)))
             .collect();
-        primo_errore(hs)
+        first_error(hs)
     })
 }
 
 // Joins every thread (the scope would anyway) and keeps the first error.
 #[cfg(not(target_arch = "wasm32"))]
-fn primo_errore(hs: Vec<std::thread::ScopedJoinHandle<'_, Result<()>>>) -> Result<()> {
+fn first_error(hs: Vec<std::thread::ScopedJoinHandle<'_, Result<()>>>) -> Result<()> {
     let mut res = Ok(());
     for h in hs {
         let r = h.join().unwrap_or_else(|_| Err(Error::memory_budget()));
@@ -244,10 +244,10 @@ mod tests_secchi {
             }
             ends.push(round.len());
         }
-        for per_scansione in [false, true] {
+        for per_scan in [false, true] {
             let (mut a, mut b) = (round.clone(), round.clone());
-            ordina_secchi(&mut a, 0, &ends, per_scansione).unwrap();
-            sequenziale(&mut b, 0, &ends, per_scansione).unwrap();
+            sort_buckets(&mut a, 0, &ends, per_scan).unwrap();
+            sequenziale(&mut b, 0, &ends, per_scan).unwrap();
             assert!(a
                 .iter()
                 .zip(&b)
@@ -268,7 +268,7 @@ fn key32<T: Num>(p: &Peak<T>) -> u64 {
     (u64::from(k) << 32) | u64::from(p.pos)
 }
 
-/// The same for an `f64` m/z, keeping the high half (the runs of equal halves are ordered by comparison).
+/// The same for an `f64` m/z, keeping the high 48 bits (the runs of equal keys are ordered by comparison).
 #[inline(always)]
 fn key64<T: Num>(p: &Peak<T>) -> u64 {
     let x = p.mz.to64();
@@ -277,7 +277,7 @@ fn key64<T: Num>(p: &Peak<T>) -> u64 {
         b if b >> 63 == 1 => !b,
         b => b | 1 << 63,
     };
-    k & !0xFFFF_FFFF
+    k & !0xFFFF
 }
 
 #[cfg(test)]
@@ -326,3 +326,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "mzidx_ordine_prove.rs"]
+mod prove;

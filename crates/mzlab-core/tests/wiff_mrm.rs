@@ -4,12 +4,13 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::mzmlhead::Mzml;
 use serde_json::Value;
 
-fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_mrm_{}", std::process::id()));
+/// The reference files of test `tag`: one folder per test, since the tests run in parallel and the script rewrites its folder.
+fn reference(tag: &str) -> Option<(PathBuf, Value)> {
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_mrm_{}_{tag}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
     let ok = Command::new("python3")
         .arg(script)
@@ -33,7 +34,7 @@ fn reference() -> Option<(PathBuf, Value)> {
 fn pair(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
-        Membro {
+        Member {
             nome: file,
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -50,11 +51,12 @@ fn pair(dir: &Path, name: &str) -> FileSet {
 
 #[test]
 fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
-    let Some((dir, want)) = reference() else {
+    let Some((dir, want)) = reference("the_transitions_of_the_method_survive_wiff_to_mzml_to_read")
+    else {
         return;
     };
     let want = want["transizioni"]["transitions"].as_array().unwrap();
-    let mut l = lettori::apri(pair(&dir, "transizioni"), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(pair(&dir, "transizioni"), &Limits::sito()).unwrap();
     let bytes = mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let text = String::from_utf8_lossy(&bytes);
     // every precursor of a transition has its activation, the energy and the dwell are written for the readers that know them
@@ -79,7 +81,9 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
 /// in the engine build (no `estesi`) as well as in the readers module.
 #[test]
 fn samples_without_a_method_of_their_own_read_the_transitions_of_method_one() {
-    let Some((dir, want)) = reference() else {
+    let Some((dir, want)) =
+        reference("samples_without_a_method_of_their_own_read_the_transitions_of_method_one")
+    else {
         return;
     };
     let want = want["transizioni"]["transitions"].as_array().unwrap();
@@ -118,7 +122,9 @@ fn samples_without_a_method_of_their_own_read_the_transitions_of_method_one() {
 /// next to sample 2): each sample reads the method whose `.dam` file name its `SampleDABE/DATA` gives.
 #[test]
 fn a_sample_reads_the_method_its_dam_file_names_not_the_one_with_its_number() {
-    let Some((dir, want)) = reference() else {
+    let Some((dir, want)) =
+        reference("a_sample_reads_the_method_its_dam_file_names_not_the_one_with_its_number")
+    else {
         return;
     };
     let want = want["transizioni"]["transitions"].as_array().unwrap();

@@ -1,7 +1,7 @@
 """Window sizes: phone, tablet, laptop, large screen, and live resizing. No horizontal page scroll, panels follow the window, nothing unreadable."""
 import sys
 from playwright.sync_api import sync_playwright
-from lib import Run, mz, SH, drawer, stage, ready, attendi, frames, close_side
+from lib import Run, mz, SH, drawer, stage, ready, wait_for_js, frames, close_side
 
 SIZES = [(360, 740), (768, 1024), (1024, 700), (1500, 900), (2560, 1300)]
 R = []
@@ -23,13 +23,13 @@ with sync_playwright() as p:
             sw, iw = overflow(pg); assert sw <= iw + 1, ("start screen overflows", sw, iw)
             pg.screenshot(path=SH + f"140_start_{w}.png")
         step(f"start screen at {w}px", start_small)
-    pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#opbtn"); ready(pg); pg.wait_for_selector(".pnl.chrom canvas", timeout=60000); attendi(pg, "!!(E.panels[0] && E.panels[0]._a)")
+    pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#opbtn"); ready(pg); pg.wait_for_selector(".pnl.chrom canvas", timeout=60000); wait_for_js(pg, "!!(E.panels[0] && E.panels[0]._a)")
     pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
-    attendi(pg, "E.panels[0]._a.sr.length >= 3")
-    if pg.is_visible("#dfiles"): close_side(pg); attendi(pg, "!document.querySelector('#dfiles') || !document.querySelector('#dfiles').offsetParent")      # the File panel is open at first start; under 900 px it would replace the workspace
+    wait_for_js(pg, "E.panels[0]._a.sr.length >= 3")
+    if pg.is_visible("#dfiles"): close_side(pg); wait_for_js(pg, "!document.querySelector('#dfiles') || !document.querySelector('#dfiles').offsetParent")      # the File panel is open at first start; under 900 px it would replace the workspace
     for w, h in SIZES:
         def at():
-            pg.set_viewport_size({"width": w, "height": h}); attendi(pg, "E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"); frames(pg, 3)
+            pg.set_viewport_size({"width": w, "height": h}); wait_for_js(pg, "E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"); frames(pg, 3)
             sw, iw = overflow(pg); assert sw <= iw + 2, ("page scrolls sideways", sw, iw)
             host = pg.evaluate("Q('#dpanels').clientWidth")
             bad = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.x + p.w > Q('#dpanels').clientWidth + 2).map(p=>[p.type,p.x,p.w])"); assert not bad, ("panel wider than the area", bad, host)
@@ -40,17 +40,17 @@ with sync_playwright() as p:
         step(f"data view at {w}x{h}", at)
     def live():
         for w in (1200, 600, 1800, 420, 1500):
-            pg.set_viewport_size({"width": w, "height": 900}); attendi(pg, "E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")
+            pg.set_viewport_size({"width": w, "height": 900}); wait_for_js(pg, "E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")
             assert pg.evaluate("E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"), w
         frames(pg, 3)
         assert pg.evaluate("E.panels[0]._a.sr.length") >= 3
     step("live resize keeps panels fitted", live)
     def fold():
         pg.set_viewport_size({"width": 700, "height": 900}); frames(pg, 3)      # below 900 px the file list is a sheet that replaces the workspace
-        drawer(pg); attendi(pg, "!!BARRA.sheet && !!document.querySelector('#dfiles').offsetParent")
+        drawer(pg); wait_for_js(pg, "!!BARRA.sheet && !!document.querySelector('#dfiles').offsetParent")
         assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.sheet") and not pg.is_visible("#dpanels")
         assert pg.evaluate("document.querySelector('#dfiles').getBoundingClientRect().width") <= 700 + 1
-        pg.keyboard.press("Escape"); attendi(pg, "E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")
+        pg.keyboard.press("Escape"); wait_for_js(pg, "E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)")
         assert pg.evaluate("E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"); pg.keyboard.press("Escape"); frames(pg, 2)
     step("file list is only a drawer at narrow width", fold)
     def tabs():
@@ -63,7 +63,7 @@ with sync_playwright() as p:
     def hidpi():
         c2 = run.b.new_context(device_scale_factor=2, viewport={"width": 1100, "height": 800}); q = c2.new_page(); q.goto(f"http://127.0.0.1:{run.port}/"); q.wait_for_selector("#pick", state="attached")
         stage(q, [mz("B_FullMass-t0")]); q.click("#opbtn"); ready(q)      # a new browser context starts empty: the session lives in the browser
-        q.wait_for_selector(".pnl.chrom canvas", timeout=30000); attendi(q, "(()=>{const c=E.panels[0] && E.panels[0].cv; return !!c && Math.abs(c.width / c.clientWidth - 2) < 0.05})()")
+        q.wait_for_selector(".pnl.chrom canvas", timeout=30000); wait_for_js(q, "(()=>{const c=E.panels[0] && E.panels[0].cv; return !!c && Math.abs(c.width / c.clientWidth - 2) < 0.05})()")
         r = q.evaluate("(()=>{const c=E.panels[0].cv;return c.width/c.clientWidth})()"); assert abs(r - 2) < 0.05, r
         c2.close()
     step("sharp canvases on a high-density screen (2x)", hidpi)

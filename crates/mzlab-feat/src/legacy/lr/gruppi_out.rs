@@ -3,7 +3,7 @@
 //! A series with fewer than two conditions has no block.
 
 use crate::sortc::SortC;
-use mzlab_core::campioni::Campione;
+use mzlab_core::campioni::Sample;
 
 use super::super::series::FileIn;
 use super::{cond, Entry, LrDig};
@@ -14,7 +14,7 @@ use crate::table::CELL_ABSENT;
 const PROTON: f64 = mzlab_core::elements::PROTON_6DP;
 
 /// A column of the Dig as a sample of `campioni/2` (role from the kind and the time, condition and replicate as the page gave them).
-pub fn campione(f: &FileIn, rank: usize) -> Campione {
+pub fn sample(f: &FileIn, rank: usize) -> Sample {
     let kind = match f.kind.as_str() {
         "blank" => "blank",
         "control" => "dark",
@@ -26,11 +26,11 @@ pub fn campione(f: &FileIn, rank: usize) -> Campione {
     } else {
         rank as u32 + 1
     };
-    let mut c = Campione::new(&f.name, "", order);
+    let mut c = Sample::new(&f.name, "", order);
     c.kind = kind.into();
     c.set_time(f.time, "min");
     c.series = f.cond.clone();
-    c.replicate = f.replica.unwrap_or(1);
+    c.replicate = f.replicate.unwrap_or(1);
     c
 }
 
@@ -108,7 +108,7 @@ pub fn block(d: &LrDig, names: &[String], found: &[bool]) -> Option<String> {
     let mut by_name: Vec<&str> = d.lc.iter().map(|f| f.name.as_str()).collect();
     by_name.sortc();
     let rank = |f: &FileIn| by_name.iter().position(|n| *n == f.name).unwrap_or(0);
-    let cs: Vec<Campione> = d.lc.iter().map(|f| campione(f, rank(f))).collect();
+    let cs: Vec<Sample> = d.lc.iter().map(|f| sample(f, rank(f))).collect();
     let shown: Vec<usize> = (0..d.entries.len()).filter(|&i| found[i]).collect();
     let n = d.lc.len();
     let mut tb = GroupTable {

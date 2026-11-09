@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::fileroutes::mrm_transitions;
 use mzlab_core::json::Out;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzmlhead::Mzml;
 
 use crate::Outcome;
@@ -33,7 +33,7 @@ Areas and heights in scientific notation with a decimal point (7.84077E+04), rea
 Peaks: every resolved peak of the whole trace, up to 10 per channel (smoothing 1-2-1 over 3 points, at least 3 points across, S/N at least 3);
 an empty cell = the sample has no such channel, or no peak for area_max, height_max and apex_rt.";
 
-struct Chiesta {
+struct Request {
     files: Vec<PathBuf>,
     output: String,
     layout: String,
@@ -42,7 +42,7 @@ struct Chiesta {
     out: Option<PathBuf>,
 }
 
-fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
+fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let (mut files, mut output, mut layout, mut out, mut groups) = (
         Vec::new(),
         "area_sum".to_string(),
@@ -94,7 +94,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Chiesta>, String> {
     if files.is_empty() {
         return Err("sim-table needs at least one file".into());
     }
-    Ok(Some(Chiesta {
+    Ok(Some(Request {
         files,
         output,
         layout,
@@ -174,13 +174,13 @@ fn samples_of(
         taken.push(name.clone());
         return Ok(vec![(name, mrm_transitions(&mut m, &chroms)?)]);
     }
-    let mut l = mzlab_lettori::apri(crate::flow_set::file_set(p)?, &Limiti::desktop())?;
+    let mut l = mzlab_lettori::apri(crate::flow_set::file_set(p)?, &Limits::desktop())?;
     let stem = name
         .rsplit_once('.')
         .map_or(name.as_str(), |s| s.0)
         .to_string();
     let wiff = lower.ends_with(".wiff");
-    let list: Vec<String> = l.campioni().iter().map(|c| c.nome.clone()).collect();
+    let list: Vec<String> = l.samples().iter().map(|c| c.nome.clone()).collect();
     let mut out = Vec::new();
     for (c, given) in list.iter().enumerate() {
         let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), c)?;
@@ -192,7 +192,7 @@ fn samples_of(
         } else {
             format!("{stem}.mzML")
         };
-        let missing = l.mancanti(c);
+        let missing = l.missing(c);
         if missing > 0 {
             *warn += &format!("warning: {n}: {missing} records past the end of the file (cut short?): only the points before the cut are integrated\n");
         }
@@ -202,7 +202,7 @@ fn samples_of(
     Ok(out)
 }
 
-fn table(c: &Chiesta, warn: &mut String) -> Result<String> {
+fn table(c: &Request, warn: &mut String) -> Result<String> {
     let mut taken = Vec::new();
     let mut o = Out::default();
     o.raw("[");
@@ -235,7 +235,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     match table(&c, &mut warn) {
         Err(e) => Outcome::fail(&format!(
             "{warn}{}",
-            crate::testo_errore::umano(&e.to_string())
+            crate::testo_errore::human(&e.to_string())
         )),
         Ok(t) => {
             let mut o = crate::emit(t, &c.out);

@@ -23,9 +23,9 @@ try:
         b = p.chromium.launch(); c = b.new_context(viewport={"width": 1400, "height": 900}); c.set_default_timeout(120000); c.add_init_script(INIT)
         A = c.new_page(); A.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         A.goto(f"http://127.0.0.1:{r.port}/"); A.wait_for_selector("#drop", state="attached")
-        attendi(A, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=120000)
+        wait_for_js(A, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=120000)
         A.set_input_files("#pick", [str(D / "P.mzML")])
-        attendi(A, "ST.files.length === 1 && ST.files.every(f => f.kind) && UPBUSY === 0 && OPENNOW.busy() === 0", timeout=120000)
+        wait_for_js(A, "ST.files.length === 1 && ST.files.every(f => f.kind) && UPBUSY === 0 && OPENNOW.busy() === 0", timeout=120000)
         n = json.loads(A.evaluate(ASK, "api/spectra?k=0&level=1&i0=0&i1=0")[1])["n"]
         def refused():
             for q, key, params in ((f"api/spectra?k=0&level=1&i0={n}&i1={n}", "err.scan.outsideN", {"n": str(n)}), ("api/spectra?k=0&level=1&i0=3&i1=2", "err.scan.range", {}),

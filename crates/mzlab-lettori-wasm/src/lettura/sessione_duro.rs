@@ -1,48 +1,48 @@
 // A reader whose answers hold the awkward values (control characters, NaN, infinities, `-0.0`, numbers at both ends of the range), for the tests of sessione.rs.
 use super::*;
-use mzlab_core::lettori::{Campione, Campo, Formato, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
-pub const STRANI: &str = "a\0b\u{1}\u{1f}\u{7f}\"\\/\n\r\t\u{8}\u{c}é€😀\u{2028}";
+pub const ODD_CHARS: &str = "a\0b\u{1}\u{1f}\u{7f}\"\\/\n\r\t\u{8}\u{c}é€😀\u{2028}";
 
-impl Lettore for Duro {
-    fn formato(&self) -> Formato {
-        Formato::Altro("duro")
+impl Reader for Hard {
+    fn format(&self) -> Format {
+        Format::Altro("duro")
     }
-    fn campioni(&self) -> &[Campione] {
-        static C: std::sync::OnceLock<Vec<Campione>> = std::sync::OnceLock::new();
+    fn samples(&self) -> &[Sample] {
+        static C: std::sync::OnceLock<Vec<Sample>> = std::sync::OnceLock::new();
         C.get_or_init(|| {
             vec![
-                Campione {
+                Sample {
                     id: 0,
-                    nome: STRANI.into(),
+                    nome: ODD_CHARS.into(),
                     scansioni: 0,
-                    dimensione: None,
+                    size: None,
                 },
-                Campione {
+                Sample {
                     id: u32::MAX,
                     nome: String::new(),
                     scansioni: usize::MAX >> 12,
-                    dimensione: Some(1),
+                    size: Some(1),
                 },
             ]
         })
     }
-    fn indice(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
         Ok(&[])
     }
-    fn scansione(&mut self, _: usize, _: usize) -> Result<Spectrum> {
+    fn scan(&mut self, _: usize, _: usize) -> Result<Spectrum> {
         Err(mzlab_core::Error::new("error.badIndex"))
     }
-    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
         Ok(vec![
-            Campo {
-                nome: STRANI.into(),
-                valore: STRANI.into(),
-                unita: Some(STRANI.into()),
+            Field {
+                nome: ODD_CHARS.into(),
+                valore: ODD_CHARS.into(),
+                unita: Some(ODD_CHARS.into()),
                 cv: None,
             },
-            Campo {
+            Field {
                 nome: String::new(),
                 valore: String::new(),
                 unita: None,
@@ -50,46 +50,46 @@ impl Lettore for Duro {
             },
         ])
     }
-    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok([ChromKind::Tic, ChromKind::Srm, ChromKind::Analog]
             .iter()
-            .map(|&tipo| VoceCromatogramma {
-                id: STRANI.into(),
+            .map(|&tipo| ChromatogramEntry {
+                id: ODD_CHARS.into(),
                 tipo,
-                unita: STRANI.into(),
+                unita: ODD_CHARS.into(),
             })
             .collect())
     }
-    fn cromatogramma(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
-        let n = numeri();
+    fn chromatogram(&mut self, _: usize, id: &str) -> Result<Chromatogram> {
+        let n = numbers();
         Ok(Chromatogram {
             index: 3,
             id: id.into(),
             kind: ChromKind::Srm,
             q1: Some(0.1 + 0.2),
             q3: Some(f64::NAN),
-            unit: STRANI.into(),
+            unit: ODD_CHARS.into(),
             time: n.clone(),
             intensity: n.iter().rev().copied().collect(),
         })
     }
-    fn metodo(&mut self, _: usize) -> Result<String> {
+    fn method(&mut self, _: usize) -> Result<String> {
         Ok("{}".into())
     }
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<mzlab_core::mzmlwrite::Header>> {
+    fn mzml_header(&mut self, c: usize) -> Result<Option<mzlab_core::mzmlwrite::Header>> {
         let t = |x: &str| x.to_string();
         Ok((c == 0).then(|| mzlab_core::mzmlwrite::Header {
-            run: t(STRANI),
-            sources: vec![t(STRANI), t("")],
-            instrument: Some((t("MS:1"), t(STRANI))),
-            components: vec![(t("source"), t("MS:2"), t(STRANI))],
-            software: (t(STRANI), t("1.0")),
+            run: t(ODD_CHARS),
+            sources: vec![t(ODD_CHARS), t("")],
+            instrument: Some((t("MS:1"), t(ODD_CHARS))),
+            components: vec![(t("source"), t("MS:2"), t(ODD_CHARS))],
+            software: (t(ODD_CHARS), t("1.0")),
             acquired: Some(t("2026-10-29T10:00:00+01:00")),
             serial: None,
             source_sha1: vec![t("00ff")],
-            source_cv: vec![(t("MS:3"), t(STRANI))],
-            sample: Some((t("s1"), t(STRANI))),
-            run_params: vec![(t(STRANI), t(STRANI))],
+            source_cv: vec![(t("MS:3"), t(ODD_CHARS))],
+            sample: Some((t("s1"), t(ODD_CHARS))),
+            run_params: vec![(t(ODD_CHARS), t(ODD_CHARS))],
             content: vec![(t("MS:4"), t("n"))],
             extra_software: vec![(t("MS:5"), t("n"), t("v"))],
             centroided: true,
@@ -98,9 +98,9 @@ impl Lettore for Duro {
     }
 }
 
-pub struct Duro;
+pub struct Hard;
 
-pub fn numeri() -> Vec<f64> {
+pub fn numbers() -> Vec<f64> {
     let mut v = vec![
         0.0,
         -0.0,

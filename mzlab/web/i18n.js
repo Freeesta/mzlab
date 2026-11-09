@@ -112,15 +112,21 @@
   const sciE = (x, d = 3) => { if (x === null || x === undefined || x === "" || !isFinite(+x)) return ""; const [m, e] = (+x === 0 ? 0 : +x).toExponential(d).split("e"); return `${m}E${+e < 0 ? "-" : "+"}${String(Math.abs(+e)).padStart(2, "0")}`; };
   const num = (x, dec) => (x === null || x === undefined || Number.isNaN(+x)) ? "" : (dec === undefined ? String(+x) : (+x).toFixed(dec));
 
+  // the texts written for the desktop app, where the limit is the memory of the computer and not of the browser
+  const NATIVE = new Set(["error.memoryBudget.native", "error.memoryBudgetFase.native", "error.memoryBudgetFase.indexPeaks.native", "error.memoryBudgetFase.detect.native"]);
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
   function err(j) {
     if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
     // a refusal of the memory contract names the phase, the estimate and the budget: its own text says by how much the file overshoots
-    const k = j.error_key === "error.memoryBudget" && j.params && j.params.fase ? "error.memoryBudgetFase" : j.error_key;
+    // (a phase with a text of its own, `error.memoryBudgetFase.<id>`, names its real limit)
+    // in the desktop app the limit is the memory of the computer, not of the browser: a key with a `.native` text uses that one (testo_errore.rs, same choice)
+    const nat = key => (typeof window !== "undefined" && window.MZLAB_DESKTOP && NATIVE.has(key + ".native") ? key + ".native" : key), FP = "error.memoryBudgetFase.";
+    const fase = j.error_key === "error.memoryBudget" && j.params && j.params.fase, own = fase && (cat[lang][FP + fase] || cat.it[FP + fase]) && nat(FP + fase).slice(FP.length);
+    const k = nat(fase ? "error.memoryBudgetFase" : j.error_key);
     // the phase has a name for people when the catalog has one (`memory.phase.<id>`)
     const ph = j.params && j.params.fase && cat[lang]["memory.phase." + j.params.fase] ? t(`memory.phase.${j.params.fase}`) : "";
     const params = ph ? Object.assign({}, j.params, { fase: ph }) : j.params;
-    let msg = t(k, params || {});
+    let msg = own ? t(`error.memoryBudgetFase.${own}`, params) : t(k, params || {});
     // a key with no text in the catalogs never reaches the student: the generic sentence carries the engine's own detail
     if (msg === k || msg === "") msg = t("error.generic", { detail: (j.params && j.params.detail) || j.error || "–" });
     return Object.assign(new Error(msg), { key: j.error_key, params: j.params });

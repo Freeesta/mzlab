@@ -1,7 +1,7 @@
 //! The record `trasf/1`: validation against the two molecules it names, the stereo rule, chains and the canonical rewrite
 //! (docs/studi/STRUTTURA_DATO_TRASFORMAZIONI.md). The molecules are small and the maps are written by hand.
 
-use mzlab_mol::{delta, Mol, RegionKind, TRegion, TSite, Trasf, TRASF_FORMAT};
+use mzlab_mol::{delta, Mol, RegionKind, TRegion, TSite, Transformation, TRANSFORMATION_FORMAT};
 
 fn mol(smiles: &str) -> Mol {
     Mol::from_smiles(smiles).unwrap_or_else(|e| panic!("{smiles}: {e}"))
@@ -15,9 +15,9 @@ fn step(
     pairs: &[(u32, Option<u32>)],
     added: &[u32],
     centre: &[u32],
-) -> Trasf {
-    Trasf {
-        format: TRASF_FORMAT.into(),
+) -> Transformation {
+    Transformation {
+        format: TRANSFORMATION_FORMAT.into(),
         parent: parent.core_hash_hex(),
         product: Some(product.core_hash_hex()),
         delta: delta.into(),
@@ -36,7 +36,7 @@ fn step(
 }
 
 /// Toluene `Cc1ccccc1` → benzyl alcohol `OCc1ccccc1`: the oxygen is new and written first.
-fn toluene_to_benzyl() -> (Mol, Mol, Trasf) {
+fn toluene_to_benzyl() -> (Mol, Mol, Transformation) {
     let (p, q) = (mol("Cc1ccccc1"), mol("OCc1ccccc1"));
     let pairs: Vec<(u32, Option<u32>)> = (0..7).map(|i| (i, Some(i + 1))).collect();
     let t = step(&p, &q, "+O", &pairs, &[0], &[0]);
@@ -47,7 +47,7 @@ fn toluene_to_benzyl() -> (Mol, Mol, Trasf) {
 fn a_certain_step_validates_and_round_trips() {
     let (p, q, t) = toluene_to_benzyl();
     t.validate_against(&p, Some(&q)).expect("valid");
-    assert_eq!(Trasf::from_json(&t.to_json()).expect("json"), t);
+    assert_eq!(Transformation::from_json(&t.to_json()).expect("json"), t);
     assert!(t.to_json().starts_with(r#"{"format":"trasf/1","parent":""#));
     assert_eq!(t.product_atom(0), Some(1));
     assert_eq!(t.parent_atom(0), None, "the added oxygen has no parent");
@@ -117,8 +117,8 @@ fn a_stereo_centre_at_the_reaction_centre_is_not_copied_as_defined() {
 #[test]
 fn an_uncertain_product_has_sites_and_no_map() {
     let p = mol("Cc1ccccc1");
-    let t = Trasf {
-        format: TRASF_FORMAT.into(),
+    let t = Transformation {
+        format: TRANSFORMATION_FORMAT.into(),
         parent: p.core_hash_hex(),
         product: None,
         delta: "+O".into(),
@@ -139,7 +139,7 @@ fn an_uncertain_product_has_sites_and_no_map() {
     };
     t.validate_against(&p, None).expect("valid");
     assert!(!t.is_certain());
-    assert_eq!(Trasf::from_json(&t.to_json()).expect("json"), t);
+    assert_eq!(Transformation::from_json(&t.to_json()).expect("json"), t);
     let mut bad = t.clone();
     bad.map.push((0, Some(0)));
     assert!(bad.validate().is_err(), "an uncertain product has no map");

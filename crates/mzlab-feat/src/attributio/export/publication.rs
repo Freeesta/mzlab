@@ -63,7 +63,7 @@ impl Build<'_> {
                 sub: &sub,
                 rep,
                 best_feats: &best_feats,
-                nome: &it.nome,
+                name: &it.nome,
                 lv,
                 lv_sub,
                 watch: &self.c.rt_logp_watchlist,

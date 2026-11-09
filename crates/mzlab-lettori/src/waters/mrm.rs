@@ -5,8 +5,8 @@ use super::cartella::errore;
 use mzlab_core::error::Result;
 
 /// The `n` channel values of a scan of `b`, whose records are `larghezza` bytes wide.
-pub(super) fn valori(b: &[u8], larghezza: u64, n: usize) -> Result<Vec<f64>> {
-    let w = usize::try_from(larghezza).map_err(|_| errore("channel width"))?;
+pub(super) fn values(b: &[u8], width: u64, n: usize) -> Result<Vec<f64>> {
+    let w = usize::try_from(width).map_err(|_| errore("channel width"))?;
     if !(w == 2 || w == 4) || b.len() < n.saturating_mul(w) {
         return Err(errore("channel record width"));
     }

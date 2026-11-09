@@ -74,7 +74,7 @@ fn parity_mcnemar_exact_grid_and_vectors() {
         let want_n01 = c["n01"].as_u64().expect("n01") as usize;
         let want_p = c["p"].as_f64().expect("p");
 
-        let (got_n10, got_n01, got_p) = mcnemar_esatto(&a, &b);
+        let (got_n10, got_n01, got_p) = mcnemar_exact(&a, &b);
         assert_eq!(got_n10, want_n10, "mcnemar vector case {i} n10");
         assert_eq!(got_n01, want_n01, "mcnemar vector case {i} n01");
         assert!(
@@ -124,7 +124,7 @@ fn parity_holm_step_down() {
 }
 
 #[test]
-fn parity_decisions_non_inferiore_e_superiore() {
+fn parity_decisions_non_inferior_and_superior() {
     let data = load_reference_data();
     let cases = data["decision_cases"]
         .as_array()
@@ -134,14 +134,14 @@ fn parity_decisions_non_inferiore_e_superiore() {
     for (i, c) in cases.iter().enumerate() {
         let lo = c["ic_basso"].as_f64().expect("lo");
         let hi = c["ic_alto"].as_f64().expect("hi");
-        let dir_alto = c["direzione_alto"].as_bool().expect("dir");
+        let dir_up = c["direzione_alto"].as_bool().expect("dir");
         let margine = c["margine"].as_f64().expect("margine");
         let rej = c["rifiutata"].as_bool().expect("rej");
         let want_ni = c["non_inferiore"].as_bool().expect("ni");
         let want_sup = c["superiore"].as_bool().expect("sup");
 
-        let got_ni = non_inferiore(lo, hi, dir_alto, margine);
-        let got_sup = superiore(lo, hi, dir_alto, rej);
+        let got_ni = non_inferiore(lo, hi, dir_up, margine);
+        let got_sup = superiore(lo, hi, dir_up, rej);
         assert_eq!(got_ni, want_ni, "decision case {i} non_inferiore");
         assert_eq!(got_sup, want_sup, "decision case {i} superiore");
     }
@@ -166,23 +166,23 @@ fn parity_bootstrap_confidence_interval() {
 
         let tipo_str = c["tipo"].as_str().unwrap_or("media");
         let tipo = if tipo_str == "mediana" {
-            StatTipo::Mediana
+            StatTipo::Median
         } else {
             StatTipo::Media
         };
 
-        let res = intervallo(&x, tipo, 200, 20261012);
+        let res = interval(&x, tipo, 200, 20261012);
         assert_eq!(res.n, x.len());
         assert!(
-            close(res.valore.expect("val"), want_pt, 1e-9),
+            close(res.value.expect("val"), want_pt, 1e-9),
             "boot case {i} value"
         );
         assert!(
-            close(res.ic_basso.expect("lo"), want_lo, 1e-9),
+            close(res.ci_low.expect("lo"), want_lo, 1e-9),
             "boot case {i} lo"
         );
         assert!(
-            close(res.ic_alto.expect("hi"), want_hi, 1e-9),
+            close(res.ci_high.expect("hi"), want_hi, 1e-9),
             "boot case {i} hi"
         );
     }
@@ -191,11 +191,11 @@ fn parity_bootstrap_confidence_interval() {
 #[test]
 fn edge_cases_and_robustness() {
     // Empty inputs
-    assert_eq!(mcnemar_esatto(&[], &[]), (0, 0, 1.0));
+    assert_eq!(mcnemar_exact(&[], &[]), (0, 0, 1.0));
     assert_eq!(holm(&[], 0.05), (Vec::new(), Vec::new()));
-    let empty_int = intervallo(&[], StatTipo::Media, 100, 1);
+    let empty_int = interval(&[], StatTipo::Media, 100, 1);
     assert_eq!(empty_int.n, 0);
-    assert!(empty_int.valore.is_none());
+    assert!(empty_int.value.is_none());
 
     let empty_diff = differenza(&[], &[], StatTipo::Media, 100, 1);
     assert!(empty_diff.is_some());

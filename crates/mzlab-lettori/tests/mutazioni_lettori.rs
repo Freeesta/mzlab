@@ -7,40 +7,40 @@ mod comune;
 mod comune_sqlite;
 mod comune_waters;
 
-use comune::andi::{andi_cromato, andi_ms, PIATTA};
-use comune::mzxml::{corsa, mzxml, PIATTO};
+use comune::andi::{andi_chromatogram, andi_ms, FLAT_RUN};
+use comune::mzxml::{mzxml, run, FLAT};
 use comune::*;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use std::sync::mpsc;
 use std::time::Duration;
 
 /// xorshift: the same mutants on every run.
-struct Caso(u64);
-impl Caso {
+struct Case(u64);
+impl Case {
     fn n(&mut self) -> u64 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 7;
         self.0 ^= self.0 << 17;
         self.0
     }
-    fn sotto(&mut self, n: usize) -> usize {
+    fn below(&mut self, n: usize) -> usize {
         (self.n() % n.max(1) as u64) as usize
     }
 }
 
-fn giri() -> usize {
+fn rounds() -> usize {
     std::env::var("MZLAB_MUTAZIONI")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(1)
 }
 
-fn insieme_di(membri: &[(String, Vec<u8>)]) -> FileSet {
+fn set_of(members: &[(String, Vec<u8>)]) -> FileSet {
     FileSet {
-        membri: membri
+        membri: members
             .iter()
-            .map(|(nome, b)| Membro {
-                nome: nome.clone(),
+            .map(|(name, b)| Member {
+                nome: name.clone(),
                 dim: b.len() as u64,
                 dati: Box::new(b.clone()),
                 sha1: None,
@@ -50,21 +50,21 @@ fn insieme_di(membri: &[(String, Vec<u8>)]) -> FileSet {
 }
 
 /// Reads everything a page and the CLI read; `Err` names the first non-finite number met.
-fn leggi_tutto(membri: &[(String, Vec<u8>)]) -> Result<(), String> {
-    let Ok(mut l) = mzlab_lettori::apri(insieme_di(membri), &Limiti::sito()) else {
+fn read_all(members: &[(String, Vec<u8>)]) -> Result<(), String> {
+    let Ok(mut l) = mzlab_lettori::apri(set_of(members), &Limits::sito()) else {
         return Ok(());
     };
-    for c in 0..l.campioni().len() {
-        let _ = l.metodo(c);
-        let _ = l.testata_mzml(c);
-        let Ok(ix) = l.indice(c).map(<[_]>::to_vec) else {
+    for c in 0..l.samples().len() {
+        let _ = l.method(c);
+        let _ = l.mzml_header(c);
+        let Ok(ix) = l.index(c).map(<[_]>::to_vec) else {
             continue;
         };
         for (k, v) in ix.iter().enumerate() {
             if !v.rt.is_finite() {
                 return Err(format!("index RT of scan {k} is {}", v.rt));
             }
-            if let Ok(s) = l.scansione(c, k) {
+            if let Ok(s) = l.scan(c, k) {
                 if s.mz.len() != s.intensity.len() {
                     return Err(format!(
                         "scan {k}: {} m/z for {} intensities",
@@ -81,11 +81,11 @@ fn leggi_tutto(membri: &[(String, Vec<u8>)]) -> Result<(), String> {
                     return Err(format!("scan {k} carries {x}"));
                 }
             }
-            let _ = l.intestazione(c, k);
+            let _ = l.scan_header(c, k);
         }
-        if let Ok(cr) = l.cromatogrammi(c) {
+        if let Ok(cr) = l.chromatograms(c) {
             for v in &cr {
-                let Ok(t) = l.cromatogramma(c, &v.id) else {
+                let Ok(t) = l.chromatogram(c, &v.id) else {
                     continue;
                 };
                 if t.time.len() != t.intensity.len() {
@@ -104,10 +104,7 @@ fn leggi_tutto(membri: &[(String, Vec<u8>)]) -> Result<(), String> {
 }
 
 /// Runs `f` on a thread with a 5 s deadline; a panic, a hang or an `Err` is a finding.
-fn sorveglia(
-    cosa: &str,
-    f: impl FnOnce() -> Result<(), String> + Send + 'static,
-) -> Option<String> {
+fn watch(what: &str, f: impl FnOnce() -> Result<(), String> + Send + 'static) -> Option<String> {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
@@ -115,15 +112,15 @@ fn sorveglia(
     });
     match rx.recv_timeout(Duration::from_secs(5)) {
         Ok(Ok(Ok(()))) => None,
-        Ok(Ok(Err(e))) => Some(format!("{cosa}: {e}")),
+        Ok(Ok(Err(e))) => Some(format!("{what}: {e}")),
         Ok(Err(p)) => Some(format!(
-            "{cosa}: panic {}",
+            "{what}: panic {}",
             p.downcast_ref::<String>()
                 .cloned()
                 .or_else(|| p.downcast_ref::<&str>().map(|s| s.to_string()))
                 .unwrap_or_default()
         )),
-        Err(_) => Some(format!("{cosa}: no answer in 5 s")),
+        Err(_) => Some(format!("{what}: no answer in 5 s")),
     }
 }
 
@@ -134,7 +131,7 @@ fn gz(b: &[u8]) -> Vec<u8> {
     e.finish().unwrap()
 }
 
-const OSTILI: &[&str] = &[
+const HOSTILE: &[&str] = &[
     "NaN",
     "-inf",
     "inf",
@@ -149,7 +146,7 @@ const OSTILI: &[&str] = &[
 ];
 
 /// Text mutants: cuts at every `<` and `>`, hostile numbers in attribute values, duplicated and removed lines, BOM/CRLF, junk appended.
-fn mutanti_testo(b: &[u8], caso: &mut Caso, giri: usize) -> Vec<(String, Vec<u8>)> {
+fn text_mutants(b: &[u8], case: &mut Case, rounds: usize) -> Vec<(String, Vec<u8>)> {
     let mut out = Vec::new();
     for (i, _) in b
         .iter()
@@ -159,35 +156,35 @@ fn mutanti_testo(b: &[u8], caso: &mut Caso, giri: usize) -> Vec<(String, Vec<u8>
         out.push((format!("cut@{i}"), b[..i].to_vec()));
     }
     // attribute values: every `="…"` gets each hostile value in turn (bounded by seeded picks)
-    let virgolette: Vec<usize> = b
+    let quotes: Vec<usize> = b
         .windows(2)
         .enumerate()
         .filter(|(_, w)| w == b"=\"")
         .map(|(i, _)| i + 2)
         .collect();
-    for _ in 0..200 * giri {
-        let Some(&a) = virgolette.get(caso.sotto(virgolette.len())) else {
+    for _ in 0..200 * rounds {
+        let Some(&a) = quotes.get(case.below(quotes.len())) else {
             break;
         };
         let Some(z) = b[a..].iter().position(|c| *c == b'"') else {
             continue;
         };
-        let v = OSTILI[caso.sotto(OSTILI.len())];
+        let v = HOSTILE[case.below(HOSTILE.len())];
         let mut m = b[..a].to_vec();
         m.extend_from_slice(v.as_bytes());
         m.extend_from_slice(&b[a + z..]);
         out.push((format!("attr@{a}={v}"), m));
     }
-    let righe: Vec<&[u8]> = b.split_inclusive(|c| *c == b'\n').collect();
-    for k in 0..righe.len() {
-        let senza: Vec<u8> = righe
+    let rows: Vec<&[u8]> = b.split_inclusive(|c| *c == b'\n').collect();
+    for k in 0..rows.len() {
+        let without: Vec<u8> = rows
             .iter()
             .enumerate()
             .filter(|(j, _)| *j != k)
             .flat_map(|(_, r)| r.iter().copied())
             .collect();
-        out.push((format!("drop-line{k}"), senza));
-        let doppia: Vec<u8> = righe
+        out.push((format!("drop-line{k}"), without));
+        let double: Vec<u8> = rows
             .iter()
             .enumerate()
             .flat_map(|(j, r)| {
@@ -198,13 +195,13 @@ fn mutanti_testo(b: &[u8], caso: &mut Caso, giri: usize) -> Vec<(String, Vec<u8>
                 }
             })
             .collect();
-        out.push((format!("dup-line{k}"), doppia));
+        out.push((format!("dup-line{k}"), double));
     }
-    for _ in 0..200 * giri {
+    for _ in 0..200 * rounds {
         let mut m = b.to_vec();
-        for _ in 0..1 + caso.sotto(4) {
-            let i = caso.sotto(m.len());
-            m[i] = caso.n() as u8;
+        for _ in 0..1 + case.below(4) {
+            let i = case.below(m.len());
+            m[i] = case.n() as u8;
         }
         out.push(("flip".into(), m));
     }
@@ -222,124 +219,119 @@ fn mutanti_testo(b: &[u8], caso: &mut Caso, giri: usize) -> Vec<(String, Vec<u8>
         })
         .collect();
     out.push(("crlf".into(), crlf));
-    let mut coda = b.to_vec();
-    coda.extend_from_slice(b"\0\0garbage<<<");
-    out.push(("trailing".into(), coda));
+    let mut tail = b.to_vec();
+    tail.extend_from_slice(b"\0\0garbage<<<");
+    out.push(("trailing".into(), tail));
     out
 }
 
 /// Binary mutants: cuts on a grid, flipped bytes, u32 words set to 0, 0xFFFFFFFF or 0x7FFFFFFF, f64 words set to NaN or -1.
-fn mutanti_binari(b: &[u8], caso: &mut Caso, giri: usize) -> Vec<(String, Vec<u8>)> {
+fn binary_mutants(b: &[u8], case: &mut Case, rounds: usize) -> Vec<(String, Vec<u8>)> {
     let mut out = Vec::new();
-    let passo = (b.len() / 300).max(1);
-    for i in (0..b.len()).step_by(passo) {
+    let step = (b.len() / 300).max(1);
+    for i in (0..b.len()).step_by(step) {
         out.push((format!("cut@{i}"), b[..i].to_vec()));
     }
-    for _ in 0..300 * giri {
+    for _ in 0..300 * rounds {
         let mut m = b.to_vec();
-        let i = caso.sotto(m.len().saturating_sub(8)) & !3;
-        let quale = caso.sotto(6);
-        let parola: Vec<u8> = match quale {
+        let i = case.below(m.len().saturating_sub(8)) & !3;
+        let which = case.below(6);
+        let word: Vec<u8> = match which {
             0 => 0u32.to_le_bytes().to_vec(),
             1 => u32::MAX.to_le_bytes().to_vec(),
             2 => 0x7FFF_FFFFu32.to_le_bytes().to_vec(),
             3 => f64::NAN.to_le_bytes().to_vec(),
             4 => (-1.0f64).to_le_bytes().to_vec(),
-            _ => vec![caso.n() as u8],
+            _ => vec![case.n() as u8],
         };
-        if i + parola.len() <= m.len() {
-            m[i..i + parola.len()].copy_from_slice(&parola);
+        if i + word.len() <= m.len() {
+            m[i..i + word.len()].copy_from_slice(&word);
         }
-        out.push((format!("word{quale}@{i}"), m));
+        out.push((format!("word{which}@{i}"), m));
     }
     out
 }
 
-fn esplora(
-    etichetta: &str,
-    membri: Vec<(String, Vec<u8>)>,
-    quale: usize,
-    testo: bool,
-) -> Vec<String> {
-    let mut caso = Caso(0x9E37_79B9_7F4A_7C15 ^ etichetta.len() as u64);
-    let base = membri[quale].1.clone();
-    let mutanti = if testo {
-        mutanti_testo(&base, &mut caso, giri())
+fn explore(label: &str, members: Vec<(String, Vec<u8>)>, which: usize, text: bool) -> Vec<String> {
+    let mut case = Case(0x9E37_79B9_7F4A_7C15 ^ label.len() as u64);
+    let base = members[which].1.clone();
+    let mutants = if text {
+        text_mutants(&base, &mut case, rounds())
     } else {
-        mutanti_binari(&base, &mut caso, giri())
+        binary_mutants(&base, &mut case, rounds())
     };
-    let mut trovati = Vec::new();
-    for (nome, m) in mutanti {
-        let mut ms = membri.clone();
-        ms[quale].1 = m;
-        if let Some(e) = sorveglia(&format!("{etichetta} {nome}"), move || leggi_tutto(&ms)) {
-            trovati.push(e);
+    let mut found = Vec::new();
+    for (name, m) in mutants {
+        let mut ms = members.clone();
+        ms[which].1 = m;
+        if let Some(e) = watch(&format!("{label} {name}"), move || read_all(&ms)) {
+            found.push(e);
         }
     }
-    trovati
+    found
 }
 
-fn esigi_nessuno(trovati: Vec<String>) {
-    for t in trovati.iter().take(40) {
+fn require_none(found: Vec<String>) {
+    for t in found.iter().take(40) {
         eprintln!("{t}");
     }
-    assert!(trovati.is_empty(), "{} findings", trovati.len());
+    assert!(found.is_empty(), "{} findings", found.len());
 }
 
 #[test]
-fn mzml_numpress_mutato() {
+fn mzml_numpress_mutated() {
     let np = mzml_di(
-        &scansioni(),
+        &scans(),
         Cod::Np {
-            intensita: mzlab_core::numpress::Np::Pic,
+            intensities: mzlab_core::numpress::Np::Pic,
             zlib: true,
         },
         None,
     );
-    esigi_nessuno(esplora("mzml-np", vec![("x.mzML".into(), np)], 0, true));
+    require_none(explore("mzml-np", vec![("x.mzML".into(), np)], 0, true));
 }
 
 #[test]
-fn mzxml_mutato() {
-    esigi_nessuno(esplora(
+fn mzxml_mutated() {
+    require_none(explore(
         "mzxml",
-        vec![("x.mzXML".into(), mzxml(&corsa(), PIATTO))],
+        vec![("x.mzXML".into(), mzxml(&run(), FLAT))],
         0,
         true,
     ));
 }
 
 #[test]
-fn mzml_gz_mutato() {
-    let gz = gz(&mzml_di(&scansioni(), Cod::Piano, None));
-    esigi_nessuno(esplora("mzml-gz", vec![("x.mzML.gz".into(), gz)], 0, false));
+fn mzml_gz_mutated() {
+    let gz = gz(&mzml_di(&scans(), Cod::Piano, None));
+    require_none(explore("mzml-gz", vec![("x.mzML.gz".into(), gz)], 0, false));
 }
 
 #[test]
-fn andi_mutato() {
-    esigi_nessuno(esplora(
+fn andi_mutated() {
+    require_none(explore(
         "andi-ms",
-        vec![("x.cdf".into(), andi_ms(&PIATTA))],
+        vec![("x.cdf".into(), andi_ms(&FLAT_RUN))],
         0,
         false,
     ));
-    esigi_nessuno(esplora(
+    require_none(explore(
         "andi-cromato",
-        vec![("x.cdf".into(), andi_cromato(40))],
+        vec![("x.cdf".into(), andi_chromatogram(40))],
         0,
         false,
     ));
 }
 
 #[test]
-fn shimadzu_mutato() {
-    esigi_nessuno(esplora(
+fn shimadzu_mutated() {
+    require_none(explore(
         "qgd",
         vec![("x.qgd".into(), comune::shimadzu::qgd(8))],
         0,
         false,
     ));
-    esigi_nessuno(esplora(
+    require_none(explore(
         "lcd",
         vec![("x.lcd".into(), comune::shimadzu::lcd2020(8))],
         0,
@@ -348,22 +340,22 @@ fn shimadzu_mutato() {
 }
 
 #[test]
-fn thermo_mutato() {
+fn thermo_mutated() {
     let raw = comune::thermo::Raw::tsq(63, 6).bytes();
-    esigi_nessuno(esplora("thermo", vec![("x.raw".into(), raw)], 0, false));
+    require_none(explore("thermo", vec![("x.raw".into(), raw)], 0, false));
 }
 
 #[test]
-fn mzxml_annidato_32_mutato() {
+fn mzxml_nested_32_mutated() {
     let o = comune::mzxml::Opz {
         a64: false,
         zlib: false,
-        indice: false,
-        annidato: true,
-        attributi: false,
+        index: false,
+        nested: true,
+        attributes: false,
     };
-    let b = mzxml(&comune::mzxml::annida(&corsa()), o);
-    esigi_nessuno(esplora(
+    let b = mzxml(&comune::mzxml::nest(&run()), o);
+    require_none(explore(
         "mzxml-annidato",
         vec![("x.mzXML".into(), b)],
         0,
@@ -372,20 +364,20 @@ fn mzxml_annidato_32_mutato() {
 }
 
 #[test]
-fn mzml_gz_multimembro_mutato() {
-    let piano = mzml_di(&scansioni(), Cod::Piano, None);
-    let meta = piano.len() / 2;
-    let mut b = gz(&piano[..meta]);
-    b.extend(gz(&piano[meta..]));
-    esigi_nessuno(esplora("mzml-gz2", vec![("x.mzML.gz".into(), b)], 0, false));
+fn mzml_gz_multimember_mutated() {
+    let flat = mzml_di(&scans(), Cod::Piano, None);
+    let meta = flat.len() / 2;
+    let mut b = gz(&flat[..meta]);
+    b.extend(gz(&flat[meta..]));
+    require_none(explore("mzml-gz2", vec![("x.mzML.gz".into(), b)], 0, false));
 }
 
 #[test]
-fn waters_mutato() {
-    let file = comune_waters::file_cartella();
+fn waters_mutated() {
+    let file = comune_waters::folder_file();
     for q in 0..file.len() {
         let e = format!("waters {}", file[q].0);
-        esigi_nessuno(esplora(
+        require_none(explore(
             &e,
             file.clone(),
             q,
@@ -395,17 +387,20 @@ fn waters_mutato() {
 }
 
 #[test]
-fn bruker_mutato() {
+fn bruker_mutated() {
     let f = vec![
-        ("x.d/analysis.tdf".to_string(), comune_sqlite::tdf_minimo(3)),
+        (
+            "x.d/analysis.tdf".to_string(),
+            comune_sqlite::minimal_tdf(3),
+        ),
         ("x.d/analysis.tdf_bin".to_string(), comune_sqlite::blocco2()),
     ];
-    esigi_nessuno(esplora("bruker tdf", f.clone(), 0, false));
-    esigi_nessuno(esplora("bruker bin", f, 1, false));
+    require_none(explore("bruker tdf", f.clone(), 0, false));
+    require_none(explore("bruker bin", f, 1, false));
 }
 
 /// The site's own path for a plain mzML (scan table, `.mzidx`, chromatograms, parser): no panic, no hang, no NaN or infinite number passed on.
-fn motore_mzml(b: &[u8]) -> Result<(), String> {
+fn engine_mzml(b: &[u8]) -> Result<(), String> {
     let mut src = b.to_vec();
     let Ok(p) = mzlab_core::upload::prepare(&mut src, b.len() as u64, "x.mzML") else {
         return Ok(());
@@ -435,10 +430,10 @@ fn motore_mzml(b: &[u8]) -> Result<(), String> {
     let mut bad = None;
     let _ = mzlab_core::mzml::parse(std::io::Cursor::new(b), |it| {
         if let mzlab_core::mzml::Item::Spectrum(s) = it {
-            let fuori = !s.rt.is_finite()
+            let outside = !s.rt.is_finite()
                 || s.mz.iter().any(|x| !x.is_finite())
                 || s.intensity.iter().any(|x| !x.is_finite());
-            if bad.is_none() && fuori {
+            if bad.is_none() && outside {
                 bad = Some(format!("parse: spectrum {} not finite", s.index));
             }
         }
@@ -447,14 +442,14 @@ fn motore_mzml(b: &[u8]) -> Result<(), String> {
 }
 
 #[test]
-fn mzml_del_motore_mutato() {
-    let piano = mzml_di(&scansioni(), Cod::Nudo, None);
-    let mut caso = Caso(0x9E37_79B9_7F4A_7C15 ^ 0x6d6f746f7265);
-    let mut trovati = Vec::new();
-    for (nome, m) in mutanti_testo(&piano, &mut caso, giri()) {
-        if let Some(e) = sorveglia(&format!("engine {nome}"), move || motore_mzml(&m)) {
-            trovati.push(e);
+fn mutated_engine_mzml() {
+    let flat = mzml_di(&scans(), Cod::Nudo, None);
+    let mut case = Case(0x9E37_79B9_7F4A_7C15 ^ 0x6d6f746f7265);
+    let mut found = Vec::new();
+    for (name, m) in text_mutants(&flat, &mut case, rounds()) {
+        if let Some(e) = watch(&format!("engine {name}"), move || engine_mzml(&m)) {
+            found.push(e);
         }
     }
-    esigi_nessuno(trovati);
+    require_none(found);
 }

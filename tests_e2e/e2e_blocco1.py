@@ -18,7 +18,7 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
         def ctx_items(x, y):
-            pg.mouse.click(x, y, button="right"); attendi(pg, "!document.querySelector('#ctx').hidden && document.querySelectorAll('#ctx div').length > 0")
+            pg.mouse.click(x, y, button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelectorAll('#ctx div').length > 0")
             return pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>d.textContent)")
         def label_box(i=0):
             return pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),l=p._a.lbls.filter(l=>l.m!=null)[{i}];return l&&{{x:q.left+l.x+l.w/2,y:q.top+l.y+l.h/2,m:l.m}}}})()")
@@ -33,7 +33,7 @@ try:
         step("1.0: right click on the label / on the bar gives the label's peak", pick_label)
         def xic_direct():
             lb = label_box(0); n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
-            ctx_items(lb["x"], lb["y"]); pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); attendi(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
+            ctx_items(lb["x"], lb["y"]); pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); wait_for_js(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
             assert not pg.evaluate("document.querySelector('#xicdlg').open"), "no dialog"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             tr = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().traces[0]"); n = round(lb["m"] - 0.25)
@@ -44,7 +44,7 @@ try:
             lb = label_box(1); its = ctx_items(lb["x"], lb["y"]); print(its)
             assert any(i.startswith("Sovrapponi all'XIC di m/z ") and "(pannello " in i for i in its) and not any("Aggiungi a" in i for i in its), its
             tip = pg.evaluate("[...document.querySelectorAll('#ctx div')].find(d=>d.textContent.startsWith('Sovrapponi'))?.title"); assert "stesso grafico" in tip, tip
-            pg.locator("#ctx div", has_text="Sovrapponi all'XIC").first.click(); attendi(pg, "E.panels.filter(p=>p.type==='xic').pop().traces.length===2")
+            pg.locator("#ctx div", has_text="Sovrapponi all'XIC").first.click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='xic').pop().traces.length===2")
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().traces.length") == 2
         step("1.4: 'Sovrapponi all'XIC di m/z … (pannello n)' adds a trace", overlay)
         def live():
@@ -52,7 +52,7 @@ try:
             for fr in (0.4, 0.6):
                 b = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return [q.left+p._a.X(p._a.full[0]+(p._a.full[1]-p._a.full[0])*{fr}),q.top+q.height*0.4]}})()")
                 pg.mouse.dblclick(b[0], b[1]); frames(pg, 2)
-            attendi(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>p.el.querySelector('.lk')||p.el.querySelector('.rtl').textContent.startsWith('fermo a '))})()")
+            wait_for_js(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>p.el.querySelector('.lk')||p.el.querySelector('.rtl').textContent.startsWith('fermo a '))})()")
             info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>[!!p.link,!!p.el.querySelector('.lk'),p.el.querySelector('.rtl').textContent])"); print(info)
             assert sum(1 for i in info if i[1]) == 1 and sum(1 for i in info if i[0]) == 1, info
             assert all(i[2].startswith("fermo a ") for i in info if not i[1]), info
@@ -66,7 +66,7 @@ try:
             pg.keyboard.press("Escape")
             pg.evaluate(f"(()=>{{const p={SPEC},a=p._a;p.zoom=[a.x0+(a.x1-a.x0)*0.4,a.x0+(a.x1-a.x0)*0.6];draw(p)}})()"); frames(pg, 2)
             its = ctx_items(*pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect();return [q.left+q.width/2,q.top+q.height*0.5]}})()")); assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", its
-            pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); attendi(pg, f"{SPEC}.zoom==null")
+            pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); wait_for_js(pg, f"{SPEC}.zoom==null")
             assert pg.evaluate(f"{SPEC}.zoom") is None
         step("1.5: 'Ripristina zoom' is shown only with a zoom", zoom_first)
         def annot():
@@ -86,7 +86,7 @@ try:
         def rt2():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()")
             pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); LIVE = "[...document.querySelectorAll('.pnl.spec .rtl')].map(e => e.textContent).filter(t => !t.startsWith('fermo a'))[0]"      # the pinned spectra read «fermo a RT», the order of the panels is not fixed
-            attendi(pg, r"/^\d+\.\d{2} min/.test(" + LIVE + ")")
+            wait_for_js(pg, r"/^\d+\.\d{2} min/.test(" + LIVE + ")")
             t = pg.evaluate(LIVE); import re; assert re.search(r"^\d+\.\d{2} min", t) and not re.search(r"^\d+\.\d{3}", t), t
         step("1.7: RT with 2 decimals", rt2)
     r.close()

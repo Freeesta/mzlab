@@ -3,80 +3,82 @@
 //! Written from the two ASTM specifications and the netCDF documentation, checked against files exported by ChemStation and MassHunter.
 
 use super::cromato;
-use super::netcdf::{scala, Cdf};
-use super::testata::Testata;
+use super::netcdf::{scale, Cdf};
+use super::testata::AndiHeader;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
-    VoceLettore, VoceScansione, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
 };
 use mzlab_core::metodo::sha1_hex;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
-/// The bytes of the start of the file that `riconosci` looks at: the names of the variables are in the header.
-const TESTA: usize = 1 << 18;
-const UNITA: &str = "Arbitrary Intensity Units";
+mod bpc;
 
-pub const VOCE: VoceLettore = VoceLettore {
+/// The bytes of the start of the file that `riconosci` looks at: the names of the variables are in the header.
+const HEAD: usize = 1 << 18;
+const UNITS: &str = "Arbitrary Intensity Units";
+
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "andi-ms",
     contratto: CONTRATTO,
     estensioni: &[".cdf", ".nc"],
-    riconosci,
-    apri,
+    riconosci: recognize,
+    apri: open,
 };
 
-impl LettoreAndi {
+impl AndiReader {
     /// Reads the per-scan variables and builds the index.
     /// First point and number of points of each scan: `scan_index` and `point_count`.
-    fn punti_per_scansione(&mut self) -> Result<usize> {
-        let (cdf, limiti) = (&self.cdf, self.limiti);
+    fn points_per_scan(&mut self) -> Result<usize> {
+        let (cdf, limits) = (&self.cdf, self.limits);
         let sx = cdf
-            .trova("scan_index")
+            .find("scan_index")
             .ok_or_else(|| Error::new("err.dam.unreadable").with("message", "no scan_index"))?;
-        let n = limiti.voci_ok(cdf.elementi(sx))?;
-        let punti = cdf.trova("mass_values").map_or(0, |v| cdf.elementi(v));
-        let inizi: Vec<u64> = cdf
-            .leggi(&mut self.dati, &limiti, sx, 0, n as u64)?
+        let n = limits.ok_entries(cdf.elements(sx))?;
+        let points = cdf.find("mass_values").map_or(0, |v| cdf.elements(v));
+        let starts: Vec<u64> = cdf
+            .read(&mut self.data, &limits, sx, 0, n as u64)?
             .iter()
             .map(|&x| x.max(0.0) as u64)
             .collect();
-        self.conti = match colonna(cdf, &mut self.dati, &limiti, "point_count")? {
+        self.counts = match column(cdf, &mut self.data, &limits, "point_count")? {
             Some(c) => (0..n)
                 .map(|k| c.get(k).map_or(0, |&x| x.max(0.0) as u64))
                 .collect(),
             None => (0..n)
                 .map(|k| {
-                    inizi
+                    starts
                         .get(k + 1)
                         .copied()
-                        .unwrap_or(punti)
-                        .saturating_sub(inizi[k])
+                        .unwrap_or(points)
+                        .saturating_sub(starts[k])
                 })
                 .collect(),
         };
-        self.inizi = inizi;
+        self.inizi = starts;
         Ok(n)
     }
 
     /// The traits the whole file has (SIM, profile) and its polarity.
-    fn tratti(&mut self) -> i8 {
+    fn stretches(&mut self) -> i8 {
         self.sim = [
-            self.cdf.testo("test_scan_function"),
-            self.cdf.testo("experiment_type"),
+            self.cdf.text("test_scan_function"),
+            self.cdf.text("experiment_type"),
         ]
         .iter()
         .flatten()
         .any(|t| t.to_ascii_lowercase().contains("selected ion") || t.contains("SIM"));
         self.profilo = self
             .cdf
-            .testo("experiment_type")
+            .text("experiment_type")
             .is_some_and(|t| t.to_ascii_lowercase().contains("continuum"));
 
         match self
             .cdf
-            .testo("test_ionization_polarity")
+            .text("test_ionization_polarity")
             .map(str::to_ascii_lowercase)
         {
             Some(p) if p.contains("pos") => 1,
@@ -85,82 +87,95 @@ impl LettoreAndi {
         }
     }
 
-    fn scansioni(&mut self) -> Result<usize> {
-        let n = self.punti_per_scansione()?;
-        let col = |l: &mut Self, nome: &str| colonna(&l.cdf, &mut l.dati, &l.limiti, nome);
-        let tempo = col(self, "scan_acquisition_time")?;
+    fn scans(&mut self) -> Result<usize> {
+        let all_of_them = self.points_per_scan()?;
+        // a copy cut short loses the points of the last scans: the index stops before the first scan not whole in the file, and `missing` counts the rest
+        let n = (0..all_of_them)
+            .find(|&k| !self.whole(k))
+            .unwrap_or(all_of_them);
+        self.cut = all_of_them - n;
+        let col = |l: &mut Self, name: &str| column(&l.cdf, &mut l.data, &l.limits, name);
+        let moment = col(self, "scan_acquisition_time")?;
         let tot = col(self, "total_intensity")?;
         let (lo, hi) = (col(self, "mass_range_min")?, col(self, "mass_range_max")?);
-        self.tic_noto = tot.is_some();
-        let pol = self.tratti();
+        self.known_tic = tot.is_some();
+        let pol = self.stretches();
         for k in 0..n {
-            let rt = match &tempo {
+            let rt = match &moment {
                 Some(t) => t.get(k).copied(),
-                None => self.tempo_punto(k)?,
+                None => self.point_time(k)?,
             };
             let v = |c: &Option<Vec<f64>>| c.as_ref().and_then(|c| c.get(k).copied());
-            self.finestre.push(v(&lo).zip(v(&hi)));
-            self.indice.push(VoceScansione {
+            self.windows.push(v(&lo).zip(v(&hi)));
+            self.indice.push(ScanEntry {
                 id: format!("scan={}", k + 1),
                 rt: rt.unwrap_or(0.0) / 60.0,
                 livello: 1,
                 polarita: pol,
                 tic: v(&tot).unwrap_or(0.0),
-                picco_base: None,
+                base_peak: None,
                 filtro: if self.sim {
                     "SIM".into()
                 } else {
                     String::new()
                 },
                 precursore: None,
-                posizione: Some(Posizione {
+                position: Some(Position {
                     membro: 0,
                     offset: self.inizi[k],
-                    lunghezza: u32::try_from(self.conti[k]).unwrap_or(u32::MAX),
+                    lunghezza: u32::try_from(self.counts[k]).unwrap_or(u32::MAX),
                 }),
             });
         }
         Ok(n)
     }
 
+    /// The m/z and intensities of scan `k` lie whole in the file.
+    fn whole(&self, k: usize) -> bool {
+        let (da, n) = (self.inizi[k], self.counts[k]);
+        ["mass_values", "intensity_values"]
+            .iter()
+            .all(|name| self.cdf.find(name).is_none_or(|v| self.cdf.whole(v, da, n)))
+    }
+
     /// The time (seconds) of the first point of scan `k` from `time_values`, when the file has no `scan_acquisition_time`.
-    fn tempo_punto(&mut self, k: usize) -> Result<Option<f64>> {
-        let Some(v) = self.cdf.trova("time_values") else {
+    fn point_time(&mut self, k: usize) -> Result<Option<f64>> {
+        let Some(v) = self.cdf.find("time_values") else {
             return Ok(None);
         };
-        if self.inizi[k] >= self.cdf.elementi(v) {
+        if self.inizi[k] >= self.cdf.elements(v) {
             return Ok(None);
         }
         let mut x = self
             .cdf
-            .leggi(&mut self.dati, &self.limiti, v, self.inizi[k], 1)?;
-        scala(&mut x, v);
+            .read(&mut self.data, &self.limits, v, self.inizi[k], 1)?;
+        scale(&mut x, v);
         Ok(x.first().copied())
     }
 
-    fn uno(&self, c: usize) -> Result<()> {
+    fn one(&self, c: usize) -> Result<()> {
         (c == 0)
             .then_some(())
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))
     }
 
     /// The points of scan `k` as `(m/z, intensity, whether the intensity type is wider than f32)`, sorted by m/z (stable: points with the same m/z keep the file's order).
-    fn punti_di(&mut self, k: usize) -> Result<(Vec<f64>, Vec<f64>, bool)> {
+    fn points_of(&mut self, k: usize) -> Result<(Vec<f64>, Vec<f64>, bool)> {
         let (da, n) = (
-            *self.inizi.get(k).ok_or_else(|| indice_cattivo(k))?,
-            self.conti[k],
+            *self.inizi.get(k).ok_or_else(|| bad_index(k))?,
+            self.counts[k],
         );
         let (m, y) = (
-            self.cdf.trova("mass_values"),
-            self.cdf.trova("intensity_values"),
+            self.cdf.find("mass_values"),
+            self.cdf.find("intensity_values"),
         );
         let (Some(m), Some(y)) = (m, y) else {
             return Err(Error::new("err.dam.unreadable").with("message", "no intensity_values"));
         };
-        let mut mz = self.cdf.leggi(&mut self.dati, &self.limiti, m, da, n)?;
-        let mut it = self.cdf.leggi(&mut self.dati, &self.limiti, y, da, n)?;
-        scala(&mut mz, m);
-        scala(&mut it, y);
+        let mut mz = self.cdf.read(&mut self.data, &self.limits, m, da, n)?;
+        let mut it = self.cdf.read(&mut self.data, &self.limits, y, da, n)?;
+        scale(&mut mz, m);
+        scale(&mut it, y);
         if mz.windows(2).any(|w| w[0] > w[1]) {
             let mut p: Vec<(f64, f64)> = mz.iter().copied().zip(it.iter().copied()).collect();
             p.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -168,21 +183,18 @@ impl LettoreAndi {
                 (mz[i], it[i]) = (x, y);
             }
         }
-        let largo = matches!(
+        let broad = matches!(
             y.tipo,
-            super::netcdf::Tipo::Double | super::netcdf::Tipo::Int
+            super::netcdf::Kind::Double | super::netcdf::Kind::Int
         );
-        Ok((mz, it, largo))
+        Ok((mz, it, broad))
     }
 
     /// Scan `k`: its points, sorted by m/z.
-    fn spettro(&mut self, k: usize) -> Result<Spectrum> {
-        let v = self
-            .indice
-            .get(k)
-            .cloned()
-            .ok_or_else(|| indice_cattivo(k))?;
-        let (mz, it, largo) = self.punti_di(k)?;
+    fn spectrum(&mut self, k: usize) -> Result<Spectrum> {
+        let v = self.indice.get(k).cloned().ok_or_else(|| bad_index(k))?;
+        let (mz, it, broad) = self.points_of(k)?;
+        self.bpc_note(k, &it, broad);
         Ok(Spectrum {
             index: k,
             id: v.id,
@@ -193,25 +205,26 @@ impl LettoreAndi {
             filter: v.filtro,
             precursor: None,
             intensity: it.iter().map(|&x| x as f32).collect(),
-            wide: largo.then_some(it),
+            wide: broad.then_some(it),
             mz,
         })
     }
 
     /// The TIC of the scans whose file has no `total_intensity`, summed from their points.
-    fn completa(&mut self) -> Result<()> {
-        if self.tic_noto {
+    fn complete(&mut self) -> Result<()> {
+        if self.known_tic {
             return Ok(());
         }
         for k in 0..self.indice.len() {
-            let (_, it, largo) = self.punti_di(k)?;
+            let (_, it, broad) = self.points_of(k)?;
+            self.bpc_note(k, &it, broad);
             // the sum of what `Spectrum::intensity_f64` gives: the narrow types are summed as f32
             self.indice[k].tic = it
                 .iter()
-                .map(|&x| if largo { x } else { f64::from(x as f32) })
+                .map(|&x| if broad { x } else { f64::from(x as f32) })
                 .sum();
         }
-        self.tic_noto = true;
+        self.known_tic = true;
         Ok(())
     }
 
@@ -221,20 +234,11 @@ impl LettoreAndi {
             "BPC" => (false, ChromKind::Bpc, 1),
             _ => return Err(Error::new("error.badIndex").with("id", id)),
         };
-        self.completa()?;
+        self.complete()?;
         let intensity = if tic {
             self.indice.iter().map(|v| v.tic).collect()
         } else {
-            let mut o = Vec::new();
-            for k in 0..self.indice.len() {
-                let s = self.spettro(k)?;
-                o.push(
-                    (0..s.mz.len())
-                        .map(|i| s.intensity_f64(i))
-                        .fold(0.0, f64::max),
-                );
-            }
-            o
+            self.bpc_points()?
         };
         Ok(Chromatogram {
             index,
@@ -242,7 +246,7 @@ impl LettoreAndi {
             kind,
             q1: None,
             q3: None,
-            unit: UNITA.into(),
+            unit: UNITS.into(),
             time: self.indice.iter().map(|v| v.rt).collect(),
             intensity,
         })
@@ -251,39 +255,47 @@ impl LettoreAndi {
     fn sha1(&mut self) -> Option<String> {
         if self.sha1.is_none() {
             let dim = self.dim;
-            self.sha1 = Some(sha1_hex(&mut self.dati, dim).ok());
+            self.sha1 = Some(sha1_hex(&mut self.data, dim).ok());
         }
         self.sha1.clone().flatten()
     }
 }
 
-impl Lettore for LettoreAndi {
-    fn formato(&self) -> Formato {
-        Formato::Altro("andi-ms")
+impl Reader for AndiReader {
+    fn format(&self) -> Format {
+        Format::Altro("andi-ms")
     }
 
-    fn campioni(&self) -> &[Campione] {
-        &self.campioni
+    fn missing(&mut self, c: usize) -> usize {
+        if c == 0 {
+            self.cut
+        } else {
+            0
+        }
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        self.uno(c)?;
-        self.completa()?;
+    fn samples(&self) -> &[Sample] {
+        &self.samples
+    }
+
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
+        self.one(c)?;
+        self.complete()?;
         Ok(&self.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.uno(c)?;
-        self.spettro(k)
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.one(c)?;
+        self.spectrum(k)
     }
 
     /// Every per-scan variable of the file (times, ranges, counts) at scan `k`, with its unit.
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.uno(c)?;
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
+        self.one(c)?;
         if k >= self.indice.len() {
-            return Err(indice_cattivo(k));
+            return Err(bad_index(k));
         }
-        let Some(sx) = self.cdf.trova("scan_index") else {
+        let Some(sx) = self.cdf.find("scan_index") else {
             return Ok(Vec::new());
         };
         let mut out = Vec::new();
@@ -291,17 +303,17 @@ impl Lettore for LettoreAndi {
             .cdf
             .var
             .iter()
-            .filter(|v| v.dims == sx.dims && v.tipo != super::netcdf::Tipo::Char)
+            .filter(|v| v.dims == sx.dims && v.tipo != super::netcdf::Kind::Char)
         {
             let mut x = self
                 .cdf
-                .leggi(&mut self.dati, &self.limiti, v, k as u64, 1)?;
-            scala(&mut x, v);
-            out.push(Campo {
+                .read(&mut self.data, &self.limits, v, k as u64, 1)?;
+            scale(&mut x, v);
+            out.push(Field {
                 nome: v.nome.clone(),
                 valore: x.first().map(|x| x.to_string()).unwrap_or_default(),
                 unita: v
-                    .testo("units")
+                    .text("units")
                     .map(str::to_string)
                     .filter(|u| !u.is_empty()),
                 cv: None,
@@ -310,79 +322,84 @@ impl Lettore for LettoreAndi {
         Ok(out)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        self.uno(c)?;
-        if self.indice.is_empty() {
-            return Ok(cromato::voci(&self.cdf, &mut self.dati, &self.limiti));
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
+        self.one(c)?;
+        if self.indice.is_empty() && self.cut == 0 {
+            return Ok(cromato::entries(&self.cdf, &mut self.data, &self.limits));
         }
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
-            .map(|(id, tipo)| VoceCromatogramma {
+            .map(|(id, kind)| ChromatogramEntry {
                 id: id.into(),
-                tipo,
-                unita: UNITA.into(),
+                tipo: kind,
+                unita: UNITS.into(),
             })
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.uno(c)?;
-        if self.indice.is_empty() {
-            return cromato::traccia(&self.cdf, &mut self.dati, &self.limiti, id);
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+        self.one(c)?;
+        if self.indice.is_empty() && self.cut == 0 {
+            return cromato::trace(&self.cdf, &mut self.data, &self.limits, id);
         }
         self.traccia(id)
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.uno(c)?;
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.one(c)?;
         let sha1 = self.sha1();
-        Ok(self.testata.documento(&self.nome, self.dim, sha1))
+        Ok(self.header.document(&self.name, self.dim, sha1))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        self.uno(c)?;
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
+        self.one(c)?;
         let sha1 = self.sha1();
-        let doc = self.testata.documento(&self.nome, self.dim, sha1.clone());
-        Ok(Some(self.testata.header(&self.nome, sha1, doc)))
+        let doc = self.header.document(&self.name, self.dim, sha1.clone());
+        Ok(Some(self.header.header(&self.name, sha1, doc)))
     }
 
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra {
             sim: self.sim,
             observed: false,
-            window: self.finestre.get(s.index).copied().flatten(),
+            window: self.windows.get(s.index).copied().flatten(),
             ..SpectrumExtra::default()
         }
     }
 }
 
-pub struct LettoreAndi {
-    dati: Box<dyn ReadAt>,
+pub struct AndiReader {
+    data: Box<dyn ReadAt>,
     dim: u64,
-    nome: String,
-    limiti: Limiti,
+    name: String,
+    limits: Limits,
     cdf: Cdf,
-    testata: Testata,
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    header: AndiHeader,
+    samples: Vec<Sample>,
+    indice: Vec<ScanEntry>,
     /// First point and number of points of each scan.
     inizi: Vec<u64>,
-    conti: Vec<u64>,
+    counts: Vec<u64>,
     /// The mass range of each scan, when the file says it.
-    finestre: Vec<Option<(f64, f64)>>,
+    windows: Vec<Option<(f64, f64)>>,
     /// Whether the TIC of the scans is that of the file (else it is summed from the points when asked).
-    tic_noto: bool,
+    known_tic: bool,
+    /// The base peak of each scan, noted at each decode (NaN: not yet); `bpc_visti` counts the noted ones.
+    bpc: Vec<f64>,
+    bpc_seen: usize,
+    /// Scans listed by the file whose points lie past the end of a copy cut short.
+    cut: usize,
     profilo: bool,
     sim: bool,
     sha1: Option<Option<String>>,
 }
 
-fn riconosci(fs: &mut FileSet) -> Fiducia {
-    let Some(i) = fs.trova(".cdf").or_else(|| fs.trova(".nc")) else {
+fn recognize(fs: &mut FileSet) -> Fiducia {
+    let Some(i) = fs.find(".cdf").or_else(|| fs.find(".nc")) else {
         return Fiducia::No;
     };
-    let head = fs.testa(i, TESTA);
+    let head = fs.testa(i, HEAD);
     let ha = |n: &[u8]| head.windows(n.len()).any(|w| w == n);
     if head.starts_with(b"\x89HDF") {
         Fiducia::Forse
@@ -398,28 +415,28 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
 }
 
 /// A whole variable of the scans as numbers, `scale_factor`/`add_offset` applied (`None`: the file has no such variable).
-fn colonna(
+fn column(
     cdf: &Cdf,
-    dati: &mut dyn ReadAt,
-    limiti: &Limiti,
-    nome: &str,
+    data: &mut dyn ReadAt,
+    limits: &Limits,
+    name: &str,
 ) -> Result<Option<Vec<f64>>> {
-    let Some(v) = cdf.trova(nome) else {
+    let Some(v) = cdf.find(name) else {
         return Ok(None);
     };
-    let mut x = cdf.leggi(dati, limiti, v, 0, cdf.elementi(v))?;
-    scala(&mut x, v);
+    let mut x = cdf.read(data, limits, v, 0, cdf.elements(v))?;
+    scale(&mut x, v);
     Ok(Some(x))
 }
 
-fn indice_cattivo(k: usize) -> Error {
+fn bad_index(k: usize) -> Error {
     Error::new("error.badIndex").with("k", k)
 }
 
-fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
+fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs
-        .trova(".cdf")
-        .or_else(|| fs.trova(".nc"))
+        .find(".cdf")
+        .or_else(|| fs.find(".nc"))
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
     let m = fs
         .membri
@@ -433,42 +450,45 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .to_string();
     let dim = m.dim;
     let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
-    let cdf = Cdf::apri(&mut dati, dim, limiti)?;
-    let testata = Testata::leggi(&cdf, &mut dati, limiti)?;
-    let mut l = LettoreAndi {
-        dati,
+    let cdf = Cdf::apri(&mut dati, dim, limits)?;
+    let testata = AndiHeader::read(&cdf, &mut dati, limits)?;
+    let mut l = AndiReader {
+        data: dati,
         dim,
-        nome,
-        limiti: *limiti,
+        name: nome,
+        limits: *limits,
         cdf,
-        testata,
-        campioni: Vec::new(),
+        header: testata,
+        samples: Vec::new(),
         indice: Vec::new(),
         inizi: Vec::new(),
-        conti: Vec::new(),
-        finestre: Vec::new(),
-        tic_noto: false,
+        counts: Vec::new(),
+        windows: Vec::new(),
+        known_tic: false,
+        bpc: Vec::new(),
+        bpc_seen: 0,
+        cut: 0,
         profilo: false,
         sim: false,
         sha1: None,
     };
-    let scansioni = if l.cdf.trova("mass_values").is_some() {
-        l.scansioni()?
-    } else if l.cdf.trova("ordinate_values").is_some() {
+    let scans = if l.cdf.find("mass_values").is_some() {
+        l.scans()?
+    } else if l.cdf.find("ordinate_values").is_some() {
         0
     } else {
-        return Err(Error::new("err.file.notAccepted").with("name", l.nome));
+        return Err(Error::new("err.file.notAccepted").with("name", l.name));
     };
     let stem = l
-        .nome
+        .name
         .rsplit_once('.')
-        .map_or(l.nome.as_str(), |(s, _)| s)
+        .map_or(l.name.as_str(), |(s, _)| s)
         .to_string();
-    l.campioni = vec![Campione {
+    l.samples = vec![Sample {
         id: 1,
-        nome: l.testata.titolo.clone().unwrap_or(stem),
-        scansioni,
-        dimensione: None,
+        nome: l.header.title.clone().unwrap_or(stem),
+        scansioni: scans,
+        size: None,
     }];
     Ok(Box::new(l))
 }

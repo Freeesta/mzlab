@@ -7,14 +7,14 @@ use crate::sortc::SortC;
 
 /// A piece of a text: plain, subscript or superscript.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Pezzo {
+pub(crate) enum Piece {
     N(String),
     Sub(String),
     Sup(String),
 }
 
 /// The formula split into its plain text and its charge: «C13H25N4O3S+» → («C13H25N4O3S», «+»).
-pub(crate) fn dividi_carica(f: &str, dflt: &str) -> (String, String) {
+pub(crate) fn split_charge(f: &str, dflt: &str) -> (String, String) {
     let mut c = f.chars();
     match c.next_back() {
         Some(l @ ('+' | '-' | '−')) => (
@@ -26,40 +26,40 @@ pub(crate) fn dividi_carica(f: &str, dflt: &str) -> (String, String) {
 }
 
 /// The formula as pieces to draw: digits are subscripts, the charge a superscript.
-pub(crate) fn pezzi_formula(f: &str, carica: &str) -> Vec<Pezzo> {
-    let mut out: Vec<Pezzo> = Vec::new();
-    let mut cifre = String::new();
-    let mut testo = String::new();
+pub(crate) fn piece_formula(f: &str, charge: &str) -> Vec<Piece> {
+    let mut out: Vec<Piece> = Vec::new();
+    let mut digits = String::new();
+    let mut text = String::new();
     for ch in f.chars() {
         if ch.is_ascii_digit() {
-            if !testo.is_empty() {
-                out.push(Pezzo::N(std::mem::take(&mut testo)));
+            if !text.is_empty() {
+                out.push(Piece::N(std::mem::take(&mut text)));
             }
-            cifre.push(ch);
+            digits.push(ch);
         } else {
-            if !cifre.is_empty() {
-                out.push(Pezzo::Sub(std::mem::take(&mut cifre)));
+            if !digits.is_empty() {
+                out.push(Piece::Sub(std::mem::take(&mut digits)));
             }
-            testo.push(ch);
+            text.push(ch);
         }
     }
-    if !testo.is_empty() {
-        out.push(Pezzo::N(testo));
+    if !text.is_empty() {
+        out.push(Piece::N(text));
     }
-    if !cifre.is_empty() {
-        out.push(Pezzo::Sub(cifre));
+    if !digits.is_empty() {
+        out.push(Piece::Sub(digits));
     }
-    if !carica.is_empty() {
-        out.push(Pezzo::Sup(if carica == "-" { "−" } else { carica }.into()));
+    if !charge.is_empty() {
+        out.push(Piece::Sup(if charge == "-" { "−" } else { charge }.into()));
     }
     out
 }
 
 /// The plain form of the pieces (for the accessible names and the tooltips).
-pub(crate) fn piano(p: &[Pezzo]) -> String {
+pub(crate) fn plane(p: &[Piece]) -> String {
     p.iter()
         .map(|x| match x {
-            Pezzo::N(t) | Pezzo::Sub(t) | Pezzo::Sup(t) => t.as_str(),
+            Piece::N(t) | Piece::Sub(t) | Piece::Sup(t) => t.as_str(),
         })
         .collect()
 }
@@ -72,7 +72,7 @@ pub(crate) fn bella(f: &str) -> String {
         .collect()
 }
 
-pub(crate) fn segno(v: f64) -> String {
+pub(crate) fn sign(v: f64) -> String {
     let sg = if v > 0.0 {
         "+"
     } else if v < 0.0 {
@@ -92,7 +92,7 @@ pub(crate) fn js_num(v: f64) -> String {
     }
 }
 
-pub(crate) fn livelli_testo(p: &Pos) -> String {
+pub(crate) fn level_text(p: &Pos) -> String {
     p.livelli
         .iter()
         .map(|l| format!("MS{l}"))
@@ -100,7 +100,7 @@ pub(crate) fn livelli_testo(p: &Pos) -> String {
         .join(", ")
 }
 
-pub(crate) fn prova_testo(p: &str) -> String {
+pub(crate) fn trial_text(p: &str) -> String {
     match p {
         "perdita" => "known loss",
         "isotopi" => "isotopes",
@@ -110,23 +110,23 @@ pub(crate) fn prova_testo(p: &str) -> String {
     .to_string()
 }
 
-pub(crate) struct Riga {
-    pub(crate) parti: Vec<Pezzo>,
+pub(crate) struct Row {
+    pub(crate) parti: Vec<Piece>,
     pub(crate) ppm: String,
     pub(crate) on: bool,
-    pub(crate) prove: Vec<String>,
+    pub(crate) evidence: Vec<String>,
 }
 
 pub(crate) struct Scatola {
-    pub(crate) righe: Vec<Riga>,
-    pub(crate) piu: String,
+    pub(crate) righe: Vec<Row>,
+    pub(crate) more: String,
     pub(crate) rel: Option<f64>,
     pub(crate) aria: Vec<String>,
     pub(crate) amb: bool,
 }
 
-pub(crate) fn scelta_di(i: &Ion) -> Option<String> {
-    i.scelta.clone().or_else(|| {
+pub(crate) fn choice_of(i: &Ion) -> Option<String> {
+    i.choice.clone().or_else(|| {
         if i.cands.len() == 1 {
             Some(i.cands[0].formula.clone())
         } else {
@@ -136,20 +136,20 @@ pub(crate) fn scelta_di(i: &Ion) -> Option<String> {
 }
 
 pub(crate) fn scatola(sc: &Scena, i: &Ion, p: &Pos, compatta: bool) -> Scatola {
-    let chosen = scelta_di(i);
+    let chosen = choice_of(i);
     let mut cs: Vec<&Cand> = i.cands.iter().collect();
     cs.sortc_by_key(|c| u8::from(Some(&c.formula) != chosen.as_ref()));
     let keep = if compatta { 1 } else { MAXC };
-    let righe = cs
+    let rows = cs
         .iter()
         .take(keep)
         .map(|c| {
-            let (b, ch) = dividi_carica(&c.formula, &sc.carica);
-            Riga {
-                parti: pezzi_formula(&b, &ch),
-                ppm: format!("{} ppm", segno(c.ppm)),
+            let (b, ch) = split_charge(&c.formula, &sc.charge);
+            Row {
+                parti: piece_formula(&b, &ch),
+                ppm: format!("{} ppm", sign(c.ppm)),
                 on: Some(&c.formula) == chosen.as_ref(),
-                prove: c.prove.iter().map(|x| prova_testo(x)).collect(),
+                evidence: c.evidence.iter().map(|x| trial_text(x)).collect(),
             }
         })
         .collect();
@@ -161,33 +161,33 @@ pub(crate) fn scatola(sc: &Scena, i: &Ion, p: &Pos, compatta: bool) -> Scatola {
     let rel = if p.da.is_some() { p.rel } else { None };
     let mut aria = vec![
         format!("m/z {:.4}", i.mz),
-        format!("levels {}", livelli_testo(p)),
+        format!("levels {}", level_text(p)),
     ];
     if let Some(r) = rel {
         aria.push(format!("{r:.1} % of the base peak"));
     }
     if let Some(c) = &chosen {
-        let (b, ch) = dividi_carica(c, &sc.carica);
+        let (b, ch) = split_charge(c, &sc.charge);
         aria.push(format!("formula {b}{ch}"));
     } else if !cs.is_empty() {
         aria.push(format!("{} candidate formulas", cs.len()));
     }
-    if p.comune {
+    if p.common {
         aria.push(format!("reached from {} precursors", p.entranti));
     }
     Scatola {
-        righe,
-        piu,
+        righe: rows,
+        more: piu,
         rel,
         aria,
         amb: i.has_formula && chosen.is_none(),
     }
 }
 
-pub(crate) fn tip_nodo(sc: &Scena, i: &Ion, p: &Pos) -> String {
-    let mut out = vec![format!("m/z {:.5} · {}", i.mz, livelli_testo(p))];
-    for a in sc.archi.iter().filter(|a| a.a == i.id) {
-        for m in &a.misure {
+pub(crate) fn node_tip(sc: &Scena, i: &Ion, p: &Pos) -> String {
+    let mut out = vec![format!("m/z {:.5} · {}", i.mz, level_text(p))];
+    for a in sc.edges.iter().filter(|a| a.a == i.id) {
+        for m in &a.measures {
             let att = m
                 .att
                 .as_ref()
@@ -200,29 +200,29 @@ pub(crate) fn tip_nodo(sc: &Scena, i: &Ion, p: &Pos) -> String {
 }
 
 /// The label of a loss: the pieces of the first line and, if any, of the second («(compatible with H2O)»).
-pub(crate) fn perdita_testo(a: &Arco) -> (Vec<Pezzo>, Option<Vec<Pezzo>>) {
+pub(crate) fn loss_text(a: &Edge) -> (Vec<Piece>, Option<Vec<Piece>>) {
     if let Some(f) = &a.formula {
-        let mut v = vec![Pezzo::N("−".into())];
-        v.extend(pezzi_formula(f, ""));
+        let mut v = vec![Piece::N("−".into())];
+        v.extend(piece_formula(f, ""));
         return (v, None);
     }
     let comp: Vec<&String> = a.compat.iter().take(2).collect();
     let mut second = None;
     if !comp.is_empty() {
-        let mut v = vec![Pezzo::N("(compatible with ".into())];
+        let mut v = vec![Piece::N("(compatible with ".into())];
         for (k, c) in comp.iter().enumerate() {
             if k > 0 {
-                v.push(Pezzo::N(" / ".into()));
+                v.push(Piece::N(" / ".into()));
             }
-            v.extend(pezzi_formula(c, ""));
+            v.extend(piece_formula(c, ""));
         }
-        v.push(Pezzo::N(")".into()));
+        v.push(Piece::N(")".into()));
         second = Some(v);
     }
-    (vec![Pezzo::N(format!("Δ {:.3} Da", a.da_massa))], second)
+    (vec![Piece::N(format!("Δ {:.3} Da", a.from_mass))], second)
 }
 
-pub(crate) fn tip_perdita(a: &Arco) -> String {
+pub(crate) fn loss_tip(a: &Edge) -> String {
     if let Some(f) = &a.formula {
         return format!("−{}", bella(f));
     }
@@ -232,5 +232,5 @@ pub(crate) fn tip_perdita(a: &Arco) -> String {
     } else {
         format!(" (compatible with {})", comp.join(" / "))
     };
-    format!("Δ {:.3} Da{extra}", a.da_massa)
+    format!("Δ {:.3} Da{extra}", a.from_mass)
 }

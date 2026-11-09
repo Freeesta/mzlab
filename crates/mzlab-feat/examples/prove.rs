@@ -161,10 +161,11 @@ fn row_spectra(
         let Some((k, p)) = best_peak(aligned, idx, row) else {
             continue;
         };
-        let (scans, pur) = s.links[k].of(p);
-        let best = (0..scans.len()).max_by(|&a, &b| pur[a].total_cmp(&pur[b]).then(b.cmp(&a)));
+        let (scans, purity) = s.links[k].of(p);
+        let best =
+            (0..scans.len()).max_by(|&a, &b| purity[a].total_cmp(&purity[b]).then(b.cmp(&a)));
         if let Some(b) = best {
-            want[k].push((row, scans[b], pur[b]));
+            want[k].push((row, scans[b], purity[b]));
         }
     }
     for (k, path) in files.iter().enumerate() {

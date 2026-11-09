@@ -10,7 +10,7 @@ use crate::routes::{Query, Routes};
 use crate::upload::prepare;
 
 /// An mzML (Thermo-style filter strings) of the cycles `(level, filter, precursor)`, one cycle every 0.1 min.
-fn indice(cicli: usize, scansioni: &[(u8, &str, Option<f64>)]) -> Routes<Vec<u8>> {
+fn index(cicli: usize, scansioni: &[(u8, &str, Option<f64>)]) -> Routes<Vec<u8>> {
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {
@@ -75,7 +75,7 @@ fn ask(r: &mut Routes<Vec<u8>>, path: &str, q: &str) -> String {
 
 #[test]
 fn route_lists_the_channels_of_the_file() {
-    let mut r = indice(
+    let mut r = index(
         10,
         &[
             (1, FULL, None),
@@ -116,7 +116,7 @@ fn route_lists_the_channels_of_the_file() {
 
 #[test]
 fn channel_of_a_key_is_the_filter_of_that_key_byte_for_byte() {
-    let mut r = indice(
+    let mut r = index(
         10,
         &[
             (1, FULL, None),
@@ -148,7 +148,7 @@ fn channel_of_a_key_is_the_filter_of_that_key_byte_for_byte() {
 
 #[test]
 fn xic_inside_two_precursors_gives_different_traces() {
-    let mut r = indice(
+    let mut r = index(
         10,
         &[
             (1, FULL, None),
@@ -191,15 +191,15 @@ fn xic_inside_two_precursors_gives_different_traces() {
     assert_eq!(level.get("y").unwrap().arr().len(), 20);
     assert_ne!(ya, ys(&level));
     // the TIC channel adds every level
-    let tutti =
+    let all =
         crate::json::parse(ask(&mut r, "/api/xic", "k=0&mz=150&tol=0.5&canale=tic").as_bytes())
             .unwrap();
-    assert_eq!(tutti.get("y").unwrap().arr().len(), 30);
+    assert_eq!(all.get("y").unwrap().arr().len(), 30);
 }
 
 #[test]
 fn tic_channel_joins_the_levels_in_time_order() {
-    let mut r = indice(5, &[(1, FULL, None), (2, MS2_A, Some(222.1))]);
+    let mut r = index(5, &[(1, FULL, None), (2, MS2_A, Some(222.1))]);
     let v = crate::json::parse(ask(&mut r, "/api/chrom", "k=0&canale=tic").as_bytes()).unwrap();
     let rt: Vec<f64> = v
         .get("rt")
@@ -217,10 +217,10 @@ fn tic_channel_joins_the_levels_in_time_order() {
 
 #[test]
 fn a_transition_is_not_a_scan_route() {
-    let mut r = indice(3, &[(1, FULL, None)]);
+    let mut r = index(3, &[(1, FULL, None)]);
     let chroms = vec![srm(0, 230.0, 162.0, 25.0, "")];
     r.pon_cromatogrammi("c.mzML", &chroms, &Facts::default());
-    assert!(r.canali().trova("srm:230>162@25").is_some());
+    assert!(r.canali().find("srm:230>162@25").is_some());
     assert_eq!(
         r.handle("/api/chrom", &Query::parse("k=0&canale=srm:230>162@25"))
             .unwrap(),

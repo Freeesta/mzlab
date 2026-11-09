@@ -166,3 +166,36 @@ fn the_minimum_height_is_ten_times_the_mode_of_the_noise() {
     );
     assert!(preview_json(&est(None), &f, &[]).contains("\"min_height\":null"));
 }
+
+#[test]
+fn an_estimate_at_its_ceiling_says_so() {
+    let errors =
+        |scale: f64| -> Vec<f64> { (0..40).map(|i| scale * ((i % 9) as f64 - 4.0)).collect() };
+    let (wide, sigma) = tolerance_from_errors(&mut errors(30.0)).unwrap();
+    assert_eq!(
+        wide, PPM_MAX,
+        "a scatter of {sigma} ppm is set to the ceiling"
+    );
+    let (narrow, _) = tolerance_from_errors(&mut errors(0.5)).unwrap();
+    assert!(narrow < PPM_MAX);
+    let est = |ppm, da| Estimate {
+        intensities: Hist::new(),
+        noise: None,
+        ppm: Some(ppm),
+        ppm_sigma: sigma,
+        ppm_n: 40,
+        fwhm: None,
+        fwhm_n: 0,
+        rt_tol: None,
+        da: Some(da),
+        da_sigma: 0.0,
+        da_n: 40,
+        dead: None,
+        defect: None,
+    };
+    let f = crate::table::FileFeatures::default();
+    let capped = preview_json(&est(wide, DA_MAX), &f, &[]);
+    assert_eq!(capped.matches("\"capped\":true").count(), 2, "{capped}");
+    let free = preview_json(&est(narrow, DA_MAX / 2.0), &f, &[]);
+    assert!(!free.contains("capped"), "{free}");
+}

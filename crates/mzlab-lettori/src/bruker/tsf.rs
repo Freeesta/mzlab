@@ -7,65 +7,65 @@ use mzlab_core::error::{Error, Result};
 
 use mzlab_core::idxread::ReadAt;
 
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
-fn guasto(m: &str) -> Error {
+fn broken(m: &str) -> Error {
     Error::new("err.dam.unreadable").with("message", format!("tsf_bin: {m}"))
 }
 
 /// A frame as TOF positions and intensities; `profilo` when there was no line spectrum and the samples of the profile stand in.
-pub struct Linee {
+pub struct Lines {
     pub tof: Vec<f64>,
     pub int: Vec<f64>,
-    pub profilo: bool,
+    pub profile: bool,
 }
 
 fn u32_le(b: &[u8]) -> u32 {
     u32::from_le_bytes([b[0], b[1], b[2], b[3]])
 }
 
-pub fn leggi_frame(
+pub fn read_frame(
     d: &mut dyn ReadAt,
     dim: u64,
     pos: u64,
-    picchi: u64,
-    campioni: u64,
-    limiti: &Limiti,
-) -> Result<Linee> {
+    peaks: u64,
+    samples: u64,
+    limits: &Limits,
+) -> Result<Lines> {
     let mut h = [0u8; 8];
     if pos.checked_add(8).is_none_or(|e| e > dim) {
-        return Err(guasto("block past the end of the file"));
+        return Err(broken("block past the end of the file"));
     }
     d.read_at(pos, &mut h)?;
-    let (prof, riga) = (u64::from(u32_le(&h)), u64::from(u32_le(&h[4..])));
-    if prof.saturating_add(riga).saturating_add(pos + 8) > dim || prof.max(riga) > limiti.byte {
-        return Err(guasto("block length"));
+    let (prof, row) = (u64::from(u32_le(&h)), u64::from(u32_le(&h[4..])));
+    if prof.saturating_add(row).saturating_add(pos + 8) > dim || prof.max(row) > limits.byte {
+        return Err(broken("block length"));
     }
-    let leggi = |d: &mut dyn ReadAt, da: u64, n: u64| -> Result<Vec<u8>> {
+    let read = |d: &mut dyn ReadAt, da: u64, n: u64| -> Result<Vec<u8>> {
         let mut b = vec![0u8; n as usize];
         d.read_at(da, &mut b)?;
         Ok(b)
     };
-    if riga > 0 && picchi > 0 {
-        let n = limiti.voci_ok(picchi)?;
-        let z = leggi(d, pos + 8, riga)?;
-        return linee(&z, n, limiti);
+    if row > 0 && peaks > 0 {
+        let n = limits.ok_entries(peaks)?;
+        let z = read(d, pos + 8, row)?;
+        return lines(&z, n, limits);
     }
     if prof == 0 {
-        return Ok(Linee {
+        return Ok(Lines {
             tof: Vec::new(),
             int: Vec::new(),
-            profilo: false,
+            profile: false,
         });
     }
-    let n = limiti.voci_ok(campioni)?;
-    let z = leggi(d, pos + 8 + riga, prof)?;
-    profilo(&z, n, limiti)
+    let n = limits.ok_entries(samples)?;
+    let z = read(d, pos + 8 + row, prof)?;
+    profilo(&z, n, limits)
 }
 
 /// The line spectrum of a block: `n` TOF positions (f64) then `n` intensities (f32).
-fn linee(z: &[u8], n: usize, limiti: &Limiti) -> Result<Linee> {
-    let b = zstd(z, n.checked_mul(12).ok_or_else(|| guasto("peaks"))?, limiti)?;
+fn lines(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
+    let b = zstd(z, n.checked_mul(12).ok_or_else(|| broken("peaks"))?, limits)?;
     let tof = (0..n)
         .map(|i| f64::from_le_bytes(b[8 * i..8 * i + 8].try_into().unwrap_or([0; 8])))
         .collect();
@@ -77,19 +77,19 @@ fn linee(z: &[u8], n: usize, limiti: &Limiti) -> Result<Linee> {
             ))
         })
         .collect();
-    Ok(Linee {
+    Ok(Lines {
         tof,
         int,
-        profilo: false,
+        profile: false,
     })
 }
 
 /// The profile of a block: `n` samples (u32), kept where there is signal or a neighbour has it (the rest is zero).
-fn profilo(z: &[u8], n: usize, limiti: &Limiti) -> Result<Linee> {
+fn profilo(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
     let b = zstd(
         z,
-        n.checked_mul(4).ok_or_else(|| guasto("samples"))?,
-        limiti,
+        n.checked_mul(4).ok_or_else(|| broken("samples"))?,
+        limits,
     )?;
     let v: Vec<u32> = b.chunks_exact(4).map(u32_le).collect();
     let (mut tof, mut int) = (Vec::new(), Vec::new());
@@ -99,10 +99,10 @@ fn profilo(z: &[u8], n: usize, limiti: &Limiti) -> Result<Linee> {
             int.push(f64::from(v[i]));
         }
     }
-    Ok(Linee {
+    Ok(Lines {
         tof,
         int,
-        profilo: true,
+        profile: true,
     })
 }
 
@@ -111,10 +111,10 @@ mod prove {
     use super::*;
 
     #[test]
-    fn blocco_oltre_la_fine() {
+    fn block_past_the_end() {
         let mut b = vec![0u8; 16];
         b[0] = 0xff;
         b[1] = 0xff;
-        assert!(leggi_frame(&mut b.clone(), 16, 0, 1, 1, &Limiti::sito()).is_err());
+        assert!(read_frame(&mut b.clone(), 16, 0, 1, 1, &Limits::sito()).is_err());
     }
 }

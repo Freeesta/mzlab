@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::itemroutes::{pda_spectrum, pda_wavelength};
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
-use mzlab_core::lettori_mzml::Conversione;
+use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::lettori_mzml::Conversion;
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::mzmlwrite::Opzioni;
+use mzlab_core::mzmlwrite::Options;
 use serde_json::Value;
 
 fn fixture() -> Option<(PathBuf, Value)> {
@@ -35,10 +35,10 @@ fn fixture() -> Option<(PathBuf, Value)> {
     Some((out, json["dadmetodo"].clone()))
 }
 
-fn membro(p: &Path, nome: &str) -> Membro {
-    let b = std::fs::read(p.join(nome)).unwrap();
-    Membro {
-        nome: nome.into(),
+fn member(p: &Path, name: &str) -> Member {
+    let b = std::fs::read(p.join(name)).unwrap();
+    Member {
+        nome: name.into(),
         dim: b.len() as u64,
         dati: Box::new(b),
         sha1: None,
@@ -46,34 +46,34 @@ fn membro(p: &Path, nome: &str) -> Membro {
 }
 
 /// The mzML of the pair as `to_mzml` of the module writes it (indexed, no steps, the matrix on).
-fn converti(dir: &Path, dad: bool) -> Vec<u8> {
+fn convert(dir: &Path, dad: bool) -> Vec<u8> {
     let fs = FileSet {
         membri: vec![
-            membro(dir, "dadmetodo.wiff"),
-            membro(dir, "dadmetodo.wiff.scan"),
+            member(dir, "dadmetodo.wiff"),
+            member(dir, "dadmetodo.wiff.scan"),
         ],
     };
-    let mut l = mzlab_lettori::apri(fs, &Limiti::sito()).unwrap();
+    let mut l = mzlab_lettori::apri(fs, &Limits::sito()).unwrap();
     assert!(
-        l.variante(0),
+        l.variant(0),
         "version-1 blocks make the pair a variant of the module"
     );
-    let conv = Conversione {
+    let conv = Conversion {
         steps: Some(&[]),
-        opz: Opzioni {
+        opz: Options {
             dad,
             thread: 1,
-            ..Opzioni::default()
+            ..Options::default()
         },
-        ..Conversione::default()
+        ..Conversion::default()
     };
-    conv.scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap()
+    conv.write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap()
 }
 
 #[test]
 fn the_variant_mzml_carries_the_matrix_and_the_method() {
     let Some((dir, want)) = fixture() else { return };
-    let bytes = converti(&dir, true);
+    let bytes = convert(&dir, true);
     let n = bytes.len() as u64;
     let mut m = Mzml::new(bytes, n);
     let dad = m.dad().unwrap().expect("the optical matrix is in the mzML");
@@ -95,7 +95,7 @@ fn the_variant_mzml_carries_the_matrix_and_the_method() {
     );
 
     let doc: Value = serde_json::from_str(
-        &m.metodo("dadmetodo.mzML", 1 << 20)
+        &m.method("dadmetodo.mzML", 1 << 20)
             .unwrap()
             .expect("metodo/1 in the run"),
     )
@@ -120,7 +120,7 @@ fn the_variant_mzml_carries_the_matrix_and_the_method() {
 #[test]
 fn without_the_option_the_mzml_has_no_matrix_but_keeps_the_method() {
     let Some((dir, _)) = fixture() else { return };
-    let bytes = converti(&dir, false);
+    let bytes = convert(&dir, false);
     let text = String::from_utf8_lossy(&bytes);
     assert!(!text.contains("MS:1000804"));
     assert!(text.contains("name=\"mzLab metodo/1\""));

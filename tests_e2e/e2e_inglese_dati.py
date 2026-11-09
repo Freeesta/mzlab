@@ -35,16 +35,16 @@ try:
         step("first view of Data: no Italian", first_view)
         def sidebar():
             for t in ("addloss", "lists"):      # the calculator is the top of Adducts & losses and has no button of its own
-                pg.click(f"#stbar [data-cmd={t}]"); attendi(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
+                pg.click(f"#stbar [data-cmd={t}]"); wait_for_js(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
                 it = italian(pg); assert not it, (t, it)
                 if t == "addloss":
                     for sub in ("losses", "cont"):
                         pg.click(f"#al-t-{sub}"); frames(pg, 2); it = italian(pg); assert not it, (sub, it)
-            pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)
+            pg.click("#stbar [data-cmd=file]"); wait_for_js(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)
             close_side(pg); frames(pg, 3)
         step("sidebar tabs: calculator, losses, lists", sidebar)
         def periodic():
-            pg.click("#np-pt"); attendi(pg, "/Hydrogen|Carbon/.test(document.querySelector('#refdlg').innerText)")
+            pg.click("#np-pt"); wait_for_js(pg, "/Hydrogen|Carbon/.test(document.querySelector('#refdlg').innerText)")
             assert "Hydrogen" in pg.inner_text("#refdlg") or "Carbon" in pg.inner_text("#refdlg"), pg.inner_text("#refdlg")[:200]
             it = italian(pg); assert not it, it
             pg.click("#refx")
@@ -57,7 +57,7 @@ try:
         step("XIC window", xic)
         def menus():
             pg.click("#np-spec"); frames(pg, 3)
-            pg.click("#np-map"); attendi(pg, "E.panels.some(p => p.type === 'map')"); frames(pg, 3)
+            pg.click("#np-map"); wait_for_js(pg, "E.panels.some(p => p.type === 'map')"); frames(pg, 3)
             it = italian(pg); assert not it, it
             for i in range(pg.locator(".pnl canvas").count()):
                 box = pg.locator(".pnl canvas").nth(i).bounding_box()
@@ -69,8 +69,8 @@ try:
         step("panels and right-click menu", menus)
         def gear_method():
             pg.click("#np-set"); pg.wait_for_selector("#uipset"); it = italian(pg); assert not it, it
-            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('#uipset')")      # the settings drawer covers the gear: Esc closes it
-            pg.click("#np-method"); attendi(pg, "!!document.querySelector('dialog[open]')"); frames(pg, 2); it = italian(pg); assert not it, it
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#uipset')")      # the settings drawer covers the gear: Esc closes it
+            pg.click("#np-method"); wait_for_js(pg, "!!document.querySelector('dialog[open]')"); frames(pg, 2); it = italian(pg); assert not it, it
         step("gear and method window", gear_method)
         def xic_integrate():
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
@@ -79,7 +79,7 @@ try:
             it = italian(pg); assert not it, it
             n = pg.locator(".pnl").count(); last = pg.locator(".pnl").nth(n - 1)
             box = last.locator("canvas").first.bounding_box()
-            pg.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5, button="right"); attendi(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes('Integrate')")
+            pg.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5, button="right"); wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes('Integrate')")
             it = italian(pg); assert not it, it
             items = pg.evaluate("[...document.querySelectorAll('#ctx button, #ctx div, #ctx a')].map(e => e.textContent.trim()).filter(Boolean)")
             assert any("Integrate" in x for x in items), items

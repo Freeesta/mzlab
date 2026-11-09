@@ -9,11 +9,11 @@ mod json;
 mod livelli;
 mod rotte;
 
-pub use cerca::{cerca, cerca_ampia};
+pub use cerca::{cerca, search_wide};
 pub use csv::{from_csv, to_csv};
 pub use ione::ione;
 pub use json::{digest, errors_json, from_json, hits_json, record_json, to_json};
-pub use livelli::unisci;
+pub use livelli::merge;
 pub use rotte::route;
 
 use crate::budget::sha256_hex;
@@ -22,7 +22,7 @@ use crate::json::round;
 
 pub const SCHEMA: &str = "molecules/1";
 /// Levels of a record, from the lowest: a later one replaces the same `id` of an earlier one.
-pub const LIVELLI: [&str; 3] = ["catalogo", "importata", "utente"];
+pub const LEVELS: [&str; 3] = ["catalogo", "importata", "utente"];
 /// Largest difference (Da) between the control mass of a CSV row and the computed one.
 pub const MASS_TOL: f64 = 0.0005;
 
@@ -30,42 +30,42 @@ pub const MASS_TOL: f64 = 0.0005;
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Proprieta {
     pub chiave: String,
-    pub valore: f64,
+    pub value: f64,
     pub unita: String,
-    pub fonte: String,
-    pub condizioni: String,
+    pub provenance: String,
+    pub conditions: String,
 }
 
 /// Where a record comes from; `catalogo` only for the catalogue, `file` for an imported file, the dates are ISO.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Origine {
+pub struct Origin {
     pub tipo: String,
-    pub catalogo: Vec<String>,
+    pub catalog: Vec<String>,
     pub file: Option<String>,
-    pub creato: Option<String>,
-    pub modificato: Option<String>,
+    pub created: Option<String>,
+    pub modified: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Molecola {
+pub struct Molecule {
     pub id: String,
     pub nome: String,
-    pub sinonimi: Vec<String>,
+    pub synonyms: Vec<String>,
     /// Hill order, no sign.
     pub formula: String,
-    pub carica: i32,
+    pub load: i32,
     /// Monoisotopic, Da, 6 decimals: computed by `finalizza`, never read.
     pub massa: f64,
     pub smiles: Option<String>,
     pub inchikey: Option<String>,
     pub addotti: Vec<String>,
-    pub raccolte: Vec<String>,
+    pub collections: Vec<String>,
     pub classi: Vec<String>,
     pub cas: Option<String>,
     pub pubchem_cid: Option<String>,
     pub proprieta: Vec<Proprieta>,
     pub note: String,
-    pub origine: Origine,
+    pub origine: Origin,
 }
 
 /// A wrong row (CSV: the 1-based line; JSON: the 1-based position of the record), an `error.molecules.*` key and the text that explains it.
@@ -123,12 +123,20 @@ fn id_ok(id: &str) -> bool {
     }
 }
 
-fn properties(m: &mut Molecola) -> Result<(), Bad> {
+fn properties(m: &mut Molecule) -> Result<(), Bad> {
     for p in &mut m.proprieta {
-        for s in [&mut p.chiave, &mut p.unita, &mut p.fonte, &mut p.condizioni] {
+        for s in [
+            &mut p.chiave,
+            &mut p.unita,
+            &mut p.provenance,
+            &mut p.conditions,
+        ] {
             *s = s.trim().to_string();
         }
-        if p.chiave.is_empty() || p.unita.is_empty() || p.fonte.is_empty() || !p.valore.is_finite()
+        if p.chiave.is_empty()
+            || p.unita.is_empty()
+            || p.provenance.is_empty()
+            || !p.value.is_finite()
         {
             return Err(("error.molecules.badProperty", p.chiave.clone()));
         }
@@ -145,7 +153,7 @@ fn properties(m: &mut Molecola) -> Result<(), Bad> {
 /// Puts a record in its one form: trimmed text, lists tidy, formula in Hill order, mass computed from formula and charge (and checked against `control`
 /// when the file had one), the InChIKey valid, the `id` assigned when empty (never changed after). A record without a formula is a mass-only entry: its
 /// mass is `control` (a positive number), taken as it is.
-pub fn finalizza(m: &mut Molecola, control: Option<f64>) -> Result<(), Bad> {
+pub fn finalizza(m: &mut Molecule, control: Option<f64>) -> Result<(), Bad> {
     m.nome = m.nome.trim().to_string();
     if m.nome.is_empty() {
         return Err(("error.molecules.noName", String::new()));
@@ -157,7 +165,7 @@ pub fn finalizza(m: &mut Molecola, control: Option<f64>) -> Result<(), Bad> {
             let f = parse_formula(&m.formula)
                 .map_err(|_| ("error.molecules.badFormula", m.formula.clone()))?;
             m.formula = fmt(&f);
-            m.massa = round(mass(&f) - f64::from(m.carica) * ELECTRON, 6);
+            m.massa = round(mass(&f) - f64::from(m.load) * ELECTRON, 6);
             if let Some(c) = control.filter(|c| (c - m.massa).abs() > MASS_TOL) {
                 return Err(("error.molecules.massMismatch", format!("{c} / {}", m.massa)));
             }
@@ -167,12 +175,12 @@ pub fn finalizza(m: &mut Molecola, control: Option<f64>) -> Result<(), Bad> {
     if let Some(k) = m.inchikey.as_deref().filter(|k| !is_inchikey(k)) {
         return Err(("error.molecules.badInchikey", k.to_string()));
     }
-    let nome = m.nome.to_lowercase();
-    tidy(&mut m.sinonimi, true, &nome)?;
+    let name = m.nome.to_lowercase();
+    tidy(&mut m.synonyms, true, &name)?;
     tidy(&mut m.addotti, false, "")?;
-    tidy(&mut m.raccolte, true, "")?;
+    tidy(&mut m.collections, true, "")?;
     tidy(&mut m.classi, true, "")?;
-    tidy(&mut m.origine.catalogo, false, "")?;
+    tidy(&mut m.origine.catalog, false, "")?;
     m.smiles = text_or_none(m.smiles.take());
     m.cas = text_or_none(m.cas.take());
     m.pubchem_cid = text_or_none(m.pubchem_cid.take());
@@ -181,7 +189,7 @@ pub fn finalizza(m: &mut Molecola, control: Option<f64>) -> Result<(), Bad> {
     if m.origine.tipo.is_empty() {
         m.origine.tipo = "utente".into();
     }
-    if !LIVELLI.contains(&m.origine.tipo.as_str()) {
+    if !LEVELS.contains(&m.origine.tipo.as_str()) {
         return Err(("error.molecules.badOrigin", m.origine.tipo.clone()));
     }
     if m.id.is_empty() {
@@ -197,7 +205,7 @@ pub fn finalizza(m: &mut Molecola, control: Option<f64>) -> Result<(), Bad> {
 
 /// Adds to `errors` (as `error.molecules.dupId`, at its line or position) every record whose `id` an earlier one already has, and puts the errors in the order
 /// of the lines.
-pub fn repeated(found: &[(usize, Molecola)], errors: &mut Vec<RowError>) {
+pub fn repeated(found: &[(usize, Molecule)], errors: &mut Vec<RowError>) {
     let mut seen = std::collections::HashSet::new();
     for (line, m) in found {
         if !seen.insert(m.id.as_str()) {

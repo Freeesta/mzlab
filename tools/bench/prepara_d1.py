@@ -13,40 +13,40 @@ import sys
 from pathlib import Path
 
 try:
-    from bench import verita as V
+    from bench import truth as V
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from bench import verita as V
+    from bench import truth as V
 from mzlab.chem.elements import MASS, PROTON, parse_formula
 
 PPM = 5.0
 NA_ION = MASS["Na"] - 0.000548579909
 
 
-def ione(formula: str, mz: float):
+def ion(formula: str, mz: float):
     if not formula:
         return None
     M = sum(MASS[e] * n for e, n in parse_formula(formula).items())
-    for nome, v in (("[M+H]+", M + PROTON), ("[M+Na]+", M + NA_ION)):
+    for name, v in (("[M+H]+", M + PROTON), ("[M+Na]+", M + NA_ION)):
         if abs(mz - v) / v * 1e6 < PPM:
-            return nome
+            return name
     return None
 
 
-def prepara(maf: str, rt_report: dict) -> dict:
-    righe = list(csv.DictReader(open(maf, newline="", encoding="utf-8"), delimiter="\t"))
-    vere = V.da_maf(maf, atteso="Compound concentration ratio")
+def prepare(maf: str, rt_report: dict) -> dict:
+    rows = list(csv.DictReader(open(maf, newline="", encoding="utf-8"), delimiter="\t"))
+    true = V.da_maf(maf, atteso="Compound concentration ratio")
     rt = {c["id"]: c for c in rt_report["compounds"]}
-    formula = {f"{(r.get('metabolite_identification') or 'maf' + str(i))}@{i}": r.get("chemical_formula") for i, r in enumerate(righe)}
+    formula = {f"{(r.get('metabolite_identification') or 'maf' + str(i))}@{i}": r.get("chemical_formula") for i, r in enumerate(rows)}
     out = []
-    for c in vere:
+    for c in true:
         r = rt.get(c["id"], {})
         out.append({"id": c["id"], "mz": c["mz"], "rt": c["rt"], "atteso": c["atteso"], "formula": formula.get(c["id"]) or None,
-                    "ione": ione(formula.get(c["id"]) or "", c["mz"]), "visto": bool(r.get("visto")), "d_rt": r.get("d")})
+                    "ione": ion(formula.get(c["id"]) or "", c["mz"]), "visto": bool(r.get("visto")), "d_rt": r.get("d")})
     return {"schema": "bench/verita/1", "dataset": "D1", "accessione": "MTBLS733", "n": len(out), "composti": out}
 
 
 if __name__ == "__main__":
-    t = prepara(sys.argv[1], json.loads(Path(sys.argv[2]).read_text()))
+    t = prepare(sys.argv[1], json.loads(Path(sys.argv[2]).read_text()))
     Path(sys.argv[3]).write_text(json.dumps(t, indent=1) + "\n")
     print(t["n"], "compounds")

@@ -19,7 +19,7 @@ if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
 
 import dati_sintetici_massa as dm  # noqa: E402
 tmp = Path(tempfile.mkdtemp(prefix="e2e_masscal_"))
-HR = tmp / "MassCal.mzML"; IONS = dm.calibrazione(HR, np.random.default_rng(3), offset_ppm=3.0, drift_ppm=2.0)
+HR = tmp / "MassCal.mzML"; IONS = dm.calibration(HR, np.random.default_rng(3), offset_ppm=3.0, drift_ppm=2.0)
 LR = ROOT / "mzlab" / "web" / "esempi" / "FullScan_t15.mzML"
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)], check=True)

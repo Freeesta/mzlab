@@ -47,7 +47,7 @@ pub(super) fn indexed_header(h: Header) -> (Vec<u8>, Vec<u8>) {
     };
     let write = |idx: bool| {
         let mut w = if idx {
-            MzmlWriter::indicizzato(Vec::new(), &h, Opzioni::default())
+            MzmlWriter::indicizzato(Vec::new(), &h, Options::default())
         } else {
             MzmlWriter::new(Vec::new(), &h)
         }
@@ -177,7 +177,7 @@ fn one_processing_method_per_step() {
 #[test]
 fn an_empty_run_still_has_a_valid_index() {
     let mut w =
-        MzmlWriter::indicizzato(Vec::new(), &Header::default(), Opzioni::default()).unwrap();
+        MzmlWriter::indicizzato(Vec::new(), &Header::default(), Options::default()).unwrap();
     w.open_spectra(0).unwrap();
     w.close_spectra().unwrap();
     let t = String::from_utf8(w.finish().unwrap()).unwrap();

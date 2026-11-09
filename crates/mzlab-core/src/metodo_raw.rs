@@ -40,7 +40,7 @@ fn positive(x: f64) -> Option<f64> {
     (x > 0.0).then_some(x)
 }
 
-fn campione(raw: &RawFileReader) -> Option<V> {
+fn sample(raw: &RawFileReader) -> Option<V> {
     let (s, i) = (&raw.seq_row, &raw.seq_row.injection);
     let vial = if s.vial.trim().is_empty() {
         &i.vial
@@ -213,10 +213,10 @@ fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
 
 /// The experiment of the transition table of a TSQ method, appended to `exps`; what the table or the file does not give is a warning.
 fn tsq_experiment(blocks: &[String], exps: &mut Vec<V>, warn: &mut Vec<Option<V>>) {
-    let not_decoded = |dove: &str| {
+    let not_decoded = |at: &str| {
         obj(vec![
             ("chiave", Some(V::s("meta.nonDecodificato"))),
-            ("dove", Some(V::s(dove))),
+            ("dove", Some(V::s(at))),
         ])
     };
     match blocks.iter().find_map(|b| tsq::parse(b)) {
@@ -292,9 +292,29 @@ fn experiments_of(
     (exps, settings)
 }
 
+/// The scan trailer read once, each record decoded once: its fields for `campi` and its series for `serie_registro`.
+fn trailer_pass<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+) -> (Vec<campi::Field>, Vec<serie::Entry>) {
+    let mut t = campi::Trailer::new(raw);
+    let n = raw.scan_parameters_header.fields.len();
+    let mut vals = Vec::with_capacity(n);
+    let entries = serie::index(raw, &mut |row| {
+        raw.scan_parameters.for_each(source, &mut |k, rec| {
+            vals.clear();
+            vals.extend((0..n).map(|i| rec.value(i)));
+            t.step(&vals);
+            row(k, &|i| vals.get(i)?.as_ref().and_then(serie::number_of));
+        });
+    });
+    (t.finish(raw), entries)
+}
+
 /// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
 pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Source) -> String {
     let s = &raw.seq_row;
+    let (trailer, voci) = trailer_pass(raw, source);
     let ident = Ident {
         computer: raw.raw_file_info.computer_name.clone(),
         paths: [&s.path, &s.file_name, &s.inst_method, &s.proc_method]
@@ -340,7 +360,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
             "origine",
             metodo::origin(src, campi::clock(raw.header.audit_start.time).as_deref()),
         ),
-        ("campione", campione(raw)),
+        ("campione", sample(raw)),
         ("strumento", strumento(raw)),
         (
             "operatore",
@@ -359,14 +379,11 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         (
             "campi",
             Some(V::Arr(campi::fields(
-                raw, source, &traces, &pairs, &items, &ident,
+                raw, trailer, &traces, &pairs, &items, &ident,
             ))),
         ),
-        ("registro", Some(V::Arr(registro::voci(&raw.error_log)))),
-        (
-            "serie_registro",
-            Some(V::Arr(serie::sezione(&serie::indice(raw, source)))),
-        ),
+        ("registro", Some(V::Arr(registro::entries(&raw.error_log)))),
+        ("serie_registro", Some(V::Arr(serie::sezione(&voci)))),
         ("grezzo", Some(V::Arr(raw_texts(&blocks)))),
         ("avvisi", Some(V::Arr(warn.into_iter().flatten().collect()))),
     ]);

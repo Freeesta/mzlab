@@ -1,19 +1,19 @@
 //! `impl Lettore` of the Shimadzu reader (the struct is in `mod.rs`).
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 use super::carica::Fam;
-use super::{meta, rec, rifiuto, LettoreShimadzu, F32_EXACT};
+use super::{meta, rec, refusal, ShimadzuReader, F32_EXACT};
 
-impl Lettore for LettoreShimadzu {
-    fn formato(&self) -> Formato {
-        Formato::Altro("shimadzu")
+impl Reader for ShimadzuReader {
+    fn format(&self) -> Format {
+        Format::Altro("shimadzu")
     }
 
-    fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
+    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use mzlab_core::conv::{IDENTITA, NON_DECODIFICATO};
         &[
             ("oven and injector programs, GCMS Configuration, embedded .qgm method, Status curves, MS Status Data, Mass Parameters", NON_DECODIFICATO),
@@ -22,17 +22,17 @@ impl Lettore for LettoreShimadzu {
         ]
     }
 
-    fn campioni(&self) -> &[Campione] {
-        &self.campioni
+    fn samples(&self) -> &[Sample] {
+        &self.samples
     }
 
-    fn indice(&mut self, c: usize) -> Result<&[VoceScansione]> {
-        self.uno(c)?;
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
+        self.one(c)?;
         Ok(&self.d.indice)
     }
 
-    fn scansione(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        self.uno(c)?;
+    fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
+        self.one(c)?;
         let (v, &(a, n, f)) = self
             .d
             .indice
@@ -43,10 +43,10 @@ impl Lettore for LettoreShimadzu {
             .d
             .raw
             .get(a..a + n)
-            .ok_or_else(|| rifiuto("scan outside the raw stream"))?;
+            .ok_or_else(|| refusal("scan outside the raw stream"))?;
         let pts: Vec<(f64, u64)> = (0..f.npk)
             .map(|j| {
-                let (mz, _, y) = rec::punto(r, &f, j);
+                let (mz, _, y) = rec::point(r, &f, j);
                 (f64::from(mz) / 20.0, y)
             })
             .collect();
@@ -69,38 +69,38 @@ impl Lettore for LettoreShimadzu {
         })
     }
 
-    fn intestazione(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
-        self.uno(c)?;
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
+        self.one(c)?;
         let (v, &(a, _, f)) = self
             .d
             .indice
             .get(k)
             .zip(self.d.pos.get(k))
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
-        let campo = |nome: &str, valore: String| Campo {
-            nome: nome.into(),
-            valore,
+        let field = |name: &str, value: String| Field {
+            nome: name.into(),
+            valore: value,
             unita: None,
             cv: None,
         };
         let mut out = vec![
-            campo("record", (k + 1).to_string()),
-            campo("offset", a.to_string()),
-            campo("TIC", v.tic.to_string()),
+            field("record", (k + 1).to_string()),
+            field("offset", a.to_string()),
+            field("TIC", v.tic.to_string()),
         ];
         if self.fam == Fam::Lc {
-            out.push(campo("event", (usize::from(f.ev) + 1).to_string()));
+            out.push(field("event", (usize::from(f.ev) + 1).to_string()));
         }
         Ok(out)
     }
 
-    fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
-        self.uno(c)?;
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
+        self.one(c)?;
         Ok(self
             .d
             .cromat
             .iter()
-            .map(|h| VoceCromatogramma {
+            .map(|h| ChromatogramEntry {
                 id: h.id.clone(),
                 tipo: h.kind,
                 unita: h.unit.clone(),
@@ -108,8 +108,8 @@ impl Lettore for LettoreShimadzu {
             .collect())
     }
 
-    fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
-        self.uno(c)?;
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
+        self.one(c)?;
         self.d
             .cromat
             .iter()
@@ -118,9 +118,9 @@ impl Lettore for LettoreShimadzu {
             .ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
 
-    fn metodo(&mut self, c: usize) -> Result<String> {
-        self.uno(c)?;
-        Ok(meta::documento(
+    fn method(&mut self, c: usize) -> Result<String> {
+        self.one(c)?;
+        Ok(meta::document(
             self.id(),
             self.fam,
             &self.d,
@@ -129,8 +129,8 @@ impl Lettore for LettoreShimadzu {
         ))
     }
 
-    fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> {
-        self.uno(c)?;
+    fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
+        self.one(c)?;
         Ok(Some(meta::header(self.id(), self.fam, &self.d, &self.meta)))
     }
 

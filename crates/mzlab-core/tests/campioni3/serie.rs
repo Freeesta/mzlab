@@ -2,7 +2,7 @@
 
 use super::codes;
 use super::modello::run as run_model;
-use mzlab_core::campioni::{self, tabella_da_json, Campione};
+use mzlab_core::campioni::{self, table_from_json, Sample};
 use serde_json::Value;
 
 const MODEL: &str = "{data}_{polarita}_{n}_{campione_id}";
@@ -76,11 +76,11 @@ fn the_model_reads_a_time_with_p() {
 #[test]
 fn several_samples_in_one_file_are_not_duplicates() {
     let row = |sub: &str| {
-        let mut c = Campione::new("ReRun.wiff", "ab", 1);
+        let mut c = Sample::new("ReRun.wiff", "ab", 1);
         c.sub = sub.into();
         c
     };
-    let t = |subs: &[&str]| campioni::Tabella {
+    let t = |subs: &[&str]| campioni::Table {
         campioni: subs.iter().map(|s| row(s)).collect(),
         colonne: Vec::new(),
     };
@@ -90,18 +90,18 @@ fn several_samples_in_one_file_are_not_duplicates() {
     let again = campioni::to_json3(&ok);
     assert!(again.contains("\"campione\":\"2\""));
     assert_eq!(
-        campioni::to_json3(&tabella_da_json(again.as_bytes()).unwrap()),
+        campioni::to_json3(&table_from_json(again.as_bytes()).unwrap()),
         again
     );
 }
 
 #[test]
 fn valida_warns_about_an_unknown_condition_and_a_bad_time() {
-    let mut a = Campione::new("a.mzML", "", 1);
+    let mut a = Sample::new("a.mzML", "", 1);
     a.sample_id = "TW-XYZ-T5".into();
-    let mut b = Campione::new("b.mzML", "", 2);
+    let mut b = Sample::new("b.mzML", "", 2);
     b.sample_id = "TW-PMS-T5x".into();
-    let t = campioni::Tabella {
+    let t = campioni::Table {
         campioni: vec![a, b],
         colonne: Vec::new(),
     };
@@ -168,7 +168,7 @@ fn a_p_in_a_time_is_the_decimal_point_and_the_order_is_numeric() {
 
 #[test]
 fn blank_words_make_a_blank_only_without_a_time_or_a_series() {
-    let kind = |n: &str| mzlab_core::campioni::ruolo_e_minuti(n).0;
+    let kind = |n: &str| mzlab_core::campioni::role_and_minutes(n).0;
     for n in [
         "MQ_Wash_1.mzML",
         "MQ_blk.mzML",

@@ -79,9 +79,9 @@ pub(crate) fn write_run(
             "--out must be a folder that can be written",
         );
     }
-    let corsa = crate::flow_report::report(&out)
+    let run_report = crate::flow_report::report(&out)
         .and_then(|c| std::fs::write(out.join("corsa.json"), c).map_err(crate::flow::io));
-    if let Err(e) = corsa {
+    if let Err(e) = run_report {
         let err = Error::new("err.cli.out").with("path", out.join("corsa.json").display());
         let hint = "prov.json and the files of the steps are written";
         return fail(st, 1, &err, &format!("corsa.json: {e}"), hint);
@@ -112,6 +112,22 @@ fn summary(run: &Run, steps: usize, out: &Path) -> Outcome {
             failed.join(", "),
             run.skipped.join(", ")
         );
+        // a memory refusal said in words, once per step, with the next step to try
+        let mut told: Vec<&str> = Vec::new();
+        for a in &run.activities {
+            let Some(e) = a.error.as_ref() else { continue };
+            let get = |k: &str| {
+                e.params
+                    .iter()
+                    .find(|(n, _)| n == k)
+                    .map(|(_, v)| v.clone())
+            };
+            let advice = crate::flow_run::memory_advice(&e.error_key, &get, &a.instance);
+            if !advice.is_empty() && !told.contains(&a.instance.as_str()) {
+                told.push(&a.instance);
+                stderr += &format!("{}: {}\n", a.instance, advice.trim_start());
+            }
+        }
         stderr += &format!(
             "hint: the other outputs, prov.json and corsa.json are in {}\n",
             out.display()
@@ -214,4 +230,50 @@ pub fn probe_plan(text: &[u8], dir: &Path, work: &Path) -> mzlab_core::Result<(u
         .collect::<HashSet<_>>()
         .len();
     Ok((reused, total.saturating_sub(reused)))
+}
+
+/// The working memory of the jobs of a run (`FileRunner::budget`): `--budget-mb` as given, else the automatic budget of this computer shared by the
+/// jobs that run at once (`budget_auto::share_mb`), so that `--workers N` and the live run of the desktop app fit together in it.
+pub(crate) struct Budget {
+    /// MB of `--budget-mb`, else the automatic budget of this computer.
+    pub(crate) mb: f64,
+    /// `mb` is the one of `--budget-mb`: it is not shared.
+    given: bool,
+    /// The jobs that run at once (`run_with`).
+    workers: std::sync::atomic::AtomicUsize,
+}
+
+impl Budget {
+    pub(crate) fn auto() -> Budget {
+        Budget {
+            mb: mzlab_core::budget_auto::native_auto_mb(),
+            given: false,
+            workers: std::sync::atomic::AtomicUsize::new(1),
+        }
+    }
+
+    pub(crate) fn given(mb: f64) -> Budget {
+        Budget {
+            mb,
+            given: true,
+            workers: std::sync::atomic::AtomicUsize::new(1),
+        }
+    }
+
+    /// The run starts `workers` jobs at once.
+    pub(crate) fn run_with(&self, workers: usize) {
+        self.workers
+            .store(workers.max(1), std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// The working memory in MB of one job.
+    pub(crate) fn job_mb(&self) -> f64 {
+        if self.given {
+            return self.mb;
+        }
+        mzlab_core::budget_auto::share_mb(
+            self.mb,
+            self.workers.load(std::sync::atomic::Ordering::Relaxed),
+        )
+    }
 }

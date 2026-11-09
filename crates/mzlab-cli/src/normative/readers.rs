@@ -62,7 +62,7 @@ pub fn read(ctx: &mut Ctx, src: &ListSrc) -> Result<Vec<Entry>, NormError> {
         "eu_water" | "eu_chem" | "us_epa_html" => tables(ctx, src)?,
         "us_ecfr" => ecfr(ctx, src)?,
         "eu_ppp" => ppp(ctx, src)?,
-        "voci" => voci(ctx, src)?,
+        "voci" => entries_file(ctx, src)?,
         "svhc" | "ca_prop65" => import(ctx, src)?,
         other => {
             return Err(NormError::parse(
@@ -234,7 +234,7 @@ fn kind_of(word: &str) -> Option<Kind> {
 }
 
 /// A hand-transcribed entries file: `entry_ref;name;cas;ec;attr;kind;group_entry;act`, the act cited on every row; an optional `inchikey` column holds a structure the act itself gives. Lines starting with `#` are comments.
-fn voci(ctx: &mut Ctx, src: &ListSrc) -> Result<Vec<Entry>, NormError> {
+fn entries_file(ctx: &mut Ctx, src: &ListSrc) -> Result<Vec<Entry>, NormError> {
     let mut out = Vec::new();
     for u in &src.urls {
         let text = ctx.text(u)?;

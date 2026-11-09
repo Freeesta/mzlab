@@ -114,14 +114,14 @@ def read_listings(data: bytes) -> dict:
 def main(out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
-        fonti, keys, mass, _ = make_sources(Path(tmp))
-        raw = gs.genera(fonti, Path(tmp), scarica=False)
+        sources, keys, mass, _ = make_sources(Path(tmp))
+        raw = gs.genera(sources, Path(tmp), scarica=False)
     (out / "mini.mzsus").write_bytes(raw)
-    s = gs.leggi_sospetti(raw)
+    s = gs.read_suspects(raw)
     qs = [(mass[k] * f, ppm) for k in keys for f, ppm in ((1.0, 0.0), (1.0, 5.0), (1 + 4e-6, 5.0), (1 + 6e-6, 5.0), (1.0, 5000.0))] + [(50.0, 5.0), (700.0, 5.0)]
-    casi = [{"mass": m, "ppm": ppm, "hits": [{"key": h.inchikey14, "mass": h.mass, "formula": h.formula, "sources": sum(gs.SOURCE_BITS[x] for x in h.sources),
+    cases = [{"mass": m, "ppm": ppm, "hits": [{"key": h.inchikey14, "mass": h.mass, "formula": h.formula, "sources": sum(gs.SOURCE_BITS[x] for x in h.sources),
                                               "pubmed": h.pubmed, "patents": h.patents, "reaction": h.reaction} for h in s.cerca(m, ppm)]} for m, ppm in qs]
-    (out / "casi.json").write_text(json.dumps({"rows": s.n, "casi": casi}), encoding="utf-8")
+    (out / "casi.json").write_text(json.dumps({"rows": s.n, "casi": cases}), encoding="utf-8")
     ext = write_listings()
     (out / "listings.mzsus").write_bytes(ext)
     (out / "listings.json").write_text(json.dumps(read_listings(ext), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

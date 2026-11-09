@@ -25,6 +25,8 @@ use mzlab_feat::{store::Slice, tp::TpRoles};
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+mod blocks_js;
 #[cfg(any(feature = "detect", feature = "untargeted"))]
 pub mod cache;
 #[cfg(feature = "detect")]
@@ -112,19 +114,26 @@ impl ReadAt for JsReader {
     }
 }
 
-#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
-fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<JsReader>> {
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+/// Index `k` of `together` open at the same time (their blocks share one budget, `blocks_js::shape`).
+fn open_in(read: &Function, k: usize, size: f64, together: usize) -> Result<Index<blocks_js::Blocks>> {
     let r = JsReader {
         read: read.clone(),
         k: k as u32,
     };
-    Index::open(r, size as u64)
+    Index::open(blocks_js::Blocks::over(r, size as u64, together), size as u64)
 }
 
-#[cfg(feature = "proofs")]
-fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<JsReader>>> {
+#[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted", feature = "flow_ms2"))]
+fn open_one(read: &Function, k: usize, size: f64) -> Result<Index<blocks_js::Blocks>> {
+    open_in(read, k, size, 1)
+}
+
+#[cfg(any(feature = "detect", feature = "proofs"))]
+/// Every index of the series, all open together.
+fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<blocks_js::Blocks>>> {
     (0..sizes.len())
-        .map(|k| open_one(read, k, sizes[k]))
+        .map(|k| open_in(read, k, sizes[k], sizes.len()))
         .collect()
 }
 
@@ -195,12 +204,15 @@ pub fn detect_file(
 
 #[cfg(feature = "detect")]
 /// L1-L3 of one file written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeatf`. `progress(done, total)` (optional) is called at most once per 1 % of the peaks.
+/// A file whose detection does not fit in `budget_mb` (0 or absent: the default of the `.wasm`) is refused first (`stima::detect_fits`).
 #[wasm_bindgen]
 pub fn detect_file_to(
-    read: Function, size: f64, name: &str, recipe: &str, write: Function, progress: Option<Function>,
+    read: Function, size: f64, name: &str, recipe: &str, write: Function, progress: Option<Function>, budget_mb: Option<f64>,
 ) -> std::result::Result<String, JsValue> {
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
     let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
+    let cap = mzlab_core::budget::MemBudget::from_request(budget_mb.unwrap_or(0.0)).cap();
+    stima::detect_fits(&mut ix, &r, cap).map_err(js_err)?;
     to_sink(write, |sink| progress_js::detect_to(&mut ix, name, &r, sink, progress))
 }
 

@@ -49,12 +49,12 @@ try:
             pg.evaluate(f"E.files.forEach((f,i)=>f.vis=i==={neg})"); pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(300)
             assert pg.input_value("#xic-ad") == "[M-H]-"; pg.click("#xic-no")
         step("default adduct follows the panel's files ([M-H]- for a negative file)", adduct)
-        def addotti():
+        def adducts():
             pg.evaluate("E.files.forEach(f=>f.vis=true)")
             pg.click("#stbar [data-cmd=addloss]"); pg.wait_for_selector("#calcin", state="visible"); pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cadd-wrap table")
             assert pg.locator(".cadd-wrap tbody tr").count() >= 4
             pg.evaluate("BARRA.close(false)")
-        step("Adducts table opens in Adducts & losses", addotti)
+        step("Adducts table opens in Adducts & losses", adducts)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

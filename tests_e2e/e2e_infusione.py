@@ -19,7 +19,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1600})
         load(pg, [F], 6000, 1)
-        attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
+        wait_for_js(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         def one():
             assert pg.evaluate("E.files.filter(f=>!f.gone).length") == 1, "one item, not MS1 + MS2"
             assert pg.evaluate("E.files[0].kind") == "infusion", pg.evaluate("E.files[0].kind")
@@ -45,7 +45,7 @@ try:
             ids = pg.evaluate("[...document.querySelectorAll('#inf-tree tbody tr[data-id]')].map(t=>t.dataset.id).filter(Boolean)")
             now = pg.evaluate("E.panels.find(p=>p.type==='spec').filt")
             other = [i for i in ids if "msn:" + i != now][-1]
-            pg.click(f"#inf-tree tbody tr[data-id='{other}']"); attendi(pg, f"E.panels.some(p=>p.type==='spec' && p.filt==='msn:{other}' && p._a && p._a.data && p._a.data[0] && p._a.data[0].d.y.length>0)", 30000)
+            pg.click(f"#inf-tree tbody tr[data-id='{other}']"); wait_for_js(pg, f"E.panels.some(p=>p.type==='spec' && p.filt==='msn:{other}' && p._a && p._a.data && p._a.data[0] && p._a.data[0].d.y.length>0)", 30000)
             st = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'),s=E.panels.find(p=>p.type==='spec');return {c:c.filt,s:s.filt,n:s._a&&s._a.data&&s._a.data[0]?s._a.data[0].d.y.length:0}})()")
             assert st["c"] == st["s"] == "msn:" + other and st["n"] > 0, st
         step("a click on a node puts it on the chromatogram and the spectrum", click)
@@ -79,7 +79,7 @@ try:
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         step("no request left unanswered by the engine", lambda: (_ for _ in ()).throw(AssertionError(pg.evaluate("window.MZLAB_LR_MISS"))) if pg.evaluate("(window.MZLAB_LR_MISS||[]).length") else None)
         # a DDA file next to it keeps its name
-        pg2 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg2.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg2, "window.qqReady === true")
+        pg2 = r.b.new_page(viewport={"width": 1500, "height": 1600}); pg2.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(pg2, "window.qqReady === true")
         load(pg2, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def keeps():
             t = pg2.evaluate("E.files.map(f=>f.kind).sort().join()"); assert "infusion" not in t, t

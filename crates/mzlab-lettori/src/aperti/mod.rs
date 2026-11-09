@@ -1,4 +1,4 @@
-//! The family `aperti`: formats with a public specification that the engine does not read (docs/agenti/lettori-aperti.md). One module per format, each with its `VOCE`.
+//! The family `aperti`: formats with a public specification that the engine does not read (docs/agenti/lettori-aperti.md). One module per format, each with its `ENTRY`.
 
 pub mod mzml_gz;
 pub mod mzml_numpress;

@@ -43,8 +43,8 @@ fn filter_string_sits_in_the_scan_and_uv_is_an_absorption_chromatogram() {
     assert_eq!(mzml::read(xml.as_bytes()).unwrap().chromatograms[0].kind, ChromKind::Pda);
 }
 
-fn write_one(sp: &Spectrum, opz: Opzioni) -> Vec<u8> {
-    let mut w = MzmlWriter::con_opzioni(Vec::new(), &Header { run: "x".into(), ..Default::default() }, opz).unwrap();
+fn write_one(sp: &Spectrum, opz: Options) -> Vec<u8> {
+    let mut w = MzmlWriter::with_options(Vec::new(), &Header { run: "x".into(), ..Default::default() }, opz).unwrap();
     w.open_spectra(1).unwrap();
     w.spectrum(sp).unwrap();
     w.close_spectra().unwrap();
@@ -56,8 +56,8 @@ fn numpress_is_lossy_but_close_and_off_by_default() {
     let mz: Vec<f64> = (0..400).map(|i| 100.0 + i as f64 * 0.37 + (i % 7) as f64 * 1e-3).collect();
     let intensity: Vec<f32> = (0..400).map(|i| 10.0 + ((i * 37) % 1000) as f32).collect();
     let sp = Spectrum { index: 0, id: "scan=1".into(), level: 1, rt: 1.0, polarity: 1, profile: false, mz: mz.clone(), intensity: intensity.clone(), ..Default::default() };
-    let plain = write_one(&sp, Opzioni::default());
-    let np = write_one(&sp, Opzioni { numpress: true, ..Default::default() });
+    let plain = write_one(&sp, Options::default());
+    let np = write_one(&sp, Options { numpress: true, ..Default::default() });
     assert!(!String::from_utf8_lossy(&plain).contains("MS:1002312"));
     let t = String::from_utf8_lossy(&np);
     assert!(t.contains("MS:1002312") || t.contains("MS:1002746"));

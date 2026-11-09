@@ -8,7 +8,7 @@ use crate::error_json;
 #[wasm_bindgen]
 pub struct Gunzip {
     g: mzlab_core::gunzip::Gunzip,
-    intero: bool,
+    whole: bool,
 }
 
 #[wasm_bindgen]
@@ -18,7 +18,7 @@ impl Gunzip {
     pub fn new(tetto: f64) -> Gunzip {
         Gunzip {
             g: mzlab_core::gunzip::Gunzip::new(tetto as u64),
-            intero: false,
+            whole: false,
         }
     }
     /// The mzML bytes the next piece of the file completes (may be empty).
@@ -28,12 +28,12 @@ impl Gunzip {
     }
     /// The last bytes; `whole()` then says whether the stream ended well (false: a cut file, opened with the spectra it has).
     pub fn finish(&mut self) -> Result<Uint8Array, JsValue> {
-        let (out, intero) = self.g.finish().map_err(|e| error_json(&e))?;
-        self.intero = intero;
+        let (out, whole) = self.g.finish().map_err(|e| error_json(&e))?;
+        self.whole = whole;
         Ok(Uint8Array::from(&out[..]))
     }
     pub fn whole(&self) -> bool {
-        self.intero
+        self.whole
     }
     /// Bytes of the mzML given out so far.
     pub fn written(&self) -> f64 {

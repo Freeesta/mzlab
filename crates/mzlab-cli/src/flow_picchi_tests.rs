@@ -2,7 +2,7 @@
 //! centroids, the default keeps the profile and warns in `prov.json` and `corsa.json`, also when the step is taken again from the cache.
 
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 
 use crate::flow_run_tests::{flow_run, p};
 
@@ -10,10 +10,10 @@ const PLAN: &str = r#"{"format":"mzflow/2","inputs":[{"name":"a.mzML","type":"ra
 {"id":"c","step":"convert.mzml@1","in":{"raw":"file:a.mzML"}}]}"#;
 
 fn profile_mzml() -> Vec<u8> {
-    let mut w = MzmlWriter::con_opzioni(
+    let mut w = MzmlWriter::with_options(
         Vec::new(),
         &Header::default(),
-        Opzioni {
+        Options {
             numpress: true,
             ..Default::default()
         },

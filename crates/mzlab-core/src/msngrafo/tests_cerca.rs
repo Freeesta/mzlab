@@ -113,7 +113,7 @@ fn the_polarity_the_min_proofs_and_the_top_cut_the_list() {
         &lib,
         &a,
         &OpzioniCerca {
-            min_prove: 0,
+            min_evidence: 0,
             ..OpzioniCerca::default()
         },
     );
@@ -122,7 +122,7 @@ fn the_polarity_the_min_proofs_and_the_top_cut_the_list() {
         &lib,
         &a,
         &OpzioniCerca {
-            min_prove: 0,
+            min_evidence: 0,
             top: 1,
             ..OpzioniCerca::default()
         },
@@ -235,14 +235,14 @@ fn an_ms2_of_a_feature_finds_the_entry_at_its_precursor() {
         ("B", &graph(350.2, 1, &MS2, &[]), 1),
         ("N", &graph(305.1, -1, &MS2, &[]), -1),
     ]);
-    let hits = super::cerca_ms2(&lib, 305.1, true, &MS2, 10.0, 0.01, 3).unwrap();
+    let hits = super::search_ms2(&lib, 305.1, true, &MS2, 10.0, 0.01, 3).unwrap();
     // B is at another precursor, N has the other polarity
     assert_eq!(hits.len(), 1);
     assert_eq!((hits[0].id.as_str(), hits[0].shared), ("A", 3));
     assert!(hits[0].entropy > 0.99);
     // too few shared peaks: nothing
     assert!(
-        super::cerca_ms2(&lib, 305.1, true, &[(100.0, 1.0)], 10.0, 0.01, 3)
+        super::search_ms2(&lib, 305.1, true, &[(100.0, 1.0)], 10.0, 0.01, 3)
             .unwrap()
             .is_empty()
     );

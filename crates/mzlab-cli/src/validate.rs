@@ -6,7 +6,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use mzlab_core::json::Out;
-use mzlab_core::mzmlvalida::{json_file, valida, Problem, Report, Severity};
+use mzlab_core::mzmlvalida::{json_file, validate, Problem, Report, Severity};
 
 use crate::Outcome;
 
@@ -90,7 +90,7 @@ pub fn run(args: impl Iterator<Item = String>) -> Outcome {
         } else {
             File::open(f).map_err(|e| e.to_string())
         })
-        .and_then(|h| valida(h).map_err(|e| e.to_string()));
+        .and_then(|h| validate(h).map_err(|e| e.to_string()));
         let Ok(r) = read else {
             err += &format!(
                 "{name}: cannot be read: {}\n",

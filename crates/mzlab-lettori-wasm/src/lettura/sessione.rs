@@ -2,94 +2,104 @@
 //! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON, or one byte array for the index and a scan (`mzlab_core::trasporto`); an error is `{error_key, params}`.
 use std::collections::HashMap;
 
-use super::json_testo::{campioni_json, cromatogrammi_json, intestazione_json, testata_json};
+use super::json_testo::{chromatograms_json, fields_json, header_json, samples_json};
 use mzlab_core::json::Out;
-use mzlab_core::lettori::Lettore;
-use mzlab_core::trasporto::{encode_indice, encode_scansione};
+use mzlab_core::lettori::Reader;
+use mzlab_core::mzml::Spectrum;
+use mzlab_core::trasporto::{encode_index, encode_scansione};
 use mzlab_core::Result;
 
 #[derive(Default)]
-pub struct Sessioni {
-    aperti: HashMap<u32, Box<dyn Lettore>>,
-    prossimo: u32,
+pub struct Sessions {
+    open: HashMap<u32, Box<dyn Reader>>,
+    next: u32,
+    // the last scan of `scan_parts`, whose columns the engine reads in place
+    last: Option<Spectrum>,
 }
 
-impl Sessioni {
+impl Sessions {
     /// Keeps `l` open and gives its handle.
-    pub fn inserisci(&mut self, l: Box<dyn Lettore>) -> u32 {
-        self.prossimo += 1;
-        self.aperti.insert(self.prossimo, l);
-        self.prossimo
+    pub fn insert(&mut self, l: Box<dyn Reader>) -> u32 {
+        self.next += 1;
+        self.open.insert(self.next, l);
+        self.next
     }
 
-    pub fn chiudi(&mut self, h: u32) {
-        self.aperti.remove(&h);
+    pub fn close(&mut self, h: u32) {
+        self.open.remove(&h);
     }
 
-    fn lettore(&mut self, h: u32) -> Result<&mut Box<dyn Lettore>> {
-        self.aperti
+    fn reader(&mut self, h: u32) -> Result<&mut Box<dyn Reader>> {
+        self.open
             .get_mut(&h)
             .ok_or_else(|| mzlab_core::Error::new("error.badIndex").with("h", h))
     }
 
     /// `{formato, campioni:[{id,name,scans}]}` of the reader.
-    pub fn campioni(&mut self, h: u32) -> Result<String> {
-        let l = self.lettore(h)?;
+    pub fn samples(&mut self, h: u32) -> Result<String> {
+        let l = self.reader(h)?;
         let mut o = Out::default();
         o.raw("{\"formato\":")
-            .str(l.formato().id())
+            .str(l.format().id())
             .raw(",\"campioni\":");
-        campioni_json(&mut o, l.campioni());
+        samples_json(&mut o, l.samples());
         o.raw("}");
         Ok(std::mem::take(&mut o.0))
     }
 
     /// The index of sample `c` as one block of bytes in columns (`trasporto.rs`).
-    pub fn indice(&mut self, h: u32, c: usize) -> Result<Vec<u8>> {
-        Ok(encode_indice(self.lettore(h)?.indice(c)?))
+    pub fn index(&mut self, h: u32, c: usize) -> Result<Vec<u8>> {
+        Ok(encode_index(self.reader(h)?.index(c)?))
     }
 
     /// Scan `k` of sample `c` as one block of bytes: a fixed head, the m/z, the intensities (`trasporto.rs`). The id and the filter are those of the index.
-    pub fn scansione(&mut self, h: u32, c: usize, k: usize) -> Result<Vec<u8>> {
-        Ok(encode_scansione(&self.lettore(h)?.scansione_dati(c, k)?))
+    pub fn scan(&mut self, h: u32, c: usize, k: usize) -> Result<Vec<u8>> {
+        Ok(encode_scansione(&self.reader(h)?.scan_data(c, k)?))
     }
 
-    pub fn intestazione(&mut self, h: u32, c: usize, k: usize) -> Result<String> {
-        Ok(intestazione_json(&self.lettore(h)?.intestazione(c, k)?))
+    /// Scan `k` of sample `c` kept here until the next one: `scan_parts` hands over views of its columns instead of a block.
+    pub fn scan_parts(&mut self, h: u32, c: usize, k: usize) -> Result<&Spectrum> {
+        self.last = None;
+        let s = self.reader(h)?.scan_data(c, k)?;
+        Ok(self.last.insert(s))
+    }
+
+    pub fn scan_header(&mut self, h: u32, c: usize, k: usize) -> Result<String> {
+        Ok(fields_json(&self.reader(h)?.scan_header(c, k)?))
     }
 }
 
-impl Sessioni {
+impl Sessions {
     /// The chromatograms of sample `c` without their points.
-    pub fn cromatogrammi(&mut self, h: u32, c: usize) -> Result<String> {
-        Ok(cromatogrammi_json(&self.lettore(h)?.cromatogrammi(c)?))
+    pub fn chromatograms(&mut self, h: u32, c: usize) -> Result<String> {
+        Ok(chromatograms_json(&self.reader(h)?.chromatograms(c)?))
     }
 
     /// One chromatogram with its points: `{id, kind, q1, q3, unit, time, intensity}`.
-    pub fn cromatogramma(&mut self, h: u32, c: usize, id: &str) -> Result<String> {
-        Ok(mzlab_lettori::json::cromatogramma_json(
-            &self.lettore(h)?.cromatogramma(c, id)?,
+    pub fn chromatogram(&mut self, h: u32, c: usize, id: &str) -> Result<String> {
+        Ok(mzlab_lettori::json::chromatogram_json(
+            &self.reader(h)?.chromatogram(c, id)?,
         ))
     }
 
     /// The `metodo/1` document of sample `c`.
-    pub fn metodo(&mut self, h: u32, c: usize) -> Result<String> {
-        self.lettore(h)?.metodo(c)
+    pub fn method(&mut self, h: u32, c: usize) -> Result<String> {
+        self.reader(h)?.method(c)
     }
 
-    /// The spectra of sample `c` that a truncated file declares but does not hold (`Lettore::mancanti`).
-    pub fn mancanti(&mut self, h: u32, c: usize) -> Result<usize> {
-        Ok(self.lettore(h)?.mancanti(c))
+    /// The spectra of sample `c` that a truncated file declares but does not hold (`Lettore::missing`).
+    pub fn missing(&mut self, h: u32, c: usize) -> Result<usize> {
+        Ok(self.reader(h)?.missing(c))
     }
 
-    /// The header of the mzML of sample `c` (`Lettore::testata_mzml`), `null` when the reader has none: `{run, sources, instrument:[acc,name]|null, components:[[kind,acc,name]],
+    /// The header of the mzML of sample `c` (`Lettore::mzml_header`), `null` when the reader has none: `{run, sources, instrument:[acc,name]|null, components:[[kind,acc,name]],
     /// software:[name,version], acquired, serial, source_sha1, source_cv:[[acc,name]], sample:[id,name]|null, run_params:[[name,value]], content:[[acc,name]],
     /// extra_software:[[acc,name,version]], centroided}`.
-    pub fn testata(&mut self, h: u32, c: usize) -> Result<String> {
+    pub fn file_header(&mut self, h: u32, c: usize) -> Result<String> {
         Ok(self
-            .lettore(h)?
-            .testata_mzml(c)?
-            .map_or_else(|| "null".into(), |t| testata_json(&t)))
+            .reader(h)?
+            .mzml_header(c)?
+            .map_or_else(|| "null".into(), |t| header_json(&t)))
     }
 }
 

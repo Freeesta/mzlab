@@ -7,14 +7,14 @@ mod comune;
 use comune::andi::*;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use std::cell::Cell;
 use std::rc::Rc;
 
 /// Bytes in memory that count the reads asked of them.
-struct Conta(Vec<u8>, Rc<Cell<usize>>);
+struct Counter(Vec<u8>, Rc<Cell<usize>>);
 
-impl ReadAt for Conta {
+impl ReadAt for Counter {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         self.1.set(self.1.get() + 1);
         self.0.read_at(off, buf)
@@ -23,32 +23,32 @@ impl ReadAt for Conta {
 
 /// An ANDI-MS file with `spettri` as its scans; `registri`: `point_number` is the unlimited dimension (record variables) or a fixed one; `tic`: the file carries `total_intensity`.
 fn file(
-    spettri: &[Vec<(f64, f64)>],
-    tipo_mz: u32,
-    tipo_it: u32,
-    registri: bool,
+    spectra: &[Vec<(f64, f64)>],
+    kind_mz: u32,
+    kind_it: u32,
+    registries: bool,
     tic: bool,
 ) -> Vec<u8> {
-    let conti: Vec<usize> = spettri.iter().map(Vec::len).collect();
-    let totale: usize = conti.iter().sum();
-    let mut inizi = vec![0usize];
-    for &n in &conti[..conti.len() - 1] {
-        inizi.push(inizi.last().unwrap() + n);
+    let counts: Vec<usize> = spectra.iter().map(Vec::len).collect();
+    let total: usize = counts.iter().sum();
+    let mut starts = vec![0usize];
+    for &n in &counts[..counts.len() - 1] {
+        starts.push(starts.last().unwrap() + n);
     }
-    let n = spettri.len();
-    let mz: Vec<f64> = spettri.iter().flatten().map(|p| p.0).collect();
-    let it: Vec<f64> = spettri.iter().flatten().map(|p| p.1).collect();
+    let n = spectra.len();
+    let mz: Vec<f64> = spectra.iter().flatten().map(|p| p.0).collect();
+    let it: Vec<f64> = spectra.iter().flatten().map(|p| p.1).collect();
     let dims = [
-        ("point_number", if registri { 0u32 } else { totale as u32 }),
+        ("point_number", if registries { 0u32 } else { total as u32 }),
         ("scan_number", n as u32),
         ("instrument_number", 1),
         ("_32_byte_string", 32),
         ("range", 2),
     ];
-    let per_scan = |nome: &str, ty: u32, x: Vec<f64>| var(nome, &[1], ty, x);
-    let mut vm = var("mass_values", &[0], tipo_mz, mz);
+    let per_scan = |name: &str, ty: u32, x: Vec<f64>| var(name, &[1], ty, x);
+    let mut vm = var("mass_values", &[0], kind_mz, mz);
     vm.att.push(("units".into(), t("M/Z")));
-    let mut vi = var("intensity_values", &[0], tipo_it, it);
+    let mut vi = var("intensity_values", &[0], kind_it, it);
     vi.att
         .push(("units".into(), t("Arbitrary Intensity Units")));
     let mut vars = vec![
@@ -59,8 +59,8 @@ fn file(
         ),
         per_scan("mass_range_min", 6, vec![40.0; n]),
         per_scan("mass_range_max", 6, vec![400.0; n]),
-        per_scan("scan_index", 4, inizi.iter().map(|&x| x as f64).collect()),
-        per_scan("point_count", 4, conti.iter().map(|&x| x as f64).collect()),
+        per_scan("scan_index", 4, starts.iter().map(|&x| x as f64).collect()),
+        per_scan("point_count", 4, counts.iter().map(|&x| x as f64).collect()),
         vm,
         vi,
         car("instrument_name", &[2, 3], "GCMS Test", 32),
@@ -71,7 +71,7 @@ fn file(
             per_scan(
                 "total_intensity",
                 6,
-                spettri
+                spectra
                     .iter()
                     .map(|s| s.iter().map(|p| p.1).sum())
                     .collect(),
@@ -91,21 +91,21 @@ fn file(
         &dims,
         &g,
         &vars,
-        if registri { totale as u32 } else { 0 },
+        if registries { total as u32 } else { 0 },
     )
 }
 
-fn apri(byte: Vec<u8>) -> (Box<dyn Lettore>, Rc<Cell<usize>>) {
-    let letture = Rc::new(Cell::new(0));
+fn open(byte: Vec<u8>) -> (Box<dyn Reader>, Rc<Cell<usize>>) {
+    let reads = Rc::new(Cell::new(0));
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "campione.cdf".into(),
             dim: byte.len() as u64,
-            dati: Box::new(Conta(byte, letture.clone())),
+            dati: Box::new(Counter(byte, reads.clone())),
             sha1: None,
         }],
     };
-    (mzlab_lettori::apri(fs, &Limiti::sito()).unwrap(), letture)
+    (mzlab_lettori::apri(fs, &Limits::sito()).unwrap(), reads)
 }
 
 #[test]
@@ -115,17 +115,17 @@ fn points_out_of_order_are_sorted_and_ties_keep_the_file_order() {
         vec![(5.0, 1.0), (6.0, 2.0)],
         vec![(9.0, 7.0), (8.0, 6.0), (8.0, 5.0)],
     ];
-    for registri in [true, false] {
-        let (mut l, _) = apri(file(&s, 6, 6, registri, true));
-        let a = l.scansione(0, 0).unwrap();
+    for registries in [true, false] {
+        let (mut l, _) = open(file(&s, 6, 6, registries, true));
+        let a = l.scan(0, 0).unwrap();
         assert_eq!(a.mz, vec![1.0, 1.0, 2.0, 3.0]);
         assert_eq!(
             (0..4).map(|i| a.intensity_f64(i)).collect::<Vec<_>>(),
             vec![10.0, 11.0, 20.0, 30.0]
         );
-        let b = l.scansione(0, 1).unwrap();
+        let b = l.scan(0, 1).unwrap();
         assert_eq!(b.mz, vec![5.0, 6.0]);
-        let c = l.scansione(0, 2).unwrap();
+        let c = l.scan(0, 2).unwrap();
         assert_eq!(c.mz, vec![8.0, 8.0, 9.0]);
         assert_eq!(
             (0..3).map(|i| c.intensity_f64(i)).collect::<Vec<_>>(),
@@ -149,20 +149,20 @@ fn the_tic_summed_from_the_points_is_that_of_the_scans_read() {
         })
         .collect();
     // total_intensity absent; the intensity type decides whether the points are f32 or wider
-    for tipo_it in [4, 5, 6] {
-        let (mut l, _) = apri(file(&s, 6, tipo_it, true, false));
-        let indice = l.indice(0).unwrap().to_vec();
-        for (k, v) in indice.iter().enumerate() {
-            let sp = l.scansione(0, k).unwrap();
-            let somma: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
-            assert_eq!(v.tic, somma, "type {tipo_it} scan {k}");
+    for kind_it in [4, 5, 6] {
+        let (mut l, _) = open(file(&s, 6, kind_it, true, false));
+        let index = l.index(0).unwrap().to_vec();
+        for (k, v) in index.iter().enumerate() {
+            let sp = l.scan(0, k).unwrap();
+            let summed: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
+            assert_eq!(v.tic, summed, "type {kind_it} scan {k}");
         }
     }
 }
 
 #[test]
 fn a_long_spectrum_crosses_windows_and_takes_few_reads() {
-    let punti = |k: usize| -> Vec<(f64, f64)> {
+    let points = |k: usize| -> Vec<(f64, f64)> {
         (0..40_000)
             .map(|i| {
                 (
@@ -172,12 +172,12 @@ fn a_long_spectrum_crosses_windows_and_takes_few_reads() {
             })
             .collect()
     };
-    let s = vec![punti(0), punti(1)];
-    for registri in [true, false] {
-        let (mut l, letture) = apri(file(&s, 6, 6, registri, true));
-        let aperte = letture.get();
+    let s = vec![points(0), points(1)];
+    for registries in [true, false] {
+        let (mut l, reads) = open(file(&s, 6, 6, registries, true));
+        let opened = reads.get();
         for (k, scan) in s.iter().enumerate().take(2) {
-            let sp = l.scansione(0, k).unwrap();
+            let sp = l.scan(0, k).unwrap();
             assert_eq!(sp.mz.len(), 40_000);
             for (i, (mz, it)) in scan.iter().enumerate() {
                 assert_eq!(
@@ -188,11 +188,7 @@ fn a_long_spectrum_crosses_windows_and_takes_few_reads() {
             }
         }
         // two arrays of 40 000 points, 16 bytes of record: a handful of windows, not 160 000 blocks
-        assert!(
-            letture.get() - aperte < 40,
-            "{} reads",
-            letture.get() - aperte
-        );
+        assert!(reads.get() - opened < 40, "{} reads", reads.get() - opened);
     }
 }
 
@@ -210,19 +206,19 @@ fn every_type_of_the_arrays_reads_the_same_in_any_layout() {
                 .collect()
         })
         .collect();
-    for registri in [true, false] {
+    for registries in [true, false] {
         for (tm, ti) in [(3, 3), (4, 4), (5, 5), (6, 6), (6, 4), (5, 3)] {
-            let (mut l, _) = apri(file(&s, tm, ti, registri, true));
+            let (mut l, _) = open(file(&s, tm, ti, registries, true));
             for (k, scan) in s.iter().enumerate().take(4) {
-                let sp = l.scansione(0, k).unwrap();
-                let mut atteso = scan.clone();
-                atteso.sort_by(|a, b| a.0.total_cmp(&b.0));
+                let sp = l.scan(0, k).unwrap();
+                let mut expected = scan.clone();
+                expected.sort_by(|a, b| a.0.total_cmp(&b.0));
                 assert_eq!(
                     sp.mz,
-                    atteso.iter().map(|p| p.0).collect::<Vec<_>>(),
+                    expected.iter().map(|p| p.0).collect::<Vec<_>>(),
                     "types {tm}/{ti} scan {k}"
                 );
-                for (i, p) in atteso.iter().enumerate() {
+                for (i, p) in expected.iter().enumerate() {
                     assert_eq!(
                         sp.intensity_f64(i),
                         p.1,

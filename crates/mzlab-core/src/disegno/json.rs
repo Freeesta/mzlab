@@ -1,7 +1,7 @@
 //! The canonical JSON of `disegno/1` (keys in alphabetical order, factors and batches sorted: the same design gives the same bytes and SHA-256)
 //! and its reader.
 
-use super::{Condizione, Confronto, Disegno, Fattore, Lotto, SCHEMA};
+use super::{Batch, Condition, Confronto, Design, Factor, SCHEMA};
 use crate::budget::sha256_hex;
 use crate::error::{Error, Result};
 use crate::json::{parse, Out, Value};
@@ -22,7 +22,7 @@ fn comparison(j: &mut Out, c: &Confronto) {
 }
 
 /// `{"condizioni":[...],"confronti":[...],"fattori":[...],"lotti":[...],"riferimento":...,"schema":"disegno/1"}`.
-pub fn to_json(d: &Disegno) -> String {
+pub fn to_json(d: &Design) -> String {
     let mut j = Out::default();
     j.raw("{\"condizioni\":[");
     for (i, c) in d.conditions.iter().enumerate() {
@@ -75,7 +75,7 @@ pub fn to_json(d: &Disegno) -> String {
 }
 
 /// SHA-256 of the canonical JSON (what the plan records in `prov/1`).
-pub fn digest(d: &Disegno) -> String {
+pub fn digest(d: &Design) -> String {
     sha256_hex(to_json(d).as_bytes())
 }
 
@@ -94,7 +94,7 @@ fn list<'a>(v: &'a Value, k: &str) -> Result<&'a [Value]> {
     }
 }
 
-fn read_condition(v: &Value) -> Result<Condizione> {
+fn read_condition(v: &Value) -> Result<Condition> {
     let n = v.get("repliche").and_then(|x| x.f64()).ok_or_else(bad)?;
     if !(n >= 0.0 && n.fract() == 0.0 && n < 4e9) {
         return Err(bad());
@@ -106,7 +106,7 @@ fn read_condition(v: &Value) -> Result<Condizione> {
             .collect::<Result<_>>()?,
         _ => return Err(bad()),
     };
-    Ok(Condizione {
+    Ok(Condition {
         name: text(v, "nome")?,
         replicates: n as u32,
         levels,
@@ -121,8 +121,8 @@ fn read_comparison(v: &Value) -> Result<Confronto> {
     }
 }
 
-fn read_factor(v: &Value) -> Result<Fattore> {
-    Ok(Fattore {
+fn read_factor(v: &Value) -> Result<Factor> {
+    Ok(Factor {
         name: text(v, "nome")?,
         values: list(v, "valori")?
             .iter()
@@ -132,7 +132,7 @@ fn read_factor(v: &Value) -> Result<Fattore> {
 }
 
 /// Reads a `disegno/1` already parsed; the design is normalised (sorted) so that the same content always gives the same bytes.
-pub fn read(doc: &Value) -> Result<Disegno> {
+pub fn read(doc: &Value) -> Result<Design> {
     if doc.get("schema").and_then(|v| v.str()) != Some(SCHEMA) {
         return Err(bad());
     }
@@ -141,7 +141,7 @@ pub fn read(doc: &Value) -> Result<Disegno> {
         Some(x) => Some(x.str().ok_or_else(bad)?.to_string()),
         None => return Err(bad()),
     };
-    let mut d = Disegno {
+    let mut d = Design {
         conditions: list(doc, "condizioni")?
             .iter()
             .map(read_condition)
@@ -158,7 +158,7 @@ pub fn read(doc: &Value) -> Result<Disegno> {
         batches: list(doc, "lotti")?
             .iter()
             .map(|l| {
-                Ok(Lotto {
+                Ok(Batch {
                     file: text(l, "file")?,
                     sha256: text(l, "sha256")?,
                     batch: text(l, "lotto")?,
@@ -171,6 +171,6 @@ pub fn read(doc: &Value) -> Result<Disegno> {
 }
 
 /// Reads a `disegno/1` document (`error.badDisegno` when the schema, a type or a number is wrong).
-pub fn from_json(bytes: &[u8]) -> Result<Disegno> {
+pub fn from_json(bytes: &[u8]) -> Result<Design> {
     read(&parse(bytes)?)
 }

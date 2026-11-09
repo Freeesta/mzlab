@@ -22,7 +22,7 @@ use mzlab_feat::attributio::review::structures::NoStructures;
 use mzlab_feat::attributio::table;
 use serde_json::Value;
 
-fn banco_files() -> MemFiles {
+fn bench_files() -> MemFiles {
     let mut files = fixture("campagna_sintetica").files;
     let base = root().join("tests/data/attributio/campagna_banco");
     walk(&base, &base, &mut files);
@@ -131,7 +131,7 @@ fn review(files: &MemFiles, pol: &str, id: i64) -> Value {
 
 #[test]
 fn the_review_of_a_feature_has_its_proofs_and_proposes_nothing_ticked() {
-    let v = review(&banco_files(), "POS", 15);
+    let v = review(&bench_files(), "POS", 15);
     assert_eq!(v["current"]["level"], "3");
     let p = &v["proposal"];
     assert_eq!(p["class"], "2b-check", "a competing isomer matches better");
@@ -175,7 +175,7 @@ fn the_review_of_a_feature_has_its_proofs_and_proposes_nothing_ticked() {
 
 #[test]
 fn a_feature_without_ms2_is_reviewed_without_error() {
-    let v = review(&banco_files(), "POS", 4);
+    let v = review(&bench_files(), "POS", 4);
     assert_eq!(v["has_ms2"], false);
     assert!(v["proposal"]["evidence"]["view"]["peaks"]
         .as_array()
@@ -270,7 +270,7 @@ fn levels_match_reference(files: &MemFiles) {
 
 #[test]
 fn a_2b_decision_makes_the_feature_2b_and_survives_the_cascade() {
-    let mut files = banco_files();
+    let mut files = bench_files();
     assert_eq!(row_of(&files, 15)[0].level, 3);
     let saved = decide(&mut files, &decision(""));
     assert_eq!(saved.path, "03 Stats/scripts/shared/feature_decisions.csv");
@@ -300,7 +300,7 @@ fn a_2b_decision_makes_the_feature_2b_and_survives_the_cascade() {
 
 #[test]
 fn a_decision_against_the_proposal_needs_a_note() {
-    let mut files = banco_files();
+    let mut files = bench_files();
     let read = |p: &str| files.read(p);
     let list = |d: &str| files.list(d);
     let io = Io::new(&read, &list);
@@ -320,7 +320,7 @@ fn a_decision_against_the_proposal_needs_a_note() {
 /// columns from the first row that has it, the older rows keep them empty, and the file with no run at all has neither column.
 #[test]
 fn accept_reject_accept_leaves_three_rows_and_the_last_wins_with_its_run() {
-    let mut files = banco_files();
+    let mut files = bench_files();
     let accept1 = decide(&mut files, &decision(""));
     assert!(!accept1.text.contains("plan_sha256"));
     let reject = decision("")

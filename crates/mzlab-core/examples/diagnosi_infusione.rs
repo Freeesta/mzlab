@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 
 use mzlab_core::idxread::Index;
-use mzlab_core::infusione::{con_msn, infusione};
+use mzlab_core::infusione::{infusione, with_msn};
 use mzlab_core::mzidx::build_mzml;
 use mzlab_core::upload;
 
@@ -57,7 +57,7 @@ fn report(path: &str) {
     keys_report(scans);
     tic_report(scans);
     match infusione(scans, None, &name) {
-        Some(i) => println!("verdict: infusion, reason {} · levels {} · nodes {} · kind in the Dati view: {}", i.motivo, i.livelli, i.nodi, if con_msn(scans, None, &name) { "infusion" } else { "not infusion (constant RT or MS1 only)" }),
+        Some(i) => println!("verdict: infusion, reason {} · levels {} · nodes {} · kind in the Dati view: {}", i.reason, i.livelli, i.nodes, if with_msn(scans, None, &name) { "infusion" } else { "not infusion (constant RT or MS1 only)" }),
         None => println!("verdict: not an infusion (no fixed precursors in blocks of at least two segments, no hint in the name)"),
     }
 }

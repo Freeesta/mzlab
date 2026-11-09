@@ -229,7 +229,7 @@ impl State {
             }
             "msngrafo" => self.op_msngrafo(eng, p),
             "masscal" => self.op_masscal(p),
-            "canali" => self.op_canali(eng, p),
+            "canali" => self.op_channels(eng, p),
             "fileinfo" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
                 let (rd, size) = self.src_slot(&mut eng.nat, u("slot"), u("fid"))?;
@@ -242,7 +242,7 @@ impl State {
     }
 
     /// api/canali: the channels of the scans plus the SRM/SIC chromatograms of the mzML (as `Engine::canali` of the wasm).
-    fn op_canali(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
+    fn op_channels(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
         let slot = p["slot"].as_u64().unwrap_or(0) as u32;
         let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
         let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
@@ -389,7 +389,7 @@ impl State {
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
             "natsame" => return self.nat_same(p),                                           // the same dataset given again
             "nat2mzml" => return self.nat_to_mzml(p),
-            "natregistro" => return self.nat_registro(p),                                   // one series of the instrument log of a .raw, read on request
+            "natregistro" => return self.nat_registry(p),                                   // one series of the instrument log of a .raw, read on request
             "natsrm" => return self.nat_srm(p),                                             // the traces of a sample for mzFinder (no mzML)
             "mzml2cen" => return self.mzml_to_cen(p),                                       // a centroid copy of a profile mzML: long, it does not hold the engine
             "lr_index_cen" => return self.lr_index_cen(p["name"].as_str().unwrap_or("")),   // the index of a sample as centroids, on a thread of the build pool

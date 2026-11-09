@@ -41,6 +41,6 @@ def test_e2e_jobs_install_the_toolchain_through_the_tool():
     for name in ("test.yml", "notte.yml", "sito-rust.yml"):
         text = (WF / name).read_text(encoding="utf-8")
         assert "python tools/ci_toolchain.py" in text, name
-    sito = (WF / "sito-rust.yml").read_text(encoding="utf-8")
-    e2e_job = sito[sito.index("  sito-e2e:"):]
+    site = (WF / "sito-rust.yml").read_text(encoding="utf-8")
+    e2e_job = site[site.index("  sito-e2e:"):]
     assert e2e_job.index("tools/ci_toolchain.py") < e2e_job.index("python tools/verifica.py")

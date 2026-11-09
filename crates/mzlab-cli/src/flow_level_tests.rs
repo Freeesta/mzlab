@@ -92,12 +92,12 @@ fn the_native_rule_gives_the_levels_of_the_shared_cases() {
 
 /// A copy of the caffeine mzML with numpress arrays, the one open format `convert.mzml` takes without a vendor file.
 fn numpress_caffeine() -> Vec<u8> {
-    use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
     let mut sample = mzlab_core::mzml::read(&caffeine_mzml()[..]).unwrap();
-    let mut w = MzmlWriter::con_opzioni(
+    let mut w = MzmlWriter::with_options(
         Vec::new(),
         &Header::default(),
-        Opzioni {
+        Options {
             numpress: true,
             ..Default::default()
         },

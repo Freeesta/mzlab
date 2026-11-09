@@ -2450,6 +2450,7 @@ dependencies = [
  "js-sys",
  "mzlab-core",
  "mzlab-feat",
+ "serde_json",
  "sha2 0.11.1",
  "wasm-bindgen",
 ]

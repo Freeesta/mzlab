@@ -7,22 +7,22 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 import ci_pytest_doppi as ci  # noqa: E402
 
-F = ci.filtro_rust()
+F = ci.rust_filter()
 
 
 def test_a_rust_change_skips_the_files_rust_yml_runs():
-    assert ci.da_saltare(["crates/mzlab-core/src/lib.rs", "docs/x.md"], F) == ci.DOPPI
-    assert ci.da_saltare(["Cargo.lock"], F) == ci.DOPPI
+    assert ci.to_skip(["crates/mzlab-core/src/lib.rs", "docs/x.md"], F) == ci.DUPLICATES
+    assert ci.to_skip(["Cargo.lock"], F) == ci.DUPLICATES
 
 
 def test_no_rust_change_keeps_every_test():
-    assert ci.da_saltare(["mzlab/web/shell.js", "docs/x.md", "tools/verifica.py"], F) == []
-    assert ci.da_saltare([], F) == []
+    assert ci.to_skip(["mzlab/web/shell.js", "docs/x.md", "tools/verifica.py"], F) == []
+    assert ci.to_skip([], F) == []
 
 
 def test_every_skipped_file_exists_and_is_run_by_rust_yml():
     rust = (ROOT / ".github/workflows/rust.yml").read_text(encoding="utf-8")
-    for f in ci.DOPPI:
+    for f in ci.DUPLICATES:
         assert (ROOT / f).is_file(), f
         assert re.search(r"pytest[^\n]*" + re.escape(f), rust), f"rust.yml does not run {f}"
 

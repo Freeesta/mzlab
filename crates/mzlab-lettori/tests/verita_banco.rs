@@ -9,35 +9,35 @@ mod verita;
 use comune::*;
 use mzlab_core::numpress::Np;
 use serde_json::{json, Value};
-use verita::{confronta, Esito, Tol};
+use verita::{compare, Outcome, Tol};
 
 /// The truth the data that wrote the file gives, in the shape of `verita/1`.
-fn verita_di(scan: &[Scan]) -> Value {
+fn truth_of(scan: &[Scan]) -> Value {
     let sc: Vec<Value> = scan
         .iter()
         .enumerate()
         .map(|(k, x)| {
             json!({
                 "id": format!("controllerType=0 controllerNumber=1 scan={}", k + 1),
-                "rt_min": x.rt_min, "livello": x.livello, "polarita": 1,
-                "precursore_mz": x.precursore, "profilo": false,
-                "n_punti": x.mz.len(), "tic": x.intensita.iter().sum::<f64>()
+                "rt_min": x.rt_min, "livello": x.level, "polarita": 1,
+                "precursore_mz": x.precursor, "profilo": false,
+                "n_punti": x.mz.len(), "tic": x.intensities.iter().sum::<f64>()
             })
         })
         .collect();
-    let mut punti = serde_json::Map::new();
+    let mut points = serde_json::Map::new();
     for k in [0, scan.len() / 2, scan.len() - 1] {
-        punti.insert(
+        points.insert(
             k.to_string(),
-            json!({"mz": scan[k].mz, "intensita": scan[k].intensita}),
+            json!({"mz": scan[k].mz, "intensita": scan[k].intensities}),
         );
     }
     json!({
         "schema": "verita/1",
         "file": {"nome": "sintetico.mzML"},
-        "conteggi": {"spettri": {"ms1": scan.iter().filter(|s| s.livello == 1).count(), "ms2": scan.iter().filter(|s| s.livello == 2).count()}, "cromatogrammi": {}},
+        "conteggi": {"spettri": {"ms1": scan.iter().filter(|s| s.level == 1).count(), "ms2": scan.iter().filter(|s| s.level == 2).count()}, "cromatogrammi": {}},
         "scansioni": sc,
-        "punti": punti,
+        "punti": points,
         "cromatogrammi": [],
         "metadati": {"mzml:run@startTimeStamp": {"valore": "2024-03-05T10:11:12Z", "metodo": "origine.file_creato"}}
     })
@@ -52,172 +52,172 @@ const TOL: Tol = Tol {
     cromatogramma_rel: 1e-6,
 };
 
-fn apri_file(scan: &[Scan]) -> Box<dyn mzlab_core::lettori::Lettore> {
+fn open_file(scan: &[Scan]) -> Box<dyn mzlab_core::lettori::Reader> {
     // the mzML of another program has no `metodo/1`; the one the bench is tried on carries the document, as an mzML written by mzLab does
-    let metodo = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
-    apri(mzml_di(
+    let method = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
+    open(mzml_di(
         scan,
         Cod::Np {
-            intensita: Np::Slof,
+            intensities: Np::Slof,
             zlib: false,
         },
-        Some(metodo),
+        Some(method),
     ))
 }
 
 #[test]
-fn una_verita_giusta_non_ha_difetti() {
-    let scan = scansioni();
-    let mut l = apri_file(&scan);
-    let r = confronta(&mut *l, &verita_di(&scan), 0, TOL, "sintetico");
-    assert!(r.difetti().is_empty(), "{:?}", r.difetti());
+fn a_correct_truth_has_no_defects() {
+    let scan = scans();
+    let mut l = open_file(&scan);
+    let r = compare(&mut *l, &truth_of(&scan), 0, TOL, "sintetico");
+    assert!(r.defects().is_empty(), "{:?}", r.defects());
     // the truth has no chromatograms: F4 is declared missing, so the file is `P`, never `L`
-    assert_eq!(r.esito(), "P", "{:?}", r.livelli);
-    assert!(r.mancanti().iter().any(|m| m.starts_with("F4")));
-    verita::scrivi_rapporto(&[r]);
+    assert_eq!(r.outcome(), "P", "{:?}", r.levels);
+    assert!(r.missing().iter().any(|m| m.starts_with("F4")));
+    verita::write_report(&[r]);
 }
 
 #[test]
-fn un_mz_fuori_tolleranza_e_un_difetto_di_f3() {
-    let scan = scansioni();
-    let mut v = verita_di(&scan);
+fn an_mz_out_of_tolerance_is_an_f3_defect() {
+    let scan = scans();
+    let mut v = truth_of(&scan);
     v["punti"]["0"]["mz"][3] = json!(scan[0].mz[3] + 0.5);
-    let mut l = apri_file(&scan);
-    let r = confronta(&mut *l, &v, 0, TOL, "sintetico");
+    let mut l = open_file(&scan);
+    let r = compare(&mut *l, &v, 0, TOL, "sintetico");
     assert!(
-        matches!(r.livelli[3], ("F3", Esito::Difetto(_))),
+        matches!(r.levels[3], ("F3", Outcome::Defect(_))),
         "{:?}",
-        r.livelli
+        r.levels
     );
-    assert_eq!(r.esito(), "DIFETTO");
+    assert_eq!(r.outcome(), "DIFETTO");
 }
 
 #[test]
-fn un_conteggio_o_un_tempo_sbagliato_sono_difetti_di_f1_e_f2() {
-    let scan = scansioni();
-    let mut l = apri_file(&scan);
-    let mut v = verita_di(&scan);
+fn a_wrong_count_or_time_are_f1_and_f2_defects() {
+    let scan = scans();
+    let mut l = open_file(&scan);
+    let mut v = truth_of(&scan);
     v["conteggi"]["spettri"]["ms2"] = json!(99);
     v["scansioni"][1]["rt_min"] = json!(7.0);
-    let r = confronta(&mut *l, &v, 0, TOL, "sintetico");
+    let r = compare(&mut *l, &v, 0, TOL, "sintetico");
     assert!(
-        matches!(r.livelli[1], ("F1", Esito::Difetto(_))),
+        matches!(r.levels[1], ("F1", Outcome::Defect(_))),
         "{:?}",
-        r.livelli
+        r.levels
     );
     assert!(
-        matches!(r.livelli[2], ("F2", Esito::Difetto(_))),
+        matches!(r.levels[2], ("F2", Outcome::Defect(_))),
         "{:?}",
-        r.livelli
+        r.levels
     );
 }
 
 #[test]
-fn un_campo_dei_metadati_diverso_e_un_difetto_di_f5() {
-    let scan = scansioni();
-    let mut l = apri_file(&scan);
-    let mut v = verita_di(&scan);
+fn a_different_metadata_field_is_an_f5_defect() {
+    let scan = scans();
+    let mut l = open_file(&scan);
+    let mut v = truth_of(&scan);
     v["metadati"]["mzml:run@startTimeStamp"]["valore"] = json!("1999-01-01T00:00:00Z");
-    let r = confronta(&mut *l, &v, 0, TOL, "sintetico");
-    let Esito::Difetto(d) = &r.livelli[5].1 else {
-        panic!("{:?}", r.livelli)
+    let r = compare(&mut *l, &v, 0, TOL, "sintetico");
+    let Outcome::Defect(d) = &r.levels[5].1 else {
+        panic!("{:?}", r.levels)
     };
     assert!(d.iter().any(|x| x.contains("1999")), "{d:?}");
 }
 
 #[test]
-fn un_campo_senza_percorso_non_e_un_difetto_ma_manca() {
-    let scan = scansioni();
-    let mut l = apri_file(&scan);
-    let mut v = verita_di(&scan);
+fn a_field_without_path_is_not_a_defect_but_missing() {
+    let scan = scans();
+    let mut l = open_file(&scan);
+    let mut v = truth_of(&scan);
     v["metadati"] = json!({"mzml:analyzer": {"valore": "orbitrap"}});
-    let r = confronta(&mut *l, &v, 0, TOL, "sintetico");
-    let Esito::Manca(m) = &r.livelli[5].1 else {
-        panic!("{:?}", r.livelli)
+    let r = compare(&mut *l, &v, 0, TOL, "sintetico");
+    let Outcome::Missing(m) = &r.levels[5].1 else {
+        panic!("{:?}", r.levels)
     };
     assert!(m[0].contains("not mapped"), "{m:?}");
 }
 
 #[test]
-fn la_normalizzazione_piega_gli_spazi_e_il_percorso_segue_gli_indici() {
+fn normalization_folds_spaces_and_the_path_follows_indices() {
     assert_eq!(
-        verita::normalizza("  Q   Exactive\tPlus "),
+        verita::normalize("  Q   Exactive\tPlus "),
         "Q Exactive Plus"
     );
     let d = json!({"ms": {"periodi": [{"nome": "a"}, {"nome": "b"}]}});
     assert_eq!(
-        verita::percorso_json(&d, "ms.periodi[1].nome"),
+        verita::json_path(&d, "ms.periodi[1].nome"),
         Some(&json!("b"))
     );
-    assert_eq!(verita::percorso_json(&d, "ms.assente"), None);
+    assert_eq!(verita::json_path(&d, "ms.assente"), None);
 }
 
-static RADICE: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+static ROOT: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
 
-fn percorso_prova(rel: &str) -> Option<std::path::PathBuf> {
-    RADICE.get().map(|r| r.join(rel)).filter(|p| p.exists())
+fn test_path(rel: &str) -> Option<std::path::PathBuf> {
+    ROOT.get().map(|r| r.join(rel)).filter(|p| p.exists())
 }
 
 /// `corpus` finds the truth under `scratchpad/rosina/verita/`, the native file under `dati/formati/` with the same relative path, opens it and compares.
 #[test]
-fn il_corpus_si_scorre_su_una_cartella_costruita() {
-    let radice = std::env::temp_dir().join(format!("rosina-banco-{}", std::process::id()));
-    let scan = scansioni();
-    let metodo = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
-    let nativo = radice.join("dati/formati/aperti/prova/campione.mzML");
-    std::fs::create_dir_all(nativo.parent().unwrap()).unwrap();
+fn the_corpus_walks_a_built_folder() {
+    let root = std::env::temp_dir().join(format!("rosina-banco-{}", std::process::id()));
+    let scan = scans();
+    let method = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
+    let native = root.join("dati/formati/aperti/prova/campione.mzML");
+    std::fs::create_dir_all(native.parent().unwrap()).unwrap();
     std::fs::write(
-        &nativo,
+        &native,
         mzml_di(
             &scan,
             Cod::Np {
-                intensita: Np::Slof,
+                intensities: Np::Slof,
                 zlib: false,
             },
-            Some(metodo),
+            Some(method),
         ),
     )
     .unwrap();
-    let vdir = radice.join("scratchpad/rosina/verita/aperti/prova");
+    let vdir = root.join("scratchpad/rosina/verita/aperti/prova");
     std::fs::create_dir_all(&vdir).unwrap();
-    let mut v = verita_di(&scan);
+    let mut v = truth_of(&scan);
     // the rounding of the numpress codec: m/z by Da, intensities within 1e-3 of the maximum
     v["tolleranza"] = json!({"mz_ppm": null, "mz_da": 1e-3, "intensita_rel": 1e-3});
     std::fs::write(vdir.join("campione.mzML.verita.json"), v.to_string()).unwrap();
-    RADICE.set(radice.clone()).unwrap();
-    let dir = percorso_prova("scratchpad/rosina/verita").unwrap();
-    let files = verita::verita_in(&dir);
+    ROOT.set(root.clone()).unwrap();
+    let dir = test_path("scratchpad/rosina/verita").unwrap();
+    let files = verita::truths_in(&dir);
     assert_eq!(files.len(), 1);
-    let v = verita::leggi(&files[0]).unwrap();
+    let v = verita::read(&files[0]).unwrap();
     assert!(v["tolleranza"].is_object());
-    let n = percorso_prova("dati/formati/aperti/prova/campione.mzML").unwrap();
+    let n = test_path("dati/formati/aperti/prova/campione.mzML").unwrap();
     assert!(n.is_file());
-    verita::corpus("aperti", |r| r.ends_with(".mzML"), Tol::LR, percorso_prova);
-    assert_eq!(verita::tolleranza_di(&v, Tol::HR).mz_da, 1e-3);
-    std::fs::remove_dir_all(radice).unwrap();
+    verita::corpus("aperti", |r| r.ends_with(".mzML"), Tol::LR, test_path);
+    assert_eq!(verita::tolerance_of(&v, Tol::HR).mz_da, 1e-3);
+    std::fs::remove_dir_all(root).unwrap();
 }
 
 /// The truth that `tools/rosina/verita.py` made of the synthetic mzML of `tests/rosina/` agrees with the mzML parser of the core (the two readers of the same file): the Python tool
 /// and the Rust bench speak of the same numbers.
 #[test]
-fn la_verita_di_verita_py_concorda_con_il_parser_mzml() {
+fn the_truth_of_verita_py_agrees_with_the_mzml_parser() {
     use mzlab_core::mzml::{self, Item};
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/rosina");
-    let v = verita::leggi(&dir.join("sintetico.verita.json")).unwrap();
-    let (mut spettri, mut croms) = (Vec::new(), Vec::new());
+    let v = verita::read(&dir.join("sintetico.verita.json")).unwrap();
+    let (mut spectra, mut croms) = (Vec::new(), Vec::new());
     mzml::parse(
         std::io::BufReader::new(std::fs::File::open(dir.join("sintetico.mzML")).unwrap()),
         |it| match it {
-            Item::Spectrum(s) => spettri.push(s),
+            Item::Spectrum(s) => spectra.push(s),
             Item::Chromatogram(c) => croms.push(c),
             _ => {}
         },
     )
     .unwrap();
     let sc = v["scansioni"].as_array().unwrap();
-    assert_eq!(sc.len(), spettri.len());
+    assert_eq!(sc.len(), spectra.len());
     assert_eq!(v["cromatogrammi"].as_array().unwrap().len(), croms.len());
-    for (t, s) in sc.iter().zip(&spettri) {
+    for (t, s) in sc.iter().zip(&spectra) {
         assert!((t["rt_min"].as_f64().unwrap() - s.rt).abs() < 1e-9, "RT");
         assert_eq!(t["livello"].as_u64(), Some(u64::from(s.level)));
         assert_eq!(t["n_punti"].as_u64(), Some(s.mz.len() as u64));
@@ -225,7 +225,7 @@ fn la_verita_di_verita_py_concorda_con_il_parser_mzml() {
         assert_eq!(t["precursore_mz"].as_f64(), s.precursor);
     }
     for (k, p) in v["punti"].as_object().unwrap() {
-        let s = &spettri[k.parse::<usize>().unwrap()];
+        let s = &spectra[k.parse::<usize>().unwrap()];
         for (i, m) in p["mz"].as_array().unwrap().iter().enumerate() {
             assert_eq!(m.as_f64(), Some(s.mz[i]));
             assert_eq!(p["intensita"][i].as_f64(), Some(s.intensity_f64(i)));
@@ -233,7 +233,7 @@ fn la_verita_di_verita_py_concorda_con_il_parser_mzml() {
     }
     for (t, c) in v["cromatogrammi"].as_array().unwrap().iter().zip(&croms) {
         assert_eq!(t["n"].as_u64(), Some(c.intensity.len() as u64));
-        let somma: f64 = c.intensity.iter().sum();
-        assert!((t["somma"].as_f64().unwrap() - somma).abs() <= 1e-6 * somma.abs().max(1.0));
+        let summed: f64 = c.intensity.iter().sum();
+        assert!((t["somma"].as_f64().unwrap() - summed).abs() <= 1e-6 * summed.abs().max(1.0));
     }
 }

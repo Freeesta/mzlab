@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::{lettori_centroidi, Error, Result};
 
 use crate::mapped::{Held, Mapped};
@@ -23,12 +23,12 @@ pub(super) const SHELLS: usize = 32 << 20;
 /// The members of a dataset mapped from the disk.
 pub(crate) fn fileset(members: &[(String, PathBuf)]) -> Result<FileSet> {
     let mut out = Vec::new();
-    for (nome, path) in members {
+    for (name, path) in members {
         let map = Mapped::open(path)
             .map_err(|e| Error::new("err.file.raw").with("detail", e.to_string()))?;
         let dim = map.bytes().len() as u64;
-        out.push(Membro {
-            nome: nome.clone(),
+        out.push(Member {
+            nome: name.clone(),
             dim,
             dati: Box::new(MapAt(Arc::new(map))),
             sha1: None,
@@ -38,8 +38,8 @@ pub(crate) fn fileset(members: &[(String, PathBuf)]) -> Result<FileSet> {
 }
 
 /// The reader of a dataset; with `centroid` its profile scans become centroids.
-pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<dyn Lettore>> {
-    let l = mzlab_lettori::apri(fileset(members)?, &Limiti::desktop())?;
+pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<dyn Reader>> {
+    let l = mzlab_lettori::apri(fileset(members)?, &Limits::desktop())?;
     Ok(if centroid {
         lettori_centroidi::centroidato(l)
     } else {
@@ -52,16 +52,16 @@ pub(crate) fn samples(members: &[(String, PathBuf)]) -> Result<String> {
     let l = open(members, false)?;
     let mut o = Out::default();
     o.raw("{\"format\":")
-        .str(&format!("{:?}", l.formato()))
+        .str(&format!("{:?}", l.format()))
         .raw(",\"samples\":[");
-    for (i, s) in l.campioni().iter().enumerate() {
+    for (i, s) in l.samples().iter().enumerate() {
         o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
             .int(i64::from(s.id))
             .raw(",\"name\":")
             .str(&s.nome)
             .raw(",\"scans\":")
             .int(s.scansioni as i64);
-        if let Some(dim) = s.dimensione {
+        if let Some(dim) = s.size {
             o.raw(",\"size\":").int(dim as i64);
         }
         o.raw("}");
@@ -92,7 +92,7 @@ pub(crate) enum Src<'a> {
     Map(MapAt),
     Nat {
         g: Arc<Vec<u8>>,
-        l: &'a mut dyn Lettore,
+        l: &'a mut dyn Reader,
         c: usize,
     },
 }
@@ -112,7 +112,7 @@ impl ReadAt for Src<'_> {
         }
     }
 
-    fn lettore(&mut self) -> Option<(&mut dyn Lettore, usize)> {
+    fn reader(&mut self) -> Option<(&mut dyn Reader, usize)> {
         match self {
             Src::Map(_) => None,
             Src::Nat { l, c, .. } => Some((&mut **l, *c)),

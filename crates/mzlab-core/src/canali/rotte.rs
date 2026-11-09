@@ -3,16 +3,16 @@
 
 use std::sync::Arc;
 
-use super::{Canali, Famiglia};
+use super::{Channels, Famiglia};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::iteminfo::Facts;
-use crate::msnroute::Filtro;
+use crate::msnroute::Filter;
 use crate::mzmlhead::Chrom;
 use crate::routes::{trace, Query, Routes};
 
 /// The routes that take `canale=`.
-const CON_CANALE: [&str; 5] = [
+const WITH_CHANNEL: [&str; 5] = [
     "/api/chrom",
     "/api/xic",
     "/api/scanlist",
@@ -22,9 +22,9 @@ const CON_CANALE: [&str; 5] = [
 
 impl<R: ReadAt> Routes<R> {
     /// The headers of the chromatograms of the mzML (SRM, SIC) and its facts; the channels are built again at the next request.
-    pub fn pon_cromatogrammi(&mut self, nome: &str, chroms: &[Chrom], facts: &Facts) {
-        self.msn.canali = Stato {
-            nome: nome.into(),
+    pub fn pon_cromatogrammi(&mut self, name: &str, chroms: &[Chrom], facts: &Facts) {
+        self.msn.channels = State {
+            nome: name.into(),
             chroms: chroms.to_vec(),
             facts: facts.clone(),
             cache: None,
@@ -32,37 +32,42 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The channels of the file, built on first use.
-    pub fn canali(&mut self) -> Arc<Canali> {
-        if let Some(c) = &self.msn.canali.cache {
+    pub fn canali(&mut self) -> Arc<Channels> {
+        if let Some(c) = &self.msn.channels.cache {
             return c.clone();
         }
-        let s = &self.msn.canali;
-        let c = Arc::new(Canali::da(&self.idx.scans, &s.chroms, &s.facts, &s.nome));
-        self.msn.canali.cache = Some(c.clone());
+        let s = &self.msn.channels;
+        let c = Arc::new(Channels::da(&self.idx.scans, &s.chroms, &s.facts, &s.nome));
+        self.msn.channels.cache = Some(c.clone());
         c
     }
 
     /// `filt=canale:<id>`: the scans of the channel as a mask over the scan table.
-    pub(crate) fn filtro_canale(&mut self, id: &str) -> Result<Filtro<'static>> {
+    pub(crate) fn channel_filter(&mut self, id: &str) -> Result<Filter<'static>> {
         let c = self.canali();
         let i = c
-            .trova(id)
+            .find(id)
             .ok_or_else(|| Error::new("err.canali.unknown").with("id", id))?;
         let mut mask = vec![false; self.idx.scans.len()];
         c.scansioni(i)
             .into_iter()
             .for_each(|k| mask[k as usize] = true);
-        Ok(Filtro::Nodo(Arc::new(mask)))
+        Ok(Filter::Node(Arc::new(mask)))
     }
 
     /// The request `path` with `canale=<id>`: the same request with the level and the filter of the channel; `None` for a channel with no scans here
     /// (a transition, a UV trace): the readers of the chromatograms answer it.
-    pub(crate) fn con_canale(&mut self, path: &str, q: &Query, id: &str) -> Result<Option<String>> {
-        let canali = self.canali();
-        let i = canali
-            .trova(id)
+    pub(crate) fn with_channel(
+        &mut self,
+        path: &str,
+        q: &Query,
+        id: &str,
+    ) -> Result<Option<String>> {
+        let channels = self.canali();
+        let i = channels
+            .find(id)
             .ok_or_else(|| Error::new("err.canali.unknown").with("id", id))?;
-        let c = &canali.v[i];
+        let c = &channels.v[i];
         let mut r: Vec<(String, String)> =
             q.0.iter().filter(|(k, _)| k != "canale").cloned().collect();
         let ha = |r: &[(String, String)], k: &str| r.iter().any(|(n, _)| n == k);
@@ -70,10 +75,10 @@ impl<R: ReadAt> Routes<R> {
             Famiglia::Srm | Famiglia::Sim | Famiglia::Uv | Famiglia::Analog => return Ok(None),
             Famiglia::Tic | Famiglia::Bpc => {
                 if path == "/api/chrom" && !ha(&r, "kind") {
-                    r.push(("kind".into(), c.famiglia.nome().into()));
+                    r.push(("kind".into(), c.famiglia.name().into()));
                 }
                 if matches!(path, "/api/chrom" | "/api/xic") && !ha(&r, "level") {
-                    return self.tutti_i_livelli(path, &Query(r));
+                    return self.all_levels(path, &Query(r));
                 }
             }
             Famiglia::Ms | Famiglia::Dd => {
@@ -94,12 +99,12 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// The trace of `tic` / `bpc` over every level: the traces of the levels joined in time order.
-    fn tutti_i_livelli(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
-        let mut livelli: Vec<u8> = self.idx.sections.iter().map(|s| s.level).collect();
-        crate::sortc::slice_ord(&mut livelli);
-        livelli.dedup();
-        let mut punti: Vec<(f64, f64)> = Vec::new();
-        for l in livelli {
+    fn all_levels(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
+        let mut levels: Vec<u8> = self.idx.sections.iter().map(|s| s.level).collect();
+        crate::sortc::slice_ord(&mut levels);
+        levels.dedup();
+        let mut points: Vec<(f64, f64)> = Vec::new();
+        for l in levels {
             let (rt, y) = if path == "/api/xic" {
                 let Some(mz) = q.num("mz")? else {
                     return Ok(None);
@@ -113,10 +118,10 @@ impl<R: ReadAt> Routes<R> {
                     None => return Ok(None),
                 }
             };
-            punti.extend(rt.into_iter().zip(y));
+            points.extend(rt.into_iter().zip(y));
         }
-        crate::sortc::slice_by(&mut punti, |a, b| a.0.total_cmp(&b.0));
-        let (rt, y): (Vec<f64>, Vec<f64>) = punti.into_iter().unzip();
+        crate::sortc::slice_by(&mut points, |a, b| a.0.total_cmp(&b.0));
+        let (rt, y): (Vec<f64>, Vec<f64>) = points.into_iter().unzip();
         Ok(Some(trace(&rt, &y)))
     }
 
@@ -136,7 +141,7 @@ impl<R: ReadAt> Routes<R> {
         };
         let keep: Vec<bool> = ids
             .iter()
-            .map(|&id| fl.passa(id as usize, &self.idx.scans[id as usize]))
+            .map(|&id| fl.passes(id as usize, &self.idx.scans[id as usize]))
             .collect();
         let pick = |v: &[f64]| -> Vec<f64> {
             v.iter()
@@ -149,20 +154,24 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/canali` and the routes that take `canale=`; `None` = not a channel request.
-    pub(crate) fn canali_route(&mut self, path: &str, q: &Query) -> Option<Result<Option<String>>> {
+    pub(crate) fn route_channels(
+        &mut self,
+        path: &str,
+        q: &Query,
+    ) -> Option<Result<Option<String>>> {
         if path == "/api/canali" {
             return Some(Ok(Some(self.canali().json())));
         }
-        let id = q.some("canale").filter(|_| CON_CANALE.contains(&path))?;
-        Some(self.con_canale(path, q, id))
+        let id = q.some("canale").filter(|_| WITH_CHANNEL.contains(&path))?;
+        Some(self.with_channel(path, q, id))
     }
 }
 
 /// What a file keeps for its channels: the chromatogram headers the page read from the mzML, and the channels built from them (once).
 #[derive(Default)]
-pub(crate) struct Stato {
+pub(crate) struct State {
     nome: String,
     chroms: Vec<Chrom>,
     facts: Facts,
-    cache: Option<Arc<Canali>>,
+    cache: Option<Arc<Channels>>,
 }

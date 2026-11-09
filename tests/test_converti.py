@@ -6,37 +6,37 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import converti  # noqa: E402
 
 
-def test_prova_stampa_i_comandi(tmp_path):
+def test_dry_run_prints_the_commands(tmp_path):
     (tmp_path / "a.raw").write_bytes(b"x"); (tmp_path / "b.wiff").write_bytes(b"x"); (tmp_path / "b.wiff.scan").write_bytes(b"x"); (tmp_path / "c.d").mkdir()
-    righe = []
-    r = converti.converti(tmp_path, tmp_path / "mzML", None, True, righe.append)
-    t = "\n".join(righe)
+    rows = []
+    r = converti.convert(tmp_path, tmp_path / "mzML", None, True, rows.append)
+    t = "\n".join(rows)
     assert "-f 2" in t and "-z" in t and "a.raw" in t
     assert "docker run" in t and "b.wiff" in t and "c.d" in t and converti.PWIZ in t and "peakPicking vendor msLevel=1-" in t
     assert len(r["da_fare"]) == 3 and not r["errori"]
     assert not (tmp_path / "mzML").exists()                      # --prova writes nothing
 
 
-def test_converte_con_un_programma_finto(tmp_path, monkeypatch):
+def test_converts_with_a_fake_program(tmp_path, monkeypatch):
     prog = tmp_path / "trfp_finto.py"                              # a fake ThermoRawFileParser (Python, so it also runs on Windows): writes the mzML named after the input
     prog.write_text("import sys, pathlib\na = sys.argv\ni = pathlib.Path(a[a.index('-i') + 1]); o = pathlib.Path(a[a.index('-o') + 1])\n(o / (i.stem + '.mzML')).write_text('<mzML/>')\n")
-    monkeypatch.setattr(converti, "trova_trfp", lambda percorso=None: [sys.executable, str(prog)])
+    monkeypatch.setattr(converti, "find_trfp", lambda percorso=None: [sys.executable, str(prog)])
     (tmp_path / "a.raw").write_bytes(b"x"); (tmp_path / "b.raw").write_bytes(b"x"); (tmp_path / "mzML").mkdir(); (tmp_path / "mzML" / "b.mzML").write_text("old")
-    righe = []
-    r = converti.converti(tmp_path, tmp_path / "mzML", None, False, righe.append)
+    rows = []
+    r = converti.convert(tmp_path, tmp_path / "mzML", None, False, rows.append)
     assert r["fatti"] == ["a.raw"] and r["saltati"] == ["b.raw"] and not r["errori"]
     assert (tmp_path / "mzML" / "a.mzML").read_text().startswith("<mzML") and (tmp_path / "mzML" / "b.mzML").read_text() == "old"
 
 
-def test_senza_programma_lo_dice(tmp_path, monkeypatch):
+def test_without_program_says_so(tmp_path, monkeypatch):
     monkeypatch.delenv("THERMORAWFILEPARSER", raising=False); monkeypatch.setenv("PATH", str(tmp_path))
     (tmp_path / "a.raw").write_bytes(b"x")
-    righe = []
-    r = converti.converti(tmp_path, tmp_path / "o", None, False, righe.append)
-    assert r["errori"] == ["trfp"] and "ThermoRawFileParser non trovato" in "\n".join(righe)
+    rows = []
+    r = converti.convert(tmp_path, tmp_path / "o", None, False, rows.append)
+    assert r["errori"] == ["trfp"] and "ThermoRawFileParser non trovato" in "\n".join(rows)
 
 
-def test_cartella_senza_file(tmp_path):
-    righe = []
-    converti.converti(tmp_path, tmp_path / "o", None, False, righe.append)
-    assert "Nessun file" in righe[0]
+def test_folder_without_files(tmp_path):
+    rows = []
+    converti.convert(tmp_path, tmp_path / "o", None, False, rows.append)
+    assert "Nessun file" in rows[0]

@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def installa() -> bool:
+def install() -> bool:
     """True when the `graphify` command is available (installed with uv or pipx if needed)."""
     if shutil.which("graphify"):
         return True
@@ -24,7 +24,7 @@ def installa() -> bool:
 
 
 def main() -> int:
-    if not installa():
+    if not install():
         print("grafo: graphify not available (install uv or pipx), graph skipped")
         return 0
     r = subprocess.run(["graphify", "update", "."], cwd=ROOT, capture_output=True, text=True)

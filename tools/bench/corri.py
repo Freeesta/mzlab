@@ -11,7 +11,7 @@ from pathlib import Path
 
 from . import adatta
 
-PARAMETRI = Path(__file__).resolve().parent / "parametri"
+PARAMETERS = Path(__file__).resolve().parent / "parametri"
 
 
 def argomenti(descrizione: str, extra=None) -> argparse.Namespace:
@@ -26,8 +26,8 @@ def argomenti(descrizione: str, extra=None) -> argparse.Namespace:
     return ap.parse_args()
 
 
-def file_mzml(cartella, solo=None) -> list[Path]:
-    fs = sorted(Path(cartella).glob("*.mzML"))
+def file_mzml(folder, solo=None) -> list[Path]:
+    fs = sorted(Path(folder).glob("*.mzML"))
     if solo:
         fs = [f for f in fs if f.stem in set(solo)]
     if not fs:
@@ -35,12 +35,12 @@ def file_mzml(cartella, solo=None) -> list[Path]:
     return fs
 
 
-def parametri(strumento: str, config: str) -> dict:
-    return json.loads((PARAMETRI / strumento / f"{config}.json").read_text(encoding="utf-8"))
+def parameters(tool: str, config: str) -> dict:
+    return json.loads((PARAMETERS / tool / f"{config}.json").read_text(encoding="utf-8"))
 
 
-def cartella_nativa(out_dir, strumento: str, config: str) -> Path:
-    p = Path(out_dir) / strumento / config
+def native_folder(out_dir, tool: str, config: str) -> Path:
+    p = Path(out_dir) / tool / config
     p.mkdir(parents=True, exist_ok=True)
     return p
 

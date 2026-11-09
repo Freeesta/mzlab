@@ -147,7 +147,7 @@ fn answer(s: &mut Sched, call: &Value) -> Option<Value> {
                 "{}={} {}/{} {frac}",
                 n.instance,
                 n.state.name(),
-                n.parte,
+                n.part,
                 n.di
             )
         }))),

@@ -26,29 +26,33 @@ try:
                     pg.click("#np-addloss"); pg.click("#al-t-losses")
                 else:      # the toolbar keeps one row: at 768 px the tools that do not fit go to «Altro»
                     pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Addotti e perdite").click(); pg.click("#al-t-losses")
-                attendi(pg, "!!document.querySelector('#sb-panel-losses') && document.querySelector('#sb-panel-losses').offsetParent !== null")
+                wait_for_js(pg, "!!document.querySelector('#sb-panel-losses') && document.querySelector('#sb-panel-losses').offsetParent !== null")
                 assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Addotti e perdite", w
                 close_side(pg); frames(pg, 3); assert not pg.is_visible("#dfiles"), w
             pg.set_viewport_size({"width": 1400, "height": 900})
         step("header: Perdite neutre opens its tab at 360/768/1500 px, no title text", header)
-        pg.click("#np-chrom"); attendi(pg, "E.panels.some(p=>p.type==='chrom')"); pg.click("#np-spec"); attendi(pg, "E.panels.some(p=>p.type==='spec')")
+        pg.click("#np-chrom"); wait_for_js(pg, "E.panels.some(p=>p.type==='chrom')"); pg.click("#np-spec"); wait_for_js(pg, "E.panels.some(p=>p.type==='spec')")
         def fs():
             n = pg.evaluate("document.querySelectorAll('.pnl').length"); assert n >= 2, n
-            pg.click("#np-xic"); frames(pg, 3); pg.keyboard.press("Escape"); attendi(pg, "document.querySelectorAll('.pnl').length>=3")
+            pg.click("#np-xic"); frames(pg, 3); pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelectorAll('.pnl').length>=3")
             n = pg.evaluate("document.querySelectorAll('.pnl').length"); assert n >= 3, n
             for i in range(n):
-                pg.evaluate("document.querySelectorAll('.pnl .fsb')[%d].click()" % i); attendi(pg, "document.querySelectorAll('.pnl')[%d].classList.contains('max')" % i)
+                pg.evaluate("document.querySelectorAll('.pnl .fsb')[%d].click()" % i); wait_for_js(pg, "document.querySelectorAll('.pnl')[%d].classList.contains('max')" % i)
                 box = pg.evaluate("(()=>{const e=document.querySelectorAll('.pnl')[%d];const r=e.getBoundingClientRect();return [r.width,r.height,e.classList.contains('max')]})()" % i)
                 assert box[2] and box[0] > 1000 * 0.9 and box[1] > 600, (i, box)
-                pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('.pnl.max')")
+                pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('.pnl.max')")
                 assert pg.evaluate("!document.querySelector('.pnl.max')"), (i, pg.evaluate("[!!document.querySelector('dialog[open]'), !!document.querySelector('#helppop:not([hidden])'), !!document.querySelector('#ctx:not([hidden])')]"))
         step("full screen on every panel (incl. XIC added later), Esc leaves it", fs)
+        def still(el):
+            # any scroll hides the tooltip and stops its timer (eventi.js): the smooth scroll to a panel just added must be over before the hover
+            el.scroll_into_view_if_needed()
+            wait_for_js(pg, "(() => { if (window._ls26 == null) { window._ls26 = performance.now(); addEventListener('scroll', () => { window._ls26 = performance.now(); }, true); } return performance.now() - window._ls26 > 300; })()", 10000)
         def tip():
-            btn = pg.locator(".pnl .fsb").first; pg.mouse.move(5, 5); hold(pg, 100); btn.hover(); hold(pg, 1000)      # a pointer that is already on the button (left there by the step before) makes no mouseover, so no tooltip
+            btn = pg.locator(".pnl .fsb").first; still(btn); pg.mouse.move(5, 5); hold(pg, 100); btn.hover(); hold(pg, 1000)      # a pointer that is already on the button (left there by the step before) makes no mouseover, so no tooltip
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "too early"
-            attendi(pg, "!document.querySelector('#qtip').hidden", 10000)      # the delay is a timer of the page: on a loaded machine it fires late, so wait for the state (the «too early» check above still holds the lower bound)
+            wait_for_js(pg, "!document.querySelector('#qtip').hidden", 10000)      # the delay is a timer of the page: on a loaded machine it fires late, so wait for the state (the «too early» check above still holds the lower bound)
             assert "Schermo intero" in pg.inner_text("#qtip")
-            pg.mouse.move(5, 5); attendi(pg, "document.querySelector('#qtip').hidden"); assert pg.evaluate("document.querySelector('#qtip').hidden")
+            pg.mouse.move(5, 5); wait_for_js(pg, "document.querySelector('#qtip').hidden"); assert pg.evaluate("document.querySelector('#qtip').hidden")
         step("tooltip after ~1.7 s, not before, gone when the pointer leaves", tip)
         def tipbox():
             # the tooltip never covers the element it describes (selects, buttons, table cells)
@@ -57,8 +61,8 @@ try:
             for i in range(n):
                 el = sel.nth(i)
                 if not el.is_visible(): continue
-                pg.mouse.move(5, 5); hold(pg, 100); el.hover()
-                attendi(pg, "!document.querySelector('#qtip').hidden", 10000)
+                still(el); pg.mouse.move(5, 5); hold(pg, 100); el.hover()
+                wait_for_js(pg, "!document.querySelector('#qtip').hidden", 10000)
                 ov = pg.evaluate("(el)=>{const a=el.getBoundingClientRect(),b=document.querySelector('#qtip').getBoundingClientRect();return a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom}", el.element_handle())
                 assert not ov, ("tooltip overlaps its element", i)
             pg.mouse.move(5, 5)
@@ -71,17 +75,17 @@ try:
             pg.evaluate(fire, ["pointerdown"]); hold(pg, 200); pg.evaluate(fire, ["pointerup"])
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "a short touch must not show the tooltip"
             pg.evaluate(fire, ["pointerdown"])
-            attendi(pg, "!document.querySelector('#qtip').hidden", 5000)
+            wait_for_js(pg, "!document.querySelector('#qtip').hidden", 5000)
             assert "Schermo intero" in pg.inner_text("#qtip")
             pg.evaluate(fire, ["pointerup"])
-            attendi(pg, "document.querySelector('#qtip').hidden", 8000)
+            wait_for_js(pg, "document.querySelector('#qtip').hidden", 8000)
         step("long press on a button shows its tooltip on touch", longpress)
         def rt():
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom'&&p.tab===E.tab)"); assert ci >= 0
             pg.evaluate(f"E.panels[{ci}].el.scrollIntoView({{block:'center'}})"); frames(pg, 3)
             b = pg.evaluate(f"(()=>{{const r=E.panels[{ci}].cv.getBoundingClientRect(),a=E.panels[{ci}]._a;return {{x:r.left,w:r.width,y:r.top+r.height/2,l:a.X(a.x0+(a.x1-a.x0)*0.5)-0,mid:r.left+a.X(a.x0+(a.x1-a.x0)*0.8)}}}})()")
             state = lambda: pg.evaluate(f"(()=>{{const q=E.panels[{ci}];return [q.sel,q._a.full]}})()")
-            pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] - 200, b["y"], steps=8); pg.mouse.up(); attendi(pg, f"E.panels[{ci}].sel!=null")
+            pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] - 200, b["y"], steps=8); pg.mouse.up(); wait_for_js(pg, f"E.panels[{ci}].sel!=null")
             s, full = state(); assert s is not None, "the drag must create a selection (otherwise the test proves nothing)"
             assert s[0] >= full[0] - 1e-9 and s[1] <= full[1] + 1e-9 and s[0] - full[0] < 0.1 * (full[1] - full[0]), (s, full)           # never before the start of the run, and it did reach the left end
             pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] + b["w"] + 300, b["y"], steps=8); pg.mouse.up(); frames(pg, 3)

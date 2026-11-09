@@ -24,7 +24,7 @@ fn trace() -> (Vec<f64>, Vec<f64>) {
 #[test]
 fn flat_window_falls_in_the_flat_zone() {
     let (t, y) = trace();
-    let b = auto_background(&t, &y, None, &FondoParams::default()).unwrap();
+    let b = auto_background(&t, &y, None, &BackgroundParams::default()).unwrap();
     let (s, e) = b.window.unwrap();
     assert_eq!(b.origin, Origin::FlatWindow);
     assert!(s < 160 && e <= 160, "window {s}..{e} outside the flat zone");
@@ -37,7 +37,7 @@ fn blank_is_used_and_interpolated() {
     let (t, y) = trace();
     let bt = [0.0, 10.0, 19.95];
     let by = [10.0, 30.0, 30.0];
-    let b = auto_background(&t, &y, Some((&bt, &by)), &FondoParams::default()).unwrap();
+    let b = auto_background(&t, &y, Some((&bt, &by)), &BackgroundParams::default()).unwrap();
     assert_eq!(b.origin, Origin::Blank);
     assert!(b.window.is_none());
     assert!((b.level[0] - 10.0).abs() < 1e-9);
@@ -47,7 +47,7 @@ fn blank_is_used_and_interpolated() {
 
 #[test]
 fn short_or_bad_input_is_none() {
-    let p = FondoParams::default();
+    let p = BackgroundParams::default();
     assert!(auto_background(&[0.0], &[1.0], None, &p).is_none());
     assert!(auto_background(&[0.0, 1.0], &[1.0, 2.0], None, &p).is_none());
     assert!(auto_background(&[1.0, 0.0], &[1.0, 2.0], None, &p).is_none());
@@ -56,7 +56,7 @@ fn short_or_bad_input_is_none() {
 #[test]
 fn local_background_follows_the_ramp() {
     let (t, y) = trace();
-    let l = local_background(&t, &y, 300, &FondoParams::default()).unwrap();
+    let l = local_background(&t, &y, 300, &BackgroundParams::default()).unwrap();
     assert!(l.left < 300 && l.right > 300);
     // the ramp under the apex is about 20 + 2 * 140 = 300: the corrected height is the Gaussian's 500, not the raw ~800
     assert!((l.height - 500.0).abs() < 40.0, "height {}", l.height);

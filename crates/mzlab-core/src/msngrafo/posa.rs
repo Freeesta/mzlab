@@ -2,23 +2,23 @@
 //! from the root, one back), starting from the m/z from high to low. `pos` is that; the tree view of `vista` (`albero`) adds a pass of
 //! adjacent swaps that removes arc crossings. The page only draws these positions.
 
-use super::Grafo;
+use super::Graph;
 
 /// What the drawing needs of a graph: the MS level and m/z of each node and its arcs (from, to), so it works on a `Grafo` and on a read JSON.
-pub(super) struct Rete<'a> {
-    pub livello: &'a [u8],
+pub(super) struct Network<'a> {
+    pub level: &'a [u8],
     pub mz: &'a [f64],
-    pub archi: &'a [(usize, usize)],
+    pub edges: &'a [(usize, usize)],
 }
 
-impl Rete<'_> {
+impl Network<'_> {
     fn col(&self, i: usize) -> usize {
-        self.livello[i] as usize - 1
+        self.level[i] as usize - 1
     }
 }
 
 /// Row of each node over the height of its column, 0..1.
-fn alto(cols: &[Vec<usize>], n: usize) -> Vec<f64> {
+fn high(cols: &[Vec<usize>], n: usize) -> Vec<f64> {
     let mut h = vec![0.0; n];
     for c in cols {
         let d = (c.len().max(2) - 1) as f64;
@@ -30,12 +30,18 @@ fn alto(cols: &[Vec<usize>], n: usize) -> Vec<f64> {
 }
 
 /// Orders column `c` by the mean height of the neighbours of each node that are in `altre` columns (the node keeps its height without).
-fn riordina(r: &Rete, cols: &mut [Vec<usize>], c: usize, vicini: &[Vec<usize>], prima: bool) {
-    let h = alto(cols, r.mz.len());
-    let chiave = |i: usize| {
-        let v: Vec<f64> = vicini[i]
+fn reorder(
+    r: &Network,
+    cols: &mut [Vec<usize>],
+    c: usize,
+    neighbours: &[Vec<usize>],
+    before: bool,
+) {
+    let h = high(cols, r.mz.len());
+    let key = |i: usize| {
+        let v: Vec<f64> = neighbours[i]
             .iter()
-            .filter(|&&j| if prima { r.col(j) < c } else { r.col(j) > c })
+            .filter(|&&j| if before { r.col(j) < c } else { r.col(j) > c })
             .map(|&j| h[j])
             .collect();
         if v.is_empty() {
@@ -44,7 +50,7 @@ fn riordina(r: &Rete, cols: &mut [Vec<usize>], c: usize, vicini: &[Vec<usize>], 
             v.iter().sum::<f64>() / v.len() as f64
         }
     };
-    let mut k: Vec<(f64, usize)> = cols[c].iter().map(|&i| (chiave(i), i)).collect();
+    let mut k: Vec<(f64, usize)> = cols[c].iter().map(|&i| (key(i), i)).collect();
     crate::sortc::by(&mut k, |a, b| {
         a.0.total_cmp(&b.0)
             .then(r.mz[b.1].total_cmp(&r.mz[a.1]))
@@ -54,9 +60,9 @@ fn riordina(r: &Rete, cols: &mut [Vec<usize>], c: usize, vicini: &[Vec<usize>], 
 }
 
 /// The nodes of each column after `giri` sweeps of the barycentre order (one down from the root, one back).
-fn baricentro(r: &Rete, giri: usize) -> Vec<Vec<usize>> {
+fn baricentro(r: &Network, giri: usize) -> Vec<Vec<usize>> {
     let n = r.mz.len();
-    let ncol = r.livello.iter().map(|&l| l as usize).max().unwrap_or(0);
+    let ncol = r.level.iter().map(|&l| l as usize).max().unwrap_or(0);
     let mut cols: Vec<Vec<usize>> = vec![vec![]; ncol];
     for i in 0..n {
         cols[r.col(i)].push(i);
@@ -65,16 +71,16 @@ fn baricentro(r: &Rete, giri: usize) -> Vec<Vec<usize>> {
         crate::sortc::by(c, |a, b| r.mz[*b].total_cmp(&r.mz[*a]).then(a.cmp(b)));
     }
     let (mut su, mut giu) = (vec![vec![]; n], vec![vec![]; n]);
-    for &(da, a) in r.archi {
+    for &(da, a) in r.edges {
         su[a].push(da);
         giu[da].push(a);
     }
     for _ in 0..giri {
         for c in 1..ncol {
-            riordina(r, &mut cols, c, &su, true);
+            reorder(r, &mut cols, c, &su, true);
         }
         for c in (0..ncol.saturating_sub(1)).rev() {
-            riordina(r, &mut cols, c, &giu, false);
+            reorder(r, &mut cols, c, &giu, false);
         }
     }
     cols
@@ -83,27 +89,27 @@ fn baricentro(r: &Rete, giri: usize) -> Vec<Vec<usize>> {
 fn posizioni(cols: &[Vec<usize>], n: usize) -> Vec<(usize, usize)> {
     let mut pos = vec![(0, 0); n];
     for (c, col) in cols.iter().enumerate() {
-        for (riga, &i) in col.iter().enumerate() {
-            pos[i] = (c, riga);
+        for (row, &i) in col.iter().enumerate() {
+            pos[i] = (c, row);
         }
     }
     pos
 }
 
 /// The barycentre positions (column, row) of every node.
-pub(super) fn baricentro_pos(r: &Rete) -> Vec<(usize, usize)> {
+pub(super) fn baricentro_pos(r: &Network) -> Vec<(usize, usize)> {
     posizioni(&baricentro(r, 1), r.mz.len())
 }
 
 /// Fills `pos` (column, row) of every node.
-pub(super) fn posa(g: &mut Grafo) {
+pub(super) fn posa(g: &mut Graph) {
     let livello: Vec<u8> = g.nodi.iter().map(|x| x.livello).collect();
     let mz: Vec<f64> = g.nodi.iter().map(|x| x.mz).collect();
     let archi: Vec<(usize, usize)> = g.archi.iter().map(|a| (a.da, a.a)).collect();
-    let pos = baricentro_pos(&Rete {
-        livello: &livello,
+    let pos = baricentro_pos(&Network {
+        level: &livello,
         mz: &mz,
-        archi: &archi,
+        edges: &archi,
     });
     for (n, p) in g.nodi.iter_mut().zip(pos) {
         n.pos = p;
@@ -111,8 +117,8 @@ pub(super) fn posa(g: &mut Grafo) {
 }
 
 /// The arcs between two different columns as (lower column end, higher column end).
-fn tra_colonne(r: &Rete) -> Vec<(usize, usize)> {
-    r.archi
+fn between_columns(r: &Network) -> Vec<(usize, usize)> {
+    r.edges
         .iter()
         .filter(|&&(a, b)| r.col(a) != r.col(b))
         .map(|&(a, b)| if r.col(a) < r.col(b) { (a, b) } else { (b, a) })
@@ -120,7 +126,12 @@ fn tra_colonne(r: &Rete) -> Vec<(usize, usize)> {
 }
 
 /// Whether two arcs of the same pair of columns cross: their ends are in opposite order in both columns.
-fn si_incrociano(r: &Rete, pos: &[(usize, usize)], x: (usize, usize), y: (usize, usize)) -> bool {
+fn si_incrociano(
+    r: &Network,
+    pos: &[(usize, usize)],
+    x: (usize, usize),
+    y: (usize, usize),
+) -> bool {
     if r.col(x.0) != r.col(y.0) || r.col(x.1) != r.col(y.1) {
         return false;
     }
@@ -132,8 +143,8 @@ fn si_incrociano(r: &Rete, pos: &[(usize, usize)], x: (usize, usize), y: (usize,
 }
 
 /// How many pairs of arcs of the same pair of columns cross (arcs that share an end never do).
-pub(super) fn incroci(r: &Rete, pos: &[(usize, usize)]) -> usize {
-    let v = tra_colonne(r);
+pub(super) fn incroci(r: &Network, pos: &[(usize, usize)]) -> usize {
+    let v = between_columns(r);
     let mut k = 0;
     for (i, &x) in v.iter().enumerate() {
         k += v[i + 1..]
@@ -149,20 +160,20 @@ const GIRI: usize = 8;
 
 /// The tree view: the barycentre order, then passes of swaps of two adjacent rows of a column while a swap removes more crossings than it
 /// makes (the pairs of arcs of the two nodes are the only ones that change), at most `GIRI` passes; deterministic.
-pub(super) fn albero(r: &Rete) -> Vec<(usize, usize)> {
+pub(super) fn albero(r: &Network) -> Vec<(usize, usize)> {
     let n = r.mz.len();
     // more sweeps of the barycentre while they leave fewer crossings
     let mut cols = baricentro(r, 1);
-    let mut meno = incroci(r, &posizioni(&cols, n));
+    let mut minus = incroci(r, &posizioni(&cols, n));
     for giri in 2..=GIRI {
         let c = baricentro(r, giri);
         let k = incroci(r, &posizioni(&c, n));
-        if k < meno {
-            (cols, meno) = (c, k);
+        if k < minus {
+            (cols, minus) = (c, k);
         }
     }
     let mut inc: Vec<Vec<(usize, usize)>> = vec![vec![]; n];
-    for (a, b) in tra_colonne(r) {
+    for (a, b) in between_columns(r) {
         inc[a].push((a, b));
         inc[b].push((a, b));
     }
@@ -172,7 +183,7 @@ pub(super) fn albero(r: &Rete) -> Vec<(usize, usize)> {
         for col in cols.iter_mut() {
             for k in 1..col.len() {
                 let (x, y) = (col[k - 1], col[k]);
-                let (mut ora, mut dopo) = (0, 0);
+                let (mut now, mut after) = (0, 0);
                 for &ex in &inc[x] {
                     for &ey in &inc[y] {
                         let altro = |e: (usize, usize), n: usize| if e.0 == n { e.1 } else { e.0 };
@@ -180,13 +191,13 @@ pub(super) fn albero(r: &Rete) -> Vec<(usize, usize)> {
                             continue;
                         }
                         if si_incrociano(r, &pos, ex, ey) {
-                            ora += 1;
+                            now += 1;
                         } else if r.col(ex.0) == r.col(ey.0) && r.col(ex.1) == r.col(ey.1) {
-                            dopo += 1;
+                            after += 1;
                         }
                     }
                 }
-                if dopo < ora {
+                if after < now {
                     col.swap(k - 1, k);
                     pos[x].1 = k;
                     pos[y].1 = k - 1;

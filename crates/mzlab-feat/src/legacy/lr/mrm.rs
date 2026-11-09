@@ -6,7 +6,7 @@ use crate::sortc::SortC;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{round, Out};
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::sorgente::TracceMzml;
+use mzlab_core::sorgente::MzmlTraces;
 use mzlab_core::srm;
 use mzlab_core::Result;
 
@@ -45,12 +45,12 @@ pub struct MrmFile {
 pub fn file_from_mzml<R: ReadAt>(f: &FileLr, m: &mut Mzml<R>, scans_end: u64) -> Result<MrmFile> {
     Ok(file_from_traces(
         f,
-        srm::leggi(&mut TracceMzml::new(m, scans_end))?,
+        srm::leggi(&mut MzmlTraces::new(m, scans_end))?,
     ))
 }
 
 /// The file `f` with the traces read from it (`srm::leggi`, or `srm::spacchetta` of the bytes a worker sent).
-pub fn file_from_traces(f: &FileLr, traces: Vec<srm::Traccia>) -> MrmFile {
+pub fn file_from_traces(f: &FileLr, traces: Vec<srm::Trace>) -> MrmFile {
     MrmFile {
         name: f.name.clone(),
         label: f.label.clone(),

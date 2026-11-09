@@ -10,9 +10,9 @@ use std::path::Path;
 const MZML: &[u8] = include_bytes!("../../../tests/golden/ref/msntree_rotta/msn.mzML");
 const MZIDX: &[u8] = include_bytes!("../../../tests/golden/ref/msntree_rotta/msn.mzidx");
 
-type Entrata = fn(&[u8]);
+type Entry = fn(&[u8]);
 
-const ENTRATE: [(&str, Entrata); 7] = [
+const ENTRIES: [(&str, Entry); 7] = [
     ("ole", ingressi::ole),
     ("xmltree_methodinfo", ingressi::xmltree_methodinfo),
     ("mzmlhead", ingressi::mzmlhead),
@@ -25,23 +25,23 @@ const ENTRATE: [(&str, Entrata); 7] = [
 #[test]
 fn every_entry_point_survives_the_seeds_and_degenerate_inputs() {
     let msp = b"\0Name: A\nPrecursorMZ: 100.5\nNum Peaks: 2\n50 10\n60 20\n\n";
-    for (nome, f) in ENTRATE {
-        for seme in [MZML, MZIDX, msp.as_slice(), &[], &[0], &[0xFF; 64]] {
-            f(seme);
+    for (name, f) in ENTRIES {
+        for seed in [MZML, MZIDX, msp.as_slice(), &[], &[0], &[0xFF; 64]] {
+            f(seed);
             // a truncation at every tenth of the seed
             for k in 1..10 {
-                f(&seme[..seme.len() * k / 10]);
+                f(&seed[..seed.len() * k / 10]);
             }
         }
-        eprintln!("{nome}: ok");
+        eprintln!("{name}: ok");
     }
 }
 
 #[test]
 fn the_stored_crashes_no_longer_crash() {
-    let radice = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fuzz/regressioni");
-    for (nome, f) in ENTRATE {
-        let Ok(dir) = std::fs::read_dir(radice.join(nome)) else {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fuzz/regressioni");
+    for (name, f) in ENTRIES {
+        let Ok(dir) = std::fs::read_dir(root.join(name)) else {
             continue;
         };
         for e in dir.flatten() {

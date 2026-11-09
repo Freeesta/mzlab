@@ -21,9 +21,9 @@ def note_in(lang, want, not_want):
             pg.context.route("**/wasm-lettori/**", lambda rt: rt.fulfill(status=404, body="not here"))      # what a page offline or a server without the modules gives
             pg.goto(f"http://127.0.0.1:{r.port}/?lang={lang}")
             pg.wait_for_selector("#start:not([hidden])", timeout=60000)
-            attendi(pg, "window.MZLAB_LR !== undefined", 60000)
+            wait_for_js(pg, "window.MZLAB_LR !== undefined", 60000)
             pg.set_input_files("#pickdir", str(top))
-            attendi(pg, f"{NOTE}.includes('perfil')", 60000)
+            wait_for_js(pg, f"{NOTE}.includes('perfil')", 60000)
             t = pg.evaluate(NOTE)
             assert want in t and not_want not in t, t
             assert pg.evaluate("ST.files.length") == 0, pg.evaluate("ST.files.map(f => f.name)")

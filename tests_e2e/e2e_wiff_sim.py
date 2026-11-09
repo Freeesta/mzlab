@@ -19,7 +19,7 @@ r = Run(port=8874, wd="/tmp/wd_wiff_sim")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); attendi(pg, "E.files.length >= 2", timeout=120000)
+        stage(pg, [D / "sim.wiff", D / "sim.wiff.scan"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 2", timeout=120000)
         def channels():
             for k in pg.evaluate("E.files.map(f => f.k)"):
                 got = pg.evaluate(f"CANALI.canali({k}).then(j => j.canali.filter(c => c.fam === 'sim').map(c => c.et))")

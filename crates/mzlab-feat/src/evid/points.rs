@@ -55,10 +55,10 @@ fn bad(what: &str) -> Error {
     Error::new("error.evid.points").with("what", what)
 }
 
-fn threshold(v: &Value, soglie: &Value) -> Result<f64> {
+fn threshold(v: &Value, thresholds: &Value) -> Result<f64> {
     match v {
         Value::Num(n) => Ok(*n),
-        Value::Str(k) => soglie
+        Value::Str(k) => thresholds
             .get(k)
             .and_then(Value::f64)
             .ok_or_else(|| bad("threshold key")),
@@ -66,25 +66,25 @@ fn threshold(v: &Value, soglie: &Value) -> Result<f64> {
     }
 }
 
-fn step_of(s: &Value, soglie: &Value) -> Result<Step> {
+fn step_of(s: &Value, thresholds: &Value) -> Result<Step> {
     let thr = s.get("soglia").ok_or_else(|| bad("step"))?;
     let points = s.get("punti").and_then(Value::f64);
     Ok(Step {
-        threshold: threshold(thr, soglie)?,
+        threshold: threshold(thr, thresholds)?,
         points: points.ok_or_else(|| bad("points"))?,
     })
 }
 
-fn require_of(v: &Value, soglie: &Value) -> Result<Option<(bool, f64)>> {
+fn require_of(v: &Value, thresholds: &Value) -> Result<Option<(bool, f64)>> {
     let Some(r) = v.get("richiede") else {
         return Ok(None);
     };
     let thr = r.get("soglia").ok_or_else(|| bad("require"))?;
     let le = r.get("op").and_then(Value::str) == Some("<=");
-    Ok(Some((le, threshold(thr, soglie)?)))
+    Ok(Some((le, threshold(thr, thresholds)?)))
 }
 
-fn rule_of(v: &Value, soglie: &Value) -> Result<Rule> {
+fn rule_of(v: &Value, thresholds: &Value) -> Result<Rule> {
     let le = match v.get("op").and_then(Value::str) {
         Some("<=") => true,
         Some(">=") => false,
@@ -96,9 +96,9 @@ fn rule_of(v: &Value, soglie: &Value) -> Result<Rule> {
         abs: v.get("assoluto").and_then(Value::bool).unwrap_or(false),
         steps: steps
             .iter()
-            .map(|s| step_of(s, soglie))
+            .map(|s| step_of(s, thresholds))
             .collect::<Result<_>>()?,
-        require: require_of(v, soglie)?,
+        require: require_of(v, thresholds)?,
         cap: v.get("massimo").and_then(Value::f64),
         cap_if_weighed: v.get("massimo_se_pesata").and_then(Value::f64),
     })
@@ -118,25 +118,25 @@ impl PointsTable {
             .get("profili")
             .and_then(|p| p.get(name))
             .ok_or_else(|| bad("profile"))?;
-        let soglie = profile.get("soglie").ok_or_else(|| bad("soglie"))?;
-        let punti = profile.get("punti").ok_or_else(|| bad("punti"))?;
-        let tol = punti.get("tolleranze").ok_or_else(|| bad("tolleranze"))?;
+        let thresholds = profile.get("soglie").ok_or_else(|| bad("soglie"))?;
+        let points = profile.get("punti").ok_or_else(|| bad("punti"))?;
+        let tol = points.get("tolleranze").ok_or_else(|| bad("tolleranze"))?;
         let mut rules = Vec::new();
         for kind in Kind::ALL {
-            if let Some(r) = punti.get("prove").and_then(|p| p.get(kind.name())) {
-                rules.push((kind, rule_of(r, soglie)?));
+            if let Some(r) = points.get("prove").and_then(|p| p.get(kind.name())) {
+                rules.push((kind, rule_of(r, thresholds)?));
             }
         }
         Ok(PointsTable {
-            version: punti.get("versione").and_then(Value::f64).unwrap_or(0.0) as u32,
+            version: points.get("versione").and_then(Value::f64).unwrap_or(0.0) as u32,
             rules,
             mass_ppm: threshold(
                 tol.get("massa_ppm").ok_or_else(|| bad("massa_ppm"))?,
-                soglie,
+                thresholds,
             )?,
             ms2_margin: threshold(
                 tol.get("margine_ms2").ok_or_else(|| bad("margine_ms2"))?,
-                soglie,
+                thresholds,
             )?,
             weighed: false,
             unit: false,

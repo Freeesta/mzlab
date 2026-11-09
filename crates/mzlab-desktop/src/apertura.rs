@@ -89,29 +89,30 @@ impl Pending {
 
 /// How the user answered the notice for good: «Yes» (did the setting of the system) or «Don't ask again».
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum Risposta {
-    Si,
-    Mai,
+pub enum NoticeAnswer {
+    #[serde(rename = "si")]
+    Yes,
+    #[serde(rename = "mai")]
+    Never,
 }
 
 /// Counts one batch of files opened from outside and says whether the notice is due: at every other opening (the first, the third, …)
 /// until the user answers for good. «No (not now)» changes nothing, so the next opening is skipped and the one after asks again.
-pub fn registra_apertura(c: &mut Config) -> bool {
+pub fn record_opening(c: &mut Config) -> bool {
     let ask = c.risposta.is_none() && c.aperture.is_multiple_of(2);
     c.aperture = c.aperture.saturating_add(1);
     ask
 }
 
 /// The answer of the user: `Some` ends the notice, `None` is «not now».
-pub fn rispondi(c: &mut Config, r: Option<Risposta>) {
+pub fn answer_notice(c: &mut Config, r: Option<NoticeAnswer>) {
     if r.is_some() {
         c.risposta = r;
     }
 }
 
 /// The setting «ask again»: the next opening asks.
-pub fn rifai(c: &mut Config) {
+pub fn ask_again(c: &mut Config) {
     c.risposta = None;
     c.aperture = 0;
 }

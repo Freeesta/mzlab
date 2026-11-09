@@ -10,16 +10,16 @@ import importlib.util
 
 # the sibling `verita.py`, by path: tools/bench has a module of the same name
 _spec = importlib.util.spec_from_file_location("rosina_verita", Path(__file__).resolve().parent / "verita.py")
-verita = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(verita)
+truth = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(truth)
 
 
-def leggi_tabella(p: Path) -> dict:
-    righe = [r.split("\t") for r in p.read_text(encoding="utf-8").splitlines() if r.strip()]
-    if not righe or [c.strip() for c in righe[0]] != ["scan", "one_over_k0"]:
+def read_table(p: Path) -> dict:
+    rows = [r.split("\t") for r in p.read_text(encoding="utf-8").splitlines() if r.strip()]
+    if not rows or [c.strip() for c in rows[0]] != ["scan", "one_over_k0"]:
         raise SystemExit("the first row must be: scan<TAB>one_over_k0")
     scan, k0 = [], []
-    for r in righe[1:]:
+    for r in rows[1:]:
         scan.append(int(r[0]))
         k0.append(float(r[1]))
     if not scan:
@@ -34,8 +34,8 @@ def main(argv=None) -> int:
     ap.add_argument("--timsdata-versione", default="?")
     ap.add_argument("--nativo", type=Path)
     a = ap.parse_args(argv)
-    d = verita.da_mzml(a.mzml, ("msconvert+timsdata", a.timsdata_versione, "mzML from msconvert; 1/K0 from timsdata"), a.nativo, None)
-    d["mobilita"] = leggi_tabella(a.tabella)
+    d = truth.da_mzml(a.mzml, ("msconvert+timsdata", a.timsdata_versione, "mzML from msconvert; 1/K0 from timsdata"), a.nativo, None)
+    d["mobilita"] = read_table(a.tabella)
     json.dump(d, sys.stdout, indent=1, ensure_ascii=False)
     sys.stdout.write("\n")
     return 0

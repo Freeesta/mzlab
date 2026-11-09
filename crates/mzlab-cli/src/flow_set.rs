@@ -7,8 +7,10 @@ use std::sync::Mutex;
 use std::time::SystemTime;
 
 use mzlab_core::budget::sha256_hex;
-use mzlab_core::hashio::hash_read;
-use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::flow::Plan;
+use mzlab_core::hashio::hash_read_with;
+use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::upload::{impronte_note, probe, Fingerprint};
 use mzlab_core::{Error, Result};
 
 use crate::flow::io;
@@ -69,47 +71,79 @@ pub(crate) fn members(path: &Path) -> Result<Vec<(String, PathBuf)>> {
 
 /// The `FileSet` of the dataset at `path`, its members opened on the disk.
 pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
-    let mut membri = Vec::new();
-    for (nome, p) in members(path)? {
+    let mut list = Vec::new();
+    for (name, p) in members(path)? {
         let f = File::open(&p).map_err(io)?;
-        membri.push(Membro {
-            nome,
+        list.push(Member {
+            nome: name,
             dim: f.metadata().map_err(io)?.len(),
             dati: Box::new(f),
             sha1: known_sha1(&p),
         });
     }
-    Ok(FileSet { membri })
+    Ok(FileSet { membri: list })
 }
 
-/// Size and SHA-256 of the file `p`; its SHA-1 comes with them in the same read and is kept for `file_set`, so the reader that writes the header of an mzML
-/// does not read the file again for it.
-fn hash_file(p: &Path) -> Result<(u64, String)> {
+/// Size and SHA-256 of the file `p`; with `sha1` its SHA-1 comes with them in the same read. Both are kept for `file_set` and `known_prints`, so
+/// neither the reader that writes the header of an mzML nor the index of the dataset reads the file again for them.
+fn hash_file(p: &Path, sha1: bool) -> Result<(u64, String)> {
     let before = stamp(p);
-    let (bytes, sha256, sha1) = hash_read(&mut File::open(p).map_err(io)?).map_err(io)?;
-    if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), SHA1.lock()) {
+    let (bytes, sha256, sha1) =
+        hash_read_with(&mut File::open(p).map_err(io)?, sha1).map_err(io)?;
+    if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), BOTH.lock()) {
+        // a SHA-1 taken by an earlier read of the same file stays
+        let same = |e: &Hashed<Pair>| e.len == len && e.time == time && e.sha.0 == sha256;
+        let sha1 = sha1.or_else(|| {
+            seen.iter()
+                .find(|e| e.path == p)
+                .filter(|e| same(e))
+                .and_then(|e| e.sha.1.clone())
+        });
         seen.retain(|e| e.path != p);
         seen.push(Hashed {
             path: p.to_path_buf(),
             len,
             time,
-            sha: sha1,
+            sha: (sha256.clone(), sha1),
         });
     }
     Ok((bytes, sha256))
 }
 
+/// The fingerprints of the members of the dataset at `path` (`upload::impronte`) when `hash_file` has read every one of them and they are still the
+/// same files: only the 128 KB of each `probe` are read. `None` sends the caller to read the members again. A member hashed without its SHA-1 gives an
+/// empty one, as `without_sha1` does: the index never uses it.
+pub(crate) fn known_prints(path: &Path) -> Result<Option<Vec<Fingerprint>>> {
+    let list = members(path)?;
+    let Some(pairs) = list
+        .iter()
+        .map(|(_, p)| known_pair(p))
+        .collect::<Option<Vec<_>>>()
+    else {
+        return Ok(None);
+    };
+    let mut fs = file_set(path)?;
+    let mut values = Vec::with_capacity(pairs.len());
+    for (m, (sha256, sha1)) in fs.membri.iter_mut().zip(pairs) {
+        values.push((sha256, sha1.unwrap_or_default(), probe(&mut m.dati, m.dim)?));
+    }
+    Ok(impronte_note(&mut fs, &values))
+}
+
 /// SHA-256 of the lone files `digest` has hashed, by path, size and modification time: the `.mzidx` build takes its source's hash from here instead of reading the file again.
 static HASHED: Mutex<Vec<Hashed>> = Mutex::new(Vec::new());
 
-/// SHA-1 of the files `hash_file` has read, in the same way.
-static SHA1: Mutex<Vec<Hashed>> = Mutex::new(Vec::new());
+/// SHA-256 and SHA-1 (when it was taken) of the files `hash_file` has read, in the same way.
+static BOTH: Mutex<Vec<Hashed<Pair>>> = Mutex::new(Vec::new());
 
-struct Hashed {
+/// SHA-256 and, when it was taken, SHA-1 of one file.
+type Pair = (String, Option<String>);
+
+struct Hashed<T = String> {
     path: PathBuf,
     len: u64,
     time: Option<SystemTime>,
-    sha: String,
+    sha: T,
 }
 
 fn stamp(p: &Path) -> Option<(u64, Option<SystemTime>)> {
@@ -135,13 +169,18 @@ fn remember(path: &Path, before: Option<(u64, Option<SystemTime>)>, bytes: u64, 
     }
 }
 
-/// The SHA-1 `hash_file` took of `path`, if it is still the same file.
-fn known_sha1(path: &Path) -> Option<String> {
+/// The SHA-256 and SHA-1 `hash_file` took of `path`, if it is still the same file.
+fn known_pair(path: &Path) -> Option<Pair> {
     let (len, time) = stamp(path)?;
-    let seen = SHA1.lock().ok()?;
+    let seen = BOTH.lock().ok()?;
     seen.iter()
         .find(|e| e.path == path && e.len == len && e.time == time)
         .map(|e| e.sha.clone())
+}
+
+/// The SHA-1 `hash_file` took of `path`, if it took one and it is still the same file.
+pub(crate) fn known_sha1(path: &Path) -> Option<String> {
+    known_pair(path).and_then(|p| p.1)
 }
 
 /// Size and SHA-256 of `path`; the hash is not recomputed when the writer already took `known`.
@@ -161,18 +200,32 @@ pub(crate) fn known_sha(path: &Path) -> Option<String> {
         .map(|e| e.sha.clone())
 }
 
-/// Bytes and SHA-256 of the dataset at `path`: a lone file hashes as its own bytes, a dataset of several members as the list of their names and hashes.
+/// Bytes and SHA-256 of the dataset at `path`, its SHA-1 taken too (`digest_for`).
 pub(crate) fn digest(path: &Path) -> Result<(u64, String)> {
+    digest_for(path, true)
+}
+
+/// Does a step of `plan` write an mzML through a reader, whose header carries the SHA-1 of the file? Only then is the SHA-1 worth its read: the
+/// whole plan is asked, as `import.raw` hands its input on unchanged and a comparison expands the steps later.
+pub(crate) fn wants_sha1(plan: &Plan) -> bool {
+    plan.steps
+        .iter()
+        .any(|s| matches!(s.step.as_str(), "convert.mzml" | "spectra.msn_graph"))
+}
+
+/// Bytes and SHA-256 of the dataset at `path`: a lone file hashes as its own bytes, a dataset of several members as the list of their names and hashes.
+/// With `sha1` each member's SHA-1 is taken in the same read; without it a reader that needs it reads the file again (the same bytes, later).
+pub(crate) fn digest_for(path: &Path, sha1: bool) -> Result<(u64, String)> {
     let list = members(path)?;
     if !path.is_dir() && list.len() == 1 {
         let before = stamp(path);
-        let (bytes, hex) = hash_file(path)?;
+        let (bytes, hex) = hash_file(path, sha1)?;
         remember(path, before, bytes, &hex);
         return Ok((bytes, hex));
     }
     let (mut bytes, mut text) = (0, String::new());
     for (name, p) in &list {
-        let (n, hex) = hash_file(p)?;
+        let (n, hex) = hash_file(p, sha1)?;
         bytes += n;
         text += &format!("{name}\0{hex}\n");
     }
