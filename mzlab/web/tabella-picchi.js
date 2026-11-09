@@ -84,8 +84,8 @@
     if (!p._a || !p._a.data || !p._a.data[0]) return;
     const pop = document.createElement("div"); pop.className = "sp-pop tp-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", T("tabp.title"));
     pop.innerHTML = h`<div class="tp-facts"></div>
-      <div class="tp-ctl"><label>${T("tabp.thr")} <input data-f="thr" inputmode="decimal" autocomplete="off" data-num data-min="0" data-max="100" value="${s.thr}"></label>
-      <label>${T("tabp.max")} <input data-f="max" inputmode="decimal" autocomplete="off" data-num data-min="1" data-max="5000" value="${s.max}"></label>
+      <div class="tp-ctl"><label>${T("tabp.thr")} <input data-f="thr" data-num="0:100" value="${s.thr}"></label>
+      <label>${T("tabp.max")} <input data-f="max" data-num="1:5000 i" value="${s.max}"></label>
       <label>${T("tabp.sort")} <select data-f="sort"><option value="mz"${raw(s.sort === "mz" ? " selected" : "")}>${T("tabp.sort.mz")}</option><option value="int"${raw(s.sort === "int" ? " selected" : "")}>${T("tabp.sort.int")}</option></select></label>
       <label class="tp-chk"><input type="checkbox" data-f="lab"${raw(s.lab ? " checked" : "")}> ${T("tabp.lab")}</label></div>
       <div class="tp-sc" tabindex="0" role="region" aria-label="${T("tabp.title")}"><table></table></div>

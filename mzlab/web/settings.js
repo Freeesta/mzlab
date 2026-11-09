@@ -144,8 +144,8 @@ function uipOpen(btn) {
     ? `<div class="imp-fld"><button id="uip-cen" type="button" title="${esc(T("settings.cen.title"))}">${T("settings.cen.btn")}</button><button id="uip-cen-x" type="button" title="${esc(T("settings.cen.stop.tip"))}" hidden>${T("settings.cen.stop")}</button></div><div class="hint" id="uip-cen-st" role="status" aria-live="polite"></div>` : "";
   const dataItems = [(!files.length || files.some(f => f.spectrum_mode !== "profile" || (window.HR && HR.isHr(f)))) ? C.sw(T("settings.merge"), T("settings.merge.tip"), 'id="uip-merge"', UIP.merge, "cont") : "",
     ...(hr ? [fld(`<span class="ic">${C.GICON.lib}</span>${T("settings.libs.label")}`, T("settings.libs.title"), `<button id="uip-lib" type="button">${T("settings.libs.button")}</button>`),
-      fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input id="uip-ppm" inputmode="decimal" autocomplete="off" data-num data-min="1" data-max="50" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`),
-      fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input id="uip-hdec" inputmode="decimal" autocomplete="off" data-num data-min="3" data-max="5" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`)] : []), cen];
+      fld(T("settings.hrPpm"), T("settings.hrPpm.title"), `<input id="uip-ppm" data-num="1:50" value="${UIP.hrPpm}" style="width:64px" aria-label="${esc(T("settings.hrPpm"))}">`),
+      fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input id="uip-hdec" data-num="3:5 i" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`)] : []), cen];
   const tourOn = !(window.BANCO && BANCO.on());
   const prof = uipProfile();
   const appItems = [window.DESKUPD ? DESKUPD.row() : "", window.DESKDEF ? DESKDEF.row() : "", window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : ""];

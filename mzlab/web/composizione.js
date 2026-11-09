@@ -74,12 +74,12 @@ const COMP = (() => {
     big(I18N.t("comp.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("comp.note")}</div>
       <h4>${I18N.t("cx.pred")}</h4>
       <div class="cmp-grid">
-        <label>m/z <input id="cmp-mz" inputmode="decimal" value="${o.mz != null ? (+o.mz).toFixed(5) : ""}" style="width:110px"></label>
+        <label>m/z <input id="cmp-mz" data-num=">0 v" value="${o.mz != null ? (+o.mz).toFixed(5) : ""}" style="width:110px"></label>
         <label>${I18N.t("comp.ion")} <select id="cmp-ion">${IONS.filter(i => pol === "+" ? !/-$/.test(i[0]) : /-$/.test(i[0])).map(i => opt(i[0], o.ion || st["ion" + pol] || (pol === "+" ? "[M+H]+" : "[M-H]-"), i[1])).join("")}</select></label>
-        <label>${I18N.t("comp.tol")} <input id="cmp-tol" value="${st.tol ?? 5}" style="width:56px"> <select id="cmp-unit">${opt("ppm", st.unit || "ppm", "ppm")}${opt("mda", st.unit || "ppm", "mDa")}</select></label>
-        <label>${I18N.t("comp.max")} <input id="cmp-max" value="${st.max ?? 10}" style="width:48px"></label>
+        <label>${I18N.t("comp.tol")} <input id="cmp-tol" data-num=">0" value="${st.tol ?? 5}" style="width:56px"> <select id="cmp-unit">${opt("ppm", st.unit || "ppm", "ppm")}${opt("mda", st.unit || "ppm", "mDa")}</select></label>
+        <label>${I18N.t("comp.max")} <input id="cmp-max" data-num="1: i" value="${st.max ?? 10}" style="width:48px"></label>
         <label>${I18N.t("comp.nitrogen")} <select id="cmp-n">${opt("none", st.n || "none", I18N.t("comp.n.none"))}${opt("even", st.n || "none", I18N.t("comp.n.even"))}${opt("odd", st.n || "none", I18N.t("comp.n.odd"))}</select></label>
-        <label>${I18N.t("comp.rdbFrom")} <input id="cmp-r0" value="${st.r0 ?? -1}" style="width:50px"> ${I18N.t("comp.rdbTo")} <input id="cmp-r1" value="${st.r1 ?? 100}" style="width:50px"></label>
+        <label>${I18N.t("comp.rdbFrom")} <input id="cmp-r0" data-num="<=cmp-r1" value="${st.r0 ?? -1}" style="width:50px"> ${I18N.t("comp.rdbTo")} <input id="cmp-r1" data-num=">=cmp-r0" value="${st.r1 ?? 100}" style="width:50px"></label>
         <label>${I18N.t("cx.cent")} <select id="cmp-cent">${opt("file", st.cent, I18N.t("cx.cent.file"))}${opt("max", st.cent, I18N.t("cx.cent.max"))}</select></label>
         <label>${I18N.t("cx.norm")} <select id="cmp-norm">${[["fit", "cx.norm.fit"], ["mono", "cx.norm.mono"], ["max", "cx.norm.max"], ["sum", "cx.norm.sum"]].map(([v, k]) => opt(v, st.norm, I18N.t(k))).join("")}</select></label>
         <label><input type="checkbox" id="cmp-rep"${st.rep ? " checked" : ""}> ${I18N.t("cx.rep")}</label>
@@ -92,23 +92,23 @@ const COMP = (() => {
       <h4>${I18N.t("comp.filters")} <span class="muted sm" style="font-weight:400">${I18N.t("comp.filters.hint")}</span></h4>
       <div class="cmp-grid">${RULES.map(([k, l]) => `<label><input type="checkbox" data-r="${k}"${(st.rules || []).includes(k) ? " checked" : ""}> ${EH(l)}</label>`).join("")}</div>
       <div class="cmp-grid" style="margin-top:6px"><label>${I18N.t("comp.parent")} <input id="cmp-par" value="${EH(o.parent || "")}" placeholder="${I18N.t("comp.parent.ph")}" style="width:150px"></label>
-        <label>${I18N.t("comp.isoObs")} M+1/M <input id="cmp-m1" value="${f4(ob.m1)}" style="width:62px"> M+2/M <input id="cmp-m2" value="${f4(ob.m2)}" style="width:62px"></label>
+        <label>${I18N.t("comp.isoObs")} M+1/M <input id="cmp-m1" data-num="0: v" value="${f4(ob.m1)}" style="width:62px"> M+2/M <input id="cmp-m2" data-num="0: v" value="${f4(ob.m2)}" style="width:62px"></label>
         <button id="cmp-go" type="button" class="go">${I18N.t("comp.go")}</button></div>
       <details id="cmp-sc" style="margin-top:6px"${o.spec || o.ms2 ? " open" : ""}><summary><b>${I18N.t("cx.pat")}</b> · <b>${I18N.t("cx.frg")}</b></summary>
         <div class="muted sm">${I18N.t("comp.sc.note")}</div>
         <h4>${I18N.t("cx.pat")}</h4>
-        <div class="cmp-grid"><label>${I18N.t("cx.ithr")} <input id="cmp-ithr" value="${st.ithr}" style="width:52px"></label>
-          <label>${I18N.t("cx.itol")} <input id="cmp-sint" value="${st.sint}" style="width:44px"></label>
-          <label>${I18N.t("comp.sc.r200")} <input id="cmp-r200" value="${st.r200 ?? o.r200 ?? 70000}" style="width:70px"></label>
-          <label>${I18N.t("comp.sc.sppm")} <input id="cmp-sppm" value="${st.sppm ?? 3}" style="width:44px"></label>
-          <span>${I18N.t("comp.sc.weights")} <label>${I18N.t("comp.sc.wm")} <input id="cmp-w0" value="${st.w0 ?? 1}" style="width:36px"></label>
-          <label>${I18N.t("comp.sc.wi")} <input id="cmp-w1" value="${st.w1 ?? 2}" style="width:36px"></label>
-          <label>${I18N.t("comp.sc.wf")} <input id="cmp-w2" value="${st.w2 ?? 1}" style="width:36px"></label></span></div>
+        <div class="cmp-grid"><label>${I18N.t("cx.ithr")} <input id="cmp-ithr" data-num="0:100" value="${st.ithr}" style="width:52px"></label>
+          <label>${I18N.t("cx.itol")} <input id="cmp-sint" data-num="0:100" value="${st.sint}" style="width:44px"></label>
+          <label>${I18N.t("comp.sc.r200")} <input id="cmp-r200" data-num=">0" value="${st.r200 ?? o.r200 ?? 70000}" style="width:70px"></label>
+          <label>${I18N.t("comp.sc.sppm")} <input id="cmp-sppm" data-num=">0" value="${st.sppm ?? 3}" style="width:44px"></label>
+          <span>${I18N.t("comp.sc.weights")} <label>${I18N.t("comp.sc.wm")} <input id="cmp-w0" data-num="0:" value="${st.w0 ?? 1}" style="width:36px"></label>
+          <label>${I18N.t("comp.sc.wi")} <input id="cmp-w1" data-num="0:" value="${st.w1 ?? 2}" style="width:36px"></label>
+          <label>${I18N.t("comp.sc.wf")} <input id="cmp-w2" data-num="0:" value="${st.w2 ?? 1}" style="width:36px"></label></span></div>
         <div class="muted sm" id="cmp-nobs">${o.spec ? I18N.t("comp.sc.obs", { n: obsText(o.mz, o.spec).split(";").filter(Boolean).length }) : I18N.t("comp.sc.noobs")}</div>
         <h4>${I18N.t("cx.frg")}</h4>
-        <div class="cmp-grid"><label>${I18N.t("cx.minfit")} <input id="cmp-minfit" value="${st.minfit}" style="width:44px"></label>
-          <label>${I18N.t("cx.sn")} <input id="cmp-sn" value="${st.sn}" style="width:44px"></label>
-          <label>${I18N.t("cx.ftol")} <input id="cmp-ftol" value="${st.ftol}" style="width:44px"></label></div>
+        <div class="cmp-grid"><label>${I18N.t("cx.minfit")} <input id="cmp-minfit" data-num="0:100" value="${st.minfit}" style="width:44px"></label>
+          <label>${I18N.t("cx.sn")} <input id="cmp-sn" data-num="0:" value="${st.sn}" style="width:44px"></label>
+          <label>${I18N.t("cx.ftol")} <input id="cmp-ftol" data-num=">0" value="${st.ftol}" style="width:44px"></label></div>
         <div style="margin-top:4px">${I18N.t("comp.sc.ms2")} <button id="cmp-ms2get" type="button">${I18N.t("comp.sc.ms2get")}</button>
           <textarea id="cmp-ms2" rows="3" aria-label="${I18N.t("comp.sc.ms2")}" placeholder="${I18N.t("comp.sc.ms2ph")}" style="width:100%;box-sizing:border-box;margin-top:2px">${EH(o.ms2 && o.ms2.mz ? o.ms2.mz.map((m, i) => `${m.toFixed(5)} ${o.ms2.y[i].toPrecision(6)}`).join("\n") : "")}</textarea></div></details>
       <div id="cmp-known" class="sm" style="margin-top:6px"></div><div id="cmp-out" style="margin-top:8px"></div>`, () => {
