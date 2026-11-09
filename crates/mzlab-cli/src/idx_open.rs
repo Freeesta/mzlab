@@ -52,7 +52,8 @@ pub(crate) fn open(idx: &Path) -> Result<Index<File>> {
     {
         return Ok(ix.over(f));
     }
-    let ix = Index::open_head(f.try_clone().map_err(crate::io)?, &head)?;
+    // a second handle of the path, not `try_clone`: WASI preview 1 cannot duplicate a descriptor (the wasm flow)
+    let ix = Index::open_head(File::open(idx).map_err(crate::io)?, &head)?;
     #[cfg(test)]
     PARSED
         .lock()
