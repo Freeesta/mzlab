@@ -1,6 +1,7 @@
 //! The SCIEX `.wiff` + `.wiff.scan` pair as a `Lettore` (`lettori.rs`): the container (`.wiff`) is read whole when the pair is opened, bounded by `Limiti`;
 //! the `.wiff.scan` never, a scan reads only its own block. One `Campione` per injection; the index lists the scans (the MRM blocks are chromatograms).
 
+use super::lettore_extra::extra_of;
 use super::window::Window;
 use super::{container, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
@@ -81,6 +82,8 @@ pub struct WiffReader {
     scan_len: u64,
     scan_member: u16,
     campioni: Vec<Sample>,
+    /// Sections of the `.wiff.scan` the `.wiff` index does not list: (recovered as samples, left out).
+    unindexed: (usize, usize),
     pub(super) parts: Vec<Part>,
     /// SHA-1 of the `.wiff.scan` for the header, read once (the whole member).
     scan_sha1: Option<Option<String>>,
@@ -199,6 +202,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         self.parts.get(c).map_or(0, |p| p.w.records.iter().filter(|r| r.cut(n)).count())
     }
     fn samples(&self) -> &[Sample] { &self.campioni }
+    fn unindexed(&self) -> (usize, usize) { self.unindexed }
     fn index(&mut self, c: usize) -> Result<&[ScanEntry]> { Ok(&self.ready(c)?.indice) }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.ready(c)?;
@@ -248,8 +252,9 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> { with_method(self, c).map(Some) }
     fn table_header(&mut self, c: usize) -> Result<Option<Header>> { file_header(self, c).map(Some) }
     fn method(&mut self, c: usize) -> Result<String> {
-        let sample = self.part(c)?.w.sample;
-        Ok(crate::metodo_wiff::from_wiff(&self.ole, sample, &source(self, sample)))
+        let w = &self.part(c)?.w;
+        let sample = w.sample;
+        Ok(crate::metodo_wiff::from_wiff(&self.ole, w.inferred_from.unwrap_or(sample), &source(self, sample)))
     }
 }
 
@@ -282,10 +287,19 @@ fn file_header(l: &mut WiffReader, c: usize) -> Result<Header> {
         l.scan_sha1 = Some(sha1_hex(win, l.scan_len).ok());
     }
     let sha = l.scan_sha1.clone().flatten();
+    let w = &l.part(c)?.w;
     #[cfg(feature = "estesi")]
-    return Ok(l.part(c)?.w.header_estesi(&l.nome, sha));
+    let mut h = w.header_estesi(&l.nome, sha);
     #[cfg(not(feature = "estesi"))]
-    Ok(l.part(c)?.w.header(&l.nome, sha, false))
+    let mut h = w.header(&l.nome, sha, false);
+    // a section the index does not list: the run says that its name, method and times were inferred from an indexed sample
+    if let Some(d) = w.inferred_from {
+        h.run_params.push((
+            "mzlab:wiff-unindexed".into(),
+            format!("name, method and times inferred from sample {d}"),
+        ));
+    }
+    Ok(h)
 }
 
 fn member(fs: &mut FileSet, i: usize) -> Result<&mut Member> {
@@ -350,6 +364,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         });
         parti.push(part);
     }
+    let unindexed = add_unindexed(&mut parti, &mut campioni, &mut raw_names, (&mut scan, scan_len, membro), (&ole, limits, only), &mut total)?;
     for (c, n) in campioni
         .iter_mut()
         .zip(super::nomi::display_names(&name, &raw_names))
@@ -363,9 +378,39 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         scan_len,
         scan_member: membro,
         campioni,
+        unindexed,
         parts: parti,
         scan_sha1,
     }))
+}
+
+/// The sections of the `.wiff.scan` the `.wiff` index does not list (the copy was made while the acquisition ran), rebuilt as samples after the indexed ones
+/// with an inferred name and method; `(recovered, left out)`.
+fn add_unindexed(
+    parti: &mut Vec<Part>,
+    campioni: &mut Vec<Sample>,
+    raw_names: &mut Vec<(u32, Option<String>)>,
+    (scan, scan_len, membro): (&mut Box<dyn ReadAt>, u64, u16),
+    (ole, limits, only): (&Ole, &Limits, Option<usize>),
+    total: &mut u64,
+) -> Result<(usize, usize)> {
+    let known: Vec<&Wiff> = parti.iter().map(|p| &p.w).collect();
+    let (end, last_id) = super::index_end(ole, &known);
+    let found = super::unindexed::recover(scan, scan_len, &known, end, last_id);
+    let counts = (found.samples.len(), found.skipped);
+    for w in found.samples {
+        let (i, s) = (parti.len(), w.sample);
+        *total += w.records.len() as u64;
+        limits.ok_entries(*total)?;
+        let mut part = Part::new(w);
+        if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
+            build(&mut part, scan, scan_len, membro)?;
+        }
+        raw_names.push((s, None));
+        campioni.push(Sample { id: s, nome: String::new(), scansioni: part.scans.len(), size: None });
+        parti.push(part);
+    }
+    Ok(counts)
 }
 
 /// The index of an injection: one row per non-empty scan block (the heads of the blocks are read through a window, front to back).
@@ -438,49 +483,4 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
         p.other_version = other;
     }
     Ok(())
-}
-
-/// The number after `key` in a spectrum id (`sample=2 ... experiment=1`).
-fn id_field(id: &str, key: &str) -> Option<usize> {
-    id.split_whitespace()
-        .find_map(|w| w.strip_prefix(key))
-        .and_then(|v| v.parse::<usize>().ok())
-}
-
-/// The TIC the index of the file holds for the block of `s`, when the block is where the spectrum number says and the value is usable.
-fn header_tic(l: &WiffReader, s: &Spectrum) -> Option<f64> {
-    let p = l
-        .parts
-        .iter()
-        .find(|p| Some(p.w.sample as usize) == id_field(&s.id, "sample="))?;
-    let r = p.w.records.get(*p.scans.get(s.index)?)?;
-    let same = id_field(&s.id, "cycle=") == Some(r.cycle + 1)
-        && id_field(&s.id, "experiment=") == Some(r.experiment + 1);
-    (same && r.tic.is_finite() && r.tic > 0.0).then_some(r.tic)
-}
-
-/// What the mzML says of a spectrum besides its points: the collision energy and isolation window of its experiment, and (readers module) the spectrum
-/// type (CV term) of precursor-ion and neutral-loss scans.
-fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
-    let e = id_field(&s.id, "sample=")
-        .and_then(|n| l.parts.iter().find(|p| p.w.sample as usize == n))
-        .zip(id_field(&s.id, "experiment="))
-        .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)));
-    // the vendor TIC of the block in every build: the engine (no `estesi`) writes the same mzML and index as the CLI and the app
-    let mut extra = crate::mzmlwrite::SpectrumExtra {
-        tic: header_tic(l, s),
-        ..Default::default()
-    };
-    let Some(e) = e else { return extra };
-    (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
-    if let Some(sg) = super::modi::tag(e.code) {
-        extra
-            .params
-            .push((super::modi::SCAN_TYPE_PARAM.into(), sg.into()));
-    }
-    #[cfg(feature = "estesi")]
-    if let Some((acc, name)) = super::estesi::spectrum_term(e.code) {
-        extra.params.push((format!("cv:{acc}"), name.to_string()));
-    }
-    extra
 }

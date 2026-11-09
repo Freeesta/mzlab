@@ -247,6 +247,7 @@ pub trait Reader {
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         &[]
     }
+    #[rustfmt::skip] fn unindexed(&self) -> (usize, usize) { (0, 0) } // data sections the index lacks (an incomplete copy): (recovered, left out)
     /// The scans the index of sample `c` lists but that lie beyond the end of the data file (a truncated copy): they are not in the index.
     fn missing(&mut self, _c: usize) -> usize {
         0

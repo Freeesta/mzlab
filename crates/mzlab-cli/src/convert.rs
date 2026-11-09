@@ -200,6 +200,18 @@ pub struct Notice {
     pub params: Vec<(&'static str, String)>,
 }
 
+/// The notice of a dataset whose data file holds sections the container's index does not list (`recovered` of them rebuilt as samples, `skipped` left out), or `None`.
+pub fn unindexed_sections(recovered: usize, skipped: usize) -> Option<Notice> {
+    (recovered + skipped > 0).then(|| Notice {
+        key: "warn.wiff.unindexed",
+        params: vec![
+            ("n", (recovered + skipped).to_string()),
+            ("recovered", recovered.to_string()),
+            ("skipped", skipped.to_string()),
+        ],
+    })
+}
+
 /// The notice of a memory budget `auto_mb` that runs fewer than `wanted` conversions at once, or `None`: the desktop queue gives it to its
 /// page, `convert` prints it (`testo_errore::avviso`).
 pub fn fewer_workers(auto_mb: f64, wanted: usize) -> Option<Notice> {

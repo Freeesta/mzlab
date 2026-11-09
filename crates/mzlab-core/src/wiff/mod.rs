@@ -13,12 +13,14 @@ pub mod dad_map;
 pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
+mod lettore_extra;
 mod metodo_nome;
 pub mod modi;
 pub mod nomi;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
+mod unindexed;
 mod window;
 
 use crate::error::{Error, Result};
@@ -88,11 +90,7 @@ impl Wiff {
             .enumerate()
             .find(|(_, e)| e.code.is_some() && !modi::nativo(e.code))
         {
-            return Err(bad(&format!(
-                "scan type code {} (experiment {})",
-                e.code.unwrap_or(0),
-                k + 1
-            )));
+            return Err(scan_type_error(e.code.unwrap_or(0), k + 1));
         }
         Ok(())
     }
@@ -167,7 +165,15 @@ pub struct Wiff {
     pub wiff_sha1: Option<String>,
     /// Off by default. When set, a scheduled transition keeps only the points within its window around the target RT (as msconvert writes it).
     pub trim_scheduled: bool,
+    /// Set when the sample is a section of the `.wiff.scan` that the `.wiff` index does not list: its name, method and times are those of this indexed sample.
+    pub inferred_from: Option<u32>,
     scan_len: u64,
+}
+
+/// A scan type the reader does not read: the code, the experiment and the name of the type (`modi`), so that the message says what it is.
+pub(crate) fn scan_type_error(code: u32, experiment: usize) -> Error {
+    let kind = modi::mode(code).map_or("unknown", |m| m.tag);
+    Error::new("err.file.wiffScanType").with("code", code).with("experiment", experiment).with("type", kind)
 }
 
 fn bad(detail: &str) -> Error {
@@ -206,6 +212,26 @@ pub fn samples(ole: &Ole) -> Vec<u32> {
     crate::sortc::slice_ord(&mut v);
     v.dedup();
     v
+}
+
+/// Where the data the index knows end in the `.wiff.scan`: after the last block of a sample, or after the head of the last section of the sample table (an empty
+/// injection has no blocks); and the highest sample number of the table.
+pub(crate) fn index_end(ole: &Ole, indexed: &[&Wiff]) -> (u64, u32) {
+    let table = ole
+        .read(&format!("{SAMPLES}SampleIdxTable"))
+        .map(|t| idx::sections(&t))
+        .unwrap_or_default();
+    let heads = table.iter().map(|s| s.1 + 20 + 24).max().unwrap_or(0);
+    let blocks = indexed
+        .iter()
+        .flat_map(|w| w.records.iter())
+        .map(|r| r.at + u64::from(r.size))
+        .max()
+        .unwrap_or(0);
+    (
+        heads.max(blocks),
+        table.iter().map(|s| s.0).max().unwrap_or(0),
+    )
 }
 
 /// The number of periods of method `method` (the `PeriodN` storages of its first device method).
@@ -362,6 +388,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         created,
         wiff_sha1: None,
         trim_scheduled: false,
+        inferred_from: None,
         scan_len,
     })
 }

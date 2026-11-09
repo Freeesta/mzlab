@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::Limits;
+use mzlab_core::lettori::{Format, Limits};
 
 use crate::flow_set::file_set;
 
@@ -12,17 +12,37 @@ pub(crate) struct Entry {
     pub(crate) input: PathBuf,
     pub(crate) label: String,
     pub(crate) out: String,
-    /// a sample with no scans (an injection that acquired nothing): its mzML is written empty and its progress line says so
+    /// a sample with no scans and no chromatograms (an injection that acquired nothing): its mzML is written empty and its progress line says so
     pub(crate) empty: bool,
+    /// the dataset is a SCIEX `.wiff`: the progress line then says why the sample is empty (`warn.wiff.emptySample`)
+    pub(crate) wiff: bool,
 }
 
 /// The ids of the samples of a dataset with more than one (each with whether it has no scans), else none (a dataset the reader cannot open is converted as one and fails there).
-fn sample_ids(p: &Path) -> Vec<(u32, bool)> {
+fn sample_ids(p: &Path) -> Vec<(u32, bool, bool)> {
     let opened = file_set(p).and_then(|fs| mzlab_lettori::apri(fs, &Limits::desktop()));
-    let ids: Vec<(u32, bool)> = opened.map_or(Vec::new(), |l| {
-        l.samples()
+    let ids: Vec<(u32, bool, bool)> = opened.map_or(Vec::new(), |mut l| {
+        // one calm line per dataset, never per sample
+        let (found, skipped) = l.unindexed();
+        if let Some(n) = crate::convert::unindexed_sections(found, skipped) {
+            eprintln!("note: {} ({})", crate::error_text::warning(&n), p.display());
+        }
+        let wiff = l.format() == Format::SciexWiff;
+        let ids: Vec<(u32, u32, usize)> = l
+            .samples()
             .iter()
-            .map(|s| (s.id, s.scansioni == 0))
+            .enumerate()
+            .map(|(c, s)| (s.id, c as u32, s.scansioni))
+            .collect();
+        // empty = no scans and no chromatograms (an MRM sample has chromatograms only)
+        ids.into_iter()
+            .map(|(id, c, scans)| {
+                (
+                    id,
+                    scans == 0 && l.chromatograms(c as usize).is_ok_and(|v| v.is_empty()),
+                    wiff,
+                )
+            })
             .collect()
     });
     if ids.len() > 1 {
@@ -47,6 +67,7 @@ fn out_name(name: &str, id: Option<u32>, long: bool) -> String {
 pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
     let mut all: Vec<(PathBuf, String, Option<u32>)> = Vec::new();
     let mut empty = Vec::new();
+    let mut wiff = Vec::new();
     for p in units {
         let name = p
             .file_name()
@@ -57,10 +78,12 @@ pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
         if ids.is_empty() {
             all.push((p.clone(), name.clone(), None));
             empty.push(false);
+            wiff.push(false);
         }
-        for (id, none) in ids {
+        for (id, none, is_wiff) in ids {
             all.push((p.clone(), name.clone(), Some(id)));
             empty.push(none);
+            wiff.push(is_wiff);
         }
     }
     let short: Vec<String> = all
@@ -83,6 +106,7 @@ pub(crate) fn entries(units: &[PathBuf]) -> Vec<Entry> {
             label: format!("{}{plain}", if unique { "" } else { &lead }),
             out: format!("{}{}", if taken { &mark } else { "" }, outs[k]),
             empty: empty[k],
+            wiff: wiff[k],
         });
     }
     made
@@ -92,7 +116,16 @@ impl Entry {
     /// The name in the progress line: the plan input, and «no scans» for an injection that acquired nothing.
     pub(crate) fn shown(&self) -> String {
         if self.empty {
-            format!("{} (no scans: an empty injection)", self.label)
+            let why = if self.wiff {
+                crate::error_text::catalog_text("warn.wiff.emptySample")
+            } else {
+                None
+            };
+            format!(
+                "{} (no scans: {})",
+                self.label,
+                why.unwrap_or("an empty injection")
+            )
         } else {
             self.label.clone()
         }

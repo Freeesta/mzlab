@@ -225,6 +225,7 @@ impl Reader for SrmFromScans {
     fn samples(&self) -> &[Sample] {
         self.inner.samples()
     }
+    #[rustfmt::skip] fn unindexed(&self) -> (usize, usize) { self.inner.unindexed() }
     fn missing(&mut self, c: usize) -> usize {
         self.inner.missing(c)
     }
