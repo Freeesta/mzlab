@@ -1,6 +1,6 @@
 # Vista Dati, bassa risoluzione (`explore.js` e compagni)
 Mappa dei file (script classici in `index.html`, in quest'ordine, campo globale condiviso; ogni funzione sta in un solo file): `explore.js` = colori, velo di avvio (`#loading`) e `#busybar`, taccuino, dati con cache e caricamento/lista file, barra file, finestre e menu; `pannelli.js` = pannelli mobili (posto, trascinamento, schede, nomi e metadati delle immagini/Excel, `XIC_BELOW`); `grafici.js` = disegno dei grafici (cromatogrammi, correzioni, zoom, `drawMap`); `picchi.js` = integrazione dei picchi, spettri, `contMarks`;
-`eventi.js` = mouse e tastiera sui grafici, metodo di acquisizione, barra strumenti, calcolatrice formula → m/z, suggerimenti (tooltip).
+`eventi.js` = mouse e tastiera sui grafici, metodo di acquisizione, barra strumenti, calcolatrice formula → m/z; tooltip `#qtip` in `tooltip.js`.
 Il nucleo è in CLAUDE.md.
 
 ## Caricamento

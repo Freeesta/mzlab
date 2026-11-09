@@ -12,7 +12,7 @@ id,area,label,key,file_line,it,en,chars,flags,source
 11,pannelli,,canali.miss.title,mzlab/web/canali.js:278,Questo file non ha il canale,This file does not have the channel,35,non,site
 12,pannelli,,ibk.chip.title+fondo.chip.auto.title,mzlab/web/grafici.js:223,"Toglie la media del tratto da tutta la traccia // Linea di base SNIP: fondo minimo e massimo tolto, in cps","Subtracts the mean of the stretch from the whole trace // SNIP baseline: minimum and maximum background removed, in cps",119,>90,site
 13,pannelli,,tip.area,mzlab/web/grafici.js:444,"<b>Area</b> {area} <span class=""sm"">conteggi·s</span> · intensità <b>{y}</b>","<b>Area</b> {area} <span class=""sm"">counts·s</span> · intensity <b>{y}</b>",76,dinamico,site
-14,pannelli,${t},,mzlab/web/pannelli.js:1035,${t},,4,dinamico,site
+14,pannelli,${t},,mzlab/web/pannelli.js:1040,${t},,4,dinamico,site
 15,pannelli,XIC,panel.xic.off+panel.xic.title,mzlab/web/pannelli.js:294,Non disponibile per MS2 // Finestra di m/z di uno ione,Not available for MS2 // m/z window of one ion,54,non,site
 16,pannelli,,panel.max.exit+panel.max.title,mzlab/web/pannelli.js:334,Esci dallo schermo intero (Esc) // Schermo intero: ingrandisce questo pannello (Esc per uscire),Exit full screen (Esc) // Full screen: enlarges this panel (Esc to exit),95,>90,site
 17,pannelli,,panel.num.title,mzlab/web/pannelli.js:49,Tasto {n}: attiva il pannello,Key {n}: activates the panel,29,dinamico,site
@@ -140,8 +140,8 @@ id,area,label,key,file_line,it,en,chars,flags,source
 139,pannelli,scala dei colori,ctl.map.scale.title,mzlab/web/pannelli.js:741,La radice quadrata fa emergere i segnali deboli,The square root brings out weak signals,47,,site
 140,pannelli,,,mzlab/web/pannelli.js:827,tip,,3,,site
 141,pannelli,,panel.pairArrow.title,mzlab/web/pannelli.js:88,Lo spettro sotto è del precursore scelto sopra,The spectrum below belongs to the precursor chosen above,56,,site
-142,pannelli,${I18N.t(,xic.adduct.title,mzlab/web/pannelli.js:969,Rende m/z dello ione dalla formula neutra e dall'addotto,Turns the neutral formula and adduct into the ion m/z,56,,site
-143,pannelli,×,xic.remove.title,mzlab/web/pannelli.js:969,Togli questo ione,Remove this ion,17,,site
+142,pannelli,${I18N.t(,xic.adduct.title,mzlab/web/pannelli.js:974,Rende m/z dello ione dalla formula neutra e dall'addotto,Turns the neutral formula and adduct into the ion m/z,56,,site
+143,pannelli,×,xic.remove.title,mzlab/web/pannelli.js:974,Togli questo ione,Remove this ion,17,,site
 144,pannelli,,,mzlab/web/scroll.js:134,t,,1,,site
 145,pannelli,&#9662;,sub.chip.title,mzlab/web/sottrazione.js:131,"Cambia file, fattore, normalizzazione e tolleranza","Change file, factor, normalisation and tolerance",50,,site
 146,pannelli,${EH(T(,sub.next,mzlab/web/sottrazione.js:131,File successivo,Next file,15,,site

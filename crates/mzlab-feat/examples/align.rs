@@ -1,6 +1,6 @@
 //! Time and counts of the alignment of a series of `.mzidx` files and of the RT map.
 //!
-//!     cargo run --release -p mzlab-feat --example allinea -- <file.mzidx>... [--neg] [--tsv FILE] [--family] [--truth FILE]
+//!     cargo run --release -p mzlab-feat --example align -- <file.mzidx>... [--neg] [--tsv FILE] [--family] [--truth FILE]
 //!
 //! Detects every file, aligns them "per ion" and prints the groups (all, in >= 3 files, in all files), the anchors of the RT map and the times.
 //! `--family` also runs the quality, isotopes, MS2 and families of every file and the alignment "per family" (rows, members, SHA-256 of two runs).
