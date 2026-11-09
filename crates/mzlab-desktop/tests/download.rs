@@ -8,7 +8,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 use mzlab_desktop::download::*;
-use mzlab_desktop::librerie::Folder;
+use mzlab_desktop::libraries::Folder;
 use mzlab_desktop::update::{sha256_hex, Http};
 
 enum Reply {

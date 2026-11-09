@@ -2,7 +2,7 @@
 //! `RunEvent::Opened` on macOS) and the commands the page calls (`predefinito.js`). The rules are in `opening.rs`.
 
 use super::{data_dir, register, save_config, PickedFile};
-use mzlab_desktop::librerie;
+use mzlab_desktop::libraries;
 use mzlab_desktop::opening::{self, NoticeAnswer, Pending};
 use mzlab_desktop::State;
 use serde::Serialize;
@@ -27,9 +27,9 @@ pub fn take_opened(
     let files = register(&state, pending.take());
     let ask = !files.is_empty()
         && data_dir(&app).is_ok_and(|d| {
-            let mut c = librerie::read_config(&d);
+            let mut c = libraries::read_config(&d);
             let ask = opening::record_opening(&mut c);
-            let _ = librerie::write_config(&d, &c);
+            let _ = libraries::write_config(&d, &c);
             ask
         });
     Opened { files, ask }
@@ -52,7 +52,7 @@ fn hand_over(app: &AppHandle, paths: Vec<PathBuf>) {
 #[tauri::command]
 pub fn assoc_get(app: AppHandle) -> serde_json::Value {
     let c = data_dir(&app)
-        .map(|d| librerie::read_config(&d))
+        .map(|d| libraries::read_config(&d))
         .unwrap_or_default();
     serde_json::json!({ "answer": c.risposta, "count": c.aperture })
 }

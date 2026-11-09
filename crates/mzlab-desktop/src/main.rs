@@ -8,7 +8,7 @@
     windows_subsystem = "windows"
 )]
 
-mod apri;
+mod open;
 mod startup;
 
 use std::path::PathBuf;
@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use mzlab_desktop::opening::{self, Pending};
-use mzlab_desktop::librerie::{self, Config};
+use mzlab_desktop::libraries::{self, Config};
 use mzlab_desktop::release;
 use mzlab_desktop::download::{self, Policy};
 use mzlab_desktop::update::{self, Http, Source, UpdateError};
@@ -122,7 +122,7 @@ fn register_paths(state: tauri::State<'_, Arc<State>>, paths: Vec<String>) -> Ve
 /// The folder of the data pointed at by the user (kept in `config.json`), if it still exists.
 fn data_root(app: &AppHandle) -> Option<PathBuf> {
     let d = data_dir(app).ok()?;
-    let p = PathBuf::from(librerie::read_config(&d).dati?);
+    let p = PathBuf::from(libraries::read_config(&d).dati?);
     p.is_dir().then_some(p)
 }
 
@@ -279,7 +279,7 @@ struct LibConfig {
 
 fn lib_config(app: &AppHandle, state: &State) -> LibConfig {
     let c = data_dir(app)
-        .map(|d| librerie::read_config(&d))
+        .map(|d| libraries::read_config(&d))
         .unwrap_or_default();
     LibConfig {
         dir: state.libs.root().to_string_lossy().into_owned(),
@@ -290,9 +290,9 @@ fn lib_config(app: &AppHandle, state: &State) -> LibConfig {
 
 fn save_config(app: &AppHandle, f: impl FnOnce(&mut Config)) -> Result<(), String> {
     let d = data_dir(app).map_err(|e| e.detail)?;
-    let mut c = librerie::read_config(&d);
+    let mut c = libraries::read_config(&d);
     f(&mut c);
-    librerie::write_config(&d, &c).map_err(|e| e.key.to_string())
+    libraries::write_config(&d, &c).map_err(|e| e.key.to_string())
 }
 
 #[tauri::command]
@@ -400,7 +400,7 @@ async fn lib_download_external(
     let (st, flag) = (state.inner().clone(), cancel.0.clone());
     tauri::async_runtime::spawn_blocking(move || {
         if !data_dir(&app)
-            .map(|d| librerie::read_config(&d).esterne)
+            .map(|d| libraries::read_config(&d).esterne)
             .unwrap_or(false)
         {
             return err_json("lib.dl.err.externalOff", "");
@@ -433,7 +433,7 @@ fn main() {
     let state = Arc::new(State::new());
     let for_protocol = state.clone();
     let app = tauri::Builder::default()
-        .plugin(apri::single_instance())
+        .plugin(open::single_instance())
         .plugin(tauri_plugin_dialog::init())
         .manage(state.clone())
         .manage(Pending::default())
@@ -459,10 +459,10 @@ fn main() {
             lib_download,
             lib_download_external,
             lib_cancel,
-            apri::take_opened,
-            apri::assoc_get,
-            apri::assoc_answer,
-            apri::assoc_reset
+            open::take_opened,
+            open::assoc_get,
+            open::assoc_answer,
+            open::assoc_reset
         ])
         .setup(startup::setup)
         .register_asynchronous_uri_scheme_protocol("mzlab", move |_ctx, request, responder| {
@@ -489,7 +489,7 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("mzlab: the window could not start");
     app.run(move |handle, event| {
-        apri::run_event(handle, &event);
+        open::run_event(handle, &event);
         if let RunEvent::Exit = event {
             state.cleanup();
         }
