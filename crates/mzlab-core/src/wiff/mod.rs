@@ -292,12 +292,12 @@ fn polarity(method: &Option<Method>) -> i8 {
         })
 }
 
-/// A SIM method of several periods is `periods=N`: only Period0 is read, so its cycles would be laid out wrong.
+/// A SIM method of several periods is `err.file.wiffPeriods`, as the readers module refuses it: only Period0 is read, so its cycles would be laid out wrong.
 fn sim_periods(ole: &Ole, sample: u32, experiments: &[Experiment]) -> Result<()> {
     if experiments.iter().any(|e| modi::sim(e.code)) {
         let p = period_count(ole, sample);
         if p > 1 {
-            return Err(bad(&format!("periods={p}")));
+            return Err(Error::new("err.file.wiffPeriods").with("periods", p));
         }
     }
     Ok(())
