@@ -1,4 +1,4 @@
-"""Product ion panels (demo files): the spectrum offers only the files with scans of its precursor and the precursors of the active file with their scan count; no «Follows», no overlay; the pair badge on one line; the second pair (_bis) obeys the same rules."""
+"""Product ion panels (demo files): the spectrum offers only the files with scans of its precursor and the precursors of the active file with their scan count; no «Follows», no overlay; the pair badge on one line; the second pair (_bis), of the other file, makes it the only drawn MS2 file and obeys the same rules."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 ES = ROOT / "mzlab" / "web" / "esempi"
@@ -27,14 +27,18 @@ try:
             ws = pg.evaluate("[...document.querySelectorAll('.ppair')].map(e => getComputedStyle(e).whiteSpace)"); assert ws and set(ws) == {"nowrap"}, ws
         step("pair badge on one line", badge)
         def bis():
-            pg.locator('#flst input[data-pr="237"]').click(); wait_for_js(pg, "E.panels.filter(p => p.tab === 'ms2' && p.type === 'chrom').length >= 2"); ready(pg)
-            open_ms2(pg); pg.locator('#flst [data-pg="237"]').dblclick(); wait_for_js(pg, f"{specs(pg)}.length >= 2"); ready(pg)
+            # the pair of a file not drawn makes it the only drawn MS2 file (MS2 files are never overlaid, esperimenti.js `unico`): the pair of MS2_t15 closes
+            pg.locator('#flst input[data-pr="237"]').click()
+            wait_for_js(pg, "E.panels.some(p => p.tab === 'ms2' && p.type === 'chrom' && String(p.prec) === '237')"); ready(pg)
+            vis = pg.evaluate("Object.fromEntries(E.files.map(f => [f.label, !!f.vis]))"); assert vis == {"MS2_t15": False, "MS2_t60": True}, vis
+            ch = pg.evaluate("E.panels.filter(p => p.tab === 'ms2' && p.type === 'chrom').map(p => String(p.prec))"); assert ch == ["237"], ch
+            open_ms2(pg); pg.locator('#flst [data-pg="237"]').dblclick(); wait_for_js(pg, f"{specs(pg)}.length >= 1"); ready(pg)
             q = pg.evaluate(f"{specs(pg)}.map(p => ({RULES})(p))")
-            assert [x["file"] for x in q] == ["MS2_t15", "MS2_t60"] or sorted(x["file"] for x in q) == ["MS2_t15", "MS2_t60"], q
-            b = [x for x in q if x["file"] == "MS2_t60"][0]
+            assert len(q) == 1 and q[0]["file"] == "MS2_t60", q
+            b = q[0]
             assert b["files"] == ["MS2_t60"] and b["prec"] == ["tutti", "237", "333"] and not b["fol"] and not b["all"], b
-            n = pg.evaluate(f"{specs(pg)}.every(p => p._a && p._a.data && p._a.data.length >= 1)"); assert n, "both spectra have data"
-        step("second pair (_bis): same rules, own file, with data", bis)
+            n = pg.evaluate(f"{specs(pg)}.every(p => p._a && p._a.data && p._a.data.length >= 1)"); assert n, "the spectrum has data"
+        step("second pair (_bis) of the other file: it alone is drawn, same rules, with data", bis)
 finally:
     r.close()
 bad = [s for s in steps if s[1] != "ok"]

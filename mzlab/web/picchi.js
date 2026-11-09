@@ -282,12 +282,12 @@ function hoverMark(/** @type {Pannello} */ p, /** @type {number} */ px) {
   if (k !== (p._mk ?? null)) { p._mk = k; drawSoon(p); }
 }
 // The window of a spectrum holds no scan of the kind shown (DDA, MS1/MS2 filters): the window moves to the nearest scan of that kind (on a tie the earlier one)
-// and the cursor of the chromatogram it follows snaps to it. False only when the file has no such scan at all.
-async function snapNearest(/** @type {Pannello} */ p, /** @type {Bag} */ f) {
+// and the cursor of the chromatogram it follows snaps to it. False only when the file has no such scan at all, or when a newer drawing (`tok`) moved the window meanwhile.
+async function snapNearest(/** @type {Pannello} */ p, /** @type {Bag} */ f, /** @type {number} */ tok) {
   try {
     const pr = p.prec != null && p.prec !== "" ? `&precursor=${p.prec}` : "", ft = p.filt ? `&filter=${encodeURIComponent(p.filt)}` : "";
     const n = await J(`api/nearest_scan?k=${f.k}&rt=${(p.r0 + p.r1) / 2}&level=${p.level || 1}${pr}${ft}`);
-    if (!n || n.rt == null) return false;
+    if (!n || n.rt == null || tok !== p._tok) return false;
     p.r0 = n.rt - NEAR; p.r1 = n.rt + NEAR;
     const c = E.panels.find((/** @type {Bag} */ q) => q.id === p.link); if (c) { c.cur = n.rt; cursorLine(c); }
     return true;
@@ -379,7 +379,8 @@ async function drawSpec(p, snapped) {
   }
   const nMz = data.reduce((/** @type {number} */ n, /** @type {Bag} */ x) => n + x.d.mz.length, 0);
   if (!nMz) {
-    if (!snapped && !isDda && files.length === 1 && p.r0 != null && await snapNearest(p, files[0])) return drawSpec(p, true);      // the cursor fell between two scans of this kind: the nearest one is shown
+    if (!snapped && !isDda && files.length === 1 && p.r0 != null && await snapNearest(p, files[0], tok)) return drawSpec(p, true);      // the cursor fell between two scans of this kind: the nearest one is shown
+    if (tok !== p._tok) return false;                    // a newer drawing (the apex of a double click) moved the window while the nearest scan was asked: it paints
     return say(I18N.t("spec.noScan"));
   }
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
