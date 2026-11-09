@@ -217,10 +217,10 @@ async function msnGrafoOp(m, id) {                                              
   const annuncia = p => postMessage({ op: "progress", id, ...p, frac: fraz(nat, p.phase, p.frac) });
   annuncia({ phase: "load", frac: 0 });
   const d = await derivata(name, p => { nat = true; annuncia(p); });
-  const blob = d ? d.mzml : m.blob, rd = conAvanzamento(readerFor, blob, annuncia), idx = d ? d.idx : undefined;
-  if (m.cerca) return msnLibCerca(name, blob, m.query || "", m.libreria || "", rd, idx);
-  if (m.libreria == null) return msnGrafo(name, blob, m.query || "", rd, !!m.esporta, idx);
-  return msnLibAggiungi(name, blob, m.query || "", m.libreria, m.molecola || "", rd, idx);
+  const blob = d ? d.mzml : m.blob, rd = conAvanzamento(readerFor, blob, annuncia), idx = d ? d.idx : undefined, q = (m.query || "") + (BUDGET_MB > 0 ? (m.query ? "&" : "") + "budget_mb=" + BUDGET_MB : "");      // q: with the engine's budget, spectra over it end in the calm error.memoryBudget (phase msnGraph), not a trap that restarts the engine
+  if (m.cerca) return msnLibCerca(name, blob, q, m.libreria || "", rd, idx);
+  if (m.libreria == null) return msnGrafo(name, blob, q, rd, !!m.esporta, idx);
+  return msnLibAggiungi(name, blob, q, m.libreria, m.molecola || "", rd, idx);
 }
 const labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });      // methods (.dam) and the routes of one item about its acquisition
 async function lrMigrate() {                                              // what an earlier visit left in IndexedDB passes to OPFS

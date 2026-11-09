@@ -1,5 +1,6 @@
 """«Range» popover of a chromatogram: the m/z and RT «from / to» pairs are read when the focus leaves the pair, so Tab moves between the fields without
-losing the focus; a reversed pair or letters are refused with a calm note in the popover and the old values back; undo, redo and a reload keep them."""
+losing the focus; a reversed pair or letters are refused with a calm note in the popover and the old values back; undo, redo and a reload keep them.
+Esc closes the popover and gives the focus back to its button; at 400 % zoom (320 px) the popover sits in «More», fits and still takes a pair."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -65,9 +66,32 @@ try:
             pg.keyboard.press("Control+y"); wait_for_js(pg, f"{C}.mz1 === 350", 5000)
             pg.keyboard.press("Control+y"); wait_for_js(pg, f"{C}.zoom != null", 5000)
         step("undo and redo bring the RT zoom and the m/z pair back", undo_redo)
+        def esc():
+            b = pg.locator("#dpanels .pnl.chrom [data-a=cpar]")
+            if b.get_attribute("aria-expanded") == "true": b.click()
+            b.focus(); pg.keyboard.press("Enter")
+            pg.wait_for_selector(f"{POP} [data-o=mz0]", state="visible"); pg.keyboard.press("Tab")
+            assert active(pg) == "mz0", active(pg)
+            pg.keyboard.press("Escape"); frames(pg, 3)
+            assert pg.evaluate(f"document.querySelector('{POP}').hidden"), "Esc left the popover open"
+            assert pg.evaluate("document.activeElement.dataset.a") == "cpar", "Esc did not give the focus back to the «Range» button"
+            assert pg.evaluate("document.activeElement.getAttribute('aria-expanded')") == "false"
+        step("keyboard: Enter opens the popover, Tab enters it, Esc closes it and the focus goes back to its button", esc)
+        def reflow():
+            pg.set_viewport_size({"width": 320, "height": 640}); ready(pg)    # 1280 px at 400 % zoom: the header moves «Range» into «More»
+            pg.focus("#dpanels .pnl.chrom [data-a=more]"); pg.keyboard.press("Enter")       # keyboard only: «More», then «Range» inside it
+            pg.wait_for_selector("#dpanels .pnl.chrom .hmore [data-a=cpar]", state="visible")
+            pg.focus("#dpanels .pnl.chrom [data-a=cpar]"); pg.keyboard.press("Enter"); pg.wait_for_selector(f"{POP} [data-o=mz0]", state="visible")
+            box = pg.evaluate(f"(()=>{{const b=document.querySelector('{POP}').getBoundingClientRect();return [b.left,b.right,document.documentElement.scrollWidth]}})()")
+            assert box[0] >= 0 and box[1] <= 320 and box[2] <= 320, f"the popover leaves the 320 px viewport: {box}"
+            write(pg, "mz0", "abc", "Enter"); wait_note(pg, "ctl.range.num")
+            write(pg, "mz0", "210", "Tab"); write(pg, "mz1", "320", "Enter")
+            wait_for_js(pg, f"{C}.mz0 === 210 && {C}.mz1 === 320", 5000)
+            pg.set_viewport_size({"width": 1500, "height": 2200}); ready(pg)
+        step("400 % zoom (320 px): the popover in «More» fits, refuses letters with a note and takes a pair", reflow)
         def reload():
             saved(pg); pg.reload(); wait_for_js(pg, f"typeof E !== 'undefined' && E.panels.some(q => q.type === 'chrom') && {C}.mz1 != null", 90000); ready(pg)
-            assert mz(pg) == [200, 350], mz(pg)
+            assert mz(pg) == [210, 320], mz(pg)
         step("a reload keeps the m/z pair", reload)
     r.close()
 except Exception as e:

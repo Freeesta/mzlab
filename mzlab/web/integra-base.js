@@ -90,13 +90,13 @@ function ibOpen(p, it) {
     <fieldset class="pk-sec"><legend>${I18N.t("int.base.mode")}</legend>${["edges", "zero", "line"].map(opt).join("")}</fieldset>
     <fieldset class="pk-sec" id="ib-pts"><legend>${I18N.t("int.base.line")}</legend>${num("t0", 0)}${num("y0", 1)}${num("t1", 2)}${num("y1", 3)}
     <label class="ib-opt"><input type="checkbox" id="ib-lvl"${it.lvl ? " checked" : ""}> ${I18N.t("int.base.level")}</label></fieldset>
-    <div class="pk-act"><button id="ib-ok" type="button" class="go">${I18N.t("int.base.apply")}</button></div></div>`, () => {
+    <div id="ib-msg" class="fail sm" role="status" aria-live="polite"></div><div class="pk-act"><button id="ib-ok" type="button" class="go">${I18N.t("int.base.apply")}</button></div></div>`, () => {
     const pts = Q("#ib-pts"), sel = () => Q("#bigbody input[name=ib-m]:checked").value;
     const sync1 = () => { pts.disabled = sel() !== "line"; };
     Q("#bigbody").querySelectorAll("input[name=ib-m]").forEach(r => { r.onchange = sync1; }); sync1();
     Q("#ib-ok").onclick = () => {
       const v = [...Q("#bigbody").querySelectorAll("[data-ib]")].map(i => numIt(i.value)), k = sel(), lvl = Q("#ib-lvl").checked;
-      if (k === "line" && !v.every(Number.isFinite)) { if (window.toast) toast(I18N.t("int.base.bad")); return; }
+      if (k === "line" && !v.every(Number.isFinite)) { Q("#ib-msg").textContent = I18N.t("int.base.bad"); return; }   // in the modal: a toast would sit behind it
       pushIh(p); delete it.zero;
       if (k === "edges") { delete it.bm; delete it.bl; delete it.lvl; }
       else if (k === "zero") { it.bm = "zero"; delete it.bl; delete it.lvl; }

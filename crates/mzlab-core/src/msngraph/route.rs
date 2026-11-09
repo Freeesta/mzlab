@@ -109,7 +109,7 @@ pub fn graph_json<M: Scansioni + ?Sized>(
     (nome, sha): (&str, &str),
     (o, r): (&Options, &Grouping),
 ) -> Result<(Graph, String)> {
-    let l = read(scans, m, r)?;
+    let l = read(scans, m, r, o.budget)?;
     let g = build(
         &Input {
             albero: &l.albero,
