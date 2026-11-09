@@ -74,7 +74,7 @@ pub(crate) struct Opened {
     scratch: RefCell<Vec<u8>>,
 }
 
-pub(crate) fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
+pub(crate) fn open<R: ReadAt + ?Sized>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
     let mut h = [0u8; 16];
     if size < 16 {
         return Err(bad());
@@ -122,7 +122,7 @@ fn whole(e: &Value, k: &str) -> Result<u64> {
 impl Opened {
     /// The rows of the m/z column (sorted) below `x`, as `partition_point(|m| m < x)`, by halving with 8 bytes read a step, not the whole column: a
     /// slab of the alignment asks it of every file.
-    fn mz_rank<R: ReadAt>(&self, r: &mut R, size: u64, x: f64) -> Result<usize> {
+    fn mz_rank<R: ReadAt + ?Sized>(&self, r: &mut R, size: u64, x: f64) -> Result<usize> {
         let (count, off) = self.entry("mz", "f64")?;
         let end = u64::try_from(count)
             .ok()
@@ -162,7 +162,7 @@ impl Opened {
     }
 
     /// Rows `rows` (all when `None`) of the array `name`, decoded `N` bytes at a time and read in pieces.
-    pub(crate) fn col<R: ReadAt, T, const N: usize>(
+    pub(crate) fn col<R: ReadAt + ?Sized, T, const N: usize>(
         &self,
         r: &mut R,
         size: u64,
@@ -238,6 +238,11 @@ pub fn read_file_from<R: ReadAt>(
     size: u64,
     want: Want,
 ) -> Result<(FileFeatures, Value)> {
+    read_file_dyn(r, size, want)
+}
+
+/// The body of `read_file_from`, once for every reader (its columns are many: one copy of them keeps the `.wasm` small).
+fn read_file_dyn(r: &mut dyn ReadAt, size: u64, want: Want) -> Result<(FileFeatures, Value)> {
     let o = open(r, size, "file")?;
     let rows = match want.mz {
         None => None,
