@@ -847,6 +847,7 @@ declare var rngIsOn: any;
 declare var roundc: any;
 declare var rowPc: any;
 declare var rowRemoval: any;
+declare var rtLabel: any;
 declare var rzRaf: any;
 declare var saveBlob: any;
 declare var scAhead: any;
