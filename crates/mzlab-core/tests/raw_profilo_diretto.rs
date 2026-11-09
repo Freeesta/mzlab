@@ -35,7 +35,7 @@ const STRANI: [f32; 9] = [
 ];
 
 /// A packet with a profile of random chunks (`first_value`, `step` as given), five centroids and their labels.
-fn pacchetto(rng: &mut Rng, fudge: bool, first_value: f64, step: f64) -> Vec<u8> {
+fn packet(rng: &mut Rng, fudge: bool, first_value: f64, step: f64) -> Vec<u8> {
     let mut profilo = Vec::new();
     profilo.extend_from_slice(&first_value.to_le_bytes());
     profilo.extend_from_slice(&step.to_le_bytes());
@@ -60,11 +60,11 @@ fn pacchetto(rng: &mut Rng, fudge: bool, first_value: f64, step: f64) -> Vec<u8>
         bin += n + rng.below(30) as u32;
     }
     let n = 5u32;
-    let mut lista = Vec::new();
-    u32s(&mut lista, &[n]);
+    let mut list = Vec::new();
+    u32s(&mut list, &[n]);
     for i in 0..n {
-        lista.extend_from_slice(&(100.0f32 + i as f32).to_le_bytes());
-        lista.extend_from_slice(&(10.0f32 * i as f32).to_le_bytes());
+        list.extend_from_slice(&(100.0f32 + i as f32).to_le_bytes());
+        list.extend_from_slice(&(10.0f32 * i as f32).to_le_bytes());
     }
     let layout = if fudge { 1u32 } else { 0 };
     let mut v = Vec::new();
@@ -73,7 +73,7 @@ fn pacchetto(rng: &mut Rng, fudge: bool, first_value: f64, step: f64) -> Vec<u8>
         &[
             0,
             (profilo.len() / 4) as u32,
-            (lista.len() / 4) as u32,
+            (list.len() / 4) as u32,
             layout,
             n,
             n + 1,
@@ -84,7 +84,7 @@ fn pacchetto(rng: &mut Rng, fudge: bool, first_value: f64, step: f64) -> Vec<u8>
     v.extend_from_slice(&100.0f32.to_le_bytes());
     v.extend_from_slice(&900.0f32.to_le_bytes());
     v.extend(&profilo);
-    v.extend(&lista);
+    v.extend(&list);
     u32s(&mut v, &(0..n).collect::<Vec<_>>());
     u32s(&mut v, &[n]);
     for i in 0..n {
@@ -135,30 +135,30 @@ fn the_direct_profile_gives_the_points_of_the_chunks_to_the_bit() {
         &[0.0, 0.1, 2.0e5, 3.3e10],
     ];
     let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
-    let mut punti = 0;
-    for giro in 0..400 {
-        let fudge = giro % 2 == 0;
+    let mut points = 0;
+    for lap in 0..400 {
+        let fudge = lap % 2 == 0;
         // a step of -0.25 from 25.0: bin 100 lands exactly on frequency 0, the bins after it below zero
-        let (fv, st) = match giro % 3 {
+        let (fv, st) = match lap % 3 {
             0 => (258_000.0, -0.25),
             1 => (25.0, -0.25),
             _ => (150.0 + rng.below(1000) as f64, 0.0137),
         };
-        let bytes = pacchetto(&mut rng, fudge, fv, st);
+        let bytes = packet(&mut rng, fudge, fv, st);
         for c in coeffs {
             let (a, b) = (vecchia(&bytes, c), nuova(&bytes, c));
-            assert!(a.is_some(), "giro {giro}");
-            punti += a.as_ref().map_or(0, |p| p.0.len());
-            assert_eq!(bit(&a), bit(&b), "giro {giro}, {} coefficients", c.len());
+            assert!(a.is_some(), "giro {lap}");
+            points += a.as_ref().map_or(0, |p| p.0.len());
+            assert_eq!(bit(&a), bit(&b), "giro {lap}, {} coefficients", c.len());
         }
     }
-    assert!(punti > 100_000, "{punti}");
+    assert!(points > 100_000, "{points}");
 }
 
 #[test]
 fn a_cut_packet_is_refused_by_both_ways_at_the_same_lengths() {
     let mut rng = Rng(0x2545_f491_4f6c_dd1d);
-    let bytes = pacchetto(&mut rng, true, 258_000.0, -0.25);
+    let bytes = packet(&mut rng, true, 258_000.0, -0.25);
     let c: &[f64] = &[0.0, 0.0, -0.25, 1.0e13, 3.0e6];
     for n in 0..bytes.len() {
         let (a, b) = (vecchia(&bytes[..n], c), nuova(&bytes[..n], c));

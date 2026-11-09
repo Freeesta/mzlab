@@ -49,7 +49,7 @@ fn spans(files: &[&str]) -> Vec<Vec<(String, String)>> {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    campioni::proponi_spiegato(&v)
+    campioni::propose_explained(&v)
         .into_iter()
         .zip(files)
         .map(|(p, n)| {
@@ -122,10 +122,10 @@ fn spans_never_change_the_values_and_stay_inside_the_name() {
         .map(|n| (n.clone(), "ab".to_string(), String::new()))
         .collect();
     let plain = proponi(&v);
-    let explained = campioni::proponi_spiegato(&v);
+    let explained = campioni::propose_explained(&v);
     assert_eq!(plain.len(), explained.len());
     for ((p, e), n) in plain.iter().zip(&explained).zip(&names) {
-        assert_eq!(p, &e.campione, "{n:?}");
+        assert_eq!(p, &e.sample, "{n:?}");
         let len = n.chars().count();
         for q in &e.positions {
             assert!(q.start < q.end && q.end <= len, "{n:?} {q:?}");

@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::mzml::Spectrum;
 
 /// One folder per test: the tests run in parallel and the script rewrites its folder.
@@ -31,8 +31,8 @@ fn reference(tag: &str) -> Option<PathBuf> {
 }
 
 fn pair(wiff: &[u8], scan: &[u8]) -> FileSet {
-    let member = |nome: &str, b: &[u8]| Membro {
-        nome: nome.into(),
+    let member = |name: &str, b: &[u8]| Member {
+        nome: name.into(),
         dim: b.len() as u64,
         dati: Box::new(b.to_vec()),
         sha1: None,
@@ -44,7 +44,7 @@ fn pair(wiff: &[u8], scan: &[u8]) -> FileSet {
 
 /// The scans of every sample (`Err` = the key of the error at open) and how many blocks each sample misses.
 fn read(wiff: &[u8], scan: &[u8]) -> Result<Vec<(Vec<Spectrum>, usize)>, &'static str> {
-    let mut l = lettori::apri(pair(wiff, scan), &Limiti::sito()).map_err(|e| e.key)?;
+    let mut l = lettori::apri(pair(wiff, scan), &Limits::sito()).map_err(|e| e.key)?;
     let mut out = Vec::new();
     for c in 0..l.samples().len() {
         let n = l.index(c).map_err(|e| e.key)?.len();

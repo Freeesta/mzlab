@@ -2,7 +2,7 @@
 //! Included with `#[path = "comune/verita.rs"] mod verita;` by `verita_banco.rs` (the bench on built files) and by `verita_<famiglia>.rs` (the real corpus, skipped without data).
 #![allow(dead_code)]
 
-use mzlab_core::lettori::{Lettore, VoceScansione};
+use mzlab_core::lettori::{Reader, ScanEntry};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
@@ -136,9 +136,9 @@ pub fn verita_in(dir: &Path) -> Vec<PathBuf> {
 }
 
 /// F1 to F4 over sample `c` of an open reader; F0 is the caller's (it opened the file); F5 reads the `metodo/1` document.
-pub fn compare(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol, name: &str) -> Rapporto {
+pub fn compare(l: &mut dyn Reader, v: &Value, c: usize, tol: Tol, name: &str) -> Rapporto {
     let mut livelli: Vec<(&'static str, Outcome)> = vec![("F0", Outcome::Ok)];
-    let index: Vec<VoceScansione> = match l.index(c) {
+    let index: Vec<ScanEntry> = match l.index(c) {
         Ok(i) => i.to_vec(),
         Err(e) => {
             livelli.push(("F1", Outcome::Defect(vec![format!("index: {}", e.key)])));
@@ -194,17 +194,17 @@ pub fn esigi(rows: &[Rapporto]) {
 
 /// The native file (or folder) a truth belongs to: the path of the truth under `scratchpad/rosina/verita/`, without `.verita.json`, under `dati/formati/`.
 fn set_of(nativo: &Path) -> Option<mzlab_core::lettori::FileSet> {
-    use mzlab_core::lettori::{FileSet, Membro};
-    fn member(p: &Path, name: String) -> Option<Membro> {
+    use mzlab_core::lettori::{FileSet, Member};
+    fn member(p: &Path, name: String) -> Option<Member> {
         let f = std::fs::File::open(p).ok()?;
-        Some(Membro {
+        Some(Member {
             nome: name,
             dim: f.metadata().ok()?.len(),
             dati: Box::new(f),
             sha1: None,
         })
     }
-    fn round_trip(d: &Path, prefisso: &str, out: &mut Vec<Membro>) {
+    fn round_trip(d: &Path, prefisso: &str, out: &mut Vec<Member>) {
         let Ok(rd) = std::fs::read_dir(d) else { return };
         let mut entries: Vec<_> = rd.flatten().map(|e| e.path()).collect();
         entries.sort();
@@ -296,7 +296,7 @@ pub fn corpus(
         let tol = tolerance_of(&v, tol);
         let c = v["file"]["campione"].as_u64().unwrap_or(0) as usize;
         let fs = set_of(&nativo).unwrap_or_else(|| panic!("{rel}: cannot list the files"));
-        let l = match mzlab_lettori::apri(fs, &mzlab_core::lettori::Limiti::desktop()) {
+        let l = match mzlab_lettori::apri(fs, &mzlab_core::lettori::Limits::desktop()) {
             Ok(mut l) => compare(&mut *l, &v, c, tol, &rel),
             Err(e) => Rapporto {
                 file: rel.clone(),

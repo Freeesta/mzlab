@@ -1,7 +1,7 @@
 //! Hostile and hand-built input for the Bruker reader: a SQLite file and a `tdf_bin` made inside the test (no real data), page cycles, long varints, fake zstd, truncations, a write-ahead log.
 #![cfg(feature = "bruker")]
 
-use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::lettori::{FileSet, Member};
 use mzlab_lettori::bruker::sqlite_min::Sqlite;
 
 mod comune_sqlite;
@@ -184,7 +184,7 @@ fn the_log_wins_if_confirmed() {
 // ---- a whole folder ----
 
 fn folder(bin: Vec<u8>, tdf: Vec<u8>) -> FileSet {
-    let m = |n: &str, b: Vec<u8>| Membro {
+    let m = |n: &str, b: Vec<u8>| Member {
         nome: format!("x.d/{n}"),
         dim: b.len() as u64,
         dati: Box::new(b),
@@ -212,7 +212,7 @@ fn a_hand_made_folder_opens_and_sums_the_scans() {
 fn a_timstof_is_high_resolution() {
     // the header names the quadrupole-TOF: the scan table reads the run as high resolution (hr1), as the page and the record show it
     let mut l = mzlab_lettori::apri(folder(blocco2(), minimal_tdf(3)), &limits()).unwrap();
-    let p = mzlab_core::upload::prepare_lettore(&mut *l, 0, &[], "x.d").unwrap();
+    let p = mzlab_core::upload::prepare_reader(&mut *l, 0, &[], "x.d").unwrap();
     assert!(p.table.hr1);
 }
 
@@ -333,7 +333,7 @@ fn no_truncation_of_a_folder_database_panics() {
 fn baf_only_says_how_to_export() {
     let b = vec![1u8, 2, 3];
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.d/analysis.baf".into(),
             dim: 3,
             dati: Box::new(b),
@@ -347,7 +347,7 @@ fn baf_only_says_how_to_export() {
 /// A folder that lacks the database or its `*_bin` (TDF or TSF) names the file it lacks; a database that is not SQLite (an empty copy) is an error with a key, not «not accepted».
 #[test]
 fn a_folder_missing_one_of_its_files_says_which() {
-    let m = |n: &str, b: Vec<u8>| Membro {
+    let m = |n: &str, b: Vec<u8>| Member {
         nome: format!("x.d/{n}"),
         dim: b.len() as u64,
         dati: Box::new(b),
@@ -387,7 +387,7 @@ fn a_folder_missing_one_of_its_files_says_which() {
 
 #[test]
 fn an_agilent_folder_is_not_bruker() {
-    let m = |n: &str| Membro {
+    let m = |n: &str| Member {
         nome: n.into(),
         dim: 16,
         dati: Box::new(vec![0u8; 16]),

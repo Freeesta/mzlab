@@ -6,16 +6,16 @@ use crate::error::{Error, Result};
 use crate::json::{parse, Value};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Formato {
+pub enum Format {
     Msp,
     MassBank,
 }
 
-impl Formato {
-    pub fn parse(s: &str) -> Result<Formato> {
+impl Format {
+    pub fn parse(s: &str) -> Result<Format> {
         match s {
-            "msp" => Ok(Formato::Msp),
-            "massbank" => Ok(Formato::MassBank),
+            "msp" => Ok(Format::Msp),
+            "massbank" => Ok(Format::MassBank),
             _ => {
                 Err(Error::new("err.flow.param.type")
                     .with("detail", "--formato is msp or massbank"))
@@ -60,7 +60,7 @@ struct Rec {
 }
 
 /// The peaks of a spectrum `s` of the graph `g`; with `annota` the formula of the node of each peak and the loss of the arc that comes from the precursor.
-fn peaks(g: &Value, s: &Value, pulito: bool, annota: bool) -> Vec<Pk> {
+fn peaks(g: &Value, s: &Value, clean: bool, annotate: bool) -> Vec<Pk> {
     let all = s.get("picchi").map_or(&[][..], |p| p.arr());
     let by_id = |list: &str, id: &str, key: &str| {
         g.get(list)
@@ -70,9 +70,9 @@ fn peaks(g: &Value, s: &Value, pulito: bool, annota: bool) -> Vec<Pk> {
     };
     let precursor = s.get("precursore").and_then(|p| p.str()).unwrap_or("");
     all.iter()
-        .filter(|p| !pulito || p.get("nodo").is_some_and(|n| n.str().is_some()))
+        .filter(|p| !clean || p.get("nodo").is_some_and(|n| n.str().is_some()))
         .filter_map(|p| {
-            let node = p.get("nodo").and_then(|n| n.str()).filter(|_| annota);
+            let node = p.get("nodo").and_then(|n| n.str()).filter(|_| annotate);
             let formula = node.and_then(|id| {
                 let f = by_id("nodi", id, "id")?.get("formula")?;
                 let name = f.get("scelta")?.str()?;
@@ -109,12 +109,12 @@ fn peaks(g: &Value, s: &Value, pulito: bool, annota: bool) -> Vec<Pk> {
 }
 
 /// The precursor m/z of a spectrum: its node when the graph has one, else the last step of the path (`305@cid35>261@cid35` → 261).
-fn precursor_mz(s: &Value, nodi: &[Value], tree: &str) -> f64 {
+fn precursor_mz(s: &Value, nodes: &[Value], tree: &str) -> f64 {
     let node = s
         .get("precursore")
         .and_then(|p| p.str())
         .and_then(|p| p.strip_prefix('n')?.parse::<usize>().ok())
-        .and_then(|k| nodi.get(k))
+        .and_then(|k| nodes.get(k))
         .and_then(|n| n.get("mz")?.f64());
     node.or_else(|| {
         let last = tree.rsplit('>').next()?;
@@ -123,12 +123,12 @@ fn precursor_mz(s: &Value, nodi: &[Value], tree: &str) -> f64 {
     .unwrap_or(0.0)
 }
 
-fn records(lib: &str, pulito: bool, tutti: bool, annota: bool) -> Result<Vec<Rec>> {
+fn records(lib: &str, clean: bool, all: bool, annotate: bool) -> Result<Vec<Rec>> {
     let v = parse(lib.as_bytes())?;
     let mut out = Vec::new();
     for e in v.get("voci").map_or(&[][..], |x| x.arr()) {
         let g = e.get("grafo").ok_or_else(|| Error::new("err.msnlib.bad"))?;
-        let nodi = g.get("nodi").map_or(&[][..], |x| x.arr());
+        let nodes = g.get("nodi").map_or(&[][..], |x| x.arr());
         let text = |v: Option<&Value>| v.and_then(|x| x.str()).unwrap_or("").to_string();
         let ion = text(e.get("ione").and_then(|i| i.get("formula")));
         let negative = g
@@ -137,7 +137,7 @@ fn records(lib: &str, pulito: bool, tutti: bool, annota: bool) -> Result<Vec<Rec
             .is_some_and(|p| p < 0.0);
         for s in g.get("spettri").map_or(&[][..], |x| x.arr()) {
             let level = s.get("livello").and_then(|x| x.f64()).unwrap_or(0.0) as i64;
-            if level != 2 && !tutti {
+            if level != 2 && !all {
                 continue;
             }
             let tree = text(s.get("albero"));
@@ -146,10 +146,10 @@ fn records(lib: &str, pulito: bool, tutti: bool, annota: bool) -> Result<Vec<Rec
                 ion: ion.clone(),
                 negative,
                 level,
-                mz: precursor_mz(s, nodi, &tree),
+                mz: precursor_mz(s, nodes, &tree),
                 act: text(s.get("att")),
                 ce: s.get("ce").and_then(|x| x.f64()).unwrap_or(0.0),
-                peaks: peaks(g, s, pulito, annota),
+                peaks: peaks(g, s, clean, annotate),
                 tree,
             });
         }
@@ -158,9 +158,9 @@ fn records(lib: &str, pulito: bool, tutti: bool, annota: bool) -> Result<Vec<Rec
 }
 
 fn msp(r: &Rec) -> String {
-    let modo = if r.negative { "N" } else { "P" };
+    let mode = if r.negative { "N" } else { "P" };
     let mut t = format!(
-        "Name: {} {} MS{} {} CE{}\nPrecursorMZ: {:.5}\nFormula: {}\nIon_mode: {modo}\n",
+        "Name: {} {} MS{} {} CE{}\nPrecursorMZ: {:.5}\nFormula: {}\nIon_mode: {mode}\n",
         r.id, r.tree, r.level, r.act, r.ce, r.mz, r.ion
     );
     t += &format!("Collision_energy: {}\nNum Peaks: {}\n", r.ce, r.peaks.len());
@@ -178,7 +178,7 @@ fn msp(r: &Rec) -> String {
 
 /// A MassBank record; `n` numbers the records of the export so every ACCESSION is unique.
 fn massbank(r: &Rec, n: usize) -> String {
-    let modo = if r.negative { "NEGATIVE" } else { "POSITIVE" };
+    let mode = if r.negative { "NEGATIVE" } else { "POSITIVE" };
     let path = r.tree.replace('>', " > ");
     let mut t = format!(
         "ACCESSION: MZLAB-{}-{n:04}\nRECORD_TITLE: {}; MS{}; {}; CE {}\n",
@@ -193,7 +193,7 @@ fn massbank(r: &Rec, n: usize) -> String {
         r.ion
     );
     t += &format!(
-        "AC$MASS_SPECTROMETRY: MS_TYPE MS{}\nAC$MASS_SPECTROMETRY: ION_MODE {modo}\n",
+        "AC$MASS_SPECTROMETRY: MS_TYPE MS{}\nAC$MASS_SPECTROMETRY: ION_MODE {mode}\n",
         r.level
     );
     t += &format!(
@@ -232,13 +232,13 @@ fn massbank(r: &Rec, n: usize) -> String {
 /// The text of a library: one record per spectrum (MS2 only unless `tutti`) of every entry; `annota` writes the formula and the loss of each explained peak.
 pub fn export_text(
     lib: &str,
-    formato: Formato,
+    format: Format,
     (pulito, tutti, annota): (bool, bool, bool),
 ) -> Result<String> {
     let recs = records(lib, pulito, tutti, annota)?;
-    Ok(match formato {
-        Formato::Msp => recs.iter().map(msp).collect(),
-        Formato::MassBank => recs
+    Ok(match format {
+        Format::Msp => recs.iter().map(msp).collect(),
+        Format::MassBank => recs
             .iter()
             .enumerate()
             .map(|(n, r)| massbank(r, n + 1))

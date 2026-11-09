@@ -2,20 +2,20 @@
 //! SHA-1 and the index text would push the reader modules over their size ceilings (`tools/build_lettori_wasm.sh`).
 use std::io::Write;
 
-use super::{Header, MzmlWriter, Opzioni, Result};
+use super::{Header, MzmlWriter, Options, Result};
 use crate::error::Error;
 
-pub(super) struct Indice;
+pub(super) struct Index;
 
-impl Indice {
+impl Index {
     pub fn new() -> Self {
-        Indice
+        Index
     }
 }
 
 impl<W: Write> MzmlWriter<W> {
     /// Not available in the browser build.
-    pub fn indicizzato(_: W, _: &Header, _: Opzioni) -> Result<Self> {
+    pub fn indexed(_: W, _: &Header, _: Options) -> Result<Self> {
         Err(Error::new("err.route.unavailable"))
     }
 

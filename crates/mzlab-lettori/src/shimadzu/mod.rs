@@ -12,7 +12,7 @@ mod rec;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{Campione, Fiducia, FileSet, Lettore, Limiti, VoceLettore, CONTRATTO};
+use mzlab_core::lettori::{Fiducia, FileSet, Limits, Reader, ReaderEntry, Sample, CONTRATTO};
 use mzlab_core::ole::Ole;
 
 use carica::{Data, Fam};
@@ -21,7 +21,7 @@ use meta::Meta;
 /// Above this intensity an `f32` loses counts: the spectrum then keeps the exact values.
 const F32_EXACT: u64 = 1 << 24;
 
-pub const ENTRY: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "shimadzu",
     contratto: CONTRATTO,
     estensioni: &[".qgd", ".lcd"],
@@ -63,7 +63,7 @@ fn find(fs: &mut FileSet) -> Option<(usize, Content)> {
 }
 
 /// A member named `.qgd`/`.lcd` that starts as an OLE2 container: the storages of its root (`Ignoto`), or `Rotto` when its directory cannot be followed.
-fn altro(m: &mut mzlab_core::lettori::Membro) -> Option<Content> {
+fn altro(m: &mut mzlab_core::lettori::Member) -> Option<Content> {
     let n = m.nome.to_ascii_lowercase();
     if !(n.ends_with(".qgd") || n.ends_with(".lcd")) || !dir::ole(m) {
         return None;
@@ -94,7 +94,7 @@ fn rifiuto(detail: &str) -> Error {
 }
 
 /// A copy cut before its directory (its header points past the end, `Ole::header_cut`): the same notice as a cut found after `open`.
-fn cut_before(m: &mut mzlab_core::lettori::Membro) -> Option<Error> {
+fn cut_before(m: &mut mzlab_core::lettori::Member) -> Option<Error> {
     let mut h = vec![0u8; m.dim.min(512) as usize];
     m.dati.read_at(0, &mut h).ok()?;
     let need = Ole::header_cut(&h).filter(|&n| n > m.dim)?;
@@ -106,7 +106,7 @@ fn cut_before(m: &mut mzlab_core::lettori::Membro) -> Option<Error> {
     )
 }
 
-fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let (i, c) = find(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted"))?;
     match &c {
         Content::Ignoto(v) => {
@@ -164,11 +164,11 @@ fn apri(mut fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
         .unwrap_or(&m.nome)
         .to_string();
     Ok(Box::new(ShimadzuReader {
-        samples: vec![Campione {
+        samples: vec![Sample {
             id: 0,
             nome: name.clone(),
             scansioni: d.indice.len(),
-            dimensione: None,
+            size: None,
         }],
         sha1: ole.sha1_hex(),
         nome: name,
@@ -184,7 +184,7 @@ pub struct ShimadzuReader {
     dim: u64,
     sha1: String,
     fam: Fam,
-    samples: Vec<Campione>,
+    samples: Vec<Sample>,
     d: Data,
     meta: Meta,
 }

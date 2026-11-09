@@ -6,7 +6,7 @@
 mod comune;
 
 use comune::*;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzml;
 use mzlab_core::numpress::{self, Np};
 
@@ -76,7 +76,7 @@ fn the_index_gives_level_precursor_tic_without_reading_peaks() {
         assert_eq!(v.polarita, 1);
         assert!((v.tic - x.intensities.iter().sum::<f64>()).abs() < 1e-6);
         assert!(v.id.starts_with("controllerType=0"));
-        assert!(v.posizione.is_some_and(|p| p.lunghezza > 0));
+        assert!(v.position.is_some_and(|p| p.lunghezza > 0));
     }
 }
 
@@ -227,7 +227,7 @@ fn numpress_chromatograms_are_read() {
 #[test]
 fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
     use mzlab_core::lettori_mzml;
-    use mzlab_core::mzmlwrite::Opzioni;
+    use mzlab_core::mzmlwrite::Options;
     let mut src = apri(mzml_di(
         &scansioni(),
         Cod::Np {
@@ -237,9 +237,9 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
         None,
     ));
     // this module opens an mzML only when it holds numpress arrays
-    let np = Opzioni {
+    let np = Options {
         numpress: true,
-        ..Opzioni::default()
+        ..Options::default()
     };
     let plain = lettori_mzml::scrivi_con(&mut *src, 0, Vec::new(), &mut |_, _| {}, np).unwrap();
     let indexed =
@@ -265,11 +265,11 @@ fn a_truncated_numpress_declares_the_missing_spectra() {
         zlib: false,
     };
     let b = mzml_di(&scan, cod, None);
-    let mut whole = mzlab_lettori::apri(file_set("a.mzML", b.clone()), &Limiti::sito()).unwrap();
+    let mut whole = mzlab_lettori::apri(file_set("a.mzML", b.clone()), &Limits::sito()).unwrap();
     assert_eq!(whole.missing(0), 0);
     let mut l = mzlab_lettori::apri(
         file_set("a.mzML", b[..b.len() * 3 / 4].to_vec()),
-        &Limiti::sito(),
+        &Limits::sito(),
     )
     .unwrap();
     let ha = l.samples()[0].scansioni;

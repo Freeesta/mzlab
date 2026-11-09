@@ -1,16 +1,16 @@
 //! `impl Lettore` of the Shimadzu reader (the struct is in `mod.rs`).
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 use super::carica::Fam;
 use super::{meta, rec, rifiuto, ShimadzuReader, F32_EXACT};
 
-impl Lettore for ShimadzuReader {
-    fn format(&self) -> Formato {
-        Formato::Altro("shimadzu")
+impl Reader for ShimadzuReader {
+    fn format(&self) -> Format {
+        Format::Altro("shimadzu")
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
@@ -22,11 +22,11 @@ impl Lettore for ShimadzuReader {
         ]
     }
 
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.samples
     }
 
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.one(c)?;
         Ok(&self.d.indice)
     }
@@ -69,7 +69,7 @@ impl Lettore for ShimadzuReader {
         })
     }
 
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.one(c)?;
         let (v, &(a, _, f)) = self
             .d
@@ -77,7 +77,7 @@ impl Lettore for ShimadzuReader {
             .get(k)
             .zip(self.d.pos.get(k))
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
-        let field = |name: &str, value: String| Campo {
+        let field = |name: &str, value: String| Field {
             nome: name.into(),
             valore: value,
             unita: None,
@@ -94,13 +94,13 @@ impl Lettore for ShimadzuReader {
         Ok(out)
     }
 
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         Ok(self
             .d
             .cromat
             .iter()
-            .map(|h| VoceCromatogramma {
+            .map(|h| ChromatogramEntry {
                 id: h.id.clone(),
                 tipo: h.kind,
                 unita: h.unit.clone(),

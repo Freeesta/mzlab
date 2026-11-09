@@ -2,7 +2,7 @@
 //! `{"table": {n_rows, n_files, rows, area, height, state, apex_rt}, "campioni": campioni/2, "opts": {...}}` (the matrices as lists of rows).
 
 use super::{build, CondOut, GroupOpts, GroupTable, GroupsOut, RowMeta, RowOut};
-use mzlab_core::campioni::{self, Campione};
+use mzlab_core::campioni::{self, Sample};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 use std::fmt::Write;
@@ -48,7 +48,7 @@ impl Fast for Out {
 }
 
 /// The text of `gruppi/1` for a table, the files and the options.
-pub fn gruppi_json(tb: &GroupTable, cs: &[Campione], opts: &GroupOpts) -> Result<String> {
+pub fn gruppi_json(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> Result<String> {
     Ok(to_json(&build(tb, cs, opts)?))
 }
 
@@ -391,14 +391,14 @@ pub fn opts_from_value(v: &Value) -> Result<GroupOpts> {
 }
 
 /// A parsed `campioni/2` document as the list of samples.
-pub fn campioni_from_value(v: &Value) -> Result<Vec<Campione>> {
+pub fn campioni_from_value(v: &Value) -> Result<Vec<Sample>> {
     let mut text = Out::default();
     dump(&mut text, v);
     campioni::from_json(text.0.as_bytes())
 }
 
 /// Reads the JSON input of `run_json`.
-pub fn parse_input(input: &[u8]) -> Result<(GroupTable, Vec<Campione>, GroupOpts)> {
+pub fn parse_input(input: &[u8]) -> Result<(GroupTable, Vec<Sample>, GroupOpts)> {
     let doc = parse(input)?;
     let tb = parse_table(doc.get("table").ok_or_else(|| size("table"))?)?;
     let mut cs_text = Out::default();

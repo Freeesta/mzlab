@@ -4,7 +4,7 @@
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
 use mzlab_core::{lettori_mzml, mzidx, upload};
 use sha2::{Digest, Sha256};
 
@@ -20,11 +20,11 @@ fn hex(b: &[u8]) -> String {
 
 /// `(mzidx, mzml, metodo, intestazioni)` hashes of the file.
 fn hashes(path: &Path) -> (String, String, String, String) {
-    let nome = path.file_name().unwrap().to_string_lossy().into_owned();
+    let name = path.file_name().unwrap().to_string_lossy().into_owned();
     let dim = std::fs::metadata(path).unwrap().len();
     let set = || FileSet {
-        membri: vec![Membro {
-            nome: nome.clone(),
+        membri: vec![Member {
+            nome: name.clone(),
             dim,
             dati: Box::new(std::fs::File::open(path).unwrap()),
             sha1: None,
@@ -32,10 +32,10 @@ fn hashes(path: &Path) -> (String, String, String, String) {
     };
     let mut fs = set();
     let imp = upload::impronte(&mut fs).expect("fingerprint");
-    let mut l: Box<dyn Lettore> = lettori::apri(set(), &Limiti::sito()).expect("open");
-    let p = upload::prepare_lettore(&mut *l, 0, &imp, &format!("{nome}.mzML")).expect("table");
+    let mut l: Box<dyn Reader> = lettori::apri(set(), &Limits::sito()).expect("open");
+    let p = upload::prepare_reader(&mut *l, 0, &imp, &format!("{name}.mzML")).expect("table");
     let mut out = Cursor::new(Vec::new());
-    mzidx::build_lettore(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("mzidx");
+    mzidx::build_reader(&p.table, &mut *l, 0, &mut out, 192 << 20).expect("mzidx");
     let mzidx = hex(&out.into_inner());
     let mut mz = Sha256Sink::default();
     lettori_mzml::scrivi(&mut *l, 0, &mut mz, &mut |_, _| {}).expect("mzML");
@@ -96,8 +96,8 @@ const PRIMA: &[(&str, [&str; 4])] = &[
     ),
 ];
 
-fn file(caso: &str) -> Option<PathBuf> {
-    let p = match caso {
+fn file(case: &str) -> Option<PathBuf> {
+    let p = match case {
         "LAB-A" => {
             let t = std::fs::read_to_string(dati_percorsi::percorso(
                 "dati/formati/raw_veloce_alias.tsv",
@@ -136,20 +136,20 @@ fn la_memoria_compatta_non_cambia_nessun_risultato() {
         return;
     };
     let print = std::env::var_os("RAW_EQ_PRINT").is_some();
-    for (caso, prima) in PRIMA {
-        let Some(p) = file(caso) else {
-            eprintln!("SKIP raw_equivalenza {caso}: file not found");
+    for (case, before) in PRIMA {
+        let Some(p) = file(case) else {
+            eprintln!("SKIP raw_equivalenza {case}: file not found");
             continue;
         };
         let (a, b, c, e) = hashes(&p);
         if print {
-            println!("    (\"{caso}\", [\"{a}\", \"{b}\", \"{c}\", \"{e}\"]),");
+            println!("    (\"{case}\", [\"{a}\", \"{b}\", \"{c}\", \"{e}\"]),");
             continue;
         }
         assert_eq!(
             [a.as_str(), b.as_str(), c.as_str(), e.as_str()],
-            *prima,
-            "{caso}"
+            *before,
+            "{case}"
         );
     }
 }
@@ -162,29 +162,29 @@ fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
         eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
         return;
     };
-    for caso in ["LAB-A", "PXD077492", "BAF"] {
-        let Some(p) = file(caso) else {
-            eprintln!("SKIP raw_equivalenza {caso}: file not found");
+    for case in ["LAB-A", "PXD077492", "BAF"] {
+        let Some(p) = file(case) else {
+            eprintln!("SKIP raw_equivalenza {case}: file not found");
             continue;
         };
-        let nome = p.file_name().unwrap().to_string_lossy().into_owned();
+        let name = p.file_name().unwrap().to_string_lossy().into_owned();
         let dim = std::fs::metadata(&p).unwrap().len();
         let fs = FileSet {
-            membri: vec![Membro {
-                nome,
+            membri: vec![Member {
+                nome: name,
                 dim,
                 dati: Box::new(std::fs::File::open(&p).unwrap()),
                 sha1: None,
             }],
         };
-        let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
-        let indice = l.index(0).unwrap().to_vec();
+        let mut l = lettori::apri(fs, &Limits::sito()).unwrap();
+        let index = l.index(0).unwrap().to_vec();
         let riletto =
-            mzlab_core::trasporto::decode_indice(&mzlab_core::trasporto::encode_indice(&indice))
+            mzlab_core::trasporto::decode_index(&mzlab_core::trasporto::encode_index(&index))
                 .unwrap();
-        assert_eq!(riletto, indice, "{caso}: index through the transport");
-        let passo = (indice.len() / 300).max(1);
-        for k in (0..indice.len()).step_by(passo) {
+        assert_eq!(riletto, index, "{case}: index through the transport");
+        let step = (index.len() / 300).max(1);
+        for k in (0..index.len()).step_by(step) {
             let a = l.scan(0, k).unwrap();
             let b = l.scan_data(0, k).unwrap();
             assert_eq!(
@@ -210,12 +210,12 @@ fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
                     &b.intensity,
                     &b.wide
                 ),
-                "{caso}: scan {k}"
+                "{case}: scan {k}"
             );
             assert_eq!(
                 (&a.id, &a.filter),
-                (&indice[k].id, &indice[k].filtro),
-                "{caso}: row {k}"
+                (&index[k].id, &index[k].filtro),
+                "{case}: row {k}"
             );
             let t = mzlab_core::trasporto::decode_scansione(
                 k,
@@ -225,7 +225,7 @@ fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
             assert_eq!(
                 (&t.mz, &t.intensity, t.rt, t.profile),
                 (&b.mz, &b.intensity, b.rt, b.profile),
-                "{caso}: transport {k}"
+                "{case}: transport {k}"
             );
         }
     }
@@ -239,27 +239,27 @@ fn la_testata_della_tabella_ha_i_campi_della_testata_completa() {
         eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
         return;
     };
-    let mut visti = 0;
+    let mut seen = 0;
     for e in std::fs::read_dir(dir).unwrap().flatten() {
         let p = e.path();
         if p.extension().is_none_or(|x| x != "raw") {
             continue;
         }
-        let nome = p.file_name().unwrap().to_string_lossy().into_owned();
+        let name = p.file_name().unwrap().to_string_lossy().into_owned();
         let fs = FileSet {
-            membri: vec![Membro {
-                nome: nome.clone(),
+            membri: vec![Member {
+                nome: name.clone(),
                 dim: std::fs::metadata(&p).unwrap().len(),
                 dati: Box::new(std::fs::File::open(&p).unwrap()),
                 sha1: None,
             }],
         };
-        let Ok(mut l) = lettori::apri(fs, &Limiti::sito()) else {
+        let Ok(mut l) = lettori::apri(fs, &Limits::sito()) else {
             continue;
         };
         let piena = l.mzml_header(0).unwrap().expect("full header");
         let leggera = l.table_header(0).unwrap().expect("light header");
-        let campi = |h: &mzlab_core::mzmlwrite::Header| {
+        let fields = |h: &mzlab_core::mzmlwrite::Header| {
             format!(
                 "{:?}",
                 (
@@ -272,8 +272,8 @@ fn la_testata_della_tabella_ha_i_campi_della_testata_completa() {
                 )
             )
         };
-        assert_eq!(campi(&leggera), campi(&piena), "{nome}");
-        visti += 1;
+        assert_eq!(fields(&leggera), fields(&piena), "{name}");
+        seen += 1;
     }
-    assert!(visti > 0, "no .raw opened");
+    assert!(seen > 0, "no .raw opened");
 }

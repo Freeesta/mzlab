@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_lettori::bruker::sqlite_min::Sqlite;
 
 pub mod pasef;
@@ -126,8 +126,8 @@ pub fn db(tabelle: &[(&str, &str, Vec<u8>)]) -> Vec<u8> {
     out
 }
 
-pub fn limits() -> Limiti {
-    Limiti::sito()
+pub fn limits() -> Limits {
+    Limits::sito()
 }
 
 pub fn apri_db(b: Vec<u8>, wal: Option<Vec<u8>>) -> mzlab_core::error::Result<Sqlite> {

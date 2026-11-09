@@ -6,7 +6,7 @@ use crate::composition::{compose, Opts, Ranges};
 use crate::elements::MASS;
 use crate::error::{Error, Result};
 use crate::json::{self, fmt_g, round, Out, Value};
-use crate::msnalbero::{albero_di, consenso, Raggruppa};
+use crate::msnalbero::{albero_di, consenso, Grouping};
 
 const MAX_SCANS: usize = 60;
 const MAX_PEAKS: usize = 120;
@@ -147,12 +147,12 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
     // nodes and parents from the one builder of the tree (`msnalbero`): a node without the generation before hangs from the nearest ancestor
     let tree = albero_di(
         scans.iter().map(|s| (s.level, Some(&s.path[..]))),
-        &Raggruppa::default(),
+        &Grouping::default(),
     );
     if tree.nodi.is_empty() {
         return Err(Error::new("err.tree.noPath"));
     }
-    if tree.nodi.iter().map(|n| n.chiave.len()).max().unwrap() < 2 {
+    if tree.nodi.iter().map(|n| n.key.len()).max().unwrap() < 2 {
         return Err(Error::new("err.tree.needStages"));
     }
     if tree.nodi.len() > 400 {
@@ -188,7 +188,7 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
         .collect();
     let mut nodes: Vec<Node> = vec![];
     for (g, tn) in tree.nodi.iter().enumerate() {
-        let nom = tn.chiave.last().unwrap().0;
+        let nom = tn.key.last().unwrap().0;
         let path = &scans[tn.scansioni[0]].path;
         let pk = tn.genitore;
         let src = match pk {
@@ -272,7 +272,7 @@ pub fn msn_tree<F: FnMut(usize) -> Result<(Vec<f64>, Vec<f64>)>>(
             parent: pk,
             path: path.clone(),
             label,
-            level: tn.chiave.len() + 1,
+            level: tn.key.len() + 1,
             scans: tn.scansioni.len(),
             prec: prec.map(|p| round(p, 5)),
             formula: form,

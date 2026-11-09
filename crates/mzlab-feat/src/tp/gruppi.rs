@@ -2,7 +2,7 @@
 //! the best hypothesis of each row, and the treated files of each condition for the network. Nothing here is read with fewer than two conditions: one
 //! condition (or none) leaves `tptab/1` and the network exactly as they are.
 
-use mzlab_core::campioni::Campione;
+use mzlab_core::campioni::Sample;
 use mzlab_core::error::Result;
 use mzlab_core::json::Value;
 
@@ -22,7 +22,7 @@ pub struct RowInfo {
 }
 
 /// The conditions when there are two or more, else none.
-pub fn conditions(cs: &[Campione]) -> Vec<CondFiles> {
+pub fn conditions(cs: &[Sample]) -> Vec<CondFiles> {
     let c = gruppi::condition_files(cs);
     if c.len() < 2 {
         Vec::new()
@@ -32,7 +32,7 @@ pub fn conditions(cs: &[Campione]) -> Vec<CondFiles> {
 }
 
 /// The treated files (time above 0) of each condition, in the order of the conditions; empty with fewer than two conditions.
-pub fn treated_by_condition(cs: &[Campione]) -> Vec<Vec<usize>> {
+pub fn treated_by_condition(cs: &[Sample]) -> Vec<Vec<usize>> {
     conditions(cs)
         .into_iter()
         .map(|c| {
@@ -106,7 +106,7 @@ fn group_table(t: &Aligned, rows: &[usize], infos: &[RowInfo]) -> GroupTable {
 /// `gruppi/1` of the rows `rows`, or `None` with fewer than two conditions.
 pub fn groups_json(
     t: &Aligned,
-    cs: &[Campione],
+    cs: &[Sample],
     rows: &[usize],
     infos: &[RowInfo],
 ) -> Result<Option<String>> {

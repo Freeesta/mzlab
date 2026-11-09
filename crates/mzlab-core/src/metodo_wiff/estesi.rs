@@ -5,7 +5,7 @@
 
 use super::counted_strings;
 use crate::metodo::V;
-use crate::metodo_campi::Campo;
+use crate::metodo_campi::Field;
 use crate::ole::Ole;
 
 /// Longest text of a field (a calibration table is a few hundred characters; the cut protects against a corrupt stream).
@@ -51,7 +51,7 @@ fn cut(t: &str) -> String {
 }
 
 /// The fields of `GLPTables` of the method `no`: one per table, titled by its first line; the version of Analyst that wrote the file is mapped.
-fn glp(ole: &Ole, no: u32) -> Vec<Campo> {
+fn glp(ole: &Ole, no: u32) -> Vec<Field> {
     let path = format!("MethodSubtree/Method{no}/GLPTables");
     let Some(b) = ole.read(&path) else {
         return vec![];
@@ -61,7 +61,7 @@ fn glp(ole: &Ole, no: u32) -> Vec<Campo> {
         const VERSION: &str = "File was created with the software version:";
         if let Some(at) = run.find(VERSION) {
             let v = run[at + VERSION.len()..].trim();
-            out.push(Campo::new(&path, "software", v).map("strumento.software"));
+            out.push(Field::new(&path, "software", v).map("strumento.software"));
             continue;
         }
         let title = run
@@ -74,7 +74,7 @@ fn glp(ole: &Ole, no: u32) -> Vec<Campo> {
             .trim()
             .to_string();
         if !title.is_empty() {
-            out.push(Campo::new(&path, &title, cut(&run)));
+            out.push(Field::new(&path, &title, cut(&run)));
         }
     }
     out
@@ -82,7 +82,7 @@ fn glp(ole: &Ole, no: u32) -> Vec<Campo> {
 
 /// The DAD header of sample `sample` (`.../DAD/DADSampleHeader`): the points, the channels and the wavelength range, kept only when they agree with each
 /// other and with the index (`DADIdx`: 32 bytes of header, then 8 per point).
-fn dad(ole: &Ole, sample: &str) -> Vec<Campo> {
+fn dad(ole: &Ole, sample: &str) -> Vec<Field> {
     let Some(path) = ole
         .paths_list()
         .find(|p| p.starts_with(sample) && p.ends_with("/DAD/DADSampleHeader"))
@@ -114,12 +114,12 @@ fn dad(ole: &Ole, sample: &str) -> Vec<Campo> {
         return vec![];
     }
     vec![
-        Campo::new(&path, "punti", points),
-        Campo::new(&path, "canali", channels),
-        Campo::new(&path, "durata", minutes).unit("min"),
-        Campo::new(&path, "lunghezza_onda_min", from).unit("nm"),
-        Campo::new(&path, "lunghezza_onda_max", to).unit("nm"),
-        Campo::new(&path, "passo", step).unit("nm"),
+        Field::new(&path, "punti", points),
+        Field::new(&path, "canali", channels),
+        Field::new(&path, "durata", minutes).unit("min"),
+        Field::new(&path, "lunghezza_onda_min", from).unit("nm"),
+        Field::new(&path, "lunghezza_onda_max", to).unit("nm"),
+        Field::new(&path, "passo", step).unit("nm"),
     ]
 }
 
@@ -178,20 +178,20 @@ pub(super) fn extend(doc: Option<V>, ole: &Ole, n: u32, sample: &str) -> Option<
     let mut doc = doc?;
     let no = crate::wiff::estesi::method_no(ole, n);
     mark_scheduled(&mut doc, ole, no);
-    let strings = |path: &str| -> Vec<Campo> {
+    let strings = |path: &str| -> Vec<Field> {
         ole.read(path)
             .map(|b| counted_strings(&b))
             .unwrap_or_default()
             .iter()
             .enumerate()
-            .map(|(i, s)| Campo::new(path, &format!("s{}", i + 1), s))
+            .map(|(i, s)| Field::new(path, &format!("s{}", i + 1), s))
             .collect()
     };
-    let mut campi = strings("SampleSubtree/DabsInfo");
-    campi.extend(strings("SampleSubtree/SampleTable"));
-    campi.extend(glp(ole, no));
-    campi.extend(dad(ole, sample));
-    let list: Vec<V> = campi.iter().filter_map(Campo::json).collect();
+    let mut fields = strings("SampleSubtree/DabsInfo");
+    fields.extend(strings("SampleSubtree/SampleTable"));
+    fields.extend(glp(ole, no));
+    fields.extend(dad(ole, sample));
+    let list: Vec<V> = fields.iter().filter_map(Field::json).collect();
     if let (V::Obj(f), false) = (&mut doc, list.is_empty()) {
         f.push(("campi", V::Arr(list)));
     }

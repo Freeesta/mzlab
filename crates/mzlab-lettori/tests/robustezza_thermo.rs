@@ -2,13 +2,13 @@
 //! Hostile `.raw` for the Thermo module: a real file (when the data repository is there) cut at many points and with bytes flipped gives an error with a key or a
 //! reading, never a panic, and what is read (index, SRM traces, UV channels, method) never panics either. Without the data the seed is a bare header, which must
 //! be refused with a key. No data of the laboratory is copied: the mutations are made in memory.
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
 fn file_set(byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.raw".into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
@@ -32,7 +32,7 @@ fn semi() -> Vec<Vec<u8>> {
 }
 
 fn everything(byte: Vec<u8>) {
-    let Ok(mut l) = mzlab_lettori::apri(file_set(byte), &Limiti::sito()) else {
+    let Ok(mut l) = mzlab_lettori::apri(file_set(byte), &Limits::sito()) else {
         return;
     };
     let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {
@@ -78,7 +78,7 @@ fn a_bare_header_is_refused_with_a_key() {
         let mut b = vec![0x01, 0xA1];
         b.extend("Finnigan".encode_utf16().flat_map(u16::to_le_bytes));
         b.resize(len, 0);
-        if let Err(e) = mzlab_lettori::apri(file_set(b), &Limiti::sito()) {
+        if let Err(e) = mzlab_lettori::apri(file_set(b), &Limits::sito()) {
             assert!(e.key.starts_with("err."), "{}", e.key);
         }
     }
@@ -120,7 +120,7 @@ fn every_version_number_is_read_or_refused_with_a_key() {
         .iter()
         .enumerate()
         {
-            match mzlab_lettori::apri(file_set(with_version(v, tail)), &Limiti::sito()) {
+            match mzlab_lettori::apri(file_set(with_version(v, tail)), &Limits::sito()) {
                 Ok(_) => assert!(DICHIARATE.contains(&v), "version {v} (tail {k}) opened"),
                 Err(e) => {
                     assert!(e.key.starts_with("err."), "{}", e.key);

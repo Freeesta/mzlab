@@ -104,15 +104,15 @@ fn no_field_of_the_side_files_is_left_out_of_campi() {
     for f in all {
         let d = Folder::load(&f).open();
         let doc = parse(&d.method(&source(&d)));
-        let campi = doc["campi"].as_array().unwrap();
+        let fields = doc["campi"].as_array().unwrap();
         let in_campi = |i: &&mzlab_core::agilent::meta::Item| {
             !(i.name == "text" && TEXTS.contains(&i.origin.as_str())) && !i.value.is_empty()
         };
         let wanted = d.metadata.iter().filter(in_campi).count();
-        assert_eq!(campi.len(), wanted, "{}: fields in campi", d.name);
+        assert_eq!(fields.len(), wanted, "{}: fields in campi", d.name);
         for i in d.metadata.iter().filter(in_campi) {
             assert!(
-                campi.iter().any(|c| c["origine"] == i.origin.as_str()
+                fields.iter().any(|c| c["origine"] == i.origin.as_str()
                     && c["chiave"] == i.name.as_str()
                     && c["valore"] == i.value.as_str()),
                 "{}: {} {} is missing",

@@ -161,7 +161,7 @@ fn a_wide_string_that_is_not_utf16_leaves_the_log_undecoded_at_open() {
 }
 
 /// The channel as it was before the finite numbers skipped the text of every value.
-fn canale_di_prima(label: &str, vals: &[&GenericValue]) -> Option<Campo> {
+fn canale_di_prima(label: &str, vals: &[&GenericValue]) -> Option<Field> {
     let (name, unit) = split_label(label);
     let texts: Vec<String> = vals.iter().map(|v| shown(v)).collect();
     if name.is_empty() || texts.iter().all(String::is_empty) {
@@ -184,7 +184,7 @@ fn canale_di_prima(label: &str, vals: &[&GenericValue]) -> Option<Campo> {
         u.dedup();
         (u.len().to_string(), format!("{name} (distinct values)"))
     };
-    Some(Campo::new(FROM, &key, value).unit(&unit))
+    Some(Field::new(FROM, &key, value).unit(&unit))
 }
 
 #[test]
@@ -213,7 +213,7 @@ fn a_channel_of_finite_numbers_gives_what_the_text_of_every_value_gave() {
         for label in ["Spray Voltage (V):", "Fore Vacuum:", ":"] {
             let a = channel(label, &vals);
             let b = canale_di_prima(label, &vals);
-            let key = |c: &Option<Campo>| {
+            let key = |c: &Option<Field>| {
                 c.as_ref()
                     .map(|c| (c.chiave.clone(), c.valore.clone(), c.unita.clone()))
             };

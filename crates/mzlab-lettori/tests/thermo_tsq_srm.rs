@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::{self, ChromKind, Spectrum};
 use mzlab_core::mzmlhead::Mzml;
 
@@ -28,17 +28,17 @@ fn data(rel: &str) -> Option<PathBuf> {
         .find(|p| p.is_file())
 }
 
-fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Lettore> {
+fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Reader> {
     let bytes = std::fs::read(raw).unwrap();
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "201208_15.raw".into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
             sha1: None,
         }],
     };
-    mzlab_lettori::apri_nudo(set, &Limiti::sito()).unwrap()
+    mzlab_lettori::apri_nudo(set, &Limits::sito()).unwrap()
 }
 
 fn close(a: f64, b: f64, rel: f64) -> bool {

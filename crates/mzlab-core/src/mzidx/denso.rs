@@ -1,7 +1,7 @@
 //! The limits of one 1-Da bucket of the `.mzidx` builder: the round that holds it when the peaks are in a scratch file, and the refusal of a bucket
 //! too dense for any round, given by pass 1 as soon as the peaks it counted prove it (`tests/mzidx_denso.rs`).
 
-use super::{Peak, Prima, DEFAULT_BUDGET, NB};
+use super::{First, Peak, DEFAULT_BUDGET, NB};
 use crate::error::{Error, Result};
 
 /// The largest round when the peaks are in a scratch file (the round of the default budget, `DEFAULT_BUDGET / 2`).
@@ -22,7 +22,7 @@ pub(super) fn round_cap(budget: usize, fixed: usize, spill: bool) -> usize {
     }
 }
 
-impl Prima<'_> {
+impl First<'_> {
     /// Every `DENSE_EVERY` scans: the refusal `build_dopo` would give at the end, as soon as the peaks counted so far prove it: a lone bucket is admitted while its sections
     /// cost at most `budget * 2`, and every scan is in its level's "all" section (12 B a peak if that section holds `f32`, else 24). So the rest of
     /// the file is neither decoded, kept nor spilled for an index that cannot be built.
@@ -32,7 +32,7 @@ impl Prima<'_> {
             return Ok(());
         }
         let at_least = |b: usize| -> usize {
-            self.gruppi
+            self.groups
                 .iter()
                 .map(|g| match g.counts32.get(b) {
                     Some(&c32) => c32.min(g.counts[b]) as usize * std::mem::size_of::<Peak<f32>>(),

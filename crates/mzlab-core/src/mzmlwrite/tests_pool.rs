@@ -14,10 +14,10 @@ fn spettri(n: usize) -> Vec<(Spectrum, SpectrumExtra)> {
     };
     (0..n)
         .map(|i| {
-            let punti = 3 + (rnd() * rnd() * 1500.0) as usize;
-            let (mut mz, mut inten) = (Vec::with_capacity(punti), Vec::with_capacity(punti));
+            let points = 3 + (rnd() * rnd() * 1500.0) as usize;
+            let (mut mz, mut inten) = (Vec::with_capacity(points), Vec::with_capacity(points));
             let mut x = 100.0;
-            for _ in 0..punti {
+            for _ in 0..points {
                 x += 0.01 + rnd() * 0.3;
                 mz.push(x);
                 inten.push((rnd() * rnd() * 1e5) as f32);
@@ -40,15 +40,15 @@ fn spettri(n: usize) -> Vec<(Spectrum, SpectrumExtra)> {
         .collect()
 }
 
-fn apri(opz: Opzioni, indicizzato: bool, n: usize) -> MzmlWriter<Vec<u8>> {
+fn apri(opz: Options, indexed: bool, n: usize) -> MzmlWriter<Vec<u8>> {
     let h = Header {
         run: "x".into(),
         ..Default::default()
     };
-    let mut w = if indicizzato {
+    let mut w = if indexed {
         MzmlWriter::indicizzato(Vec::new(), &h, opz)
     } else {
-        MzmlWriter::con_opzioni(Vec::new(), &h, opz)
+        MzmlWriter::with_options(Vec::new(), &h, opz)
     }
     .unwrap();
     w.open_spectra(n).unwrap();
@@ -61,8 +61,8 @@ fn chiudi(mut w: MzmlWriter<Vec<u8>>) -> Vec<u8> {
 }
 
 /// The file without the pool: one `spectrum_with` after the other.
-fn senza_gruppo(s: &[(Spectrum, SpectrumExtra)], opz: Opzioni, indicizzato: bool) -> Vec<u8> {
-    let mut w = apri(opz, indicizzato, s.len());
+fn senza_gruppo(s: &[(Spectrum, SpectrumExtra)], opz: Options, indexed: bool) -> Vec<u8> {
+    let mut w = apri(opz, indexed, s.len());
     s.iter()
         .for_each(|(sp, ex)| w.spectrum_with(sp, ex).unwrap());
     chiudi(w)
@@ -70,11 +70,11 @@ fn senza_gruppo(s: &[(Spectrum, SpectrumExtra)], opz: Opzioni, indicizzato: bool
 
 fn con_gruppo(
     s: &[(Spectrum, SpectrumExtra)],
-    opz: Opzioni,
-    indicizzato: bool,
+    opz: Options,
+    indexed: bool,
     thread: usize,
 ) -> Vec<u8> {
-    let mut w = apri(Opzioni { thread, ..opz }, indicizzato, s.len());
+    let mut w = apri(Options { thread, ..opz }, indexed, s.len());
     w.spettri(s.iter().cloned().map(Ok)).unwrap();
     chiudi(w)
 }
@@ -89,36 +89,36 @@ fn sha(b: &[u8]) -> String {
 #[test]
 fn the_bytes_are_the_same_with_1_2_7_threads_and_without_the_pool() {
     let s = spettri(2000);
-    for (numpress, indicizzato) in [(false, false), (false, true), (true, false), (true, true)] {
-        let opz = Opzioni {
+    for (numpress, indexed) in [(false, false), (false, true), (true, false), (true, true)] {
+        let opz = Options {
             numpress,
-            ..Opzioni::default()
+            ..Options::default()
         };
-        let atteso = senza_gruppo(&s, opz, indicizzato);
+        let expected = senza_gruppo(&s, opz, indexed);
         for thread in [1, 2, 7] {
-            let b = con_gruppo(&s, opz, indicizzato, thread);
+            let b = con_gruppo(&s, opz, indexed, thread);
             assert_eq!(
                 sha(&b),
-                sha(&atteso),
-                "numpress={numpress} indexed={indicizzato} threads={thread}"
+                sha(&expected),
+                "numpress={numpress} indexed={indexed} threads={thread}"
             );
-            assert!(b == atteso);
+            assert!(b == expected);
         }
     }
 }
 
 #[test]
 fn no_threads_and_an_empty_run_work() {
-    let opz = Opzioni::default();
-    let vuoto = con_gruppo(&[], opz, true, 3);
-    assert!(vuoto == senza_gruppo(&[], opz, true));
+    let opz = Options::default();
+    let empty = con_gruppo(&[], opz, true, 3);
+    assert!(empty == senza_gruppo(&[], opz, true));
     let s = spettri(5);
     assert!(con_gruppo(&s, opz, false, 0) == senza_gruppo(&s, opz, false));
 }
 
 /// What the writer has written when the pool stopped: the file up to the first `n` spectra, never closed.
-fn fino_a(s: &[(Spectrum, SpectrumExtra)], n: usize, indicizzato: bool) -> Vec<u8> {
-    let mut w = apri(Opzioni::default(), indicizzato, s.len());
+fn fino_a(s: &[(Spectrum, SpectrumExtra)], n: usize, indexed: bool) -> Vec<u8> {
+    let mut w = apri(Options::default(), indexed, s.len());
     s[..n]
         .iter()
         .for_each(|(sp, ex)| w.spectrum_with(sp, ex).unwrap());
@@ -130,15 +130,15 @@ fn an_error_at_spectrum_1500_is_the_error_returned_and_the_file_is_not_closed() 
     let s = spettri(2000);
     for thread in [1, 4, 7] {
         let mut w = apri(
-            Opzioni {
+            Options {
                 thread,
-                ..Opzioni::default()
+                ..Options::default()
             },
             false,
             s.len(),
         );
         let guasto =
-            |enc: &mut Codifica, k: usize, sp: &Spectrum, ex: &SpectrumExtra, t: &mut String| {
+            |enc: &mut Encoding, k: usize, sp: &Spectrum, ex: &SpectrumExtra, t: &mut String| {
                 if k == 1500 {
                     return Err(Error::new("err.test.injected").with("k", k));
                 }
@@ -161,15 +161,15 @@ fn an_error_at_spectrum_1500_is_the_error_returned_and_the_file_is_not_closed() 
 fn the_first_error_in_the_order_wins_over_a_later_one_and_over_the_reader() {
     let s = spettri(300);
     let mut w = apri(
-        Opzioni {
+        Options {
             thread: 5,
-            ..Opzioni::default()
+            ..Options::default()
         },
         true,
         s.len(),
     );
     let guasto =
-        |enc: &mut Codifica, k: usize, sp: &Spectrum, ex: &SpectrumExtra, t: &mut String| {
+        |enc: &mut Encoding, k: usize, sp: &Spectrum, ex: &SpectrumExtra, t: &mut String| {
             if k == 250 || k == 120 {
                 return Err(Error::new("err.test.injected").with("k", k));
             }
@@ -194,9 +194,9 @@ fn the_first_error_in_the_order_wins_over_a_later_one_and_over_the_reader() {
 fn a_reader_error_is_returned_after_the_spectra_before_it() {
     let s = spettri(300);
     let mut w = apri(
-        Opzioni {
+        Options {
             thread: 3,
-            ..Opzioni::default()
+            ..Options::default()
         },
         false,
         s.len(),
@@ -216,8 +216,8 @@ fn a_reader_error_is_returned_after_the_spectra_before_it() {
 #[test]
 fn the_default_is_the_cores_minus_one_and_at_least_one() {
     let n = std::thread::available_parallelism().map_or(1, |n| n.get());
-    assert_eq!(thread_predefinito(), n.saturating_sub(1).max(1));
-    assert_eq!(Opzioni::default().thread, thread_predefinito());
+    assert_eq!(default_threads(), n.saturating_sub(1).max(1));
+    assert_eq!(Options::default().thread, default_threads());
 }
 
 /// Blocks close by points as well as by count: a few spectra of 150 000 points among small ones, and an error inside a block of mixed sizes.
@@ -225,22 +225,22 @@ fn the_default_is_the_cores_minus_one_and_at_least_one() {
 fn blocks_closed_by_points_write_the_same_bytes_and_stop_at_the_same_error() {
     let mut s = spettri(90);
     for i in [3, 4, 40, 41, 77] {
-        let punti = 150_000;
-        s[i].0.mz = (0..punti).map(|k| 100.0 + k as f64 * 0.01).collect();
-        s[i].0.intensity = (0..punti).map(|k| (k % 977) as f32).collect();
+        let points = 150_000;
+        s[i].0.mz = (0..points).map(|k| 100.0 + k as f64 * 0.01).collect();
+        s[i].0.intensity = (0..points).map(|k| (k % 977) as f32).collect();
         s[i].0.wide = None;
     }
-    let opz = Opzioni::default();
-    let atteso = senza_gruppo(&s, opz, true);
+    let opz = Options::default();
+    let expected = senza_gruppo(&s, opz, true);
     for thread in [1, 3] {
         assert!(
-            con_gruppo(&s, opz, true, thread) == atteso,
+            con_gruppo(&s, opz, true, thread) == expected,
             "threads={thread}"
         );
     }
-    let mut w = apri(Opzioni { thread: 3, ..opz }, false, s.len());
+    let mut w = apri(Options { thread: 3, ..opz }, false, s.len());
     let guasto =
-        |enc: &mut Codifica, k: usize, sp: &Spectrum, ex: &SpectrumExtra, t: &mut String| {
+        |enc: &mut Encoding, k: usize, sp: &Spectrum, ex: &SpectrumExtra, t: &mut String| {
             if k == 41 {
                 return Err(Error::new("err.test.injected"));
             }

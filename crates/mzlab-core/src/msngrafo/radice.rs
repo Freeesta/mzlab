@@ -1,7 +1,7 @@
 //! Candidate formulas for the ion of the root when the user gave none (`docs/agenti/msn-grafo.md` §2): up to `MAX` formulas of `composition::compose` for
 //! the m/z of the first root of the graph, to fill the field `formula` of the options. Candidates only, never an identification.
 
-use super::{Grafo, Opzioni};
+use super::{Graph, Options};
 use crate::composition::{compose, Opts};
 use crate::json::parse;
 
@@ -13,12 +13,12 @@ const MAX: usize = 8;
 pub struct CandidatoRadice {
     /// Written as the option `formula` takes it: `C8H11N4O2+`.
     pub formula: String,
-    pub mz_teorico: f64,
+    pub theoretical_mz: f64,
     pub ppm: f64,
 }
 
 /// The candidates for the first root of a graph with no ion formula; none when it has one, or no root.
-pub fn candidati_radice(g: &Grafo, o: &Opzioni) -> Vec<CandidatoRadice> {
+pub fn root_candidates(g: &Graph, o: &Options) -> Vec<CandidatoRadice> {
     let Some(&r) = g.radici.first().filter(|_| g.ione.is_none()) else {
         return vec![];
     };
@@ -36,18 +36,17 @@ pub fn candidati_radice(g: &Grafo, o: &Opzioni) -> Vec<CandidatoRadice> {
     else {
         return vec![];
     };
-    let Some(righe) = v.get("results") else {
+    let Some(rows) = v.get("results") else {
         return vec![];
     };
-    righe
-        .arr()
+    rows.arr()
         .iter()
         .take(MAX)
         .filter_map(|x| {
             let f = x.get("formula")?.str()?.trim_end_matches(['+', '-']);
             Some(CandidatoRadice {
                 formula: format!("{f}{segno}"),
-                mz_teorico: x.get("mz_calc")?.f64()?,
+                theoretical_mz: x.get("mz_calc")?.f64()?,
                 ppm: x.get("delta_ppm")?.f64()?,
             })
         })

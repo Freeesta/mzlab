@@ -4,12 +4,12 @@
 
 mod comune;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::Spectrum;
 
 fn fs(name: &str, b: &[u8]) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: name.into(),
             dim: b.len() as u64,
             dati: Box::new(b.to_vec()),
@@ -20,7 +20,7 @@ fn fs(name: &str, b: &[u8]) -> FileSet {
 
 /// The scans of the first sample and its missing count, or the key of the first error.
 fn read(name: &str, b: &[u8]) -> Result<(Vec<Spectrum>, usize), &'static str> {
-    let mut l = mzlab_lettori::apri(fs(name, b), &Limiti::sito()).map_err(|e| e.key)?;
+    let mut l = mzlab_lettori::apri(fs(name, b), &Limits::sito()).map_err(|e| e.key)?;
     if l.samples().is_empty() {
         return Ok((Vec::new(), 0));
     }

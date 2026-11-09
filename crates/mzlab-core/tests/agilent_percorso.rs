@@ -7,31 +7,31 @@
 mod agilent_synth;
 
 use agilent_synth::{encode, sample};
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 
-fn apri(scan: Vec<u8>, peak: Vec<u8>) -> mzlab_core::error::Result<Box<dyn lettori::Lettore>> {
+fn apri(scan: Vec<u8>, peak: Vec<u8>) -> mzlab_core::error::Result<Box<dyn lettori::Reader>> {
     apri_con(scan, "MSPeak.bin", peak)
 }
 
 /// The run with its points in `AcqData/<punti>` (`MSPeak.bin`, or `MSProfile.bin` of a folder without peaks).
 fn apri_con(
     scan: Vec<u8>,
-    punti: &str,
+    points: &str,
     peak: Vec<u8>,
-) -> mzlab_core::error::Result<Box<dyn lettori::Lettore>> {
-    let membri = [
+) -> mzlab_core::error::Result<Box<dyn lettori::Reader>> {
+    let members = [
         ("x.D/AcqData/MSScan.bin".to_string(), scan),
-        (format!("x.D/AcqData/{punti}"), peak),
+        (format!("x.D/AcqData/{points}"), peak),
     ]
     .into_iter()
-    .map(|(n, b)| Membro {
+    .map(|(n, b)| Member {
         nome: n,
         dim: b.len() as u64,
         dati: Box::new(b),
         sha1: None,
     })
     .collect();
-    lettori::apri(FileSet { membri }, &Limiti::sito())
+    lettori::apri(FileSet { membri: members }, &Limits::sito())
 }
 
 /// A GC/MS run whose scans after the first are MRM visits.
@@ -78,7 +78,7 @@ fn the_module_reads_mrm_visits_as_srm_chromatograms() {
 }
 
 /// The scans and the TIC of a plain GC/MS run, as text: the engine and `agilent_ext` must give the same, so both builds compare it with one pinned value.
-fn lettura(l: &mut Box<dyn lettori::Lettore>) -> String {
+fn reading(l: &mut Box<dyn lettori::Reader>) -> String {
     let ix = l.index(0).unwrap().to_vec();
     let mut out = String::new();
     for (j, v) in ix.iter().enumerate() {
@@ -94,7 +94,7 @@ fn lettura(l: &mut Box<dyn lettori::Lettore>) -> String {
 fn a_plain_run_reads_the_same_on_both_builds() {
     let (scan, peak) = encode(&sample());
     let mut l = apri(scan, peak).expect("opens");
-    let got = lettura(&mut l);
+    let got = reading(&mut l);
     eprintln!("LETTURA\n{got}");
     assert_eq!(got, include_str!("agilent_percorso.txt").trim_end());
 }
@@ -109,7 +109,7 @@ fn a_profile_only_folder_takes_the_module_route() {
     assert_eq!(r.err().expect("refused").key, "err.file.agilentNoPeaks");
     #[cfg(feature = "estesi")]
     assert_eq!(
-        lettura(&mut r.expect("opens")),
+        reading(&mut r.expect("opens")),
         include_str!("agilent_percorso.txt").trim_end()
     );
 }

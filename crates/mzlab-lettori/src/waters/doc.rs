@@ -7,7 +7,7 @@ use super::inf::Entry;
 use super::lettore::{Fun, WatersReader};
 use mzlab_core::error::Result;
 use mzlab_core::metodo::{self, num, obj, sha1_hex, text, Source, SrcFile, V};
-use mzlab_core::metodo_campi::Campo;
+use mzlab_core::metodo_campi::Field;
 use mzlab_core::mzmlwrite::Header;
 
 /// The most files named in `origine` and the most fields kept.
@@ -219,7 +219,7 @@ fn identifier(key: &str, value: &str) -> bool {
         )
 }
 
-fn fields_of(origin: &str, entries: &[Entry], dest: &mut Vec<Campo>) {
+fn fields_of(origin: &str, entries: &[Entry], dest: &mut Vec<Field>) {
     for v in entries {
         if dest.len() >= FIELDS_MAX {
             return;
@@ -229,7 +229,7 @@ fn fields_of(origin: &str, entries: &[Entry], dest: &mut Vec<Campo>) {
         } else {
             format!("{origin}#{}", v.section)
         };
-        let c = Campo::new(&o, &v.chiave, &v.valore);
+        let c = Field::new(&o, &v.chiave, &v.valore);
         dest.push(if identifier(&v.chiave, &v.valore) {
             c.id()
         } else {
@@ -238,7 +238,7 @@ fn fields_of(origin: &str, entries: &[Entry], dest: &mut Vec<Campo>) {
     }
 }
 
-fn fields(l: &WatersReader) -> Vec<Campo> {
+fn fields(l: &WatersReader) -> Vec<Field> {
     let mut out = Vec::new();
     for (k, v) in &l.testata.entries {
         if out.len() >= FIELDS_MAX {
@@ -252,7 +252,7 @@ fn fields(l: &WatersReader) -> Vec<Campo> {
             "Instrument" => Some("strumento.modello"),
             _ => None,
         };
-        let c = Campo::new("waters:_HEADER.TXT", k, v);
+        let c = Field::new("waters:_HEADER.TXT", k, v);
         let c = if identifier(k, v) { c.id() } else { c };
         out.push(match mappa {
             Some(m) => c.map(m),
@@ -264,7 +264,7 @@ fn fields(l: &WatersReader) -> Vec<Campo> {
         fields_of("waters:_INLET.INF", &i.entries, &mut out);
     }
     for a in &l.analogiche {
-        out.push(Campo::new("waters:_CHROMS.INF", &a.name, &a.raw_value).unit(&a.unita));
+        out.push(Field::new("waters:_CHROMS.INF", &a.name, &a.raw_value).unit(&a.unita));
     }
     out
 }
@@ -322,7 +322,7 @@ pub(super) fn document(l: &mut WatersReader) -> Result<String> {
         ("lc", lc(l)),
         (
             "campi",
-            Some(V::Arr(fields(l).iter().filter_map(Campo::json).collect())),
+            Some(V::Arr(fields(l).iter().filter_map(Field::json).collect())),
         ),
         (
             "avvisi",

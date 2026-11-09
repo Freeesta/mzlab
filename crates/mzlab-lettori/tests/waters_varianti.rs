@@ -4,7 +4,7 @@
 mod comune_waters;
 
 use comune_waters::{file_set, folder_file, record_funzione};
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 /// One row of `_FUNCnnn.IDX`, variant B (30 bytes, offset as `u64` at byte 22).
 fn row_b(offset: u64, count: u32, tic: f32, rt_min: f32) -> Vec<u8> {
@@ -48,7 +48,7 @@ fn an_empty_function_list_is_told_with_the_folder() {
         .unwrap()
         .1
         .clear();
-    let e = mzlab_lettori::apri_nudo(file_set(f), &Limiti::sito())
+    let e = mzlab_lettori::apri_nudo(file_set(f), &Limits::sito())
         .err()
         .expect("refused");
     assert_eq!(e.key, "err.file.functionsEmpty");
@@ -57,7 +57,7 @@ fn an_empty_function_list_is_told_with_the_folder() {
 
 #[test]
 fn a_lone_function_of_unknown_records_is_told_with_its_number_and_type() {
-    let e = mzlab_lettori::apri_nudo(file_set(unknown_function()), &Limiti::sito())
+    let e = mzlab_lettori::apri_nudo(file_set(unknown_function()), &Limits::sito())
         .err()
         .expect("refused");
     assert_eq!(e.key, "err.file.recordVariant");
@@ -75,6 +75,6 @@ fn next_to_a_readable_function_the_folder_still_opens() {
     inf.extend(&base[0].1[416..832]);
     f.insert(0, ("_FUNCTNS.INF".into(), inf));
     f.extend(base.into_iter().filter(|(n, _)| n.starts_with("_FUNC002")));
-    let mut l = mzlab_lettori::apri_nudo(file_set(f), &Limiti::sito()).expect("opens");
+    let mut l = mzlab_lettori::apri_nudo(file_set(f), &Limits::sito()).expect("opens");
     assert!(l.chromatograms(0).expect("channels").len() >= 2);
 }

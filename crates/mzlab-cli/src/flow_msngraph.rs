@@ -7,7 +7,7 @@ use std::path::Path;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::molecules::{cerca, from_csv};
-use mzlab_core::msngrafo::{Opzioni, ParamRegole};
+use mzlab_core::msngrafo::{Options, RuleParams};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{one_input, write_made, FileRunner};
@@ -68,7 +68,7 @@ fn cleavage_params() -> Vec<Param> {
 }
 
 /// The parameters of the root ion and of the sub-formula windows.
-fn root_params(d: &Opzioni) -> Vec<Param> {
+fn root_params(d: &Options) -> Vec<Param> {
     vec![
             Param::text("formula", "Ion of the root")
                 .label("Root ion")
@@ -106,26 +106,26 @@ fn root_params(d: &Opzioni) -> Vec<Param> {
                 .label("Low m/z limit")
                 .tip("Below this m/z the wider low-mass window may apply.")
                 .min(0.0)
-                .default_num(d.mz_basso)
+                .default_num(d.mz_low)
                 .unit("m/z")
                 .doc("Below this m/z the window may widen to the low-mass window"),
             Param::number("wide_ppm", "Low-mass window")
                 .label("Low-mass window")
                 .tip("Wider ppm window used below the low m/z limit when enough evidences support the candidate.")
                 .min(0.0)
-                .default_num(d.ppm_basso)
+                .default_num(d.ppm_low)
                 .unit("ppm")
                 .doc("The wider window, for a candidate with enough evidences"),
             Param::integer("min_evidence", "Evidences for the wider window")
                 .label("Evidences for the wider window")
                 .tip("Number of evidences a candidate needs to use the wider window.")
                 .min(0.0)
-                .default_num(d.prove_min as f64),
+                .default_num(d.evidence_min as f64),
     ]
 }
 
 fn params() -> Vec<Param> {
-    let d = Opzioni::default();
+    let d = Options::default();
     let mut v = root_params(&d);
     v.extend(vec![
             Param::text("activation", "Activation")
@@ -171,13 +171,13 @@ fn params() -> Vec<Param> {
                 .label("Trap cut-off q")
                 .tip("Fragments below q/0.908 of the precursor m/z are treated as not observable.")
                 .min(0.0)
-                .default_num(ParamRegole::default().cutoff_q)
+                .default_num(RuleParams::default().cutoff_q)
                 .doc("Fragments below q/0.908 of the precursor m/z are not observable in a trap CID"),
             Param::number("loss_tol_mda", "Rule tolerance")
                 .label("Rule tolerance")
                 .tip("Maximum distance in mDa between a loss and the mass of a rule.")
                 .min(0.0)
-                .default_num(ParamRegole::default().toll_mda)
+                .default_num(RuleParams::default().toll_mda)
                 .unit("mDa")
                 .doc("Tolerance of a loss against the mass of a rule"),
             Param::text("pick", "Chosen formulas")
@@ -233,13 +233,13 @@ fn molecule(name: &str, adduct: &str, list: &str) -> Result<(String, Option<Stri
 }
 
 /// The options of the command from the resolved parameters; `molecules` is the text of the list the port gives, if any.
-fn options(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
-    let mut o = Opzioni {
+fn options(job: &Job, molecules: Option<&str>) -> Result<Options> {
+    let mut o = Options {
         formula: text(job, "formula"),
         smiles: text(job, "smiles"),
         molfile: text(job, "molfile"),
-        attivazione: text(job, "activation"),
-        ..Opzioni::default()
+        activation: text(job, "activation"),
+        ..Options::default()
     };
     if let (Some(name), None) = (text(job, "molecule"), &o.formula) {
         let list = molecules
@@ -250,9 +250,9 @@ fn options(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
         o.smiles = o.smiles.or(smiles);
     }
     o.ppm_formula = number(job, "ppm_formula", o.ppm_formula);
-    o.mz_basso = number(job, "low_mz", o.mz_basso);
-    o.ppm_basso = number(job, "wide_ppm", o.ppm_basso);
-    o.prove_min = number(job, "min_evidence", o.prove_min as f64) as usize;
+    o.mz_low = number(job, "low_mz", o.mz_low);
+    o.ppm_low = number(job, "wide_ppm", o.ppm_low);
+    o.evidence_min = number(job, "min_evidence", o.evidence_min as f64) as usize;
     o.isotopi = job
         .resolved
         .params
@@ -264,8 +264,8 @@ fn options(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
         .iter()
         .any(|(k, v)| k == "rules" && v.bool() == Some(true))
     {
-        let d = ParamRegole::default();
-        o.regole = Some(ParamRegole {
+        let d = RuleParams::default();
+        o.regole = Some(RuleParams {
             cutoff_q: number(job, "cutoff_q", d.cutoff_q),
             toll_mda: number(job, "loss_tol_mda", d.toll_mda),
         });
@@ -273,7 +273,7 @@ fn options(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
     for par in text(job, "pick").iter().flat_map(|s| s.split(',')) {
         let bad = || Error::new("err.flow.param.type").with("param", "pick");
         let (m, f) = par.split_once('=').ok_or_else(bad)?;
-        o.scelte
+        o.choices
             .push((m.trim().parse().map_err(|_| bad())?, f.trim().to_string()));
     }
     Ok(o)

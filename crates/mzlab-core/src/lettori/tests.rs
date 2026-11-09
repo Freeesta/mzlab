@@ -1,28 +1,28 @@
 use super::*;
 
 /// A reader of nothing, enough to open and to count.
-struct Vuoto {
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+struct Empty {
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
 }
 
-impl Lettore for Vuoto {
-    fn format(&self) -> Formato {
-        Formato::Altro("prova")
+impl Reader for Empty {
+    fn format(&self) -> Format {
+        Format::Altro("prova")
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
     fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         Err(Error::new("error.badIndex").with("k", k))
     }
-    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
         Ok(vec![])
     }
-    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(vec![])
     }
     fn chromatogram(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
@@ -33,22 +33,22 @@ impl Lettore for Vuoto {
     }
 }
 
-fn apri_vuoto(_: FileSet, _: &Limiti) -> Result<Box<dyn Lettore>> {
-    Ok(Box::new(Vuoto {
-        campioni: vec![Campione {
+fn open_empty(_: FileSet, _: &Limits) -> Result<Box<dyn Reader>> {
+    Ok(Box::new(Empty {
+        campioni: vec![Sample {
             id: 1,
             nome: "a".into(),
             scansioni: 0,
-            dimensione: None,
+            size: None,
         }],
         indice: vec![],
     }))
 }
 
-fn insieme(nome: &str, byte: &[u8]) -> FileSet {
+fn file_set(name: &str, byte: &[u8]) -> FileSet {
     FileSet {
-        membri: vec![Membro {
-            nome: nome.into(),
+        membri: vec![Member {
+            nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte.to_vec()),
             sha1: None,
@@ -66,50 +66,50 @@ fn riconosci_a(fs: &mut FileSet) -> Fiducia {
 }
 
 fn riconosci_forse(fs: &mut FileSet) -> Fiducia {
-    if fs.trova(".dat").is_some() {
+    if fs.find(".dat").is_some() {
         Fiducia::Forse
     } else {
         Fiducia::No
     }
 }
 
-const REGISTRO: &[VoceLettore] = &[
-    VoceLettore {
+const REGISTRY: &[ReaderEntry] = &[
+    ReaderEntry {
         id: "forse",
         contratto: CONTRATTO,
         estensioni: &[".dat", ".x"],
         riconosci: riconosci_forse,
-        apri: apri_vuoto,
+        apri: open_empty,
     },
-    VoceLettore {
+    ReaderEntry {
         id: "a",
         contratto: CONTRATTO,
         estensioni: &[".x", ".a"],
         riconosci: riconosci_a,
-        apri: apri_vuoto,
+        apri: open_empty,
     },
-    VoceLettore {
+    ReaderEntry {
         id: "vecchio",
         contratto: 0,
         estensioni: &[".old"],
         riconosci: |_| Fiducia::Si,
-        apri: apri_vuoto,
+        apri: open_empty,
     },
 ];
 
 #[test]
 fn the_surest_reader_wins_and_a_reader_of_another_contract_is_not_asked() {
-    let mut fs = insieme("dati.dat", b"AAxx");
-    assert_eq!(riconosci_in(REGISTRO, &mut fs).map(|v| v.id), Some("a")); // the bytes beat the extension
-    let mut fs = insieme("dati.dat", b"BBxx");
-    assert_eq!(riconosci_in(REGISTRO, &mut fs).map(|v| v.id), Some("forse"));
-    let mut fs = insieme("dati.zip", b"BBxx");
-    assert!(riconosci_in(REGISTRO, &mut fs).is_none());
+    let mut fs = file_set("dati.dat", b"AAxx");
+    assert_eq!(riconosci_in(REGISTRY, &mut fs).map(|v| v.id), Some("a")); // the bytes beat the extension
+    let mut fs = file_set("dati.dat", b"BBxx");
+    assert_eq!(riconosci_in(REGISTRY, &mut fs).map(|v| v.id), Some("forse"));
+    let mut fs = file_set("dati.zip", b"BBxx");
+    assert!(riconosci_in(REGISTRY, &mut fs).is_none());
 }
 
 #[test]
 fn the_extensions_for_the_pickers_come_from_the_registry_without_repeats() {
-    assert_eq!(estensioni_in(REGISTRO), [".dat", ".x", ".a", ".old"]);
+    assert_eq!(estensioni_in(REGISTRY), [".dat", ".x", ".a", ".old"]);
     // the real registry: whatever is registered, in lower case with the dot and without repeats
     let real = estensioni();
     assert!(real
@@ -120,58 +120,61 @@ fn the_extensions_for_the_pickers_come_from_the_registry_without_repeats() {
 
 #[test]
 fn an_unknown_set_is_an_error_with_a_key_and_the_head_is_read_at_most_to_the_end() {
-    let e = apri(insieme("x.bin", b"zz"), &Limiti::default())
+    let e = apri(file_set("x.bin", b"zz"), &Limits::default())
         .err()
         .unwrap();
     assert_eq!(e.key, "err.file.notAccepted");
-    let mut fs = insieme("x.bin", b"abc");
+    let mut fs = file_set("x.bin", b"abc");
     assert_eq!(fs.testa(0, 100), b"abc");
     assert!(fs.testa(5, 10).is_empty());
 }
 
 #[test]
 fn the_limits_refuse_what_a_file_asks_beyond_them() {
-    let l = Limiti {
+    let l = Limits {
         profondita: 4,
-        voci: 1000,
+        entries: 1000,
         byte: 1 << 20,
     };
-    assert_eq!(l.voci_ok(1000).unwrap(), 1000);
-    assert_eq!(l.voci_ok(1001).unwrap_err().key, "error.memoryBudget");
-    assert_eq!(l.voci_ok(u64::MAX).unwrap_err().key, "error.memoryBudget");
+    assert_eq!(l.ok_entries(1000).unwrap(), 1000);
+    assert_eq!(l.ok_entries(1001).unwrap_err().key, "error.memoryBudget");
+    assert_eq!(
+        l.ok_entries(u64::MAX).unwrap_err().key,
+        "error.memoryBudget"
+    );
     assert!(l.profondita_ok(4).is_ok());
     assert_eq!(l.profondita_ok(5).unwrap_err().key, "err.dam.unreadable");
-    assert!(Limiti::desktop().byte > Limiti::sito().byte);
+    assert!(Limits::desktop().byte > Limits::sito().byte);
 }
 
 #[test]
 fn a_reader_serves_the_trait() {
-    let mut l = apri_vuoto(FileSet::default(), &Limiti::default()).unwrap();
+    let mut l = open_empty(FileSet::default(), &Limits::default()).unwrap();
     assert_eq!(l.format().id(), "prova");
     assert_eq!(l.samples().len(), 1);
     assert!(l.index(0).unwrap().is_empty());
     assert!(l.scan(0, 3).is_err());
 }
 
-fn voce(rt: f64, livello: u8, tic: f64) -> VoceScansione {
-    VoceScansione {
+fn entry(rt: f64, level: u8, tic: f64) -> ScanEntry {
+    ScanEntry {
         id: String::new(),
         rt,
-        livello,
+        livello: level,
         polarita: 1,
         tic,
-        picco_base: None,
+        base_peak: None,
         filtro: String::new(),
         precursore: None,
-        posizione: None,
+        position: None,
     }
 }
 
 #[test]
 fn the_early_tic_keeps_the_ms1_scans_or_every_scan_when_none_is_ms1() {
-    let v = [voce(0.1, 1, 10.0), voce(0.2, 2, 3.0), voce(0.3, 1, 12.0)];
+    let v = [entry(0.1, 1, 10.0), entry(0.2, 2, 3.0), entry(0.3, 1, 12.0)];
     assert_eq!(tic_ms1(&v), (vec![0.1, 0.3], vec![10.0, 12.0]));
-    let v = [voce(0.1, 2, 4.0), voce(0.2, 2, 5.0)];
+    let v = [entry(0.1, 2, 4.0), entry(0.2, 2, 5.0)];
     assert_eq!(tic_ms1(&v), (vec![0.1, 0.2], vec![4.0, 5.0]));
     assert_eq!(tic_ms1(&[]), (vec![], vec![]));
 }

@@ -4,7 +4,7 @@
 //! `@cid25.0` of the filter or, when the filter has none (the TSQ filters never have), from the transition table of `metodo/1` (`ms…transizioni`), which also
 //! gives the polarity of the transition (a TSQ scan carries a fixed polarity).
 use mzlab_core::error::Result;
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
@@ -86,13 +86,13 @@ struct Transition {
 
 /// A reader that also gives the SRM traces of the scans of the reader it wraps (unless that one has SRM chromatograms of its own).
 pub struct SrmDaScansioni {
-    inner: Box<dyn Lettore>,
+    inner: Box<dyn Reader>,
     /// The traces of each sample asked for so far (a few at most: a list is enough).
     cache: Vec<(usize, Vec<Chromatogram>)>,
 }
 
 impl SrmDaScansioni {
-    pub fn new(inner: Box<dyn Lettore>) -> Self {
+    pub fn new(inner: Box<dyn Reader>) -> Self {
         SrmDaScansioni {
             inner,
             cache: Vec::new(),
@@ -120,7 +120,7 @@ impl SrmDaScansioni {
         {
             return Ok(Vec::new());
         }
-        let rows: Vec<VoceScansione> = self.inner.index_without_tic(c)?.to_vec();
+        let rows: Vec<ScanEntry> = self.inner.index_without_tic(c)?.to_vec();
         let mut tr = transitions_from_the_scans(&mut *self.inner, c, &rows)?;
         if tr.iter().any(|t| t.ce.is_none())
             && let Ok(m) = self.inner.method(c)
@@ -133,9 +133,9 @@ impl SrmDaScansioni {
 
 /// One transition for every distinct (Q1, Q3, polarity, collision energy) of the SRM scans of `righe`.
 fn transitions_from_the_scans(
-    inner: &mut dyn Lettore,
+    inner: &mut dyn Reader,
     c: usize,
-    rows: &[VoceScansione],
+    rows: &[ScanEntry],
 ) -> Result<Vec<Transition>> {
     let mut tr: Vec<Transition> = Vec::new();
     for (k, r) in rows.iter().enumerate().filter(|(_, r)| scansione_srm(r)) {
@@ -214,15 +214,15 @@ fn id_di(t: &Transition) -> String {
     id
 }
 
-fn scansione_srm(v: &VoceScansione) -> bool {
+fn scansione_srm(v: &ScanEntry) -> bool {
     v.livello == 2 && v.precursore.is_some() && srm_filter(&v.filtro)
 }
 
-impl Lettore for SrmDaScansioni {
-    fn format(&self) -> Formato {
+impl Reader for SrmDaScansioni {
+    fn format(&self) -> Format {
         self.inner.format()
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         self.inner.samples()
     }
     fn missing(&mut self, c: usize) -> usize {
@@ -232,10 +232,10 @@ impl Lettore for SrmDaScansioni {
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         self.inner.not_carried()
     }
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.inner.index(c)
     }
-    fn index_without_tic(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index_without_tic(&mut self, c: usize) -> Result<&[ScanEntry]> {
         self.inner.index_without_tic(c)
     }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
@@ -248,13 +248,13 @@ impl Lettore for SrmDaScansioni {
     fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
         self.inner.scan_profile(c, k)
     }
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.inner.scan_header(c, k)
     }
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         let mut v = self.inner.chromatograms(c)?;
         let extra = self.traces(c)?;
-        v.extend(extra.iter().map(|t| VoceCromatogramma {
+        v.extend(extra.iter().map(|t| ChromatogramEntry {
             id: t.id.clone(),
             tipo: t.kind,
             unita: t.unit.clone(),
@@ -303,7 +303,7 @@ impl Lettore for SrmDaScansioni {
 }
 
 /// True when sample `c` of `l` has scans that are SRM transitions.
-pub fn ha_scansioni_srm(l: &mut dyn Lettore, c: usize) -> bool {
+pub fn ha_scansioni_srm(l: &mut dyn Reader, c: usize) -> bool {
     l.index_without_tic(c)
         .map(|i| i.iter().any(scansione_srm))
         .unwrap_or(false)

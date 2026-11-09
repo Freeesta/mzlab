@@ -2,7 +2,7 @@
 //! The encoders here are the inverse of the ones in `src/waters/dat.rs` and `mrm.rs`; `tools/waters_sintetico.py` writes the same folder for the browser test.
 #![allow(dead_code)]
 
-use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::lettori::{FileSet, Member};
 
 /// The m/z word of the 8- and 12-byte records: 5-bit exponent on top, 27-bit mantissa with the leading one at bit 26.
 pub fn word_mz(mz: f64) -> u32 {
@@ -58,8 +58,8 @@ pub fn mrm_channels(k: u32) -> [u32; 2] {
 
 pub const RT: [f32; 3] = [0.5, 1.0, 1.5];
 
-fn member(folder: &str, name: &str, byte: Vec<u8>) -> Membro {
-    Membro {
+fn member(folder: &str, name: &str, byte: Vec<u8>) -> Member {
+    Member {
         nome: format!("{folder}/{name}"),
         dim: byte.len() as u64,
         dati: Box::new(byte),

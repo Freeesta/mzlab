@@ -6,7 +6,7 @@ mod comune;
 use comune::*;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::numpress::Np;
 use std::io::Write;
 
@@ -19,8 +19,8 @@ fn gz(b: &[u8]) -> Vec<u8> {
 fn abre(
     name: &str,
     b: Vec<u8>,
-    l: &Limiti,
-) -> Result<Box<dyn mzlab_core::lettori::Lettore>, &'static str> {
+    l: &Limits,
+) -> Result<Box<dyn mzlab_core::lettori::Reader>, &'static str> {
     mzlab_lettori::apri(file_set(name, b), l).map_err(|e| e.key)
 }
 
@@ -30,7 +30,7 @@ fn an_mzml_gz_with_flat_arrays_returns_exact() {
     let mut l = abre(
         "run.mzML.gz",
         gz(&mzml_di(&scan, Cod::Piano, None)),
-        &Limiti::sito(),
+        &Limits::sito(),
     )
     .unwrap();
     assert_eq!(l.samples()[0].scansioni, scan.len());
@@ -56,7 +56,7 @@ fn an_mzml_gz_with_numpress_opens() {
     let mut l = abre(
         "run.mzML.gz",
         gz(&mzml_di(&scan, cod, None)),
-        &Limiti::sito(),
+        &Limits::sito(),
     )
     .unwrap();
     assert_eq!(l.scan(0, 0).unwrap().mz.len(), scan[0].mz.len());
@@ -67,12 +67,12 @@ fn an_mzml_gz_with_numpress_opens() {
 fn a_truncated_gz_opens_with_the_spectra_it_has() {
     let scan = scansioni();
     let buono = gz(&mzml_di(&scan, Cod::Piano, None));
-    let mut whole = abre("a.mzML.gz", buono.clone(), &Limiti::sito()).unwrap();
+    let mut whole = abre("a.mzML.gz", buono.clone(), &Limits::sito()).unwrap();
     assert_eq!(whole.missing(0), 0);
     let mut l = abre(
         "a.mzML.gz",
         buono[..buono.len() * 3 / 4].to_vec(),
-        &Limiti::sito(),
+        &Limits::sito(),
     )
     .unwrap();
     let ha = l.samples()[0].scansioni;
@@ -85,23 +85,23 @@ fn a_truncated_gz_opens_with_the_spectra_it_has() {
 fn hostile_cases_give_a_key() {
     let scan = scansioni();
     let buono = gz(&mzml_di(&scan, Cod::Piano, None));
-    let key = |name: &str, b: Vec<u8>, l: &Limiti| abre(name, b, l).err();
+    let key = |name: &str, b: Vec<u8>, l: &Limits| abre(name, b, l).err();
     // cut before anything inflated: a damaged gzip, the key of the page's inflate (tests/gz_bordi.rs)
     assert_eq!(
-        key("a.mzML.gz", buono[..12].to_vec(), &Limiti::sito()),
+        key("a.mzML.gz", buono[..12].to_vec(), &Limits::sito()),
         Some("err.file.zlib")
     );
     // not gzip at all, and gzip of something that is not an mzML
     assert_eq!(
-        key("a.mzML.gz", b"<mzML></mzML>".to_vec(), &Limiti::sito()),
+        key("a.mzML.gz", b"<mzML></mzML>".to_vec(), &Limits::sito()),
         Some("err.file.notAccepted")
     );
     assert_eq!(
-        key("a.mzML.gz", gz(b"hello world"), &Limiti::sito()),
+        key("a.mzML.gz", gz(b"hello world"), &Limits::sito()),
         Some("err.file.notAccepted")
     );
     // inflated size over the limit: a memory-budget error, not an allocation
-    let mut little = Limiti::sito();
+    let mut little = Limits::sito();
     little.byte = 200;
     assert_eq!(key("a.mzML.gz", buono, &little), Some("error.memoryBudget"));
 }
@@ -112,8 +112,8 @@ fn hostile_cases_give_a_key() {
 #[test]
 fn an_mzxml_gz_opens_like_its_mzxml() {
     let flat = comune::mzxml::mzxml(&comune::mzxml::run(), comune::mzxml::FLAT);
-    let mut from_gz = abre("run.mzXML.gz", gz(&flat), &Limiti::sito()).unwrap();
-    let mut from_flat = abre("run.mzXML", flat.clone(), &Limiti::sito()).unwrap();
+    let mut from_gz = abre("run.mzXML.gz", gz(&flat), &Limits::sito()).unwrap();
+    let mut from_flat = abre("run.mzXML", flat.clone(), &Limits::sito()).unwrap();
     let n = from_flat.samples()[0].scansioni;
     assert!(n > 0);
     assert_eq!(from_gz.samples()[0].scansioni, n);

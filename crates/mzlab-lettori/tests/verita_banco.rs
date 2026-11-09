@@ -52,7 +52,7 @@ const TOL: Tol = Tol {
     cromatogramma_rel: 1e-6,
 };
 
-fn apri_file(scan: &[Scan]) -> Box<dyn mzlab_core::lettori::Lettore> {
+fn apri_file(scan: &[Scan]) -> Box<dyn mzlab_core::lettori::Reader> {
     // the mzML of another program has no `metodo/1`; the one the bench is tried on carries the document, as an mzML written by mzLab does
     let method = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
     apri(mzml_di(

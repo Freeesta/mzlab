@@ -3,10 +3,10 @@
 
 use std::sync::Mutex;
 
-use super::Molecola;
+use super::Molecule;
 
-fn rank(m: &Molecola) -> usize {
-    super::LIVELLI
+fn rank(m: &Molecule) -> usize {
+    super::LEVELS
         .iter()
         .position(|l| *l == m.origine.tipo)
         .unwrap_or(2)
@@ -14,10 +14,10 @@ fn rank(m: &Molecola) -> usize {
 
 /// The catalogue first, in its order, then the others; for an `id` that is in more places the highest level wins (the later of two equal ones), keeping the
 /// place of the first.
-pub fn unisci(catalogo: &[Molecola], altri: &[Molecola]) -> Vec<Molecola> {
-    let mut out: Vec<Molecola> = Vec::with_capacity(catalogo.len() + altri.len());
+pub fn merge(catalog: &[Molecule], altri: &[Molecule]) -> Vec<Molecule> {
+    let mut out: Vec<Molecule> = Vec::with_capacity(catalog.len() + altri.len());
     let mut at = std::collections::HashMap::new();
-    for m in catalogo.iter().chain(altri) {
+    for m in catalog.iter().chain(altri) {
         match at.get(&m.id) {
             Some(&k) if rank(m) >= rank(&out[k]) => out[k] = m.clone(),
             Some(_) => {}
@@ -33,14 +33,14 @@ pub fn unisci(catalogo: &[Molecola], altri: &[Molecola]) -> Vec<Molecola> {
 /// What `carica` leaves in the engine.
 #[derive(Default)]
 pub struct Archivio {
-    pub catalogo: Vec<Molecola>,
-    pub altri: Vec<Molecola>,
+    pub catalog: Vec<Molecule>,
+    pub altri: Vec<Molecule>,
     /// `unisci(catalogo, altri)`.
-    pub tutte: Vec<Molecola>,
+    pub tutte: Vec<Molecule>,
 }
 
 pub static ARCHIVIO: Mutex<Archivio> = Mutex::new(Archivio {
-    catalogo: Vec::new(),
+    catalog: Vec::new(),
     altri: Vec::new(),
     tutte: Vec::new(),
 });
@@ -51,7 +51,7 @@ pub fn con<R>(f: impl FnOnce(&mut Archivio) -> R) -> R {
 }
 
 impl Archivio {
-    pub fn aggiorna(&mut self) {
-        self.tutte = unisci(&self.catalogo, &self.altri);
+    pub fn update(&mut self) {
+        self.tutte = merge(&self.catalog, &self.altri);
     }
 }

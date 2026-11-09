@@ -2,14 +2,14 @@
 //! tree, the scans and their spectra become the `msngrafo/1`. Used by the `.wasm` module of the page and by the command line, so both
 //! write the same bytes.
 
-use super::{con_regole, costruisci, json, leggi, Attesa, Grafo, Ingresso, Opzioni, ParamRegole};
+use super::{build, con_regole, json, read, Expectation, Graph, Input, Options, RuleParams};
 use crate::error::{Error, Result};
 use crate::idxread::Scan;
 use crate::json::parse;
-use crate::msnalbero::{Raggruppa, Tol};
+use crate::msnalbero::{Grouping, Tol};
 use crate::sorgente::Scansioni;
 
-fn numero(get: &dyn Fn(&str) -> Option<String>, k: &str, por: f64) -> Result<f64> {
+fn number(get: &dyn Fn(&str) -> Option<String>, k: &str, por: f64) -> Result<f64> {
     match get(k).filter(|v| !v.is_empty()) {
         None => Ok(por),
         Some(v) => v
@@ -38,9 +38,9 @@ fn tol_di(v: Option<&str>) -> Result<Tol> {
 }
 
 /// `[{"mz": 195.0877, "formula": "C10H11N4O2+"}, ...]`: the formulas the user chose among the candidates.
-fn scelte(testo: &str) -> Result<Vec<(f64, String)>> {
+fn choices(text: &str) -> Result<Vec<(f64, String)>> {
     let bad = || Error::new("err.request.badNumber").with("name", "scelte");
-    let v = parse(testo.as_bytes()).map_err(|_| bad())?;
+    let v = parse(text.as_bytes()).map_err(|_| bad())?;
     v.arr()
         .iter()
         .map(|s| {
@@ -51,17 +51,17 @@ fn scelte(testo: &str) -> Result<Vec<(f64, String)>> {
         .collect()
 }
 
-/// `[["loss_h2o","H2O",0], ...]`: the expectations of the structure (`Attesa`: rule, formula, 1 = ion), computed by the `.wasm` `msnregole`.
-fn attese(testo: &str) -> Result<Vec<Attesa>> {
+/// `[["loss_h2o","H2O",0], ...]`: the expectations of the structure (`Expectation`: rule, formula, 1 = ion), computed by the `.wasm` `msnregole`.
+fn attese(text: &str) -> Result<Vec<Expectation>> {
     let bad = || Error::new("err.request.badNumber").with("name", "attese");
-    let v = parse(testo.as_bytes()).map_err(|_| bad())?;
+    let v = parse(text.as_bytes()).map_err(|_| bad())?;
     v.arr()
         .iter()
         .map(|a| {
-            let campo = |i: usize| a.at(i).and_then(|x| x.str()).map(String::from);
-            Ok(Attesa {
-                regola: campo(0).ok_or_else(bad)?,
-                formula: campo(1).ok_or_else(bad)?,
+            let field = |i: usize| a.at(i).and_then(|x| x.str()).map(String::from);
+            Ok(Expectation {
+                rule: field(0).ok_or_else(bad)?,
+                formula: field(1).ok_or_else(bad)?,
                 ione: a.at(2).and_then(|x| x.f64()).ok_or_else(bad)? != 0.0,
             })
         })
@@ -69,35 +69,35 @@ fn attese(testo: &str) -> Result<Vec<Attesa>> {
 }
 
 /// The options and the grouping of a request; `get(name)` is the value of a parameter, the defaults are those of `Opzioni::default()`.
-pub fn da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<(Opzioni, Raggruppa)> {
-    let d = Opzioni::default();
-    let testo = |k: &str| get(k).filter(|v| !v.is_empty());
-    let o = Opzioni {
-        ppm_formula: numero(get, "ppm_formula", d.ppm_formula)?,
-        mz_basso: numero(get, "mz_basso", d.mz_basso)?,
-        ppm_basso: numero(get, "ppm_basso", d.ppm_basso)?,
-        prove_min: numero(get, "prove_min", d.prove_min as f64)? as usize,
+pub fn da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<(Options, Grouping)> {
+    let d = Options::default();
+    let text = |k: &str| get(k).filter(|v| !v.is_empty());
+    let o = Options {
+        ppm_formula: number(get, "ppm_formula", d.ppm_formula)?,
+        mz_low: number(get, "mz_basso", d.mz_low)?,
+        ppm_low: number(get, "ppm_basso", d.ppm_low)?,
+        evidence_min: number(get, "prove_min", d.evidence_min as f64)? as usize,
         isotopi: get("isotopi").as_deref() == Some("1"),
-        attivazione: testo("attivazione"),
-        formula: testo("formula"),
-        smiles: testo("smiles"),
-        molfile: testo("molfile"),
-        scelte: testo("scelte").map_or(Ok(vec![]), |t| scelte(&t))?,
-        attese: testo("attese").map_or(Ok(vec![]), |t| attese(&t))?,
+        activation: text("attivazione"),
+        formula: text("formula"),
+        smiles: text("smiles"),
+        molfile: text("molfile"),
+        choices: text("scelte").map_or(Ok(vec![]), |t| choices(&t))?,
+        attese: text("attese").map_or(Ok(vec![]), |t| attese(&t))?,
         regole: if get("regole").as_deref() == Some("1") {
-            let r = ParamRegole::default();
-            Some(ParamRegole {
-                cutoff_q: numero(get, "cutoff_q", r.cutoff_q)?,
-                toll_mda: numero(get, "toll_perdita_mda", r.toll_mda)?,
+            let r = RuleParams::default();
+            Some(RuleParams {
+                cutoff_q: number(get, "cutoff_q", r.cutoff_q)?,
+                toll_mda: number(get, "toll_perdita_mda", r.toll_mda)?,
             })
         } else {
             None
         },
         ..d
     };
-    let r = Raggruppa {
-        tol: tol_di(testo("tol").as_deref())?,
-        energie: get("ce").as_deref() != Some("0"),
+    let r = Grouping {
+        tol: tol_di(text("tol").as_deref())?,
+        energies: get("ce").as_deref() != Some("0"),
     };
     Ok((o, r))
 }
@@ -107,15 +107,15 @@ pub fn grafo_json<M: Scansioni + ?Sized>(
     scans: &[Scan],
     m: &mut M,
     (nome, sha): (&str, &str),
-    (o, r): (&Opzioni, &Raggruppa),
-) -> Result<(Grafo, String)> {
-    let l = leggi(scans, m, r)?;
-    let g = costruisci(
-        &Ingresso {
+    (o, r): (&Options, &Grouping),
+) -> Result<(Graph, String)> {
+    let l = read(scans, m, r)?;
+    let g = build(
+        &Input {
             albero: &l.albero,
             ms1: l.ms1.as_ref(),
             spettri: &l.spettri,
-            larghezze: &l.larghezze,
+            widths: &l.larghezze,
             polarita: l.polarita,
         },
         o,
@@ -132,7 +132,7 @@ pub fn grafo_json<M: Scansioni + ?Sized>(
 mod tests {
     use super::*;
 
-    fn con(q: &'static str) -> Result<(Opzioni, Raggruppa)> {
+    fn con(q: &'static str) -> Result<(Options, Grouping)> {
         let q = crate::routes::Query::parse(q);
         da_richiesta(&|k| q.get(k).map(String::from))
     }
@@ -140,8 +140,8 @@ mod tests {
     #[test]
     fn an_empty_request_has_the_defaults() {
         let (o, r) = con("").unwrap();
-        assert_eq!(o, Opzioni::default());
-        assert_eq!(r, Raggruppa::default());
+        assert_eq!(o, Options::default());
+        assert_eq!(r, Grouping::default());
     }
 
     #[test]
@@ -150,10 +150,10 @@ mod tests {
                  &scelte=%5B%7B%22mz%22%3A195.0877%2C%22formula%22%3A%22C8H11N4O2%2B%22%7D%5D";
         let (o, r) = con(q).unwrap();
         assert_eq!(o.formula.as_deref(), Some("C8H11N4O2+"));
-        assert_eq!((o.ppm_formula, o.prove_min, o.isotopi), (5.0, 2, true));
-        assert_eq!(o.attivazione.as_deref(), Some("hcd"));
-        assert_eq!(o.scelte, [(195.0877, "C8H11N4O2+".to_string())]);
-        assert_eq!((r.tol, r.energie), (Tol::Ppm(10.0), false));
+        assert_eq!((o.ppm_formula, o.evidence_min, o.isotopi), (5.0, 2, true));
+        assert_eq!(o.activation.as_deref(), Some("hcd"));
+        assert_eq!(o.choices, [(195.0877, "C8H11N4O2+".to_string())]);
+        assert_eq!((r.tol, r.energies), (Tol::Ppm(10.0), false));
     }
 
     #[test]

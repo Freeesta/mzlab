@@ -3,7 +3,7 @@
 use std::io::Write;
 
 use js_sys::Function;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::lettori_mzml;
 use wasm_bindgen::prelude::*;
 
@@ -190,7 +190,7 @@ impl Members {
             .iter()
             .zip(&self.sizes)
             .enumerate()
-            .map(|(i, (n, &s))| Membro {
+            .map(|(i, (n, &s))| Member {
                 nome: n.clone(),
                 dim: s as u64,
                 dati: Box::new(member_js(self.read.clone(), i as u32, s as u64)),
@@ -288,28 +288,30 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
 /// any other set opens as `apri`.
 fn open_probe(
     #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
-) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Lettore>> {
+) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Reader>> {
     #[cfg(any(feature = "sciex", feature = "tutte"))]
-    if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::lettore::VOCE.id)
+    if mzlab_lettori::riconosci(&mut fs)
+        .is_some_and(|v| v.id == mzlab_core::wiff::lettore::ENTRY.id)
     {
-        return mzlab_core::wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(0));
+        return mzlab_core::wiff::lettore::open_only(fs, &Limits::sito(), Some(0));
     }
-    mzlab_lettori::apri(fs, &Limiti::sito())
+    mzlab_lettori::apri(fs, &Limits::sito())
 }
 
 /// The reader of `fs` for the mzML of sample `c`: a SCIEX pair reads the heads of the blocks of that injection only (`apri_solo`, as the engine does), any other set opens as `apri`.
 fn open_sample(
     #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
     c: usize,
-) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Lettore>> {
+) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Reader>> {
     #[cfg(any(feature = "sciex", feature = "tutte"))]
-    if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::lettore::VOCE.id)
+    if mzlab_lettori::riconosci(&mut fs)
+        .is_some_and(|v| v.id == mzlab_core::wiff::lettore::ENTRY.id)
     {
-        let l = mzlab_core::wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(c))?;
+        let l = mzlab_core::wiff::lettore::open_only(fs, &Limits::sito(), Some(c))?;
         return Ok(Box::new(mzlab_lettori::srm::SrmDaScansioni::new(l)));
     }
     let _ = c;
-    mzlab_lettori::apri(fs, &Limiti::sito())
+    mzlab_lettori::apri(fs, &Limits::sito())
 }
 
 /// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::missing`).
@@ -327,7 +329,7 @@ pub fn to_mzml(
     to_mzml_with(names, sizes, read, c, true, "standard", sink, progress)
 }
 
-/// `to_mzml` with the optical matrix only when `dad` and the compression of «Download .mzML» (`mzmlwrite::opzioni_compressione`): with `dad` false the file of
+/// `to_mzml` with the optical matrix only when `dad` and the compression of «Download .mzML» (`mzmlwrite::compression_options`): with `dad` false the file of
 /// `mzlab-cli convert` with the same `conv.numpress`, byte for byte (the download of a `.wiff` sample, also one the engine reads: the engine leaves out what `estesi` writes).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
@@ -341,7 +343,7 @@ pub fn to_mzml_with(
     sink: Function,
     progress: Function,
 ) -> Result<f64, JsValue> {
-    let opz = mzlab_core::mzmlwrite::opzioni_compressione(compression)
+    let opz = mzlab_core::mzmlwrite::compression_options(compression)
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     let m = Members::new(names, sizes, read)?;
     let mut l = open_sample(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
@@ -357,12 +359,12 @@ pub fn to_mzml_with(
             &(total as f64).into(),
         );
     };
-    let conv = lettori_mzml::Conversione {
+    let conv = lettori_mzml::Conversion {
         steps: Some(&[]),
-        opz: mzlab_core::mzmlwrite::Opzioni { dad, ..opz },
-        ..lettori_mzml::Conversione::default()
+        opz: mzlab_core::mzmlwrite::Options { dad, ..opz },
+        ..lettori_mzml::Conversion::default()
     };
-    conv.scrivi(&mut *l, c as usize, &mut out, &mut tell)
+    conv.write(&mut *l, c as usize, &mut out, &mut tell)
         .map_err(|e| error_json(&e))?;
     out.flush().map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
@@ -402,7 +404,7 @@ pub fn open_with_sha1(
 }
 fn open_members(fs: FileSet) -> Result<u32, JsValue> {
     // as it is, without the SRM traces of `mzlab_lettori::apri`: the engine reads the module through `ExternalReader` and decides itself what it does with them
-    let l = mzlab_lettori::apri_nudo(fs, &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let l = mzlab_lettori::apri_nudo(fs, &Limits::sito()).map_err(|e| error_json(&e))?;
     with_sessions(|s| Ok(s.insert(l)))
 }
 #[wasm_bindgen]
@@ -414,7 +416,7 @@ pub fn samples(h: u32) -> Result<String, JsValue> {
 pub fn protocol() -> u32 {
     mzlab_core::trasporto::PROTOCOLLO
 }
-/// The index of the sample as one `Uint8Array` (`mzlab_core::trasporto::encode_indice`).
+/// The index of the sample as one `Uint8Array` (`mzlab_core::trasporto::encode_index`).
 #[wasm_bindgen]
 pub fn index(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
     with_sessions(|s| s.index(h, c as usize))

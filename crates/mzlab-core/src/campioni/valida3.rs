@@ -1,17 +1,17 @@
 //! The checks `campioni/3` adds to `valida`: free columns (`missingValue`, `typeMismatch`), the key of a file (`duplicateKey`) and the two
 //! polarities of a physical sample (`pairMissing`, `pairMismatch`). Stable codes; the pages put the words.
 
-use super::{idcampione, valida, Avviso, Campione, Tabella};
+use super::{idcampione, validate, Sample, Table, Warning};
 
 fn push(
-    out: &mut Vec<Avviso>,
+    out: &mut Vec<Warning>,
     code: &'static str,
     severity: &'static str,
     i: usize,
-    c: &Campione,
+    c: &Sample,
     column: &str,
 ) {
-    out.push(Avviso {
+    out.push(Warning {
         code,
         severity,
         file: Some(i),
@@ -22,9 +22,9 @@ fn push(
 
 /// `typeMismatch` on `tempo` (error) when the ID has a time part that is not a number, `unknownCondition` (warning, column `serie`) when
 /// the ID has the shape `MAT-COND-Ttt` with a condition the series does not use.
-fn ids(out: &mut Vec<Avviso>, cs: &[Campione]) {
+fn ids(out: &mut Vec<Warning>, cs: &[Sample]) {
     for (i, c) in cs.iter().enumerate() {
-        let info = idcampione::leggi(&c.sample_id);
+        let info = idcampione::read(&c.sample_id);
         if info.bad_time {
             push(out, "typeMismatch", "error", i, c, "tempo");
         }
@@ -35,9 +35,9 @@ fn ids(out: &mut Vec<Avviso>, cs: &[Campione]) {
 }
 
 /// `duplicateKey` (error) on every file after the first with the same SHA-256 (when known) or the same name, and the same sample inside it.
-fn duplicates(out: &mut Vec<Avviso>, cs: &[Campione]) {
+fn duplicates(out: &mut Vec<Warning>, cs: &[Sample]) {
     for (i, c) in cs.iter().enumerate() {
-        let same = |o: &Campione| {
+        let same = |o: &Sample| {
             o.sub == c.sub
                 && if c.sha256.is_empty() || o.sha256.is_empty() {
                     o.file == c.file && !c.file.is_empty()
@@ -51,7 +51,7 @@ fn duplicates(out: &mut Vec<Avviso>, cs: &[Campione]) {
     }
 }
 
-fn columns(out: &mut Vec<Avviso>, t: &Tabella) {
+fn columns(out: &mut Vec<Warning>, t: &Table) {
     for col in &t.colonne {
         for (i, c) in t.campioni.iter().enumerate() {
             match c.extra_of(&col.name) {
@@ -65,7 +65,7 @@ fn columns(out: &mut Vec<Avviso>, t: &Tabella) {
 
 /// The files of one `campione_id` with a polarity: `pairMissing` (warning, on the first) when only one polarity is there, `pairMismatch`
 /// (warning, on the first file of the other polarity) when positive and negative differ in time, role or condition.
-fn pairs(out: &mut Vec<Avviso>, cs: &[Campione]) {
+fn pairs(out: &mut Vec<Warning>, cs: &[Sample]) {
     let mut ids: Vec<&str> = Vec::new();
     for c in cs
         .iter()
@@ -95,8 +95,8 @@ fn pairs(out: &mut Vec<Avviso>, cs: &[Campione]) {
 }
 
 /// The findings of `valida` plus the ones of `campioni/3`, in that order.
-pub fn valida3(t: &Tabella) -> Vec<Avviso> {
-    let mut out = valida(&t.campioni);
+pub fn valida3(t: &Table) -> Vec<Warning> {
+    let mut out = validate(&t.campioni);
     duplicates(&mut out, &t.campioni);
     columns(&mut out, t);
     ids(&mut out, &t.campioni);

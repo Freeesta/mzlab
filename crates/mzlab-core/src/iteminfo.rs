@@ -534,7 +534,7 @@ pub fn item_info<R: ReadAt>(
             "ms2" => "ms2",
             _ => "mrm",
         },
-        None if all.len() > n1 && msn.as_ref().is_some_and(|m| m.motivo != "rt_costante") => {
+        None if all.len() > n1 && msn.as_ref().is_some_and(|m| m.reason != "rt_costante") => {
             "infusion"
         }
         None if all.len() - n1 > 0 => "ms2",

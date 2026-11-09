@@ -4,7 +4,7 @@ use opentfraw::extra::scan_extras_with;
 use opentfraw::mzml::scan_metadata_with;
 use opentfraw::{Activation, Analyzer, ExtraFields};
 
-use super::{field, header_fields, raw_error, Campo, LettoreRaw, Stream};
+use super::{field, header_fields, raw_error, Field, RawReader, Stream};
 use crate::error::Result;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{CvPar, Precursore, SpectrumExtra};
@@ -40,7 +40,7 @@ fn termini_attivazione(a: Activation, analyzer: Option<Analyzer>) -> Vec<(String
 }
 
 /// `Lettore::scan_extra` of the `.raw`: nothing when the sample cannot be opened, the plain precursor of the spectrum when the scan cannot be read.
-pub(super) fn di_scansione(l: &mut LettoreRaw, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+pub(super) fn di_scansione(l: &mut RawReader, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
     if l.one(c).is_err() {
         return SpectrumExtra::default();
     }
@@ -49,7 +49,7 @@ pub(super) fn di_scansione(l: &mut LettoreRaw, c: usize, k: usize, s: &Spectrum)
 
 /// What the mzML says of scan `k` besides its points. The parent of an MSn scan is the last scan of the level above that came before it (the "Master
 /// Index" of the trailer is not a scan number). `None` when the scan cannot be read: the writer then falls back to the plain precursor of the spectrum.
-fn extra_di_scansione(l: &mut LettoreRaw, k: usize, s: &Spectrum) -> Option<SpectrumExtra> {
+fn extra_di_scansione(l: &mut RawReader, k: usize, s: &Spectrum) -> Option<SpectrumExtra> {
     let idx = l.row(k).ok()?;
     let first = l.raw.run_header.sample_info.first_scan_number;
     let params = l.raw.scan_params(&mut l.src, first + idx);
@@ -119,7 +119,7 @@ fn median(mut v: Vec<f32>) -> f32 {
 /// The noise and the baseline an FT scan carries (a piecewise-linear function of m/z, a few dozen nodes): `thermo:noise_function` holds every node as
 /// `m/z,noise,baseline` joined by `;` (nothing is lost: the value at a peak is the interpolation), `thermo:noise` and `thermo:baseline` the median of the nodes
 /// for a quick read. A scan without them (ion trap, SRM) gives nothing. The peaks are not touched.
-pub(super) fn noise_fields(raw: &RawFileReader, src: &mut Stream, idx: u32) -> Vec<Campo> {
+pub(super) fn noise_fields(raw: &RawFileReader, src: &mut Stream, idx: u32) -> Vec<Field> {
     let scan = raw.run_header.sample_info.first_scan_number + idx;
     let Ok(p) = raw.read_scan_labels(src, scan) else {
         return Vec::new();
@@ -151,7 +151,7 @@ pub(super) fn noise_fields(raw: &RawFileReader, src: &mut Stream, idx: u32) -> V
 }
 
 /// `Lettore::scan_header` of the `.raw`: the header fields of scan `k` and its noise nodes.
-pub(super) fn scan_header(l: &mut LettoreRaw, c: usize, k: usize) -> Result<Vec<Campo>> {
+pub(super) fn scan_header(l: &mut RawReader, c: usize, k: usize) -> Result<Vec<Field>> {
     l.one(c)?;
     let idx = l.row(k)?;
     let first = l.raw.run_header.sample_info.first_scan_number;

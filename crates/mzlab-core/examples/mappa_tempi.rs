@@ -5,7 +5,7 @@ use std::fs::{File, OpenOptions};
 use std::time::Instant;
 
 use mzlab_core::idxread::Index;
-use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
 use mzlab_core::maproute::map_route;
 use mzlab_core::originroute::ItemMeta;
 use mzlab_core::routes::{Query, Routes};
@@ -25,7 +25,7 @@ fn rss_mb() -> f64 {
 fn fileset(wiff: &str) -> FileSet {
     let m = |p: &str| {
         let dim = std::fs::metadata(p).unwrap().len();
-        Membro {
+        Member {
             nome: p.rsplit('/').next().unwrap().to_string(),
             dim,
             dati: Box::new(File::open(p).unwrap()),
@@ -56,7 +56,7 @@ fn run(wiff: &str, c: usize, cen: bool) {
         wiff.rsplit('/').next().unwrap(),
         if cen { "CENTROIDS" } else { "PROFILE" }
     );
-    let mut l = lettori::apri(fileset(wiff), &Limiti::sito()).expect("open");
+    let mut l = lettori::apri(fileset(wiff), &Limits::sito()).expect("open");
     if cen {
         l = lettori_centroidi::centroidato(l);
     }
@@ -77,11 +77,11 @@ fn run(wiff: &str, c: usize, cen: bool) {
 }
 
 /// Scan table + `.mzidx` with a spill file, as the site builds it; returns the index file and its size.
-fn index(l: &mut dyn Lettore, c: usize) -> (File, u64) {
+fn index(l: &mut dyn Reader, c: usize) -> (File, u64) {
     let mut out = tmp("idx");
     let mut sp = tmp("spill");
     let t = Instant::now();
-    let (st, _) = upload::indicizza_lettore_con(
+    let (st, _) = upload::index_reader_with(
         l,
         c,
         &mut || Ok(vec![]),

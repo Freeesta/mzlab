@@ -22,7 +22,7 @@ pub(super) fn sigla(s: &Scan) -> Option<&'static str> {
     if let Some(t) = s.scan_type() {
         return Some(t);
     }
-    modi::sigla(Some(if s.level >= 2 {
+    modi::tag(Some(if s.level >= 2 {
         CODE_PRODUCT
     } else {
         CODE_FULL

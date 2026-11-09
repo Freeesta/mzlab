@@ -1,48 +1,48 @@
 // A reader whose answers hold the awkward values (control characters, NaN, infinities, `-0.0`, numbers at both ends of the range), for the tests of sessione.rs.
 use super::*;
-use mzlab_core::lettori::{Campione, Campo, Formato, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 pub const ODD_CHARS: &str = "a\0b\u{1}\u{1f}\u{7f}\"\\/\n\r\t\u{8}\u{c}é€😀\u{2028}";
 
-impl Lettore for Hard {
-    fn format(&self) -> Formato {
-        Formato::Altro("duro")
+impl Reader for Hard {
+    fn format(&self) -> Format {
+        Format::Altro("duro")
     }
-    fn samples(&self) -> &[Campione] {
-        static C: std::sync::OnceLock<Vec<Campione>> = std::sync::OnceLock::new();
+    fn samples(&self) -> &[Sample] {
+        static C: std::sync::OnceLock<Vec<Sample>> = std::sync::OnceLock::new();
         C.get_or_init(|| {
             vec![
-                Campione {
+                Sample {
                     id: 0,
                     nome: ODD_CHARS.into(),
                     scansioni: 0,
-                    dimensione: None,
+                    size: None,
                 },
-                Campione {
+                Sample {
                     id: u32::MAX,
                     nome: String::new(),
                     scansioni: usize::MAX >> 12,
-                    dimensione: Some(1),
+                    size: Some(1),
                 },
             ]
         })
     }
-    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
         Ok(&[])
     }
     fn scan(&mut self, _: usize, _: usize) -> Result<Spectrum> {
         Err(mzlab_core::Error::new("error.badIndex"))
     }
-    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
         Ok(vec![
-            Campo {
+            Field {
                 nome: ODD_CHARS.into(),
                 valore: ODD_CHARS.into(),
                 unita: Some(ODD_CHARS.into()),
                 cv: None,
             },
-            Campo {
+            Field {
                 nome: String::new(),
                 valore: String::new(),
                 unita: None,
@@ -50,10 +50,10 @@ impl Lettore for Hard {
             },
         ])
     }
-    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok([ChromKind::Tic, ChromKind::Srm, ChromKind::Analog]
             .iter()
-            .map(|&tipo| VoceCromatogramma {
+            .map(|&tipo| ChromatogramEntry {
                 id: ODD_CHARS.into(),
                 tipo,
                 unita: ODD_CHARS.into(),

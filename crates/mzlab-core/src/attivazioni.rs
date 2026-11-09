@@ -19,8 +19,8 @@ pub const ATTIVAZIONI: [(&str, &str, &str); 9] = [
 ];
 
 /// The (accession, term) of the method named `nome` (any case, spaces around ignored).
-pub fn da_nome(nome: &str) -> Option<(&'static str, &'static str)> {
-    let n = nome.trim();
+pub fn from_name(name: &str) -> Option<(&'static str, &'static str)> {
+    let n = name.trim();
     ATTIVAZIONI
         .iter()
         .find(|a| a.0.eq_ignore_ascii_case(n))

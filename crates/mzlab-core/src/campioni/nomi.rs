@@ -3,8 +3,8 @@
 //! the infusion (`infusion`, `infusione`, `direct-infusion`, `FIA` or an MSn file), the dark control (`dark`, `buio`, `adsorption`) and the series.
 
 use super::parole_bianco::is_blank_name;
-use super::posizioni::{self, Proposta};
-use super::{minutes_per, number_replicates, Campione};
+use super::posizioni::{self, Proposal};
+use super::{minutes_per, number_replicates, Sample};
 use crate::project::{guess_conc, guess_sample as guess_stem, guess_type};
 
 /// `project::guess_sample` plus the blank words of `data/nomi-bianco.json` (`MQ_Wash_1`), which the parity with `project.py` does not carry.
@@ -221,7 +221,7 @@ fn prefix_of(stem: &str, low: &[char], start: usize) -> String {
 
 /// The series: the prefix before the time when the timed files have more than one (an empty prefix belongs to every series); a file without
 /// a time takes the longest series its name starts with.
-fn assign_series(out: &mut [Campione], prefixes: &[Option<String>]) {
+fn assign_series(out: &mut [Sample], prefixes: &[Option<String>]) {
     let mut distinct: Vec<&String> = prefixes
         .iter()
         .flatten()
@@ -260,7 +260,7 @@ fn matrix_word(stem: &str) -> Option<&str> {
 /// The matrix and the group proposed from the shape `MAT_COND_Tnn`: the first word of the names when at least two different words each start
 /// two or more files (`TW`, `MQ`), whatever they are. The group of a timed file is `MAT-COND` (its series without the matrix). Nothing is
 /// proposed with a single word: one matrix says nothing the series does not.
-fn assign_matrix(out: &mut [Campione]) {
+fn assign_matrix(out: &mut [Sample]) {
     let words: Vec<Option<String>> = out
         .iter()
         .map(|c| matrix_word(&guess_sample(&c.file).0).map(String::from))
@@ -313,15 +313,15 @@ pub fn ruolo_e_minuti(name: &str) -> (&'static str, Option<f64>) {
 }
 
 /// The metadata proposed for `files` (`(name, SHA-256, kind of the file)`, in the order of injection; kind `msn` = an infusion); an infusion and a QC have no time.
-pub fn proponi(files: &[(String, String, String)]) -> Vec<Campione> {
-    proponi_spiegato(files)
+pub fn proponi(files: &[(String, String, String)]) -> Vec<Sample> {
+    propose_explained(files)
         .into_iter()
-        .map(|p| p.campione)
+        .map(|p| p.sample)
         .collect()
 }
 
 /// The same as `proponi`, each file with the parts of its name that decided its fields (`posizioni.rs`); the values are the ones of `proponi`.
-pub fn proponi_spiegato(files: &[(String, String, String)]) -> Vec<Proposta> {
+pub fn propose_explained(files: &[(String, String, String)]) -> Vec<Proposal> {
     let mut out = Vec::with_capacity(files.len());
     let mut prefixes = Vec::with_capacity(files.len());
     let mut written = Vec::with_capacity(files.len());
@@ -335,7 +335,7 @@ pub fn proponi_spiegato(files: &[(String, String, String)]) -> Vec<Proposta> {
         } else {
             None
         };
-        let mut c = Campione::new(name, sha, i as u32 + 1);
+        let mut c = Sample::new(name, sha, i as u32 + 1);
         if let Some(t) = &time {
             c.set_time(Some(t.value), t.unit);
         }
@@ -374,8 +374,8 @@ pub fn proponi_spiegato(files: &[(String, String, String)]) -> Vec<Proposta> {
         .zip(written)
         .map(|((c, sp), w)| {
             let positions = sp.finish(&c, w.is_some());
-            Proposta {
-                campione: c,
+            Proposal {
+                sample: c,
                 positions,
             }
         })

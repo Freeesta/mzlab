@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use super::{Outcome, Tol};
-use mzlab_core::lettori::{Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Reader, ScanEntry};
 use mzlab_core::mzml::ChromKind;
 use serde_json::Value;
 
@@ -38,7 +38,7 @@ pub fn level(defects_outcome: Vec<String>, absent: Vec<String>) -> Outcome {
 }
 
 /// F1: scans per level and chromatograms per type, and the ids when both name them the same way.
-pub fn f1_counts(index: &[VoceScansione], croms: &[VoceCromatogramma], v: &Value) -> Outcome {
+pub fn f1_counts(index: &[ScanEntry], croms: &[ChromatogramEntry], v: &Value) -> Outcome {
     let sc = v["scansioni"].as_array().cloned().unwrap_or_default();
     let (mut d1, mut m1) = (Vec::new(), Vec::new());
     if index.len() != sc.len() {
@@ -81,7 +81,7 @@ pub fn f1_counts(index: &[VoceScansione], croms: &[VoceCromatogramma], v: &Value
 /// F2 for one scan: RT, level, polarity, precursor (differences in `d`, items the reader cannot give in `m`).
 fn f2_scansione(
     k: usize,
-    s: &VoceScansione,
+    s: &ScanEntry,
     t: &Value,
     tol: Tol,
     d: &mut Vec<String>,
@@ -113,7 +113,7 @@ fn f2_scansione(
 
 /// F2 for one scan: collision energy and isolation window, read from the scan header fields.
 fn f2_fields(
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     c: usize,
     k: usize,
     t: &Value,
@@ -142,8 +142,8 @@ fn f2_fields(
 
 /// F2: the header of every scan.
 pub fn f2_headers(
-    l: &mut dyn Lettore,
-    index: &[VoceScansione],
+    l: &mut dyn Reader,
+    index: &[ScanEntry],
     v: &Value,
     c: usize,
     tol: Tol,
@@ -160,7 +160,7 @@ pub fn f2_headers(
 }
 
 /// F3: the points of the chosen scans.
-pub fn f3_points(l: &mut dyn Lettore, v: &Value, c: usize, tol: Tol) -> Outcome {
+pub fn f3_points(l: &mut dyn Reader, v: &Value, c: usize, tol: Tol) -> Outcome {
     let (mut d3, mut m3) = (Vec::new(), Vec::new());
     let points = v["punti"].as_object().cloned().unwrap_or_default();
     if points.is_empty() {
@@ -247,8 +247,8 @@ fn f4_trace(
 
 /// F4: the chromatograms, by id, else by type and order.
 pub fn f4_chromatograms(
-    l: &mut dyn Lettore,
-    croms: &[VoceCromatogramma],
+    l: &mut dyn Reader,
+    croms: &[ChromatogramEntry],
     v: &Value,
     c: usize,
     tol: Tol,
@@ -325,7 +325,7 @@ fn instant(s: &str) -> String {
         .to_string()
 }
 
-pub fn metadati(l: &mut dyn Lettore, v: &Value, c: usize) -> Outcome {
+pub fn metadati(l: &mut dyn Reader, v: &Value, c: usize) -> Outcome {
     let fields = v["metadati"].as_object().cloned().unwrap_or_default();
     if fields.is_empty() {
         return Outcome::Missing(vec!["no fields in the truth".into()]);

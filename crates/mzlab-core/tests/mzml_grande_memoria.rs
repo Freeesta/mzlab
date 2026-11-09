@@ -15,16 +15,16 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use lettore_finto::Finto;
 use mzlab_core::{lettori_mzml, mzidx, upload};
 
-struct Conta;
+struct Tally;
 static VIVI: AtomicUsize = AtomicUsize::new(0);
-static PICCO: AtomicUsize = AtomicUsize::new(0);
+static PEAK: AtomicUsize = AtomicUsize::new(0);
 
 // SAFETY: forwards every call to the system allocator and only counts the bytes.
-unsafe impl GlobalAlloc for Conta {
+unsafe impl GlobalAlloc for Tally {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
         unsafe {
             let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
-            PICCO.fetch_max(v, Ordering::Relaxed);
+            PEAK.fetch_max(v, Ordering::Relaxed);
             System.alloc(l)
         }
     }
@@ -38,24 +38,24 @@ unsafe impl GlobalAlloc for Conta {
         unsafe {
             let v = VIVI.fetch_add(n, Ordering::Relaxed) + n;
             VIVI.fetch_sub(l.size(), Ordering::Relaxed);
-            PICCO.fetch_max(v, Ordering::Relaxed);
+            PEAK.fetch_max(v, Ordering::Relaxed);
             System.realloc(p, l, n)
         }
     }
 }
 #[global_allocator]
-static A: Conta = Conta;
+static A: Tally = Tally;
 
 /// Starts a measurement: the live bytes now.
-fn inizio() -> usize {
+fn start() -> usize {
     let v = VIVI.load(Ordering::Relaxed);
-    PICCO.store(v, Ordering::Relaxed);
+    PEAK.store(v, Ordering::Relaxed);
     v
 }
 
 /// Bytes the phase held above where it started.
-fn sopra(base: usize) -> usize {
-    PICCO.load(Ordering::Relaxed).saturating_sub(base)
+fn above(base: usize) -> usize {
+    PEAK.load(Ordering::Relaxed).saturating_sub(base)
 }
 
 /// The index goes to a file at its offsets (as the page writes it to OPFS), so that it does not count as heap.
@@ -80,10 +80,10 @@ fn mzml_grande_entra_nel_budget() {
     let size = std::fs::metadata(&path).unwrap().len();
 
     // the scan table: about 1.5 KB a scan (the rows), never the headers of every spectrum on top
-    let base = inizio();
+    let base = start();
     let mut f = File::open(&path).unwrap();
     let p = upload::prepare(&mut f, size, "grande.mzML").unwrap();
-    let prep = sopra(base);
+    let prep = above(base);
     assert_eq!(p.table.level.len(), SCANS);
     assert!(
         prep <= 2200 * SCANS + 4 * MB,
@@ -93,7 +93,7 @@ fn mzml_grande_entra_nel_budget() {
 
     // the index with a small budget: the peak stays inside it besides the table the caller holds
     let budget = 16 * MB;
-    let costruisci = |budget: usize, scratch: bool| {
+    let build = |budget: usize, scratch: bool| {
         let out_path = path.with_extension(format!("idx{scratch}{budget}"));
         let mut out = ASuFile(File::create(&out_path).unwrap());
         let mut sp = scratch.then(|| {
@@ -107,7 +107,7 @@ fn mzml_grande_entra_nel_budget() {
                 .unwrap();
             (f, sp_path)
         });
-        let base = inizio();
+        let base = start();
         let src = BufReader::new(File::open(&path).unwrap());
         mzidx::build_mzml_spill(
             &p.table,
@@ -118,20 +118,20 @@ fn mzml_grande_entra_nel_budget() {
                 .map(|(f, _)| f as &mut dyn mzlab_core::mzidx_spill::Spill),
         )
         .unwrap();
-        let picco = sopra(base);
+        let peak = above(base);
         if let Some((_, sp_path)) = sp {
             let _ = std::fs::remove_file(sp_path);
         }
         drop(out);
-        (std::fs::read(&out_path).unwrap(), picco, out_path)
+        (std::fs::read(&out_path).unwrap(), peak, out_path)
     };
-    let (grande, _, f0) = costruisci(mzidx::DEFAULT_BUDGET, false);
+    let (large, _, f0) = build(mzidx::DEFAULT_BUDGET, false);
     let _ = std::fs::remove_file(f0);
     for scratch in [false, true] {
-        let (idx, picco, f1) = costruisci(budget, scratch);
+        let (idx, picco, f1) = build(budget, scratch);
         let _ = std::fs::remove_file(f1);
         assert!(
-            idx == grande,
+            idx == large,
             "scratch={scratch}: the index differs from the one of a big budget"
         );
         // the part that depends on the file: the budget of the peaks, plus the lists of the build (member lists, per-scan arrays)

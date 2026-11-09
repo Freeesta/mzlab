@@ -85,7 +85,7 @@ pub fn table_json_cond(
     t: &Aligned,
     s: &[Sample],
     rows: Option<&[usize]>,
-    cond: Option<(&[mzlab_core::campioni::Campione], &[super::RowInfo])>,
+    cond: Option<(&[mzlab_core::campioni::Sample], &[super::RowInfo])>,
 ) -> Result<String> {
     let has_block = !t.tp.is_empty() && t.tp.len() == t.len();
     if rows.is_none() && !has_block {
@@ -158,7 +158,7 @@ pub fn table_json_cond(
 }
 
 /// The condition of each file's role and controls (empty with fewer than two conditions).
-fn cond_cx(cs: &[mzlab_core::campioni::Campione], roles: &[Role]) -> Vec<CondCx> {
+fn cond_cx(cs: &[mzlab_core::campioni::Sample], roles: &[Role]) -> Vec<CondCx> {
     super::group_conditions(cs)
         .into_iter()
         .map(|c| {

@@ -2,7 +2,7 @@
 
 use super::cartella::{f32_at, u16_at};
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 const RECORD: usize = 416;
 const SLOTS: usize = 32;
@@ -49,11 +49,11 @@ impl Funzione {
 }
 
 /// The functions of `bytes` (`apri` refuses an empty file first); `None` when the size is no multiple of the record (a file cut inside a record).
-pub(super) fn read(b: &[u8], limits: &Limiti) -> Result<Option<Vec<Funzione>>> {
+pub(super) fn read(b: &[u8], limits: &Limits) -> Result<Option<Vec<Funzione>>> {
     if !b.len().is_multiple_of(RECORD) {
         return Ok(None);
     }
-    let n = limits.voci_ok((b.len() / RECORD) as u64)?;
+    let n = limits.ok_entries((b.len() / RECORD) as u64)?;
     Ok(Some(
         (0..n)
             .map(|i| {

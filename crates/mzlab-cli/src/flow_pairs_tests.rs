@@ -184,7 +184,7 @@ fn fixture(out: &Path) -> Fixture {
     add(
         "design.json",
         "design",
-        mzlab_core::disegno::to_json(&mzlab_core::disegno::proponi(&camp)).as_bytes(),
+        mzlab_core::disegno::to_json(&mzlab_core::disegno::propose(&camp)).as_bytes(),
     );
     add(
         "parent.json",

@@ -1,8 +1,8 @@
 //! `campioni::ricollega`: files renamed, moved and replaced are found by SHA-256; by name only when a SHA-256 is unknown, and flagged.
 
-use mzlab_core::campioni::{self, proponi, ricollega, Campione};
+use mzlab_core::campioni::{self, proponi, relink, Sample};
 
-fn series(files: &[(&str, &str)]) -> Vec<Campione> {
+fn series(files: &[(&str, &str)]) -> Vec<Sample> {
     let v: Vec<(String, String, String)> = files
         .iter()
         .map(|(n, h)| (n.to_string(), h.to_string(), String::new()))
@@ -16,8 +16,8 @@ fn cand(v: &[(&str, &str)]) -> Vec<(String, String)> {
         .collect()
 }
 
-fn found(cs: &[Campione], c: &[(&str, &str)]) -> Vec<(usize, String, bool)> {
-    ricollega(cs, &cand(c))
+fn found(cs: &[Sample], c: &[(&str, &str)]) -> Vec<(usize, String, bool)> {
+    relink(cs, &cand(c))
         .into_iter()
         .map(|a| (a.index, a.path, a.by_name))
         .collect()

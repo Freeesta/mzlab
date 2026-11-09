@@ -4,13 +4,13 @@
 mod comune_waters;
 
 use comune_waters::{file_set, folder_file};
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 /// The error of the synthetic folder after `cambia`, with its key and its `name` and `file`.
 fn rifiuto(change: impl FnOnce(&mut Vec<(String, Vec<u8>)>)) -> (String, String, String) {
     let mut f = folder_file();
     change(&mut f);
-    let e = mzlab_lettori::apri_nudo(file_set(f), &Limiti::sito())
+    let e = mzlab_lettori::apri_nudo(file_set(f), &Limits::sito())
         .err()
         .expect("refused");
     let p = |n: &str| {

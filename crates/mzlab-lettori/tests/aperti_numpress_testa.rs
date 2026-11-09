@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Formato, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Format, Limits, Member};
 use mzlab_core::numpress::Np;
 
 /// One long scan whose m/z array is plain (zlib, incompressible, well over 64 KB) and whose intensities are numpress Slof.
@@ -60,7 +60,7 @@ fn numpress_only_in_intensities_after_a_long_mz_is_recognised() {
         "fixture must hide it past 64 KB"
     );
     let mut l = apri(byte);
-    assert_eq!(l.format(), Formato::Altro("mzml-numpress"));
+    assert_eq!(l.format(), Format::Altro("mzml-numpress"));
     let s = l.scan(0, 0).unwrap();
     assert_eq!(s.mz.len(), 30_000);
 }
@@ -97,14 +97,14 @@ fn read_from_header(byte: Vec<u8>) -> (u64, u64) {
     let dim = byte.len() as u64;
     let read_items = Rc::new(Cell::new(0));
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "campione.mzML".into(),
             dim,
             dati: Box::new(Counter(byte, read_items.clone())),
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(fs, &Limiti::sito()).unwrap();
+    let mut l = mzlab_lettori::apri(fs, &Limits::sito()).unwrap();
     let before = read_items.get();
     l.mzml_header(0).unwrap();
     (read_items.get() - before, dim)
@@ -138,7 +138,7 @@ fn a_plain_mzml_is_not_captured_by_the_numpress_module() {
     x[0].intensities = x[0].mz.iter().map(|m| 50.0 + (m * 7.0) % 900.0).collect();
     let r = mzlab_lettori::apri(
         file_set("campione.mzML", mzml_di(&x, Cod::Piano, None)),
-        &Limiti::sito(),
+        &Limits::sito(),
     );
     // the family `aperti` has no reader of plain mzML (the engine of the page reads it): not this one either
     assert!(r.is_err_and(|e| e.key == "err.file.notAccepted"));

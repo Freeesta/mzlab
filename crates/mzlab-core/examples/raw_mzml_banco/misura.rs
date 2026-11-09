@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use crate::conta::{self, Alloc};
 
 #[derive(Clone, Debug)]
-pub struct Giro {
+pub struct Lap {
     pub s: f64,
     pub cpu: f64,
     pub rss_mb: f64,
@@ -16,7 +16,7 @@ pub struct Giro {
     pub guasti_maggiori: u64,
 }
 
-pub fn mediana(v: &[f64]) -> f64 {
+pub fn median(v: &[f64]) -> f64 {
     let mut x: Vec<f64> = v.iter().copied().filter(|a| a.is_finite()).collect();
     if x.is_empty() {
         return f64::NAN;
@@ -47,7 +47,7 @@ pub fn iqr(v: &[f64]) -> f64 {
 }
 
 /// Runs `f` `giri` times; the value of the last run is returned.
-pub fn ripeti<R>(giri: usize, mut f: impl FnMut() -> R) -> (Vec<Giro>, R) {
+pub fn repeat<R>(giri: usize, mut f: impl FnMut() -> R) -> (Vec<Lap>, R) {
     let mut out = Vec::new();
     let mut ultimo = None;
     for _ in 0..giri.max(1) {
@@ -59,7 +59,7 @@ pub fn ripeti<R>(giri: usize, mut f: impl FnMut() -> R) -> (Vec<Giro>, R) {
         let s = t.elapsed().as_secs_f64();
         eprintln!("  run {s:.2} s");
         let (g1, m1) = conta::guasti();
-        out.push(Giro {
+        out.push(Lap {
             s,
             cpu: conta::cpu_s() - cpu0,
             rss_mb: if rss_ok {
@@ -86,16 +86,16 @@ fn tondo(x: f64) -> Value {
 }
 
 /// The JSON of a series of runs: the runs, the median and the range of the time, the first run apart.
-pub fn riassunto(giri: &[Giro]) -> Value {
+pub fn summary(giri: &[Lap]) -> Value {
     let s: Vec<f64> = giri.iter().map(|g| g.s).collect();
-    let med = |f: fn(&Giro) -> f64| mediana(&giri.iter().map(f).collect::<Vec<_>>());
+    let med = |f: fn(&Lap) -> f64| median(&giri.iter().map(f).collect::<Vec<_>>());
     json!({
         "secondi": s.iter().map(|x| tondo(*x)).collect::<Vec<_>>(),
-        "mediana_s": tondo(mediana(&s)),
+        "mediana_s": tondo(median(&s)),
         "iqr_s": tondo(iqr(&s)),
         "migliore_s": tondo(s.iter().copied().fold(f64::INFINITY, f64::min)),
         "primo_giro_s": tondo(s[0]),
-        "mediana_senza_primo_s": tondo(mediana(&s[1.min(s.len() - 1)..])),
+        "mediana_senza_primo_s": tondo(median(&s[1.min(s.len() - 1)..])),
         "cpu_s": tondo(med(|g| g.cpu)),
         "rss_picco_mb": tondo(med(|g| g.rss_mb)),
         "heap_picco_mb": tondo(med(|g| g.heap_mb)),
@@ -106,6 +106,6 @@ pub fn riassunto(giri: &[Giro]) -> Value {
     })
 }
 
-pub fn arrotonda(x: f64) -> Value {
+pub fn round_to(x: f64) -> Value {
     tondo(x)
 }

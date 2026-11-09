@@ -2,15 +2,15 @@
 
 use crate::idxread::{Scan, KINDS};
 use crate::json::Value;
-use crate::lettori::Posizione;
+use crate::lettori::Position;
 
 /// `[membro, offset, lunghezza]` of a row of version 2, or `null`.
-fn posizione(v: &Value) -> Option<Option<Posizione>> {
+fn posizione(v: &Value) -> Option<Option<Position>> {
     if v.is_null() {
         return Some(None);
     }
     let n = |i: usize| v.at(i).and_then(Value::f64).filter(|x| *x >= 0.0);
-    Some(Some(Posizione {
+    Some(Some(Position {
         membro: u16::try_from(n(0)? as u64).ok()?,
         offset: n(1)? as u64,
         lunghezza: u32::try_from(n(2)? as u64).ok()?,
@@ -63,7 +63,7 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
     Some(Scan {
         start,
         end,
-        posizione: pos,
+        position: pos,
         k,
         level: f(2)? as u8,
         rt: f(3)?,

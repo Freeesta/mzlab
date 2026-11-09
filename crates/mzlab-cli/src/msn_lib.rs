@@ -5,9 +5,9 @@
 use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::msngrafo::{aggiungi, cerca, Opzioni, OpzioniCerca};
+use mzlab_core::msngrafo::{aggiungi, cerca, Options, OpzioniCerca};
 
-use mzlab_core::msngrafo::{export_text, LibFormato as Formato};
+use mzlab_core::msngrafo::{export_text, LibFormato as Format};
 
 /// Old flag names of `msn-lib` (old, new); resolved before each match. The options of `add` are those of `msn-graph`, which has its own table.
 const ALIASES: &[(&str, &str)] = &[
@@ -134,11 +134,11 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
             column(&row, "addotto_atteso")
         );
         let none = |s: &str| (!s.is_empty()).then(|| s.to_string());
-        let o = Opzioni {
+        let o = Options {
             formula: Some(ion),
             smiles: none(column(&row, "smiles")),
-            attivazione: none(column(&row, "attivazione")),
-            ..Opzioni::default()
+            activation: none(column(&row, "attivazione")),
+            ..Options::default()
         };
         if id.is_empty() || file.is_empty() {
             return Err(bad("every row needs id and file"));
@@ -153,7 +153,7 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
 fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
     let (mut lib, mut out, mut clean, mut all, mut annotate) = (None, None, false, false, false);
-    let mut formato = Formato::Msp;
+    let mut formato = Format::Msp;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         let x = crate::msn_uscite::canonical(ALIASES, x);
@@ -161,7 +161,7 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
             "--clean" => clean = true,
             "--all" => all = true,
             "--annotate" => annotate = true,
-            "--format" => formato = Formato::parse(&it.next().unwrap_or_default())?,
+            "--format" => formato = Format::parse(&it.next().unwrap_or_default())?,
             "--out" => out = it.next().map(PathBuf::from),
             _ if lib.is_none() => lib = Some(PathBuf::from(x)),
             _ => return Err(bad(&format!("unknown argument {x}"))),
@@ -193,7 +193,7 @@ fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
         match x.as_str() {
             "--ppm" => o.ppm_prec = number()?,
             "--tol" => o.tol_mz = number()?,
-            "--min-evidence" => o.min_prove = number()? as usize,
+            "--min-evidence" => o.min_evidence = number()? as usize,
             "--top" => o.top = number()? as usize,
             "--delta" => o.delta_max = number()?,
             "--out" => out = it.next().map(PathBuf::from),

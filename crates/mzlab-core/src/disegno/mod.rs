@@ -5,7 +5,7 @@ mod json;
 
 pub use json::{digest, from_json, to_json};
 
-use crate::campioni::{Avviso, Campione};
+use crate::campioni::{Sample, Warning};
 use crate::error::{Error, Result};
 
 pub const SCHEMA: &str = "disegno/1";
@@ -16,7 +16,7 @@ pub const MIN_REPLICHE: u32 = 3;
 
 /// One condition: the files of one `serie`, in the order of injection.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Condizione {
+pub struct Condition {
     /// A `serie` of `campioni/2` ("" = the only series).
     pub name: String,
     /// The fewest sample files over the time points of the condition (derived, 0 when it has none).
@@ -34,29 +34,29 @@ pub enum Confronto {
 
 /// A factor and the values it takes.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Fattore {
+pub struct Factor {
     pub name: String,
     pub values: Vec<String>,
 }
 
 /// The batch of one file (the key is the SHA-256 when known, else the name).
 #[derive(Debug, Clone, PartialEq)]
-pub struct Lotto {
+pub struct Batch {
     pub file: String,
     pub sha256: String,
     pub batch: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Disegno {
-    pub conditions: Vec<Condizione>,
+pub struct Design {
+    pub conditions: Vec<Condition>,
     pub reference: Option<String>,
     pub comparisons: Vec<Confronto>,
-    pub factors: Vec<Fattore>,
-    pub batches: Vec<Lotto>,
+    pub factors: Vec<Factor>,
+    pub batches: Vec<Batch>,
 }
 
-impl Disegno {
+impl Design {
     /// Sorts what has no meaningful order, so that equal designs give equal bytes.
     fn normalize(&mut self) {
         for c in &mut self.conditions {
@@ -70,13 +70,13 @@ impl Disegno {
 }
 
 /// The sample files of a condition.
-fn samples<'a>(cs: &'a [Campione], name: &'a str) -> impl Iterator<Item = &'a Campione> {
+fn samples<'a>(cs: &'a [Sample], name: &'a str) -> impl Iterator<Item = &'a Sample> {
     cs.iter()
         .filter(move |c| c.role() == "sample" && c.series == name)
 }
 
 /// The fewest files over the time points of a condition (an unknown time is a point of its own).
-fn replicates(cs: &[Campione], name: &str) -> u32 {
+fn replicates(cs: &[Sample], name: &str) -> u32 {
     let times: Vec<Option<f64>> = samples(cs, name).map(|c| c.time_min).collect();
     times
         .iter()
@@ -100,8 +100,8 @@ fn guess_reference(names: &[String]) -> Option<String> {
 }
 
 /// The design the names suggest: conditions from `serie` in order of injection, the likely reference with "all against the reference", one batch.
-pub fn proponi(cs: &[Campione]) -> Disegno {
-    let mut ordered: Vec<&Campione> = samples_all(cs);
+pub fn propose(cs: &[Sample]) -> Design {
+    let mut ordered: Vec<&Sample> = samples_all(cs);
     crate::sortc::slice_by(&mut ordered, |a, b| {
         (a.order, &a.file).cmp(&(b.order, &b.file))
     });
@@ -120,10 +120,10 @@ pub fn proponi(cs: &[Campione]) -> Disegno {
     } else {
         Vec::new()
     };
-    let mut d = Disegno {
+    let mut d = Design {
         conditions: names
             .iter()
-            .map(|n| Condizione {
+            .map(|n| Condition {
                 name: n.clone(),
                 replicates: replicates(cs, n),
                 levels: Vec::new(),
@@ -134,7 +134,7 @@ pub fn proponi(cs: &[Campione]) -> Disegno {
         factors: Vec::new(),
         batches: cs
             .iter()
-            .map(|c| Lotto {
+            .map(|c| Batch {
                 file: c.file.clone(),
                 sha256: c.sha256.clone(),
                 batch: if c.batch.is_empty() {
@@ -149,12 +149,12 @@ pub fn proponi(cs: &[Campione]) -> Disegno {
     d
 }
 
-fn samples_all(cs: &[Campione]) -> Vec<&Campione> {
+fn samples_all(cs: &[Sample]) -> Vec<&Sample> {
     cs.iter().filter(|c| c.role() == "sample").collect()
 }
 
-fn push(out: &mut Vec<Avviso>, code: &'static str, severity: &'static str, name: &str) {
-    let a = Avviso {
+fn push(out: &mut Vec<Warning>, code: &'static str, severity: &'static str, name: &str) {
+    let a = Warning {
         code,
         severity,
         file: None,
@@ -167,7 +167,7 @@ fn push(out: &mut Vec<Avviso>, code: &'static str, severity: &'static str, name:
 }
 
 /// The batch of a file: the one the design says (by SHA-256 when both are known, else by name), else the default.
-fn batch_of<'a>(d: &'a Disegno, c: &Campione) -> &'a str {
+fn batch_of<'a>(d: &'a Design, c: &Sample) -> &'a str {
     d.batches
         .iter()
         .find(|l| {
@@ -181,8 +181,8 @@ fn batch_of<'a>(d: &'a Disegno, c: &Campione) -> &'a str {
 }
 
 /// A QC before the first sample and another after the last one, in the order of injection.
-fn qc_at_both_ends(files: &[&Campione]) -> bool {
-    let is_sample = |c: &&Campione| matches!(c.role(), "sample" | "t0");
+fn qc_at_both_ends(files: &[&Sample]) -> bool {
+    let is_sample = |c: &&Sample| matches!(c.role(), "sample" | "t0");
     let (Some(first), Some(last)) = (
         files.iter().position(is_sample),
         files.iter().rposition(is_sample),
@@ -195,7 +195,7 @@ fn qc_at_both_ends(files: &[&Campione]) -> bool {
 
 /// What the design lacks, as codes: `fewReplicates` (warning, per condition), `batchNoQc` (warning, per batch), `emptyComparison` (error, per
 /// condition without sample files used by a comparison) and `refMissing` (error, "all against the reference" without a known reference).
-pub fn valida(d: &Disegno, cs: &[Campione]) -> Vec<Avviso> {
+pub fn validate(d: &Design, cs: &[Sample]) -> Vec<Warning> {
     let mut out = Vec::new();
     for c in &d.conditions {
         let n = replicates(cs, &c.name);
@@ -211,7 +211,7 @@ pub fn valida(d: &Disegno, cs: &[Campione]) -> Vec<Avviso> {
         }
     }
     for b in names {
-        let mut files: Vec<&Campione> = cs.iter().filter(|c| batch_of(d, c) == b).collect();
+        let mut files: Vec<&Sample> = cs.iter().filter(|c| batch_of(d, c) == b).collect();
         crate::sortc::slice_by(&mut files, |x, y| {
             (x.order, &x.file).cmp(&(y.order, &y.file))
         });
@@ -247,7 +247,7 @@ pub fn valida(d: &Disegno, cs: &[Campione]) -> Vec<Avviso> {
 /// The bindings: `op` is `proponi` (a `campioni/2`), `valida` (`{"disegno","campioni"}`), `canonico` or `digest` (a `disegno/1`); JSON in, JSON out.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
-        "proponi" => Ok(to_json(&proponi(&crate::campioni::from_json(
+        "proponi" => Ok(to_json(&propose(&crate::campioni::from_json(
             input.as_bytes(),
         )?))),
         "valida" => {
@@ -255,7 +255,7 @@ pub fn route(op: &str, input: &str) -> Result<String> {
             let bad = || Error::new("error.badDisegno");
             let d = json::read(v.get("disegno").ok_or_else(bad)?)?;
             let cs = crate::campioni::from_value(v.get("campioni").ok_or_else(bad)?)?;
-            Ok(crate::campioni::valida_json(&valida(&d, &cs)))
+            Ok(crate::campioni::validate_json(&validate(&d, &cs)))
         }
         "canonico" => Ok(to_json(&from_json(input.as_bytes())?)),
         "digest" => Ok(digest(&from_json(input.as_bytes())?)),

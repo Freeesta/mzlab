@@ -11,9 +11,7 @@
 )]
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{
-    Campione, Campo, Formato, Lettore, Posizione, VoceCromatogramma, VoceScansione,
-};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Position, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{CvPar, Header, Precursore, SpectrumExtra};
 
@@ -52,9 +50,9 @@ fn con_totali(extra: &mut SpectrumExtra, k: usize, level: u8, precursor: Option<
 }
 
 /// A tiny deterministic generator (xorshift), so the scans are the same on every run.
-pub struct Caso(pub u64);
+pub struct Case(pub u64);
 
-impl Caso {
+impl Case {
     pub fn next(&mut self) -> u64 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 7;
@@ -68,18 +66,18 @@ impl Caso {
 
 /// What a scan carries besides its peaks.
 #[derive(Clone)]
-pub struct Scheda {
+pub struct Card {
     pub spettro: Spectrum,
     pub extra: SpectrumExtra,
 }
 
 pub struct Finto {
-    pub formato: Formato,
-    pub campioni: Vec<Campione>,
-    pub indice: Vec<VoceScansione>,
-    pub schede: Vec<Scheda>,
+    pub formato: Format,
+    pub campioni: Vec<Sample>,
+    pub indice: Vec<ScanEntry>,
+    pub cards: Vec<Card>,
     pub testata: Option<Header>,
-    pub tracce: Vec<Chromatogram>,
+    pub traces: Vec<Chromatogram>,
 }
 
 fn spettro(
@@ -111,8 +109,8 @@ fn spettro(
 impl Finto {
     /// `n` scans of one cycle MS1, MS2, MS2, MS3, empty, with every combination of the optional fields; `peaks` peaks in the survey scans.
     pub fn vario(n: usize, peaks: usize, seed: u64) -> Finto {
-        let mut r = Caso(seed | 1);
-        let mut schede = Vec::new();
+        let mut r = Case(seed | 1);
+        let mut cards = Vec::new();
         for k in 0..n {
             let (level, pol): (u8, i8) = match k % 5 {
                 0 => (1, [1, -1, 0, 1][(k / 5) % 4]),
@@ -213,32 +211,32 @@ impl Finto {
             if k % 23 == 7 {
                 extra.params.push(("scan \"mode\"".into(), "a<b&c".into()));
             }
-            schede.push(Scheda { spettro: sp, extra });
+            cards.push(Card { spettro: sp, extra });
         }
-        Finto::da_schede(schede)
+        Finto::da_schede(cards)
     }
 
-    pub fn da_schede(schede: Vec<Scheda>) -> Finto {
-        let indice = schede
+    pub fn da_schede(cards: Vec<Card>) -> Finto {
+        let indice = cards
             .iter()
             .enumerate()
-            .map(|(k, s)| VoceScansione {
+            .map(|(k, s)| ScanEntry {
                 id: s.spettro.id.clone(),
                 rt: s.spettro.rt,
                 livello: s.spettro.level,
                 polarita: s.spettro.polarity,
                 tic: 0.0,
-                picco_base: None,
+                base_peak: None,
                 filtro: s.spettro.filter.clone(),
                 precursore: s.spettro.precursor,
-                posizione: (k % 9 != 8).then_some(Posizione {
+                position: (k % 9 != 8).then_some(Position {
                     membro: (k % 2) as u16,
                     offset: 100 * k as u64,
                     lunghezza: 77,
                 }),
             })
             .collect();
-        let tracce = vec![
+        let traces = vec![
             Chromatogram {
                 index: 0,
                 id: "TIC".into(),
@@ -271,23 +269,23 @@ impl Finto {
             },
         ];
         Finto {
-            formato: Formato::Altro("finto"),
-            campioni: vec![Campione {
+            formato: Format::Altro("finto"),
+            campioni: vec![Sample {
                 id: 7,
                 nome: "finto".into(),
-                scansioni: schede.len(),
-                dimensione: None,
+                scansioni: cards.len(),
+                size: None,
             }],
             indice,
-            schede,
+            cards,
             testata: None,
-            tracce,
+            traces,
         }
     }
 
     /// Some scans with one intensity more than m/z values (what `mzidx_lettore::spettro` cuts); the mzML of such a reader is not valid.
     pub fn con_lunghezze_diverse(mut self) -> Finto {
-        for (k, s) in self.schede.iter_mut().enumerate() {
+        for (k, s) in self.cards.iter_mut().enumerate() {
             if k % 17 == 9 && s.spettro.wide.is_none() {
                 s.spettro.intensity.push(1.0);
             }
@@ -302,30 +300,30 @@ impl Finto {
     }
 }
 
-impl Lettore for Finto {
-    fn format(&self) -> Formato {
+impl Reader for Finto {
+    fn format(&self) -> Format {
         self.formato
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn index(&mut self, _c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _c: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
     fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
-        self.schede
+        self.cards
             .get(k)
             .map(|s| s.spettro.clone())
             .ok_or_else(|| Error::new("error.badIndex"))
     }
-    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Field>> {
         Ok(Vec::new())
     }
-    fn chromatograms(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(self
-            .tracce
+            .traces
             .iter()
-            .map(|t| VoceCromatogramma {
+            .map(|t| ChromatogramEntry {
                 id: t.id.clone(),
                 tipo: t.kind,
                 unita: String::new(),
@@ -333,7 +331,7 @@ impl Lettore for Finto {
             .collect())
     }
     fn chromatogram(&mut self, _c: usize, id: &str) -> Result<Chromatogram> {
-        self.tracce
+        self.traces
             .iter()
             .find(|t| t.id == id)
             .cloned()
@@ -346,7 +344,7 @@ impl Lettore for Finto {
         Ok(self.testata.clone())
     }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
-        self.schede
+        self.cards
             .get(s.index)
             .map(|x| x.extra.clone())
             .unwrap_or_default()

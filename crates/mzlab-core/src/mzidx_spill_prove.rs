@@ -22,16 +22,16 @@ fn a_round_ends_on_a_partition_boundary() {
     let counts: Vec<u64> = (0..NB as u64)
         .map(|b| (b % 13 + 1) * u64::from(b > 100 && b < 2000))
         .collect();
-    let parti = Parti::new(&counts);
+    let parts = Parts::new(&counts);
     let cost = |b: usize| (b % 7 + 1) * 10;
     for (lo, hi) in [(0, 150), (150, 400), (300, 301), (1500, 1990), (9000, NB)] {
         let used: usize = (lo..hi).map(cost).sum();
-        let (h, u) = allinea(Some(&parti), lo, hi, used, &cost);
+        let (h, u) = allinea(Some(&parts), lo, hi, used, &cost);
         assert!(h > lo && h <= hi, "{lo}..{hi} -> {h}");
         assert_eq!(u, (lo..h).map(cost).sum::<usize>());
-        let inside = parti.first.iter().any(|&f| f > lo && f <= hi);
+        let inside = parts.first.iter().any(|&f| f > lo && f <= hi);
         if hi < NB && inside {
-            assert!(parti.first.contains(&h), "{lo}..{hi} -> {h}");
+            assert!(parts.first.contains(&h), "{lo}..{hi} -> {h}");
         } else {
             assert_eq!(h, hi);
         }

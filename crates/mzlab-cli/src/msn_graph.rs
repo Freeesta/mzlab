@@ -10,12 +10,12 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
-use mzlab_core::lettori_mzml::Picchi;
-use mzlab_core::msnalbero::Raggruppa;
+use mzlab_core::lettori_mzml::Peaks;
+use mzlab_core::msnalbero::Grouping;
 use mzlab_core::msngrafo::{
-    con_interpretazione, esporta, grafo_json, Formato, Grafo, Opzioni, ParamRegole, PPM_PERDITA,
+    con_interpretazione, esporta, grafo_json, Format, Graph, Options, RuleParams, PPM_PERDITA,
 };
-use mzlab_core::mzmlwrite::Opzioni as MzmlOpzioni;
+use mzlab_core::mzmlwrite::Options as MzmlOpzioni;
 
 pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/2) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
@@ -122,10 +122,10 @@ impl Rot {
 
 pub struct Args {
     pub(crate) file: PathBuf,
-    pub(crate) o: Opzioni,
+    pub(crate) o: Options,
     verita: Option<PathBuf>,
     summary: bool,
-    export: Option<(Formato, bool, Option<String>)>,
+    export: Option<(Format, bool, Option<String>)>,
     structures: Option<(String, f64)>,
     interpreta: Option<f64>,
     cleavages: Option<Parametri>,
@@ -159,12 +159,12 @@ const FIGURE_USAGE: &str =
 pub fn parse_args(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<Option<Args>, String> {
-    let (mut file, mut o) = (None, Opzioni::default());
+    let (mut file, mut o) = (None, Options::default());
     let (mut verita, mut riassunto, mut out) = (None, false, None);
     let (mut export, mut clean, mut node) = (None, false, None);
     let (mut strutture, mut rot) = (None, Rot::default());
     let (mut interpreta, mut loss_ppm) = (false, PPM_PERDITA);
-    let (mut rules, mut rules_p) = (false, ParamRegole::default());
+    let (mut rules, mut rules_p) = (false, RuleParams::default());
     let (mut figura, mut vista) = (Vec::new(), mzlab_feat::msnfigura::Vista::Albero);
     while let Some(x) = a.next().map(|x| crate::msn_uscite::canonical(ALIASES, x)) {
         match x.as_str() {
@@ -176,21 +176,21 @@ pub fn parse_args(
                 o.molfile = Some(std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))?);
             }
             "--ppm-formula" => o.ppm_formula = number(a.next(), &x)?,
-            "--low-mz" => o.mz_basso = number(a.next(), &x)?,
-            "--wide-ppm" => o.ppm_basso = number(a.next(), &x)?,
-            "--min-evidence" => o.prove_min = number(a.next(), &x)? as usize,
-            "--activation" => o.attivazione = a.next(),
+            "--low-mz" => o.mz_low = number(a.next(), &x)?,
+            "--wide-ppm" => o.ppm_low = number(a.next(), &x)?,
+            "--min-evidence" => o.evidence_min = number(a.next(), &x)? as usize,
+            "--activation" => o.activation = a.next(),
             "--isotopes" => o.isotopi = true,
             "--pick" => {
                 let v = a.next().unwrap_or_default();
                 let (m, f) = v.split_once('=').ok_or("--pick needs MZ=ION")?;
-                o.scelte.push((number(Some(m.into()), &x)?, f.into()));
+                o.choices.push((number(Some(m.into()), &x)?, f.into()));
             }
             "--truth" => verita = a.next().map(PathBuf::from),
             "--summary" => riassunto = true,
             "--export" => {
                 export = Some(
-                    Formato::da_nome(&a.next().unwrap_or_default())
+                    Format::from_name(&a.next().unwrap_or_default())
                         .map_err(|_| "--export needs csv, mgf or msp")?,
                 )
             }
@@ -243,14 +243,14 @@ fn io(e: std::io::Error) -> Error {
 
 /// The graph of `file`, its index built in `tmp`: an mzML is read as it is, any other dataset a reader takes (a Thermo `.raw`, ...) is first written to
 /// `tmp` as mzML with the peaks of the file.
-pub fn graph(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
+pub fn graph(file: &Path, o: &Options, tmp: &Path) -> Result<(Graph, String)> {
     let name = file
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let converted = tmp.join("0.mzML");
     let is_mzml = name.to_lowercase().ends_with(".mzml");
     if !is_mzml {
-        let (peaks, opz) = (Picchi::File, MzmlOpzioni::default());
+        let (peaks, opz) = (Peaks::File, MzmlOpzioni::default());
         crate::flow_base::write_mzml(file, None, &converted, peaks, opz)?;
     }
     let source = if is_mzml { file } else { &converted };
@@ -260,7 +260,7 @@ pub fn graph(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
     let o = &mzlab_feat::chem::regole::con_attese(o);
-    grafo_json(&scans, &mut m, (&name, &sha), (o, &Raggruppa::default()))
+    grafo_json(&scans, &mut m, (&name, &sha), (o, &Grouping::default()))
 }
 
 /// The nominal path of a node of the tree (`317@cid35>261@cid35` → [317, 261]).
@@ -276,7 +276,7 @@ fn hill(f: &str) -> String {
 }
 
 /// Nodes of each MS level, and the peaks of the spectra of each level: kept (with a node) and discarded (unexplained).
-fn per_livello(o: &mut Out, g: &Grafo) {
+fn per_livello(o: &mut Out, g: &Graph) {
     o.raw("\"per_livello\":{");
     let max = g.nodi.iter().map(|n| n.livello).max().unwrap_or(0);
     for l in 1..=max {
@@ -288,13 +288,13 @@ fn per_livello(o: &mut Out, g: &Grafo) {
     }
     // peaks of the spectra of each MS level: kept (with a node) and discarded (unexplained)
     o.raw("},\"picchi_per_livello\":{");
-    let lv = g.spettri.iter().map(|s| s.livello).max().unwrap_or(0);
+    let lv = g.spettri.iter().map(|s| s.level).max().unwrap_or(0);
     let mut first_one = true;
     for l in 2..=lv {
         let pk = g
             .spettri
             .iter()
-            .filter(|s| s.livello == l)
+            .filter(|s| s.level == l)
             .flat_map(|s| &s.picchi);
         let (t, d) = pk.fold((0, 0), |(t, d), p| {
             if p.2.is_some() {
@@ -313,7 +313,7 @@ fn per_livello(o: &mut Out, g: &Grafo) {
 }
 
 /// One line of numbers: the graph against the paths of a truth file.
-pub fn summary(g: &Grafo, verita: &str) -> Result<String> {
+pub fn summary(g: &Graph, verita: &str) -> Result<String> {
     let v = parse(verita.as_bytes())?;
     let attesi: Vec<(Vec<i64>, String)> = v
         .get("nodes")
@@ -341,11 +341,11 @@ pub fn summary(g: &Grafo, verita: &str) -> Result<String> {
         };
         found += 1;
         let Some(x) = &n.formula else { continue };
-        if let Some(c) = x.candidati.iter().find(|c| c.formula == *f) {
+        if let Some(c) = x.candidates.iter().find(|c| c.formula == *f) {
             between += 1;
             ppm_max = ppm_max.max(c.ppm.abs());
         }
-        if x.scelta.as_deref() == Some(f) {
+        if x.choice.as_deref() == Some(f) {
             single += 1;
         }
     }
@@ -369,9 +369,9 @@ pub fn summary(g: &Grafo, verita: &str) -> Result<String> {
 
 /// The graph text `j` of `g` with the key `strutture` of node `nodo` (`nK` or `K`): the cleavages of `o.smiles` that give its m/z within `ppm`.
 pub fn structures_text(
-    g: &Grafo,
+    g: &Graph,
     j: &str,
-    o: &Opzioni,
+    o: &Options,
     (nodo, ppm): (&str, f64),
 ) -> Result<String> {
     mzlab_feat::chem::strutture::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
@@ -396,7 +396,7 @@ pub fn complete_cmd(
 }
 
 /// The graph text `j` of `g` with the keys `interpretazione` and `rotture` the options ask for (also used by `msn-lib add`).
-pub fn with_keys(a: &Args, g: &Grafo, mut j: String) -> Result<String> {
+pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
     if let Some(ppm) = a.interpreta {
         j = con_interpretazione(&j, g, ppm);
     }

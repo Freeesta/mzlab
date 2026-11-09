@@ -8,11 +8,11 @@ use std::collections::{HashMap, HashSet};
 use js_sys::{Array, Float32Array, Float64Array, Function, Reflect, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::trasporto::{
-    decode_indice, decode_scansione, scansione_da_parti, Intensita, PROTOCOLLO,
+    decode_index, decode_scansione, scan_from_parts, Intensity, PROTOCOLLO,
 };
 use wasm_bindgen::prelude::*;
 
@@ -21,7 +21,7 @@ pub trait Module {
     /// The version of the transport the module speaks (`trasporto::PROTOCOLLO`).
     fn protocol(&mut self) -> Result<u32>;
     fn samples(&mut self) -> Result<String>;
-    /// The index of sample `c` (`trasporto::encode_indice`).
+    /// The index of sample `c` (`trasporto::encode_index`).
     fn index(&mut self, c: usize) -> Result<Vec<u8>>;
     /// Scan `k` of sample `c` (`trasporto::encode_scansione`).
     fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>>;
@@ -92,14 +92,14 @@ fn pairs(v: Option<&Value>) -> Vec<(String, String)> {
         .collect()
 }
 
-fn format(id: &str) -> Formato {
+fn format(id: &str) -> Format {
     match id {
-        "thermo-raw" => Formato::ThermoRaw,
-        "sciex-wiff" => Formato::SciexWiff,
-        "sciex-dam" => Formato::SciexDam,
-        "agilent-d" => Formato::AgilentD,
-        "mzml" => Formato::Mzml,
-        _ => Formato::Altro(interned(id)),
+        "thermo-raw" => Format::ThermoRaw,
+        "sciex-wiff" => Format::SciexWiff,
+        "sciex-dam" => Format::SciexDam,
+        "agilent-d" => Format::AgilentD,
+        "mzml" => Format::Mzml,
+        _ => Format::Altro(interned(id)),
     }
 }
 
@@ -137,18 +137,18 @@ pub(crate) struct Replies;
 
 impl Replies {
     /// `{formato, campioni:[{id,name,scans}]}`.
-    pub(crate) fn samples(t: &str) -> Result<(Formato, Vec<Campione>)> {
+    pub(crate) fn samples(t: &str) -> Result<(Format, Vec<Sample>)> {
         let v = doc(t)?;
         let c = v
             .get("campioni")
             .map(Value::arr)
             .unwrap_or_default()
             .iter()
-            .map(|c| Campione {
+            .map(|c| Sample {
                 id: number(c.get("id")) as u32,
                 nome: text(c.get("name")),
                 scansioni: number(c.get("scans")) as usize,
-                dimensione: c.get("size").and_then(Value::f64).map(|d| d as u64),
+                size: c.get("size").and_then(Value::f64).map(|d| d as u64),
             })
             .collect::<Vec<_>>();
         if c.is_empty() {
@@ -157,9 +157,9 @@ impl Replies {
         Ok((format(&text(v.get("formato"))), c))
     }
 
-    /// The index as the module wrote it (`trasporto::decode_indice`).
-    pub(crate) fn index(b: &[u8]) -> Result<Vec<VoceScansione>> {
-        decode_indice(b)
+    /// The index as the module wrote it (`trasporto::decode_index`).
+    pub(crate) fn index(b: &[u8]) -> Result<Vec<ScanEntry>> {
+        decode_index(b)
     }
 }
 
@@ -168,7 +168,7 @@ pub struct ScanReplies;
 
 impl ScanReplies {
     /// The scan as the module sends it, with the id and the filter of its row of the index.
-    pub(crate) fn scan(mut s: Spectrum, row: Option<&VoceScansione>) -> Spectrum {
+    pub(crate) fn scan(mut s: Spectrum, row: Option<&ScanEntry>) -> Spectrum {
         if let Some(r) = row {
             s.id = r.id.clone();
             s.filter = r.filtro.clone();
@@ -177,12 +177,12 @@ impl ScanReplies {
     }
 
     /// `[{name, value, unit, cv}]`.
-    pub(crate) fn scan_header(t: &str) -> Result<Vec<Campo>> {
+    pub(crate) fn scan_header(t: &str) -> Result<Vec<Field>> {
         let opt = |v: Option<&Value>| v.and_then(Value::str).map(str::to_string);
         Ok(doc(t)?
             .arr()
             .iter()
-            .map(|f| Campo {
+            .map(|f| Field {
                 nome: text(f.get("name")),
                 valore: text(f.get("value")),
                 unita: opt(f.get("unit")),
@@ -192,11 +192,11 @@ impl ScanReplies {
     }
 
     /// `[{id, kind, unit}]` (`kind` is the name of the `ChromKind`).
-    pub(crate) fn chromatograms(t: &str) -> Result<Vec<VoceCromatogramma>> {
+    pub(crate) fn chromatograms(t: &str) -> Result<Vec<ChromatogramEntry>> {
         Ok(doc(t)?
             .arr()
             .iter()
-            .map(|x| VoceCromatogramma {
+            .map(|x| ChromatogramEntry {
                 id: text(x.get("id")),
                 tipo: kind_of(&text(x.get("kind"))),
                 unita: text(x.get("unit")),
@@ -279,9 +279,9 @@ impl TraceReplies {
 /// A `Lettore` over a `Module`.
 pub struct ExternalReader<M: Module> {
     m: M,
-    format: Formato,
-    samples: Vec<Campione>,
-    indexes: HashMap<usize, Vec<VoceScansione>>,
+    format: Format,
+    samples: Vec<Sample>,
+    indexes: HashMap<usize, Vec<ScanEntry>>,
 }
 
 impl<M: Module> ExternalReader<M> {
@@ -302,14 +302,14 @@ impl<M: Module> ExternalReader<M> {
     }
 }
 
-impl<M: Module> Lettore for ExternalReader<M> {
-    fn format(&self) -> Formato {
+impl<M: Module> Reader for ExternalReader<M> {
+    fn format(&self) -> Format {
         self.format
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.samples
     }
-    fn index(&mut self, c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
         if !self.indexes.contains_key(&c) {
             let r = Replies::index(&self.m.index(c)?)?;
             self.indexes.insert(c, r);
@@ -324,10 +324,10 @@ impl<M: Module> Lettore for ExternalReader<M> {
             self.indexes.get(&c).and_then(|v| v.get(k)),
         ))
     }
-    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         ScanReplies::scan_header(&self.m.scan_header(c, k)?)
     }
-    fn chromatograms(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         ScanReplies::chromatograms(&self.m.chromatograms(c)?)
     }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
@@ -408,14 +408,14 @@ fn from_parts(k: usize, r: JsValue) -> Result<Spectrum> {
     let mz = mz.to_vec();
     let y = a.get(2);
     let y = match y.dyn_ref::<Float64Array>() {
-        Some(w) => Intensita::Larghe(w.to_vec()),
-        None => Intensita::Strette(
+        Some(w) => Intensity::Larghe(w.to_vec()),
+        None => Intensity::Strette(
             y.dyn_into::<Float32Array>()
                 .map_err(|_| broken("scan"))?
                 .to_vec(),
         ),
     };
-    scansione_da_parti(k, &head.to_vec(), mz, y)
+    scan_from_parts(k, &head.to_vec(), mz, y)
 }
 
 impl Module for JsModule {

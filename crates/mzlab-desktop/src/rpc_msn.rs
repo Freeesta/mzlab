@@ -10,10 +10,10 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
     aggiungi, cerca, con_interpretazione, da_richiesta, da_richiesta_export, esporta, grafo_json,
-    library_text, opzioni_cerca, tabella_regole, table_text, Grafo, Opzioni, PPM_PERDITA,
+    library_text, opzioni_cerca, tabella_regole, table_text, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
-use mzlab_core::sorgente::SorgenteLettore;
+use mzlab_core::sorgente::ReaderSource;
 use mzlab_core::{lettori_mzml, Error, Result};
 use mzlab_feat::chem::strutture::strutture_testo;
 use serde_json::{json, Value};
@@ -135,7 +135,7 @@ impl State {
     pub(crate) fn nat_srm(&self, p: &Value) -> Result<Answer> {
         let nat = self.nat_of(p["name"].as_str().unwrap_or(""))?;
         let mut l = nativi::open(&nat.members, nat.centroid)?;
-        let mut t = SorgenteLettore {
+        let mut t = ReaderSource {
             l: &mut *l,
             c: nat.c,
         };
@@ -225,7 +225,7 @@ fn add_expected(q: &mut Query) {
     for (i, x) in a.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("[")
-            .str(&x.regola)
+            .str(&x.rule)
             .raw(",")
             .str(&x.formula);
         o.raw(if x.ione { ",1]" } else { ",0]" });
@@ -234,7 +234,7 @@ fn add_expected(q: &mut Query) {
     q.0.push(("attese".to_string(), o.0));
 }
 
-type Computed = Result<(Grafo, String, Opzioni)>;
+type Computed = Result<(Graph, String, Options)>;
 
 /// The graph of the query over the index and the mzML (`calcola_con` of the `.wasm`).
 fn graph(mut idx: MapAt, idx_size: u64, mzml: &mut dyn ReadAt, name: &str, q: &Query) -> Computed {
@@ -259,7 +259,7 @@ impl ReadAt for DynRead<'_> {
 }
 
 /// The optional keys of the query on the graph text: `interpreta=1` and `rotture=1`, shared by the graph and its exports.
-fn with_keys(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> Result<String> {
+fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String> {
     if q.get("interpreta") == Some("1") {
         let ppm = match q.some("ppm_perdita") {
             None => PPM_PERDITA,

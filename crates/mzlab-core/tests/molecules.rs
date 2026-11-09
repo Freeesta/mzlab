@@ -6,7 +6,7 @@
 
 use mzlab_core::json::{parse, Value};
 use mzlab_core::molecules::{
-    cerca, digest, from_csv, from_json, route, to_csv, to_json, unisci, Molecola,
+    cerca, digest, from_csv, from_json, merge, route, to_csv, to_json, Molecule,
 };
 
 const LOOSE: &str = "\
@@ -16,11 +16,11 @@ Esempina;c10h15no;ABCDEFGHIJKLMN-OPQRSTUVWX-Y;Esempina HCl|esempina|Ex-1;;4.25;m
 Cationina;C8H12N;AAAAAAAAAAAAAA-BBBBBBBBBB-C;;1;;;;
 ";
 
-fn ms(csv: &str) -> Vec<Molecola> {
+fn ms(csv: &str) -> Vec<Molecule> {
     from_csv(csv, "utente", None).unwrap_or_else(|e| panic!("{e:?}"))
 }
 
-fn sorted_by_id(mut v: Vec<Molecola>) -> Vec<Molecola> {
+fn sorted_by_id(mut v: Vec<Molecule>) -> Vec<Molecule> {
     v.sort_by(|a, b| a.id.cmp(&b.id));
     v
 }
@@ -32,7 +32,7 @@ fn root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn catalogue() -> (String, Vec<Molecola>) {
+fn catalogue() -> (String, Vec<Molecule>) {
     let text = std::fs::read_to_string(root().join("mzlab/web/molecole/catalogo.csv")).unwrap();
     let all =
         from_csv(&text, "catalogo", None).unwrap_or_else(|e| panic!("{:?}", &e[..e.len().min(3)]));
@@ -149,7 +149,7 @@ Paresempina;;C13H21NO;AAAAAAAAAAAAAA-AAAAAAAAAA-E
 Lattosio;;C12H22O11;AAAAAAAAAAAAAA-AAAAAAAAAA-F
 ";
 
-fn names(ms: &[Molecola], hits: &[(usize, f64)]) -> Vec<String> {
+fn names(ms: &[Molecule], hits: &[(usize, f64)]) -> Vec<String> {
     hits.iter().map(|h| ms[h.0].nome.clone()).collect()
 }
 
@@ -199,7 +199,7 @@ fn levels_replace_by_id_and_come_back() {
     let mut mine = cat[1].clone();
     mine.nome = "Esempinolo mio".into();
     mine.origine.tipo = "utente".into();
-    let all = unisci(&cat, &[mine.clone()]);
+    let all = merge(&cat, &[mine.clone()]);
     assert_eq!(all.len(), cat.len());
     assert_eq!(all[1].nome, "Esempinolo mio");
     // an imported copy does not beat the user one, in any order
@@ -207,12 +207,12 @@ fn levels_replace_by_id_and_come_back() {
     imported.nome = "Esempinolo importato".into();
     imported.origine.tipo = "importata".into();
     assert_eq!(
-        unisci(&cat, &[mine.clone(), imported.clone()])[1].nome,
+        merge(&cat, &[mine.clone(), imported.clone()])[1].nome,
         "Esempinolo mio"
     );
-    assert_eq!(unisci(&cat, &[imported, mine])[1].nome, "Esempinolo mio");
+    assert_eq!(merge(&cat, &[imported, mine])[1].nome, "Esempinolo mio");
     // taking the copy away brings the catalogue record back
-    assert_eq!(unisci(&cat, &[])[1].nome, "Esempinolo");
+    assert_eq!(merge(&cat, &[])[1].nome, "Esempinolo");
     // the same through the bindings
     let doc = route(
         "a_json",
@@ -257,23 +257,23 @@ fn the_catalogue_is_canonical_and_complete() {
     // the last record (timolol) was added after the two old lists
     assert_eq!(all.len(), 625 + 645 - 43 + 1);
     assert_eq!(to_csv(&all), text, "mzlab/web/molecole/catalogo.csv is not in the canonical form: run tools/genera_molecole.py");
-    let both = all.iter().filter(|m| m.origine.catalogo.len() == 2).count();
+    let both = all.iter().filter(|m| m.origine.catalog.len() == 2).count();
     assert_eq!(both, 43 + 1);
     assert_eq!(
         all.iter()
-            .filter(|m| m.origine.catalogo.contains(&"tabui".to_string()))
+            .filter(|m| m.origine.catalog.contains(&"tabui".to_string()))
             .count(),
         625 + 1
     );
 }
 
 /// The queries of `tools/molecole_oro_tabui.mjs`: prefixes of 2, 3 and 5 characters of every name of Tabui, then 100 inner pieces.
-fn queries(tabui: &[&Molecola]) -> Vec<String> {
+fn queries(tabui: &[&Molecule]) -> Vec<String> {
     let mut names: Vec<&str> = Vec::new();
     for m in tabui {
         names.push(&m.nome);
-        if m.origine.catalogo.len() == 1 {
-            names.extend(m.sinonimi.iter().map(String::as_str));
+        if m.origine.catalog.len() == 1 {
+            names.extend(m.synonyms.iter().map(String::as_str));
         }
     }
     let mut out: Vec<String> = Vec::new();
@@ -299,11 +299,11 @@ fn queries(tabui: &[&Molecola]) -> Vec<String> {
 }
 
 /// The 625 compounds of the old Tabui list, in its order (timolol came after).
-fn old_tabui_compounds() -> Vec<Molecola> {
+fn old_tabui_compounds() -> Vec<Molecule> {
     let (_, all) = catalogue();
-    let mut tabui: Vec<Molecola> = all
+    let mut tabui: Vec<Molecule> = all
         .into_iter()
-        .filter(|m| m.origine.catalogo.contains(&"tabui".to_string()))
+        .filter(|m| m.origine.catalog.contains(&"tabui".to_string()))
         .collect();
     tabui.truncate(625);
     tabui
@@ -313,7 +313,7 @@ fn old_tabui_compounds() -> Vec<Molecola> {
 fn search_gives_what_the_name_box_of_tabui_gave() {
     let tabui = old_tabui_compounds();
     let common: Vec<usize> = (0..tabui.len())
-        .filter(|&k| tabui[k].origine.catalogo.len() == 2)
+        .filter(|&k| tabui[k].origine.catalog.len() == 2)
         .collect();
     let oro = std::fs::read_to_string(root().join("tests/data/molecole_tabui_oro.json")).unwrap();
     let oro = parse(oro.as_bytes()).unwrap();

@@ -4,7 +4,7 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 mod pezzi;
 
@@ -134,7 +134,7 @@ impl Cur<'_> {
         if t != tag {
             return Err(guasto("unexpected tag in the header"));
         }
-        self.limits.voci_ok(u64::from(n))
+        self.limits.ok_entries(u64::from(n))
     }
     fn attributi(&mut self) -> Result<Vec<Attr>> {
         let n = self.list(TAG_ATT)?;
@@ -166,7 +166,7 @@ impl Cur<'_> {
 
 impl Cdf {
     /// Parses the header of the file `dati` of `dim` bytes.
-    pub fn apri(data: &mut dyn ReadAt, dim: u64, limits: &Limiti) -> Result<Cdf> {
+    pub fn apri(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Cdf> {
         let mut c = Cur {
             dati: data,
             dim,
@@ -212,7 +212,7 @@ impl Cdf {
         for _ in 0..c.list(TAG_VAR)? {
             let name = c.name()?;
             let n = u64::from(c.u32()?);
-            let nd = c.limits.voci_ok(n)?;
+            let nd = c.limits.ok_entries(n)?;
             let mut dims = Vec::new();
             for _ in 0..nd {
                 let d = c.u32()? as usize;
@@ -314,12 +314,12 @@ impl Cdf {
     pub fn read(
         &self,
         data: &mut dyn ReadAt,
-        limits: &Limiti,
+        limits: &Limits,
         v: &Var,
         da: u64,
         n: u64,
     ) -> Result<Vec<f64>> {
-        limits.voci_ok(n)?;
+        limits.ok_entries(n)?;
         // the values are decoded piece by piece, never the whole window as bytes first
         self.check(limits, v, da, n)?;
         let mut out = Vec::new();
@@ -330,7 +330,7 @@ impl Cdf {
     }
 
     /// The strings of a `char` variable (rows of its last dimension, trailing NULs and spaces cut).
-    pub fn stringhe(&self, data: &mut dyn ReadAt, limits: &Limiti, v: &Var) -> Result<Vec<String>> {
+    pub fn stringhe(&self, data: &mut dyn ReadAt, limits: &Limits, v: &Var) -> Result<Vec<String>> {
         let row = v.dims.last().map_or(1, |&d| self.length_dim(d)).max(1);
         let n = self.elementi(v);
         let b = self.raw_values(data, limits, v, 0, n)?;
@@ -414,7 +414,7 @@ struct Cur<'a> {
     pos: u64,
     buf: Vec<u8>,
     base: u64,
-    limits: Limiti,
+    limits: Limits,
 }
 
 fn guasto(why: &str) -> Error {

@@ -9,8 +9,8 @@ use std::time::SystemTime;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::flow::Plan;
 use mzlab_core::hashio::hash_read_with;
-use mzlab_core::lettori::{FileSet, Membro};
-use mzlab_core::upload::{impronte_note, probe, Impronta};
+use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::upload::{impronte_note, probe, Fingerprint};
 use mzlab_core::{Error, Result};
 
 use crate::flow::io;
@@ -74,7 +74,7 @@ pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
     let mut membri = Vec::new();
     for (name, p) in members(path)? {
         let f = File::open(&p).map_err(io)?;
-        membri.push(Membro {
+        membri.push(Member {
             nome: name,
             dim: f.metadata().map_err(io)?.len(),
             dati: Box::new(f),
@@ -112,8 +112,8 @@ fn hash_file(p: &Path, sha1: bool) -> Result<(u64, String)> {
 
 /// The fingerprints of the members of the dataset at `path` (`upload::impronte`) when `hash_file` has read every one of them and they are still the
 /// same files: only the 128 KB of each `probe` are read. `None` sends the caller to read the members again. A member hashed without its SHA-1 gives an
-/// empty one, as `senza_sha1` does: the index never uses it.
-pub(crate) fn known_prints(path: &Path) -> Result<Option<Vec<Impronta>>> {
+/// empty one, as `without_sha1` does: the index never uses it.
+pub(crate) fn known_prints(path: &Path) -> Result<Option<Vec<Fingerprint>>> {
     let list = members(path)?;
     let Some(pairs) = list
         .iter()

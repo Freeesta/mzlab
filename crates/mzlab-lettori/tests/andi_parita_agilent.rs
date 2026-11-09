@@ -4,13 +4,13 @@
 
 mod comune;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use std::path::Path;
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn members(root: &Path, dir: &Path, out: &mut Vec<Membro>) {
+fn members(root: &Path, dir: &Path, out: &mut Vec<Member>) {
     for e in std::fs::read_dir(dir).unwrap().flatten() {
         let p = e.path();
         if p.is_dir() {
@@ -22,7 +22,7 @@ fn members(root: &Path, dir: &Path, out: &mut Vec<Membro>) {
                 .unwrap()
                 .to_string_lossy()
                 .into_owned();
-            out.push(Membro {
+            out.push(Member {
                 nome: name,
                 dim: b.len() as u64,
                 dati: Box::new(b),
@@ -71,7 +71,7 @@ fn the_exported_cdf_says_what_its_d_folder_says() {
             .unwrap();
         let mut m = Vec::new();
         members(&dir, &dir, &mut m);
-        let mut d_set = mzlab_lettori::apri(FileSet { membri: m }, &Limiti::desktop()).unwrap();
+        let mut d_set = mzlab_lettori::apri(FileSet { membri: m }, &Limits::desktop()).unwrap();
         let mut c_set = comune::andi::apri_andi(std::fs::read(folder.join(cdf)).unwrap());
         let n = d_set.samples()[0].scansioni;
         assert_eq!(c_set.samples()[0].scansioni, n, "{cdf}");

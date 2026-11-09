@@ -1,9 +1,9 @@
 //! Hostile input for the registry of the module: bytes no reader knows are an error with a key (never a panic), and so are an empty set and a truncated header.
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 
 fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),
@@ -13,7 +13,7 @@ fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
 }
 
 fn key(fs: FileSet) -> &'static str {
-    match mzlab_lettori::apri(fs, &Limiti::sito()) {
+    match mzlab_lettori::apri(fs, &Limits::sito()) {
         Ok(_) => "ok",
         Err(e) => e.key,
     }

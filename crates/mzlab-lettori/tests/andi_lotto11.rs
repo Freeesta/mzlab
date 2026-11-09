@@ -7,7 +7,7 @@ mod comune;
 use comune::andi::*;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -95,17 +95,17 @@ fn file(
     )
 }
 
-fn apri(byte: Vec<u8>) -> (Box<dyn Lettore>, Rc<Cell<usize>>) {
+fn apri(byte: Vec<u8>) -> (Box<dyn Reader>, Rc<Cell<usize>>) {
     let letture = Rc::new(Cell::new(0));
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "campione.cdf".into(),
             dim: byte.len() as u64,
             dati: Box::new(Counter(byte, letture.clone())),
             sha1: None,
         }],
     };
-    (mzlab_lettori::apri(fs, &Limiti::sito()).unwrap(), letture)
+    (mzlab_lettori::apri(fs, &Limits::sito()).unwrap(), letture)
 }
 
 #[test]

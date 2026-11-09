@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json;
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::methodinfo::{method_of_sample, Kind};
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::wiff::dad::{
@@ -65,13 +65,13 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
         }
         let fs = FileSet {
             membri: vec![
-                Membro {
+                Member {
                     nome: format!("{name}.wiff"),
                     dim: wiff_bytes.len() as u64,
                     dati: Box::new(wiff_bytes),
                     sha1: None,
                 },
-                Membro {
+                Member {
                     nome: format!("{name}.wiff.scan"),
                     dim: scan_bytes.len() as u64,
                     dati: Box::new(scan_bytes),
@@ -79,7 +79,7 @@ fn dad_3d_matrix_twc_and_single_wavelength_invariants() {
                 },
             ],
         };
-        let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
+        let mut l = lettori::apri(fs, &Limits::sito()).unwrap();
         let twc = l.chromatogram(0, "DAD TWC").unwrap();
         assert_eq!(twc.kind, ChromKind::Pda);
         assert_eq!(twc.unit, "mAU");
@@ -139,13 +139,13 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
 
     let fs = FileSet {
         membri: vec![
-            Membro {
+            Member {
                 nome: "MRM.wiff".into(),
                 dim: wiff_bytes.len() as u64,
                 dati: Box::new(wiff_bytes),
                 sha1: None,
             },
-            Membro {
+            Member {
                 nome: "MRM.wiff.scan".into(),
                 dim: scan_bytes.len() as u64,
                 dati: Box::new(scan_bytes),
@@ -153,7 +153,7 @@ fn mrm_fine_parameters_and_hplc_gradient_extraction() {
             },
         ],
     };
-    let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(fs, &Limits::sito()).unwrap();
     let doc = json::parse(l.method(0).unwrap().as_bytes()).unwrap();
     let tr_json = doc
         .get("ms")

@@ -2,7 +2,7 @@
 //! the root node that matches it, then `annota` gives every fragment the sub-formulas of the root within its window.
 
 use super::candidati::elementi;
-use super::{annota, Avviso, Grafo, Ione, Opzioni};
+use super::{annota, Graph, Ione, Options, Warning};
 use crate::elements::{embedded_adduct, parse_formula, Formula};
 
 /// What an adduct adds to the neutral (`+1`) or takes from it (`-1`), and its polarity: the adducts of `elements::adducts`, then
@@ -20,8 +20,8 @@ const ADDOTTI: [(&str, &str, i8, i8); 9] = [
 ];
 
 /// The adduct of a typed ion (`[M+H]+` for `C8H11N4O2+`, `C8H10N4O2+Na`...); `None` for `[M]+`/`[M]-`, the ion itself.
-pub(super) fn addotto(testo: &str, pol: i8) -> Option<&'static str> {
-    let t: String = testo.split_whitespace().collect();
+pub(super) fn addotto(text: &str, pol: i8) -> Option<&'static str> {
+    let t: String = text.split_whitespace().collect();
     if t.ends_with("[M]+") || t.ends_with("[M]-") {
         return None;
     }
@@ -37,21 +37,21 @@ pub(super) fn addotto(testo: &str, pol: i8) -> Option<&'static str> {
 }
 
 /// The root is looked for within this distance when no node is within the tolerance (the isolation window of the MS2).
-const FINESTRA: f64 = 0.5;
+const WINDOW: f64 = 0.5;
 
-pub(super) fn avviso(g: &mut Grafo, chiave: &'static str, nodo: Option<usize>) {
-    g.avvisi.push(Avviso {
-        chiave,
+pub(super) fn warning(g: &mut Graph, key: &'static str, node: Option<usize>) {
+    g.avvisi.push(Warning {
+        chiave: key,
         albero: String::new(),
-        nodo,
+        nodo: node,
     });
 }
 
 /// The ion of a text: `C8H11N4O2+` or `C8H11N4O2 [M]+` (the ion itself), `C8H10N4O2+H` or `C8H10N4O2 [M+H]+` (neutral and adduct). The error is a
 /// `warn.msngrafo.*` key: an unreadable formula, or an ion of the other polarity.
-pub(super) fn ione(testo: &str, pol: i8) -> Result<Formula, &'static str> {
+pub(super) fn ione(text: &str, pol: i8) -> Result<Formula, &'static str> {
     // `[M]+` / `[M]-`: the formula is the ion itself
-    let t: String = testo.split_whitespace().collect();
+    let t: String = text.split_whitespace().collect();
     let testo = match t.strip_suffix("[M]+").or(t.strip_suffix("[M]-")) {
         Some(f) => format!("{f}{}", &t[t.len() - 1..]),
         None => t,
@@ -60,11 +60,11 @@ pub(super) fn ione(testo: &str, pol: i8) -> Result<Formula, &'static str> {
     let (base, add) = match ADDOTTI[7..].iter().find(|x| testo.ends_with(x.0)) {
         Some(x) => (testo[..testo.len() - x.0.len()].to_string(), Some(x)),
         None => {
-            let (resto, a) = embedded_adduct(&testo);
-            (resto, a.and_then(addotto))
+            let (rest, a) = embedded_adduct(&testo);
+            (rest, a.and_then(addotto))
         }
     };
-    let (base, carica) = match add {
+    let (base, load) = match add {
         Some(x) => (base, Some(x.3)),
         None => {
             let t = base.trim_end_matches(['+', '-']);
@@ -75,7 +75,7 @@ pub(super) fn ione(testo: &str, pol: i8) -> Result<Formula, &'static str> {
             (t.to_string(), segno)
         }
     };
-    if carica.is_some_and(|c| c != pol) {
+    if load.is_some_and(|c| c != pol) {
         return Err("warn.msngrafo.polarity");
     }
     let mut f = parse_formula(&base).map_err(|_| "warn.msngrafo.badFormula")?;
@@ -94,12 +94,12 @@ pub(super) fn ione(testo: &str, pol: i8) -> Result<Formula, &'static str> {
 
 /// The root node of the ion: within `ppm_formula`, or else the closest within the isolation window (its m/z is then not the ion's,
 /// as when the MS1 is missing and the precursor is the nominal of the method).
-fn radice(g: &Grafo, teo: f64, o: &Opzioni) -> Option<(usize, bool)> {
+fn root(g: &Graph, teo: f64, o: &Options) -> Option<(usize, bool)> {
     let r = g
         .radici
         .iter()
         .copied()
-        .filter(|&i| (g.nodi[i].mz - teo).abs() <= FINESTRA)
+        .filter(|&i| (g.nodi[i].mz - teo).abs() <= WINDOW)
         .min_by(|&a, &b| {
             (g.nodi[a].mz - teo)
                 .abs()
@@ -110,29 +110,29 @@ fn radice(g: &Grafo, teo: f64, o: &Opzioni) -> Option<(usize, bool)> {
 }
 
 /// Fills `ione`, the formulas of the nodes and of the losses when `o.formula` is given; the nodes with no formula leave the graph.
-pub(super) fn assegna(g: &mut Grafo, o: &Opzioni) {
-    let Some(testo) = o.formula.as_deref() else {
+pub(super) fn assegna(g: &mut Graph, o: &Options) {
+    let Some(text) = o.formula.as_deref() else {
         return;
     };
-    let f = match ione(testo, g.polarita) {
+    let f = match ione(text, g.polarita) {
         Ok(f) => f,
-        Err(k) => return avviso(g, k, None),
+        Err(k) => return warning(g, k, None),
     };
     let e = elementi(&f, g.polarita);
     let rc = e.conta(&f).expect("the root has its own elements");
     let teo = e.mz(&rc);
-    let Some((r, entro)) = radice(g, teo, o) else {
-        return avviso(g, "warn.msngrafo.rootMissing", None);
+    let Some((r, entro)) = root(g, teo, o) else {
+        return warning(g, "warn.msngrafo.rootMissing", None);
     };
     if !entro {
-        avviso(g, "warn.msngrafo.rootMissing", Some(r));
+        warning(g, "warn.msngrafo.rootMissing", Some(r));
     }
     let oss = g.nodi[r].mz;
     g.ione = Some(Ione {
         formula: e.testo(&rc),
-        mz_teorico: teo,
+        theoretical_mz: teo,
         mz_osservato: oss,
         ppm: (oss - teo) / teo * 1e6,
     });
-    annota::annota(g, &e, r, rc, o);
+    annota::annotate(g, &e, r, rc, o);
 }

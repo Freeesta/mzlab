@@ -1,7 +1,7 @@
 //! The Bruker timsTOF reader against the real folders and the mzML that msconvert (ProteoWizard, `combineIonMobilitySpectra`) made of them (private data repository, `MZLAB_DATI`; skipped without it).
 #![cfg(feature = "bruker")]
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::{self, Item, Spectrum};
 use std::path::Path;
 
@@ -18,7 +18,7 @@ fn set_of(dir: &Path) -> FileSet {
         .filter(|p| p.is_file())
         .map(|p| {
             let f = std::fs::File::open(&p).unwrap();
-            Membro {
+            Member {
                 nome: format!("{name}/{}", p.file_name().unwrap().to_string_lossy()),
                 dim: f.metadata().unwrap().len(),
                 dati: Box::new(f),
@@ -76,7 +76,7 @@ fn compare_folder(folder: &str, reference_mzml: &str) {
         eprintln!("SKIP bruker {folder}: no data repository (MZLAB_DATI)");
         return;
     };
-    let mut l = mzlab_lettori::apri_nudo(set_of(&base.join(folder)), &Limiti::desktop()).unwrap();
+    let mut l = mzlab_lettori::apri_nudo(set_of(&base.join(folder)), &Limits::desktop()).unwrap();
     let reference = spettri_mzml(&base.join(reference_mzml));
     // the copy of the test data keeps only the first 400 kB of `analysis.tdf_bin`: the spectra of the frames past its end leave the index and are counted
     let n = l.index(0).unwrap().len();
@@ -115,7 +115,7 @@ fn percorri(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
         eprintln!("SKIP bruker {rel}: not in the data repository");
         return None;
     };
-    let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limiti::desktop()).unwrap();
+    let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limits::desktop()).unwrap();
     let ix = l.index(0).unwrap().to_vec();
     let mut levels = Vec::new();
     for k in (0..ix.len()).take(max) {
@@ -168,7 +168,7 @@ fn synthetic_timsrust_folders() {
         if !dir.exists() {
             continue;
         }
-        let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limiti::desktop()).unwrap();
+        let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limits::desktop()).unwrap();
         assert!(!l.index(0).unwrap().is_empty());
         assert_eq!(
             l.scan(0, 0).err().map(|e| e.key),

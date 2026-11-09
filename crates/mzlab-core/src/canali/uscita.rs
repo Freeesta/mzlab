@@ -2,18 +2,18 @@
 
 use super::*;
 
-impl Canali {
+impl Channels {
     /// The scans of channel `i` in file order (`tic` and `bpc`: every scan).
     pub fn scansioni(&self, i: usize) -> Vec<u32> {
-        match self.v.get(i).map(|c| &c.sorgente) {
-            Some(Sorgente::Scan { da, a })
+        match self.v.get(i).map(|c| &c.source) {
+            Some(Source::Scan { da, a })
                 if matches!(self.v[i].famiglia, Famiglia::Tic | Famiglia::Bpc) =>
             {
                 let mut t = self.scan_ids[*da as usize..*a as usize].to_vec();
                 crate::sortc::slice_ord(&mut t);
                 t
             }
-            Some(Sorgente::Scan { da, a }) => self.scan_ids[*da as usize..*a as usize].to_vec(),
+            Some(Source::Scan { da, a }) => self.scan_ids[*da as usize..*a as usize].to_vec(),
             _ => Vec::new(),
         }
     }
@@ -25,7 +25,7 @@ impl Canali {
                 .v
                 .iter()
                 .map(|c| {
-                    std::mem::size_of::<Canale>() + c.id.len() + c.etichetta.len() + c.omologo.len()
+                    std::mem::size_of::<Channel>() + c.id.len() + c.label.len() + c.omologo.len()
                 })
                 .sum::<usize>()
     }
@@ -34,17 +34,17 @@ impl Canali {
     pub fn json(&self) -> String {
         let mut o = Out::default();
         o.raw("{\"v\":\"canali/1\",\"tipo\":{\"proposto\":")
-            .str(self.tipo.proposto)
+            .str(self.tipo.proposed)
             .raw(",\"motivo\":")
-            .str(self.tipo.motivo)
+            .str(self.tipo.reason)
             .raw("},\"canali\":[");
         for (i, c) in self.v.iter().enumerate() {
             o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
                 .str(&c.id)
                 .raw(",\"fam\":")
-                .str(c.famiglia.nome())
+                .str(c.famiglia.name())
                 .raw(",\"gen\":");
-            match c.genitore {
+            match c.parent {
                 Some(g) => o.int(g as i64),
                 None => o.raw("null"),
             };
@@ -58,7 +58,7 @@ impl Canali {
                 None => o.raw("null"),
             };
             o.raw(",\"et\":")
-                .str(&c.etichetta)
+                .str(&c.label)
                 .raw(",\"omo\":")
                 .str(&c.omologo)
                 .raw(",\"n\":")

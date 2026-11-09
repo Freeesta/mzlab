@@ -195,7 +195,7 @@ impl<R: ReadAt> Routes<R> {
         let mut keep = vec![true; rt.len()];
         if let Some(f) = self.filtro(filt)? {
             for (j, &id) in ids.iter().enumerate() {
-                keep[j] = f.passa(id as usize, &self.idx.scans[id as usize]);
+                keep[j] = f.passes(id as usize, &self.idx.scans[id as usize]);
             }
         }
         if let (Some(p), true) = (prec, level > 1) {
@@ -282,7 +282,7 @@ impl<R: ReadAt> Routes<R> {
         let fl = self.filtro(filt)?;
         let (ar, scans) = self.idx.arrays_scans(si)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &scans[ar.scan_ids[j] as usize])))
+            .filter(|&j| fl.as_ref().is_none_or(|f| f.passes(ar.scan_ids[j] as usize, &scans[ar.scan_ids[j] as usize])))
             .collect();
         let sc = |j: usize| &scans[ar.scan_ids[j] as usize];
         o.raw("{\"level\":")
@@ -336,7 +336,7 @@ impl<R: ReadAt> Routes<R> {
         for &id in &ar.scan_ids {
             let s = &scans[id as usize];
             let ok = match (&fl, precursor) {
-                (Some(f), _) => f.passa(id as usize, s),
+                (Some(f), _) => f.passes(id as usize, s),
                 (None, Some(p)) => (s.prec(-100.0) - p).abs() <= 0.6,
                 (None, None) => true,
             };

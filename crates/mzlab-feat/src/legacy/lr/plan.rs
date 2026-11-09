@@ -176,7 +176,7 @@ pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
 }
 
 /// The role, time, condition and replicate of `campioni/2` over a file (a role the Dig does not use keeps the page's type).
-fn apply_campione(x: &mut FileLr, c: &mzlab_core::campioni::Campione) {
+fn apply_campione(x: &mut FileLr, c: &mzlab_core::campioni::Sample) {
     match c.role() {
         "sample" | "t0" => x.kind_type = "sample".into(),
         "blank" => x.kind_type = "blank".into(),

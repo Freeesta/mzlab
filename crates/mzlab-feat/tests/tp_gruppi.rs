@@ -1,6 +1,6 @@
 //! The conditions in the table of the products (`tptab/1` with `gruppi/1`) and in the network (`arcs_in`): synthetic data only.
 
-use mzlab_core::campioni::{number_replicates, Campione};
+use mzlab_core::campioni::{self, number_replicates};
 use mzlab_core::json::{parse, Value};
 use mzlab_feat::hypo::Rules;
 use mzlab_feat::samples::Sample;
@@ -9,8 +9,14 @@ use mzlab_feat::tp::*;
 
 const O: f64 = 15.994915;
 
-fn file(name: &str, kind: &str, series: &str, minutes: Option<f64>, order: u32) -> Campione {
-    let mut c = Campione::new(name, "", order);
+fn file(
+    name: &str,
+    kind: &str,
+    series: &str,
+    minutes: Option<f64>,
+    order: u32,
+) -> campioni::Sample {
+    let mut c = campioni::Sample::new(name, "", order);
     c.kind = kind.into();
     c.series = series.into();
     c.set_time(minutes, "min");
@@ -18,7 +24,7 @@ fn file(name: &str, kind: &str, series: &str, minutes: Option<f64>, order: u32) 
 }
 
 /// The `campioni/1` of the same files (the table reads the roles from it).
-fn samples_of(cs: &[Campione]) -> Vec<Sample> {
+fn samples_of(cs: &[campioni::Sample]) -> Vec<Sample> {
     cs.iter()
         .map(|c| Sample {
             file: c.file.clone(),
@@ -54,7 +60,7 @@ fn table(rows: &[(f64, f64, Vec<f64>)], n_files: usize) -> Aligned {
 }
 
 /// blank, t0 (shared) and one 60 min file for each of the six conditions.
-fn endpoint() -> (Aligned, Vec<Campione>) {
+fn endpoint() -> (Aligned, Vec<campioni::Sample>) {
     let mut cs = vec![
         file("blank", "blank", "", None, 1),
         file("t0", "t0", "", Some(0.0), 2),
@@ -198,7 +204,7 @@ fn with_one_condition_the_text_is_the_one_without_conditions() {
 /// blank, t0 and five times for each of the conditions A and B.
 const TIMES: [f64; 5] = [5.0, 10.0, 20.0, 40.0, 80.0];
 
-fn kinetics(n: usize) -> (Aligned, Vec<Campione>, Vec<f64>, Vec<Vec<usize>>) {
+fn kinetics(n: usize) -> (Aligned, Vec<campioni::Sample>, Vec<f64>, Vec<Vec<usize>>) {
     let mut cs = vec![
         file("blank", "blank", "", None, 1),
         file("t0", "t0", "", Some(0.0), 2),
@@ -284,7 +290,7 @@ fn a_condition_with_fewer_than_four_times_gives_no_arc() {
 #[test]
 fn one_condition_reads_as_the_old_network() {
     let (_, cs, _, _) = kinetics(5);
-    let one: Vec<Campione> = cs
+    let one: Vec<campioni::Sample> = cs
         .into_iter()
         .map(|mut c| {
             if c.kind == "sample" {

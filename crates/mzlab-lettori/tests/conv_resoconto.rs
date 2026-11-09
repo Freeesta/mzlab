@@ -7,12 +7,12 @@ mod comune;
 mod comune_waters;
 
 use mzlab_core::json;
-use mzlab_core::lettori::Lettore;
-use mzlab_core::lettori_mzml::Conversione;
+use mzlab_core::lettori::Reader;
+use mzlab_core::lettori_mzml::Conversion;
 
-fn conv_di(l: &mut dyn Lettore) -> json::Value {
-    let xml = Conversione::default()
-        .scrivi(l, 0, Vec::new(), &mut |_, _| {})
+fn conv_di(l: &mut dyn Reader) -> json::Value {
+    let xml = Conversion::default()
+        .write(l, 0, Vec::new(), &mut |_, _| {})
         .unwrap();
     let t = String::from_utf8_lossy(&xml);
     let key = "name=\"mzLab conv/1\" value=\"";
@@ -26,7 +26,7 @@ fn conv_di(l: &mut dyn Lettore) -> json::Value {
     json::parse(v.as_bytes()).unwrap()
 }
 
-fn check(l: &mut dyn Lettore, id: &str) {
+fn check(l: &mut dyn Reader, id: &str) {
     assert_eq!(l.format().id(), id);
     let doc = conv_di(l);
     assert_eq!(doc.get("schema").and_then(|s| s.str()), Some("conv/1"));
@@ -76,10 +76,10 @@ fn andi_carries_conv() {
 #[test]
 fn shimadzu_carries_conv() {
     use comune::shimadzu::qgd;
-    use mzlab_core::lettori::{FileSet, Limiti, Membro};
+    use mzlab_core::lettori::{FileSet, Limits, Member};
     let b = qgd(6);
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "a.qgd".into(),
             dim: b.len() as u64,
             dati: Box::new(b),
@@ -87,7 +87,7 @@ fn shimadzu_carries_conv() {
         }],
     };
     check(
-        &mut *mzlab_lettori::apri_nudo(fs, &Limiti::sito()).unwrap(),
+        &mut *mzlab_lettori::apri_nudo(fs, &Limits::sito()).unwrap(),
         "shimadzu",
     );
 }
@@ -95,7 +95,7 @@ fn shimadzu_carries_conv() {
 #[cfg(feature = "waters")]
 #[test]
 fn waters_carries_conv() {
-    use mzlab_core::lettori::Limiti;
-    let mut l = mzlab_lettori::apri_nudo(comune_waters::synthetic_set(), &Limiti::sito()).unwrap();
+    use mzlab_core::lettori::Limits;
+    let mut l = mzlab_lettori::apri_nudo(comune_waters::synthetic_set(), &Limits::sito()).unwrap();
     check(&mut *l, "waters-raw");
 }

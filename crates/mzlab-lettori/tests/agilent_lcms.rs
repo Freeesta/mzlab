@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::{self, ChromKind};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -62,7 +62,7 @@ fn set_of(dir: &Path) -> FileSet {
                     .to_string_lossy()
                     .replace('\\', "/");
                 let file = std::fs::File::open(&f).unwrap();
-                Membro {
+                Member {
                     nome: format!("{name}/{rel}"),
                     dim: file.metadata().unwrap().len(),
                     dati: Box::new(file),
@@ -73,8 +73,8 @@ fn set_of(dir: &Path) -> FileSet {
     }
 }
 
-fn open(dir: &Path) -> Box<dyn Lettore> {
-    mzlab_lettori::apri_nudo(set_of(dir), &Limiti::sito()).unwrap()
+fn open(dir: &Path) -> Box<dyn Reader> {
+    mzlab_lettori::apri_nudo(set_of(dir), &Limits::sito()).unwrap()
 }
 
 fn name(dir: &Path) -> String {
@@ -93,7 +93,7 @@ fn every_real_run_opens_and_gives_its_scans_and_traces() {
         let label = name(&dir);
         // a folder without the points (MSScan.bin alone) is refused with the file error
         if label.contains("MTBLS787") {
-            let e = mzlab_lettori::apri_nudo(set_of(&dir), &Limiti::sito())
+            let e = mzlab_lettori::apri_nudo(set_of(&dir), &Limits::sito())
                 .err()
                 .unwrap();
             assert_eq!(e.key, "err.file.agilent", "{label}");
@@ -227,7 +227,7 @@ fn srm_traces_match_msconvert() {
     assert!(pairs >= 3, "{pairs} QqQ pairs");
 }
 
-fn field(h: &[mzlab_core::lettori::Campo], name: &str) -> f64 {
+fn field(h: &[mzlab_core::lettori::Field], name: &str) -> f64 {
     h.iter()
         .find(|c| c.nome == name)
         .unwrap()

@@ -9,7 +9,7 @@ mod lettore_finto;
 
 use lettore_finto::Finto;
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori::Lettore;
+use mzlab_core::lettori::Reader;
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::{lettori_mzml, mzidx, upload};
 
@@ -35,7 +35,7 @@ fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
 }
 
 /// Index through the mzML (the oracle) and the two ways straight from the reader, with several budgets.
-fn prova(label: &str, l: Finto) {
+fn trial(label: &str, l: Finto) {
     prova_con(label, l, true);
 }
 
@@ -51,25 +51,25 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
         idx
     });
 
-    let pb = upload::prepare_lettore(&mut l, 0, &[], &name).unwrap();
+    let pb = upload::prepare_reader(&mut l, 0, &[], &name).unwrap();
     let due = |l: &mut Finto, budget: usize| {
         let mut out = std::io::Cursor::new(Vec::new());
-        mzidx::build_lettore(&pb.table, l, 0, &mut out, budget).map(|st| (out.into_inner(), st))
+        mzidx::build_reader(&pb.table, l, 0, &mut out, budget).map(|st| (out.into_inner(), st))
     };
     let (b, _) = due(&mut l, BIG).unwrap();
     // the same index in one call, whatever the budget (one pass, or the rounds)
     let mut saw_many = false;
     for budget in [BIG, 1 << 22, 1 << 20, 1 << 18, 1 << 16, 1 << 14, 1 << 12] {
         let mut out = std::io::Cursor::new(Vec::new());
-        let mut fasi = Vec::new();
+        let mut phases = Vec::new();
         let Ok((st, sha)) =
             upload::indicizza_lettore(&mut l, 0, &[], &name, &mut out, budget, &mut |f| {
-                fasi.push(f)
+                phases.push(f)
             })
         else {
             continue;
         };
-        assert_eq!(fasi, [3], "{label}");
+        assert_eq!(phases, [3], "{label}");
         assert_eq!(sha, pb.sha256, "{label}");
         saw_many |= st.passes > 1;
         assert!(
@@ -83,7 +83,7 @@ fn prova_con(label: &str, mut l: Finto, con_mzml: bool) {
     if l.index(0).unwrap().len() > 200 {
         assert!(saw_many, "{label}: no budget forced the rounds");
     }
-    con_scratch(label, &mut l, &pb, &name, &b);
+    with_scratch(label, &mut l, &pb, &name, &b);
 
     let Some(a) = a else { return };
     // against the mzML: the sections, the rows but for their first two columns, the metadata but for source and version
@@ -131,14 +131,14 @@ fn mzml_con_scratch(label: &str, table: &mzidx::ScanTable, mzml: &[u8], idx: &[u
 }
 
 /// The same index with a scratch file: the peaks that do not fit go to it, the scans are decoded once, the bytes are the same.
-fn con_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b: &[u8]) {
+fn with_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b: &[u8]) {
     // a wrong guess of 32-bit MS1 peaks (`primo_ms1_diverso`) throws away what pass 1 kept or spilled: the rounds decode again
     let ripassa = label == "primo FTMS";
     let mut spilled = false;
     for budget in [BIG, 1 << 22, 1 << 20, 1 << 18, 1 << 16, 1 << 14, 1 << 12] {
         let mut out = std::io::Cursor::new(Vec::new());
         let mut sp = std::io::Cursor::new(Vec::new());
-        let Ok((st, sha)) = upload::indicizza_lettore_con(
+        let Ok((st, sha)) = upload::index_reader_with(
             l,
             0,
             &mut || Ok(vec![]),
@@ -193,13 +193,13 @@ fn vario_senza_testata() {
         (400, 60, 5),
         (1200, 30, 6),
     ] {
-        prova(&format!("vario{n}"), Finto::vario(n, peaks, seed));
+        trial(&format!("vario{n}"), Finto::vario(n, peaks, seed));
     }
 }
 
 #[test]
 fn vario_con_testata_orbitrap() {
-    prova(
+    trial(
         "orbitrap",
         Finto::vario(300, 50, 7).con_testata(testata_orbitrap()),
     );
@@ -208,14 +208,14 @@ fn vario_con_testata_orbitrap() {
 #[test]
 fn vario_a_bassa_risoluzione() {
     let mut l = Finto::vario(300, 50, 8);
-    for s in &mut l.schede {
+    for s in &mut l.cards {
         s.spettro.filter = s
             .spettro
             .filter
             .replace("FTMS", "TQMS")
             .replace("ITMS", "TQMS");
     }
-    prova("lr", l);
+    trial("lr", l);
 }
 
 #[test]
@@ -232,10 +232,10 @@ fn testata_con_nomi_che_chiedono_il_testo() {
 #[test]
 fn un_solo_campione_di_una_polarita() {
     let mut l = Finto::vario(150, 30, 10);
-    for s in &mut l.schede {
+    for s in &mut l.cards {
         s.spettro.polarity = 1;
     }
-    prova("positivo", l);
+    trial("positivo", l);
 }
 
 #[test]
@@ -252,7 +252,7 @@ fn uguali_dopo_l_arrotondamento_tra_due_bucket() {
     // every MS1 scan holds 100.0 and every other one 99.9999999 too (bucket 99 in 64 bits, 100 in 32): with the scratch file the partitions of the two
     // buckets are read one after the other, and the equal 32-bit m/z must still come in scan order
     let mut l = Finto::vario(600, 10, 13);
-    for (k, s) in l.schede.iter_mut().enumerate() {
+    for (k, s) in l.cards.iter_mut().enumerate() {
         let sp = &mut s.spettro;
         sp.wide = None;
         if sp.level == 1 {
@@ -273,11 +273,11 @@ fn uguali_dopo_l_arrotondamento_tra_due_bucket() {
 
 /// MS1 filters where the first scan says the opposite of the file: a reader keeps the MS1 peaks of pass 1 by what its first MS1 scan says
 /// (`Prima::indovina`), and a wrong guess must not change a byte.
-fn primo_ms1_diverso(seed: u64, primo: &str, altri: &str) -> Finto {
+fn primo_ms1_diverso(seed: u64, first: &str, altri: &str) -> Finto {
     let mut l = Finto::vario(400, 40, seed);
     let mut primo_visto = false;
-    for s in l.schede.iter_mut().filter(|s| s.spettro.level == 1) {
-        let a = if primo_visto { altri } else { primo };
+    for s in l.cards.iter_mut().filter(|s| s.spettro.level == 1) {
+        let a = if primo_visto { altri } else { first };
         s.spettro.filter = format!("{a} + p ESI Full ms [100.0000-1000.0000]");
         primo_visto = true;
     }
@@ -287,31 +287,31 @@ fn primo_ms1_diverso(seed: u64, primo: &str, altri: &str) -> Finto {
 #[test]
 fn primo_ms1_ad_alta_risoluzione_in_un_file_a_bassa() {
     let mut l = primo_ms1_diverso(21, "FTMS", "ITMS");
-    let p = upload::prepare_lettore(&mut l, 0, &[], "x.mzML").unwrap();
+    let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").unwrap();
     assert!(!p.table.hr1);
-    prova("primo FTMS", l);
+    trial("primo FTMS", l);
 }
 
 #[test]
 fn primo_ms1_a_bassa_risoluzione_in_un_file_ad_alta() {
     let mut l = primo_ms1_diverso(22, "ITMS", "FTMS");
-    let p = upload::prepare_lettore(&mut l, 0, &[], "x.mzML").unwrap();
+    let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").unwrap();
     assert!(p.table.hr1);
-    prova("primo ITMS", l);
+    trial("primo ITMS", l);
 }
 
 /// The source of an index straight from a reader is named after the dataset, as `mzlab-cli` names the path it is given, whatever name the caller
 /// passes (the page passes the name of its list entry, `X.mzML` or `X.raw.mzML`): the same `.mzidx` on the site, in the app and from the CLI.
 #[test]
 fn the_source_of_a_vendor_index_is_the_dataset_name() {
-    let imp = |nome: &str| upload::Impronta {
+    let imp = |nome: &str| upload::Fingerprint {
         nome: nome.into(),
         dim: 1,
         sha256: String::new(),
         sha1: String::new(),
         probe: String::new(),
     };
-    for (membri, atteso) in [
+    for (members, expected) in [
         (vec!["X.raw"], "X.raw"),
         (vec!["X.wiff.scan", "X.wiff"], "X.wiff"),
         (vec!["X.wiff", "X.wiff.scan"], "X.wiff"),
@@ -320,12 +320,16 @@ fn the_source_of_a_vendor_index_is_the_dataset_name() {
             "X.D",
         ),
     ] {
-        let membri: Vec<_> = membri.into_iter().map(imp).collect();
+        let membri: Vec<_> = members.into_iter().map(imp).collect();
         for name in ["X.mzML", "X.raw.mzML", "X_2.raw.mzML"] {
             let mut l = Finto::vario(10, 5, 3);
-            let p = upload::prepare_lettore(&mut l, 0, &membri, name).unwrap();
+            let p = upload::prepare_reader(&mut l, 0, &membri, name).unwrap();
             let src = json::parse(p.table.source_json.as_bytes()).unwrap();
-            assert_eq!(src.get("name").and_then(Value::str), Some(atteso), "{name}");
+            assert_eq!(
+                src.get("name").and_then(Value::str),
+                Some(expected),
+                "{name}"
+            );
         }
     }
 }

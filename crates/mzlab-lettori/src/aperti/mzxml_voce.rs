@@ -1,7 +1,7 @@
 //! The index row of an mzXML scan from the attributes of its `<scan>`: level, polarity, filter, retention time, TIC and precursor; used by `mzxml`.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Posizione, VoceScansione};
+use mzlab_core::lettori::{Position, ScanEntry};
 
 use super::mzxml::number;
 use super::mzxml_indice::Row;
@@ -31,10 +31,10 @@ fn filter(t: Tag) -> String {
 }
 
 /// The index entry of scan `k` from its attributes.
-pub(super) fn entry(k: usize, r: Row, t: &Testa) -> Result<VoceScansione> {
+pub(super) fn entry(k: usize, r: Row, t: &Testa) -> Result<ScanEntry> {
     let length = u32::try_from(r.end - r.start).map_err(|_| Error::memory_budget())?;
     let num = attr(t.scan, "num").trim();
-    Ok(VoceScansione {
+    Ok(ScanEntry {
         id: if num.is_empty() {
             format!("scan={}", k + 1)
         } else {
@@ -44,10 +44,10 @@ pub(super) fn entry(k: usize, r: Row, t: &Testa) -> Result<VoceScansione> {
         livello: number(t.scan, "msLevel").map_or(1, |l| l.clamp(1.0, 255.0) as u8),
         polarita: polarita(attr(t.scan, "polarity")),
         tic: number(t.scan, "totIonCurrent").unwrap_or(0.0),
-        picco_base: number(t.scan, "basePeakMz"),
+        base_peak: number(t.scan, "basePeakMz"),
         filtro: filter(t.scan),
         precursore: t.precursori.iter().rev().find_map(|p| p.1.parse().ok()),
-        posizione: Some(Posizione {
+        position: Some(Position {
             membro: 0,
             offset: r.start,
             lunghezza: length,

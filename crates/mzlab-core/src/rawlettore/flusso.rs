@@ -7,9 +7,9 @@ use std::io::{Read, Seek, SeekFrom};
 use crate::idxread::ReadAt;
 
 /// The largest window of `Stream`: `opentfraw` reads a few bytes at a time and a read of the source can cost a call into JS (the logic of `window::Windowed`, owned here because `Stream` owns its source).
-pub(super) const FINESTRA: usize = 1 << 16;
+pub(super) const WINDOW: usize = 1 << 16;
 /// The window after a seek: a scan's header or the centroid list behind a skipped profile need a few KB, not 64 KB of the profile.
-pub(super) const FINESTRA_SALTO: usize = 1 << 12;
+pub(super) const SKIP_WINDOW: usize = 1 << 12;
 
 /// A `ReadAt` seen as `Read + Seek` (what `opentfraw` reads from), with a window that serves the short reads.
 pub(super) struct Stream {
@@ -19,7 +19,7 @@ pub(super) struct Stream {
     at: u64,
     buf: Vec<u8>,
     /// The size of the next refill: small after a seek, doubled while the reads go on in order (read-ahead).
-    passo: usize,
+    step: usize,
     /// A seek since the last refill: the reader moved to a header or a list, not along a profile.
     saltato: bool,
 }
@@ -32,7 +32,7 @@ impl Stream {
             len,
             at: 0,
             buf: Vec::new(),
-            passo: FINESTRA_SALTO,
+            step: SKIP_WINDOW,
             saltato: true,
         }
     }
@@ -47,20 +47,20 @@ impl Read for Stream {
             return Ok(0);
         };
         let fine = self.pos + n as u64;
-        if n > FINESTRA {
+        if n > WINDOW {
             self.inner
                 .read_at(self.pos, out)
                 .map_err(|e| std::io::Error::other(e.key))?;
         } else if n > 0 {
             if self.pos < self.at || fine > self.at + self.buf.len() as u64 {
                 // reads that go on without a seek grow the window; after a seek it starts small again
-                self.passo = if self.saltato {
-                    FINESTRA_SALTO
+                self.step = if self.saltato {
+                    SKIP_WINDOW
                 } else {
-                    (self.passo * 2).min(FINESTRA)
+                    (self.step * 2).min(WINDOW)
                 };
                 self.saltato = false;
-                let w = (self.len - self.pos).min(self.passo.max(n) as u64) as usize;
+                let w = (self.len - self.pos).min(self.step.max(n) as u64) as usize;
                 self.buf.resize(w, 0);
                 self.at = self.pos;
                 if let Err(e) = self.inner.read_at(self.pos, &mut self.buf) {

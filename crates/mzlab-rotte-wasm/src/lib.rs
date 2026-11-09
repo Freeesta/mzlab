@@ -47,7 +47,7 @@ pub fn molecules(op: &str, input: &str) -> Result<String, JsValue> {
 /// `op` is `proponi`, `proponi3`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest`, `migra`, `modello`, `dal_file`, `csv_leggi` or `csv_scrivi` (see `campioni::route`); JSON in, JSON out, an error is JSON with a key.
 #[wasm_bindgen]
 pub fn samples(op: &str, input: &str) -> Result<String, JsValue> {
-    mzlab_core::campioni::route_tutto(op, input).map_err(|e| error_json(&e))
+    mzlab_core::campioni::route_all(op, input).map_err(|e| error_json(&e))
 }
 
 /// The script that reruns an `mzflow/2` plan on the command line (`mzlab_core::flow::command_route`): text in, text out.

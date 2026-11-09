@@ -2,7 +2,7 @@
 //! Each reader declares what its format holds and the mzML does not (`Lettore::not_carried`), always with the reason.
 
 use crate::error::Result;
-use crate::lettori::{Campo, Lettore};
+use crate::lettori::{Field, Reader};
 
 /// Reasons shared by the readers: one text each, so a module carries it once.
 pub const NON_DECODIFICATO: &str = "layout not decoded";
@@ -44,28 +44,28 @@ pub const AGILENT_EXT: &[(&str, &str)] = &[
 const RIGHE: usize = 64;
 
 /// The `conv/1` document of sample `c`: reader, version, how many header fields of a scan have a CV term and how many only a name, and the declared gaps.
-pub(crate) fn resoconto(l: &mut dyn Lettore, c: usize) -> Result<String> {
-    let mut visti = [false; 2];
+pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
+    let mut seen = [false; 2];
     let mut ks = Vec::new();
     for (k, v) in l.index_without_tic(c)?.iter().take(RIGHE).enumerate() {
         let i = usize::from(v.livello > 1);
-        if !visti[i] {
-            visti[i] = true;
+        if !seen[i] {
+            seen[i] = true;
             ks.push(k);
         }
     }
-    let mut campi: Vec<Campo> = Vec::new();
+    let mut fields: Vec<Field> = Vec::new();
     for k in ks {
-        campi.extend(l.scan_header(c, k)?);
+        fields.extend(l.scan_header(c, k)?);
     }
-    let mut nomi: Vec<&str> = Vec::new();
-    for f in &campi {
-        if !nomi.contains(&f.nome.as_str()) {
-            nomi.push(&f.nome);
+    let mut names: Vec<&str> = Vec::new();
+    for f in &fields {
+        if !names.contains(&f.nome.as_str()) {
+            names.push(&f.nome);
         }
     }
-    let con_cv = |n: &str| campi.iter().any(|f| f.nome == n && f.cv.is_some());
-    let cv = nomi.iter().filter(|n| con_cv(n)).count();
+    let con_cv = |n: &str| fields.iter().any(|f| f.nome == n && f.cv.is_some());
+    let cv = names.iter().filter(|n| con_cv(n)).count();
     let mut s = String::from("{\"schema\":\"conv/1\",\"lettore\":\"");
     s += l.format().id();
     s += "\",\"versione\":\"";
@@ -73,7 +73,7 @@ pub(crate) fn resoconto(l: &mut dyn Lettore, c: usize) -> Result<String> {
     s += "\",\"compressore\":\"zlib-rs\",\"campi_cv\":";
     s += &cv.to_string();
     s += ",\"campi_user\":";
-    s += &(nomi.len() - cv).to_string();
+    s += &(names.len() - cv).to_string();
     s += ",\"non_portati\":[";
     for (i, (campo, motivo)) in l.not_carried().iter().enumerate() {
         if i > 0 {

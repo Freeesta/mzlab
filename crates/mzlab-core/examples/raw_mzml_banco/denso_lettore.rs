@@ -4,37 +4,37 @@ use std::os::unix::fs::FileExt;
 use std::path::Path;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Campione, Posizione, VoceScansione};
+use mzlab_core::lettori::{Position, Sample, ScanEntry};
 use mzlab_core::mzml::Spectrum;
 
-/// The reader of the dense case: scans decoded from the file by offset, as `LettoreRaw` does from the `.raw`.
+/// The reader of the dense case: scans decoded from the file by offset, as `RawReader` does from the `.raw`.
 pub struct Denso {
     pub(crate) file: File,
-    voci: Vec<VoceScansione>,
-    campioni: Vec<Campione>,
-    nome: String,
+    entries: Vec<ScanEntry>,
+    campioni: Vec<Sample>,
+    name: String,
     buf: Vec<u8>,
     /// Trailer userParams per scan (the real trailer of a Fusion has about 130 fields).
     pub campi_trailer: usize,
 }
 
 /// The index entry of scan `k` from its 12-byte table row (offset, length).
-fn voce(k: usize, c: &[u8]) -> VoceScansione {
+fn entry(k: usize, c: &[u8]) -> ScanEntry {
     let offset = u64::from_le_bytes(c[..8].try_into().unwrap_or_default());
-    let lunghezza = u32::from_le_bytes(c[8..].try_into().unwrap_or_default());
-    VoceScansione {
+    let length = u32::from_le_bytes(c[8..].try_into().unwrap_or_default());
+    ScanEntry {
         id: format!("controllerType=0 controllerNumber=1 scan={}", k + 1),
         rt: k as f64 * 0.0005,
         livello: 1,
         polarita: 1,
         tic: 1.0e9,
-        picco_base: Some(500.0),
+        base_peak: Some(500.0),
         filtro: "FTMS + p ESI Full ms [150.0000-2000.0000]".into(),
         precursore: None,
-        posizione: Some(Posizione {
+        position: Some(Position {
             membro: 0,
             offset,
-            lunghezza,
+            lunghezza: length,
         }),
     }
 }
@@ -47,30 +47,30 @@ impl Denso {
         let n = u64::from_le_bytes(n) as usize;
         let mut t = vec![0u8; n * 12];
         file.read_exact_at(&mut t, 8)?;
-        let voci = (0..n).map(|k| voce(k, &t[k * 12..k * 12 + 12])).collect();
+        let voci = (0..n).map(|k| entry(k, &t[k * 12..k * 12 + 12])).collect();
         let nome = path
             .file_name()
             .map_or(String::new(), |s| s.to_string_lossy().into_owned());
         Ok(Denso {
             file,
-            voci,
-            campioni: vec![Campione {
+            entries: voci,
+            campioni: vec![Sample {
                 id: 1,
                 nome: "denso".into(),
                 scansioni: n,
-                dimensione: None,
+                size: None,
             }],
-            nome,
+            name: nome,
             buf: Vec::new(),
             campi_trailer: 130,
         })
     }
 
-    fn leggi(&mut self, k: usize) -> Result<()> {
+    fn read(&mut self, k: usize) -> Result<()> {
         let p = self
-            .voci
+            .entries
             .get(k)
-            .and_then(|v| v.posizione)
+            .and_then(|v| v.position)
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
         self.buf.resize(p.lunghezza as usize, 0);
         self.file
@@ -79,7 +79,7 @@ impl Denso {
     }
 
     fn spettro(&self, k: usize, profile: bool, mz: Vec<f64>, intensity: Vec<f32>) -> Spectrum {
-        let v = &self.voci[k];
+        let v = &self.entries[k];
         Spectrum {
             index: k,
             id: v.id.clone(),

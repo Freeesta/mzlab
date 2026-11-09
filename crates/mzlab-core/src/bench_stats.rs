@@ -74,8 +74,8 @@ pub fn holm(p: &[f64], alfa: f64) -> (Vec<f64>, Vec<bool>) {
     if m == 0 {
         return (Vec::new(), Vec::new());
     }
-    let mut ordine: Vec<usize> = (0..m).collect();
-    slice_by(&mut ordine, |&i, &j| {
+    let mut order: Vec<usize> = (0..m).collect();
+    slice_by(&mut order, |&i, &j| {
         let pi = p.get(i).copied().unwrap_or(f64::NAN);
         let pj = p.get(j).copied().unwrap_or(f64::NAN);
         match pi.partial_cmp(&pj) {
@@ -85,7 +85,7 @@ pub fn holm(p: &[f64], alfa: f64) -> (Vec<f64>, Vec<bool>) {
     });
     let mut adj = vec![0.0_f64; m];
     let mut corrente = 0.0_f64;
-    for (r, &i) in ordine.iter().enumerate() {
+    for (r, &i) in order.iter().enumerate() {
         let pi = p.get(i).copied().unwrap_or(0.0);
         let unadj = (m - r) as f64 * pi;
         corrente = corrente.max(unadj.min(1.0));
@@ -100,22 +100,22 @@ pub fn holm(p: &[f64], alfa: f64) -> (Vec<f64>, Vec<bool>) {
 /// Non-inferiority of `a - b`:
 /// - `direzione_alto` (higher is better): `ic_basso > margine`
 /// - otherwise (lower is better): `ic_alto < margine`
-pub fn non_inferiore(ic_basso: f64, ic_alto: f64, direzione_alto: bool, margine: f64) -> bool {
+pub fn non_inferiore(ci_low: f64, ci_high: f64, direzione_alto: bool, margine: f64) -> bool {
     if direzione_alto {
-        ic_basso > margine
+        ci_low > margine
     } else {
-        ic_alto < margine
+        ci_high < margine
     }
 }
 
 /// Superiority of `a` over `b`:
 /// - `direzione_alto`: `ic_basso > 0.0 && rifiutata`
 /// - otherwise: `ic_alto < 0.0 && rifiutata`
-pub fn superiore(ic_basso: f64, ic_alto: f64, direzione_alto: bool, rifiutata: bool) -> bool {
+pub fn superiore(ci_low: f64, ci_high: f64, direzione_alto: bool, rifiutata: bool) -> bool {
     let lato = if direzione_alto {
-        ic_basso > 0.0
+        ci_low > 0.0
     } else {
-        ic_alto < 0.0
+        ci_high < 0.0
     };
     lato && rifiutata
 }
@@ -167,15 +167,15 @@ pub fn indici_bootstrap(n: usize, n_boot: usize, seed: u64) -> Vec<Vec<usize>> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StatTipo {
     Media,
-    Mediana,
+    Median,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct IntervalloBootstrap {
     pub n: usize,
-    pub valore: Option<f64>,
-    pub ic_basso: Option<f64>,
-    pub ic_alto: Option<f64>,
+    pub value: Option<f64>,
+    pub ci_low: Option<f64>,
+    pub ci_high: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -247,7 +247,7 @@ pub fn nanpercentile(vals: &[f64], q: f64) -> Option<f64> {
 fn calc_stat(x: &[f64], tipo: StatTipo) -> Option<f64> {
     match tipo {
         StatTipo::Media => mean(x),
-        StatTipo::Mediana => nanmedian(x),
+        StatTipo::Median => nanmedian(x),
     }
 }
 
@@ -255,12 +255,12 @@ fn calc_stat(x: &[f64], tipo: StatTipo) -> Option<f64> {
 pub fn intervallo(x: &[f64], tipo: StatTipo, n_boot: usize, seed: u64) -> IntervalloBootstrap {
     let n = x.len();
     let punto = calc_stat(x, tipo);
-    if n == 0 || (tipo == StatTipo::Mediana && punto.is_none()) {
+    if n == 0 || (tipo == StatTipo::Median && punto.is_none()) {
         return IntervalloBootstrap {
             n,
-            valore: None,
-            ic_basso: None,
-            ic_alto: None,
+            value: None,
+            ci_low: None,
+            ci_high: None,
         };
     }
     let indices = indici_bootstrap(n, n_boot, seed);
@@ -273,9 +273,9 @@ pub fn intervallo(x: &[f64], tipo: StatTipo, n_boot: usize, seed: u64) -> Interv
     let ic_alto = nanpercentile(&s, 97.5);
     IntervalloBootstrap {
         n,
-        valore: punto,
-        ic_basso,
-        ic_alto,
+        value: punto,
+        ci_low: ic_basso,
+        ci_high: ic_alto,
     }
 }
 
@@ -293,7 +293,7 @@ pub fn differenza(
     let n = a.len();
     let pt_a = calc_stat(a, tipo);
     let pt_b = calc_stat(b, tipo);
-    if n == 0 || (tipo == StatTipo::Mediana && (pt_a.is_none() || pt_b.is_none())) {
+    if n == 0 || (tipo == StatTipo::Median && (pt_a.is_none() || pt_b.is_none())) {
         return Some(DifferenzaBootstrap {
             n,
             valore: None,
@@ -332,8 +332,8 @@ pub fn differenza(
         Some(ord) => ord,
         None => Ordering::Equal,
     });
-    let ic_basso = percentile(&d_sorted, 2.5);
-    let ic_alto = percentile(&d_sorted, 97.5);
+    let ci_low = percentile(&d_sorted, 2.5);
+    let ci_high = percentile(&d_sorted, 97.5);
     let d_len = d.len() as f64;
     let le_zero = d.iter().filter(|&&v| v <= 0.0).count() as f64;
     let ge_zero = d.iter().filter(|&&v| v >= 0.0).count() as f64;
@@ -342,8 +342,8 @@ pub fn differenza(
     Some(DifferenzaBootstrap {
         n,
         valore: diff_punto,
-        ic_basso,
-        ic_alto,
+        ic_basso: ci_low,
+        ic_alto: ci_high,
         p: Some(p_val),
     })
 }

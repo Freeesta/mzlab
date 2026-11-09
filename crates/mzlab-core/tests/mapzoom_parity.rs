@@ -10,8 +10,8 @@ use mzlab_core::{mzidx, upload};
 
 fn routes(n: usize, peaks: usize) -> Routes<Vec<u8>> {
     let mut l = finto::Finto::vario(n, 1, 7);
-    let mut rng = finto::Caso(5);
-    for (k, sc) in l.schede.iter_mut().enumerate() {
+    let mut rng = finto::Case(5);
+    for (k, sc) in l.cards.iter_mut().enumerate() {
         let sp = &mut sc.spettro;
         sp.level = 1;
         sp.polarity = 1;
@@ -23,9 +23,9 @@ fn routes(n: usize, peaks: usize) -> Routes<Vec<u8>> {
         mzlab_core::sortc::slice_by(&mut sp.mz, |a, b| a.total_cmp(b));
         sp.intensity = (0..peaks).map(|_| (rng.unit() * 1e6) as f32).collect();
     }
-    let p = upload::prepare_lettore(&mut l, 0, &[], "x.mzML").expect("table");
+    let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").expect("table");
     let mut out = Cursor::new(Vec::new());
-    mzidx::build_lettore(&p.table, &mut l, 0, &mut out, 192 << 20).expect("index");
+    mzidx::build_reader(&p.table, &mut l, 0, &mut out, 192 << 20).expect("index");
     let bytes = out.into_inner();
     let size = bytes.len() as u64;
     let mut r = Routes::new(Index::open(bytes, size).expect("open"));

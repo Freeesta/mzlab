@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::wiff::{container, Wiff};
@@ -38,7 +38,7 @@ fn generate() -> Option<(PathBuf, Value)> {
 fn pair(dir: &Path) -> FileSet {
     let member = |file: &str| {
         let bytes = std::fs::read(dir.join(file)).unwrap();
-        Membro {
+        Member {
             nome: file.into(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -125,7 +125,7 @@ fn the_registry_and_the_mzml_keep_the_sim_channels() {
         return;
     };
     let ions = want["ioni"].as_array().unwrap();
-    let mut l = lettori::apri(pair(&dir), &Limiti::sito()).unwrap();
+    let mut l = lettori::apri(pair(&dir), &Limits::sito()).unwrap();
     assert_eq!(l.samples().len(), 2);
     for c in 0..2 {
         let list = l.chromatograms(c).unwrap();

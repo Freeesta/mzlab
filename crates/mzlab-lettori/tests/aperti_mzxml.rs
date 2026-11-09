@@ -71,7 +71,7 @@ fn the_index_gives_level_precursor_and_tic_without_reading_peaks() {
     assert_eq!(ind[1].livello, 2);
     assert_eq!(ind[1].precursore, Some(412.25));
     assert!((ind[3].tic - scan[3].it.iter().sum::<f64>()).abs() < 1e-9);
-    assert!(ind[1].posizione.is_some());
+    assert!(ind[1].position.is_some());
 }
 
 #[test]

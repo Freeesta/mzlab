@@ -3,18 +3,18 @@
 
 use crate::error::{Error, Result};
 use crate::json::{self, Value};
-use crate::lettori::Posizione;
+use crate::lettori::Position;
 
 pub const BLOCK: u64 = 16384;
 const HEADER: usize = 64;
 /// Bit 0 of `flags` (version 2): the rows locate the scans in the members of a vendor file set, not in an mzML.
-pub const FLAG_LETTORE: u32 = 1;
+pub const READER_FLAG: u32 = 1;
 
 /// Bytes at an offset. `&mut self` so that a JS callback or a cache can keep state.
 pub trait ReadAt {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()>;
     /// The reader and the sample behind the bytes when they are not an mzML (`sorgente::Scansioni` reads the scans from it): `None` for a file read as it is.
-    fn lettore(&mut self) -> Option<(&mut dyn crate::lettori::Lettore, usize)> {
+    fn reader(&mut self) -> Option<(&mut dyn crate::lettori::Reader, usize)> {
         None
     }
 }
@@ -23,8 +23,8 @@ impl<T: ReadAt + ?Sized> ReadAt for Box<T> {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         (**self).read_at(off, buf)
     }
-    fn lettore(&mut self) -> Option<(&mut dyn crate::lettori::Lettore, usize)> {
-        (**self).lettore()
+    fn reader(&mut self) -> Option<(&mut dyn crate::lettori::Reader, usize)> {
+        (**self).reader()
     }
 }
 
@@ -56,7 +56,7 @@ pub struct Scan {
     pub start: u64,
     pub end: u64,
     /// Index of a vendor file (version 2): where the scan lies in the members of the set (`None` when the reader does not say) and its number `k` in `Lettore::index`.
-    pub posizione: Option<Posizione>,
+    pub position: Option<Position>,
     pub k: Option<usize>,
     pub level: u8,
     pub rt: f64,
@@ -249,7 +249,7 @@ pub struct Index<R: ReadAt> {
     pub(crate) fences: Vec<Option<Vec<f64>>>, // per section, the first m/z of each block (the `fence` array), read at the first search
 }
 
-/// Whether the header is of an index of a vendor file (version 2 with `FLAG_LETTORE`) or of an mzML (version 1); `None` for any other.
+/// Whether the header is of an index of a vendor file (version 2 with `READER_FLAG`) or of an mzML (version 1); `None` for any other.
 fn nativo(h: &[u8]) -> Option<bool> {
     let w = |a: usize| {
         h.get(a..a + 4)
@@ -258,7 +258,7 @@ fn nativo(h: &[u8]) -> Option<bool> {
     };
     match (w(8)?, w(12)?) {
         (1, 0) => Some(false),
-        (2, FLAG_LETTORE) => Some(true),
+        (2, READER_FLAG) => Some(true),
         _ => None,
     }
 }

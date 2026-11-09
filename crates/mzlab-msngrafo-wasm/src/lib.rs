@@ -11,7 +11,7 @@ use mzlab_core::msngrafo::{
     aggiungi, cerca, da_richiesta, da_richiesta_export, esporta, grafo_json, opzioni_cerca,
 };
 use mzlab_core::msngrafo::{
-    con_interpretazione, library_text, table_text, Grafo, Opzioni, PPM_PERDITA,
+    con_interpretazione, library_text, table_text, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
 use mzlab_feat::chem::strutture::strutture_testo;
@@ -64,7 +64,7 @@ fn compute(
     read_file: Function,
     name: &str,
     q: &Query,
-) -> mzlab_core::Result<(Grafo, String)> {
+) -> mzlab_core::Result<(Graph, String)> {
     let (g, j, _) = compute_with(read_idx, idx_size, read_file, name, q)?;
     Ok((g, j))
 }
@@ -75,7 +75,7 @@ fn compute_with(
     read_file: Function,
     name: &str,
     q: &Query,
-) -> mzlab_core::Result<(Grafo, String, Opzioni)> {
+) -> mzlab_core::Result<(Graph, String, Options)> {
     let req = da_richiesta(&|k| q.get(k).map(String::from))?;
     let bad = || Error::new("error.badIndex");
     if idx_size.is_nan() || idx_size < 0.0 {
@@ -97,7 +97,7 @@ fn compute_with(
 }
 
 /// The optional keys of the query on the graph text `j`: `interpreta=1` and `rotture=1`, shared by the graph and its exports.
-fn with_query_keys(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> mzlab_core::Result<String> {
+fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_core::Result<String> {
     // `interpreta=1` (and `ppm_perdita`) adds the key `interpretazione`, as `mzlab-cli msn-graph --interpreta` does
     if q.get("interpreta").is_some_and(|v| v == "1") {
         let ppm = match q.get("ppm_perdita").filter(|v| !v.is_empty()) {

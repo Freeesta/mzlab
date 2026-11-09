@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 
 fn generate(tool: &str) -> Option<PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_sciex_sonda_{tool}_{}", std::process::id()));
@@ -30,10 +30,10 @@ fn generate(tool: &str) -> Option<PathBuf> {
     Some(out)
 }
 
-fn apri(dir: &Path, stem: &str) -> Box<dyn Lettore> {
+fn apri(dir: &Path, stem: &str) -> Box<dyn Reader> {
     let member = |name: String| {
         let b = std::fs::read(dir.join(&name)).unwrap();
-        Membro {
+        Member {
             nome: name,
             dim: b.len() as u64,
             dati: Box::new(b),
@@ -46,7 +46,7 @@ fn apri(dir: &Path, stem: &str) -> Box<dyn Lettore> {
             member(format!("{stem}.wiff.scan")),
         ],
     };
-    mzlab_lettori::apri(fs, &Limiti::sito()).unwrap()
+    mzlab_lettori::apri(fs, &Limits::sito()).unwrap()
 }
 
 #[test]

@@ -7,7 +7,7 @@ use super::sqlite_min::{Sqlite, Val};
 
 use mzlab_core::error::Result;
 
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -23,7 +23,7 @@ impl Frame {
 }
 
 impl Data {
-    pub fn read(db: &mut Sqlite, limits: &Limiti) -> Result<Data> {
+    pub fn read(db: &mut Sqlite, limits: &Limits) -> Result<Data> {
         let mut d = Data::default();
         rows(db, limits, "GlobalMetadata", &["Key", "Value"], |r| {
             if let (Some(k), Some(v)) = (r[0].text(), r[1].as_text()) {
@@ -37,12 +37,12 @@ impl Data {
         Ok(d)
     }
 
-    fn frames_e_calibrazioni(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+    fn frames_e_calibrazioni(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         self.frames(db, limits)?;
         self.calibrazioni(db, limits)
     }
 
-    fn frames(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+    fn frames(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         let mut fr = Vec::new();
         let c = [
             "Id",
@@ -87,7 +87,7 @@ impl Data {
         Ok(())
     }
 
-    fn calibrazioni(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+    fn calibrazioni(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         let mut cal = HashMap::new();
         let c = [
             "Id",
@@ -135,7 +135,7 @@ impl Data {
         Ok(())
     }
 
-    fn msms(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+    fn msms(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         let mut prec = HashMap::new();
         let c = [
             "Id",
@@ -173,7 +173,7 @@ impl Data {
         Ok(())
     }
 
-    fn dia_prm(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+    fn dia_prm(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         let mut g: HashMap<i64, Vec<Window>> = HashMap::new();
         let c = [
             "WindowGroup",
@@ -236,7 +236,7 @@ impl Data {
     }
 
     /// The properties of the property group of the first frame (the method settings that stay constant), with the names and units the file defines.
-    fn proprieta(&mut self, db: &mut Sqlite, limits: &Limiti) -> Result<()> {
+    fn proprieta(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         let mut group = None;
         rows_until(db, limits, "Frames", &["PropertyGroup"], |r| {
             group = r[0].i64();
@@ -349,7 +349,7 @@ pub struct Data {
 }
 
 /// The rows of `nome` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows. The other columns of a row are skipped, not decoded.
-fn rows<F>(db: &mut Sqlite, limits: &Limiti, name: &str, columns: &[&str], mut f: F) -> Result<()>
+fn rows<F>(db: &mut Sqlite, limits: &Limits, name: &str, columns: &[&str], mut f: F) -> Result<()>
 where
     F: FnMut(&[Val]),
 {
@@ -362,7 +362,7 @@ where
 /// `righe` that stops at the first row `f` answers `false` for.
 fn rows_until<F>(
     db: &mut Sqlite,
-    limits: &Limiti,
+    limits: &Limits,
     name: &str,
     columns: &[&str],
     mut f: F,
@@ -377,7 +377,7 @@ where
     let mut n = 0u64;
     db.rows_cols(&t, &idx, |r| {
         n += 1;
-        limits.voci_ok(n)?;
+        limits.ok_entries(n)?;
         Ok(f(r))
     })
 }

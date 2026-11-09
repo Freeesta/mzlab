@@ -1,7 +1,7 @@
 //! The outputs after the reader that `--downstream` adds to every scan row (docs/agenti/scandump.md): the mzML as written, the filter of `rawfilter`, the `.mzidx` row and the entry node of `msngrafo/1`.
 use std::io::{Cursor, Write};
 
-use mzlab_core::lettori::Lettore;
+use mzlab_core::lettori::Reader;
 use mzlab_core::{lettori_mzml, msnalbero, mzidx_lettore, rawfilter::MzmlFilter};
 use opentfraw::RawFileReader;
 use serde_json::{json, Map, Value};
@@ -102,7 +102,7 @@ fn precursors_of(mzml: &str) -> Vec<Vec<Value>> {
 
 /// The `down` object of every scan row: what the outputs after the reader give for it (docs/agenti/scandump.md).
 pub fn add_downstream(
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     raw: &RawFileReader,
     src: &mut Cursor<&[u8]>,
     name: &str,

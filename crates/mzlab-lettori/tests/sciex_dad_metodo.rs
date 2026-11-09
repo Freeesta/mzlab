@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::itemroutes::{pda_spectrum, pda_wavelength};
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
-use mzlab_core::lettori_mzml::Conversione;
+use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::lettori_mzml::Conversion;
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::mzmlwrite::Opzioni;
+use mzlab_core::mzmlwrite::Options;
 use serde_json::Value;
 
 fn fixture() -> Option<(PathBuf, Value)> {
@@ -35,9 +35,9 @@ fn fixture() -> Option<(PathBuf, Value)> {
     Some((out, json["dadmetodo"].clone()))
 }
 
-fn member(p: &Path, name: &str) -> Membro {
+fn member(p: &Path, name: &str) -> Member {
     let b = std::fs::read(p.join(name)).unwrap();
-    Membro {
+    Member {
         nome: name.into(),
         dim: b.len() as u64,
         dati: Box::new(b),
@@ -53,21 +53,21 @@ fn convert(dir: &Path, dad: bool) -> Vec<u8> {
             member(dir, "dadmetodo.wiff.scan"),
         ],
     };
-    let mut l = mzlab_lettori::apri(fs, &Limiti::sito()).unwrap();
+    let mut l = mzlab_lettori::apri(fs, &Limits::sito()).unwrap();
     assert!(
         l.variant(0),
         "version-1 blocks make the pair a variant of the module"
     );
-    let conv = Conversione {
+    let conv = Conversion {
         steps: Some(&[]),
-        opz: Opzioni {
+        opz: Options {
             dad,
             thread: 1,
-            ..Opzioni::default()
+            ..Options::default()
         },
-        ..Conversione::default()
+        ..Conversion::default()
     };
-    conv.scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap()
+    conv.write(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap()
 }
 
 #[test]

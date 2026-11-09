@@ -4,9 +4,9 @@
 use super::netcdf::{Cdf, Val};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
-use mzlab_core::metodo_campi::Campo;
+use mzlab_core::metodo_campi::Field;
 use mzlab_core::mzmlwrite::Header;
 
 /// The most fields kept from a file.
@@ -14,7 +14,7 @@ const FIELDS_MAX: usize = 2000;
 
 impl Testata {
     /// The attributes and the instrument variables of `cdf`.
-    pub(super) fn read(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limiti) -> Result<Testata> {
+    pub(super) fn read(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> Result<Testata> {
         let mut t = Testata::default();
         for a in &cdf.att {
             let v = match &a.val {
@@ -28,8 +28,8 @@ impl Testata {
             if v.is_empty() || t.fields.len() >= FIELDS_MAX {
                 continue;
             }
-            let c = Campo::new("andi:global", &a.nome, &v);
-            let c = mappa(&a.nome).map_or(c, |m| Campo::new("andi:global", &a.nome, &v).map(m));
+            let c = Field::new("andi:global", &a.nome, &v);
+            let c = mappa(&a.nome).map_or(c, |m| Field::new("andi:global", &a.nome, &v).map(m));
             t.fields.push(if identita(&a.nome) { c.id() } else { c });
         }
         t.titolo = cdf.text("experiment_title").map(str::to_string);
@@ -42,7 +42,7 @@ impl Testata {
             if s.is_empty() || t.fields.len() >= FIELDS_MAX {
                 continue;
             }
-            let c = Campo::new("andi:instrument", &v.nome, &s);
+            let c = Field::new("andi:instrument", &v.nome, &s);
             t.fields.push(if identita(&v.nome) { c.id() } else { c });
             let ch = Some(s);
             match v.nome.as_str() {
@@ -105,7 +105,7 @@ impl Testata {
             ),
             (
                 "campi",
-                Some(V::Arr(self.fields.iter().filter_map(Campo::json).collect())),
+                Some(V::Arr(self.fields.iter().filter_map(Field::json).collect())),
             ),
         ]);
         doc.map_or_else(String::new, |d| d.json())
@@ -144,7 +144,7 @@ impl Testata {
 
 #[derive(Default)]
 pub(super) struct Testata {
-    pub(super) fields: Vec<Campo>,
+    pub(super) fields: Vec<Field>,
     pub(super) titolo: Option<String>,
     pub(super) created: Option<String>,
     pub(super) user: Option<String>,

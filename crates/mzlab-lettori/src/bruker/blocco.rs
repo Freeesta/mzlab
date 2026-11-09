@@ -5,7 +5,7 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 fn guasto(m: &str) -> Error {
     Error::new("err.dam.unreadable").with("message", format!("tdf_bin: {m}"))
@@ -70,7 +70,7 @@ fn u32_le(b: &[u8], o: usize) -> Option<u32> {
 }
 
 /// Reads the block at `offset` of a `tdf_bin` of `dim` bytes: the whole block, header included.
-pub fn read_block(d: &mut dyn ReadAt, dim: u64, offset: u64, limits: &Limiti) -> Result<Vec<u8>> {
+pub fn read_block(d: &mut dyn ReadAt, dim: u64, offset: u64, limits: &Limits) -> Result<Vec<u8>> {
     let mut h = [0u8; 8];
     if offset.checked_add(8).is_none_or(|e| e > dim) {
         return Err(guasto("block past the end of the file"));
@@ -94,10 +94,10 @@ pub fn decode(
     tipo: u32,
     num_scans: u64,
     num_peaks: u64,
-    limits: &Limiti,
+    limits: &Limits,
 ) -> Result<Peaks> {
-    limits.voci_ok(num_scans)?;
-    limits.voci_ok(num_peaks)?;
+    limits.ok_entries(num_scans)?;
+    limits.ok_entries(num_peaks)?;
     if block.len() <= 8 {
         return if num_peaks == 0 {
             Ok(Peaks::default())
@@ -106,7 +106,7 @@ pub fn decode(
         };
     }
     let ns = u64::from(u32_le(block, 4).unwrap_or(u32::MAX));
-    limits.voci_ok(ns)?;
+    limits.ok_entries(ns)?;
     // type 2 repeats the scan count of the frame table; type 1 lists the whole ramp
     if tipo == 2 && ns != num_scans {
         return Err(guasto("scan count differs from the frame table"));
@@ -150,7 +150,7 @@ fn zstd_window(z: &[u8]) -> Option<u64> {
 }
 
 /// One zstd frame that must decompress to exactly `attesi` bytes (the frame header and the output are bounded by `limiti` before any allocation).
-pub fn zstd(z: &[u8], attesi: usize, limits: &Limiti) -> Result<Vec<u8>> {
+pub fn zstd(z: &[u8], attesi: usize, limits: &Limits) -> Result<Vec<u8>> {
     use std::io::Read;
     if attesi as u64 > limits.byte || zstd_window(z).is_none_or(|w| w > limits.byte) {
         return Err(guasto("zstd frame"));
@@ -167,7 +167,7 @@ pub fn zstd(z: &[u8], attesi: usize, limits: &Limiti) -> Result<Vec<u8>> {
     Ok(inner)
 }
 
-fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limiti) -> Result<Peaks> {
+fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks> {
     let words = ns
         .checked_add(np.checked_mul(2).ok_or_else(|| guasto("peaks"))?)
         .ok_or_else(|| guasto("peaks"))?;
@@ -207,7 +207,7 @@ fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limiti) -> Result<Peaks>
     Ok(out)
 }
 
-fn decodifica1(b: &[u8], ns: usize, np: usize, limits: &Limiti) -> Result<Peaks> {
+fn decodifica1(b: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks> {
     let tab = (ns + 1) * 4;
     let start = 8 + tab;
     if start > b.len() {

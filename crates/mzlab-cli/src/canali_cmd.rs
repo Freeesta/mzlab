@@ -98,7 +98,7 @@ fn read(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
         if let Some(id) = &c.channel {
             return match c.rt {
                 Some((a, b)) => mzlab_core::canali_uv::spettro(&mut m, id, a, b),
-                None => mzlab_core::canali_uv::traccia(&mut m, &chroms, id, c.n),
+                None => mzlab_core::canali_uv::trace(&mut m, &chroms, id, c.n),
             };
         }
         let facts = mzlab_core::iteminfo::facts_from(&mut m, scans_end, chroms.len() as i64, true)?;
@@ -107,7 +107,7 @@ fn read(c: &Chiesta, tmp: &std::path::Path) -> Result<String> {
         // the first sample, as the index: its chromatograms (SIM, SRM, UV) from the mzML shell the site reads (`lettori_mzml::guscio`)
         let mut l = mzlab_lettori::apri(
             crate::flow_set::file_set(file)?,
-            &mzlab_core::lettori::Limiti::desktop(),
+            &mzlab_core::lettori::Limits::desktop(),
         )?;
         let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), 0)?;
         let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);

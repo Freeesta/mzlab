@@ -5,7 +5,7 @@ use super::tabelle::Data;
 
 use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
 
-use mzlab_core::metodo_campi::Campo;
+use mzlab_core::metodo_campi::Field;
 
 use mzlab_core::mzmlwrite::Header;
 
@@ -32,13 +32,13 @@ impl Testata {
             tsf,
             ..Testata::default()
         };
-        let mut add = |c: Campo, id: bool| {
+        let mut add = |c: Field, id: bool| {
             if t.fields.len() < FIELDS_MAX {
                 t.fields.push(if id { c.id() } else { c });
             }
         };
         for (k, v) in d.meta.iter().filter(|(_, v)| !v.trim().is_empty()) {
-            let c = Campo::new("bruker:global", k, v.trim());
+            let c = Field::new("bruker:global", k, v.trim());
             let c = match k.as_str() {
                 "OperatorName" => c.map("operatore.utente"),
                 "SampleName" => c.map("campione.nome"),
@@ -49,27 +49,27 @@ impl Testata {
             add(c, identita(k));
         }
         for (k, v, u) in &d.proprieta {
-            add(Campo::new("bruker:proprieta", k, v).unit(u), identita(k));
+            add(Field::new("bruker:proprieta", k, v).unit(u), identita(k));
         }
         for (k, v) in &d.tims {
-            add(Campo::new("bruker:TimsCalibration", k, v), false);
+            add(Field::new("bruker:TimsCalibration", k, v), false);
         }
         if let Some(c) = d.frames.first().and_then(|f| d.cal.get(&f.cal)) {
             add(
-                Campo::new("bruker:MzCalibration", "ModelType", c.model),
+                Field::new("bruker:MzCalibration", "ModelType", c.model),
                 false,
             );
             add(
-                Campo::new("bruker:MzCalibration", "DigitizerTimebase", c.timebase),
+                Field::new("bruker:MzCalibration", "DigitizerTimebase", c.timebase),
                 false,
             );
             add(
-                Campo::new("bruker:MzCalibration", "DigitizerDelay", c.delay),
+                Field::new("bruker:MzCalibration", "DigitizerDelay", c.delay),
                 false,
             );
             for (i, x) in c.c.iter().enumerate() {
                 add(
-                    Campo::new("bruker:MzCalibration", &format!("C{i}"), x),
+                    Field::new("bruker:MzCalibration", &format!("C{i}"), x),
                     false,
                 );
             }
@@ -116,7 +116,7 @@ impl Testata {
             ("operatore", obj(vec![("utente", s(&self.user))])),
             (
                 "campi",
-                Some(V::Arr(self.fields.iter().filter_map(Campo::json).collect())),
+                Some(V::Arr(self.fields.iter().filter_map(Field::json).collect())),
             ),
             (
                 "avvisi",
@@ -164,7 +164,7 @@ impl Testata {
 
 #[derive(Default)]
 pub struct Testata {
-    pub fields: Vec<Campo>,
+    pub fields: Vec<Field>,
     pub model: Option<String>,
     pub series: Option<String>,
     pub maker: Option<String>,

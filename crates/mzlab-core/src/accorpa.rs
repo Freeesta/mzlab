@@ -15,12 +15,12 @@ pub const FLUSSI: usize = 8;
 /// at most a slot after the end of the pending block can only start the next slot, so the gap is the unwritten tail of the pending one, filled with zeros.
 pub const BUCO: u64 = crate::mzidx_spill::CHUNK as u64;
 
-struct Blocco {
+struct Block {
     at: u64,
     buf: Vec<u8>,
 }
 
-impl Blocco {
+impl Block {
     fn end(&self) -> u64 {
         self.at + self.buf.len() as u64
     }
@@ -30,7 +30,7 @@ impl Blocco {
 pub struct Accorpa<O> {
     dest: O,
     /// The pending blocks, the least recently written first.
-    blocks: Vec<Blocco>,
+    blocks: Vec<Block>,
     cap: usize,
     streams: usize,
 }
@@ -69,12 +69,12 @@ impl<O> Accorpa<O> {
         send: fn(&mut O, u64, &[u8]) -> Result<()>,
     ) -> Result<()> {
         let to = offset + data.len() as u64;
-        let goes_on = |b: &Blocco| offset.checked_sub(b.end()).is_some_and(|g| g <= hole);
+        let goes_on = |b: &Block| offset.checked_sub(b.end()).is_some_and(|g| g <= hole);
         let from = self
             .blocks
             .iter()
             .find(|b| goes_on(b))
-            .map_or(offset, Blocco::end);
+            .map_or(offset, Block::end);
         let mut i = 0;
         while i < self.blocks.len() {
             let b = &self.blocks[i];
@@ -95,7 +95,7 @@ impl<O> Accorpa<O> {
                     let old = self.blocks.remove(0);
                     send(&mut self.dest, old.at, &old.buf)?;
                 }
-                Blocco {
+                Block {
                     at: offset,
                     buf: Vec::new(),
                 }

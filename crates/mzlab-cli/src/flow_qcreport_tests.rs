@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::campioni::{self, Campione};
+use mzlab_core::campioni::{self, Sample};
 use mzlab_core::json::Value;
 use mzlab_feat::methods::{generic_sentence, methods_text, placeholders, template, templated};
 use mzlab_feat::runorder::runorder_text;
@@ -26,9 +26,9 @@ fn run(d: &Path, plan: &str) -> String {
 
 /// 12 injections, a QC every 4, no blank, standards at one level.
 fn samples() -> String {
-    let cs: Vec<Campione> = (0..12)
+    let cs: Vec<Sample> = (0..12)
         .map(|k| {
-            let mut c = Campione::new(&format!("f{k:02}.mzML"), "", k + 1);
+            let mut c = Sample::new(&format!("f{k:02}.mzML"), "", k + 1);
             c.kind = if k % 4 == 3 {
                 "qc"
             } else if k == 0 {

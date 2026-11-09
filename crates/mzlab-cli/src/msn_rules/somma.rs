@@ -83,7 +83,7 @@ fn read_line(s: &mut Strato, v: &Value) {
 /// cleavage: a rule that asks for a group or an element passes it by construction, the rewiring keeps the groups).
 fn tasso(id: &str, n: &[usize; 4]) -> f64 {
     let reads = tabella_regole()
-        .regole
+        .rules
         .iter()
         .find(|r| r.id == id)
         .is_none_or(|r| r.site.is_some() || r.tipo == Tipo::Cleavage);

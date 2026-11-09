@@ -3,36 +3,36 @@ use super::*;
 use mzlab_core::error::Error;
 
 struct Finto {
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
     metodo: String,
 }
 
-fn entry(k: usize, rt: f64, filter: &str, q1: f64) -> VoceScansione {
-    VoceScansione {
+fn entry(k: usize, rt: f64, filter: &str, q1: f64) -> ScanEntry {
+    ScanEntry {
         id: format!("scan={k}"),
         rt,
         livello: 2,
         polarita: 1,
         tic: 0.0,
-        picco_base: None,
+        base_peak: None,
         filtro: filter.into(),
         precursore: Some(q1),
-        posizione: None,
+        position: None,
     }
 }
 
-impl Lettore for Finto {
+impl Reader for Finto {
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         &[("campo finto", "motivo finto")]
     }
-    fn format(&self) -> Formato {
-        Formato::Altro("finto")
+    fn format(&self) -> Format {
+        Format::Altro("finto")
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn index(&mut self, _: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
     fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
@@ -57,10 +57,10 @@ impl Lettore for Finto {
             wide: None,
         })
     }
-    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<Field>> {
         Ok(vec![])
     }
-    fn chromatograms(&mut self, _: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(vec![])
     }
     fn chromatogram(&mut self, _: usize, _: &str) -> Result<Chromatogram> {
@@ -101,11 +101,11 @@ fn fake_with(filter: &str, pol: i8, method: &str) -> SrmDaScansioni {
         })
         .collect();
     SrmDaScansioni::new(Box::new(Finto {
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 1,
             nome: "a".into(),
             scansioni: 4,
-            dimensione: None,
+            size: None,
         }],
         indice: index,
         metodo: method.into(),

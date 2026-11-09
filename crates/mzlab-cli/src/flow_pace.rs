@@ -11,15 +11,15 @@ use std::sync::Arc;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzidx::build_mzml_late;
 use mzlab_core::upload::{
-    con_impronte_parallele, indicizza_lettore_con, prepare_con, probe, senza_sha1,
+    con_impronte_parallele, index_reader_with, prepare_con, probe, without_sha1,
 };
 
 use crate::{flow_set, io};
 
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::pace::Pace;
@@ -272,8 +272,8 @@ fn index_reader(
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     let mut fs = flow_set::file_set(path)?;
-    senza_sha1(&mut fs);
-    let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
+    without_sha1(&mut fs);
+    let l = mzlab_lettori::apri(fs, &Limits::desktop())?;
     let ids: Vec<u32> = l.samples().iter().map(|s| s.id).collect();
     let sample = flow_set::sample_index(label, &ids)?;
     let mut l = Scans::new(l, sample, pace).stopping(stop);
@@ -294,7 +294,7 @@ fn index_reader(
     let built = match flow_set::known_prints(path)? {
         Some(prints) => {
             let mut prints = Some(prints);
-            indicizza_lettore_con(
+            index_reader_with(
                 &mut l,
                 sample,
                 &mut || prints.take().ok_or_else(|| Error::new("err.file.unknown")),
@@ -308,7 +308,7 @@ fn index_reader(
         None => con_impronte_parallele(
             move || hashing.file_set(path),
             |imp| {
-                let r = indicizza_lettore_con(
+                let r = index_reader_with(
                     &mut l,
                     sample,
                     imp,
@@ -343,7 +343,7 @@ impl Halting {
         fs.membri = fs
             .membri
             .into_iter()
-            .map(|m| Membro {
+            .map(|m| Member {
                 dati: Box::new(HaltingAt {
                     r: m.dati,
                     stop: self.stop.clone(),
@@ -373,7 +373,7 @@ impl ReadAt for HaltingAt {
 
 /// A reader that tells `pace` how many scans of sample `c` it has decoded (as many as the sample has in pass 1; a later pass counts past the total and is clamped).
 pub(crate) struct Scans<'a, 'b> {
-    l: Box<dyn Lettore>,
+    l: Box<dyn Reader>,
     c: usize,
     n: usize,
     done: usize,
@@ -382,7 +382,7 @@ pub(crate) struct Scans<'a, 'b> {
 }
 
 impl<'a, 'b> Scans<'a, 'b> {
-    pub(crate) fn new(mut l: Box<dyn Lettore>, c: usize, pace: &'a mut Pace<'b>) -> Self {
+    pub(crate) fn new(mut l: Box<dyn Reader>, c: usize, pace: &'a mut Pace<'b>) -> Self {
         let n = l.index(c).map_or(0, |v| v.len());
         pace.at(0, n);
         Scans {
@@ -417,15 +417,15 @@ impl<'a, 'b> Scans<'a, 'b> {
 }
 
 #[rustfmt::skip]
-impl Lettore for Scans<'_, '_> {
-    fn format(&self) -> Formato { self.l.format() }
-    fn samples(&self) -> &[Campione] { self.l.samples() }
-    fn index(&mut self, c: usize) -> mzlab_core::Result<&[VoceScansione]> { self.l.index(c) }
+impl Reader for Scans<'_, '_> {
+    fn format(&self) -> Format { self.l.format() }
+    fn samples(&self) -> &[Sample] { self.l.samples() }
+    fn index(&mut self, c: usize) -> mzlab_core::Result<&[ScanEntry]> { self.l.index(c) }
     fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scan(c, k); self.count(c); s }
     fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scan_data(c, k); self.count(c); s }
     fn scan_profile(&mut self, c: usize, k: usize) -> mzlab_core::Result<Option<Spectrum>> { self.l.scan_profile(c, k) }
-    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<Campo>> { self.l.scan_header(c, k) }
-    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<VoceCromatogramma>> { self.l.chromatograms(c) }
+    fn scan_header(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<Field>> { self.l.scan_header(c, k) }
+    fn chromatograms(&mut self, c: usize) -> mzlab_core::Result<Vec<ChromatogramEntry>> { self.l.chromatograms(c) }
     fn chromatogram(&mut self, c: usize, id: &str) -> mzlab_core::Result<Chromatogram> { self.l.chromatogram(c, id) }
     fn dad_map(&mut self, c: usize) -> mzlab_core::Result<Option<String>> { self.l.dad_map(c) }
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_spectrum(c, rt0, rt1) }

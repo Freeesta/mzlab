@@ -45,8 +45,8 @@ fn synthetic_folder_reads_back() {
     // mzML written and read back
     let out = conv_aiuto::mzml(FileSet {
         membri: vec![
-            conv_aiuto::membro("x.D/AcqData/MSScan.bin", &idx),
-            conv_aiuto::membro("x.D/AcqData/MSPeak.bin", &peak),
+            conv_aiuto::member("x.D/AcqData/MSScan.bin", &idx),
+            conv_aiuto::member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     });
     let back = mzml::read(&out[..]).unwrap();
@@ -393,7 +393,7 @@ fn a_run_with_only_data_ms_opens() {
         "the bytes after the records are declared"
     );
     let mzml = conv_aiuto::mzml(FileSet {
-        membri: vec![conv_aiuto::membro("old.D/data.ms", &bytes)],
+        membri: vec![conv_aiuto::member("old.D/data.ms", &bytes)],
     });
     assert_eq!(mzlab_core::mzml::read(&mzml[..]).unwrap().spectra.len(), 2);
     // another record length is an error that names the numbers
@@ -440,8 +440,8 @@ fn single_precision_centroids_read_like_the_double_ones() {
         let run = d.run(&mut p).unwrap();
         let out = conv_aiuto::mzml(FileSet {
             membri: vec![
-                conv_aiuto::membro("x.D/AcqData/MSScan.bin", &idx),
-                conv_aiuto::membro("x.D/AcqData/MSPeak.bin", &peak),
+                conv_aiuto::member("x.D/AcqData/MSScan.bin", &idx),
+                conv_aiuto::member("x.D/AcqData/MSPeak.bin", &peak),
             ],
         });
         (run, mzml::read(&out[..]).unwrap())

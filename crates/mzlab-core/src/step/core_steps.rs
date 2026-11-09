@@ -102,13 +102,13 @@ fn index_mzidx() -> Step {
 mod tests {
     use super::*;
     use crate::mzidx::DEFAULT_BUDGET;
-    use crate::mzmlwrite::{Opzioni, LIVELLO_ZLIB};
+    use crate::mzmlwrite::{Options, LIVELLO_ZLIB};
 
     #[test]
     fn defaults_are_the_ones_of_the_code() {
         let steps = core_steps();
         let find = |id: &str| steps.iter().find(|s| s.id == id).unwrap();
-        let o = Opzioni::default();
+        let o = Options::default();
         let conv = find("convert.mzml");
         assert_eq!(
             conv.param("zlib_level").unwrap().default_f64(),

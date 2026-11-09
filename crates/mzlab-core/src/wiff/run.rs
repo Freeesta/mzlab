@@ -144,7 +144,7 @@ impl Wiff {
         Ok(chroms)
     }
 
-    /// The spectrum `n` (counting the non-empty scans) made of the block `r` and its points: the one `visit` gives and `lettore::LettoreWiff::scansione` serves.
+    /// The spectrum `n` (counting the non-empty scans) made of the block `r` and its points: the one `visit` gives and `lettore::WiffReader::scansione` serves.
     pub(super) fn spectrum_of(&self, n: usize, r: &super::Record, p: scan::Points) -> Spectrum {
         let e = self
             .experiments

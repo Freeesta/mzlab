@@ -12,14 +12,14 @@ fn hr_bucket_is_the_stable_sort() {
         x ^= x << 17;
         x
     };
-    let ioni: [f64; 4] = [445.120_31, 445.120_32, 445.5, 445.999_999_9];
+    let ions: [f64; 4] = [445.120_31, 445.120_32, 445.5, 445.999_999_9];
     let v: Vec<Peak<f64>> = (0..5000u32)
         .map(|i| {
             let mz = match next() % 10 {
                 0 => f64::NAN,
                 1 => [0.0, -0.0][(next() % 2) as usize],
                 2 => 445.0 + (next() % 1_000_000) as f64 * 1e-6,
-                k => f64::from_bits(ioni[k as usize % 4].to_bits() + next() % 3),
+                k => f64::from_bits(ions[k as usize % 4].to_bits() + next() % 3),
             };
             Peak {
                 mz,
@@ -28,12 +28,12 @@ fn hr_bucket_is_the_stable_sort() {
             }
         })
         .collect();
-    for per_scansione in [false, true] {
+    for per_scan in [false, true] {
         let (mut a, mut b, mut tmp) = (v.clone(), v.clone(), Vec::new());
-        ordina(&mut a, &mut tmp, per_scansione).unwrap();
+        sort(&mut a, &mut tmp, per_scan).unwrap();
         b.sort_by(|x, y| {
             let o = by_mz(x, y);
-            if per_scansione {
+            if per_scan {
                 o.then(x.pos.cmp(&y.pos))
             } else {
                 o

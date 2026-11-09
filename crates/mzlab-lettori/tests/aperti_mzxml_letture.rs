@@ -41,7 +41,7 @@ fn the_index_of_many_scans_takes_few_reads_and_the_same_rows() {
         let mut fs = comune::file_set("campione.mzXML", Vec::new());
         fs.membri[0].dim = byte.len() as u64;
         fs.membri[0].dati = Box::new(Contato(byte.clone(), calls.clone()));
-        let mut l = mzlab_lettori::apri(fs, &mzlab_core::lettori::Limiti::sito()).unwrap();
+        let mut l = mzlab_lettori::apri(fs, &mzlab_core::lettori::Limits::sito()).unwrap();
         // opening: the header, the pass over the file for the starts of the scans, the windows of the index
         assert!(calls.get() < scan.len() / 10, "{} reads", calls.get());
         let mut r = apri_mzxml(byte);

@@ -1,5 +1,5 @@
 //! The index of a native sample (a maker's file read as it is): built straight from its reader, version 2 (see `nativi.rs`).
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzidx::Stats;
 use mzlab_core::{lettori_centroidi, upload, Error};
 
@@ -14,8 +14,8 @@ impl IdxBuilder {
             // the fingerprints are taken by a second thread (its own mapping of the members) while the scans are decoded; the members this one opens say
             // they have a SHA-1 already (empty): the index never reads it
             let mut fs = nativi::fileset(&nat.members)?;
-            upload::senza_sha1(&mut fs);
-            let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
+            upload::without_sha1(&mut fs);
+            let l = mzlab_lettori::apri(fs, &Limits::desktop())?;
             let mut l = if nat.centroid {
                 lettori_centroidi::centroidato(l)
             } else {
@@ -25,7 +25,7 @@ impl IdxBuilder {
             upload::con_impronte_parallele(
                 move || nativi::fileset(&members),
                 |impronte| {
-                    let (mut st, _) = upload::indicizza_lettore_con(
+                    let (mut st, _) = upload::index_reader_with(
                         &mut *l,
                         nat.c,
                         impronte,

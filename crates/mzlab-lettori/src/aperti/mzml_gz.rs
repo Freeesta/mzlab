@@ -5,14 +5,14 @@
 use std::io::Read;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::gunzip::Membri;
+use mzlab_core::gunzip::Members;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{Fiducia, FileSet, Lettore, Limiti, Membro, VoceLettore, CONTRATTO};
+use mzlab_core::lettori::{Fiducia, FileSet, Limits, Member, Reader, ReaderEntry, CONTRATTO};
 
 /// The bytes of the start of the file that `riconosci` inflates to see the root element.
 const TESTA: usize = 4096;
 
-pub const ENTRY: VoceLettore = VoceLettore {
+pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "mzml-gz",
     contratto: CONTRATTO,
     estensioni: &[".mzml.gz"],
@@ -22,7 +22,7 @@ pub const ENTRY: VoceLettore = VoceLettore {
 
 /// `x.mzXML.gz`: the same inflate, then the reader of `mzxml.rs` (registry of the app and the CLI only).
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
-pub const ENTRY_MZXML: VoceLettore = VoceLettore {
+pub const ENTRY_MZXML: ReaderEntry = ReaderEntry {
     id: "mzxml-gz",
     contratto: CONTRATTO,
     estensioni: &[".mzxml.gz"],
@@ -62,7 +62,7 @@ fn riconosci_mzxml(fs: &mut FileSet) -> Fiducia {
 }
 
 fn sees(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
-    let Some(i) = fs.trova(suffisso) else {
+    let Some(i) = fs.find(suffisso) else {
         return Fiducia::No;
     };
     let head = fs.testa(i, 64 << 10);
@@ -75,7 +75,7 @@ fn sees(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
     }
     let mut text = Vec::new();
     // a short or cut stream still gives its first bytes; the error is the caller's at `apri`
-    let _ = Membri::new(&head[..])
+    let _ = Members::new(&head[..])
         .take(TESTA as u64)
         .read_to_end(&mut text);
     let text = String::from_utf8_lossy(&text);
@@ -89,24 +89,24 @@ fn sees(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
     }
 }
 
-fn apri(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     super::mzml_numpress::apri(inflate(fs, ".mzml.gz", limits)?, limits)
 }
 
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
-fn apri_mzxml(fs: FileSet, limits: &Limiti) -> Result<Box<dyn Lettore>> {
+fn apri_mzxml(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     (super::mzxml::ENTRY.apri)(inflate(fs, ".mzxml.gz", limits)?, limits)
 }
 
 /// The set with its gzip member inflated into memory, named without `.gz`.
-fn inflate(mut fs: FileSet, suffisso: &str, limits: &Limiti) -> Result<FileSet> {
+fn inflate(mut fs: FileSet, suffisso: &str, limits: &Limits) -> Result<FileSet> {
     let i = fs
-        .trova(suffisso)
+        .find(suffisso)
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
     let m = fs.membri.swap_remove(i);
     let name = m.nome[..m.nome.len() - ".gz".len()].to_string();
     let mut outside = Vec::new();
-    let read_one = Membri::new(std::io::BufReader::with_capacity(
+    let read_one = Members::new(std::io::BufReader::with_capacity(
         1 << 16,
         Stream {
             data: m.dati,
@@ -133,7 +133,7 @@ fn inflate(mut fs: FileSet, suffisso: &str, limits: &Limiti) -> Result<FileSet> 
     }
     let dim = outside.len() as u64;
     Ok(FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: name,
             dim,
             dati: Box::new(outside),

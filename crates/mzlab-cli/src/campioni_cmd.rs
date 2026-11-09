@@ -118,7 +118,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         Some(c) => return Outcome::fail(&format!("unknown samples operation {c}")),
     };
     match body.and_then(|b| {
-        mzlab_core::campioni::route_tutto(op, &b).map_err(|e| format!("{} {:?}", e.key, e.params))
+        mzlab_core::campioni::route_all(op, &b).map_err(|e| format!("{} {:?}", e.key, e.params))
     }) {
         Ok(t) => Outcome::ok((t + "\n").into_bytes()),
         Err(e) => Outcome::fail(&e),

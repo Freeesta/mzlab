@@ -1,6 +1,6 @@
 // The tests of esterno.rs: the answers of a fake module become the types of the contract (no JS).
 use super::*;
-use mzlab_core::lettori::Posizione;
+use mzlab_core::lettori::Position;
 
 struct Fake;
 
@@ -15,32 +15,32 @@ impl Module for Fake {
         if c != 0 {
             return Err(Error::new("error.badIndex"));
         }
-        Ok(mzlab_core::trasporto::encode_indice(&[
-            VoceScansione {
+        Ok(mzlab_core::trasporto::encode_index(&[
+            ScanEntry {
                 id: "scan=1".into(),
                 rt: 0.1234567890123,
                 livello: 2,
                 polarita: -1,
                 tic: 1e300,
-                picco_base: None,
+                base_peak: None,
                 filtro: "f".into(),
                 precursore: Some(445.5),
-                posizione: Some(Posizione {
+                position: Some(Position {
                     membro: 0,
                     offset: 4096,
                     lunghezza: 77,
                 }),
             },
-            VoceScansione {
+            ScanEntry {
                 id: "scan=2".into(),
                 rt: 0.2,
                 livello: 1,
                 polarita: 1,
                 tic: 3.5,
-                picco_base: Some(200.25),
+                base_peak: Some(200.25),
                 filtro: "g".into(),
                 precursore: None,
-                posizione: None,
+                position: None,
             },
         ]))
     }
@@ -81,7 +81,7 @@ impl Module for Fake {
 #[test]
 fn the_replies_become_the_types_of_the_contract() {
     let mut l = ExternalReader::new(Fake).unwrap();
-    assert_eq!(l.format(), Formato::ThermoRaw);
+    assert_eq!(l.format(), Format::ThermoRaw);
     assert_eq!(l.samples()[0].scansioni, 2);
     let i = l.index(0).unwrap().to_vec();
     assert_eq!(i.len(), 2);
@@ -89,18 +89,18 @@ fn the_replies_become_the_types_of_the_contract() {
     assert_eq!(i[0].rt, 0.1234567890123);
     assert_eq!(i[0].tic, 1e300);
     assert_eq!(
-        i[0].posizione,
-        Some(Posizione {
+        i[0].position,
+        Some(Position {
             membro: 0,
             offset: 4096,
             lunghezza: 77
         })
     );
     assert_eq!(
-        (i[0].picco_base, i[0].precursore, i[0].polarita),
+        (i[0].base_peak, i[0].precursore, i[0].polarita),
         (None, Some(445.5), -1)
     );
-    assert_eq!((i[1].picco_base, i[1].posizione), (Some(200.25), None));
+    assert_eq!((i[1].base_peak, i[1].position), (Some(200.25), None));
     assert_eq!(l.index(1).err().map(|e| e.key), Some("error.badIndex"));
     let s = l.scan(0, 1).unwrap();
     assert_eq!((s.index, s.level, s.profile, s.mz.len()), (1, 1, true, 2));

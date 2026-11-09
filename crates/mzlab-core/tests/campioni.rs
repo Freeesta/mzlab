@@ -4,16 +4,16 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::campioni::{
-    self, da_legacy, from_json, per_tp, proponi, to_json, valida, Campione,
+    self, da_legacy, from_json, per_tp, proponi, to_json, validate, Sample,
 };
 use mzlab_core::project::guess_sample;
 use serde_json::Value;
 
-fn one(name: &str, kind: &str) -> Campione {
+fn one(name: &str, kind: &str) -> Sample {
     proponi(&[(name.to_string(), "ab".to_string(), kind.to_string())]).remove(0)
 }
 
-fn many(names: &[&str]) -> Vec<Campione> {
+fn many(names: &[&str]) -> Vec<Sample> {
     let v: Vec<(String, String, String)> = names
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
@@ -101,7 +101,7 @@ fn table_of_the_names() {
 
 #[test]
 fn series_from_the_prefix() {
-    let s = |cs: Vec<Campione>| cs.into_iter().map(|c| c.series).collect::<Vec<_>>();
+    let s = |cs: Vec<Sample>| cs.into_iter().map(|c| c.series).collect::<Vec<_>>();
     assert_eq!(
         s(many(&[
             "X_TiO2_t000min",
@@ -176,13 +176,13 @@ fn same_roles_and_minutes_as_guess_sample() {
     }
 }
 
-fn confirmed(mut cs: Vec<Campione>) -> Vec<Campione> {
+fn confirmed(mut cs: Vec<Sample>) -> Vec<Sample> {
     cs.iter_mut().for_each(|c| c.time_confirmed = true);
     cs
 }
 
-fn codes(cs: &[Campione]) -> Vec<(&'static str, Option<usize>, String)> {
-    valida(cs)
+fn codes(cs: &[Sample]) -> Vec<(&'static str, Option<usize>, String)> {
+    validate(cs)
         .into_iter()
         .map(|a| (a.code, a.file, a.series))
         .collect()
@@ -205,7 +205,7 @@ fn findings() {
         .any(|g| g.0 == "noT0" || g.0 == "noDark" || g.0 == "noInfusion"));
     let ok = confirmed(many(&names));
     assert_eq!(codes(&ok), [("noBlank", None, String::new())]);
-    assert!(campioni::valida_json(&valida(&ok)).ends_with("\"bloccante\":false}"));
+    assert!(campioni::validate_json(&validate(&ok)).ends_with("\"bloccante\":false}"));
     assert_eq!(
         codes(&confirmed(many(&["x", "t0"])))[0],
         ("timeMissing", Some(0), String::new())
@@ -214,7 +214,7 @@ fn findings() {
     t0[0].set_time(Some(5.0), "min");
     t0[0].kind = "t0".into();
     assert!(codes(&t0).contains(&("t0WithTime", Some(0), String::new())));
-    let only = |v: Vec<Campione>| codes(&v).into_iter().map(|c| c.0).collect::<Vec<_>>();
+    let only = |v: Vec<Sample>| codes(&v).into_iter().map(|c| c.0).collect::<Vec<_>>();
     assert_eq!(only(many(&["blank"])), ["noTreated", "noInfusion"]);
     assert_eq!(
         only(many(&["std_5ppm"])),

@@ -4,46 +4,46 @@ use std::io::Write;
 #[cfg(not(target_family = "wasm"))]
 use crate::centroidi::{Buf, Params};
 use crate::error::{Error, Result};
-use crate::lettori::Lettore;
+use crate::lettori::Reader;
 #[cfg(not(target_family = "wasm"))]
 use crate::lettori_centroidi::{picchi, stima};
 use crate::mzml::Spectrum;
-use crate::mzmlwrite::{Header, MzmlWriter, Opzioni, ProcStep};
+use crate::mzmlwrite::{Header, MzmlWriter, Options, ProcStep};
 
 /// The header when the reader gives none: the run is the sample, the program is mzLab.
-fn semplice(l: &dyn Lettore, c: usize) -> Header {
-    let nome = l
+fn simple(l: &dyn Reader, c: usize) -> Header {
+    let name = l
         .samples()
         .get(c)
         .map(|s| s.nome.clone())
         .unwrap_or_default();
     Header {
-        run: nome.clone(),
-        sources: vec![nome],
+        run: name.clone(),
+        sources: vec![name],
         software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
         ..Header::default()
     }
 }
 
 /// The header `scrivi` writes for sample `c`.
-pub(crate) fn file_header(l: &mut dyn Lettore, c: usize) -> Result<Header> {
+pub(crate) fn file_header(l: &mut dyn Reader, c: usize) -> Result<Header> {
     Ok(match l.mzml_header(c)? {
         Some(h) => h,
-        None => semplice(l, c),
+        None => simple(l, c),
     })
 }
 
 /// The header the scan table reads (`Lettore::table_header`).
-pub(crate) fn table_header(l: &mut dyn Lettore, c: usize) -> Result<Header> {
+pub(crate) fn table_header(l: &mut dyn Reader, c: usize) -> Result<Header> {
     Ok(match l.table_header(c)? {
         Some(h) => h,
-        None => semplice(l, c),
+        None => simple(l, c),
     })
 }
 
 /// Which points of a scan the file gets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Picchi {
+pub enum Peaks {
     /// The scans as the reader gives them (the centroids of the maker where it has them).
     #[default]
     File,
@@ -56,7 +56,7 @@ pub enum Picchi {
 
 /// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam).
 #[cfg(not(target_family = "wasm"))]
-fn centroidi_di(l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Option<Params>> {
+fn centroidi_di(l: &mut dyn Reader, c: usize, h: &mut Header) -> Result<Option<Params>> {
     if l.index_without_tic(c)?.is_empty() || !l.scan(c, 0)?.profile {
         return Ok(None);
     }
@@ -80,37 +80,37 @@ struct Pick;
 
 /// The `Pick` of a conversion: the parameters only when `peaks` asks for our centroids and the sample is profile.
 #[cfg(not(target_family = "wasm"))]
-fn pick_di(peaks: Picchi, l: &mut dyn Lettore, c: usize, h: &mut Header) -> Result<Pick> {
+fn pick_di(peaks: Peaks, l: &mut dyn Reader, c: usize, h: &mut Header) -> Result<Pick> {
     let p = match peaks {
-        Picchi::Mzlab => centroidi_di(l, c, h)?,
+        Peaks::Mzlab => centroidi_di(l, c, h)?,
         _ => None,
     };
     Ok(Pick(p, Buf::default()))
 }
 
 #[cfg(target_family = "wasm")]
-fn pick_di(_: Picchi, _: &mut dyn Lettore, _: usize, _: &mut Header) -> Result<Pick> {
+fn pick_di(_: Peaks, _: &mut dyn Reader, _: usize, _: &mut Header) -> Result<Pick> {
     Ok(Pick)
 }
 
 /// Scan `(c, k)` as `peaks` says; the browser build has no peak picking and no profile of a reader that does not keep one apart.
 #[cfg(not(target_family = "wasm"))]
 fn scansione_di(
-    peaks: Picchi,
-    l: &mut dyn Lettore,
+    peaks: Peaks,
+    l: &mut dyn Reader,
     (c, k): (usize, usize),
     pick: &mut Pick,
 ) -> Result<Spectrum> {
     match peaks {
-        Picchi::File => l.scan(c, k),
-        Picchi::Mzlab => {
+        Peaks::File => l.scan(c, k),
+        Peaks::Mzlab => {
             let mut s = l.scan(c, k)?;
             if let Some(p) = &pick.0 {
                 picchi(&mut s, p, &mut pick.1);
             }
             Ok(s)
         }
-        Picchi::Profilo => match l.scan_profile(c, k)? {
+        Peaks::Profilo => match l.scan_profile(c, k)? {
             Some(s) => Ok(s),
             // a reader whose scans are the file's own (mzML) has the profile in them
             None => Some(l.scan(c, k)?)
@@ -122,13 +122,13 @@ fn scansione_di(
 
 #[cfg(target_family = "wasm")]
 fn scansione_di(
-    peaks: Picchi,
-    l: &mut dyn Lettore,
+    peaks: Peaks,
+    l: &mut dyn Reader,
     (c, k): (usize, usize),
     _: &mut Pick,
 ) -> Result<Spectrum> {
     match peaks {
-        Picchi::Profilo => l
+        Peaks::Profilo => l
             .scan_profile(c, k)?
             .ok_or_else(|| Error::new("err.conv.noProfile")),
         _ => l.scan(c, k),
@@ -137,11 +137,7 @@ fn scansione_di(
 
 /// The optical matrix of sample `c` when `opz.dad` asks for it (in the browser only the `sciex` readers module writes it; the engine has none).
 #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
-fn dad_di(
-    opz: Opzioni,
-    l: &mut dyn Lettore,
-    c: usize,
-) -> Result<Option<crate::wiff::dad::DadData>> {
+fn dad_di(opz: Options, l: &mut dyn Reader, c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
     if opz.dad {
         l.dad_data(c)
     } else {
@@ -150,7 +146,7 @@ fn dad_di(
 }
 
 #[cfg(all(target_family = "wasm", not(feature = "sciex")))]
-fn dad_di(_: Opzioni, _: &mut dyn Lettore, _: usize) -> Result<Option<crate::wiff::dad::DadData>> {
+fn dad_di(_: Options, _: &mut dyn Reader, _: usize) -> Result<Option<crate::wiff::dad::DadData>> {
     Ok(None)
 }
 
@@ -178,18 +174,18 @@ fn uv_spettri<W: Write>(
 
 /// A conversion of one sample to mzML: the one entry of every route (`scrivi*` are its short forms).
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Conversione<'a> {
-    pub peaks: Picchi,
-    pub opz: Opzioni,
+pub struct Conversion<'a> {
+    pub peaks: Peaks,
+    pub opz: Options,
     /// `Some`: the `indexedmzML` form with one `processingMethod` per step after the conversion.
     pub steps: Option<&'a [ProcStep]>,
 }
 
-impl Conversione<'_> {
+impl Conversion<'_> {
     /// Writes sample `c` of `l` to `out`; `progress(done, total)` counts the spectra.
-    pub fn scrivi<W: Write>(
+    pub fn write<W: Write>(
         &self,
-        l: &mut dyn Lettore,
+        l: &mut dyn Reader,
         c: usize,
         out: W,
         progress: &mut dyn FnMut(usize, usize),
@@ -206,7 +202,7 @@ impl Conversione<'_> {
                 h.steps = steps.to_vec();
                 MzmlWriter::indicizzato(out, &h, self.opz)?
             }
-            None => MzmlWriter::con_opzioni(out, &h, self.opz)?,
+            None => MzmlWriter::with_options(out, &h, self.opz)?,
         };
         let n = l.index_without_tic(c)?.len();
         let dad = dad_di(self.opz, l, c)?;
@@ -230,9 +226,9 @@ impl Conversione<'_> {
 /// (`MzmlWriter::spettri`), otherwise one scan at a time. The file is the same; `progress` counts the scans read.
 fn spettri<W: Write>(
     w: &mut MzmlWriter<W>,
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     (c, n): (usize, usize),
-    (peaks, pick): (Picchi, &mut Pick),
+    (peaks, pick): (Peaks, &mut Pick),
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<()> {
     #[cfg(not(target_family = "wasm"))]
@@ -259,60 +255,60 @@ fn spettri<W: Write>(
 
 /// Writes sample `c` of `l` as mzML to `out`; `progress(done, total)` counts the spectra.
 pub fn scrivi<W: Write>(
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     c: usize,
     out: W,
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<W> {
-    Conversione::default().scrivi(l, c, out, progress)
+    Conversion::default().write(l, c, out, progress)
 }
 
 /// `scrivi` with the zlib level and the numpress choice of `opz` (`mzmlwrite::Opzioni`).
 pub fn scrivi_con<W: Write>(
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     c: usize,
     out: W,
     progress: &mut dyn FnMut(usize, usize),
-    opz: Opzioni,
+    opz: Options,
 ) -> Result<W> {
-    let conv = Conversione {
+    let conv = Conversion {
         opz,
-        ..Conversione::default()
+        ..Conversion::default()
     };
-    conv.scrivi(l, c, out, progress)
+    conv.write(l, c, out, progress)
 }
 
 /// The mzML of the `convert.mzml` step: `indexedmzML` (PSI-MS 4.2.6, offsets, SHA-1 checksum) with one `processingMethod` per entry of `steps`
 /// after the conversion. The spectra and chromatograms are those of `scrivi_con`.
 pub fn scrivi_indicizzato<W: Write>(
-    l: &mut dyn Lettore,
+    l: &mut dyn Reader,
     c: usize,
     out: W,
     progress: &mut dyn FnMut(usize, usize),
-    opz: Opzioni,
+    opz: Options,
     steps: &[ProcStep],
 ) -> Result<W> {
-    let conv = Conversione {
+    let conv = Conversion {
         opz,
         steps: Some(steps),
-        ..Conversione::default()
+        ..Conversion::default()
     };
-    conv.scrivi(l, c, out, progress)
+    conv.write(l, c, out, progress)
 }
 
 /// The chromatograms of sample `c` that hold points, numbered again from 0 as `scrivi` writes them.
-fn chromatograms<W: Write>(l: &mut dyn Lettore, c: usize, w: &mut MzmlWriter<W>) -> Result<()> {
-    let mut tracce = Vec::new();
+fn chromatograms<W: Write>(l: &mut dyn Reader, c: usize, w: &mut MzmlWriter<W>) -> Result<()> {
+    let mut traces = Vec::new();
     for v in l.chromatograms(c)? {
         let mut t = l.chromatogram(c, &v.id)?;
         if !t.time.is_empty() {
-            t.index = tracce.len();
-            tracce.push(t);
+            t.index = traces.len();
+            traces.push(t);
         }
     }
-    if !tracce.is_empty() {
-        w.open_chromatograms(tracce.len())?;
-        for t in &tracce {
+    if !traces.is_empty() {
+        w.open_chromatograms(traces.len())?;
+        for t in &traces {
             w.chromatogram(t)?;
         }
         w.close_chromatograms()?;
@@ -323,7 +319,7 @@ fn chromatograms<W: Write>(l: &mut dyn Lettore, c: usize, w: &mut MzmlWriter<W>)
 /// The mzML of sample `c` without its spectra: the header and the chromatograms exactly as `scrivi` writes them, then a comment that names the
 /// polarities of the scans (what a whole mzML says of them where `mzmlhead::Mzml::header_polarity` looks). What the routes that read the header
 /// and the chromatograms of a file (`mzmlhead::Mzml`) read for a vendor file; its scans come from the reader (`ReadAt::lettore`).
-pub fn guscio(l: &mut dyn Lettore, c: usize) -> Result<Vec<u8>> {
+pub fn guscio(l: &mut dyn Reader, c: usize) -> Result<Vec<u8>> {
     if c >= l.samples().len() {
         return Err(Error::new("error.badIndex").with("c", c));
     }

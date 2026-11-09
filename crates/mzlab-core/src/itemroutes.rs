@@ -45,7 +45,7 @@ pub(crate) fn cv_value(h: &str, acc: &str) -> Option<String> {
 fn scan_window<R: ReadAt, M: ReadAt>(idx: &Index<R>, mzml: &mut M) -> Result<Option<(f64, f64)>> {
     let mut win: Option<(f64, f64)> = None;
     for s in idx.scans.iter().take(50) {
-        let h = crate::sorgente::testo_scansione(mzml, s)?;
+        let h = crate::sorgente::scan_text(mzml, s)?;
         let (Some(a), Some(z)) = (cv_value(&h, "MS:1000501").filter(|v| !v.is_empty()), cv_value(&h, "MS:1000500").filter(|v| !v.is_empty())) else { continue };
         let (Ok(a), Ok(z)) = (a.trim().parse::<f64>(), z.trim().parse::<f64>()) else { continue };
         win = Some(win.map_or((a, z), |(lo, hi)| (lo.min(a), hi.max(z))));
@@ -159,7 +159,7 @@ pub fn pda_trace<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom]) -> Result<String>
 
 /// `/api/map?kind=pda`: the 2D DAD optical matrix (retention time vs wavelength) from the native reader when available.
 pub fn pda_map<M: ReadAt>(m: &mut Mzml<M>) -> Result<String> {
-    if let Some((l, c)) = m.r.lettore()
+    if let Some((l, c)) = m.r.reader()
         && let Some(json) = l.dad_map(c)? {
             return Ok(json);
         }
@@ -172,7 +172,7 @@ pub fn pda_map<M: ReadAt>(m: &mut Mzml<M>) -> Result<String> {
 
 /// `/api/uvxic`: the trace of the DAD at the wavelengths `nm0`..`nm1`; `err.pda.none` when the file has no optical matrix.
 pub fn pda_wavelength<M: ReadAt>(m: &mut Mzml<M>, nm0: f64, nm1: f64) -> Result<String> {
-    if let Some((l, c)) = m.r.lettore()
+    if let Some((l, c)) = m.r.reader()
         && let Some(json) = l.dad_wavelength(c, nm0, nm1)? {
             return Ok(json);
         }
@@ -185,7 +185,7 @@ pub fn pda_wavelength<M: ReadAt>(m: &mut Mzml<M>, nm0: f64, nm1: f64) -> Result<
 
 /// `/api/uvspec`: the UV spectrum of the DAD between `rt0` and `rt1` (minutes); `err.pda.none` when the file has no optical matrix (the `.wiff` of the 3200 with the detector and an mzML with a `dad_matrix` or `MS:1000804` spectra have it).
 pub fn pda_spectrum<M: ReadAt>(m: &mut Mzml<M>, rt0: f64, rt1: f64) -> Result<String> {
-    if let Some((l, c)) = m.r.lettore()
+    if let Some((l, c)) = m.r.reader()
         && let Some(json) = l.dad_spectrum(c, rt0, rt1)? {
             return Ok(json);
         }

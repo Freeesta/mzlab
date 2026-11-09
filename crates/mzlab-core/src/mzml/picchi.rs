@@ -66,7 +66,7 @@ pub(crate) fn decode_peaks<'a>(
 }
 
 /// True when `ok` holds for every value: `&` without short-circuit, so the loop has no branch and vectorises.
-fn tutti<T: Copy>(v: &[T], ok: impl Fn(T) -> bool) -> bool {
+fn all<T: Copy>(v: &[T], ok: impl Fn(T) -> bool) -> bool {
     v.iter().fold(true, |a, &x| a & ok(x))
 }
 
@@ -96,10 +96,10 @@ pub(crate) fn assemble(s: Spec, p: Peaks) -> Result<(Spectrum, Option<Mobility>)
     let mob = mob.filter(|m| m.len() == n && n > 0);
     // a branch-free pass over each array (vectorised); the search that names the value runs only on a damaged file
     let sani = s.rt.is_finite()
-        && tutti(&mz, |v| v.is_finite())
-        && tutti(&it, |v| v.is_finite())
-        && wide.as_deref().is_none_or(|w| tutti(w, |v| v.is_finite()))
-        && mob.as_deref().is_none_or(|m| tutti(m, |v| v.is_finite()));
+        && all(&mz, |v| v.is_finite())
+        && all(&it, |v| v.is_finite())
+        && wide.as_deref().is_none_or(|w| all(w, |v| v.is_finite()))
+        && mob.as_deref().is_none_or(|m| all(m, |v| v.is_finite()));
     let guasto = (!sani)
         .then(|| {
             std::iter::once(("rt", s.rt))

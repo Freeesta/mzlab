@@ -1,7 +1,7 @@
 //! A netCDF-3 encoder for the tests of the family `andi` (classic and 64-bit offset, record variables, every `nc_type`) and the ANDI-MS / ANDI-Chromatography files built with it.
 #![allow(dead_code)]
 
-use mzlab_core::lettori::{Lettore, Limiti};
+use mzlab_core::lettori::{Limits, Reader};
 
 #[derive(Clone)]
 pub enum At {
@@ -389,12 +389,12 @@ pub fn andi_cromato(n: usize) -> Vec<u8> {
     cdf(false, &dims, &g, &vars, n as u32)
 }
 
-pub fn apri_andi(byte: Vec<u8>) -> Box<dyn Lettore> {
-    mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limiti::sito()).unwrap()
+pub fn apri_andi(byte: Vec<u8>) -> Box<dyn Reader> {
+    mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limits::sito()).unwrap()
 }
 
 pub fn andi_error(byte: Vec<u8>) -> &'static str {
-    match mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limiti::sito()) {
+    match mzlab_lettori::apri(super::file_set("campione.cdf", byte), &Limits::sito()) {
         Err(e) => e.key,
         Ok(mut l) => {
             for k in 0..l.index(0).map(|i| i.len()).unwrap_or(0) {

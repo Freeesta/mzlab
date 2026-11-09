@@ -4,7 +4,7 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{parse, round, Out, Value};
-use mzlab_core::msngrafo::{cerca, OpzioniCerca as Opzioni};
+use mzlab_core::msngrafo::{cerca, OpzioniCerca as Options};
 
 use crate::flow_match::{num, Named};
 
@@ -38,12 +38,12 @@ pub(crate) fn tree_text(job: &Job, query: Named, library: Named) -> Result<Strin
         Some(mz) => da / mz * 1e6,
         None => num(job, "precursor_ppm"),
     };
-    let o = Opzioni {
+    let o = Options {
         ppm_prec,
         tol_mz: num(job, "tol_da"),
-        min_prove: num(job, "min_prove").max(0.0) as usize,
+        min_evidence: num(job, "min_prove").max(0.0) as usize,
         top: num(job, "top_n").max(1.0) as usize,
-        ..Opzioni::default()
+        ..Options::default()
     };
     let found = cerca(text(library)?, text(query)?, &o)?;
     let name = param(job, "name_contains").to_lowercase();

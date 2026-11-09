@@ -191,10 +191,10 @@ fn xic_inside_two_precursors_gives_different_traces() {
     assert_eq!(level.get("y").unwrap().arr().len(), 20);
     assert_ne!(ya, ys(&level));
     // the TIC channel adds every level
-    let tutti =
+    let all =
         crate::json::parse(ask(&mut r, "/api/xic", "k=0&mz=150&tol=0.5&canale=tic").as_bytes())
             .unwrap();
-    assert_eq!(tutti.get("y").unwrap().arr().len(), 30);
+    assert_eq!(all.get("y").unwrap().arr().len(), 30);
 }
 
 #[test]
@@ -220,7 +220,7 @@ fn a_transition_is_not_a_scan_route() {
     let mut r = index(3, &[(1, FULL, None)]);
     let chroms = vec![srm(0, 230.0, 162.0, 25.0, "")];
     r.pon_cromatogrammi("c.mzML", &chroms, &Facts::default());
-    assert!(r.canali().trova("srm:230>162@25").is_some());
+    assert!(r.canali().find("srm:230>162@25").is_some());
     assert_eq!(
         r.handle("/api/chrom", &Query::parse("k=0&canale=srm:230>162@25"))
             .unwrap(),

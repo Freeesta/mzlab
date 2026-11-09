@@ -4,11 +4,11 @@ use std::io::Cursor;
 
 /// A destination that counts its calls and keeps the bytes.
 #[derive(Default)]
-struct Conta {
+struct Tally {
     c: Cursor<Vec<u8>>,
     calls: usize,
 }
-impl Output for Conta {
+impl Output for Tally {
     fn write_at(&mut self, o: u64, d: &[u8]) -> Result<()> {
         self.calls += 1;
         self.c.write_at(o, d)
@@ -37,8 +37,8 @@ fn writes() -> Vec<(u64, Vec<u8>)> {
 
 #[test]
 fn same_bytes_fewer_calls() {
-    let mut direct = Conta::default();
-    let mut a = Accorpa::with_block(Conta::default(), 64 << 10);
+    let mut direct = Tally::default();
+    let mut a = Accorpa::with_block(Tally::default(), 64 << 10);
     for (o, d) in writes() {
         direct.write_at(o, &d).unwrap();
         a.write_at(o, &d).unwrap();
@@ -56,7 +56,7 @@ fn same_bytes_fewer_calls() {
 
 #[test]
 fn a_big_write_goes_through_and_fine_is_needed() {
-    let mut a = Accorpa::with_block(Conta::default(), 16);
+    let mut a = Accorpa::with_block(Tally::default(), 16);
     a.write_at(0, &[1; 40]).unwrap();
     a.write_at(40, &[2; 3]).unwrap();
     assert_eq!(a.dest.calls, 1);
@@ -98,7 +98,7 @@ fn scratch_puts_join_across_the_slack_of_a_slot() {
     let mut b = [1u8; 12];
     s.get(98, &mut b).unwrap();
     assert_eq!(b, [7, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-    let mut o = Accorpa::with_block(Conta::default(), 1 << 20);
+    let mut o = Accorpa::with_block(Tally::default(), 1 << 20);
     o.write_at(0, &[1]).unwrap();
     o.write_at(2, &[1]).unwrap();
     assert_eq!(o.dest.calls, 1, "an output joins only what is contiguous");
@@ -128,8 +128,8 @@ fn interleaved() -> Vec<(u64, Vec<u8>)> {
 #[test]
 fn several_streams_give_the_same_bytes_in_fewer_calls() {
     for streams in [1, 2, 8] {
-        let mut direct = Conta::default();
-        let mut a = Accorpa::with_streams(Conta::default(), 64 << 10, streams);
+        let mut direct = Tally::default();
+        let mut a = Accorpa::with_streams(Tally::default(), 64 << 10, streams);
         for (o, d) in interleaved().into_iter().chain(writes()) {
             direct.write_at(o, &d).unwrap();
             a.write_at(o, &d).unwrap();
@@ -150,7 +150,7 @@ fn several_streams_give_the_same_bytes_in_fewer_calls() {
 
 #[test]
 fn a_write_over_a_pending_block_of_another_stream_sends_that_block_first() {
-    let mut a = Accorpa::with_streams(Conta::default(), 1 << 20, 8);
+    let mut a = Accorpa::with_streams(Tally::default(), 1 << 20, 8);
     a.write_at(0, &[1; 10]).unwrap();
     a.write_at(100, &[2; 10]).unwrap();
     a.write_at(10, &[3; 95]).unwrap();

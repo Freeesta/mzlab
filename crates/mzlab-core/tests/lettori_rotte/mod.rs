@@ -6,14 +6,14 @@ use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{fileroutes, itemroutes, lettori_mzml, lr};
 
-pub fn mzml_of(l: &mut dyn lettori::Lettore, c: usize) -> Vec<u8> {
+pub fn mzml_of(l: &mut dyn lettori::Reader, c: usize) -> Vec<u8> {
     lettori_mzml::scrivi(l, c, Vec::new(), &mut |_, _| {}).unwrap()
 }
 
 /// A vendor file as the engine reads it: the mzML without its spectra (`lettori_mzml::guscio`) and the reader for the scans.
 struct Nativo<'a> {
     g: Vec<u8>,
-    l: &'a mut dyn lettori::Lettore,
+    l: &'a mut dyn lettori::Reader,
     c: usize,
 }
 
@@ -21,7 +21,7 @@ impl ReadAt for Nativo<'_> {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
         self.g.read_at(off, buf)
     }
-    fn lettore(&mut self) -> Option<(&mut dyn lettori::Lettore, usize)> {
+    fn reader(&mut self) -> Option<(&mut dyn lettori::Reader, usize)> {
         Some((&mut *self.l, self.c))
     }
 }
@@ -32,7 +32,7 @@ pub fn same_routes(
     mzml: &[u8],
     a: &[u8],
     b: &[u8],
-    l: &mut dyn lettori::Lettore,
+    l: &mut dyn lettori::Reader,
     c: usize,
 ) {
     let g = lettori_mzml::guscio(l, c).unwrap();

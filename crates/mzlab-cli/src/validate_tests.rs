@@ -2,7 +2,7 @@
 use std::path::PathBuf;
 
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 
 use crate::execute;
 
@@ -12,7 +12,7 @@ fn written(indexed: bool) -> Vec<u8> {
         ..Default::default()
     };
     let mut w = if indexed {
-        MzmlWriter::indicizzato(Vec::new(), &h, Opzioni::default())
+        MzmlWriter::indicizzato(Vec::new(), &h, Options::default())
     } else {
         MzmlWriter::new(Vec::new(), &h)
     }

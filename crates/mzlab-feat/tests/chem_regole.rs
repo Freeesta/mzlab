@@ -1,16 +1,16 @@
 //! The structure side of the rules of `fragrules/1`: each group and site on a small synthetic molecule, the products of the rules that compute one,
 //! and the counterexamples where a rule must stay silent. Synthetic structures only.
 
-use mzlab_core::msngrafo::{tabella_regole, Attesa};
+use mzlab_core::msngrafo::{tabella_regole, Expectation};
 use mzlab_feat::chem::grafo::Mol;
 use mzlab_feat::chem::regole::{attese, nomi_sconosciuti};
 
-fn tutte(smiles: &str) -> Vec<Attesa> {
+fn tutte(smiles: &str) -> Vec<Expectation> {
     attese(smiles, tabella_regole()).expect("valid SMILES")
 }
 
 fn ids(smiles: &str) -> Vec<String> {
-    let mut v: Vec<String> = tutte(smiles).into_iter().map(|a| a.regola).collect();
+    let mut v: Vec<String> = tutte(smiles).into_iter().map(|a| a.rule).collect();
     v.dedup();
     v
 }
@@ -18,7 +18,7 @@ fn ids(smiles: &str) -> Vec<String> {
 fn prodotti(smiles: &str, regola: &str) -> Vec<String> {
     let mut v: Vec<String> = tutte(smiles)
         .into_iter()
-        .filter(|a| a.regola == regola)
+        .filter(|a| a.rule == regola)
         .map(|a| a.formula)
         .collect();
     v.sort();
@@ -106,8 +106,8 @@ fn the_rules_compute_their_products_from_the_structure() {
         ["C2H3O", "C7H5O"]
     );
     let t = tutte("CCOC(=O)CC");
-    assert!(t.iter().any(|a| a.regola == "ion_acylium" && a.ione));
-    assert!(t.iter().all(|a| a.regola != "loss_alkene_ester" || !a.ione));
+    assert!(t.iter().any(|a| a.rule == "ion_acylium" && a.ione));
+    assert!(t.iter().all(|a| a.rule != "loss_alkene_ester" || !a.ione));
 }
 
 #[test]

@@ -4,7 +4,7 @@
 mod comune;
 
 use comune::*;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::numpress::Np;
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -88,9 +88,9 @@ fn a_truncated_file_does_not_panic() {
 #[test]
 fn rows_over_the_limit_are_an_error() {
     let scan = scansioni();
-    let limits = Limiti {
-        voci: 2,
-        ..Limiti::sito()
+    let limits = Limits {
+        entries: 2,
+        ..Limits::sito()
     };
     let r = mzlab_lettori::apri(
         file_set(

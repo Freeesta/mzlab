@@ -39,9 +39,9 @@ fn cycled_msn_needs_a_hint() {
     assert_eq!(infusione(&scans, None, "msn.mzML"), None);
     assert_eq!(infusione(&scans, Some(true), "msn.mzML"), None);
     let m = infusione(&scans, Some(false), "msn.mzML").unwrap();
-    assert_eq!(m.motivo, "metodo_senza_lc");
+    assert_eq!(m.reason, "metodo_senza_lc");
     assert_eq!(
-        infusione(&scans, None, "msn_FIA.mzML").map(|m| m.motivo),
+        infusione(&scans, None, "msn_FIA.mzML").map(|m| m.reason),
         Some("nome")
     );
 }
@@ -67,7 +67,7 @@ fn synthetic_tune_infusion_is_recognised() {
     let _ = std::fs::remove_file(&out);
     let m = infusione(&scans, None, "sample.mzML").unwrap();
     // 6 paths with their energies, 5 nominal nodes (195>138 at two energies), down to MS5
-    assert_eq!((m.motivo, m.livelli, m.nodi), ("blocchi", 5, 5));
+    assert_eq!((m.reason, m.livelli, m.nodes), ("blocchi", 5, 5));
 }
 
 #[test]
@@ -100,8 +100,8 @@ fn real_files_like_the_truth() {
             match positive {
                 true => {
                     let m = got.unwrap_or_else(|| panic!("{group} {seen}: not an infusion"));
-                    assert_eq!(m.motivo, f["motivo"].as_str().unwrap());
-                    assert_eq!(m.nodi as u64, f["nominali"].as_u64().unwrap());
+                    assert_eq!(m.reason, f["motivo"].as_str().unwrap());
+                    assert_eq!(m.nodes as u64, f["nominali"].as_u64().unwrap());
                     let top = f["livelli"]
                         .as_object()
                         .unwrap()

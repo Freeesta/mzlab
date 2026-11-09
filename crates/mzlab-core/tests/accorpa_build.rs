@@ -9,17 +9,17 @@ use mzlab_core::mzidx_spill::Spill;
 use mzlab_core::{lettori_mzml, mzidx, upload};
 
 #[derive(Default)]
-struct Conta {
+struct Tally {
     c: Cursor<Vec<u8>>,
     calls: usize,
 }
-impl mzidx::Output for Conta {
+impl mzidx::Output for Tally {
     fn write_at(&mut self, o: u64, d: &[u8]) -> mzlab_core::Result<()> {
         self.calls += 1;
         self.c.write_at(o, d)
     }
 }
-impl Spill for Conta {
+impl Spill for Tally {
     fn put(&mut self, o: u64, d: &[u8]) -> mzlab_core::Result<()> {
         self.calls += 1;
         Spill::put(&mut self.c, o, d)
@@ -37,7 +37,7 @@ fn coalesced_index_is_the_same() {
     let p = upload::prepare(&mut mz.clone(), mz.len() as u64, "c.mzML").unwrap();
     let budget = 1 << 20;
     let build = |join: bool| {
-        let (mut out, mut sp) = (Conta::default(), Conta::default());
+        let (mut out, mut sp) = (Tally::default(), Tally::default());
         let st = if join {
             let (mut o, mut s) = (Accorpa::flussi(out), Accorpa::new(sp));
             let st =

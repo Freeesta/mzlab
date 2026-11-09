@@ -2,7 +2,7 @@
 //! matrix and for a synthetic `.wiff` + `.wiff.scan` pair with a DAD, the very strings of the routes of `mzlab-core` that the wasm engine runs on the same file.
 //! The pair is written by `tools/wiff_riferimento.py` (no binary in the repository); the wiff cases are skipped when python3 is not there.
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::{itemroutes, lettori_mzml};
 use mzlab_desktop::rpc::Answer;
@@ -58,14 +58,14 @@ fn state(dir: &Path) -> State {
 /// What the routes read for a native sample: its `guscio` and its reader, as `Src::Nat` of the engines.
 struct Shell {
     g: Vec<u8>,
-    l: Box<dyn Lettore>,
+    l: Box<dyn Reader>,
 }
 
 impl ReadAt for Shell {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
         self.g.read_at(off, buf)
     }
-    fn lettore(&mut self) -> Option<(&mut dyn Lettore, usize)> {
+    fn reader(&mut self) -> Option<(&mut dyn Reader, usize)> {
         Some((&mut *self.l, 0))
     }
 }
@@ -74,7 +74,7 @@ impl ReadAt for Shell {
 fn reference_wiff(wiff: &Path) -> Mzml<Shell> {
     let member = |name: &str, p: PathBuf| {
         let bytes = std::fs::read(p).unwrap();
-        Membro {
+        Member {
             nome: name.to_string(),
             dim: bytes.len() as u64,
             dati: Box::new(bytes),
@@ -90,7 +90,7 @@ fn reference_wiff(wiff: &Path) -> Mzml<Shell> {
             member(&format!("{n}.scan"), scan.into()),
         ],
     };
-    let mut l = mzlab_lettori::apri(set, &Limiti::desktop()).unwrap();
+    let mut l = mzlab_lettori::apri(set, &Limits::desktop()).unwrap();
     let g = lettori_mzml::guscio(&mut *l, 0).unwrap();
     let size = g.len() as u64;
     Mzml::new(Shell { g, l }, size)

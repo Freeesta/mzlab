@@ -13,8 +13,8 @@ use mzlab_core::originroute::ItemMeta;
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::upload::prepare;
 
-struct Caso(u64);
-impl Caso {
+struct Case(u64);
+impl Case {
     fn next(&mut self) -> u64 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 7;
@@ -27,7 +27,7 @@ impl Caso {
 }
 
 /// m/z of a peak: mostly anywhere in `lo..hi`, a third of them at a cell edge `n + phase` moved by a few rounding steps.
-fn mz_of(r: &mut Caso, lo: f64, hi: f64, phase: f64, hr: bool) -> f64 {
+fn mz_of(r: &mut Case, lo: f64, hi: f64, phase: f64, hr: bool) -> f64 {
     let m = lo + r.unit() * (hi - lo);
     if r.next().is_multiple_of(4) {
         return m;
@@ -51,7 +51,7 @@ fn mz_of(r: &mut Caso, lo: f64, hi: f64, phase: f64, hr: bool) -> f64 {
 }
 
 fn file(seed: u64, scans: usize, (lo, hi): (f64, f64), rt0: f64, hr: bool) -> Routes<Vec<u8>> {
-    let mut r = Caso(seed);
+    let mut r = Case(seed);
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {

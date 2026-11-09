@@ -5,11 +5,11 @@
 mod comune;
 
 use comune::*;
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 use mzlab_core::numpress::Np;
 
-fn tic(l: &mut Box<dyn mzlab_core::lettori::Lettore>) -> Chromatogram {
+fn tic(l: &mut Box<dyn mzlab_core::lettori::Reader>) -> Chromatogram {
     l.chromatogram(0, "TIC").expect("the TIC is there")
 }
 
@@ -35,7 +35,7 @@ fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
     for cut in 0..ok.len() {
         let Ok(mut l) = mzlab_lettori::apri(
             file_set("campione.mzML", ok[..cut].to_vec()),
-            &Limiti::sito(),
+            &Limits::sito(),
         ) else {
             continue;
         };

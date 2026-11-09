@@ -2,13 +2,13 @@
 //! and the full index asked afterwards still carries the TIC summed from the points (synthetic DDA-PASEF folder, no lab data).
 #![cfg(feature = "bruker")]
 
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 
 mod comune_sqlite;
 
-fn apri() -> Box<dyn Lettore> {
+fn apri() -> Box<dyn Reader> {
     let (tdf, bin) = comune_sqlite::pasef::folder(3, 3000, 800);
-    let m = |n: &str, b: Vec<u8>| Membro {
+    let m = |n: &str, b: Vec<u8>| Member {
         nome: format!("x.d/{n}"),
         dim: b.len() as u64,
         dati: Box::new(b),
@@ -17,10 +17,10 @@ fn apri() -> Box<dyn Lettore> {
     let fs = FileSet {
         membri: vec![m("analysis.tdf", tdf), m("analysis.tdf_bin", bin)],
     };
-    mzlab_lettori::apri(fs, &Limiti::desktop()).unwrap()
+    mzlab_lettori::apri(fs, &Limits::desktop()).unwrap()
 }
 
-fn mzml(l: &mut dyn Lettore) -> Vec<u8> {
+fn mzml(l: &mut dyn Reader) -> Vec<u8> {
     let mut out = Vec::new();
     mzlab_core::lettori_mzml::scrivi(l, 0, &mut out, &mut |_, _| {}).unwrap();
     out

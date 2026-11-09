@@ -6,7 +6,7 @@ mod comune;
 use comune::andi::*;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::upload::indicizza_lettore;
 use std::cell::Cell;
 use std::io::Cursor;
@@ -34,13 +34,13 @@ fn contato(
     points: fn(usize) -> Vec<(f64, f64)>,
     n: usize,
     tic: bool,
-) -> (Box<dyn Lettore>, Rc<Cell<u64>>) {
+) -> (Box<dyn Reader>, Rc<Cell<u64>>) {
     let b = andi_ms_with(&FLAT_RUN, n, points, tic);
     let total: usize = (0..n).map(|k| points(k).len()).sum();
     let read_items = Rc::new(Cell::new(0));
     let da = (b.len() - 8 * total) as u64;
     let fs = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "campione.cdf".into(),
             dim: b.len() as u64,
             dati: Box::new(Counter {
@@ -52,13 +52,13 @@ fn contato(
         }],
     };
     (
-        mzlab_lettori::apri(fs, &Limiti::sito()).unwrap(),
+        mzlab_lettori::apri(fs, &Limits::sito()).unwrap(),
         read_items,
     )
 }
 
 /// Builds the `.mzidx` of sample 0, then asks the BPC; returns the bytes of points read by both.
-fn index_and_bpc(l: &mut dyn Lettore, read_items: &Cell<u64>) -> (u64, Vec<f64>) {
+fn index_and_bpc(l: &mut dyn Reader, read_items: &Cell<u64>) -> (u64, Vec<f64>) {
     // the SHA-1 of the header reads the whole file once: taken before counting
     l.method(0).unwrap();
     read_items.set(0);

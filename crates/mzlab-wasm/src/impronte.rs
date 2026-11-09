@@ -4,26 +4,26 @@
 
 use js_sys::Function;
 use mzlab_core::lettori::FileSet;
-use mzlab_core::upload::{self, Impronta};
+use mzlab_core::upload::{self, Fingerprint};
 use wasm_bindgen::prelude::*;
 
 use crate::error_json;
 
 pub(crate) struct Fingerprints {
-    now: Option<Vec<Impronta>>,
+    now: Option<Vec<Fingerprint>>,
     later: Option<Function>,
 }
 
 impl Fingerprints {
     /// From `prints` (the flat `[sha256, sha1, probe]` of each member, a function, or nothing) for the set `fs` the reader opens; `tell(1)` when
-    /// the members are read here now. With a function the set carries an empty SHA-1 (`senza_sha1`): the table does not read it.
+    /// the members are read here now. With a function the set carries an empty SHA-1 (`without_sha1`): the table does not read it.
     pub(crate) fn new(
         fs: &mut FileSet,
         prints: &JsValue,
         tell: &dyn Fn(u32),
     ) -> Result<Fingerprints, JsValue> {
         if let Some(f) = prints.dyn_ref::<Function>() {
-            upload::senza_sha1(fs);
+            upload::without_sha1(fs);
             return Ok(Fingerprints {
                 now: None,
                 later: Some(f.clone()),
@@ -43,7 +43,7 @@ impl Fingerprints {
     }
 
     /// The fingerprints when the table is done; `set` makes a fresh set of the members (read here when the late value is not usable).
-    pub(crate) fn given(&self, set: impl Fn() -> FileSet) -> mzlab_core::Result<Vec<Impronta>> {
+    pub(crate) fn given(&self, set: impl Fn() -> FileSet) -> mzlab_core::Result<Vec<Fingerprint>> {
         if let Some(i) = &self.now {
             return Ok(i.clone());
         }

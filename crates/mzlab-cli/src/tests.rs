@@ -142,17 +142,17 @@ fn page_csv(files: &[(String, Vec<u8>)], params: &str) -> String {
 /// `convert.mzml` writes `indexedmzML` and the table step reads it.
 #[test]
 fn the_convert_step_writes_an_indexed_mzml_the_table_step_reads() {
-    use mzlab_core::mzmlwrite::Opzioni;
+    use mzlab_core::mzmlwrite::Options;
     let dir = std::env::temp_dir().join(format!("mzlab_cli_conv_{}", std::process::id()));
     let work = dir.join("work");
     std::fs::create_dir_all(&work).unwrap();
     // an mzML whose arrays are numpress: the one open format `import.raw` accepts without a vendor file
     let src = mzml(10.0);
     let mut sample = mzlab_core::mzml::read(&src[..]).unwrap();
-    let mut w = MzmlWriter::con_opzioni(
+    let mut w = MzmlWriter::with_options(
         Vec::new(),
         &Header::default(),
-        Opzioni {
+        Options {
             numpress: true,
             ..Default::default()
         },
@@ -189,16 +189,16 @@ fn the_convert_step_writes_an_indexed_mzml_the_table_step_reads() {
 /// An mzML with numpress arrays gets the table of its plain twin through `features` (the index is built by the reader of the registry), and `canali` lists its channels.
 #[test]
 fn a_numpress_mzml_gives_the_table_of_its_plain_twin() {
-    use mzlab_core::mzmlwrite::Opzioni;
+    use mzlab_core::mzmlwrite::Options;
     let dir = std::env::temp_dir().join(format!("mzlab_cli_np_{}", std::process::id()));
     let tmp = dir.join("tmp");
     std::fs::create_dir_all(&tmp).unwrap();
     let sample = mzlab_core::mzml::read(&mzml(10.0)[..]).unwrap();
     let write = |numpress: bool, name: &str| {
-        let mut w = MzmlWriter::con_opzioni(
+        let mut w = MzmlWriter::with_options(
             Vec::new(),
             &Header::default(),
-            Opzioni {
+            Options {
                 numpress,
                 ..Default::default()
             },

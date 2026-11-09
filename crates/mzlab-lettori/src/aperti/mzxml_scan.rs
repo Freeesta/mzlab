@@ -5,7 +5,7 @@ use std::io::Read;
 
 use base64::Engine;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 /// The text of a tag without its brackets: `name a="1" b="2"` (a tag ends at the first `>` outside quotes).
 pub(super) type Tag<'a> = &'a str;
@@ -169,7 +169,7 @@ pub(super) fn peaks(
     tag: Tag,
     text: &str,
     conteggio: Option<usize>,
-    limits: &Limiti,
+    limits: &Limits,
 ) -> Result<Peaks> {
     let width = match attr(tag, "precision") {
         "" | "32" => 4usize,
@@ -189,8 +189,8 @@ pub(super) fn peaks(
         _ => return Err(xml("compressionType")),
     };
     let cap = match conteggio {
-        Some(n) => limits.voci_ok(n as u64)?,
-        None => limits.voci,
+        Some(n) => limits.ok_entries(n as u64)?,
+        None => limits.entries,
     };
     let limit = usize::try_from(limits.byte)
         .unwrap_or(usize::MAX)

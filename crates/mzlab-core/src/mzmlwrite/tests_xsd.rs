@@ -2,7 +2,7 @@
 //! `curl` or network the test says so and passes, so only a machine that can check really checks.
 use super::tests_indice::{indexed_header, indexed_sample};
 use crate::mzml::Spectrum;
-use crate::mzmlwrite::{Header, MzmlWriter, Opzioni, ProcStep, SpectrumExtra};
+use crate::mzmlwrite::{Header, MzmlWriter, Options, ProcStep, SpectrumExtra};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -49,7 +49,7 @@ fn the_indexed_file_validates_against_the_psi_schema() {
     .1;
     let full = [Vec::new(), vec![step]].map(|steps| indexed_sample(steps).1);
     for idx in std::iter::once(bare).chain(full) {
-        valida(&idx);
+        validate(&idx);
     }
 }
 
@@ -59,7 +59,7 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
         run: "x".into(),
         ..Default::default()
     };
-    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Opzioni::default()).unwrap();
+    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Options::default()).unwrap();
     w.open_spectra(2).unwrap();
     for (i, extra) in [
         SpectrumExtra::default(),
@@ -86,7 +86,7 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
         w.spectrum_with(&sp, extra).unwrap();
     }
     w.close_spectra().unwrap();
-    valida(&w.finish().unwrap());
+    validate(&w.finish().unwrap());
 }
 
 #[test]
@@ -96,7 +96,7 @@ fn an_srm_chromatogram_validates() {
         run: "x".into(),
         ..Default::default()
     };
-    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Opzioni::default()).unwrap();
+    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Options::default()).unwrap();
     w.open_spectra(0).unwrap();
     w.close_spectra().unwrap();
     w.open_chromatograms(2).unwrap();
@@ -114,7 +114,7 @@ fn an_srm_chromatogram_validates() {
         w.chromatogram(&c).unwrap();
     }
     w.close_chromatograms().unwrap();
-    valida(&w.finish().unwrap());
+    validate(&w.finish().unwrap());
 }
 
 #[test]
@@ -124,7 +124,7 @@ fn the_tic_of_a_full_scan_validates() {
         run: "x".into(),
         ..Default::default()
     };
-    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Opzioni::default()).unwrap();
+    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Options::default()).unwrap();
     w.open_spectra(0).unwrap();
     w.close_spectra().unwrap();
     w.open_chromatograms(1).unwrap();
@@ -140,11 +140,11 @@ fn the_tic_of_a_full_scan_validates() {
     };
     w.chromatogram(&tic).unwrap();
     w.close_chromatograms().unwrap();
-    valida(&w.finish().unwrap());
+    validate(&w.finish().unwrap());
 }
 
 /// `idx` against the indexed schema; a machine without `xmllint`, `curl` or network says so and passes.
-pub(super) fn valida(idx: &[u8]) {
+pub(super) fn validate(idx: &[u8]) {
     let dir = match schemas() {
         Ok(d) => d,
         Err(e) => return eprintln!("skipped: {e}"),

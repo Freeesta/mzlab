@@ -10,29 +10,29 @@ use flate2::write::GzDecoder;
 use crate::error::{Error, Result};
 
 /// The input given to the decoder at a time: a piece of highly repetitive XML inflates about 1000 times, so one push never makes more than ~64 MB.
-const PASSO: usize = 64 << 10;
+const STEP: usize = 64 << 10;
 
 pub struct Gunzip {
     /// the decoder of the current member; its output is taken by `prendi`
     dec: GzDecoder<Vec<u8>>,
     /// the current member ended: the next bytes start another member or are padding
-    tra: bool,
+    between: bool,
     /// zero bytes of padding seen after a member: only zeros may follow
     zeri: bool,
     /// bytes of the mzML given out so far
-    fuori: u64,
+    outside: u64,
     /// the most bytes the mzML may have (`err.memory.over4gb` beyond)
-    tetto: u64,
+    cap: u64,
 }
 
 impl Gunzip {
-    pub fn new(tetto: u64) -> Self {
+    pub fn new(cap: u64) -> Self {
         Gunzip {
             dec: GzDecoder::new(Vec::new()),
-            tra: false,
+            between: false,
             zeri: false,
-            fuori: 0,
-            tetto,
+            outside: 0,
+            cap,
         }
     }
 
@@ -40,10 +40,10 @@ impl Gunzip {
     pub fn push(&mut self, input: &[u8]) -> Result<Vec<u8>> {
         let zlib = |e: io::Error| Error::new("err.file.zlib").with("detail", e);
         let mut out = Vec::new();
-        for p in input.chunks(PASSO) {
+        for p in input.chunks(STEP) {
             let mut b = p;
             while !b.is_empty() {
-                if self.tra {
+                if self.between {
                     let z = b.iter().take_while(|x| **x == 0).count();
                     self.zeri |= z > 0;
                     b = &b[z..];
@@ -56,13 +56,13 @@ impl Gunzip {
                     }
                     out.extend(self.prendi()?);
                     self.dec = GzDecoder::new(Vec::new());
-                    self.tra = false;
+                    self.between = false;
                 }
                 match self.dec.write(b).map_err(zlib)? {
                     // the member ended (header, data and CRC read): what follows is the next member or padding
                     0 => {
                         self.dec.try_finish().map_err(zlib)?;
-                        self.tra = true;
+                        self.between = true;
                     }
                     n => b = &b[n..],
                 }
@@ -75,18 +75,18 @@ impl Gunzip {
     /// The last bytes once the whole file was pushed, and whether the stream ended well (false: the file is cut short, as a stopped download; what was inflated stays
     /// and the reader counts the spectra it lacks, as `mzml_gz` does).
     pub fn finish(&mut self) -> Result<(Vec<u8>, bool)> {
-        let intero = self.tra || self.dec.try_finish().is_ok();
-        Ok((self.prendi()?, intero))
+        let integer = self.between || self.dec.try_finish().is_ok();
+        Ok((self.prendi()?, integer))
     }
 
     pub fn written(&self) -> u64 {
-        self.fuori
+        self.outside
     }
 
     fn prendi(&mut self) -> Result<Vec<u8>> {
         let out = std::mem::take(self.dec.get_mut());
-        self.fuori += out.len() as u64;
-        if self.fuori > self.tetto {
+        self.outside += out.len() as u64;
+        if self.outside > self.cap {
             return Err(Error::new("err.memory.over4gb"));
         }
         Ok(out)
@@ -95,19 +95,19 @@ impl Gunzip {
 
 /// The members of a gzip file one after the other as one stream, for the app and the CLI (`aperti/mzml_gz.rs`): the bytes `Gunzip` gives the page, zero padding
 /// after a member included.
-pub struct Membri<R: BufRead> {
+pub struct Members<R: BufRead> {
     dec: Option<flate2::bufread::GzDecoder<R>>,
 }
 
-impl<R: BufRead> Membri<R> {
+impl<R: BufRead> Members<R> {
     pub fn new(r: R) -> Self {
-        Membri {
+        Members {
             dec: Some(flate2::bufread::GzDecoder::new(r)),
         }
     }
 }
 
-impl<R: BufRead> Read for Membri<R> {
+impl<R: BufRead> Read for Members<R> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         loop {
             let Some(d) = self.dec.as_mut() else {

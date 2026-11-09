@@ -6,7 +6,7 @@ use super::{record, Artifact, Ctx, Outcome, Results, Run};
 use crate::budget::sha256_hex;
 use crate::error::{Error, Result};
 use crate::flow::sched::{JobId, Sched};
-use crate::flow::{check, corsa_build, parse, plan_json, prov_json, Agent, Mem, Platform, Uscita};
+use crate::flow::{check, corsa_build, parse, plan_json, prov_json, Agent, Mem, Output, Platform};
 use crate::json::{parse as parse_json, Value};
 use crate::step::{registry_from_value, DataType, Step};
 
@@ -137,9 +137,9 @@ pub fn route(op: &str, body: &str, agent: &Agent) -> Result<String> {
                 .iter()
                 .filter_map(|u| Some((text(u, "name")?, text(u, "text")?)))
                 .collect();
-            let uscite: Vec<Uscita> = kept
+            let uscite: Vec<Output> = kept
                 .iter()
-                .map(|(n, t)| Uscita {
+                .map(|(n, t)| Output {
                     name: n,
                     bytes: t.as_bytes(),
                 })

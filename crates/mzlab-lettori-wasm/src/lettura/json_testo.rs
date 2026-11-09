@@ -1,10 +1,10 @@
 //! The pieces of the JSON texts of the module (`sessione.rs`, `lib.rs`), written with `mzlab_core::json::Out`: lists of strings, rows of strings, nullable strings, the samples (a trace with its points: `mzlab_lettori::json`).
 use mzlab_core::json::Out;
-use mzlab_core::lettori::{Campione, Campo, VoceCromatogramma};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Sample};
 use mzlab_core::mzmlwrite::Header;
 
 /// `[{id,name,scans}]`, shared with the `probe` answer of `lib.rs`.
-pub fn samples_json(o: &mut Out, samples: &[Campione]) {
+pub fn samples_json(o: &mut Out, samples: &[Sample]) {
     o.raw("[");
     for (i, c) in samples.iter().enumerate() {
         o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
@@ -45,7 +45,7 @@ pub fn rows<T>(o: &mut Out, v: &[T], row: impl Fn(&T) -> Vec<&str>) {
 }
 
 /// `[{name,value,unit,cv}]`.
-pub fn fields_json(fields: &[Campo]) -> String {
+pub fn fields_json(fields: &[Field]) -> String {
     let mut o = Out::default();
     o.raw("[");
     for (i, f) in fields.iter().enumerate() {
@@ -64,7 +64,7 @@ pub fn fields_json(fields: &[Campo]) -> String {
 }
 
 /// `[{id,kind,unit}]`.
-pub fn chromatograms_json(v: &[VoceCromatogramma]) -> String {
+pub fn chromatograms_json(v: &[ChromatogramEntry]) -> String {
     let mut o = Out::default();
     o.raw("[");
     for (i, x) in v.iter().enumerate() {

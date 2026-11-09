@@ -154,31 +154,31 @@ impl Ottico {
     }
 }
 
-impl crate::lettori::Lettore for Ottico {
-    fn format(&self) -> crate::lettori::Formato {
-        crate::lettori::Formato::Altro("prova")
+impl crate::lettori::Reader for Ottico {
+    fn format(&self) -> crate::lettori::Format {
+        crate::lettori::Format::Altro("prova")
     }
-    fn samples(&self) -> &[crate::lettori::Campione] {
-        static C: std::sync::OnceLock<Vec<crate::lettori::Campione>> = std::sync::OnceLock::new();
+    fn samples(&self) -> &[crate::lettori::Sample] {
+        static C: std::sync::OnceLock<Vec<crate::lettori::Sample>> = std::sync::OnceLock::new();
         C.get_or_init(|| {
-            vec![crate::lettori::Campione {
+            vec![crate::lettori::Sample {
                 id: 1,
                 nome: "uv".into(),
                 scansioni: 0,
-                dimensione: None,
+                size: None,
             }]
         })
     }
-    fn index(&mut self, _: usize) -> Result<&[crate::lettori::VoceScansione]> {
+    fn index(&mut self, _: usize) -> Result<&[crate::lettori::ScanEntry]> {
         Ok(&[])
     }
     fn scan(&mut self, _: usize, _: usize) -> Result<crate::mzml::Spectrum> {
         Err(crate::error::Error::new("error.badIndex"))
     }
-    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<crate::lettori::Campo>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<crate::lettori::Field>> {
         Ok(vec![])
     }
-    fn chromatograms(&mut self, _: usize) -> Result<Vec<crate::lettori::VoceCromatogramma>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<crate::lettori::ChromatogramEntry>> {
         Ok(vec![])
     }
     fn chromatogram(&mut self, _: usize, _: &str) -> Result<crate::mzml::Chromatogram> {
@@ -193,7 +193,7 @@ impl crate::lettori::Lettore for Ottico {
 }
 
 fn convert(dad: bool, matrix: Option<DadData>) -> Vec<u8> {
-    let opz = crate::mzmlwrite::Opzioni {
+    let opz = crate::mzmlwrite::Options {
         dad,
         ..Default::default()
     };

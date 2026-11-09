@@ -3,7 +3,7 @@
 //! bytes per record `u16` at 4, number of descriptors `u16` at 6), 48-byte descriptors (sequence, type, offset, name of 42 bytes), then the records.
 
 use super::cartella::{f32_at, u16_at, u32_at};
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 
 const PREAMBOLO: usize = 32;
 const DESCR: usize = 48;
@@ -25,7 +25,7 @@ pub(super) struct Table {
 
 impl Table {
     /// The table of `b`; `None` for a file that is not one (the table is optional: the scans do not depend on it).
-    pub(super) fn read(b: &[u8], limits: &Limiti) -> Option<Table> {
+    pub(super) fn read(b: &[u8], limits: &Limits) -> Option<Table> {
         let (start, rec, n) = (
             u16_at(b, 0) as usize,
             u16_at(b, 4) as usize,
@@ -34,7 +34,7 @@ impl Table {
         if rec == 0 || start != PREAMBOLO + n * DESCR || b.len() < start {
             return None;
         }
-        limits.voci_ok(n as u64).ok()?;
+        limits.ok_entries(n as u64).ok()?;
         let canali: Vec<Channel> = (0..n)
             .map(|i| {
                 let d = &b[PREAMBOLO + i * DESCR..PREAMBOLO + (i + 1) * DESCR];
@@ -92,8 +92,8 @@ impl Table {
 }
 
 /// The names of `_FUNCnnn.CMP`: 12 bytes of header, then records of 1024 bytes that begin with the name.
-pub(super) fn compound_names(b: &[u8], limits: &Limiti) -> Vec<String> {
-    if b.len() < 12 || limits.voci_ok(((b.len() - 12) / 1024) as u64).is_err() {
+pub(super) fn compound_names(b: &[u8], limits: &Limits) -> Vec<String> {
+    if b.len() < 12 || limits.ok_entries(((b.len() - 12) / 1024) as u64).is_err() {
         return Vec::new();
     }
     b[12..]

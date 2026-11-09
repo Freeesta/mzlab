@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use mzlab_core::lettori::Lettore;
+use mzlab_core::lettori::Reader;
 use mzlab_core::{lettori_mzml, Error, Result};
 
 use crate::mapped::Held;
@@ -55,7 +55,7 @@ impl Nativi {
     }
 
     /// The open reader of dataset `ds` (opened again when it was closed; the least used ones are closed beyond `OPEN`).
-    fn reader(&mut self, ds: &str) -> Result<&mut dyn Lettore> {
+    fn reader(&mut self, ds: &str) -> Result<&mut dyn Reader> {
         self.clock += 1;
         let open_now = self.sets.values().filter(|d| d.l.is_some()).count();
         if open_now >= OPEN

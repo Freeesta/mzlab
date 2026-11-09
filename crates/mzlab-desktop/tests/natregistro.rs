@@ -5,7 +5,7 @@
 #[path = "../../mzlab-lettori/tests/comune/thermo.rs"]
 mod thermo;
 
-use mzlab_core::lettori::{FileSet, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use serde_json::{json, Value};
@@ -21,14 +21,14 @@ fn text(a: Answer) -> String {
 fn module_answer(path: &std::path::Path, id: &str) -> Result<String, &'static str> {
     let b = std::fs::read(path).unwrap();
     let set = FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: "x.raw".into(),
             dim: b.len() as u64,
             dati: Box::new(b),
             sha1: None,
         }],
     };
-    let mut l = mzlab_lettori::apri(set, &Limiti::desktop()).unwrap();
+    let mut l = mzlab_lettori::apri(set, &Limits::desktop()).unwrap();
     l.chromatogram(0, id)
         .map(|c| mzlab_lettori::json::cromatogramma_json(&c))
         .map_err(|e| e.key)

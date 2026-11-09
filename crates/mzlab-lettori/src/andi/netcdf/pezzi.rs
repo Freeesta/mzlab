@@ -7,7 +7,7 @@ impl Cdf {
     pub(super) fn raw_values(
         &self,
         data: &mut dyn ReadAt,
-        limits: &Limiti,
+        limits: &Limits,
         v: &Var,
         da: u64,
         n: u64,
@@ -21,7 +21,7 @@ impl Cdf {
     }
 
     /// The window `da..da + n` lies inside `v` and its bytes fit the budget: the number of bytes.
-    pub(super) fn check(&self, limits: &Limiti, v: &Var, da: u64, n: u64) -> Result<usize> {
+    pub(super) fn check(&self, limits: &Limits, v: &Var, da: u64, n: u64) -> Result<usize> {
         let fine = da.checked_add(n).ok_or_else(Error::memory_budget)?;
         if fine > self.elementi(v) {
             return Err(guasto("read past the end of a variable"));

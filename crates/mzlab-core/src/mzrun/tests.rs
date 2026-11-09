@@ -1,5 +1,5 @@
 use super::*;
-use crate::campioni::Campione;
+use crate::campioni::Sample;
 use crate::json::parse;
 
 const EXAMPLE: &str = include_str!("../../../../tests/data/mzrun/record.mzrun.json");
@@ -8,11 +8,11 @@ fn sha(c: char) -> String {
     c.to_string().repeat(64)
 }
 
-fn sample(file: &str, sha: &str, order: u32) -> Campione {
-    Campione::new(file, sha, order)
+fn sample(file: &str, sha: &str, order: u32) -> Sample {
+    Sample::new(file, sha, order)
 }
 
-fn parts_text() -> (String, String, Vec<Campione>) {
+fn parts_text() -> (String, String, Vec<Sample>) {
     let plan = format!(
         r#"{{"format":"mzflow/2","inputs":[{{"name":"S01","sha256":"{}","bytes":10,"type":"mzml"}}],"steps":[{{"id":"detect","step":"features.detect@1","in":{{"source":["file:S01"]}}}}]}}"#,
         sha('a')
@@ -130,7 +130,7 @@ fn an_input_without_a_role_or_a_run_without_a_commit_does_not_build() {
         parse(plan.as_bytes()).unwrap(),
         parse(prov.as_bytes()).unwrap(),
     );
-    let mk = |v: &Value, roles: &[Campione]| {
+    let mk = |v: &Value, roles: &[Sample]| {
         build(&Parts {
             plan: &p,
             prov: v,

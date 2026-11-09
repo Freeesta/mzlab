@@ -31,7 +31,7 @@ const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
 /// Offset of the polarity in `ExperimentHeader`.
 const HEADER_POLARITY: usize = 86;
-use modi::{Uscita, CODE_PRODUCT};
+use modi::{Output, CODE_PRODUCT};
 /// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
 /// method), the nearest one before it.
 pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
@@ -55,8 +55,8 @@ impl Wiff {
         let code = self.experiments.get(e).and_then(|x| x.code);
         modi::nativo(code)
             && code
-                .and_then(modi::modo)
-                .is_some_and(|m| m.uscita == Uscita::Spettro)
+                .and_then(modi::mode)
+                .is_some_and(|m| m.output == Output::Spettro)
     }
 
     /// The engine (no `estesi`) reads the native scan types only: a sample with an experiment of another code is refused when its data are read, never

@@ -8,38 +8,38 @@
 #![allow(clippy::field_reassign_with_default)]
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Campione, Campo, Formato, Lettore, VoceCromatogramma, VoceScansione};
+use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::scantable::{Row, Table};
 use mzlab_core::{lettori_mzml, mzidx_lettore, scantable};
 
 struct Uno {
-    campioni: Vec<Campione>,
-    indice: Vec<VoceScansione>,
-    schede: Vec<(Spectrum, SpectrumExtra)>,
+    campioni: Vec<Sample>,
+    indice: Vec<ScanEntry>,
+    cards: Vec<(Spectrum, SpectrumExtra)>,
 }
 
-impl Lettore for Uno {
-    fn format(&self) -> Formato {
-        Formato::Altro("uno")
+impl Reader for Uno {
+    fn format(&self) -> Format {
+        Format::Altro("uno")
     }
-    fn samples(&self) -> &[Campione] {
+    fn samples(&self) -> &[Sample] {
         &self.campioni
     }
-    fn index(&mut self, _c: usize) -> Result<&[VoceScansione]> {
+    fn index(&mut self, _c: usize) -> Result<&[ScanEntry]> {
         Ok(&self.indice)
     }
     fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
-        self.schede
+        self.cards
             .get(k)
             .map(|s| s.0.clone())
             .ok_or_else(|| Error::new("error.badIndex"))
     }
-    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Campo>> {
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Field>> {
         Ok(Vec::new())
     }
-    fn chromatograms(&mut self, _c: usize) -> Result<Vec<VoceCromatogramma>> {
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<ChromatogramEntry>> {
         Ok(Vec::new())
     }
     fn chromatogram(&mut self, _c: usize, _id: &str) -> Result<Chromatogram> {
@@ -52,7 +52,7 @@ impl Lettore for Uno {
         Ok(None)
     }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
-        self.schede
+        self.cards
             .get(s.index)
             .map(|x| x.1.clone())
             .unwrap_or_default()
@@ -60,8 +60,8 @@ impl Lettore for Uno {
 }
 
 /// xorshift: the same scans on every run.
-struct Caso(u64);
-impl Caso {
+struct Case(u64);
+impl Case {
     fn next(&mut self) -> u64 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 7;
@@ -74,7 +74,7 @@ impl Caso {
 }
 
 /// A total of scan `k`: fixed edge values first, then any bit pattern (every NaN payload and sign, subnormals, infinities) and decimals with no short text.
-fn totale(r: &mut Caso, k: usize) -> f64 {
+fn total(r: &mut Case, k: usize) -> f64 {
     const BORDI: [f64; 14] = [
         0.0,
         -0.0,
@@ -101,9 +101,9 @@ fn totale(r: &mut Caso, k: usize) -> f64 {
 
 /// `n` scans; `finiti`: the totals the mzML converter accepts; `al_testo`: a userParam naming an accession in every scan, so `righe` reads the row
 /// from the header text (it names no accession a row reads: the row is the same).
-fn lettore(n: usize, seed: u64, finiti: bool, al_testo: bool) -> Uno {
-    let fin = |v: f64| if finiti && !v.is_finite() { 0.5 } else { v };
-    let mut r = Caso(seed | 1);
+fn reader(n: usize, seed: u64, finished: bool, al_testo: bool) -> Uno {
+    let fin = |v: f64| if finished && !v.is_finite() { 0.5 } else { v };
+    let mut r = Case(seed | 1);
     let mut schede = Vec::new();
     for k in 0..n {
         let level = if k.is_multiple_of(3) { 1 } else { 2 };
@@ -130,7 +130,7 @@ fn lettore(n: usize, seed: u64, finiti: bool, al_testo: bool) -> Uno {
         };
         let mut extra = SpectrumExtra::default();
         // one scan in eleven without the maker's TIC: the sum of the points
-        extra.tic = (k % 11 != 10).then(|| fin(totale(&mut r, k)));
+        extra.tic = (k % 11 != 10).then(|| fin(total(&mut r, k)));
         if al_testo {
             extra.params.push(("note".into(), "see MS:1000927".into()));
         }
@@ -142,33 +142,33 @@ fn lettore(n: usize, seed: u64, finiti: bool, al_testo: bool) -> Uno {
         #[cfg(feature = "precursori")]
         {
             extra.base_peak =
-                (k % 4 != 3).then(|| (fin(totale(&mut r, k + 3)), fin(totale(&mut r, k + 5))));
+                (k % 4 != 3).then(|| (fin(total(&mut r, k + 3)), fin(total(&mut r, k + 5))));
         }
         schede.push((sp, extra));
     }
     let indice = schede
         .iter()
-        .map(|(s, _)| VoceScansione {
+        .map(|(s, _)| ScanEntry {
             id: s.id.clone(),
             rt: s.rt,
             livello: s.level,
             polarita: s.polarity,
             tic: 0.0,
-            picco_base: None,
+            base_peak: None,
             filtro: s.filter.clone(),
             precursore: s.precursor,
-            posizione: None,
+            position: None,
         })
         .collect();
     Uno {
-        campioni: vec![Campione {
+        campioni: vec![Sample {
             id: 1,
             nome: "uno".into(),
             scansioni: schede.len(),
-            dimensione: None,
+            size: None,
         }],
         indice,
-        schede,
+        cards: schede,
     }
 }
 
@@ -209,12 +209,12 @@ fn uguali(k: usize, a: &Row, b: &Row) {
         "row {k}: precursor"
     );
     // the private parts (parent, the precursor detail) by their text, which writes every finite float exactly
-    let senza = |r: &Row| {
+    let without = |r: &Row| {
         let mut r = r.clone();
-        (r.start, r.end, r.dove) = (0, 0, None);
+        (r.start, r.end, r.at) = (0, 0, None);
         format!("{r:?}")
     };
-    assert_eq!(senza(a), senza(b), "row {k}");
+    assert_eq!(without(a), without(b), "row {k}");
 }
 
 fn confronta(label: &str, a: &Table, b: &Table) {
@@ -232,9 +232,9 @@ const CASI: [(usize, u64); 4] = [(1, 1), (40, 2), (500, 3), (3000, 4)];
 #[test]
 fn tic_del_lettore_come_dal_testo() {
     for (n, seed) in CASI {
-        let diretta = mzidx_lettore::righe(&mut lettore(n, seed, false, false), 0).unwrap();
-        let testo = mzidx_lettore::righe(&mut lettore(n, seed, false, true), 0).unwrap();
-        confronta(&format!("{n} scans"), &diretta, &testo);
+        let diretta = mzidx_lettore::righe(&mut reader(n, seed, false, false), 0).unwrap();
+        let text = mzidx_lettore::righe(&mut reader(n, seed, false, true), 0).unwrap();
+        confronta(&format!("{n} scans"), &diretta, &text);
     }
 }
 
@@ -242,20 +242,20 @@ fn tic_del_lettore_come_dal_testo() {
 #[test]
 fn tic_del_lettore_come_dal_mzml() {
     for (n, seed) in CASI {
-        let mut l = lettore(n, seed, true, false);
+        let mut l = reader(n, seed, true, false);
         let diretta = mzidx_lettore::righe(&mut l, 0).unwrap();
         let mut mzml = lettori_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let size = mzml.len() as u64;
-        let testo = scantable::read(&mut mzml, size).unwrap();
-        confronta(&format!("{n} scans, mzML"), &diretta, &testo);
+        let text = scantable::read(&mut mzml, size).unwrap();
+        confronta(&format!("{n} scans, mzML"), &diretta, &text);
     }
 }
 
 /// The edges are in the scans: a NaN with a payload or a sign (the text keeps neither), -0, the infinities, subnormals, negative totals.
 #[test]
 fn i_bordi_ci_sono() {
-    let l = lettore(3000, 4, false, false);
-    let tic: Vec<f64> = l.schede.iter().filter_map(|s| s.1.tic).collect();
+    let l = reader(3000, 4, false, false);
+    let tic: Vec<f64> = l.cards.iter().filter_map(|s| s.1.tic).collect();
     assert!(tic
         .iter()
         .any(|v| v.is_nan() && v.to_bits() != f64::NAN.to_bits()));

@@ -4,7 +4,7 @@
 use std::borrow::Cow;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::Limiti;
+use mzlab_core::lettori::Limits;
 use mzlab_core::numpress;
 
 const PIENI: [&str; 6] = [
@@ -30,7 +30,7 @@ fn error(why: &str) -> Error {
 }
 
 /// `xml` with every numpress array decoded and written as a plain 64-bit one (borrowed when it has none).
-pub fn riscrivi<'a>(xml: &'a [u8], limits: &Limiti) -> Result<Cow<'a, [u8]>> {
+pub fn riscrivi<'a>(xml: &'a [u8], limits: &Limits) -> Result<Cow<'a, [u8]>> {
     let Ok(s) = std::str::from_utf8(xml) else {
         return Ok(Cow::Borrowed(xml));
     };
@@ -66,7 +66,7 @@ pub fn riscrivi<'a>(xml: &'a [u8], limits: &Limiti) -> Result<Cow<'a, [u8]>> {
 }
 
 /// One `<binaryDataArray>`; unchanged when it is not numpress.
-fn block<'a>(b: &'a str, expected: usize, limits: &Limiti) -> Result<Cow<'a, str>> {
+fn block<'a>(b: &'a str, expected: usize, limits: &Limits) -> Result<Cow<'a, str>> {
     // the cvParams of the array: (start, end, accession)
     let mut cv: Vec<(usize, usize, &str)> = Vec::new();
     let mut da = 0usize;

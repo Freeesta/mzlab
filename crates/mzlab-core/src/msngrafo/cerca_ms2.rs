@@ -14,8 +14,8 @@ pub struct Ms2Hit {
 
 /// The entries of an `msnlib/1` text whose precursor is within `ppm` of `mz` (same polarity) and whose best MS2, at any activation or energy, shares
 /// at least `min_shared` peaks with `peaks` `(m/z, intensity)`; most similar first. A feature has no activation label, so every MS2 of the entry counts.
-pub fn cerca_ms2(
-    libreria: &str,
+pub fn search_ms2(
+    library: &str,
     mz: f64,
     positive: bool,
     peaks: &[(f64, f64)],
@@ -23,7 +23,7 @@ pub fn cerca_ms2(
     tol: f64,
     min_shared: usize,
 ) -> Result<Vec<Ms2Hit>> {
-    let lib = parse(libreria.as_bytes())?;
+    let lib = parse(library.as_bytes())?;
     let u = Sp {
         path: String::new(),
         level: 2,

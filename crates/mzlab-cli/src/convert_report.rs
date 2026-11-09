@@ -108,7 +108,7 @@ pub(crate) fn report(items: &[Item]) -> String {
 
 /// The `--set` pairs of a compression kind (the three choices of the download dialog): standard = zlib, smallest = zlib and MS-Numpress, none = raw arrays.
 pub(crate) fn compression_sets(kind: &str) -> Result<[String; 2], String> {
-    let o = mzlab_core::mzmlwrite::opzioni_compressione(kind)
+    let o = mzlab_core::mzmlwrite::compression_options(kind)
         .ok_or_else(|| format!("--compression {kind}: expected standard, smallest or none"))?;
     let (z, n) = (o.livello, o.numpress);
     Ok([format!("conv.zlib_level={z}"), format!("conv.numpress={n}")])

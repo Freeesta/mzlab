@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{FileSet, Membro};
+use mzlab_core::lettori::{FileSet, Member};
 
 #[path = "../../mzlab-lettori/tests/comune/andi.rs"]
 pub mod andi;
@@ -34,7 +34,7 @@ pub fn zlib(b: &[u8]) -> Vec<u8> {
 
 pub fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
-        membri: vec![Membro {
+        membri: vec![Member {
             nome: name.into(),
             dim: byte.len() as u64,
             dati: Box::new(byte),

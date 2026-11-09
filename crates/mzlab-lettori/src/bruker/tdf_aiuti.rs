@@ -3,7 +3,7 @@ use super::blocco::Peaks;
 use super::spettri::stretches;
 use mzlab_core::error::Error;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{Fiducia, FileSet, Membro};
+use mzlab_core::lettori::{Fiducia, FileSet, Member};
 
 /// The folder part of a member name; both `/` and `\` separate (a folder picked on Windows names its members with `\`).
 pub(super) fn cartella(name: &str) -> Option<&str> {
@@ -58,13 +58,13 @@ const MAGIA: &[u8; 16] = b"SQLite format 3\0";
 
 /// A folder is Bruker's when its database starts with the SQLite magic and the file of the peaks is beside it; a folder with only `analysis.baf` is recognised to say why it does not open.
 pub(super) fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
-    let bin = fs.trova(&format!("{base}_bin")).is_some();
-    let Some(i) = fs.trova(base) else {
+    let bin = fs.find(&format!("{base}_bin")).is_some();
+    let Some(i) = fs.find(base) else {
         // a `*_bin` without its database is this reader's folder, refused by `apri` with the file it lacks
         return if bin
-            || (fs.trova("analysis.baf").is_some()
-                && fs.trova("analysis.tdf").is_none()
-                && fs.trova("analysis.tsf").is_none())
+            || (fs.find("analysis.baf").is_some()
+                && fs.find("analysis.tdf").is_none()
+                && fs.find("analysis.tsf").is_none())
         {
             Fiducia::Forse
         } else {
@@ -85,8 +85,8 @@ pub(super) fn absent(name: &str, file: &str) -> Error {
         .with("file", file)
 }
 
-pub(super) fn prendi(fs: &mut FileSet, suffisso: &str) -> Option<Membro> {
-    let i = fs.trova(suffisso)?;
+pub(super) fn prendi(fs: &mut FileSet, suffisso: &str) -> Option<Member> {
+    let i = fs.find(suffisso)?;
     Some(fs.membri.remove(i))
 }
 

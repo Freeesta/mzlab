@@ -3,20 +3,20 @@
 mod comune;
 
 use comune::shimadzu::*;
-use mzlab_core::lettori::{FileSet, Lettore, Limiti, Membro};
+use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::ChromKind;
 
-fn apri(name: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Lettore>> {
+fn apri(name: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Reader>> {
     mzlab_lettori::apri_nudo(
         FileSet {
-            membri: vec![Membro {
+            membri: vec![Member {
                 nome: name.into(),
                 dim: b.len() as u64,
                 dati: Box::new(b),
                 sha1: None,
             }],
         },
-        &Limiti::sito(),
+        &Limits::sito(),
     )
 }
 
