@@ -105,7 +105,11 @@ try:
             pg.keyboard.press("Tab"); assert pg.evaluate("document.activeElement.classList.contains('xl')"), pg.evaluate("document.activeElement.outerHTML.slice(0,80)")
             assert pg.get_attribute(".pnl .xl", "aria-label")
             pg.keyboard.press("t"); pg.wait_for_selector("dialog#tdati", timeout=5000)
-            rows = pg.evaluate("document.querySelectorAll('#tdati tbody tr').length"); t = lens_trace(pg, SPEC)
+            # the table writes 1000 rows at a time and the rest on scroll: scroll to the end, then count the data rows
+            for _ in range(20):
+                if not pg.query_selector("#tdati tr.td-more"): break
+                pg.evaluate("(()=>{const s=document.querySelector('#tdati .td-sc'); s.scrollTop=s.scrollHeight})()"); frames(pg, 3)
+            rows = pg.evaluate("document.querySelectorAll('#tdati tbody tr:not(.td-more)').length"); t = lens_trace(pg, SPEC)
             assert rows == len(t["rt"]), (rows, len(t["rt"]))
             first = pg.evaluate("[...document.querySelectorAll('#tdati tbody tr')[0].children].map(c=>c.textContent)"); assert first[1] == str(float(t["y"][0])).rstrip("0").rstrip(".") or float(first[1]) == t["y"][0], first
             pg.keyboard.press("Escape"); frames(pg, 3)
