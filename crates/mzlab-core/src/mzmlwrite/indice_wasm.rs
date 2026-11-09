@@ -15,7 +15,7 @@ impl Index {
 
 impl<W: Write> MzmlWriter<W> {
     /// Not available in the browser build.
-    pub fn indexed(_: W, _: &Header, _: Options) -> Result<Self> {
+    pub fn indicizzato(_: W, _: &Header, _: Options) -> Result<Self> {
         Err(Error::new("err.route.unavailable"))
     }
 
