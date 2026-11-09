@@ -2,8 +2,8 @@
 //! Parity of the review proofs with Attributio (sub-formula explanation, isotope pattern, MS2 purity, raw proofs, RT versus logP: 1e-9 relative) and the
 //! agreement of the fragmenter with the reference (a measure, with a floor).
 
-mod attributio_comune;
-use attributio_comune::golden;
+mod attributio_common;
+use attributio_common::golden;
 use mzlab_feat::attributio::review::explain::{
     explain, fmt_formula, iso_pattern, parse_formula, prep_ms2, removed_reasons, Formula,
 };

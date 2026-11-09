@@ -4,7 +4,7 @@ use mzlab_core::json::{round, Out};
 
 use super::kin::{kinetics, Point};
 use super::labels::Crit;
-use super::{isf, nomi, plan, Entry, LrDig};
+use super::{isf, names, plan, Entry, LrDig};
 use crate::legacy::lrisf::IsfVerdict;
 
 const PROPOSED: &str = "Proposed formula: it derives from one known transformation of the parent and passes the criteria. At unit resolution the formula is not proven; the identification level is the chemist's.";
@@ -137,7 +137,7 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str
     o.raw(",\"name\":").str(&e.name);
     o.raw(",\"tp_name\":").str(tp_name);
     o.raw(",\"status\":").str(status);
-    nomi::words_json(o, e, parent_formula);
+    names::words_json(o, e, parent_formula);
     o.raw(",\"alternatives\":");
     strs(o, &e.alternatives);
     o.raw(",\"formula\":")
@@ -354,7 +354,7 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
                 .is_some_and(|r| e.label == "progenitore" || e.unexpected || r.max_area > 0.0)
         })
         .collect();
-    let names = nomi::tp_names(&d.entries, &found);
+    let names = names::tp_names(&d.entries, &found);
     for (i, r) in rows.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         let at = d
@@ -392,7 +392,7 @@ pub fn summary(d: &LrDig, timing: &str) -> String {
         o.raw(",\"ms2_links\":");
         super::ms2link::json(&mut o, l);
     }
-    if let Some(g) = super::gruppi_out::block(d, &names, &found) {
+    if let Some(g) = super::groups_out::block(d, &names, &found) {
         o.raw(",\"gruppi\":").raw(&g);
     }
     let timing = if timing.trim().starts_with('{') {

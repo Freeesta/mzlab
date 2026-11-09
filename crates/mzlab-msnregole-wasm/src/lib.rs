@@ -21,7 +21,7 @@ pub fn version() -> String {
 /// `[["loss_h2o","H2O",0], ...]` (rule, formula, 1 = ion) of a SMILES, the value of the query key `attese` of `msn_graph`.
 #[wasm_bindgen]
 pub fn expectations(smiles: &str) -> std::result::Result<String, JsValue> {
-    let a = mzlab_feat::chem::regole::attese(smiles, tabella_regole()).map_err(js_err)?;
+    let a = mzlab_feat::chem::rules::attese(smiles, tabella_regole()).map_err(js_err)?;
     let mut o = Out::default();
     o.raw("[");
     for (i, x) in a.iter().enumerate() {

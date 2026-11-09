@@ -2,8 +2,8 @@
 //! `posiz/1` from a `mol/1` record against the one from a SMILES: same JSON for the same parent, over textbook molecules and every transformation,
 //! with peaks taken from the expected fragments of the first site; a Kekulé parent through the record finds the aromatic sites of its lower-case twin.
 
-use mzlab_feat::chem::grafo::Mol;
-use mzlab_feat::chem::posizioni::{
+use mzlab_feat::chem::graph::Mol;
+use mzlab_feat::chem::positions::{
     expected_fragments, positions_json, positions_prior_json, positions_record_json, sites, Pol,
 };
 

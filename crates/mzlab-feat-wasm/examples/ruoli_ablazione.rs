@@ -415,7 +415,7 @@ fn main() {
         .collect();
     let structure = match text(parent, "smiles").as_str() {
         "" => String::new(),
-        s => mzlab_feat::chem::grafo::analyse_json(s).expect("smiles"),
+        s => mzlab_feat::chem::graph::analyse_json(s).expect("smiles"),
     };
     let ctx = Ctx {
         files,

@@ -79,7 +79,7 @@ fn errors_are_keys() {
 
 #[test]
 fn eht_fallback_has_no_charges() {
-    let mol = mzlab_feat::chem::grafo::Mol::parse("c1ccccc1O").unwrap();
+    let mol = mzlab_feat::chem::graph::Mol::parse("c1ccccc1O").unwrap();
     let m = mzlab_chem::Mol3d::from_mol(&mol).unwrap();
     let c = mzlab_chem::embed(&m, 42, 1).unwrap();
     let (f, homo, lumo) = mzlab_chem::eht::fukui(&m.el, &c[0].xyz).unwrap();

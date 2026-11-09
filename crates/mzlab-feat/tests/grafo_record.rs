@@ -1,7 +1,7 @@
 //! The graph built from a `mol/1` record against the one the SMILES and molfile readers of `grafo` build: same atoms, hydrogens, charges, aromatic
 //! flags and bonds (as a set: the record sorts them by atom pair), over the study cases, the extra cases and the 625 compounds of composti.csv.
 
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 use serde_json::Value;
 
 type Key = (String, bool, u32, i32);

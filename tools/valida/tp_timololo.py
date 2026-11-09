@@ -22,7 +22,7 @@ RT_TOL = 0.3
 
 
 def run_pass() -> dict:
-    """The rows interpreted by `cargo test` (tests/interp_dati.rs) as the JSON it writes in MZLAB_MISURE_OUT."""
+    """The rows interpreted by `cargo test` (tests/interp_data.rs) as the JSON it writes in MZLAB_MISURE_OUT."""
     with tempfile.TemporaryDirectory() as d:
         out = Path(d) / "misure.json"
         env = {**os.environ, "MZLAB_MISURE_OUT": str(out)}

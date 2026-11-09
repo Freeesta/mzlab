@@ -3,8 +3,8 @@
 pub mod adduct;
 pub mod alternatives;
 pub mod auto2b;
-pub mod banco;
-pub mod banco_json;
+pub mod bench;
+pub mod bench_json;
 pub mod evidence;
 pub mod evidence_svg;
 pub mod explain;

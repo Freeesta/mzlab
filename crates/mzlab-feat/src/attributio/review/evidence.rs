@@ -5,7 +5,7 @@
 //! the delta m recorded, the reference drawn shifted by it and the pairs matched through it in violet); a 2a kept without a recorded reference shows the best
 //! exact reference of the same structure; a 2b on fragments has no reference and the plot shows the spectrum and its explained fragments.
 
-use super::banco::Run;
+use super::bench::Run;
 use super::evidence_svg::{reference_rel, rows, svg, Plot, RefDraw, PLOT_COLUMNS};
 use super::matching::{compare, Kind, Ms2};
 use super::proposal::{Proposal, Reference, View};

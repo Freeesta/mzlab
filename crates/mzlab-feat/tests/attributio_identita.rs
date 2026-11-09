@@ -3,8 +3,8 @@
 //! curation of names, the evidence of the members: no tolerance on text, 1e-9 relative on numbers) and hand cases for the rules that the campaign does not reach.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::annotate::{
     gnps_comparer, load_annotations, Annotations, BasicCuration, Curation, Feature,
 };

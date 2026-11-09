@@ -1,5 +1,5 @@
 //! The registry of the filters (`filtri/1`) of a `.mzfeat` that `run_to` already interpreted, again under other thresholds (`tp.filter`): F1-F4 are read
-//! from the table (`filtri::row_facts`), F5 from the rows of the block (`ms1.mz_obs` and its file, the neutral formula of the change) against the
+//! from the table (`filters::row_facts`), F5 from the rows of the block (`ms1.mz_obs` and its file, the neutral formula of the change) against the
 //! calibration of the files in its meta, and the decoys from the hypotheses. With the default thresholds the answer is the one `build` stored.
 
 use mzlab_core::elements::{fmt, parse_formula};
@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{parse, Value};
 
-use super::filtri::{
+use super::filters::{
     self, first_hidden, out_of_tolerance, table_decoys_with, DecoyParams, FileCal, Registry,
     TOL_MAX, TOL_MIN,
 };
@@ -87,7 +87,7 @@ pub fn refilter<R: ReadAt>(
         return Err(Error::new("error.interp.noTp"));
     }
     let (meta, ids) = store::read_meta(r, size)?.ok_or_else(|| Error::new("error.interp.noTp"))?;
-    let mut facts = filtri::row_facts(&t);
+    let mut facts = filters::row_facts(&t);
     let mut reg = Registry::default();
     for (row, (fact, &status)) in facts.iter_mut().zip(&t.tp.status).enumerate() {
         match first_hidden(fact) {

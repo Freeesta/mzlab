@@ -2,7 +2,7 @@
 //! the rules of the Banco, adds it to the decisions already in the folder (a history: only the row with the same `decided_on` and `decided_by` is replaced) and
 //! gives back the text of the whole file for the caller to store. The checklist the chemist ticked goes in the last column, `evidence_checklist`, separated by `|`.
 
-use super::banco::{Bench, CHECKLIST};
+use super::bench::{Bench, CHECKLIST};
 use super::rules::{decision_changes, Current, Rec};
 use crate::attributio::annotate::Feature;
 use crate::attributio::error::{CampaignError, Result};

@@ -3,8 +3,8 @@
 //! pieces the campaign has no data for (references, raw proofs, the JSON of the proposal).
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::annotate::{gnps_comparer, load_annotations, BasicCuration};
 use mzlab_feat::attributio::io::Io;
 use mzlab_feat::attributio::review::feature::{review_feature, Env, Inputs};

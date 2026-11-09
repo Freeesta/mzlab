@@ -3,8 +3,8 @@
 //! case for each step of the cascade on a campaign cut down by hand.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::annotate::{
     gnps_comparer, load_annotations, Annotations, BasicCuration, Feature,
 };

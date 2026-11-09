@@ -4,7 +4,7 @@
 
 use mzlab_chem::mol3d::Mol3d;
 use mzlab_chem::mol3d_record::mol3d_from_record;
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 
 const SMILES: [&str; 10] = [
     "Oc1ccccc1",

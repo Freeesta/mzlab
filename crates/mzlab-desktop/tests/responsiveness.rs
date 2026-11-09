@@ -36,7 +36,7 @@ fn positions_route_carries_the_prior_of_the_reactivity() {
     let peaks = "[[95.0491,100]]";
     let q = |r: &str| json!({"kind": "positions", "smiles": "Oc1ccccc1", "transform": "+O", "peaks": peaks, "tol": 0.5, "reatt": r});
     let with = text(st.rpc("feat/grafo", &q(&reatt), &[]).unwrap());
-    let direct = mzlab_feat::chem::posizioni::positions_prior_json(
+    let direct = mzlab_feat::chem::positions::positions_prior_json(
         "Oc1ccccc1",
         "+O",
         peaks,
