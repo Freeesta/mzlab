@@ -434,7 +434,7 @@ async function handle(ev) {
     switch (m.op) {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
       case "mzml2cen": {                                                              // a profile mzML of the archive -> a copy with one point per peak on OPFS (centroids/convert.rs; read twice, never held)
-        const f = await fileOf(m.name), rd = readerFor(f), sink = await rawSink(m.dest);
+        const f = await fileOf(m.name), rd = readerFor(f), sink = await rawSink(m.dest, BUDGET_MB);
         let written = 0, last = 0, scans = 0, scansTotal = null, did = false;
         const tick = force => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total: f.size, written, scans, scansTotal }); } };
         try { did = engine.mzml_to_centroids(m.name, f.size, rd, piece => { sink.write(piece); written += piece.length; tick(false); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }); }
@@ -446,7 +446,7 @@ async function handle(ev) {
       }
       case "natsamples": info = await nativo.samples(m.members); break; case "natsame": info = await natSame(m); break;   // the samples of a maker's dataset (a .wiff holds several), from its members; those already loaded from the same files, whose index is in OPFS
       case "nat2mzml": {                                                              // «Download .mzML»: one sample of a maker's file as mzML on OPFS, written piece by piece
-        const sink = await nativo.toMzml(m, p => postMessage({ op: "progress", id, ...p }));
+        const sink = await nativo.toMzml({ ...m, cap: BUDGET_MB }, p => postMessage({ op: "progress", id, ...p }));
         postMessage({ id, op: m.op, n: sink.parts ? sink.parts.length : 1, parts: sink.parts || null, file: sink.file || null }, sink.parts ? sink.parts.map(a => a.buffer) : []);
         return;
       }
