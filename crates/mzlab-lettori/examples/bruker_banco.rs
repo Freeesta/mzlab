@@ -8,9 +8,9 @@ use std::time::Instant;
 
 use mzlab_core::lettori::{FileSet, Limits, Member};
 
-#[path = "../tests/comune_sqlite/mod.rs"]
-mod comune_sqlite;
-use comune_sqlite::pasef;
+#[path = "../tests/common_sqlite/mod.rs"]
+mod common_sqlite;
+use common_sqlite::pasef;
 
 fn scrivi(dir: &Path, cycles: usize, n1: usize, n2: usize) {
     std::fs::create_dir_all(dir).unwrap();

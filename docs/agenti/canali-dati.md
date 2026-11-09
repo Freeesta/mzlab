@@ -28,7 +28,7 @@ Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta 
 4. Quattro meccanismi per «quale sottoinsieme di scan»: `prec` (0,6 Da), `tr` MS2 (`ms2tr`), `filt`/`msn:` (solo HR e infusione), pannello `mrm`.
 5. `.mzidx`: nessun id di esperimento, periodo o ciclo (per il `.wiff` stanno solo nel testo `native`, `wiff/run.rs:107-113`); si legge solo il `Period0` (`wiff/mod.rs:120`); finestra di scan, `p/c` e `[a-b]` del filtro Thermo non sono campi.
 6. Cromatogrammi mzML non indicizzati (solo il numero in `run.n_chromatograms`): ogni lista rilegge la coda del file.
-7. PDA Agilent e Shimadzu non decodificati (`agilent_ext/lettore_lc.rs:11`, `mzlab-lettori/src/shimadzu/lettore.rs:20`): oggi il canale manca, non è nascosto.
+7. PDA Agilent e Shimadzu non decodificati (`agilent_ext/lettore_lc.rs:11`, `mzlab-lettori/src/shimadzu/reader.rs:20`): oggi il canale manca, non è nascosto.
 
 ## 2. Modello «file → canali»
 **Principio.** Ogni file espone un elenco di canali; ogni canale ha una traccia (tempo → intensità) e, se li ha, i suoi scan con lo spettro (di massa o UV). Gli strumenti chiedono «canale + file», mai «kind».

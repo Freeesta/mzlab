@@ -6,7 +6,7 @@ use mzlab_core::metodo_campi::Field;
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::ole::Ole;
 
-use super::carica::{Data, Fam};
+use super::load::{Data, Fam};
 use super::prop;
 
 /// The most transitions listed in the document.

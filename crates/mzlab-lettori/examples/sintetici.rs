@@ -4,11 +4,11 @@
 use mzlab_core::lettori::{FileSet, Member};
 use std::path::Path;
 
-#[path = "../tests/comune/andi.rs"]
+#[path = "../tests/common/andi.rs"]
 mod andi;
-#[path = "../tests/comune_sqlite/mod.rs"]
-mod comune_sqlite;
-#[path = "../tests/comune/thermo.rs"]
+#[path = "../tests/common_sqlite/mod.rs"]
+mod common_sqlite;
+#[path = "../tests/common/thermo.rs"]
 mod thermo;
 
 /// The helper the shared ANDI module expects from its parent.
@@ -32,12 +32,12 @@ fn main() {
         std::fs::write(p, b).unwrap();
     };
     w("thermo/synt.raw", thermo::Raw::tsq(63, 12).bytes());
-    w("bruker/synt.d/analysis.tdf", comune_sqlite::minimal_tdf(3));
-    w("bruker/synt.d/analysis.tdf_bin", comune_sqlite::blocco2());
+    w("bruker/synt.d/analysis.tdf", common_sqlite::minimal_tdf(3));
+    w("bruker/synt.d/analysis.tdf_bin", common_sqlite::blocco2());
     // five frames, the copy of `tdf_bin` cut inside the fourth block: three spectra read, two counted as missing
-    let b = comune_sqlite::blocco2();
+    let b = common_sqlite::blocco2();
     let n = b.len() as i64;
-    let tdf = comune_sqlite::tdf_frames(&[0, n, 2 * n, 3 * n, 4 * n], 3);
+    let tdf = common_sqlite::tdf_frames(&[0, n, 2 * n, 3 * n, 4 * n], 3);
     w("bruker_tagliato/tagliato.d/analysis.tdf", tdf);
     let bin: Vec<u8> = b.iter().copied().cycle().take(3 * b.len() + 9).collect();
     w("bruker_tagliato/tagliato.d/analysis.tdf_bin", bin);
