@@ -42,14 +42,19 @@ fn huge_counts_and_sizes_are_errors_without_allocating() {
         pos(&b, b"scan_acquisition_time") - 8 - 4,
     ] {
         let mut x = b.clone();
-        x[da + 4..da + 8].copy_from_slice(&u32::MAX.to_be_bytes());
-        assert_ne!(andi_error(x), "ok", "{da}");
+        // a count of a few hundred thousand in a file of a few KB is damage, not a file too big for memory
+        for n in [u32::MAX, 0x0010_0000, 0x7fff_ffff] {
+            x[da + 4..da + 8].copy_from_slice(&n.to_be_bytes());
+            assert_eq!(andi_error(x.clone()), "err.file.cdfDamaged", "{da} {n}");
+        }
     }
     // the length of the dimension scan_number: more scans than the file has points for
     let mut x = b.clone();
     let i = pos(&x, b"scan_number") + 12;
-    x[i..i + 4].copy_from_slice(&u32::MAX.to_be_bytes());
-    assert_ne!(andi_error(x), "ok");
+    for n in [u32::MAX, 0x0100_0000, 0x0001_0000] {
+        x[i..i + 4].copy_from_slice(&n.to_be_bytes());
+        assert_eq!(andi_error(x.clone()), "err.file.cdfDamaged", "{n}");
+    }
 }
 
 #[test]
@@ -57,7 +62,7 @@ fn a_too_long_name_is_an_error() {
     let mut x = good();
     let i = pos(&x, b"point_number") - 4;
     x[i..i + 4].copy_from_slice(&(1u32 << 30).to_be_bytes());
-    assert_eq!(andi_error(x), "err.dam.unreadable");
+    assert_eq!(andi_error(x), "err.file.cdfDamaged");
 }
 
 #[test]
@@ -67,7 +72,7 @@ fn a_begin_outside_the_file_is_a_keyed_error() {
     let i = pos(&b, b"scan_index") + 12 + 4 + 4 + 8 + 4 + 4;
     let mut x = b.clone();
     x[i..i + 4].copy_from_slice(&0x7fff_fff0u32.to_be_bytes());
-    assert_eq!(andi_error(x), "err.dam.unreadable");
+    assert_eq!(andi_error(x), "err.file.cdfDamaged");
 }
 
 #[test]

@@ -42,6 +42,24 @@ fn an_unfinished_raw_is_the_text_of_the_page() {
     );
 }
 
+/// A .cdf whose header describes more data than the file holds: the calm text of the page, the reader's detail after the key.
+#[test]
+fn a_damaged_cdf_is_the_text_of_the_page() {
+    let e = Error::new("err.file.cdfDamaged").with("detail", "no scan_index");
+    let t = human(&e.to_string());
+    assert_eq!(
+        t,
+        format!(
+            "{} (err.file.cdfDamaged, detail=no scan_index)",
+            text_of("err.file.cdfDamaged").unwrap()
+        )
+    );
+    assert!(
+        t.contains("damaged or cut short") && t.contains("netCDF-3/AIA"),
+        "{t}"
+    );
+}
+
 #[test]
 fn every_key_of_the_catalogue_is_found() {
     let keys: Vec<&str> = CATALOG

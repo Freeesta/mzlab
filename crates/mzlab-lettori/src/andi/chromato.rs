@@ -66,7 +66,7 @@ pub(super) fn trace(
         .find("ordinate_values")
         .filter(|_| name == id)
         .ok_or_else(|| Error::new("error.badIndex").with("id", name))?;
-    let n = limits.ok_entries(cdf.elements(v))? as u64;
+    let n = cdf.count(v, limits)? as u64;
     let mut y = cdf.read(data, limits, v, 0, n)?;
     scale(&mut y, v);
     let retention = cdf
