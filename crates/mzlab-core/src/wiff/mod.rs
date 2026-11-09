@@ -33,7 +33,7 @@ const HEADER_CODE: usize = 122;
 const HEADER_POLARITY: usize = 86;
 use modi::{Output, CODE_PRODUCT};
 /// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
-/// method), the nearest one before it.
+/// method), the nearest one before it if it acquires what the sample's own blocks hold (scans or MRM); otherwise none is borrowed.
 pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
     if let Some(k) = metodo_nome::by_name(ole, sample) {
         return k;
@@ -43,10 +43,29 @@ pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
             "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
         ))
     };
-    (1..=sample.min(10_000))
-        .rev()
-        .find(|&k| has(k))
-        .unwrap_or(sample)
+    match (1..=sample.min(10_000)).rev().find(|&k| has(k)) {
+        Some(k) if k == sample || borrow_agrees(ole, sample, k) => k,
+        _ => sample,
+    }
+}
+
+/// Whether the method `k` fits the blocks of `sample`: an MRM sample never takes a scan method, nor a scan sample an MRM one. The Idx rows say which
+/// blocks are scans (a point count above 0); a sample without rows takes the method as it is.
+fn borrow_agrees(ole: &Ole, sample: u32, k: u32) -> bool {
+    let rows = ole
+        .read(&format!("{SAMPLES}Sample{sample}/Idx"))
+        .map(|b| idx::parse(&b))
+        .unwrap_or_default();
+    if rows.is_empty() {
+        return true;
+    }
+    let own_scans = rows.iter().any(|r| r.points > 0.0);
+    let method_scans = experiments(ole, k).iter().any(|e| {
+        e.code
+            .and_then(modi::mode)
+            .is_some_and(|m| m.output == Output::Spettro)
+    });
+    own_scans == method_scans
 }
 
 impl Wiff {
