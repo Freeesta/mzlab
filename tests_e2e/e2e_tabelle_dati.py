@@ -94,6 +94,11 @@ try:
             pg.evaluate(SAFARI_CLIP); pg.click("#tdati [data-td=c]"); wait_for_js(pg, "window.__clip !== null || window.__clipNo", 10000)
             ln = [l for l in pg.evaluate("window.__clip").split("\n") if l and not l.startswith("#")]
             assert ln[0] == "i\tv" and len(ln) == 51 and ln[-1] == "49\t98", ln[-2:]
+            close()
+            pg.evaluate("TDATI.maxRows(250); TDATI.table({title:'Tanti', head:['i'], rows:Array.from({length:1500},(_, i)=>[String(i)])})")    # FIRST 200 at once, then the rest of the cap
+            pg.wait_for_selector("#tdati[open]"); assert len(tbl()["rows"]) == 201                                 # 200 rows and the «…» row
+            pg.evaluate("document.querySelector('#tdati .td-sc').scrollTop = 1e9"); wait_for_js(pg, "!document.querySelector('#tdati tr.td-more')", 10000)
+            assert len(tbl()["rows"]) == 250 and tbl()["rows"][-1] == ["249"], len(tbl()["rows"])
             close(); pg.evaluate("TDATI.maxRows(0)")
         step("past the row cap (fake: 50) the table keeps the first rows, says so with the next step, and copies only those", capped)
     r.close()
