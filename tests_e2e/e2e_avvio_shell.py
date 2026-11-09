@@ -1,6 +1,6 @@
 """The Dati page draws its shell before the engine: with the .wasm held back, the drop area is visible and usable-looking while the engine is still
-pending, the .wasm is asked for only once the page is parsed (not from the head, where it competes with the first paint) and once, before the
-engine's worker (preload of browser.js); once released, the engine comes up on its own. Build first: python tools/build_site.py"""
+pending, the .wasm is asked for only once the page is parsed (not from the head, where it competes with the first paint) and once, from the
+start of the engine's module graph (preload of browser.js); once released, the engine comes up on its own. Build first: python tools/build_site.py"""
 from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
@@ -55,6 +55,8 @@ try:
         step("shell visible while the .wasm is held back", shell_before_engine)
 
         def wasm_after_parse():
+            deadline = time.time() + 30                                         # the preload is the held request; the engine's fetch() follows its module graph
+            while not pg.evaluate("window.__wasmAsked.length") and time.time() < deadline: hold(pg, 50)
             asked = pg.evaluate("window.__wasmAsked")
             assert asked and all(s != "loading" for s in asked), f"the .wasm was asked for while the page was being parsed: {asked}"
         step(".wasm asked for only after the page is parsed", wasm_after_parse)
@@ -68,11 +70,13 @@ try:
         step("released, the engine comes up on its own", engine_follows)
 
         def wasm_once_and_early():
-            wasm = [i for i, u in enumerate(asked_urls) if u.endswith(".wasm")]
-            worker = [i for i, u in enumerate(asked_urls) if u.endswith("/rust-worker.js")]
-            assert len(wasm) == 1, f"the .wasm went over the network {len(wasm)} times (the engine's fetch must take the preload of browser.js)"
-            assert worker and wasm[0] < worker[0], "the .wasm download waited for the module graph of the engine"
-        step(".wasm downloaded once, before the engine's worker", wasm_once_and_early)
+            # the page's own requests (the service worker also fetches the .wasm, to fill its cache)
+            res = pg.evaluate("performance.getEntriesByType('resource').map(e => [e.name, e.startTime])")
+            wasm = [t for u, t in res if u.endswith("/mzlab_wasm_bg.wasm")]
+            bridge = [t for u, t in res if u.endswith("/rust-bridge.js")]
+            assert len(wasm) == 1, f"the engine's .wasm went over the network {len(wasm)} times (the engine's fetch must take the preload of browser.js)"
+            assert bridge and wasm[0] <= bridge[0], "the .wasm download waited for the module graph of the engine"
+        step(".wasm downloaded once, from the start of the engine's module graph", wasm_once_and_early)
         b.close()
 finally:
     srv.terminate()
