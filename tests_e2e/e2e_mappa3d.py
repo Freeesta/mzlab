@@ -18,6 +18,17 @@ r = Run(port=8838, wd="/tmp/wd_mappa3d")
 INK = "(()=>{const c=document.querySelector('.m3d-gl');window.__m3d.frame();const o=document.createElement('canvas');o.width=c.width;o.height=c.height;const g=o.getContext('2d');g.drawImage(c,0,0);const d=g.getImageData(0,0,o.width,o.height).data;const s=new Set();for(let i=0;i<d.length;i+=4*97)s.add((d[i]>>4)+','+(d[i+1]>>4)+','+(d[i+2]>>4));return s.size})()"
 
 
+def data_step(pg, tag):
+    def data():
+        ref = pg.evaluate("(()=>{const V=window.__m3d.V,c=[];for(let k=0;k<V.raw.length;k++)if(V.raw[k]>0)c.push(V.raw[k]);return c.sort((a,b)=>b-a).slice(0,100).map(v=>+v.toFixed(1))})()")
+        pg.evaluate("document.querySelector('.m3d-gl').focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
+        got = pg.evaluate("[...document.querySelectorAll('#tdati tbody tr')].map(r=>+r.children[2].textContent)")
+        assert got == ref and len(got) == min(100, len(ref)), (got[:5], ref[:5])
+        pg.keyboard.press("Escape"); wait_for_js(pg, "!document.getElementById('tdati')")
+        pg.evaluate("document.querySelector('.m3d-gl').focus()")
+    step(f"{tag}: T on the 3D view: the 100 most intense cells kept while walking the grid, as a full sort gives them", data)
+
+
 def viewer(pg, tag, hr):
     def opens():
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); frames(pg, 3)
@@ -87,6 +98,7 @@ def viewer(pg, tag, hr):
         pg.fill("dialog.m3d [data-m=ti]", "5"); pg.dispatch_event("dialog.m3d [data-m=ti]", "input"); wait_for_js(pg, "window.__m3d.V.cur.i === 5")
         assert pg.evaluate("window.__m3d.V.cur.i") == 5
     step(f"{tag}: arrows and the time slider move the cursor and the plane", keys)
+    data_step(pg, tag)
     def closes():
         pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('dialog.m3d')")
         assert pg.evaluate("!document.querySelector('dialog.m3d')")

@@ -246,9 +246,7 @@ export function open(p, opener) {
   // the most intense cells of the grid, for the «Dati» table (tdati.js)
   if (window.TDATI) TDATI.addButton(glc, () => {
     if (!V.g || !V.raw) return null;
-    const { nrt, nmz } = V.g, cells = [];
-    for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) { const v = V.raw[i * nmz + j]; if (v > 0) cells.push([i, j, v]); }
-    cells.sort((a, b) => b[2] - a[2]).splice(100);
+    const { nrt, nmz } = V.g, cells = /** @type {number[][]} */ (TDATI.topCells(V.raw, nrt, nmz, 100));
     return { title: T("m3d.canvas"), head: [T("tdati.col.rt"), "m/z", T("tdati.col.int")], rows: cells.map(c => [TDATI.num(V.rt[0] + (c[0] + 0.5) * (V.rt[1] - V.rt[0]) / nrt, 3), TDATI.num(V.g.log ? V.g.mz0 * Math.exp((c[1] + 0.5) * V.g.dlog) : V.g.mz0 + (c[1] + 0.5) * V.g.dmz, 3), TDATI.num(c[2], 1)]), note: T("tdati.note.map", { n: cells.length }) };
   });
   // ---- WebGL
