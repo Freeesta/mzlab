@@ -150,3 +150,22 @@ fn a_folder_without_functions_is_refused_with_a_key() {
     .expect("refused");
     assert!(e.key.starts_with("err.file."), "{}", e.key);
 }
+
+/// A record word no acquisition writes (an intensity without its leading bit): the calm key of a damaged folder, never «the whole file is needed».
+#[test]
+fn a_damaged_record_word_is_a_damaged_folder() {
+    let mut f = folder_file();
+    let dat = f.iter_mut().find(|(n, _)| n == "_FUNC001.DAT").unwrap();
+    dat.1[0..4].copy_from_slice(&1u32.to_le_bytes());
+    let key = match mzlab_lettori::open_bare(file_set(f), &Limits::sito()) {
+        Err(e) => e.key,
+        Ok(mut l) => {
+            let ix = l.index(0).map(<[_]>::to_vec).unwrap_or_default();
+            (0..ix.len())
+                .find_map(|k| l.scan(0, k).err())
+                .expect("a scan refused")
+                .key
+        }
+    };
+    assert_eq!(key, "err.file.folderDamaged");
+}

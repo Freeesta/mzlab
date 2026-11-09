@@ -106,6 +106,7 @@
   "err.file.functionsCut": "Cartella .raw di Waters con l'elenco delle funzioni troncato (copia interrotta). {name} = nome della cartella; {listed} = funzioni che l'elenco contiene.",
   "err.file.indexCut": "Cartella .raw di Waters con un indice di funzione troncato o danneggiato (copia interrotta). {name} = nome della cartella; {file} = file d'indice (_FUNCnnn.IDX).",
   "err.file.folderIncomplete": "Cartella .raw di Waters senza _FUNCTNS.INF (copia incompleta). {name} = nome della cartella; {file} = file mancante.",
+  "err.file.folderDamaged": "Nessun segnaposto nel testo. L’errore porta {detail} (quale parola del record o quale intervallo non torna, in inglese dal lettore): il CLI lo scrive tra parentesi dopo la chiave, la pagina no. Può arrivare all’apertura o alla lettura di una scansione.",
   "err.file.folderFileCut": "Cartella .raw di Waters con _FUNCTNS.INF troncato a metà di un record. {name} = nome della cartella; {file} = file troncato.",
   "err.file.functionsEmpty": "Cartella .raw di Waters con _FUNCTNS.INF vuoto (copia interrotta). {name} = nome della cartella.",
   "err.file.recordVariant": "Cartella .raw di Waters la cui unica funzione con dati usa una larghezza di record non ancora decodificata. {name} = nome della cartella; {function} = numero della funzione; {type} = byte del tipo di funzione in esadecimale (es. 0x10).",

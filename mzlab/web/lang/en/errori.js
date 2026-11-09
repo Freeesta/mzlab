@@ -6,6 +6,7 @@ I18N.add("en", {
   "err.file.functionsCut": "The folder {name} lists {listed} functions in _FUNCTNS.INF but holds the data of more: the list is cut short, so nothing was loaded. Copy the whole .raw folder again.",
   "err.file.indexCut": "In the folder {name} the index {file} is cut short or damaged: it does not match its data file, so nothing was loaded. Copy the whole folder again.",
   "err.file.folderIncomplete": "The folder {name} has no {file}, which every .raw folder holds: the copy is incomplete, so nothing was loaded. Copy the whole .raw folder again.",
+  "err.file.folderDamaged": "A data file of this .raw folder is damaged: some of its records hold values that no acquisition writes, so they cannot be read. Copy the whole folder again, or export it again from the instrument PC.",
   "err.file.folderFileCut": "In the folder {name} the file {file} is cut short: its size is not a whole number of records, so nothing was loaded. Copy the whole folder again.",
   "err.file.functionsEmpty": "In the folder {name} the file _FUNCTNS.INF is empty: it lists the acquisition functions of the run and without it no function can be read, so nothing was loaded. Copy the whole folder again.",
   "err.file.recordVariant": "In the folder {name} function {function} (type {type}) stores its data in a record variant this program does not read yet, so nothing was loaded. Convert the folder to mzML with the instrument software and open that file.",
