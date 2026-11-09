@@ -1,8 +1,8 @@
 //! Time, peak memory and SHA-256 of the output of `untargeted::pipeline::run_file` on a synthetic run, and of the broad-band search on a long trace.
 //!
-//!     cargo run --release -p mzlab-feat --features untargeted --example perf_lotto5 -- gen <scans> <ions> <out.mzidx>
-//!     cargo run --release -p mzlab-feat --features untargeted --example perf_lotto5 -- run <file.mzidx> <broad 0|1> <gt 0|1> [baseline 0|1] [slab_mb]
-//!     cargo run --release -p mzlab-feat --features untargeted --example perf_lotto5 -- trace <scans>
+//!     cargo run --release -p mzlab-feat --features untargeted --example perf_batch5 -- gen <scans> <ions> <out.mzidx>
+//!     cargo run --release -p mzlab-feat --features untargeted --example perf_batch5 -- run <file.mzidx> <broad 0|1> <gt 0|1> [baseline 0|1] [slab_mb]
+//!     cargo run --release -p mzlab-feat --features untargeted --example perf_batch5 -- trace <scans>
 
 #[path = "../tests/untargeted_common/synth.rs"]
 mod synth;

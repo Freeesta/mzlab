@@ -25,8 +25,8 @@ _ts = [0.05 * k for k in range(40)]
 _w = wr.Writer(); _w.sample(1, [("scan", [(100 + k, 50 + k)], 1000.0 * k, 50.0 + k) for k in range(40)], {"Experiment0/ExperimentHeader": wr.header(15, 30.0)},
                             dad=(_ts, 200.0, 1.0, [[10 + 400 * math.exp(-((j - 60) / 12) ** 2) * math.exp(-((t - 1.0) / 0.2) ** 2) for j in range(201)] for t in _ts])); _w.save(WIFF_DIR, "uv")
 WIFF_FILES = [WIFF_DIR / "uv.wiff", WIFF_DIR / "uv.wiff.scan"]
-RAW_DIR = Path(tempfile.mkdtemp(prefix="mzlab-raw-"))                  # a synthetic Thermo .raw (crates/mzlab-lettori examples/sintetici, invented numbers)
-subprocess.run(["cargo", "run", "-q", "-p", "mzlab-lettori", "--example", "sintetici", "--", str(RAW_DIR)], cwd=ROOT, check=True)
+RAW_DIR = Path(tempfile.mkdtemp(prefix="mzlab-raw-"))                  # a synthetic Thermo .raw (crates/mzlab-lettori examples/synthetic, invented numbers)
+subprocess.run(["cargo", "run", "-q", "-p", "mzlab-lettori", "--example", "synthetic", "--", str(RAW_DIR)], cwd=ROOT, check=True)
 RAW_FILE = RAW_DIR / "thermo" / "synt.raw"
 import agilent_sintetico  # noqa: E402  (synthetic Agilent .D folders, invented numbers)
 D_DIR = Path(tempfile.mkdtemp(prefix="mzlab-d-")) / "serie"

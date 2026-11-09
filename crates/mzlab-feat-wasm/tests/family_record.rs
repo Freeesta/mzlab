@@ -1,4 +1,4 @@
-//! `run::family_record` (behind the export `family_record`) against the native path of `examples/famiglie.rs` on the hard synthetic series of
+//! `run::family_record` (behind the export `family_record`) against the native path of `examples/families.rs` on the hard synthetic series of
 //! `tools/valida/sintetici_degdma.py`: same record byte for byte, same bytes on a second run, whatever the reader, and an orderly refusal when the
 //! budget holds nothing. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 #![cfg(feature = "detect")]
@@ -44,7 +44,7 @@ fn the_record_equals_the_native_one_and_is_deterministic() {
     let r = recipe(&mut ix);
     let got = family::record(&mut ix, "degdma", &r, &MemBudget::mb(192.0)).unwrap();
 
-    // the native path of `examples/famiglie.rs`, with the numbers of the same recipe
+    // the native path of `examples/families.rs`, with the numbers of the same recipe
     let mut ix = open();
     let (mut f, links) = analyse(&mut ix, &r.detect, &r.steps).unwrap();
     let fam = analyse_families(&mut ix, &mut f, &links, &r.detect, &r.fam).unwrap();
@@ -53,7 +53,7 @@ fn the_record_equals_the_native_one_and_is_deterministic() {
     assert!(!fam.arcs.is_empty(), "the series has arcs to prove");
     assert_eq!(got, want, "wasm path and native path");
 
-    // exactly what `examples/famiglie.rs` runs: default numbers, no recipe
+    // exactly what `examples/families.rs` runs: default numbers, no recipe
     let mut ix = open();
     let (p, steps) = (Params::default(), Steps::default());
     let (mut f, links) = analyse(&mut ix, &p, &steps).unwrap();

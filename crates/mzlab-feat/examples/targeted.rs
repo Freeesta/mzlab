@@ -1,6 +1,6 @@
 //! Targeted pass on a series of `.mzidx` files: hypotheses (parent x rules, plus decoys and real TPs of a synthetic truth), time, and the numbers.
 //!
-//!     cargo run --release -p mzlab-feat --example mirato -- <file.mzidx>... --truth verita.json [--esche] [--oracle] [--neg] [--rules FILE]
+//!     cargo run --release -p mzlab-feat --example targeted -- <file.mzidx>... --truth verita.json [--esche] [--oracle] [--neg] [--rules FILE]
 //!
 //! `--extra N` adds N invented masses (timing of thousands of hypotheses). The parent comes from the truth (`parent.ion` minus H, `parent.rt_obs`). `--esche` adds the decoy ions of the truth (invented rules, absent from the
 //! data) as imported masses; `--oracle` adds the true products as imported masses (the sensitivity of the extraction alone). Prints how many

@@ -44,20 +44,20 @@ name = "thermo_scandump"
 required-features = ["thermo"]
 
 [[example]]
-name = "thermo_banco"
+name = "thermo_bench"
 required-features = ["thermo"]
 
 [[example]]
-name = "thermo_sintetico"
+name = "thermo_synthetic"
 
 [[example]]
-name = "thermo_diagnosi"
+name = "thermo_diagnosis"
 required-features = ["thermo"]
 
 [[example]]
-name = "bruker_banco"
+name = "bruker_bench"
 required-features = ["bruker"]
 
 [[example]]
-name = "sintetici"
+name = "synthetic"
 required-features = ["tutte"]

@@ -1,5 +1,5 @@
 //! The module `aperti` reads an mzXML (docs/agenti/lettori-aperti.md): files built here in every form (32 and 64 bit, zlib or not, with and without `<index>`, flat and nested), SRM scans,
-//! the `metodo/1` document and the header of the mzML we write. The real-data parity is in `aperti_mzxml_hostile.rs` (it needs `MZLAB_DATI`).
+//! the `metodo/1` document and the header of the mzML we write. The real-data parity is in `open_mzxml_hostile.rs` (it needs `MZLAB_DATI`).
 #![cfg(feature = "aperti")]
 
 mod common;
@@ -131,7 +131,7 @@ fn recognises_by_bytes_not_by_name() {
     assert!(mzlab_lettori::riconosci(&mut good).is_some_and(|v| v.id == "mzxml"));
     let mut other = file_set("x.mzXML", b"<?xml version=\"1.0\"?><altro/>".to_vec());
     assert!(mzlab_lettori::riconosci(&mut other).is_none());
-    let v = (mzlab_lettori::aperti::mzxml::ENTRY.riconosci)(&mut good);
+    let v = (mzlab_lettori::open::mzxml::ENTRY.riconosci)(&mut good);
     assert_eq!(v, Fiducia::Si);
 }
 

@@ -1,7 +1,7 @@
 //! The inputs of the detection estimate (`trace_stima`) and the native peak memory of the detection of each index, for the fit of its coefficients:
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example stima_detect -- FILE.mzidx...
-//!     cargo run --release -p mzlab-feat-wasm --example stima_detect -- --fixture OUT.mzidx
+//!     cargo run --release -p mzlab-feat-wasm --example estimate_detect -- FILE.mzidx...
+//!     cargo run --release -p mzlab-feat-wasm --example estimate_detect -- --fixture OUT.mzidx
 //!
 //! One line per file: MS1 scans, peaks, peaks at or above the floor, the estimate (MB) and the growth of the resident memory while detecting (MB).
 //! `--fixture` writes the index of `tests/dati/stima_detect.json` instead, for the test of the `.wasm` (`tests/test_stima_detect_wasm.py`).

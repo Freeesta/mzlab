@@ -26,7 +26,7 @@ Flags are automatic suspects, not verdicts: `non`/`invece`/`puoi`/`consigliamo`/
 - **Sites** (`tools/inventario_tooltip.py`): `title=`, `.title =`, `setAttribute('title')`, `data-tip`/`data-tiph`, `tip:` fields, `data-i18n-title` and SVG `<title>` in `mzlab/web`, `TP_Mine/js`, `TP_Mine/lazy`, `flow/lazy`; keys resolved in `lang/it` and `lang/en`.
 - **Catalog keys** ending `.title`, `.tip`, `.tt`, `.hint` or `Title` (and `tip.*`) that no site names are added as `catalog-only` (headings, tour, help and dialog titles are not tooltips and are left out).
 - **Flow**: the hover help of each step (`doc`) and parameter (`x-tip`, else `description`) from `docs/schemi/steps-*.json` (English only).
-- **aria-label**: the program's tooltip reads only `title`, `data-tip` and `data-tiph` (`eventi.js`), so an `aria-label` is hover text only where code copies it into a `title` (those `.title =` sites are in the list).
+- **aria-label**: the program's tooltip reads only `title`, `data-tip` and `data-tiph` (`tooltip.js`), so an `aria-label` is hover text only where code copies it into a `title` (those `.title =` sites are in the list).
 - **Desktop app**: it serves the same pages; `crates/mzlab-desktop/shim` and `src` set no tooltip text (the window title is the page title).
 
 | source | entries |
@@ -58,7 +58,7 @@ Check: scanner sites 594 = 584 listed + 10 excluded (appendix A); nothing is ski
 | 11 |  | canali.miss.title | mzlab/web/canali.js:278 | Questo file non ha il canale | This file does not have the channel | 35 | non |
 | 12 |  | ibk.chip.title+fondo.chip.auto.title | mzlab/web/grafici.js:223 | Toglie la media del tratto da tutta la traccia // Linea di base SNIP: fondo minimo e massimo tolto, in cps | Subtracts the mean of the stretch from the whole trace // SNIP baseline: minimum and maximum background removed, in cps | 119 | >90 |
 | 13 |  | tip.area | mzlab/web/grafici.js:444 | Area {area} conteggi·s · intensità {y} | Area {area} counts·s · intensity {y} | 76 | dinamico |
-| 14 | ${t} |  | mzlab/web/pannelli.js:1035 | ${t} |  | 4 | dinamico |
+| 14 | ${t} |  | mzlab/web/pannelli.js:1040 | ${t} |  | 4 | dinamico |
 | 15 | XIC | panel.xic.off+panel.xic.title | mzlab/web/pannelli.js:294 | Non disponibile per MS2 // Finestra di m/z di uno ione | Not available for MS2 // m/z window of one ion | 54 | non |
 | 16 |  | panel.max.exit+panel.max.title | mzlab/web/pannelli.js:334 | Esci dallo schermo intero (Esc) // Schermo intero: ingrandisce questo pannello (Esc per uscire) | Exit full screen (Esc) // Full screen: enlarges this panel (Esc to exit) | 95 | >90 |
 | 17 |  | panel.num.title | mzlab/web/pannelli.js:49 | Tasto {n}: attiva il pannello | Key {n}: activates the panel | 29 | dinamico |
@@ -186,8 +186,8 @@ Check: scanner sites 594 = 584 listed + 10 excluded (appendix A); nothing is ski
 | 139 | scala dei colori | ctl.map.scale.title | mzlab/web/pannelli.js:741 | La radice quadrata fa emergere i segnali deboli | The square root brings out weak signals | 47 |  |
 | 140 |  |  | mzlab/web/pannelli.js:827 | tip |  | 3 |  |
 | 141 |  | panel.pairArrow.title | mzlab/web/pannelli.js:88 | Lo spettro sotto è del precursore scelto sopra | The spectrum below belongs to the precursor chosen above | 56 |  |
-| 142 | ${I18N.t( | xic.adduct.title | mzlab/web/pannelli.js:969 | Rende m/z dello ione dalla formula neutra e dall'addotto | Turns the neutral formula and adduct into the ion m/z | 56 |  |
-| 143 | × | xic.remove.title | mzlab/web/pannelli.js:969 | Togli questo ione | Remove this ion | 17 |  |
+| 142 | ${I18N.t( | xic.adduct.title | mzlab/web/pannelli.js:974 | Rende m/z dello ione dalla formula neutra e dall'addotto | Turns the neutral formula and adduct into the ion m/z | 56 |  |
+| 143 | × | xic.remove.title | mzlab/web/pannelli.js:974 | Togli questo ione | Remove this ion | 17 |  |
 | 144 |  |  | mzlab/web/scroll.js:134 | t |  | 1 |  |
 | 145 | &#9662; | sub.chip.title | mzlab/web/sottrazione.js:131 | Cambia file, fattore, normalizzazione e tolleranza | Change file, factor, normalisation and tolerance | 50 |  |
 | 146 | ${EH(T( | sub.next | mzlab/web/sottrazione.js:131 | File successivo | Next file | 15 |  |

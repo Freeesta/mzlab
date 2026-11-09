@@ -31,6 +31,28 @@ try:
         pg = r.page(p)
         pg.add_script_tag(path=AXE)
         step("axe: start screen (no file)", lambda: axe_ok(pg))
+        # Before the main page loads files: WebKit on macOS shares the origin's stored files and session between profiles, and a restored session keeps the MSn file from opening
+        def msn():
+            from lib_hr import synth
+            from TP_Mine.tests.msn_synth import write_msn, caffeine_nodes
+            F = write_msn(synth("a11ymsn") / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
+            q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
+            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            try:
+                q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop", timeout=120000)
+                q.set_input_files("#pick", [str(F)])
+                q.wait_for_function("[...document.querySelectorAll('#flist input[data-k=use]')].some(i => (i.closest('tr,li,label,div') || i).textContent.includes('MSn_synth_t01'))", timeout=180000)
+                q.click("text=Carica dati"); q.wait_for_function("E.files.some(f => f.kind === 'infusion')", timeout=90000)
+                q.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'))")
+                try: q.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
+                except Exception:   # where the window stopped: the file kinds and the text of the output
+                    print("MSN-STATE", q.evaluate("[E.files.map(f => f.kind + (f.dda ? '/dda' : '')), String((document.querySelector('#mt-out') || {}).textContent).slice(0, 400)]")); raise
+                q.add_script_tag(path=AXE); axe_ok(q, "#bigdlg")
+            finally:   # the files and the session of this page go, so that the main page does not find them in the shared store
+                try: q.evaluate("QQRESET.wipe('files')")
+                except Exception as e: print("MSN-WIPE", str(e)[:200])
+                q.close()
+        step("axe: MSn tree window", msn)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MRM-t0")]); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(1200)
         pg.add_script_tag(path=AXE)
@@ -64,20 +86,6 @@ try:
             assert pg.evaluate("document.querySelectorAll('#bigbody table tr').length") > 1, "the integration table must list the peak"
             axe_ok(pg, "#bigdlg"); pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#bigdlg').open")
         step("axe: integration window", integration)
-        def msn():
-            from lib_hr import synth
-            from TP_Mine.tests.msn_synth import write_msn, caffeine_nodes
-            F = write_msn(synth("a11ymsn") / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
-            q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
-            q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-            try:
-                q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop", timeout=120000)
-                q.set_input_files("#pick", [str(F)]); q.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=1", timeout=180000)
-                q.click("text=Carica dati"); q.wait_for_function("E.files.length>=1", timeout=90000)
-                q.evaluate("COMP.tree(E.files.findIndex(f=>f.kind==='infusion'))"); q.wait_for_selector("#mt-tbl tr[data-n]", timeout=60000)
-                q.add_script_tag(path=AXE); axe_ok(q, "#bigdlg")
-            finally: q.close()
-        step("axe: MSn tree window", msn)
         def esc_closes():
             pg.evaluate("E.panels.find(p=>p.type==='chrom').cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert not pg.evaluate("!!document.querySelector('#tdati[open]')"), "Esc must close the data table"

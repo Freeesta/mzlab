@@ -1,4 +1,4 @@
-//! A `.mzML.gz` in the app and on the site. The app reads it through the readers of the registry (`aperti/mzml_gz.rs`: inflated into memory); the site inflates it piece by
+//! A `.mzML.gz` in the app and on the site. The app reads it through the readers of the registry (`open/mzml_gz.rs`: inflated into memory); the site inflates it piece by
 //! piece into OPFS with `mzlab_core::gunzip` (the `Gunzip` of the engine `.wasm`, fed by `rust-carica.js` `putGz`) and opens the mzML it wrote as a plain upload. The mzML of the
 //! site must be the original byte for byte, and its TIC, BPC, XIC, spectra and scans the app's answers for the `.gz`, exactly. Synthetic run, two gzip members.
 use flate2::write::GzEncoder;

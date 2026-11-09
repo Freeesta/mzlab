@@ -1,6 +1,6 @@
 //! Seconds of each part of the `features.detect` step of `flow run` on one index (bench of the step, not a test):
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example det_fasi -- FILE.mzidx [--rounds N]
+//!     cargo run --release -p mzlab-feat-wasm --example det_phases -- FILE.mzidx [--rounds N]
 //!
 //! Prints the best of N rounds (default 5) of: the recipe with the estimated minimum height, the detection with families (`run::detect`) and the
 //! weak candidates (`run::detect_weak`), and the SHA-256 of the two outputs so a change can be shown not to move them.

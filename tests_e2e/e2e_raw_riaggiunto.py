@@ -1,5 +1,5 @@
 # e2e_raw_riaggiunto: a Thermo .raw given again (the same file: name, size, date) keeps its one sample (shell.js rawToMzml, nativo.js cached): no second row, no second copy or index in
-# OPFS, both in the same page and after a reload of the page (the session restored). Synthetic .raw (crates/mzlab-lettori examples/sintetici, invented numbers).
+# OPFS, both in the same page and after a reload of the page (the session restored). Synthetic .raw (crates/mzlab-lettori examples/synthetic, invented numbers).
 # Needs the site and cargo: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_raw_riaggiunto.py
 import os, sys, tempfile, shutil, subprocess; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
@@ -9,7 +9,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:600]))
 D = Path(tempfile.mkdtemp(prefix="rawri_"))
-subprocess.run(["cargo", "run", "-q", "--release", "-p", "mzlab-lettori", "--example", "sintetici", "--", str(D)], cwd=str(ROOT), check=True)
+subprocess.run(["cargo", "run", "-q", "--release", "-p", "mzlab-lettori", "--example", "synthetic", "--", str(D)], cwd=str(ROOT), check=True)
 RAW = D / "thermo" / "synt.raw"
 # every file of OPFS mzlab/ with its size
 WALK = """async () => { const out = {}; const walk = async (h, p) => { for await (const [n, c] of h.entries()) { if (c.kind === 'file') out[p + n] = (await c.getFile()).size; else await walk(c, p + n + '/'); } };
