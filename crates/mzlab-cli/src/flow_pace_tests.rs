@@ -1,8 +1,8 @@
 //! Progress of the native index build (`flow_pace::build_index_with`) and of `write_mzml_with`: monotone, at most one report per 1 %, ends at the total, and
 //! the file made is the same bytes as without a callback.
 
-use mzlab_core::lettori_mzml::Peaks;
 use mzlab_core::mzmlwrite::Options;
+use mzlab_core::readers_mzml::Peaks;
 
 use crate::convert_fixtures::{folder, makers, wiff};
 
@@ -71,7 +71,7 @@ fn the_hash_taken_while_writing_is_the_hash_of_the_file_and_the_memo_of_the_inpu
     let size = f.metadata().unwrap().len();
     assert_eq!(
         given,
-        Some(mzlab_core::metodo::sha1_hex(&mut f, size).unwrap())
+        Some(mzlab_core::method::sha1_hex(&mut f, size).unwrap())
     );
     let b = d.join("b.mzML");
     crate::flow_base::write_mzml_with(&src, None, &b, how, &mut |_, _| {}, &None).unwrap();
@@ -116,7 +116,7 @@ fn the_fingerprints_taken_beside_the_scans_change_no_byte_and_a_cancel_stops() {
         crate::build_index_of(&p, "", &a, budget).unwrap();
         let mut fs = crate::flow_set::file_set(&p).unwrap();
         let imp = mzlab_core::upload::impronte(&mut fs).unwrap();
-        let mut l = mzlab_lettori::apri(fs, &mzlab_core::lettori::Limits::desktop()).unwrap();
+        let mut l = mzlab_lettori::apri(fs, &mzlab_core::readers::Limits::desktop()).unwrap();
         let mut out = std::io::Cursor::new(Vec::new());
         mzlab_core::upload::index_reader_with(
             &mut *l,

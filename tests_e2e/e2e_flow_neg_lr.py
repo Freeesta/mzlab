@@ -69,7 +69,7 @@ def sample(n, t):
     return {"composto": "", "concentrazione": None, "file": n + ".mzML", "istd": False, "note": "", "ordine_iniezione": NAMES.index(n) + 1, "replica": 1, "serie": "", "sha256": "", "tempo": t, "tempo_confermato": False,
             "tempo_min": t, "tipo": kind, "tipo_bianco": None, "unita": None, "unita_tempo": "min"}
 # the series in the order of injection: the browser runner lists the indexes of OPFS by name, and every step puts the samples in the order of the files
-# of the table by name (`campioni::order_like`), so both sides give the same files whatever the order
+# of the table by name (`samples::order_like`), so both sides give the same files whatever the order
 ORDER = NAMES
 SAMPLES = json.dumps({"campioni": [sample(n, TIMES[NAMES.index(n)]) for n in ORDER], "schema": "campioni/2"}, separators=(",", ":"))
 

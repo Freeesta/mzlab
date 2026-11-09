@@ -1,7 +1,7 @@
 //! `chem::breaks`: the bond breaks of a public molecule (ethyl indole-3-carboxylate) on a graph built by hand: M+H 190.08626, the acid 162.05495
 //! (ester bond), the acylium 144.04439 (the acid piece without its OH, two hydrogens moved) and a node no piece gives.
 
-use mzlab_core::msngrafo::{Edge, GNode, Graph, SpettroG};
+use mzlab_core::msngraph::{Edge, GNode, Graph, SpettroG};
 use mzlab_feat::chem::breaks::{breaks, Params};
 
 const SMILES: &str = "CCOC(=O)c1c[nH]c2ccccc12";

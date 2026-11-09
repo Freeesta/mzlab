@@ -3,7 +3,7 @@
 //! bytes per record `u16` at 4, number of descriptors `u16` at 6), 48-byte descriptors (sequence, type, offset, name of 42 bytes), then the records.
 
 use super::folder::{f32_at, u16_at, u32_at};
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 const PREAMBLE: usize = 32;
 const DESCR: usize = 48;

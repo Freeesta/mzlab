@@ -1,8 +1,8 @@
 //! The Bruker timsTOF reader against the real folders and the mzML that msconvert (ProteoWizard, `combineIonMobilitySpectra`) made of them (private data repository, `MZLAB_DATI`; skipped without it).
 #![cfg(feature = "bruker")]
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::{self, Item, Spectrum};
+use mzlab_core::readers::{FileSet, Limits, Member};
 use std::path::Path;
 
 #[path = "../../../tools/dati_percorsi.rs"]

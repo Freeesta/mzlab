@@ -1,8 +1,8 @@
 //! The outputs after the reader that `--downstream` adds to every scan row (docs/agenti/scandump.md): the mzML as written, the filter of `rawfilter`, the `.mzidx` row and the entry node of `msngrafo/1`.
 use std::io::{Cursor, Write};
 
-use mzlab_core::lettori::Reader;
-use mzlab_core::{lettori_mzml, msnalbero, mzidx_lettore, rawfilter::MzmlFilter};
+use mzlab_core::readers::Reader;
+use mzlab_core::{msntree_build, mzidx_reader, rawfilter::MzmlFilter, readers_mzml};
 use opentfraw::RawFileReader;
 use serde_json::{json, Map, Value};
 
@@ -110,7 +110,7 @@ pub fn add_downstream(
 ) {
     let entries = l.index(0).expect("index").to_vec();
     let mut mzml = Vec::new();
-    lettori_mzml::scrivi(l, 0, &mut mzml, &mut |_, _| {}).expect("mzML");
+    readers_mzml::scrivi(l, 0, &mut mzml, &mut |_, _| {}).expect("mzML");
     let written = precursors_of(&String::from_utf8_lossy(&mzml));
     let mut filtered = Vec::new();
     {
@@ -119,7 +119,7 @@ pub fn add_downstream(
         f.flush().expect("flush");
     }
     let refs = precursors_of(&String::from_utf8_lossy(&filtered));
-    let table = mzidx_lettore::righe(l, 0).expect("rows");
+    let table = mzidx_reader::righe(l, 0).expect("rows");
     for (k, (row, meta)) in scans.iter_mut().enumerate() {
         let mut d = Map::new();
         d.insert("filter".into(), entries[k].filtro.clone().into());
@@ -144,7 +144,7 @@ pub fn add_downstream(
         }
         let chain = chain_of(&entries[k].filtro);
         if meta.ms_level > 1 && !chain.is_empty() {
-            let node = msnalbero::node_id(&chain);
+            let node = msntree_build::node_id(&chain);
             let c: Vec<Value> = chain
                 .iter()
                 .map(|(mz, a, e)| json!({"mz": mz, "activation": a, "energy": e}))

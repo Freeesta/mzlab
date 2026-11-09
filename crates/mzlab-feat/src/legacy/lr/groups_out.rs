@@ -3,7 +3,7 @@
 //! A series with fewer than two conditions has no block.
 
 use crate::sortc::SortC;
-use mzlab_core::campioni::Sample;
+use mzlab_core::samples::Sample;
 
 use super::super::series::FileIn;
 use super::{cond, Entry, LrDig};

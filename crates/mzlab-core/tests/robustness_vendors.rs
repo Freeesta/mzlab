@@ -15,8 +15,8 @@ use std::sync::{Mutex, OnceLock};
 
 use agilent_synth::lc;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{self, Limits};
-use mzlab_core::lettori_mzml;
+use mzlab_core::readers::{self, Limits};
+use mzlab_core::readers_mzml;
 use robustness::*;
 
 #[global_allocator]
@@ -41,8 +41,8 @@ fn keep<T>(r: Result<T>, keys: &mut Vec<String>) -> Option<T> {
 /// Everything the page and the CLI read from a set: open, index, three scans and their headers, the first trace, the method, the mzML writer.
 fn read_all(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
-    let _ = lettori::riconosci(&mut fileset(m));
-    let Some(mut l) = keep(lettori::apri(fileset(m), &Limits::sito()), &mut k) else {
+    let _ = readers::riconosci(&mut fileset(m));
+    let Some(mut l) = keep(readers::apri(fileset(m), &Limits::sito()), &mut k) else {
         return k;
     };
     for c in 0..l.samples().len().min(3) {
@@ -61,7 +61,7 @@ fn read_all(m: &[(String, Vec<u8>)]) -> Vec<String> {
         }
         keep(l.method(c), &mut k);
         keep(
-            lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}),
+            readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}),
             &mut k,
         );
     }
@@ -205,13 +205,13 @@ fn the_seeds_read_whole() {
         MET.lock().unwrap().clear();
         let mut set = fileset(&seed);
         assert_eq!(
-            lettori::riconosci(&mut set).map(|v| v.id),
+            readers::riconosci(&mut set).map(|v| v.id),
             Some("agilent-d"),
             "{name}"
         );
         let k = read_all(&seed);
         assert!(k.is_empty(), "{name}: {:?}", MET.lock().unwrap());
-        let mut l = lettori::apri(fileset(&seed), &Limits::sito()).unwrap();
+        let mut l = readers::apri(fileset(&seed), &Limits::sito()).unwrap();
         let ix = l.index(0).unwrap().to_vec();
         // the MRM visits of the QqQ become traces, the Q-TOF centroids scans
         let read = if name == "qqq" {
@@ -223,7 +223,7 @@ fn the_seeds_read_whole() {
     }
     for (stem, pair) in wiff_pairs() {
         assert_eq!(
-            lettori::riconosci(&mut fileset(pair)).map(|v| v.id),
+            readers::riconosci(&mut fileset(pair)).map(|v| v.id),
             Some("sciex-wiff"),
             "{stem}"
         );

@@ -6,7 +6,7 @@ use mzlab_core::iteminfo::{facts_from, item_info, Meta};
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::mzml::{self, Item};
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::sorgente::Scansioni;
+use mzlab_core::source::Scansioni;
 use mzlab_core::upload::prepare;
 
 fn b64(vals: &[f64]) -> String {

@@ -1,7 +1,7 @@
 //! Golden tests of the low-resolution peak pipeline on synthetic MRM-like traces (noisy Gaussians sampled every 0.05 s):
 //! one peak gets one label, the integrated area stays within 1 % of the analytic one, two overlapping peaks stay two, flat noise has none.
 
-use mzlab_core::etichette_picchi::select;
+use mzlab_core::peak_labels::select;
 use mzlab_core::peakq_lr::{lr_edges, LrParams};
 
 const DT: f64 = 0.05 / 60.0;

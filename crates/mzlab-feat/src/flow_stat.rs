@@ -8,7 +8,7 @@ use crate::stat::{
     StatsOpts,
 };
 use crate::store::{origin_from_meta, read_table};
-use mzlab_core::disegno;
+use mzlab_core::drawing;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 
@@ -35,7 +35,7 @@ pub fn stats_text(
         return Err(Error::new("error.badStatInput"));
     }
     let cols = columns(&inputs, &samples_of(samples)?);
-    let design = disegno::from_json(design)?;
+    let design = drawing::from_json(design)?;
     let lay = layout_from_design(&cols, &design);
     let pairs = comparisons_from_design(&design, &lay)?;
     let matrix: Vec<Vec<f64>> = (0..t.len())

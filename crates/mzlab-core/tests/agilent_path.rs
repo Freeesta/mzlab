@@ -7,9 +7,9 @@
 mod agilent_synth;
 
 use agilent_synth::{encode, sample};
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 
-fn apri(scan: Vec<u8>, peak: Vec<u8>) -> mzlab_core::error::Result<Box<dyn lettori::Reader>> {
+fn apri(scan: Vec<u8>, peak: Vec<u8>) -> mzlab_core::error::Result<Box<dyn readers::Reader>> {
     open_with(scan, "MSPeak.bin", peak)
 }
 
@@ -18,7 +18,7 @@ fn open_with(
     scan: Vec<u8>,
     points: &str,
     peak: Vec<u8>,
-) -> mzlab_core::error::Result<Box<dyn lettori::Reader>> {
+) -> mzlab_core::error::Result<Box<dyn readers::Reader>> {
     let members = [
         ("x.D/AcqData/MSScan.bin".to_string(), scan),
         (format!("x.D/AcqData/{points}"), peak),
@@ -31,7 +31,7 @@ fn open_with(
         sha1: None,
     })
     .collect();
-    lettori::apri(FileSet { membri: members }, &Limits::sito())
+    readers::apri(FileSet { membri: members }, &Limits::sito())
 }
 
 /// A GC/MS run whose scans after the first are MRM visits.
@@ -78,7 +78,7 @@ fn the_module_reads_mrm_visits_as_srm_chromatograms() {
 }
 
 /// The scans and the TIC of a plain GC/MS run, as text: the engine and `agilent_ext` must give the same, so both builds compare it with one pinned value.
-fn reading(l: &mut Box<dyn lettori::Reader>) -> String {
+fn reading(l: &mut Box<dyn readers::Reader>) -> String {
     let ix = l.index(0).unwrap().to_vec();
     let mut out = String::new();
     for (j, v) in ix.iter().enumerate() {

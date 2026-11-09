@@ -5,7 +5,7 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::{parse, Value};
-use mzlab_core::msngrafo;
+use mzlab_core::msngraph;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{io, read_one, Exec, FileRunner};
@@ -112,7 +112,7 @@ fn graph_of(r: &FileRunner, job: &Job) -> Result<(Value, String)> {
 /// The library text of the graph `g` (written as `json`) with the parameters of the step.
 pub(crate) fn library_text(g: &Value, json: &str, job: &Job) -> Result<String> {
     let text_param = |n: &str, d: &'static str| param(job, n).and_then(Value::str).unwrap_or(d);
-    msngrafo::library_text(
+    msngraph::library_text(
         g,
         json,
         (
@@ -143,7 +143,7 @@ pub(crate) fn table_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let view = param(job, "view")
         .and_then(Value::str)
         .unwrap_or("modifications");
-    let text = msngrafo::table_text(&g, view, flag(job, "clean"));
+    let text = msngraph::table_text(&g, view, flag(job, "clean"));
     let out = r.work.join(format!("{}.csv", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Report)

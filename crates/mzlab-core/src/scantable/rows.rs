@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use super::inerte::{extra_inerte, tic_read};
+use super::inert::{extra_inerte, tic_read};
 use super::*;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, SpectrumExtra};
@@ -373,7 +373,7 @@ impl Rows {
             kind: (level > 1)
                 .then(|| super::kind_of(h, filt))
                 .flatten()
-                .or_else(|| crate::wiff::modi::scan_type_of(h)),
+                .or_else(|| crate::wiff::modes::scan_type_of(h)),
             mob: super::mobility_of_header(h),
             filter: self.intern(filt),
             profile: h.contains("accession=\"MS:1000128\""),
@@ -442,7 +442,7 @@ impl Rows {
             kind: (level > 1)
                 .then(|| super::kind_of("", filt))
                 .flatten()
-                .or_else(|| crate::wiff::modi::scan_type_param(&extra.params)),
+                .or_else(|| crate::wiff::modes::scan_type_param(&extra.params)),
             filter: self.intern(filt),
             profile: sp.profile,
             parent: None,

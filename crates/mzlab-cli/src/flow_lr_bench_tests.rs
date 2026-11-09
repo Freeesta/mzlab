@@ -141,7 +141,7 @@ fn aligned(d: &Path, centroid: bool, rule: bool, tag: &str) -> Rows {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    let samples = mzlab_core::campioni::to_json(&mzlab_core::campioni::proponi(&files));
+    let samples = mzlab_core::samples::to_json(&mzlab_core::samples::proponi(&files));
     std::fs::write(d.join("samples.json"), samples).unwrap();
     let raw: Vec<String> = names
         .iter()

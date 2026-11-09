@@ -2,7 +2,7 @@
 //! result or an error, never panic or loop. Kept apart from `ingressi.rs` (which `mzlab-lib` includes in its tests) because it needs `mzlab-lettori`;
 //! `crates/mzlab-lettori/tests/fuzz_readers.rs` runs the same functions on a few inputs in `cargo test`.
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 fn insieme(membri: Vec<(&str, Vec<u8>)>) -> FileSet {
     FileSet {

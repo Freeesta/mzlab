@@ -1,19 +1,19 @@
 //! The routes that read a file besides its index, from the mzML and from the reader (helpers of `readers_mzidx.rs`).
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori;
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::readers;
 use mzlab_core::routes::{Query, Routes};
-use mzlab_core::{fileroutes, itemroutes, lettori_mzml, lr};
+use mzlab_core::{fileroutes, itemroutes, lr, readers_mzml};
 
-pub fn mzml_of(l: &mut dyn lettori::Reader, c: usize) -> Vec<u8> {
-    lettori_mzml::scrivi(l, c, Vec::new(), &mut |_, _| {}).unwrap()
+pub fn mzml_of(l: &mut dyn readers::Reader, c: usize) -> Vec<u8> {
+    readers_mzml::scrivi(l, c, Vec::new(), &mut |_, _| {}).unwrap()
 }
 
-/// A vendor file as the engine reads it: the mzML without its spectra (`lettori_mzml::guscio`) and the reader for the scans.
+/// A vendor file as the engine reads it: the mzML without its spectra (`readers_mzml::guscio`) and the reader for the scans.
 struct Nativo<'a> {
     g: Vec<u8>,
-    l: &'a mut dyn lettori::Reader,
+    l: &'a mut dyn readers::Reader,
     c: usize,
 }
 
@@ -21,7 +21,7 @@ impl ReadAt for Nativo<'_> {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
         self.g.read_at(off, buf)
     }
-    fn reader(&mut self) -> Option<(&mut dyn lettori::Reader, usize)> {
+    fn reader(&mut self) -> Option<(&mut dyn readers::Reader, usize)> {
         Some((&mut *self.l, self.c))
     }
 }
@@ -32,10 +32,10 @@ pub fn same_routes(
     mzml: &[u8],
     a: &[u8],
     b: &[u8],
-    l: &mut dyn lettori::Reader,
+    l: &mut dyn readers::Reader,
     c: usize,
 ) {
-    let g = lettori_mzml::guscio(l, c).unwrap();
+    let g = readers_mzml::guscio(l, c).unwrap();
     let (sa, sb) = (mzml.len() as u64, g.len() as u64);
     let mut ma = Mzml::new(mzml.to_vec(), sa);
     let mut mb = Mzml::new(Nativo { g, l, c }, sb);

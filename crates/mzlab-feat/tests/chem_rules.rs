@@ -1,7 +1,7 @@
 //! The structure side of the rules of `fragrules/1`: each group and site on a small synthetic molecule, the products of the rules that compute one,
 //! and the counterexamples where a rule must stay silent. Synthetic structures only.
 
-use mzlab_core::msngrafo::{tabella_regole, Expectation};
+use mzlab_core::msngraph::{tabella_regole, Expectation};
 use mzlab_feat::chem::graph::Mol;
 use mzlab_feat::chem::rules::{attese, unknown_names};
 

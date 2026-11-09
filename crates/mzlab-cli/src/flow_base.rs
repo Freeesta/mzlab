@@ -12,10 +12,10 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::hashio::HashWrite;
 use mzlab_core::idxread::Index;
-use mzlab_core::lettori::Limits;
-use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::{Options, ZLIB_LEVEL};
+use mzlab_core::readers::Limits;
+use mzlab_core::readers_mzml::{Conversion, Peaks};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
@@ -107,7 +107,7 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let mut index = open_gated(&path, &gate)?;
     let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut index)?)?;
     let name = r.source_name(input);
-    // refused with its numbers before it grows past the working memory of this job, as the page refuses it (`stima::detect_fits`)
+    // refused with its numbers before it grows past the working memory of this job, as the page refuses it (`estimate::detect_fits`)
     mzlab_feat_wasm::estimate::detect_fits(
         &mut index,
         &recipe,

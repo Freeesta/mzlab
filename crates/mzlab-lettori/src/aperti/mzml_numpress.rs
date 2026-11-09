@@ -1,5 +1,5 @@
 //! An mzML whose arrays are MS-Numpress (msconvert `--numpressLinear/--numpressPic/--numpressSlof/--numpressAll`), as a `Lettore`. The engine of the page refuses it
-//! (`err.file.numpress`); the module reads it and `lettori_mzml::scrivi` writes it again as a plain mzML (zlib) in OPFS (rule R, docs/agenti/lettori-modulo.md).
+//! (`err.file.numpress`); the module reads it and `readers_mzml::scrivi` writes it again as a plain mzML (zlib) in OPFS (rule R, docs/agenti/lettori-modulo.md).
 //! The index comes from one pass over the offsets (`mzlab_core::scantable`, the headers only); `scansione(c, k)` reads the bytes of spectrum `k` and gives them to `mzml::parse`,
 //! whose numpress decoding is on in this build (`mzlab_core::numpress`, feature `estesi`). Reference of the codecs: the MS-Numpress documentation; the code is written from it.
 
@@ -7,14 +7,14 @@ use std::cell::RefCell;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{
-    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
-    Sample, ScanEntry, CONTRATTO,
-};
-use mzlab_core::metodo::{self, sha1_hex};
+use mzlab_core::method::{self, sha1_hex};
 use mzlab_core::mzml::{self, ChromKind, Chromatogram, Item, Spectrum};
 use mzlab_core::mzmlhead::{Chrom, Mzml};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::readers::{
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
+};
 use mzlab_core::scantable::{self, Row};
 
 use super::mzml_header::{extra_di, header_from, param_list};
@@ -264,9 +264,9 @@ impl NumpressReader {
             h.sources = vec![self.name.clone()];
             h.source_sha1 = self.sha1.clone().flatten().into_iter().collect();
         }
-        if let Some(doc) = metodo::from_userparam(&head) {
-            h.run_params.retain(|(k, _)| k != metodo::USERPARAM);
-            h.run_params.push((metodo::USERPARAM.to_string(), doc));
+        if let Some(doc) = method::from_userparam(&head) {
+            h.run_params.retain(|(k, _)| k != method::USERPARAM);
+            h.run_params.push((method::USERPARAM.to_string(), doc));
         }
         Ok(h)
     }
@@ -360,7 +360,7 @@ impl Reader for NumpressReader {
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         let head = self.head_xml()?;
-        Ok(metodo::from_userparam(&head).unwrap_or_else(|| "{}".to_string()))
+        Ok(method::from_userparam(&head).unwrap_or_else(|| "{}".to_string()))
     }
 
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {

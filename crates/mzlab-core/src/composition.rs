@@ -12,7 +12,7 @@ use crate::isoscore::SI;
 use crate::isoscore::{combined, fragment_constraint, isotope_score, Frag, IsoOpts, IsoScore};
 use crate::json::{round, Out};
 
-mod griglia;
+mod grid;
 
 pub type Counts = Vec<(String, i64)>;
 
@@ -495,7 +495,7 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
     } else {
         o.tol / 1000.0
     }) * zf.abs();
-    let size = griglia::narrow(&mut els, par.as_ref(), (!o.uncut).then_some(t + tol_da))?;
+    let size = grid::narrow(&mut els, par.as_ref(), (!o.uncut).then_some(t + tol_da))?;
     let get = |s: &str| els.iter().find(|(e, _)| e == s).map(|(_, r)| *r);
     let mh = mass_of("H").unwrap();
     let (cmin, cmax) = get("C").unwrap_or((0, (t / 12.0).floor() as i64));

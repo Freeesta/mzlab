@@ -1,6 +1,6 @@
-//! `campioni::ricollega`: files renamed, moved and replaced are found by SHA-256; by name only when a SHA-256 is unknown, and flagged.
+//! `samples::relink`: files renamed, moved and replaced are found by SHA-256; by name only when a SHA-256 is unknown, and flagged.
 
-use mzlab_core::campioni::{self, proponi, relink, Sample};
+use mzlab_core::samples::{self, proponi, relink, Sample};
 
 fn series(files: &[(&str, &str)]) -> Vec<Sample> {
     let v: Vec<(String, String, String)> = files
@@ -95,10 +95,10 @@ fn the_route_answers_in_json() {
     let cs = series(&[("a_t5.mzML", "aa")]);
     let input = format!(
         "{{\"campioni\":{},\"file\":[{{\"percorso\":\"/n/z.mzML\",\"sha256\":\"aa\"}}]}}",
-        campioni::to_json(&cs)
+        samples::to_json(&cs)
     );
     assert_eq!(
-        campioni::route("ricollega", &input).unwrap(),
+        samples::route("ricollega", &input).unwrap(),
         "{\"abbinati\":[{\"indice\":0,\"per_nome\":false,\"percorso\":\"/n/z.mzML\"}]}"
     );
 }

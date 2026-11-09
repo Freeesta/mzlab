@@ -1,7 +1,7 @@
 //! The precursor chain of an mzXML scan as the mzML we write has it (`SpectrumExtra::precursors`); used by `mzxml`.
 
-use mzlab_core::lettori::ScanEntry;
 use mzlab_core::mzmlwrite::{activation_from_name, Precursore};
+use mzlab_core::readers::ScanEntry;
 
 use super::mzxml::number;
 use super::mzxml_scan::{attr, Head};

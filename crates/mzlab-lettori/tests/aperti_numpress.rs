@@ -6,9 +6,9 @@
 mod common;
 
 use common::*;
-use mzlab_core::lettori::Limits;
 use mzlab_core::mzml;
 use mzlab_core::numpress::{self, Np};
+use mzlab_core::readers::Limits;
 
 #[test]
 fn every_codec_opens_and_round_trips_within_its_precision() {
@@ -226,8 +226,8 @@ fn numpress_chromatograms_are_read() {
 /// `convert.mzml` form (`indexedmzML`): reading it back gives the same scans as reading the plain mzML written from the same reader.
 #[test]
 fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
-    use mzlab_core::lettori_mzml;
     use mzlab_core::mzmlwrite::Options;
+    use mzlab_core::readers_mzml;
     let mut src = open(mzml_di(
         &scans(),
         Cod::Np {
@@ -241,9 +241,9 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
         numpress: true,
         ..Options::default()
     };
-    let plain = lettori_mzml::write_with(&mut *src, 0, Vec::new(), &mut |_, _| {}, np).unwrap();
+    let plain = readers_mzml::write_with(&mut *src, 0, Vec::new(), &mut |_, _| {}, np).unwrap();
     let indexed =
-        lettori_mzml::write_indexed(&mut *src, 0, Vec::new(), &mut |_, _| {}, np, &[]).unwrap();
+        readers_mzml::write_indexed(&mut *src, 0, Vec::new(), &mut |_, _| {}, np, &[]).unwrap();
     assert!(
         indexed.starts_with(b"<?xml") && String::from_utf8_lossy(&indexed).contains("<indexedmzML")
     );

@@ -4,7 +4,7 @@ use super::{error_json, Engine, JsReader};
 use js_sys::Function;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::labmethods;
-use mzlab_core::metodo::{self, Source, SrcFile};
+use mzlab_core::method::{self, Source, SrcFile};
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::ole::Ole;
 use wasm_bindgen::prelude::*;
@@ -20,7 +20,7 @@ const HEAD: usize = 1 << 20;
 impl Engine {
     /// SHA-1 (hex) of a file read through `read(offset, length)`.
     pub fn sha1_file(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
-        metodo::sha1_dyn(&mut JsReader { read }, size as u64).map_err(|e| error_json(&e))
+        method::sha1_dyn(&mut JsReader { read }, size as u64).map_err(|e| error_json(&e))
     }
 
     /// `{"sources":[{"name","sha1"}],"sample":N|null}` from the start of an mzML: the source files it says it was made from and the sample of its first nativeID.
@@ -33,7 +33,7 @@ impl Engine {
         let t = String::from_utf8_lossy(&b);
         let mut o = mzlab_core::json::Out::default();
         o.raw("{\"sources\":[");
-        for (i, (name, sha)) in metodo::source_sha1s(&t).iter().enumerate() {
+        for (i, (name, sha)) in method::source_sha1s(&t).iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" })
                 .raw("{\"name\":")
                 .str(name)
@@ -44,7 +44,7 @@ impl Engine {
         o.raw("],\"sample\":");
         match t
             .find("sample=")
-            .and_then(|p| metodo::sample_of_id(&t[p..]))
+            .and_then(|p| method::sample_of_id(&t[p..]))
         {
             Some(s) => o.int(s as i64),
             None => o.raw("null"),
@@ -56,7 +56,7 @@ impl Engine {
     pub fn mzml_metodo(&mut self, size: f64, read: Function) -> Result<String, JsValue> {
         let mut m = Mzml::new(JsReader { read }, size as u64);
         let head = m.run_head(DOC_MAX).map_err(|e| error_json(&e))?;
-        Ok(metodo::from_userparam(&head).unwrap_or_default())
+        Ok(method::from_userparam(&head).unwrap_or_default())
     }
 
     /// `metodo/1` of an mzML from its header and first scans (`""` when it has no header); a document the file carries wins.
@@ -98,7 +98,7 @@ impl Engine {
             files: vec![file],
             sample: Some(sample),
         };
-        Ok(mzlab_core::metodo_wiff::from_wiff(&ole, sample, &src))
+        Ok(mzlab_core::method_wiff::from_wiff(&ole, sample, &src))
     }
 
     /// `metodo/1` of an Agilent method folder `*.m` outside any run (`mzlab-core::agilent::quant`): `names` = the paths inside the folder, one per line,
@@ -144,6 +144,6 @@ impl Engine {
             }],
             ..Default::default()
         };
-        Ok(metodo::from_dam(m, &src))
+        Ok(method::from_dam(m, &src))
     }
 }
