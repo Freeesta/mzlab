@@ -44,11 +44,11 @@ pub(super) fn tags<'a>(s: &'a str, f: &mut dyn FnMut(Tag<'a>, usize) -> bool) {
     let mut i = 0;
     while let Some(p) = s.get(i..).and_then(|r| r.find('<')) {
         let a = i + p + 1;
-        let (mut q, mut citato) = (a, 0u8);
+        let (mut q, mut quoted) = (a, 0u8);
         while let Some(&c) = b.get(q) {
-            match (citato, c) {
-                (0, b'"' | b'\'') => citato = c,
-                (x, y) if x != 0 && x == y => citato = 0,
+            match (quoted, c) {
+                (0, b'"' | b'\'') => quoted = c,
+                (x, y) if x != 0 && x == y => quoted = 0,
                 (0, b'>') => break,
                 _ => {}
             }
@@ -95,7 +95,7 @@ pub(super) fn minutes(t: &str) -> Option<f64> {
 
 /// The start of a scan (everything before `<peaks`), borrowed from its text.
 #[derive(Default)]
-pub(super) struct Testa<'a> {
+pub(super) struct Head<'a> {
     pub(super) scan: Tag<'a>,
     /// (tag, value) of each `<precursorMz>`.
     pub(super) precursori: Vec<(Tag<'a>, &'a str)>,
@@ -106,8 +106,8 @@ pub(super) struct Testa<'a> {
 }
 
 /// The scan, its precursors, its `nameValue` pairs and its peaks, out of the text of a scan (at most `tetto` of each kind).
-pub(super) fn testa(t: &str, cap: usize) -> Result<Testa<'_>> {
-    let mut r = Testa::default();
+pub(super) fn head(t: &str, cap: usize) -> Result<Head<'_>> {
+    let mut r = Head::default();
     let text = |after: usize| {
         t.get(after..)
             .and_then(|x| x.split('<').next())
@@ -165,12 +165,7 @@ fn raw_values(text: &str, zlib: bool, limit: usize) -> Result<Vec<u8>> {
 }
 
 /// Decodes the `<peaks>` of a scan with the attributes `attr`: `precision`, `byteOrder`, `contentType`/`pairOrder`, `compressionType`; `conteggio` is the `peaksCount` of the scan.
-pub(super) fn peaks(
-    tag: Tag,
-    text: &str,
-    conteggio: Option<usize>,
-    limits: &Limits,
-) -> Result<Peaks> {
+pub(super) fn peaks(tag: Tag, text: &str, count: Option<usize>, limits: &Limits) -> Result<Peaks> {
     let width = match attr(tag, "precision") {
         "" | "32" => 4usize,
         "64" => 8,
@@ -188,7 +183,7 @@ pub(super) fn peaks(
         "zlib" => true,
         _ => return Err(xml("compressionType")),
     };
-    let cap = match conteggio {
+    let cap = match count {
         Some(n) => limits.ok_entries(n as u64)?,
         None => limits.entries,
     };
@@ -196,7 +191,7 @@ pub(super) fn peaks(
         .unwrap_or(usize::MAX)
         .min(cap.saturating_mul(2 * width));
     let b = raw_values(text, zlib, limit)?;
-    let n = (b.len() / (2 * width)).min(conteggio.unwrap_or(usize::MAX));
+    let n = (b.len() / (2 * width)).min(count.unwrap_or(usize::MAX));
     let (mut mz, mut intensities) = (Vec::new(), Vec::new());
     mz.try_reserve_exact(n)
         .map_err(|_| Error::memory_budget())?;

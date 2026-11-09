@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limits;
 
-fn guasto(m: &str) -> Error {
+fn broken(m: &str) -> Error {
     Error::new("err.dam.unreadable").with("message", format!("tdf_bin: {m}"))
 }
 
@@ -73,7 +73,7 @@ fn u32_le(b: &[u8], o: usize) -> Option<u32> {
 pub fn read_block(d: &mut dyn ReadAt, dim: u64, offset: u64, limits: &Limits) -> Result<Vec<u8>> {
     let mut h = [0u8; 8];
     if offset.checked_add(8).is_none_or(|e| e > dim) {
-        return Err(guasto("block past the end of the file"));
+        return Err(broken("block past the end of the file"));
     }
     d.read_at(offset, &mut h)?;
     let len = u64::from(u32_le(&h, 0).unwrap_or(0));
@@ -81,7 +81,7 @@ pub fn read_block(d: &mut dyn ReadAt, dim: u64, offset: u64, limits: &Limits) ->
         return Ok(h.to_vec());
     }
     if offset + len > dim || len > limits.byte {
-        return Err(guasto("block length"));
+        return Err(broken("block length"));
     }
     let mut b = vec![0u8; len as usize];
     d.read_at(offset, &mut b)?;
@@ -91,7 +91,7 @@ pub fn read_block(d: &mut dyn ReadAt, dim: u64, offset: u64, limits: &Limits) ->
 /// The peaks of a block. `num_scans` and `num_peaks` come from the `Frames` row and are checked against the block and the limits.
 pub fn decode(
     block: &[u8],
-    tipo: u32,
+    kind: u32,
     num_scans: u64,
     num_peaks: u64,
     limits: &Limits,
@@ -102,20 +102,20 @@ pub fn decode(
         return if num_peaks == 0 {
             Ok(Peaks::default())
         } else {
-            Err(guasto("empty block with peaks"))
+            Err(broken("empty block with peaks"))
         };
     }
     let ns = u64::from(u32_le(block, 4).unwrap_or(u32::MAX));
     limits.ok_entries(ns)?;
     // type 2 repeats the scan count of the frame table; type 1 lists the whole ramp
-    if tipo == 2 && ns != num_scans {
-        return Err(guasto("scan count differs from the frame table"));
+    if kind == 2 && ns != num_scans {
+        return Err(broken("scan count differs from the frame table"));
     }
     let num_scans = ns;
-    match tipo {
+    match kind {
         2 => decodifica2(&block[8..], num_scans as usize, num_peaks as usize, limits),
         1 => decodifica1(block, num_scans as usize, num_peaks as usize, limits),
-        _ => Err(guasto("unknown compression type")),
+        _ => Err(broken("unknown compression type")),
     }
 }
 
@@ -150,29 +150,29 @@ fn zstd_window(z: &[u8]) -> Option<u64> {
 }
 
 /// One zstd frame that must decompress to exactly `attesi` bytes (the frame header and the output are bounded by `limiti` before any allocation).
-pub fn zstd(z: &[u8], attesi: usize, limits: &Limits) -> Result<Vec<u8>> {
+pub fn zstd(z: &[u8], expected: usize, limits: &Limits) -> Result<Vec<u8>> {
     use std::io::Read;
-    if attesi as u64 > limits.byte || zstd_window(z).is_none_or(|w| w > limits.byte) {
-        return Err(guasto("zstd frame"));
+    if expected as u64 > limits.byte || zstd_window(z).is_none_or(|w| w > limits.byte) {
+        return Err(broken("zstd frame"));
     }
-    let mut dec = ruzstd::decoding::StreamingDecoder::new(z).map_err(|_| guasto("zstd"))?;
-    let mut inner = Vec::with_capacity(attesi);
+    let mut dec = ruzstd::decoding::StreamingDecoder::new(z).map_err(|_| broken("zstd"))?;
+    let mut inner = Vec::with_capacity(expected);
     (&mut dec)
-        .take(attesi as u64 + 1)
+        .take(expected as u64 + 1)
         .read_to_end(&mut inner)
-        .map_err(|_| guasto("zstd data"))?;
-    if inner.len() != attesi {
-        return Err(guasto("decompressed size"));
+        .map_err(|_| broken("zstd data"))?;
+    if inner.len() != expected {
+        return Err(broken("decompressed size"));
     }
     Ok(inner)
 }
 
 fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks> {
     let words = ns
-        .checked_add(np.checked_mul(2).ok_or_else(|| guasto("peaks"))?)
-        .ok_or_else(|| guasto("peaks"))?;
-    let attesi = words.checked_mul(4).ok_or_else(|| guasto("peaks"))?;
-    let inner = zstd(z, attesi, limits)?;
+        .checked_add(np.checked_mul(2).ok_or_else(|| broken("peaks"))?)
+        .ok_or_else(|| broken("peaks"))?;
+    let expected = words.checked_mul(4).ok_or_else(|| broken("peaks"))?;
+    let inner = zstd(z, expected, limits)?;
     let word = |i: usize| {
         u32::from(inner[i])
             | u32::from(inner[words + i]) << 8
@@ -187,12 +187,12 @@ fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks>
             (word(scan + 1) / 2) as usize
         } else {
             np.checked_sub(out.len())
-                .ok_or_else(|| guasto("peak counts"))?
+                .ok_or_else(|| broken("peak counts"))?
         };
         let fine = read_items
-            .checked_add(n.checked_mul(2).ok_or_else(|| guasto("peak counts"))?)
+            .checked_add(n.checked_mul(2).ok_or_else(|| broken("peak counts"))?)
             .filter(|&f| f <= words - ns)
-            .ok_or_else(|| guasto("peak counts"))?;
+            .ok_or_else(|| broken("peak counts"))?;
         let mut tof = u32::MAX;
         while read_items < fine {
             tof = tof.wrapping_add(word(ns + read_items));
@@ -202,7 +202,7 @@ fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks>
         out.fine_scan();
     }
     if out.len() != np {
-        return Err(guasto("peak total"));
+        return Err(broken("peak total"));
     }
     Ok(out)
 }
@@ -211,13 +211,13 @@ fn decodifica1(b: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks>
     let tab = (ns + 1) * 4;
     let start = 8 + tab;
     if start > b.len() {
-        return Err(guasto("offset table"));
+        return Err(broken("offset table"));
     }
     let mut off = Vec::with_capacity(ns + 1);
     for i in 0..=ns {
-        let o = u32_le(b, 8 + 4 * i).ok_or_else(|| guasto("offset table"))? as usize;
+        let o = u32_le(b, 8 + 4 * i).ok_or_else(|| broken("offset table"))? as usize;
         if o < start || o > b.len() || off.last().is_some_and(|&p| o < p) {
-            return Err(guasto("scan offset"));
+            return Err(broken("scan offset"));
         }
         off.push(o);
     }
@@ -231,7 +231,7 @@ fn decodifica1(b: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks>
         buf.clear();
         lzf(&b[off[scan]..off[scan + 1]], &mut buf, limits.byte as usize)?;
         if buf.len() % 4 != 0 {
-            return Err(guasto("scan size"));
+            return Err(broken("scan size"));
         }
         // a negative word skips that many TOF bins; a non-negative one is an intensity at the current bin, and the bin moves on
         let mut tof = 0u32;
@@ -239,7 +239,7 @@ fn decodifica1(b: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks>
             let v = i32::from_le_bytes([w[0], w[1], w[2], w[3]]);
             if v >= 0 {
                 if out.len() >= np {
-                    return Err(guasto("more peaks than the frame table"));
+                    return Err(broken("more peaks than the frame table"));
                 }
                 out.push(tof, v as u32);
                 tof = tof.wrapping_add(1);
@@ -250,7 +250,7 @@ fn decodifica1(b: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks>
         out.fine_scan();
     }
     if out.len() != np {
-        return Err(guasto("peak total"));
+        return Err(broken("peak total"));
     }
     Ok(out)
 }
@@ -263,28 +263,28 @@ fn lzf(z: &[u8], out: &mut Vec<u8>, max: usize) -> Result<()> {
         i += 1;
         if c < 32 {
             let n = c + 1;
-            let s = z.get(i..i + n).ok_or_else(|| guasto("lzf literal"))?;
+            let s = z.get(i..i + n).ok_or_else(|| broken("lzf literal"))?;
             if out.len() + n > max {
-                return Err(guasto("lzf size"));
+                return Err(broken("lzf size"));
             }
             out.extend_from_slice(s);
             i += n;
         } else {
             let mut n = c >> 5;
             if n == 7 {
-                n += usize::from(*z.get(i).ok_or_else(|| guasto("lzf length"))?);
+                n += usize::from(*z.get(i).ok_or_else(|| broken("lzf length"))?);
                 i += 1;
             }
             n += 2;
             let dist =
-                ((c & 0x1f) << 8) | usize::from(*z.get(i).ok_or_else(|| guasto("lzf distance"))?);
+                ((c & 0x1f) << 8) | usize::from(*z.get(i).ok_or_else(|| broken("lzf distance"))?);
             i += 1;
             let da = out
                 .len()
                 .checked_sub(dist + 1)
-                .ok_or_else(|| guasto("lzf reference"))?;
+                .ok_or_else(|| broken("lzf reference"))?;
             if out.len() + n > max {
-                return Err(guasto("lzf size"));
+                return Err(broken("lzf size"));
             }
             for k in 0..n {
                 out.push(out[da + k]);

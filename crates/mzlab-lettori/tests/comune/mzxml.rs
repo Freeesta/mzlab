@@ -13,8 +13,8 @@ pub struct Sc {
     pub mz: Vec<f64>,
     pub it: Vec<f64>,
     pub prec: Option<f64>,
-    pub tipo: &'static str,
-    pub figli: Vec<Sc>,
+    pub kind: &'static str,
+    pub children: Vec<Sc>,
 }
 
 #[derive(Clone, Copy)]
@@ -22,17 +22,17 @@ pub struct Opz {
     pub a64: bool,
     pub zlib: bool,
     pub index: bool,
-    pub annidato: bool,
+    pub nested: bool,
     /// Write `totIonCurrent`, `basePeakIntensity` and `peaksCount`.
-    pub attributi: bool,
+    pub attributes: bool,
 }
 
 pub const FLAT: Opz = Opz {
     a64: true,
     zlib: true,
     index: true,
-    annidato: false,
-    attributi: true,
+    nested: false,
+    attributes: true,
 };
 
 pub fn sc(num: u32, livello: u8, rt_s: f64, n: usize, prec: Option<f64>) -> Sc {
@@ -47,8 +47,8 @@ pub fn sc(num: u32, livello: u8, rt_s: f64, n: usize, prec: Option<f64>) -> Sc {
             .map(|i| 10.0 + ((i * 37 + num as usize * 11) % 101) as f64 * 3.0)
             .collect(),
         prec,
-        tipo: "Full",
-        figli: Vec::new(),
+        kind: "Full",
+        children: Vec::new(),
     }
 }
 
@@ -63,7 +63,7 @@ pub fn run() -> Vec<Sc> {
     ]
 }
 
-pub const TESTATA: &str = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<mzXML xmlns=\"http://sashimi.sourceforge.net/schema_revision/mzXML_3.2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n\
+pub const HEADER: &str = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<mzXML xmlns=\"http://sashimi.sourceforge.net/schema_revision/mzXML_3.2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n\
 <msRun scanCount=\"5\" startTime=\"PT6S\" endTime=\"PT12.4S\">\n\
 <parentFile fileName=\"file:///C:/dati/campione.raw\" fileType=\"RAWData\" fileSha1=\"0123456789abcdef0123456789abcdef01234567\"/>\n\
 <msInstrument msInstrumentID=\"1\"><msManufacturer category=\"msManufacturer\" value=\"Thermo Scientific\"/><msModel category=\"msModel\" value=\"Q Exactive\"/>\
@@ -93,11 +93,11 @@ fn peaks(mz: &[f64], it: &[f64], o: Opz) -> String {
 }
 
 /// The `<scan>` element of `x`, its nested scans inside when `o.annidato`; `pos` collects the byte offset of every scan.
-fn emetti(s: &mut String, x: &Sc, o: Opz, pos: &mut Vec<usize>) {
+fn emit(s: &mut String, x: &Sc, o: Opz, pos: &mut Vec<usize>) {
     pos.push(s.len());
     let tic: f64 = x.it.iter().sum();
     let bpi = x.it.iter().copied().fold(0.0, f64::max);
-    let extra = if o.attributi {
+    let extra = if o.attributes {
         format!(
             " peaksCount=\"{}\" totIonCurrent=\"{tic}\" basePeakIntensity=\"{bpi}\"",
             x.mz.len()
@@ -108,7 +108,7 @@ fn emetti(s: &mut String, x: &Sc, o: Opz, pos: &mut Vec<usize>) {
     s.push_str(&format!(
         "<scan num=\"{}\" scanType=\"{}\" centroided=\"1\" msLevel=\"{}\" polarity=\"{}\" retentionTime=\"PT{}S\" lowMz=\"{}\" highMz=\"{}\"{extra}>",
         x.num,
-        x.tipo,
+        x.kind,
         x.level,
         x.pol,
         x.rt_s,
@@ -122,25 +122,25 @@ fn emetti(s: &mut String, x: &Sc, o: Opz, pos: &mut Vec<usize>) {
     }
     s.push_str(&peaks(&x.mz, &x.it, o));
     s.push_str("<nameValue name=\"ion injection time\" value=\"12.5\"/>");
-    if o.annidato {
-        for f in &x.figli {
-            emetti(s, f, o, pos);
+    if o.nested {
+        for f in &x.children {
+            emit(s, f, o, pos);
         }
         s.push_str("</scan>\n");
     } else {
         s.push_str("</scan>\n");
-        for f in &x.figli {
-            emetti(s, f, o, pos);
+        for f in &x.children {
+            emit(s, f, o, pos);
         }
     }
 }
 
 /// The mzXML of `scans`, with `<index>` and `<indexOffset>` when `o.indice`.
 pub fn mzxml(scans: &[Sc], o: Opz) -> Vec<u8> {
-    let mut s = String::from(TESTATA);
+    let mut s = String::from(HEADER);
     let mut pos = Vec::new();
     for x in scans {
-        emetti(&mut s, x, o, &mut pos);
+        emit(&mut s, x, o, &mut pos);
     }
     s.push_str("</msRun>\n");
     if o.index {
@@ -158,18 +158,18 @@ pub fn mzxml(scans: &[Sc], o: Opz) -> Vec<u8> {
 }
 
 /// `scans` with the MS2 scans that follow an MS1 moved inside it (the nested form of mzXML 2).
-pub fn annida(scans: &[Sc]) -> Vec<Sc> {
+pub fn nest(scans: &[Sc]) -> Vec<Sc> {
     let mut out: Vec<Sc> = Vec::new();
     for x in scans {
         match (x.level, out.last_mut()) {
-            (2, Some(p)) => p.figli.push(x.clone()),
+            (2, Some(p)) => p.children.push(x.clone()),
             _ => out.push(x.clone()),
         }
     }
     out
 }
 
-pub fn apri_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::lettori::Reader> {
+pub fn open_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::lettori::Reader> {
     mzlab_lettori::apri(
         super::file_set("campione.mzXML", byte),
         &mzlab_core::lettori::Limits::sito(),

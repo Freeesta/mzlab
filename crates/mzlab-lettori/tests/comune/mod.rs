@@ -32,13 +32,13 @@ pub enum Cod {
 
 /// The kind of an array: its term and whether the codec of the m/z axis (linear prediction) is the one that applies.
 #[derive(Clone, Copy, PartialEq)]
-pub enum Genere {
+pub enum Family {
     Mz,
     Intensita,
     Tempo,
 }
 
-pub fn array(v: &[f64], cod: Cod, g: Genere) -> String {
+pub fn array(v: &[f64], cod: Cod, g: Family) -> String {
     let (accessions, data): (String, Vec<u8>) = match cod {
         Cod::Piano => (
             "<cvParam cvRef=\"MS\" accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam cvRef=\"MS\" accession=\"MS:1000574\" name=\"zlib compression\"/>".into(),
@@ -50,8 +50,8 @@ pub fn array(v: &[f64], cod: Cod, g: Genere) -> String {
         ),
         Cod::Np { intensities, zlib: z } => {
             let (np, bytes) = match (g, intensities) {
-                (Genere::Intensita, Np::Pic) => (Np::Pic, numpress::encode_pic(v)),
-                (Genere::Intensita, Np::Slof) => (Np::Slof, numpress::encode_slof(v, numpress::slof_fixed_point(v))),
+                (Family::Intensita, Np::Pic) => (Np::Pic, numpress::encode_pic(v)),
+                (Family::Intensita, Np::Slof) => (Np::Slof, numpress::encode_slof(v, numpress::slof_fixed_point(v))),
                 _ => (Np::Linear, numpress::encode_linear(v, numpress::linear_fixed_point(v))),
             };
             let acc = match (np, z) {
@@ -69,9 +69,9 @@ pub fn array(v: &[f64], cod: Cod, g: Genere) -> String {
         }
     };
     let kind = match g {
-        Genere::Mz => "<cvParam cvRef=\"MS\" accession=\"MS:1000514\" name=\"m/z array\"/>",
-        Genere::Intensita => "<cvParam cvRef=\"MS\" accession=\"MS:1000515\" name=\"intensity array\"/>",
-        Genere::Tempo => "<cvParam cvRef=\"MS\" accession=\"MS:1000595\" name=\"time array\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>",
+        Family::Mz => "<cvParam cvRef=\"MS\" accession=\"MS:1000514\" name=\"m/z array\"/>",
+        Family::Intensita => "<cvParam cvRef=\"MS\" accession=\"MS:1000515\" name=\"intensity array\"/>",
+        Family::Tempo => "<cvParam cvRef=\"MS\" accession=\"MS:1000595\" name=\"time array\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>",
     };
     format!("<binaryDataArray encodedLength=\"0\">{accessions}{kind}<binary>{}</binary></binaryDataArray>\n", b64(&data))
 }
@@ -82,10 +82,10 @@ pub struct Scan {
     pub intensities: Vec<f64>,
     pub level: u8,
     pub rt_min: f64,
-    pub precursore: Option<f64>,
+    pub precursor: Option<f64>,
 }
 
-pub fn scansioni() -> Vec<Scan> {
+pub fn scans() -> Vec<Scan> {
     (0..6)
         .map(|k| {
             let n = 40 + 7 * k;
@@ -98,13 +98,13 @@ pub fn scansioni() -> Vec<Scan> {
                     .collect(),
                 level: if k % 3 == 2 { 2 } else { 1 },
                 rt_min: 0.5 + k as f64 * 0.25,
-                precursore: (k % 3 == 2).then_some(412.25 + k as f64),
+                precursor: (k % 3 == 2).then_some(412.25 + k as f64),
             }
         })
         .collect()
 }
 
-pub const TESTATA: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\"><mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\">\n\
+pub const HEADER: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\"><mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\">\n\
 <cvList count=\"1\"><cv id=\"MS\" fullName=\"x\" URI=\"x\"/></cvList>\n\
 <fileDescription><fileContent><cvParam cvRef=\"MS\" accession=\"MS:1000579\" name=\"MS1 spectrum\"/><cvParam cvRef=\"MS\" accession=\"MS:1000580\" name=\"MSn spectrum\"/></fileContent>\
 <sourceFileList count=\"1\"><sourceFile id=\"RAW1\" name=\"campione.raw\" location=\"file:///x\"><cvParam cvRef=\"MS\" accession=\"MS:1000563\" name=\"Thermo RAW format\"/><cvParam cvRef=\"MS\" accession=\"MS:1000569\" name=\"SHA-1\" value=\"0123456789abcdef0123456789abcdef01234567\"/></sourceFile></sourceFileList></fileDescription>\n\
@@ -115,7 +115,7 @@ pub const TESTATA: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<indexedm
 
 /// The mzML: spectra, then a TIC chromatogram whose arrays are written as the spectra's. `metodo`: the userParam that carries a `metodo/1` document.
 pub fn mzml_di(scan: &[Scan], cod: Cod, method: Option<&str>) -> Vec<u8> {
-    let mut s = String::from(TESTATA);
+    let mut s = String::from(HEADER);
     if let Some(m) = method {
         s += &format!(
             "<userParam name=\"mzLab metodo/1\" value=\"{}\"/>\n",
@@ -136,13 +136,13 @@ pub fn mzml_di(scan: &[Scan], cod: Cod, method: Option<&str>) -> Vec<u8> {
             x.intensities.iter().sum::<f64>(),
             x.rt_min
         );
-        if let Some(p) = x.precursore {
+        if let Some(p) = x.precursor {
             s += &format!("<precursorList count=\"1\"><precursor><isolationWindow><cvParam cvRef=\"MS\" accession=\"MS:1000827\" name=\"isolation window target m/z\" value=\"{p}\"/></isolationWindow><selectedIonList count=\"1\"><selectedIon><cvParam cvRef=\"MS\" accession=\"MS:1000744\" name=\"selected ion m/z\" value=\"{p}\"/></selectedIon></selectedIonList><activation><cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"35\"/></activation></precursor></precursorList>\n");
         }
         s += &format!(
             "<binaryDataArrayList count=\"2\">\n{}{}</binaryDataArrayList></spectrum>\n",
-            array(&x.mz, cod, Genere::Mz),
-            array(&x.intensities, cod, Genere::Intensita)
+            array(&x.mz, cod, Family::Mz),
+            array(&x.intensities, cod, Family::Intensita)
         );
     }
     s += "</spectrumList>\n";
@@ -152,8 +152,8 @@ pub fn mzml_di(scan: &[Scan], cod: Cod, method: Option<&str>) -> Vec<u8> {
         "<chromatogramList count=\"1\"><chromatogram index=\"0\" id=\"TIC\" defaultArrayLength=\"{}\"><cvParam cvRef=\"MS\" accession=\"MS:1000235\" name=\"total ion current chromatogram\"/><binaryDataArrayList count=\"2\">\n",
         t.len()
     );
-    s += &array(&t, cod, Genere::Tempo);
-    s += &array(&y, cod, Genere::Intensita);
+    s += &array(&t, cod, Family::Tempo);
+    s += &array(&y, cod, Family::Intensita);
     s += "</binaryDataArrayList></chromatogram></chromatogramList></run></mzML></indexedmzML>\n";
     s.into_bytes()
 }
@@ -169,7 +169,7 @@ pub fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     }
 }
 
-pub fn apri(byte: Vec<u8>) -> Box<dyn Reader> {
+pub fn open(byte: Vec<u8>) -> Box<dyn Reader> {
     mzlab_lettori::apri(file_set("campione.mzML", byte), &Limits::sito()).unwrap()
 }
 

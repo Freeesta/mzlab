@@ -55,13 +55,13 @@ pub enum Outcome {
 pub const LEVELS: [&str; 6] = ["F0", "F1", "F2", "F3", "F4", "F5"];
 
 #[derive(Debug)]
-pub struct Rapporto {
+pub struct Ratio {
     pub file: String,
     pub levels: Vec<(&'static str, Outcome)>,
 }
 
-impl Rapporto {
-    pub fn difetti(&self) -> Vec<String> {
+impl Ratio {
+    pub fn defects(&self) -> Vec<String> {
         self.levels
             .iter()
             .filter_map(|(l, e)| match e {
@@ -85,7 +85,7 @@ impl Rapporto {
     }
     /// `L`: F0-F5 compared and equal; `P`: equal where compared, some level missing; `NV`: only F0 (the truth has nothing to compare); a defect is `DIFETTO`.
     pub fn outcome(&self) -> &'static str {
-        if !self.difetti().is_empty() {
+        if !self.defects().is_empty() {
             return "DIFETTO";
         }
         let compared = self
@@ -117,7 +117,7 @@ pub fn read(p: &Path) -> Result<Value, String> {
 }
 
 /// Every `*.verita.json` under `dir`, sorted.
-pub fn verita_in(dir: &Path) -> Vec<PathBuf> {
+pub fn truths_in(dir: &Path) -> Vec<PathBuf> {
     fn round_trip(d: &Path, out: &mut Vec<PathBuf>) {
         let Ok(rd) = std::fs::read_dir(d) else { return };
         for e in rd.flatten() {
@@ -136,13 +136,13 @@ pub fn verita_in(dir: &Path) -> Vec<PathBuf> {
 }
 
 /// F1 to F4 over sample `c` of an open reader; F0 is the caller's (it opened the file); F5 reads the `metodo/1` document.
-pub fn compare(l: &mut dyn Reader, v: &Value, c: usize, tol: Tol, name: &str) -> Rapporto {
+pub fn compare(l: &mut dyn Reader, v: &Value, c: usize, tol: Tol, name: &str) -> Ratio {
     let mut livelli: Vec<(&'static str, Outcome)> = vec![("F0", Outcome::Ok)];
     let index: Vec<ScanEntry> = match l.index(c) {
         Ok(i) => i.to_vec(),
         Err(e) => {
             livelli.push(("F1", Outcome::Defect(vec![format!("index: {}", e.key)])));
-            return Rapporto {
+            return Ratio {
                 file: name.into(),
                 levels: livelli,
             };
@@ -153,15 +153,15 @@ pub fn compare(l: &mut dyn Reader, v: &Value, c: usize, tol: Tol, name: &str) ->
     livelli.push(("F2", livelli_f::f2_headers(l, &index, v, c, tol)));
     livelli.push(("F3", livelli_f::f3_points(l, v, c, tol)));
     livelli.push(("F4", livelli_f::f4_chromatograms(l, &croms, v, c, tol)));
-    livelli.push(("F5", livelli_f::metadati(l, v, c)));
-    Rapporto {
+    livelli.push(("F5", livelli_f::metadata(l, v, c)));
+    Ratio {
         file: name.into(),
         levels: livelli,
     }
 }
 
 /// Writes the report of the run (`file<TAB>L|P|NV<TAB>levels missing`) when `MZLAB_ROSINA_RAPPORTO` names a file; the nightly workflow of the private repository collects it.
-pub fn write_report(rows: &[Rapporto]) {
+pub fn write_report(rows: &[Ratio]) {
     for r in rows {
         eprintln!("ROSINA {}", r.row());
     }
@@ -180,11 +180,11 @@ pub fn write_report(rows: &[Rapporto]) {
 }
 
 /// Panics with every defect of the reports (a `P` or `NV` is not a failure: it is the honest level of the file).
-pub fn esigi(rows: &[Rapporto]) {
+pub fn require(rows: &[Ratio]) {
     let all: Vec<String> = rows
         .iter()
         .flat_map(|r| {
-            r.difetti()
+            r.defects()
                 .into_iter()
                 .map(move |d| format!("{}: {d}", r.file))
         })
@@ -193,7 +193,7 @@ pub fn esigi(rows: &[Rapporto]) {
 }
 
 /// The native file (or folder) a truth belongs to: the path of the truth under `scratchpad/rosina/verita/`, without `.verita.json`, under `dati/formati/`.
-fn set_of(nativo: &Path) -> Option<mzlab_core::lettori::FileSet> {
+fn set_of(native: &Path) -> Option<mzlab_core::lettori::FileSet> {
     use mzlab_core::lettori::{FileSet, Member};
     fn member(p: &Path, name: String) -> Option<Member> {
         let f = std::fs::File::open(p).ok()?;
@@ -204,13 +204,13 @@ fn set_of(nativo: &Path) -> Option<mzlab_core::lettori::FileSet> {
             sha1: None,
         })
     }
-    fn round_trip(d: &Path, prefisso: &str, out: &mut Vec<Member>) {
+    fn round_trip(d: &Path, prefix: &str, out: &mut Vec<Member>) {
         let Ok(rd) = std::fs::read_dir(d) else { return };
         let mut entries: Vec<_> = rd.flatten().map(|e| e.path()).collect();
         entries.sort();
         for p in entries {
             let name = format!(
-                "{prefisso}/{}",
+                "{prefix}/{}",
                 p.file_name().unwrap_or_default().to_string_lossy()
             );
             if p.is_dir() {
@@ -220,15 +220,15 @@ fn set_of(nativo: &Path) -> Option<mzlab_core::lettori::FileSet> {
             }
         }
     }
-    let base = nativo.file_name()?.to_string_lossy().into_owned();
+    let base = native.file_name()?.to_string_lossy().into_owned();
     let mut members = Vec::new();
-    if nativo.is_dir() {
-        round_trip(nativo, &base, &mut members);
+    if native.is_dir() {
+        round_trip(native, &base, &mut members);
     } else {
-        members.push(member(nativo, base.clone())?);
+        members.push(member(native, base.clone())?);
         // a `.wiff` travels with its `.wiff.scan`
-        let fratelli = nativo.parent()?.read_dir().ok()?;
-        for e in fratelli.flatten() {
+        let siblings = native.parent()?.read_dir().ok()?;
+        for e in siblings.flatten() {
             let n = e.file_name().to_string_lossy().into_owned();
             if n != base && n.starts_with(&format!("{base}.")) {
                 members.extend(member(&e.path(), n));
@@ -268,17 +268,17 @@ pub fn tolerance_of(v: &Value, base: Tol) -> Tol {
 /// The real corpus: every truth under `scratchpad/rosina/verita/` that `filtro` accepts (it gets the path relative to that folder, without `.verita.json`) is compared with its native
 /// file under `dati/formati/`. Skipped without the private data repository (`MZLAB_DATI`); `tol` is the default of the family, a truth may override it (`tolleranza_di`).
 pub fn corpus(
-    famiglia: &str,
+    family: &str,
     filter: fn(&str) -> bool,
     tol: Tol,
     file_path: fn(&str) -> Option<PathBuf>,
 ) {
     let Some(dir) = file_path("scratchpad/rosina/verita") else {
-        eprintln!("SKIP verita_{famiglia}: no data repository");
+        eprintln!("SKIP verita_{family}: no data repository");
         return;
     };
     let mut reports = Vec::new();
-    for vp in verita_in(&dir) {
+    for vp in truths_in(&dir) {
         let rel = vp
             .strip_prefix(&dir)
             .unwrap_or(&vp)
@@ -288,17 +288,17 @@ pub fn corpus(
         if !filter(&rel) {
             continue;
         }
-        let Some(nativo) = file_path(&format!("dati/formati/{rel}")) else {
+        let Some(native) = file_path(&format!("dati/formati/{rel}")) else {
             eprintln!("SKIP {rel}: the native file is not in this checkout");
             continue;
         };
         let v = read(&vp).unwrap_or_else(|e| panic!("{e}"));
         let tol = tolerance_of(&v, tol);
         let c = v["file"]["campione"].as_u64().unwrap_or(0) as usize;
-        let fs = set_of(&nativo).unwrap_or_else(|| panic!("{rel}: cannot list the files"));
+        let fs = set_of(&native).unwrap_or_else(|| panic!("{rel}: cannot list the files"));
         let l = match mzlab_lettori::apri(fs, &mzlab_core::lettori::Limits::desktop()) {
             Ok(mut l) => compare(&mut *l, &v, c, tol, &rel),
-            Err(e) => Rapporto {
+            Err(e) => Ratio {
                 file: rel.clone(),
                 levels: vec![(
                     "F0",
@@ -309,9 +309,9 @@ pub fn corpus(
         reports.push(l);
     }
     if reports.is_empty() {
-        eprintln!("SKIP verita_{famiglia}: no truth for this family yet");
+        eprintln!("SKIP verita_{family}: no truth for this family yet");
         return;
     }
     write_report(&reports);
-    esigi(&reports);
+    require(&reports);
 }

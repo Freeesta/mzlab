@@ -54,10 +54,10 @@ pub(super) fn sum_scan(p: &Peaks, scan: &[(u32, u32)]) -> f64 {
     t as f64
 }
 
-const MAGIA: &[u8; 16] = b"SQLite format 3\0";
+const MAGIC: &[u8; 16] = b"SQLite format 3\0";
 
 /// A folder is Bruker's when its database starts with the SQLite magic and the file of the peaks is beside it; a folder with only `analysis.baf` is recognised to say why it does not open.
-pub(super) fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
+pub(super) fn recognize(fs: &mut FileSet, base: &str) -> Fiducia {
     let bin = fs.find(&format!("{base}_bin")).is_some();
     let Some(i) = fs.find(base) else {
         // a `*_bin` without its database is this reader's folder, refused by `apri` with the file it lacks
@@ -72,7 +72,7 @@ pub(super) fn riconosci(fs: &mut FileSet, base: &str) -> Fiducia {
         };
     };
     // a database without its `*_bin`, or one that is not SQLite (an empty or cut copy): `apri` says which
-    if fs.testa(i, 16) != MAGIA || !bin {
+    if fs.testa(i, 16) != MAGIC || !bin {
         return Fiducia::Forse;
     }
     Fiducia::Si
@@ -85,8 +85,8 @@ pub(super) fn absent(name: &str, file: &str) -> Error {
         .with("file", file)
 }
 
-pub(super) fn prendi(fs: &mut FileSet, suffisso: &str) -> Option<Member> {
-    let i = fs.find(suffisso)?;
+pub(super) fn take(fs: &mut FileSet, suffix: &str) -> Option<Member> {
+    let i = fs.find(suffix)?;
     Some(fs.membri.remove(i))
 }
 

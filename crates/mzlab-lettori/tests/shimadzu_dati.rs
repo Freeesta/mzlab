@@ -8,7 +8,7 @@ use mzlab_core::mzml::ChromKind;
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn apri(rel: &str) -> Option<Box<dyn Reader>> {
+fn open(rel: &str) -> Option<Box<dyn Reader>> {
     let Some(p) =
         dati_percorsi::percorso(&format!("dati/formati/shimadzu/{rel}")).filter(|p| p.is_file())
     else {
@@ -24,7 +24,7 @@ fn apri(rel: &str) -> Option<Box<dyn Reader>> {
             sha1: None,
         }],
     };
-    Some(mzlab_lettori::apri_nudo(fs, &Limits::sito()).unwrap())
+    Some(mzlab_lettori::open_bare(fs, &Limits::sito()).unwrap())
 }
 
 /// Every scan: the decoded intensities add up to the TIC of the index, the times do not go back.
@@ -52,7 +52,7 @@ const QGD: &[&str] = &[
 #[test]
 fn qgd_scans_add_up_to_the_tic() {
     for f in QGD {
-        let Some(mut l) = apri(f) else { return };
+        let Some(mut l) = open(f) else { return };
         let n = check_scans(&mut *l);
         eprintln!(
             "{f}: {n} scans, chroms {}",
@@ -64,7 +64,7 @@ fn qgd_scans_add_up_to_the_tic() {
 
 #[test]
 fn lcms2020_scans_add_up_to_the_tic() {
-    let Some(mut l) = apri("lcms2020_MTBLS1960/MTBLS1960_E1.lcd") else {
+    let Some(mut l) = open("lcms2020_MTBLS1960/MTBLS1960_E1.lcd") else {
         return;
     };
     let n = check_scans(&mut *l);
@@ -93,7 +93,7 @@ fn qqq_mrm_gives_srm_chromatograms() {
         "lcms8030_lcd_zenodo18256551/1_2024-05-21_2.lcd",
         "gcms_tq8040_MTBLS5383/MTBLS5383_GC0270_AtD01_20170530_17.qgd",
     ] {
-        let Some(mut l) = apri(f) else { return };
+        let Some(mut l) = open(f) else { return };
         let v = l.chromatograms(0).unwrap();
         let srm = v.iter().filter(|c| c.tipo == ChromKind::Srm).count();
         eprintln!("{f}: scans {} srm {srm}", l.index(0).unwrap().len());
@@ -114,7 +114,7 @@ fn the_method_names_the_maker_and_the_mzml_header_has_no_operator() {
         "lcms8040_fia_MTBLS2376/MTBLS2376_53003918.lcd",
         "lcms8030_lcd_zenodo18256551/1_2024-05-21_2.lcd",
     ]) {
-        let Some(mut l) = apri(f) else { return };
+        let Some(mut l) = open(f) else { return };
         assert!(
             l.method(0).unwrap().contains("\"produttore\":\"Shimadzu\""),
             "{f}"

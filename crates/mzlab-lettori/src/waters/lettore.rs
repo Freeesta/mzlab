@@ -3,9 +3,9 @@
 
 use super::cartella::{errore, text, Folder};
 use super::dat::{decode, Calibration, Encoding};
-use super::funzioni::{self, Funzione};
+use super::funzioni::{self, Function};
 use super::idx::{self, Row};
-use super::inf::{self, Extern, FunzioneExt, Inlet, Mode, Testata};
+use super::inf::{self, Extern, FunctionExt, Inlet, Mode, WatersHeader};
 use super::lati::{compound_names, Table};
 use super::tagli::{cuts, nel_file, whole_header, whole_list};
 use mzlab_core::error::{Error, Result};
@@ -23,8 +23,8 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "waters-raw",
     contratto: CONTRATTO,
     estensioni: &[".raw"],
-    riconosci,
-    apri,
+    riconosci: recognize,
+    apri: open,
 };
 
 impl WatersReader {
@@ -47,7 +47,7 @@ impl WatersReader {
         for &(_, i, k) in &v {
             let f = &self.funs[i];
             let r = f.righe[k];
-            let precursore = (f.livello == 2)
+            let precursor = (f.livello == 2)
                 .then(|| {
                     f.sts
                         .as_ref()
@@ -68,7 +68,7 @@ impl WatersReader {
                 } else {
                     format!("function {}", f.f.indice)
                 },
-                precursore,
+                precursore: precursor,
                 position: f.dat.map(|m| Position {
                     membro: u16::try_from(m).unwrap_or(0),
                     offset: r.offset,
@@ -78,7 +78,7 @@ impl WatersReader {
                     .unwrap_or(u32::MAX),
                 }),
             });
-            self.mappa.push((i, k));
+            self.map.push((i, k));
         }
     }
 
@@ -87,7 +87,7 @@ impl WatersReader {
             return Err(Error::new("error.badIndex").with("c", c));
         }
         let (i, r) = *self
-            .mappa
+            .map
             .get(k)
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
         Ok((&self.funs[i], r, &self.indice[k]))
@@ -111,7 +111,7 @@ impl Reader for WatersReader {
 
     fn missing(&mut self, c: usize) -> usize {
         if c == 0 {
-            self.funs.iter().map(|f| f.tagliate).sum()
+            self.funs.iter().map(|f| f.cut).sum()
         } else {
             0
         }
@@ -158,10 +158,10 @@ impl Reader for WatersReader {
 
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         let (f, r, v) = self.entry(c, k)?;
-        let field = |name: &str, value: String, unita: Option<&str>| Field {
+        let field = |name: &str, value: String, units: Option<&str>| Field {
             nome: name.into(),
             valore: value,
-            unita: unita.map(Into::into),
+            unita: units.map(Into::into),
             cv: None,
         };
         let mut out = vec![
@@ -258,7 +258,7 @@ impl WatersReader {
 }
 
 /// A folder with `_FUNC001.DAT` is a MassLynx folder; it is surer when `_FUNCTNS.INF` is there and has whole records.
-fn riconosci(fs: &mut FileSet) -> Fiducia {
+fn recognize(fs: &mut FileSet) -> Fiducia {
     let base =
         |m: &mzlab_core::lettori::Member| super::cartella::base(&m.nome).to_ascii_lowercase();
     if !fs.membri.iter().any(|m| base(m) == "_func001.dat") {
@@ -272,8 +272,8 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
 
 /// One function with everything read of it when the folder is opened (the DAT is read by position).
 pub(super) struct Fun {
-    pub(super) f: Funzione,
-    pub(super) ext: FunzioneExt,
+    pub(super) f: Function,
+    pub(super) ext: FunctionExt,
     pub(super) righe: Vec<Row>,
     /// Index of `_FUNCnnn.DAT` among the members.
     pub(super) dat: Option<usize>,
@@ -288,20 +288,20 @@ pub(super) struct Fun {
     pub(super) livello: u8,
     pub(super) polarita: i8,
     /// Scans of the index past the end of a DAT cut short (emptied in `righe`).
-    pub(super) tagliate: usize,
+    pub(super) cut: usize,
 }
 
 pub struct WatersReader {
     pub(super) c: Folder,
     pub(super) funs: Vec<Fun>,
-    pub(super) testata: Testata,
+    pub(super) testata: WatersHeader,
     pub(super) ext: Extern,
     pub(super) inlet: Option<Inlet>,
-    pub(super) analogiche: Vec<super::cromi::Analogica>,
+    pub(super) analogiche: Vec<super::cromi::Analog>,
     samples: Vec<Sample>,
     indice: Vec<ScanEntry>,
     /// For each row of `indice`: (function, row of its IDX).
-    mappa: Vec<(usize, usize)>,
+    map: Vec<(usize, usize)>,
     /// What the reader did not decode: (key of the notice, where).
     pub(super) warnings: Vec<(String, String)>,
     pub(super) sha1: Option<Vec<Option<String>>>,
@@ -353,7 +353,7 @@ fn unknown_variant(name: &str, funs: &[Fun], without_analog: bool) -> Result<()>
         Some(f) => Err(Error::new("err.file.recordVariant")
             .with("name", name)
             .with("function", f.f.indice.to_string())
-            .with("type", format!("0x{:02X}", f.f.tipo))),
+            .with("type", format!("0x{:02X}", f.f.kind))),
         None => Ok(()),
     }
 }
@@ -361,9 +361,9 @@ fn unknown_variant(name: &str, funs: &[Fun], without_analog: bool) -> Result<()>
 /// Everything of function `f`: its index, the DAT and the side tables.
 fn load(
     c: &mut Folder,
-    f: Funzione,
+    f: Function,
     ext: &Extern,
-    tars: &Testata,
+    tars: &WatersHeader,
     spent: &mut u64,
 ) -> Result<(Fun, Option<String>)> {
     let n = f.indice;
@@ -399,7 +399,7 @@ fn load(
     } else {
         None
     };
-    let polarita = x.polarita.or(ext.polarita).unwrap_or(0);
+    let polarity = x.polarita.or(ext.polarita).unwrap_or(0);
     let tar = tars.tarature.get(&n).cloned().unwrap_or_default();
     let fun = Fun {
         f,
@@ -414,13 +414,13 @@ fn load(
         ee,
         names: nomi,
         livello: 1,
-        polarita,
-        tagliate,
+        polarita: polarity,
+        cut: tagliate,
     };
     Ok((fun, warning))
 }
 
-fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let mut c = Folder::new(fs, *limits);
     // Every run has `_FUNCTNS.INF`: a folder without it is a copy that left files behind.
     let inf = c
@@ -437,7 +437,7 @@ fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     whole_list(&c, list.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
     whole_header(&c, header.as_deref())?;
-    let testata = header.map_or_else(Testata::default, |b| inf::file_header(&text(&b)));
+    let testata = header.map_or_else(WatersHeader::default, |b| inf::file_header(&text(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
         .map_or_else(Extern::default, |b| inf::extern_inf(&text(&b)));
     let inlet = opzionale(&mut c, "_INLET.INF").map(|b| inf::inlet(&text(&b)));
@@ -461,7 +461,7 @@ fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
             format!("{}: ion mobility", c.name),
         ));
     }
-    let analogiche = super::cromi::analogiche(&mut c);
+    let analogiche = super::cromi::analog(&mut c);
     unknown_variant(&c.name, &funs, analogiche.is_empty())?;
     let mut l = WatersReader {
         c,
@@ -472,7 +472,7 @@ fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         analogiche,
         samples: Vec::new(),
         indice: Vec::new(),
-        mappa: Vec::new(),
+        map: Vec::new(),
         warnings,
         sha1: None,
         chroms: None,

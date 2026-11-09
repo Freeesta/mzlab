@@ -18,9 +18,9 @@ impl Sqlite {
                 .collect(),
             None => columns.to_vec(),
         };
-        let mut mascherati = vec![false; pos.iter().flatten().max().map_or(0, |&m| m + 1)];
+        let mut masked = vec![false; pos.iter().flatten().max().map_or(0, |&m| m + 1)];
         for &p in pos.iter().flatten() {
-            mascherati[p] = true;
+            masked[p] = true;
         }
         // a position asked twice is cloned the first time and moved the last
         let last: Vec<bool> = (0..pos.len())
@@ -28,7 +28,7 @@ impl Sqlite {
             .collect();
         let alias = t.alias_rowid.filter(|_| t.ordine.is_none());
         let mut out: Vec<Val> = Vec::with_capacity(columns.len());
-        self.walk_with(t.radice, Some(&mascherati), |rowid, v| {
+        self.walk_with(t.radice, Some(&masked), |rowid, v| {
             out.clear();
             for (j, p) in pos.iter().enumerate() {
                 out.push(match p.and_then(|p| v.get_mut(p).map(|x| (p, x))) {
@@ -48,27 +48,27 @@ impl Sqlite {
 pub(super) fn record_in(
     b: &[u8],
     limits: &Limits,
-    voglio: Option<&[bool]>,
+    want: Option<&[bool]>,
     out: &mut Vec<Val>,
 ) -> Result<()> {
     out.clear();
-    let (hl, o0) = varint(b).ok_or_else(|| guasto("record header"))?;
-    let hl = usize::try_from(hl).map_err(|_| guasto("record header"))?;
+    let (hl, o0) = varint(b).ok_or_else(|| broken("record header"))?;
+    let hl = usize::try_from(hl).map_err(|_| broken("record header"))?;
     if hl > b.len() || hl < o0 {
-        return Err(guasto("record header"));
+        return Err(broken("record header"));
     }
     // first the count of the serial types (and its limit), then the types again with the bodies
     let (mut o, mut n) = (o0, 0u64);
     while o < hl {
-        let (_, k) = varint(&b[o..hl]).ok_or_else(|| guasto("serial type"))?;
+        let (_, k) = varint(&b[o..hl]).ok_or_else(|| broken("serial type"))?;
         o += k;
         n += 1;
         limits.ok_entries(n)?;
     }
     out.reserve(n as usize);
-    let (mut o, mut corpo) = (o0, hl);
+    let (mut o, mut body) = (o0, hl);
     for pos in 0..n as usize {
-        let (t, k) = varint(&b[o..hl]).ok_or_else(|| guasto("serial type"))?;
+        let (t, k) = varint(&b[o..hl]).ok_or_else(|| broken("serial type"))?;
         o += k;
         let len = match t {
             0 | 8 | 9 => 0,
@@ -78,14 +78,14 @@ pub(super) fn record_in(
             4 => 4,
             5 => 6,
             6 | 7 => 8,
-            10 | 11 => return Err(guasto("serial type")),
+            10 | 11 => return Err(broken("serial type")),
             n => ((n - 12) / 2) as usize,
         };
         let s = b
-            .get(corpo..corpo.checked_add(len).ok_or_else(|| guasto("record"))?)
-            .ok_or_else(|| guasto("record body"))?;
-        corpo += len;
-        if voglio.is_some_and(|m| !m.get(pos).copied().unwrap_or(false)) {
+            .get(body..body.checked_add(len).ok_or_else(|| broken("record"))?)
+            .ok_or_else(|| broken("record body"))?;
+        body += len;
+        if want.is_some_and(|m| !m.get(pos).copied().unwrap_or(false)) {
             out.push(Val::Null);
             continue;
         }
@@ -101,7 +101,7 @@ pub(super) fn record_in(
                 Val::Int(v)
             }
             7 => Val::Real(f64::from_be_bytes(
-                s.try_into().map_err(|_| guasto("real"))?,
+                s.try_into().map_err(|_| broken("real"))?,
             )),
             n if n % 2 == 0 => Val::Blob(s.to_vec()),
             _ => Val::Text(String::from_utf8_lossy(s).into_owned()),

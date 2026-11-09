@@ -30,7 +30,7 @@ impl ReadAt for Counter {
 }
 
 /// An ANDI-MS file of float points (8 bytes a point in the records) and a reader of it that counts the bytes of points it reads.
-fn contato(
+fn counted(
     points: fn(usize) -> Vec<(f64, f64)>,
     n: usize,
     tic: bool,
@@ -70,7 +70,7 @@ fn index_and_bpc(l: &mut dyn Reader, read_items: &Cell<u64>) -> (u64, Vec<f64>) 
 
 /// The bytes of points of one decode of every scan.
 fn one_pass(points: fn(usize) -> Vec<(f64, f64)>, n: usize) -> u64 {
-    let (mut l, read_items) = contato(points, n, true);
+    let (mut l, read_items) = counted(points, n, true);
     l.index(0).unwrap();
     read_items.set(0);
     for k in 0..n {
@@ -86,13 +86,13 @@ fn bits(v: &[f64]) -> Vec<u64> {
 #[test]
 fn index_and_bpc_decode_each_scan_once() {
     let n = 300;
-    let passata = one_pass(points, n);
-    assert!(passata > 0);
-    let (mut l, read_items) = contato(points, n, true);
+    let pass = one_pass(points, n);
+    assert!(pass > 0);
+    let (mut l, read_items) = counted(points, n, true);
     let (read_one, _) = index_and_bpc(&mut *l, &read_items);
     assert_eq!(
-        read_one, passata,
-        "bytes of points read: {read_one}, one pass: {passata}"
+        read_one, pass,
+        "bytes of points read: {read_one}, one pass: {pass}"
     );
     // asked again: still nothing read
     read_items.set(0);
@@ -104,7 +104,7 @@ fn index_and_bpc_decode_each_scan_once() {
 fn without_total_intensity_the_index_tic_also_leaves_the_bpc() {
     let n = 300;
     let passata = one_pass(points, n);
-    let (mut l, read_items) = contato(points, n, false);
+    let (mut l, read_items) = counted(points, n, false);
     let (read_one, _) = index_and_bpc(&mut *l, &read_items);
     // one pass sums the TIC of the index, one builds the rows; the BPC reads nothing more
     assert_eq!(read_one, 2 * passata);
@@ -134,8 +134,8 @@ fn without_nan(k: usize) -> Vec<(f64, f64)> {
 }
 
 /// The BPC and TIC of a fresh reader that answers before any scan is decoded.
-fn freddo(b: &[u8]) -> (Vec<u64>, Vec<u64>) {
-    let mut l = apri_andi(b.to_vec());
+fn cold(b: &[u8]) -> (Vec<u64>, Vec<u64>) {
+    let mut l = open_andi(b.to_vec());
     let bpc = l.chromatogram(0, "BPC").unwrap().intensity;
     let tic = l.chromatogram(0, "TIC").unwrap().intensity;
     (bits(&bpc), bits(&tic))
@@ -143,16 +143,16 @@ fn freddo(b: &[u8]) -> (Vec<u64>, Vec<u64>) {
 
 #[test]
 fn the_annotated_bpc_has_the_bits_of_the_decoded_one() {
-    for tipo_it in [3, 4, 5, 6] {
+    for kind_it in [3, 4, 5, 6] {
         for tic in [true, false] {
             let c = Run {
-                tipo_it,
+                kind_it: kind_it,
                 ..FLAT_RUN
             };
             let b = andi_ms_with(&c, 40, without_nan, tic);
-            let (bpc0, tic0) = freddo(&b);
+            let (bpc0, tic0) = cold(&b);
             assert_eq!(bpc0.len(), 40);
-            let mut l = apri_andi(b);
+            let mut l = open_andi(b);
             let mut out = Cursor::new(Vec::new());
             index_reader(
                 &mut *l,
@@ -166,27 +166,27 @@ fn the_annotated_bpc_has_the_bits_of_the_decoded_one() {
             .unwrap();
             for _ in 0..2 {
                 let bpc = l.chromatogram(0, "BPC").unwrap().intensity;
-                assert_eq!(bits(&bpc), bpc0, "type {tipo_it}, tic {tic}");
+                assert_eq!(bits(&bpc), bpc0, "type {kind_it}, tic {tic}");
             }
             let t = l.chromatogram(0, "TIC").unwrap().intensity;
-            assert_eq!(bits(&t), tic0, "type {tipo_it}, tic {tic}");
+            assert_eq!(bits(&t), tic0, "type {kind_it}, tic {tic}");
         }
     }
 }
 
 #[test]
 fn a_nan_intensity_gives_in_the_bpc_what_it_gave_before() {
-    for tipo_it in [5, 6] {
+    for kind_it in [5, 6] {
         let c = Run {
-            tipo_it,
+            kind_it: kind_it,
             ..FLAT_RUN
         };
         let b = andi_ms_with(&c, 40, edge_points, true);
-        let bpc0 = apri_andi(b.clone())
+        let bpc0 = open_andi(b.clone())
             .chromatogram(0, "BPC")
             .unwrap()
             .intensity;
-        let mut l = apri_andi(b);
+        let mut l = open_andi(b);
         // the guard refuses the scans with a NaN; the base peaks are noted all the same
         for k in 0..40 {
             let _ = l.scan(0, k);

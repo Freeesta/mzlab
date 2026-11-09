@@ -29,7 +29,7 @@ fn apri(p: &Path) -> Box<dyn mzlab_core::lettori::Reader> {
             sha1: None,
         }],
     };
-    mzlab_lettori::apri_nudo(fs, &Limits::sito()).unwrap()
+    mzlab_lettori::open_bare(fs, &Limits::sito()).unwrap()
 }
 
 #[test]

@@ -12,15 +12,15 @@ use mzlab_core::mzmlwrite::Header;
 /// The most fields kept from a run.
 const FIELDS_MAX: usize = 2000;
 
-impl Testata {
-    pub fn read(d: &Data, tsf: bool) -> Testata {
+impl BrukerHeader {
+    pub fn read(d: &Data, tsf: bool) -> BrukerHeader {
         let m = |k: &str| {
             d.meta
                 .get(k)
                 .map(|v| v.trim().to_string())
                 .filter(|v| !v.is_empty())
         };
-        let mut t = Testata {
+        let mut t = BrukerHeader {
             model: m("InstrumentName"),
             series: m("InstrumentSerialNumber"),
             maker: m("InstrumentVendor"),
@@ -28,9 +28,9 @@ impl Testata {
             firmware: m("AcquisitionFirmwareVersion"),
             created: m("AcquisitionDateTime"),
             user: m("OperatorName"),
-            campione: m("SampleName"),
+            sample: m("SampleName"),
             tsf,
-            ..Testata::default()
+            ..BrukerHeader::default()
         };
         let mut add = |c: Field, id: bool| {
             if t.fields.len() < FIELDS_MAX {
@@ -46,10 +46,10 @@ impl Testata {
                 "InstrumentSerialNumber" => c.map("strumento.serie"),
                 _ => c,
             };
-            add(c, identita(k));
+            add(c, identity(k));
         }
         for (k, v, u) in &d.proprieta {
-            add(Field::new("bruker:proprieta", k, v).unit(u), identita(k));
+            add(Field::new("bruker:proprieta", k, v).unit(u), identity(k));
         }
         for (k, v) in &d.tims {
             add(Field::new("bruker:TimsCalibration", k, v), false);
@@ -102,7 +102,7 @@ impl Testata {
         let doc = obj(vec![
             ("schema", Some(V::s(metodo::SCHEMA))),
             ("origine", metodo::origin(&src, self.created.as_deref())),
-            ("campione", obj(vec![("nome", s(&self.campione))])),
+            ("campione", obj(vec![("nome", s(&self.sample))])),
             (
                 "strumento",
                 obj(vec![
@@ -163,7 +163,7 @@ impl Testata {
 }
 
 #[derive(Default)]
-pub struct Testata {
+pub struct BrukerHeader {
     pub fields: Vec<Field>,
     pub model: Option<String>,
     pub series: Option<String>,
@@ -172,11 +172,11 @@ pub struct Testata {
     pub firmware: Option<String>,
     pub created: Option<String>,
     pub user: Option<String>,
-    pub campione: Option<String>,
+    pub sample: Option<String>,
     pub tsf: bool,
 }
 
-fn identita(name: &str) -> bool {
+fn identity(name: &str) -> bool {
     let n = name.to_ascii_lowercase();
     [
         "operator",

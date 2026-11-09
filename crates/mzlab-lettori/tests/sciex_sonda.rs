@@ -30,7 +30,7 @@ fn generate(tool: &str) -> Option<PathBuf> {
     Some(out)
 }
 
-fn apri(dir: &Path, stem: &str) -> Box<dyn Reader> {
+fn open(dir: &Path, stem: &str) -> Box<dyn Reader> {
     let member = |name: String| {
         let b = std::fs::read(dir.join(&name)).unwrap();
         Member {
@@ -54,7 +54,7 @@ fn a_scheduled_mrm_pair_without_a_log_is_a_variant() {
     let Some(dir) = generate("wiff_riferimento.py") else {
         return;
     };
-    let mut l = apri(&dir, "programmati");
+    let mut l = open(&dir, "programmati");
     assert!(
         l.variant(0),
         "its sparse MRM blocks are read by the module only"
@@ -67,7 +67,7 @@ fn a_pair_is_a_variant_when_any_of_its_samples_is() {
     let Some(dir) = generate("wiff_misto_pi.py") else {
         return;
     };
-    let mut l = apri(&dir, "mistopi");
+    let mut l = open(&dir, "mistopi");
     assert_eq!(l.samples().len(), 2);
     assert!(!l.variant(0) && l.variant(1));
     assert!(mzlab_lettori::motivi(&mut *l, 0).contains(&"variante"));
@@ -80,7 +80,7 @@ fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
     let Some(dir) = generate("wiff_mrm_rado.py") else {
         return;
     };
-    let mut l = apri(&dir, "mrmrado");
+    let mut l = open(&dir, "mrmrado");
     assert!(
         l.variant(0),
         "its sparse MRM blocks are read by the module only"

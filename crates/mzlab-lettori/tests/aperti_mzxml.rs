@@ -14,13 +14,13 @@ fn options() -> Vec<Opz> {
     for a64 in [false, true] {
         for zlib in [false, true] {
             for index in [false, true] {
-                for annidato in [false, true] {
+                for nested in [false, true] {
                     v.push(Opz {
                         a64,
                         zlib,
                         index,
-                        annidato,
-                        attributi: true,
+                        nested: nested,
+                        attributes: true,
                     });
                 }
             }
@@ -33,12 +33,8 @@ fn options() -> Vec<Opz> {
 fn every_shape_opens_and_returns_as_written() {
     let scan = run();
     for o in options() {
-        let source = if o.annidato {
-            annida(&scan)
-        } else {
-            scan.clone()
-        };
-        let mut l = apri_mzxml(mzxml(&source, o));
+        let source = if o.nested { nest(&scan) } else { scan.clone() };
+        let mut l = open_mzxml(mzxml(&source, o));
         assert_eq!(l.samples()[0].scansioni, scan.len());
         for (k, x) in scan.iter().enumerate() {
             let s = l.scan(0, k).unwrap();
@@ -65,7 +61,7 @@ fn every_shape_opens_and_returns_as_written() {
 #[test]
 fn the_index_gives_level_precursor_and_tic_without_reading_peaks() {
     let scan = run();
-    let mut l = apri_mzxml(mzxml(&scan, FLAT));
+    let mut l = open_mzxml(mzxml(&scan, FLAT));
     let ind = l.index(0).unwrap();
     assert_eq!(ind.len(), 5);
     assert_eq!(ind[1].livello, 2);
@@ -77,10 +73,10 @@ fn the_index_gives_level_precursor_and_tic_without_reading_peaks() {
 #[test]
 fn tic_and_bpc_are_computed_from_peaks_when_the_file_omits_them() {
     let scan = run();
-    let mut l = apri_mzxml(mzxml(
+    let mut l = open_mzxml(mzxml(
         &scan,
         Opz {
-            attributi: false,
+            attributes: false,
             ..FLAT
         },
     ));
@@ -111,11 +107,11 @@ fn srm_scans_become_chromatograms() {
             let mut x = sc((k * 3 + j + 1) as u32, 2, *rt, 1, Some(*q1));
             x.mz = vec![*q3];
             x.it = vec![100.0 * (j + 1) as f64 + k as f64];
-            x.tipo = "SRM";
+            x.kind = "SRM";
             scan.push(x);
         }
     }
-    let mut l = apri_mzxml(mzxml(&scan, FLAT));
+    let mut l = open_mzxml(mzxml(&scan, FLAT));
     let srm: Vec<_> = l
         .chromatograms(0)
         .unwrap()
@@ -131,17 +127,17 @@ fn srm_scans_become_chromatograms() {
 
 #[test]
 fn recognises_by_bytes_not_by_name() {
-    let mut buono = file_set("x.mzXML", mzxml(&run(), FLAT));
-    assert!(mzlab_lettori::riconosci(&mut buono).is_some_and(|v| v.id == "mzxml"));
-    let mut altro = file_set("x.mzXML", b"<?xml version=\"1.0\"?><altro/>".to_vec());
-    assert!(mzlab_lettori::riconosci(&mut altro).is_none());
-    let v = (mzlab_lettori::aperti::mzxml::ENTRY.riconosci)(&mut buono);
+    let mut good = file_set("x.mzXML", mzxml(&run(), FLAT));
+    assert!(mzlab_lettori::riconosci(&mut good).is_some_and(|v| v.id == "mzxml"));
+    let mut other = file_set("x.mzXML", b"<?xml version=\"1.0\"?><altro/>".to_vec());
+    assert!(mzlab_lettori::riconosci(&mut other).is_none());
+    let v = (mzlab_lettori::aperti::mzxml::ENTRY.riconosci)(&mut good);
     assert_eq!(v, Fiducia::Si);
 }
 
 #[test]
 fn the_method_and_the_header_carry_instrument_file_and_software() {
-    let mut l = apri_mzxml(mzxml(&run(), FLAT));
+    let mut l = open_mzxml(mzxml(&run(), FLAT));
     let m = l.method(0).unwrap();
     for t in [
         "\"formato\":\"mzxml\"",
@@ -173,7 +169,7 @@ fn the_method_and_the_header_carry_instrument_file_and_software() {
 
 #[test]
 fn the_header_carries_every_scan_attribute() {
-    let mut l = apri_mzxml(mzxml(&run(), FLAT));
+    let mut l = open_mzxml(mzxml(&run(), FLAT));
     let fields = l.scan_header(0, 1).unwrap();
     let value = |n: &str| {
         fields

@@ -55,30 +55,30 @@ fn site(b: &[u8]) -> String {
 
 #[test]
 fn gzip_edges_give_the_same_key_on_app_and_site() {
-    let buono = gz(&mzml_di(&scansioni(), Cod::Piano, None));
-    let mut with_zeros = buono.clone();
+    let good = gz(&mzml_di(&scans(), Cod::Piano, None));
+    let mut with_zeros = good.clone();
     with_zeros.extend([0u8; 512]);
-    let mut zeri_e_altro = with_zeros.clone();
-    zeri_e_altro.extend(gz(b"<mzML/>"));
-    let casi: [(&str, Vec<u8>); 7] = [
-        ("good", buono.clone()),
+    let mut zeros_and_other = with_zeros.clone();
+    zeros_and_other.extend(gz(b"<mzML/>"));
+    let cases: [(&str, Vec<u8>); 7] = [
+        ("good", good.clone()),
         ("empty", Vec::new()),
         ("magic only", vec![0x1f, 0x8b]),
-        ("header only", buono[..10].to_vec()),
-        ("cut in the middle", buono[..buono.len() / 2].to_vec()),
+        ("header only", good[..10].to_vec()),
+        ("cut in the middle", good[..good.len() / 2].to_vec()),
         ("zeros after the member", with_zeros.clone()),
-        ("a member after the zeros", zeri_e_altro.clone()),
+        ("a member after the zeros", zeros_and_other.clone()),
     ];
     let mut different = Vec::new();
-    for (name, b) in casi {
+    for (name, b) in cases {
         let (a, s) = (app(&b), site(&b));
         if a != s {
             different.push(format!("{name}: app {a}, site {s}"));
         }
     }
     assert!(different.is_empty(), "{different:#?}");
-    assert_eq!(app(&buono), "ok");
+    assert_eq!(app(&good), "ok");
     // padding to a block size, as GNU gzip reads it: the file opens; something after the padding is damage
     assert_eq!(app(&with_zeros), "ok");
-    assert_eq!(app(&zeri_e_altro), "err.file.zlib");
+    assert_eq!(app(&zeros_and_other), "err.file.zlib");
 }

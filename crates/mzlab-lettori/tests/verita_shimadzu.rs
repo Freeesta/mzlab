@@ -7,7 +7,7 @@ mod dati_percorsi;
 mod verita;
 
 #[test]
-fn verita_shimadzu() {
+fn truth_shimadzu() {
     verita::corpus(
         "shimadzu",
         |r| r.starts_with("shimadzu/"),

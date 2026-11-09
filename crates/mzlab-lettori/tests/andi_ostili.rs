@@ -9,7 +9,7 @@ use comune::andi::*;
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
-fn buono() -> Vec<u8> {
+fn good() -> Vec<u8> {
     andi_ms(&FLAT_RUN)
 }
 
@@ -26,7 +26,7 @@ fn a_netcdf4_file_has_its_key() {
 
 #[test]
 fn no_file_length_panics_the_reader() {
-    let b = buono();
+    let b = good();
     for n in (0..b.len()).step_by(7).chain([b.len() - 1]) {
         let _ = andi_error(b[..n].to_vec());
     }
@@ -34,7 +34,7 @@ fn no_file_length_panics_the_reader() {
 
 #[test]
 fn huge_counts_and_sizes_are_errors_without_allocating() {
-    let b = buono();
+    let b = good();
     // the number of dimensions, of attributes and of variables
     for da in [
         8usize,
@@ -54,7 +54,7 @@ fn huge_counts_and_sizes_are_errors_without_allocating() {
 
 #[test]
 fn a_too_long_name_is_an_error() {
-    let mut x = buono();
+    let mut x = good();
     let i = pos(&x, b"point_number") - 4;
     x[i..i + 4].copy_from_slice(&(1u32 << 30).to_be_bytes());
     assert_eq!(andi_error(x), "err.dam.unreadable");
@@ -62,7 +62,7 @@ fn a_too_long_name_is_an_error() {
 
 #[test]
 fn a_begin_outside_the_file_is_a_keyed_error() {
-    let b = buono();
+    let b = good();
     // the `begin` of scan_index: the last four bytes of its entry
     let i = pos(&b, b"scan_index") + 12 + 4 + 4 + 8 + 4 + 4;
     let mut x = b.clone();
@@ -72,7 +72,7 @@ fn a_begin_outside_the_file_is_a_keyed_error() {
 
 #[test]
 fn negative_point_count_or_indices_outside_the_points_do_not_panic() {
-    let b = buono();
+    let b = good();
     for (name, value) in [
         ("point_count", -5i32),
         ("point_count", 1 << 30),
@@ -101,16 +101,16 @@ fn real_cdfs_open_and_the_counts_match() {
             continue;
         }
         let name = p.file_name().unwrap().to_string_lossy().into_owned();
-        let mut l = apri_andi(std::fs::read(&p).unwrap());
+        let mut l = open_andi(std::fs::read(&p).unwrap());
         let n = l.samples()[0].scansioni;
         assert!(n > 100, "{name}");
-        for (prefisso, attese) in [
+        for (prefix, expected) in [
             ("MTBLS7740", 7231),
             ("MTBLS8819", 14960),
             ("MTBLS13991", 4109),
         ] {
-            if name.starts_with(prefisso) {
-                assert_eq!(n, attese, "{name}");
+            if name.starts_with(prefix) {
+                assert_eq!(n, expected, "{name}");
             }
         }
         let index = l.index(0).unwrap().to_vec();

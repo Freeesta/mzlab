@@ -17,7 +17,7 @@ fn file_set(byte: Vec<u8>) -> FileSet {
     }
 }
 
-fn semi() -> Vec<Vec<u8>> {
+fn seeds() -> Vec<Vec<u8>> {
     if dati_percorsi::percorso("dati/formati/thermo/raw").is_none() {
         eprintln!("SKIP robustezza_thermo: no data repository, bare header only");
         return vec![vec![0x01, 0xA1, 0x46, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x6e, 0x00]; 1];
@@ -51,7 +51,7 @@ fn everything(byte: Vec<u8>) {
 
 #[test]
 fn truncated_and_flipped_files_do_not_panic() {
-    for s in semi() {
+    for s in seeds() {
         let n = s.len();
         for k in 0..40 {
             let cut = n * k / 40;
@@ -96,7 +96,7 @@ fn with_version(version: u32, tail: &[u8]) -> Vec<u8> {
     b
 }
 
-fn pseudocasuali(n: usize, mut x: u64) -> Vec<u8> {
+fn pseudorandom(n: usize, mut x: u64) -> Vec<u8> {
     (0..n)
         .map(|_| {
             x = x
@@ -109,22 +109,22 @@ fn pseudocasuali(n: usize, mut x: u64) -> Vec<u8> {
 
 #[test]
 fn every_version_number_is_read_or_refused_with_a_key() {
-    const DICHIARATE: [u32; 8] = [8, 47, 57, 60, 62, 63, 64, 66];
+    const DECLARED: [u32; 8] = [8, 47, 57, 60, 62, 63, 64, 66];
     for v in (0..=80).chain([255, 65_536, u32::MAX]) {
         for (k, tail) in [
             vec![],
             vec![0; 4096],
             vec![0xFF; 4096],
-            pseudocasuali(65_536, u64::from(v) + 1),
+            pseudorandom(65_536, u64::from(v) + 1),
         ]
         .iter()
         .enumerate()
         {
             match mzlab_lettori::apri(file_set(with_version(v, tail)), &Limits::sito()) {
-                Ok(_) => assert!(DICHIARATE.contains(&v), "version {v} (tail {k}) opened"),
+                Ok(_) => assert!(DECLARED.contains(&v), "version {v} (tail {k}) opened"),
                 Err(e) => {
                     assert!(e.key.starts_with("err."), "{}", e.key);
-                    if !DICHIARATE.contains(&v) {
+                    if !DECLARED.contains(&v) {
                         assert_eq!(e.key, "err.file.rawVersion", "version {v}");
                     }
                 }
@@ -138,10 +138,7 @@ fn a_declared_version_with_a_random_body_never_panics() {
     for v in [8u32, 47, 57, 60, 62, 63, 64, 66] {
         for seed in 0..40u64 {
             let n = [0usize, 7, 300, 1500, 20_000][seed as usize % 5];
-            everything(with_version(
-                v,
-                &pseudocasuali(n, seed * 977 + u64::from(v)),
-            ));
+            everything(with_version(v, &pseudorandom(n, seed * 977 + u64::from(v))));
         }
     }
 }

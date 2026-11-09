@@ -7,7 +7,7 @@ mod dati_percorsi;
 mod verita;
 
 #[test]
-fn verita_agilent() {
+fn truth_agilent() {
     verita::corpus(
         "agilent",
         |r| r.starts_with("agilent/") && !r.to_lowercase().ends_with(".cdf"),

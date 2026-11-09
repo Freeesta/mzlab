@@ -72,7 +72,7 @@ fn the_exported_cdf_says_what_its_d_folder_says() {
         let mut m = Vec::new();
         members(&dir, &dir, &mut m);
         let mut d_set = mzlab_lettori::apri(FileSet { membri: m }, &Limits::desktop()).unwrap();
-        let mut c_set = comune::andi::apri_andi(std::fs::read(folder.join(cdf)).unwrap());
+        let mut c_set = comune::andi::open_andi(std::fs::read(folder.join(cdf)).unwrap());
         let n = d_set.samples()[0].scansioni;
         assert_eq!(c_set.samples()[0].scansioni, n, "{cdf}");
         let (id, ic) = (

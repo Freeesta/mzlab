@@ -2,7 +2,7 @@
 use super::*;
 use mzlab_core::error::Error;
 
-struct Finto {
+struct Fake {
     campioni: Vec<Sample>,
     indice: Vec<ScanEntry>,
     metodo: String,
@@ -22,7 +22,7 @@ fn entry(k: usize, rt: f64, filter: &str, q1: f64) -> ScanEntry {
     }
 }
 
-impl Reader for Finto {
+impl Reader for Fake {
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         &[("campo finto", "motivo finto")]
     }
@@ -82,12 +82,12 @@ impl Reader for Finto {
     }
 }
 
-fn finto(filter: &str) -> SrmDaScansioni {
+fn fake(filter: &str) -> SrmFromScans {
     fake_with(filter, 1, "")
 }
 
 /// Four scans with `filtro` and polarity `pol`; `metodo` is the `metodo/1` document the reader gives.
-fn fake_with(filter: &str, pol: i8, method: &str) -> SrmDaScansioni {
+fn fake_with(filter: &str, pol: i8, method: &str) -> SrmFromScans {
     let index = (0..4)
         .map(|k| {
             let mut v = entry(
@@ -100,7 +100,7 @@ fn fake_with(filter: &str, pol: i8, method: &str) -> SrmDaScansioni {
             v
         })
         .collect();
-    SrmDaScansioni::new(Box::new(Finto {
+    SrmFromScans::new(Box::new(Fake {
         campioni: vec![Sample {
             id: 1,
             nome: "a".into(),
@@ -114,7 +114,7 @@ fn fake_with(filter: &str, pol: i8, method: &str) -> SrmDaScansioni {
 
 #[test]
 fn one_trace_per_transition() {
-    let mut l = finto("+ c SRM ms2 300.0@cid25.0 [100.0-100.0]");
+    let mut l = fake("+ c SRM ms2 300.0@cid25.0 [100.0-100.0]");
     let v = l.chromatograms(0).unwrap();
     let ids: Vec<&str> = v.iter().map(|c| c.id.as_str()).collect();
     assert_eq!(
@@ -137,14 +137,14 @@ fn one_trace_per_transition() {
 /// A TSQ filter as the vendor writes it: no collision energy in it, the product window in brackets.
 const TSQ_FILTER: &str = "+ c ESI SRM ms2 300.000 [100.000-100.000, 150.000-150.002]";
 
-const METODO_TSQ: &str = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
+const TSQ_METHOD: &str = r#"{"ms":{"periodi":[{"esperimenti":[{"transizioni":[
 {"q1":300,"q3":100,"ce_eV":18.5,"polarita":"negative"},
 {"q1":300,"q3":150.001,"ce_eV":30,"polarita":"negative"},
 {"q1":400,"q3":200,"ce_eV":22,"polarita":"negative"}]}]}]}}"#;
 
 #[test]
 fn a_tsq_filter_without_ce_takes_ce_and_polarity_from_the_method() {
-    let mut l = fake_with(TSQ_FILTER, 1, METODO_TSQ);
+    let mut l = fake_with(TSQ_FILTER, 1, TSQ_METHOD);
     let ids: Vec<String> = l
         .chromatograms(0)
         .unwrap()
@@ -189,26 +189,26 @@ fn a_transition_duplicated_in_the_method_stays_as_the_scans() {
 
 #[test]
 fn crm_counts_as_srm() {
-    let mut l = finto("+ c ESI CRM ms2 300.0@cid25.0 [100.0-100.0]");
+    let mut l = fake("+ c ESI CRM ms2 300.0@cid25.0 [100.0-100.0]");
     assert_eq!(l.chromatograms(0).unwrap().len(), 3);
 }
 
 #[test]
 fn without_srm_filter_no_traces() {
-    let mut l = finto("+ c Full ms2 300.0@cid25.0 [50.0-400.0]");
+    let mut l = fake("+ c Full ms2 300.0@cid25.0 [50.0-400.0]");
     assert!(l.chromatograms(0).unwrap().is_empty());
-    assert!(!ha_scansioni_srm(&mut l, 0));
+    assert!(!has_srm_scans(&mut l, 0));
 }
 
 #[test]
 fn the_report_of_the_not_carried_is_that_of_the_wrapped_reader() {
-    assert_eq!(finto("").not_carried(), &[("campo finto", "motivo finto")]);
+    assert_eq!(fake("").not_carried(), &[("campo finto", "motivo finto")]);
 }
 
 #[test]
 fn the_profile_and_the_light_header_pass_through_the_wrapped_reader() {
     // a Thermo `.raw` keeps its profile next to the centroids: `--peaks profile` must reach it through the wrapper
-    let mut l = finto("+ c SRM ms2 300.000 [99.5-100.5]");
+    let mut l = fake("+ c SRM ms2 300.000 [99.5-100.5]");
     assert!(l.scan_profile(0, 0).unwrap().is_some_and(|s| s.profile));
     assert_eq!(l.table_header(0).unwrap().unwrap().run, "leggera");
 }

@@ -12,7 +12,7 @@ const FIELDS_MAX: usize = 64;
 pub(super) struct Tag {
     pub(super) name: String,
     pub(super) attr: Vec<(String, String)>,
-    pub(super) chiusura: bool,
+    pub(super) closing: bool,
     pub(super) empty: bool,
 }
 
@@ -47,24 +47,24 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
     while let Some(p) = s.get(i..).and_then(|r| r.find('<')) {
         let a = i + p + 1;
         let mut q = a;
-        let mut citato = 0u8;
+        let mut quoted = 0u8;
         while let Some(&c) = b.get(q) {
-            match (citato, c) {
-                (0, b'"') | (0, b'\'') => citato = c,
-                (x, y) if x != 0 && x == y => citato = 0,
+            match (quoted, c) {
+                (0, b'"') | (0, b'\'') => quoted = c,
+                (x, y) if x != 0 && x == y => quoted = 0,
                 (0, b'>') => break,
                 _ => {}
             }
             q += 1;
         }
-        let Some(corpo) = s.get(a..q) else { break };
+        let Some(body) = s.get(a..q) else { break };
         i = q + 1;
-        if corpo.starts_with(['?', '!']) {
+        if body.starts_with(['?', '!']) {
             continue;
         }
-        let (chiusura, corpo) = match corpo.strip_prefix('/') {
+        let (chiusura, corpo) = match body.strip_prefix('/') {
             Some(r) => (true, r),
-            None => (false, corpo),
+            None => (false, body),
         };
         let (empty, corpo) = match corpo.strip_suffix('/') {
             Some(r) => (true, r),
@@ -77,10 +77,10 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
         while let Some(e) = remainder.find('=') {
             let key = remainder[..e].trim().to_string();
             let v = remainder[e + 1..].trim_start();
-            let Some(virgolette) = v.chars().next().filter(|c| *c == '"' || *c == '\'') else {
+            let Some(quotes) = v.chars().next().filter(|c| *c == '"' || *c == '\'') else {
                 break;
             };
-            let Some(fine) = v[1..].find(virgolette) else {
+            let Some(fine) = v[1..].find(quotes) else {
                 break;
             };
             attr.push((key, unescape(&v[1..1 + fine])));
@@ -89,7 +89,7 @@ pub(super) fn tag_di(s: &str) -> Vec<Tag> {
         out.push(Tag {
             name: nome,
             attr,
-            chiusura,
+            closing: chiusura,
             empty,
         });
     }
@@ -101,11 +101,11 @@ pub(super) struct Parameter {
     pub(super) acc: String,
     pub(super) name: String,
     pub(super) value: String,
-    pub(super) unita: Option<String>,
+    pub(super) units: Option<String>,
 }
 
 /// The cvParams that `mzmlwrite` writes itself, from the fields of the `Spectrum`.
-const SCRITTI: [&str; 20] = [
+const WRITTEN: [&str; 20] = [
     "MS:1000511",
     "MS:1000579",
     "MS:1000580",
@@ -128,32 +128,32 @@ const SCRITTI: [&str; 20] = [
     "MS:1000744",
 ];
 
-pub(super) fn param_list(spettro: &[u8]) -> Vec<Parameter> {
-    let t = String::from_utf8_lossy(spettro);
+pub(super) fn param_list(spectrum: &[u8]) -> Vec<Parameter> {
+    let t = String::from_utf8_lossy(spectrum);
     let fine = t.find("<binaryDataArrayList").unwrap_or(t.len());
     tag_di(&t[..fine])
         .into_iter()
-        .filter(|g| !g.chiusura && g.name == "cvParam")
+        .filter(|g| !g.closing && g.name == "cvParam")
         .take(FIELDS_MAX)
         .map(|g| Parameter {
             acc: g.get("accession").to_string(),
             name: g.get("name").to_string(),
             value: g.get("value").to_string(),
-            unita: Some(g.get("unitName").to_string()).filter(|u| !u.is_empty()),
+            units: Some(g.get("unitName").to_string()).filter(|u| !u.is_empty()),
         })
         .collect()
 }
 
 /// What goes into the converted spectrum besides the fields of `Spectrum`: the scan window and, as userParams, every other cvParam with a value (collision energy, isolation width, injection time…).
-pub(super) fn extra_di(spettro: &[u8]) -> SpectrumExtra {
+pub(super) fn extra_di(spectrum: &[u8]) -> SpectrumExtra {
     let mut e = SpectrumExtra::default();
     let (mut lo, mut hi) = (None, None);
-    for p in param_list(spettro) {
+    for p in param_list(spectrum) {
         let number = p.value.parse::<f64>().ok();
         match p.acc.as_str() {
             "MS:1000501" => lo = number,
             "MS:1000500" => hi = number,
-            a if SCRITTI.contains(&a) => {}
+            a if WRITTEN.contains(&a) => {}
             _ if p.value.is_empty() => {}
             a => e.params.push((format!("{a} {}", p.name), p.value)),
         }
@@ -208,17 +208,17 @@ fn cv_param(h: &mut Header, st: &mut State, parent: &str, g: &Tag) {
 }
 
 /// The header of the mzML we write: the instrument, the sources with their SHA-1, the software and the run of the original, and mzLab as the program that wrote this file.
-pub(super) fn testata_da(head: &str, name: &str, limits: &Limits) -> Result<Header> {
+pub(super) fn header_from(head: &str, name: &str, limits: &Limits) -> Result<Header> {
     let mut h = Header {
         run: name.rsplit_once('.').map_or(name, |(s, _)| s).to_string(),
         software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
         ..Header::default()
     };
-    let mut pila: Vec<String> = Vec::new();
+    let mut stack: Vec<String> = Vec::new();
     let mut st = State::default();
     for g in tag_di(head) {
-        if g.chiusura {
-            if pila.pop().as_deref() == Some("software") {
+        if g.closing {
+            if stack.pop().as_deref() == Some("software") {
                 if let Some((v, Some((a, nm)))) = st.soft.take() {
                     h.extra_software.push((a, nm, v));
                 }
@@ -226,7 +226,7 @@ pub(super) fn testata_da(head: &str, name: &str, limits: &Limits) -> Result<Head
             }
             continue;
         }
-        let parent = pila.last().cloned().unwrap_or_default();
+        let parent = stack.last().cloned().unwrap_or_default();
         match g.name.as_str() {
             "referenceableParamGroup" => st.gruppi.push((g.get("id").to_string(), Vec::new())),
             "instrumentConfiguration" => st.ic_seen += 1,
@@ -258,8 +258,8 @@ pub(super) fn testata_da(head: &str, name: &str, limits: &Limits) -> Result<Head
             _ => {}
         }
         if !g.empty {
-            limits.profondita_ok(pila.len() + 1)?;
-            pila.push(g.name);
+            limits.profondita_ok(stack.len() + 1)?;
+            stack.push(g.name);
         }
     }
     Ok(h)

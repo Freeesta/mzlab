@@ -20,11 +20,11 @@ fn all_of_them(s: &mut Sqlite, name: &str) -> mzlab_core::error::Result<Vec<Vec<
 
 #[test]
 fn a_hand_made_sqlite_is_read() {
-    let t = foglia(&[
+    let t = leaf(&[
         vec![V::N, V::T("a"), V::R(1.5)],
         vec![V::N, V::T("b"), V::I(7)],
     ]);
-    let mut s = apri_db(
+    let mut s = open_db(
         db(&[(
             "T",
             "CREATE TABLE T (Id INTEGER PRIMARY KEY, Nome TEXT, X REAL)",
@@ -53,7 +53,7 @@ fn without_rowid_puts_the_key_first() {
         })
         .collect();
     let p = page(10, 0, &cell_list, 0);
-    let mut s = apri_db(
+    let mut s = open_db(
         db(&[(
             "T",
             "CREATE TABLE T (a INTEGER, b TEXT, PRIMARY KEY (b)) WITHOUT ROWID",
@@ -81,7 +81,7 @@ fn a_page_pointing_to_itself_does_not_loop_forever() {
         c
     };
     let p = page(5, 0, &[c], 2);
-    let mut s = apri_db(
+    let mut s = open_db(
         db(&[("T", "CREATE TABLE T (Id INTEGER PRIMARY KEY)", p)]),
         None,
     )
@@ -95,17 +95,17 @@ fn long_varints_and_broken_records_are_errors() {
     let mut rec = vec![0xff; 10];
     rec.extend([1, 2, 3]);
     let p = page(13, 0, &[leaf_cell(1, &rec)], 0);
-    let mut s = apri_db(
+    let mut s = open_db(
         db(&[("T", "CREATE TABLE T (Id INTEGER PRIMARY KEY, X)", p)]),
         None,
     )
     .unwrap();
     assert!(all_of_them(&mut s, "T").is_err());
     // a cell pointer outside the page
-    let mut p = foglia(&[vec![V::N, V::I(1)]]);
+    let mut p = leaf(&[vec![V::N, V::I(1)]]);
     p[8..10].copy_from_slice(&0xfff0u16.to_be_bytes());
     p[10..12].copy_from_slice(&0xffffu16.to_be_bytes());
-    let mut s = apri_db(
+    let mut s = open_db(
         db(&[("T", "CREATE TABLE T (Id INTEGER PRIMARY KEY, X)", p)]),
         None,
     )
@@ -115,10 +115,10 @@ fn long_varints_and_broken_records_are_errors() {
 
 #[test]
 fn every_truncation_is_an_error_or_a_result() {
-    let t = foglia(&[vec![V::N, V::T("a")]]);
+    let t = leaf(&[vec![V::N, V::T("a")]]);
     let b = db(&[("T", "CREATE TABLE T (Id INTEGER PRIMARY KEY, X TEXT)", t)]);
     for n in (0..b.len()).step_by(37) {
-        if let Ok(mut s) = apri_db(b[..n].to_vec(), None)
+        if let Ok(mut s) = open_db(b[..n].to_vec(), None)
             && s.table("T").is_some()
         {
             let _ = all_of_them(&mut s, "T");
@@ -164,20 +164,20 @@ fn wal(page_n: u32, img: &[u8], commit: bool) -> Vec<u8> {
 #[test]
 fn the_log_wins_if_confirmed() {
     let sql = "CREATE TABLE T (Id INTEGER PRIMARY KEY, X TEXT)";
-    let vecchia = foglia(&[vec![V::N, V::T("vecchio")]]);
-    let new_one = foglia(&[vec![V::N, V::T("nuovo")]]);
-    let base = db(&[("T", sql, vecchia)]);
-    let mut s = apri_db(base.clone(), Some(wal(2, &new_one, true))).unwrap();
+    let old = leaf(&[vec![V::N, V::T("vecchio")]]);
+    let new_one = leaf(&[vec![V::N, V::T("nuovo")]]);
+    let base = db(&[("T", sql, old)]);
+    let mut s = open_db(base.clone(), Some(wal(2, &new_one, true))).unwrap();
     assert!(s.with_wal());
     assert_eq!(all_of_them(&mut s, "T").unwrap()[0][1], "nuovo");
     // not committed: ignored
-    let mut s = apri_db(base.clone(), Some(wal(2, &new_one, false))).unwrap();
+    let mut s = open_db(base.clone(), Some(wal(2, &new_one, false))).unwrap();
     assert_eq!(all_of_them(&mut s, "T").unwrap()[0][1], "vecchio");
     // wrong checksum: ignored
     let mut w = wal(2, &new_one, true);
     let n = w.len();
     w[n - 1] ^= 1;
-    let mut s = apri_db(base, Some(w)).unwrap();
+    let mut s = open_db(base, Some(w)).unwrap();
     assert_eq!(all_of_them(&mut s, "T").unwrap()[0][1], "vecchio");
 }
 
@@ -219,9 +219,9 @@ fn a_timstof_is_high_resolution() {
 #[test]
 fn bpc_equal_before_and_after_the_round_trip() {
     // the BPC asked first decodes the frames; after every spectrum has been read it comes from the maxima kept by the reader
-    let apri = || mzlab_lettori::apri(folder(blocco2(), minimal_tdf(3)), &limits()).unwrap();
-    let before = apri().chromatogram(0, "BPC").unwrap();
-    let mut l = apri();
+    let open = || mzlab_lettori::apri(folder(blocco2(), minimal_tdf(3)), &limits()).unwrap();
+    let before = open().chromatogram(0, "BPC").unwrap();
+    let mut l = open();
     let n = l.index(0).unwrap().len();
     let maxima: Vec<f64> = (0..n)
         .map(|k| {

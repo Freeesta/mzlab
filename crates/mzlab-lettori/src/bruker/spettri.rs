@@ -16,7 +16,7 @@ pub struct Desc {
     pub id: String,
     pub filter: String,
     pub iso: Option<Window>,
-    pub precursore: Option<i64>,
+    pub precursor: Option<i64>,
     pub load: Option<i64>,
     /// Selected ion m/z (monoisotopic when the file says it) or the isolation target.
     pub mz_prec: Option<f64>,
@@ -39,7 +39,7 @@ pub fn build(d: &Data) -> Vec<Desc> {
     let mut out: Vec<Desc> = Vec::new();
     for (fi, f) in d.frames.iter().enumerate() {
         let n0 = out.len();
-        match f.tipo {
+        match f.kind {
             0 => out.push(whole_frame(d, fi, None)),
             8 => dda(d, fi, pasef.get(&f.id).map_or(&[][..], |v| v), &mut out),
             9 => dia(d, fi, &mut out),
@@ -54,17 +54,17 @@ pub fn build(d: &Data) -> Vec<Desc> {
     out
 }
 
-fn scansioni_intere(d: &Data, f: usize) -> Vec<(u32, u32)> {
-    vec![(0, u32::try_from(d.frames[f].scansioni).unwrap_or(u32::MAX))]
+fn whole_scans(d: &Data, f: usize) -> Vec<(u32, u32)> {
+    vec![(0, u32::try_from(d.frames[f].scans).unwrap_or(u32::MAX))]
 }
 
 /// A frame as one spectrum: MS1, or MS2 when the frame table says it has an isolation.
 fn whole_frame(d: &Data, fi: usize, info: Option<&InfoFrame>) -> Desc {
     let f = &d.frames[fi];
-    let ms2 = info.is_some() || f.tipo != 0;
+    let ms2 = info.is_some() || f.kind != 0;
     Desc {
         frame: fi,
-        scan: scansioni_intere(d, fi),
+        scan: whole_scans(d, fi),
         livello: if ms2 { 2 } else { 1 },
         id: format!("frame={}", f.id),
         filter: match info {
@@ -77,22 +77,22 @@ fn whole_frame(d: &Data, fi: usize, info: Option<&InfoFrame>) -> Desc {
             width: i.larghezza,
             ce: i.ce,
         }),
-        precursore: None,
-        load: info.and_then(|i| i.carica),
+        precursor: None,
+        load: info.and_then(|i| i.charge),
         mz_prec: info.map(|i| i.mz),
     }
 }
 
 /// A MS2 spectrum of one isolation window of a frame.
-fn ms2(fi: usize, id: String, tipo: &str, w: Window) -> Desc {
+fn ms2(fi: usize, id: String, kind: &str, w: Window) -> Desc {
     Desc {
         frame: fi,
         scan: vec![w.scan],
         livello: 2,
         id,
-        filter: format!("TOF {tipo} MS2 {}@{}", fmt_mz(w.mz), w.ce),
+        filter: format!("TOF {kind} MS2 {}@{}", fmt_mz(w.mz), w.ce),
         iso: Some(w),
-        precursore: None,
+        precursor: None,
         load: None,
         mz_prec: Some(w.mz),
     }
@@ -116,7 +116,7 @@ fn dda(d: &Data, fi: usize, rows: &[usize], out: &mut Vec<Desc>) {
             w,
         );
         s.scan = rows.iter().map(|&i| d.pasef[i].2.scan).collect();
-        s.precursore = Some(p);
+        s.precursor = Some(p);
         s.load = pr.and_then(|x| x.load);
         s.mz_prec = pr.and_then(|x| x.mz).or(Some(w.mz));
         out.push(s);
@@ -154,14 +154,14 @@ fn prm_row(d: &Data, fi: usize, rows: &[usize], out: &mut Vec<Desc>) {
 pub fn stretches(p: &Peaks, scan: &[(u32, u32)]) -> Vec<std::ops::Range<usize>> {
     let mut r: Vec<(u32, u32)> = scan.iter().copied().filter(|x| x.0 < x.1).collect();
     r.sort_unstable();
-    let mut uniti: Vec<(u32, u32)> = Vec::with_capacity(r.len());
+    let mut joined: Vec<(u32, u32)> = Vec::with_capacity(r.len());
     for (a, b) in r {
-        match uniti.last_mut() {
+        match joined.last_mut() {
             Some(u) if a <= u.1 => u.1 = u.1.max(b),
-            _ => uniti.push((a, b)),
+            _ => joined.push((a, b)),
         }
     }
-    uniti.into_iter().map(|(a, b)| p.points(a, b)).collect()
+    joined.into_iter().map(|(a, b)| p.points(a, b)).collect()
 }
 
 /// The points of `p` whose scan is in one of `scan`, added by TOF index (ordered by TOF, and so by m/z).

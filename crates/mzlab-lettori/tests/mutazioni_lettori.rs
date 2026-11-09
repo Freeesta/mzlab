@@ -7,7 +7,7 @@ mod comune;
 mod comune_sqlite;
 mod comune_waters;
 
-use comune::andi::{andi_cromato, andi_ms, FLAT_RUN};
+use comune::andi::{andi_chromatogram, andi_ms, FLAT_RUN};
 use comune::mzxml::{mzxml, run, FLAT};
 use comune::*;
 use mzlab_core::lettori::{FileSet, Limits, Member};
@@ -28,7 +28,7 @@ impl Case {
     }
 }
 
-fn giri() -> usize {
+fn rounds() -> usize {
     std::env::var("MZLAB_MUTAZIONI")
         .ok()
         .and_then(|s| s.parse().ok())
@@ -104,10 +104,7 @@ fn read_all(members: &[(String, Vec<u8>)]) -> Result<(), String> {
 }
 
 /// Runs `f` on a thread with a 5 s deadline; a panic, a hang or an `Err` is a finding.
-fn sorveglia(
-    what: &str,
-    f: impl FnOnce() -> Result<(), String> + Send + 'static,
-) -> Option<String> {
+fn watch(what: &str, f: impl FnOnce() -> Result<(), String> + Send + 'static) -> Option<String> {
     let (tx, rx) = mpsc::channel();
     std::thread::spawn(move || {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
@@ -134,7 +131,7 @@ fn gz(b: &[u8]) -> Vec<u8> {
     e.finish().unwrap()
 }
 
-const OSTILI: &[&str] = &[
+const HOSTILE: &[&str] = &[
     "NaN",
     "-inf",
     "inf",
@@ -149,7 +146,7 @@ const OSTILI: &[&str] = &[
 ];
 
 /// Text mutants: cuts at every `<` and `>`, hostile numbers in attribute values, duplicated and removed lines, BOM/CRLF, junk appended.
-fn text_mutants(b: &[u8], case: &mut Case, giri: usize) -> Vec<(String, Vec<u8>)> {
+fn text_mutants(b: &[u8], case: &mut Case, rounds: usize) -> Vec<(String, Vec<u8>)> {
     let mut out = Vec::new();
     for (i, _) in b
         .iter()
@@ -159,20 +156,20 @@ fn text_mutants(b: &[u8], case: &mut Case, giri: usize) -> Vec<(String, Vec<u8>)
         out.push((format!("cut@{i}"), b[..i].to_vec()));
     }
     // attribute values: every `="…"` gets each hostile value in turn (bounded by seeded picks)
-    let virgolette: Vec<usize> = b
+    let quotes: Vec<usize> = b
         .windows(2)
         .enumerate()
         .filter(|(_, w)| w == b"=\"")
         .map(|(i, _)| i + 2)
         .collect();
-    for _ in 0..200 * giri {
-        let Some(&a) = virgolette.get(case.below(virgolette.len())) else {
+    for _ in 0..200 * rounds {
+        let Some(&a) = quotes.get(case.below(quotes.len())) else {
             break;
         };
         let Some(z) = b[a..].iter().position(|c| *c == b'"') else {
             continue;
         };
-        let v = OSTILI[case.below(OSTILI.len())];
+        let v = HOSTILE[case.below(HOSTILE.len())];
         let mut m = b[..a].to_vec();
         m.extend_from_slice(v.as_bytes());
         m.extend_from_slice(&b[a + z..]);
@@ -187,7 +184,7 @@ fn text_mutants(b: &[u8], case: &mut Case, giri: usize) -> Vec<(String, Vec<u8>)
             .flat_map(|(_, r)| r.iter().copied())
             .collect();
         out.push((format!("drop-line{k}"), without));
-        let doppia: Vec<u8> = rows
+        let double: Vec<u8> = rows
             .iter()
             .enumerate()
             .flat_map(|(j, r)| {
@@ -198,9 +195,9 @@ fn text_mutants(b: &[u8], case: &mut Case, giri: usize) -> Vec<(String, Vec<u8>)
                 }
             })
             .collect();
-        out.push((format!("dup-line{k}"), doppia));
+        out.push((format!("dup-line{k}"), double));
     }
-    for _ in 0..200 * giri {
+    for _ in 0..200 * rounds {
         let mut m = b.to_vec();
         for _ in 0..1 + case.below(4) {
             let i = case.below(m.len());
@@ -229,13 +226,13 @@ fn text_mutants(b: &[u8], case: &mut Case, giri: usize) -> Vec<(String, Vec<u8>)
 }
 
 /// Binary mutants: cuts on a grid, flipped bytes, u32 words set to 0, 0xFFFFFFFF or 0x7FFFFFFF, f64 words set to NaN or -1.
-fn mutanti_binari(b: &[u8], case: &mut Case, giri: usize) -> Vec<(String, Vec<u8>)> {
+fn binary_mutants(b: &[u8], case: &mut Case, rounds: usize) -> Vec<(String, Vec<u8>)> {
     let mut out = Vec::new();
     let step = (b.len() / 300).max(1);
     for i in (0..b.len()).step_by(step) {
         out.push((format!("cut@{i}"), b[..i].to_vec()));
     }
-    for _ in 0..300 * giri {
+    for _ in 0..300 * rounds {
         let mut m = b.to_vec();
         let i = case.below(m.len().saturating_sub(8)) & !3;
         let which = case.below(6);
@@ -255,19 +252,19 @@ fn mutanti_binari(b: &[u8], case: &mut Case, giri: usize) -> Vec<(String, Vec<u8
     out
 }
 
-fn esplora(label: &str, members: Vec<(String, Vec<u8>)>, which: usize, text: bool) -> Vec<String> {
+fn explore(label: &str, members: Vec<(String, Vec<u8>)>, which: usize, text: bool) -> Vec<String> {
     let mut case = Case(0x9E37_79B9_7F4A_7C15 ^ label.len() as u64);
     let base = members[which].1.clone();
-    let mutanti = if text {
-        text_mutants(&base, &mut case, giri())
+    let mutants = if text {
+        text_mutants(&base, &mut case, rounds())
     } else {
-        mutanti_binari(&base, &mut case, giri())
+        binary_mutants(&base, &mut case, rounds())
     };
     let mut found = Vec::new();
-    for (name, m) in mutanti {
+    for (name, m) in mutants {
         let mut ms = members.clone();
         ms[which].1 = m;
-        if let Some(e) = sorveglia(&format!("{label} {name}"), move || read_all(&ms)) {
+        if let Some(e) = watch(&format!("{label} {name}"), move || read_all(&ms)) {
             found.push(e);
         }
     }
@@ -282,21 +279,21 @@ fn require_none(found: Vec<String>) {
 }
 
 #[test]
-fn mzml_numpress_mutato() {
+fn mzml_numpress_mutated() {
     let np = mzml_di(
-        &scansioni(),
+        &scans(),
         Cod::Np {
             intensities: mzlab_core::numpress::Np::Pic,
             zlib: true,
         },
         None,
     );
-    require_none(esplora("mzml-np", vec![("x.mzML".into(), np)], 0, true));
+    require_none(explore("mzml-np", vec![("x.mzML".into(), np)], 0, true));
 }
 
 #[test]
-fn mzxml_mutato() {
-    require_none(esplora(
+fn mzxml_mutated() {
+    require_none(explore(
         "mzxml",
         vec![("x.mzXML".into(), mzxml(&run(), FLAT))],
         0,
@@ -305,36 +302,36 @@ fn mzxml_mutato() {
 }
 
 #[test]
-fn mzml_gz_mutato() {
-    let gz = gz(&mzml_di(&scansioni(), Cod::Piano, None));
-    require_none(esplora("mzml-gz", vec![("x.mzML.gz".into(), gz)], 0, false));
+fn mzml_gz_mutated() {
+    let gz = gz(&mzml_di(&scans(), Cod::Piano, None));
+    require_none(explore("mzml-gz", vec![("x.mzML.gz".into(), gz)], 0, false));
 }
 
 #[test]
-fn andi_mutato() {
-    require_none(esplora(
+fn andi_mutated() {
+    require_none(explore(
         "andi-ms",
         vec![("x.cdf".into(), andi_ms(&FLAT_RUN))],
         0,
         false,
     ));
-    require_none(esplora(
+    require_none(explore(
         "andi-cromato",
-        vec![("x.cdf".into(), andi_cromato(40))],
+        vec![("x.cdf".into(), andi_chromatogram(40))],
         0,
         false,
     ));
 }
 
 #[test]
-fn shimadzu_mutato() {
-    require_none(esplora(
+fn shimadzu_mutated() {
+    require_none(explore(
         "qgd",
         vec![("x.qgd".into(), comune::shimadzu::qgd(8))],
         0,
         false,
     ));
-    require_none(esplora(
+    require_none(explore(
         "lcd",
         vec![("x.lcd".into(), comune::shimadzu::lcd2020(8))],
         0,
@@ -343,22 +340,22 @@ fn shimadzu_mutato() {
 }
 
 #[test]
-fn thermo_mutato() {
+fn thermo_mutated() {
     let raw = comune::thermo::Raw::tsq(63, 6).bytes();
-    require_none(esplora("thermo", vec![("x.raw".into(), raw)], 0, false));
+    require_none(explore("thermo", vec![("x.raw".into(), raw)], 0, false));
 }
 
 #[test]
-fn mzxml_annidato_32_mutato() {
+fn mzxml_nested_32_mutated() {
     let o = comune::mzxml::Opz {
         a64: false,
         zlib: false,
         index: false,
-        annidato: true,
-        attributi: false,
+        nested: true,
+        attributes: false,
     };
-    let b = mzxml(&comune::mzxml::annida(&run()), o);
-    require_none(esplora(
+    let b = mzxml(&comune::mzxml::nest(&run()), o);
+    require_none(explore(
         "mzxml-annidato",
         vec![("x.mzXML".into(), b)],
         0,
@@ -367,20 +364,20 @@ fn mzxml_annidato_32_mutato() {
 }
 
 #[test]
-fn mzml_gz_multimembro_mutato() {
-    let flat = mzml_di(&scansioni(), Cod::Piano, None);
+fn mzml_gz_multimember_mutated() {
+    let flat = mzml_di(&scans(), Cod::Piano, None);
     let meta = flat.len() / 2;
     let mut b = gz(&flat[..meta]);
     b.extend(gz(&flat[meta..]));
-    require_none(esplora("mzml-gz2", vec![("x.mzML.gz".into(), b)], 0, false));
+    require_none(explore("mzml-gz2", vec![("x.mzML.gz".into(), b)], 0, false));
 }
 
 #[test]
-fn waters_mutato() {
+fn waters_mutated() {
     let file = comune_waters::folder_file();
     for q in 0..file.len() {
         let e = format!("waters {}", file[q].0);
-        require_none(esplora(
+        require_none(explore(
             &e,
             file.clone(),
             q,
@@ -390,7 +387,7 @@ fn waters_mutato() {
 }
 
 #[test]
-fn bruker_mutato() {
+fn bruker_mutated() {
     let f = vec![
         (
             "x.d/analysis.tdf".to_string(),
@@ -398,8 +395,8 @@ fn bruker_mutato() {
         ),
         ("x.d/analysis.tdf_bin".to_string(), comune_sqlite::blocco2()),
     ];
-    require_none(esplora("bruker tdf", f.clone(), 0, false));
-    require_none(esplora("bruker bin", f, 1, false));
+    require_none(explore("bruker tdf", f.clone(), 0, false));
+    require_none(explore("bruker bin", f, 1, false));
 }
 
 /// The site's own path for a plain mzML (scan table, `.mzidx`, chromatograms, parser): no panic, no hang, no NaN or infinite number passed on.
@@ -446,11 +443,11 @@ fn engine_mzml(b: &[u8]) -> Result<(), String> {
 
 #[test]
 fn mutated_engine_mzml() {
-    let flat = mzml_di(&scansioni(), Cod::Nudo, None);
+    let flat = mzml_di(&scans(), Cod::Nudo, None);
     let mut case = Case(0x9E37_79B9_7F4A_7C15 ^ 0x6d6f746f7265);
     let mut found = Vec::new();
-    for (name, m) in text_mutants(&flat, &mut case, giri()) {
-        if let Some(e) = sorveglia(&format!("engine {name}"), move || engine_mzml(&m)) {
+    for (name, m) in text_mutants(&flat, &mut case, rounds()) {
+        if let Some(e) = watch(&format!("engine {name}"), move || engine_mzml(&m)) {
             found.push(e);
         }
     }

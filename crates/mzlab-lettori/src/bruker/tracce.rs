@@ -1,6 +1,6 @@
 //! The TIC and BPC of a timsTOF run (docs/agenti/bruker.md): the TIC of a survey scan from `Frames`, of the other spectra from their points;
 //! the BPC from the maxima the reader keeps of the spectra already decoded, decoding only the frames not read yet.
-use super::{bad_index, BrukerReader, UNITA};
+use super::{bad_index, BrukerReader, UNITS};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
@@ -43,7 +43,7 @@ impl BrukerReader {
             kind,
             q1: None,
             q3: None,
-            unit: UNITA.into(),
+            unit: UNITS.into(),
             time: ks.iter().map(|&k| self.indice[k].rt).collect(),
             intensity,
         })

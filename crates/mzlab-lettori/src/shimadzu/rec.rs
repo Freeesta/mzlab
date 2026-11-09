@@ -9,7 +9,7 @@ const W_MAX: usize = 8;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct Shape {
     /// Bytes of the header.
-    pub testa: usize,
+    pub head: usize,
     /// Bytes of an intensity.
     pub w: usize,
     pub npk: usize,
@@ -31,8 +31,8 @@ fn u16_at(r: &[u8], at: usize) -> Option<u16> {
 }
 
 fn validate(r: &[u8], f: Shape) -> Option<Shape> {
-    let ok = (1..=W_MAX).contains(&f.w)
-        && f.npk.checked_mul(f.point())?.checked_add(f.testa)? == r.len();
+    let ok =
+        (1..=W_MAX).contains(&f.w) && f.npk.checked_mul(f.point())?.checked_add(f.head)? == r.len();
     ok.then_some(f)
 }
 
@@ -43,7 +43,7 @@ pub(super) fn gc_shape(r: &[u8], ko: usize) -> Option<Shape> {
     validate(
         r,
         Shape {
-            testa: 32,
+            head: 32,
             w: if mrm { kind - 100 } else { kind },
             npk,
             mrm,
@@ -57,7 +57,7 @@ pub(super) fn lc_shape(r: &[u8]) -> Option<Shape> {
     validate(
         r,
         Shape {
-            testa: 64,
+            head: 64,
             w: usize::from(u16_at(r, 52)?),
             npk: usize::from(u16_at(r, 54)?),
             mrm: false,
@@ -68,7 +68,7 @@ pub(super) fn lc_shape(r: &[u8]) -> Option<Shape> {
 
 /// Point `j` of a record already validated by `forma_*`: (m/z or Q1 × 20, Q3 × 20 for MRM, intensity).
 pub(super) fn point(r: &[u8], f: &Shape, j: usize) -> (u16, Option<u16>, u64) {
-    let p = f.testa + j * f.point();
+    let p = f.head + j * f.point();
     let a = u16_at(r, p).unwrap_or(0);
     let (q3, y0) = if f.mrm {
         (u16_at(r, p + 2), p + 4)

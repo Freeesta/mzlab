@@ -8,42 +8,42 @@ use super::mrm;
 use mzlab_core::error::Result;
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
-const UNITA: &str = "number of detector counts";
+const UNITS: &str = "number of detector counts";
 const CHROMS_INF: &str = "_CHROMS.INF";
-const INTESTAZIONE: usize = 128;
+const HEADER: usize = 128;
 const RECORD_INF: usize = 85;
 const RECORD_DAT: usize = 8;
 
 /// One analog trace: `_CHROMS.INF` record `n - 1` is the file `_CHROnnn.DAT`.
 #[derive(Debug, Clone)]
-pub(super) struct Analogica {
+pub(super) struct Analog {
     pub(super) n: u32,
     pub(super) name: String,
-    pub(super) unita: String,
+    pub(super) units: String,
     pub(super) scale: f64,
     /// The text after the name, as the file wrote it (`$CC$,scale,type,low,high,units`).
     pub(super) raw_value: String,
 }
 
-pub(super) fn analogiche(c: &mut Folder) -> Vec<Analogica> {
+pub(super) fn analog(c: &mut Folder) -> Vec<Analog> {
     let Some(b) = c.read(CHROMS_INF).ok().flatten() else {
         return Vec::new();
     };
-    let n = b.len().saturating_sub(INTESTAZIONE) / RECORD_INF;
+    let n = b.len().saturating_sub(HEADER) / RECORD_INF;
     if c.limits.ok_entries(n as u64).is_err() {
         return Vec::new();
     }
     (0..n)
         .map(|i| {
-            let r = &b[INTESTAZIONE + i * RECORD_INF..INTESTAZIONE + (i + 1) * RECORD_INF];
+            let r = &b[HEADER + i * RECORD_INF..HEADER + (i + 1) * RECORD_INF];
             let mut fields = r[4..].split(|&x| x == 0);
             let nome = text(fields.next().unwrap_or(&[])).trim().to_string();
             let raw_value = text(fields.next().unwrap_or(&[])).trim().to_string();
             let p: Vec<&str> = raw_value.split(',').collect();
-            Analogica {
+            Analog {
                 n: i as u32 + 1,
                 name: nome,
-                unita: p.get(5).map_or(String::new(), |u| u.trim().to_string()),
+                units: p.get(5).map_or(String::new(), |u| u.trim().to_string()),
                 scale: p
                     .get(1)
                     .and_then(|s| s.trim().parse().ok())
@@ -55,25 +55,25 @@ pub(super) fn analogiche(c: &mut Folder) -> Vec<Analogica> {
         .collect()
 }
 
-fn tipo_analogico(a: &Analogica) -> ChromKind {
+fn analog_kind(a: &Analog) -> ChromKind {
     let n = a.name.to_ascii_lowercase();
     if n.contains("pressure") {
         ChromKind::Pressure
-    } else if a.unita.eq_ignore_ascii_case("AU") || n.contains(" nm") {
+    } else if a.units.eq_ignore_ascii_case("AU") || n.contains(" nm") {
         ChromKind::Pda
     } else {
         ChromKind::Analog
     }
 }
 
-fn trace(c: &mut Folder, a: &Analogica, indice: usize) -> Result<Option<Chromatogram>> {
+fn trace(c: &mut Folder, a: &Analog, indice: usize) -> Result<Option<Chromatogram>> {
     let Some(b) = c.read(&format!("_CHRO{:03}.DAT", a.n))? else {
         return Ok(None);
     };
-    let n = b.len().saturating_sub(INTESTAZIONE) / RECORD_DAT;
+    let n = b.len().saturating_sub(HEADER) / RECORD_DAT;
     c.limits.ok_entries(n as u64)?;
     let (mut time, mut intensity) = (Vec::with_capacity(n), Vec::with_capacity(n));
-    for r in b[INTESTAZIONE..].chunks_exact(RECORD_DAT) {
+    for r in b[HEADER..].chunks_exact(RECORD_DAT) {
         let (t, v) = (f64::from(f32_at(r, 0)), f64::from(f32_at(r, 4)) * a.scale);
         if t.is_finite() && v.is_finite() {
             time.push(t);
@@ -83,10 +83,10 @@ fn trace(c: &mut Folder, a: &Analogica, indice: usize) -> Result<Option<Chromato
     Ok(Some(Chromatogram {
         index: indice,
         id: a.name.clone(),
-        kind: tipo_analogico(a),
+        kind: analog_kind(a),
         q1: None,
         q3: None,
-        unit: a.unita.clone(),
+        unit: a.units.clone(),
         time,
         intensity,
     }))
@@ -157,7 +157,7 @@ fn channels(l: &mut WatersReader, i: usize, first_one: usize) -> Result<Option<V
                     q3: q
                         .filter(|c| c.1 > 0.0 && c.1 != c.0)
                         .map(|c| f64::from(c.1)),
-                    unit: UNITA.into(),
+                    unit: UNITS.into(),
                     time: moment.clone(),
                     intensity,
                 }
@@ -181,7 +181,7 @@ fn tic<'a>(funs: impl Iterator<Item = &'a Fun>, id: &str, kind: ChromKind) -> Op
         kind,
         q1: None,
         q3: None,
-        unit: UNITA.into(),
+        unit: UNITS.into(),
         time: v.iter().map(|x| f64::from(x.0)).collect(),
         intensity: v.iter().map(|x| f64::from(x.1)).collect(),
     })

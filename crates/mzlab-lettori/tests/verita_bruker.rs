@@ -7,7 +7,7 @@ mod dati_percorsi;
 mod verita;
 
 #[test]
-fn verita_bruker() {
+fn truth_bruker() {
     verita::corpus(
         "bruker",
         |r| r.starts_with("bruker/"),

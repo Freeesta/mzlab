@@ -22,7 +22,7 @@ fn number(v: &str) -> Option<f64> {
         .filter(|x| x.is_finite())
 }
 
-fn polarita(v: &str) -> Option<i8> {
+fn polarity(v: &str) -> Option<i8> {
     let v = v.trim().to_ascii_uppercase();
     if v.starts_with("ES+") || v.starts_with("POS") {
         Some(1)
@@ -36,12 +36,12 @@ fn polarita(v: &str) -> Option<i8> {
 // ---- _HEADER.TXT ----
 
 #[derive(Debug, Default)]
-pub(super) struct Testata {
+pub(super) struct WatersHeader {
     pub(super) entries: Vec<(String, String)>,
     pub(super) tarature: BTreeMap<u32, Calibration>,
 }
 
-impl Testata {
+impl WatersHeader {
     /// The value of `chiave` when the file gives one.
     pub(super) fn get(&self, key: &str) -> Option<&str> {
         self.entries
@@ -51,8 +51,8 @@ impl Testata {
     }
 }
 
-pub(super) fn file_header(t: &str) -> Testata {
-    let mut h = Testata::default();
+pub(super) fn file_header(t: &str) -> WatersHeader {
+    let mut h = WatersHeader::default();
     for row in t.lines() {
         let Some(r) = row.trim().strip_prefix("$$") else {
             continue;
@@ -94,7 +94,7 @@ pub(super) enum Mode {
 }
 
 #[derive(Debug, Clone, Default)]
-pub(super) struct FunzioneExt {
+pub(super) struct FunctionExt {
     pub(super) label: String,
     pub(super) mode: Mode,
     /// The label names ion mobility (not decoded).
@@ -109,7 +109,7 @@ pub(super) struct FunzioneExt {
 #[derive(Debug, Default)]
 pub(super) struct Extern {
     pub(super) voci: Vec<Entry>,
-    pub(super) funzioni: BTreeMap<u32, FunzioneExt>,
+    pub(super) funzioni: BTreeMap<u32, FunctionExt>,
     /// The polarity of the global section (functions without their own).
     pub(super) polarita: Option<i8>,
 }
@@ -132,7 +132,7 @@ fn mode_of(tail: &str) -> Mode {
 }
 
 /// «Function Parameters - Function 2 - TOF MS FUNCTION» → (2, «TOF MS FUNCTION»).
-fn intestazione_funzione(r: &str) -> Option<(u32, &str)> {
+fn function_header(r: &str) -> Option<(u32, &str)> {
     let rest = r.strip_prefix("Function Parameters - Function ")?;
     let (n, tail) = rest.split_once('-').unwrap_or((rest, ""));
     Some((n.trim().parse().ok()?, tail.trim()))
@@ -180,7 +180,7 @@ pub(super) fn extern_inf(t: &str) -> Extern {
         if r.is_empty() {
             continue;
         }
-        if let Some((n, tail)) = intestazione_funzione(r) {
+        if let Some((n, tail)) = function_header(r) {
             funz = Some(n);
             sezione = r.to_string();
             let f = e.funzioni.entry(n).or_default();
@@ -190,11 +190,11 @@ pub(super) fn extern_inf(t: &str) -> Extern {
             continue;
         }
         if r.ends_with(':') && !r.contains('\t') {
-            let titolo = r.trim_end_matches(':').trim();
-            funz = titolo
+            let title = r.trim_end_matches(':').trim();
+            funz = title
                 .strip_prefix("Instrument Parameters - Function ")
                 .and_then(|n| n.trim().parse().ok());
-            sezione = titolo.to_string();
+            sezione = title.to_string();
             if let Some(n) = funz {
                 e.funzioni.entry(n).or_default();
             }
@@ -204,7 +204,7 @@ pub(super) fn extern_inf(t: &str) -> Extern {
         let base = k.split('(').next().unwrap_or(&k).trim_end().to_string();
         match (base.as_str(), funz) {
             ("Polarity", f) => {
-                let p = polarita(&v);
+                let p = polarity(&v);
                 match f {
                     Some(n) => e.funzioni.entry(n).or_default().polarita = p,
                     None => e.polarita = e.polarita.or(p),

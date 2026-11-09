@@ -17,15 +17,12 @@ const MSCONVERT: &str =
     "_oracoli/msconvert_windows/centroidi/thermo/raw/PXD043691_mrm/201208_15.mzML";
 
 fn data(rel: &str) -> Option<PathBuf> {
-    let mut radici: Vec<PathBuf> = std::env::var_os("MZLAB_ROSINA_DATI")
+    let mut roots: Vec<PathBuf> = std::env::var_os("MZLAB_ROSINA_DATI")
         .map(PathBuf::from)
         .into_iter()
         .collect();
-    radici.push(PathBuf::from("/Volumes/Fred/rosina"));
-    radici
-        .into_iter()
-        .map(|r| r.join(rel))
-        .find(|p| p.is_file())
+    roots.push(PathBuf::from("/Volumes/Fred/rosina"));
+    roots.into_iter().map(|r| r.join(rel)).find(|p| p.is_file())
 }
 
 fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Reader> {
@@ -38,7 +35,7 @@ fn reader(raw: &PathBuf) -> Box<dyn mzlab_core::lettori::Reader> {
             sha1: None,
         }],
     };
-    mzlab_lettori::apri_nudo(set, &Limits::sito()).unwrap()
+    mzlab_lettori::open_bare(set, &Limits::sito()).unwrap()
 }
 
 fn close(a: f64, b: f64, rel: f64) -> bool {

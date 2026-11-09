@@ -8,10 +8,10 @@ const RECORD: usize = 416;
 const SLOTS: usize = 32;
 
 #[derive(Debug, Clone)]
-pub(super) struct Funzione {
+pub(super) struct Function {
     /// 1-based, the `nnn` of `_FUNCnnn.*`.
     pub(super) indice: u32,
-    pub(super) tipo: u8,
+    pub(super) kind: u8,
     pub(super) below: u8,
     /// Seconds per scan cycle (`+0x002`).
     pub(super) cycle_s: f32,
@@ -22,10 +22,10 @@ pub(super) struct Funzione {
     pub(super) dwell_s: Vec<f32>,
 }
 
-impl Funzione {
+impl Function {
     /// Channels of a function of SIR or MRM (the low nibble of the type is 9).
     pub(super) fn mirato(&self) -> bool {
-        self.tipo & 0x0F == 9
+        self.kind & 0x0F == 9
     }
 
     /// Bit 7 of the subtype marks the function of the lock mass (the reference).
@@ -49,7 +49,7 @@ impl Funzione {
 }
 
 /// The functions of `bytes` (`apri` refuses an empty file first); `None` when the size is no multiple of the record (a file cut inside a record).
-pub(super) fn read(b: &[u8], limits: &Limits) -> Result<Option<Vec<Funzione>>> {
+pub(super) fn read(b: &[u8], limits: &Limits) -> Result<Option<Vec<Function>>> {
     if !b.len().is_multiple_of(RECORD) {
         return Ok(None);
     }
@@ -61,9 +61,9 @@ pub(super) fn read(b: &[u8], limits: &Limits) -> Result<Option<Vec<Funzione>>> {
                 let slot = |base: usize| -> Vec<f32> {
                     (0..SLOTS).map(|k| f32_at(r, base + 4 * k)).collect()
                 };
-                Funzione {
+                Function {
                     indice: i as u32 + 1,
-                    tipo: r[0],
+                    kind: r[0],
                     below: r[1],
                     cycle_s: f32_at(r, 2),
                     tof_depth: u16_at(r, 0x10),

@@ -7,22 +7,22 @@ pub(super) fn columns_of(sql: &str) -> (Vec<String>, Option<usize>, Option<Vec<u
     };
     let mut parts: Vec<String> = Vec::new();
     let (mut prof, mut cur) = (0usize, String::new());
-    let mut virgolette: Option<char> = None;
+    let mut quotes: Option<char> = None;
     for ch in sql[ap + 1..].chars() {
-        if let Some(q) = virgolette {
+        if let Some(q) = quotes {
             cur.push(ch);
             if ch == q {
-                virgolette = None;
+                quotes = None;
             }
             continue;
         }
         match ch {
             '"' | '\'' | '`' => {
-                virgolette = Some(ch);
+                quotes = Some(ch);
                 cur.push(ch);
             }
             '[' => {
-                virgolette = Some(']');
+                quotes = Some(']');
                 cur.push(ch);
             }
             '(' => {

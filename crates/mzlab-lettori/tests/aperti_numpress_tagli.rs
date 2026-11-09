@@ -15,7 +15,7 @@ fn tic(l: &mut Box<dyn mzlab_core::lettori::Reader>) -> Chromatogram {
 
 #[test]
 fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
-    let scan = scansioni();
+    let scan = scans();
     let ok = mzml_di(
         &scan,
         Cod::Np {
@@ -24,7 +24,7 @@ fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
         },
         None,
     );
-    let mut full = apri(ok.clone());
+    let mut full = open(ok.clone());
     let whole = tic(&mut full);
     assert_eq!(
         full.chromatograms(0).unwrap().len(),

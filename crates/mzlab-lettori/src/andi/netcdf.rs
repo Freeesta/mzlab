@@ -17,44 +17,44 @@ const TAG_DIM: u32 = 0x0A;
 const TAG_VAR: u32 = 0x0B;
 const TAG_ATT: u32 = 0x0C;
 
-impl Tipo {
-    fn da(n: u32) -> Result<Tipo> {
+impl Kind {
+    fn da(n: u32) -> Result<Kind> {
         Ok(match n {
-            1 => Tipo::Byte,
-            2 => Tipo::Char,
-            3 => Tipo::Short,
-            4 => Tipo::Int,
-            5 => Tipo::Float,
-            6 => Tipo::Double,
-            _ => return Err(guasto("unknown nc_type")),
+            1 => Kind::Byte,
+            2 => Kind::Char,
+            3 => Kind::Short,
+            4 => Kind::Int,
+            5 => Kind::Float,
+            6 => Kind::Double,
+            _ => return Err(broken("unknown nc_type")),
         })
     }
     pub fn width(self) -> u64 {
         match self {
-            Tipo::Byte | Tipo::Char => 1,
-            Tipo::Short => 2,
-            Tipo::Int | Tipo::Float => 4,
-            Tipo::Double => 8,
+            Kind::Byte | Kind::Char => 1,
+            Kind::Short => 2,
+            Kind::Int | Kind::Float => 4,
+            Kind::Double => 8,
         }
     }
     /// Appends to `out` the values of the big-endian elements of `b` (a whole number of them): the type is matched once for the piece, not for each element.
     fn values(self, b: &[u8], out: &mut Vec<f64>) {
         match self {
-            Tipo::Byte => out.extend(b.iter().map(|&x| f64::from(x as i8))),
-            Tipo::Char => out.extend(b.iter().map(|&x| f64::from(x))),
-            Tipo::Short => out.extend(
+            Kind::Byte => out.extend(b.iter().map(|&x| f64::from(x as i8))),
+            Kind::Char => out.extend(b.iter().map(|&x| f64::from(x))),
+            Kind::Short => out.extend(
                 b.chunks_exact(2)
                     .map(|x| f64::from(i16::from_be_bytes([x[0], x[1]]))),
             ),
-            Tipo::Int => out.extend(
+            Kind::Int => out.extend(
                 b.chunks_exact(4)
                     .map(|x| f64::from(i32::from_be_bytes([x[0], x[1], x[2], x[3]]))),
             ),
-            Tipo::Float => out.extend(
+            Kind::Float => out.extend(
                 b.chunks_exact(4)
                     .map(|x| f64::from(f32::from_be_bytes([x[0], x[1], x[2], x[3]]))),
             ),
-            Tipo::Double => out.extend(
+            Kind::Double => out.extend(
                 b.chunks_exact(8)
                     .map(|x| f64::from_be_bytes([x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]])),
             ),
@@ -69,12 +69,12 @@ impl Tipo {
             x
         };
         match self {
-            Tipo::Byte => f64::from(b[0] as i8),
-            Tipo::Char => f64::from(b[0]),
-            Tipo::Short => f64::from(i16::from_be_bytes([b[0], b[1]])),
-            Tipo::Int => f64::from(i32::from_be_bytes([b[0], b[1], b[2], b[3]])),
-            Tipo::Float => f64::from(f32::from_be_bytes([b[0], b[1], b[2], b[3]])),
-            Tipo::Double => f64::from_be_bytes(a(8)),
+            Kind::Byte => f64::from(b[0] as i8),
+            Kind::Char => f64::from(b[0]),
+            Kind::Short => f64::from(i16::from_be_bytes([b[0], b[1]])),
+            Kind::Int => f64::from(i32::from_be_bytes([b[0], b[1], b[2], b[3]])),
+            Kind::Float => f64::from(f32::from_be_bytes([b[0], b[1], b[2], b[3]])),
+            Kind::Double => f64::from_be_bytes(a(8)),
         }
     }
 }
@@ -85,7 +85,7 @@ const PIECE: usize = 1 << 18;
 impl Cur<'_> {
     fn bytes(&mut self, n: u64) -> Result<Vec<u8>> {
         if n > self.limits.byte || self.pos.checked_add(n).is_none_or(|f| f > self.dim) {
-            return Err(guasto("header runs past the end of the file"));
+            return Err(broken("header runs past the end of the file"));
         }
         let (a, f) = (self.pos, self.pos + n);
         if a < self.base || f > self.base + self.buf.len() as u64 {
@@ -113,16 +113,16 @@ impl Cur<'_> {
             self.u32().map(u64::from)
         }
     }
-    fn riempi(&mut self, n: u64) -> Result<()> {
+    fn fill(&mut self, n: u64) -> Result<()> {
         self.bytes((4 - n % 4) % 4).map(drop)
     }
     fn name(&mut self) -> Result<String> {
         let n = u64::from(self.u32()?);
         if n > NAME_MAX {
-            return Err(guasto("name too long"));
+            return Err(broken("name too long"));
         }
         let b = self.bytes(n)?;
-        self.riempi(n)?;
+        self.fill(n)?;
         Ok(String::from_utf8_lossy(&b).into_owned())
     }
     /// The tag and the count of a list (`ABSENT` is two zeros).
@@ -132,31 +132,31 @@ impl Cur<'_> {
             return Ok(0);
         }
         if t != tag {
-            return Err(guasto("unexpected tag in the header"));
+            return Err(broken("unexpected tag in the header"));
         }
         self.limits.ok_entries(u64::from(n))
     }
-    fn attributi(&mut self) -> Result<Vec<Attr>> {
+    fn attributes(&mut self) -> Result<Vec<Attr>> {
         let n = self.list(TAG_ATT)?;
         let mut out = Vec::new();
         for _ in 0..n {
             let name = self.name()?;
-            let tipo = Tipo::da(self.u32()?)?;
+            let kind = Kind::da(self.u32()?)?;
             let c = u64::from(self.u32()?);
             let byte = c
-                .checked_mul(tipo.width())
+                .checked_mul(kind.width())
                 .ok_or_else(Error::memory_budget)?;
             let b = self.bytes(byte)?;
-            self.riempi(byte)?;
-            let val = if tipo == Tipo::Char {
+            self.fill(byte)?;
+            let val = if kind == Kind::Char {
                 Val::Testo(
                     String::from_utf8_lossy(&b)
                         .trim_end_matches('\0')
                         .to_string(),
                 )
             } else {
-                let w = tipo.width() as usize;
-                Val::Num(b.chunks_exact(w).map(|x| tipo.value(x)).collect())
+                let w = kind.width() as usize;
+                Val::Num(b.chunks_exact(w).map(|x| kind.value(x)).collect())
             };
             out.push(Attr { nome: name, val });
         }
@@ -175,12 +175,12 @@ impl Cdf {
             base: 0,
             limits: *limits,
         };
-        let m = c.bytes(4.min(dim)).map_err(|_| guasto("too short"))?;
+        let m = c.bytes(4.min(dim)).map_err(|_| broken("too short"))?;
         if m.starts_with(b"\x89HDF") {
             return Err(Error::new("err.file.netcdf4"));
         }
         if m.len() < 4 || &m[..3] != b"CDF" || !matches!(m[3], 1 | 2) {
-            return Err(guasto("not a netCDF-3 file"));
+            return Err(broken("not a netCDF-3 file"));
         }
         let v64 = m[3] == 2;
         let numrecs = u64::from(c.u32()?);
@@ -192,14 +192,14 @@ impl Cdf {
             recsize: 0,
             size: dim,
         };
-        cdf.dimensioni(&mut c)?;
-        cdf.att = c.attributi()?;
-        cdf.variabili(&mut c, v64)?;
+        cdf.sizes(&mut c)?;
+        cdf.att = c.attributes()?;
+        cdf.variables(&mut c, v64)?;
         cdf.record(numrecs);
         Ok(cdf)
     }
 
-    fn dimensioni(&mut self, c: &mut Cur) -> Result<()> {
+    fn sizes(&mut self, c: &mut Cur) -> Result<()> {
         for _ in 0..c.list(TAG_DIM)? {
             c.name()?;
             let length = u64::from(c.u32()?);
@@ -208,7 +208,7 @@ impl Cdf {
         Ok(())
     }
 
-    fn variabili(&mut self, c: &mut Cur, v64: bool) -> Result<()> {
+    fn variables(&mut self, c: &mut Cur, v64: bool) -> Result<()> {
         for _ in 0..c.list(TAG_VAR)? {
             let name = c.name()?;
             let n = u64::from(c.u32()?);
@@ -217,23 +217,23 @@ impl Cdf {
             for _ in 0..nd {
                 let d = c.u32()? as usize;
                 if d >= self.dim.len() {
-                    return Err(guasto("dimension id out of range"));
+                    return Err(broken("dimension id out of range"));
                 }
                 dims.push(d);
             }
-            let att = c.attributi()?;
-            let tipo = Tipo::da(c.u32()?)?;
+            let att = c.attributes()?;
+            let kind = Kind::da(c.u32()?)?;
             let vsize = u64::from(c.u32()?);
             let begin = c.offset(v64)?;
             let record = dims.first().is_some_and(|&d| self.dim[d].lunghezza == 0);
             if begin > self.size && !record {
-                return Err(guasto("variable starts past the end of the file"));
+                return Err(broken("variable starts past the end of the file"));
             }
             self.var.push(Var {
                 nome: name,
                 dims,
                 att,
-                tipo,
+                tipo: kind,
                 vsize,
                 begin,
                 record,
@@ -301,10 +301,10 @@ impl Cdf {
         } else {
             v.begin.saturating_add(e.saturating_mul(w))
         };
-        e < self.elementi(v) && pos.saturating_add(w) <= self.size
+        e < self.elements(v) && pos.saturating_add(w) <= self.size
     }
 
-    pub fn elementi(&self, v: &Var) -> u64 {
+    pub fn elements(&self, v: &Var) -> u64 {
         v.dims
             .iter()
             .fold(1u64, |a, &d| a.saturating_mul(self.length_dim(d)))
@@ -330,9 +330,9 @@ impl Cdf {
     }
 
     /// The strings of a `char` variable (rows of its last dimension, trailing NULs and spaces cut).
-    pub fn stringhe(&self, data: &mut dyn ReadAt, limits: &Limits, v: &Var) -> Result<Vec<String>> {
+    pub fn strings(&self, data: &mut dyn ReadAt, limits: &Limits, v: &Var) -> Result<Vec<String>> {
         let row = v.dims.last().map_or(1, |&d| self.length_dim(d)).max(1);
-        let n = self.elementi(v);
+        let n = self.elements(v);
         let b = self.raw_values(data, limits, v, 0, n)?;
         Ok(b.chunks(row as usize)
             .map(|r| {
@@ -362,7 +362,7 @@ impl Var {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Tipo {
+pub enum Kind {
     Byte,
     Char,
     Short,
@@ -390,7 +390,7 @@ pub struct Var {
     pub nome: String,
     pub dims: Vec<usize>,
     pub att: Vec<Attr>,
-    pub tipo: Tipo,
+    pub tipo: Kind,
     pub vsize: u64,
     pub begin: u64,
     /// Its first dimension is the unlimited one.
@@ -417,7 +417,7 @@ struct Cur<'a> {
     limits: Limits,
 }
 
-fn guasto(why: &str) -> Error {
+fn broken(why: &str) -> Error {
     Error::new("err.dam.unreadable").with("message", why)
 }
 

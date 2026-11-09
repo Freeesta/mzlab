@@ -22,12 +22,12 @@ pub(super) fn cuts(
         }
         None => ha_idx && dat_len > 0,
     };
-    let storte = rows.windows(2).any(|w| w[1].offset < w[0].offset)
+    let skewed = rows.windows(2).any(|w| w[1].offset < w[0].offset)
         || rows.iter().any(|r| r.offset >> 40 != 0);
-    if tail || (ha_dat && storte) {
+    if tail || (ha_dat && skewed) {
         return None;
     }
-    let mut tagliate = 0;
+    let mut cut = 0;
     if let Some(w) = larg {
         for r in rows.iter_mut().filter(|r| r.count > 0) {
             let fine = u64::from(r.count)
@@ -35,11 +35,11 @@ pub(super) fn cuts(
                 .and_then(|l| r.offset.checked_add(l));
             if fine.is_none_or(|f| f > dat_len) {
                 r.count = 0;
-                tagliate += 1;
+                cut += 1;
             }
         }
     }
-    Some(tagliate)
+    Some(cut)
 }
 
 /// A `_FUNCTNS.INF` cut short at a whole record still parses: the data of the next function tell that functions are missing.
@@ -61,14 +61,14 @@ pub(super) fn whole_list(c: &Folder, n: usize) -> Result<()> {
 
 /// The calibration of every function is a line of `_HEADER.TXT`: one emptied, or cut inside a calibration line, would give other m/z unsaid.
 pub(super) fn whole_header(c: &Folder, header: Option<&[u8]>) -> Result<()> {
-    let tronca = |b: &[u8]| {
+    let truncate = |b: &[u8]| {
         b.is_empty()
             || (b.last() != Some(&b'\n')
                 && b.rsplit(|&x| x == b'\n')
                     .next()
                     .is_some_and(|r| r.trim_ascii_start().starts_with(b"$$ Cal")))
     };
-    if header.is_some_and(tronca) {
+    if header.is_some_and(truncate) {
         return Err(nel_file(c, "err.file.headerCut", "_HEADER.TXT"));
     }
     Ok(())

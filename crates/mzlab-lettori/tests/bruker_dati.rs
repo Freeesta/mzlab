@@ -29,7 +29,7 @@ fn set_of(dir: &Path) -> FileSet {
     FileSet { membri: members }
 }
 
-fn spettri_mzml(p: &Path) -> Vec<Spectrum> {
+fn spectra_mzml(p: &Path) -> Vec<Spectrum> {
     let mut out = Vec::new();
     mzml::parse(
         std::io::BufReader::new(std::fs::File::open(p).unwrap()),
@@ -55,7 +55,7 @@ fn compare(s: &Spectrum, reference: &Spectrum, ppm: f64, label: &str) {
         summed(s),
         summed(reference)
     );
-    let mut peggiore = 0.0f64;
+    let mut worst = 0.0f64;
     for &m in &reference.mz {
         let j = s.mz.partition_point(|&x| x < m);
         let near = [j.checked_sub(1), Some(j)]
@@ -64,10 +64,10 @@ fn compare(s: &Spectrum, reference: &Spectrum, ppm: f64, label: &str) {
             .filter_map(|j| s.mz.get(j))
             .map(|&x| ((x - m) / m).abs() * 1e6)
             .fold(f64::INFINITY, f64::min);
-        peggiore = peggiore.max(near);
+        worst = worst.max(near);
     }
-    assert!(peggiore <= ppm, "{label}: worst point {peggiore} ppm");
-    eprintln!("{label}: {} points, worst {peggiore:.2} ppm", s.mz.len());
+    assert!(worst <= ppm, "{label}: worst point {worst} ppm");
+    eprintln!("{label}: {} points, worst {worst:.2} ppm", s.mz.len());
 }
 
 fn compare_folder(folder: &str, reference_mzml: &str) {
@@ -76,8 +76,8 @@ fn compare_folder(folder: &str, reference_mzml: &str) {
         eprintln!("SKIP bruker {folder}: no data repository (MZLAB_DATI)");
         return;
     };
-    let mut l = mzlab_lettori::apri_nudo(set_of(&base.join(folder)), &Limits::desktop()).unwrap();
-    let reference = spettri_mzml(&base.join(reference_mzml));
+    let mut l = mzlab_lettori::open_bare(set_of(&base.join(folder)), &Limits::desktop()).unwrap();
+    let reference = spectra_mzml(&base.join(reference_mzml));
     // the copy of the test data keeps only the first 400 kB of `analysis.tdf_bin`: the spectra of the frames past its end leave the index and are counted
     let n = l.index(0).unwrap().len();
     assert_eq!(n + l.missing(0), reference.len(), "{folder}");
@@ -110,12 +110,12 @@ fn mrm_come_msconvert() {
 
 /// Opens the folder `rel` (under `dati/formati/`) and reads every spectrum (at most `max`): no error, m/z increasing and finite, the TIC of the index equal to the sum of the points
 /// for a survey scan. Returns (spectra, levels seen).
-fn percorri(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
+fn walk(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
     let Some(dir) = dati_percorsi::percorso(&format!("dati/formati/{rel}")) else {
         eprintln!("SKIP bruker {rel}: not in the data repository");
         return None;
     };
-    let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limits::desktop()).unwrap();
+    let mut l = mzlab_lettori::open_bare(set_of(&dir), &Limits::desktop()).unwrap();
     let ix = l.index(0).unwrap().to_vec();
     let mut levels = Vec::new();
     for k in (0..ix.len()).take(max) {
@@ -147,7 +147,7 @@ fn percorri(rel: &str, max: usize) -> Option<(usize, Vec<u8>)> {
 
 #[test]
 fn clean_diapasef() {
-    let r = percorri(
+    let r = walk(
         "bruker/timstof_dia/asalt_mzio_hela_dia_slice/hela_dia_iildlisespik_rt21_60_21_78.d",
         400,
     );
@@ -168,7 +168,7 @@ fn synthetic_timsrust_folders() {
         if !dir.exists() {
             continue;
         }
-        let mut l = mzlab_lettori::apri_nudo(set_of(&dir), &Limits::desktop()).unwrap();
+        let mut l = mzlab_lettori::open_bare(set_of(&dir), &Limits::desktop()).unwrap();
         assert!(!l.index(0).unwrap().is_empty());
         assert_eq!(
             l.scan(0, 0).err().map(|e| e.key),

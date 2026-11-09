@@ -2,7 +2,7 @@
 
 use super::V;
 
-const SCANSIONI: u32 = 918;
+const SCANS: u32 = 918;
 const PASEF_PER_CYCLE: usize = 10;
 const PRECURSORS_PER_FRAME: usize = 12;
 
@@ -32,12 +32,12 @@ pub fn block(per_scan: &[Vec<(u32, u32)>]) -> Vec<u8> {
             before = t;
         }
     }
-    let mut piani = Vec::with_capacity(words.len() * 4);
+    let mut planes = Vec::with_capacity(words.len() * 4);
     for k in 0..4 {
-        piani.extend(words.iter().map(|w| (w >> (8 * k)) as u8));
+        planes.extend(words.iter().map(|w| (w >> (8 * k)) as u8));
     }
     let z =
-        ruzstd::encoding::compress_to_vec(&piani[..], ruzstd::encoding::CompressionLevel::Fastest);
+        ruzstd::encoding::compress_to_vec(&planes[..], ruzstd::encoding::CompressionLevel::Fastest);
     let mut b = ((z.len() + 8) as u32).to_le_bytes().to_vec();
     b.extend((ns as u32).to_le_bytes());
     b.extend(z);
@@ -46,7 +46,7 @@ pub fn block(per_scan: &[Vec<(u32, u32)>]) -> Vec<u8> {
 
 /// The peaks of a frame: `n` points spread over the scans `da..a`, TOF indices drawn around a few hundred ion lines.
 fn peaks(c: &mut Case, n: usize, windows: &[(u32, u32)]) -> (Vec<Vec<(u32, u32)>>, u64) {
-    let mut per_scan: Vec<Vec<(u32, u32)>> = vec![Vec::new(); SCANSIONI as usize];
+    let mut per_scan: Vec<Vec<(u32, u32)>> = vec![Vec::new(); SCANS as usize];
     for i in 0..n {
         let (a, b) = windows[i % windows.len()];
         let s = a + (c.n() % u64::from(b - a)) as u32;
@@ -74,7 +74,7 @@ fn frame_row(id: i64, ms1: bool, pos: i64, summed: u64, np: u64) -> Vec<V<'stati
         V::I(pos),
         V::I(summed as i64),
         V::I(500),
-        V::I(i64::from(SCANSIONI)),
+        V::I(i64::from(SCANS)),
         V::I(np as i64),
         V::I(1),
         V::R(25.0),
@@ -115,17 +115,17 @@ fn database(
 }
 
 /// `analysis.tdf` and `analysis.tdf_bin` of `cicli` cycles of one MS1 frame (`n1` points) and 10 PASEF frames (`n2` points).
-pub fn folder(cicli: usize, n1: usize, n2: usize) -> (Vec<u8>, Vec<u8>) {
+pub fn folder(cycles: usize, n1: usize, n2: usize) -> (Vec<u8>, Vec<u8>) {
     let mut c = Case(0x9E37_79B9_7F4A_7C15);
     let mut bin = Vec::new();
     let (mut frames, mut prec, mut pasef) = (Vec::new(), Vec::new(), Vec::new());
     let mut id = 0i64;
-    for cycle in 0..cicli {
+    for cycle in 0..cycles {
         for j in 0..=PASEF_PER_CYCLE {
             id += 1;
             let ms1 = j == 0;
             let fin: Vec<(u32, u32)> = if ms1 {
-                vec![(0, SCANSIONI)]
+                vec![(0, SCANS)]
             } else {
                 (0..PRECURSORS_PER_FRAME)
                     .map(|p| {

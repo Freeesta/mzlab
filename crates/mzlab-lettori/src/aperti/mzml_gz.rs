@@ -10,14 +10,14 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{Fiducia, FileSet, Limits, Member, Reader, ReaderEntry, CONTRATTO};
 
 /// The bytes of the start of the file that `riconosci` inflates to see the root element.
-const TESTA: usize = 4096;
+const HEAD: usize = 4096;
 
 pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "mzml-gz",
     contratto: CONTRATTO,
     estensioni: &[".mzml.gz"],
-    riconosci,
-    apri,
+    riconosci: recognize,
+    apri: open,
 };
 
 /// `x.mzXML.gz`: the same inflate, then the reader of `mzxml.rs` (registry of the app and the CLI only).
@@ -26,8 +26,8 @@ pub const ENTRY_MZXML: ReaderEntry = ReaderEntry {
     id: "mzxml-gz",
     contratto: CONTRATTO,
     estensioni: &[".mzxml.gz"],
-    riconosci: riconosci_mzxml,
-    apri: apri_mzxml,
+    riconosci: recognize_mzxml,
+    apri: open_mzxml,
 };
 
 /// A `ReadAt` seen as a `Read`, from the start.
@@ -52,17 +52,17 @@ impl Read for Stream {
 }
 
 /// Yes when the member is gzip (magic bytes) and its first bytes inflate to an `<mzML` or `<indexedmzML` root.
-fn riconosci(fs: &mut FileSet) -> Fiducia {
+fn recognize(fs: &mut FileSet) -> Fiducia {
     sees(fs, ".mzml.gz", &["<mzML", "<indexedmzML"])
 }
 
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
-fn riconosci_mzxml(fs: &mut FileSet) -> Fiducia {
+fn recognize_mzxml(fs: &mut FileSet) -> Fiducia {
     sees(fs, ".mzxml.gz", &["<mzXML"])
 }
 
-fn sees(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
-    let Some(i) = fs.find(suffisso) else {
+fn sees(fs: &mut FileSet, suffix: &str, roots: &[&str]) -> Fiducia {
+    let Some(i) = fs.find(suffix) else {
         return Fiducia::No;
     };
     let head = fs.testa(i, 64 << 10);
@@ -76,10 +76,10 @@ fn sees(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
     let mut text = Vec::new();
     // a short or cut stream still gives its first bytes; the error is the caller's at `apri`
     let _ = Members::new(&head[..])
-        .take(TESTA as u64)
+        .take(HEAD as u64)
         .read_to_end(&mut text);
     let text = String::from_utf8_lossy(&text);
-    if radici.iter().any(|r| text.contains(r)) {
+    if roots.iter().any(|r| text.contains(r)) {
         Fiducia::Si
     } else if text.is_empty() {
         // gzip whose first bytes do not inflate (header only, cut): damaged, not another type
@@ -89,19 +89,19 @@ fn sees(fs: &mut FileSet, suffisso: &str, radici: &[&str]) -> Fiducia {
     }
 }
 
-fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     super::mzml_numpress::apri(inflate(fs, ".mzml.gz", limits)?, limits)
 }
 
 #[cfg_attr(not(feature = "tutte"), allow(dead_code))]
-fn apri_mzxml(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open_mzxml(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     (super::mzxml::ENTRY.apri)(inflate(fs, ".mzxml.gz", limits)?, limits)
 }
 
 /// The set with its gzip member inflated into memory, named without `.gz`.
-fn inflate(mut fs: FileSet, suffisso: &str, limits: &Limits) -> Result<FileSet> {
+fn inflate(mut fs: FileSet, suffix: &str, limits: &Limits) -> Result<FileSet> {
     let i = fs
-        .find(suffisso)
+        .find(suffix)
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
     let m = fs.membri.swap_remove(i);
     let name = m.nome[..m.nome.len() - ".gz".len()].to_string();

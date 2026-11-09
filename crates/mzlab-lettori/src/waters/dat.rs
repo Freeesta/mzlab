@@ -16,14 +16,14 @@ impl Calibration {
     /// The `c0,c1,...,ck,T1` of a `Cal Function` line; `None` when the text is not that.
     pub(super) fn from_text(v: &str) -> Option<Calibration> {
         let mut parts: Vec<&str> = v.split(',').map(str::trim).collect();
-        let tipo = parts.pop()?;
-        if tipo != "T0" && tipo != "T1" {
+        let kind = parts.pop()?;
+        if kind != "T0" && kind != "T1" {
             return None;
         }
         let coef: Option<Vec<f64>> = parts.iter().map(|p| p.parse().ok()).collect();
         Some(Calibration {
             coef: coef?,
-            t1: tipo == "T1",
+            t1: kind == "T1",
         })
     }
 

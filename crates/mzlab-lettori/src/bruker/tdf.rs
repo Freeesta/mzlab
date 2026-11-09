@@ -4,8 +4,8 @@ use super::blocco::{decode, read_block, Peaks};
 use super::spettri::{build, summed, Desc};
 use super::sqlite_min::Sqlite;
 use super::tabelle::Data;
-use super::tdf_aiuti::{absent, bad_index, cartella, cut_ones, prendi, riconosci, sum_scan};
-use super::testata::Testata;
+use super::tdf_aiuti::{absent, bad_index, cartella, cut_ones, recognize, sum_scan, take};
+use super::testata::BrukerHeader;
 use super::tsf;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
@@ -22,22 +22,22 @@ use tracce::maximum;
 #[path = "tracce.rs"]
 mod tracce;
 
-const UNITA: &str = "Arbitrary Intensity Units";
+const UNITS: &str = "Arbitrary Intensity Units";
 
 pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "bruker-tdf",
     contratto: CONTRATTO,
     estensioni: &[".d"],
-    riconosci: riconosci_tdf,
-    apri: apri_tdf,
+    riconosci: recognize_tdf,
+    apri: open_tdf,
 };
 
 pub const ENTRY_TSF: ReaderEntry = ReaderEntry {
     id: "bruker-tsf",
     contratto: CONTRATTO,
     estensioni: &[".d"],
-    riconosci: riconosci_tsf,
-    apri: apri_tsf,
+    riconosci: recognize_tsf,
+    apri: open_tsf,
 };
 
 impl BrukerReader {
@@ -49,15 +49,15 @@ impl BrukerReader {
             .first()
             .map(|m| m.nome.clone())
             .unwrap_or_default();
-        let Some(db_m) = prendi(&mut fs, base) else {
+        let Some(db_m) = take(&mut fs, base) else {
             return Err(match fs.find(&bin) {
                 Some(_) => absent(&first_one, base),
                 None => Error::new("err.file.brukerBaf"),
             });
         };
-        let bin_m = prendi(&mut fs, &bin).ok_or_else(|| absent(&db_m.nome, &bin))?;
-        let wal = prendi(&mut fs, &format!("{base}-wal")).map(|m| (m.dati, m.dim));
-        let db = Sqlite::apri(db_m.dati, db_m.dim, wal, limits);
+        let bin_m = take(&mut fs, &bin).ok_or_else(|| absent(&db_m.nome, &bin))?;
+        let wal = take(&mut fs, &format!("{base}-wal")).map(|m| (m.dati, m.dim));
+        let db = Sqlite::open(db_m.dati, db_m.dim, wal, limits);
         let mut db = db?;
         let data = Data::read(&mut db, limits)?;
         let mut desc = build(&data);
@@ -69,7 +69,7 @@ impl BrukerReader {
         let all = desc.len();
         desc.retain(|d| !cut[d.frame]);
         let missing_ones = all - desc.len();
-        let testata = Testata::read(&data, tsf);
+        let header = BrukerHeader::read(&data, tsf);
         let compression = data
             .meta
             .get("TimsCompressionType")
@@ -92,7 +92,7 @@ impl BrukerReader {
             dati: data,
             desc,
             limits: *limits,
-            testata,
+            testata: header,
             campioni: samples,
             indice: Vec::new(),
             known_tic: false,
@@ -113,7 +113,7 @@ impl BrukerReader {
                 id: d.id.clone(),
                 rt: f.moment / 60.0,
                 livello: d.livello,
-                polarita: f.polarita,
+                polarita: f.polarity,
                 tic: if d.livello == 1 { f.raw_sum() } else { 0.0 },
                 base_peak: None,
                 filtro: d.filter.clone(),
@@ -141,7 +141,7 @@ impl BrukerReader {
                 u64::try_from(f.pos).unwrap_or(u64::MAX),
                 &self.limits,
             )?;
-            let p = decode(&b, self.compressione, f.scansioni, f.peaks, &self.limits)?;
+            let p = decode(&b, self.compressione, f.scans, f.peaks, &self.limits)?;
             self.cache = Some((fi, p));
         }
         Ok(self
@@ -169,7 +169,7 @@ impl BrukerReader {
                 camp,
                 &self.limits,
             )?;
-            return Ok((l.tof, l.int, l.profilo));
+            return Ok((l.tof, l.int, l.profile));
         }
         let scan = d.scan.clone();
         let s = summed(self.peaks(d.frame)?, &scan);
@@ -180,7 +180,7 @@ impl BrukerReader {
         ))
     }
 
-    fn spettro(&mut self, k: usize) -> Result<Spectrum> {
+    fn spectrum(&mut self, k: usize) -> Result<Spectrum> {
         let d = self.desc.get(k).cloned().ok_or_else(|| bad_index(k))?;
         let f = self.dati.frames[d.frame].clone();
         let cal = self
@@ -294,7 +294,7 @@ impl Reader for BrukerReader {
 
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
-        self.spettro(k)
+        self.spectrum(k)
     }
 
     /// Frame, scan range, isolation and collision energy of spectrum `k`.
@@ -302,22 +302,17 @@ impl Reader for BrukerReader {
         self.one(c)?;
         let d = self.desc.get(k).ok_or_else(|| bad_index(k))?;
         let f = &self.dati.frames[d.frame];
-        let field = |name: &str, value: String, unita: Option<&str>, cv: Option<&str>| Field {
+        let field = |name: &str, value: String, units: Option<&str>, cv: Option<&str>| Field {
             nome: name.into(),
             valore: value,
-            unita: unita.map(Into::into),
+            unita: units.map(Into::into),
             cv: cv.map(Into::into),
         };
         let mut o = vec![field("frame", f.id.to_string(), None, None)];
         if !self.tsf {
             let r: Vec<String> = d.scan.iter().map(|s| format!("{}-{}", s.0, s.1)).collect();
             o.push(field("mobility scans [begin-end)", r.join(","), None, None));
-            o.push(field(
-                "accumulation scans",
-                f.scansioni.to_string(),
-                None,
-                None,
-            ));
+            o.push(field("accumulation scans", f.scans.to_string(), None, None));
         }
         if let Some(w) = d.iso {
             o.push(field(
@@ -347,7 +342,7 @@ impl Reader for BrukerReader {
                 Some("MS:1000041"),
             ));
         }
-        if let Some(p) = d.precursore {
+        if let Some(p) = d.precursor {
             o.push(field("precursor", p.to_string(), None, None));
         }
         Ok(o)
@@ -358,10 +353,10 @@ impl Reader for BrukerReader {
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
-            .map(|(id, tipo)| ChromatogramEntry {
+            .map(|(id, kind)| ChromatogramEntry {
                 id: id.into(),
-                tipo,
-                unita: UNITA.into(),
+                tipo: kind,
+                unita: UNITS.into(),
             })
             .collect())
     }
@@ -423,19 +418,19 @@ impl Reader for BrukerReader {
     }
 }
 
-fn riconosci_tdf(fs: &mut FileSet) -> Fiducia {
-    riconosci(fs, "analysis.tdf")
+fn recognize_tdf(fs: &mut FileSet) -> Fiducia {
+    recognize(fs, "analysis.tdf")
 }
 
-fn riconosci_tsf(fs: &mut FileSet) -> Fiducia {
-    riconosci(fs, "analysis.tsf")
+fn recognize_tsf(fs: &mut FileSet) -> Fiducia {
+    recognize(fs, "analysis.tsf")
 }
 
-fn apri_tdf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open_tdf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     BrukerReader::apri(fs, limits, false).map(|l| Box::new(l) as Box<dyn Reader>)
 }
 
-fn apri_tsf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open_tsf(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     BrukerReader::apri(fs, limits, true).map(|l| Box::new(l) as Box<dyn Reader>)
 }
 
@@ -451,7 +446,7 @@ pub struct BrukerReader {
     dati: Data,
     desc: Vec<Desc>,
     limits: Limits,
-    testata: Testata,
+    testata: BrukerHeader,
     campioni: Vec<Sample>,
     indice: Vec<ScanEntry>,
     known_tic: bool,

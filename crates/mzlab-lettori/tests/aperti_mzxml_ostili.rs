@@ -18,18 +18,18 @@ fn text(o: Opz) -> String {
 
 #[test]
 fn index_offsets_do_not_count_scans_come_from_the_pass() {
-    let buono = text(FLAT);
+    let good = text(FLAT);
     for damage in [
         ("<offset id=\"1\">", "<offset id=\"1\">9"),
         ("<offset id=\"5\">", "<offset id=\"5\">99999"),
     ] {
-        let b = buono.replacen(damage.0, damage.1, 1);
-        let mut l = apri_mzxml(b.into_bytes());
+        let b = good.replacen(damage.0, damage.1, 1);
+        let mut l = open_mzxml(b.into_bytes());
         assert_eq!(l.samples()[0].scansioni, 5);
         assert_eq!(l.scan(0, 4).unwrap().mz.len(), 10);
     }
-    let outside = buono.replacen("<indexOffset>", "<indexOffset>9999999", 1);
-    assert_eq!(apri_mzxml(outside.into_bytes()).samples()[0].scansioni, 5);
+    let outside = good.replacen("<indexOffset>", "<indexOffset>9999999", 1);
+    assert_eq!(open_mzxml(outside.into_bytes()).samples()[0].scansioni, 5);
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn more_peaks_than_declared_are_cut_or_an_error_if_compressed() {
     })
     .replacen("peaksCount=\"30\"", "peaksCount=\"4\"", 1);
     assert_eq!(
-        apri_mzxml(simple.into_bytes()).scan(0, 0).unwrap().mz.len(),
+        open_mzxml(simple.into_bytes()).scan(0, 0).unwrap().mz.len(),
         4
     );
     let compressed = text(FLAT).replacen("peaksCount=\"30\"", "peaksCount=\"4\"", 1);
@@ -59,8 +59,8 @@ fn a_zlib_inflating_past_the_declared_size_is_an_error() {
     let da = b.find("compressedLen=\"").unwrap();
     let a = da + b[da..].find('>').unwrap() + 1;
     let fine = a + b[a..].find("</peaks>").unwrap();
-    let bomba = b64(&zlib(&vec![0u8; 8 << 20]));
-    let b = format!("{}{}{}", &b[..a], bomba, &b[fine..]);
+    let bomb = b64(&zlib(&vec![0u8; 8 << 20]));
+    let b = format!("{}{}{}", &b[..a], bomb, &b[fine..]);
     assert_eq!(mzxml_error(b.into_bytes()), "error.memoryBudget");
 }
 
@@ -72,10 +72,10 @@ fn broken_base64_unknown_precision_and_truncated_data_are_keyed_errors() {
         ..FLAT
     });
     let da = b.find("compressedLen=\"0\">").unwrap() + 18;
-    let rotta = format!("{}!!!{}", &b[..da], &b[da + 3..]);
-    assert_eq!(mzxml_error(rotta.into_bytes()), "err.file.base64");
-    let strana = b.replacen("precision=\"64\"", "precision=\"16\"", 1);
-    assert_eq!(mzxml_error(strana.into_bytes()), "err.file.xml");
+    let route = format!("{}!!!{}", &b[..da], &b[da + 3..]);
+    assert_eq!(mzxml_error(route.into_bytes()), "err.file.base64");
+    let odd = b.replacen("precision=\"64\"", "precision=\"16\"", 1);
+    assert_eq!(mzxml_error(odd.into_bytes()), "err.file.xml");
     let order = b.replacen("contentType=\"m/z-int\"", "contentType=\"int-m/z\"", 1);
     assert_eq!(mzxml_error(order.into_bytes()), "err.file.xml");
     // truncated in the middle of the peaks: an error or a short scan, never a panic
@@ -86,7 +86,7 @@ fn broken_base64_unknown_precision_and_truncated_data_are_keyed_errors() {
 
 #[test]
 fn deep_nesting_is_a_keyed_error() {
-    let mut b = String::from(TESTATA);
+    let mut b = String::from(HEADER);
     for k in 0..400 {
         b += &format!(
             "<scan num=\"{}\" msLevel=\"1\" retentionTime=\"PT1S\">",
@@ -112,7 +112,7 @@ fn without_scans_or_with_another_xml_does_not_open() {
 
 #[allow(non_snake_case)]
 fn HEAD_WITHOUT_SCAN() -> &'static str {
-    TESTATA
+    HEADER
 }
 
 #[test]
@@ -124,19 +124,19 @@ fn no_file_length_panics_the_reader() {
 }
 
 /// A run of `n` MS1 scans whose `scanCount` says `dichiarate` (`None`: no attribute).
-fn long(n: u32, dichiarate: Option<u32>, o: Opz) -> Vec<u8> {
+fn long(n: u32, declared: Option<u32>, o: Opz) -> Vec<u8> {
     let v: Vec<Sc> = (1..=n)
         .map(|k| sc(k, 1, 6.0 + k as f64, 30, None))
         .collect();
-    let count = dichiarate.map_or(String::new(), |d| format!("scanCount=\"{d}\" "));
+    let count = declared.map_or(String::new(), |d| format!("scanCount=\"{d}\" "));
     let t = String::from_utf8(mzxml(&v, o)).unwrap();
     t.replacen("scanCount=\"5\" ", &count, 1).into_bytes()
 }
 
 /// The scans a damaged copy still gives: each is the same as in the whole file, and with `mancanti` they make up the run.
 fn intact_part(whole: &[u8], broken: Vec<u8>, n: usize) -> usize {
-    let mut everything = apri_mzxml(whole.to_vec());
-    let mut l = apri_mzxml(broken);
+    let mut everything = open_mzxml(whole.to_vec());
+    let mut l = open_mzxml(broken);
     let rows = l.index(0).unwrap().to_vec();
     assert!(rows.len() < n, "a damaged copy reads fewer scans");
     for (k, r) in rows.iter().enumerate() {
@@ -167,7 +167,7 @@ fn a_cut_or_zeroed_copy_says_how_many_scans_are_missing() {
     ] {
         let b = long(n, Some(n), o);
         assert_eq!(
-            apri_mzxml(b.clone()).missing(0),
+            open_mzxml(b.clone()).missing(0),
             0,
             "the whole file lacks nothing"
         );
@@ -221,7 +221,7 @@ fn pairs() -> Vec<(PathBuf, PathBuf)> {
     out
 }
 
-fn mzml_spettri(m: &PathBuf) -> Vec<mzlab_core::mzml::Spectrum> {
+fn mzml_spectra(m: &PathBuf) -> Vec<mzlab_core::mzml::Spectrum> {
     let mut v = Vec::new();
     let f = std::fs::File::open(m).unwrap();
     mzlab_core::mzml::parse(std::io::BufReader::new(f), |it| {
@@ -238,8 +238,8 @@ fn mzml_spettri(m: &PathBuf) -> Vec<mzlab_core::mzml::Spectrum> {
 fn every_real_mzxml_says_what_its_mzml_says() {
     for (x, m) in pairs() {
         let name = x.file_name().unwrap().to_string_lossy().into_owned();
-        let mut l = apri_mzxml(std::fs::read(&x).unwrap());
-        let reference = mzml_spettri(&m);
+        let mut l = open_mzxml(std::fs::read(&x).unwrap());
+        let reference = mzml_spectra(&m);
         assert_eq!(l.samples()[0].scansioni, reference.len(), "{name}");
         for (k, r) in reference.iter().enumerate() {
             let s = l.scan(0, k).unwrap();
@@ -294,11 +294,11 @@ fn real_mzxmls_open_and_the_counts_match() {
             continue;
         }
         let name = p.file_name().unwrap().to_string_lossy().into_owned();
-        let mut l = apri_mzxml(std::fs::read(&p).unwrap());
+        let mut l = open_mzxml(std::fs::read(&p).unwrap());
         let n = l.samples()[0].scansioni;
         assert!(n > 0, "{name}");
-        let attese = [("PXD070375", 1096), ("PXD005665", 5344)];
-        if let Some((_, v)) = attese.iter().find(|(k, _)| name.starts_with(k)) {
+        let expected = [("PXD070375", 1096), ("PXD005665", 5344)];
+        if let Some((_, v)) = expected.iter().find(|(k, _)| name.starts_with(k)) {
             assert_eq!(n, *v, "{name}");
         }
         let tic: Vec<f64> = l.index(0).unwrap().iter().map(|v| v.tic).collect();
