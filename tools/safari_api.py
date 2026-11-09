@@ -1,5 +1,5 @@
-"""Static check against the Safari floor of the site (16.4, docs/agenti/compat-safari.md): greps the interface sources (mzlab/web, flow, TP_Mine;
-classic scripts, modules, workers, sw.js, CSS) for web APIs, JS syntax and CSS that Safari 16.4 lacks. Each use must be listed, with its count and
+"""Static check against the floor of the site (Chrome/Edge 111, Firefox 121, Safari 16.4; docs/agenti/compat-safari.md): greps the interface sources
+(mzlab/web, flow, TP_Mine; classic scripts, modules, workers, sw.js, CSS) for web APIs, JS syntax and CSS that one of the three lacks. Each use must be listed, with its count and
 the guard or fallback that covers it, in tools/safari_api_ammesse.txt; a new or unlisted use fails. Run: python3 tools/safari_api.py [--elenco].
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ DIRS = ("mzlab/web", "flow", "TP_Mine")
 SKIP = ("mzlab/web/vendor/", "mzlab/web/esempi/", "mzlab/web/lang/", "mzlab/web/elements.js", "/tests/", "TP_Mine/data/")
 EXT = {".js", ".mjs", ".css", ".html"}
 
-# id, first Safari with it ("-" = none yet), what it is, regex. JS ones skip comment lines; CSS ones look at CSS files and CSS kept in JS strings.
+# id, first version with it (a bare number or "-" = Safari; "Chrome N" / "Firefox N" for what Safari 16.4 has and they lack), what it is, regex. JS ones skip comment lines; CSS ones look at CSS files and CSS kept in JS strings.
 JS = [
     ("AbortSignal.any", "17.4", "AbortSignal.any", r"\bAbortSignal\.any\b"),
     ("Object.groupBy", "17.4", "Object/Map.groupBy", r"\b(?:Object|Map)\.groupBy\b"),
@@ -58,6 +58,15 @@ JS = [
     ("OffscreenCanvas webgl", "17", "OffscreenCanvas with webgl", r"OffscreenCanvas[^;\n]*getContext\(\s*[\"']webgl"),
     ("wasm exceptions/JSPI", "-", "WebAssembly.Tag / Suspending / promising", r"\bWebAssembly\.(?:Tag|Exception|Suspending|promising)\b"),
     ("wheel ctrlKey zoom", "-", "Ctrl+wheel zoom: a trackpad pinch on Safari is a gesture* event (compat.js turns it into this wheel)", r"[\"']wheel[\"'][^\n]*\bctrlKey\b"),
+    ("Array.fromAsync", "Chrome 121", "Array.fromAsync", r"\bArray\.fromAsync\b"),
+    ("Intl.Segmenter", "Firefox 125", "Intl.Segmenter", r"\bIntl\.Segmenter\b"),
+    ("resizable ArrayBuffer", "Firefox 128", "ArrayBuffer maxByteLength / resize", r"\bmaxByteLength\b"),
+    ("Atomics.waitAsync", "Firefox 145", "Atomics.waitAsync", r"\bAtomics\.waitAsync\b"),
+    ("CSS.registerProperty", "Firefox 128", "CSS.registerProperty", r"\bCSS\.registerProperty\b"),
+    ("Firefox-less DOM", "Firefox -", "scrollIntoViewIfNeeded / computedStyleMap / caretRangeFromPoint", r"\b(?:scrollIntoViewIfNeeded|computedStyleMap|caretRangeFromPoint)\b"),
+    ("clipboard read", "Firefox 125", "navigator.clipboard.read / readText", r"\bclipboard\.read(?:Text)?\("),
+    ("Response.json", "17", "static Response.json()", r"\bResponse\.json\("),
+    ("base64 typed arrays", "18.2", "Uint8Array.fromBase64 / fromHex / toBase64 / toHex", r"\b(?:fromBase64|fromHex)\b|\.(?:toBase64|toHex)\("),
     ("ClipboardItem", "13.1", "ClipboardItem after an await: Safari wants the item made in the click (a Promise of the Blob)", r"\bnew\s+ClipboardItem\("),
 ]
 CSS = [
@@ -80,6 +89,13 @@ CSS = [
     ("text-box", "18.2", "text-box-trim / text-box", r"\btext-box(?:-trim|-edge)?\s*:"),
     ("contain-intrinsic-size", "17", "contain-intrinsic-size", r"\bcontain-intrinsic-(?:size|width|height)\s*:"),
     ("font-size-adjust", "17", "font-size-adjust", r"\bfont-size-adjust\s*:"),
+    ("subgrid", "Chrome 117", "grid-template-*: subgrid", r"\bgrid-template-(?:columns|rows)\s*:\s*subgrid\b"),
+    ("@property", "Firefox 128", "@property", r"@property\b"),
+    ("CSS zoom", "Firefox 126", "the zoom property", r"(?<![-\w])zoom\s*:\s*(?:var\(|[\d.]+%?\s*[;}!]|normal\b|reset\b)"),
+    ("unprefixed mask", "Chrome 120", "mask / mask-image without -webkit- on the same line", r"^(?!.*-webkit-mask)(?=.*(?<![-\w])mask(?:-image|-size|-position|-repeat|-mode)?\s*:)"),
+    ("relative colour", "Chrome 119", "rgb(from ...) and the other relative colour syntax", r"\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\(\s*from\s"),
+    (":dir()", "Chrome 120", ":dir()", r":dir\("),
+    ("CSS math", "Chrome 120", "round() mod() rem() pow() sqrt() exp() hypot() log() abs() sign()", r"(?<![\w.$])(?:round|mod|rem|pow|sqrt|exp|hypot|log|abs|sign)\(\s*(?:var\(|calc\(|-?[\d.]+(?:px|%|r?em|v[wh]|deg)\b|up\b|down\b|nearest\b|to-zero\b)"),
     ("prefers-reduced-transparency", "-", "prefers-reduced-transparency", r"prefers-reduced-transparency"),
 ]
 COMMENT = re.compile(r"^\s*(?://|/?\*)")
@@ -142,7 +158,8 @@ def controlla() -> list[str]:
     for (f, sid), lines in sorted(hits.items()):
         want = ok.get((f, sid))
         if want is None:
-            bad.append(f"{f}:{lines[0]}: {sid} (Safari {ver[sid]}) not covered: add a guard or a fallback in compat.js, then list it in tools/safari_api_ammesse.txt")
+            v = ver[sid] if ver[sid][:1].isalpha() and ver[sid] != "-" or " " in ver[sid] else "Safari " + ver[sid]
+            bad.append(f"{f}:{lines[0]}: {sid} ({v}) not covered: add a guard or a fallback in compat.js, then list it in tools/safari_api_ammesse.txt")
         elif len(lines) > want:
             bad.append(f"{f}:{','.join(map(str, lines))}: {sid} used {len(lines)} times, {want} listed in tools/safari_api_ammesse.txt")
     for (f, sid), n in sorted(ok.items()):

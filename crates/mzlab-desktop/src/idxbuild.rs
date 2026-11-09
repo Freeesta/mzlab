@@ -260,7 +260,7 @@ impl IdxBuilder {
             ) -> Result<Stats, Error>
             + Send,
     ) -> Result<Stats, Error> {
-        let _indexing = crate::conv_coda::Indexing::new();
+        let _indexing = crate::conv_queue::Indexing::new();
         let dest = self.path(name)?;
         let stop = self.stop_of(name);
         let stopped = || stop.load(Ordering::Relaxed);

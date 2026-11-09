@@ -1,4 +1,4 @@
-"""A Thermo .raw is read by the engine THROUGH the `thermo` readers module (crates/mzlab-lettori-wasm, mzlab/web/lettore-esterno.js, crates/mzlab-wasm/src/esterno.rs): no mzML in between, the module is downloaded
+"""A Thermo .raw is read by the engine THROUGH the `thermo` readers module (crates/mzlab-lettori-wasm, mzlab/web/lettore-esterno.js, crates/mzlab-wasm/src/external.rs): no mzML in between, the module is downloaded
 only when a .raw arrives, and what the page shows is what the engine gave while the Thermo reader was linked in it: the TIC, a scan and «Download .mzML» (byte for byte) against `raw_referenza`
 (crates/mzlab-core/examples, the reader of the core). Needs the private data repository (the data repository found by tools/dati_percorsi.py, or MZLAB_DATI: the smallest .raw of dati/HRMS; skipped without it), cargo, the site and both .wasm:
 python tools/build_site.py, tools/build_lettori_wasm.sh site/static (MZLAB_PIPE_SITE=<built site> reuses a site). Run from the repo root: python3 tests_e2e/e2e_thermo_modulo.py"""

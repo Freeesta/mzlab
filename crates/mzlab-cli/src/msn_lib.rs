@@ -156,7 +156,7 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let mut lib_format = Format::Msp;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
-        let x = crate::msn_uscite::canonical(ALIASES, x);
+        let x = crate::msn_outputs::canonical(ALIASES, x);
         match x.as_str() {
             "--clean" => clean = true,
             "--all" => all = true,
@@ -184,7 +184,7 @@ fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let (mut files, mut out, mut o) = (Vec::new(), None, OpzioniCerca::default());
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
-        let x = crate::msn_uscite::canonical(ALIASES, x);
+        let x = crate::msn_outputs::canonical(ALIASES, x);
         let mut number = || {
             let v = it.next().unwrap_or_default();
             v.parse::<f64>()

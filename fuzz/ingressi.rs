@@ -1,5 +1,5 @@
 //! Entry points of the fuzz targets: every function takes arbitrary bytes and must return, with a result or an error, never panic or loop.
-//! Shared by `fuzz_targets/*.rs` (cargo-fuzz) and by `crates/mzlab-lib/tests/fuzz_regressioni.rs` (the stored crashes run in `cargo test`).
+//! Shared by `fuzz_targets/*.rs` (cargo-fuzz) and by `crates/mzlab-lib/tests/fuzz_regressions.rs` (the stored crashes run in `cargo test`).
 
 use std::io::Cursor;
 
