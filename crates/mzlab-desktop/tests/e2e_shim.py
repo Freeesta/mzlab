@@ -139,7 +139,7 @@ try:
             ref["py"] = PyRef([str(EX / n.split("#")[0]) for n in dict.fromkeys(ref["names"])], nb)
             py = {"state": ref["py"].get("api/state")["j"], "session": ref["py"].get("api/session")["j"]}
             st = pg.evaluate(JSON, "api/state")["j"]
-            # the engine reads the infusion MSn of a file (`msn`, mzlab-core/src/infusione.rs); the Python reference does not
+            # the engine reads the infusion MSn of a file (`msn`, mzlab-core/src/infusion.rs); the Python reference does not
             nomsn = lambda x: {k: nomsn(v) for k, v in x.items() if k != "msn"} if isinstance(x, dict) else [nomsn(v) for v in x] if isinstance(x, list) else x
             # `hr` (high-resolution flag of a file, `sniff.rs`) is the engine's alone, in every `files` list
             nohr = lambda x: {k: ([{a: b for a, b in f.items() if a != "hr"} if isinstance(f, dict) else f for f in nohr(v)] if k == "files" and isinstance(v, list) else nohr(v)) for k, v in x.items()} if isinstance(x, dict) else [nohr(v) for v in x] if isinstance(x, list) else x

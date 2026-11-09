@@ -1,15 +1,15 @@
 //! `/api/msn_albero` (the tree of the precursors from the index), the filter `msn:<id>` of the other routes and `/api/msntree` of a file with an index: the scan table gives the fragmentation path of every scan and the spectra come from the mzML by offset
-//! (`sorgente::Scansioni::spettro`), so the tree needs no Python. `Ok(None)` = Python's (a `ppm` Python must reject); the errors of the tree are keyed.
+//! (`source::Scansioni::spettro`), so the tree needs no Python. `Ok(None)` = Python's (a `ppm` Python must reject); the errors of the tree are keyed.
 
 use std::sync::Arc;
 
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::json::{round, Out};
-use crate::msnalbero::{albero, blocks, Albero, Grouping, Tol};
+use crate::msntree_build::{albero, blocks, Albero, Grouping, Tol};
 use crate::msntree::{msn_tree, TreeScan};
 use crate::routes::{Query, Routes};
-use crate::sorgente::Scansioni;
+use crate::source::Scansioni;
 
 impl<R: ReadAt> Routes<R> {
     /// The tree of the fragmentation paths of the file (`App.msn_tree`: the whole run, whatever part of a mixed file `k` is).
@@ -134,8 +134,8 @@ pub(crate) enum Filter<'a> {
 pub(crate) struct Msn {
     pub alberi: Vec<(Grouping, Arc<Albero>)>,
     pub opz: Opz,
-    /// The chromatogram headers the page gave and the channels built from them (`canali::rotte`).
-    pub channels: crate::canali::State,
+    /// The chromatogram headers the page gave and the channels built from them (`channels::routes`).
+    pub channels: crate::channels::State,
 }
 
 /// `nom` (or absent), `0.01` (Da) or `10ppm`.

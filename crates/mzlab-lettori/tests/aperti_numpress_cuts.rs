@@ -5,11 +5,11 @@
 mod common;
 
 use common::*;
-use mzlab_core::lettori::Limits;
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 use mzlab_core::numpress::Np;
+use mzlab_core::readers::Limits;
 
-fn tic(l: &mut Box<dyn mzlab_core::lettori::Reader>) -> Chromatogram {
+fn tic(l: &mut Box<dyn mzlab_core::readers::Reader>) -> Chromatogram {
     l.chromatogram(0, "TIC").expect("the TIC is there")
 }
 
@@ -78,7 +78,7 @@ fn a_cut_numpress_mzml_keeps_its_whole_scans_and_a_tic() {
         // the writer goes over every scan again: a sample of the cuts is enough for it
         assert!(
             cut % 16 != 0
-                || mzlab_core::lettori_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {})
+                || mzlab_core::readers_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {})
                     .is_ok(),
             "cut at {cut}: the mzML is not written"
         );

@@ -6,9 +6,9 @@ mod conv_help;
 
 use agilent_synth::{encode, sample};
 use mzlab_core::json;
-use mzlab_core::lettori::FileSet;
 use mzlab_core::mzml::{self, ChromKind, Chromatogram};
 use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
+use mzlab_core::readers::FileSet;
 
 /// The `conv/1` document of an mzML as `Conversione` writes it.
 pub fn conv_di(xml: &[u8]) -> json::Value {
@@ -108,10 +108,10 @@ fn pressure_and_device_traces_are_written_with_their_term_and_unit() {
 
 #[test]
 fn a_reader_without_profile_refuses_the_profile_route_with_a_key() {
-    use mzlab_core::lettori::{self, Limits};
-    use mzlab_core::lettori_mzml::{Conversion, Peaks};
+    use mzlab_core::readers::{self, Limits};
+    use mzlab_core::readers_mzml::{Conversion, Peaks};
     let (idx, peak) = encode(&sample());
-    let mut l = lettori::apri(
+    let mut l = readers::apri(
         FileSet {
             membri: vec![
                 conv_help::member("x.D/AcqData/MSScan.bin", &idx),

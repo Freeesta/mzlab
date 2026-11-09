@@ -204,7 +204,7 @@ pub fn detect_file(
 
 #[cfg(feature = "detect")]
 /// L1-L3 of one file written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeatf`. `progress(done, total)` (optional) is called at most once per 1 % of the peaks.
-/// A file whose detection does not fit in `budget_mb` (0 or absent: the default of the `.wasm`) is refused first (`stima::detect_fits`).
+/// A file whose detection does not fit in `budget_mb` (0 or absent: the default of the `.wasm`) is refused first (`estimate::detect_fits`).
 #[wasm_bindgen]
 pub fn detect_file_to(
     read: Function, size: f64, name: &str, recipe: &str, write: Function, progress: Option<Function>, budget_mb: Option<f64>,

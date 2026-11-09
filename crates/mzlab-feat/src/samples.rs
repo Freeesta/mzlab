@@ -1,11 +1,11 @@
 //! Metadata of the samples of a series, `campioni/1` (`docs/schemi/campioni-1.json`): a type, a time, a replicate, a group and a concentration for every file.
-//! It is proposed from the file names by `mzlab_core::campioni::proponi` (the one parser of `campioni/2`) and edited by the user; the SHA-256 of its canonical JSON goes in the `.mzflow`.
+//! It is proposed from the file names by `mzlab_core::samples::proponi` (the one parser of `campioni/2`) and edited by the user; the SHA-256 of its canonical JSON goes in the `.mzflow`.
 //! Changing a metadatum does not change the detection (the `.mzfeat` is the same): only the views and the identities read it.
 
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
-use mzlab_core::campioni;
+use mzlab_core::samples;
 use mzlab_core::project::guess_sample;
 
 pub const SCHEMA: &str = "campioni/1";
@@ -33,13 +33,13 @@ pub struct Sample {
 }
 
 /// The metadata proposed for `files` (`(name, SHA-256)` in the order of injection, as in the table): the roles and times of
-/// `mzlab_core::campioni::proponi` in the vocabulary of `campioni/1` (an infusion takes the type and time of the old rules, a QC its time; no series; replicates by type, time and concentration).
+/// `mzlab_core::samples::proponi` in the vocabulary of `campioni/1` (an infusion takes the type and time of the old rules, a QC its time; no series; replicates by type, time and concentration).
 pub fn propose(files: &[(String, String)]) -> Vec<Sample> {
     let named: Vec<(String, String, String)> = files.iter().map(|(n, s)| (n.clone(), s.clone(), String::new())).collect();
     let mut out: Vec<Sample> = Vec::with_capacity(files.len());
-    for c in campioni::proponi(&named) {
+    for c in samples::proponi(&named) {
         let (kind, time_min) = match c.kind.as_str() {
-            "infusion" => (campioni::tipo_v1(&c.file), guess_sample(&c.file).1),
+            "infusion" => (samples::tipo_v1(&c.file), guess_sample(&c.file).1),
             "qc" => ("qc", guess_sample(&c.file).1),
             k => (k, c.time_min),
         };
@@ -175,7 +175,7 @@ pub fn samples_of(bytes: &[u8]) -> Result<Vec<Sample>> {
     if doc.get("schema").and_then(|v| v.str()) != Some("campioni/2") {
         return from_json(bytes);
     }
-    Ok(campioni::from_json(bytes)?
+    Ok(samples::from_json(bytes)?
         .into_iter()
         .map(|c| Sample {
             kind: c.role().to_string(),

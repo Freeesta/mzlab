@@ -1,11 +1,11 @@
 //! The structure side of the rules of `fragrules/1`: which rules of the table the structure of the user satisfies (required and excluded groups, the
-//! named `site`) and the products they expect (`regole_site`). The core (`mzlab_core::msngrafo`) matches those products against the graph; used by
+//! named `site`) and the products they expect (`regole_site`). The core (`mzlab_core::msngraph`) matches those products against the graph; used by
 //! `mzlab-cli msn-graph --regole` and the `.wasm` `msngrafo`. Evidence with a reason, never a verdict; `regole_tp/2` does not use it.
 
 use super::graph::Mol;
 use super::rules_site::{NEW_GROUPS, SITES};
 use mzlab_core::error::Result;
-use mzlab_core::msngrafo::{tabella_regole, Expectation, Options, Rule, Table, Tipo};
+use mzlab_core::msngraph::{tabella_regole, Expectation, Options, Rule, Table, Tipo};
 
 /// The rules whose structure conditions hold for `smiles`, with the products they expect: `Expectation`s for the option `attese` of the graph.
 /// A rule with no structure condition is not listed (the core decides it by the formula alone); a rule that reads a structure but has no product to

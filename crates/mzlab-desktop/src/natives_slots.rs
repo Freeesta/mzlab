@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use mzlab_core::lettori::Reader;
-use mzlab_core::{lettori_mzml, Error, Result};
+use mzlab_core::readers::Reader;
+use mzlab_core::{readers_mzml, Error, Result};
 
 use crate::mapped::Held;
 use crate::natives::{open, Dataset, Nativi, Src, OPEN, SHELLS};
@@ -91,7 +91,7 @@ impl Nativi {
         let g = match self.shells.get(&key) {
             Some(g) => g.clone(),
             None => {
-                let g = Arc::new(lettori_mzml::guscio(self.reader(&ds)?, c)?);
+                let g = Arc::new(readers_mzml::guscio(self.reader(&ds)?, c)?);
                 let mut held: usize = self.shells.values().map(|g| g.len()).sum();
                 while held + g.len() > SHELLS {
                     let Some(old) = self.order.pop_front() else {

@@ -6,8 +6,8 @@ mod agilent_synth;
 
 use agilent_synth::*;
 use mzlab_core::agilent::{AgilentD, Files};
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
-use mzlab_core::lettori_mzml;
+use mzlab_core::readers::{self, FileSet, Limits, Member};
+use mzlab_core::readers_mzml;
 
 #[test]
 fn agilent_through_lettore_gives_the_spectra_of_the_run() {
@@ -36,9 +36,9 @@ fn agilent_through_lettore_gives_the_spectra_of_the_run() {
             member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     };
-    let mut l = lettori::apri(fs, &Limits::sito()).unwrap();
+    let mut l = readers::apri(fs, &Limits::sito()).unwrap();
     let mut steps = 0;
-    let via = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| steps += 1).unwrap();
+    let via = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| steps += 1).unwrap();
     assert!(steps >= 2);
     let back = mzlab_core::mzml::read(&via[..]).unwrap();
     assert_eq!(back.spectra.len(), want.spectra.len());
@@ -49,7 +49,7 @@ fn agilent_through_lettore_gives_the_spectra_of_the_run() {
         );
         assert!((0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)));
     }
-    assert!(lettori_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).is_err());
+    assert!(readers_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).is_err());
 }
 
 /// The `convert.mzml` form: same spectra as `scrivi`, `indexedmzML` with working offsets, CV 4.2.6, one `processingMethod` per step.
@@ -69,8 +69,8 @@ fn indexed_form_has_the_same_scans_and_a_working_index() {
             member("x.D/AcqData/MSPeak.bin", &peak),
         ],
     };
-    let mut l = lettori::apri(fs, &Limits::sito()).unwrap();
-    let plain = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let mut l = readers::apri(fs, &Limits::sito()).unwrap();
+    let plain = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let step = ProcStep {
         accession: "MS:1000035".into(),
         name: "peak picking".into(),
@@ -78,8 +78,8 @@ fn indexed_form_has_the_same_scans_and_a_working_index() {
         version: "1".into(),
         params: vec![("min_height".into(), "1000".into())],
     };
-    let run = |l: &mut dyn lettori::Reader| {
-        lettori_mzml::write_indexed(
+    let run = |l: &mut dyn readers::Reader| {
+        readers_mzml::write_indexed(
             l,
             0,
             Vec::new(),

@@ -7,7 +7,7 @@ use std::process::Command;
 
 use mzlab_core::json::Out;
 use mzlab_core::json::Value;
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 
 const TABLE: &str = "name;q1;q3;polarity;rt;rt_window;isomer_group\n\
 isoA;237.1;;+;2.5;0.3;237\n\
@@ -46,10 +46,10 @@ fn fixture(tag: &str) -> Option<PathBuf> {
     let set = FileSet {
         membri: vec![member("sim.wiff"), member("sim.wiff.scan")],
     };
-    let mut l = lettori::apri(set, &Limits::sito()).unwrap();
+    let mut l = readers::apri(set, &Limits::sito()).unwrap();
     for c in 0..2 {
         let bytes =
-            mzlab_core::lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
+            mzlab_core::readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
         std::fs::write(d.join(format!("s{}.mzML", c + 1)), bytes).unwrap();
     }
     Some(d)

@@ -1,4 +1,4 @@
-"""Core of the Python reference of crates/mzlab-core/src/centroidi (grid, smoothing, background, detection, centroids), same operations in the same
+"""Core of the Python reference of crates/mzlab-core/src/centroids (grid, smoothing, background, detection, centroids), same operations in the same
 order. Used by tools/centroidi_riferimento.py; only a reference for the tests."""
 import math
 

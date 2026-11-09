@@ -19,7 +19,7 @@ pub use kmd::{
 };
 
 use crate::samples::Sample;
-use mzlab_core::disegno::{Confronto, Design};
+use mzlab_core::drawing::{Confronto, Design};
 use mzlab_core::error::{Error, Result};
 
 pub const SCHEMA: &str = "stat/1";

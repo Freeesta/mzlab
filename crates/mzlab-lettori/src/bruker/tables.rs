@@ -7,7 +7,7 @@ use super::sqlite_min::{Sqlite, Val};
 
 use mzlab_core::error::Result;
 
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 use std::collections::{BTreeMap, HashMap};
 

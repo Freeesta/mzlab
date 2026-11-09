@@ -4,9 +4,9 @@
 use std::collections::HashMap;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Limits, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 use mzlab_core::ole::Ole;
+use mzlab_core::readers::{Limits, ScanEntry};
 
 use super::mrm::{self, Traces};
 use super::rec::{self, Shape};

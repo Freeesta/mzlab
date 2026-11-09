@@ -7,9 +7,9 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::mzmlarray::{decode_array, Inflate, Want};
 
-mod finestre;
-mod lettura;
+mod reading;
 mod tags;
+mod windows;
 use tags::{find_tag, time_in_seconds};
 
 /// Values an array may inflate to at least (see `decode`).
@@ -252,23 +252,23 @@ impl<R: ReadAt> Mzml<R> {
 
     /// The header of every `<chromatogram>`; they follow the spectra, so the search starts where the last scan ends (0 without scans).
     pub fn chromatograms(&mut self, scans_end: u64) -> Result<Vec<Chrom>> {
-        finestre::chromatograms(self, scans_end)
+        windows::chromatograms(self, scans_end)
     }
 
     /// (time in minutes, intensity) of a chromatogram.
     pub fn chromatogram(&mut self, c: &Chrom) -> Result<(Vec<f64>, Vec<f64>)> {
         let chunk = self.read(c.start, c.end)?;
-        lettura::pair_of(&chunk, c)
+        reading::pair_of(&chunk, c)
     }
 
-    /// The unit of a chromatogram, or "": see `unita_traccia::resolve`.
+    /// The unit of a chromatogram, or "": see `trace_unit::resolve`.
     pub fn chromatogram_unit(&mut self, c: &Chrom) -> Result<String> {
         let chunk = self.read(c.start, c.end)?;
         let found = arrays(&chunk)
             .into_iter()
             .filter(|(h, _)| !h.contains("MS:1000595"))
             .find_map(|(h, _)| attr(&h, "unitName").map(str::to_string));
-        Ok(crate::unita_traccia::resolve(
+        Ok(crate::trace_unit::resolve(
             found.unwrap_or_default(),
             &chunk,
         ))

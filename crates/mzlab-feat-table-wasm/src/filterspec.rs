@@ -1,7 +1,7 @@
 //! The rules of `table.filter` in the language of the engine (`normalizza`/`filtra`), from the parameters of the step: one rule for `flow run` and the browser.
-use mzlab_core::campioni;
 use mzlab_core::error::Result;
 use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::samples;
 use mzlab_feat::filters::QC_MIN_FILES;
 use mzlab_feat::filters_blank::Labels;
 
@@ -57,7 +57,7 @@ fn wants_labels(job: &[(String, Value)]) -> bool {
 
 /// The batch, matrix, series and group of every file of a `campioni/2` or `/3` document; empty for `campioni/1`, which has none.
 fn labels_of(samples: &[u8]) -> Labels {
-    let Ok(list) = campioni::from_json(samples) else {
+    let Ok(list) = samples::from_json(samples) else {
         return Labels::default();
     };
     Labels {

@@ -75,7 +75,7 @@ fn an_entry_keeps_the_bond_breaks_of_its_graph_and_the_table_of_the_entry_shows_
         g.get("rotture").is_some(),
         "the entry holds the key rotture"
     );
-    let csv = mzlab_core::msngrafo::table_text(g, "nodes", false);
+    let csv = mzlab_core::msngraph::table_text(g, "nodes", false);
     assert!(csv.lines().next().unwrap().contains("bond_break"), "{csv}");
     let e = run(&["msn-lib", "export", l, "--tutti"]);
     assert_eq!(e.code, 0, "{}", e.stderr);

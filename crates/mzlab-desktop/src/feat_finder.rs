@@ -316,7 +316,7 @@ impl State {
             }
             "finder/plan" => self.finder_plan(p),
             "finder/tp_table" => self.finder_tp_table(p),
-            "finder/campioni" => text(mzlab_core::campioni::route(s("cop"), s("input"))?),
+            "finder/campioni" => text(mzlab_core::samples::route(s("cop"), s("input"))?),
             "finder/transf_rows" => text(legacy::transf::describe(s("text"))),
             "finder/transformations" => {
                 let merged =

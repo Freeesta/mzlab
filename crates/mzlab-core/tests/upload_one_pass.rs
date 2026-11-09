@@ -1,5 +1,5 @@
 //! `upload::Passata` (SHA-256, SHA-1 and probe in one pass, fed in pieces) gives what the three separate reads gave: the same values whatever the pieces.
-use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::readers::{FileSet, Member};
 use mzlab_core::upload::{self, Passata};
 use sha1::{Digest as _, Sha1};
 use sha2::Sha256;

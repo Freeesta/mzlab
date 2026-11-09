@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 
-use mzlab_core::mzmlvalida::{analyze, ChromInfo, Item, SpecInfo};
+use mzlab_core::mzml_validate::{analyze, ChromInfo, Item, SpecInfo};
 
 #[derive(Default, Clone, Copy)]
 struct Dev {

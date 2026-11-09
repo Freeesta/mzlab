@@ -6,7 +6,7 @@ mod finto;
 
 use std::time::Instant;
 
-use mzlab_core::lettori::Reader;
+use mzlab_core::readers::Reader;
 use mzlab_core::{mzidx, upload};
 
 /// The index goes to a temporary file, as on the desktop (a sparse file: nothing is zeroed in memory); `sha` is the SHA-256 of what was written (a change

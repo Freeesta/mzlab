@@ -4,8 +4,8 @@ use std::os::unix::fs::FileExt;
 use std::path::Path;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Position, Sample, ScanEntry};
 use mzlab_core::mzml::Spectrum;
+use mzlab_core::readers::{Position, Sample, ScanEntry};
 
 /// The reader of the dense case: scans decoded from the file by offset, as `RawReader` does from the `.raw`.
 pub struct Denso {

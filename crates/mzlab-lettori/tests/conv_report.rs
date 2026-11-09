@@ -7,8 +7,8 @@ mod common;
 mod common_waters;
 
 use mzlab_core::json;
-use mzlab_core::lettori::Reader;
-use mzlab_core::lettori_mzml::Conversion;
+use mzlab_core::readers::Reader;
+use mzlab_core::readers_mzml::Conversion;
 
 fn conv_di(l: &mut dyn Reader) -> json::Value {
     let xml = Conversion::default()
@@ -76,7 +76,7 @@ fn andi_carries_conv() {
 #[test]
 fn shimadzu_carries_conv() {
     use common::shimadzu::qgd;
-    use mzlab_core::lettori::{FileSet, Limits, Member};
+    use mzlab_core::readers::{FileSet, Limits, Member};
     let b = qgd(6);
     let fs = FileSet {
         membri: vec![Member {
@@ -95,7 +95,7 @@ fn shimadzu_carries_conv() {
 #[cfg(feature = "waters")]
 #[test]
 fn waters_carries_conv() {
-    use mzlab_core::lettori::Limits;
+    use mzlab_core::readers::Limits;
     let mut l = mzlab_lettori::open_bare(common_waters::synthetic_set(), &Limits::sito()).unwrap();
     check(&mut *l, "waters-raw");
 }

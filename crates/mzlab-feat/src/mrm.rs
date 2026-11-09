@@ -10,7 +10,7 @@ use crate::sortc::SortC;
 use mzlab_core::error::Result;
 use mzlab_core::peakq::{quality, Quality};
 use mzlab_core::peaks::noise_level;
-use mzlab_core::sorgente::Traces;
+use mzlab_core::source::Traces;
 
 mod resolver;
 use resolver::{area_above, boxcar, odd_points, resolve, Span, Stabilise};

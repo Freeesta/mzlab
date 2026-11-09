@@ -9,7 +9,7 @@ use std::time::SystemTime;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::flow::Plan;
 use mzlab_core::hashio::hash_read_with;
-use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::readers::{FileSet, Member};
 use mzlab_core::upload::{impronte_note, probe, Fingerprint};
 use mzlab_core::{Error, Result};
 

@@ -3,11 +3,11 @@
 #![allow(clippy::indexing_slicing)]
 #![allow(clippy::disallowed_methods)]
 
-mod lettore_finto;
+mod fake_reader;
 
 use std::io::Cursor;
 
-use lettore_finto::Finto;
+use fake_reader::Finto;
 use mzlab_core::idxread::{Head, Index};
 use mzlab_core::{mzidx, upload};
 

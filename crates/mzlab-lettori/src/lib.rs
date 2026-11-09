@@ -1,8 +1,8 @@
 //! The readers of the vendor files, one module `.wasm` per family of formats (docs/agenti/lettori-modulo.md): the engine (`mzlab-wasm`) carries none of this crate.
-//! The readers of a family sit in `src/<family>/` behind the Cargo feature of the same name and implement `mzlab_core::lettori::Lettore`; variants of the readers that live
+//! The readers of a family sit in `src/<family>/` behind the Cargo feature of the same name and implement `mzlab_core::readers::Lettore`; variants of the readers that live
 //! in `mzlab-core` sit behind its `estesi` feature, which this crate turns on and the engine leaves off.
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{self, Fiducia, FileSet, Limits, Reader, ReaderEntry};
+use mzlab_core::readers::{self, Fiducia, FileSet, Limits, Reader, ReaderEntry};
 
 #[cfg(any(feature = "andi", feature = "tutte"))]
 pub mod andi;
@@ -32,13 +32,13 @@ static ENTRY_MZXML_GZ: ReaderEntry = aperti::mzml_gz::ENTRY_MZXML;
 #[cfg(any(feature = "andi", feature = "tutte"))]
 static ENTRY_ANDI: ReaderEntry = andi::ms::ENTRY;
 #[cfg(any(feature = "agilent", feature = "tutte"))]
-static ENTRY_AGILENT: ReaderEntry = mzlab_core::agilent::lettore::ENTRY;
+static ENTRY_AGILENT: ReaderEntry = mzlab_core::agilent::reader::ENTRY;
 #[cfg(any(feature = "sciex", feature = "tutte"))]
-static ENTRY_SCIEX: ReaderEntry = mzlab_core::wiff::lettore::ENTRY;
+static ENTRY_SCIEX: ReaderEntry = mzlab_core::wiff::reader::ENTRY;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
 static ENTRY_SHIMADZU: ReaderEntry = shimadzu::ENTRY;
 #[cfg(any(feature = "thermo", feature = "tutte"))]
-static ENTRY_THERMO: ReaderEntry = mzlab_core::rawlettore::ENTRY;
+static ENTRY_THERMO: ReaderEntry = mzlab_core::rawreader::ENTRY;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 static ENTRY_BRUKER_TDF: ReaderEntry = bruker::tdf::ENTRY;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
@@ -102,12 +102,12 @@ pub fn registry() -> Vec<&'static ReaderEntry> {
     entries.iter().flatten().copied().collect()
 }
 
-/// The reader of `registro` that is surest of `fs` (the first among equals; like `lettori::riconosci_in`, which takes a slice and not this list).
+/// The reader of `registro` that is surest of `fs` (the first among equals; like `readers::riconosci_in`, which takes a slice and not this list).
 pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
     let mut best: Option<(Fiducia, &'static ReaderEntry)> = None;
     for v in registry()
         .into_iter()
-        .filter(|v| v.contratto == lettori::CONTRATTO)
+        .filter(|v| v.contratto == readers::CONTRATTO)
     {
         let f = (v.riconosci)(fs);
         if f > Fiducia::No && best.is_none_or(|(b, _)| f > b) {
@@ -128,7 +128,7 @@ pub fn open_bare(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .unwrap_or_default();
     let v = riconosci(&mut fs).ok_or_else(|| refusal(&fs, name))?;
     let mut l = (v.apri)(fs, limits)?;
-    if l.format() == lettori::Format::ThermoRaw && srm::has_srm_scans(&mut *l, 0) {
+    if l.format() == readers::Format::ThermoRaw && srm::has_srm_scans(&mut *l, 0) {
         l = Box::new(srm::SrmFromScans::new(l));
     }
     Ok(Box::new(finite::Finished::new(l)))
@@ -209,7 +209,7 @@ pub fn motivi(l: &mut dyn Reader, c: usize) -> Vec<&'static str> {
 #[cfg(any(feature = "agilent", feature = "tutte"))]
 pub fn reasons_together(fs: &mut FileSet) -> Vec<&'static str> {
     let mut m = Vec::new();
-    if mzlab_core::agilent::lettore::variant(fs) {
+    if mzlab_core::agilent::reader::variant(fs) {
         m.push("variante");
     }
     m

@@ -18,7 +18,7 @@ use mzlab_feat::view::{self, View};
 fn load<R: ReadAt>(r: &mut R, size: u64, samples_json: &str) -> Result<(Aligned, Vec<Sample>)> {
     let (t, meta) = read_table_from(r, size)?;
     let text =
-        mzlab_core::campioni::order_like(samples_json, &mzlab_feat::store::input_names(&meta))?;
+        mzlab_core::samples::order_like(samples_json, &mzlab_feat::store::input_names(&meta))?;
     let s = samples::from_json(text.as_bytes())?;
     if s.len() != t.n_files {
         return Err(Error::new("error.badView"));
@@ -178,8 +178,8 @@ pub fn tp_table_cond_json<R: ReadAt>(
         )
     };
     let names = mzlab_feat::store::table_names(r, size)?;
-    let series_json = mzlab_core::campioni::order_like(series_json, &names)?;
-    let cs = mzlab_core::campioni::from_json(series_json.as_bytes())?;
+    let series_json = mzlab_core::samples::order_like(series_json, &names)?;
+    let cs = mzlab_core::samples::from_json(series_json.as_bytes())?;
     let infos = mzlab_feat::tp::infos_from_json(infos_json)?;
     mzlab_feat::tp::table_json_cond(&t, &s, rows.as_deref(), Some((&cs, &infos)))
 }
@@ -362,7 +362,7 @@ pub fn row_traces_json<R: ReadAt, I: ReadAt>(
     row::traces(&t, &s, id, open, ppm)
 }
 
-/// `campioni/2` and `/3`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest` or `migra` (`mzlab_core::campioni::route`: no name models or CSV, they are over the cap of this .wasm).
+/// `campioni/2` and `/3`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest` or `migra` (`mzlab_core::samples::route`: no name models or CSV, they are over the cap of this .wasm).
 pub fn samples_route(op: &str, input: &str) -> Result<String> {
-    mzlab_core::campioni::route(op, input)
+    mzlab_core::samples::route(op, input)
 }

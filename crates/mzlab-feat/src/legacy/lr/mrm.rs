@@ -6,7 +6,7 @@ use crate::sortc::SortC;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{round, Out};
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::sorgente::MzmlTraces;
+use mzlab_core::source::MzmlTraces;
 use mzlab_core::srm;
 use mzlab_core::Result;
 

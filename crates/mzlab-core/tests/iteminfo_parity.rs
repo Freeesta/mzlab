@@ -46,7 +46,7 @@ fn s(v: &Value) -> String {
     v.as_str().unwrap_or("").to_string()
 }
 
-/// Documented exception to the parity: the recognition of an infusion (`infusione.rs`) is Rust only. `explore.py` keeps the rule of
+/// Documented exception to the parity: the recognition of an infusion (`infusion.rs`) is Rust only. `explore.py` keeps the rule of
 /// the constant RT and has neither `msn` nor the hint "infusion": the new fields are checked against themselves, then the values of
 /// Python are put back.
 fn infusion_exception(got: &mut Value, want: &Value) {

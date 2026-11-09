@@ -1,6 +1,6 @@
 //! The indexed file against the PSI schema `mzML1.1.2_idx.xsd` (`xmllint`). The schema files are fetched once into a cache folder; without `xmllint`,
 //! `curl` or network the test says so and passes, so only a machine that can check really checks.
-use super::tests_indice::{indexed_header, indexed_sample};
+use super::tests_index::{indexed_header, indexed_sample};
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, MzmlWriter, Options, ProcStep, SpectrumExtra};
 use std::path::PathBuf;

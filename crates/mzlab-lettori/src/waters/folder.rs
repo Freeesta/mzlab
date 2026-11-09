@@ -1,7 +1,7 @@
 //! The members of a `.raw` folder as the reader needs them: found by their file name (the case of the names varies between MassLynx versions) and read whole when small.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{FileSet, Limits};
+use mzlab_core::readers::{FileSet, Limits};
 
 /// The largest side file read whole (`_extern.inf`, an index, a table of channels).
 const SMALL_MAX: u64 = 8 << 20;
@@ -112,7 +112,7 @@ pub(super) fn text(b: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mzlab_core::lettori::Member;
+    use mzlab_core::readers::Member;
 
     #[test]
     fn windows_member_path_names_the_folder() {
