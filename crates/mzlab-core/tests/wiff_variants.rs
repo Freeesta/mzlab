@@ -333,3 +333,47 @@ fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
         .zip(&run.chromatograms[1].intensity)
         .all(|(a, b)| close(*a, *b)));
 }
+
+/// A sample of an MS3 experiment (code 13) is read as level-3 spectra whose precursor is the second isolated mass and whose first one is a userParam, and a sample the
+/// reader refuses stays in the list with its reason: it never makes the pair fail, nor stops the samples before it.
+#[test]
+fn an_ms3_sample_is_read_and_a_refused_sample_does_not_fail_the_pair() {
+    let Some((dir, want)) = reference() else {
+        return;
+    };
+    let r = &want["ms3"];
+    let mut l = readers::apri(set(&dir, "ms3"), &Limits::sito()).unwrap();
+    let names: Vec<_> = l.samples().iter().map(|s| s.nome.clone()).collect();
+    let wanted: Vec<_> = r["names"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n.as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(names, wanted);
+    let xml = String::from_utf8(
+        mzlab_core::readers_mzml::scrivi(&mut *l, 1, Vec::new(), &mut |_, _| {}).unwrap(),
+    )
+    .unwrap();
+    let sp = r["spectra"].as_array().unwrap();
+    assert_eq!(xml.matches("<spectrum ").count(), sp.len());
+    assert_eq!(
+        xml.matches("name=\"ms level\" value=\"3\"").count(),
+        sp.len()
+    );
+    assert_eq!(
+        xml.matches("userParam name=\"ms3 first precursor m/z\" value=\"237.1\"")
+            .count(),
+        sp.len()
+    );
+    assert_eq!(
+        xml.matches("name=\"selected ion m/z\" value=\"194.1\"")
+            .count(),
+        sp.len()
+    );
+    // the first sample reads as before, the refused one says why when its data are asked for
+    assert!(mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).is_ok());
+    let e = mzlab_core::readers_mzml::scrivi(&mut *l, 2, Vec::new(), &mut |_, _| {})
+        .expect_err("sample 3 is refused");
+    assert_eq!(detail(&e), "scan type code 21 (experiment 1)");
+}
