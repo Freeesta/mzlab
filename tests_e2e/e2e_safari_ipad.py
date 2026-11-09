@@ -212,7 +212,7 @@ try:
                 pg.evaluate("for (const d of document.querySelectorAll('dialog[open]')) d.close()")
             pg.context.close()
             for (name, top), v in got.items():
-                if top == "down": assert v[0][0] > 16 and not v[1], f"{name}: the dialog does not come back when the keyboard goes {v}"; continue
+                if top == "down": assert abs(v[0][0] - (innerh + 8 - v[0][1])) <= 1 and not v[1], f"{name}: the dialog is not centred again when the keyboard goes {v}"; continue   # a modal dialog is centred: the same margin above and below
                 band = (top, innerh - 400)
                 out = [p for p, (a, z) in zip(["dialog", "field", "button"], v[0]) if (a < band[0] - 1 or z > band[1] + 1) and not (p == "button" and v[1])]
                 assert not out, f"{name}, keyboard up (visible band {band}): {out} outside it {v[0]} (a button may be under the scroll of a dialog that scrolls)"
