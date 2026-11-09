@@ -154,6 +154,14 @@ impl Stored for Files {
     fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
         std::fs::read(&self.0[k]).map_err(io)
     }
+    fn part(
+        &mut self,
+        k: usize,
+    ) -> Result<Option<(Box<dyn mzlab_core::idxread::ReadAt + '_>, u64)>> {
+        let f = File::open(&self.0[k]).map_err(io)?;
+        let size = f.metadata().map_err(io)?.len();
+        Ok(Some((Box::new(f), size)))
+    }
     fn weak(&mut self, k: usize) -> Result<Option<Vec<u8>>> {
         Ok(std::fs::read(weak_path(&self.0[k])).ok())
     }

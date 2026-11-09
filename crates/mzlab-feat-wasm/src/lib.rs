@@ -190,7 +190,36 @@ impl Stored for JsStored {
         self.files.length() as usize
     }
     fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
-        Ok(Uint8Array::new(&self.files.get(k as u32)).to_vec())
+        Ok(self.file(k).to_vec())
+    }
+    fn part(&mut self, k: usize) -> Result<Option<(Box<dyn ReadAt + '_>, u64)>> {
+        let a = self.file(k);
+        let size = a.length() as u64;
+        Ok(Some((Box::new(JsPart(a)), size)))
+    }
+}
+
+impl JsStored {
+    /// File `k` as the page holds it: `new Uint8Array(x)` would copy a `Uint8Array` whole, so only another kind of value (an `ArrayBuffer`) is wrapped.
+    fn file(&self, k: usize) -> Uint8Array {
+        self.files
+            .get(k as u32)
+            .dyn_into()
+            .unwrap_or_else(|v| Uint8Array::new(&v))
+    }
+}
+
+/// One `.mzfeatf` held in JavaScript read by parts: only the bytes asked for cross into the module.
+struct JsPart(Uint8Array);
+
+impl ReadAt for JsPart {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        let end = off
+            .checked_add(buf.len() as u64)
+            .filter(|&e| e <= self.0.length() as u64)
+            .ok_or_else(|| Error::new("error.badIndex"))?;
+        self.0.subarray(off as u32, end as u32).copy_to(buf);
+        Ok(())
     }
 }
 

@@ -47,6 +47,12 @@ impl Stored for WithWeak {
     fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
         self.files.bytes(k)
     }
+    fn part(
+        &mut self,
+        k: usize,
+    ) -> Result<Option<(Box<dyn mzlab_core::idxread::ReadAt + '_>, u64)>> {
+        self.files.part(k)
+    }
     fn weak(&mut self, k: usize) -> Result<Option<Vec<u8>>> {
         let v = self.weak.as_ref().map(|w| w.get(k as u32));
         Ok(v.and_then(|v| v.dyn_into::<Uint8Array>().ok())
