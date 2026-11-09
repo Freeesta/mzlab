@@ -40,3 +40,5 @@ mzlab/web/app.css::subgrid::3  # the rule and its @supports not (grid-template-c
 mzlab/web/integra-base.js::subgrid::1  # inside @supports (grid-template-columns:subgrid): the column of the fields, .pk-row keeps its own grid otherwise
 mzlab/web/draw.js::CSS zoom::2  # Ketcher toolbars a little larger; Firefox before 126 keeps their own size
 mzlab/web/mappa-dati.js::base64 typed arrays::1  # feature check, atob loop otherwise
+mzlab/web/explore.js::fetch keepalive::1  # on the site api/ is answered in the page (browser.js), never sent; an engine without keepalive sends a plain fetch
+mzlab/web/transizioni.css::backdrop var()::1  # only the fade of the backdrop: below Chrome 122 / Safari 17.4 it appears at once
