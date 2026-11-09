@@ -789,12 +789,7 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "xlo" || k === "xhi") window.XICBORDI?.wire(p, c, x);  // xic-bordi.js: absolute m/z edges
     else if (k === "view") x.onclick = () => MAPPA.open3d(p, x);  // mappa.js: the 3D viewer (mappa3d.js), a modal over the page
     else if (k === "split") x.onclick = () => splitPanel(p);
-    else if (k === "rt0" || k === "rt1") x.onchange = () => {  // visible time interval of the panel
-      const q = c.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'), a = p._a || {}, u = numMz(q[0].value), v = numMz(q[1].value);
-      if (u == null && v == null) { pushZh(p); p.zoom = null; p.zoomY = null; draw(p); uiSave(); return; }
-      const lo = u ?? a.xmin ?? a.x0, hi = v ?? a.xmax ?? a.x1;
-      if (lo != null && hi != null && hi > lo) { pushZh(p); zoomTo(p, lo, hi); uiSave(); }
-    };
+    else if (k === "rt0" || k === "rt1" || k === "mz0" || k === "mz1") window.XICBORDI?.range(p, c, x);  // xic-bordi.js: the pairs of the «Range» popover
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
     else if (k === "corr") corrWire(x, (/** @type {string} */ v) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
     else if (k === "bkg") corrWire(x, (/** @type {string} */ v) => setFondo(p, v));
