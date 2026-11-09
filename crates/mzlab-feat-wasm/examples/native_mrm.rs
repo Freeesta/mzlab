@@ -1,6 +1,6 @@
 //! The MRM pipeline of the bridge on files, natively (reference of the validation tools, `tools/valida/lr_nativo.py`).
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example nativo_mrm -- OUT_DIR file.mzML...
+//!     cargo run --release -p mzlab-feat-wasm --example native_mrm -- OUT_DIR file.mzML...
 //!
 //! Writes `<name>.mzfeatf` for every file and `series.mzfeat` (aligned by transition and RT, empty cells integrated) and prints the SHA-256 of each.
 

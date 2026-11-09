@@ -259,3 +259,17 @@ fn the_read_is_refused_with_its_numbers_below_the_estimate_of_the_fixture() {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
+/// `flow run` starts the threads of the desktop app (`default_workers`) unless `--workers` says otherwise; the bytes do not depend on it.
+#[test]
+fn flow_run_has_the_threads_of_the_desktop_app_unless_workers_is_given() {
+    let workers = |a: &[&str]| {
+        let a = a.iter().map(|s| s.to_string()).collect();
+        crate::flow_run::parse_args(a).unwrap().unwrap().workers
+    };
+    assert_eq!(
+        workers(&["p.json", "--dry-run"]),
+        crate::flow::live::default_workers()
+    );
+    assert_eq!(workers(&["p.json", "--dry-run", "--workers", "1"]), 1);
+}

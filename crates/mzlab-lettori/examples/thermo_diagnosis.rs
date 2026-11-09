@@ -1,9 +1,9 @@
-//! `cargo run --release -p mzlab-lettori --features thermo --example thermo_diagnosi -- FILE.raw`: the structures of a Thermo `.raw` that does not open (format
+//! `cargo run --release -p mzlab-lettori --features thermo --example thermo_diagnosis -- FILE.raw`: the structures of a Thermo `.raw` that does not open (format
 //! versions, addresses and counts of every run header) and what the reader says of it. Prints no scan data and no file name; the output can go in a report.
 
 fn main() {
     let Some(path) = std::env::args().nth(1) else {
-        eprintln!("usage: thermo_diagnosi FILE.raw");
+        eprintln!("usage: thermo_diagnosis FILE.raw");
         std::process::exit(2);
     };
     match std::fs::File::open(&path) {

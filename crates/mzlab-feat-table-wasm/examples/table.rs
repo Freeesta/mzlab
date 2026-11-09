@@ -1,6 +1,6 @@
 //! Native reference of the bridge: writes the views, the report and the files of a table to a directory and prints `name sha256` of each. The same bytes
 //! must come from the `.wasm` (`tests/test_feat_table_wasm.py`).
-//! usage: tabella <out dir> <table.mzfeat> <campioni.json> <spec.json|-> <polarity> [<file.mzidx>...]
+//! usage: table <out dir> <table.mzfeat> <campioni.json> <spec.json|-> <polarity> [<file.mzidx>...]
 use std::fs::File;
 use std::path::Path;
 

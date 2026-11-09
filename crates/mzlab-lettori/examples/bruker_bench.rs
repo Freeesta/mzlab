@@ -1,8 +1,8 @@
 //! Speed bench of the Bruker timsTOF reader (docs/agenti/misure-formati.md) on a synthetic DDA-PASEF folder of realistic size (invented numbers, no lab data):
 //! `scrivi` writes `analysis.tdf` + `analysis.tdf_bin` (zstd, codec 2), `misura` times open, index, TIC, BPC, first spectrum, all spectra and the mzML conversion.
 //! A tool of the bench: it never enters a .wasm.
-//!   bruker_banco scrivi DIR.d [--cicli 100] [--ms1 60000] [--ms2 15000]
-//!   bruker_banco misura DIR.d [--giri 3]
+//!   bruker_bench scrivi DIR.d [--cicli 100] [--ms1 60000] [--ms2 15000]
+//!   bruker_bench misura DIR.d [--giri 3]
 use std::path::Path;
 use std::time::Instant;
 
@@ -94,6 +94,6 @@ fn main() {
     match (a.first().map(String::as_str), a.get(1)) {
         (Some("scrivi"), Some(d)) => scrivi(Path::new(d), opz("--cicli", 100), opz("--ms1", 60_000), opz("--ms2", 15_000)),
         (Some("misura"), Some(d)) => measure(Path::new(d), opz("--giri", 3)),
-        _ => eprintln!("usage: bruker_banco scrivi DIR.d [--cicli N] [--ms1 N] [--ms2 N] | misura DIR.d [--giri N]"),
+        _ => eprintln!("usage: bruker_bench scrivi DIR.d [--cicli N] [--ms1 N] [--ms2 N] | misura DIR.d [--giri N]"),
     }
 }

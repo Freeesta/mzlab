@@ -30,7 +30,8 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
   --out FOLDER             the run folder: plan.json (the plan as run), one file per step, prov.json and corsa.json
   --set INSTANCE.NAME=V    a parameter of a step instance (INSTANCE is its id, or the step id when the plan has one instance of it);
                            NAME may also be `algorithm` or `preset`; repeat for more
-  --workers N              threads for the steps of a level and the files of a per-file step (default 1; the outputs do not depend on it)
+  --workers N              threads for the steps of a level and the files of a per-file step (default: the cores but one, 1 to 4, as the
+                           desktop app; the outputs do not depend on it)
   --budget-mb N            working memory of the alignment in MB (default: a share of the RAM); a series that does not fit in memory is aligned
                            in slabs of m/z, and the outputs are the same bytes whatever N is
   --dry-run                checks the plan, the settings and the inputs and prints what would run; writes nothing
@@ -47,21 +48,21 @@ old names still accepted: --jsonl";
 
 /// Arguments of `flow run`.
 #[derive(Default)]
-struct Args {
+pub(crate) struct Args {
     plan: Option<PathBuf>,
     ins: Vec<PathBuf>,
     out: Option<PathBuf>,
     sets: Vec<String>,
-    workers: usize,
+    pub(crate) workers: usize,
     dry: bool,
     fresh: bool,
     budget_mb: Option<f64>,
     style: Style,
 }
 
-fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
+pub(crate) fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
     let mut a = Args {
-        workers: 1,
+        workers: crate::flow::live::default_workers(),
         ..Args::default()
     };
     let mut it = args.into_iter().peekable();

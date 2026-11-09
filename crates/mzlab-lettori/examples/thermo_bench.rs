@@ -1,6 +1,6 @@
 //! Speed bench of our Thermo `.raw` reader (criteria A5/A6 of docs/agenti/thermo-velocita.md): open, TIC/BPC, first scan, all scans, 100 random scans.
 //! Writes one `banco/1` JSON line per file; read-only, uses the same functions as the `thermo` module. A tool of the bench: it never enters a .wasm.
-//!   thermo_banco FILE.raw [--sha MAIN_SHA_40] [--reps 5] [--machine TEXT] [--profile TEXT] [--target native|wasm]
+//!   thermo_bench FILE.raw [--sha MAIN_SHA_40] [--reps 5] [--machine TEXT] [--profile TEXT] [--target native|wasm]
 use std::time::Instant;
 
 use mzlab_core::rawreader;
@@ -133,7 +133,7 @@ fn stats(laps: &[Lap]) -> (Value, Value, Value, f64, f64) {
 
 fn main() {
     std::panic::set_hook(Box::new(|i| {
-        eprintln!("thermo_banco: {i}");
+        eprintln!("thermo_bench: {i}");
         std::process::exit(2);
     }));
     let a: Vec<String> = std::env::args().skip(1).collect();

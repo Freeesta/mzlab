@@ -1,5 +1,5 @@
 #![cfg(feature = "thermo")]
-//! The synthetic Orbitrap v66 writer (`examples/thermo_sintetico.rs`, the stand-in for the speed benches of high-resolution `.raw`) gives a file the reader opens:
+//! The synthetic Orbitrap v66 writer (`examples/thermo_synthetic.rs`, the stand-in for the speed benches of high-resolution `.raw`) gives a file the reader opens:
 //! the scan count, the MS1/MS2 cycle, profile MS1 with centroids at the m/z it wrote, MS2 with a precursor. Small file in a temporary folder, removed afterwards.
 //! A pinned hash of every decoded scan (centroids and profile) is the gate of any change to the decoder: it must give the same values.
 use mzlab_core::mzml::Spectrum;
@@ -12,7 +12,7 @@ use std::process::Command;
 fn generate(out: &Path, args: &[&str]) {
     let ex = std::env::current_exe()
         .ok()
-        .and_then(|e| Some(e.parent()?.parent()?.join("examples/thermo_sintetico")))
+        .and_then(|e| Some(e.parent()?.parent()?.join("examples/thermo_synthetic")))
         .filter(|p| p.is_file());
     let st = match ex {
         Some(p) => Command::new(p).arg(out).args(args).status(),
@@ -26,19 +26,19 @@ fn generate(out: &Path, args: &[&str]) {
                 "--features",
                 "thermo",
                 "--example",
-                "thermo_sintetico",
+                "thermo_synthetic",
                 "--",
             ])
             .arg(out)
             .args(args)
             .status(),
     };
-    assert!(st.is_ok_and(|s| s.success()), "thermo_sintetico failed");
+    assert!(st.is_ok_and(|s| s.success()), "thermo_synthetic failed");
 }
 
 fn folder(name: &str) -> PathBuf {
     let d = std::env::temp_dir().join(format!(
-        "mzlab_thermo_sintetico_{}_{name}",
+        "mzlab_thermo_synthetic_{}_{name}",
         std::process::id()
     ));
     std::fs::create_dir_all(&d).unwrap();

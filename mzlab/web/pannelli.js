@@ -49,7 +49,7 @@ function numberPanels() {
   st.forEach((/** @type {Pannello} */ q, /** @type {number} */ i) => { const n = q.el.querySelector(".pnum"); q.num = i + 1; n.textContent = i + 1; n.hidden = false; n.title = I18N.t("panel.num.title", { n: i + 1 }); });
   markPairs(st);
 }
-// a spectrum that follows a chromatogram (MS2 or Full Scan): both panels share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hovering or focusing one lights up the other
+// a spectrum following a chromatogram: both share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hover or focus on one lights the other
 function markPairs(/** @type {Pannello[]} */ st) {
   let ord = 0; const idx = new Map();
   E.panels.forEach((/** @type {Pannello} */ q) => { if (q.el) { delete q.el.dataset.pair; q.el.querySelectorAll(".ppair").forEach((/** @type {Element} */ x) => x.remove()); } });
@@ -605,7 +605,7 @@ function corrWidget(/** @type {Pannello} */ p, /** @type {Bag} */ o) {
   const T0 = p.tab || E.tab, fileOpts = o.files.length > (o.min ?? 1) ? o.files : [], cfile = o.cur[0] === "f";
   const refK = /** @type {unknown} */ (S.ref.k) !== "auto" && fileOpts.some((/** @type {MzFile} */ x) => x.k === /** @type {unknown} */ (S.ref.k)) ? S.ref.k : (SUBREF.autoFile(T0) || {}).k;  // default file: the reference of the session
   const subK = cfile ? +o.cur.slice(1) : fileOpts.some((/** @type {MzFile} */ x) => x.k === refK) ? refK : fileOpts.length ? fileOpts[0].k : null, subF = subK != null ? E.files[subK] : null;
-  // [value, icon, label, subtitle (only where it explains something non-obvious), short label, tooltip]: «None» and the file entry keep their sentence as a tooltip, not as a second line
+  // [value, icon, label, subtitle (only where non-obvious), short label, tooltip]: «None» and the file entry keep their sentence as a tooltip
   const items = [["", "none", I18N.t("corr.none"), "", "", I18N.t("corr.none.desc")],
     [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? "" : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : "", subF ? o.fileDesc || I18N.t("corr.file.desc") : ""],
     ["tract", "tract", I18N.t("corr.tract"), o.tractDesc || I18N.t("corr.tract.desc")],
@@ -624,7 +624,7 @@ function corrWidget(/** @type {Pannello} */ p, /** @type {Bag} */ o) {
 function corrWire(/** @type {HTMLElement & { disabled: boolean }} */ x, /** @type {(v: string) => void} */ pick) {  // pick("" | "f<k>" | "tract" | "snip")
   const m = /** @type {HTMLElement} */ (/** @type {ParentNode} */ (x.parentNode).querySelector(".corrm")), items = () => [...m.querySelectorAll("button:not(:disabled),select")];
   const shut = (/** @type {boolean} */ back) => { m.hidden = true; x.setAttribute("aria-expanded", "false"); if (back) x.focus(); };
-  x.onclick = () => { m.hidden = !m.hidden; x.setAttribute("aria-expanded", String(!m.hidden)); if (!m.hidden) (m.querySelector(".corri.on:not(:disabled)") || items()[0] || m).focus(); };
+  x.onclick = () => { m.hidden = !m.hidden; x.setAttribute("aria-expanded", String(!m.hidden)); if (!m.hidden) { m.style.left = ""; const o = m.getBoundingClientRect().right + 8 - document.documentElement.clientWidth; if (o > 0) m.style.left = -o + "px"; (m.querySelector(".corri.on:not(:disabled)") || items()[0] || m).focus(); } };  // kept in the page (clientWidth: an iPad zooms innerWidth out)
   x.onkeydown = (/** @type {KeyboardEvent} */ e) => { if ((e.key === "ArrowDown" || e.key === "ArrowUp") && m.hidden && !x.disabled) { e.preventDefault(); x.click(); } };
   m.querySelectorAll("[data-c]").forEach((/** @type {HTMLElement} */ b) => b.onclick = () => { shut(false); pick(/** @type {string} */ (b.dataset.c)); });
   const cf = m.querySelector('[data-o="corrf"]'); if (cf) cf.onchange = () => { shut(false); pick("f" + cf.value); };
@@ -902,7 +902,7 @@ const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trai
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
 const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
 const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose ions whose defect plus drift passes +0.5; this keeps them and still leaves out n-1 and n+1
-const XIC_DRIFT = 0.25;  // mean offset (Da) of the observed centroids over the calculated m/z, used only to go from a CLICKED centroid back to the calculated nominal mass (364.37 -> 364.12 -> n = 364, not 365)
+const XIC_DRIFT = 0.25;  // mean offset (Da) of observed centroids over the calculated m/z: a CLICKED centroid back to its nominal mass (364.37 -> n = 364)
 const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
 /** @type {Bag | null} */
