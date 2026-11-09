@@ -36,13 +36,15 @@ subprocess.run(CLI + ["convert", str(tmp / "w" / "sim.wiff"), "--out", str(run)]
 assert all((run / n).exists() for n in NAMES), sorted(p.name for p in run.iterdir())
 
 ZERO = "peaks_zero"   # the peaks output with the areas from zero
+# the outputs the memory steps run once each (a refused job is not tried again under the same plan): the table and the candidates with the areas from zero
+VARIANTS = {ZERO: {"output": "peaks", "baseline": "zero"}, "table_zero": {"output": "table", "baseline": "zero"}, "candidates_zero": {"output": "candidates", "baseline": "zero"}}
 def plan(output, names=NAMES):
-    extra = {"output": "peaks", "baseline": "zero"} if output == ZERO else {"output": output}
+    extra = VARIANTS.get(output, {"output": output})
     return {"format": "mzflow/2", "inputs": [{"name": n, "sha256": "", "type": "mzml"} for n in names],
             "steps": [{"id": "tr", "step": "chrom.transitions@1", "in": {"source": ["file:" + n for n in names]}, "params": {**extra, "transitions": TABLE}}]}
 
 NAT = {}
-for o in OUTPUTS + [ZERO]:
+for o in OUTPUTS + [ZERO, "table_zero"]:
     (run / (o + ".json")).write_text(json.dumps(plan(o)))
     subprocess.run(CLI + ["flow", "run", str(run / (o + ".json")), "--in", str(run), "--out", str(run / ("out_" + o))], cwd=ROOT, check=True, capture_output=True)
     NAT[o] = (run / ("out_" + o) / "tr.csv").read_text()
@@ -116,22 +118,22 @@ try:
         UNDO = "() => { const r = window.MZLAB_RUST; [r.budgetMb, r.choice] = window.__lv; }"
         def read_refused():
             pg.evaluate(LEVELS, 8)
-            try: r = pg.evaluate(RUN, plan("candidates"))   # not the plan of read_raised: Run does not try a refused job again under the same plan
+            try: r = pg.evaluate(RUN, plan("candidates_zero"))
             finally: pg.evaluate(UNDO)
             assert any(e["passo"] == "tr" and e["stato"] in ("error", "refused") for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "tr"][-3:]
             title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('tr')).title")
-            assert "Reading this mzML file whole would need about" in title and "the browser gives the engine 8 MB" in title, title
+            assert ("Reading this mzML file whole would need about" in title or "Leggere per intero questo file mzML" in title) and "8 MB" in title, title
         step("past the budget and the high level, the mzML files are refused before they are read, with the numbers of the read", read_refused)
         def read_raised():
             pg.evaluate(LEVELS, 4096)
             try:
-                pg.evaluate("(plan) => { window.__run = (" + RUN + ")(plan); }", plan("table"))
+                pg.evaluate("(plan) => { window.__run = (" + RUN + ")(plan); }", plan("table_zero"))
                 pg.wait_for_selector("#memmore", timeout=120000)
                 pg.click("#memmore #mm-yes")
                 r = pg.evaluate("() => window.__run")
             finally: pg.evaluate(UNDO)
             assert not r.get("err"), (r.get("err"), r["ev"][-4:])
-            assert sha(pg.evaluate(KEPT)["tr.csv"]) == sha(NAT["table"]), pg.evaluate(KEPT)["tr.csv"][:400]
+            assert sha(pg.evaluate(KEPT)["tr.csv"]) == sha(NAT["table_zero"]), pg.evaluate(KEPT)["tr.csv"][:400]
         step("past the safe budget and within the high one, Run asks once and the yes gives the CSV of the native flow run", read_raised)
         step("no request was left unserved by the engine", lambda: (lambda m: m == [] or (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         b.close()

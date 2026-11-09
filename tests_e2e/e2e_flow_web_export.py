@@ -148,7 +148,7 @@ try:
             finally: pg.evaluate(UNDO)
             assert any(e["passo"] == "flt" and e["stato"] in ("error", "refused") for e in r["ev"]), r["ev"][-6:]
             title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('flt')).title")
-            assert "Reading the feature table of this step whole would need about" in title and "8 MB" in title, title
+            assert ("Reading the feature table of this step whole would need about" in title or "Leggere per intero la tabella delle feature" in title) and "8 MB" in title, title
             assert "flt.json" not in pg.evaluate(KEPT)
         step("past the budget and the high level, table.filter is refused before the .mzfeat is read, with the numbers of the read", read_refused)
 
