@@ -1,5 +1,5 @@
 //! Table of the scan-type codes of `ExperimentHeader` (+122) of a `.wiff`: Analyst abbreviation, MS level, CV term of the spectrum and the output kind
-//! of each. Read by `mod.rs`, `extended.rs` and `reader.rs`; the page shows the abbreviation as the exact type of an experiment. Codes 0, 4, 5, 6, 7, 11, 15 are
+//! of each. Read by `mod.rs`, `extended.rs` and `reader.rs`; the page shows the abbreviation as the exact type of an experiment. Codes 0, 4, 5, 6, 7, 11, 13, 15 are
 //! seen in real files (0 is the Q1 MS full scan of a 3200 QTRAP: level-1 profile scans like EMS, its meaning inferred from the method name and the
 //! spectra); the others follow the `ScanType` enum of Analyst and stay `confermato: false` until a file shows them.
 
@@ -10,6 +10,9 @@ pub const CODE_PRECURSOR_ION: u32 = 5;
 pub const CODE_PRODUCT_ION: u32 = 6;
 pub const CODE_NEUTRAL_LOSS: u32 = 7;
 pub const CODE_PRODUCT: u32 = 11;
+/// MS3 of a 3200 QTRAP (Analyst `MS3`): Q1 isolates the first precursor (`ExperimentHeader` +42), the second one (`ExperimentHeaderQTrapEX` +64) is isolated
+/// from its fragments and trapped; the sample of the file seen is named `MS3_237-194` after that chain, which the two stored masses match.
+pub const CODE_MS3: u32 = 13;
 pub const CODE_FULL: u32 = 15;
 /// Selected-ion monitoring on Q1 or Q3 (Q1MI, Q3MI): one value per ion per cycle, like an MRM block. Not yet seen in a real file.
 pub const CODE_Q1MI: u32 = 1;
@@ -60,7 +63,7 @@ pub const MODI: [Modo; 17] = [
     m(10, "?", 1, None, Spettro, false),
     m(CODE_PRODUCT, "EPI", 2, None, Spettro, true),
     m(12, "ER", 1, Some(("MS:1000791", "enhanced resolution spectrum")), Spettro, false),
-    m(13, "MS3", 3, None, Spettro, false),
+    m(CODE_MS3, "MS3", 3, None, Spettro, true),
     m(14, "TDF", 2, Some(("MS:1000790", "time-delayed fragmentation spectrum")), Spettro, false),
     m(CODE_FULL, "EMS", 1, None, Spettro, true),
     m(16, "EMC", 1, Some(("MS:1000789", "enhanced multiply charged spectrum")), Spettro, false),
