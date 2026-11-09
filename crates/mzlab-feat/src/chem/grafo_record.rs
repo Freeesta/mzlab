@@ -4,7 +4,7 @@
 use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};
 
-use super::grafo::{Atom, Bond, Mol, MAX_ATOMS};
+use super::graph::{Atom, Bond, Mol, MAX_ATOMS};
 use super::smiles::normal_valence;
 
 impl Mol {

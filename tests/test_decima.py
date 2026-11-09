@@ -18,6 +18,8 @@ def test_decimate_matches_the_point_by_point_loop():
     assert o["mismatches"] == []
     assert o["lost_apex"] == []
     assert o["window_idx_bad"] == 0
+    assert o["extent_bad"] == [] and o["range_bad"] == 0          # the block extremes give the values of the plain scan
+    assert o["clip_bad"] == 0 and o["runs_bad"] == 0              # clipY and the y zoom triangles as before, vertex for vertex
     assert o["unsorted_ok"] is True
     assert o["big"]["max"] == 5e9 and o["big"]["min"] == -7e9 and abs(o["big"]["range"]) <= 1e3
     assert o["sorted"] == [True, False]

@@ -80,6 +80,24 @@ fn a_damaged_cdf_is_the_text_of_the_page() {
     );
 }
 
+/// A record of a .raw folder that no acquisition writes: the calm text of the page, the reader's detail after the key.
+#[test]
+fn a_damaged_folder_is_the_text_of_the_page() {
+    let e = Error::new("err.file.folderDamaged").with("detail", "intensity word of the record");
+    let t = human(&e.to_string());
+    assert_eq!(
+        t,
+        format!(
+            "{} (err.file.folderDamaged, detail=intensity word of the record)",
+            text_of("err.file.folderDamaged").unwrap()
+        )
+    );
+    assert!(
+        t.contains("is damaged") && t.contains("whole folder"),
+        "{t}"
+    );
+}
+
 #[test]
 fn every_key_of_the_catalogue_is_found() {
     let keys: Vec<&str> = CATALOG

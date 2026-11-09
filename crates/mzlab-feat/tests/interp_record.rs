@@ -3,10 +3,10 @@
 //! kind of answer (site, region, cannot say), over textbook molecules and the transformations `interp` knows.
 
 use mzlab_core::elements::parse_formula;
-use mzlab_feat::chem::grafo::Mol;
-use mzlab_feat::chem::posizioni::{expected_fragments, sites, Peak, Pol};
-use mzlab_feat::interp::disegno::{drawing, drawing_record};
-use mzlab_feat::interp::sito::{analyse, candidates, candidates_record, Facts};
+use mzlab_feat::chem::graph::Mol;
+use mzlab_feat::chem::positions::{expected_fragments, sites, Peak, Pol};
+use mzlab_feat::interp::drawing::{drawing, drawing_record};
+use mzlab_feat::interp::site::{analyse, candidates, candidates_record, Facts};
 
 const FACTS: Facts = Facts {
     scans: 3,

@@ -12,7 +12,7 @@ crate-type = ["rlib"]
 # `chem`: the structure graph (SMILES -> groups, cleavages). On by default; the engine of the proofs (`mzlab-feat-wasm`) turns it off so its .wasm does not carry it.
 default = ["chem"]
 chem = []
-# `record`: the structure graph built from a `mol/1` record (`grafo::Mol::from_record`, crate `mzlab-mol`). Off by default and in every .wasm: no site module changes until an engine asks for it.
+# `record`: the structure graph built from a `mol/1` record (`graph::Mol::from_record`, crate `mzlab-mol`). Off by default and in every .wasm: no site module changes until an engine asks for it.
 record = ["chem", "dep:mzlab-mol"]
 # `crippen`: `LogPValues::from_smiles`, the Crippen logP and descriptors of a SMILES from our own tables (`mzlab-mol`), for the RT-logP check of the Banco 2b. Off by default; the `.wasm` `attributio` carries it through its feature `rev`.
 crippen = ["dep:mzlab-mol"]
@@ -63,7 +63,7 @@ name = "untargeted_gapfill"
 required-features = ["untargeted"]
 
 [[test]]
-name = "untargeted_join_dati"
+name = "untargeted_join_data"
 required-features = ["untargeted"]
 
 [[test]]
@@ -135,15 +135,15 @@ name = "interp"
 required-features = ["interp"]
 
 [[test]]
-name = "interp_sintetico"
+name = "interp_synthetic"
 required-features = ["interp"]
 
 [[test]]
-name = "interp_dati"
+name = "interp_data"
 required-features = ["interp"]
 
 [[test]]
-name = "interp_sito"
+name = "interp_site"
 required-features = ["interp"]
 
 [[test]]
@@ -155,11 +155,11 @@ name = "steps_attributio_parity"
 required-features = ["attributio", "untargeted"]
 
 [[test]]
-name = "rete_interp"
+name = "network_interp"
 required-features = ["interp"]
 
 [[test]]
-name = "rete_run"
+name = "network_run"
 required-features = ["interp"]
 
 [[test]]

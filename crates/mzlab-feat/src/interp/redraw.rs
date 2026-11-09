@@ -1,15 +1,15 @@
 //! The drawing of a position that is only known as the JSON of its `site` (`sites/1` of `tp.position`, `structure.render` and its `render_text`): the key is read back into a
-//! `SiteReport` and drawn by `disegno::drawing`, the function that made the `drawing` stored in the block `interp`, so the bytes are the same.
+//! `SiteReport` and drawn by `drawing::drawing`, the function that made the `drawing` stored in the block `interp`, so the bytes are the same.
 //! The candidate sites are not in the JSON; they are made again from the structure and the change, which is deterministic.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 
-use super::disegno::drawing;
-use super::sito::{SiteReport, Vote};
-use super::sito_json::drawing_json;
-use crate::chem::grafo::Mol;
-use crate::chem::posizioni::sites;
+use super::drawing::drawing;
+use super::site::{SiteReport, Vote};
+use super::site_json::drawing_json;
+use crate::chem::graph::Mol;
+use crate::chem::positions::sites;
 use crate::parent::parent_of;
 
 fn atoms(v: Option<&Value>) -> Vec<usize> {

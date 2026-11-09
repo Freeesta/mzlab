@@ -29,7 +29,7 @@ def test_guards_reader_text():
 @pytest.mark.parametrize("f,new,old", [
     ("crates/mzlab-feat/tests/famalign.rs", "MZLAB_UPDATE_GOLDEN", "MZLAB_GOLDEN_WRITE"),
     ("crates/mzlab-feat/tests/network_golden.rs", "MZLAB_UPDATE_GOLDEN", "MZLAB_WRITE_GOLDEN"),
-    ("crates/mzlab-feat/tests/rete.rs", "MZLAB_UPDATE_FIXTURE", "MZLAB_WRITE_FIXTURE"),
+    ("crates/mzlab-feat/tests/network.rs", "MZLAB_UPDATE_FIXTURE", "MZLAB_WRITE_FIXTURE"),
     ("crates/mzlab-desktop/examples/serve.rs", "MZLAB_APP_DIR", "MZLAB_DATA"),
 ])
 def test_rust_readers_check_new_then_old(f, new, old):

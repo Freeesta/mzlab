@@ -186,8 +186,8 @@ function attach(p) {
     const a = p._a, f = Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004), x = xd(rect(e));
     if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();                // a burst of wheel steps is one zoom for the history
     if (rect(e) < M.l && canYZ(a)) { const v = a.yinv(recty(e)); zoomYTo(p, v - (v - a.ymin) * f, v + (a.ymax - v) * f); uiSave(); return; }      // over the y axis: only the vertical scale changes
-    if (a.map) { const y = a.mzAt(recty(e)); p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]); }
-    zoomTo(p, x - (x - a.x0) * f, x + (a.x1 - x) * f);
+    if (a.map) { const y = a.mzAt(recty(e)); p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]); return void zoomTo(p, x - (x - a.x0) * f, x + (a.x1 - x) * f); }
+    const q = p._ds && p.zoom ? p.zoom : [a.x0, a.x1], t = Math.max(a.full[0], Math.min(a.full[1], q[0] + (rect(e) - M.l) / (a.W - M.l - M.r) * (q[1] - q[0]))); p.zoom = clampView(t - (t - q[0]) * f, t + (q[1] - t) * f, a.full[0], a.full[1]); drawSoon(p);      // the steps of one frame = one drawing (120 traces of 50 000 scans: ~50 ms each); a step whose view is not drawn yet starts from it
   }, { passive: false });
   cv.ondblclick = async e => {
     const hit = (p._a?.lbls || []).find(b => b.ann && rect(e) >= b.x && rect(e) <= b.x + b.w && recty(e) >= b.y && recty(e) <= b.y + b.h);

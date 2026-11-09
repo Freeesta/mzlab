@@ -2,7 +2,7 @@
 //! IDX (bytes of the scan / records of the scan): 6 bytes (ion counts), 8 bytes and 12 bytes (the same floating intensity word; the 12-byte record has 4 more bytes that are not read). The m/z of a
 //! record is a small float whose exponent sits in the top bits; the calibration polynomial of `_HEADER.TXT` is applied to its square root (proportional to the flight time).
 
-use super::folder::{errore, u16_at, u32_at};
+use super::folder::{danno, u16_at, u32_at};
 use mzlab_core::error::Result;
 
 /// The `Cal Function N` polynomial of `_HEADER.TXT`. `T0` is no correction.
@@ -74,7 +74,7 @@ impl Encoding {
 /// m/z of the word of the encodings D and E: bit 26 is the leading one of a 27-bit mantissa, the top 5 bits the exponent.
 fn mz_d(u: u32) -> Result<f64> {
     if u & (1 << 26) == 0 {
-        return Err(errore("m/z word without the leading bit"));
+        return Err(danno("m/z word without the leading bit"));
     }
     Ok(f64::from(u & 0x07FF_FFFF) / f64::from(1u32 << 27) * 2f64.powi((u >> 27) as i32))
 }
@@ -83,7 +83,7 @@ fn mz_d(u: u32) -> Result<f64> {
 fn mz_a(r: &[u8]) -> Result<f64> {
     let m = u32::from_le_bytes([r[3], r[4], r[5], 0]);
     if r[2] & 0x0F != 0 || m & 0x80_0000 == 0 {
-        return Err(errore("m/z word of the 6-byte record"));
+        return Err(danno("m/z word of the 6-byte record"));
     }
     Ok(f64::from(m) * 2f64.powi(i32::from(r[2] >> 4) - 24))
 }
@@ -92,7 +92,7 @@ fn mz_a(r: &[u8]) -> Result<f64> {
 pub(super) fn decode(c: Encoding, b: &[u8], t: &Calibration) -> Result<(Vec<f64>, Vec<f32>)> {
     let w = c.width();
     if !b.len().is_multiple_of(w) {
-        return Err(errore("scan size is no multiple of the record"));
+        return Err(danno("scan size is no multiple of the record"));
     }
     let (mut mz, mut it) = (
         Vec::with_capacity(b.len() / w),
@@ -114,7 +114,7 @@ pub(super) fn decode(c: Encoding, b: &[u8], t: &Calibration) -> Result<(Vec<f64>
                     continue;
                 }
                 if m & (1 << 20) == 0 || word & (1 << 21) != 0 {
-                    return Err(errore("intensity word of the record"));
+                    return Err(danno("intensity word of the record"));
                 }
                 let e = ((word >> 22) & 0x1F) as i32;
                 (

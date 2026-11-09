@@ -1,7 +1,7 @@
 //! Conditions in the Dig: a series that compares several experimental conditions (`serie` of `campioni/2`) is judged condition by condition, never as
 //! one kinetic. The treated samples of a condition, its time zero and its blanks (or the shared ones, with an empty condition, when it has none of
 //! its own) make the view `members`; a row takes the criteria of the condition where it scores best, and the detail per condition is in the block
-//! `gruppi` of the summary (`gruppi_out.rs`). A series with a single condition (or none) goes through the code of one kinetic unchanged.
+//! `gruppi` of the summary (`groups_out.rs`). A series with a single condition (or none) goes through the code of one kinetic unchanged.
 
 use super::super::series::FileIn;
 use super::kin::{decay, gen_of, kinetics, Decay, Gens, Point};

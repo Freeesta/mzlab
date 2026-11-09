@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use mzlab_core::elements::{mass, mass_of, parse_formula, ELECTRON};
 use mzlab_core::json::{round, Out};
 
-use crate::chem::grafo;
+use crate::chem::graph;
 
 mod mol;
 pub use mol::*;

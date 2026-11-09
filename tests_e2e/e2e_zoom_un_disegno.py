@@ -1,5 +1,5 @@
 """Ctrl+wheel zoom of the TIC and of the spectrum: one draw() of the zoomed panel per wheel step, and the picture is the one a fresh draw gives
-(same y axis labels, same margins: nothing is drawn late)."""
+(same y axis labels, same margins: nothing is drawn late). Three steps inside one frame of the TIC: one draw(), and the view three separate steps give."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -35,6 +35,19 @@ try:
                     assert n == 1, f"{n} draw() calls for one wheel step"
                     assert a == b, "the picture after the wheel step differs from a fresh draw (late margins or labels)"
             step(f"{nm}: one draw() per Ctrl+wheel step, same picture as a fresh draw", one)
+        def burst():
+            # three steps dispatched in one task (a fast wheel or a trackpad): one drawing, and each step starts from the view the one before asked for
+            WHEEL = f"""(n) => {{ const p = {PN('chrom')}, q = p.cv.getBoundingClientRect(), x = q.left + q.width * 0.45, y = q.top + q.height * 0.5;
+              for (let i = 0; i < n; i++) p.cv.dispatchEvent(new WheelEvent('wheel', {{ deltaY: -100, ctrlKey: true, clientX: x, clientY: y, bubbles: true, cancelable: true }})); return p.id; }}"""
+            ZOOM = f"{PN('chrom')}.zoom"
+            pg.evaluate(f"(() => {{ const p = {PN('chrom')}; p.zoom = null; draw(p); }})()"); frames(pg, 3); ready(pg)
+            for _ in range(3): pg.evaluate(WHEEL, 1); frames(pg, 3); ready(pg)
+            want = pg.evaluate(ZOOM)
+            pg.evaluate(f"(() => {{ const p = {PN('chrom')}; p.zoom = null; draw(p); }})()"); frames(pg, 3); ready(pg); pg.evaluate(COUNT)
+            i = pg.evaluate(WHEEL, 3); frames(pg, 4); ready(pg)
+            assert pg.evaluate(f"window.__dr.filter(k => k === {i}).length") == 1, pg.evaluate("window.__dr")
+            got = pg.evaluate(ZOOM); assert got and all(abs(u - v) < 1e-9 for u, v in zip(got, want)), (got, want)
+        step("TIC: three Ctrl+wheel steps in one frame = one draw(), the view of three steps", burst)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

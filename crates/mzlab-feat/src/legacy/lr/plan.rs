@@ -46,7 +46,7 @@ pub struct Settings {
     /// Products are proposed only when the parent is a chromatographic peak whose area falls over time (`parent_check`).
     pub parent_decay: bool,
     /// Options of the comparison of conditions (`gruppi/1`) from the settings key `gruppi`; the defaults of the module when absent.
-    pub groups: crate::gruppi::GroupOpts,
+    pub groups: crate::groups::GroupOpts,
 }
 
 impl Settings {
@@ -75,7 +75,7 @@ impl Default for Settings {
             min_points: 5,
             dead_factor: 1.5,
             parent_decay: true,
-            groups: crate::gruppi::GroupOpts::default(),
+            groups: crate::groups::GroupOpts::default(),
         }
     }
 }
@@ -141,7 +141,7 @@ pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
     };
     let camp = match camp {
         Some(c) if !c.is_null() => {
-            crate::gruppi::samples_from_value(c).map_err(|e| e.to_string())?
+            crate::groups::samples_from_value(c).map_err(|e| e.to_string())?
         }
         _ => Vec::new(),
     };
@@ -258,7 +258,7 @@ pub fn settings(settings_json: &str) -> Settings {
     s.parent_decay = flag("parent_decay").unwrap_or(s.parent_decay);
     if let Some(o) = v
         .get("gruppi")
-        .and_then(|g| crate::gruppi::opts_from_value(g).ok())
+        .and_then(|g| crate::groups::opts_from_value(g).ok())
     {
         s.groups = o;
     }

@@ -156,7 +156,7 @@ fn rule_chain() -> Algorithm {
 }
 
 /// `tp.filter` (version 2): the five filters that hide a row of the table of the products, and the decoys that count the matches by chance
-/// (`interp::filtri`), read again under the thresholds of the plan from the table that `tp.link` interpreted (`interp::refilter`). Version 1 took the
+/// (`interp::filters`), read again under the thresholds of the plan from the table that `tp.link` interpreted (`interp::refilter`). Version 1 took the
 /// feature table alone, which does not hold what F5 and the decoys read.
 fn filter() -> Step {
     Step {
@@ -213,7 +213,7 @@ fn stages() -> Algorithm {
     algorithm(
         "stages",
         "Five stages in a fixed order",
-        "The first filter that hides the row wins (first_hidden in crates/mzlab-feat/src/interp/filtri.rs); the registry filtri/1 holds the text and the counts of each stage.",
+        "The first filter that hides the row wins (first_hidden in crates/mzlab-feat/src/interp/filters.rs); the registry filtri/1 holds the text and the counts of each stage.",
         Status::Available,
     )
 }

@@ -1,4 +1,4 @@
-//! The `positions` of the bridge answers the `posiz/1` of `mzlab_feat::chem::posizioni::positions_json` (the error path builds a `JsValue`, which only exists in a browser).
+//! The `positions` of the bridge answers the `posiz/1` of `mzlab_feat::chem::positions::positions_json` (the error path builds a `JsValue`, which only exists in a browser).
 use mzlab_feat_grafo_wasm::{positions, positions_prior, version};
 
 // 4-methyldiphenylamine + O: the fragment C7H8O (tolyl + O, +H) 109.0648 carries the oxygen on ring A, C12H11NO 186.0913 is everything but the methyl.
@@ -11,7 +11,7 @@ fn bridge_gives_the_same_json_as_the_library() {
         positions(DPA, "+O", peaks, 5.0, true, true).unwrap_or_else(|_| panic!("positions failed"));
     assert_eq!(
         j,
-        mzlab_feat::chem::posizioni::positions_json(DPA, "+O", peaks, 5.0, true, true).unwrap()
+        mzlab_feat::chem::positions::positions_json(DPA, "+O", peaks, 5.0, true, true).unwrap()
     );
     for k in [
         "\"format\":\"posiz\"",

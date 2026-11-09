@@ -5,7 +5,7 @@ use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Value};
 
-use crate::chem::grafo::analyse_json;
+use crate::chem::graph::analyse_json;
 use crate::hypo::Structure;
 
 /// The parent of the file: neutral formula, SMILES when there is one, and the retention time and the adduct when the file says them.

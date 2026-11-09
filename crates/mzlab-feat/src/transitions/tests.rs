@@ -235,7 +235,7 @@ fn an_empty_table_or_files_without_channels_are_refused() {
 #[test]
 fn the_list_editor_keeps_the_order_and_gives_the_csv_of_the_plan() {
     let body = r#"{"kind":"transitions","rows":[{"name":"b","formula":"C6H6"},{"name":"a","q1":"100","rt":"2"}]}"#;
-    let out = crate::liste::route(body).unwrap();
+    let out = crate::lists::route(body).unwrap();
     let v = parse_json(out.as_bytes()).unwrap();
     let csv = v.get("csv").and_then(Value::str).unwrap();
     assert_eq!(csv, "name;q1;q3;polarity;rt;rt_window;isomer_group;note;formula;adduct\nb;;;;;;;;C6H6;\na;100;;;2;;;;;\n");
@@ -244,9 +244,9 @@ fn the_list_editor_keeps_the_order_and_gives_the_csv_of_the_plan() {
     req.raw("{\"kind\":\"transitions\",\"csv\":")
         .str(csv)
         .raw("}");
-    let again = crate::liste::route(&req.0).unwrap();
+    let again = crate::lists::route(&req.0).unwrap();
     assert_eq!(again, out);
-    let bad = crate::liste::route(r#"{"kind":"transitions","rows":[{"name":""}]}"#).unwrap();
+    let bad = crate::lists::route(r#"{"kind":"transitions","rows":[{"name":""}]}"#).unwrap();
     assert!(
         bad.contains("error.liste.noName") && bad.contains("\"line\":2"),
         "{bad}"

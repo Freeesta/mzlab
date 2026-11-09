@@ -4,15 +4,15 @@
 use mzlab_core::elements::{mass, parse_formula, Formula};
 use mzlab_core::idxread::{Index, ReadAt};
 
-use super::albero::{self, LibNode, NodeState, TreeCtx};
-use super::apice::apex_ms1_many;
-use super::confronto::{self, VsParent};
-use super::disegno::{self, Drawing};
-use super::filtri::{self, FileCal, RowFacts};
-use super::modifica::{self, Candidate, IsoCheck};
+use super::apex::apex_ms1_many;
+use super::comparison::{self, VsParent};
+use super::drawing::{self, Drawing};
+use super::edit::{self, Candidate, IsoCheck};
+use super::filters::{self, FileCal, RowFacts};
 use super::ms2link::{self, Isomers, LinkParams, Ms2Scan, Pooled};
-use super::sito::{self, SiteReport};
-use crate::chem::posizioni::{Peak, Pol};
+use super::site::{self, SiteReport};
+use super::tree::{self, LibNode, NodeState, TreeCtx};
+use crate::chem::positions::{Peak, Pol};
 use crate::legacy::ms2::{Consensus, Ms2Sorted};
 use crate::legacy::series::{Hyp, Parent};
 use crate::prof::{report, time};
@@ -54,7 +54,7 @@ pub struct RowInterp {
 
 pub struct Output {
     pub rows: Vec<RowInterp>,
-    pub registry: filtri::Registry,
+    pub registry: filters::Registry,
     pub cals: Vec<FileCal>,
     pub nodes: Vec<LibNode>,
     pub entries: Vec<LibNode>,
@@ -212,11 +212,11 @@ pub fn build<R: ReadAt>(
     if t.tp.is_empty() {
         return Err("error.interp.noTp".into());
     }
-    let mut facts = filtri::row_facts(t);
-    let mut registry = filtri::Registry::default();
+    let mut facts = filters::row_facts(t);
+    let mut registry = filters::Registry::default();
     let mut work: Vec<Work> = vec![];
     for (r, f) in facts.iter().enumerate() {
-        match filtri::first_hidden(f) {
+        match filters::first_hidden(f) {
             Some(i) if t.tp.status[r] != ST_PARENT => registry.hidden[i].push(t.id(r)),
             None if t.tp.status[r] == ST_TP || t.tp.status[r] == ST_UNEXPLAINED => {
                 work.push(Work {
@@ -240,12 +240,12 @@ pub fn build<R: ReadAt>(
     }
     let all_parent: Vec<Ms2Scan> = parent_scans.iter().flatten().cloned().collect();
     let dda = ms2link::pool_with(&all_parent, inp.link).consensus;
-    let (nodes, entries, ctx) = time("library", || albero::library_of(infusion, inp.parent, &dda))?;
+    let (nodes, entries, ctx) = time("library", || tree::library_of(infusion, inp.parent, &dda))?;
     let cals: Vec<FileCal> = (0..t.n_files)
         .map(|k| {
             let mut e = fragment_errors(&parent_scans[k], &entries);
             e.extend(perr[k]);
-            filtri::calibrate(&e)
+            filters::calibrate(&e)
         })
         .collect();
     let hyps: Vec<&Hyp> = inp.hyps.iter().collect();
@@ -267,7 +267,7 @@ pub fn build<R: ReadAt>(
         })
         .collect();
     registry.decoys = time("decoys", || {
-        filtri::table_decoys(inp.hyps, &t.mz, &t.tp.status, &facts)
+        filters::table_decoys(inp.hyps, &t.mz, &t.tp.status, &facts)
     });
     report("interp");
     Ok(Output {
@@ -291,17 +291,17 @@ fn interpret(
     ctx: Option<&TreeCtx>,
     cals: &[FileCal],
     w: Work,
-    registry: &mut filtri::Registry,
+    registry: &mut filters::Registry,
     facts: &mut [RowFacts],
 ) -> RowInterp {
     let t = inp.table;
     let mz = t.mz[w.row];
     let change = time("candidates", || {
-        modifica::candidates_with(mz, &inp.parent.neutral, hyps, inp.link.match_ppm)
+        edit::candidates_with(mz, &inp.parent.neutral, hyps, inp.link.match_ppm)
     });
     let iso = change
         .first()
-        .and_then(|c| w.iso.and_then(|i| modifica::iso_check(&c.ion_formula, i.0)));
+        .and_then(|c| w.iso.and_then(|i| edit::iso_check(&c.ion_formula, i.0)));
     let mz_obs = w.iso.filter(|i| i.1.is_finite()).map(|i| (i.1, w.best));
     let hidden = match (change.first(), mz_obs) {
         (Some(c), Some((obs, k))) => {
@@ -312,7 +312,7 @@ fn interpret(
                         .is_ok_and(|f| mzlab_core::elements::fmt(&f) == c.neutral_formula)
                 })
                 .map_or(mz, |h| h.mz);
-            let bad = filtri::out_of_tolerance(ppm(obs, theo), &cals[k]);
+            let bad = filters::out_of_tolerance(ppm(obs, theo), &cals[k]);
             facts[w.row].mass_error = bad;
             bad.then_some("F5")
         }
@@ -376,7 +376,7 @@ fn position(
     let Ok(tp) = parse_formula(&c.neutral_formula) else {
         return (None, None);
     };
-    let facts = sito::Facts {
+    let facts = site::Facts {
         scans: scans.len(),
         clean: scans.iter().filter(|s| !s.chimeric).count(),
         isomers: match pooled.isomers {
@@ -387,7 +387,7 @@ fn position(
         has_reference: ctx.is_some() || has_dda,
     };
     let pol = if inp.polarity < 0 { Pol::Neg } else { Pol::Pos };
-    let rep = match sito::candidates(smiles, &inp.parent.neutral, &tp) {
+    let rep = match site::candidates(smiles, &inp.parent.neutral, &tp) {
         Ok(cand) => {
             let cons = &pooled.consensus;
             let peaks: Vec<Peak> = cons
@@ -396,13 +396,13 @@ fn position(
                 .zip(&cons.rel)
                 .map(|(&mz, &inten)| Peak { mz, inten })
                 .collect();
-            let tree = ctx
-                .and_then(|x| albero::tree_votes(x, &cand, inp.parent, c, cons, mz, inp.polarity));
-            sito::analyse(&cand, &peaks, pol, &facts, tree)
+            let tree =
+                ctx.and_then(|x| tree::tree_votes(x, &cand, inp.parent, c, cons, mz, inp.polarity));
+            site::analyse(&cand, &peaks, pol, &facts, tree)
         }
-        Err(reason) => sito::undetermined(&c.delta, vec![reason]),
+        Err(reason) => site::undetermined(&c.delta, vec![reason]),
     };
-    let drawing = disegno::drawing(smiles, &rep);
+    let drawing = drawing::drawing(smiles, &rep);
     (Some(rep), Some(drawing))
 }
 
@@ -423,7 +423,7 @@ fn compare(
     }
     let mut v = VsParent::default();
     let dda_cmp = (!dda.mz.is_empty())
-        .then(|| confronto::against_dda((&dda.mz, &dda.rel, inp.parent.mz), (&c.mz, &c.rel, mz)))
+        .then(|| comparison::against_dda((&dda.mz, &dda.rel, inp.parent.mz), (&c.mz, &c.rel, mz)))
         .flatten();
     if let Some((comp, e, s, l)) = dda_cmp {
         (v.cos_mod, v.entropy, v.equal, v.shifted, v.losses) =
@@ -433,14 +433,14 @@ fn compare(
         v.reference = "infusion";
     }
     if !entries.is_empty() {
-        let (e, s) = confronto::by_formula(&c.mz, entries, delta);
+        let (e, s) = comparison::by_formula(&c.mz, entries, delta);
         (v.formula_equal, v.formula_shifted) = (e, s);
     }
     let range = scans
         .iter()
         .filter(|s| !s.chimeric)
         .find_map(|s| s.scan_range);
-    let tree = albero::states(nodes, &c.mz, delta, range, mz);
+    let tree = tree::states(nodes, &c.mz, delta, range, mz);
     (
         if v.reference.is_empty() {
             None

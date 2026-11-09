@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "rete/1",
  "title": "rete/1: the network of the transformation products",
- "description": "The parent and the accepted products of tp/1 as nodes in columns by step, and an arc for every rule whose change of the ion formula takes one to another. Computed by crates/mzlab-feat/src/rete/; the view draws what it finds here. A network is not an identification and raises no level.",
+ "description": "The parent and the accepted products of tp/1 as nodes in columns by step, and an arc for every rule whose change of the ion formula takes one to another. Computed by crates/mzlab-feat/src/network/; the view draws what it finds here. A network is not an identification and raises no level.",
  "type": "object",
  "required": ["schema", "params", "parent", "columns", "nodes", "arcs", "n_arcs"],
  "properties": {
