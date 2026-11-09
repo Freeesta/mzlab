@@ -288,6 +288,7 @@ I18N.add("en", {
   "err.flow.unavailable": "The step {step} is not available on {platform}.",
   "err.flow.worker": "The calculation stopped before it finished: try again.",
   "err.formula.offset": "The shift {offset} is not a number: after the m/z or the formula write a sign and a number, e.g. +16 or -18.",
+  "err.formula.mzLow": "With the shift the m/z becomes {mz}, which is not an ion: for an m/z range write the lower edge first, e.g. 250.8-251.5.",
   "err.formula.noIon": "The formula {formula} cannot be an ion of this type: check the charge and the adduct.",
   "err.formulaId.finder": "The formula search could not run ({why}).",
   "err.formulaId.param": "The parameter {param} of the formula search is not valid.",
