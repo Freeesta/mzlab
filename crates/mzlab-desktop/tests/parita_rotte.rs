@@ -136,7 +136,8 @@ fn plan() -> Vec<Value> {
     ];
     steps.extend(stat_steps());
     steps.extend(name_steps());
-    // the signed shift of an ion text (`288.2+16`, `C9H8O4-18`) of the dialog «Extract ions»; a malformed shift is `err.formula.offset`
+    // the signed shift of an ion text (`288.2+16`, `C9H8O4-18`) of the dialog «Extract ions»; a malformed shift is `err.formula.offset`;
+    // two numbers with the larger second are a range (`250.8-251.5`), a shift that leaves m/z < 1 is `err.formula.mzLow`
     for (f, adduct) in [
         ("288.2+16", ""),
         ("288,2-18", ""),
@@ -146,6 +147,9 @@ fn plan() -> Vec<Value> {
         ("C9H8O4+1.2.3", "[M+H]+"),
         ("288.2+", ""),
         ("C9H8O4+16x", "[M+H]+"),
+        ("250.8-251.5", ""),
+        ("251.5-250.8", ""),
+        ("C2H6-100", "[M+H]+"),
     ] {
         steps.push(json!({"op": "lr_formula", "f": f, "adduct": adduct}));
     }

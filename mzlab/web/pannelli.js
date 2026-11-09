@@ -786,15 +786,7 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "gdelay") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); }); draw(p); uiSave(); };
     else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); COMANDI.fai("spec.display", p, () => { p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; }); draw(p); uiSave(); };
     else if (k === "pdaAlign") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.pdaAlign = x.checked; }); draw(p); uiSave(); };
-    else if (k === "xlo" || k === "xhi") x.onchange = () => {
-      const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = (/** @type {string} */ v) => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);
-      const lo = nm(c.querySelector('[data-o="xlo"]').value), hi = nm(c.querySelector('[data-o="xhi"]').value);
-      if (t && lo != null && hi != null && hi > lo) {  // the student writes the edges: from now on it is an explicit window in Da, the same for every file
-        const d = hrE ? HR.dec(HR.xicFiles(p.tab), 1) : 1;
-        COMANDI.fai("xic.traces", p, () => { t.mz = rh((lo + hi) / 2, hrE ? 5 : 2); t.w = rh((hi - lo) / 2, hrE ? 5 : 2); t.label = `m/z ${hrE ? t.mz.toFixed(4) : t.mz.toFixed(mzd(p))}`; delete t.ion; delete t.obs; });
-      }
-      ctl(p); draw(p);
-    };
+    else if (k === "xlo" || k === "xhi") window.XICBORDI?.wire(p, c, x);  // xic-bordi.js: absolute m/z edges
     else if (k === "view") x.onclick = () => MAPPA.open3d(p, x);  // mappa.js: the 3D viewer (mappa3d.js), a modal over the page
     else if (k === "split") x.onclick = () => splitPanel(p);
     else if (k === "rt0" || k === "rt1") x.onchange = () => {  // visible time interval of the panel
@@ -951,7 +943,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     return hf && r.ex != null ? HR.ionText(r.ex, hf).replace("m/z", "<i>m/z</i>") + (lowFiles() ? ` <span class="muted">${I18N.t("xic.lowRes", { unit })}</span>` : "") : unit;
   };
   const evalRow = (/** @type {Bag} */ r) => {
-    const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null;
+    const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null; r.range = false;
     r.ad.hidden = isNum(t) || ns(t);
     if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
     if (isNum(t)) {
@@ -1003,8 +995,8 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
       if (r.ex != null && hrFile()) {  // high resolution: the ion (exact m/z), each file reads it with its own tolerance
         const ht = HR.ionTrace(r.ex, { obs: r.obs, prefix: r.label, tab: xtab() }), key = "ion|" + ht.mz; if (seen.has(key)) return; seen.add(key); traces.push(ht); return;
       }
-      const [a, b] = r.win, mz = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
-      traces.push({ id: E.seq++, mz, w, label: (r.label ? r.label + " · " : "") + `m/z ${mz.toFixed(mzd(panel))}` });
+      const [a, b] = r.win, d = r.range ? 5 : 2, mz = rh((a + b) / 2, d), w = rh((b - a) / 2, d), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
+      traces.push({ id: E.seq++, mz, w, label: r.range ? `m/z ${fmz(a, panel)}\u2013${fmz(b, panel)}` : (r.label ? r.label + " · " : "") + `m/z ${mz.toFixed(mzd(panel))}` });
     });
     d.close();
     const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: r0.ex ?? numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };

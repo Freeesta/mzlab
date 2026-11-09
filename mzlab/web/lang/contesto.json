@@ -1035,6 +1035,7 @@
   "err.flow.type": "Messaggio d'errore del motore; {from} = tipo di partenza, {to} = tipo di arrivo.",
   "err.flow.unavailable": "Messaggio d'errore del motore; {platform} = piattaforma, {step} = passo.",
   "err.formula.offset": "Messaggio d'errore del motore; {offset} = lo scarto scritto dall'utente, con il segno.",
+  "err.formula.mzLow": "Messaggio d'errore del motore; {mz} = m/z (sotto 1) che darebbe lo scarto scritto.",
   "err.formula.noIon": "Messaggio d'errore del motore; {formula} = formula.",
   "err.formulaId.finder": "Messaggio d'errore del motore; {why} = motivo.",
   "err.formulaId.param": "Messaggio d'errore del motore; {param} = nome del parametro.",

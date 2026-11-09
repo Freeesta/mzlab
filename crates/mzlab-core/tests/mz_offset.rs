@@ -52,3 +52,27 @@ fn an_unreadable_head_keeps_its_text_and_shift_in_the_error() {
     assert_eq!(get("head"), Some("imidacloprid"));
     assert_eq!(get("offset"), Some("16"));
 }
+
+#[test]
+fn two_numbers_with_the_larger_second_are_a_range_not_a_negative_mz() {
+    let j = get("250.8-251.5", "");
+    assert_eq!(j["range"][0].as_f64().unwrap(), 250.8);
+    assert_eq!(j["range"][1].as_f64().unwrap(), 251.5);
+    assert!(j.get("mz").is_none());
+    assert_eq!(
+        get("250,8 - 251,5", "")["range"][1].as_f64().unwrap(),
+        251.5
+    );
+    assert_eq!(get("288.2-18", "")["mz"].as_f64().unwrap(), 270.2);
+}
+
+#[test]
+fn a_shift_that_leaves_no_ion_is_refused() {
+    for t in ["251.5-250.8", "0.5-1", "C2H6-100"] {
+        assert_eq!(
+            formula_mz(t, None).unwrap_err().key,
+            "err.formula.mzLow",
+            "{t}"
+        );
+    }
+}
