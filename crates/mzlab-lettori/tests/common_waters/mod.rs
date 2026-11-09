@@ -2,7 +2,7 @@
 //! The encoders here are the inverse of the ones in `src/waters/dat.rs` and `mrm.rs`; `tools/waters_sintetico.py` writes the same folder for the browser test.
 #![allow(dead_code)]
 
-use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::readers::{FileSet, Member};
 
 /// The m/z word of the 8- and 12-byte records: 5-bit exponent on top, 27-bit mantissa with the leading one at bit 26.
 pub fn word_mz(mz: f64) -> u32 {

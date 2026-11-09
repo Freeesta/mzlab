@@ -1,8 +1,8 @@
 //! The scanner of tags and the readers of the header and of the parameters of an mzML for `mzml_numpress.rs` (the header of the original file, the cvParams of a spectrum).
 
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limits;
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::readers::Limits;
 
 /// The most cvParams of a spectrum kept as header fields.
 const FIELDS_MAX: usize = 64;

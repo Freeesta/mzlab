@@ -1,7 +1,7 @@
 //! The index row of an mzXML scan from the attributes of its `<scan>`: level, polarity, filter, retention time, TIC and precursor; used by `mzxml`.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{Position, ScanEntry};
+use mzlab_core::readers::{Position, ScanEntry};
 
 use super::mzxml::number;
 use super::mzxml_index::Row;

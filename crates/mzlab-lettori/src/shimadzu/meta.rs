@@ -1,8 +1,8 @@
 //! What a Shimadzu file says besides its scans: the property streams (`prop.rs`), the instrument names found in its configuration streams, and the list of what is not decoded. It becomes
 //! the `metodo/1` document and the header of the mzML we write (the operator and the paths are in the document of the reader, not in the one of the mzML).
 
-use mzlab_core::metodo::{self, num, obj, text, Source, SrcFile, V};
-use mzlab_core::metodo_campi::Field;
+use mzlab_core::method::{self, num, obj, text, Source, SrcFile, V};
+use mzlab_core::method_fields::Field;
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::ole::Ole;
 
@@ -330,8 +330,8 @@ pub(super) fn document(
         ])
     });
     let doc = obj(vec![
-        ("schema", Some(V::s(metodo::SCHEMA))),
-        ("origine", metodo::origin(&src, m.created.as_deref())),
+        ("schema", Some(V::s(method::SCHEMA))),
+        ("origine", method::origin(&src, m.created.as_deref())),
         ("strumento", instrument(fam, m)),
         (
             "campione",
@@ -422,7 +422,7 @@ pub(super) fn header(id: (&str, u64, &str), fam: Fam, d: &Data, m: &Meta) -> Hea
     ));
     h.sample = m.campione.clone().map(|n| ("1".to_string(), n));
     h.run_params.push((
-        metodo::USERPARAM.to_string(),
+        method::USERPARAM.to_string(),
         document(id, fam, d, m, false),
     ));
     h

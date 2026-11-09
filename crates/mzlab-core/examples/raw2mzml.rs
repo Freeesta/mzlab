@@ -1,6 +1,6 @@
 //! Converts a vendor file (Thermo `.raw`, ...) to mzML through the registry: `cargo run --release --example raw2mzml -- IN.raw OUT.mzML [profile]`.
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
-use mzlab_core::lettori_mzml::{Conversion, Peaks};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
+use mzlab_core::readers_mzml::{Conversion, Peaks};
 
 fn main() {
     let a: Vec<String> = std::env::args().collect();
@@ -14,7 +14,7 @@ fn main() {
             sha1: None,
         }],
     };
-    let mut l = lettori::apri(set, &Limits::desktop()).expect("recognise");
+    let mut l = readers::apri(set, &Limits::desktop()).expect("recognise");
     let out = std::io::BufWriter::new(std::fs::File::create(&a[2]).expect("create mzML"));
     let conv = Conversion {
         peaks: if a.get(3).is_some_and(|p| p == "profile") {

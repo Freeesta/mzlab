@@ -171,7 +171,7 @@ impl State {
                 Some(Ok(j)) => text(j),
                 Some(Err(j)) => text(format!("E{j}")),
             },
-            "lr_campioni" => text(mzlab_core::campioni::route_all(s("cop"), s("body"))?),
+            "lr_campioni" => text(mzlab_core::samples::route_all(s("cop"), s("body"))?),
             "lr_molecole_archivio" => text(self.store.lock().unwrap_or_else(|e| e.into_inner()).molecules(s("mop"), s("body"))?),
             "lr_molecules" => text(mzlab_core::molecules::route(s("mop"), s("body"))?),
             "lr_formula" => {
@@ -181,7 +181,7 @@ impl State {
             "lr_ion_pattern" => text(mzlab_core::ionpattern::route(s("f"), s("adduct"))?),
             "lr_adduct_table" => text(mzlab_core::adduct_table::table(s("f"), s("obs"), s("tol"), s("delta"))?),
             "lr_flow_command" => text(mzlab_core::flow::command_route(s("body"))?),   // the copyable shell command of a mzflow/2 plan, as the `.wasm` of the site and `mzlab-cli flow command`
-            "lr_ricerca" => text(mzlab_core::ricerca::match_number(s("body"))?),
+            "lr_ricerca" => text(mzlab_core::search::match_number(s("body"))?),
             "lr_provenance" => text(mzlab_core::provenance::build(s("ctx"))),
             "lr_kv_get" => text(json!({ "value": self.store.lock().unwrap_or_else(|e| e.into_inner()).kv_get(s("key")) }).to_string()),
             "lr_kv_set" => {
@@ -211,8 +211,8 @@ impl State {
         let entry = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).filter(|e| e.nat.is_none());
         let entry = entry.ok_or_else(|| Error::new("err.file.unknown").with("detail", name))?;
         let file = std::fs::File::open(&entry.path).map_err(|e| Error::new("err.file.unknown").with("detail", e.to_string()))?;
-        let report = mzlab_core::mzmlvalida::validate(std::io::BufReader::new(file))?;
-        text(mzlab_core::mzmlvalida::json_un_file(name, &report))
+        let report = mzlab_core::mzml_validate::validate(std::io::BufReader::new(file))?;
+        text(mzlab_core::mzml_validate::json_un_file(name, &report))
     }
 
     fn method_or_gradient(&self, eng: &mut Eng, op: &str, item: &str) -> Result<Answer> {

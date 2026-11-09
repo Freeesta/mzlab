@@ -3,7 +3,7 @@
 
 use mzlab_core::error::Result;
 use mzlab_core::flow::Job;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 use mzlab_core::step::DataType;
 
 use crate::flow::{FileRunner, Made};

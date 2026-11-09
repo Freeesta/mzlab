@@ -5,10 +5,10 @@
 use crate::drift::batches_of;
 use crate::samples::Sample;
 use crate::sortc::SortC;
-use mzlab_core::campioni;
-use mzlab_core::disegno::{self, DEFAULT_BATCH};
+use mzlab_core::drawing::{self, DEFAULT_BATCH};
 use mzlab_core::error::Result;
 use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::samples;
 
 const QC_GAP: &str = "warn.qc.runorder.qc_gap";
 const NO_QC: &str = "warn.qc.runorder.no_qc";
@@ -59,7 +59,7 @@ struct Warning {
 }
 
 /// The samples of the file with the files that gave no usable injection order (they are set to 1 so the reader accepts them, and left out of every order check).
-fn read_samples(bytes: &[u8]) -> Result<(Vec<campioni::Sample>, Vec<bool>)> {
+fn read_samples(bytes: &[u8]) -> Result<(Vec<samples::Sample>, Vec<bool>)> {
     let mut doc = parse(bytes)?;
     let mut missing = Vec::new();
     if let Value::Obj(fields) = &mut doc
@@ -82,11 +82,11 @@ fn read_samples(bytes: &[u8]) -> Result<(Vec<campioni::Sample>, Vec<bool>)> {
             missing.push(!usable);
         }
     }
-    Ok((campioni::from_value(&doc)?, missing))
+    Ok((samples::from_value(&doc)?, missing))
 }
 
 /// The identity `batches_of` matches a file of the design by: its name and SHA-256.
-fn sample_of(c: &campioni::Sample) -> Sample {
+fn sample_of(c: &samples::Sample) -> Sample {
     Sample {
         file: c.file.clone(),
         sha256: c.sha256.clone(),
@@ -109,7 +109,7 @@ fn distinct(mut v: Vec<f64>) -> Vec<f64> {
     v
 }
 
-fn names(files: &[(u32, &campioni::Sample)]) -> Vec<String> {
+fn names(files: &[(u32, &samples::Sample)]) -> Vec<String> {
     files.iter().map(|(_, c)| c.file.clone()).collect()
 }
 
@@ -117,13 +117,13 @@ fn names(files: &[(u32, &campioni::Sample)]) -> Vec<String> {
 struct Batch<'a> {
     name: String,
     /// The files with an injection order, in injection order.
-    files: Vec<(u32, &'a campioni::Sample)>,
+    files: Vec<(u32, &'a samples::Sample)>,
     /// The files without a usable order.
-    unordered: Vec<&'a campioni::Sample>,
+    unordered: Vec<&'a samples::Sample>,
 }
 
 impl<'a> Batch<'a> {
-    fn of_role(&self, roles: &[&str]) -> Vec<(u32, &'a campioni::Sample)> {
+    fn of_role(&self, roles: &[&str]) -> Vec<(u32, &'a samples::Sample)> {
         self.files
             .iter()
             .filter(|(_, c)| roles.contains(&c.role()))
@@ -217,7 +217,7 @@ fn write_batch(batch: &Batch, o: &mut Out) {
             None => roles.push((c.role(), 1)),
         }
     }
-    roles.sortc_by_key(|(r, _)| campioni::TYPES.iter().position(|t| t == r));
+    roles.sortc_by_key(|(r, _)| samples::TYPES.iter().position(|t| t == r));
     for (k, (role, count)) in roles.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" })
             .str(role)
@@ -248,7 +248,7 @@ fn write_batch(batch: &Batch, o: &mut Out) {
 }
 
 /// The warnings about the injection order of the whole table: files without an order, and orders shared by several files.
-fn order_warnings(cs: &[campioni::Sample], missing: &[bool]) -> Vec<Warning> {
+fn order_warnings(cs: &[samples::Sample], missing: &[bool]) -> Vec<Warning> {
     let mut out = Vec::new();
     let lost = sorted_names(
         cs.iter()
@@ -283,11 +283,11 @@ fn order_warnings(cs: &[campioni::Sample], missing: &[bool]) -> Vec<Warning> {
 }
 
 /// The batch of every file: the design's when given, else the batch of the sample table, else the default one.
-fn batches_for(cs: &[campioni::Sample], design: Option<&[u8]>) -> Result<Vec<String>> {
+fn batches_for(cs: &[samples::Sample], design: Option<&[u8]>) -> Result<Vec<String>> {
     Ok(match design {
         Some(d) => {
             let named: Vec<Sample> = cs.iter().map(sample_of).collect();
-            batches_of(&named, &disegno::from_json(d)?)
+            batches_of(&named, &drawing::from_json(d)?)
         }
         None => cs
             .iter()
@@ -325,7 +325,7 @@ pub fn runorder_text(
                     .zip(&batch)
                     .filter(move |((_, m), b)| *b == name && **m == want)
             };
-            let mut files: Vec<(u32, &campioni::Sample)> =
+            let mut files: Vec<(u32, &samples::Sample)> =
                 mine(false).map(|((c, _), _)| (c.order, c)).collect();
             files.sortc_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.file.cmp(&b.1.file)));
             Batch {

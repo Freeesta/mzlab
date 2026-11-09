@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 use mzlab_lettori::bruker::sqlite_min::Sqlite;
 
 pub mod pasef;

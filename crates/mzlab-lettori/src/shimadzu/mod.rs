@@ -12,8 +12,8 @@ mod rec;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{Fiducia, FileSet, Limits, Reader, ReaderEntry, Sample, CONTRATTO};
 use mzlab_core::ole::Ole;
+use mzlab_core::readers::{Fiducia, FileSet, Limits, Reader, ReaderEntry, Sample, CONTRATTO};
 
 use load::{Data, Fam};
 use meta::Meta;
@@ -63,7 +63,7 @@ fn find(fs: &mut FileSet) -> Option<(usize, Content)> {
 }
 
 /// A member named `.qgd`/`.lcd` that starts as an OLE2 container: the storages of its root (`Ignoto`), or `Rotto` when its directory cannot be followed.
-fn other(m: &mut mzlab_core::lettori::Member) -> Option<Content> {
+fn other(m: &mut mzlab_core::readers::Member) -> Option<Content> {
     let n = m.nome.to_ascii_lowercase();
     if !(n.ends_with(".qgd") || n.ends_with(".lcd")) || !dir::ole(m) {
         return None;
@@ -94,7 +94,7 @@ fn refusal(detail: &str) -> Error {
 }
 
 /// A copy cut before its directory (its header points past the end, `Ole::header_cut`): the same notice as a cut found after `open`.
-fn cut_before(m: &mut mzlab_core::lettori::Member) -> Option<Error> {
+fn cut_before(m: &mut mzlab_core::readers::Member) -> Option<Error> {
     let mut h = vec![0u8; m.dim.min(512) as usize];
     m.dati.read_at(0, &mut h).ok()?;
     let need = Ole::header_cut(&h).filter(|&n| n > m.dim)?;

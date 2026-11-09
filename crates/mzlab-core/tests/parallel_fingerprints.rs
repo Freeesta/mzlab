@@ -1,6 +1,6 @@
 //! The fingerprints taken by a second thread while the work goes on (`upload::with_parallel_prints`) are the ones `upload::impronte` gives, and the members
 //! the work opens carry an empty SHA-1 (`upload::without_sha1`).
-use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::readers::{FileSet, Member};
 use mzlab_core::upload;
 
 fn file_set(n: usize) -> FileSet {

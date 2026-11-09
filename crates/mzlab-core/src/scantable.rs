@@ -7,9 +7,9 @@ use std::sync::Arc;
 
 use crate::budget::MemBudget;
 use crate::error::Result;
+use crate::estimate;
 use crate::idxread::ReadAt;
-use crate::lettori::Position;
-use crate::stima;
+use crate::readers::Position;
 use head_read::read_head;
 
 const ANALYZERS: [&str; 5] = ["FTMS", "ITMS", "TOFMS", "TQMS", "SQMS"];
@@ -84,7 +84,7 @@ pub struct Where {
 pub struct Row {
     pub start: u64,
     pub end: u64,
-    /// A row of a vendor file (`mzidx_lettore::rows_json`).
+    /// A row of a vendor file (`mzidx_reader::rows_json`).
     pub at: Option<Box<Where>>,
     pub level: u8,
     pub rt: f64,
@@ -279,7 +279,7 @@ fn precursor_element(e: &str, refer: Option<Arc<str>>) -> Prec {
         selected: get("744"),
         charge: ch.filter(|c| *c != 0.0).map(|c| c as i64),
         refer,
-        act: crate::attivazioni::name_in(e),
+        act: crate::activations::name_in(e),
         ce: get("045"),
         pint: get("042"),
     }
@@ -513,14 +513,14 @@ impl<R: ReadAt> Source<'_, R> {
     }
 }
 
-mod fonte;
-use fonte::{find, Source};
+mod source;
+use source::{find, Source};
 mod head_read;
-mod inerte;
+mod inert;
 mod json;
 mod rows;
 #[cfg(test)]
-mod tests_attivazioni;
+mod tests_activations;
 
 pub use json::Columns;
 use rows::Head;
@@ -651,7 +651,7 @@ fn read_walked<R: ReadAt>(
         };
         let Some(a) = a else { break };
         if let Some(b) = budget {
-            stima::check_walk(b, rows.len(), a, size)?;
+            estimate::check_walk(b, rows.len(), a, size)?;
         }
         // find "</spectrum>" after a: in the buffer that holds `a` when the spectrum ends inside it, else by reading ahead
         let mut from = (a - buf_off) as usize;
@@ -731,7 +731,7 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
     let offs = src.offsets()?;
     if let Some(o) = &offs {
         if let Some(b) = budget {
-            stima::check_table(b, o.len())?;
+            estimate::check_table(b, o.len())?;
         }
         rows.reserve(o.len());
     }
@@ -765,8 +765,8 @@ fn finished(t: Table) -> Result<Table> {
 }
 
 #[cfg(test)]
-mod tests_finestra;
-#[cfg(test)]
 mod tests_header;
 #[cfg(test)]
 mod tests_walk;
+#[cfg(test)]
+mod tests_window;

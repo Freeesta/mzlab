@@ -1,6 +1,6 @@
 // @ts-strict
 import { ensureRoom } from "./archivio.js";
-// A profile mzML already in the archive -> a copy with one point per peak (rust-worker.js, case "mzml2cen"; the algorithm is crates/mzlab-core/src/centroidi/). The copy is written to a file of OPFS
+// A profile mzML already in the archive -> a copy with one point per peak (rust-worker.js, case "mzml2cen"; the algorithm is crates/mzlab-core/src/centroids/). The copy is written to a file of OPFS
 // (mzlab/conv/) and returned as a File; the page then loads it like any file. `onProgress({ scans, scansTotal, written })`, `signal` (AbortSignal) cancels it: the worker is busy in one long call, so cancelling
 // asks the bridge to stop it and start a new one (h.abort). Resolves with the File, or null when the file has no profile spectrum. Rejects with { cancelled: true } or an Error whose `json` is { error, error_key, params }.
 export function makeConvertCentroids(h) {

@@ -5,7 +5,7 @@ mod common;
 use common::thermo::Raw;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 use std::cell::Cell;
 use std::rc::Rc;
 

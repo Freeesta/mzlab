@@ -94,7 +94,7 @@ fn a_profile_file_gets_the_centres_of_its_peaks_and_the_bytes_of_the_archive_con
     );
     let got = std::fs::read(d.join("w/c-p.mzML")).unwrap();
     let mut want = Vec::new();
-    mzlab_core::centroidi::mzml_to_centroids(
+    mzlab_core::centroids::mzml_to_centroids(
         || Ok(src.as_slice()),
         &mut want,
         "p.mzML",
@@ -213,7 +213,7 @@ fn the_index_after_the_step_holds_centroids_and_the_one_without_it_profile() {
 fn the_progress_is_monotone_ends_at_the_total_and_leaves_the_bytes_alone() {
     let src = profile(300, &PEAKS);
     let mut plain = Vec::new();
-    mzlab_core::centroidi::mzml_to_centroids(
+    mzlab_core::centroids::mzml_to_centroids(
         || Ok(src.as_slice()),
         &mut plain,
         "p.mzML",
@@ -224,7 +224,7 @@ fn the_progress_is_monotone_ends_at_the_total_and_leaves_the_bytes_alone() {
     {
         let mut sink = |d, t| seen.push((d, t));
         let mut pace = mzlab_core::pace::Pace::new(&mut sink);
-        mzlab_core::centroidi::mzml_to_centroids(
+        mzlab_core::centroids::mzml_to_centroids(
             || Ok(src.as_slice()),
             &mut with,
             "p.mzML",
@@ -353,7 +353,7 @@ fn the_step_and_the_engine_call_of_the_browser_give_the_same_bytes_on_the_synthe
         );
         let got = std::fs::read(d.join(format!("w{t}/c-{name}"))).unwrap();
         let mut want = Vec::new();
-        let did = mzlab_core::centroidi::mzml_to_centroids(
+        let did = mzlab_core::centroids::mzml_to_centroids(
             || Ok(src.as_slice()),
             &mut want,
             &name,

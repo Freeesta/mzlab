@@ -5,11 +5,11 @@ mod csv;
 mod model;
 mod series;
 
-use mzlab_core::campioni::{
+use mzlab_core::samples::{
     self, from_json, per_tp, table_from_json, to_json, to_json3, validate, Cell, Column,
     ColumnType, Table,
 };
-use mzlab_core::campioni::{proponi, Sample};
+use mzlab_core::samples::{proponi, Sample};
 use serde_json::Value;
 
 pub fn many(names: &[&str]) -> Vec<Sample> {
@@ -21,7 +21,7 @@ pub fn many(names: &[&str]) -> Vec<Sample> {
 }
 
 fn codes(t: &Table) -> Vec<String> {
-    let j = campioni::route("valida", &to_json3(t)).unwrap();
+    let j = samples::route("valida", &to_json3(t)).unwrap();
     let v: Value = serde_json::from_str(&j).unwrap();
     v["avvisi"]
         .as_array()
@@ -58,14 +58,14 @@ fn a_campioni_2_migrates_with_the_same_per_tp() {
         per_tp(&t.campioni),
         per_tp(&from_json(v2.as_bytes()).unwrap())
     );
-    let v3 = campioni::route("migra", &v2).unwrap();
+    let v3 = samples::route("migra", &v2).unwrap();
     assert!(v3.contains("\"schema\":\"campioni/3\""));
     let back = table_from_json(v3.as_bytes()).unwrap();
     assert_eq!(per_tp(&back.campioni), per_tp(&cs));
     // a /2 asked for its canonical form stays a /2, a /3 stays a /3
-    assert_eq!(campioni::route("canonico", &v2).unwrap(), v2);
-    assert_eq!(campioni::route("canonico", &v3).unwrap(), v3);
-    assert_eq!(campioni::route("digest", &v3).unwrap().len(), 64);
+    assert_eq!(samples::route("canonico", &v2).unwrap(), v2);
+    assert_eq!(samples::route("canonico", &v3).unwrap(), v3);
+    assert_eq!(samples::route("digest", &v3).unwrap().len(), 64);
 }
 
 fn rich() -> Table {
@@ -136,8 +136,8 @@ fn canonical_bytes_do_not_depend_on_the_order_written() {
         "alfa"
     );
     assert_eq!(
-        campioni::digest3(&t),
-        campioni::digest3(&table_from_json(want.as_bytes()).unwrap())
+        samples::digest3(&t),
+        samples::digest3(&table_from_json(want.as_bytes()).unwrap())
     );
 }
 
@@ -180,8 +180,8 @@ fn valida_checks_columns_keys_and_pairs() {
     // a campioni/2 document is checked as before
     let v2 = to_json(&many(&["X_t000min", "X_t005min"]));
     assert_eq!(
-        campioni::route("valida", &v2).unwrap(),
-        campioni::route("valida", &campioni::route("migra", &v2).unwrap()).unwrap()
+        samples::route("valida", &v2).unwrap(),
+        samples::route("valida", &samples::route("migra", &v2).unwrap()).unwrap()
     );
     assert!(!validate(&many(&["X_t000min", "X_t005min"])).is_empty());
 }
@@ -201,7 +201,7 @@ fn dal_file_fills_what_the_file_says() {
         t.campioni[1].file
     );
     let out: Value =
-        serde_json::from_str(&campioni::route_all("dal_file", &input).unwrap()).unwrap();
+        serde_json::from_str(&samples::route_all("dal_file", &input).unwrap()).unwrap();
     let c = &out["campioni"]["campioni"];
     let by = |f: &str| {
         c.as_array()
@@ -241,7 +241,7 @@ fn dal_file_fills_what_the_file_says() {
         .iter()
         .all(|x| x["indice"] != 1 || x["campo"] == "acquisito"));
     // the dati_file survive the canonical form
-    let again = campioni::route(
+    let again = samples::route(
         "canonico",
         &serde_json::to_string(&out["campioni"]).unwrap(),
     )
@@ -260,6 +260,6 @@ fn errors_are_json_keys_not_panics() {
         ("dal_file", "{}"),
         ("canonico", r#"{"schema":"campioni/9"}"#),
     ] {
-        assert!(campioni::route_all(op, input).is_err(), "{op} {input}");
+        assert!(samples::route_all(op, input).is_err(), "{op} {input}");
     }
 }

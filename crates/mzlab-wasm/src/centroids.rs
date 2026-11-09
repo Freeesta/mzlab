@@ -1,4 +1,4 @@
-//! A profile mzML of the archive as a copy with one point per peak (`mzlab_core::centroidi`), sent to JS in pieces like the other conversions.
+//! A profile mzML of the archive as a copy with one point per peak (`mzlab_core::centroids`), sent to JS in pieces like the other conversions.
 use js_sys::Function;
 use std::io::Write;
 use wasm_bindgen::prelude::*;
@@ -28,7 +28,7 @@ impl Engine {
                 &(total as f64).into(),
             ))
         };
-        let did = mzlab_core::centroidi::mzml_to_centroids(
+        let did = mzlab_core::centroids::mzml_to_centroids(
             || Ok(js_blocks(read.clone(), size as u64)),
             &mut out,
             name,

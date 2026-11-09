@@ -4,9 +4,9 @@
 use std::io::Cursor;
 
 use mzlab_core::idxread::Index;
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::ole::Ole;
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::{methodinfo, raw, wiff, xmltree};
 use mzlab_lib::parse::{parse_all, Format};
 
@@ -92,8 +92,8 @@ pub fn wiff(data: &[u8]) {
         }
     }
     let membri = vec![("x.wiff", w.to_vec()), ("x.wiff.scan", scan.to_vec())];
-    let _ = lettori::riconosci(&mut insieme(membri.clone()));
-    let Ok(mut l) = lettori::apri(insieme(membri), &Limits::sito()) else {
+    let _ = readers::riconosci(&mut insieme(membri.clone()));
+    let Ok(mut l) = readers::apri(insieme(membri), &Limits::sito()) else {
         return;
     };
     let Ok(ix) = l.index(0).map(<[_]>::to_vec) else {

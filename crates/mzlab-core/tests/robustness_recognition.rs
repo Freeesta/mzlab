@@ -1,11 +1,11 @@
-//! The recognition of a set (`lettori::riconosci`) looks at the first bytes, never at the extension alone: every prefix of every magic, a magic under the
+//! The recognition of a set (`readers::riconosci`) looks at the first bytes, never at the extension alone: every prefix of every magic, a magic under the
 //! wrong name, a declared size smaller or larger than the bytes, and a Thermo `.raw` that is its magic and little else, must give a refusal or a key.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod robustness;
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 use robustness::*;
 
 #[global_allocator]
@@ -27,8 +27,8 @@ fn reads(name: String, b: Vec<u8>, dim: u64) -> Vec<String> {
             sha1: None,
         }],
     };
-    let _ = lettori::riconosci(&mut set());
-    if let Some(mut l) = note(lettori::apri(set(), &Limits::sito()), &mut k) {
+    let _ = readers::riconosci(&mut set());
+    if let Some(mut l) = note(readers::apri(set(), &Limits::sito()), &mut k) {
         if let Some(ix) = note(l.index(0), &mut k).map(<[_]>::to_vec) {
             (0..ix.len().min(4)).for_each(|j| drop(note(l.scan(0, j), &mut k)));
         }

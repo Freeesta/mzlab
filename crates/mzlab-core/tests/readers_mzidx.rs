@@ -1,5 +1,5 @@
 //! The `.mzidx` built straight from a vendor file set (`upload::prepare_lettore` + `mzidx::build_lettore`, version 2) equals the one built from the
-//! mzML `lettori_mzml::scrivi` writes for the same sample: the same sections byte for byte, the same rows but for their first two columns, the same
+//! mzML `readers_mzml::scrivi` writes for the same sample: the same sections byte for byte, the same rows but for their first two columns, the same
 //! metadata but for `source` and `version`; and the same index whatever the budget (one pass or many). The two sources of `sorgente` (the mzML by
 //! offset and the reader) give the same peaks and traces. Synthetic `.D` always, synthetic `.wiff` with
 //! python3, the real `.wiff`, `.D` and `.raw` with the private data repository (MZLAB_DATI or `mzlab-dati` beside this one); skipped without them.
@@ -17,11 +17,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use agilent_synth::{encode, sample};
 use mzlab_core::idxread::{Index, Scan, READER_FLAG};
 use mzlab_core::json::{self, Value};
-use mzlab_core::lettori::{self, ChromatogramEntry, FileSet, Limits, Member};
 use mzlab_core::mzml::ChromKind;
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::sorgente::{MzmlTraces, ReaderSource, Scansioni, Traces};
-use mzlab_core::{lettori_mzml, mzidx, upload};
+use mzlab_core::readers::{self, ChromatogramEntry, FileSet, Limits, Member};
+use mzlab_core::source::{MzmlTraces, ReaderSource, Scansioni, Traces};
+use mzlab_core::{mzidx, readers_mzml, upload};
 use readers_routes::{mzml_of, same_routes};
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -78,16 +78,16 @@ fn on_disk(dir: &Path, rel: &str) -> Member {
 fn same(label: &str, make: &dyn Fn() -> FileSet, c: usize) -> usize {
     let mut fs = make();
     let members = upload::impronte(&mut fs).unwrap();
-    let mut l = lettori::apri(fs, &Limits::desktop()).unwrap();
+    let mut l = readers::apri(fs, &Limits::desktop()).unwrap();
     let name = format!("{label}.mzML");
     // A: through the mzML
-    let mzml = lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
+    let mzml = readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();
     let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, &name).unwrap();
     let (a, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();
     same_sources(label, mzml, &a, &mut *l, c);
     // B: straight from the reader, with a large and a small budget
     let pb = upload::prepare_reader(&mut *l, c, &members, &name).unwrap();
-    let build = |l: &mut dyn lettori::Reader, budget: usize| {
+    let build = |l: &mut dyn readers::Reader, budget: usize| {
         let mut out = Cursor::new(Vec::new());
         let st = mzidx::build_reader(&pb.table, l, c, &mut out, budget)?;
         Ok::<_, mzlab_core::error::Error>((out.into_inner(), st))
@@ -158,7 +158,7 @@ fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_members: usize, id: 
 }
 
 /// `Scansioni` and `Tracce` give the same peaks and traces from the mzML by offset (rows of version 1) and from the reader (rows of version 2).
-fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Reader, c: usize) {
+fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn readers::Reader, c: usize) {
     let size = mzml.len() as u64;
     let rows = Index::open(a.to_vec(), a.len() as u64).unwrap().scans;
     let n = rows.len();
@@ -219,7 +219,7 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn lettori::Reade
 
 /// Every sample of a set.
 fn same_all(label: &str, make: &dyn Fn() -> FileSet) -> usize {
-    let n = lettori::apri(make(), &Limits::desktop())
+    let n = readers::apri(make(), &Limits::desktop())
         .unwrap()
         .samples()
         .len();
@@ -333,7 +333,7 @@ fn the_real_files_give_the_index_of_their_mzml() {
     let ext = |p: &Path, e: &str| p.extension().is_some_and(|x| x.eq_ignore_ascii_case(e));
     let (mut samples, mut scans) = (0usize, 0usize);
     let mut count = |label: &str, make: &dyn Fn() -> FileSet| {
-        let n = lettori::apri(make(), &Limits::desktop())
+        let n = readers::apri(make(), &Limits::desktop())
             .unwrap()
             .samples()
             .len();

@@ -9,8 +9,8 @@ use std::rc::Rc;
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Format, Limits, Member};
 use mzlab_core::numpress::Np;
+use mzlab_core::readers::{FileSet, Format, Limits, Member};
 
 /// One long scan whose m/z array is plain (zlib, incompressible, well over 64 KB) and whose intensities are numpress Slof.
 fn numpress_intensities_only() -> Vec<u8> {

@@ -2,8 +2,8 @@
 use std::rc::Rc;
 
 use js_sys::Function;
-use mzlab_core::lettori_mzml;
-use mzlab_core::lettori_sessione::{attacca, stacca};
+use mzlab_core::readers_mzml;
+use mzlab_core::readers_session::{attacca, stacca};
 use wasm_bindgen::prelude::*;
 
 use crate::natives::{reader, Dataset, Members, Natives, Src, SHELLS};
@@ -44,7 +44,7 @@ impl Natives {
             Some(g) => g.clone(),
             None => {
                 let l = reader(self, ds.clone())?;
-                let g = Rc::new(lettori_mzml::guscio(l, c).map_err(|e| error_json(&e))?);
+                let g = Rc::new(readers_mzml::guscio(l, c).map_err(|e| error_json(&e))?);
                 let mut held: usize = self.shells.values().map(|g| g.len()).sum();
                 while held + g.len() > SHELLS {
                     let Some(old) = self.order.pop_front() else {
@@ -139,7 +139,7 @@ impl Engine {
 }
 
 /// The provisional TIC of sample `c` of a dataset (`names`, `sizes`, `read` as for `native_samples`), from its scan index alone: `rt[n]` then `tic[n]`
-/// (`lettori::tic_ms1`). The page reads it from the dropped files while they are copied, before the `.mzidx` exists.
+/// (`readers::tic_ms1`). The page reads it from the dropped files while they are copied, before the `.mzidx` exists.
 #[wasm_bindgen]
 pub fn native_early_tic(
     names: js_sys::Array,
@@ -149,7 +149,7 @@ pub fn native_early_tic(
 ) -> Result<js_sys::Float64Array, JsValue> {
     let mut l = Members::new(names, sizes, read)?.open(false)?;
     let (mut rt, tic) =
-        mzlab_core::lettori::tic_ms1(l.index(c as usize).map_err(|e| error_json(&e))?);
+        mzlab_core::readers::tic_ms1(l.index(c as usize).map_err(|e| error_json(&e))?);
     rt.extend(tic);
     Ok(js_sys::Float64Array::from(&rt[..]))
 }

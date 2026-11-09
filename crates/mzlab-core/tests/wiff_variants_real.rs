@@ -317,7 +317,7 @@ fn real_files_match_proteowizard_mzml() {
 
 /// `metodo/1` of the real file `file` in `sub` of the data repository, sample `sample`.
 fn method(sub: &str, file: &str, sample: u32) -> Value {
-    use mzlab_core::metodo::Source;
+    use mzlab_core::method::Source;
     let path = dati_percorsi::percorso(&format!("{sub}/{file}")).unwrap();
     let ole = container(std::fs::read(path).unwrap(), file).unwrap();
     let src = Source {
@@ -325,7 +325,7 @@ fn method(sub: &str, file: &str, sample: u32) -> Value {
         files: vec![],
         sample: Some(sample),
     };
-    serde_json::from_str(&mzlab_core::metodo_wiff::from_wiff(&ole, sample, &src)).unwrap()
+    serde_json::from_str(&mzlab_core::method_wiff::from_wiff(&ole, sample, &src)).unwrap()
 }
 
 fn experiments(m: &Value) -> Vec<Value> {

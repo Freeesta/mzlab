@@ -1,5 +1,5 @@
 //! The ops `msngrafo`, `mzml2cen`, `lr_index_cen` and `natsrm` of the desktop engine give the bytes the site's `.wasm` gives: the graph and its exports are those of
-//! `mzlab-cli msn-graph` (which `tests/test_msngrafo_wasm.py` holds equal to the `.wasm`), the centroid copy that of `mzlab_core::centroidi` (what `mzml2cen` of
+//! `mzlab-cli msn-graph` (which `tests/test_msngrafo_wasm.py` holds equal to the `.wasm`), the centroid copy that of `mzlab_core::centroids` (what `mzml2cen` of
 //! `rust-worker.js` runs), the SRM bytes `srm::impacchetta` of the reader. Public synthetic files only.
 #[path = "../../mzlab-core/tests/agilent_synth/mod.rs"]
 mod agilent_synth;
@@ -171,7 +171,7 @@ fn a_profile_mzml_becomes_the_centroid_copy_of_the_core() {
     ))
     .unwrap();
     let mut want = Vec::new();
-    let did = mzlab_core::centroidi::mzml_to_centroids(
+    let did = mzlab_core::centroids::mzml_to_centroids(
         || Ok(std::io::Cursor::new(&src[..])),
         &mut want,
         "profile.mzML",
@@ -188,7 +188,7 @@ fn a_profile_mzml_becomes_the_centroid_copy_of_the_core() {
         .unwrap();
     assert_eq!(
         got, want,
-        "the copy has the bytes of mzlab_core::centroidi, as the .wasm writes them"
+        "the copy has the bytes of mzlab_core::centroids, as the .wasm writes them"
     );
     assert!(got.len() < src.len());
     // the progress the page polls ends with every spectrum done
@@ -224,12 +224,12 @@ fn the_srm_bytes_and_the_centroid_index_of_a_native_sample() {
     r("lr_index", json!({"name": "x"})).unwrap();
 
     // natsrm: the bytes of srm::impacchetta over the reader (an error stays an error with its key)
-    let set = mzlab_core::lettori::FileSet {
+    let set = mzlab_core::readers::FileSet {
         membri: paths
             .iter()
             .map(|(n, p)| {
                 let bytes = std::fs::read(p).unwrap();
-                mzlab_core::lettori::Member {
+                mzlab_core::readers::Member {
                     nome: n.clone(),
                     dim: bytes.len() as u64,
                     dati: Box::new(bytes),
@@ -238,8 +238,8 @@ fn the_srm_bytes_and_the_centroid_index_of_a_native_sample() {
             })
             .collect(),
     };
-    let mut l = mzlab_lettori::apri(set, &mzlab_core::lettori::Limits::desktop()).unwrap();
-    let mut t = mzlab_core::sorgente::ReaderSource { l: &mut *l, c: 0 };
+    let mut l = mzlab_lettori::apri(set, &mzlab_core::readers::Limits::desktop()).unwrap();
+    let mut t = mzlab_core::source::ReaderSource { l: &mut *l, c: 0 };
     let want = mzlab_core::srm::leggi(&mut t).map(|v| mzlab_core::srm::impacchetta(&v));
     match (r("natsrm", json!({"name": "x"})), want) {
         (Ok(Answer::Bytes(b)), Ok(w)) => assert_eq!(b, w),

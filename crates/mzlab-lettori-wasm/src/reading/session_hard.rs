@@ -1,7 +1,7 @@
 // A reader whose answers hold the awkward values (control characters, NaN, infinities, `-0.0`, numbers at both ends of the range), for the tests of session.rs.
 use super::*;
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 
 pub const ODD_CHARS: &str = "a\0b\u{1}\u{1f}\u{7f}\"\\/\n\r\t\u{8}\u{c}é€😀\u{2028}";
 

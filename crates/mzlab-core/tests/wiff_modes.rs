@@ -7,7 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
@@ -142,9 +142,9 @@ fn check(dir: &Path, tag: &str, sample: &Value) {
 
 /// The CV type of the spectra in the mzML: only precursor-ion and neutral-loss scans have one today.
 fn check_cv(dir: &Path, tag: &str, cv: Option<&str>) {
-    let mut l = lettori::apri(set(dir, tag), &Limits::sito()).unwrap();
+    let mut l = readers::apri(set(dir, tag), &Limits::sito()).unwrap();
     let xml = String::from_utf8(
-        mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap();
     for term in ["MS:1000341", "MS:1000326"] {
@@ -194,7 +194,7 @@ fn the_registry_refuses_the_same_modes_with_the_same_detail() {
     for (tag, m) in modi.as_object().unwrap() {
         let today = &m["campioni"][0]["oggi"];
         if today["esito"] == "rifiuto" {
-            let err = lettori::apri(set(&dir, tag), &Limits::sito())
+            let err = readers::apri(set(&dir, tag), &Limits::sito())
                 .err()
                 .unwrap_or_else(|| panic!("{tag}: opened"));
             assert_eq!(detail(&err), today["detail"].as_str().unwrap(), "{tag}");
@@ -204,9 +204,9 @@ fn the_registry_refuses_the_same_modes_with_the_same_detail() {
 
 /// The mzML of sample `c` (0-based) of the pair `name`, with the file name replaced so two pairs compare.
 fn mzml(dir: &Path, name: &str, c: usize) -> String {
-    let mut l = lettori::apri(set(dir, name), &Limits::sito()).unwrap();
+    let mut l = readers::apri(set(dir, name), &Limits::sito()).unwrap();
     let xml = String::from_utf8(
-        mzlab_core::lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap(),
+        mzlab_core::readers_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap(),
     )
     .unwrap()
     .replace(name, "X");
@@ -219,13 +219,13 @@ fn mzml(dir: &Path, name: &str, c: usize) -> String {
     let mut xml = parts.concat();
     let tag = format!(
         "<userParam name=\"{}\" value=\"",
-        mzlab_core::wiff::modi::SCAN_TYPE_PARAM
+        mzlab_core::wiff::modes::SCAN_TYPE_PARAM
     );
     while let Some(a) = xml.find(&tag) {
         let b = a + xml[a..].find("/>").unwrap() + 2;
         xml.replace_range(a..b, "");
     }
-    let key = format!("name=\"{}\"", mzlab_core::metodo::USERPARAM);
+    let key = format!("name=\"{}\"", mzlab_core::method::USERPARAM);
     match xml.find(&key) {
         Some(a) => {
             let a = xml[..a].rfind("<userParam").unwrap();
@@ -274,7 +274,7 @@ fn sim_modes_give_one_sim_chromatogram_per_ion() {
     };
     for tag in ["Q1MI", "Q3MI"] {
         let ions = modi[tag]["futuro"]["ioni"].as_array().unwrap().len();
-        let mut l = lettori::apri(set(&dir, tag), &Limits::sito()).unwrap();
+        let mut l = readers::apri(set(&dir, tag), &Limits::sito()).unwrap();
         let list = l.chromatograms(0).unwrap();
         let sim: Vec<_> = list
             .iter()
@@ -295,18 +295,18 @@ fn sim_modes_give_one_sim_chromatogram_per_ion() {
 /// and only the experiment the scan table names tells them apart in the channels (as EMS and Q1 at level 1).
 #[test]
 fn pi_and_epi_are_both_ms2_and_only_their_experiment_tells_them_apart() {
-    use mzlab_core::canali::Famiglia;
+    use mzlab_core::channels::Famiglia;
     use mzlab_core::idxread::Index;
     use mzlab_core::routes::{Query, Routes};
     let Some((dir, modi)) = generate() else {
         return;
     };
     for (name, level) in [("PI", 2), ("EPI", 2), ("EMS", 1), ("Q1", 1)] {
-        let mut l = lettori::apri(set(&dir, name), &Limits::sito()).unwrap();
-        let xml = mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let mut l = readers::apri(set(&dir, name), &Limits::sito()).unwrap();
+        let xml = mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
         let tag = format!(
             "<userParam name=\"{}\" value=\"{name}\"/>",
-            mzlab_core::wiff::modi::SCAN_TYPE_PARAM
+            mzlab_core::wiff::modes::SCAN_TYPE_PARAM
         );
         let n = String::from_utf8_lossy(&xml).matches("<spectrum ").count();
         assert_eq!(

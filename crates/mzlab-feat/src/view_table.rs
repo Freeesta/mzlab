@@ -54,7 +54,7 @@ pub fn table_of_view_from<R: ReadAt>(r: &mut R, size: u64, view: &str) -> Result
     }
     drop(bytes);
     let (t, meta) = read_table_from(r, size)?;
-    let text = mzlab_core::campioni::order_like(samples_text, &input_names(&meta))?;
+    let text = mzlab_core::samples::order_like(samples_text, &input_names(&meta))?;
     let s = samples::from_json(text.as_bytes())?;
     if s.len() != t.n_files {
         return Err(Error::new("error.badView"));

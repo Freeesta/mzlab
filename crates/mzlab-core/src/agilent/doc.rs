@@ -1,11 +1,11 @@
-//! The `metodo/1` document (`metodo.rs`) of an Agilent `.D` run: the sample and the sequence row, the instrument (model, serial number, firmware, acquisition
+//! The `metodo/1` document (`method.rs`) of an Agilent `.D` run: the sample and the sequence row, the instrument (model, serial number, firmware, acquisition
 //! program), the people and the computer, the EI source with its tune values, the scan range or the SIM groups of the method, and in `campi` every name/value of
 //! the side files (`AgilentD::metadata`) with the section that carries it. The method report, the run start and the converter log go whole to `grezzo`. A block of
 //! the folder that is not decoded is named in `avvisi`.
 
 use super::AgilentD;
-use crate::metodo::{self, num, obj, text, Source, V};
-use crate::metodo_campi::{Field, Ident};
+use crate::method::{self, num, obj, text, Source, V};
+use crate::method_fields::{Field, Ident};
 
 const GRAW_MAX: usize = 256 * 1024;
 /// The files whose text goes whole to `grezzo` (origin, title).
@@ -282,8 +282,8 @@ impl AgilentD {
             .acquired()
             .map(|t| t.chars().take(19).collect::<String>());
         let doc = obj(vec![
-            ("schema", Some(V::s(metodo::SCHEMA))),
-            ("origine", metodo::origin(src, created.as_deref())),
+            ("schema", Some(V::s(method::SCHEMA))),
+            ("origine", method::origin(src, created.as_deref())),
             ("campione", sample(self)),
             ("strumento", strumento(self)),
             (

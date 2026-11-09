@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::budget::MemBudget;
-use mzlab_core::campioni::{proponi, to_json};
 use mzlab_core::idxread::Index;
+use mzlab_core::samples::{proponi, to_json};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs, Rules};
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::run::run_to_with;

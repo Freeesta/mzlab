@@ -18,5 +18,21 @@ I18N.add("it", {
   "calc.add.hitDa": "{adduct} · {ppm} Da",
   "calc.add.noneDa": "nessun addotto entro {tol} Da",
   "icon.ad": "Addotti",
-  "cq.g.combos": "Combinazioni di perdite"
+  "cq.g.combos": "Combinazioni di perdite",
+  "cq.calc.tip": "Mostra o nasconde la calcolatrice",
+  "calc.pad.tip": "Scrive nel campo; va bene anche la tastiera",
+  "al.t.adducts.tip": "Ioni che la molecola può formare",
+  "al.t.losses.tip": "Frammenti neutri che lo ione può perdere",
+  "al.t.cont.tip": "Ioni di fondo frequenti in LC-MS",
+  "cq.tol.tip": "Scarto massimo accettato dal valore",
+  "cq.pol.tip": "Ioni positivi, negativi o entrambi",
+  "cq.all.tip": "Anche le corrispondenze più lontane",
+  "cq.loss.tip": "Dove si vede e perché",
+  "cq.g.liste.tip": "Composti noti con questa m/z",
+  "cq.g.perdite.tip": "Perdite neutre che danno questa massa",
+  "cq.g.diff.tip": "Coppie di addotti con questa differenza",
+  "tbl.add.more.tip": "Anche gli addotti rari",
+  "tbl.diff.tip": "Δm tra gli addotti di uno stesso ione",
+  "cq.link.ad.tip": "Apre la scheda Addotti",
+  "cq.link.loss.tip": "Apre la scheda Perdite neutre"
 });

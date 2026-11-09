@@ -6,7 +6,7 @@ use std::cmp::Ordering::Equal;
 
 use crate::json::Value;
 use crate::jsonb::{floats, int, text, Obj};
-use crate::statistica::{bad, blank_filter, ncols, user, StatErr, R};
+use crate::statistics::{bad, blank_filter, ncols, user, StatErr, R};
 use crate::statmat::{eigh, svd};
 use crate::stats::psum;
 

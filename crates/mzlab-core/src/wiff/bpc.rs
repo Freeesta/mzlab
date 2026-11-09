@@ -1,10 +1,10 @@
 //! The BPC of the full scan experiments of a `.wiff`: the mzML writer reads every scan once and `WiffReader::watch`
 //! notes its base peak on the way, so the chromatograms are listed with the BPC only after that pass and no scan is ever decoded twice.
 
-use super::lettore::WiffReader;
+use super::reader::WiffReader;
 use crate::error::Result;
-use crate::lettori::ChromatogramEntry;
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
+use crate::readers::ChromatogramEntry;
 
 impl WiffReader {
     /// Notes the base peak of scan `k` of injection `c` (the mzML writer reads every scan once, in order; the BPC comes from these).

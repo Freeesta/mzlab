@@ -1,7 +1,7 @@
 //! The index of a native sample (a maker's file read as it is): built straight from its reader, version 2 (see `natives.rs`).
-use mzlab_core::lettori::Limits;
 use mzlab_core::mzidx::Stats;
-use mzlab_core::{lettori_centroidi, upload, Error};
+use mzlab_core::readers::Limits;
+use mzlab_core::{readers_centroids, upload, Error};
 
 use crate::idxbuild::IdxBuilder;
 use crate::natives;
@@ -17,7 +17,7 @@ impl IdxBuilder {
             upload::without_sha1(&mut fs);
             let l = mzlab_lettori::apri(fs, &Limits::desktop())?;
             let mut l = if nat.centroid {
-                lettori_centroidi::centroidato(l)
+                readers_centroids::centroidato(l)
             } else {
                 l
             };

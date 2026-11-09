@@ -80,7 +80,7 @@ pub fn network_text<T: ReadAt, P: ReadAt>(
         None
     } else {
         let names = crate::store::input_names(&table_meta);
-        Some(TpRoles::from_json(&mzlab_core::campioni::order_like(
+        Some(TpRoles::from_json(&mzlab_core::samples::order_like(
             samples, &names,
         )?)?)
     };

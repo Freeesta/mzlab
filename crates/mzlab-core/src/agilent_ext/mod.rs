@@ -13,7 +13,6 @@ mod lcmethod;
 mod lcmodules;
 pub mod lcms;
 mod lcprofile;
-pub mod lettore;
 #[path = "../agilent/meta.rs"]
 pub mod meta;
 #[path = "../agilent/method.rs"]
@@ -22,6 +21,7 @@ pub mod method;
 mod peak;
 #[path = "../agilent/quant.rs"]
 pub mod quant;
+pub mod reader;
 mod run;
 #[path = "../agilent/scan.rs"]
 pub mod scan;
