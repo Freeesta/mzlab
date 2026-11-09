@@ -45,7 +45,15 @@ Un file Orbitrap sintetico di 50 000 scansioni aperto 6 volte, tutti spuntati; u
 
 Prima la scala y di ogni traccia scorreva due volte tutti i 50 000 punti a ogni disegno (`amax`/`amin`, 70 ms su 105) e i triangoli dello zoom verticale chiamavano una funzione per ogni punto di ogni traccia anche fuori dalla finestra (55 ms). Ora i blocchi da 128 punti (`rangeExtent`, `runsAbove`) danno gli stessi valori leggendo ~1/60 dei punti; `clipY` non crea più due array per segmento (36 ms); gli scatti di rotella di un fotogramma fanno un disegno.
 
-Il resto è `m4` (~27 ms, ~38 punti per colonna: i blocchi non aiutano) e la rasterizzazione delle 120 linee. Il cromatogramma TIC, la mappa e il passaggio del mouse erano già a 16,7 ms per fotogramma; aprire i 20 XIC costa ~1 s (copia degli array del motore e smoothing, una volta).
+Il resto è `m4` (~27 ms, ~38 punti per colonna: i blocchi non aiutano) e la rasterizzazione delle 120 linee. Il cromatogramma TIC, la mappa e il passaggio del mouse erano già a 16,7 ms per fotogramma; aprire i 20 XIC: sezione seguente.
+
+## Aprire 20 XIC su 6 file HR da 50 000 scansioni, CPU 1x (`main` `2499d61b` → `rtArr` in `cache-dati.js`; 4 aperture, cache delle risposte svuotata tra l'una e l'altra)
+| azione | prima | dopo |
+|---|---|---|
+| aprire il pannello XIC di 20 ioni (120 tracce), ms | 1015-1225 | 558-688 |
+| attività più lunga, ms | 445-585 | 103-193 |
+
+I tempi di scansione di un file sono gli stessi per ogni ione: `xicBin` (`explore.js`) copiava in un Array gli stessi 50 000 rt per ognuno dei 20 ioni, e il garbage collector pagava ~250 ms. Ora un rt uguale bit per bit all'ultimo dello stesso file (confronto delle parole a 32 bit, ~10 volte meno di una copia) restituisce lo stesso Array; `isSorted` di `decima.js`, in cache per array, lo scorre una volta. Lo smoothing in un `Float64Array` non cambia il tempo: non fatto.
 
 ## Memoria su cicli ripetuti, un file LR sintetico (`main` `1913013` → `corrInfoWire` in `pannelli.js` chiude il vecchio ascoltatore con `abort(0)`; prova `e2e_memoria_zoom`)
 | 30 cicli zoom → zoom intero dopo 5 di riscaldamento, dopo GC | prima | dopo |

@@ -1,4 +1,4 @@
-"""Launcher of the `.raw` -> mzML bench (`crates/mzlab-core/examples/raw_mzml_banco`): builds it, measures the disk with `dd`, runs it on one input and
+"""Launcher of the `.raw` -> mzML bench (`crates/mzlab-core/examples/raw_mzml_bench`): builds it, measures the disk with `dd`, runs it on one input and
 leaves the JSON of MISURE §4 in `.verifica/raw-mzml/`. No calculation here: every number comes from the Rust bench.
   python3 tools/bench/raw_mzml.py --file X.raw            a real file
   python3 tools/bench/raw_mzml.py --denso 2               the dense synthetic case, 2 GB
@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / ".verifica" / "raw-mzml"
-EXE = ROOT / "target" / "cli" / "examples" / "raw_mzml_banco"
+EXE = ROOT / "target" / "cli" / "examples" / "raw_mzml_bench"
 
 
 def sh(cmd, **kw):
@@ -21,7 +21,7 @@ def sh(cmd, **kw):
 
 
 def build(features):
-    cmd = ["cargo", "build", "--profile", "cli", "-p", "mzlab-core", "--example", "raw_mzml_banco"]
+    cmd = ["cargo", "build", "--profile", "cli", "-p", "mzlab-core", "--example", "raw_mzml_bench"]
     if features:
         cmd += ["--features", features]
     r = subprocess.run(cmd, cwd=ROOT)

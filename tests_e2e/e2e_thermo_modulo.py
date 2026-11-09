@@ -1,5 +1,5 @@
 """A Thermo .raw is read by the engine THROUGH the `thermo` readers module (crates/mzlab-lettori-wasm, mzlab/web/lettore-esterno.js, crates/mzlab-wasm/src/external.rs): no mzML in between, the module is downloaded
-only when a .raw arrives, and what the page shows is what the engine gave while the Thermo reader was linked in it: the TIC, a scan and «Download .mzML» (byte for byte) against `raw_referenza`
+only when a .raw arrives, and what the page shows is what the engine gave while the Thermo reader was linked in it: the TIC, a scan and «Download .mzML» (byte for byte) against `raw_reference`
 (crates/mzlab-core/examples, the reader of the core). Needs the private data repository (the data repository found by tools/dati_percorsi.py, or MZLAB_DATI: the smallest .raw of dati/HRMS; skipped without it), cargo, the site and both .wasm:
 python tools/build_site.py, tools/build_lettori_wasm.sh site/static (MZLAB_PIPE_SITE=<built site> reuses a site). Run from the repo root: python3 tests_e2e/e2e_thermo_modulo.py"""
 import hashlib, json, os, shutil, socket, subprocess, sys, tempfile, threading
@@ -34,7 +34,7 @@ if not reuse:
     shutil.copytree(src, site / "static" / "wasm-lettori", dirs_exist_ok=True)
 # what the reader of the core gives (the engine's path before the reader moved to the module)
 ref_mzml = tmp / "ref.mzML"
-out = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-core", "--example", "raw_referenza", "--", str(raw), str(ref_mzml)], cwd=ROOT, check=True, capture_output=True, text=True).stdout
+out = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-core", "--example", "raw_reference", "--", str(raw), str(ref_mzml)], cwd=ROOT, check=True, capture_output=True, text=True).stdout
 ref = json.loads(out); ref_sha = hashlib.sha256(ref_mzml.read_bytes()).hexdigest(); name = raw.stem + ".mzML"
 folder = agilent_sintetico.write(tmp / "serie", "uno.D", 40).parent
 

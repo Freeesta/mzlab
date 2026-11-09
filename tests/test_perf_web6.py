@@ -97,3 +97,13 @@ CACHE_BUD.max=1200;
 })()"""
     keys = run(code)
     assert "f" not in keys and "c" in keys and "a" in keys and "b" not in keys
+
+
+@needs_node
+def test_xic_rt_of_a_file_is_shared_only_when_equal_bit_for_bit():
+    src = "const navigator = {};" + (WEB / "cache-dati.js").read_text(encoding="utf-8")
+    code = src + """
+const F = v => Float64Array.from(v), a = rtArr(1, F([0.1, 0.2, 0.3])), b = rtArr(1, F([0.1, 0.2, 0.3])), c = rtArr(1, F([0.1, 0.2, 0.4])), d = rtArr(1, F([0.1, 0.2, 0.4]));
+const e = rtArr(2, F([0.1, 0.2, 0.4])), z0 = rtArr(3, F([0, 1])), z1 = rtArr(3, F([-0, 1])), s = rtArr(1, F([0.1, 0.2]));
+console.log(JSON.stringify([Array.isArray(a), a === b, c !== b, c === d, e !== d, JSON.stringify(e) === JSON.stringify(d), z0 !== z1, Object.is(z1[0], -0), s.length, JSON.stringify(c)]));"""
+    assert run(code) == [True, True, True, True, True, True, True, True, 2, "[0.1,0.2,0.4]"]

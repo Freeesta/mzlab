@@ -1,7 +1,7 @@
 //! The mzML validator: structure (required elements, `count`, array lengths, order of m/z), the PSI-MS vocabulary (accession, name, unit, required
 //! terms) and, for `indexedmzML`, the offsets, `indexListOffset` and the SHA-1 `fileChecksum`. One streaming pass, nothing of the file kept but the
 //! spectrum being read (and the index, which is as long as the list of spectra). The same pass hands each spectrum and chromatogram to the caller
-//! (`analizza`), which is how `examples/mzml_confronta.rs` reads two files. Native, and in the `aperti` readers module of the page (feature `valida`).
+//! (`analizza`), which is how `examples/mzml_compare.rs` reads two files. Native, and in the `aperti` readers module of the page (feature `valida`).
 //! `mzlab-cli validate` is the command, the action «Validate mzML» of the page and the app prints the same JSON (`json_file`); the vocabulary is `data/psims-cv.json` (`tools/psims_tabella.py`).
 
 mod array;
