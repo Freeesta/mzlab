@@ -582,6 +582,12 @@ pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, &[u8])> {
 /// One chromatogram array: the same decoder as the spectra (`mzmlarray`), so a zlib bomb stops at `expected` values, never below 8M values (the
 /// declared length of a PDA matrix chromatogram is shorter than its array).
 pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64>> {
+    if crate::numpress::ACCESSIONS
+        .iter()
+        .any(|a| has_accession(head, a))
+    {
+        return Err(Error::new("err.file.numpress"));
+    }
     let num = ["MS:1000521", "MS:1000519", "MS:1000522"]
         .iter()
         .find(|a| has_accession(head, a))
