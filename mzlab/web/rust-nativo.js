@@ -136,7 +136,7 @@ function registroDi(stubOf, memberFiles, ext, jerr) {
 
 /** one member copied to OPFS unless it is there (or being written for another sample); its fingerprints are taken in the same pass, or, for a member already there that this worker did not copy, read from a stub of another sample (`known`).
  *  With `hashing` the copy waits for the SHA-1 only (`free` of impronta.js): the rest of the hash goes on and `hashing` holds its promise until it ends */
-async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: number) => import("./impronta.js").Presa, free?: (size: number, source: Blob) => import("./impronta.js").Libera | null }, writing: Map<string, Promise<void>>, taken: Map<string, string[]>, hashing?: Map<string, Promise<string[] | null>>, known?: (store: string, size: number, mtime: number) => Promise<string[] | null> }} */ { ARCH, impronte, writing, taken, hashing, known }, /** @type {Blob} */ blob, /** @type {string} */ store, /** @type {(n: number) => void} */ bump) {
+async function copyMember(/** @type {{ ARCH: any, impronte?: { start: (size: number) => import("./impronta.js").Presa, free?: (size: number, source: Blob) => import("./impronta.js").Libera | null, file?: (file: Blob, onRead?: (n: number) => void) => { sha1: Promise<string | null>, all: Promise<string[] | null> } | null }, writing: Map<string, Promise<void>>, taken: Map<string, string[]>, hashing?: Map<string, Promise<string[] | null>>, known?: (store: string, size: number, mtime: number) => Promise<string[] | null> }} */ { ARCH, impronte, writing, taken, hashing, known }, /** @type {Blob} */ blob, /** @type {string} */ store, /** @type {(n: number) => void} */ bump) {
   const have = await ARCH.get("files", store);
   if (writing.has(store)) { await writing.get(store); bump(blob.size); return; }
   if (have && have.size === blob.size) { bump(blob.size); if (!taken.has(store) && known) { const o = await known(store, blob.size, /** @type {any} */ (blob).lastModified || 0); if (o) taken.set(store, o); } return; }
@@ -160,6 +160,16 @@ export const LOCK = "mzlab-nat:";                          // Web Lock of a data
 const locks = () => /** @type {any} */ (self.navigator) && navigator.locks;
 /** the dataset key and the file name a member store stands for (`nat~<key>~<path>`: a key never holds «~») */
 export const storeParts = (/** @type {string} */ s) => { const [key, ...path] = s.slice(PREFIX.length).replace(/\.part$/, "").split("~"); return { key, name: path[path.length - 1] || "" }; };
+/** the fingerprints of a member read in place, from the hash workers reading the user's File: the SHA-1 is awaited (the reader of a .raw opens the file with it), SHA-256 and probe
+ *  go on beside the build (`hashing`, as after a copy), so the builder does not read the whole member once more to take them; without a hash worker the builder takes them as before */
+async function inPlace(/** @type {any} */ impronte, /** @type {Map<string, string[]>} */ taken, /** @type {Map<string, Promise<string[] | null>>} */ hashing, /** @type {string} */ store, /** @type {Blob} */ blob, /** @type {(n: number) => void} */ bump) {
+  const r = !taken.has(store) && !hashing.has(store) && impronte?.file ? impronte.file(blob, bump) : null;
+  if (!r) { bump(blob.size); return; }
+  const sha1 = await r.sha1.catch(() => null);
+  if (!sha1) return;
+  taken.set(store, ["", sha1, ""]);
+  hashing.set(store, r.all.catch(() => null).then(o => { if (o) taken.set(store, o); hashing.delete(store); return o; }));
+}
 /** the bytes of the members of `nat` that are not in OPFS yet nor being written for another sample (a .wiff.scan shared by the samples of a .wiff counts for the first only) */
 async function missing(/** @type {any} */ ARCH, /** @type {Map<string, Promise<void>>} */ writing, /** @type {any} */ nat) {
   let n = 0;
@@ -198,7 +208,7 @@ async function lateJobDi(/** @type {Map<string, Promise<string[] | null>>} */ ha
   return { ...job, late };
 }
 
-/** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function, native_srm: Function, native_external: Function, impronte?: { start: (size: number) => import("./impronta.js").Presa, free?: (size: number, source: Blob) => import("./impronta.js").Libera | null } }} h */
+/** @param {{ ARCH: any, readerFor: (b: Blob) => (o: number, n: number) => Uint8Array, fileOf: (n: string) => Promise<File>, jerr: (k: string) => never, native_samples: Function, native_to_mzml: Function, native_srm: Function, native_external: Function, impronte?: { start: (size: number) => import("./impronta.js").Presa, free?: (size: number, source: Blob) => import("./impronta.js").Libera | null, file?: (file: Blob, onRead?: (n: number) => void) => { sha1: Promise<string | null>, all: Promise<string[] | null> } | null } }} h */
 /** which of `names` are samples of the same files as `members` ([{ name, size, mtime }]: same names, sizes and lastModified, and in OPFS): the same pair given again */
 async function sameDi(/** @type {(n: string) => Promise<Stub | null>} */ stubOf, /** @type {any} */ ARCH, /** @type {{ name: string, size: number, mtime: number }[]} */ members, /** @type {string[]} */ names) {
   const key = (/** @type {{ name: string, size: number, mtime?: number }[]} */ ms) => JSON.stringify(ms.map(m => [m.name, m.size, m.mtime || 0]).sort());
@@ -292,7 +302,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
       const store = storeOf(nat, x);
       const member = /** @type {StubMember} */ ({ name: x.name, store, size: x.blob.size, mtime: /** @type {any} */ (x.blob).lastModified || 0 });
       members.push(member);
-      if (!sul) try { await copyMember({ ARCH, impronte, writing, taken, hashing, known: (store, size, mtime) => known(ARCH, stubOf, store, size, mtime) }, x.blob, store, bump); } catch (e) { quota(e); sul = true; } if (sul && !(await ARCH.get("files", store))) { posto.set(store, x.blob); bump(x.blob.size); }
+      if (!sul) try { await copyMember({ ARCH, impronte, writing, taken, hashing, known: (store, size, mtime) => known(ARCH, stubOf, store, size, mtime) }, x.blob, store, bump); } catch (e) { quota(e); sul = true; } if (sul && !(await ARCH.get("files", store))) { posto.set(store, x.blob); await inPlace(impronte, taken, hashing, store, x.blob, bump); }
       const o = taken.get(store);
       if (o) [member.sha256, member.sha1, member.probe] = o;
     }
