@@ -1,6 +1,6 @@
 """The words of the regulatory screening (study §7): a match is a candidate with its evidence, never a verdict on the sample.
 
-Greps the report wording (`corsa_reg.rs`), the page section (`rapporto-flow.js`), the matching steps and any `normative.*` text of the catalogues for the words
+Greps the report wording (`run_report_reg.rs`), the page section (`rapporto-flow.js`), the matching steps and any `normative.*` text of the catalogues for the words
 that would turn a list match into a finding about the sample.
 """
 import re
@@ -31,7 +31,7 @@ def _lang_texts():
 
 def test_regulatory_wording_has_no_verdict_word():
     texts = {
-        "corsa_reg.rs": _rust_strings("crates/mzlab-core/src/flow/corsa_reg.rs"),
+        "run_report_reg.rs": _rust_strings("crates/mzlab-core/src/flow/run_report_reg.rs"),
         "flow_regulatory.rs": _rust_strings("crates/mzlab-feat/src/flow_regulatory.rs"),
         "regulatory.rs": _rust_strings("crates/mzlab-feat/src/regulatory.rs"),
         "rapporto-flow.js": _page_section(),
@@ -43,12 +43,12 @@ def test_regulatory_wording_has_no_verdict_word():
 
 
 def test_report_carries_the_study_disclaimer():
-    s = (ROOT / "crates/mzlab-core/src/flow/corsa_reg.rs").read_text(encoding="utf-8")
+    s = (ROOT / "crates/mzlab-core/src/flow/run_report_reg.rs").read_text(encoding="utf-8")
     assert "it is not an assessment of compliance with any law" in s
     assert "Confirm candidates with reference standards before any regulatory use." in s
 
 
 def test_library_panel_shows_the_report_disclaimer():
-    rust = re.search(r'pub const DISCLAIMER: &str = "(.*?)";', (ROOT / "crates/mzlab-core/src/flow/corsa_reg.rs").read_text(encoding="utf-8")).group(1)
+    rust = re.search(r'pub const DISCLAIMER: &str = "(.*?)";', (ROOT / "crates/mzlab-core/src/flow/run_report_reg.rs").read_text(encoding="utf-8")).group(1)
     en = (ROOT / "mzlab/web/lang/en/normative.js").read_text(encoding="utf-8")
     assert f'"normative.lib.disclaimer": "{rust}"' in en

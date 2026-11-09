@@ -9,7 +9,7 @@ use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{analysis, budget::MemBudget, mzidx, mzml, peakq, peaks};
-pub(crate) use mzlab_core::accorpa::Accorpa;
+pub(crate) use mzlab_core::coalesce::Accorpa;
 use std::collections::HashMap;
 use std::io::Write;
 use wasm_bindgen::prelude::*;
@@ -469,7 +469,7 @@ pub fn build_mzidx(
     cap_mb: f64,
     aiuti: JsValue,
 ) -> Result<String, JsValue> {
-    mzlab_core::stima::check_index(&MemBudget::from_request(cap_mb), levels.len(), scans_json.len(), (budget_mb as usize) << 20).map_err(|e| error_json(&e))?;
+    mzlab_core::estimate::check_index(&MemBudget::from_request(cap_mb), levels.len(), scans_json.len(), (budget_mb as usize) << 20).map_err(|e| error_json(&e))?;
     let table = mzidx::ScanTable {
         level: levels.to_vec(),
         polarity: polarities.iter().map(|&b| b as i8).collect(),

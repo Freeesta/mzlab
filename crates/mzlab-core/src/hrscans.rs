@@ -1,4 +1,4 @@
-//! Single scans of CENTROID files read from their source (`sorgente::Scansioni`: the mzML by offset, the scan table of the index giving `start..end`
+//! Single scans of CENTROID files read from their source (`source::Scansioni`: the mzML by offset, the scan table of the index giving `start..end`
 //! of each `<spectrum>`, or a vendor reader; the whole file is never held): `/api/spectra` (`App.spectra`: the scans `i0..=i1` of a level, each with its own centroids in high resolution, binned and
 //! optionally merged by nominal mass otherwise), `/api/scan` (`Item.scan`: one scan as the file has it, with its parent and activation) and
 //! `/api/scanavg` (`Item.scan_avg`: the mean of up to 200 scans on cells of 3 ppm or 0.1 Da). `Ok(None)` = not answered here (profile scans, a
@@ -9,7 +9,7 @@ use crate::idxread::ReadAt;
 use crate::iteminfo::{hr_profile, HrProfile};
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
-use crate::sorgente::Scansioni;
+use crate::source::Scansioni;
 use crate::specpeaks::merge_unit;
 use std::collections::{BTreeMap, HashMap};
 use std::hash::{BuildHasherDefault, Hasher};

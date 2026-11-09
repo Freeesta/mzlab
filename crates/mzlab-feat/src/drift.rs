@@ -7,7 +7,7 @@
 //! factors there (no guess). Sums run in a fixed order, so equal inputs give equal bytes. Reference: `tools/deriva_riferimento.py` (golden `deriva.json`).
 
 use crate::sortc::SortC;
-use mzlab_core::disegno::{Design, DEFAULT_BATCH};
+use mzlab_core::drawing::{Design, DEFAULT_BATCH};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{round, Out};
 

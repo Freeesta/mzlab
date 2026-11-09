@@ -1,5 +1,5 @@
 //! Hostile input for the registry of the module: bytes no reader knows are an error with a key (never a panic), and so are an empty set and a truncated header.
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 fn file_set(name: &str, byte: Vec<u8>) -> FileSet {
     FileSet {
@@ -55,7 +55,7 @@ fn empty_set() {
 #[test]
 fn module_extensions_contain_the_engine_ones() {
     let m = mzlab_lettori::estensioni();
-    for e in mzlab_core::lettori::estensioni() {
+    for e in mzlab_core::readers::estensioni() {
         assert!(m.contains(&e), "{e}");
     }
 }

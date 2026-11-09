@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use mzlab_core::json::{parse, round, Out, Value};
-use mzlab_core::msngrafo::{tabella_regole, Tipo};
+use mzlab_core::msngraph::{tabella_regole, Tipo};
 
 use crate::Outcome;
 

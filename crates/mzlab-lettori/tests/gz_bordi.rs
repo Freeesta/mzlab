@@ -8,7 +8,7 @@ mod common;
 use common::*;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 use std::io::Write;
 
 fn gz(b: &[u8]) -> Vec<u8> {

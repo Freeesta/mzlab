@@ -1,8 +1,8 @@
 //! `Lettore` for the dense case: packets decoded with the real decoders (`opentfraw::pacchetto`), the profile converted with the scan-event coefficients.
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::SpectrumExtra;
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use opentfraw::pacchetto::{decodifica, decodifica_picchi};
 
 use super::Denso;

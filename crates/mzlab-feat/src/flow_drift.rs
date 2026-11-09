@@ -4,7 +4,7 @@
 use crate::drift::{batches_of, correct, Method};
 use crate::samples::{columns, samples_of};
 use crate::store::{origin_from_meta, read_table};
-use mzlab_core::disegno;
+use mzlab_core::drawing;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 
@@ -31,7 +31,7 @@ pub fn drift_text(
         return Err(Error::new("error.badView"));
     }
     let cols = columns(&inputs, &samples_of(samples)?);
-    let batch = batches_of(&cols, &disegno::from_json(design)?);
+    let batch = batches_of(&cols, &drawing::from_json(design)?);
     let d = correct(&t, &cols, &batch, method_of(params))?;
     let mut text = d.summary_json(&cols);
     text.pop();

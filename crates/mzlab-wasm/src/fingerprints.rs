@@ -3,7 +3,7 @@
 //! or taken here. A late value that is missing, empty or does not match: the members are read again here, never an index without them.
 
 use js_sys::Function;
-use mzlab_core::lettori::FileSet;
+use mzlab_core::readers::FileSet;
 use mzlab_core::upload::{self, Fingerprint};
 use wasm_bindgen::prelude::*;
 

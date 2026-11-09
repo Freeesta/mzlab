@@ -87,7 +87,7 @@ try:
             btns = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>[b.dataset.nav,b.getAttribute('aria-label'),b.title])")
             assert [b[0] for b in btns] == ["mapzin", "mapzout", "maphelp"], btns
             assert all(b[1] for b in btns), btns
-            zoom_in(); pg.click(".pnl.map [data-a=fit]"); wait_for_js(pg, ZNULL); assert z() == [None, None]
+            zoom_in(); hd_click(pg, ".pnl.map [data-a=fit]"); wait_for_js(pg, ZNULL); assert z() == [None, None]
             pg.click(".pnl.map [data-nav=mapzin]"); wait_for_js(pg, ZSET); zz = z(); assert zz[0] and zz[1], zz
             pg.click(".pnl.map [data-nav=mapzout]"); changed(zz)
             pg.evaluate("MAPPA.whole(" + M + ")"); wait_for_js(pg, ZNULL)
@@ -119,9 +119,9 @@ try:
         def wheels():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("MAPPA.whole(" + M + ")"); x, y = at(.5, .45); pg.mouse.move(x, y)
             pg.keyboard.down("Shift"); pg.mouse.wheel(0, -300); pg.keyboard.up("Shift"); wait_for_js(pg, f"{M}.zoom && {M}.zoomY == null"); a = z(); assert a[0] and a[1] is None, a        # Shift = RT only
-            pg.click(".pnl.map [data-a=fit]"); pg.mouse.move(x, y)
+            hd_click(pg, ".pnl.map [data-a=fit]"); x, y = at(.5, .45); pg.mouse.move(x, y)      # through «⋯» the page may have scrolled: aim again
             pg.keyboard.down("Alt"); pg.mouse.wheel(0, -300); pg.keyboard.up("Alt"); wait_for_js(pg, f"{M}.zoomY && {M}.zoom == null"); a = z(); assert a[1] and a[0] is None, a             # Alt = m/z only
-            pg.click(".pnl.map [data-a=fit]"); pg.mouse.move(x, y); ctrl_wheel(pg, 0, -300); wait_for_js(pg, ZSET); a = z(); assert a[0] and a[1], a
+            hd_click(pg, ".pnl.map [data-a=fit]"); x, y = at(.5, .45); pg.mouse.move(x, y); ctrl_wheel(pg, 0, -300); wait_for_js(pg, ZSET); a = z(); assert a[0] and a[1], a
             before = z(); pg.mouse.wheel(0, -300); pg.mouse.wheel(120, 0); frames(pg, 8); assert z() == before, ("the wheel alone does not touch the map", before, z())      # it scrolls the page
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); x, y = at(.5, .45)
             pg.mouse.dblclick(x, y); wait_for_js(pg, ZNULL); assert z() == [None, None]                                                                             # double click = reset

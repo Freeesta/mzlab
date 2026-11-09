@@ -29,6 +29,7 @@ I18N.add("it", {
   "err.file.rawVersion": "La versione {version} del formato .raw Thermo non è ancora supportata: converti il file in mzML.",
   "err.file.notAgilentD": "La cartella {name} non contiene AcqData/MSScan.bin e AcqData/MSPeak.bin (né il file data.ms): serve la cartella .D intera, con la sua sottocartella AcqData.",
   "err.file.agilentNoEngine": "Le cartelle Agilent .D si aprono solo con il motore Rust del programma ({name}).",
+  "err.file.brukerDamaged": "Una parte di questa cartella Bruker .d non si legge: analysis.tdf/.tsf o il suo file _bin è danneggiato, troncato o scritto in una forma che questo programma non legge, quindi non è stato caricato nulla. Copia di nuovo tutta la cartella .d; se l'avviso resta, esporta la corsa in mzML con il programma dello strumento e apri quel file.",
   "err.file.brukerBaf": "Le cartelle Bruker con solo analysis.baf non si leggono senza il software del produttore: esportali prima in mzML.",
   "err.file.brukerNoBin": "La cartella {name} non contiene {file}: serve la cartella .d intera di Bruker.",
   "err.transitions.empty": "La tabella delle transizioni non ha righe.",

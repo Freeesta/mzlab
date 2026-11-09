@@ -11,10 +11,10 @@ use std::time::Instant;
 
 use sha2::{Digest, Sha256};
 
-use mzlab_core::blocchi::BlockCache;
+use mzlab_core::blocks::BlockCache;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{self, FileSet, Limits, Member, Reader};
-use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
+use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
+use mzlab_core::{mzidx, readers_centroids, readers_mzml, upload};
 
 const BLOCK: usize = 256 << 10;
 
@@ -48,7 +48,7 @@ impl Bytes {
     }
 }
 
-/// A file read through the block cache of `mzlab-lettori-wasm` (`mzlab_core::blocchi::BlockCache`, `slots` blocks of 256 KB); `calls` counts the reads asked of it, `fills` the
+/// A file read through the block cache of `mzlab-lettori-wasm` (`mzlab_core::blocks::BlockCache`, `slots` blocks of 256 KB); `calls` counts the reads asked of it, `fills` the
 /// blocks (and big reads) fetched from the file.
 struct Blocks<R> {
     inner: R,
@@ -178,9 +178,9 @@ fn peak_rss_mb() -> f64 {
 fn open(path: &str, cen: bool) -> (Box<dyn Reader>, Counters, f64) {
     let (fs, c) = set(path);
     let t = Instant::now();
-    let l = lettori::apri(fs, &Limits::sito()).expect("open");
+    let l = readers::apri(fs, &Limits::sito()).expect("open");
     let l = if cen {
-        lettori_centroidi::centroidato(l)
+        readers_centroids::centroidato(l)
     } else {
         l
     };
@@ -223,7 +223,7 @@ fn desktop_phase(path: &str, name: &str, tmp: &std::path::Path, c: &Counters) {
     let t = Instant::now();
     let (mut fs, _) = set(path);
     upload::without_sha1(&mut fs);
-    let l2 = lettori::apri(fs, &Limits::sito()).expect("open");
+    let l2 = readers::apri(fs, &Limits::sito()).expect("open");
     let mut l2 = l2;
     let mut out = Cursor::new(Vec::new());
     let mut sp = scratch(tmp);
@@ -364,7 +364,7 @@ fn mzml(l: &mut dyn Reader, n: usize, c: &Counters) {
         thread: threads(),
         ..Default::default()
     };
-    lettori_mzml::write_with(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
+    readers_mzml::write_with(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
     line(
         "write mzML (scrivi)",
         t.elapsed().as_secs_f64(),

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use mzlab_core::{lettori_mzml, Error, Result};
+use mzlab_core::{readers_mzml, Error, Result};
 use serde_json::{json, Value};
 
 use crate::engine::{CountWrite, Picked, Progress, State};
@@ -91,7 +91,7 @@ impl State {
             p["compression"].as_str().unwrap_or("standard"),
         )
         .ok_or_else(|| Error::new("err.file.mzmlWrite"))?;
-        lettori_mzml::write_with(&mut *l, nat.c, &mut out, &mut tell, opz)?;
+        readers_mzml::write_with(&mut *l, nat.c, &mut out, &mut tell, opz)?;
         std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
         drop(out);
         let size = std::fs::metadata(&tmp).map_err(|e| io_error(&e))?.len();

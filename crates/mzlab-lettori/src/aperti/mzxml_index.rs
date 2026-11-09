@@ -5,7 +5,7 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 /// The bytes of one scan.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

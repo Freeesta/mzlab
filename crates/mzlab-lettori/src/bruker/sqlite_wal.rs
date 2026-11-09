@@ -2,7 +2,7 @@
 use super::sqlite_min::{broken, read, u32_be};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 use std::collections::HashMap;
 
 /// The checksum of SQLite's log over `b` (a multiple of 8 bytes), continuing from `(s0, s1)`; the words are read little-endian when `le`.

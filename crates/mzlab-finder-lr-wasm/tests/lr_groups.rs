@@ -1,9 +1,9 @@
 //! The Dig on a series that compares conditions (`docs/agenti/gruppi.md`): the 38 synthetic mzML of `tests/data/gruppi/` (6 conditions × 3 times × 2
 //! replicates, a blank and a standard of the parent; the truth is `attesi.json` and its `LEGGIMI.md`), the roles and conditions from
-//! `campioni::proponi`. The pipeline runs natively as the pool of `feat-worker.js` runs it, then the Dig and the block `gruppi`.
+//! `samples::proponi`. The pipeline runs natively as the pool of `feat-worker.js` runs it, then the Dig and the block `gruppi`.
 //! Criteria 8.1-8.4 of `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`.
 
-use mzlab_core::campioni;
+use mzlab_core::samples;
 use mzlab_feat::legacy::lr::{self, summary::summary};
 use serde_json::Value;
 use std::path::PathBuf;
@@ -46,7 +46,7 @@ fn files_json(names: &[String], with_cond: bool) -> String {
         .iter()
         .map(|n| format!(r#"{{"name":"{n}","sha256":"","kind":"mzML"}}"#))
         .collect();
-    let doc = campioni::route("proponi", &format!(r#"{{"files":[{}]}}"#, req.join(","))).unwrap();
+    let doc = samples::route("proponi", &format!(r#"{{"files":[{}]}}"#, req.join(","))).unwrap();
     format!(r#"{{"files":[{}],"campioni":{doc}}}"#, list.join(","))
 }
 

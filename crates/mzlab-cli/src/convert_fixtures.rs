@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::readers::{FileSet, Member};
 
 #[path = "../../mzlab-lettori/tests/common/andi.rs"]
 pub mod andi;

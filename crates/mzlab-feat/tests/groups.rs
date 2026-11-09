@@ -260,7 +260,7 @@ fn warnings_cover_the_design() {
 }
 
 fn two_conditions(
-    cs: Vec<mzlab_core::campioni::Sample>,
+    cs: Vec<mzlab_core::samples::Sample>,
     rows: Vec<(mzlab_feat::groups::RowMeta, Vec<(u8, f64)>)>,
 ) -> GroupTable {
     table(rows, cs.len())
@@ -373,7 +373,7 @@ fn factors_must_be_strings() {
 }
 
 /// Permutes the columns (and the files, and the files named by the MS2 links) the same way.
-fn permuted(perm: &[usize]) -> (GroupTable, Vec<mzlab_core::campioni::Sample>, GroupOpts) {
+fn permuted(perm: &[usize]) -> (GroupTable, Vec<mzlab_core::samples::Sample>, GroupOpts) {
     let (tb, cs, opts) = scenario();
     let mut t = permute(&tb, perm);
     for m in &mut t.rows {

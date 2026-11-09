@@ -9,7 +9,7 @@ mod robustness;
 #[cfg(feature = "estesi")]
 use agilent_synth::lc;
 use agilent_synth::{encode, sample};
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
+use mzlab_core::readers::{self, FileSet, Limits, Member};
 use robustness::*;
 
 #[global_allocator]
@@ -30,11 +30,11 @@ fn reads(members: Vec<(String, Vec<u8>, Option<u64>)>) -> Vec<String> {
     let mut fs = FileSet {
         membri: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
     };
-    let _ = lettori::riconosci(&mut fs);
+    let _ = readers::riconosci(&mut fs);
     let fs = FileSet {
         membri: members.iter().map(|(n, b, d)| member(n, b, *d)).collect(),
     };
-    if let Some(mut l) = note(lettori::apri(fs, &Limits::sito()), &mut k) {
+    if let Some(mut l) = note(readers::apri(fs, &Limits::sito()), &mut k) {
         if let Some(ix) = note(l.index(0), &mut k).map(<[_]>::to_vec) {
             (0..ix.len()).for_each(|j| drop(note(l.scan(0, j), &mut k)));
         }

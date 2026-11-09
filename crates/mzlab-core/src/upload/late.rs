@@ -6,7 +6,7 @@ use crate::mzidx::ScanTable;
 use crate::scantable::Table;
 #[cfg(not(target_arch = "wasm32"))]
 use {
-    super::{fingerprint, non_mzml, Passata},
+    super::{fingerprint, not_mzml, Passata},
     crate::error::{Error, Result},
     crate::idxread::ReadAt,
     crate::scantable,
@@ -46,7 +46,7 @@ pub fn prepare_late<R: ReadAt, R2: ReadAt + Send + 'static>(
     size: u64,
     name: &str,
 ) -> Result<(ScanTable, impl FnMut() -> Result<String> + use<R, R2>)> {
-    non_mzml::refuse(r, size, name)?;
+    not_mzml::refuse(r, size, name)?;
     let prints =
         std::thread::spawn(move || fingerprint(&mut r2, size, Passata::without_sha1(size)));
     let t = scantable::read(&mut Windowed::new(r, size), size)?;

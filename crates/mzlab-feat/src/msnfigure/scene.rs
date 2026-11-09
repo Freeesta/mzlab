@@ -234,7 +234,7 @@ fn read_edges(j: &Value) -> Result<Vec<Edge>> {
 }
 
 pub(crate) fn scena(graph: &str) -> Result<Scena> {
-    let done = mzlab_core::msngrafo::completa(graph).map_err(|_| bad())?;
+    let done = mzlab_core::msngraph::completa(graph).map_err(|_| bad())?;
     let j = parse(done.as_bytes()).map_err(|_| bad())?;
     let view = j.get("vista").ok_or_else(bad)?;
     let ioni = read_ions(&j)?;

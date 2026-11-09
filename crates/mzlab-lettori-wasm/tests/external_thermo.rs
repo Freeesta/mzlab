@@ -1,5 +1,5 @@
 #![cfg(feature = "thermo")]
-//! The external reader of the engine (`mzlab_wasm::esterno::ExternalReader`) over the session of the `thermo` module gives, for a real `.raw`, exactly what the Thermo reader gives when it is linked
+//! The external reader of the engine (`mzlab_wasm::external::ExternalReader`) over the session of the `thermo` module gives, for a real `.raw`, exactly what the Thermo reader gives when it is linked
 //! in the engine: the index, the scans, the headers, the TIC, the `metodo/1` document, the header of the mzML and the whole mzML byte for byte. Needs the private data repository
 //! (MZLAB_DATI, or `mzlab-dati` beside this one); skipped without it. Run in release: `cargo test --release -p mzlab-lettori-wasm --features thermo --test external_thermo`.
 #![allow(clippy::indexing_slicing)]
@@ -7,10 +7,10 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
-use mzlab_core::{lettori_mzml, rawlettore, Result};
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
+use mzlab_core::{rawreader, readers_mzml, Result};
 use mzlab_lettori_wasm::session::Sessions;
-use mzlab_wasm::esterno::{ExternalReader, Module};
+use mzlab_wasm::external::{ExternalReader, Module};
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
@@ -59,7 +59,7 @@ impl Module for ViaSession {
         self.s.samples(self.h)
     }
     fn protocol(&mut self) -> Result<u32> {
-        Ok(mzlab_core::trasporto::PROTOCOLLO)
+        Ok(mzlab_core::transport::PROTOCOLLO)
     }
     fn index(&mut self, c: usize) -> Result<Vec<u8>> {
         self.s.index(self.h, c)
@@ -102,7 +102,7 @@ impl Write for Fingerprint {
 
 fn mzml(l: &mut dyn Reader) -> (u64, u64) {
     let w =
-        lettori_mzml::scrivi(l, 0, Fingerprint(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
+        readers_mzml::scrivi(l, 0, Fingerprint(0xcbf2_9ce4_8422_2325, 0), &mut |_, _| {}).unwrap();
     (w.0, w.1)
 }
 
@@ -154,7 +154,7 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
         return;
     }
     for f in &files {
-        let mut diretto = (rawlettore::ENTRY.apri)(set(f), &Limits::sito()).unwrap();
+        let mut diretto = (rawreader::ENTRY.apri)(set(f), &Limits::sito()).unwrap();
         let mut s = Sessions::default();
         let h = s.insert(mzlab_lettori::open_bare(set(f), &Limits::sito()).unwrap());
         let mut ext = ExternalReader::new(ViaSession { s, h }).unwrap();

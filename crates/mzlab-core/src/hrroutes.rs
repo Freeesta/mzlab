@@ -7,7 +7,7 @@ use crate::idxread::ReadAt;
 use crate::iteminfo::{hr_profile, HrProfile};
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
-use crate::sorgente::Scansioni;
+use crate::source::Scansioni;
 use crate::spectrum::{binned_json, Binned, EMPTY};
 
 impl<R: ReadAt> Routes<R> {

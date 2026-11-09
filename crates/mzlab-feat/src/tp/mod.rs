@@ -120,7 +120,7 @@ pub struct TpInputs<'a> {
     pub rules: Option<&'a crate::hypo::Rules>,
 }
 
-/// The roles of the files (`campioni/2`, `mzlab_core::campioni::per_tp`): gate 1 reads them instead of guessing from the minutes. The infusion is
+/// The roles of the files (`campioni/2`, `mzlab_core::samples::per_tp`): gate 1 reads them instead of guessing from the minutes. The infusion is
 /// never a reference nor a treated file; standards, QC and files without a time take no part.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct TpRoles {
@@ -139,8 +139,8 @@ pub struct TpRoles {
 }
 
 impl TpRoles {
-    pub fn of(cs: &[mzlab_core::campioni::Sample]) -> TpRoles {
-        let p = mzlab_core::campioni::per_tp(cs);
+    pub fn of(cs: &[mzlab_core::samples::Sample]) -> TpRoles {
+        let p = mzlab_core::samples::per_tp(cs);
         TpRoles {
             blank_kinds: p.blank.iter().map(|&i| cs[i].blank_kind.clone().unwrap_or_default()).collect(),
             minutes: p.minutes.iter().map(|m| m.unwrap_or(f64::NAN)).collect(),
@@ -155,13 +155,13 @@ impl TpRoles {
 
     /// The roles of the files from a `campioni/2` document (`error.badCampioni` when it is not one).
     pub fn from_json(samples: &str) -> Result<TpRoles> {
-        Ok(TpRoles::of(&mzlab_core::campioni::from_json(samples.as_bytes())?))
+        Ok(TpRoles::of(&mzlab_core::samples::from_json(samples.as_bytes())?))
     }
 
-    /// `from_json` with the files put in the order of the files of the `.mzfeat` `table`, by name (`campioni::order_like`).
+    /// `from_json` with the files put in the order of the files of the `.mzfeat` `table`, by name (`samples::order_like`).
     pub fn for_table(samples: &str, table: &[u8]) -> Result<TpRoles> {
         let names = crate::store::table_names(&mut crate::store::Slice(table), table.len() as u64)?;
-        TpRoles::from_json(&mzlab_core::campioni::order_like(samples, &names)?)
+        TpRoles::from_json(&mzlab_core::samples::order_like(samples, &names)?)
     }
 
     /// `for_table` on a `.mzfeat` read by offsets; None or an empty text is no roles.
@@ -170,7 +170,7 @@ impl TpRoles {
             return Ok(None);
         };
         let names = crate::store::table_names(table, size)?;
-        TpRoles::from_json(&mzlab_core::campioni::order_like(c, &names)?).map(Some)
+        TpRoles::from_json(&mzlab_core::samples::order_like(c, &names)?).map(Some)
     }
 
     /// The files the kinetics reads: the timed ones (the t0 and the treated) and the controls. With the roles the controls are the blanks and the

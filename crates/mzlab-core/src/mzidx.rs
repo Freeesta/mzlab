@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 use std::io::{Cursor, Seek, SeekFrom, Write};
 
 use crate::error::{Error, Result};
-use crate::mzidx_ordine::sort_buckets;
+use crate::mzidx_order::sort_buckets;
 use crate::mzidx_spill::{align, read_parts, Parts, Spill};
 use crate::mzml::Spectrum;
 mod late;
@@ -635,10 +635,10 @@ fn start(groups: &mut [Group], sp: &mut dyn Spill) -> Result<Parts> {
 }
 
 #[cfg(test)]
-mod tests_avvia;
+mod tests_start;
 
-mod denso;
-use denso::{round_cap, slice_refusal};
+mod dense;
+use dense::{round_cap, slice_refusal};
 
 fn pad(n: u64) -> u64 {
     (ALIGN - n % ALIGN) % ALIGN
@@ -1020,7 +1020,7 @@ pub fn build_mzml_spill<R: std::io::Read + Seek>(
 /// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::index(c)` in order (`mzidx_lettore`).
 pub fn build_reader(
     table: &ScanTable,
-    l: &mut dyn crate::lettori::Reader,
+    l: &mut dyn crate::readers::Reader,
     c: usize,
     out: &mut dyn Output,
     budget: usize,
@@ -1028,7 +1028,7 @@ pub fn build_reader(
     let n = l.index(c)?.len();
     build(
         table,
-        &mut |on| (0..n).try_for_each(|k| crate::mzidx_lettore::spettro(l, c, k).map(&mut *on)),
+        &mut |on| (0..n).try_for_each(|k| crate::mzidx_reader::spettro(l, c, k).map(&mut *on)),
         out,
         budget,
         true,

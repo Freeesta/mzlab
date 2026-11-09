@@ -1,12 +1,12 @@
-//! The `.mzidx` built through `accorpa::Accorpa` (the coalescing the browser uses for its OPFS output and scratch file) has the bytes of the
+//! The `.mzidx` built through `coalesce::Accorpa` (the coalescing the browser uses for its OPFS output and scratch file) has the bytes of the
 //! direct build, with a small budget that sends the peaks to the scratch area, and far fewer calls to the destinations.
 mod fake_reader;
 use std::io::Cursor;
 
 use fake_reader::Finto;
-use mzlab_core::accorpa::Accorpa;
+use mzlab_core::coalesce::Accorpa;
 use mzlab_core::mzidx_spill::Spill;
-use mzlab_core::{lettori_mzml, mzidx, upload};
+use mzlab_core::{mzidx, readers_mzml, upload};
 
 #[derive(Default)]
 struct Tally {
@@ -33,7 +33,7 @@ impl Spill for Tally {
 fn coalesced_index_is_the_same() {
     let mut l = Finto::vario(1500, 400, 31);
     let mut mz = Vec::new();
-    lettori_mzml::scrivi(&mut l, 0, &mut mz, &mut |_, _| {}).unwrap();
+    readers_mzml::scrivi(&mut l, 0, &mut mz, &mut |_, _| {}).unwrap();
     let p = upload::prepare(&mut mz.clone(), mz.len() as u64, "c.mzML").unwrap();
     let budget = 1 << 20;
     let build = |join: bool| {

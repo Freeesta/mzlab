@@ -8,10 +8,10 @@ mod common_waters;
 use common::andi::{andi_ms, points, FLAT_RUN};
 use common::mzxml::{mzxml, run, FLAT};
 use common::*;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 /// The key of the first error met reading index, every scan and every trace; `"ok"` when none.
-fn key(fs: mzlab_core::lettori::FileSet) -> String {
+fn key(fs: mzlab_core::readers::FileSet) -> String {
     let mut l = match mzlab_lettori::apri(fs, &Limits::sito()) {
         Ok(l) => l,
         Err(e) => return e.key.to_string(),

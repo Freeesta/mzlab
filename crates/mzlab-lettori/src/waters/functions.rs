@@ -2,7 +2,7 @@
 
 use super::folder::{f32_at, u16_at};
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 const RECORD: usize = 416;
 const SLOTS: usize = 32;

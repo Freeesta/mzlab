@@ -1,5 +1,5 @@
 // @ts-strict
-// Flat-window background of a chromatogram: the program picks the steadiest low stretch of the run (Rust, crates/mzlab-core/src/chrom_fondo.rs through QUALITA),
+// Flat-window background of a chromatogram: the program picks the steadiest low stretch of the run (Rust, crates/mzlab-core/src/chrom_background.rs through QUALITA),
 // the student can move it (handle on the chart, arrows, buttons) and go back to the automatic one. State: p.fondo = { mode: "tract", ib: { mode: "median", a: [t0, t1], flat: true, mod?: true } };
 // «mod» = moved by the student: the window is no longer recomputed. Classic script, loaded after grafici.js (corrected(), ibkChip() and the chart events call it).
 const FONDOP = (() => {

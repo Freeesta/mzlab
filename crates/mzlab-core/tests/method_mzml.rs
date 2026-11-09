@@ -115,7 +115,7 @@ fn every_key_is_known_to_the_schema() {
 #[test]
 fn a_document_the_file_carries_wins_and_a_file_without_run_has_none() {
     let own = "{\"schema\":\"metodo/1\",\"x\":1}";
-    let up = mzlab_core::metodo::userparam_xml(own);
+    let up = mzlab_core::method::userparam_xml(own);
     let d = doc(mzml(&up));
     assert_eq!(d["x"], 1);
     let junk = b"<mzML><cvList/></mzML>".to_vec();

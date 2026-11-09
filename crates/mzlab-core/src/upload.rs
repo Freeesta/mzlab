@@ -9,21 +9,21 @@ use crate::budget::MemBudget;
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::json::Out;
-use crate::lettori::{FileSet, Reader};
 use crate::mzidx::ScanTable;
-use crate::mzidx_lettore;
+use crate::mzidx_reader;
+use crate::readers::{FileSet, Reader};
 use crate::scantable::{self, Table};
 use crate::window::Windowed;
-mod doppio;
+mod double;
 mod late;
-mod non_mzml;
-mod passata;
+mod not_mzml;
+mod one_pass;
 #[cfg(test)]
 mod tests;
-pub use doppio::index_reader_twice;
+pub use double::index_reader_twice;
 #[cfg(not(target_arch = "wasm32"))]
 pub use late::prepare_late;
-pub use passata::Passata;
+pub use one_pass::Passata;
 
 const PROBE: u64 = 65536;
 const STEP: u64 = 1 << 20;
@@ -77,7 +77,7 @@ pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, St
 /// Native: SHA-256 and SHA-1 on two threads (`passata::two_threads`).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn fingerprint3(r: &mut dyn ReadAt, size: u64) -> Result<(String, String, String)> {
-    passata::two_threads(r, size, STEP)
+    one_pass::two_threads(r, size, STEP)
 }
 
 fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String, String, String)> {
@@ -115,7 +115,7 @@ pub fn prepare_in<R: ReadAt>(
     known: Option<(String, String)>,
     budget: Option<&MemBudget>,
 ) -> Result<Prepared> {
-    non_mzml::refuse(r, size, name)?;
+    not_mzml::refuse(r, size, name)?;
     let t = scantable::read_in(&mut Windowed::new(r, size), size, budget)?;
     let (sha256, probe) = match known {
         Some(k) => k,
@@ -135,7 +135,7 @@ pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
     size: u64,
     name: &str,
 ) -> Result<Prepared> {
-    non_mzml::refuse(r, size, name)?;
+    not_mzml::refuse(r, size, name)?;
     std::thread::scope(|s| {
         let h = s.spawn(move || fingerprint(&mut r2, size, Passata::without_sha1(size)));
         let t = scantable::read(&mut Windowed::new(r, size), size);
@@ -204,7 +204,7 @@ pub struct Fingerprint {
     pub probe: String,
 }
 
-/// The fingerprints of every member of `fs`, in its order: taken before `lettori::apri`, which consumes the set. The SHA-1 goes to the member too,
+/// The fingerprints of every member of `fs`, in its order: taken before `readers::apri`, which consumes the set. The SHA-1 goes to the member too,
 /// so the reader does not read the file again for the header of the mzML.
 pub fn impronte(fs: &mut FileSet) -> Result<Vec<Fingerprint>> {
     fs.membri
@@ -274,7 +274,7 @@ pub fn prepare_reader(
     members: &[Fingerprint],
     name: &str,
 ) -> Result<Prepared> {
-    let t = mzidx_lettore::righe(l, c)?;
+    let t = mzidx_reader::righe(l, c)?;
     from_the_table(t, l, c, members, name)
 }
 
@@ -316,7 +316,7 @@ pub fn index_reader_with(
     spill: Option<&mut dyn crate::mzidx_spill::Spill>,
     fase: &mut dyn FnMut(u32),
 ) -> Result<(crate::mzidx::Stats, String)> {
-    let (t, before) = mzidx_lettore::rows_before(l, c, budget, spill)?;
+    let (t, before) = mzidx_reader::rows_before(l, c, budget, spill)?;
     let sample = sample_of(l, c)?;
     let p = table(t, l, c, String::new(), String::new(), String::new())?;
     fase(3);
@@ -331,7 +331,7 @@ pub fn index_reader_with(
     let st = crate::mzidx::build_after(
         &p.table,
         before,
-        &mut |on| (0..n).try_for_each(|k| mzidx_lettore::spettro(l, c, k).map(&mut *on)),
+        &mut |on| (0..n).try_for_each(|k| mzidx_reader::spettro(l, c, k).map(&mut *on)),
         out,
         budget,
         true,
@@ -390,7 +390,7 @@ pub fn set_name(members: &[Fingerprint]) -> Option<&str> {
         .min_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)))
 }
 
-/// The generation of what the readers give besides the scans (the chromatogram list: `wiff/cromatogrammi.rs`), written in the `source` of an index of a
+/// The generation of what the readers give besides the scans (the chromatogram list: `wiff/chromatograms.rs`), written in the `source` of an index of a
 /// vendor file set (`"reader"`): an index of an older generation (or without one) is built again once (`native_attach` of mzlab-wasm refuses it).
 pub const READERS_GENERATION: u32 = 2;
 
@@ -413,11 +413,11 @@ fn table(
     sha256: String,
     probe: String,
 ) -> Result<Prepared> {
-    let scans_json = mzidx_lettore::rows_json(&mut t, l.index(c)?).into_bytes();
+    let scans_json = mzidx_reader::rows_json(&mut t, l.index(c)?).into_bytes();
     Ok(prepared(&t, scans_json, source, sha256, probe))
 }
 
-fn sample_of(l: &mut dyn Reader, c: usize) -> Result<crate::lettori::Sample> {
+fn sample_of(l: &mut dyn Reader, c: usize) -> Result<crate::readers::Sample> {
     l.samples()
         .get(c)
         .cloned()
@@ -427,7 +427,7 @@ fn sample_of(l: &mut dyn Reader, c: usize) -> Result<crate::lettori::Sample> {
 /// The `source` of the index of sample `campione` of the members, its SHA-256 and probe.
 fn sorgente(
     members: &[Fingerprint],
-    sample: &crate::lettori::Sample,
+    sample: &crate::readers::Sample,
     name: &str,
 ) -> (String, String, String) {
     let (sha256, probe) = set_print(members, sample.id);

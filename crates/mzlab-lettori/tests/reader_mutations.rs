@@ -10,7 +10,7 @@ mod common_waters;
 use common::andi::{andi_chromatogram, andi_ms, FLAT_RUN};
 use common::mzxml::{mzxml, run, FLAT};
 use common::*;
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -98,7 +98,7 @@ fn read_all(members: &[(String, Vec<u8>)]) -> Result<(), String> {
                 }
             }
         }
-        let _ = mzlab_core::lettori_mzml::scrivi(l.as_mut(), c, Vec::new(), &mut |_, _| {});
+        let _ = mzlab_core::readers_mzml::scrivi(l.as_mut(), c, Vec::new(), &mut |_, _| {});
     }
     Ok(())
 }

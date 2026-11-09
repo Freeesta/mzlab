@@ -83,7 +83,7 @@ fn synthetic_pairs_match_the_reference() {
             for (b, g) in back.chromatograms.iter().zip(&run.chromatograms) {
                 assert!(b.id == g.id && b.time == g.time && b.intensity == g.intensity, "{}: mzML", g.id);
             }
-            // the engine and the `estesi` build give the same list (`wiff/cromatogrammi.rs`): the TIC/BPC of a full scan sample too
+            // the engine and the `estesi` build give the same list (`wiff/chromatograms.rs`): the TIC/BPC of a full scan sample too
             let ch: &[Value] = r["chromatograms"].as_array().unwrap();
             assert_eq!(run.chromatograms.len(), ch.len(), "{name}/{s}: chromatograms");
             for (g, e) in run.chromatograms.iter().zip(ch) {
@@ -218,10 +218,10 @@ fn the_header_of_a_real_file_carries_model_time_and_hashes() {
     let head = String::from_utf8_lossy(&xml[..xml.len().min(20000)]).to_string();
     assert!(w.model.as_deref().is_some_and(|m| m.replace(' ', "").contains("QTRAP")), "{:?}", w.model);
     assert!(head.contains("MS:1000651") && head.contains("startTimeStamp=\"20"), "{head}");
-    let hashes = mzlab_core::metodo::source_sha1s(&head);
+    let hashes = mzlab_core::method::source_sha1s(&head);
     assert_eq!(hashes.len(), 2);
     assert_eq!(hashes[0].1, ole.sha1_hex());
     let n = scan.len() as u64;
-    assert_eq!(hashes[1].1, mzlab_core::metodo::sha1_hex(&mut scan, n).unwrap());
+    assert_eq!(hashes[1].1, mzlab_core::method::sha1_hex(&mut scan, n).unwrap());
     eprintln!("model {:?} created {:?}", w.model, w.created);
 }

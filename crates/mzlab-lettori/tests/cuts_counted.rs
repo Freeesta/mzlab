@@ -5,8 +5,8 @@
 mod common;
 mod common_waters;
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::Spectrum;
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 type Members = Vec<(String, Vec<u8>)>;
 
@@ -54,7 +54,7 @@ fn read(m: &Members, at: &str) -> Result<ReadOne, &'static str> {
         ));
     }
     ok(
-        mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}),
+        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}),
         at,
         "the mzML",
     );

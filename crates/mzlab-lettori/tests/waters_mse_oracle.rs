@@ -4,7 +4,7 @@
 //! the reader writes one per cycle, so the oracle is compared on cycle sums: TIC, RT and the intensity-weighted mean m/z.
 use std::path::PathBuf;
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 fn folder() -> Option<FileSet> {
     let base = std::env::var_os("MZLAB_ROSINA_DATI")

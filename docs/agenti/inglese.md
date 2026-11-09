@@ -33,7 +33,7 @@ Counts per area. `identifiers` and `keys` are distinct names per file, summed ov
 ## Rename map (summary of `--rinomine`)
 - 125 directories and 2418 files change name (file rows show the path after the directory renames). Word-by-word translation, then three Italian word-order rules: an adjective after its noun is swapped (`lettore_finto` → `fake_reader`, `campioni_variabili` → `variable_samples`), `X di Y` → `Y X`, and a head noun before its complement is swapped (`calibrazione_massa` → `mass_calibration`; heads in `HEADS`; quantifiers and file-kind words such as `prove`, `vista`, `tour` are never complements).
 - Topic-first names (`gruppi-vista`, `e2e_mappa_assi`) are already English order and keep it.
-- Hand choices where a name collides (`OVERRIDES`: `flow/corsa.rs` → `run_report.rs`, `msnalbero.rs` → `msntree_build.rs`, `avanzamento.js` → `job-progress.js`); a Rust module directory follows its file (`msnalbero/` → `msntree_build/`). MassBank accessions (`MSBNK-…`) are kept.
+- Hand choices where a name collides (`OVERRIDES`: `corsa.rs` of `flow/` → `run_report.rs`, `msnalbero.rs` → `msntree_build.rs`, `avanzamento.js` → `job-progress.js`); a Rust module directory follows its file (`msnalbero/` → `msntree_build/`). MassBank accessions (`MSBNK-…`) are kept.
 
 | area | dir renames | file renames | named by `.github/` | word order fired (`REORDERED`) |
 |---|---|---|---|---|

@@ -8,8 +8,8 @@ mod agilent_synth;
 
 use agilent_folder::*;
 use agilent_synth::*;
-use mzlab_core::lettori::{self, FileSet, Format, Limits, Member, Reader};
 use mzlab_core::mzml::{ChromKind, Run};
+use mzlab_core::readers::{self, FileSet, Format, Limits, Member, Reader};
 
 /// The files of a real folder as a `FileSet`: the members are read from disk by offset, never loaded.
 fn set_of(dir: &std::path::Path) -> FileSet {
@@ -56,11 +56,11 @@ fn the_reader_gives_the_scans_the_chromatograms_and_the_method_of_the_run() {
         let run = d.run(&mut fo.peak).unwrap();
         let mut fs = set_of(&f);
         assert_eq!(
-            lettori::riconosci(&mut fs).map(|v| v.id),
+            readers::riconosci(&mut fs).map(|v| v.id),
             Some("agilent-d"),
             "{label}"
         );
-        let mut l = lettori::apri(set_of(&f), &Limits::sito()).unwrap();
+        let mut l = readers::apri(set_of(&f), &Limits::sito()).unwrap();
         assert_eq!(l.format(), Format::AgilentD);
         assert_eq!(l.samples().len(), 1);
         assert_eq!(l.samples()[0].scansioni, run.spectra.len(), "{label}");
@@ -150,21 +150,21 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         .collect(),
     };
     // the good set opens and reads
-    let mut l = lettori::apri(set(&idx, true), &Limits::sito()).unwrap();
+    let mut l = readers::apri(set(&idx, true), &Limits::sito()).unwrap();
     assert_eq!(l.index(0).unwrap().len(), 3);
     assert_eq!(l.scan(0, 1).unwrap().mz.len(), 3);
     // without MSPeak.bin the folder is only possible, not sure
     assert_eq!(
-        lettori::riconosci(&mut set(&idx, false)).map(|v| v.id),
+        readers::riconosci(&mut set(&idx, false)).map(|v| v.id),
         Some("agilent-d")
     );
     // a header that is not one, a file of another kind
     let mut bad = idx.clone();
     bad[88..92].copy_from_slice(&i32::MAX.to_le_bytes());
-    assert!(lettori::riconosci(&mut set(&bad, true)).is_none());
-    assert!(lettori::riconosci(&mut set(b"not an index", true)).is_none());
+    assert!(readers::riconosci(&mut set(&bad, true)).is_none());
+    assert!(readers::riconosci(&mut set(b"not an index", true)).is_none());
     assert_eq!(
-        lettori::apri(set(b"not an index", true), &Limits::sito())
+        readers::apri(set(b"not an index", true), &Limits::sito())
             .err()
             .unwrap()
             .key,
@@ -177,7 +177,7 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         byte: 100,
     };
     assert_eq!(
-        lettori::apri(set(&idx, true), &tiny).err().unwrap().key,
+        readers::apri(set(&idx, true), &tiny).err().unwrap().key,
         "error.memoryBudget"
     );
     // a table of more entries than allowed
@@ -186,7 +186,7 @@ fn a_damaged_or_oversized_set_is_refused_with_a_key() {
         entries: 2,
         byte: 1 << 20,
     };
-    assert!(lettori::apri(set(&idx, true), &few).is_err());
+    assert!(readers::apri(set(&idx, true), &few).is_err());
 }
 
 /// The GC/MS runs are not a variant: the engine's reader opens and reads them, so the probe of the module does not send them away.
@@ -196,7 +196,7 @@ fn a_gc_run_is_not_a_variant() {
     let Some(all) = folders() else { return };
     for f in all {
         assert!(
-            !mzlab_core::agilent::lettore::variant(&mut set_of(&f)),
+            !mzlab_core::agilent::reader::variant(&mut set_of(&f)),
             "{f:?}"
         );
     }

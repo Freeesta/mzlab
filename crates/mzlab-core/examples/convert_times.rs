@@ -8,10 +8,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
-use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzml::{self, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Options;
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
+use mzlab_core::readers_mzml::{Conversion, Peaks};
 use sha2::{Digest as _, Sha256};
 
 struct Tally;

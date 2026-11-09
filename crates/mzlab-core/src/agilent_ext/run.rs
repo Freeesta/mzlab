@@ -6,7 +6,7 @@ use super::scan::ScanRec;
 use super::{AgilentD, SCAN_FULL, SCAN_SIM};
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use crate::metodo::{self, Source, SrcFile};
+use crate::method::{self, Source, SrcFile};
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
 use crate::mzmlwrite::{Header, SpectrumExtra};
 
@@ -211,7 +211,7 @@ impl AgilentD {
                 .sample_type()
                 .map(|t| ("sample type".to_string(), t.to_string()))
                 .into_iter()
-                .chain((!document.is_empty()).then(|| (metodo::USERPARAM.to_string(), document)))
+                .chain((!document.is_empty()).then(|| (method::USERPARAM.to_string(), document)))
                 .collect(),
             instrument: Some(("MS:1000490".into(), name)),
             components,
@@ -262,7 +262,7 @@ pub(crate) fn add_sic(
 
 /// SHA-1 (hex) of the first `len` bytes of a reader (`metodo::sha1_hex`).
 pub(crate) fn sha1_of<R: ReadAt>(r: &mut R, len: u64) -> Result<String> {
-    crate::metodo::sha1_hex(r, len)
+    crate::method::sha1_hex(r, len)
 }
 
 impl AgilentD {
