@@ -36,13 +36,7 @@ fn long_run(n: u32) -> Vec<Sc> {
 fn the_index_of_many_scans_takes_few_reads_and_the_same_rows() {
     let scan = long_run(900);
     for attributes in [true, false] {
-        let byte = mzxml(
-            &scan,
-            Opz {
-                attributes: attributes,
-                ..FLAT
-            },
-        );
+        let byte = mzxml(&scan, Opz { attributes, ..FLAT });
         let calls = Rc::new(Cell::new(0));
         let mut fs = comune::file_set("campione.mzXML", Vec::new());
         fs.membri[0].dim = byte.len() as u64;

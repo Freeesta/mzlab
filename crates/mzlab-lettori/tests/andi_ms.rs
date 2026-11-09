@@ -46,8 +46,8 @@ fn cdf1_and_cdf2_with_every_data_type() {
         for (kind_mz, kind_it) in [(5, 5), (6, 4), (5, 3), (4, 6)] {
             check(&Run {
                 v2,
-                kind_mz: kind_mz,
-                kind_it: kind_it,
+                kind_mz,
+                kind_it,
                 ..FLAT_RUN
             });
         }

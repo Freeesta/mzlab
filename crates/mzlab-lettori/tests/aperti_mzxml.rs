@@ -19,7 +19,7 @@ fn options() -> Vec<Opz> {
                         a64,
                         zlib,
                         index,
-                        nested: nested,
+                        nested,
                         attributes: true,
                     });
                 }

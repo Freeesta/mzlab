@@ -146,7 +146,7 @@ fn the_annotated_bpc_has_the_bits_of_the_decoded_one() {
     for kind_it in [3, 4, 5, 6] {
         for tic in [true, false] {
             let c = Run {
-                kind_it: kind_it,
+                kind_it,
                 ..FLAT_RUN
             };
             let b = andi_ms_with(&c, 40, without_nan, tic);
@@ -178,7 +178,7 @@ fn the_annotated_bpc_has_the_bits_of_the_decoded_one() {
 fn a_nan_intensity_gives_in_the_bpc_what_it_gave_before() {
     for kind_it in [5, 6] {
         let c = Run {
-            kind_it: kind_it,
+            kind_it,
             ..FLAT_RUN
         };
         let b = andi_ms_with(&c, 40, edge_points, true);
