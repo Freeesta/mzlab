@@ -1,6 +1,6 @@
 // Timing and fingerprints of the peak picker pieces: AsLS on 10 000 points (downsampled to 160) and on 2 000 (solved at full size), detect_full on 10 000 points,
 // Savitzky-Golay and Ricker CWT, noise_level, any_by on 10^6 items. The fingerprints must not change between versions.
-// Run with `cargo run --release -p mzlab-picchi --example bench_picchi`.
+// Run with `cargo run --release -p mzlab-picchi --example bench_peaks`.
 
 use std::time::Instant;
 

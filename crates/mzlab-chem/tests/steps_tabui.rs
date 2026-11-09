@@ -92,7 +92,7 @@ fn exported_json_is_standard_json_and_is_the_committed_file() {
 #[test]
 fn reactivity_defaults_are_those_of_the_engine() {
     let s = tabui().pop().unwrap();
-    let d = mzlab_chem::reatt::Opts::parse("").unwrap();
+    let d = mzlab_chem::react::Opts::parse("").unwrap();
     let num = |n: &str| s.param(n).unwrap().default_f64().unwrap();
     assert_eq!(num("conformers"), d.conformers as f64);
     assert_eq!(num("conformers"), mzlab_chem::DEFAULT_CONFORMERS as f64);

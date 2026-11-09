@@ -9,7 +9,7 @@ use mzlab_core::elements::parse_formula;
 use mzlab_core::mzml::Spectrum;
 
 use crate::entry::AdductType;
-use crate::indice::TargetList;
+use crate::index::TargetList;
 
 mod helpers;
 use helpers::*;
@@ -443,5 +443,5 @@ pub fn search_targets(
 }
 
 #[cfg(test)]
-#[path = "cerca_tests.rs"]
+#[path = "search_tests.rs"]
 mod tests;

@@ -1,6 +1,6 @@
 //! The record `trasf/1` (docs/studi/STRUTTURA_DATO_TRASFORMAZIONI.md): a parent → product transformation with the atom map, written on the canonical
 //! indices of two `mol/1` records that it names by their core hash and never copies. A certain product has a complete map; an uncertain one (only
-//! the change is known) has `delta`, `sites` and a region and no product. Chains, remapping and the stereo rule are in `trasf_chain.rs`.
+//! the change is known) has `delta`, `sites` and a region and no product. Chains, remapping and the stereo rule are in `transform_chain.rs`.
 
 use crate::codec::MolError;
 use crate::delta;

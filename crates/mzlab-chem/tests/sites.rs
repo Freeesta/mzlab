@@ -2,7 +2,7 @@
 //! tblite 0.7.0 on the reference geometry, the experimental site in at least 9 of 10, and the same class on the ETKDG geometry of `embed`.
 
 use mzlab_chem::fukui::{ch_sites, Site};
-use mzlab_chem::reatt::gfn2;
+use mzlab_chem::react::gfn2;
 use mzlab_chem::{embed, Mol3d, DEFAULT_CONFORMERS};
 use mzlab_feat::chem::graph::Mol;
 

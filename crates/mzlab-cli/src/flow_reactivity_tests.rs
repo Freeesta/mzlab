@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use mzlab_chem::reatt::reactivity_json;
+use mzlab_chem::react::reactivity_json;
 
 const ETHANOL: &str = "CCO";
 

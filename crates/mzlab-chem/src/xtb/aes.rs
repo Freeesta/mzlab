@@ -142,7 +142,7 @@ pub struct AesPot {
     pub vqp: Vec<[f64; 6]>,
 }
 
-/// Multipole damping radius (bohr): sci-form has 3.9 for Br, the GFN2 parameter file of dxtb 0.4.0 has 4.0 (`tests/parametri_gfn2.rs`).
+/// Multipole damping radius (bohr): sci-form has 3.9 for Br, the GFN2 parameter file of dxtb 0.4.0 has 4.0 (`tests/parameters_gfn2.rs`).
 fn mp_rad(z: u8, sci_form: f64) -> f64 {
     if z == 35 {
         4.0
