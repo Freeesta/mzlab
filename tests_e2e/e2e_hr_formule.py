@@ -93,10 +93,10 @@ try:
             pg.evaluate("e=>{const t=document.querySelector('#cx-els');t.value=e;t.dispatchEvent(new Event('input'))}", "C:0-13,H:0-25,N:0-4,O:0-3,S:0-1"); pg.fill("#cx-mz", "317.1639")
         step("the calculation answers within a second even with wide limits (the time is printed)", speed)
         def edit():
-            pg.fill(".cx-els input[data-f=max][data-i='0']", "5"); pg.wait_for_timeout(800)
+            pg.fill(".cx-els input[data-f=max][data-i='0']", "5"); pg.press(".cx-els input[data-f=max][data-i='0']", "Tab"); pg.wait_for_timeout(800)
             assert pg.input_value("#cx-els") if False else pg.evaluate("document.querySelector('#cx-els').value").startswith("C:0-5,"), "the table edits the text"
             pg.wait_for_function("document.querySelector('#cx-out').innerText.includes('Nessuna formula')", timeout=15000)
-            pg.fill(".cx-els input[data-f=max][data-i='0']", "13"); pg.wait_for_function("document.querySelector('#cx-out').innerText.replace(/\\s/g,'').includes('C13H25N4O3S')", timeout=15000)
+            pg.fill(".cx-els input[data-f=max][data-i='0']", "13"); pg.press(".cx-els input[data-f=max][data-i='0']", "Tab"); pg.wait_for_function("document.querySelector('#cx-out').innerText.replace(/\\s/g,'').includes('C13H25N4O3S')", timeout=15000)
         step("editing max in the table recalculates (no candidate, then back)", edit)
         def generate():
             pg.evaluate("BARRA.setTab('hdr',{noFocus:true,instant:true})"); pg.wait_for_timeout(300)

@@ -3,8 +3,8 @@
 // data-num, space-separated: «a:b» bounds, «>a» exclusive, «i» integer, «v» empty allowed, «<=ID» / «>=ID» against field #ID.
 (() => {
   /** @type {WeakMap<HTMLInputElement, string>} */
-  const last = new WeakMap(), ed = new WeakSet(), fed = new WeakSet();   // an edit under way (its value before the first key); one live handlers saw
-  /** text -> number | null (empty) | NaN (letters, «1,2.3», 1e999); one comma or point @param {unknown} t */
+  const last = new WeakMap(), fed = new WeakSet();   // the value before the first key of an edit; an edit live handlers saw
+  /** number | null (empty) | NaN (letters, «1,2.3», 1e999) @param {unknown} t */
   function num(t) {
     const s = String(t ?? "").trim().replace(/−/g, "-"), c = s.split(",").length - 1;
     if (s === "") return null;
@@ -27,14 +27,14 @@
   /** the refusal text, or "" @param {HTMLInputElement} x */
   function why(x) {
     const s = spec(x), v = num(x.value), T = I18N.t;
-    const ot = (/** @type {string} */ id) => { const e = /** @type {HTMLInputElement | null} */ (document.getElementById(id)); return e ? num(e.value) : null; };
+    const ot = (/** @type {string} */ id) => id ? num(/** @type {any} */ (document.getElementById(id))?.value) : null;
     if (x.validity.badInput || Number.isNaN(v)) return T("campo.num");
     if (v === null) return s.empty ? "" : T("campo.empty");
     if (s.int && !Number.isInteger(v)) return T("campo.int");
     if (s.gt != null && v <= s.gt) return T("campo.gt", { a: s.gt });
     if ((s.lo != null && v < s.lo) || (s.hi != null && v > s.hi))
       return s.lo != null && s.hi != null ? T("campo.range", { a: s.lo, b: s.hi }) : s.lo != null ? T("campo.min", { a: s.lo }) : T("campo.max", { b: s.hi });
-    const le = s.le ? ot(s.le) : null, ge = s.ge ? ot(s.ge) : null;
+    const le = ot(s.le), ge = ot(s.ge);
     return (le != null && v > le) || (ge != null && v < ge) ? T("campo.order") : "";
   }
   /** under the panel header (in its popover), else after the label; set after a clear so it is read again @param {string} msg @param {HTMLElement} x */
@@ -59,15 +59,14 @@
   function refuse(x, msg) {
     x.value = last.get(x) ?? x.defaultValue; x.setAttribute("aria-invalid", "true");
     if (fed.has(x)) x.dispatchEvent(new Event("input", { bubbles: true }));   // live views follow the value that is back
-    ed.delete(x); fed.delete(x);
-    note(msg, x);
+    last.delete(x); fed.delete(x); note(msg, x);
   }
   const on = (/** @type {string} */ k, /** @type {(e: any, x: HTMLInputElement) => void} */ f) => document.addEventListener(k, e => { const x = field(e.target); if (x) f(e, x); }, true);
-  on("focusin", (e, x) => { if (x.type !== "number") { x.inputMode ||= "decimal"; x.autocomplete = "off"; } ed.delete(x); if (!last.has(x)) last.set(x, x.value); });
-  on("beforeinput", (e, x) => { if (!ed.has(x)) { ed.add(x); last.set(x, x.value); } });
+  on("focusin", (e, x) => { if (x.type !== "number") { x.inputMode ||= "decimal"; x.autocomplete = "off"; } last.delete(x); });
+  on("beforeinput", (e, x) => { if (!last.has(x)) last.set(x, x.value); });
   on("input", (e, x) => { if (!e.isTrusted) return; if (why(x)) e.stopImmediatePropagation(); else fed.add(x); });
-  on("change", (e, x) => { const m = why(x); if (!m) { ed.delete(x); fed.delete(x); last.set(x, x.value); x.removeAttribute("aria-invalid"); } else { e.stopImmediatePropagation(); refuse(x, m); } });
-  // Enter in a form submits without a change: a refused field stops it
+  on("change", (e, x) => { const m = why(x); if (!m) { last.delete(x); fed.delete(x); x.removeAttribute("aria-invalid"); } else { e.stopImmediatePropagation(); refuse(x, m); } });
+  // Enter submits a form without a change
   document.addEventListener("submit", e => {
     const x = [.../** @type {HTMLFormElement} */ (e.target).querySelectorAll("input")].map(field).find(i => i && why(i));
     if (x) { e.preventDefault(); e.stopImmediatePropagation(); refuse(x, why(x)); x.focus(); }
