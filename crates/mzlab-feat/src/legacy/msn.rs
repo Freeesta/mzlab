@@ -112,9 +112,8 @@ fn argmax(v: &[f64], idx: &[usize]) -> usize {
 }
 
 /// `node_key` of a path of the tree (`mzlab_core::msnalbero`): nominal m/z, activation, collision energy (as bits, to be hashed).
-fn key_of(chiave: &[(f64, String, f64)]) -> Key {
-    chiave
-        .iter()
+fn key_of(key: &[(f64, String, f64)]) -> Key {
+    key.iter()
         .map(|(mz, act, ce)| (mz.round_ties_even() as i64, act.clone(), ce.to_bits()))
         .collect()
 }

@@ -12,7 +12,7 @@ pub const VERSION: u32 = 1;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hypothesis {
     /// Indices of the bonds cut (empty = the whole molecule).
-    pub legami: Vec<usize>,
+    pub bonds: Vec<usize>,
     /// Heavy atoms of the piece (0-based, as in the SMILES), ascending.
     pub piece: Vec<usize>,
     /// Neutral formula of the piece with the hydrogens of the cuts and of the transfer.
@@ -52,7 +52,7 @@ pub struct Breaks {
     pub smiles: String,
     pub ppm: f64,
     pub h_max: u8,
-    pub max_legami: u8,
+    pub max_bonds: u8,
     pub atoms: usize,
     pub legami: usize,
     pub warnings: Vec<&'static str>,
@@ -98,7 +98,7 @@ pub fn breaks_json(r: &Breaks) -> String {
         .raw(",\"h_max\":")
         .int(r.h_max as i64)
         .raw(",\"max_legami\":")
-        .int(r.max_legami as i64)
+        .int(r.max_bonds as i64)
         .raw(",\"atomi\":")
         .int(r.atoms as i64)
         .raw(",\"legami\":")
@@ -123,7 +123,7 @@ pub fn breaks_json(r: &Breaks) -> String {
             .raw(",\"ipotesi\":[");
         for (k, h) in n.ipotesi.iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" }).raw("{\"legami\":");
-            list(&mut o, &h.legami);
+            list(&mut o, &h.bonds);
             o.raw(",\"pezzo\":");
             list(&mut o, &h.piece);
             o.raw(",\"formula\":")

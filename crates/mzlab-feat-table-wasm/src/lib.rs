@@ -130,7 +130,7 @@ pub fn rete_build(
     ppm: f64,
     min_fragments: u32,
 ) -> std::result::Result<String, JsValue> {
-    let params = mzlab_feat::rete::ReteParams {
+    let params = mzlab_feat::rete::NetworkParams {
         ppm,
         min_fragments: min_fragments as usize,
     };

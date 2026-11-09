@@ -9,7 +9,7 @@ use mzlab_feat::interp::ms2link::{Isomers, Pooled};
 use mzlab_feat::interp::RowInterp;
 use mzlab_feat::legacy::ms2::Consensus;
 use mzlab_feat::legacy::series::Parent;
-use mzlab_feat::rete::{build, rows_from_interp, ReteParams};
+use mzlab_feat::rete::{build, rows_from_interp, NetworkParams};
 use mzlab_feat::table::Aligned;
 use mzlab_feat::tp::{TpBlock, KIN_PROBABLE, ST_PARENT, ST_TP};
 
@@ -112,7 +112,7 @@ fn the_rows_and_the_arcs_come_from_the_interpretation() {
     );
 
     let rules = Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp_2.json")).unwrap();
-    let r = build(&tp, &p, &v, &rules, &ReteParams::default());
+    let r = build(&tp, &p, &v, &rules, &NetworkParams::default());
     let arcs: Vec<_> = r
         .arcs
         .iter()

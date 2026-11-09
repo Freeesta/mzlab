@@ -439,7 +439,7 @@ fn columns_in_any_order_give_the_same_bytes() {
 /// 2 000 rows x 60 files (6 conditions of 10 files): by hand with `cargo test --release -- --ignored gruppi_speed`.
 #[test]
 #[ignore]
-fn gruppi_speed() {
+fn groups_speed() {
     let mut v = vec![
         file("t0.mzML", "t0", "", Some(0.0), 1),
         file("blank.mzML", "blank", "", None, 2),

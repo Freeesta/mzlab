@@ -65,7 +65,7 @@ fn study_and_extra_cases_give_the_same_graph() {
 }
 
 #[test]
-fn composti_give_the_same_graph() {
+fn compounds_give_the_same_graph() {
     let text = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../TP_Mine/data/composti.csv"

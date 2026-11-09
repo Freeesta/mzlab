@@ -112,7 +112,7 @@ pub(super) fn proofs(p: &Proposal, alts: &[Alt], rt: Option<bool>) -> Vec<Option
         .as_ref()
         .and_then(|r| r.ms1.as_ref())
         .and_then(|m| m.iso_ok);
-    let pur = e
+    let purity = e
         .purity
         .as_ref()
         .and_then(|u| u.purity.map(|v| (v, u.badge.clone())));
@@ -132,7 +132,7 @@ pub(super) fn proofs(p: &Proposal, alts: &[Alt], rt: Option<bool>) -> Vec<Option
                 if ok { "consistent" } else { "not consistent" }
             )
         }),
-        pur.map(|(v, b)| format!("isolation purity {v:.2} ({b})")),
+        purity.map(|(v, b)| format!("isolation purity {v:.2} ({b})")),
         rt.map(|ok| {
             format!(
                 "RT versus logP: {}",

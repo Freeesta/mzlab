@@ -1,5 +1,5 @@
 //! `tp.link`, `tp.position`, `tp.network` and `tp.review`: the MS2 of a product row, the place of its modification and the network of the products. The parameters
-//! are the constants of `interp::ms2link`, `interp::sito` and `rete::ReteParams`, compared with the code in `tests/steps_tabui_parity.rs` (feature `interp`).
+//! are the constants of `interp::ms2link`, `interp::sito` and `rete::NetworkParams`, compared with the code in `tests/steps_tabui_parity.rs` (feature `interp`).
 
 use mzlab_core::step::{
     Algorithm, Applicability, DataType, Facets, Param, Port, Reference, Status, Step,

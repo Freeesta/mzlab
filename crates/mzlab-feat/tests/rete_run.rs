@@ -6,7 +6,7 @@ use mzlab_core::campioni::{proponi, to_json};
 use mzlab_core::json::parse;
 use mzlab_feat::interp::store::append;
 use mzlab_feat::recipe::Recipe;
-use mzlab_feat::rete::{network_text, ReteParams};
+use mzlab_feat::rete::{network_text, NetworkParams};
 use mzlab_feat::store::{write_table, Origin, Slice};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
 use mzlab_feat::tp::{TpBlock, KIN_PROBABLE, ST_PARENT, ST_TP};
@@ -94,14 +94,14 @@ fn with_interp(bytes: &[u8]) -> Vec<u8> {
     out
 }
 
-fn run(file: &[u8], campioni: &str) -> mzlab_core::error::Result<String> {
+fn run(file: &[u8], samples: &str) -> mzlab_core::error::Result<String> {
     let n = file.len() as u64;
     network_text(
         (&mut Slice(file), n),
         (&mut Slice(file), n),
-        campioni,
+        samples,
         &rules(),
-        &ReteParams::default(),
+        &NetworkParams::default(),
     )
 }
 
@@ -147,7 +147,7 @@ fn the_table_and_the_interpretation_can_be_two_files() {
         (&mut Slice(&full), m),
         &samples(),
         &rules(),
-        &ReteParams::default(),
+        &NetworkParams::default(),
     )
     .unwrap();
     assert_eq!(two, run(&full, &samples()).unwrap());

@@ -126,7 +126,7 @@ struct RefIn {
     lib: Option<Ref>,
     sc: Option<(f64, f64, usize, usize, usize)>,
     tools: Vec<ToolHit>,
-    usi_id: Option<String>,
+    uses_id: Option<String>,
 }
 
 #[derive(Clone)]
@@ -278,7 +278,7 @@ fn library_refs<R: RawSource, S: Structures>(
             lib: Some(r),
             sc: Some((c.cos_vis, c.cos, 0, 0, 0)),
             tools: vec![],
-            usi_id: None,
+            uses_id: None,
         });
     }
     refs.sortc_by(|a, b| {
@@ -314,7 +314,7 @@ fn library_refs<R: RawSource, S: Structures>(
                 lib: Some(r),
                 sc: None,
                 tools: vec![],
-                usi_id: None,
+                uses_id: None,
             },
         ));
     }
@@ -352,7 +352,7 @@ fn add_tool_refs(lib: &LibraryIndex, refs: &mut Vec<RefIn>, hits: Vec<ToolHit>) 
             lib: found,
             sc: None,
             tools: vec![h.clone()],
-            usi_id: rid,
+            uses_id: rid,
         };
         if let Some(r) = found {
             by_entry.insert(lib.record(r).entry.clone(), refs.len());
@@ -425,7 +425,7 @@ fn finish_refs<R: RawSource, S: Structures>(
                 .as_ref()
                 .map(|m| m.entry.clone())
                 .filter(|e| !e.is_empty())
-                .or(c.usi_id.clone()),
+                .or(c.uses_id.clone()),
             name: meta
                 .as_ref()
                 .map(|m| m.name.clone())

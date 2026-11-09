@@ -26,15 +26,15 @@ pub const PPM: f64 = 10.0;
 
 /// Thresholds of the network; the values are recorded in the output.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ReteParams {
+pub struct NetworkParams {
     pub ppm: f64,
     /// An arc with MS2 evidence is kept when the product shares at least this many fragments with the parent (equal or shifted); 0 keeps all.
     pub min_fragments: usize,
 }
 
-impl Default for ReteParams {
+impl Default for NetworkParams {
     fn default() -> Self {
-        ReteParams {
+        NetworkParams {
             ppm: PPM,
             min_fragments: 0,
         }
@@ -44,7 +44,7 @@ impl Default for ReteParams {
 /// A row of the table as the network reads it: the formula of its ion from the best hypothesis (`interp/1`) and the fragments of its MS2 against the
 /// parent's. `row` is the index in the table (and in the arrays of `tp/1`), `id` the id of the row.
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct ReteRow {
+pub struct NetworkRow {
     pub row: usize,
     pub id: u32,
     pub mz: f64,
@@ -62,7 +62,7 @@ pub struct ReteRow {
 /// A node of the network. `step` 0 is the parent; `pos` is the place in its column (by m/z, then RT, then id).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node {
-    pub row: ReteRow,
+    pub row: NetworkRow,
     pub kinship: u8,
     pub step: u32,
     pub pos: u32,
@@ -96,15 +96,15 @@ pub struct Ms2Share {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Rete {
-    pub params: ReteParams,
+pub struct Network {
+    pub params: NetworkParams,
     /// Id of the row of the parent.
     pub parent: u32,
     pub nodes: Vec<Node>,
     pub arcs: Vec<Arc>,
 }
 
-impl Rete {
+impl Network {
     /// Columns of the layout: the largest step plus one.
     pub fn columns(&self) -> u32 {
         self.nodes.iter().map(|n| n.step + 1).max().unwrap_or(0)
@@ -115,12 +115,12 @@ impl Rete {
 /// `rows`. Without rules or without arcs the network has the parent alone.
 pub fn build(
     tp: &TpBlock,
-    parent: &ReteRow,
-    rows: &[ReteRow],
+    parent: &NetworkRow,
+    rows: &[NetworkRow],
     rules: &Rules,
-    params: &ReteParams,
-) -> Rete {
-    let mut prods: Vec<&ReteRow> = rows
+    params: &NetworkParams,
+) -> Network {
+    let mut prods: Vec<&NetworkRow> = rows
         .iter()
         .filter(|r| {
             r.row != parent.row && !r.ion_formula.is_empty() && tp.status.get(r.row) == Some(&ST_TP)
@@ -131,7 +131,7 @@ pub fn build(
             .then(a.rt.total_cmp(&b.rt))
             .then(a.id.cmp(&b.id))
     });
-    let all: Vec<&ReteRow> = std::iter::once(parent).chain(prods).collect();
+    let all: Vec<&NetworkRow> = std::iter::once(parent).chain(prods).collect();
     let forms: Vec<_> = all.iter().map(|r| counts(&r.ion_formula)).collect();
     let tmax: Vec<Option<f64>> = std::iter::once(Some(0.0))
         .chain(all[1..].iter().map(|r| r.tmax))
@@ -146,7 +146,7 @@ pub fn build(
     let nodes = layout::nodes(&all, &kept, tp);
     let mut arcs: Vec<Arc> = found.into_iter().map(|f| f.2).collect();
     arcs.sortc_by_key(|a| (a.from, a.to));
-    Rete {
+    Network {
         params: params.clone(),
         parent: parent.id,
         nodes,
@@ -155,11 +155,11 @@ pub fn build(
 }
 
 fn arc_of(
-    all: &[&ReteRow],
+    all: &[&NetworkRow],
     forms: &[crate::hypo::Counts],
     rules: &Rules,
     p: &arcs::Pair,
-    params: &ReteParams,
+    params: &NetworkParams,
 ) -> Option<Arc> {
     let (a, b) = (all[p.from], all[p.to]);
     let rule = &rules.rules[p.rule];

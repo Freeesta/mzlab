@@ -164,9 +164,9 @@ fn max_height(ix: &mut [Index<File>], i: &Ion) -> f64 {
 }
 
 fn report_decoys(ions: &[Ion], res: &TargetResult, reg: &Registry) {
-    let esche: Vec<&Ion> = ions.iter().filter(|i| i.role == "esca").collect();
+    let decoys: Vec<&Ion> = ions.iter().filter(|i| i.role == "esca").collect();
     let mut rows = Vec::new();
-    for e in &esche {
+    for e in &decoys {
         for r in hit_rows(res, e) {
             if reg.hyps[res.rows[r].hyp as usize]
                 .label
@@ -180,7 +180,7 @@ fn report_decoys(ions: &[Ion], res: &TargetResult, reg: &Registry) {
         .iter()
         .filter(|&&r| res.rows[r].n_targeted > 0 && res.rows[r].ms2_total > 0)
         .count();
-    println!("decoys (invented rules): {}; with a targeted row {} ({:.1} %); with a targeted row and MS2 {with_ms2} ({:.1} %)", esche.len(), rows.len(), pct(rows.len(), esche.len()), pct(with_ms2, esche.len()));
+    println!("decoys (invented rules): {}; with a targeted row {} ({:.1} %); with a targeted row and MS2 {with_ms2} ({:.1} %)", decoys.len(), rows.len(), pct(rows.len(), decoys.len()), pct(with_ms2, decoys.len()));
     let known = |row: &mzlab_feat::target::TargetRow| {
         ions.iter()
             .any(|i| i.role != "esca" && near(row.mz, row.rt, i))
@@ -207,9 +207,9 @@ fn report_cap(res: &TargetResult) {
     println!("rows capped at level 4: {capped} of {}; chance of coincidence (rows with a targeted cell) median {:.3}", res.rows.len(), p.get(p.len() / 2).copied().unwrap_or(f64::NAN));
 }
 
-fn build_imports(ions: &[Ion], esche: bool, oracle: bool, extra: Option<String>) -> Vec<Imported> {
+fn build_imports(ions: &[Ion], decoys: bool, oracle: bool, extra: Option<String>) -> Vec<Imported> {
     let mut imp = Vec::new();
-    if esche {
+    if decoys {
         imp.extend(imported(ions, &["esca"], "esche"));
     }
     if oracle {

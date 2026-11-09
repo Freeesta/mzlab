@@ -257,9 +257,9 @@ fn texts() -> SourceTexts {
 #[test]
 fn source_tables_match_attributio() {
     let (g, t) = (golden(), texts());
-    let fonti = &g["fonti"];
+    let sources = &g["fonti"];
     let hits = sirius_hits(&t);
-    let w = fonti["sirius_hits"].as_array().unwrap();
+    let w = sources["sirius_hits"].as_array().unwrap();
     assert_eq!(hits.len(), w.len());
     for (h, w) in hits.iter().zip(w) {
         assert_eq!(
@@ -278,7 +278,7 @@ fn source_tables_match_attributio() {
         assert_eq!(h.ik1.as_deref(), w["ik1"].as_str());
     }
     let forms = sirius_formulas(&t);
-    let w = fonti["sirius_formulas"].as_array().unwrap();
+    let w = sources["sirius_formulas"].as_array().unwrap();
     assert_eq!(forms.len(), w.len());
     for (((pol, id), items), w) in forms.iter().zip(w) {
         assert_eq!(
@@ -301,7 +301,7 @@ fn source_tables_match_attributio() {
         }
     }
     let csi = csi_top5(&t);
-    let w = fonti["csi_top5"].as_array().unwrap();
+    let w = sources["csi_top5"].as_array().unwrap();
     assert_eq!(csi.len(), w.len());
     for (((pol, id), items), w) in csi.iter().zip(w) {
         assert_eq!(
@@ -327,9 +327,9 @@ fn source_tables_match_attributio() {
 #[test]
 fn network_and_gnps_tables_match_attributio() {
     let (g, t) = (golden(), texts());
-    let fonti = &g["fonti"];
+    let sources = &g["fonti"];
     let edges = network_edges(&t);
-    let w = fonti["network_edges"].as_array().unwrap();
+    let w = sources["network_edges"].as_array().unwrap();
     assert_eq!(edges.len(), w.len());
     for (e, w) in edges.iter().zip(w) {
         assert_eq!(
@@ -340,7 +340,7 @@ fn network_and_gnps_tables_match_attributio() {
         assert_eq!(e.component, w["component"].as_f64());
     }
     let gh = gnps_hits(&t);
-    let w = fonti["gnps_hits"].as_array().unwrap();
+    let w = sources["gnps_hits"].as_array().unwrap();
     assert_eq!(gh.len(), w.len());
     for (h, w) in gh.iter().zip(w) {
         assert_eq!(

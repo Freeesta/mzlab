@@ -5,7 +5,7 @@ use crate::flow::{read_one, write_made, FileRunner};
 use mzlab_core::error::Result;
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
-use mzlab_feat::rete::{network_text, ReteParams};
+use mzlab_feat::rete::{network_text, NetworkParams};
 use mzlab_feat::store::Slice;
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
@@ -17,8 +17,8 @@ fn param(job: &Job, name: &str) -> Option<f64> {
 
 /// `rete/1` text from the `tp` and `table` files and the optional `campioni/2` of the series.
 pub fn network_json(job: &Job, tp: &[u8], table: &[u8], samples: Option<&[u8]>) -> Result<String> {
-    let d = ReteParams::default();
-    let params = ReteParams {
+    let d = NetworkParams::default();
+    let params = NetworkParams {
         ppm: param(job, "ppm").unwrap_or(d.ppm),
         min_fragments: param(job, "min_fragments").map_or(d.min_fragments, |v| v as usize),
     };

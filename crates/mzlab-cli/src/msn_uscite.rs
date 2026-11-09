@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
 
-use mzlab_feat::msnfigura::Vista;
+use mzlab_feat::msnfigura::View;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Format {
@@ -49,7 +49,7 @@ pub fn formats(list: &str) -> std::result::Result<Vec<Format>, String> {
 }
 
 /// The bytes of the figure of `graph` in the format `f`.
-pub fn bytes(graph: &str, f: Format, view: Vista) -> Result<Vec<u8>> {
+pub fn bytes(graph: &str, f: Format, view: View) -> Result<Vec<u8>> {
     match f {
         Format::Svg => Ok(mzlab_feat::msnfigura::svg(graph, view)?.into_bytes()),
         Format::Html => Ok(mzlab_feat::msnfigura::html::html(graph, view)?.into_bytes()),
@@ -58,7 +58,7 @@ pub fn bytes(graph: &str, f: Format, view: Vista) -> Result<Vec<u8>> {
 }
 
 /// Writes the figures next to `stem` (`stem.svg`, `stem.html`, `stem.png`); returns the files.
-pub fn scrivi(graph: &str, fs: &[Format], view: Vista, stem: &Path) -> Result<Vec<PathBuf>> {
+pub fn scrivi(graph: &str, fs: &[Format], view: View, stem: &Path) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
     for &f in fs {
         let p = PathBuf::from(format!("{}.{}", stem.display(), f.extension()));
@@ -84,14 +84,14 @@ pub fn canonical(aliases: &[(&str, &str)], x: String) -> String {
 /// without its extension. Returns the message for the standard output.
 pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<String, String> {
     let (mut file, mut out, mut fs, mut view) =
-        (None, None, vec![Format::Svg, Format::Html], Vista::Albero);
+        (None, None, vec![Format::Svg, Format::Html], View::Albero);
     while let Some(x) = a.next() {
         let x = canonical(ALIASES, x);
         match x.as_str() {
             "--out" => out = a.next().map(PathBuf::from),
             "--figure" => fs = formats(&a.next().unwrap_or_default())?,
             "--view" => {
-                view = Vista::da_nome(&a.next().unwrap_or_default())
+                view = View::da_nome(&a.next().unwrap_or_default())
                     .ok_or("--view needs tree or radial")?
             }
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),

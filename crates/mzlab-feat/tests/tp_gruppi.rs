@@ -111,7 +111,7 @@ fn texts<'a>(v: &'a Value, key: &str) -> Vec<&'a str> {
 }
 
 #[test]
-fn six_conditions_give_gruppi_with_the_formulas_and_the_presence_of_the_truth() {
+fn six_conditions_give_groups_with_the_formulas_and_the_presence_of_the_truth() {
     let (t, cs) = endpoint();
     let s = samples_of(&cs);
     let out = table_json_cond(&t, &s, Some(&[0, 1, 2, 3]), Some((&cs, &infos()))).unwrap();

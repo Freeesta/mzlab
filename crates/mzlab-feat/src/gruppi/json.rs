@@ -391,7 +391,7 @@ pub fn opts_from_value(v: &Value) -> Result<GroupOpts> {
 }
 
 /// A parsed `campioni/2` document as the list of samples.
-pub fn campioni_from_value(v: &Value) -> Result<Vec<Sample>> {
+pub fn samples_from_value(v: &Value) -> Result<Vec<Sample>> {
     let mut text = Out::default();
     dump(&mut text, v);
     campioni::from_json(text.0.as_bytes())

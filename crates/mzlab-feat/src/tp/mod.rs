@@ -154,19 +154,19 @@ impl TpRoles {
     }
 
     /// The roles of the files from a `campioni/2` document (`error.badCampioni` when it is not one).
-    pub fn from_json(campioni: &str) -> Result<TpRoles> {
-        Ok(TpRoles::of(&mzlab_core::campioni::from_json(campioni.as_bytes())?))
+    pub fn from_json(samples: &str) -> Result<TpRoles> {
+        Ok(TpRoles::of(&mzlab_core::campioni::from_json(samples.as_bytes())?))
     }
 
     /// `from_json` with the files put in the order of the files of the `.mzfeat` `table`, by name (`campioni::order_like`).
-    pub fn for_table(campioni: &str, table: &[u8]) -> Result<TpRoles> {
+    pub fn for_table(samples: &str, table: &[u8]) -> Result<TpRoles> {
         let names = crate::store::table_names(&mut crate::store::Slice(table), table.len() as u64)?;
-        TpRoles::from_json(&mzlab_core::campioni::order_like(campioni, &names)?)
+        TpRoles::from_json(&mzlab_core::campioni::order_like(samples, &names)?)
     }
 
     /// `for_table` on a `.mzfeat` read by offsets; None or an empty text is no roles.
-    pub fn opt_for_table<R: mzlab_core::idxread::ReadAt>(campioni: Option<&str>, table: &mut R, size: u64) -> Result<Option<TpRoles>> {
-        let Some(c) = campioni.filter(|c| !c.is_empty()) else {
+    pub fn opt_for_table<R: mzlab_core::idxread::ReadAt>(samples: Option<&str>, table: &mut R, size: u64) -> Result<Option<TpRoles>> {
+        let Some(c) = samples.filter(|c| !c.is_empty()) else {
             return Ok(None);
         };
         let names = crate::store::table_names(table, size)?;

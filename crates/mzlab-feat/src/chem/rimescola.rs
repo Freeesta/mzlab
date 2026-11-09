@@ -15,7 +15,7 @@ impl Seme {
         z ^ (z >> 31)
     }
 
-    fn sotto(&mut self, n: usize) -> usize {
+    fn below(&mut self, n: usize) -> usize {
         (self.prossimo() % n as u64) as usize
     }
 }
@@ -29,9 +29,9 @@ impl Mol {
         let n = bonds.len();
         if n >= 2 {
             for _ in 0..(10 * n) {
-                let (i, j) = (s.sotto(n), s.sotto(n));
-                let capovolto = s.sotto(2) == 1;
-                scambia(&mut bonds, i, j, capovolto);
+                let (i, j) = (s.below(n), s.below(n));
+                let capovolto = s.below(2) == 1;
+                swap(&mut bonds, i, j, capovolto);
             }
         }
         let mut adj = vec![Vec::new(); self.atoms.len()];
@@ -48,7 +48,7 @@ impl Mol {
 }
 
 /// One swap of the ends of bonds `i` and `j`, only when it makes no loop and no second bond between two atoms.
-fn scambia(bonds: &mut [Bond], i: usize, j: usize, capovolto: bool) {
+fn swap(bonds: &mut [Bond], i: usize, j: usize, capovolto: bool) {
     if i == j || bonds[i].order != bonds[j].order {
         return;
     }
@@ -58,12 +58,12 @@ fn scambia(bonds: &mut [Bond], i: usize, j: usize, capovolto: bool) {
     } else {
         (bonds[j].a, bonds[j].b)
     };
-    let esiste = |x: usize, y: usize| {
+    let exists = |x: usize, y: usize| {
         bonds
             .iter()
             .any(|k| (k.a == x && k.b == y) || (k.a == y && k.b == x))
     };
-    if a == d || c == b || esiste(a, d) || esiste(c, b) {
+    if a == d || c == b || exists(a, d) || exists(c, b) {
         return;
     }
     bonds[i].b = d;

@@ -284,7 +284,7 @@ fn publication_matches_the_reference() {
     same(&only(&got), &want, "readme");
 }
 
-fn banco_files_with(decisions: &str) -> mzlab_feat::attributio::io::MemFiles {
+fn bench_files_with(decisions: &str) -> mzlab_feat::attributio::io::MemFiles {
     let mut files = fixture("campagna_sintetica").files;
     let base = root().join("tests/data/attributio/campagna_banco");
     walk(&base, &base, &mut files);
@@ -298,7 +298,7 @@ fn banco_files_with(decisions: &str) -> mzlab_feat::attributio::io::MemFiles {
 const HEAD: &str = "pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification;group;evidence_type;evidence_library;evidence_entry;evidence_cosine;evidence_matched;evidence_delta_mz;evidence_delta_formula;evidence_note\n";
 
 fn evidence_files(rows: &str) -> Vec<(String, String)> {
-    let files = banco_files_with(&format!("{HEAD}{rows}"));
+    let files = bench_files_with(&format!("{HEAD}{rows}"));
     let read = |p: &str| files.read(p);
     let list = |d: &str| files.list(d);
     let io = Io::new(&read, &list);
@@ -317,7 +317,7 @@ fn the_settings_digest_is_the_reference_one() {
 fn the_decided_features_are_those_whose_last_level_is_2b_or_2() {
     let rows = "POS;15;152.0706;3.10;3;;;2026-09-01;t;first\nPOS;15;152.0706;3.10;2;Paracetamol;;2026-09-02;t;second\nPOS;15;152.0706;3.10;;;;2026-09-03;t;note only\n";
     let d = load_feature_decisions(Some(&format!("{HEAD}{rows}")), "d.csv").expect("table");
-    let files = banco_files_with(HEAD);
+    let files = bench_files_with(HEAD);
     let read = |p: &str| files.read(p);
     let list = |dir: &str| files.list(dir);
     let io = Io::new(&read, &list);

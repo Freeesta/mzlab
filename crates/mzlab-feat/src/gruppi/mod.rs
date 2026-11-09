@@ -10,7 +10,7 @@ mod json;
 mod presenza;
 mod prev;
 
-pub use json::{campioni_from_value, gruppi_json, opts_from_value, parse_input, run_json, to_json};
+pub use json::{gruppi_json, opts_from_value, parse_input, run_json, samples_from_value, to_json};
 
 use crate::sortc::SortC;
 use mzlab_core::campioni::Sample;

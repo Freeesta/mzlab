@@ -282,12 +282,12 @@ fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String>
                     .ok_or_else(|| Error::new("err.request.badNumber").with("name", k)),
             }
         };
-        let par = mzlab_feat::chem::rotture::Parametri {
+        let par = mzlab_feat::chem::rotture::Params {
             ppm: num("ppm_struttura", STRUCTURE_PPM)?,
             h_max: num("h_max", 2.0)?.min(4.0) as u8,
-            max_legami: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
+            max_bonds: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
         };
-        j = mzlab_feat::chem::rotture::rotture_testo(g, &j, o.smiles.as_deref(), par)?;
+        j = mzlab_feat::chem::rotture::breaks_text(g, &j, o.smiles.as_deref(), par)?;
     }
     Ok(j)
 }

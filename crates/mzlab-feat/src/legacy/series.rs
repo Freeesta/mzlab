@@ -22,7 +22,7 @@ pub struct FileIn {
     /// The experimental condition (`serie` of `campioni/2`); empty = shared by all (a control of every condition, or the only condition).
     pub cond: String,
     /// The replicate of the file within its condition and time, when the page gave it.
-    pub replica: Option<u32>,
+    pub replicate: Option<u32>,
     /// 1-based position of the injection when `campioni/2` gave it, 0 when unknown.
     pub order: u32,
 }
@@ -62,7 +62,7 @@ pub fn lc_files(files_json: &str) -> Res<Vec<FileIn>> {
             time,
             t: f64::NAN,
             cond: String::new(),
-            replica: None,
+            replicate: None,
             order: 0,
         };
         x.t = match time {
