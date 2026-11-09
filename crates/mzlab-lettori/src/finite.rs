@@ -152,7 +152,7 @@ impl Reader for Finished {
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         self.inner.not_carried()
     }
-    #[rustfmt::skip] fn unindexed(&self) -> (usize, usize) { self.inner.unindexed() }
+    #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { self.inner.unindexed() }
     fn missing(&mut self, c: usize) -> usize {
         self.inner.missing(c)
     }

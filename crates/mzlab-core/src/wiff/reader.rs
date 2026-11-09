@@ -364,7 +364,14 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         });
         parti.push(part);
     }
-    let unindexed = add_unindexed(&mut parti, &mut campioni, &mut raw_names, (&mut scan, scan_len, membro), (&ole, limits, only), &mut total)?;
+    let unindexed = add_unindexed(
+        &mut parti,
+        &mut campioni,
+        &mut raw_names,
+        (&mut scan, scan_len, membro),
+        (&ole, limits, only),
+        &mut total,
+    )?;
     for (c, n) in campioni
         .iter_mut()
         .zip(super::names::display_names(&name, &raw_names))
@@ -407,7 +414,12 @@ fn add_unindexed(
             build(&mut part, scan, scan_len, membro)?;
         }
         raw_names.push((s, None));
-        campioni.push(Sample { id: s, nome: String::new(), scansioni: part.scans.len(), size: None });
+        campioni.push(Sample {
+            id: s,
+            nome: String::new(),
+            scansioni: part.scans.len(),
+            size: None,
+        });
         parti.push(part);
     }
     Ok(counts)
