@@ -99,7 +99,7 @@
   const tableMatch = async (x, spec, inst) => {
     const j = J().job(spec), p = await kit().getPool(), library = await textOf(x, p, inst, "library");
     const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null })), up = al ? x.upstream(al) : [];
+    const al = isTable ? x.alignOf(up0) : null, alKey = isTable ? x.tableKey(up0) : null, up = al ? x.upstream(al) : [];
     const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
     if (!library || !alKey || !samples || !F.refs(inst, "index").length || !up.length || !await J().has(p, J().DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     const key = await J().sha(spec.key + "\n" + await J().sha(library.text)), hit = await J().recall(p, key);

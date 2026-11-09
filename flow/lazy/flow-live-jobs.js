@@ -98,11 +98,13 @@
   /** the refusal of the budget with the numbers of the phase, as the pipeline reports it @param {any} est @param {number} budget @param {string} [fase] */
   const refusal = (est, budget, fase = "align") => Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: { fase, stima_mb: est.mb, budget_mb: budget, libero_mb: budget } });
 
-  /** features.align, and features.gapfill when the table of the alignment was made with another recipe (the pool aligns and fills the gaps in one call): the estimate first; past the budget
+  /** features.align and features.gapfill, each into its own table (the pool aligns and fills the gaps in one call): the estimate first; past the budget
    * the job is blocked by `permission.memory` until the user agrees (flow-live.js asks on Run), past the high level it is refused with its numbers @param {any} x @param {any} spec @param {any} inst */
   const align = async (x, spec, inst) => {
-    const k = kit(), p = await k.getPool(), j = job(spec), recipe = await k.recipeOf(x.plan, x.registry, inst);
-    const al = x.alignOf(inst), alKey = al === inst ? spec.key : x.keys.get(x.jk({ instance: al.id, item: null }));
+    const k = kit(), p = await k.getPool(), j = job(spec), al = x.alignOf(inst);
+    // every table step keeps its own table; an alignment only gap fillings read makes the table of the first of them, which then finds it ready
+    const filled = x.onlyFilled(inst), into = filled ? x.fillers(inst)[0] : inst, recipe = await k.recipeOf(x.plan, x.registry, inst, filled);
+    const alKey = into === inst ? spec.key : x.keys.get(x.jk({ instance: into.id, item: null }));
     if (!alKey) { await fail(x, spec, inst, Object.assign(new Error("err.flow.lineage"), { key: "err.flow.lineage", params: { step: inst.step } })); return {}; }
     if (await fresh(p, alKey, recipe)) { await x.call("cached", { job: j }); return {}; }
     const up = x.upstream(al);
@@ -228,7 +230,7 @@
   const tpDig = async (x, spec, inst) => {
     const j = job(spec), k = kit(), p = await k.getPool(), key = await sha(spec.key), hit = await recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
-    const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
+    const t = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst, al = x.alignOf(t), alKey = x.tableKey(t), up = x.upstream(al);
     /** @type {any} */ let inp = null;
     try { inp = F.webTp ? await F.webTp.digInputs(x.S, inst) : null; } catch (e) { await x.call("started", { job: j }); await fail(x, spec, inst, e); return {}; }
     if (!inp || !alKey || !up.length || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
@@ -236,7 +238,7 @@
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
       const table = await p.fs.read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(async u => p.fs.read(DIR + u.key + ".mzfeatf")));
-      const text = await p.digLr({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, samples: inp.samples, names: x.items.map((/** @type {any} */ i) => i.input), recipe: await k.recipeOf(x.plan, x.registry, al), settings: JSON.stringify(inst.params || {}), peaks, paths: up.map(u => u.path) });
+      const text = await p.digLr({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, samples: inp.samples, names: x.items.map((/** @type {any} */ i) => i.input), recipe: await k.recipeOf(x.plan, x.registry, t, false), settings: JSON.stringify(inst.params || {}), peaks, paths: up.map(u => u.path) });
       const r = { name: inst.id + ".dig.json", text };
       await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
@@ -250,7 +252,7 @@
     let up0 = x.inst(String(F.refs(inst, port)[0] || "").split(".")[0]), view = "";
     if (up0 && base(up0) === "table.filter") { const f = x.files.get(up0.id); if (!f) return null; view = f.text; up0 = x.inst(String(F.refs(up0, "table")[0] || "").split(".")[0]); }
     const isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    const alKey = isTable ? x.tableKey(up0) : null;
     if (!alKey || !await has(p, DIR + alKey + ".mzfeat")) return null;
     const read = async () => { const t = await p.fs.read(DIR + alKey + ".mzfeat"); return view ? (await p.ident("table", "flow_table_of_view", { table: t, view }, true)).bytes : t; };
     return { key: view ? alKey + "\n" + await sha(view) : alKey, read };
@@ -266,7 +268,7 @@
     // a `table.filter` view: the rows it keeps are exported (its text names the rules and the table it was made from)
     if (up0 && base(up0) === "table.filter" && x.files.get(up0.id)) { view = x.files.get(up0.id).text; up0 = x.inst(String(F.refs(up0, "table")[0] || "").split(".")[0]); }
     const isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null })), up = al ? x.upstream(al) : [];
+    const al = isTable ? x.alignOf(up0) : null, alKey = isTable ? x.tableKey(up0) : null, up = al ? x.upstream(al) : [];
     const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
     if (!alKey || !samples || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
@@ -286,7 +288,7 @@
     const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    const alKey = isTable ? x.tableKey(up0) : null;
     const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
     if (!alKey || !samples || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
@@ -304,7 +306,7 @@
   const tpLink = async (x, spec, inst) => {
     const j = job(spec), k = kit(), p = await k.getPool(), path = DIR + spec.key + ".tp.mzfeat";
     if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
-    const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
+    const t = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst, al = x.alignOf(t), alKey = x.tableKey(t), up = x.upstream(al);
     const inp = F.webTp ? await F.webTp.linkInputs(x, p, inst).catch(/** @param {any} e */ e => { x.errors.set(inst.id, e); return e; }) : null;
     if (inp instanceof Error) { await x.call("started", { job: j }); await fail(x, spec, inst, inp); return {}; }
     if (!inp || !alKey || !up.length) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
@@ -314,7 +316,7 @@
       const read = async (/** @type {string} */ f) => p.fs.read(f), paths = up.map(u => u.path);
       const table = await read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(u => read(DIR + u.key + ".mzfeatf")));
       const given = (inst.params || {}).polarity, step = F.stepOf(x.S.reg, inst);
-      const ev = await p.linkEvidence({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, hypotheses: inp.hypotheses, samples: inp.samples, recipe: await k.recipeOf(x.plan, x.registry, al), polarity: given == null ? NaN : Number(given), budgetMb: budgetMb(), peaks, paths });
+      const ev = await p.linkEvidence({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, hypotheses: inp.hypotheses, samples: inp.samples, recipe: await k.recipeOf(x.plan, x.registry, t, false), polarity: given == null ? NaN : Number(given), budgetMb: budgetMb(), peaks, paths });
       const out = await p.linkInterp({ table: ev.table, parent: ev.parent, registry: ev.registry, polarity: ev.polarity, params: JSON.stringify({ ...F.defaults(inst, step), ...(inst.params || {}) }), infusion: ev.infusion, paths });
       await p.fs.write(path, out.slice());
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
