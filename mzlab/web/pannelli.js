@@ -322,7 +322,7 @@ function addPanel(type, o, after) {
     if (skip > 0) { skip--; return; }
     if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
     FRAME.cancel(p._raf); p._raf = FRAME.next(() => drawSized(p));
-    fitHdNow(p);
+    if (p._fitW !== el.offsetWidth) { p._fitW = el.offsetWidth; fitHdNow(p); }     // both observers fire on one resize: the header is fitted once per width
   };
   const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap
   // full screen of THIS panel (any panel, also the ones added later): the button, Esc, and the graph is redrawn at the new size on the way in and out
@@ -844,7 +844,19 @@ function fitHd(/** @type {Pannello} */ p) {
     if (!over()) return;
     mb.hidden = false;
     const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
-    for (const n of [...cands, ...groups, ...kids]) {
+    const list = [...cands, ...groups, ...kids];
+    // A node frees at most its width and a gap: while the row overflows by more than that, the node goes without a layout to check it (one reflow per node was
+    // ~1 ms at 4x CPU, ~9 per fit, on every step of a resize). A node inside one already moved is skipped, as its zero width makes the loop below do.
+    let need = hd.scrollWidth - hd.clientWidth - 1, j = 0;
+    const w = list.map(n => (n.hidden ? 0 : n.offsetWidth)), gone = /** @type {HTMLElement[]} */ ([]);
+    for (; j < list.length; j++) {
+      const n = list[j];
+      if (!w[j] || gone.some(g => g.contains(n))) continue;
+      if (need - w[j] - 32 <= 0) break;
+      need -= w[j] + 32; gone.push(n); p._hm.push(n);
+      if (n.classList.contains("bnl")) n.classList.add("hd-ov"); else { const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); }
+    }
+    for (const n of list.slice(j)) {
       if (!over()) break;
       if (n.hidden || !n.offsetWidth) continue;
       if (n.classList.contains("bnl")) { n.classList.add("hd-ov"); p._hm.push(n); continue; }
