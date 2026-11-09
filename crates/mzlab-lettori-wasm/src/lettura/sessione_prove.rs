@@ -6,8 +6,8 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use serde_json::Value;
 
 struct Fake {
-    campioni: Vec<Sample>,
-    indice: Vec<ScanEntry>,
+    samples: Vec<Sample>,
+    index: Vec<ScanEntry>,
 }
 
 impl Reader for Fake {
@@ -15,10 +15,10 @@ impl Reader for Fake {
         Format::Altro("finto")
     }
     fn samples(&self) -> &[Sample] {
-        &self.campioni
+        &self.samples
     }
     fn index(&mut self, _: usize) -> Result<&[ScanEntry]> {
-        Ok(&self.indice)
+        Ok(&self.index)
     }
     fn scan(&mut self, _: usize, k: usize) -> Result<Spectrum> {
         Ok(Spectrum {
@@ -71,13 +71,13 @@ impl Reader for Fake {
 fn the_session_answers_and_closes() {
     let mut s = Sessions::default();
     let fin = Fake {
-        campioni: vec![Sample {
+        samples: vec![Sample {
             id: 1,
             nome: "a".into(),
             scansioni: 1,
             size: None,
         }],
-        indice: vec![ScanEntry {
+        index: vec![ScanEntry {
             id: "scan=0".into(),
             rt: 0.5,
             livello: 1,
@@ -150,8 +150,8 @@ fn the_index_bytes_round_trip() {
     ];
     let mut s = Sessions::default();
     let h = s.insert(Box::new(Fake {
-        campioni: vec![],
-        indice: entries.clone(),
+        samples: vec![],
+        index: entries.clone(),
     }));
     let b = s.index(h, 0).unwrap();
     assert_eq!(mzlab_core::trasporto::decode_index(&b).unwrap(), entries);
