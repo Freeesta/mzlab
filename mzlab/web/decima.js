@@ -39,6 +39,49 @@ export function amin(a, i0 = 0, i1 = a.length, init = Infinity) {
   return m;
 }
 
+// Highest and lowest value of every block of BLK points, built once per array (and again if its length changes): a range query reads the blocks it covers whole and scans
+// only its two ends, so 120 traces of 50 000 scans cost ~1/60 of a full scan per drawing. The result is the same value as amax/amin over the range.
+const BLK = 128;
+/** @type {WeakMap<object, { n: number, mx: Float64Array, mn: Float64Array }>} */
+const BLOCKS = new WeakMap();
+/** @param {Vec} a */
+function blocks(a) {
+  const o = /** @type {object} */ (a);
+  let b = BLOCKS.get(o);
+  if (!b || b.n !== a.length) {
+    const nb = Math.ceil(a.length / BLK), mx = new Float64Array(nb), mn = new Float64Array(nb);
+    for (let k = 0; k < nb; k++) { const i0 = k * BLK, i1 = Math.min(a.length, i0 + BLK); mx[k] = amax(a, i0, i1); mn[k] = amin(a, i0, i1); }
+    b = { n: a.length, mx, mn }; BLOCKS.set(o, b);
+  }
+  return b;
+}
+/** amax/amin of a[i0..i1) through the blocks (short ranges are scanned). @param {Vec} a @param {number} i0 @param {number} i1 @param {number} mx @param {number} mn @returns {[number, number]} */
+export function rangeExtent(a, i0, i1, mx = -Infinity, mn = Infinity) {
+  if (i1 - i0 < 4 * BLK) return [amax(a, i0, i1, mx), amin(a, i0, i1, mn)];
+  const b = blocks(a), k0 = Math.ceil(i0 / BLK), k1 = Math.floor(i1 / BLK), e0 = k0 * BLK, e1 = k1 * BLK;
+  mx = amax(a, e1, i1, amax(a, i0, e0, mx)); mn = amin(a, e1, i1, amin(a, i0, e0, mn));
+  return [amax(b.mx, k0, k1, mx), amin(b.mn, k0, k1, mn)];
+}
+
+/**
+ * The runs of consecutive points of y[i0..i1) whose f(y) is above lim (a point that is not, NaN included, ends a run): for each run the index of its highest point, the
+ * first at that height. A block whose highest value is not above lim ends the run at its first point and is skipped whole (f is increasing, as the chart units are).
+ * @param {Vec} y @param {number} i0 @param {number} i1 @param {(v: number) => number} f @param {number} lim @returns {number[]}
+ */
+export function runsAbove(y, i0, i1, f, lim) {
+  /** @type {number[]} */
+  const out = [], b = i1 - i0 >= 4 * BLK ? blocks(y) : null;
+  let best = -1, bv = 0;
+  for (let i = i0; i < i1;) {
+    if (b && i % BLK === 0 && i + BLK <= i1 && !(f(b.mx[i / BLK]) > lim)) { if (best >= 0) { out.push(best); best = -1; } i += BLK; continue; }
+    const v = f(y[i]);
+    if (v > lim) { if (best < 0 || v > bv) { best = i; bv = v; } } else if (best >= 0) { out.push(best); best = -1; }
+    i++;
+  }
+  if (best >= 0) out.push(best);
+  return out;
+}
+
 /**
  * The polyline of a trace, one pixel column at a time: for each column the vertices first, lowest, highest, last (the lowest and the highest in the order in which the
  * data reach them first), as flat [px, py, px, py, ...]. Points are grouped by Math.round(X(x)) exactly as the point-by-point loop did; the end of a column is found by
@@ -80,7 +123,7 @@ export function m4(x, y, i0, i1, X, V) {
  * @param {Vec} x @param {Vec} y @param {number} lo @param {number} hi @param {number} [mx] @param {number} [mn] @returns {[number, number]}
  */
 export function extent(x, y, lo, hi, mx = -Infinity, mn = Infinity) {
-  if (isSorted(x)) { const [i0, i1] = windowIdx(x, lo, hi); return [amax(y, i0, i1, mx), amin(y, i0, i1, mn)]; }
+  if (isSorted(x)) { const [i0, i1] = windowIdx(x, lo, hi); return rangeExtent(y, i0, i1, mx, mn); }
   return extentScan(x, y, lo, hi, mx, mn);
 }
 
@@ -156,10 +199,14 @@ export function clipY(v, lo, hi) {
   while (i < v.length && v[i] >= lo && v[i] <= hi) i += 2;
   if (i >= v.length) return v;
   const cl = (/** @type {number} */ y) => y < lo ? lo : y > hi ? hi : y, out = [v[0], cl(v[1])];
-  for (let k = 2; k < v.length; k += 2) {
-    const xa = v[k - 2], ya = v[k - 1], xb = v[k], yb = v[k + 1];
-    const ts = [lo, hi].filter(b => (ya - b) * (yb - b) < 0).map(b => (b - ya) / (yb - ya)).sort((a, b) => a - b);
-    for (const t of ts) out.push(xa + (xb - xa) * t, ya + (yb - ya) * t);
+  for (let k = 2; k < v.length; k += 2) {                 // the crossings of the two bounds in the order the segment meets them; no array per segment (120 traces)
+    const xa = v[k - 2], ya = v[k - 1], xb = v[k], yb = v[k + 1], cLo = (ya - lo) * (yb - lo) < 0, cHi = (ya - hi) * (yb - hi) < 0;
+    if (cLo || cHi) {
+      const tl = (lo - ya) / (yb - ya), th = (hi - ya) / (yb - ya);
+      if (cLo && (!cHi || tl <= th)) out.push(xa + (xb - xa) * tl, ya + (yb - ya) * tl);
+      if (cHi) out.push(xa + (xb - xa) * th, ya + (yb - ya) * th);
+      if (cLo && cHi && tl > th) out.push(xa + (xb - xa) * tl, ya + (yb - ya) * tl);
+    }
     out.push(xb, cl(yb));
   }
   return out;
