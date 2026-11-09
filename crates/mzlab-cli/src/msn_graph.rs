@@ -80,7 +80,7 @@ const ALIASES: &[(&str, &str)] = &[
 ];
 
 /// Default window of the cleavages of `--structures`, ppm.
-pub const PPM_STRUTTURA: f64 = 10.0;
+pub const PPM_STRUCTURE: f64 = 10.0;
 
 use mzlab_feat::chem::rotture::Params;
 
@@ -95,7 +95,7 @@ impl Default for Rot {
         Rot {
             on: false,
             p: Params {
-                ppm: PPM_STRUTTURA,
+                ppm: PPM_STRUCTURE,
                 ..Params::default()
             },
         }
@@ -123,11 +123,11 @@ impl Rot {
 pub struct Args {
     pub(crate) file: PathBuf,
     pub(crate) o: Options,
-    verita: Option<PathBuf>,
+    truth: Option<PathBuf>,
     summary: bool,
     export: Option<(Format, bool, Option<String>)>,
     structures: Option<(String, f64)>,
-    interpreta: Option<f64>,
+    interpret: Option<f64>,
     cleavages: Option<Params>,
     figure: Vec<crate::msn_uscite::Format>,
     view: mzlab_feat::msnfigura::View,
@@ -160,12 +160,12 @@ pub fn parse_args(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<Option<Args>, String> {
     let (mut file, mut o) = (None, Options::default());
-    let (mut verita, mut riassunto, mut out) = (None, false, None);
+    let (mut truth, mut summary, mut out) = (None, false, None);
     let (mut export, mut clean, mut node) = (None, false, None);
-    let (mut strutture, mut rot) = (None, Rot::default());
-    let (mut interpreta, mut loss_ppm) = (false, PPM_PERDITA);
+    let (mut structures, mut rot) = (None, Rot::default());
+    let (mut interpret, mut loss_ppm) = (false, PPM_PERDITA);
     let (mut rules, mut rules_p) = (false, RuleParams::default());
-    let (mut figura, mut vista) = (Vec::new(), mzlab_feat::msnfigura::View::Albero);
+    let (mut figure, mut view) = (Vec::new(), mzlab_feat::msnfigura::View::Albero);
     while let Some(x) = a.next().map(|x| crate::msn_uscite::canonical(ALIASES, x)) {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -186,8 +186,8 @@ pub fn parse_args(
                 let (m, f) = v.split_once('=').ok_or("--pick needs MZ=ION")?;
                 o.choices.push((number(Some(m.into()), &x)?, f.into()));
             }
-            "--truth" => verita = a.next().map(PathBuf::from),
-            "--summary" => riassunto = true,
+            "--truth" => truth = a.next().map(PathBuf::from),
+            "--summary" => summary = true,
             "--export" => {
                 export = Some(
                     Format::from_name(&a.next().unwrap_or_default())
@@ -196,43 +196,43 @@ pub fn parse_args(
             }
             "--clean" => clean = true,
             "--node" => node = a.next(),
-            "--structures" => strutture = a.next().map(all),
-            "--interpret" => interpreta = true,
+            "--structures" => structures = a.next().map(all),
+            "--interpret" => interpret = true,
             "--loss-ppm" => loss_ppm = number(a.next(), &x)?,
             "--rules" => rules = true,
             "--cutoff-q" => rules_p.cutoff_q = number(a.next(), &x)?,
             "--loss-tol-mda" => rules_p.toll_mda = number(a.next(), &x)?,
             x if rot.flag(x, &mut a)? => {}
-            "--figure" => figura = crate::msn_uscite::formats(&a.next().unwrap_or_default())?,
-            "--view" => vista = view_of(a.next())?,
+            "--figure" => figure = crate::msn_uscite::formats(&a.next().unwrap_or_default())?,
+            "--view" => view = view_of(a.next())?,
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
         }
     }
     let file = file.ok_or("an infusion file is needed")?;
-    if !figura.is_empty() && (out.is_none() || riassunto || export.is_some() || strutture.is_some())
+    if !figure.is_empty() && (out.is_none() || summary || export.is_some() || structures.is_some())
     {
         return Err(FIGURE_USAGE.into());
     }
-    if riassunto && verita.is_none() {
+    if summary && truth.is_none() {
         return Err("--summary needs --truth".into());
     }
     o.regole = rules.then_some(rules_p);
     let export = export.map(|f| (f, clean, node));
-    let strutture = strutture.map(|n| (n, rot.p.ppm));
-    let interpreta = interpreta.then_some(loss_ppm);
+    let structures = structures.map(|n| (n, rot.p.ppm));
+    let interpret = interpret.then_some(loss_ppm);
     Ok(Some(Args {
         file,
         o,
-        verita,
-        summary: riassunto,
+        truth,
+        summary,
         export,
-        structures: strutture,
-        interpreta,
+        structures,
+        interpret,
         cleavages: rot.on.then_some(rot.p),
-        figure: figura,
-        view: vista,
+        figure,
+        view,
         out,
     }))
 }
@@ -276,7 +276,7 @@ fn hill(f: &str) -> String {
 }
 
 /// Nodes of each MS level, and the peaks of the spectra of each level: kept (with a node) and discarded (unexplained).
-fn per_livello(o: &mut Out, g: &Graph) {
+fn per_level(o: &mut Out, g: &Graph) {
     o.raw("\"per_livello\":{");
     let max = g.nodi.iter().map(|n| n.livello).max().unwrap_or(0);
     for l in 1..=max {
@@ -313,9 +313,9 @@ fn per_livello(o: &mut Out, g: &Graph) {
 }
 
 /// One line of numbers: the graph against the paths of a truth file.
-pub fn summary(g: &Graph, verita: &str) -> Result<String> {
-    let v = parse(verita.as_bytes())?;
-    let attesi: Vec<(Vec<i64>, String)> = v
+pub fn summary(g: &Graph, truth: &str) -> Result<String> {
+    let v = parse(truth.as_bytes())?;
+    let expected: Vec<(Vec<i64>, String)> = v
         .get("nodes")
         .map_or(&[][..], |n| n.arr())
         .iter()
@@ -331,7 +331,7 @@ pub fn summary(g: &Graph, verita: &str) -> Result<String> {
         })
         .collect();
     let (mut found, mut between, mut single, mut ppm_max) = (0, 0, 0, 0.0f64);
-    for (p, f) in &attesi {
+    for (p, f) in &expected {
         let Some(n) = g
             .nodi
             .iter()
@@ -350,7 +350,7 @@ pub fn summary(g: &Graph, verita: &str) -> Result<String> {
         }
     }
     let mut o = Out::default();
-    o.raw("{\"percorsi_verita\":").int(attesi.len() as i64);
+    o.raw("{\"percorsi_verita\":").int(expected.len() as i64);
     o.raw(",\"percorsi_trovati\":").int(found);
     o.raw(",\"formula_giusta_fra_candidati\":").int(between);
     o.raw(",\"unica_e_giusta\":").int(single);
@@ -362,7 +362,7 @@ pub fn summary(g: &Graph, verita: &str) -> Result<String> {
     o.raw(",\"scartati_formula\":")
         .int(g.scartati.formula as i64);
     o.raw(",\"avvisi\":").int(g.avvisi.len() as i64).raw(",");
-    per_livello(&mut o, g);
+    per_level(&mut o, g);
     o.raw("}\n");
     Ok(o.0)
 }
@@ -397,7 +397,7 @@ pub fn complete_cmd(
 
 /// The graph text `j` of `g` with the keys `interpretazione` and `rotture` the options ask for (also used by `msn-lib add`).
 pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
-    if let Some(ppm) = a.interpreta {
+    if let Some(ppm) = a.interpret {
         j = with_interpretation(&j, g, ppm);
     }
     if let Some(p) = a.cleavages {
@@ -420,7 +420,7 @@ pub fn execute(a: &Args, tmp: &Path) -> Result<String> {
         return Ok(j + "\n");
     }
     let v =
-        std::fs::read_to_string(a.verita.as_ref().expect("checked by parse_args")).map_err(io)?;
+        std::fs::read_to_string(a.truth.as_ref().expect("checked by parse_args")).map_err(io)?;
     summary(&g, &v)
 }
 
@@ -429,7 +429,7 @@ pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String
     let Some(out) = a.out.as_ref().filter(|_| !a.figure.is_empty()) else {
         return Ok(String::new());
     };
-    let made = crate::msn_uscite::scrivi(graph, &a.figure, a.view, &out.with_extension(""))
+    let made = crate::msn_uscite::write_outputs(graph, &a.figure, a.view, &out.with_extension(""))
         .map_err(|e| e.to_string())?;
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }
@@ -438,7 +438,7 @@ pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String
 pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
     let mut args = args.peekable();
     if args.next_if(|a| a == "compare").is_some() {
-        return match crate::msn_graph_compare::esegui(args) {
+        return match crate::msn_graph_compare::run_compare(args) {
             Ok((t, out)) => crate::emit(t, &out),
             Err(e) => Outcome::fail(&e.to_string()),
         };

@@ -10,9 +10,9 @@ use mzlab_core::msngrafo::{tabella_regole, Tipo};
 use crate::Outcome;
 
 /// A rule with fewer applications than this in a stratum is «not measured».
-const MINIMA: usize = 20;
+const MIN_COUNT: usize = 20;
 /// A rule whose decoy rate is above this goes to priority 3.
-const TASSO_MAX: f64 = 0.30;
+const MAX_RATE: f64 = 0.30;
 /// The coverage (c) of the true records must lose at most this share of itself against every decoy that applies, on average.
 const DIFFERENZA_MIN: f64 = 0.5;
 /// A record with a smaller share of its intensity explained by sub-formulas (a) is nominal mass: counted apart, outside the 10 ppm test.
@@ -20,12 +20,12 @@ const NOMINAL: f64 = 0.5;
 const DECOY: [&str; 3] = ["ds", "dp", "dl"];
 
 #[derive(Default)]
-struct Strato {
-    registri: usize,
+struct Layer {
+    registries: usize,
     /// Records of nominal mass (a below `NOMINALE`), left out of everything else.
-    nominali: usize,
+    nominal: usize,
     /// Mean-to-be fractions of the intensity: (a), (b), (c) of the true record.
-    frazioni: Vec<[f64; 3]>,
+    fractions: Vec<[f64; 3]>,
     /// Per decoy kind: (c of the true record, c of the decoy) of the records that have it.
     pairs: [Vec<(f64, f64)>; 3],
     /// Peaks per rule id: true, then the three decoys.
@@ -50,7 +50,7 @@ fn fraction(m: &Value, k: &str) -> Option<f64> {
     (t > 0.0).then(|| num(m, k) / t)
 }
 
-fn add_rules(s: &mut Strato, m: &Value, place: usize) {
+fn add_rules(s: &mut Layer, m: &Value, place: usize) {
     if let Some(Value::Obj(r)) = m.get("r") {
         for (id, n) in r {
             s.rules.entry(id.clone()).or_default()[place] += n.f64().unwrap_or(0.0) as usize;
@@ -58,19 +58,20 @@ fn add_rules(s: &mut Strato, m: &Value, place: usize) {
     }
 }
 
-fn read_line(s: &mut Strato, v: &Value) {
+fn read_line(s: &mut Layer, v: &Value) {
     let Some(real) = v.get("v") else { return };
     let a = fraction(real, "ia").unwrap_or(0.0);
     if a < NOMINAL {
-        s.nominali += 1;
+        s.nominal += 1;
         return;
     }
-    s.registri += 1;
+    s.registries += 1;
     add_rules(s, real, 0);
     let Some(c) = fraction(real, "ic") else {
         return;
     };
-    s.frazioni.push([a, fraction(real, "ib").unwrap_or(0.0), c]);
+    s.fractions
+        .push([a, fraction(real, "ib").unwrap_or(0.0), c]);
     for (k, name) in DECOY.iter().enumerate() {
         if let Some(d) = v.get(name) {
             add_rules(s, d, k + 1);
@@ -94,21 +95,24 @@ fn tasso(id: &str, n: &[usize; 4]) -> f64 {
 }
 
 fn outcome(n: &[usize; 4], t: f64) -> &'static str {
-    if n[0] < MINIMA {
+    if n[0] < MIN_COUNT {
         "non_misurata"
-    } else if t > TASSO_MAX {
+    } else if t > MAX_RATE {
         "priorita_3"
     } else {
         "ok"
     }
 }
 
-fn write_layer(o: &mut Out, (strato, pol): &(String, i64), s: &Strato) {
+fn write_layer(o: &mut Out, (layer_name, pol): &(String, i64), s: &Layer) {
     let r3 = |x: f64| round(x, 3);
-    let col = |i: usize| mean(s.frazioni.iter().map(|f| f[i]));
-    o.raw("{\"strato\":").str(strato).raw(",\"pol\":").int(*pol);
-    o.raw(",\"registri\":").int(s.registri as i64);
-    o.raw(",\"nominali\":").int(s.nominali as i64);
+    let col = |i: usize| mean(s.fractions.iter().map(|f| f[i]));
+    o.raw("{\"strato\":")
+        .str(layer_name)
+        .raw(",\"pol\":")
+        .int(*pol);
+    o.raw(",\"registri\":").int(s.registries as i64);
+    o.raw(",\"nominali\":").int(s.nominal as i64);
     o.raw(",\"copertura\":{\"a\":").num(r3(col(0)));
     o.raw(",\"b\":")
         .num(r3(col(1)))
@@ -156,12 +160,12 @@ fn write_layer(o: &mut Out, (strato, pol): &(String, i64), s: &Strato) {
 
 /// The summary of the lines `testo`: one JSON object, the strata ordered by name and polarity.
 pub fn summed(text: &str) -> Result<String, String> {
-    let mut strati: BTreeMap<(String, i64), Strato> = BTreeMap::new();
-    let mut saltati: BTreeMap<String, usize> = BTreeMap::new();
+    let mut layers: BTreeMap<(String, i64), Layer> = BTreeMap::new();
+    let mut skipped: BTreeMap<String, usize> = BTreeMap::new();
     for l in text.lines().filter(|l| !l.trim().is_empty()) {
         let v = parse(l.as_bytes()).map_err(|_| format!("not a JSON line: {l}"))?;
         if let Some(s) = v.get("saltato").and_then(Value::str) {
-            *saltati.entry(s.to_string()).or_default() += 1;
+            *skipped.entry(s.to_string()).or_default() += 1;
             continue;
         }
         let key = (
@@ -171,21 +175,21 @@ pub fn summed(text: &str) -> Result<String, String> {
                 .to_string(),
             num(&v, "pol") as i64,
         );
-        read_line(strati.entry(key).or_default(), &v);
+        read_line(layers.entry(key).or_default(), &v);
     }
     let mut o = Out::default();
-    o.raw("{\"soglie\":{\"minime\":").int(MINIMA as i64);
-    o.raw(",\"tasso_max\":").num(TASSO_MAX);
+    o.raw("{\"soglie\":{\"minime\":").int(MIN_COUNT as i64);
+    o.raw(",\"tasso_max\":").num(MAX_RATE);
     o.raw(",\"differenza_min\":").num(DIFFERENZA_MIN);
     o.raw("},\"saltati\":{");
-    for (i, (k, n)) in saltati.iter().enumerate() {
+    for (i, (k, n)) in skipped.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .str(k)
             .raw(":")
             .int(*n as i64);
     }
     o.raw("},\"strati\":[");
-    for (i, (k, s)) in strati.iter().enumerate() {
+    for (i, (k, s)) in layers.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         write_layer(&mut o, k, s);
     }
@@ -193,7 +197,7 @@ pub fn summed(text: &str) -> Result<String, String> {
 }
 
 /// The text to the standard output, or to the file of `--out`.
-pub fn emetti(t: String, out: &Option<PathBuf>) -> Outcome {
+pub fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
     let (stdout, stderr) = match out {
         None => (t.into_bytes(), String::new()),
         Some(p) => match std::fs::write(p, t) {
@@ -226,7 +230,7 @@ pub fn run(args: Vec<String>) -> Outcome {
         }
     }
     match summed(&text) {
-        Ok(t) => emetti(t, &out),
+        Ok(t) => emit(t, &out),
         Err(e) => failed(e),
     }
 }

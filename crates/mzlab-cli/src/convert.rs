@@ -184,7 +184,7 @@ fn progress(names: Vec<String>, ended: Arc<Mutex<Vec<Option<Ended>>>>) -> DoneFn
         let k = item.unwrap_or(0);
         let n = count.fetch_add(1, Ordering::Relaxed) + 1;
         let what = match (&err, cached) {
-            (Some(e), _) => format!("failed: {}", crate::testo_errore::umano(e)),
+            (Some(e), _) => format!("failed: {}", crate::testo_errore::human(e)),
             (None, true) => "skipped (already converted)".to_string(),
             (None, false) => format!("done in {:.1} s", ms / 1e3),
         };

@@ -322,7 +322,7 @@ impl Outcome {
         Outcome {
             code: 2,
             stdout: Vec::new(),
-            stderr: format!("error: {}\n", testo_errore::umano(msg)),
+            stderr: format!("error: {}\n", testo_errore::human(msg)),
         }
     }
 }
@@ -414,10 +414,10 @@ fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
 
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
-    testo_errore::with_help(args, eseguito(args))
+    testo_errore::with_help(args, executed(args))
 }
 
-fn eseguito(args: &[String]) -> Outcome {
+fn executed(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
     let first = args.next();
     match first.as_deref().map(plain::canonical) {

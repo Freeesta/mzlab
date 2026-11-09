@@ -1,19 +1,19 @@
 //! `testo_errore`: catalogue keys to English text, the parameters filled in, the hint of the command run.
-use super::{text_of, umano, CATALOG};
+use super::{human, text_of, CATALOG};
 use mzlab_core::error::Error;
 
 #[test]
 fn a_key_becomes_its_english_text_with_the_key_kept() {
     let e = Error::new("err.file.wiffNoScan").with("name", "X Y.wiff");
     assert_eq!(
-        umano(&e.to_string()),
+        human(&e.to_string()),
         "The .wiff.scan file of X Y.wiff is missing: both are needed, with the same name. (err.file.wiffNoScan)"
     );
     let e = Error::new("err.file.zlib")
         .with("detail", "truncated")
         .with("at", 12);
     assert_eq!(
-        umano(&e.to_string()),
+        human(&e.to_string()),
         "The file is damaged: a compressed peak array cannot be unpacked (truncated). Copy the file again or export it again from the instrument software. (err.file.zlib, at=12)"
     );
 }
@@ -26,7 +26,7 @@ fn an_unfinished_raw_is_the_text_of_the_page() {
     let e = Error::new("err.file.rawUnfinished")
         .with("detail", "the run header declares no scan")
         .with("size", 5_670_000);
-    let t = umano(&e.to_string());
+    let t = human(&e.to_string());
     assert_eq!(
         t,
         format!(
@@ -71,7 +71,7 @@ fn other_messages_pass_unchanged() {
         "no input file",
         "error: x",
     ] {
-        assert_eq!(umano(m), m);
+        assert_eq!(human(m), m);
     }
 }
 
@@ -126,8 +126,8 @@ fn a_memory_refusal_reads_as_in_the_desktop_app() {
             e = e.with(k, p[1].as_str().unwrap());
         }
         // after the text, the key and the parameters the text does not use, as for every key (the phase by its id, for scripts)
-        let resa = umano(&e.to_string());
-        let (text, tail) = resa.split_once(" (error.memoryBudget").unwrap();
+        let rendered = human(&e.to_string());
+        let (text, tail) = rendered.split_once(" (error.memoryBudget").unwrap();
         assert_eq!(text, case["testo"].as_str().unwrap());
         assert!(
             !tail.contains("stima_mb") && !tail.contains("index peaks"),

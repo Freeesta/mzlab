@@ -12,8 +12,8 @@ fn text_in(catalog: &'static str, key: &str) -> Option<&'static str> {
     let sign = format!("\n  \"{key}\": \"");
     let da = catalog.find(&sign)? + sign.len();
     let row = catalog[da..].lines().next()?.trim_end();
-    let riga = row.strip_suffix(',').unwrap_or(row);
-    riga.strip_suffix('"')
+    let line = row.strip_suffix(',').unwrap_or(row);
+    line.strip_suffix('"')
 }
 
 /// The catalogue text of `key`.
@@ -35,9 +35,9 @@ fn returned_key(key: &str, fase: Option<&str>) -> String {
         }
         _ => key.to_string(),
     };
-    let nativa = format!("{base}.native");
-    if text_of(&nativa).is_some() {
-        nativa
+    let native = format!("{base}.native");
+    if text_of(&native).is_some() {
+        native
     } else {
         base
     }
@@ -64,21 +64,21 @@ fn params(remainder: &str) -> Vec<(String, String)> {
 }
 
 /// `msg` with its leading error key rendered: «text (key, unused=params)».
-pub(crate) fn umano(msg: &str) -> String {
+pub(crate) fn human(msg: &str) -> String {
     let (key, remainder) = msg.split_once(' ').unwrap_or((msg, ""));
     if !(key.starts_with("err.") || key.starts_with("error.")) {
         return msg.to_string();
     }
-    rendi(msg, key, remainder)
+    render(msg, key, remainder)
 }
 
 /// A calm notice (the one the desktop app gives its page as `{"key", "params"}`) as the terminal line: «text (key)».
 pub fn warning(n: &crate::convert::Notice) -> String {
     let remainder: String = n.params.iter().map(|(k, v)| format!(" {k}={v}")).collect();
-    rendi(n.key, n.key, &remainder)
+    render(n.key, n.key, &remainder)
 }
 
-fn rendi(msg: &str, key: &str, remainder: &str) -> String {
+fn render(msg: &str, key: &str, remainder: &str) -> String {
     let par = params(remainder);
     let fase = par
         .iter()
@@ -88,7 +88,7 @@ fn rendi(msg: &str, key: &str, remainder: &str) -> String {
         return msg.to_string();
     };
     let mut t = text.to_string();
-    let mut avanzo = String::new();
+    let mut rest = String::new();
     for (k, v) in par {
         let sign = format!("{{{k}}}");
         if t.contains(&sign) {
@@ -97,10 +97,10 @@ fn rendi(msg: &str, key: &str, remainder: &str) -> String {
                 .flatten();
             t = t.replace(&sign, name.unwrap_or(&v));
         } else {
-            avanzo += &format!(", {k}={v}");
+            rest += &format!(", {k}={v}");
         }
     }
-    format!("{t} ({key}{avanzo})")
+    format!("{t} ({key}{rest})")
 }
 
 /// A usage or engine error (`Outcome::fail`, code 2) ends with the help of the command that was run: `(mzlab-cli channels --help)`, not another's.

@@ -57,15 +57,21 @@ fn the_cleavage_that_gives_the_node_is_found_with_its_ppm_and_atoms() {
 #[test]
 fn the_graph_without_the_key_does_not_change_and_the_answer_is_deterministic() {
     let base = text(run(&["--smiles", SMILES]));
-    let con = text(run(&["--smiles", SMILES, "--strutture", "n3"]));
-    let (prefisso, view) = base.trim_end().split_once(",\"vista\":").unwrap();
-    assert!(con.starts_with(prefisso), "the graph part keeps its bytes");
-    assert!(con[prefisso.len()..].starts_with(",\"strutture\":{"));
+    let with_n3 = text(run(&["--smiles", SMILES, "--strutture", "n3"]));
+    let (prefix, view) = base.trim_end().split_once(",\"vista\":").unwrap();
     assert!(
-        con.trim_end().ends_with(&format!(",\"vista\":{view}")),
+        with_n3.starts_with(prefix),
+        "the graph part keeps its bytes"
+    );
+    assert!(with_n3[prefix.len()..].starts_with(",\"strutture\":{"));
+    assert!(
+        with_n3.trim_end().ends_with(&format!(",\"vista\":{view}")),
         "the view stays the last key"
     );
-    assert_eq!(con, text(run(&["--smiles", SMILES, "--strutture", "3"])));
+    assert_eq!(
+        with_n3,
+        text(run(&["--smiles", SMILES, "--strutture", "3"]))
+    );
 }
 
 #[test]
@@ -154,13 +160,13 @@ fn the_molfile_is_written_back_and_complete_adds_the_view_to_an_old_graph() {
         "\n  mzlab\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\nM  END\n",
     )
     .unwrap();
-    let con = text(run(&[
+    let with_n3 = text(run(&[
         "--smiles",
         SMILES,
         "--molfile",
         mol.to_str().unwrap(),
     ]));
-    let v = mzlab_core::json::parse(con.as_bytes()).unwrap();
+    let v = mzlab_core::json::parse(with_n3.as_bytes()).unwrap();
     assert!(v
         .get("opzioni")
         .unwrap()
@@ -171,15 +177,15 @@ fn the_molfile_is_written_back_and_complete_adds_the_view_to_an_old_graph() {
         .contains("M  END"));
     // an old graph (no view) is completed with the bytes the engine writes
     let old = dir.join("old.json");
-    let (testa, _) = con.trim_end().split_once(",\"vista\":").unwrap();
-    std::fs::write(&old, format!("{testa}}}")).unwrap();
+    let (head, _) = with_n3.trim_end().split_once(",\"vista\":").unwrap();
+    std::fs::write(&old, format!("{head}}}")).unwrap();
     let o = execute(&[
         "msn-graph".to_string(),
         "complete".into(),
         old.to_str().unwrap().into(),
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    assert_eq!(String::from_utf8(o.stdout).unwrap(), con);
+    assert_eq!(String::from_utf8(o.stdout).unwrap(), with_n3);
     // what is not an msngrafo/1 is a keyed error
     std::fs::write(&old, "{\"formato\":\"msnlib/1\"}").unwrap();
     let o = execute(&[

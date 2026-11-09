@@ -129,7 +129,7 @@ fn proposals_input() -> String {
 }
 
 /// A `param-scelte/1` that keeps every proposal, with `edit` applied to the choice of `name`.
-fn scelte(input: &str, edit: &dyn Fn(&str, &Value) -> Option<String>) -> String {
+fn choices_doc(input: &str, edit: &dyn Fn(&str, &Value) -> Option<String>) -> String {
     let doc = json(input);
     let props = doc
         .get("proposta-param/1")
@@ -162,7 +162,7 @@ fn scelte(input: &str, edit: &dyn Fn(&str, &Value) -> Option<String>) -> String 
 fn choices_that_keep_every_proposal_pass() {
     let input = proposals_input();
     assert_eq!(
-        reasons(&scelte(&input, &|_, _| None), &input),
+        reasons(&choices_doc(&input, &|_, _| None), &input),
         Vec::<String>::new()
     );
 }
@@ -205,21 +205,21 @@ fn a_changed_value_says_model_a_kept_one_names_its_rule() {
         );
         move |name: &str, _: &Value| (name == target).then(|| one.clone())
     };
-    let r = scelte(&input, &pick("model", &(value + 1.0).to_string()));
+    let r = choices_doc(&input, &pick("model", &(value + 1.0).to_string()));
     assert!(!reasons(&r, &input).contains(&"source".to_string()));
-    let r = scelte(
+    let r = choices_doc(
         &input,
         &pick(&format!("rule:{rule}"), &(value + 1.0).to_string()),
     );
     assert!(reasons(&r, &input).contains(&"source".to_string()));
-    let r = scelte(&input, &pick("model", &below.to_string()));
+    let r = choices_doc(&input, &pick("model", &below.to_string()));
     assert!(reasons(&r, &input).contains(&"out_of_range".to_string()));
 }
 
 #[test]
 fn a_missing_unknown_or_invented_choice_is_refused() {
     let input = proposals_input();
-    let r = scelte(&input, &|_, _| None);
+    let r = choices_doc(&input, &|_, _| None);
     // drop the first choice
     let doc = json(&r);
     let kept: Vec<String> = doc

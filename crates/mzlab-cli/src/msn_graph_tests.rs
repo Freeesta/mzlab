@@ -48,9 +48,9 @@ fn the_graph_of_a_file_with_the_formula_of_its_ion() {
 fn a_truth_file_gives_one_line_of_numbers() {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_msn_{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    let verita = dir.join("verita.json");
+    let truth = dir.join("verita.json");
     let t = r#"{"nodes":[{"path":[305],"formula":"C14H15N3O5"},{"path":[305,244],"formula":"C13H10NO4"},{"path":[305,261],"formula":"C13H9N2O4"}]}"#;
-    std::fs::write(&verita, t).unwrap();
+    std::fs::write(&truth, t).unwrap();
     let f = msn();
     let o = run(&[
         "msn-graph",
@@ -58,7 +58,7 @@ fn a_truth_file_gives_one_line_of_numbers() {
         "--formula",
         "C14H15N3O5 [M]+",
         "--verita",
-        verita.to_str().unwrap(),
+        truth.to_str().unwrap(),
         "--riassunto",
     ]);
     let _ = std::fs::remove_dir_all(&dir);

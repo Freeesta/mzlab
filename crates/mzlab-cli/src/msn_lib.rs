@@ -72,13 +72,13 @@ fn add(args: Vec<String>, tmp: &Path) -> Result<String> {
         .ok_or_else(|| bad("--help is not an option here"))?;
     let (g, json) = crate::msn_graph::graph(&a.file, &a.o, tmp)?;
     let json = crate::msn_graph::with_keys(&a, &g, json)?;
-    let (text, doppione) = aggiungi(&read_lib(&lib)?, &id, &g, &json)?;
+    let (text, duplicate) = aggiungi(&read_lib(&lib)?, &id, &g, &json)?;
     let out = a.out.clone().unwrap_or(lib);
     std::fs::write(&out, text).map_err(io)?;
     Ok(format!(
         "{}: {id} {}\n",
         out.display(),
-        if doppione { "already there" } else { "added" }
+        if duplicate { "already there" } else { "added" }
     ))
 }
 
@@ -153,7 +153,7 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
 fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
     let (mut lib, mut out, mut clean, mut all, mut annotate) = (None, None, false, false, false);
-    let mut formato = Format::Msp;
+    let mut lib_format = Format::Msp;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         let x = crate::msn_uscite::canonical(ALIASES, x);
@@ -161,7 +161,7 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
             "--clean" => clean = true,
             "--all" => all = true,
             "--annotate" => annotate = true,
-            "--format" => formato = Format::parse(&it.next().unwrap_or_default())?,
+            "--format" => lib_format = Format::parse(&it.next().unwrap_or_default())?,
             "--out" => out = it.next().map(PathBuf::from),
             _ if lib.is_none() => lib = Some(PathBuf::from(x)),
             _ => return Err(bad(&format!("unknown argument {x}"))),
@@ -171,7 +171,7 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     Ok((
         export_text(
             &std::fs::read_to_string(&lib).map_err(io)?,
-            formato,
+            lib_format,
             (clean, all, annotate),
         )?,
         out,

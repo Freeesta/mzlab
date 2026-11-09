@@ -89,10 +89,10 @@ fn file_source(path: &Path, sample: &Value, order: usize) -> String {
         }
         Ok(o)
     };
-    let tipo = sample.get("tipo").and_then(Value::str).unwrap_or("sample");
+    let kind = sample.get("tipo").and_then(Value::str).unwrap_or("sample");
     let tail = format!(
         ",\"sample\":{{\"tipo\":{},\"ordine_iniezione\":{order}}}}}",
-        quoted(tipo)
+        quoted(kind)
     );
     match open() {
         Ok(o) => o + &tail,
