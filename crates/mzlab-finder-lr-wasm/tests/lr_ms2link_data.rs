@@ -6,8 +6,8 @@ use mzlab_feat::legacy::lr::ms2link::State;
 use mzlab_feat::legacy::lr::{Entry, LrDig};
 use serde_json::Value;
 
-mod comune;
-use comune::*;
+mod common;
+use common::*;
 
 #[test]
 fn the_experiments_of_the_real_series_are_found_and_matched_as_the_truth_says() {

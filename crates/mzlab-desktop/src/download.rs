@@ -13,8 +13,8 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use crate::download_sources::CatalogSource;
 use crate::librerie::{Folder, META};
-use crate::scarica_fonti::CatalogSource;
 use crate::update::{sha256_hex, Source};
 
 /// The highest `.mzlib` version this app reads (`mzlab_lib::format::VERSION`; a test keeps them equal).

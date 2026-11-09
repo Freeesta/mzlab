@@ -1,4 +1,4 @@
-//! Which dataset each slot of the engine reads: the rule of `Natives::attach` (`crates/mzlab-wasm/src/nativi_motore.rs`), kept here so it is tested without a browser.
+//! Which dataset each slot of the engine reads: the rule of `Natives::attach` (`crates/mzlab-wasm/src/natives_engine.rs`), kept here so it is tested without a browser.
 //! A dataset (and its open reader) outlives the move of a slot between the samples of the same dataset; it is dropped only when no slot is left on it.
 use std::collections::HashMap;
 

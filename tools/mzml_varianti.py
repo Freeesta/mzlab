@@ -1,7 +1,7 @@
 """Synthetic mzML files, one per variant of the format seen in the wild (conformance matrix: docs/agenti/mzml-matrice.md). All numbers are invented.
     python3 tools/mzml_varianti.py OUT_DIR
 Writes plain/indexed, 32/64-bit, raw/zlib, CRLF, UTF-8 BOM, gzip, MS3/MS4, profile, ion mobility, referenceableParamGroup, scanSettings, every kind of
-chromatogram, and the hostile ones (truncated, empty, not XML, broken base64, absurd offsets). The tests of `mzlab-cli` (mzml_varianti_tests.rs) run them."""
+chromatogram, and the hostile ones (truncated, empty, not XML, broken base64, absurd offsets). The tests of `mzlab-cli` (mzml_variants_tests.rs) run them."""
 import base64, gzip, os, re, sys, zlib
 
 import numpy as np

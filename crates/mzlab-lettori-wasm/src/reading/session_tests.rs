@@ -1,6 +1,6 @@
-// The tests of sessione.rs.
+// The tests of session.rs.
 use super::*;
-use crate::sessione::duro::{Hard, ODD_CHARS};
+use crate::session::hard::{Hard, ODD_CHARS};
 use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use serde_json::Value;

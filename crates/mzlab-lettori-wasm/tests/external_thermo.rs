@@ -1,7 +1,7 @@
 #![cfg(feature = "thermo")]
 //! The external reader of the engine (`mzlab_wasm::esterno::ExternalReader`) over the session of the `thermo` module gives, for a real `.raw`, exactly what the Thermo reader gives when it is linked
 //! in the engine: the index, the scans, the headers, the TIC, the `metodo/1` document, the header of the mzML and the whole mzML byte for byte. Needs the private data repository
-//! (MZLAB_DATI, or `mzlab-dati` beside this one); skipped without it. Run in release: `cargo test --release -p mzlab-lettori-wasm --features thermo --test esterno_thermo`.
+//! (MZLAB_DATI, or `mzlab-dati` beside this one); skipped without it. Run in release: `cargo test --release -p mzlab-lettori-wasm --features thermo --test external_thermo`.
 #![allow(clippy::indexing_slicing)]
 
 use std::io::Write;
@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::{lettori_mzml, rawlettore, Result};
-use mzlab_lettori_wasm::sessione::Sessions;
+use mzlab_lettori_wasm::session::Sessions;
 use mzlab_wasm::esterno::{ExternalReader, Module};
 
 #[path = "../../../tools/dati_percorsi.rs"]

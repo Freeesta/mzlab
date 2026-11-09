@@ -133,8 +133,8 @@ impl Inner {
     }
 }
 
-#[path = "conv_fili.rs"]
-mod fili;
+#[path = "conv_threads.rs"]
+mod threads;
 
 #[derive(Default)]
 pub(crate) struct Queue {

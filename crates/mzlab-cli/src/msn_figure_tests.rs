@@ -284,9 +284,9 @@ fn the_step_writes_the_bytes_of_the_command() {
     };
     for (format, view) in [("svg", "tree"), ("svg", "radial"), ("html", "tree")] {
         let (g, got) = run(format, view);
-        let want = crate::msn_uscite::bytes(
+        let want = crate::msn_outputs::bytes(
             std::str::from_utf8(&g).unwrap(),
-            crate::msn_uscite::Format::from_name(format).unwrap(),
+            crate::msn_outputs::Format::from_name(format).unwrap(),
             View::da_nome(view).unwrap(),
         )
         .unwrap();

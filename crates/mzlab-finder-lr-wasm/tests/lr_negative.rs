@@ -10,8 +10,8 @@ use mzlab_feat::legacy::lr::{self, summary::summary};
 use mzlab_feat_wasm::run;
 use serde_json::Value;
 
-mod comune;
-use comune::{noise, open, Lcg, SHIFT, TIMES};
+mod common;
+use common::{noise, open, Lcg, SHIFT, TIMES};
 
 const NEUTRAL: &str = "C10H12N2O3S";
 /// [M-H]- of the parent, of its product -OS+H2 and of its product -H2OS.

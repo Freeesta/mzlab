@@ -131,5 +131,5 @@ mod stdout;
 pub use stdout::write_stdout;
 
 #[cfg(test)]
-#[path = "testo_errore_tests.rs"]
+#[path = "error_text_tests.rs"]
 mod tests;

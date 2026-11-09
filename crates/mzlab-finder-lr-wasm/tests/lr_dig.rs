@@ -10,8 +10,8 @@ use mzlab_core::upload::prepare;
 use mzlab_feat::legacy::lr::{self, detail::detail, summary::summary};
 use serde_json::Value;
 
-mod comune;
-use comune::*;
+mod common;
+use common::*;
 
 #[path = "lr_dig/ms2_real.rs"]
 mod ms2_real;

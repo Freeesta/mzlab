@@ -8,8 +8,8 @@ use mzlab_feat::legacy::lr::{self, summary::summary};
 use serde_json::Value;
 use std::path::PathBuf;
 
-mod comune;
-use comune::*;
+mod common;
+use common::*;
 
 const BENTAZONE: &str = r#"{"name": "Bentazone", "neutral": "C10H12N2O3S"}"#;
 const CONDS: [&str; 6] = ["Air", "Ar", "He", "N2", "O2", "Reference"];
@@ -329,7 +329,7 @@ fn the_other_polarity_pairs_equal_neutral_masses() {
     );
 }
 
-/// `cargo test --release -p mzlab-finder-lr-wasm --test lr_gruppi -- --ignored --nocapture scale` with `N=20` or `N=40` under `/usr/bin/time -v`:
+/// `cargo test --release -p mzlab-finder-lr-wasm --test lr_groups -- --ignored --nocapture scale` with `N=20` or `N=40` under `/usr/bin/time -v`:
 /// the whole native pipeline (detection, alignment, Dig, block `gruppi`) of N full-scan files of the folder (`docs/agenti/misure.md`).
 #[test]
 #[ignore]

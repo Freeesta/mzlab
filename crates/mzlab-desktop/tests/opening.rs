@@ -1,9 +1,9 @@
-//! Files opened from outside (`src/apertura.rs`): which arguments count, the queue, and the alternate notice «make mzLab the default app?».
+//! Files opened from outside (`src/opening.rs`): which arguments count, the queue, and the alternate notice «make mzLab the default app?».
 
-use mzlab_desktop::apertura::{
+use mzlab_desktop::librerie::{read_config, write_config, Config};
+use mzlab_desktop::opening::{
     answer_notice, ask_again, paths_from_args, record_opening, NoticeAnswer, Pending,
 };
-use mzlab_desktop::librerie::{read_config, write_config, Config};
 
 fn s(x: &std::path::Path) -> String {
     x.to_string_lossy().into_owned()
@@ -103,7 +103,7 @@ fn counter_and_answer_survive_in_the_config_file() {
 
 #[test]
 fn accepted_extensions_come_from_the_readers_registry() {
-    let all = mzlab_desktop::apertura::file_extensions();
+    let all = mzlab_desktop::opening::file_extensions();
     // every single-file reader extension is there, folder-only ones are not
     for e in [
         ".mzml", ".mzxml", ".raw", ".wiff", ".qgd", ".lcd", ".cdf", ".nc",
@@ -111,7 +111,7 @@ fn accepted_extensions_come_from_the_readers_registry() {
         assert!(all.iter().any(|x| x == e), "{e}");
     }
     assert!(!all.iter().any(|x| x == ".d"));
-    let dlg = mzlab_desktop::apertura::dialog_extensions();
+    let dlg = mzlab_desktop::opening::dialog_extensions();
     assert!(dlg.contains(&"MZXML".to_string()) && dlg.contains(&"mzxml".to_string()));
     assert!(dlg.iter().all(|x| !x.starts_with('.') && !x.contains('.')));
     assert!(dlg.contains(&"gz".to_string()));
@@ -131,7 +131,7 @@ fn file_associations_in_tauri_conf_match_the_registry() {
         .map(|e| e.as_str().unwrap().to_ascii_lowercase())
         .collect();
     got.sort();
-    assert_eq!(got, mzlab_desktop::apertura::associated_extensions());
+    assert_eq!(got, mzlab_desktop::opening::associated_extensions());
 }
 
 #[test]

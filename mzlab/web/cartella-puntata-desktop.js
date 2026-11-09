@@ -1,7 +1,7 @@
 // @ts-strict
 "use strict";
 // Desktop app side of the remembered folder (cartella-puntata.js asks for it when `window.MZLAB_DESKTOP`): the folder is chosen with the system dialog, kept by the native side
-// (config.json) and listed by `data_list` (crates/mzlab-desktop/src/cartella.rs); the page only sees names and relative paths. A file is registered (`data_register`) when
+// (config.json) and listed by `data_list` (crates/mzlab-desktop/src/folder.rs); the page only sees names and relative paths. A file is registered (`data_register`) when
 // it is opened and arrives as the same stub File as a file of the system dialog (the engine reads it from the disk). There is no change notification: the list is asked again
 // when the window is shown again and every 10 s.
 

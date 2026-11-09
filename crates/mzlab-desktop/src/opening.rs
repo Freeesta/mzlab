@@ -1,6 +1,6 @@
 //! Files opened from outside the window (double click in the file manager, `mzlab file.mzML`, «Open with»): which arguments are files
 //! the app can open, the queue the page empties when it is ready, and the rule of the notice «make mzLab the default app?».
-//! Pure logic (no window): `main.rs` feeds it, `tests/apertura.rs` proves it.
+//! Pure logic (no window): `main.rs` feeds it, `tests/opening.rs` proves it.
 
 use crate::librerie::Config;
 use serde::{Deserialize, Serialize};

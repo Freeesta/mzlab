@@ -101,7 +101,7 @@ Banco (scratch, non committato): libreria sintetica deterministica di `identity_
 | c | nodo Attribution: `table.match` multi-libreria + `table.attribute@1` + CLI | b | `flow_attribute.rs` in `crates/mzlab-cli/src/`, `mzlab-feat/src/steps/` |
 | d | wasm `LibSet.search` + pannello laterale (su IDENT-LIBRERIE-UI) | b, pannello IDENT | `crates/mzlab-lib-wasm`, `libreria-worker.js` |
 | e | analoghi: `modifiche-1.json`, ΔFormula vincolata, kit proprietà | b (c, d per le colonne) | `mzlab-core`, `matching.rs` |
-| f | catalogo `librerie/2`, verifica URL/licenze, preset | a | `tools/librerie_*`, `libreria-scarica.js`, `scarica.rs` |
+| f | catalogo `librerie/2`, verifica URL/licenze, preset | a | `tools/librerie_*`, `libreria-scarica.js`, `download.rs` |
 
 a e f possono partire insieme; c, d, e dopo b; d attende anche la PR di IDENT-LIBRERIE-UI.
 

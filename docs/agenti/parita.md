@@ -14,13 +14,13 @@ Regola (`CLAUDE.md`): ogni funzione esiste nel sito (`.wasm` + OPFS) e nell'app 
 |---|---|---|---|---|
 | Rotte comuni (TIC, XIC, spettri, MRM, mappe, canali, info, statistica) | `.wasm` motore | `rpc.rs` | `channels`, `sim-table` | `crates/mzlab-desktop/tests/parita_rotte.rs` (37 passi, `.wasm` con `MZLAB_WASM_PKG` = app), `test_canali_wasm.py` |
 | Tipo di corsa proposto dai canali (`canali::tipo_di`): senza scansioni SRM = `lc-mrm`, solo SIM = `lc-sim` (anche con un DAD), solo il DAD = `solo-uv` | `.wasm` motore | `rpc.rs` | `channels` | `canali/tests.rs` (`a_file_of_sim_chromatograms_only_is_typed_sim_also_with_a_uv_trace`); le tre facce chiamano la stessa funzione |
-| Grafo MSn (`msngrafo`), centroidi (`lr_index_cen`, `mzml2cen`), SRM per mzFinder (`natsrm`) | sì | `rpc_msn.rs` | `msn-graph` | `parita_msn.rs` (app = core), `test_msngrafo_wasm.py` (`.wasm` = CLI) |
-| Registro dello strumento di un `.raw` (`natregistro`, `/api/registro`) | modulo `thermo` (`registroDi`) | `rpc_nat.rs` | — (nessun comando; il `metodo/1` della CLI elenca le serie) | `crates/mzlab-desktop/tests/natregistro.rs` (app = lettore del registro + `mzlab_lettori::json::chromatogram_json`, la funzione che il modulo chiama); il `.raw` sintetico non ha status log: la prova passa per il TIC e per l'errore di una serie assente |
-| Massa del fondo (`masscal`) | sì | `rpc.rs` | — | `parita_masscal.rs` |
-| Comando copiabile, riga corta (`lr_flow_command`, `flow/line`) | `.wasm` `rotte` | `rpc_lr.rs`, `flow/line` | `flow run` | `parita_flow_command.rs` |
+| Grafo MSn (`msngrafo`), centroidi (`lr_index_cen`, `mzml2cen`), SRM per mzFinder (`natsrm`) | sì | `rpc_msn.rs` | `msn-graph` | `parity_msn.rs` (app = core), `test_msngrafo_wasm.py` (`.wasm` = CLI) |
+| Registro dello strumento di un `.raw` (`natregistro`, `/api/registro`) | modulo `thermo` (`registroDi`) | `rpc_nat.rs` | — (nessun comando; il `metodo/1` della CLI elenca le serie) | `crates/mzlab-desktop/tests/natregistry.rs` (app = lettore del registro + `mzlab_lettori::json::chromatogram_json`, la funzione che il modulo chiama); il `.raw` sintetico non ha status log: la prova passa per il TIC e per l'errore di una serie assente |
+| Massa del fondo (`masscal`) | sì | `rpc.rs` | — | `parity_masscal.rs` |
+| Comando copiabile, riga corta (`lr_flow_command`, `flow/line`) | `.wasm` `rotte` | `rpc_lr.rs`, `flow/line` | `flow run` | `parity_flow_command.rs` |
 | Validazione mzML (`api/mzml_valida`) | modulo `valida` | `lr_valida` | `validate` | `test_valida_wasm.py`, `crates/mzlab-desktop/tests/rpc.rs` |
 | Solo sito per natura | `module`, `policy`, `budget`, `down`, `lr_gunzip`, `lr_cen_have`, `lr_cen_adopt`; `lr_flow_line`/`lr_flow_sched` (l'app usa `flow/line`, `flow/live/*`) | — | — | `SOLO_SITO` |
-| «Annulla» del caricamento (`lr_cancel`) | ferma copie e indici | `IdxBuilder::cancel`: le costruzioni dell'indice del file si fermano alla lettura o scrittura seguente e non lasciano file (né `.part` né indice); `lr_remove` toglie anche gli indici del file | — | `crates/mzlab-desktop/tests/annulla.rs`, `idxbuild_tests.rs` (app); `e2e_annulla_orfani.py` (sito) |
+| «Annulla» del caricamento (`lr_cancel`) | ferma copie e indici | `IdxBuilder::cancel`: le costruzioni dell'indice del file si fermano alla lettura o scrittura seguente e non lasciano file (né `.part` né indice); `lr_remove` toglie anche gli indici del file | — | `crates/mzlab-desktop/tests/cancel.rs`, `idxbuild_tests.rs` (app); `e2e_annulla_orfani.py` (sito) |
 
 ## Passi del Flow (`mzlab-cli steps`, esecutori del sito in `F.liveJobs`)
 | Passi | Sito | App/CLI | Prova |

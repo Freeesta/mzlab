@@ -1,9 +1,9 @@
-//! Tests of the conversion queue (`conv_coda.rs`) on small synthetic files.
+//! Tests of the conversion queue (`conv_queue.rs`) on small synthetic files.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::conv_coda::{dataset_root, Indexing, Queue};
+use crate::conv_queue::{dataset_root, Indexing, Queue};
 
 #[path = "../../mzlab-lettori/tests/comune/mzxml.rs"]
 mod mzxml;
@@ -197,12 +197,12 @@ fn old_samples_are_removed_only_when_the_dataset_changed() {
     let stray = out.join("a-7.mzML");
     std::fs::write(&stray, b"old").unwrap();
     let st = crate::conv_stamp::stamp(&a);
-    let files = crate::conv_coda::convert_fresh(&a, &out, st).unwrap();
+    let files = crate::conv_queue::convert_fresh(&a, &out, st).unwrap();
     assert_eq!(files.len(), 1, "{files:?}");
     assert!(!stray.exists());
     // the same bytes again keep what is there (the cache of a second run)
     std::fs::write(&stray, b"kept").unwrap();
-    crate::conv_coda::convert_fresh(&a, &out, st).unwrap();
+    crate::conv_queue::convert_fresh(&a, &out, st).unwrap();
     assert!(stray.exists());
 }
 

@@ -469,5 +469,5 @@ impl Module for JsModule {
 }
 
 #[cfg(test)]
-#[path = "esterno_prove.rs"]
+#[path = "external_tests.rs"]
 mod tests;

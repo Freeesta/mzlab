@@ -13,9 +13,9 @@ use mzlab_core::sorgente::ReaderSource;
 use mzlab_core::{lettori_centroidi, lettori_mzml, upload};
 use wasm_bindgen::prelude::*;
 
-mod membro;
+mod member;
 
-use crate::esterno::{module_error, ExternalReader, JsModule};
+use crate::external::{module_error, ExternalReader, JsModule};
 use crate::{error_json, Accorpa, BlockWriter, JsReader};
 
 /// Readers kept open at once (a `.wiff` holds its container in memory).
@@ -72,7 +72,7 @@ impl Members {
             .map(|(i, (n, &s))| Member {
                 nome: n.clone(),
                 dim: s as u64,
-                dati: membro::member(&self.read, i as u32, s as u64),
+                dati: member::member(&self.read, i as u32, s as u64),
                 sha1: None,
             })
             .collect();
@@ -310,7 +310,7 @@ impl Spill for JsSpill {
 
 /// Builds the `.mzidx` of sample `c` of a dataset straight from its reader (version 2: the rows say where each scan lies in the members) and writes
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
-/// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`contato.rs`), else JS follows the bytes read.
+/// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`counted.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
 /// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::missing`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once).
 #[wasm_bindgen]
@@ -334,10 +334,10 @@ pub fn build_mzidx_native(
     let tell = |n: u32| drop(phase.call1(&JsValue::NULL, &n.into()));
     let m = Members::new(names, sizes, read)?;
     let mut fs = m.fileset();
-    let fingerprints = crate::impronte::Fingerprints::new(&mut fs, &prints, &tell)?;
+    let fingerprints = crate::fingerprints::Fingerprints::new(&mut fs, &prints, &tell)?;
     let mut members = || fingerprints.given(|| m.fileset());
     let c = c as usize;
-    let mut l = crate::contato::open(fs, |fs| m.open_fs(fs), &tell, step, c)?;
+    let mut l = crate::counted::open(fs, |fs| m.open_fs(fs), &tell, step, c)?;
     let cm = (c, l.missing(c));
     let mut out = Accorpa::flussi(JsOutput { write });
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round; OPFS writes in 1 MiB blocks (`accorpa`)
