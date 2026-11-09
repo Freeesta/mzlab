@@ -1,7 +1,7 @@
 //! The bond breaks of the structure of the user that explain the ions of an `msngrafo/1`: every set of one or two single bonds is cut, each
 //! piece takes a hydrogen per cut and may gain or lose a few more (hydrogen transfer), and the pieces whose m/z is a node's become its hypotheses;
 //! an arc is explained when a hypothesis of the child lies inside one of the parent. Used by `mzlab-cli msn-graph --rotture` and the `.wasm`
-//! `msngrafo` (`rotture_testo`, the same bytes); the types of the answer are in `mzlab_core::msngrafo`. Hypotheses, never identifications.
+//! `msngrafo` (`breaks_text`, the same bytes); the types of the answer are in `mzlab_core::msngrafo`. Hypotheses, never identifications.
 
 use super::grafo::Mol;
 use crate::sortc::SortC;
@@ -12,34 +12,34 @@ use mzlab_core::msngrafo::{
 };
 
 const ION_H: f64 = mzlab_core::elements::PROTON;
-const MASSA_H: f64 = 1.00782503207;
+const MASS_H: f64 = 1.00782503207;
 /// Single bonds cut at most (as the one-bond cleavages of `strutture`).
-const MAX_LEGAMI: usize = 400;
+const MAX_BONDS: usize = 400;
 /// Bonds that take part in pairs at most (a pair is a quadratic number of cuts).
-const MAX_COPPIE: usize = 120;
+const MAX_PAIRS: usize = 120;
 /// Hypotheses written per node (the count `n` is of all).
-const MAX_IPOTESI: usize = 20;
+const MAX_HYPOTHESES: usize = 20;
 
 /// The parameters of the calculation: window in ppm of the m/z of a node, hydrogens moved at most, bonds cut at most (1 or 2).
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Parametri {
+pub struct Params {
     pub ppm: f64,
     pub h_max: u8,
-    pub max_legami: u8,
+    pub max_bonds: u8,
 }
 
-impl Default for Parametri {
+impl Default for Params {
     fn default() -> Self {
-        Parametri {
+        Params {
             ppm: 10.0,
             h_max: 2,
-            max_legami: 2,
+            max_bonds: 2,
         }
     }
 }
 
 /// Component label of every atom once the bonds in `tagli` are removed, and the number of components.
-fn componenti(m: &Mol, tagli: &[usize]) -> (Vec<usize>, usize) {
+fn componenti(m: &Mol, cuts: &[usize]) -> (Vec<usize>, usize) {
     let mut lab = vec![usize::MAX; m.atoms.len()];
     let mut n = 0;
     for s in 0..m.atoms.len() {
@@ -50,7 +50,7 @@ fn componenti(m: &Mol, tagli: &[usize]) -> (Vec<usize>, usize) {
         let mut st = vec![s];
         while let Some(u) = st.pop() {
             for (v, k) in &m.adj[u] {
-                if !tagli.contains(k) && lab[*v] == usize::MAX {
+                if !cuts.contains(k) && lab[*v] == usize::MAX {
                     lab[*v] = n;
                     st.push(*v);
                 }
@@ -75,13 +75,13 @@ fn sottoinsieme(a: &[usize], b: &[usize]) -> bool {
 }
 
 /// The hypotheses of every node, the explained arcs and the explained intensity of `g` for the structure `smiles`. `Err` = the SMILES cannot be read.
-pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Breaks, String> {
+pub fn breaks(g: &Graph, smiles: &str, p: Params) -> Result<Breaks, String> {
     let mixture = smiles.split('.').filter(|s| !s.trim().is_empty()).count() > 1;
     let mut out = Breaks {
         smiles: smiles.to_string(),
         ppm: p.ppm,
         h_max: p.h_max,
-        max_legami: p.max_legami.clamp(1, 2),
+        max_bonds: p.max_bonds.clamp(1, 2),
         atoms: 0,
         legami: 0,
         warnings: vec![],
@@ -89,7 +89,7 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Breaks, String> 
         edges: vec![],
         spettri: vec![],
     };
-    let mut ipotesi: Vec<Vec<Hypothesis>> = vec![vec![]; g.nodi.len()];
+    let mut hyps: Vec<Vec<Hypothesis>> = vec![vec![]; g.nodi.len()];
     if mixture {
         Mol::parse(smiles.split('.').next().unwrap_or("")).map_err(|_| "Invalid SMILES")?;
         out.warnings.push("warn.msngrafo.structMixture");
@@ -97,14 +97,14 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Breaks, String> 
         let m = Mol::parse(smiles).map_err(|_| "Invalid SMILES")?;
         out.atoms = m.atoms.len();
         out.legami = m.bonds.len();
-        enumera(g, &m, &mut out, &mut ipotesi, p);
+        enumera(g, &m, &mut out, &mut hyps, p);
     }
-    for (k, v) in ipotesi.iter_mut().enumerate() {
+    for (k, v) in hyps.iter_mut().enumerate() {
         v.sortc_by(|a, b| {
             a.ppm
                 .abs()
                 .total_cmp(&b.ppm.abs())
-                .then(a.legami.len().cmp(&b.legami.len()))
+                .then(a.bonds.len().cmp(&b.bonds.len()))
                 .then(a.piece.cmp(&b.piece))
                 .then(a.h.cmp(&b.h))
         });
@@ -118,8 +118,8 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Breaks, String> 
         });
     }
     for a in &g.archi {
-        let spiegato = ipotesi[a.a].iter().any(|c| {
-            ipotesi[a.da].iter().any(|q| {
+        let spiegato = hyps[a.a].iter().any(|c| {
+            hyps[a.da].iter().any(|q| {
                 sottoinsieme(&c.piece, &q.piece) && (c.piece.len() < q.piece.len() || c.h != q.h)
             })
         });
@@ -149,7 +149,7 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Breaks, String> 
         });
     }
     for n in &mut out.nodes {
-        n.ipotesi = ipotesi[n.node].iter().take(MAX_IPOTESI).cloned().collect();
+        n.ipotesi = hyps[n.node].iter().take(MAX_HYPOTHESES).cloned().collect();
     }
     Ok(out)
 }
@@ -158,30 +158,27 @@ pub fn rotture(g: &Graph, smiles: &str, p: Parametri) -> Result<Breaks, String> 
 struct Ctx<'a> {
     g: &'a Graph,
     m: &'a Mol,
-    ordine: Vec<usize>,
-    massa_atomo: Vec<f64>,
+    order: Vec<usize>,
+    atom_mass: Vec<f64>,
     delta: f64,
-    p: Parametri,
+    p: Params,
 }
 
 impl Ctx<'_> {
     /// Cuts the bonds `tagli` and adds, per node, the pieces (and hydrogen shifts) that give its m/z.
-    fn prova(&self, tagli: &[usize], ipotesi: &mut [Vec<Hypothesis>]) {
+    fn trial(&self, cuts: &[usize], hypotheses: &mut [Vec<Hypothesis>]) {
         let m = self.m;
-        let (lab, nc) = componenti(m, tagli);
-        if tagli
-            .iter()
-            .any(|&k| lab[m.bonds[k].a] == lab[m.bonds[k].b])
-        {
+        let (lab, nc) = componenti(m, cuts);
+        if cuts.iter().any(|&k| lab[m.bonds[k].a] == lab[m.bonds[k].b]) {
             return;
         }
         for c in 0..nc {
-            let pezzo: Vec<usize> = (0..lab.len()).filter(|&i| lab[i] == c).collect();
+            let piece: Vec<usize> = (0..lab.len()).filter(|&i| lab[i] == c).collect();
             let mut keep = vec![false; lab.len()];
-            for &i in &pezzo {
+            for &i in &piece {
                 keep[i] = true;
             }
-            let attacchi: usize = tagli
+            let attacchi: usize = cuts
                 .iter()
                 .map(|&k| {
                     [m.bonds[k].a, m.bonds[k].b]
@@ -191,17 +188,17 @@ impl Ctx<'_> {
                 })
                 .sum();
             let base: f64 =
-                pezzo.iter().map(|&i| self.massa_atomo[i]).sum::<f64>() + attacchi as f64 * MASSA_H;
+                piece.iter().map(|&i| self.atom_mass[i]).sum::<f64>() + attacchi as f64 * MASS_H;
             let h = self.p.h_max as i8;
             for k in -h..=h {
-                let mz = base + k as f64 * MASSA_H + self.delta;
+                let mz = base + k as f64 * MASS_H + self.delta;
                 if mz > 0.0 {
-                    nodi_a(
+                    nodes_at(
                         self,
                         mz,
-                        (tagli, &pezzo, &keep, attacchi as i64 + k as i64),
+                        (cuts, &piece, &keep, attacchi as i64 + k as i64),
                         k,
-                        ipotesi,
+                        hypotheses,
                     );
                 }
             }
@@ -210,21 +207,21 @@ impl Ctx<'_> {
 }
 
 /// Adds the piece to every node within the window of `mz`.
-fn nodi_a(
+fn nodes_at(
     cx: &Ctx,
     mz: f64,
     (tagli, pezzo, keep, nh): (&[usize], &[usize], &[bool], i64),
     k: i8,
-    ipotesi: &mut [Vec<Hypothesis>],
+    hypotheses: &mut [Vec<Hypothesis>],
 ) {
     let (g, tol) = (cx.g, mz * cx.p.ppm * 1e-6);
-    let lo = cx.ordine.partition_point(|&n| g.nodi[n].mz < mz - tol);
-    for &n in cx.ordine[lo..]
+    let lo = cx.order.partition_point(|&n| g.nodi[n].mz < mz - tol);
+    for &n in cx.order[lo..]
         .iter()
         .take_while(|&&n| g.nodi[n].mz <= mz + tol)
     {
         // the fewest cuts come first, so a repeated piece keeps the simplest way to get it
-        if ipotesi[n].iter().any(|x| x.piece == pezzo && x.h == k) {
+        if hypotheses[n].iter().any(|x| x.piece == pezzo && x.h == k) {
             continue;
         }
         let mut f: Formula = cx.m.formula_of(keep);
@@ -234,8 +231,8 @@ fn nodi_a(
                 None => f.push(("H".to_string(), nh.max(0) as u64)),
             }
         }
-        ipotesi[n].push(Hypothesis {
-            legami: tagli.to_vec(),
+        hypotheses[n].push(Hypothesis {
+            bonds: tagli.to_vec(),
             piece: pezzo.to_vec(),
             formula: elements::fmt(&f),
             h: k,
@@ -246,7 +243,7 @@ fn nodi_a(
 }
 
 /// Cuts the sets of bonds and collects, per node, the pieces that give its m/z.
-fn enumera(g: &Graph, m: &Mol, out: &mut Breaks, ipotesi: &mut [Vec<Hypothesis>], p: Parametri) {
+fn enumera(g: &Graph, m: &Mol, out: &mut Breaks, hypotheses: &mut [Vec<Hypothesis>], p: Params) {
     let on_ring = m.ring_bonds();
     let mut cand: Vec<usize> = (0..m.bonds.len())
         .filter(|&k| {
@@ -254,44 +251,44 @@ fn enumera(g: &Graph, m: &Mol, out: &mut Breaks, ipotesi: &mut [Vec<Hypothesis>]
             o == 1.0 || (o == 1.5 && !on_ring[k])
         })
         .collect();
-    cand.truncate(MAX_LEGAMI);
+    cand.truncate(MAX_BONDS);
     let mut ordine: Vec<usize> = (0..g.nodi.len()).collect();
     ordine.sortc_by(|&a, &b| g.nodi[a].mz.total_cmp(&g.nodi[b].mz));
     let ctx = Ctx {
         g,
         m,
-        ordine,
-        massa_atomo: m
+        order: ordine,
+        atom_mass: m
             .atoms
             .iter()
-            .map(|a| elements::mass(&vec![(a.el.clone(), 1u64)]) + a.h as f64 * MASSA_H)
+            .map(|a| elements::mass(&vec![(a.el.clone(), 1u64)]) + a.h as f64 * MASS_H)
             .collect(),
         delta: if g.polarita < 0 { -ION_H } else { ION_H },
         p,
     };
-    ctx.prova(&[], ipotesi);
+    ctx.trial(&[], hypotheses);
     for &a in &cand {
-        ctx.prova(&[a], ipotesi);
+        ctx.trial(&[a], hypotheses);
     }
-    if p.max_legami < 2 {
+    if p.max_bonds < 2 {
         return;
     }
-    if cand.len() > MAX_COPPIE {
-        cand.truncate(MAX_COPPIE);
+    if cand.len() > MAX_PAIRS {
+        cand.truncate(MAX_PAIRS);
         out.warnings.push("warn.msngrafo.rottureCapped");
     }
     for (i, &a) in cand.iter().enumerate() {
         for &b in &cand[i + 1..] {
-            ctx.prova(&[a, b], ipotesi);
+            ctx.trial(&[a, b], hypotheses);
         }
     }
 }
 
 /// The graph text `j` of `g` with the key `rotture` for `smiles`.
-pub fn rotture_testo(g: &Graph, j: &str, smiles: Option<&str>, p: Parametri) -> CoreResult<String> {
+pub fn breaks_text(g: &Graph, j: &str, smiles: Option<&str>, p: Params) -> CoreResult<String> {
     let smiles = smiles.filter(|s| !s.trim().is_empty());
     let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
-    let r = rotture(g, smiles, p)
-        .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
+    let r =
+        breaks(g, smiles, p).map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
     Ok(with_breaks(j, &r))
 }

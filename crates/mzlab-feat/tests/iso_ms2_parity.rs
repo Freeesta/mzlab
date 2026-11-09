@@ -76,14 +76,14 @@ fn check_reference(f: &FileFeatures, links: &mzlab_feat::ms2::Ms2Links, want: &V
         .collect();
     assert_eq!(iso, ints(&want["isotope"]), "isotope flag");
     for i in 0..f.len() {
-        let (scans, pur) = links.of(i);
+        let (scans, purity) = links.of(i);
         let ws = ints(&want["ms2_scans"][i]);
         assert_eq!(
             scans.iter().map(|&s| s as i64).collect::<Vec<_>>(),
             ws,
             "#{i}: MS2 scans"
         );
-        for (k, p) in pur.iter().enumerate() {
+        for (k, p) in purity.iter().enumerate() {
             let w = want["ms2_purity"][i][k].as_f64().unwrap();
             assert!(
                 (*p as f64 - w).abs() <= 1e-5,
@@ -98,15 +98,15 @@ fn check_truth(f: &FileFeatures, dir: &Path) {
         serde_json::from_slice(&std::fs::read(dir.join("verita.json")).unwrap()).unwrap();
     let ions = t["ioni"].as_array().unwrap();
     let base = |fam: &str| ions.iter().find(|r| r["id"] == fam).unwrap();
-    let (mut pur_ok, mut pur_n, mut iso_ok, mut iso_n) = (0, 0, 0, 0);
+    let (mut purity_ok, mut purity_n, mut iso_ok, mut iso_n) = (0, 0, 0, 0);
     for r in ions {
         let (Some(rt), Some(mz)) = (r["rt_obs"][0].as_f64(), r["mz"].as_f64()) else {
             continue;
         };
         let Some(i) = find(f, mz, rt) else { continue };
         if r["ruolo"] == "tp1" && r["purezza"].is_number() && f.ms2_n[i] > 0 {
-            pur_n += 1;
-            pur_ok +=
+            purity_n += 1;
+            purity_ok +=
                 (((f.purity[i] as f64) - r["purezza"].as_f64().unwrap()).abs() <= 0.05) as i32;
         }
         if r["ruolo"] == "isotopo" {
@@ -117,8 +117,8 @@ fn check_truth(f: &FileFeatures, dir: &Path) {
             }
         }
     }
-    assert!(pur_n >= 4, "purity levels found: {pur_n}");
-    assert_eq!(pur_ok, pur_n, "purity within 0.05");
+    assert!(purity_n >= 4, "purity levels found: {purity_n}");
+    assert_eq!(purity_ok, purity_n, "purity within 0.05");
     assert!(
         iso_n >= 10 && iso_ok as f64 >= 0.95 * iso_n as f64,
         "isotopologues grouped {iso_ok}/{iso_n}"

@@ -8,7 +8,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::json::{Out, Value};
 use mzlab_feat::chem::posizioni::Pol;
 use mzlab_feat::interp::filtri::DecoyParams;
-use mzlab_feat::interp::json::filtri_json;
+use mzlab_feat::interp::json::filters_json;
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::refilter::{refilter, FilterParams};
 use mzlab_feat::interp::reposition::reposition;
@@ -188,7 +188,7 @@ pub fn refilter_text(
     hyps.sortc_by_key(|h| h.0);
     let hyps: Vec<_> = hyps.into_iter().map(|h| h.1).collect();
     let reg = refilter(&mut Slice(tp), tp.len() as u64, &hyps, &filter_params(get))?;
-    Ok(filtri_json(&reg))
+    Ok(filters_json(&reg))
 }
 
 /// The polarity of the series, from the recipe in the meta of the table: the recipe is text (`detect=Params { .. polarity: Some(-1) .. }`), positive when it names none.

@@ -4,11 +4,11 @@
 use crate::sortc::SortC;
 use std::collections::VecDeque;
 
-use super::{Node, ReteRow};
+use super::{NetworkRow, Node};
 use crate::tp::TpBlock;
 
 /// The nodes touched by an arc, and the parent. `all` is the parent then the products in the order of m/z; `arcs` are indexes into `all`.
-pub(super) fn nodes(all: &[&ReteRow], arcs: &[(usize, usize)], tp: &TpBlock) -> Vec<Node> {
+pub(super) fn nodes(all: &[&NetworkRow], arcs: &[(usize, usize)], tp: &TpBlock) -> Vec<Node> {
     let n = all.len();
     let mut adj = vec![Vec::new(); n];
     for &(a, b) in arcs {

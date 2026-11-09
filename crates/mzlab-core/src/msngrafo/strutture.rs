@@ -28,7 +28,7 @@ pub struct Cut {
     pub rest: Vec<usize>,
     /// Neutral formula of the piece (with the hydrogen of the cut) and the form that matched (`ion`, `radical`, `-H2O`, ...).
     pub formula: String,
-    pub variante: String,
+    pub variant: String,
     pub perdita: String,
     pub theoretical_mz: f64,
     pub ppm: f64,
@@ -53,7 +53,7 @@ pub struct Structures {
     pub ppm_tol: f64,
     /// Heavy atoms of the structure and bonds that can be cleaved (acyclic single bonds).
     pub atoms: usize,
-    pub legami: usize,
+    pub bonds: usize,
     pub candidates: Vec<StructureCandidate>,
     /// Keys `warn.msngrafo.*`.
     pub warnings: Vec<&'static str>,
@@ -128,7 +128,7 @@ fn cut_at(o: &mut Out, t: &Cut) {
     o.raw(",\"formula\":")
         .str(&t.formula)
         .raw(",\"variante\":")
-        .str(&t.variante)
+        .str(&t.variant)
         .raw(",\"perdita\":")
         .str(&t.perdita)
         .raw(",\"mz_teorico\":")
@@ -167,7 +167,7 @@ pub fn structures_json(s: &Structures) -> String {
         .raw(",\"atomi\":")
         .int(s.atoms as i64)
         .raw(",\"legami\":")
-        .int(s.legami as i64)
+        .int(s.bonds as i64)
         .raw(",\"avvisi\":[");
     for (i, a) in s.warnings.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).str(a);

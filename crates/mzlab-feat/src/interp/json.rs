@@ -205,7 +205,7 @@ fn tree(o: &mut Out, r: &RowInterp) {
 }
 
 /// The registry `filtri/1`.
-pub fn filtri_json(reg: &Registry) -> String {
+pub fn filters_json(reg: &Registry) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":")
         .str(super::filtri::SCHEMA)
@@ -280,7 +280,7 @@ pub fn meta_json(out: &Output, parent: &Parent) -> String {
         o.raw("]");
     }
     o.raw("},\"filtri\":")
-        .raw(&filtri_json(&out.registry))
+        .raw(&filters_json(&out.registry))
         .raw("}");
     o.0
 }

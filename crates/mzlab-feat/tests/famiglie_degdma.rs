@@ -89,13 +89,13 @@ fn the_fragment_of_a_later_product_is_not_joined_to_the_molecule() {
     let _ = std::fs::remove_dir_all(&out);
 }
 
-fn series(solo: &str) -> Option<std::path::PathBuf> {
+fn series(only: &str) -> Option<std::path::PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let out = std::env::temp_dir().join(format!("mzlab_feat_orient_{solo}_{}", std::process::id()));
+    let out = std::env::temp_dir().join(format!("mzlab_feat_orient_{only}_{}", std::process::id()));
     let ok = std::process::Command::new("python3")
         .arg(root.join("tools/feat_sintetici.py"))
         .arg(&out)
-        .args(["--solo", solo])
+        .args(["--solo", only])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);

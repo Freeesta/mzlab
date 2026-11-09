@@ -222,7 +222,7 @@ mod tests {
             time: Some(t),
             t,
             cond: String::new(),
-            replica: None,
+            replicate: None,
             order: 0,
         }
     }

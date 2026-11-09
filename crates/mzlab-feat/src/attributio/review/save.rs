@@ -89,7 +89,7 @@ fn check_rules(
     level: &str,
     group: &str,
     name: &str,
-    nota: &str,
+    note: &str,
     etype: &str,
 ) -> Result<()> {
     let cur = Current {
@@ -100,13 +100,13 @@ fn check_rules(
         group: f.decision.group_override.as_deref(),
     };
     let changes = decision_changes(&cur, &Rec { level, group, name });
-    if !changes.is_empty() && nota.is_empty() {
+    if !changes.is_empty() && note.is_empty() {
         return Err(bad(format!(
             "a note (justification) is required: the decision changes {}",
             changes.join(", ")
         )));
     }
-    if level == "2b" && nota.is_empty() {
+    if level == "2b" && note.is_empty() {
         return Err(bad("a '2b' row needs a note (justification)"));
     }
     if etype == "analog" && level == "2" {
@@ -139,8 +139,8 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
         ev_text("type"),
         &["", "library", "analog", "fragments", "in_silico", "context"],
     )?;
-    let (name, nota) = (g("name"), g("justification"));
-    check_rules(f, level, &group, &name, &nota, &etype)?;
+    let (name, note) = (g("name"), g("justification"));
+    check_rules(f, level, &group, &name, &note, &etype)?;
     let ticked = ticked_items(&d)?;
     let mut row = DecisionTable::empty();
     // the run the decision comes from (`plan_sha256` and `agent.version` of its `prov/1`), when the page sends it
@@ -163,7 +163,7 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
         ("identity", g("identity")),
         ("decided_on", g("decided_on")),
         ("decided_by", g("decided_by")),
-        ("justification", nota),
+        ("justification", note),
         ("group", group),
         ("rt_check", rt_check),
         ("evidence_type", etype),

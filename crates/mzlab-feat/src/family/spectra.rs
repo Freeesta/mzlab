@@ -45,9 +45,9 @@ impl Spectra {
 
 /// The scan (index in `Index::scans`) of the highest purity among the MS2 linked to row `i`.
 fn best_scan(links: &Ms2Links, i: usize) -> Option<u32> {
-    let (scans, pur) = links.of(i);
+    let (scans, purity) = links.of(i);
     let mut best: Option<(f32, u32)> = None;
-    for (&s, &p) in scans.iter().zip(pur) {
+    for (&s, &p) in scans.iter().zip(purity) {
         if best.is_none_or(|(bp, _)| p > bp) {
             best = Some((p, s));
         }

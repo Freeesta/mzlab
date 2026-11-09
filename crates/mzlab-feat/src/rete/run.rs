@@ -8,7 +8,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{self, Value};
 
-use super::{build, ReteParams, ReteRow};
+use super::{build, NetworkParams, NetworkRow};
 use crate::hypo::Rules;
 use crate::interp::store;
 use crate::store_read::read_table_from;
@@ -52,14 +52,14 @@ fn neutral_of(ion: &str) -> String {
     fmt(&f)
 }
 
-fn row_of(table: &Aligned, tmax: &[Option<f64>], row: usize) -> ReteRow {
-    ReteRow {
+fn row_of(table: &Aligned, tmax: &[Option<f64>], row: usize) -> NetworkRow {
+    NetworkRow {
         row,
         id: table.id(row),
         mz: table.mz[row],
         rt: table.rt[row],
         tmax: tmax[row],
-        ..ReteRow::default()
+        ..NetworkRow::default()
     }
 }
 
@@ -68,20 +68,20 @@ fn row_of(table: &Aligned, tmax: &[Option<f64>], row: usize) -> ReteRow {
 pub fn network_text<T: ReadAt, P: ReadAt>(
     table: (&mut T, u64),
     tp_file: (&mut P, u64),
-    campioni: &str,
+    samples: &str,
     rules: &[u8],
-    params: &ReteParams,
+    params: &NetworkParams,
 ) -> Result<String> {
     let (aligned, table_meta) = read_table_from(table.0, table.1)?;
     if aligned.tp.is_empty() || aligned.tp.parent_row == NO_PARENT {
         return Err(Error::new("error.tpNoBlock"));
     }
-    let roles = if campioni.trim().is_empty() {
+    let roles = if samples.trim().is_empty() {
         None
     } else {
         let names = crate::store::input_names(&table_meta);
         Some(TpRoles::from_json(&mzlab_core::campioni::order_like(
-            campioni, &names,
+            samples, &names,
         )?)?)
     };
     let tmax = strongest_times(&aligned, roles.as_ref());

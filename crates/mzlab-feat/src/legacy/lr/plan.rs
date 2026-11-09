@@ -117,7 +117,7 @@ pub fn columns(files: &[FileLr]) -> Vec<FileIn> {
                 time: f.time,
                 t: f64::NAN,
                 cond: f.cond.clone(),
-                replica: f.replica,
+                replicate: f.replica,
                 order: f.order,
             };
             x.t = match f.time {
@@ -141,7 +141,7 @@ pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
     };
     let camp = match camp {
         Some(c) if !c.is_null() => {
-            crate::gruppi::campioni_from_value(c).map_err(|e| e.to_string())?
+            crate::gruppi::samples_from_value(c).map_err(|e| e.to_string())?
         }
         _ => Vec::new(),
     };
@@ -168,7 +168,7 @@ pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
                 name,
             };
             if let Some(c) = camp.iter().find(|c| c.file == x.name) {
-                apply_campione(&mut x, c);
+                apply_sample(&mut x, c);
             }
             x
         })
@@ -176,7 +176,7 @@ pub fn files(files_json: &str) -> Res<Vec<FileLr>> {
 }
 
 /// The role, time, condition and replicate of `campioni/2` over a file (a role the Dig does not use keeps the page's type).
-fn apply_campione(x: &mut FileLr, c: &mzlab_core::campioni::Sample) {
+fn apply_sample(x: &mut FileLr, c: &mzlab_core::campioni::Sample) {
     match c.role() {
         "sample" | "t0" => x.kind_type = "sample".into(),
         "blank" => x.kind_type = "blank".into(),

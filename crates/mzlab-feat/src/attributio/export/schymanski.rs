@@ -73,7 +73,7 @@ fn feature_cells(l: &Loaded, r: &FRow, files: &Files) -> Pairs {
         ),
         kv(
             "ref_usi",
-            r.ref_usi().map_or(Cell::Null, |x| text(x.into())),
+            r.ref_uses().map_or(Cell::Null, |x| text(x.into())),
         ),
         kv(
             "gnps_component",

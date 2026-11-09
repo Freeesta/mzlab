@@ -121,7 +121,7 @@ pub fn decided_features(d: &DecisionTable, features: &[Feature]) -> Vec<Decided>
 }
 
 /// The USI of a public library spectrum id.
-pub fn usi_for(id: &str) -> Option<String> {
+pub fn uses_for(id: &str) -> Option<String> {
     let mut id = id.trim().to_string();
     if id.starts_with('[') {
         id = id
@@ -346,7 +346,7 @@ fn table_row(
         r.and_then(|r| r.library.clone()).unwrap_or_default(),
         r.and_then(|r| r.entry.clone()).unwrap_or_default(),
         r.and_then(|r| r.entry.as_deref())
-            .and_then(usi_for)
+            .and_then(uses_for)
             .unwrap_or_default(),
         r.map_or(String::new(), |r| r.kind.clone()),
         pick(

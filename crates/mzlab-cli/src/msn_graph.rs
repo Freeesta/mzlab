@@ -82,21 +82,21 @@ const ALIASES: &[(&str, &str)] = &[
 /// Default window of the cleavages of `--structures`, ppm.
 pub const PPM_STRUTTURA: f64 = 10.0;
 
-use mzlab_feat::chem::rotture::Parametri;
+use mzlab_feat::chem::rotture::Params;
 
 /// The flags of the bond breaks and the window shared with `--structures`.
 struct Rot {
     on: bool,
-    p: Parametri,
+    p: Params,
 }
 
 impl Default for Rot {
     fn default() -> Self {
         Rot {
             on: false,
-            p: Parametri {
+            p: Params {
                 ppm: PPM_STRUTTURA,
-                ..Parametri::default()
+                ..Params::default()
             },
         }
     }
@@ -112,7 +112,7 @@ impl Rot {
         match x {
             "--breaks" => self.on = true,
             "--h-max" => self.p.h_max = number(a.next(), x)?.clamp(0.0, 4.0) as u8,
-            "--max-bonds" => self.p.max_legami = number(a.next(), x)?.clamp(1.0, 2.0) as u8,
+            "--max-bonds" => self.p.max_bonds = number(a.next(), x)?.clamp(1.0, 2.0) as u8,
             "--struct-ppm" => self.p.ppm = number(a.next(), x)?,
             _ => return Ok(false),
         }
@@ -128,9 +128,9 @@ pub struct Args {
     export: Option<(Format, bool, Option<String>)>,
     structures: Option<(String, f64)>,
     interpreta: Option<f64>,
-    cleavages: Option<Parametri>,
+    cleavages: Option<Params>,
     figure: Vec<crate::msn_uscite::Format>,
-    view: mzlab_feat::msnfigura::Vista,
+    view: mzlab_feat::msnfigura::View,
     pub out: Option<PathBuf>,
 }
 
@@ -147,8 +147,8 @@ fn number(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
 
 /// The arguments after `msn-graph`; `Ok(None)` = `--help`.
 /// The view named after `--view`.
-fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigura::Vista, String> {
-    mzlab_feat::msnfigura::Vista::da_nome(&n.unwrap_or_default())
+fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigura::View, String> {
+    mzlab_feat::msnfigura::View::da_nome(&n.unwrap_or_default())
         .ok_or_else(|| "--view needs tree or radial".into())
 }
 
@@ -165,7 +165,7 @@ pub fn parse_args(
     let (mut strutture, mut rot) = (None, Rot::default());
     let (mut interpreta, mut loss_ppm) = (false, PPM_PERDITA);
     let (mut rules, mut rules_p) = (false, RuleParams::default());
-    let (mut figura, mut vista) = (Vec::new(), mzlab_feat::msnfigura::Vista::Albero);
+    let (mut figura, mut vista) = (Vec::new(), mzlab_feat::msnfigura::View::Albero);
     while let Some(x) = a.next().map(|x| crate::msn_uscite::canonical(ALIASES, x)) {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -259,7 +259,7 @@ pub fn graph(file: &Path, o: &Options, tmp: &Path) -> Result<(Graph, String)> {
     let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
-    let o = &mzlab_feat::chem::regole::con_attese(o);
+    let o = &mzlab_feat::chem::regole::with_expected(o);
     graph_json(&scans, &mut m, (&name, &sha), (o, &Grouping::default()))
 }
 
@@ -401,7 +401,7 @@ pub fn with_keys(a: &Args, g: &Graph, mut j: String) -> Result<String> {
         j = with_interpretation(&j, g, ppm);
     }
     if let Some(p) = a.cleavages {
-        j = mzlab_feat::chem::rotture::rotture_testo(g, &j, a.o.smiles.as_deref(), p)?;
+        j = mzlab_feat::chem::rotture::breaks_text(g, &j, a.o.smiles.as_deref(), p)?;
     }
     Ok(j)
 }
