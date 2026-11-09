@@ -9,14 +9,15 @@ const [pkg, out, ...rest] = process.argv.slice(2);
 const w = require(path.join(pkg, "mzlab_feat_wasm.js"));
 
 const files = [];
-const opt = { recipe: "", parent: "", rules: "", structure: "", "parent-mz": NaN, "parent-rt": NaN, "budget-mb": "", spill: "" };
+const opt = { recipe: "", parent: "", rules: "", structure: "", "parent-mz": NaN, "parent-rt": NaN, "budget-mb": "", spill: "", weak: "" };
 for (let i = 0; i < rest.length; i++) {
   if (rest[i].startsWith("--")) opt[rest[i].slice(2)] = rest[++i]; else files.push(rest[i]);
 }
 const sha = b => crypto.createHash("sha256").update(b).digest("hex");
 const fds = files.map(f => fs.openSync(f, "r"));
 const sizes = Float64Array.from(files, f => fs.statSync(f).size);
-const read = (k, off, len) => { const b = new Uint8Array(len); fs.readSync(fds[k], b, 0, len, off); return b; };
+let reads = 0;
+const read = (k, off, len) => { reads++; const b = new Uint8Array(len); fs.readSync(fds[k], b, 0, len, off); return b; };
 const base = f => path.basename(f);
 
 // a sink: write(offset, bytes) into a file of the out directory; the step returns {bytes, sha256}
@@ -42,7 +43,11 @@ if (budget !== null) {
   const held = [];
   let puts = 0, gets = 0;
   const spill = opt.spill ? { put: (k, b) => { held[k] = b.slice(); puts++; }, get: k => { gets++; if (opt.spill === "fail") throw new Error("get"); return held[k]; } } : undefined;
-  const done = JSON.parse(w.align_series_to(stored, read, sizes, opt.recipe, s.write, budget, spill));
+  // --weak 1: the weak candidates of every file from its detection (`detect_weak_file_to`, as the worker keeps them), handed to the alignment
+  const weak = opt.weak ? files.map((_, k) => { const b = []; w.detect_weak_file_to((_, off, len) => read(k, off, len), sizes[k], opt.recipe, (_, x) => b.push(x.slice())); return Buffer.concat(b); }) : undefined;
+  reads = 0;
+  const done = JSON.parse(w.align_series_to(stored, read, sizes, opt.recipe, s.write, budget, spill, weak));
+  console.error(`align reads ${reads}`);
   if (spill) console.error(`spill puts ${puts} gets ${gets}`);
   fs.closeSync(s.fd);
   console.log(`series.mzfeat ${done.sha256}`);

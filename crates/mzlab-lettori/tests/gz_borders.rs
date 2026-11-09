@@ -1,4 +1,4 @@
-//! The edge cases of a `.mzML.gz`, app against site: the app and the CLI inflate it in `aperti/mzml_gz.rs` and open it, the page streams it through
+//! The edge cases of a `.mzML.gz`, app against site: the app and the CLI inflate it in `open/mzml_gz.rs` and open it, the page streams it through
 //! `mzlab_core::gunzip` (`rust-carica.js` `inflate`: a stream that did not end well and gave no byte is `err.file.zlib`) and opens the mzML as a plain
 //! upload (`upload::prepare`). Empty, magic bytes only, header only, cut in the middle, padded with zeros after the member: both give the same key.
 #![cfg(feature = "aperti")]

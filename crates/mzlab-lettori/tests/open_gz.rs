@@ -86,7 +86,7 @@ fn hostile_cases_give_a_key() {
     let scan = scans();
     let good = gz(&mzml_di(&scan, Cod::Piano, None));
     let key = |name: &str, b: Vec<u8>, l: &Limits| abre(name, b, l).err();
-    // cut before anything inflated: a damaged gzip, the key of the page's inflate (tests/gz_bordi.rs)
+    // cut before anything inflated: a damaged gzip, the key of the page's inflate (tests/gz_borders.rs)
     assert_eq!(
         key("a.mzML.gz", good[..12].to_vec(), &Limits::sito()),
         Some("err.file.zlib")
