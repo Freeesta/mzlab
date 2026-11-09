@@ -23,7 +23,7 @@ const BARRA = (() => {
   const MAIN = new Set(["file", "calc", "addloss", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
   const LEVELS = ["all", "main", "none"];
   const HYST = 8;                   // px of slack asked before a richer level comes back (no flicker at the edge)
-  const DROP_ORDER = ["ptable", "qaqc", "lists", "addloss", "idn", "form", "scan"];       // first to go into "Altro" (File never does)
+  const DROP_ORDER = ["ptable", "qaqc", "lists", "addloss", "idn", "form", "scan", "search"];       // first to go into "Altro" (File never does; Search last, still on ⌘K)
 
   let _tab = "file";
   let _prev = "";                   // the tool shown before the current one while the panel stayed open: a second click on the current one goes back to it

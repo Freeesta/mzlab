@@ -172,7 +172,7 @@ header .hq:focus-visible{outline-offset:1px}
 #stmenu button[aria-checked=true]::after{content:"";margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 #stmenu .mh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:6px 10px 2px}
 #stmenu hr{border:0;border-top:1px solid var(--line);margin:3px 0}
-@media (pointer:coarse){#stbar .tb{min-height:40px;min-width:40px;justify-content:center}#stmenu button{min-height:40px}#sb-header button{min-width:40px;min-height:40px}}
+@media (pointer:coarse){#stbar{height:40px;min-height:40px}#stbar .tb{min-height:40px;min-width:40px;justify-content:center}#stmenu button{min-height:40px}#sb-header button{min-width:40px;min-height:40px}}
 #sb-header{display:flex;align-items:center;gap:6px;padding:var(--sp-2) 8px;border-bottom:1px solid var(--line);flex:none;margin:0}
 #sb-title{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-dock-btn{background:transparent;border:0;padding:2px 4px;min-width:24px;min-height:24px;cursor:pointer;color:var(--muted);border-radius:4px;display:inline-flex;align-items:center;justify-content:center}
