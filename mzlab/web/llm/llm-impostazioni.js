@@ -87,8 +87,8 @@ export async function mount(box, ui, startOn = false) {
     };
     $("#llm-model").onchange = (/** @type {any} */ e) => { s.model = e.target.value; writeSettings(s); };
     box.querySelectorAll('input[name="llm-level"]').forEach(r => r.addEventListener("change", e => { if (/** @type {HTMLInputElement} */ (e.target).checked) { s.level = /** @type {HTMLInputElement} */ (e.target).value; writeSettings(s); } }));
-    $("#llm-l2max").onchange = (/** @type {any} */ e) => { s.l2max = Math.min(50, Math.max(1, Math.round(+e.target.value || 5))); e.target.value = s.l2max; writeSettings(s); };
-    $("#llm-cap").onchange = (/** @type {any} */ e) => { s.cap = Math.max(0, +e.target.value || 0); e.target.value = s.cap; writeSettings(s); };
+    $("#llm-l2max").onchange = (/** @type {any} */ e) => { s.l2max = Math.min(50, Math.max(1, Math.round(numIt(e.target.value) || 5))); e.target.value = s.l2max; writeSettings(s); };
+    $("#llm-cap").onchange = (/** @type {any} */ e) => { s.cap = Math.max(0, numIt(e.target.value) || 0); e.target.value = s.cap; writeSettings(s); };
     $("#llm-hide").onchange = (/** @type {any} */ e) => { s.hideNames = e.target.checked; writeSettings(s); };
     $("#llm-revoke").onclick = () => { revoke(provider().id); s.on = false; writeSettings(s); off(); };
     keyArea(client, T, status, $("#llm-keybox"), provider());
