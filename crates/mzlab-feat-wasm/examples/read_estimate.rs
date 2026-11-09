@@ -1,8 +1,8 @@
 //! The inputs of the read estimate (`mzlab_core::mzml_estimate`) and the native peak memory of `spectra.ms2` on synthetic mzML shapes, for the fit of its coefficients:
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example stima_lettura -- --write DIR     (the shapes of the sweep, one .mzML each)
-//!     cargo run --release -p mzlab-feat-wasm --example stima_lettura -- FILE.mzML...
-//!     cargo run --release -p mzlab-feat-wasm --example stima_lettura -- --fixture OUT.mzML   (the file of `tests/dati/stima_lettura.json`)
+//!     cargo run --release -p mzlab-feat-wasm --example read_estimate -- --write DIR     (the shapes of the sweep, one .mzML each)
+//!     cargo run --release -p mzlab-feat-wasm --example read_estimate -- FILE.mzML...
+//!     cargo run --release -p mzlab-feat-wasm --example read_estimate -- --fixture OUT.mzML   (the file of `tests/dati/read_estimate.json`)
 //!
 //! One line per file: spectra, points, 64-bit points, file MB, the estimate (MB) and the growth of the resident memory of `mzml::read` and of `ms2_text` (MB, the file included).
 
@@ -11,8 +11,8 @@ use mzlab_core::mzml_estimate::{bytes, inputs, mgf_bytes};
 use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 use mzlab_feat::flow_ms2::{ms2_text, Ms2Params};
 
-#[path = "../tests/lettura_comune/mod.rs"]
-mod comune;
+#[path = "../tests/read_common/mod.rs"]
+mod read_common;
 
 fn kb(field: &str) -> f64 {
     let s = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
@@ -58,7 +58,7 @@ fn shape(n: usize, k: usize, wide: bool, np: bool) -> Vec<u8> {
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("--fixture") {
-        std::fs::write(&args[1], comune::mzml(&comune::spec())).expect("write");
+        std::fs::write(&args[1], read_common::mzml(&read_common::spec())).expect("write");
         return;
     }
     if args.first().map(String::as_str) == Some("--write") {

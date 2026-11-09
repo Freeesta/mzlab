@@ -1,22 +1,22 @@
-//! The read estimate of `spectra.ms2` on the fixture `tests/dati/stima_lettura.json`, by the Rust route both the page (`flow_ms2`, one file) and
+//! The read estimate of `spectra.ms2` on the fixture `tests/dati/read_estimate.json`, by the Rust route both the page (`flow_ms2`, one file) and
 //! `flow run` call: below the estimate the step is refused with `error.memoryBudget` (phase `read`) and the numbers of the fixture, above it writes the MGF.
-#[path = "lettura_comune/mod.rs"]
-mod comune;
+#[path = "read_common/mod.rs"]
+mod read_common;
 
 use mzlab_core::budget::MemBudget;
 use mzlab_feat::flow_ms2::{ms2_text, Ms2Params};
 
 #[test]
 fn the_read_is_refused_below_the_estimate_of_the_fixture() {
-    let s = comune::spec();
-    let b = comune::mzml(&s);
+    let s = read_common::spec();
+    let b = read_common::mzml(&s);
     let mb = s["mb"].as_u64().unwrap();
-    for (budget, via) in comune::cases(&s) {
+    for (budget, via) in read_common::cases(&s) {
         let p = Ms2Params {
             cap: MemBudget::mb(budget).cap(),
             ..Ms2Params::from_params(&[])
         };
-        let got = ms2_text(&p, &[("stima.mzML", &b)], None);
+        let got = ms2_text(&p, &[("estimate.mzML", &b)], None);
         if via == "memory" {
             assert!(got.unwrap().contains("BEGIN IONS"), "{budget}");
             continue;

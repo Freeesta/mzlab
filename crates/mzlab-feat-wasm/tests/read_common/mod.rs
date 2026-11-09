@@ -1,5 +1,5 @@
-//! The synthetic HR file of `tests/dati/stima_lettura.json` (every other scan an MS2 with a precursor, deterministic), shared through `#[path]` by the parity
-//! tests of the read estimate: the Rust route, `flow run` and the `.wasm` `flow_ms2` (the example `stima_lettura --fixture` writes it). The fixture also
+//! The synthetic HR file of `tests/dati/read_estimate.json` (every other scan an MS2 with a precursor, deterministic), shared through `#[path]` by the parity
+//! tests of the read estimate: the Rust route, `flow run` and the `.wasm` `flow_ms2` (the example `read_estimate --fixture` writes it). The fixture also
 //! holds the expected estimate and, per budget, the way: `memory` or `refused`.
 #![allow(dead_code)]
 
@@ -8,7 +8,7 @@ use mzlab_core::mzmlwrite::{Header, MzmlWriter};
 use serde_json::Value;
 
 pub fn spec() -> Value {
-    serde_json::from_str(include_str!("../../../../tests/dati/stima_lettura.json")).unwrap()
+    serde_json::from_str(include_str!("../../../../tests/dati/read_estimate.json")).unwrap()
 }
 
 /// The budgets of the fixture with their way: `(budget_mb, "memory" | "refused")`.
