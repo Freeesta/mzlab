@@ -59,16 +59,17 @@ try:
             assert pg.is_hidden("#cx-help") if pg.query_selector("#cx-help") else True
             body = pg.inner_text(".cx"); assert "Un clic su una riga" not in body and "Aiuto" not in body, body[:200]
             assert pg.input_value("#cx-max") == "5", pg.input_value("#cx-max")
-            assert pg.get_attribute("#cx-max", "max") == "10" and pg.get_attribute("#cx-max", "min") == "1"
-            pg.fill("#cx-max", "99"); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "10", pg.input_value("#cx-max")
-            pg.fill("#cx-max", "0"); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "1", pg.input_value("#cx-max")
+            assert pg.get_attribute("#cx-max", "data-num") == "1:10 i", pg.get_attribute("#cx-max", "data-num")
+            for v in ("99", "0"):   # out of 1-10: refused, the old value back (campi.js)
+                pg.fill("#cx-max", v); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "5", pg.input_value("#cx-max")
+                assert pg.get_attribute("#cx-max", "aria-invalid") == "true"
             pg.fill("#cx-max", "5"); pg.press("#cx-max", "Tab")
             assert pg.inner_text("label[for=cx-pre]").strip() == "Insieme di elementi"
             labs = pg.evaluate("[...document.querySelectorAll('#cx-pre option')].map(o=>o.textContent)"); assert labs == ["CHNO (organiche)", "CHNOSP", "CHNOSP + alogeni"], labs
             assert "Sostituisce gli elementi qui sotto" in pg.get_attribute("#cx-load", "title") and "Salva gli elementi qui sotto" in pg.get_attribute("#cx-save", "title")
             assert pg.get_attribute("#cx-out th.num:last-child", "title"), "the Score header explains itself"
             assert pg.get_attribute("#cx-out table", "aria-describedby") == "cx-desc" and pg.inner_text("#cx-desc").strip() != ""
-        step("layout: Massa (m/z), no Help and no note, 5 results by default and 1-10 clamp, element set with its tips, Score tooltip", layout)
+        step("layout: Massa (m/z), no Help and no note, 5 results by default, outside 1-10 refused, element set with its tips, Score tooltip", layout)
         def unit_and_scroll():
             pg.select_option("#cx-unit", "mda"); pg.fill("#cx-tol", "30"); pg.press("#cx-tol", "Tab")
             pg.wait_for_function("document.querySelector('#cx-out thead').innerText.includes('mDa')", timeout=15000)
