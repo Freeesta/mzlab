@@ -8,8 +8,8 @@ use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-mod comune;
-use comune::{index_of_file, open};
+mod common;
+use common::{index_of_file, open};
 
 const TIMES: [u32; 5] = [0, 5, 10, 15, 30];
 

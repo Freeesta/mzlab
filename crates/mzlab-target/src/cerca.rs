@@ -11,8 +11,8 @@ use mzlab_core::mzml::Spectrum;
 use crate::entry::AdductType;
 use crate::indice::TargetList;
 
-mod aiuti;
-use aiuti::*;
+mod helpers;
+use helpers::*;
 
 /// A confirmed or proposed match for a target substance in chromatographic HRMS data.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

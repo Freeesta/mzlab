@@ -1,6 +1,7 @@
 """A maker's file (synthetic SCIEX .wiff + .wiff.scan pair of tools/wiff_misto.py, no laboratory data) whose members the browser refuses to copy is
 read in place from the user's Files: every sample loads, no member is copied, the stubs are marked `sul`, the index of a sample is byte-identical to
-the one built from the copy, and after a reload a calm notice per sample says to load it again while stubs, members and indexes go (no «interrupted
+the one built from the copy, the members read in place are hashed by the hash workers (each stub records their SHA-1: the builder does not read them
+once more for it), and after a reload a calm notice per sample says to load it again while stubs, members and indexes go (no «interrupted
 copy» notice). The browser's limit is set over CDP (Storage.overrideQuotaForOrigin). Needs the site: python3 tools/prepara_sito.py"""
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
@@ -27,6 +28,8 @@ SHAS = """async () => { const d = await (await (await navigator.storage.getDirec
   return o; }"""
 STUBS = """async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('files'); const o = {};
   for await (const [n, h] of d.entries()) if (/\\.mzml$/i.test(n)) { try { o[n] = !!JSON.parse(await (await h.getFile()).text()).sul; } catch (_) { o[n] = null; } } return o; }"""
+PRINTS = """async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('files'); const o = {};
+  for await (const [n, h] of d.entries()) if (/\\.mzml$/i.test(n)) { try { o[n] = JSON.parse(await (await h.getFile()).text()).members.map(m => !!m.sha1); } catch (_) { o[n] = null; } } return o; }"""
 CALM = "!window.qqFailed && document.getElementById('rust-note')?.getAttribute('role') === 'status' && ![...document.querySelectorAll('[role=alert]')].some(e => e.offsetParent && e.textContent.trim())"      # a notice, never the failure banner
 WHY = "[ST.files.map(f => [f.name, f.kind]), UPBUSY, document.getElementById('unopen')?.innerText.slice(0, 400), window.__notes]"
 try:
@@ -61,6 +64,10 @@ try:
             assert any(t == a.evaluate("n => I18N.t('load.sulPosto', { name: n })", n) for n in st for t in a.evaluate("window.__notes || []")), a.evaluate("window.__notes")
             assert a.evaluate(CALM), ("the notice looks like a failure", a.evaluate(WHY))
         step("the members refused: every sample loads in place, the .wiff is not copied, the stubs are marked sul, a calm notice", in_place)
+        def hashed():
+            o = a.evaluate(PRINTS)
+            assert len(o) == N and all(v and all(v) for v in o.values()), ("a member read in place has no SHA-1 in its stub: the builder reads it all once more", o)
+        step("the members read in place get their SHA-1 from the hash workers, not from one more read in the builder", hashed)
         def same():
             now = a.evaluate(SHAS)
             assert now == ref["sha"], ("the indexes read in place differ from the ones built from the copy", sorted(set(now) ^ set(ref["sha"])))

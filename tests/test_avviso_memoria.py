@@ -1,5 +1,5 @@
 """A memory refusal says the same thing in the desktop app and in the CLI (tests/dati/avvisi_memoria.json; the CLI half is
-testo_errore_tests.rs), and on the site it keeps its browser text with the numbers of the refusal."""
+error_text_tests.rs), and on the site it keeps its browser text with the numbers of the refusal."""
 import json
 import shutil
 import subprocess

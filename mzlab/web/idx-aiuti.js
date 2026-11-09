@@ -1,6 +1,6 @@
 // @ts-check
 // The helper workers of one index build (idx-worker.js): they decode the arrays of the spectra (base64 + zlib) while the builder reads the file.
-// The builder's courier (crates/mzlab-wasm/src/corriere.rs) calls send(seq, job, bound) and take(seq) synchronously; each job has a slot, a
+// The builder's courier (crates/mzlab-wasm/src/courier.rs) calls send(seq, job, bound) and take(seq) synchronously; each job has a slot, a
 // SharedArrayBuffer [state, job bytes, answer bytes, -, data...] shared with the helper, which answers in place and wakes the builder with
 // Atomics.notify. Only with cross-origin isolation (capacita.js «indiceParallelo»); without it the builder decodes alone, with the same bytes.
 

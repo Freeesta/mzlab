@@ -2,7 +2,7 @@
 // @ts-check
 // Desktop app only (window.MZLAB_DESKTOP): files opened from outside the window (double click in the file manager, «Open with», a second launch while the app
 // is open) and the notice «Make mzLab the default app for these files?». The native side keeps the queue, the alternating counter and the answer
-// (crates/mzlab-desktop/src/apertura.rs, config.json in the app data folder); this file takes the files into the Data view and shows the dialog.
+// (crates/mzlab-desktop/src/opening.rs, config.json in the app data folder); this file takes the files into the Data view and shows the dialog.
 // In a browser nothing here runs.
 window.DESKDEF = (() => {
   const T = () => window.__TAURI__;

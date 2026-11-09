@@ -1,5 +1,5 @@
 {
-  "about": "Synthetic HR file of the detection estimate (mzlab_feat::trace_stima): the parity tests of the .wasm, the CLI, the app and the Rust route build it with crates/mzlab-feat-wasm/tests/stima_comune and check the estimate and the refusal at each budget.",
+  "about": "Synthetic HR file of the detection estimate (mzlab_feat::trace_stima): the parity tests of the .wasm, the CLI, the app and the Rust route build it with crates/mzlab-feat-wasm/tests/estimate_common and check the estimate and the refusal at each budget.",
   "scans": 400,
   "noise_per_scan": 60,
   "noise_intensity": 300.0,
