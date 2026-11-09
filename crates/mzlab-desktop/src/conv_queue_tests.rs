@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use crate::conv_queue::{dataset_root, Indexing, Queue};
 
-#[path = "../../mzlab-lettori/tests/comune/mzxml.rs"]
+#[path = "../../mzlab-lettori/tests/common/mzxml.rs"]
 mod mzxml;
 
 // the helpers the included encoder asks of its parent

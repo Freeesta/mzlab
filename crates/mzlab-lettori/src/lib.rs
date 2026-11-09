@@ -10,9 +10,9 @@ pub mod andi;
 pub mod aperti;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 pub mod bruker;
-pub mod finiti;
+pub mod finite;
 pub mod json;
-pub mod non_portati;
+pub mod not_carried;
 #[cfg(any(feature = "shimadzu", feature = "tutte"))]
 pub mod shimadzu;
 pub mod srm;
@@ -131,7 +131,7 @@ pub fn open_bare(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     if l.format() == lettori::Format::ThermoRaw && srm::has_srm_scans(&mut *l, 0) {
         l = Box::new(srm::SrmFromScans::new(l));
     }
-    Ok(Box::new(finiti::Finished::new(l)))
+    Ok(Box::new(finite::Finished::new(l)))
 }
 
 /// The extensions that name one format read only by this crate: a file so named that no reader takes is a cut or damaged copy, not another format (`.mzML`, `.mzML.gz`,

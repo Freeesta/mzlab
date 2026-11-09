@@ -48,8 +48,26 @@ pub fn thermo_error(e: &opentfraw::Error) -> Error {
         opentfraw::Error::NoRun { reason, file_len } => Error::new("err.file.rawUnfinished")
             .with("detail", reason)
             .with("size", file_len),
+        opentfraw::Error::Stage { stage, source, .. } if damage(source) => {
+            Error::new("err.file.rawDamaged")
+                .with("stage", stage)
+                .with("detail", e)
+        }
+        e if damage(e) => Error::new("err.file.rawDamaged").with("detail", e),
         _ => Error::new("err.file.raw").with("detail", e),
     }
+}
+
+/// A count or an address of the file that points past its end, or bytes that cannot be the value they stand for: damage, not a format the reader lacks.
+fn damage(e: &opentfraw::Error) -> bool {
+    matches!(
+        e,
+        opentfraw::Error::AllocationTooLarge { .. }
+            | opentfraw::Error::AddressOutOfRange(_)
+            | opentfraw::Error::UnexpectedEof { .. }
+            | opentfraw::Error::InvalidUtf16(_)
+            | opentfraw::Error::InvalidTypeCode(_)
+    )
 }
 
 pub(crate) fn spectrum(r: SpectrumRecord) -> Spectrum {

@@ -310,5 +310,5 @@ pub fn has_srm_scans(l: &mut dyn Reader, c: usize) -> bool {
 }
 
 #[cfg(test)]
-#[path = "srm_prove.rs"]
+#[path = "srm_tests.rs"]
 mod tests;

@@ -6,7 +6,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limits;
 
-mod pezzi;
+mod pieces;
 
 /// The bytes of the window the header is read through.
 const WINDOW: u64 = 1 << 16;
@@ -134,6 +134,12 @@ impl Cur<'_> {
         if t != tag {
             return Err(broken("unexpected tag in the header"));
         }
+        // every entry of a list takes at least four bytes: a count past that is damage, not a file too big for memory
+        if u64::from(n) > (self.dim - self.pos.min(self.dim)) / 4 {
+            return Err(broken(
+                "a list of the header counts more entries than the file holds",
+            ));
+        }
         self.limits.ok_entries(u64::from(n))
     }
     fn attributes(&mut self) -> Result<Vec<Attr>> {
@@ -145,7 +151,7 @@ impl Cur<'_> {
             let c = u64::from(self.u32()?);
             let byte = c
                 .checked_mul(kind.width())
-                .ok_or_else(Error::memory_budget)?;
+                .ok_or_else(|| broken("header runs past the end of the file"))?;
             let b = self.bytes(byte)?;
             self.fill(byte)?;
             let val = if kind == Kind::Char {
@@ -304,6 +310,18 @@ impl Cdf {
         e < self.elements(v) && pos.saturating_add(w) <= self.size
     }
 
+    /// The elements of `v` as a count to read: more values than the file has bytes for is damage (`err.file.cdfDamaged`), a count that fits
+    /// but passes `limits` is a file too big for memory.
+    pub fn count(&self, v: &Var, limits: &Limits) -> Result<usize> {
+        let n = self.elements(v);
+        if n.saturating_mul(v.tipo.width()) > self.size {
+            return Err(broken(
+                "a variable holds more values than the file has bytes",
+            ));
+        }
+        limits.ok_entries(n)
+    }
+
     pub fn elements(&self, v: &Var) -> u64 {
         v.dims
             .iter()
@@ -417,8 +435,9 @@ struct Cur<'a> {
     limits: Limits,
 }
 
-fn broken(why: &str) -> Error {
-    Error::new("err.dam.unreadable").with("message", why)
+/// A header that does not match the bytes of the file: one notice for a cut copy and a damaged one.
+pub(super) fn broken(why: &str) -> Error {
+    Error::new("err.file.cdfDamaged").with("detail", why)
 }
 
 /// Elements of a variable per record (the product of its dimensions after the unlimited one).

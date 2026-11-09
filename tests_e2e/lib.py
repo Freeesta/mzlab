@@ -274,7 +274,10 @@ def open_kind(pg, kind):
     chv = f"#flst .fgh[data-gt={kind}] .chv[aria-expanded=false]"
     if pg.locator(chv).count(): pg.click(chv)      # a folded group (product ion starts folded) is opened first
     pg.wait_for_selector(f"#flst .fl[data-k='{k}'] .nm", state="visible")
+    # two clicks on one name within 400 ms are a double click of the list («only this file», lista-file.js): two separate clicks on the same file are spaced past it
+    pg.wait_for_function("k => !window.__okLast || window.__okLast.k !== k || performance.now() - window.__okLast.t > 450", arg=k)
     pg.click(f"#flst .fl[data-k='{k}'] .nm")
+    pg.evaluate("k => { window.__okLast = { k, t: performance.now() }; }", k)
 def shut(pg, sel):
     """Close a floating window by its × button. In the Dati view the calculator and the reference tables are tabs of the sidebar (no × there): then there is nothing to close."""
     if pg.is_visible(sel): pg.click(sel)

@@ -1,7 +1,7 @@
 """Synthetic Waters MassLynx .raw folder (_FUNCTNS.INF, _FUNC001/002 .DAT + .IDX, _HEADER.TXT), written with the layout of docs/agenti/waters.md: no laboratory data.
     python3 tools/waters_sintetico.py <out folder> [name.raw] [scans]
 Function 1 scans m/z 100-1000 (12-byte records, centroids): a chromatographic peak of m/z 150.1 (and a flat m/z 300.3) at 1.5 min; function 2 is an MRM function with two channels
-(200.1 > 100.2 and 300.3 > 150.4, 4-byte values) with a peak at the same time. The same folder as `crates/mzlab-lettori/tests/comune_waters/mod.rs` builds, with more scans."""
+(200.1 > 100.2 and 300.3 > 150.4, 4-byte values) with a peak at the same time. The same folder as `crates/mzlab-lettori/tests/common_waters/mod.rs` builds, with more scans."""
 import math
 import struct
 import sys

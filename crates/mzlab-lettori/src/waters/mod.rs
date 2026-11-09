@@ -2,17 +2,17 @@
 //! The layout was worked out from real folders (Xevo TQ in MRM/SIR, Xevo G2-XS, Synapt and Vion in MS, MSe and DDA) with the free `openwraw` reader (Apache-2.0) as a guide for the
 //! TOF record encodings; the code is written here from scratch. Format notes: `docs/agenti/waters.md`. Ion mobility is not decoded and the lock mass correction is not applied.
 
-pub mod lettore;
+pub mod reader;
 
-mod cartella;
-mod cromi;
+mod chroms;
+mod cuts;
 mod dat;
 mod doc;
-mod funzioni;
+mod folder;
+mod functions;
 mod idx;
 mod inf;
-mod lati;
 mod mrm;
-mod tagli;
+mod sides;
 
-pub use lettore::ENTRY;
+pub use reader::ENTRY;

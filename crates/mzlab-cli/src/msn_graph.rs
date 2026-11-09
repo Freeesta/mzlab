@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::Outcome;
 
-use mzlab_core::budget::sha256_hex;
+use mzlab_core::budget::sha256_hex_read;
 use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
@@ -256,7 +256,7 @@ pub fn graph(file: &Path, o: &Options, tmp: &Path) -> Result<(Graph, String)> {
     let source = if is_mzml { file } else { &converted };
     let idx = tmp.join("0.mzidx");
     crate::build_index(source, &idx, mzlab_core::budget_auto::native_index_budget())?;
-    let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
+    let sha = sha256_hex_read(std::fs::File::open(&idx).map_err(io)?).map_err(io)?;
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
     let o = &mzlab_feat::chem::regole::with_expected(o);

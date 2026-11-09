@@ -1,6 +1,6 @@
 """A .wiff sample of a scan type the engine does not read (`mistopi` of tools/wiff_misto_pi.py, synthetic: sample 1 Full Scan, sample 2 code 6) on the site:
 the engine (mzlab-wasm, `build_mzidx_native`) refuses sample 2 (`err.file.wiff`, `scan type code 6`) instead of indexing it as level-1 scans, and still reads
-sample 1. The `sciex` module serves that pair (tests/test_wiff_programmati_sito.py, crates/mzlab-lettori/tests/sciex_sonda.rs). Skipped without cargo, wasm-bindgen or node."""
+sample 1. The `sciex` module serves that pair (tests/test_wiff_programmati_sito.py, crates/mzlab-lettori/tests/sciex_probe.rs). Skipped without cargo, wasm-bindgen or node."""
 import shutil
 import subprocess
 import sys

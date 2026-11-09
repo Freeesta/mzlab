@@ -1,9 +1,9 @@
 //! The BPC of an ANDI-MS file comes from the base peaks noted while the scans are decoded: one decode per scan for the `.mzidx` build and the BPC
 //! asked after it (`chromatograms_written` included), and the same bits as the BPC of a reader that decodes the scans only to answer it.
 
-mod comune;
+mod common;
 
-use comune::andi::*;
+use common::andi::*;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{FileSet, Limits, Member, Reader};

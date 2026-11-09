@@ -146,6 +146,11 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # the binaryen tarball of tools/wasm_opt.sh, the cache of pages.yml and sito-rust.yml: a GitHub release outage does not leave the night's .wasm unoptimised and over their caps
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/binaryen-133.tar.gz
+          key: binaryen-version_133-${{ runner.os }}
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       - id: rcache

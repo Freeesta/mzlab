@@ -2,7 +2,7 @@
 //! IDX (bytes of the scan / records of the scan): 6 bytes (ion counts), 8 bytes and 12 bytes (the same floating intensity word; the 12-byte record has 4 more bytes that are not read). The m/z of a
 //! record is a small float whose exponent sits in the top bits; the calibration polynomial of `_HEADER.TXT` is applied to its square root (proportional to the flight time).
 
-use super::cartella::{errore, u16_at, u32_at};
+use super::folder::{errore, u16_at, u32_at};
 use mzlab_core::error::Result;
 
 /// The `Cal Function N` polynomial of `_HEADER.TXT`. `T0` is no correction.

@@ -1,6 +1,6 @@
 //! Entry points of the fuzz targets of the readers modules (`fuzz_targets/lettori_<famiglia>.rs`): arbitrary bytes dressed as the members of a dataset of the family must return, with a
 //! result or an error, never panic or loop. Kept apart from `ingressi.rs` (which `mzlab-lib` includes in its tests) because it needs `mzlab-lettori`;
-//! `crates/mzlab-lettori/tests/fuzz_lettori.rs` runs the same functions on a few inputs in `cargo test`.
+//! `crates/mzlab-lettori/tests/fuzz_readers.rs` runs the same functions on a few inputs in `cargo test`.
 
 use mzlab_core::lettori::{FileSet, Limits, Member};
 
