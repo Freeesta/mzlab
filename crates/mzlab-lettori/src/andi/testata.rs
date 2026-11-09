@@ -12,10 +12,10 @@ use mzlab_core::mzmlwrite::Header;
 /// The most fields kept from a file.
 const FIELDS_MAX: usize = 2000;
 
-impl Testata {
+impl AndiHeader {
     /// The attributes and the instrument variables of `cdf`.
-    pub(super) fn read(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> Result<Testata> {
-        let mut t = Testata::default();
+    pub(super) fn read(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> Result<AndiHeader> {
+        let mut t = AndiHeader::default();
         for a in &cdf.att {
             let v = match &a.val {
                 Val::Testo(s) => s.trim().to_string(),
@@ -29,21 +29,21 @@ impl Testata {
                 continue;
             }
             let c = Field::new("andi:global", &a.nome, &v);
-            let c = mappa(&a.nome).map_or(c, |m| Field::new("andi:global", &a.nome, &v).map(m));
-            t.fields.push(if identita(&a.nome) { c.id() } else { c });
+            let c = map(&a.nome).map_or(c, |m| Field::new("andi:global", &a.nome, &v).map(m));
+            t.fields.push(if identity(&a.nome) { c.id() } else { c });
         }
-        t.titolo = cdf.text("experiment_title").map(str::to_string);
+        t.title = cdf.text("experiment_title").map(str::to_string);
         t.created = cdf.text("experiment_date_time_stamp").map(str::to_string);
         t.user = cdf.text("operator_name").map(str::to_string);
         t.ionizzazione = cdf.text("test_ionization_mode").map(str::to_string);
         t.detector = cdf.text("test_detector_type").map(str::to_string);
         for v in cdf.var.iter().filter(|v| v.nome.starts_with("instrument_")) {
-            let s = unico(cdf.stringhe(data, limits, v)?).unwrap_or_default();
+            let s = single(cdf.strings(data, limits, v)?).unwrap_or_default();
             if s.is_empty() || t.fields.len() >= FIELDS_MAX {
                 continue;
             }
             let c = Field::new("andi:instrument", &v.nome, &s);
-            t.fields.push(if identita(&v.nome) { c.id() } else { c });
+            t.fields.push(if identity(&v.nome) { c.id() } else { c });
             let ch = Some(s);
             match v.nome.as_str() {
                 "instrument_mfr" => t.maker = ch,
@@ -79,7 +79,7 @@ impl Testata {
         let doc = obj(vec![
             ("schema", Some(V::s(metodo::SCHEMA))),
             ("origine", metodo::origin(&src, self.created.as_deref())),
-            ("campione", obj(vec![("nome", s(&self.titolo))])),
+            ("campione", obj(vec![("nome", s(&self.title))])),
             (
                 "strumento",
                 obj(vec![
@@ -143,9 +143,9 @@ impl Testata {
 }
 
 #[derive(Default)]
-pub(super) struct Testata {
+pub(super) struct AndiHeader {
     pub(super) fields: Vec<Field>,
-    pub(super) titolo: Option<String>,
+    pub(super) title: Option<String>,
     pub(super) created: Option<String>,
     pub(super) user: Option<String>,
     pub(super) maker: Option<String>,
@@ -158,7 +158,7 @@ pub(super) struct Testata {
 }
 
 /// The attribute names that identify a person, a computer or a path of the acquisition.
-fn identita(name: &str) -> bool {
+fn identity(name: &str) -> bool {
     matches!(
         name,
         "operator_name" | "instrument_serial_no" | "source_file_reference" | "source_file_name"
@@ -167,7 +167,7 @@ fn identita(name: &str) -> bool {
 }
 
 /// Where a global attribute is also in the document.
-fn mappa(name: &str) -> Option<&'static str> {
+fn map(name: &str) -> Option<&'static str> {
     match name {
         "experiment_title" => Some("campione.nome"),
         "operator_name" => Some("operatore.utente"),
@@ -176,7 +176,7 @@ fn mappa(name: &str) -> Option<&'static str> {
     }
 }
 
-fn unico(v: Vec<String>) -> Option<String> {
+fn single(v: Vec<String>) -> Option<String> {
     v.into_iter().find(|s| !s.is_empty())
 }
 

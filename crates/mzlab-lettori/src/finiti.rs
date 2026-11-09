@@ -1,4 +1,4 @@
-//! The guard every reader of the module is opened through (`apri_nudo`): a retention time, TIC, m/z, intensity or chromatogram point that is NaN or infinite is a damaged file
+//! The guard every reader of the module is opened through (`open_bare`): a retention time, TIC, m/z, intensity or chromatogram point that is NaN or infinite is a damaged file
 //! (`err.file.nonFinite`, `err.file.nonFiniteTrace`, with the scan or trace and what is wrong), never a number passed on to the index, the charts or the mzML. A finite but odd value (negative RT, RT out
 //! of order) is the file's own and goes through.
 use mzlab_core::error::{Error, Result};
@@ -21,7 +21,7 @@ impl Finished {
     }
 }
 
-fn guasto(location: &str, who: impl ToString, what: &str, v: f64) -> Error {
+fn broken(location: &str, who: impl ToString, what: &str, v: f64) -> Error {
     let (key, param) = if location == "scan" {
         ("err.file.nonFinite", "scan")
     } else {
@@ -33,7 +33,7 @@ fn guasto(location: &str, who: impl ToString, what: &str, v: f64) -> Error {
         .with("value", v)
 }
 
-fn spettro(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
+fn spectrum(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
     let s = s?;
     let who = || {
         if s.id.is_empty() {
@@ -43,16 +43,16 @@ fn spettro(s: Result<Spectrum>, k: usize) -> Result<Spectrum> {
         }
     };
     if !s.rt.is_finite() {
-        return Err(guasto("scan", who(), "rt", s.rt));
+        return Err(broken("scan", who(), "rt", s.rt));
     }
     if let Some(v) = s.mz.iter().find(|x| !x.is_finite()) {
-        return Err(guasto("scan", who(), "mz", *v));
+        return Err(broken("scan", who(), "mz", *v));
     }
     if let Some(v) = s.intensity.iter().find(|x| !x.is_finite()) {
-        return Err(guasto("scan", who(), "intensity", f64::from(*v)));
+        return Err(broken("scan", who(), "intensity", f64::from(*v)));
     }
     if let Some(v) = s.wide.iter().flatten().find(|x| !x.is_finite()) {
-        return Err(guasto("scan", who(), "intensity", *v));
+        return Err(broken("scan", who(), "intensity", *v));
     }
     Ok(s)
 }
@@ -69,7 +69,7 @@ impl Reader for Finished {
             for v in self.inner.index(c)? {
                 for (what, x) in [("rt", v.rt), ("tic", v.tic)] {
                     if !x.is_finite() {
-                        return Err(guasto("scan", &v.id, what, x));
+                        return Err(broken("scan", &v.id, what, x));
                     }
                 }
             }
@@ -86,7 +86,7 @@ impl Reader for Finished {
             for v in self.inner.index_without_tic(c)? {
                 for (what, x) in [("rt", v.rt), ("tic", v.tic)] {
                     if !x.is_finite() {
-                        return Err(guasto("scan", &v.id, what, x));
+                        return Err(broken("scan", &v.id, what, x));
                     }
                 }
             }
@@ -94,15 +94,15 @@ impl Reader for Finished {
         self.inner.index_without_tic(c)
     }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        spettro(self.inner.scan(c, k), k)
+        spectrum(self.inner.scan(c, k), k)
     }
     fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        spettro(self.inner.scan_data(c, k), k)
+        spectrum(self.inner.scan_data(c, k), k)
     }
     fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
         self.inner
             .scan_profile(c, k)?
-            .map(|s| spettro(Ok(s), k))
+            .map(|s| spectrum(Ok(s), k))
             .transpose()
     }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
@@ -114,10 +114,10 @@ impl Reader for Finished {
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         let t = self.inner.chromatogram(c, id)?;
         if let Some(v) = t.time.iter().find(|x| !x.is_finite()) {
-            return Err(guasto("trace", id, "time", *v));
+            return Err(broken("trace", id, "time", *v));
         }
         if let Some(v) = t.intensity.iter().find(|x| !x.is_finite()) {
-            return Err(guasto("trace", id, "intensity", *v));
+            return Err(broken("trace", id, "intensity", *v));
         }
         Ok(t)
     }

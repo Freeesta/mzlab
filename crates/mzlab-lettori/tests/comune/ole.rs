@@ -13,7 +13,7 @@ fn put(b: &mut [u8], at: usize, v: u32) {
 
 struct Entry {
     name: String,
-    tipo: u8,
+    kind: u8,
     parent: usize,
     start: u32,
     dim: u32,
@@ -30,7 +30,7 @@ fn entry(v: &Entry) -> Vec<u8> {
         .collect();
     e[..u.len()].copy_from_slice(&u);
     e[0x40..0x42].copy_from_slice(&(u.len() as u16 + 2).to_le_bytes());
-    e[0x42] = v.tipo;
+    e[0x42] = v.kind;
     put(&mut e, 0x44, FREE);
     put(&mut e, 0x48, v.right);
     put(&mut e, 0x4C, v.child);
@@ -58,10 +58,10 @@ fn scan_header(nf: usize, dir0: usize) -> Vec<u8> {
 }
 
 /// The directory entries (the root, then storages and streams in order of appearance) and the bytes of each stream.
-fn entries<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Entry>, Vec<&'a Vec<u8>>) {
+fn entries<'a>(streams: &'a [(&str, Vec<u8>)]) -> (Vec<Entry>, Vec<&'a Vec<u8>>) {
     let mut v = vec![Entry {
         name: "Root Entry".into(),
-        tipo: 5,
+        kind: 5,
         parent: 0,
         start: END,
         dim: 0,
@@ -69,20 +69,20 @@ fn entries<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Entry>, Vec<&'a Vec<u8>>) 
         right: FREE,
     }];
     let mut data: Vec<&Vec<u8>> = Vec::new();
-    for (p, b) in flussi {
+    for (p, b) in streams {
         let mut padre = 0;
         let parts: Vec<&str> = p.split('/').collect();
         for (i, n) in parts.iter().enumerate() {
             let last_one = i + 1 == parts.len();
             let t = if last_one { 2 } else { 1 };
             let es =
-                (1..v.len()).find(|&j| v[j].parent == padre && v[j].name == *n && v[j].tipo == t);
+                (1..v.len()).find(|&j| v[j].parent == padre && v[j].name == *n && v[j].kind == t);
             padre = match es {
                 Some(j) => j,
                 None => {
                     v.push(Entry {
                         name: (*n).into(),
-                        tipo: t,
+                        kind: t,
                         parent: padre,
                         start: END,
                         dim: 0,
@@ -101,8 +101,8 @@ fn entries<'a>(flussi: &'a [(&str, Vec<u8>)]) -> (Vec<Entry>, Vec<&'a Vec<u8>>) 
 }
 
 /// The container holding `flussi` (path, bytes).
-pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
-    let (mut v, data) = entries(flussi);
+pub fn ole(streams: &[(&str, Vec<u8>)]) -> Vec<u8> {
+    let (mut v, data) = entries(streams);
     // siblings: the first child of a parent is its `figlio`, each next one the `destro` of the one before
     let mut last_one: std::collections::HashMap<usize, usize> = Default::default();
     for j in 1..v.len() {
@@ -114,9 +114,9 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
     }
     let nd = v.len().div_ceil(4);
     let setts = |n: usize| n.div_ceil(512);
-    let ndati: usize = data.iter().map(|b| setts(b.len())).sum();
+    let ndata: usize = data.iter().map(|b| setts(b.len())).sum();
     let mut nf = 1;
-    while nf * 128 < nf + nd + ndati {
+    while nf * 128 < nf + nd + ndata {
         nf += 1;
     }
     assert!(nf <= 109, "container too large for the test writer");
@@ -132,16 +132,16 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
         }
     });
     let mut at = nf + nd;
-    let mut corpo: Vec<u8> = Vec::new();
-    for (k, e) in v.iter_mut().skip(1).filter(|e| e.tipo == 2).enumerate() {
+    let mut body: Vec<u8> = Vec::new();
+    for (k, e) in v.iter_mut().skip(1).filter(|e| e.kind == 2).enumerate() {
         let b = data[k];
         e.dim = b.len() as u32;
         let n = setts(b.len());
         if n > 0 {
             e.start = at as u32;
             (0..n).for_each(|i| fat[at + i] = if i + 1 < n { (at + i + 1) as u32 } else { END });
-            corpo.extend(b.iter());
-            corpo.resize(corpo.len().div_ceil(512) * 512, 0);
+            body.extend(b.iter());
+            body.resize(body.len().div_ceil(512) * 512, 0);
             at += n;
         }
     }
@@ -151,6 +151,6 @@ pub fn ole(flussi: &[(&str, Vec<u8>)]) -> Vec<u8> {
     let mut d: Vec<u8> = v.iter().flat_map(entry).collect();
     d.resize(nd * 512, 0);
     out.extend(d);
-    out.extend(corpo);
+    out.extend(body);
     out
 }

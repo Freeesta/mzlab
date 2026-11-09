@@ -34,7 +34,7 @@ fn folder() -> Option<FileSet> {
 }
 
 /// (function, cycle, RT in minutes, TIC of the cycle, intensity-weighted mean m/z) of the oracle.
-const ORACOLO: &[(u32, u32, f64, f64, f64)] = &[
+const ORACLE: &[(u32, u32, f64, f64, f64)] = &[
     (1, 1, 0.068800002337, 59478.0, 285.8191690992991),
     (1, 2, 0.119599997997, 55347.0, 272.89677553846985),
     (1, 3, 0.170416668057, 52744.0, 281.0631935025462),
@@ -49,7 +49,7 @@ const ORACOLO: &[(u32, u32, f64, f64, f64)] = &[
 #[test]
 fn mse_and_lock_mass_match_the_msconvert_oracle() {
     let Some(fs) = folder() else { return };
-    let mut l = mzlab_lettori::apri_nudo(fs, &Limits::sito()).unwrap();
+    let mut l = mzlab_lettori::open_bare(fs, &Limits::sito()).unwrap();
     let idx = l.index(0).unwrap().to_vec();
     // Cycles per function: 48400/200, 48200/200 and 19400/200 spectra of the oracle.
     for (f, n) in [(1, 242), (2, 241), (3, 97)] {
@@ -59,7 +59,7 @@ fn mse_and_lock_mass_match_the_msconvert_oracle() {
             .count();
         assert_eq!(c, n, "cycles of function {f}");
     }
-    for &(f, cyc, rt, tic, mz_medio) in ORACOLO {
+    for &(f, cyc, rt, tic, mz_medio) in ORACLE {
         let id = format!("function={f} process=0 scan={cyc}");
         let k = idx
             .iter()

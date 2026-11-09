@@ -5,14 +5,14 @@
 use super::cartella::{f32_at, u16_at, u32_at};
 use mzlab_core::lettori::Limits;
 
-const PREAMBOLO: usize = 32;
+const PREAMBLE: usize = 32;
 const DESCR: usize = 48;
 
 #[derive(Debug, Clone)]
 pub(super) struct Channel {
     pub(super) name: String,
     /// 0: `u8`, 1: `i16`, 2: `u32`, 3: `f32`.
-    tipo: u16,
+    kind: u16,
     offset: usize,
 }
 
@@ -31,17 +31,17 @@ impl Table {
             u16_at(b, 4) as usize,
             u16_at(b, 6) as usize,
         );
-        if rec == 0 || start != PREAMBOLO + n * DESCR || b.len() < start {
+        if rec == 0 || start != PREAMBLE + n * DESCR || b.len() < start {
             return None;
         }
         limits.ok_entries(n as u64).ok()?;
         let canali: Vec<Channel> = (0..n)
             .map(|i| {
-                let d = &b[PREAMBOLO + i * DESCR..PREAMBOLO + (i + 1) * DESCR];
+                let d = &b[PREAMBLE + i * DESCR..PREAMBLE + (i + 1) * DESCR];
                 let nome: Vec<u8> = d[6..].iter().copied().take_while(|&c| c != 0).collect();
                 Channel {
                     name: super::cartella::text(&nome).trim().to_string(),
-                    tipo: u16_at(d, 2),
+                    kind: u16_at(d, 2),
                     offset: u16_at(d, 4) as usize,
                 }
             })
@@ -53,7 +53,7 @@ impl Table {
         };
         if canali
             .iter()
-            .any(|c| c.tipo > 3 || c.offset + larg(c.tipo) > rec)
+            .any(|c| c.kind > 3 || c.offset + larg(c.kind) > rec)
         {
             return None;
         }
@@ -67,7 +67,7 @@ impl Table {
 
     fn value_of(&self, c: &Channel, k: usize) -> Option<f64> {
         let r = self.data.get(k * self.rec..(k + 1) * self.rec)?;
-        Some(match c.tipo {
+        Some(match c.kind {
             0 => f64::from(*r.get(c.offset)?),
             1 => f64::from(u16_at(r, c.offset) as i16),
             2 => f64::from(u32_at(r, c.offset)),

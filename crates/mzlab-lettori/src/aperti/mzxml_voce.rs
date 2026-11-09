@@ -5,9 +5,9 @@ use mzlab_core::lettori::{Position, ScanEntry};
 
 use super::mzxml::number;
 use super::mzxml_indice::Row;
-use super::mzxml_scan::{self as scan, attr, Tag, Testa};
+use super::mzxml_scan::{self as scan, attr, Head, Tag};
 
-fn polarita(t: &str) -> i8 {
+fn polarity(t: &str) -> i8 {
     match t.trim() {
         "+" | "positive" | "Positive" => 1,
         "-" | "negative" | "Negative" => -1,
@@ -18,20 +18,20 @@ fn polarita(t: &str) -> i8 {
 /// The filter of a scan: its `filterLine`, with the scan type in front for SRM/MRM scans whose line does not say it (the SRM traces are found by it).
 fn filter(t: Tag) -> String {
     let line = attr(t, "filterLine").trim();
-    let tipo = attr(t, "scanType").trim();
+    let kind = attr(t, "scanType").trim();
     let low = line.to_ascii_lowercase();
     let srm = ["srm", "mrm", "crm"]
         .iter()
-        .any(|x| tipo.eq_ignore_ascii_case(x));
+        .any(|x| kind.eq_ignore_ascii_case(x));
     if srm && !low.contains("srm") && !low.contains("mrm") {
-        format!("{tipo} {line}").trim().to_string()
+        format!("{kind} {line}").trim().to_string()
     } else {
         line.to_string()
     }
 }
 
 /// The index entry of scan `k` from its attributes.
-pub(super) fn entry(k: usize, r: Row, t: &Testa) -> Result<ScanEntry> {
+pub(super) fn entry(k: usize, r: Row, t: &Head) -> Result<ScanEntry> {
     let length = u32::try_from(r.end - r.start).map_err(|_| Error::memory_budget())?;
     let num = attr(t.scan, "num").trim();
     Ok(ScanEntry {
@@ -42,7 +42,7 @@ pub(super) fn entry(k: usize, r: Row, t: &Testa) -> Result<ScanEntry> {
         },
         rt: scan::minutes(attr(t.scan, "retentionTime")).unwrap_or(0.0),
         livello: number(t.scan, "msLevel").map_or(1, |l| l.clamp(1.0, 255.0) as u8),
-        polarita: polarita(attr(t.scan, "polarity")),
+        polarita: polarity(attr(t.scan, "polarity")),
         tic: number(t.scan, "totIonCurrent").unwrap_or(0.0),
         base_peak: number(t.scan, "basePeakMz"),
         filtro: filter(t.scan),

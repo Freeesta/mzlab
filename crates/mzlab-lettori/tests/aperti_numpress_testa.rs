@@ -34,20 +34,20 @@ fn fixture(n: usize, flat_mz: bool) -> Vec<u8> {
         intensities: it,
         level: 1,
         rt_min: 1.0,
-        precursore: None,
+        precursor: None,
     }];
     let np = Cod::Np {
         intensities: Np::Slof,
         zlib: false,
     };
     let complete_one = String::from_utf8(mzml_di(&scan, np, None)).unwrap();
-    let da = array(&mz, np, Genere::Mz);
+    let da = array(&mz, np, Family::Mz);
     assert!(complete_one.contains(&da));
     if !flat_mz {
         return complete_one.into_bytes();
     }
     complete_one
-        .replacen(&da, &array(&mz, Cod::Piano, Genere::Mz), 1)
+        .replacen(&da, &array(&mz, Cod::Piano, Family::Mz), 1)
         .into_bytes()
 }
 
@@ -59,7 +59,7 @@ fn numpress_only_in_intensities_after_a_long_mz_is_recognised() {
         first_accession > 64 << 10,
         "fixture must hide it past 64 KB"
     );
-    let mut l = apri(byte);
+    let mut l = open(byte);
     assert_eq!(l.format(), Format::Altro("mzml-numpress"));
     let s = l.scan(0, 0).unwrap();
     assert_eq!(s.mz.len(), 30_000);
@@ -67,14 +67,14 @@ fn numpress_only_in_intensities_after_a_long_mz_is_recognised() {
 
 #[test]
 fn a_spectrum_without_id_keeps_the_window() {
-    let scan = scansioni();
+    let scan = scans();
     let np = Cod::Np {
         intensities: Np::Slof,
         zlib: false,
     };
     let text = String::from_utf8(mzml_di(&scan, np, None)).unwrap();
     let without_id = text.replace("id=\"controllerType=0 controllerNumber=1 scan=", "x=\"");
-    let mut l = apri(without_id.into_bytes());
+    let mut l = open(without_id.into_bytes());
     for k in 0..scan.len() {
         let s = l.scan(0, k).unwrap();
         assert_eq!(s.id, format!("index={k}"));
@@ -130,7 +130,7 @@ fn a_header_naming_the_source_does_not_reread_the_file_for_sha1() {
 #[test]
 fn a_plain_mzml_is_not_captured_by_the_numpress_module() {
     // a long first spectrum, no numpress anywhere: the scan to the end of it must still say No
-    let scan = scansioni();
+    let scan = scans();
     let mut x = scan;
     x[0].mz = (0..30_000)
         .map(|i| 100.0 + f64::from(i as u32) * 0.011)

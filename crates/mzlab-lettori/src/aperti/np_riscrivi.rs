@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::Limits;
 use mzlab_core::numpress;
 
-const PIENI: [&str; 6] = [
+const FULL: [&str; 6] = [
     "MS:1002312",
     "MS:1002313",
     "MS:1002314",
@@ -18,7 +18,7 @@ const PIENI: [&str; 6] = [
 /// The cvParams of an array that say how it is stored: they are replaced by "64-bit float" and "no compression".
 const SHAPE: [&str; 4] = ["MS:1000574", "MS:1000521", "MS:1000523", "MS:1000576"];
 
-fn attributo<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+fn attribute<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
     let key = format!(" {name}=\"");
     let da = tag.find(&key)? + key.len();
     let until = tag[da..].find('"')?;
@@ -30,16 +30,16 @@ fn error(why: &str) -> Error {
 }
 
 /// `xml` with every numpress array decoded and written as a plain 64-bit one (borrowed when it has none).
-pub fn riscrivi<'a>(xml: &'a [u8], limits: &Limits) -> Result<Cow<'a, [u8]>> {
+pub fn rewrite<'a>(xml: &'a [u8], limits: &Limits) -> Result<Cow<'a, [u8]>> {
     let Ok(s) = std::str::from_utf8(xml) else {
         return Ok(Cow::Borrowed(xml));
     };
-    if !PIENI.iter().any(|a| s.contains(a)) {
+    if !FULL.iter().any(|a| s.contains(a)) {
         return Ok(Cow::Borrowed(xml));
     }
     let expected = s
         .find("defaultArrayLength=\"")
-        .and_then(|i| attributo(&s[i.saturating_sub(1)..], "defaultArrayLength"))
+        .and_then(|i| attribute(&s[i.saturating_sub(1)..], "defaultArrayLength"))
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(0);
     let mut out = String::with_capacity(s.len());
@@ -73,7 +73,7 @@ fn block<'a>(b: &'a str, expected: usize, limits: &Limits) -> Result<Cow<'a, str
     while let Some(rel) = b[da..].find("<cvParam") {
         let a = da + rel;
         let fine = a + b[a..].find('>').ok_or_else(|| error("unclosed cvParam"))? + 1;
-        cv.push((a, fine, attributo(&b[a..fine], "accession").unwrap_or("")));
+        cv.push((a, fine, attribute(&b[a..fine], "accession").unwrap_or("")));
         da = fine;
     }
     let Some((np, z)) = cv
@@ -109,7 +109,7 @@ fn block<'a>(b: &'a str, expected: usize, limits: &Limits) -> Result<Cow<'a, str
         if *a >= bin_a {
             break;
         }
-        if PIENI.contains(acc) || SHAPE.contains(acc) {
+        if FULL.contains(acc) || SHAPE.contains(acc) {
             out.push_str(&b[da..*a]);
             da = *f;
         }

@@ -85,7 +85,7 @@ fn a_block_cut_by_the_end_of_the_file_is_told_apart() {
     }
     let pos = [0, 20, 40, -1];
     for (b, t) in [(tdf, false), (tsf, true)] {
-        for (dim, attesi) in [
+        for (dim, expected) in [
             (60, [false, false, false, true]),
             (59, [false, false, true, true]),
             (44, [false, false, true, true]),
@@ -93,7 +93,7 @@ fn a_block_cut_by_the_end_of_the_file_is_told_apart() {
             (39, [false, true, true, true]),
         ] {
             let mut c = b[..dim].to_vec();
-            assert_eq!(cut_ones(&pos, &mut c, dim as u64, t), attesi, "{t} {dim}");
+            assert_eq!(cut_ones(&pos, &mut c, dim as u64, t), expected, "{t} {dim}");
         }
     }
 }

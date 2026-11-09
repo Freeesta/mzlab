@@ -12,7 +12,7 @@ use super::netcdf::{scale, Cdf};
 fn text(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits, name: &str) -> Option<String> {
     cdf.text(name).map(str::to_string).or_else(|| {
         let v = cdf.find(name)?;
-        cdf.stringhe(data, limits, v)
+        cdf.strings(data, limits, v)
             .ok()?
             .into_iter()
             .find(|s| !s.is_empty())
@@ -20,10 +20,10 @@ fn text(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits, name: &str) -> Option
 }
 
 /// A scalar variable (or global attribute) as a number.
-fn scalare(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits, name: &str) -> Option<f64> {
+fn scalar(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits, name: &str) -> Option<f64> {
     cdf.number(name).or_else(|| {
         let v = cdf.find(name)?;
-        cdf.read(data, limits, v, 0, cdf.elementi(v).min(1))
+        cdf.read(data, limits, v, 0, cdf.elements(v).min(1))
             .ok()?
             .first()
             .copied()
@@ -34,7 +34,7 @@ fn id(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> String {
     text(cdf, data, limits, "detector_name").unwrap_or_else(|| "Detector".into())
 }
 
-fn unita(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> String {
+fn units(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> String {
     let da_var = cdf
         .find("ordinate_values")
         .and_then(|v| v.text("units"))
@@ -50,7 +50,7 @@ pub(super) fn entries(cdf: &Cdf, data: &mut dyn ReadAt, limits: &Limits) -> Vec<
     vec![ChromatogramEntry {
         id: id(cdf, data, limits),
         tipo: ChromKind::Analog,
-        unita: unita(cdf, data, limits),
+        unita: units(cdf, data, limits),
     }]
 }
 
@@ -66,12 +66,12 @@ pub(super) fn trace(
         .find("ordinate_values")
         .filter(|_| name == id)
         .ok_or_else(|| Error::new("error.badIndex").with("id", name))?;
-    let n = limits.ok_entries(cdf.elementi(v))? as u64;
+    let n = limits.ok_entries(cdf.elements(v))? as u64;
     let mut y = cdf.read(data, limits, v, 0, n)?;
     scale(&mut y, v);
     let retention = cdf
         .find("raw_data_retention")
-        .filter(|r| cdf.elementi(r) == n);
+        .filter(|r| cdf.elements(r) == n);
     let seconds: Vec<f64> = match retention {
         Some(r) => {
             let mut t = cdf.read(data, limits, r, 0, n)?;
@@ -80,8 +80,8 @@ pub(super) fn trace(
         }
         None => {
             let (d, p) = (
-                scalare(cdf, data, limits, "actual_delay_time").unwrap_or(0.0),
-                scalare(cdf, data, limits, "actual_sampling_interval").unwrap_or(1.0),
+                scalar(cdf, data, limits, "actual_delay_time").unwrap_or(0.0),
+                scalar(cdf, data, limits, "actual_sampling_interval").unwrap_or(1.0),
             );
             (0..n).map(|i| d + i as f64 * p).collect()
         }
@@ -92,7 +92,7 @@ pub(super) fn trace(
         kind: ChromKind::Analog,
         q1: None,
         q3: None,
-        unit: unita(cdf, data, limits),
+        unit: units(cdf, data, limits),
         time: seconds.iter().map(|s| s / 60.0).collect(),
         intensity: y,
     })

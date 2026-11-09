@@ -32,7 +32,7 @@ fn record_blob(text: &str, blob: &[u8], n: i64) -> Vec<u8> {
 }
 
 /// Table pages: an interior page (root), two leaves and an overflow page, the whole tree placed after the earlier tables.
-fn albero(first_one: u32) -> Vec<u8> {
+fn tree(first_one: u32) -> Vec<u8> {
     let large = "x".repeat(6000 - 40);
     let mut rec = record_blob(&large, &[1, 2, 3], -9);
     // tot = payload size, local part by the rules of the file format (usable 4096)
@@ -82,7 +82,7 @@ fn albero(first_one: u32) -> Vec<u8> {
 
 /// Tables `A` (rowid alias), `W` (WITHOUT ROWID) and `T` (two leaves, an overflow chain).
 fn three_tables() -> Sqlite {
-    let a = foglia(&[
+    let a = leaf(&[
         vec![V::N, V::T("a"), V::R(1.5), V::I(7)],
         vec![V::I(40), V::T("bé"), V::N],
         vec![V::N, V::T("corta")],
@@ -98,7 +98,7 @@ fn three_tables() -> Sqlite {
         })
         .collect();
     let w = page(10, 0, &cell_list, 0);
-    apri_db(
+    open_db(
         db(&[
             (
                 "A",
@@ -113,7 +113,7 @@ fn three_tables() -> Sqlite {
             (
                 "T",
                 "CREATE TABLE T (Id INTEGER PRIMARY KEY, Testo TEXT, Blob BLOB, N INTEGER)",
-                albero(4),
+                tree(4),
             ),
         ]),
         None,
@@ -141,7 +141,7 @@ fn compare(s: &mut Sqlite, name: &str) {
     }
     choices.push(vec![Some(0), None, Some(0), Some(n - 1), Some(n + 3)]);
     for idx in choices {
-        let attese: Vec<Vec<Val>> = all_rows
+        let expected: Vec<Vec<Val>> = all_rows
             .iter()
             .map(|r| {
                 idx.iter()
@@ -149,13 +149,13 @@ fn compare(s: &mut Sqlite, name: &str) {
                     .collect()
             })
             .collect();
-        let mut avute: Vec<Vec<Val>> = Vec::new();
+        let mut had: Vec<Vec<Val>> = Vec::new();
         s.rows_cols(&t, &idx, |r| {
-            avute.push(r.to_vec());
+            had.push(r.to_vec());
             Ok(true)
         })
         .unwrap();
-        assert_eq!(avute, attese, "{name} {idx:?}");
+        assert_eq!(had, expected, "{name} {idx:?}");
     }
 }
 
@@ -248,7 +248,7 @@ fn timing_of_a_million_row_scan() {
     for p in mids.iter().chain(leaves.iter()) {
         img.extend(p);
     }
-    let mut s = apri_db(img.clone(), None).unwrap();
+    let mut s = open_db(img.clone(), None).unwrap();
     let t = s.table("B").unwrap().clone();
     for round in 0..3 {
         let t0 = std::time::Instant::now();

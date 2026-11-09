@@ -10,11 +10,11 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::lettori::Limits;
 use mzlab_core::mzml::{ChromKind, Chromatogram};
 
-const UNITA: &str = "number of detector counts";
+const UNITS: &str = "number of detector counts";
 /// The most bytes of one decompressed record (a record holds a few transitions).
 const RECORD_MAX: u64 = 1 << 24;
 /// Bytes of the head of a decompressed record, and of one point in it.
-const TESTA: usize = 44;
+const HEAD: usize = 44;
 const POINT: usize = 12;
 
 /// One transition and its points.
@@ -83,7 +83,7 @@ impl Traces {
                 kind: ChromKind::Srm,
                 q1: Some(s.q1),
                 q3: Some(s.q3),
-                unit: UNITA.into(),
+                unit: UNITS.into(),
                 time: s.t.clone(),
                 intensity: s.y.clone(),
             })
@@ -92,7 +92,7 @@ impl Traces {
 }
 
 /// The polarity a record of `TLM Raw Data` says in the byte at 33 of its decompressed head: both bits 6–7 set is negative, both clear positive (4 files: one negative, three positive).
-pub(super) fn polarita_tlm(r: &[u8]) -> i8 {
+pub(super) fn polarity_tlm(r: &[u8]) -> i8 {
     match r.get(33).map(|b| b & 0xc0) {
         Some(0xc0) => -1,
         Some(0) => 1,
@@ -122,13 +122,13 @@ pub(super) fn record(raw: &[u8], off: usize) -> Option<Vec<u8>> {
 /// The points (Q1 × 100, Q3 × 100, counts) of a decompressed record; `None` when its length is not `head + n × 12`.
 pub(super) fn points(r: &[u8]) -> Option<Vec<(u32, u32, u64)>> {
     let n = usize::try_from(u32_at(r, 40)?).ok()?;
-    if n.checked_mul(POINT)?.checked_add(TESTA)? != r.len() {
+    if n.checked_mul(POINT)?.checked_add(HEAD)? != r.len() {
         return None;
     }
     Some(
         (0..n)
             .filter_map(|j| {
-                let p = TESTA + j * POINT;
+                let p = HEAD + j * POINT;
                 Some((
                     u32_at(r, p)?,
                     u32_at(r, p + 4)?,
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn record_round_trip() {
-        let mut r = vec![0u8; TESTA];
+        let mut r = vec![0u8; HEAD];
         r[40..44].copy_from_slice(&1u32.to_le_bytes());
         r[33] = 0xcd;
         for v in [17610u32, 15910, 42] {
@@ -172,7 +172,7 @@ mod tests {
         raw.extend_from_slice(&z);
         let d = record(&raw, 0).expect("record");
         assert_eq!(points(&d), Some(vec![(17610, 15910, 42)]));
-        assert_eq!(polarita_tlm(&d), -1);
+        assert_eq!(polarity_tlm(&d), -1);
         assert!(record(&raw[..raw.len() - 3], 0).is_none());
     }
 }

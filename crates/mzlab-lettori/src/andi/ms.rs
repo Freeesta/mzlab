@@ -4,7 +4,7 @@
 
 use super::cromato;
 use super::netcdf::{scale, Cdf};
-use super::testata::Testata;
+use super::testata::AndiHeader;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
@@ -18,15 +18,15 @@ use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 mod bpc;
 
 /// The bytes of the start of the file that `riconosci` looks at: the names of the variables are in the header.
-const TESTA: usize = 1 << 18;
-const UNITA: &str = "Arbitrary Intensity Units";
+const HEAD: usize = 1 << 18;
+const UNITS: &str = "Arbitrary Intensity Units";
 
 pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "andi-ms",
     contratto: CONTRATTO,
     estensioni: &[".cdf", ".nc"],
-    riconosci,
-    apri,
+    riconosci: recognize,
+    apri: open,
 };
 
 impl AndiReader {
@@ -37,28 +37,28 @@ impl AndiReader {
         let sx = cdf
             .find("scan_index")
             .ok_or_else(|| Error::new("err.dam.unreadable").with("message", "no scan_index"))?;
-        let n = limits.ok_entries(cdf.elementi(sx))?;
-        let points = cdf.find("mass_values").map_or(0, |v| cdf.elementi(v));
-        let inizi: Vec<u64> = cdf
+        let n = limits.ok_entries(cdf.elements(sx))?;
+        let points = cdf.find("mass_values").map_or(0, |v| cdf.elements(v));
+        let starts: Vec<u64> = cdf
             .read(&mut self.data, &limits, sx, 0, n as u64)?
             .iter()
             .map(|&x| x.max(0.0) as u64)
             .collect();
-        self.conti = match column(cdf, &mut self.data, &limits, "point_count")? {
+        self.counts = match column(cdf, &mut self.data, &limits, "point_count")? {
             Some(c) => (0..n)
                 .map(|k| c.get(k).map_or(0, |&x| x.max(0.0) as u64))
                 .collect(),
             None => (0..n)
                 .map(|k| {
-                    inizi
+                    starts
                         .get(k + 1)
                         .copied()
                         .unwrap_or(points)
-                        .saturating_sub(inizi[k])
+                        .saturating_sub(starts[k])
                 })
                 .collect(),
         };
-        self.inizi = inizi;
+        self.inizi = starts;
         Ok(n)
     }
 
@@ -87,13 +87,13 @@ impl AndiReader {
         }
     }
 
-    fn scansioni(&mut self) -> Result<usize> {
+    fn scans(&mut self) -> Result<usize> {
         let all_of_them = self.points_per_scan()?;
         // a copy cut short loses the points of the last scans: the index stops before the first scan not whole in the file, and `missing` counts the rest
         let n = (0..all_of_them)
             .find(|&k| !self.whole(k))
             .unwrap_or(all_of_them);
-        self.tagliate = all_of_them - n;
+        self.cut = all_of_them - n;
         let col = |l: &mut Self, name: &str| column(&l.cdf, &mut l.data, &l.limits, name);
         let moment = col(self, "scan_acquisition_time")?;
         let tot = col(self, "total_intensity")?;
@@ -123,7 +123,7 @@ impl AndiReader {
                 position: Some(Position {
                     membro: 0,
                     offset: self.inizi[k],
-                    lunghezza: u32::try_from(self.conti[k]).unwrap_or(u32::MAX),
+                    lunghezza: u32::try_from(self.counts[k]).unwrap_or(u32::MAX),
                 }),
             });
         }
@@ -132,7 +132,7 @@ impl AndiReader {
 
     /// The m/z and intensities of scan `k` lie whole in the file.
     fn whole(&self, k: usize) -> bool {
-        let (da, n) = (self.inizi[k], self.conti[k]);
+        let (da, n) = (self.inizi[k], self.counts[k]);
         ["mass_values", "intensity_values"]
             .iter()
             .all(|name| self.cdf.find(name).is_none_or(|v| self.cdf.whole(v, da, n)))
@@ -143,7 +143,7 @@ impl AndiReader {
         let Some(v) = self.cdf.find("time_values") else {
             return Ok(None);
         };
-        if self.inizi[k] >= self.cdf.elementi(v) {
+        if self.inizi[k] >= self.cdf.elements(v) {
             return Ok(None);
         }
         let mut x = self
@@ -163,7 +163,7 @@ impl AndiReader {
     fn points_of(&mut self, k: usize) -> Result<(Vec<f64>, Vec<f64>, bool)> {
         let (da, n) = (
             *self.inizi.get(k).ok_or_else(|| bad_index(k))?,
-            self.conti[k],
+            self.counts[k],
         );
         let (m, y) = (
             self.cdf.find("mass_values"),
@@ -185,13 +185,13 @@ impl AndiReader {
         }
         let broad = matches!(
             y.tipo,
-            super::netcdf::Tipo::Double | super::netcdf::Tipo::Int
+            super::netcdf::Kind::Double | super::netcdf::Kind::Int
         );
         Ok((mz, it, broad))
     }
 
     /// Scan `k`: its points, sorted by m/z.
-    fn spettro(&mut self, k: usize) -> Result<Spectrum> {
+    fn spectrum(&mut self, k: usize) -> Result<Spectrum> {
         let v = self.indice.get(k).cloned().ok_or_else(|| bad_index(k))?;
         let (mz, it, broad) = self.points_of(k)?;
         self.bpc_note(k, &it, broad);
@@ -246,7 +246,7 @@ impl AndiReader {
             kind,
             q1: None,
             q3: None,
-            unit: UNITA.into(),
+            unit: UNITS.into(),
             time: self.indice.iter().map(|v| v.rt).collect(),
             intensity,
         })
@@ -268,7 +268,7 @@ impl Reader for AndiReader {
 
     fn missing(&mut self, c: usize) -> usize {
         if c == 0 {
-            self.tagliate
+            self.cut
         } else {
             0
         }
@@ -286,7 +286,7 @@ impl Reader for AndiReader {
 
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
-        self.spettro(k)
+        self.spectrum(k)
     }
 
     /// Every per-scan variable of the file (times, ranges, counts) at scan `k`, with its unit.
@@ -303,7 +303,7 @@ impl Reader for AndiReader {
             .cdf
             .var
             .iter()
-            .filter(|v| v.dims == sx.dims && v.tipo != super::netcdf::Tipo::Char)
+            .filter(|v| v.dims == sx.dims && v.tipo != super::netcdf::Kind::Char)
         {
             let mut x = self
                 .cdf
@@ -324,23 +324,23 @@ impl Reader for AndiReader {
 
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
-        if self.indice.is_empty() && self.tagliate == 0 {
+        if self.indice.is_empty() && self.cut == 0 {
             return Ok(cromato::entries(&self.cdf, &mut self.data, &self.limits));
         }
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
-            .map(|(id, tipo)| ChromatogramEntry {
+            .map(|(id, kind)| ChromatogramEntry {
                 id: id.into(),
-                tipo,
-                unita: UNITA.into(),
+                tipo: kind,
+                unita: UNITS.into(),
             })
             .collect())
     }
 
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.one(c)?;
-        if self.indice.is_empty() && self.tagliate == 0 {
+        if self.indice.is_empty() && self.cut == 0 {
             return cromato::trace(&self.cdf, &mut self.data, &self.limits, id);
         }
         self.traccia(id)
@@ -349,14 +349,14 @@ impl Reader for AndiReader {
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         let sha1 = self.sha1();
-        Ok(self.testata.document(&self.name, self.dim, sha1))
+        Ok(self.header.document(&self.name, self.dim, sha1))
     }
 
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.one(c)?;
         let sha1 = self.sha1();
-        let doc = self.testata.document(&self.name, self.dim, sha1.clone());
-        Ok(Some(self.testata.header(&self.name, sha1, doc)))
+        let doc = self.header.document(&self.name, self.dim, sha1.clone());
+        Ok(Some(self.header.header(&self.name, sha1, doc)))
     }
 
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
@@ -375,12 +375,12 @@ pub struct AndiReader {
     name: String,
     limits: Limits,
     cdf: Cdf,
-    testata: Testata,
+    header: AndiHeader,
     samples: Vec<Sample>,
     indice: Vec<ScanEntry>,
     /// First point and number of points of each scan.
     inizi: Vec<u64>,
-    conti: Vec<u64>,
+    counts: Vec<u64>,
     /// The mass range of each scan, when the file says it.
     windows: Vec<Option<(f64, f64)>>,
     /// Whether the TIC of the scans is that of the file (else it is summed from the points when asked).
@@ -389,17 +389,17 @@ pub struct AndiReader {
     bpc: Vec<f64>,
     bpc_seen: usize,
     /// Scans listed by the file whose points lie past the end of a copy cut short.
-    tagliate: usize,
+    cut: usize,
     profilo: bool,
     sim: bool,
     sha1: Option<Option<String>>,
 }
 
-fn riconosci(fs: &mut FileSet) -> Fiducia {
+fn recognize(fs: &mut FileSet) -> Fiducia {
     let Some(i) = fs.find(".cdf").or_else(|| fs.find(".nc")) else {
         return Fiducia::No;
     };
-    let head = fs.testa(i, TESTA);
+    let head = fs.testa(i, HEAD);
     let ha = |n: &[u8]| head.windows(n.len()).any(|w| w == n);
     if head.starts_with(b"\x89HDF") {
         Fiducia::Forse
@@ -424,7 +424,7 @@ fn column(
     let Some(v) = cdf.find(name) else {
         return Ok(None);
     };
-    let mut x = cdf.read(data, limits, v, 0, cdf.elementi(v))?;
+    let mut x = cdf.read(data, limits, v, 0, cdf.elements(v))?;
     scale(&mut x, v);
     Ok(Some(x))
 }
@@ -433,7 +433,7 @@ fn bad_index(k: usize) -> Error {
     Error::new("error.badIndex").with("k", k)
 }
 
-fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs
         .find(".cdf")
         .or_else(|| fs.find(".nc"))
@@ -451,29 +451,29 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let dim = m.dim;
     let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
     let cdf = Cdf::apri(&mut dati, dim, limits)?;
-    let testata = Testata::read(&cdf, &mut dati, limits)?;
+    let testata = AndiHeader::read(&cdf, &mut dati, limits)?;
     let mut l = AndiReader {
         data: dati,
         dim,
         name: nome,
         limits: *limits,
         cdf,
-        testata,
+        header: testata,
         samples: Vec::new(),
         indice: Vec::new(),
         inizi: Vec::new(),
-        conti: Vec::new(),
+        counts: Vec::new(),
         windows: Vec::new(),
         known_tic: false,
         bpc: Vec::new(),
         bpc_seen: 0,
-        tagliate: 0,
+        cut: 0,
         profilo: false,
         sim: false,
         sha1: None,
     };
-    let scansioni = if l.cdf.find("mass_values").is_some() {
-        l.scansioni()?
+    let scans = if l.cdf.find("mass_values").is_some() {
+        l.scans()?
     } else if l.cdf.find("ordinate_values").is_some() {
         0
     } else {
@@ -486,8 +486,8 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .to_string();
     l.samples = vec![Sample {
         id: 1,
-        nome: l.testata.titolo.clone().unwrap_or(stem),
-        scansioni,
+        nome: l.header.title.clone().unwrap_or(stem),
+        scansioni: scans,
         size: None,
     }];
     Ok(Box::new(l))

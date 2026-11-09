@@ -118,18 +118,18 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
 }
 
 /// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans), except
-/// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmDaScansioni`). Every reader
+/// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmFromScans`). Every reader
 /// answers through `finiti::Finiti`: a NaN or infinite number of the file is an error, not a value.
-pub fn apri_nudo(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+pub fn open_bare(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let name = fs
         .membri
         .first()
         .map(|m| m.nome.clone())
         .unwrap_or_default();
-    let v = riconosci(&mut fs).ok_or_else(|| rifiuto(&fs, name))?;
+    let v = riconosci(&mut fs).ok_or_else(|| refusal(&fs, name))?;
     let mut l = (v.apri)(fs, limits)?;
-    if l.format() == lettori::Format::ThermoRaw && srm::ha_scansioni_srm(&mut *l, 0) {
-        l = Box::new(srm::SrmDaScansioni::new(l));
+    if l.format() == lettori::Format::ThermoRaw && srm::has_srm_scans(&mut *l, 0) {
+        l = Box::new(srm::SrmFromScans::new(l));
     }
     Ok(Box::new(finiti::Finished::new(l)))
 }
@@ -149,7 +149,7 @@ const ONLY_HERE: [&str; 8] = [
 
 /// Why no reader takes `fs`: a member named like a format of the registry that is empty (`err.file.empty`), or whose start is not that of its format
 /// (`err.file.notThisFormat`, a cut or damaged copy); anything else is `err.file.notAccepted` (the engine of the site then asks the readers module).
-fn rifiuto(fs: &FileSet, name: String) -> Error {
+fn refusal(fs: &FileSet, name: String) -> Error {
     let short = |n: &str| n.rsplit(['/', '\\']).next().unwrap_or(n).to_string();
     for m in &fs.membri {
         let n = m.nome.to_ascii_lowercase();
@@ -174,9 +174,9 @@ fn rifiuto(fs: &FileSet, name: String) -> Error {
     Error::new("err.file.notAccepted").with("name", name)
 }
 
-/// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmDaScansioni`).
+/// Opens `fs` with the reader that recognises it; the SRM traces of scans with an SRM filter become chromatograms (`srm::SrmFromScans`).
 pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    Ok(Box::new(srm::SrmDaScansioni::new(apri_nudo(fs, limits)?)))
+    Ok(Box::new(srm::SrmFromScans::new(open_bare(fs, limits)?)))
 }
 
 /// Every extension of the registry of this build, without repeats.
@@ -194,7 +194,7 @@ pub fn estensioni() -> Vec<&'static str> {
 /// was not written for (SCIEX other than the 3200 QTRAP, scheduled MRM), in sample `c` or in any other sample: the page hands the whole pair to one reader.
 pub fn motivi(l: &mut dyn Reader, c: usize) -> Vec<&'static str> {
     let mut m = Vec::new();
-    if srm::ha_scansioni_srm(l, c) {
+    if srm::has_srm_scans(l, c) {
         m.push("srm");
     }
     #[cfg(feature = "sciex")]

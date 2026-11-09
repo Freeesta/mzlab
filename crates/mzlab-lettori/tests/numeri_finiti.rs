@@ -81,7 +81,7 @@ fn an_andi_with_nan_intensity_is_an_error() {
 #[test]
 fn a_numpress_mzml_with_infinite_time_is_an_error() {
     let b = mzml_di(
-        &scansioni(),
+        &scans(),
         Cod::Np {
             intensities: mzlab_core::numpress::Np::Slof,
             zlib: false,

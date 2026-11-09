@@ -28,32 +28,32 @@ pub fn varint(mut v: u64) -> Vec<u8> {
 }
 
 pub fn record(vals: &[V<'_>]) -> Vec<u8> {
-    let (mut kinds, mut corpo) = (Vec::new(), Vec::new());
+    let (mut kinds, mut body) = (Vec::new(), Vec::new());
     for v in vals {
         match v {
             V::N => kinds.push(0),
             V::I(x) => {
                 kinds.push(6);
-                corpo.extend(x.to_be_bytes());
+                body.extend(x.to_be_bytes());
             }
             V::R(x) => {
                 kinds.push(7);
-                corpo.extend(x.to_be_bytes());
+                body.extend(x.to_be_bytes());
             }
             V::T(s) => {
                 kinds.extend(varint(13 + 2 * s.len() as u64));
-                corpo.extend(s.as_bytes());
+                body.extend(s.as_bytes());
             }
         }
     }
     let mut o = vec![(kinds.len() + 1) as u8];
     o.extend(kinds);
-    o.extend(corpo);
+    o.extend(body);
     o
 }
 
 /// A b-tree page of `tipo` (13 leaf table, 10 leaf index, 5 interior table) with its `celle`, the header at `base`.
-pub fn page(tipo: u8, base: usize, cell_list: &[Vec<u8>], destra: u32) -> Vec<u8> {
+pub fn page(kind: u8, base: usize, cell_list: &[Vec<u8>], right: u32) -> Vec<u8> {
     let mut p = vec![0u8; PAG];
     let mut fine = PAG;
     let mut ptr = Vec::new();
@@ -62,12 +62,12 @@ pub fn page(tipo: u8, base: usize, cell_list: &[Vec<u8>], destra: u32) -> Vec<u8
         p[fine..fine + c.len()].copy_from_slice(c);
         ptr.push(fine as u16);
     }
-    let intest = if tipo == 5 { 12 } else { 8 };
-    p[base] = tipo;
+    let intest = if kind == 5 { 12 } else { 8 };
+    p[base] = kind;
     p[base + 3..base + 5].copy_from_slice(&(cell_list.len() as u16).to_be_bytes());
     p[base + 5..base + 7].copy_from_slice(&(fine as u16).to_be_bytes());
-    if tipo == 5 {
-        p[base + 8..base + 12].copy_from_slice(&destra.to_be_bytes());
+    if kind == 5 {
+        p[base + 8..base + 12].copy_from_slice(&right.to_be_bytes());
     }
     for (i, o) in ptr.iter().enumerate() {
         let a = base + intest + 2 * i;
@@ -83,7 +83,7 @@ pub fn leaf_cell(rowid: u64, rec: &[u8]) -> Vec<u8> {
     c
 }
 
-pub fn foglia(rows: &[Vec<V<'_>>]) -> Vec<u8> {
+pub fn leaf(rows: &[Vec<V<'_>>]) -> Vec<u8> {
     let c: Vec<Vec<u8>> = rows
         .iter()
         .enumerate()
@@ -93,8 +93,8 @@ pub fn foglia(rows: &[Vec<V<'_>>]) -> Vec<u8> {
 }
 
 /// A database whose tables are `(name, CREATE text, page image)`; table `i` is rooted at page `i + 2`.
-pub fn db(tabelle: &[(&str, &str, Vec<u8>)]) -> Vec<u8> {
-    let schema: Vec<Vec<u8>> = tabelle
+pub fn db(tables: &[(&str, &str, Vec<u8>)]) -> Vec<u8> {
+    let schema: Vec<Vec<u8>> = tables
         .iter()
         .enumerate()
         .map(|(i, (n, sql, _))| {
@@ -116,11 +116,11 @@ pub fn db(tabelle: &[(&str, &str, Vec<u8>)]) -> Vec<u8> {
     p1[18] = 1;
     p1[19] = 1;
     p1[21..24].copy_from_slice(&[64, 32, 32]);
-    p1[28..32].copy_from_slice(&(tabelle.len() as u32 + 1).to_be_bytes());
+    p1[28..32].copy_from_slice(&(tables.len() as u32 + 1).to_be_bytes());
     p1[44..48].copy_from_slice(&4u32.to_be_bytes());
     p1[56..60].copy_from_slice(&1u32.to_be_bytes());
     let mut out = p1;
-    for (_, _, p) in tabelle {
+    for (_, _, p) in tables {
         out.extend(p);
     }
     out
@@ -130,13 +130,13 @@ pub fn limits() -> Limits {
     Limits::sito()
 }
 
-pub fn apri_db(b: Vec<u8>, wal: Option<Vec<u8>>) -> mzlab_core::error::Result<Sqlite> {
+pub fn open_db(b: Vec<u8>, wal: Option<Vec<u8>>) -> mzlab_core::error::Result<Sqlite> {
     let dim = b.len() as u64;
     let w = wal.map(|w| {
         let n = w.len() as u64;
         (Box::new(w) as Box<dyn ReadAt>, n)
     });
-    Sqlite::apri(Box::new(b), dim, w, &limits())
+    Sqlite::open(Box::new(b), dim, w, &limits())
 }
 
 // ---- a whole `.d` folder ----
@@ -152,11 +152,11 @@ pub fn raw_zstd(d: &[u8]) -> Vec<u8> {
 /// A codec-2 block of 2 scans: scan 0 has TOF 100 and 150, scan 1 has TOF 100.
 pub fn blocco2() -> Vec<u8> {
     let words: [u32; 8] = [0, 4, 101, 10, 50, 20, 101, 5];
-    let mut piani = Vec::new();
+    let mut planes = Vec::new();
     for k in 0..4 {
-        piani.extend(words.iter().map(|w| (w >> (8 * k)) as u8));
+        planes.extend(words.iter().map(|w| (w >> (8 * k)) as u8));
     }
-    let z = raw_zstd(&piani);
+    let z = raw_zstd(&planes);
     let mut b = ((z.len() + 8) as u32).to_le_bytes().to_vec();
     b.extend(2u32.to_le_bytes());
     b.extend(z);
@@ -191,8 +191,8 @@ pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
             ]
         })
         .collect();
-    let frames = foglia(&rows);
-    let cal = foglia(&[vec![
+    let frames = leaf(&rows);
+    let cal = leaf(&[vec![
         V::N,
         V::I(1),
         V::R(0.125),
@@ -214,38 +214,38 @@ pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
 }
 
 /// A database of tables of any size: `(name, CREATE text, rows)`, every table its leaves of `rows` and, past one leaf, an interior root (at most one level: a few thousand rows).
-pub fn db_rows(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
-    let mut pagine: Vec<Vec<u8>> = Vec::new();
-    let mut radici = Vec::new();
-    for (_, _, rows) in tabelle {
+pub fn db_rows(tables: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
+    let mut pages: Vec<Vec<u8>> = Vec::new();
+    let mut roots = Vec::new();
+    for (_, _, rows) in tables {
         let cell_list: Vec<Vec<u8>> = rows
             .iter()
             .enumerate()
             .map(|(i, r)| leaf_cell(i as u64 + 1, &record(r)))
             .collect();
-        let mut foglie: Vec<(Vec<Vec<u8>>, u64)> = vec![(Vec::new(), 0)];
+        let mut leaves: Vec<(Vec<Vec<u8>>, u64)> = vec![(Vec::new(), 0)];
         let mut used = 8;
         for (i, c) in cell_list.into_iter().enumerate() {
-            if used + c.len() + 2 > PAG && !foglie.last().unwrap().0.is_empty() {
-                foglie.push((Vec::new(), 0));
+            if used + c.len() + 2 > PAG && !leaves.last().unwrap().0.is_empty() {
+                leaves.push((Vec::new(), 0));
                 used = 8;
             }
             used += c.len() + 2;
-            let f = foglie.last_mut().unwrap();
+            let f = leaves.last_mut().unwrap();
             f.0.push(c);
             f.1 = i as u64 + 1;
         }
         // pages are numbered from 2 (page 1 is the schema)
-        let first_one = pagine.len() as u32 + 2;
-        for (c, _) in &foglie {
-            pagine.push(page(13, 0, c, 0));
+        let first_one = pages.len() as u32 + 2;
+        for (c, _) in &leaves {
+            pages.push(page(13, 0, c, 0));
         }
-        if foglie.len() == 1 {
-            radici.push(first_one);
+        if leaves.len() == 1 {
+            roots.push(first_one);
             continue;
         }
-        let n = foglie.len() as u32;
-        let interne: Vec<Vec<u8>> = foglie[..foglie.len() - 1]
+        let n = leaves.len() as u32;
+        let internal: Vec<Vec<u8>> = leaves[..leaves.len() - 1]
             .iter()
             .enumerate()
             .map(|(j, (_, max))| {
@@ -255,15 +255,15 @@ pub fn db_rows(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
             })
             .collect();
         assert!(
-            interne.len() * 15 + 12 < PAG,
+            internal.len() * 15 + 12 < PAG,
             "table too large for one interior page"
         );
-        radici.push(pagine.len() as u32 + 2);
-        pagine.push(page(5, 0, &interne, first_one + n - 1));
+        roots.push(pages.len() as u32 + 2);
+        pages.push(page(5, 0, &internal, first_one + n - 1));
     }
-    let schema: Vec<Vec<u8>> = tabelle
+    let schema: Vec<Vec<u8>> = tables
         .iter()
-        .zip(&radici)
+        .zip(&roots)
         .enumerate()
         .map(|(i, ((n, sql, _), &r))| {
             leaf_cell(
@@ -284,11 +284,11 @@ pub fn db_rows(tabelle: &[(&str, &str, Vec<Vec<V<'_>>>)]) -> Vec<u8> {
     p1[18] = 1;
     p1[19] = 1;
     p1[21..24].copy_from_slice(&[64, 32, 32]);
-    p1[28..32].copy_from_slice(&(pagine.len() as u32 + 1).to_be_bytes());
+    p1[28..32].copy_from_slice(&(pages.len() as u32 + 1).to_be_bytes());
     p1[44..48].copy_from_slice(&4u32.to_be_bytes());
     p1[56..60].copy_from_slice(&1u32.to_be_bytes());
     let mut out = p1;
-    for p in pagine {
+    for p in pages {
         out.extend(p);
     }
     out

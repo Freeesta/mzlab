@@ -25,7 +25,7 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "shimadzu",
     contratto: CONTRATTO,
     estensioni: &[".qgd", ".lcd"],
-    riconosci,
+    riconosci: recognize,
     apri,
 };
 
@@ -41,7 +41,7 @@ enum Content {
 
 fn content(names: &[String]) -> Option<Content> {
     let ha = |n: &str| names.iter().any(|x| x == n);
-    if carica::famiglie().iter().any(|f| ha(f.storage())) {
+    if carica::families().iter().any(|f| ha(f.storage())) {
         Some(Content::Data)
     } else if ha("QTFL RawData") {
         Some(Content::QTof)
@@ -59,11 +59,11 @@ fn find(fs: &mut FileSet) -> Option<(usize, Content)> {
             let c = content(&dir::names(&mut fs.membri[i])?)?;
             Some((i, c))
         })
-        .or_else(|| (0..fs.membri.len()).find_map(|i| Some((i, altro(&mut fs.membri[i])?))))
+        .or_else(|| (0..fs.membri.len()).find_map(|i| Some((i, other(&mut fs.membri[i])?))))
 }
 
 /// A member named `.qgd`/`.lcd` that starts as an OLE2 container: the storages of its root (`Ignoto`), or `Rotto` when its directory cannot be followed.
-fn altro(m: &mut mzlab_core::lettori::Member) -> Option<Content> {
+fn other(m: &mut mzlab_core::lettori::Member) -> Option<Content> {
     let n = m.nome.to_ascii_lowercase();
     if !(n.ends_with(".qgd") || n.ends_with(".lcd")) || !dir::ole(m) {
         return None;
@@ -81,7 +81,7 @@ fn altro(m: &mut mzlab_core::lettori::Member) -> Option<Content> {
     })
 }
 
-fn riconosci(fs: &mut FileSet) -> Fiducia {
+fn recognize(fs: &mut FileSet) -> Fiducia {
     match find(fs) {
         Some((_, Content::Data | Content::QTof)) => Fiducia::Si,
         Some((_, Content::LcOnly | Content::Ignoto(_) | Content::Broken)) => Fiducia::Forse,
@@ -89,7 +89,7 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
     }
 }
 
-fn rifiuto(detail: &str) -> Error {
+fn refusal(detail: &str) -> Error {
     Error::new("err.file.shimadzu").with("detail", detail)
 }
 
@@ -110,7 +110,7 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let (i, c) = find(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted"))?;
     match &c {
         Content::Ignoto(v) => {
-            return Err(rifiuto(&format!(
+            return Err(refusal(&format!(
                 "not a LabSolutions/GCMSsolution data file (storages: {v})"
             )))
         }
@@ -120,7 +120,7 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
                 return Err(e);
             }
             let d = m.dim;
-            return Err(rifiuto(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
+            return Err(refusal(&format!("the file is cut short or damaged: its directory lies beyond its {d} bytes; copy the whole file again")));
         }
         _ => {}
     }
@@ -143,13 +143,13 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
             .with("needed", need));
     }
     let Some(fam) = carica::choose(&ole) else {
-        return Err(rifiuto(match c {
+        return Err(refusal(match c {
             Content::QTof => "Q-TOF data (QTFL RawData) are not read: their m/z could not be checked against a reference",
             _ => "the file holds no mass spectrometer data",
         }));
     };
     let d = carica::load(&ole, fam, limits)?;
-    let mut meta = meta::raccogli(&ole, fam);
+    let mut meta = meta::collect(&ole, fam);
     if d.unreadable > 0 {
         meta.warnings.push(format!(
             "{} of {} records not decoded",

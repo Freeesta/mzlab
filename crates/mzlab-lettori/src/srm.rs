@@ -12,7 +12,7 @@ use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 pub const Q3_TOLERANCE: f64 = 0.005;
 /// Precursors closer than this (m/z) to the Q1 of a transition belong to it.
 pub const Q1_TOLERANCE: f64 = 0.005;
-const UNITA: &str = "number of detector counts";
+const UNITS: &str = "number of detector counts";
 
 fn srm_filter(f: &str) -> bool {
     let f = f.to_ascii_lowercase();
@@ -79,21 +79,21 @@ struct Transition {
     q1: f64,
     q3: f64,
     ce: Option<f64>,
-    polarita: i8,
+    polarity: i8,
     time: Vec<f64>,
     intensity: Vec<f64>,
 }
 
 /// A reader that also gives the SRM traces of the scans of the reader it wraps (unless that one has SRM chromatograms of its own).
-pub struct SrmDaScansioni {
+pub struct SrmFromScans {
     inner: Box<dyn Reader>,
     /// The traces of each sample asked for so far (a few at most: a list is enough).
     cache: Vec<(usize, Vec<Chromatogram>)>,
 }
 
-impl SrmDaScansioni {
+impl SrmFromScans {
     pub fn new(inner: Box<dyn Reader>) -> Self {
-        SrmDaScansioni {
+        SrmFromScans {
             inner,
             cache: Vec::new(),
         }
@@ -127,7 +127,7 @@ impl SrmDaScansioni {
         {
             complete_from_method(&m, &mut tr);
         }
-        Ok(tr.into_iter().enumerate().map(cromatogramma_di).collect())
+        Ok(tr.into_iter().enumerate().map(chromatogram_of).collect())
     }
 }
 
@@ -138,7 +138,7 @@ fn transitions_from_the_scans(
     rows: &[ScanEntry],
 ) -> Result<Vec<Transition>> {
     let mut tr: Vec<Transition> = Vec::new();
-    for (k, r) in rows.iter().enumerate().filter(|(_, r)| scansione_srm(r)) {
+    for (k, r) in rows.iter().enumerate().filter(|(_, r)| scan_srm(r)) {
         let q1 = r.precursore.unwrap_or(0.0);
         let s = inner.scan(c, k)?;
         let ce = ce_of_the_filter(&r.filtro);
@@ -147,7 +147,7 @@ fn transitions_from_the_scans(
             let j = match tr.iter().position(|t| {
                 (t.q1 - q1).abs() <= Q1_TOLERANCE
                     && (t.q3 - q3).abs() <= Q3_TOLERANCE
-                    && t.polarita == r.polarita
+                    && t.polarity == r.polarita
                     && t.ce == ce
             }) {
                 Some(j) => j,
@@ -157,7 +157,7 @@ fn transitions_from_the_scans(
                         // the m/z of a point is stored as f32: 246.108 would otherwise print as 246.10800170898438
                         q3: (q3 * 1e3).round() / 1e3,
                         ce,
-                        polarita: r.polarita,
+                        polarity: r.polarita,
                         time: Vec::new(),
                         intensity: Vec::new(),
                     });
@@ -171,14 +171,14 @@ fn transitions_from_the_scans(
     Ok(tr)
 }
 
-fn cromatogramma_di((index, t): (usize, Transition)) -> Chromatogram {
+fn chromatogram_of((index, t): (usize, Transition)) -> Chromatogram {
     Chromatogram {
         index,
         id: id_di(&t),
         kind: ChromKind::Srm,
         q1: Some(t.q1),
         q3: Some(t.q3),
-        unit: UNITA.into(),
+        unit: UNITS.into(),
         time: t.time,
         intensity: t.intensity,
     }
@@ -197,7 +197,7 @@ fn complete_from_method(m: &str, tr: &mut [Transition]) {
         };
         t.ce = t.ce.or(ce);
         if pol != 0 {
-            t.polarita = pol;
+            t.polarity = pol;
         }
     }
 }
@@ -208,17 +208,17 @@ fn id_di(t: &Transition) -> String {
     if let Some(ce) = t.ce {
         id.push_str(&format!(" ce={ce}"));
     }
-    if t.polarita < 0 {
+    if t.polarity < 0 {
         id.push_str(" polarity=negative");
     }
     id
 }
 
-fn scansione_srm(v: &ScanEntry) -> bool {
+fn scan_srm(v: &ScanEntry) -> bool {
     v.livello == 2 && v.precursore.is_some() && srm_filter(&v.filtro)
 }
 
-impl Reader for SrmDaScansioni {
+impl Reader for SrmFromScans {
     fn format(&self) -> Format {
         self.inner.format()
     }
@@ -303,9 +303,9 @@ impl Reader for SrmDaScansioni {
 }
 
 /// True when sample `c` of `l` has scans that are SRM transitions.
-pub fn ha_scansioni_srm(l: &mut dyn Reader, c: usize) -> bool {
+pub fn has_srm_scans(l: &mut dyn Reader, c: usize) -> bool {
     l.index_without_tic(c)
-        .map(|i| i.iter().any(scansione_srm))
+        .map(|i| i.iter().any(scan_srm))
         .unwrap_or(false)
 }
 

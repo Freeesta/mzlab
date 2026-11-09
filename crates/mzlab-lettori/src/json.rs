@@ -21,7 +21,7 @@ fn floats(o: &mut Out, a: &[f64]) {
 }
 
 /// `{id,kind,q1,q3,unit,time,intensity}`.
-pub fn cromatogramma_json(x: &Chromatogram) -> String {
+pub fn chromatogram_json(x: &Chromatogram) -> String {
     let mut o = Out(String::with_capacity(
         96 + 20 * (x.time.len() + x.intensity.len()),
     ));

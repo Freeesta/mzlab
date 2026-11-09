@@ -55,21 +55,21 @@ fn check(l: &mut dyn Reader, id: &str) {
 #[cfg(feature = "aperti")]
 #[test]
 fn mzxml_and_numpress_mzml_carry_conv() {
-    use comune::mzxml::{apri_mzxml, mzxml, run, FLAT};
-    use comune::{apri, mzml_di, scansioni, Cod};
-    check(&mut *apri_mzxml(mzxml(&run(), FLAT)), "mzxml");
+    use comune::mzxml::{mzxml, open_mzxml, run, FLAT};
+    use comune::{mzml_di, open, scans, Cod};
+    check(&mut *open_mzxml(mzxml(&run(), FLAT)), "mzxml");
     let np = Cod::Np {
         intensities: mzlab_core::numpress::Np::Slof,
         zlib: true,
     };
-    check(&mut *apri(mzml_di(&scansioni(), np, None)), "mzml-numpress");
+    check(&mut *open(mzml_di(&scans(), np, None)), "mzml-numpress");
 }
 
 #[cfg(feature = "andi")]
 #[test]
 fn andi_carries_conv() {
-    use comune::andi::{andi_ms, apri_andi, FLAT_RUN};
-    check(&mut *apri_andi(andi_ms(&FLAT_RUN)), "andi-ms");
+    use comune::andi::{andi_ms, open_andi, FLAT_RUN};
+    check(&mut *open_andi(andi_ms(&FLAT_RUN)), "andi-ms");
 }
 
 #[cfg(feature = "shimadzu")]
@@ -87,7 +87,7 @@ fn shimadzu_carries_conv() {
         }],
     };
     check(
-        &mut *mzlab_lettori::apri_nudo(fs, &Limits::sito()).unwrap(),
+        &mut *mzlab_lettori::open_bare(fs, &Limits::sito()).unwrap(),
         "shimadzu",
     );
 }
@@ -96,6 +96,6 @@ fn shimadzu_carries_conv() {
 #[test]
 fn waters_carries_conv() {
     use mzlab_core::lettori::Limits;
-    let mut l = mzlab_lettori::apri_nudo(comune_waters::synthetic_set(), &Limits::sito()).unwrap();
+    let mut l = mzlab_lettori::open_bare(comune_waters::synthetic_set(), &Limits::sito()).unwrap();
     check(&mut *l, "waters-raw");
 }

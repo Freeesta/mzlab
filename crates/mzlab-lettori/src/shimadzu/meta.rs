@@ -10,7 +10,7 @@ use super::carica::{Data, Fam};
 use super::prop;
 
 /// The most transitions listed in the document.
-const TRANSIZIONI_MAX: usize = 5000;
+const MAX_TRANSITIONS: usize = 5000;
 /// The most printable strings kept from one configuration stream.
 const TEXTS_MAX: usize = 64;
 
@@ -24,7 +24,7 @@ pub(super) struct Meta {
     pub id: Option<String>,
     pub vial: Option<String>,
     pub injection_ul: Option<f64>,
-    pub metodo_file: Option<String>,
+    pub method_file: Option<String>,
     pub fields: Vec<Field>,
     /// The parts of the file that are not decoded (`meta.nonDecodificato`).
     pub warnings: Vec<String>,
@@ -35,7 +35,7 @@ fn last_one(p: &str) -> &str {
 }
 
 /// Whether a key of the properties names a person, a computer or a path.
-fn e_identita(k: &str, v: &str) -> bool {
+fn is_identity(k: &str, v: &str) -> bool {
     matches!(k, "generatedBy" | "modifiedBy" | "operator")
         || k.ends_with("GeneratedBy")
         || k.ends_with("ModifiedBy")
@@ -96,11 +96,11 @@ fn field(m: &mut Meta, origin: &str, k: &str, v: &str) {
         return;
     }
     let c = Field::new(origin, k, v);
-    m.fields.push(if e_identita(k, v) { c.id() } else { c });
+    m.fields.push(if is_identity(k, v) { c.id() } else { c });
 }
 
 /// The metadata of `ole`.
-pub(super) fn raccogli(ole: &Ole, fam: Fam) -> Meta {
+pub(super) fn collect(ole: &Ole, fam: Fam) -> Meta {
     let mut m = Meta::default();
     if fam == Fam::Gc {
         gc(ole, &mut m);
@@ -151,7 +151,7 @@ fn gc(ole: &Ole, m: &mut Meta) {
             "sampleName" => m.campione = Some(v.clone()),
             "sampleId" => m.id = Some(v.clone()),
             "operator" => m.operatore = Some(v.clone()),
-            "methodFile" => m.metodo_file = Some(last_one(&v).to_string()),
+            "methodFile" => m.method_file = Some(last_one(&v).to_string()),
             _ => {}
         }
         field(m, o, &k, &v);
@@ -241,7 +241,7 @@ fn lc(ole: &Ole, m: &mut Meta) {
     }
 }
 
-fn tipo_evento(filter: &str) -> &'static str {
+fn event_kind(filter: &str) -> &'static str {
     if filter.contains("SIM") {
         "SIM"
     } else {
@@ -252,22 +252,22 @@ fn tipo_evento(filter: &str) -> &'static str {
 /// The experiments of the `ms` section: one per event seen, then one MRM experiment with the transitions.
 fn experiments(d: &Data) -> Vec<Option<V>> {
     let mut experiments: Vec<Option<V>> = d
-        .eventi
+        .events
         .iter()
         .enumerate()
         .map(|(i, e)| {
             obj(vec![
                 ("indice", num(Some((i + 1) as f64))),
-                ("tipo", Some(V::s(tipo_evento(&e.filter)))),
+                ("tipo", Some(V::s(event_kind(&e.filter)))),
                 ("mz", Some(V::Arr(vec![V::Num(e.mz.0), V::Num(e.mz.1)]))),
             ])
         })
         .collect();
-    if !d.transizioni.is_empty() {
+    if !d.transitions.is_empty() {
         let tr = d
-            .transizioni
+            .transitions
             .iter()
-            .take(TRANSIZIONI_MAX)
+            .take(MAX_TRANSITIONS)
             .filter_map(|&(q1, q3, p)| {
                 obj(vec![
                     ("q1", num(Some(q1))),
@@ -288,7 +288,7 @@ fn experiments(d: &Data) -> Vec<Option<V>> {
 }
 
 /// The `strumento` section: maker, model and the software that wrote the file.
-fn strumento(fam: Fam, m: &Meta) -> Option<V> {
+fn instrument(fam: Fam, m: &Meta) -> Option<V> {
     let s = |t: &Option<String>| t.as_deref().and_then(text);
     obj(vec![
         ("produttore", Some(V::s("Shimadzu"))),
@@ -332,7 +332,7 @@ pub(super) fn document(
     let doc = obj(vec![
         ("schema", Some(V::s(metodo::SCHEMA))),
         ("origine", metodo::origin(&src, m.created.as_deref())),
-        ("strumento", strumento(fam, m)),
+        ("strumento", instrument(fam, m)),
         (
             "campione",
             obj(vec![
@@ -340,7 +340,7 @@ pub(super) fn document(
                 ("id", s(&m.id)),
                 ("vial", s(&m.vial)),
                 ("iniezione_uL", num(m.injection_ul)),
-                ("metodo_file", s(&m.metodo_file)),
+                ("metodo_file", s(&m.method_file)),
             ]),
         ),
         (

@@ -18,18 +18,18 @@ pub(super) struct Row {
 const BLOCK: usize = 1 << 20;
 
 /// What the pass over the file finds.
-pub(super) struct Passata {
+pub(super) struct Pass {
     /// The intact scans.
     pub(super) rows: Vec<Row>,
     /// The scans left out: they hold a NUL byte, or the file ends before their peaks close.
     pub(super) discarded: usize,
     /// The `<offset>`s of the `<index>` after the run (0: no index).
-    pub(super) indicizzate: usize,
+    pub(super) indexed: usize,
 }
 
 /// The rows of the scans of the file, from one pass over its bytes.
-pub(super) fn rows(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Passata> {
-    passata(data, dim, limits)
+pub(super) fn rows(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Pass> {
+    pass(data, dim, limits)
 }
 
 fn read(data: &mut dyn ReadAt, da: u64, n: u64) -> Result<Vec<u8>> {
@@ -40,10 +40,10 @@ fn read(data: &mut dyn ReadAt, da: u64, n: u64) -> Result<Vec<u8>> {
 
 /// The tag that starts at `b[0]` (`b[0] == b'<'`): 1 a `<scan `, 2 a `</scan>`, 3 a `</msRun>`, 4 a `</peaks>`, 0 anything else.
 fn tag(b: &[u8]) -> u8 {
-    let blanco = |c: Option<&u8>| matches!(c, Some(b' ' | b'\t' | b'\r' | b'\n' | b'>' | b'/'));
-    if b.starts_with(b"<scan") && blanco(b.get(5)) {
+    let blank = |c: Option<&u8>| matches!(c, Some(b' ' | b'\t' | b'\r' | b'\n' | b'>' | b'/'));
+    if b.starts_with(b"<scan") && blank(b.get(5)) {
         1
-    } else if b.starts_with(b"</scan") && blanco(b.get(6)) {
+    } else if b.starts_with(b"</scan") && blank(b.get(6)) {
         2
     } else if b.starts_with(b"</msRun") {
         3
@@ -61,9 +61,9 @@ fn offset_after(data: &mut dyn ReadAt, da: u64, dim: u64, limits: &Limits) -> Re
 }
 
 /// One pass over the file in blocks of 1 MB: the starts of the scans, the nesting depth against the limit, the end of the run, and what is damaged.
-fn passata(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Passata> {
+fn pass(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Pass> {
     let (mut starts, mut fine_run): (Vec<u64>, Option<u64>) = (Vec::new(), None);
-    let (mut pos, mut profondita, mut closed) = (0u64, 0usize, 0u64);
+    let (mut pos, mut depth, mut closed) = (0u64, 0usize, 0u64);
     let (mut remainder, mut nul): (Vec<u8>, Vec<u64>) = (Vec::new(), Vec::new());
     'file: while pos < dim || !remainder.is_empty() {
         let n = (dim - pos).min(BLOCK as u64);
@@ -92,13 +92,13 @@ fn passata(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Passata> 
             }
             match tag(&buf[at..]) {
                 1 => {
-                    profondita += 1;
-                    limits.profondita_ok(profondita)?;
+                    depth += 1;
+                    limits.profondita_ok(depth)?;
                     limits.ok_entries(starts.len() as u64 + 1)?;
                     starts.push(base + at as u64);
                 }
                 2 => {
-                    profondita = profondita.saturating_sub(1);
+                    depth = depth.saturating_sub(1);
                     closed = base + at as u64;
                 }
                 3 => {
@@ -119,19 +119,19 @@ fn passata(data: &mut dyn ReadAt, dim: u64, limits: &Limits) -> Result<Passata> 
         start,
         end: starts.get(k + 1).copied().unwrap_or(fine).max(start),
     });
-    let intatta = |r: &Row| {
+    let intact = |r: &Row| {
         let k = nul.partition_point(|&p| p < r.start);
         nul.get(k).is_none_or(|&p| p >= r.end)
             && (fine_run.is_some() || r.end < dim || closed > r.start)
     };
-    let righe: Vec<Row> = all_of_them.filter(intatta).collect();
+    let righe: Vec<Row> = all_of_them.filter(intact).collect();
     let indicizzate = match fine_run {
         Some(f) => offset_after(data, f, dim, limits)?,
         None => 0,
     };
-    Ok(Passata {
+    Ok(Pass {
         discarded: starts.len() - righe.len(),
         rows: righe,
-        indicizzate,
+        indexed: indicizzate,
     })
 }

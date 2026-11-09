@@ -29,9 +29,9 @@ pub fn idx_row(offset: u32, count: u32, tic: f32, rt_min: f32) -> Vec<u8> {
 }
 
 /// A 416-byte record of `_FUNCTNS.INF`: type, subtype, cycle time and the 32 slots (Q1 or low mass at +0xA0, Q3 or high mass at +0x120, dwell at +0x20).
-pub fn record_funzione(tipo: u8, below: u8, cycle_s: f32, channels: &[(f32, f32, f32)]) -> Vec<u8> {
+pub fn function_record(kind: u8, below: u8, cycle_s: f32, channels: &[(f32, f32, f32)]) -> Vec<u8> {
     let mut r = vec![0u8; 416];
-    r[0] = tipo;
+    r[0] = kind;
     r[1] = below;
     r[2..6].copy_from_slice(&cycle_s.to_le_bytes());
     for (k, (q1, q3, dw)) in channels.iter().enumerate() {
@@ -69,8 +69,8 @@ fn member(folder: &str, name: &str, byte: Vec<u8>) -> Member {
 
 /// The files of the folder as `(name, bytes)`.
 pub fn folder_file() -> Vec<(String, Vec<u8>)> {
-    let mut funtns = record_funzione(0x12, 0x25, 1.0, &[(100.0, 1000.0, 0.0)]);
-    funtns.extend(record_funzione(
+    let mut funtns = function_record(0x12, 0x25, 1.0, &[(100.0, 1000.0, 0.0)]);
+    funtns.extend(function_record(
         0x29,
         0x01,
         1.0,

@@ -7,7 +7,7 @@ mod dati_percorsi;
 mod verita;
 
 #[test]
-fn verita_waters() {
+fn truth_waters() {
     verita::corpus(
         "waters",
         |r| r.starts_with("waters/"),

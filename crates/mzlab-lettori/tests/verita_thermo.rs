@@ -7,7 +7,7 @@ mod dati_percorsi;
 mod verita;
 
 #[test]
-fn verita_thermo() {
+fn truth_thermo() {
     verita::corpus(
         "thermo",
         |r| r.starts_with("thermo/"),

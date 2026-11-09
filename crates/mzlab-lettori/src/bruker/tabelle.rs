@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, HashMap};
 impl Frame {
     /// The sum of the counts of the frame as `tdf_bin` holds them (the table's sum, undone from the normalisation to 100 ms).
     pub fn raw_sum(&self) -> f64 {
-        if self.accumulo > 0.0 {
-            self.summed * self.accumulo / 100.0
+        if self.accumulator > 0.0 {
+            self.summed * self.accumulator / 100.0
         } else {
             self.summed
         }
@@ -30,16 +30,16 @@ impl Data {
                 d.meta.insert(k.to_string(), v);
             }
         })?;
-        d.frames_e_calibrazioni(db, limits)?;
+        d.frames_and_calibrations(db, limits)?;
         d.msms(db, limits)?;
         d.dia_prm(db, limits)?;
-        d.proprieta(db, limits)?;
+        d.properties(db, limits)?;
         Ok(d)
     }
 
-    fn frames_e_calibrazioni(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
+    fn frames_and_calibrations(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         self.frames(db, limits)?;
-        self.calibrazioni(db, limits)
+        self.calibrations(db, limits)
     }
 
     fn frames(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
@@ -64,22 +64,22 @@ impl Data {
             fr.push(Frame {
                 id: i(&r[0]),
                 moment: n(&r[1]),
-                polarita: match r[2].text() {
+                polarity: match r[2].text() {
                     Some("+") => 1,
                     Some("-") => -1,
                     _ => 0,
                 },
                 mode: i(&r[3]),
-                tipo: i(&r[4]),
+                kind: i(&r[4]),
                 pos: i(&r[5]),
                 summed: n(&r[6]),
                 max: n(&r[7]),
-                scansioni: i(&r[8]).max(0) as u64,
+                scans: i(&r[8]).max(0) as u64,
                 peaks: i(&r[9]).max(0) as u64,
                 cal: i(&r[10]),
                 t1: n(&r[11]),
                 t2: n(&r[12]),
-                accumulo: n(&r[13]),
+                accumulator: n(&r[13]),
             })
         })?;
         fr.sort_by_key(|f| f.id);
@@ -87,7 +87,7 @@ impl Data {
         Ok(())
     }
 
-    fn calibrazioni(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
+    fn calibrations(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         let mut cal = HashMap::new();
         let c = [
             "Id",
@@ -148,7 +148,7 @@ impl Data {
             let mz = r[1].f64().or_else(|| r[2].f64());
             prec.insert(
                 i(&r[0]),
-                Precursore {
+                Precursor {
                     mz,
                     load: r[3].i64(),
                     intensities: r[4].f64(),
@@ -226,7 +226,7 @@ impl Data {
                 InfoFrame {
                     mz: n(&r[1]),
                     larghezza: n(&r[2]),
-                    carica: r[3].i64(),
+                    charge: r[3].i64(),
                     ce: n(&r[4]),
                 },
             );
@@ -236,7 +236,7 @@ impl Data {
     }
 
     /// The properties of the property group of the first frame (the method settings that stay constant), with the names and units the file defines.
-    fn proprieta(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
+    fn properties(&mut self, db: &mut Sqlite, limits: &Limits) -> Result<()> {
         let mut group = None;
         rows_until(db, limits, "Frames", &["PropertyGroup"], |r| {
             group = r[0].i64();
@@ -250,7 +250,7 @@ impl Data {
         rows(db, limits, "PropertyDefinitions", &c, |r| {
             let name = r[1].text().unwrap_or_default().to_string();
             let vis = r[2].text().unwrap_or_default();
-            let unita = r[3].text().unwrap_or_default();
+            let units = r[3].text().unwrap_or_default();
             def.insert(
                 i(&r[0]),
                 (
@@ -259,7 +259,7 @@ impl Data {
                     } else {
                         name
                     },
-                    unita.to_string(),
+                    units.to_string(),
                 ),
             );
         })?;
@@ -288,20 +288,20 @@ pub struct Frame {
     pub id: i64,
     /// Seconds.
     pub moment: f64,
-    pub polarita: i8,
+    pub polarity: i8,
     pub mode: i64,
-    pub tipo: i64,
+    pub kind: i64,
     /// Offset of the block in `*_bin`.
     pub pos: i64,
     pub summed: f64,
     pub max: f64,
-    pub scansioni: u64,
+    pub scans: u64,
     pub peaks: u64,
     pub cal: i64,
     pub t1: f64,
     pub t2: f64,
     /// Ms of ion accumulation: `SummedIntensities` and `MaxIntensity` are normalised to 100 ms, the counts of `tdf_bin` are not.
-    pub accumulo: f64,
+    pub accumulator: f64,
 }
 
 /// An isolation window with the scans of the mobility ramp it covers.
@@ -314,7 +314,7 @@ pub struct Window {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Precursore {
+pub struct Precursor {
     pub mz: Option<f64>,
     pub load: Option<i64>,
     pub intensities: Option<f64>,
@@ -325,7 +325,7 @@ pub struct Precursore {
 pub struct InfoFrame {
     pub mz: f64,
     pub larghezza: f64,
-    pub carica: Option<i64>,
+    pub charge: Option<i64>,
     pub ce: f64,
 }
 
@@ -334,7 +334,7 @@ pub struct Data {
     pub frames: Vec<Frame>,
     pub cal: HashMap<i64, MzCal>,
     pub meta: BTreeMap<String, String>,
-    pub precursori: HashMap<i64, Precursore>,
+    pub precursori: HashMap<i64, Precursor>,
     /// `(frame, precursor, window)` of DDA-PASEF.
     pub pasef: Vec<(i64, i64, Window)>,
     pub dia_groups: HashMap<i64, Vec<Window>>,

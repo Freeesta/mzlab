@@ -13,7 +13,7 @@ use super::mzxml_scan::{attr, each, name, tags, Tag};
 const FIELDS_MAX: usize = 2000;
 
 #[derive(Default)]
-pub(super) struct Cabina {
+pub(super) struct Cabin {
     pub(super) fields: Vec<Field>,
     pub(super) maker: Option<String>,
     pub(super) model: Option<String>,
@@ -29,7 +29,7 @@ pub(super) struct Cabina {
     pub(super) centroidi: Option<bool>,
 }
 
-fn mappa(key: &str) -> Option<&'static str> {
+fn map(key: &str) -> Option<&'static str> {
     match key {
         "msManufacturer" => Some("strumento.produttore"),
         "msModel" => Some("strumento.modello"),
@@ -53,7 +53,7 @@ fn fields_of(o: &str, n: &str, g: Tag, dest: &mut Vec<Field>) {
     let (cat, val) = (attr(g, "category"), attr(g, "value"));
     if !cat.is_empty() && !val.is_empty() {
         let f = Field::new(o, cat, val);
-        dest.push(match mappa(cat) {
+        dest.push(match map(cat) {
             Some(m) => f.map(m),
             None => f,
         });
@@ -61,12 +61,12 @@ fn fields_of(o: &str, n: &str, g: Tag, dest: &mut Vec<Field>) {
     }
     each(g, &mut |k, v| {
         let f = Field::new(o, k, v);
-        let identita = n == "operator" || (n == "parentFile" && k == "fileName" && file_path(v));
-        dest.push(if identita { f.id() } else { f });
+        let identity = n == "operator" || (n == "parentFile" && k == "fileName" && file_path(v));
+        dest.push(if identity { f.id() } else { f });
     });
 }
 
-fn annotate(c: &mut Cabina, n: &str, g: Tag) {
+fn annotate(c: &mut Cabin, n: &str, g: Tag) {
     let v = |k: &str| Some(attr(g, k).trim().to_string()).filter(|v| !v.is_empty());
     match n {
         "msManufacturer" => c.maker = v("value"),
@@ -93,19 +93,19 @@ fn annotate(c: &mut Cabina, n: &str, g: Tag) {
 }
 
 /// The cabin of `head`, the text of the file before its first scan.
-pub(super) fn read(head: &str, limits: &Limits) -> Result<Cabina> {
-    let mut c = Cabina::default();
-    let mut pila: Vec<&str> = Vec::new();
+pub(super) fn read(head: &str, limits: &Limits) -> Result<Cabin> {
+    let mut c = Cabin::default();
+    let mut stack: Vec<&str> = Vec::new();
     let mut error = None;
     tags(head, &mut |g, _| {
         let n = name(g);
         if n.starts_with('/') {
-            pila.pop();
+            stack.pop();
             return true;
         }
         if c.fields.len() < FIELDS_MAX && n != "mzXML" {
             let mut o = String::from("mzxml:");
-            for p in &pila {
+            for p in &stack {
                 o.push_str(p);
                 o.push('/');
             }
@@ -114,11 +114,11 @@ pub(super) fn read(head: &str, limits: &Limits) -> Result<Cabina> {
         }
         annotate(&mut c, n, g);
         if !g.ends_with('/') {
-            if let Err(e) = limits.profondita_ok(pila.len() + 1) {
+            if let Err(e) = limits.profondita_ok(stack.len() + 1) {
                 error = Some(e);
                 return false;
             }
-            pila.push(n);
+            stack.push(n);
         }
         true
     });
@@ -126,7 +126,7 @@ pub(super) fn read(head: &str, limits: &Limits) -> Result<Cabina> {
 }
 
 /// The `metodo/1` document of the file `nome` (`dim` bytes, `sha1` when read).
-pub(super) fn document(c: &Cabina, nome: &str, dim: u64, sha1: Option<String>) -> String {
+pub(super) fn document(c: &Cabin, nome: &str, dim: u64, sha1: Option<String>) -> String {
     let src = Source {
         format: "mzxml",
         files: vec![SrcFile {
@@ -167,7 +167,7 @@ pub(super) fn document(c: &Cabina, nome: &str, dim: u64, sha1: Option<String>) -
 }
 
 /// The header of the mzML: the instrument, the files the data come from (this file when the mzXML names none), the programs, and `doc` in the `<run>`.
-pub(super) fn header(c: &Cabina, name: &str, sha1: Option<String>, doc: String) -> Header {
+pub(super) fn header(c: &Cabin, name: &str, sha1: Option<String>, doc: String) -> Header {
     let mut h = Header {
         run: name.rsplit_once('.').map_or(name, |(s, _)| s).to_string(),
         software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),

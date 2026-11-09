@@ -7,10 +7,10 @@ use comune_waters::{file_set, folder_file};
 use mzlab_core::lettori::Limits;
 
 /// The error of the synthetic folder after `cambia`, with its key and its `name` and `file`.
-fn rifiuto(change: impl FnOnce(&mut Vec<(String, Vec<u8>)>)) -> (String, String, String) {
+fn refusal(change: impl FnOnce(&mut Vec<(String, Vec<u8>)>)) -> (String, String, String) {
     let mut f = folder_file();
     change(&mut f);
-    let e = mzlab_lettori::apri_nudo(file_set(f), &Limits::sito())
+    let e = mzlab_lettori::open_bare(file_set(f), &Limits::sito())
         .err()
         .expect("refused");
     let p = |n: &str| {
@@ -27,7 +27,7 @@ fn without(f: &mut Vec<(String, Vec<u8>)>, name: &str) {
     f.retain(|(n, _)| n != name);
 }
 
-fn accorcia(f: &mut [(String, Vec<u8>)], name: &str, di: usize) {
+fn shorten(f: &mut [(String, Vec<u8>)], name: &str, di: usize) {
     let b = &mut f.iter_mut().find(|(n, _)| n == name).unwrap().1;
     b.truncate(b.len() - di);
 }
@@ -39,7 +39,7 @@ fn a_folder_without_its_function_list_is_incomplete() {
         "X.raw".into(),
         "_FUNCTNS.INF".into(),
     );
-    assert_eq!(rifiuto(|f| without(f, "_FUNCTNS.INF")), k);
+    assert_eq!(refusal(|f| without(f, "_FUNCTNS.INF")), k);
 }
 
 #[test]
@@ -49,7 +49,7 @@ fn a_function_list_cut_inside_a_record_is_named() {
         "X.raw".into(),
         "_FUNCTNS.INF".into(),
     );
-    assert_eq!(rifiuto(|f| accorcia(f, "_FUNCTNS.INF", 10)), k);
+    assert_eq!(refusal(|f| shorten(f, "_FUNCTNS.INF", 10)), k);
 }
 
 #[test]
@@ -59,5 +59,5 @@ fn an_index_cut_inside_a_row_is_named() {
         "X.raw".into(),
         "_FUNC001.IDX".into(),
     );
-    assert_eq!(rifiuto(|f| accorcia(f, "_FUNC001.IDX", 5)), k);
+    assert_eq!(refusal(|f| shorten(f, "_FUNC001.IDX", 5)), k);
 }

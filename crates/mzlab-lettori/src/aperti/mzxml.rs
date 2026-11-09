@@ -1,6 +1,6 @@
 //! An mzXML file (ISB, versions 2.x and 3.x) as a `Lettore`: spectra with level, precursor, polarity and retention time, TIC and BPC chromatograms computed from the scans, the header of the file
 //! as `metodo/1`. The index comes from `<index name="scan">` or from one pass over the bytes (`mzxml_indice.rs`); `scansione(c, k)` reads only the bytes of scan `k` (`mzxml_scan.rs`).
-//! SRM/MRM scans become chromatograms through `mzlab_lettori::srm::SrmDaScansioni`, which wraps every reader of this crate. Written from the mzXML schema (ISB); not from any program's code.
+//! SRM/MRM scans become chromatograms through `mzlab_lettori::srm::SrmFromScans`, which wraps every reader of this crate. Written from the mzXML schema (ISB); not from any program's code.
 
 use std::cell::RefCell;
 
@@ -19,18 +19,18 @@ use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 use super::mzxml_finestra::{peak_sums, Window};
 use super::mzxml_indice::{self, Row};
-use super::mzxml_precursori::precursori_di;
+use super::mzxml_precursori::precursors_of;
 use super::mzxml_voce::entry;
 
-use super::mzxml_scan::{self as scan, attr, each, Tag, Testa};
+use super::mzxml_scan::{self as scan, attr, each, Head, Tag};
 
-use super::mzxml_testata::{self as testata, Cabina};
+use super::mzxml_testata::{self as testata, Cabin};
 
 /// The bytes of the start of the file that `riconosci` looks at.
-const TESTA: usize = 4096;
+const HEAD: usize = 4096;
 /// The most bytes of the start of a scan read to learn its attributes (the peaks come after them), and of the header of the file.
-const TESTA_SCANSIONE: u64 = 1 << 20;
-const UNITA: &str = "number of detector counts";
+const SCAN_HEAD: u64 = 1 << 20;
+const UNITS: &str = "number of detector counts";
 /// The most `nameValue`/`precursorMz` elements kept for a scan.
 pub(super) const CAP: usize = 256;
 
@@ -38,8 +38,8 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "mzxml",
     contratto: CONTRATTO,
     estensioni: &[".mzxml"],
-    riconosci,
-    apri,
+    riconosci: recognize,
+    apri: open,
 };
 
 impl MzxmlReader {
@@ -75,13 +75,13 @@ impl MzxmlReader {
     }
 
     /// Scan `k`: its attributes and its peaks, and the extra of its mzML spectrum.
-    fn spettro(&mut self, k: usize) -> Result<(Spectrum, SpectrumExtra)> {
+    fn spectrum(&mut self, k: usize) -> Result<(Spectrum, SpectrumExtra)> {
         let byte = self.byte(k)?;
         let text = String::from_utf8_lossy(&byte);
-        let t = scan::testa(&text, CAP)?;
-        let conteggio = number(t.scan, "peaksCount").map(|n| n.max(0.0) as usize);
+        let t = scan::head(&text, CAP)?;
+        let count = number(t.scan, "peaksCount").map(|n| n.max(0.0) as usize);
         let p = match t.peaks {
-            Some((g, corpo)) => scan::peaks(g, corpo, conteggio, &self.limits)?,
+            Some((g, corpo)) => scan::peaks(g, corpo, count, &self.limits)?,
             None => scan::Peaks {
                 mz: Vec::new(),
                 intensities: Vec::new(),
@@ -96,7 +96,7 @@ impl MzxmlReader {
         let profilo = match attr(t.scan, "centroided") {
             "1" => false,
             "0" => true,
-            _ => self.cabina.centroidi == Some(false),
+            _ => self.cabin.centroidi == Some(false),
         };
         let s = Spectrum {
             index: k,
@@ -168,7 +168,7 @@ impl MzxmlReader {
             kind,
             q1: None,
             q3: None,
-            unit: UNITA.to_string(),
+            unit: UNITS.to_string(),
             time: k.iter().map(|&i| self.indice[i].rt).collect(),
             intensity: k
                 .iter()
@@ -213,7 +213,7 @@ impl Reader for MzxmlReader {
         if c != 0 {
             return 0;
         }
-        self.dichiarati
+        self.declared
             .saturating_sub(self.indice.len())
             .max(self.discarded)
     }
@@ -226,7 +226,7 @@ impl Reader for MzxmlReader {
 
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
-        let (s, e) = self.spettro(k)?;
+        let (s, e) = self.spectrum(k)?;
         *self.last.borrow_mut() = Some((k, e));
         Ok(s)
     }
@@ -235,15 +235,15 @@ impl Reader for MzxmlReader {
         self.one(c)?;
         let byte = self.byte(k)?;
         let text = String::from_utf8_lossy(&byte);
-        let t = scan::testa(&text, CAP)?;
+        let t = scan::head(&text, CAP)?;
         let mut out = Vec::new();
         let add = |out: &mut Vec<Field>, pre: &str, g: Tag| {
             each(g, &mut |n, v| out.push(field(&format!("{pre}{n}"), v)))
         };
         add(&mut out, "", t.scan);
-        for (g, corpo) in &t.precursori {
+        for (g, body) in &t.precursori {
             add(&mut out, "precursorMz.", g);
-            out.push(field("precursorMz", corpo));
+            out.push(field("precursorMz", body));
         }
         if let Some((g, _)) = t.peaks {
             add(&mut out, "peaks.", g);
@@ -259,10 +259,10 @@ impl Reader for MzxmlReader {
         Ok(["TIC", "BPC"]
             .into_iter()
             .zip([ChromKind::Tic, ChromKind::Bpc])
-            .map(|(id, tipo)| ChromatogramEntry {
+            .map(|(id, kind)| ChromatogramEntry {
                 id: id.into(),
-                tipo,
-                unita: UNITA.into(),
+                tipo: kind,
+                unita: UNITS.into(),
             })
             .collect())
     }
@@ -275,14 +275,14 @@ impl Reader for MzxmlReader {
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         let sha1 = self.sha1();
-        Ok(testata::document(&self.cabina, &self.name, self.dim, sha1))
+        Ok(testata::document(&self.cabin, &self.name, self.dim, sha1))
     }
 
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.one(c)?;
         let sha1 = self.sha1();
-        let doc = testata::document(&self.cabina, &self.name, self.dim, sha1.clone());
-        Ok(Some(testata::header(&self.cabina, &self.name, sha1, doc)))
+        let doc = testata::document(&self.cabin, &self.name, self.dim, sha1.clone());
+        Ok(Some(testata::header(&self.cabin, &self.name, sha1, doc)))
     }
 
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
@@ -296,14 +296,14 @@ impl Reader for MzxmlReader {
 impl MzxmlReader {
     /// The header of the file (before the first scan).
     fn read_head(&mut self) -> Result<()> {
-        let fine = self.rows[0].start.min(TESTA_SCANSIONE);
+        let fine = self.rows[0].start.min(SCAN_HEAD);
         let b = self.read(0, fine)?;
         let text = String::from_utf8_lossy(&b);
-        self.cabina = testata::read(&text, &self.limits)?;
+        self.cabin = testata::read(&text, &self.limits)?;
         scan::tags(&text, &mut |g, _| {
             if scan::name(g) == "msRun" {
                 let n = number(g, "scanCount").map_or(0, |n| n.max(0.0) as usize);
-                self.dichiarati = self.dichiarati.max(n);
+                self.declared = self.declared.max(n);
             }
             true
         });
@@ -323,12 +323,9 @@ impl MzxmlReader {
                     r.start,
                     (r.end - r.start).min(n),
                 )?;
-                if b.windows(6).any(|w| w == b"<peaks")
-                    || n >= r.end - r.start
-                    || n >= TESTA_SCANSIONE
-                {
+                if b.windows(6).any(|w| w == b"<peaks") || n >= r.end - r.start || n >= SCAN_HEAD {
                     let text = String::from_utf8_lossy(b);
-                    let t = scan::testa(&text, CAP)?;
+                    let t = scan::head(&text, CAP)?;
                     break (
                         number(t.scan, "totIonCurrent").is_some(),
                         number(t.scan, "basePeakIntensity"),
@@ -357,19 +354,19 @@ pub struct MzxmlReader {
     known_tic: Vec<bool>,
     bpi: Vec<Option<f64>>,
     /// The scans the file says it has (`scanCount`, the `<offset>`s of its index) and those the pass left out as damaged, to count those a damaged copy lacks.
-    dichiarati: usize,
+    declared: usize,
     discarded: usize,
-    cabina: Cabina,
+    cabin: Cabin,
     sha1: Option<Option<String>>,
     /// The extra of the spectrum `scansione` read last (the writer asks for it right after).
     last: RefCell<Option<(usize, SpectrumExtra)>>,
 }
 
-fn riconosci(fs: &mut FileSet) -> Fiducia {
+fn recognize(fs: &mut FileSet) -> Fiducia {
     let Some(i) = fs.find(".mzxml") else {
         return Fiducia::No;
     };
-    let head = fs.testa(i, TESTA);
+    let head = fs.testa(i, HEAD);
     if String::from_utf8_lossy(&head).contains("<mzXML") {
         Fiducia::Si
     } else {
@@ -386,12 +383,12 @@ pub(super) fn number(t: Tag, n: &str) -> Option<f64> {
 }
 
 /// The `userParam`s, the window and the precursors of a scan for the mzML we write.
-fn extra_di(t: &Testa, index: &[ScanEntry]) -> SpectrumExtra {
+fn extra_di(t: &Head, index: &[ScanEntry]) -> SpectrumExtra {
     let mut e = SpectrumExtra {
         sim: attr(t.scan, "scanType").eq_ignore_ascii_case("SIM"),
         observed: number(t.scan, "lowMz").is_some() && number(t.scan, "highMz").is_some(),
         window: number(t.scan, "startMz").zip(number(t.scan, "endMz")),
-        precursors: precursori_di(t, index),
+        precursors: precursors_of(t, index),
         ..SpectrumExtra::default()
     };
     let mut add = |g: Tag, names: &[&str]| {
@@ -426,7 +423,7 @@ fn field(name: &str, value: &str) -> Field {
     }
 }
 
-fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let i = fs
         .find(".mzxml")
         .ok_or_else(|| Error::new("err.file.notAccepted"))?;
@@ -442,10 +439,10 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .to_string();
     let dim = m.dim;
     let mut dati: Box<dyn ReadAt> = std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new()));
-    let mzxml_indice::Passata {
+    let mzxml_indice::Pass {
         rows: righe,
         discarded,
-        indicizzate,
+        indexed: indicizzate,
     } = mzxml_indice::rows(&mut dati, dim, limits)?;
     if righe.is_empty() {
         return Err(Error::new("err.file.xml").with("detail", "no scans"));
@@ -460,9 +457,9 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         indice: Vec::new(),
         known_tic: Vec::new(),
         bpi: Vec::new(),
-        dichiarati: indicizzate,
+        declared: indicizzate,
         discarded,
-        cabina: Cabina::default(),
+        cabin: Cabin::default(),
         sha1: None,
         last: RefCell::new(None),
     };

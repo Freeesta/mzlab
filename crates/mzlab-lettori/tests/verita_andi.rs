@@ -7,7 +7,7 @@ mod dati_percorsi;
 mod verita;
 
 #[test]
-fn verita_andi() {
+fn truth_andi() {
     verita::corpus(
         "andi",
         |r| r.to_lowercase().ends_with(".cdf"),

@@ -304,7 +304,7 @@ fn open_sample(
         .is_some_and(|v| v.id == mzlab_core::wiff::lettore::ENTRY.id)
     {
         let l = mzlab_core::wiff::lettore::open_only(fs, &Limits::sito(), Some(c))?;
-        return Ok(Box::new(mzlab_lettori::srm::SrmDaScansioni::new(l)));
+        return Ok(Box::new(mzlab_lettori::srm::SrmFromScans::new(l)));
     }
     let _ = c;
     mzlab_lettori::apri(fs, &Limits::sito())
@@ -400,7 +400,7 @@ pub fn open_with_sha1(
 }
 fn open_members(fs: FileSet) -> Result<u32, JsValue> {
     // as it is, without the SRM traces of `mzlab_lettori::apri`: the engine reads the module through `ExternalReader` and decides itself what it does with them
-    let l = mzlab_lettori::apri_nudo(fs, &Limits::sito()).map_err(|e| error_json(&e))?;
+    let l = mzlab_lettori::open_bare(fs, &Limits::sito()).map_err(|e| error_json(&e))?;
     with_sessions(|s| Ok(s.insert(l)))
 }
 #[wasm_bindgen]

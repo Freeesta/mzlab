@@ -8,7 +8,7 @@ use mzlab_core::lettori::{Limits, Member};
 mod dati_percorsi;
 
 fn everything(file: Vec<(String, Vec<u8>)>) {
-    let Ok(mut l) = mzlab_lettori::apri_nudo(file_set(file), &Limits::sito()) else {
+    let Ok(mut l) = mzlab_lettori::open_bare(file_set(file), &Limits::sito()) else {
         return;
     };
     let n = l.samples().len();
@@ -29,7 +29,7 @@ fn everything(file: Vec<(String, Vec<u8>)>) {
     }
 }
 
-fn reale() -> Option<Vec<(String, Vec<u8>)>> {
+fn real() -> Option<Vec<(String, Vec<u8>)>> {
     let d = dati_percorsi::percorso(
         "dati/formati/waters/raw/xevo_g2s_MTBLS1198/MTBLS1198_20190321_MS.raw",
     )
@@ -47,9 +47,9 @@ fn reale() -> Option<Vec<(String, Vec<u8>)>> {
     Some(out)
 }
 
-fn semi() -> Vec<Vec<(String, Vec<u8>)>> {
+fn seeds() -> Vec<Vec<(String, Vec<u8>)>> {
     let mut v = vec![folder_file()];
-    v.extend(reale());
+    v.extend(real());
     v
 }
 
@@ -63,11 +63,11 @@ fn rng(x: &mut u64) -> u64 {
 #[test]
 fn cut_and_flipped_members_do_not_panic() {
     let mut x: u64 = 0x2545_F491_4F6C_DD1D;
-    for seme in semi() {
-        for m in 0..seme.len() {
-            let n = seme[m].1.len();
+    for seed in seeds() {
+        for m in 0..seed.len() {
+            let n = seed[m].1.len();
             for k in 0..12 {
-                let mut f = seme.clone();
+                let mut f = seed.clone();
                 f[m].1.truncate(n * k / 12);
                 everything(f);
             }
@@ -75,7 +75,7 @@ fn cut_and_flipped_members_do_not_panic() {
                 continue;
             }
             for _ in 0..25 {
-                let mut f = seme.clone();
+                let mut f = seed.clone();
                 for _ in 0..6 {
                     let i = rng(&mut x) as usize % n;
                     f[m].1[i] ^= 0xFF;
@@ -88,12 +88,12 @@ fn cut_and_flipped_members_do_not_panic() {
 
 #[test]
 fn a_member_missing_or_empty_is_a_key_or_a_reading() {
-    for seme in semi() {
-        for m in 0..seme.len() {
-            let mut f = seme.clone();
+    for seed in seeds() {
+        for m in 0..seed.len() {
+            let mut f = seed.clone();
             f.remove(m);
             everything(f);
-            let mut f = seme.clone();
+            let mut f = seed.clone();
             f[m].1.clear();
             everything(f);
         }
@@ -118,7 +118,7 @@ fn absurd_index_numbers_are_refused_not_allocated() {
         entries: 2,
         byte: 1 << 10,
     };
-    if let Err(e) = mzlab_lettori::apri_nudo(synthetic_set(), &tiny) {
+    if let Err(e) = mzlab_lettori::open_bare(synthetic_set(), &tiny) {
         assert!(
             e.key.starts_with("err.") || e.key.starts_with("error."),
             "{}",
@@ -131,11 +131,11 @@ fn absurd_index_numbers_are_refused_not_allocated() {
 fn a_folder_without_functions_is_refused_with_a_key() {
     let mut f = folder_file();
     f.retain(|(n, _)| n != "_FUNCTNS.INF");
-    let e = mzlab_lettori::apri_nudo(file_set(f), &Limits::sito())
+    let e = mzlab_lettori::open_bare(file_set(f), &Limits::sito())
         .err()
         .expect("refused");
     assert!(e.key.starts_with("err.file."), "{}", e.key);
-    let e = mzlab_lettori::apri_nudo(
+    let e = mzlab_lettori::open_bare(
         mzlab_core::lettori::FileSet {
             membri: vec![Member {
                 nome: "X.raw/_FUNC001.DAT".into(),

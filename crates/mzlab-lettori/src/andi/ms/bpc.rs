@@ -28,7 +28,7 @@ impl AndiReader {
         }
         let mut o = Vec::new();
         for k in 0..self.indice.len() {
-            let s = self.spettro(k)?;
+            let s = self.spectrum(k)?;
             o.push(
                 (0..s.mz.len())
                     .map(|i| s.intensity_f64(i))

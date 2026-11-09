@@ -51,7 +51,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn tof_e_mz_si_invertono() {
+    fn tof_and_mz_invert() {
         let c = MzCal {
             model: 1,
             timebase: 0.125,

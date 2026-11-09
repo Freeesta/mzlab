@@ -156,7 +156,7 @@ fn the_external_reader_gives_what_the_linked_one_gives() {
     for f in &files {
         let mut diretto = (rawlettore::ENTRY.apri)(set(f), &Limits::sito()).unwrap();
         let mut s = Sessions::default();
-        let h = s.insert(mzlab_lettori::apri_nudo(set(f), &Limits::sito()).unwrap());
+        let h = s.insert(mzlab_lettori::open_bare(set(f), &Limits::sito()).unwrap());
         let mut ext = ExternalReader::new(ViaSession { s, h }).unwrap();
         let name = f.display();
         assert_eq!(ext.format(), diretto.format(), "{name}");

@@ -12,14 +12,14 @@ use mzlab_core::numpress::{self, Np};
 
 #[test]
 fn every_codec_opens_and_round_trips_within_its_precision() {
-    let scan = scansioni();
+    let scan = scans();
     for (intensities, z) in [
         (Np::Slof, false),
         (Np::Slof, true),
         (Np::Pic, false),
         (Np::Pic, true),
     ] {
-        let mut l = apri(mzml_di(
+        let mut l = open(mzml_di(
             &scan,
             Cod::Np {
                 intensities,
@@ -51,7 +51,7 @@ fn every_codec_opens_and_round_trips_within_its_precision() {
                 );
             }
             assert_eq!(s.level, x.level);
-            assert_eq!(s.precursor, x.precursore);
+            assert_eq!(s.precursor, x.precursor);
             assert!((s.rt - x.rt_min).abs() < 1e-9);
         }
     }
@@ -59,8 +59,8 @@ fn every_codec_opens_and_round_trips_within_its_precision() {
 
 #[test]
 fn the_index_gives_level_precursor_tic_without_reading_peaks() {
-    let scan = scansioni();
-    let mut l = apri(mzml_di(
+    let scan = scans();
+    let mut l = open(mzml_di(
         &scan,
         Cod::Np {
             intensities: Np::Slof,
@@ -72,7 +72,7 @@ fn the_index_gives_level_precursor_tic_without_reading_peaks() {
     assert_eq!(ind.len(), scan.len());
     for (v, x) in ind.iter().zip(&scan) {
         assert_eq!(v.livello, x.level);
-        assert_eq!(v.precursore, x.precursore);
+        assert_eq!(v.precursore, x.precursor);
         assert_eq!(v.polarita, 1);
         assert!((v.tic - x.intensities.iter().sum::<f64>()).abs() < 1e-6);
         assert!(v.id.starts_with("controllerType=0"));
@@ -82,8 +82,8 @@ fn the_index_gives_level_precursor_tic_without_reading_peaks() {
 
 #[test]
 fn rewritten_as_zlib_mzml_without_numpress_equals_its_twin() {
-    let scan = scansioni();
-    let mut np = apri(mzml_di(
+    let scan = scans();
+    let mut np = open(mzml_di(
         &scan,
         Cod::Np {
             intensities: Np::Slof,
@@ -104,9 +104,9 @@ fn rewritten_as_zlib_mzml_without_numpress_equals_its_twin() {
         assert!(!text.contains(a), "{a} still in the output");
     }
     let run = mzml::read(&written[..]).unwrap();
-    let gemello = mzml::read(&mzml_di(&scan, Cod::Piano, None)[..]).unwrap();
-    assert_eq!(run.spectra.len(), gemello.spectra.len());
-    for (a, b) in run.spectra.iter().zip(&gemello.spectra) {
+    let twin = mzml::read(&mzml_di(&scan, Cod::Piano, None)[..]).unwrap();
+    assert_eq!(run.spectra.len(), twin.spectra.len());
+    for (a, b) in run.spectra.iter().zip(&twin.spectra) {
         assert_eq!(
             (a.level, a.polarity, a.precursor, a.profile),
             (b.level, b.polarity, b.precursor, b.profile)
@@ -130,8 +130,8 @@ fn rewritten_as_zlib_mzml_without_numpress_equals_its_twin() {
 
 #[test]
 fn the_original_header_stays_and_mzlab_writes() {
-    let scan = scansioni();
-    let mut np = apri(mzml_di(
+    let scan = scans();
+    let mut np = open(mzml_di(
         &scan,
         Cod::Np {
             intensities: Np::Slof,
@@ -169,9 +169,9 @@ fn the_original_header_stays_and_mzlab_writes() {
 
 #[test]
 fn the_method_repeats_only_if_the_mzml_carries_it() {
-    let scan = scansioni();
+    let scan = scans();
     let doc = "{\"schema\":\"metodo/1\",\"strumento\":{\"modello\":\"x\"}}";
-    let mut con = apri(mzml_di(
+    let mut con = open(mzml_di(
         &scan,
         Cod::Np {
             intensities: Np::Pic,
@@ -182,7 +182,7 @@ fn the_method_repeats_only_if_the_mzml_carries_it() {
     assert_eq!(con.method(0).unwrap(), doc);
     let t = String::from_utf8_lossy(&written_mzml(&mut con)).to_string();
     assert!(t.contains("mzLab metodo/1"));
-    let mut without = apri(mzml_di(
+    let mut without = open(mzml_di(
         &scan,
         Cod::Np {
             intensities: Np::Pic,
@@ -195,7 +195,7 @@ fn the_method_repeats_only_if_the_mzml_carries_it() {
 
 #[test]
 fn an_mzml_without_numpress_or_another_file_is_not_its_own() {
-    let scan = scansioni();
+    let scan = scans();
     let flat = mzml_di(&scan, Cod::Piano, None);
     assert_eq!(error(flat), "err.file.notAccepted");
     assert_eq!(
@@ -207,8 +207,8 @@ fn an_mzml_without_numpress_or_another_file_is_not_its_own() {
 
 #[test]
 fn numpress_chromatograms_are_read() {
-    let scan = scansioni();
-    let mut l = apri(mzml_di(
+    let scan = scans();
+    let mut l = open(mzml_di(
         &scan,
         Cod::Np {
             intensities: Np::Linear,
@@ -228,8 +228,8 @@ fn numpress_chromatograms_are_read() {
 fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
     use mzlab_core::lettori_mzml;
     use mzlab_core::mzmlwrite::Options;
-    let mut src = apri(mzml_di(
-        &scansioni(),
+    let mut src = open(mzml_di(
+        &scans(),
         Cod::Np {
             intensities: Np::Slof,
             zlib: true,
@@ -247,7 +247,7 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
     assert!(
         indexed.starts_with(b"<?xml") && String::from_utf8_lossy(&indexed).contains("<indexedmzML")
     );
-    let (mut a, mut b) = (apri(plain), apri(indexed));
+    let (mut a, mut b) = (open(plain), open(indexed));
     assert_eq!(a.index(0).unwrap().len(), b.index(0).unwrap().len());
     for k in 0..a.index(0).unwrap().len() {
         let (x, y) = (a.scan(0, k).unwrap(), b.scan(0, k).unwrap());
@@ -258,7 +258,7 @@ fn the_indexed_mzml_of_the_convert_step_reads_back_like_the_plain_one() {
 /// A numpress mzML cut in the middle of the spectrum list opens with the spectra it holds, and `mancanti` counts those the run header declared.
 #[test]
 fn a_truncated_numpress_declares_the_missing_spectra() {
-    let scan = scansioni();
+    let scan = scans();
     let cod = Cod::Np {
         intensities: Np::Slof,
         zlib: false,

@@ -29,11 +29,11 @@ impl Window {
         let fine = da.checked_add(n).ok_or_else(Error::memory_budget)?;
         let inside = da >= self.da && fine <= self.da + self.byte.len() as u64;
         if !inside {
-            let voluta = n.max(WINDOW).min(dim.saturating_sub(da));
+            let wanted = n.max(WINDOW).min(dim.saturating_sub(da));
             let mut b = Vec::new();
-            b.try_reserve_exact(usize::try_from(voluta).map_err(|_| Error::memory_budget())?)
+            b.try_reserve_exact(usize::try_from(wanted).map_err(|_| Error::memory_budget())?)
                 .map_err(|_| Error::memory_budget())?;
-            b.resize(voluta as usize, 0);
+            b.resize(wanted as usize, 0);
             data.read_at(da, &mut b)?;
             (self.da, self.byte) = (da, b);
         }
@@ -45,12 +45,12 @@ impl Window {
 /// `(TIC, base peak intensity)` of the scan whose bytes are `byte`, as its spectrum would give them (a 32-bit file's values are `f32`), without building the spectrum.
 pub(super) fn peak_sums(byte: &[u8], limits: &Limits) -> Result<(f64, f64)> {
     let text = String::from_utf8_lossy(byte);
-    let t = scan::testa(&text, CAP)?;
+    let t = scan::head(&text, CAP)?;
     let Some((g, corpo)) = t.peaks else {
         return Ok((0.0, 0.0));
     };
-    let conteggio = number(t.scan, "peaksCount").map(|n| n.max(0.0) as usize);
-    let p = scan::peaks(g, corpo, conteggio, limits)?;
+    let count = number(t.scan, "peaksCount").map(|n| n.max(0.0) as usize);
+    let p = scan::peaks(g, corpo, count, limits)?;
     let y = |&x: &f64| if p.a_64_bit { x } else { f64::from(x as f32) };
     Ok((
         p.intensities.iter().map(y).sum(),

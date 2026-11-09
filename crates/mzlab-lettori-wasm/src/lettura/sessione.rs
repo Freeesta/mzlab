@@ -77,7 +77,7 @@ impl Sessions {
 
     /// One chromatogram with its points: `{id, kind, q1, q3, unit, time, intensity}`.
     pub fn chromatogram(&mut self, h: u32, c: usize, id: &str) -> Result<String> {
-        Ok(mzlab_lettori::json::cromatogramma_json(
+        Ok(mzlab_lettori::json::chromatogram_json(
             &self.reader(h)?.chromatogram(c, id)?,
         ))
     }

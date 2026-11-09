@@ -16,7 +16,7 @@ const FIELDS_MAX: usize = 4000;
 const FORMAT: &str = "waters-raw";
 
 /// The SHA-1 of every member, computed once (the members are read through, none is held).
-fn impronte(l: &mut WatersReader) -> &[Option<String>] {
+fn prints(l: &mut WatersReader) -> &[Option<String>] {
     if l.sha1.is_none() {
         let v =
             l.c.fs
@@ -33,7 +33,7 @@ fn impronte(l: &mut WatersReader) -> &[Option<String>] {
 fn iso(data: &str, now: &str) -> Option<String> {
     let mut p = data.trim().split('-');
     let (g, m, a) = (p.next()?, p.next()?, p.next()?);
-    let mese = [
+    let month = [
         "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
     ]
     .iter()
@@ -41,7 +41,7 @@ fn iso(data: &str, now: &str) -> Option<String> {
         + 1;
     let (g, a): (u32, u32) = (g.parse().ok()?, a.parse().ok()?);
     let now = now.trim();
-    (now.len() == 8 && (1..=31).contains(&g)).then(|| format!("{a:04}-{mese:02}-{g:02}T{now}"))
+    (now.len() == 8 && (1..=31).contains(&g)).then(|| format!("{a:04}-{month:02}-{g:02}T{now}"))
 }
 
 fn acquisito(l: &WatersReader) -> Option<String> {
@@ -52,7 +52,7 @@ fn acquisito(l: &WatersReader) -> Option<String> {
 }
 
 /// «XEVO-TQXS#WBA0927» → (model, serial); «NotSet» is no serial.
-fn strumento_di(l: &WatersReader) -> (Option<String>, Option<String>) {
+fn instrument_of(l: &WatersReader) -> (Option<String>, Option<String>) {
     let Some(i) = l.testata.get("Instrument") else {
         return (None, None);
     };
@@ -62,7 +62,7 @@ fn strumento_di(l: &WatersReader) -> (Option<String>, Option<String>) {
     (Some(m.trim().to_string()).filter(|m| !m.is_empty()), series)
 }
 
-fn tipo(f: &Fun) -> &'static str {
+fn kind(f: &Fun) -> &'static str {
     if f.f.mirato() {
         "MRM"
     } else if f.f.riferimento() {
@@ -76,7 +76,7 @@ fn tipo(f: &Fun) -> &'static str {
     }
 }
 
-fn polarita_v(p: i8) -> Option<V> {
+fn polarity_v(p: i8) -> Option<V> {
     match p {
         1 => Some(V::s("positive")),
         -1 => Some(V::s("negative")),
@@ -84,7 +84,7 @@ fn polarita_v(p: i8) -> Option<V> {
     }
 }
 
-fn param(id: &str, label: &str, value: f64, unita: &str) -> Option<V> {
+fn param(id: &str, label: &str, value: f64, units: &str) -> Option<V> {
     obj(vec![
         ("id", text(id)),
         ("etichetta", text(label)),
@@ -92,12 +92,12 @@ fn param(id: &str, label: &str, value: f64, unita: &str) -> Option<V> {
             "valore",
             num(Some(value)).filter(|_| value.is_finite() && value != 0.0),
         ),
-        ("unita", text(unita)),
+        ("unita", text(units)),
     ])
 }
 
 fn experiment(f: &Fun) -> Option<V> {
-    let transizioni: Vec<V> =
+    let transitions: Vec<V> =
         f.f.channels()
             .iter()
             .enumerate()
@@ -111,7 +111,7 @@ fn experiment(f: &Fun) -> Option<V> {
                         num(f.ee.as_ref().and_then(|t| t.value("Collision Energy", j))),
                     ),
                     ("nome", f.names.get(j).and_then(|n| text(n))),
-                    ("polarita", polarita_v(f.polarita)),
+                    ("polarita", polarity_v(f.polarita)),
                 ])
             })
             .collect();
@@ -127,7 +127,7 @@ fn experiment(f: &Fun) -> Option<V> {
     };
     obj(vec![
         ("indice", Some(V::Num(f64::from(f.f.indice)))),
-        ("tipo", Some(V::s(tipo(f)))),
+        ("tipo", Some(V::s(kind(f)))),
         ("mz", mz),
         ("ce_eV", ce.filter(|_| !mirato)),
         (
@@ -147,7 +147,7 @@ fn experiment(f: &Fun) -> Option<V> {
                 .collect(),
             )),
         ),
-        ("transizioni", Some(V::Arr(transizioni))),
+        ("transizioni", Some(V::Arr(transitions))),
     ])
 }
 
@@ -244,7 +244,7 @@ fn fields(l: &WatersReader) -> Vec<Field> {
         if out.len() >= FIELDS_MAX {
             break;
         }
-        let mappa = match k.as_str() {
+        let map = match k.as_str() {
             "Sample Description" => Some("campione.nome"),
             "Bottle Number" => Some("campione.vial"),
             "SampleID" => Some("campione.id"),
@@ -254,7 +254,7 @@ fn fields(l: &WatersReader) -> Vec<Field> {
         };
         let c = Field::new("waters:_HEADER.TXT", k, v);
         let c = if identifier(k, v) { c.id() } else { c };
-        out.push(match mappa {
+        out.push(match map {
             Some(m) => c.map(m),
             None => c,
         });
@@ -264,13 +264,13 @@ fn fields(l: &WatersReader) -> Vec<Field> {
         fields_of("waters:_INLET.INF", &i.entries, &mut out);
     }
     for a in &l.analogiche {
-        out.push(Field::new("waters:_CHROMS.INF", &a.name, &a.raw_value).unit(&a.unita));
+        out.push(Field::new("waters:_CHROMS.INF", &a.name, &a.raw_value).unit(&a.units));
     }
     out
 }
 
 fn origin(l: &mut WatersReader) -> Source {
-    let sha = impronte(l).to_vec();
+    let sha = prints(l).to_vec();
     let mut files: Vec<SrcFile> =
         l.c.fs
             .membri
@@ -293,9 +293,9 @@ fn origin(l: &mut WatersReader) -> Source {
 
 pub(super) fn document(l: &mut WatersReader) -> Result<String> {
     let src = origin(l);
-    let (model, series) = strumento_di(l);
+    let (model, series) = instrument_of(l);
     let h = |k: &str| l.testata.get(k).and_then(text);
-    let metodo_file = l.testata.get("MS Method").map(|p| base(p).to_string());
+    let method_file = l.testata.get("MS Method").map(|p| base(p).to_string());
     let doc = obj(vec![
         ("schema", Some(V::s(metodo::SCHEMA))),
         ("origine", metodo::origin(&src, acquisito(l).as_deref())),
@@ -306,7 +306,7 @@ pub(super) fn document(l: &mut WatersReader) -> Result<String> {
                 ("vial", h("Bottle Number")),
                 ("id", h("SampleID")),
                 ("commento", h("Conditions")),
-                ("metodo_file", metodo_file.as_deref().and_then(text)),
+                ("metodo_file", method_file.as_deref().and_then(text)),
             ]),
         ),
         (
@@ -340,8 +340,8 @@ pub(super) fn document(l: &mut WatersReader) -> Result<String> {
 /// The header of the mzML: the instrument, the data files with their SHA-1 and the document.
 pub(super) fn file_header(l: &mut WatersReader) -> Result<Header> {
     let doc = document(l)?;
-    let sha = impronte(l).to_vec();
-    let (model, series) = strumento_di(l);
+    let sha = prints(l).to_vec();
+    let (model, series) = instrument_of(l);
     let name = l.testata.get("Acquired Name").map_or_else(
         || l.c.name.trim_end_matches(".raw").to_string(),
         str::to_string,

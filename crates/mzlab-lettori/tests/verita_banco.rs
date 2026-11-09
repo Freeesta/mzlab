@@ -12,7 +12,7 @@ use serde_json::{json, Value};
 use verita::{compare, Outcome, Tol};
 
 /// The truth the data that wrote the file gives, in the shape of `verita/1`.
-fn verita_di(scan: &[Scan]) -> Value {
+fn truth_of(scan: &[Scan]) -> Value {
     let sc: Vec<Value> = scan
         .iter()
         .enumerate()
@@ -20,7 +20,7 @@ fn verita_di(scan: &[Scan]) -> Value {
             json!({
                 "id": format!("controllerType=0 controllerNumber=1 scan={}", k + 1),
                 "rt_min": x.rt_min, "livello": x.level, "polarita": 1,
-                "precursore_mz": x.precursore, "profilo": false,
+                "precursore_mz": x.precursor, "profilo": false,
                 "n_punti": x.mz.len(), "tic": x.intensities.iter().sum::<f64>()
             })
         })
@@ -52,10 +52,10 @@ const TOL: Tol = Tol {
     cromatogramma_rel: 1e-6,
 };
 
-fn apri_file(scan: &[Scan]) -> Box<dyn mzlab_core::lettori::Reader> {
+fn open_file(scan: &[Scan]) -> Box<dyn mzlab_core::lettori::Reader> {
     // the mzML of another program has no `metodo/1`; the one the bench is tried on carries the document, as an mzML written by mzLab does
     let method = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
-    apri(mzml_di(
+    open(mzml_di(
         scan,
         Cod::Np {
             intensities: Np::Slof,
@@ -67,10 +67,10 @@ fn apri_file(scan: &[Scan]) -> Box<dyn mzlab_core::lettori::Reader> {
 
 #[test]
 fn a_correct_truth_has_no_defects() {
-    let scan = scansioni();
-    let mut l = apri_file(&scan);
-    let r = compare(&mut *l, &verita_di(&scan), 0, TOL, "sintetico");
-    assert!(r.difetti().is_empty(), "{:?}", r.difetti());
+    let scan = scans();
+    let mut l = open_file(&scan);
+    let r = compare(&mut *l, &truth_of(&scan), 0, TOL, "sintetico");
+    assert!(r.defects().is_empty(), "{:?}", r.defects());
     // the truth has no chromatograms: F4 is declared missing, so the file is `P`, never `L`
     assert_eq!(r.outcome(), "P", "{:?}", r.levels);
     assert!(r.missing().iter().any(|m| m.starts_with("F4")));
@@ -79,10 +79,10 @@ fn a_correct_truth_has_no_defects() {
 
 #[test]
 fn an_mz_out_of_tolerance_is_an_f3_defect() {
-    let scan = scansioni();
-    let mut v = verita_di(&scan);
+    let scan = scans();
+    let mut v = truth_of(&scan);
     v["punti"]["0"]["mz"][3] = json!(scan[0].mz[3] + 0.5);
-    let mut l = apri_file(&scan);
+    let mut l = open_file(&scan);
     let r = compare(&mut *l, &v, 0, TOL, "sintetico");
     assert!(
         matches!(r.levels[3], ("F3", Outcome::Defect(_))),
@@ -94,9 +94,9 @@ fn an_mz_out_of_tolerance_is_an_f3_defect() {
 
 #[test]
 fn a_wrong_count_or_time_are_f1_and_f2_defects() {
-    let scan = scansioni();
-    let mut l = apri_file(&scan);
-    let mut v = verita_di(&scan);
+    let scan = scans();
+    let mut l = open_file(&scan);
+    let mut v = truth_of(&scan);
     v["conteggi"]["spettri"]["ms2"] = json!(99);
     v["scansioni"][1]["rt_min"] = json!(7.0);
     let r = compare(&mut *l, &v, 0, TOL, "sintetico");
@@ -114,9 +114,9 @@ fn a_wrong_count_or_time_are_f1_and_f2_defects() {
 
 #[test]
 fn a_different_metadata_field_is_an_f5_defect() {
-    let scan = scansioni();
-    let mut l = apri_file(&scan);
-    let mut v = verita_di(&scan);
+    let scan = scans();
+    let mut l = open_file(&scan);
+    let mut v = truth_of(&scan);
     v["metadati"]["mzml:run@startTimeStamp"]["valore"] = json!("1999-01-01T00:00:00Z");
     let r = compare(&mut *l, &v, 0, TOL, "sintetico");
     let Outcome::Defect(d) = &r.levels[5].1 else {
@@ -127,9 +127,9 @@ fn a_different_metadata_field_is_an_f5_defect() {
 
 #[test]
 fn a_field_without_path_is_not_a_defect_but_missing() {
-    let scan = scansioni();
-    let mut l = apri_file(&scan);
-    let mut v = verita_di(&scan);
+    let scan = scans();
+    let mut l = open_file(&scan);
+    let mut v = truth_of(&scan);
     v["metadati"] = json!({"mzml:analyzer": {"valore": "orbitrap"}});
     let r = compare(&mut *l, &v, 0, TOL, "sintetico");
     let Outcome::Missing(m) = &r.levels[5].1 else {
@@ -162,12 +162,12 @@ fn test_path(rel: &str) -> Option<std::path::PathBuf> {
 #[test]
 fn the_corpus_walks_a_built_folder() {
     let root = std::env::temp_dir().join(format!("rosina-banco-{}", std::process::id()));
-    let scan = scansioni();
+    let scan = scans();
     let method = r#"{"schema":"metodo/1","origine":{"file_creato":"2024-03-05T10:11:12Z"}}"#;
-    let nativo = root.join("dati/formati/aperti/prova/campione.mzML");
-    std::fs::create_dir_all(nativo.parent().unwrap()).unwrap();
+    let native = root.join("dati/formati/aperti/prova/campione.mzML");
+    std::fs::create_dir_all(native.parent().unwrap()).unwrap();
     std::fs::write(
-        &nativo,
+        &native,
         mzml_di(
             &scan,
             Cod::Np {
@@ -180,13 +180,13 @@ fn the_corpus_walks_a_built_folder() {
     .unwrap();
     let vdir = root.join("scratchpad/rosina/verita/aperti/prova");
     std::fs::create_dir_all(&vdir).unwrap();
-    let mut v = verita_di(&scan);
+    let mut v = truth_of(&scan);
     // the rounding of the numpress codec: m/z by Da, intensities within 1e-3 of the maximum
     v["tolleranza"] = json!({"mz_ppm": null, "mz_da": 1e-3, "intensita_rel": 1e-3});
     std::fs::write(vdir.join("campione.mzML.verita.json"), v.to_string()).unwrap();
     ROOT.set(root.clone()).unwrap();
     let dir = test_path("scratchpad/rosina/verita").unwrap();
-    let files = verita::verita_in(&dir);
+    let files = verita::truths_in(&dir);
     assert_eq!(files.len(), 1);
     let v = verita::read(&files[0]).unwrap();
     assert!(v["tolleranza"].is_object());
@@ -204,20 +204,20 @@ fn the_truth_of_verita_py_agrees_with_the_mzml_parser() {
     use mzlab_core::mzml::{self, Item};
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/rosina");
     let v = verita::read(&dir.join("sintetico.verita.json")).unwrap();
-    let (mut spettri, mut croms) = (Vec::new(), Vec::new());
+    let (mut spectra, mut croms) = (Vec::new(), Vec::new());
     mzml::parse(
         std::io::BufReader::new(std::fs::File::open(dir.join("sintetico.mzML")).unwrap()),
         |it| match it {
-            Item::Spectrum(s) => spettri.push(s),
+            Item::Spectrum(s) => spectra.push(s),
             Item::Chromatogram(c) => croms.push(c),
             _ => {}
         },
     )
     .unwrap();
     let sc = v["scansioni"].as_array().unwrap();
-    assert_eq!(sc.len(), spettri.len());
+    assert_eq!(sc.len(), spectra.len());
     assert_eq!(v["cromatogrammi"].as_array().unwrap().len(), croms.len());
-    for (t, s) in sc.iter().zip(&spettri) {
+    for (t, s) in sc.iter().zip(&spectra) {
         assert!((t["rt_min"].as_f64().unwrap() - s.rt).abs() < 1e-9, "RT");
         assert_eq!(t["livello"].as_u64(), Some(u64::from(s.level)));
         assert_eq!(t["n_punti"].as_u64(), Some(s.mz.len() as u64));
@@ -225,7 +225,7 @@ fn the_truth_of_verita_py_agrees_with_the_mzml_parser() {
         assert_eq!(t["precursore_mz"].as_f64(), s.precursor);
     }
     for (k, p) in v["punti"].as_object().unwrap() {
-        let s = &spettri[k.parse::<usize>().unwrap()];
+        let s = &spectra[k.parse::<usize>().unwrap()];
         for (i, m) in p["mz"].as_array().unwrap().iter().enumerate() {
             assert_eq!(m.as_f64(), Some(s.mz[i]));
             assert_eq!(p["intensita"][i].as_f64(), Some(s.intensity_f64(i)));

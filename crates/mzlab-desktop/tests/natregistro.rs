@@ -1,5 +1,5 @@
 //! `natregistro` (one series of the instrument log of a `.raw`, `/api/registro` of `lr-method.js`) is answered by the app as by the readers module of the
-//! site: the same reader (`mzlab_lettori::apri`) and the same writer (`mzlab_lettori::json::cromatogramma_json`, which `Sessions::chromatogram` of
+//! site: the same reader (`mzlab_lettori::apri`) and the same writer (`mzlab_lettori::json::chromatogram_json`, which `Sessions::chromatogram` of
 //! `mzlab-lettori-wasm` calls), byte for byte. The synthetic `.raw` (`comune/thermo.rs`, invented numbers) has no status log: the TIC id walks the same
 //! path (`rawlettore::cromatogramma_di`), an id the file lacks gives the reader's error, a name that is not a maker's sample `err.session.fileNotFound`.
 #[path = "../../mzlab-lettori/tests/comune/thermo.rs"]
@@ -30,7 +30,7 @@ fn module_answer(path: &std::path::Path, id: &str) -> Result<String, &'static st
     };
     let mut l = mzlab_lettori::apri(set, &Limits::desktop()).unwrap();
     l.chromatogram(0, id)
-        .map(|c| mzlab_lettori::json::cromatogramma_json(&c))
+        .map(|c| mzlab_lettori::json::chromatogram_json(&c))
         .map_err(|e| e.key)
 }
 

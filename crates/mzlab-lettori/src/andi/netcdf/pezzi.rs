@@ -23,8 +23,8 @@ impl Cdf {
     /// The window `da..da + n` lies inside `v` and its bytes fit the budget: the number of bytes.
     pub(super) fn check(&self, limits: &Limits, v: &Var, da: u64, n: u64) -> Result<usize> {
         let fine = da.checked_add(n).ok_or_else(Error::memory_budget)?;
-        if fine > self.elementi(v) {
-            return Err(guasto("read past the end of a variable"));
+        if fine > self.elements(v) {
+            return Err(broken("read past the end of a variable"));
         }
         let total = n
             .checked_mul(v.tipo.width())
@@ -57,7 +57,7 @@ impl Cdf {
         let mut gat = Vec::new();
         let read = |data: &mut dyn ReadAt, pos: u64, len: usize, buf: &mut Vec<u8>| -> Result<()> {
             if pos.checked_add(len as u64).is_none_or(|f| f > self.size) {
-                return Err(guasto("variable data past the end of the file"));
+                return Err(broken("variable data past the end of the file"));
             }
             buf.clear();
             buf.resize(len, 0);

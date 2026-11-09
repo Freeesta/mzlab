@@ -17,7 +17,7 @@ use mzlab_core::mzmlhead::{Chrom, Mzml};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::scantable::{self, Row};
 
-use super::mzml_testata::{extra_di, param_list, testata_da};
+use super::mzml_testata::{extra_di, header_from, param_list};
 use super::np_riscrivi;
 
 /// The accessions that make an array numpress (the three codecs, alone and followed by zlib).
@@ -30,20 +30,20 @@ const ACCESSION: [&str; 6] = [
     "MS:1002748",
 ];
 /// The bytes of the start of the file that `riconosci` looks at first; it reads on (doubling) up to the end of the first spectrum, never past `TESTA_MAX`.
-const TESTA: usize = 64 << 10;
-const TESTA_MAX: usize = 16 << 20;
+const HEAD: usize = 64 << 10;
+const MAX_HEAD: usize = 16 << 20;
 pub const ENTRY: ReaderEntry = ReaderEntry {
     id: "mzml-numpress",
     contratto: CONTRATTO,
     estensioni: &[".mzml"],
-    riconosci,
+    riconosci: recognize,
     apri,
 };
 
 /// A borrowed `ReadAt` (`Mzml` owns its reader).
-struct Prestito<'a>(&'a mut dyn ReadAt);
+struct Loan<'a>(&'a mut dyn ReadAt);
 
-impl ReadAt for Prestito<'_> {
+impl ReadAt for Loan<'_> {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         self.0.read_at(off, buf)
     }
@@ -57,7 +57,7 @@ pub struct NumpressReader {
     campioni: Vec<Sample>,
     rows: Vec<Row>,
     /// Spectra the run header declares (0: not declared), to count those a truncated file lacks.
-    dichiarati: usize,
+    declared: usize,
     /// The file does not end with its closing tag: a TIC lost with the cut is built from the whole scans.
     cut: bool,
     indice: Vec<ScanEntry>,
@@ -96,22 +96,22 @@ impl NumpressReader {
     fn chromatograms_of_the_file(&mut self) -> Result<&[Chrom]> {
         if self.traces.is_none() {
             let fine = self.rows.last().map_or(0, |r| r.end);
-            let mut m = Mzml::new(Prestito(&mut *self.data), self.dim);
+            let mut m = Mzml::new(Loan(&mut *self.data), self.dim);
             self.traces = Some(m.chromatograms(fine)?);
         }
         Ok(self.traces.as_deref().unwrap_or_default())
     }
 
-    fn testa_xml(&mut self) -> Result<String> {
-        Mzml::new(Prestito(&mut *self.data), self.dim).run_head(1 << 20)
+    fn head_xml(&mut self) -> Result<String> {
+        Mzml::new(Loan(&mut *self.data), self.dim).run_head(1 << 20)
     }
 }
 
-fn field(name: &str, value: impl ToString, unita: Option<&str>, cv: Option<&str>) -> Field {
+fn field(name: &str, value: impl ToString, units: Option<&str>, cv: Option<&str>) -> Field {
     Field {
         nome: name.into(),
         valore: value.to_string(),
-        unita: unita.map(str::to_string),
+        unita: units.map(str::to_string),
         cv: cv.map(str::to_string),
     }
 }
@@ -125,10 +125,10 @@ impl NumpressReader {
             out.push(ChromatogramEntry {
                 id: "TIC".into(),
                 tipo: ChromKind::Tic,
-                unita: UNITA_TIC.into(),
+                unita: UNITS_TIC.into(),
             });
         }
-        let mut m = Mzml::new(Prestito(&mut *self.data), self.dim);
+        let mut m = Mzml::new(Loan(&mut *self.data), self.dim);
         for t in traces {
             out.push(ChromatogramEntry {
                 tipo: tipo(&t.kind),
@@ -156,7 +156,7 @@ impl NumpressReader {
         let mut piece =
             vec![0u8; usize::try_from(t.end - t.start).map_err(|_| Error::memory_budget())?];
         self.data.read_at(t.start, &mut piece)?;
-        let simple = np_riscrivi::riscrivi(&piece, &self.limits)?.into_owned();
+        let simple = np_riscrivi::rewrite(&piece, &self.limits)?.into_owned();
         let length = simple.len() as u64;
         let local = Chrom {
             start: 0,
@@ -180,7 +180,7 @@ impl NumpressReader {
 }
 
 /// The unit of a TIC built from the `totIonCurrent` of the scans (as the mzXML reader gives it).
-const UNITA_TIC: &str = "number of detector counts";
+const UNITS_TIC: &str = "number of detector counts";
 
 impl NumpressReader {
     /// Yes when a cut took the TIC of the file away and scans are left to build it from.
@@ -199,7 +199,7 @@ impl NumpressReader {
             kind: ChromKind::Tic,
             q1: None,
             q3: None,
-            unit: UNITA_TIC.into(),
+            unit: UNITS_TIC.into(),
             time,
             intensity,
         }
@@ -207,7 +207,7 @@ impl NumpressReader {
 }
 
 /// Yes when the last bytes of the file are its closing tag (`</indexedmzML>` or `</mzML>`).
-fn chiuso(data: &mut dyn ReadAt, dim: u64) -> bool {
+fn closed(data: &mut dyn ReadAt, dim: u64) -> bool {
     let n = dim.min(64);
     let mut tail = vec![0u8; n as usize];
     if data.read_at(dim - n, &mut tail).is_err() {
@@ -231,9 +231,9 @@ fn tipo(k: &str) -> ChromKind {
 
 impl NumpressReader {
     /// Spectrum `k`: its bytes with the numpress arrays plain, read by the engine's parser; its extra is kept for the writer.
-    fn spettro(&mut self, k: usize) -> Result<Spectrum> {
+    fn spectrum(&mut self, k: usize) -> Result<Spectrum> {
         let byte = self.byte(k)?;
-        let simple = np_riscrivi::riscrivi(&byte, &self.limits)?;
+        let simple = np_riscrivi::rewrite(&byte, &self.limits)?;
         let mut spettro = None;
         mzml::parse(&simple[..], |it| {
             if let Item::Spectrum(s) = it {
@@ -251,10 +251,10 @@ impl NumpressReader {
         Ok(s)
     }
 
-    /// The header of the mzML we write (`testata_da`), with the SHA-1 of the file when the original names no source.
+    /// The header of the mzML we write (`header_from`), with the SHA-1 of the file when the original names no source.
     fn file_header(&mut self) -> Result<Header> {
-        let head = self.testa_xml()?;
-        let mut h = testata_da(&head, &self.name, &self.limits)?;
+        let head = self.head_xml()?;
+        let mut h = header_from(&head, &self.name, &self.limits)?;
         if h.sources.is_empty() {
             // the whole-file SHA-1 is only worth reading when the original names no source
             if self.sha1.is_none() {
@@ -273,12 +273,12 @@ impl NumpressReader {
 }
 
 /// Yes when a numpress accession shows up before the end of the first spectrum (the m/z array may be plain and hundreds of KB while only the intensities are numpress).
-fn riconosci(fs: &mut FileSet) -> Fiducia {
+fn recognize(fs: &mut FileSet) -> Fiducia {
     let Some(i) = fs.find(".mzml") else {
         return Fiducia::No;
     };
     let dim = fs.membri.get(i).map_or(0, |m| m.dim);
-    let mut n = TESTA;
+    let mut n = HEAD;
     loop {
         let head = fs.testa(i, n);
         let text = String::from_utf8_lossy(&head);
@@ -292,11 +292,11 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
         if !text.contains("<mzML")
             || text.contains("</spectrum>")
             || (n as u64) >= dim
-            || n >= TESTA_MAX
+            || n >= MAX_HEAD
         {
             return Fiducia::No;
         }
-        n = (n * 2).min(TESTA_MAX);
+        n = (n * 2).min(MAX_HEAD);
     }
 }
 
@@ -324,7 +324,7 @@ impl Reader for NumpressReader {
         if c != 0 {
             return 0;
         }
-        self.dichiarati.saturating_sub(self.rows.len())
+        self.declared.saturating_sub(self.rows.len())
     }
 
     fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
@@ -334,7 +334,7 @@ impl Reader for NumpressReader {
 
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
-        self.spettro(k)
+        self.spectrum(k)
     }
 
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
@@ -342,7 +342,7 @@ impl Reader for NumpressReader {
         let byte = self.byte(k)?;
         Ok(param_list(&byte)
             .into_iter()
-            .map(|p| field(&p.name, p.value, p.unita.as_deref(), Some(&p.acc)))
+            .map(|p| field(&p.name, p.value, p.units.as_deref(), Some(&p.acc)))
             .collect())
     }
 
@@ -359,7 +359,7 @@ impl Reader for NumpressReader {
     /// The `metodo/1` document the mzML carries (written by mzLab); an mzML of another program has none (`{}`: no section).
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
-        let head = self.testa_xml()?;
+        let head = self.head_xml()?;
         Ok(metodo::from_userparam(&head).unwrap_or_else(|| "{}".to_string()))
     }
 
@@ -424,7 +424,7 @@ pub(super) fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> 
         .rsplit_once('.')
         .map_or(nome.as_str(), |(s, _)| s)
         .to_string();
-    let cut = !chiuso(&mut *dati, dim);
+    let cut = !closed(&mut *dati, dim);
     Ok(Box::new(NumpressReader {
         data: dati,
         dim,
@@ -436,7 +436,7 @@ pub(super) fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> 
         }],
         name: nome,
         limits: *limits,
-        dichiarati: table.declared,
+        declared: table.declared,
         cut,
         rows: table.rows,
         indice: index,

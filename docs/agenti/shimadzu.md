@@ -19,7 +19,7 @@ Codice: `crates/mzlab-lettori/src/shimadzu/` (feature `shimadzu`, tetto 327 680 
 
 ## Dall'indice agli spettri
 - Id `scan=<numero del record>`; filtro `EI scan` / `EI SIM` per `.qgd`, `Q1 event N scan` / `Q1 event N SIM` per `.lcd`. Una scansione con al più 64 m/z la cui lista (impronta FNV) si ripete in almeno 3 record è SIM (`carica::mark_sim`); è un'euristica non confermata da un riferimento. m/z = u16/20; `Spectrum.wide` solo se un'intensità supera 2^24.
-- MRM: un cromatogramma `ChromKind::Srm` per (Q1, Q3, polarità) con id `SRM SIC Q1=<q1> Q3=<q3> sample=1 period=1 experiment=1 transition=<j>` (come `wiff/run.rs`) e, se negativo, ` polarity=negative`. `CE` e tempo di attesa non sono decodificati: due transizioni con gli stessi Q1/Q3 e CE diverse si fonderebbero. Il lettore ha già cromatogrammi SRM, quindi `SrmDaScansioni` non ne aggiunge.
+- MRM: un cromatogramma `ChromKind::Srm` per (Q1, Q3, polarità) con id `SRM SIC Q1=<q1> Q3=<q3> sample=1 period=1 experiment=1 transition=<j>` (come `wiff/run.rs`) e, se negativo, ` polarity=negative`. `CE` e tempo di attesa non sono decodificati: due transizioni con gli stessi Q1/Q3 e CE diverse si fonderebbero. Il lettore ha già cromatogrammi SRM, quindi `SrmFromScans` non ne aggiunge.
 - Tempi in minuti (`ms/60 000`). `Chromatogram` TIC con il flusso `TIC Data`.
 
 ## Metodo e testata

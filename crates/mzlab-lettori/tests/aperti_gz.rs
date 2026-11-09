@@ -26,7 +26,7 @@ fn abre(
 
 #[test]
 fn an_mzml_gz_with_flat_arrays_returns_exact() {
-    let scan = scansioni();
+    let scan = scans();
     let mut l = abre(
         "run.mzML.gz",
         gz(&mzml_di(&scan, Cod::Piano, None)),
@@ -48,7 +48,7 @@ fn an_mzml_gz_with_flat_arrays_returns_exact() {
 
 #[test]
 fn an_mzml_gz_with_numpress_opens() {
-    let scan = scansioni();
+    let scan = scans();
     let cod = Cod::Np {
         intensities: Np::Slof,
         zlib: true,
@@ -65,13 +65,13 @@ fn an_mzml_gz_with_numpress_opens() {
 /// A download stopped midway: the spectra that inflated open, and `mancanti` counts those the run header declared and the cut took.
 #[test]
 fn a_truncated_gz_opens_with_the_spectra_it_has() {
-    let scan = scansioni();
-    let buono = gz(&mzml_di(&scan, Cod::Piano, None));
-    let mut whole = abre("a.mzML.gz", buono.clone(), &Limits::sito()).unwrap();
+    let scan = scans();
+    let good = gz(&mzml_di(&scan, Cod::Piano, None));
+    let mut whole = abre("a.mzML.gz", good.clone(), &Limits::sito()).unwrap();
     assert_eq!(whole.missing(0), 0);
     let mut l = abre(
         "a.mzML.gz",
-        buono[..buono.len() * 3 / 4].to_vec(),
+        good[..good.len() * 3 / 4].to_vec(),
         &Limits::sito(),
     )
     .unwrap();
@@ -83,12 +83,12 @@ fn a_truncated_gz_opens_with_the_spectra_it_has() {
 
 #[test]
 fn hostile_cases_give_a_key() {
-    let scan = scansioni();
-    let buono = gz(&mzml_di(&scan, Cod::Piano, None));
+    let scan = scans();
+    let good = gz(&mzml_di(&scan, Cod::Piano, None));
     let key = |name: &str, b: Vec<u8>, l: &Limits| abre(name, b, l).err();
     // cut before anything inflated: a damaged gzip, the key of the page's inflate (tests/gz_bordi.rs)
     assert_eq!(
-        key("a.mzML.gz", buono[..12].to_vec(), &Limits::sito()),
+        key("a.mzML.gz", good[..12].to_vec(), &Limits::sito()),
         Some("err.file.zlib")
     );
     // not gzip at all, and gzip of something that is not an mzML
@@ -103,7 +103,7 @@ fn hostile_cases_give_a_key() {
     // inflated size over the limit: a memory-budget error, not an allocation
     let mut little = Limits::sito();
     little.byte = 200;
-    assert_eq!(key("a.mzML.gz", buono, &little), Some("error.memoryBudget"));
+    assert_eq!(key("a.mzML.gz", good, &little), Some("error.memoryBudget"));
 }
 
 /// `x.mzXML.gz` in the app and the CLI (registry, `tutte`): the scans of the inflated mzXML, exactly. The site gunzips it into OPFS with `mzlab_core::gunzip` and gives the

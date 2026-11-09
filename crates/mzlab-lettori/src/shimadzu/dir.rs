@@ -5,7 +5,7 @@ use mzlab_core::lettori::Member;
 
 const MAGIC: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 /// The most directory sectors followed (each holds 4 or 32 entries).
-const SETTORI_MAX: usize = 256;
+const MAX_SECTORS: usize = 256;
 /// The first FAT sectors the header lists.
 const DIFAT: usize = 109;
 
@@ -13,7 +13,7 @@ fn u32_at(b: &[u8], at: usize) -> Option<u32> {
     Some(u32::from_le_bytes(b.get(at..at + 4)?.try_into().ok()?))
 }
 
-fn settore(m: &mut Member, ss: usize, id: u32) -> Option<Vec<u8>> {
+fn sector(m: &mut Member, ss: usize, id: u32) -> Option<Vec<u8>> {
     let off = (u64::from(id) + 1).checked_mul(ss as u64)?;
     if off + ss as u64 > m.dim {
         return None;
@@ -44,11 +44,11 @@ pub(super) fn names(m: &mut Member) -> Option<Vec<String>> {
     let mut dir = u32_at(&h, 0x30)?;
     let mut fat: Vec<Option<Vec<u8>>> = vec![None; DIFAT];
     let mut out = Vec::new();
-    for _ in 0..SETTORI_MAX {
+    for _ in 0..MAX_SECTORS {
         if dir >= 0xFFFF_FFFA {
             break;
         }
-        let s = settore(m, ss, dir)?;
+        let s = sector(m, ss, dir)?;
         for e in s.chunks_exact(128) {
             let len = usize::from(u16::from_le_bytes([e[64], e[65]])).min(64);
             if len >= 2 && matches!(e[66], 1 | 2 | 5) {
@@ -65,7 +65,7 @@ pub(super) fn names(m: &mut Member) -> Option<Vec<String>> {
         }
         if fat[fi].is_none() {
             let sid = u32_at(&h, 0x4C + 4 * fi)?;
-            fat[fi] = Some(settore(m, ss, sid)?);
+            fat[fi] = Some(sector(m, ss, sid)?);
         }
         dir = u32_at(fat[fi].as_ref()?, 4 * at)?;
     }

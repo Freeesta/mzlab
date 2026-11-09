@@ -7,7 +7,7 @@ mod dati_percorsi;
 mod verita;
 
 #[test]
-fn verita_sciex() {
+fn truth_sciex() {
     verita::corpus(
         "sciex",
         |r| r.starts_with("sciex/"),

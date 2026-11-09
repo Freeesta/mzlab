@@ -9,7 +9,7 @@ use mzlab_core::idxread::ReadAt;
 
 use mzlab_core::lettori::Limits;
 
-fn guasto(m: &str) -> Error {
+fn broken(m: &str) -> Error {
     Error::new("err.dam.unreadable").with("message", format!("tsf_bin: {m}"))
 }
 
@@ -17,7 +17,7 @@ fn guasto(m: &str) -> Error {
 pub struct Lines {
     pub tof: Vec<f64>,
     pub int: Vec<f64>,
-    pub profilo: bool,
+    pub profile: bool,
 }
 
 fn u32_le(b: &[u8]) -> u32 {
@@ -34,12 +34,12 @@ pub fn read_frame(
 ) -> Result<Lines> {
     let mut h = [0u8; 8];
     if pos.checked_add(8).is_none_or(|e| e > dim) {
-        return Err(guasto("block past the end of the file"));
+        return Err(broken("block past the end of the file"));
     }
     d.read_at(pos, &mut h)?;
     let (prof, row) = (u64::from(u32_le(&h)), u64::from(u32_le(&h[4..])));
     if prof.saturating_add(row).saturating_add(pos + 8) > dim || prof.max(row) > limits.byte {
-        return Err(guasto("block length"));
+        return Err(broken("block length"));
     }
     let read = |d: &mut dyn ReadAt, da: u64, n: u64| -> Result<Vec<u8>> {
         let mut b = vec![0u8; n as usize];
@@ -55,7 +55,7 @@ pub fn read_frame(
         return Ok(Lines {
             tof: Vec::new(),
             int: Vec::new(),
-            profilo: false,
+            profile: false,
         });
     }
     let n = limits.ok_entries(samples)?;
@@ -65,7 +65,7 @@ pub fn read_frame(
 
 /// The line spectrum of a block: `n` TOF positions (f64) then `n` intensities (f32).
 fn lines(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
-    let b = zstd(z, n.checked_mul(12).ok_or_else(|| guasto("peaks"))?, limits)?;
+    let b = zstd(z, n.checked_mul(12).ok_or_else(|| broken("peaks"))?, limits)?;
     let tof = (0..n)
         .map(|i| f64::from_le_bytes(b[8 * i..8 * i + 8].try_into().unwrap_or([0; 8])))
         .collect();
@@ -80,7 +80,7 @@ fn lines(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
     Ok(Lines {
         tof,
         int,
-        profilo: false,
+        profile: false,
     })
 }
 
@@ -88,7 +88,7 @@ fn lines(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
 fn profilo(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
     let b = zstd(
         z,
-        n.checked_mul(4).ok_or_else(|| guasto("samples"))?,
+        n.checked_mul(4).ok_or_else(|| broken("samples"))?,
         limits,
     )?;
     let v: Vec<u32> = b.chunks_exact(4).map(u32_le).collect();
@@ -102,7 +102,7 @@ fn profilo(z: &[u8], n: usize, limits: &Limits) -> Result<Lines> {
     Ok(Lines {
         tof,
         int,
-        profilo: true,
+        profile: true,
     })
 }
 

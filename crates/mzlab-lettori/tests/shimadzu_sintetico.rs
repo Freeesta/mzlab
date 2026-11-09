@@ -6,8 +6,8 @@ use comune::shimadzu::*;
 use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::ChromKind;
 
-fn apri(name: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Reader>> {
-    mzlab_lettori::apri_nudo(
+fn open(name: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Reader>> {
+    mzlab_lettori::open_bare(
         FileSet {
             membri: vec![Member {
                 nome: name.into(),
@@ -22,7 +22,7 @@ fn apri(name: &str, b: Vec<u8>) -> mzlab_core::error::Result<Box<dyn Reader>> {
 
 #[test]
 fn qgd_scans_sim_and_tic() {
-    let mut l = apri("a.qgd", qgd(6)).unwrap();
+    let mut l = open("a.qgd", qgd(6)).unwrap();
     let ix = l.index(0).unwrap().to_vec();
     assert_eq!(ix.len(), 11);
     assert_eq!(ix[0].id, "scan=1");
@@ -40,7 +40,7 @@ fn qgd_scans_sim_and_tic() {
 
 #[test]
 fn qgd_mrm_gives_srm_chromatograms() {
-    let mut l = apri("m.qgd", qgd_mrm(4)).unwrap();
+    let mut l = open("m.qgd", qgd_mrm(4)).unwrap();
     assert!(l.index(0).unwrap().is_empty());
     let c = l.chromatograms(0).unwrap();
     let srm: Vec<_> = c.iter().filter(|v| v.tipo == ChromKind::Srm).collect();
@@ -52,7 +52,7 @@ fn qgd_mrm_gives_srm_chromatograms() {
 
 #[test]
 fn lcd2020_scans_and_sim_by_event() {
-    let mut l = apri("a.lcd", lcd2020(3)).unwrap();
+    let mut l = open("a.lcd", lcd2020(3)).unwrap();
     let ix = l.index(0).unwrap().to_vec();
     assert_eq!(ix.len(), 6);
     assert!(ix[0].filtro.starts_with("Q1 event 1"));
@@ -65,7 +65,7 @@ fn lcd2020_scans_and_sim_by_event() {
 
 #[test]
 fn lcd_tlm_srm_chromatograms() {
-    let mut l = apri("q.lcd", lcd_tlm(5)).unwrap();
+    let mut l = open("q.lcd", lcd_tlm(5)).unwrap();
     let c = l.chromatograms(0).unwrap();
     let srm: Vec<_> = c.iter().filter(|v| v.tipo == ChromKind::Srm).collect();
     assert_eq!(srm.len(), 2);
@@ -78,7 +78,7 @@ fn lcd_tlm_srm_chromatograms() {
 
 #[test]
 fn the_method_keeps_the_operator_apart() {
-    let mut l = apri("a.qgd", qgd(3)).unwrap();
+    let mut l = open("a.qgd", qgd(3)).unwrap();
     let m = l.method(0).unwrap();
     assert!(m.contains("GCMS-QP2010"), "{m}");
     assert!(
@@ -96,21 +96,21 @@ fn the_method_keeps_the_operator_apart() {
 
 #[test]
 fn qtof_and_pda_only_are_refused_with_a_key() {
-    let e = apri("t.lcd", lcd_qtof()).err().expect("refused");
+    let e = open("t.lcd", lcd_qtof()).err().expect("refused");
     assert_eq!(e.key, "err.file.shimadzu");
-    let e = apri("p.lcd", lcd_pda_only()).err().expect("refused");
+    let e = open("p.lcd", lcd_pda_only()).err().expect("refused");
     assert_eq!(e.key, "err.file.shimadzu");
 }
 
 #[test]
 fn the_extension_alone_is_not_enough() {
-    assert!(apri("x.qgd", vec![0u8; 4000]).is_err());
+    assert!(open("x.qgd", vec![0u8; 4000]).is_err());
 }
 
 #[test]
 fn the_sample_name_has_no_folder() {
     for p in ["dir/sub/a.qgd", "dir\\sub\\a.qgd"] {
-        let l = apri(p, qgd(6)).unwrap();
+        let l = open(p, qgd(6)).unwrap();
         assert_eq!(l.samples()[0].nome, "a.qgd", "{p}");
     }
 }

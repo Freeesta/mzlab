@@ -6,7 +6,7 @@ use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
 use super::carica::Fam;
-use super::{meta, rec, rifiuto, ShimadzuReader, F32_EXACT};
+use super::{meta, rec, refusal, ShimadzuReader, F32_EXACT};
 
 impl Reader for ShimadzuReader {
     fn format(&self) -> Format {
@@ -43,7 +43,7 @@ impl Reader for ShimadzuReader {
             .d
             .raw
             .get(a..a + n)
-            .ok_or_else(|| rifiuto("scan outside the raw stream"))?;
+            .ok_or_else(|| refusal("scan outside the raw stream"))?;
         let pts: Vec<(f64, u64)> = (0..f.npk)
             .map(|j| {
                 let (mz, _, y) = rec::point(r, &f, j);

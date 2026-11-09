@@ -6,7 +6,7 @@ use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 
 mod comune_sqlite;
 
-fn apri() -> Box<dyn Reader> {
+fn open() -> Box<dyn Reader> {
     let (tdf, bin) = comune_sqlite::pasef::folder(3, 3000, 800);
     let m = |n: &str, b: Vec<u8>| Member {
         nome: format!("x.d/{n}"),
@@ -28,8 +28,8 @@ fn mzml(l: &mut dyn Reader) -> Vec<u8> {
 
 #[test]
 fn mzml_equal_with_and_without_the_ms2_tic() {
-    let without = mzml(&mut *apri());
-    let mut l = apri();
+    let without = mzml(&mut *open());
+    let mut l = open();
     assert!(l
         .index(0)
         .unwrap()
@@ -47,9 +47,9 @@ fn mzml_equal_with_and_without_the_ms2_tic() {
 
 #[test]
 fn index_after_the_light_rows_has_the_ms2_tic() {
-    let full = apri().index(0).unwrap().to_vec();
-    let mut l = apri();
-    assert!(!mzlab_lettori::srm::ha_scansioni_srm(&mut *l, 0));
+    let full = open().index(0).unwrap().to_vec();
+    let mut l = open();
+    assert!(!mzlab_lettori::srm::has_srm_scans(&mut *l, 0));
     let to_read = l.index_without_tic(0).unwrap().to_vec();
     assert_eq!(to_read.len(), full.len());
     assert!(to_read

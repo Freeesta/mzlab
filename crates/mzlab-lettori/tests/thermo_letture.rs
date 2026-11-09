@@ -9,9 +9,9 @@ use mzlab_core::lettori::{FileSet, Limits, Member};
 use std::cell::Cell;
 use std::rc::Rc;
 
-struct Contato(Vec<u8>, Rc<Cell<usize>>);
+struct Counted(Vec<u8>, Rc<Cell<usize>>);
 
-impl ReadAt for Contato {
+impl ReadAt for Counted {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         self.1.set(self.1.get() + 1);
         self.0.read_at(off, buf)
@@ -27,7 +27,7 @@ fn opening_and_indexing_a_run_takes_few_reads() {
         membri: vec![Member {
             nome: "x.raw".into(),
             dim: bytes.len() as u64,
-            dati: Box::new(Contato(bytes.clone(), calls.clone())),
+            dati: Box::new(Counted(bytes.clone(), calls.clone())),
             sha1: None,
         }],
     };

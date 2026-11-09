@@ -6,7 +6,7 @@ use mzlab_core::lettori::{ChromatogramEntry, Reader, ScanEntry};
 use mzlab_core::mzml::ChromKind;
 use serde_json::Value;
 
-pub fn kind_tipo(k: ChromKind) -> &'static str {
+pub fn kind_name(k: ChromKind) -> &'static str {
     match k {
         ChromKind::Tic => "tic",
         ChromKind::Bpc => "bpc",
@@ -58,7 +58,7 @@ pub fn f1_counts(index: &[ScanEntry], croms: &[ChromatogramEntry], v: &Value) ->
         .into_iter()
         .flatten()
     {
-        let ours = croms.iter().filter(|x| kind_tipo(x.tipo) == k).count() as u64;
+        let ours = croms.iter().filter(|x| kind_name(x.tipo) == k).count() as u64;
         if Some(ours) != n.as_u64() {
             d1.push(format!("chromatograms {k}: {ours} vs {n}"));
         }
@@ -79,14 +79,7 @@ pub fn f1_counts(index: &[ScanEntry], croms: &[ChromatogramEntry], v: &Value) ->
 }
 
 /// F2 for one scan: RT, level, polarity, precursor (differences in `d`, items the reader cannot give in `m`).
-fn f2_scansione(
-    k: usize,
-    s: &ScanEntry,
-    t: &Value,
-    tol: Tol,
-    d: &mut Vec<String>,
-    m: &mut Vec<String>,
-) {
+fn f2_scan(k: usize, s: &ScanEntry, t: &Value, tol: Tol, d: &mut Vec<String>, m: &mut Vec<String>) {
     if let Some(rt) = num(&t["rt_min"])
         && (s.rt - rt).abs() > tol.rt_min
     {
@@ -151,7 +144,7 @@ pub fn f2_headers(
     let sc = v["scansioni"].as_array().cloned().unwrap_or_default();
     let (mut d2, mut m2) = (Vec::new(), Vec::new());
     for (k, (s, t)) in index.iter().zip(&sc).enumerate() {
-        f2_scansione(k, s, t, tol, &mut d2, &mut m2);
+        f2_scan(k, s, t, tol, &mut d2, &mut m2);
         f2_fields(l, c, k, t, &mut d2, &mut m2);
     }
     m2.sort();
@@ -259,20 +252,20 @@ pub fn f4_chromatograms(
         m4.push("no chromatograms in the truth".into());
     }
     for (j, t) in vc.iter().enumerate() {
-        let tipo = t["tipo"].as_str().unwrap_or("altro");
+        let kind = t["tipo"].as_str().unwrap_or("altro");
         let id = t["id"].as_str().unwrap_or("");
         let order = vc[..j]
             .iter()
-            .filter(|x| x["tipo"].as_str() == Some(tipo))
+            .filter(|x| x["tipo"].as_str() == Some(kind))
             .count();
         let entry = croms.iter().find(|x| x.id == id).or_else(|| {
             croms
                 .iter()
-                .filter(|x| kind_tipo(x.tipo) == tipo)
+                .filter(|x| kind_name(x.tipo) == kind)
                 .nth(order)
         });
         let Some(voce) = entry else {
-            d4.push(format!("chromatogram {id} ({tipo}): not in the reader"));
+            d4.push(format!("chromatogram {id} ({kind}): not in the reader"));
             continue;
         };
         match l.chromatogram(c, &voce.id) {
@@ -325,7 +318,7 @@ fn instant(s: &str) -> String {
         .to_string()
 }
 
-pub fn metadati(l: &mut dyn Reader, v: &Value, c: usize) -> Outcome {
+pub fn metadata(l: &mut dyn Reader, v: &Value, c: usize) -> Outcome {
     let fields = v["metadati"].as_object().cloned().unwrap_or_default();
     if fields.is_empty() {
         return Outcome::Missing(vec!["no fields in the truth".into()]);
@@ -334,27 +327,27 @@ pub fn metadati(l: &mut dyn Reader, v: &Value, c: usize) -> Outcome {
         Some(m) => m,
         None => return Outcome::Defect(vec!["metodo/1 cannot be read".into()]),
     };
-    let (mut difetti, mut absent) = (Vec::new(), Vec::new());
+    let (mut defects, mut absent) = (Vec::new(), Vec::new());
     for (name, f) in fields {
         let Some(path) = f["metodo"].as_str() else {
             absent.push(format!("{name} (not mapped)"));
             continue;
         };
         let Some(a) = json_path(&method, path).and_then(text) else {
-            difetti.push(format!("{name}: {path} is absent"));
+            defects.push(format!("{name}: {path} is absent"));
             continue;
         };
         let Some(b) = text(&f["valore"]) else {
             continue;
         };
-        let uguale = if path.contains("file_creato") || name.contains("TimeStamp") {
+        let equal = if path.contains("file_creato") || name.contains("TimeStamp") {
             instant(&a) == instant(&b)
         } else {
             a == b
         };
-        if !uguale {
-            difetti.push(format!("{name}: {path} = {a:?} vs {b:?}"));
+        if !equal {
+            defects.push(format!("{name}: {path} = {a:?} vs {b:?}"));
         }
     }
-    level(difetti, absent)
+    level(defects, absent)
 }

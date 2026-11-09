@@ -8,7 +8,7 @@ use mzlab_core::lettori::Limits;
 const A: usize = 22;
 const B: usize = 30;
 /// The top byte of the word at byte 4 in every record of the families seen.
-const MARCHI: [u8; 3] = [0x18, 0x4c, 0x08];
+const MARKS: [u8; 3] = [0x18, 0x4c, 0x08];
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Row {
@@ -29,7 +29,7 @@ fn variant_a(b: &[u8]) -> bool {
             let mut before = 0u32;
             b.chunks_exact(A).all(|r| {
                 let o = u32_at(r, 0);
-                let ok = MARCHI.contains(&r[7]) && o >= before;
+                let ok = MARKS.contains(&r[7]) && o >= before;
                 before = o;
                 ok
             })

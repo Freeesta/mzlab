@@ -4,14 +4,14 @@ mod comune_waters;
 use comune_waters::*;
 use mzlab_core::lettori::{Limits, Reader};
 
-fn apri() -> Box<dyn Reader> {
-    mzlab_lettori::apri_nudo(synthetic_set(), &Limits::sito())
+fn open() -> Box<dyn Reader> {
+    mzlab_lettori::open_bare(synthetic_set(), &Limits::sito())
         .unwrap_or_else(|e| panic!("{}", e.key))
 }
 
 #[test]
 fn the_scans_read_back_to_the_encoded_peaks() {
-    let mut l = apri();
+    let mut l = open();
     assert_eq!(l.format().id(), "waters-raw");
     let ix = l.index(0).unwrap().to_vec();
     assert_eq!(ix.len(), 3, "only the scanning function has spectra");
@@ -33,7 +33,7 @@ fn the_scans_read_back_to_the_encoded_peaks() {
 
 #[test]
 fn the_mrm_function_is_chromatograms_not_spectra() {
-    let mut l = apri();
+    let mut l = open();
     let ch = l.chromatograms(0).unwrap();
     let ids: Vec<&str> = ch.iter().map(|c| c.id.as_str()).collect();
     assert_eq!(ids[0], "TIC");
@@ -54,7 +54,7 @@ fn the_mrm_function_is_chromatograms_not_spectra() {
 
 #[test]
 fn the_method_and_the_header_carry_the_header_txt_and_hide_the_operator() {
-    let mut l = apri();
+    let mut l = open();
     let m = l.method(0).unwrap();
     let doc = check_schema(&m, "synthetic");
     assert_eq!(doc["origine"]["formato"], "waters-raw");

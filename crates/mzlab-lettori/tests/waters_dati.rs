@@ -39,7 +39,7 @@ pub fn folder(rel: &str) -> Option<FileSet> {
 pub fn apri(rel: &str) -> Option<Box<dyn Reader>> {
     let fs = folder(rel)?;
     Some(
-        mzlab_lettori::apri_nudo(fs, &Limits::sito())
+        mzlab_lettori::open_bare(fs, &Limits::sito())
             .unwrap_or_else(|e| panic!("{rel}: {}", e.key)),
     )
 }
@@ -115,7 +115,7 @@ fn bare(id: &str) -> String {
 }
 
 /// The chromatograms of an msconvert mzML, by id.
-fn mzml_cromi(p: &Path) -> Vec<Chromatogram> {
+fn mzml_chroms(p: &Path) -> Vec<Chromatogram> {
     let mut v = Vec::new();
     mzml::parse(std::fs::File::open(p).unwrap(), |i| {
         if let Item::Chromatogram(c) = i {
@@ -140,7 +140,7 @@ fn chromatograms_match_the_msconvert_mzml() {
         eprintln!("SKIP waters_dati: no mzML for {rel}");
         return;
     };
-    let theirs = mzml_cromi(&mz);
+    let theirs = mzml_chroms(&mz);
     assert!(l.index(0).unwrap().is_empty(), "MRM folder has no spectra");
     let mine = l.chromatograms(0).unwrap();
     assert_eq!(mine.len(), theirs.len(), "number of traces");
@@ -198,7 +198,7 @@ fn folders_without_function_table_are_refused_with_a_key() {
         "waters/raw/cyclic_ims_PXD052561/20230920_NM4_1187_ECD_2_CID_25.raw",
     ] {
         let Some(fs) = folder(rel) else { continue };
-        match mzlab_lettori::apri_nudo(fs, &Limits::sito()) {
+        match mzlab_lettori::open_bare(fs, &Limits::sito()) {
             Ok(mut l) => eprintln!("{rel}: opens, {} scans", l.index(0).map_or(0, <[_]>::len)),
             Err(e) => assert!(e.key.starts_with("err.file."), "{rel}: {}", e.key),
         }

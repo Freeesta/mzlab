@@ -74,7 +74,7 @@ fn set_of(dir: &Path) -> FileSet {
 }
 
 fn open(dir: &Path) -> Box<dyn Reader> {
-    mzlab_lettori::apri_nudo(set_of(dir), &Limits::sito()).unwrap()
+    mzlab_lettori::open_bare(set_of(dir), &Limits::sito()).unwrap()
 }
 
 fn name(dir: &Path) -> String {
@@ -93,7 +93,7 @@ fn every_real_run_opens_and_gives_its_scans_and_traces() {
         let label = name(&dir);
         // a folder without the points (MSScan.bin alone) is refused with the file error
         if label.contains("MTBLS787") {
-            let e = mzlab_lettori::apri_nudo(set_of(&dir), &Limits::sito())
+            let e = mzlab_lettori::open_bare(set_of(&dir), &Limits::sito())
                 .err()
                 .unwrap();
             assert_eq!(e.key, "err.file.agilent", "{label}");
@@ -303,8 +303,8 @@ fn probe_says_variant_for_every_lc_run() {
     };
     for dir in runs(&root) {
         let label = name(&dir);
-        let motivi = mzlab_lettori::reasons_together(&mut set_of(&dir));
-        assert!(motivi.contains(&"variante"), "{label}: {motivi:?}");
+        let reasons = mzlab_lettori::reasons_together(&mut set_of(&dir));
+        assert!(reasons.contains(&"variante"), "{label}: {reasons:?}");
     }
 }
 

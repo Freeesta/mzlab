@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Fields that the bench has proved equal to RFR on the corpus; a new name here makes a difference in it a failure. Empty at the start: the test only reports.
-const VERIFICATI: &[&str] = &[];
+const VERIFIED: &[&str] = &[];
 
 fn dumps(dir: &Path) -> Vec<PathBuf> {
     let mut v: Vec<PathBuf> = std::fs::read_dir(dir)
@@ -41,7 +41,7 @@ fn find(dir: &Path, name: &str, bottom: usize) -> Option<PathBuf> {
 }
 
 /// The built example next to the test binary (`cargo test` builds it), else `cargo run`.
-fn nostro(raw: &Path, out: &Path) -> bool {
+fn our(raw: &Path, out: &Path) -> bool {
     let exe = std::env::current_exe().ok();
     let ex = exe.as_ref().and_then(|e| {
         e.parent()?
@@ -97,7 +97,7 @@ fn scandump_thermo() {
             tmp.join(format!("{i}.jsonl.gz")),
             tmp.join(format!("{i}.json")),
         );
-        if !nostro(&raw, &mio) {
+        if !our(&raw, &mio) {
             eprintln!("dump {i}: our reader does not open the file (exit code 2 of the example)");
             continue;
         }
@@ -122,7 +122,7 @@ fn scandump_thermo() {
             )
         });
         eprintln!("dump {i}: {} fields, equal {equal}, different {different}, missing on our side {absent_ones}", fields.len());
-        for name in VERIFICATI {
+        for name in VERIFIED {
             match fields.get(*name) {
                 Some(v)
                     if v["compared"].as_u64().unwrap_or(0) > 0

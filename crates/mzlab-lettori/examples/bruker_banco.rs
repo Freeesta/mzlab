@@ -12,9 +12,9 @@ use mzlab_core::lettori::{FileSet, Limits, Member};
 mod comune_sqlite;
 use comune_sqlite::pasef;
 
-fn scrivi(dir: &Path, cicli: usize, n1: usize, n2: usize) {
+fn scrivi(dir: &Path, cycles: usize, n1: usize, n2: usize) {
     std::fs::create_dir_all(dir).unwrap();
-    let (tdf, bin) = pasef::folder(cicli, n1, n2);
+    let (tdf, bin) = pasef::folder(cycles, n1, n2);
     std::fs::write(dir.join("analysis.tdf"), tdf).unwrap();
     std::fs::write(dir.join("analysis.tdf_bin"), &bin).unwrap();
     eprintln!("{}: tdf_bin {} MB", dir.display(), bin.len() / 1_000_000);
@@ -42,11 +42,11 @@ fn ms(t: Instant) -> f64 {
     t.elapsed().as_secs_f64() * 1e3
 }
 
-fn measure(dir: &Path, giri: usize) {
-    for g in 0..giri {
+fn measure(dir: &Path, rounds: usize) {
+    for g in 0..rounds {
         let t = Instant::now();
         let mut l = mzlab_lettori::apri(file_set(dir), &Limits::desktop()).unwrap();
-        let apri = ms(t);
+        let open = ms(t);
         let t = Instant::now();
         let n = l.index(0).unwrap().len();
         let index = ms(t);
@@ -60,14 +60,14 @@ fn measure(dir: &Path, giri: usize) {
         std::hint::black_box(l.scan(0, 0).unwrap());
         let first_one = ms(t);
         let t = Instant::now();
-        let (mut points, mut firma) = (0usize, 0xcbf2_9ce4_8422_2325u64);
+        let (mut points, mut signature) = (0usize, 0xcbf2_9ce4_8422_2325u64);
         for k in 0..n {
             let s = l.scan(0, k).unwrap();
             points += s.mz.len();
             // FNV-1a over the bits of every point: the same number before and after a change of the reader
             for (m, y) in s.mz.iter().zip(&s.intensity) {
                 for b in [m.to_bits(), u64::from(y.to_bits())] {
-                    firma = (firma ^ b).wrapping_mul(0x100_0000_01b3);
+                    signature = (signature ^ b).wrapping_mul(0x100_0000_01b3);
                 }
             }
         }
@@ -77,7 +77,7 @@ fn measure(dir: &Path, giri: usize) {
         mzlab_core::lettori_mzml::scrivi(&mut *l, 0, std::io::sink(), &mut |_, _| {}).unwrap();
         let mzml = ms(t);
         println!(
-            "{{\"giro\":{g},\"spettri\":{n},\"punti\":{points},\"firma\":\"{firma:016x}\",\"apri_ms\":{apri:.1},\"indice_ms\":{index:.1},\"tic_ms\":{tic:.1},\"bpc_ms\":{bpc:.1},\"primo_ms\":{first_one:.2},\"tutti_ms\":{all:.1},\"mzml_ms\":{mzml:.1}}}"
+            "{{\"giro\":{g},\"spettri\":{n},\"punti\":{points},\"firma\":\"{signature:016x}\",\"apri_ms\":{open:.1},\"indice_ms\":{index:.1},\"tic_ms\":{tic:.1},\"bpc_ms\":{bpc:.1},\"primo_ms\":{first_one:.2},\"tutti_ms\":{all:.1},\"mzml_ms\":{mzml:.1}}}"
         );
     }
 }

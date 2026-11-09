@@ -14,7 +14,7 @@ mod dati_percorsi;
 
 #[test]
 fn more_values_than_declared_is_an_error() {
-    let scan = scansioni();
+    let scan = scans();
     let mut b = String::from_utf8(mzml_di(
         &scan,
         Cod::Np {
@@ -30,7 +30,7 @@ fn more_values_than_declared_is_an_error() {
 
 #[test]
 fn a_zlib_inflating_past_the_declared_size_is_an_error() {
-    let scan = scansioni();
+    let scan = scans();
     let mut b = String::from_utf8(mzml_di(
         &scan,
         Cod::Np {
@@ -41,16 +41,16 @@ fn a_zlib_inflating_past_the_declared_size_is_an_error() {
     ))
     .unwrap();
     // an array of 40 values inflates to a few hundred bytes at most; this stream inflates to 8 MB of zeros
-    let bomba = b64(&zlib(&vec![0u8; 8 << 20]));
+    let bomb = b64(&zlib(&vec![0u8; 8 << 20]));
     let da = b.find("<binary>").unwrap() + 8;
     let a = da + b[da..].find("</binary>").unwrap();
-    b.replace_range(da..a, &bomba);
+    b.replace_range(da..a, &bomb);
     assert_eq!(error(b.into_bytes()), "error.memoryBudget");
 }
 
 #[test]
 fn broken_base64_and_truncated_data_are_keyed_errors() {
-    let scan = scansioni();
+    let scan = scans();
     let ok = String::from_utf8(mzml_di(
         &scan,
         Cod::Np {
@@ -61,8 +61,8 @@ fn broken_base64_and_truncated_data_are_keyed_errors() {
     ))
     .unwrap();
     let da = ok.find("<binary>").unwrap() + 8;
-    let rotta = format!("{}!!!{}", &ok[..da], &ok[da + 3..]);
-    assert_eq!(error(rotta.into_bytes()), "err.file.base64");
+    let route = format!("{}!!!{}", &ok[..da], &ok[da + 3..]);
+    assert_eq!(error(route.into_bytes()), "err.file.base64");
     // a linear array cut to 5 bytes: shorter than its fixed point
     let a = da + ok[da..].find("</binary>").unwrap();
     let short = format!("{}{}{}", &ok[..da], b64(&[1, 2, 3, 4, 5]), &ok[a..]);
@@ -71,7 +71,7 @@ fn broken_base64_and_truncated_data_are_keyed_errors() {
 
 #[test]
 fn a_truncated_file_does_not_panic() {
-    let scan = scansioni();
+    let scan = scans();
     let ok = mzml_di(
         &scan,
         Cod::Np {
@@ -87,7 +87,7 @@ fn a_truncated_file_does_not_panic() {
 
 #[test]
 fn rows_over_the_limit_are_an_error() {
-    let scan = scansioni();
+    let scan = scans();
     let limits = Limits {
         entries: 2,
         ..Limits::sito()
@@ -125,7 +125,7 @@ fn openms_linear_and_slof_have_the_header_tic() {
     let Some(b) = real("OpenMS_FileFilter_37_output.mzML") else {
         return;
     };
-    let mut l = apri(b);
+    let mut l = open(b);
     let n = l.samples()[0].scansioni;
     assert_eq!(n, 10);
     for k in 0..n {
@@ -151,7 +151,7 @@ fn openms_linear_and_pic_are_read() {
     let Some(b) = real("OpenMS_FileFilter_38_output.mzML") else {
         return;
     };
-    let mut l = apri(b);
+    let mut l = open(b);
     for k in 0..l.samples()[0].scansioni {
         let s = l.scan(0, k).unwrap();
         assert!(!s.mz.is_empty() && s.mz.windows(2).all(|w| w[0] <= w[1]));
@@ -165,7 +165,7 @@ fn pymzml_srm_numpress_chromatograms() {
     let Some(b) = real("pymzML_mini_numpress.chrom.mzML") else {
         return;
     };
-    let mut l = apri(b);
+    let mut l = open(b);
     assert_eq!(l.samples()[0].scansioni, 0);
     let v = l.chromatograms(0).unwrap();
     assert!(!v.is_empty());
