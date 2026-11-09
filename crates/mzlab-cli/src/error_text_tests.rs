@@ -98,7 +98,7 @@ fn a_damaged_folder_is_the_text_of_the_page() {
     );
 }
 
-/// A part of a .D folder or of a .wiff pair that a mutated copy breaks: the calm text of the page, the reader's detail only after the key.
+/// A part of a .D folder, of a .wiff pair or of a Bruker .d that a mutated copy breaks: the calm text of the page, the reader's detail only after the key.
 #[test]
 fn a_damaged_agilent_or_wiff_is_the_text_of_the_page() {
     for (key, detail, says) in [
@@ -111,6 +111,11 @@ fn a_damaged_agilent_or_wiff_is_the_text_of_the_page() {
             "err.file.wiff",
             "no scan type code (experiment 1)",
             "its .wiff.scan again",
+        ),
+        (
+            "err.file.brukerDamaged",
+            "sqlite: page size",
+            "whole .d folder again",
         ),
     ] {
         let t = human(&Error::new(key).with("detail", detail).to_string());
