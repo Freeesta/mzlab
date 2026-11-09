@@ -6,8 +6,14 @@ const MAXROWS = 300;
 const nm = (v, n = 3) => TDATI.num(v, n);
 const ptitle = p => String(p.title || "").replace(/<[^>]*>/g, "");
 
-// at most MAXROWS indices of x inside [lo, hi], evenly spread
+// at most MAXROWS indices of x inside [lo, hi], evenly spread; a sorted x (decima.js, loaded by the first drawing) gives the window by binary search, not a pass over 10^6 points
 function pick(x, lo, hi) {
+  const D = /** @type {any} */ (window).DECIMA;
+  if (D && D.isSorted(x)) {
+    const [i0, i1] = D.windowIdx(x, lo, hi), n = i1 - i0, st = n / MAXROWS, out = [];
+    if (n <= MAXROWS) { for (let i = i0; i < i1; i++) out.push(i); } else for (let k = 0; k < MAXROWS; k++) out.push(i0 + Math.floor(k * st));
+    return out;
+  }
   const ix = []; for (let i = 0; i < x.length; i++) if (x[i] >= lo && x[i] <= hi) ix.push(i);
   if (ix.length <= MAXROWS) return ix;
   const out = [], st = ix.length / MAXROWS; for (let k = 0; k < MAXROWS; k++) out.push(ix[Math.floor(k * st)]);
