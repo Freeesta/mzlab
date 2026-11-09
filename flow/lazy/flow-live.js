@@ -111,7 +111,7 @@
         const list = [].concat(/** @type {any} */ (v)), at = list.indexOf("file:" + first.name);
         if (at < 0) continue;
         const many = (F.stepOf(S.reg, s) || { in: {} }).in[port]?.many;
-        s.in[port] = many ? [...list.slice(0, at), ...refs, ...list.slice(at + 1)] : msnSteps.includes(base(s)) && refs.includes("file:" + infusion) ? "file:" + infusion : refs[0];
+        s.in[port] = many ? [...new Set([...list.slice(0, at), ...refs, ...list.slice(at + 1)])] : msnSteps.includes(base(s)) && refs.includes("file:" + infusion) ? "file:" + infusion : refs[0];
       }
     }
     return { plan, items, ids: Object.fromEntries(items.map((/** @type {any} */ i) => [i.input, i.idx ? `${i.idx.key}:${i.mode}` : "loading"])) };
@@ -134,6 +134,13 @@
       const ref = [].concat(/** @type {any} */ (inst.in.table || []))[0];
       return instOf(x, String(ref).split(".")[0]) || inst;
     };
+    // the steps that read an output of `id`; the gap fillings of an alignment, in the order of the plan
+    x.readers = (/** @type {string} */ id) => x.plan.steps.filter((/** @type {any} */ s) => Object.values(s.in || {}).flat().some(r => String(r).split(".")[0] === id));
+    x.fillers = (/** @type {any} */ al) => x.readers(al.id).filter((/** @type {any} */ s) => base(s) === "features.gapfill");
+    // an alignment only gap fillings read keeps no table of its own: it makes the one of its first filling (the pool aligns and fills in one call)
+    x.onlyFilled = (/** @type {any} */ al) => base(al) === "features.align" && x.readers(al.id).length > 0 && x.readers(al.id).every((/** @type {any} */ s) => base(s) === "features.gapfill");
+    // the OPFS key of the table an alignment or a gap filling keeps (each its own, as `flow run` writes one file per step), null for anything else
+    x.tableKey = (/** @type {any} */ inst) => (inst && ["features.align", "features.gapfill"].includes(base(inst)) && !x.onlyFilled(inst) ? x.keys.get(jk({ instance: inst.id, item: null })) || null : null);
     // the detections an alignment reads, in the order of the items: [{ key, path }]
     x.upstream = (/** @type {any} */ al) => {
       const ids = [...new Set(Object.values(al.in || {}).flat().map(String).filter(r => !r.startsWith("file:")).map(r => r.split(".")[0]))], out = /** @type {any[]} */ ([]);
@@ -246,8 +253,8 @@
     const p = await kit().getPool(), D = F.liveJobs.DIR;
     for (const j of await call(x, "jobs")) {
       if (j.state !== "done" && j.state !== "reused") continue;
-      const inst = instOf(x, j.instance), key = x.keys.get(jk(j)), id = inst && base(inst);
-      if (!key || (id !== "features.detect" && id !== "features.align")) continue;
+      const inst = instOf(x, j.instance), id = inst && base(inst), key = id === "features.detect" ? x.keys.get(jk(j)) : x.tableKey(inst);
+      if (!key || (id !== "features.detect" && id !== "features.align" && id !== "features.gapfill")) continue;
       if (!await F.liveJobs.has(p, D + key + (id === "features.detect" ? ".mzfeatf" : ".mzfeat"))) return false;
     }
     return true;
@@ -319,7 +326,8 @@
       if (bad) { await recordOf(live); throw refused(live, bad.instance); }
     } finally { live.listeners.delete(o.onEvent); }
     live.logFrom = live.log.length;
-    const al = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.align"), key = al && live.keys.get(`${al.id}|`);
+    // the table of the first alignment, or of its first gap filling when only fillings read it
+    const al = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.align"), key = al && live.tableKey(live.onlyFilled(al) ? live.fillers(al)[0] : al);
     const table = key ? await (await kit().getPool()).fs.read(F.liveJobs.DIR + key + ".mzfeat") : null;
     const record = await recordOf(live);
     // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})

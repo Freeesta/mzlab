@@ -1,7 +1,7 @@
 // @ts-check
-// Flow (administrator mode): chrom.transitions in this browser. The mzML files of the plan open in Data are packed in one call to `flow_transitions` of the `flowtab` .wasm
-// (`mzlab_feat::transitions::transitions_packed`, over the same text `flow run` writes), so the CSV is the same bytes. A source that is not an mzML open in Data (a raw file to
-// convert first) stays with the computer. The text is kept like the other results, under the key of the job. English only.
+// Flow (administrator mode): chrom.transitions in this browser. The mzML files of the plan open in Data are packed in one call to `flow_transitions` of the `flowtab` .wasm (`transitions_packed`,
+// the text `flow run` writes), so the CSV is the same bytes; a raw file to convert first stays with the computer. Each mzML is read within the safe budget of the page; a refusal (phase `read`)
+// that fits in the high budget waits for the user's yes (`holdRead`). The text is kept like the other results, under the key of the job. English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
@@ -24,13 +24,14 @@
     await x.call("started", { job: j });
     const t0 = performance.now(), all = { ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) };
     const table = typeof all.transitions === "string" ? all.transitions : "", params = JSON.stringify(all);
+    const budgetMb = J().readBudget(x, spec);
     return J().detached(x, spec, inst, async () => {
       const parts = await Promise.all(blobs.map(async (/** @type {Blob} */ b) => new Uint8Array(await b.arrayBuffer())));
       const manifest = JSON.stringify(parts.map((b, k) => ({ name: names[k].slice(5), len: b.length })));
       const blob = new Uint8Array(parts.reduce((n, b) => n + b.length, 0));
       parts.reduce((at, b) => { blob.set(b, at); return at + b.length; }, 0);
       let text;
-      try { text = await p.ident("flowtab", "flow_transitions", { params, table, manifest, blob }); } catch (e) { throw asError(e); }
+      try { text = await p.ident("flowtab", "flow_transitions", { params, table, manifest, blob, budgetMb }); } catch (e) { await J().holdRead(x, spec, asError(e)); return; }
       const r = { name: inst.id + ".csv", text };
       await F.webMsn.keep(r.name, r.text); await J().remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });

@@ -3,6 +3,7 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
+use mzlab_core::mzml_estimate;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 use mzlab_core::wiff::dad::DadData;
@@ -103,8 +104,9 @@ fn field(s: &str) -> String {
     }
 }
 
-/// The CSV of the peaks of every file under the parameters of the job.
-pub fn uv_text(job: &Job, files: &[Named]) -> Result<String> {
+/// The CSV of the peaks of every file under the parameters of the job. Each file is read whole only when its decoding (`mzml_estimate`, with every
+/// file and the copy the reader takes in memory) fits in `cap` bytes, else `error.memoryBudget` (phase `read`).
+pub fn uv_text(job: &Job, files: &[Named], cap: usize) -> Result<String> {
     let (nm, band) = (
         param(job, "wavelength_nm").unwrap_or(254.0),
         param(job, "band_nm").unwrap_or(4.0),
@@ -116,7 +118,10 @@ pub fn uv_text(job: &Job, files: &[Named]) -> Result<String> {
         snr: param(job, "broad_snr").unwrap_or(8.0),
     };
     let mut out = format!("{HEADER}\n");
+    let held: usize = files.iter().map(|(_, b)| b.len()).sum();
     for (name, bytes) in files {
+        let x = mzml_estimate::inputs(bytes);
+        mzml_estimate::check(mzml_estimate::bytes(&x, held + bytes.len()), cap)?;
         let mut m = Mzml::new(bytes.to_vec(), bytes.len() as u64);
         let d = m.dad()?.ok_or_else(|| Error::new("err.pda.none"))?;
         let y = trace_at(&d, nm, band);
@@ -145,7 +150,7 @@ pub fn uv_text(job: &Job, files: &[Named]) -> Result<String> {
 /// `chrom.uv_peaks`: one CSV for all the files of `source`.
 pub(crate) fn uv_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let files = read_all(r, job, "source")?;
-    let text = uv_text(job, &named(&files))?;
+    let text = uv_text(job, &named(&files), r.cap())?;
     let out = r.work.join(format!("{}.csv", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Peaks)

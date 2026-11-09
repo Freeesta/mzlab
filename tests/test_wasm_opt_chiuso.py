@@ -4,8 +4,10 @@ Every job of pages.yml, sito-rust.yml and release.yml that runs wasm-opt sets th
 the nightly restores the same cache but stays lenient."""
 import hashlib
 import io
+import os
 import platform
 import re
+import shutil
 import subprocess
 import tarfile
 from pathlib import Path
@@ -21,10 +23,23 @@ FAKE_CURL = '#!/usr/bin/env bash\necho called >> "{log}"\n{body}'
 GARBAGE = 'while [ $# -gt 0 ]; do [ "$1" = -o ] && out=$2; shift; done; echo junk > "$out"\n'
 
 
+WINDOWS = platform.system() == "Windows"
+
+
+def _git_bash():
+    """Git for Windows' bash.exe, next to git: a bare `bash` on a Windows runner is the WSL launcher in System32, which has no distribution."""
+    git = shutil.which("git")
+    # git is <Git>/cmd/git.exe, <Git>/bin/git.exe or <Git>/mingw64/bin/git.exe
+    for root in Path(git).resolve().parents[1:3] if git else ():
+        if (root / "bin" / "bash.exe").is_file() and (root / "usr" / "bin").is_dir():
+            return root / "bin" / "bash.exe"
+    pytest.fail(f"Git for Windows' bash.exe not found next to git ({git})")
+
+
 def _bin(tmp_path, curl_body="exit 1\n"):
     b = tmp_path / "bin"
     b.mkdir()
-    (b / "curl").write_text(FAKE_CURL.format(log=tmp_path / "curl.log", body=curl_body))
+    (b / "curl").write_text(FAKE_CURL.format(log=(tmp_path / "curl.log").as_posix(), body=curl_body))
     (b / "npm").write_text("#!/usr/bin/env bash\nexit 1\n")
     for f in b.iterdir():
         f.chmod(0o755)
@@ -36,10 +51,19 @@ def _run(tmp_path, script=SCRIPT, strict=True, curl_body="exit 1\n"):
     rt.mkdir(exist_ok=True)
     wasm = tmp_path / "m.wasm"
     wasm.write_bytes(b"\0asm" + b"\0" * 10)
-    env = {"PATH": f"{_bin(tmp_path, curl_body)}:/usr/bin:/bin:/usr/local/bin", "RUNNER_TEMP": str(rt)}
+    fake = _bin(tmp_path, curl_body)
+    if WINDOWS:
+        # a Windows PATH (`;`), which bash converts at start-up; the stand-ins come first, then Git's own tools (uname, mkdir, cut, ...)
+        bash = _git_bash()
+        git = bash.parent.parent
+        env = {"PATH": os.pathsep.join([str(fake), str(git / "usr" / "bin"), str(git / "bin")]), "RUNNER_TEMP": rt.as_posix(),
+               "SYSTEMROOT": os.environ.get("SYSTEMROOT", r"C:\Windows")}   # Windows programs started without it fail to load their DLLs
+    else:
+        bash = "bash"
+        env = {"PATH": f"{fake}:/usr/bin:/bin:/usr/local/bin", "RUNNER_TEMP": str(rt)}
     if strict:
         env["MZLAB_WASM_OPT_STRICT"] = "1"
-    return subprocess.run(["bash", str(script), str(wasm), "1000", "t"], env=env, capture_output=True, text=True, cwd=ROOT)
+    return subprocess.run([str(bash), str(script), str(wasm), "1000", "t"], env=env, capture_output=True, text=True, cwd=ROOT)
 
 
 def test_strict_without_wasm_opt_is_an_error(tmp_path):

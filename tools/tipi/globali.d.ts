@@ -154,6 +154,7 @@ declare var UNTUI: any;
 declare var UVSPEC: any;
 declare var WORKFLOW: any;
 declare var WatersRaw: any;
+declare var XICBORDI: any;
 declare var XICBTN: any;
 declare var XICLENS: any;
 declare var XLSX_MIME: any;

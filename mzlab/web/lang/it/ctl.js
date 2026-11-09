@@ -44,6 +44,8 @@ I18N.add("it", {
   "ctl.files.aria": "File mostrati: {n} su {tot}",
   "ctl.smooth": "Smoothing",
   "ctl.range.clear": "Azzera l'intervallo",
+  "ctl.range.num": "Scrivi un numero positivo, o lascia vuoto per nessun limite: ho rimesso i valori di prima.",
+  "ctl.range.order": "«da» deve essere minore di «a»: ho rimesso i valori di prima.",
   "ctl.range.set": "impostato",
   "ctl.range.title": "Intervallo di m/z e di tempo mostrato",
   "ctl.range.note": "Vuoto = tutto; il precursore sceglie le MS2 di un solo ione.",

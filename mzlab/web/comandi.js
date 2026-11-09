@@ -12,7 +12,7 @@
 
 // TAB-BEGIN
 const COMANDI_TAB = [
-  { id: "view.zoom", nome: "storia.zoom", modulo: "eventi.js", dove: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js"], campi: ["zoom", "zoomY", "lock"],
+  { id: "view.zoom", nome: "storia.zoom", modulo: "eventi.js", dove: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js", "xic-bordi.js"], campi: ["zoom", "zoomY", "lock"],
     parametri: "m/z or RT interval, intensity interval", tasto: "wheel, Backspace, double click, Shift+drag", unisci: "a burst of wheel steps, a drag and a pan are one step", annulla: "istantanea" },
   { id: "peaks.integration", nome: "storia.int", modulo: "picchi.js", dove: ["picchi.js", "eventi.js", "xic-spettro.js", "pannelli.js", "pannelli-annulla.js"], campi: ["ints", "isel"],
     parametri: "limits of the integrated peak", tasto: "I, Del", unisci: "an edge drag is one step", annulla: "istantanea" },
@@ -30,7 +30,7 @@ const COMANDI_TAB = [
     parametri: "position and size of the panels", tasto: "Alt+arrows", unisci: "", annulla: "layout" },
 
   // ---- panel.source (a command) and the actions that are not undoable by design ("nessuna" + motivo, enforced by tests/test_comandi.py); "da-portare" stays at zero
-  { id: "panel.source", nome: "cmd.source", modulo: "pannelli.js", dove: ["pannelli.js", "banco.js", "lista-file.js", "grafici.js", "picchi.js", "infusione.js", "eventi.js", "sim-ui.js", "canali.js"], campi: ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log"],
+  { id: "panel.source", nome: "cmd.source", modulo: "pannelli.js", dove: ["pannelli.js", "banco.js", "lista-file.js", "grafici.js", "picchi.js", "infusione.js", "eventi.js", "sim-ui.js", "canali.js", "xic-bordi.js"], campi: ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log"],
     parametri: "file, MS level, precursor, chromatogram kind, display mode, m/z limits, scale", tasto: "", unisci: "", annulla: "comando" },
   { id: "spec.annotation", nome: "cmd.annotation", modulo: "eventi.js", dove: ["spettro.js", "eventi.js"], campi: ["anns"], parametri: "add, edit, delete a note", tasto: "", unisci: "", annulla: "comando" },
   { id: "spec.display", nome: "cmd.display", modulo: "visualizza.js", dove: ["visualizza.js", "spettro.js", "pannelli.js", "barra.js", "gradiente.js", "etichette-picchi.js"], campi: ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk"],
@@ -38,7 +38,7 @@ const COMANDI_TAB = [
   { id: "spec.isotopes", nome: "storia.campi", modulo: "spettro.js", dove: ["spettro.js", "banco.js", "picchi.js"], campi: ["iso"], parametri: "isotope simulation and resolution", tasto: "", unisci: "", annulla: "comando" },
   { id: "spec.background", nome: "storia.fondo", modulo: "fondo-spettro.js", dove: ["fondo-spettro.js", "pannelli.js", "grafici.js", "sottrazione.js"], campi: ["bg", "bw0", "bw1", "bwi"], parametri: "background window of the spectrum", tasto: "", unisci: "", annulla: "comando" },
   { id: "peaks.noise", nome: "storia.int", modulo: "eventi.js", dove: ["eventi.js", "picchi.js"], campi: ["noise"], parametri: "noise stretch of an integration", tasto: "", unisci: "", annulla: "istantanea" },
-  { id: "xic.traces", nome: "storia.campi", modulo: "pannelli-annulla.js", dove: ["pannelli.js", "pannelli-annulla.js", "xic-spettro.js", "grafici.js", "visualizza.js"], campi: ["traces"], parametri: "add, remove, label, window and unit of the XIC traces (the split into panels is not undone)", tasto: "X", unisci: "", annulla: "comando" },
+  { id: "xic.traces", nome: "storia.campi", modulo: "pannelli-annulla.js", dove: ["pannelli.js", "pannelli-annulla.js", "xic-spettro.js", "xic-bordi.js", "grafici.js", "visualizza.js"], campi: ["traces"], parametri: "add, remove, label, window and unit of the XIC traces (the split into panels is not undone)", tasto: "X", unisci: "", annulla: "comando" },
   { id: "series.visibility", nome: "storia.campi", modulo: "grafici.js", dove: ["grafici.js", "picchi.js"], campi: ["hid", "showHid"], parametri: "hide or show a series from the legend", tasto: "", unisci: "", annulla: "comando" },
   { id: "panel.link", nome: "storia.campi", modulo: "eventi.js", dove: ["eventi.js", "spettro.js", "banco.js", "pannelli.js", "dda.js"], campi: ["link", "src"], parametri: "freeze or relink the live spectrum", tasto: "", unisci: "", annulla: "comando" },
   { id: "panel.rename", nome: "storia.pannello", modulo: "pannelli-annulla.js", dove: ["pannelli.js", "pannelli-annulla.js", "banco.js"], campi: ["title"], parametri: "title of the panel", tasto: "", unisci: "", annulla: "comando" },

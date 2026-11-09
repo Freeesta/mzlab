@@ -33,7 +33,7 @@ PLAN = {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "ty
                   {"id": "flt", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 3, "normalize": "sum"}},
                   {"id": "flt2", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_replicate_fraction": 0.5, "normalize": "istd", "istd_id": 1}}]}
 
-# two branches over the same indexes, one with a preset and a gap filling, the other with its own detection parameters: each table takes only its own line
+# two branches over the same indexes, one with a preset and two gap fillings, the other with its own detection parameters: each table takes only its own line
 BRANCHES = {"format": "mzflow/2", "inputs": PLAN["inputs"], "steps": [PLAN["steps"][0],
             {"id": "detb", "step": "features.detect@1", "in": {"index": ["idx.index"]}, "params": {"min_points": 3}},
             {"id": "deta", "step": "features.detect@1", "preset": "hr", "in": {"index": ["idx.index"]}},
@@ -41,7 +41,11 @@ BRANCHES = {"format": "mzflow/2", "inputs": PLAN["inputs"], "steps": [PLAN["step
             {"id": "alib", "step": "features.align@1", "in": {"peaks": ["detb.peaks"]}, "params": {"rt_gap": 0.05}},
             {"id": "gapa", "step": "features.gapfill@1", "in": {"table": "alia.table", "index": ["idx.index"]}},
             {"id": "csva", "step": "export.table_csv@1", "in": {"table": "gapa.table", "samples": "file:samples.json"}},
-            {"id": "csvb", "step": "export.table_csv@1", "in": {"table": "alib.table", "samples": "file:samples.json"}}]}
+            {"id": "csvb", "step": "export.table_csv@1", "in": {"table": "alib.table", "samples": "file:samples.json"}},
+            # a second filling of the same alignment, and the alignment read as it is: each its own table, as `flow run` writes one file per step
+            {"id": "gapc", "step": "features.gapfill@1", "in": {"table": "alia.table", "index": ["idx.index"]}, "params": {"rt_tol": 0.3}},
+            {"id": "csvc", "step": "export.table_csv@1", "in": {"table": "gapc.table", "samples": "file:samples.json"}},
+            {"id": "csvd", "step": "export.table_csv@1", "in": {"table": "alia.table", "samples": "file:samples.json"}}]}
 tmp = Path(tempfile.mkdtemp(prefix="flow_web_export_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)], check=True)
@@ -126,13 +130,45 @@ try:
         def branches():
             r = pg.evaluate(RUN, [BRANCHES, SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             kept = pg.evaluate(KEPT)
-            for name in ("csva.csv", "csvb.csv"):
+            for name in ("csva.csv", "csvb.csv", "csvc.csv", "csvd.csv"):
                 assert name in kept, (name, list(kept), [(e["passo"], e["stato"], e.get("modo")) for e in r["ev"] if e["passo"] in ("deta", "alia", "gapa", "csva")], pg.evaluate(NODES))
                 nat = (run / "out_b" / name).read_text(); web = kept[name]
                 at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
                 assert nat == web and len(nat) > 100, (name, "first difference at", at, len(nat), len(web), nat[max(0, at - 100):at + 100], web[max(0, at - 100):at + 100])
-            assert kept["csva.csv"] != kept["csvb.csv"]
-        step("a plan with two branches (a preset and a gap filling on one, other detection parameters on the other) gives the CSV of the native flow run for each", branches)
+            assert len({kept[n] for n in ("csva.csv", "csvb.csv", "csvc.csv", "csvd.csv")}) == 4, "every table is its own"
+        step("a plan with two branches (a preset and a gap filling on one, other detection parameters on the other) gives the CSV of the native flow run for each, also for two fillings of one alignment and the alignment read as it is", branches)
+
+        # the memory of the whole read of the .mzfeat (flow-live-jobs.js `wholeRead`): the kept view of `flt` is dropped so table.filter runs again, under a safe budget of 8 MB
+        DROP = """async () => { const msn = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow')).getDirectoryHandle('msn');
+          for await (const [n, h] of msn.entries()) if (n !== 'index.json' && JSON.parse(await (await h.getFile()).text()).name === 'flt.json') await msn.removeEntry(n); }"""
+        LEVELS = "(high) => { const r = window.MZLAB_RUST; window.__lv = [r.budgetMb, r.choice]; r.budgetMb = 0; r.choice = { ...(r.choice || {}), mb: 8, high_mb: high }; }"
+        UNDO = "() => { const r = window.MZLAB_RUST; [r.budgetMb, r.choice] = window.__lv; }"
+
+        def read_refused():
+            pg.evaluate(DROP); pg.evaluate(LEVELS, 8)
+            # another min_detected than the plan's: a refused job is not tried again by Run under the same plan (read_raised runs the plan itself)
+            other = json.loads(json.dumps(PLAN)); next(s for s in other["steps"] if s["id"] == "flt")["params"]["min_detected"] = 2
+            try: r = pg.evaluate(RUN, [other, SAMPLES])
+            finally: pg.evaluate(UNDO)
+            assert any(e["passo"] == "flt" and e["stato"] in ("error", "refused") for e in r["ev"]), r["ev"][-6:]
+            title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('flt')).title")
+            assert ("Reading the feature table of this step whole would need about" in title or "Leggere per intero la tabella delle feature" in title) and "8 MB" in title, title
+            assert "flt.json" not in pg.evaluate(KEPT)
+        step("past the budget and the high level, table.filter is refused before the .mzfeat is read, with the numbers of the read", read_refused)
+
+        def read_raised():
+            pg.evaluate(DROP); pg.evaluate(LEVELS, 4096)
+            try:
+                pg.evaluate("([plan, samples]) => { window.__run = (" + RUN + ")([plan, samples]); }", [PLAN, SAMPLES])
+                pg.wait_for_selector("#memmore", timeout=120000)
+                text = pg.inner_text("#memmore #mm-p")
+                assert "reading of the feature table" in text or "lettura della tabella delle feature" in text, text
+                pg.click("#memmore #mm-yes")
+                r = pg.evaluate("() => window.__run")
+            finally: pg.evaluate(UNDO)
+            assert not r.get("err"), (r.get("err"), r["ev"][-6:])
+            assert pg.evaluate(KEPT).get("flt.json") == (run / "out" / "flt.json").read_text()
+        step("past the safe budget and within the high one, Run asks once and the yes gives the view of the native flow run", read_raised)
 
         b.close()
 finally:

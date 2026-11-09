@@ -44,6 +44,8 @@ I18N.add("en", {
   "ctl.files.aria": "Files shown: {n} of {tot}",
   "ctl.smooth": "Smoothing",
   "ctl.range.clear": "Clear the range",
+  "ctl.range.num": "Write a positive number, or leave it empty for no limit: the previous values are back.",
+  "ctl.range.order": "«from» must be lower than «to»: the previous values are back.",
   "ctl.range.set": "set",
   "ctl.range.title": "m/z and time range shown",
   "ctl.range.note": "Empty = everything; the precursor picks the MS2 scans of one ion.",

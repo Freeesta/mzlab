@@ -17,9 +17,41 @@
 
   /** a failed or cancelled job reported to the scheduler: a cancelled one is not an error of the step @param {any} x @param {any} spec @param {any} inst @param {any} e */
   const fail = async (x, spec, inst, e) => {
+    if (e && e.held) return;   // held by `permission.memory` (wholeRead): already reported, it goes back in line
     const cancelled = e && e.key === "tpmine.feat.cancelled";
     if (!cancelled) x.errors.set(inst.id, e);
     await x.call("finished", { job: job(spec), result: { error_key: cancelled ? "err.flow.cancelled" : (e && e.key) || "error.featWorker", params: strings(e && e.params) } });
+  };
+
+  /** the safe working memory of a step, as the pool gives it (the level of the engine of the page) */
+  const safeMb = () => { const r = G.MZLAB_RUST; return r ? Number(r.budgetMb || (r.choice && r.choice.mb)) || 0 : 0; };
+  /** the memory a step that reads whole files works in: the high budget once the user said yes, else the safe one @param {any} x @param {any} spec */
+  const readBudget = (x, spec) => x.allowed.has(x.jk(spec)) ? kit().highMb() : safeMb();
+  /** a refusal of a whole read (`error.memoryBudget` of the .wasm or of `wholeRead`) that fits in the high budget: the job ends refused, waits for the user's yes (`permission.memory`, asked on Run,
+   * flow-live.js `answerAsks`) and goes back in line, as features.group does. Any other error is thrown. `claimed` false: the job was not started yet (the hold starts it, as the scheduler wants)
+   * @param {any} x @param {any} spec @param {any} err @param {boolean} [claimed] */
+  const holdRead = async (x, spec, err, claimed = true) => {
+    const q = (err && err.params) || {}, need = Number(q.stima_mb), high = kit().highMb(), jk = x.jk(spec), j = job(spec);
+    const key = err && (err.key === "error.memoryBudget" ? "error.featMemory" : err.key);
+    // a refusal with its phase is told by the notice of that phase (error.memoryBudgetFase.*), also when the pool handed it on as error.featMemory
+    if (key !== "error.featMemory" || x.allowed.has(jk) || !(need <= high && high > Number(q.budget_mb))) throw key === "error.featMemory" && q.fase ? Object.assign(err, { key: "error.memoryBudget" }) : err;
+    x.memAsk.set(jk, { spec, est: { mb: need }, err, fase: q.fase || "read" });
+    if (!claimed) await x.call("started", { job: j });
+    await x.call("finished", { job: j, result: { error_key: "error.featMemory", params: strings(q) } });
+    await x.call("block", { job: j, by: "permission.memory" });
+    await x.call("retry", { job: j });
+  };
+
+  /** the bytes of the OPFS files `paths`, read whole only when they fit the step's memory: the copy the worker reads and the copy the .wasm takes of each file, over the 16 MB of base of the engine's
+   * read estimate. Past the budget the job is held (`holdRead`; the error thrown is `held`) or refused with `error.memoryBudget`, phase `readTable`, and its numbers; nothing is read before the check
+   * @param {any} x @param {any} spec @param {any} p @param {string[]} paths @param {boolean} [claimed] */
+  const wholeRead = async (x, spec, p, paths, claimed = true) => {
+    const budget = readBudget(x, spec);
+    const bytes = (await Promise.all(paths.map(f => p.fs.size(f)))).reduce((a, b) => a + Math.max(0, b), 0), need = Math.ceil(16 + 2 * bytes / 1048576);
+    if (!budget || need <= budget) return Promise.all(paths.map(f => p.fs.read(f)));
+    const params = { fase: "readTable", stima_mb: need, budget_mb: budget, libero_mb: budget, eccesso_mb: need - budget };
+    await holdRead(x, spec, Object.assign(new Error("error.memoryBudget"), { key: "error.memoryBudget", params }), claimed);
+    throw Object.assign(new Error("held"), { held: true });
   };
 
   /** @param {any} x @param {any} spec @param {any} inst @param {() => Promise<void>} body the work after the claim */
@@ -98,11 +130,13 @@
   /** the refusal of the budget with the numbers of the phase, as the pipeline reports it @param {any} est @param {number} budget @param {string} [fase] */
   const refusal = (est, budget, fase = "align") => Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: { fase, stima_mb: est.mb, budget_mb: budget, libero_mb: budget } });
 
-  /** features.align, and features.gapfill when the table of the alignment was made with another recipe (the pool aligns and fills the gaps in one call): the estimate first; past the budget
+  /** features.align and features.gapfill, each into its own table (the pool aligns and fills the gaps in one call): the estimate first; past the budget
    * the job is blocked by `permission.memory` until the user agrees (flow-live.js asks on Run), past the high level it is refused with its numbers @param {any} x @param {any} spec @param {any} inst */
   const align = async (x, spec, inst) => {
-    const k = kit(), p = await k.getPool(), j = job(spec), recipe = await k.recipeOf(x.plan, x.registry, inst);
-    const al = x.alignOf(inst), alKey = al === inst ? spec.key : x.keys.get(x.jk({ instance: al.id, item: null }));
+    const k = kit(), p = await k.getPool(), j = job(spec), al = x.alignOf(inst);
+    // every table step keeps its own table; an alignment only gap fillings read makes the table of the first of them, which then finds it ready
+    const filled = x.onlyFilled(inst), into = filled ? x.fillers(inst)[0] : inst, recipe = await k.recipeOf(x.plan, x.registry, inst, filled);
+    const alKey = into === inst ? spec.key : x.keys.get(x.jk({ instance: into.id, item: null }));
     if (!alKey) { await fail(x, spec, inst, Object.assign(new Error("err.flow.lineage"), { key: "err.flow.lineage", params: { step: inst.step } })); return {}; }
     if (await fresh(p, alKey, recipe)) { await x.call("cached", { job: j }); return {}; }
     const up = x.upstream(al);
@@ -213,7 +247,7 @@
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     const t0 = performance.now();
     /** @type {any} */ let r = null;
-    try { r = F.webTp ? await F.webTp.post({ x, p, dir: DIR }, inst) : null; } catch (e) { await x.call("started", { job: j }); await fail(x, spec, inst, e); return {}; }
+    try { r = F.webTp ? await F.webTp.post({ x, p, dir: DIR }, inst) : null; } catch (e) { if (!(e && e.held)) { await x.call("started", { job: j }); await fail(x, spec, inst, e); } return {}; }
     if (!r) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
     return detached(x, spec, inst, async () => {
@@ -228,15 +262,15 @@
   const tpDig = async (x, spec, inst) => {
     const j = job(spec), k = kit(), p = await k.getPool(), key = await sha(spec.key), hit = await recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
-    const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
+    const t = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst, al = x.alignOf(t), alKey = x.tableKey(t), up = x.upstream(al);
     /** @type {any} */ let inp = null;
     try { inp = F.webTp ? await F.webTp.digInputs(x.S, inst) : null; } catch (e) { await x.call("started", { job: j }); await fail(x, spec, inst, e); return {}; }
     if (!inp || !alKey || !up.length || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      const table = await p.fs.read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(async u => p.fs.read(DIR + u.key + ".mzfeatf")));
-      const text = await p.digLr({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, samples: inp.samples, names: x.items.map((/** @type {any} */ i) => i.input), recipe: await k.recipeOf(x.plan, x.registry, al), settings: JSON.stringify(inst.params || {}), peaks, paths: up.map(u => u.path) });
+      const [table, ...peaks] = await wholeRead(x, spec, p, [DIR + alKey + ".mzfeat", ...up.map(u => DIR + u.key + ".mzfeatf")]);
+      const text = await p.digLr({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, samples: inp.samples, names: x.items.map((/** @type {any} */ i) => i.input), recipe: await k.recipeOf(x.plan, x.registry, t, false), settings: JSON.stringify(inst.params || {}), peaks, paths: up.map(u => u.path) });
       const r = { name: inst.id + ".dig.json", text };
       await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
@@ -250,7 +284,7 @@
     let up0 = x.inst(String(F.refs(inst, port)[0] || "").split(".")[0]), view = "";
     if (up0 && base(up0) === "table.filter") { const f = x.files.get(up0.id); if (!f) return null; view = f.text; up0 = x.inst(String(F.refs(up0, "table")[0] || "").split(".")[0]); }
     const isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    const alKey = isTable ? x.tableKey(up0) : null;
     if (!alKey || !await has(p, DIR + alKey + ".mzfeat")) return null;
     const read = async () => { const t = await p.fs.read(DIR + alKey + ".mzfeat"); return view ? (await p.ident("table", "flow_table_of_view", { table: t, view }, true)).bytes : t; };
     return { key: view ? alKey + "\n" + await sha(view) : alKey, read };
@@ -266,13 +300,13 @@
     // a `table.filter` view: the rows it keeps are exported (its text names the rules and the table it was made from)
     if (up0 && base(up0) === "table.filter" && x.files.get(up0.id)) { view = x.files.get(up0.id).text; up0 = x.inst(String(F.refs(up0, "table")[0] || "").split(".")[0]); }
     const isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null })), up = al ? x.upstream(al) : [];
+    const al = isTable ? x.alignOf(up0) : null, alKey = isTable ? x.tableKey(up0) : null, up = al ? x.upstream(al) : [];
     const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
     if (!alKey || !samples || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now(), csv = base(inst) === "export.table_csv", kind = csv ? ({ ...F.defaults(inst, F.stepOf(x.S.reg, inst)), ...(inst.params || {}) }).kind || "full" : "mztab";
     return detached(x, spec, inst, async () => {
-      const table = await p.fs.read(DIR + alKey + ".mzfeat"), hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", table))].map(b => b.toString(16).padStart(2, "0")).join("");
+      const [table] = await wholeRead(x, spec, p, [DIR + alKey + ".mzfeat"]), hex = [...new Uint8Array(await crypto.subtle.digest("SHA-256", table))].map(b => b.toString(16).padStart(2, "0")).join("");
       const r = { name: inst.id + (csv ? ".csv" : ".mzTab"), text: await p.tableFile({ table, samples, sha: hex, kind, view, paths: up.map((/** @type {any} */ u) => u.path) }) };
       await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
@@ -286,13 +320,13 @@
     const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
-    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    const alKey = isTable ? x.tableKey(up0) : null;
     const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
     if (!alKey || !samples || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst)), ...(inst.params || {}) });
     return detached(x, spec, inst, async () => {
-      const r = { name: inst.id + ".json", text: await p.tableView({ table: await p.fs.read(DIR + alKey + ".mzfeat"), samples, params }) };
+      const r = { name: inst.id + ".json", text: await p.tableView({ table: (await wholeRead(x, spec, p, [DIR + alKey + ".mzfeat"]))[0], samples, params }) };
       await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
@@ -304,22 +338,21 @@
   const tpLink = async (x, spec, inst) => {
     const j = job(spec), k = kit(), p = await k.getPool(), path = DIR + spec.key + ".tp.mzfeat";
     if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
-    const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
+    const t = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst, al = x.alignOf(t), alKey = x.tableKey(t), up = x.upstream(al);
     const inp = F.webTp ? await F.webTp.linkInputs(x, p, inst).catch(/** @param {any} e */ e => { x.errors.set(inst.id, e); return e; }) : null;
     if (inp instanceof Error) { await x.call("started", { job: j }); await fail(x, spec, inst, inp); return {}; }
     if (!inp || !alKey || !up.length) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      const read = async (/** @type {string} */ f) => p.fs.read(f), paths = up.map(u => u.path);
-      const table = await read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(u => read(DIR + u.key + ".mzfeatf")));
+      const paths = up.map(u => u.path), [table, ...peaks] = await wholeRead(x, spec, p, [DIR + alKey + ".mzfeat", ...up.map(u => DIR + u.key + ".mzfeatf")]);
       const given = (inst.params || {}).polarity, step = F.stepOf(x.S.reg, inst);
-      const ev = await p.linkEvidence({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, hypotheses: inp.hypotheses, samples: inp.samples, recipe: await k.recipeOf(x.plan, x.registry, al), polarity: given == null ? NaN : Number(given), budgetMb: budgetMb(), peaks, paths });
+      const ev = await p.linkEvidence({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, hypotheses: inp.hypotheses, samples: inp.samples, recipe: await k.recipeOf(x.plan, x.registry, t, false), polarity: given == null ? NaN : Number(given), budgetMb: budgetMb(), peaks, paths });
       const out = await p.linkInterp({ table: ev.table, parent: ev.parent, registry: ev.registry, polarity: ev.polarity, params: JSON.stringify({ ...F.defaults(inst, step), ...(inst.params || {}) }), infusion: ev.infusion, paths });
       await p.fs.write(path, out.slice());
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
     });
   };
 
-  F.liveJobs = { msnKey, tableOf, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "features.group": (...a) => F.webGroup.run(...a), "table.stats": (...a) => F.webStat.run(...a), "table.pca": (...a) => F.webStat.run(...a), "table.kmd": (...a) => F.webStat.run(...a), "structure.render": (...a) => F.webStruct.run(...a), "structure.reactivity": (...a) => F.webStruct.run(...a), "msn.figure": (...a) => F.webStruct.run(...a), "features.estimate": (...a) => F.webEstimate.run(...a), "chrom.transitions": (...a) => F.webTransitions.run(...a), "export.annotations": (...a) => F.webExportAnnot.run(...a), "export.inclusion": (...a) => F.webInclusion.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings, "qc.run_order": (...a) => F.webQcReport.runOrder(...a), "report.methods": (...a) => F.webQcReport.methods(...a) };
+  F.liveJobs = { msnKey, tableOf, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "features.group": (...a) => F.webGroup.run(...a), "table.stats": (...a) => F.webStat.run(...a), "table.pca": (...a) => F.webStat.run(...a), "table.kmd": (...a) => F.webStat.run(...a), "structure.render": (...a) => F.webStruct.run(...a), "structure.reactivity": (...a) => F.webStruct.run(...a), "msn.figure": (...a) => F.webStruct.run(...a), "features.estimate": (...a) => F.webEstimate.run(...a), "chrom.transitions": (...a) => F.webTransitions.run(...a), "export.annotations": (...a) => F.webExportAnnot.run(...a), "export.inclusion": (...a) => F.webInclusion.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, wholeRead, readBudget, holdRead, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings, "qc.run_order": (...a) => F.webQcReport.runOrder(...a), "report.methods": (...a) => F.webQcReport.methods(...a) };
 })();

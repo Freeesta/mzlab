@@ -6,6 +6,7 @@
 use mzlab_core::baseline::Baseline;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
+use mzlab_core::mzml_estimate;
 
 use super::table::{parse, Row};
 use super::traces::{channels, Channel};
@@ -343,15 +344,23 @@ fn candidates_text(rows: &[Row], samples: &[(String, Vec<Channel>)], s: &Setting
     out
 }
 
-/// The text of `chrom.transitions@1` for the table `table` (its CSV) over the mzML `files` (name, bytes) in their order.
+/// The text of `chrom.transitions@1` for the table `table` (its CSV) over the mzML `files` (name, bytes) in their order. Before each file is read its
+/// decoding (`mzml_estimate`, with every file, the copy the reader takes and the channels already read in memory) must fit in `cap` bytes, else
+/// `error.memoryBudget` (phase `read`).
 pub fn transitions_text(
     params: &[(String, Value)],
     table: &str,
     files: &[(&str, &[u8])],
+    cap: usize,
 ) -> Result<String> {
-    let mut samples = Vec::new();
+    let held: usize = files.iter().map(|(_, b)| b.len()).sum();
+    let (mut samples, mut kept) = (Vec::new(), 0usize);
     for (name, bytes) in files {
-        samples.push((name.to_string(), channels(bytes)?));
+        let x = mzml_estimate::inputs(bytes);
+        mzml_estimate::check(mzml_estimate::bytes(&x, held + bytes.len() + kept), cap)?;
+        let c = channels(bytes)?;
+        kept += c.iter().map(|c| 16 * c.t.len()).sum::<usize>();
+        samples.push((name.to_string(), c));
     }
     channels_text(params, table, &samples)
 }
@@ -395,12 +404,13 @@ pub fn channels_text(
 }
 
 /// `transitions_text` for the browser (`flowtab`): `params_json` is the step's parameters merged with its defaults, the files are packed as `manifest`
-/// (JSON `[{"name","len"}]`, in the order of the plan) over their concatenated bytes `blob`.
+/// (JSON `[{"name","len"}]`, in the order of the plan) over their concatenated bytes `blob`; `cap` as in `transitions_text`.
 pub fn transitions_packed(
     params_json: &str,
     table: &str,
     manifest: &str,
     blob: &[u8],
+    cap: usize,
 ) -> Result<String> {
     let params = crate::flow_ms2::json_params(params_json)?;
     let bad = || Error::new("err.transitions.manifest");
@@ -412,5 +422,5 @@ pub fn transitions_packed(
         files.push((name, blob.get(at..at + len).ok_or_else(bad)?));
         at += len;
     }
-    transitions_text(&params, table, &files)
+    transitions_text(&params, table, &files, cap)
 }
