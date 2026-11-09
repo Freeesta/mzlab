@@ -52,3 +52,6 @@ fn a_session_runs_through_the_route() {
     route("drop", "{}").unwrap();
     assert_eq!(route("jobs", "{}").unwrap_err().key, "err.flow.sched");
 }
+
+#[path = "sched_key_tests.rs"]
+mod key;

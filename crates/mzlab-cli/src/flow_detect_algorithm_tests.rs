@@ -1,4 +1,5 @@
-//! The `algorithm` slot of `features.detect` on the synthetic fixture of `flow_run_tests`: the parameters of the trace stage are common to every algorithm.
+//! The `algorithm` slot of `features.detect` on the synthetic fixture of `flow_run_tests`: the parameters of the trace stage are common to every algorithm; `branches`: the recipe
+//! text of the browser pool over a plan with two branches.
 
 use mzlab_core::budget::sha256_hex;
 
@@ -113,3 +114,5 @@ fn the_trace_parameters_can_be_set_with_every_algorithm() {
     }
     run("mt_strict", &["det.min_points=40"]);
 }
+
+mod branches;

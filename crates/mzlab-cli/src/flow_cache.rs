@@ -121,7 +121,7 @@ impl Cache {
             &inputs,
             &who,
             algorithm.as_deref(),
-            &job.resolved.params_sha256(),
+            &job.resolved.run_sha256(),
         )
     }
 

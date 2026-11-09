@@ -5,7 +5,7 @@
 use crate::run::{recipe_for_estimated, recipe_of_layers, Layer};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::sched::{JobId, Sched};
-use mzlab_core::flow::{parse, value_text, Ctx, Instance, Job, Plan};
+use mzlab_core::flow::{parse, value_text, Ctx, Instance, Job, Plan, Ref};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{Out, Value};
 use mzlab_core::step::Step;
@@ -86,26 +86,70 @@ pub struct Meta {
 
 const LAYERED: [&str; 3] = ["features.detect", "features.align", "features.gapfill"];
 
-/// The parameters the feature steps in the line of `inst` wrote before it, in the order of the plan: what the lineage of its files carries in `flow run`.
-fn upstream(ctx: &Ctx, plan: &Plan, inst: &Instance) -> Vec<Layer> {
-    let mut line: Vec<&str> = Vec::new();
-    let mut todo = inst.sources();
-    while let Some(id) = todo.pop() {
-        if let Some(i) = plan.steps.iter().find(|s| s.id == id)
-            && !line.contains(&id)
-        {
-            line.push(id);
-            todo.extend(i.sources());
-        }
+/// The layers `flow run` carries with the output of `inst` (its lineage, `flow_base.rs`): a detection its own; an alignment those of its first source, then its
+/// own; a gap filling those of its table, then its own; any other step none. Only the line of `inst` counts, so a second branch of the plan never leaks in.
+fn carried(ctx: &Ctx, plan: &Plan, inst: &Instance, depth: usize) -> Vec<Layer> {
+    if !LAYERED.contains(&inst.step.as_str()) || depth > plan.steps.len() {
+        return Vec::new();
     }
-    plan.steps
+    let port = match inst.step.as_str() {
+        "features.align" => "peaks",
+        "features.gapfill" => "table",
+        _ => "",
+    };
+    let first = inst
+        .ins
         .iter()
-        .filter(|s| line.contains(&s.id.as_str()) && LAYERED.contains(&s.step.as_str()))
-        .map(|s| {
-            let job = ctx.job(&JobId::new(&s.id, None), Vec::new());
-            (job.step.id.to_string(), written(&job))
-        })
-        .collect()
+        .filter(|(p, _)| p == port)
+        .flat_map(|(_, refs)| refs)
+        .find_map(|r| match r {
+            Ref::Out { instance, .. } => plan.steps.iter().find(|s| s.id == *instance),
+            Ref::File(_) => None,
+        });
+    let mut layers = first.map_or_else(Vec::new, |s| carried(ctx, plan, s, depth + 1));
+    let job = ctx.job(&JobId::new(&inst.id, None), Vec::new());
+    layers.push((job.step.id.to_string(), written(&job)));
+    layers
+}
+
+/// The layers of the line of `inst` before its own: the recipe `flow run` rebuilds for it from the lineage of what it reads.
+fn upstream(ctx: &Ctx, plan: &Plan, inst: &Instance) -> Vec<Layer> {
+    let mut layers = carried(ctx, plan, inst, 0);
+    layers.pop();
+    layers
+}
+
+/// The recipe text the browser pool runs `instance` with (`{"fill": bool, "layers": [{"step", "params"}]}`), the recipe `flow run` builds for that job. The
+/// browser keeps one table per alignment, aligned and filled in one call: with `filled`, an alignment a gap filling reads takes the recipe of the first such filling.
+pub fn job_recipe_text(plan_text: &[u8], registry: &[Step], instance: &str, filled: bool) -> Result<String> {
+    let plan = parse(plan_text)?;
+    let sched = Sched::new(&plan, registry, env!("CARGO_PKG_VERSION"), &[]);
+    let ctx = Ctx::new(&plan, registry, &sched)?;
+    let inst = plan
+        .steps
+        .iter()
+        .find(|s| s.id == instance)
+        .ok_or_else(|| Error::new("err.flow.lineage"))?;
+    let reads = |s: &&Instance| {
+        s.step == "features.gapfill"
+            && s.ins.iter().any(|(p, refs)| {
+                p == "table" && refs.iter().any(|r| matches!(r, Ref::Out { instance, .. } if *instance == inst.id))
+            })
+    };
+    let target = match inst.step.as_str() {
+        "features.align" if filled => plan.steps.iter().find(reads).unwrap_or(inst),
+        _ => inst,
+    };
+    let mut o = Out::default();
+    o.raw("{\"fill\":")
+        .raw(if target.step == "features.gapfill" { "true" } else { "false" })
+        .raw(",\"layers\":[");
+    for (i, (step, params)) in carried(&ctx, &plan, target, 0).iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).raw("{\"step\":").str(step);
+        o.raw(",\"params\":").raw(&value_text(&Value::Obj(params.clone()))).raw("}");
+    }
+    o.raw("]}");
+    Ok(o.0.clone())
 }
 
 /// The meta of `instance` of the plan: `own` is the index of the file a detection is about, `first` the first index of the series, `stored` the `.mzfeatf` an
@@ -193,6 +237,21 @@ pub fn meta_json(m: &Meta) -> String {
         o.raw(",\"preset\":").str(p);
     }
     o.raw("}").0.clone()
+}
+
+/// The recipe text of `instance` for the pool (`job_recipe_text`): `plan` is the `mzflow/2` text, `registry` the `step/1` array.
+#[cfg(feature = "detect")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn flow_job_recipe(
+    plan: &str,
+    registry: &str,
+    instance: &str,
+    filled: bool,
+) -> std::result::Result<String, wasm_bindgen::JsValue> {
+    let reg = mzlab_core::json::parse(registry.as_bytes())
+        .and_then(|v| mzlab_core::step::registry_from_value(&v))
+        .map_err(crate::js_err)?;
+    job_recipe_text(plan.as_bytes(), &reg, instance, filled).map_err(crate::js_err)
 }
 
 #[cfg(feature = "detect")]
