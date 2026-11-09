@@ -107,13 +107,22 @@ try:
         step("keyboard: Tab reaches the visible controls, each with a visible focus indicator", tab_reach)
         def no_trap():
             # Tab and Shift+Tab leave each chart's canvas (and the panel itself within a few presses); Escape on a canvas does not pin the focus.
-            # The last panel's last control is the page's last tab stop: past it the focus goes to the browser (the document loses it), which is leaving too;
-            # Chromium then wraps to the top of the page, Firefox and WebKit stay in the browser
+            # The last panel's last control is the page's last tab stop: past it the focus goes to the browser (document.hasFocus() false), which is
+            # leaving too. The trail of each press ([document focused, element, inside the panel]) is printed, so a red shows where the focus went
             def leaves(pid, key):
+                trail = []
                 for i in range(60):
                     pg.keyboard.press(key)
-                    if pg.evaluate(f"(() => {{ const a = document.activeElement, p = document.querySelector('[data-pid=\"{pid}\"]') || E.panels.find(q => q.id === {pid}).el; return !document.hasFocus() || !!a && a !== document.body && !p.contains(a); }})()"): return True
-                return False
+                    st = pg.evaluate(f"(() => {{ const a = document.activeElement, p = document.querySelector('[data-pid=\"{pid}\"]') || E.panels.find(q => q.id === {pid}).el; return [document.hasFocus(), a ? a.tagName + '.' + String(a.className).split(' ')[0] : '', !!a && p.contains(a)]; }})()")
+                    trail.append(st)
+                    if not st[0] or st[1] and not st[1].startswith("BODY") and not st[2]:
+                        print("FOCUS-TRAIL", pid, key, trail); return True
+                print("FOCUS-TRAIL", pid, key, trail[:12]); return False
+            # a real trap (Tab sent back to the canvas inside the panel) must still be caught
+            first = pg.evaluate("E.panels.find(p => p.el && p.el.offsetParent && p.el.querySelector('canvas[tabindex=\"0\"]')).id")
+            pg.evaluate(f"(() => {{ const p = E.panels.find(q => q.id === {first}).el; p._trap = e => {{ if (e.key === 'Tab') {{ e.preventDefault(); p.querySelector('canvas[tabindex=\"0\"]').focus(); }} }}; p.addEventListener('keydown', p._trap, true); p.querySelector('canvas[tabindex=\"0\"]').focus(); }})()")
+            assert not leaves(first, "Tab"), "a focus trap inside the panel is not detected"
+            pg.evaluate(f"(() => {{ const p = E.panels.find(q => q.id === {first}).el; p.removeEventListener('keydown', p._trap, true); }})()")
             def charts():
                 return pg.evaluate("E.panels.filter(p => p.el && p.el.isConnected && p.el.offsetParent && p.el.querySelector('canvas[tabindex=\"0\"]')).map(p => [p.id, p.type])")
             pg.evaluate("setTab('full')"); wait_for_js(pg, "E.tab === 'full'")
