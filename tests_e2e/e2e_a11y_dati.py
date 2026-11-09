@@ -106,11 +106,13 @@ try:
             assert not bad, "no visible focus indicator on: " + ", ".join(bad[:12])
         step("keyboard: Tab reaches the visible controls, each with a visible focus indicator", tab_reach)
         def no_trap():
-            # Tab and Shift+Tab leave each chart's canvas (and the panel itself within a few presses); Escape on a canvas does not pin the focus
+            # Tab and Shift+Tab leave each chart's canvas (and the panel itself within a few presses); Escape on a canvas does not pin the focus.
+            # The last panel's last control is the page's last tab stop: past it the focus goes to the browser (the document loses it), which is leaving too;
+            # Chromium then wraps to the top of the page, Firefox and WebKit stay in the browser
             def leaves(pid, key):
                 for i in range(60):
                     pg.keyboard.press(key)
-                    if pg.evaluate(f"(() => {{ const a = document.activeElement, p = document.querySelector('[data-pid=\"{pid}\"]') || E.panels.find(q => q.id === {pid}).el; return !!a && a !== document.body && !p.contains(a); }})()"): return True
+                    if pg.evaluate(f"(() => {{ const a = document.activeElement, p = document.querySelector('[data-pid=\"{pid}\"]') || E.panels.find(q => q.id === {pid}).el; return !document.hasFocus() || !!a && a !== document.body && !p.contains(a); }})()"): return True
                 return False
             def charts():
                 return pg.evaluate("E.panels.filter(p => p.el && p.el.isConnected && p.el.offsetParent && p.el.querySelector('canvas[tabindex=\"0\"]')).map(p => [p.id, p.type])")
