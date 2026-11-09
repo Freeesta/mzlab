@@ -65,7 +65,7 @@
     const id = ls.length > 1 ? "g" + Math.round(massOf(ls[0].f)) : ls[0].f, open = NL.open.has(id), m = massOf(ls[0].f), rad = ls.some(l => l.rad);
     const hit = ls.some(l => o.hit.has(l.f)), exact = resHr() ? `<small class="muted" title="${I18N.t("tbl.loss.exactTitle")}">${m.toFixed(4)}</small>` : "";
     const label = ls.length > 1 ? `${I18N.t("tbl.loss.sameShort")}${Math.round(m) === 80 ? " · " + I18N.t("tbl.loss.checkM2") : ""}` : H(I18N.t(ls[0].short));
-    return `<div class="nlr${hit ? " hit" : ""}" data-f="${id}"><button type="button" class="nlrow" data-d="${id}" aria-expanded="${open}" aria-controls="nld-${id}"><span class="nlm">${Math.round(m)}${exact}</span><span class="nlf">${ls.map(l => `<b>${fl(l.f)}</b>`).join('<span class="nlsep"> · </span>')}</span><span class="nls">${label}</span>${rad ? `<span class="nlrd" role="img" aria-label="${H(I18N.t("loss.radShort"))}" title="${H(I18N.t("loss.radShort"))}"></span>` : ""}${NL_CHEV}</button>
+    return `<div class="nlr${hit ? " hit" : ""}" data-f="${id}"><button type="button" class="nlrow" title="${H(I18N.t("cq.loss.tip"))}" data-d="${id}" aria-expanded="${open}" aria-controls="nld-${id}"><span class="nlm">${Math.round(m)}${exact}</span><span class="nlf">${ls.map(l => `<b>${fl(l.f)}</b>`).join('<span class="nlsep"> · </span>')}</span><span class="nls">${label}</span>${rad ? `<span class="nlrd" role="img" aria-label="${H(I18N.t("loss.radShort"))}" title="${H(I18N.t("loss.radShort"))}"></span>` : ""}${NL_CHEV}</button>
       <div class="nldet" id="nld-${id}"${open ? "" : " hidden"}>${ls.map(lossDet).join("")}</div></div>`;
   };
   // the polarity is the shared choice of «what can this number be?» (calc-qui.js: ESI+, ESI− or both)
@@ -81,7 +81,7 @@
   function lossTab(shared) {
     if (shared) return `<div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
     return `<div class="nlbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></div></div>
-      <div id="nl-ctl"></div><div class="cq-links"><button type="button" class="cq-link" id="nl-to-ad" hidden>${I18N.t("cq.link.ad")}</button></div><div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
+      <div id="nl-ctl"></div><div class="cq-links"><button type="button" class="cq-link" id="nl-to-ad" title="${H(I18N.t("cq.link.ad.tip"))}" hidden>${I18N.t("cq.link.ad")}</button></div><div id="nl-res" aria-live="polite"></div><div id="nl-list">${lossList()}</div>`;
   }
   // root is the host of the Neutral losses tab (any DOM container): its descendants are queried by selector, hence any
   function bindLoss(/** @type {any} */ root, /** @type {(id: string) => void} */ show, shared = false) {
