@@ -1,7 +1,7 @@
 // @ts-check
-// The «m/z from / to» fields of a low-resolution XIC header (pannelli.js ctl): ABSOLUTE edges, read when the focus leaves the pair (Enter, or a click
-// elsewhere), so the window can move to another mass whichever edge is written first. A refused pair (not a positive number, from >= to) brings the old
-// edges back with a calm note under the header; an accepted one is undoable (xic.traces) and saved with the session.
+// The «from / to» pairs of the panel headers (pannelli.js ctl): the «m/z» edges of a low-resolution XIC and the m/z (nm of a PDA trace) and RT of the
+// «Range» popover. A pair is read when the focus leaves it (Enter, or a click elsewhere), so either end can be written first; a refused pair (not a
+// number, from above to) brings the old values back with a calm note; an accepted one is undoable and saved, and the focus stays where it went.
 (() => {
   /** @param {any} p @param {HTMLElement} c @param {HTMLInputElement} x */
   function wire(p, c, x) {
@@ -16,14 +16,43 @@
     });
     x.onchange = go; x.onblur = go;
   }
-  /** a short status line under the header of panel p; it goes away by itself @param {any} p @param {string} msg */
-  function note(p, msg) {
-    let m = /** @type {HTMLElement | null} */ (p.el.querySelector(".xr-msg"));
-    if (!m) { m = document.createElement("div"); m.className = "xr-msg"; m.setAttribute("role", "status"); p.el.appendChild(m); }
+  /** the m/z (or nm) and RT pairs of the «Range» popover: empty = no limit; RT may start at 0 @param {any} p @param {HTMLElement} c @param {HTMLInputElement} x */
+  function range(p, c, x) {
+    const rt = x.dataset.o === "rt0" || x.dataset.o === "rt1", ks = rt ? ["rt0", "rt1"] : ["mz0", "mz1"], pda = !rt && p.kind === "pda";
+    const go = () => setTimeout(() => {
+      const q = /** @type {HTMLInputElement[]} */ (ks.map(k => c.querySelector(`[data-o="${k}"]`))), a = /** @type {any} */ (document.activeElement);
+      if (!x.isConnected || q.some(i => !i) || (q.includes(a) && a !== x) || q.every(i => i.value === i.defaultValue)) return;   // the other end has the focus: wait for it
+      const rd = (/** @type {string} */ v) => { if (!v.trim()) return null; const n = numIt(v); return isFinite(n) && (rt ? n >= 0 : n > 0) ? n : NaN; };
+      let [lo, hi] = q.map(i => rd(i.value)), bad = Number.isNaN(lo) || Number.isNaN(hi) ? "num" : "";
+      if (!bad && rt && (lo != null || hi != null)) { const A = p._a || {}; lo ??= A.xmin ?? A.x0; hi ??= A.xmax ?? A.x1; }   // one RT end: the other is the edge of the data
+      if (!bad && lo != null && hi != null && (pda ? hi < lo : hi <= lo)) bad = "order";   // one wavelength is a range of its own
+      if (bad) { q.forEach(i => { i.value = i.defaultValue; }); note(p, I18N.t(bad === "num" ? "ctl.range.num" : "ctl.range.order"), /** @type {HTMLElement} */ (x.closest(".cpop"))); return; }
+      keepFocus(p, () => {
+        if (rt) { pushZh(p); if (lo == null) { p.zoom = null; p.zoomY = null; draw(p); } else zoomTo(p, lo, hi); }
+        else { const r2 = (/** @type {number | null} */ v) => v == null ? null : Math.round(v * 100) / 100; COMANDI.fai("panel.source", p, () => { p.mz0 = r2(lo); p.mz1 = r2(hi); ctl(p); }); draw(p); }
+        uiSave();
+      });
+      q.forEach(i => { i.defaultValue = i.value; });   // an RT zoom keeps these fields: the pair is applied, a later blur must not apply it again
+    });
+    x.onchange = go; x.onblur = go;
+  }
+  /** runs fn, which may draw the header again, and gives the focus back to the same control of the new header @param {any} p @param {() => void} fn */
+  function keepFocus(p, fn) {
+    const a = /** @type {HTMLElement | null} */ (document.activeElement), d = a && p.el.contains(a) ? a.dataset : null;
+    const sel = d?.o ? `[data-o="${d.o}"]` : d?.a ? `[data-a="${d.a}"]` : "";
+    fn();
+    if (sel && a && !a.isConnected) /** @type {HTMLElement | null} */ (p.el.querySelector(sel))?.focus();
+  }
+  /** a short status line under the header of panel p (inside the popover when host is one); it goes away by itself @param {any} p @param {string} msg @param {HTMLElement | null} [host] */
+  function note(p, msg, host) {
+    const box = host || p.el;
+    let m = /** @type {HTMLElement | null} */ (box.querySelector(".xr-msg"));
+    if (!m) { m = document.createElement("div"); m.className = host ? "xr-msg xr-in" : "xr-msg"; m.setAttribute("role", "status"); box.appendChild(m); }
     const hd = /** @type {HTMLElement} */ (p.el.querySelector(".hd")), el = m;
-    el.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px"; el.hidden = false; el.textContent = "";
+    if (!host) el.style.top = hd.offsetTop + hd.offsetHeight + 2 + "px";
+    el.hidden = false; el.textContent = "";
     setTimeout(() => { el.textContent = msg; }, 20);   // set after the clear: a screen reader announces every refusal
     clearTimeout(p._xrNote); p._xrNote = setTimeout(() => { el.hidden = true; }, 6000);
   }
-  /** @type {any} */ (window).XICBORDI = { wire };
+  /** @type {any} */ (window).XICBORDI = { wire, range };
 })();
