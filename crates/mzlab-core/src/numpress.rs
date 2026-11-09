@@ -15,6 +15,16 @@ pub enum Np {
     Slof,
 }
 
+/// The six accessions of a numpress array, alone and followed by zlib: the engine refuses an array that carries any of them.
+pub const ACCESSIONS: [&str; 6] = [
+    "MS:1002312",
+    "MS:1002313",
+    "MS:1002314",
+    "MS:1002746",
+    "MS:1002747",
+    "MS:1002748",
+];
+
 /// The codec an accession names and whether zlib follows it: `Some((codec, zlib))` for MS:1002312/13/14 and MS:1002746/47/48.
 pub fn of_accession(acc: &str) -> Option<(Np, bool)> {
     Some(match acc {
