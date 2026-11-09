@@ -64,6 +64,18 @@ try:
             assert old["area"] == old["integ"], old                                  # the line between the edges: the JS number of always
             assert not {"bm", "bl", "below", "lvl"} & set(old["keys"]), old["keys"]  # a record without a mode saves the fields it had
         step("a record without a mode keeps its area and its fields", unchanged)
+        def dialog_keys():
+            pg.evaluate(f"(()=>{{const p={PN};p.isel={IT}.id;setActive(p);p.cv.focus()}})()")
+            pg.keyboard.press("b"); pg.wait_for_selector("#bigdlg[open] input[name=ib-m]")
+            name = pg.evaluate("(()=>{const d=Q('#bigdlg'),id=d.getAttribute('aria-labelledby');return id&&document.getElementById(id)?document.getElementById(id).textContent:''})()")
+            assert name == pg.evaluate("I18N.t('int.base.title')"), f"the dialog has no accessible name: {name!r}"
+            pg.check("#bigdlg input[name=ib-m][value=line]"); pg.fill("[data-ib='0']", "abc"); pg.locator("#ib-ok").focus(); pg.keyboard.press("Enter")
+            want = pg.evaluate("I18N.t('int.base.bad')")
+            wait_for_js(pg, f"(()=>{{const m=Q('#bigdlg [role=status]');return !!m&&m.textContent==={want!r}&&!!m.offsetParent}})()", 5000)   # inside the modal: a toast stays behind it
+            assert pg.evaluate("Q('#bigdlg').open") and pg.evaluate(f"({IT}.bm||'edges')") == "edges"
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!Q('#bigdlg').open")
+            assert pg.evaluate(f"document.activeElement==={PN}.cv"), "Esc did not give the focus back to the chart"
+        step("keyboard: B opens a named dialog, four bad numbers are refused with a status line in the dialog, Esc gives the focus back", dialog_keys)
         def three():
             res["edges"] = old["area"]
             z = mode(pg, "zero"); e = engine(pg, 1)

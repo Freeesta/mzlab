@@ -710,9 +710,9 @@ function ctl(/** @type {Pannello} */ p) {
     + corrInfo(p)
     + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" inputmode="decimal" autocomplete="off" data-num data-min="0.2" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
-  // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover; the button is accented when one of them is set, and a «×» clears them
+  // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover, next to its button in the tab order; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
-  const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
+  const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button><span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}</span>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
   const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${p._trs.map((/** @type {Bag} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</select>` : "";
   const canBtn = p.type === "chrom" ? "" : window.CANALI?.html(p) ?? "";
@@ -777,6 +777,9 @@ function ctl(/** @type {Pannello} */ p) {
   const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const op = cpP.offsetParent || p.el, pr = op.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, op.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
   const parToggle = (/** @type {boolean} */ on) => { p._parOpen = on; if (cpB) cpB.setAttribute("aria-expanded", String(!!on)); if (cpP) { cpP.hidden = !on; if (on) { const q = cpP.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'); if (q.length === 2) { q[0].value = p.zoom ? fmt2(p.zoom[0]) : ""; q[1].value = p.zoom ? fmt2(p.zoom[1]) : ""; } } parPlace(); } };
   if (cpB) { cpB.onclick = () => parToggle(!p._parOpen); parPlace();
+    /** @type {HTMLElement} */ (cpB.parentElement).onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Esc: the popover closes, a half-written pair is dropped, the focus goes back to its button
+      if (e.key !== "Escape" || !p._parOpen) return; e.stopPropagation();
+      cpP?.querySelectorAll("input").forEach((/** @type {HTMLInputElement} */ i) => { i.value = i.defaultValue; }); parToggle(false); cpB.focus(); };
     const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { COMANDI.fai("panel.source", p, () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; p.zoom = null; p.zoomY = null; }); p._parOpen = false; ctl(p); draw(p); uiSave(); };
     if (!p._parAway) { p._parAway = (/** @type {Event} */ e) => { if (p._parOpen && p.el.isConnected && !/** @type {Element} */ (e.target).closest(".cpop") && !/** @type {Element} */ (e.target).closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("pointerdown", p._parAway, { capture: true, signal: p._ac.signal }); } }
   c.querySelectorAll("[data-o]").forEach((/** @type {HTMLInputElement} */ x) => {
@@ -786,10 +789,10 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "gdelay") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); }); draw(p); uiSave(); };
     else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); COMANDI.fai("spec.display", p, () => { p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; }); draw(p); uiSave(); };
     else if (k === "pdaAlign") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.pdaAlign = x.checked; }); draw(p); uiSave(); };
-    else if (k === "xlo" || k === "xhi") window.XICBORDI?.wire(p, c, x);  // xic-bordi.js: absolute m/z edges
+    else if (k === "xlo" || k === "xhi") window.XICBORDI?.wire(p, x);  // xic-bordi.js: absolute m/z edges
     else if (k === "view") x.onclick = () => MAPPA.open3d(p, x);  // mappa.js: the 3D viewer (mappa3d.js), a modal over the page
     else if (k === "split") x.onclick = () => splitPanel(p);
-    else if (k === "rt0" || k === "rt1" || k === "mz0" || k === "mz1") window.XICBORDI?.range(p, c, x);  // xic-bordi.js: the pairs of the «Range» popover
+    else if (k === "rt0" || k === "rt1" || k === "mz0" || k === "mz1") window.XICBORDI?.range(p, x);  // xic-bordi.js: the pairs of the «Range» popover
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
     else if (k === "corr") corrWire(x, (/** @type {string} */ v) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
     else if (k === "bkg") corrWire(x, (/** @type {string} */ v) => setFondo(p, v));
