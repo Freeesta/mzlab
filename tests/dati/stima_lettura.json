@@ -1,0 +1,10 @@
+{
+  "about": "Synthetic HR file of the read estimate (mzlab_core::mzml_estimate) of the steps that decode a whole mzML: the parity tests of the .wasm (flow_ms2), the CLI (flow run) and the Rust route build it with crates/mzlab-feat-wasm/tests/lettura_comune and check spectra.ms2 at each budget: refused with error.memoryBudget (phase read) and the estimate, or the MGF.",
+  "scans": 400,
+  "points": 2000,
+  "mb": 41,
+  "cases": [
+    {"budget_mb": 24, "via": "refused"},
+    {"budget_mb": 4096, "via": "memory"}
+  ]
+}

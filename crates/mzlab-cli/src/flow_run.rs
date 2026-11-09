@@ -303,6 +303,10 @@ pub(crate) fn memory_advice(
             "\n    detecting this file needs about {est} MB and the budget is {cap} MB: give more working memory with --budget-mb {est}, or detect less of \
              it with --set {instance}.rt_range=A,B or a higher --set {instance}.floor="
         ),
+        (Some("read"), Some(est), Some(cap)) => format!(
+            "\n    reading the mzML files of this step whole needs about {est} MB and the budget is {cap} MB: give more working memory with --budget-mb {est}, \
+             or give the step fewer files"
+        ),
         (Some(f), Some(est), Some(cap)) => format!(
             "\n    the {f} phase needs about {est} MB and the budget is {cap} MB: give more working memory with --budget-mb N, or run fewer files at once"
         ),

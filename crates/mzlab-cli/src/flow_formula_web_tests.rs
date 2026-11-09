@@ -57,15 +57,23 @@ fn formulas_and_levels_in_the_libraries_give_the_bytes_of_the_cli() {
     let table = std::fs::read(dir.join("work/t.csv")).unwrap();
     let p1 = json_params(&resolved(PLAN, "f1")).unwrap();
     assert_eq!(
-        ms1_text(&p1, &table, &[("caf.mzML", &mzml)]).unwrap(),
+        ms1_text(&p1, &table, &[("caf.mzML", &mzml)], usize::MAX).unwrap(),
         made("f1.json")
     );
-    let rows = ms1_rows(&p1, &table, &["caf.mzML"], (0, &mzml)).unwrap();
+    let rows = ms1_rows(&p1, &table, &["caf.mzML"], (0, &mzml), (0, usize::MAX)).unwrap();
     let joined: Vec<String> = rows.into_iter().map(|r| r.1).collect();
     assert_eq!(ms1_join(&joined), made("f1.json"));
     // a feature the file does not hold is refused as the CLI does
-    let e = ms1_text(&p1, &table, &[]).unwrap_err();
+    let e = ms1_text(&p1, &table, &[], usize::MAX).unwrap_err();
     assert_eq!(e.key, "err.flow.formula.file");
+    // below the read estimate both routes refuse the same way, before the file is decoded
+    use mzlab_core::mzml_estimate::{bytes, inputs};
+    let cap = bytes(&inputs(&mzml), mzml.len()) - (2 << 20);
+    let cli = ms1_text(&p1, &table, &[("caf.mzML", &mzml)], cap).unwrap_err();
+    let web = ms1_rows(&p1, &table, &["caf.mzML"], (0, &mzml), (mzml.len(), cap)).unwrap_err();
+    assert_eq!((cli.key, &cli.params), (web.key, &web.params));
+    assert_eq!(cli.key, "error.memoryBudget");
+    assert!(cli.params.contains(&("fase", "read".to_string())), "{cli:?}");
 
     // formula.ms2, both algorithms
     let f1_text = made("f1.json");

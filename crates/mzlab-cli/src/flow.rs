@@ -204,6 +204,11 @@ impl FileRunner {
         self
     }
 
+    /// The working memory of one job in bytes, for the steps that check their own estimate (`mzml_estimate`).
+    pub(crate) fn cap(&self) -> usize {
+        mzlab_core::budget::MemBudget::mb(self.budget.job_mb()).cap()
+    }
+
     pub(crate) fn path(&self, a: &Artifact) -> PathBuf {
         let made = self.made.lock().unwrap_or_else(|e| e.into_inner());
         let label = a.label.clone().unwrap_or_default();
@@ -289,8 +294,12 @@ fn ms2_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     } else {
         None
     };
-    let text =
-        crate::flow_ms2::ms2_text(job, &named(&files), table.as_ref().map(|t| t.1.as_slice()))?;
+    let text = crate::flow_ms2::ms2_text(
+        job,
+        &named(&files),
+        table.as_ref().map(|t| t.1.as_slice()),
+        r.cap(),
+    )?;
     let out = r.work.join(format!("{}.mgf", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Spectra)
