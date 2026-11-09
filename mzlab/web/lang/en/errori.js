@@ -29,6 +29,7 @@ I18N.add("en", {
   "err.file.rawVersion": "Version {version} of the Thermo .raw format is not supported yet: convert the file to mzML.",
   "err.file.notAgilentD": "The folder {name} has no AcqData/MSScan.bin and AcqData/MSPeak.bin (nor a data.ms file): the whole .D folder is needed, with its AcqData subfolder.",
   "err.file.agilentNoEngine": "Agilent .D folders open only with the Rust engine of the program ({name}).",
+  "err.file.brukerDamaged": "A part of this Bruker .d folder cannot be read: analysis.tdf/.tsf or its _bin file is damaged, cut short or written in a layout this program does not read, so nothing was loaded. Copy the whole .d folder again; if the notice remains, export the run to mzML with the instrument software and open that file.",
   "err.file.brukerBaf": "Bruker folders with only analysis.baf cannot be read without the vendor's software: export it to mzML first.",
   "err.file.brukerNoBin": "The folder {name} does not contain {file}: the whole Bruker .d folder is needed.",
   "err.transitions.empty": "The transition table has no rows.",

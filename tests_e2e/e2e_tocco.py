@@ -173,7 +173,7 @@ try:
             pg.evaluate(f"{M3}.el.scrollIntoView({{block:'center'}})"); wait(400)
             # open() ignores the click until the 2D map has drawn once (p._a.f): wait for it instead of a fixed pause
             pg.wait_for_function(f"{M3}._a && {M3}._a.f", timeout=60000)
-            pg.locator(".pnl.map [data-o=view][data-v='3d']").click()
+            hd_click(pg, ".pnl.map [data-o=view][data-v='3d']")
             pg.wait_for_function("window.__m3d && window.__m3d.V.g && window.__m3d.V.Z", timeout=60000); wait(500)
             c = pg.evaluate("(() => { const q = document.querySelector('.m3d-gl').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; })()"); az0 = pg.evaluate("window.__m3d.V.cam.az")
             T("touchStart", [(c[0], c[1])]); wait(60)
