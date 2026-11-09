@@ -138,6 +138,38 @@ try:
             assert len({kept[n] for n in ("csva.csv", "csvb.csv", "csvc.csv", "csvd.csv")}) == 4, "every table is its own"
         step("a plan with two branches (a preset and a gap filling on one, other detection parameters on the other) gives the CSV of the native flow run for each, also for two fillings of one alignment and the alignment read as it is", branches)
 
+        # the memory of the whole read of the .mzfeat (flow-live-jobs.js `wholeRead`): the kept view of `flt` is dropped so table.filter runs again, under a safe budget of 8 MB
+        DROP = """async () => { const msn = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow')).getDirectoryHandle('msn');
+          for await (const [n, h] of msn.entries()) if (n !== 'index.json' && JSON.parse(await (await h.getFile()).text()).name === 'flt.json') await msn.removeEntry(n); }"""
+        LEVELS = "(high) => { const r = window.MZLAB_RUST; window.__lv = [r.budgetMb, r.choice]; r.budgetMb = 0; r.choice = { ...(r.choice || {}), mb: 8, high_mb: high }; }"
+        UNDO = "() => { const r = window.MZLAB_RUST; [r.budgetMb, r.choice] = window.__lv; }"
+
+        def read_refused():
+            pg.evaluate(DROP); pg.evaluate(LEVELS, 8)
+            # another min_detected than the plan's: a refused job is not tried again by Run under the same plan (read_raised runs the plan itself)
+            other = json.loads(json.dumps(PLAN)); next(s for s in other["steps"] if s["id"] == "flt")["params"]["min_detected"] = 2
+            try: r = pg.evaluate(RUN, [other, SAMPLES])
+            finally: pg.evaluate(UNDO)
+            assert any(e["passo"] == "flt" and e["stato"] in ("error", "refused") for e in r["ev"]), r["ev"][-6:]
+            title = pg.evaluate("() => FLOW.liveView.look(FLOW.liveView.node('flt')).title")
+            assert ("Reading the feature table of this step whole would need about" in title or "Leggere per intero la tabella delle feature" in title) and "8 MB" in title, title
+            assert "flt.json" not in pg.evaluate(KEPT)
+        step("past the budget and the high level, table.filter is refused before the .mzfeat is read, with the numbers of the read", read_refused)
+
+        def read_raised():
+            pg.evaluate(DROP); pg.evaluate(LEVELS, 4096)
+            try:
+                pg.evaluate("([plan, samples]) => { window.__run = (" + RUN + ")([plan, samples]); }", [PLAN, SAMPLES])
+                pg.wait_for_selector("#memmore", timeout=120000)
+                text = pg.inner_text("#memmore #mm-p")
+                assert "reading of the feature table" in text or "lettura della tabella delle feature" in text, text
+                pg.click("#memmore #mm-yes")
+                r = pg.evaluate("() => window.__run")
+            finally: pg.evaluate(UNDO)
+            assert not r.get("err"), (r.get("err"), r["ev"][-6:])
+            assert pg.evaluate(KEPT).get("flt.json") == (run / "out" / "flt.json").read_text()
+        step("past the safe budget and within the high one, Run asks once and the yes gives the view of the native flow run", read_raised)
+
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

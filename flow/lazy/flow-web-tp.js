@@ -82,7 +82,8 @@
   /** the `.tp.mzfeat` of the tp.link job an input points to (null when it is not a tp.link of this plan or not made yet) @param {any} c the context of the executor @param {any} inst @param {string} port */
   const tpFile = async (c, inst, port) => {
     const up = c.x.inst(String(F.refs(inst, port)[0] || "").split(".")[0]), key = up && step(up) === "tp.link" && c.x.keys.get(c.x.jk({ instance: up.id, item: null }));
-    return key && await c.p.fs.exists(c.dir + key + ".tp.mzfeat") ? c.p.fs.read(c.dir + key + ".tp.mzfeat") : null;
+    // read whole only when it fits the step's memory (flow-live-jobs.js `wholeRead`; the job is not started yet)
+    return key && await c.p.fs.exists(c.dir + key + ".tp.mzfeat") ? (await F.liveJobs.wholeRead(c.x, F.liveJobs.job({ instance: inst.id }), c.p, [c.dir + key + ".tp.mzfeat"], false))[0] : null;
   };
 
   /** the text a tp.filter, tp.position, tp.network or tp.review job asks of the pool (the same Rust as `flow run`): its name and text, or null when an input stays with the computer

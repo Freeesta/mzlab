@@ -347,11 +347,10 @@ fn slabs(
     let mut before = vec![0usize; n];
     for w in cuts.windows(2) {
         let slab = plan.slab_bytes.unwrap_or(budget.left() / 4).max(1);
-        // a table that has room for the groups of the slab is not copied when it grows
-        let grows =
-            plan.table_rows.is_none() || table.len() + slab_rows(slab) > table.mz.capacity();
-        let held = table.heap_bytes() * if grows { 2 } else { 1 };
-        if held + slab > budget.left() {
+        // without room planned the table may be copied by any slab; with room, only by a slab whose groups do not fit in it (checked once they are known)
+        let held = table.heap_bytes() * if plan.table_rows.is_none() { 2 } else { 1 };
+        let free = budget.left();
+        if held + slab > free {
             return Err(budget.refuse("align", held + slab));
         }
         let files = (0..n)
@@ -361,6 +360,12 @@ fn slabs(
         let _g = budget.reserve("align", rows * (LEAN_ROW + WORK_ROW))?;
         let refs: Vec<&FileFeatures> = files.iter().collect();
         let g = align_grouped(&refs, &r.align.ion, adj, group_of.is_some())?;
+        if plan.table_rows.is_some() && table.len() + g.table.len() > table.mz.capacity() {
+            let held = table.heap_bytes() * 2;
+            if held + slab > free {
+                return Err(budget.refuse("align", held + slab));
+            }
+        }
         if let Some(all) = group_of.as_deref_mut() {
             let base = table.len() as u32;
             for (k, local) in g.group_of.iter().enumerate() {
@@ -423,9 +428,13 @@ fn family_slabs(
     // the group of every row stays for the whole alignment
     let group_bytes = s.rows.iter().sum::<usize>() * 4;
     let _groups = budget.reserve("align", group_bytes)?;
-    // the table of the ions is held (and copied when it grows): a slab takes half of what is left beside it
+    // the table of the ions is held, with room for `table_rows`: a slab takes half of what is left beside it. Room for a copy of the table (when it
+    // outgrows that room) is kept only when it fits: without it a growth is refused anyway, and reserving it would leave slabs of `slab_rows` minimum
     let cell_row = s.rows.len() * CELL + TABLE_ROW;
-    let slab_bytes = budget.left().saturating_sub(table_rows * cell_row * 2) / 2;
+    let table = table_rows * cell_row;
+    let left = budget.left();
+    let beside = if left >= table * 2 { table * 2 } else { table };
+    let slab_bytes = left.saturating_sub(beside) / 2;
     let cuts = cuts(&mut s.all, slab_rows(slab_bytes), r.align.ion.ppm);
     let plan = Plan {
         slab_bytes: Some(slab_bytes),

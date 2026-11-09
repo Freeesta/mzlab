@@ -128,6 +128,9 @@
       "error.featMemory": `Not enough memory for the «${q.fase}» phase (about ${q.stima_mb} MB needed of ${q.budget_mb} MB).`,
       "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
     };
+    // a memory refusal is told by the page's catalogue (IT+EN, the notice of its phase with the next step), as browser.js does
+    const I = /** @type {any} */ (globalThis).I18N;
+    if (p.key === "error.memoryBudget" && I) return I.err({ error_key: p.key, params: q }).message;
     return M[p.key] || p.key;
   };
 
