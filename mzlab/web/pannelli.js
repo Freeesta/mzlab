@@ -836,9 +836,14 @@ function hdRestore(/** @type {Pannello} */ p) {
   if (m) m.hidden = true; if (b) { b.hidden = true; b.setAttribute("aria-expanded", "false"); }
   p.el?.querySelector(".hd")?.classList.remove("hd-tight");
 }
-// the header holds more than its width: the row itself, or the controls (.ctl and its groups shrink with the row, so what they hold spills over the buttons beside them)
+// the header holds more than its width: the row itself, or the controls (.ctl and its groups shrink with the row, so what they hold spills over the buttons beside them).
+// A group is measured by its in-flow children, not by scrollWidth: an open pop-up (the correction menu) is absolute inside its group and is not part of the row.
 const hdSpills = (/** @type {Element} */ e) => e.scrollWidth > e.clientWidth + 1;
-function hdOver(/** @type {HTMLElement} */ hd, /** @type {HTMLElement | null} */ c) { return hdSpills(hd) || !!(c && (hdSpills(c) || [...c.children].some(hdSpills))); }
+function hdGroupSpills(/** @type {Element} */ g) {
+  const r = g.getBoundingClientRect().right + 1;
+  return [...g.children].some(k => k instanceof HTMLElement && k.offsetWidth > 0 && k.getBoundingClientRect().right > r && getComputedStyle(k).position !== "absolute");
+}
+function hdOver(/** @type {HTMLElement} */ hd, /** @type {HTMLElement | null} */ c) { return hdSpills(hd) || !!(c && (hdSpills(c) || [...c.children].some(hdGroupSpills))); }
 function fitHd(/** @type {Pannello} */ p) {
   const el = p.el; if (!el || !el.isConnected || p._fitBusy) return;
   const hd = el.querySelector(".hd"), more = el.querySelector(".hmore"), mb = el.querySelector('[data-a="more"]'); if (!hd || !more || !mb) return;
@@ -851,7 +856,7 @@ function fitHd(/** @type {Pannello} */ p) {
     const over = () => hdOver(hd, c);
     if (!over()) return;
     mb.hidden = false;
-    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
+    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     for (const n of [...cands, ...groups, ...kids]) {
       if (!over()) break;
       if (n.hidden || !n.offsetWidth) continue;

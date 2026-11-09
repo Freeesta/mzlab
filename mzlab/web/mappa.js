@@ -836,7 +836,7 @@ window.MAPPA = (() => {
   /** @type {Record<string, string[]>} */ const BAR = { "2d": ["mapzin", "mapzout", "mapfeat", "maphelp"], "3d": ["mapreset", "mapzin", "mapzout", "maplock", "maphelp"] };
   // the buttons sit in the toolbar of the panel (2D: the head, with the same .bt look as the others) or in the header of the side column (3D); nothing floats over the data
   function barFor(/** @type {() => Record<string, any>} */ getAd, kind = "2d") {
-    const b = document.createElement("span"); b.className = "tbg mznav"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));
+    const b = document.createElement("span"); b.className = "tbg mznav hdkeep"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", T("mapnav.bar"));  // hdkeep: zoom and gestures stay in sight, fitHd moves the other groups first
     b.innerHTML = BAR[kind].map((/** @type {string} */ id) => `<button type="button"${kind === "2d" ? ' class="bt"' : ""} data-nav="${id}" title="${EH(T(`cmd.${id}.tip`))}" aria-label="${EH(T(`cmd.${id}.name`))}"${id === "maplock" || id === "mapfeat" ? ' aria-pressed="false"' : ""}>${SV(ICO[/** @type {any} */ (AZIONI.voce(id)).ic])}</button>`).join("");
     b.addEventListener("click", e => { const x = /** @type {any} */ (e.target).closest("button[data-nav]"); if (x) { e.stopPropagation(); runCmd(x.dataset.nav, getAd()); } });
     b.addEventListener("mousemove", e => e.stopPropagation());
