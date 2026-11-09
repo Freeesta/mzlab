@@ -4,7 +4,7 @@
 use crate::json::{parse, Value};
 use crate::jsonb::{text, write, Obj};
 use crate::pca::{pca_analysis, PcaOpts};
-use crate::statistica::{bad, blank_filter, blank_value, clean_matrix, time_profile, StatErr, R};
+use crate::statistics::{bad, blank_filter, blank_value, clean_matrix, time_profile, StatErr, R};
 use crate::statref::{identity_links, reference_difference, RefIn, RefOpts, FLOOR};
 
 fn num(b: &Value, k: &str, d: f64) -> R<f64> {

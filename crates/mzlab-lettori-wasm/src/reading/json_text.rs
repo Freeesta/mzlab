@@ -1,7 +1,7 @@
 //! The pieces of the JSON texts of the module (`session.rs`, `lib.rs`), written with `mzlab_core::json::Out`: lists of strings, rows of strings, nullable strings, the samples (a trace with its points: `mzlab_lettori::json`).
 use mzlab_core::json::Out;
-use mzlab_core::lettori::{ChromatogramEntry, Field, Sample};
 use mzlab_core::mzmlwrite::Header;
+use mzlab_core::readers::{ChromatogramEntry, Field, Sample};
 
 /// `[{id,name,scans}]`, shared with the `probe` answer of `lib.rs`.
 pub fn samples_json(o: &mut Out, samples: &[Sample]) {

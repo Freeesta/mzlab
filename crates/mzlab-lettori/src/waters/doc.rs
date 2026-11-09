@@ -2,12 +2,12 @@
 //! collision energy, channels Q1/Q3/dwell/CE), the LC of `_INLET.INF`, the lock mass (declared, never applied). The user and the paths of the acquisition computer are marked `identita`.
 //! Every line of the text files goes to `campi` with the section it comes from; what the reader does not decode is named in `avvisi`.
 
-use super::folder::{base, errore};
+use super::folder::{base, read_error};
 use super::inf::Entry;
 use super::reader::{Fun, WatersReader};
 use mzlab_core::error::Result;
-use mzlab_core::metodo::{self, num, obj, sha1_hex, text, Source, SrcFile, V};
-use mzlab_core::metodo_campi::Field;
+use mzlab_core::method::{self, num, obj, sha1_hex, text, Source, SrcFile, V};
+use mzlab_core::method_fields::Field;
 use mzlab_core::mzmlwrite::Header;
 
 /// The most files named in `origine` and the most fields kept.
@@ -297,8 +297,8 @@ pub(super) fn document(l: &mut WatersReader) -> Result<String> {
     let h = |k: &str| l.testata.get(k).and_then(text);
     let method_file = l.testata.get("MS Method").map(|p| base(p).to_string());
     let doc = obj(vec![
-        ("schema", Some(V::s(metodo::SCHEMA))),
-        ("origine", metodo::origin(&src, acquisito(l).as_deref())),
+        ("schema", Some(V::s(method::SCHEMA))),
+        ("origine", method::origin(&src, acquisito(l).as_deref())),
         (
             "campione",
             obj(vec![
@@ -334,7 +334,8 @@ pub(super) fn document(l: &mut WatersReader) -> Result<String> {
             )),
         ),
     ]);
-    doc.map(|d| d.json()).ok_or_else(|| errore("empty method"))
+    doc.map(|d| d.json())
+        .ok_or_else(|| read_error("empty method"))
 }
 
 /// The header of the mzML: the instrument, the data files with their SHA-1 and the document.
@@ -368,6 +369,6 @@ pub(super) fn file_header(l: &mut WatersReader) -> Result<Header> {
             h.source_sha1.push(s.unwrap_or_default());
         }
     }
-    h.run_params.push((metodo::USERPARAM.to_string(), doc));
+    h.run_params.push((method::USERPARAM.to_string(), doc));
     Ok(h)
 }

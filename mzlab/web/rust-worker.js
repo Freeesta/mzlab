@@ -433,7 +433,7 @@ async function handle(ev) {
     }
     switch (m.op) {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
-      case "mzml2cen": {                                                              // a profile mzML of the archive -> a copy with one point per peak on OPFS (centroidi/convert.rs; read twice, never held)
+      case "mzml2cen": {                                                              // a profile mzML of the archive -> a copy with one point per peak on OPFS (centroids/convert.rs; read twice, never held)
         const f = await fileOf(m.name), rd = readerFor(f), sink = await rawSink(m.dest);
         let written = 0, last = 0, scans = 0, scansTotal = null, did = false;
         const tick = force => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total: f.size, written, scans, scansTotal }); } };

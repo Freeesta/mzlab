@@ -40,7 +40,7 @@ pub fn budget_choice(
     ba::json(
         &c,
         &m,
-        mzlab_core::stima::max_scans(&MemBudget::mb(c.mb as f64)),
+        mzlab_core::estimate::max_scans(&MemBudget::mb(c.mb as f64)),
     )
 }
 

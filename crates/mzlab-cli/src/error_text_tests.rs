@@ -98,6 +98,31 @@ fn a_damaged_folder_is_the_text_of_the_page() {
     );
 }
 
+/// A part of a .D folder or of a .wiff pair that a mutated copy breaks: the calm text of the page, the reader's detail only after the key.
+#[test]
+fn a_damaged_agilent_or_wiff_is_the_text_of_the_page() {
+    for (key, detail, says) in [
+        (
+            "err.file.agilent",
+            "MSScan.bin: 2460 bytes, records from 160, a record of 220 bytes does not fit",
+            "whole folder again",
+        ),
+        (
+            "err.file.wiff",
+            "no scan type code (experiment 1)",
+            "its .wiff.scan again",
+        ),
+    ] {
+        let t = human(&Error::new(key).with("detail", detail).to_string());
+        let text = text_of(key).unwrap();
+        assert_eq!(t, format!("{text} ({key}, detail={detail})"));
+        assert!(
+            !text.contains(detail) && text.contains("nothing was loaded") && t.contains(says),
+            "{t}"
+        );
+    }
+}
+
 #[test]
 fn every_key_of_the_catalogue_is_found() {
     let keys: Vec<&str> = CATALOG

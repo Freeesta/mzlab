@@ -1,0 +1,168 @@
+//! `corsa/1` on a hand-written `prov/1`: files and lists apart, estimated against fixed parameters, level counts and the included `report/1`.
+
+use super::*;
+use crate::json::parse;
+
+const PROV: &str = r#"{"schema":"prov/1","agent":{"name":"mzLab","version":"1.2.3","platform":"native"},"plan_sha256":"aa",
+"entity":{"file:a.mzML":{"sha256":"11","bytes":10,"type":"mzml"},"file:lib.msp":{"sha256":"22","bytes":5,"type":"library"},"d.table":{"sha256":"33","type":"table"}},
+"activity":{"d":{"step":"features.detect@1","algorithm":"masstrace@1","preset":"hr","params":{"floor":20000,"min_height":200000},"params_sha256":"p1","estimates":{"floor":{"hist":[1,2]}},"used":[],"generated":[],"ms":12.5},
+"m":{"step":"spectra.match@1","params":{},"params_sha256":"p2","used":[],"generated":[],"ms":3,"error":{"error_key":"err.x","params":{}}}}}"#;
+
+const ANNOT: &str = r#"{"format":"annot/1","rows":[{"id":"q0","level":"2a"},{"id":"q1","level":"3a"},{"id":"q2","level":"2a"},{"id":"q3","level":"1","auto":false}]}"#;
+const REPORT: &str = r#"{"schema":"report/1","rows":4}"#;
+
+fn run() -> RunReport {
+    let prov = parse(PROV.as_bytes()).unwrap();
+    let u = [
+        Output {
+            name: "annot.json",
+            bytes: ANNOT.as_bytes(),
+        },
+        Output {
+            name: "report.json",
+            bytes: REPORT.as_bytes(),
+        },
+        Output {
+            name: "notes.json",
+            bytes: b"not json",
+        },
+    ];
+    build(&prov, &u).unwrap()
+}
+
+#[test]
+fn reads_inputs_lists_steps_and_parameters() {
+    let c = run();
+    assert_eq!(c.inputs.len(), 1);
+    assert_eq!(c.inputs[0].name, "a.mzML");
+    assert_eq!(c.lists.len(), 1);
+    assert_eq!(c.lists[0].sha256, "22");
+    assert_eq!(c.steps[0].status, "ok");
+    assert_eq!(c.steps[1].status, "error");
+    assert_eq!(c.steps[1].error_key.as_deref(), Some("err.x"));
+    let floor = &c.steps[0].params[0];
+    assert_eq!(
+        (floor.name.as_str(), floor.proof.is_some()),
+        ("floor", true)
+    );
+    assert!(c.steps[0].params[1].proof.is_none());
+}
+
+#[test]
+fn counts_levels_auto_apart() {
+    let l = run().levels;
+    assert_eq!((l.files, l.rows), (1, 4));
+    assert_eq!(l.auto, vec![("2a".into(), 2), ("3a".into(), 1)]);
+    assert_eq!(l.other, vec![("1".into(), 1)]);
+}
+
+#[test]
+fn json_is_stable_and_valid() {
+    let a = run().json();
+    assert_eq!(a, run().json());
+    let v = parse(a.as_bytes()).unwrap();
+    assert_eq!(v.get("schema").unwrap().str(), Some("corsa/1"));
+    assert_eq!(v.get("total_ms").unwrap().f64(), Some(15.5));
+    assert_eq!(
+        v.get("report").unwrap().get("rows").unwrap().f64(),
+        Some(4.0)
+    );
+    let p = &v.get("steps").unwrap().arr()[0]
+        .get("params")
+        .unwrap()
+        .arr()[0];
+    assert_eq!(p.get("state").unwrap().str(), Some("estimated"));
+}
+
+#[test]
+fn refuses_what_is_not_prov() {
+    let v = parse(b"{\"schema\":\"x\"}").unwrap();
+    assert!(build(&v, &[])
+        .unwrap_err()
+        .to_string()
+        .contains("err.corsa.prov"));
+}
+
+#[test]
+fn engine_copies_the_build_keys_of_the_agent() {
+    let prov = PROV.replace(
+        r#""platform":"native"}"#,
+        r#""commit":"0123456789012345678901234567890123456789","platform":"native","target":"x86_64-linux","rustc":"rustc 1.90.0","cargo_lock_sha256":"ab","modules":{"mzlab-cli":"cd"}}"#,
+    );
+    let c = build(&parse(prov.as_bytes()).unwrap(), &[]).unwrap();
+    let keys: Vec<&str> = c.engine.iter().map(|(k, _)| k.as_str()).collect();
+    assert_eq!(
+        keys,
+        [
+            "name",
+            "version",
+            "commit",
+            "platform",
+            "target",
+            "rustc",
+            "cargo_lock_sha256"
+        ]
+    );
+    assert_eq!(c.modules, vec![("mzlab-cli".to_string(), "cd".to_string())]);
+    assert!(c
+        .json()
+        .contains(r#""cargo_lock_sha256":"ab","modules":{"mzlab-cli":"cd"}}"#));
+    assert!(run().modules.is_empty());
+}
+
+#[test]
+fn names_each_regulatory_list_once() {
+    let prov = parse(PROV.as_bytes()).unwrap();
+    let list = r#"{"id":"T_A","tags":{"status":"in_force","version_date":"2000-01-01"},"csv_sha256":"c1"}"#;
+    let screen = format!(
+        r#"{{"format":"screen/1","suspect_files":[{{"name":"n.mzsus","lists":[{list}]}},{{"name":"u.csv","lists":null}}],"hits":[]}}"#
+    );
+    let annot = format!(r#"{{"format":"annot/1","regulatory":{{"lists":[{list}]}},"rows":[]}}"#);
+    let u = [
+        Output {
+            name: "s.json",
+            bytes: screen.as_bytes(),
+        },
+        Output {
+            name: "r.json",
+            bytes: annot.as_bytes(),
+        },
+    ];
+    let c = build(&prov, &u).unwrap();
+    assert_eq!(c.regulatory.lists.len(), 1);
+    let j = c.json();
+    assert!(j.contains("\"title\":\"Regulatory lists\""));
+    assert!(j.contains(
+        "Screened against: T_A (version 2000-01-01, SHA-256 c1…). 1 list in force, 0 proposals."
+    ));
+    assert!(j.contains(crate::flow::run_report_reg::DISCLAIMER));
+    assert!(!run().json().contains("\"regulatory\""));
+}
+
+#[test]
+fn cites_each_imported_list_file_once_with_its_sha256() {
+    let prov = parse(PROV.as_bytes()).unwrap();
+    let list = r#"{"id":"SVHC","tags":{"status":"in_force","citation":"imported by you on 2026-10-01 from svhc.csv"},"csv_sha256":"c1c1c1c1c1"}"#;
+    let screen = format!(
+        r#"{{"format":"screen/1","suspect_files":[{{"name":"imp.mzsus","sha256":"abcdef0123456789","imported":true,"lists":[{list}]}}],"hits":[]}}"#
+    );
+    let annot = format!(
+        r#"{{"format":"annot/1","regulatory":{{"lists":[],"imported":[{{"name":"imp.mzsus","sha256":"abcdef0123456789","lists":[{list}]}}]}},"rows":[]}}"#
+    );
+    let u = [
+        Output {
+            name: "s.json",
+            bytes: screen.as_bytes(),
+        },
+        Output {
+            name: "r.json",
+            bytes: annot.as_bytes(),
+        },
+    ];
+    let c = build(&prov, &u).unwrap();
+    assert_eq!(c.regulatory.lists.len(), 1);
+    assert_eq!(c.regulatory.imported.len(), 1);
+    let j = c.json();
+    assert!(j.contains("Lists you imported: imp.mzsus (SHA-256 abcdef01…)."));
+    assert!(j.contains(r#""imported":[{"name":"imp.mzsus","sha256":"abcdef0123456789"}]"#));
+}

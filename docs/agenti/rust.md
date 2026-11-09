@@ -11,7 +11,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 
 ## Crates (workspace in `Cargo.toml`; `vendor/opentfraw` is excluded)
 - `mzlab-core`: the engine. mzML reader (`mzml*.rs`, quick-xml, base64, flate2 with `zlib-rs`), mzML writer (`mzmlwrite/`), `.mzidx` builder and readers (`mzidx*.rs`, `idx*.rs`), every `api/...` route of the page (`*route*.rs`, `fileroutes.rs`, `hrroutes.rs`, `lr.rs`, `iteminfo.rs`, …).
-- `mzlab-core`, continued: chemistry (`elements.rs`, `composition.rs`, `isoscore.rs`, `subformulas.rs`), statistics (`stats.rs`, `statmat.rs`, `pca.rs`), centroiding (`centroidi/`), maps, the MSn tree and graph (`msnalbero.rs`, `msntree.rs`, `msngrafo/`), method readers (`metodo*.rs`), the memory budget (`budget_auto.rs`), the Flow step descriptors (`step/`).
+- `mzlab-core`, continued: chemistry (`elements.rs`, `composition.rs`, `isoscore.rs`, `subformulas.rs`), statistics (`stats.rs`, `statmat.rs`, `pca.rs`), centroiding (`centroids/`), maps, the MSn tree and graph (`msntree_build.rs`, `msntree.rs`, `msngraph/`), method readers (`metodo*.rs`), the memory budget (`budget_auto.rs`), the Flow step descriptors (`step/`).
 - `mzlab-core` features: `thermo` (default; the `.raw` reader via `vendor/opentfraw`), `precursori`, `mappa-dad` (default), `estesi`, `sciex`, `valida`, `indice`. The engine `.wasm` (`mzlab-wasm`) turns off `thermo` and `estesi`: vendor readers reach the page through the readers modules (`lettori-modulo.md`).
 - `mzlab-picchi`: peak picking, signal processing, compact sorts (`sortc`); its own crate so it builds at opt-level 3. `mzlab-core` re-exports its modules under the same paths (`mzlab_core::sortc`, …).
 - `mzlab-wasm`: wasm-bindgen bridge of `mzlab-core` (`Engine`, one slot per opened file); runs ONLY in a Web Worker (`rust-worker.js`).
@@ -59,7 +59,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 ## Speed
 - A speed gain counts, even a few percent, when measured beyond the noise (repeated, median, same result) with small readable code: the PR gives the % on the step and on the total and adds a row to `misure-velocita.md`.
 - A dependency for speed is accepted if it gains ≥ 3 % measured on its target, has a permissive licence (`cargo deny`) and the PR shows the Cargo lines and the before/after numbers.
-- Load time of a file: `cargo run --release --example carico -- FILE.mzML`; other timing examples sit in `crates/mzlab-core/examples/*_tempi.rs`; WASM benches across browsers: `tools/banco_wasm.py` (`banco-wasm.yml`).
+- Load time of a file: `cargo run --release --example load -- FILE.mzML`; other timing examples sit in `crates/mzlab-core/examples/*_tempi.rs`; WASM benches across browsers: `tools/banco_wasm.py` (`banco-wasm.yml`).
 
 ## Build and test
 - Native: `cargo test --release -p mzlab-core` (or `-p <crate>`); CI splits the workspace into `rust` (mzlab-feat), `rust-core` (core, lettori, lib, mol, target), `rust-misc-a` (Attributio, chem, llm), `rust-misc-b` (the rest).

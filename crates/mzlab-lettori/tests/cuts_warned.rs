@@ -4,8 +4,8 @@
 
 mod common;
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::Spectrum;
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 fn fs(name: &str, b: &[u8]) -> FileSet {
     FileSet {

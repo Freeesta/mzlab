@@ -4,12 +4,12 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::campioni;
 use mzlab_core::idxread::Index;
 use mzlab_core::json::{parse, Out, Value};
 use mzlab_core::lr::{open_items, Sample};
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::samples;
 use mzlab_core::upload::prepare;
 use mzlab_llm::inspect::scan_stats;
 
@@ -171,7 +171,7 @@ pub fn proposals(names: &[&str]) -> Vec<Value> {
         .iter()
         .map(|n| format!("{{\"name\":{}}}", quoted(n)))
         .collect();
-    let out = campioni::route("proponi", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
+    let out = samples::route("proponi", &format!("{{\"files\":[{}]}}", files.join(","))).unwrap();
     j(&out).get("campioni").unwrap().arr().to_vec()
 }
 

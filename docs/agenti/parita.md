@@ -13,7 +13,7 @@ Regola (`CLAUDE.md`): ogni funzione esiste nel sito (`.wasm` + OPFS) e nell'app 
 | Funzione | Sito | App | CLI | Prova |
 |---|---|---|---|---|
 | Rotte comuni (TIC, XIC, spettri, MRM, mappe, canali, info, statistica) | `.wasm` motore | `rpc.rs` | `channels`, `sim-table` | `crates/mzlab-desktop/tests/parita_rotte.rs` (37 passi, `.wasm` con `MZLAB_WASM_PKG` = app), `test_canali_wasm.py` |
-| Tipo di corsa proposto dai canali (`canali::tipo_di`): senza scansioni SRM = `lc-mrm`, solo SIM = `lc-sim` (anche con un DAD), solo il DAD = `solo-uv` | `.wasm` motore | `rpc.rs` | `channels` | `canali/tests.rs` (`a_file_of_sim_chromatograms_only_is_typed_sim_also_with_a_uv_trace`); le tre facce chiamano la stessa funzione |
+| Tipo di corsa proposto dai canali (`channels::tipo_di`): senza scansioni SRM = `lc-mrm`, solo SIM = `lc-sim` (anche con un DAD), solo il DAD = `solo-uv` | `.wasm` motore | `rpc.rs` | `channels` | `channels/tests.rs` (`a_file_of_sim_chromatograms_only_is_typed_sim_also_with_a_uv_trace`); le tre facce chiamano la stessa funzione |
 | Grafo MSn (`msngrafo`), centroidi (`lr_index_cen`, `mzml2cen`), SRM per mzFinder (`natsrm`) | sì | `rpc_msn.rs` | `msn-graph` | `parity_msn.rs` (app = core), `test_msngrafo_wasm.py` (`.wasm` = CLI) |
 | Registro dello strumento di un `.raw` (`natregistro`, `/api/registro`) | modulo `thermo` (`registroDi`) | `rpc_nat.rs` | — (nessun comando; il `metodo/1` della CLI elenca le serie) | `crates/mzlab-desktop/tests/natregistry.rs` (app = lettore del registro + `mzlab_lettori::json::chromatogram_json`, la funzione che il modulo chiama); il `.raw` sintetico non ha status log: la prova passa per il TIC e per l'errore di una serie assente |
 | Massa del fondo (`masscal`) | sì | `rpc.rs` | — | `parity_masscal.rs` |
@@ -45,7 +45,7 @@ Regola (`CLAUDE.md`): ogni funzione esiste nel sito (`.wasm` + OPFS) e nell'app 
 | File oltre 4 GiB, fili dentro un file | no | sì | limite: memory64 e `atomics` (`wasm-potenziale.md`) |
 | SRM: energia di collisione e dwell dell'id (`ce=`, `dwell=`) nell'mzML | ogni modulo lettori | `convert`, `nat2mzml` | `mzmlwrite/tests.rs` (`an_srm_id_with_energy_and_dwell_writes_them_in_every_build`): `srm_windows` senza `cfg(feature = "sciex")` |
 | Prodotto ionico: energia e finestra di isolamento del precursore nell'`.mzidx` di un `.wiff` | motore (senza `sciex` né `precursori`) | `flow run` (`index.mzidx`) | `test_wiff_energia_parita.py` (byte per byte, `energia.wiff` sintetico); `mzmlwrite/tests.rs` (`a_plain_precursor_keeps_its_energy_and_window_in_every_build`) |
-| Nome della sorgente (`source.name`) di un `.mzidx` letto da un file del produttore | motore (`upload::set_name`) | `flow run` (`index.mzidx`) | `tests/mzidx_righe_dirette.rs` (`the_source_of_a_vendor_index_is_the_dataset_name`): `X.raw`, `X.wiff`, `X.D` qualunque nome dia la pagina alla voce dell'elenco |
+| Nome della sorgente (`source.name`) di un `.mzidx` letto da un file del produttore | motore (`upload::set_name`) | `flow run` (`index.mzidx`) | `tests/mzidx_rows_direct.rs` (`the_source_of_a_vendor_index_is_the_dataset_name`): `X.raw`, `X.wiff`, `X.D` qualunque nome dia la pagina alla voce dell'elenco |
 | Feature da un `.raw` e dal suo mzML | — | `features` | limite: stesso risultato solo per acquisizioni a centroidi; un `.raw` a profilo usa i centroidi del produttore, il suo mzML a profilo la centroidatura di mzLab (area di `features` e del lettore Thermo) |
 
 ## Verifiche su dati reali (fuori dal repository)

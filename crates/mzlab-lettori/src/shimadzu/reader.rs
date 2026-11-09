@@ -1,9 +1,9 @@
 //! `impl Lettore` of the Shimadzu reader (the struct is in `mod.rs`).
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 
 use super::load::Fam;
 use super::{meta, rec, refusal, ShimadzuReader, F32_EXACT};

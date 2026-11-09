@@ -14,9 +14,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 
-use mzlab_core::campioni::Sample;
 use mzlab_core::idxread::Index;
 use mzlab_core::json::{self, Value};
+use mzlab_core::samples::Sample;
 use mzlab_feat::store::read_table;
 use mzlab_feat::tp::{TpRoles, ST_CONTROL, ST_ISF, ST_PARENT, ST_TP, ST_UNEXPLAINED};
 use mzlab_feat_wasm::run;

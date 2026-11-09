@@ -17,7 +17,7 @@
   const live = p => { const s = ST.get(p); return s && s.xp && E.panels.includes(s.xp) ? s.xp : null; };
   /** the file of the spectrum @param {any} p */
   const specFile = p => p._a && p._a.data && p._a.data[0] ? p._a.data[0].f : null;
-  /** an infusion has no real chromatogram: the XIC button and the lens of its spectrum are off (the kind of the engine, infusione.rs, or the same words in the file name) @param {any} p */
+  /** an infusion has no real chromatogram: the XIC button and the lens of its spectrum are off (the kind of the engine, infusion.rs, or the same words in the file name) @param {any} p */
   const infusion = p => { const f = specFile(p); return !!f && (f.kind === "infusion" || !f.manual && /infus|fia|direct|syringe/i.test(String(f.label || f.name || "").split(/[\\/]/).pop() || "") || (!!window.CANALI && ESP.predefinito(CANALI.tipo(f)).lente === false)); };      // the table of the types of experiment (esperimenti.js) says whether the lens is proposed
   /** the XIC lens (the preview on peak hover and its switch) exists only on the MS1 spectrum of a high-resolution file: not on MS2, not at low resolution, not on infusion @param {any} p */
   /** an MS2 spectrum has no XIC of its own: no button, no choosing a peak @param {any} p */

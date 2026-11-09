@@ -1,4 +1,4 @@
-"""Matrix of the scan modes of a SCIEX QTRAP as synthetic `.wiff` pairs (reference for crates/mzlab-core/tests/wiff_modi.rs).
+"""Matrix of the scan modes of a SCIEX QTRAP as synthetic `.wiff` pairs (reference for crates/mzlab-core/tests/wiff_modes.rs).
 
     python3 tools/wiff_modi.py OUT
 

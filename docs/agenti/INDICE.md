@@ -31,13 +31,13 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | inglese nel codice (identificatori, commenti, nomi di file e cartelle): inventario misurato, `tools/controlla_inglese.py`, `tools/italian_words.tsv`, mappa delle rinomine (`tools/english_rename_map.py`), piano a lotti | `docs/agenti/inglese.md` |
-| metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |
+| metodo di acquisizione (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/metodo.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
 | mzFinder: Dig in diretta (`js/24_tpmine_diretta.js`, `TPLIVE`), coppie progenitore-TP e interfaccia HR (`js/21_tpmine_hr.js`, `mass_network`, previsione) | `docs/agenti/mzfinder-diretta.md`, `mzfinder-coppie.md` (nucleo: `mzfinder.md`) |
 | mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` (famiglia di un file a richiesta, `family_record`: `mzfeat-wasm-famiglia.md`; pannello «Pipeline»: `mzfeat-wasm-pannello.md`) |
 | scandump, oracolo RFR | `docs/agenti/scandump.md` |
 | velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_banco`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
-| conversione `.raw` → mzML: banco `raw_mzml_banco`, `tools/bench/raw_mzml.py`, T_min, punti di partenza V1-V9, cause di D8 e D11, caso denso sintetico | `docs/agenti/raw-mzml.md` |
+| conversione `.raw` → mzML: banco `raw_mzml_bench`, `tools/bench/raw_mzml.py`, T_min, punti di partenza V1-V9, cause di D8 e D11, caso denso sintetico | `docs/agenti/raw-mzml.md` |
 | tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` (lettori dei produttori, `.raw`, `.wiff`, `.D`: `misure-velocita-raw.md`; tentativi scartati: `ottimizzazioni-tentate.md`) |
 | caricamento della pagina (FCP, LCP, motore pronto, KB prima del paint per scenario; `tests_e2e/misura_primo_paint.py`) | `docs/agenti/misure-caricamento.md` |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`; specifica binaria: `wiff_specifica_completa.md`) |
@@ -57,7 +57,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` e `untargeted`) | `docs/agenti/attributio.md` (binario MZ: `attributio-mz.md`, parità con mzmine: `attributio-mz-parita.md`; isotopi: `attributio-isotopi.md`; Banco 2b: `attributio-banco.md`; esportazioni: `attributio-export.md`; abbinamento: `attributio-abbinamento.md`; identità: `attributio-identita.md`; revisione: `attributio-revisione.md`; pannello: `attributio-pannello.md`; formule: `attributio-formula.md`) |
 | vista «Compare conditions» di Tabui (`TP_Mine/lazy/gruppi-vista.js`: matrice TP × condizione, UpSet, grafici, esportazioni; contratto `gruppi/1`) | `docs/agenti/gruppi-vista.md` (studio: `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`) |
 | grafo di frammentazione MSn dell'infusione (`msngrafo/1`: ioni uniti fra livelli ed energie, formule proposte dei frammenti, scheda «Fragmentation graph») e libreria di alberi MSn degli standard (`msnlib/1`, protocollo di acquisizione) | `docs/agenti/msn-grafo.md` (libreria: `msnlib.md`; vista: `msn-grafo-vista.md`; scheda «Fragmentation graph» nella vista Dati: `infusione-grafo.md`; tagli per un nodo: `msn-grafo-strutture.md`; interpretazione dei frammenti: `msn-interpreta.md`; prove delle regole: `msn-regole-prove.md`; manuale: `msn-manuale.md`; figura: `msn-figura.md`) |
-| formule dei frammenti del grafo MSn (`msngrafo/formule.rs`, `candidati.rs`, `annota.rs`: ingresso, radice, finestre, vincolo DAG, perdite) | `docs/agenti/msn-grafo-formule.md` (sintesi: `msn-grafo.md`) |
+| formule dei frammenti del grafo MSn (`msngraph/formulas.rs`, `candidates.rs`, `annotate.rs`: ingresso, radice, finestre, vincolo DAG, perdite) | `docs/agenti/msn-grafo-formule.md` (sintesi: `msn-grafo.md`) |
 | pacchetto dei candidati in silico (`mzlab-cli insilico pack`, `insilico-scarica.js`, `flow-web-insilico.js`, `crates/mzlab-desktop/src/insilico.rs`, `spectra.insilico` nel browser) | `docs/agenti/insilico.md` |
 | costruttore delle liste normative UE e USA (`mzlab-cli normative build`, `crates/mzlab-cli/src/normative/`, `normative/sources.json`, fonti, pin, `resolve`, uscita) | `docs/agenti/normative.md` |
 | motore MS2 sperimentale, frammentazione in silico alla MetFrag, attribuzione dei frammenti alla MS-FINDER, previsione dell'RT (`attributio/ms2_engine/`) | `docs/agenti/attributio-ms2.md` |
@@ -75,7 +75,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
 | database delle molecole (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV e JSON canonico, ricerca, livelli catalogo/importata/utente, catalogo `mzlab/web/molecole/catalogo.csv`, rotte `api/molecules/*`) | `docs/agenti/molecules.md` (studio e piano a PR: `docs/studi/molecules/README.md`) |
 | canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; piano DEV-a…f) | `docs/agenti/canali-dati.md` (prompt dei DEV: `docs/archivio/prompt-canali/a.md`…`f.md`) |
-| ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/campioni/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
+| ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/samples/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
 | misure prima/dopo dei .wasm per ogni modifica (byte dopo `wasm-opt`, tetti in vigore) | `docs/agenti/wasm-tetti-misure.md` |
@@ -103,7 +103,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | Dependabot, CodeQL, impostazioni di sicurezza da accendere a mano | `docs/agenti/sicurezza.md` |
 | sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`, `tests_e2e/e2e_lab_vuoto.py` = giro senza file) |
-| contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
+| contratto dei lettori dei produttori (`readers.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
 | modulo «aperti» (mzML con numpress, mzXML: `crates/mzlab-lettori/src/aperti/`, `numpress.rs`) | `docs/agenti/lettori-aperti.md` |
 | matrice di conformità mzML (varianti, fixture `tools/mzml_varianti.py`, buchi noti) | `docs/agenti/mzml-matrice.md` |
 | modulo «andi» (netCDF/ANDI `.cdf`: `crates/mzlab-lettori/src/andi/`) | `docs/agenti/lettori-andi.md` |
@@ -118,8 +118,8 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | scheduler a stati del Flow «live» (`mzlab_core::flow::sched`, `run_sched.rs`) | `docs/agenti/flow-live.md` |
 | dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
-| pulsante «XIC» nella barra dello spettro, lente XIC al passaggio sul picco (`xic-lente.js`), banco e tabella di partenza dei tempi del visualizzatore (`tools/bench_visore.py`, `visore_tempi.rs`) | `docs/agenti/visore-veloce.md` |
-| pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusione.rs` (chiavi, blocchi, nome), comando `diagnosi_infusione` | `docs/agenti/infusione-lente.md` |
+| pulsante «XIC» nella barra dello spettro, lente XIC al passaggio sul picco (`xic-lente.js`), banco e tabella di partenza dei tempi del visualizzatore (`tools/bench_visore.py`, `viewer_times.rs`) | `docs/agenti/visore-veloce.md` |
+| pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusion.rs` (chiavi, blocchi, nome), comando `infusion_diagnosis` | `docs/agenti/infusione-lente.md` |
 | scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset` | `docs/agenti/xic-scarto.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |

@@ -2,10 +2,10 @@
 //! header of the mzML we write; every attribute of every element goes into `campi` (nothing is lost), the identifying ones (operator, paths) marked `identita`.
 
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limits;
-use mzlab_core::metodo::{self, obj, text, Source, SrcFile, V};
-use mzlab_core::metodo_campi::Field;
+use mzlab_core::method::{self, obj, text, Source, SrcFile, V};
+use mzlab_core::method_fields::Field;
 use mzlab_core::mzmlwrite::Header;
+use mzlab_core::readers::Limits;
 
 use super::mzxml_scan::{attr, each, name, tags, Tag};
 
@@ -143,8 +143,8 @@ pub(super) fn document(c: &Cabin, nome: &str, dim: u64, sha1: Option<String>) ->
         .collect();
     let s = |t: &Option<String>| t.as_deref().and_then(text);
     let doc = obj(vec![
-        ("schema", Some(V::s(metodo::SCHEMA))),
-        ("origine", metodo::origin(&src, None)),
+        ("schema", Some(V::s(method::SCHEMA))),
+        ("origine", method::origin(&src, None)),
         (
             "strumento",
             obj(vec![
@@ -202,6 +202,6 @@ pub(super) fn header(c: &Cabin, name: &str, sha1: Option<String>, doc: String) -
         .iter()
         .map(|(n, v)| ("MS:1000531".to_string(), n.clone(), v.clone()))
         .collect();
-    h.run_params.push((metodo::USERPARAM.to_string(), doc));
+    h.run_params.push((method::USERPARAM.to_string(), doc));
     h
 }

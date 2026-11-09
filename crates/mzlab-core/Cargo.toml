@@ -9,7 +9,7 @@ license.workspace = true
 # the Thermo `.raw` reader (`raw`, `rawlettore`, `rawfilter`, `metodo_raw`, the `opentfraw` dependency): the engine (mzlab-wasm) leaves it off and reaches it through the `thermo` readers module
 default = ["thermo", "mappa-dad", "precursori"]
 thermo = ["dep:opentfraw"]
-# the precursor chain, activation and energy of `<precursorList>` in the mzML writer (`mzmlwrite/spettro.rs`): the readers that fill `SpectrumExtra::precursors` turn it on; the engine and the other readers modules (under a size limit) leave it off
+# the precursor chain, activation and energy of `<precursorList>` in the mzML writer (`mzmlwrite/spectrum.rs`): the readers that fill `SpectrumExtra::precursors` turn it on; the engine and the other readers modules (under a size limit) leave it off
 precursori = []
 # variants of the readers served only by the readers module (crates/mzlab-lettori), never by the engine (mzlab-wasm leaves it off)
 estesi = []
@@ -21,7 +21,7 @@ valida = []
 sciex = ["estesi"]
 # the indexed mzML (offsets and SHA-1 checksum) in the `.wasm` build too: only the readers modules turn it on, to write the same mzML as `mzlab-cli convert`; the engine (mzlab-wasm) leaves it off
 indice = []
-# the bench `raw_mzml_banco` with zlib-rs in place of miniz_oxide behind flate2 (a second build of the same bench, to compare the two on the same code)
+# the bench `raw_mzml_bench` with zlib-rs in place of miniz_oxide behind flate2 (a second build of the same bench, to compare the two on the same code)
 banco-zlib-rs = ["flate2/zlib-rs"]
 
 # the isotopes of the 44 elements beyond the core 13 of `isoscore` (`isotable.rs`): the engine (mzlab-wasm), the app and the CLI serve `api/isotope_fine` with them; the mzFinder modules (under a size limit) leave them off
@@ -51,11 +51,11 @@ name = "raw2mzml"
 required-features = ["thermo"]
 
 [[example]]
-name = "raw_referenza"
+name = "raw_reference"
 required-features = ["thermo"]
 
 [[example]]
-name = "raw_mzml_banco"
-path = "examples/raw_mzml_banco/main.rs"
+name = "raw_mzml_bench"
+path = "examples/raw_mzml_bench/main.rs"
 required-features = ["thermo"]
 test = true

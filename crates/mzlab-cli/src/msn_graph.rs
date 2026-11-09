@@ -10,12 +10,12 @@ use mzlab_core::budget::sha256_hex_read;
 use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
-use mzlab_core::lettori_mzml::Peaks;
-use mzlab_core::msnalbero::Grouping;
-use mzlab_core::msngrafo::{
+use mzlab_core::msngraph::{
     esporta, graph_json, with_interpretation, Format, Graph, Options, RuleParams, PPM_PERDITA,
 };
+use mzlab_core::msntree_build::Grouping;
 use mzlab_core::mzmlwrite::Options as MzmlOpzioni;
+use mzlab_core::readers_mzml::Peaks;
 
 pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/2) of an MSn infusion (mzML or a vendor file such as a Thermo .raw).
 
@@ -391,7 +391,7 @@ pub fn complete_cmd(
     }
     let file = file.ok_or("complete needs an msngrafo/1 file")?;
     let json = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
-    let done = mzlab_core::msngrafo::completa(&json).map_err(|e| e.to_string())?;
+    let done = mzlab_core::msngraph::completa(&json).map_err(|e| e.to_string())?;
     Ok((done + "\n", out))
 }
 

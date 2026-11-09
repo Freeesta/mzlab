@@ -6,7 +6,7 @@ use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
-use crate::sorgente::Scansioni;
+use crate::source::Scansioni;
 
 impl<R: ReadAt> Routes<R> {
     /// The block of the scans asked for, from the mzML by offset.

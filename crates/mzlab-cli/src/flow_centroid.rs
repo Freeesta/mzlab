@@ -1,10 +1,10 @@
-//! The native executor of `spectra.centroid@1`: an mzML with profile scans becomes an mzML with one point per peak (`mzlab_core::centroidi`, the
+//! The native executor of `spectra.centroid@1`: an mzML with profile scans becomes an mzML with one point per peak (`mzlab_core::centroids`, the
 //! conversion of the archive), the step before `index.mzidx` for a profile file. An mzML with no profile scan goes through byte for byte.
 
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-use mzlab_core::centroidi::{mzml_to_centroids_with, Over, Params};
+use mzlab_core::centroids::{mzml_to_centroids_with, Over, Params};
 use mzlab_core::error::Result;
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::Value;

@@ -30,7 +30,7 @@
   `rust-wasm` (build, grafo) e `rust-wasm-guardie` (pytest delle guardie, che costruiscono i propri `.wasm` e `nativo`) girano in parallelo: in locale 208 s + 214 s in serie, 223 s le guardie da sole (nessuna condivisione di artefatti).
   `rust-core` gira solo se l'output `core` di `changes` è vero (cambiano quelle crate, `Cargo.*`, `rust-toolchain.toml`, `vendor/`, `.cargo/`, `tests/golden/` o `rust.yml`); saltato altrimenti e `rust-ok` lo accetta.
 - **Test Rust e guardie** (job `rust`, `rust-core`, `rust-misc-a`, `rust-misc-b`; guardie in `rust-wasm-guardie`, determinismo in `rust-det`): `cargo test` esegue i binari uno dopo l'altro (compilazione 230 s + esecuzione 192 s su 205 binari); gli altri binari durano ≤ 11 s, quindi niente `cargo-nextest`.
-  `rois_parity` (30 s): `tools/roi_riferimento.py` elabora i file in parallelo, un processo per CPU. `campioni::number_replicates` conta con una `HashMap` (`campioni_posizioni`, 34 000 nomi, 1,5 s; un NaN ripiega sul confronto a coppie).
+  `rois_parity` (30 s): `tools/roi_riferimento.py` elabora i file in parallelo, un processo per CPU. `samples::number_replicates` conta con una `HashMap` (`samples_positions`, 34 000 nomi, 1,5 s; un NaN ripiega sul confronto a coppie).
   Le guardie di memoria (`tests/test_guardie_memoria.py`, `tests/test_feat_wasm.py`) costruiscono, generano le serie e misurano in parallelo, ciascuna misura nella sua cartella: 112 s → 57 s con le build in cache.
 
 - **`e2e_flow_msn`**: il riferimento `mzlab-cli msn-graph` (211 s a freddo) va in background all'inizio e il passo `graph` ne raccoglie l'uscita.

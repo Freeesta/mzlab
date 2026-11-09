@@ -3,8 +3,8 @@
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{ChromatogramEntry, Limits};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
+use mzlab_core::readers::{ChromatogramEntry, Limits};
 
 use super::netcdf::{scale, Cdf};
 

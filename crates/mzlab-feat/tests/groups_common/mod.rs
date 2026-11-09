@@ -1,8 +1,8 @@
 //! Shared builders of the proofs of `gruppi`: files of `campioni/2`, cells and the synthetic scenario of the fixture. Synthetic data only.
 #![allow(dead_code)]
 
-use mzlab_core::campioni::{self, number_replicates, Sample};
 use mzlab_core::json::Out;
+use mzlab_core::samples::{self, number_replicates, Sample};
 use mzlab_feat::groups::{GroupOpts, GroupTable, RowMeta};
 use mzlab_feat::table::{CELL_ABSENT, CELL_DETECTED, CELL_FILLED};
 
@@ -199,7 +199,7 @@ pub fn input_json(tb: &GroupTable, cs: &[Sample], opts: &GroupOpts) -> String {
     matrix(&mut o, tb, |i| f64::from(tb.state[i]));
     o.raw(",\"apex_rt\":");
     matrix(&mut o, tb, |i| f64::from(tb.apex_rt[i]));
-    o.raw("},\"campioni\":").raw(&campioni::to_json(cs));
+    o.raw("},\"campioni\":").raw(&samples::to_json(cs));
     o.raw(",\"opts\":{\"reference\":");
     match &opts.reference {
         Some(r) => o.str(r),

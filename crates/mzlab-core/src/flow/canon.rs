@@ -16,6 +16,9 @@ pub struct Resolved {
     pub params: Vec<(String, Value)>,
     /// Names of the parameters that do not change the result (memory budget): shown, but not part of the fingerprint.
     pub noresult: Vec<String>,
+    /// For a step that measures the values the plan leaves out (an `estimate` parameter): the canonical text of what the plan writes (the algorithm, the
+    /// preset named, the parameters). Its run starts from the measured values, not from the defaults, so two plans with the same `params` can differ.
+    pub written: Option<String>,
 }
 
 fn write(o: &mut Out, v: &Value) {
@@ -88,6 +91,13 @@ impl Resolved {
     /// SHA-256 of the canonical text without the `noresult` parameters: the same result, the same fingerprint.
     pub fn params_sha256(&self) -> String {
         sha256_hex(self.text_without(&self.noresult).as_bytes())
+    }
+    /// The fingerprint of the run for the keys of the cache and of the scheduler: `params_sha256`, with what the plan writes when the step measures what it leaves out.
+    pub fn run_sha256(&self) -> String {
+        match &self.written {
+            None => self.params_sha256(),
+            Some(w) => sha256_hex(format!("{}\nwritten:{w}", self.params_sha256()).as_bytes()),
+        }
     }
 }
 
@@ -178,7 +188,11 @@ pub fn canonical(inst: &Instance, step: &Step) -> Result<Resolved> {
         set(&mut params, k, v.clone());
     }
     crate::sortc::slice_by(&mut params, |a, b| a.0.cmp(&b.0));
+    let written = declared(step, algorithm)
+        .any(|p| p.estimate)
+        .then(|| written_text(inst, step));
     Ok(Resolved {
+        written,
         algorithm: algorithm.map(|a| (a.id.to_string(), a.version)),
         preset: preset.map(|p| p.id.to_string()),
         noresult: declared(step, algorithm)
@@ -187,4 +201,23 @@ pub fn canonical(inst: &Instance, step: &Step) -> Result<Resolved> {
             .collect(),
         params,
     })
+}
+
+/// What the plan writes for `inst`, as canonical JSON: the algorithm and the preset named, the parameters (rule of `written` in mzlab-feat-wasm).
+fn written_text(inst: &Instance, step: &Step) -> String {
+    let mut kv: Vec<(String, Value)> = Vec::new();
+    if let Some(a) = &inst.algorithm {
+        kv.push(("algorithm".into(), Value::Str(a.clone())));
+    }
+    let named = step
+        .presets
+        .iter()
+        .filter(|p| Some(p.id) == inst.preset.as_deref());
+    for (k, v) in named.flat_map(|p| p.params.iter()) {
+        set(&mut kv, k, v.clone());
+    }
+    for (k, v) in &inst.params {
+        set(&mut kv, k, v.clone());
+    }
+    value_text(&Value::Obj(kv))
 }

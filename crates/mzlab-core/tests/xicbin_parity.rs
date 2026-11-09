@@ -2,7 +2,7 @@
 //! `.mzidx`: every window of a spread of m/z, a window with no peaks, a level that does not exist, a buffer that is too short.
 #![allow(clippy::indexing_slicing)]
 
-#[path = "lettore_finto/mod.rs"]
+#[path = "fake_reader/mod.rs"]
 mod finto;
 
 use std::io::BufWriter;
@@ -10,12 +10,12 @@ use std::io::BufWriter;
 use mzlab_core::idxread::Index;
 use mzlab_core::json::{self, Value};
 use mzlab_core::routes::Routes;
-use mzlab_core::{lettori_mzml, mzidx, upload};
+use mzlab_core::{mzidx, readers_mzml, upload};
 
 fn routes() -> Routes<Vec<u8>> {
     let mut l = finto::Finto::vario(400, 300, 4242);
     let mut mzml = Vec::new();
-    lettori_mzml::scrivi(&mut l, 0, BufWriter::new(&mut mzml), &mut |_, _| {}).unwrap();
+    readers_mzml::scrivi(&mut l, 0, BufWriter::new(&mut mzml), &mut |_, _| {}).unwrap();
     let p = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "x.mzML").unwrap();
     let (idx, _) = mzidx::build_mzml_to_vec(&p.table, &mzml, mzidx::DEFAULT_BUDGET).unwrap();
     let size = idx.len() as u64;

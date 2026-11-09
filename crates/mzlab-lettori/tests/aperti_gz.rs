@@ -6,8 +6,8 @@ mod common;
 use common::*;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use mzlab_core::lettori::Limits;
 use mzlab_core::numpress::Np;
+use mzlab_core::readers::Limits;
 use std::io::Write;
 
 fn gz(b: &[u8]) -> Vec<u8> {
@@ -20,7 +20,7 @@ fn abre(
     name: &str,
     b: Vec<u8>,
     l: &Limits,
-) -> Result<Box<dyn mzlab_core::lettori::Reader>, &'static str> {
+) -> Result<Box<dyn mzlab_core::readers::Reader>, &'static str> {
     mzlab_lettori::apri(file_set(name, b), l).map_err(|e| e.key)
 }
 

@@ -5,8 +5,6 @@
 mod canon;
 mod check;
 mod command;
-mod corsa;
-mod corsa_reg;
 mod line;
 #[cfg(test)]
 mod line_tests;
@@ -15,6 +13,8 @@ mod order;
 mod parse;
 mod prov;
 mod run;
+mod run_report;
+mod run_report_reg;
 pub mod sched;
 mod sched_route;
 mod write;
@@ -22,7 +22,6 @@ mod write;
 pub use canon::{cache_key, canonical, value_text, Resolved};
 pub use check::{check, conversion_path, Platform, Problem};
 pub use command::{command, route as command_route};
-pub use corsa::{build as corsa_build, Output, RunReport};
 pub use line::{apply_set, apply_sets, line, route as line_route, sets_of};
 pub use migrate::{migrate, migrate_name, Migrated, MIGRATIONS};
 pub use order::{levels, plan_order};
@@ -34,6 +33,7 @@ pub use run::{
     execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx, Hooks, Job,
     Outcome, Results, Run, Runner,
 };
+pub use run_report::{build as corsa_build, Output, RunReport};
 pub use sched_route::{
     act as sched_act, ask as sched_ask, cancels as sched_cancels, route as sched_route,
 };

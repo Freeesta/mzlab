@@ -20,7 +20,7 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
-    d = tmp_path_factory.mktemp("wiff_energia")
+    d = tmp_path_factory.mktemp("wiff_energy")
     run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
     run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli")

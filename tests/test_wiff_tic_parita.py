@@ -1,7 +1,7 @@
 """The .mzidx of a SCIEX .wiff sample from the engine .wasm (mzlab-wasm `build_mzidx_native`, what the site writes in OPFS; through Node) and from
 `mzlab-cli flow run` (index.mzidx, what the app writes) hold the same bytes, the TIC of each scan included: the TIC the file header gives (not the sum of the
 points, not a float32 value), the sum only where the header has none. Synthetic pair `totale` of tools/wiff_riferimento.py (no laboratory data).
-The stored chromatograms are left out of the comparison: the app keeps the vendor TIC chromatogram of a full scan experiment (wiff/run_estesi.rs), the engine
+The stored chromatograms are left out of the comparison: the app keeps the vendor TIC chromatogram of a full scan experiment (wiff/run_extended.rs), the engine
 only the MRM ones. Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil

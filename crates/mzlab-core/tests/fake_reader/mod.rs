@@ -1,0 +1,352 @@
+//! A made-up `Lettore` that carries every optional field a reader may give (precursor with and without a value, every polarity, empty scans,
+//! Thermo-like filters, `extra_mzml` marks and userParams, 64-bit intensities, arrays of unequal length): the oracle of the rows built without text
+//! (`mzidx_lettore`) and the source of the synthetic benchmark (`examples/mzidx_times.rs`).
+#![allow(dead_code)]
+#![allow(
+    clippy::disallowed_methods,
+    clippy::field_reassign_with_default,
+    clippy::inconsistent_digit_grouping,
+    clippy::too_many_arguments,
+    clippy::useless_format
+)]
+
+use mzlab_core::error::{Error, Result};
+use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
+use mzlab_core::mzmlwrite::{CvPar, Header, Precursore, SpectrumExtra};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Position, Reader, Sample, ScanEntry};
+
+/// The maker's totals, an injection time and a precursor chain on some scans: the rows are then read from the text the writer gives them.
+fn with_totals(extra: &mut SpectrumExtra, k: usize, level: u8, precursor: Option<f64>) {
+    // the maker's totals, an injection time and a precursor chain: the rows are then read from the text the writer gives them
+    if k % 17 == 6 {
+        extra.tic = Some(1234.5);
+        extra.base_peak = Some((111.25, 77.0));
+        extra.scan_params.push(
+            CvPar::new("MS:1000927", "ion injection time", 12.5)
+                .with_unit("UO:0000028", "millisecond"),
+        );
+    }
+    if k % 19 == 7 {
+        extra
+            .cv_params
+            .push(CvPar::new("MS:1000129", "negative scan", ""));
+    }
+    if level > 1 && k % 7 == 3 {
+        extra.precursors.push(Precursore {
+            selected_mz: precursor,
+            charge: Some(2),
+            intensity: Some(555.5),
+            iso_target: precursor,
+            iso_lower: Some(1.5),
+            iso_upper: Some(0.5),
+            activation: vec![(
+                "MS:1000422".into(),
+                "beam-type collision-induced dissociation".into(),
+            )],
+            energy: Some(("MS:1000138".into(), 30.0)),
+            spectrum_ref: Some(format!("controllerType=0 controllerNumber=1 scan={k}")),
+        });
+    }
+}
+
+/// A tiny deterministic generator (xorshift), so the scans are the same on every run.
+pub struct Case(pub u64);
+
+impl Case {
+    pub fn next(&mut self) -> u64 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        self.0
+    }
+    pub fn unit(&mut self) -> f64 {
+        (self.next() >> 11) as f64 / (1u64 << 53) as f64
+    }
+}
+
+/// What a scan carries besides its peaks.
+#[derive(Clone)]
+pub struct Card {
+    pub spettro: Spectrum,
+    pub extra: SpectrumExtra,
+}
+
+pub struct Finto {
+    pub formato: Format,
+    pub campioni: Vec<Sample>,
+    pub indice: Vec<ScanEntry>,
+    pub cards: Vec<Card>,
+    pub testata: Option<Header>,
+    pub traces: Vec<Chromatogram>,
+}
+
+fn spettro(
+    k: usize,
+    level: u8,
+    rt: f64,
+    polarity: i8,
+    profile: bool,
+    filter: &str,
+    precursor: Option<f64>,
+    mz: Vec<f64>,
+    it: Vec<f32>,
+) -> Spectrum {
+    Spectrum {
+        index: k,
+        id: format!("controllerType=0 controllerNumber=1 scan={}", k + 1),
+        level,
+        rt,
+        polarity,
+        profile,
+        filter: filter.into(),
+        precursor,
+        mz,
+        intensity: it,
+        wide: None,
+    }
+}
+
+impl Finto {
+    /// `n` scans of one cycle MS1, MS2, MS2, MS3, empty, with every combination of the optional fields; `peaks` peaks in the survey scans.
+    pub fn vario(n: usize, peaks: usize, seed: u64) -> Finto {
+        let mut r = Case(seed | 1);
+        let mut cards = Vec::new();
+        for k in 0..n {
+            let (level, pol): (u8, i8) = match k % 5 {
+                0 => (1, [1, -1, 0, 1][(k / 5) % 4]),
+                1 | 2 => (2, [1, -1, 0][(k / 5) % 3]),
+                3 => (3, 1),
+                _ => (1, -1),
+            };
+            let np = if k % 7 == 6 {
+                0
+            } else {
+                1 + (r.next() as usize % peaks.max(1))
+            };
+            // every third scan on a coarse grid: equal m/z across scans and groups (the order of equal m/z in a section)
+            let mut mz: Vec<f64> = if k % 3 == 0 {
+                (0..np)
+                    .map(|_| 100.0 + (r.next() % 40) as f64 * 0.5)
+                    .collect()
+            } else {
+                (0..np).map(|_| 50.0 + r.unit() * 1500.0).collect()
+            };
+            if k % 41 == 13 {
+                // out of range, rounding to 32 bits across a bucket edge (a NaN never gets here: the readers' guard and the mzML parser refuse it,
+                // tests/engine_finite_numbers.rs)
+                mz.extend([-5.0, 12345.6, 99.999_999_9, 9998.999_999_9]);
+            }
+            mz.sort_by(|a, b| a.total_cmp(b));
+            let np = mz.len();
+            let it: Vec<f32> = (0..np).map(|_| (r.unit() * 1e6) as f32).collect();
+            let filter = match k % 5 {
+                0 => "FTMS + p ESI Full ms [100.0000-1000.0000]".to_string(),
+                1 => format!(
+                    "ITMS + c ESI d Full ms2 {:.4}@cid35.00 [50.0000-500.0000]",
+                    300.0 + k as f64
+                ),
+                2 => format!(
+                    "FTMS + c ESI d Full ms2 {:.4}@hcd30.00 [50.0000-500.0000]",
+                    400.5 + k as f64
+                ),
+                3 => format!(
+                    "ITMS + c ESI d Full ms3 500.1000@cid35.00 250.2000@hcd25.00 [50.0000-300.0000]"
+                ),
+                _ => String::new(),
+            };
+            let precursor = match (level, k % 3) {
+                (1, _) if k % 25 == 0 => Some(555.5),
+                (1, _) => None,
+                (_, 0) => None,
+                (2, _) => Some(300.0 + k as f64 + r.unit()),
+                _ => Some(250.2 + r.unit()),
+            };
+            let mut sp = spettro(
+                k,
+                level,
+                k as f64 * 0.013 + r.unit() * 0.001,
+                pol,
+                k % 2 == 0,
+                &filter,
+                precursor,
+                mz,
+                it,
+            );
+            if k % 11 == 3 {
+                sp.wide = Some(
+                    (0..np)
+                        .map(|i| f64::from(sp.intensity[i]) * 1.000_000_1)
+                        .collect(),
+                );
+            }
+            if k % 13 == 5 {
+                sp.id = format!("a\"b<c>&d scan={k}");
+            }
+            let mut extra = SpectrumExtra::default();
+            extra.sim = k % 19 == 4;
+            extra.observed = k % 3 == 1;
+            extra.window = (k % 4 != 3).then_some((50.0, 1500.0));
+            if k % 2 == 0 {
+                extra.params.push((
+                    "opentfraw.resolution".into(),
+                    format!("{}", 15000 + (k % 5) * 10000),
+                ));
+            }
+            match k % 31 {
+                2 => extra
+                    .params
+                    .push(("cv:MS:1000130".into(), "positive scan".into())),
+                5 => extra
+                    .params
+                    .push(("cv:MS:1000045".into(), "collision energy".into())),
+                8 => extra
+                    .params
+                    .push(("cv:MS:1000341".into(), "precursor ion spectrum".into())),
+                _ => {}
+            }
+            if k % 29 == 4 {
+                extra.params.push(("note".into(), "see MS:1000744".into()));
+            }
+            with_totals(&mut extra, k, level, sp.precursor);
+            if k % 23 == 7 {
+                extra.params.push(("scan \"mode\"".into(), "a<b&c".into()));
+            }
+            cards.push(Card { spettro: sp, extra });
+        }
+        Finto::from_sheets(cards)
+    }
+
+    pub fn from_sheets(cards: Vec<Card>) -> Finto {
+        let indice = cards
+            .iter()
+            .enumerate()
+            .map(|(k, s)| ScanEntry {
+                id: s.spettro.id.clone(),
+                rt: s.spettro.rt,
+                livello: s.spettro.level,
+                polarita: s.spettro.polarity,
+                tic: 0.0,
+                base_peak: None,
+                filtro: s.spettro.filter.clone(),
+                precursore: s.spettro.precursor,
+                position: (k % 9 != 8).then_some(Position {
+                    membro: (k % 2) as u16,
+                    offset: 100 * k as u64,
+                    lunghezza: 77,
+                }),
+            })
+            .collect();
+        let traces = vec![
+            Chromatogram {
+                index: 0,
+                id: "TIC".into(),
+                kind: ChromKind::Tic,
+                q1: None,
+                q3: None,
+                unit: String::new(),
+                time: vec![0.0, 1.0],
+                intensity: vec![5.0, 6.0],
+            },
+            Chromatogram {
+                index: 1,
+                id: "vuota".into(),
+                kind: ChromKind::Bpc,
+                q1: None,
+                q3: None,
+                unit: String::new(),
+                time: vec![],
+                intensity: vec![],
+            },
+            Chromatogram {
+                index: 2,
+                id: "pressione".into(),
+                kind: ChromKind::Pressure,
+                q1: None,
+                q3: None,
+                unit: String::new(),
+                time: vec![0.0],
+                intensity: vec![1.0],
+            },
+        ];
+        Finto {
+            formato: Format::Altro("finto"),
+            campioni: vec![Sample {
+                id: 7,
+                nome: "finto".into(),
+                scansioni: cards.len(),
+                size: None,
+            }],
+            indice,
+            cards,
+            testata: None,
+            traces,
+        }
+    }
+
+    /// Some scans with one intensity more than m/z values (what `mzidx_reader::spettro` cuts); the mzML of such a reader is not valid.
+    pub fn with_different_lengths(mut self) -> Finto {
+        for (k, s) in self.cards.iter_mut().enumerate() {
+            if k % 17 == 9 && s.spettro.wide.is_none() {
+                s.spettro.intensity.push(1.0);
+            }
+        }
+        self
+    }
+
+    /// The header of a Q-TOF run with a serial number and an acquisition program that names the normalised collision energy.
+    pub fn with_header(mut self, h: Header) -> Finto {
+        self.testata = Some(h);
+        self
+    }
+}
+
+impl Reader for Finto {
+    fn format(&self) -> Format {
+        self.formato
+    }
+    fn samples(&self) -> &[Sample] {
+        &self.campioni
+    }
+    fn index(&mut self, _c: usize) -> Result<&[ScanEntry]> {
+        Ok(&self.indice)
+    }
+    fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
+        self.cards
+            .get(k)
+            .map(|s| s.spettro.clone())
+            .ok_or_else(|| Error::new("error.badIndex"))
+    }
+    fn scan_header(&mut self, _c: usize, _k: usize) -> Result<Vec<Field>> {
+        Ok(Vec::new())
+    }
+    fn chromatograms(&mut self, _c: usize) -> Result<Vec<ChromatogramEntry>> {
+        Ok(self
+            .traces
+            .iter()
+            .map(|t| ChromatogramEntry {
+                id: t.id.clone(),
+                tipo: t.kind,
+                unita: String::new(),
+            })
+            .collect())
+    }
+    fn chromatogram(&mut self, _c: usize, id: &str) -> Result<Chromatogram> {
+        self.traces
+            .iter()
+            .find(|t| t.id == id)
+            .cloned()
+            .ok_or_else(|| Error::new("error.badIndex"))
+    }
+    fn method(&mut self, _c: usize) -> Result<String> {
+        Ok(String::new())
+    }
+    fn mzml_header(&mut self, _c: usize) -> Result<Option<Header>> {
+        Ok(self.testata.clone())
+    }
+    fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
+        self.cards
+            .get(s.index)
+            .map(|x| x.extra.clone())
+            .unwrap_or_default()
+    }
+}

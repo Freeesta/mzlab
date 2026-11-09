@@ -4,9 +4,9 @@
 use base64::Engine;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
-use mzlab_core::lettori_mzml;
 use mzlab_core::numpress::{self, Np};
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
+use mzlab_core::readers_mzml;
 use std::io::Write;
 
 pub fn b64(b: &[u8]) -> String {
@@ -189,7 +189,7 @@ pub fn error(byte: Vec<u8>) -> &'static str {
 }
 
 pub fn written_mzml(l: &mut Box<dyn Reader>) -> Vec<u8> {
-    lettori_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {}).unwrap()
+    readers_mzml::scrivi(l.as_mut(), 0, Vec::new(), &mut |_, _| {}).unwrap()
 }
 
 pub mod andi;

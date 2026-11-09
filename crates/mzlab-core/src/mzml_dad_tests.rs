@@ -154,14 +154,14 @@ impl Ottico {
     }
 }
 
-impl crate::lettori::Reader for Ottico {
-    fn format(&self) -> crate::lettori::Format {
-        crate::lettori::Format::Altro("prova")
+impl crate::readers::Reader for Ottico {
+    fn format(&self) -> crate::readers::Format {
+        crate::readers::Format::Altro("prova")
     }
-    fn samples(&self) -> &[crate::lettori::Sample] {
-        static C: std::sync::OnceLock<Vec<crate::lettori::Sample>> = std::sync::OnceLock::new();
+    fn samples(&self) -> &[crate::readers::Sample] {
+        static C: std::sync::OnceLock<Vec<crate::readers::Sample>> = std::sync::OnceLock::new();
         C.get_or_init(|| {
-            vec![crate::lettori::Sample {
+            vec![crate::readers::Sample {
                 id: 1,
                 nome: "uv".into(),
                 scansioni: 0,
@@ -169,16 +169,16 @@ impl crate::lettori::Reader for Ottico {
             }]
         })
     }
-    fn index(&mut self, _: usize) -> Result<&[crate::lettori::ScanEntry]> {
+    fn index(&mut self, _: usize) -> Result<&[crate::readers::ScanEntry]> {
         Ok(&[])
     }
     fn scan(&mut self, _: usize, _: usize) -> Result<crate::mzml::Spectrum> {
         Err(crate::error::Error::new("error.badIndex"))
     }
-    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<crate::lettori::Field>> {
+    fn scan_header(&mut self, _: usize, _: usize) -> Result<Vec<crate::readers::Field>> {
         Ok(vec![])
     }
-    fn chromatograms(&mut self, _: usize) -> Result<Vec<crate::lettori::ChromatogramEntry>> {
+    fn chromatograms(&mut self, _: usize) -> Result<Vec<crate::readers::ChromatogramEntry>> {
         Ok(vec![])
     }
     fn chromatogram(&mut self, _: usize, _: &str) -> Result<crate::mzml::Chromatogram> {
@@ -197,7 +197,7 @@ fn convert(dad: bool, matrix: Option<DadData>) -> Vec<u8> {
         dad,
         ..Default::default()
     };
-    crate::lettori_mzml::write_with(&mut Ottico(matrix), 0, Vec::new(), &mut |_, _| {}, opz)
+    crate::readers_mzml::write_with(&mut Ottico(matrix), 0, Vec::new(), &mut |_, _| {}, opz)
         .unwrap()
 }
 

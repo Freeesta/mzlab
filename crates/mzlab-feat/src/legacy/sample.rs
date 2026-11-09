@@ -24,7 +24,7 @@ pub fn stem(name: &str) -> String {
 /// `guess_sample`: label, time (min) and type from a file name ('blank', 't30', 'STD_12ppm', '120min', 'dark'), read by the one parser of the names.
 pub fn guess(name: &str) -> Guess {
     let label = stem(name);
-    let (role, minutes) = mzlab_core::campioni::role_and_minutes(name);
+    let (role, minutes) = mzlab_core::samples::role_and_minutes(name);
     let kind = match role {
         "blank" => "blank",
         "dark" => "control",

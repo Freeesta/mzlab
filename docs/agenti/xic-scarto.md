@@ -1,7 +1,7 @@
 # Scarto con segno nella finestra «Estrai ioni» (XIC)
 - Un numero con segno in coda al testo di uno ione, `288.2+16` o `C9H10Cl2N2O-18`, si somma all'm/z dopo l'addotto come Da letterali (+16 = 16,000, non l'ossigeno). Un testo che finisce con un segno o con lettere (`+H`, `[M+H]+`) non ha scarto.
 - Il lettore sta in Rust: `elements::split_offset`, usato da `elements::formula_mz` (`api/formula`), che aggiunge la chiave `offset`. Un m/z nudo con scarto risponde senza formula (`formula` vuota). Scarto illeggibile (`+1.2.3`, `+16x`, `288.2+`): `err.formula.offset`.
-- Sito e app danno gli stessi byte: casi in `crates/mzlab-desktop/tests/parita_rotte.rs` (`lr_formula`); prove del lettore in `crates/mzlab-core/tests/scarto_mz.rs`.
+- Sito e app danno gli stessi byte: casi in `crates/mzlab-desktop/tests/parita_rotte.rs` (`lr_formula`); prove del lettore in `crates/mzlab-core/tests/mz_offset.rs`.
 - CLI: `mzlab-cli ion-mz TESTO [--adduct A] [--out PATH]` (`ion_mz_cmd.rs`) stampa il JSON di `api/formula`; scarto illeggibile = uscita 2.
 - Interfaccia: `evalRow` di `openXic` (`pannelli.js`) mostra «base scarto Da → m/z candidato», mai un'identificazione; i testi sono `xic.shifted` e `err.formula.offset`. Prova: `tests_e2e/e2e_xic_scarto.py`.
 - Nomi: un testo che il motore non legge come formula si prova come nome delle liste dei contaminanti (`xic-nomi.js`, caricato alla bisogna, con `liste-nomi.js` e `ask-suggerisci.js`): l'errore del motore porta `head` e `offset`, la pagina cerca il nome esatto e richiama `api/formula` con formula + scarto e l'addotto della riga. Suggerimenti sotto il campo (combobox). Un nome è un candidato, mai un'identificazione; se le liste non si caricano, m/z e formule funzionano. Prova: `e2e_xic_nomi.py`.

@@ -2,9 +2,9 @@
 //! `{"table": {n_rows, n_files, rows, area, height, state, apex_rt}, "campioni": campioni/2, "opts": {...}}` (the matrices as lists of rows).
 
 use super::{build, CondOut, GroupOpts, GroupTable, GroupsOut, RowMeta, RowOut};
-use mzlab_core::campioni::{self, Sample};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::samples::{self, Sample};
 use std::fmt::Write;
 
 /// `Out::num`, `int` and `opt` without a temporary string per number (the table has millions of them).
@@ -394,7 +394,7 @@ pub fn opts_from_value(v: &Value) -> Result<GroupOpts> {
 pub fn samples_from_value(v: &Value) -> Result<Vec<Sample>> {
     let mut text = Out::default();
     dump(&mut text, v);
-    campioni::from_json(text.0.as_bytes())
+    samples::from_json(text.0.as_bytes())
 }
 
 /// Reads the JSON input of `run_json`.
@@ -406,7 +406,7 @@ pub fn parse_input(input: &[u8]) -> Result<(GroupTable, Vec<Sample>, GroupOpts)>
         &mut cs_text,
         doc.get("campioni").ok_or_else(|| size("campioni"))?,
     );
-    let cs = campioni::from_json(cs_text.0.as_bytes())?;
+    let cs = samples::from_json(cs_text.0.as_bytes())?;
     let opts = match doc.get("opts") {
         Some(v) => parse_opts(v)?,
         None => GroupOpts::default(),

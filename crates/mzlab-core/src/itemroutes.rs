@@ -45,7 +45,7 @@ pub(crate) fn cv_value(h: &str, acc: &str) -> Option<String> {
 fn scan_window<R: ReadAt, M: ReadAt>(idx: &Index<R>, mzml: &mut M) -> Result<Option<(f64, f64)>> {
     let mut win: Option<(f64, f64)> = None;
     for s in idx.scans.iter().take(50) {
-        let h = crate::sorgente::scan_text(mzml, s)?;
+        let h = crate::source::scan_text(mzml, s)?;
         let (Some(a), Some(z)) = (cv_value(&h, "MS:1000501").filter(|v| !v.is_empty()), cv_value(&h, "MS:1000500").filter(|v| !v.is_empty())) else { continue };
         let (Ok(a), Ok(z)) = (a.trim().parse::<f64>(), z.trim().parse::<f64>()) else { continue };
         win = Some(win.map_or((a, z), |(lo, hi)| (lo.min(a), hi.max(z))));

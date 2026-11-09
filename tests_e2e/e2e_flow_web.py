@@ -82,7 +82,7 @@ try:
         step("the base plan runs: events of every step, the table is kept in OPFS", first_run)
 
         def same_bytes_as_native():
-            recipe = pg.evaluate("FLOW.runners.web.recipeOf(document.querySelector('.flx-list').__flow.plan)")
+            recipe = pg.evaluate("(() => { const S = document.querySelector('.flx-list').__flow, al = S.plan.steps.find(s => String(s.step).split('@')[0] === 'features.align'); return FLOW.runners.web.recipeOf(S.plan, S.reg.steps, al); })()")
             assert '"layers"' in recipe, recipe
             got = pg.evaluate("""(async () => { const d = await navigator.storage.getDirectory(), f = await (await d.getDirectoryHandle('mzlab')).getDirectoryHandle('flow');
               const b = await (await (await f.getFileHandle('series.mzfeat')).getFile()).arrayBuffer();

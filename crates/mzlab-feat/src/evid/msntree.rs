@@ -3,7 +3,7 @@
 
 use super::ExternalHit;
 use mzlab_core::error::Result;
-use mzlab_core::msngrafo::search_ms2;
+use mzlab_core::msngraph::search_ms2;
 
 pub const SOURCE: &str = "MSn tree of a reference";
 const PPM: f64 = 10.0;

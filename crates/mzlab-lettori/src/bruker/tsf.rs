@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 
 use mzlab_core::idxread::ReadAt;
 
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 fn broken(m: &str) -> Error {
     Error::new("err.dam.unreadable").with("message", format!("tsf_bin: {m}"))

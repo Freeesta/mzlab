@@ -1,5 +1,5 @@
 //! Bench harness: real mzlab-core functions behind tiny wasm-bindgen entry points; JS times each call.
-use mzlab_core::{centroidi, composition, entropy, idxread, mzidx, mzml, peaks, routes, upload};
+use mzlab_core::{centroids, composition, entropy, idxread, mzidx, mzml, peaks, routes, upload};
 use std::cell::RefCell;
 use std::io::Cursor;
 use wasm_bindgen::prelude::*;
@@ -58,14 +58,14 @@ pub fn xic(k: u32, lo: f64, hi: f64, tol: f64) -> f64 {
 /// Centroids of every MS1 spectrum (continuous mode).
 #[wasm_bindgen]
 pub fn centroid(step: f64, w: f64, maxn: u32) -> f64 {
-    let p = centroidi::Params { mode: centroidi::Mode::Continuous, unit: 1.0, step, w, k: 3.0, vmax: 0.0, area: false };
-    let mut buf = centroidi::Buf::default();
+    let p = centroids::Params { mode: centroids::Mode::Continuous, unit: 1.0, step, w, k: 3.0, vmax: 0.0, area: false };
+    let mut buf = centroids::Buf::default();
     RUN.with(|r| {
         let r = r.borrow();
         let mut n = 0usize;
         for s in r.as_ref().unwrap().spectra.iter().filter(|s| s.level == 1).take(maxn as usize) {
             let y: Vec<f64> = s.intensity.iter().map(|&x| x as f64).collect();
-            n += centroidi::centroids(&s.mz, &y, &p, &mut buf).len();
+            n += centroids::centroids(&s.mz, &y, &p, &mut buf).len();
         }
         n as f64
     })
@@ -191,10 +191,10 @@ pub fn raw_parse() -> f64 {
 #[cfg(feature = "thermo")]
 #[wasm_bindgen]
 pub fn raw_index() -> f64 {
-    use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+    use mzlab_core::readers::{self, FileSet, Limiti, Membro};
     let bytes = FILE.with(|f| f.borrow().clone());
     let fs = FileSet { membri: vec![Membro { nome: "x.raw".into(), dim: bytes.len() as u64, dati: Box::new(bytes), sha1: None }] };
-    let mut l = lettori::apri(fs, &Limiti::sito()).unwrap();
+    let mut l = readers::apri(fs, &Limiti::sito()).unwrap();
     let p = upload::prepare_lettore(&mut *l, 0, &[], "x.mzML").unwrap();
     let mut out = Cursor::new(Vec::new());
     mzidx::build_lettore(&p.table, &mut *l, 0, &mut out, 192 << 20).unwrap();

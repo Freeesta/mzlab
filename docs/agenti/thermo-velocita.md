@@ -25,7 +25,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - **B1** La perdita profilo → centroidi esiste solo nel passo `spectra.centroid` (D6/L8, parametri in `prov/1`); lettore, colonne e matrice non perdono nulla.
 - **B2 Colonne senza perdite**: m/z e intensità in colonne separate, delta + rimescolamento dei byte + zstd, MAI Numpress né arrotondamenti; decodificate ridanno le impronte A4. Blocco opzionale nuovo del `.mzidx` con versione dichiarata (`error.newerFormat`); i `.mzidx` esistenti restano uguali byte per byte. Numeri: dimensione contro `.raw` e mzML, MB/s di scrittura e lettura.
 - **B3 Matrice scansione × bin (CSR)**: un XIC è una fetta di colonna, uguale al bit alla somma a forza bruta; la feature table dalla matrice è uguale byte per byte a quella della via mzML.
-- **B4 Centroidatura fusa**: decodifica e centroidatura in un passo, centroidi uguali al bit a `lettori_centroidi.rs`; un algoritmo nuovo è un parametro del passo, spento di base, dichiarato con perdita e confrontato con `meta.compare`.
+- **B4 Centroidatura fusa**: decodifica e centroidatura in un passo, centroidi uguali al bit a `readers_centroids.rs`; un algoritmo nuovo è un parametro del passo, spento di base, dichiarato con perdita e confrontato con `meta.compare`.
 - **B5 Flow contro mzmine**: tempo e memoria di picco `.raw` → centroidi → feature table contro mzmine (`tools/bench/corri_mzmine.py`) e contro la nostra via `.raw` → mzML → feature, stessi file e parametri.
 
 ## Banco
@@ -33,7 +33,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - `python3 tools/bench/thermo_velocita.py unisci BANCO.jsonl RFR.jsonl > UNITO.tsv` poi `tabella UNITO.tsv --sha SHA40 --maquina TESTO`: tabelle per famiglia solo sui file aperti da entrambi, conteggio dei restanti a parte, nessun nome di file. `RFR.jsonl` = righe `banco/1` con `reader: "rfr"` e le stesse fasi.
 - File sostitutivo Orbitrap v66 per i banchi di velocità (nessun dato reale): `cargo run --release -p mzlab-lettori --example thermo_sintetico -- OUT.raw [--scans 2000] [--peaks 2000] [--bins 16] [--ms2 0] [--ms2-peaks 200] [--trailer 600] [--seed 1]` (MS1 FTMS in profilo con centroidi, `--ms2 K` MS2 HCD dipendenti in centroide dopo ogni MS1, scritto a flusso; stesso seme, stessi byte).
 - Taglie del file sostitutivo: pesante ≈ 2,1 GB `--scans 82500 --peaks 3000 --ms2 10`; normale ≈ 290 MB `--scans 5400 --peaks 600`. Test `thermo_synthetic_hr.rs`: ciclo, stesso seme, e un hash fissato di tutte le scansioni decodificate (centroidi e profilo) di un file in profilo, il cancello di ogni modifica del decodificatore.
-- Fasi del percorso verso la mappa e dell'mzML (livello B, nativo): `cargo run --profile cli -p mzlab-core --features thermo --example raw_tempi -- FILE.raw` (`RAW_VELOCE.md` §1). Browser: `python3 tools/bench_raw.py FILE.raw` (serve `wasm-bindgen`).
+- Fasi del percorso verso la mappa e dell'mzML (livello B, nativo): `cargo run --profile cli -p mzlab-core --features thermo --example raw_times -- FILE.raw` (`RAW_VELOCE.md` §1). Browser: `python3 tools/bench_raw.py FILE.raw` (serve `wasm-bindgen`).
 - Dump di `thermo_scandump` (`scandump.md`): il suo `read_all_ms` include trailer e righe del dump per scansione, il suo `open_ms` apre due volte e copia il file; NON è lo stesso lavoro di `thermo_banco` e non va confrontato con esso.
 
 ## Rumore di misura (cloud 4 vCPU, `thermo_banco`, profilo `cli`, `main` `ab4fe7d00606e58218a7ea8570f333a4026b4fc4`)
@@ -103,7 +103,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - **Dove perdiamo**: A5 chiede browser ≤ 1,7× il nativo e oggi la lettura è 3,3-6,3× (rapporto di profilo `z` contro `3` incluso). Memoria del modulo dopo `apri`: 32-41 MB (il tetto di memoria iniziale del modulo è 32 MB).
 
 ## Numeri di partenza, livello B
-**B-1 · Cloud 4 vCPU, nativo, `raw_tempi`, profilo `cli`, `main` `ab4fe7d00606e58218a7ea8570f333a4026b4fc4`, una corsa** (cache calda, letture a blocchi di 256 KB come nel modulo). Decodifica di tutto, via normale e via `lettori_centroidi`; il resto è comune.
+**B-1 · Cloud 4 vCPU, nativo, `raw_times`, profilo `cli`, `main` `ab4fe7d00606e58218a7ea8570f333a4026b4fc4`, una corsa** (cache calda, letture a blocchi di 256 KB come nel modulo). Decodifica di tutto, via normale e via `lettori_centroidi`; il resto è comune.
 
 | File | Decodifica (s) normale / centroidi | Tabella s | `.mzidx` s | Tabella + `.mzidx` + scratch s | mzML s | Picco memoria |
 |---|---|---|---|---|---|---|
@@ -115,7 +115,7 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 
 **B-2 · Cloud 4 vCPU, `wasm`, site `.mzidx` build in Node 22** (`build_mzidx_native` of the engine with the `thermo` module as external reader, `fs.readSync` reads on demand, spill to file, 64 MB budget, fingerprints given; modules without `wasm-opt`; 10 alternating runs, median [min-max] in ms; same `.mzidx` bytes). `thermo_sintetico` files: normal 288 MB (`--scans 5400 --peaks 600`), heavy 2.14 GB (`--scans 82500 --peaks 3000 --ms2 10`).
 
-Measured with the blocks no longer zero-filled and without the adaptive window of `rawlettore::Stream`, whose numbers are in `misure-velocita-raw.md`.
+Measured with the blocks no longer zero-filled and without the adaptive window of `rawreader::Stream`, whose numbers are in `misure-velocita-raw.md`.
 
 | file | open | scans | chromatograms | total |
 |---|---|---|---|---|

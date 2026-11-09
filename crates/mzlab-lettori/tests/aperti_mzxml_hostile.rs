@@ -6,7 +6,7 @@ mod common;
 
 use common::mzxml::*;
 use common::{b64, file_set, zlib};
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 use std::path::PathBuf;
 
 #[path = "../../../tools/dati_percorsi.rs"]

@@ -65,7 +65,7 @@
     const src = x.source(it);
     if (!src) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
     if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
-    const recipe = k.recipeOf(x.plan, inst), jk = x.jk(spec), high = k.highMb(), budget = budgetMb();
+    const recipe = await k.recipeOf(x.plan, x.registry, inst), jk = x.jk(spec), high = k.highMb(), budget = budgetMb();
     // the estimate from the header of the index (`trace_stima`); without it the check of the .wasm still refuses in order
     const est = k.stimaDetect ? await k.stimaDetect(src.path, recipe).catch(() => null) : null;
     const raise = !!est && est.via === "refused" && x.allowed.has(jk);
@@ -101,7 +101,7 @@
   /** features.align, and features.gapfill when the table of the alignment was made with another recipe (the pool aligns and fills the gaps in one call): the estimate first; past the budget
    * the job is blocked by `permission.memory` until the user agrees (flow-live.js asks on Run), past the high level it is refused with its numbers @param {any} x @param {any} spec @param {any} inst */
   const align = async (x, spec, inst) => {
-    const k = kit(), p = await k.getPool(), j = job(spec), recipe = k.recipeOf(x.plan);
+    const k = kit(), p = await k.getPool(), j = job(spec), recipe = await k.recipeOf(x.plan, x.registry, inst);
     const al = x.alignOf(inst), alKey = al === inst ? spec.key : x.keys.get(x.jk({ instance: al.id, item: null }));
     if (!alKey) { await fail(x, spec, inst, Object.assign(new Error("err.flow.lineage"), { key: "err.flow.lineage", params: { step: inst.step } })); return {}; }
     if (await fresh(p, alKey, recipe)) { await x.call("cached", { job: j }); return {}; }
@@ -127,6 +127,8 @@
       try {
         const run = () => p.align(stored, up.map(u => u.path), recipe, jk, est.mb > BIG_MB);
         const table = est.mb > BIG_MB && navigator.locks ? await navigator.locks.request(LOCK, run) : await run();
+        // the old recipe goes first: a page closed between the two writes leaves a table without a recipe (made again), never a new table under the old recipe
+        await p.fs.remove(DIR + alKey + ".recipe").catch(() => {});
         await p.fs.write(DIR + alKey + ".mzfeat", table.slice());
         await p.fs.write(LATEST, table.slice());
         await p.fs.write(DIR + alKey + ".recipe", new TextEncoder().encode(recipe));
@@ -145,8 +147,12 @@
   const recall = async (p, key) => {
     try { return await has(p, MSN_DIR + key + ".json") ? JSON.parse(new TextDecoder().decode(await p.fs.read(MSN_DIR + key + ".json"))) : null; } catch (_) { return null; }
   };
+  /** the writes of index.json one after the other: jobs that end together read and write it in turn, so none drops the key of another (a key not listed is never trimmed) */
+  let kept = Promise.resolve();
   /** keeps a result (and its warnings, when it has any) and forgets the oldest ones past MSN_KEEP @param {any} p @param {string} key @param {{ name: string, text: string, warnings?: string[] }} r */
-  const remember = async (p, key, r) => {
+  const remember = (p, key, r) => (kept = kept.then(() => keep(p, key, r)));
+  /** @param {any} p @param {string} key @param {{ name: string, text: string, warnings?: string[] }} r */
+  const keep = async (p, key, r) => {
     try {
       await p.fs.write(MSN_DIR + key + ".json", new TextEncoder().encode(JSON.stringify({ name: r.name, text: r.text, ...(r.warnings && r.warnings.length ? { warnings: r.warnings } : {}) })));
       let list = [];
@@ -230,7 +236,7 @@
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
       const table = await p.fs.read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(async u => p.fs.read(DIR + u.key + ".mzfeatf")));
-      const text = await p.digLr({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, samples: inp.samples, names: x.items.map((/** @type {any} */ i) => i.input), recipe: k.recipeOf(x.plan), settings: JSON.stringify(inst.params || {}), peaks, paths: up.map(u => u.path) });
+      const text = await p.digLr({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, samples: inp.samples, names: x.items.map((/** @type {any} */ i) => i.input), recipe: await k.recipeOf(x.plan, x.registry, al), settings: JSON.stringify(inst.params || {}), peaks, paths: up.map(u => u.path) });
       const r = { name: inst.id + ".dig.json", text };
       await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
@@ -308,7 +314,7 @@
       const read = async (/** @type {string} */ f) => p.fs.read(f), paths = up.map(u => u.path);
       const table = await read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(u => read(DIR + u.key + ".mzfeatf")));
       const given = (inst.params || {}).polarity, step = F.stepOf(x.S.reg, inst);
-      const ev = await p.linkEvidence({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, hypotheses: inp.hypotheses, samples: inp.samples, recipe: k.recipeOf(x.plan), polarity: given == null ? NaN : Number(given), budgetMb: budgetMb(), peaks, paths });
+      const ev = await p.linkEvidence({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, hypotheses: inp.hypotheses, samples: inp.samples, recipe: await k.recipeOf(x.plan, x.registry, al), polarity: given == null ? NaN : Number(given), budgetMb: budgetMb(), peaks, paths });
       const out = await p.linkInterp({ table: ev.table, parent: ev.parent, registry: ev.registry, polarity: ev.polarity, params: JSON.stringify({ ...F.defaults(inst, step), ...(inst.params || {}) }), infusion: ev.infusion, paths });
       await p.fs.write(path, out.slice());
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });

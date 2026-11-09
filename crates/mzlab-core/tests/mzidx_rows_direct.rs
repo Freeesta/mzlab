@@ -1,0 +1,335 @@
+//! The scan table and the `.mzidx` of a reader built without the mzML text (`Rows::lettore`, one decoding for the table and pass 1) equal the old way:
+//! the mzML `readers_mzml::scrivi` writes, read back by `scantable` and indexed by `build_mzml`. A made-up reader (`fake_reader`) carries every optional
+//! field: precursor with and without a value, every polarity, empty scans, equal m/z in several scans, out-of-range m/z, 64-bit intensities,
+//! arrays of unequal length, extras that name accessions the rows read. Header variants too (analyzer components, `MS:1000768`, names that need the text).
+#![allow(clippy::indexing_slicing)]
+#![allow(clippy::disallowed_methods)]
+
+mod fake_reader;
+
+use fake_reader::Finto;
+use mzlab_core::json::{self, Value};
+use mzlab_core::mzmlwrite::Header;
+use mzlab_core::readers::Reader;
+use mzlab_core::{mzidx, readers_mzml, upload};
+
+const BIG: usize = mzidx::DEFAULT_BUDGET;
+
+fn u64_at(b: &[u8], at: usize) -> u64 {
+    u64::from_le_bytes(b[at..at + 8].try_into().unwrap())
+}
+
+fn json_at(b: &[u8], off: usize, len: usize) -> Value {
+    json::parse(&b[u64_at(b, off) as usize..][..u64_at(b, len) as usize]).unwrap()
+}
+
+fn without(v: &Value, skip: &[&str]) -> Vec<(String, Value)> {
+    match v {
+        Value::Obj(o) => o
+            .iter()
+            .filter(|(k, _)| !skip.contains(&k.as_str()))
+            .cloned()
+            .collect(),
+        _ => panic!("not an object"),
+    }
+}
+
+/// Index through the mzML (the oracle) and the two ways straight from the reader, with several budgets.
+fn trial(label: &str, l: Finto) {
+    try_with(label, l, true);
+}
+
+/// `with_mzml`: false when the mzML of the reader is not valid (then only the two ways straight from the reader are compared).
+fn try_with(label: &str, mut l: Finto, with_mzml: bool) {
+    let name = format!("{label}.mzML");
+    let a = with_mzml.then(|| {
+        let mzml = readers_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+        let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, &name).unwrap();
+        let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG)
+            .unwrap_or_else(|e| panic!("{label}: mzML path {e:?}"));
+        mzml_with_scratch(label, &pa.table, &mzml, &idx);
+        idx
+    });
+
+    let pb = upload::prepare_reader(&mut l, 0, &[], &name).unwrap();
+    let two = |l: &mut Finto, budget: usize| {
+        let mut out = std::io::Cursor::new(Vec::new());
+        mzidx::build_reader(&pb.table, l, 0, &mut out, budget).map(|st| (out.into_inner(), st))
+    };
+    let (b, _) = two(&mut l, BIG).unwrap();
+    // the same index in one call, whatever the budget (one pass, or the rounds)
+    let mut saw_many = false;
+    for budget in [BIG, 1 << 22, 1 << 20, 1 << 18, 1 << 16, 1 << 14, 1 << 12] {
+        let mut out = std::io::Cursor::new(Vec::new());
+        let mut phases = Vec::new();
+        let Ok((st, sha)) =
+            upload::index_reader(&mut l, 0, &[], &name, &mut out, budget, &mut |f| {
+                phases.push(f)
+            })
+        else {
+            continue;
+        };
+        assert_eq!(phases, [3], "{label}");
+        assert_eq!(sha, pb.sha256, "{label}");
+        saw_many |= st.passes > 1;
+        assert!(
+            out.into_inner() == b,
+            "{label}: the one-call index differs at budget {budget}"
+        );
+        if let Ok((x, _)) = two(&mut l, budget) {
+            assert!(x == b, "{label}: build_lettore differs at budget {budget}");
+        }
+    }
+    if l.index(0).unwrap().len() > 200 {
+        assert!(saw_many, "{label}: no budget forced the rounds");
+    }
+    with_scratch(label, &mut l, &pb, &name, &b);
+
+    let Some(a) = a else { return };
+    // against the mzML: the sections, the rows but for their first two columns, the metadata but for source and version
+    let scans_off = u64_at(&a, 32) as usize;
+    assert_eq!(u64_at(&b, 32) as usize, scans_off, "{label}: sections");
+    assert!(
+        a[64..scans_off] == b[64..scans_off],
+        "{label}: sections differ"
+    );
+    let (ra, rb) = (json_at(&a, 32, 40), json_at(&b, 32, 40));
+    assert_eq!(ra.arr().len(), rb.arr().len(), "{label}: rows");
+    for (k, (x, y)) in ra.arr().iter().zip(rb.arr()).enumerate() {
+        assert_eq!(x.arr()[2..], y.arr()[2..], "{label}: row {k}");
+    }
+    let (ma, mb) = (json_at(&a, 16, 24), json_at(&b, 16, 24));
+    assert_eq!(
+        without(&ma, &["source", "version"]),
+        without(&mb, &["source", "version"]),
+        "{label}: metadata"
+    );
+}
+
+/// The mzML path with a scratch file (`build_mzml_spill`): the same bytes at every budget, the file decoded once.
+fn mzml_with_scratch(label: &str, table: &mzidx::ScanTable, mzml: &[u8], idx: &[u8]) {
+    for budget in [1 << 20, 1 << 16, 1 << 12] {
+        let (mut out, mut sp) = (
+            std::io::Cursor::new(Vec::new()),
+            std::io::Cursor::new(Vec::new()),
+        );
+        let Ok(st) = mzidx::build_mzml_spill(
+            table,
+            std::io::Cursor::new(mzml),
+            &mut out,
+            budget,
+            Some(&mut sp),
+        ) else {
+            continue;
+        };
+        assert_eq!(st.passes, 1, "{label}: one decoding with a scratch file");
+        assert!(
+            out.into_inner() == idx,
+            "{label}: mzML index with a scratch file differs at budget {budget}"
+        );
+    }
+}
+
+/// The same index with a scratch file: the peaks that do not fit go to it, the scans are decoded once, the bytes are the same.
+fn with_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b: &[u8]) {
+    // a wrong guess of 32-bit MS1 peaks (`first_ms1_different`) throws away what pass 1 kept or spilled: the rounds decode again
+    let ripassa = label == "primo FTMS";
+    let mut spilled = false;
+    for budget in [BIG, 1 << 22, 1 << 20, 1 << 18, 1 << 16, 1 << 14, 1 << 12] {
+        let mut out = std::io::Cursor::new(Vec::new());
+        let mut sp = std::io::Cursor::new(Vec::new());
+        let Ok((st, sha)) = upload::index_reader_with(
+            l,
+            0,
+            &mut || Ok(vec![]),
+            name,
+            &mut out,
+            budget,
+            Some(&mut sp),
+            &mut |_| {},
+        ) else {
+            continue;
+        };
+        assert_eq!(sha, pb.sha256, "{label}");
+        if !ripassa {
+            assert_eq!(st.passes, 1, "{label}: one decoding with a scratch file");
+        }
+        spilled |= !sp.into_inner().is_empty();
+        assert!(
+            out.into_inner() == b,
+            "{label}: the index with a scratch file differs at budget {budget}"
+        );
+    }
+    if l.index(0).unwrap().len() > 200 && !ripassa {
+        assert!(spilled, "{label}: no budget used the scratch file");
+    }
+}
+
+fn testata_orbitrap() -> Header {
+    Header {
+        run: "r".into(),
+        sources: vec!["r.raw".into()],
+        software: ("mzLab".into(), "1".into()),
+        components: vec![
+            (
+                "source".into(),
+                "MS:1000073".into(),
+                "electrospray ionization".into(),
+            ),
+            ("analyzer".into(), "MS:1000484".into(), "orbitrap".into()),
+        ],
+        source_cv: vec![("MS:1000768".into(), "Thermo nativeID format".into())],
+        ..Header::default()
+    }
+}
+
+#[test]
+fn varied_without_header() {
+    for (n, peaks, seed) in [
+        (0, 10, 1),
+        (1, 10, 2),
+        (7, 5, 3),
+        (60, 40, 4),
+        (400, 60, 5),
+        (1200, 30, 6),
+    ] {
+        trial(&format!("vario{n}"), Finto::vario(n, peaks, seed));
+    }
+}
+
+#[test]
+fn varied_with_orbitrap_header() {
+    trial(
+        "orbitrap",
+        Finto::vario(300, 50, 7).with_header(testata_orbitrap()),
+    );
+}
+
+#[test]
+fn varied_at_low_resolution() {
+    let mut l = Finto::vario(300, 50, 8);
+    for s in &mut l.cards {
+        s.spettro.filter = s
+            .spettro
+            .filter
+            .replace("FTMS", "TQMS")
+            .replace("ITMS", "TQMS");
+    }
+    trial("lr", l);
+}
+
+#[test]
+fn header_with_names_that_ask_for_the_text() {
+    let mut h = testata_orbitrap();
+    h.components.push((
+        "analyzer".into(),
+        "MS:1000079".into(),
+        "quad\"rupole".into(),
+    ));
+    try_with("nomi", Finto::vario(120, 20, 9).with_header(h), false);
+}
+
+#[test]
+fn a_single_sample_of_one_polarity() {
+    let mut l = Finto::vario(150, 30, 10);
+    for s in &mut l.cards {
+        s.spettro.polarity = 1;
+    }
+    trial("positivo", l);
+}
+
+#[test]
+fn arrays_of_different_length() {
+    try_with(
+        "lunghezze",
+        Finto::vario(200, 30, 11).with_different_lengths(),
+        false,
+    );
+}
+
+#[test]
+fn equal_after_rounding_between_two_buckets() {
+    // every MS1 scan holds 100.0 and every other one 99.9999999 too (bucket 99 in 64 bits, 100 in 32): with the scratch file the partitions of the two
+    // buckets are read one after the other, and the equal 32-bit m/z must still come in scan order
+    let mut l = Finto::vario(600, 10, 13);
+    for (k, s) in l.cards.iter_mut().enumerate() {
+        let sp = &mut s.spettro;
+        sp.wide = None;
+        if sp.level == 1 {
+            sp.mz = if k % 2 == 1 {
+                vec![99.5, 99.999_999_9, 100.0, 100.5]
+            } else {
+                vec![99.5, 100.0, 100.5]
+            };
+            sp.intensity = (0..sp.mz.len()).map(|j| (k * 10 + j) as f32).collect();
+        }
+    }
+    let mzml = readers_mzml::scrivi(&mut l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let pa = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "uguali.mzML").unwrap();
+    assert!(pa.table.hr1, "the MS1 sections hold f32");
+    let (idx, _) = mzidx::build_mzml_to_vec(&pa.table, &mzml, BIG).unwrap();
+    mzml_with_scratch("uguali", &pa.table, &mzml, &idx);
+}
+
+/// MS1 filters where the first scan says the opposite of the file: a reader keeps the MS1 peaks of pass 1 by what its first MS1 scan says
+/// (`Prima::indovina`), and a wrong guess must not change a byte.
+fn first_ms1_different(seed: u64, first: &str, altri: &str) -> Finto {
+    let mut l = Finto::vario(400, 40, seed);
+    let mut first_seen = false;
+    for s in l.cards.iter_mut().filter(|s| s.spettro.level == 1) {
+        let a = if first_seen { altri } else { first };
+        s.spettro.filter = format!("{a} + p ESI Full ms [100.0000-1000.0000]");
+        first_seen = true;
+    }
+    l
+}
+
+#[test]
+fn first_ms1_high_resolution_in_a_low_file() {
+    let mut l = first_ms1_different(21, "FTMS", "ITMS");
+    let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").unwrap();
+    assert!(!p.table.hr1);
+    trial("primo FTMS", l);
+}
+
+#[test]
+fn first_ms1_low_resolution_in_a_high_file() {
+    let mut l = first_ms1_different(22, "ITMS", "FTMS");
+    let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").unwrap();
+    assert!(p.table.hr1);
+    trial("primo ITMS", l);
+}
+
+/// The source of an index straight from a reader is named after the dataset, as `mzlab-cli` names the path it is given, whatever name the caller
+/// passes (the page passes the name of its list entry, `X.mzML` or `X.raw.mzML`): the same `.mzidx` on the site, in the app and from the CLI.
+#[test]
+fn the_source_of_a_vendor_index_is_the_dataset_name() {
+    let imp = |nome: &str| upload::Fingerprint {
+        nome: nome.into(),
+        dim: 1,
+        sha256: String::new(),
+        sha1: String::new(),
+        probe: String::new(),
+    };
+    for (members, expected) in [
+        (vec!["X.raw"], "X.raw"),
+        (vec!["X.wiff.scan", "X.wiff"], "X.wiff"),
+        (vec!["X.wiff", "X.wiff.scan"], "X.wiff"),
+        (
+            vec!["X.D/AcqData/MSScan.bin", "X.D/AcqData/MSPeak.bin"],
+            "X.D",
+        ),
+    ] {
+        let membri: Vec<_> = members.into_iter().map(imp).collect();
+        for name in ["X.mzML", "X.raw.mzML", "X_2.raw.mzML"] {
+            let mut l = Finto::vario(10, 5, 3);
+            let p = upload::prepare_reader(&mut l, 0, &membri, name).unwrap();
+            let src = json::parse(p.table.source_json.as_bytes()).unwrap();
+            assert_eq!(
+                src.get("name").and_then(Value::str),
+                Some(expected),
+                "{name}"
+            );
+        }
+    }
+}

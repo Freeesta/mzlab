@@ -1,12 +1,12 @@
 # Agilent `.D` LC/MS: QqQ (MRM, dMRM), Q-TOF (profilo, centroidi, MS/MS), metodo LC/MS
 
-Codice in `crates/mzlab-core/src/agilent_ext/` (`mod.rs`, `run.rs`, `lettore.rs`, `doc.rs`, `datams.rs` copie con il ramo LC/MS di quelli di `agilent/`; `lcms.rs`, `lcmethod.rs`, `lcdoc.rs` nuovi), che `lib.rs` sceglie al posto di `agilent/` con la feature `estesi` (la accende solo il modulo `agilent`, `lettori-modulo.md`); `info`, `meta`, `method`, `peak`, `quant` e `scan` sono gli stessi file di `agilent/` (`#[path]`; `scan.rs` porta in fondo i layout LC/MS dietro `cfg`).
+Codice in `crates/mzlab-core/src/agilent_ext/` (`mod.rs`, `run.rs`, `reader.rs`, `doc.rs`, `datams.rs` copie con il ramo LC/MS di quelli di `agilent/`; `lcms.rs`, `lcmethod.rs`, `lcdoc.rs` nuovi), che `lib.rs` sceglie al posto di `agilent/` con la feature `estesi` (la accende solo il modulo `agilent`, `lettori-modulo.md`); `info`, `meta`, `method`, `peak`, `quant` e `scan` sono gli stessi file di `agilent/` (`#[path]`; `scan.rs` porta in fondo i layout LC/MS dietro `cfg`).
 
 `agilent/` non cambia, così `mzlab_wasm.wasm` resta identico bit per bit (i numeri di riga dei panic entrano nel binario: un'aggiunta a metà file di `agilent/` lo cambia): una correzione ai cinque file copiati va fatta in entrambe le cartelle. Il GC/MS e `data.ms` sono in `agilent.md`. Formati ricavati da quattordici corse vere (repository dati privato, `dati/formati/agilent/D/`: QqQ 6460, 6470, 6490, 6495; Q-TOF 6520, 6530, 6550) e dagli mzML di msconvert di quattro coppie; nessun dato nel repository pubblico.
 
 La pagina (`agilent-d.js`, `NEED` e i file `AcqData/*` non elencati, chiave `x:<percorso>`) passa al motore e al modulo anche `MSProfile.bin`, `MSMassCal.bin`, `DefaultMassCal.xml`, `AcqMethod.xml`, `sample_info.xml`, `sequence.xml` e gli altri file sotto `AcqData/` (il DAD, le tracce dei moduli); `MSPeak.bin` non è richiesto se c'è `MSProfile.bin`.
 
-Prove: `crates/mzlab-lettori/tests/agilent_lcms.rs` (salta senza dati), `crates/mzlab-core/tests/agilent_msconvert.rs`, `robustezza_agilent.rs`, `tests_e2e/e2e_lettori_modulo.py` (cartelle di `tools/agilent_sintetico.py::write_lcms`).
+Prove: `crates/mzlab-lettori/tests/agilent_lcms.rs` (salta senza dati), `crates/mzlab-core/tests/agilent_msconvert.rs`, `robustness_agilent.rs`, `tests_e2e/e2e_lettori_modulo.py` (cartelle di `tools/agilent_sintetico.py::write_lcms`).
 
 ## `MSScan.bin` di una corsa LC/MS
 - Testa: offset dei record `i32` al byte 88. Il record segue `MSScan.xsd` della cartella, con i tipi annidati (`DataDependentScanParamType`: `DDScanID`, `DDScanParamMz`; `SpectrumParamsType`) espansi sul posto nell'ordine dello schema (`Layout::from_xsd_ext`, al massimo 4 livelli, un tipo sconosciuto è `err.file.agilent`). Dimensioni viste: QqQ 186 e 196 byte, Q-TOF 216 e 220 byte. Alcuni xsd del Q-TOF (6520/6530/6540) dichiarano `ChromScaleFactor` come `double` ma il record ha un `float` di 4 byte: `Layout::fit` sceglie il layout che divide la lunghezza dei record.
@@ -27,4 +27,4 @@ Prove: `crates/mzlab-lettori/tests/agilent_lcms.rs` (salta senza dati), `crates/
 
 ## Robustezza
 - Ogni numero letto dal file passa da `Limiti::ok_entries`/`profondita_ok` prima di allocare; `AcqMethod.xml` e gli altri membri piccoli si leggono dentro il budget di byte (oltre `UNDECODED_MAX` = 4 MiB resta la sola dimensione); i file laterali XML annidati oltre 256 livelli non si leggono (`meta.rs::MAX_DEPTH`).
-- `robustezza_agilent.rs::lc_ms_folders_that_are_not_what_they_say`: LZF tagliato, indice run-length fuori dal blocco, conteggi assurdi, offset oltre il file, tipo xsd sconosciuto, profilo senza taratura, metodo da 16 EB / con 50 000 sezioni aperte / tagliato, file del rivelatore da 16 EB.
+- `robustness_agilent.rs::lc_ms_folders_that_are_not_what_they_say`: LZF tagliato, indice run-length fuori dal blocco, conteggi assurdi, offset oltre il file, tipo xsd sconosciuto, profilo senza taratura, metodo da 16 EB / con 50 000 sezioni aperte / tagliato, file del rivelatore da 16 EB.

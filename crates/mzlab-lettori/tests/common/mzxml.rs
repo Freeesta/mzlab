@@ -169,10 +169,10 @@ pub fn nest(scans: &[Sc]) -> Vec<Sc> {
     out
 }
 
-pub fn open_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::lettori::Reader> {
+pub fn open_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::readers::Reader> {
     mzlab_lettori::apri(
         super::file_set("campione.mzXML", byte),
-        &mzlab_core::lettori::Limits::sito(),
+        &mzlab_core::readers::Limits::sito(),
     )
     .unwrap()
 }
@@ -180,7 +180,7 @@ pub fn open_mzxml(byte: Vec<u8>) -> Box<dyn mzlab_core::lettori::Reader> {
 pub fn mzxml_error(byte: Vec<u8>) -> &'static str {
     match mzlab_lettori::apri(
         super::file_set("campione.mzXML", byte),
-        &mzlab_core::lettori::Limits::sito(),
+        &mzlab_core::readers::Limits::sito(),
     ) {
         Err(e) => e.key,
         Ok(mut l) => {

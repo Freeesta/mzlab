@@ -3,8 +3,8 @@
 use std::io::Write;
 
 use js_sys::Function;
-use mzlab_core::lettori::{FileSet, Limits, Member};
-use mzlab_core::lettori_mzml;
+use mzlab_core::readers::{FileSet, Limits, Member};
+use mzlab_core::readers_mzml;
 use wasm_bindgen::prelude::*;
 
 mod json_text;
@@ -82,7 +82,7 @@ fn read_member(
 }
 
 /// Blocks kept by the `thermo` module: the reader alternates between the packets of the scans, the trailer records and the index, and a block thrown away by a far read is read
-/// again at the next (`raw_tempi`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145). The other families keep
+/// again at the next (`raw_times`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145). The other families keep
 /// the one block they had: their gain is not measured and their `.wasm` limits leave no room for the cache.
 #[cfg(feature = "thermo")]
 const BLOCKS: usize = 3;
@@ -98,10 +98,10 @@ fn member_js(
     read: Function,
     i: u32,
     dim: u64,
-) -> mzlab_core::blocchi::BlockCache<impl FnMut(u64, &mut [u8]) -> mzlab_core::Result<()>> {
+) -> mzlab_core::blocks::BlockCache<impl FnMut(u64, &mut [u8]) -> mzlab_core::Result<()>> {
     let into = into_of(&read);
     let fetch = move |off: u64, buf: &mut [u8]| read_member(&read, into.as_ref(), i, off, buf);
-    mzlab_core::blocchi::BlockCache::new(fetch, dim, READ_AHEAD, BLOCKS).read_ahead(READ_AHEAD_MAX)
+    mzlab_core::blocks::BlockCache::new(fetch, dim, READ_AHEAD, BLOCKS).read_ahead(READ_AHEAD_MAX)
 }
 
 /// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`; the small reads are served from the last block read.
@@ -284,12 +284,11 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
 /// any other set opens as `apri`.
 fn open_probe(
     #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
-) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Reader>> {
+) -> mzlab_core::Result<Box<dyn mzlab_core::readers::Reader>> {
     #[cfg(any(feature = "sciex", feature = "tutte"))]
-    if mzlab_lettori::riconosci(&mut fs)
-        .is_some_and(|v| v.id == mzlab_core::wiff::lettore::ENTRY.id)
+    if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::reader::ENTRY.id)
     {
-        return mzlab_core::wiff::lettore::open_only(fs, &Limits::sito(), Some(0));
+        return mzlab_core::wiff::reader::open_only(fs, &Limits::sito(), Some(0));
     }
     mzlab_lettori::apri(fs, &Limits::sito())
 }
@@ -298,12 +297,11 @@ fn open_probe(
 fn open_sample(
     #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
     c: usize,
-) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Reader>> {
+) -> mzlab_core::Result<Box<dyn mzlab_core::readers::Reader>> {
     #[cfg(any(feature = "sciex", feature = "tutte"))]
-    if mzlab_lettori::riconosci(&mut fs)
-        .is_some_and(|v| v.id == mzlab_core::wiff::lettore::ENTRY.id)
+    if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::reader::ENTRY.id)
     {
-        let l = mzlab_core::wiff::lettore::open_only(fs, &Limits::sito(), Some(c))?;
+        let l = mzlab_core::wiff::reader::open_only(fs, &Limits::sito(), Some(c))?;
         return Ok(Box::new(mzlab_lettori::srm::SrmFromScans::new(l)));
     }
     let _ = c;
@@ -355,10 +353,10 @@ pub fn to_mzml_with(
             &(total as f64).into(),
         );
     };
-    let conv = lettori_mzml::Conversion {
+    let conv = readers_mzml::Conversion {
         steps: Some(&[]),
         opz: mzlab_core::mzmlwrite::Options { dad, ..opz },
-        ..lettori_mzml::Conversion::default()
+        ..readers_mzml::Conversion::default()
     };
     conv.write(&mut *l, c as usize, &mut out, &mut tell)
         .map_err(|e| error_json(&e))?;
@@ -407,22 +405,22 @@ fn open_members(fs: FileSet) -> Result<u32, JsValue> {
 pub fn samples(h: u32) -> Result<String, JsValue> {
     with_sessions(|s| s.samples(h))
 }
-/// The version of the binary transport of the index and the scans (`mzlab_core::trasporto::PROTOCOLLO`): the engine refuses a module with another.
+/// The version of the binary transport of the index and the scans (`mzlab_core::transport::PROTOCOLLO`): the engine refuses a module with another.
 #[wasm_bindgen]
 pub fn protocol() -> u32 {
-    mzlab_core::trasporto::PROTOCOLLO
+    mzlab_core::transport::PROTOCOLLO
 }
-/// The index of the sample as one `Uint8Array` (`mzlab_core::trasporto::encode_index`).
+/// The index of the sample as one `Uint8Array` (`mzlab_core::transport::encode_index`).
 #[wasm_bindgen]
 pub fn index(h: u32, c: u32) -> Result<Vec<u8>, JsValue> {
     with_sessions(|s| s.index(h, c as usize))
 }
-/// A scan as one `Uint8Array` (`mzlab_core::trasporto::encode_scansione`).
+/// A scan as one `Uint8Array` (`mzlab_core::transport::encode_scansione`).
 #[wasm_bindgen]
 pub fn scan(h: u32, c: u32, k: u32) -> Result<Vec<u8>, JsValue> {
     with_sessions(|s| s.scan(h, c as usize, k as usize))
 }
-/// A scan as `[head, m/z, intensities]`: the head of `trasporto::testa_scansione`, then views of this module's memory (`Float64Array`, and `Float32Array`
+/// A scan as `[head, m/z, intensities]`: the head of `transport::testa_scansione`, then views of this module's memory (`Float64Array`, and `Float32Array`
 /// or, for 64-bit intensities, `Float64Array`), valid until its next call: the engine copies each in one piece instead of a block copied twice.
 #[wasm_bindgen]
 pub fn scan_parts(h: u32, c: u32, k: u32) -> Result<js_sys::Array, JsValue> {
@@ -431,7 +429,7 @@ pub fn scan_parts(h: u32, c: u32, k: u32) -> Result<js_sys::Array, JsValue> {
         let n = sp.mz.len();
         let a = js_sys::Array::new();
         a.push(&js_sys::Uint8Array::from(
-            &mzlab_core::trasporto::testa_scansione(sp)[..],
+            &mzlab_core::transport::testa_scansione(sp)[..],
         ));
         // SAFETY: nothing allocates in this module between here and the engine's copy (the views are read before any other call)
         unsafe {

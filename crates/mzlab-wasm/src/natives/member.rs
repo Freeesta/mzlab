@@ -59,7 +59,7 @@ pub(super) fn member(read: &Function, i: u32, dim: u64) -> Box<dyn ReadAt> {
         i,
     };
     Box::new(
-        mzlab_core::blocchi::BlockCache::new(
+        mzlab_core::blocks::BlockCache::new(
             move |off: u64, buf: &mut [u8]| m.read_at(off, buf),
             dim,
             READ_AHEAD,
