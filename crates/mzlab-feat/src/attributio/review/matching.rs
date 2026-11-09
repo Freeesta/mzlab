@@ -1,7 +1,7 @@
 // Ported from Attributio src/attributio/review/matching.py.
 //
 // Spectrum against spectrum for the review. The cosine itself is `mzlab_lib::scores::gnps_match_prepared`, the GNPS cosine that
-// `crates/mzlab-lib/tests/parita.rs` (`check_attributio`) already holds equal to Attributio's `readers/ms2.py::similarity`; this file
+// `crates/mzlab-lib/tests/parity.rs` (`check_attributio`) already holds equal to Attributio's `readers/ms2.py::similarity`; this file
 // adds what the review needs around it: cleaning that keeps the indices of the input, the lower limit of the scan window (`cos_vis`),
 // the matched pairs and the elemental formulas of a mass difference.
 

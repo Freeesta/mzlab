@@ -4,7 +4,7 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 #![forbid(unsafe_code)]
-mod xicbin; mod etichette; mod fondo_cr; mod info; mod diff; mod items; mod metodo; mod budget_js;
+mod xicbin; mod labels; mod fondo_cr; mod info; mod diff; mod items; mod metodo; mod budget_js;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -15,18 +15,18 @@ use std::io::Write;
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod centroidi; mod panic; mod ricerca; mod adduct;
-pub mod esterno;
-mod contato;
+mod centroids; mod panic; mod ricerca; mod adduct;
+pub mod external;
+mod counted;
 mod zip;
-mod nativi; mod impronte;
-mod corriere;
-mod nativi_motore;
-mod blocchi;
+mod natives; mod fingerprints;
+mod courier;
+mod natives_engine;
+mod blocks;
 mod gunzip;
 mod peak_area;
 pub use peak_area::peak_area;
-pub(crate) use blocchi::{js_blocks, BLOCK};
+pub(crate) use blocks::{js_blocks, BLOCK};
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -96,8 +96,8 @@ pub struct Engine {
     labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
     /// Bytes the cache (maps, arrays and blocks of the indexes) may hold (`set_budget_mb`; 0 = the default).
     pub(crate) cache_cap: usize, pub(crate) work_cap: usize,    // work_cap: what the files opened whole may hold together
-    /// The slots read straight from the files of a maker (`nativi.rs`).
-    pub(crate) nat: nativi::Natives,
+    /// The slots read straight from the files of a maker (`natives.rs`).
+    pub(crate) nat: natives::Natives,
 }
 
 /// Bytes of the index file asked to JS: `read(offset, length) -> Uint8Array`.
@@ -447,7 +447,7 @@ impl Engine {
 
 /// Builds the `.mzidx` of an mzML of `size` bytes (read through `read(offset, length)`, decoded again for every pass) and writes it with
 /// `write(offset, bytes)`. The scan table (levels, polarities as signed bytes, RT and TIC as little-endian `f64`, the JSON rows,
-/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`); `aiuti` ({send, take, window} or undefined) gives the arrays to helper workers (`corriere.rs`), same bytes. Returns the statistics as JSON;
+/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`); `aiuti` ({send, take, window} or undefined) gives the arrays to helper workers (`courier.rs`), same bytes. Returns the statistics as JSON;
 /// errors are JSON with a key (`error.memoryBudget` when memory cannot be reserved).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
@@ -482,16 +482,16 @@ pub fn build_mzidx(
         declared: 0,
     };
     // every call of `write` is an OPFS write and a read-back in the worker: contiguous writes go in blocks of 1 MiB (`accorpa`), same bytes
-    let mut out = Accorpa::flussi(nativi::JsOutput { write });
+    let mut out = Accorpa::flussi(natives::JsOutput { write });
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
-    let mut spill = spill_put.zip(spill_get).map(|(put, get)| Accorpa::new(nativi::JsSpill { put, get }));
+    let mut spill = spill_put.zip(spill_get).map(|(put, get)| Accorpa::new(natives::JsSpill { put, get }));
     let st = mzidx::build_mzml_corriere(
         &table,
         js_blocks(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
         spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
-        &mut corriere::JsCorriere::new(&aiuti),
+        &mut courier::JsCorriere::new(&aiuti),
     ).map_err(|e| error_json(&e))?;
     out.fine().map_err(|e| error_json(&e))?;
     Ok(format!(

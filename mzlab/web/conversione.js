@@ -121,7 +121,7 @@ const CONV = {
   async downloadAll() { for (const n of new Set([...this.files.keys(), ...this.native()])) { await this.download(n); if (!window.MZLAB_DESKTOP) await new Promise(r => setTimeout(r, 400)); } },
 };
 
-// desktop app: the mzML files the background queue (conv_coda.rs) makes of the maker's files of the list. State of each file: queued | run | done | failed | cancelled.
+// desktop app: the mzML files the background queue (conv_queue.rs) makes of the maker's files of the list. State of each file: queued | run | done | failed | cancelled.
 const CONVQ = {
   st: /** @type {Map<string, { state: string, error: string }>} */ (new Map()),
   timer: /** @type {any} */ (0),

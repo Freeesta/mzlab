@@ -1,7 +1,7 @@
 // @ts-strict
 // Files of a maker (Thermo .raw, SCIEX .wiff + .wiff.scan, Agilent .D folder) read as they are, in the engine's worker (rust-worker.js): no mzML is written. The members of a dataset
 // are kept in OPFS `files/` under flat names; a sample is a «file» of the program called `x.mzML` whose bytes are a small JSON (the stub: which members, which sample), so the list of the
-// files, the index (`idx/x.mzML.mzidx`) and the removal work as for any mzML. The engine reads the members through their offsets (crates/mzlab-wasm/src/nativi.rs).
+// files, the index (`idx/x.mzML.mzidx`) and the removal work as for any mzML. The engine reads the members through their offsets (crates/mzlab-wasm/src/natives.rs).
 import { putChunks, ensureRoom, ROOM } from "./archivio.js";
 import { openSource } from "./lettura-sync.js";
 import { rawSink } from "./rust-opfs.js";
@@ -33,11 +33,11 @@ export function prints(/** @type {StubMember[]} */ members) {
   return members.length && members.every(m => m.sha256 && m.sha1 && m.probe) ? members.flatMap(m => [m.sha256, m.sha1, m.probe]) : undefined;
 }
 
-/** `read(member, offset, length)` over some Files, as nativi.rs wants it (with `into` over handles); `seen(i, end)` is told how far each member was read */
+/** `read(member, offset, length)` over some Files, as natives.rs wants it (with `into` over handles); `seen(i, end)` is told how far each member was read */
 export function reader(/** @type {Blob[]} */ files, /** @type {((i: number, end: number) => void) | undefined} */ seen, /** @type {import("./lettura-sync.js").Fonte[] | undefined} */ fonti = undefined) {
   const fr = new FileReaderSync(), rd = fonti ? fonti.map(f => f.read) : files.map(f => (/** @type {number} */ o, /** @type {number} */ n) => new Uint8Array(fr.readAsArrayBuffer(f.slice(o, o + n))));
   const read = (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
-  // over handles, `read.into(i, offset, view)`: the engine (nativi/membro.rs) and the readers modules (lettura.rs) give a view of their memory, the handle reads into it
+  // over handles, `read.into(i, offset, view)`: the engine (natives/member.rs) and the readers modules (reading.rs) give a view of their memory, the handle reads into it
   if (fonti) read.into = (/** @type {number} */ i, /** @type {number} */ o, /** @type {Uint8Array} */ v) => { const k = fonti[i].into(o, v); if (seen) seen(i, o + k); return k; };
   return read;
 }
