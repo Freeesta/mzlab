@@ -2,12 +2,12 @@
 //! scans and SIM) and of a triple quadrupole (`TLM Raw Data`: MRM as SRM chromatograms). The Q-TOF `.lcd` (`QTFL RawData`) is recognised and refused with `err.file.shimadzu`.
 //! Written from the files themselves (stream layout in docs/agenti/shimadzu.md); the Apache-2.0 crate `openszraw` was read to learn where the streams are, not copied.
 
-mod carica;
 mod dir;
-mod lettore;
+mod load;
 mod meta;
 mod mrm;
 mod prop;
+mod reader;
 mod rec;
 
 use mzlab_core::error::{Error, Result};
@@ -15,7 +15,7 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{Fiducia, FileSet, Limits, Reader, ReaderEntry, Sample, CONTRATTO};
 use mzlab_core::ole::Ole;
 
-use carica::{Data, Fam};
+use load::{Data, Fam};
 use meta::Meta;
 
 /// Above this intensity an `f32` loses counts: the spectrum then keeps the exact values.
@@ -41,7 +41,7 @@ enum Content {
 
 fn content(names: &[String]) -> Option<Content> {
     let ha = |n: &str| names.iter().any(|x| x == n);
-    if carica::families().iter().any(|f| ha(f.storage())) {
+    if load::families().iter().any(|f| ha(f.storage())) {
         Some(Content::Data)
     } else if ha("QTFL RawData") {
         Some(Content::QTof)
@@ -142,13 +142,13 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
             .with("size", m.dim)
             .with("needed", need));
     }
-    let Some(fam) = carica::choose(&ole) else {
+    let Some(fam) = load::choose(&ole) else {
         return Err(refusal(match c {
             Content::QTof => "Q-TOF data (QTFL RawData) are not read: their m/z could not be checked against a reference",
             _ => "the file holds no mass spectrometer data",
         }));
     };
-    let d = carica::load(&ole, fam, limits)?;
+    let d = load::load(&ole, fam, limits)?;
     let mut meta = meta::collect(&ole, fam);
     if d.unreadable > 0 {
         meta.warnings.push(format!(

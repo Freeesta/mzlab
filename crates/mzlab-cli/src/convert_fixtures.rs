@@ -6,9 +6,9 @@ use std::process::Command;
 
 use mzlab_core::lettori::{FileSet, Member};
 
-#[path = "../../mzlab-lettori/tests/comune/andi.rs"]
+#[path = "../../mzlab-lettori/tests/common/andi.rs"]
 pub mod andi;
-#[path = "../../mzlab-lettori/tests/comune/mzxml.rs"]
+#[path = "../../mzlab-lettori/tests/common/mzxml.rs"]
 pub mod mzxml;
 
 /// The helpers the included encoders ask of their parent: base64, zlib (the files here are written without it) and a one-file dataset.

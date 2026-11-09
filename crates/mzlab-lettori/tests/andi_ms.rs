@@ -1,9 +1,9 @@
 //! The family `andi` reads ANDI-MS (ASTM E2077) and ANDI-Chromatography (ASTM E1947) files, built here with an encoder in every form of the format (docs/agenti/lettori-andi.md).
 #![cfg(feature = "andi")]
 
-mod comune;
+mod common;
 
-use comune::andi::*;
+use common::andi::*;
 use mzlab_core::lettori_mzml;
 use mzlab_core::mzml::ChromKind;
 
@@ -179,9 +179,9 @@ fn an_andi_chromatogram_is_a_sample_with_an_analog_trace() {
 #[test]
 fn recognises_ms_with_certainty_and_chromatography_with_less() {
     use mzlab_core::lettori::Fiducia;
-    let mut a = comune::file_set("a.cdf", andi_ms(&FLAT_RUN));
-    let mut b = comune::file_set("b.cdf", andi_chromatogram(5));
-    let mut c = comune::file_set("c.cdf", b"CDF\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".to_vec());
+    let mut a = common::file_set("a.cdf", andi_ms(&FLAT_RUN));
+    let mut b = common::file_set("b.cdf", andi_chromatogram(5));
+    let mut c = common::file_set("c.cdf", b"CDF\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".to_vec());
     assert_eq!(
         (mzlab_lettori::andi::ms::ENTRY.riconosci)(&mut a),
         Fiducia::Si

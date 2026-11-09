@@ -1,13 +1,13 @@
 //! The family `aperti`: formats with a public specification that the engine does not read (docs/agenti/lettori-aperti.md). One module per format, each with its `ENTRY`.
 
 pub mod mzml_gz;
+mod mzml_header;
 pub mod mzml_numpress;
-mod mzml_testata;
 pub mod mzxml;
-mod mzxml_finestra;
-mod mzxml_indice;
-mod mzxml_precursori;
+mod mzxml_entry;
+mod mzxml_header;
+mod mzxml_index;
+mod mzxml_precursors;
 mod mzxml_scan;
-mod mzxml_testata;
-mod mzxml_voce;
-mod np_riscrivi;
+mod mzxml_window;
+mod np_rewrite;

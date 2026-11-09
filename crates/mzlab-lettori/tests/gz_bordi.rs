@@ -3,9 +3,9 @@
 //! upload (`upload::prepare`). Empty, magic bytes only, header only, cut in the middle, padded with zeros after the member: both give the same key.
 #![cfg(feature = "aperti")]
 
-mod comune;
+mod common;
 
-use comune::*;
+use common::*;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use mzlab_core::lettori::Limits;

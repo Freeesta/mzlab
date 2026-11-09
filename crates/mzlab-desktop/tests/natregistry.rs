@@ -2,7 +2,7 @@
 //! site: the same reader (`mzlab_lettori::apri`) and the same writer (`mzlab_lettori::json::chromatogram_json`, which `Sessions::chromatogram` of
 //! `mzlab-lettori-wasm` calls), byte for byte. The synthetic `.raw` (`comune/thermo.rs`, invented numbers) has no status log: the TIC id walks the same
 //! path (`rawlettore::cromatogramma_di`), an id the file lacks gives the reader's error, a name that is not a maker's sample `err.session.fileNotFound`.
-#[path = "../../mzlab-lettori/tests/comune/thermo.rs"]
+#[path = "../../mzlab-lettori/tests/common/thermo.rs"]
 mod thermo;
 
 use mzlab_core::lettori::{FileSet, Limits, Member};
