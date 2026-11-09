@@ -1,6 +1,6 @@
 //! Labels of the main peaks: a synthetic TIC with three peaks (RT and apex), a UV spectrum with two maxima at different wavelengths, the base peak of an MS scan.
 
-use mzlab_core::etichette_picchi::{main_peak, select};
+use mzlab_core::peak_labels::{main_peak, select};
 
 fn gauss(t: f64, c: f64, w: f64, h: f64) -> f64 {
     h * (-((t - c) / w).powi(2) / 2.0).exp()

@@ -4,7 +4,7 @@
 
 mod common;
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Member};
 use std::path::Path;
 
 #[path = "../../../tools/dati_percorsi.rs"]

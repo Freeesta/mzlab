@@ -7,7 +7,7 @@ use std::io::Read;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::gunzip::Members;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{Fiducia, FileSet, Limits, Member, Reader, ReaderEntry, CONTRATTO};
+use mzlab_core::readers::{Fiducia, FileSet, Limits, Member, Reader, ReaderEntry, CONTRATTO};
 
 /// The bytes of the start of the file that `riconosci` inflates to see the root element.
 const HEAD: usize = 4096;

@@ -7,8 +7,8 @@ use std::io::Read;
 
 use flate2::read::ZlibDecoder;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::Limits;
 use mzlab_core::mzml::{ChromKind, Chromatogram};
+use mzlab_core::readers::Limits;
 
 const UNITS: &str = "number of detector counts";
 /// The most bytes of one decompressed record (a record holds a few transitions).

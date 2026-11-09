@@ -70,8 +70,8 @@ fn validate_mzml_gives_the_bytes_of_the_command_line_report() {
     let name = "FullScan_t10.mzML";
     st.rpc("lr_put", &json!({"name": name, "fid": id}), &[]).unwrap();
     let got = text(st.rpc("lr_valida", &json!({"name": name}), &[]).unwrap());
-    let report = mzlab_core::mzmlvalida::validate(std::fs::File::open(&ex).unwrap()).unwrap();
-    assert_eq!(got, mzlab_core::mzmlvalida::json_un_file(name, &report));
+    let report = mzlab_core::mzml_validate::validate(std::fs::File::open(&ex).unwrap()).unwrap();
+    assert_eq!(got, mzlab_core::mzml_validate::json_un_file(name, &report));
     assert!(got.starts_with("[{\"file\":\"FullScan_t10.mzML\",\"valid\":"), "{got}");
     assert!(st.rpc("lr_valida", &json!({"name": "absent.mzML"}), &[]).is_err(), "a file that is not in the list");
 }

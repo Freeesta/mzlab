@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::readers::{FileSet, Member};
 
 /// Counts, per thread, the bytes alive, the peak and the largest single request. A request over `REAL_CAP` is refused (null), so that a hostile count cannot
 /// bring the machine to its knees: the reader that handles the refusal is flagged all the same, because its count was never compared with the file.

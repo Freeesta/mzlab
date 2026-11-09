@@ -8,7 +8,7 @@ use std::fs::File;
 use std::path::Path;
 
 use mzlab_core::mzmlhead::Mzml;
-use mzlab_core::sorgente::MzmlTraces;
+use mzlab_core::source::MzmlTraces;
 use mzlab_feat::mrm::{self, MrmParams};
 use sha2::{Digest, Sha256};
 

@@ -127,8 +127,8 @@ pub fn read_scans<R: ReadAt>(
     Ok(out)
 }
 
-/// `consensus_arrays(mzs, ints, ppm, min_frac, min_rel)`: moved to `mzlab_core::msnalbero::consenso` (the MSn tree uses it too).
-pub use mzlab_core::msnalbero::consenso as consensus_arrays;
+/// `consensus_arrays(mzs, ints, ppm, min_frac, min_rel)`: moved to `mzlab_core::msntree_build::consenso` (the MSn tree uses it too).
+pub use mzlab_core::msntree_build::consenso as consensus_arrays;
 
 /// `ms2_consensus`: peaks in at least 40 % of the scans and at least 0.5 % of the base peak, relative to the strongest (= 100).
 #[derive(Debug, Clone, Default, PartialEq)]

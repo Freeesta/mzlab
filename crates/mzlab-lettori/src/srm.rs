@@ -4,9 +4,9 @@
 //! `@cid25.0` of the filter or, when the filter has none (the TSQ filters never have), from the transition table of `metodo/1` (`ms…transizioni`), which also
 //! gives the polarity of the transition (a TSQ scan carries a fixed polarity).
 use mzlab_core::error::Result;
-use mzlab_core::lettori::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
 
 /// Products closer than this (m/z) to the Q3 of a transition belong to it.
 pub const Q3_TOLERANCE: f64 = 0.005;
@@ -32,7 +32,7 @@ fn ce_of_the_filter(f: &str) -> Option<f64> {
 /// A transition of the table of the method: `(q1, q3, collision energy, polarity)`.
 type FromMethod = (f64, f64, Option<f64>, i8);
 
-/// The number after `"key":` in `seg` (the document is written by `metodo.rs`, so keys are quoted and followed by a colon and, at most, one blank).
+/// The number after `"key":` in `seg` (the document is written by `method.rs`, so keys are quoted and followed by a colon and, at most, one blank).
 fn number_of(seg: &str, key: &str) -> Option<f64> {
     let k = seg.find(key)?;
     let rest = seg.get(k + key.len()..)?.trim_start();

@@ -8,7 +8,7 @@ mod conv_help;
 
 use agilent_folder::*;
 use mzlab_core::agilent::AgilentD;
-use mzlab_core::metodo::{from_userparam, Source};
+use mzlab_core::method::{from_userparam, Source};
 use serde_json::Value;
 
 const TEXTS: [&str; 3] = ["acqmeth.txt", "runstart.txt", "IndexedDataConverter.log"];

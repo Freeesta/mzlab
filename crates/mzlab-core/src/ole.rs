@@ -217,7 +217,7 @@ impl Ole {
 
     /// SHA-1 (lower-case hex) of the whole container file.
     pub fn sha1_hex(&self) -> String {
-        crate::metodo::sha1_hex_bytes(&self.data)
+        crate::method::sha1_hex_bytes(&self.data)
     }
 
     pub fn has(&self, path: &str) -> bool {

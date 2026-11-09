@@ -1,9 +1,9 @@
-//! The index of a file of the series read through a cache of a few blocks (`mzlab_core::blocchi::BlockCache`): every read of `JsReader` is a call to
+//! The index of a file of the series read through a cache of a few blocks (`mzlab_core::blocks::BlockCache`): every read of `JsReader` is a call to
 //! JavaScript and an OPFS sync-handle read, whose cost is mostly fixed per call (about 0.2 ms in Chromium), while the engine asks a few KB at a time
 //! (the slabs of the detection and of the weak candidates, the gap filling). The bytes given back are the same, so every output is. Blocks are
 //! allocated on the first miss and freed with the index; an index of a set open together keeps one small block (`shape`).
 
-use mzlab_core::blocchi::BlockCache;
+use mzlab_core::blocks::BlockCache;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::Result;
 

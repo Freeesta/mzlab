@@ -11,7 +11,7 @@ use std::io::{BufReader, BufWriter};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-use mzlab_core::{lettori_mzml, mzidx, mzml, upload};
+use mzlab_core::{mzidx, mzml, readers_mzml, upload};
 
 /// Counts the live and peak heap bytes: the WASM instance has a hard 256 MB, so the peak of each phase is what matters.
 struct Tally;
@@ -183,7 +183,7 @@ fn generate(a: &[String]) {
     let mut l = finto::Finto::vario(n, peaks, 12345);
     let t = Instant::now();
     let w = BufWriter::new(File::create(out).expect("create"));
-    lettori_mzml::scrivi(&mut l, 0, w, &mut |_, _| {}).expect("write");
+    readers_mzml::scrivi(&mut l, 0, w, &mut |_, _| {}).expect("write");
     let size = std::fs::metadata(out).map(|m| m.len()).unwrap_or(0);
     println!(
         "write {n} scans: {:.2} s, {:.1} MB",

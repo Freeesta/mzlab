@@ -1,10 +1,10 @@
-//! The SRM traces of a sample as plain numbers: read through `Tracce` (an mzML or a sample of a vendor file, `sorgente.rs`) and passed between
+//! The SRM traces of a sample as plain numbers: read through `Tracce` (an mzML or a sample of a vendor file, `source.rs`) and passed between
 //! the engine and the mzFinder workers as bytes (`impacchetta` / `spacchetta`), so an MRM file is never written as an mzML to be read again.
 
 use crate::error::{Error, Result};
 use crate::mzml::ChromKind;
 use crate::mzmlhead::srm_id;
-use crate::sorgente::Traces;
+use crate::source::Traces;
 
 /// The chromatogram of one transition: times in minutes.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -112,7 +112,7 @@ pub fn spacchetta(b: &[u8]) -> Result<Vec<Trace>> {
 }
 
 #[cfg(test)]
-mod prove {
+mod tests {
     use super::*;
 
     #[test]

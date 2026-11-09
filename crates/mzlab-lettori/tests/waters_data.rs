@@ -5,8 +5,8 @@
 mod common_waters;
 use std::path::Path;
 
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::{self, Chromatogram, Item};
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;

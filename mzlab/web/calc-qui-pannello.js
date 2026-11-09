@@ -18,7 +18,7 @@
     const id = "ad" + ++seq;
     root.innerHTML = h`<div class="nlbar"><div class="sb-search-box">${raw(SEARCH)}<input id="${id}-q" inputmode="decimal" autocomplete="off" placeholder="${T("calc.ph")}" aria-label="${T("cq.ad.title")}" title="${T("cq.ad.title.field")}"></div></div>
       <div id="${id}-ctl"></div>
-      <div class="cq-links"><button type="button" class="cq-link" id="${id}-loss" hidden>${raw(T("cq.link.loss"))}</button></div><div id="${id}-out" class="cq-out" aria-live="polite"></div>`;
+      <div class="cq-links"><button type="button" class="cq-link" id="${id}-loss" title="${T("cq.link.loss.tip")}" hidden>${raw(T("cq.link.loss"))}</button></div><div id="${id}-out" class="cq-out" aria-live="polite"></div>`;
     const q = /** @type {HTMLInputElement} */ (root.querySelector(`#${id}-q`)), loss = /** @type {HTMLElement} */ (root.querySelector(`#${id}-loss`));
     if (opt.q != null) q.value = String(opt.q);
     const view = CALCQUI.mount({

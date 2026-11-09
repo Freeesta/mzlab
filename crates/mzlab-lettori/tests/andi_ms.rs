@@ -4,8 +4,8 @@
 mod common;
 
 use common::andi::*;
-use mzlab_core::lettori_mzml;
 use mzlab_core::mzml::ChromKind;
+use mzlab_core::readers_mzml;
 
 fn check(c: &Run) {
     let mut l = open_andi(andi_ms(c));
@@ -146,7 +146,7 @@ fn the_method_carries_instrument_operator_and_every_attribute() {
 #[test]
 fn writes_as_mzml_and_reads_back() {
     let mut l = open_andi(andi_ms(&FLAT_RUN));
-    let out = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let out = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     let text = String::from_utf8(out).unwrap();
     assert!(text.contains("<spectrum "));
     assert!(text.contains("Model 7"));
@@ -172,13 +172,13 @@ fn an_andi_chromatogram_is_a_sample_with_an_analog_trace() {
     assert!((c.time[2] - (30.0 + 1.0) / 60.0).abs() < 1e-12);
     assert!((c.intensity[3] - (1000.0 + 21.0)).abs() < 1e-9);
     assert!(l.chromatogram(0, "altro").is_err());
-    let out = lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let out = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
     assert!(String::from_utf8(out).unwrap().contains("FID1A"));
 }
 
 #[test]
 fn recognises_ms_with_certainty_and_chromatography_with_less() {
-    use mzlab_core::lettori::Fiducia;
+    use mzlab_core::readers::Fiducia;
     let mut a = common::file_set("a.cdf", andi_ms(&FLAT_RUN));
     let mut b = common::file_set("b.cdf", andi_chromatogram(5));
     let mut c = common::file_set("c.cdf", b"CDF\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".to_vec());

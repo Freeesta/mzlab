@@ -1,13 +1,13 @@
 //! The MS2 spectrum of a row for the exports, read from the `.mzidx` of the file that has its best MS2 (`RowMeta::ms2_file`): among the MS2 scans of
 //! that file whose isolation window holds the m/z of the row and whose time lies between the edges of the peak, the one with the highest TIC. One pass
 //! over the MS2 peaks of each file reads all the scans wanted from it. Two options, both off by default (then the bytes are the ones of the single best scan):
-//! `consensus` (all the fitting scans of the row, then across the files where the row has a peak, with `msnalbero::consenso`) and `background` (the MS2
+//! `consensus` (all the fitting scans of the row, then across the files where the row has a peak, with `msntree_build::consenso`) and `background` (the MS2
 //! peaks that recur in the blank files are taken out of every row, never the precursor).
 
 use crate::sortc::SortC;
 use std::collections::{HashMap, HashSet};
 
-use mzlab_core::msnalbero::consenso;
+use mzlab_core::msntree_build::consenso;
 
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};

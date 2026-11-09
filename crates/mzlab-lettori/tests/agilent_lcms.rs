@@ -6,8 +6,8 @@
 
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
 use mzlab_core::mzml::{self, ChromKind};
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
@@ -227,7 +227,7 @@ fn srm_traces_match_msconvert() {
     assert!(pairs >= 3, "{pairs} QqQ pairs");
 }
 
-fn field(h: &[mzlab_core::lettori::Field], name: &str) -> f64 {
+fn field(h: &[mzlab_core::readers::Field], name: &str) -> f64 {
     h.iter()
         .find(|c| c.nome == name)
         .unwrap()

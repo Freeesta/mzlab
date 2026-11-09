@@ -1,6 +1,6 @@
 //! `metodo::sha1_hex` reads in blocks of at most 1 MB: the hash is that of the whole buffer around the block size, and for an empty member.
 
-use mzlab_core::metodo::sha1_hex;
+use mzlab_core::method::sha1_hex;
 use sha1::{Digest as _, Sha1};
 
 #[test]

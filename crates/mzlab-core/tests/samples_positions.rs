@@ -1,6 +1,6 @@
-//! `campioni::proponi_spiegato`: the parts of the name that decided each field, and the check that the values are the ones of `proponi`.
+//! `samples::proponi_spiegato`: the parts of the name that decided each field, and the check that the values are the ones of `proponi`.
 
-use mzlab_core::campioni::{self, from_json, proponi};
+use mzlab_core::samples::{self, from_json, proponi};
 use serde_json::Value;
 
 /// The names of `tools/project_riferimento.py` (the parity table of `guess_sample`), all of them.
@@ -49,7 +49,7 @@ fn spans(files: &[&str]) -> Vec<Vec<(String, String)>> {
         .iter()
         .map(|n| (n.to_string(), String::new(), String::new()))
         .collect();
-    campioni::propose_explained(&v)
+    samples::propose_explained(&v)
         .into_iter()
         .zip(files)
         .map(|(p, n)| {
@@ -122,7 +122,7 @@ fn spans_never_change_the_values_and_stay_inside_the_name() {
         .map(|n| (n.clone(), "ab".to_string(), String::new()))
         .collect();
     let plain = proponi(&v);
-    let explained = campioni::propose_explained(&v);
+    let explained = samples::propose_explained(&v);
     assert_eq!(plain.len(), explained.len());
     for ((p, e), n) in plain.iter().zip(&explained).zip(&names) {
         assert_eq!(p, &e.sample, "{n:?}");
@@ -136,7 +136,7 @@ fn spans_never_change_the_values_and_stay_inside_the_name() {
 #[test]
 fn route_with_spans() {
     let input = r#"{"files":[{"name":"X_t5.mzML","sha256":"ab"}]}"#;
-    let out = campioni::route("proponi_spiegato", input).unwrap();
+    let out = samples::route("proponi_spiegato", input).unwrap();
     assert!(out.starts_with("{\"campioni\":{\"campioni\":["), "{out}");
     assert!(
         out.ends_with(",\"posizioni\":[[{\"campo\":\"tempo\",\"fine\":4,\"inizio\":2}]]}"),
@@ -144,7 +144,7 @@ fn route_with_spans() {
     );
     let doc: Value = serde_json::from_str(&out).unwrap();
     assert_eq!(
-        campioni::to_json(&from_json(doc["campioni"].to_string().as_bytes()).unwrap()),
-        campioni::route("proponi", input).unwrap()
+        samples::to_json(&from_json(doc["campioni"].to_string().as_bytes()).unwrap()),
+        samples::route("proponi", input).unwrap()
     );
 }

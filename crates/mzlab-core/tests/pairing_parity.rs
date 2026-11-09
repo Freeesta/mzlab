@@ -1,4 +1,4 @@
-//! Parity tests for `mzlab_core::abbina` against Python reference (`tools/abbina_riferimento.py`).
+//! Parity tests for `mzlab_core::pairing` against Python reference (`tools/abbina_riferimento.py`).
 //!
 //! Verifies 100% agreement on synthetic test cases (empty lists, boundary values, exact ties,
 //! greedy contention, and seeded pseudo-random distributions) and includes mutational tests
@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::abbina::abbina;
+use mzlab_core::pairing::abbina;
 use serde_json::Value;
 
 fn root() -> PathBuf {

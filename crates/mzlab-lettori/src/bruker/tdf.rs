@@ -9,12 +9,12 @@ use super::tdf_helpers::{absent, bad_index, cartella, cut_ones, recognize, sum_s
 use super::tsf;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{
+use mzlab_core::method::SrcFile;
+use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
+use mzlab_core::readers::{
     ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Reader, ReaderEntry, Sample,
     ScanEntry, CONTRATTO,
 };
-use mzlab_core::metodo::SrcFile;
-use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
 use traces::maximum;

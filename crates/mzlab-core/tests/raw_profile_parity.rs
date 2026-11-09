@@ -9,9 +9,9 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufReader;
 
-use mzlab_core::lettori::{self, FileSet, Limits, Member};
-use mzlab_core::lettori_mzml::{Conversion, Peaks};
 use mzlab_core::mzml;
+use mzlab_core::readers::{self, FileSet, Limits, Member};
+use mzlab_core::readers_mzml::{Conversion, Peaks};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 
@@ -296,7 +296,7 @@ fn compare() -> Option<Report> {
                 sha1: None,
             }],
         };
-        let mut l = lettori::apri(set, &Limits::sito()).unwrap();
+        let mut l = readers::apri(set, &Limits::sito()).unwrap();
         let conv = Conversion {
             peaks: Peaks::Profilo,
             ..Conversion::default()

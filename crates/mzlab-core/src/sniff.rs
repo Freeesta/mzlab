@@ -6,7 +6,7 @@ use crate::idxread::{Index, ReadAt};
 use crate::iteminfo::{file_parts, item_info, Facts, Meta};
 use crate::json::{self, Out};
 use crate::mzmlhead::Mzml;
-use crate::sorgente::Scansioni;
+use crate::source::Scansioni;
 
 // `as` saturates and maps NaN to 0, which is what both callers want.
 #[allow(clippy::cast_possible_truncation)]
@@ -77,7 +77,7 @@ fn is_hr(v: &json::Value) -> bool {
     })
 }
 
-/// `{kind, scans, srm, polarity, mixed, spectrum_mode, hr_profile, hr, hint, msn}` of a whole file (`msn`: `infusione.rs`).
+/// `{kind, scans, srm, polarity, mixed, spectrum_mode, hr_profile, hr, hint, msn}` of a whole file (`msn`: `infusion.rs`).
 pub fn sniff<R: ReadAt, M: ReadAt>(
     idx: &mut Index<R>,
     m: &mut Mzml<M>,
@@ -153,8 +153,8 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         Some(h) => o.str(h),
         None => o.raw("null"),
     };
-    let msn = crate::infusione::infusione(&idx.scans, facts.lc, file_name);
-    crate::infusione::json(&mut o, msn.as_ref());
+    let msn = crate::infusion::infusione(&idx.scans, facts.lc, file_name);
+    crate::infusion::json(&mut o, msn.as_ref());
     o.raw("}");
     Ok(o.0)
 }

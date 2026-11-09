@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::centroidi::{centroids, estimate, Buf, Mode, Params};
+use mzlab_core::centroids::{centroids, estimate, Buf, Mode, Params};
 use serde_json::Value;
 
 fn root() -> PathBuf {

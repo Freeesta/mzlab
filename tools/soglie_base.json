@@ -61,7 +61,7 @@
   "crates/mzlab-core/src/mzmlhead.rs::mobility_kind": 292,
   "crates/mzlab-core/src/mzmlwrite.rs::Opzioni": 131,
   "crates/mzlab-core/src/peakq.rs::valley": 112,
-  "crates/mzlab-core/src/rawlettore.rs::field": 88,
+  "crates/mzlab-core/src/rawreader.rs::field": 88,
   "crates/mzlab-core/src/rois.rs::build_rois": 218,
   "crates/mzlab-core/src/routes.rs::Routes": 268,
   "crates/mzlab-core/src/scantable/rows.rs::Head": 99,

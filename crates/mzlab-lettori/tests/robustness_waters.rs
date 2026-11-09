@@ -3,7 +3,7 @@
 //! reading, never a panic, and what is read from it (index, scans, chromatograms, method, header) never panics either. No data of the laboratory is copied: the mutations are made in memory.
 mod common_waters;
 use common_waters::*;
-use mzlab_core::lettori::{Limits, Member};
+use mzlab_core::readers::{Limits, Member};
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
 
@@ -136,7 +136,7 @@ fn a_folder_without_functions_is_refused_with_a_key() {
         .expect("refused");
     assert!(e.key.starts_with("err.file."), "{}", e.key);
     let e = mzlab_lettori::open_bare(
-        mzlab_core::lettori::FileSet {
+        mzlab_core::readers::FileSet {
             membri: vec![Member {
                 nome: "X.raw/_FUNC001.DAT".into(),
                 dim: 0,

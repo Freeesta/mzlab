@@ -15,7 +15,7 @@ Il prezzo è +32-37 % sul motore (1,77 → 2,34-2,42 MB). La compatibilità cost
 - **Divisione e tetti** (`wasm-tetti.md`): un modulo per gruppo, caricato a richiesta; tetto = misura × 1,10, solo in calo. I tetti hanno imposto `z` ovunque: è lì che si perde velocità.
 
 ## 3. Misure
-Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` (`mzml::read`, `upload::prepare` + `mzidx::build_mzml_to_vec`, `Routes::xic_raw`, `centroidi::centroids`, `peaks::detect_peaks`, `composition::compose`, `entropy::entropy_similarity`, `flate2` inflate). File: mzML HR profilo sintetico 87 MB (1200 MS1 × 400 picchi in profilo, 900 MS2, zlib) e `B_FullMass-t15` di `tools/dati_sintetici.py` (2,5 MB, LR). Mediana di 5 giri (Chromium) o 3 (Node 22). Uscite identiche bit per bit in tutte le varianti (somme di controllo a 17 cifre).
+Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` (`mzml::read`, `upload::prepare` + `mzidx::build_mzml_to_vec`, `Routes::xic_raw`, `centroids::centroids`, `peaks::detect_peaks`, `composition::compose`, `entropy::entropy_similarity`, `flate2` inflate). File: mzML HR profilo sintetico 87 MB (1200 MS1 × 400 picchi in profilo, 900 MS2, zlib) e `B_FullMass-t15` di `tools/dati_sintetici.py` (2,5 MB, LR). Mediana di 5 giri (Chromium) o 3 (Node 22). Uscite identiche bit per bit in tutte le varianti (somme di controllo a 17 cifre).
 
 **Chromium 153, ms** (base = come oggi: `z` + `-Oz`):
 

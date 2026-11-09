@@ -2,8 +2,8 @@
 //! formula: the arcs, the time course from the roles of the files, the table and the interpretation in two files or in one, and the errors of a file
 //! without a block.
 
-use mzlab_core::campioni::{proponi, to_json};
 use mzlab_core::json::parse;
+use mzlab_core::samples::{proponi, to_json};
 use mzlab_feat::interp::store::append;
 use mzlab_feat::network::{network_text, NetworkParams};
 use mzlab_feat::recipe::Recipe;

@@ -11,7 +11,7 @@ use mzlab_core::error::{Error, Result};
 
 use mzlab_core::idxread::ReadAt;
 
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 use std::collections::{HashMap, HashSet};
 
@@ -160,7 +160,7 @@ impl Sqlite {
 
     /// SHA-1 of the main file of the database (not of its log).
     pub fn sha1(&mut self) -> Option<String> {
-        mzlab_core::metodo::sha1_hex(&mut self.main, self.dim).ok()
+        mzlab_core::method::sha1_hex(&mut self.main, self.dim).ok()
     }
 
     pub fn table(&self, name: &str) -> Option<&Table> {

@@ -5,7 +5,7 @@
 use mzlab_core::elements::{self, ELECTRON};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
-use mzlab_core::nuclidi::NUCLIDES;
+use mzlab_core::nuclides::NUCLIDES;
 
 use crate::sortc::SortC;
 

@@ -1,6 +1,6 @@
 // The tests of external.rs: the answers of a fake module become the types of the contract (no JS).
 use super::*;
-use mzlab_core::lettori::Position;
+use mzlab_core::readers::Position;
 
 struct Fake;
 
@@ -15,7 +15,7 @@ impl Module for Fake {
         if c != 0 {
             return Err(Error::new("error.badIndex"));
         }
-        Ok(mzlab_core::trasporto::encode_index(&[
+        Ok(mzlab_core::transport::encode_index(&[
             ScanEntry {
                 id: "scan=1".into(),
                 rt: 0.1234567890123,
@@ -45,7 +45,7 @@ impl Module for Fake {
         ]))
     }
     fn scan(&mut self, _: usize, _: usize) -> Result<Vec<u8>> {
-        Ok(mzlab_core::trasporto::encode_scansione(&Spectrum {
+        Ok(mzlab_core::transport::encode_scansione(&Spectrum {
             level: 1,
             rt: 0.5,
             polarity: 1,

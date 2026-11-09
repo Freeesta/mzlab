@@ -1,4 +1,4 @@
-//! `mzlab-cli validate FILE...`: is this mzML valid? Structure, PSI-MS vocabulary and, for `indexedmzML`, offsets and SHA-1 (`mzlab_core::mzmlvalida`).
+//! `mzlab-cli validate FILE...`: is this mzML valid? Structure, PSI-MS vocabulary and, for `indexedmzML`, offsets and SHA-1 (`mzlab_core::mzml_validate`).
 //! One line per finding on the standard output; the summary of each file on the standard error. Exit 0: no error in any file; 1: errors; 2: usage or a
 //! file that cannot be read.
 
@@ -6,7 +6,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use mzlab_core::json::Out;
-use mzlab_core::mzmlvalida::{json_file, validate, Problem, Report, Severity};
+use mzlab_core::mzml_validate::{json_file, validate, Problem, Report, Severity};
 
 use crate::Outcome;
 

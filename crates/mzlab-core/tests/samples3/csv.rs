@@ -1,8 +1,8 @@
 //! CSV of `campioni/3`: round trip both ways, the three separators, quotes and newlines, synonyms of the headers, typed free columns, errors.
 
 use super::{many, rich};
-use mzlab_core::campioni::{self, csv_read, csv_write, Cell, ColumnType, Table};
-use mzlab_core::campioni::{table_from_json, to_json3};
+use mzlab_core::samples::{self, csv_read, csv_write, Cell, ColumnType, Table};
+use mzlab_core::samples::{table_from_json, to_json3};
 use serde_json::{json, Value};
 
 fn written(t: &Table, sep: &str) -> String {
@@ -116,17 +116,15 @@ fn bad_tables_are_refused_with_the_place() {
         ("file,polarita\nx,2\n", "polarita"),
         ("file,file\nx,y\n", "file"),
     ] {
-        let e = campioni::route_all("csv_leggi", &json!({"testo": text}).to_string()).unwrap_err();
+        let e = samples::route_all("csv_leggi", &json!({"testo": text}).to_string()).unwrap_err();
         assert_eq!(e.key, "error.badCsv", "{text}");
         assert!(
             e.params.iter().any(|(k, v)| *k == "colonna" && v == col),
             "{text}"
         );
     }
-    assert!(
-        campioni::route_all("csv_leggi", &json!({"testo": "file\nx,y\n"}).to_string()).is_err()
-    );
-    let none = campioni::route_all("csv_leggi", &json!({"testo": ""}).to_string()).unwrap();
+    assert!(samples::route_all("csv_leggi", &json!({"testo": "file\nx,y\n"}).to_string()).is_err());
+    let none = samples::route_all("csv_leggi", &json!({"testo": ""}).to_string()).unwrap();
     assert!(none.contains("\"campioni\":[]"));
     let _ = many;
 }

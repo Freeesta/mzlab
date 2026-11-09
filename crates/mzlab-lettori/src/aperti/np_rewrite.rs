@@ -4,8 +4,8 @@
 use std::borrow::Cow;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::Limits;
 use mzlab_core::numpress;
+use mzlab_core::readers::Limits;
 
 const FULL: [&str; 6] = [
     "MS:1002312",

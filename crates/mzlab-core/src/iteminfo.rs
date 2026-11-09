@@ -527,7 +527,7 @@ pub fn item_info<R: ReadAt>(
         "mixed"
     };
     let n1 = all.iter().filter(|s| s.level == 1).count();
-    let msn = crate::infusione::infusione(&idx.scans, facts.lc, &meta.file);
+    let msn = crate::infusion::infusione(&idx.scans, facts.lc, &meta.file);
     let kind = match part {
         Some(p) => match p.mode {
             "ms1" => "full",
@@ -685,7 +685,7 @@ pub fn item_info<R: ReadAt>(
         .raw(if dda { "true" } else { "false" })
         .raw(",\"infusion\":")
         .raw(if msn.is_some() { "true" } else { "false" });
-    crate::infusione::json(&mut o, msn.as_ref());
+    crate::infusion::json(&mut o, msn.as_ref());
     o.raw(",\"max_level\":")
         .int(all.iter().map(|s| s.level as i64).max().unwrap_or(1))
         .raw(",\"acq\":[");
@@ -778,7 +778,7 @@ pub fn facts_from<M: ReadAt>(
             });
         }
     }
-    f.lc = crate::infusione::raw_lc(m)?;
+    f.lc = crate::infusion::raw_lc(m)?;
     f.ims = crate::mzmlhead::mobility_kind(m)?;
     // The header polarity and the RT range of the SRM traces matter only for a file without scans or with SRM parts: reading a whole file (up to 256 MB) for them is
     // refused as `error.memoryBudget` for a big profile file (HRMS), and a file with scans and no SRM never shows them.

@@ -2,8 +2,8 @@
 #![allow(dead_code)]
 
 use super::{Outcome, Tol};
-use mzlab_core::lettori::{ChromatogramEntry, Reader, ScanEntry};
 use mzlab_core::mzml::ChromKind;
+use mzlab_core::readers::{ChromatogramEntry, Reader, ScanEntry};
 use serde_json::Value;
 
 pub fn kind_name(k: ChromKind) -> &'static str {
