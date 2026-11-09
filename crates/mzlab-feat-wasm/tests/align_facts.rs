@@ -69,6 +69,7 @@ fn facts_handed_in_give_the_bytes_of_facts_read_again() {
         open,
         &mut handed,
         None,
+        &mut |_, _| {},
     )
     .unwrap();
     assert!(!again.is_empty());

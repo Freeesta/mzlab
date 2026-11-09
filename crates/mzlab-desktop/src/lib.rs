@@ -17,6 +17,7 @@ mod feat_finder;
 mod feat_graph;
 mod feat_import;
 mod feat_msn;
+mod feat_progress;
 mod feat_untargeted;
 mod flow_live;
 mod flow_progress;

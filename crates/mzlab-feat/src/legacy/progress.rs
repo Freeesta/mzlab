@@ -87,7 +87,10 @@ pub fn json(kind: &str, phase: &str, done: u32, total: u32) -> String {
         (done.min(total) as f64) / (total as f64)
     };
     let frac = (before + list[i].weight * inside).clamp(0.0, 1.0);
-    let label = if total > 1 {
+    // the alignment counts slabs and files of gap filling, not files of the series: its share as a percentage
+    let label = if total > 1 && list[i].key == "align" {
+        format!("{}: {} %", list[i].label, done.min(total) * 100 / total)
+    } else if total > 1 {
         format!(
             "{}: file {} of {}",
             list[i].label,

@@ -168,7 +168,10 @@ async function runRust(a) {
   try { stored = await detect(p, files, idx, recipe); } finally { p.onProgress = prev; }
   lap("feature", t); t = performance.now(); check();
   step("align");
-  const table = await p.align(stored, paths, recipe); lap("align", t); t = performance.now(); check();
+  p.onProgress = (/** @type {any} */ i) => { if (i.phase === "align" && i.total > 1) step("align", i.done, i.total); };
+  let table;
+  try { table = await p.align(stored, paths, recipe); } finally { p.onProgress = prev; }
+  lap("align", t); t = performance.now(); check();
   step("candidates");
   say("Searching the products of the parent...");
   let rules = new Uint8Array(await (await fetch(base() + "mzfinder/regole_tp_2.json")).arrayBuffer());

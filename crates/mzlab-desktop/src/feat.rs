@@ -131,7 +131,7 @@ impl State {
         let mut src = self.feat_stored(&ns)?;
         let budget = step_budget();
         let mut out = Vec::new();
-        run::align_to(&mut src, &budget, &r, |k| self.open_idx(&ns[k]), &mut out)?;
+        self.align_told(&mut src, &budget, &r, &ns, &mut out)?;
         let a = written(&out);
         let mut g = self.feat_lock();
         g.table = Some(out);
@@ -401,6 +401,7 @@ impl State {
             "feat/detect" => self.feat_detect(p),
             "feat/estimate_detect" => self.feat_estimate_detect(p),
             "feat/align" => self.feat_align(p),
+            "feat/progress" => crate::feat_progress::route(&self.feat_at),
             "feat/untargeted/detect" => self.feat_unt_detect(p),
             "feat/untargeted/align" => self.feat_unt_align(p),
             "feat/formula_id" => self.feat_formula_id(p),

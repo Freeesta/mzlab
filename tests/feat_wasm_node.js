@@ -46,8 +46,10 @@ if (budget !== null) {
   // --weak 1: the weak candidates of every file from its detection (`detect_weak_file_to`, as the worker keeps them), handed to the alignment
   const weak = opt.weak ? files.map((_, k) => { const b = []; w.detect_weak_file_to((_, off, len) => read(k, off, len), sizes[k], opt.recipe, (_, x) => b.push(x.slice())); return Buffer.concat(b); }) : undefined;
   reads = 0;
-  const done = JSON.parse(w.align_series_to(stored, read, sizes, opt.recipe, s.write, budget, spill, weak));
+  let steps = 0, last = [0, 0];
+  const done = JSON.parse(w.align_series_to(stored, read, sizes, opt.recipe, s.write, budget, spill, weak, (d, t) => { steps++; last = [d, t]; }));
   console.error(`align reads ${reads}`);
+  console.error(`align steps ${steps} last ${last[0]} of ${last[1]}`);       // the steps the worker posts to the page
   if (spill) console.error(`spill puts ${puts} gets ${gets}`);
   fs.closeSync(s.fd);
   console.log(`series.mzfeat ${done.sha256}`);

@@ -95,7 +95,12 @@ export function createDesktop(base, say, held) {
     let t = performance.now();
     for (const [k, name] of names.entries()) { say(`Detecting the features of ${name} (${k + 1} of ${names.length})...`); await rpc("feat/detect", { name, recipe: "" }); }
     lap("feature", t); t = performance.now();
-    say("Aligning the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
+    say("Aligning the series...");
+    let on = true;
+    const poll = async () => { while (on) { await new Promise(r => setTimeout(r, 500)); if (on) try { const s = JSON.parse(await rpc("feat/progress", {})); if (on && s.total > 1) say(s.label + "..."); } catch (_) { /* a missed step: the next one says it */ } } };     // the label of the engine, as on the site
+    poll();
+    try { await rpc("feat/align", { names, recipe: "" }); } finally { on = false; }
+    lap("align", t); t = performance.now();
     say("Searching the products of the parent...");
     const h = await hypotheses(base, names, a[3], plan.structure, plan.formula);
     await rpc("feat/evidence", { minutes: plan.minutes, files: filesJson, parent: parentJson, recipe: "" }); lap("proofs", t); t = performance.now();
