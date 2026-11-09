@@ -42,7 +42,7 @@ I18N.add("it", {
   "settings.merge.tip": "Negli spettri, un picco per massa intera",
   "settings.cen.stop.tip": "Ferma; le copie già fatte restano",
   "settings.tour.tip": "Passo passo sui comandi principali",
-  "settings.g.bug.tip": "Prepara il rapporto; nulla parte da solo",
+  "settings.g.bug.tip": "Prepara un rapporto da inviare tu",
   "settings.g.diag.tip": "Memoria del motore e scelte fatte",
   "settings.title": "Impostazioni",
   "settings.gear.title": "Impostazioni: testo, tema, colori dei grafici",

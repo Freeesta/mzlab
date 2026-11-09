@@ -997,7 +997,7 @@ Check: scanner sites 578 = 567 listed + 11 excluded (appendix A); nothing is ski
 | 915 |  | mapfeat.title | mzlab/web/lang/it/mappe.js:22 | Come è stata trovata · feature {id} | How it was found · feature {id} | 35 | dinamico |
 | 916 |  | masscal.title | mzlab/web/lang/it/masscal.js:2 | Controllo della calibrazione di massa · {file} | Mass calibration check · {file} | 46 | dinamico |
 | 917 |  | method.m.title | mzlab/web/lang/it/method.js:2 | Metodo Agilent «{name}» (.m) | Agilent method «{name}» (.m) | 28 | dinamico |
-| 918 |  | settings.g.bug.tip | mzlab/web/lang/it/settings.js:45 | Prepara il rapporto; nulla parte da solo | Prepares the report; nothing is sent by itself | 46 | privacy |
+| 918 |  | settings.g.bug.tip | mzlab/web/lang/it/settings.js:45 | Prepara un rapporto da inviare tu | Prepares a report for you to send | 33 | privacy |
 | 919 |  | valida.title | mzlab/web/lang/it/valida.js:2 | Valida mzML: {name} | Validate mzML: {name} | 21 | dinamico |
 | 920 |  | corr.button.title | mzlab/web/lang/it/altre-a11y-fair.js:154 | Correzione del fondo (una alla volta) | Background correction (one at a time) | 37 |  |
 | 921 |  | corr.info.title | mzlab/web/lang/it/altre-a11y-fair.js:155 | Correzioni attive: riepilogo | Active corrections: summary | 28 |  |

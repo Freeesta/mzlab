@@ -42,7 +42,7 @@ I18N.add("en", {
   "settings.merge.tip": "In spectra, one peak per whole mass",
   "settings.cen.stop.tip": "Stops; the copies already made stay",
   "settings.tour.tip": "Step by step through the main controls",
-  "settings.g.bug.tip": "Prepares the report; nothing is sent by itself",
+  "settings.g.bug.tip": "Prepares a report for you to send",
   "settings.g.diag.tip": "Engine memory and the choices made",
   "settings.title": "Settings",
   "settings.gear.title": "Settings: text, theme, chart colors",
