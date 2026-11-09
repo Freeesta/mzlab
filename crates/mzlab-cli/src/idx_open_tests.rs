@@ -41,3 +41,21 @@ fn an_index_is_parsed_once_until_its_file_changes() {
     assert_eq!(parses(&idx), 2);
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn two_passes_that_open_a_file_together_parse_it_once() {
+    let d = folder("idx_open_together");
+    let (src, idx) = (d.join("a.mzML"), d.join("a.mzidx"));
+    std::fs::write(&src, crate::tests::mzml(3.0)).unwrap();
+    crate::build_index(&src, &idx, mzlab_core::mzidx::DEFAULT_BUDGET).unwrap();
+    let want = plain(&idx);
+    let got: Vec<String> = std::thread::scope(|s| {
+        let hs: Vec<_> = (0..4)
+            .map(|_| s.spawn(|| scans(&open(&idx).unwrap())))
+            .collect();
+        hs.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    assert!(got.iter().all(|g| *g == want));
+    assert_eq!(parses(&idx), 1);
+    let _ = std::fs::remove_dir_all(&d);
+}
