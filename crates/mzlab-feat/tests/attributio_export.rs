@@ -2,8 +2,8 @@
 //! Parity of the exports (quantification, gradient, Schymanski folder, publication table, evidence) with the golden data of the reference tool.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::annotate::AnnotationSettings;
 use mzlab_feat::attributio::annotate::{gnps_comparer, load_annotations};
 use mzlab_feat::attributio::curation::TableCuration;
@@ -16,7 +16,7 @@ use mzlab_feat::attributio::quantify::{
     load_calibration, quantify_lvl1, quantify_lvl1_environmental, ENV_COLUMNS, QUANT_COLUMNS,
 };
 use mzlab_feat::attributio::readers::feature_decisions::{load_feature_decisions, DecisionTable};
-use mzlab_feat::attributio::review::banco::Bench;
+use mzlab_feat::attributio::review::bench::Bench;
 use mzlab_feat::attributio::review::evidence::{
     decided_features, export_evidence, settings_digest,
 };

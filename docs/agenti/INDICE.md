@@ -62,12 +62,12 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | costruttore delle liste normative UE e USA (`mzlab-cli normative build`, `crates/mzlab-cli/src/normative/`, `normative/sources.json`, fonti, pin, `resolve`, uscita) | `docs/agenti/normative.md` |
 | motore MS2 sperimentale, frammentazione in silico alla MetFrag, attribuzione dei frammenti alla MS-FINDER, previsione dell'RT (`attributio/ms2_engine/`) | `docs/agenti/attributio-ms2.md` |
 | interpretazione per riga dei TP (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, blocco `interp` nel `.mzfeat`, `.wasm` `interp`, rotte `table_interp`) | `docs/agenti/interp.md` |
-| rete dei prodotti (`crates/mzlab-feat/src/rete/`, `rete/1`: archi per regola su `tp/1`, passi, coordinate, motivo dell'arco) | `docs/agenti/rete.md` |
-| posizione della sostituzione negli isomeri dei TP (classi compatibili con la MS2, `chem/posizioni.rs`, `posiz/1`) | `docs/agenti/posizioni.md` |
+| rete dei prodotti (`crates/mzlab-feat/src/network/`, `rete/1`: archi per regola su `tp/1`, passi, coordinate, motivo dell'arco) | `docs/agenti/rete.md` |
+| posizione della sostituzione negli isomeri dei TP (classi compatibili con la MS2, `chem/positions.rs`, `posiz/1`) | `docs/agenti/posizioni.md` |
 | motore di reattività del genitore (crates/mzlab-chem, .wasm chem, reatt/1, viewer 3D di Tabui) | `docs/agenti/reattivita.md` (validazione sui siti sperimentali ed esperimenti scartati: `reattivita-studi.md`) |
-| classi chimiche da regole (`crates/mzlab-feat/src/classi/`, tabella `data/classi-1.json`, `classi/1`: frammenti diagnostici e perdite neutre) | `docs/agenti/classi.md` |
+| classi chimiche da regole (`crates/mzlab-feat/src/classes/`, tabella `data/classi-1.json`, `classi/1`: frammenti diagnostici e perdite neutre) | `docs/agenti/classi.md` |
 | livelli di identificazione (scala di Schymanski 2a/2b/3a/3b, scala di previsione, etichette «L3» e «Prev. 2», Tabui, Attributio, untargeted) | `docs/agenti/livelli.md` |
-| gruppi di esperimenti in Tabui: condizioni, `gruppi/1`, `crates/mzlab-feat/src/gruppi/` | `docs/agenti/gruppi.md` |
+| gruppi di esperimenti in Tabui: condizioni, `gruppi/1`, `crates/mzlab-feat/src/groups/` | `docs/agenti/gruppi.md` |
 | statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | estremi di array grandi senza spread, ricerca binaria dei punti in una finestra (`numeri.js`: `maxOf`, `minOf`, `maxAbs`, `spanOf`) | `docs/agenti/numeri.md` |
 | tabella delle transizioni SIM/MRM di un triplo quadrupolo (`chrom.transitions`, `transitions/`, integrazione per campione, candidati di RT, preset di esempio) | `docs/agenti/transizioni.md` |

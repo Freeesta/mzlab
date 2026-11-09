@@ -15,7 +15,7 @@ use mzlab_core::msngrafo::{
 use mzlab_core::routes::Query;
 use mzlab_core::sorgente::ReaderSource;
 use mzlab_core::{lettori_mzml, Error, Result};
-use mzlab_feat::chem::strutture::strutture_testo;
+use mzlab_feat::chem::structures::strutture_testo;
 use serde_json::{json, Value};
 
 use crate::engine::{CountWrite, Picked, Progress, State};
@@ -216,7 +216,7 @@ fn add_expected(q: &mut Query) {
     if q.get("regole") != Some("1") || q.some("smiles").is_none() || q.some("attese").is_some() {
         return;
     }
-    let Ok(a) = mzlab_feat::chem::regole::attese(q.get("smiles").unwrap_or(""), tabella_regole())
+    let Ok(a) = mzlab_feat::chem::rules::attese(q.get("smiles").unwrap_or(""), tabella_regole())
     else {
         return;
     };
@@ -282,12 +282,12 @@ fn with_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> Result<String>
                     .ok_or_else(|| Error::new("err.request.badNumber").with("name", k)),
             }
         };
-        let par = mzlab_feat::chem::rotture::Params {
+        let par = mzlab_feat::chem::breaks::Params {
             ppm: num("ppm_struttura", STRUCTURE_PPM)?,
             h_max: num("h_max", 2.0)?.min(4.0) as u8,
             max_bonds: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
         };
-        j = mzlab_feat::chem::rotture::breaks_text(g, &j, o.smiles.as_deref(), par)?;
+        j = mzlab_feat::chem::breaks::breaks_text(g, &j, o.smiles.as_deref(), par)?;
     }
     Ok(j)
 }

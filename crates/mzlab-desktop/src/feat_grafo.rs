@@ -7,7 +7,7 @@
 //! An error keeps its key (`error.grafo.ring`, `error.grafo.delta.neg`, ...) as the `.wasm` throws it.
 
 use mzlab_core::{Error, Result};
-use mzlab_feat::chem::{etichette, frammenti, grafo, posizioni};
+use mzlab_feat::chem::{fragments, graph, labels, positions};
 use serde_json::Value;
 
 use crate::engine::State;
@@ -18,10 +18,10 @@ impl State {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let n = |k: &str| p[k].as_i64().map_or(-1, |v| v as i32);
         match s("kind") {
-            "analyse" => text(grafo::analyse_json(s("smiles"))?),
-            "fragments" => text(frammenti::fragments_json(s("molfile"), n("a"), n("b"))?),
-            "partial" => text(frammenti::partial_json(s("molfile"), s("delta"))?),
-            "positions" => text(posizioni::positions_prior_json(
+            "analyse" => text(graph::analyse_json(s("smiles"))?),
+            "fragments" => text(fragments::fragments_json(s("molfile"), n("a"), n("b"))?),
+            "partial" => text(fragments::partial_json(s("molfile"), s("delta"))?),
+            "positions" => text(positions::positions_prior_json(
                 s("smiles"),
                 s("transform"),
                 s("peaks"),
@@ -36,7 +36,7 @@ impl State {
                 } else {
                     s("request").to_string()
                 };
-                text(etichette::labels_json(&req)?)
+                text(labels::labels_json(&req)?)
             }
             "reactivity" => {
                 let opts = if p["opts"].is_object() {

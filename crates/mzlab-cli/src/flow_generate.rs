@@ -8,7 +8,7 @@ use mzlab_core::error::Result;
 use mzlab_core::flow::Job;
 use mzlab_core::json::Value;
 use mzlab_core::step::DataType;
-use mzlab_feat::chem::grafo::analyse_json;
+use mzlab_feat::chem::graph::analyse_json;
 use mzlab_feat::hypo::HypoParams;
 use mzlab_feat_wasm::run_tp;
 

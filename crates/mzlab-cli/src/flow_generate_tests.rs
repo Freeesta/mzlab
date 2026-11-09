@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use mzlab_feat::chem::grafo::analyse_json;
+use mzlab_feat::chem::graph::analyse_json;
 use mzlab_feat::hypo::{generate, HypoParams, Inputs, Rules, Structure};
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");

@@ -100,7 +100,7 @@ fn main() {
     let structure = if smiles.is_empty() {
         String::new()
     } else {
-        mzlab_feat::chem::grafo::analyse_json(&smiles).expect("smiles")
+        mzlab_feat::chem::graph::analyse_json(&smiles).expect("smiles")
     };
     let mut ix: Vec<_> = paths.iter().map(|p| open(p).expect("open")).collect();
     let fr: Vec<_> = feats.iter().collect();

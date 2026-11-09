@@ -28,7 +28,8 @@ held, head_held, asked_urls = [], [], []
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
-        ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce")
+        # no service worker: Firefox and WebKit send the page's requests through it, and context.route never sees those (the .wasm is not held)
+        ctx = b.new_context(viewport={"width": 1400, "height": 900}, reduced_motion="reduce", service_workers="block")
         ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")   # no isolation reload (browser.js isolateOnce): the held .wasm and the watched fetch belong to the page that stays
         ctx.add_init_script(WATCH)
         ctx.route("**/*.wasm", lambda r: held.append(r))

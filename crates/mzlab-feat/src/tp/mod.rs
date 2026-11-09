@@ -8,20 +8,20 @@
 //! hypothesis or an MS2 related to the parent's). The rows that pass 1 and 2 but not 3 are the "formed and not explained" ones. Kinship (`parentela`) is a
 //! second axis, read from the signs of the proofs of `evid/1`.
 
-mod cancelli;
-mod candidati;
-mod gruppi;
+mod gates;
+mod candidates;
+mod groups;
 mod meta;
-mod parentela;
-mod rete;
-mod tabella;
+mod kinship;
+mod network;
+mod table;
 
-pub use candidati::{candidates, candidates_json, element_fit, FitCandidate};
-pub use gruppi::{conditions as group_conditions, groups_json, infos_from_json, treated_by_condition, RowInfo};
-pub use rete::{arcs, arcs_in, explain_by_arcs, explain_by_arcs_in, next_generation, Arc, NetParams};
+pub use candidates::{candidates, candidates_json, element_fit, FitCandidate};
+pub use groups::{conditions as group_conditions, groups_json, infos_from_json, treated_by_condition, RowInfo};
+pub use network::{arcs, arcs_in, explain_by_arcs, explain_by_arcs_in, next_generation, Arc, NetParams};
 #[cfg(feature = "interp")]
-pub(crate) use tabella::measured;
-pub use tabella::{role_of, table_json, table_json_cond, Role, TABLE_SCHEMA};
+pub(crate) use table::measured;
+pub use table::{role_of, table_json, table_json_cond, Role, TABLE_SCHEMA};
 
 use mzlab_core::error::Result;
 
@@ -149,7 +149,7 @@ impl TpRoles {
             blank: p.blank,
             dark: p.dark,
             infusion: p.infusion,
-            conditions: gruppi::treated_by_condition(cs),
+            conditions: groups::treated_by_condition(cs),
         }
     }
 
@@ -245,7 +245,7 @@ pub fn build_by_role(inp: &TpInputs, roles: &TpRoles) -> Result<Option<TpBlock>>
 }
 
 fn run_gates(inp: &TpInputs, roles: Option<&TpRoles>) -> Result<Option<TpBlock>> {
-    let Some(parent) = cancelli::parent_row(inp) else {
+    let Some(parent) = gates::parent_row(inp) else {
         return Ok(None);
     };
     let n = inp.aligned.len();
@@ -259,15 +259,15 @@ fn run_gates(inp: &TpInputs, roles: Option<&TpRoles>) -> Result<Option<TpBlock>>
     b.via = filled(n, 0)?;
     b.kinship = filled(n, KIN_NONE)?;
     match roles {
-        Some(roles) => b.roles = Some(cancelli::formed_by_role(inp, roles, parent, &mut b)?),
-        None => cancelli::formed(inp, parent, &mut b)?,
+        Some(roles) => b.roles = Some(gates::formed_by_role(inp, roles, parent, &mut b)?),
+        None => gates::formed(inp, parent, &mut b)?,
     }
-    cancelli::not_in_source(inp, parent, &mut b);
-    cancelli::explained(inp, &mut b);
+    gates::not_in_source(inp, parent, &mut b);
+    gates::explained(inp, &mut b);
     if let Some(rules) = inp.rules {
         let by = roles.map_or(&[][..], |r| r.conditions.as_slice());
         explain_by_arcs_in(inp, rules, &mut b, &NetParams::default(), by)?;
     }
-    parentela::kinship(inp, &mut b);
+    kinship::kinship(inp, &mut b);
     Ok(Some(b))
 }

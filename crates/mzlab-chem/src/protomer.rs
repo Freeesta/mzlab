@@ -4,7 +4,7 @@
 //! Rule: an acid is deprotonated when its pKa < 7, a base is protonated when its pKa > 7; each base already protonated within a
 //! few bonds lowers the pKa of the next one. One form is returned, never an ensemble. Charges written in the SMILES are kept.
 
-use mzlab_feat::chem::grafo::{Atom, Mol};
+use mzlab_feat::chem::graph::{Atom, Mol};
 
 /// pH of the form.
 pub const PH: f64 = 7.0;

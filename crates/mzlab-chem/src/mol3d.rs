@@ -1,8 +1,8 @@
 //! A molecule with 3D coordinates, numbered like the rest of mzLab: the heavy atoms in the order of the SMILES (the order of
-//! `mzlab_feat::chem::grafo::Mol`, i.e. of `posiz/1`), then the hydrogens of each heavy atom in turn.
+//! `mzlab_feat::chem::graph::Mol`, i.e. of `posiz/1`), then the hydrogens of each heavy atom in turn.
 
 use mzlab_core::error::{Error, Result};
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 
 /// Elements the geometry covers (atomic numbers): H, C, N, O, F, P, S, Cl, Br, I.
 const SUPPORTED: [u8; 10] = [1, 6, 7, 8, 9, 15, 16, 17, 35, 53];

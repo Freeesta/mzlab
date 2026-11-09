@@ -4,14 +4,14 @@
 //! paracetamol with an MS2 and a library of three isomers), all invented.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::io::{Io, MemFiles};
 use mzlab_feat::attributio::readers::feature_decisions::{
     load_feature_decisions, write_feature_decisions,
 };
 use mzlab_feat::attributio::review::alternatives::{same_formula, AltSources};
-use mzlab_feat::attributio::review::banco::review_json;
+use mzlab_feat::attributio::review::bench::review_json;
 use mzlab_feat::attributio::review::libraries::{LibFormat, LibInput, LibraryIndex};
 use mzlab_feat::attributio::review::matching::Ms2;
 use mzlab_feat::attributio::review::rules::{

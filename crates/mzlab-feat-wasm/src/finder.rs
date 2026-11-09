@@ -131,7 +131,7 @@ pub fn finder_plan(files_json: &str, parent_json: &str) -> Result<String, JsValu
     let structure = p
         .smiles
         .as_deref()
-        .and_then(|s| mzlab_feat::chem::grafo::analyse_json(s).ok())
+        .and_then(|s| mzlab_feat::chem::graph::analyse_json(s).ok())
         .unwrap_or_default();
     let mut o = mzlab_core::json::Out::default();
     o.raw("{\"lc\":[");

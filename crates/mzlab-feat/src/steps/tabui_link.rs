@@ -1,5 +1,5 @@
 //! `tp.link`, `tp.position`, `tp.network` and `tp.review`: the MS2 of a product row, the place of its modification and the network of the products. The parameters
-//! are the constants of `interp::ms2link`, `interp::sito` and `rete::NetworkParams`, compared with the code in `tests/steps_tabui_parity.rs` (feature `interp`).
+//! are the constants of `interp::ms2link`, `interp::site` and `network::NetworkParams`, compared with the code in `tests/steps_tabui_parity.rs` (feature `interp`).
 
 use mzlab_core::step::{
     Algorithm, Applicability, DataType, Facets, Param, Port, Reference, Status, Step,
@@ -108,11 +108,11 @@ fn isomer_traces() -> Algorithm {
     }
 }
 
-/// `tp.position`: the classes of sites of the parent compatible with the MS2 of a product (`interp::sito`, `chem::posizioni`, `posiz/1`).
+/// `tp.position`: the classes of sites of the parent compatible with the MS2 of a product (`interp::site`, `chem::positions`, `posiz/1`).
 pub(super) fn position() -> Step {
     Step {
         ins: vec![
-            // HR only: the fragments are matched at 5 ppm (`interp::sito`), so unit-resolution data would find no site instead of being refused
+            // HR only: the fragments are matched at 5 ppm (`interp::site`), so unit-resolution data would find no site instead of being refused
             Port::new("tp", DataType::Tp, "Product row with its consensus MS2").requires(Facets { resolution: vec!["hr"], ..Facets::default() }),
             Port::new("parent", DataType::Structure, "Parent compound with its structure"),
         ],
@@ -171,7 +171,7 @@ fn msn_tree() -> Algorithm {
         ..algorithm(
             "msn_tree",
             "Votes of the MSn tree",
-            "The likelihood of each class is read from the fragments of the MSn tree that carry the modification (votes_of in crates/mzlab-feat/src/interp/sito.rs).",
+            "The likelihood of each class is read from the fragments of the MSn tree that carry the modification (votes_of in crates/mzlab-feat/src/interp/site.rs).",
             Status::Available,
         )
     }
@@ -197,7 +197,7 @@ fn cleavage_likelihood() -> Algorithm {
         ..algorithm(
             "cleavage_likelihood",
             "Likelihood from the cleavages",
-            "Without the tree, the likelihood of a class is built from the cleavages of the parent that explain the peaks of the MS2 (match_spectrum in crates/mzlab-feat/src/chem/posizioni.rs).",
+            "Without the tree, the likelihood of a class is built from the cleavages of the parent that explain the peaks of the MS2 (match_spectrum in crates/mzlab-feat/src/chem/positions.rs).",
             Status::Available,
         )
     }
@@ -242,7 +242,7 @@ fn rule_arcs() -> Algorithm {
     algorithm(
         "rule_arcs",
         "Arcs by the rules of the table",
-        "One arc per pair of ions, from the one that peaks first, for the rule whose change of formula joins them (crates/mzlab-feat/src/rete/arcs.rs, shared with the network of mzFinder).",
+        "One arc per pair of ions, from the one that peaks first, for the rule whose change of formula joins them (crates/mzlab-feat/src/network/arcs.rs, shared with the network of mzFinder).",
         Status::Available,
     )
 }

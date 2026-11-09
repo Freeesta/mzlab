@@ -3,8 +3,8 @@
 //! already identified, hits with their classes, per-list summary, RT ~ logP model, method lines and the theoretical M+2 ratios.
 
 #[macro_use]
-mod attributio_comune;
-use attributio_comune::*;
+mod attributio_common;
+use attributio_common::*;
 use mzlab_feat::attributio::reglists::b1::StructRow;
 use mzlab_feat::attributio::reglists::screen::*;
 use mzlab_feat::attributio::tox::snapshot::{read_membership, read_registry};

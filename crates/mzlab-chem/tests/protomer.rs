@@ -2,7 +2,7 @@
 
 use mzlab_chem::protomer::assign;
 use mzlab_chem::reactivity_json;
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 use serde_json::Value;
 
 /// (written SMILES of the form, total charge, groups changed)

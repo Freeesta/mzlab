@@ -2,7 +2,7 @@
 //! `frag/1` and `parz/1` from a `mol/1` record against the molfile path, over the V2000 molfiles of the mzlab-mol golden: the same cuts (compared as a
 //! set by atom pair: the record sorts its bonds) with the same sides, and the same partial structure.
 
-use mzlab_feat::chem::frammenti::{
+use mzlab_feat::chem::fragments::{
     fragments_json, fragments_record_json, partial_json, partial_record_json,
 };
 use serde_json::Value;

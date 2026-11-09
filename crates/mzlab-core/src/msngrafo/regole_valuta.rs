@@ -92,7 +92,7 @@ pub(super) fn root_adduct(o: &Options, pol: i8) -> Option<&'static str> {
 }
 
 /// What a rule expects of the structure of the user: the product it gives (a neutral loss, or an ion when `ione`) with its formula. The structure
-/// side computes them (`mzlab_feat::chem::regole::attese`); the core only matches them against the graph.
+/// side computes them (`mzlab_feat::chem::rules::attese`); the core only matches them against the graph.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expectation {
     pub rule: String,

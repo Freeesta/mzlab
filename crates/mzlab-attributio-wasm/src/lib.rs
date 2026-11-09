@@ -8,7 +8,7 @@ use mzlab_core::json::{self, Out};
 #[cfg(any(feature = "rev", feature = "export"))]
 use mzlab_feat::attributio::export::run::Options;
 use mzlab_feat::attributio::io::{Entry, Io};
-use mzlab_feat::attributio::review::banco::review_json_with;
+use mzlab_feat::attributio::review::bench::review_json_with;
 use mzlab_feat::attributio::review::save::{decision_text, Saved};
 use mzlab_feat::attributio::table::Run;
 use std::collections::BTreeMap;

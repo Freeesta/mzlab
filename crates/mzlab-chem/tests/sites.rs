@@ -4,7 +4,7 @@
 use mzlab_chem::fukui::{ch_sites, Site};
 use mzlab_chem::reatt::gfn2;
 use mzlab_chem::{embed, Mol3d, DEFAULT_CONFORMERS};
-use mzlab_feat::chem::grafo::Mol;
+use mzlab_feat::chem::graph::Mol;
 
 /// (name in `cc_ref.json`, heavy atoms of the experimental site of •OH attack, draft CC-05 §2.1).
 const DRAFT: [(&str, &[usize]); 10] = [

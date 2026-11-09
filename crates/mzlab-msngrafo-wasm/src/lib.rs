@@ -14,7 +14,7 @@ use mzlab_core::msngrafo::{
     library_text, table_text, with_interpretation, Graph, Options, PPM_PERDITA,
 };
 use mzlab_core::routes::Query;
-use mzlab_feat::chem::strutture::strutture_testo;
+use mzlab_feat::chem::structures::strutture_testo;
 use wasm_bindgen::prelude::*;
 
 /// Bytes of a file asked to JS: `read(offset, length) -> Uint8Array`.
@@ -122,12 +122,12 @@ fn with_query_keys(g: &Graph, mut j: String, o: &Options, q: &Query) -> mzlab_co
                     .ok_or_else(|| Error::new("err.request.badNumber").with("name", k)),
             }
         };
-        let p = mzlab_feat::chem::rotture::Params {
+        let p = mzlab_feat::chem::breaks::Params {
             ppm: num("ppm_struttura", PPM_STRUCTURE)?,
             h_max: num("h_max", 2.0)?.min(4.0) as u8,
             max_bonds: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
         };
-        j = mzlab_feat::chem::rotture::breaks_text(g, &j, o.smiles.as_deref(), p)?;
+        j = mzlab_feat::chem::breaks::breaks_text(g, &j, o.smiles.as_deref(), p)?;
     }
     Ok(j)
 }

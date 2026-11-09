@@ -130,11 +130,11 @@ pub fn rete_build(
     ppm: f64,
     min_fragments: u32,
 ) -> std::result::Result<String, JsValue> {
-    let params = mzlab_feat::rete::NetworkParams {
+    let params = mzlab_feat::network::NetworkParams {
         ppm,
         min_fragments: min_fragments as usize,
     };
-    mzlab_feat::rete::network_text(
+    mzlab_feat::network::network_text(
         (&mut table_reader(table_read), size as u64),
         (&mut table_reader(interp_read), interp_size as u64),
         campioni_json,
