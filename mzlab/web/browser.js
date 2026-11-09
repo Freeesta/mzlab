@@ -72,7 +72,8 @@
   window.addEventListener("mzlab:db-blocked", () => phase({ key: "load.blocked", pct: null }));
   const parsed = () => new Promise(ok => { if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => ok(null), { once: true }); else ok(null); });
   // the .wasm download starts with the module graph, not after it: its fetch() in rust-supervisor.js takes this response (same URL, cors)
-  const wasmEarly = () => { const l = document.createElement("link"); l.rel = "preload"; l.as = "fetch"; l.crossOrigin = "anonymous"; l.href = new URL("wasm/mzlab_wasm_bg.wasm", SRC).href; document.head.appendChild(l); };
+  // only a hint: if it cannot be added, the engine still starts and fetches the .wasm itself
+  const wasmEarly = () => { try { const l = document.createElement("link"); l.rel = "preload"; l.as = "fetch"; l.crossOrigin = "anonymous"; l.href = new URL("wasm/mzlab_wasm_bg.wasm", SRC).href; document.head.appendChild(l); } catch (_) { /* no preload */ } };
   const rustReady = modern && !window.MZLAB_PHONE
     ? parsed().then(() => { wasmEarly(); return import(new URL("rust-bridge.js", SRC).href); }).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), notify: notice, onBlocked: () => phase({ key: "load.blocked", pct: null }) }); b.start(); window.MZLAB_RUST = b; return b; })
         .catch(e => { window.MZLAB_RUST_ERR = String(e && e.message || e); console.debug("[mzLab] Rust engine not available", e); return null; })
