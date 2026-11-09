@@ -13,5 +13,5 @@ Safari chiude una scheda molto prima che il dispositivo finisca la RAM (iPad cir
 | Allineamento e riempimento dei buchi di mzFinder | sì (`error.featMemory` dal pool) | `tests/test_feat_wasm.py`, `tests/test_feat_pool_budget.py` |
 | Motore che muore (trap) | il supervisore lo riavvia | `tests_e2e/e2e_rust.py` |
 | Conversione senza `createSyncAccessHandle` (`rust-opfs.js`) | no: i pezzi restano in memoria fino al Blob | nessuno |
-| Grafo MSn (`mzlab-msngrafo-wasm`) | no: nessun budget passato; un trap riavvia il motore | nessuno |
+| Grafo MSn (`mzlab-msngrafo-wasm`) | sì, `msngraph::read` (fase `msnGraph`): 40 B per punto, stima estesa a tutte le scansioni del consenso dopo 8 spettri; la pagina passa `budget_mb`, desktop (`rpc_msn.rs`) e CLI (`msn-graph --budget-mb`) il budget della macchina | `tests/test_msngrafo_wasm.py` (0,0001 MB: stesso rifiuto in CLI e `.wasm`; 64 MB: stessi byte), test di `read.rs` |
 | TDATI (mappa 3D, XIC, rete, QC) e «Copia» | no: nessun tetto di righe | nessuno |
