@@ -77,7 +77,7 @@ impl<W: Write> MzmlWriter<W> {
         for (k, v) in &h.run_params {
             s += &format!("<userParam name=\"{}\" value=\"{}\"/>\n", esc(k), esc(v));
         }
-        let mut w = MzmlWriter { out, spectra: 0, chroms: 0, opz, enc: Encoding::new(opz), text: String::new(), idx: indexed.then(indice::Index::new) };
+        let mut w = MzmlWriter { out, spectra: 0, chroms: 0, opz, enc: Encoding::new(opz), text: String::new(), idx: indexed.then(index::Index::new) };
         w.put(s.as_bytes())?;
         Ok(w)
     }
@@ -261,7 +261,7 @@ pub struct MzmlWriter<W: Write> {
     text: String,
     /// Positions and checksum, only for `MzmlWriter::indicizzato`.
     #[cfg_attr(target_family = "wasm", allow(dead_code))]
-    idx: Option<indice::Index>,
+    idx: Option<index::Index>,
 }
 
 pub(crate) fn io(_: std::io::Error) -> Error {
@@ -419,25 +419,25 @@ fn component_list(h: &Header) -> String {
     s + "</componentList>"
 }
 
-mod codifica;
-mod compressione;
-pub use compressione::compression_options;
-mod matrice;
+mod encoding;
+mod compression;
+pub use compression::compression_options;
+mod matrix;
 #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
 mod uv;
 mod thread;
 pub use thread::default_threads;
-use codifica::{Encoding, Data};
+use encoding::{Encoding, Data};
 #[cfg(not(target_family = "wasm"))]
 mod pool;
-mod testa;
-pub(crate) use testa::{spectrum_head, spectrum_head_into};
+mod head;
+pub(crate) use head::{spectrum_head, spectrum_head_into};
 #[cfg(feature = "precursori")]
-mod spettro;
+mod spectrum;
 #[cfg(feature = "precursori")]
-pub use spettro::{activation_from_name, CvPar, Precursore};
+pub use spectrum::{activation_from_name, CvPar, Precursore};
 #[cfg(feature = "precursori")]
-use spettro::{params_into, precursor_list_into};
+use spectrum::{params_into, precursor_list_into};
 
 /// Appends the cvParams of `<scan>` the reader gives besides the start time and the filter.
 fn scan_into(s: &mut String, extra: &SpectrumExtra) {
@@ -447,16 +447,16 @@ fn scan_into(s: &mut String, extra: &SpectrumExtra) {
     let _ = (s, extra);
 }
 #[cfg(any(not(target_family = "wasm"), feature = "indice"))]
-mod indice;
+mod index;
 #[cfg(all(target_family = "wasm", not(feature = "indice")))]
-#[path = "mzmlwrite/indice_wasm.rs"]
-mod indice;
+#[path = "mzmlwrite/index_wasm.rs"]
+mod index;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod tests_indice;
+mod tests_index;
 #[cfg(all(test, feature = "precursori"))]
-mod tests_precursori;
+mod tests_precursors;
 #[cfg(test)]
 mod tests_xsd;
 #[cfg(all(test, not(target_family = "wasm")))]

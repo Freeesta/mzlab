@@ -5,8 +5,8 @@
 //! found beside the `.raw` (or in `dati/formati/aperti/mzml_msconvert/`), and is skipped otherwise.
 use std::path::{Path, PathBuf};
 
-use mzlab_core::lettori::{FileSet, Limits, Member};
 use mzlab_core::mzml::{self, ChromKind, Item};
+use mzlab_core::readers::{FileSet, Limits, Member};
 
 #[path = "../../../tools/dati_percorsi.rs"]
 mod dati_percorsi;
@@ -19,7 +19,7 @@ fn file(rel: &str) -> Option<PathBuf> {
     p
 }
 
-fn apri(p: &Path) -> Box<dyn mzlab_core::lettori::Reader> {
+fn apri(p: &Path) -> Box<dyn mzlab_core::readers::Reader> {
     let bytes = std::fs::read(p).unwrap();
     let fs = FileSet {
         membri: vec![Member {

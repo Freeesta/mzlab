@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 
 fn generate(tool: &str) -> Option<PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_sciex_sonda_{tool}_{}", std::process::id()));

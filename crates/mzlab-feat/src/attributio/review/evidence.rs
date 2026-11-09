@@ -67,7 +67,7 @@ pub fn settings_digest(s: &ReviewSettings, a: &AnnotationSettings) -> (String, S
     .collect::<Vec<_>>()
     .join(";");
     (
-        mzlab_core::metodo::sha1_hex_bytes(kv.as_bytes())[..12].to_string(),
+        mzlab_core::method::sha1_hex_bytes(kv.as_bytes())[..12].to_string(),
         kv,
     )
 }

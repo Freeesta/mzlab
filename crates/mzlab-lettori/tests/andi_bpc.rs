@@ -6,7 +6,7 @@ mod common;
 use common::andi::*;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::lettori::{FileSet, Limits, Member, Reader};
+use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 use mzlab_core::upload::index_reader;
 use std::cell::Cell;
 use std::io::Cursor;

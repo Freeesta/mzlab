@@ -1,9 +1,9 @@
 //! The optical (DAD / PDA) matrix as mzML spectra: one `MS:1000804` spectrum per instant with a wavelength array in nm, the layout ProteoWizard writes
-//! and `mzml_dad` reads. Used by `lettori_mzml::Conversione` when `Opzioni::dad` is on.
+//! and `mzml_dad` reads. Used by `readers_mzml::Conversione` when `Opzioni::dad` is on.
 
 use std::io::Write;
 
-use super::codifica::Data;
+use super::encoding::Data;
 use super::{cv, esc, MzmlWriter};
 use crate::error::Result;
 

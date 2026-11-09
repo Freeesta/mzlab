@@ -5,7 +5,7 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::campioni::{proponi, to_json};
+use mzlab_core::samples::{proponi, to_json};
 use mzlab_feat::tp::{ST_PARENT, ST_TP};
 
 pub(crate) const FORMULA: &str = "C10H12N2O3S";

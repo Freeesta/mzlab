@@ -13,8 +13,8 @@ mod shapes;
 pub use json::{gruppi_json, opts_from_value, parse_input, run_json, samples_from_value, to_json};
 
 use crate::sortc::SortC;
-use mzlab_core::campioni::Sample;
 use mzlab_core::error::{Error, Result};
+use mzlab_core::samples::Sample;
 use presence::{CondModel, GStat};
 
 pub use presence::Controls;

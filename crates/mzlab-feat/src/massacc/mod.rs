@@ -252,7 +252,7 @@ pub fn istd_flags(samples: Option<&[u8]>, names: &[(String, String)]) -> Result<
                 .map(|s| (s.file, s.sha256, s.istd))
                 .collect()
         } else {
-            mzlab_core::campioni::from_json(bytes)?
+            mzlab_core::samples::from_json(bytes)?
                 .into_iter()
                 .map(|c| (c.file, c.sha256, c.istd))
                 .collect()

@@ -3,7 +3,7 @@
 
 use super::folder::{damage, f32_at, read_error, u32_at};
 use mzlab_core::error::Result;
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 const A: usize = 22;
 const B: usize = 30;

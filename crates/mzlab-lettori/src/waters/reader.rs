@@ -9,12 +9,12 @@ use super::idx::{self, Row};
 use super::inf::{self, Extern, FunctionExt, Inlet, Mode, WatersHeader};
 use super::sides::{compound_names, Table};
 use mzlab_core::error::{Error, Result};
-use mzlab_core::lettori::{
+use mzlab_core::mzml::{Chromatogram, Spectrum};
+use mzlab_core::mzmlwrite::Header;
+use mzlab_core::readers::{
     ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
     Sample, ScanEntry, CONTRATTO,
 };
-use mzlab_core::mzml::{Chromatogram, Spectrum};
-use mzlab_core::mzmlwrite::Header;
 
 const FUNCTNS: &str = "_FUNCTNS.INF";
 const FIRST_DAT: &str = "_FUNC001.DAT";
@@ -259,7 +259,7 @@ impl WatersReader {
 
 /// A folder with `_FUNC001.DAT` is a MassLynx folder; it is surer when `_FUNCTNS.INF` is there and has whole records.
 fn recognize(fs: &mut FileSet) -> Fiducia {
-    let base = |m: &mzlab_core::lettori::Member| super::folder::base(&m.nome).to_ascii_lowercase();
+    let base = |m: &mzlab_core::readers::Member| super::folder::base(&m.nome).to_ascii_lowercase();
     if !fs.membri.iter().any(|m| base(m) == "_func001.dat") {
         return Fiducia::No;
     }

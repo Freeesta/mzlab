@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::itemroutes::{pda_spectrum, pda_wavelength};
-use mzlab_core::lettori::{FileSet, Limits, Member};
-use mzlab_core::lettori_mzml::Conversion;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::mzmlwrite::Options;
+use mzlab_core::readers::{FileSet, Limits, Member};
+use mzlab_core::readers_mzml::Conversion;
 use serde_json::Value;
 
 fn fixture() -> Option<(PathBuf, Value)> {

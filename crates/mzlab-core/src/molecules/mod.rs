@@ -1,20 +1,20 @@
 //! The molecules database, `molecules/1` (`docs/schemi/molecules-1.json`): one record per molecule (names, formula, SMILES, InChIKey, classes, properties),
 //! shared by the tools of the app. The mass is always computed here from formula and charge. `csv.rs` and `json.rs` read and write the two forms (an error
-//! for every wrong row, canonical JSON), `livelli.rs` joins catalogue < imported < user, `cerca.rs` is the one search, `rotte.rs` the bindings.
+//! for every wrong row, canonical JSON), `levels.rs` joins catalogue < imported < user, `search.rs` is the one search, `routes.rs` the bindings.
 
-mod cerca;
 mod csv;
-mod ione;
+mod ion;
 mod json;
-mod livelli;
-mod rotte;
+mod levels;
+mod routes;
+mod search;
 
-pub use cerca::{cerca, search_wide};
 pub use csv::{from_csv, to_csv};
-pub use ione::ione;
+pub use ion::ione;
 pub use json::{digest, errors_json, from_json, hits_json, record_json, to_json};
-pub use livelli::merge;
-pub use rotte::route;
+pub use levels::merge;
+pub use routes::route;
+pub use search::{cerca, search_wide};
 
 use crate::budget::sha256_hex;
 use crate::elements::{fmt, mass, parse_formula, ELECTRON};

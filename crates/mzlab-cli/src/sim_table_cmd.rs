@@ -1,6 +1,6 @@
 //! `mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=..] [--set baseline=..] [--set group.SAMPLE=GROUP] [--out PATH]`: the SIM table of the Data view (`mzlab_core::simtab`):
 //! the peaks of every SIM channel of every sample, or a pivot (one row per sample and one column per channel, or the reverse). Each file gives the `/api/mrm` transitions the engine gives the page (an mzML read as it is, a vendor file through the
-//! chromatograms of `lettori_mzml::guscio`, as the site reads it), so the CSV is the bytes of the page's export. A `.wiff` gives one column per sample,
+//! chromatograms of `readers_mzml::guscio`, as the site reads it), so the CSV is the bytes of the page's export. A `.wiff` gives one column per sample,
 //! named as the site names its mzML (`conversione.js::wiffName`).
 
 use std::fs::File;
@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::fileroutes::mrm_transitions;
 use mzlab_core::json::Out;
-use mzlab_core::lettori::Limits;
 use mzlab_core::mzmlhead::Mzml;
+use mzlab_core::readers::Limits;
 
 use crate::Outcome;
 
@@ -183,7 +183,7 @@ fn samples_of(
     let list: Vec<String> = l.samples().iter().map(|c| c.nome.clone()).collect();
     let mut out = Vec::new();
     for (c, given) in list.iter().enumerate() {
-        let shell = mzlab_core::lettori_mzml::guscio(l.as_mut(), c)?;
+        let shell = mzlab_core::readers_mzml::guscio(l.as_mut(), c)?;
         let size = shell.len() as u64;
         let mut m = Mzml::new(shell, size);
         let chroms = m.chromatograms(0)?;

@@ -1,8 +1,8 @@
 //! Gate 1 of the view of the products by role (`tp::build_by_role`): which reference takes a row out (blank, t0, dark), the infusion never a reference,
 //! a series without t0 noted on every row, the counts in the meta and back; the minutes alone keep the old gate.
 
-use mzlab_core::campioni::proponi;
 use mzlab_core::json::parse;
+use mzlab_core::samples::proponi;
 use mzlab_feat::evid::rowproofs::{Signs, NONE};
 use mzlab_feat::hypo::{Dir, Hypothesis, SRC_RULE};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};

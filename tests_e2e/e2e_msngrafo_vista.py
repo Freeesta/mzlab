@@ -15,7 +15,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:1500]))
 
 def crossings(pos, arcs):
-    """The measure of the engine (posa.rs `incroci`): pairs of arcs between the same two columns whose ends are in opposite order in both; arcs sharing an end never count."""
+    """The measure of the engine (layout.rs `incroci`): pairs of arcs between the same two columns whose ends are in opposite order in both; arcs sharing an end never count."""
     seg = [(pos[a["da"]], pos[a["a"]], a["da"], a["a"]) for a in arcs if a["da"] in pos and a["a"] in pos]
     n = 0
     for i in range(len(seg)):

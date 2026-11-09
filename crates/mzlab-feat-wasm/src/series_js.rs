@@ -3,15 +3,28 @@
 #![cfg(feature = "detect")]
 
 use js_sys::Function;
-use mzlab_core::error::Result;
+use mzlab_core::error::{Error, Result};
+use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::recipe::Recipe;
 
 use crate::run::recipe_for;
-use crate::{open_all, open_one};
+use crate::{blocks_of, open_all};
 
-/// The recipe `text` on the first of the indexes `sizes` (read with `read(k, offset, length)`), or the refusal of a series that mixes polarities or resolutions.
-pub fn series_recipe(read: &Function, sizes: &[f64], text: &str) -> Result<Recipe> {
+/// The recipe `text` on the first of the indexes `sizes` (read with `read(k, offset, length)`) and the facts of every file, or the refusal of a
+/// series that mixes polarities or resolutions. Each scan table is parsed once: the first index is taken again over a reader of its own (the block
+/// budget of a file open alone, as the recipe was always estimated) without parsing it a second time.
+pub fn series_recipe(
+    read: &Function,
+    sizes: &[f64],
+    text: &str,
+) -> Result<(Recipe, Vec<FileFacts>)> {
     let indexes = open_all(read, sizes)?;
     mzlab_feat::nature::one_kind_of(&indexes)?;
-    recipe_for(text, &mut open_one(read, 0, sizes[0])?)
+    let facts = indexes.iter().map(file_facts).collect();
+    let first = indexes
+        .first()
+        .ok_or_else(|| Error::new("error.badIndex"))?;
+    let mut first = first.over(blocks_of(read, 0, sizes[0], 1));
+    drop(indexes);
+    Ok((recipe_for(text, &mut first)?, facts))
 }

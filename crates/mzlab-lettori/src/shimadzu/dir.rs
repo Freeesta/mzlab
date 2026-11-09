@@ -1,7 +1,7 @@
 //! The names in the directory of an OLE2 container, read from a few sectors of the file (never the whole of it): what `riconosci` looks at, so that a Shimadzu file is told by its storages
 //! (`GCMS Raw Data`, `Mass Raw Data`, `TLM Raw Data`, `QTFL RawData`) and not by its extension.
 
-use mzlab_core::lettori::Member;
+use mzlab_core::readers::Member;
 
 const MAGIC: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 /// The most directory sectors followed (each holds 4 or 32 entries).

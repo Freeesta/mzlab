@@ -2,7 +2,7 @@
 //! parent, not a row of the table, so its areas are read from the XIC of every file at the RT of the parent and tested with the ratio of `hidden::rises`.
 
 use crate::sortc::SortC;
-use mzlab_core::differenza::area;
+use mzlab_core::difference::area;
 use mzlab_core::idxread::{Index, ReadAt};
 
 use super::dig::{candidate, Cand};

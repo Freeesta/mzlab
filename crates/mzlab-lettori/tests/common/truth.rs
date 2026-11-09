@@ -2,7 +2,7 @@
 //! Included with `#[path = "common/truth.rs"] mod verita;` by `truth_bench.rs` (the bench on built files) and by `verita_<famiglia>.rs` (the real corpus, skipped without data).
 #![allow(dead_code)]
 
-use mzlab_core::lettori::{Reader, ScanEntry};
+use mzlab_core::readers::{Reader, ScanEntry};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
@@ -193,8 +193,8 @@ pub fn require(rows: &[Ratio]) {
 }
 
 /// The native file (or folder) a truth belongs to: the path of the truth under `scratchpad/rosina/verita/`, without `.verita.json`, under `dati/formati/`.
-fn set_of(native: &Path) -> Option<mzlab_core::lettori::FileSet> {
-    use mzlab_core::lettori::{FileSet, Member};
+fn set_of(native: &Path) -> Option<mzlab_core::readers::FileSet> {
+    use mzlab_core::readers::{FileSet, Member};
     fn member(p: &Path, name: String) -> Option<Member> {
         let f = std::fs::File::open(p).ok()?;
         Some(Member {
@@ -296,7 +296,7 @@ pub fn corpus(
         let tol = tolerance_of(&v, tol);
         let c = v["file"]["campione"].as_u64().unwrap_or(0) as usize;
         let fs = set_of(&native).unwrap_or_else(|| panic!("{rel}: cannot list the files"));
-        let l = match mzlab_lettori::apri(fs, &mzlab_core::lettori::Limits::desktop()) {
+        let l = match mzlab_lettori::apri(fs, &mzlab_core::readers::Limits::desktop()) {
             Ok(mut l) => compare(&mut *l, &v, c, tol, &rel),
             Err(e) => Ratio {
                 file: rel.clone(),

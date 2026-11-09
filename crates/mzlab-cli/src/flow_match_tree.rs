@@ -1,10 +1,10 @@
-//! The `tree` algorithm of `spectra.match@1`: the graph `msngrafo/1` in `query` against the library `msnlib/1`, by `msngrafo::cerca`. The output is its
+//! The `tree` algorithm of `spectra.match@1`: the graph `msngrafo/1` in `query` against the library `msnlib/1`, by `msngraph::cerca`. The output is its
 //! `msncerca/1` text, or with `tree_output=candidates` the `candidates/1` of the other algorithms (the three scores and the proofs stay in a `tree` block).
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{parse, round, Out, Value};
-use mzlab_core::msngrafo::{cerca, OpzioniCerca as Options};
+use mzlab_core::msngraph::{cerca, OpzioniCerca as Options};
 
 use crate::flow_match::{num, Named};
 

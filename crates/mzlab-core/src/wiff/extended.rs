@@ -1,0 +1,134 @@
+//! What the readers module (feature `estesi`) adds to the `.wiff` reader: the scan types of the other QTRAPs and the check that nothing
+//! the reader does not know is read as a full scan. Known: Q1 full scan (0), MRM (4), precursor-ion scan (5), product-ion scan (6), neutral-loss scan (7), product-ion / EPI (11) and
+//! survey / full scan (15). The TOF codes and any other code are `err.file.wiffScanType`, a method of several periods `err.file.wiffPeriods`, a sample kept in a .wiff2 `err.file.wiffNeeds2`.
+
+use super::{bad, Experiment, Wiff, HEADER_PRECURSOR};
+
+use crate::error::{Error, Result};
+use crate::mzmlwrite::Header;
+use crate::ole::Ole;
+
+pub use super::modes::{spectrum_term, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_PRODUCT_ION};
+
+/// The detection window of each scheduled MRM experiment (`Experiment::window_s`).
+pub(crate) fn mark_windows(ole: &Ole, sample: u32, experiments: &mut [super::Experiment]) {
+    let no = method_no(ole, sample);
+    for (i, e) in experiments.iter_mut().enumerate() {
+        e.window_s = crate::method_wiff::scheduled(ole, no, i);
+    }
+}
+
+pub(crate) use super::method_no;
+
+/// The method of `sample` read from the method that stands for it (`method_no`), for the samples without a `MethodN` of their own.
+pub(crate) fn fallback_method(ole: &Ole, sample: u32) -> Option<crate::methodinfo::Method> {
+    crate::methodinfo::method_of_sample(ole, method_no(ole, sample))
+}
+
+/// The number of periods of the method of `sample` (the `PeriodN` storages of its first device method).
+fn periods(ole: &Ole, sample: u32) -> usize {
+    super::period_count(ole, method_no(ole, sample))
+}
+
+/// The experiments of `sample` checked: a method of several periods or a scan type this reader does not know is an error; the precursor-ion and
+/// product-ion (6) and neutral-loss scans are MS2 whose selected ion is the fixed mass of the header (as ProteoWizard writes them).
+pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<Vec<Experiment>> {
+    let m = method_no(ole, sample);
+    if ex.is_empty() && m != sample {
+        ex = super::experiments(ole, m);
+    }
+    let p = periods(ole, sample);
+    if p > 1 {
+        return Err(Error::new("err.file.wiffPeriods").with("periods", p));
+    }
+    for (i, e) in ex.iter_mut().enumerate() {
+        match e.code {
+            Some(c) if super::modes::nativo(Some(c)) => {}
+            Some(CODE_PRECURSOR_ION | CODE_PRODUCT_ION | CODE_NEUTRAL_LOSS) => {
+                let header = ole.read(&format!("MethodSubtree/Method{m}/DeviceMethod0/Period0/Experiment{i}/ExperimentHeader")).unwrap_or_default();
+                e.level = 2;
+                e.precursor = header
+                    .get(HEADER_PRECURSOR..HEADER_PRECURSOR + 8)
+                    .map(|b| f64::from_le_bytes(b.try_into().unwrap_or([0; 8])))
+                    .filter(|m| m.is_finite() && *m > 0.0);
+            }
+            Some(c) if !super::modes::confirmed(Some(c)) => {
+                if crate::wiff::dad::wiff2_sample_info(ole, sample).is_some() {
+                    return Err(Error::new("err.file.wiffNeeds2"));
+                }
+                return Err(Error::new("err.file.wiffScanType")
+                    .with("code", c)
+                    .with("experiment", i + 1));
+            }
+            Some(_) => {}
+            None => return Err(bad(&format!("no scan type code (experiment {})", i + 1))),
+        }
+    }
+    Ok(ex)
+}
+
+impl Wiff {
+    /// True when the engine's reader (written for the 3200 QTRAP: full scans, product-ion scans and dense MRM) would not read this sample as the file is:
+    /// another instrument model, a scan type besides those three, or a scheduled MRM experiment (its sparse blocks; a file with no Log has no model to tell).
+    pub fn variant(&self) -> bool {
+        let other_model = self
+            .model
+            .as_deref()
+            .is_some_and(|m| !m.replace(' ', "").contains("3200QTRAP"));
+        other_model
+            || self
+                .experiments
+                .iter()
+                .any(|e| !super::modes::nativo(e.code) || e.window_s.is_some())
+    }
+}
+
+/// The instrument of the mzML for the models the Log names, as `(accession, name)`; `m` is the `Component ID` without spaces and in lower case.
+fn instrument_cv(m: &str) -> Option<(&'static str, &'static str)> {
+    const MODELS: [(&str, &str, &str); 10] = [
+        ("qtrap6500+", "MS:1002582", "QTRAP 6500+"),
+        ("qtrap6500", "MS:1002581", "QTRAP 6500"),
+        ("qtrap5500", "MS:1000931", "QTRAP 5500"),
+        ("qtrap4500", "MS:1002580", "QTRAP 4500"),
+        ("4000qtrap", "MS:1000139", "4000 QTRAP"),
+        ("api4000", "MS:1000147", "API 4000"),
+        ("triplequad4500", "MS:1002592", "Triple Quad 4500"),
+        ("qstarpulsar", "MS:1000656", "QSTAR Pulsar"),
+        ("tripletof5600", "MS:1000932", "TripleTOF 5600"),
+        ("tripletof6600", "MS:1002533", "TripleTOF 6600"),
+    ];
+    MODELS
+        .iter()
+        .find(|(k, _, _)| m.contains(k))
+        .map(|&(_, a, n)| (a, n))
+}
+
+impl Wiff {
+    /// The header of the mzML as the readers module writes it: the instrument CV term of the model when it is one of the known (the generic term and
+    /// the model as a userParam otherwise) and the spectrum types the experiments produce in the file content.
+    pub(crate) fn header_estesi(&self, name: &str, scan_sha1: Option<String>) -> Header {
+        let mut h = self.header(name, scan_sha1, false);
+        let key = self.model.as_deref().map(|m| {
+            m.chars()
+                .filter(|c| !c.is_whitespace())
+                .collect::<String>()
+                .to_lowercase()
+        });
+        if let Some((acc, term)) = key
+            .as_deref()
+            .filter(|k| !k.contains("3200qtrap"))
+            .and_then(instrument_cv)
+        {
+            h.instrument = Some((acc.to_string(), term.to_string()));
+            h.run_params.clear();
+        }
+        for e in &self.experiments {
+            if let Some((acc, term)) = spectrum_term(e.code)
+                && !h.content.iter().any(|(a, _)| a == acc)
+            {
+                h.content.push((acc.to_string(), term.to_string()));
+            }
+        }
+        h
+    }
+}

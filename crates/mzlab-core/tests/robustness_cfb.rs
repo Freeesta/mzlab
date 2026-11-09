@@ -73,7 +73,7 @@ fn reads(b: Vec<u8>) -> Vec<String> {
     #[cfg(feature = "estesi")]
     if let Some(ole) = note(Ole::open(b.clone(), "x.wiff"), &mut k) {
         // the method document of the readers module: fallback method, GLP tables, DAD header, scheduled-MRM streams
-        drop(mzlab_core::metodo_wiff::from_wiff(
+        drop(mzlab_core::method_wiff::from_wiff(
             &ole,
             1,
             &Default::default(),

@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 
 use mzlab_core::json::Out;
-use mzlab_core::msngrafo::{
+use mzlab_core::msngraph::{
     graph_from_peaks, tabella_regole, valuta_regole, Evaluation, Expectation, Graph, Options,
     RuleParams,
 };

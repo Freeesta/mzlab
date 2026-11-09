@@ -248,20 +248,25 @@ pub fn align_to<R: ReadAt, W: WriteAt>(
     open: impl FnMut(usize) -> Result<Index<R>>,
     sink: &mut W,
 ) -> Result<()> {
-    align_to_spilling(src, budget, r, open, sink, None)
+    align_to_spilling(src, budget, r, None, open, sink, None)
 }
 
-/// `align_to` with a `Spill` for the weak tables of the files (the page keeps them outside the memory of the module).
+/// `align_to` with a `Spill` for the weak tables of the files (the page keeps them outside the memory of the module) and the `facts` of the
+/// files when the caller has them (`series_js::series_recipe`), so their scan tables are not parsed again for them.
 pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
     src: &mut dyn Stored,
     budget: &MemBudget,
     r: &Recipe,
+    facts: Option<Vec<FileFacts>>,
     mut open: impl FnMut(usize) -> Result<Index<R>>,
     sink: &mut W,
     spill: Option<&mut dyn Spill>,
 ) -> Result<()> {
     let mut origin = origin_of(src)?;
-    origin.facts = facts_of(src.count(), &mut open)?;
+    origin.facts = match facts {
+        Some(f) => f,
+        None => facts_of(src.count(), &mut open)?,
+    };
     let (table, _) = align_and_fill_spilling(src, budget, r, open, spill)?;
     write_table_to(sink, &table, r, &origin, &mut (&[][..]))
 }

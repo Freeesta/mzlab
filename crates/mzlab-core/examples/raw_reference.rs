@@ -1,7 +1,7 @@
 //! What the engine gave for a Thermo `.raw` while the reader was linked in it, for tests_e2e/e2e_thermo_modulo.py: `raw_reference <file.raw> <out.mzML>` writes the mzML as «Download .mzML» does
-//! (`lettori_mzml::scrivi` over `rawlettore`) and prints the JSON `{scans, tic: {rt, y}, scan: {k, id, mz, y}}`: the TIC of the MS1 scans (from the index) and the scan in the middle of the index.
-use mzlab_core::lettori::{FileSet, Limits, Member};
-use mzlab_core::{json::Out, lettori_mzml, rawlettore};
+//! (`readers_mzml::scrivi` over `rawlettore`) and prints the JSON `{scans, tic: {rt, y}, scan: {k, id, mz, y}}`: the TIC of the MS1 scans (from the index) and the scan in the middle of the index.
+use mzlab_core::readers::{FileSet, Limits, Member};
+use mzlab_core::{json::Out, rawreader, readers_mzml};
 
 fn main() {
     let a: Vec<String> = std::env::args().collect();
@@ -18,7 +18,7 @@ fn main() {
             sha1: None,
         }],
     };
-    let mut l = (rawlettore::ENTRY.apri)(fs, &Limits::sito()).expect("open");
+    let mut l = (rawreader::ENTRY.apri)(fs, &Limits::sito()).expect("open");
     let index = l.index(0).expect("index").to_vec();
     let n = index.len();
     let k = n / 2;
@@ -41,6 +41,6 @@ fn main() {
     let y: Vec<f64> = (0..s.mz.len()).map(|i| s.intensity_f64(i)).collect();
     o.raw(",\"y\":").floats(&y).raw("}}");
     let out = std::fs::File::create(dst).expect("create");
-    lettori_mzml::scrivi(&mut *l, 0, std::io::BufWriter::new(out), &mut |_, _| {}).expect("mzML");
+    readers_mzml::scrivi(&mut *l, 0, std::io::BufWriter::new(out), &mut |_, _| {}).expect("mzML");
     println!("{}", o.0);
 }

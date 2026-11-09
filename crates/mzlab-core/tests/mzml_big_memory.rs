@@ -13,7 +13,7 @@ use std::os::unix::fs::FileExt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use fake_reader::Finto;
-use mzlab_core::{lettori_mzml, mzidx, upload};
+use mzlab_core::{mzidx, readers_mzml, upload};
 
 struct Tally;
 static VIVI: AtomicUsize = AtomicUsize::new(0);
@@ -76,7 +76,7 @@ fn large_mzml_fits_the_budget() {
     let path = std::env::temp_dir().join(format!("mzlab_grande_{}.mzML", std::process::id()));
     let mut l = Finto::vario(SCANS, 60, 777);
     let w = BufWriter::new(File::create(&path).unwrap());
-    lettori_mzml::scrivi(&mut l, 0, w, &mut |_, _| {}).unwrap();
+    readers_mzml::scrivi(&mut l, 0, w, &mut |_, _| {}).unwrap();
     let size = std::fs::metadata(&path).unwrap().len();
 
     // the scan table: about 1.5 KB a scan (the rows), never the headers of every spectrum on top

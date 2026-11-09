@@ -4,7 +4,7 @@
 mod common_waters;
 
 use common_waters::{file_set, folder_file};
-use mzlab_core::lettori::Limits;
+use mzlab_core::readers::Limits;
 
 /// The error of the synthetic folder after `cambia`, with its key and its `name` and `file`.
 fn refusal(change: impl FnOnce(&mut Vec<(String, Vec<u8>)>)) -> (String, String, String) {

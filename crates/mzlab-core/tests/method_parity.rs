@@ -3,9 +3,9 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::json::{self, Value};
+use mzlab_core::method::{self, Source, SrcFile};
+use mzlab_core::method_wiff::from_wiff;
 use mzlab_core::methodinfo::read_methods;
-use mzlab_core::metodo::{self, Source, SrcFile};
-use mzlab_core::metodo_wiff::from_wiff;
 use mzlab_core::ole::Ole;
 
 #[path = "../../../tools/dati_percorsi.rs"]
@@ -17,7 +17,7 @@ fn src(name: &str, bytes: &[u8], sample: u32) -> Source {
         format: "sciex-wiff",
         files: vec![SrcFile {
             name: name.into(),
-            sha1: Some(metodo::sha1_hex(&mut d, bytes.len() as u64).unwrap()),
+            sha1: Some(method::sha1_hex(&mut d, bytes.len() as u64).unwrap()),
             bytes: bytes.len() as u64,
         }],
         sample: Some(sample),
@@ -106,7 +106,7 @@ fn check_sample(ole: &Ole, wiff: &str, bytes: &[u8], sample: u32) -> usize {
         };
         assert_eq!(
             ms_of(&doc),
-            ms_of(&metodo::from_dam(&m, &source)),
+            ms_of(&method::from_dam(&m, &source)),
             "{wiff} sample {sample}: ms differs from {name}"
         );
         checked = 1;
@@ -139,13 +139,13 @@ fn the_wiff_method_is_the_dam_it_names_and_the_sha1_is_the_one_of_the_mzml() {
     {
         let head = String::from_utf8_lossy(&t[..t.len().min(8000)]).to_string();
         let mut bytes = std::fs::read(dir.join("MRM.wiff")).unwrap();
-        let sha = metodo::sha1_hex(
+        let sha = method::sha1_hex(
             &mut bytes,
             std::fs::metadata(dir.join("MRM.wiff")).unwrap().len(),
         )
         .unwrap();
         assert!(
-            metodo::source_sha1s(&head).iter().any(|(_, h)| *h == sha),
+            method::source_sha1s(&head).iter().any(|(_, h)| *h == sha),
             "the SHA-1 of MRM.wiff is not the one of its mzML"
         );
     }

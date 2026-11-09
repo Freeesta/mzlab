@@ -1,4 +1,4 @@
-"""Write the nuclide table of the engine (crates/mzlab-core/src/nuclidi.rs): for every element from H the exact mass of the isotopes OpenChemLib knows,
+"""Write the nuclide table of the engine (crates/mzlab-core/src/nuclides.rs): for every element from H the exact mass of the isotopes OpenChemLib knows,
 and the mass number of its monoisotopic isotope (the most abundant natural one; the longest-lived for the elements without a stable isotope;
 Rf to Mt, whose longest-lived isotope OpenChemLib does not list, are left out). Only the isotopes within WINDOW mass numbers of the natural ones (of the monoisotopic
 one for the elements without a stable isotope) are kept: the labels people draw (2H, 3H, 11C, 14C, 18F, 32P, 123I to 131I, 137Cs, 99Tc) and a grafo .wasm that stays small.
@@ -13,7 +13,7 @@ from pathlib import Path
 from genera_elementi import AB, SYMBOLS, ocl_masses
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "crates" / "mzlab-core" / "src" / "nuclidi.rs"
+OUT = ROOT / "crates" / "mzlab-core" / "src" / "nuclides.rs"
 MONO_A = {"Kr": 84, "Zr": 90, "Tc": 98, "Ru": 102, "Pd": 106, "In": 115, "Te": 130, "Xe": 132, "La": 139, "Ce": 140, "Nd": 142, "Pm": 145, "Sm": 152,
           "Eu": 153, "Gd": 158, "Dy": 164, "Er": 166, "Yb": 174, "Lu": 175, "Hf": 180, "Ta": 181, "W": 184, "Re": 187, "Os": 192, "Ir": 193, "Pt": 195,
           "Po": 209, "At": 210, "Rn": 222, "Fr": 223, "Ra": 226, "Ac": 227, "Th": 232, "Pa": 231, "U": 238, "Np": 237, "Pu": 244, "Am": 243, "Cm": 247,

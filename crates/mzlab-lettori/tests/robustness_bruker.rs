@@ -1,7 +1,7 @@
 //! Hostile and hand-built input for the Bruker reader: a SQLite file and a `tdf_bin` made inside the test (no real data), page cycles, long varints, fake zstd, truncations, a write-ahead log.
 #![cfg(feature = "bruker")]
 
-use mzlab_core::lettori::{FileSet, Member};
+use mzlab_core::readers::{FileSet, Member};
 use mzlab_lettori::bruker::sqlite_min::Sqlite;
 
 mod common_sqlite;
@@ -401,10 +401,10 @@ fn an_agilent_folder_is_not_bruker() {
     };
     assert_eq!(
         (mzlab_lettori::bruker::tdf::ENTRY.riconosci)(&mut fs),
-        mzlab_core::lettori::Fiducia::No
+        mzlab_core::readers::Fiducia::No
     );
     assert_eq!(
         (mzlab_lettori::bruker::tdf::ENTRY_TSF.riconosci)(&mut fs),
-        mzlab_core::lettori::Fiducia::No
+        mzlab_core::readers::Fiducia::No
     );
 }

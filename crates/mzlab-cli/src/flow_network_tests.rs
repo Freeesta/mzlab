@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use mzlab_core::campioni::{proponi, to_json};
+use mzlab_core::samples::{proponi, to_json};
 use mzlab_feat::interp::store::append;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::{write_table, Origin, Slice};
