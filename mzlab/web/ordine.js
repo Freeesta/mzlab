@@ -55,8 +55,8 @@ function saveBlob(blob, name, wait = 4000) {
   a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(u), wait);
 }
-// decimal text typed by the student ("0,5" or "0.5") -> number | NaN; lenient like parseFloat (a trailing unit is ignored)
-const numIt = t => parseFloat(String(t).replace(",", "."));
+// decimal text typed by the student ("0,5" or "0.5") -> finite number | NaN; lenient like parseFloat (a trailing unit is ignored), never Infinity (1e999)
+const numIt = t => { const v = parseFloat(String(t).replace(",", ".")); return isFinite(v) ? v : NaN; };
 // text typed in the time field: "", "12", "0,5", "1.25" -> number | null (empty) | NaN (not a number); no exponent; a sign ("-30", "−30") only with `signed` (the dark)
 function parseDecimal(text, signed = false) {
   const s = String(text ?? "").trim().replace(",", ".");
