@@ -1,6 +1,6 @@
 """The Dati page draws its shell before the engine: with the .wasm held back, the drop area is visible and usable-looking while the engine is still
-pending, the .wasm is asked for only once the page is parsed (not from the head, where it competes with the first paint), and once released
-the engine comes up on its own. Build first: python tools/build_site.py"""
+pending, the .wasm is asked for only once the page is parsed (not from the head, where it competes with the first paint) and once, before the
+engine's worker (preload of browser.js); once released, the engine comes up on its own. Build first: python tools/build_site.py"""
 from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
@@ -66,6 +66,13 @@ try:
             assert pg.evaluate("AVVIO.stato") == "ready", "the engine did not come up after the .wasm was released"
             assert pg.is_visible("#start")
         step("released, the engine comes up on its own", engine_follows)
+
+        def wasm_once_and_early():
+            wasm = [i for i, u in enumerate(asked_urls) if u.endswith(".wasm")]
+            worker = [i for i, u in enumerate(asked_urls) if u.endswith("/rust-worker.js")]
+            assert len(wasm) == 1, f"the .wasm went over the network {len(wasm)} times (the engine's fetch must take the preload of browser.js)"
+            assert worker and wasm[0] < worker[0], "the .wasm download waited for the module graph of the engine"
+        step(".wasm downloaded once, before the engine's worker", wasm_once_and_early)
         b.close()
 finally:
     srv.terminate()
