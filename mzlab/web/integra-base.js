@@ -86,11 +86,11 @@ function ibOpen(p, it) {
   const bl = it.bl || edgeLine(s, it.a, it.b, it.base), m = it.bm || "edges";
   const opt = k => `<label class="ib-opt"><input type="radio" name="ib-m" value="${k}"${m === k ? " checked" : ""}> ${I18N.t("int.base." + k)}</label>`;
   const num = (k, i) => `<label class="pk-row"><span>${I18N.t("int.base." + k)}</span><input data-ib="${i}" value="${+bl[i].toPrecision(6)}" inputmode="decimal"></label>`;
-  big(I18N.t("int.base.title"), `<div class="muted sm pk-intro">${I18N.t("int.base.intro")}</div>
+  big(I18N.t("int.base.title"), `<div class="ib-dlg"><div class="muted sm pk-intro">${I18N.t("int.base.intro")}</div>
     <fieldset class="pk-sec"><legend>${I18N.t("int.base.mode")}</legend>${["edges", "zero", "line"].map(opt).join("")}</fieldset>
     <fieldset class="pk-sec" id="ib-pts"><legend>${I18N.t("int.base.line")}</legend>${num("t0", 0)}${num("y0", 1)}${num("t1", 2)}${num("y1", 3)}
     <label class="ib-opt"><input type="checkbox" id="ib-lvl"${it.lvl ? " checked" : ""}> ${I18N.t("int.base.level")}</label></fieldset>
-    <div class="pk-act"><button id="ib-ok" type="button" class="go">${I18N.t("int.base.apply")}</button></div>`, () => {
+    <div class="pk-act"><button id="ib-ok" type="button" class="go">${I18N.t("int.base.apply")}</button></div></div>`, () => {
     const pts = Q("#ib-pts"), sel = () => Q("#bigbody input[name=ib-m]:checked").value;
     const sync1 = () => { pts.disabled = sel() !== "line"; };
     Q("#bigbody").querySelectorAll("input[name=ib-m]").forEach(r => { r.onchange = sync1; }); sync1();
@@ -108,7 +108,7 @@ function ibOpen(p, it) {
 {                                                                  // the look of the two point buttons (colours from the CSS variables)
   const st = document.createElement("style");
   st.textContent = ".ibp{position:absolute;z-index:3;width:24px;height:24px;margin:-12px 0 0 -12px;padding:0;border:0;border-radius:50%;background:transparent;touch-action:none;cursor:move}" +
-    ".ibp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.ibp.on{background:color-mix(in srgb,var(--accent) 25%,transparent)}.ib-opt{display:block;margin:.2em 0}" +
+    ".ibp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.ibp.on{background:color-mix(in srgb,var(--accent) 25%,transparent)}.ib-opt{display:flex;align-items:center;gap:2px;min-height:24px;margin:.2em 0;width:fit-content}.ib-dlg .pk-sec+.pk-sec{margin-top:8px}#bigdlg:has(.ib-dlg){width:min(38rem,95vw)}.ib-dlg .pk-row input{grid-row:1;width:9ch;min-width:100%}@supports (grid-template-columns:subgrid){.ib-dlg .pk-sec:has(>.pk-row){grid-template-columns:fit-content(18rem) 11ch}}" +
     "@media (forced-colors:active){.ibp:focus-visible{outline-color:Highlight}.ibp.on{background:Highlight}}";
   document.head.appendChild(st);
 }
