@@ -71,10 +71,11 @@ pub fn ms2_step() -> Step {
 
 /// Runs the step of `job` on the mzML files and returns the MGF text: files in the given order, scans in file order, `TITLE` `<file>.<scan>`.
 /// `SPECTRUMID` (the query id of `spectra.match`) is the same, or with a feature table the id of the feature of the scan, and the scans of no feature go.
-pub fn ms2_text(job: &Job, files: &[Named], features: Option<&[u8]>) -> Result<String> {
-    mzlab_feat::flow_ms2::ms2_text(
-        &Ms2Params::from_params(&job.resolved.params),
-        files,
-        features,
-    )
+/// `cap` is the working memory of the job in bytes (`error.memoryBudget`, phase `read`, past it).
+pub fn ms2_text(job: &Job, files: &[Named], features: Option<&[u8]>, cap: usize) -> Result<String> {
+    let p = Ms2Params {
+        cap,
+        ..Ms2Params::from_params(&job.resolved.params)
+    };
+    mzlab_feat::flow_ms2::ms2_text(&p, files, features)
 }

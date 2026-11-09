@@ -15,7 +15,7 @@ use crate::flow_read::named;
 
 /// `formula.ms1`: for each feature the MS1 scan at the apex, in the file where the feature is largest, goes to `formula_id::identify`. An `ion` the plan
 /// does not write is left to the files (the descriptor default is not a choice of the plan), as the browser does.
-pub fn ms1_text(job: &Job, features: &[u8], files: &[Named]) -> Result<String> {
+pub fn ms1_text(job: &Job, features: &[u8], files: &[Named], cap: usize) -> Result<String> {
     let params: Vec<(String, Value)> = job
         .resolved
         .params
@@ -23,13 +23,13 @@ pub fn ms1_text(job: &Job, features: &[u8], files: &[Named]) -> Result<String> {
         .filter(|(k, _)| k != "ion" || written(job, "ion"))
         .cloned()
         .collect();
-    mzlab_feat::flow_formula_ms1::ms1_text(&params, features, files)
+    mzlab_feat::flow_formula_ms1::ms1_text(&params, features, files, cap)
 }
 
 /// The executor of `formula.ms1`: the text, the ions the files gave as an estimate when the plan leaves `ion` out, `WARN_ION` when a written ion is of the other polarity.
 pub(crate) fn ms1_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let (table, index) = (read_one(r, job, "features")?, read_all(r, job, "index")?);
-    let text = ms1_text(job, &table.1, &named(&index))?;
+    let text = ms1_text(job, &table.1, &named(&index), r.cap())?;
     let doc = parse(text.as_bytes())?;
     let rows = doc.get("features").map_or(&[][..], Value::arr);
     let mut ions: Vec<&str> = rows
