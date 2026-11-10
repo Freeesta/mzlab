@@ -36,7 +36,7 @@ try:
             tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "fedecrista@gmail.com" in tx, tx[:200]
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); gone("#helppop"); assert not pg.is_visible("#helppop")
-            assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
+            tt = pg.evaluate("document.querySelector('.pnl.chrom .ttl').title"); assert pg.evaluate("I18N.t('panel.rename.hint')") in tt and "F2" in tt, tt
         step("only the general (i) is left: it opens the info box; panel titles carry the short explanation", helpq)
         def xlsxexcel():
             open_kind(pg, "mrm"); ready(pg)

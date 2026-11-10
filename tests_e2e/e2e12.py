@@ -10,6 +10,13 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e12.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:300]))
+def intf_pick(loc, **kw):
+    """Choose the file to integrate the way a user does: once the integration buttons appear a narrow header moves the chooser into «⋯», opened first and closed after."""
+    tog = "s => { const m = s.closest('.hmore'); if (!m || m.hidden !== %s) return false; m.closest('.pnl').querySelector('[data-a=more]').click(); return true; }"
+    loc.evaluate(tog % "true"); loc.select_option(**kw); loc.evaluate(tog % "false")
+def shown(pg, sel):
+    """the header control is offered: on the header or in its «⋯» menu (the menu itself is closed between uses)"""
+    return pg.evaluate("s => { const e = document.querySelector(s); return !!e && !e.hidden && !(e.parentElement.closest('[hidden]:not(.hmore)')); }", sel)
 r = Run(port=8822, wd="/tmp/wd12")
 F = FILES + ["B_FullMass-t10"]      # a sixth file of the B series (the old extra file was not in the data repository)
 with sync_playwright() as p:
@@ -50,18 +57,18 @@ with sync_playwright() as p:
         pg.click("#np-xic"); pg.fill("#xic-mz", "364"); pg.click("#xic-go"); ready(pg)
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp = pg.locator('.pnl.xic').first
         assert pg.evaluate(f"E.panels[{xi}].traces[0].w") == 0.5
-        xp.locator('[data-a=iauto]').click(); assert xp.locator('[data-a=intf]').is_visible()
+        hd_click(pg, ".pnl.xic [data-a=iauto]"); assert shown(pg, ".pnl.xic [data-a=intf]")
         xbox = xp.locator("canvas").bounding_box(); xx = pg.evaluate(f"E.panels[{xi}]._a.X(14.33)")
-        xp.locator('[data-a=intf]').select_option("all"); pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); pg.wait_for_timeout(600)
+        intf_pick(xp.locator('[data-a=intf]'), value="all"); pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); pg.wait_for_timeout(600)
         n = pg.evaluate(f"[E.panels[{xi}].ints.length, E.panels[{xi}]._a.sr.length]"); assert n[0] == n[1] and n[0] > 1, n
         pg.screenshot(path=SH + "122_integr.png")
-        pg.evaluate(f"E.panels[{xi}].ints=[]"); xp.locator('[data-a=intf]').select_option(index=2)
+        pg.evaluate(f"E.panels[{xi}].ints=[]"); intf_pick(xp.locator('[data-a=intf]'), index=2)
         pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); pg.wait_for_timeout(600)
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 1
-        xp.locator('[data-a=iauto]').click(); xp.locator('[data-a=iman]').click()
+        hd_click(pg, ".pnl.xic [data-a=iauto]"); hd_click(pg, ".pnl.xic [data-a=iman]")
         pg.mouse.move(xbox["x"] + pg.evaluate(f"E.panels[{xi}]._a.X(5)"), xbox["y"] + 100); pg.mouse.down(); pg.mouse.move(xbox["x"] + pg.evaluate(f"E.panels[{xi}]._a.X(6)"), xbox["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
-        assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and xp.locator('[data-a=itab]').is_visible()
-        xp.locator('[data-a=iman]').click()
+        assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and shown(pg, ".pnl.xic [data-a=itab]")
+        hd_click(pg, ".pnl.xic [data-a=iman]")
         # header: only the m/z range; quick file chooser; RT readout bottom right; clear integrations
         assert xp.locator('[data-o=xlo]').input_value() == "363.8" and xp.locator('[data-o=xhi]').input_value() == "364.8" and xp.locator('#xic-q, [data-o=tol]').count() == 0
         xp.locator('[data-o=xlo]').fill("363,9"); xp.locator('[data-o=xlo]').press("Enter"); xp.locator('[data-o=xhi]').fill("364.3"); xp.locator('[data-o=xhi]').press("Enter"); pg.wait_for_timeout(1500)
@@ -72,8 +79,8 @@ with sync_playwright() as p:
         pg.locator("#fpop .fn").nth(2).click(); pg.wait_for_timeout(1200); assert pg.evaluate("tabFiles().filter(f=>f.vis).length") == 1
         pg.locator("#fpop [data-all='1']").click(); pg.wait_for_timeout(800); pg.mouse.click(5, 5)
         assert not xp.locator(".rd").is_visible(), "the line under the graph is gone (the info is in the mouse box)"
-        assert xp.locator('[data-a=iclr]').is_visible(); xp.locator('[data-a=iclr]').click(); pg.wait_for_timeout(400)
-        assert pg.evaluate("E.panels.find(p=>p.type==='xic').ints.length") == 0 and not xp.locator('[data-a=iclr]').is_visible()
+        assert shown(pg, ".pnl.xic [data-a=iclr]"); hd_click(pg, ".pnl.xic [data-a=iclr]"); pg.wait_for_timeout(400)
+        assert pg.evaluate("E.panels.find(p=>p.type==='xic').ints.length") == 0 and not shown(pg, ".pnl.xic [data-a=iclr]")
     step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
     def ms2():
         open_kind(pg, "ms2"); ready(pg)
