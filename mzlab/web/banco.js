@@ -247,7 +247,7 @@ const BANCO = (() => {
     const rl = p.el.querySelector(".rtl"); if (!rl) return;
     SPECBAR.title(p, p.el.querySelector(".ttl"));
     let h = p.el.querySelector(".bnl"); if (!h) { h = document.createElement("span"); h.className = "bnl muted sm"; h.style.marginLeft = "8px"; rl.after(h); }
-    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? maxOf(d.y) : null;
+    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? topOf(d.y) : null;      // kept per spectrum: a drag redraws the same one
     h.textContent = nl == null ? "" : `${p.filt ? p.filt + " · " : ""}NL: ${nl.toExponential(2).replace("e+", "E")}`;
   }
   function decorate(p, c) {

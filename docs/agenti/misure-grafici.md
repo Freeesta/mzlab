@@ -1,6 +1,6 @@
 # Misure dei pannelli dei grafici (vista Dati)
 
-Costo del disegno dei cromatogrammi su tracce sintetiche dense: `python3 tools/bench_grafici.py [--rate 1|4] [--only big,many]` (sito costruito con il motore, `tools/prepara_sito.py`; Chromium headless senza GPU, cioè tela 2D software, 1500×1000, 4 CPU; file in `/tmp/mzlab_bench_grafici`). Una misura, non un test.
+Costo del disegno dei cromatogrammi, della mappa e dello spettro su dati sintetici densi: `python3 tools/bench_grafici.py [--rate 1|4] [--only big,many,hr,hr100,map,spec]` (sito costruito con il motore, `tools/prepara_sito.py`; Chromium headless senza GPU, cioè tela 2D software, 1500×1000, 4 CPU; file in `/tmp/mzlab_bench_grafici`). Una misura, non un test.
 
 - **Insiemi**: `big` = un file SRM con 4 transizioni da 10^6 punti (20 min), una mostrata; `many` = 20 file SRM da 10^5 punti, tutti spuntati e sovrapposti (riempimento «Area» acceso, il predefinito dei pannelli MRM). Rumore sulla linea di base, un picco gaussiano per transizione e 6 punte di un solo punto.
 - **Colonne**: «draw» = tempo di `draw()` (mediana di 8, ms) sulla vista intera e su uno zoom della sola linea di base (9,45-9,62 min); gesti = chiamate a `draw()`, intervalli tra i fotogrammi (mediana / p95 / massimo, ms) e attività lunghe (> 50 ms: numero / la più lunga).
@@ -89,3 +89,17 @@ Dove andava il tempo: un elemento focalizzabile per punto (5 nodi ciascuno), il 
 - **Dove va il tempo** (profilo CDP): nel disegno ~55 % è raster della tela software, `m4` ~5 ns per punto (0,5 ms per 10^5 punti in node; blocchi fini di 16 punti non lo battono a ~70 punti per colonna). Rotella e trascinamento passano già per `drawSoon` (un disegno per fotogramma): a 4x il fotogramma è il disegno dei due pannelli collegati.
 - **Testata al ridimensionamento** (`fitHd` in `pannelli.js`): i due osservatori di dimensione (pannello e tela) chiedono un adattamento per larghezza, non uno a testa; i nodi che di certo non bastano (larghezza + 32 px sotto lo sforamento della riga) vanno nel «⋯» senza un riflusso ciascuno. 10 passi: `fitHd` 51 → 30 chiamate, `hdOver` 447 → 243, tempo ~980 → ~505 ms (~98 → ~50 ms per passo); stesso risultato del ciclo nodo per nodo su 141 prove (larghezze 640-1500 px, ogni pannello).
 - **Tabella «Dati»**: si apre con 200 righe (`FIRST` in `tdati.js`; impaginarne 1000 in `showModal` costava ~180 ms) e `pick` in `tdati-pannelli.js` prende la finestra di una traccia ordinata per ricerca binaria (`windowIdx`): hr100 581-698 → ~195 ms (attività lunga ~110 ms), big 189-236 → 118-178 ms.
+
+## Mappa e spettro sul file hr100, CPU 4x (`--rate 4 --only spec,map`)
+`spec` = lo spettro sommato di tutta la corsa di `hr100` (730 695 centroidi), `map` = la mappa RT x m/z dello stesso file (10^7 centroidi). Prima = `main` `8462470cd570df9da01614b1e9e2681a40640b9a`, dopo = barre per colonna di pixel.
+| azione | spec prima | spec dopo | map |
+|---|---|---|---|
+| aprire il pannello, ms (attività lunghe n / max) | 2978 (4 / 712) | 1826-2186 (2 / 430-562) | 1227-1348 (3 / 145-179) |
+| draw, vista intera / zoom, ms | 394 / 88 | 19-22 / 5-8 | 6 / 5 |
+| Ctrl+rotella x30, fotogrammi mediana / p95 / max, ms (attività lunga max) | 33 / 517 / 1117 (1129) | 17 / 67 / 117 (109-124) | 17 / 33 / 33 (0) |
+| Maiusc+trascina x60, fotogrammi, ms (attività lunga max) | 17 / 167 / 217 (223) | 17 / 33-50 / 83-100 (79-101) | 17 / 33 / 50 (55-73) |
+| passaggio del puntatore x120, fotogrammi, ms | 33 / 50 / 117 | 33 / 50-67 / 67 | 17 / 33 / 50 |
+| ridimensionare la finestra x10, fotogrammi, ms (attività lunga max) | 1183 / 1317 / 1317 (1272) | 217 / 250-283 / 283 (256-280) | 183-208 / 217-250 (192-226) |
+| tabella «Dati», ms (attività lunghe) | 189 (1 / 157) | 100-124 (1 / 77-99) | 93-150 (1 / 65-77) |
+- **Spettro denso** (`drawSpec` in `picchi.js`): con più di 4 picchi per pixel si disegna solo il più alto di ogni colonna di pixel (`tallCols` in `numeri.js`, tenuto per spettro, finestra e larghezza), come rettangoli (= una linea a estremi piatti: un tracciato di 1000 linee costava ~40 ms di raster nel commit). Massimo dello spettro (`topOf`, `topAbs`) e massimo della finestra (`winTop`) sono tenuti per array; il conteggio per il lettore di schermo (`text` in `tdati-pannelli.js`) per finestra. Le etichette prendono i candidati dalle colonne.
+- **Resta**: aprire lo spettro sommato è il JSON di 730 000 picchi (`Response` + `json` ~430 ms in un'attività): servirebbe una risposta binaria di `api/spectrum` come quella della mappa (motore + parità). Il ridimensionamento è ~200 ms anche con un terzo spettro di una sola scansione (~190 ms): è la testata di ogni pannello, non i dati; la mappa non ha punti caldi propri (colore, base64, `ref` sparsi, ~30-60 ms ciascuno).
