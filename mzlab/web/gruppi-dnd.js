@@ -144,11 +144,17 @@ window.GDND = (() => {
     if (cfg && cfg.list === list) return;
     carica("gruppi.js"); bind(list, sideOpts());
   }
+  // the side list keeps only its first group open by default: the group that receives the files opens first, so a moved row stays on screen and keeps the keyboard focus
+  const openFor = (/** @type {string[]} */ bases, /** @type {string} */ g) => {
+    E._grpOpen = E._grpOpen || {};
+    if (g) { E._grpOpen["u:" + g] = true; return; }
+    for (const f of E.files) if (!f.gone && bases.includes(fileBase(f.file))) E._grpOpen[lrTog() ? f.kind : E.tab] = true;
+  };
   /** A drop (or a keyboard move): ONTO a file = new group or join, else into the header's group; returns the group. @param {{ bases: string[], target: { kind?: string, key: string } }} d */
   const drop = async d => {
     await carica("gruppi.js");
-    if (d.target.kind === "onto") return GRUPPI.onto(d.bases, d.target.key);
-    GRUPPI.set(d.bases, d.target.key); return d.target.key;
+    if (d.target.kind === "onto") { const t = E.files.find(/** @param {any} x */ x => !x.gone && fileBase(x.file) === d.target.key); if (t && t.ugrp) openFor(d.bases, t.ugrp); return GRUPPI.onto(d.bases, d.target.key); }
+    openFor(d.bases, d.target.key); GRUPPI.set(d.bases, d.target.key); return d.target.key;
   };
   const sideOpts = () => {
     const autoKey = (/** @type {string} */ b) => { const f = E.files.find(/** @param {any} x */ x => !x.gone && fileBase(x.file) === b); return f ? grpOf({ ...f, ugrp: undefined }) : ""; };
