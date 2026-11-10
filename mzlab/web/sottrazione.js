@@ -107,8 +107,8 @@ function popBuild(/** @type {Pannello} */ p) {
   pop.innerHTML = `<div class="spr"><label for="sp-file">${T("sub.file")}</label><select id="sp-file">${opt("auto", o && o.auto ? "auto" : curK === "auto" ? "auto" : "", T("sub.file.auto", { file: au ? au.label : "—" }))}${fs.map((/** @type {MzFile} */ f) => opt(f.k, curK, f.label)).join("")}</select></div>
     <div class="spr"><label for="sp-fr">${T("sub.factor")}</label><input id="sp-fr" type="range" min="0" max="2" step="0.05" value="${r.factor}" aria-valuetext="${EH(T("sub.factor.vt", { f: num(r.factor) }))}"><input id="sp-fn" type="number" min="0" max="2" step="0.05" value="${r.factor}" aria-label="${EH(T("sub.factor"))}"></div>
     <div class="spr"><label for="sp-norm">${T("sub.norm")}</label><select id="sp-norm">${opt("none", r.norm, T("sub.norm.none"))}${opt("tic", r.norm, T("sub.norm.tic.long"))}${opt("istd", r.norm, T("sub.norm.istd"))}</select>
-      <input id="sp-istd" class="mzf" inputmode="decimal" autocomplete="off" value="${EH(r.istd)}" placeholder="m/z" aria-label="${EH(T("sub.istd"))}"${r.norm === "istd" ? "" : " hidden"}></div>
-    <div class="spr"><label for="sp-rt">${T("sub.rttol")}</label><input id="sp-rt" type="number" min="0" max="2" step="0.01" value="${r.rttol}"></div>
+      <input id="sp-istd" class="mzf" data-num=">0 v" value="${EH(r.istd)}" placeholder="m/z" aria-label="${EH(T("sub.istd"))}"${r.norm === "istd" ? "" : " hidden"}></div>
+    <div class="spr"><label for="sp-rt">${T("sub.rttol")}</label><input id="sp-rt" data-num="0:2" value="${r.rttol}"></div>
     <div class="spr"><label><input id="sp-clip" type="checkbox"${r.clip ? " checked" : ""}> ${T("sub.clip")}</label></div>
     <div class="spr"><button type="button" id="sp-ok">${T("sub.close")}</button></div>`;
   const $ = (/** @type {string} */ id) => pop.querySelector("#" + id), upd = () => refresh(tab);
@@ -118,7 +118,7 @@ function popBuild(/** @type {Pannello} */ p) {
   $("sp-fn").onchange = (/** @type {Bag} */ e) => setF(e.target.value);
   $("sp-norm").onchange = (/** @type {Bag} */ e) => { r.norm = e.target.value; $("sp-istd").hidden = r.norm !== "istd"; if (r.norm === "istd" && !r.istd) { $("sp-istd").focus(); return; } r.on[tab] = true; upd(); };
   $("sp-istd").onchange = (/** @type {Bag} */ e) => { r.istd = e.target.value.trim().replace(",", "."); if (r.norm === "istd" && !(+r.istd > 0)) { r.norm = "none"; $("sp-norm").value = "none"; $("sp-istd").hidden = true; } r.on[tab] = true; upd(); };
-  $("sp-rt").onchange = (/** @type {Bag} */ e) => { r.rttol = Math.max(0, Math.min(2, +e.target.value || 0)); r.on[tab] = true; upd(); };
+  $("sp-rt").onchange = (/** @type {Bag} */ e) => { r.rttol = Math.max(0, Math.min(2, numIt(e.target.value) || 0)); r.on[tab] = true; upd(); };
   $("sp-clip").onchange = (/** @type {Bag} */ e) => { r.clip = e.target.checked; r.on[tab] = true; upd(); };
   $("sp-ok").onclick = () => { const a = pop._anchor; popClose(); if (a && a.isConnected) a.focus(); };
 }

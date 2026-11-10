@@ -1,12 +1,13 @@
 // @ts-check
 // The «from / to» pairs of the panel headers (pannelli.js ctl): the «m/z» edges of a low-resolution XIC and the m/z (nm of a PDA trace) and RT of the
-// «Range» popover. A pair is read when the focus leaves it (Enter, or a click elsewhere), so either end can be written first; a refused pair (not a
-// number, from above to) brings the old values back with a calm note; an accepted one is undoable and saved, and the focus stays where it went.
+// «Range» popover, looked up in the whole panel (a narrow header moves them into «More»). A pair is read when the focus leaves it (Enter, or a click
+// elsewhere), so either end can be written first; a refused pair (not a number, from above to) brings the old values back with a calm note; an accepted
+// one is undoable and saved, and the focus stays where it went.
 (() => {
-  /** @param {any} p @param {HTMLElement} c @param {HTMLInputElement} x */
-  function wire(p, c, x) {
+  /** @param {any} p @param {HTMLInputElement} x */
+  function wire(p, x) {
     const go = () => setTimeout(() => {
-      const t = p.traces[p._xt], q = /** @type {HTMLInputElement[]} */ ([...c.querySelectorAll('[data-o="xlo"],[data-o="xhi"]')]), a = /** @type {any} */ (document.activeElement);
+      const t = p.traces[p._xt], q = /** @type {HTMLInputElement[]} */ ([...p.el.querySelectorAll('[data-o="xlo"],[data-o="xhi"]')]), a = /** @type {any} */ (document.activeElement);
       if (!t || !x.isConnected || q.length !== 2 || (q.includes(a) && a !== x) || q.every(i => i.value === i.defaultValue)) return;   // the other edge has the focus: wait for it
       const hrE = t.ion && window.HR && HR.xicEdges(t, p), nm = (/** @type {string} */ v) => hrE ? (isFinite(numIt(v)) && numIt(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);
       const lo = nm(q[0].value), hi = nm(q[1].value), ok = lo != null && hi != null && hi > lo, d = hrE ? 5 : 2;
@@ -16,11 +17,11 @@
     });
     x.onchange = go; x.onblur = go;
   }
-  /** the m/z (or nm) and RT pairs of the «Range» popover: empty = no limit; RT may start at 0 @param {any} p @param {HTMLElement} c @param {HTMLInputElement} x */
-  function range(p, c, x) {
+  /** the m/z (or nm) and RT pairs of the «Range» popover: empty = no limit; RT may start at 0 @param {any} p @param {HTMLInputElement} x */
+  function range(p, x) {
     const rt = x.dataset.o === "rt0" || x.dataset.o === "rt1", ks = rt ? ["rt0", "rt1"] : ["mz0", "mz1"], pda = !rt && p.kind === "pda";
     const go = () => setTimeout(() => {
-      const q = /** @type {HTMLInputElement[]} */ (ks.map(k => c.querySelector(`[data-o="${k}"]`))), a = /** @type {any} */ (document.activeElement);
+      const q = /** @type {HTMLInputElement[]} */ (ks.map(k => p.el.querySelector(`[data-o="${k}"]`))), a = /** @type {any} */ (document.activeElement);
       if (!x.isConnected || q.some(i => !i) || (q.includes(a) && a !== x) || q.every(i => i.value === i.defaultValue)) return;   // the other end has the focus: wait for it
       const rd = (/** @type {string} */ v) => { if (!v.trim()) return null; const n = CAMPI.num(v); return n != null && isFinite(n) && (rt ? n >= 0 : n > 0) ? n : NaN; };
       let [lo, hi] = q.map(i => rd(i.value)), bad = Number.isNaN(lo) || Number.isNaN(hi) ? "num" : "";

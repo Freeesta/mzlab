@@ -74,3 +74,18 @@ Aprire, usare e chiudere 50 XIC trattiene invece ~280 nodi per ciclo nelle voci 
 | tabella «Dati» del grafico, ms; righe scritte | 10 595; 100 000 | 173; 1000 |
 
 Dove andava il tempo: un elemento focalizzabile per punto (5 nodi ciascuno), il pannello ridipinto per intero a ogni clic (`PROFILO.show` riapriva la scheda già aperta) e il riquadro `overflow-x:auto` della tabella del riferimento (500 righe), che senza `contain:paint` il browser ristratificava a ogni fotogramma della pagina (`PaintArtifactCompositor::Update`, ~125 ms).
+
+## HR, 20 tracce da 100 000 scansioni, CPU 4x (tablet medio; `--rate 4 --only hr100,big`; `main` `c13dfa1ea6e760ce54fbc0c4f301adb8ab4d4d00`)
+`hr100` = un file Orbitrap Full Scan di 100 000 scansioni, pannello XIC di 20 ioni (20 tracce sovrapposte da 10^5 punti) più il TIC; `big` come sopra. Valori di `main`:
+| azione | hr100 | big |
+|---|---|---|
+| aprire l'XIC di 20 ioni, ms (attività lunghe n / max) | 1220 (2 / 390) | |
+| draw, vista intera / zoom / zoom y, ms | 92 / 54 / 123 | 35 / 6 / 46 |
+| Ctrl+rotella x30, fotogrammi mediana / p95 / max, ms | 33 / 100 / 133 | 17 / 33 / 50 |
+| Maiusc+trascina x60, fotogrammi, ms | 33 / 100 / 150 | 17 / 50 / 67 |
+| passaggio del puntatore x120, fotogrammi, ms | 17 / 33 / 33 | 17 / 17 / 17 |
+| ridimensionare la finestra x10, fotogrammi, ms | 283 / 317 / 317 | 100 / 150 / 150 |
+| tabella «Dati» dell'XIC, ms (attività lunghe) | 575 (2 / 350) | 210 (1 / 173) |
+- **Dove va il tempo** (profilo CDP): nel disegno ~55 % è raster della tela software, `m4` ~5 ns per punto (0,5 ms per 10^5 punti in node; blocchi fini di 16 punti non lo battono a ~70 punti per colonna). Rotella e trascinamento passano già per `drawSoon` (un disegno per fotogramma): a 4x il fotogramma è il disegno dei due pannelli collegati.
+- **Testata al ridimensionamento** (`fitHd` in `pannelli.js`): i due osservatori di dimensione (pannello e tela) chiedono un adattamento per larghezza, non uno a testa; i nodi che di certo non bastano (larghezza + 32 px sotto lo sforamento della riga) vanno nel «⋯» senza un riflusso ciascuno. 10 passi: `fitHd` 51 → 30 chiamate, `hdOver` 447 → 243, tempo ~980 → ~505 ms (~98 → ~50 ms per passo); stesso risultato del ciclo nodo per nodo su 141 prove (larghezze 640-1500 px, ogni pannello).
+- **Tabella «Dati»**: si apre con 200 righe (`FIRST` in `tdati.js`; impaginarne 1000 in `showModal` costava ~180 ms) e `pick` in `tdati-pannelli.js` prende la finestra di una traccia ordinata per ricerca binaria (`windowIdx`): hr100 581-698 → ~195 ms (attività lunga ~110 ms), big 189-236 → 118-178 ms.

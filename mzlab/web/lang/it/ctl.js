@@ -106,5 +106,7 @@ I18N.add("it", {
   "campo.gt": "Scrivi un numero maggiore di {a}: ho rimesso il valore di prima.",
   "campo.range": "Scrivi un numero da {a} a {b}: ho rimesso il valore di prima.",
   "campo.min": "Scrivi un numero non minore di {a}: ho rimesso il valore di prima.",
-  "campo.max": "Scrivi un numero non maggiore di {b}: ho rimesso il valore di prima."
+  "campo.max": "Scrivi un numero non maggiore di {b}: ho rimesso il valore di prima.",
+  "campo.int": "Scrivi un numero intero: ho rimesso il valore di prima.",
+  "campo.order": "«da» non può superare «a»: ho rimesso il valore di prima."
 });

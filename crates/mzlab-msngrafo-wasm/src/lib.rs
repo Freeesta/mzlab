@@ -3,7 +3,7 @@
 //! engine on the first request of the graph; `strutture=<id>` (and `ppm_struttura`) adds the cleavages of the SMILES that explain a node; `interpreta=1` adds the interpretation of the losses. Memory: the index is read once for its SHA-256 and once to open it; the output is one JSON string,
 //! no offsets (`docs/agenti/memoria.md`). Errors are JSON `{"error_key", "params"}` strings.
 use js_sys::{Function, Uint8Array};
-use mzlab_core::budget::sha256_hex;
+use mzlab_core::budget::{sha256_hex_at, MemBudget};
 use mzlab_core::error::Error;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
@@ -76,19 +76,25 @@ fn compute_with(
     name: &str,
     q: &Query,
 ) -> mzlab_core::Result<(Graph, String, Options)> {
-    let req = from_request(&|k| q.get(k).map(String::from))?;
+    let mut req = from_request(&|k| q.get(k).map(String::from))?;
+    // the budget of the instance (`budget_mb` of the page; missing: the default): a consensus over it is the calm `error.memoryBudget`, not a trap
+    let mb = q
+        .get("budget_mb")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0.0);
+    req.0.budget = MemBudget::from_request(mb).cap();
     let bad = || Error::new("error.badIndex");
     if idx_size.is_nan() || idx_size < 0.0 {
         return Err(bad());
     }
     let size = idx_size as u64;
-    let mut bytes = vec![0u8; size as usize];
-    JsReader {
-        read: read_idx.clone(),
-    }
-    .read_at(0, &mut bytes)?;
-    let sha = sha256_hex(&bytes);
-    drop(bytes);
+    // hashed in blocks of 1 MiB: no copy of the whole index in memory
+    let sha = sha256_hex_at(
+        &mut JsReader {
+            read: read_idx.clone(),
+        },
+        size,
+    )?;
     let scans = Index::open(JsReader { read: read_idx }, size)?.scans;
     let mut m = JsReader { read: read_file };
     let (g, j) = graph_json(&scans, &mut m, (name, &sha), (&req.0, &req.1))?;

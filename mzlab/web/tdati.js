@@ -6,7 +6,7 @@
 const T = (k, p) => I18N.t(k, p);
 const EH_ = s => EH(s ?? "");
 let live = null, seq = 0;
-const CHUNK = 1000;
+const FIRST = 200, CHUNK = 1000;      // the dialog opens with FIRST rows (laying out 1000 took ~180 ms at 4x CPU), then CHUNK at a time
 
 // ---- the description of a chart, linked to its canvas (aria-describedby); the live region announces it only when asked
 function describe(cv, text) {
@@ -32,10 +32,10 @@ function table(o) {
   const opener = /** @type {HTMLElement | null} */ (document.activeElement);
   const d = document.createElement("dialog"); d.id = "tdati"; d.className = "tdati"; d.setAttribute("aria-labelledby", "tdati-h");
   const head = (o.head || []).map(h => `<th scope="col">${EH_(h)}</th>`).join("");
-  // a long table is written CHUNK rows at a time, the next ones when the reader scrolls near the end (all rows at once froze the page for seconds at 100k);
+  // a long table is written FIRST rows, then CHUNK at a time, the next ones when the reader scrolls near the end (all rows at once froze the page for seconds at 100k);
   // the count and the Copy button always cover every row
   const all = o.rows || [], rowHtml = r => `<tr>${r.map((v, i) => (i === 0 && o.rowHeader ? `<th scope="row">${EH_(v)}</th>` : `<td>${EH_(v)}</td>`)).join("")}</tr>`;
-  const rows = all.slice(0, CHUNK).map(rowHtml).join("") + (all.length > CHUNK ? `<tr class="td-more" aria-hidden="true"><td colspan="${Math.max(1, (o.head || []).length)}">…</td></tr>` : "");
+  const rows = all.slice(0, FIRST).map(rowHtml).join("") + (all.length > FIRST ? `<tr class="td-more" aria-hidden="true"><td colspan="${Math.max(1, (o.head || []).length)}">…</td></tr>` : "");
   d.innerHTML = `<div class="td-hd"><h3 id="tdati-h">${EH_(o.title || T("tdati.title"))}</h3><button type="button" class="bt" data-td="x" aria-label="${T("tdati.close")}" title="${T("tdati.close")}">&times;</button></div>
     ${o.note ? `<p class="sm muted">${EH_(o.note)}</p>` : ""}
     <div class="td-sc" tabindex="0" role="region" aria-label="${EH_(T("tdati.region", { title: o.title || "" }))}"><table><caption class="sr-only">${EH_(o.title || "")}</caption><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>
@@ -44,7 +44,7 @@ function table(o) {
   const more = d.querySelector("tr.td-more");
   let io = null;
   if (more) {
-    let shown = CHUNK;
+    let shown = FIRST;
     io = new IntersectionObserver(es => {
       if (!es.some(e => e.isIntersecting)) return;
       more.insertAdjacentHTML("beforebegin", all.slice(shown, shown + CHUNK).map(rowHtml).join("")); shown += CHUNK;

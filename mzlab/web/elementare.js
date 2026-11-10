@@ -44,12 +44,12 @@ const ELEM = (() => {
       host.innerHTML = `<table class="cx-els"><thead><tr><th>${t("cx.col.iso")}</th><th class="num">${t("cx.col.min")}</th><th class="num">${t("cx.col.max")}</th><th class="num">${t("cx.col.db")}</th><th class="num">${t("cx.col.mass")}</th><th></th></tr></thead><tbody>
         ${rows.map((r, i) => r.raw != null ? `<tr><td colspan="5" class="muted">${EH(r.raw)}</td><td><button type="button" data-del="${i}" aria-label="${t("cx.remove", { el: EH(r.raw) })}" title="${t("cx.remove", { el: EH(r.raw) })}">×</button></td></tr>` : (() => {
           const ii = isoInfo(r.s);
-          return `<tr><td><b>${lab(r.s)}</b></td><td class="num"><input type="number" min="0" data-i="${i}" data-f="min" value="${r.n0}" aria-label="${t("cx.col.min")} ${EH(r.s)}"></td><td class="num"><input type="number" min="0" data-i="${i}" data-f="max" value="${r.n1}" aria-label="${t("cx.col.max")} ${EH(r.s)}"></td>
+          return `<tr><td><b>${lab(r.s)}</b></td><td class="num"><input data-num="0: i" data-i="${i}" data-f="min" value="${r.n0}" aria-label="${t("cx.col.min")} ${EH(r.s)}"></td><td class="num"><input data-num="0: i" data-i="${i}" data-f="max" value="${r.n1}" aria-label="${t("cx.col.max")} ${EH(r.s)}"></td>
             <td class="num">${DBEQ[baseOf(r.s)] != null ? DBEQ[baseOf(r.s)] : ""}</td><td class="num">${ii ? ii.mass.toFixed(5) : ""}</td><td><button type="button" data-del="${i}" aria-label="${t("cx.remove", { el: EH(r.s) })}" title="${t("cx.remove", { el: EH(r.s) })}">×</button></td></tr>`;
         })()).join("")}</tbody></table>
         <div class="cx-add"><select aria-label="${t("cx.add")}">${[...SUPPORTED, ...ISOT].filter(s => !used.has(s)).map(s => `<option value="${s}">${optLabel(s)}</option>`).join("")}</select><button type="button" data-add>${t("cx.add")}</button></div>`;
       const put = () => { ta.value = ser(rows); if (onch) onch(); };
-      host.querySelectorAll("input[data-i]").forEach(inp => { inp.oninput = () => { const r = /** @type {any} */ (rows[+inp.dataset.i]), v = Math.max(0, parseInt(inp.value) || 0), f = inp.dataset.f; r[f === "min" ? "n0" : "n1"] = v; if (r.n1 < r.n0) { if (f === "min") r.n1 = v; else r.n0 = v; } put(); }; });
+      host.querySelectorAll("input[data-i]").forEach(inp => { inp.onchange = () => { const r = /** @type {any} */ (rows[+inp.dataset.i]), v = Math.max(0, parseInt(inp.value) || 0), f = inp.dataset.f; r[f === "min" ? "n0" : "n1"] = v; if (r.n1 < r.n0) { if (f === "min") r.n1 = v; else r.n0 = v; /** @type {any} */ (inp.closest("tr")).querySelector(`[data-f=${f === "min" ? "max" : "min"}]`).value = v; } put(); }; });   // change: only what campi.js took
       host.querySelectorAll("[data-del]").forEach(b => { b.onclick = () => { rows.splice(+b.dataset.del, 1); put(); draw(); }; });
       host.querySelector("[data-add]").onclick = () => { const s = host.querySelector(".cx-add select").value; if (!s) return; rows.push({ s, n0: 0, n1: 2 }); put(); draw(); };
     };

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::Outcome;
 
-use mzlab_core::budget::sha256_hex_read;
+use mzlab_core::budget::{sha256_hex_read, MemBudget};
 use mzlab_core::elements::{fmt, parse_formula};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
@@ -58,6 +58,7 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --figure LIST        with --out: also write the figures of the graph next to it (g.json → g.svg, g.html, g.png): svg, html (one file, no external
                        resource, two views, data table) and png (only in a build with the cargo feature `png`)
   --view V             the view the figures open on: tree (default) or radial
+  --budget-mb N        memory the spectra of one consensus may take, MB (default: the budget of this machine); over it the calm error.memoryBudget
   --out PATH           write there instead of the standard output
 
   figure               the figures of a graph already made (after `complete` if it has no `vista`): STEM.svg and STEM.html, STEM.png with --figure
@@ -147,6 +148,11 @@ fn number(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
 
 /// The arguments after `msn-graph`; `Ok(None)` = `--help`.
 /// The view named after `--view`.
+fn molfile(p: Option<String>) -> std::result::Result<String, String> {
+    let p = p.ok_or("--molfile needs a file")?;
+    std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))
+}
+
 fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigure::View, String> {
     mzlab_feat::msnfigure::View::da_nome(&n.unwrap_or_default())
         .ok_or_else(|| "--view needs tree or radial".into())
@@ -171,10 +177,7 @@ pub fn parse_args(
             "--help" | "-h" => return Ok(None),
             "--formula" => o.formula = a.next(),
             "--smiles" => o.smiles = a.next(),
-            "--molfile" => {
-                let p = a.next().ok_or("--molfile needs a file")?;
-                o.molfile = Some(std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))?);
-            }
+            "--molfile" => o.molfile = Some(molfile(a.next())?),
             "--ppm-formula" => o.ppm_formula = number(a.next(), &x)?,
             "--low-mz" => o.mz_low = number(a.next(), &x)?,
             "--wide-ppm" => o.ppm_low = number(a.next(), &x)?,
@@ -205,6 +208,7 @@ pub fn parse_args(
             x if rot.flag(x, &mut a)? => {}
             "--figure" => figure = crate::msn_outputs::formats(&a.next().unwrap_or_default())?,
             "--view" => view = view_of(a.next())?,
+            "--budget-mb" => o.budget = MemBudget::mb(number(a.next(), &x)?).cap(),
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
@@ -259,7 +263,11 @@ pub fn graph(file: &Path, o: &Options, tmp: &Path) -> Result<(Graph, String)> {
     let sha = sha256_hex_read(std::fs::File::open(&idx).map_err(io)?).map_err(io)?;
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
-    let o = &mzlab_feat::chem::rules::with_expected(o);
+    let mut o = mzlab_feat::chem::rules::with_expected(o);
+    if o.budget == usize::MAX {
+        o.budget = MemBudget::mb(mzlab_core::budget_auto::native_auto_mb()).cap();
+    }
+    let o = &o;
     graph_json(&scans, &mut m, (&name, &sha), (o, &Grouping::default()))
 }
 

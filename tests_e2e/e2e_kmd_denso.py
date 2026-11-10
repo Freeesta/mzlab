@@ -67,14 +67,14 @@ try:
         step("a chosen series stays bright, the others are dimmed", dim)
         def table():
             pg.evaluate("TDATI.open(document.querySelector('#kmd-plot'))"); pg.wait_for_selector("#tdati tbody tr")
-            assert pg.locator("#tdati tbody tr:not(.td-more)").count() == 1000 and str(N) in pg.inner_text("#tdati-n"), pg.inner_text("#tdati-n")
-            for k in range(2, 4):
+            assert pg.locator("#tdati tbody tr:not(.td-more)").count() == 200 and str(N) in pg.inner_text("#tdati-n"), pg.inner_text("#tdati-n")
+            for k in range(1, 4):
                 pg.evaluate("const s = document.querySelector('#tdati .td-sc'); s.scrollTop = s.scrollHeight")
-                wait_for_js(pg, f"document.querySelectorAll('#tdati tbody tr:not(.td-more)').length >= {min(N, k * 1000)}", 10000)
+                wait_for_js(pg, f"document.querySelectorAll('#tdati tbody tr:not(.td-more)').length >= {min(N, 200 + k * 1000)}", 10000)
             assert pg.locator("#tdati tbody tr.td-more").count() == 0 and pg.locator("#tdati tbody tr").count() == N
             assert len(pg.evaluate("KMD.plotTable().rows")) == N, "Copy covers every row"
             pg.keyboard.press("Escape"); pg.wait_for_selector("#tdati", state="detached")
-        step("the «Dati» table writes 1000 rows, the next ones on scrolling; the count and Copy cover all", table)
+        step("the «Dati» table writes 200 rows, then 1000 at a time on scrolling; the count and Copy cover all", table)
 finally:
     r.close()
 for s in steps: print(s)
