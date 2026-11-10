@@ -181,7 +181,7 @@ function dialogHtml({ f, lv, hr, files, others, V, P, prefs, opt }) {
 <div class="rw"><label>${T("m3d.pal")} <select data-m="pal" aria-label="${T("m3d.pal")}">${opt("viridis", mapPal(), T("mappa.pal.viridis"))}${opt("cividis", mapPal(), T("mappa.pal.cividis"))}</select></label></div>
 <div class="rw"><label><input type="checkbox" data-m="lt"${P.lt ? " checked" : ""}> ${T("m3d.light")}</label><label><input type="checkbox" data-m="fl"${P.fl ? " checked" : ""}> ${T("m3d.floor")}</label><label><input type="checkbox" data-m="pl"> ${T("m3d.plane")}</label></div></details>
 <details open><summary>${T("m3d.g.bg")}</summary>
-<div class="rw"><label>${T("mappa.thr")} <input class="mzf" data-m="thr" inputmode="decimal" aria-label="${T("mappa.thr.title")}"> %</label><label><input type="checkbox" data-m="bg"${prefs.bg ? " checked" : ""}> ${T("mappa.bg")}</label></div>
+<div class="rw"><label>${T("mappa.thr")} <input class="mzf" data-m="thr" data-num="0:99" inputmode="decimal" aria-label="${T("mappa.thr.title")}"> %</label><label><input type="checkbox" data-m="bg"${prefs.bg ? " checked" : ""}> ${T("mappa.bg")}</label></div>
 <canvas class="m3d-hist" data-m="hist" aria-label="${T("m3d.hist.aria")}" title="${T("m3d.hist.title")}"></canvas>
 <div class="rw"><label>${T("m3d.sig")} <input type="range" data-m="sig" min="0" max="4" step="0.5" value="${P.sig}" aria-label="${T("m3d.sig")}"></label></div></details>
 <details open><summary>${T("m3d.g.views")}</summary>

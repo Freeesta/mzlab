@@ -71,6 +71,22 @@ try:
             wait_for_js(pg, "(() => { try { return JSON.parse(localStorage.getItem('mzlab.lib.soglie')).mzlab.entropia_min === 0.5; } catch (e) { return false; } })()", 5000)
             assert all("abc" not in u for u in urls[n0:])
         step("«What is it?»: Enter in a refused field runs nothing; «0,25» and «0,5» are taken", what_enter)
+        def msn_list():
+            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d => d.close())"); pg.click("#hrbar [data-hb=tree]")
+            wait_for_js(pg, "document.querySelectorAll('#mt-pexp .msnl-b .msnl-r').length > 0", 60000)
+            n = "document.querySelectorAll('#mt-pexp .msnl-r').length"
+            assert sweep(pg, "#mt-pexp .msnl-f", n) == 4
+            typed(pg, "#mt-pexp [data-f=mz0]", "100,5"); assert pg.get_attribute("#mt-pexp [data-f=mz0]", "aria-invalid") is None
+        step("MSn list: the m/z and RT filters refuse garbage; «100,5» is taken", msn_list)
+        def map3d():
+            pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d => d.close()); setTab('full', true)"); ready(pg)
+            pg.evaluate("reveal(addPanel('map', { k: E.files.find(f => f.kind === 'full').k }))"); ready(pg)
+            M = "E.panels.find(q => q.type === 'map')"; wait_for_js(pg, M + " && " + M + "._a", 60000)
+            pg.evaluate(M + ".el.scrollIntoView({block: 'center'})"); frames(pg, 3); pg.click(".pnl.map [data-o=view][data-v='3d']")
+            pg.wait_for_function("document.querySelector('dialog.m3d[open]') && window.__m3d && window.__m3d.V.g", timeout=60000)
+            assert sweep(pg, "dialog.m3d", "localStorage.getItem('mzlab.mappa')") == 1
+            pg.evaluate("document.querySelector('dialog.m3d').close()")
+        step("3D map: the threshold refuses garbage", map3d)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

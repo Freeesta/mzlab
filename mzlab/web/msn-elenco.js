@@ -53,7 +53,7 @@ const COLS = () => [["no", T("msnl.col.no")], ["rt", T("msnl.col.rt")], ["lev", 
 /** The filters, the count and the empty grid with its header. @param {Vista} V @param {boolean} all */
 function headHtml(V, all) {
   const lvOpt = V.levels.length > 1 ? h`<label>${T("msnl.f.lev")} <select data-f="lv"><option value="0">${T("msnl.f.all")}</option>${V.levels.map(l => raw(h`<option value="${l}">MS${l}</option>`))}</select></label>` : "";
-  const inp = (/** @type {string} */ k, /** @type {string} */ ph, /** @type {string} */ lab, /** @type {number} */ w) => raw(h`<input data-f="${k}" inputmode="decimal" placeholder="${T(ph)}" aria-label="${T(lab)}" style="width:${w}px">`);
+  const inp = (/** @type {string} */ k, /** @type {string} */ ph, /** @type {string} */ lab, /** @type {number} */ w) => raw(h`<input data-f="${k}" data-num="${k[0] === "m" ? ">0 v" : "0: v"}" inputmode="decimal" placeholder="${T(ph)}" aria-label="${T(lab)}" style="width:${w}px">`);
   const hd = COLS().map(c => raw(c[0] ? h`<span role="columnheader" data-c="${c[0]}" aria-sort="none"><button type="button">${c[1]}</button></span>` : `<span role="columnheader"></span>`));
   return h`<div class="cmp-grid msnl-f"><label>m/z ${inp("mz0", "msnl.f.min", "msnl.f.mz0", 80)}</label><label>– ${inp("mz1", "msnl.f.max", "msnl.f.mz1", 80)}</label>
     <label>RT ${inp("rt0", "msnl.f.min", "msnl.f.rt0", 64)}</label><label>– ${inp("rt1", "msnl.f.max", "msnl.f.rt1", 64)}</label>${raw(lvOpt)}
