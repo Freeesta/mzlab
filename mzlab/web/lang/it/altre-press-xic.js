@@ -198,6 +198,8 @@ I18N.add("it", {
   "tdati.copy": "Copia",
   "tdati.copied": "Tabella copiata negli appunti.",
   "tdati.rows": "{n} righe",
+  "tdati.rowsOf": "{shown} righe di {n}",
+  "tdati.capped": "Questa tabella ha {n} righe: qui ci sono le prime {shown}, mostrate e copiate, perché il browser non resti senza memoria (su iPad e iPhone chiuderebbe la scheda). Per avere tutte le righe esporta i dati dalla vista (i pulsanti di esportazione) oppure usa l'app desktop.",
   "tdati.region": "Tabella dei dati: {title}",
   "tdati.none": "Questo grafico non ha una tabella dei dati.",
   "tdati.col.trace": "Traccia",

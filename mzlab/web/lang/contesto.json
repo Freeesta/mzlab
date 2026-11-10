@@ -285,6 +285,8 @@
   "press.read.cursor": "Parte della lettura del cursore; {p} = valore al tempo del cursore, {u} = unità.",
   "tabp.rows": "Contatore delle righe della tabella picchi; {n} = numero di righe.",
   "tdati.rows": "Contatore sotto la tabella dei dati; {n} = numero di righe.",
+  "tdati.rowsOf": "Contatore sotto una tabella dei dati tagliata; {shown} = righe tenute, {n} = righe del grafico.",
+  "tdati.capped": "Nota sopra una tabella dei dati con più righe del tetto (200 000): restano le prime, mostrate e copiate, e si indica dove averle tutte. {shown} = righe tenute, {n} = righe del grafico.",
   "tdati.region": "Etichetta dell'area scorrevole della tabella; {title} = titolo del grafico.",
   "tdati.apex": "Riga della tabella per un picco integrato; {a}, {b} = estremi in min.",
   "tdati.note.line": "Nota sopra la tabella; {a}, {b} = estremi del tempo, {n} = righe al massimo per traccia.",

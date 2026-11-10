@@ -198,6 +198,8 @@ I18N.add("en", {
   "tdati.copy": "Copy",
   "tdati.copied": "Table copied to the clipboard.",
   "tdati.rows": "{n} rows",
+  "tdati.rowsOf": "{shown} of {n} rows",
+  "tdati.capped": "This table has {n} rows: here are the first {shown}, shown and copied, so the browser does not run out of memory (on an iPad or iPhone it would close the tab). For every row, export the data from the view (its export buttons) or use the desktop app.",
   "tdati.region": "Data table: {title}",
   "tdati.none": "This chart has no data table.",
   "tdati.col.trace": "Trace",
