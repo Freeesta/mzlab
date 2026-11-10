@@ -1,9 +1,9 @@
 // @ts-check
 // @ts-strict
 // The worker of the readers modules (crates/mzlab-lettori-wasm, wasm-lettori/<family>/): opens the files of a family that the engine does not read and writes their mzML into OPFS (rust-opfs.js rawSink).
-// The .wasm of a family is fetched on the first message that names it (never the others) and checked against its SHA-256 in wasm-lettori/manifest.json (carica-modulo.js). Messages: probe, toMzml, cancel (the page also ends the worker, a running conversion cannot listen).
+// The .wasm of a family is fetched on the first message that names it (never the others) and checked against its SHA-256 in wasm-lettori/manifest.json (carica-modulo.js), and loaded afresh after a wasm trap. Messages: probe, toMzml, cancel (the page also ends the worker, a running conversion cannot listen).
 import { rawSink } from "./rust-opfs.js";
-import { loadModulo as load } from "./carica-modulo.js";
+import { loadModulo as load, forgetIfTrapped } from "./carica-modulo.js";
 
 /** `read(member, offset, length)` over some Blobs, as the bridge wants it */
 function reader(/** @type {Blob[]} */ blobs) {
@@ -40,6 +40,7 @@ async function run(m) {
     post(r.file ? { file: r.file, missing } : { parts: r.parts, missing });
   } catch (e) {
     if (sink) await sink.abort().catch(() => {});
+    forgetIfTrapped(m.fam, e);                            // a trapped module is not used again: the next message loads a fresh one
     post({ error: errOf(e, m.fam) });
   }
 }
