@@ -49,9 +49,9 @@ ${list(t("blank.kept"), r.kept, "blank-kept")}${list(t("blank.discarded"), r.dis
   function paint(box) {
     const tb = TABELLA.table;
     box.innerHTML = `<p class="sm">${t("blank.intro")}</p>
-<form id="blank-form" class="qq-form"><label>${t("blank.factor")} <input id="blank-f" value="${st.factor}" inputmode="decimal" size="4"></label>
+<form id="blank-form" class="qq-form"><label>${t("blank.factor")} <input id="blank-f" data-num="0:" value="${st.factor}" inputmode="decimal" size="4"></label>
 <label>${t("blank.level")} <select id="blank-s"><option value="max"${st.stat === "max" ? " selected" : ""}>${t("blank.stat.max")}</option><option value="mean"${st.stat === "mean" ? " selected" : ""}>${t("blank.stat.mean")}</option></select></label>
-<label>${t("blank.min")} <input id="blank-n" value="${st.min}" inputmode="numeric" size="3"></label><button type="submit" id="blank-go">${t("blank.go")}</button></form>
+<label>${t("blank.min")} <input id="blank-n" data-num="1: i" value="${st.min}" inputmode="numeric" size="3"></label><button type="submit" id="blank-go">${t("blank.go")}</button></form>
 ${tb ? "" : `<p class="sm">${t("blank.err.table")}</p>`}<div id="blank-msg" class="sm bad" role="alert"></div><div id="blank-res"></div>`;
     paintRes(box);
   }

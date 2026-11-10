@@ -1,6 +1,6 @@
 // @ts-check
 // One gate for typed numbers (<input type=number> or data-num) before the field's handlers: a refused text gets its old value back and one calm note.
-// data-num, space-separated: «a:b» bounds, «>a» exclusive, «i» integer, «v» empty allowed, «<=ID» / «>=ID» against field #ID.
+// data-num, space-separated: «a:b» bounds, «>a» exclusive, «i» integer, «v» empty allowed, last «a» auto, «<=ID» / «>=ID» against field #ID.
 (() => {
   /** @type {WeakMap<HTMLInputElement, string>} */
   const last = new WeakMap(), fed = new WeakSet();   // the value before the first key of an edit; an edit live handlers saw
@@ -28,6 +28,7 @@
   function why(x) {
     const s = spec(x), v = num(x.value), T = I18N.t;
     const ot = (/** @type {string} */ id) => id ? num(/** @type {any} */ (document.getElementById(id))?.value) : null;
+    if (/ a$/.test(x.dataset.num ?? "") && /^ *auto *$/i.test(x.value)) return "";
     if (x.validity.badInput || Number.isNaN(v)) return T("campo.num");
     if (v === null) return s.empty ? "" : T("campo.empty");
     if (s.int && !Number.isInteger(v)) return T("campo.int");

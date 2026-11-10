@@ -134,7 +134,7 @@ const PCA = (() => {
     const n = nSamples(), tb = TABELLA.table;
     if (n < MIN_SAMPLES) { box.innerHTML = `<p class="sm" role="status">${t("pca.off", { min: MIN_SAMPLES, n })}</p>`; res = null; return; }
     box.innerHTML = `<p class="sm">${t("pca.intro")}</p>
-<form id="pca-form" class="qq-form"><label>${t("pca.min")} <input id="pca-min" value="${st.min}" inputmode="decimal" size="7"></label><label>${t("pca.k")} <input id="pca-k" value="${st.k}" inputmode="numeric" size="3"></label>
+<form id="pca-form" class="qq-form"><label>${t("pca.min")} <input id="pca-min" data-num="0:" value="${st.min}" inputmode="decimal" size="7"></label><label>${t("pca.k")} <input id="pca-k" data-num="1: i" value="${st.k}" inputmode="numeric" size="3"></label>
 <label>${t("pca.transform")} <select id="pca-tr"><option value="log"${st.transform === "log" ? " selected" : ""}>${t("pca.tr.log")}</option><option value="none"${st.transform === "none" ? " selected" : ""}>${t("pca.tr.none")}</option></select></label>
 <label>${t("pca.scaling")} <select id="pca-sc"><option value="pareto"${st.scaling === "pareto" ? " selected" : ""}>${t("pca.sc.pareto")}</option><option value="auto"${st.scaling === "auto" ? " selected" : ""}>${t("pca.sc.auto")}</option><option value="none"${st.scaling === "none" ? " selected" : ""}>${t("pca.sc.none")}</option></select></label>
 <button type="submit" id="pca-go">${t("pca.go")}</button></form>
