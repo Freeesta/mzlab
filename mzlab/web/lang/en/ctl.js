@@ -106,5 +106,7 @@ I18N.add("en", {
   "campo.gt": "Write a number above {a}: the previous value is back.",
   "campo.range": "Write a number from {a} to {b}: the previous value is back.",
   "campo.min": "Write a number of at least {a}: the previous value is back.",
-  "campo.max": "Write a number of at most {b}: the previous value is back."
+  "campo.max": "Write a number of at most {b}: the previous value is back.",
+  "campo.int": "Write a whole number: the previous value is back.",
+  "campo.order": "«from» cannot be above «to»: the previous value is back."
 });

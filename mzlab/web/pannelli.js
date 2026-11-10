@@ -1,7 +1,7 @@
 // @ts-strict
 // @ts-noany
 // @ts-check
-// Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split from explore.js: classic script, loaded right after it (shared globals).
+// Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Classic script loaded right after explore.js (shared globals).
 // ------------------------------------------------------------------ floating panels
 /** @param {number} [w] @param {number} [h] */
 function place(w, h) {
@@ -690,7 +690,7 @@ function ctl(/** @type {Pannello} */ p) {
   const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = I18N.t("ctl.oneFile");
   const view = `<select data-o="mode" aria-label="${I18N.t("ctl.mode.aria")}"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="${I18N.t("ctl.mode.title")}"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>${I18N.t("ctl.mode.ovl")}</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>${I18N.t("ctl.mode.stk")}</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>${I18N.t("ctl.mode.cas")}</option></select>`;
   // low resolution: the gradient delay and the PDA alignment are in this popover (in high resolution they are in «Opzioni di visualizzazione»)
-  const num = (/** @type {number | string} */ k, /** @type {number | string} */ v, /** @type {number | string} */ lo, /** @type {number | string} */ hi, /** @type {number | string} */ st, vu = false) => `<input data-o="${k}" class="mzf" inputmode="decimal" autocomplete="off" data-num data-min="${lo}" data-max="${hi}"${vu ? " data-vuoto" : ""} value="${v ?? ""}" style="width:5em">`;
+  const num = (/** @type {number | string} */ k, /** @type {number | string} */ v, /** @type {number | string} */ lo, /** @type {number | string} */ hi, /** @type {number | string} */ st, vu = false) => `<input data-o="${k}" class="mzf" data-num="${lo}:${hi}${vu ? " v" : ""}" value="${v ?? ""}" style="width:5em">`;
   const lrExtra = window.BANCO && BANCO.on() ? "" :
     (p.overlay === "grad" ? `<label class="muted" title="${I18N.t("disp.gdelay.title")}">${I18N.t("disp.gdelay", { input: num("gdelay", p.gdelay || 0, 0, 10, 0.1) })}</label>` : "") +
     (p.kind === "pda" && window.DISP && DISP.pdaHere(p) ? `<label class="muted" title="${I18N.t("disp.pdaDelay.title")}">${I18N.t("disp.pdaDelay", { input: num("pdadelay", DISP.pdaDelayValue(p), -2, 2, 0.01, true) })}</label>${chk("pdaAlign", I18N.t("disp.pdaAlign"), false, "", I18N.t("disp.pdaAlign.title"))}` : "");
@@ -708,7 +708,7 @@ function ctl(/** @type {Pannello} */ p) {
   const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), idle: "file", dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
     + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
     + corrInfo(p)
-    + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" inputmode="decimal" autocomplete="off" data-num data-min="0.2" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
+    + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" data-num="0.2:" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover, next to its button in the tab order; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
@@ -739,7 +739,7 @@ function ctl(/** @type {Pannello} */ p) {
     c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<span class="mzfs">${mapNav(p, sf, fol, isF ? +mc.now.slice(1) : null, -1)}<select data-o="k" aria-label="${I18N.t("ctl.map.file")}" title="${fol ? I18N.t("ctl.map.follow") : I18N.t("ctl.map.file")}">${sf.map((/** @type {MzFile} */ x) => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select>${mapNav(p, sf, fol, isF ? +mc.now.slice(1) : null, 1)}</span>${kindSel}`) + mCorr + corrInfo(p) +
       mPar(`<label class="muted" title="${isF ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${I18N.t("ctl.map.norm.lab")} <select data-o="norm"${isF ? "" : " disabled"}>${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select></label><span data-mzslot="diff"></span>` +
         `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
-        `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" class="mzf" inputmode="decimal" autocomplete="off" data-num data-min="0.1" data-max="3" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
+        `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" class="mzf" data-num="0.1:3" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
   }
   if (p.type === "spec" && !p.uv) {  // a UV spectrum (uv-spettro.js) has no file, level or background menus
     const f = TF, hasMs2 = f.some((/** @type {MzFile} */ x) => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;  // the «fondo» menu starts from the reference of the session
@@ -849,7 +849,7 @@ function fitHd(/** @type {Pannello} */ p) {
     const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     const list = [...cands, ...groups, ...kids], w = list.map(n => n.hidden ? 0 : n.offsetWidth), gone = /** @type {HTMLElement[]} */ ([]);
     const put = (/** @type {HTMLElement & Bag} */ n) => { p._hm.push(n); if (n.classList.contains("bnl")) return n.classList.add("hd-ov"); const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); };
-    // a node frees at most its width + a gap: while the overflow is larger it moves with no reflow (one per node was ~9 per resize step)
+    // a node frees at most its width + a gap: while the overflow is larger it moves with no reflow
     let need = hd.scrollWidth - hd.clientWidth - 1, j = 0;
     for (; j < list.length; j++) {
       const n = list[j];
@@ -899,7 +899,7 @@ const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trai
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
 const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
-const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose ions whose defect plus drift passes +0.5; this keeps them and still leaves out n-1 and n+1
+const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose some; this keeps them and leaves out n-1 and n+1
 const XIC_DRIFT = 0.25;  // mean offset (Da) of observed centroids over the calculated m/z: a CLICKED centroid back to its nominal mass (364.37 -> n = 364)
 const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
@@ -1020,7 +1020,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     if (keep) ff.forEach((/** @type {MzFile} */ f) => { if (f !== keep) traces.forEach(t => { np.hid["x|" + f.k + "|" + t.mz] = true; }); });
     if (np === panel) draw(np); else if (!(pre.after && E.panels.includes(pre.after))) reveal(np);
   };
-  if (pre.diretto) return Q("#xic-go").onclick(null);  // no dialog: the same rows, windows and panel as the dialog gives (pre.diretto: a caller that already knows the ion, e.g. the inclusion list of the method)
+  if (pre.diretto) return Q("#xic-go").onclick(null);  // no dialog, same rows and panel (pre.diretto: the caller knows the ion, e.g. the method inclusion list)
   d.showModal();
   rows[0].inp.focus();
 }

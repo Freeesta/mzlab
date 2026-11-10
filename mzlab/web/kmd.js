@@ -33,7 +33,7 @@ const KMD = (() => {
     const tb = TABELLA.table;
     box.innerHTML = `<p class="sm">${t("kmd.intro")}</p>`
       + `<form id="kmd-form" class="qq-form"><label>${t("kmd.unit")} <select id="kmd-unit">${KMDCALC.UNITS.map(u => `<option value="${u.id}"${u.id === st.unit ? " selected" : ""}>${u.id} (${u.mass.toFixed(4)})</option>`).join("")}</select></label>`
-      + `<label>${t("kmd.tol")} <input id="kmd-tol" value="${st.tol}" inputmode="decimal" size="4"></label><label>${t("kmd.min")} <input id="kmd-min" value="${st.min}" inputmode="numeric" size="3"></label>`
+      + `<label>${t("kmd.tol")} <input id="kmd-tol" value="${st.tol}" data-num=">0" size="4"></label><label>${t("kmd.min")} <input id="kmd-min" value="${st.min}" data-num="2: i" size="3"></label>`
       + `<button type="submit" id="kmd-go">${t("kmd.go")}</button></form>${tb ? "" : `<p class="sm">${t("kmd.needtable")}</p>`}<div id="kmd-msg" class="sm bad" role="alert"></div><div id="kmd-res"></div>`;
     if (tb && !res) compute().then(() => { if (curBox === box && box.isConnected) paintRes(box); }).catch(err => { const msg = box.querySelector("#kmd-msg"); if (msg) msg.textContent = String(err && err.message || err); res = null; if (curBox === box && box.isConnected) paintRes(box); });
     else paintRes(box);

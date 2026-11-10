@@ -59,16 +59,17 @@ try:
             assert pg.is_hidden("#cx-help") if pg.query_selector("#cx-help") else True
             body = pg.inner_text(".cx"); assert "Un clic su una riga" not in body and "Aiuto" not in body, body[:200]
             assert pg.input_value("#cx-max") == "5", pg.input_value("#cx-max")
-            assert pg.get_attribute("#cx-max", "max") == "10" and pg.get_attribute("#cx-max", "min") == "1"
-            pg.fill("#cx-max", "99"); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "10", pg.input_value("#cx-max")
-            pg.fill("#cx-max", "0"); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "1", pg.input_value("#cx-max")
+            assert pg.get_attribute("#cx-max", "data-num") == "1:10 i", pg.get_attribute("#cx-max", "data-num")
+            for v in ("99", "0"):   # out of 1-10: refused, the old value back (campi.js)
+                pg.fill("#cx-max", v); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "5", pg.input_value("#cx-max")
+                assert pg.get_attribute("#cx-max", "aria-invalid") == "true"
             pg.fill("#cx-max", "5"); pg.press("#cx-max", "Tab")
             assert pg.inner_text("label[for=cx-pre]").strip() == "Insieme di elementi"
             labs = pg.evaluate("[...document.querySelectorAll('#cx-pre option')].map(o=>o.textContent)"); assert labs == ["CHNO (organiche)", "CHNOSP", "CHNOSP + alogeni"], labs
             assert "Sostituisce gli elementi qui sotto" in pg.get_attribute("#cx-load", "title") and "Salva gli elementi qui sotto" in pg.get_attribute("#cx-save", "title")
             assert pg.get_attribute("#cx-out th.num:last-child", "title"), "the Score header explains itself"
             assert pg.get_attribute("#cx-out table", "aria-describedby") == "cx-desc" and pg.inner_text("#cx-desc").strip() != ""
-        step("layout: Massa (m/z), no Help and no note, 5 results by default and 1-10 clamp, element set with its tips, Score tooltip", layout)
+        step("layout: Massa (m/z), no Help and no note, 5 results by default, outside 1-10 refused, element set with its tips, Score tooltip", layout)
         def unit_and_scroll():
             pg.select_option("#cx-unit", "mda"); pg.fill("#cx-tol", "30"); pg.press("#cx-tol", "Tab")
             pg.wait_for_function("document.querySelector('#cx-out thead').innerText.includes('mDa')", timeout=15000)
@@ -93,10 +94,10 @@ try:
             pg.evaluate("e=>{const t=document.querySelector('#cx-els');t.value=e;t.dispatchEvent(new Event('input'))}", "C:0-13,H:0-25,N:0-4,O:0-3,S:0-1"); pg.fill("#cx-mz", "317.1639")
         step("the calculation answers within a second even with wide limits (the time is printed)", speed)
         def edit():
-            pg.fill(".cx-els input[data-f=max][data-i='0']", "5"); pg.wait_for_timeout(800)
+            pg.fill(".cx-els input[data-f=max][data-i='0']", "5"); pg.press(".cx-els input[data-f=max][data-i='0']", "Tab"); pg.wait_for_timeout(800)
             assert pg.input_value("#cx-els") if False else pg.evaluate("document.querySelector('#cx-els').value").startswith("C:0-5,"), "the table edits the text"
             pg.wait_for_function("document.querySelector('#cx-out').innerText.includes('Nessuna formula')", timeout=15000)
-            pg.fill(".cx-els input[data-f=max][data-i='0']", "13"); pg.wait_for_function("document.querySelector('#cx-out').innerText.replace(/\\s/g,'').includes('C13H25N4O3S')", timeout=15000)
+            pg.fill(".cx-els input[data-f=max][data-i='0']", "13"); pg.press(".cx-els input[data-f=max][data-i='0']", "Tab"); pg.wait_for_function("document.querySelector('#cx-out').innerText.replace(/\\s/g,'').includes('C13H25N4O3S')", timeout=15000)
         step("editing max in the table recalculates (no candidate, then back)", edit)
         def generate():
             pg.evaluate("BARRA.setTab('hdr',{noFocus:true,instant:true})"); pg.wait_for_timeout(300)
