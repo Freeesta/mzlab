@@ -118,8 +118,11 @@ try:
             assert not any("t30" in x for x in rows), rows
         cell(pg, "many files: a file removed, the profile forgets it", remove)
         def profile_error():
-            profile()                                      # a result on screen, then a wrong retention time
-            pg.fill("#prof-rt", "-1"); pg.click("#prof-go")
+            profile()                                      # a result on screen; a negative retention time never reaches it, an m/z of 0 does
+            x = pg.locator("#prof-rt"); x.focus(); x.press("ControlOrMeta+a"); x.press_sequentially("-1"); x.press("Tab")
+            wait_for_js(pg, "document.querySelector('#prof-rt').getAttribute('aria-invalid') === 'true'", 5000)
+            assert pg.input_value("#prof-rt") == "14.3", "the gate gives the old time back"
+            pg.fill("#prof-mz", "0"); pg.click("#prof-go")
             wait_for_js(pg, "!!document.querySelector('#prof-msg').textContent", 30000)
             assert not pg.locator("#prof-res").inner_text().strip(), "the old result stays beside the error"
             assert pg.evaluate("PROFILO.result") is None
