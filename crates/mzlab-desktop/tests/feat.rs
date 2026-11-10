@@ -136,6 +136,7 @@ fn detect_and_align(e: &Env) -> (Vec<Vec<u8>>, Vec<u8>) {
         open_k,
         &mut again,
         None,
+        None,
         &mut |d, t| pace.at(d, t),
     )
     .unwrap();

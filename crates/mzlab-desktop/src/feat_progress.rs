@@ -33,7 +33,7 @@ impl State {
         let mut tell = |d, t| set(at, d, t);
         let mut pace = Pace::new(&mut tell);
         let open = |k: usize| self.open_idx(&ns[k]);
-        run::align_to_spilling(src, budget, r, None, open, sink, None, &mut |d, t| {
+        run::align_to_spilling(src, budget, r, None, open, sink, None, None, &mut |d, t| {
             pace.at(d, t)
         })
     }
