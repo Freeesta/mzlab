@@ -54,6 +54,7 @@ I18N.add("en", {
   "memory.phase.group": "ion grouping",
   "memory.phase.read": "reading of the mzML file",
   "memory.phase.readTable": "reading of the feature table",
+  "memory.phase.mzmlInMemory": "mzML conversion held in memory",
   "memory.phase.msnGraph": "MSn graph",
   "pol.positive": "ESI positive",
   "pol.negative": "ESI negative",

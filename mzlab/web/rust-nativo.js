@@ -333,7 +333,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     const files = await memberFiles(/** @type {Stub} */ (st));
     await ext.prepara(/** @type {Stub} */ (st).members.map(x => x.name), /** @type {Stub} */ (st).members);
     const write = await writerOf(/** @type {Stub} */ (st), native_to_mzml);
-    const sink = await rawSink(m.dest);
+    const sink = await rawSink(m.dest, m.cap || 0);
     let written = 0, last = 0, scans = 0, scansTotal = null;
     const tick = (/** @type {boolean} */ force) => { const t = performance.now(); if (force || t - last > TICK) { last = t; post({ written, scans, scansTotal }); } };
     try {

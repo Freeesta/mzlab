@@ -139,6 +139,25 @@ def test_the_quota_error_of_the_raw_sink_counts_the_block_that_did_not_fit():
     assert got[1] == {"error_key": "error.quotaWrite", "params": {"serve_mb": 4, "scritti_mb": 2, "libero_mb": 100}}
 
 
+def test_without_opfs_the_mzml_held_in_memory_stops_calmly_past_the_budget():
+    """No OPFS (a private window, an old Safari): the pieces are held in memory; past `capMb` the conversion ends in error.memoryBudget, not a killed tab."""
+    got = run("""
+  nav({ storage: { getDirectory: async () => { throw new Error("SecurityError"); } } });
+  const { rawSink } = await import(%r);
+  await out(async () => {
+    const s = await rawSink("c.mzML", 2), free = await rawSink("d.mzML");
+    s.write(new Uint8Array(1 << 20)); free.write(new Uint8Array(3 << 20));
+    let threw = false, again = false;
+    try { s.write(new Uint8Array(3 << 20)); } catch (_) { threw = true; }      // 4 MiB held > 2 MB
+    try { s.write(new Uint8Array(1)); } catch (_) { again = true; }
+    await s.abort();
+    return [threw, again, JSON.parse(await s.error()), await free.error(), (await free.finish()).parts.length];
+  });""" % (WEB / "rust-opfs.js").as_uri())
+    assert got[:2] == [True, True]
+    assert got[2] == {"error_key": "error.memoryBudget", "params": {"fase": "mzmlInMemory", "stima_mb": 4, "budget_mb": 2, "libero_mb": 2, "eccesso_mb": 2}}
+    assert got[3:] == [None, 1]                                                   # capMb 0: no cap, as before
+
+
 def test_a_refused_write_never_quotes_a_free_space_that_would_have_held_it():
     """A write the browser refuses while estimate() says the file fits (a private window, a full disk) gave «about 17 MB are needed and 3072 MB are left»."""
     got = run("""

@@ -1,9 +1,14 @@
 // @ts-strict
 // Where the mzML of a converted .raw goes (rust-worker.js): a file of OPFS written piece by piece, so the mzML (GBs for a profile run) is never held in memory.
-// `dest` = file name in mzlab/conv/ chosen by the page (it removes it if the conversion is cancelled). Without OPFS (or a sync handle) the pieces are kept in memory instead.
+// `dest` = file name in mzlab/conv/ chosen by the page (it removes it if the conversion is cancelled). Without OPFS (or a sync handle) the pieces are kept in memory instead,
+// up to `capMb` (the engine's budget; 0 = no cap): past it the conversion stops with the calm error.memoryBudget (phase mzmlInMemory) instead of the tab being killed (Safari).
 // Old files of earlier visits are removed here (a day old).
 import { writeFull, quotaError } from "./archivio.js";
-export async function rawSink(dest) {
+const MB = 1048576;
+/** error.memoryBudget as `budget::refusal` of Rust writes it: `held` = bytes the mzML had reached when it was stopped */
+const inMemoryRefusal = (/** @type {number} */ held, /** @type {number} */ capMb) => JSON.stringify({ error_key: "error.memoryBudget",
+  params: { fase: "mzmlInMemory", stima_mb: Math.ceil(held / MB), budget_mb: Math.floor(capMb), libero_mb: Math.floor(capMb), eccesso_mb: Math.max(1, Math.ceil((held - capMb * MB) / MB)) } });
+export async function rawSink(/** @type {string} */ dest, capMb = 0) {
   /** @type {any} */ let dir = null, fh = null, ah = null;
   try {
     dir = await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab", { create: true })).getDirectoryHandle("conv", { create: true });
@@ -13,8 +18,16 @@ export async function rawSink(dest) {
     ah.truncate(0);
   } catch (_) { if (ah) ah.close(); ah = null; }
   if (!ah) {
-    const parts = [];
-    return { write: p => parts.push(p), abort: async () => {}, error: () => null, finish: async () => ({ parts }) };
+    /** @type {Uint8Array[]} */ let parts = [];
+    let held = 0, over = false;
+    return {
+      write: (/** @type {Uint8Array} */ p) => {
+        if (over) throw new Error("memory budget");
+        held += p.length;
+        if (capMb > 0 && held > capMb * MB) { over = true; parts = []; throw new Error("memory budget"); }   // the pieces go at once: the page must stay alive to show the notice
+        parts.push(p);
+      },
+      abort: async () => { parts = []; }, error: () => over ? inMemoryRefusal(held, capMb) : null, finish: async () => ({ parts }) };
   }
   let at = 0, need = 0, full = false;      // `at` = bytes really written, `need` = bytes the file needs once the failing block is counted
   return {
