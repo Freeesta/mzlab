@@ -7,7 +7,7 @@ import { openSource } from "./lettura-sync.js";
 import { rawSink } from "./rust-opfs.js";
 import { W } from "./nativo-fasi.js";
 import { createEsterno } from "./lettore-esterno.js";
-import { loadModulo } from "./carica-modulo.js";
+import { loadModulo, trapGuard } from "./carica-modulo.js";
 import { createTicNativo } from "./tic-nativo.js";
 
 export const MAGIC = "mzlab/nat1";
@@ -253,7 +253,8 @@ async function writerOf(/** @type {Stub} */ st, /** @type {Function} */ native_t
   if (st.centroid || !st.members.some(x => /\.wiff$/i.test(x.name)))
     return (/** @type {any[]} */ ...a) => native_to_mzml(a[0], a[1], a[2], a[3], st.centroid, a[4], a[5], a[6]);
   const w = await loadModulo("sciex").catch(e => { throw JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: "sciex", detail: String(e && e.message || e) } }); });
-  return (/** @type {any[]} */ ...a) => w.to_mzml_with(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
+  const write = trapGuard("sciex", w.to_mzml_with);     // a trapped module is not used for the next sample
+  return (/** @type {any[]} */ ...a) => write(a[0], a[1], a[2], a[3], false, a[4], a[5], a[6]);
 }
 
 const quotaErr = (/** @type {any} */ e) => /quota/i.test(typeof e === "string" ? e : String(e && (e.name || e.message)));
