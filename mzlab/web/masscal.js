@@ -62,8 +62,8 @@ export async function open(k) {
   const d = document.createElement("dialog"); d.id = "masscal"; d.className = "tdati masscal"; d.setAttribute("aria-labelledby", "masscal-h");
   d.innerHTML = h`<div class="td-hd"><h3 id="masscal-h">${T("masscal.title", { file: file.label })}</h3><button type="button" class="bt" data-mc="x" aria-label="${T("masscal.close")}" title="${T("masscal.close")}">&times;</button></div>
     <p class="sm muted">${T("masscal.intro")}</p>
-    <div class="mc-ctl"><label>${raw(T("masscal.thr", { input: `<input type="number" id="mc-thr" min="0.1" step="0.5" value="${set.thr}" aria-label="${EH(T("masscal.thr", { input: "" }))}">` }))}</label>
-      <label>${raw(T("masscal.minint", { input: `<input type="number" id="mc-int" min="0" step="1000" value="${set.minInt}" aria-label="${EH(T("masscal.minint", { input: "" }))}">` }))}</label>
+    <div class="mc-ctl"><label>${raw(T("masscal.thr", { input: `<input id="mc-thr" data-num=">0" value="${set.thr}" aria-label="${EH(T("masscal.thr", { input: "" }))}">` }))}</label>
+      <label>${raw(T("masscal.minint", { input: `<input id="mc-int" data-num="0:" value="${set.minInt}" aria-label="${EH(T("masscal.minint", { input: "" }))}">` }))}</label>
       <button type="button" class="go" data-mc="run">${T("masscal.run")}</button></div>
     <p id="mc-sum" class="mc-sum" role="status" aria-live="polite"></p><p id="mc-trend" class="sm muted"></p>
     <div id="mc-out"></div>
@@ -75,7 +75,7 @@ export async function open(k) {
   d.querySelectorAll('[data-mc="x"]').forEach(b => { /** @type {HTMLElement} */ (b).onclick = close; });
   d.addEventListener("cancel", e => { e.preventDefault(); close(); });
   /** @type {FileReport | null} */ let rep = null;
-  const thrNow = () => { const v = +/** @type {HTMLInputElement} */ ($("#mc-thr")).value; return v > 0 ? v : 3; };
+  const thrNow = () => { const v = numIt(/** @type {HTMLInputElement} */ ($("#mc-thr")).value); return v > 0 ? v : 3; };
 
   function draw() {
     const out = $("#mc-out"), sum = $("#mc-sum"), trend = $("#mc-trend"), btn = /** @type {HTMLButtonElement} */ ($('[data-mc="csv"]'));
@@ -106,7 +106,7 @@ export async function open(k) {
   }
 
   async function run() {
-    const s = { thr: thrNow(), minInt: Math.max(0, +/** @type {HTMLInputElement} */ ($("#mc-int")).value || 0) };
+    const s = { thr: thrNow(), minInt: Math.max(0, numIt(/** @type {HTMLInputElement} */ ($("#mc-int")).value) || 0) };
     keep(s);
     $("#mc-sum").textContent = T("masscal.busy"); $("#mc-out").innerHTML = ""; rep = null;
     try {
