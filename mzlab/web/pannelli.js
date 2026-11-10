@@ -355,7 +355,7 @@ function addPanel(type, o, after) {
         let cvs; p._exp = true; EXPORTING = true; paintFiles();  // light palette for the image, whatever the theme
         try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
         cvs.toBlob(async b => {
-          let out = b; try { out = await pngWithMeta(/** @type {Blob} */ (b), plotMeta(p)); } catch (e) { }
+          let out = b; try { out = await (await import("./png-meta.js")).pngWithMeta(/** @type {Blob} */ (b), plotMeta(p)); } catch (e) { }
           saveBlob(out, plotName(p) + ".png");
         });
       }},
@@ -577,20 +577,6 @@ function plotMeta(/** @type {Pannello} */ p) {
   if (window.SUBREF && SUBREF.text(p)) d.push(SUBREF.text(p));
   if (a.x0 != null) d.push(I18N.t("export.desc.axis", { a: a.x0.toFixed(p.type === "spec" ? 1 : 2), b: a.x1.toFixed(p.type === "spec" ? 1 : 2) }));
   return [["Title", ptitleP(p) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
-}
-// writes tEXt chunks (Latin-1) right after the IHDR of a PNG
-const CRCT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
-const crc32 = (/** @type {Uint8Array} */ u) => { let c = 0xffffffff; for (const b of u) c = CRCT[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-async function pngWithMeta(/** @type {Blob} */ blob, /** @type {string[][]} */ fields) {
-  const src = new Uint8Array(await blob.arrayBuffer()), l1 = (/** @type {unknown} */ t) => Uint8Array.from(String(t).replace(/[\u2013\u2014]/g, "-").replace(/[^\x20-\x7e\xa0-\xff]/g, "?"), c => c.charCodeAt(0));
-  const parts = [src.slice(0, 33)];
-  fields.forEach(([k, v]) => {
-    const kb = l1(k), vb = l1(v), body = new Uint8Array(4 + kb.length + 1 + vb.length);
-    body.set([116, 69, 88, 116], 0); body.set(kb, 4); body.set(vb, 5 + kb.length);  // "tEXt" + keyword + 0 + text
-    const ch = new Uint8Array(12 + body.length - 4), dv = new DataView(ch.buffer);
-    dv.setUint32(0, body.length - 4); ch.set(body, 4); dv.setUint32(ch.length - 4, crc32(body)); parts.push(ch);
-  });
-  parts.push(src.subarray(33)); return new Blob(parts, { type: "image/png" });
 }
 
 // ---- «Correzione»: ONE menu for chromatogram and spectrum (None · Subtract file with its chooser · Background of a stretch · Automatic baseline). Icon + one-line hints;
