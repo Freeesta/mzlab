@@ -99,7 +99,7 @@ try:
             SW = "(()=>{const r=document.querySelector('#sb-panel-losses');return [r.scrollWidth>r.clientWidth+1,document.documentElement.scrollWidth>innerWidth]})()"
             try:
                 for w, h in [(1440, 900), (400, 800)]:
-                    pg.set_viewport_size({"width": w, "height": h})
+                    pg.set_viewport_size({"width": w, "height": h}); frames(pg, 2)          # the resize handler closes the panel on a phone: let it run before looking
                     if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')")
                     # the layout settles after the resize event; wait for the state, then report who overflows
                     try: wait_for_js(pg, f"!({SW}).some(Boolean)", 5000)
@@ -108,7 +108,10 @@ try:
                     if any(sw):
                         wide = pg.evaluate("[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,6).map(e=>e.tagName+'#'+e.id+'.'+e.className+' '+Math.round(e.getBoundingClientRect().right))")
                         raise AssertionError(f"horizontal overflow {(w, sw, pg.evaluate('innerWidth'), wide)}")
-                    tgt = pg.evaluate("[...document.querySelectorAll('#nl-list .nlrow')].every(b=>{const q=b.getBoundingClientRect();return q.width>=24&&q.height>=24})"); assert tgt, w
+                    TGT = "[...document.querySelectorAll('#nl-list .nlrow')].every(b=>{const q=b.getBoundingClientRect();return q.width>=24&&q.height>=24})"
+                    try: wait_for_js(pg, TGT, 5000)
+                    except TimeoutError: pass
+                    assert pg.evaluate(TGT), w
             finally:
                 # later steps assume the desktop viewport even when this one fails
                 pg.set_viewport_size({"width": 1400, "height": 1000})
