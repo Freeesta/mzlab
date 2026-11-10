@@ -191,12 +191,12 @@ const QAQC = (() => {
     box.innerHTML = `<p class="sm qq-intro">${t(hr ? "qaqc.intro.hr" : "qaqc.intro.lr")}</p>
 <details open><summary>${t("qaqc.types")}</summary><table class="qq-tab"><tbody>${roleRows}</tbody></table></details>
 <details open><summary>${t("qaqc.ions")}</summary>
-<form id="qq-add" class="qq-form"><label>${t("qaqc.in.mz")} <input id="qq-in" autocomplete="off" required></label><label>${t("qaqc.in.rt")} <input id="qq-rt" inputmode="decimal" size="5" required></label>
+<form id="qq-add" class="qq-form"><label>${t("qaqc.in.mz")} <input id="qq-in" autocomplete="off" required></label><label>${t("qaqc.in.rt")} <input id="qq-rt" data-num="0:" inputmode="decimal" size="5" required></label>
 ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t("qaqc.kind.is")}</option><option value="known">${t("qaqc.kind.known")}</option></select></label>` : ""}
-<label>${t("qaqc.in.win")} <input id="qq-win" inputmode="decimal" size="4" value="${st.win}"></label><button type="submit" id="qq-addb">${t("qaqc.add")}</button></form>
+<label>${t("qaqc.in.win")} <input id="qq-win" data-num=">0" inputmode="decimal" size="4" value="${st.win}"></label><button type="submit" id="qq-addb">${t("qaqc.add")}</button></form>
 <div id="qq-msg" class="sm bad" role="alert"></div><div id="qq-res"></div></details>
 <details open><summary>${t("qaqc.ratio")}</summary>
-<form id="qq-rform" class="qq-form"><label>${t("qaqc.in.mz")} <input id="qq-rin" value="${eh(st.ratio.text)}" autocomplete="off" required></label><label>${t("qaqc.in.rt")} <input id="qq-rrt" value="${eh(st.ratio.rt)}" inputmode="decimal" size="5" required></label>
+<form id="qq-rform" class="qq-form"><label>${t("qaqc.in.mz")} <input id="qq-rin" value="${eh(st.ratio.text)}" autocomplete="off" required></label><label>${t("qaqc.in.rt")} <input id="qq-rrt" data-num="0:" value="${eh(st.ratio.rt)}" inputmode="decimal" size="5" required></label>
 <label>${t("qaqc.thr")} <select id="qq-thr"><option value="3"${st.thr === 3 ? " selected" : ""}>3:1</option><option value="10"${st.thr === 10 ? " selected" : ""}>10:1</option></select></label>
 <button type="submit">${t("qaqc.ratio.go")}</button>${hasTable ? `<button type="button" id="qq-feat">${t("qaqc.feat.go")}</button>` : ""}</form>
 <div class="qq-form"><button type="button" id="qq-rep-html">${t("qaqc.rep.html")}</button><button type="button" id="qq-rep-json">${t("qaqc.rep.json")}</button></div>

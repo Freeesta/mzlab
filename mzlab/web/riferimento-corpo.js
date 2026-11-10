@@ -112,10 +112,10 @@ const RIFERIMENTO_CORPO = (() => {
     const tb = TABELLA.table;
     box.innerHTML = `<p class="sm">${t("ref.intro")}</p>
 ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.err.table")}</p>`}
-<form id="ref-form" class="qq-form"><label>${t("ref.factor")} <input id="ref-f" value="${st.factor}" inputmode="decimal" size="4"></label>
+<form id="ref-form" class="qq-form"><label>${t("ref.factor")} <input id="ref-f" data-num="0:" value="${st.factor}" inputmode="decimal" size="4"></label>
 <label>${t("blank.level")} <select id="ref-s"><option value="max"${st.stat === "max" ? " selected" : ""}>${t("blank.stat.max")}</option><option value="mean"${st.stat === "mean" ? " selected" : ""}>${t("blank.stat.mean")}</option></select></label>
-<label>${t("blank.min")} <input id="ref-n" value="${st.min}" inputmode="numeric" size="3"></label>
-<label>${t("ref.pseudo.in")} <input id="ref-p" value="${eh(st.pseudo)}" inputmode="decimal" size="7" aria-describedby="ref-pnote"></label><label>${t("ref.floor")} <input id="ref-fl" value="${st.floor}" inputmode="decimal" size="6"></label>
+<label>${t("blank.min")} <input id="ref-n" data-num="1: i" value="${st.min}" inputmode="numeric" size="3"></label>
+<label>${t("ref.pseudo.in")} <input id="ref-p" data-num="0: a" value="${eh(st.pseudo)}" inputmode="decimal" size="7" aria-describedby="ref-pnote"></label><label>${t("ref.floor")} <input id="ref-fl" data-num="0:" value="${st.floor}" inputmode="decimal" size="6"></label>
 <button type="submit" id="ref-go">${t("blank.go")}</button></form><p class="sm muted" id="ref-pnote">${t("ref.pseudo.note")}</p>
 <div id="ref-msg" class="sm bad" role="alert"></div><div id="ref-res"></div>`;
     paintRes(box);
