@@ -634,7 +634,7 @@ const BARRA = (() => {
     setLevel(chosen);
     _lvl = chosen;
     let i = 0;
-    while ((phone || need() > avail()) && i < DROP_ORDER.length) {
+    while (i < DROP_ORDER.length && (need() > avail() || phone && DROP_ORDER[i] !== "search")) {      // a phone drops all but Search, which leaves only when it does not fit
       const id = DROP_ORDER[i++];
       const c = byId(id);
       if (!c || !onBar(c)) continue;
