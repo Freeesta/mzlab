@@ -1,7 +1,7 @@
 // @ts-strict
 // @ts-noany
 // @ts-check
-// Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split from explore.js: classic script, loaded right after it (shared globals).
+// Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Classic script loaded right after explore.js (shared globals).
 // ------------------------------------------------------------------ floating panels
 /** @param {number} [w] @param {number} [h] */
 function place(w, h) {
@@ -849,7 +849,7 @@ function fitHd(/** @type {Pannello} */ p) {
     const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     const list = [...cands, ...groups, ...kids], w = list.map(n => n.hidden ? 0 : n.offsetWidth), gone = /** @type {HTMLElement[]} */ ([]);
     const put = (/** @type {HTMLElement & Bag} */ n) => { p._hm.push(n); if (n.classList.contains("bnl")) return n.classList.add("hd-ov"); const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); };
-    // a node frees at most its width + a gap: while the overflow is larger it moves with no reflow (one per node was ~9 per resize step)
+    // a node frees at most its width + a gap: while the overflow is larger it moves with no reflow
     let need = hd.scrollWidth - hd.clientWidth - 1, j = 0;
     for (; j < list.length; j++) {
       const n = list[j];
@@ -899,7 +899,7 @@ const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trai
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
 const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
-const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose ions whose defect plus drift passes +0.5; this keeps them and still leaves out n-1 and n+1
+const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose some; this keeps them and leaves out n-1 and n+1
 const XIC_DRIFT = 0.25;  // mean offset (Da) of observed centroids over the calculated m/z: a CLICKED centroid back to its nominal mass (364.37 -> n = 364)
 const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
@@ -1020,7 +1020,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     if (keep) ff.forEach((/** @type {MzFile} */ f) => { if (f !== keep) traces.forEach(t => { np.hid["x|" + f.k + "|" + t.mz] = true; }); });
     if (np === panel) draw(np); else if (!(pre.after && E.panels.includes(pre.after))) reveal(np);
   };
-  if (pre.diretto) return Q("#xic-go").onclick(null);  // no dialog: the same rows, windows and panel as the dialog gives (pre.diretto: a caller that already knows the ion, e.g. the inclusion list of the method)
+  if (pre.diretto) return Q("#xic-go").onclick(null);  // no dialog, same rows and panel (pre.diretto: the caller knows the ion, e.g. the method inclusion list)
   d.showModal();
   rows[0].inp.focus();
 }
