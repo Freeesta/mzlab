@@ -1,4 +1,4 @@
-"""The readers worker (mzlab/web/lettori-worker.js, carica-modulo.js) after a wasm trap: the broken instance is dropped and the next message loads a fresh one; a plain error keeps it (tests/lettori_trap_node.mjs)."""
+"""A readers module after a wasm trap (mzlab/web/carica-modulo.js), in the readers worker (lettori-worker.js) and in the engine's sessions of a `.raw` (lettore-esterno.js): the broken instance is dropped and the next request loads a fresh one; a plain error keeps it (tests/lettori_trap_node.mjs)."""
 import re
 import shutil
 import subprocess
@@ -12,7 +12,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 
 def test_a_trapped_readers_module_is_loaded_afresh(tmp_path):
-    todo, seen = ["lettori-worker.js"], set()
+    todo, seen = ["lettori-worker.js", "lettore-esterno.js"], set()
     while todo:
         n = todo.pop()
         if n in seen:

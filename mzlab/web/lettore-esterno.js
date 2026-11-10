@@ -4,7 +4,7 @@
 // The index crosses as one Uint8Array and a scan as its head and views of its columns, read by the engine (`transport.rs`); the engine refuses a module whose `protocollo()` is not its own (err.file.wiffLoad).
 // `native_external(open)` of the engine takes `open(names, sizes, read)` -> the object of a session of the module, or null for a dataset no module reads. The module is loaded BEFORE the engine asks
 // (`prepara`, async): the engine cannot wait for a download.
-import { loadModulo } from "./carica-modulo.js";
+import { loadModulo, trapGuard } from "./carica-modulo.js";
 
 /** the family whose module reads a dataset, by the name of its members (the same rule as `LETTORI_FAM` in lettori-famiglie.js, for the families the engine reads through a module); "" when none does */
 export function famigliaEsterna(/** @type {string[]} */ names) {
@@ -16,6 +16,9 @@ export function famigliaEsterna(/** @type {string[]} */ names) {
 function loadError(/** @type {string} */ fam, /** @type {any} */ e) {
   return JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: fam, detail: String(e && e.message || e) } });
 }
+
+/** the methods of a session, each through `g` */
+const wrap = (/** @type {(f: Function) => Function} */ g, /** @type {Record<string, Function>} */ o) => Object.fromEntries(Object.entries(o).map(([k, f]) => [k, g(f)]));
 
 /** @param {Function} native_external the one of the .wasm of this worker */
 export function createEsterno(native_external) {
@@ -31,8 +34,10 @@ export function createEsterno(native_external) {
     if (!w) throw loadError(fam, "module not loaded");
     const sums = Array.from(names, (n, i) => (sha1 && sha1[i]) || known.get(n + "\0" + sizes[i]) || "");
     // the module reads the members with the engine's own `read`; the SHA-1 of a member the page knows is not read again
-    const h = w.open_with_sha1 && sums.some(Boolean) ? w.open_with_sha1(names, sizes, read, sums) : w.open(names, sizes, read);
-    return {
+    // a call that traps forgets the module here and in carica-modulo.js: the next `prepara` loads a fresh instance
+    const g = (/** @type {Function} */ f) => trapGuard(fam, f, () => loaded.delete(fam));
+    const h = g(() => w.open_with_sha1 && sums.some(Boolean) ? w.open_with_sha1(names, sizes, read, sums) : w.open(names, sizes, read))();
+    return wrap(g, {
       // the version of the binary transport of the index and the scans (a module of an older build has none)
       protocol: () => (w.protocol ? w.protocol() : 1),
       samples: () => w.samples(h),
@@ -49,7 +54,7 @@ export function createEsterno(native_external) {
       // the spectra a truncated file declares but does not hold (a module of an older build has none)
       missing: (/** @type {number} */ c) => (w.missing ? w.missing(h, c) : 0),
       close: () => w.close(h),
-    };
+    });
   };
   return {
     /** loads the module of the family that reads the dataset with these members (nothing for the others) and registers `open` on the engine; rejects with the JSON `err.file.moduleLoad` */

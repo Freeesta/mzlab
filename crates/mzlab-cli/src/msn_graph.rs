@@ -146,13 +146,13 @@ fn number(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
         .ok_or(format!("{k} needs a number"))
 }
 
-/// The arguments after `msn-graph`; `Ok(None)` = `--help`.
-/// The view named after `--view`.
+/// The text of the file named after `--molfile`.
 fn molfile(p: Option<String>) -> std::result::Result<String, String> {
     let p = p.ok_or("--molfile needs a file")?;
     std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))
 }
 
+/// The view named after `--view`.
 fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigure::View, String> {
     mzlab_feat::msnfigure::View::da_nome(&n.unwrap_or_default())
         .ok_or_else(|| "--view needs tree or radial".into())
@@ -162,6 +162,7 @@ fn view_of(n: Option<String>) -> std::result::Result<mzlab_feat::msnfigure::View
 const FIGURE_USAGE: &str =
     "--figure needs --out and the graph itself (not --summary, --export or --structures)";
 
+/// The arguments after `msn-graph`; `Ok(None)` = `--help`.
 pub fn parse_args(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<Option<Args>, String> {

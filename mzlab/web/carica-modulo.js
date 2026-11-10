@@ -32,3 +32,7 @@ export function forgetIfTrapped(/** @type {string} */ fam, /** @type {any} */ e)
   mods.delete(fam); gens.set(fam, (gens.get(fam) || 0) + 1);
   return true;
 }
+/** `f` (a call into the module of `fam`) that forgets the family when it traps, so the next `loadModulo` gives a fresh instance (`onTrap` drops the caller's own copy); the error goes on as it was */
+export function trapGuard(/** @type {string} */ fam, /** @type {Function} */ f, onTrap = () => {}) {
+  return (/** @type {any[]} */ ...a) => { try { return f(...a); } catch (e) { if (forgetIfTrapped(fam, e)) onTrap(); throw e; } };
+}
