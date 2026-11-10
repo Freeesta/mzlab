@@ -396,7 +396,7 @@ async function drawSpec(p, snapped) {
   const lineOf = (/** @type {Bag} */ x) => x.d.pmz && !p.sticks;                  // a profile file is drawn as a line (the peaks are drawn as bars only if the student asks)
   const inRange = (/** @type {number} */ lo, /** @type {number} */ hi) => {
     let top = 1e-9;
-    for (const x of data) { const [mz, y] = lineOf(x) ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y], [i0, i1] = spanOf(mz, lo, hi); for (let i = i0; i < i1 && i < y.length; i++) { const v = y[i]; if (mz[i] >= lo && mz[i] <= hi && v > top) top = v; } }
+    for (const x of data) { const [mz, y] = lineOf(x) ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y]; top = Math.max(top, winTop(mz, y, lo, hi)); }
     return top;
   };
   // the m/z axis is always the widest range of all the scans of the file(s) (level / precursor of the panel): it only changes with a zoom, another file or another precursor
@@ -441,7 +441,7 @@ async function drawSpec(p, snapped) {
     g.strokeStyle = color; g.lineWidth = 1.4 + LWX();
     if (x.multi) g.globalAlpha = 0.55; else g.globalAlpha = 1.0;
     g.beginPath();
-    const [vis0, vis1] = spanOf(x.d.mz, x0, x1);           // the bars, the cut-bar triangles and the labels visit only the peaks inside the window
+    const [vis0, vis1] = spanOf(x.d.mz, x0, x1); let /** @type {number[] | null} */ tall = null;          // the bars, the cut-bar triangles and the labels visit only the peaks inside the window (`tall`: the bars drawn, when there are too many)
     if (p.dots && !x.d.diff) {                                           // «only points»: every point is a dot, nothing joins them (isolated peaks stay isolated)
       const [mz, y] = x.d.pmz ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y], r = 2.5 + LWX(); g.fillStyle = color;
       const [a0, a1] = spanOf(mz, x0, x1);
@@ -461,16 +461,18 @@ async function drawSpec(p, snapped) {
     } else if (x.d.diff) {                                             // difference: orange up (higher in the sample), blue down (higher in the reference)
       [[1, ecss("--diff-pos")], [-1, ecss("--diff-neg")]].forEach(([sg, col]) => { g.strokeStyle = col; g.beginPath(); for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1 || x.d.y[j] * sg <= 0) continue; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); } g.stroke(); });
       g.strokeStyle = ecss("--muted"); g.lineWidth = 1; g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke();      // the zero line
-    } else { const hid = cont ? hidOf(x) : null, /** @type {number[]} */ dim = []; for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1) continue; if (hid && hid(j)) { dim.push(j); continue; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); } g.stroke();
+    } else { const hid = cont ? hidOf(x) : null; let /** @type {number[]} */ dim = [];     // many more bars than pixels (a whole HR run summed: ~730 000): only the tallest of each pixel column, as rectangles (= a butt-capped line; one line per peak: 1.3 s a drawing at 4x CPU, one path of 1000: ~40 ms of raster)
+      if (vis1 - vis0 > 4 * (W - M.l - M.r)) { const tc = tallCols(x.d, vis0, vis1, X, x0, x1, `${x0},${x1},${W},${M.l},${M.r}`, hid); tall = x.tall = tc.idx; dim = tc.dim; g.fillStyle = color; const lw = g.lineWidth, y0 = Y(0); for (const j of tc.idx) { const y1 = Y(x.d.y[j]); g.fillRect(X(x.d.mz[j]) - lw / 2, Math.min(y0, y1), lw, Math.abs(y0 - y1)); } } else for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1) continue; if (hid && hid(j)) { dim.push(j); continue; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); } g.stroke();
       if (dim.length) { g.save(); g.strokeStyle = ecss("--line"); g.globalAlpha = 1; g.beginPath(); dim.forEach(j => { g.moveTo(X(x.d.mz[j]), Y(0)); g.lineTo(X(x.d.mz[j]), Y(x.d.y[j])); }); g.stroke(); g.restore(); } }
     g.fillStyle = color;                                          // a small triangle on every cut bar
-    for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= ymax) continue; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); }
+    const cut = (/** @type {number} */ j) => { const m = x.d.mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= ymax) return; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); }; if (tall) tall.forEach(cut); else for (let j = vis0; j < vis1; j++) cut(j);
   });
   g.restore();
   const d0 = data[0].d, /** @type {[number, number][]} */ pk = [];
-  const top0 = maxAbs(d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
+  const top0 = topAbs(d0.y), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
   const hid0 = cont ? hidOf(data[0]) : null;
-  { const [a0, a1] = spanOf(d0.mz, x0, x1); for (let j = a0; j < a1; j++) { const m = d0.mz[j]; if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); } }
+  { const lab = (/** @type {number} */ j) => { const m = d0.mz[j]; if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); };
+    if (data[0].tall && !p.zoomY && !lk) data[0].tall.forEach(lab); else { const [a0, a1] = spanOf(d0.mz, x0, x1); for (let j = a0; j < a1; j++) lab(j); } }      // too many peaks: the tallest of each column hold every label (a shorter one shares its pixel)
   pk.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   /** @type {{ x: number, w: number }[]} */ const used = [];
   g.fillStyle = ecss("--ink"); g.textAlign = "center"; g.font = fpx(12);
