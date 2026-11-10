@@ -76,11 +76,11 @@ const LISTE_TARGET = (function() {
 
           <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px">
             <span>Tol &plusmn; ppm</span>
-            <input type="number" id="ts-tol-ppm" value="5" step="0.5" min="0.1" style="width:50px;font-size:12px">
+            <input id="ts-tol-ppm" data-num="0.1:" value="5" step="0.5" min="0.1" style="width:50px;font-size:12px">
           </label>
           <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px">
             <span>Min S/N</span>
-            <input type="number" id="ts-min-sn" value="3" step="0.5" min="1" style="width:45px;font-size:12px">
+            <input id="ts-min-sn" data-num="1:" value="3" step="0.5" min="1" style="width:45px;font-size:12px">
           </label>
 
           <span style="font-size:12px;display:inline-flex;gap:6px;align-items:center">
@@ -304,8 +304,8 @@ const LISTE_TARGET = (function() {
       elStatus.style.display = "block"; elStatus.textContent = "Loading substance list and spectra...";
       const mode = elListSel?.value;
       const opts = {
-        tolerance_ppm: parseFloat(container.querySelector("#ts-tol-ppm")?.value) || 5.0,
-        min_sn: parseFloat(container.querySelector("#ts-min-sn")?.value) || 3.0,
+        tolerance_ppm: numIt(container.querySelector("#ts-tol-ppm")?.value) || 5.0,
+        min_sn: numIt(container.querySelector("#ts-min-sn")?.value) || 3.0,
         min_area: 1000.0,
         adducts: getSelectedAdducts(container)
       };

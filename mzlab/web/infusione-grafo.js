@@ -68,7 +68,7 @@ function zoomBar(/** @type {HTMLElement} */ bar, /** @type {HTMLElement} */ wrap
 function viewBar(/** @type {HTMLElement} */ bar, /** @type {() => void} */ redraw) {
   const T = (/** @type {string} */ k) => I18N.t(/** @type {any} */ (k));
   bar.innerHTML = h`<span class="ig-mode" role="group" aria-label="${T("msngrafo.v.view.aria")}"><button type="button" class="bt" id="ig-vt" title="${T("msngrafo.v.view.tree.tip")}">${T("msngrafo.v.view.tree")}</button><button type="button" class="bt" id="ig-vr" title="${T("msngrafo.v.view.radial.tip")}">${T("msngrafo.v.view.radial")}</button></span>` +
-    h`<label class="ig-num" title="${T("msngrafo.v.minrel.tip")}">${T("msngrafo.v.minrel")} <input type="number" id="ig-minrel" min="0" max="100" step="1" value="${G.minRel}"></label>` +
+    h`<label class="ig-num" title="${T("msngrafo.v.minrel.tip")}">${T("msngrafo.v.minrel")} <input id="ig-minrel" data-num="0:100" size="5" value="${G.minRel}"></label>` +
     h`<label class="ig-flt" title="${T("msngrafo.v.level.tip")}">${T("msngrafo.v.level")} <select id="ig-lvl"></select></label>` +
     h`<label class="ig-flt" title="${T("msngrafo.v.best.tip")}"><input type="checkbox" id="ig-best"> ${T("msngrafo.v.best")}</label>` +
     h`<button type="button" class="bt" id="ig-collapse" title="${T("msngrafo.v.close.tip")}">${T("msngrafo.v.close")}</button>` +
@@ -76,7 +76,7 @@ function viewBar(/** @type {HTMLElement} */ bar, /** @type {() => void} */ redra
   const q = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (bar.querySelector("#" + id));
   q("ig-vt").addEventListener("click", () => { G.view = "tree"; redraw(); });
   q("ig-vr").addEventListener("click", () => { G.view = "radial"; redraw(); });
-  q("ig-minrel").addEventListener("change", e => { const v = parseFloat(/** @type {HTMLInputElement} */ (e.target).value); G.minRel = Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 0; redraw(); });
+  q("ig-minrel").addEventListener("change", e => { const v = numIt(/** @type {HTMLInputElement} */ (e.target).value); G.minRel = Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 0; redraw(); });
   q("ig-lvl").addEventListener("change", e => { G.maxLevel = +(/** @type {HTMLSelectElement} */ (e.target).value); redraw(); });
   q("ig-best").addEventListener("change", e => { G.bestOnly = /** @type {HTMLInputElement} */ (e.target).checked; redraw(); });
   q("ig-structs").addEventListener("change", e => { G.structs = /** @type {HTMLInputElement} */ (e.target).checked; redraw(); });
@@ -128,7 +128,7 @@ function summary() {
 }
 
 function settings(/** @type {any} */ file) {
-  const { o } = G, num = (/** @type {string} */ id, /** @type {string} */ k, /** @type {number} */ v, /** @type {string} */ tip) => h`<label title="${I18N.t(tip)}">${I18N.t(k)} <input type="number" id="ig-${id}" value="${v}" step="any" min="0"></label>`;
+  const { o } = G, num = (/** @type {string} */ id, /** @type {string} */ k, /** @type {number} */ v, /** @type {string} */ tip) => h`<label title="${I18N.t(tip)}">${I18N.t(k)} <input id="ig-${id}" data-num="${id === "pm" ? "0: i" : id === "mzl" ? "0:" : ">0"}" value="${v}"></label>`;
   return h`<details class="ig-set"><summary>${I18N.t("msngrafo.settings")}</summary><div class="row">` +
     num("ppmf", "msngrafo.ppm", o.ppm_formula, "msngrafo.ppm.tip") + num("mzl", "msngrafo.mzlow", o.mz_basso, "msngrafo.mzlow.tip") + num("ppml", "msngrafo.ppmlow", o.ppm_basso, "msngrafo.ppmlow.tip") + num("pm", "msngrafo.proofs", o.prove_min, "msngrafo.proofs.tip") +
     h`<label>${I18N.t("msngrafo.activation")} <select id="ig-act">${["", "cid", "hcd"].map(a => raw(h`<option value="${a}"${raw(a === o.attivazione ? " selected" : "")}>${a ? a.toUpperCase() : I18N.t("msngrafo.act.all")}</option>`))}</select></label>` +
@@ -137,7 +137,7 @@ function settings(/** @type {any} */ file) {
 
 function wireSettings(/** @type {HTMLElement} */ b, /** @type {() => void} */ go) {
   const nums = /** @type {const} */ ([["ppmf", "ppm_formula"], ["mzl", "mz_basso"], ["ppml", "ppm_basso"], ["pm", "prove_min"]]);
-  nums.forEach(([id, key]) => { const e = /** @type {HTMLInputElement | null} */ (b.querySelector("#ig-" + id)); if (e) e.onchange = () => { const v = parseFloat(e.value); if (Number.isFinite(v) && v >= 0) { G.o[key] = v; go(); } }; });
+  nums.forEach(([id, key]) => { const e = /** @type {HTMLInputElement | null} */ (b.querySelector("#ig-" + id)); if (e) e.onchange = () => { const v = numIt(e.value); if (Number.isFinite(v) && v >= 0) { G.o[key] = v; go(); } }; });
   const act = /** @type {HTMLSelectElement | null} */ (b.querySelector("#ig-act")), iso = /** @type {HTMLInputElement | null} */ (b.querySelector("#ig-iso"));
   if (act) act.onchange = () => { G.o.attivazione = act.value; go(); };
   if (iso) iso.onchange = () => { G.o.isotopi = iso.checked; go(); };
