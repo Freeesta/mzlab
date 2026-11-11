@@ -42,12 +42,18 @@ CASES = {
     "typed": ({"type": "chrom", "kind": "tic", "title": "My trace"}, {}),
     "sim_no_q1": ({"type": "mrm", "tab": "mrm", "tr": ["i0"], "title": "@sim"}, {}),
     "sim_q1": ({"type": "mrm", "tab": "mrm", "tr": ["305.1"], "title": "@sim"}, {}),
+    "ms3_single_chrom": ({"type": "chrom", "tab": "ms2", "kind": "tic", "prec": 194.1, "title": "@ms2tic"}, {"nPrec": 1, "lv": 3}),
+    "ms3_several_all": ({"type": "chrom", "tab": "ms2", "kind": "tic", "prec": None, "title": "@ms2tic"}, {"nPrec": 2, "lv": 3}),
+    "ms3_several_one": ({"type": "chrom", "tab": "ms2", "kind": "tic", "prec": 194.1, "title": "@ms2prec:194.1"}, {"nPrec": 2, "lv": 3}),
+    "ms3_spec": ({"type": "spec", "tab": "ms2", "level": 3, "prec": 194.1, "title": "@product:194.1"}, {}),
 }
 EXPECT = {
     "en": ["TIC · MS²", "TIC · MS² (all precursors)", "TIC · MS² · precursor 414.1", "MS² of 414.1", "TIC", "MS¹", "MRM", "MRM · 414.1>195.0",
-           "PDA (all λ)", "PDA 254 nm", "PDA 250–260 nm", "UV spectrum", "My trace", "SIM · ion 1", "SIM · 305.1"],
+           "PDA (all λ)", "PDA 254 nm", "PDA 250–260 nm", "UV spectrum", "My trace", "SIM · ion 1", "SIM · 305.1",
+           "TIC · MS³", "TIC · MS³ (all precursors)", "TIC · MS³ · precursor 194.1", "MS³ of 194.1"],
     "it": ["TIC · MS²", "TIC · MS² (tutti i precursori)", "TIC · MS² · precursore 414.1", "MS² di 414.1", "TIC", "MS¹", "MRM", "MRM · 414.1>195.0",
-           "PDA (tutte le λ)", "PDA 254 nm", "PDA 250–260 nm", "Spettro UV", "My trace", "SIM · ione 1", "SIM · 305.1"],
+           "PDA (tutte le λ)", "PDA 254 nm", "PDA 250–260 nm", "Spettro UV", "My trace", "SIM · ione 1", "SIM · 305.1",
+           "TIC · MS³", "TIC · MS³ (tutti i precursori)", "TIC · MS³ · precursore 194.1", "MS³ di 194.1"],
 }
 
 

@@ -481,10 +481,11 @@ pub fn item_info<R: ReadAt>(
     part: Option<&Part>,
 ) -> Result<String> {
     let has1 = idx.scans.iter().any(|s| matches(s, part) && s.level == 1);
-    let has2 = idx.scans.iter().any(|s| matches(s, part) && s.level >= 2);
+    // the MSn level the page shows: MS2 when the file has it, else the first deeper level (an MS3-only file has no MS2 scans)
+    let msn_level = idx.scans.iter().filter(|s| matches(s, part) && s.level >= 2).map(|s| s.level).min();
     let pol = part.and_then(|p| p.pol).filter(|p| *p == 1 || *p == -1);
     let mut ranges = [None, None];
-    for (i, (level, present)) in [(1u8, has1), (2u8, has2)].into_iter().enumerate() {
+    for (i, (level, present)) in [(1u8, has1), (msn_level.unwrap_or(2), msn_level.is_some())].into_iter().enumerate() {
         if present
             && let Some(si) = idx.section_of(level, pol) {
                 ranges[i] = idx.mz_range(si)?;
@@ -627,6 +628,8 @@ pub fn item_info<R: ReadAt>(
         .int(facts.n_chromatograms)
         .raw(",\"kind\":")
         .str(kind)
+        .raw(",\"msn_level\":")
+        .raw(&msn_level.map_or("null".into(), |l| l.to_string()))
         .raw(",\"srm\":")
         .int(facts.srm as i64)
         .raw(",\"pda\":")

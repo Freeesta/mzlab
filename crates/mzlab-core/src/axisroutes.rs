@@ -26,9 +26,10 @@ impl<R: ReadAt> Routes<R> {
         Ok(Some(o.0))
     }
 
-    /// The transitions of the MS2 scans: `[{"q1":..,"q3":..,"y":..}]` (the caller wraps them per file, as for `mrm`).
-    pub fn ms2_transitions(&mut self) -> Result<String> {
-        let Some(si) = self.idx.section_of(2, self.pol) else {
+    /// The transitions of the MSn scans of `level` (2 for MS2, 3 for an MS3-only file): `[{"q1":..,"q3":..,"y":..}]`, `q1` the last precursor
+    /// (the caller wraps them per file, as for `mrm`).
+    pub fn ms2_transitions(&mut self, level: u8) -> Result<String> {
+        let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok("[]".into());
         };
         let ids = self.idx.arrays(si)?.scan_ids.clone();

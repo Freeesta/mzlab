@@ -278,7 +278,7 @@ function stackAfter(p, anchor) {
 function freezeSpec(s) {
   if (!s.link) return;
   s.src = s.src || s.link; s.link = null;
-  if (/^@(spec|product)/.test(s.title) && s.r0 != null) s.title = s.level === 2 ? ptProduct(s.prec) : PT.spec;   // the time is written once, next to the title (.rtl)
+  if (/^@(spec|product)/.test(s.title) && s.r0 != null) s.title = s.level > 1 ? ptProduct(s.prec) : PT.spec;   // the time is written once, next to the title (.rtl)
   ctl(s); rtLabel(s);   // the retention time next to the title: freezing redraws nothing (drawSized), so afterDraw would not write it
 }
 function liveSpec(s, from) {
@@ -324,10 +324,10 @@ async function extractMs2(p, e) {
   setTab("ms2");
   await ms2Goto(e.prec);
   const c = ms2PairOf(e.prec); if (!c) return;
-  let sp = E.panels.find(q => q.type === "spec" && q.link === c.id && q.el); if (!sp) { sp = newSpec(c, null, null, e.k ?? tabFiles("ms2")[0].k); sp.level = 2; }      // the chromatogram alone (no spectrum yet): the spectrum is created
+  let sp = E.panels.find(q => q.type === "spec" && q.link === c.id && q.el); if (!sp) { sp = newSpec(c, null, null, e.k ?? tabFiles("ms2")[0].k); sp.level = lvN(sp.k); }      // the chromatogram alone (no spectrum yet): the spectrum is created
   const rt = p.r0 != null && p.r1 != null ? (p.r0 + p.r1) / 2 : null; if (rt == null) return;
   const sn = c._a && c._a.sr ? ms2Near(c, rt, 0) : null; if (!sn) return;
-  c.cur = sn.rt; Object.assign(sp, { k: sn.k, level: 2, r0: sn.rt - sn.g / 2, r1: sn.rt + sn.g / 2, zoom: null });
+  c.cur = sn.rt; Object.assign(sp, { k: sn.k, level: lvN(sn.k), r0: sn.rt - sn.g / 2, r1: sn.rt + sn.g / 2, zoom: null });
   ctl(sp); draw(c); draw(sp); uiSave();
 }
 // the right-click menu opened from the keyboard: at the cursor of a chromatogram, at the tallest peak in view of a spectrum, otherwise in the middle of the graph

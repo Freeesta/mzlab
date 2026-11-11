@@ -1,5 +1,5 @@
 """The structure bridge of mzFinder in WebAssembly (crates/mzlab-feat-grafo-wasm) answers a SMILES with the formula, the groups and the cleavage products that
-the Rust library gives natively (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
+the Rust library gives natively, the piece labels and the bond cuts of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import json
 import shutil
@@ -74,3 +74,42 @@ def test_labels_through_wasm_equal_the_cli_byte_for_byte(pkg, tmp_path):
     assert site == app
     r = json.loads(site)
     assert [s.get("text") for s in r["structures"]] == ["[13C]H4", "CH4O", "H4Cl2N2Pt", "[C2H2O4]2-", None] and r["arrows"][1] is None
+
+
+# 4'-fluoroacetanilide, CC(=O)Nc1ccc(F)cc1, Kekulé ring; atom 3 is the amide N, atom 4 the aryl carbon
+ANILIDE = ("\n  qqq\n\n 11 11  0  0  0  0  0  0  0  0999 V2000\n"
+           + "".join(f"{x:10.4f}{y:10.4f}{0:10.4f} {el:<3} 0  0  0  0  0  0  0  0  0  0  0  0\n" for x, y, el in (
+               (0, 0, "C"), (0.87, 0.5, "C"), (0.87, 1.5, "O"), (1.73, 0, "N"), (2.6, 0.5, "C"), (3.46, 0, "C"), (4.33, 0.5, "C"), (4.33, 1.5, "C"),
+               (5.2, 2, "F"), (3.46, 2, "C"), (2.6, 1.5, "C")))
+           + "".join("%3d%3d%3d  0  0  0  0\n" % b for b in ((1, 2, 1), (2, 3, 2), (2, 4, 1), (4, 5, 1), (5, 6, 2), (6, 7, 1), (7, 8, 2), (8, 9, 1), (8, 10, 1), (10, 11, 2), (11, 5, 1)))
+           + "M  END")
+
+
+@pytest.mark.parametrize("sets", [[], ["mode=heterolytic", "cation=4"], ["mode=hydrogen", "gap=0.5"]])
+def test_cut_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, sets):
+    mf = tmp_path / "a.mol"
+    mf.write_text(ANILIDE, encoding="utf-8")
+    req = {"molfile": ANILIDE, "bonds": [[3, 4]]}
+    for kv in sets:
+        k, v = kv.split("=")
+        req[k] = [int(v)] if k == "cation" else float(v) if k == "gap" else v
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps(req), "cut")
+    app = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-cut", str(mf), "--set", "bonds=3-4", *[a for kv in sets for a in ("--set", kv)])
+    assert site == app
+    labels = {tuple(p["atoms"]): p["label"] for p in json.loads(site)["pieces"]}
+    aryl, amide = labels[(4, 5, 6, 7, 8, 9, 10)], labels[(0, 1, 2, 3)]
+    if not sets:
+        assert (aryl["formula"], round(aryl["mass"], 4), aryl["kind"]) == ("C6H4F", 95.0297, "radical")
+        assert (amide["formula"], round(amide["mass"], 4), amide["odd"]) == ("C2H4NO", 58.0293, True)
+    elif sets[0] == "mode=heterolytic":
+        assert (aryl["kind"], round(aryl["mz"], 4), amide["kind"]) == ("cation", 95.0292, "anion")
+
+
+def test_labels_with_a_radical_mark_equal_the_cli(pkg, tmp_path):
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps({"structures": [[{"el": "C", "h": 3, "r": 2}], [{"el": "N", "h": 3, "q": 1, "r": 2}]], "arrows": []}), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "labels")
+    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-label", str(req))
+    methyl, aminium = json.loads(site)["structures"]
+    assert (methyl["unpaired"], methyl["odd"], methyl["kind"]) == (1, True, "radical")
+    assert (aminium["kind"], aminium["electrons"]) == ("radicalCation", 9) and aminium["odd"]
