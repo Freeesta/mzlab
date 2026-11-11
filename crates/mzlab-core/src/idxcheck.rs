@@ -56,36 +56,34 @@ pub(crate) fn scan_ids(ids: &[i64], rows: usize) -> Result<()> {
     Ok(())
 }
 
-/// The `crc32` object of a section: `None` when absent (an index written before the sums), `error.badIndex` when present but malformed.
-pub(crate) fn crcs(s: &Value) -> Result<Option<[u32; 10]>> {
-    let Some(c) = s.get("crc32") else {
-        return Ok(None);
-    };
-    let mut o = [0u32; 10];
-    for (i, name) in NAMES.iter().enumerate() {
-        let v = c
-            .get(name)
-            .and_then(Value::f64)
-            .filter(|v| v.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(v));
-        o[i] = v.ok_or_else(|| Error::new("error.badIndex"))? as u32;
+/// The sum recorded for an array of a section that has no `crc32` (an index written before the sums).
+pub(crate) const ABSENT: u64 = u64::MAX;
+
+/// Appends the 10 sums of the `crc32` object of section `s` to `out` (`ABSENT` for each when the section has none); `error.badIndex` when the
+/// object is present but malformed. Flat `u64`s, not an `Option` per section: the feature modules already carry the code of a `Vec<u64>`.
+pub(crate) fn crcs(s: &Value, out: &mut Vec<u64>) -> Result<()> {
+    let c = s.get("crc32");
+    for name in NAMES {
+        out.push(match c {
+            None => ABSENT,
+            Some(c) => c
+                .get(name)
+                .and_then(Value::f64)
+                .filter(|v| v.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(v))
+                .ok_or_else(|| Error::new("error.badIndex"))? as u64,
+        });
     }
-    Ok(Some(o))
+    Ok(())
 }
 
 /// Errors with `error.badIndex` when array `k` of section `si`, read whole as `bytes`, does not match the sum the section records (`crcs` of `Index`).
-pub(crate) fn sum(crcs: &[Option<[u32; 10]>], si: usize, k: usize, bytes: &[u8]) -> Result<()> {
-    let Some(want) = crcs
-        .get(si)
-        .copied()
-        .flatten()
-        .and_then(|c| c.get(k).copied())
-    else {
-        return Ok(());
-    };
-    if crc32(bytes) != want {
-        return Err(Error::new("error.badIndex"));
+pub(crate) fn sum(crcs: &[u64], si: usize, k: usize, bytes: &[u8]) -> Result<()> {
+    match crcs.get(si * 10 + k) {
+        Some(&want) if want != ABSENT && u64::from(crc32(bytes)) != want => {
+            Err(Error::new("error.badIndex"))
+        }
+        _ => Ok(()),
     }
-    Ok(())
 }
 
 /// IEEE CRC-32, bit by bit: no table and no flate2, so the feature modules that link this reader keep their size caps and their memory layout
