@@ -24,9 +24,10 @@ pub struct Cols {
 /// Most transitions one experiment may have (a count read from the file).
 const WIDTH_MAX: usize = 100_000;
 
-/// The MRM block of `bytes` bytes starting at `at`. A dense block is one f32 (cps) per transition. A scheduled (sMRM) block starts with `-(N + 0.01)`, N being the
-/// transitions of the experiment, and goes on with the cps of the transitions that were acquired and `-(k + 0.01)` for k transitions that were not, in order. A block that is neither
-/// (a negative or non-finite count, a sparse block that does not add up to N) is an error.
+/// The MRM block of `bytes` bytes starting at `at`. A dense block is one f32 (cps) per transition. A sparse block starts with `-(N + 0.01)`, N being the
+/// transitions of the experiment, and goes on with the cps of consecutive transitions and `-(k + 0.01)` for a run of k transitions that measured zero, in
+/// order: every transition gets its point, zeros included, as the vendor library gives them. A block that is neither (a negative or non-finite count, a
+/// sparse block that does not add up to N) is an error.
 pub fn read_mrm_cols<R: ReadAt>(
     scan: &mut R,
     scan_len: u64,
@@ -44,7 +45,12 @@ pub fn read_mrm_cols<R: ReadAt>(
         let (mut pos, mut points) = (0usize, Vec::new());
         for &x in v.iter().skip(1) {
             if x < 0.0 {
-                pos = pos.saturating_add(count((-x).floor()));
+                let run = count((-x).floor());
+                if pos.saturating_add(run) > count(width) {
+                    return Err(bad("sparse MRM block"));
+                }
+                points.extend((pos..pos + run).map(|j| (j, 0.0)));
+                pos += run;
             } else if x.is_finite() {
                 points.push((pos, x));
                 pos = pos.saturating_add(1);

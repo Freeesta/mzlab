@@ -5,6 +5,7 @@
 pub mod reader;
 
 mod chroms;
+mod counts;
 mod cuts;
 mod dat;
 mod doc;

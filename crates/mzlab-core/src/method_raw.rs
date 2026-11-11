@@ -132,7 +132,7 @@ fn sampler(pairs: &[script::Pair]) -> Option<V> {
     obj(vec![("parametri", Some(V::Arr(params)))])
 }
 
-/// The texts of the method as they are (`grezzo`), cut to `GRAW_MAX` in all, in all.
+/// The texts of the method as they are (`grezzo`), cut to `GRAW_MAX` in all, without the characters outside the XML `Char` production.
 fn raw_texts(blocks: &[String]) -> Vec<V> {
     let mut left = GRAW_MAX;
     let mut out = Vec::new();
@@ -144,6 +144,12 @@ fn raw_texts(blocks: &[String]) -> Vec<V> {
         }
         let part = t.get(..end).unwrap_or("");
         left = left.saturating_sub(part.len());
+        // a block decoded from binary holds characters (U+FFFF, controls) no XML or JSON reader of the method accepts as text
+        let part: String = part
+            .chars()
+            .filter(|&c| crate::mzmlwrite::xml_char(c))
+            .collect();
+        let part = part.as_str();
         let name = match script::classify(b) {
             Block::Script => "Method LC",
             Block::Xml => "Method XML",

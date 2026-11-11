@@ -1,6 +1,6 @@
-"""Flow «This browser» runs chrom.transitions@1 (flow/lazy/flow-web-transitions.js, `flow_transitions` of the `flowtab` .wasm): the two samples of the synthetic SIM .wiff
+"""Flow «This browser» runs chrom.transitions@2 (flow/lazy/flow-web-transitions.js, `flow_transitions` of the `flowtab` .wasm): the two samples of the synthetic SIM .wiff
 (tools/wiff_sim.py) converted to mzML by `mzlab-cli convert`, a transition table with two isomers on one ion, a negative ion and a row without RT; the CSV the browser keeps is
-the one of `mzlab-cli flow run` byte for byte for the three outputs and for the areas from zero (`baseline` = zero), the job runs `via: "browser"`, past the memory budget the read is refused or asked for (`error.memoryBudget`, phase read) and no request is left unserved (`MZLAB_LR_MISS`). Builds the site and the
+the one of `mzlab-cli flow run` byte for byte for the three outputs (areas from zero, the default) and for the areas from the edge line (`baseline` = edges), the job runs `via: "browser"`, past the memory budget the read is refused or asked for (`error.memoryBudget`, phase read) and no request is left unserved (`MZLAB_LR_MISS`). Builds the site and the
 .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_transitions.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -35,13 +35,13 @@ CLI = ["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--"]
 subprocess.run(CLI + ["convert", str(tmp / "w" / "sim.wiff"), "--out", str(run)], cwd=ROOT, check=True, capture_output=True)
 assert all((run / n).exists() for n in NAMES), sorted(p.name for p in run.iterdir())
 
-ZERO = "peaks_zero"   # the peaks output with the areas from zero
+ZERO = "peaks_edges"   # the peaks output with the areas from the line between the edges (the default is zero)
 # the outputs the memory steps run once each (a refused job is not tried again under the same plan): the table and the candidates with the areas from zero
-VARIANTS = {ZERO: {"output": "peaks", "baseline": "zero"}, "table_zero": {"output": "table", "baseline": "zero"}, "candidates_zero": {"output": "candidates", "baseline": "zero"}}
+VARIANTS = {ZERO: {"output": "peaks", "baseline": "edges"}, "table_zero": {"output": "table", "baseline": "zero"}, "candidates_zero": {"output": "candidates", "baseline": "zero"}}
 def plan(output, names=NAMES):
     extra = VARIANTS.get(output, {"output": output})
     return {"format": "mzflow/2", "inputs": [{"name": n, "sha256": "", "type": "mzml"} for n in names],
-            "steps": [{"id": "tr", "step": "chrom.transitions@1", "in": {"source": ["file:" + n for n in names]}, "params": {**extra, "transitions": TABLE}}]}
+            "steps": [{"id": "tr", "step": "chrom.transitions@2", "in": {"source": ["file:" + n for n in names]}, "params": {**extra, "transitions": TABLE}}]}
 
 NAT = {}
 for o in OUTPUTS + [ZERO, "table_zero"]:
@@ -51,7 +51,8 @@ for o in OUTPUTS + [ZERO, "table_zero"]:
 assert NAT["peaks"].count(",ok,") + NAT["peaks"].count(",ok\n") >= 6, NAT["peaks"]
 assert len(NAT["candidates"].strip().splitlines()) == 3, NAT["candidates"]
 assert len({NAT[o] for o in OUTPUTS}) == 3, "the three outputs of the native run must differ"
-assert NAT[ZERO].splitlines()[0].endswith(",peak,baseline,below") and NAT[ZERO] != NAT["peaks"], NAT[ZERO][:300]
+assert NAT["peaks"].splitlines()[0].endswith(",peak,baseline,below") and ",zero," in NAT["peaks"], NAT["peaks"][:300]
+assert ",edges," in NAT[ZERO] and NAT[ZERO] != NAT["peaks"], NAT[ZERO][:300]
 data = site / "static" / "dati_flow_transitions"; data.mkdir()
 for n in NAMES: shutil.copy2(run / n, data / n)
 # the page finds a file of a plan through its OPFS index (mzlab/idx/<stem>.mzidx), made here by the native index step
@@ -111,7 +112,7 @@ try:
                 assert sha(web) == sha(NAT[output]), (output, NAT[output][:400], web[:400])
             return check
         for o in OUTPUTS: step(f"the browser gives the {o} CSV of the native flow run, byte for byte", same(o))
-        step("the areas from zero (baseline = zero) are the native ones, byte for byte", same(ZERO))
+        step("the areas from the edge line (baseline = edges) are the native ones, byte for byte", same(ZERO))
         step("the three outputs give three different CSVs in the browser", lambda: (len(WEBS) == 4 and len(set(WEBS.values())) == 4) or (_ for _ in ()).throw(AssertionError(sorted(WEBS))))
         # the read estimate of the engine (error.memoryBudget, phase read): the two files of the plan are run here only, so nothing comes from the cache
         LEVELS = "(high) => { const r = window.MZLAB_RUST; window.__lv = [r.budgetMb, r.choice]; r.budgetMb = 0; r.choice = { ...(r.choice || {}), mb: 8, high_mb: high }; }"

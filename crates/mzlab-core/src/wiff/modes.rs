@@ -101,6 +101,8 @@ pub fn tag(code: Option<u32>) -> Option<&'static str> {
 /// The userParam of every spectrum of a `.wiff` that names the Analyst abbreviation of its experiment: PSI-MS has no term for an EPI (product ions
 /// trapped in Q3) nor for a product-ion scan of Q3, both written as `MSn spectrum`, so the scan table reads the type back from it (`scan_type_named`).
 pub const SCAN_TYPE_PARAM: &str = "analyst scan type";
+/// The userParam of a neutral-loss scan: the constant loss (Da) Q1 and Q3 are kept apart by, which is not an m/z of the spectrum.
+pub const LOSS_PARAM: &str = "constant neutral loss (Da)";
 
 /// The experiment of a scan (`EPI`, `PI`, `EMS`, `Q1`) from the userParams a reader gives it (`SpectrumExtra::params`).
 pub(crate) fn scan_type_param(params: &[(String, String)]) -> Option<&'static str> {

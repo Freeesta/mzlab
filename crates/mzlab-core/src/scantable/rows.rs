@@ -4,6 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use super::analyzer::analyzer_names;
 use super::inert::{extra_inerte, tic_read};
 use super::*;
 use crate::mzml::Spectrum;
@@ -125,33 +126,6 @@ impl Head {
             .or_else(|| look(self.default_ic.as_deref().unwrap_or("")))
             .unwrap_or("?")
     }
-}
-
-/// The `name` of every `cvParam` of the `<analyzer>` elements of an instrument configuration.
-fn analyzer_names(block: &str) -> Vec<String> {
-    let mut names = Vec::new();
-    let mut a = 0;
-    while let Some(p) = block[a..].find("<analyzer") {
-        let st = a + p;
-        let Some(e) = block[st..].find("</analyzer>") else {
-            break;
-        };
-        let blk = &block[st..st + e];
-        let mut c = 0;
-        while let Some(q) = blk[c..].find("<cvParam ") {
-            let ts = c + q;
-            let te = blk[ts..].find('>').map_or(blk.len(), |g| ts + g);
-            if let Some(n) = blk[ts..te].rfind("name=\"") {
-                let ns = ts + n + 6;
-                if let Some(ne) = blk[ns..].find('"') {
-                    names.push(blk[ns..ns + ne].to_string());
-                }
-            }
-            c = te;
-        }
-        a = st + e;
-    }
-    names
 }
 
 /// The rows of a table, one spectrum header at a time (the text from `<spectrum ` up to `<binaryDataArrayList`), linked to their parents by `finish`.

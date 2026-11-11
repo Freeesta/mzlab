@@ -22,11 +22,13 @@ fn number(v: &str) -> Option<f64> {
         .filter(|x| x.is_finite())
 }
 
+/// The polarity of an ion mode: `ES+`, `Positive`, or a mode word ending in the sign (`ESCi+`, `APCI-`).
 fn polarity(v: &str) -> Option<i8> {
     let v = v.trim().to_ascii_uppercase();
-    if v.starts_with("ES+") || v.starts_with("POS") {
+    let word = v.split_whitespace().next().unwrap_or("");
+    if v.starts_with("ES+") || v.starts_with("POS") || word.ends_with('+') {
         Some(1)
-    } else if v.starts_with("ES-") || v.starts_with("NEG") {
+    } else if v.starts_with("ES-") || v.starts_with("NEG") || word.ends_with('-') {
         Some(-1)
     } else {
         None

@@ -1,4 +1,4 @@
-//! The native executor of `chrom.transitions@1`: the transition table integrated in each mzML (or its candidate peaks), as one CSV. The text is
+//! The native executor of `chrom.transitions@2`: the transition table integrated in each mzML (or its candidate peaks), as one CSV. The text is
 //! `mzlab_feat::transitions::transitions_text`, shared with the browser; this file only reads and writes the files. Called by `flow.rs`.
 
 use mzlab_core::error::Result;

@@ -12,6 +12,7 @@ pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
 pub mod idx;
+mod mass_check;
 mod method_name;
 pub mod modes;
 pub mod names;
@@ -38,12 +39,18 @@ pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
     if let Some(k) = method_name::by_name(ole, sample) {
         return k;
     }
-    let has = |k: u32| {
-        ole.has(&format!(
-            "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
-        ))
-    };
-    match (1..=sample.min(10_000)).rev().find(|&k| has(k)) {
+    // one pass over the paths, not one search per method number below `sample`: a table of 2 000 samples was 2 000 x 10 000 path searches
+    let nearest = ole
+        .paths_list()
+        .filter_map(|p| {
+            let d = p
+                .strip_prefix("MethodSubtree/Method")?
+                .strip_suffix("/DeviceMethod0/Period0/Experiment0/ExperimentHeader")?;
+            d.parse::<u32>().ok().filter(|k| k.to_string() == d)
+        })
+        .filter(|&k| (1..=sample.min(10_000)).contains(&k))
+        .max();
+    match nearest {
         Some(k) if k == sample || borrow_agrees(ole, sample, k) => k,
         _ => sample,
     }
@@ -119,6 +126,8 @@ pub struct Experiment {
     pub precursor: Option<f64>,
     /// The first precursor of an MS3 experiment (`precursor` is the second one, isolated from the fragments of the first).
     pub parent: Option<f64>,
+    /// The fixed mass of a precursor-ion scan (the product m/z Q3 stays on) or of a neutral-loss scan (the loss, Da): not a precursor.
+    pub fixed: Option<f64>,
     /// Collision energy (eV) of a product-ion experiment, when the method gives one value for it.
     pub ce: Option<f64>,
     /// Half-width (m/z) of the isolation window of a product-ion experiment.
@@ -177,6 +186,12 @@ pub struct Wiff {
     failure: Option<Error>,
 }
 
+/// `head + width * n` bytes, `None` when it does not fit a `usize`: on a 32-bit target (the site) a count of 2^29 rows would wrap to a few bytes,
+/// pass a length check that the 64-bit app fails, and start a loop of 2^29 turns.
+pub(crate) fn span(head: usize, width: usize, n: usize) -> Option<usize> {
+    n.checked_mul(width)?.checked_add(head)
+}
+
 fn bad(detail: &str) -> Error {
     Error::new("err.file.wiff").with("detail", detail)
 }
@@ -184,9 +199,15 @@ fn bad(detail: &str) -> Error {
 /// The container of a `.wiff`; one cut short (sectors its header or its FAT use lie past the end) is refused whole: its streams would read empty or short,
 /// so the samples, the index or the method would be missing unsaid.
 pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
+    container_within(wiff, name, &crate::readers::Limits::held())
+}
+
+/// `container` bounded by `limits`: a file past the memory budget is told as such, not as a file that is not a `.wiff`.
+pub fn container_within(wiff: Vec<u8>, name: &str, limits: &crate::readers::Limits) -> Result<Ole> {
     let size = wiff.len();
     let cut = Ole::header_cut(&wiff);
-    let ole = Ole::open(wiff, name).map_err(|_| match cut {
+    let ole = Ole::open(wiff, name, limits).map_err(|e| match cut {
+        _ if e.key == Error::memory_budget().key => e,
         Some(needed) => truncated(name, size, needed),
         None => Error::new("err.file.notWiff").with("name", name),
     })?;
@@ -249,6 +270,7 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             level: if product { 2 } else { 1 },
             precursor: if product { prec } else { None },
             parent: None,
+            fixed: None,
             ce: None,
             iso_half: None,
             window_s: None,
@@ -365,6 +387,15 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             experiment: k % n_exp,
         })
         .collect();
+    let no = method_no(ole, sample);
+    let no = if ole.has(&format!(
+        "MethodSubtree/Method{no}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
+    )) {
+        no
+    } else {
+        sample
+    };
+    mass_check::check(ole, no, &experiments)?;
     let method = methodinfo::method_of_sample(ole, method_no(ole, sample));
     let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);

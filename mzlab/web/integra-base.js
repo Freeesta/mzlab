@@ -98,7 +98,7 @@ function ibOpen(p, it) {
       const v = [...Q("#bigbody").querySelectorAll("[data-ib]")].map(i => numIt(i.value)), k = sel(), lvl = Q("#ib-lvl").checked;
       if (k === "line" && !v.every(Number.isFinite)) { Q("#ib-msg").textContent = I18N.t("int.base.bad"); return; }   // in the modal: a toast would sit behind it
       pushIh(p); delete it.zero;
-      if (k === "edges") { delete it.bm; delete it.bl; delete it.lvl; }
+      if (k === "edges") { it.bm = "edges"; delete it.bl; delete it.lvl; }
       else if (k === "zero") { it.bm = "zero"; delete it.bl; delete it.lvl; }
       else { it.bm = "line"; it.bl = lvl ? [v[0], v[1], v[2], v[1]] : v; if (lvl) it.lvl = true; else delete it.lvl; }
       Q("#bigdlg").close(); uiSave(); draw(p);

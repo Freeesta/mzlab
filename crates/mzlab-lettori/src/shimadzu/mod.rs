@@ -134,7 +134,7 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .map_err(|_| Error::memory_budget())?;
     data.resize(m.dim as usize, 0);
     m.dati.read_at(0, &mut data)?;
-    let ole = Ole::open(data, &m.nome)?;
+    let ole = Ole::open(data, &m.nome, limits)?;
     // sectors in use past the end: the raw stream would read short and the file would open with fewer scans, or none, unsaid
     if let Some(need) = ole.cut_short() {
         return Err(Error::new("err.file.cutShort")

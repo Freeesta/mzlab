@@ -443,6 +443,7 @@ impl<R: ReadAt> Source<'_, R> {
 
 mod source;
 use source::{find, Source};
+mod analyzer;
 mod head_read;
 mod inert;
 mod json;

@@ -1,7 +1,7 @@
 //! The scanner of tags and the readers of the header and of the parameters of an mzML for `mzml_numpress.rs` (the header of the original file, the cvParams of a spectrum).
 
 use mzlab_core::error::Result;
-use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
+use mzlab_core::mzmlwrite::{generic_term, generic_user_name, Header, SpectrumExtra};
 use mzlab_core::readers::Limits;
 
 /// The most cvParams of a spectrum kept as header fields.
@@ -207,6 +207,41 @@ fn cv_param(h: &mut Header, st: &mut State, parent: &str, g: &Tag) {
     }
 }
 
+/// A `userParam` of the header: a parameter of the run, or the text of a generic term of the instrument or of a program, which replaces the CV name
+/// the term was read with (`mzmlwrite::header_term` writes it back the same way).
+fn user_param(h: &mut Header, st: &mut State, parent: &str, g: &Tag) {
+    let (n, v) = (g.get("name"), g.get("value"));
+    let text = |acc: &str, name: &mut String| {
+        if let Some(cv) = generic_term(acc)
+            && *name == cv
+            && generic_user_name(cv) == n
+        {
+            *name = v.to_string();
+        }
+    };
+    match parent {
+        "run" => h.run_params.push((n.to_string(), v.to_string())),
+        "instrumentConfiguration" if st.ic_seen == 1 => {
+            if let Some((a, m)) = h.instrument.as_mut() {
+                text(a, m);
+            }
+        }
+        "source" | "analyzer" | "detector" if st.ic_seen == 1 => {
+            if let Some((k, a, m)) = h.components.last_mut()
+                && k == parent
+            {
+                text(a, m);
+            }
+        }
+        "software" => {
+            if let Some((_, Some((a, m)))) = st.soft.as_mut() {
+                text(a, m);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// The header of the mzML we write: the instrument, the sources with their SHA-1, the software and the run of the original, and mzLab as the program that wrote this file.
 pub(super) fn header_from(head: &str, name: &str, limits: &Limits) -> Result<Header> {
     let mut h = Header {
@@ -250,10 +285,7 @@ pub(super) fn header_from(head: &str, name: &str, limits: &Limits) -> Result<Hea
                     }
                 }
             }
-            "userParam" if parent == "run" => {
-                h.run_params
-                    .push((g.get("name").to_string(), g.get("value").to_string()));
-            }
+            "userParam" => user_param(&mut h, &mut st, &parent, &g),
             "cvParam" => cv_param(&mut h, &mut st, &parent, &g),
             _ => {}
         }
