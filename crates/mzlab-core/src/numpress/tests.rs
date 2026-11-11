@@ -154,8 +154,8 @@ fn unhex(s: &str) -> Vec<u8> {
         .collect()
 }
 
-/// Streams written by the reference C++ (through pyopenms 3.6, an independent build): an odd number of half bytes ends with the pad 0x0, which its decoder drops;
-/// a pad 0x8 would read back as one more value. The linear fixed point is the reference's own, taken from the stream.
+/// Streams written by the reference C++ (through pyopenms 3.6, an independent build; `python3 tools/numpress_pyopenms.py` prints them): an odd number of half bytes
+/// ends with the pad 0x0, which its decoder drops; a pad 0x8 would read back as one more value. The linear fixed point is the reference's own, taken from the stream.
 const REFERENCE: [(Np, &[f64], &str); 9] = [
     (
         Np::Linear,
