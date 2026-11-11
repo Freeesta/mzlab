@@ -405,7 +405,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         probs = judge(out, rc)
         return (n, "FAIL" if probs else "OK", dt, probs[:4])
     if todo:           # the page the tests open is the built site with the Rust engine (tests_e2e/lib.py Run)
-        rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 1800, env=env)
+        rc, _out, dt = sh([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], LOG / "prepara_sito.log", 3600, env=env)   # cold cache: engine, libraries, 9 reader families
         if rc:
             results.append(("sito per gli e2e (tools/prepara_sito.py)", "FAIL", dt, ["vedi .verifica/log/prepara_sito.log"])); return
     if shutil.which("cargo") and any("cargo" in (E2E / f"{n}.py").read_text(encoding="utf-8") for n in todo):      # the tests that call `cargo run` would each wait on cargo's build-folder lock, or rebuild a stale tree, inside the timeout of their own: build the two binaries once
