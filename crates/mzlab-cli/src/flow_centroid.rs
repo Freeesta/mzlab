@@ -26,13 +26,13 @@ pub fn centroid_step() -> Step {
             Param::number("fwhm", "Peak width")
                 .min(0.0)
                 .unit("Da")
-                .doc("FWHM of a peak; left out, it is measured on the isolated peaks of the file (0.7 Da, with a warning, when fewer than 8 are found)")
+                .doc("FWHM of a peak; left out, it is measured on the isolated peaks of the file")
                 .estimate(),
             Param::number("threshold", "Threshold")
                 .min(0.0)
                 .unit("sigma")
                 .default_num(3.0)
-                .doc("A peak is kept when it stands this many sigma over the background (Poisson Z for counts)"),
+                .doc("A peak is kept when it stands this many sigma over the background (Poisson Z for counts); left out, the value of the mode of the file"),
         ],
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),
