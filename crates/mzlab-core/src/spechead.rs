@@ -302,6 +302,19 @@ impl<'g> Reader<'g> {
                 Ctx::Other
             }
             _ if self.cur.is_none() => Ctx::Other,
+            _ => self.item_tag(name, attrs, top),
+        };
+        if !empty {
+            self.stack.push(ctx);
+        } else if ctx == Ctx::Group {
+            self.end_group();
+        }
+    }
+
+    /// An element inside a spectrum or chromatogram (scans, precursors, products, arrays).
+    fn item_tag(&mut self, name: &str, attrs: &[(&str, Cow<str>)], top: Option<Ctx>) -> Ctx {
+        let get = |k: &str| attrs.iter().find(|(n, _)| *n == k).map(|(_, v)| v.as_ref());
+        match name {
             "scanList" if top == Some(Ctx::Item) => Ctx::Scan,
             "scan" if top == Some(Ctx::Scan) => {
                 let h = self.cur.as_mut().expect("in an item");
@@ -330,7 +343,11 @@ impl<'g> Reader<'g> {
             "selectedIon" if top == Some(Ctx::Precursor) => {
                 let st = self.stage().expect("in a precursor");
                 st.ions += 1;
-                if st.ions == 1 { Ctx::Ion } else { Ctx::Other }
+                if st.ions == 1 {
+                    Ctx::Ion
+                } else {
+                    Ctx::Other
+                }
             }
             "activation" if top == Some(Ctx::Precursor) => Ctx::Activation,
             "selectedIonList" if top == Some(Ctx::Precursor) => Ctx::Precursor,
@@ -344,11 +361,6 @@ impl<'g> Reader<'g> {
             }
             "binary" if top == Some(Ctx::Array) => Ctx::Binary,
             _ => Ctx::Other,
-        };
-        if !empty {
-            self.stack.push(ctx);
-        } else if ctx == Ctx::Group {
-            self.end_group();
         }
     }
 
