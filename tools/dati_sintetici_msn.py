@@ -52,3 +52,17 @@ def ms3(path: Path, rng) -> None:
         mz = np.array([122.1, 150.1, 176.1]) + rng.normal(0, 0.03, 3); it = np.array([0.4, 1.0, 0.2]) * sig * rng.normal(1, 0.05, 3)
         specs.append(_spec(i, rt, mz, it, level=3, prec=194.1, ce=35.0))
     _write(path, specs, [])
+
+
+def ms2_ms3(path: Path, rng) -> None:
+    """A product-ion file with MS2 and MS3 scans in turn (MS2 of 237.1, MS3 of its product 194.1): two experiments of one file, no MS1 scan."""
+    specs = []
+    for i, rt in enumerate(np.linspace(0.02, 10.0, 400)):
+        sig = 4e5 * _g(rt, 5.2, 0.08) + 200
+        if i % 2 == 0:
+            mz, rel, lv, prec = [150.1, 194.1, 219.1], [0.3, 1.0, 0.2], 2, 237.1
+        else:
+            mz, rel, lv, prec = [122.1, 150.1, 176.1], [0.4, 1.0, 0.2], 3, 194.1
+        it = np.array(rel) * sig * rng.normal(1, 0.05, 3)
+        specs.append(_spec(i, rt, np.array(mz) + rng.normal(0, 0.03, 3), it, level=lv, prec=prec, ce=35.0))
+    _write(path, specs, [])

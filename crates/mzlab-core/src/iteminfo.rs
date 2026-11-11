@@ -59,6 +59,8 @@ pub struct Part {
     pub tag: String,
     /// The scan type of the MS2 scans of this part (`PREC`, `NL`, `NG`, `EMC`, `TDF`, `ER`), `None` for the ordinary ones.
     pub kind: Option<&'static str>,
+    /// The MSn level of this part when the file holds product scans of more than one level (MS2 and MS3 apart), `None` otherwise.
+    pub level: Option<u8>,
 }
 
 /// The scan types in the order they are listed, with the name shown for each.
@@ -90,6 +92,18 @@ fn polarities(sel: &[&Scan], split: bool) -> Vec<Option<i8>> {
     v.into_iter().map(Some).collect()
 }
 
+/// The levels the product scans are split in: product scans of two levels (MS2 and MS3) are two experiments; one level keeps one part unnamed by level.
+fn product_levels(sel: &[&Scan], level2: bool) -> Vec<Option<u8>> {
+    let mut levels: Vec<u8> = sel.iter().map(|s| s.level).collect();
+    crate::sortc::slice_ord(&mut levels);
+    levels.dedup();
+    if level2 && levels.len() > 1 {
+        levels.into_iter().map(Some).collect()
+    } else {
+        vec![None]
+    }
+}
+
 /// The experiments of a mixed file (survey + product ions, MRM + EPI, positive + negative), or empty when the file has only one.
 pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
     let pols: Vec<i8> = {
@@ -112,35 +126,40 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
         if sel.is_empty() {
             continue;
         }
-        // the ordinary scans first, then one part per scan type present
-        let kinds: Vec<Option<&'static str>> = std::iter::once(None)
-            .chain(KINDS.iter().map(|(c, _)| Some(*c)))
-            .filter(|k| (level2 || k.is_none()) && sel.iter().any(|s| s.kind_name() == *k))
-            .collect();
-        for kind in kinds {
+        for level in product_levels(&sel, level2) {
             let sel: Vec<&Scan> = sel
                 .iter()
                 .copied()
-                .filter(|s| s.kind_name() == kind)
+                .filter(|s| level.is_none_or(|l| s.level == l))
                 .collect();
-            let name = kind.unwrap_or(name);
-            let list = polarities(&sel, split);
-            for pol in list {
-                let suffix = if split {
-                    if pol == Some(1) {
-                        " pos"
-                    } else {
-                        " neg"
-                    }
-                } else {
-                    ""
-                };
-                parts.push(Part {
-                    mode,
-                    pol,
-                    tag: format!("{name}{suffix}"),
-                    kind,
-                });
+            let lname = level.map(|l| format!("MS{l}"));
+            // the ordinary scans first, then one part per scan type present
+            let kinds: Vec<Option<&'static str>> = std::iter::once(None)
+                .chain(KINDS.iter().map(|(c, _)| Some(*c)))
+                .filter(|k| (level2 || k.is_none()) && sel.iter().any(|s| s.kind_name() == *k))
+                .collect();
+            for kind in kinds {
+                let sel: Vec<&Scan> = sel
+                    .iter()
+                    .copied()
+                    .filter(|s| s.kind_name() == kind)
+                    .collect();
+                let name = kind.or(lname.as_deref()).unwrap_or(name);
+                let list = polarities(&sel, split);
+                for pol in list {
+                    let suffix = match (split, pol) {
+                        (false, _) => "",
+                        (_, Some(1)) => " pos",
+                        _ => " neg",
+                    };
+                    parts.push(Part {
+                        mode,
+                        pol,
+                        tag: format!("{name}{suffix}"),
+                        kind,
+                        level,
+                    });
+                }
             }
         }
     }
@@ -150,6 +169,7 @@ pub fn file_parts(scans: &[Scan], has_srm: bool) -> Vec<Part> {
             pol: None,
             tag: "MRM".into(),
             kind: None,
+            level: None,
         });
     }
     if parts.len() > 1 {
@@ -169,6 +189,10 @@ pub fn part_label(part: &Part, scans: &[Scan]) -> String {
         "ms1" => ("Full Scan", "MS1"),
         "mrm" => ("MRM", "MRM"),
         _ if part.kind.is_some() => (kind_name(part.kind.unwrap_or("")), part.kind.unwrap_or("")),
+        _ if part.level.is_some() => {
+            let l = format!("MS{}", part.level.unwrap_or(2));
+            return format!("{l}{}", part.tag.strip_prefix(l.as_str()).unwrap_or(""));
+        }
         _ if dda => ("DDA", "MS2"),
         _ => ("MS2", "MS2"),
     };
@@ -185,7 +209,7 @@ pub fn matches(s: &Scan, part: Option<&Part>) -> bool {
     if p.mode == "ms1" {
         s.level == 1
     } else {
-        s.level >= 2 && s.kind_name() == p.kind
+        s.level >= 2 && s.kind_name() == p.kind && p.level.is_none_or(|l| s.level == l)
     }
 }
 

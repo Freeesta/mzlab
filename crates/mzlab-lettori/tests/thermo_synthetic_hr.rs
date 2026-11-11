@@ -3,7 +3,7 @@
 //! the scan count, the MS1/MS2 cycle, profile MS1 with centroids at the m/z it wrote, MS2 with a precursor. Small file in a temporary folder, removed afterwards.
 //! A pinned hash of every decoded scan (centroids and profile) is the gate of any change to the decoder: it must give the same values.
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::readers::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Losses, Member, EVENTS_REFUSED};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -187,6 +187,57 @@ fn scans_without_a_readable_event_have_no_ms_level() {
         ix.iter().map(|e| e.livello).collect::<Vec<_>>()
     );
     assert_eq!(l.scan(0, 0).expect("scan").level, 0);
+    // every scan is read, none with its event: the losses say so with their own cause, not as a cut file
+    assert_eq!(
+        l.losses(0).expect("losses"),
+        Losses::of(12, 0, EVENTS_REFUSED)
+    );
+}
+
+/// A file opened as the site and the app open it.
+fn reader_of(b: Vec<u8>) -> Box<dyn mzlab_core::readers::Reader> {
+    let set = FileSet {
+        membri: vec![Member {
+            nome: "hr.raw".into(),
+            dim: b.len() as u64,
+            dati: Box::new(b),
+            sha1: None,
+        }],
+    };
+    mzlab_lettori::apri(set, &Limits::sito()).expect("open")
+}
+
+#[test]
+fn a_trailer_ion_outside_its_window_is_named_in_the_method_and_the_target_kept() {
+    let d = folder("ione_fuori");
+    let f = d.join("hr.raw");
+    generate(&f, &["--scans", "9", "--ms2", "2", "--seed", "3"]);
+    let mut b = std::fs::read(&f).unwrap();
+    let _ = std::fs::remove_dir_all(&d);
+    let mut l = reader_of(b.clone());
+    let before = l.method(0).expect("method");
+    assert!(!before.contains("meta.ioneScartata"), "{before}");
+    let target = l.index(0).expect("index")[1].precursore.expect("an MS2");
+    // the trailer record of scan 1 starts with its charge (2) and its monoisotopic m/z: moved 50 m/z off a window of 1.4
+    let mut rec = 2u32.to_le_bytes().to_vec();
+    rec.extend(target.to_le_bytes());
+    let at = b
+        .windows(12)
+        .position(|w| w == rec)
+        .expect("trailer record")
+        + 4;
+    b[at..at + 8].copy_from_slice(&(target + 50.0).to_le_bytes());
+    let mut l = reader_of(b.clone());
+    assert_eq!(l.index(0).expect("index")[1].precursore, Some(target));
+    assert_eq!(l.losses(0).expect("losses"), Losses::complete(9));
+    let doc = l.method(0).expect("method");
+    assert!(
+        doc.contains(r#""chiave":"meta.ioneScartata","dove":"the trailer's monoisotopic m/z lies outside the isolation window in 1 of 9 scans""#),
+        "{doc}"
+    );
+    // the document of the method alone (`raw::method`, no index built) counts the same scans
+    let alone = mzlab_core::raw::method(std::io::Cursor::new(b), "hr.raw").expect("method");
+    assert_eq!(alone, doc);
 }
 
 #[test]

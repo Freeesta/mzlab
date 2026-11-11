@@ -10,8 +10,8 @@ use crate::error::{Error, Result};
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::mzmlwrite::{Header, SpectrumExtra};
 use crate::readers::{
-    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
-    Sample, ScanEntry, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Losses, Position, Reader,
+    ReaderEntry, Sample, ScanEntry, CONTRATTO, EVENTS_REFUSED, TRUNCATED,
 };
 use stream::Stream;
 #[cfg(test)]
@@ -54,6 +54,8 @@ pub struct RawReader {
     sha1: Option<Option<String>>,
     /// The traces of the analog controllers (pressure, temperatures, UV channels), read the first time they are asked for.
     analogiche: Option<Vec<(String, ChromKind, opentfraw::AnalogTrace)>>,
+    /// What the metadata of the scans leave to a notice, counted while the index is built.
+    notes: crate::raw::ScanNotes,
 }
 
 fn raw_error(e: impl std::fmt::Display) -> Error {
@@ -81,9 +83,13 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let sha1 = m.sha1.take().map(Some);
     let raw = RawFileReader::open(&mut src).map_err(|e| crate::raw::thermo_error(&e))?;
     limits.ok_entries(u64::from(raw.num_scans))?;
+    let mut notes = crate::raw::ScanNotes::default();
     let index: Vec<ScanEntry> = (0..raw.num_scans)
         .filter_map(|k| scan_metadata(&raw, &mut src, k))
-        .map(|m| entry(&raw, &m))
+        .map(|m| {
+            notes.add(&m);
+            entry(&raw, &m)
+        })
         .collect();
     let stem = nome
         .rsplit_once('.')
@@ -103,6 +109,7 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         indice: index,
         sha1,
         analogiche: None,
+        notes,
     }))
 }
 
@@ -338,9 +345,27 @@ impl Reader for RawReader {
     fn missing(&mut self, _c: usize) -> usize {
         crate::raw::cut_scans(&self.raw)
     }
+    /// A cut file lacks the scans past its end; a refused table of scan events leaves the scans after it without their event (read, level and polarity unknown).
+    fn losses(&mut self, c: usize) -> Result<Losses> {
+        self.one(c)?;
+        let (n, cut) = (self.indice.len(), crate::raw::cut_scans(&self.raw));
+        Ok(if cut > 0 {
+            Losses::of(n + cut, n, TRUNCATED)
+        } else if crate::raw::events_refused(&self.raw) {
+            Losses::of(n, self.notes.with_event, EVENTS_REFUSED)
+        } else {
+            Losses::complete(n)
+        })
+    }
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
-        Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.name))
+        Ok(crate::raw::metodo_sha1(
+            &self.raw,
+            &mut self.src,
+            &self.name,
+            None,
+            &self.notes,
+        ))
     }
 
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {

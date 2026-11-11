@@ -145,6 +145,12 @@ pub struct ScanMetadata {
     pub ion_injection_time_ms: Option<f64>,
     pub faims_cv: Option<f64>,
     pub precursor: Option<PrecursorInfo>,
+    /// Whether the scan has a readable scan event (level, polarity and filter come from it).
+    pub has_event: bool,
+    /// Whether the trailer named a monoisotopic m/z that lies outside the isolation window, so the selected ion is the target instead.
+    pub selected_ion_rejected: bool,
+    /// Whether this SRM scan's Q1 and energy come from the run's transition table, its event naming no reaction.
+    pub srm_from_table: bool,
 }
 
 /// Extract the metadata of the scan at scan-index `idx` (zero-based offset
@@ -213,6 +219,8 @@ pub fn scan_metadata_with(
     let final_reaction =
         event.and_then(|e| e.reactions.iter().rev().find(|r| r.precursor_mz > 0.0));
     // the Q1 and energy of an SRM scan are its event's own reaction; the transition table is the source only for a run without events
+    let srm_from_table =
+        is_srm && final_reaction.is_none() && raw.srm_q1_by_event.contains_key(&entry.scan_event);
     let (srm_q1, srm_ce) = if is_srm {
         srm_transition(
             final_reaction,
@@ -223,6 +231,7 @@ pub fn scan_metadata_with(
         (None, None)
     };
 
+    let mut selected_ion_rejected = false;
     let precursor = if !is_ms1 {
         let info = if let Some(q1) = srm_q1 {
             PrecursorInfo {
@@ -301,14 +310,16 @@ pub fn scan_metadata_with(
             let sm = if msn_chain {
                 tm
             } else {
-                mono.filter(|&m| plausible_selected_ion(m, tm, iw, ch))
-                    .or(tm)
+                let kept = mono.filter(|&m| plausible_selected_ion(m, tm, iw, ch));
+                selected_ion_rejected = mono.is_some() && kept.is_none();
+                kept.or(tm)
             };
             let final_charge = if msn_chain { None } else { ch };
             if msn_chain {
                 if let Some(first) = reactions.first_mut() {
                     first.selected_mz = mono
                         .filter(|&m| plausible_selected_ion(m, Some(first.precursor_mz), None, ch));
+                    selected_ion_rejected = mono.is_some() && first.selected_mz.is_none();
                     first.charge = ch;
                 }
             }
@@ -357,6 +368,9 @@ pub fn scan_metadata_with(
         ion_injection_time_ms,
         faims_cv,
         precursor,
+        has_event: event.is_some(),
+        selected_ion_rejected,
+        srm_from_table,
     })
 }
 

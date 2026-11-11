@@ -189,3 +189,52 @@ fn the_module_error_keeps_key_and_params() {
         interned("err.file.raw").as_ptr()
     );
 }
+
+/// A module that says why its scans are missing: `missing` of them and `cause`.
+struct Says(u32, &'static str);
+impl Module for Says {
+    fn protocol(&mut self) -> Result<u32> {
+        Fake.protocol()
+    }
+    fn samples(&mut self) -> Result<String> {
+        Fake.samples()
+    }
+    fn index(&mut self, c: usize) -> Result<Vec<u8>> {
+        Fake.index(c)
+    }
+    fn scan(&mut self, c: usize, k: usize) -> Result<Vec<u8>> {
+        Fake.scan(c, k)
+    }
+    fn scan_header(&mut self, c: usize, k: usize) -> Result<String> {
+        Fake.scan_header(c, k)
+    }
+    fn chromatograms(&mut self, c: usize) -> Result<String> {
+        Fake.chromatograms(c)
+    }
+    fn chromatogram(&mut self, c: usize, id: &str) -> Result<String> {
+        Fake.chromatogram(c, id)
+    }
+    fn method(&mut self, c: usize) -> Result<String> {
+        Fake.method(c)
+    }
+    fn file_header(&mut self, c: usize) -> Result<String> {
+        Fake.file_header(c)
+    }
+    fn missing(&mut self, _: usize) -> Result<u32> {
+        Ok(self.0)
+    }
+    fn cause(&mut self, _: usize) -> Result<String> {
+        Ok(self.1.into())
+    }
+}
+
+/// The losses of the module's reader cross whole: scans past the end of a cut file (also from a module of an older build, which names no cause),
+/// or scans of the index without their event, read but fewer than the rows.
+#[test]
+fn the_losses_keep_the_cause_the_module_gives() {
+    let l = |m: Says| ExternalReader::new(m).unwrap().losses(0).unwrap();
+    assert_eq!(l(Says(3, "")), Losses::of(5, 2, TRUNCATED));
+    assert_eq!(l(Says(3, TRUNCATED)), Losses::of(5, 2, TRUNCATED));
+    assert_eq!(l(Says(1, EVENTS_REFUSED)), Losses::of(2, 1, EVENTS_REFUSED));
+    assert_eq!(l(Says(0, "")), Losses::complete(2));
+}
