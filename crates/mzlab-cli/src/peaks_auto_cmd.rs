@@ -15,9 +15,10 @@ usage: mzlab-cli peak-auto TRACE.csv|- [--from MIN] [--to MIN] [--set NAME=VALUE
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the stretch whose apexes count (default: the whole trace)
   --set        the page dialog: hr_smooth (points, odd), hr_sn; engine only: hr_prom (% of the tallest), hr_scans, hr_half (points, 0 = auto), hr_slope (%);
-               the area of every peak: baseline = edges (default, b0-b1), zero, or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help)
-  output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":BASELINE,\"b1\":BASELINE,\"area\":COUNTS_MIN}...]}; with zero or line each peak
-               also has \"baseline\" and \"below\" (COUNTS_MIN, the part under the line) and its area is the signed one against that line";
+               the area of every peak: baseline = zero (default: any background under the peak is part of the area), edges (the line b0-b1),
+               or line with base_y0, base_t0, base_y1, base_t1 (see peak-area --help)
+  output       {\"peaks\":[{\"t0\":MIN,\"t1\":MIN,\"b0\":BASELINE,\"b1\":BASELINE,\"area\":COUNTS_MIN,\"baseline\":MODE}...]}; with zero or line each
+               peak also has \"below\" (COUNTS_MIN, the part under the line) and its area is the signed one against that line";
 
 fn set(p: &mut AutoParams, name: &str, v: &str) -> Result<(), String> {
     let n: f64 = v.parse().map_err(|_| format!("{name} needs a number"))?;
@@ -90,7 +91,7 @@ pub fn run(args: Vec<String>) -> Outcome {
                         x[k.lo], x[k.hi], k.base_lo, k.base_hi
                     );
                     match base.at(0.0) {
-                        None => format!("{head},\"area\":{}}}", k.area),
+                        None => format!("{head},\"area\":{},\"baseline\":\"edges\"}}", k.area),
                         Some(_) => {
                             let r = integrate(&x, &y, k.lo, k.hi, |t| base.at(t).unwrap_or(0.0));
                             format!(
