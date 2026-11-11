@@ -171,7 +171,7 @@ fn safe_name(n: &str) -> bool {
 }
 
 /// The entries of an archive made of "stored" entries (what `zip_stored` writes, and any other tool's uncompressed ZIP without ZIP64): name and bytes, the CRC-32 of
-/// every entry checked. Errors (a message): not a ZIP, compressed or encrypted entry, ZIP64, bad CRC, a name that leaves the archive.
+/// every entry checked. Errors (a message): not a ZIP, compressed or encrypted entry, ZIP64, bad CRC, a name that leaves the archive, entries that share bytes.
 pub fn unzip_stored(z: &[u8]) -> Result<Vec<(String, Vec<u8>)>, String> {
     let lo = z.len().saturating_sub(22 + u16::MAX as usize);
     let end = (lo..=z.len().saturating_sub(22))
@@ -181,6 +181,8 @@ pub fn unzip_stored(z: &[u8]) -> Result<Vec<(String, Vec<u8>)>, String> {
     let n = le16(z, end + 10)?;
     let mut p = le32(z, end + 16)?;
     let mut out = Vec::with_capacity(n);
+    // the bytes of every entry, which a "stored" archive holds once: entries that share bytes would copy the archive many times over
+    let mut spans = Vec::with_capacity(n);
     for _ in 0..n {
         if le32(z, p)? != 0x0201_4B50 {
             return Err("zip: bad central directory".into());
@@ -210,12 +212,20 @@ pub fn unzip_stored(z: &[u8]) -> Result<Vec<(String, Vec<u8>)>, String> {
             return Err("zip: bad local header".into());
         }
         let start = off + 30 + le16(z, off + 26)? + le16(z, off + 28)?;
-        let data = z.get(start..start + size).ok_or("zip: truncated data")?;
+        let data = start
+            .checked_add(size)
+            .and_then(|e| z.get(start..e))
+            .ok_or("zip: truncated data")?;
+        spans.push((off, start + size));
         if crc32(data) as usize != crc {
             return Err("zip: CRC mismatch".into());
         }
         out.push((name.to_string(), data.to_vec()));
         p += 46 + nl + el + cl;
+    }
+    spans.sort_unstable();
+    if spans.windows(2).any(|w| w[1].0 < w[0].1) {
+        return Err("zip: entries overlap".into());
     }
     Ok(out)
 }
