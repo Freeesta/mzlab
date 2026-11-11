@@ -1,7 +1,8 @@
 """Synthetic Waters MassLynx .raw folder (_FUNCTNS.INF, _FUNC001/002 .DAT + .IDX, _HEADER.TXT), written with the layout of docs/agenti/waters.md: no laboratory data.
     python3 tools/waters_sintetico.py <out folder> [name.raw] [scans]
 Function 1 scans m/z 100-1000 (12-byte records, centroids): a chromatographic peak of m/z 150.1 (and a flat m/z 300.3) at 1.5 min; function 2 is an MRM function with two channels
-(200.1 > 100.2 and 300.3 > 150.4, 4-byte values) with a peak at the same time. The same folder as `crates/mzlab-lettori/tests/common_waters/mod.rs` builds, with more scans."""
+(200.1 > 100.2 and 300.3 > 150.4, 4-byte values) with a peak at the same time. The same folder as `crates/mzlab-lettori/tests/common_waters/mod.rs` builds, with more scans.
+`write_flags` writes a folder with the index marks set both ways (0x18 calibrated by mzLab, 0x4C stored calibrated)."""
 import math
 import struct
 import sys
@@ -57,6 +58,34 @@ def write(root: Path, name: str = "synt.raw", n: int = 40) -> Path:
     )
     for f, b in (("_FUNCTNS.INF", inf), ("_FUNC001.DAT", dat1), ("_FUNC001.IDX", idx1), ("_FUNC002.DAT", dat2), ("_FUNC002.IDX", idx2), ("_HEADER.TXT", head.encode("latin-1"))):
         (d / f).write_bytes(bytes(b))
+    return d
+
+
+FLAGS_CAL = (0.0005, 1.0001)
+
+
+def write_flags(root: Path, name: str = "flags.raw", n: int = 20) -> Path:
+    """The index marks set both ways (as `flags_folder` of crates/mzlab-lettori/tests/common_waters): function 1 continuum scans stored uncalibrated (mark 0x18,
+    8-byte records, odd scans with bit 22 set above the 22-bit count), function 2 centroid scans the acquisition stored calibrated (mark 0x4C, 12-byte records);
+    both have a Cal Function line, applied only to function 1."""
+    d = root / name
+    d.mkdir(parents=True, exist_ok=True)
+    dat1, idx1, dat2, idx2 = bytearray(), bytearray(), bytearray(), bytearray()
+    for k in range(n):
+        rt = 0.5 + 2.0 * k / max(1, n - 1)
+        peaks = [(150.1 + k, 1000 + 10 * k), (300.25, 5000), (450.5, 250 * (k + 1))]
+        tic = float(sum(p[1] for p in peaks))
+        flag = (1 << 22) if k % 2 else 0
+        idx1 += struct.pack("<IIff", len(dat1), 0x18000000 | flag | 3, tic, rt) + bytes(6)
+        idx2 += struct.pack("<IIff", len(dat2), 0x4C000000 | 3, tic, rt) + bytes(6)
+        for mz, it in peaks:
+            dat1 += struct.pack("<II", word_int(it), word_mz(mz))
+            dat2 += struct.pack("<III", word_int(it), word_mz(mz), 0)
+    inf = func_record(0x12, 0x25, 1.0, [(100.0, 1000.0, 0.0)]) + func_record(0x0D, 0x25, 1.0, [(100.0, 1000.0, 0.0)])
+    a, b = FLAGS_CAL
+    head = f"$$ Acquired Name: FLAGS_001\r\n$$ Cal Function 1: {a},{b},T1\r\n$$ Cal Function 2: {a},{b},T1\r\n"
+    for f, x in (("_FUNCTNS.INF", inf), ("_FUNC001.DAT", dat1), ("_FUNC001.IDX", idx1), ("_FUNC002.DAT", dat2), ("_FUNC002.IDX", idx2), ("_HEADER.TXT", head.encode("latin-1"))):
+        (d / f).write_bytes(bytes(x))
     return d
 
 

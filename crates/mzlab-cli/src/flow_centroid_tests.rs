@@ -110,11 +110,13 @@ fn a_profile_file_gets_the_centres_of_its_peaks_and_the_bytes_of_the_archive_con
             );
         }
     }
-    // the values it measured are reported, and the same plan gives the same bytes
+    // the width it measured is an estimate with its proof; the threshold is the default, never an estimate; the same plan gives the same bytes
     assert!(
-        prov.contains("\"fwhm\"") && prov.contains("\"threshold\""),
+        prov.contains("isolated peaks of the profile scans"),
         "{prov}"
     );
+    assert!(prov.contains("\"fwhm_basis\":\"measured\""), "{prov}");
+    assert!(!prov.contains("widthFallback"), "{prov}");
     run_again(&d, &got);
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -363,5 +365,23 @@ fn the_step_and_the_engine_call_of_the_browser_give_the_same_bytes_on_the_synthe
         assert!(did, "{name} is a profile file");
         assert_eq!(got, want, "{name}");
     }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_fallback_width_is_never_called_estimated() {
+    let d = dir("f", &[("p.mzML", profile(1, &[(300.2, 900.0)]))]);
+    let prov = run(&d, &plan("{}"), "w").1;
+    assert!(prov.contains("\"fwhm_basis\":\"fallback\""), "{prov}");
+    assert!(prov.contains("warn.centroid.widthFallback"), "{prov}");
+    assert!(
+        !prov.contains("isolated peaks of the profile scans"),
+        "{prov}"
+    );
+    let given = run(&d, &plan(r#"{"fwhm":0.3}"#), "g").1;
+    assert!(
+        given.contains("\"fwhm_basis\":\"given\"") && !given.contains("widthFallback"),
+        "{given}"
+    );
     let _ = std::fs::remove_dir_all(&d);
 }

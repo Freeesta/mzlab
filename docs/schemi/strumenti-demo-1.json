@@ -79,7 +79,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
-              "chrom.transitions@1",
+              "chrom.transitions@2",
               "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.annotations@1",
@@ -322,7 +322,7 @@
           },
           {
             "properties":{
-              "step":{"const":"chrom.transitions@1"},
+              "step":{"const":"chrom.transitions@2"},
               "name":{
                 "enum":[
                   "preset",
@@ -363,9 +363,9 @@
                     "description":"The peak is searched in RT plus and minus this when the row writes no window"
                   },
                   {
-                    "enum":["edges","zero"],
-                    "default":"edges",
-                    "description":"edges: the area above the straight line between the edges of the peak; zero: the whole area under the trace down to zero between the same edges (signed; a baseline column says which)"
+                    "enum":["zero","edges"],
+                    "default":"zero",
+                    "description":"zero: the whole area under the trace down to zero between the edges of the peak (signed), so any background under the peak is part of it; edges: the area above the straight line between the same edges (what a version 1 plan keeps); a baseline column says which"
                   },
                   {
                     "type":"number",
@@ -1553,6 +1553,7 @@
                   {
                     "type":"number",
                     "minimum":0,
+                    "default":3,
                     "description":"A peak is kept when it stands this many sigma over the background (Poisson Z for counts); left out, the value of the mode of the file"
                   }
                 ]
@@ -2843,7 +2844,7 @@
                 "annot.hazard@1",
                 "annot.level@1",
                 "annot.regulatory@1",
-                "chrom.transitions@1",
+                "chrom.transitions@2",
                 "chrom.uv_peaks@1",
                 "convert.mzml@1",
                 "export.annotations@1",

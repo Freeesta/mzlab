@@ -74,7 +74,8 @@ fn a_pair_is_a_variant_when_any_of_its_samples_is() {
 }
 
 /// A chromatogram-only MRM sample whose blocks are sparse while its method has no `sMRM` stream (the scheduling is only in the data): the block itself
-/// says the engine cannot read it, so the probe answers `"variante"` and the module reads all 136 traces.
+/// says the engine cannot read it, so the probe answers `"variante"` and the module reads all 136 traces. A `-(k + 0.01)` token is a run of k measured
+/// zeros: every trace has a point in each of the 40 cycles, as `mrmrado.json` (the generator's own counts) says.
 #[test]
 fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
     let Some(dir) = generate("wiff_mrm_rado.py") else {
@@ -86,11 +87,29 @@ fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
         "its sparse MRM blocks are read by the module only"
     );
     assert_eq!(mzlab_lettori::motivi(&mut *l, 0), vec!["variante"]);
-    let srm = l
+    let srm: Vec<String> = l
         .chromatograms(0)
         .unwrap()
-        .iter()
+        .into_iter()
         .filter(|c| c.id.starts_with("SRM SIC"))
-        .count();
-    assert_eq!(srm, 136);
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(srm.len(), 136);
+    let want: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(dir.join("mrmrado.json")).unwrap()).unwrap();
+    for (j, id) in srm.iter().enumerate() {
+        let c = l.chromatogram(0, id).unwrap();
+        let num = |k: &str| -> Vec<f64> {
+            want[j][k]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|x| x.as_f64().unwrap())
+                .collect()
+        };
+        assert_eq!(c.intensity, num("intensity"), "{id}");
+        let (t, w) = (c.time, num("time"));
+        assert_eq!(t.len(), w.len(), "{id}");
+        assert!(t.iter().zip(&w).all(|(a, b)| (a - b).abs() < 1e-6), "{id}");
+    }
 }

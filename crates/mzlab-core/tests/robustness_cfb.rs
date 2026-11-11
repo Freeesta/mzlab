@@ -66,12 +66,18 @@ fn contenitore(fat: &[(usize, u32)], dim: u32, data: usize) -> Vec<u8> {
 /// What the reader does with a container: open it, read every stream, ask for the methods.
 fn reads(b: Vec<u8>) -> Vec<String> {
     let mut k = Vec::new();
-    if let Some(ole) = note(Ole::open(b.clone(), "x.wiff"), &mut k) {
+    if let Some(ole) = note(
+        Ole::open(b.clone(), "x.wiff", &mzlab_core::readers::Limits::held()),
+        &mut k,
+    ) {
         let paths: Vec<String> = ole.paths_list().take(4).map(String::from).collect();
         paths.iter().for_each(|p| drop(ole.read(p)));
     }
     #[cfg(feature = "estesi")]
-    if let Some(ole) = note(Ole::open(b.clone(), "x.wiff"), &mut k) {
+    if let Some(ole) = note(
+        Ole::open(b.clone(), "x.wiff", &mzlab_core::readers::Limits::held()),
+        &mut k,
+    ) {
         // the method document of the readers module: fallback method, GLP tables, DAD header, scheduled-MRM streams
         drop(mzlab_core::method_wiff::from_wiff(
             &ole,
@@ -90,7 +96,12 @@ fn case(name: &str, b: Vec<u8>) -> Vec<String> {
 
 #[test]
 fn the_valid_container_reads_its_stream() {
-    let ole = Ole::open(contenitore(&[], 5000, 10), "x.wiff").unwrap();
+    let ole = Ole::open(
+        contenitore(&[], 5000, 10),
+        "x.wiff",
+        &mzlab_core::readers::Limits::held(),
+    )
+    .unwrap();
     assert_eq!(ole.read("S").map(|s| s.len()), Some(5000));
 }
 

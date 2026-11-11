@@ -1,5 +1,5 @@
 //! Parameters of a file estimated from a few scans (at most 64 equally spaced ones, read and dropped): the mode (counts or continuous), the unit of one
-//! count, the step of the grid and the width of a peak (median FWHM of isolated peaks with S/N >= 20; below 8 peaks the fallback width is used).
+//! count, the step of the grid and the width of a peak (median FWHM of isolated peaks with S/N >= 20, looked for at the fallback width and, for continuous data, at widths of 8-64 points; below 8 peaks the fallback width is used and `peaks` is 0).
 
 use super::{smooth, Buf, Mode, Params};
 
@@ -133,7 +133,33 @@ fn fwhms(buf: &Buf, p: &Params, sigma: f64, out: &mut Vec<f64>) {
     }
 }
 
-/// Estimates the parameters; `fallback_w` is used when fewer than 8 isolated peaks are found (0.7 for a unit-resolution quadrupole, 0.25 for a linear ion trap).
+fn median(v: &mut [f64]) -> f64 {
+    crate::sortc::by(v, f64::total_cmp);
+    v[(v.len() - 1) / 2]
+}
+
+/// FWHMs of the isolated peaks of `scans` measured with the background and the isolation test of the width `p.w`.
+fn widths_at(scans: &[(&[f64], &[f64])], p: &Params) -> Vec<f64> {
+    let mut buf = Buf::default();
+    let mut widths = Vec::new();
+    for (mz, y) in scans {
+        super::grid::fill(mz, y, p, &mut buf);
+        if buf.v.len() < 5 {
+            continue;
+        }
+        smooth::smooth(&mut buf, 5);
+        smooth::background(&mut buf, p.wb(), p.mode == Mode::Counts);
+        let sigma = if p.mode == Mode::Continuous {
+            smooth::noise(&mut buf, p.wb())
+        } else {
+            1.0
+        };
+        fwhms(&buf, p, sigma, &mut widths);
+    }
+    widths
+}
+
+/// Estimates the parameters; `fallback_w` is used when fewer than 8 isolated peaks are found (continuous data are searched again at widths of 8, 24 and 64 points first) (0.7 for a unit-resolution quadrupole, 0.25 for a linear ion trap).
 pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
     let (unit, mode) = unit_and_mode(scans);
     let (step, regular) = step_and_grid(scans);
@@ -150,26 +176,34 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
         vmax,
         area: true,
     };
-    let mut buf = Buf::default();
-    let mut widths = Vec::new();
-    for (mz, y) in scans {
-        super::grid::fill(mz, y, &p, &mut buf);
-        if buf.v.len() < 5 {
-            continue;
+    let mut widths = widths_at(scans, &p);
+    // Continuous data whose peaks are much narrower than the fallback (high-resolution profile): at the fallback width
+    // nothing looks isolated and the background swallows the peaks, so the width is looked for again on the scale of
+    // the point spacing, then measured once more at the width found.
+    if widths.len() < 8 && mode == Mode::Continuous {
+        for points in [8.0, 24.0, 64.0] {
+            let q = Params {
+                w: points * step,
+                ..p.clone()
+            };
+            if q.w >= p.w {
+                break;
+            }
+            let found = widths_at(scans, &q);
+            if found.len() >= 8 {
+                let again = Params {
+                    w: median(&mut found.clone()).max(3.0 * step),
+                    ..p.clone()
+                };
+                let more = widths_at(scans, &again);
+                widths = if more.len() >= 8 { more } else { found };
+                break;
+            }
         }
-        smooth::smooth(&mut buf, 5);
-        smooth::background(&mut buf, p.wb(), p.mode == Mode::Counts);
-        let sigma = if mode == Mode::Continuous {
-            smooth::noise(&mut buf, p.wb())
-        } else {
-            1.0
-        };
-        fwhms(&buf, &p, sigma, &mut widths);
     }
     let peaks = if widths.len() >= 8 { widths.len() } else { 0 };
     if peaks > 0 {
-        crate::sortc::by(&mut widths, f64::total_cmp);
-        p.w = widths[(widths.len() - 1) / 2].max(3.0 * step);
+        p.w = median(&mut widths).max(3.0 * step);
     }
     p.area = !p.hr();
     Estimate {

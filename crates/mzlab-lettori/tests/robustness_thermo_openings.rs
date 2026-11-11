@@ -432,3 +432,25 @@ fn a_stamped_count_is_a_damaged_file() {
         }
     }
 }
+
+/// TH-02: a TSQ run without scan events does not say its polarity, so its scans have none (not positive) and the module's index row has 0.
+#[test]
+fn an_srm_run_without_events_has_no_polarity() {
+    let b = Raw::tsq(63, 4).bytes();
+    let r = open(&b).unwrap();
+    let m = opentfraw::scan_metadata(&r, &mut Cursor::new(b.clone()), 1).unwrap();
+    assert_eq!((m.ms_level, m.polarity), (2, None));
+    let mut l = mzlab_lettori::apri(
+        mzlab_core::readers::FileSet {
+            membri: vec![mzlab_core::readers::Member {
+                nome: "x.raw".into(),
+                dim: b.len() as u64,
+                dati: Box::new(b),
+                sha1: None,
+            }],
+        },
+        &mzlab_core::readers::Limits::sito(),
+    )
+    .unwrap();
+    assert!(l.index(0).unwrap().iter().all(|v| v.polarita == 0));
+}

@@ -265,8 +265,15 @@ impl AgilentD {
             observed: true,
             window,
             params: Vec::new(),
+            ce: self.ce_of(s),
             ..SpectrumExtra::default()
         }
+    }
+
+    /// The collision energy of the record of a fragmentation spectrum (one with a precursor), when the layout has the field: written on every such spectrum.
+    pub(crate) fn ce_of(&self, s: &Spectrum) -> Option<f64> {
+        s.precursor?;
+        super::scan::record_of(&self.records, &s.id)?.collision_energy
     }
 }
 

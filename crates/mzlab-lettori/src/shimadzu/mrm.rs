@@ -106,17 +106,52 @@ fn u32_at(b: &[u8], at: usize) -> Option<u32> {
 
 /// The decompressed record at `off` of `raw`, `None` when it is not a record (the marker, the sizes or the stream do not agree).
 pub(super) fn record(raw: &[u8], off: usize) -> Option<Vec<u8>> {
-    let (us, cs) = (u32_at(raw, off + 4)?, u32_at(raw, off + 8)?);
+    let us = u32_at(raw, off.checked_add(4)?)?;
     if u64::from(us) > RECORD_MAX {
         return None;
     }
-    let z = raw.get(off + 12..off + 12 + usize::try_from(cs).ok()?)?;
+    let z = raw.get(off.checked_add(12)?..end(raw, off)?)?;
     let mut out = Vec::new();
     ZlibDecoder::new(z)
         .take(u64::from(us) + 1)
         .read_to_end(&mut out)
         .ok()?;
     (out.len() == usize::try_from(us).ok()?).then_some(out)
+}
+
+/// Where the compressed record at `off` ends (its 12-byte head and its stream), `None` when the head is not in `raw` or the sum does not fit.
+pub(super) fn end(raw: &[u8], off: usize) -> Option<usize> {
+    let cs = usize::try_from(u32_at(raw, off.checked_add(8)?)?).ok()?;
+    off.checked_add(12)?.checked_add(cs)
+}
+
+/// The entries whose record shares bytes with the record of another entry. A real file writes each record once, one after the other; a record named by many
+/// entries (or records laid over each other) would be inflated once per entry, up to 16 MB each from a few KB of the file.
+pub(super) fn shared(raw: &[u8], offs: &[usize]) -> Vec<bool> {
+    let mut spans: Vec<(usize, usize, usize)> = offs
+        .iter()
+        .enumerate()
+        .filter_map(|(i, &o)| Some((o, end(raw, o)?, i)))
+        .collect();
+    spans.sort_unstable();
+    let mut out = vec![false; offs.len()];
+    let mut owner: Option<(usize, usize)> = None; // (end, entry) of the span that reaches furthest so far
+    for &(a, b, i) in &spans {
+        match owner {
+            Some((e, j)) if a < e => {
+                for k in [i, j] {
+                    if let Some(x) = out.get_mut(k) {
+                        *x = true;
+                    }
+                }
+                if b > e {
+                    owner = Some((b, i));
+                }
+            }
+            _ => owner = Some((b, i)),
+        }
+    }
+    out
 }
 
 /// The points (Q1 × 100, Q3 × 100, counts) of a decompressed record; `None` when its length is not `head + n × 12`.
