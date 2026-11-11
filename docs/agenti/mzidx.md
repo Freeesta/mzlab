@@ -18,7 +18,7 @@ Un `.mzidx` si scrive una volta per file (`build(run, out)`) e si legge a fette 
 scans_off  JSON UTF-8 (separatori compatti): lista di righe, una per scansione, nell'ordine del file, con le colonne di SCAN_COLUMNS:
          start,end (byte dell'mzML),level,rt,polarity,tic,precursor,collision_energy,filter,profile,parent,iso,act,res,an,pint,path,precursors,charge,native[,kind[,mob]]
 meta_off   JSON UTF-8: {format:"mzidx", version, block, source:{name,size,mtime_ns,probe,sha256}, run:{nce,hr1,n_chromatograms},
-                        keys:{"<livello>/<all|+|->": indice di sezione}, sections:[{level,dtype,n_scans,n_peaks,n_fence,off:{rt,tic,scan_ids,sumint,bp_mz,bp_inten,fence,mz,inten,pos}}]}
+                        keys:{"<livello>/<all|+|->": indice di sezione}, sections:[{level,dtype,n_scans,n_peaks,n_fence,off:{rt,tic,scan_ids,sumint,bp_mz,bp_inten,fence,mz,inten,pos},crc32?}]}
 total      dimensione del file: un file di dimensione diversa (troncato) non si apre
 ```
 - **`kind`** (21ª colonna, solo se la scansione ha un tipo): `PREC` (precursor ion, `MS:1000341` o `pr` del filtro Thermo), `NL` (`MS:1000326`, `cnl`), `NG` (`MS:1000325`, `cng`), `EMC` (`MS:1000789`), `TDF` (`MS:1000790`), `ER` (`MS:1000791`), solo per le scansioni MS2 o oltre (`scantable::kind_of`); a ogni livello `EPI`, `PI`, `EMS`, `Q1` dallo userParam `analyst scan type` del lettore `.wiff`. `Scan::kind_name` dà i primi sei (parte a sé), `Scan::scan_type` gli esperimenti SCIEX (scansione MS1/MS2 qualsiasi). Un indice senza tipi né mobilità ha 20 colonne, come prima; `idxread::Scan.kind`.

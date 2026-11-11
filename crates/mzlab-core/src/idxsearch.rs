@@ -77,6 +77,7 @@ impl<R: ReadAt> Index<R> {
             if ok {
                 let mut b = vec![0u8; n_f * w];
                 index_bytes(&mut self.r, s.off[6], &mut b)?;
+                crate::idxcheck::sum(s, 6, &b)?;
                 fence = b.chunks_exact(w).map(widen).collect();
             }
             self.fences[si] = Some(fence);

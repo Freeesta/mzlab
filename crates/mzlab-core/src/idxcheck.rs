@@ -1,8 +1,10 @@
 //! Checks the sections of an index against the size of its file when it is opened: every array must lie inside the file, with lengths that do
 //! not overflow, and every key must name a section. A damaged index is `error.badIndex` here, never a panic or a huge allocation later.
+//! The optional `crc32` of a section (a CRC-32 per array) is checked on every array read whole (docs/agenti/rust-mzidx.md).
 
 use crate::error::{Error, Result};
-use crate::idxread::Section;
+use crate::idxread::{Section, NAMES};
+use crate::json::Value;
 
 /// The `(offset index, bytes per element, element count)` of each of the 10 arrays of a section (`NAMES` of `idxread`).
 fn extents(s: &Section) -> [(usize, u64, u64); 10] {
@@ -49,6 +51,33 @@ pub(crate) fn scan_ids(ids: &[i64], rows: usize) -> Result<()> {
             .iter()
             .any(|&i| usize::try_from(i).map_or(true, |i| i >= rows))
     {
+        return Err(Error::new("error.badIndex"));
+    }
+    Ok(())
+}
+
+/// The `crc32` object of a section: `None` when absent (an index written before the sums), `error.badIndex` when present but malformed.
+pub(crate) fn crcs(s: &Value) -> Result<Option<[u32; 10]>> {
+    let Some(c) = s.get("crc32") else {
+        return Ok(None);
+    };
+    let mut o = [0u32; 10];
+    for (i, name) in NAMES.iter().enumerate() {
+        let v = c
+            .get(name)
+            .and_then(Value::f64)
+            .filter(|v| v.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(v));
+        o[i] = v.ok_or_else(|| Error::new("error.badIndex"))? as u32;
+    }
+    Ok(Some(o))
+}
+
+/// Errors with `error.badIndex` when array `k` of `s`, read whole as `bytes`, does not match the sum the section records.
+pub(crate) fn sum(s: &Section, k: usize, bytes: &[u8]) -> Result<()> {
+    let Some(c) = s.crc else { return Ok(()) };
+    let mut h = flate2::Crc::new();
+    h.update(bytes);
+    if h.sum() != c[k] {
         return Err(Error::new("error.badIndex"));
     }
     Ok(())
