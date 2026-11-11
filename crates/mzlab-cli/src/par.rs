@@ -180,14 +180,14 @@ fn collect(mut st: Pool) -> Result<Detected> {
         return Err(e);
     }
     let Some(recipe) = st.recipe.take() else {
-        return Err(mzlab_core::error::Error::memory_budget());
+        return Err(mzlab_core::error::Error::work_stopped("detect"));
     };
     let (mut peaks, mut weak) = (Vec::new(), Vec::new());
     for (p, w) in st.detected.iter_mut().zip(st.weak.iter_mut()) {
         for (r, into) in [(p, &mut peaks), (w, &mut weak)] {
             into.push(
                 r.take()
-                    .unwrap_or_else(|| Err(mzlab_core::error::Error::memory_budget()))?,
+                    .unwrap_or_else(|| Err(mzlab_core::error::Error::work_stopped("detect")))?,
             );
         }
     }

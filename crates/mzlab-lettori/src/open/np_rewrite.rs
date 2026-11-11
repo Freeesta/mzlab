@@ -101,7 +101,7 @@ fn block<'a>(b: &'a str, expected: usize, limits: &Limits) -> Result<Cow<'a, str
     };
     let values = numpress::decode_text(np, zlib, text, expected)?;
     if (values.len() as u64).saturating_mul(8) > limits.byte {
-        return Err(Error::memory_budget());
+        return Err(Error::fixed_limit("numpress array", limits.byte));
     }
     let mut out = String::with_capacity(b.len() + values.len() * 11);
     let mut da = 0usize;

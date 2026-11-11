@@ -50,5 +50,6 @@ fn bomb_is_an_error_not_an_oom() {
         .flat_map(|x| x.to_le_bytes())
         .collect();
     let e = read(file(3, &bomb, &zlib_b64(&ok))).unwrap_err();
-    assert_eq!(e.key, "error.memoryBudget");
+    // a fixed limit of the array, not the memory error the index pool retries with fewer workers
+    assert_eq!(e.key, "error.fixedLimit");
 }

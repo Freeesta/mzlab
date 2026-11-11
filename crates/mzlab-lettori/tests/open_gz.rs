@@ -100,10 +100,10 @@ fn hostile_cases_give_a_key() {
         key("a.mzML.gz", gz(b"hello world"), &Limits::sito()),
         Some("err.file.notAccepted")
     );
-    // inflated size over the limit: a memory-budget error, not an allocation
+    // inflated size over the limit: a fixed-limit error (no budget moves it), not an allocation
     let mut little = Limits::sito();
     little.byte = 200;
-    assert_eq!(key("a.mzML.gz", good, &little), Some("error.memoryBudget"));
+    assert_eq!(key("a.mzML.gz", good, &little), Some("error.fixedLimit"));
 }
 
 /// `x.mzXML.gz` in the app and the CLI (registry, `tutte`): the scans of the inflated mzXML, exactly. The site gunzips it into OPFS with `mzlab_core::gunzip` and gives the
