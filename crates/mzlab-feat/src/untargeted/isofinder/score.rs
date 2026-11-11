@@ -195,5 +195,5 @@ pub(super) fn spacing_consistency(ladder: &Ladder, base_mz: f64, tol: &Tol) -> f
     if sigma <= 0.0 {
         return 1.0;
     }
-    (-(eps / sigma).powi(2)).exp()
+    libm::exp(-(eps / sigma).powi(2))
 }

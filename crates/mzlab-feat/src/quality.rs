@@ -420,7 +420,7 @@ mod tests {
 
     fn gauss(n: usize, c: f64, s: f64, h: f64) -> Vec<f64> {
         (0..n)
-            .map(|i| h * (-((i as f64 - c).powi(2)) / (2.0 * s * s)).exp())
+            .map(|i| h * libm::exp(-((i as f64 - c).powi(2)) / (2.0 * s * s)))
             .collect()
     }
 

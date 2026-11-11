@@ -301,7 +301,7 @@ fn log_likelihood(r: &[u64], ev: &[Evidence], lib: &Library, subs: &Subs) -> Vec
                     }
                 })
                 .fold(0.0, |a, (_, &x)| a + x);
-            ll[i] += k * (EPS + (1.0 - 2.0 * EPS) * p).ln();
+            ll[i] += k * libm::log(EPS + (1.0 - 2.0 * EPS) * p);
         }
     }
     ll

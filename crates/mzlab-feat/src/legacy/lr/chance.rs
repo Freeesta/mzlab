@@ -32,7 +32,7 @@ impl Chance {
 
 /// P(X ≥ k) for a Poisson variable of mean `lambda`.
 pub fn poisson_sf(k: usize, lambda: f64) -> f64 {
-    let (mut term, mut cdf) = ((-lambda).exp(), 0.0);
+    let (mut term, mut cdf) = (libm::exp(-lambda), 0.0);
     for i in 0..k {
         cdf += term;
         term *= lambda / (i + 1) as f64;
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn poisson_tail() {
         assert!((poisson_sf(0, 2.0) - 1.0).abs() < 1e-12);
-        assert!((poisson_sf(1, 2.0) - (1.0 - (-2.0f64).exp())).abs() < 1e-12);
+        assert!((poisson_sf(1, 2.0) - (1.0 - libm::exp(-2.0f64))).abs() < 1e-12);
         assert!((poisson_sf(3, 0.8) - 0.0474).abs() < 1e-3);
     }
 }

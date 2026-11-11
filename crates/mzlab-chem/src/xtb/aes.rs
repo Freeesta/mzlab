@@ -13,7 +13,7 @@ impl Aes {
             .map(|i| {
                 let p = par(el[i]);
                 let r0 = mp_rad(el[i], p.mp_rad);
-                let t = (-MP_KEXP_MULTI * (cn[i] - p.mp_vcn - MP_SHIFT)).exp();
+                let t = libm::exp(-MP_KEXP_MULTI * (cn[i] - p.mp_vcn - MP_SHIFT));
                 r0 + (MP_RMAX - r0) / (1.0 + t)
             })
             .collect();
@@ -36,8 +36,8 @@ impl Aes {
                 let g3 = g1 * g1 * g1;
                 let g5 = g3 * g1 * g1;
                 let rr = 0.5 * (mrad[i] + mrad[j]) * g1;
-                let f3 = 1.0 / (1.0 + 6.0 * rr.powf(MP_DMP3));
-                let f5 = 1.0 / (1.0 + 6.0 * rr.powf(MP_DMP5));
+                let f3 = 1.0 / (1.0 + 6.0 * libm::pow(rr, MP_DMP3));
+                let f5 = 1.0 / (1.0 + 6.0 * libm::pow(rr, MP_DMP5));
                 let k = i * n + j;
                 for x in 0..3 {
                     a.sd[k][x] = v[x] * g3 * f3;

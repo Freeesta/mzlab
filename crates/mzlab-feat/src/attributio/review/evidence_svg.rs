@@ -68,7 +68,7 @@ fn esc(s: &str) -> String {
 
 fn nice_step(range: f64) -> f64 {
     let raw = range / 6.0;
-    let mag = 10f64.powf(raw.log10().floor());
+    let mag = libm::pow(10f64, libm::log10(raw).floor());
     let f = raw / mag;
     mag * if f <= 1.0 {
         1.0

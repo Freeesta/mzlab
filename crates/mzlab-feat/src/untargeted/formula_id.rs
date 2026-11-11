@@ -203,7 +203,7 @@ fn pattern_for(d: &Option<Detection>, z: i32) -> Vec<(f64, f64)> {
 
 /// The mass term of `compose`: a Gaussian of the error in ppm (expected error 3 ppm).
 fn mass_term(ppm: f64) -> f64 {
-    round((-0.5 * (ppm / 3.0).powi(2)).exp(), 4)
+    round(libm::exp(-0.5 * (ppm / 3.0).powi(2)), 4)
 }
 
 /// Runs `compose` and reads its JSON `results` (formula, errors, rules, scores).
@@ -349,7 +349,7 @@ fn composition_terms(c: &Candidate) -> ScoreTerms {
     // with a pattern `compose` averages the unrounded mass term and rounds only the total: the terms of the record are the ones it averaged, so the value
     // rounded to 4 decimals is the score shown
     let mass = match c.iso_term {
-        Some(_) => (-0.5 * (c.error_ppm / d.sigma_ppm).powi(2)).exp(),
+        Some(_) => libm::exp(-0.5 * (c.error_ppm / d.sigma_ppm).powi(2)),
         None => c.mass_term,
     };
     let mut parts = vec![("mass", mass, w.0)];

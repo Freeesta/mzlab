@@ -272,7 +272,7 @@ impl<S: Source> Library<S> {
                 let rec = SpecRec::from_bytes(r);
                 recs.push(LightRec {
                     ln_scale: if rec.scale > 0.0 {
-                        (rec.scale as f64).ln()
+                        libm::log(rec.scale as f64)
                     } else {
                         0.0
                     },

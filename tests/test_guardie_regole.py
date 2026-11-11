@@ -212,6 +212,24 @@ def test_guard_std_sorts_only_sortc_in_wasm_crates():
     assert not found, f"use sortc (SortC::sortc_by...) instead of std sorts: {found}"
 
 
+# Std exp/ln/pow/trig come from the system library in a native build and from the libm port in the .wasm, which differ in the last bit:
+# the engine crates call `libm::` so the site, the app and the CLI write the same bytes (docs/agenti/parita.md, «Funzioni matematiche»).
+MATH_STD = re.compile(r"\.(exp|ln|log10|log2|powf|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|exp2|exp_m1|ln_1p|cbrt|hypot)\(")
+
+
+def test_guard_engine_math_from_libm():
+    found = []
+    for crate in ("mzlab-core", "mzlab-picchi", "mzlab-feat", "mzlab-lib", "mzlab-chem", "mzlab-target"):
+        for f in sorted((ROOT / "crates" / crate / "src").rglob("*.rs")):
+            if "test" in f.stem or f.parent.name == "tests":
+                continue
+            testo = f.read_text(encoding="utf-8").split("#[cfg(test)]")[0]
+            for n, row in enumerate(testo.splitlines(), 1):
+                if MATH_STD.search(row) and not row.lstrip().startswith("//"):
+                    found.append(f"{f.relative_to(ROOT).as_posix()}:{n}")
+    assert not found, f"use libm:: (libm::exp, libm::log, libm::pow, ...) instead of std math: {found}"
+
+
 def test_guardia_costanti_di_massa_solo_in_elements():
     """Proton, electron and 13C step are written once (mzlab-core elements.rs); crates import them by name."""
     pat = re.compile(r"1\.00727|1\.007_276|0\.00054858|1\.00335|1\.003_35")

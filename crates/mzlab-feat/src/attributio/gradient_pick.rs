@@ -38,7 +38,7 @@ pub(super) struct Pick {
 
 pub(super) fn logs(us: f64, ds: f64) -> (Option<f64>, Option<f64>) {
     if us > 0.0 && ds > 0.0 {
-        (Some((us / ds).log2()), Some((ds / us).log2()))
+        (Some(libm::log2(us / ds)), Some(libm::log2(ds / us)))
     } else {
         (None, None)
     }
@@ -89,14 +89,14 @@ pub(super) fn other_sorbents_disagree(
             .copied()
             .unwrap_or(0.0)
     };
-    let thr = fold.log2();
+    let thr = libm::log2(fold);
     let mut discordant = false;
     for sb in sorbents.iter().filter(|s| *s != used) {
         let (o_us, o_ds) = (get(sites[0], sb), get(sites[1], sb));
         if l_ud.abs() >= thr {
             let up = l_ud > 0.0;
             discordant = if o_us > 0.0 && o_ds > 0.0 {
-                let o = (o_us / o_ds).log2();
+                let o = libm::log2(o_us / o_ds);
                 (o > 0.0) != up && o.abs() >= thr
             } else if up {
                 o_ds > 0.0 && o_us == 0.0

@@ -1,13 +1,13 @@
 //! Fast natural logarithm for the Flash entropy terms.
 
-/// Natural logarithm to ~1e-13 relative error (range reduction to [√½, √2) and the atanh series), about three times faster than `f64::ln`;
-/// subnormal, zero, negative or non-finite arguments use `f64::ln`.
+/// Natural logarithm to ~1e-13 relative error (range reduction to [√½, √2) and the atanh series), about three times faster than `libm::log`;
+/// subnormal, zero, negative or non-finite arguments use `libm::log` (the same bits on every target).
 #[inline]
 pub(crate) fn fast_ln(x: f64) -> f64 {
     let bits = x.to_bits();
     let ex = ((bits >> 52) & 0x7ff) as i64;
     if ex == 0 || ex == 0x7ff || x < 0.0 {
-        return x.ln();
+        return libm::log(x);
     }
     let mut e = ex - 1023;
     let mut m = f64::from_bits((bits & 0x000F_FFFF_FFFF_FFFF) | (1023u64 << 52));
@@ -34,7 +34,7 @@ mod tests {
     fn fast_ln_matches_std() {
         let mut x = 1e-9f64;
         while x < 1e9 {
-            let (a, b) = (fast_ln(x), x.ln());
+            let (a, b) = (fast_ln(x), libm::log(x));
             assert!((a - b).abs() <= 1e-12 * b.abs().max(1.0), "{x}: {a} vs {b}");
             x *= 1.0137;
         }
