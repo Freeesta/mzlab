@@ -1,6 +1,6 @@
 """Disegno: the «Formula analysis» card (closed by default) gives formula, exact, nominal and average mass and the mass % of the drawn molecule from the
 Rust `anal/1`; «Show isotope pattern» draws the theoretical sticks (keyboard-reachable, with their TDATI table) titled as theory for the formula; an ion
-shows its m/z; two molecules without a selection ask for one. Draw -> card -> pattern = 2 clicks. Needs site/static/wasm-feat/grafo; SKIP without it."""
+shows its m/z; two molecules without a selection ask for one; the right-click row opens the card on the selection. Draw -> card -> pattern = 2 clicks. Needs site/static/wasm-feat/grafo; SKIP without it."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
@@ -62,6 +62,14 @@ try:
             pg.evaluate(f"{KJ}.setMolecule('CCO.CN')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 5")
             pg.wait_for_function("/Seleziona una molecola/.test(document.querySelector('#anal-body').textContent)", timeout=15000)
         step("two molecules without a selection ask for one", two)
+        def menu():
+            pg.evaluate("document.querySelector('#anal-card').open = false")
+            pg.evaluate(f"(()=>{{const K={KJ};const ids=[...K.editor.struct().atoms.keys()];K.editor.selection({{atoms:ids.slice(3)}})}})()")   # the CN piece
+            OPEN = "(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()"
+            pg.evaluate(OPEN); wait_for_js(pg, "!!document.querySelector('#ctx:not([hidden]) div[data-row=analysis]')", timeout=10000)
+            pg.click("#ctx div[data-row=analysis]")
+            pg.wait_for_function("document.querySelector('#anal-card').open && (document.querySelector('#anal-formula')||{}).textContent === 'CH5N'", timeout=15000)
+        step("the right-click row opens the card on the selection", menu)
 finally:
     r.close()
 r.report()

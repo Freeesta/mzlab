@@ -131,6 +131,8 @@ I18N.add("it", {
   "draw.ctx.copySmiles": "Copia SMILES",
   "draw.ctx.copySmilesOf": "Copia SMILES ({smiles})",
   "draw.ctx.center": "Centra disegno",
+  "draw.ctx.analysis": "Analisi della formula",
+  "draw.ctx.analysis.title": "Formula, masse, % in massa e pattern isotopico teorico di ciò su cui agisce il menu",
   "draw.ctx.breakBonds": "{n, plural, one {Spezza il legame} other {Spezza i # legami selezionati}}",
   "draw.ctx.breakBonds.title": "Toglie il legame tra i due atomi",
   "draw.ctx.copyFormula": "Copia la formula ({formula})",
