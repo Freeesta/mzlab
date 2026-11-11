@@ -477,11 +477,12 @@ impl<R: ReadAt> Index<R> {
             let s = self.sections[si].clone();
             let n = s.n_scans;
             let rt = self.read_f64(s.off[0], n)?;
-            let scan_ids = self
+            let scan_ids: Vec<i64> = self
                 .read_bytes(s.off[2], n)?
                 .chunks_exact(8)
                 .map(|c| i64::from_le_bytes(c.try_into().unwrap()))
                 .collect();
+            crate::idxcheck::scan_ids(&scan_ids, self.scans.len())?;
             let sumint = self.read_f64(s.off[3], n)?;
             let bp_mz = self.read_f64(s.off[4], n)?;
             let bp_inten = self.read_f64(s.off[5], n)?;
