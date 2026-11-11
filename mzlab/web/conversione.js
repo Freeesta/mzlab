@@ -334,9 +334,9 @@ const CONVROWS = {
     for (const r of end) add(r.state !== "done" ? r.state : /** @type {string} */ (r.kind) in CONV_SUM && r.kind !== "fail" && r.kind !== "cancel" ? /** @type {string} */ (r.kind) : "other");
     const parts = Object.keys(CONV_SUM).filter(k => by.has(k)).map(k => T(CONV_SUM[k], { n: I18N.fix(by.get(k), 0) }));
     const hit = end.filter((/** @type {ConvRow} */ r) => r.cached).length; if (hit) parts.push(T("conv.sum.cached", { n: I18N.fix(hit, 0) }));
-    const miss = end.filter((/** @type {ConvRow} */ r) => r.missing), noEv = miss.filter(r => r.cause === CONV_EVENTS_REFUSED).length;
-    if (miss.length > noEv) parts.push(T("conv.sum.missing", { n: I18N.fix(miss.length - noEv, 0) }));
-    if (noEv) parts.push(T("conv.sum.eventsRefused", { n: I18N.fix(noEv, 0) }));
+    const miss = end.filter((/** @type {ConvRow} */ r) => r.missing), ev = miss.filter(r => r.cause === CONV_EV).length, cut = miss.length - ev;
+    if (cut) parts.push(T("conv.sum.missing", { n: I18N.fix(cut, 0) }));
+    if (ev) parts.push(T("conv.sum.noEvent", { n: I18N.fix(ev, 0) }));
     const t0 = minOf(end.map((/** @type {ConvRow} */ r) => r.t0 || 0)), t1 = maxOf(end.map((/** @type {ConvRow} */ r) => (r.t0 || 0) + 1000 * (r.secs || 0)));
     return T("conv.sum.head", { n: I18N.fix(end.length, 0), parts: parts.join(", "), time: convElapsed(t1 - t0) });
   },
@@ -454,14 +454,13 @@ function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sam
 function convStKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.st.open", nopen: "conv.st.open", get: "conv.st.get", load: "conv.st.load", idx: "conv.st.index", index: "conv.st.index", wait: "conv.st.wait", run: "conv.st.run", conv: "conv.st.conv", nread: "conv.st.read", nscan: "conv.st.scans", nchrom: "conv.st.chrom" })[state] || "conv.st.wait"; }
 // the text key of the state of a row of the files being converted (CONVROWS)
 function convRowKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.row.open", get: "conv.row.get", load: "conv.row.loadn", idx: "conv.row.idx", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" })[state] || "conv.row.wait"; }
-// "m:ss" or "h:mm:ss" from milliseconds
-// the cause of a .raw whose scans are all there but some without their scan event (`Losses::cause`): not a file that ends early
-const CONV_EVENTS_REFUSED = "warn.raw.eventsRefused";
-/** The note of a row with `missing` scans: past the end of a cut file, or listed without their event. @param {ConvRow} r */
-function convMissing(r) {
-  const n = r.scans || 0, m = r.missing || 0;
-  return r.cause === CONV_EVENTS_REFUSED ? I18N.t("conv.row.eventsRefused", { n: I18N.fix(m, 0), scans: I18N.fix(n, 0) }) : I18N.t("conv.row.missing", { read: I18N.fix(n, 0), declared: I18N.fix(n + m, 0) });
+// a cause: scans without their event, not a cut file
+const CONV_EV = "warn.raw.eventsRefused";
+function convMissing(/** @type {ConvRow} */ r) {
+  const n = r.scans || 0, m = r.missing || 0, f = (/** @type {number} */ v) => I18N.fix(v, 0), e = r.cause === CONV_EV;
+  return I18N.t(e ? "conv.row.noEvent" : "conv.row.missing", e ? { n: f(m), scans: f(n) } : { read: f(n), declared: f(n + m) });
 }
+// "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(/** @type {number} */ ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");

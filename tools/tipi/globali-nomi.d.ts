@@ -46,7 +46,7 @@ declare var CONV: any;
 declare var CONVERT_RAW: any;
 declare var CONVQ: any;
 declare var CONVROWS: any;
-declare var CONV_EVENTS_REFUSED: any;
+declare var CONV_EV: any;
 declare var CONV_FINAL: any;
 declare var CONV_SUM: any;
 declare var CU: any;
