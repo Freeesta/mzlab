@@ -167,7 +167,7 @@ pub fn run_plan_notify(
     fill_inputs(&mut plan, |n| dir.join(crate::flow_set::dataset_name(n)))?;
     let plan = prepare(plan, &steps())?.map_err(|problems| {
         let list: Vec<String> = problems.iter().map(problem_text).collect();
-        mzlab_core::Error::new("err.flow.check").with("problems", list.join(" "))
+        mzlab_core::flow::check_error(&problems).with("problems", list.join(" "))
     })?;
     let runner = FileRunner::cached(dir, work, meter, fresh).with_done(done);
     run_checked(&plan, text, &runner, workers)
@@ -208,7 +208,7 @@ pub fn probe_plan(text: &[u8], dir: &Path, work: &Path) -> mzlab_core::Result<(u
     fill_inputs(&mut plan, |n| dir.join(crate::flow_set::dataset_name(n)))?;
     let plan = prepare(plan, &steps())?.map_err(|problems| {
         let list: Vec<String> = problems.iter().map(problem_text).collect();
-        mzlab_core::Error::new("err.flow.check").with("problems", list.join(" "))
+        mzlab_core::flow::check_error(&problems).with("problems", list.join(" "))
     })?;
     let seen = Arc::new(Mutex::new(HashMap::<String, bool>::new()));
     let log = seen.clone();

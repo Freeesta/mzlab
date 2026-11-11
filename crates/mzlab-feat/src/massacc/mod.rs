@@ -61,7 +61,18 @@ impl Params {
     /// The parameters from an object of the resolved ones (`[(name, value)]`); one that is missing keeps its default, one that is wrong is `err.flow.param.type`.
     pub fn from_value(v: &Value) -> Result<Params> {
         let mut p = Params::default();
-        let bad = |name: &str| Error::new("err.flow.param.type").with("param", name);
+        // the step's id stands for the instance: the page and the app ask without a plan
+        let bad = |name: &str| {
+            Error::new("err.flow.param.type")
+                .with("instance", "qc.mass_accuracy")
+                .with("param", name)
+                .with(
+                    "detail",
+                    v.get(name)
+                        .map(mzlab_core::flow::value_text)
+                        .unwrap_or_default(),
+                )
+        };
         let num = |name: &str, into: &mut f64| -> Result<()> {
             match v.get(name) {
                 None => Ok(()),

@@ -107,7 +107,7 @@ pub(crate) fn invalid(st: Style, problems: &[Problem]) -> Outcome {
     let msg = format!("the plan is not valid:\n{}", lines.join("\n"));
     let mut o = crate::flow_run::fail(3, &msg, hint);
     if st.json {
-        let err = Error::new("err.flow.check").with("problems", list.join(" "));
+        let err = mzlab_core::flow::check_error(problems).with("problems", list.join(" "));
         o.stdout = error_json(3, &err, &msg, hint, problems).into_bytes();
     }
     o
@@ -335,9 +335,10 @@ fn check_plan(path: &str, sets: &[String], reg: &[Step], st: Style) -> Result<Pl
         .iter()
         .partition(|s| s.contains(".algorithm=") || s.contains(".preset="));
     for s in setting.into_iter().chain(plain) {
-        let err = Error::new("err.cli.set").with("set", s);
-        apply_set(&mut plan, reg, s)
-            .map_err(|e| fail(st, 2, &err, &e, "mzlab-cli flow check --help"))?;
+        apply_set(&mut plan, reg, s).map_err(|e| {
+            let err = Error::new("err.cli.set").with("set", s).with("message", &e);
+            fail(st, 2, &err, &e, "mzlab-cli flow check --help")
+        })?;
     }
     Ok(plan)
 }

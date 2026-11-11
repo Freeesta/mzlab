@@ -27,10 +27,12 @@ const FINDER_KEYS: [&str; 6] = [
     "finder_auto",
 ];
 
-fn bad(step: &str, name: &str) -> Error {
+/// `err.flow.param.type` of parameter `name` of `step`, with the value it was given.
+fn bad(step: &str, name: &str, v: &Value) -> Error {
     Error::new("err.flow.param.type")
         .with("instance", step)
         .with("param", name)
+        .with("detail", mzlab_core::flow::value_text(v))
 }
 
 /// Whether `k` of `features.detect` is the isotope grouping or one of its parameters.
@@ -45,7 +47,7 @@ pub(super) fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> 
             Some("averagine") => (false, false),
             Some("grouper") => (true, false),
             Some("finder") => (false, true),
-            _ => return Err(bad(step, k)),
+            _ => return Err(bad(step, k, v)),
         };
         return Ok(());
     }
@@ -54,19 +56,19 @@ pub(super) fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> 
     }
     let g = &mut r.steps.grouper;
     match k {
-        "iso_monotonic" => g.monotonic = v.bool().ok_or_else(|| bad(step, k))?,
+        "iso_monotonic" => g.monotonic = v.bool().ok_or_else(|| bad(step, k, v))?,
         "iso_representative" => {
             g.lowest_mz = match v.str() {
                 Some("most_intense") => false,
                 Some("lowest_mz") => true,
-                _ => return Err(bad(step, k)),
+                _ => return Err(bad(step, k, v)),
             }
         }
         _ => {
             let x = v
                 .f64()
                 .filter(|x| x.is_finite() && *x >= 0.0)
-                .ok_or_else(|| bad(step, k))?;
+                .ok_or_else(|| bad(step, k, v))?;
             match k {
                 "iso_ppm" => g.tol_ppm = x,
                 "iso_abs_da" => g.tol_da = x,
@@ -82,10 +84,10 @@ pub(super) fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> 
 fn set_finder(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     let g = &mut r.steps.finder;
     match k {
-        "finder_require_c13" => g.require_c13 = v.bool().ok_or_else(|| bad(step, k))?,
-        "finder_auto" => g.auto = v.bool().ok_or_else(|| bad(step, k))?,
+        "finder_require_c13" => g.require_c13 = v.bool().ok_or_else(|| bad(step, k, v))?,
+        "finder_auto" => g.auto = v.bool().ok_or_else(|| bad(step, k, v))?,
         "finder_elements" => {
-            let list = v.str().ok_or_else(|| bad(step, k))?;
+            let list = v.str().ok_or_else(|| bad(step, k, v))?;
             let els: Vec<&str> = list
                 .split(',')
                 .map(str::trim)
@@ -96,7 +98,7 @@ fn set_finder(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
                     .iter()
                     .any(|e| mzlab_core::isoscore::isotopes_of(e).is_none())
             {
-                return Err(bad(step, k));
+                return Err(bad(step, k, v));
             }
             g.elements = els.join(",");
         }
@@ -104,7 +106,7 @@ fn set_finder(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
             let x = v
                 .f64()
                 .filter(|x| x.is_finite() && *x >= 0.0)
-                .ok_or_else(|| bad(step, k))?;
+                .ok_or_else(|| bad(step, k, v))?;
             match k {
                 "finder_ppm" => g.tol_ppm = x,
                 "finder_abs_da" => g.tol_da = x,

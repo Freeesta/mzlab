@@ -93,7 +93,11 @@ fn the_meter_never_lets_the_worst_case_pass_the_cap() {
     assert_eq!(e.key, "err.llm.limit.spend");
     assert_eq!(
         e.params,
-        vec![("cap", "12000".to_string()), ("spent", "0".to_string())]
+        vec![
+            ("limit", "session".to_string()),
+            ("cap", "12000".to_string()),
+            ("spent", "0".to_string())
+        ]
     );
     // a finished call replaces its reservation with its real cost and frees the difference
     let cost = m

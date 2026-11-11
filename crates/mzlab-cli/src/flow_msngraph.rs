@@ -205,9 +205,15 @@ fn number(job: &Job, name: &str, fallback: f64) -> f64 {
 
 /// The molecule `name` of the CSV `list`: the one whose name, synonym or formula is the best match; two best matches are ambiguous and a name the list does
 /// not hold is an error. Returns its ion text (`C8H9NO2 [M+H]+`) and SMILES.
-fn molecule(name: &str, adduct: &str, list: &str) -> Result<(String, Option<String>)> {
+fn molecule(
+    name: &str,
+    adduct: &str,
+    list: &str,
+    instance: &str,
+) -> Result<(String, Option<String>)> {
     let bad = |detail: String| {
         Error::new("err.flow.param.type")
+            .with("instance", instance)
             .with("param", "molecule")
             .with("detail", detail)
     };
@@ -245,7 +251,7 @@ fn options(job: &Job, molecules: Option<&str>) -> Result<Options> {
         let list = molecules
             .ok_or_else(|| Error::new("err.flow.port.missing").with("port", "molecules"))?;
         let adduct = text(job, "adduct").unwrap_or_else(|| "[M+H]+".into());
-        let (ion, smiles) = molecule(&name, &adduct, list)?;
+        let (ion, smiles) = molecule(&name, &adduct, list, &job.instance.id)?;
         o.formula = Some(ion);
         o.smiles = o.smiles.or(smiles);
     }
@@ -271,7 +277,12 @@ fn options(job: &Job, molecules: Option<&str>) -> Result<Options> {
         });
     }
     for par in text(job, "pick").iter().flat_map(|s| s.split(',')) {
-        let bad = || Error::new("err.flow.param.type").with("param", "pick");
+        let bad = || {
+            Error::new("err.flow.param.type")
+                .with("instance", &job.instance.id)
+                .with("param", "pick")
+                .with("detail", par)
+        };
         let (m, f) = par.split_once('=').ok_or_else(bad)?;
         o.choices
             .push((m.trim().parse().map_err(|_| bad())?, f.trim().to_string()));
