@@ -312,7 +312,7 @@ impl Spill for JsSpill {
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
 /// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`counted.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
-/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Lettore::missing`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once). `cap_mb`: the budget of the instance (`MemBudget::from_request`; absent or 0 the default).
+/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Reader::losses`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once). `cap_mb`: the budget of the instance (`MemBudget::from_request`; absent or 0 the default).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -357,10 +357,8 @@ pub fn build_mzidx_native(
         1 + both.is_some() as usize,
     )
     .map_err(|e| error_json(&e))?;
-    // the scans the file declares beyond the ones read (`Reader::losses`), after the budget check: the page shows both counts
-    let cm = (c, l.losses(c).map_err(|e| error_json(&e))?.lost());
     if let Some(wc) = both {
-        return index_both(l, cm, &mut members, name, out, wc, budget_mb, spill, &tell);
+        return index_both(l, c, &mut members, name, out, wc, budget_mb, spill, &tell);
     }
     let mut l = if centroid {
         readers_centroids::centroidato(l)
@@ -380,17 +378,19 @@ pub fn build_mzidx_native(
     )
     .map_err(|e| error_json(&e))?;
     out.fine().map_err(|e| error_json(&e))?;
+    // the scans the file declares beyond the ones read (`Reader::losses`), asked once the index is built so its pass keeps the phases of the row
+    let missing = l.losses(c).map_err(|e| error_json(&e))?.lost();
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{}}}",
-        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, cm.1
+        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, missing
     ))
 }
 
-/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`index_reader_twice`); `missing`: `Lettore::missing` of sample `c`.
+/// `build_mzidx_native` for a profile sample whose centroid index is wanted too: both from one decoding (`index_reader_twice`); `missing`: `Reader::losses` of sample `c`.
 #[allow(clippy::too_many_arguments)]
 fn index_both(
     l: Box<dyn mzlab_core::readers::Reader>,
-    (c, missing): (usize, usize),
+    c: usize,
     members: &mut dyn FnMut() -> mzlab_core::Result<Vec<upload::Fingerprint>>,
     name: &str,
     mut out: Accorpa<JsOutput>,
@@ -416,6 +416,7 @@ fn index_both(
     .map_err(|e| error_json(&e))?;
     let fine = out.fine().and_then(|()| out_cen.fine());
     fine.map_err(|e| error_json(&e))?;
+    let missing = lc.losses(c).map_err(|e| error_json(&e))?.lost();
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{},\"cen\":{{\"peaks\":{},\"bytes\":{}}}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, missing, sc.peaks, sc.bytes
