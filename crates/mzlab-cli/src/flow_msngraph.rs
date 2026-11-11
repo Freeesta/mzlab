@@ -205,7 +205,12 @@ fn number(job: &Job, name: &str, fallback: f64) -> f64 {
 
 /// The molecule `name` of the CSV `list`: the one whose name, synonym or formula is the best match; two best matches are ambiguous and a name the list does
 /// not hold is an error. Returns its ion text (`C8H9NO2 [M+H]+`) and SMILES.
-fn molecule(name: &str, adduct: &str, list: &str, instance: &str) -> Result<(String, Option<String>)> {
+fn molecule(
+    name: &str,
+    adduct: &str,
+    list: &str,
+    instance: &str,
+) -> Result<(String, Option<String>)> {
     let bad = |detail: String| {
         Error::new("err.flow.param.type")
             .with("instance", instance)

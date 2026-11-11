@@ -16,7 +16,12 @@ fn the_record_names_the_preset_the_files_decided_and_the_ppm_error_is_refused_at
                 .expect_err("a ppm error on unit-resolution files");
             assert_eq!(
                 e.params,
-                vec![("problems", "qc.raw:err.flow.facet".into())],
+                vec![
+                    ("count", "1".into()),
+                    ("instance", "qc".into()),
+                    ("error_key", "err.flow.facet".into()),
+                    ("problems", "qc.raw:err.flow.facet".into())
+                ],
                 "{tag}"
             );
         }

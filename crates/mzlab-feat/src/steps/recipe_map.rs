@@ -131,7 +131,7 @@ fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         return set_adap(a, step, k, v);
     }
     let Peak::CentWave(c) = &mut r.detect.peak else {
-        return Err(Error::new("err.flow.param.unknown").with("instance", step).with("param", k));
+        return Err(unknown(step, k));
     };
     if k == "broad_peaks" {
         c.broad.enabled = v.bool().ok_or_else(|| bad(step, k, v))?;
@@ -187,7 +187,7 @@ fn set_adap(a: &mut AdapPeak, step: &str, k: &str, v: &Value) -> Result<()> {
         "chrom_threshold" => a.chrom_threshold = x.min(1.0),
         "search_rt" => a.search_rt = x,
         "min_ratio" => a.min_ratio = x,
-        _ => return Err(Error::new("err.flow.param.unknown").with("instance", step).with("param", k)),
+        _ => return Err(unknown(step, k)),
     }
     Ok(())
 }
@@ -200,6 +200,13 @@ fn set_axis(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         _ => return Err(bad(step, k, v)),
     };
     Ok(())
+}
+
+/// `err.flow.param.unknown` for parameter `k` of instance `step`.
+fn unknown(step: &str, k: &str) -> Error {
+    Error::new("err.flow.param.unknown")
+        .with("instance", step)
+        .with("param", k)
 }
 
 fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
@@ -222,7 +229,9 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
                 *defect = num()?;
             }
         }
-        ("features.detect", "rt_range") => r.rt_range = rt_range(v).ok_or_else(|| bad(step, k, v))?,
+        ("features.detect", "rt_range") => {
+            r.rt_range = rt_range(v).ok_or_else(|| bad(step, k, v))?
+        }
         ("features.detect", "budget") => r.detect.budget = int()?,
         ("features.detect", "min_points") => r.detect.min_points = num()? as u32,
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
@@ -272,11 +281,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.ms2_link", "tol_ppm") => r.steps.ms2.tol_ppm = num()?,
         ("features.ms2_link", "weak") => r.steps.ms2.weak = num()? as f32,
         ("features.ms2_link", "margin_s") => r.steps.ms2.margin_s = num()?,
-        _ => {
-            return Err(Error::new("err.flow.param.unknown")
-                .with("instance", step)
-                .with("param", k))
-        }
+        _ => return Err(unknown(step, k)),
     }
     Ok(())
 }

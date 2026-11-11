@@ -238,8 +238,10 @@ pub fn run(args: Vec<String>, tmp: &Path) -> Result<(Vec<u8>, String)> {
             let (t, out) = search(rest)?;
             deliver(t, out)
         }
-        _ => Err(Error::new("err.cli.line")
-            .with("message", "usage: mzlab-cli msn-lib add|build|export|search")),
+        _ => Err(Error::new("err.cli.line").with(
+            "message",
+            "usage: mzlab-cli msn-lib add|build|export|search",
+        )),
     }
 }
 

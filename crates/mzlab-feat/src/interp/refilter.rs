@@ -86,7 +86,8 @@ pub fn refilter<R: ReadAt>(
     if t.tp.is_empty() {
         return Err(Error::new("error.interp.noTp").with("detail", "empty"));
     }
-    let (meta, ids) = store::read_meta(r, size)?.ok_or_else(|| Error::new("error.interp.noTp").with("detail", "meta"))?;
+    let (meta, ids) = store::read_meta(r, size)?
+        .ok_or_else(|| Error::new("error.interp.noTp").with("detail", "meta"))?;
     let mut facts = filters::row_facts(&t);
     let mut reg = Registry::default();
     for (row, (fact, &status)) in facts.iter_mut().zip(&t.tp.status).enumerate() {

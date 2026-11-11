@@ -66,7 +66,12 @@ impl Params {
             Error::new("err.flow.param.type")
                 .with("instance", "qc.mass_accuracy")
                 .with("param", name)
-                .with("detail", v.get(name).map(mzlab_core::flow::value_text).unwrap_or_default())
+                .with(
+                    "detail",
+                    v.get(name)
+                        .map(mzlab_core::flow::value_text)
+                        .unwrap_or_default(),
+                )
         };
         let num = |name: &str, into: &mut f64| -> Result<()> {
             match v.get(name) {

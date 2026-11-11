@@ -377,9 +377,7 @@ impl Reader for NumpressReader {
 }
 
 pub(super) fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    let i = fs
-        .find(".mzml")
-        .ok_or_else(|| fs.not_accepted())?;
+    let i = fs.find(".mzml").ok_or_else(|| fs.not_accepted())?;
     let refused = fs.not_accepted();
     let m = fs.membri.get_mut(i).ok_or(refused)?;
     let nome = m

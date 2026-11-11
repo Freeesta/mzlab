@@ -300,7 +300,11 @@ fn index_reader(
             index_reader_with(
                 &mut l,
                 sample,
-                &mut || prints.take().ok_or_else(|| Error::new("error.workStopped").with("detail", "hash")),
+                &mut || {
+                    prints
+                        .take()
+                        .ok_or_else(|| Error::new("error.workStopped").with("detail", "hash"))
+                },
                 &name,
                 out,
                 budget,

@@ -119,7 +119,11 @@ pub struct FileSet {
 impl FileSet {
     /// `err.file.notAccepted` for this set, named by its first member (the name the page and the CLI show).
     pub fn not_accepted(&self) -> Error {
-        let name = self.membri.first().map(|m| m.nome.as_str()).unwrap_or_default();
+        let name = self
+            .membri
+            .first()
+            .map(|m| m.nome.as_str())
+            .unwrap_or_default();
         Error::new("err.file.notAccepted").with("name", name)
     }
     /// Index of the member whose name ends with `suffisso`, ignoring case.

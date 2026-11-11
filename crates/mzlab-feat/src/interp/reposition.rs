@@ -92,7 +92,8 @@ pub fn reposition<R: ReadAt>(
     pol: Pol,
     p: &SiteParams,
 ) -> Result<Vec<Positioned>> {
-    let (_, ids) = store::read_meta(r, size)?.ok_or_else(|| Error::new("error.interp.noTp").with("detail", "meta"))?;
+    let (_, ids) = store::read_meta(r, size)?
+        .ok_or_else(|| Error::new("error.interp.noTp").with("detail", "meta"))?;
     let mut out = Vec::with_capacity(ids.len());
     for id in ids {
         let text = store::read_row(r, size, id)?.ok_or_else(bad)?;

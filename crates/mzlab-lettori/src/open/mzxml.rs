@@ -424,9 +424,7 @@ fn field(name: &str, value: &str) -> Field {
 }
 
 fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    let i = fs
-        .find(".mzxml")
-        .ok_or_else(|| fs.not_accepted())?;
+    let i = fs.find(".mzxml").ok_or_else(|| fs.not_accepted())?;
     let refused = fs.not_accepted();
     let m = fs.membri.get_mut(i).ok_or(refused)?;
     let nome = m

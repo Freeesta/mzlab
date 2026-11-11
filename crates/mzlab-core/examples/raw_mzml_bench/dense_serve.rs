@@ -23,7 +23,8 @@ impl Reader for Denso {
     /// The centroid list (the packet is read without its profile, as `extract_arrays` does).
     fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
         self.read(k)?;
-        let peaks = decodifica_picchi(&self.buf).map_err(|_| Error::new("err.file.raw").with("detail", "peaks"))?;
+        let peaks = decodifica_picchi(&self.buf)
+            .map_err(|_| Error::new("err.file.raw").with("detail", "peaks"))?;
         let mz = peaks.iter().map(|p| p.mz).collect();
         let int = peaks.iter().map(|p| p.abundance).collect();
         Ok(self.spettro(k, false, mz, int))
@@ -31,7 +32,8 @@ impl Reader for Denso {
     /// The profile points with m/z above 0, converted from the bins as `profile_arrays` does.
     fn scan_profile(&mut self, _c: usize, k: usize) -> Result<Option<Spectrum>> {
         self.read(k)?;
-        let packet = decodifica(&self.buf).map_err(|_| Error::new("err.file.raw").with("detail", "packet"))?;
+        let packet = decodifica(&self.buf)
+            .map_err(|_| Error::new("err.file.raw").with("detail", "packet"))?;
         let Some(profilo) = packet.profile else {
             return Ok(None);
         };
