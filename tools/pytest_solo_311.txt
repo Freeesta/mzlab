@@ -1,7 +1,7 @@
 tests/test_msngrafo_wasm.py
 tests/test_feat_wasm.py
 tests/test_feat_grafo_wasm.py
-tests/test_molcheck_wasm.py
+tests/test_molkit_wasm.py
 tests/test_guardie_memoria.py
 tests/test_flow_determinismo.py
 tests/test_corsa_schema.py

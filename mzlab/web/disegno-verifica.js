@@ -1,5 +1,5 @@
 // @ts-check
-// «Drawing check» card of Draw: sends the molfile of the canvas to the Rust check (`check` of the molcheck .wasm, `check/1`; the app asks `feat/grafo`) and
+// «Drawing check» card of Draw: sends the molfile of the canvas to the Rust check (`check` of the molkit .wasm, `check/1`; the app asks `feat/grafo`) and
 // lists its remarks, each with a text row (role=status, level written out, not only a colour), a click that selects its atoms on the canvas and a «Why?»
 // that opens the three parts (problem, why it matters, next step). It speaks of the drawing only; auto-run after each change is off by default.
 import { featManifest } from "./feat-manifesto.js";
@@ -16,17 +16,17 @@ async function sha256(/** @type {ArrayBuffer} */ b) {
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256", b))].map(x => x.toString(16).padStart(2, "0")).join("");
 }
 
-/** the molcheck module, loaded on the first check; the .wasm is checked against the SHA-256 of wasm-feat/manifest.json and the bridge version */
+/** the molkit module, loaded on the first check; the .wasm is checked against the SHA-256 of wasm-feat/manifest.json and the bridge version */
 export function carica() {
   if (modulo) return modulo;
   modulo = (async () => {
-    const base = new URL("./wasm-feat/", import.meta.url), e = (await featManifest(base)).molcheck;
-    if (!e) throw new Error("molcheck");
+    const base = new URL("./wasm-feat/", import.meta.url), e = (await featManifest(base)).molkit;
+    if (!e) throw new Error("molkit");
     const bytes = await (await fetch(new URL(e.wasm, base))).arrayBuffer();
     if ((await sha256(bytes)) !== e.sha256) throw new Error("sha");
     const mod = await import(new URL(e.js, base).href);
     await mod.default({ module_or_path: bytes });
-    if (mod.version() !== "molcheck/1") throw new Error("molcheck version");
+    if (mod.version() !== "molkit/1") throw new Error("molkit version");
     return mod;
   })();
   modulo.catch(() => { modulo = null; });
@@ -39,7 +39,7 @@ async function ketcher() {
   return /** @type {any} */ (document.querySelector("#kframe")).contentWindow.ketcher;
 }
 
-/** `check/1` text of a request: the native engine in the app, the molcheck .wasm on the site */
+/** `check/1` text of a request: the native engine in the app, the molkit .wasm on the site */
 async function ask(/** @type {string} */ request) {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) {
     const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";

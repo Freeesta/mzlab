@@ -1,6 +1,6 @@
 [package]
 name = "mzlab-mol-wasm"
-description = "wasm-bindgen bridge of the drawing check of Draw (molfile -> check/1 of mzlab_feat::chem::check, on the mol/1 record); a .wasm of its own, loaded by the page only when the user asks for the check"
+description = "wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (check/1 of mzlab_feat::chem::check); a .wasm of its own (molkit), loaded by the page only when the user asks for it"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

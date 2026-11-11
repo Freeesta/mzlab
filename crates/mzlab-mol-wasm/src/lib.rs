@@ -1,11 +1,11 @@
-//! wasm-bindgen bridge of the drawing check of Draw: a molfile gives `check/1`, what is wrong in the drawing (valence, charge, isotope, wedges,
-//! rings, query atoms, pieces). A `.wasm` of its own (`molcheck`), so the grafo one does not carry the mol/1 record; the CLI (`mol-check`) and
-//! the app (`feat/grafo`, kind `check`) run the same `mzlab_feat::chem::check::check_json`. Errors are JSON `{"error_key", "params"}` strings.
+//! wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (`mzlab-mol` linked once): `check` gives `check/1`, what is wrong in the
+//! drawing. A `.wasm` of its own (`molkit`), so the grafo one does not carry the record; the CLI (`mol-check`) and the app (`feat/grafo`, kind
+//! `check`) run the same `mzlab_feat::chem::check::check_json`. Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "molcheck/1";
+const BRIDGE: &str = "molkit/1";
 
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())

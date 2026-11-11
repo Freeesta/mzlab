@@ -1,7 +1,7 @@
-"""Disegno, structure check (`check/1` of the molcheck .wasm): a pentavalent carbon is a valence mistake, a neutral four-bonded nitrogen asks for a + charge
+"""Disegno, structure check (`check/1` of the molkit .wasm): a pentavalent carbon is a valence mistake, a neutral four-bonded nitrogen asks for a + charge
 and the same nitrogen drawn as N+ is fine, and common groups (sulfone, nitro, phosphate, DMSO, pyridine, carboxylic acid, azide) raise no alarm.
 A remark selects its atoms on the canvas and «Perché?» opens its three parts; draw -> Check -> remark -> Why? is three clicks; auto-run is off by default.
-Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molcheck); SKIP without site/static/wasm-feat."""
+Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without site/static/wasm-feat."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
     print("SKIP site/static/wasm-feat is missing (tools/build_feat_wasm.sh site/static)"); sys.exit(0)
