@@ -2,10 +2,12 @@
 // @ts-noany
 // Drop-down toolbar of the editor (Disegno). Ketcher has no API to rearrange its toolbars, so a group of its buttons is replaced by ONE proxy button
 // that opens a small menu; choosing an item clicks the real (hidden) Ketcher button, and the proxy mirrors which one is selected.
-// To add a group: one entry of GROUPS (the data-testid of the real buttons + a key of lang/ for each tooltip).
+// To add a group: one entry of GROUPS (the data-testid of the real buttons + a key of lang/ for each tooltip). An item with `icon` is a tool of
+// mzLab, not of Ketcher (the radical mark): `mountBar` gets what it does and whether it is on from the page (`own`).
 // Self-check: a group whose real buttons are not all found is left as Ketcher draws it; if the bar is removed from the page the native toolbars come back.
 
-/** @typedef {{ id: string, tip: string }} Item */
+/** @typedef {{ id: string, tip: string, icon?: string }} Item */
+/** @typedef {Record<string, { run: () => void, on: () => boolean }>} Own */
 /** @typedef {{ id: string, tool: string | null, tip: string, cols: number, items: Item[], hide: string[] }} Group */
 
 /** @type {Group[]} */
@@ -14,8 +16,9 @@ export const GROUPS = [
     { id: "template-0", tip: "draw.bar.ring.benzene" }, { id: "template-1", tip: "draw.bar.ring.cyclopentadiene" }, { id: "template-2", tip: "draw.bar.ring.cyclohexane" },
     { id: "template-3", tip: "draw.bar.ring.cyclopentane" }, { id: "template-4", tip: "draw.bar.ring.cyclopropane" }, { id: "template-5", tip: "draw.bar.ring.cyclobutane" },
     { id: "template-6", tip: "draw.bar.ring.cycloheptane" }, { id: "template-7", tip: "draw.bar.ring.cyclooctane" }, { id: "template-lib", tip: "draw.bar.ring.library" }] },
-  { id: "charge", tool: null, tip: "draw.bar.charge", cols: 2, hide: ['[data-testid="charge-plus"]', '[data-testid="charge-minus"]'], items: [
-    { id: "charge-plus", tip: "draw.bar.charge.plus" }, { id: "charge-minus", tip: "draw.bar.charge.minus" }] },
+  { id: "charge", tool: null, tip: "draw.bar.charge", cols: 3, hide: ['[data-testid="charge-plus"]', '[data-testid="charge-minus"]'], items: [
+    { id: "charge-plus", tip: "draw.bar.charge.plus" }, { id: "charge-minus", tip: "draw.bar.charge.minus" },
+    { id: "radical", tip: "draw.bar.radical", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><text x="3" y="19" font-size="16" font-family="sans-serif" fill="currentColor">C</text><circle cx="18" cy="6" r="2.6" fill="currentColor"/></svg>' }] },
 ];
 
 const CSS = `:root{--tpb-bg:#fff;--tpb-line:#b8bcc4;--tpb-sel:#d6e6ff;--tpb-focus:#0b57d0}
@@ -37,11 +40,12 @@ const CSS = `:root{--tpb-bg:#fff;--tpb-line:#b8bcc4;--tpb-sel:#d6e6ff;--tpb-focu
 /** Builds the bar in the document `d` of Ketcher's iframe.
  * @param {Document} d
  * @param {(key: string) => string} t translator
- * @returns {{ update: (choice: Record<string, boolean>) => void, destroy: () => void, state: string } | null} null when nothing could be replaced */
-export function mountBar(d, t) {
+ * @param {Own} [own] the mzLab tools of the items with `icon`
+ * @returns {{ update: (choice: Record<string, boolean>) => void, destroy: () => void, sync: () => void, state: string } | null} null when nothing could be replaced */
+export function mountBar(d, t, own = {}) {
   const root = d.querySelector('[class*="LeftToolbar-module_root"]');
   const found = (/** @type {string} */ id) => /** @type {HTMLElement | null} */ (d.querySelector(`[data-testid="${id}"]`));
-  const usable = GROUPS.filter(g => g.items.every(i => found(i.id) && found(i.id)?.querySelector("svg")));
+  const usable = GROUPS.filter(g => g.items.every(i => i.icon ? !!own[i.id] : found(i.id) && found(i.id)?.querySelector("svg")));
   const missing = GROUPS.filter(g => !usable.includes(g)).map(g => g.id);
   if (missing.length) console.warn("Ketcher toolbar: native buttons kept for", missing.join(", "), "(a button was not found)");
   if (!root || !usable.length) { d.documentElement.dataset.tpBar = "native"; return null; }
@@ -55,7 +59,12 @@ export function mountBar(d, t) {
   /** @type {{ g: Group, box: HTMLElement, btn: HTMLButtonElement, menu: HTMLElement, items: HTMLButtonElement[], cur: number }[]} */
   const views = [];
   const closeAll = (/** @type {boolean} */ focus = false) => views.forEach(v => { if (!v.menu.hidden) { v.menu.hidden = true; v.btn.setAttribute("aria-expanded", "false"); if (focus) v.btn.focus(); } });
-  const icon = (/** @type {Item} */ it) => /** @type {SVGElement} */ (found(it.id)?.querySelector("svg")?.cloneNode(true));
+  const icon = (/** @type {Item} */ it) => {
+    if (!it.icon) return /** @type {SVGElement} */ (found(it.id)?.querySelector("svg")?.cloneNode(true));
+    const h = d.createElement("span"); h.innerHTML = it.icon; return /** @type {SVGElement} */ (h.firstElementChild);
+  };
+  const press = (/** @type {Item} */ it) => { if (it.icon) own[it.id].run(); else found(it.id)?.click(); };
+  const on = (/** @type {Item} */ it) => { if (it.icon) return own[it.id].on(); const e = found(it.id); return !!e && isSel(e); };
 
   for (const g of usable) {
     const box = d.createElement("div"); box.className = "tpb-g";
@@ -66,12 +75,13 @@ export function mountBar(d, t) {
     const items = g.items.map(it => {
       const b = d.createElement("button"); b.type = "button"; b.setAttribute("role", "menuitem"); b.tabIndex = -1;
       b.setAttribute("aria-label", t(it.tip)); b.title = t(it.tip); b.appendChild(icon(it));
-      b.onclick = () => { found(it.id)?.click(); v.cur = g.items.indexOf(it); closeAll(true); sync(); };
+      if (it.icon) b.dataset.tpOwn = "";
+      b.onclick = () => { press(it); v.cur = g.items.indexOf(it); closeAll(true); sync(); };
       menu.appendChild(b); return b;
     });
     const v = { g, box, btn, menu, items, cur: 0 };
     // opening a group also selects its current tool (the one drawn on the button), so one click is enough to start drawing; the menu then offers the variants
-    const open = (/** @type {number} */ at) => { closeAll(); found(g.items[at].id)?.click(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); items[at].focus(); sync(); };
+    const open = (/** @type {number} */ at) => { closeAll(); if (!g.items[at].icon) press(g.items[at]); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); items[at].focus(); sync(); };
     btn.onclick = () => { if (menu.hidden) open(v.cur); else closeAll(); };
     btn.addEventListener("keydown", e => { if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); open(v.cur); } });
     menu.addEventListener("keydown", e => {
@@ -91,7 +101,7 @@ export function mountBar(d, t) {
   function sync() {
     if (!bar.isConnected) { destroy(); return; }
     for (const v of views) {
-      const sel = v.g.items.findIndex(it => { const e = found(it.id); return !!e && isSel(e); });
+      const sel = v.g.items.findIndex(on);
       if (sel >= 0) v.cur = sel;
       v.btn.replaceChildren(icon(v.g.items[v.cur]));
       const caret = d.createElementNS("http://www.w3.org/2000/svg", "svg"); caret.setAttribute("viewBox", "0 0 6 6"); caret.setAttribute("class", "tpb-caret"); caret.setAttribute("aria-hidden", "true");
@@ -108,7 +118,7 @@ export function mountBar(d, t) {
   obs.observe(app, { subtree: true, attributes: true, attributeFilter: ["class"] }); gone.observe(root, { childList: true });
   d.documentElement.dataset.tpBar = "menu"; sync();
   return {
-    state: "menu", destroy,
+    state: "menu", destroy, sync,
     /** The tool groups that the student switched off hide their proxy too. */
     update(choice) { for (const v of views) v.box.hidden = !!v.g.tool && choice[v.g.tool] === false; bar.hidden = views.every(v => v.box.hidden); if (bar.hidden) closeAll(); },
   };
