@@ -1,7 +1,7 @@
 //! Windows of the peak table of an index: the peaks `a..b` handed to a closure, and the per-scan sums and maxima of an XIC. Used by every extraction of the engine.
 
 use crate::error::{Error, Result};
-use crate::idxread::{Index, ReadAt};
+use crate::idxread::{index_bytes, Index, ReadAt};
 
 impl<R: ReadAt> Index<R> {
     /// `pos`, m/z and `inten` of the peaks `a..b`, handed to `f` in pieces of at most 64 K peaks, in table order.
@@ -68,12 +68,12 @@ impl<R: ReadAt> Index<R> {
             let (ib, rest) = work.split_at_mut(cw);
             let (mb, pb) = rest.split_at_mut(cw);
             let pb = &mut pb[..c * 4];
-            self.r.read_at(off[9] + i * 4, pb)?;
+            index_bytes(&mut self.r, off[9] + i * 4, pb)?;
             if let Some((lo, hi)) = block_span(pb, n_scans, lut)? {
                 let span = (hi - lo + 1) * w as usize;
                 let base = (i + lo as u64) * w;
-                self.r.read_at(off[8] + base, &mut ib[..span])?;
-                self.r.read_at(off[7] + base, &mut mb[..span])?;
+                index_bytes(&mut self.r, off[8] + base, &mut ib[..span])?;
+                index_bytes(&mut self.r, off[7] + base, &mut mb[..span])?;
                 decode_selected(
                     &pb[lo * 4..(hi + 1) * 4],
                     &ib[..span],
@@ -119,13 +119,13 @@ impl<R: ReadAt> Index<R> {
             let (ib, rest) = work.split_at_mut(cw);
             let (mb, pb) = rest.split_at_mut(cw);
             if INTEN {
-                self.r.read_at(off[8] + i * w, ib)?;
+                index_bytes(&mut self.r, off[8] + i * w, ib)?;
             }
             if MZ {
-                self.r.read_at(off[7] + i * w, mb)?;
+                index_bytes(&mut self.r, off[7] + i * w, mb)?;
             }
             let pb = &mut pb[..c * 4];
-            self.r.read_at(off[9] + i * 4, pb)?;
+            index_bytes(&mut self.r, off[9] + i * 4, pb)?;
             decode_block::<MZ, INTEN>(&pb[..c * 4], &ib[..cw], &mb[..cw], c, f4, n_scans, &mut f)?;
             i += c as u64;
         }

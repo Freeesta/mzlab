@@ -65,7 +65,7 @@ impl MzxmlReader {
             .get(k)
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
         if r.end - r.start > self.limits.byte {
-            return Err(Error::memory_budget());
+            return Err(Error::fixed_limit("mzXML scan", self.limits.byte));
         }
         let b = self.read(r.start, r.end - r.start)?;
         if !b.starts_with(b"<scan") {

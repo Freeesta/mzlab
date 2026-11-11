@@ -127,7 +127,7 @@ fn inflate(mut fs: FileSet, suffix: &str, limits: &Limits) -> Result<FileSet> {
         return Err(Error::new("err.file.zlib").with("detail", "truncated"));
     }
     if read_ones as u64 > limits.byte {
-        return Err(Error::memory_budget());
+        return Err(Error::fixed_limit("gzip file inflated", limits.byte));
     }
     let dim = outside.len() as u64;
     Ok(FileSet {

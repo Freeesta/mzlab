@@ -117,7 +117,7 @@ impl Helped {
     /// No helper is left (one stopped): the pieces still waiting are lost.
     fn fail_waiting(&mut self) {
         for slot in self.queue.iter_mut().filter(|s| s.is_none()) {
-            *slot = Some(Err(Error::memory_budget()));
+            *slot = Some(Err(Error::work_stopped("decode")));
         }
         self.waiting = 0;
     }
