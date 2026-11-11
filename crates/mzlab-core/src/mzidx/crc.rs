@@ -63,7 +63,7 @@ impl<'a> Summed<'a> {
             if !s.ok || s.next != s.end {
                 return None;
             }
-            c[id % 10] = s.crc.sum();
+            *c.get_mut(id % 10)? = s.crc.sum();
         }
         Some(c)
     }
