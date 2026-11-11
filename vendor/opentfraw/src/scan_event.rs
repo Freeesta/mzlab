@@ -148,6 +148,13 @@ impl ScanEventPreamble {
             .and_then(|&b| crate::MsPower::from_byte(b))
     }
 
+    /// Whether byte 6 holds an MS order [`crate::MsPower`] does not name (a precursor-ion or neutral-loss scan, MS9 and above): its level is not decoded.
+    pub fn ms_power_unknown(&self) -> bool {
+        self.bytes
+            .get(6)
+            .is_some_and(|&b| crate::MsPower::from_byte(b).is_none())
+    }
+
     /// Scan type: byte 7.
     pub fn scan_type(&self) -> Option<crate::ScanType> {
         self.bytes
@@ -806,6 +813,19 @@ pub(crate) mod counted_tests {
         let got: Vec<f64> = ev.reactions.iter().map(|x| x.precursor_mz).collect();
         assert_eq!(got, [500.25, 400.5, 300.75, 200.125]);
         assert_eq!(ev.reactions[3].energy, 30.0);
+    }
+
+    #[test]
+    fn an_ms_order_the_enum_does_not_name_is_unknown() {
+        let with = |b: u8| ScanEventPreamble {
+            bytes: [vec![0; 6], vec![b]].concat(),
+        };
+        // MS1..MS8 and «any» (0) are named; MS9, MS10 and the precursor-ion and neutral-loss orders (stored as negative numbers) are not
+        assert!((0..=8).all(|b| !with(b).ms_power_unknown()));
+        assert!([9u8, 10, 253, 254, 255]
+            .iter()
+            .all(|&b| with(b).ms_power_unknown()));
+        assert!(!ScanEventPreamble { bytes: vec![0; 3] }.ms_power_unknown());
     }
 
     #[test]

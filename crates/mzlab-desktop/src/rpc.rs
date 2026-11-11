@@ -148,17 +148,17 @@ impl State {
         let before = self.store.lock().unwrap_or_else(|e| e.into_inner()).stamp_now(name);   // taken before the build: a change during it stays flagged
         // the mapped old index goes before the build replaces its file (a mapped file cannot be replaced on Windows); the next request opens the new one
         self.drop_lr_index(name);
-        let missing = if let Some(nat) = &e.nat {
-            self.indexer()?.build_nat(nat, name)?.missing
+        let (st, cause) = if let Some(nat) = &e.nat {
+            self.indexer()?.build_nat(nat, name)?
         } else {
-            self.indexer()?.build(&e.path, name, None)?.missing
+            (self.indexer()?.build(&e.path, name, None)?, "")
         };
         self.drop_lr_index(name);
         if let Some(st) = before {
             self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(name, st);
         }
-        // missing: the spectra the file declares beyond the ones it holds (the row of the loading warns, as on the site)
-        text(format!("{{\"ms\":{},\"missing\":{missing}}}", t0.elapsed().as_millis()))
+        // missing: the spectra the file declares beyond the ones it holds or lists without their event, and why (the row of the loading warns, as on the site)
+        text(format!("{{\"ms\":{},\"missing\":{},\"cause\":\"{}\"}}", t0.elapsed().as_millis(), st.missing, cause))
     }
 
     #[allow(unused_variables)]
@@ -353,7 +353,7 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
-            "simtab" => text(match mzlab_core::simtab::table_text_with(s("files"), s("output"), s("layout"), if s("baseline").is_empty() { mzlab_core::simtab::DEFAULT_BASELINE } else { s("baseline") }) {
+            "manint" => text(match mzlab_core::manint::table_text(s("files"), s("windows"), p["sums"].as_bool() == Some(true) || s("sums") == "true") {
                 Ok(csv) => csv,
                 Err(e) => format!("E{}", e.to_json()),
             }),
@@ -472,7 +472,7 @@ impl ReadAt for MapAt {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         let b = self.0.bytes();
         let a = off as usize;
-        let src = a.checked_add(buf.len()).and_then(|e| b.get(a..e)).ok_or_else(|| Error::new("error.badIndex"))?;
+        let src = a.checked_add(buf.len()).and_then(|e| b.get(a..e)).ok_or_else(|| mzlab_core::idxread::read_error(off, buf.len()))?;
         buf.copy_from_slice(src);
         Ok(())
     }

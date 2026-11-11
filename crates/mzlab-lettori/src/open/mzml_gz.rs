@@ -100,9 +100,7 @@ fn open_mzxml(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 
 /// The set with its gzip member inflated into memory, named without `.gz`.
 fn inflate(mut fs: FileSet, suffix: &str, limits: &Limits) -> Result<FileSet> {
-    let i = fs
-        .find(suffix)
-        .ok_or_else(|| Error::new("err.file.notAccepted"))?;
+    let i = fs.find(suffix).ok_or_else(|| fs.not_accepted())?;
     let m = fs.membri.swap_remove(i);
     let name = m.nome[..m.nome.len() - ".gz".len()].to_string();
     let mut outside = Vec::new();
@@ -129,7 +127,7 @@ fn inflate(mut fs: FileSet, suffix: &str, limits: &Limits) -> Result<FileSet> {
         return Err(Error::new("err.file.zlib").with("detail", "truncated"));
     }
     if read_ones as u64 > limits.byte {
-        return Err(Error::memory_budget());
+        return Err(Error::fixed_limit("gzip file inflated", limits.byte));
     }
     let dim = outside.len() as u64;
     Ok(FileSet {

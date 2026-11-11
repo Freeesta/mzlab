@@ -19,6 +19,9 @@ PUT = """async ([path, b64]) => { const d = await (await navigator.storage.getDi
   const w = await (await d.getFileHandle(path, { create: true })).createWritable(); await w.write(Uint8Array.from(atob(b64), c => c.charCodeAt(0))); await w.close(); }"""
 SHA = """async (p) => { try { let d = await navigator.storage.getDirectory(); d = await d.getDirectoryHandle('mzlab'); const [k, n] = p.split('/'); d = await d.getDirectoryHandle(k);
   const f = await (await d.getFileHandle(n)).getFile(); const h = await crypto.subtle.digest('SHA-256', await f.arrayBuffer()); return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join(''); } catch (e) { return null; } }"""
+STAMP = """async (n) => { const r = await navigator.storage.getDirectory(), f = await (await (await r.getDirectoryHandle('prova')).getFileHandle(n)).getFile();
+  const w = await (await r.getDirectoryHandle('mzlab')).getDirectoryHandle('warm'), h = await w.getFileHandle(n + '.json'), m = JSON.parse(await (await h.getFile()).text());
+  m.mtime = f.lastModified; const o = await h.createWritable(); await o.write(JSON.stringify(m)); await o.close(); }"""
 NOSTART = "try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 def finished(pg): return pg.evaluate("window.RISCALDA ? window.RISCALDA.state().finished : {}")
 def shown(pg): return pg.evaluate("[ST.files.length, document.querySelectorAll('#flist input[data-k=use]').length, document.querySelectorAll('#fl-up .fl').length]")
@@ -57,6 +60,18 @@ try:
             assert pg.evaluate(SHA, "idx/a.mzML.mzidx") == hot["a.mzML"], "the index was built again"
             assert pg.evaluate(SHA, "warm/a.mzML.json") is None, "the marker stays after the click"
         step("a click on a warm file loads it with no copy and no index", click_hit)
+        def replaced_same_date():
+            # other bytes with the same size, and a marker with the new file's date (a copy that kept the date): the old index must not be served
+            pg.evaluate(PUT, ["b.mzML", base64.b64encode((D / "b.mzML").read_bytes().replace(b'<run id="b">', b'<run id="x">', 1)).decode()])
+            pg.evaluate(STAMP, "b.mzML"); pg.evaluate("window.__ev.length = 0")
+            pg.evaluate("document.querySelector('#addf').click()"); pg.wait_for_selector('#cartbody .cprow', timeout=30000)      # the first click opened the session: «+» brings the folder back
+            pg.click('.cprow:has-text("b.mzML")'); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=2", timeout=90000)
+            for _ in range(120):
+                new = pg.evaluate(SHA, "idx/b.mzML.mzidx")
+                if new and new != hot["b.mzML"]: break
+                frames(pg, 30)
+            assert new and new != hot["b.mzML"], "the index of the replaced file is the old one"
+        step("a warm file replaced with the same size and date is indexed again", replaced_same_date)
         def waiting():
             pg.evaluate("document.querySelector('#addf').click()"); pg.wait_for_selector('#cartbody .cprow', timeout=30000)      # the first click opened the session: «+» brings the folder back
             pg.evaluate(PUT, ["c.mzML", B64["c.mzML"]]); pg.evaluate("document.dispatchEvent(new Event('visibilitychange'))")

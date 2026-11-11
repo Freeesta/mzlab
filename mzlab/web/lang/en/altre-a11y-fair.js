@@ -126,7 +126,7 @@ I18N.add("en", {
   "export.int.role.std": "standard",
   "export.int.role.qc": "QC",
   "export.file.spectrum": "spectrum",
-  "export.file.spectrumMs2": "spectrumMS2",
+  "export.file.spectrumMsn": "spectrumMS{n}",
   "export.file.overlaid": "overlaid",
   "export.file.map": "map",
   "export.file.chart": "chart",

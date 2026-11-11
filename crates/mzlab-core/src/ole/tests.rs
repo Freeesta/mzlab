@@ -176,7 +176,7 @@ fn storages_nested_past_the_depth_limit_are_refused_not_walked() {
 }
 
 #[test]
-fn a_file_or_a_directory_past_the_limits_is_the_memory_error() {
+fn a_file_past_the_byte_limit_is_a_fixed_limit_and_a_directory_past_the_entries_a_memory_error() {
     let f = file(9, &[entry("Root Entry", 5, NONE, NONE, NONE)]);
     let small = Limits {
         byte: 100,
@@ -184,7 +184,7 @@ fn a_file_or_a_directory_past_the_limits_is_the_memory_error() {
     };
     assert_eq!(
         Ole::open(f.clone(), "x", &small).err().unwrap().key,
-        "error.memoryBudget"
+        "error.fixedLimit"
     );
     let few = Limits {
         entries: 1,

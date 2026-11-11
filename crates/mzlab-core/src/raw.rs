@@ -10,6 +10,55 @@ use opentfraw::{iter_spectra, Polarity, RawFileReader, ScanMode, SpectrumRecord}
 use crate::error::{Error, Result};
 use crate::mzml::{Run, Spectrum};
 
+/// What the metadata of a run's scans leave to a notice: how many have their scan event, how many had the trailer's monoisotopic m/z put aside (outside
+/// the isolation window), how many SRM scans take Q1 and energy from the method's transition table, how many name an MS order not decoded, how many
+/// found their event by number in a table cut short, how many have a profile calibration no known conversion uses.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ScanNotes {
+    pub scans: usize,
+    pub with_event: usize,
+    pub ion_rejected: usize,
+    pub srm_from_table: usize,
+    pub order_unknown: usize,
+    pub event_by_class: usize,
+    pub calibration_unknown: usize,
+}
+
+impl ScanNotes {
+    pub fn add(&mut self, m: &opentfraw::mzml::ScanMetadata) {
+        self.scans += 1;
+        self.with_event += usize::from(m.has_event);
+        self.ion_rejected += usize::from(m.selected_ion_rejected);
+        self.srm_from_table += usize::from(m.srm_from_table);
+        self.order_unknown += usize::from(m.ms_order_unknown);
+        self.event_by_class += usize::from(m.event_by_class);
+        self.calibration_unknown += usize::from(m.calibration_unknown);
+    }
+    /// The notes of every scan of `raw`, read from its scan index, events and trailer.
+    pub fn of<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> ScanNotes {
+        let mut n = ScanNotes::default();
+        for k in 0..raw.num_scans {
+            if let Some(m) = opentfraw::mzml::scan_metadata(raw, source, k) {
+                n.add(&m);
+            }
+        }
+        n
+    }
+}
+
+/// Whether the open refused the table of scan events (or stopped inside it): the scans after that point have no event.
+pub(crate) fn events_refused(raw: &RawFileReader) -> bool {
+    raw.warnings.iter().any(|w| {
+        matches!(
+            w,
+            opentfraw::Warning::Skipped {
+                stage: "ScanEvents",
+                ..
+            }
+        )
+    })
+}
+
 /// Scans the index lists that the file is too short to hold (a cut copy).
 pub(crate) fn cut_scans(raw: &RawFileReader) -> usize {
     raw.warnings
@@ -109,19 +158,17 @@ pub fn instrument_method_text<R: Read + Seek>(mut source: R) -> Result<Option<St
 /// The `metodo/1` document of a `.raw` (`method_raw.rs`); `name` is the file name.
 pub fn method<R: Read + Seek>(mut source: R, name: &str) -> Result<String> {
     let raw = open(&mut source)?;
-    Ok(metodo_of(&raw, &mut source, name))
+    let notes = ScanNotes::of(&raw, &mut source);
+    Ok(metodo_sha1(&raw, &mut source, name, None, &notes))
 }
 
-pub(crate) fn metodo_of<R: Read + Seek>(raw: &RawFileReader, source: &mut R, name: &str) -> String {
-    metodo_sha1(raw, source, name, None)
-}
-
-/// As `metodo_of`, with the SHA-1 of the file when the caller has it.
+/// The `metodo/1` document of an open `.raw`, with the SHA-1 of the file when the caller has it and the notes of its scans (`ScanNotes`).
 pub(crate) fn metodo_sha1<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,
     name: &str,
     sha1: Option<String>,
+    notes: &ScanNotes,
 ) -> String {
     let bytes = source.seek(SeekFrom::End(0)).unwrap_or(0);
     let src = crate::method::Source {
@@ -133,7 +180,7 @@ pub(crate) fn metodo_sha1<R: Read + Seek>(
         }],
         sample: None,
     };
-    crate::method_raw::from_raw(raw, source, &src)
+    crate::method_raw::from_raw(raw, source, &src, notes)
 }
 
 /// Streams the spectra one at a time (centroids); `on` gets each before the next is read.

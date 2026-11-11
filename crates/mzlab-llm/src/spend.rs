@@ -208,6 +208,7 @@ impl Meter {
             > self.cap
         {
             return Err(Error::new("err.llm.limit.spend")
+                .with("limit", "session")
                 .with("cap", self.cap.to_string())
                 .with("spent", self.spent.to_string()));
         }

@@ -10,11 +10,12 @@ fn text(v: &Value, key: &str) -> Option<String> {
 }
 
 /// `file:NAME` or `STEP.OUTPUT`.
-fn reference(s: &str, instance: &str) -> Result<Ref> {
+fn reference(s: &str, instance: &str, port: &str) -> Result<Ref> {
     let bad = || {
         Error::new("err.flow.ref")
             .with("instance", instance)
             .with("ref", s)
+            .with("port", port)
     };
     if let Some(name) = s.strip_prefix("file:") {
         return if name.is_empty() {
@@ -59,13 +60,14 @@ fn instance(v: &Value) -> Result<Instance> {
     if let Some(Value::Obj(kv)) = v.get("in") {
         for (port, val) in kv {
             let refs: Result<Vec<Ref>> = match val {
-                Value::Str(s) => Ok(vec![reference(s, &id)?]),
+                Value::Str(s) => Ok(vec![reference(s, &id, port)?]),
                 Value::Arr(a) => a
                     .iter()
-                    .map(|x| reference(x.str().unwrap_or_default(), &id))
+                    .map(|x| reference(x.str().unwrap_or_default(), &id, port))
                     .collect(),
                 _ => Err(Error::new("err.flow.ref")
                     .with("instance", &id)
+                    .with("ref", super::value_text(val))
                     .with("port", port)),
             };
             ins.push((port.clone(), refs?));

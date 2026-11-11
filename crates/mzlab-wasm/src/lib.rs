@@ -22,6 +22,7 @@ mod zip;
 mod natives; mod natives_samples; mod fingerprints;
 mod courier;
 mod natives_engine;
+mod source_check;
 mod blocks;
 mod gunzip;
 mod peak_area;
@@ -107,7 +108,9 @@ pub(crate) struct JsReader {
 
 impl ReadAt for JsReader {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
-        let bad = || mzlab_core::Error::new("error.badIndex");
+        // a read of the file the page holds: the index reads turn it into `error.badIndex` themselves (`idxread::index_bytes`)
+        let len = buf.len();
+        let bad = || mzlab_core::idxread::read_error(off, len);
         let v = self
             .read
             .call2(

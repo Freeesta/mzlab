@@ -8,7 +8,7 @@ I18N.add("en", {
   "files.group.standard": "Standards",
   "files.group.sample": "Samples",
   "files.group.full": "Full Scan",
-  "files.group.ms2": "MS2 (Product Ion)",
+  "files.group.ms2": "{ms} (Product Ion)",
   "files.group.prompt": "Group name",
   "files.group.infusion": "Infusion",
   "files.group.blank": "Blanks",

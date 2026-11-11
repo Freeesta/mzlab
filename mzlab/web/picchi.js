@@ -340,7 +340,7 @@ async function drawSpec(p, snapped) {
     files = ms1(files).length ? ms1(files) : ms1(scanFiles([E.files[/** @type {number} */ (p.k)]].filter(Boolean)));
     if (!files.length) return say(I18N.t("spec.noScan"));
   }
-  if (!isDda && p.level === 2 && p.prec != null && p.prec !== "") {          // an MS2 experiment is a precursor: only the files that have it (as the chromatograms)
+  if (!isDda && p.level > 1 && p.prec != null && p.prec !== "") {          // an MSn experiment (MS2, MS3) is a precursor: only the files that have it (as the chromatograms)
     const owns = (/** @type {Bag} */ f) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - p.prec) < 0.6);
     // a file without a precursor list counts only if it has MS2 scans: a Full Scan sample has none to give, also when it is the target
     const hasPr = (/** @type {Bag} */ f) => (f.precursors || []).length ? owns(f) : (f.ms2 || 0) > 0;
@@ -362,7 +362,7 @@ async function drawSpec(p, snapped) {
   /** @type {Bag[]} */ const reqs = [];
   files.forEach((/** @type {Bag} */ f) => {
     const isHr = !!window.HR && HR.isHr(f);
-    const split = p.level === 2 && !isHr && f.precursors && f.precursors.length > 1 && (p.prec == null || p.prec === "");
+    const split = p.level > 1 && !isHr && f.precursors && f.precursors.length > 1 && (p.prec == null || p.prec === "");
     if (split) {
       const pset = [...new Set(f.precursors)].sort((a, b) => a - b);
       pset.forEach((pr, i) => reqs.push({ f, prec: pr, multi: true, idx: i }));
@@ -403,11 +403,10 @@ async function drawSpec(p, snapped) {
     return top;
   };
   // the m/z axis is always the widest range of all the scans of the file(s) (level / precursor of the panel): it only changes with a zoom, another file or another precursor
-  const wide = files.reduce((/** @type {number[]} */ r, /** @type {Bag} */ f) => { const a = p.level === 2 ? f.mz2_min : f.mz_min, b = p.level === 2 ? f.mz2_max : f.mz_max; return a != null && b != null ? [Math.min(r[0], a), Math.max(r[1], b)] : r; }, [Infinity, -Infinity]);
+  const wide = files.reduce((/** @type {number[]} */ r, /** @type {Bag} */ f) => { const a = p.level > 1 ? f.mz2_min : f.mz_min, b = p.level > 1 ? f.mz2_max : f.mz_max; return a != null && b != null ? [Math.min(r[0], a), Math.max(r[1], b)] : r; }, [Infinity, -Infinity]);
   const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [minOf(data.map((/** @type {Bag} */ x) => minOf(x.d.mz))) - 2, maxOf(data.map((/** @type {Bag} */ x) => maxOf(x.d.mz))) + 2];
-  // an MS2 spectrum fits its own peaks (the range of the file also holds the fragments of other precursors): +5%, and at least the precursor + 5; MS1 keeps the range of the file
-  // an MS2 spectrum fits its own peaks (the range of the file also holds the fragments of other precursors): +5%, at least the precursor + 5; MS1 keeps the range of the file
-  const own = p.level === 2 ? data.flatMap((/** @type {Bag} */ x) => { const m = lineOf(x) ? x.d.pmz : x.d.mz; return m && m.length ? [m[0], m[m.length - 1], ...(x.prec > 0 ? [+x.prec + 5] : [])] : []; }) : [];
+  // an MSn spectrum fits its own peaks (the range of the file also holds the fragments of other precursors): +5%, at least the precursor + 5; MS1 keeps the range of the file
+  const own = p.level > 1 ? data.flatMap((/** @type {Bag} */ x) => { const m = lineOf(x) ? x.d.pmz : x.d.mz; return m && m.length ? [m[0], m[m.length - 1], ...(x.prec > 0 ? [+x.prec + 5] : [])] : []; }) : [];
   const lo = own.reduce((a, v) => Math.min(a, v), Infinity), hi = own.reduce((a, v) => Math.max(a, v), -Infinity);   if (own.length > 1 && lo < hi) { const w = (hi - lo) * 0.05; full[0] = Math.max(0, lo - w - 1); full[1] = hi + w + 1; }
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));

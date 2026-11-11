@@ -10,7 +10,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{read_one, Exec, FileRunner};
 use crate::msn_outputs::{bytes, Format};
-use mzlab_feat::msnfigure::{figure_text, View};
+use mzlab_feat::msnfigure::{bad_param, figure_text, View};
 
 /// The executor of the step, read by the runner after its own list.
 pub(crate) const EXECUTORS: &[(&str, Exec)] = &[("msn.figure", Exec::File("figure", figure_job))];
@@ -59,8 +59,7 @@ fn figure_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     // png is rasterised here (resvg, feature `png`); svg and html are the text the `.wasm` `msnfigura` writes too
     let bytes = if format == "png" {
         let text = String::from_utf8(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
-        let view = View::da_nome(view)
-            .ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
+        let view = View::da_nome(view).ok_or_else(|| bad_param("view", view))?;
         bytes(&text, Format::Png, view)?
     } else {
         figure_text(&graph, format, view)?.into_bytes()

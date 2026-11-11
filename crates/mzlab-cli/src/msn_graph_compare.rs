@@ -299,7 +299,7 @@ fn entropy(a: &Spectrum, b: &Spectrum) -> f64 {
 
 /// The arguments after `compare`: the two graph files and `--out`.
 pub fn run_compare(args: impl Iterator<Item = String>) -> Result<(String, Option<PathBuf>)> {
-    let usage = |m: &str| Error::new("err.flow.param.type").with("detail", m);
+    let usage = |m: &str| Error::new("err.cli.line").with("message", m);
     let (mut files, mut out) = (Vec::new(), None);
     let mut it = args;
     while let Some(x) = it.next() {
@@ -316,7 +316,7 @@ pub fn run_compare(args: impl Iterator<Item = String>) -> Result<(String, Option
     };
     let read = |p: &PathBuf| {
         std::fs::read_to_string(p)
-            .map_err(|e| Error::new("err.flow.param.type").with("detail", e.to_string()))
+            .map_err(|e| Error::new("err.flow.io").with("detail", e.to_string()))
     };
     Ok((compare(&read(a)?, &read(b)?)?, out))
 }

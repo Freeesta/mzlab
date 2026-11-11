@@ -1,7 +1,7 @@
 // @ts-strict
 // @ts-noany
 "use strict";
-// Thermo .raw and SCIEX .wiff -> mzML (index.html rawToMzml, wiffToMzml): the progress of the conversion and the download of the converted files. The DOM part first (only runs in the page), the pure helpers
+// Thermo .raw and SCIEX .wiff -> mzML (rawToMzml, wiffToMzml of shell.js): the progress of the conversion and the download of the converted files. The DOM part first (only runs in the page), the pure helpers
 // below (also run by node in tests/test_conversione.py). Classic script, loaded after i18n.js.
 
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
@@ -33,7 +33,7 @@ const CONV = {
   add(/** @type {string} */ name, /** @type {Blob} */ blob, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File } | undefined} */ src) { this.files.set(name, blob); if (src) this.sources.set(name, src); },
   // samples that left the list: their mzML and source go, so a later file of the same name is neither taken for them (NATIVO.cachedModulo) nor downloaded as them
   forget(/** @type {string[]} */ names) { for (const n of names) { this.files.delete(n); this.sources.delete(n); for (const k of [...this.made.keys()]) if (k.slice(k.indexOf(":") + 1) === n) this.made.delete(k); } },
-  // the mzML the module wrote into conv/ is copied into the engine's store (files/) by the loading: the reference moves to that copy and conv/ lets its own go (two full copies of every converted sample otherwise)
+  // the mzML the module wrote into conv/ is copied into the engine's store (files/) by the loading: the reference moves to that copy and conv/ lets its own go (else two copies of each sample)
   async settle(/** @type {string} */ name) {
     const b = this.files.get(name);
     if (!this.sources.has(name) || !(b instanceof File) || !/^[0-9a-z]+-[0-9a-z]+\.mzML$/.test(b.name) || !navigator.storage) return;      // the name shell.js moduloToMzml gave it in conv/
@@ -263,7 +263,7 @@ const CONVROWS = {
     }, 1000);
   },
   label(/** @type {ConvRow} */ r) {
-    if (r.state === "done") return (r.cached ? I18N.t("conv.row.cached", { scans: I18N.fix(r.scans || 0, 0) }) : I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) })) + (r.missing ? " · " + I18N.t("conv.row.missing", { read: I18N.fix(r.scans || 0, 0), declared: I18N.fix((r.scans || 0) + r.missing, 0) }) : "");
+    if (r.state === "done") return (r.cached ? I18N.t("conv.row.cached", { scans: I18N.fix(r.scans || 0, 0) }) : I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) })) + (r.missing ? " · " + I18N.t(r.note || "conv.row.missing", { read: I18N.fix(r.scans || 0, 0), declared: I18N.fix((r.scans || 0) + r.missing, 0), n: I18N.fix(r.missing, 0) }) : "");
     if (r.state === "fail") return r.msg || "";
     const T = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p), mb = (/** @type {number} */ v) => I18N.fix(v / 1e6, 1);
     if ((r.state === "get" || r.state === "load") && r.det) return T(r.state === "get" ? "conv.row.getmb" : "conv.row.loadmb", { done: mb(r.det.done), total: mb(r.det.total) });
@@ -338,7 +338,7 @@ const CONVROWS = {
     const t0 = minOf(end.map((/** @type {ConvRow} */ r) => r.t0 || 0)), t1 = maxOf(end.map((/** @type {ConvRow} */ r) => (r.t0 || 0) + 1000 * (r.secs || 0)));
     return T("conv.sum.head", { n: I18N.fix(end.length, 0), parts: parts.join(", "), time: convElapsed(t1 - t0) });
   },
-  // under the table only what needs attention: the error with «Details» and «Copy diagnosis», «Cancelled», a file with scans missing; a loading that went well shows nothing; «Close» once nothing runs
+  // under the table only what needs attention: the error with «Details» and «Copy diagnosis», «Cancelled», a partial read; a loading that went well shows nothing; «Close» once nothing runs
   summary() {
     if (this.running().length) return "";
     const all = this.rows.filter(r => CONV_FINAL.includes(r.state)), end = all.filter(r => r.state !== "done" || r.missing); if (!end.length) return "";

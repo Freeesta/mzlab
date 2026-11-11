@@ -138,6 +138,8 @@ pub mod insilico_pack;
 mod ion_pattern_cmd;
 pub mod llm;
 mod llm_ctx;
+mod manual_table_cmd;
+mod mol_cut_cmd;
 mod mol_label_cmd;
 #[cfg(test)]
 mod msn_figure_tests;
@@ -158,7 +160,6 @@ mod peaks_auto_cmd;
 mod peaks_edges_cmd;
 mod plain;
 mod samples_cmd;
-mod sim_table_cmd;
 mod steps_cmd;
 #[cfg(not(target_family = "wasm"))]
 mod validate;
@@ -178,9 +179,10 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
        mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help)
+       mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help)
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
-       mzlab-cli sim-table FILE... [--set output=area|apex_rt]   every SIM channel integrated, one column per sample, as CSV (sim-table --help)
+       mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help)
        mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help); peak-area: one peak from zero or a line (peak-area --help); peak-window: where a dragged window end goes (peak-window --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)

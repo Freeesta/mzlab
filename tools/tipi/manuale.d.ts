@@ -51,7 +51,7 @@ interface FileSystemDirectoryHandle { entries(): AsyncIterableIterator<[string, 
 interface FileSystemSyncAccessHandle { close(): void; flush(): void; getSize(): number; truncate(size: number): void; read(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number; write(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number }
 type DrawKet = any;  // Ketcher editor object or one of its parts (vendor bundle, untyped)
 type DrawLine = [string | number, string][];  // one line of a drawing label: pieces [text, "sub" | "sup" | "it" | ""]
-type DrawStruct = { formula: string, text: string, mass: number, nominal: number, mz: number | null, q: number, error?: string, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing (numbers from `etich/1`)
+type DrawStruct = { formula: string, text: string, mass: number, nominal: number, mz: number | null, q: number, unpaired?: number, odd?: boolean, kind?: string, error?: string, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing (numbers from `etich/1`)
 /** A file of the loading table / of ST.files as the engine reports it (shell.js, explore.js): the fields differ by experiment, so only `name` is fixed. */
 type FileRiga = { name: string; [k: string]: any };
 /** A file open in the session (E.files): `file` is its name in the session, `gone` marks one taken away. */
@@ -89,4 +89,4 @@ type GradModel = { source: string; points: GradPt[]; run_time?: number; nonlinea
 type GradRow = Record<string, number | string | null>;
 
 /** A row of the files being read, converted and indexed (CONVROWS in conversione.js). */
-type ConvRow = { name: string; state: string; pc: number | null; floor?: number; mono?: boolean; det?: { done: number; total: number } | null; sub?: { done: number; total: number } | null; t0?: number; seen?: number; tr?: string[]; last?: string; scans?: number; kind?: string; missing?: number; cached?: boolean; secs?: number; msg?: string; diag?: any; mem?: string };
+type ConvRow = { name: string; state: string; pc: number | null; floor?: number; mono?: boolean; det?: { done: number; total: number } | null; sub?: { done: number; total: number } | null; t0?: number; seen?: number; tr?: string[]; last?: string; scans?: number; kind?: string; missing?: number; note?: string; cached?: boolean; secs?: number; msg?: string; diag?: any; mem?: string };

@@ -77,11 +77,11 @@ fn a_block_of_two_points_per_byte_past_the_budget_is_the_memory_error() {
         .err()
         .unwrap();
     assert_eq!(e.key, "error.memoryBudget");
-    // 1 MB of the same block decodes to its 2 M points, and no more than the head claims
-    let p = scan::read_scan(&mut v, LEN, 0, body + (1 << 20))
-        .unwrap()
+    // 1 MB of the same block holds 2 M points, fewer than the head claims: a damaged block, never a scan read short
+    let e = scan::read_scan(&mut v, LEN, 0, body + (1 << 20))
+        .err()
         .unwrap();
-    assert_eq!(p.mz.len(), 2 << 20);
+    assert_eq!(e.key, "err.file.wiff");
     v.0 = head(1000).0;
     let p = scan::read_scan(&mut v, LEN, 0, body + (1 << 20))
         .unwrap()

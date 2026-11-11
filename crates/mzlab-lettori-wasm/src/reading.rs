@@ -360,9 +360,8 @@ pub fn to_mzml_with(
     };
     conv.write(&mut *l, c as usize, &mut out, &mut tell)
         .map_err(|e| error_json(&e))?;
-    out.flush().map_err(|_| {
-        error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
-    })?;
+    out.flush()
+        .map_err(|_| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     Ok(lacking as f64)
 }
 
@@ -464,6 +463,11 @@ pub fn method(h: u32, c: u32) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn missing(h: u32, c: u32) -> Result<u32, JsValue> {
     with_sessions(|s| s.missing(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
+}
+/// Why the sample has scans `missing` (`Losses::cause`: `warn.file.truncated`, `warn.wiff.damaged`, `warn.raw.eventsRefused`), empty when none.
+#[wasm_bindgen]
+pub fn cause(h: u32, c: u32) -> Result<String, JsValue> {
+    with_sessions(|s| s.cause(h, c as usize))
 }
 /// The header of the mzML of the sample as JSON (`null` when the reader has none).
 #[wasm_bindgen]

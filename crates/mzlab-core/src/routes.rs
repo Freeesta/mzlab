@@ -103,7 +103,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/scanlist" => r.scanlist(q),
             "/api/nearest_scan" => r.nearest_scan(q),
             "/api/scan_axis" => r.scan_axis(q),
-            "/api/ms2tr" => r.ms2_transitions().map(Some),
+            "/api/ms2tr" => r.ms2_transitions(q.get("level").and_then(|v| v.parse().ok()).unwrap_or(2)).map(Some),
             "/api/spectrum" => r.spectrum(q),
             "/api/dda" => r.dda(q),
             "/api/dda_window" => r.dda_window(q),

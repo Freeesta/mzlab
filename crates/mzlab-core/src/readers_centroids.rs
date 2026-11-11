@@ -57,7 +57,11 @@ pub(crate) fn stima(l: &mut dyn Reader, c: usize) -> Result<centroids::Estimate>
     let n = len.min(64);
     let mut scans = Vec::new();
     for i in 0..n {
-        let s = l.scan(c, i * len / n)?;
+        // the estimate is made on the points it will reduce: the profile, not the maker's centroids of a reader that keeps both
+        let s = match crate::readers_mzml::profile_of(l, c, i * len / n)? {
+            Some(s) => s,
+            None => l.scan(c, i * len / n)?,
+        };
         let y = s
             .wide
             .unwrap_or_else(|| s.intensity.iter().map(|&v| f64::from(v)).collect());
@@ -125,6 +129,9 @@ impl Reader for Centroidato {
     }
     fn missing(&mut self, c: usize) -> usize {
         self.l.missing(c)
+    }
+    fn refused(&mut self, c: usize) -> Option<crate::Error> {
+        self.l.refused(c)
     }
     fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> {
         self.l.losses(c)

@@ -56,7 +56,12 @@ fn convert_mzml() -> Step {
             native: true,
             ..RunsIn::default()
         },
-        errors: vec!["err.file.notAccepted", "error.memoryBudget"],
+        errors: vec![
+            "err.file.notAccepted",
+            "error.memoryBudget",
+            "err.conv.noProfile",
+            "err.conv.mzlabNoProfile",
+        ],
         per_item: true,
         converts: Some((DataType::Raw, DataType::Mzml)),
         cost: Some(2.0),

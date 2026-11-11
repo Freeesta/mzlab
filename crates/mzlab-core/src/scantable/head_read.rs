@@ -10,8 +10,12 @@ pub(super) fn read_head<R: ReadAt>(src: &mut Source<'_, R>) -> Result<Head> {
     let head_end = find(&first, b"<run ").map(|p| p as u64);
     let head_hi = head_end.unwrap_or(200000.min(size));
     let run_lo = head_end.unwrap_or(0);
-    let run_hi = (run_lo + 2000).min(size);
     let fit = |a: u64, b: u64| b <= first.len() as u64 && a <= b;
+    let run_hi = if fit(run_lo, run_lo) {
+        run_end(&first, run_lo as usize) as u64
+    } else {
+        (run_lo + 2000).min(size)
+    };
     let head_own;
     let head_bytes: &[u8] = if fit(0, head_hi) {
         &first[..head_hi as usize]
@@ -30,6 +34,21 @@ pub(super) fn read_head<R: ReadAt>(src: &mut Source<'_, R>) -> Result<Head> {
         &String::from_utf8_lossy(head_bytes),
         &String::from_utf8_lossy(run_text),
     ))
+}
+
+/// How far past the `<run ` tag at `lo` the header text reaches in `text`: through the `<spectrumList …>` tag when it starts within `RUN_MAX`
+/// bytes (a writer's run userParams, mzLab's own `metodo/1` among them, push it well past the tag), else 2000 bytes, enough for the tag itself.
+pub(super) fn run_end(text: &[u8], lo: usize) -> usize {
+    const RUN_MAX: usize = 1 << 20;
+    let t = &text[lo..text.len().min(lo + RUN_MAX)];
+    find(t, b"<spectrumList")
+        .and_then(|p| {
+            t[p..]
+                .iter()
+                .position(|&b| b == b'>')
+                .map(|q| lo + p + q + 1)
+        })
+        .unwrap_or((lo + 2000).min(text.len()))
 }
 
 /// `count` of the `<spectrumList` in `run_text` (0 when the tag or the attribute is not there).

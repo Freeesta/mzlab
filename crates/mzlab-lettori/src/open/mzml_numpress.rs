@@ -83,7 +83,7 @@ impl NumpressReader {
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
         let n = r.end - r.start;
         if n > self.limits.byte {
-            return Err(Error::memory_budget());
+            return Err(Error::fixed_limit("mzML spectrum", self.limits.byte));
         }
         let mut b = Vec::new();
         b.try_reserve_exact(n as usize)
@@ -151,7 +151,7 @@ impl NumpressReader {
             .ok_or_else(|| Error::new("error.badIndex").with("id", id))?;
         // the bytes of the chromatogram with its numpress arrays plain, read as a file of its own
         if t.end <= t.start || t.end - t.start > self.limits.byte {
-            return Err(Error::memory_budget());
+            return Err(Error::fixed_limit("mzML chromatogram", self.limits.byte));
         }
         let mut piece =
             vec![0u8; usize::try_from(t.end - t.start).map_err(|_| Error::memory_budget())?];
@@ -377,13 +377,9 @@ impl Reader for NumpressReader {
 }
 
 pub(super) fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    let i = fs
-        .find(".mzml")
-        .ok_or_else(|| Error::new("err.file.notAccepted"))?;
-    let m = fs
-        .membri
-        .get_mut(i)
-        .ok_or_else(|| Error::new("err.file.notAccepted"))?;
+    let i = fs.find(".mzml").ok_or_else(|| fs.not_accepted())?;
+    let refused = fs.not_accepted();
+    let m = fs.membri.get_mut(i).ok_or(refused)?;
     let nome = m
         .nome
         .rsplit(['/', '\\'])

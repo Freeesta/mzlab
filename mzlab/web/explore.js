@@ -157,16 +157,15 @@ const subText = (/** @type {unknown} */ f) => String(f || "").replace(/\d/g, d =
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
 const KIND = /** @type {Record<string, string>} */ ({ full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM" });
 const kindOf = (/** @type {FileAperto} */ f) => window.SIMUI && SIMUI.n(f) > 0 ? I18N.t("canali.sim.kind") : f.kind === "empty" ? I18N.t("kind.empty") : KIND[f.kind] || f.kind;
-// the three kinds of experiment never share a graph: Dati has one block of panels for each (Full Scan, MS2, MRM); panels and files belong to one
+// the experiment kinds (Full Scan, MS2, MRM) never share a graph: each has its block of panels; panels and files belong to one
 // f.gone = removed from the session (the file on disk is untouched)
 const tabFiles = (t = E.tab) => E.files.filter((/** @type {FileAperto} */ f) => f.kind === t && !f.gone);
-// the blocks of every experiment type are on the same page (one block per type in the low-resolution world, the cells of the bench in the high-resolution one):
-// tabPanels() without an argument is all the panels. A panel still holds ONE experiment type; E.tab is the type of the current file.
+// every experiment type is on one page (blocks in low resolution, bench cells in high): tabPanels() = all the panels; a panel holds ONE type; E.tab = type of the current file
 const lrTog = () => !(window.BANCO && BANCO.on());
 /** @param {string} [t] */ const tabPanels = t => (t === undefined ? E.panels : E.panels.filter((/** @type {Bag} */ p) => p.tab === (t ?? E.tab)));
-// group of a file in the list: a user group (lista-file.js) first; otherwise in LR strictly the experiment name (Full Scan, MS2, MRM), in HR bench sub-groups
+// group of a file in the list: its user group (lista-file.js), else the experiment name in LR, a bench sub-group in HR
 const grpOf = (/** @type {FileAperto} */ f) => f.ugrp ? "u:" + f.ugrp : (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
-const GRP_HR = /** @type {Record<string, () => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }); const grpLabel = (/** @type {string} */ g) => g.startsWith("u:") ? g.slice(2) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+const GRP_HR = /** @type {Record<string, (fs: any[]) => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": fs => I18N.t("files.group.ms2", { ms: msLv(fs) }), "hr.infusion": () => I18N.t("files.group.infusion") }); const msLv = (/** @type {any[]} */ fs) => [...new Set(fs.map(f => "MS" + (f.lv || 2)))].sort().join("/"); const grpLabel = (/** @type {string} */ g, /** @type {any[]} */ fs = []) => g.startsWith("u:") ? g.slice(2) : GRP_HR[g] ? GRP_HR[g](fs) : g === KIND.ms2 ? g.replace("MS2", msLv(fs)) : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
 // the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
 const sibsOf = (/** @type {FileAperto} */ f) => E.files.filter((/** @type {FileAperto} */ x) => fileBase(x.file) === fileBase(f.file));
 const TOL0 = 1.0;                                   // dated instrument: XIC window of +-1 Da
@@ -340,8 +339,8 @@ const J = (/** @type {string} */ u) => fetch(u).then(async r => { const j = awai
 const prk = (/** @type {unknown} */ pr, /** @type {string | undefined} */ ft) => ft ? `${pr ?? ""}~${ft}` : pr;
 const prSplit = (/** @type {unknown} */ pr) => { const t = String(pr ?? ""), i = t.indexOf("~"); return i < 0 ? [/** @type {string} */ (pr ?? ""), ""] : [t.slice(0, i), t.slice(i + 1)]; };
 const FT = (/** @type {string | undefined} */ ft) => ft ? `&filt=${encodeURIComponent(ft)}` : "";
-// precursor > fragment pairs of an MS2 file (unit resolution)
-const getMs2Tr = (/** @type {string | number} */ k) => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then((/** @type {Bag} */ d) => d.files[0].transitions);
+const lvN = (/** @type {any} */ k) => Math.max(2, E.files[k]?.lv || 2);      // MSn level of a product file; getMs2Tr: its precursor > fragment pairs (unit resolution)
+const getMs2Tr = (/** @type {string | number} */ k, lv = 2) => memo(`m2t${k}|${lv}`, () => J(`api/ms2tr?k=${k}&level=${lv}`)).then((/** @type {Bag} */ d) => d.files[0].transitions);
 (() => {
   addEventListener("mzlab-index", (/** @type {any} */ e) => {
     const d = e && e.detail;
@@ -460,7 +459,7 @@ async function bootSession0() {
   E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
     // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
     const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
-    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...CAMPIONI.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
+    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...CAMPIONI.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? t.msn_level || 2 : 1 };
     return o && o.gone ? Object.assign(o, e, { vis: false }) : e;      // a removed file stays removed, the same object as in its «Removed · Undo» entry (lista-file.js fileRemoval)
   }); uniqueLabels(E.files);
   paintFiles(); if (window.SIMUI) SIMUI.mark(E.files);
@@ -814,7 +813,7 @@ function renderFileList() {
     return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type; user groups that are all single files are listed flat (ugFlat, lista-file.js)
-  const flatUg = ugFlat(groups), body = groups.map(G => { const flat = flatUg && G.g.startsWith("u:"); return (flat ? "" : gh(G, grpLabel(G.g))) + `<div class="grp-files" style="${flat || (isExpOpen(gkOf(G)) && !grpClosed(G.g)) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`; }).join("");
+  const flatUg = ugFlat(groups), body = groups.map(G => { const flat = flatUg && G.g.startsWith("u:"); return (flat ? "" : gh(G, grpLabel(G.g, G.fs))) + `<div class="grp-files" style="${flat || (isExpOpen(gkOf(G)) && !grpClosed(G.g)) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`; }).join("");
   // the files still being read or converted: one progress row each, under the open ones (upload-rows.js)
   Q("#flst").innerHTML = pre + body + UPROWS.html();
   UPROWS.wire(Q("#fl-up")); UPROWS.paint();
@@ -1032,7 +1031,7 @@ function plotSheets(/** @type {Pannello} */ p) {
   const metaRows = [
     [{ v: I18N.t("export.meta.property"), b: true }, { v: I18N.t("export.meta.value"), b: true }],
     [{ v: I18N.t("export.meta.title"), b: true }, ptitleP(p) || I18N.t("export.meta.chart")],
-    [{ v: I18N.t("export.meta.type"), b: true }, (/** @type {Record<string, string>} */ ({ chrom: I18N.t("export.type.chrom", { kind: (p.kind || "").toUpperCase() }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: p.level === 2 ? "MS²" : "MS¹" }), map: I18N.t("panel.title.map") }))[p.type] || p.type],
+    [{ v: I18N.t("export.meta.type"), b: true }, (/** @type {Record<string, string>} */ ({ chrom: I18N.t("export.type.chrom", { kind: (p.kind || "").toUpperCase() }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: "MS" + ["¹", "²", "³"][Math.min(p.level || 1, 3) - 1] }), map: I18N.t("panel.title.map") }))[p.type] || p.type],
     [{ v: I18N.t("export.meta.samples"), b: true }, plotFiles(p).map((/** @type {FileAperto} */ f) => f.label).join(", ")],
     [{ v: I18N.t("export.meta.caption"), b: true }, plotCaption(p)],
     [{ v: I18N.t("export.meta.date"), b: true }, new Date().toLocaleString(LOCALE)],

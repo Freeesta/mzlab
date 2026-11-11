@@ -67,9 +67,12 @@ try:
                 loc = pg.locator(f".iep[data-e='{k}']")
                 assert loc.get_attribute("role") == "slider" and f"{t:.3f}" in (loc.get_attribute("aria-label") or ""), loc.get_attribute("aria-label")
                 want = pg.evaluate(f"(()=>{{const p={PN},s=p._a.sr[0],r=p.cv.getBoundingClientRect();return [r.left+p._a.X({t}),r.top+p._a.Y(p._a.U(s,0))]}})()")
-                assert abs(x - want[0]) <= 1 and abs(y - want[1]) <= 1, (k, x, y, want)
+                # over its point; the two ends of a window narrower than a handle step apart, never on each other
+                assert b["x"] - 1 <= want[0] <= b["x"] + b["width"] + 1 and abs(y - want[1]) <= 1, (k, b, want)
+            b0, b1 = handle(pg, "0")[2], handle(pg, "1")[2]
+            assert b0["x"] + b0["width"] <= b1["x"] + 0.5, (b0, b1)
             assert pg.evaluate("getComputedStyle(document.querySelector('.iep')).transitionDuration") in ("0s", "0s, 0s"), "reduced motion: no transition"
-        step("two named 24 px sliders sit where the area meets the zero line", on_baseline)
+        step("two named 24 px sliders sit where the area meets the zero line, side by side", on_baseline)
         def keys():
             v = rec(pg); loc = pg.locator(".iep[data-e='0']"); loc.focus()
             want = page_end(pg, v["a"], v["b"], None, -1)

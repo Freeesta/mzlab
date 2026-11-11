@@ -12,8 +12,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::readers::{
-    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
-    Sample, ScanEntry, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Losses, Position, Reader,
+    ReaderEntry, Sample, ScanEntry, CONTRATTO,
 };
 
 const FUNCTNS: &str = "_FUNCTNS.INF";
@@ -110,11 +110,12 @@ impl Reader for WatersReader {
     }
 
     fn missing(&mut self, c: usize) -> usize {
-        if c == 0 {
-            self.funs.iter().map(|f| f.cut).sum()
-        } else {
-            0
-        }
+        super::counts::cut(&self.funs) * usize::from(c == 0)
+    }
+
+    fn losses(&mut self, c: usize) -> Result<Losses> {
+        let n = self.index_without_tic(c)?.len();
+        Ok(super::counts::losses(&self.funs, c, n))
     }
 
     fn samples(&self) -> &[Sample] {
@@ -311,10 +312,6 @@ pub struct WatersReader {
     chroms: Option<Vec<Chromatogram>>,
 }
 
-fn opzionale(c: &mut Folder, name: &str) -> Option<Vec<u8>> {
-    c.read(name).ok().flatten()
-}
-
 fn level_of(funs: &[Fun], i: usize) -> u8 {
     let (f, x) = (&funs[i].f, &funs[i].ext);
     if f.riferimento() {
@@ -371,7 +368,7 @@ fn load(
 ) -> Result<(Fun, Option<String>)> {
     let n = f.indice;
     let name = |e: &str| format!("_FUNC{n:03}.{e}");
-    let idx_b = opzionale(c, &name("IDX"));
+    let idx_b = c.read_run(&name("IDX"))?;
     let ha_idx = idx_b.is_some();
     let mut rows = match idx_b {
         Some(b) => idx::read(&b, &c.limits)?
@@ -391,9 +388,13 @@ fn load(
     let tagliate = cuts(&mut rows, larg, dat.is_some(), dat_len, ha_idx)
         .ok_or_else(|| nel_file(c, "err.file.indexCut", &name("IDX")))?;
     let lim = c.limits;
-    let tab = |c: &mut Folder, e: &str| opzionale(c, &name(e)).and_then(|b| Table::read(&b, &lim));
-    let (sts, ee) = (tab(c, "STS"), tab(c, "EE"));
-    let nomi = opzionale(c, &name("CMP")).map_or(Vec::new(), |b| compound_names(&b, &lim));
+    let tab = |c: &mut Folder, e: &str| -> Result<_> {
+        Ok(c.read_run(&name(e))?.and_then(|b| Table::read(&b, &lim)))
+    };
+    let (sts, ee) = (tab(c, "STS")?, tab(c, "EE")?);
+    let nomi = c
+        .read(&name("CMP"))?
+        .map_or(Vec::new(), |b| compound_names(&b, &lim));
     let x = ext.funzioni.get(&n).cloned().unwrap_or_default();
     // the member that is not there is named: a function with an index and no DAT is not the same loss as a function without scans
     let warning = if dat.is_some() != ha_idx {
@@ -444,13 +445,14 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let list = functions::read(&inf, limits)?
         .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
     whole_list(&c, list.len())?;
-    let header = opzionale(&mut c, "_HEADER.TXT");
+    let header = c.read("_HEADER.TXT")?;
     let has_header = header.is_some();
     whole_header(&c, header.as_deref())?;
     let testata = header.map_or_else(WatersHeader::default, |b| inf::file_header(&text(&b)));
-    let ext = opzionale(&mut c, "_extern.inf")
+    let ext = c
+        .read("_extern.inf")?
         .map_or_else(Extern::default, |b| inf::extern_inf(&text(&b)));
-    let inlet = opzionale(&mut c, "_INLET.INF").map(|b| inf::inlet(&text(&b)));
+    let inlet = c.read("_INLET.INF")?.map(|b| inf::inlet(&text(&b)));
     let (mut funs, mut warnings, mut spent) = (Vec::new(), Vec::new(), 0u64);
     for f in list {
         let (fun, av) = load(&mut c, f, &ext, &testata, &mut spent)?;
@@ -466,7 +468,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         funs[i].livello = level_of(&funs, i);
     }
     warnings.extend(super::counts::notes(&c.name, &funs, &ext, has_header));
-    let analogiche = super::chroms::analog(&mut c);
+    let analogiche = super::chroms::analog(&mut c)?;
     unknown_variant(&c.name, &funs, analogiche.is_empty())?;
     let mut l = WatersReader {
         c,

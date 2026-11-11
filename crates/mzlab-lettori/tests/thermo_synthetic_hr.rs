@@ -3,47 +3,11 @@
 //! the scan count, the MS1/MS2 cycle, profile MS1 with centroids at the m/z it wrote, MS2 with a precursor. Small file in a temporary folder, removed afterwards.
 //! A pinned hash of every decoded scan (centroids and profile) is the gate of any change to the decoder: it must give the same values.
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::readers::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Losses, Member, EVENTS_REFUSED};
 use sha2::{Digest, Sha256};
-use std::path::{Path, PathBuf};
-use std::process::Command;
 
-/// The built example next to the test binary (`cargo test` builds it), else `cargo run`.
-fn generate(out: &Path, args: &[&str]) {
-    let ex = std::env::current_exe()
-        .ok()
-        .and_then(|e| Some(e.parent()?.parent()?.join("examples/thermo_synthetic")))
-        .filter(|p| p.is_file());
-    let st = match ex {
-        Some(p) => Command::new(p).arg(out).args(args).status(),
-        None => Command::new(env!("CARGO"))
-            .args([
-                "run",
-                "--release",
-                "-q",
-                "-p",
-                "mzlab-lettori",
-                "--features",
-                "thermo",
-                "--example",
-                "thermo_synthetic",
-                "--",
-            ])
-            .arg(out)
-            .args(args)
-            .status(),
-    };
-    assert!(st.is_ok_and(|s| s.success()), "thermo_synthetic failed");
-}
-
-fn folder(name: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!(
-        "mzlab_thermo_synthetic_{}_{name}",
-        std::process::id()
-    ));
-    std::fs::create_dir_all(&d).unwrap();
-    d
-}
+mod common_thermo_hr;
+use common_thermo_hr::{folder, generate};
 
 #[test]
 fn the_synthetic_orbitrap_file_opens_with_its_cycle() {
@@ -187,6 +151,11 @@ fn scans_without_a_readable_event_have_no_ms_level() {
         ix.iter().map(|e| e.livello).collect::<Vec<_>>()
     );
     assert_eq!(l.scan(0, 0).expect("scan").level, 0);
+    // every scan is read, none with its event: the losses say so with their own cause, not as a cut file
+    assert_eq!(
+        l.losses(0).expect("losses"),
+        Losses::of(12, 0, EVENTS_REFUSED)
+    );
 }
 
 #[test]

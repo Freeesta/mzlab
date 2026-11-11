@@ -10,7 +10,10 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Value};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
-use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
+use mzlab_core::readers::{
+    ChromatogramEntry, Field, Format, Losses, Reader, Sample, ScanEntry, DAMAGED, EVENTS_REFUSED,
+    TRUNCATED,
+};
 use mzlab_core::transport::{
     decode_index, decode_scansione, scan_from_parts, Intensity, PROTOCOLLO,
 };
@@ -38,10 +41,15 @@ pub trait Module {
     fn missing(&mut self, _c: usize) -> Result<u32> {
         Ok(0)
     }
+    /// The key of why scans are `missing` (`Losses::cause`; a module of an older build says none: the file is cut).
+    fn cause(&mut self, _c: usize) -> Result<String> {
+        Ok(String::new())
+    }
 }
 
+/// An answer of the module the engine cannot decode (`err.module.reply`, as `transport` says it).
 fn broken(what: &str) -> Error {
-    Error::new("err.file.notAccepted").with("detail", what)
+    Error::new("err.module.reply").with("detail", what)
 }
 
 thread_local! { static NAMES: RefCell<HashSet<&'static str>> = RefCell::new(HashSet::new()); }
@@ -339,6 +347,16 @@ impl<M: Module> Reader for ExternalReader<M> {
     fn missing(&mut self, c: usize) -> usize {
         self.m.missing(c).unwrap_or(0) as usize
     }
+    /// As the module's reader: scans past the end of a cut file or in damaged blocks (out of the index), or scans it lists without their event (in it).
+    fn losses(&mut self, c: usize) -> Result<Losses> {
+        let lacking = self.missing(c);
+        let n = self.index(c)?.len();
+        Ok(match self.m.cause(c)?.as_str() {
+            EVENTS_REFUSED => Losses::of(n, n.saturating_sub(lacking), EVENTS_REFUSED),
+            DAMAGED => Losses::of(n + lacking, n, DAMAGED),
+            _ => Losses::of(n + lacking, n, TRUNCATED),
+        })
+    }
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         TraceReplies::file_header(&self.m.file_header(c)?)
     }
@@ -465,6 +483,14 @@ impl Module for JsModule {
             .ok()
             .and_then(|v| v.as_f64())
             .map_or(0, |v| v as u32))
+    }
+    fn cause(&mut self, c: usize) -> Result<String> {
+        // a session of an older module has no such function
+        Ok(self
+            .call("cause", &[(c as f64).into()])
+            .ok()
+            .and_then(|v| v.as_string())
+            .unwrap_or_default())
     }
 }
 

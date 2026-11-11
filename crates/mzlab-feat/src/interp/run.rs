@@ -13,7 +13,7 @@ use crate::store_read::read_table_from;
 
 fn user(e: String) -> Error {
     match e.as_str() {
-        "error.interp.noTp" => Error::new("error.interp.noTp"),
+        "error.interp.noTp" => Error::new("error.interp.noTp").with("detail", "table"),
         _ => Error::new("error.interp.failed").with("detail", e),
     }
 }

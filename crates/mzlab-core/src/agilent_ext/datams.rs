@@ -115,6 +115,16 @@ pub fn parse(b: &[u8]) -> Result<DataMs> {
         });
         at += 2 * words;
     }
+    // a header count damaged to a smaller number would drop the scans after it in silence: whole records past the declared ones are a named error
+    let last_ms = scans
+        .last()
+        .map_or(0, |s| (s.time_min * 60000.0).round() as u32);
+    let found = n + whole_records_after(b, at, last_ms);
+    if found > n {
+        return Err(Error::new("err.file.agilentDataMsCount")
+            .with("declared", n)
+            .with("found", found));
+    }
     Ok(DataMs {
         strings,
         scans,
@@ -144,6 +154,28 @@ pub(super) fn items(d: &DataMs, b: &[u8]) -> Vec<meta::Item> {
         ("data.ms#after-records", b.get(d.end..).unwrap_or(&[])),
     ]));
     out
+}
+
+/// How many whole records follow one another from `at`: the length its peak count gives, the `5 4 0` trailer, a time not before `after_ms`.
+fn whole_records_after(b: &[u8], mut at: usize, mut after_ms: u32) -> usize {
+    let mut k = 0;
+    while let (Some(words), Some(peaks), Some(ms)) =
+        (be16(b, at), be16(b, at + 12), be32(b, at + 2))
+    {
+        let tail = at + 14 + 4 * (peaks + 1);
+        let whole = peaks <= 20_000
+            && 2 * words == FIXED + 4 * (peaks + 1)
+            && at + 2 * words <= b.len()
+            && b.get(tail..tail + 6) == Some(&[0, 5, 0, 4, 0, 0][..])
+            && ms >= after_ms;
+        if !whole {
+            break;
+        }
+        k += 1;
+        after_ms = ms;
+        at += 2 * words;
+    }
+    k
 }
 
 fn be16(b: &[u8], o: usize) -> Option<usize> {

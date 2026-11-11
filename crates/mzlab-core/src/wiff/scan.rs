@@ -150,7 +150,7 @@ fn head<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Opt
 }
 
 /// The scan whose block starts at `at` (the payload) and whose data end before `end`; `None` when the block is not a scan.
-/// An empty scan gives empty vectors.
+/// An empty scan gives empty vectors; a block whose stream holds fewer points than its head declares is `err.file.wiff`.
 pub fn read_scan<R: ReadAt>(
     scan: &mut R,
     scan_len: u64,
@@ -176,6 +176,10 @@ pub fn read_scan<R: ReadAt>(
         scan.read_at(at + h.len as u64, &mut data)?;
     }
     let pts = if n > 0 { decode(&data, n) } else { Vec::new() };
+    // a stream that ends before the points its head declares is a damaged block: never a scan read short
+    if pts.len() != h.n {
+        return Err(bad(format!("{} of {} points", pts.len(), h.n)));
+    }
     let Some(&r0) = h.ranges.first() else {
         return Ok(None);
     };

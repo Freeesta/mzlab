@@ -135,9 +135,9 @@ function ptNorm(/** @type {string} */ s) {
 function ptitle(/** @type {string} */ s) {  // the title to show
   if (!s || s[0] !== "@") return s || "";
   const [c, ...a] = s.slice(1).split(":");
-  if (c === "product") return a[0] != null ? I18N.t("panel.title.productOf", { prec: a[0] }) : I18N.t("panel.title.product");
-  if (c === "ms2tic") return I18N.t("panel.title.ticMs2");
-  if (c === "ms2prec") return I18N.t("panel.title.ms2prec", { prec: a[0] });
+  if (c === "product") return a[0] != null ? I18N.t("panel.title.productOf", { ms: "MS²", prec: a[0] }) : I18N.t("panel.title.product");
+  if (c === "ms2tic") return I18N.t("panel.title.ticMs2", { ms: "MS²" });
+  if (c === "ms2prec") return I18N.t("panel.title.ms2prec", { ms: "MS²", prec: a[0] });
   if (c === "composite") return a.length ? I18N.t("panel.title.composite", { t0: a[0], t1: a[1] }) : I18N.t("panel.title.compositeBare");
   return ["chrom", "spec", "xic", "mrm", "sim", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
 }
@@ -561,14 +561,14 @@ function plotName(/** @type {Pannello} */ p) {
   if (p.type === "chrom") parts = [p.kind.toUpperCase() + (p.kind === "pda" && p.mz0 != null ? "-" + p.mz0 + (p.mz1 != null && p.mz1 !== p.mz0 ? "-" + p.mz1 : "") + "nm" : ""), pr, ft];
   else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, (/** @type {number} */ v) => +v.toFixed(mzd(p))) : "", ft];
   else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, (/** @type {string} */ v) => String(v).replace(">", "-")) : "", ft];
-  else if (p.type === "spec") parts = [p.uv ? "UV" : I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, p.level === 2 ? pr : "", rtm];
+  else if (p.type === "spec") parts = [p.uv ? "UV" : p.level > 1 ? I18N.t("export.file.spectrumMsn", { n: p.level }) : I18N.t("export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, p.level > 1 ? pr : "", rtm];
   else parts = [I18N.t("export.file.map"), ft];
   if (p.title && p.title[0] !== "@") parts = [p.title, ft];  // a title typed by the student names the file; the default titles are codes
   return fname(parts.filter(Boolean).join("_")).slice(0, 60) || I18N.t("export.file.chart");
 }
 function plotMeta(/** @type {Pannello} */ p) {
   const a = p._a || {}, fs = plotFiles(p), d = [];
-  d.push({ chrom: I18N.t("export.desc.chrom", { kind: (p.kind || "").toUpperCase() }), xic: "XIC (" + p.traces.map((/** @type {Traccia} */ t) => t.w == null ? t.mz + " +-" + p.tol : (t.mz - t.w).toFixed(mzd(p)) + "-" + (t.mz + t.w).toFixed(mzd(p))).join("; ") + ")", mrm: I18N.t("export.desc.mrm"), spec: I18N.t("export.desc.spec", { ms: p.level === 2 ? "MS2" : "MS1" }), map: I18N.t("export.desc.map") }[p.type] || p.type);
+  d.push({ chrom: I18N.t("export.desc.chrom", { kind: (p.kind || "").toUpperCase() }), xic: "XIC (" + p.traces.map((/** @type {Traccia} */ t) => t.w == null ? t.mz + " +-" + p.tol : (t.mz - t.w).toFixed(mzd(p)) + "-" + (t.mz + t.w).toFixed(mzd(p))).join("; ") + ")", mrm: I18N.t("export.desc.mrm"), spec: I18N.t("export.desc.spec", { ms: "MS" + (p.level || 1) }), map: I18N.t("export.desc.map") }[p.type] || p.type);
   const mzs = a.sr ? [...new Set(a.sr.map((/** @type {Bag} */ s) => s.mz).filter((/** @type {number} */ v) => v != null))] : [];
   if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(mzd(p))).join(", "));
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${/** @type {number} */ (p.r1).toFixed(2)} min`);
@@ -669,7 +669,7 @@ function ctl(/** @type {Pannello} */ p) {
   const T0 = p.tab || E.tab, prodTab = T0 === "ms2", ms2c = p.type === "chrom" && prodTab, mrmP = p.type === "mrm";
   if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.fondo = { mode: "none", w: p.fondo.w, ib: null }; p.log = false; }  // precursor chromatogram: only the MS2 scans of the precursor
   if (mrmP) p.bk = "";
-  if (p.type === "spec" && prodTab && !p.filt) p.level = 2;
+  if (p.type === "spec" && prodTab && !p.filt) p.level = lvN(p.k);
   const NOMS2 = I18N.t("ctl.noMs2"), NOMRM = I18N.t("ctl.noMrm");
   const off = (/** @type {boolean} */ on, /** @type {string} */ why) => on ? ` disabled title="${why}"` : "";
   const chk = (/** @type {string} */ k, /** @type {string} */ lab, /** @type {boolean} */ dis, /** @type {string} */ why, /** @type {string} */ tip) => `<label class="muted${dis ? " dis" : ""}"${dis ? ` title="${why}"` : tip ? ` title="${tip}"` : ""}><input type="checkbox" data-o="${k}" ${p[k] ? "checked" : ""}${dis ? " disabled" : ""}> ${lab}</label>`;
@@ -730,18 +730,19 @@ function ctl(/** @type {Pannello} */ p) {
   if (p.type === "spec" && !p.uv) {  // a UV spectrum (uv-spettro.js) has no file, level or background menus
     const f = TF, hasMs2 = f.some((/** @type {MzFile} */ x) => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;  // the «fondo» menu starts from the reference of the session
     const fol = follow(T0), FW = I18N.t("ctl.spec.follow");
+    const msn = lvN(p.k);
     // product ions: only the files that hold scans of the chosen precursor, and the precursors of the active file with their scan count
-    const hasPrec = p.level === 2 && p.prec != null && /** @type {unknown} */ (p.prec) !== "", fl = prodTab ? f.filter((/** @type {MzFile} */ x) => hasPrec ? ms2Scans(x, Number(p.prec)) : (x.ms2_exps || []).length) : f;
-    if (prodTab || p.level === 2) p.all = false;
+    const hasPrec = p.level > 1 && p.prec != null && /** @type {unknown} */ (p.prec) !== "", fl = prodTab ? f.filter((/** @type {MzFile} */ x) => hasPrec ? ms2Scans(x, Number(p.prec)) : (x.ms2_exps || []).length) : f;
+    if (prodTab || p.level > 1) p.all = false;
     if (prodTab) { if (fl.length && !fl.some((/** @type {MzFile} */ x) => x.k === (fol ? E.cur : p.k))) p.k = fl[0].k; }
     const vf = f.filter((/** @type {MzFile} */ x) => x.vis);  // the menu lists the files ticked in the list (the same as the TIC)
     if (!prodTab && !fol && vf.length && !vf.some((/** @type {MzFile} */ x) => x.k === p.k)) { p.k = vf[0].k; p.kSet = false; }
     const act = E.files[fol ? E.cur : p.k] || {}, precN = prodTab ? (act.ms2_exps || []).filter((/** @type {Bag} */ e) => e.prec != null).sort((/** @type {Bag} */ a, /** @type {Bag} */ b) => a.prec - b.prec) : [];
-    c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${(prodTab && fl.length ? fl : vf.length ? vf : f).map((/** @type {MzFile} */ x) => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${prodTab ? "" : SPECBAR.overlay(p, fol || ONEF || p.level === 2, fol ? FW : p.level === 2 ? I18N.t("ctl.spec.overlayMs2") : I18N.t("ctl.files.one"))}` +
-            (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", I18N.t("ctl.spec.levelMs2"))}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
+    c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${(prodTab && fl.length ? fl : vf.length ? vf : f).map((/** @type {MzFile} */ x) => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${prodTab ? "" : SPECBAR.overlay(p, fol || ONEF || p.level > 1, fol ? FW : p.level > 1 ? I18N.t("ctl.spec.overlayMs2") : I18N.t("ctl.files.one"))}` +
+            (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", I18N.t("ctl.spec.levelMs2"))}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="${msn}" ${p.level > 1 ? "selected" : ""}>MS${msn}</option></select>` : "") +
       corrWidget(p, { files: f.filter((/** @type {MzFile} */ x) => x.kind !== "mrm"), cur: p.bg === "w" ? "tract" : p.bg === "x" ? "" : p.bg !== "" && p.bg != null ? "f" + p.bg : sref0 ? "f" + sref0.k : "", snip: false, dis: "", tractDesc: I18N.t("corr.tract.spec") }) + corrInfo(p) +
       (p.bg === "w" ? FONDOSP.box(p) : "") +
-      (p.level === 2 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:7em"><option value="">${I18N.t("ctl.prec.all")}</option>${(prodTab ? precN : [...new Set(f.flatMap((/** @type {MzFile} */ x) => x.precursors))].sort((a, b) => a - b).map(v => ({ prec: v }))).map((/** @type {Bag} */ e) => `<option value="${e.prec}" ${String(p.prec) === String(e.prec) ? "selected" : ""}>${e.prec}</option>`).join("")}</select>` : "");
+      (p.level > 1 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:7em"><option value="">${I18N.t("ctl.prec.all")}</option>${(prodTab ? precN : [...new Set(f.flatMap((/** @type {MzFile} */ x) => x.precursors))].sort((a, b) => a - b).map(v => ({ prec: v }))).map((/** @type {Bag} */ e) => `<option value="${e.prec}" ${String(p.prec) === String(e.prec) ? "selected" : ""}>${e.prec}</option>`).join("")}</select>` : "");
   }
   if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {  // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
     const srcP = p.link ? E.panels.find((/** @type {Pannello} */ q) => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";

@@ -25,15 +25,14 @@ pub(super) struct Analog {
     pub(super) raw_value: String,
 }
 
-pub(super) fn analog(c: &mut Folder) -> Vec<Analog> {
-    let Some(b) = c.read(CHROMS_INF).ok().flatten() else {
-        return Vec::new();
+/// The analog traces `_CHROMS.INF` lists (none when the folder has no `_CHROMS.INF`); a list that is there and cannot be read is an error, not an empty list.
+pub(super) fn analog(c: &mut Folder) -> Result<Vec<Analog>> {
+    let Some(b) = c.read(CHROMS_INF)? else {
+        return Ok(Vec::new());
     };
     let n = b.len().saturating_sub(HEADER) / RECORD_INF;
-    if c.limits.ok_entries(n as u64).is_err() {
-        return Vec::new();
-    }
-    (0..n)
+    c.limits.ok_entries(n as u64)?;
+    Ok((0..n)
         .map(|i| {
             let r = &b[HEADER + i * RECORD_INF..HEADER + (i + 1) * RECORD_INF];
             let mut fields = r[4..].split(|&x| x == 0);
@@ -52,7 +51,7 @@ pub(super) fn analog(c: &mut Folder) -> Vec<Analog> {
                 raw_value,
             }
         })
-        .collect()
+        .collect())
 }
 
 fn analog_kind(a: &Analog) -> ChromKind {

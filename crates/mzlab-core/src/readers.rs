@@ -117,6 +117,15 @@ pub struct FileSet {
 }
 
 impl FileSet {
+    /// `err.file.notAccepted` for this set, named by its first member (the name the page and the CLI show).
+    pub fn not_accepted(&self) -> Error {
+        let name = self
+            .membri
+            .first()
+            .map(|m| m.nome.as_str())
+            .unwrap_or_default();
+        Error::new("err.file.notAccepted").with("name", name)
+    }
     /// Index of the member whose name ends with `suffisso`, ignoring case.
     pub fn find(&self, suffisso: &str) -> Option<usize> {
         let s = suffisso.to_lowercase();
@@ -188,7 +197,8 @@ pub struct ChromatogramEntry {
     pub unita: String,
 }
 
-pub use outcome::{Losses, ReadOutcome, ReadOutcomes, TRUNCATED};
+pub use listing::samples_json;
+pub use outcome::{Losses, ReadOutcome, ReadOutcomes, DAMAGED, EVENTS_REFUSED, TRUNCATED};
 
 /// A reader of one dataset. Random access: `indice` is read once, `scansione` reads only the bytes of one scan; streaming is `scansione(c, 0..n)`.
 /// An error is a key (`err.file.*`), never a panic; what a file lacks is absent from the answer, not an error.
@@ -247,8 +257,7 @@ pub trait Reader {
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra::default()
     }
-    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML
-    /// writer asks this one; the index builders ask `extra_mzml` (cheap, no read), so what only this one gives is in the mzML and not in the rows of an index.
+    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML writer asks this one; the index builders ask `extra_mzml` (cheap, no read), so what only this one gives is in the mzML and not in the rows of an index.
     fn scan_extra(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
         self.extra_mzml(s)
     }
@@ -258,6 +267,7 @@ pub trait Reader {
     }
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) } // data sections the index lacks (an incomplete copy): (recovered, left out)
     #[rustfmt::skip]    fn missing(&mut self, _c: usize) -> usize { 0 } // scans of sample `c` the index lists beyond the end of the data file (a truncated copy): not in the index
+    #[rustfmt::skip]    fn refused(&mut self, _c: usize) -> Option<Error> { None } // why sample `c` will not be read (its method, a damaged block): the listing carries it; a wrapper forwards it
     /// The scans of sample `c` the file declares and the ones read (`ReadOutcomes` pairs them with the data). A reader that drops scans for another reason than a cut file overrides this; a wrapper forwards it. Default: the rows of `index_without_tic` plus `missing`.
     fn losses(&mut self, c: usize) -> Result<Losses> {
         outcome::default_losses(self, c)
@@ -308,13 +318,8 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
 /// Opens `fs` with the reader that recognises it; `err.file.notAccepted` when none does.
 pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let mut fs = fs;
-    let name = fs
-        .membri
-        .first()
-        .map(|m| m.nome.clone())
-        .unwrap_or_default();
-    let v =
-        riconosci(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
+    let refused = fs.not_accepted();
+    let v = riconosci(&mut fs).ok_or(refused)?;
     (v.apri)(fs, limits)
 }
 
@@ -344,6 +349,7 @@ pub fn tic_ms1(entries: &[ScanEntry]) -> (Vec<f64>, Vec<f64>) {
         .unzip()
 }
 
+mod listing;
 mod outcome;
 
 #[cfg(test)]

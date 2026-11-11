@@ -390,6 +390,12 @@ def variants(out: Path):
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0), "Period1/Experiment0/ExperimentHeader": header(15, 30.0)}, log="QTRAP 6500+")
     w.save(out, "periodi")
     refusals["periodi"] = "periods=2"
+    w = Writer()  # one pair, three samples: read, acquired nothing (no Idx), refused (a TOF experiment, outside the engine reader): the listing tells the refused one from the empty one
+    w.sample(1, one, {"Experiment0/ExperimentHeader": header(15, 30.0)})
+    w.sample(2, [])
+    del w.streams["SampleSubtree/Sample2/Idx"]
+    w.sample(3, one, {"Experiment0/ExperimentHeader": header(8, 0.0)})
+    w.save(out, "rifiutato")
     w = Writer()  # a TOF MS experiment
     w.sample(1, one, {"Experiment0/ExperimentHeader": header(8, 0.0)}, log="TripleTOF 6600")
     w.save(out, "tof")

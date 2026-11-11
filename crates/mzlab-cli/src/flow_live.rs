@@ -480,7 +480,7 @@ fn ready_plan(text: &[u8], dir: &Path, known: &[FileInput], reg: &[Step]) -> Res
     }
     let check = |problems: Vec<mzlab_core::flow::Problem>| {
         let list: Vec<String> = problems.iter().map(crate::flow_run::problem_text).collect();
-        Error::new("err.flow.check").with("problems", list.join(" "))
+        mzlab_core::flow::check_error(&problems).with("problems", list.join(" "))
     };
     let problems = crate::flow_compare::check(&plan, reg, Platform::current());
     if !problems.is_empty() {

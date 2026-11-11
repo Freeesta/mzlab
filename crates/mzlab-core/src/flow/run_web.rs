@@ -99,10 +99,9 @@ pub fn record_jobs(plan_text: &[u8], registry: &[Step], jobs: &str) -> Result<(R
 /// `record_jobs` of the reports as read: the parameters of an error keep the order the runner gave them.
 fn record_reports(plan_text: &[u8], registry: &[Step], reports: &Value) -> Result<(Run, String)> {
     let plan = parse(plan_text)?;
-    if let Some(p) = check(&plan, registry, Platform::current()).first() {
-        return Err(Error::new("err.flow.check")
-            .with("instance", &p.instance)
-            .with("error_key", p.error_key));
+    let problems = check(&plan, registry, Platform::current());
+    if !problems.is_empty() {
+        return Err(crate::flow::check_error(&problems));
     }
     let sched = Sched::new(&plan, registry, env!("CARGO_PKG_VERSION"), &[]);
     let ctx = Ctx::new(&plan, registry, &sched)?;

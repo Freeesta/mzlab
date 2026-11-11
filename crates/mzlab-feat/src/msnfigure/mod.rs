@@ -329,15 +329,22 @@ pub fn svg(graph: &str, view: View) -> Result<String> {
     Ok(o + "</svg>\n")
 }
 
+/// `err.flow.param.type` of parameter `name` of `msn.figure` (the step's id stands for the instance: the `.wasm` asks without a plan).
+pub fn bad_param(name: &str, value: &str) -> Error {
+    Error::new("err.flow.param.type")
+        .with("instance", "msn.figure")
+        .with("param", name)
+        .with("detail", value)
+}
+
 /// The text of `msn.figure@1` in a format a library writes (`svg`, `html`), the bytes of `flow run` and of the `.wasm` `msnfigura`; `png` needs the
 /// rasteriser of the CLI and answers `err.msnfigura.png` here.
 pub fn figure_text(graph: &[u8], format: &str, view: &str) -> Result<String> {
     let graph = std::str::from_utf8(graph).map_err(|_| Error::new("err.msnfigura.bad"))?;
     if !["svg", "html", "png"].contains(&format) {
-        return Err(Error::new("err.flow.param.type").with("param", "format"));
+        return Err(bad_param("format", format));
     }
-    let vista = View::da_nome(view)
-        .ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
+    let vista = View::da_nome(view).ok_or_else(|| bad_param("view", view))?;
     match format {
         "svg" => svg(graph, vista),
         "html" => html::html(graph, vista),

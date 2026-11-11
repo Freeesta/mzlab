@@ -107,21 +107,12 @@
   /** the panel draws the area under the traces (a tint of the line colour): MRM and SIM overlays, on by default @param {any} p */
   const area = p => panelTr(p) && p.area !== false;
 
-  /** the help line of the empty Data view of a SIM session (no graph yet): what to do next and a button to the SIM table */
+  /** the help line of the empty Data view of a SIM session (no graph yet): what to do next */
   function help() {
     const el = document.getElementById("simhelp"); if (!el) return;
     const on = allSim() && !E.panels.some((/** @type {any} */ p) => p.el);
     if (!on) { el.hidden = true; return; }
-    if (el.dataset.on !== I18N.lang) {
-      el.innerHTML = h`${I18N.t("canali.sim.help")} <button type="button" class="sec sm">${I18N.t("canali.sim.helpbtn")}</button>`;
-      /** @type {HTMLElement} */ (el.querySelector("button")).onclick = () => {
-        S.table = true; syncWork(true);                                // the work area shows the sample table and the SIM table (area-lavoro.js)
-        const c = document.getElementById("simtab"); if (!c) return;
-        const d = c.querySelector("details"); if (d) d.open = true;
-        c.hidden = false; c.scrollIntoView({ block: "start" }); const r = /** @type {HTMLElement | null} */ (c.querySelector("[role=region]")); if (r) r.focus();
-      };
-      el.dataset.on = I18N.lang;
-    }
+    if (el.dataset.on !== I18N.lang) { el.textContent = I18N.t("canali.sim.help"); el.dataset.on = I18N.lang; }
     el.hidden = false;
   }
 

@@ -14,10 +14,12 @@ use crate::recipe::{Mode, Recipe};
 use super::recipe_algo;
 use super::recipe_iso;
 
-fn bad(step: &str, name: &str) -> Error {
+/// `err.flow.param.type` of parameter `name` of `step`, with the value it was given.
+fn bad(step: &str, name: &str, v: &Value) -> Error {
     Error::new("err.flow.param.type")
         .with("instance", step)
         .with("param", name)
+        .with("detail", mzlab_core::flow::value_text(v))
 }
 
 /// `area_from` of `features.detect` (`channel` or `window`, the area of the quality trace) and `stitch` (`strict` or `wide`): the second value turns its switch on.
@@ -30,7 +32,7 @@ fn set_trace_choice(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()
     *flag = match v.str() {
         Some(x) if x == on[0] => false,
         Some(x) if x == on[1] => true,
-        _ => return Err(bad(step, k)),
+        _ => return Err(bad(step, k, v)),
     };
     Ok(())
 }
@@ -121,7 +123,7 @@ fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
             Some("centwave") => Peak::CentWave(CentWave::default()),
             Some("masstrace") => Peak::Minima,
             Some("adap_localmin") => Peak::Adap(AdapPeak::default()),
-            _ => return Err(bad(step, k)),
+            _ => return Err(bad(step, k, v)),
         };
         return Ok(());
     }
@@ -129,13 +131,13 @@ fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         return set_adap(a, step, k, v);
     }
     let Peak::CentWave(c) = &mut r.detect.peak else {
-        return Err(Error::new("err.flow.param.unknown").with("param", k));
+        return Err(unknown(step, k));
     };
     if k == "broad_peaks" {
-        c.broad.enabled = v.bool().ok_or_else(|| bad(step, k))?;
+        c.broad.enabled = v.bool().ok_or_else(|| bad(step, k, v))?;
         return Ok(());
     }
-    let num = v.f64().ok_or_else(|| bad(step, k));
+    let num = v.f64().ok_or_else(|| bad(step, k, v));
     match k {
         "ppm" => c.ppm = num?,
         "snr" => c.snr = num?,
@@ -149,15 +151,15 @@ fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
                         if hi.is_finite() && hi >= c.width_s.0 {
                             c.width_s.1 = hi;
                         } else {
-                            return Err(bad(step, k));
+                            return Err(bad(step, k, v));
                         }
                     } else {
-                        return Err(bad(step, k));
+                        return Err(bad(step, k, v));
                     }
                 }
             }
         }
-        _ => return Err(bad(step, k)),
+        _ => return Err(bad(step, k, v)),
     }
     Ok(())
 }
@@ -170,13 +172,13 @@ fn pair(v: &Value) -> Option<(f64, f64)> {
 
 fn set_adap(a: &mut AdapPeak, step: &str, k: &str, v: &Value) -> Result<()> {
     if k == "duration" {
-        a.duration = pair(v).ok_or_else(|| bad(step, k))?;
+        a.duration = pair(v).ok_or_else(|| bad(step, k, v))?;
         return Ok(());
     }
     let x = v
         .f64()
         .filter(|x| x.is_finite() && *x >= 0.0)
-        .ok_or_else(|| bad(step, k))?;
+        .ok_or_else(|| bad(step, k, v))?;
     match k {
         "noise_factor" => a.noise_factor = x,
         "ppm" => a.ppm = x,
@@ -185,7 +187,7 @@ fn set_adap(a: &mut AdapPeak, step: &str, k: &str, v: &Value) -> Result<()> {
         "chrom_threshold" => a.chrom_threshold = x.min(1.0),
         "search_rt" => a.search_rt = x,
         "min_ratio" => a.min_ratio = x,
-        _ => return Err(Error::new("err.flow.param.unknown").with("param", k)),
+        _ => return Err(unknown(step, k)),
     }
     Ok(())
 }
@@ -195,13 +197,20 @@ fn set_axis(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         (Some("ppm"), _) => MassAxis::Ppm,
         (Some("Da"), MassAxis::Da { defect }) => MassAxis::Da { defect },
         (Some("Da"), MassAxis::Ppm) => MassAxis::Da { defect: 0.0 },
-        _ => return Err(bad(step, k)),
+        _ => return Err(bad(step, k, v)),
     };
     Ok(())
 }
 
+/// `err.flow.param.unknown` for parameter `k` of instance `step`.
+fn unknown(step: &str, k: &str) -> Error {
+    Error::new("err.flow.param.unknown")
+        .with("instance", step)
+        .with("param", k)
+}
+
 fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
-    let num = || v.f64().ok_or_else(|| bad(step, k));
+    let num = || v.f64().ok_or_else(|| bad(step, k, v));
     axis_gate(r, step, k)?;
     let int = || num().map(|x| x as usize);
     match (step, k) {
@@ -220,7 +229,9 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
                 *defect = num()?;
             }
         }
-        ("features.detect", "rt_range") => r.rt_range = rt_range(v).ok_or_else(|| bad(step, k))?,
+        ("features.detect", "rt_range") => {
+            r.rt_range = rt_range(v).ok_or_else(|| bad(step, k, v))?
+        }
         ("features.detect", "budget") => r.detect.budget = int()?,
         ("features.detect", "min_points") => r.detect.min_points = num()? as u32,
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
@@ -235,7 +246,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
             r.mode = match v.str() {
                 Some("family") => Mode::Family,
                 Some("ion") => Mode::Ion,
-                _ => return Err(bad(step, k)),
+                _ => return Err(bad(step, k, v)),
             }
         }
         ("features.align", "ppm") => r.align.ion.ppm = num()?,
@@ -243,14 +254,14 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.align", "rt_gap") => r.align.ion.rt_gap = num()?,
         ("features.align", "max_ppm_span") => r.align.ion.max_ppm_span = num()?,
         ("features.align", "drop_artefacts") => {
-            r.align.ion.drop_artefacts = v.bool().ok_or_else(|| bad(step, k))?
+            r.align.ion.drop_artefacts = v.bool().ok_or_else(|| bad(step, k, v))?
         }
         ("features.align", "split_gap") => r.align.ion.split_gap = Some(num()?),
         ("features.align", "rt_warp") => {
             r.align.warp.method = v
                 .str()
                 .and_then(crate::rtwarp::Method::parse)
-                .ok_or_else(|| bad(step, k))?
+                .ok_or_else(|| bad(step, k, v))?
         }
         ("features.align", "rt_coarse_gap") => r.align.warp.coarse_gap = num()?,
         ("features.align", "rt_span") => r.align.warp.span = num()?,
@@ -270,11 +281,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.ms2_link", "tol_ppm") => r.steps.ms2.tol_ppm = num()?,
         ("features.ms2_link", "weak") => r.steps.ms2.weak = num()? as f32,
         ("features.ms2_link", "margin_s") => r.steps.ms2.margin_s = num()?,
-        _ => {
-            return Err(Error::new("err.flow.param.unknown")
-                .with("instance", step)
-                .with("param", k))
-        }
+        _ => return Err(unknown(step, k)),
     }
     Ok(())
 }

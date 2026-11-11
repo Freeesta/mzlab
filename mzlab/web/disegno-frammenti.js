@@ -6,7 +6,7 @@
 
 import { featManifest } from "./feat-manifesto.js";
 
-/** @typedef {{ atoms: number[], formula: string, mass: number, mz: number }} Side */
+/** @typedef {{ atoms: number[], formula: string, mass: number, mz: number, odd?: boolean }} Side */
 /** @typedef {{ a: number, b: number, order: number, kind: string, sides: Side[] }} Cut */
 
 /** @type {Promise<any> | null} */
@@ -30,6 +30,7 @@ function nativo() {
     fragments: (/** @type {string} */ molfile, /** @type {number} */ a, /** @type {number} */ b) => ask({ kind: "fragments", molfile, a, b }),
     partial: (/** @type {string} */ molfile, /** @type {string} */ delta) => ask({ kind: "partial", molfile, delta }),
     labels: (/** @type {string} */ request) => ask({ kind: "labels", request }),
+    cut: (/** @type {string} */ request) => ask({ kind: "cut", request }),
   };
 }
 
@@ -63,9 +64,11 @@ export async function cutsOf(/** @type {string} */ molfile, /** @type {number} *
   }
 }
 
+/** the formula of a side, with • when it has an odd electron count (a radical drawn on it: its ion is an odd-electron one, M+•) */
+const formulaOf = (/** @type {Side} */ s) => s.formula + (s.odd ? "•" : "");
 /** one line for a side, numbers already formatted: «C2H6 · 30.05 · m/z 31.05» */
 export const sideLine = (/** @type {Side} */ s, /** @type {(v: number) => string} */ num, /** @type {(k: string, p?: any) => string} */ t) =>
-  t("draw.frag.side", { formula: s.formula, mass: num(s.mass), mz: num(s.mz) });
+  t("draw.frag.side", { formula: formulaOf(s), mass: num(s.mass), mz: num(s.mz) });
 
 /** options of `TDATI.table` for every cut: the bond by element and number, the two pieces with formula, mass and m/z */
 export function cutsTable(/** @type {Cut[]} */ cuts, /** @type {string[]} */ labels, /** @type {(v: number) => string} */ num, /** @type {(k: string, p?: any) => string} */ t) {
@@ -73,7 +76,7 @@ export function cutsTable(/** @type {Cut[]} */ cuts, /** @type {string[]} */ lab
   return {
     title: t("draw.frag.title"), rowHeader: true,
     head: [t("draw.frag.col.bond"), t("draw.frag.col.formula", { n: 1 }), t("draw.frag.col.mz", { n: 1 }), t("draw.frag.col.formula", { n: 2 }), t("draw.frag.col.mz", { n: 2 })],
-    rows: cuts.map(c => [`${name(c.a)}–${name(c.b)}`, `${c.sides[0].formula} (${num(c.sides[0].mass)})`, num(c.sides[0].mz), `${c.sides[1].formula} (${num(c.sides[1].mass)})`, num(c.sides[1].mz)]),
+    rows: cuts.map(c => [`${name(c.a)}–${name(c.b)}`, `${formulaOf(c.sides[0])} (${num(c.sides[0].mass)})`, num(c.sides[0].mz), `${formulaOf(c.sides[1])} (${num(c.sides[1].mass)})`, num(c.sides[1].mz)]),
     note: t("draw.frag.note"),
   };
 }

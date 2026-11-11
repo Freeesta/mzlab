@@ -127,7 +127,8 @@ pub(super) fn two_threads(
         read?;
         match (x.fine(), y) {
             (Some((sha256, _, probe)), Some((_, sha1, _))) => Ok((sha256, sha1, probe)),
-            _ => Err(crate::Error::new("err.file.unknown")),
+            (None, _) => Err(crate::Error::new("err.file.unknown").with("detail", "incomplete")),
+            (_, None) => Err(crate::Error::new("error.workStopped").with("detail", "hash")),
         }
     })
 }

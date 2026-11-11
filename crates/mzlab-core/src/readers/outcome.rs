@@ -50,6 +50,12 @@ pub struct ReadOutcome<T> {
 /// Cause of the scans an index lists beyond the end of its data file (`Reader::missing`).
 pub const TRUNCATED: &str = "warn.file.truncated";
 
+/// Cause of the scan blocks of a `.wiff.scan` whose head disagrees with the index row (`wiff::Record::damaged`): left out, never read as other scans.
+pub const DAMAGED: &str = "warn.wiff.damaged";
+
+/// Cause of the scans a run lists without their scan event: the table of events was refused, the scans are read with level and polarity unknown.
+pub const EVENTS_REFUSED: &str = "warn.raw.eventsRefused";
+
 /// `Reader::losses` of a reader that does not override it: the rows of `index_without_tic` plus the scans `missing` counts.
 pub(super) fn default_losses<R: Reader + ?Sized>(r: &mut R, c: usize) -> Result<Losses> {
     let lacking = r.missing(c);

@@ -113,7 +113,7 @@ impl Members {
             Ok(v) => v,
             Err(e) => {
                 return Some(Err(e.as_string().map_or_else(
-                    || mzlab_core::Error::new("err.file.notAccepted"),
+                    || mzlab_core::Error::new("err.module.reply").with("detail", "open"),
                     |t| module_error(&t),
                 )))
             }
@@ -282,7 +282,7 @@ impl Spill for JsSpill {
 /// it with `write(offset, bytes)`; `name` is the name of the item. `phase(n)` is told when a phase begins (1 the members are read for their SHA-256,
 /// 4 the reader opens the dataset, 2 the scans are read and indexed, 3 the chromatograms and the index are written); `step(done, total)`, when given, is told how many scans of sample `c` have been decoded (`counted.rs`), else JS follows the bytes read.
 /// `write_cen(offset, bytes)`, when the page wants it: if the first MS1 scan is profile (and `centroid` is not asked) the index with the scans as centroids (the `.cen.mzidx` of mzFinder) is built from the SAME decoding of the scans and written there (`"cen"` in the answer holds its statistics); otherwise nothing is written to it.
-/// Returns the statistics, the SHA-256 of the dataset and `missing` (the scans a truncated data file lacks, `Reader::losses`) as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once). `cap_mb`: the budget of the instance (`MemBudget::from_request`; absent or 0 the default).
+/// Returns the statistics, the SHA-256 of the dataset, `missing` (the scans a truncated data file lacks or a `.raw` lists without their event, `Reader::losses`) and its `cause` as JSON. `prints`: `[sha256, sha1, probe]` of each member if the page already has them (`Passata`), or a function called once the first pass is done that gives them (the copy's hash still running) or null; a missing or empty value: they are taken here. `spill_put(offset, bytes)` and `spill_get(offset, length)`: a scratch file for the peaks that do not fit in the budget (the scans are then decoded once). `cap_mb`: the budget of the instance (`MemBudget::from_request`; absent or 0 the default).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn build_mzidx_native(
@@ -349,10 +349,10 @@ pub fn build_mzidx_native(
     .map_err(|e| error_json(&e))?;
     out.fine().map_err(|e| error_json(&e))?;
     // the scans the file declares beyond the ones read (`Reader::losses`), asked once the index is built so its pass keeps the phases of the row
-    let missing = l.losses(c).map_err(|e| error_json(&e))?.lost();
+    let lost = l.losses(c).map_err(|e| error_json(&e))?;
     Ok(format!(
-        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{}}}",
-        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, missing
+        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{},\"cause\":\"{}\"}}",
+        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, lost.lost(), lost.cause
     ))
 }
 
@@ -386,10 +386,10 @@ fn index_both(
     .map_err(|e| error_json(&e))?;
     let fine = out.fine().and_then(|()| out_cen.fine());
     fine.map_err(|e| error_json(&e))?;
-    let missing = lc.losses(c).map_err(|e| error_json(&e))?.lost();
+    let lost = lc.losses(c).map_err(|e| error_json(&e))?;
     Ok(format!(
-        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{},\"cen\":{{\"peaks\":{},\"bytes\":{}}}}}",
-        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, missing, sc.peaks, sc.bytes
+        "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{},\"sha256\":\"{}\",\"missing\":{},\"cause\":\"{}\",\"cen\":{{\"peaks\":{},\"bytes\":{}}}}}",
+        st.scans, st.peaks, st.sections, st.passes, st.bytes, sha256, lost.lost(), lost.cause, sc.peaks, sc.bytes
     ))
 }
 
@@ -455,7 +455,6 @@ pub fn native_to_mzml(
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     readers_mzml::write_with(&mut *l, c as usize, &mut out, &mut tell, opt)
         .map_err(|e| error_json(&e))?;
-    std::io::Write::flush(&mut out).map_err(|_| {
-        error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
-    })
+    std::io::Write::flush(&mut out)
+        .map_err(|_| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))
 }

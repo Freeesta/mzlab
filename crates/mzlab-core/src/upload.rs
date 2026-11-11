@@ -89,7 +89,8 @@ fn fingerprint(r: &mut dyn ReadAt, size: u64, mut p: Passata) -> Result<(String,
         p.aggiorna(&buf[..n]);
         at += n as u64;
     }
-    p.fine().ok_or_else(|| Error::new("err.file.unknown"))
+    p.fine()
+        .ok_or_else(|| Error::new("err.file.unknown").with("detail", "incomplete"))
 }
 
 /// Everything the index builder and the loading table need of an mzML: the scan table, the metadata objects and the fingerprints.
@@ -141,7 +142,7 @@ pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
         let t = scantable::read(&mut Windowed::new(r, size), size);
         let prints = h
             .join()
-            .unwrap_or_else(|_| Err(Error::new("err.file.unknown")));
+            .unwrap_or_else(|_| Err(Error::new("error.workStopped").with("detail", "hash")));
         let (sha256, _, probe) = prints?;
         Ok(from_mzml_table(t?, name, size, sha256, probe))
     })
@@ -353,8 +354,8 @@ pub fn with_parallel_prints<R>(
         let mut attendi = || match h.take() {
             Some(h) => h
                 .join()
-                .unwrap_or_else(|_| Err(Error::new("err.file.unknown"))),
-            None => Err(Error::new("err.file.unknown")),
+                .unwrap_or_else(|_| Err(Error::new("error.workStopped").with("detail", "hash"))),
+            None => Err(Error::new("error.workStopped").with("detail", "hash")),
         };
         job(&mut attendi)
     })
@@ -369,7 +370,7 @@ pub fn with_parallel_prints<R>(
     let mut recipe = Some(recipe);
     job(&mut || match recipe.take() {
         Some(r) => r().and_then(|mut fs| impronte(&mut fs)),
-        None => Err(Error::new("err.file.unknown")),
+        None => Err(Error::new("error.workStopped").with("detail", "hash")),
     })
 }
 

@@ -4,16 +4,36 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use mzlab_core::readers::{self, FileSet, Limits, Member, Reader};
 use serde_json::Value;
 
-fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_nonind_{}", std::process::id()));
+/// A directory of one call of the reference, removed when dropped: the tests run in parallel, so each writes its own files.
+struct Tmp(PathBuf);
+impl std::ops::Deref for Tmp {
+    type Target = Path;
+    fn deref(&self) -> &Path {
+        &self.0
+    }
+}
+impl Drop for Tmp {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+fn reference() -> Option<(Tmp, Value)> {
+    static N: AtomicUsize = AtomicUsize::new(0);
+    let out = Tmp(std::env::temp_dir().join(format!(
+        "mzlab_wiff_nonind_{}_{}",
+        std::process::id(),
+        N.fetch_add(1, Ordering::Relaxed)
+    )));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
     let ok = Command::new("python3")
         .arg(script)
-        .arg(&out)
+        .arg(&*out)
         .output()
         .ok()
         .filter(|o| o.status.success());

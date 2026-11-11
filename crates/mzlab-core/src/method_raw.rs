@@ -12,6 +12,8 @@ mod registry;
 mod script;
 pub(crate) mod series;
 mod settings;
+#[cfg(test)]
+mod tests;
 pub(crate) mod tsq;
 
 use crate::agilent;
@@ -194,11 +196,85 @@ fn open_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
         .collect()
 }
 
-/// Every warning the file itself raises: the open, the trailer and the status log.
-fn file_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
+/// What the scans themselves leave to a notice: trailer ions put aside for the isolation target, SRM transitions taken from the method's table, and what
+/// the reader passes on unverified (an MS order it does not decode, an event found by number in a cut table) or refuses (a profile it cannot calibrate).
+fn scan_warnings(n: &crate::raw::ScanNotes) -> Vec<Option<V>> {
+    let note = |key: &str, text: String| {
+        obj(vec![
+            ("chiave", Some(V::s(key))),
+            ("dove", Some(V::s(text))),
+        ])
+    };
+    let mut out = Vec::new();
+    if n.order_unknown > 0 {
+        out.push(note("meta.nonDecodificato", format!(
+            "MS order of {} of {} scans (precursor-ion, neutral-loss or MS9 and above): their level is unknown, though their filter text says ms",
+            n.order_unknown, n.scans
+        )));
+    }
+    if n.event_by_class > 0 {
+        out.push(note("meta.nonDecodificato", format!(
+            "the own scan event of {} of {} scans: the event table is cut short, so each takes the event its number names, unchecked (level, polarity, filter)",
+            n.event_by_class, n.scans
+        )));
+    }
+    if n.calibration_unknown > 0 {
+        out.push(note("meta.nonDecodificato", format!(
+            "profile calibration of {} of {} scans (a count of coefficients no known conversion uses): their profile is refused, it would be in frequency units",
+            n.calibration_unknown, n.scans
+        )));
+    }
+    if n.ion_rejected > 0 {
+        out.push(obj(vec![
+            ("chiave", Some(V::s("meta.ioneScartata"))),
+            (
+                "dove",
+                Some(V::s(format!(
+                    "the trailer's monoisotopic m/z lies outside the isolation window in {} of {} scans",
+                    n.ion_rejected, n.scans
+                ))),
+            ),
+        ]));
+    }
+    if n.srm_from_table > 0 {
+        out.push(obj(vec![
+            ("chiave", Some(V::s("meta.daTabella"))),
+            (
+                "dove",
+                Some(V::s(format!(
+                    "SRM Q1 and collision energy of {} of {} scans (the transition table; the scans have no scan event)",
+                    n.srm_from_table, n.scans
+                ))),
+            ),
+        ]));
+    }
+    out
+}
+
+/// Every warning the file itself raises: the open, the trailer, the status log and the notes of its scans.
+fn file_warnings(raw: &RawFileReader, notes: &crate::raw::ScanNotes) -> Vec<Option<V>> {
     let mut w = status_warning(raw);
     w.extend(trailer_warning(raw));
     w.extend(open_warnings(raw));
+    w.extend(scan_warnings(notes));
+    w
+}
+
+/// What the method blocks lack: the UV 3D field is not decoded, a file with no block has no method.
+fn block_warnings(blocks: &[String]) -> Vec<Option<V>> {
+    let mut w = Vec::new();
+    if detectors::has_3d_field(blocks) {
+        w.push(obj(vec![
+            ("chiave", Some(V::s("meta.nonDecodificato"))),
+            ("dove", Some(V::s("UV 3D field (PDA spectra)"))),
+        ]));
+    }
+    if blocks.is_empty() {
+        w.push(obj(vec![
+            ("chiave", Some(V::s("meta.mancante"))),
+            ("dove", Some(V::s("Method"))),
+        ]));
+    }
     w
 }
 
@@ -317,7 +393,12 @@ fn trailer_pass<R: Read + Seek>(
 }
 
 /// The `metodo/1` document of a `.raw` already opened as `raw` (`source` is the same file, read again for the texts of the method). Never an error: what is missing is absent.
-pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Source) -> String {
+pub fn from_raw<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    src: &Source,
+    notes: &crate::raw::ScanNotes,
+) -> String {
     let s = &raw.seq_row;
     let (trailer, voci) = trailer_pass(raw, source);
     let ident = Ident {
@@ -344,20 +425,9 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         }
         v
     });
-    warn.extend(file_warnings(raw));
+    warn.extend(file_warnings(raw, notes));
     let (exps, settings) = experiments_of(&blocks, &items, &mut warn);
-    if detectors::has_3d_field(&blocks) {
-        warn.push(obj(vec![
-            ("chiave", Some(V::s("meta.nonDecodificato"))),
-            ("dove", Some(V::s("UV 3D field (PDA spectra)"))),
-        ]));
-    }
-    if blocks.is_empty() {
-        warn.push(obj(vec![
-            ("chiave", Some(V::s("meta.mancante"))),
-            ("dove", Some(V::s("Method"))),
-        ]));
-    }
+    warn.extend(block_warnings(&blocks));
     let lock = lock::section(raw, source, &blocks);
     let doc = obj(vec![
         ("schema", Some(V::s(method::SCHEMA))),

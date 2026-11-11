@@ -1,9 +1,9 @@
-"""Synthetic MSn file (a direct infusion with a fragmentation cascade) for the tests of the MSn tree: all numbers invented."""
+"""Synthetic MSn files for the tests: a direct infusion with a fragmentation cascade (MSn tree) and a product-ion file of MS3 scans only. All numbers invented."""
 from pathlib import Path
 
 import numpy as np
 
-from dati_sintetici import _U_MZ, _arr, _cvp, _hr_head
+from dati_sintetici import _U_MZ, _arr, _cvp, _g, _hr_head, _spec, _write
 
 
 def msn_infusion(path: Path, rng, scans: int = 14) -> None:
@@ -42,3 +42,27 @@ def msn_infusion(path: Path, rng, scans: int = 14) -> None:
     Path(path).write_text(_hr_head("exploris", False, Path(path).stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs)
                           + "</spectrumList></run></mzML>", encoding="utf-8")
 
+
+def ms3(path: Path, rng) -> None:
+    """A product-ion file of MS3 scans only (an ion trap's MS3 of one precursor, 194.1, itself a product of 237.1): level 3, no MS1 nor MS2 scan."""
+    rts = np.linspace(0.02, 10.0, 400)
+    specs = []
+    for i, rt in enumerate(rts):
+        sig = 4e5 * _g(rt, 5.2, 0.08) + 200
+        mz = np.array([122.1, 150.1, 176.1]) + rng.normal(0, 0.03, 3); it = np.array([0.4, 1.0, 0.2]) * sig * rng.normal(1, 0.05, 3)
+        specs.append(_spec(i, rt, mz, it, level=3, prec=194.1, ce=35.0))
+    _write(path, specs, [])
+
+
+def ms2_ms3(path: Path, rng) -> None:
+    """A product-ion file with MS2 and MS3 scans in turn (MS2 of 237.1, MS3 of its product 194.1): two experiments of one file, no MS1 scan."""
+    specs = []
+    for i, rt in enumerate(np.linspace(0.02, 10.0, 400)):
+        sig = 4e5 * _g(rt, 5.2, 0.08) + 200
+        if i % 2 == 0:
+            mz, rel, lv, prec = [150.1, 194.1, 219.1], [0.3, 1.0, 0.2], 2, 237.1
+        else:
+            mz, rel, lv, prec = [122.1, 150.1, 176.1], [0.4, 1.0, 0.2], 3, 194.1
+        it = np.array(rel) * sig * rng.normal(1, 0.05, 3)
+        specs.append(_spec(i, rt, np.array(mz) + rng.normal(0, 0.03, 3), it, level=lv, prec=prec, ce=35.0))
+    _write(path, specs, [])

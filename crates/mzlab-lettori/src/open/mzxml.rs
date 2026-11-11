@@ -65,7 +65,7 @@ impl MzxmlReader {
             .get(k)
             .ok_or_else(|| Error::new("error.badIndex").with("k", k))?;
         if r.end - r.start > self.limits.byte {
-            return Err(Error::memory_budget());
+            return Err(Error::fixed_limit("mzXML scan", self.limits.byte));
         }
         let b = self.read(r.start, r.end - r.start)?;
         if !b.starts_with(b"<scan") {
@@ -424,13 +424,9 @@ fn field(name: &str, value: &str) -> Field {
 }
 
 fn open(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    let i = fs
-        .find(".mzxml")
-        .ok_or_else(|| Error::new("err.file.notAccepted"))?;
-    let m = fs
-        .membri
-        .get_mut(i)
-        .ok_or_else(|| Error::new("err.file.notAccepted"))?;
+    let i = fs.find(".mzxml").ok_or_else(|| fs.not_accepted())?;
+    let refused = fs.not_accepted();
+    let m = fs.membri.get_mut(i).ok_or(refused)?;
     let nome = m
         .nome
         .rsplit(['/', '\\'])
