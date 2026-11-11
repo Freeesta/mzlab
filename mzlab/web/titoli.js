@@ -9,7 +9,7 @@
   const fnm = (/** @type {number} */ v) => String(+(+v).toFixed(2));
   /** distinct precursors (0.6 Da) of the MS2 files shown @param {any[]} files */
   const nPrecOf = files => { const out = []; for (const f of files) for (const v of f.precursors || []) if (!out.some(u => Math.abs(u - v) < 0.6)) out.push(v); return out.length; };
-  /** @param {any} p @param {{ nPrec?: number }} [ctx] */
+  /** @param {any} p @param {{ nPrec?: number, lv?: number }} [ctx] lv: the MSn level of the shown files */
   function nome(p, ctx = {}) {
     const t = typeof p.title === "string" ? p.title : "";
     const own = t && t[0] !== "@" && !/^MS²$/.test(t);  // typed by the student
@@ -25,14 +25,18 @@
       const K = kind === "bpc" ? "BPC" : kind === "tic" ? "TIC" : null;
       if (!K) return T(`ctl.kind.${kind}`) === `ctl.kind.${kind}` ? String(kind).toUpperCase() : T(`ctl.kind.${kind}`);
       if (p.tab === MS2) {
+        const lv = ctx.lv ?? 2, ms = "MS" + SUP[Math.min(lv, 3)], many = (ctx.nPrec ?? 2) > 1;  // one precursor in the file: the trace IS the TIC of the experiment
+        if (lv > 2) return prec == null ? T("panel.title.ticMsnAll", { ms }) : many ? T("panel.title.msnPrec", { ms, prec }) : T("panel.title.ticMsn", { ms });
         if (prec == null) return T("panel.title.ticMs2All");
-        return (ctx.nPrec ?? 2) > 1 ? T("panel.title.ms2prec", { prec }) : T("panel.title.ticMs2");  // one precursor in the file: the trace IS the TIC of the experiment
+        return many ? T("panel.title.ms2prec", { prec }) : T("panel.title.ticMs2");
       }
       return prec != null ? T("panel.title.kindPrec", { kind: K, prec }) : K;
     }
     if (p.type === "spec") {
       if (p.uv) return T("panel.title.uv");
-      if (p.level > 1) return prec != null ? T("panel.title.productOf", { prec }) : "MS" + SUP[Math.min(p.level, 3)];
+      const ms = "MS" + SUP[Math.min(p.level, 3)];
+      if (p.level > 2) return prec != null ? T("panel.title.productOfMsn", { ms, prec }) : ms;
+      if (p.level > 1) return prec != null ? T("panel.title.productOf", { prec }) : ms;
       return "MS¹";
     }
     if (p.type === "xic") return (p.traces || []).length === 1 ? T("panel.title.xicOne", { label: p.traces[0].label }) : T("panel.title.xic");
@@ -45,6 +49,6 @@
     return t;
   }
   /** the name of a live panel (precursors counted over the MS2 files that are shown) @param {any} p */
-  const di = p => nome(p, { nPrec: nPrecOf(tabFiles(MS2).filter((/** @type {any} */ f) => f.vis && !f.gone)) });
+  const di = p => { const fs = tabFiles(MS2).filter((/** @type {any} */ f) => f.vis && !f.gone); return nome(p, { nPrec: nPrecOf(fs), lv: fs.length ? Math.min(...fs.map((/** @type {any} */ f) => f.lv || 2)) : 2 }); };
   window.TITOLI = { nome, di, nPrecOf };
 })();

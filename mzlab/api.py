@@ -96,7 +96,7 @@ def _r_chrom(app, q):
 
 @_get("/api/ms2tr")
 def _r_ms2tr(app, q):      # precursor > fragment pairs of the MS2 scans (the MS2 counterpart of the MRM transitions): m/z and intensity only
-    return _json({"files": [{"k": k, "transitions": app._item(k).ms2_transitions()} for k in _ks(q)]})
+    return _json({"files": [{"k": k, "transitions": app._item(k).ms2_transitions(level=int(q.get("level", 2)))} for k in _ks(q)]})
 
 
 @_get("/api/qaqc", fail=(ValueError, KeyError))

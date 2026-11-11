@@ -91,7 +91,9 @@ pub fn item_method<R: ReadAt, M: ReadAt>(idx: &Index<R>, m: &mut Mzml<M>, file: 
     };
     let md = m.metadata()?;
     let ms2: Vec<&&Scan> = sc.iter().filter(|s| s.level >= 2).collect();
-    let rts: Vec<f64> = sc.iter().filter(|s| s.level == if kind == "full" { 1 } else { 2 }).map(|s| s.rt).collect();
+    // the cycle of the level the page shows: MS1, else the first MSn level (3 in an MS3-only file)
+    let shown = if kind == "full" { 1 } else { ms2.iter().map(|s| s.level).min().unwrap_or(2) };
+    let rts: Vec<f64> = sc.iter().filter(|s| s.level == shown).map(|s| s.rt).collect();
     let cycle = (rts.len() > 2).then(|| median(&mut rts.windows(2).map(|w| w[1] - w[0]).collect::<Vec<_>>()) * 60.0);
     let polarity = if kind == "mrm" || sc.is_empty() { m.header_polarity()? } else { polarity_of(&sc).to_string() };
     let win = scan_window(idx, &mut m.r)?;

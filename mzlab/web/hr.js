@@ -9,7 +9,7 @@ const HR = (() => {
   const num = (v, lo, hi, d) => { v = +v; return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
   // profile of file f at a level (1 survey, 2 product ions); `f` may be undefined (no file yet): low resolution
   function prof(f, level) {
-    const lv = level || (f && f.lv) || 1, p = f && (lv === 2 ? f.prof2 : f.prof1);
+    const lv = level || (f && f.lv) || 1, p = f && (lv > 1 ? f.prof2 : f.prof1);
     if (!p) return LOW;
     // ion trap: 2 decimals, 0.5 Da (as Thermo's default), not high resolution
     if (!p.hr) return p;
@@ -65,7 +65,7 @@ const HR = (() => {
   function fwhmFn(iso, f, level) {
     const k = WDEF[iso.def || "fwhm"] || 1;
     if (iso.fw && iso.fw.v > 0) return iso.fw.mode === "ppm" ? (m => m * iso.fw.v * 1e-6 / k) : (() => iso.fw.v / k);
-    const R = iso.R === 0 ? 0 : (iso.R || (f && (level === 2 ? f.res2 : f.res1)) || 0);
+    const R = iso.R === 0 ? 0 : (iso.R || (f && (level > 1 ? f.res2 : f.res1)) || 0);
     return R > 0 ? (m => m / resAt(R, m)) : null;
   }
   // the Gaussian profile of the merged peaks (points = points per FWHM): {x, y}, highest point = 100
@@ -113,7 +113,7 @@ const HR = (() => {
   function drawIso(p, g, X, Y, d0, ymax, W, f, pat) {
     const tol = prof(f, p.level).tol, st = p.iso.style || "centroidi";
     // no width: whole fine structure
-    const fw = fwhmFn(p.iso, f, p.level), R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0);
+    const fw = fwhmFn(p.iso, f, p.level), R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level > 1 ? f.res2 : f.res1) || 0);
     const top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
     const find = mz => { /** @type {{ m: number, y: number, e: number } | null} */ let best = null; d0.mz.forEach((m, j) => { if (d0.y[j] <= 0) return; const e = ppm(m, mz); if (Math.abs(e) <= tol && (!best || d0.y[j] > best.y)) best = { m, y: d0.y[j], e }; }); return /** @type {{ m: number, y: number, e: number } | null} */ (best); };
     const obsTop = find(top.mz), h = obsTop ? obsTop.y : ymax / 1.12 * 0.9;

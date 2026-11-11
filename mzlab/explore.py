@@ -491,10 +491,10 @@ class Item:
                 return rt[sm], y[sm]
         return rt, y
 
-    def ms2_transitions(self, top: int = 5) -> list[dict]:
-        """The precursor > fragment pairs present in the MS2 scans (unit resolution): for each precursor the `top` fragments (1 Da cells) with the largest summed
+    def ms2_transitions(self, top: int = 5, level: int = 2) -> list[dict]:
+        """The precursor > fragment pairs present in the MSn scans of `level` (unit resolution): for each precursor the `top` fragments (1 Da cells) with the largest summed
         intensity. Numbers only: m/z, the scans that hold the fragment and its summed intensity; no names and no verdicts."""
-        t = self._tbl(2)
+        t = self._tbl(level)
         if len(t.rt) == 0:
             return []
         pr = np.array([sum(self.run.scans[i].iso) / 2 if self.run.scans[i].iso else self.run.scans[i].precursor or -1.0 for i in t.scan_ids])

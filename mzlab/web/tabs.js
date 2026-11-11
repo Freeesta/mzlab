@@ -179,7 +179,7 @@ function addMs2Chrom(/** @type {Bag} */ e, /** @type {number} */ y) {
 }
 function addMs2Spec(/** @type {Pannello} */ c, /** @type {Bag} */ e, /** @type {number} */ y) {
   const f0 = tabFiles("ms2")[0], k = e.k ?? f0.k;
-  const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: 2, prec: e.prec, title: ptProduct(e.prec), x: 0, y, w: c.w, h: 280, full: true });
+  const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: Math.max(2, E.files[k]?.lv || 2), prec: e.prec, title: ptProduct(e.prec), x: 0, y, w: c.w, h: 280, full: true });
   apexSpectrum(c, sp); return sp;
 }
 function addMs2Pair(/** @type {Bag} */ e, /** @type {number} */ y) { const c = addMs2Chrom(e, y); addMs2Spec(c, e, y + 260); return c; }
@@ -240,7 +240,7 @@ async function ms2Spectrum(/** @type {number | string} */ prec) {
   let c = ms2PairOf(prec); if (!c) { ms2Toggle(prec, true); c = ms2PairOf(prec); } if (!c) return;
   ms2Show(prec); renderFileList();
   let sp = E.panels.find((/** @type {Pannello} */ q) => q.type === "spec" && q.link === c.id);
-  if (!sp) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (!e) return; sp = newSpec(c, null, null, e.k ?? tabFiles("ms2")[0].k); sp.level = 2; }
+  if (!sp) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (!e) return; sp = newSpec(c, null, null, e.k ?? tabFiles("ms2")[0].k); sp.level = Math.max(2, E.files[sp.k]?.lv || 2); }
   await apexSpectrum(c, sp);
   setActive(sp); front(sp.el);
 }
