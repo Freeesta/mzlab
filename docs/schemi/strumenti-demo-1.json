@@ -1548,12 +1548,13 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "description":"FWHM of a peak; left out, it is measured on the isolated peaks of the file"
+                    "description":"FWHM of a peak; left out, it is measured on the isolated peaks of the file (0.7 Da, with a warning, when fewer than 8 are found)"
                   },
                   {
                     "type":"number",
                     "minimum":0,
-                    "description":"A peak is kept when it stands this many sigma over the background (Poisson Z for counts); left out, the value of the mode of the file"
+                    "default":3,
+                    "description":"A peak is kept when it stands this many sigma over the background (Poisson Z for counts)"
                   }
                 ]
               }
