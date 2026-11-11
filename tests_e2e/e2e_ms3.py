@@ -33,8 +33,8 @@ try:
                 assert t == want, t
             step(f"{lang}: titles name MS³", titles)
             def spectrum(pg=pg):
-                wait_for_js(pg, "(() => { const s = E.panels.find(p => p.tab === 'ms2' && p.type === 'spec'); return s && s.level === 3 && s._a && s._a.sr && s._a.sr.length; })()", 30000)
-                mz = pg.evaluate("(() => { const s = E.panels.find(p => p.tab === 'ms2' && p.type === 'spec'); const d = s._a.sr[0]; return [...(d.x || d.mz || [])].map(Number); })()")
+                wait_for_js(pg, "(() => { const s = E.panels.find(p => p.tab === 'ms2' && p.type === 'spec'); return s && s.level === 3 && s._a && s._a.data && s._a.data.length; })()", 30000)
+                mz = pg.evaluate("(() => { const s = E.panels.find(p => p.tab === 'ms2' && p.type === 'spec'); return [...s._a.data[0].d.mz].map(Number); })()")
                 assert any(abs(m - 150.1) < 0.3 for m in mz), ("no MS3 product ion in the spectrum", mz[:10])
                 o = pg.evaluate("[...document.querySelectorAll('.pnl select[data-o=level] option')].map(o => [o.value, o.textContent])")
                 assert ["3", "MS3"] in o and ["2", "MS2"] not in o, o
