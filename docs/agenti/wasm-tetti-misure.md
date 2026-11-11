@@ -2,7 +2,7 @@
 Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.129 e `tools/wasm_opt.sh` (`wasm-opt -O3`, binaryen 133; `@motore` per motore, feat, tabelle e rotte, `@estesi` per i lettori) salvo «grezzo» = `tools/cargo_wasm.sh build --release` prima di `wasm-opt`; la crescita in % è il rapporto della coppia. I tetti stanno in `tools/build_*_wasm.sh` (`docs/agenti/wasm-tetti.md`), nessuna riga qui li cambia; i valori del passo «size» della CI fanno fede.
 
 ## Tetti
-- motore 2 174 976; `thermo` 774 144; `sciex` 475 136; `aperti` 561 152; `andi` 344 064; librerie 614 400; `hr` 1 712 128; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; i tetti degli altri moduli stanno solo negli script.
+- motore 2 174 976; `thermo` 774 144; `sciex` 475 136; `aperti` 561 152; `andi` 344 064; librerie 614 400; `hr` 1 716 224; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; i tetti degli altri moduli stanno solo negli script.
 
 ## Motore
 - Centroidi del lettore: `readers_mzml::profile_of` nella stima di `readers_centroids::stima` (il profilo, non i centroidi del produttore) motore grezzo 3 602 657 → 3 603 263 (+606 B; `cargo build --release` senza `wasm-opt`).

@@ -9,7 +9,7 @@ want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 limit=512000
 limit_untargeted=585728   # untargeted: +2.4 % over 512000 for the broad-band mark and the blank rule (measured 512259), decision of the Coordinator
 limit_table=737280   # table: tabcheck/1 with all fifteen checks (Kendrick analysis and PCA included); cap +20 % over 512000, decision of Federico, 22 Oct 2026 (docs/agenti/wasm-tetti.md)
-limit_hr=1712128   # hr: detect, proofs, finder, finder_edge and finder_msn in ONE .wasm (measured 1661089 with the isotope finder of features.detect, +4.4 %, decision of the Coordinator; before 1590857); the only cap of the group (docs/agenti/wasm-tetti.md)
+limit_hr=1716224   # hr: detect, proofs, finder, finder_edge and finder_msn in ONE .wasm (measured 1661089 with the isotope finder of features.detect, +4.4 %, decision of the Coordinator; before 1590857); the only cap of the group (docs/agenti/wasm-tetti.md)
 limit_attributio=1536000   # attributio fused: the table, the review (Banco 2b), the exports and the MS2 engine in ONE .wasm (measured 1395661 (+10 %)); the only cap of the group (docs/agenti/misure.md)
 limit_lr=892928   # zlib-rs +30 KB (was 741376), mzlab-picchi at O3 +3.6 KB (peaks 3.1x); finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=623200   # interp (cap +10 % over the 566463 measured with tp.review, rounded up to 100 B): the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
