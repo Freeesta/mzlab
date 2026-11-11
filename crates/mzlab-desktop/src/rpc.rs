@@ -353,7 +353,7 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
-            "simtab" => text(match mzlab_core::simtab::table_text_with(s("files"), s("output"), s("layout"), if s("baseline").is_empty() { mzlab_core::simtab::DEFAULT_BASELINE } else { s("baseline") }) {
+            "manint" => text(match mzlab_core::manint::table_text(s("files"), s("windows"), p["sums"].as_bool() == Some(true) || s("sums") == "true") {
                 Ok(csv) => csv,
                 Err(e) => format!("E{}", e.to_json()),
             }),

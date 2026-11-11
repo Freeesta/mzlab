@@ -75,9 +75,9 @@ try:
         step("Ctrl adds an ion, Shift takes a range, All clears the selection", ctrl_shift)
         def helpline():
             pg.click("#np-closeall"); wait_for_js(pg, "!E.panels.some(p => p.el)", timeout=20000)
-            wait_for_js(pg, "(() => { const h = document.querySelector('#simhelp'); return !!h && !h.hidden && !!h.querySelector('button'); })()", timeout=20000)
-            pg.click("#simhelp button"); wait_for_js(pg, "(() => { const t = document.querySelector('#simtab'); return t && !t.hidden; })()", timeout=30000)
-        step("with no graph the help line offers the SIM table and the button shows it", helpline)
+            wait_for_js(pg, "(() => { const h = document.querySelector('#simhelp'); return !!h && !h.hidden; })()", timeout=20000)
+            need(pg.evaluate("document.querySelector('#simhelp').textContent === I18N.t('canali.sim.help') && !document.querySelector('#simhelp button')"), pg.inner_text("#simhelp"))
+        step("with no graph the help line says how to add one and integrate", helpline)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:

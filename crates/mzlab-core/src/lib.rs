@@ -115,7 +115,7 @@ mod mzmlarray;
 pub mod mzmlhead;
 pub(crate) mod trace_unit;
 pub mod mzmlsrm;
-pub mod simtab;
+pub mod manint;
 #[cfg(feature = "mappa-dad")]
 mod mzml_dad;
 pub mod numarray;

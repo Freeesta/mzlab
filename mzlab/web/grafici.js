@@ -422,8 +422,8 @@ async function drawLines(p) {
     if (DC.isSorted(s.x)) { const [i0, i1] = DC.windowIdx(s.x, x0, x1); for (const i of DC.runsAbove(s.ys, i0, i1, (/** @type {number} */ v) => U(s, v), ymax)) tri(s.x[i]); continue; }       // through the blocks of decima.js: 120 traces of 50 000 scans
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(/** @type {any} */ (seg).x); seg = null; } }); if (seg) tri(/** @type {any} */ (seg).x);
   }
-  // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js)
-  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js");
+  // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js); the card «Manual integrations» follows the windows of the transition panels (integrazioni-manuali.js, read on the first one)
+  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js"); const mi = /** @type {any} */ (window).MANINT; if (mi) mi.sync(); else if (ESP.mrm(p) && p.ints.length) carica("m:integrazioni-manuali.js");
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)

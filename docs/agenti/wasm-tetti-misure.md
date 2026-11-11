@@ -49,3 +49,4 @@ Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.
 - Grezzo `libm`: `feat-table` 1 778 666 → 1 776 395, `finder-lr` 1 908 206 → 1 902 971, `feat` −177, `msngrafo` −106. Deuterio: `finder-lr` 777 969 → 778 007, `msngrafo` 687 261 → 687 299. `llm` identico.
 - Librerie: spettri tagliati al tetto dei picchi (`Stats.cut`) 493 081 → 493 196.
 - Cause degli errori (ogni `Error::new` porta i valori del suo testo, `err.module.reply`, `error.workStopped`), grezzo dopo `cargo build --release`: motore `mzlab-wasm` 3 598 329 → 3 598 549 (+0,01 %), `rotte` 1 488 171 → 1 489 259 (+0,07 %), lettori `aperti` 1 304 943 → 1 305 737 (+0,06 %), `interp` 1 665 348 → 1 665 784 (+0,03 %); `llm` identico.
+- Integrazioni manuali al posto della Tabella SIM (`manint::table_text`, `manual_table`), grezzo dopo `cargo build --release`: motore `mzlab-wasm` 3 643 690 → 3 636 318 (−0,20 %).

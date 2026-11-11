@@ -1,7 +1,7 @@
-//! `mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=..] [--set baseline=..] [--set group.SAMPLE=GROUP] [--out PATH]`: the SIM table of the Data view (`mzlab_core::simtab`):
-//! the peaks of every SIM channel of every sample, or a pivot (one row per sample and one column per channel, or the reverse). Each file gives the `/api/mrm` transitions the engine gives the page (an mzML read as it is, a vendor file through the
-//! chromatograms of `readers_mzml::guscio`, as the site reads it), so the CSV is the bytes of the page's export. A `.wiff` gives one column per sample,
-//! named as the site names its mzML (`conversione.js::wiffName`).
+//! `mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]`: the table of the integrations drawn by hand in the Data view
+//! (`mzlab_core::manint`), one row per window grouped by channel. Each file gives the `/api/mrm` transitions the engine gives the page (an mzML read as
+//! it is, a vendor file through the chromatograms of `readers_mzml::guscio`, as the site reads it), so the CSV is the bytes of the page's export. A
+//! `.wiff` gives one sample per sample of the file, named as the site names its mzML (`conversione.js::wiffName`).
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -14,43 +14,29 @@ use mzlab_core::readers::Limits;
 
 use crate::Outcome;
 
-pub const HELP: &str = "mzlab-cli sim-table: every SIM channel of the files integrated with the default settings, as CSV.
+pub const HELP: &str = "mzlab-cli manual-table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=samples|channels] [--set baseline=zero|edges] [--set group.SAMPLE=GROUP]... [--out PATH]
+usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]
 
-  FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in injection order
-  --set output=area_sum    sum of the peak areas of each channel in each sample (default; 0.0 = no peak)
-         output=area_max   area of the largest peak; height_max its height; apex_rt its apex time (min); n_peaks the number of peaks
-         output=peaks      the peak table: one row per resolved peak (sample, q1, name, peak, apex_rt, area, height, snr, fwhm_s)
-  --set layout=samples     one row per sample, one column per channel (its Q1 m/z; ion N without one, N = place in the list) (default); layout=channels the reverse
-  --set baseline=zero      areas and heights from y = 0 over each peak's edges (default: any background under the peak is part of the area);
-                           baseline=edges against the straight line between the same edges; a last column baseline names it in every row
-  --set group.SAMPLE=GROUP the sample (its row name) in a group, as the sidebar groups of the site: rows by group in the order the groups first appear,
-                           then the samples without one; a group column; channels without Q1 apart per group (ion N [GROUP])
+  FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
+  --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1]}]:
+                      I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min
+  --set sums=true     after the windows of each channel a row sum with the sum of their areas
   --out PATH  write there instead of the standard output
 
-Areas and heights in scientific notation with a decimal point (7.84077E+04), read as numbers by a spreadsheet in any locale.
-Peaks: every resolved peak of the whole trace, up to 10 per channel (smoothing 1-2-1 over 3 points, at least 3 points across, S/N at least 3);
-an empty cell = the sample has no such channel, or no peak for area_max, height_max and apex_rt.";
+Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), name, sample, start_min, end_min, apex_rt_min, area (counts x s),
+height, snr (peak1d around the window), baseline. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal
+point (7.84077E+04), read as numbers by a spreadsheet in any locale.";
 
 struct Request {
     files: Vec<PathBuf>,
-    output: String,
-    layout: String,
-    baseline: String,
-    groups: Vec<(String, String)>,
+    windows: PathBuf,
+    sums: bool,
     out: Option<PathBuf>,
 }
 
 fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
-    let (mut files, mut output, mut layout, mut out, mut groups) = (
-        Vec::new(),
-        "area_sum".to_string(),
-        "samples".to_string(),
-        None,
-        Vec::new(),
-    );
-    let mut baseline = mzlab_core::simtab::DEFAULT_BASELINE.to_string();
+    let (mut files, mut windows, mut sums, mut out) = (Vec::new(), None, false, None);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -59,31 +45,9 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
             "--set" => {
                 let v = it.next().ok_or("--set needs NAME=VALUE")?;
                 match v.split_once('=') {
-                    Some(("output", o)) if mzlab_core::simtab::OUTPUTS.contains(&o) => {
-                        output = o.to_string()
-                    }
-                    Some(("output", o)) => {
-                        return Err(format!(
-                            "output is one of {}, not {o}",
-                            mzlab_core::simtab::OUTPUTS.join(", ")
-                        ))
-                    }
-                    Some(("layout", l @ ("samples" | "channels"))) => layout = l.to_string(),
-                    Some(("layout", l)) => {
-                        return Err(format!("layout is samples or channels, not {l}"))
-                    }
-                    Some(("baseline", b)) if mzlab_core::simtab::BASELINES.contains(&b) => {
-                        baseline = b.to_string()
-                    }
-                    Some(("baseline", b)) => {
-                        return Err(format!(
-                            "baseline is one of {}, not {b}",
-                            mzlab_core::simtab::BASELINES.join(", ")
-                        ))
-                    }
-                    Some((k, g)) if k.starts_with("group.") && k.len() > 6 => {
-                        groups.push((k[6..].to_string(), g.to_string()))
-                    }
+                    Some(("windows", w)) if !w.is_empty() => windows = Some(PathBuf::from(w)),
+                    Some(("sums", b @ ("true" | "false"))) => sums = b == "true",
+                    Some(("sums", b)) => return Err(format!("sums is true or false, not {b}")),
                     _ => return Err(format!("unknown setting {v}")),
                 }
             }
@@ -92,14 +56,13 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         }
     }
     if files.is_empty() {
-        return Err("sim-table needs at least one file".into());
+        return Err("manual-table needs at least one file".into());
     }
+    let windows = windows.ok_or("manual-table needs --set windows=PATH")?;
     Ok(Some(Request {
         files,
-        output,
-        layout,
-        baseline,
-        groups,
+        windows,
+        sums,
         out,
     }))
 }
@@ -209,20 +172,17 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
     let mut first = true;
     for p in &c.files {
         for (name, tr) in samples_of(p, &mut taken, warn)? {
-            let stem = mzlab_core::simtab::sample_of(&name);
             o.raw(if first { "{\"name\":" } else { ",{\"name\":" })
                 .str(&name)
                 .raw(",\"transitions\":")
-                .raw(&tr);
-            if let Some((_, g)) = c.groups.iter().rev().find(|(s, _)| s == stem) {
-                o.raw(",\"group\":").str(g);
-            }
-            o.raw("}");
+                .raw(&tr)
+                .raw("}");
             first = false;
         }
     }
     o.raw("]");
-    mzlab_core::simtab::table_text_with(&o.0, &c.output, &c.layout, &c.baseline)
+    let windows = std::fs::read_to_string(&c.windows).map_err(io)?;
+    mzlab_core::manint::table_text(&o.0, &windows, c.sums)
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
@@ -246,5 +206,5 @@ pub fn run(args: Vec<String>) -> Outcome {
 }
 
 #[cfg(test)]
-#[path = "sim_table_cmd_tests.rs"]
+#[path = "manual_table_cmd_tests.rs"]
 mod tests;
