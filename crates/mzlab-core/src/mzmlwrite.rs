@@ -271,10 +271,10 @@ pub(crate) fn io(_: std::io::Error) -> Error {
     Error::new("err.file.mzmlWrite")
 }
 
-/// The dwell time (userParam, read back by `mzmlhead`), then the precursor with its activation and the product of an SRM transition. The collision energy and the dwell
-/// (ms) are the ones the id spells (`ce=`, `dwell=`), written by every build: a readers module without `sciex` gives the same mzML as `mzlab-cli convert`.
+/// The dwell time (userParam in seconds, read back by `mzmlhead`), then the precursor with its activation and the product of an SRM transition. The collision energy and the dwell
+/// are the ones the id spells (`ce=`, `dwell=` in ms), written by every build: a readers module without `sciex` gives the same mzML as `mzlab-cli convert`.
 fn srm_windows(c: &Chromatogram, q1: f64, q3: f64) -> String {
-    let dwell = crate::mzmlsrm::id_dwell(&c.id).map_or(String::new(), |d| format!("<userParam name=\"MS_dwell_time\" value=\"{d}\"/>"));
+    let dwell = crate::mzmlsrm::dwell_param(&c.id);
     let ce = crate::mzmlhead::srm_id(&c.id).2.map_or(String::new(), |e| format!("<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{e}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>"));
     format!("{dwell}<precursor><isolationWindow>{}</isolationWindow><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>{ce}</activation></precursor><product><isolationWindow>{}</isolationWindow></product>", mz_cv("MS:1000827", "isolation window target m/z", q1), mz_cv("MS:1000827", "isolation window target m/z", q3))
 }
@@ -290,7 +290,7 @@ fn chromatogram_polarity(id: &str) -> &'static str {
 
 /// The dwell time (as for SRM) and the precursor of a SIM chromatogram: its Q1 as the isolation window target, with no activation (nothing is fragmented).
 fn sim_window(c: &Chromatogram, q1: f64) -> String {
-    let dwell = crate::mzmlsrm::id_dwell(&c.id).map_or(String::new(), |d| format!("<userParam name=\"MS_dwell_time\" value=\"{d}\"/>"));
+    let dwell = crate::mzmlsrm::dwell_param(&c.id);
     format!("{dwell}<precursor><isolationWindow>{}</isolationWindow><activation/></precursor>", mz_cv("MS:1000827", "isolation window target m/z", q1))
 }
 

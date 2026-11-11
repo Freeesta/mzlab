@@ -72,7 +72,13 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
     for (c, w) in srm.iter().zip(want) {
         assert_eq!((c.q1, c.q3), (w["q1"].as_f64(), w["q3"].as_f64()));
         assert_eq!(c.ce, w["ce"].as_f64(), "{}", c.id);
-        assert_eq!(c.dwell, w["dwell"].as_f64(), "{}", c.id);
+        // the userParam is in seconds (msconvert), the method in ms
+        assert_eq!(
+            c.dwell,
+            w["dwell"].as_f64().map(|ms| ms / 1000.0),
+            "{}",
+            c.id
+        );
         assert_eq!(c.name, w["name"].as_str().unwrap());
     }
 }
@@ -144,5 +150,34 @@ fn a_sample_reads_the_method_its_dam_file_names_not_the_one_with_its_number() {
             .filter(|c| c.kind == mzlab_core::mzml::ChromKind::Srm)
             .count();
         assert_eq!(srm, want.len(), "sample {n}");
+    }
+}
+
+/// A negative-mode method stores its collision energies with their sign: each chromatogram id and its mzML carry the magnitude (ProteoWizard's
+/// `fabs` of the compound parameter), an energy of 0 is left out, and the mzML reads back the same.
+#[test]
+fn a_negative_mode_energy_is_written_as_its_magnitude() {
+    let Some((dir, want)) = reference("a_negative_mode_energy_is_written_as_its_magnitude") else {
+        return;
+    };
+    let want = want["transizioni"]["negative"].as_array().unwrap();
+    let mut l = readers::apri(pair(&dir, "transizioni_neg"), &Limits::sito()).unwrap();
+    let bytes = mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(!text.contains("ce=-"), "a signed energy in an id");
+    assert_eq!(text.matches("name=\"collision energy\"").count(), 2);
+    assert_eq!(text.matches("name=\"negative scan\"").count(), want.len());
+    let size = bytes.len() as u64;
+    let mut m = Mzml::new(bytes, size);
+    let chroms = m.chromatograms(0).unwrap();
+    let srm: Vec<_> = chroms.iter().filter(|c| c.kind == "srm").collect();
+    assert_eq!(srm.len(), want.len());
+    for (c, w) in srm.iter().zip(want) {
+        assert_eq!(
+            (c.q1, c.q3, c.ce),
+            (w["q1"].as_f64(), w["q3"].as_f64(), w["ce"].as_f64()),
+            "{}",
+            c.id
+        );
     }
 }
