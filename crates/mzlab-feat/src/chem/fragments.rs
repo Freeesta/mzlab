@@ -61,7 +61,8 @@ fn mz_of(mass: f64, z: i32) -> f64 {
 }
 
 /// `{"atoms":[..],"formula","mass","mz"}` of one side of a cut: the side closes with `h` hydrogens (the bond order, as in `cleavages`). A neutral side gives
-/// `mz` of [F+H]+; a side with a formal charge is the ion itself (no extra H+) and says its `charge`.
+/// `mz` of [F+H]+; a side with a formal charge is the ion itself (no extra H+) and says its `charge`. A side with an odd electron count (a radical mark
+/// drawn on it) says `odd`: the neutral is a radical and its ion an odd-electron one (M+•), as `etich/1` counts it.
 fn side_json(o: &mut Out, m: &Mol, keep: &[bool], h: u64) {
     let f = add_h(m.formula_of(keep), h, 0);
     let z: i32 = m
@@ -82,6 +83,16 @@ fn side_json(o: &mut Out, m: &Mol, keep: &[bool], h: u64) {
         .num(mzlab_core::json::round(mz_of(mass, z), 4));
     if z != 0 {
         o.raw(",\"charge\":").int(z as i64);
+    }
+    let electrons: i64 = f
+        .iter()
+        .map(|(e, n)| {
+            super::labels::z_of(e.trim_start_matches(|c: char| c.is_ascii_digit())) * *n as i64
+        })
+        .sum::<i64>()
+        - z as i64;
+    if electrons % 2 != 0 {
+        o.raw(",\"odd\":true");
     }
     o.raw("}");
 }
@@ -241,6 +252,22 @@ mod molfile_tests {
         assert!(j.contains("\"formula\":\"C2H6\""), "{j}");
         assert!(j.contains("\"formula\":\"H2O\""), "{j}");
         assert!(j.contains("\"mz\":19.0178"), "{j}");
+        assert!(!j.contains("odd"), "{j}");
+    }
+
+    #[test]
+    fn radical_side_is_odd() {
+        // CH3-CH•-OH: the C-C cut leaves CH4 and the radical CH3O, whose [F+H]+ CH4O+• is an odd-electron ion
+        let m = ETHANOL.replace("M  END", "M  RAD  1   2   2\nM  END");
+        let j = fragments_json(&m, 0, 1).unwrap();
+        assert!(
+            j.contains("\"formula\":\"CH4\",\"mass\":16.0313,\"mz\":17.0386}"),
+            "{j}"
+        );
+        assert!(
+            j.contains("\"formula\":\"CH3O\",\"mass\":31.0184,\"mz\":32.0257,\"odd\":true}"),
+            "{j}"
+        );
     }
 
     #[test]

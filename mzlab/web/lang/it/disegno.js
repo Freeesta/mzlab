@@ -143,7 +143,7 @@ I18N.add("it", {
   "draw.frag.col.bond": "Legame",
   "draw.frag.col.formula": "Frammento {n}: formula (massa)",
   "draw.frag.col.mz": "m/z [F{n}+H]+",
-  "draw.frag.note": "Ogni frammento prende un H per ordine di legame; m/z dello ione [F+H]+.",
+  "draw.frag.note": "Ogni frammento prende un H per ordine di legame; m/z dello ione [F+H]+. • = numero dispari di elettroni (radicale disegnato): lo ione è a elettroni dispari (M+•).",
   "draw.cut.heading": "Taglio dei legami",
   "draw.cut.help": "Traccia una linea sui legami da rompere (anche due legami di un anello), oppure selezionali e usa il tasto destro. Sotto ogni pezzo compaiono formula e massa: sono candidati da valutare, non la risposta.",
   "draw.cut.mode": "Tipo di rottura",

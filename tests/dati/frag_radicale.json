@@ -1,0 +1,5 @@
+{
+ "about": "CH3-CH(radical)-OH: frag/1 of every bond, the same bytes from the .wasm grafo (site) and the route feat/grafo (app)",
+ "molfile": "\n  qqq\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    2.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\nM  RAD  1   2   2\nM  END",
+ "frag": "{\"format\":\"frag/1\",\"cuts\":[{\"a\":0,\"b\":1,\"order\":1,\"kind\":\"cut\",\"sides\":[{\"atoms\":[0],\"formula\":\"CH4\",\"mass\":16.0313,\"mz\":17.0386},{\"atoms\":[1,2],\"formula\":\"CH3O\",\"mass\":31.0184,\"mz\":32.0257,\"odd\":true}]},{\"a\":1,\"b\":2,\"order\":1,\"kind\":\"cut\",\"sides\":[{\"atoms\":[0,1],\"formula\":\"C2H5\",\"mass\":29.0391,\"mz\":30.0464,\"odd\":true},{\"atoms\":[2],\"formula\":\"H2O\",\"mass\":18.0106,\"mz\":19.0178}]}]}"
+}

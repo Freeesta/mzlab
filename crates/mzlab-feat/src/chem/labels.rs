@@ -55,7 +55,7 @@ pub(super) fn unpaired_of(code: i64) -> u64 {
 }
 
 /// Atomic number of an element of the nuclide table (it runs from H in order).
-fn z_of(e: &str) -> i64 {
+pub(super) fn z_of(e: &str) -> i64 {
     NUCLIDES
         .iter()
         .position(|n| n.0 == e)
