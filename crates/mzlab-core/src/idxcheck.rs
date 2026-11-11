@@ -82,9 +82,8 @@ pub(crate) fn sum(crcs: &[Option<[u32; 10]>], si: usize, k: usize, bytes: &[u8])
     else {
         return Ok(());
     };
-    let mut h = flate2::Crc::new();
-    h.update(bytes);
-    if h.sum() != want {
+    // the small table CRC of `zip`, not flate2's: the feature modules link this reader without flate2, under their size caps
+    if crate::zip::crc32(bytes) != want {
         return Err(Error::new("error.badIndex"));
     }
     Ok(())
