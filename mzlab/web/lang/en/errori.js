@@ -414,6 +414,8 @@ I18N.add("en", {
   "warn.wiff.inferredSample": "Recovered from data the .wiff index does not list: the name and the method are inferred from the previous sample, not read from the file.",
   "warn.centroid.widthFallback": "Fewer than 8 isolated peaks were found in the profile scans, so the peak width was not measured: the centroids use the fallback width of 0.7 Da. On high-resolution data give the width (fwhm) yourself.",
   "warn.file.truncated": "The file ends before some of the scans it declares: what it holds is read and written, the rest is missing. Check the copy of the file.",
+  "warn.file.memberMissing": "A data file of the folder is missing (for example _FUNC002.DAT): the scans its index lists are not read, the rest is read and written. Check the copy of the folder.",
+  "warn.file.recordWidth": "A function of the folder stores its points in a record size mzLab does not decode: its scans are not read, the rest is read and written.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
   "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
   "warn.msngrafo.rottureCapped": "There are too many bond cleavages: only the first ones were tried.",
