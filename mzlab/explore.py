@@ -412,7 +412,8 @@ class Item:
         r, md = self.run, self.run.metadata()
         kind = self.kind()
         ms2 = [s for s in self.sc if s.level >= 2]
-        rts = np.array([s.rt for s in self.sc if s.level == (1 if kind == "full" else 2)])
+        shown = 1 if kind == "full" else min((s.level for s in ms2), default=2)      # MS1, else the first MSn level (3 in an MS3 part or file)
+        rts = np.array([s.rt for s in self.sc if s.level == shown])
         cycle = float(np.median(np.diff(rts)) * 60) if len(rts) > 2 else None
         win = r.scan_window()
         res = {"file": self.file, "kind": kind, **md, "polarity": self.info()["polarity"] if kind != "mrm" else self._header_polarity(), "scans": len(self.sc),
