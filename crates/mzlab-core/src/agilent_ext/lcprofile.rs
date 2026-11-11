@@ -14,7 +14,8 @@ pub(super) fn run_length(s: &[u8], n: usize) -> Result<Vec<i32>> {
         .map(|b| -(i32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64))
         .filter(|f| *f >= 0)
         .ok_or_else(|| bad("profile: no start index".into()))? as usize;
-    let mut out = vec![0i32; n];
+    let mut out = crate::budget::try_vec(n)?;
+    out.resize(n, 0i32);
     let (mut pos, mut w, mut i) = (first, 4usize, 8usize);
     while i < s.len() {
         let Some(raw) = s.get(i..i + w) else { break };

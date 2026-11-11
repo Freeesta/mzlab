@@ -9,6 +9,7 @@
 
 ## File del modulo
 - `sqlite_min.rs`, `sqlite_schema.rs`, `sqlite_wal.rs`: lettore SQLite 3 in sola lettura senza motore SQL (nessun `rusqlite`). Pagine b-tree di tabella (5, 13) e di indice (2, 10, per le tabelle `WITHOUT ROWID`, con le colonne riordinate: la chiave primaria per prima), overflow, log WAL. Visita iterativa con ogni puntatore, lunghezza, profondità e numero di pagine passati da `Limiti`; una pagina già vista o un ciclo è un errore, non un giro infinito.
+- Overflow SQLite: una catena che torna su una pagina, o una cella che dichiara più byte di quanti ne tengano le pagine del file, è `err.file.brukerDamaged` (`tests/robustness_sqlite_overflow.rs`), mai lo stesso valore ricopiato.
 - `block.rs`: blocchi di `tdf_bin`. `zstd()` usa `ruzstd` solo dopo aver letto la finestra e la dimensione annunciate dall'intestazione del frame zstd (il tetto è `Limiti.byte`) e pretende la dimensione attesa esatta. Un blocco inizia con `u32` lunghezza, `u32` numero di scansioni (`ns`), poi i dati.
 - `calib.rs`: calibrazione m/z. `tables.rs`: tabelle del database. `spectra.rs`: taglio degli spettri (`tratti`: gli intervalli di scansione uniti e passati agli offset per scansione `Picchi::inizio`; `somma`: unione per indice TOF, radix a 11 bit da 1024 punti). Banco: `examples/bruker_bench.rs` (`misure-formati.md`). `tsf.rs`: blocchi TSF. `header.rs`: `metodo/1` e testata mzML. `tdf.rs`: `ENTRY`, `BrukerReader`.
 
