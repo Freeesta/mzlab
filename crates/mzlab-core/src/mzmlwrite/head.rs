@@ -111,12 +111,29 @@ pub(crate) fn spectrum_head_into(
     params_into_head(s, extra);
     scan_list_into(s, sp, extra);
     #[cfg(feature = "precursori")]
-    if !extra.precursors.is_empty() {
+    let plain = extra.precursors.is_empty();
+    #[cfg(not(feature = "precursori"))]
+    let plain = true;
+    #[cfg(feature = "precursori")]
+    if !plain {
         precursor_list_into(s, &extra.precursors);
-        return;
     }
-    if let Some(p) = sp.precursor {
+    if let (true, Some(p)) = (plain, sp.precursor) {
         plain_precursor_into(s, p, extra);
+    }
+    if let Some(t) = extra.product {
+        s.push_str("<productList count=\"1\"><product><isolationWindow>");
+        isolation_into(s, t, extra.iso_half);
+        s.push_str("</isolationWindow></product></productList>");
+    }
+}
+
+/// The target of an isolation window and its offsets, the half-width each side.
+fn isolation_into(s: &mut String, target: f64, half: Option<f64>) {
+    mz_cv_into(s, "MS:1000827", "isolation window target m/z", target);
+    if let Some(h) = half {
+        mz_cv_into(s, "MS:1000828", "isolation window lower offset", h);
+        mz_cv_into(s, "MS:1000829", "isolation window upper offset", h);
     }
 }
 
@@ -125,11 +142,7 @@ pub(crate) fn spectrum_head_into(
 /// in every build: the engine reads a `.wiff` without `sciex` or `precursori`, and the row of its index is read back from this text.
 fn plain_precursor_into(s: &mut String, p: f64, extra: &SpectrumExtra) {
     s.push_str("<precursorList count=\"1\"><precursor><isolationWindow>");
-    mz_cv_into(s, "MS:1000827", "isolation window target m/z", p);
-    if let Some(h) = extra.iso_half {
-        mz_cv_into(s, "MS:1000828", "isolation window lower offset", h);
-        mz_cv_into(s, "MS:1000829", "isolation window upper offset", h);
-    }
+    isolation_into(s, p, extra.iso_half);
     s.push_str("</isolationWindow><selectedIonList count=\"1\"><selectedIon>");
     mz_cv_into(s, "MS:1000744", "selected ion m/z", p);
     s.push_str("</selectedIon></selectedIonList><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>");

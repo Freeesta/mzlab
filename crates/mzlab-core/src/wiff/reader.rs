@@ -462,6 +462,8 @@ fn header_tic(l: &WiffReader, s: &Spectrum) -> Option<f64> {
 
 /// The userParam of an MS3 spectrum that holds the m/z of its first precursor (`Spectrum::precursor` is the second).
 pub const PARENT_PARAM: &str = "ms3 first precursor m/z";
+/// The userParam of a neutral-loss scan: the constant loss (Da) Q1 and Q3 are kept apart by, which is not an m/z of the spectrum.
+pub const LOSS_PARAM: &str = "constant neutral loss (Da)";
 
 /// What the mzML says of a spectrum besides its points: the collision energy and isolation window of its experiment, and (readers module) the spectrum
 /// type (CV term) of precursor-ion and neutral-loss scans.
@@ -479,6 +481,10 @@ fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
     if let Some(p) = e.parent {
         extra.params.push((PARENT_PARAM.into(), p.to_string()));
+    }
+    match (e.code, e.fixed) {
+        (Some(super::modes::CODE_NEUTRAL_LOSS), Some(l)) => extra.params.push((LOSS_PARAM.into(), l.to_string())),
+        (_, f) => extra.product = f,
     }
     if let Some(sg) = super::modes::tag(e.code) {
         extra

@@ -11,6 +11,8 @@ pub(super) struct Cur {
     pub(super) chrom: Option<Chrom>,
     pub(super) array: Option<Array>,
     pub(super) in_precursor_list: bool,
+    /// Inside `<productList>`: its isolation window is the product of the scan (a precursor-ion scan, an SRM), not a precursor.
+    pub(super) in_product_list: bool,
     pub(super) in_analyzer: bool,
 }
 
@@ -22,6 +24,7 @@ impl Default for Cur {
             chrom: None,
             array: None,
             in_precursor_list: false,
+            in_product_list: false,
             in_analyzer: false,
         }
     }
@@ -75,7 +78,7 @@ impl Cur {
                     }
                 }
             }
-        } else if let (Scope::Spectrum, Some(s)) = (self.scope, self.spec.as_mut()) {
+        } else if let (Scope::Spectrum, Some(s), false) = (self.scope, self.spec.as_mut(), self.in_product_list) {
             spectrum_cv(s, acc, value, seconds, self.in_precursor_list);
         }
         Ok(())

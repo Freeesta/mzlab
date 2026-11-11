@@ -234,8 +234,9 @@ fn compare_chromatograms(label: &str, want: &Run, got: &Run) -> (usize, usize) {
     (chroms, scheduled)
 }
 
-/// Every spectrum of the reference (but the last block) is ours: time, level, polarity, precursor and the nonzero points.
-fn compare_spectra(label: &str, want: &Run, got: &Run) -> usize {
+/// Every spectrum of the reference (but the last block) is ours: time, level, polarity, precursor and the nonzero points. A neutral-loss scan
+/// (`loss`: its experiment) has no precursor m/z whatever the reference says: its header mass is the loss, not an ion it selected.
+fn compare_spectra(label: &str, want: &Run, got: &Run, loss: &dyn Fn(&str) -> bool) -> usize {
     let n = want.spectra.len().saturating_sub(1);
     for e in &want.spectra[..n] {
         let g = got
@@ -256,7 +257,7 @@ fn compare_spectra(label: &str, want: &Run, got: &Run) -> usize {
         );
         assert_eq!(
             g.precursor.is_some(),
-            e.precursor.is_some(),
+            e.precursor.is_some() && !loss(&e.id),
             "{label} {}: precursor",
             e.id
         );
@@ -301,7 +302,12 @@ fn real_files_match_proteowizard_mzml() {
         let (c, s) = compare_chromatograms(&label, &want, &got);
         chroms += c;
         scheduled += s;
-        spectra += compare_spectra(&label, &want, &got);
+        let loss = |id: &str| {
+            let n = id.rsplit("experiment=").next().and_then(|v| v.parse::<usize>().ok());
+            n.and_then(|n| w.experiments.get(n.wrapping_sub(1)))
+                .is_some_and(|x| x.code == Some(mzlab_core::wiff::modes::CODE_NEUTRAL_LOSS))
+        };
+        spectra += compare_spectra(&label, &want, &got, &loss);
         eprintln!(
             "compared {label}: {} chromatograms, {} spectra",
             want.chromatograms.len(),
