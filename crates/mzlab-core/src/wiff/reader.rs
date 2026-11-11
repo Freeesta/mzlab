@@ -43,7 +43,7 @@ pub(super) struct Part {
     /// Indexes into `w.records` of the scans with points.
     pub(super) scans: Vec<usize>,
     /// The point count of each record's head as `build` read it (`scan::point_count`): the chromatograms do not read the heads again.
-    counts: Vec<Option<u32>>,
+    pub(super) counts: Vec<Option<u32>>,
     indice: Vec<ScanEntry>,
     chroms: Option<Vec<Chromatogram>>,
     /// Base peak intensity of each scan as the mzML writer saw it (NaN: not yet) and how many it has seen: the BPC of the full scan experiments is listed
@@ -79,7 +79,7 @@ pub struct WiffReader {
     ole: Ole,
     nome: String,
     scan: Box<dyn ReadAt>,
-    scan_len: u64,
+    pub(super) scan_len: u64,
     scan_member: u16,
     campioni: Vec<Sample>,
     /// Sections of the `.wiff.scan` the `.wiff` index does not list: (recovered as samples, left out).
@@ -191,7 +191,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) }
+#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { self.losses_of(c) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) }
     fn format(&self) -> Format { Format::SciexWiff }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
@@ -448,7 +448,7 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
         } else {
             scan::point_count(&mut win, scan_len, r.at, r.end)?
         };
-        counts.push(points);
+        counts.push(points.filter(|&c| !r.damaged(Some(c as usize))));
         // the first MRM block of each experiment: a sparse (scheduled) one starts with `-(N + 0.01)`, even when the method has no `sMRM` stream to say so
         #[cfg(feature = "sciex")]
         if points.is_none()
@@ -460,7 +460,7 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
             other |= scan::read_mrm(&mut win, scan_len, r.at, 1)?
                 .is_some_and(|v| v.first().is_some_and(|x| *x < 0.0));
         }
-        if !points.is_some_and(|c| c > 0) {
+        if !counts.last().copied().flatten().is_some_and(|c| c > 0) {
             continue;
         }
         #[cfg(feature = "sciex")]

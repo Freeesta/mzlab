@@ -12,12 +12,13 @@ pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
 pub mod idx;
-mod reader_extra;
+mod losses;
 mod mass_check;
 mod method_name;
 pub mod modes;
 pub mod names;
 pub mod reader;
+mod reader_extra;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
@@ -148,6 +149,8 @@ pub struct Record {
     pub tic: f64,
     pub cycle: usize,
     pub experiment: usize,
+    /// The point count of the scan as the index row tells it (0 for an MRM block or an empty scan, NaN when the row is not known).
+    pub points: f64,
 }
 
 impl Record {
@@ -157,6 +160,10 @@ impl Record {
         self.at >= scan_len
             || self.end > scan_len
             || self.at.saturating_add(u64::from(self.size)) > scan_len
+    }
+    /// The index row says the block is a scan of points and its head (`n` points, `None`: not a scan) disagrees: left out, counted (`warn.wiff.damaged`).
+    pub fn damaged(&self, n: Option<usize>) -> bool {
+        self.points > 0.0 && n.is_none_or(|n| n as f64 != self.points)
     }
 }
 
@@ -391,6 +398,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             tic: e.tic,
             cycle: k / n_exp,
             experiment: k % n_exp,
+            points: e.points,
         })
         .collect();
     let no = method_no(ole, sample);

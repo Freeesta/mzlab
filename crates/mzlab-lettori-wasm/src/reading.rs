@@ -464,7 +464,7 @@ pub fn method(h: u32, c: u32) -> Result<String, JsValue> {
 pub fn missing(h: u32, c: u32) -> Result<u32, JsValue> {
     with_sessions(|s| s.missing(h, c as usize)).map(|n| n.min(u32::MAX as usize) as u32)
 }
-/// Why the sample has scans `missing` (`Losses::cause`: `warn.file.truncated`, `warn.raw.eventsRefused`), empty when none.
+/// Why the sample has scans `missing` (`Losses::cause`: `warn.file.truncated`, `warn.wiff.damaged`, `warn.raw.eventsRefused`), empty when none.
 #[wasm_bindgen]
 pub fn cause(h: u32, c: u32) -> Result<String, JsValue> {
     with_sessions(|s| s.cause(h, c as usize))
