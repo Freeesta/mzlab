@@ -158,9 +158,11 @@ fn ms(l: &WatersReader) -> Option<V> {
         obj(vec![
             (
                 "modo",
-                Some(V::s(
-                    "reference function; the correction is not applied to the m/z",
-                )),
+                Some(V::s(if l.funs.iter().any(|f| f.righe.iter().any(|r| r.mark == super::idx::CALIBRATED)) {
+                    "reference function; scans marked 0x4C in the index are as the acquisition stored them (already calibrated, with any lock mass correction of the acquisition); mzLab applies no correction of its own"
+                } else {
+                    "reference function; the correction is not applied to the m/z"
+                })),
             ),
             ("numero_nel_trailer", Some(V::Num(f64::from(f.f.indice)))),
         ])

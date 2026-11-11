@@ -344,6 +344,64 @@ fn baf_only_says_how_to_export() {
     assert_eq!(e.key, "err.file.brukerBaf");
 }
 
+/// A run whose frames name no usable `MzCalibration` row is refused when it opens, with its own key and the frame.
+#[test]
+fn a_frame_without_calibration_is_refused_at_open() {
+    let ok = mzlab_lettori::apri(folder(blocco2(), tdf_frames_cal(&[0], 3, 1)), &limits());
+    assert!(ok.is_ok(), "{:?}", ok.err().map(|e| e.key));
+    let e = mzlab_lettori::apri(folder(blocco2(), tdf_frames_cal(&[0], 3, 7)), &limits())
+        .err()
+        .unwrap();
+    assert_eq!(e.key, "err.file.brukerCalibration");
+    assert!(
+        e.params.contains(&("frame", "1".to_string())),
+        "{:?}",
+        e.params
+    );
+}
+
+/// The Bruker folders this module does not read say which kind they are: YEP (ion traps), FT-ICR (`ser`/`fid` in a `.d`), FLEX MALDI (`fid` with `acqu`).
+#[test]
+fn legacy_bruker_folders_have_named_keys() {
+    let m = |n: &str| Member {
+        nome: n.into(),
+        dim: 3,
+        dati: Box::new(vec![1u8, 2, 3]),
+        sha1: None,
+    };
+    for (names, key) in [
+        (
+            vec!["x.d/analysis.yep", "x.d/desktop.ini"],
+            "err.file.brukerYep",
+        ),
+        (
+            vec!["x.d/ser", "x.d/x.m/apexAcquisition.method"],
+            "err.file.brukerFtms",
+        ),
+        (vec!["x.d/fid", "x.d/acqus"], "err.file.brukerFtms"),
+        (
+            vec!["run/0_A1/1/1SLin/fid", "run/0_A1/1/1SLin/acqu"],
+            "err.file.brukerFlex",
+        ),
+        (
+            vec!["run/0_A1/1/1SLin/fid", "run/0_A1/1/1SLin/acqus"],
+            "err.file.brukerFlex",
+        ),
+    ] {
+        let fs = FileSet {
+            membri: names.iter().map(|n| m(n)).collect(),
+        };
+        let e = mzlab_lettori::apri(fs, &limits()).err().unwrap();
+        assert_eq!(e.key, key, "{names:?}");
+    }
+    // a lone `fid` outside a `.d` folder, without its `acqu`, is nobody's: not accepted
+    let fs = FileSet {
+        membri: vec![m("run/fid")],
+    };
+    let e = mzlab_lettori::apri(fs, &limits()).err().unwrap();
+    assert_eq!(e.key, "err.file.notAccepted");
+}
+
 /// A folder that lacks the database or its `*_bin` (TDF or TSF) names the file it lacks; a database that is not SQLite (an empty copy) is an error with a key, not «not accepted».
 #[test]
 fn a_folder_missing_one_of_its_files_says_which() {

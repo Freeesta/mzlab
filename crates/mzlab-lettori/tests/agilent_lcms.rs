@@ -91,12 +91,12 @@ fn every_real_run_opens_and_gives_its_scans_and_traces() {
     assert!(all.len() >= 10, "{} runs", all.len());
     for dir in all {
         let label = name(&dir);
-        // a folder without the points (MSScan.bin alone) is refused with the file error
+        // a folder without the points (MSScan.bin alone) is refused with the key that names the missing file (`AgilentD::open`, synthetic: `agilent_path.rs`)
         if label.contains("MTBLS787") {
             let e = mzlab_lettori::open_bare(set_of(&dir), &Limits::sito())
                 .err()
                 .unwrap();
-            assert_eq!(e.key, "err.file.agilent", "{label}");
+            assert_eq!(e.key, "err.file.agilentNoPeaks", "{label}");
             continue;
         }
         let mut l = open(&dir);

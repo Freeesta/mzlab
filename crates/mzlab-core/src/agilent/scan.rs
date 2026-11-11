@@ -332,7 +332,8 @@ pub struct ScanRec {
     pub ion_mode: i32,
     pub polarity: i32,
     pub fragmentor: f64,
-    pub collision_energy: f64,
+    /// `None` when the layout has no `CollisionEnergy` field (never decoded, so never written as 0).
+    pub collision_energy: Option<f64>,
     pub mz_of_interest: f64,
     pub format: i32,
     pub offset: u64,
@@ -343,6 +344,17 @@ pub struct ScanRec {
     pub max_y: f64,
     /// The fields of the layout that have no member above (`Layout::extra_names`, same order), so that no value of the record is lost.
     pub extra: Vec<f64>,
+}
+
+/// The record of the spectrum `scan=N`: ids count from 1 in the runs seen, else a binary search on the ids (written in increasing order).
+pub(crate) fn record_of<'a>(records: &'a [ScanRec], spectrum_id: &str) -> Option<&'a ScanRec> {
+    let n: i32 = spectrum_id.strip_prefix("scan=")?.parse().ok()?;
+    let guess = usize::try_from(n).ok()?.checked_sub(1)?;
+    if let Some(r) = records.get(guess).filter(|r| r.id == n) {
+        return Some(r);
+    }
+    let i = records.binary_search_by_key(&n, |r| r.id).ok()?;
+    records.get(i)
 }
 
 /// One record of the file read by the layout.
@@ -363,7 +375,7 @@ pub(super) fn record(layout: &Layout, r: &[u8]) -> ScanRec {
         ion_mode: i("IonMode") as i32,
         polarity: i("IonPolarity") as i32,
         fragmentor: f("Fragmentor"),
-        collision_energy: f("CollisionEnergy"),
+        collision_energy: layout.real(r, "CollisionEnergy"),
         mz_of_interest: f("MzOfInterest"),
         format: i("SpectrumFormatID") as i32,
         offset: i("SpectrumOffset").max(0) as u64,

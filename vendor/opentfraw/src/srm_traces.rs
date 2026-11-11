@@ -26,12 +26,12 @@ impl SrmTrace {
 }
 
 impl RawFileReader {
-    /// The SRM traces of the file, in order of first appearance (Q1, then product range); empty when the events do not carry Q1 and ranges
-    /// (the older TSQ layouts name their transitions through `srm_q1_by_event`). A scan whose peak is missing for a range adds no point to it.
+    /// The SRM traces of the file from each scan's own event, one per (Q1, product range), in order of first appearance; empty when the events do not
+    /// carry Q1 and ranges (the older TSQ layouts name their transitions only through `srm_q1_by_event`). A scan whose peak is missing for a range adds no point to it.
     pub fn srm_traces<R: Read + Seek>(&self, source: &mut R) -> Vec<SrmTrace> {
         let mut out: Vec<SrmTrace> = Vec::new();
         let mut at: HashMap<(u64, usize), usize> = HashMap::new();
-        if !self.flat_peaks || !self.srm_q1_by_event.is_empty() {
+        if !self.flat_peaks {
             return out;
         }
         let first = self.run_header.sample_info.first_scan_number;
