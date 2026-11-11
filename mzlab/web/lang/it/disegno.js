@@ -126,6 +126,8 @@ I18N.add("it", {
   "draw.zoom.in": "Ingrandisci",
   "draw.zoom.out": "Riduci",
   "draw.zoom.reset": "Ripristina: 100 % e centrato",
+  "draw.ctx.head.sel": "{n, plural, one {Selezione (# atomo)} other {Selezione (# atomi)}}",
+  "draw.ctx.head.whole": "Tutto il disegno",
   "draw.ctx.copySmiles": "Copia SMILES",
   "draw.ctx.copySmilesOf": "Copia SMILES ({smiles})",
   "draw.ctx.center": "Centra disegno",

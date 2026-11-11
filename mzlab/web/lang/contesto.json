@@ -16,6 +16,7 @@
   "draw.part.bad": "Avviso quando il Δ scritto per una parentesi non si legge; {delta} = il testo scritto.",
   "fair.warn.precMismatch": "Avviso nel dialogo del record MassBank; {ppm} = differenza in ppm, già formattata, tra la massa esatta della formula più l'addotto e il precursore dello spettro.",
   "draw.ctx.breakBonds": "Voce del menu del tasto destro su uno o più legami selezionati nel Disegno. {n} = numero di legami selezionati.",
+  "draw.ctx.head.sel": "Intestazione muta del menu del tasto destro nel Disegno: su cosa agisce il menu. {n} = numero di atomi selezionati.",
   "draw.ctx.copyFormula": "Voce del menu del tasto destro sull'etichetta sotto una molecola; {formula} = formula con carica (es. C10H14N+).",
   "draw.ctx.copyMass": "Come sopra, per la massa di una molecola neutra; {mass} = valore già formattato.",
   "draw.ctx.copyMassMz": "Come sopra, per uno ione: la massa è un m/z.",
