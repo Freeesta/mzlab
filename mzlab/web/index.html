@@ -85,7 +85,9 @@
    <div class="bar" style="margin-top:4px"><button type="button" id="cut-line" aria-pressed="false" data-i18n-title="draw.cut.line.title" title="Trascina sulla tela una linea attraverso i legami da rompere; Esc per uscire" data-i18n="draw.cut.line">Linea di taglio</button></div>
    <div id="cut-note" class="sm" role="status" style="margin-top:4px"></div></div>
   <div class="card"><h2 data-i18n="draw.quick.heading">Disegna veloce</h2><div class="bar"><input id="ex-smi" data-i18n-placeholder="draw.quick.placeholder" placeholder="Incolla uno SMILES o cerca un composto" data-i18n-aria-label="draw.quick.label" aria-label="Incolla uno SMILES o cerca un composto" style="flex:1" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><button id="ex-load" data-i18n="draw.quick.button">Disegna</button></div>
-   <div id="smi-warn" class="sm" role="status" style="color:var(--bad);margin-top:4px" hidden></div></div>
+   <div id="smi-warn" class="sm" role="status" style="color:var(--bad);margin-top:4px" hidden></div>
+   <div class="bar" style="margin-top:4px"><button type="button" id="ex-id" data-i18n="draw.id.button" data-i18n-title="draw.id.title" title="Cerca nel catalogo delle molecole le strutture disegnate (o quella selezionata), senza rete">&Egrave; nel catalogo?</button></div>
+   <div id="id-out" class="sm" role="status" aria-live="polite" style="margin-top:4px"></div></div>
   <div class="card" id="sel-card" hidden><h2 data-i18n="draw.selection.heading">SMILES della selezione</h2><div id="sel-body"></div></div>
   <div class="card" id="prop-card"><h2 data-i18n="draw.props.heading">Propriet&agrave; previste</h2><div id="prop-body"><div class="muted sm" data-i18n="draw.props.select">Seleziona una molecola</div></div></div>
   <details class="card" id="keys-card"><summary style="font-weight:600;cursor:pointer" data-i18n="draw.keys.heading">Scorciatoie</summary><div id="keys-body"></div></details>

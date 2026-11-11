@@ -14,6 +14,8 @@ default = ["chem"]
 chem = []
 # `record`: the structure graph built from a `mol/1` record (`graph::Mol::from_record`, crate `mzlab-mol`). Off by default and in every .wasm: no site module changes until an engine asks for it.
 record = ["chem", "dep:mzlab-mol"]
+# `identita`: `chem::identity`, a drawing looked up in the molecule catalogue by `can()` and skeleton (`molid/1`, crate `mzlab-mol`). Off by default; the `.wasm` `grafo`, the app and the CLI carry it.
+identita = ["chem", "dep:mzlab-mol"]
 # `crippen`: `LogPValues::from_smiles`, the Crippen logP and descriptors of a SMILES from our own tables (`mzlab-mol`), for the RT-logP check of the Banco 2b. Off by default; the `.wasm` `attributio` carries it through its feature `rev`.
 crippen = ["dep:mzlab-mol"]
 # `attributio`: reading of the campaign folders of Attributio (campaign.toml, mzMine/SIRIUS/GNPS2 tables, decisions), its review matching on top of `mzlab-lib` and its level cascade and table (`docs/agenti/attributio.md`). Off by default; the `.wasm` `attributio` (`crates/mzlab-attributio-wasm`) and the desktop app carry it.
@@ -169,3 +171,7 @@ required-features = ["record", "attributio"]
 [[example]]
 name = "perf_batch5"
 required-features = ["untargeted"]
+
+[[test]]
+name = "identita"
+required-features = ["identita"]

@@ -1,6 +1,6 @@
 //! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
 //! `grafo` and of `mzlab-cli mol-label`), with the request as an object or as text, and keeps the key of an error; `kind: "cut"` gives `cut/1` the same way;
-//! `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`.
+//! `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`; `kind: "identity"` gives the `molid/1` of `mzlab-cli mol-id`.
 
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
@@ -73,4 +73,36 @@ fn fragments_route_gives_the_bytes_of_the_fixture() {
         text(st.rpc("feat/grafo", &p, &[]).unwrap()),
         fx["frag"].as_str().unwrap()
     );
+}
+
+#[test]
+fn identity_route_equals_the_function() {
+    let st = State::new();
+    let cat = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../mzlab/web/molecole/catalogo.csv"
+    ))
+    .unwrap();
+    let req = json!({"smiles": "COc1ccc2cc([C@@H](C)C(O)=O)ccc2c1", "catalogo": cat});
+    let direct = mzlab_feat::chem::identity::identity_json(&req.to_string()).unwrap();
+    assert!(direct.contains("\"differs\":[\"stereo\"]"), "{direct}");
+    for request in [req.clone(), json!(req.to_string())] {
+        assert_eq!(
+            text(
+                st.rpc(
+                    "feat/grafo",
+                    &json!({"kind": "identity", "request": request}),
+                    &[]
+                )
+                .unwrap()
+            ),
+            direct
+        );
+    }
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "identity", "request": {"smiles": "", "catalogo": cat}}),
+        &[],
+    );
+    assert_eq!(bad.err().map(|e| e.key), Some("error.molid.empty"));
 }
