@@ -62,6 +62,12 @@ def test_fragments_keep_charge_and_isotope(pkg):
     assert cut["sides"][0]["formula"] == "13CH4" and cut["sides"][0]["mass"] == pytest.approx(17.0347, abs=1e-4)
 
 
+def test_fragments_of_a_radical_equal_the_app_fixture(pkg):
+    fx = json.loads((Path(__file__).parent / "dati" / "frag_radicale.json").read_text(encoding="utf-8"))
+    assert run("node", "tests/feat_grafo_node.js", str(pkg), fx["molfile"], "-1", "-1").strip() == fx["frag"]   # crates/mzlab-desktop/tests/labels.rs reads the same bytes
+    assert '"formula":"CH3O","mass":31.0184,"mz":32.0257,"odd":true' in fx["frag"]
+
+
 LABELS = {"structures": [[{"el": "C", "iso": 13, "h": 4}], [{"el": "C", "h": 3}, {"el": "O", "h": 1}], [{"el": "Pt"}, {"el": "Cl"}, {"el": "Cl"}, {"el": "N", "h": 2}, {"el": "N", "h": 2}],
                          [{"el": "C", "h": 2}, {"el": "C"}, {"el": "O", "q": -1}, {"el": "O", "q": -1}, {"el": "O"}, {"el": "O"}], [{"el": "R#"}]], "arrows": [[1, 0], [0, 4]]}
 

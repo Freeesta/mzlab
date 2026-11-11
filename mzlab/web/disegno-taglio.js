@@ -4,6 +4,7 @@
 // says which atoms change and how far each piece moves; the page writes that into the .ket (one undo step) and the labels under each piece follow.
 import { carica } from "./disegno-frammenti.js";
 import { ketIndex } from "./disegno-parziali.js";
+import { dots } from "./disegno-etichette.js";
 
 /** @typedef {{ formula: string, text: string, charge: number, mass: number, mz: number | null, unpaired: number, odd: boolean, kind: string }} Label */
 /** @typedef {{ atoms: number[], shift: [number, number], label: Label }} Piece */
@@ -59,7 +60,7 @@ const KINDS = /** @type {Record<string, string>} */ ({ neutral: "draw.cut.kind.n
 
 /** one line per piece for the status line and the screen reader: «C6H4F• radical · exact mass 95.0297» */
 export function pieceLine(/** @type {Label} */ l, /** @type {Helpers} */ h) {
-  const dot = l.unpaired || l.odd ? "•" : "", q = l.charge ? (Math.abs(l.charge) > 1 ? Math.abs(l.charge) : "") + (l.charge > 0 ? "+" : "−") : "";
+  const dot = dots(l), q = l.charge ? (Math.abs(l.charge) > 1 ? Math.abs(l.charge) : "") + (l.charge > 0 ? "+" : "−") : "";
   const kind = h.t(KINDS[l.kind] || KINDS.neutral), mass = l.mz != null ? `m/z ${h.num(l.mz)}` : `${h.t("draw.labels.exactMass")} ${h.num(l.mass)}`;
   return `${l.formula}${q}${dot} ${kind} · ${mass}`;
 }
