@@ -242,6 +242,10 @@ def write_build_json(out: Path, version: str, commit: str | None = None) -> None
     (static / "build.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
 
 
+# the example drawings the lab build keeps: the two figures of Draw's example link (draw.js, #ex-link)
+LAB_DRAWINGS = ("esempio-trasformazione.png", "esempio-frammentazione.png")
+
+
 def lab_expiry() -> str | None:
     """The expiry date (YYYY-MM-DD, UTC) of the lab variant, or None for the normal build. A lab build without a valid date is refused."""
     if os.environ.get("MZLAB_LAB") != "1":
@@ -254,6 +258,21 @@ def lab_expiry() -> str | None:
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
         raise SystemExit(f"MZLAB_LAB_EXPIRES must be YYYY-MM-DD, got {d!r}")
     return d
+
+
+def lab_variant(html: str, out: Path, static: Path, lab: str) -> str:
+    """The lab build: lab.js first in the head (before anything runs), not indexed, no link preview nor canonical address pointing at the main site;
+    no example data files (lab.js hides their entry points), and of the example drawings only the two Draw's «See an example drawing» opens (draw.js)."""
+    head = '<head><meta charset="utf-8">'
+    assert head in html
+    html = html.replace(head, head + '<script src="static/lab.js"></script><meta name="robots" content="noindex,nofollow">', 1)
+    (static / "lab.js").write_text((ROOT / "tools" / "lab" / "lab.js").read_text(encoding="utf-8").replace("__LAB_EXPIRES__", lab), encoding="utf-8")
+    (out / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
+    shutil.rmtree(static / "esempi")
+    for png in static.glob("esempio-*.png"):
+        if png.name not in LAB_DRAWINGS:
+            png.unlink()
+    return html
 
 
 def main() -> None:
@@ -291,16 +310,7 @@ def main() -> None:
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
     html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} • {TITLE_TAG}</title>", html, count=1)
     if lab:
-        # lab: first script of the head (before anything runs), no link preview and no canonical address pointing at the main site, not indexed
-        head = '<head><meta charset="utf-8">'
-        assert head in html
-        html = html.replace(head, head + '<script src="static/lab.js"></script><meta name="robots" content="noindex,nofollow">', 1)
-        (static / "lab.js").write_text((ROOT / "tools" / "lab" / "lab.js").read_text(encoding="utf-8").replace("__LAB_EXPIRES__", lab), encoding="utf-8")
-        (out / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
-        # lab: no example files at all (the demo mzML sets and the two example drawings are not shipped; lab.js hides their entry points)
-        shutil.rmtree(static / "esempi")
-        for png in static.glob("esempio-*.png"):
-            png.unlink()
+        html = lab_variant(html, out, static, lab)
     else:
         html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
