@@ -28,6 +28,7 @@ const run = s => {
     case "scanbin": return { b: Buffer.from(e.scanbin(s.slot, s.query || "", rdMzml)).toString("hex") };
     case "specexact": return { s: e.spectrum_exact(s.slot, s.query || "", rdMzml) };
     case "map": return { s: e.map_route(s.path, s.items, s.query || "") };
+    case "origin": return { s: e.origin(s.items, s.k, s.query || "") };
     case "diff": return { s: e.diff_traces(s.path, s.query || "") };
     case "flow_command": return { s: rotte().flow_command(s.body) };
     case "lr_formula": return { s: wasm.formula_mz(s.f, s.adduct) };

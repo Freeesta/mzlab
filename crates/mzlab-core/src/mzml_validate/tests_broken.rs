@@ -165,3 +165,46 @@ fn twelve_broken_files_each_with_its_own_error() {
         assert_eq!(errors(&r), [*code], "{what}:\n{}", show_all(&r));
     }
 }
+
+/// The strict XML pass: each edit makes the file not well-formed XML 1.0 (a conforming parser stops there), which quick-xml alone accepts.
+#[test]
+fn not_well_formed_xml_is_invalid() {
+    let good = String::from_utf8(written(false, Options::default(), true)).unwrap();
+    assert!(report(good.as_bytes()).is_valid());
+    let cases: [(&str, &str, &str); 7] = [
+        ("<run id=\"x\"", "<run id=\"x\u{FFFF}\"", "U+FFFF"),
+        ("<run id=\"x\"", "<run id=\"x\u{1}\"", "U+0001"),
+        ("<run id=\"x\"", "<run id=\"<x>\"", "'<'"),
+        ("<run id=\"x\"", "<run id=\"&bogus;\"", "unknown entity"),
+        (
+            "<run id=\"x\"",
+            "<run id=\"&#xFFFE;\"",
+            "character reference",
+        ),
+        (
+            "<run id=\"x\"",
+            "<run id=\"x\" id=\"y\"",
+            "malformed attribute",
+        ),
+        ("</mzML>", "</mzML><mzML/>", "second root"),
+    ];
+    for (from, to, why) in cases {
+        let b = good.replacen(from, to, 1);
+        let r = report(b.as_bytes());
+        let p = r
+            .problems
+            .iter()
+            .find(|p| p.code == "xml")
+            .unwrap_or_else(|| panic!("{why}: {}", show_all(&r)));
+        assert!(
+            p.message.contains("not well-formed") && p.message.contains(why),
+            "{why}: {}",
+            p.message
+        );
+        assert_eq!(
+            errors(&r),
+            vec!["xml"],
+            "{why}: the pass stops at the first fault"
+        );
+    }
+}

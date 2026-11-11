@@ -1,11 +1,15 @@
 # Lettore Bruker timsTOF (`.d` con `analysis.tdf` o `analysis.tsf`)
 
-`crates/mzlab-lettori/src/bruker/` (feature `bruker`, modulo `.wasm` `bruker`, tetto 524 288 B; misurato dopo `wasm_opt -Oz`: 416 514 B con `ruzstd`). Voci del registro: `bruker-tdf` (membri `x.d/analysis.tdf` + `analysis.tdf_bin`) e `bruker-tsf` (`analysis.tsf` + `analysis.tsf_bin`); un eventuale `-wal` accanto al database si legge (vince l'ultimo frame confermato). Una cartella con solo `analysis.baf` si riconosce (`Forse`) per dire `err.file.brukerBaf` («esporta in mzML con Bruker DataAnalysis o msconvert»): il BAF resta impossibile senza l'SDK.
+`crates/mzlab-lettori/src/bruker/` (feature `bruker`, modulo `.wasm` `bruker`, tetto 524 288 B; misurato dopo `wasm_opt -Oz`: 416 514 B con `ruzstd`). Voci del registro: `bruker-tdf` (membri `x.d/analysis.tdf` + `analysis.tdf_bin`) e `bruker-tsf` (`analysis.tsf` + `analysis.tsf_bin`); un eventuale `-wal` accanto al database si legge (vince l'ultimo frame confermato).
+- Le cartelle Bruker senza `analysis.tdf`/`.tsf` che il modulo non legge si riconoscono (`Forse`, `legacy_key` in `tdf_helpers.rs`) per dire quale sono: solo `analysis.baf` → `err.file.brukerBaf`, `analysis.yep` (trappole ioniche) → `err.file.brukerYep`, `ser` o `fid` direttamente nella cartella `.d` (FT-ICR) → `err.file.brukerFtms`, un `fid` accanto ad `acqu`/`acqus` fuori da una `.d` (MALDI FLEX) → `err.file.brukerFlex`; tutte dicono di esportare in mzML.
+- La pagina dà le stesse chiavi (`BrukerD.legacyKey` in `agilent-d.js`; FLEX tra i file ignorati, `CartCarica.flexMaldi`). BAF, YEP, FT-ICR e FLEX restano illeggibili senza l'SDK.
 - Un database senza il suo `_bin`, un `_bin` senza il suo database o un database che non è SQLite (copia vuota o tagliata) sono `Forse`: `apri` dà `err.file.brukerNoBin` (`name` = cartella, `file` = il file che manca) o l'errore SQLite con chiave; la pagina fa lo stesso conto (`BrukerD.missing` in `agilent-d.js`).
-- Un `.tdf`/`.tsf` o un `_bin` danneggiato, tagliato o con un layout non letto (pagina SQLite, blocco zstd, nessuna `MzCalibration` usabile) è `err.file.brukerDamaged`: il testo dell'avviso non mostra il dettaglio del lettore (`detail`, scritto dal CLI dopo la chiave).
+- Un frame dell'indice che nomina una riga di `MzCalibration` assente o inutilizzabile (`MzCal::validate`) fa rifiutare la corsa all'apertura con `err.file.brukerCalibration` (`frame` = `Frames.Id`), non al primo spettro.
+- Un `.tdf`/`.tsf` o un `_bin` danneggiato, tagliato o con un layout non letto (pagina SQLite, blocco zstd) è `err.file.brukerDamaged`: il testo dell'avviso non mostra il dettaglio del lettore (`detail`, scritto dal CLI dopo la chiave).
 
 ## File del modulo
 - `sqlite_min.rs`, `sqlite_schema.rs`, `sqlite_wal.rs`: lettore SQLite 3 in sola lettura senza motore SQL (nessun `rusqlite`). Pagine b-tree di tabella (5, 13) e di indice (2, 10, per le tabelle `WITHOUT ROWID`, con le colonne riordinate: la chiave primaria per prima), overflow, log WAL. Visita iterativa con ogni puntatore, lunghezza, profondità e numero di pagine passati da `Limiti`; una pagina già vista o un ciclo è un errore, non un giro infinito.
+- Overflow SQLite: una catena che torna su una pagina, o una cella che dichiara più byte di quanti ne tengano le pagine del file, è `err.file.brukerDamaged` (`tests/robustness_sqlite_overflow.rs`), mai lo stesso valore ricopiato.
 - `block.rs`: blocchi di `tdf_bin`. `zstd()` usa `ruzstd` solo dopo aver letto la finestra e la dimensione annunciate dall'intestazione del frame zstd (il tetto è `Limiti.byte`) e pretende la dimensione attesa esatta. Un blocco inizia con `u32` lunghezza, `u32` numero di scansioni (`ns`), poi i dati.
 - `calib.rs`: calibrazione m/z. `tables.rs`: tabelle del database. `spectra.rs`: taglio degli spettri (`tratti`: gli intervalli di scansione uniti e passati agli offset per scansione `Picchi::inizio`; `somma`: unione per indice TOF, radix a 11 bit da 1024 punti). Banco: `examples/bruker_bench.rs` (`misure-formati.md`). `tsf.rs`: blocchi TSF. `header.rs`: `metodo/1` e testata mzML. `tdf.rs`: `ENTRY`, `BrukerReader`.
 
@@ -27,7 +31,7 @@ Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` d
 
 ## Spettri
 - `MsMsType` 0 (MS1): un frame è uno spettro, mobilità sommata.
-- 8 (DDA-PASEF): uno spettro per (frame, precursore), righe della stessa coppia unite, scansioni sommate, con isolamento (`IsolationMz`, `IsolationWidth`) e CE; ordine: prima scansione della finestra (come msconvert).
+- 8 (DDA-PASEF): uno spettro per (frame, precursore), righe della stessa coppia unite, scansioni sommate, con isolamento (`IsolationMz`, `IsolationWidth`) e CE; ordine: prima scansione della finestra (come msconvert). Nel `<precursor>` dell'mzML lo ione selezionato è `MonoisotopicMz` (o `LargestPeakMz`), il centro della finestra `IsolationMz` e la carica `Charge` di `Precursors` (una carica 0 o vuota non si scrive); prova `tests/bruker_precursor.rs`.
 - 9 (diaPASEF): uno spettro per finestra del gruppo (`DiaFrameMsMsInfo` → `DiaFrameMsMsWindows`) e per ciclo.
 - 10 (PRM-PASEF): uno spettro per riga di `PrmFrameMsMsInfo`.
 - Altri tipi: uno spettro per frame, livello 2 se esiste `FrameMsMsInfo`.
@@ -47,3 +51,4 @@ Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` d
 - TSF: m/z uguale a quello del `.mgf` di Bruker su un campione; mobilità non verificata.
 - Mobilità inversa 1/K0 (`TimsCalibration`, `ModelType` 2): la formula non è nota né ricavabile dai file, quindi non si calcola; si scrivono gli intervalli di scansione (DEV-10 userà i punti con mobilità).
 - Il BAF non si legge (serve l'SDK Bruker).
+- TIC dell'indice: il fattore `AccumulationTime/100` presuppone `SummedIntensities` normalizzato a 100 ms in ogni versione dello schema; non è verificato su tutte le versioni (nessun file sintetico né documento lo decide), quindi la regola resta questa.

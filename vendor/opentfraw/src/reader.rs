@@ -372,11 +372,9 @@ pub struct RawFileReader {
     pub inst_log: std::sync::Arc<[GenericRecord]>,
     /// The status log as the file stores it (temperatures, voltages, vacuum...); `None` when no schema is found or the records do not fit.
     pub status_log: Option<crate::status_log::StatusLog>,
-    /// Layout the file is read with: the version in the header when documented, else the nearest documented one (`declared_version` has the number written).
+    /// The format version in the file header, one of `robust::VERIFIED_VERSIONS`.
     pub version: u32,
-    /// The version number written in the file header.
-    pub declared_version: u32,
-    /// What `open` left out or assumed (a cut file, an undocumented version, a structure that could not be read); empty for a sound file.
+    /// What `open` left out (a cut file, a structure that could not be read); empty for a sound file.
     pub warnings: Vec<Warning>,
     /// Number of scans.
     pub num_scans: u32,
@@ -485,22 +483,10 @@ pub struct ControllerInfo {
 impl RawFileReader {
     /// Open and parse a RAW file from a reader.
     ///
-    /// A version number that is not documented is read with the nearest documented layout when the scan index then looks sound (`Warning::UnverifiedVersion`);
-    /// otherwise the error is `Error::UnsupportedVersion` with the number written. A file that stops inside the scan data opens with the scans that are whole
-    /// (`Warning::Truncated`); one that stops before its scan index is `Error::Truncated`. Every other error names the structure, the version and the file size.
+    /// A version that no real file has verified (`robust::VERIFIED_VERSIONS`) is `Error::UnsupportedVersion` with the number written. A file that stops
+    /// inside the scan data opens with the scans that are whole (`Warning::Truncated`); one that stops before its scan index is `Error::Truncated`. Every
+    /// other error names the structure, the version and the file size.
     pub fn open<R: Read + Seek>(source: R) -> Result<Self> {
-        let mut undocumented = None;
-        match Self::open_with(source, &mut undocumented) {
-            Err(e) if !matches!(e, Error::UnsupportedVersion(_)) => match undocumented {
-                Some(v) => Err(Error::UnsupportedVersion(v)),
-                None => Err(e),
-            },
-            other => other,
-        }
-    }
-
-    /// `open`; `undocumented` receives the header version when it is not a documented one.
-    fn open_with<R: Read + Seek>(source: R, undocumented: &mut Option<u32>) -> Result<Self> {
         let mut r = BinaryReader::new(source);
         let file_len = r.length()?;
         let mut warnings: Vec<Warning> = Vec::new();
@@ -509,10 +495,6 @@ impl RawFileReader {
         let header = FileHeader::read(&mut r)
             .map_err(|e| robust::stage_error("FileHeader", 0, file_len, e))?;
         let version = header.version;
-        let header_declared = header.declared_version;
-        if header.declared_version != version {
-            *undocumented = Some(header.declared_version);
-        }
         let stage = |name: &'static str, e: Error| robust::stage_error(name, version, file_len, e);
 
         // 2. SeqRow
@@ -641,15 +623,6 @@ impl RawFileReader {
                 });
             }
         }
-        if let Some(declared) = *undocumented {
-            if !robust::plausible_index(&scan_index, data_addr, file_len) {
-                return Err(Error::UnsupportedVersion(declared));
-            }
-            warnings.push(Warning::UnverifiedVersion {
-                declared,
-                used: version,
-            });
-        }
 
         // Flat-peak (TSQ/SRM) layout: a run without scan events, or a first record too small to be a packet.
         let flat_peaks = run_header.ntrailer == 0
@@ -734,10 +707,22 @@ impl RawFileReader {
         // survey scan) and independent MS2+ (DIA windows). Instruments with uniform events (Q Exactive, Exploris)
         // have one size; the tribrid ones (Eclipse, Fusion Lumos) mix several, and the sizes are found by walking
         // the table with each known layout until one ends exactly where the next stream begins.
-        let sizes: [usize; 3] = if version >= 66 && n_events > 0 {
-            v66_body_sizes(&mut r, n_events as u64, preamble_size, stream_bytes)?
+        // A table no known layout walks to its end is refused by name: its events would be read with the wrong sizes.
+        let (sizes, n_events): ([usize; 3], u32) = if version >= 66 && n_events > 0 {
+            match v66_body_sizes(&mut r, n_events as u64, preamble_size, stream_bytes) {
+                Ok(s) => (s, n_events),
+                Err(e) => {
+                    skipped(
+                        &mut warnings,
+                        "ScanEvents",
+                        run_header.scan_trailer_addr,
+                        &e,
+                    );
+                    ([0, 0, 0], 0)
+                }
+            }
         } else {
-            [0, 0, 0]
+            ([0, 0, 0], n_events)
         };
         // Each event consumes at least its preamble on disk (the body may add
         // more, but the preamble alone is a safe lower bound for the count check).
@@ -1051,7 +1036,6 @@ impl RawFileReader {
             inst_log,
             status_log,
             version,
-            declared_version: header_declared,
             warnings,
             num_scans,
             data_addr,
@@ -1095,16 +1079,15 @@ impl RawFileReader {
         let mut r = BinaryReader::new(source);
         let len = r.length().unwrap_or(0);
         let _ = writeln!(out, "file: {len} bytes");
-        let Ok(header) = FileHeader::read(&mut r) else {
-            let _ = writeln!(out, "FileHeader: not readable");
-            return out;
+        let header = match FileHeader::read(&mut r) {
+            Ok(h) => h,
+            Err(e) => {
+                let _ = writeln!(out, "FileHeader: {e}");
+                return out;
+            }
         };
         let v = header.version;
-        let _ = writeln!(
-            out,
-            "FileHeader: declared v{} read as v{v}",
-            header.declared_version
-        );
+        let _ = writeln!(out, "FileHeader: v{v}");
         let info = (|| -> Result<RawFileInfo> {
             SeqRow::read(&mut r, v)?;
             r.read_bytes(24)?;
@@ -1442,19 +1425,9 @@ impl RawFileReader {
     }
 
     /// The filter of an SRM scan from its own event: `+ c NSI SRM ms2 528.296 [343.207-343.209, ...]`; `None` without a reaction and ranges.
+    /// Polarity and ionization are the event's; a code the event does not give is left out, not assumed.
     fn srm_event_filter(&self, idx: usize) -> Option<String> {
-        let event = self.scan_event(idx)?;
-        if event.preamble.scan_type() != Some(crate::ScanType::Srm) {
-            return None;
-        }
-        let q1 = event.reactions.first()?.precursor_mz;
-        let ranges: Vec<String> = event
-            .fraction_collectors
-            .iter()
-            .map(|f| format!("{:.3}-{:.3}", f.low_mz, f.high_mz))
-            .collect();
-        let ion = event.preamble.ionization().map_or("ESI", |i| i.as_str());
-        Some(format!("+ c {ion} SRM ms2 {q1:.3} [{}]", ranges.join(", ")))
+        srm_filter_of_event(&self.scan_event(idx)?)
     }
 
     /// Read a single scan's peaks using whichever decoder matches this file's
@@ -1629,14 +1602,11 @@ impl RawFileReader {
     ) -> Option<String> {
         let entry = self.scan_index.get(idx)?;
 
-        // SRM files have no scan events; build the filter string from
-        // the pre-loaded Q1 and Q3 window maps.
+        // An SRM scan's own event holds its Q1 and product ranges; the transition table found in the method is the source only for a run without events.
         if self.flat_peaks {
-            let Some(text) = self.srm_filters.get(&entry.scan_event) else {
-                // A TSQ run whose events are one per scan (no event class): the event itself holds Q1 and the product ranges.
-                return self.srm_event_filter(idx);
-            };
-            return Some(text.clone());
+            return self
+                .srm_event_filter(idx)
+                .or_else(|| self.srm_filters.get(&entry.scan_event).cloned());
         }
 
         let owned;
@@ -1869,6 +1839,8 @@ const SCAN_PARAM_LABELS: &[&str] = &[
     "Reagent Ion AGC:",
     "Reagent Ion Injection Time (ms):",
     "S-Lens RF Level:",
+    "SPS Masses Continued:",
+    "SPS Masses:",
     "Scan Description:",
     "Source CID eV:",
     "Supplemental Activation CE:",
@@ -2003,15 +1975,14 @@ impl<'a> ScanParams<'a> {
             .or_else(|| self.0.get_f64("MS2 Isolation Width (M/Z):"))
     }
 
-    /// MSn isolation window target m/z (the center of the isolation window).
-    ///
-    /// Some instruments write this separately from the precursor m/z; when
-    /// absent, callers should fall back to [`Self::monoisotopic_mz`] or to
-    /// the event's first reaction `precursor_mz`.
+    /// MSn isolation window target m/z (`Target M/Z`); the event's final reaction is the first source (`scan_metadata`).
     pub fn isolation_target_mz(&self) -> Option<f64> {
-        self.0
-            .get_f64("MS2 Isolation Offset:")
-            .or_else(|| self.0.get_f64("Target M/Z:"))
+        self.0.get_f64("Target M/Z:")
+    }
+
+    /// Offset of the isolation window from its target (`MS2 Isolation Offset`, m/z): an offset, never a target m/z.
+    pub fn isolation_offset(&self) -> Option<f64> {
+        self.0.get_f64("MS2 Isolation Offset:")
     }
 
     /// Activation energy (eV or %) for the primary activation step.
@@ -2631,6 +2602,74 @@ mod tests {
         assert_eq!(v66_body_sizes(&mut r, 8, 136, n).unwrap(), [144; 3]);
     }
 
+    /// TH-01: a table that is not a whole number of equal events and that neither a known layout nor the count walks to its end is refused by
+    /// name, never read with an average size (the oracle is the arithmetic: 3 events of 280 bytes and 1 more byte fit no layout).
+    #[test]
+    fn a_table_no_layout_walks_to_its_end_is_refused() {
+        let mut bytes = vec![0u8; 3 * (136 + 144) + 1];
+        for e in 0..3 {
+            bytes[e * 280 + 6] = 1; // MS1 preamble, so the walks read it as one
+        }
+        let n = bytes.len() as u64;
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        match v66_body_sizes(&mut r, 3, 136, n) {
+            Err(Error::EventTableMisfit { events, bytes }) => assert_eq!((events, bytes), (3, n)),
+            other => panic!("not refused: {other:?}"),
+        }
+    }
+
+    /// TH-02: an SRM event gives its own polarity to the filter; a polarity byte the format does not define leaves the sign out.
+    #[test]
+    fn an_srm_event_filter_takes_the_polarity_of_the_event() {
+        use crate::scan_event::{FractionCollector, Reaction, ScanEventPreamble};
+        let ev = |pol: u8| {
+            let mut bytes = vec![0u8; 136];
+            bytes[4] = pol;
+            bytes[6] = 2;
+            bytes[7] = 3; // SRM
+            bytes[11] = 255; // no ionization code
+            ScanEvent {
+                preamble: ScanEventPreamble { bytes },
+                reactions: vec![Reaction {
+                    precursor_mz: 300.0,
+                    unknown_double: 0.0,
+                    energy: 20.0,
+                    unknown_long1: 0,
+                    unknown_long2: 0,
+                }],
+                fraction_collectors: vec![FractionCollector {
+                    low_mz: 100.0,
+                    high_mz: 100.5,
+                }],
+                coefficients: Vec::new(),
+            }
+        };
+        assert_eq!(
+            srm_filter_of_event(&ev(0)).unwrap(),
+            "- c SRM ms2 300.000 [100.000-100.500]"
+        );
+        assert_eq!(
+            srm_filter_of_event(&ev(1)).unwrap(),
+            "+ c SRM ms2 300.000 [100.000-100.500]"
+        );
+        assert_eq!(
+            srm_filter_of_event(&ev(9)).unwrap(),
+            "c SRM ms2 300.000 [100.000-100.500]"
+        );
+    }
+
+    /// TH-02: the filter of a transition from the table of a run without scan events names no polarity and no ionization.
+    #[test]
+    fn a_table_filter_names_no_polarity_it_was_not_given() {
+        let q1 = HashMap::from([(0u16, 300.0)]);
+        let q3 = HashMap::from([(0u16, vec![(100.0f32, 100.5f32)])]);
+        let ce = HashMap::from([(0u16, 25.0)]);
+        let v63 = srm_event_filters(crate::scan_format::ScanDataFormat::FlatV63, &q1, &q3, &ce);
+        assert_eq!(v63[&0], "c SRM ms2 300.000@cid25.00 [100.000-100.500]");
+        let v66 = srm_event_filters(crate::scan_format::ScanDataFormat::FlatV66, &q1, &q3, &ce);
+        assert_eq!(v66[&0], "c SRM ms2 300.000 [100.000-100.500]");
+    }
+
     #[test]
     fn walk_counted_follows_events_that_grow_with_their_reactions() {
         use crate::scan_event::counted_tests::counted_event;
@@ -2656,7 +2695,8 @@ mod tests {
 }
 
 /// The body sizes of the events of a v66 table of `n` events that starts at the reader's position and spans `stream_bytes`
-/// (see the layouts above). Leaves the reader where it started.
+/// (see the layouts above). Leaves the reader where it started. A table that is not a whole number of equal events and that no known
+/// layout walks to its end is `Error::EventTableMisfit`, never read with an average size.
 fn v66_body_sizes<R: Read + Seek>(
     r: &mut BinaryReader<R>,
     n: u64,
@@ -2693,11 +2733,14 @@ fn v66_body_sizes<R: Read + Seek>(
     let counted =
         found.is_none() && walk_counted(r, n, preamble_size, start, stream_bytes).is_some();
     r.seek_to(start)?;
-    Ok(match found {
-        Some(l) => l.map(|x| (x as usize).saturating_sub(preamble_size)),
-        None if counted => [crate::scan_event::COUNTED_BODY; 3],
-        None => uniform(stream_bytes),
-    })
+    match found {
+        Some(l) => Ok(l.map(|x| (x as usize).saturating_sub(preamble_size))),
+        None if counted => Ok([crate::scan_event::COUNTED_BODY; 3]),
+        None => Err(Error::EventTableMisfit {
+            events: n,
+            bytes: stream_bytes,
+        }),
+    }
 }
 
 /// Whether `n` events of a v66 table are counted events (body = 96 + 56 bytes per reaction, the count opening the
@@ -2773,8 +2816,34 @@ fn walk_events<R: Read + Seek>(
     at == start + stream_bytes
 }
 
-/// `+ c {NSI|ESI} SRM ms2 {Q1:.3}{@cidCE} [{lo:.3}-{hi:.3}, ...]` for each event with a Q1 and Q3 windows. v63 (TSQ Quantum/Vantage) is NSI and carries the
-/// collision energy after Q1; v66 (TSQ Quantiva/Altis) is ESI without it.
+/// The SRM filter of one v66 TSQ event (see `RawFileReader::srm_event_filter`).
+fn srm_filter_of_event(event: &ScanEvent) -> Option<String> {
+    if event.preamble.scan_type() != Some(crate::ScanType::Srm) {
+        return None;
+    }
+    let q1 = event.reactions.first()?.precursor_mz;
+    let ranges: Vec<String> = event
+        .fraction_collectors
+        .iter()
+        .map(|f| format!("{:.3}-{:.3}", f.low_mz, f.high_mz))
+        .collect();
+    let mut head = String::new();
+    match event.preamble.polarity() {
+        Some(crate::Polarity::Positive) => head.push_str("+ "),
+        Some(crate::Polarity::Negative) => head.push_str("- "),
+        None => {}
+    }
+    head.push_str("c ");
+    if let Some(i) = event.preamble.ionization() {
+        head.push_str(i.as_str());
+        head.push(' ');
+    }
+    Some(format!("{head}SRM ms2 {q1:.3} [{}]", ranges.join(", ")))
+}
+
+/// `c SRM ms2 {Q1:.3}{@cidCE} [{lo:.3}-{hi:.3}, ...]` for each event with a Q1 and Q3 windows, from the transition table of a run without scan
+/// events. Polarity and ionization are not in that table, so the filter does not name them; v63 (TSQ Quantum/Vantage) carries the collision
+/// energy after Q1, v66 (TSQ Quantiva/Altis) does not.
 fn srm_event_filters(
     scan_format: crate::scan_format::ScanDataFormat,
     q1_by_event: &HashMap<u16, f64>,
@@ -2796,12 +2865,7 @@ fn srm_event_filters(
         } else {
             String::new()
         };
-        let mut s = format!(
-            "+ c {} SRM ms2 {:.3}{}",
-            if v63 { "NSI" } else { "ESI" },
-            q1,
-            ce_part
-        );
+        let mut s = format!("c SRM ms2 {:.3}{}", q1, ce_part);
         if !windows.is_empty() {
             s.push_str(" [");
             for (i, (lo, hi)) in windows.iter().enumerate() {

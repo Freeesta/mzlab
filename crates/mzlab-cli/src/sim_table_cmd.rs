@@ -16,15 +16,15 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli sim-table: every SIM channel of the files integrated with the default settings, as CSV.
 
-usage: mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=samples|channels] [--set baseline=edges|zero] [--set group.SAMPLE=GROUP]... [--out PATH]
+usage: mzlab-cli sim-table FILE... [--set output=OUTPUT] [--set layout=samples|channels] [--set baseline=zero|edges] [--set group.SAMPLE=GROUP]... [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in injection order
   --set output=area_sum    sum of the peak areas of each channel in each sample (default; 0.0 = no peak)
          output=area_max   area of the largest peak; height_max its height; apex_rt its apex time (min); n_peaks the number of peaks
          output=peaks      the peak table: one row per resolved peak (sample, q1, name, peak, apex_rt, area, height, snr, fwhm_s)
   --set layout=samples     one row per sample, one column per channel (its Q1 m/z; ion N without one, N = place in the list) (default); layout=channels the reverse
-  --set baseline=edges     areas and heights against the straight line between each peak's edges (default); baseline=zero from y = 0
-                           over the same edges, with a last column baseline (zero) in every row
+  --set baseline=zero      areas and heights from y = 0 over each peak's edges (default: any background under the peak is part of the area);
+                           baseline=edges against the straight line between the same edges; a last column baseline names it in every row
   --set group.SAMPLE=GROUP the sample (its row name) in a group, as the sidebar groups of the site: rows by group in the order the groups first appear,
                            then the samples without one; a group column; channels without Q1 apart per group (ion N [GROUP])
   --out PATH  write there instead of the standard output
@@ -50,7 +50,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         None,
         Vec::new(),
     );
-    let mut baseline = "edges".to_string();
+    let mut baseline = mzlab_core::simtab::DEFAULT_BASELINE.to_string();
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {

@@ -1,7 +1,7 @@
-//! The baseline of a peak integration: `edges` (the straight line each engine draws between the boundaries, the default and the old numbers),
-//! `zero` (y = 0) or `line` (a line the user sets: a level or two points, which may cut through the peak). The area against `zero` or `line` is
+//! The baseline of a peak integration: `zero` (y = 0, the default), `edges` (the straight line each engine draws between the boundaries, the
+//! numbers of records made before `zero` was the default) or `line` (a line the user sets: a level or two points, which may cut through the peak). The area against `zero` or `line` is
 //! the signed trapezoid integral of the trace minus the line; the part of the trace under the line is reported apart (`below`), never dropped.
-//! One function for the Data view (`peak_area` of mzlab-wasm, `mzlab-cli peak-area`), `peak-auto`, `chrom.transitions@1` and the SIM table.
+//! One function for the Data view (`peak_area` of mzlab-wasm, `mzlab-cli peak-area`), `peak-auto`, `chrom.transitions@2` and the SIM table.
 
 use crate::peakq_lr::near_idx;
 
@@ -18,6 +18,9 @@ pub enum Baseline {
 
 /// The parameter names, the same in `--set`, the flow steps and the page.
 pub const MODES: [&str; 3] = ["edges", "zero", "line"];
+
+/// The mode of an integration that names none: from zero (the background under the peak is part of the area).
+pub const DEFAULT: Baseline = Baseline::Zero;
 
 impl Baseline {
     /// The mode's name (`MODES`).
@@ -41,13 +44,13 @@ impl Baseline {
         }
     }
 
-    /// From the parameters `baseline` (a name of `MODES`, absent = `edges`) and `base_t0`, `base_y0`, `base_t1`, `base_y1` of a `line`
+    /// From the parameters `baseline` (a name of `MODES`, absent = `DEFAULT`) and `base_t0`, `base_y0`, `base_t1`, `base_y1` of a `line`
     /// (`base_y0` is required; `base_y1` absent = `base_y0`, the times absent = 0, so a level needs only `base_y0`).
     pub fn from_params(
         mode: Option<&str>,
         num: impl Fn(&str) -> Option<f64>,
     ) -> Result<Baseline, String> {
-        match mode.unwrap_or("edges") {
+        match mode.unwrap_or(DEFAULT.name()) {
             "edges" => Ok(Baseline::Edges),
             "zero" => Ok(Baseline::Zero),
             "line" => {

@@ -188,6 +188,26 @@ pub fn lcd_tlm(n: usize) -> Vec<u8> {
     ])
 }
 
+/// A triple-quadrupole `.lcd` of `n` index entries: entry 0 has a record of its own after the shared one, every other entry names the same record at offset 0.
+pub fn lcd_tlm_shared(n: usize) -> Vec<u8> {
+    let mut raw = tlm_record(false, &[(17610, 15910, 7)]);
+    let own = raw.len() as u32;
+    raw.extend(tlm_record(false, &[(17610, 15910, 50)]));
+    let mut idx = u32s(&[0, 0, own, 0, 0, 0]);
+    for i in 1..n {
+        idx.extend(u32s(&[0, i as u32, 0, 0, 0, 0]));
+    }
+    ole(&[
+        ("TLM Raw Data/MS Raw Data", raw),
+        ("TLM Raw Data/Spectrum Index", idx),
+        (
+            "TLM Raw Data/Retention Time",
+            u32s(&(0..n as u32).map(|i| 600 * i).collect::<Vec<_>>()),
+        ),
+        ("TLM Raw Data/TIC Data", u64s(&vec![57u64; n])),
+    ])
+}
+
 /// A Q-TOF `.lcd` (only its storage name matters) and a container with only the PDA part.
 pub fn lcd_qtof() -> Vec<u8> {
     ole(&[("QTFL RawData/MS Raw Data", vec![1, 2, 3, 4])])

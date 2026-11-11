@@ -53,6 +53,9 @@ const CartCarica = (() => {
     return { ok, ignored };
   }
 
+  // a Bruker FLEX MALDI run among the ignored files: a `fid` beside its `acqu`/`acqus` (as `bruker::tdf_helpers::legacy_key`), named instead of only counted
+  const flexMaldi = (/** @type {File[]} */ fs) => fs.some(f => f.name.toLowerCase() === "fid") && fs.some(f => /^acqus?$/i.test(f.name));
+
   // two mzML/.dam with the same name in different folders: the second one gets the name of its folder («name (folder).mzML»); .wiff files keep their name (pairing)
   function uniqueNames(files, taken = []) {
     const seen = new Set(taken.map(n => n.toLowerCase())), out = [];
@@ -80,7 +83,7 @@ const CartCarica = (() => {
   async function load(files, name) {
     const wr = WatersRaw.group(files), ag = AgilentD.group(wr.rest), T = (k, p) => I18N.t(k, p), mm = AgilentD.groupMethods(ag.rest), { ok, ignored } = split(mm.rest);     // Agilent .D folders are converted by agilent-d.js, Waters .raw folders by waters-raw.js, .m method folders are held there
     const kept = mm.methods.filter(m => m.files.length), meth = kept.map(m => m.name); AgilentD.held.push(...kept);
-    const ig = (ignored.length ? " " + T(ignored.length === 1 ? "cart.ignored.one" : "cart.ignored", { n: ignored.length }) : "") + (meth.length ? " " + T(meth.length === 1 ? "cart.method.one" : "cart.method", { n: meth.length, name: meth.join(", ") }) : "");
+    const ig = (ignored.length ? " " + T(ignored.length === 1 ? "cart.ignored.one" : "cart.ignored", { n: ignored.length }) : "") + (meth.length ? " " + T(meth.length === 1 ? "cart.method.one" : "cart.method", { n: meth.length, name: meth.join(", ") }) : "") + (flexMaldi(ignored) ? " " + T("err.file.brukerFlex") : "");
     const n = ok.length + ag.runs.length + wr.runs.length; if (!n) { note(meth.length ? ig.trim() : T("cart.none", { name }) + ig); return; }
     const msg = T(n === 1 ? "cart.found.one" : "cart.found", { n, name }) + ig; note(msg);
     if (ag.runs.length && typeof AVVIO !== "undefined" && !(await AVVIO.pronto())) return;
@@ -96,6 +99,6 @@ const CartCarica = (() => {
     return true;
   }
   async function fromInput(list) { const files = [...list]; await load(files, rootName(null, files)); }
-  return { dir, setDir, pairKey, split, byproduct: n => BYPRODUCT.test(n), uniqueNames, entriesOf, readEntries, fromDrop, fromInput, note, load };
+  return { dir, setDir, pairKey, split, flexMaldi, byproduct: n => BYPRODUCT.test(n), uniqueNames, entriesOf, readEntries, fromDrop, fromInput, note, load };
 })();
 if (typeof module !== "undefined") module.exports = CartCarica;

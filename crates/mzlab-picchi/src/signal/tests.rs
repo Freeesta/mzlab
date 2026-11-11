@@ -163,12 +163,12 @@ fn banded_asls_is_identical_through_the_downsampling_path_and_on_odd_inputs() {
     );
 }
 
-/// `snip_baseline` as it was, with a new vector for every width.
+/// `snip_baseline` as it was, with a new vector for every width (and the same libm `log`/`exp`).
 fn old_snip(y: &[f64], iters: usize) -> Vec<f64> {
     let n = y.len();
     let mut v: Vec<f64> = y
         .iter()
-        .map(|&x| (((x.max(0.0) + 1.0).sqrt() + 1.0).ln() + 1.0).ln())
+        .map(|&x| libm::log(libm::log((x.max(0.0) + 1.0).sqrt() + 1.0) + 1.0))
         .collect();
     let top = iters.min((n / 2).saturating_sub(1).max(1));
     for w in 1..=top {
@@ -184,7 +184,7 @@ fn old_snip(y: &[f64], iters: usize) -> Vec<f64> {
         }
     }
     v.iter()
-        .map(|&x| ((x.exp() - 1.0).exp() - 1.0).powi(2) - 1.0)
+        .map(|&x| (libm::exp(libm::exp(x) - 1.0) - 1.0).powi(2) - 1.0)
         .collect()
 }
 

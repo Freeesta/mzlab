@@ -94,6 +94,12 @@ impl State {
         readers_mzml::write_with(&mut *l, nat.c, &mut out, &mut tell, opz)?;
         std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
         drop(out);
+        // the same check as `mzlab-cli convert`: an mzML the validator calls INVALID is not handed out
+        let back = std::fs::File::open(&tmp).map_err(|e| io_error(&e))?;
+        if let Err(e) = mzlab_core::mzml_validate::check_written(std::io::BufReader::new(back)) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(e);
+        }
         let size = std::fs::metadata(&tmp).map_err(|e| io_error(&e))?.len();
         let mut g = self.lock_inner();
         g.next_id += 1;

@@ -114,11 +114,30 @@ fn gemelli(rel: &str) -> Vec<String> {
     out
 }
 
-/// Existing path for `rel` (or its moved/unmoved twin), or None when there is no data repository or no such path.
+/// Existing path for `rel` (or its moved/unmoved twin), or None when there is no data repository or no such path: then the test that asked says
+/// so on the terminal (`skipped: no data`), so that a pass without the data never reads as a pass on the data.
 pub fn percorso(rel: &str) -> Option<PathBuf> {
-    let r = radice()?;
-    std::iter::once(rel.to_string())
-        .chain(gemelli(rel))
-        .map(|c| r.join(c))
-        .find(|p| p.exists())
+    let found = radice().and_then(|r| {
+        std::iter::once(rel.to_string())
+            .chain(gemelli(rel))
+            .map(|c| r.join(c))
+            .find(|p| p.exists())
+    });
+    if found.is_none() {
+        skipped();
+    }
+    found
+}
+
+/// One line on the terminal past the output capture of the test harness (it holds only `print!`/`eprint!`), with the name of the test and
+/// never the path: the names of the data files stay out of the CI logs.
+fn skipped() {
+    use std::io::Write;
+    let test = std::thread::current().name().unwrap_or("?").to_string();
+    let why = if radice().is_none() {
+        "the private data repository is not here"
+    } else {
+        "not in the data repository"
+    };
+    let _ = writeln!(std::io::stderr(), "skipped: no data: {test} ({why})");
 }

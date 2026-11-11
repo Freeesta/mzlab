@@ -1,5 +1,6 @@
 //! `conv/1`: what a conversion carried into the mzML and what it left out (and the zlib implementation that wrote the arrays), written in the `<run>` by `readers_mzml::Conversione`.
-//! Each reader declares what its format holds and the mzML does not (`Lettore::not_carried`), always with the reason.
+//! Each reader declares what its format holds and the mzML does not (`Lettore::not_carried`), always with the reason, and the scans it could not read
+//! (`Reader::losses`): `dichiarate`, `lette`, `parziale` and the key `perdita` of the cause, so a partial result is never silent.
 
 use crate::error::Result;
 use crate::readers::{Field, Reader};
@@ -43,7 +44,8 @@ pub const AGILENT_EXT: &[(&str, &str)] = &[
 /// Scans looked at to count the fields: the first MS1 and the first MSn among the first rows.
 const ROWS: usize = 64;
 
-/// The `conv/1` document of sample `c`: reader, version, how many header fields of a scan have a CV term and how many only a name, and the declared gaps.
+/// The `conv/1` document of sample `c`: reader, version, how many header fields of a scan have a CV term and how many only a name, the scans declared
+/// and read, and the declared gaps.
 pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
     let mut seen = [false; 2];
     let mut ks = Vec::new();
@@ -74,6 +76,21 @@ pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
     s += &cv.to_string();
     s += ",\"campi_user\":";
     s += &(names.len() - cv).to_string();
+    let lost = l.losses(c)?;
+    s += ",\"dichiarate\":";
+    s += &lost.declared.to_string();
+    s += ",\"lette\":";
+    s += &lost.read.to_string();
+    s += if lost.partial() {
+        ",\"parziale\":true,\"perdita\":\""
+    } else {
+        ",\"parziale\":false"
+    };
+    if lost.partial() {
+        // a catalogue key: letters, dots and digits only
+        s += lost.cause;
+        s.push('"');
+    }
     s += ",\"non_portati\":[";
     for (i, (campo, motivo)) in l.not_carried().iter().enumerate() {
         if i > 0 {

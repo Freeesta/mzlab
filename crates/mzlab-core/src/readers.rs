@@ -71,6 +71,13 @@ impl Limits {
             byte: (crate::budget::NATIVE_BUDGET_MB as u64) << 20,
         }
     }
+    /// Bytes the caller already holds in memory (a `.dam`, the container of a `.wiff`): only entries and depth are checked, both as on the site.
+    pub const fn held() -> Limits {
+        Limits {
+            byte: u64::MAX,
+            ..Limits::sito()
+        }
+    }
     /// `n` entries asked by a file: an error with a key when they are more than the limit (and so never an allocation).
     pub fn ok_entries(&self, n: u64) -> Result<usize> {
         usize::try_from(n)
@@ -153,6 +160,7 @@ pub struct ScanEntry {
     pub id: String,
     /// Minutes.
     pub rt: f64,
+    /// MS level, 0 when the file does not say it.
     pub livello: u8,
     /// +1, -1 or 0 (not said).
     pub polarita: i8,
@@ -180,6 +188,8 @@ pub struct ChromatogramEntry {
     pub unita: String,
 }
 
+pub use outcome::{Losses, ReadOutcome, ReadOutcomes, TRUNCATED};
+
 /// A reader of one dataset. Random access: `indice` is read once, `scansione` reads only the bytes of one scan; streaming is `scansione(c, 0..n)`.
 /// An error is a key (`err.file.*`), never a panic; what a file lacks is absent from the answer, not an error.
 pub trait Reader {
@@ -194,8 +204,7 @@ pub trait Reader {
     }
     /// Scan `k` of the index of sample `c`.
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum>;
-    /// Scan `k` for a caller that holds the index already (the module of the readers, `transport.rs`): the points, level, polarity, profile, RT and precursor as `scansione`
-    /// gives them; `id` and `filter` may be empty (they are the ones of the row of the index).
+    /// Scan `k` for a caller that holds the index already (the module of the readers, `transport.rs`): the points, level, polarity, profile, RT and precursor as `scansione` gives them; `id` and `filter` may be empty (they are the ones of the row of the index).
     fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.scan(c, k)
     }
@@ -247,12 +256,16 @@ pub trait Reader {
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         &[]
     }
+    #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) } // data sections the index lacks (an incomplete copy): (recovered, left out)
     /// The scans the index of sample `c` lists but that lie beyond the end of the data file (a truncated copy): they are not in the index.
     fn missing(&mut self, _c: usize) -> usize {
         0
     }
-    /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is
-    /// then the one to open it (`docs/agenti/lettori-modulo.md`).
+    /// The scans of sample `c` the file declares and the ones read (`ReadOutcomes` pairs them with the data). A reader that drops scans for another reason than a cut file overrides this; a wrapper forwards it. Default: the rows of `index_without_tic` plus `missing`.
+    fn losses(&mut self, c: usize) -> Result<Losses> {
+        outcome::default_losses(self, c)
+    }
+    /// True when the engine's reader would not read sample `c` as the file is (another instrument model, a scan type it does not know): the readers module is then the one to open it (`docs/agenti/lettori-modulo.md`).
     #[cfg(feature = "sciex")]
     fn variant(&mut self, _c: usize) -> bool {
         false
@@ -333,6 +346,8 @@ pub fn tic_ms1(entries: &[ScanEntry]) -> (Vec<f64>, Vec<f64>) {
         .map(|v| (v.rt, v.tic))
         .unzip()
 }
+
+mod outcome;
 
 #[cfg(test)]
 mod tests;

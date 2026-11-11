@@ -144,8 +144,15 @@ fn tlm(
     limits: &Limits,
 ) -> Result<usize> {
     let mut bad = 0;
-    for (i, off) in mrm::offset_tlm(idx, n, limits)?.into_iter().enumerate() {
-        let Some(r) = mrm::record(raw, off) else {
+    let offs = mrm::offset_tlm(idx, n, limits)?;
+    let shared = mrm::shared(raw, &offs);
+    for (i, off) in offs.into_iter().enumerate() {
+        let r = if shared.get(i) == Some(&true) {
+            None
+        } else {
+            mrm::record(raw, off)
+        };
+        let Some(r) = r else {
             bad += 1;
             continue;
         };

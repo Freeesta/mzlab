@@ -4,6 +4,8 @@
 //! built-in list (`Layout::builtin`, the fallback when the folder has no xsd). A layout that does not divide the file (unless the copy is cut short, `parse`), a field
 //! of an unknown type or a missing required field is an error that names the numbers, never a guess.
 
+use std::collections::{HashMap, HashSet};
+
 use crate::error::{Error, Result};
 
 const DATA_OFFSET_AT: usize = 88;
@@ -97,6 +99,8 @@ struct Field {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layout {
     fields: Vec<Field>,
+    /// The first field of each name: an `MSScan.xsd` may list thousands of fields, and every record looks up about twenty of them.
+    index: HashMap<String, usize>,
     pub record_len: usize,
 }
 
@@ -112,14 +116,17 @@ impl Layout {
             });
             at += kind.size();
         }
-        if let Some(m) = REQUIRED
-            .iter()
-            .find(|r| !fields.iter().any(|f| f.name == **r))
-        {
+        let names: HashSet<&str> = fields.iter().map(|f| f.name.as_str()).collect();
+        if let Some(m) = REQUIRED.iter().find(|r| !names.contains(**r)) {
             return Err(bad(format!("the record layout has no {m}")));
+        }
+        let mut index = HashMap::with_capacity(fields.len());
+        for (k, f) in fields.iter().enumerate() {
+            index.entry(f.name.clone()).or_insert(k);
         }
         Ok(Layout {
             fields,
+            index,
             record_len: at,
         })
     }
@@ -221,31 +228,37 @@ impl Layout {
     }
 
     fn at(&self, name: &str) -> Option<&Field> {
-        self.fields.iter().find(|f| f.name == name)
+        self.fields.get(*self.index.get(name)?)
     }
 
     fn int(&self, r: &[u8], name: &str) -> Option<i64> {
-        let f = self.at(name)?;
-        let b = &r[f.at..f.at + f.kind.size()];
-        Some(match f.kind {
-            Kind::I8 => b[0] as i8 as i64,
-            Kind::I16 => i16::from_le_bytes([b[0], b[1]]) as i64,
-            Kind::I32 => i32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64,
-            Kind::I64 => i64::from_le_bytes(b.try_into().ok()?),
-            Kind::F32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64,
-            Kind::F64 => f64::from_le_bytes(b.try_into().ok()?) as i64,
-        })
+        int_of(r, self.at(name)?)
     }
 
     fn real(&self, r: &[u8], name: &str) -> Option<f64> {
-        let f = self.at(name)?;
-        let b = &r[f.at..f.at + f.kind.size()];
-        Some(match f.kind {
-            Kind::F32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]) as f64,
-            Kind::F64 => f64::from_le_bytes(b.try_into().ok()?),
-            _ => self.int(r, name)? as f64,
-        })
+        real_of(r, self.at(name)?)
     }
+}
+
+fn int_of(r: &[u8], f: &Field) -> Option<i64> {
+    let b = &r[f.at..f.at + f.kind.size()];
+    Some(match f.kind {
+        Kind::I8 => b[0] as i8 as i64,
+        Kind::I16 => i16::from_le_bytes([b[0], b[1]]) as i64,
+        Kind::I32 => i32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64,
+        Kind::I64 => i64::from_le_bytes(b.try_into().ok()?),
+        Kind::F32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64,
+        Kind::F64 => f64::from_le_bytes(b.try_into().ok()?) as i64,
+    })
+}
+
+fn real_of(r: &[u8], f: &Field) -> Option<f64> {
+    let b = &r[f.at..f.at + f.kind.size()];
+    Some(match f.kind {
+        Kind::F32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]) as f64,
+        Kind::F64 => f64::from_le_bytes(b.try_into().ok()?),
+        _ => int_of(r, f)? as f64,
+    })
 }
 
 fn attr(tag: &str, name: &str) -> Option<String> {
@@ -319,7 +332,8 @@ pub struct ScanRec {
     pub ion_mode: i32,
     pub polarity: i32,
     pub fragmentor: f64,
-    pub collision_energy: f64,
+    /// `None` when the layout has no `CollisionEnergy` field (never decoded, so never written as 0).
+    pub collision_energy: Option<f64>,
     pub mz_of_interest: f64,
     pub format: i32,
     pub offset: u64,
@@ -330,6 +344,17 @@ pub struct ScanRec {
     pub max_y: f64,
     /// The fields of the layout that have no member above (`Layout::extra_names`, same order), so that no value of the record is lost.
     pub extra: Vec<f64>,
+}
+
+/// The record of the spectrum `scan=N`: ids count from 1 in the runs seen, else a binary search on the ids (written in increasing order).
+pub(crate) fn record_of<'a>(records: &'a [ScanRec], spectrum_id: &str) -> Option<&'a ScanRec> {
+    let n: i32 = spectrum_id.strip_prefix("scan=")?.parse().ok()?;
+    let guess = usize::try_from(n).ok()?.checked_sub(1)?;
+    if let Some(r) = records.get(guess).filter(|r| r.id == n) {
+        return Some(r);
+    }
+    let i = records.binary_search_by_key(&n, |r| r.id).ok()?;
+    records.get(i)
 }
 
 /// One record of the file read by the layout.
@@ -350,7 +375,7 @@ pub(super) fn record(layout: &Layout, r: &[u8]) -> ScanRec {
         ion_mode: i("IonMode") as i32,
         polarity: i("IonPolarity") as i32,
         fragmentor: f("Fragmentor"),
-        collision_energy: f("CollisionEnergy"),
+        collision_energy: layout.real(r, "CollisionEnergy"),
         mz_of_interest: f("MzOfInterest"),
         format: i("SpectrumFormatID") as i32,
         offset: i("SpectrumOffset").max(0) as u64,

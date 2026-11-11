@@ -154,7 +154,7 @@ fn scale_widths(n: usize) -> Vec<f64> {
             } else if i == 6 {
                 stop
             } else {
-                (stop.ln() * i as f64 / 6.0).exp()
+                libm::exp(libm::log(stop) * i as f64 / 6.0)
             };
             (g * 100.0).round_ties_even() / 100.0
         })

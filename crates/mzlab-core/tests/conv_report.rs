@@ -61,6 +61,36 @@ fn an_agilent_conversion_carries_conv_with_its_gaps_and_reasons() {
     );
 }
 
+/// A whole folder reads every scan it declares; one cut short in a record says, in `conv/1`, how many scans it declares, how many were read and why.
+#[test]
+fn a_cut_folder_writes_the_scans_declared_and_read_in_conv() {
+    const MSTS: &[u8] = b"<?xml version=\"1.0\"?><TimeSegments><TimeSegment><StartTime>3</StartTime><EndTime>3.1</EndTime><NumOfScans>4</NumOfScans></TimeSegment></TimeSegments>";
+    let (idx, peak) = encode(&sample());
+    let doc = |scan: &[u8]| {
+        conv_di(&conv_help::mzml(FileSet {
+            membri: vec![
+                conv_help::member("x.D/AcqData/MSScan.bin", scan),
+                conv_help::member("x.D/AcqData/MSPeak.bin", &peak),
+                conv_help::member("x.D/AcqData/MSTS.xml", MSTS),
+            ],
+        }))
+    };
+    let n = |d: &json::Value, k: &str| d.get(k).and_then(|v| v.f64()).unwrap();
+    let whole = doc(&idx);
+    check(&whole, "agilent-d");
+    assert_eq!(whole.get("parziale").and_then(|p| p.bool()), Some(false));
+    assert_eq!(n(&whole, "dichiarate"), n(&whole, "lette"));
+    assert!(whole.get("perdita").is_none());
+    let cut = doc(&idx[..idx.len() - 7]);
+    check(&cut, "agilent-d");
+    assert_eq!(cut.get("parziale").and_then(|p| p.bool()), Some(true));
+    assert_eq!((n(&cut, "lette"), n(&cut, "dichiarate")), (2.0, 3.0));
+    assert_eq!(
+        cut.get("perdita").and_then(|s| s.str()),
+        Some("warn.file.truncated")
+    );
+}
+
 #[test]
 fn pressure_and_device_traces_are_written_with_their_term_and_unit() {
     let trace = |id: &str, kind, unit: &str| Chromatogram {

@@ -61,11 +61,11 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
         .iter()
         .map(|i| format!("{}", i.get("q1").and_then(Value::f64).unwrap()))
         .collect();
-    assert_eq!(lines[0], format!("sample,{}", head.join(",")));
+    assert_eq!(lines[0], format!("sample,{},baseline", head.join(",")));
     assert_eq!(lines.len(), samples.len() + 1, "{area}");
     assert_eq!(
         lines[1],
-        format!("Blank{}", ",0.00000E+00".repeat(ions.len())),
+        format!("Blank{},zero", ",0.00000E+00".repeat(ions.len())),
         "the blank: every channel, no peak"
     );
     let peaks = text(&table(&[&d.join("sim3.wiff")], &["--set", "output=peaks"]));
@@ -96,9 +96,13 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
     ));
     assert_eq!(
         flip.lines().next().unwrap(),
-        format!("channel,name,{}", samples.join(","))
+        format!("channel,name,{},baseline", samples.join(","))
     );
-    assert_eq!(flip.lines().nth(3).unwrap(), "251.1,ionC,0,2,2,2", "{flip}");
+    assert_eq!(
+        flip.lines().nth(3).unwrap(),
+        "251.1,ionC,0,2,2,2,zero",
+        "{flip}"
+    );
     for bad in ["output=area", "layout=rows"] {
         assert_ne!(table(&[&d.join("sim3.wiff")], &["--set", bad]).code, 0);
     }
@@ -199,12 +203,15 @@ fn a_scan_file_cut_short_gives_the_points_before_the_cut_and_a_warning() {
         "the blank and the first sample lie before the cut"
     );
     let b: Vec<&str> = cut[3].split(',').skip(1).collect();
+    let b = &b[..b.len() - 1];
     assert!(
         b[..3].iter().all(|v| v.parse::<f64>().unwrap() > 0.0)
             && b[3..].iter().all(|v| *v == "0.00000E+00"),
         "{cut:?}"
     );
-    assert!(cut[4].split(',').skip(1).all(str::is_empty), "{cut:?}");
+    assert!(cut[4].ends_with(",zero"), "{cut:?}");
+    let c: Vec<&str> = cut[4].split(',').collect();
+    assert!(c[1..c.len() - 1].iter().all(|v| v.is_empty()), "{cut:?}");
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -235,17 +242,16 @@ fn a_lone_unnamed_sample_is_named_after_its_file_in_any_case() {
 }
 
 #[test]
-fn baseline_zero_adds_a_column_and_an_unknown_one_is_refused() {
+fn no_baseline_named_is_from_zero_and_each_row_names_its_baseline() {
     let Some(d) = fixture("zero") else { return };
     let w = d.join("sim3.wiff");
-    let edges = text(&table(&[&w], &[]));
-    assert_eq!(text(&table(&[&w], &["--set", "baseline=edges"])), edges);
-    let zero = text(&table(&[&w], &["--set", "baseline=zero"]));
-    assert!(
-        zero.lines().next().unwrap().ends_with(",baseline"),
-        "{zero}"
-    );
-    assert!(zero.lines().skip(1).all(|l| l.ends_with(",zero")), "{zero}");
+    let zero = text(&table(&[&w], &[]));
+    assert_eq!(text(&table(&[&w], &["--set", "baseline=zero"])), zero);
+    let edges = text(&table(&[&w], &["--set", "baseline=edges"]));
+    for (t, mode) in [(&zero, ",zero"), (&edges, ",edges")] {
+        assert!(t.lines().next().unwrap().ends_with(",baseline"), "{t}");
+        assert!(t.lines().skip(1).all(|l| l.ends_with(mode)), "{t}");
+    }
     assert_eq!(zero.lines().count(), edges.lines().count());
     assert_ne!(table(&[&w], &["--set", "baseline=line"]).code, 0);
     let _ = std::fs::remove_dir_all(&d);

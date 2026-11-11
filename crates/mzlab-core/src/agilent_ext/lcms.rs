@@ -7,11 +7,13 @@
 //!   run-length stream behind a header that is stored as it is.
 //! - m/z of a time `t`: `(A·(t−T0))² − Σ c_k·clamp(t, tmin, tmax)^p_k`, with the powers `p_k` the set bits of the `ValueUseFlags` of the `Polynomial` step of
 //!   `DefaultMassCal.xml`; the coefficients of the scan come from its record in `MSMassCal.bin` (72-byte header, then 84 bytes per scan: `u32` 10, then ten `f64`:
-//!   A, T0, tmin, tmax, c0…c5), else from the default calibration the record names with `CalibrationID`.
+//!   A, T0, tmin, tmax, c0…c5), else (`MassCalOffset` 0) from the default calibration the record names with `CalibrationID`. A scan with
+//!   `MassCalOffset` > 0 and no record, or a `CalibrationID` with no default, is `err.file.agilentCalibration`, never computed with other coefficients.
 
 use std::collections::BTreeMap;
 
 pub use super::lccal::Calibration;
+use super::lccal::Miss;
 use super::lcprofile::{bad, f64_at, lzf, run_length};
 use super::scan::ScanRec;
 use super::AgilentD;
@@ -25,6 +27,8 @@ pub const SCAN_PRODUCT: i32 = 512;
 
 /// The most bytes a spectrum block may hold, stored or unpacked.
 const MAX_BLOCK: u64 = 1 << 26;
+/// Bytes one decoded profile point holds at once: the intensity of the stream (4), the flight time, the m/z and the intensity of the spectrum (24).
+pub(super) const PROFILE_POINT: usize = 28;
 
 impl AgilentD {
     /// The calibration of the run (a Q-TOF's), from `MSMassCal.bin` and `DefaultMassCal.xml`.
@@ -85,14 +89,28 @@ impl AgilentD {
                 r.id
             )));
         }
-        let id = self.extra_of_record(r, "CalibrationID").unwrap_or(0.0) as i32;
+        let id = self.extra_of_record(r, "CalibrationID").map(|v| v as i32);
+        let own = self
+            .extra_of_record(r, "MassCalOffset")
+            .is_some_and(|v| v > 0.0);
         let at = self.position(r);
+        let named = |detail: String| {
+            Error::new("err.file.agilentCalibration")
+                .with("scan", r.id.to_string())
+                .with("detail", detail)
+        };
         times
             .iter()
             .map(|&t| {
-                self.calibration
-                    .mz(id, at, t)
-                    .ok_or_else(|| bad(format!("scan {}: no m/z for the time {t}", r.id)))
+                self.calibration.mz(id, at, own, t).map_err(|m| match m {
+                    // another calibration would shift the masses: a named error, not a guess
+                    Miss::NoRecord => named(format!("scan {}: no record in MSMassCal.bin", r.id)),
+                    Miss::NoDefault => named(format!(
+                        "scan {}: CalibrationID {id:?} not in DefaultMassCal.xml",
+                        r.id
+                    )),
+                    Miss::NotFinite => bad(format!("scan {}: no m/z for the time {t}", r.id)),
+                })
             })
             .collect()
     }
@@ -160,6 +178,8 @@ impl AgilentD {
                 r.points
             )));
         }
+        // a run-length stream of a few bytes may claim millions of points: they must fit the memory of the target before any is decoded
+        crate::budget::points_fit(n, PROFILE_POINT, crate::budget::TARGET_BYTES)?;
         let raw = self.read_block(peak, r)?;
         if raw.len() < 20 {
             return Err(bad(format!(
@@ -191,22 +211,18 @@ impl AgilentD {
 }
 
 impl AgilentD {
-    /// userParams of a spectrum of an LC/MS run: the collision energy and the fragmentor voltage of its record, when it says them.
+    /// userParams of a spectrum of an LC/MS run: the fragmentor voltage of its record and, on a spectrum without a precursor (all-ions MS1), the collision
+    /// energy, when it says them; a fragmentation spectrum carries its energy in the activation of its precursor (`ce_of`).
     pub(crate) fn energies_of(&self, s: &crate::mzml::Spectrum) -> Vec<(String, String)> {
-        let Some(r) =
-            s.id.strip_prefix("scan=")
-                .and_then(|n| n.parse::<usize>().ok())
-                .and_then(|n| self.records.get(n.checked_sub(1)?))
-                .filter(|r| format!("scan={}", r.id) == s.id)
-        else {
+        let Some(r) = super::scan::record_of(&self.records, &s.id) else {
             return Vec::new();
         };
         let mut out = Vec::new();
-        if r.collision_energy > 0.0 {
-            out.push((
-                "collision energy".to_string(),
-                format!("{}", r.collision_energy),
-            ));
+        if let Some(ce) = r
+            .collision_energy
+            .filter(|&c| c > 0.0 && s.precursor.is_none())
+        {
+            out.push(("collision energy".to_string(), format!("{ce}")));
         }
         if r.fragmentor > 0.0 {
             out.push((

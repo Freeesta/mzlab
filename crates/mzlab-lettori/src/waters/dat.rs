@@ -27,6 +27,26 @@ impl Calibration {
         })
     }
 
+    /// The calibration of a scan with index mark `mark`: none for the scans the acquisition stored already calibrated (the polynomial is not applied twice).
+    pub(super) fn for_mark(&self, mark: u8) -> Calibration {
+        if mark == super::idx::CALIBRATED {
+            Calibration::default()
+        } else {
+            self.clone()
+        }
+    }
+
+    /// What the header of a scan says of its m/z calibration.
+    pub(super) fn label(&self, stored: bool) -> &'static str {
+        if stored {
+            "as stored by the acquisition (index mark 0x4C: already calibrated)"
+        } else if self.t1 {
+            "polynomial of _HEADER.TXT applied by mzLab"
+        } else {
+            "none (no Cal Function line for this function)"
+        }
+    }
+
     pub(super) fn apply(&self, mz: f64) -> f64 {
         if !self.t1 || self.coef.is_empty() || mz <= 0.0 {
             return mz;

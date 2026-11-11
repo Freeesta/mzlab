@@ -1,7 +1,8 @@
 #![cfg(feature = "waters")]
 //! MassLynx folders read through the module, on real files only (the private data repository, `MZLAB_DATI` or `mzlab-dati` beside this one, folder `dati/formati/`); every
 //! test skips without them. Parity with the mzML of msconvert where the repository has one: `waters/raw/xevo_tqxs_pair_ST004453/` (SRM chromatograms and the analog traces).
-//! The TOF, MSe, DDA and old TQ folders have no mzML of msconvert there: their numbers are checked against the index of the folder itself (the TIC of each scan).
+//! The TOF, MSe, DDA and old TQ folders have no mzML of msconvert there: their numbers are checked against the index of the folder itself (the TIC of each scan; within 10 %
+//! for the lock-mass reference scans, whose TIC is not their sum).
 mod common_waters;
 use std::path::Path;
 
@@ -83,10 +84,17 @@ fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
                 "{rel} scan {k}"
             );
             let sum: f64 = s.intensity.iter().map(|&i| f64::from(i)).sum();
+            // the lock-mass reference scans (12-byte centroids, mark 0x08) are not summed into the TIC of the index: the vendor library reads the same
+            // intensities as this reader and the same TIC, up to 10 % apart (TS-01); every other scan, 0x4C centroids included, adds up to its TIC
+            let h = l.scan_header(0, k).unwrap();
+            let reference = h
+                .iter()
+                .any(|f| f.nome == "role" && f.valore == "lock mass reference");
+            let tol = if reference { 0.10 } else { 2e-3 };
             if idx[k].tic > 0.0 {
                 assert!(
-                    (sum - idx[k].tic).abs() <= 2e-3 * idx[k].tic,
-                    "{rel} scan {k}: sum {sum} vs TIC {}",
+                    (sum - idx[k].tic).abs() <= tol * idx[k].tic,
+                    "{rel} scan {k}: sum {sum} vs TIC {} ({h:?})",
                     idx[k].tic
                 );
             }
@@ -103,13 +111,13 @@ fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
     }
 }
 
-/// An id without the `ce=` and `name=` words mzLab adds to the one of msconvert.
+/// An id without the `ce=`, `polarity=` and `name=` words mzLab adds to the one of msconvert (which writes the polarity as a `- ` prefix, stripped by the caller).
 fn bare(id: &str) -> String {
     id.split(" name=")
         .next()
         .unwrap_or(id)
         .split(' ')
-        .filter(|w| !w.starts_with("ce="))
+        .filter(|w| !w.starts_with("ce=") && !w.starts_with("polarity="))
         .collect::<Vec<_>>()
         .join(" ")
 }

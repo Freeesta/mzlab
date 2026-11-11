@@ -5,7 +5,9 @@ use super::header::BrukerHeader;
 use super::spectra::{build, summed, Desc};
 use super::sqlite_min::Sqlite;
 use super::tables::Data;
-use super::tdf_helpers::{absent, bad_index, cartella, cut_ones, recognize, sum_scan, take};
+use super::tdf_helpers::{
+    absent, bad_index, cartella, cut_ones, legacy_key, no_calibration, recognize, sum_scan, take,
+};
 use super::tsf;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
@@ -52,7 +54,7 @@ impl BrukerReader {
         let Some(db_m) = take(&mut fs, base) else {
             return Err(match fs.find(&bin) {
                 Some(_) => absent(&first_one, base),
-                None => Error::new("err.file.brukerBaf"),
+                None => Error::new(legacy_key(&fs).unwrap_or("err.file.brukerBaf")),
             });
         };
         let bin_m = take(&mut fs, &bin).ok_or_else(|| absent(&db_m.nome, &bin))?;
@@ -69,6 +71,14 @@ impl BrukerReader {
         let all = desc.len();
         desc.retain(|d| !cut[d.frame]);
         let missing_ones = all - desc.len();
+        // a frame without a usable MzCalibration: refused when the run opens, not at its first spectrum
+        let uncalibrated = desc
+            .iter()
+            .map(|d| &data.frames[d.frame])
+            .find(|f| !data.cal.get(&f.cal).is_some_and(|c| c.validate()));
+        if let Some(f) = uncalibrated {
+            return Err(no_calibration(f.id));
+        }
         let header = BrukerHeader::read(&data, tsf);
         let compression = data
             .meta
@@ -188,9 +198,7 @@ impl BrukerReader {
             .cal
             .get(&f.cal)
             .filter(|c| c.validate())
-            .ok_or_else(|| {
-                Error::new("err.file.brukerDamaged").with("detail", "no usable MzCalibration")
-            })?
+            .ok_or_else(|| no_calibration(f.id))?
             .clone();
         let (tof, y, profilo) = self.points(&d)?;
         self.maxima[k] = Some(maximum(&y));
@@ -395,11 +403,16 @@ impl Reader for BrukerReader {
                     w.width.to_string(),
                 ));
                 params.push(("mzLab collision energy (eV)".to_string(), w.ce.to_string()));
-                // the window the instrument isolated and the energy it applied; the dissociation method is not said in the file
+                // the window the instrument isolated (its centre is `IsolationMz`, not the selected ion) and the energy it applied; the dissociation method is not said in the file
                 let meta = w.width / 2.0;
+                let charge = d
+                    .load
+                    .filter(|&z| z != 0)
+                    .and_then(|z| i32::try_from(z).ok());
                 precursors.extend(s.precursor.map(|mz| Precursore {
                     selected_mz: Some(mz),
-                    iso_target: Some(mz),
+                    charge,
+                    iso_target: Some(w.mz),
                     iso_lower: Some(meta),
                     iso_upper: Some(meta),
                     energy: (w.ce > 0.0).then(|| ("MS:1000045".to_string(), w.ce)),

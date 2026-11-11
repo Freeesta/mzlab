@@ -28,6 +28,8 @@ function lineData(p) {
     (p.ints || []).filter(it => it.key === s.key).forEach(it => {
       let b = -1; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= it.a && s.x[i] <= it.b && (b < 0 || s.y[i] > s.y[b])) b = i;
       if (b >= 0) rows.push([`${s.name} · ${T("tdati.apex", { a: nm(it.a, 2), b: nm(it.b, 2) })}`, nm(s.x[b], 4), nm(s.y[b], 1)]);
+      const W = /** @type {any} */ (window).INTEND, w = { ...it, a: iLo(it), b: iHi(it) };        // the two ends where the area meets its baseline (integra-estremi.js), as dragged
+      if (W) [["a", "tdati.int.a"], ["b", "tdati.int.b"]].forEach(([e, k]) => { const t = W.shown(s, w, e); rows.push([`${s.name} · ${T(k, { a: nm(w.a, 2), b: nm(w.b, 2) })}`, nm(t, 4), nm(W.baseY(s, w, t), 1)]); });
     });
   });
   const unit = p.kind === "press" ? `${T("axis.pressure")}${a.sr[0] && a.sr[0].unit ? " (" + a.sr[0].unit + ")" : ""}` : reg ? `${T("tdati.col.value")}${a.sr[0] && a.sr[0].unit ? " (" + a.sr[0].unit + ")" : ""}` : T("tdati.col.int");

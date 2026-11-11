@@ -1,4 +1,4 @@
-use super::super::lccal::{Calibration, MASS_CAL_HEAD};
+use super::super::lccal::{Calibration, Miss, MASS_CAL_HEAD};
 use super::super::lcprofile::{lzf, run_length};
 
 #[test]
@@ -22,18 +22,40 @@ fn lzf_literal_and_back_reference() {
 }
 
 #[test]
-fn calibration_uses_the_scan_coefficients_before_the_default() {
+fn calibration_uses_the_scan_coefficients_and_never_others() {
     let xml = "<DefaultCalibration DefaultCalibrationID=\"1\"><Step Number=\"1\"><CalibrationFormula>Traditional</CalibrationFormula><ValueUseFlags>0</ValueUseFlags><Values><Value Number=\"1\">0.5</Value><Value Number=\"2\">2</Value></Values></Step><Step Number=\"2\"><CalibrationFormula>Polynomial</CalibrationFormula><ValueUseFlags>1</ValueUseFlags><Values><Value Number=\"1\">0</Value><Value Number=\"2\">100</Value><Value Number=\"3\">3</Value></Values></Step></DefaultCalibration>";
+    // a scan without its own coefficients (MassCalOffset 0): the default, (0.5·(10−2))² − 3·10⁰ = 16 − 3
     let c = Calibration::parse(None, Some(xml.as_bytes()));
-    // (0.5·(10−2))² − 3·10⁰ = 16 − 3
-    assert_eq!(c.mz(1, None, 10.0), Some(13.0));
+    assert_eq!(c.mz(Some(1), None, false, 10.0), Ok(13.0));
+    assert_eq!(c.mz(None, None, false, 10.0), Ok(13.0));
+    // one that has them and no MSMassCal.bin, or names a calibration that is not there: no m/z
+    assert_eq!(c.mz(Some(1), Some(0), true, 10.0), Err(Miss::NoRecord));
+    assert_eq!(c.mz(Some(2), None, false, 10.0), Err(Miss::NoDefault));
     let mut cal = vec![0u8; MASS_CAL_HEAD];
     cal.extend(10u32.to_le_bytes());
     for v in [1.0f64, 0.0, 0.0, 100.0, 1.0] {
         cal.extend(v.to_le_bytes());
     }
     cal.extend([0u8; 40]);
+    // an emptied record (all zeros)
+    cal.extend([0u8; 84]);
     let c = Calibration::parse(Some(&cal), Some(xml.as_bytes()));
-    assert_eq!(c.mz(1, Some(0), 10.0), Some(99.0));
-    assert_eq!(c.mz(1, Some(5), 10.0), Some(13.0));
+    assert_eq!(c.mz(Some(1), Some(0), true, 10.0), Ok(99.0));
+    assert_eq!(c.mz(Some(1), Some(1), true, 10.0), Err(Miss::NoRecord));
+    assert_eq!(c.mz(Some(1), Some(5), true, 10.0), Err(Miss::NoRecord));
+}
+
+#[test]
+fn a_profile_of_16_million_points_does_not_fit_the_site() {
+    use crate::budget::{points_fit, NATIVE_BUDGET_MB, WASM_BUDGET_MB};
+    // the largest block the header may claim: 16 + 4 n bytes under 64 MB, a stored stream of 24 bytes
+    let n = ((1usize << 26) - 16) / 4;
+    let (site, app) = (WASM_BUDGET_MB << 20, NATIVE_BUDGET_MB << 20);
+    assert_eq!(
+        points_fit(n, super::PROFILE_POINT, site).unwrap_err().key,
+        "error.memoryBudget"
+    );
+    assert!(points_fit(n, super::PROFILE_POINT, app).is_ok());
+    // a profile of the size real Q-TOF scans have reads on both
+    assert!(points_fit(400_000, super::PROFILE_POINT, site).is_ok());
 }

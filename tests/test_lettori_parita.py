@@ -86,10 +86,13 @@ def da_wasm(tools, fam, ds: Path) -> bytes:
     return out.read_bytes()
 
 
-def da_cli(tools, fam, ds: Path, *extra: str) -> bytes:
+def da_cli(tools, fam, ds: Path, *extra: str, code: int = 0) -> bytes:
+    """The mzML the CLI writes; `code` 3 for a cut dataset (written, with the scans missing named on stderr)."""
     out = tools["tmp"] / f"cli_{fam}"
     r = run([str(tools["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1", *extra])
-    assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
+    assert r.returncode == code, r.stdout[-1500:] + r.stderr[-1500:]
+    if code == 3:
+        assert "partial read, " in r.stderr, r.stderr[-1500:]
     files = sorted(out.glob("*.mzML"))
     assert len(files) == 1, files
     return files[0].read_bytes()
@@ -164,10 +167,21 @@ def test_module_mzml_equals_the_cli_one(tools, fam):
     assert sha(wasm) == sha(cli), (fam, len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def test_waters_index_marks_equal_the_cli(tools):
+    """A folder with the index marks set both ways (0x18 scans get the polynomial of `_HEADER.TXT`, 0x4C scans keep the stored m/z; a flag bit above the 22-bit count):
+    the module and `mzlab-cli convert` write the same mzML, byte for byte."""
+    import waters_sintetico
+    ds = waters_sintetico.write_flags(tools["tmp"] / "in_waters_flags")
+    cli = da_cli(tools, "waters_flags", ds)
+    wasm = da_wasm(tools, "waters", ds)
+    assert cli.count(b"<spectrum ") == 40
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
     """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte."""
     ds = create("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")
-    cli = da_cli(tools, "bruker_tagliato", ds)
+    cli = da_cli(tools, "bruker_tagliato", ds, code=3)
     wasm = da_wasm(tools, "bruker", ds)
     assert cli.count(b"<spectrum ") == 3
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
@@ -180,7 +194,7 @@ def test_cropped_agilent_equals_the_cli(tools, membro):
     ds = agilent_sintetico.write(tools["tmp"] / f"in_agilent_{membro}", "synt.D", 60)
     f = ds / "AcqData" / membro
     f.write_bytes(f.read_bytes()[:-7])
-    cli = da_cli(tools, "agilent", ds)
+    cli = da_cli(tools, "agilent", ds, code=3)
     wasm = da_wasm(tools, "agilent", ds)
     assert cli.count(b"<spectrum ") == 59
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))

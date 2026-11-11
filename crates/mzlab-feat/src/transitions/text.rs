@@ -1,4 +1,4 @@
-//! The texts of `chrom.transitions@1`: for each sample and each row of the table, the chromatogram of the row (unit resolution: Q1 and Q3 within `mz_tol`,
+//! The texts of `chrom.transitions@2`: for each sample and each row of the table, the chromatogram of the row (unit resolution: Q1 and Q3 within `mz_tol`,
 //! the same polarity) integrated inside RT ± window (`peaks`, long; `table`, one row per transition with the area and apex RT of each sample), or, for the
 //! rows without an RT, the candidate peaks of their channel over all samples sorted by area (`candidates`). Isobaric rows share their candidates: which
 //! peak is which isomer is left to the user.
@@ -32,7 +32,7 @@ pub struct Settings {
     pub min_points: usize,
     pub max_candidates: usize,
     pub group_rt: f64,
-    /// What the areas are measured from: `Edges` (the line between the edges of the peak, the default) or `Zero`.
+    /// What the areas are measured from: `Zero` (the default) or `Edges` (the line between the edges of the peak, what `@1` plans keep).
     pub baseline: Baseline,
 }
 
@@ -47,7 +47,7 @@ impl Default for Settings {
             min_points: 3,
             max_candidates: 5,
             group_rt: 0.1,
-            baseline: Baseline::Edges,
+            baseline: mzlab_core::baseline::DEFAULT,
         }
     }
 }
@@ -74,8 +74,8 @@ impl Settings {
             max_candidates: count("max_candidates", d.max_candidates),
             group_rt: num("group_rt", d.group_rt),
             baseline: match get("baseline").and_then(Value::str) {
-                Some("zero") => Baseline::Zero,
-                _ => Baseline::Edges,
+                Some("edges") => Baseline::Edges,
+                _ => Baseline::Zero,
             },
         }
     }
@@ -176,21 +176,11 @@ fn candidates(c: &Channel, s: &Settings) -> Vec<Found> {
     v
 }
 
-/// The trailing column that states the baseline of the areas, written only when it is not the default (`Edges`), so old plans keep their bytes.
-fn base_head(s: &Settings) -> &'static str {
-    if s.baseline == Baseline::Edges {
-        ""
-    } else {
-        ",baseline"
-    }
-}
+/// The trailing column that states the baseline of the areas, in every output and for every mode, so a result always says what it was measured from.
+const BASE_HEAD: &str = ",baseline";
 
 fn base_cell(s: &Settings) -> String {
-    if s.baseline == Baseline::Edges {
-        String::new()
-    } else {
-        format!(",{}", s.baseline.name())
-    }
+    format!(",{}", s.baseline.name())
 }
 
 /// A CSV field: quoted when it holds a comma, a quote or a line break.
@@ -223,15 +213,8 @@ fn row_cells(r: &Row) -> String {
 const ROW_HEAD: &str = "name,isomer_group,q1,q3,polarity,rt,rt_window";
 
 fn peaks_text(rows: &[Row], cells: &[(String, Vec<Cell>)], s: &Settings) -> String {
-    let below = if s.baseline == Baseline::Edges {
-        ""
-    } else {
-        ",below"
-    };
-    let mut out = format!(
-        "sample,{ROW_HEAD},apex_rt,area,height,snr,fwhm_s,peak{}{below}\n",
-        base_head(s)
-    );
+    let mut out =
+        format!("sample,{ROW_HEAD},apex_rt,area,height,snr,fwhm_s,peak{BASE_HEAD},below\n");
     for (sample, v) in cells {
         for (r, c) in rows.iter().zip(v) {
             let f = c.found.as_ref();
@@ -246,9 +229,8 @@ fn peaks_text(rows: &[Row], cells: &[(String, Vec<Cell>)], s: &Settings) -> Stri
                 opt(f.map(|f| f.fwhm), 1),
                 c.flag
             );
-            if s.baseline != Baseline::Edges {
-                out += &format!("{},{}", base_cell(s), opt(c.below, 1));
-            }
+            // `below` stays empty against the edge line: `find_peak` clips what lies under it to 0
+            out += &format!("{},{}", base_cell(s), opt(c.below, 1));
             out.push('\n');
         }
     }
@@ -263,7 +245,7 @@ fn table_text(rows: &[Row], cells: &[(String, Vec<Cell>)], s: &Settings) -> Stri
     for (sample, _) in cells {
         out += &format!(",{}", field(&format!("apex_rt {sample}")));
     }
-    out += &format!(",n_peaks,rt_mean,rt_sd{}\n", base_head(s));
+    out += &format!(",n_peaks,rt_mean,rt_sd{}\n", BASE_HEAD);
     for (k, r) in rows.iter().enumerate() {
         let found: Vec<Option<&Found>> = cells.iter().map(|(_, v)| v[k].counted()).collect();
         out += &row_cells(r);
@@ -294,7 +276,7 @@ fn table_text(rows: &[Row], cells: &[(String, Vec<Cell>)], s: &Settings) -> Stri
 fn candidates_text(rows: &[Row], samples: &[(String, Vec<Channel>)], s: &Settings) -> String {
     let mut out = format!(
         "{ROW_HEAD},candidate,apex_rt,apex_rt_min,apex_rt_max,samples,area_max,area_median{}\n",
-        base_head(s)
+        BASE_HEAD
     );
     for r in rows.iter().filter(|r| r.rt.is_none()) {
         let mut all: Vec<(f64, f64, usize)> = Vec::new();
@@ -344,7 +326,7 @@ fn candidates_text(rows: &[Row], samples: &[(String, Vec<Channel>)], s: &Setting
     out
 }
 
-/// The text of `chrom.transitions@1` for the table `table` (its CSV) over the mzML `files` (name, bytes) in their order. Before each file is read its
+/// The text of `chrom.transitions@2` for the table `table` (its CSV) over the mzML `files` (name, bytes) in their order. Before each file is read its
 /// decoding (`mzml_estimate`, with every file, the copy the reader takes and the channels already read in memory) must fit in `cap` bytes, else
 /// `error.memoryBudget` (phase `read`).
 pub fn transitions_text(
