@@ -18,6 +18,7 @@ I18N.add("en", {
   "err.file.wiffScanType": "Experiment {experiment} of this .wiff uses a scan type (code {code}) this program does not read yet, so nothing was loaded rather than reading it wrong. Convert the file to mzML with MSConvert and open the mzML.",
   "err.file.wiffPeriods": "The method of this .wiff has {periods} periods and this program reads one-period methods only, so nothing was loaded. Convert the file to mzML with MSConvert and open the mzML.",
   "err.file.wiffNeeds2": "This .wiff keeps its spectra in the matching .wiff2 file, which this program does not read yet, so nothing was loaded. Convert the .wiff2 to mzML with MSConvert and open the mzML.",
+  "err.file.wiffMassRange": "The method of this .wiff announces {expected} entries for experiment {experiment}, but its mass table does not hold exactly that many ({detail}), so this sample was not loaded rather than pairing transitions with the wrong values. Convert the file to mzML with MSConvert and open the mzML.",
   "err.file.shimadzu": "The Shimadzu file cannot be read ({detail}).",
   "err.file.mzmlWrite": "The mzML could not be written.",
   "err.file.unknown": "The program did not receive the file ({detail}): try loading it again.",

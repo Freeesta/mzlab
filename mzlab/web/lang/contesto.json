@@ -122,6 +122,7 @@
   "err.file.wiffScanType": "{experiment} = numero dell'esperimento nel metodo (da 1); {code} = codice numerico del tipo di scansione scritto nel file.",
   "err.file.wiffPeriods": "{periods} = numero di periodi del metodo.",
   "err.file.wiffNeeds2": "Nessun parametro.",
+  "err.file.wiffMassRange": "{experiment} = numero dell'esperimento nel metodo (da 1); {expected} = voci annunciate dall'intestazione; {detail} = causa tecnica in inglese.",
   "err.file.shimadzu": "{detail} = motivo tecnico (testo inglese del lettore).",
   "err.file.unknown": "{detail} = motivo tecnico (testo inglese del motore).",
   "err.file.raw": "{detail} = motivo tecnico (testo inglese della libreria).",
