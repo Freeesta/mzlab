@@ -92,3 +92,31 @@ fn write_for_the_independent_reader() {
     .unwrap();
     std::fs::write(format!("{dir}/big.bin"), &big).unwrap();
 }
+
+/// `z` with its central directory entry repeated `k` times: every copy points at the same local header and bytes.
+fn repeated_entry(z: &[u8], k: usize) -> Vec<u8> {
+    let end = z.len() - 22;
+    let cd = u32::from_le_bytes(z[end + 16..end + 20].try_into().unwrap()) as usize;
+    let mut out = z[..cd].to_vec();
+    (0..k).for_each(|_| out.extend_from_slice(&z[cd..end]));
+    let mut rec = z[end..].to_vec();
+    rec[8..10].copy_from_slice(&(k as u16).to_le_bytes());
+    rec[10..12].copy_from_slice(&(k as u16).to_le_bytes());
+    rec[12..16].copy_from_slice(&(((end - cd) * k) as u32).to_le_bytes());
+    out.extend(rec);
+    out
+}
+
+#[test]
+fn entries_that_share_bytes_are_refused_not_copied_again() {
+    // 65 535 entries over one 64 KB file would expand to 4 GB
+    let z = zip_stored(&[("a", &[7u8; 65_536][..])]).unwrap();
+    assert_eq!(unzip_stored(&repeated_entry(&z, 1)).unwrap().len(), 1);
+    assert_eq!(
+        unzip_stored(&repeated_entry(&z, 2)).unwrap_err(),
+        "zip: entries overlap"
+    );
+    let t = std::time::Instant::now();
+    assert!(unzip_stored(&repeated_entry(&z, 2_000)).is_err());
+    assert!(t.elapsed().as_secs() < 5);
+}
