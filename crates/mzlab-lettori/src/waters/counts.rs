@@ -1,11 +1,46 @@
 //! What two sources of the same count of a folder do not agree on, as notices of `apri`: the channels of a SIR/MRM function (`_FUNCTNS.INF` against the records per scan of
 //! the IDX, and scans with fewer records than the others), the functions (`_extern.inf` against `_FUNCTNS.INF`), scans past a DAT cut short and a missing `_HEADER.TXT`.
-//! Nothing is guessed: the notice names what is absent.
+//! Nothing is guessed: the notice names what is absent. `losses` counts the scans of the index that are not read, with the key of the cause (`Reader::losses`).
 
 use super::inf::Extern;
 use super::reader::Fun;
+use mzlab_core::readers::{Losses, TRUNCATED};
 
 const KEY: &str = "meta.nonDecodificato";
+/// Scans of a scanning function whose `_FUNCnnn.DAT` is not in the folder.
+pub(super) const MEMBER_MISSING: &str = "warn.file.memberMissing";
+/// Scans of a scanning function whose DAT record width is none of the decoded ones.
+pub(super) const RECORD_WIDTH: &str = "warn.file.recordWidth";
+
+/// Scans of the index past the end of a DAT cut short (the rows of a function without its DAT are a missing member, not a cut).
+pub(super) fn cut(funs: &[Fun]) -> usize {
+    funs.iter().filter(|f| f.dat.is_some()).map(|f| f.cut).sum()
+}
+
+/// The scans of sample `c` the index lists and the `n` read: past the end of a DAT cut short, of a scanning function without its DAT, of one whose record
+/// width is not decoded. The cause is the one of the most scans (the first of that order on a tie).
+pub(super) fn losses(funs: &[Fun], c: usize, n: usize) -> Losses {
+    if c != 0 {
+        return Losses::complete(n);
+    }
+    // every row of a function without its DAT lies past its (empty) end: `cut` holds the ones `cuts` set to 0 records
+    let rows = |f: &Fun| f.cut + f.righe.iter().filter(|r| r.count > 0).count();
+    let scanning = || funs.iter().filter(|f| !f.f.mirato());
+    let gone = scanning().filter(|f| f.dat.is_none()).map(rows).sum();
+    let width = scanning().filter(|f| f.dat.is_some() && f.cod.is_none());
+    let parts = [
+        (cut(funs), TRUNCATED),
+        (gone, MEMBER_MISSING),
+        (width.map(rows).sum(), RECORD_WIDTH),
+    ];
+    let lost: usize = parts.iter().map(|p| p.0).sum();
+    let cause = parts
+        .iter()
+        .rev()
+        .max_by_key(|p| p.0)
+        .map_or(TRUNCATED, |p| p.1);
+    Losses::of(n + lost, n, cause)
+}
 
 /// What the channel counts of a SIR/MRM function do not agree on: scans of the index with fewer records than the others, and the channels of `_FUNCTNS.INF`
 /// against the records per scan of the index (two sources of the same number).
@@ -40,14 +75,18 @@ pub(super) fn notes(name: &str, funs: &[Fun], ext: &Extern, header: bool) -> Vec
         .flat_map(channel_notes)
         .collect();
     // scans of the index past the end of a DAT cut short are not read: how many, and in which function
-    v.extend(funs.iter().filter(|f| f.cut > 0).map(|f| {
-        let k = f.f.indice;
-        format!(
-            "function {k}: {} of {} scans past the end of _FUNC{k:03}.DAT",
-            f.cut,
-            f.righe.len()
-        )
-    }));
+    v.extend(
+        funs.iter()
+            .filter(|f| f.cut > 0 && f.dat.is_some())
+            .map(|f| {
+                let k = f.f.indice;
+                format!(
+                    "function {k}: {} of {} scans past the end of _FUNC{k:03}.DAT",
+                    f.cut,
+                    f.righe.len()
+                )
+            }),
+    );
     // a function `_extern.inf` describes past the end of `_FUNCTNS.INF` is named; it has no data to read
     let past: Vec<String> = ext
         .funzioni

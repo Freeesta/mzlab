@@ -416,6 +416,8 @@ I18N.add("it", {
   "warn.centroid.widthFallback": "Nelle scansioni profilo ci sono meno di 8 picchi isolati, quindi la larghezza dei picchi non è stata misurata: i centroidi usano la larghezza di ripiego di 0,7 Da. Sui dati ad alta risoluzione indica tu la larghezza (fwhm).",
   "warn.file.truncated": "Il file finisce prima di alcune scansioni che dichiara: si legge e si scrive quello che contiene, il resto manca. Controlla la copia del file.",
   "warn.file.brukerCutBin": "Il file analysis.tdf_bin (o analysis.tsf_bin) di questa cartella .d finisce prima di alcuni frame elencati in analysis.tdf: si leggono e si scrivono gli spettri dei frame interi, mancano quelli dei frame oltre la sua fine. Copia di nuovo l'intera cartella .d.",
+  "warn.file.memberMissing": "Manca un file di dati della cartella (per esempio _FUNC002.DAT): le scansioni che il suo indice elenca non si leggono, il resto si legge e si scrive. Controlla la copia della cartella.",
+  "warn.file.recordWidth": "Una funzione della cartella registra i punti con una dimensione di record che mzLab non decodifica: le sue scansioni non si leggono, il resto si legge e si scrive.",
   "warn.flow.formula.subformulas": "Questo ione ha più sotto-formule di max_subformulas, quindi nessun frammento è stato provato: alza max_subformulas o indica meno elementi.",
   "warn.flow.group.corrFiles": "La correlazione tra le righe richiede almeno tanti file quanti min_corr_samples (3 se non lo cambi): con meno file non è stata calcolata, quindi non ci sono archi di correlazione. Isotopi e specie ioniche restano.",
   "warn.msngrafo.rottureCapped": "Ci sono troppe rotture di legami: sono state provate solo le prime.",

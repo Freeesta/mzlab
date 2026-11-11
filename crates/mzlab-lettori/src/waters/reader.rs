@@ -12,8 +12,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::readers::{
-    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Position, Reader, ReaderEntry,
-    Sample, ScanEntry, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Losses, Position, Reader,
+    ReaderEntry, Sample, ScanEntry, CONTRATTO,
 };
 
 const FUNCTNS: &str = "_FUNCTNS.INF";
@@ -110,11 +110,12 @@ impl Reader for WatersReader {
     }
 
     fn missing(&mut self, c: usize) -> usize {
-        if c == 0 {
-            self.funs.iter().map(|f| f.cut).sum()
-        } else {
-            0
-        }
+        super::counts::cut(&self.funs) * usize::from(c == 0)
+    }
+
+    fn losses(&mut self, c: usize) -> Result<Losses> {
+        let n = self.index_without_tic(c)?.len();
+        Ok(super::counts::losses(&self.funs, c, n))
     }
 
     fn samples(&self) -> &[Sample] {
