@@ -55,66 +55,6 @@ pub fn header_count(header: &[u8]) -> Option<u32> {
     u32_at(header, HEADER_COUNT)
 }
 
-/// The `n` entries of `d`, or why the stream does not hold exactly `n` entries of the grammar (the text goes in the `detail` of the error).
-pub fn parse(d: &[u8], n: u32) -> Result<Vec<Entry>, String> {
-    let n_params =
-        u32_at(d, 36).ok_or_else(|| format!("stream of {} bytes has no head", d.len()))?;
-    if n_params > MAX_PARAMS {
-        return Err(format!("{n_params} parameters per entry"));
-    }
-    let mut at = HEAD;
-    let mut out = Vec::with_capacity(n.min(4096) as usize);
-    for k in 0..n {
-        let cut = || {
-            format!(
-                "entry {} of {n} runs past the end ({} bytes)",
-                k + 1,
-                d.len()
-            )
-        };
-        let len = u16_at(d, at + 20).ok_or_else(cut)?;
-        if len % 2 != 0 {
-            return Err(format!("entry {} has a name of odd length {len}", k + 1));
-        }
-        let name = utf16(d.get(at + 22..at + 22 + len).ok_or_else(cut)?);
-        let mut e = Entry {
-            m0: f32_at(d, at).ok_or_else(cut)?,
-            m1: f32_at(d, at + 4).ok_or_else(cut)?,
-            m2: f32_at(d, at + 8).ok_or_else(cut)?,
-            dwell: f32_at(d, at + 12).ok_or_else(cut)?,
-            name,
-            params: Vec::with_capacity(n_params as usize),
-        };
-        at += 22 + len;
-        for _ in 0..n_params {
-            let plen = u16_at(d, at).ok_or_else(cut)?;
-            if plen == 0 || plen % 2 != 0 {
-                return Err(format!(
-                    "entry {} has a parameter tag of length {plen}",
-                    k + 1
-                ));
-            }
-            let id = utf16(d.get(at + 2..at + 2 + plen).ok_or_else(cut)?);
-            let v = at + 2 + plen;
-            e.params.push(Param {
-                id,
-                start: f32_at(d, v).ok_or_else(cut)?,
-                stop: f32_at(d, v + 4).ok_or_else(cut)?,
-            });
-            f32_at(d, v + 8).ok_or_else(cut)?;
-            at = v + 12;
-        }
-        out.push(e);
-    }
-    if at != d.len() {
-        return Err(format!(
-            "{n} entries end at byte {at}, the stream has {}",
-            d.len()
-        ));
-    }
-    Ok(out)
-}
-
 /// The entries `ExperimentHeader` +176 announces for experiment `i` (`None` when the header is missing or says 0: no count to read by).
 pub(super) fn announced(ole: &Ole, base: &str, i: usize) -> Option<u32> {
     ole.read(&format!(
@@ -182,59 +122,66 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
     Kind::Scan { range, ce }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn entry(q1: f32, q3: f32, name: &str, params: &[(&str, f32)]) -> Vec<u8> {
-        let mut b = Vec::new();
-        for v in [q1, 0.0, q3, 25.0] {
-            b.extend(v.to_le_bytes());
+/// The `n` entries of `d`, or why the stream does not hold exactly `n` entries of the grammar (the text goes in the `detail` of the error).
+pub fn parse(d: &[u8], n: u32) -> Result<Vec<Entry>, String> {
+    let n_params =
+        u32_at(d, 36).ok_or_else(|| format!("stream of {} bytes has no head", d.len()))?;
+    if n_params > MAX_PARAMS {
+        return Err(format!("{n_params} parameters per entry"));
+    }
+    let mut at = HEAD;
+    let mut out = Vec::with_capacity(n.min(4096) as usize);
+    for k in 0..n {
+        let cut = || {
+            format!(
+                "entry {} of {n} runs past the end ({} bytes)",
+                k + 1,
+                d.len()
+            )
+        };
+        let len = u16_at(d, at + 20).ok_or_else(cut)?;
+        if len % 2 != 0 {
+            return Err(format!("entry {} has a name of odd length {len}", k + 1));
         }
-        b.extend([0; 4]);
-        let nm: Vec<u8> = name.encode_utf16().flat_map(u16::to_le_bytes).collect();
-        b.extend((nm.len() as u16).to_le_bytes());
-        b.extend(nm);
-        for (id, v) in params {
-            let t: Vec<u8> = id.encode_utf16().flat_map(u16::to_le_bytes).collect();
-            b.extend((t.len() as u16).to_le_bytes());
-            b.extend(t);
-            for x in [*v, *v, 0.0] {
-                b.extend(x.to_le_bytes());
+        let name = utf16(d.get(at + 22..at + 22 + len).ok_or_else(cut)?);
+        let mut e = Entry {
+            m0: f32_at(d, at).ok_or_else(cut)?,
+            m1: f32_at(d, at + 4).ok_or_else(cut)?,
+            m2: f32_at(d, at + 8).ok_or_else(cut)?,
+            dwell: f32_at(d, at + 12).ok_or_else(cut)?,
+            name,
+            params: Vec::with_capacity(n_params as usize),
+        };
+        at += 22 + len;
+        for _ in 0..n_params {
+            let plen = u16_at(d, at).ok_or_else(cut)?;
+            if plen == 0 || plen % 2 != 0 {
+                return Err(format!(
+                    "entry {} has a parameter tag of length {plen}",
+                    k + 1
+                ));
             }
+            let id = utf16(d.get(at + 2..at + 2 + plen).ok_or_else(cut)?);
+            let v = at + 2 + plen;
+            e.params.push(Param {
+                id,
+                start: f32_at(d, v).ok_or_else(cut)?,
+                stop: f32_at(d, v + 4).ok_or_else(cut)?,
+            });
+            f32_at(d, v + 8).ok_or_else(cut)?;
+            at = v + 12;
         }
-        b
+        out.push(e);
     }
-
-    fn stream(n_params: u32, entries: &[Vec<u8>]) -> Vec<u8> {
-        let mut d = vec![0u8; 40];
-        d[32..36].copy_from_slice(&2u32.to_le_bytes());
-        d[36..40].copy_from_slice(&n_params.to_le_bytes());
-        entries.iter().for_each(|e| d.extend(e));
-        d
+    if at != d.len() {
+        return Err(format!(
+            "{n} entries end at byte {at}, the stream has {}",
+            d.len()
+        ));
     }
-
-    #[test]
-    fn exactly_the_announced_entries_are_read() {
-        let p = [("DP", 50.0), ("CE", 20.0)];
-        let d = stream(
-            2,
-            &[
-                entry(364.1, 194.1, "Quant", &p),
-                entry(364.1, 152.1, "", &p),
-            ],
-        );
-        let e = parse(&d, 2).unwrap();
-        assert_eq!((e[0].name.as_str(), e[1].name.as_str()), ("Quant", ""));
-        assert_eq!(
-            (e[1].m0, e[1].m2, e[1].params[1].start),
-            (364.1, 152.1, 20.0)
-        );
-        assert!(parse(&d, 1).unwrap_err().contains("end at byte"));
-        assert!(parse(&d, 3).unwrap_err().contains("past the end"));
-        let mut long = d.clone();
-        long.push(0);
-        assert!(parse(&long, 2).is_err());
-        assert!(parse(&d[..30], 0).is_err());
-    }
+    Ok(out)
 }
+
+#[cfg(test)]
+#[path = "mass_range_tests.rs"]
+mod tests;
