@@ -17,7 +17,7 @@ pub const NATIVE_BUDGET_MB: usize = 1024;
 
 /// How far a zlib array whose spectrum declares no length may inflate: 32 times its compressed bytes (real spectra compress 2 to 20 times), at least 1 MB, never past `TARGET_BYTES`.
 pub fn undeclared_inflate(compressed: usize) -> usize {
-    compressed.saturating_mul(32).max(1 << 20).min(TARGET_BYTES)
+    compressed.saturating_mul(32).clamp(1 << 20, TARGET_BYTES)
 }
 
 /// What a phase may hold at once. `reserve` hands out a `Guard` that gives the bytes back when dropped.
