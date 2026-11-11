@@ -311,6 +311,41 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
     }
 }
 
+/// The evidence of origin (`api/origin`): its profile similarity runs the peak picking of `mzlab-picchi` (SNIP baseline, wavelet widths), whose
+/// `exp`/`ln` must give the same bits natively and in the `.wasm`; its numbers are written unrounded, so any last-bit difference shows.
+#[test]
+fn the_origin_route_gives_the_same_report_in_the_app_and_in_the_wasm() {
+    let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(dir.path().join("app"));
+    st.set_index_folder(dir.path().join("idx")).unwrap();
+    let (fid, _) = st.pick(example()).unwrap();
+    st.rpc("lr_put", &json!({"name": NAME, "fid": fid}), &[])
+        .unwrap();
+    st.rpc("lr_index", &json!({"name": NAME}), &[]).unwrap();
+    let items = json!([{"slot": 0, "label": NAME, "time": 0.0, "full": true}]).to_string();
+    let mut plan = vec![json!({"op": "idxopen", "slot": 0, "name": NAME})];
+    for (mz, parent) in [(149, 198), (141, 214), (122, 158), (150, 194), (158, 214), (198, 214)] {
+        plan.push(json!({"op": "origin", "items": items, "k": 0, "query": format!("?mz={mz}&parent={parent}")}));
+    }
+    let wasm = run_wasm(
+        &pkg,
+        dir.path(),
+        &dir.path().join("idx").join(format!("{NAME}.mzidx")),
+        &example(),
+        &plan,
+    );
+    compare(&st, fid, &plan, &wasm, &[1]);
+    let reports = wasm[1..]
+        .iter()
+        .filter(|w| matches!(from_wasm(w), Got::Text(t) if t.contains("\"x_snr\"")))
+        .count();
+    assert!(reports > 0, "no origin report carries a profile similarity: {wasm:?}");
+}
+
 /// A small SRM acquisition made for the test: three MS1 scans and three SRM traces, written by the writer of the core.
 fn srm_mzml() -> Vec<u8> {
     use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
