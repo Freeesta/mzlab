@@ -197,6 +197,7 @@ pub struct ChromatogramEntry {
     pub unita: String,
 }
 
+pub use listing::samples_json;
 pub use outcome::{Losses, ReadOutcome, ReadOutcomes, EVENTS_REFUSED, TRUNCATED};
 
 /// A reader of one dataset. Random access: `indice` is read once, `scansione` reads only the bytes of one scan; streaming is `scansione(c, 0..n)`.
@@ -266,6 +267,7 @@ pub trait Reader {
     }
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) } // data sections the index lacks (an incomplete copy): (recovered, left out)
     #[rustfmt::skip]    fn missing(&mut self, _c: usize) -> usize { 0 } // scans of sample `c` the index lists beyond the end of the data file (a truncated copy): not in the index
+    #[rustfmt::skip]    fn refused(&mut self, _c: usize) -> Option<Error> { None } // why sample `c` will not be read (its method, a damaged block): the listing carries it; a wrapper forwards it
     /// The scans of sample `c` the file declares and the ones read (`ReadOutcomes` pairs them with the data). A reader that drops scans for another reason than a cut file overrides this; a wrapper forwards it. Default: the rows of `index_without_tic` plus `missing`.
     fn losses(&mut self, c: usize) -> Result<Losses> {
         outcome::default_losses(self, c)
@@ -347,6 +349,7 @@ pub fn tic_ms1(entries: &[ScanEntry]) -> (Vec<f64>, Vec<f64>) {
         .unzip()
 }
 
+mod listing;
 mod outcome;
 
 #[cfg(test)]

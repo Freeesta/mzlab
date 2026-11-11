@@ -444,6 +444,7 @@ impl Reader for Scans<'_, '_> {
     fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra { self.l.scan_extra(c, k, s) }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] { self.l.not_carried() }
     fn missing(&mut self, c: usize) -> usize { self.l.missing(c) }
+    fn refused(&mut self, c: usize) -> Option<mzlab_core::Error> { self.l.refused(c) }
     fn losses(&mut self, c: usize) -> mzlab_core::Result<mzlab_core::readers::Losses> { self.l.losses(c) }
     fn variant(&mut self, c: usize) -> bool { self.l.variant(c) }
 }
