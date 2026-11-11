@@ -89,8 +89,8 @@ try:
             srcs = pg.evaluate("[...document.querySelectorAll('#bigbody img')].map(i => i.getAttribute('src'))")
             assert srcs == ["static/esempio-trasformazione.png", "static/esempio-frammentazione.png"], srcs
             assert all(pg.evaluate("[...document.querySelectorAll('#bigbody img')].map(i => !!i.alt)"))
-            pg.keyboard.press("Escape"); pg.wait_for_selector("#bigdlg:not([open])", timeout=5000)
-            assert not [u for u in reqs if "/esempi/" in u], reqs
+            pg.keyboard.press("Escape"); pg.wait_for_function("!document.querySelector('#bigdlg').open", timeout=5000)
+            assert not [u for u in reqs if "/esempi/" in u and not u.endswith("/esempi/FullScan_t15.mzML")], reqs      # only the 404 probe above
         step("lab: no example files shipped and no example entry points; Draw's example drawings open", noexamples)
         def tour():
             pg, _ = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z"); errs = []
