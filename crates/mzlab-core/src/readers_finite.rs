@@ -166,7 +166,7 @@ impl Reader for Finished {
     fn missing(&mut self, c: usize) -> usize {
         self.inner.missing(c)
     }
-    fn refused(&mut self, c: usize) -> Option<mzlab_core::Error> {
+    fn refused(&mut self, c: usize) -> Option<crate::Error> {
         self.inner.refused(c)
     }
     fn losses(&mut self, c: usize) -> Result<Losses> {
