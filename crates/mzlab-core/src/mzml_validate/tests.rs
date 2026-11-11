@@ -178,7 +178,8 @@ fn the_pass_hands_over_what_the_file_holds() {
 
 #[test]
 fn a_file_that_is_not_xml_or_not_mzml_says_so() {
-    assert_eq!(errors(&report(b"just text")), ["required"]);
+    // text with no element is not XML: the strict pass says so before the structure
+    assert_eq!(errors(&report(b"just text")), ["xml"]);
     assert_eq!(errors(&report(b"<html><body/></html>")), ["root"]);
     assert_eq!(errors(&report(b"")), ["required"]);
 }

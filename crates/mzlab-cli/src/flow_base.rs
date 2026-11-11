@@ -406,6 +406,9 @@ pub(crate) fn write_mzml_with(
         let mut w = conv.write(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))?;
         w.flush().map_err(io)?;
         let (_, bytes, sha256) = w.into_inner().map_err(|e| io(e.into_error()))?.finish();
+        // the file is read again by the validator: a conversion its own `validate` would call INVALID fails here
+        let back = std::io::BufReader::new(File::open(out).map_err(io)?);
+        mzlab_core::mzml_validate::check_written(back)?;
         Ok((bytes, sha256))
     });
     match written {

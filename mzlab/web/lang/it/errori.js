@@ -20,6 +20,7 @@ I18N.add("it", {
   "err.file.wiffNeeds2": "Questo .wiff tiene gli spettri nel file .wiff2 corrispondente, che il programma non legge ancora, quindi non è stato caricato nulla. Converti il .wiff2 in mzML con MSConvert e apri l'mzML.",
   "err.file.shimadzu": "Il file Shimadzu non si legge ({detail}).",
   "err.file.mzmlWrite": "Non riesco a scrivere l'mzML.",
+  "err.file.mzmlInvalid": "L'mzML scritto da questo file non rispetta le regole dell'mzML ({detail}), quindi non è stato tenuto. È un difetto di questo programma, non del file: segnalalo.",
   "err.file.unknown": "Il programma non ha ricevuto il file ({detail}): riprova a caricarlo.",
   "err.file.index": "Non si riesce a costruire l'indice del file ({detail}).",
   "err.file.raw": "Il file .raw (Thermo) o la cartella .raw (Waters) non si legge: serve il file intero, con tutti i suoi file ({detail}).",
