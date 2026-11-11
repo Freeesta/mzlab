@@ -116,6 +116,7 @@
   "err.flow.align.resolution": "Errore del motore di Flow: l'allineamento riceve file a risoluzione unitaria e ad alta risoluzione. {unit}, {high} = nomi dei file dei due gruppi, separati da virgole.",
   "err.mzrun.build": "Errore del motore del registro di corsa. {what} = parte del piano o dei file che manca o non è valida, {detail} = suo nome (testo inglese del motore).",
   "err.file.index": "{detail} = motivo tecnico (testo inglese del motore).",
+  "err.file.mzmlInvalid": "{detail} = primo problema trovato dal validatore nell'mzML appena scritto (testo inglese del motore).",
   "err.flow.io": "{detail} = percorso e motivo del sistema operativo (testo inglese).",
   "err.file.moduleLoad": "{family} = famiglia del lettore che non si è scaricato (agilent, thermo, sciex, ...); lo scarica la pagina da wasm-lettori/.",
   "err.file.wiff": "Nessun segnaposto nel testo. L’errore porta {detail} (la parte del .wiff che non torna, in inglese dal lettore): il CLI lo scrive tra parentesi dopo la chiave, la pagina no.",

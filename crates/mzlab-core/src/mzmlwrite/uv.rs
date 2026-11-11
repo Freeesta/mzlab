@@ -20,6 +20,8 @@ impl<W: Write> MzmlWriter<W> {
             wl.len()
         );
         s += &cv("MS:1000804", "electromagnetic radiation spectrum", "");
+        // a sampled absorbance curve, never a peak list
+        s += &cv("MS:1000128", "profile spectrum", "");
         s += &format!("<cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{time_min}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>");
         s +=
             "<userParam name=\"intensity unit\" value=\"mAU\"/><binaryDataArrayList count=\"2\">\n";

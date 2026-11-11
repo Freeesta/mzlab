@@ -218,7 +218,11 @@ pub(super) fn required_terms(element: &str, terms: &[String], path: &str, out: &
     match element {
         "spectrum" => {
             let levels = terms.iter().filter(|t| *t == "MS:1000511").count();
-            if levels != 1 {
+            // an optical spectrum (electromagnetic radiation, emission, absorption) has no MS stage
+            let optical = terms
+                .iter()
+                .any(|t| ["MS:1000804", "MS:1000805", "MS:1000806"].contains(&t.as_str()));
+            if levels > 1 || (levels == 0 && !optical) {
                 push(
                     out,
                     Severity::Error,

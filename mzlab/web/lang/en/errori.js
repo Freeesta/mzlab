@@ -21,6 +21,7 @@ I18N.add("en", {
   "err.file.wiffMassRange": "The method of this .wiff announces {expected} entries for experiment {experiment}, but its mass table does not hold exactly that many ({detail}), so this sample was not loaded rather than pairing transitions with the wrong values. Convert the file to mzML with MSConvert and open the mzML.",
   "err.file.shimadzu": "The Shimadzu file cannot be read ({detail}).",
   "err.file.mzmlWrite": "The mzML could not be written.",
+  "err.file.mzmlInvalid": "The mzML written from this file breaks the mzML rules ({detail}), so it was not kept. This is a fault of this program, not of the file: please report it.",
   "err.file.unknown": "The program did not receive the file ({detail}): try loading it again.",
   "err.file.index": "The index of the file could not be built ({detail}).",
   "err.file.raw": "The .raw file (Thermo) or the .raw folder (Waters) cannot be read: the whole file is needed, with all its files ({detail}).",

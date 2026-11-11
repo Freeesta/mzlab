@@ -1,4 +1,4 @@
-//! The mzML validator: structure (required elements, `count`, array lengths, order of m/z), the PSI-MS vocabulary (accession, name, unit, required
+//! The mzML validator: strict XML 1.0 well-formedness first (`wellformed`), then structure (required elements, `count`, array lengths, order of m/z), the PSI-MS vocabulary (accession, name, unit, required
 //! terms) and, for `indexedmzML`, the offsets, `indexListOffset` and the SHA-1 `fileChecksum`. One streaming pass, nothing of the file kept but the
 //! spectrum being read (and the index, which is as long as the list of spectra). The same pass hands each spectrum and chromatogram to the caller
 //! (`analizza`), which is how `examples/mzml_compare.rs` reads two files. Native, and in the `aperti` readers module of the page (feature `valida`).
@@ -13,6 +13,7 @@ mod structure;
 mod tests;
 #[cfg(test)]
 mod tests_broken;
+mod wellformed;
 
 use std::io::Read;
 
@@ -107,6 +108,17 @@ pub fn analyze<R: Read>(reader: R, sink: &mut dyn FnMut(Item)) -> Result<Report>
 /// `analizza` with nobody listening.
 pub fn validate<R: Read>(reader: R) -> Result<Report> {
     analyze(reader, &mut |_| {})
+}
+
+/// The check every conversion makes on the mzML it has just written: `Ok` when the validator finds no error, else `err.file.mzmlInvalid` with the first
+/// error (`detail`: code, place, sentence). A writer fault never leaves the program as a file that third-party readers refuse.
+pub fn check_written<R: Read>(reader: R) -> Result<()> {
+    let r = validate(reader)?;
+    match r.problems.iter().find(|p| p.severity == Severity::Error) {
+        None => Ok(()),
+        Some(p) => Err(crate::error::Error::new("err.file.mzmlInvalid")
+            .with("detail", format!("{} at {}: {}", p.code, p.path, p.message))),
+    }
 }
 
 /// The number of terms in the vocabulary table.
