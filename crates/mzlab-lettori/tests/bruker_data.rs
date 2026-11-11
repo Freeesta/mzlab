@@ -158,7 +158,7 @@ fn clean_diapasef() {
 
 #[test]
 fn synthetic_timsrust_folders() {
-    // the files of timsrust's tests have no MzCalibration: they open, the spectra give an error with a key
+    // the files of timsrust's tests have no MzCalibration: the run is refused when it opens, with the key of a missing calibration
     let Some(d) = dati_percorsi::percorso("dati/formati/bruker/timstof_lettori/timsrust_tests")
     else {
         return;
@@ -168,11 +168,9 @@ fn synthetic_timsrust_folders() {
         if !dir.exists() {
             continue;
         }
-        let mut l = mzlab_lettori::open_bare(set_of(&dir), &Limits::desktop()).unwrap();
-        assert!(!l.index(0).unwrap().is_empty());
-        assert_eq!(
-            l.scan(0, 0).err().map(|e| e.key),
-            Some("err.file.brukerDamaged")
-        );
+        let e = mzlab_lettori::open_bare(set_of(&dir), &Limits::desktop())
+            .err()
+            .map(|e| e.key);
+        assert_eq!(e, Some("err.file.brukerCalibration"), "{f}");
     }
 }

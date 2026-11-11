@@ -215,7 +215,24 @@ def main():
     blocchi = blocks_v13(out)
     ms3 = ms3_file(out)
     dad = dad_method(out)
-    (out / "riferimento.json").write_text(json.dumps({"dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi, "ms3": ms3}))
+    ida = ida_file(out)
+    (out / "riferimento.json").write_text(json.dumps({"ida": ida, "dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi, "ms3": ms3}))
+
+
+def ida_file(out: Path):
+    """`ida.wiff`: two samples of one method (survey, two product-ion experiments whose headers hold 500.0 and 321.0) over three cycles. Sample 1 was
+    acquired by IDA (it has a `DDERealTimeData` stream: 32-byte header, one 32-byte row per dependent slot with other masses), so its product-ion scans
+    carry no precursor; sample 2 has no such stream and keeps the fixed masses of the header."""
+    method = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 500.0), "Experiment2/ExperimentHeader": header(11, 321.0),
+              "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    blocks = [("scan", FULL if e == 0 else PRODUCT, 1000.0 * c + 100.0 * e, 1.0) for c in range(3) for e in range(3)]
+    w = Writer()
+    w.sample(1, blocks, method)
+    w.sample(2, blocks, method)
+    w.streams["SampleSubtree/Sample1/DDERealTimeData"] = bytes(32) + b"".join(struct.pack("<d8sd8s", 200.0 + k, bytes(8), 1e5, bytes(8)) for k in range(6))
+    w.save(out, "ida")
+    precs = {"1": [None, None, None], "2": [None, 500.0, 321.0]}
+    return {n: [{"id": f"sample={n} period=1 cycle={c + 1} experiment={e + 1}", "level": 1 if e == 0 else 2, "precursor": precs[n][e]} for c in range(3) for e in range(3)] for n in precs}
 
 
 def energy(out: Path):

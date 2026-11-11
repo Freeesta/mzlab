@@ -391,7 +391,13 @@ fn load(
     let (sts, ee) = (tab(c, "STS"), tab(c, "EE"));
     let nomi = opzionale(c, &name("CMP")).map_or(Vec::new(), |b| compound_names(&b, &lim));
     let x = ext.funzioni.get(&n).cloned().unwrap_or_default();
-    let warning = if dat.is_none() || rows.is_empty() {
+    // the member that is not there is named: a function with an index and no DAT is not the same loss as a function without scans
+    let warning = if dat.is_some() != ha_idx {
+        Some(format!(
+            "function {n}: {} missing",
+            name(if ha_idx { "DAT" } else { "IDX" })
+        ))
+    } else if dat.is_none() || rows.is_empty() {
         Some(format!("function {n}: no scans"))
     } else if !f.mirato() && cod.is_none() {
         Some(format!("function {n}: record width"))
@@ -435,6 +441,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
     whole_list(&c, list.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
+    let has_header = header.is_some();
     whole_header(&c, header.as_deref())?;
     let testata = header.map_or_else(WatersHeader::default, |b| inf::file_header(&text(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
@@ -454,6 +461,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     for i in 0..funs.len() {
         funs[i].livello = level_of(&funs, i);
     }
+    warnings.extend(super::counts::notes(&c.name, &funs, &ext, has_header));
     if funs.iter().any(|f| f.ext.mobilita) {
         warnings.push((
             "meta.nonDecodificato".into(),

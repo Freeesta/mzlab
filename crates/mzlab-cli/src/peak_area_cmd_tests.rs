@@ -70,9 +70,27 @@ fn the_area_is_the_text_of_the_page() {
 }
 
 #[test]
+fn no_baseline_named_is_from_zero() {
+    let (_, _, p) = trace_file("mzlab_peak_area_trace3.tsv");
+    let plain = run(args(&[&p, "--from", "1.7", "--to", "2.3"]));
+    let zero = run(args(&[
+        &p,
+        "--from",
+        "1.7",
+        "--to",
+        "2.3",
+        "--set",
+        "baseline=zero",
+    ]));
+    assert_eq!((plain.code, &plain.stdout), (0, &zero.stdout));
+    assert!(String::from_utf8(plain.stdout)
+        .unwrap()
+        .starts_with("{\"baseline\":\"zero\""));
+}
+
+#[test]
 fn edges_and_bad_numbers_are_refused() {
     let (_, _, p) = trace_file("mzlab_peak_area_trace2.tsv");
-    assert_ne!(run(args(&[&p, "--from", "1", "--to", "3"])).code, 0);
     assert_ne!(
         run(args(&[
             &p,

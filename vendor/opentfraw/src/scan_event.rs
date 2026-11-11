@@ -231,6 +231,11 @@ fn srm_ranges(
 /// `unknown_long1` of a reaction whose activation is CID (an HCD reaction carries 11).
 pub(crate) const CID_REACTION_FLAG: u32 = 1;
 
+/// Preamble activation codes (byte 24) seen in real files: 1 HCD (Q Exactive), 4 CID or HCD (see `ScanEvent::preamble_activation`). The other
+/// codes `Activation::from_byte` names come from firmware documentation and were never checked: an event with one of them has no activation
+/// unless its reaction codes one.
+pub const CONFIRMED_ACTIVATION_CODES: [u8; 2] = [1, 4];
+
 /// Marks `sizes` of `ScanEvent::read` for a v66 table of counted events (see `read_counted`).
 pub(crate) const COUNTED_BODY: usize = usize::MAX;
 /// Body of an event without reactions (an MS1 scan) and bytes added by each reaction.
@@ -276,9 +281,28 @@ fn counted_reactions(body: &[u8]) -> Vec<Reaction> {
 }
 
 impl ScanEvent {
-    /// Activation of the scan. Code 4 on an FTMS scan is CID (collisions in the ion trap) when the first reaction's
-    /// `unknown_long1` is 1 and beam-type HCD otherwise (11 in the Fusion and Exploris files that mix both).
+    /// Activation of the scan (its final step). The final reaction's own code wins when it has one (`Reaction::activation`, the public
+    /// Thermo enumeration; a code it does not name stays unknown). Without one the preamble decides, and only with the codes seen in real
+    /// files (`preamble_activation`); any other code is unknown, not guessed.
     pub fn activation(&self) -> Option<crate::Activation> {
+        match self.final_reaction() {
+            Some(r) if r.unknown_long1 & 1 == 1 => r.activation(),
+            _ => self.preamble_activation(),
+        }
+    }
+
+    /// The reaction of the final step: the last one with a precursor.
+    pub fn final_reaction(&self) -> Option<&Reaction> {
+        self.reactions.iter().rev().find(|r| r.precursor_mz > 0.0)
+    }
+
+    /// Activation from the preamble alone, for the codes of [`CONFIRMED_ACTIVATION_CODES`]: code 4 on an FTMS scan is CID (collisions in
+    /// the ion trap) when the first reaction's `unknown_long1` is 1 and beam-type HCD otherwise (11 in the Fusion and Exploris files that
+    /// mix both). Tells the tribrid EThcD events (preamble CID or HCD, two reactions) apart.
+    pub fn preamble_activation(&self) -> Option<crate::Activation> {
+        if !CONFIRMED_ACTIVATION_CODES.contains(&self.preamble.activation_byte()) {
+            return None;
+        }
         let act = self.preamble.activation();
         let beam = self.preamble.analyzer() == Some(crate::Analyzer::FTMS)
             && self
@@ -710,8 +734,23 @@ mod activation_tests {
     }
 
     #[test]
-    fn ion_trap_cid_stays_cid() {
-        assert_eq!(event(0, 4, 11).activation(), Some(Activation::CID));
+    fn the_reaction_code_wins_over_the_preamble() {
+        // ion trap readout of an HCD reaction (tribrid): the reaction says HCD
+        assert_eq!(event(0, 4, 11).activation(), Some(Activation::HCD));
+        // a reaction coding PQD (3 << 1 | 1) on a preamble of the collisional family
+        assert_eq!(event(0, 4, 7).activation(), Some(Activation::PQD));
+        // a reaction coding a type the enumeration does not name: unknown, the preamble does not fill it
+        assert_eq!(event(4, 4, 13 << 1 | 1).activation(), None);
+    }
+
+    #[test]
+    fn without_a_reaction_code_only_confirmed_preamble_codes_count() {
+        assert_eq!(event(0, 4, 0).activation(), Some(Activation::CID));
+        assert_eq!(event(4, 4, 0).activation(), Some(Activation::HCD));
+        assert_eq!(event(4, 1, 0).activation(), Some(Activation::HCD));
+        for code in [2u8, 3, 5, 6, 7, 8, 9, 10, 12] {
+            assert_eq!(event(4, code, 0).activation(), None, "code {code}");
+        }
     }
 }
 
