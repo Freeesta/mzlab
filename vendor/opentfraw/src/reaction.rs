@@ -89,7 +89,10 @@ pub fn chain(event: &ScanEvent, fin: &FinalReaction) -> Vec<ReactionInfo> {
         && rs.len() >= 2
         && valid == 1
         && event.preamble.analyzer() == Some(Analyzer::FTMS)
-        && matches!(act, Some(Activation::CID | Activation::HCD));
+        && matches!(
+            event.preamble_activation(),
+            Some(Activation::CID | Activation::HCD)
+        );
     if tribrid_ethcd {
         let Some(rx) = rs.iter().find(|r| r.precursor_mz > 0.0) else {
             return Vec::new();
@@ -106,7 +109,7 @@ pub fn chain(event: &ScanEvent, fin: &FinalReaction) -> Vec<ReactionInfo> {
             ..info(rx)
         }];
     }
-    let last = rs.len().saturating_sub(1);
+    let last = rs.iter().rposition(|r| r.precursor_mz > 0.0).unwrap_or(0);
     rs.iter()
         .enumerate()
         .filter(|(_, r)| r.precursor_mz > 0.0)
@@ -116,7 +119,8 @@ pub fn chain(event: &ScanEvent, fin: &FinalReaction) -> Vec<ReactionInfo> {
                 ..info(rx)
             };
             if i != last {
-                out.activation = rx.activation().or(act);
+                // an earlier step says its activation itself or it is not known: the final step's is not lent to it
+                out.activation = rx.activation();
                 out.energy_is_nce = fin.energy_is_nce;
                 return out;
             }
@@ -124,21 +128,7 @@ pub fn chain(event: &ScanEvent, fin: &FinalReaction) -> Vec<ReactionInfo> {
             out.energy = fin.energy.or(out.energy);
             out.energy_is_nce = fin.energy.is_some() && fin.energy_is_nce;
             out.energy_steps = fin.energy_steps.clone();
-            if act == Some(Activation::EThcD) {
-                out.activation = Some(Activation::ETD);
-                out.supplemental = Some(Activation::HCD);
-                out.supplemental_energy = fin.supplemental_energy;
-            } else {
-                // On FTMS the event's own activation comes from the first reaction; the final one says CID or HCD for itself.
-                let ftms = event.preamble.analyzer() == Some(Analyzer::FTMS);
-                out.activation = match (act, rx.activation()) {
-                    (
-                        Some(Activation::CID | Activation::HCD),
-                        Some(a @ (Activation::CID | Activation::HCD)),
-                    ) if ftms => Some(a),
-                    _ => act,
-                };
-            }
+            out.activation = act;
             out
         })
         .collect()
@@ -242,17 +232,18 @@ mod tests {
     }
 
     #[test]
-    fn ethcd_is_etd_plus_supplemental_hcd() {
+    fn an_unconfirmed_preamble_code_leaves_the_activation_unknown() {
         let fin = FinalReaction {
             supplemental_energy: Some(28.0),
             ..fin(35.0, true)
         };
+        // preamble 12 (EThcD in the firmware documentation, never seen) and a reaction that codes nothing
         let c = chain(&event(2, 4, 12, vec![rx(649.1, 0.0, 0)]), &fin);
-        assert_eq!(
-            (c[0].activation, c[0].supplemental, c[0].supplemental_energy),
-            (Some(Activation::ETD), Some(Activation::HCD), Some(28.0))
-        );
+        assert_eq!((c[0].activation, c[0].supplemental), (None, None));
         assert_eq!(c[0].energy, Some(35.0));
+        // the same event whose reaction codes ETD (4 << 1 | 1)
+        let c = chain(&event(2, 4, 12, vec![rx(649.1, 0.0, 9)]), &fin);
+        assert_eq!(c[0].activation, Some(Activation::ETD));
     }
 
     #[test]

@@ -169,6 +169,11 @@ pub fn minimal_tdf(num_peaks: i64) -> Vec<u8> {
 
 /// A database of one MS1 frame per offset in `tims` (`TimsId`), each `num_peaks` peaks over 2 scans, 1 s apart.
 pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
+    tdf_frames_cal(tims, num_peaks, 1)
+}
+
+/// `tdf_frames` whose frames name the calibration `cal_id` (the only `MzCalibration` row has id 1).
+pub fn tdf_frames_cal(tims: &[i64], num_peaks: i64, cal_id: i64) -> Vec<u8> {
     let rows: Vec<Vec<V<'_>>> = tims
         .iter()
         .enumerate()
@@ -184,7 +189,7 @@ pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
                 V::I(50),
                 V::I(2),
                 V::I(num_peaks),
-                V::I(1),
+                V::I(cal_id),
                 V::R(25.0),
                 V::R(30.0),
                 V::R(100.0),

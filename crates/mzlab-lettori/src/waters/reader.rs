@@ -135,8 +135,8 @@ impl Reader for WatersReader {
             f.dat.ok_or_else(|| read_error("no DAT"))?,
         );
         let (off, len) = idx::extension(&f.righe, r, cod.width() as u64, f.dat_len)?;
-        let (tar, livello, polarity, rt, precursor) =
-            (f.tar.clone(), v.livello, v.polarita, v.rt, v.precursore);
+        let tar = f.tar.for_mark(f.righe[r].mark);
+        let (livello, polarity, rt, precursor) = (v.livello, v.polarita, v.rt, v.precursore);
         let id = v.id.clone();
         let filter = v.filtro.clone();
         let b = self.c.read_from(dat, off, len)?;
@@ -200,9 +200,13 @@ impl Reader for WatersReader {
         if let Some(p) = v.precursore {
             out.push(field("precursor", p.to_string(), Some("m/z")));
         }
+        let stored = f.righe[r].mark == idx::CALIBRATED;
+        out.push(field("m/z calibration", f.tar.label(stored).into(), None));
         if let Some(t) = &f.sts {
+            let note =
+                ["(not applied)", "(applied by the acquisition, if at all)"][usize::from(stored)];
             for (n, x) in t.all(r).into_iter().filter(|(n, _)| n.contains("ock mass")) {
-                out.push(field(&format!("{n} (not applied)"), x.to_string(), None));
+                out.push(field(&format!("{n} {note}"), x.to_string(), None));
             }
         }
         Ok(out)
@@ -391,7 +395,13 @@ fn load(
     let (sts, ee) = (tab(c, "STS"), tab(c, "EE"));
     let nomi = opzionale(c, &name("CMP")).map_or(Vec::new(), |b| compound_names(&b, &lim));
     let x = ext.funzioni.get(&n).cloned().unwrap_or_default();
-    let warning = if dat.is_none() || rows.is_empty() {
+    // the member that is not there is named: a function with an index and no DAT is not the same loss as a function without scans
+    let warning = if dat.is_some() != ha_idx {
+        Some(format!(
+            "function {n}: {} missing",
+            name(if ha_idx { "DAT" } else { "IDX" })
+        ))
+    } else if dat.is_none() || rows.is_empty() {
         Some(format!("function {n}: no scans"))
     } else if !f.mirato() && cod.is_none() {
         Some(format!("function {n}: record width"))
@@ -435,6 +445,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
     whole_list(&c, list.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
+    let has_header = header.is_some();
     whole_header(&c, header.as_deref())?;
     let testata = header.map_or_else(WatersHeader::default, |b| inf::file_header(&text(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
@@ -454,12 +465,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     for i in 0..funs.len() {
         funs[i].livello = level_of(&funs, i);
     }
-    if funs.iter().any(|f| f.ext.mobilita) {
-        warnings.push((
-            "meta.nonDecodificato".into(),
-            format!("{}: ion mobility", c.name),
-        ));
-    }
+    warnings.extend(super::counts::notes(&c.name, &funs, &ext, has_header));
     let analogiche = super::chroms::analog(&mut c);
     unknown_variant(&c.name, &funs, analogiche.is_empty())?;
     let mut l = WatersReader {

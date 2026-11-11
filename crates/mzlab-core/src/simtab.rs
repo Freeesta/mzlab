@@ -11,7 +11,7 @@ use crate::numfmt::sci;
 use crate::peak1d::{peaks, Found};
 use crate::peakq_lr::near_idx;
 
-/// Smoothing (points, 1-2-1), points across a peak and S/N of the default integration: the defaults of `chrom.transitions@1`.
+/// Smoothing (points, 1-2-1), points across a peak and S/N of the default integration: the defaults of `chrom.transitions@2`.
 pub const SMOOTH: usize = 3;
 pub const MIN_POINTS: usize = 3;
 pub const SNR_MIN: f64 = 3.0;

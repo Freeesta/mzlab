@@ -30,7 +30,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
     let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
     std::fs::write(&f, format!("rt,y\n{}", body.join("\n"))).unwrap();
     let p = f.to_str().unwrap();
-    let o = run(args(&[p]));
+    let o = run(args(&[p, "--set", "baseline=edges"]));
     assert_eq!(o.code, 0);
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
@@ -40,6 +40,7 @@ fn peaks_are_the_core_result_and_set_names_are_accepted() {
         assert_eq!(g["t0"].as_f64().unwrap(), rt[k.lo]);
         assert_eq!(g["t1"].as_f64().unwrap(), rt[k.hi]);
         assert_eq!(g["area"].as_f64().unwrap(), k.area);
+        assert_eq!(g["baseline"], "edges");
     }
     // the page names are accepted; a prominence above the tallest peak keeps nothing
     let o = run(args(&[
@@ -116,13 +117,13 @@ fn the_baseline_mode_applies_to_every_peak() {
     let body: Vec<String> = rt.iter().zip(&y).map(|(a, b)| format!("{a},{b}")).collect();
     std::fs::write(&f, body.join("\n")).unwrap();
     let p = f.to_str().unwrap();
-    let edges = run(args(&[p]));
+    // no mode named = zero
     assert_eq!(
-        run(args(&[p, "--set", "baseline=edges"])).stdout,
-        edges.stdout
+        run(args(&[p, "--set", "baseline=zero"])).stdout,
+        run(args(&[p])).stdout
     );
     let core = auto_integrate(&rt, &y, rt[0], rt[rt.len() - 1], AutoParams::default());
-    let o = run(args(&[p, "--set", "baseline=zero"]));
+    let o = run(args(&[p]));
     let v: serde_json::Value = serde_json::from_slice(&o.stdout).unwrap();
     let got = v["peaks"].as_array().unwrap();
     assert_eq!(got.len(), core.len());

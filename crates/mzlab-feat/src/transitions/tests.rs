@@ -137,7 +137,7 @@ fn the_example_table_reads_and_its_isobaric_rows_share_a_group() {
 #[test]
 fn each_row_takes_its_peak_inside_its_window_and_says_why_it_has_none() {
     let text = channels_text(&params("peaks"), TABLE, &samples()).unwrap();
-    assert!(text.starts_with("sample,name,isomer_group,q1,q3,polarity,rt,rt_window,apex_rt,area,height,snr,fwhm_s,peak\n"));
+    assert!(text.starts_with("sample,name,isomer_group,q1,q3,polarity,rt,rt_window,apex_rt,area,height,snr,fwhm_s,peak,baseline,below\n"));
     assert_eq!(text.lines().count(), 1 + 2 * 7);
     for (sample, name, apex) in [
         ("s1.mzML", "isoA", 2.5),
@@ -178,7 +178,10 @@ fn a_window_without_a_peak_is_no_peak() {
         "{text}"
     );
     let wide = channels_text(&params("table"), t, &samples()).unwrap();
-    assert!(wide.lines().nth(1).unwrap().ends_with(",,,,,0,,"), "{wide}");
+    assert!(
+        wide.lines().nth(1).unwrap().ends_with(",,,,,0,,,zero"),
+        "{wide}"
+    );
 }
 
 #[test]
@@ -186,7 +189,7 @@ fn the_table_has_the_area_and_apex_of_each_file_and_their_spread() {
     let text = channels_text(&params("table"), TABLE, &samples()).unwrap();
     assert_eq!(
         text.lines().next().unwrap(),
-        "name,isomer_group,q1,q3,polarity,rt,rt_window,area s1.mzML,area s2.mzML,apex_rt s1.mzML,apex_rt s2.mzML,n_peaks,rt_mean,rt_sd"
+        "name,isomer_group,q1,q3,polarity,rt,rt_window,area s1.mzML,area s2.mzML,apex_rt s1.mzML,apex_rt s2.mzML,n_peaks,rt_mean,rt_sd,baseline"
     );
     let c = line(&text, "", "isoA");
     assert_eq!(get(&c, "n_peaks"), "2");
@@ -256,11 +259,19 @@ fn the_list_editor_keeps_the_order_and_gives_the_csv_of_the_plan() {
 #[test]
 fn from_zero_the_area_is_the_trapezoid_of_the_trace_between_the_same_edges() {
     let s = samples();
-    let edges = channels_text(&params("peaks"), TABLE, &s).unwrap();
-    assert!(!edges.lines().next().unwrap().contains("baseline"));
+    let mut pe = params("peaks");
+    pe.push(("baseline".into(), Value::Str("edges".into())));
+    let edges = channels_text(&pe, TABLE, &s).unwrap();
+    assert!(edges
+        .lines()
+        .next()
+        .unwrap()
+        .ends_with(",peak,baseline,below"));
     let mut p = params("peaks");
     p.push(("baseline".into(), Value::Str("zero".into())));
     let zero = channels_text(&p, TABLE, &s).unwrap();
+    // no baseline named = zero
+    assert_eq!(zero, channels_text(&params("peaks"), TABLE, &s).unwrap());
     assert!(zero
         .lines()
         .next()
@@ -274,6 +285,7 @@ fn from_zero_the_area_is_the_trapezoid_of_the_trace_between_the_same_edges() {
         assert_eq!(get(&e, col), get(&z, col), "{col}");
     }
     assert_eq!((get(&z, "baseline"), get(&z, "below")), ("zero", "0.0"));
+    assert_eq!((get(&e, "baseline"), get(&e, "below")), ("edges", ""));
     // the same edges as find_peak, then the plain trapezoid of y: what lay under the line between the edges is now inside the area
     let c = &sim(1)[1];
     let f = mzlab_core::peak1d::find_peak(&c.t, &c.y, Some(1.5), 0.3, 3, 3).unwrap();

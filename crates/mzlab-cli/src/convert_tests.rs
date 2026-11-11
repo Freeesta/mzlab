@@ -420,7 +420,7 @@ fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
             "x".repeat(blob)
         );
         std::fs::write(&file, text).unwrap();
-        let (n, conv) = crate::convert_report::head_of(&file);
+        let (n, conv, _) = crate::convert_report::head_of(&file);
         assert_eq!((n, conv.as_deref()), (7, Some("{\"a\":1}")), "blob {blob}");
     }
     let _ = std::fs::remove_dir_all(&dir);
@@ -458,4 +458,29 @@ fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so()
         note.is_some(),
         mzlab_core::budget_auto::convert_wanted() > 1
     );
+}
+
+/// Each entry of `metodo/1.avvisi` in the head of an mzML is a note with its catalogue text and place, and a key without a text keeps its place.
+#[test]
+fn the_method_warnings_are_notes_with_their_text() {
+    let dir = folder("notes");
+    let file = dir.join("n.mzML");
+    let doc = "{&quot;schema&quot;:&quot;metodo/1&quot;,&quot;avvisi&quot;:[{&quot;chiave&quot;:&quot;meta.troncato&quot;,&quot;dove&quot;:&quot;scan 7&quot;},{&quot;chiave&quot;:&quot;meta.nuovo&quot;,&quot;dove&quot;:&quot;x&quot;}]}";
+    let text = format!(
+        "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab metodo/1\" value=\"{doc}\"/>\n<spectrumList count=\"0\" defaultDataProcessingRef=\"c\">\n</spectrumList></run></mzML>\n"
+    );
+    std::fs::write(&file, text).unwrap();
+    let (_, _, notes) = crate::convert_report::head_of(&file);
+    let lines: Vec<String> = notes
+        .iter()
+        .map(|(k, d)| crate::error_text::method_note(k, d))
+        .collect();
+    assert_eq!(
+        lines,
+        [
+            "The file is cut short: scan 7. What comes before the cut is read. (meta.troncato)",
+            "meta.nuovo: x"
+        ]
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

@@ -2,7 +2,8 @@
 "use strict";
 // The Method window shows here what the file itself says about its acquisition: the `metodo/1` document (docs/agenti/metodo.md) that /api/metodo gives for the open item
 // (the engine reads it from the .raw, the .wiff, the .D, the .dam or the mzML that carries it). Only what the file holds is drawn, as the file says it; a value the file
-// lacks has no row, and the parts the file does not decode are not listed. Everything that comes from a file goes through EH().
+// lacks has no row. What the reader could not read (`avvisi`: parts not decoded, missing, cut, a version not checked) is listed first, in plain words.
+// Everything that comes from a file goes through EH().
 
 const METODO_DOC = (() => {
   /** @param {string} k @param {any} [p] */
@@ -47,6 +48,15 @@ const METODO_DOC = (() => {
     return r ? `<table>${r}</table>` : "";
   }
 
+  // the keys of `metodo/1.avvisi` the readers write; another key is shown as it is, with its place
+  const NOTE_KEYS = ["meta.nonDecodificato", "meta.mancante", "meta.troncato", "meta.versioneNonVerificata"];
+  function notes(/** @type {any} */ d) {
+    const a = (d.avvisi || []).filter((/** @type {any} */ x) => x && x.chiave);
+    if (!a.length) return "";
+    const line = (/** @type {any} */ x) => NOTE_KEYS.includes(x.chiave) ? T(x.chiave, { dove: x.dove || "" }) : join([x.chiave, x.dove], ": ");
+    return `<div class="sm" role="note" aria-label="${EH(T("method.doc.notes"))}" data-mnotes="${a.length}"><strong>${EH(T("method.doc.notes"))}</strong><ul style="margin:4px 0 8px">${a.map((/** @type {any} */ x) => `<li>${EH(line(x))}</li>`).join("")}</ul></div>`;
+  }
+
   function all(/** @type {any} */ d, /** @type {{ k: number }} */ f) {
     const c = d.campi || [], reg = d.registro || [];
     const fields = c.length ? `<table>${c.map((/** @type {any} */ f) => rowOf(`${f.origine || ""} · ${f.chiave || ""}`, String(f.valore ?? "") + (f.unita ? " " + f.unita : ""))).join("")}</table>` : "";
@@ -62,7 +72,7 @@ const METODO_DOC = (() => {
     try { d = ((await J("api/metodo?k=" + f.k)) || {}).metodo; } catch (_) { d = null; }
     if (!d) return `<section class="msec">${title}<div class="muted sm">${EH(T("method.doc.none"))}</div></section>`;
     const rows = head(d) + ms(d);
-    return `<section class="msec">${title}${METODO_INCL.html(d, f)}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d, f)}</section>`;
+    return `<section class="msec">${title}${notes(d)}${METODO_INCL.html(d, f)}${rows ? `<table>${rows}</table>` : ""}${lc(d)}${detectors(d)}${all(d, f)}</section>`;
   }
   return { html, bind: METODO_INCL.bind };
 })();
