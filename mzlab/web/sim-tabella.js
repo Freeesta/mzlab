@@ -35,8 +35,10 @@ function rows(text) {
   return out;
 }
 
+/** The name of each baseline of the table. */
+const BASES = () => ({ zero: t("canali.simtab.base.zero"), edges: t("canali.simtab.base.edges") });
 /** An area or height of the CSV (7.84077E+04) in the one form of the page (7.841E+04); any other cell as the engine wrote it. @param {string} v */
-const fmt = v => /^-?\d(\.\d+)?E[+-]\d+$/.test(v) ? G.I18N.sciE(Number(v)) : v === "zero" || v === "edges" ? t("canali.simtab.base." + v) : v;
+const fmt = v => /^-?\d(\.\d+)?E[+-]\d+$/.test(v) ? G.I18N.sciE(Number(v)) : v === "zero" || v === "edges" ? BASES()[v] : v;
 /** A channel column of the CSV as shown: the m/z, or «ione N» (`ion N`, ` [group]` when kept apart per group). @param {string} c */
 const shown = c => c.replace(/^ion (\d+)/, (_, n) => t("canali.sim.ion", { n: +n })).replace(/ \[(.*)\]( #\d+)?$/, (_, g, k) => `${k || ""} · ${g}`);
 
@@ -124,7 +126,7 @@ function draw() {
   const ths = cols.map((x, i) => i >= lead && pick && x !== "baseline" ? h`<th scope="col" class="num">${shown(x)}${raw(pickBtn(x))}</th>` : h`<th scope="col"${raw(i >= lead ? ' class="num"' : "")}>${heads[x] || shown(x)}</th>`);
   const kin = kinetic();
   el.innerHTML = h`<details${raw(open ? " open" : "")}><summary><h3 id="simtab-h">${t("canali.simtab.title", st.size)}</h3></summary>
-<div class="simtab-bar"><label>${t("canali.simtab.show")} <select data-o>${raw(opts.join(""))}</select></label><label>${t("canali.simtab.base")} <select data-b>${raw(["zero", "edges"].map(b => `<option value="${b}"${b === st.base ? " selected" : ""}>${t("canali.simtab.base." + b)}</option>`).join(""))}</select></label>
+<div class="simtab-bar"><label>${t("canali.simtab.show")} <select data-o>${raw(opts.join(""))}</select></label><label>${t("canali.simtab.base")} <select data-b>${raw(Object.entries(BASES()).map(([b, name]) => `<option value="${b}"${b === st.base ? " selected" : ""}>${name}</option>`).join(""))}</select></label>
 <button type="button" class="sec sm" data-flip aria-pressed="${String(st.layout === "channels")}"${raw(st.out === "peaks" ? " disabled" : "")}>${t("canali.simtab.flip")}</button><button type="button" class="sec sm" data-dl${raw(csv ? "" : " disabled")}>${t("canali.simtab.csv")}</button></div>
 <div class="simtab-wrap" tabindex="0" role="region" aria-labelledby="simtab-h"><table class="qq-tab"><caption>${label}</caption>
 <thead><tr>${raw(ths.join(""))}</tr></thead><tbody>${raw(bodyHtml(body, gcol, lead, cols.length))}</tbody></table></div>

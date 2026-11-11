@@ -98,7 +98,11 @@ fn one_row_per_sample_one_column_per_ion_and_every_peak() {
         flip.lines().next().unwrap(),
         format!("channel,name,{},baseline", samples.join(","))
     );
-    assert_eq!(flip.lines().nth(3).unwrap(), "251.1,ionC,0,2,2,2,zero", "{flip}");
+    assert_eq!(
+        flip.lines().nth(3).unwrap(),
+        "251.1,ionC,0,2,2,2,zero",
+        "{flip}"
+    );
     for bad in ["output=area", "layout=rows"] {
         assert_ne!(table(&[&d.join("sim3.wiff")], &["--set", bad]).code, 0);
     }
