@@ -182,6 +182,7 @@ pub mod flow;
 pub mod mzrun;
 pub mod step;
 pub mod scantable;
+pub mod spechead;
 pub mod specdiff;
 pub mod specpeaks;
 pub mod spectrum;
