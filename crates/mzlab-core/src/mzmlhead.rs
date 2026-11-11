@@ -52,7 +52,8 @@ fn chrom_of(h: &str, index: usize, start: u64, end: u64) -> Chrom {
         d.kind = "srm".into();
         (_, _, _, d.name) = srm_id(&cid);
         d.q1 = after(&cid, "Q1=");
-        d.dwell = after(&cid, "dwell=").or_else(|| named_value(h, "MS_dwell_time"));
+        d.dwell =
+            named_value(h, "MS_dwell_time").or_else(|| after(&cid, "dwell=").map(|ms| ms / 1000.0));
     } else if ![
         "MS:1000235",
         "MS:1000627",

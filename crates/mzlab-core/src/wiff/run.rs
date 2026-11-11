@@ -26,7 +26,7 @@ impl Wiff {
     }
 
     /// The id of the SRM chromatogram of transition `j` of experiment `e` (0-based), as msconvert spells it (Q1, Q3, sample, period, experiment, transition),
-    /// then the collision energy, dwell (ms) (target RT in min and window in s when scheduled), the polarity of the experiment and the name of the method when it has them; the mzML writer and `mzmlhead` read them back from it.
+    /// then the collision energy (its magnitude, absent when zero), dwell (ms) (target RT in min and window in s when scheduled), the polarity of the experiment and the name of the method when it has them; the mzML writer and `mzmlhead` read them back from it.
     pub(super) fn srm_id(&self, e: usize, j: usize, t: Option<&Transition>) -> String {
         let mut id = String::from("SRM SIC");
         if let Some(t) = t {
@@ -38,7 +38,8 @@ impl Wiff {
             e + 1
         );
         if let Some(t) = t {
-            if let Some(ce) = t.ce {
+            // a negative-mode method stores the energy with its sign; the id (and the mzML) carry its magnitude, as ProteoWizard does
+            if let Some(ce) = t.ce.map(f64::abs).filter(|c| *c > 0.0) {
                 id += &format!(" ce={ce}");
             }
             match self.experiments.get(e).and_then(|x| x.window_s) {
