@@ -89,4 +89,4 @@ type GradModel = { source: string; points: GradPt[]; run_time?: number; nonlinea
 type GradRow = Record<string, number | string | null>;
 
 /** A row of the files being read, converted and indexed (CONVROWS in conversione.js). */
-type ConvRow = { name: string; state: string; pc: number | null; floor?: number; mono?: boolean; det?: { done: number; total: number } | null; sub?: { done: number; total: number } | null; t0?: number; seen?: number; tr?: string[]; last?: string; scans?: number; kind?: string; missing?: number; cause?: string; cached?: boolean; secs?: number; msg?: string; diag?: any; mem?: string };
+type ConvRow = { name: string; state: string; pc: number | null; floor?: number; mono?: boolean; det?: { done: number; total: number } | null; sub?: { done: number; total: number } | null; t0?: number; seen?: number; tr?: string[]; last?: string; scans?: number; kind?: string; missing?: number; note?: string; cached?: boolean; secs?: number; msg?: string; diag?: any; mem?: string };

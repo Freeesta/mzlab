@@ -1,7 +1,7 @@
 // @ts-strict
 // @ts-noany
 "use strict";
-// Thermo .raw and SCIEX .wiff -> mzML (index.html rawToMzml, wiffToMzml): the progress of the conversion and the download of the converted files. The DOM part first (only runs in the page), the pure helpers
+// Thermo .raw and SCIEX .wiff -> mzML (rawToMzml, wiffToMzml of shell.js): the progress of the conversion and the download of the converted files. The DOM part first (only runs in the page), the pure helpers
 // below (also run by node in tests/test_conversione.py). Classic script, loaded after i18n.js.
 
 // the mzML files made in this page: mzML name -> Blob (with .mzlabId in the desktop app); they are what the program reads, so a saved copy opens without converting again
@@ -33,7 +33,7 @@ const CONV = {
   add(/** @type {string} */ name, /** @type {Blob} */ blob, /** @type {{ fam: string, mem: { name: string, blob: Blob }[], c: number, gz?: File } | undefined} */ src) { this.files.set(name, blob); if (src) this.sources.set(name, src); },
   // samples that left the list: their mzML and source go, so a later file of the same name is neither taken for them (NATIVO.cachedModulo) nor downloaded as them
   forget(/** @type {string[]} */ names) { for (const n of names) { this.files.delete(n); this.sources.delete(n); for (const k of [...this.made.keys()]) if (k.slice(k.indexOf(":") + 1) === n) this.made.delete(k); } },
-  // the mzML the module wrote into conv/ is copied into the engine's store (files/) by the loading: the reference moves to that copy and conv/ lets its own go (two full copies of every converted sample otherwise)
+  // the mzML the module wrote into conv/ is copied into the engine's store (files/) by the loading: the reference moves to that copy and conv/ lets its own go (else two copies of each sample)
   async settle(/** @type {string} */ name) {
     const b = this.files.get(name);
     if (!this.sources.has(name) || !(b instanceof File) || !/^[0-9a-z]+-[0-9a-z]+\.mzML$/.test(b.name) || !navigator.storage) return;      // the name shell.js moduloToMzml gave it in conv/
@@ -263,7 +263,7 @@ const CONVROWS = {
     }, 1000);
   },
   label(/** @type {ConvRow} */ r) {
-    if (r.state === "done") return (r.cached ? I18N.t("conv.row.cached", { scans: I18N.fix(r.scans || 0, 0) }) : I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) })) + (r.missing ? " · " + convMissing(r) : "");
+    if (r.state === "done") return (r.cached ? I18N.t("conv.row.cached", { scans: I18N.fix(r.scans || 0, 0) }) : I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) })) + (r.missing ? " · " + I18N.t(r.note || "conv.row.missing", { read: I18N.fix(r.scans || 0, 0), declared: I18N.fix((r.scans || 0) + r.missing, 0), n: I18N.fix(r.missing, 0) }) : "");
     if (r.state === "fail") return r.msg || "";
     const T = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p), mb = (/** @type {number} */ v) => I18N.fix(v / 1e6, 1);
     if ((r.state === "get" || r.state === "load") && r.det) return T(r.state === "get" ? "conv.row.getmb" : "conv.row.loadmb", { done: mb(r.det.done), total: mb(r.det.total) });
@@ -334,13 +334,11 @@ const CONVROWS = {
     for (const r of end) add(r.state !== "done" ? r.state : /** @type {string} */ (r.kind) in CONV_SUM && r.kind !== "fail" && r.kind !== "cancel" ? /** @type {string} */ (r.kind) : "other");
     const parts = Object.keys(CONV_SUM).filter(k => by.has(k)).map(k => T(CONV_SUM[k], { n: I18N.fix(by.get(k), 0) }));
     const hit = end.filter((/** @type {ConvRow} */ r) => r.cached).length; if (hit) parts.push(T("conv.sum.cached", { n: I18N.fix(hit, 0) }));
-    const miss = end.filter((/** @type {ConvRow} */ r) => r.missing), ev = miss.filter(r => r.cause === CONV_EV).length, cut = miss.length - ev;
-    if (cut) parts.push(T("conv.sum.missing", { n: I18N.fix(cut, 0) }));
-    if (ev) parts.push(T("conv.sum.noEvent", { n: I18N.fix(ev, 0) }));
+    const miss = end.filter((/** @type {ConvRow} */ r) => r.missing).length; if (miss) parts.push(T("conv.sum.missing", { n: I18N.fix(miss, 0) }));
     const t0 = minOf(end.map((/** @type {ConvRow} */ r) => r.t0 || 0)), t1 = maxOf(end.map((/** @type {ConvRow} */ r) => (r.t0 || 0) + 1000 * (r.secs || 0)));
     return T("conv.sum.head", { n: I18N.fix(end.length, 0), parts: parts.join(", "), time: convElapsed(t1 - t0) });
   },
-  // under the table only what needs attention: the error with «Details» and «Copy diagnosis», «Cancelled», a file with scans missing; a loading that went well shows nothing; «Close» once nothing runs
+  // under the table only what needs attention: the error with «Details» and «Copy diagnosis», «Cancelled», a partial read; a loading that went well shows nothing; «Close» once nothing runs
   summary() {
     if (this.running().length) return "";
     const all = this.rows.filter(r => CONV_FINAL.includes(r.state)), end = all.filter(r => r.state !== "done" || r.missing); if (!end.length) return "";
@@ -454,12 +452,6 @@ function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sam
 function convStKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.st.open", nopen: "conv.st.open", get: "conv.st.get", load: "conv.st.load", idx: "conv.st.index", index: "conv.st.index", wait: "conv.st.wait", run: "conv.st.run", conv: "conv.st.conv", nread: "conv.st.read", nscan: "conv.st.scans", nchrom: "conv.st.chrom" })[state] || "conv.st.wait"; }
 // the text key of the state of a row of the files being converted (CONVROWS)
 function convRowKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.row.open", get: "conv.row.get", load: "conv.row.loadn", idx: "conv.row.idx", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" })[state] || "conv.row.wait"; }
-// a cause: scans without their event, not a cut file
-const CONV_EV = "warn.raw.eventsRefused";
-function convMissing(/** @type {ConvRow} */ r) {
-  const n = r.scans || 0, m = r.missing || 0, f = (/** @type {number} */ v) => I18N.fix(v, 0), e = r.cause === CONV_EV;
-  return I18N.t(e ? "conv.row.noEvent" : "conv.row.missing", e ? { n: f(m), scans: f(n) } : { read: f(n), declared: f(n + m) });
-}
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(/** @type {number} */ ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
