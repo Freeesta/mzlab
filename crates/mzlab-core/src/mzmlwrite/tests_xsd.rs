@@ -117,6 +117,63 @@ fn an_srm_chromatogram_validates() {
     validate(&w.finish().unwrap());
 }
 
+/// A negative SRM and a positive SIM chromatogram of the `.wiff` reader: the scan polarity term from the id, the SIM ion as its precursor's isolation
+/// window target with its dwell and no activation term.
+#[test]
+fn polarity_and_a_sim_precursor_validate() {
+    use crate::mzml::{ChromKind, Chromatogram};
+    let h = Header {
+        run: "x".into(),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Options::default()).unwrap();
+    w.open_spectra(0).unwrap();
+    w.close_spectra().unwrap();
+    w.open_chromatograms(2).unwrap();
+    let srm = "SRM SIC Q1=364.5 Q3=176 sample=1 period=1 experiment=1 transition=0 dwell=50 polarity=negative name=a b";
+    let sim =
+        "SIM SIC Q1=237.125 sample=1 period=1 experiment=2 transition=0 dwell=20 polarity=positive";
+    for (i, (id, kind, q3)) in [
+        (srm, ChromKind::Srm, Some(176.0)),
+        (sim, ChromKind::Sic, None),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let c = Chromatogram {
+            index: i,
+            id: id.into(),
+            kind,
+            q1: Some(if q3.is_some() { 364.5 } else { 237.125 }),
+            q3,
+            unit: "number of detector counts".into(),
+            time: vec![0.5, 1.5],
+            intensity: vec![30.0, 0.0],
+        };
+        w.chromatogram(&c).unwrap();
+    }
+    w.close_chromatograms().unwrap();
+    let out = w.finish().unwrap();
+    let text = String::from_utf8_lossy(&out);
+    let (a, b) = text.split_once("SIM SIC").unwrap();
+    assert!(
+        a.contains("name=\"negative scan\"") && !a.contains("positive scan"),
+        "{a}"
+    );
+    assert!(
+        b.contains("name=\"positive scan\"")
+            && b.contains("<userParam name=\"MS_dwell_time\" value=\"20\"/>"),
+        "{b}"
+    );
+    assert!(
+        b.contains("name=\"isolation window target m/z\" value=\"237.125\"")
+            && b.contains("<activation/>")
+            && !b.contains("<product>"),
+        "{b}"
+    );
+    validate(&out);
+}
+
 #[test]
 fn the_tic_of_a_full_scan_validates() {
     use crate::mzml::{ChromKind, Chromatogram};
