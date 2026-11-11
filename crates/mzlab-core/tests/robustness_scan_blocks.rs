@@ -15,12 +15,12 @@ static ALLOCATORE: Counter = Counter;
 
 const LEN: u64 = 8 << 30;
 
-/// A version-1 scan head (marker, version, one range, the point count) at offset 0 and zeros up to `LEN`.
-struct Virtual(Vec<u8>);
+/// A version-1 scan head (marker, version, one range, the point count) at offset 0 and the fill byte up to `LEN`.
+struct Virtual(Vec<u8>, u8);
 
 impl ReadAt for Virtual {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
-        buf.fill(0);
+        buf.fill(self.1);
         let head = &self.0;
         if let Ok(o) = usize::try_from(off) {
             for (i, b) in buf.iter_mut().enumerate() {
@@ -40,7 +40,7 @@ fn head(points: u32) -> Virtual {
         .iter()
         .for_each(|v| h.extend(v.to_le_bytes()));
     h.extend(points.to_le_bytes());
-    Virtual(h)
+    Virtual(h, 0)
 }
 
 #[test]
@@ -65,4 +65,26 @@ fn an_mrm_block_of_2_gb_is_the_memory_error() {
             .map(|v| v.len()),
         Some(2)
     );
+}
+
+#[test]
+fn a_block_of_two_points_per_byte_past_the_budget_is_the_memory_error() {
+    // nibbles 1: two points of count 1 per byte, so 16 MB of block are 32 M points (about 1.4 GB decoded): refused before decoding
+    let mut v = head(u32::MAX);
+    v.1 = 0x11;
+    let body = v.0.len() as u64;
+    let e = scan::read_scan(&mut v, LEN, 0, body + (16 << 20))
+        .err()
+        .unwrap();
+    assert_eq!(e.key, "error.memoryBudget");
+    // 1 MB of the same block decodes to its 2 M points, and no more than the head claims
+    let p = scan::read_scan(&mut v, LEN, 0, body + (1 << 20))
+        .unwrap()
+        .unwrap();
+    assert_eq!(p.mz.len(), 2 << 20);
+    v.0 = head(1000).0;
+    let p = scan::read_scan(&mut v, LEN, 0, body + (1 << 20))
+        .unwrap()
+        .unwrap();
+    assert_eq!(p.mz.len(), 1000);
 }
