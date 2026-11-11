@@ -12,6 +12,7 @@ use crate::error::{Error, Result};
 use crate::mzidx_order::sort_buckets;
 use crate::mzidx_spill::{align, read_parts, Parts, Spill};
 use crate::mzml::Spectrum;
+mod crc;
 mod late;
 pub use late::{build_mzml_corriere, build_mzml_late};
 
@@ -833,6 +834,7 @@ pub(crate) fn build_after(
         };
     }
     pos += pad(pos);
+    let out = &mut crc::Summed::new(out, &infos);
 
     // -- the arrays of the scans
     for s in &infos {
@@ -951,23 +953,9 @@ pub(crate) fn build_after(
         }
         meta.push_str(&format!("\"{k}\":{si}"));
     }
-    meta.push_str("},\"sections\":[");
-    for (i, s) in infos.iter().enumerate() {
-        if i > 0 {
-            meta.push(',');
-        }
-        let o = &s.off;
-        meta.push_str(&format!(
-            "{{\"level\":{},\"dtype\":\"{}\",\"n_scans\":{},\"n_peaks\":{},\"n_fence\":{},\"off\":{{\"rt\":{},\"tic\":{},\"scan_ids\":{},\"sumint\":{},\"bp_mz\":{},\"bp_inten\":{},\"fence\":{},\"mz\":{},\"inten\":{},\"pos\":{}}}}}",
-            s.level,
-            if s.f32 { "<f4" } else { "<f8" },
-            s.ids.len(),
-            s.n_peaks,
-            s.n_peaks.div_ceil(BLOCK),
-            o.rt, o.tic, o.scan_ids, o.sumint, o.bp_mz, o.bp_inten, o.fence, o.mz, o.inten, o.pos
-        ));
-    }
-    meta.push_str("]}");
+    meta.push_str("},\"sections\":");
+    meta.push_str(&crc::sections_json(&infos, out));
+    meta.push('}');
     let meta_off = scans_off + table.scans_json.len() as u64;
     out.write_at(meta_off, meta.as_bytes())?;
     let total = meta_off + meta.len() as u64;

@@ -18,6 +18,7 @@ import os
 import struct
 import tempfile
 import threading
+import zlib
 
 import numpy as np
 
@@ -201,6 +202,13 @@ class LazyArray(np.lib.mixins.NDArrayOperatorsMixin):
 _IO_LOCK = threading.Lock()      # the handle of an index is shared by the requests of a threaded server: seek + read must not interleave
 
 
+def _summed(s, name: str, arr: np.ndarray) -> np.ndarray:
+    """`arr`, the whole array `name` of section `s`, after the check against the section's `crc32` (absent in older indexes: not checked)."""
+    if "crc32" in s and zlib.crc32(arr.tobytes()) != s["crc32"][name]:
+        raise ValueError("mzidx: damaged array " + name)
+    return arr
+
+
 class MzIdx:
     def __init__(self, path):
         self.path = os.fspath(path)
@@ -256,12 +264,13 @@ class MzIdx:
         n, p = s["n_scans"], s["n_peaks"]
         owner = (self.uid, si)
         a = lambda name, count, dtype, fence=None: LazyArray(self._fh, s["off"][name], count, dtype, fence, owner)
-        fence = a("fence", s["n_fence"], dt)._read(0, s["n_fence"]) if p else np.zeros(0, dtype=dt)
-        rt, tic, ids = (a(x, n, d)._read(0, n) for x, d in (("rt", "<f8"), ("tic", "<f8"), ("scan_ids", "<i8")))
+        whole = lambda name, count, dtype: _summed(s, name, a(name, count, dtype)._read(0, count))
+        fence = whole("fence", s["n_fence"], dt) if p else np.zeros(0, dtype=dt)
+        rt, tic, ids = (whole(x, n, d) for x, d in (("rt", "<f8"), ("tic", "<f8"), ("scan_ids", "<i8")))
         t = PeakTable(rt=rt, scan_ids=ids, mz=a("mz", p, dt, fence), inten=a("inten", p, dt), pos=a("pos", p, "<i4"), tic=tic)
         if "sumint" in s["off"]:                                           # the per-scan totals are in the file: the TIC and the base peaks need no pass over the peaks
-            t._sum = a("sumint", n, "<f8")._read(0, n)
-            t._base = (a("bp_mz", n, "<f8")._read(0, n), a("bp_inten", n, "<f8")._read(0, n))
+            t._sum = whole("sumint", n, "<f8")
+            t._base = (whole("bp_mz", n, "<f8"), whole("bp_inten", n, "<f8"))
         self._tables[si] = t
         return t
 
@@ -274,6 +283,25 @@ class MzIdx:
 
 def open(path) -> MzIdx:          # noqa: A001 -- the name the specification gives
     return MzIdx(path)
+
+
+def _sizes(s) -> list[tuple[str, int]]:
+    """The byte length of each array of a section, in file order."""
+    n, p, w = s["n_scans"], s["n_peaks"], np.dtype(s["dtype"]).itemsize
+    return [("rt", 8 * n), ("tic", 8 * n), ("scan_ids", 8 * n), ("sumint", 8 * n), ("bp_mz", 8 * n), ("bp_inten", 8 * n),
+            ("fence", w * s["n_fence"]), ("mz", w * p), ("inten", w * p), ("pos", 4 * p)]
+
+
+def _crc(fh, off: int, size: int, chunk: int = 1 << 22) -> int:
+    """The CRC-32 (IEEE) of `size` bytes at `off`."""
+    c = 0
+    fh.seek(off)
+    while size > 0:
+        b = fh.read(min(chunk, size))
+        if not b:
+            raise ValueError("mzidx: file truncated")
+        c, size = zlib.crc32(b, c), size - len(b)
+    return c
 
 
 # ---------------------------------------------------------------------------------------------------------------- builder
@@ -466,7 +494,7 @@ def build(run, out, tmpdir=None, budget: int | None = None, sha256: str | None =
                 pos += size
         pos += _pad(pos)
         # -- pass 2: the data
-        with builtins.open(tmp, "wb") as f:
+        with builtins.open(tmp, "w+b") as f:
             f.write(b"\0" * HEADER.size)
             for s in sections:
                 ids = s["ids"]
@@ -488,6 +516,7 @@ def build(run, out, tmpdir=None, budget: int | None = None, sha256: str | None =
                 for name, arr in zip(("sumint", "bp_mz", "bp_inten"), tot.result()):
                     f.seek(s["off"][name]); f.write(arr.astype("<f8", copy=False).tobytes())
                 s["sorter"].close()
+                s["crc32"] = {k: _crc(f, s["off"][k], size) for k, size in _sizes(s)}
             f.seek(pos)
             scans_off = f.tell()
             blob = scans_blob(run)
@@ -498,7 +527,7 @@ def build(run, out, tmpdir=None, budget: int | None = None, sha256: str | None =
                     "source": source,
                     "run": run_meta,
                     "keys": keys,
-                    "sections": [{k: s[k] for k in ("level", "dtype", "n_scans", "n_peaks", "n_fence", "off")} for s in sections]}
+                    "sections": [{k: s[k] for k in ("level", "dtype", "n_scans", "n_peaks", "n_fence", "off", "crc32")} for s in sections]}
             mblob = json.dumps(meta, separators=(",", ":")).encode("utf-8")
             meta_off = f.tell()
             f.write(mblob)

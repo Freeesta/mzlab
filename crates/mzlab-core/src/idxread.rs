@@ -204,7 +204,7 @@ pub struct Section {
     pub(crate) off: [u64; 10],
 }
 
-const NAMES: [&str; 10] = [
+pub(crate) const NAMES: [&str; 10] = [
     "rt", "tic", "scan_ids", "sumint", "bp_mz", "bp_inten", "fence", "mz", "inten", "pos",
 ];
 
@@ -229,6 +229,7 @@ pub struct Index<R: ReadAt> {
     pub(crate) arrays: Vec<Option<ScanArrays>>,
     pub(crate) arrays_tick: Vec<u64>, // tick of the last use of each section's arrays (see idxcache.rs)
     pub(crate) fences: Vec<Option<Vec<f64>>>, // per section, the first m/z of each block (the `fence` array), read at the first search
+    pub(crate) crcs: Vec<f64>, // the `crc32` of the 10 arrays of each section in turn (NaN when the section has none)
 }
 
 /// Whether the header is of an index of a vendor file (version 2 with `READER_FLAG`) or of an mzML (version 1); `None` for any other.
@@ -345,14 +346,14 @@ impl<R: ReadAt> Index<R> {
             .map(|r| crate::scanrow::scan_of_row(r, nativo))
             .collect::<Option<_>>()
             .ok_or_else(bad)?;
-        let mut sections = Vec::new();
+        let (mut sections, mut crcs) = (Vec::new(), Vec::new());
         for s in meta.get("sections").ok_or_else(bad)?.arr() {
             let n = |k: &str| s.get(k).and_then(Value::f64).ok_or_else(bad);
-            let off = s.get("off").ok_or_else(bad)?;
-            let mut o = [0u64; 10];
-            for (i, name) in NAMES.iter().enumerate() {
-                o[i] = off.get(name).and_then(Value::f64).ok_or_else(bad)? as u64;
-            }
+            let o = (s
+                .get("off")
+                .and_then(crate::idxcheck::ten)
+                .ok_or_else(bad)?)
+            .map(|x| x as u64);
             sections.push(Section {
                 level: n("level")? as u8,
                 f4: s.get("dtype").and_then(Value::str) == Some("<f4"),
@@ -361,6 +362,7 @@ impl<R: ReadAt> Index<R> {
                 n_fence: n("n_fence")? as usize,
                 off: o,
             });
+            crate::idxcheck::crcs(s, &mut crcs)?;
         }
         let keys: Vec<(String, usize)> = match meta.get("keys") {
             Some(Value::Obj(o)) => o
@@ -382,6 +384,7 @@ impl<R: ReadAt> Index<R> {
             arrays: vec![None; n],
             arrays_tick: vec![0; n],
             fences: vec![None; n],
+            crcs,
         })
     }
 
@@ -400,6 +403,7 @@ impl<R: ReadAt> Index<R> {
             arrays: vec![None; n],
             arrays_tick: vec![0; n],
             fences: vec![None; n],
+            crcs: self.crcs.clone(),
         }
     }
 
@@ -425,8 +429,9 @@ impl<R: ReadAt> Index<R> {
         self.run.get("hr1").and_then(Value::bool).unwrap_or(false)
     }
 
-    /// `n` 8-byte elements at `off`, as bytes.
-    fn read_bytes(&mut self, off: u64, n: usize) -> Result<Vec<u8>> {
+    /// The 8-byte elements of array `k` of section `si`, as bytes, checked against the sum of the section.
+    fn read_bytes(&mut self, si: usize, k: usize) -> Result<Vec<u8>> {
+        let (off, n) = (self.sections[si].off[k], self.sections[si].n_scans);
         let len = n
             .checked_mul(8)
             .ok_or_else(|| Error::new("error.badIndex"))?;
@@ -435,12 +440,13 @@ impl<R: ReadAt> Index<R> {
             .map_err(|_| Error::memory_budget())?;
         b.resize(len, 0);
         index_bytes(&mut self.r, off, &mut b)?;
+        crate::idxcheck::sum(&self.crcs, si, k, &b)?;
         Ok(b)
     }
 
-    fn read_f64(&mut self, off: u64, n: usize) -> Result<Vec<f64>> {
+    fn read_f64(&mut self, si: usize, k: usize) -> Result<Vec<f64>> {
         Ok(self
-            .read_bytes(off, n)?
+            .read_bytes(si, k)?
             .chunks_exact(8)
             .map(|c| f64::from_le_bytes(c.try_into().unwrap()))
             .collect())
@@ -456,18 +462,16 @@ impl<R: ReadAt> Index<R> {
     /// The per-scan arrays of a section, read once.
     pub fn arrays(&mut self, si: usize) -> Result<&ScanArrays> {
         if self.arrays[si].is_none() {
-            let s = self.sections[si].clone();
-            let n = s.n_scans;
-            let rt = self.read_f64(s.off[0], n)?;
+            let rt = self.read_f64(si, 0)?;
             let scan_ids: Vec<i64> = self
-                .read_bytes(s.off[2], n)?
+                .read_bytes(si, 2)?
                 .chunks_exact(8)
                 .map(|c| i64::from_le_bytes(c.try_into().unwrap()))
                 .collect();
             crate::idxcheck::scan_ids(&scan_ids, self.scans.len())?;
-            let sumint = self.read_f64(s.off[3], n)?;
-            let bp_mz = self.read_f64(s.off[4], n)?;
-            let bp_inten = self.read_f64(s.off[5], n)?;
+            let sumint = self.read_f64(si, 3)?;
+            let bp_mz = self.read_f64(si, 4)?;
+            let bp_inten = self.read_f64(si, 5)?;
             self.arrays[si] = Some(ScanArrays {
                 rt,
                 scan_ids,
