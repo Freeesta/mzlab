@@ -90,7 +90,7 @@ fn a_fill_value_is_no_value() {
         );
     }
     // a point whose m/z is a fill (the default of a float, or the variable's `_FillValue`) is dropped
-    let fill = f64::from(9.969_209_968_386_869e36_f32);
+    let fill = f64::from(9.969_21e36_f32);
     let (_, s) = result(set("mass_values", 0, fill)).unwrap();
     assert_eq!(s[1..], good[1..]);
     assert_ne!(s[0], good[0]);
@@ -126,10 +126,10 @@ fn no_header_byte_changes_the_result_without_a_word() {
             for x in [0x01u8, 0x80, 0xff] {
                 let mut b = good.clone();
                 b[i] ^= x;
-                if let Ok((0, scans)) = result(b) {
-                    if scans != expected.1 {
-                        silent.push((i, x));
-                    }
+                if let Ok((0, scans)) = result(b)
+                    && scans != expected.1
+                {
+                    silent.push((i, x));
                 }
             }
         }

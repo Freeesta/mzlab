@@ -16,7 +16,7 @@ pub(super) fn is_fill(v: &Var, x: f64) -> bool {
         Kind::Byte => -127.0,
         Kind::Short => -32_767.0,
         Kind::Int => -2_147_483_647.0,
-        Kind::Float => f64::from(9.969_209_968_386_869e36_f32),
+        Kind::Float => f64::from(9.969_21e36_f32),
         Kind::Double => 9.969_209_968_386_869e36,
         Kind::Char => f64::NAN,
     };
