@@ -33,10 +33,15 @@ export function mountRadical(o) {
   let on = false;
   const set = (/** @type {boolean} */ v) => { on = v; o.d.documentElement.classList.toggle("tp-rad", v); o.changed(); };
   const mark = (/** @type {number[]} */ ids) => { toggleRadicals(o.K(), ids).then(() => o.changed(), () => o.changed()); };
-  const el = (/** @type {EventTarget | null} */ t) => (t instanceof Element ? t : null);
+  // the nodes of the frame are not `instanceof Element` of this window: duck typing
+  const el = (/** @type {any} */ t) => /** @type {Element | null} */ (t && typeof t.closest === "function" ? t : null);
   // a button of Ketcher's bars, or an item of the drop-down bar that is not this tool (the menu button of the bar only opens a menu)
   const other = (/** @type {EventTarget | null} */ t) => { const e = el(t); if (!e) return false; const m = e.closest("#tp-bar [role=menuitem]"); return m ? !m.hasAttribute("data-tp-own") : !!e.closest('[class*="Toolbar-module"] button,[data-testid$="-toolbar"] button') && !e.closest("#tp-bar"); };
   let swallow = false;
+  // opening the menu selects a tool of Ketcher, which drops the selection: the atoms selected when the bar is touched are kept for the item
+  let kept = /** @type {number[]} */ ([]);
+  const keep = (/** @type {Event} */ e) => { if (el(e.target)?.closest("#tp-bar [data-tp]")) { const sel = o.K().editor.selection(); kept = sel && sel.atoms ? [...sel.atoms] : []; } };
+  o.d.addEventListener("pointerdown", keep, true); o.d.addEventListener("keydown", keep, true);
   o.d.addEventListener("pointerdown", e => {
     swallow = false;
     if (!on || el(e.target)?.closest('#tp-bar,[class*="Toolbar-module"],[role=dialog]')) return;
@@ -47,12 +52,16 @@ export function mountRadical(o) {
   for (const k of ["pointerup", "mousedown", "mouseup", "click"]) o.d.addEventListener(k, e => { if (swallow) { e.stopImmediatePropagation(); e.preventDefault(); if (k === "click") swallow = false; } }, true);
   // another tool of Ketcher (its own buttons, or an item of the bar that clicks one) ends this one
   o.d.addEventListener("click", e => { if (on && other(e.target)) set(false); }, true);
-  o.d.addEventListener("keydown", e => { if (on && e.key === "Escape") set(false); });
+  o.d.addEventListener("keydown", e => { if (on && e.key === "Escape") set(false); }, true);                 // before Ketcher, which keeps its own Esc
   document.addEventListener("keydown", e => { if (on && e.key === "Escape") set(false); });
   return {
     on: () => on,
     off: () => { if (on) set(false); },
     /** the item of the bar: the selected atoms get or lose the mark; with none selected the tool turns on (or off) */
-    run: () => { const sel = o.K().editor.selection(), ids = sel && sel.atoms ? [...sel.atoms] : []; if (ids.length) { if (on) set(false); mark(ids); } else set(!on); },
+    run: () => {
+      const sel = o.K().editor.selection(), now = sel && sel.atoms ? [...sel.atoms] : [], ids = now.length ? now : kept.filter(id => o.K().editor.struct().atoms.has(id));
+      kept = [];
+      if (ids.length) { if (on) set(false); mark(ids); } else set(!on);
+    },
   };
 }

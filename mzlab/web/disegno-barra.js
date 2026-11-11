@@ -35,7 +35,8 @@ const CSS = `:root{--tpb-bg:#fff;--tpb-line:#b8bcc4;--tpb-sel:#d6e6ff;--tpb-focu
 #tp-bar [role=menu]{position:absolute;left:100%;top:0;margin-left:4px;display:grid;gap:2px;padding:4px;background:var(--tpb-bg);border:1px solid var(--tpb-line);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 #tp-bar [role=menu][hidden]{display:none}
 @media (pointer:coarse){#tp-bar button{min-width:calc(40px / var(--ksz,1));min-height:calc(40px / var(--ksz,1))}}
-@media (prefers-reduced-motion:no-preference){#tp-bar button{transition:background .1s}}`;
+@media (prefers-reduced-motion:no-preference){#tp-bar button{transition:background .1s}}
+html.tp-rad [class*="StructEditor-module_canvas"] svg{cursor:crosshair!important}`;
 
 /** Builds the bar in the document `d` of Ketcher's iframe.
  * @param {Document} d
@@ -99,7 +100,7 @@ export function mountBar(d, t, own = {}) {
   function sync() {
     if (!bar.isConnected) { destroy(); return; }
     for (const v of views) {
-      const sel = v.g.items.findIndex(on);
+      const mine = v.g.items.findIndex(it => !!it.icon && on(it)), sel = mine >= 0 ? mine : v.g.items.findIndex(on);   // a tool of mzLab that is on wins
       if (sel >= 0) v.cur = sel;
       v.btn.replaceChildren(icon(v.g.items[v.cur]));
       const caret = d.createElementNS("http://www.w3.org/2000/svg", "svg"); caret.setAttribute("viewBox", "0 0 6 6"); caret.setAttribute("class", "tpb-caret"); caret.setAttribute("aria-hidden", "true");

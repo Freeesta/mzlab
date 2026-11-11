@@ -25,13 +25,14 @@ try:
               const f=document.querySelector('#kframe').getBoundingClientRect(),a=[...K.editor.struct().atoms.values()][{i}].pp;
               return [f.left+(a.x-o1.x)*100/(o2.x-o1.x),f.top+(a.y-o1.y)*100/(o2.y-o1.y)]}})()""")
         pressed = lambda: IN(pg, "d => d.querySelector('#tp-bar [data-tp=charge]').getAttribute('aria-pressed')")
+        tool_on = lambda: IN(pg, "d => d.documentElement.classList.contains('tp-rad') && d.querySelector('#tp-bar [data-tp-own]').classList.contains('tp-sel')")
         def click_mark():
             pg.evaluate(f"{KJ}.setMolecule('CC')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 2")
             fr.locator("#tp-bar [data-tp=charge]").click()
             item = fr.locator("#tp-bar [data-tp-own]")
             box = item.bounding_box(); assert box["width"] >= 24 and box["height"] >= 24, box
             assert "Radicale" in item.get_attribute("aria-label")
-            item.click(); assert pressed() == "true"
+            item.click(); assert pressed() == "true" and tool_on()
             x, y = atom_pt(0); pg.mouse.click(x, y)
             wait_for_js(pg, f"{RADS} === 'C2'")
             wait_for_js(pg, f"/C2H5•.*29\\.0391/.test({LABELS})", timeout=10000)
@@ -43,18 +44,28 @@ try:
             wait_for_js(pg, f"/C2H6.*30\\.0470/.test({LABELS}) && !/•/.test({LABELS})", timeout=10000)
         step("a second click takes the mark off", click_again)
         def esc():
-            pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('#kframe').contentDocument.querySelector('#tp-bar [data-tp=charge]').getAttribute('aria-pressed') === 'false'")
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#kframe').contentDocument.documentElement.classList.contains('tp-rad')")
             x, y = atom_pt(1); pg.mouse.click(x, y)
             assert pg.evaluate(RADS) == "", "after Esc a click does not mark"
         step("Esc ends the tool", esc)
+        def other_tool():
+            pg.evaluate(f"{KJ}.editor.selection(null)")                     # the click of the step above selected the atom
+            fr.locator("#tp-bar [data-tp=charge]").click(); fr.locator("#tp-bar [data-tp-own]").click(); assert tool_on()
+            fr.locator("#tp-bar [data-tp=charge]").click(); fr.locator("#tp-bar [role=menuitem]").nth(10).click()          # charge −
+            wait_for_js(pg, "!document.querySelector('#kframe').contentDocument.documentElement.classList.contains('tp-rad')")
+            x, y = atom_pt(1); pg.mouse.click(x, y); pg.keyboard.press("Escape")
+            assert pg.evaluate(RADS) == "", "the charge tool, not the mark"
+            pg.evaluate("TPDraw.undo()"); wait_for_js(pg, f"![...{KJ}.editor.struct().atoms.values()].some(a=>a.charge)")
+        step("another tool of the menu (charge −) ends the radical tool", other_tool)
         def keyboard():
             pg.evaluate(f"(()=>{{const K={KJ};K.editor.selection({{atoms:[[...K.editor.struct().atoms.keys()][1]]}})}})()")
             IN(pg, "d => d.querySelector('#tp-bar [data-tp=charge]').focus()")
             fr.locator("#tp-bar [data-tp=charge]").press("ArrowDown")
+            fr.locator("#tp-bar [data-tp=charge] ~ [role=menu] [role=menuitem]").first.press("End")
             wait_for_js(pg, "document.querySelector('#kframe').contentDocument.activeElement.hasAttribute('data-tp-own')")
             fr.locator("#tp-bar [data-tp-own]").press("Enter")
             wait_for_js(pg, f"{RADS} === 'C2'")
-            assert pressed() == "false", "with a selection the item marks the atoms and leaves the tool off"
+            assert not tool_on(), "with a selection the item marks the atoms and leaves the tool off"
         step("from the keyboard the item marks the selected atoms", keyboard)
         def exports():
             mf = pg.evaluate(f"{KJ}.getMolfile()"); assert "M  RAD  1" in mf, mf[-200:]
