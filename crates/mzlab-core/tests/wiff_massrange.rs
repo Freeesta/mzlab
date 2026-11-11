@@ -11,8 +11,12 @@ use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
-fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_massrange_{}", std::process::id()));
+/// The encoder's files in a folder of the calling test: the tests run in parallel and one must not read the other's half-written files.
+fn reference(test: &str) -> Option<(PathBuf, Value)> {
+    let out = std::env::temp_dir().join(format!(
+        "mzlab_wiff_massrange_{}_{test}",
+        std::process::id()
+    ));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_massrange.py");
     let ok = Command::new("python3")
         .arg(script)
@@ -70,7 +74,7 @@ fn param<'a>(e: &'a mzlab_core::error::Error, k: &str) -> &'a str {
 
 #[test]
 fn every_announced_transition_is_read() {
-    let Some((dir, want)) = reference() else {
+    let Some((dir, want)) = reference("read") else {
         return;
     };
     let rows = want["tabella"].as_array().unwrap();
@@ -111,7 +115,7 @@ fn every_announced_transition_is_read() {
 
 #[test]
 fn a_table_that_disagrees_with_its_header_is_refused() {
-    let Some((dir, want)) = reference() else {
+    let Some((dir, want)) = reference("refused") else {
         return;
     };
     for (name, expected) in want["rifiuti"].as_object().unwrap() {
