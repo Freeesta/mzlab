@@ -39,12 +39,18 @@ pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
     if let Some(k) = method_name::by_name(ole, sample) {
         return k;
     }
-    let has = |k: u32| {
-        ole.has(&format!(
-            "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
-        ))
-    };
-    match (1..=sample.min(10_000)).rev().find(|&k| has(k)) {
+    // one pass over the paths, not one search per method number below `sample`: a table of 2 000 samples was 2 000 x 10 000 path searches
+    let nearest = ole
+        .paths_list()
+        .filter_map(|p| {
+            let d = p
+                .strip_prefix("MethodSubtree/Method")?
+                .strip_suffix("/DeviceMethod0/Period0/Experiment0/ExperimentHeader")?;
+            d.parse::<u32>().ok().filter(|k| k.to_string() == d)
+        })
+        .filter(|&k| (1..=sample.min(10_000)).contains(&k))
+        .max();
+    match nearest {
         Some(k) if k == sample || borrow_agrees(ole, sample, k) => k,
         _ => sample,
     }
