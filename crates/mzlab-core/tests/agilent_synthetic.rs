@@ -396,6 +396,23 @@ fn a_run_with_only_data_ms_opens() {
         membri: vec![conv_help::member("old.D/data.ms", &bytes)],
     });
     assert_eq!(mzlab_core::mzml::read(&mzml[..]).unwrap().spectra.len(), 2);
+    // a header that declares fewer scans than the whole records the file holds is a named error, never the first scans alone
+    let mut fewer = bytes.clone();
+    fewer[0x116..0x11A].copy_from_slice(&1u32.to_be_bytes());
+    let e = AgilentD::open(
+        "old.D",
+        &Files {
+            data_ms: Some(&fewer),
+            ..Default::default()
+        },
+    )
+    .err()
+    .unwrap();
+    assert_eq!(e.key, "err.file.agilentDataMsCount");
+    assert_eq!(
+        e.params,
+        vec![("declared", "1".to_string()), ("found", "2".to_string())]
+    );
     // another record length is an error that names the numbers
     let mut odd = bytes.clone();
     odd[0x140 + 13] = 5;
