@@ -152,23 +152,20 @@ fn a_changed_byte_in_the_fence_is_a_bad_index() {
     );
 }
 
+/// A sum that is not a number, or missing, is `error.badIndex` at open; a number that is not a CRC-32 matches no array and is
+/// `error.badIndex` when its array is read.
 #[test]
 fn a_malformed_sum_is_a_bad_index() {
     let b = build(mzidx::DEFAULT_BUDGET);
-    for bad in [
-        Value::from("x"),
-        Value::from(-1),
-        Value::from(1.5),
-        Value::from(1u64 << 33),
-    ] {
+    for bad in [Value::from(-1), Value::from(1.5), Value::from(1u64 << 33)] {
         let mut m = meta(&b);
-        m["sections"][0]["crc32"]["tic"] = bad.clone();
-        assert_eq!(
-            open(with_meta(&b, &m)).err().unwrap().key,
-            "error.badIndex",
-            "{bad}"
-        );
+        m["sections"][0]["crc32"]["rt"] = bad.clone();
+        let mut ix = open(with_meta(&b, &m)).unwrap();
+        assert_eq!(ix.arrays(0).err().unwrap().key, "error.badIndex", "{bad}");
     }
+    let mut m = meta(&b);
+    m["sections"][0]["crc32"]["tic"] = Value::from("x");
+    assert_eq!(open(with_meta(&b, &m)).err().unwrap().key, "error.badIndex");
     let mut m = meta(&b);
     m["sections"][0]["crc32"]
         .as_object_mut()

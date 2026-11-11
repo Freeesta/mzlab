@@ -56,30 +56,38 @@ pub(crate) fn scan_ids(ids: &[i64], rows: usize) -> Result<()> {
     Ok(())
 }
 
-/// The sum recorded for an array of a section that has no `crc32` (an index written before the sums).
-pub(crate) const ABSENT: u64 = u64::MAX;
-
-/// Appends the 10 sums of the `crc32` object of section `s` to `out` (`ABSENT` for each when the section has none); `error.badIndex` when the
-/// object is present but malformed. Flat `u64`s, not an `Option` per section: the feature modules already carry the code of a `Vec<u64>`.
-pub(crate) fn crcs(s: &Value, out: &mut Vec<u64>) -> Result<()> {
-    let c = s.get("crc32");
-    for name in NAMES {
-        out.push(match c {
-            None => ABSENT,
-            Some(c) => c
-                .get(name)
-                .and_then(Value::f64)
-                .filter(|v| v.fract() == 0.0 && (0.0..=u32::MAX as f64).contains(v))
-                .ok_or_else(|| Error::new("error.badIndex"))? as u64,
-        });
+/// The 10 numbers of object `o` in the order of `NAMES` (the `off` and the `crc32` of a section); `None` when one is missing or not a number.
+/// Not generic and not inlined, with the lookup out of line too: the unrolled loop would copy it ten times into each reader of the feature
+/// modules, which have little room under their size caps.
+#[inline(never)]
+pub(crate) fn ten(o: &Value) -> Option<[f64; 10]> {
+    #[inline(never)]
+    fn num(o: &Value, k: &str) -> Option<f64> {
+        o.get(k)?.f64()
     }
+    let mut v = [0.0; 10];
+    for (x, name) in v.iter_mut().zip(NAMES) {
+        *x = num(o, name)?;
+    }
+    Some(v)
+}
+
+/// Appends the 10 sums of the `crc32` object of section `s` to `out`, as recorded (NaN for each when the section has none, an index written
+/// before the sums); `error.badIndex` when one is missing or not a number. A number that is not a CRC-32 matches no array, so it is
+/// `error.badIndex` when that array is read (`sum`), never wrong numbers. `f64`s as parsed: the feature modules have little room for more code.
+pub(crate) fn crcs(s: &Value, out: &mut Vec<f64>) -> Result<()> {
+    let sums = match s.get("crc32") {
+        None => [f64::NAN; 10],
+        Some(c) => ten(c).ok_or_else(|| Error::new("error.badIndex"))?,
+    };
+    out.extend_from_slice(&sums);
     Ok(())
 }
 
 /// Errors with `error.badIndex` when array `k` of section `si`, read whole as `bytes`, does not match the sum the section records (`crcs` of `Index`).
-pub(crate) fn sum(crcs: &[u64], si: usize, k: usize, bytes: &[u8]) -> Result<()> {
+pub(crate) fn sum(crcs: &[f64], si: usize, k: usize, bytes: &[u8]) -> Result<()> {
     match crcs.get(si * 10 + k) {
-        Some(&want) if want != ABSENT && u64::from(crc32(bytes)) != want => {
+        Some(&want) if !want.is_nan() && f64::from(crc32(bytes)) != want => {
             Err(Error::new("error.badIndex"))
         }
         _ => Ok(()),
