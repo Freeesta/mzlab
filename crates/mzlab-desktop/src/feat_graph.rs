@@ -3,12 +3,13 @@
 //! `kind: "positions"` (`smiles`, `transform`, `peaks` as JSON text, `tol`, `ppm`, `positive`, optional `reatt` as the `reatt/1` text of the parent) gives the `posiz/1`
 //! of a product (the classes of positions its MS2 supports; with `reatt`, also `prior`).
 //! `kind: "labels"` (`request` as a JSON object or text) gives the `etich/1` of the structures of a drawing (`mzlab-cli mol-label`); `kind: "cut"`
-//! (`request` the same way) the `cut/1` of a cut across bonds (`mzlab-cli mol-cut`).
+//! (`request` the same way) the `cut/1` of a cut across bonds (`mzlab-cli mol-cut`); `kind: "mech"` (`request` the same way) the `mecc/1` check of the
+//! curved arrows of a mechanism (`mzlab-cli mol-mech`).
 //! `kind: "reactivity"` (`smiles`, `opts` as a JSON object or text) gives the `reatt/1` of `mzlab_chem::reactivity_json` (the same function as the `.wasm` `chem`).
 //! An error keeps its key (`error.grafo.ring`, `error.grafo.delta.neg`, ...) as the `.wasm` throws it.
 
 use mzlab_core::{Error, Result};
-use mzlab_feat::chem::{cut, fragments, graph, labels, positions};
+use mzlab_feat::chem::{cut, fragments, graph, labels, mech, positions};
 use serde_json::Value;
 
 use crate::engine::State;
@@ -31,16 +32,16 @@ impl State {
                 p["positive"].as_bool().unwrap_or(true),
                 s("reatt"),
             )?),
-            "labels" | "cut" => {
+            "labels" | "cut" | "mech" => {
                 let req = if p["request"].is_object() {
                     p["request"].to_string()
                 } else {
                     s("request").to_string()
                 };
-                text(if s("kind") == "cut" {
-                    cut::cut_json(&req)?
-                } else {
-                    labels::labels_json(&req)?
+                text(match s("kind") {
+                    "cut" => cut::cut_json(&req)?,
+                    "mech" => mech::mech_json(&req)?,
+                    _ => labels::labels_json(&req)?,
                 })
             }
             "reactivity" => {

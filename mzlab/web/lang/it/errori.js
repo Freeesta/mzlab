@@ -360,6 +360,8 @@ I18N.add("it", {
   "error.generic": "L'operazione non è riuscita: {detail}. Riprova; se succede ancora, ricarica la pagina.",
   "error.grafo.delta": "La variazione di formula «{delta}» non si legge: scrivila come +O, -H2 o -Cl+H.",
   "error.grafo.delta.neg": "La struttura non ha {element} da togliere.",
+  "error.grafo.mech.request": "La richiesta del controllo delle frecce non è valida.",
+  "error.grafo.mech.atom": "Una freccia o un doppietto indica un atomo che non c'è nel disegno.",
   "error.grafo.cut.none": "Nessun legame da tagliare: traccia la linea attraverso almeno un legame.",
   "error.grafo.cut.aromatic": "Un legame aromatico non si taglia: disegna la struttura con legami singoli e doppi alternati.",
   "error.grafo.cut.order": "La rottura eterolitica qui vale solo per legami singoli.",

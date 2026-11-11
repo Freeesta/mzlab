@@ -68,6 +68,17 @@ def test_fragments_of_a_radical_equal_the_app_fixture(pkg):
     assert '"formula":"CH3O","mass":31.0184,"mz":32.0257,"odd":true' in fx["frag"]
 
 
+def test_mechanism_check_through_wasm_equals_the_app_fixture_and_the_cli(pkg, tmp_path):
+    fx = json.loads((Path(__file__).parent / "dati" / "mecc_mclafferty.json").read_text(encoding="utf-8"))
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps(fx["request"]), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "mech")
+    assert site.strip() == fx["mecc"]   # crates/mzlab-desktop/tests/labels.rs reads the same bytes
+    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-mech", str(req))
+    r = json.loads(site)
+    assert [a["ok"] for a in r["arrows"]] == [True] * 5 + [False] and r["arrows"][5]["problem"] == "pairFromRadical"
+
+
 LABELS = {"structures": [[{"el": "C", "iso": 13, "h": 4}], [{"el": "C", "h": 3}, {"el": "O", "h": 1}], [{"el": "Pt"}, {"el": "Cl"}, {"el": "Cl"}, {"el": "N", "h": 2}, {"el": "N", "h": 2}],
                          [{"el": "C", "h": 2}, {"el": "C"}, {"el": "O", "q": -1}, {"el": "O", "q": -1}, {"el": "O"}, {"el": "O"}], [{"el": "R#"}]], "arrows": [[1, 0], [0, 4]]}
 
