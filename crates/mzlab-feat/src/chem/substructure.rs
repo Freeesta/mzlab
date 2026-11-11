@@ -1,7 +1,7 @@
 //! `sub/1`: where a drawn moiety occurs in a list of structures (feature `record`, matcher `mzlab_mol::SubQuery`). The request is
 //! `{"query", "targets": [..], "stereo", "max"}` with SMILES or molfiles as text; the answer lists, per target that
 //! contains the query, its distinct matches (target atoms of every query atom, merged query hydrogens left out). A hit is a suspect to
-//! check, never an identification. The same bytes from the `.wasm` `sub`, the desktop route `feat/grafo` and `mzlab-cli mol-search --sub`.
+//! check, never an identification. The same bytes from the desktop route `feat/grafo` and `mzlab-cli mol-search --sub`.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Out};

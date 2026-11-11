@@ -14,7 +14,6 @@ limit_attributio=1536000   # attributio fused: the table, the review (Banco 2b),
 limit_lr=892928   # zlib-rs +30 KB (was 741376), mzlab-picchi at O3 +3.6 KB (peaks 3.1x); finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=623200   # interp (cap +10 % over the 566463 measured with tp.review, rounded up to 100 B): the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
-limit_sub=237568   # sub: the substructure search of the Draw page (mzlab-mol SMILES and molfile readers, matcher; sub/1), loaded only when the user asks for the search; measured 214045 (x 1.10, multiple of 4 KiB)
 limit_msnregole=196608   # msnregole: SMILES -> the expectations of the structure rules (mzlab-feat chem::rules), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES; measured 163480 (+3 %)
 limit_msngrafo=790528   # zlib-rs +30 KB (was 575000), mzlab-picchi at O3 +1.1 KB (peaks 3.1x); msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 537129 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
 limit_rotte=884736   # rotte: the statistics, molecules, campioni (Data) and Flow command/line/scheduler routes, out of the engine; loaded by the worker of the engine on the first request of one of them (docs/agenti/wasm-tetti.md)
@@ -49,9 +48,6 @@ wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit_table "mzFinder tabl
 # the structure graph, loaded only when the user gives a SMILES: crates/mzlab-feat-grafo-wasm
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-grafo-wasm
 wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo" @motore
-# the substructure search of the Draw page (crates/mzlab-sub-wasm: sub/1), loaded only when the user asks for it
-tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-sub-wasm
-wasm_pack "$out/sub" $R/mzlab_sub_wasm.wasm $limit_sub "sub" @motore
 # the reactivity of the parent (crates/mzlab-chem-wasm: reatt/1), loaded only in administrator mode
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-chem-wasm
 wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem" @motore
@@ -113,8 +109,6 @@ m["interp"] = {"js": "interp/mzlab_feat_wasm.js", "wasm": "interp/mzlab_feat_was
 m["untargeted"] = {"js": "untargeted/mzlab_feat_wasm.js", "wasm": "untargeted/mzlab_feat_wasm_bg.wasm", "sha256": sha("untargeted")}
 m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
-m["sub"] = {"js": "sub/mzlab_sub_wasm.js", "wasm": "sub/mzlab_sub_wasm_bg.wasm",
-            "sha256": hashlib.sha256(open(f"{o}/sub/mzlab_sub_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["chem"] = {"js": "chem/mzlab_chem_wasm.js", "wasm": "chem/mzlab_chem_wasm_bg.wasm",
              "sha256": hashlib.sha256(open(f"{o}/chem/mzlab_chem_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["llm"] = {"js": "llm/mzlab_llm_wasm.js", "wasm": "llm/mzlab_llm_wasm_bg.wasm",

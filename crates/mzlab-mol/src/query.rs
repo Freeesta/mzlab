@@ -95,8 +95,8 @@ impl SubQuery {
     }
 }
 
-/// Reads a target: a molfile (a text with `M  END`) or a SMILES. A `mol/1` JSON record is not read here, so the `.wasm` `sub` does not
-/// carry the JSON reader of the record.
+/// Reads a target: a molfile (a text with `M  END`) or a SMILES. A `mol/1` JSON record is not read here, so a `.wasm` with the matcher does
+/// not carry the JSON reader of the record.
 pub fn read_target(text: &str) -> Result<Mol, MolError> {
     if text.contains("M  END") {
         Mol::from_molfile(text)

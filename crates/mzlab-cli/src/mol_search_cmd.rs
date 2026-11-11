@@ -1,5 +1,5 @@
 //! `mzlab-cli mol-search --sub QUERY TARGET... [--set stereo=1] [--set max=N] [--out PATH]`: where a drawn moiety occurs in the given
-//! structures (`sub/1`), byte for byte what the `.wasm` `sub` and the desktop route `feat/grafo` (`kind: "sub"`) answer.
+//! structures (`sub/1`), byte for byte what the desktop route `feat/grafo` (`kind: "sub"`) answer.
 
 use std::path::PathBuf;
 

@@ -1,5 +1,5 @@
-//! The route `feat/grafo` with `kind: "sub"` gives the same `sub/1` as `mzlab_feat::chem::substructure::search_json` (the function of the `.wasm`
-//! `sub` and of `mzlab-cli mol-search --sub`), with the request as an object or as text, and keeps the key of an error.
+//! The route `feat/grafo` with `kind: "sub"` gives the same `sub/1` as `mzlab_feat::chem::substructure::search_json` (the function of
+//! `mzlab-cli mol-search --sub`), with the request as an object or as text, and keeps the key of an error.
 
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
