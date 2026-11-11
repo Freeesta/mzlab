@@ -10,6 +10,23 @@ use mzlab_mol::{read_target, SubOptions, SubQuery};
 /// Most matches listed per target; the count `n` stops there too.
 const MAX_MATCHES: usize = 1000;
 
+/// One entry of `hits`: the target index, the number of matches and the target atoms of each.
+fn hit(o: &mut Out, first: bool, i: usize, rows: &[Vec<u32>]) {
+    o.raw(if first { "{\"i\":" } else { ",{\"i\":" })
+        .int(i as i64)
+        .raw(",\"n\":")
+        .int(rows.len() as i64)
+        .raw(",\"maps\":[");
+    for (k, r) in rows.iter().enumerate() {
+        o.raw(if k > 0 { ",[" } else { "[" });
+        for (j, a) in r.iter().enumerate() {
+            o.raw(if j > 0 { "," } else { "" }).int(i64::from(*a));
+        }
+        o.raw("]");
+    }
+    o.raw("]}");
+}
+
 /// The `sub/1` answer of a request.
 pub fn search_json(request: &str) -> Result<String> {
     let bad = || Error::new("error.sub.request");
@@ -43,19 +60,7 @@ pub fn search_json(request: &str) -> Result<String> {
         match found {
             Ok(rows) if rows.is_empty() => {}
             Ok(rows) => {
-                o.raw(if first { "{\"i\":" } else { ",{\"i\":" })
-                    .int(i as i64)
-                    .raw(",\"n\":")
-                    .int(rows.len() as i64)
-                    .raw(",\"maps\":[");
-                for (k, r) in rows.iter().enumerate() {
-                    o.raw(if k > 0 { ",[" } else { "[" });
-                    for (j, a) in r.iter().enumerate() {
-                        o.raw(if j > 0 { "," } else { "" }).int(i64::from(*a));
-                    }
-                    o.raw("]");
-                }
-                o.raw("]}");
+                hit(&mut o, first, i, &rows);
                 first = false;
             }
             Err(e) => {
