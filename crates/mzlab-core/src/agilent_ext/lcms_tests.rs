@@ -44,3 +44,18 @@ fn calibration_uses_the_scan_coefficients_and_never_others() {
     assert_eq!(c.mz(Some(1), Some(1), true, 10.0), Err(Miss::NoRecord));
     assert_eq!(c.mz(Some(1), Some(5), true, 10.0), Err(Miss::NoRecord));
 }
+
+#[test]
+fn a_profile_of_16_million_points_does_not_fit_the_site() {
+    use crate::budget::{points_fit, NATIVE_BUDGET_MB, WASM_BUDGET_MB};
+    // the largest block the header may claim: 16 + 4 n bytes under 64 MB, a stored stream of 24 bytes
+    let n = ((1usize << 26) - 16) / 4;
+    let (site, app) = (WASM_BUDGET_MB << 20, NATIVE_BUDGET_MB << 20);
+    assert_eq!(
+        points_fit(n, super::PROFILE_POINT, site).unwrap_err().key,
+        "error.memoryBudget"
+    );
+    assert!(points_fit(n, super::PROFILE_POINT, app).is_ok());
+    // a profile of the size real Q-TOF scans have reads on both
+    assert!(points_fit(400_000, super::PROFILE_POINT, site).is_ok());
+}

@@ -11,7 +11,7 @@ use mzlab_core::flow::{file_roots, parse, plan_json};
 use mzlab_core::json::Out;
 
 use crate::convert_entries::{entries, Entry};
-use crate::convert_report::{compression_sets, head_of, report, Item};
+use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
@@ -286,23 +286,6 @@ fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path
         }
         Err(cause) => Item::Failed { input, cause },
     }
-}
-
-/// A partial read is written and said, never passed for a whole one: one warning line per file with its counts.
-fn partial_lines(items: &[Item]) -> String {
-    items
-        .iter()
-        .filter_map(|i| match i {
-            Item::Done {
-                input,
-                conv: Some(c),
-                ..
-            } => crate::convert_report::partial_of(c).map(|(declared, read, cause)| {
-                format!("warning: {input}: partial read, {read} of {declared} scans ({cause})\n")
-            }),
-            _ => None,
-        })
-        .collect()
 }
 
 /// The last lines on stderr and the code: every file written, or the number that failed.
