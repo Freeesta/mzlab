@@ -103,3 +103,28 @@ fn a_cut_file_is_a_bad_index() {
         assert_eq!(err.key, "error.badIndex", "cut {cut}");
     }
 }
+
+/// The index with the first scan id of section 0 (the first `"scan_ids":` offset in the metadata) set to `id`.
+fn with_scan_id(b: &[u8], id: i64) -> Vec<u8> {
+    let (off, len) = (u64_at(b, 16) as usize, u64_at(b, 24) as usize);
+    let meta = String::from_utf8(b[off..off + len].to_vec()).unwrap();
+    let mut out = b.to_vec();
+    let rest = &meta[meta.find("\"scan_ids\":").unwrap() + 11..];
+    let at: usize = rest[..rest.find(|c: char| !c.is_ascii_digit()).unwrap()]
+        .parse()
+        .unwrap();
+    out[at..at + 8].copy_from_slice(&id.to_le_bytes());
+    out
+}
+
+#[test]
+fn a_scan_id_outside_the_scan_table_is_a_bad_index() {
+    let b = good();
+    let rows = open(b.clone()).unwrap().scans.len() as i64;
+    assert!(open(b.clone()).unwrap().arrays(0).is_ok());
+    for id in [-1, rows, i64::MAX] {
+        let mut ix = open(with_scan_id(&b, id)).unwrap();
+        let err = ix.arrays(0).err().unwrap_or_else(|| panic!("id {id} read"));
+        assert_eq!(err.key, "error.badIndex", "id {id}");
+    }
+}
