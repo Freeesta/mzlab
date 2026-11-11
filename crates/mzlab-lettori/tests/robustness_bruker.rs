@@ -1,7 +1,7 @@
 //! Hostile and hand-built input for the Bruker reader: a SQLite file and a `tdf_bin` made inside the test (no real data), page cycles, long varints, fake zstd, truncations, a write-ahead log.
 #![cfg(feature = "bruker")]
 
-use mzlab_core::readers::{FileSet, Member};
+use mzlab_core::readers::{FileSet, Losses, Member};
 use mzlab_lettori::bruker::sqlite_min::Sqlite;
 
 mod common_sqlite;
@@ -279,6 +279,7 @@ fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
     let mut l =
         mzlab_lettori::apri(folder(whole.clone(), tdf_frames(&tims, 3)), &limits()).unwrap();
     assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (5, 0));
+    assert_eq!(l.losses(0).unwrap(), Losses::complete(5));
     // cut inside the fourth block, at its first byte, and inside its header: three frames read, two counted
     for cut in [
         3 * b.len() + 9,
@@ -293,6 +294,10 @@ fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
         .unwrap();
         assert_eq!(l.index(0).unwrap().len(), 3, "{cut}");
         assert_eq!(l.missing(0), 2, "{cut}");
+        // the account of the read names the cut `_bin`, not a generic truncation
+        let lost = l.losses(0).unwrap();
+        assert_eq!(lost, Losses::of(5, 3, "warn.file.brukerCutBin"), "{cut}");
+        assert!(l.losses(1).is_err());
         assert_eq!(l.samples()[0].scansioni, 3);
         for k in 0..3 {
             let s = l.scan(0, k).unwrap();
@@ -316,6 +321,28 @@ fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
     // nothing left: an empty index, every spectrum counted
     let mut l = mzlab_lettori::apri(folder(Vec::new(), tdf_frames(&tims, 3)), &limits()).unwrap();
     assert_eq!((l.index(0).unwrap().len(), l.missing(0)), (0, 5));
+    assert_eq!(l.losses(0).unwrap().cause, "warn.file.brukerCutBin");
+}
+
+#[test]
+fn the_mzml_of_a_cut_tdf_bin_carries_the_partial_read() {
+    let b = blocco2();
+    let n = b.len() as i64;
+    let whole: Vec<u8> = b.iter().copied().cycle().take(b.len() * 5).collect();
+    let conv = |bin: Vec<u8>| {
+        let mut l = mzlab_lettori::apri(
+            folder(bin, tdf_frames(&[0, n, 2 * n, 3 * n, 4 * n], 3)),
+            &limits(),
+        )
+        .unwrap();
+        let mut out = Vec::new();
+        mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {}).unwrap();
+        String::from_utf8(out).unwrap()
+    };
+    let cut = conv(whole[..3 * b.len() + 9].to_vec());
+    assert!(cut.contains(r#"&quot;dichiarate&quot;:5,&quot;lette&quot;:3,&quot;parziale&quot;:true,&quot;perdita&quot;:&quot;warn.file.brukerCutBin&quot;"#), "{}", &cut[..cut.len().min(3000)]);
+    let all = conv(whole);
+    assert!(all.contains("&quot;parziale&quot;:false") && !all.contains("brukerCutBin"));
 }
 
 #[test]
