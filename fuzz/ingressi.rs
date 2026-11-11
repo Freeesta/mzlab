@@ -26,7 +26,7 @@ fn insieme(membri: Vec<(&str, Vec<u8>)>) -> FileSet {
 
 /// The container of `.wiff` and `.dam`: directory, streams, hash.
 pub fn ole(data: &[u8]) {
-    if let Ok(o) = Ole::open(data.to_vec(), "x.wiff") {
+    if let Ok(o) = Ole::open(data.to_vec(), "x.wiff", &Limits::sito()) {
         let percorsi: Vec<String> = o.paths_list().map(String::from).collect();
         percorsi.iter().take(64).for_each(|p| drop(o.read(p)));
         let _ = o.sha1_hex();

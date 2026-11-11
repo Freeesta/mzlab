@@ -184,6 +184,12 @@ pub struct Wiff {
     failure: Option<Error>,
 }
 
+/// `head + width * n` bytes, `None` when it does not fit a `usize`: on a 32-bit target (the site) a count of 2^29 rows would wrap to a few bytes,
+/// pass a length check that the 64-bit app fails, and start a loop of 2^29 turns.
+pub(crate) fn span(head: usize, width: usize, n: usize) -> Option<usize> {
+    n.checked_mul(width)?.checked_add(head)
+}
+
 fn bad(detail: &str) -> Error {
     Error::new("err.file.wiff").with("detail", detail)
 }
@@ -191,9 +197,15 @@ fn bad(detail: &str) -> Error {
 /// The container of a `.wiff`; one cut short (sectors its header or its FAT use lie past the end) is refused whole: its streams would read empty or short,
 /// so the samples, the index or the method would be missing unsaid.
 pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
+    container_within(wiff, name, &crate::readers::Limits::held())
+}
+
+/// `container` bounded by `limits`: a file past the memory budget is told as such, not as a file that is not a `.wiff`.
+pub fn container_within(wiff: Vec<u8>, name: &str, limits: &crate::readers::Limits) -> Result<Ole> {
     let size = wiff.len();
     let cut = Ole::header_cut(&wiff);
-    let ole = Ole::open(wiff, name).map_err(|_| match cut {
+    let ole = Ole::open(wiff, name, limits).map_err(|e| match cut {
+        _ if e.key == Error::memory_budget().key => e,
         Some(needed) => truncated(name, size, needed),
         None => Error::new("err.file.notWiff").with("name", name),
     })?;

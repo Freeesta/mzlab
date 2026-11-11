@@ -87,7 +87,8 @@ impl Engine {
         JsReader { read }
             .read_at(0, &mut data)
             .map_err(|e| error_json(&e))?;
-        let ole = Ole::open(data, name).map_err(|e| error_json(&e))?;
+        let ole = Ole::open(data, name, &mzlab_core::readers::Limits::held())
+            .map_err(|e| error_json(&e))?;
         let file = SrcFile {
             name: name.to_string(),
             sha1: (!sha1.is_empty()).then(|| sha1.to_string()),

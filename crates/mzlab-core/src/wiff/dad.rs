@@ -2,7 +2,7 @@
 //! plus high-resolution TOF / SCIEX OS sample streams (`Wiff2SampleInfo`, `DDERealTimeData`, `TDCInfo`, `TDCStatistics`, `TOFCalibrationData`, `Itc`, and `.wiff.scan`
 //! `0xffffffff` TDC blocks). Spec: `docs/agenti/wiff_specifica_completa.md`.
 
-use super::bad;
+use super::{bad, span};
 use crate::error::Result;
 use crate::mzml::{ChromKind, Chromatogram};
 use crate::ole::Ole;
@@ -105,7 +105,7 @@ fn read_dad(ole: &Ole, sample: u32) -> Option<DadData> {
         return None;
     }
     let idx = ole.read(&h_path.replace("DADSampleHeader", "DADIdx"))?;
-    if idx.len() < 32 + 8 * n_pts {
+    if idx.len() < span(32, 8, n_pts)? {
         return None;
     }
     let (mut time_min, mut twc_mau) = (Vec::with_capacity(n_pts), Vec::with_capacity(n_pts));
@@ -115,7 +115,7 @@ fn read_dad(ole: &Ole, sample: u32) -> Option<DadData> {
     }
     let rtd = ole.read(&h_path.replace("DADSampleHeader", "DADRealTimeData"))?;
     let total = n_pts.checked_mul(n_ch)?;
-    let raw = rtd.get(32..32 + 4 * total)?;
+    let raw = rtd.get(32..span(32, 4, total)?)?;
     let mut matrix_mau = Vec::with_capacity(total);
     for c in raw.chunks_exact(4) {
         if let Ok(arr) = c.try_into() {
@@ -260,7 +260,7 @@ pub fn device_channels(ole: &Ole, sample: u32) -> Vec<DeviceChannel> {
             .and_then(|v| usize::try_from(v).ok())
             .unwrap_or(0);
         let data = ole.read(&format!("{base}DevData")).unwrap_or_default();
-        let n_pts = if total >= n_ch && data.len() >= 32 + 8 * total {
+        let n_pts = if total >= n_ch && span(32, 8, total).is_some_and(|n| data.len() >= n) {
             total / n_ch
         } else {
             0
@@ -395,7 +395,7 @@ impl TofSampleData {
             f64_at(&cal, 40)?,
             usize::try_from(u32_at(&cal, 52)?).ok()?,
         );
-        if cal.len() < 56 + 20 * n_scans {
+        if cal.len() < span(56, 20, n_scans)? {
             return None;
         }
         let scan_calibration = (0..n_scans)

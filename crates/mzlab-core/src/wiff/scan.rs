@@ -47,7 +47,7 @@ impl Nibbles<'_> {
 
 /// `(bin, count)` of up to `n` points: nibble 1..7 a point of that count; 0 a point with a long count; 8 a long skip; 9..15 a skip of nibble - 8.
 pub fn decode(buf: &[u8], n: usize) -> Vec<(u64, u32)> {
-    let mut out = Vec::with_capacity(n.min(buf.len() * 2));
+    let mut out = Vec::with_capacity(n.min(buf.len().saturating_mul(2)));
     let (mut r, mut pos) = (Nibbles { buf, at: 0 }, 0u64);
     while out.len() < n {
         let Some(t) = r.nib() else { break };
@@ -72,6 +72,22 @@ pub fn decode(buf: &[u8], n: usize) -> Vec<(u64, u32)> {
         pos += 1;
     }
     out
+}
+
+/// Bytes a decoded point holds at once: `(bin, count)` (16), m/z and intensity (16), the f32 and f64 intensities of the spectrum (12).
+const POINT_BYTES: usize = 44;
+/// The memory one scan may take: the budget of the target (the site 192 MB, the app 1 GB).
+const BUDGET: usize = if cfg!(target_family = "wasm") {
+    crate::budget::WASM_BUDGET_MB
+} else {
+    crate::budget::NATIVE_BUDGET_MB
+} << 20;
+
+/// `n` zero bytes, or `error.memoryBudget` when the memory does not hold them: `n` is a length read from the file.
+fn zeroed(n: usize) -> Result<Vec<u8>> {
+    let mut v = crate::budget::try_vec(n)?;
+    v.resize(n, 0);
+    Ok(v)
 }
 
 /// Longest header: marker (8) + three ranges (96) + the point count (4).
@@ -145,22 +161,21 @@ pub fn read_scan<R: ReadAt>(
         return Ok(None);
     };
     let end = end.min(scan_len);
-    // at most 10 bytes for a long skip and 10 for a long count per point
-    let mut data = vec![
-        0u8;
-        usize::try_from(end - at)
-            .unwrap_or(usize::MAX)
-            .saturating_sub(h.len)
-            .min(h.n.saturating_mul(20).saturating_add(16))
-    ];
-    if h.n > 0 {
+    // at most 10 bytes for a long skip and 10 for a long count per point; the block may still claim more than the memory holds (a calm error, never a trap)
+    let len = usize::try_from(end - at)
+        .unwrap_or(usize::MAX)
+        .saturating_sub(h.len)
+        .min(h.n.saturating_mul(20).saturating_add(16));
+    // a byte holds at most two points: the count of the head is believed only up to that, and the points must fit the memory budget of the target
+    let n = h.n.min(len.saturating_mul(2));
+    if n.saturating_mul(POINT_BYTES) > BUDGET {
+        return Err(Error::memory_budget());
+    }
+    let mut data = zeroed(len)?;
+    if n > 0 {
         scan.read_at(at + h.len as u64, &mut data)?;
     }
-    let pts = if h.n > 0 {
-        decode(&data, h.n)
-    } else {
-        Vec::new()
-    };
+    let pts = if n > 0 { decode(&data, n) } else { Vec::new() };
     let Some(&r0) = h.ranges.first() else {
         return Ok(None);
     };
@@ -198,10 +213,13 @@ pub fn read_mrm<R: ReadAt>(
     at: u64,
     n: usize,
 ) -> Result<Option<Vec<f64>>> {
-    if at + 4 * n as u64 > scan_len {
+    let Some(len) = n
+        .checked_mul(4)
+        .filter(|&l| at.saturating_add(l as u64) <= scan_len)
+    else {
         return Ok(None);
-    }
-    let mut b = vec![0u8; 4 * n];
+    };
+    let mut b = zeroed(len)?;
     scan.read_at(at, &mut b)?;
     Ok(Some(
         b.chunks_exact(4)
