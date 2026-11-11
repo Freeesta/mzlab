@@ -1,5 +1,5 @@
 //! A synthetic Thermo `.raw` for the tests: invented numbers, laid out the way `vendor/opentfraw` reads a TSQ run of format v57-v63 (one flat peak list per scan,
-//! no scan events). It is the only way to build the cut, the undocumented-version and the unreadable-stream cases without a real file.
+//! no scan events). It is the only way to build the cut, the unverified-version and the unreadable-stream cases without a real file.
 #![allow(dead_code)]
 
 /// Where the scan data sits relative to the streams that describe it.
@@ -14,7 +14,7 @@ pub enum Layout {
 pub struct Raw {
     /// Version of the layout written (57, 60, 62 or 63).
     pub layout_version: u32,
-    /// Number written in the header (differs from `layout_version` for the undocumented-version cases).
+    /// Number written in the header (differs from `layout_version` for the unverified-version cases).
     pub declared_version: u32,
     pub scans: u32,
     pub peaks: u32,

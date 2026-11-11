@@ -181,7 +181,7 @@ try:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
             pg.set_input_files("#pick", [str(D / "tof.wiff"), str(D / "tof.wiff.scan")])
-            pg.wait_for_function(r"document.querySelector('#unopen') && /\((code|codice) 8\)/.test(document.querySelector('#unopen').innerText)", timeout=120000)   # the page speaks Italian or English
+            pg.wait_for_function(r"document.querySelector('#unopen') && /(code|codice) 8\b/.test(document.querySelector('#unopen').innerText)", timeout=120000)   # the page speaks Italian or English
             told = pg.evaluate("document.querySelector('#unopen').innerText")
             assert "tof.wiff" in told and "tof.mzML" not in told, told
             assert not errs, errs

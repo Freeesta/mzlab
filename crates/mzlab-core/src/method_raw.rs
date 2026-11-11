@@ -177,14 +177,13 @@ fn trailer_warning(raw: &RawFileReader) -> Vec<Option<V>> {
         .collect()
 }
 
-/// What `RawFileReader::open` left out or assumed: a cut file, a version that was read with another layout, a structure that could not be read.
+/// What `RawFileReader::open` left out: a cut file, a structure that could not be read.
 fn open_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
     raw.warnings
         .iter()
         .map(|w| {
             let key = match w {
                 opentfraw::Warning::Truncated { .. } => "meta.troncato",
-                opentfraw::Warning::UnverifiedVersion { .. } => "meta.versioneNonVerificata",
                 opentfraw::Warning::Skipped { .. } => "meta.nonDecodificato",
             };
             obj(vec![

@@ -1,6 +1,6 @@
 #![cfg(feature = "thermo")]
 //! The Thermo reader on files that are not as the format says, built here (`comune/thermo.rs`, invented numbers): cut files open up to the last whole scan,
-//! an undocumented version is read with the nearest layout, an unreadable stream does not stop the scans, and what cannot be opened says why.
+//! a version no real file has verified is refused with its number, an unreadable stream does not stop the scans, and what cannot be opened says why.
 //! Not checked against RawFileReader: these are constructed files (docs/agenti/lettori-modulo.md).
 mod common;
 
@@ -22,10 +22,10 @@ fn refused(b: &[u8]) -> Error {
 
 #[test]
 fn the_built_file_opens_whole_and_gives_its_peaks() {
-    for v in [57, 60, 62, 63] {
+    for v in [57, 63] {
         let b = Raw::tsq(v, 10).bytes();
         let r = open(&b).unwrap_or_else(|e| panic!("v{v}: {e}"));
-        assert_eq!((r.num_scans, r.version, r.declared_version), (10, v, v));
+        assert_eq!((r.num_scans, r.version), (10, v));
         assert!(r.warnings.is_empty(), "v{v}: {:?}", r.warnings);
         let p = r
             .read_scan_peaks(&mut Cursor::new(b.clone()), 4)
@@ -121,21 +121,25 @@ fn an_index_cut_in_the_middle_keeps_the_entries_that_are_whole() {
     );
 }
 
+/// TH-15: the layouts of 60 and 62 are written as the format documents them, yet no real file verified them; they and every other number stay refused.
 #[test]
-fn an_undocumented_version_is_read_with_the_nearest_layout_when_the_index_holds() {
-    let mut raw = Raw::tsq(60, 50);
-    let reference = open(&raw.bytes()).unwrap();
-    for declared in [59, 61] {
+fn an_unverified_version_is_refused_with_its_number_whatever_layout_follows() {
+    for (layout, declared) in [
+        (60, 60),
+        (62, 62),
+        (63, 59),
+        (63, 61),
+        (63, 65),
+        (57, 8),
+        (57, 47),
+    ] {
+        let mut raw = Raw::tsq(layout, 50);
         raw.declared_version = declared;
-        let b = raw.bytes();
-        let r = open(&b).unwrap_or_else(|e| panic!("v{declared}: {e}"));
-        assert_eq!((r.declared_version, r.version), (declared, 60));
-        assert_eq!(
-            r.warnings,
-            vec![Warning::UnverifiedVersion { declared, used: 60 }]
-        );
-        assert_eq!(r.num_scans, reference.num_scans);
-        assert_eq!(peaks(&b, &r, 7), peaks(&raw.bytes(), &r, 7));
+        match open(&raw.bytes()) {
+            Err(Error::UnsupportedVersion(v)) => assert_eq!(v, declared),
+            Err(e) => panic!("v{declared}: {e}"),
+            Ok(_) => panic!("v{declared} opened"),
+        }
     }
 }
 
@@ -155,7 +159,7 @@ fn an_undocumented_version_with_another_layout_keeps_the_error_with_the_number()
 /// A count in a stream the scans do not need (events, error log) that the file cannot hold used to stop the whole opening with `AllocationTooLarge`.
 #[test]
 fn a_stream_that_cannot_be_read_is_left_out_and_the_scans_open() {
-    for version in [57, 60, 62, 63] {
+    for version in [57, 63] {
         let mut raw = Raw::tsq(version, 30);
         raw.events = u32::MAX;
         raw.error_entries = 4_000_000_000;
@@ -178,7 +182,7 @@ fn a_stream_that_cannot_be_read_is_left_out_and_the_scans_open() {
 
 #[test]
 fn an_error_names_the_structure_the_version_and_the_size() {
-    let b = Raw::tsq(62, 5).bytes();
+    let b = Raw::tsq(63, 5).bytes();
     // a header that is whole and a seq row that is not
     let e = refused(&b[..1400]);
     let text = e.to_string();
@@ -188,7 +192,7 @@ fn an_error_names_the_structure_the_version_and_the_size() {
     );
     let mut bad = b.clone();
     bad[40..44].copy_from_slice(&66u32.to_le_bytes());
-    // v66 layout over a v62 body: the run header addresses read as other numbers
+    // v66 layout over a v63 body: the run header addresses read as other numbers
     let e = open(&bad);
     if let Err(e) = e {
         let t = e.to_string();
@@ -223,12 +227,16 @@ fn describe_lists_the_structures_and_the_result() {
     let b = Raw::tsq(63, 20).bytes();
     let t = RawFileReader::describe(Cursor::new(b.clone()));
     assert!(
-        t.contains("declared v63 read as v63") && t.contains("scans 1..20"),
+        t.contains("FileHeader: v63\n") && t.contains("scans 1..20"),
         "{t}"
     );
     assert!(t.contains("open: 20 scans, 0 warnings"), "{t}");
     let t = RawFileReader::describe(Cursor::new(b[..2000].to_vec()));
     assert!(t.contains("open: file cut at 2000 bytes"), "{t}");
+    let mut raw = Raw::tsq(63, 20);
+    raw.declared_version = 65;
+    let t = RawFileReader::describe(Cursor::new(raw.bytes()));
+    assert!(t.contains("FileHeader: unsupported version: 65"), "{t}");
 }
 
 use mzlab_core::readers::{FileSet, Limits, Member};
@@ -326,7 +334,7 @@ fn mutated_built_files_never_panic() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(0);
     let mut seeds = Vec::new();
-    for v in [57, 60, 62, 63] {
+    for v in [57, 63] {
         for layout in [Layout::DataFirst, Layout::DataLast] {
             let mut raw = Raw::tsq(v, 60);
             raw.layout = layout;
@@ -439,7 +447,7 @@ fn an_srm_run_without_events_has_no_polarity() {
     let b = Raw::tsq(63, 4).bytes();
     let r = open(&b).unwrap();
     let m = opentfraw::scan_metadata(&r, &mut Cursor::new(b.clone()), 1).unwrap();
-    assert_eq!((m.ms_level, m.polarity), (2, None));
+    assert_eq!((m.ms_level, m.polarity), (Some(2), None));
     let mut l = mzlab_lettori::apri(
         mzlab_core::readers::FileSet {
             membri: vec![mzlab_core::readers::Member {

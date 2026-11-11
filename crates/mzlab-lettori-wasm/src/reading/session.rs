@@ -87,9 +87,9 @@ impl Sessions {
         self.reader(h)?.method(c)
     }
 
-    /// The spectra of sample `c` that a truncated file declares but does not hold (`Lettore::missing`).
+    /// The spectra of sample `c` the file declares beyond the ones read (`Reader::losses`).
     pub fn missing(&mut self, h: u32, c: usize) -> Result<usize> {
-        Ok(self.reader(h)?.missing(c))
+        Ok(self.reader(h)?.losses(c)?.lost())
     }
 
     /// The header of the mzML of sample `c` (`Lettore::mzml_header`), `null` when the reader has none: `{run, sources, instrument:[acc,name]|null, components:[[kind,acc,name]],

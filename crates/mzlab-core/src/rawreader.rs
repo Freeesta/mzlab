@@ -115,7 +115,8 @@ fn entry(raw: &RawFileReader, m: &ScanMetadata) -> ScanEntry {
     ScanEntry {
         id: format!("controllerType=0 controllerNumber=1 scan={}", m.scan_number),
         rt: m.retention_time_min,
-        livello: u8::try_from(m.ms_level).unwrap_or(u8::MAX),
+        // 0: the file does not say the level (no readable event)
+        livello: m.ms_level.map_or(0, |l| u8::try_from(l).unwrap_or(u8::MAX)),
         polarita: match m.polarity {
             Some(opentfraw::Polarity::Positive) => 1,
             Some(opentfraw::Polarity::Negative) => -1,
