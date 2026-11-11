@@ -173,9 +173,7 @@ pub(crate) fn decode_array(
         Want::Both => 12,
     };
     // the declared points must fit the budget of this target before a byte is inflated
-    if expected.saturating_mul(num.width() + kept) > crate::budget::TARGET_BUDGET {
-        return Err(Error::memory_budget());
-    }
+    crate::budget::points_fit(expected, num.width() + kept, crate::budget::TARGET_BYTES)?;
     let bytes: &[u8] = if zlib {
         // an array inflates to what the spectrum declares; when it declares nothing, to what the bytes of the file explain: a zlib stream may claim far more
         let limit = match expected.saturating_mul(num.width()) {
