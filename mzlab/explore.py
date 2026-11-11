@@ -142,7 +142,8 @@ class Item:
         ms1 = [s for s in self.sc if s.level == 1]
         ms2 = [s for s in self.sc if s.level >= 2]
         t1 = self._tbl(1) if ms1 else None
-        t2 = self._tbl(2) if ms2 else None
+        msn = min((s.level for s in ms2), default=None)      # MS2 when present, else the first deeper level (an MS3-only file)
+        t2 = self._tbl(msn) if ms2 else None
         pol = sorted({s.polarity for s in self.sc if s.polarity})
         out = {"file": self.file, "label": self.label, "sha256": getattr(self, "sha256", "") or getattr(r, "sha256", ""),
                 "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit, "rep": self.rep,
@@ -155,7 +156,7 @@ class Item:
                 "mz2_max": float(t2.mz[-1]) if t2 is not None and len(t2.mz) else None,
                 "polarity": "positive" if pol == [1] else "negative" if pol == [-1] else "mixed" if pol else "unknown",
                 "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}), "spectrum_mode": self.spectrum_mode(),
-                "ms2_exps": self._ms2_exps(ms2), "chromatograms": r.n_chromatograms, "kind": self.kind(),
+                "ms2_exps": self._ms2_exps(ms2), "msn_level": msn, "chromatograms": r.n_chromatograms, "kind": self.kind(),
                 "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda(), "analog": self.analog_list()}
         out.update(self.hr_info())
         if self.part:

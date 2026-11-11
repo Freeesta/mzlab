@@ -340,7 +340,8 @@ const J = (/** @type {string} */ u) => fetch(u).then(async r => { const j = awai
 const prk = (/** @type {unknown} */ pr, /** @type {string | undefined} */ ft) => ft ? `${pr ?? ""}~${ft}` : pr;
 const prSplit = (/** @type {unknown} */ pr) => { const t = String(pr ?? ""), i = t.indexOf("~"); return i < 0 ? [/** @type {string} */ (pr ?? ""), ""] : [t.slice(0, i), t.slice(i + 1)]; };
 const FT = (/** @type {string | undefined} */ ft) => ft ? `&filt=${encodeURIComponent(ft)}` : "";
-// precursor > fragment pairs of an MSn file (unit resolution) at its MSn level (3 in an MS3-only file)
+// precursor > fragment pairs of a product file (unit resolution); lvN = its MSn level
+const lvN = (/** @type {any} */ k) => Math.max(2, E.files[k]?.lv || 2);
 const getMs2Tr = (/** @type {string | number} */ k, lv = 2) => memo(`m2t${k}|${lv}`, () => J(`api/ms2tr?k=${k}&level=${lv}`)).then((/** @type {Bag} */ d) => d.files[0].transitions);
 (() => {
   addEventListener("mzlab-index", (/** @type {any} */ e) => {
