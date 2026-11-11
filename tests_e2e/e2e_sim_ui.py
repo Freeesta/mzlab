@@ -50,6 +50,43 @@ try:
             rows = pg.evaluate("[...document.querySelectorAll('.can-pop')].map(e => e.querySelectorAll('.can-row').length)")
             need(rows and all(r == N for r in rows), rows)
         step("the channel picker lists the SIM ions", picker)
+        PP = "E.panels.find(p => p.type === 'mrm' && p.el && p.el.isConnected)"
+        Q = PP + ".el"
+        tr = lambda: pg.evaluate("JSON.stringify(%s.tr)" % PP)
+        def short_labels():
+            t = pg.evaluate("[...%s.querySelectorAll('.can-row .can-et')].map(e => e.textContent)" % Q)
+            need(len(t) == N and all(not any(w in x for w in ("ms", "SIM", "«")) for x in t), t)
+            mixed = len({i["polarita"] for i in TRUE["ioni"]}) > 1                  # the polarity is printed only when the file holds both
+            need(all(x.endswith(("(+)", "(−)")) for x in t) if mixed else not any("(" in x for x in t), t)
+            need(pg.evaluate("[...%s.querySelectorAll('.can-hd span')].length" % Q) == 1, "extra columns")
+            need(pg.evaluate("[...%s.querySelectorAll('.can-row')].every(e => /ms/.test(e.title) && /\\d+ (punti|points)/.test(e.title))" % Q), "details not in the hover text")
+        step("the picker names each ion by its m/z alone; dwell, mode and points go to the hover text", short_labels)
+        def single():
+            pg.evaluate("%s.querySelectorAll('.can-row .can-et')[2].click()" % Q); frames(pg, 2)
+            need(len(json.loads(tr())) == 1, tr())
+            need(pg.evaluate("[...%s.querySelectorAll('.can-row')].filter(e => e.getAttribute('aria-selected') === 'true').length" % Q) == 1, "ticks")
+            wait_for_js(pg, "%s._a && new Set(%s._a.sr.map(s => s.ion)).size === 1" % (PP, PP), timeout=30000)
+            need(":" in pg.evaluate("%s.querySelector('.can-bt').textContent" % Q), "button does not name the ion")
+        step("a click on an ion plots that ion alone", single)
+        def multi():
+            pg.evaluate("%s.querySelectorAll('.can-row .can-hit')[0].click()" % Q); frames(pg, 2)
+            need(len(json.loads(tr())) == 2, tr())
+            pg.evaluate("%s.querySelectorAll('.can-row .can-hit')[0].click()" % Q); frames(pg, 2)
+            need(len(json.loads(tr())) == 1, tr())
+            pg.evaluate("%s.querySelectorAll('.can-row .can-hit')[2].click()" % Q); frames(pg, 2)
+            need(len(json.loads(tr())) == 1, "the last ion was unticked: " + tr())
+            sz = pg.evaluate("(() => { const r = %s.querySelector('.can-hit').getBoundingClientRect(); return [r.width, r.height]; })()" % Q)
+            need(sz[0] >= 24 and sz[1] >= 24, sz)
+        step("the box adds or removes an ion (24 px target) and the last one stays", multi)
+        def keys():
+            pg.evaluate("(() => { const r = %s.querySelectorAll('.can-row')[0]; r.setAttribute('tabindex', '0'); r.focus(); })()" % Q)
+            pg.keyboard.press(" "); frames(pg, 2); need(len(json.loads(tr())) == 2, tr())
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); frames(pg, 2); need(len(json.loads(tr())) == 1, tr())
+            need(pg.evaluate("%s.querySelector('[role=tree]').getAttribute('aria-describedby')" % Q), "no hint")
+            pg.evaluate("%s.querySelector('.can-all').click()" % Q); frames(pg, 2)
+            need(tr() == '""', tr())
+            need(pg.evaluate("document.activeElement.classList.contains('can-all') && !!document.activeElement.getAttribute('aria-label')"), "focus")
+        step("Space adds an ion, Enter plots it alone, «All» plots every ion again", keys)
         pg.keyboard.press("Escape")
         def submenu():
             box = pg.locator("canvas").first.bounding_box()

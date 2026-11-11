@@ -28,26 +28,8 @@ impl<T: ReadAt + ?Sized> ReadAt for Box<T> {
     }
 }
 
-impl ReadAt for Vec<u8> {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
-        let a = off as usize;
-        let src = a
-            .checked_add(buf.len())
-            .and_then(|b| self.get(a..b))
-            .ok_or_else(|| Error::new("error.badIndex"))?;
-        buf.copy_from_slice(src);
-        Ok(())
-    }
-}
-
-impl ReadAt for std::fs::File {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
-        use std::io::{Read, Seek, SeekFrom};
-        self.seek(SeekFrom::Start(off))
-            .and_then(|_| self.read_exact(buf))
-            .map_err(|_| Error::new("error.badIndex"))
-    }
-}
+pub(crate) use crate::readat::index_bytes;
+pub use crate::readat::read_error;
 
 /// One row of the scan table (`SCAN_COLUMNS`).
 #[derive(Debug, Clone, Default)]
@@ -269,7 +251,7 @@ fn read_span<R: ReadAt>(r: &mut R, off: u64, len: u64) -> Result<Vec<u8>> {
     b.try_reserve_exact(len as usize)
         .map_err(|_| Error::memory_budget())?;
     b.resize(len as usize, 0);
-    r.read_at(off, &mut b)?;
+    index_bytes(r, off, &mut b)?;
     Ok(b)
 }
 
@@ -297,7 +279,7 @@ impl Head {
         if size < HEADER as u64 {
             return Err(bad());
         }
-        r.read_at(0, &mut h)?;
+        index_bytes(r, 0, &mut h)?;
         if let Some(v) = crate::idx_newer::newer_version(&h) {
             // never taken for damaged: it is a file of a newer program, to be left as it is
             return Err(Error::new("error.newerFormat")
@@ -452,7 +434,7 @@ impl<R: ReadAt> Index<R> {
         b.try_reserve_exact(len)
             .map_err(|_| Error::memory_budget())?;
         b.resize(len, 0);
-        self.r.read_at(off, &mut b)?;
+        index_bytes(&mut self.r, off, &mut b)?;
         Ok(b)
     }
 
