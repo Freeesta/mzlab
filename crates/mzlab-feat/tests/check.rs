@@ -2,6 +2,10 @@
 //! wedges that say nothing), and common functional groups raise no alarm (sulfone, nitro, phosphate, azide, N-oxide, carboxylate, aromatic rings).
 use mzlab_feat::chem::check::check_json;
 
+/// An atom (element, charge) and a bond (1-based atoms, type) of a hand-written molfile.
+type Atom<'a> = (&'a str, i8);
+type Bond = (usize, usize, u8);
+
 /// A V2000 molfile: atoms (symbol, charge, isotope, x, y), bonds (1-based atoms, type, stereo).
 fn molfile(atoms: &[(&str, i8, u16, f64, f64)], bonds: &[(usize, usize, u8, u8)]) -> String {
     let mut s = format!(
@@ -146,7 +150,7 @@ fn common_groups_raise_no_alarm() {
         assert!(codes(&check(&mf)).is_empty(), "{}", check(&mf));
     }
     // nitromethane, methyl azide, pyridine N-oxide, acetate, methyl isocyanide
-    let charged: &[(&[(&str, i8)], &[(usize, usize, u8)])] = &[
+    let charged: &[(&[Atom], &[Bond])] = &[
         (
             &[("C", 0), ("N", 1), ("O", 0), ("O", -1)],
             &[(1, 2, 1), (2, 3, 2), (2, 4, 1)],
