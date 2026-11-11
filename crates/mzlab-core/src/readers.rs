@@ -313,12 +313,13 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
     riconosci_in(LETTORI, fs)
 }
 
-/// Opens `fs` with the reader that recognises it; `err.file.notAccepted` when none does.
+/// Opens `fs` with the reader that recognises it, behind the non-finite guard (`readers_finite::Finished`); `err.file.notAccepted` when none does.
 pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let mut fs = fs;
     let refused = fs.not_accepted();
     let v = riconosci(&mut fs).ok_or(refused)?;
-    (v.apri)(fs, limits)
+    let l = (v.apri)(fs, limits)?;
+    Ok(Box::new(crate::readers_finite::Finished::new(l)))
 }
 
 /// Every extension of `registro`, in order and without repeats: the `accept=` of the pickers comes from here.

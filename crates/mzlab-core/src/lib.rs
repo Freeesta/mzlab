@@ -100,6 +100,7 @@ pub mod methodjson;
 pub mod readers;
 pub mod transport;
 pub mod readers_centroids;
+pub mod readers_finite;
 pub mod readers_mzml;
 pub mod readers_session;
 pub mod conv;
