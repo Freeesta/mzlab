@@ -224,6 +224,7 @@ I18N.add("it", {
   "err.cli.line": "La riga di comando non si legge: {message}.",
   "err.cli.set": "L'impostazione «{set}» non è valida: {message}.",
   "err.conv.noProfile": "Questo file ha solo picchi centroidi e nessun dato di profilo, quindi non si può convertire in un mzML di profilo. Usa l'mzML centroide così com'è.",
+  "err.conv.mzlabNoProfile": "Questo file ha solo i centroidi dello strumento e nessun dato di profilo, quindi mzLab non può calcolare i propri centroidi. Converti con picchi = file per tenere i centroidi dello strumento.",
   "err.corsa.prov": "Il registro di provenienza di questa analisi manca o ha un formato sconosciuto: rilancia l'analisi.",
   "err.file.agilent": "Una parte di questa cartella Agilent .D non si legge: uno dei suoi file è danneggiato, troncato o scritto in una forma che questo programma non legge, quindi non è stato caricato nulla. Se la cartella .D è una copia, copiala di nuovo intera; se l'avviso resta, converti la cartella in mzML con il programma dello strumento e apri quel file.",
   "err.file.agilentCut": "Nella cartella {name} la copia è troncata: AcqData/MSScan.bin o AcqData/MSPeak.bin finisce prima della prima scansione intera, quindi non è stato caricato nulla. Copia di nuovo l'intera cartella .D.",

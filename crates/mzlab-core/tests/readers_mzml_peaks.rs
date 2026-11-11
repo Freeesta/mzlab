@@ -1,5 +1,6 @@
 //! `Picchi` of the mzML conversion on a fake reader with a gaussian profile at known centres: `Mzlab` gives the centres, `Profilo` the profile points,
-//! `File` the centroids of the file.
+//! `File` the centroids of the file. A reader that keeps the maker's centroids and the profile apart (as the Thermo one does): `Mzlab` reduces the
+//! profile, never copies the maker's centroids; a file with only centroids refuses `Mzlab` (review H4-B).
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{self, Chromatogram, Item, Spectrum};
@@ -12,6 +13,8 @@ struct Finto {
     campioni: Vec<Sample>,
     indice: Vec<ScanEntry>,
     profilo_ok: bool,
+    /// The scans are the maker's centroids (0.01 Da off the true centres) and the profile is only in `scan_profile`.
+    doppio: bool,
 }
 
 fn finto(profilo_ok: bool) -> Finto {
@@ -37,7 +40,22 @@ fn finto(profilo_ok: bool) -> Finto {
             })
             .collect(),
         profilo_ok,
+        doppio: false,
     }
+}
+
+fn thermo_like() -> Finto {
+    Finto {
+        doppio: true,
+        ..finto(true)
+    }
+}
+
+/// The maker's centroids of the double reader: the centres moved by 0.01 Da (about 100 ppm), so that a copy of them shows.
+fn centroidi_maker(k: usize) -> Spectrum {
+    let mut s = spettro(k, false);
+    s.mz.iter_mut().for_each(|m| *m += 0.01);
+    s
 }
 
 fn spettro(k: usize, profile: bool) -> Spectrum {
@@ -76,6 +94,9 @@ impl Reader for Finto {
     }
     // The scans as the reader gives them: profile, or the centroids of the maker when `profilo_ok` is false.
     fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
+        if self.doppio {
+            return Ok(centroidi_maker(k));
+        }
         Ok(spettro(k, self.profilo_ok))
     }
     fn scan_profile(&mut self, _c: usize, k: usize) -> Result<Option<Spectrum>> {
@@ -143,4 +164,30 @@ fn lettori_mzml_picchi_file_keeps_the_scans_of_the_reader() {
     let (doc, spettri) = convert(&mut finto(true), Peaks::File).unwrap();
     assert!(doc.contains("MS:1000128") && !doc.contains("MS:1000035"));
     assert!(spettri.iter().all(|s| s.mz.len() == 400));
+}
+
+#[test]
+fn mzlab_reduces_the_profile_of_a_reader_that_keeps_the_maker_centroids_apart() {
+    let (doc, spettri) = convert(&mut thermo_like(), Peaks::Mzlab).unwrap();
+    assert!(doc.contains("MS:1000035") && doc.contains("mzLab centroids"));
+    assert_eq!(spettri.len(), 5);
+    for s in &spettri {
+        assert!(!s.profile);
+        assert_eq!(s.mz.len(), CENTRI.len(), "scan {}", s.index);
+        for (m, c) in s.mz.iter().zip(CENTRI) {
+            assert!(
+                (m - c).abs() / c * 1e6 < 0.5,
+                "{m} vs {c}: the maker's centroids were copied"
+            );
+        }
+    }
+    // `File` keeps the maker's centroids: the two outputs differ
+    let (_, file) = convert(&mut thermo_like(), Peaks::File).unwrap();
+    assert!((file[0].mz[0] - (CENTRI[0] + 0.01)).abs() < 1e-9);
+}
+
+#[test]
+fn mzlab_on_a_file_with_only_centroids_refuses() {
+    let e = convert(&mut finto(false), Peaks::Mzlab).unwrap_err();
+    assert_eq!(e.key, "err.conv.mzlabNoProfile");
 }

@@ -5,6 +5,7 @@ Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.
 - motore 2 174 976; `thermo` 774 144; `sciex` 475 136; `aperti` 561 152; `andi` 344 064; librerie 614 400; `hr` 1 703 936; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; i tetti degli altri moduli stanno solo negli script.
 
 ## Motore
+- Centroidi del lettore: `readers_mzml::profile_of` nella stima di `readers_centroids::stima` (il profilo, non i centroidi del produttore) motore grezzo 3 602 657 → 3 603 263 (+606 B; `cargo build --release` senza `wasm-opt`).
 - Lettura e indice `.mzidx`: `read.into` (`JsMember` di `natives/member.rs`) 2 113 537 → 2 114 054; `lend` di `natives.rs` e `mzidx_spill::record` 2 113 470 → 2 113 537; `mzidx_spill::allinea` 2 112 878 → 2 113 470; `Sec::emit`, `mzidx_order::key64` 2 111 986 → 2 112 878; `scan_parts`/`JsModule::scan_spectrum` 2 109 296 → 2 111 986; impronte tardive (`prints` di `build_mzidx_native`) 2 104 337 → 2 106 625.
 - Grafo MSn: budget dei consensi (`msngraph::read`, `budget_mb`) e hash a blocchi dell'indice, `msngrafo` 701 324 → 703 021 (+0,24 %; grezzo 1 390 434 → 1 394 173).
 - Centroidi: larghezza su profilo HR (`centroids::estimate`, ricerca a 8/24/64 punti di griglia, `Estimate` restituito da `mzml_to_centroids_with`) motore grezzo 3 531 169 → 3 532 333 (+0,03 %; misura locale senza `wasm-opt`, tetto del motore invariato).

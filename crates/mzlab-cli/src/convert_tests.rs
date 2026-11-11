@@ -313,26 +313,33 @@ fn usage_errors_and_a_missing_input_have_their_codes() {
 fn peaks_take_three_values_and_the_short_form_is_the_parameter() {
     let dir = folder("peaks");
     let src = makers(&dir, false);
-    assert_eq!(
-        convert(&[p(&src), "--out", p(&dir.join("o")), "--peaks", "x"]).code,
-        2
+    let run =
+        |opt: &str, val: &str, out: &str| convert(&[p(&src), "--out", p(&dir.join(out)), opt, val]);
+    assert_eq!(run("--peaks", "x", "o").code, 2);
+    let (a, b) = (
+        run("--peaks", "file", "s"),
+        run("--set", "conv.peaks=file", "l"),
     );
-    for which in ["file", "mzlab"] {
-        let (short, long) = (
-            dir.join(format!("s-{which}")),
-            dir.join(format!("l-{which}")),
-        );
-        let o = convert(&[p(&src), "--out", p(&short), "--peaks", which]);
-        assert_eq!(o.code, 0, "{which}: {}", o.stderr);
-        let set = format!("conv.peaks={which}");
-        let o = convert(&[p(&src), "--out", p(&long), "--set", &set]);
-        assert_eq!(o.code, 0, "{which}: {}", o.stderr);
-        assert_eq!(mzmls(&short), mzmls(&long), "{which}");
+    assert!(a.code == 0 && b.code == 0, "{} {}", a.stderr, b.stderr);
+    assert_eq!(mzmls(&dir.join("s")), mzmls(&dir.join("l")));
+    // the synthetic files hold centroids only: the profile and our centroids are asked in vain (never the maker's centroids written as ours), and
+    // the cause is named, the same from the short form and from the parameter
+    for (which, key) in [
+        ("profile", "err.conv.noProfile"),
+        ("mzlab", "err.conv.mzlabNoProfile"),
+    ] {
+        for (opt, val) in [
+            ("--peaks", which.to_string()),
+            ("--set", format!("conv.peaks={which}")),
+        ] {
+            let o = run(opt, &val, &format!("{which}{opt}"));
+            assert!(
+                o.code == 1 && o.stderr.contains(key),
+                "{which} {opt}: {}",
+                o.stderr
+            );
+        }
     }
-    // the synthetic files hold centroids only: the profile is asked in vain, and the cause is named
-    let o = convert(&[p(&src), "--out", p(&dir.join("pr")), "--peaks", "profile"]);
-    assert_eq!(o.code, 1, "{}", o.stderr);
-    assert!(o.stderr.contains("err.conv.noProfile"), "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }
 

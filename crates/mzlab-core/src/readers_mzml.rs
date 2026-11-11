@@ -49,8 +49,10 @@ pub enum Peaks {
     File,
     /// The profile points of the file (`Lettore::scan_profile`, else the scans of the reader that are profile); a file without them refuses (`err.conv.noProfile`).
     Profilo,
-    /// Our own centroids (`lettori_centroidi`): the profile scans are reduced to one point per peak with parameters estimated on the sample, a scan
-    /// already centroided stays as it is; the file says so (`MS:1000035`, the parameters in a userParam of the run).
+    /// Our own centroids (`lettori_centroidi`): the profile points of each scan (`Lettore::scan_profile`, else the scan when it is profile) are reduced
+    /// to one point per peak with parameters estimated on the sample, a scan with no profile stays as it is; the file says so (`MS:1000035`, the
+    /// parameters in a userParam of the run). A sample with no profile at all refuses (`err.conv.mzlabNoProfile`): the maker's centroids are never
+    /// written as ours.
     Mzlab,
 }
 
@@ -58,8 +60,11 @@ pub enum Peaks {
 /// with `w_basis` = `measured` on N isolated peaks or `fallback`: a fallback width is never written as measured).
 #[cfg(not(target_family = "wasm"))]
 fn centroids_of(l: &mut dyn Reader, c: usize, h: &mut Header) -> Result<Option<Params>> {
-    if l.index_without_tic(c)?.is_empty() || !l.scan(c, 0)?.profile {
+    if l.index_without_tic(c)?.is_empty() {
         return Ok(None);
+    }
+    if profile_of(l, c, 0)?.is_none() {
+        return Err(Error::new("err.conv.mzlabNoProfile"));
     }
     let e = stima(l, c)?;
     let p = e.params;
@@ -77,6 +82,15 @@ fn centroids_of(l: &mut dyn Reader, c: usize, h: &mut Header) -> Result<Option<P
         ),
     ));
     Ok(Some(p))
+}
+
+/// The profile points of scan `(c, k)`: those the reader keeps apart (`scan_profile`, the maker's centroids being the scan), else the scan when it is
+/// profile; `None` when the file has only centroids for it.
+pub(crate) fn profile_of(l: &mut dyn Reader, c: usize, k: usize) -> Result<Option<Spectrum>> {
+    if let Some(s) = l.scan_profile(c, k)? {
+        return Ok(Some(s));
+    }
+    Ok(Some(l.scan(c, k)?).filter(|s| s.profile))
 }
 
 /// What the peak picking of our own centroids needs while the scans go by (nothing in the browser build, which has none).
@@ -111,7 +125,10 @@ fn scansione_di(
     match peaks {
         Peaks::File => l.scan(c, k),
         Peaks::Mzlab => {
-            let mut s = l.scan(c, k)?;
+            let mut s = match profile_of(l, c, k)? {
+                Some(s) => s,
+                None => l.scan(c, k)?,
+            };
             if let Some(p) = &pick.0 {
                 picchi(&mut s, p, &mut pick.1);
             }
