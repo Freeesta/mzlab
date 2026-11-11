@@ -59,14 +59,19 @@ function say(/** @type {Bag} */ p) {
 function sync(/** @type {Bag} */ p) {
   const a = p._a, old = /** @type {Bag[]} */ (p._ep || []); p._ep = [];
   const list = a && a.sr && !a.cas && a.X && a.Y && a.U && !p._exp && p.type !== "spec" && p.type !== "map" ? p.ints : [];
-  const pts = (p._bp || []).filter((/** @type {HTMLElement} */ b) => !b.hidden).map((/** @type {HTMLElement} */ b) => [parseFloat(b.style.left), parseFloat(b.style.top)]);
+  const pts = (p._bp || []).filter((/** @type {HTMLElement} */ b) => !b.hidden).map((/** @type {HTMLElement} */ b) => [parseFloat(b.style.left) - 12, parseFloat(b.style.top)]);
+  // the box of a start lies left of its point, of an end right of it (the two ends of a narrow window never overlap); where boxes meet (the same window on
+  // two traces) the first stands for both; the one in hand stays. pts: the left/top of the boxes shown (the points of a custom line are centred)
   for (const it of list) {
     const s = a.sr.find((/** @type {Bag} */ q) => q.key === it.key); if (!s) continue;
     for (const e of ["a", "b"]) {
       const b = old.shift() || button(p), t = shown(s, it, e); b._it = it; b._e = e; b._s = s; b.dataset.e = e === lo(it) ? "0" : "1"; p._ep.push(b);
       const px = a.X(t), py = a.Y(a.U(s, baseY(s, it, t))), x = p.cv.offsetLeft + px, y = p.cv.offsetTop + py;
       const out = px < M.l - 2 || px > a.W - M.r + 2 || py < M.t - 2 || py > a.H - M.b + 2;
-      b.hidden = out || pts.some(q => Math.abs(q[0] - x) < 24 && Math.abs(q[1] - y) < 24);          // a point of a custom line sits there: that one is dragged
+      const held = b.classList.contains("on") || document.activeElement === b;
+      const bx = b.dataset.e === "0" ? x - 24 : x;
+      b.hidden = out || (!held && pts.some(q => Math.abs(q[0] - bx) < 24 && Math.abs(q[1] - y) < 24));
+      if (!b.hidden) pts.push([bx, y]);
       b.style.left = x + "px"; b.style.top = y + "px";
       const v = label(it, e, t); b.setAttribute("aria-label", v); b.title = v;
       b.setAttribute("aria-valuenow", t.toFixed(3)); b.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: t.toFixed(3) }));
@@ -75,11 +80,11 @@ function sync(/** @type {Bag} */ p) {
   }
   old.forEach(n => n.remove()); say(p);
 }
-{                                                                  // the look of the handles: a ring on the baseline (colours from the CSS variables)
+{                                                                  // the look of the handles: a ring on the baseline at the inner edge of its box (colours from the CSS variables)
   const st = document.createElement("style");
-  st.textContent = ".iep{position:absolute;z-index:3;width:24px;height:24px;margin:-12px 0 0 -12px;padding:0;border:0;border-radius:50%;background:transparent;touch-action:none;cursor:ew-resize;transition:background-color .12s}" +
-    ".iep::after{content:\"\";position:absolute;left:7px;top:7px;width:10px;height:10px;box-sizing:border-box;border-radius:50%;border:2px solid var(--ink);background:var(--panel)}" +
-    ".iep:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.iep.on{background:color-mix(in srgb,var(--accent) 25%,transparent)}" +
+  st.textContent = ".iep{position:absolute;z-index:3;width:24px;height:24px;margin:-12px 0 0;padding:0;border:0;border-radius:4px;background:transparent;touch-action:none;cursor:ew-resize;transition:background-color .12s}" +
+    ".iep[data-e=\"0\"]{margin-left:-24px}.iep::after{content:\"\";position:absolute;left:-5px;top:7px;width:10px;height:10px;box-sizing:border-box;border-radius:50%;border:2px solid var(--ink);background:var(--panel)}" +
+    ".iep[data-e=\"0\"]::after{left:19px}.iep:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.iep.on{background:color-mix(in srgb,var(--accent) 25%,transparent)}" +
     "@media (prefers-reduced-motion:reduce){.iep{transition:none}}@media (forced-colors:active){.iep::after{border-color:CanvasText;background:Canvas}.iep:focus-visible{outline-color:Highlight}.iep.on{background:Highlight}}";
   document.head.appendChild(st);
 }

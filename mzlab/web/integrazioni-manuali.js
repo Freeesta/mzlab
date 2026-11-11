@@ -94,7 +94,7 @@ function draw() {
   el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl(st.sums ? "manual-integrations-sums.csv" : "manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
   el.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)]); if (!rec) return;
-    rec.p.isel = rec.it.id; G.reveal(rec.p); G.draw(rec.p);
+    G.reveal(rec.p); G.draw(rec.p);
   }));
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)]); if (rec) G.delInts(rec.p, [rec.it]);

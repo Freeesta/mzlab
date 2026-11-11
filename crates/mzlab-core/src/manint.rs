@@ -44,6 +44,10 @@ struct Row {
 
 /// The group of a channel across files: Q1 and Q3 at 0.01 (or the place in the list without Q1) and the name the method gives it.
 type Key = (i64, i64, String);
+/// A sample: its name without `.mzML` and its channels.
+type Sample = (String, Vec<Trace>);
+/// A channel group with its label and name.
+type Channel = (Key, String, String);
 
 fn nums(v: Option<&Value>) -> Vec<f64> {
     v.map_or(Vec::new(), |a| {
@@ -150,11 +154,9 @@ fn baseline_of(w: &Value) -> Result<Baseline> {
 }
 
 /// The samples of `files` (name without `.mzML`, channels) and the channels in the order they first appear, with their label and name.
-fn samples_and_keys(
-    files: &str,
-) -> Result<(Vec<(String, Vec<Trace>)>, Vec<(Key, String, String)>)> {
+fn samples_and_keys(files: &str) -> Result<(Vec<Sample>, Vec<Channel>)> {
     let list = parse(files.as_bytes())?;
-    let samples: Vec<(String, Vec<Trace>)> = list
+    let samples: Vec<Sample> = list
         .arr()
         .iter()
         .map(|f| {
@@ -165,7 +167,7 @@ fn samples_and_keys(
             )
         })
         .collect();
-    let mut keys: Vec<(Key, String, String)> = Vec::new();
+    let mut keys: Vec<Channel> = Vec::new();
     for (_, trs) in &samples {
         for tr in trs {
             let k = key_of(tr);
@@ -178,11 +180,7 @@ fn samples_and_keys(
 }
 
 /// One window measured on its channel: (the place of the channel in `keys`, the row).
-fn measure(
-    w: &Value,
-    samples: &[(String, Vec<Trace>)],
-    keys: &[(Key, String, String)],
-) -> Result<(usize, Row)> {
+fn measure(w: &Value, samples: &[Sample], keys: &[Channel]) -> Result<(usize, Row)> {
     let num = |k: &str| w.get(k).and_then(Value::f64);
     let (fi, ti, a, b) = (num("file"), num("tr"), num("a"), num("b"));
     let tr = fi
