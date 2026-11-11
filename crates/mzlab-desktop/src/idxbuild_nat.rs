@@ -39,8 +39,8 @@ impl IdxBuilder {
                         Some(spill),
                         &mut |_| {},
                     )?;
-                    // the spectra a truncated file declares beyond the ones it holds
-                    st.missing = l.missing(nat.c);
+                    // the spectra the file declares beyond the ones read (`Reader::losses`)
+                    st.missing = l.losses(nat.c)?.lost();
                     Ok(st)
                 },
             )

@@ -123,6 +123,12 @@ impl Reader for Centroidato {
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.l.chromatograms(c)
     }
+    fn missing(&mut self, c: usize) -> usize {
+        self.l.missing(c)
+    }
+    fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> {
+        self.l.losses(c)
+    }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         self.l.chromatogram(c, id)
     }

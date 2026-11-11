@@ -4,7 +4,7 @@
 use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
-use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Losses, Reader, Sample, ScanEntry};
 
 pub struct Finished {
     inner: Box<dyn Reader>,
@@ -154,6 +154,9 @@ impl Reader for Finished {
     }
     fn missing(&mut self, c: usize) -> usize {
         self.inner.missing(c)
+    }
+    fn losses(&mut self, c: usize) -> Result<Losses> {
+        self.inner.losses(c)
     }
     #[cfg(feature = "sciex")]
     fn variant(&mut self, c: usize) -> bool {

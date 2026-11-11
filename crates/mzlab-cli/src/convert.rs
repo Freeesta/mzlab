@@ -38,7 +38,8 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
-progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 4 an input is missing or holds nothing to convert";
+progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conv/1 parziale; a
+warning line names it), 4 an input is missing or holds nothing to convert";
 
 #[derive(Default)]
 pub(crate) struct Args {
@@ -292,11 +293,25 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
             Item::Failed { .. } => None,
         })
         .collect();
+    // a partial read is written and said, never passed for a whole one
+    let partial: String = items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Done {
+                input,
+                conv: Some(c),
+                ..
+            } => crate::convert_report::partial_of(c).map(|(declared, read, cause)| {
+                format!("warning: {input}: partial read, {read} of {declared} scans ({cause})\n")
+            }),
+            _ => None,
+        })
+        .collect();
     let (code, stderr) = if failed == 0 {
         (
-            0,
+            if partial.is_empty() { 0 } else { 3 },
             format!(
-                "done: {converted} converted, {skipped} skipped; outputs in {}\n",
+                "{partial}done: {converted} converted, {skipped} skipped; outputs in {}\n",
                 out.display()
             ),
         )
@@ -312,7 +327,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
             "error: {failed} of {} failed ({converted} converted, {skipped} skipped)\n",
             items.len()
         );
-        (1, causes + &line + "hint: the other files are written; run again to retry the failed ones, the converted ones are skipped\n")
+        (1, partial + &causes + &line + "hint: the other files are written; run again to retry the failed ones, the converted ones are skipped\n")
     };
     Outcome {
         code,

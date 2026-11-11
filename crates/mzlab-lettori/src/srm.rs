@@ -6,7 +6,7 @@
 use mzlab_core::error::Result;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
-use mzlab_core::readers::{ChromatogramEntry, Field, Format, Reader, Sample, ScanEntry};
+use mzlab_core::readers::{ChromatogramEntry, Field, Format, Losses, Reader, Sample, ScanEntry};
 
 /// Products closer than this (m/z) to the Q3 of a transition belong to it.
 pub const Q3_TOLERANCE: f64 = 0.005;
@@ -227,6 +227,9 @@ impl Reader for SrmFromScans {
     }
     fn missing(&mut self, c: usize) -> usize {
         self.inner.missing(c)
+    }
+    fn losses(&mut self, c: usize) -> Result<Losses> {
+        self.inner.losses(c)
     }
     // The account `conv/1` gives of the mzML is the reader's own: the wrapper adds traces, not gaps.
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {

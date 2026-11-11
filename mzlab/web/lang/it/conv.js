@@ -50,7 +50,7 @@ I18N.add("it", {
   "conv.row.done": "Caricato ✓ ({scans} scansioni, {secs} s)",
   "conv.row.cancel": "Annullato",
   "conv.row.cached": "Caricato dalla cache ✓ ({scans} scansioni)",
-  "conv.row.missing": "{n} scansioni mancanti: il file finisce prima",
+  "conv.row.missing": "lettura parziale: {read} di {declared} scansioni, il file finisce prima del resto",
   "conv.sum.head": "{n} file: {parts} · {time}",
   "conv.sum.full": "{n} full scan",
   "conv.sum.ms2": "{n} MS2",

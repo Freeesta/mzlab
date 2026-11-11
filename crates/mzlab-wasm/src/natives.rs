@@ -339,7 +339,6 @@ pub fn build_mzidx_native(
     let mut members = || fingerprints.given(|| m.fileset());
     let c = c as usize;
     let mut l = crate::counted::open(fs, |fs| m.open_fs(fs), &tell, step, c)?;
-    let cm = (c, l.missing(c));
     let mut out = Accorpa::flussi(JsOutput { write });
     // peaks that do not fit in the budget go to the scratch file (a second file of OPFS) instead of being decoded again by every round; OPFS writes in 1 MiB blocks (`accorpa`)
     let mut spill = spill_put
@@ -358,6 +357,8 @@ pub fn build_mzidx_native(
         1 + both.is_some() as usize,
     )
     .map_err(|e| error_json(&e))?;
+    // the scans the file declares beyond the ones read (`Reader::losses`), after the budget check: the page shows both counts
+    let cm = (c, l.losses(c).map_err(|e| error_json(&e))?.lost());
     if let Some(wc) = both {
         return index_both(l, cm, &mut members, name, out, wc, budget_mb, spill, &tell);
     }

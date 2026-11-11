@@ -383,13 +383,19 @@ pub(crate) fn write_mzml_with(
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
-    let lacking = reader.missing(sample);
-    if lacking > 0 {
-        let have = reader.index(sample)?.len();
+    let lost = reader.losses(sample)?;
+    if lost.partial() {
         eprintln!(
-            "warn.file.truncated: {}: {have} of {} spectra read, the file ends before the rest",
+            "{}: {}: {} of {} spectra read{}",
+            lost.cause,
             path.display(),
-            have + lacking
+            lost.read,
+            lost.declared,
+            if lost.cause == mzlab_core::readers::TRUNCATED {
+                ", the file ends before the rest"
+            } else {
+                ""
+            }
         );
     }
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
