@@ -43,6 +43,12 @@ pub(super) fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::Spectr
     if let Some(p) = e.parent {
         extra.params.push((PARENT_PARAM.into(), p.to_string()));
     }
+    match (e.code, e.fixed) {
+        (Some(super::modes::CODE_NEUTRAL_LOSS), Some(l)) => extra
+            .params
+            .push((super::modes::LOSS_PARAM.into(), l.to_string())),
+        (_, f) => extra.product = f,
+    }
     if let Some(sg) = super::modes::tag(e.code) {
         extra
             .params

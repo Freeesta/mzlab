@@ -372,6 +372,7 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
                         cur.scope = Scope::Chromatogram;
                     }
                     "precursorList" => cur.in_precursor_list = true,
+                    "productList" => cur.in_product_list = true,
                     "analyzer" if !empty => cur.in_analyzer = true,
                     "binaryDataArray" => {
                         cur.array = Some(Array {
@@ -450,6 +451,7 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
                         }
                     }
                     "precursorList" => cur.in_precursor_list = false,
+                    "productList" => cur.in_product_list = false,
                     "analyzer" => cur.in_analyzer = false,
                     "referenceableParamGroup" => {
                         if let Some((id, list)) = group.take() {

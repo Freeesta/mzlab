@@ -355,20 +355,22 @@ def scheduled(out: Path):
 
 
 def variants(out: Path):
-    """The files of the readers module. A QTRAP 5500 with four experiments (survey V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1) over two cycles, and the refused files."""
+    """The files of the readers module. A QTRAP 5500 with four experiments (survey V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1) over two cycles, and the refused files.
+    The mass of the header is a precursor of the product-ion scan only: the precursor-ion scan has it as its product, the neutral-loss scan as its loss (Da)."""
     ex = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 55.5), "Experiment2/ExperimentHeader": header(5, 184.0),
           "Experiment3/ExperimentHeader": header(7, 217.3), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
     pts = {1: FULL, 3: PRODUCT, 5: [(5, 4), (6, 9), (400, 12000)], 7: [(70, 1), (71, 2), (72, 7), (900, 300)]}
     blocks, want = [], []
     for cycle in range(2):
-        for e, (code, level, prec, version, term) in enumerate([(15, 1, None, 1, None), (11, 2, 55.5, 3, None), (5, 2, 184.0, 1, ("MS:1000341", "precursor ion spectrum")),
-                                                                (7, 2, 217.3, 1, ("MS:1000326", "constant neutral loss spectrum"))]):
+        for e, (code, level, prec, version, term) in enumerate([(15, 1, None, 1, None), (11, 2, 55.5, 3, None), (5, 2, None, 1, ("MS:1000341", "precursor ion spectrum")),
+                                                                (7, 2, None, 1, ("MS:1000326", "constant neutral loss spectrum"))]):
             p = [pts[1], pts[3], pts[5], pts[7]][e]
             p = p if not (e == 3 and cycle == 1) else []  # an empty block (no spectrum)
             t = 1000.0 * cycle + 100.0 * e
             blocks.append(("scan", p, t, float(sum(c for _, c in p)), version))
             if p:
-                want.append(spectrum(f"sample=1 period=1 cycle={cycle + 1} experiment={e + 1}", level, prec, t, p, version, term))
+                want.append(spectrum(f"sample=1 period=1 cycle={cycle + 1} experiment={e + 1}", level, prec, t, p, version, term)
+                            | {"product": 184.0 if code == 5 else None, "loss": 217.3 if code == 7 else None})
     w = Writer()
     w.sample(1, blocks, ex, log="QTRAP 5500")
     w.save(out, "variante")
