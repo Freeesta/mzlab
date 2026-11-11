@@ -59,14 +59,21 @@ def fill(mz, y, p, buf):
         return
     for i in range(n):
         if i > 0 and mz[i] - mz[i - 1] > 1.5 * p.step:
+            s = local_step(mz[:n], i, p.step)
             gap = mz[i] - mz[i - 1]
-            buf.x.append(mz[i - 1] + p.step)
-            buf.v.append(0.0)
-            if gap > 2.0 * p.step:
-                buf.x.append(mz[i] - p.step)
+            if gap > 1.5 * s:
+                buf.x.append(mz[i - 1] + s)
                 buf.v.append(0.0)
+                if gap > 2.0 * s:
+                    buf.x.append(mz[i] - s)
+                    buf.v.append(0.0)
         buf.x.append(mz[i])
         buf.v.append(y[i])
+
+
+def local_step(mz, i, step):
+    lo, hi = max(i - 3, 1), min(i + 3, len(mz) - 1)
+    return max(min([mz[j] - mz[j - 1] for j in range(lo, hi + 1) if j != i], default=math.inf), step)
 
 
 def sg_coef(l):
@@ -286,12 +293,30 @@ def gaussian(buf, sigma, apex):
 def saturated(buf, p, g):
     if p.vmax <= 0.0:
         return False
-    t, run = 0.99 * p.vmax, 0
+    t, start = 0.99 * p.vmax, None
     for j in range(g["lo"], g["hi"] + 1):
-        run = run + 1 if buf.v[j] >= t else 0
-        if run >= 3:
+        if buf.v[j] < t:
+            start = None
+            continue
+        if start is None:
+            start = j
+        if j - start >= 2 and buf.x[j] - buf.x[start] >= 0.15 * p.w:
             return True
     return False
+
+
+def merge_plateaus(buf, p, gs):
+    t, out = 0.99 * p.vmax, []
+    for g in gs:
+        if out:
+            last = out[-1]
+            a, b = min(last["apex"], g["apex"]), max(last["apex"], g["apex"])
+            if p.vmax > 0.0 and g["lo"] <= last["hi"] + 1 and b > a + 1 and all(v >= t for v in buf.v[a + 1:b]):
+                apex = g["apex"] if buf.s[g["apex"]] > buf.s[last["apex"]] else last["apex"]
+                out[-1] = {"apex": apex, "lo": min(last["lo"], g["lo"]), "hi": max(last["hi"], g["hi"]), "members": last["members"] + g["members"]}
+                continue
+        out.append(dict(g))
+    return out
 
 
 def saturated_centre(buf, p, g):
@@ -401,7 +426,7 @@ def one(buf, p, sigma, g, out):
     sh = find_shoulders(buf, p, sigma, g, x0, area) if g["members"] == 1 and not sat else []
     for s in sh:
         area -= s[2]
-    out.append([mz, area if (p.area or sat) else height, area, height, flags])
+    out.append([mz, area if p.area else height, area, height, flags])
     out.extend(sh)
 
 
@@ -414,7 +439,7 @@ def centroids(mz, y, p):
     background(buf, p.wb(), p.mode == COUNTS)
     sigma = noise(buf, p.wb()) if p.mode == CONTINUOUS else 0.0
     out = []
-    for g in groups(buf, p, sigma):
+    for g in merge_plateaus(buf, p, groups(buf, p, sigma)):
         one(buf, p, sigma, g, out)
     out.sort(key=lambda c: c[0])
     return out
