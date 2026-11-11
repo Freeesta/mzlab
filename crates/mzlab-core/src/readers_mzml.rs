@@ -54,18 +54,25 @@ pub enum Peaks {
     Mzlab,
 }
 
-/// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam).
+/// The parameters of our own centroids when the first scan of sample `c` is profile; the header then says so (`MS:1000035`, the parameters in a userParam,
+/// with `w_basis` = `measured` on N isolated peaks or `fallback`: a fallback width is never written as measured).
 #[cfg(not(target_family = "wasm"))]
 fn centroids_of(l: &mut dyn Reader, c: usize, h: &mut Header) -> Result<Option<Params>> {
     if l.index_without_tic(c)?.is_empty() || !l.scan(c, 0)?.profile {
         return Ok(None);
     }
-    let p = stima(l, c)?;
+    let e = stima(l, c)?;
+    let p = e.params;
+    let basis = if e.peaks > 0 {
+        format!("measured on {} isolated peaks", e.peaks)
+    } else {
+        "fallback".to_string()
+    };
     h.centroided = true;
     h.run_params.push((
         "mzLab centroids".into(),
         format!(
-            "mode={:?}; unit={}; step={}; w={}; k={}",
+            "mode={:?}; unit={}; step={}; w={}; w_basis={basis}; k={}",
             p.mode, p.unit, p.step, p.w, p.k
         ),
     ));

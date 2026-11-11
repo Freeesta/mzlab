@@ -4,7 +4,7 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-use mzlab_core::centroids::{mzml_to_centroids_with, Over, Params};
+use mzlab_core::centroids::{mzml_to_centroids_with, Estimate, Over};
 use mzlab_core::error::Result;
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::Value;
@@ -14,7 +14,7 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 use crate::flow::{io, FileRunner, Lineage, Made};
 use crate::flow_pace::{Stop, Stopping};
 
-/// `spectra.centroid@1`: the parameters left out are estimated on at most 128 profile scans spread over the file (and reported as estimates).
+/// `spectra.centroid@1`: a width left out is measured on at most 64 profile scans spread over the file (reported as an estimate only when measured).
 pub fn centroid_step() -> Step {
     Step {
         cv: Some("MS:1000035"),
@@ -31,8 +31,8 @@ pub fn centroid_step() -> Step {
             Param::number("threshold", "Threshold")
                 .min(0.0)
                 .unit("sigma")
-                .doc("A peak is kept when it stands this many sigma over the background (Poisson Z for counts); left out, the value of the mode of the file")
-                .estimate(),
+                .default_num(3.0)
+                .doc("A peak is kept when it stands this many sigma over the background (Poisson Z for counts); left out, the value of the mode of the file"),
         ],
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),
@@ -120,27 +120,44 @@ pub(crate) fn job_with(
     Ok(made_of(job, a, used))
 }
 
-/// The file made, with the values the centroider measured (as estimates) and what the record says of the file: `centroided`, or `passthrough` when the file had no profile scan.
-fn made_of(job: &Job, a: Artifact, used: Option<Params>) -> Made {
-    let mut made = Made::new("mzml", a);
-    let proof = Value::Str("estimated on the profile scans of the file".into());
-    let via = if used.is_some() {
-        "centroided"
-    } else {
-        "passthrough"
-    };
-    let mut said = vec![("via".to_string(), Value::Str(via.into()))];
-    for (k, v) in used
-        .iter()
-        .flat_map(|p| [("fwhm", p.w), ("threshold", p.k)])
-    {
-        let given = number(job, k);
-        said.push((k.into(), Value::Num(given.unwrap_or(v))));
-        if given.is_none() {
-            made.estimates
-                .push((k.into(), Value::Num(v), proof.clone()));
-        }
+/// Where the width used comes from: given in the plan, measured on the file, or the fallback (too few isolated peaks).
+fn width_basis(given: bool, e: &Estimate) -> &'static str {
+    match (given, e.peaks) {
+        (true, _) => "given",
+        (false, 0) => "fallback",
+        _ => "measured",
     }
-    made.file = Some(Value::Obj(said));
+}
+
+/// The file made and what the record says of it: `centroided` (with the values used and where the width comes from), or `passthrough` when the file had no
+/// profile scan. Only a measured width is an estimate; a fallback width is never called estimated and raises `warn.centroid.widthFallback`.
+fn made_of(job: &Job, a: Artifact, used: Option<Estimate>) -> Made {
+    let mut made = Made::new("mzml", a);
+    let Some(e) = used else {
+        made.file = Some(Value::Obj(vec![(
+            "via".into(),
+            Value::Str("passthrough".into()),
+        )]));
+        return made;
+    };
+    let basis = width_basis(number(job, "fwhm").is_some(), &e);
+    match basis {
+        "measured" => made.estimates.push((
+            "fwhm".into(),
+            Value::Num(e.params.w),
+            Value::Str(format!(
+                "median FWHM of {} isolated peaks of the profile scans of the file",
+                e.peaks
+            )),
+        )),
+        "fallback" => made.warnings.push("warn.centroid.widthFallback".into()),
+        _ => {}
+    }
+    made.file = Some(Value::Obj(vec![
+        ("via".into(), Value::Str("centroided".into())),
+        ("fwhm".into(), Value::Num(e.params.w)),
+        ("fwhm_basis".into(), Value::Str(basis.into())),
+        ("threshold".into(), Value::Num(e.params.k)),
+    ]));
     made
 }

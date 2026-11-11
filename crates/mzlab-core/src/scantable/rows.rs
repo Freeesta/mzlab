@@ -495,8 +495,10 @@ impl Rows {
             m.precs.push(precursor_element(body, rf));
             from = after + g + 1 + close + 12;
         }
-        if m.precs.is_empty() && (h.contains("MS:1000744") || h.contains("MS:1000827")) {
-            m.precs.push(precursor_element(h, None));
+        // the isolation window of a `<product>` (a precursor-ion scan) is not a precursor
+        let lone = h.find("<productList").map_or(h, |p| &h[..p]);
+        if m.precs.is_empty() && (lone.contains("MS:1000744") || lone.contains("MS:1000827")) {
+            m.precs.push(precursor_element(lone, None));
         }
         // the parent of an MS3+ is its immediate precursor, not the first one listed (which may be the MS1)
         let mut immediate_ref = None;

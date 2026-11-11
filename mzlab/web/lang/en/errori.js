@@ -409,6 +409,7 @@ I18N.add("en", {
   "error.tpNoControls": "The table has no control files to compare with the treated ones: mark them.",
   "warn.flow.formula.ion": "The ion written here has a different polarity from the data.",
   "warn.convert.fewerWorkers": "{workers} files are converted at once instead of {wanted}, so that each conversion has its share of the memory budget of this computer ({budget_mb} MB). The files written are the same; it only takes longer.",
+  "warn.centroid.widthFallback": "Fewer than 8 isolated peaks were found in the profile scans, so the peak width was not measured: the centroids use the fallback width of 0.7 Da. On high-resolution data give the width (fwhm) yourself.",
   "warn.file.truncated": "The file ends before some of the scans it declares: what it holds is read and written, the rest is missing. Check the copy of the file.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
   "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",

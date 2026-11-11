@@ -409,6 +409,7 @@ I18N.add("it", {
   "error.tpNoControls": "La tabella non ha file di controllo da confrontare con quelli trattati: segnali.",
   "warn.flow.formula.ion": "Lo ione scritto qui ha una polarità diversa da quella dei dati.",
   "warn.convert.fewerWorkers": "Si convertono {workers} file alla volta invece di {wanted}, perché ogni conversione abbia la sua parte del budget di memoria di questo computer ({budget_mb} MB). I file scritti sono gli stessi; ci vuole solo più tempo.",
+  "warn.centroid.widthFallback": "Nelle scansioni profilo ci sono meno di 8 picchi isolati, quindi la larghezza dei picchi non è stata misurata: i centroidi usano la larghezza di ripiego di 0,7 Da. Sui dati ad alta risoluzione indica tu la larghezza (fwhm).",
   "warn.file.truncated": "Il file finisce prima di alcune scansioni che dichiara: si legge e si scrive quello che contiene, il resto manca. Controlla la copia del file.",
   "warn.flow.formula.subformulas": "Questo ione ha più sotto-formule di max_subformulas, quindi nessun frammento è stato provato: alza max_subformulas o indica meno elementi.",
   "warn.flow.group.corrFiles": "La correlazione tra le righe richiede almeno tanti file quanti min_corr_samples (3 se non lo cambi): con meno file non è stata calcolata, quindi non ci sono archi di correlazione. Isotopi e specie ioniche restano.",

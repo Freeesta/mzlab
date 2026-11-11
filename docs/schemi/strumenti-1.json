@@ -1625,6 +1625,7 @@
                   {
                     "type":"number",
                     "minimum":0,
+                    "default":3,
                     "description":"A peak is kept when it stands this many sigma over the background (Poisson Z for counts); left out, the value of the mode of the file"
                   }
                 ]
