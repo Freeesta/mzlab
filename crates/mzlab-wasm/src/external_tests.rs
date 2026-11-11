@@ -236,5 +236,6 @@ fn the_losses_keep_the_cause_the_module_gives() {
     assert_eq!(l(Says(3, "")), Losses::of(5, 2, TRUNCATED));
     assert_eq!(l(Says(3, TRUNCATED)), Losses::of(5, 2, TRUNCATED));
     assert_eq!(l(Says(1, EVENTS_REFUSED)), Losses::of(2, 1, EVENTS_REFUSED));
+    assert_eq!(l(Says(3, DAMAGED)), Losses::of(5, 2, DAMAGED));
     assert_eq!(l(Says(0, "")), Losses::complete(2));
 }

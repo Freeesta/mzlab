@@ -27,7 +27,7 @@
       if (p.tab === MS2) {
         const ms = "MS" + SUP[Math.min(ctx.lv ?? 2, 3)];
         if (prec == null) return T("panel.title.ticMs2All", { ms });
-        return (ctx.nPrec ?? 2) > 1 ? T("panel.title.ms2prec", { ms, prec }) : T("panel.title.ticMs2", { ms });  // one precursor: the trace IS the TIC
+        return (ctx.nPrec ?? 2) > 1 ? T("panel.title.ms2prec", { ms, prec }) : T("panel.title.ticMs2", { ms });
       }
       return prec != null ? T("panel.title.kindPrec", { kind: K, prec }) : K;
     }

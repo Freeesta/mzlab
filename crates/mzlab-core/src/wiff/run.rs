@@ -130,7 +130,7 @@ impl Wiff {
         let mut n = 0;
         for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
             if let Some(p) = scan::read_scan(scan, self.scan_len, r.at, r.end)? {
-                if p.mz.is_empty() {
+                if p.mz.is_empty() || r.damaged(Some(p.mz.len())) {
                     continue;
                 }
                 if self.is_full_scan(r.experiment) {
