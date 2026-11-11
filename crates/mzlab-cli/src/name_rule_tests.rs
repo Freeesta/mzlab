@@ -46,7 +46,7 @@ const COMMANDS: &[&[&str]] = &[
     &["mol-cut"],
     &["samples"],
     &["peak-edges"],
-    &["sim-table"],
+    &["manual-table"],
     &["peak-area"],
     &["peak-window"],
     &["explain-missing"],
