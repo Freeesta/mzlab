@@ -14,9 +14,9 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
-        pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.wait_for_timeout(800)
+        pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         KJ = "document.querySelector('#kframe').contentWindow.ketcher"
-        pg.evaluate(f"{KJ}.setMolecule('CC(=O)Nc1ccc(O)cc1')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 11")
+        wait_for_js(pg, f"!!({KJ} && {KJ}.editor)"); pg.evaluate(f"{KJ}.setMolecule('CC(=O)Nc1ccc(O)cc1')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size === 11")
         def closed():
             assert pg.evaluate("!document.querySelector('#anal-card').open"), "the card starts closed"
             assert pg.locator("#anal-body *").count() == 0, "nothing is computed before the card is opened"

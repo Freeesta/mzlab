@@ -28,6 +28,7 @@ function formulaHtml(/** @type {any} */ s) {
   return formulaParts(s.formula).map(([x, k]) => k ? `<${k}>${esc(x)}</${k}>` : esc(x)).join("") + sign;
 }
 
+const note = (/** @type {string} */ s) => '<div class="muted sm">' + esc(s) + "</div>";
 const peakName = (/** @type {number} */ off) => off ? `M+${off}` : "M";
 
 /** the sticks as SVG: one focusable group per stick (roving tabindex), a target at least 24 px wide */
@@ -57,7 +58,7 @@ export function mount(/** @type {Helpers} */ h) {
   function render() {
     if (!body) return;
     if (!cur) return;
-    if (cur.error) { body.innerHTML = `<div class="muted sm">${esc(cur.error)}</div>`; return; }
+    if (cur.error) { body.innerHTML = note(cur.error); return; }
     const s = cur.structure, ion = s.charge !== 0, xl = ion ? "m/z" : t("draw.anal.mass");
     const row = (/** @type {string} */ k, /** @type {string} */ v) => `<tr><th scope="row" style="text-align:left;font-weight:400">${esc(t(k))}</th><td class="num">${v}</td></tr>`;
     let html = `<div style="display:flex;gap:6px;align-items:center;margin:2px 0 4px"><span id="anal-formula" style="flex:1;font-size:15px">${formulaHtml(s)}</span>`
@@ -101,7 +102,7 @@ export function mount(/** @type {Helpers} */ h) {
   async function refresh() {
     if (!card || !body || !card.open) return;
     const atoms = h.atoms();
-    if (!atoms || !atoms.length) { lastKey = ""; cur = null; body.innerHTML = `<div class="muted sm">${esc(t("draw.anal.select"))}</div>`; return; }
+    if (!atoms || !atoms.length) { lastKey = ""; cur = null; body.innerHTML = note(t("draw.anal.select")); return; }
     const key = JSON.stringify({ atoms: atoms.map(atomOf) });
     if (key === lastKey && cur) return;
     lastKey = key; const me = ++run;
