@@ -412,6 +412,7 @@ I18N.add("en", {
   "warn.wiff.unindexed": "The .wiff index is older than its .wiff.scan (the files were copied while the acquisition was running). Sections of data the index does not list: {n}; recovered as samples, with a name and method inferred from the previous sample: {recovered}; left out because their blocks cannot be checked: {skipped}. Copy the files again after the acquisition ends.",
   "warn.wiff.emptySample": "Empty acquisition: the .wiff index lists this sample with no scans (acquisition aborted or failed, or the copy is incomplete).",
   "warn.wiff.inferredSample": "Recovered from data the .wiff index does not list: the name and the method are inferred from the previous sample, not read from the file.",
+  "warn.centroid.widthFallback": "Fewer than 8 isolated peaks were found in the profile scans, so the peak width was not measured: the centroids use the fallback width of 0.7 Da. On high-resolution data give the width (fwhm) yourself.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
   "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
   "warn.msngrafo.rottureCapped": "There are too many bond cleavages: only the first ones were tried.",

@@ -739,6 +739,7 @@
   "warn.wiff.unindexed": "Avviso calmo, uno per file (sito, CLI e app): il .wiff.scan di una coppia SCIEX contiene sezioni di dati che l'indice del .wiff non elenca (copia fatta durante l'acquisizione). {n} = sezioni trovate, {recovered} = recuperate come campioni (nome e metodo dedotti, il nome è <file>_s<N>), {skipped} = lasciate fuori perché non verificabili.",
   "warn.wiff.emptySample": "Motivo mostrato per un campione .wiff senza scansioni né cromatogrammi (riga del campione, riga di avanzamento della CLI): calmo, una riga.",
   "warn.wiff.inferredSample": "Motivo mostrato per un campione ricostruito da una sezione che l'indice del .wiff non elenca (accanto alla nota di file warn.wiff.unindexed).",
+  "warn.centroid.widthFallback": "Avviso del passo spectra.centroid (Flow, CLI e sito): la larghezza non è misurata ma di ripiego; mai chiamarla stimata.",
   "error.memoryBudget.native": "Come error.memoryBudget, ma nell'app desktop e nella CLI: il limite è la memoria scelta per il computer, non quella del browser.",
   "error.memoryBudgetFase.native": "Come error.memoryBudgetFase, ma nell'app desktop e nella CLI. Stessi segnaposto: {fase}, {stima_mb}, {budget_mb}, {libero_mb}, {eccesso_mb}.",
   "error.memoryBudgetFase.indexPeaks.native": "Come error.memoryBudgetFase.indexPeaks, ma nell'app desktop e nella CLI. {stima_mb} = MB di picchi dell'intervallo di 1 Da, {budget_mb} = MB al massimo per un intervallo.",
