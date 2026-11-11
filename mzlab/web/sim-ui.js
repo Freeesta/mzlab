@@ -109,8 +109,6 @@
 
   /** the help line of the empty Data view of a SIM session (no graph yet): what to do next */
   function help() {
-    // the SIM table (sim-tabella.js) is read with the first SIM file, not at start-up (tests/test_peso_avvio.py)
-    if (!(/** @type {any} */ (window)).SIMTAB && typeof E !== "undefined" && E.files.some((/** @type {any} */ f) => !f.gone && n(f) > 0)) carica("m:sim-tabella.js");
     const el = document.getElementById("simhelp"); if (!el) return;
     const on = allSim() && !E.panels.some((/** @type {any} */ p) => p.el);
     if (!on) { el.hidden = true; return; }
