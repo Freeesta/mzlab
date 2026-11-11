@@ -78,7 +78,7 @@ pub(crate) fn spectrum(r: SpectrumRecord) -> Spectrum {
     Spectrum {
         index: r.index,
         id: format!("controllerType=0 controllerNumber=1 scan={}", r.scan_number),
-        level: r.ms_level.min(255) as u8,
+        level: r.ms_level.map_or(0, |l| l.min(255) as u8),
         rt: r.retention_time_min,
         polarity: match r.polarity {
             Some(Polarity::Positive) => 1,

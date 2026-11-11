@@ -24,3 +24,9 @@ Non provato qui: il motore `.wasm` del sito e l'app desktop sulle stesse fixture
 
 ## Misure (file grande sintetico, 700 scansioni × 100 000 punti, profilo)
 `tools/mzml_grande.py` scrive il file zlib (893 MB); `mzlab-cli convert x.mzML.gz --compression smallest|standard` ne fa i gemelli; `mzlab-cli canali FILE` costruisce l'indice (CLI nativa, release, 4 CPU). Tempi e picco di memoria: Standard 1003 MB, 20,5 s, 109 MB; Smallest (zlib + Numpress) 180 MB, 26,9 s, 67 MB; scrittura Standard 43 s / 940 MB, Smallest 35 s / 916 MB (il `.gz` si gonfia in memoria). Numpress è con perdita; il dato è sintetico (rumore e picchi inventati), il rapporto reale dipende dal file.
+
+Scrittura (`mzmlwrite/text.rs`): ogni testo letto da un file passa da `esc` (`& < > "` e i caratteri fuori dalla produzione `Char` di XML 1.0 diventano U+FFFD), anche i nomi dei termini CV.
+Un termine generico con un testo del file (`GENERIC`: `MS:1000031` e i modelli dei produttori, `MS:1000531` software, `MS:1000008`/`MS:1000443`/`MS:1000026` tipo di sorgente, analizzatore, rivelatore) tiene il nome CV; il testo va in un `userParam` (`instrument model` per i modelli, altrimenti il nome CV), riletto da `mzmlhead/params.rs`, `scantable/analyzer.rs` e `open/mzml_header.rs`.
+`tests/test_mzml_secondo_parser.py` legge con lxml (libxml2, senza recupero) l'mzML di `convert` di ogni famiglia sintetica, in Standard e Smallest.
+
+Validatore (`mzml_validate`): prima un passaggio XML 1.0 rigoroso (`wellformed.rs`: caratteri fuori da `Char`, attributi malformati o ripetuti, `<` in un valore, entità sconosciute, contenuto fuori dalla radice; si ferma al primo, codice `xml`). Ogni mzML scritto da una conversione passa da `check_written`: un errore è `err.file.mzmlInvalid` e il file non resta (`convert.mzml` della CLI, `nat2mzml` dell'app, «Scarica .mzML» del sito con il modulo `valida`: `CONV.valid`).

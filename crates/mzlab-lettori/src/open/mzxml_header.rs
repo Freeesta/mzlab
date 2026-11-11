@@ -67,7 +67,9 @@ fn fields_of(o: &str, n: &str, g: Tag, dest: &mut Vec<Field>) {
 }
 
 fn annotate(c: &mut Cabin, n: &str, g: Tag) {
-    let v = |k: &str| Some(attr(g, k).trim().to_string()).filter(|v| !v.is_empty());
+    // attribute values are XML text: `&lt;` is `<` (the mzML writer escapes them again)
+    let v =
+        |k: &str| Some(super::mzml_header::unescape(attr(g, k).trim())).filter(|v| !v.is_empty());
     match n {
         "msManufacturer" => c.maker = v("value"),
         "msModel" => c.model = v("value"),

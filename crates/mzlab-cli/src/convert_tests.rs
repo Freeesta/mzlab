@@ -10,6 +10,9 @@ use crate::convert_fixtures::{folder, makers, wiff};
 use crate::flow_run_tests::{flow_run, p};
 use crate::Outcome;
 
+#[path = "convert_tests_wiff.rs"]
+mod wiff_notes;
+
 fn convert(args: &[&str]) -> Outcome {
     let mut a = vec!["convert".to_string()];
     a.extend(args.iter().map(|x| x.to_string()));
@@ -246,7 +249,7 @@ fn a_refused_wiff_is_told_with_the_text_of_the_site() {
     for (name, text) in [
         (
             "tof",
-            "Experiment 1 of this .wiff uses a scan type (code 8) this program does not read yet",
+            "Not supported yet: TOF MS scan (scan type code 8, experiment 1 of this .wiff)",
         ),
         (
             "periodi",
@@ -484,3 +487,6 @@ fn the_method_warnings_are_notes_with_their_text() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[path = "convert_partial_tests.rs"]
+mod partial;

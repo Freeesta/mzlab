@@ -80,7 +80,8 @@ def today(sigla, code, kind, version):
     if kind in ("mrm", "ions"):
         return {"esito": "letto", "spettri": 0, "cromatogrammi": 1 + len(TRS if kind == "mrm" else IONS), "tipo": None}
     level = 1 if sigla in ("EMS", "Q1") else 3 if sigla == "MS3" else 2
-    prec = MS3_SECOND if sigla == "MS3" else PREC.get(sigla) if sigla not in ("EMS", "Q1") else None
+    # the header mass of a precursor-ion or neutral-loss scan is its product or its loss, never a precursor
+    prec = MS3_SECOND if sigla == "MS3" else PREC.get(sigla) if sigla not in ("EMS", "Q1", "PREC", "NL") else None
     sp = [w.spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", level, prec, 1000.0 * k, pts(k), version)
           for k in range(CYCLES)]
     return {"esito": "letto", "spettri": CYCLES, "livello": sp[0]["level"], "precursore": sp[0]["precursor"], "tipo": CV.get(sigla),
@@ -107,7 +108,7 @@ def main(out=None):
         wr.save(out, sigla)
         info[sigla] = {"codice": code, "codice_confermato": confirmed, "polarita": 1,
                        "campioni": [{"n": n, "versione": v, "oggi": today(sigla, code, kind, v)} for n, v in samples],
-                       "futuro": {"livello": level, "tipo_cv": cv, "precursore": PREC.get(sigla), "sim": sigla in ("Q1MI", "Q3MI"),
+                       "futuro": {"livello": level, "tipo_cv": cv, "precursore": None if sigla in ("PREC", "NL") else PREC.get(sigla), "sim": sigla in ("Q1MI", "Q3MI"),
                                   "spettri": kind == "scan", "ioni": IONS if kind == "ions" else None}}
     (out / "modi.json").write_text(json.dumps(info))
 

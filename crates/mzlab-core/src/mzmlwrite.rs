@@ -57,11 +57,9 @@ impl<W: Write> MzmlWriter<W> {
             s += &format!("<sampleList count=\"1\"><sample id=\"{}\" name=\"{}\"/></sampleList>\n", esc(id), esc(name));
         }
         s += &format!("<softwareList count=\"{}\"><software id=\"mzlab\" version=\"{}\">{}</software>{}</softwareList>\n", 1 + h.centroided as usize + h.extra_software.len() + h.steps.len(), esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)),
-            h.extra_software.iter().enumerate().map(|(i, (a, n, v))| format!("<software id=\"acq{}\" version=\"{}\">{}</software>", i + 1, esc(v), cv(a, n, ""))).collect::<String>() + &if h.centroided { format!("<software id=\"mzlab-centroidi\" version=\"{}\">{}</software>", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", "mzLab centroidi")) } else { String::new() } + &step_software(&h.steps));
+            h.extra_software.iter().enumerate().map(|(i, (a, n, v))| format!("<software id=\"acq{}\" version=\"{}\">{}</software>", i + 1, esc(v), header_term(a, n))).collect::<String>() + &if h.centroided { format!("<software id=\"mzlab-centroidi\" version=\"{}\">{}</software>", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", "mzLab centroidi")) } else { String::new() } + &step_software(&h.steps));
         s += "<instrumentConfigurationList count=\"1\"><instrumentConfiguration id=\"IC1\">";
-        if let Some((acc, name)) = &h.instrument {
-            s += &cv(acc, name, "");
-        }
+        s += &instrument_terms(h);
         if let Some(sn) = &h.serial {
             s += &cv("MS:1000529", "instrument serial number", esc(sn));
         }
@@ -237,6 +235,8 @@ pub struct SpectrumExtra {
     /// `MS:1000045` collision energy (eV) and half-width of the isolation window (m/z) of a spectrum with a plain `Spectrum::precursor`: written in its `<precursor>`.
     pub ce: Option<f64>,
     pub iso_half: Option<f64>,
+    /// The m/z Q3 stays on in a precursor-ion scan: written as its `<product>` (isolation target, `iso_half` offsets), the spectrum has no precursor.
+    pub product: Option<f64>,
     /// userParams of the spectrum: (name, value).
     pub params: Vec<(String, String)>,
     /// The precursors, in order (the chain of an MSn scan is one per level, outermost first). Empty: `Spectrum::precursor` is written as target and selected ion.
@@ -269,30 +269,6 @@ pub struct MzmlWriter<W: Write> {
 
 pub(crate) fn io(_: std::io::Error) -> Error {
     Error::new("err.file.mzmlWrite")
-}
-
-/// `s` with `&`, `<`, `>` and `"` escaped, in one pass (a text with none of them is copied once).
-fn esc(s: &str) -> String {
-    let mut out = String::with_capacity(s.len() + 16);
-    esc_into(&mut out, s);
-    out
-}
-
-/// `esc` appended to `out`.
-fn esc_into(out: &mut String, s: &str) {
-    if !s.bytes().any(|b| matches!(b, b'&' | b'<' | b'>' | b'"')) {
-        out.push_str(s);
-        return;
-    }
-    for c in s.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            c => out.push(c),
-        }
-    }
 }
 
 /// The dwell time (userParam, read back by `mzmlhead`), then the precursor with its activation and the product of an SRM transition. The collision energy and the dwell
@@ -341,10 +317,11 @@ fn cv(acc: &str, name: &str, value: impl std::fmt::Display) -> String {
 /// `cv` appended to `s`: the header of a spectrum is written without a temporary string per parameter.
 fn cv_into(s: &mut String, acc: &str, name: &str, value: impl std::fmt::Display) {
     use std::fmt::Write;
-    let _ = write!(
-        s,
-        "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\"/>"
-    );
+    s.push_str("<cvParam cvRef=\"MS\" accession=\"");
+    esc_into(s, acc);
+    s.push_str("\" name=\"");
+    esc_into(s, name);
+    let _ = write!(s, "\" value=\"{value}\"/>");
 }
 
 fn window_into(s: &mut String, w: Option<(f64, f64)>) {
@@ -418,7 +395,7 @@ fn source_list(h: &Header) -> String {
     for (i, f) in h.sources.iter().enumerate() {
         let mut inner: String = h.source_cv.iter().map(|(a, n)| cv(a, n, "")).collect();
         if let Some(x) = h.source_sha1.get(i) {
-            inner += &cv("MS:1000569", "SHA-1", x);
+            inner += &cv("MS:1000569", "SHA-1", esc(x));
         }
         s += &format!("<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\">{inner}</sourceFile>", i + 1, esc(f));
     }
@@ -432,7 +409,7 @@ fn component_list(h: &Header) -> String {
     }
     let mut s = format!("<componentList count=\"{}\">", h.components.len());
     for (i, (kind, acc, name)) in h.components.iter().enumerate() {
-        s += &format!("<{kind} order=\"{}\">{}</{kind}>", i + 1, cv(acc, name, ""));
+        s += &format!("<{kind} order=\"{}\">{}</{kind}>", i + 1, header_term(acc, name));
     }
     s + "</componentList>"
 }
@@ -469,6 +446,10 @@ mod index;
 #[cfg(all(target_family = "wasm", not(feature = "indice")))]
 #[path = "mzmlwrite/index_wasm.rs"]
 mod index;
+mod text;
+pub use text::{generic_name, generic_term, generic_user_name};
+pub(crate) use text::{esc, esc_into, xml_char};
+use text::{header_term, instrument_terms};
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
@@ -477,5 +458,7 @@ mod tests_index;
 mod tests_precursors;
 #[cfg(test)]
 mod tests_xsd;
+#[cfg(test)]
+mod tests_xmlchar;
 #[cfg(all(test, not(target_family = "wasm")))]
 mod tests_pool;

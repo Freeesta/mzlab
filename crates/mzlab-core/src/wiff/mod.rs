@@ -12,6 +12,7 @@ pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
 pub mod idx;
+mod reader_extra;
 mod mass_check;
 mod method_name;
 pub mod modes;
@@ -20,6 +21,7 @@ pub mod reader;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
+mod unindexed;
 mod window;
 
 use crate::error::{Error, Result};
@@ -98,11 +100,7 @@ impl Wiff {
             .enumerate()
             .find(|(_, e)| e.code.is_some() && !modes::nativo(e.code))
         {
-            return Err(bad(&format!(
-                "scan type code {} (experiment {})",
-                e.code.unwrap_or(0),
-                k + 1
-            )));
+            return Err(scan_type_error(e.code.unwrap_or(0), k + 1));
         }
         Ok(())
     }
@@ -126,6 +124,8 @@ pub struct Experiment {
     pub precursor: Option<f64>,
     /// The first precursor of an MS3 experiment (`precursor` is the second one, isolated from the fragments of the first).
     pub parent: Option<f64>,
+    /// The fixed mass of a precursor-ion scan (the product m/z Q3 stays on) or of a neutral-loss scan (the loss, Da): not a precursor.
+    pub fixed: Option<f64>,
     /// Collision energy (eV) of a product-ion experiment, when the method gives one value for it.
     pub ce: Option<f64>,
     /// Half-width (m/z) of the isolation window of a product-ion experiment.
@@ -179,9 +179,17 @@ pub struct Wiff {
     pub wiff_sha1: Option<String>,
     /// Off by default. When set, a scheduled transition keeps only the points within its window around the target RT (as msconvert writes it).
     pub trim_scheduled: bool,
+    /// Set when the sample is a section of the `.wiff.scan` that the `.wiff` index does not list: its name, method and times are those of this indexed sample.
+    pub inferred_from: Option<u32>,
     scan_len: u64,
     /// Why this sample could not be opened (its method is refused): it has no records, and reading its data gives this error while the other samples stay readable.
     failure: Option<Error>,
+}
+
+/// A scan type the reader does not read: the code, the experiment and the name of the type (`modi`), so that the message says what it is.
+pub(crate) fn scan_type_error(code: u32, experiment: usize) -> Error {
+    let kind = modes::mode(code).map_or("unknown", |m| m.tag);
+    Error::new("err.file.wiffScanType").with("code", code).with("experiment", experiment).with("type", kind)
 }
 
 /// `head + width * n` bytes, `None` when it does not fit a `usize`: on a 32-bit target (the site) a count of 2^29 rows would wrap to a few bytes,
@@ -268,6 +276,7 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             level: if product { 2 } else { 1 },
             precursor: if product { prec } else { None },
             parent: None,
+            fixed: None,
             ce: None,
             iso_half: None,
             window_s: None,
@@ -411,6 +420,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         created,
         wiff_sha1: None,
         trim_scheduled: false,
+        inferred_from: None,
         scan_len,
         failure: None,
     })
@@ -433,6 +443,7 @@ impl Wiff {
             created: None,
             wiff_sha1: None,
             trim_scheduled: false,
+            inferred_from: None,
             scan_len,
             failure: Some(failure),
         }

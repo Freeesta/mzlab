@@ -166,6 +166,35 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
             "{term}"
         );
     }
+    // a precursor-ion scan has its fixed m/z as its product, a neutral-loss scan its loss as a userParam: neither has a precursor
+    for s in want["variante"]["1"]["spectra"].as_array().unwrap() {
+        let at = xml
+            .find(&format!("id=\"{}\"", s["id"].as_str().unwrap()))
+            .unwrap();
+        let head = &xml[at..at + xml[at..].find("<binaryDataArrayList").unwrap()];
+        let product = s["product"].as_f64().map(|m| {
+            format!("<productList count=\"1\"><product><isolationWindow><cvParam cvRef=\"MS\" accession=\"MS:1000827\" name=\"isolation window target m/z\" value=\"{m}\"")
+        });
+        assert_eq!(
+            product.as_ref().map(|p| head.contains(p.as_str())),
+            product.as_ref().map(|_| true),
+            "{head}"
+        );
+        assert_eq!(head.contains("<productList"), product.is_some(), "{head}");
+        let loss = s["loss"]
+            .as_f64()
+            .map(|l| format!("<userParam name=\"constant neutral loss (Da)\" value=\"{l}\""));
+        assert_eq!(
+            loss.as_ref().is_some_and(|l| head.contains(l.as_str())),
+            loss.is_some(),
+            "{head}"
+        );
+        assert_eq!(
+            head.contains("<precursorList"),
+            s["precursor"].as_f64().is_some(),
+            "{head}"
+        );
+    }
     // one precursor-ion and one neutral-loss spectrum per cycle (two cycles), each type in its own spectra
     assert_eq!(
         xml.matches("accession=\"MS:1000341\" name=\"precursor ion spectrum\"")

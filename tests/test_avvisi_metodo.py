@@ -19,7 +19,7 @@ def emitted():
 
 def test_every_method_warning_has_a_text_in_both_languages_and_a_place():
     keys = emitted()
-    assert {"meta.nonDecodificato", "meta.mancante", "meta.troncato", "meta.versioneNonVerificata"} <= keys, keys
+    assert {"meta.nonDecodificato", "meta.mancante", "meta.troncato"} <= keys, keys
     page = (ROOT / "mzlab/web/metodo-doc.js").read_text(encoding="utf-8")
     for lang in ("en", "it"):
         cat = (ROOT / f"mzlab/web/lang/{lang}/errori.js").read_text(encoding="utf-8")

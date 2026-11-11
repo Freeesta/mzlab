@@ -87,6 +87,25 @@ def fwhms(buf, p, sigma, out):
         out.append(xr - xl)
 
 
+def median(v):
+    v.sort()
+    return v[(len(v) - 1) // 2]
+
+
+def widths_at(scans, p):
+    widths = []
+    for mz, y in scans:
+        buf = Buf()
+        fill(mz, y, p, buf)
+        if len(buf.v) < 5:
+            continue
+        smooth(buf, 5)
+        background(buf, p.wb(), p.mode == COUNTS)
+        sigma = noise(buf, p.wb()) if p.mode == CONTINUOUS else 1.0
+        fwhms(buf, p, sigma, widths)
+    return widths
+
+
 def estimate(scans, fallback_w):
     unit, mode = unit_and_mode(scans)
     step, reg = step_and_grid(scans)
@@ -95,20 +114,21 @@ def estimate(scans, fallback_w):
         for v in y:
             vmax = max(vmax, v)
     p = P(mode, unit, step, max(fallback_w, 3.0 * step), 3.0, vmax, True)
-    widths = []
-    for mz, y in scans:
-        buf = Buf()
-        fill(mz, y, p, buf)
-        if len(buf.v) < 5:
-            continue
-        smooth(buf, 5)
-        background(buf, p.wb(), mode == COUNTS)
-        sigma = noise(buf, p.wb()) if mode == CONTINUOUS else 1.0
-        fwhms(buf, p, sigma, widths)
+    widths = widths_at(scans, p)
+    if len(widths) < 8 and mode == CONTINUOUS:
+        for points in (8.0, 24.0, 64.0):
+            q = P(mode, unit, step, points * step, 3.0, vmax, True)
+            if q.w >= p.w:
+                break
+            found = widths_at(scans, q)
+            if len(found) >= 8:
+                again = P(mode, unit, step, max(median(list(found)), 3.0 * step), 3.0, vmax, True)
+                more = widths_at(scans, again)
+                widths = more if len(more) >= 8 else found
+                break
     peaks = len(widths) if len(widths) >= 8 else 0
     if peaks:
-        widths.sort()
-        p.w = max(widths[(len(widths) - 1) // 2], 3.0 * step)
+        p.w = max(median(widths), 3.0 * step)
     p.area = not p.hr()
     return p, reg, peaks
 
@@ -172,6 +192,10 @@ def main():
     est = []
     for k in range(4):
         scans = [counts_scan(rng, 0.06, 240, [(110.0 + 0.01 * t, 900.0, 0.7), (112.5, 700.0, 0.7), (115.0, 500.0, 0.7)], 0.3, 2.5, 107.0) for t in range(20)]
+        p, reg, peaks = estimate(scans, 0.7)
+        est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "regular": reg, "peaks": peaks})
+    for n_peaks in (12, 2):                       # high-resolution profile: the width is looked for on the scale of the grid
+        scans = [continuous_scan(rng, 300.0, 3000, 0.0, [(300.1 + 0.24 * j, 5000.0 + 400.0 * j, 0.005) for j in range(n_peaks)], 40.0) for _ in range(3)]
         p, reg, peaks = estimate(scans, 0.7)
         est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "regular": reg, "peaks": peaks})
     json.dump({"scans": rows, "estimates": est}, open(sys.argv[1], "w"))

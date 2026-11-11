@@ -109,7 +109,7 @@ fn pseudorandom(n: usize, mut x: u64) -> Vec<u8> {
 
 #[test]
 fn every_version_number_is_read_or_refused_with_a_key() {
-    const DECLARED: [u32; 8] = [8, 47, 57, 60, 62, 63, 64, 66];
+    const VERIFIED: [u32; 4] = [57, 63, 64, 66];
     for v in (0..=80).chain([255, 65_536, u32::MAX]) {
         for (k, tail) in [
             vec![],
@@ -121,10 +121,10 @@ fn every_version_number_is_read_or_refused_with_a_key() {
         .enumerate()
         {
             match mzlab_lettori::apri(file_set(with_version(v, tail)), &Limits::sito()) {
-                Ok(_) => assert!(DECLARED.contains(&v), "version {v} (tail {k}) opened"),
+                Ok(_) => assert!(VERIFIED.contains(&v), "version {v} (tail {k}) opened"),
                 Err(e) => {
                     assert!(e.key.starts_with("err."), "{}", e.key);
-                    if !DECLARED.contains(&v) {
+                    if !VERIFIED.contains(&v) {
                         assert_eq!(e.key, "err.file.rawVersion", "version {v}");
                     }
                 }
@@ -135,7 +135,7 @@ fn every_version_number_is_read_or_refused_with_a_key() {
 
 #[test]
 fn a_declared_version_with_a_random_body_never_panics() {
-    for v in [8u32, 47, 57, 60, 62, 63, 64, 66] {
+    for v in [57u32, 63, 64, 66] {
         for seed in 0..40u64 {
             let n = [0usize, 7, 300, 1500, 20_000][seed as usize % 5];
             everything(with_version(v, &pseudorandom(n, seed * 977 + u64::from(v))));
