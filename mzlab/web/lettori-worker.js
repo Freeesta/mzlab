@@ -1,9 +1,9 @@
 // @ts-check
 // @ts-strict
 // The worker of the readers modules (crates/mzlab-lettori-wasm, wasm-lettori/<family>/): opens the files of a family that the engine does not read and writes their mzML into OPFS (rust-opfs.js rawSink).
-// The .wasm of a family is fetched on the first message that names it (never the others) and checked against its SHA-256 in wasm-lettori/manifest.json (carica-modulo.js). Messages: probe, toMzml, cancel (the page also ends the worker, a running conversion cannot listen).
+// The .wasm of a family is fetched on the first message that names it (never the others) and checked against its SHA-256 in wasm-lettori/manifest.json (carica-modulo.js), and loaded afresh after a wasm trap. Messages: probe, toMzml, cancel (the page also ends the worker, a running conversion cannot listen).
 import { rawSink } from "./rust-opfs.js";
-import { loadModulo as load } from "./carica-modulo.js";
+import { loadModulo as load, forgetIfTrapped } from "./carica-modulo.js";
 
 /** `read(member, offset, length)` over some Blobs, as the bridge wants it */
 function reader(/** @type {Blob[]} */ blobs) {
@@ -17,7 +17,7 @@ function errOf(/** @type {any} */ e, /** @type {string} */ fam) {
   return { error_key: "err.file.wiffLoad", params: { family: fam, detail: String(e && e.message || e) } };
 }
 
-/** @param {{ op: string, id: number, fam: string, members: { name: string, blob: Blob }[], c?: number, dest?: string, dad?: boolean, compression?: string }} m */
+/** @param {{ op: string, id: number, fam: string, members: { name: string, blob: Blob }[], c?: number, dest?: string, cap?: number, dad?: boolean, compression?: string }} m */
 async function run(m) {
   const post = (/** @type {any} */ x, /** @type {Transferable[]} */ t = []) => /** @type {any} */ (self).postMessage({ id: m.id, ...x }, t);
   let sink = null;
@@ -26,7 +26,7 @@ async function run(m) {
     const w = await load(m.fam).catch(e => { throw JSON.stringify({ error_key: "err.file.moduleLoad", params: { family: m.fam, detail: String(e && e.message || e) } }); }), names = m.members.map(x => x.name), sizes = Float64Array.from(m.members.map(x => x.blob.size)), read = reader(m.members.map(x => x.blob));
     if (m.op === "valida") return post({ text: w.validate_mzml(names[0], sizes[0], read) });
     if (m.op === "probe") return post({ info: JSON.parse(w.probe(names, sizes, read)) });
-    sink = await rawSink(/** @type {string} */ (m.dest));
+    sink = await rawSink(/** @type {string} */ (m.dest), m.cap || 0);
     const s = sink;
     let written = 0, last = 0;
     const sinkOf = (/** @type {Uint8Array} */ p) => { written += p.length; s.write(p); }, tell = (/** @type {number} */ scans, /** @type {number} */ scansTotal) => {
@@ -40,6 +40,7 @@ async function run(m) {
     post(r.file ? { file: r.file, missing } : { parts: r.parts, missing });
   } catch (e) {
     if (sink) await sink.abort().catch(() => {});
+    forgetIfTrapped(m.fam, e);                            // a trapped module is not used again: the next message loads a fresh one
     post({ error: errOf(e, m.fam) });
   }
 }

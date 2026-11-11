@@ -25,7 +25,7 @@ mod reference {
 
     fn pack(halves: &[u8], out: &mut Vec<u8>) {
         for p in halves.chunks(2) {
-            out.push((p[0] << 4) | p.get(1).copied().unwrap_or(0x8));
+            out.push((p[0] << 4) | p.get(1).copied().unwrap_or(0));
         }
     }
 

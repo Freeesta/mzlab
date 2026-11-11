@@ -6,8 +6,14 @@ const MAXROWS = 300;
 const nm = (v, n = 3) => TDATI.num(v, n);
 const ptitle = p => String(p.title || "").replace(/<[^>]*>/g, "");
 
-// at most MAXROWS indices of x inside [lo, hi], evenly spread
+// at most MAXROWS indices of x inside [lo, hi], evenly spread; a sorted x (decima.js, loaded by the first drawing) gives the window by binary search, not a pass over 10^6 points
 function pick(x, lo, hi) {
+  const D = /** @type {any} */ (window).DECIMA;
+  if (D && D.isSorted(x)) {
+    const [i0, i1] = D.windowIdx(x, lo, hi), n = i1 - i0, st = n / MAXROWS, out = [];
+    if (n <= MAXROWS) { for (let i = i0; i < i1; i++) out.push(i); } else for (let k = 0; k < MAXROWS; k++) out.push(i0 + Math.floor(k * st));
+    return out;
+  }
   const ix = []; for (let i = 0; i < x.length; i++) if (x[i] >= lo && x[i] <= hi) ix.push(i);
   if (ix.length <= MAXROWS) return ix;
   const out = [], st = ix.length / MAXROWS; for (let k = 0; k < MAXROWS; k++) out.push(ix[Math.floor(k * st)]);
@@ -31,8 +37,8 @@ function specData(p) {
   const a = p._a; if (!a || !a.data || !a.data.length) return null;
   const rows = [];
   a.data.forEach(x => {
-    const d = x.d, top = maxOf(d.y, 1e-9), thr = (p.thr ?? 5) / 100 * top, sel = [];
-    d.mz.forEach((m, i) => { if (m >= a.x0 && m <= a.x1 && d.y[i] >= thr) sel.push(i); });
+    const d = x.d, top = Math.max(topOf(d.y), 1e-9), thr = (p.thr ?? 5) / 100 * top, sel = [], [i0, i1] = spanOf(d.mz, a.x0, a.x1);      // the top kept per spectrum, the window by binary search
+    for (let i = i0; i < i1; i++) if (d.mz[i] >= a.x0 && d.mz[i] <= a.x1 && d.y[i] >= thr) sel.push(i);
     sel.sort((u, v) => d.y[v] - d.y[u]).splice(MAXROWS);
     sel.sort((u, v) => d.mz[u] - d.mz[v]).forEach(i => rows.push([x.f ? x.f.label : "", nm(d.mz[i], a.dec || 4), nm(d.y[i], 1), nm(100 * d.y[i] / top, 1)]));
   });
@@ -59,13 +65,15 @@ function uvData(p) {
 }
 const data = p => (p.uv ? uvData(p) : p.type === "spec" ? specData(p) : p.type === "map" ? mapData(p) : lineData(p));
 
+const NPK = new WeakMap();
 function text(p) {
   const a = p._a; if (!a) return p._say || T("a11y.empty");
   if (p.uv && a.uvd) return T("a11y.uv", { title: ptitle(p), rt: a.uvd.n > 1 ? a.uvd.rt.toFixed(2) + "–" + a.uvd.rt1.toFixed(2) : a.uvd.rt.toFixed(2), a: nm(a.x0, 0), b: nm(a.x1, 0), y: nm(maxOf(a.uvd.y), 1) });
   if (p.type === "spec") {
-    // the top of the spectrum once, not once per peak (a spectrum of thousands of peaks made every drawing wait for a second)
+    // the top once per spectrum (not once per peak) and the count once per window: a resize or a drag redraws without changing them (a summed HR run: 730 000 peaks)
     let n = 0;
-    if (a.data) { const d = a.data[0].d, thr = (p.thr ?? 5) / 100 * d.y.reduce((m, v) => (v > m ? v : m), 1e-9); d.mz.forEach((m, i) => { if (m >= a.x0 && m <= a.x1 && d.y[i] >= thr) n++; }); }
+    if (a.data) { const d = a.data[0].d, k = `${a.x0},${a.x1},${p.thr ?? 5}`, c = NPK.get(d);
+      if (c && c.k === k) n = c.n; else { const thr = (p.thr ?? 5) / 100 * Math.max(topOf(d.y), 1e-9), [i0, i1] = spanOf(d.mz, a.x0, a.x1); for (let i = i0; i < i1; i++) if (d.mz[i] >= a.x0 && d.mz[i] <= a.x1 && d.y[i] >= thr) n++; NPK.set(d, { k, n }); } }
     return T("a11y.spec", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), n });
   }
   if (p.type === "map") return T(a.pda ? "a11y.mapPda" : "a11y.map", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), c: nm(a.y0, 1), d: nm(a.y1, 1) });

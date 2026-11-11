@@ -9,6 +9,8 @@ const t = (/** @type {string} */ k, /** @type {any} */ a) => W_.I18N.t(k, a);
 const EHt = (/** @type {unknown} */ s) => EH(s == null ? "" : s);
 const LIB = () => W_.LIB, LV = () => W_.LIVELLI;
 const THR_KEYS = ["entropia_min", "picchi_min", "precursore_ppm_max", "scansioni_min", "margine_min", "entropia_provvisorio", "analogo_mcos_min"];
+/** @type {Record<string, string>} */
+const THR_NUM = { entropia_min: "0:1", picchi_min: "0: i", precursore_ppm_max: ">0", scansioni_min: "0: i", margine_min: "0:1", entropia_provvisorio: "0:1", analogo_mcos_min: "0:1" };
 // neutral change between a query and an analogue: the usual transformations first, then the simplest formula within 3 mDa (the composition of the engine)
 const TRANSF = () => [[15.9949146, t("lib.tr.hydroxylation")], [-2.01565, t("lib.tr.dehydrogenation")], [13.97926, "+O −2H"], [-26.01565, "−C₂H₂"], [1.97926, "−CH₂ +O"], [-56.0626, t("lib.tr.dealkylation")],
   [18.010565, "+H₂O"], [-18.010565, "−H₂O"], [-27.9949146, "−CO"], [2.01565, "+2H"], [-14.01565, t("lib.tr.demethylation")], [14.01565, t("lib.tr.methylation")], [-43.98983, "−CO₂"], [31.98983, "+O₂"]];
@@ -89,7 +91,7 @@ const pop = (/** @type {string} */ id, /** @type {string} */ face, /** @type {st
   `<details class="lw-pop" id="${id}"><summary title="${EHt(label)}" aria-label="${EHt(label)}">${face}</summary><div class="lw-menu">${body}</div></details>`;
 const head = (/** @type {string} */ title, /** @type {string} */ sub, /** @type {string} */ mid, /** @type {string} */ opts, /** @type {string} */ dls) => `<div class="lw-head"><h3 id="lw-t">${title}</h3><span class="lw-q sm muted" id="lw-q">${sub}</span>${mid}
   ${pop("lw-opt", `⚙ ${t("lw.opt")}`, t("lw.opt.title"), opts)}${pop("lw-dl", dlIcon(), t("lw.dl"), dls)}<button type="button" class="lw-mx" aria-pressed="false">⤢</button><button type="button" class="x" id="lw-x" title="${t("common.close")}" aria-label="${t("common.close")}">&times;</button></div>`;
-const thrHtml = () => { const T = LV().thresholds(); return `<b>${t("lv.thr.title")}</b>${THR_KEYS.map(k => `<label>${t(`lv.thr.${k}`)} <input data-thr="${k}" inputmode="decimal" value="${String(T[k])}"></label>`).join("")}<button type="button" id="lw-thr-reset">${t("lv.thr.reset")}</button>`; };
+const thrHtml = () => { const T = LV().thresholds(); return `<b>${t("lv.thr.title")}</b>${THR_KEYS.map(k => `<label>${t(`lv.thr.${k}`)} <input data-thr="${k}" data-num="${THR_NUM[k]}" inputmode="decimal" value="${String(T[k])}"></label>`).join("")}<button type="button" id="lw-thr-reset">${t("lv.thr.reset")}</button>`; };
 function thrBind(/** @type {HTMLElement} */ root, /** @type {() => void} */ again) {
   root.querySelectorAll("[data-thr]").forEach(el => { const i = /** @type {HTMLInputElement} */ (el); i.onchange = () => { const v = numIt(i.value); if (v >= 0) { LV().setThreshold(i.dataset.thr, v); again(); } }; });
   const rs = /** @type {HTMLElement | null} */ (root.querySelector("#lw-thr-reset"));
@@ -311,9 +313,9 @@ function showQuery(q, ctx) {
   /** @type {any} */
   const st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, frag: Math.max(0.005, +(10e-6 * top).toFixed(4)), res: null, an: null, tab: "id", sel: { k: "id", i: 0 },
     n: ctx.nScans || 1, lo: null, decided: "", open: new Set(), why: false, sortId: { key: "ent", dir: -1 }, sortAn: { key: "mcos", dir: -1 }, tok: 0 };
-  const opts = `<label>${t("lib.search.tol")} (ppm) <input id="lw-tol" inputmode="decimal" value="${st.v}"></label><label>${t("lib.search.peaksWithin")} (Da) <input id="lw-frag" inputmode="decimal" value="${st.frag}"></label><hr>${thrHtml()}<hr><button type="button" id="lw-libs">${t("lib.libs")}</button>`;
+  const opts = `<label>${t("lib.search.tol")} (ppm) <input id="lw-tol" data-num=">0" inputmode="decimal" value="${st.v}"></label><label>${t("lib.search.peaksWithin")} (Da) <input id="lw-frag" data-num=">0" inputmode="decimal" value="${st.frag}"></label><hr>${thrHtml()}<hr><button type="button" id="lw-libs">${t("lib.libs")}</button>`;
   const dls = `<button type="button" id="lw-copy" title="${t("lib.copy.title")}">${t("lib.copy")}</button><button type="button" id="lw-xlsx">Excel</button>`;
-  const mid = `${ctx.back ? `<button type="button" id="lw-back">${t("lw.all.back")}</button>` : ""}<label class="lw-prec">${t("lib.search.prec")} <input id="lw-prec" inputmode="decimal" value="${st.prec ?? ""}"></label>
+  const mid = `${ctx.back ? `<button type="button" id="lw-back">${t("lw.all.back")}</button>` : ""}<label class="lw-prec">${t("lib.search.prec")} <input id="lw-prec" data-num=">0" inputmode="decimal" value="${st.prec ?? ""}"></label>
     <button type="button" id="lw-go" class="pri">${t("lib.search.go")}</button><span class="sm muted" id="lw-msg" role="status"></span>${ctx.back ? `<button type="button" id="lw-goto">${t("lw.all.show")}</button>` : ""}`;
   d.innerHTML = head(t("lib.what.title"), EHt(q.title), mid, opts, dls) + `<div id="lw-verdict"></div>
     <div class="lw-main"><section class="lw-left" aria-label="${t("lw.tabs")}"><div role="tablist"><button type="button" role="tab" id="lw-tab-id" aria-controls="lw-list" data-tab="id"></button><button type="button" role="tab" id="lw-tab-an" aria-controls="lw-list" data-tab="an"></button></div>
@@ -345,7 +347,7 @@ function showQuery(q, ctx) {
   };
   thrBind(d, () => { showVerdict(V); });
   $("#lw-go").onclick = run;
-  ["#lw-prec", "#lw-tol", "#lw-frag"].forEach(id => { $(id).onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") run(); }; });
+  ["#lw-prec", "#lw-tol", "#lw-frag"].forEach(id => { const i = $(id); i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") { i.blur(); i.focus(); if (i.getAttribute("aria-invalid") !== "true") run(); } }; });   // the blur lets the gate refuse first
   ["#lw-tol", "#lw-frag"].forEach(id => { $(id).onchange = () => { if (st.res) run(); }; });
   dlBind(V);
   if (!d.open) d.showModal();

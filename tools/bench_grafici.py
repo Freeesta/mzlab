@@ -5,6 +5,8 @@
 big   one SRM file, 4 transitions of 10^6 points (20 min), one shown
 many  20 SRM files of 10^5 points, all ticked and overlaid
 hr    one Orbitrap Full Scan file of 50 000 scans opened 6 times (hard links), all ticked; an XIC panel of 20 ions = 120 traces of 50 000 points (the one measured)
+hr100 one Orbitrap Full Scan file of 100 000 scans; an XIC panel of 20 ions = 20 overlaid traces of 100 000 points (the one measured)
+map   the hr100 file in an RT x m/z map panel (10^7 centroids); spec  the hr100 file in a spectrum panel summed over the whole run
 Per set: draw() time of the whole view and of a zoom on the noisy baseline (median of 8, ms), of a y zoom on the baseline (many also in the waterfall view), then the gestures (Ctrl+wheel x30, Shift+drag x60,
 hover x120, window resize x10): draw() calls, frame intervals (median / p95 / max ms) and long tasks (> 50 ms: count / longest). Files in /tmp/mzlab_bench_grafici."""
 import sys, os, argparse, statistics
@@ -24,6 +26,9 @@ HOOK = r"""(() => { const B = window.__B = { n: 0, fr: [], on: false };
   B.start = () => { B.n = 0; B.fr = []; B.on = true; }; B.stop = () => { B.on = false; return { n: B.n, fr: B.fr }; }; })(); 0"""
 P = "E.panels.find(q => q._a && q.type !== 'spec')"
 XIC20 = "E.panels.find(q => q.type === 'xic' && q.traces && q.traces.length >= 20)"
+PANEL = {"map": "E.panels.find(q => q.type === 'map')", "spec": "E.panels.findLast(q => q.type === 'spec')"}
+OPEN = {"map": "() => { reveal(addPanel('map', { k: E.files[0].k })); }", "spec": "() => { const f = E.files[0]; reveal(addPanel('spec', { k: f.k, level: 1, r0: 0, r1: 21, link: null })); }"}
+ZOOM = {"map": "[9.45, 9.615]", "spec": "[300.05, 300.15]"}      # the x axis: RT for the map, m/z for the spectrum
 ADD20 = "() => { const t = []; for (let k = 0; k < 20; k++) t.push(HR.ionTrace(300.1 + k * 18.65, { obs: false })); addPanel('xic', { traces: t }); }"
 
 
@@ -38,7 +43,11 @@ def srm_file(path, n, ntr, seed):
 
 
 def files(name):
-    d = WORK / name; d.mkdir(parents=True, exist_ok=True)
+    d = WORK / ("hr100" if name in PANEL else name); d.mkdir(parents=True, exist_ok=True)
+    if d.name == "hr100":
+        f = d / "HR_100k.mzML"
+        if not f.exists(): ds.hr_series(f, np.random.default_rng(2), [(300.1 + k * 37.3, 1 + k * 1.7, 0.03, 1e6) for k in range(10)], rt_end=20.5, cyc=0.0002)
+        return [f]
     if name == "hr":
         f = d / "HR_dense-t0.mzML"
         if not f.exists(): ds.hr_series(f, np.random.default_rng(1), [(300.1 + k * 37.3, 1 + k * 1.7, 0.03, 1e6) for k in range(10)], rt_end=20.5, cyc=0.0004)
@@ -69,7 +78,7 @@ def gesture(pg, fn):
 
 
 def draw_ms(pg, zoom, P=P):
-    v = pg.evaluate(f"""(async () => {{ const p = {P}; p.zoom = {zoom}; const out = []; for (let i = 0; i < 8; i++) {{ const t = performance.now(); await draw(p); out.push(performance.now() - t); }}
+    v = pg.evaluate(f"""(async () => {{ const p = {P}; p.zoom = {zoom}; const out = []; for (let i = 0; i < 8; i++) {{ p._drawAt = null; const t = performance.now(); await draw(p); out.push(performance.now() - t); }}
         p.zoom = null; await draw(p); return out; }})()""")
     return round(statistics.median(v), 1)
 
@@ -78,13 +87,15 @@ def run_set(p, port, name, rate):
     b, ctx, pg = mp.launch(p, rate); rows = []
     try:
         mp.load_files(pg, port, files(name))
-        P = XIC20 if name == "hr" else globals()["P"]
-        if name != "big": pg.evaluate("E.files.forEach(f => f.vis = true); syncBrowse(); renderFileList(); redrawAll(); 0"); ready(pg, timeout=600000)
-        if name == "hr":
+        P = PANEL.get(name) or (XIC20 if name.startswith("hr") else globals()["P"])
+        if name in PANEL:
+            s = mp.run_in(pg, OPEN[name], f"() => !!({P} && {P}._a) && !E.pending.length", 600000); rows.append((f"open the {name} panel, ms; long tasks", f"{s['ms']:.0f}", "", f"{s['long_n']} / {s['long_max']:.0f}"))
+        elif name != "big": pg.evaluate("E.files.forEach(f => f.vis = true); syncBrowse(); renderFileList(); redrawAll(); 0"); ready(pg, timeout=600000)
+        if name.startswith("hr"):
             s = mp.run_in(pg, ADD20, f"() => !!({P} && {P}._a) && !E.pending.length", 600000); rows.append(("open the XIC of 20 ions, ms; long tasks", f"{s['ms']:.0f}", "", f"{s['long_n']} / {s['long_max']:.0f}"))
-        pg.evaluate(HOOK); n = pg.evaluate(f"({P})._a.sr.length")
-        rows.append(("draw, whole view", draw_ms(pg, "null", P))); rows.append(("draw, zoom on the noisy baseline 9.45-9.62 min", draw_ms(pg, "[9.45, 9.615]", P)))
-        pg.evaluate(f"({P}).zoomY = [0, 300]"); rows.append(("draw, y zoom on the baseline 0-300", draw_ms(pg, "null", P))); pg.evaluate(f"({P}).zoomY = null")
+        pg.evaluate(HOOK); n = pg.evaluate(f"(({P})._a.sr || [0]).length")
+        rows.append(("draw, whole view", draw_ms(pg, "null", P))); rows.append((f"draw, zoom on x {ZOOM.get(name, '9.45-9.62 min')}", draw_ms(pg, ZOOM.get(name, "[9.45, 9.615]"), P)))
+        if name not in PANEL: pg.evaluate(f"({P}).zoomY = [0, 300]"); rows.append(("draw, y zoom on the baseline 0-300", draw_ms(pg, "null", P))); pg.evaluate(f"({P}).zoomY = null")
         if name == "many": pg.evaluate(f"({P}).mode = 'cas'"); rows.append(("draw, waterfall view", draw_ms(pg, "null", P))); pg.evaluate(f"({P}).mode = ''"); ready(pg)
         x, y, w, h = pg.evaluate(f"(() => {{ const r = ({P}).cv.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }})()"); cx, cy = x + w / 2, y + h / 2
 
@@ -101,8 +112,8 @@ def run_set(p, port, name, rate):
         rows.append(("hover x120", *gesture(pg, lambda: [pg.mouse.move(x + 80 + i * (w - 120) / 120, cy) for i in range(120)])))
         pg.evaluate(f"(() => {{ const p = {P}; p.zoom = null; draw(p); }})()"); ready(pg)
         rows.append(("window resize x10", *gesture(pg, lambda: [pg.set_viewport_size({"width": 1500 - 30 * i, "height": 1000}) for i in range(10)])))
-        if name == "hr":
-            s = mp.run_in(pg, f"() => TDATI.open(({P}).cv)", "() => !!document.querySelector('#tdati tbody tr')", 600000); rows.append(("«Dati» table of the XIC, ms; long tasks", f"{s['ms']:.0f}", "", f"{s['long_n']} / {s['long_max']:.0f}"))
+        if name.startswith("hr") or name in ("big", *PANEL):
+            s = mp.run_in(pg, f"() => TDATI.open(({P}).cv)", "() => !!document.querySelector('#tdati tbody tr')", 600000); rows.append((f"«Dati» table of the {name if name in PANEL else 'XIC'}, ms; long tasks", f"{s['ms']:.0f}", "", f"{s['long_n']} / {s['long_max']:.0f}"))
     finally: b.close()
     return n, rows
 

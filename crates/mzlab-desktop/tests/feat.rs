@@ -122,6 +122,33 @@ fn detect_and_align(e: &Env) -> (Vec<Vec<u8>>, Vec<u8>) {
         e.json("feat/align", json!({"names": NAMES, "recipe": ""}))["sha256"],
         sha(&table)
     );
+    // the progress the page asks for ends where the one of the `.wasm` ends (`align_series_to`, the same steps at most once per 1 %)
+    let mut last = (0, 0);
+    let mut seen = |d, t| last = (d, t);
+    let mut pace = mzlab_core::pace::Pace::new(&mut seen);
+    let mut again = Vec::new();
+    let open_k = |k: usize| Ok(open(&e.paths[k]));
+    run::align_to_spilling(
+        &mut stored.clone(),
+        &budget(),
+        &rec,
+        None,
+        open_k,
+        &mut again,
+        None,
+        None,
+        &mut |d, t| pace.at(d, t),
+    )
+    .unwrap();
+    assert!(again == table && last.1 > 0 && last.0 == last.1, "{last:?}");
+    let step: serde_json::Value = serde_json::from_str(&mzlab_feat::legacy::progress::json(
+        "hr",
+        "align",
+        last.0 as u32,
+        last.1 as u32,
+    ))
+    .unwrap();
+    assert_eq!(e.json("feat/progress", json!({})), step);
     (stored, table)
 }
 

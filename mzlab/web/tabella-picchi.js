@@ -84,8 +84,8 @@
     if (!p._a || !p._a.data || !p._a.data[0]) return;
     const pop = document.createElement("div"); pop.className = "sp-pop tp-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", T("tabp.title"));
     pop.innerHTML = h`<div class="tp-facts"></div>
-      <div class="tp-ctl"><label>${T("tabp.thr")} <input type="number" data-f="thr" min="0" max="100" step="0.5" value="${s.thr}"></label>
-      <label>${T("tabp.max")} <input type="number" data-f="max" min="1" max="5000" step="1" value="${s.max}"></label>
+      <div class="tp-ctl"><label>${T("tabp.thr")} <input data-f="thr" data-num="0:100" value="${s.thr}"></label>
+      <label>${T("tabp.max")} <input data-f="max" data-num="1:5000 i" value="${s.max}"></label>
       <label>${T("tabp.sort")} <select data-f="sort"><option value="mz"${raw(s.sort === "mz" ? " selected" : "")}>${T("tabp.sort.mz")}</option><option value="int"${raw(s.sort === "int" ? " selected" : "")}>${T("tabp.sort.int")}</option></select></label>
       <label class="tp-chk"><input type="checkbox" data-f="lab"${raw(s.lab ? " checked" : "")}> ${T("tabp.lab")}</label></div>
       <div class="tp-sc" tabindex="0" role="region" aria-label="${T("tabp.title")}"><table></table></div>
@@ -96,8 +96,8 @@
     pop.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - pop.offsetWidth - 6)) + "px"; pop.style.top = br.bottom - pr.top + 4 + "px";
     pop.addEventListener("input", e => {
       const t = /** @type {HTMLInputElement} */ (e.target), f = t.dataset.f;
-      if (f === "thr") { const v = +t.value; if (t.value !== "" && isFinite(v)) s.thr = Math.max(0, Math.min(100, v)); }
-      else if (f === "max") { const v = Math.floor(+t.value); if (t.value !== "" && isFinite(v) && v >= 1) s.max = v; }
+      if (f === "thr") { const v = CAMPI.num(t.value); if (v != null && isFinite(v) && v >= 0 && v <= 100) s.thr = Math.max(0, Math.min(100, v)); }
+      else if (f === "max") { const n = CAMPI.num(t.value), v = n == null ? NaN : Math.floor(n); if (isFinite(v) && v >= 1 && v <= 5000) s.max = v; }
       else if (f === "sort") s.sort = t.value === "int" ? "int" : "mz";
       else if (f === "lab") s.lab = t.checked;
       render(p);

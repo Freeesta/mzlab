@@ -3,7 +3,7 @@
 
 use super::reader_extra::extra_of;
 use super::window::Window;
-use super::{container, samples, scan, Record, Wiff, SAMPLES};
+use super::{container_within, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::method::{sha1_hex, Source, SrcFile};
@@ -331,7 +331,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     }
     let mut bytes = vec![0u8; usize::try_from(m.dim).map_err(|_| Error::memory_budget())?];
     m.dati.read_at(0, &mut bytes)?;
-    let ole = container(bytes, &name)?;
+    let ole = container_within(bytes, &name, limits)?;
     let sm = member(&mut fs, si)?;
     let scan_len = sm.dim;
     // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `impronte_note`): the header does not read the whole file again
@@ -403,7 +403,7 @@ fn add_unindexed(
     total: &mut u64,
 ) -> Result<(usize, usize)> {
     let known: Vec<&Wiff> = parti.iter().map(|p| &p.w).collect();
-    let (end, last_id) = super::index_end(ole, &known);
+    let (end, last_id) = super::unindexed::index_end(ole, &known);
     let found = super::unindexed::recover(scan, scan_len, &known, end, last_id);
     let counts = (found.samples.len(), found.skipped);
     for w in found.samples {
@@ -497,6 +497,3 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
     }
     Ok(())
 }
-
-/// The userParam of an MS3 spectrum that holds the m/z of its first precursor (`Spectrum::precursor` is the second).
-pub const PARENT_PARAM: &str = "ms3 first precursor m/z";

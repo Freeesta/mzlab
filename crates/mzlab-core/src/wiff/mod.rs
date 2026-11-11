@@ -13,6 +13,7 @@ pub mod dad_map;
 pub mod dad_uv;
 pub mod idx;
 mod reader_extra;
+mod mass_check;
 mod method_name;
 pub mod modes;
 pub mod names;
@@ -40,12 +41,18 @@ pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {
     if let Some(k) = method_name::by_name(ole, sample) {
         return k;
     }
-    let has = |k: u32| {
-        ole.has(&format!(
-            "MethodSubtree/Method{k}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
-        ))
-    };
-    match (1..=sample.min(10_000)).rev().find(|&k| has(k)) {
+    // one pass over the paths, not one search per method number below `sample`: a table of 2 000 samples was 2 000 x 10 000 path searches
+    let nearest = ole
+        .paths_list()
+        .filter_map(|p| {
+            let d = p
+                .strip_prefix("MethodSubtree/Method")?
+                .strip_suffix("/DeviceMethod0/Period0/Experiment0/ExperimentHeader")?;
+            d.parse::<u32>().ok().filter(|k| k.to_string() == d)
+        })
+        .filter(|&k| (1..=sample.min(10_000)).contains(&k))
+        .max();
+    match nearest {
         Some(k) if k == sample || borrow_agrees(ole, sample, k) => k,
         _ => sample,
     }
@@ -183,6 +190,12 @@ pub(crate) fn scan_type_error(code: u32, experiment: usize) -> Error {
     Error::new("err.file.wiffScanType").with("code", code).with("experiment", experiment).with("type", kind)
 }
 
+/// `head + width * n` bytes, `None` when it does not fit a `usize`: on a 32-bit target (the site) a count of 2^29 rows would wrap to a few bytes,
+/// pass a length check that the 64-bit app fails, and start a loop of 2^29 turns.
+pub(crate) fn span(head: usize, width: usize, n: usize) -> Option<usize> {
+    n.checked_mul(width)?.checked_add(head)
+}
+
 fn bad(detail: &str) -> Error {
     Error::new("err.file.wiff").with("detail", detail)
 }
@@ -190,9 +203,15 @@ fn bad(detail: &str) -> Error {
 /// The container of a `.wiff`; one cut short (sectors its header or its FAT use lie past the end) is refused whole: its streams would read empty or short,
 /// so the samples, the index or the method would be missing unsaid.
 pub fn container(wiff: Vec<u8>, name: &str) -> Result<Ole> {
+    container_within(wiff, name, &crate::readers::Limits::held())
+}
+
+/// `container` bounded by `limits`: a file past the memory budget is told as such, not as a file that is not a `.wiff`.
+pub fn container_within(wiff: Vec<u8>, name: &str, limits: &crate::readers::Limits) -> Result<Ole> {
     let size = wiff.len();
     let cut = Ole::header_cut(&wiff);
-    let ole = Ole::open(wiff, name).map_err(|_| match cut {
+    let ole = Ole::open(wiff, name, limits).map_err(|e| match cut {
+        _ if e.key == Error::memory_budget().key => e,
         Some(needed) => truncated(name, size, needed),
         None => Error::new("err.file.notWiff").with("name", name),
     })?;
@@ -219,26 +238,6 @@ pub fn samples(ole: &Ole) -> Vec<u32> {
     crate::sortc::slice_ord(&mut v);
     v.dedup();
     v
-}
-
-/// Where the data the index knows end in the `.wiff.scan`: after the last block of a sample, or after the head of the last section of the sample table (an empty
-/// injection has no blocks); and the highest sample number of the table.
-pub(crate) fn index_end(ole: &Ole, indexed: &[&Wiff]) -> (u64, u32) {
-    let table = ole
-        .read(&format!("{SAMPLES}SampleIdxTable"))
-        .map(|t| idx::sections(&t))
-        .unwrap_or_default();
-    let heads = table.iter().map(|s| s.1 + 20 + 24).max().unwrap_or(0);
-    let blocks = indexed
-        .iter()
-        .flat_map(|w| w.records.iter())
-        .map(|r| r.at + u64::from(r.size))
-        .max()
-        .unwrap_or(0);
-    (
-        heads.max(blocks),
-        table.iter().map(|s| s.0).max().unwrap_or(0),
-    )
 }
 
 /// The number of periods of method `method` (the `PeriodN` storages of its first device method).
@@ -289,6 +288,18 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
         });
     }
     out
+}
+
+/// The product-ion experiments of a sample acquired by IDA (it has a `DDERealTimeData` stream) are dependent scans: the survey picks their precursor at
+/// every cycle, and the mass of their header is only the value the method was saved with. That stream is not decoded, so they carry no precursor rather
+/// than an invented one (level 2 stays; the channels group them as `dd:2:EPI`).
+fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) {
+    if !ole.has(&format!("{SAMPLES}Sample{sample}/DDERealTimeData")) {
+        return;
+    }
+    for e in experiments.iter_mut().filter(|e| e.code == Some(CODE_PRODUCT)) {
+        e.precursor = None;
+    }
 }
 
 /// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
@@ -362,6 +373,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         extended::mark_windows(ole, sample, &mut experiments);
     }
     sim_periods(ole, sample, &experiments)?;
+    dependent_scans(ole, sample, &mut experiments);
     let n_exp = experiments.len().max(1);
     let records = entries
         .iter()
@@ -378,6 +390,15 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             experiment: k % n_exp,
         })
         .collect();
+    let no = method_no(ole, sample);
+    let no = if ole.has(&format!(
+        "MethodSubtree/Method{no}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
+    )) {
+        no
+    } else {
+        sample
+    };
+    mass_check::check(ole, no, &experiments)?;
     let method = methodinfo::method_of_sample(ole, method_no(ole, sample));
     let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);

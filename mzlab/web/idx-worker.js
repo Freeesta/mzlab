@@ -71,7 +71,7 @@ async function build(m) {
     // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase
     if (m.nat) {
       // the peaks that do not fit in the budget wait in a scratch file of OPFS (`<name>.mzidx.sp.part`: removed at the end, and by the cleaning of the `.part` files if the worker dies) instead of being decoded again by every round
-      stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase, done: p.done, total: p.total }), m.budget, spill, writeCen);
+      stats = await buildNative(build_mzidx_native, ext, m.nat, m.name, write, p => postMessage({ op: "progress", frac: p.frac, phase: p.phase, done: p.done, total: p.total }), m.budget, spill, writeCen, m.cap || 0);
     } else {
       const blob = m.blob;
       // the copy in OPFS is read through a read-only handle; without one (or if the file is taken) the Blob is read as before

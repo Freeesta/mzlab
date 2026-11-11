@@ -79,3 +79,13 @@ fn errors_name_the_label() {
     );
     assert_eq!(labels_json("nope").unwrap_err().key, "error.etich.request");
 }
+
+#[test]
+fn the_ion_mz_is_not_rounded_twice() {
+    // Protonated paracetamol: m/z 152.0706050 shows as 152.07060 at 5 decimals, not 152.07061 (6-then-5 rounding).
+    let s = one(
+        r#"[{"el":"C","h":3},{"el":"C"},{"el":"O"},{"el":"N","h":2,"q":1},{"el":"C"},{"el":"C","h":1},{"el":"C","h":1},{"el":"C"},{"el":"O","h":1},{"el":"C","h":1},{"el":"C","h":1}]"#,
+    );
+    assert!(s.contains(r#""text":"C8H10NO2+""#), "{s}");
+    assert_eq!(format!("{:.5}", num(&s, "mz")), "152.07060", "{s}");
+}

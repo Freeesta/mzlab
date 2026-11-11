@@ -11,7 +11,7 @@ const cxCss = document.createElement("style");
 cxCss.textContent = `.cx{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}.cx-title{font-size:14px;margin:0}
 .cx-sec{font-weight:600;font-size:12px;margin:var(--sp-2) 0 0;padding-top:var(--sp-3);border-top:1px solid var(--line)}
 .cx-grid{display:grid;grid-template-columns:minmax(7em,40%) minmax(0,1fr);gap:var(--sp-3) var(--sp-4);align-items:center}.cx-grid>label{color:var(--muted)}
-.cx input[type=text],.cx input[type=number],.cx select{box-sizing:border-box;width:100%;min-width:0;min-height:var(--cx-row);padding:2px 5px}.cx input[type=number]{text-align:right}
+.cx input:is([type=text],[type=number],[data-num]),.cx select{box-sizing:border-box;width:100%;min-width:0;min-height:var(--cx-row);padding:2px 5px}.cx input:is([type=number],[data-num]:not(#cx-mz)){text-align:right}
 .cx-pair{display:flex;gap:var(--sp-3);align-items:center;min-width:0}.cx-pair>*{flex:1 1 0}.cx-pair>span{flex:0 0 auto}
 .cx button{min-height:var(--cx-row);min-width:var(--cx-row);padding:2px 8px}.cx-btns{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}.cx-set{padding-bottom:var(--sp-3)}
 .cx-out{max-height:calc(var(--cx-row) * 6 + 2px);overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
@@ -38,16 +38,16 @@ function cxHtml(/** @type {any} */ st0, /** @type {any} */ ctx, /** @type {strin
   const ion0 = st0["ion" + (pol || "+")] || (pol === "-" ? "[M-H]-" : "[M+H]+");
   return `<div class="cx">
       <h3 class="cx-title">${cxT("cx.title")}</h3>
-      <div class="cx-grid"><label for="cx-mz">${cxT("cx.mass")}</label><input id="cx-mz" type="text" inputmode="decimal" value="${ctx.mz != null ? (+ctx.mz).toFixed(5) : ""}">
-        <label for="cx-max">${cxT("comp.max")}</label><input id="cx-max" type="number" min="1" max="${CX_MAX}" value="${Math.min(CX_MAX, Math.max(1, st0.cxmax ?? CX_DEF))}"></div>
+      <div class="cx-grid"><label for="cx-mz">${cxT("cx.mass")}</label><input id="cx-mz" data-num=">0 v" value="${ctx.mz != null ? (+ctx.mz).toFixed(5) : ""}">
+        <label for="cx-max">${cxT("comp.max")}</label><input id="cx-max" data-num="1:${CX_MAX} i" value="${Math.min(CX_MAX, Math.max(1, st0.cxmax ?? CX_DEF))}"></div>
       <h4 class="cx-sec" id="cx-h-res">${cxT("cx.results")}</h4>
       <div id="cx-out" class="cx-out" role="region" aria-labelledby="cx-h-res" aria-live="polite"></div>
       <span id="cx-desc" class="sr-only"></span><span id="cx-live" class="sr-only" role="status"></span>
       <h4 class="cx-sec">${cxT("cx.limits")}</h4>
       <div class="cx-grid"><label for="cx-ion">${cxT("cx.charge")}</label><select id="cx-ion">${ions.map((/** @type {string[]} */ i) => cxOpt(i[0], ion0, i[1])).join("")}</select>
         <label for="cx-n">${cxT("comp.nitrogen")}</label><select id="cx-n">${["none", "even", "odd"].map(v => cxOpt(v, st0.n || "none", cxT("comp.n." + v))).join("")}</select>
-        <label for="cx-tol">${cxT("comp.tol")}</label><span class="cx-pair"><input id="cx-tol" type="number" min="0" step="any" value="${st0.tol ?? 5}"><select id="cx-unit" aria-label="${cxT("comp.tol")}">${cxOpt("ppm", st0.unit || "ppm", "ppm")}${cxOpt("mda", st0.unit || "ppm", "mDa")}</select></span>
-        <label for="cx-r0" id="cx-rl">${cxT("comp.col.rdb")}</label><span class="cx-pair" role="group" aria-labelledby="cx-rl"><input id="cx-r0" type="number" step="any" value="${st0.r0 ?? -1}" aria-label="${cxT("comp.rdbFrom")}"><span aria-hidden="true">–</span><input id="cx-r1" type="number" step="any" value="${st0.r1 ?? 100}" aria-label="${cxT("comp.rdbTo")}"></span></div>
+        <label for="cx-tol">${cxT("comp.tol")}</label><span class="cx-pair"><input id="cx-tol" data-num=">0" value="${st0.tol ?? 5}"><select id="cx-unit" aria-label="${cxT("comp.tol")}">${cxOpt("ppm", st0.unit || "ppm", "ppm")}${cxOpt("mda", st0.unit || "ppm", "mDa")}</select></span>
+        <label for="cx-r0" id="cx-rl">${cxT("comp.col.rdb")}</label><span class="cx-pair" role="group" aria-labelledby="cx-rl"><input id="cx-r0" data-num="<=cx-r1" value="${st0.r0 ?? -1}" aria-label="${cxT("comp.rdbFrom")}"><span aria-hidden="true">–</span><input id="cx-r1" data-num=">=cx-r0" value="${st0.r1 ?? 100}" aria-label="${cxT("comp.rdbTo")}"></span></div>
       <h4 class="cx-sec">${cxT("comp.elements")}</h4>
       <div class="cx-grid cx-set"><label for="cx-pre">${cxT("cx.set")}</label><select id="cx-pre">${Object.keys(presets).map(k => `<option>${EH(k)}</option>`).join("")}</select></div>
       <div class="cx-btns cx-set"><button id="cx-load" type="button" title="${cxT("cx.load.tip")}">${cxT("comp.load")}</button><button id="cx-save" type="button" title="${cxT("cx.save.tip")}">${cxT("comp.saveAs")}</button></div>

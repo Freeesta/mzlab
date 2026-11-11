@@ -368,13 +368,29 @@ pub fn split_offset(text: &str) -> Result<(String, Option<f64>)> {
     ))
 }
 
-/// The answer for a bare m/z with a shift (`288.2+16`): nothing to resolve, so no formula.
+/// Lowest m/z a shifted text may give: below it no ion exists (H+ is 1.007), so the text was not a shift.
+const MZ_MIN: f64 = 1.0;
+
+/// The answer for a bare m/z with a shift (`288.2+16`): nothing to resolve, so no formula. Two numbers whose second is the larger
+/// (`250.8-251.5`) are a range of m/z, lower edge first: as a shift they would give a negative m/z, so the answer is the range itself.
 fn shifted_mz(text: &str, d: f64) -> Result<String> {
     let base: f64 = text
         .replace(',', ".")
         .parse()
         .map_err(|_| Error::new("err.formula.unreadable").with("formula", text))?;
     let z = base + d;
+    if d < 0.0 && -d > base && base >= MZ_MIN {
+        let mut o = Out::default();
+        o.raw("{\"formula\":\"\",\"range\":[")
+            .num(round(base, 5))
+            .raw(",")
+            .num(round(-d, 5))
+            .raw("]}");
+        return Ok(o.0);
+    }
+    if z < MZ_MIN {
+        return Err(Error::new("err.formula.mzLow").with("mz", round(z, 4)));
+    }
     let mut o = Out::default();
     o.raw("{\"formula\":\"\",\"offset\":")
         .num(d)
@@ -413,6 +429,9 @@ pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
         None => e,
     })?;
     let m = mass(&f);
+    if let Some(d) = offset.filter(|d| m + d < MZ_MIN) {
+        return Err(Error::new("err.formula.mzLow").with("mz", round(m + d, 4)));
+    }
     let mut o = Out::default();
     o.raw("{\"formula\":")
         .str(&fmt(&f))

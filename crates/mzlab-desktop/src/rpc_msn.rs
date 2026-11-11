@@ -5,7 +5,7 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use mzlab_core::budget::sha256_hex;
+use mzlab_core::budget::{sha256_hex_at, MemBudget};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 use mzlab_core::msngraph::{
@@ -238,11 +238,10 @@ type Computed = Result<(Graph, String, Options)>;
 
 /// The graph of the query over the index and the mzML (`calcola_con` of the `.wasm`).
 fn graph(mut idx: MapAt, idx_size: u64, mzml: &mut dyn ReadAt, name: &str, q: &Query) -> Computed {
-    let req = from_request(&|k| q.get(k).map(String::from))?;
-    let mut bytes = vec![0u8; idx_size as usize];
-    idx.read_at(0, &mut bytes)?;
-    let sha = sha256_hex(&bytes);
-    drop(bytes);
+    let mut req = from_request(&|k| q.get(k).map(String::from))?;
+    // as the site, with the budget of this machine: a consensus over it is the calm `error.memoryBudget`
+    req.0.budget = MemBudget::mb(crate::ram::native_budget_mb()).cap();
+    let sha = sha256_hex_at(&mut idx, idx_size)?;
     let scans = Index::open(idx, idx_size)?.scans;
     let (g, j) = graph_json(&scans, &mut DynRead(mzml), (name, &sha), (&req.0, &req.1))?;
     let j = with_keys(&g, j, &req.0, q)?;

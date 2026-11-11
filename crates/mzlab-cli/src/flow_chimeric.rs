@@ -4,9 +4,10 @@
 
 use std::fmt::Write as _;
 
-use crate::flow::{all_inputs, io, read_all, read_one, Exec, FileRunner};
+use crate::flow::{all_inputs, io, one_input, read_one, Exec, FileRunner};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
+use mzlab_core::mzml_estimate;
 use mzlab_core::step::DataType;
 use mzlab_feat::attributio::ms2_engine::chimeric::{default_window, intruders, FeaturePoint};
 use mzlab_feat::attributio::ms2_engine::deconv::{deconvolve, Candidate};
@@ -291,9 +292,26 @@ fn peaks(lines: &[&str]) -> (Vec<f64>, Vec<f64>) {
     lines.iter().filter_map(pair).unzip()
 }
 
+/// The texts the step reads whole (the MGF, the feature table, the library) must fit in the working memory with their parse and the text written
+/// (`mzml_estimate::text_bytes`), else `error.memoryBudget` (phase `read`) before any is read. The indexes are read by offset, not whole.
+fn check_read(r: &FileRunner, job: &Job) -> Result<()> {
+    let size = |port: &str| {
+        one_input(r, job, port)
+            .ok()
+            .and_then(|p| std::fs::metadata(p).ok())
+            .map_or(0, |m| m.len() as usize)
+    };
+    let held = ["spectra", "features", "library"]
+        .into_iter()
+        .map(size)
+        .sum();
+    mzml_estimate::check(mzml_estimate::text_bytes(held), r.cap())
+}
+
 fn chimeric_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+    check_read(r, job)?;
     let spectra = read_one(r, job, "spectra")?;
-    if read_all(r, job, "index")?.is_empty() {
+    if all_inputs(r, job, "index").is_empty() {
         return Err(Error::new("err.flow.port.missing").with("port", "index"));
     }
     let text = String::from_utf8_lossy(&spectra.1);

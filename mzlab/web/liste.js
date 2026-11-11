@@ -473,7 +473,7 @@ const LISTE = (() => {
         big(I18N.t("lst.lab.name"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("lst.lab.intro")}</div>
           <div class="bar"><button id="lab-xl" type="button">${I18N.t("lst.lab.export")}</button><button id="lab-im" type="button">${I18N.t("lst.lab.import")}</button><button id="lab-add" type="button" class="go">${I18N.t("lst.lab.add")}</button><input type="file" id="lab-f" accept=".csv,.txt" hidden></div>
           <table class="lct"><tr><th class="num"><i>m/z</i></th><th>${I18N.t("lst.col.name")}</th><th>${I18N.t("lst.col.formula")}</th><th>${I18N.t("lst.col.polarity")}</th><th>${I18N.t("lst.col.note")}</th><th></th></tr>
-          ${rows.map((r, i) => `<tr><td><input data-i="${i}" data-c="mz" value="${r.mz}" style="width:84px"></td><td><input data-i="${i}" data-c="name" value="${EH(r.name)}"></td><td><input data-i="${i}" data-c="formula" value="${EH(r.formula)}" style="width:110px"></td>
+          ${rows.map((r, i) => `<tr><td><input data-i="${i}" data-c="mz" data-num=">0" value="${r.mz}" style="width:84px"></td><td><input data-i="${i}" data-c="name" value="${EH(r.name)}"></td><td><input data-i="${i}" data-c="formula" value="${EH(r.formula)}" style="width:110px"></td>
             <td><select data-i="${i}" data-c="polarity"><option value="0"${!r.polarity ? " selected" : ""}>${I18N.t("lst.pol.both")}</option><option value="1"${r.polarity === 1 ? " selected" : ""}>${I18N.t("lst.pol.pos")}</option><option value="-1"${r.polarity === -1 ? " selected" : ""}>${I18N.t("lst.pol.neg")}</option></select></td>
             <td><input data-i="${i}" data-c="note" value="${EH(r.note)}"></td><td><button data-del="${i}" type="button" title="${I18N.t("lst.lab.removeRow")}">×</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">${I18N.t("lst.lab.empty")}</td></tr>`}</table>`, () => {
           document.querySelectorAll("#bigbody [data-c]").forEach(inp => inp.onchange = () => {
@@ -579,7 +579,7 @@ const LISTE = (() => {
         <div class="liste-bar">
           <div class="lb-row">
             <label class="lb-grow"><span><i>m/z</i></span> <input type="text" id="lst-q" value="${EH(state.q)}" placeholder="${I18N.t("lst.qPh")}" aria-label="${I18N.t("lst.qPh")}"></label>
-            <label id="lst-tol-wrap"${state.mode === "da" ? " hidden" : ""}><span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span> <input type="number" id="lst-tol" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" aria-label="${I18N.t("lst.tolAria")}"></label>
+            <label id="lst-tol-wrap"${state.mode === "da" ? " hidden" : ""}><span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span> <input id="lst-tol" data-num=">0" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" aria-label="${I18N.t("lst.tolAria")}"></label>
           </div>
         </div>
 
@@ -802,7 +802,7 @@ const LISTE = (() => {
     // Bind event listeners
     elQ.oninput = (/** @type {Event} */ e) => { state.q = /** @type {HTMLInputElement} */ (e.target).value; render(); };
     elTol.oninput = (/** @type {Event} */ e) => {
-      const v = parseFloat(/** @type {HTMLInputElement} */ (e.target).value);
+      const v = numIt(/** @type {HTMLInputElement} */ (e.target).value);
       if (state.mode === "da") state.tolDa = v || 0.5;
       else state.tolPpm = v || 5;
       render();

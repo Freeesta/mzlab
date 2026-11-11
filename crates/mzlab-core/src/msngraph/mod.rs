@@ -79,7 +79,7 @@ pub fn version(v: &Value) -> Result<u32> {
     Ok(n)
 }
 
-/// The options of the graph; every one is written in the JSON so that a graph can be rebuilt.
+/// The options of the graph; every one but `budget` is written in the JSON so that a graph can be rebuilt.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Options {
     /// Tolerance of the merging of the peaks, in ppm of the m/z.
@@ -112,6 +112,9 @@ pub struct Options {
     pub regole: Option<RuleParams>,
     /// What the structure of the user expects of the rules (`mzlab_feat::chem::rules::attese`); empty = no structure given.
     pub attese: Vec<Expectation>,
+    /// Bytes the spectra of one consensus may hold while they are read (`read`); over it the graph ends in `error.memoryBudget` (phase `msnGraph`),
+    /// never in a trap. `usize::MAX`: no limit. Not in the JSON: the same graph whatever the budget it fits in.
+    pub budget: usize,
 }
 
 impl Default for Options {
@@ -133,6 +136,7 @@ impl Default for Options {
             choices: vec![],
             regole: None,
             attese: vec![],
+            budget: usize::MAX,
         }
     }
 }

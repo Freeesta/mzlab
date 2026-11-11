@@ -17,15 +17,16 @@ try:
         def reflists():
             pg.evaluate("document.querySelector('#refdlg').close()")
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(1500)
-            n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 0, "one list only: no switch"
-            t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminanti" in t.lower(), t
+            # two built-in lists (known contaminants, pesticides): one switch each, titles without the reference
+            n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 2, n
+            t = pg.inner_text("#lst-src-checks"); assert "Keller" not in t and "Anal. Chim" not in t and "contaminanti" in t.lower() and "pesticidi" in t.lower(), t
             assert pg.locator("#lst-mode-seg").count() == 0 and pg.is_visible("#lst-view-seg"), "no files: HR version, no mode switch"
             assert pg.locator("#lst-tbody tr").first.locator("td").count() == 9 and "." in pg.inner_text("#lst-tbody tr >> nth=0")
-            # two lists (the built-in one + a simulated user list): the switches come back
+            # a simulated user list adds its own switch
             pg.evaluate("LISTE.addUserListFromCsv('prova.csv','mz,name,formula,polarity\\n100.1,Test,,1\\n')"); pg.wait_for_timeout(600)
             pg.evaluate("LISTE.open({})"); pg.wait_for_timeout(800)
-            n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 2, n
-        step("Reference lists: no switch with one list, switches with two", reflists)
+            n = pg.evaluate("document.querySelectorAll('#lst-src-checks input[type=checkbox]').length"); assert n == 3, n
+        step("Reference lists: one switch per list, the user list adds one", reflists)
         def lists_lr():
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
             pg.evaluate("window.__fake={gone:false,polarity:'positive',name:'x'}; E.files.push(window.__fake); HR.__ish=HR.isHr; HR.isHr=()=>false")

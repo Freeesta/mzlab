@@ -210,69 +210,72 @@ fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
         let Some(d) = ole.read(&key) else { break };
         // MRM (4) or SIM (Q1MI 1, Q3MI 3): a row of their table may have no name
         let is_mrm = scan_code(ole, base, i).is_some_and(|c| matches!(c, 1 | 3 | 4));
-        let mut hits = Vec::new();
-        let mut at = 0;
-        while at < d.len() {
-            match mrm_at(&d, at) {
-                Some(h) => {
-                    at = h.end;
-                    hits.push(h);
-                }
-                None => at += 1,
-            }
-        }
-        hits.retain(|h| h.name.len() == h.len as usize && (is_mrm || !h.name.is_empty()));
-        if !hits.is_empty() {
-            let tr = hits
-                .iter()
-                .enumerate()
-                .map(|(j, h)| {
-                    transition_from_hit(&d, h, hits.get(j + 1).map_or(d.len(), |n| n.start))
-                })
-                .collect();
-            out.push(Experiment {
-                index: i,
-                kind: Kind::Mrm(tr),
-            });
-            continue;
-        }
-        let mut ce: Vec<f64> = Vec::new();
-        let mut at = 0;
-        while at + 10 <= d.len() {
-            if d[at..].starts_with(&[4, 0, b'C', 0, b'E', 0]) {
-                let v = round(f32_at(&d, at + 6).unwrap_or(0.0), 2);
-                if !ce.contains(&v) {
-                    ce.push(v);
-                }
-                at += 10;
-            } else {
-                at += 1;
-            }
-        }
-        crate::sortc::by(&mut ce, |a, b| a.total_cmp(b));
-        let mut range = None;
-        if d.len() >= 244 {
-            let a = f32_at(&d, 40).unwrap_or(f64::NAN);
-            let b = if d.len() == 432 {
-                f32_at(&d, 240)
-            } else {
-                f32_at(&d, 44)
-            };
-            if let Some(b) = b
-                && 10.0 <= a
-                && a < b
-                && b <= 3000.0
-            {
-                range = Some([round(a, 2), round(b, 2)]);
-            }
-        }
-        out.push(Experiment {
-            index: i,
-            kind: Kind::Scan { range, ce },
-        });
+        let kind = match mass_range::announced(ole, base, i) {
+            Some(n) => mass_range::counted(&d, n, is_mrm),
+            None => guessed(&d, is_mrm),
+        };
+        out.push(Experiment { index: i, kind });
     }
     out
 }
+
+/// The table of a header that announces no count: the transitions found by their layout (Q1, 0, Q3, dwell, 0, name, `DP` tag), else a scan range and energies.
+fn guessed(d: &[u8], is_mrm: bool) -> Kind {
+    let mut hits = Vec::new();
+    let mut at = 0;
+    while at < d.len() {
+        match mrm_at(d, at) {
+            Some(h) => {
+                at = h.end;
+                hits.push(h);
+            }
+            None => at += 1,
+        }
+    }
+    hits.retain(|h| h.name.len() == h.len as usize && (is_mrm || !h.name.is_empty()));
+    if !hits.is_empty() {
+        let tr = hits
+            .iter()
+            .enumerate()
+            .map(|(j, h)| transition_from_hit(d, h, hits.get(j + 1).map_or(d.len(), |n| n.start)))
+            .collect();
+        return Kind::Mrm(tr);
+    }
+    let mut ce: Vec<f64> = Vec::new();
+    let mut at = 0;
+    while at + 10 <= d.len() {
+        if d[at..].starts_with(&[4, 0, b'C', 0, b'E', 0]) {
+            let v = round(f32_at(d, at + 6).unwrap_or(0.0), 2);
+            if !ce.contains(&v) {
+                ce.push(v);
+            }
+            at += 10;
+        } else {
+            at += 1;
+        }
+    }
+    crate::sortc::by(&mut ce, |a, b| a.total_cmp(b));
+    let mut range = None;
+    if d.len() >= 244 {
+        let a = f32_at(d, 40).unwrap_or(f64::NAN);
+        let b = if d.len() == 432 {
+            f32_at(d, 240)
+        } else {
+            f32_at(d, 44)
+        };
+        if let Some(b) = b
+            && 10.0 <= a
+            && a < b
+            && b <= 3000.0
+        {
+            range = Some([round(a, 2), round(b, 2)]);
+        }
+    }
+    Kind::Scan { range, ce }
+}
+
+#[path = "methodinfo/mass_range.rs"]
+pub mod mass_range;
 
 #[path = "methodinfo/lc.rs"]
 mod lc;
@@ -468,7 +471,7 @@ pub fn method_of_sample(ole: &Ole, n: u32) -> Option<Method> {
 
 /// `[{name, source, compound, file, ...}]` for a `.dam` (one method) or a `.wiff` (one per sample).
 pub fn read_methods(data: Vec<u8>, file_name: &str) -> Result<Vec<Method>> {
-    let ole = Ole::open(data, file_name)?;
+    let ole = Ole::open(data, file_name, &crate::readers::Limits::held())?;
     let mut subs: Vec<String> = ole
         .paths_list()
         .filter(|k| k.starts_with("MethodSubtree/Method"))

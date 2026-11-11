@@ -105,7 +105,7 @@ const PROFILO = (() => {
   function paint(box) {
     const hr = isHr(), ions = hr && qaOn() && window.QAQC ? QAQC.state.ions.filter(i => i.kind !== "known") : [];
     box.innerHTML = `<p class="sm">${t(hr ? (qaOn() ? "prof.intro.hr" : "prof.intro.hr.plain") : "prof.intro.lr")}</p>
-<form id="prof-form" class="qq-form"><label>${t("qaqc.in.mz")} <input id="prof-mz" value="${eh(st.text)}" autocomplete="off" required></label><label>${t("qaqc.in.rt")} <input id="prof-rt" value="${eh(st.rt)}" inputmode="decimal" size="5" required></label>
+<form id="prof-form" class="qq-form"><label>${t("qaqc.in.mz")} <input id="prof-mz" value="${eh(st.text)}" autocomplete="off" required></label><label>${t("qaqc.in.rt")} <input id="prof-rt" data-num="0:" value="${eh(st.rt)}" inputmode="decimal" size="5" required></label>
 <label>${t("prof.metric")} <select id="prof-metric"><option value="area"${st.metric === "area" ? " selected" : ""}>${t("qaqc.col.area")}</option><option value="height"${st.metric === "height" ? " selected" : ""}>${t("prof.col.height")}</option></select></label>
 ${hr && qaOn() ? `<label>${t("prof.istd")} <select id="prof-istd"><option value="">${t("prof.istd.none")}</option>${ions.map(i => `<option value="${i.id}"${String(i.id) === String(st.istd) ? " selected" : ""}>${eh(i.label)}</option>`).join("")}</select></label>` : ""}
 <button type="submit" id="prof-go">${t("prof.go")}</button></form>

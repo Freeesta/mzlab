@@ -45,3 +45,17 @@ def test_the_family_of_a_bruker_dataset_is_bruker_before_agilent():
     code = js + "const fam=(n)=>{const m=n.map(x=>x.toLowerCase());return Object.keys(LETTORI_FAM).find(k=>m.some(x=>LETTORI_FAM[k].ext.some(e=>x.endsWith(e))||LETTORI_FAM[k].membri.some(p=>x.includes(p))))||''};console.log(JSON.stringify([fam(%s),fam(['y.D/AcqData/MSScan.bin']),fam(['z.d/analysis.baf'])]))" % json.dumps(names)
     out = subprocess.run(["node", "-e", re.sub(r"^// @ts-check", "", code)], check=True, capture_output=True, encoding="utf-8").stdout
     assert json.loads(out) == ["bruker", "agilent", "bruker"]
+
+
+def test_legacy_bruker_folders_name_their_kind():
+    """YEP, FT-ICR and FLEX MALDI get the same keys as `bruker::tdf_helpers::legacy_key` (crates/mzlab-lettori/tests/robustness_bruker.rs)."""
+    code = """(()=>{const g=a.group([F('analysis.yep','t/y.d/'),F('ser','t/f.d/'),F('fid','t/g.d/'),F('acqus','t/g.d/'),F('analysis.baf','t/b.d/')]);
+      return g.runs.map(r=>[r.name,r.bruker,a.BrukerD.legacyKey(r)])})()"""
+    assert run(code) == [["y.d", True, "err.file.brukerYep"], ["f.d", True, "err.file.brukerFtms"], ["g.d", True, "err.file.brukerFtms"], ["b.d", True, "err.file.brukerBaf"]]
+
+
+def test_a_flex_maldi_run_is_named_among_the_ignored_files():
+    prelude = "const C=require(%r);" % str(WEB / "cartella-carica.js")
+    code = prelude + "const f=n=>new File(['x'],n);console.log(JSON.stringify([C.flexMaldi([f('fid'),f('acqu')]),C.flexMaldi([f('fid'),f('acqus')]),C.flexMaldi([f('fid')])]))"
+    out = subprocess.run(["node", "-e", code], check=True, capture_output=True, encoding="utf-8").stdout
+    assert json.loads(out) == [True, True, False]

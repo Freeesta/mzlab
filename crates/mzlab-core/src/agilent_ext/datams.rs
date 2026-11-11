@@ -194,7 +194,7 @@ impl AgilentD {
                 ion_mode: 0,
                 polarity: 0,
                 fragmentor: 0.0,
-                collision_energy: 0.0,
+                collision_energy: None,
                 mz_of_interest: 0.0,
                 format: 1,
                 offset: 0,

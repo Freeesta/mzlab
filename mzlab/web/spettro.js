@@ -149,8 +149,8 @@ function specParams(p, btn) {
   const old = p.el.querySelector(".sp-pop"); if (old) { old.remove(); return; }
   const pop = document.createElement("div"); pop.className = "sp-pop";
   const cur = { rel: specRel(p), thr: p.thr ?? SPEC_DEF.thr, nlab: p.nlab ?? SPEC_DEF.nlab, dec: p.dec ?? (p._a ? p._a.dec : SPEC_DEF.dec) };
-  pop.innerHTML = `<label title="${I18N.t("spec.par.thr.title")}">${I18N.t("spec.par.thr", { input: `<input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}">` })}</label>
-    <label title="${I18N.t("spec.par.nlab.title")}">${I18N.t("spec.par.nlab", { input: `<input data-s="nlab" type="number" min="1" max="60" step="1" value="${cur.nlab}">` })}</label>
+  pop.innerHTML = `<label title="${I18N.t("spec.par.thr.title")}">${I18N.t("spec.par.thr", { input: `<input data-s="thr" data-num="0:100" value="${cur.thr}">` })}</label>
+    <label title="${I18N.t("spec.par.nlab.title")}">${I18N.t("spec.par.nlab", { input: `<input data-s="nlab" data-num="1:60 i" value="${cur.nlab}">` })}</label>
     <label>${I18N.t("spec.par.dec", { select: `<select data-s="dec">${(p._a && p._a.hrp ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]).map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select>` })}</label>
     ${(p._a && p._a.data || []).some(x => x.d.pmz) ? `<label title="${I18N.t("spec.par.sticks.title")}">${I18N.t("spec.par.sticks", { select: `<select data-s="sticks"><option value="0" ${p.sticks ? "" : "selected"}>${I18N.t("spec.par.sticks.profile")}</option><option value="1" ${p.sticks ? "selected" : ""}>${I18N.t("spec.par.sticks.sticks")}</option></select>` })}</label>` : ""}
     <label title="${I18N.t("disp.dots.title")}"><input data-s="dots" type="checkbox" ${p.dots ? "checked" : ""}> ${I18N.t("disp.dots")}</label>
@@ -165,7 +165,7 @@ function specParams(p, btn) {
       COMANDI.fai("spec.display", p, () => {
         if (k === "sticks") p.sticks = x.value === "1";
         else if (k === "dots") p.dots = x.checked;
-        else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(+x.value || 0)));
+        else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(numIt(x.value) || 0)));
       });
       apply();
     };

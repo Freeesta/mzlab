@@ -125,7 +125,7 @@ fn the_wiff_method_is_the_dam_it_names_and_the_sha1_is_the_one_of_the_mzml() {
     let mut checked = 0;
     for wiff in ["MRM.wiff", "FullMass.wiff", "MS2.wiff"] {
         let bytes = std::fs::read(dir.join(wiff)).unwrap();
-        let ole = Ole::open(bytes.clone(), wiff).unwrap();
+        let ole = Ole::open(bytes.clone(), wiff, &mzlab_core::readers::Limits::held()).unwrap();
         for sample in
             (1..=16u32).filter(|n| ole.has(&format!("SampleSubtree/Sample{n}/SampleDABE/DATA")))
         {

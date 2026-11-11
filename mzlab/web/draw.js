@@ -681,8 +681,8 @@ async function image(/** @type {string} */ format) {
   g.drawImage(img, 0, 0, c.width, c.height);
   URL.revokeObjectURL(url);
   const out = await new Promise(r => c.toBlob(r, format === "jpg" ? "image/jpeg" : "image/png", 0.95));
-  if (format === "png" && window.pngWithMeta) {                    // tEXt chunks, like the plots of the Dati tab (no personal data)
-    try { return await window.pngWithMeta(out, [["Title", I18N.t("draw.export.metaTitle")], ["Description", I18N.t(clear ? "draw.export.metaDesc.clear" : "draw.export.metaDesc.white", { scale: sc.toFixed(1) })], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]]); } catch (_) { /* saved without metadata */ }
+  if (format === "png") {                    // tEXt chunks, like the plots of the Dati tab (no personal data)
+    try { return await (await import("./png-meta.js")).pngWithMeta(out, [["Title", I18N.t("draw.export.metaTitle")], ["Description", I18N.t(clear ? "draw.export.metaDesc.clear" : "draw.export.metaDesc.white", { scale: sc.toFixed(1) })], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]]); } catch (_) { /* saved without metadata */ }
   }
   return out;
 }

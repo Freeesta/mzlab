@@ -1,5 +1,6 @@
 //! `run::align_to_spilling` handed the facts of the files (as `series_js::series_recipe` reads them, from the indexes it already parsed) writes the same
-//! bytes as `run::align_to`, which opens every index again for them. The synthetic series is the one of `tools/bench/oro_mzmine.py --genera` (python3
+//! bytes as `run::align_to`, which opens every index again for them; so does a gap filling that opens the files without their scan table
+//! (`Index::open_lean`, as `align_series_to` does). The synthetic series is the one of `tools/bench/oro_mzmine.py --genera` (python3
 //! with numpy; skipped without).
 #![cfg(feature = "detect")]
 
@@ -57,9 +58,23 @@ fn facts_handed_in_give_the_bytes_of_facts_read_again() {
     let budget = MemBudget::from_request(f64::NAN);
     let mut again = Vec::new();
     run::align_to(&mut stored, &budget, &r, open, &mut again).unwrap();
-    let facts = (0..ix.len())
+    let facts: Vec<_> = (0..ix.len())
         .map(|k| file_facts(&open(k).unwrap()))
         .collect();
+    let fill = |k: usize| Index::open_lean(ix[k].clone(), ix[k].len() as u64);
+    let mut lean_fill = Vec::new();
+    run::align_to_spilling(
+        &mut stored,
+        &budget,
+        &r,
+        Some(facts.clone()),
+        open,
+        &mut lean_fill,
+        None,
+        Some(&fill),
+        &mut |_, _| {},
+    )
+    .unwrap();
     let mut handed = Vec::new();
     run::align_to_spilling(
         &mut stored,
@@ -69,8 +84,11 @@ fn facts_handed_in_give_the_bytes_of_facts_read_again() {
         open,
         &mut handed,
         None,
+        None,
+        &mut |_, _| {},
     )
     .unwrap();
     assert!(!again.is_empty());
     assert_eq!(again, handed);
+    assert_eq!(again, lean_fill);
 }

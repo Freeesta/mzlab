@@ -55,6 +55,11 @@ pub enum Error {
     #[error("no finished run in a file of {file_len} bytes: {reason}")]
     NoRun { reason: &'static str, file_len: u64 },
 
+    /// A v66 scan-event table that no known event layout walks to its end (`events` events in `bytes` bytes): read with any size, its
+    /// events would be shifted, so it is not read.
+    #[error("scan-event table of {events} events in {bytes} bytes: no known event layout ends where the table ends")]
+    EventTableMisfit { events: u64, bytes: u64 },
+
     #[error(
         "refusing to allocate for {requested} bytes at offset {offset:#x}: \
          only {available} bytes remain in the input"

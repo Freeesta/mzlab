@@ -174,8 +174,8 @@ function paint(/** @type {HTMLElement} */ box) {
   const tb = TABELLA.table;
   box.innerHTML = `<p class="sm">${t("pfas.intro")}</p>`
     + `<form id="pfas-form" class="qq-form"><label>${t("pfas.ion")} <select id="pfas-ion">${["[M-H]-", "[M+H]+"].map(a => `<option value="${a}"${a === st.ion ? " selected" : ""}>${a}</option>`).join("")}</select></label>`
-    + `<label>${t("pfas.tol")} <input id="pfas-tol" value="${st.tol}" inputmode="decimal" size="3"></label><label>${t("pfas.ms2tol")} <input id="pfas-ms2tol" value="${st.ms2tol}" inputmode="decimal" size="3"></label>`
-    + `<label>${t("pfas.minrel")} <input id="pfas-minrel" value="${st.minRel}" inputmode="decimal" size="3"></label><button type="submit" id="pfas-go">${t("kmd.go")}</button></form>`
+    + `<label>${t("pfas.tol")} <input id="pfas-tol" data-num=">0" value="${st.tol}" inputmode="decimal" size="3"></label><label>${t("pfas.ms2tol")} <input id="pfas-ms2tol" data-num=">0" value="${st.ms2tol}" inputmode="decimal" size="3"></label>`
+    + `<label>${t("pfas.minrel")} <input id="pfas-minrel" data-num="0:100" value="${st.minRel}" inputmode="decimal" size="3"></label><button type="submit" id="pfas-go">${t("kmd.go")}</button></form>`
     + `${tb ? "" : `<p class="sm">${t("kmd.needtable")}</p>`}<div id="pfas-msg" class="sm" role="status"></div><div id="pfas-res"></div>`;
   paintRes(box);
 }

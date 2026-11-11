@@ -81,6 +81,8 @@ pub struct State {
     pub(crate) store: Mutex<crate::store::Store>,
     /// what the steps of mzFinder leave between two calls (`feat.rs`): the `.mzfeatf`, the table, the hypotheses, the Dig
     pub(crate) feat: Mutex<crate::feat::FeatState>,
+    /// `(done, total)` of the running `feat/align` (`feat_progress.rs`)
+    pub(crate) feat_at: Mutex<(usize, usize)>,
     /// the background conversion of the maker's files to mzML (`conv_queue.rs`)
     pub(crate) queue: crate::conv_queue::Queue,
     /// the indexes built ahead for the files of the pointed folder, waiting for their file to be opened (`rpc_warm.rs`)

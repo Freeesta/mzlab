@@ -38,11 +38,11 @@ function ogDialog() {
   d.innerHTML = `<div class="ogh"><h3>${I18N.t("og.title")}</h3><button id="og-x" title="${I18N.t("common.close")}">&times;</button></div>
 <div class="ogb"><p class="why">${I18N.t("og.intro")}</p>
 <div class="ogf">
-<label><span>${I18N.t("og.lbl.ion")}</span><input id="og-mz" class="mzf" inputmode="decimal" autocomplete="off"></label>
-<label><span>${I18N.t("og.lbl.par")}</span><input id="og-par" class="mzf" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("og.ph.par")}"></label>
+<label><span>${I18N.t("og.lbl.ion")}</span><input id="og-mz" class="mzf" data-num=">0 v"></label>
+<label><span>${I18N.t("og.lbl.par")}</span><input id="og-par" class="mzf" data-num=">0 v" placeholder="${I18N.t("og.ph.par")}"></label>
 <label>${I18N.t("og.lbl.f")}<input id="og-f" autocomplete="off" placeholder="${I18N.t("og.ph.f")}"></label>
-<label>${I18N.t("og.lbl.r0")}<input id="og-r0" class="mzf" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("og.ph.auto")}"></label>
-<label>${I18N.t("og.lbl.r1")}<input id="og-r1" class="mzf" inputmode="decimal" autocomplete="off"></label>
+<label>${I18N.t("og.lbl.r0")}<input id="og-r0" class="mzf" data-num="0: v <=og-r1" placeholder="${I18N.t("og.ph.auto")}"></label>
+<label>${I18N.t("og.lbl.r1")}<input id="og-r1" class="mzf" data-num="0: v >=og-r0"></label>
 <label>${I18N.t("og.lbl.k")}<select id="og-k"></select></label>
 <button id="og-go" class="imp">${I18N.t("og.go")}</button></div>
 <div id="og-err" class="ogw" hidden></div><div id="og-out"></div></div>`;

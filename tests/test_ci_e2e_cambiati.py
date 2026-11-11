@@ -21,7 +21,7 @@ def test_a_core_file_runs_nothing_and_names_the_night():
 
 def test_an_area_file_runs_its_tests_without_the_smoke_round():
     tests, why = ci.pick({"mzlab/web/draw.js"})
-    assert "e2e_disegno_chimica" in tests and f"running {len(tests)}" in why
+    assert "e2e_lingua_disegno" in tests and f"running {len(tests)}" in why
     assert not set(tests) & (set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX))
     assert tests == sorted(tests)
 
@@ -32,9 +32,16 @@ def test_tests_of_other_jobs_are_left_out():
     assert tests == [] and "nothing left to run" in why
 
 
+def test_tests_that_need_the_ci_wasm_are_left_out_but_run_by_verifica():
+    wasm = next(n for n, need in verifica.NEEDS.items() if "wasm" in need)
+    tests, why = ci.pick({f"tests_e2e/{wasm}.py"})
+    assert tests == [] and "nothing left to run" in why
+    assert not verifica.NEEDS[wasm] & {"sito", "dam", "veri"}          # the complete round of the night still runs it
+
+
 def test_a_changed_e2e_runs_itself():
-    tests, _ = ci.pick({"tests_e2e/e2e_disegno_chimica.py"})
-    assert tests == ["e2e_disegno_chimica"]
+    tests, _ = ci.pick({"tests_e2e/e2e_lingua_disegno.py"})
+    assert tests == ["e2e_lingua_disegno"]
 
 
 def test_the_output_line(tmp_path, monkeypatch):

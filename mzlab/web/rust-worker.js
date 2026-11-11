@@ -217,10 +217,10 @@ async function msnGrafoOp(m, id) {                                              
   const annuncia = p => postMessage({ op: "progress", id, ...p, frac: fraz(nat, p.phase, p.frac) });
   annuncia({ phase: "load", frac: 0 });
   const d = await derivata(name, p => { nat = true; annuncia(p); });
-  const blob = d ? d.mzml : m.blob, rd = conAvanzamento(readerFor, blob, annuncia), idx = d ? d.idx : undefined;
-  if (m.cerca) return msnLibCerca(name, blob, m.query || "", m.libreria || "", rd, idx);
-  if (m.libreria == null) return msnGrafo(name, blob, m.query || "", rd, !!m.esporta, idx);
-  return msnLibAggiungi(name, blob, m.query || "", m.libreria, m.molecola || "", rd, idx);
+  const blob = d ? d.mzml : m.blob, rd = conAvanzamento(readerFor, blob, annuncia), idx = d ? d.idx : undefined, q = (m.query || "") + (BUDGET_MB > 0 ? (m.query ? "&" : "") + "budget_mb=" + BUDGET_MB : "");      // q: with the engine's budget, spectra over it end in the calm error.memoryBudget (phase msnGraph), not a trap that restarts the engine
+  if (m.cerca) return msnLibCerca(name, blob, q, m.libreria || "", rd, idx);
+  if (m.libreria == null) return msnGrafo(name, blob, q, rd, !!m.esporta, idx);
+  return msnLibAggiungi(name, blob, q, m.libreria, m.molecola || "", rd, idx);
 }
 const labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });      // methods (.dam) and the routes of one item about its acquisition
 async function lrMigrate() {                                              // what an earlier visit left in IndexedDB passes to OPFS
@@ -281,7 +281,7 @@ async function lrIndexOwn(m) {
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
-  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, budget: idxBudget(), onProgress }
+  const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, cap: BUDGET_MB, budget: idxBudget(), onProgress }
     : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
@@ -323,7 +323,7 @@ async function lrOp(m) {
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
       const job = await nativo.lateJob(await nativo.indexJob(m.name), ISOLATED), part = m.name + ".cen.mzidx.part";
       if (!job) jerr("err.session.fileNotFound");
-      const res = await idxPool().build({ name: m.name, nat: { ...job, st: { ...job.st, centroid: true } }, part });
+      const res = await idxPool().build({ name: m.name, nat: { ...job, st: { ...job.st, centroid: true } }, part, cap: BUDGET_MB });
       if (!res.ok) { await ARCH.remove("idx", part); throw JSON.stringify({ error_key: "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } }); }
       await ARCH.promote("idx", part, m.name + ".cen.mzidx");
       return { info: "{}" };
@@ -434,7 +434,7 @@ async function handle(ev) {
     switch (m.op) {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
       case "mzml2cen": {                                                              // a profile mzML of the archive -> a copy with one point per peak on OPFS (centroids/convert.rs; read twice, never held)
-        const f = await fileOf(m.name), rd = readerFor(f), sink = await rawSink(m.dest);
+        const f = await fileOf(m.name), rd = readerFor(f), sink = await rawSink(m.dest, BUDGET_MB);
         let written = 0, last = 0, scans = 0, scansTotal = null, did = false;
         const tick = force => { const t = performance.now(); if (force || t - last > 150) { last = t; postMessage({ op: "progress", id, total: f.size, written, scans, scansTotal }); } };
         try { did = engine.mzml_to_centroids(m.name, f.size, rd, piece => { sink.write(piece); written += piece.length; tick(false); }, (d, t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }); }
@@ -446,7 +446,7 @@ async function handle(ev) {
       }
       case "natsamples": info = await nativo.samples(m.members); break; case "natsame": info = await natSame(m); break;   // the samples of a maker's dataset (a .wiff holds several), from its members; those already loaded from the same files, whose index is in OPFS
       case "nat2mzml": {                                                              // «Download .mzML»: one sample of a maker's file as mzML on OPFS, written piece by piece
-        const sink = await nativo.toMzml(m, p => postMessage({ op: "progress", id, ...p }));
+        const sink = await nativo.toMzml({ ...m, cap: BUDGET_MB }, p => postMessage({ op: "progress", id, ...p }));
         postMessage({ id, op: m.op, n: sink.parts ? sink.parts.length : 1, parts: sink.parts || null, file: sink.file || null }, sink.parts ? sink.parts.map(a => a.buffer) : []);
         return;
       }
@@ -475,7 +475,7 @@ async function handle(ev) {
       case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
-      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;   case "simtab": info = sim_table(m.files, m.output, m.layout, m.baseline || "edges"); break;   case "masscal": info = await masscal(m.name || tileName.get(m.slot) || "", m.params, readerFor); break;        // api/mrm with ref, from the transitions of the files; api/simtab: the SIM table (simtab.rs); api/masscal: the mass error of the background ions (massacc/1)
+      case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;   case "simtab": info = sim_table(m.files, m.output, m.layout, m.baseline || "zero"); break;   case "masscal": info = await masscal(m.name || tileName.get(m.slot) || "", m.params, readerFor); break;        // api/mrm with ref, from the transitions of the files; api/simtab: the SIM table (simtab.rs); api/masscal: the mass error of the background ions (massacc/1)
       case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await msnGrafoOp(m, id); break;   // api/msn_grafo over the .mzidx and the mzML of the slot (of a maker's sample: the mzML made from it)
       case "down": lowerBudget(m); break; case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;   // down: one level lower by Rust's rule; budget: the value the supervisor sends at startup
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); openGate.clear(); blobs.clear(); tileName.clear(); break;

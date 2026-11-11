@@ -10,6 +10,9 @@ use crate::convert_fixtures::{folder, makers, wiff};
 use crate::flow_run_tests::{flow_run, p};
 use crate::Outcome;
 
+#[path = "convert_tests_wiff.rs"]
+mod wiff_notes;
+
 fn convert(args: &[&str]) -> Outcome {
     let mut a = vec!["convert".to_string()];
     a.extend(args.iter().map(|x| x.to_string()));
@@ -420,7 +423,7 @@ fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
             "x".repeat(blob)
         );
         std::fs::write(&file, text).unwrap();
-        let (n, conv) = crate::convert_report::head_of(&file);
+        let (n, conv, _) = crate::convert_report::head_of(&file);
         assert_eq!((n, conv.as_deref()), (7, Some("{\"a\":1}")), "blob {blob}");
     }
     let _ = std::fs::remove_dir_all(&dir);
@@ -460,28 +463,27 @@ fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so()
     );
 }
 
+/// Each entry of `metodo/1.avvisi` in the head of an mzML is a note with its catalogue text and place, and a key without a text keeps its place.
 #[test]
-fn sections_the_wiff_index_lacks_are_one_calm_notice_per_dataset() {
-    assert_eq!(crate::convert::unindexed_sections(0, 0), None);
-    let n = crate::convert::unindexed_sections(2, 1).unwrap();
-    assert_eq!(n.key, "warn.wiff.unindexed");
-    let text = crate::error_text::warning(&n);
-    assert!(
-        text.contains(": 3;")
-            && text
-                .contains("samples, with a name and method inferred from the previous sample: 2;")
-            && text.contains("checked: 1."),
-        "{text}"
+fn the_method_warnings_are_notes_with_their_text() {
+    let dir = folder("notes");
+    let file = dir.join("n.mzML");
+    let doc = "{&quot;schema&quot;:&quot;metodo/1&quot;,&quot;avvisi&quot;:[{&quot;chiave&quot;:&quot;meta.troncato&quot;,&quot;dove&quot;:&quot;scan 7&quot;},{&quot;chiave&quot;:&quot;meta.nuovo&quot;,&quot;dove&quot;:&quot;x&quot;}]}";
+    let text = format!(
+        "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab metodo/1\" value=\"{doc}\"/>\n<spectrumList count=\"0\" defaultDataProcessingRef=\"c\">\n</spectrumList></run></mzML>\n"
     );
-}
-
-/// The reasons of a sample with nothing to show are catalogue texts, the ones the site shows (never the bare «no scans»).
-#[test]
-fn the_reasons_of_an_empty_wiff_sample_are_catalogue_texts() {
-    for key in ["warn.wiff.emptySample", "warn.wiff.inferredSample"] {
-        assert!(
-            crate::error_text::catalog_text(key).is_some_and(|t| t.len() > 40),
-            "{key}"
-        );
-    }
+    std::fs::write(&file, text).unwrap();
+    let (_, _, notes) = crate::convert_report::head_of(&file);
+    let lines: Vec<String> = notes
+        .iter()
+        .map(|(k, d)| crate::error_text::method_note(k, d))
+        .collect();
+    assert_eq!(
+        lines,
+        [
+            "The file is cut short: scan 7. What comes before the cut is read. (meta.troncato)",
+            "meta.nuovo: x"
+        ]
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

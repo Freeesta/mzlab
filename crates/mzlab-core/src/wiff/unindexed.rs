@@ -4,6 +4,7 @@
 
 use super::{Record, Wiff};
 use crate::idxread::ReadAt;
+use crate::ole::Ole;
 
 /// Eight bytes that start every section of the `.wiff.scan`, then the u32 sample number; the first block lies `LEAD` bytes after the marker.
 const MARKER: [u8; 8] = [0x11, 0x11, 0x11, 0x11, 0x82, 0x05, 0, 0];
@@ -171,4 +172,24 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
         scan_len: donor.scan_len,
         failure: None,
     })
+}
+
+/// Where the data the index knows end in the `.wiff.scan`: after the last block of a sample, or after the head of the last section of the sample table (an empty
+/// injection has no blocks); and the highest sample number of the table.
+pub(super) fn index_end(ole: &Ole, indexed: &[&Wiff]) -> (u64, u32) {
+    let table = ole
+        .read(&format!("{}SampleIdxTable", super::SAMPLES))
+        .map(|t| super::idx::sections(&t))
+        .unwrap_or_default();
+    let heads = table.iter().map(|s| s.1 + 20 + 24).max().unwrap_or(0);
+    let blocks = indexed
+        .iter()
+        .flat_map(|w| w.records.iter())
+        .map(|r| r.at + u64::from(r.size))
+        .max()
+        .unwrap_or(0);
+    (
+        heads.max(blocks),
+        table.iter().map(|s| s.0).max().unwrap_or(0),
+    )
 }

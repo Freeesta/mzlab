@@ -32,7 +32,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1; or ingresso, errore, causa
+  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi; or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
@@ -271,7 +271,7 @@ fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path
         .and_then(|_| digest_known(&to, known).map_err(|err| err.to_string()));
     match made {
         Ok((_, sha256)) => {
-            let (spectra, conv) = head_of(&to);
+            let (spectra, conv, notes) = head_of(&to);
             Item::Done {
                 input,
                 output: to.display().to_string(),
@@ -280,6 +280,7 @@ fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path
                 seconds,
                 skipped,
                 conv,
+                notes,
             }
         }
         Err(cause) => Item::Failed { input, cause },
@@ -304,11 +305,22 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
             Item::Failed { .. } => None,
         })
         .collect();
+    // what the readers could not read (`metodo/1.avvisi`), one note per entry, as the Method window lists it
+    let notes: String = items
+        .iter()
+        .flat_map(|i| match i {
+            Item::Done { input, notes, .. } => notes
+                .iter()
+                .map(|(k, d)| format!("note: {input}: {}\n", crate::error_text::method_note(k, d)))
+                .collect(),
+            Item::Failed { .. } => Vec::new(),
+        })
+        .collect();
     let (code, stderr) = if failed == 0 {
         (
             0,
             format!(
-                "done: {converted} converted, {skipped} skipped; outputs in {}\n",
+                "{notes}done: {converted} converted, {skipped} skipped; outputs in {}\n",
                 out.display()
             ),
         )
@@ -324,7 +336,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
             "error: {failed} of {} failed ({converted} converted, {skipped} skipped)\n",
             items.len()
         );
-        (1, causes + &line + "hint: the other files are written; run again to retry the failed ones, the converted ones are skipped\n")
+        (1, notes + &causes + &line + "hint: the other files are written; run again to retry the failed ones, the converted ones are skipped\n")
     };
     Outcome {
         code,

@@ -1,6 +1,7 @@
 //! The memory a step asks for when it decodes a whole mzML (`mzml::read`), from a pass over its XML tags before anything is decoded: spectra and points
-//! (`defaultArrayLength`), 64-bit intensities and the arrays beyond m/z and intensity. Steps that read whole files (`spectra.ms2`, `formula.ms1`) refuse
-//! with `error.memoryBudget` (phase `read`) when it does not fit, on the page, in the app and in `flow run`. Coefficients: `docs/agenti/memoria.md`.
+//! (`defaultArrayLength`), 64-bit intensities and the arrays beyond m/z and intensity. Steps that read whole files (`spectra.ms2`, `formula.ms1`,
+//! `chrom.transitions`, `chrom.uv_peaks`; `spectra.chimeric` by `text_bytes`) refuse with `error.memoryBudget` (phase `read`) when it does not fit, on
+//! the page, in the app and in `flow run`. Coefficients: `docs/agenti/memoria.md`.
 
 use crate::budget::refusal;
 use crate::error::Result;
@@ -151,6 +152,14 @@ pub fn mgf_bytes(x: &Inputs) -> usize {
 /// Bytes of the `f64` copy of every intensity (the DIA pseudo-spectra).
 pub fn f64_copy_bytes(x: &Inputs) -> usize {
     (PER_WIDE * x.points as f64) as usize
+}
+
+/// Times the bytes of the texts a step reads whole: the texts, their parse and the text it writes.
+pub const PER_TEXT_BYTE: usize = 3;
+
+/// Bytes of a step that reads texts of `held` bytes whole (`spectra.chimeric`: the MGF, the feature table, the library).
+pub fn text_bytes(held: usize) -> usize {
+    FLOOR_BYTES as usize + PER_TEXT_BYTE.saturating_mul(held)
 }
 
 /// `Ok` when `need` bytes fit in `cap`, else `error.memoryBudget` with the phase `read` and its numbers.

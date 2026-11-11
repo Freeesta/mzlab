@@ -4,6 +4,9 @@
 use super::reader::WiffReader;
 use crate::mzml::Spectrum;
 
+/// The userParam of an MS3 spectrum that holds the m/z of its first precursor (`Spectrum::precursor` is the second).
+pub const PARENT_PARAM: &str = "ms3 first precursor m/z";
+
 /// The number after `key` in a spectrum id (`sample=2 ... experiment=1`).
 fn id_field(id: &str, key: &str) -> Option<usize> {
     id.split_whitespace()
@@ -38,9 +41,7 @@ pub(super) fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::Spectr
     let Some(e) = e else { return extra };
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
     if let Some(p) = e.parent {
-        extra
-            .params
-            .push((super::reader::PARENT_PARAM.into(), p.to_string()));
+        extra.params.push((PARENT_PARAM.into(), p.to_string()));
     }
     if let Some(sg) = super::modes::tag(e.code) {
         extra

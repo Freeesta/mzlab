@@ -222,10 +222,10 @@ function ibkChip(p) {
   const chip = document.createElement("span"); chip.className = "ibk"; const flat = ib && ib.flat ? FONDOP.chip(p, ib, l0 ? ibkLevels(l0) : "", chip) : null;
   chip.title = I18N.t(ib ? "ibk.chip.title" : "fondo.chip.auto.title");
   const main = flat || (ib ? I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) }) : bl ? I18N.t("fondo.chip.auto", { min: fmtA(bl.min), max: fmtA(bl.max) }) : "");
-  chip.innerHTML = `${main} <label title="${I18N.t("fondo.zone.title")}">${I18N.t("fondo.zone.label")} <input type="number" data-ib="zd" min="0" step="0.1" value="${+zd.toFixed(2)}" style="width:4.2em" aria-label="${I18N.t("fondo.zone.title")}"> min</label> <button data-ib="det" title="${I18N.t("fondo.zone.detect.title")}">${I18N.t("fondo.zone.detect")}</button> <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label>` +
+  chip.innerHTML = `${main} <label title="${I18N.t("fondo.zone.title")}">${I18N.t("fondo.zone.label")} <input data-ib="zd" data-num="0:" value="${+zd.toFixed(2)}" style="width:4.2em" aria-label="${I18N.t("fondo.zone.title")}"> min</label> <button data-ib="det" title="${I18N.t("fondo.zone.detect.title")}">${I18N.t("fondo.zone.detect")}</button> <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label>` +
     (ib ? ` <button data-ib="spec" title="${I18N.t("ibk.spec.title")}">${I18N.t("ibk.spec")}</button>` : "") + ` <button data-ib="off">${I18N.t("ibk.off")}</button>`;
   chip.querySelector("[data-ib=clip]").onchange = e => { p.clipDraw = e.target.checked; draw(p); uiSave(); };
-  chip.querySelector("[data-ib=zd]").onchange = e => { fo.zd = Math.max(0, +e.target.value || 0); draw(p); uiSave(); };
+  chip.querySelector("[data-ib=zd]").onchange = e => { fo.zd = Math.max(0, numIt(e.target.value) || 0); draw(p); uiSave(); };
   chip.querySelector("[data-ib=det]").onclick = () => { const z = s0 ? FONDO.front(s0.x, s0.yraw || s0.y) : null; if (z == null) return info(I18N.t("fondo.zone.none")); fo.zd = z; draw(p); uiSave(); };
   const sp = chip.querySelector("[data-ib=spec]"); if (sp) sp.onclick = () => ibkSpectra(p);
   chip.querySelector("[data-ib=off]").onclick = () => { setFondo(p, ""); };
@@ -427,8 +427,8 @@ async function drawLines(p) {
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    const r = it.bm ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
-    if (it.bm) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
+    const own = it.bm && it.bm !== "edges", r = own ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
+    if (own) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));

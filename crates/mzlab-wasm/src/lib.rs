@@ -19,7 +19,7 @@ mod centroids; mod panic; mod search; mod adduct;
 pub mod external;
 mod counted;
 mod zip;
-mod natives; mod fingerprints;
+mod natives; mod natives_samples; mod fingerprints;
 mod courier;
 mod natives_engine;
 mod blocks;

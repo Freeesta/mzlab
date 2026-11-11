@@ -64,7 +64,7 @@ const FONDOSP = (() => {
   }
   /** The two time boxes of the stretch (the automatic one as placeholder) and the controls of ui(). @param {any} p */
   function box(p) {
-    const a = (p._bgauto?.cands[+p.bwi || 0]) || ["", ""], inp = (o, v, ph) => `<input data-o="${o}" type="number" step="0.1" value="${v ?? ""}" style="width:56px"${v == null ? ` placeholder="${ph}"` : ""}>`;
+    const a = (p._bgauto?.cands[+p.bwi || 0]) || ["", ""], inp = (o, v, ph) => `<input data-o="${o}" data-num="0: v" value="${v ?? ""}" style="width:56px"${v == null ? ` placeholder="${ph}"` : ""}>`;
     return `<label class="muted">${I18N.t("ctl.range.from")} ${inp("bw0", p.bw0, a[0])} ${I18N.t("ctl.range.to")} ${inp("bw1", p.bw1, a[1])} min</label>` + ui(p);
   }
   // the button back to automatic (one listener for every panel: the header is rebuilt by ctl)

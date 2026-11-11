@@ -3,6 +3,14 @@
 use crate::error::Result;
 use crate::idxread::{Index, ReadAt, BLOCK};
 
+/// One element of the m/z array as `f64`: 4 bytes are the `f32` of a high-resolution survey (widened exactly), else 8 bytes of `f64`.
+fn widen(c: &[u8]) -> f64 {
+    match *c {
+        [a, b, c, d] => f64::from(f32::from_le_bytes([a, b, c, d])),
+        _ => f64::from_le_bytes(c.try_into().unwrap_or_default()),
+    }
+}
+
 impl<R: ReadAt> Index<R> {
     /// Element `i` of the m/z array (as `f64`; the `f32` of a high-resolution survey is widened exactly), through the block cache.
     pub(crate) fn mz_at(&mut self, si: usize, i: u64) -> Result<f64> {
@@ -33,11 +41,20 @@ impl<R: ReadAt> Index<R> {
         };
         let b = self.touch_block(at);
         let k = (i - blk * BLOCK) as usize * w;
-        Ok(if w == 4 {
-            f32::from_le_bytes(b[k..k + 4].try_into().unwrap()) as f64
-        } else {
-            f64::from_le_bytes(b[k..k + 8].try_into().unwrap())
-        })
+        Ok(widen(&b[k..k + w]))
+    }
+
+    /// The m/z of the peaks `a..b` appended to `out`, through the block cache: a slab copies each run while it searches it, so the run is not
+    /// read again with the intensities.
+    pub fn mz_into(&mut self, si: usize, a: u64, b: u64, out: &mut Vec<f64>) -> Result<()> {
+        // steps of an eighth, not doubling: a slab holds about its peaks (wasm memory never shrinks)
+        let need = (b.saturating_sub(a) as usize).max(out.len() / 8);
+        out.try_reserve_exact(need)
+            .map_err(|_| crate::error::Error::memory_budget())?;
+        for i in a..b {
+            out.push(self.mz_at(si, i)?);
+        }
+        Ok(())
     }
 
     /// Lowest and highest m/z of a section (`mz[0]`, `mz[-1]` of its peak table), None when it has no peaks.
@@ -60,16 +77,7 @@ impl<R: ReadAt> Index<R> {
             if ok {
                 let mut b = vec![0u8; n_f * w];
                 self.r.read_at(s.off[6], &mut b)?;
-                fence = b
-                    .chunks_exact(w)
-                    .map(|c| {
-                        if w == 4 {
-                            f64::from(f32::from_le_bytes(c.try_into().unwrap()))
-                        } else {
-                            f64::from_le_bytes(c.try_into().unwrap())
-                        }
-                    })
-                    .collect();
+                fence = b.chunks_exact(w).map(widen).collect();
             }
             self.fences[si] = Some(fence);
         }

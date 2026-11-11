@@ -1,7 +1,7 @@
 // @ts-strict
 // @ts-noany
 // @ts-check
-// Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Split from explore.js: classic script, loaded right after it (shared globals).
+// Floating panels of the Dati view: placement, drag, resize, tabs, saved images / Excel names. Classic script loaded right after explore.js (shared globals).
 // ------------------------------------------------------------------ floating panels
 /** @param {number} [w] @param {number} [h] */
 function place(w, h) {
@@ -322,7 +322,7 @@ function addPanel(type, o, after) {
     if (skip > 0) { skip--; return; }
     if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; const row = p.full && LAYOUT.inRiga(p, stackOrder()); if (row) LAYOUT.altezza(p, E.panels); if (p.full && !row && !dockedP(p) && !hasDocked(p) && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
     FRAME.cancel(p._raf); p._raf = FRAME.next(() => drawSized(p));
-    fitHdNow(p);
+    if (p._fitW !== el.offsetWidth) { p._fitW = el.offsetWidth; fitHdNow(p); }  // both observers fire: one fit per width
   };
   const offA = FRAME.ro(el, onSize), offB = FRAME.ro(p.cv, onSize); p._ro = () => { offA(); offB(); };   // the canvas too: it shrinks when the legend or the controls wrap
   // full screen of THIS panel (any panel, also the ones added later): the button, Esc, and the graph is redrawn at the new size on the way in and out
@@ -355,7 +355,7 @@ function addPanel(type, o, after) {
         let cvs; p._exp = true; EXPORTING = true; paintFiles();  // light palette for the image, whatever the theme
         try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
         cvs.toBlob(async b => {
-          let out = b; try { out = await pngWithMeta(/** @type {Blob} */ (b), plotMeta(p)); } catch (e) { }
+          let out = b; try { out = await (await import("./png-meta.js")).pngWithMeta(/** @type {Blob} */ (b), plotMeta(p)); } catch (e) { }
           saveBlob(out, plotName(p) + ".png");
         });
       }},
@@ -578,20 +578,6 @@ function plotMeta(/** @type {Pannello} */ p) {
   if (a.x0 != null) d.push(I18N.t("export.desc.axis", { a: a.x0.toFixed(p.type === "spec" ? 1 : 2), b: a.x1.toFixed(p.type === "spec" ? 1 : 2) }));
   return [["Title", ptitleP(p) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
 }
-// writes tEXt chunks (Latin-1) right after the IHDR of a PNG
-const CRCT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
-const crc32 = (/** @type {Uint8Array} */ u) => { let c = 0xffffffff; for (const b of u) c = CRCT[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-async function pngWithMeta(/** @type {Blob} */ blob, /** @type {string[][]} */ fields) {
-  const src = new Uint8Array(await blob.arrayBuffer()), l1 = (/** @type {unknown} */ t) => Uint8Array.from(String(t).replace(/[\u2013\u2014]/g, "-").replace(/[^\x20-\x7e\xa0-\xff]/g, "?"), c => c.charCodeAt(0));
-  const parts = [src.slice(0, 33)];
-  fields.forEach(([k, v]) => {
-    const kb = l1(k), vb = l1(v), body = new Uint8Array(4 + kb.length + 1 + vb.length);
-    body.set([116, 69, 88, 116], 0); body.set(kb, 4); body.set(vb, 5 + kb.length);  // "tEXt" + keyword + 0 + text
-    const ch = new Uint8Array(12 + body.length - 4), dv = new DataView(ch.buffer);
-    dv.setUint32(0, body.length - 4); ch.set(body, 4); dv.setUint32(ch.length - 4, crc32(body)); parts.push(ch);
-  });
-  parts.push(src.subarray(33)); return new Blob(parts, { type: "image/png" });
-}
 
 // ---- «Correzione»: ONE menu for chromatogram and spectrum (None · Subtract file with its chooser · Background of a stretch · Automatic baseline). Icon + one-line hints;
 // o = { files: files that can be subtracted, cur: "" | "f<k>" | "tract" | "snip", snip: offer the automatic baseline, dis: reason why it is off ("" = on) }
@@ -690,10 +676,10 @@ function ctl(/** @type {Pannello} */ p) {
   const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = I18N.t("ctl.oneFile");
   const view = `<select data-o="mode" aria-label="${I18N.t("ctl.mode.aria")}"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="${I18N.t("ctl.mode.title")}"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>${I18N.t("ctl.mode.ovl")}</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>${I18N.t("ctl.mode.stk")}</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>${I18N.t("ctl.mode.cas")}</option></select>`;
   // low resolution: the gradient delay and the PDA alignment are in this popover (in high resolution they are in «Opzioni di visualizzazione»)
-  const num = (/** @type {number | string} */ k, /** @type {number | string} */ v, /** @type {number | string} */ lo, /** @type {number | string} */ hi, /** @type {number | string} */ st) => `<input data-o="${k}" type="number" class="mzf" min="${lo}" max="${hi}" step="${st}" value="${v}" style="width:5em">`;
+  const num = (/** @type {number | string} */ k, /** @type {number | string} */ v, /** @type {number | string} */ lo, /** @type {number | string} */ hi, /** @type {number | string} */ st, vu = false) => `<input data-o="${k}" class="mzf" data-num="${lo}:${hi}${vu ? " v" : ""}" value="${v ?? ""}" style="width:5em">`;
   const lrExtra = window.BANCO && BANCO.on() ? "" :
     (p.overlay === "grad" ? `<label class="muted" title="${I18N.t("disp.gdelay.title")}">${I18N.t("disp.gdelay", { input: num("gdelay", p.gdelay || 0, 0, 10, 0.1) })}</label>` : "") +
-    (p.kind === "pda" && window.DISP && DISP.pdaHere(p) ? `<label class="muted" title="${I18N.t("disp.pdaDelay.title")}">${I18N.t("disp.pdaDelay", { input: num("pdadelay", DISP.pdaDelayValue(p), -2, 2, 0.01) })}</label>${chk("pdaAlign", I18N.t("disp.pdaAlign"), false, "", I18N.t("disp.pdaAlign.title"))}` : "");
+    (p.kind === "pda" && window.DISP && DISP.pdaHere(p) ? `<label class="muted" title="${I18N.t("disp.pdaDelay.title")}">${I18N.t("disp.pdaDelay", { input: num("pdadelay", DISP.pdaDelayValue(p), -2, 2, 0.01, true) })}</label>${chk("pdaAlign", I18N.t("disp.pdaAlign"), false, "", I18N.t("disp.pdaAlign.title"))}` : "");
   const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = minOf(sfl.map((/** @type {MzFile} */ x) => x.mz_min ?? Infinity)), mhi = maxOf(sfl.map((/** @type {MzFile} */ x) => x.mz_max ?? -Infinity));
   const mzbar = `<label class="muted" title="${I18N.t("ctl.mz.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(mzd(p)) : ""}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(mzd(p)) : ""}"></label>`;
   const rtbar = p.type === "map" ? "" : `<label class="muted" title="${I18N.t("ctl.rt.title")}"><i>RT</i> ${I18N.t("ctl.range.from")} <input data-o="rt0" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[0]) : ""}" placeholder="${I18N.t("ctl.rt.min")}"> ${I18N.t("ctl.range.to")} <input data-o="rt1" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[1]) : ""}" placeholder="${I18N.t("ctl.rt.max")}"> min</label>`;
@@ -708,11 +694,11 @@ function ctl(/** @type {Pannello} */ p) {
   const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), idle: "file", dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
     + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
     + corrInfo(p)
-    + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
+    + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" data-num="0.2:" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
-  // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover; the button is accented when one of them is set, and a «×» clears them
+  // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover, next to its button in the tab order; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
-  const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
+  const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button><span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}</span>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
   const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${p._trs.map((/** @type {Bag} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</select>` : "";
   const canBtn = p.type === "chrom" ? "" : window.CANALI?.html(p) ?? "";
@@ -739,7 +725,7 @@ function ctl(/** @type {Pannello} */ p) {
     c.innerHTML = G(I18N.t("ctl.map.grp.file"), `<span class="mzfs">${mapNav(p, sf, fol, isF ? +mc.now.slice(1) : null, -1)}<select data-o="k" aria-label="${I18N.t("ctl.map.file")}" title="${fol ? I18N.t("ctl.map.follow") : I18N.t("ctl.map.file")}">${sf.map((/** @type {MzFile} */ x) => opt(x.k, fol ? E.cur : p.k, x.label)).join("")}</select>${mapNav(p, sf, fol, isF ? +mc.now.slice(1) : null, 1)}</span>${kindSel}`) + mCorr + corrInfo(p) +
       mPar(`<label class="muted" title="${isF ? "" : I18N.t("ctl.map.norm.need") + " "}${I18N.t("ctl.map.norm.title")}">${I18N.t("ctl.map.norm.lab")} <select data-o="norm"${isF ? "" : " disabled"}>${opt("abs", p.norm, I18N.t("ctl.map.norm.abs"))}${opt("max", p.norm, I18N.t("ctl.map.norm.max"))}${opt("tic", p.norm, I18N.t("ctl.map.norm.tic"))}</select></label><span data-mzslot="diff"></span>` +
         `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
-        `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" type="number" class="mzf" min="0.1" max="3" step="0.05" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
+        `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" class="mzf" data-num="0.1:3" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
   }
   if (p.type === "spec" && !p.uv) {  // a UV spectrum (uv-spettro.js) has no file, level or background menus
     const f = TF, hasMs2 = f.some((/** @type {MzFile} */ x) => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;  // the «fondo» menu starts from the reference of the session
@@ -777,6 +763,9 @@ function ctl(/** @type {Pannello} */ p) {
   const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const op = cpP.offsetParent || p.el, pr = op.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, op.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
   const parToggle = (/** @type {boolean} */ on) => { p._parOpen = on; if (cpB) cpB.setAttribute("aria-expanded", String(!!on)); if (cpP) { cpP.hidden = !on; if (on) { const q = cpP.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'); if (q.length === 2) { q[0].value = p.zoom ? fmt2(p.zoom[0]) : ""; q[1].value = p.zoom ? fmt2(p.zoom[1]) : ""; } } parPlace(); } };
   if (cpB) { cpB.onclick = () => parToggle(!p._parOpen); parPlace();
+    /** @type {HTMLElement} */ (cpB.parentElement).onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Esc: the popover closes, a half-written pair is dropped, the focus goes back to its button
+      if (e.key !== "Escape" || !p._parOpen) return; e.stopPropagation();
+      cpP?.querySelectorAll("input").forEach((/** @type {HTMLInputElement} */ i) => { i.value = i.defaultValue; }); parToggle(false); cpB.focus(); };
     const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { COMANDI.fai("panel.source", p, () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; p.zoom = null; p.zoomY = null; }); p._parOpen = false; ctl(p); draw(p); uiSave(); };
     if (!p._parAway) { p._parAway = (/** @type {Event} */ e) => { if (p._parOpen && p.el.isConnected && !/** @type {Element} */ (e.target).closest(".cpop") && !/** @type {Element} */ (e.target).closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("pointerdown", p._parAway, { capture: true, signal: p._ac.signal }); } }
   c.querySelectorAll("[data-o]").forEach((/** @type {HTMLInputElement} */ x) => {
@@ -786,28 +775,15 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "gdelay") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); }); draw(p); uiSave(); };
     else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); COMANDI.fai("spec.display", p, () => { p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; }); draw(p); uiSave(); };
     else if (k === "pdaAlign") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.pdaAlign = x.checked; }); draw(p); uiSave(); };
-    else if (k === "xlo" || k === "xhi") x.onchange = () => {
-      const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = (/** @type {string} */ v) => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);
-      const lo = nm(c.querySelector('[data-o="xlo"]').value), hi = nm(c.querySelector('[data-o="xhi"]').value);
-      if (t && lo != null && hi != null && hi > lo) {  // the student writes the edges: from now on it is an explicit window in Da, the same for every file
-        const d = hrE ? HR.dec(HR.xicFiles(p.tab), 1) : 1;
-        COMANDI.fai("xic.traces", p, () => { t.mz = rh((lo + hi) / 2, hrE ? 5 : 2); t.w = rh((hi - lo) / 2, hrE ? 5 : 2); t.label = `m/z ${hrE ? t.mz.toFixed(4) : t.mz.toFixed(mzd(p))}`; delete t.ion; delete t.obs; });
-      }
-      ctl(p); draw(p);
-    };
+    else if (k === "xlo" || k === "xhi") window.XICBORDI?.wire(p, x);  // xic-bordi.js: absolute m/z edges
     else if (k === "view") x.onclick = () => MAPPA.open3d(p, x);  // mappa.js: the 3D viewer (mappa3d.js), a modal over the page
     else if (k === "split") x.onclick = () => splitPanel(p);
-    else if (k === "rt0" || k === "rt1") x.onchange = () => {  // visible time interval of the panel
-      const q = c.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'), a = p._a || {}, u = numMz(q[0].value), v = numMz(q[1].value);
-      if (u == null && v == null) { pushZh(p); p.zoom = null; p.zoomY = null; draw(p); uiSave(); return; }
-      const lo = u ?? a.xmin ?? a.x0, hi = v ?? a.xmax ?? a.x1;
-      if (lo != null && hi != null && hi > lo) { pushZh(p); zoomTo(p, lo, hi); uiSave(); }
-    };
+    else if (k === "rt0" || k === "rt1" || k === "mz0" || k === "mz1") window.XICBORDI?.range(p, x);  // xic-bordi.js: the pairs of the «Range» popover
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
     else if (k === "corr") corrWire(x, (/** @type {string} */ v) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
     else if (k === "bkg") corrWire(x, (/** @type {string} */ v) => setFondo(p, v));
     else if (k === "cinfo") corrInfoWire(p, x);
-    else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, +x.value || 1); draw(p); uiSave(); };
+    else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
         else x.onchange = () => choosePanelOption(p, k, x);
   });
   window.CANALI?.wire(p, c);
@@ -857,11 +833,19 @@ function fitHd(/** @type {Pannello} */ p) {
     if (!over()) return;
     mb.hidden = false;
     const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
-    for (const n of [...cands, ...groups, ...kids]) {
+    const list = [...cands, ...groups, ...kids], w = list.map(n => n.hidden ? 0 : n.offsetWidth), gone = /** @type {HTMLElement[]} */ ([]);
+    const put = (/** @type {HTMLElement & Bag} */ n) => { p._hm.push(n); if (n.classList.contains("bnl")) return n.classList.add("hd-ov"); const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); };
+    // a node frees at most its width + a gap: while the overflow is larger it moves with no reflow
+    let need = hd.scrollWidth - hd.clientWidth - 1, j = 0;
+    for (; j < list.length; j++) {
+      const n = list[j];
+      if (!w[j] || gone.some(g => g.contains(n))) continue;
+      if ((need -= w[j] + 32) <= 0) break;
+      gone.push(n); put(n);
+    }
+    for (const n of list.slice(j)) {
       if (!over()) break;
-      if (n.hidden || !n.offsetWidth) continue;
-      if (n.classList.contains("bnl")) { n.classList.add("hd-ov"); p._hm.push(n); continue; }
-      const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); p._hm.push(n);
+      if (!n.hidden && n.offsetWidth) put(n);
     }
     if (over()) hd.classList.add("hd-tight");  // last resort: title and selects shrink
     if (!p._hm.some((/** @type {HTMLElement & Bag} */ n) => n._ph)) mb.hidden = true;
@@ -887,11 +871,11 @@ function addTrace(p, mz, label, w) {
   COMANDI.fai("xic.traces", p, () => p.traces.push({ id: E.seq++, mz, w: w ?? null, label: label || "m/z " + mz.toFixed(mzd(p)) }));
   ctl(p); draw(p);
 }
-const numMz = (/** @type {string} */ t) => { const v = numIt(t); return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
+const numMz = (/** @type {string} */ t) => { const v = CAMPI.num(t); return v != null && isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
 // ONE rounding rule everywhere (half up on the decimal text, like mzlab.chem round_half_up): 364.15 gives 364.2 although 364.15*10 is 3641.4999... in binary
 const rh = (/** @type {unknown} */ v, d = 1) => { const n = Number(v); if (!isFinite(n)) return n; const sg = n < 0 ? -1 : 1; return sg * Number(Math.round(Number(Number(Math.abs(n).toFixed(9)) + "e" + d)) + "e-" + d); };   // the 9-digit prefilter is the same as round_half_up in elements.py
 window.rh = rh;
-const numMz1 = (/** @type {string} */ t) => { const v = numIt(t); return isFinite(v) && v > 0 ? rh(v, 1) : null; };  // XIC fields: one decimal only
+const numMz1 = (/** @type {string} */ t) => { const v = CAMPI.num(t); return v != null && isFinite(v) && v > 0 ? rh(v, 1) : null; };  // XIC fields: one decimal only
 const mzd = (/** @type {Pannello | null | undefined} */ p, lv = 1) => window.HR ? HR.dec(scanFiles(tabFiles(p ? p.tab || E.tab : E.tab)), p && p.level ? p.level : lv) : 1;
 const fmt2 = (/** @type {number | string} */ v) => String(+(+v).toFixed(2));
 /** @param {number | string} v @param {Pannello | null} [p] @param {number} [lv] */
@@ -901,7 +885,7 @@ const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trai
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
 const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
-const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose ions whose defect plus drift passes +0.5; this keeps them and still leaves out n-1 and n+1
+const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose some; this keeps them and leaves out n-1 and n+1
 const XIC_DRIFT = 0.25;  // mean offset (Da) of observed centroids over the calculated m/z: a CLICKED centroid back to its nominal mass (364.37 -> n = 364)
 const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
@@ -951,7 +935,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     return hf && r.ex != null ? HR.ionText(r.ex, hf).replace("m/z", "<i>m/z</i>") + (lowFiles() ? ` <span class="muted">${I18N.t("xic.lowRes", { unit })}</span>` : "") : unit;
   };
   const evalRow = (/** @type {Bag} */ r) => {
-    const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null;
+    const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null; r.range = false;
     r.ad.hidden = isNum(t) || ns(t);
     if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
     if (isNum(t)) {
@@ -1003,8 +987,8 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
       if (r.ex != null && hrFile()) {  // high resolution: the ion (exact m/z), each file reads it with its own tolerance
         const ht = HR.ionTrace(r.ex, { obs: r.obs, prefix: r.label, tab: xtab() }), key = "ion|" + ht.mz; if (seen.has(key)) return; seen.add(key); traces.push(ht); return;
       }
-      const [a, b] = r.win, mz = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
-      traces.push({ id: E.seq++, mz, w, label: (r.label ? r.label + " · " : "") + `m/z ${mz.toFixed(mzd(panel))}` });
+      const [a, b] = r.win, d = r.range ? 5 : 2, mz = rh((a + b) / 2, d), w = rh((b - a) / 2, d), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
+      traces.push({ id: E.seq++, mz, w, label: r.range ? `m/z ${fmz(a, panel)}\u2013${fmz(b, panel)}` : (r.label ? r.label + " · " : "") + `m/z ${mz.toFixed(mzd(panel))}` });
     });
     d.close();
     const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: r0.ex ?? numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
@@ -1022,7 +1006,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     if (keep) ff.forEach((/** @type {MzFile} */ f) => { if (f !== keep) traces.forEach(t => { np.hid["x|" + f.k + "|" + t.mz] = true; }); });
     if (np === panel) draw(np); else if (!(pre.after && E.panels.includes(pre.after))) reveal(np);
   };
-  if (pre.diretto) return Q("#xic-go").onclick(null);  // no dialog: the same rows, windows and panel as the dialog gives (pre.diretto: a caller that already knows the ion, e.g. the inclusion list of the method)
+  if (pre.diretto) return Q("#xic-go").onclick(null);  // no dialog, same rows and panel (pre.diretto: the caller knows the ion, e.g. the method inclusion list)
   d.showModal();
   rows[0].inp.focus();
 }
@@ -1052,7 +1036,7 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
       }
       COMANDI.fai("panel.source", p, () => {  // one undo step: the choice with what it resets (measures, zoom, background)
       if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco"); else if (k === "mode") fondoOnStack(p, x.value);
-      p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
+      p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.hasAttribute("data-num") ? CAMPI.num(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && k === "k") p.kSet = true;  // the file chosen in the menu stays until another choice or a click on a trace of the TIC
       if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;  // the measures belong to the spectrum they were made on

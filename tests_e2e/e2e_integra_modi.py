@@ -1,6 +1,7 @@
 """The baseline of a Data-view integration (integra-base.js, the numbers from mzlab_core::baseline through QUALITA.peakArea): the three modes on the same peak
 (the line between the edges, from zero, a custom line), the custom line moved by mouse, by keyboard and by finger on a 1024x768 touch viewport, in the light and
-the dark theme; the part under the line is reported apart and drawn hatched; the default of the peak dialog; a record without a mode keeps its old number and fields."""
+the dark theme; the part under the line is reported apart and drawn hatched; a new integration is from zero and names it (`bm`), the default of the peak dialog
+(`PK.bmode`, edges still chosen there or in the dialog, where it is written as `bm` = edges); a record without a mode (a saved session) keeps its old number and fields."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import load
@@ -58,12 +59,32 @@ try:
         load(pg, [LRF], 4000, 1)
         xic(pg, "364")
         integrate(pg, 14.3)
+        def from_zero():
+            v = pg.evaluate(f"(()=>{{const i={IT};return {{bm:i.bm,area:i.area,below:i.below}}}})()")
+            assert v["bm"] == "zero", v
+            settle(pg, "zero"); assert pg.evaluate(f"{IT}.area") == engine(pg, 1)["area"]
+        step("a new integration is measured from zero, by the engine, and its record names the mode", from_zero)
+        # a record saved before the default changed has no `bm`: it is drawn with integ(), the edge line of always
+        pg.evaluate(f"(()=>{{const p={PN},i={IT};delete i.bm;delete i.below;draw(p)}})()")
+        wait_for_js(pg, f"(()=>{{const p={PN},s=p._a.sr[0],i={IT};return i.area===integ(s,i.a,i.b).area}})()")
         old = pg.evaluate(f"(()=>{{const p={PN},s=p._a.sr[0],i={IT};return {{area:i.area,integ:integ(s,i.a,i.b).area,keys:Object.keys(JSON.parse(JSON.stringify(i))).sort()}}}})()")
         res = {}
         def unchanged():
             assert old["area"] == old["integ"], old                                  # the line between the edges: the JS number of always
             assert not {"bm", "bl", "below", "lvl"} & set(old["keys"]), old["keys"]  # a record without a mode saves the fields it had
         step("a record without a mode keeps its area and its fields", unchanged)
+        def dialog_keys():
+            pg.evaluate(f"(()=>{{const p={PN};p.isel={IT}.id;setActive(p);p.cv.focus()}})()")
+            pg.keyboard.press("b"); pg.wait_for_selector("#bigdlg[open] input[name=ib-m]")
+            name = pg.evaluate("(()=>{const d=Q('#bigdlg'),id=d.getAttribute('aria-labelledby');return id&&document.getElementById(id)?document.getElementById(id).textContent:''})()")
+            assert name == pg.evaluate("I18N.t('int.base.title')"), f"the dialog has no accessible name: {name!r}"
+            pg.check("#bigdlg input[name=ib-m][value=line]"); pg.fill("[data-ib='0']", "abc"); pg.locator("#ib-ok").focus(); pg.keyboard.press("Enter")
+            want = pg.evaluate("I18N.t('int.base.bad')")
+            wait_for_js(pg, f"(()=>{{const m=Q('#bigdlg [role=status]');return !!m&&m.textContent==={want!r}&&!!m.offsetParent}})()", 5000)   # inside the modal: a toast stays behind it
+            assert pg.evaluate("Q('#bigdlg').open") and pg.evaluate(f"({IT}.bm||'edges')") == "edges"
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!Q('#bigdlg').open")
+            assert pg.evaluate(f"document.activeElement==={PN}.cv"), "Esc did not give the focus back to the chart"
+        step("keyboard: B opens a named dialog, four bad numbers are refused with a status line in the dialog, Esc gives the focus back", dialog_keys)
         def three():
             res["edges"] = old["area"]
             z = mode(pg, "zero"); e = engine(pg, 1)
@@ -73,6 +94,9 @@ try:
             assert l["bm"] == "line" and len(l["bl"]) == 4 and l["area"] == e["area"], (l, e)
             assert abs(l["area"] - res["edges"]) <= 1e-9 * res["edges"], (l, res)  # the line starts on the edge line: the same area as the edges
             res["line"] = l["area"]
+            e = mode(pg, "edges")
+            assert e["bm"] == "edges" and e["area"] == res["edges"], (e, res)   # chosen in the dialog: written, the number of integ()
+            mode(pg, "line")
             tab = pg.evaluate("(async()=>{await showInts();return document.querySelector('#bigbody table').innerText})()")
             assert "Linea personalizzata" in tab or "Custom line" in tab, tab
             pg.evaluate("Q('#bigdlg').close()")
@@ -117,10 +141,13 @@ try:
             assert l["bl"][1] == l["bl"][3], l
         step("a level: both points at the same intensity", level)
         def default():
-            pg.evaluate("PK.base=1"); integrate(pg, 14.3)
+            assert pg.evaluate("PK_DEF.bmode") == 0
+            pg.evaluate("Object.assign(PK, PK_DEF)"); integrate(pg, 14.3); settle(pg, "zero")
             assert pg.evaluate(f"{IT}.bm") == "zero" and abs(pg.evaluate(f"{IT}.area") - res["zero"]) <= 1e-9 * res["zero"]
+            pg.evaluate("PK.bmode=1"); integrate(pg, 14.3)
+            assert pg.evaluate(f"{IT}.bm") == "edges" and pg.evaluate(f"{IT}.area") == res["edges"]
             pg.evaluate("Object.assign(PK, PK_DEF)")
-        step("the default of the peak dialog applies to a new integration", default)
+        step("the default of the peak dialog (zero, or edges when chosen) applies to a new integration", default)
         miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).length"); assert miss == 0, miss
         errs = [e for e in r.errs if e[0] == "pageerror"]; assert not errs, errs
         # finger and pen: a 1024x768 touch viewport, the same records

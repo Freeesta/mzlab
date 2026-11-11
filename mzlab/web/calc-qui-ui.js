@@ -105,6 +105,7 @@
       if (b.dataset.p) set({ pol: CALCQUI.polToggle(options(v).pol, +b.dataset.p > 0 ? 1 : -1) });
       else if (b.dataset.u === "da" || b.dataset.u === "ppm") set({ unit: { ...CALCQUI.st.unit, [options(v).hr ? "hr" : "lr"]: b.dataset.u } });         // remembered for this resolution mode only
     });
+    ctl.addEventListener("focusin", ev => { const i = /** @type {HTMLInputElement} */ (ev.target); if (i.id === cfg.idp + "tol") i.value = "" + options(v).tol; });   // sync skips a focused field
     ctl.addEventListener("input", ev => {
       const i = /** @type {HTMLInputElement} */ (ev.target);
       if (i.id === cfg.idp + "tol") set({ [tolKey()]: i.value });

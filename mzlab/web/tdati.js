@@ -6,7 +6,10 @@
 const T = (k, p) => I18N.t(k, p);
 const EH_ = s => EH(s ?? "");
 let live = null, seq = 0;
-const CHUNK = 1000;
+const FIRST = 200, CHUNK = 1000;      // the dialog opens with FIRST rows (laying out 1000 took ~180 ms at 4x CPU), then CHUNK at a time
+// rows a table keeps (shown and copied): past it the first ROWS_MAX stay and a note names the cut and where every row is (the view's export); a Copy of millions
+// of rows built a string as large as the data again, which is what kills a tab on an iPad. `TDATI.maxRows` lowers it for the tests.
+let ROWS_MAX = 200000;
 
 // ---- the description of a chart, linked to its canvas (aria-describedby); the live region announces it only when asked
 function describe(cv, text) {
@@ -32,19 +35,19 @@ function table(o) {
   const opener = /** @type {HTMLElement | null} */ (document.activeElement);
   const d = document.createElement("dialog"); d.id = "tdati"; d.className = "tdati"; d.setAttribute("aria-labelledby", "tdati-h");
   const head = (o.head || []).map(h => `<th scope="col">${EH_(h)}</th>`).join("");
-  // a long table is written CHUNK rows at a time, the next ones when the reader scrolls near the end (all rows at once froze the page for seconds at 100k);
-  // the count and the Copy button always cover every row
-  const all = o.rows || [], rowHtml = r => `<tr>${r.map((v, i) => (i === 0 && o.rowHeader ? `<th scope="row">${EH_(v)}</th>` : `<td>${EH_(v)}</td>`)).join("")}</tr>`;
-  const rows = all.slice(0, CHUNK).map(rowHtml).join("") + (all.length > CHUNK ? `<tr class="td-more" aria-hidden="true"><td colspan="${Math.max(1, (o.head || []).length)}">…</td></tr>` : "");
+  // a long table is written FIRST rows, then CHUNK at a time, the next ones when the reader scrolls near the end (all rows at once froze the page for seconds at 100k);
+  // the count and the Copy button always cover every row kept (at most ROWS_MAX)
+  const given = o.rows || [], cut = given.length > ROWS_MAX, all = cut ? given.slice(0, ROWS_MAX) : given, rowHtml = r => `<tr>${r.map((v, i) => (i === 0 && o.rowHeader ? `<th scope="row">${EH_(v)}</th>` : `<td>${EH_(v)}</td>`)).join("")}</tr>`;
+  const rows = all.slice(0, FIRST).map(rowHtml).join("") + (all.length > FIRST ? `<tr class="td-more" aria-hidden="true"><td colspan="${Math.max(1, (o.head || []).length)}">…</td></tr>` : "");
   d.innerHTML = `<div class="td-hd"><h3 id="tdati-h">${EH_(o.title || T("tdati.title"))}</h3><button type="button" class="bt" data-td="x" aria-label="${T("tdati.close")}" title="${T("tdati.close")}">&times;</button></div>
-    ${o.note ? `<p class="sm muted">${EH_(o.note)}</p>` : ""}
+    ${o.note ? `<p class="sm muted">${EH_(o.note)}</p>` : ""}${cut ? `<p class="sm" id="tdati-cut">${EH_(T("tdati.capped", { shown: ROWS_MAX, n: given.length }))}</p>` : ""}
     <div class="td-sc" tabindex="0" role="region" aria-label="${EH_(T("tdati.region", { title: o.title || "" }))}"><table><caption class="sr-only">${EH_(o.title || "")}</caption><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="td-ft"><span class="sm muted" id="tdati-n">${T("tdati.rows", { n: (o.rows || []).length })}</span><button type="button" class="go" data-td="c">${T("tdati.copy")}</button><button type="button" class="go" data-td="x">${T("tdati.close")}</button></div>`;
+    <div class="td-ft"><span class="sm muted" id="tdati-n">${cut ? T("tdati.rowsOf", { shown: ROWS_MAX, n: given.length }) : T("tdati.rows", { n: all.length })}</span><button type="button" class="go" data-td="c">${T("tdati.copy")}</button><button type="button" class="go" data-td="x">${T("tdati.close")}</button></div>`;
   document.body.appendChild(d);
   const more = d.querySelector("tr.td-more");
   let io = null;
   if (more) {
-    let shown = CHUNK;
+    let shown = FIRST;
     io = new IntersectionObserver(es => {
       if (!es.some(e => e.isIntersecting)) return;
       more.insertAdjacentHTML("beforebegin", all.slice(shown, shown + CHUNK).map(rowHtml).join("")); shown += CHUNK;
@@ -56,7 +59,7 @@ function table(o) {
   d.querySelectorAll('[data-td="x"]').forEach(b => { b.onclick = close; });
   d.addEventListener("cancel", e => { e.preventDefault(); close(); });
   d.querySelector('[data-td="c"]').onclick = async () => {
-    const tsvP = PROV.tsv([o.head || [], ...(o.rows || [])].map(r => r.join("\t")).join("\n"), { table: String(o.title || "chart-data") });      // not awaited: Safari takes the clipboard only while the click runs
+    const tsvP = PROV.tsv([o.head || [], ...all].map(r => r.join("\t")).join("\n"), { table: String(o.title || "chart-data") });      // not awaited: Safari takes the clipboard only while the click runs
     try { await clipboardCopy({ "text/plain": tsvP }); } catch (_) { const tsv = await tsvP, t = document.createElement("textarea"); t.value = tsv; d.appendChild(t); t.select(); try { document.execCommand("copy"); } catch (e) { /* the table itself can be selected and copied */ } t.remove(); }
     /** @type {HTMLElement} */ (document.getElementById("tdati-n")).textContent = T("tdati.copied");
   };
@@ -128,5 +131,17 @@ function scan(root) {
   }));
 }
 new MutationObserver(ms => { if (!watchers.length) return; for (const m of ms) m.addedNodes.forEach(n => { if (n.nodeType === 1) scan(n); }); }).observe(document.documentElement, { childList: true, subtree: true });
+// the `n` most intense cells [i, j, value] of a grid (row i, column j), in decreasing order (ties in grid order, as a stable sort), kept while walking it:
+// an array of every non-empty cell first (2M on a fine 3D grid) is hundreds of MB, enough to kill a tab on an iPad
+function topCells(/** @type {ArrayLike<number>} */ raw, /** @type {number} */ nr, /** @type {number} */ nc, /** @type {number} */ n) {
+  /** @type {number[][]} */ const out = [];
+  for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) {
+    const v = raw[i * nc + j];
+    if (!(v > 0) || (out.length === n && v <= out[n - 1][2])) continue;
+    let k = out.length; while (k > 0 && out[k - 1][2] < v) k--;
+    out.splice(k, 0, [i, j, v]); if (out.length > n) out.pop();
+  }
+  return out;
+}
 const num = (v, n = 3) => (v == null || !isFinite(v) ? "" : String(+Number(v).toFixed(n)));
-window.TDATI = { table, describe, say, attach, open, num, addButton, series, fromDom, watch };
+window.TDATI = { topCells, maxRows: (/** @type {number} */ n) => { ROWS_MAX = n > 0 ? n : 200000; }, table, describe, say, attach, open, num, addButton, series, fromDom, watch };

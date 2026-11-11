@@ -274,8 +274,8 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
     const prof = profOf(q.f), st = /** @type {any} */ ({ prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, unit: prof.unit, frag: 0.5, res: null, sel: 0 });
     d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.search.title")}</h3><button class="x" id="lr-x" title="${I18N.t("common.close")}">&times;</button></div>
       <div class="sm muted" id="lr-q" style="margin-top:4px">${EHt(q.title)}</div>
-      <div class="qbar"><label>${I18N.t("lib.search.prec")} <input id="lr-prec" value="${st.prec ?? ""}"></label><label>${I18N.t("lib.search.tol")} <input id="lr-tol" value="${st.v}"> <select id="lr-unit"><option value="ppm">ppm</option><option value="Da">Da</option></select></label>
-        <label>${I18N.t("lib.search.peaksWithin")} <input id="lr-frag" value="${st.frag}"> Da</label><button id="lr-go">${I18N.t("lib.search.go")}</button><button id="lr-copy" title="${I18N.t("lib.copy.title")}">${I18N.t("lib.copy")}</button><button id="lr-xlsx">Excel</button><button id="lr-libs">${I18N.t("lib.libs")}</button><span class="sm muted" id="lr-msg"></span></div>
+      <div class="qbar"><label>${I18N.t("lib.search.prec")} <input id="lr-prec" data-num=">0" value="${st.prec ?? ""}"></label><label>${I18N.t("lib.search.tol")} <input id="lr-tol" data-num=">0" value="${st.v}"> <select id="lr-unit"><option value="ppm">ppm</option><option value="Da">Da</option></select></label>
+        <label>${I18N.t("lib.search.peaksWithin")} <input id="lr-frag" data-num=">0" value="${st.frag}"> Da</label><button id="lr-go">${I18N.t("lib.search.go")}</button><button id="lr-copy" title="${I18N.t("lib.copy.title")}">${I18N.t("lib.copy")}</button><button id="lr-xlsx">Excel</button><button id="lr-libs">${I18N.t("lib.libs")}</button><span class="sm muted" id="lr-msg"></span></div>
 
       <div id="lr-body"></div><canvas id="lr-cv" hidden></canvas>`;
     d.querySelector("#lr-unit").value = st.unit;
@@ -306,7 +306,7 @@ window.LIBCORE = (/** @type {Bag} */ S) => {
       show();
     };
     d.querySelector("#lr-go").onclick = run;
-    d.querySelectorAll(".qbar input").forEach((/** @type {HTMLInputElement} */ i) => i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") run(); });
+    d.querySelectorAll(".qbar input").forEach((/** @type {HTMLInputElement} */ i) => i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") { i.blur(); i.focus(); if (i.getAttribute("aria-invalid") !== "true") run(); } });   // the blur lets the gate refuse first
     const table = () => { const h = colHead, rs = st.res ? rowsOf(st.res.results) : []; return { h, rs }; };
     d.querySelector("#lr-copy").onclick = async () => {
       const { h, rs } = table(); if (!rs.length) return msg(I18N.t("lib.nothingCopy"));

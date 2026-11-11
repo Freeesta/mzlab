@@ -143,14 +143,19 @@ fn open_all(read: &Function, sizes: &[f64]) -> Result<Vec<Index<blocks_js::Block
         .collect()
 }
 
-/// Where an output goes: `write(offset, bytes: Uint8Array)` in JavaScript (an OPFS sync handle), called in order.
+/// Where an output goes: `write(offset, bytes: Uint8Array)` in JavaScript (an OPFS sync handle), called in order; without `write`, into `held`
+/// (`align_series`, which returns the bytes through the same steps as `align_series_to`).
 struct JsSink {
-    write: Function,
+    write: Option<Function>,
+    held: Vec<u8>,
 }
 
 impl WriteAt for JsSink {
     fn write_at(&mut self, off: u64, data: &[u8]) -> Result<()> {
-        self.write
+        let Some(write) = &self.write else {
+            return self.held.write_at(off, data);
+        };
+        write
             .call2(
                 &JsValue::NULL,
                 &(off as f64).into(),
@@ -174,7 +179,7 @@ fn to_sink(
     write: Function,
     step: impl FnOnce(&mut Hashing<JsSink>) -> Result<()>,
 ) -> std::result::Result<String, JsValue> {
-    let mut sink = Hashing::new(JsSink { write });
+    let mut sink = Hashing::new(JsSink { write: Some(write), held: Vec::new() });
     step(&mut sink).map_err(js_err)?;
     let (_, n, sha) = sink.finish();
     Ok(written(n, &sha))
@@ -300,48 +305,6 @@ pub fn drift_series(
     let refs: Vec<&mzlab_feat::table::FileFeatures> = all.iter().collect();
     let d = mzlab_feat::params_drift::parent_drift(&refs, parent_mz);
     Ok(mzlab_feat::params_drift::drift_json(&d, base_rt_tol))
-}
-
-#[cfg(feature = "detect")]
-/// L4-L6: alignment and gap filling of the `.mzfeatf` of a series (an `Array` of `Uint8Array`, in the order of the indexes) written to
-/// `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeat`. The same bytes whatever `budget_mb` (0/NaN = 192): in memory, in slabs of m/z, or
-/// the error `error.memoryBudget` with `{fase, stima_mb, budget_mb}`. The optional `spill` keeps the weak tables outside the module (`spill_js`); the
-/// optional `weak` holds the weak candidates of each file from its detection (`series_js::detect_weak_file_to`), the same bytes with or without them.
-#[wasm_bindgen]
-#[allow(clippy::too_many_arguments)]
-pub fn align_series_to(
-    files: Array,
-    read: Function,
-    sizes: Vec<f64>,
-    recipe: &str,
-    write: Function,
-    budget_mb: f64,
-    spill: Option<js_sys::Object>,
-    weak: Option<Array>,
-) -> std::result::Result<String, JsValue> {
-    let (r, facts) = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
-    let budget = MemBudget::from_request(budget_mb);
-    let mut src = series_js::WithWeak { files: JsStored { files }, weak };
-    let (open, mut spill) = (|k| open_one(&read, k, sizes[k]), spill_js::of(spill.as_ref())?);
-    to_sink(write, |sink| run::align_to_spilling(&mut src, &budget, &r, Some(facts), open, sink, spill_js::borrow(&mut spill)))
-}
-
-#[cfg(feature = "detect")]
-/// L4-L6 with the bytes of the `.mzfeat` returned (they are in memory as a whole: for small series and tests; the page uses `align_series_to`).
-#[wasm_bindgen]
-pub fn align_series(
-    files: Array,
-    read: Function,
-    sizes: Vec<f64>,
-    recipe: &str,
-) -> std::result::Result<Vec<u8>, JsValue> {
-    let (r, _) = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
-    let budget = MemBudget::from_request(f64::NAN);
-    let mut out = Vec::new();
-    let mut src = JsStored { files };
-    let open = |k| open_one(&read, k, sizes[k]);
-    run::align_to(&mut src, &budget, &r, open, &mut out).map_err(js_err)?;
-    Ok(out)
 }
 
 #[cfg(feature = "proofs")]

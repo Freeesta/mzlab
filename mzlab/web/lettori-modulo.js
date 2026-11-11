@@ -42,6 +42,8 @@ function ask(/** @type {any} */ msg, /** @type {((p: any) => void) | undefined} 
   const w = start(), id = ++seq;
   return new Promise((ok, no) => { wait.set(id, { ok, no, tell }); w.postMessage({ ...msg, id }); });
 }
+/** the engine's budget in MB (rust-bridge.js), the cap of a conversion held in memory when there is no OPFS; 0 = not known yet */
+const engineMb = () => { const b = /** @type {any} */ (window).MZLAB_RUST; return (b && (b.budgetMb || (b.choice && b.choice.mb))) || 0; };
 const cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });
 
 const LETTORI_MOD = {
@@ -99,7 +101,7 @@ const LETTORI_MOD = {
     const onAbort = () => { w.postMessage({ op: "cancel" }, []); w.terminate(); if (w === worker) worker = null; const e = cancelled(); for (const p of wait.values()) p.no(e); wait.clear(); drop(); };
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     try {
-      const r = await ask({ op: "toMzml", fam, members, c, dest, ...opts }, onProgress);
+      const r = await ask({ op: "toMzml", fam, members, c, dest, cap: engineMb(), ...opts }, onProgress);
       const out = r.file || new Blob(r.parts, { type: "application/xml" });
       // the spectra a truncated file lacked: the converted mzML is whole, so the row of the loading learns it from here (`lr.js` adds it to the index's)
       if (r.missing) Object.defineProperty(out, "mzlabMissing", { value: r.missing });

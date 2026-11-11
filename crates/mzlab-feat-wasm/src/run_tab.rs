@@ -86,14 +86,16 @@ pub fn flow_export_annot(
 }
 
 /// The CSV of `chrom.transitions` for the transition table `table` (a CSV) over the mzML files packed as `manifest` (JSON `[{"name","len"}]`) over their
-/// concatenated bytes `blob`. Errors are JSON `{"error_key","params"}` texts.
+/// concatenated bytes `blob`, within `budget_mb` (0 = the default of the page). Errors are JSON `{"error_key","params"}` texts (`error.memoryBudget`, phase `read`).
 #[wasm_bindgen]
 pub fn flow_transitions(
     params_json: &str,
     table: &str,
     manifest: &str,
     blob: &[u8],
+    budget_mb: f64,
 ) -> std::result::Result<String, JsValue> {
-    mzlab_feat::transitions::transitions_packed(params_json, table, manifest, blob)
+    let cap = mzlab_core::budget::MemBudget::from_request(budget_mb).cap();
+    mzlab_feat::transitions::transitions_packed(params_json, table, manifest, blob, cap)
         .map_err(crate::js_err)
 }

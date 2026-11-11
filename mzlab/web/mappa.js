@@ -975,7 +975,7 @@ window.MAPPA = (() => {
     const opt = (/** @type {string} */ v, /** @type {string} */ cur, /** @type {string} */ lab) => `<option value="${v}" ${cur === v ? "selected" : ""}>${lab}</option>`;
     const col = c.querySelector('[data-mzslot="col"]'), dif = c.querySelector('[data-mzslot="diff"]');
     if (col) col.outerHTML = `<select data-mz="pal" title="${T("mappa.pal.title")}" aria-label="${T("mappa.pal.title")}">${opt("viridis", pal, T("mappa.pal.viridis"))}${opt("cividis", pal, T("mappa.pal.cividis"))}</select>` +
-      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>` +
+      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" data-num="0:99.9" value="${+(o.thr * 100).toFixed(1)}"> %</label>` +
       `<select data-mz="rend" title="${T("mappa.rend.title")}" aria-label="${T("mappa.rend.title")}">${opt("smooth", liscia() ? "smooth" : "detail", T("mappa.rend.smooth"))}${opt("detail", liscia() ? "smooth" : "detail", T("mappa.rend.detail"))}</select>` +
       `<select data-mz="dens" title="${T("mappa.dens.title")}" aria-label="${T("mappa.dens.title")}">${["few", "mid", "many"].map(k => opt(k, DENS[PREF.dens] ? PREF.dens : "mid", T(DENS[k].lab))).join("")}</select>`;
     if (dif) dif.outerHTML = !hasRef ? `<label class="muted" title="${T("mappa.fix.title")}"><input type="checkbox" data-mz="fix"${PREF.fix ? " checked" : ""}> ${T("mappa.fix")}</label>` : hasRef ? `<label class="muted" title="${T("mappa.show.title")}"><input type="checkbox" data-mz="neg"${PREF.neg === false ? "" : " checked"}> ${T("mappa.show.neg")}</label>` : "";

@@ -24,8 +24,11 @@ const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.len
 // those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peak-edges / peak-auto --set only).
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
 /** @type {Record<string, number>} */
-const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, base: 0 };      // base: 0 edges, 1 zero, 2 line (new integrations)
-const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
+// bmode = the baseline of new integrations: 0 zero (the default, as mzlab_core::baseline::DEFAULT), 1 edges, 2 line. The older key `base` (0 edges, 1 zero,
+// 2 line) was saved with every setting, so its 0 cannot tell a choice from the old default: only its line is carried over.
+const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, bmode: 0 };
+const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; if (o.bmode === undefined && o.base === 2) o.bmode = 2; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
+const BMODES = ["zero", "edges", "line"];
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 // Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
 // moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
@@ -116,7 +119,7 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
 function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null), zero = false) {
   const f = E.files[s.k];
   return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}), ...(zero ? { zero: true } : {}),
-    ...(!zero && PK.base ? PK.base === 1 ? { bm: "zero" } : { bm: "line", bl: edgeLine(s, lo, hi, base) } : {}) };
+    ...(zero ? {} : PK.bmode === 2 ? { bm: "line", bl: edgeLine(s, lo, hi, base) } : { bm: BMODES[PK.bmode] || "zero" }) };      // every new record names its baseline
 }
 // [t0, y0, t1, y1] of the line between the edges: a custom line starts there
 const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? baseAt(base, s.x[i]) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
@@ -160,10 +163,11 @@ function intAt(/** @type {Bag} */ p, /** @type {number} */ px, /** @type {number
 }
 // dialog of the automatic-integration settings (applies to every panel): two blocks side by side, one row per setting (label, field, one-line hint)
 function peakParams() {
-  const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
+  const B = /** @type {Record<string, string>} */ ({ edgeFrac: "0:100", win: ">0", tail: ">0", snMin: "0:", multi: "0:100", hrSmooth: "3:99 i", hrSn: "0:" });
+  const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" data-num="${B[k]}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
   const sec = (/** @type {string} */ k, /** @type {string[]} */ keys) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${keys.map(f).join("")}</fieldset>`;
   big(I18N.t("pk.title"), `<div class="muted sm pk-intro">${I18N.t("pk.intro")}</div>
-    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="base">${["edges", "zero", "line"].map((k, v) => `<option value="${v}"${PK.base === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
+    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
     <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
     Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
@@ -331,6 +335,11 @@ async function drawSpec(p, snapped) {
   const base = isDda ? [E.files[/** @type {number} */ (p.k)]] : p.all ? shownFor(p) : [E.files[targetK]];
   let files = scanFiles(base.filter(Boolean));
   if (!files.length) return say(I18N.t("spec.isMrm"));
+  if (!isDda && p.level === 1) {          // an MS2-only file has no MS1 scans to give: while browsing, the current file can be one; the panel keeps its own file then
+    const ms1 = (/** @type {Bag[]} */ l) => l.filter((/** @type {Bag} */ f) => f && f.kind !== ESP.ms2);
+    files = ms1(files).length ? ms1(files) : ms1(scanFiles([E.files[/** @type {number} */ (p.k)]].filter(Boolean)));
+    if (!files.length) return say(I18N.t("spec.noScan"));
+  }
   if (!isDda && p.level === 2 && p.prec != null && p.prec !== "") {          // an MS2 experiment is a precursor: only the files that have it (as the chromatograms)
     const owns = (/** @type {Bag} */ f) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - p.prec) < 0.6);
     // a file without a precursor list counts only if it has MS2 scans: a Full Scan sample has none to give, also when it is the target
@@ -390,7 +399,7 @@ async function drawSpec(p, snapped) {
   const lineOf = (/** @type {Bag} */ x) => x.d.pmz && !p.sticks;                  // a profile file is drawn as a line (the peaks are drawn as bars only if the student asks)
   const inRange = (/** @type {number} */ lo, /** @type {number} */ hi) => {
     let top = 1e-9;
-    for (const x of data) { const [mz, y] = lineOf(x) ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y], [i0, i1] = spanOf(mz, lo, hi); for (let i = i0; i < i1 && i < y.length; i++) { const v = y[i]; if (mz[i] >= lo && mz[i] <= hi && v > top) top = v; } }
+    for (const x of data) { const [mz, y] = lineOf(x) ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y]; top = Math.max(top, winTop(mz, y, lo, hi)); }
     return top;
   };
   // the m/z axis is always the widest range of all the scans of the file(s) (level / precursor of the panel): it only changes with a zoom, another file or another precursor
@@ -435,7 +444,7 @@ async function drawSpec(p, snapped) {
     g.strokeStyle = color; g.lineWidth = 1.4 + LWX();
     if (x.multi) g.globalAlpha = 0.55; else g.globalAlpha = 1.0;
     g.beginPath();
-    const [vis0, vis1] = spanOf(x.d.mz, x0, x1);           // the bars, the cut-bar triangles and the labels visit only the peaks inside the window
+    const [vis0, vis1] = spanOf(x.d.mz, x0, x1); let /** @type {number[] | null} */ tall = null;          // the bars, the cut-bar triangles and the labels visit only the peaks inside the window (`tall`: the bars drawn, when there are too many)
     if (p.dots && !x.d.diff) {                                           // «only points»: every point is a dot, nothing joins them (isolated peaks stay isolated)
       const [mz, y] = x.d.pmz ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y], r = 2.5 + LWX(); g.fillStyle = color;
       const [a0, a1] = spanOf(mz, x0, x1);
@@ -455,16 +464,18 @@ async function drawSpec(p, snapped) {
     } else if (x.d.diff) {                                             // difference: orange up (higher in the sample), blue down (higher in the reference)
       [[1, ecss("--diff-pos")], [-1, ecss("--diff-neg")]].forEach(([sg, col]) => { g.strokeStyle = col; g.beginPath(); for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1 || x.d.y[j] * sg <= 0) continue; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); } g.stroke(); });
       g.strokeStyle = ecss("--muted"); g.lineWidth = 1; g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke();      // the zero line
-    } else { const hid = cont ? hidOf(x) : null, /** @type {number[]} */ dim = []; for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1) continue; if (hid && hid(j)) { dim.push(j); continue; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); } g.stroke();
+    } else { const hid = cont ? hidOf(x) : null; let /** @type {number[]} */ dim = [];     // many more bars than pixels (a whole HR run summed: ~730 000): only the tallest of each pixel column, as rectangles (= a butt-capped line; one line per peak: 1.3 s a drawing at 4x CPU, one path of 1000: ~40 ms of raster)
+      if (vis1 - vis0 > 4 * (W - M.l - M.r)) { const tc = tallCols(x.d, vis0, vis1, X, x0, x1, `${x0},${x1},${W},${M.l},${M.r}`, hid); tall = x.tall = tc.idx; dim = tc.dim; g.fillStyle = color; const lw = g.lineWidth, y0 = Y(0); for (const j of tc.idx) { const y1 = Y(x.d.y[j]); g.fillRect(X(x.d.mz[j]) - lw / 2, Math.min(y0, y1), lw, Math.abs(y0 - y1)); } } else for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1) continue; if (hid && hid(j)) { dim.push(j); continue; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); } g.stroke();
       if (dim.length) { g.save(); g.strokeStyle = ecss("--line"); g.globalAlpha = 1; g.beginPath(); dim.forEach(j => { g.moveTo(X(x.d.mz[j]), Y(0)); g.lineTo(X(x.d.mz[j]), Y(x.d.y[j])); }); g.stroke(); g.restore(); } }
     g.fillStyle = color;                                          // a small triangle on every cut bar
-    for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= ymax) continue; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); }
+    const cut = (/** @type {number} */ j) => { const m = x.d.mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= ymax) return; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); }; if (tall) tall.forEach(cut); else for (let j = vis0; j < vis1; j++) cut(j);
   });
   g.restore();
   const d0 = data[0].d, /** @type {[number, number][]} */ pk = [];
-  const top0 = maxAbs(d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
+  const top0 = topAbs(d0.y), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
   const hid0 = cont ? hidOf(data[0]) : null;
-  { const [a0, a1] = spanOf(d0.mz, x0, x1); for (let j = a0; j < a1; j++) { const m = d0.mz[j]; if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); } }
+  { const lab = (/** @type {number} */ j) => { const m = d0.mz[j]; if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); };
+    if (data[0].tall && !p.zoomY && !lk) data[0].tall.forEach(lab); else { const [a0, a1] = spanOf(d0.mz, x0, x1); for (let j = a0; j < a1; j++) lab(j); } }      // too many peaks: the tallest of each column hold every label (a shorter one shares its pixel)
   pk.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   /** @type {{ x: number, w: number }[]} */ const used = [];
   g.fillStyle = ecss("--ink"); g.textAlign = "center"; g.font = fpx(12);

@@ -10,7 +10,7 @@ def check(name, ok, info=""):
 
 # the three panels in their empty state: the lists one is reached with a search that finds nothing, the other two get the same markup
 # the quiet way their code uses (the catalogues are never empty on their own)
-HOLD = {"lists": "#sb-panel-lists #lst-tbody", "losses": "#sb-panel-losses #nl-list", "adducts": "#sb-panel-adducts .cq-out"}
+HOLD = {"lists": "#sb-panel-lists #lst-tbody", "losses": "#sb-panel-losses #nl-list", "adducts": "#sb-panel-adducts"}
 KEY = {"lists": "empty.lists", "losses": "empty.losses", "adducts": "empty.adducts"}
 
 def show(pg, which):

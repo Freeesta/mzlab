@@ -1,5 +1,5 @@
-//! `mzlab-cli peak-area TRACE.csv --from MIN --to MIN --set baseline=zero|line`: the area of the Data view between two boundaries measured from zero
-//! or from a line the user sets, from `mzlab_core::baseline::peak_area_json`, the text the page gets from `QUALITA.peakArea` (the same bytes).
+//! `mzlab-cli peak-area TRACE.csv --from MIN --to MIN [--set baseline=zero|line]`: the area of the Data view between two boundaries measured from
+//! zero (the default) or from a line the user sets, from `mzlab_core::baseline::peak_area_json`, the text the page gets from `QUALITA.peakArea` (the same bytes).
 
 use mzlab_core::baseline::{peak_area_json, Baseline};
 
@@ -8,11 +8,11 @@ use crate::Outcome;
 
 pub const HELP: &str = "mzlab-cli peak-area: the area of a peak between two boundaries, from zero or from a line you set, as JSON.
 
-usage: mzlab-cli peak-area TRACE.csv|- --from MIN --to MIN --set baseline=zero|line [--set NAME=VALUE...]
+usage: mzlab-cli peak-area TRACE.csv|- --from MIN --to MIN [--set baseline=zero|line] [--set NAME=VALUE...]
 
   TRACE.csv    two columns, RT (min) and intensity; - = the standard input
   --from/--to  the boundaries (each taken to the nearest point of the trace)
-  --set        baseline: zero (y = 0) or line; a line: base_y0 (counts), base_t0, base_y1, base_t1 (min, counts;
+  --set        baseline: zero (y = 0, the default: any background under the peak is part of the area) or line; a line: base_y0 (counts), base_t0, base_y1, base_t1 (min, counts;
                base_y1 absent = base_y0, a level). edges, the line between the boundaries, is the page's own (picchi.js)
   output       {\"baseline\":MODE,\"area\":COUNTS_S,\"below\":COUNTS_S,\"height\":COUNTS,\"rt\":MIN}: area signed, below = the part under the line";
 

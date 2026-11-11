@@ -89,8 +89,16 @@ fn budgeted(
         .map(|p| std::fs::read(Path::new(out).join(format!("{}.mzfeatf", base(p)))).expect("read"))
         .collect();
     let mut s = sink(out, "series.mzfeat");
-    run::align_to(&mut stored, &budget, &r, |k| Ok(open(&files[k])), &mut s)
+    // the steps the page is told, at most once per 1 % as the `.wasm` hands them (`align_series_to`), on stderr
+    let (mut steps, mut last) = (0, (0, 0));
+    let mut tell = |d, t| {
+        steps += 1;
+        last = (d, t);
+    };
+    let mut pace = mzlab_core::pace::Pace::new(&mut tell);
+    run::align_to_spilling(&mut stored, &budget, &r, None, |k| Ok(open(&files[k])), &mut s, None, None, &mut |d, t| pace.at(d, t))
         .unwrap_or_else(|e| panic!("align: {e}"));
+    eprintln!("align steps {steps} last {} of {}", last.0, last.1);
     println!("series.mzfeat {}", s.finish().2);
     if parent.is_empty() {
         return;

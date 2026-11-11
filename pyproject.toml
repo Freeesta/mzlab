@@ -11,8 +11,9 @@ dependencies = ["numpy>=1.24"]
 license = { text = "MIT" }
 
 [project.optional-dependencies]
-# jsonschema: only the test of the step descriptors (tests/test_step_descrittori.py); never in the site
-test = ["pytest", "jsonschema>=4.18"]
+# jsonschema: only the test of the step descriptors (tests/test_step_descrittori.py); pillow: the e2e that read screenshots (e2e_header, e2e_pulsanti, ...),
+# also when the changed-files job picks them; never in the site
+test = ["pytest", "jsonschema>=4.18", "pillow"]
 # only to regenerate tests/golden/librerie/ with tools/parita_librerie.py (not needed by the tests or the site)
 parita = ["ms_entropy>=1.5", "matchms>=0.33"]
 

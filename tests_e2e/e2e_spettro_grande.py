@@ -1,5 +1,6 @@
 """A spectrum with 200 000 centroids and a 200 000-point profile: drawn without RangeError (no Math.max(...a) on the arrays), the nearest peak under the pointer
-equals the brute-force one, the intensity axis fits the window, and the same holds when the m/z array is not ascending."""
+equals the brute-force one, the intensity axis fits the window, and the same holds when the m/z array is not ascending.
+Drawn as bars, many more peaks than pixels draw the tallest of each pixel column only: the same set as a brute-force pass, after a zoom and a resize too."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -48,6 +49,15 @@ async (z) => {
   return { n, hit, bad, ymax: a.yfull[1], want: top * 1.12 / (1 - (sp._legPad || 0)), pts: d.mz.length, ink: sp.cv.toDataURL().length > 3000 };
 }
 """
+BARS = """
+async (z) => {
+  const sp = E.panels.filter(q => q.type === 'spec').pop(); sp.sticks = true; sp.zoom = z; sp.zoomY = null; await drawSpec(sp);
+  const a = sp._a, x = a.data[0], d = x.d, best = new Map();
+  for (let j = 0; j < d.mz.length; j++) { const m = d.mz[j]; if (m < a.x0 || m > a.x1) continue; const c = Math.floor(a.X(m)), b = best.get(c); if (b === undefined || d.y[j] > d.y[b]) best.set(c, j); }
+  const want = [...best.entries()].sort((u, v) => u[0] - v[0]).map(e => e[1]), tall = x.tall || null;
+  return { many: !!tall, same: !!tall && JSON.stringify(tall) === JSON.stringify(want), cols: want.length, n: tall ? tall.length : 0, W: a.W, ink: sp.cv.toDataURL().length > 3000 };
+}
+"""
 r = Run(port=8894, wd="/tmp/wd94")
 try:
     with sync_playwright() as p:
@@ -63,6 +73,14 @@ try:
                 assert abs(c["ymax"] - c["want"]) <= 1e-9 * max(1, c["want"]), f"axis top at zoom {z}: {c}"
             assert c["hit"] >= 1, "no hover case was exercised"
         step("200 000 centroids and points: drawn, nearest peak and axis as the brute force", sorted_case)
+        def bars_case():
+            for z in (None, [300, 600]):
+                c = pg.evaluate(BARS, z); assert c["many"] and c["same"] and c["ink"], f"zoom {z}: {c}"
+            w0 = c["W"]; pg.set_viewport_size({"width": 1000, "height": 800}); ready(pg)
+            c = pg.evaluate(BARS, [300, 600]); assert c["W"] != w0 and c["many"] and c["same"], f"after a resize: {c}"
+            c = pg.evaluate(BARS, [700, 700.8]); assert not c["many"] and c["ink"], f"few peaks are drawn one by one: {c}"
+            pg.evaluate("(() => { const sp = E.panels.filter(q => q.type === 'spec').pop(); sp.sticks = false; sp.zoom = null; })()"); pg.set_viewport_size({"width": 1500, "height": 2200}); ready(pg)
+        step("200 000 centroids as bars: the tallest of each pixel column, as the brute force", bars_case)
         def shuffled_case():
             pg.evaluate("window.__SYN.shuffle = 1; E.panels.filter(q => q.type === 'spec').forEach(closePanel); addPanel('spec',{tab:E.tab,k:E.cur,level:1,r0:5.0,r1:5.4,h:420})"); ready(pg)
             for z in (None, [400.0, 420.0]):

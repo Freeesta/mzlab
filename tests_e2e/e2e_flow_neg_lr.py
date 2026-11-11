@@ -112,11 +112,13 @@ def check_plan(pol, hr):
     pl["steps"] += [{"id": "t", "step": "features.table@1", "in": {"source": src}}, {"id": "f1", "step": "formula.ms1@1", "in": {"features": "t.report", "index": src}}]
     pl["steps"].append(POS if not hr else {"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
     return pl
-# the check of the page once it has the facets of the indexes of OPFS (`series_estimates` of the proofs .wasm asked for `?facets`): the facet problems with their text
+# the check of the page once it has the facets of the indexes of OPFS (`series_estimates` of the proofs .wasm asked for `?facets`): the facet problems with their text.
+# The plan is read as an imported one (FLOW.migrated, the engine's flow::migrate), so a step saved at an older version is checked at the current one, as `flow run` parses it
 CHECK = """async ([plan]) => {
   for (let i = 0; i < 600 && !FLOW.fileFacets; i++) await new Promise(r => setTimeout(r, 100));
-  const S = document.querySelector('.flx-list').__flow;
-  return { facets: FLOW.fileFacets, problems: FLOW.validate(plan, S.reg).map(p => ({ at: p.instance + '.' + p.port + ':' + p.key, params: p.params, text: FLOW.message(p) })) };
+  const S = document.querySelector('.flx-list').__flow, m = await FLOW.migrated(FLOW.importText(JSON.stringify(plan)), S.reg);
+  if (m.error) return { facets: FLOW.fileFacets, problems: [{ instance: '', port: '', key: m.error.key, params: m.error.params }] };
+  return { facets: FLOW.fileFacets, problems: FLOW.validate(m.plan, S.reg).map(p => ({ at: p.instance + '.' + p.port + ':' + p.key, params: p.params, text: FLOW.message(p) })) };
 }"""
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_neg_lr_"))

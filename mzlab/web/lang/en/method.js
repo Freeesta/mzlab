@@ -14,6 +14,7 @@ I18N.add("en", {
   "method.m.col.curve": "Curve",
   "method.doc.title": "Method stored in the file",
   "method.doc.none": "This file holds no readable acquisition method.",
+  "method.doc.notes": "What the reader could not read",
   "method.doc.created": "Created (instrument clock)",
   "method.doc.name": "Sample name",
   "method.doc.inject": "Injected volume",

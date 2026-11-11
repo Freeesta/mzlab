@@ -144,25 +144,22 @@ fn walk_into(pos: &[u32], it: &[f64], w0: usize, y: &mut [f64]) {
 }
 
 impl Slab {
-    /// The peaks of the runs `parts` of the table, one after the other.
+    /// The intensities and positions of the runs `parts` of the table, one after the other (their m/z are in `mz` already, from `slab_parts`).
     fn load<R: ReadAt>(
         &mut self,
         index: &mut Index<R>,
         si: usize,
         parts: &[(u64, u64)],
     ) -> Result<()> {
-        self.mz.clear();
         self.it.clear();
         self.pos.clear();
         self.by_scan = OnceLock::new();
-        let n = parts.iter().map(|&(a, b)| (b - a) as usize).sum();
-        reserve(&mut self.mz, n)?;
+        let n = self.mz.len();
         reserve(&mut self.it, n)?;
         reserve(&mut self.pos, n)?;
-        let (mz, it, pos) = (&mut self.mz, &mut self.it, &mut self.pos);
+        let (it, pos) = (&mut self.it, &mut self.pos);
         for &(a, b) in parts {
-            index.each_peak(si, a, b, |p, m, y| {
-                mz.push(m);
+            index.each_inten(si, a, b, |p, y| {
                 it.push(y);
                 pos.push(p as u32);
             })?;
@@ -290,7 +287,15 @@ pub(crate) fn windows_by_slab<R: ReadAt>(
     let mut parts: Vec<(u64, u64)> = Vec::new();
     let mut i = 0;
     while i < ranges.len() {
-        let j = slab_parts(index, si, &ranges[i..], max_peaks as u64, &mut parts)? + i;
+        slab.mz.clear();
+        let j = slab_parts(
+            index,
+            si,
+            &ranges[i..],
+            max_peaks as u64,
+            &mut parts,
+            &mut slab.mz,
+        )? + i;
         slab.load(index, si, &parts)?;
         hits.clear();
         for (k, r) in ranges.iter().enumerate().take(j).skip(i) {
@@ -310,13 +315,15 @@ const GAP: u64 = 64;
 
 /// The runs of the table a slab reads for the first ranges of `ranges` (sorted by lower bound), in `parts`, and how many ranges they serve:
 /// every peak of each of those ranges (always the first, whatever its size), and at most `max_peaks` peaks in all. The runs ascend and do not
-/// overlap, so the slab stays sorted by m/z and a range finds the same peaks, in the same order, as in the whole table.
+/// overlap, so the slab stays sorted by m/z and a range finds the same peaks, in the same order, as in the whole table. Their m/z go to `mz`
+/// as they are found, while the blocks the search read are still in the cache of the reader.
 fn slab_parts<R: ReadAt>(
     index: &mut Index<R>,
     si: usize,
     ranges: &[(f64, f64)],
     max_peaks: u64,
     parts: &mut Vec<(u64, u64)>,
+    mz: &mut Vec<f64>,
 ) -> Result<usize> {
     parts.clear();
     let mut run = (0u64, 0u64);
@@ -334,6 +341,8 @@ fn slab_parts<R: ReadAt>(
         if n > 0 && total + (run.1 - run.0) + grow > max_peaks {
             break;
         }
+        let from = if joins { run.1 } else { a };
+        index.mz_into(si, from, e, mz)?;
         if joins {
             run.1 = run.1.max(e);
         } else {

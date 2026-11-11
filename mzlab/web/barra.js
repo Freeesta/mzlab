@@ -623,7 +623,7 @@ const BARRA = (() => {
       const gap = parseFloat(getComputedStyle(bar).columnGap) || 0;
       return kids.reduce((s, e) => { const cs = getComputedStyle(e); return s + e.getBoundingClientRect().width + (parseFloat(cs.marginLeft) || 0) + (parseFloat(cs.marginRight) || 0); }, 0) + Math.max(0, kids.length - 1) * gap;
     };
-    const phone = window.innerWidth < PHONE_W;        // very narrow: everything but File goes into "Altro"
+    const phone = window.innerWidth < PHONE_W;        // very narrow: everything but File and Search goes into "Altro"
     const tryLv = phone ? ["none"] : LEVELS;
     let chosen = tryLv[tryLv.length - 1];
     for (const lv of tryLv) {
@@ -634,7 +634,7 @@ const BARRA = (() => {
     setLevel(chosen);
     _lvl = chosen;
     let i = 0;
-    while ((phone || need() > avail()) && i < DROP_ORDER.length) {
+    while (i < DROP_ORDER.length && (need() > avail() || phone && DROP_ORDER[i] !== "search")) {      // a phone drops all but Search, which leaves only when it does not fit
       const id = DROP_ORDER[i++];
       const c = byId(id);
       if (!c || !onBar(c)) continue;

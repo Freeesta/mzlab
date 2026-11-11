@@ -179,7 +179,7 @@ const BANCO = (() => {
     const opt = g => `<option value="${EH(g.key)}" data-lv="${g.level}">${EH(g.key)} \u00d7${nfmt(g.n)}</option>`;
     big(I18N.t("bn.add.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("bn.add.note")}</div>
       <div class="cmp-grid"><label>${I18N.t("bn.add.kind")} <select id="br-kind"><option value="tic">${I18N.t("bn.add.tic")}</option><option value="bpc">${I18N.t("bn.add.bpc")}</option><option value="xic">${I18N.t("bn.add.xic")}</option></select></label>
-      <label id="br-ionw" hidden>${I18N.t("bn.add.ion")} <input id="br-ion" placeholder="${I18N.t("bn.add.ionPh")}" style="width:200px"> <select id="br-ad"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M+K]+</option><option>[M-H]-</option></select> \u00b1 <input id="br-ppm" value="${HR.prof(f0, 1).tol}" style="width:46px"> ppm</label>
+      <label id="br-ionw" hidden>${I18N.t("bn.add.ion")} <input id="br-ion" placeholder="${I18N.t("bn.add.ionPh")}" style="width:200px"> <select id="br-ad"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M+K]+</option><option>[M-H]-</option></select> \u00b1 <input id="br-ppm" data-num=">0" value="${HR.prof(f0, 1).tol}" style="width:46px"> ppm</label>
       <label>${I18N.t("bn.scanType")} <select id="br-filt"><option value="" data-lv="1">${I18N.t("bn.allMs1")}</option>${groups.map(opt).join("")}</select></label></div>
       <div style="margin-top:8px"><button id="br-ok" type="button" class="go">${I18N.t("lst.lab.add")}</button> <span id="br-err" class="fail"></span></div>`, () => {
       const $ = x => Q(x), sync = () => { $("#br-ionw").hidden = $("#br-kind").value !== "xic"; };
@@ -189,7 +189,7 @@ const BANCO = (() => {
         if (kind === "xic") {
           const t = $("#br-ion").value.trim().replace(",", "."); let mz = parseFloat(t);
           if (!(mz > 0) || /[A-Za-z]/.test(t)) { try { const j = await getFormula(t.split(/\s+/)[0], $("#br-ad").value); mz = j.mz5 ?? j.mz; } catch (e) { $("#br-err").textContent = I18N.t("bn.add.invalid"); return; } }
-          r.mz = +(+mz).toFixed(5); r.ppm = parseFloat($("#br-ppm").value) || HR.prof(f0, 1).tol;
+          r.mz = +(+mz).toFixed(5); r.ppm = numIt($("#br-ppm").value) || HR.prof(f0, 1).tol;
           r.label = `XIC ${r.mz.toFixed(HR.prof(f0, 1).dec)} \u00b1${+r.ppm.toFixed(1)} ppm` + (filt ? " · " + filt : "");
         }
         p.ranges = [...(p.ranges || []), r]; if (p.ranges.length > 1) p.mode = "stk";
@@ -207,12 +207,12 @@ const BANCO = (() => {
     const f0 = fileOf(p) || vis()[0]; if (!f0) return;
     big(I18N.t("bn.sub.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("bn.sub.note")}</div>
       <div class="cmp-grid"><label>${I18N.t("bn.sub.formula")} <input id="bs-f" placeholder="C34H54O31N5" style="width:200px" autocomplete="off" spellcheck="false"></label>
-      <label>${I18N.t("bn.sub.ppm")} <input id="bs-ppm" type="number" min="0.1" max="100" step="0.5" value="5" style="width:70px"></label>
-      <label>${I18N.t("bn.sub.min")} <input id="bs-min" type="number" min="0" step="10" value="100" style="width:80px"></label></div>
+      <label>${I18N.t("bn.sub.ppm")} <input id="bs-ppm" data-num="0.1:100" value="5" style="width:70px"></label>
+      <label>${I18N.t("bn.sub.min")} <input id="bs-min" data-num="0:" value="100" style="width:80px"></label></div>
       <div style="margin-top:8px"><button id="bs-go" type="button" class="go">${I18N.t("bn.sub.calc")}</button> <button id="bs-add" type="button" hidden>${I18N.t("bn.sub.add")}</button> <span id="bs-err" class="fail"></span></div>
       <div id="bs-out" style="margin-top:8px;max-height:46vh;overflow:auto"></div>`, () => {
       const $ = x => Q(x); let cur = null;
-      const par = () => ({ formula: $("#bs-f").value.trim(), ppm: parseFloat($("#bs-ppm").value) || 5, min: parseFloat($("#bs-min").value) || 0, z: zOf(f0) });
+      const par = () => ({ formula: $("#bs-f").value.trim(), ppm: numIt($("#bs-ppm").value) || 5, min: numIt($("#bs-min").value) || 0, z: zOf(f0) });
       const dec = HR.prof(f0, 1).dec;
       $("#bs-go").onclick = async () => {
         const r = par(); $("#bs-err").textContent = ""; $("#bs-out").innerHTML = ""; $("#bs-add").hidden = true; cur = null;
@@ -247,7 +247,7 @@ const BANCO = (() => {
     const rl = p.el.querySelector(".rtl"); if (!rl) return;
     SPECBAR.title(p, p.el.querySelector(".ttl"));
     let h = p.el.querySelector(".bnl"); if (!h) { h = document.createElement("span"); h.className = "bnl muted sm"; h.style.marginLeft = "8px"; rl.after(h); }
-    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? maxOf(d.y) : null;
+    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? topOf(d.y) : null;      // kept per spectrum: a drag redraws the same one
     h.textContent = nl == null ? "" : `${p.filt ? p.filt + " · " : ""}NL: ${nl.toExponential(2).replace("e+", "E")}`;
   }
   function decorate(p, c) {
@@ -450,18 +450,18 @@ const BANCO = (() => {
   function tIso(b, p) {
     const sp = specOf(p), iso = (sp && sp.iso) || {}, fw = iso.fw || {}, cd = iso.cd || {};
     const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}>${l}</option>`).join("")}</select>`;
-    const adRow = (a, c, k) => `<div class="row hri-ad"><label>${k ? "" : I18N.t("lib.col.adduct")} <select data-ad aria-label="${I18N.t("lib.col.adduct")}">${ISO_AD.map(x => `<option${x === a ? " selected" : ""}>${x}</option>`).join("")}</select></label><label>${I18N.t("bn.iso.conc")} <input data-conc type="number" min="0" max="1000" step="any" value="${c}" style="width:56px"></label>${k ? `<button type="button" data-delad aria-label="${I18N.t("bn.iso.delAd")}" title="${I18N.t("bn.iso.delAd")}">×</button>` : ""}</div>`;
+    const adRow = (a, c, k) => `<div class="row hri-ad"><label>${k ? "" : I18N.t("lib.col.adduct")} <select data-ad aria-label="${I18N.t("lib.col.adduct")}">${ISO_AD.map(x => `<option${x === a ? " selected" : ""}>${x}</option>`).join("")}</select></label><label>${I18N.t("bn.iso.conc")} <input data-conc data-num="0:1000" value="${c}" style="width:56px"></label>${k ? `<button type="button" data-delad aria-label="${I18N.t("bn.iso.delAd")}" title="${I18N.t("bn.iso.delAd")}">×</button>` : ""}</div>`;
     const adds = iso.adds && iso.adds.length ? iso.adds : [{ ad: iso.ad || "[M+H]+", c: 100 }];
     b.innerHTML = `<div class="muted">${I18N.t("bn.iso.note")}</div>
       <div class="row"><label>${I18N.t("bn.iso.formula")} <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:130px"></label></div>
       <div id="hri-ads">${adds.map((a, k) => adRow(a.ad, a.c == null ? 100 : a.c, k)).join("")}</div>
       <div class="row"><button type="button" id="hri-addad">${I18N.t("bn.iso.addAd")}</button></div>
       <h2>${I18N.t("bn.iso.cd")}</h2>
-      <div class="row"><label title="${I18N.t("bn.iso.cdTitle")}">${I18N.t("bn.iso.z0")} <input id="hri-z0" type="number" min="1" max="60" step="any" value="${cd.z0 ?? ""}" placeholder="1" style="width:52px"></label><label>${I18N.t("bn.iso.hw")} <input id="hri-hw" type="number" min="0" max="60" step="any" value="${cd.hw ?? ""}" placeholder="0" style="width:52px"></label></div>
+      <div class="row"><label title="${I18N.t("bn.iso.cdTitle")}">${I18N.t("bn.iso.z0")} <input id="hri-z0" data-num="1:60 v" value="${cd.z0 ?? ""}" placeholder="1" style="width:52px"></label><label>${I18N.t("bn.iso.hw")} <input id="hri-hw" data-num="0:60 v" value="${cd.hw ?? ""}" placeholder="0" style="width:52px"></label></div>
       <h2>${I18N.t("bn.iso.output")}</h2>
-      <div class="row"><label>${sel("hri-st", [["barre", I18N.t("bn.iso.bars")], ["profilo", I18N.t("bn.iso.profile")], ["centroidi", I18N.t("bn.iso.centroids")]], iso.style || "centroidi")}</label><label title="${I18N.t("bn.iso.ptsTitle")}">${I18N.t("bn.iso.pts")} <input id="hri-pts" value="${iso.pts || 10}" style="width:36px"></label></div>
+      <div class="row"><label>${sel("hri-st", [["barre", I18N.t("bn.iso.bars")], ["profilo", I18N.t("bn.iso.profile")], ["centroidi", I18N.t("bn.iso.centroids")]], iso.style || "centroidi")}</label><label title="${I18N.t("bn.iso.ptsTitle")}">${I18N.t("bn.iso.pts")} <input id="hri-pts" data-num="3: i" value="${iso.pts || 10}" style="width:36px"></label></div>
       <h2>${I18N.t("bn.iso.resolution")}</h2>
-      <div class="row"><label>${sel("hri-rm", [["R", I18N.t("bn.iso.rm.R")], ["da", I18N.t("bn.iso.rm.da")], ["ppm", I18N.t("bn.iso.rm.ppm")]], fw.mode || "R")} <input id="hri-r" placeholder="${I18N.t("bn.iso.auto")}" value="${fw.v != null ? fw.v : iso.R != null ? iso.R : ""}" style="width:72px"></label>
+      <div class="row"><label>${sel("hri-rm", [["R", I18N.t("bn.iso.rm.R")], ["da", I18N.t("bn.iso.rm.da")], ["ppm", I18N.t("bn.iso.rm.ppm")]], fw.mode || "R")} <input id="hri-r" data-num=">0 v" placeholder="${I18N.t("bn.iso.auto")}" value="${fw.v != null ? fw.v : iso.R != null ? iso.R : ""}" style="width:72px"></label>
         <label title="${I18N.t("bn.iso.defTitle")}">${I18N.t("bn.iso.defAs")} ${sel("hri-df", [["fwhm", I18N.t("bn.iso.fwhm")], ["10", I18N.t("bn.iso.v10")], ["5", I18N.t("bn.iso.v5")]], iso.def || "fwhm")}</label></div>
       <div class="row"><button type="button" id="hri-go" class="go" title="${I18N.t("bn.iso.overTitle")}">${I18N.t("bn.iso.over")}</button><button type="button" id="hri-new" title="${I18N.t("bn.iso.newTitle")}">${I18N.t("bn.iso.new")}</button><button type="button" id="hri-rep" title="${I18N.t("bn.iso.repTitle")}">${I18N.t("bn.iso.rep")}</button><button type="button" id="hri-off">${I18N.t("lib.remove")}</button></div>
       <div class="muted sm">${I18N.t("bn.iso.hint")}</div>`;

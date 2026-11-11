@@ -44,6 +44,8 @@ I18N.add("en", {
   "ctl.files.aria": "Files shown: {n} of {tot}",
   "ctl.smooth": "Smoothing",
   "ctl.range.clear": "Clear the range",
+  "ctl.range.num": "Write a positive number, or leave it empty for no limit: the previous values are back.",
+  "ctl.range.order": "«from» must be lower than «to»: the previous values are back.",
   "ctl.range.set": "set",
   "ctl.range.title": "m/z and time range shown",
   "ctl.range.note": "Empty = everything; the precursor picks the MS2 scans of one ion.",
@@ -98,5 +100,13 @@ I18N.add("en", {
   "dda.nav.last": "Last MS² of this precursor",
   "dda.nav.only": "No other MS² of this precursor",
   "dda.peak.near": "MS² of this ion from a scan {d} min away",
-  "dda.tri.btn": "▲ MS²"
+  "dda.tri.btn": "▲ MS²",
+  "campo.num": "Write a number, for example 250.8 or 250,8: the previous value is back.",
+  "campo.empty": "This field cannot be left empty: the previous value is back.",
+  "campo.gt": "Write a number above {a}: the previous value is back.",
+  "campo.range": "Write a number from {a} to {b}: the previous value is back.",
+  "campo.min": "Write a number of at least {a}: the previous value is back.",
+  "campo.max": "Write a number of at most {b}: the previous value is back.",
+  "campo.int": "Write a whole number: the previous value is back.",
+  "campo.order": "«from» cannot be above «to»: the previous value is back."
 });

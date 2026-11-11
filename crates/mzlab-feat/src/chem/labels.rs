@@ -145,15 +145,13 @@ fn shape_json(o: &mut Out, s: &Shape) {
     o.raw(",\"charge\":")
         .int(s.q)
         .raw(",\"mass\":")
-        .num(round(s.mass, 6));
+        // Full precision: the UI rounds once to its decimals (rounding here too gave 152.07061 for 152.070605).
+        .num(s.mass);
     o.raw(",\"nominal\":").int(s.nominal as i64).raw(",\"mz\":");
     if s.q == 0 {
         o.raw("null");
     } else {
-        o.num(round(
-            (s.mass - s.q as f64 * ELECTRON) / s.q.abs() as f64,
-            6,
-        ));
+        o.num((s.mass - s.q as f64 * ELECTRON) / s.q.abs() as f64);
     }
     o.raw("}");
 }

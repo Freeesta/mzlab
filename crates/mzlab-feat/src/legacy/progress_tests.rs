@@ -41,6 +41,12 @@ fn file_by_file_phase_names_the_file() {
 }
 
 #[test]
+fn alignment_shows_a_percentage() {
+    assert!(json("hr", "align", 40, 100).contains("\"label\":\"Aligning the series: 40 %\""));
+    assert!(json("hr", "align", 1, 1).contains("\"label\":\"Aligning the series\""));
+}
+
+#[test]
 fn unknown_names_give_null() {
     assert_eq!(json("lr", "nope", 0, 0), "null");
     assert_eq!(json("py", "xic", 0, 0), "null");
