@@ -50,23 +50,28 @@ def test_lab_build_head(sites):
     assert "static/lab.js" in json.loads((lab / "static" / "manifest.json").read_text())["files"]
 
 
-def test_lab_build_ships_no_example_files(sites):
+def test_lab_build_ships_no_example_files_but_the_two_example_drawings(sites):
     lab, normal = sites
     names = sorted(p.relative_to(lab).as_posix() for p in lab.rglob("*") if p.is_file())
     assert not (lab / "static" / "esempi").exists()
-    assert not [n for n in names if n.startswith("static/esempi/") or n.startswith("static/esempio-") or n.lower().endswith(".mzml")], names
+    assert not [n for n in names if n.startswith("static/esempi/") or n.lower().endswith(".mzml")], names
+    drawings = ["static/esempio-frammentazione.png", "static/esempio-trasformazione.png"]      # the two figures of Draw's example link (draw.js)
+    assert [n for n in names if n.startswith("static/esempio-")] == drawings, names
+    draw = (ROOT / "mzlab" / "web" / "draw.js").read_text(encoding="utf-8")
+    assert all(f'"{n.split("/")[1]}"' in draw for n in drawings)      # the very images the link opens
     files = json.loads((lab / "static" / "manifest.json").read_text())["files"]
-    assert not [f for f in files if "esempi/" in f or "esempio-" in f or f.lower().endswith(".mzml")]
+    assert not [f for f in files if "esempi/" in f or f.lower().endswith(".mzml")]
+    assert sorted(f for f in files if "esempio-" in f) == drawings, files
     # the normal build keeps them (and so stays as it was)
     assert (normal / "static" / "esempi" / "FullScan_t15.mzML").is_file() and (normal / "static" / "esempio-trasformazione.png").is_file()
 
 
-def test_lab_build_example_entry_points_are_hidden_by_lab_js(sites):
+def test_lab_build_hides_the_example_files_but_keeps_the_drawing_link(sites):
     lab, _ = sites
     js = (lab / "static" / "lab.js").read_text(encoding="utf-8")
-    assert "#demo" in js and "#ex-link" in js and "caricaEsempio" in js
+    assert "#demo" in js and "caricaEsempio" in js
     html = (lab / "index.html").read_text(encoding="utf-8")
-    assert 'id="demo"' in html and 'id="ex-link"' in html      # kept in the DOM (shell.js and draw.js bind them); lab.js hides them
+    assert 'id="demo"' in html and 'id="ex-link"' in html      # #demo stays in the DOM (shell.js binds it) and lab.js hides it; #ex-link works
 
 
 @pytest.mark.parametrize("env", [{}, {"MZLAB_LAB_EXPIRES": "2026-13-40"}, {"MZLAB_LAB_EXPIRES": "29/12/2026"}])
@@ -129,7 +134,8 @@ def test_tabui_and_flow_are_ungated_in_the_normal_build_and_skipped_in_the_lab()
 @needs_node
 def test_guard_hides_the_example_entry_points():
     r = guard()
-    assert "#demo" in r["css"] and "#ex-link" in r["css"] and "display:none" in r["css"]
+    assert "#demo" in r["css"] and "display:none" in r["css"]
+    assert "ex-link" not in r["css"]      # Draw's example drawings stay reachable
     assert r["tour"] == "function"      # replaced by a no-op: the tour no longer fetches static/esempi
 
 

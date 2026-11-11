@@ -1,7 +1,8 @@
 # Lab site (Freeesta/qqq)
 
-Parallel build of mzLab for a lab: only Data and Draw, no example files (not shipped, buttons hidden), `noindex`, and it stops
-working after 2026-12-29 (UTC). It follows `main` of `Freeesta/mzlab` by itself.
+Parallel build of mzLab for a lab: only Data and Draw, no example data files (not shipped, buttons hidden), `noindex`, and it stops
+working after 2026-12-29 (UTC). Draw's «See an example drawing» link works: its two drawings (`esempio-trasformazione.png`,
+`esempio-frammentazione.png`, anonymous paracetamol schemes) are the only example images the build ships. It follows `main` of `Freeesta/mzlab` by itself.
 The expiry is a soft block (the date is checked against the visitor's clock), not security.
 
 Three manual steps for Federico:
