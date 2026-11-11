@@ -1145,6 +1145,7 @@
   "error.rowNotFound": "Messaggio d'errore del motore; {id} = identificativo.",
   "error.stats.condition": "Messaggio d'errore del motore; {name} = nome.",
   "error.generic": "Errore senza testo proprio; {detail} = messaggio tecnico del motore.",
+  "draw.check.ctx": "Riga del menu del tasto destro su un atomo con un'osservazione del controllo; apre le tre parti. {what} = il problema in una frase.",
   "draw.check.found": "Stato del controllo del disegno; {n} = numero di osservazioni trovate.",
   "draw.check.fail": "Stato quando il controllo del disegno non parte; {message} = messaggio dell'errore.",
   "draw.check.atoms": "Atomi a cui si riferisce un'osservazione; {list} = simbolo e numero degli atomi, es. «C1, N7».",

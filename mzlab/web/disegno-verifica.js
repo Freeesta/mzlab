@@ -71,6 +71,14 @@ async function select(/** @type {any} */ w) {
   K.editor.selection(atoms.length || bonds.length ? { atoms, bonds } : null);
 }
 
+/** «label: text» as nodes, the label in bold (text only, no HTML) */
+function labelled(/** @type {string} */ label, /** @type {string} */ text) {
+  const f = document.createDocumentFragment(), b = document.createElement("b");
+  b.textContent = label + ":";
+  f.append(b, " " + text);
+  return f;
+}
+
 /** one remark: the row (select) and «Why?» with its three parts */
 function row(/** @type {any} */ w, /** @type {number} */ k) {
   const li = document.createElement("li"), p = params(w);
@@ -78,14 +86,18 @@ function row(/** @type {any} */ w, /** @type {number} */ k) {
   const atomsText = w.atoms.length ? " (" + t("draw.check.atoms", { list: w.atoms.map((/** @type {number} */ i) => (last.els[i] || "") + (i + 1)).join(", ") }) + ")" : "";
   const sel = document.createElement("button");
   sel.type = "button"; sel.className = "chk-sel"; sel.title = t("draw.check.show.title");
-  sel.innerHTML = "<b>" + EH(t(`draw.check.level.${w.level}`)) + ":</b> " + EH(t(`draw.check.${w.code}.what`, p) + atomsText);
+  sel.append(labelled(t(`draw.check.level.${w.level}`), t(`draw.check.${w.code}.what`, p) + atomsText));
   sel.onclick = () => { select(w).catch(() => { /* the canvas went away */ }); };
   const why = document.createElement("button");
   why.type = "button"; why.className = "sm chk-why"; why.textContent = t("draw.check.why"); why.title = t("draw.check.why.title");
   why.setAttribute("aria-expanded", "false"); why.setAttribute("aria-controls", "chk-x" + k);
   const box = document.createElement("div");
   box.id = "chk-x" + k; box.className = "sm chk-x"; box.hidden = true;
-  box.innerHTML = ["what", "why", "next"].map(part => "<div><b>" + EH(t("draw.check.part." + part)) + ":</b> " + EH(t(`draw.check.${w.code}.${part}`, p)) + "</div>").join("");
+  for (const part of ["what", "why", "next"]) {
+    const d = document.createElement("div");
+    d.append(labelled(t("draw.check.part." + part), t(`draw.check.${w.code}.${part}`, p)));
+    box.append(d);
+  }
   why.onclick = () => { box.hidden = !box.hidden; why.setAttribute("aria-expanded", String(!box.hidden)); };
   li.append(sel, " ", why, box);
   return li;
@@ -142,4 +154,31 @@ export function mountCheck() {
     listening = true;
     (await ketcher()).editor.subscribe("change", () => { if (!auto) return; clearTimeout(timer); timer = window.setTimeout(checkNow, 700); });
   };
+  const menu = /** @type {any} */ (window).TPDraw && /** @type {any} */ (window).TPDraw.menu;
+  if (menu) menu.add({ id: "check-why", order: 70, rows: whyRows });
+}
+
+/** «Why?» rows of the canvas menu: the remarks of the last check on the atom or bond under the pointer, or on the selection */
+async function whyRows(/** @type {any} */ c) {
+  if (!last || !last.r.warnings.length) return [];
+  const K = c.K, st = K.editor.struct(), on = new Set(c.atoms);
+  if (c.whole && c.ev) {
+    const hit = K.editor.findItem(c.ev, ["atoms", "bonds"]), b = hit && hit.map === "bonds" ? st.bonds.get(hit.id) : null;
+    if (b) on.add(b.begin).add(b.end); else if (hit) on.add(hit.id);
+  }
+  /** @type {{text: string, title: string, run: () => void}[]} */ const rows = [];
+  last.r.warnings.forEach((/** @type {any} */ w, /** @type {number} */ k) => {
+    const ids = [...w.atoms, ...w.bonds.flat()].map((/** @type {number} */ i) => last.ids[i]);
+    if (!ids.some((/** @type {number} */ id) => on.has(id))) return;
+    rows.push({ text: t("draw.check.ctx", { what: t(`draw.check.${w.code}.what`, params(w)) }), title: t("draw.check.why.title"), run: () => openWhy(k) });
+  });
+  return rows;
+}
+
+/** opens the three parts of remark k in the card and moves the focus to its «Why?» */
+function openWhy(/** @type {number} */ k) {
+  const box = document.getElementById("chk-x" + k), why = document.querySelector(`[aria-controls="chk-x${k}"]`);
+  if (!box || !(why instanceof HTMLElement)) return;
+  box.hidden = false; why.setAttribute("aria-expanded", "true");
+  why.scrollIntoView({ block: "nearest" }); why.focus();
 }

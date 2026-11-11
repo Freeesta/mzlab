@@ -10,6 +10,7 @@ I18N.add("it", {
   "draw.check.found": "Osservazioni sul disegno: {n}.",
   "draw.check.fail": "Il controllo non è partito: {message}",
   "draw.check.why": "Perché?",
+  "draw.check.ctx": "Perché? {what}",
   "draw.check.why.title": "Qual è il problema, perché conta e cosa fare dopo",
   "draw.check.show.title": "Seleziona sulla tela gli atomi di questa osservazione",
   "draw.check.atoms": "atomi {list}",

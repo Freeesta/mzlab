@@ -149,6 +149,10 @@ fn common_groups_raise_no_alarm() {
     ] {
         assert!(codes(&check(&mf)).is_empty(), "{}", check(&mf));
     }
+}
+
+#[test]
+fn charge_separated_groups_raise_no_alarm() {
     // nitromethane, methyl azide, pyridine N-oxide, acetate, methyl isocyanide
     let charged: &[(&[Atom], &[Bond])] = &[
         (

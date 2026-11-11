@@ -61,6 +61,21 @@ try:
             bb = why.bounding_box(); assert bb["width"] >= 24 and bb["height"] >= 24, bb
         step("pentavalent carbon: one valence remark, selects C1, Why? opens problem / why / next step (3 clicks)", penta)
 
+        def menu_why():
+            box = pg.locator("#chk-list li .chk-x").first
+            pg.locator("#chk-list li .chk-why").first.click(); assert box.is_hidden()    # closed again; C1 is still selected
+            OPEN = """(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()"""
+            for _ in range(200):
+                pg.evaluate(OPEN)
+                if pg.locator("#ctx:not([hidden]) [data-row=check-why]").count(): break
+                pg.evaluate("new Promise(r => requestAnimationFrame(r))")
+            row = pg.locator("#ctx [data-row=check-why]")
+            assert row.count() == 1 and row.inner_text().startswith(pg.evaluate("I18N.t('draw.check.ctx', {what: ''})").strip()), pg.inner_text("#ctx")
+            row.click()
+            assert box.is_visible() and pg.locator("#chk-list li .chk-why").first.get_attribute("aria-expanded") == "true"
+            assert pg.evaluate("document.activeElement && document.activeElement.classList.contains('chk-why')")
+        step("right click on the selected atom: a «Why?» row opens the same three parts in the card", menu_why)
+
         def ammonium():
             assert check(AMMONIUM) == ["valenceCharge"], pg.inner_text("#chk-card")
             pg.locator("#chk-list li .chk-why").first.click()

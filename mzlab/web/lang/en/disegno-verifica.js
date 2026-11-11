@@ -10,6 +10,7 @@ I18N.add("en", {
   "draw.check.found": "Remarks on the drawing: {n}.",
   "draw.check.fail": "The check could not run: {message}",
   "draw.check.why": "Why?",
+  "draw.check.ctx": "Why? {what}",
   "draw.check.why.title": "What the problem is, why it matters and what to do next",
   "draw.check.show.title": "Select the atoms of this remark on the canvas",
   "draw.check.atoms": "atoms {list}",
