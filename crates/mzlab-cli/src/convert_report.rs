@@ -101,6 +101,23 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     Some((n("dichiarate"), n("lette"), cause.to_string()))
 }
 
+/// A partial read is written and said, never passed for a whole one: one warning line per file with its counts.
+pub(crate) fn partial_lines(items: &[Item]) -> String {
+    items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Done {
+                input,
+                conv: Some(c),
+                ..
+            } => partial_of(c).map(|(declared, read, cause)| {
+                format!("warning: {input}: partial read, {read} of {declared} scans ({cause})\n")
+            }),
+            _ => None,
+        })
+        .collect()
+}
+
 /// The `--report` document: a JSON array with `{ingresso, uscita, sha256, spettri, secondi, saltato, conv/1}` or `{ingresso, errore, causa}` per input.
 pub(crate) fn report(items: &[Item]) -> String {
     let mut o = Out::default();

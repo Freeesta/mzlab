@@ -92,6 +92,11 @@ impl Sessions {
         Ok(self.reader(h)?.losses(c)?.lost())
     }
 
+    /// The key of why sample `c` has scans `missing` (`Losses::cause`), empty when none.
+    pub fn cause(&mut self, h: u32, c: usize) -> Result<String> {
+        Ok(self.reader(h)?.losses(c)?.cause.to_string())
+    }
+
     /// The header of the mzML of sample `c` (`Lettore::mzml_header`), `null` when the reader has none: `{run, sources, instrument:[acc,name]|null, components:[[kind,acc,name]],
     /// software:[name,version], acquired, serial, source_sha1, source_cv:[[acc,name]], sample:[id,name]|null, run_params:[[name,value]], content:[[acc,name]],
     /// extra_software:[[acc,name,version]], centroided}`.

@@ -33,9 +33,9 @@ const earlyTics = new Map();
 async function warmRun(rpc, n, blob) {
   try { return JSON.parse((await rpc({ op: "lr_warm", name: n, blob, mtime: /** @type {any} */ (blob).lastModified || 0 })).info || "{}"); } catch (_) { return { skipped: "failed" }; }
 }
-/** the engine's answer to «is this file warm already?»: { files, missing } when its copy and index are there, else null */
+/** the engine's answer to «is this file warm already?»: { files, missing, cause } when its copy and index are there, else null */
 async function warmClaim(rpc, /** @type {string} */ n, /** @type {Blob} */ blob) {
-  try { const r = await rpc({ op: "lr_warm_claim", name: n, blob, mtime: /** @type {any} */ (blob).lastModified || 0 }), j = JSON.parse(r.info || "{}"); return j.hit ? { files: r.files, missing: j.missing || 0 } : null; } catch (_) { return null; }
+  try { const r = await rpc({ op: "lr_warm_claim", name: n, blob, mtime: /** @type {any} */ (blob).lastModified || 0 }), j = JSON.parse(r.info || "{}"); return j.hit ? { files: r.files, missing: j.missing || 0, cause: j.cause || "" } : null; } catch (_) { return null; }
 }
 
 /** the page shows how far the loading of `name` has got (event mzlab-index, shell.js upload); `p` = { done, total } scans of the sample, `wait` = queued for a free builder */
@@ -49,8 +49,8 @@ export function createLr({ rb }) {
   let items = null;                      // Item.info() of every item (objects), null = no session
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
   const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items });      // the methods (.dam) and how the items were acquired
-  const missing = new Map();             // name -> scans its index lacks (a truncated data file, `build_mzidx_native`): for the row of the loading, not part of the row of App.files()
-  const api = { files, missing, earlyTics, earlyTic: (/** @type {string} */ name) => earlyTics.get(name) };
+  const missing = new Map(), causes = new Map();      // name -> scans its index lacks (a truncated data file, `build_mzidx_native`) and why (`Losses::cause`: a .raw may hold them without their event): for the row of the loading, not part of the row of App.files()
+  const api = { files, missing, causes, earlyTics, earlyTic: (/** @type {string} */ name) => earlyTics.get(name) };
   const rpc = async (msg, onp) => {
     const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg, onp);
@@ -107,7 +107,7 @@ export function createLr({ rb }) {
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { fase = "index"; const ix = hit ? { missing: hit.missing } : JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : 0.4 + 0.585 * p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, (ix.missing || 0) + (window.LETTORI_MOD?.missing?.get(n) || 0)); }
+      else { fase = "index"; const ix = hit ? { missing: hit.missing, cause: hit.cause } : JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : 0.4 + 0.585 * p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, (ix.missing || 0) + (window.LETTORI_MOD?.missing?.get(n) || 0)); causes.set(n, ix.cause || ""); }
     } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (__) { const _ = /** @type {Lanciato} */ (__); /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)

@@ -148,17 +148,17 @@ impl State {
         let before = self.store.lock().unwrap_or_else(|e| e.into_inner()).stamp_now(name);   // taken before the build: a change during it stays flagged
         // the mapped old index goes before the build replaces its file (a mapped file cannot be replaced on Windows); the next request opens the new one
         self.drop_lr_index(name);
-        let missing = if let Some(nat) = &e.nat {
-            self.indexer()?.build_nat(nat, name)?.missing
+        let (st, cause) = if let Some(nat) = &e.nat {
+            self.indexer()?.build_nat(nat, name)?
         } else {
-            self.indexer()?.build(&e.path, name, None)?.missing
+            (self.indexer()?.build(&e.path, name, None)?, "")
         };
         self.drop_lr_index(name);
         if let Some(st) = before {
             self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(name, st);
         }
-        // missing: the spectra the file declares beyond the ones it holds (the row of the loading warns, as on the site)
-        text(format!("{{\"ms\":{},\"missing\":{missing}}}", t0.elapsed().as_millis()))
+        // missing: the spectra the file declares beyond the ones it holds or lists without their event, and why (the row of the loading warns, as on the site)
+        text(format!("{{\"ms\":{},\"missing\":{},\"cause\":\"{}\"}}", t0.elapsed().as_millis(), st.missing, cause))
     }
 
     #[allow(unused_variables)]
