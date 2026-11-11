@@ -59,10 +59,8 @@ export function mountBar(d, t, own = {}) {
   /** @type {{ g: Group, box: HTMLElement, btn: HTMLButtonElement, menu: HTMLElement, items: HTMLButtonElement[], cur: number }[]} */
   const views = [];
   const closeAll = (/** @type {boolean} */ focus = false) => views.forEach(v => { if (!v.menu.hidden) { v.menu.hidden = true; v.btn.setAttribute("aria-expanded", "false"); if (focus) v.btn.focus(); } });
-  const icon = (/** @type {Item} */ it) => {
-    if (!it.icon) return /** @type {SVGElement} */ (found(it.id)?.querySelector("svg")?.cloneNode(true));
-    const h = d.createElement("span"); h.innerHTML = it.icon; return /** @type {SVGElement} */ (h.firstElementChild);
-  };
+  const own1 = (/** @type {string} */ svg) => { const h = d.createElement("span"); h.innerHTML = svg; return h.firstElementChild; };
+  const icon = (/** @type {Item} */ it) => /** @type {SVGElement} */ (it.icon ? own1(it.icon) : found(it.id)?.querySelector("svg")?.cloneNode(true));
   const press = (/** @type {Item} */ it) => { if (it.icon) own[it.id].run(); else found(it.id)?.click(); };
   const on = (/** @type {Item} */ it) => { if (it.icon) return own[it.id].on(); const e = found(it.id); return !!e && isSel(e); };
 
