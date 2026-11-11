@@ -2,7 +2,7 @@
 // Warm-up of the pointed folder, engine side (docs/agenti/riscaldamento.md): `warm` copies an mzML to OPFS and builds its index exactly as an upload does, then closes
 // its slot and leaves a marker (OPFS folder "warm"); lr_boot hides the marked files. `claim` (the file is opened by the student) takes the marker away and opens the index,
 // so the normal load skips the copy and the build. Loaded by rust-worker.js on the first warm/claim, never at start-up.
-/** @typedef {{ size: number, mtime: number, bytes: number, at: number, missing: number }} Marker */
+/** @typedef {{ size: number, mtime: number, bytes: number, at: number, missing: number, cause?: string }} Marker */
 const SHARE = 0.25, SPARE = 256 << 20;           // the warm files take at most a quarter of the quota and always leave 256 MB free
 
 /** @param {{ ARCH: any, lrPut: (m: any) => Promise<any>, lrIndex: (m: any) => Promise<any>, lrOpen: (n: string) => Promise<boolean>, lrFile: Map<string, File>, closeSlot: (n: string) => void }} d */
@@ -46,7 +46,7 @@ export function createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot }
       const put = await lrPut({ ...m, nat: null }), ixr = JSON.parse((await lrIndex({ ...m, cen: false })).info || "{}");
       const ix = await ARCH.get("idx", m.name + ".mzidx");
       closeSlot(m.name); await ARCH.dropLease("idx", m.name + ".mzidx");
-      /** @type {Marker} */ const out = { size, mtime, bytes: JSON.parse(put.info).size + (ix ? ix.size : 0), at: Date.now(), missing: ixr.missing || 0 };
+      /** @type {Marker} */ const out = { size, mtime, bytes: JSON.parse(put.info).size + (ix ? ix.size : 0), at: Date.now(), missing: ixr.missing || 0, cause: ixr.cause || "" };
       await ARCH.put("warm", key(m.name), new TextEncoder().encode(JSON.stringify(out)));
     } catch (_) {
       await drop(m.name);                                                     // silent: the student sees the normal error when the file is opened
@@ -61,7 +61,7 @@ export function createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot }
     if (!(await fresh(m.name, mk, size, mtime)) || !(await lrOpen(m.name).catch(() => false))) { await drop(m.name); return { info: JSON.stringify({ hit: false }) }; }
     await ARCH.remove("warm", key(m.name));
     const f = await ARCH.get("files", m.name); if (f) lrFile.set(m.name, f);
-    return { info: JSON.stringify({ hit: true, size, missing: mk.missing || 0 }), files: f ? [[m.name, f]] : [] };
+    return { info: JSON.stringify({ hit: true, size, missing: mk.missing || 0, cause: mk.cause || "" }), files: f ? [[m.name, f]] : [] };
   }
   return { lr_warm: (/** @type {any} */ m) => warm({ ...m, warm: true }), lr_warm_claim: claim, makeRoom, names: async () => new Set((await all()).map(w => w.name)), clear: async () => { for (const w of await all()) await drop(w.name); await ARCH.clear("warm"); } };
 }

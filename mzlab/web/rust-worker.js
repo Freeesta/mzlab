@@ -297,7 +297,7 @@ async function lrIndexOwn(m) {
   let opened = false;
   try { opened = await lrOpen(m.name); } catch (_) { await ARCH.remove("idx", m.name + ".mzidx"); jerr("error.badIndex"); }      // an index that does not open (incomplete, damaged) is not kept
   if (!opened) jerr("err.engine.index", { name: m.name });
-  nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
+  nativo.early.drop(m.name); return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0, cause: (res.stats && res.stats.cause) || "" }) };      // missing: scans the index lists beyond the end of a truncated data file, or lists without their event (`cause`)
 }
 let flowCenOps;
 const flowCen = () => flowCenOps || (flowCenOps = createFlowCentroid({ ARCH, infoDi, nuovo, safe, version, lrPut, lrIndex, lrFile, release: n => ARCH.release(n), close: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } }));

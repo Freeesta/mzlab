@@ -50,7 +50,7 @@ fn more_peaks_than_declared_are_cut_or_an_error_if_compressed() {
         4
     );
     let compressed = text(FLAT).replacen("peaksCount=\"30\"", "peaksCount=\"4\"", 1);
-    assert_eq!(mzxml_error(compressed.into_bytes()), "error.memoryBudget");
+    assert_eq!(mzxml_error(compressed.into_bytes()), "error.fixedLimit");
 }
 
 #[test]
@@ -63,16 +63,16 @@ fn a_zlib_inflating_past_the_declared_size_is_an_error() {
     let bomb = with(&b64(&zlib(&vec![0u8; 8 << 20])));
     let count = bomb.find("peaksCount=\"").unwrap();
     let end = count + bomb[count + 12..].find('"').unwrap() + 13;
-    // a scan that declares no points, or says nothing, still inflates no further than the budget: the size, not damage
+    // a scan that declares no points, or says nothing, still inflates no further than its fixed limit: the size, not damage
     for declared in ["peaksCount=\"0\"", ""] {
         let b = format!("{}{}{}", &bomb[..count], declared, &bomb[end..]);
         assert_eq!(
             mzxml_error(b.into_bytes()),
-            "error.memoryBudget",
+            "error.fixedLimit",
             "{declared:?}"
         );
     }
-    assert_eq!(mzxml_error(bomb.into_bytes()), "error.memoryBudget");
+    assert_eq!(mzxml_error(bomb.into_bytes()), "error.fixedLimit");
     let mut broken = zlib(&vec![7u8; 4096]);
     broken.truncate(broken.len() / 2);
     assert_eq!(

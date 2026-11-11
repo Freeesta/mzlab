@@ -57,9 +57,9 @@ fn zlib_errors_keep_their_keys_and_details() {
     );
     assert_eq!(key(&good[..5]).1, "incomplete deflate stream");
     assert_eq!(key(b"hello world 12345").1, "corrupt deflate stream");
-    // 3 values declared, far more inflated: a bomb is a memory-budget error, not a zlib one
+    // 3 values declared, far more inflated: a bomb passes a fixed limit, neither a zlib error nor the memory one the pool retries
     let bomb = deflate(&vec![0u8; 8 << 20]);
-    assert_eq!(key(&bomb), ("error.memoryBudget".into(), String::new()));
+    assert_eq!(key(&bomb), ("error.fixedLimit".into(), String::new()));
 }
 
 /// An mzML of `n` spectra (their size varies with the index) with a chromatogram and an analyzer among them; spectrum `bad` has a corrupt array.
