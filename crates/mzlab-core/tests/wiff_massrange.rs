@@ -1,5 +1,5 @@
 //! The MRM table of a `.wiff` read by the counted grammar of `MassRangeEx`: the pairs of `tools/wiff_massrange.py` (an encoder written from the grammar)
-//! give every announced transition, a non-ASCII and an unnamed name included, through `Wiff::open`/`run` and the `Lettore` the site reads; a stream that
+//! give every announced transition, an unnamed, a non-ASCII and a 151-character name included, through `Wiff::open`/`run` and the `Lettore` the site reads; a stream that
 //! does not hold the count of its `ExperimentHeader` refuses the sample with `err.file.wiffMassRange`, in both. Skipped without python3.
 
 use std::path::{Path, PathBuf};
