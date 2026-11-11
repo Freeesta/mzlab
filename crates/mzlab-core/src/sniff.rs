@@ -77,6 +77,16 @@ fn is_hr(v: &json::Value) -> bool {
     })
 }
 
+/// The name of a part of a mixed file: «Full Scan», «MS2» (or «MS3» for the part of one level) or «MRM».
+fn part_name(p: &crate::iteminfo::Part) -> String {
+    match (p.mode, p.level) {
+        ("ms1", _) => "Full Scan".to_string(),
+        ("ms2", Some(l)) => format!("MS{l}"),
+        ("ms2", None) => "MS2".to_string(),
+        _ => "MRM".to_string(),
+    }
+}
+
 /// `{kind, scans, srm, polarity, mixed, spectrum_mode, hr_profile, hr, hint, msn}` of a whole file (`msn`: `infusion.rs`).
 pub fn sniff<R: ReadAt, M: ReadAt>(
     idx: &mut Index<R>,
@@ -125,11 +135,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
     for (i, p) in parts.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"name\":")
-            .str(match p.mode {
-                "ms1" => "Full Scan",
-                "ms2" => "MS2",
-                _ => "MRM",
-            });
+            .str(&part_name(p));
         o.raw(",\"pol\":");
         match p.pol {
             Some(v) => o.int(v as i64),

@@ -166,7 +166,7 @@ const lrTog = () => !(window.BANCO && BANCO.on());
 /** @param {string} [t] */ const tabPanels = t => (t === undefined ? E.panels : E.panels.filter((/** @type {Bag} */ p) => p.tab === (t ?? E.tab)));
 // group of a file in the list: a user group (lista-file.js) first; otherwise in LR strictly the experiment name (Full Scan, MS2, MRM), in HR bench sub-groups
 const grpOf = (/** @type {FileAperto} */ f) => f.ugrp ? "u:" + f.ugrp : (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
-const GRP_HR = /** @type {Record<string, () => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }); const grpLabel = (/** @type {string} */ g) => g.startsWith("u:") ? g.slice(2) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+const GRP_HR = /** @type {Record<string, (fs: any[]) => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": fs => I18N.t("files.group.ms2", { ms: msLv(fs) }), "hr.infusion": () => I18N.t("files.group.infusion") }); const msLv = (/** @type {any[]} */ fs) => [...new Set(fs.map(f => "MS" + Math.max(2, f.lv || 2)))].sort().join("/") || "MS2"; const grpLabel = (/** @type {string} */ g, /** @type {any[]} */ fs = []) => g.startsWith("u:") ? g.slice(2) : GRP_HR[g] ? GRP_HR[g](fs) : g === KIND.ms2 ? g.replace("MS2", msLv(fs)) : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
 // the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
 const sibsOf = (/** @type {FileAperto} */ f) => E.files.filter((/** @type {FileAperto} */ x) => fileBase(x.file) === fileBase(f.file));
 const TOL0 = 1.0;                                   // dated instrument: XIC window of +-1 Da
@@ -814,7 +814,7 @@ function renderFileList() {
     return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type; user groups that are all single files are listed flat (ugFlat, lista-file.js)
-  const flatUg = ugFlat(groups), body = groups.map(G => { const flat = flatUg && G.g.startsWith("u:"); return (flat ? "" : gh(G, grpLabel(G.g))) + `<div class="grp-files" style="${flat || (isExpOpen(gkOf(G)) && !grpClosed(G.g)) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`; }).join("");
+  const flatUg = ugFlat(groups), body = groups.map(G => { const flat = flatUg && G.g.startsWith("u:"); return (flat ? "" : gh(G, grpLabel(G.g, G.fs))) + `<div class="grp-files" style="${flat || (isExpOpen(gkOf(G)) && !grpClosed(G.g)) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`; }).join("");
   // the files still being read or converted: one progress row each, under the open ones (upload-rows.js)
   Q("#flst").innerHTML = pre + body + UPROWS.html();
   UPROWS.wire(Q("#fl-up")); UPROWS.paint();

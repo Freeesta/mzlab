@@ -47,6 +47,6 @@
     return t;
   }
   /** the name of a live panel (precursors counted over the MS2 files that are shown) @param {any} p */
-  const di = p => { const fs = tabFiles(MS2).filter((/** @type {any} */ f) => f.vis && !f.gone); return nome(p, { nPrec: nPrecOf(fs), lv: fs.reduce((m, f) => Math.min(m, f.lv), 9) % 9 || 2 }); };
+  const di = p => { const fs = tabFiles(MS2).filter((/** @type {any} */ f) => f.vis && !f.gone); const fp = p.prec != null && p.prec !== "" ? fs.filter((/** @type {any} */ f) => (f.precursors || []).some((/** @type {number} */ q) => Math.abs(q - +p.prec) < 0.05)) : []; return nome(p, { nPrec: nPrecOf(fs), lv: (fp.length ? fp : fs).reduce((m, f) => Math.min(m, f.lv), 9) % 9 || 2 }); };      // the level of the files that hold the precursor (MS2 and MS3 parts of one file)
   window.TITOLI = { nome, di, nPrecOf };
 })();

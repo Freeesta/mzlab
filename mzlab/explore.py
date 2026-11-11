@@ -41,6 +41,9 @@ def scan_key(s) -> str:
 def part_label(part: dict, scans) -> str:
     """The name shown for a part of a mixed file: Full Scan, DDA (every MS2 tied to a survey scan), MS2 or MRM, with the polarity suffix of the tag."""
     mode = part["mode"]
+    if part.get("level"):
+        head = f"MS{part['level']}"
+        return head + part["tag"].removeprefix(head)
     ms2 = [x for x in scans if x.level >= 2]
     dda = any(x.level == 1 for x in scans) and bool(ms2) and all(x.parent is not None for x in ms2)
     name = "Full Scan" if mode == "ms1" else "MRM" if mode == "mrm" else "DDA" if dda else "MS2"
@@ -75,7 +78,7 @@ class Item:
             return True
         if p["mode"] == "mrm" or (p.get("pol") not in (None, 0) and s.polarity not in (p["pol"], 0)):
             return False
-        return s.level == 1 if p["mode"] == "ms1" else s.level >= 2
+        return s.level == 1 if p["mode"] == "ms1" else s.level >= 2 and p.get("level") in (None, s.level)
 
     def _keys(self) -> dict:
         """scan index -> scan_key, for every scan of the physical file (computed once, shared by the parts of a file)."""
@@ -976,7 +979,8 @@ def infusion_like(scans) -> bool:
 def file_parts(run) -> list[dict]:
     """The experiments of a MIXED file (survey + product ions, MRM + EPI, positive + negative polarity), or [] when the file has only one.
 
-    Each part is {"mode": "ms1" | "ms2" | "mrm", "pol": 1 | -1 | None, "tag": "MS1" | "MS2" | "MRM" (+ " pos" / " neg" when both polarities are there)}.
+    Each part is {"mode": "ms1" | "ms2" | "mrm", "pol": 1 | -1 | None, "tag": "MS1" | "MS2" | "MRM" (+ " pos" / " neg" when both polarities are there),
+    "level": 2 | 3 | None (set only when the product scans have two levels: "MS2" and "MS3" are then two parts)}.
     """
     sc = run.scans
     split = len({s.polarity for s in sc if s.polarity in (1, -1)}) > 1
@@ -985,8 +989,12 @@ def file_parts(run) -> list[dict]:
         sel = [s for s in sc if test(s)]
         if not sel:
             continue
-        for pol in (sorted({s.polarity for s in sel if s.polarity in (1, -1)}, reverse=True) if split else [None]):
-            parts.append({"mode": mode, "pol": pol, "tag": name + ((" pos" if pol == 1 else " neg") if split else "")})
+        levels = sorted({s.level for s in sel})                 # product scans of two levels (MS2 and MS3) are two experiments
+        for lv in (levels if mode == "ms2" and len(levels) > 1 else [None]):
+            sub = [s for s in sel if lv in (None, s.level)]
+            nm = f"MS{lv}" if lv else name
+            for pol in (sorted({s.polarity for s in sub if s.polarity in (1, -1)}, reverse=True) if split else [None]):
+                parts.append({"mode": mode, "pol": pol, "tag": nm + ((" pos" if pol == 1 else " neg") if split else ""), "level": lv})
     if any(c["kind"] == "srm" for c in run.chromatograms()):
         parts.append({"mode": "mrm", "pol": None, "tag": "MRM"})
     return parts if len(parts) > 1 else []
@@ -999,7 +1007,7 @@ def mixed_text(run) -> list[dict]:
         return []
     n_prec = len({round(s.precursor) for s in run.scans if s.level >= 2 and s.precursor})
     names = {"ms1": "Full Scan", "ms2": "MS2", "mrm": "MRM"}
-    return [{"name": names[p["mode"]], "pol": p["pol"], "nprec": n_prec if p["mode"] == "ms2" and n_prec else None} for p in parts]
+    return [{"name": f"MS{p['level']}" if p.get("level") else names[p["mode"]], "pol": p["pol"], "nprec": n_prec if p["mode"] == "ms2" and n_prec else None} for p in parts]
 
 
 class Session:
