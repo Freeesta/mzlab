@@ -1,4 +1,4 @@
-"""Drop-down toolbar of Disegno (disegno-barra.js): one button for the rings and one for the charge, menus with the keyboard, mirror of the selected tool, return to Ketcher's own bar."""
+"""Drop-down toolbar of Disegno (disegno-barra.js): one button for the rings and one for the charge (and the radical mark), menus with the keyboard, mirror of the selected tool, return to Ketcher's own bar."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -28,7 +28,7 @@ try:
             assert IN(pg, "d => d.querySelector('#tp-bar [role=menu]').hidden")
             IN(pg, "d => d.querySelector('#tp-bar [data-tp=rings]').click()")
             assert IN(pg, "d => !d.querySelector('#tp-bar [role=menu]').hidden")
-            assert IN(pg, "d => d.querySelectorAll('#tp-bar [role=menuitem]').length") == 11, "9 rings + 2 charge items exist"
+            assert IN(pg, "d => d.querySelectorAll('#tp-bar [role=menuitem]').length") == 12, "9 rings + 2 charge items + the radical mark exist"
             assert IN(pg, "d => d.querySelector('#tp-bar [data-tp=rings]').getAttribute('aria-expanded')") == "true"
             IN(pg, "d => d.querySelector('#tp-bar [role=menu] [role=menuitem]:nth-child(3)').click()")
             pg.wait_for_timeout(300)

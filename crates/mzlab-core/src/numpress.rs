@@ -59,7 +59,7 @@ pub fn decode_text(np: Np, zlib: bool, text: &str, expected: usize) -> Result<Ve
         .read_to_end(&mut out)
         .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
     if out.len() as u64 > limit {
-        return Err(Error::memory_budget());
+        return Err(Error::fixed_limit("numpress array", limit));
     }
     decode(np, &out, expected)
 }

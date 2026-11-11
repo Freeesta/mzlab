@@ -10,10 +10,10 @@ const FREE: u32 = 0xFFFF_FFFF;
 
 impl Ole {
     /// `name` is the file name, only for the error of a file that is not OLE2. `limits`: the bytes of the file, the directory entries and the
-    /// nesting of storages it may ask for (`error.memoryBudget`, `err.dam.unreadable` past them).
+    /// nesting of storages it may ask for (`error.fixedLimit`, `err.dam.unreadable` past them).
     pub fn open(data: Vec<u8>, name: &str, limits: &Limits) -> Result<Ole> {
         if data.len() as u64 > limits.byte {
-            return Err(Error::memory_budget());
+            return Err(Error::fixed_limit("OLE file", limits.byte));
         }
         if !matches!(
             data.get(..8),
