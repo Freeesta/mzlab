@@ -1,5 +1,5 @@
 //! `_FUNCnnn.IDX`: one record per scan, in two layouts. Variant A (22 bytes) holds the offset in the DAT as `u32`; variant B (30 bytes) holds it as `u64` at byte 22. In both, bytes 4-7
-//! hold the number of records of the scan in their low 24 bits, then the TIC (`f32`) and the retention time in minutes (`f32`).
+//! hold the number of records of the scan in their low 22 bits and a mark in the top byte, then the TIC (`f32`) and the retention time in minutes (`f32`).
 
 use super::folder::{damage, f32_at, read_error, u32_at};
 use mzlab_core::error::Result;
@@ -7,14 +7,21 @@ use mzlab_core::readers::Limits;
 
 const A: usize = 22;
 const B: usize = 30;
-/// The top byte of the word at byte 4 in every record of the families seen.
+/// The top byte of the word at byte 4 in every record of the families seen: 0x18 continuum scans stored uncalibrated, 0x08 reference (lock mass) and MRM functions,
+/// 0x4C centroid scans the acquisition stored already calibrated. Only whole bytes were seen, no single bit is decoded.
 const MARKS: [u8; 3] = [0x18, 0x4c, 0x08];
+/// The mark of the scans whose m/z the acquisition already calibrated: the polynomial of `_HEADER.TXT` is not applied again.
+pub(super) const CALIBRATED: u8 = 0x4c;
+/// Low bits of the word at byte 4: the records of the scan (the bits above are flags).
+const COUNT: u32 = 0x003F_FFFF;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Row {
     pub(super) offset: u64,
     /// Records of the scan: points of a scan, channels of a SIR or MRM scan.
     pub(super) count: u32,
+    /// The top byte of the word at byte 4 (`MARKS`).
+    pub(super) mark: u8,
     pub(super) tic: f32,
     /// Minutes.
     pub(super) rt: f32,
@@ -56,12 +63,30 @@ pub(super) fn read(b: &[u8], limits: &Limits) -> Result<Option<Vec<Row>>> {
                 } else {
                     u32_at(r, 22) as u64 | (u32_at(r, 26) as u64) << 32
                 },
-                count: u32_at(r, 4) & 0x00FF_FFFF,
+                count: u32_at(r, 4) & COUNT,
+                mark: r[7],
                 tic: f32_at(r, 8),
                 rt: f32_at(r, 12),
             })
             .collect(),
     ))
+}
+
+/// A notice for each mark of `rows` that is none of `MARKS`, with how many scans carry it: their m/z keep the polynomial, as the 0x18 scans.
+pub(super) fn mark_notes(name: &str, k: u32, rows: &[Row]) -> Vec<(String, String)> {
+    let mut v: Vec<(u8, usize)> = Vec::new();
+    for r in rows.iter().filter(|r| !MARKS.contains(&r.mark)) {
+        match v.iter_mut().find(|x| x.0 == r.mark) {
+            Some(x) => x.1 += 1,
+            None => v.push((r.mark, 1)),
+        }
+    }
+    v.into_iter()
+        .map(|(m, n)| {
+            let a = format!("{name}: function {k}: unknown calibration flag 0x{m:02X} in {n} scans, polynomial applied as for 0x18");
+            ("meta.nonDecodificato".to_string(), a)
+        })
+        .collect()
 }
 
 /// Bytes per record of a function: the first scan whose extent (up to the offset of the next scan, or up to the end of the DAT for the last) is a whole number of records.
