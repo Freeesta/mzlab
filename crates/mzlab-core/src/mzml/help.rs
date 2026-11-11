@@ -56,7 +56,7 @@ pub(super) fn parse_with<R: Read, D: Decode>(
     reader: R,
     f: &mut dyn FnMut(Item),
     out: &mut D,
-) -> Result<()> {
+) -> Result<crate::readers::Losses> {
     let r = super::parse_loop(reader, f, out);
     // what is in flight goes to `f` before an error is told, as without helpers
     out.finish(f).and(r)
