@@ -96,7 +96,8 @@ fn mrm_rows(rows: &mut Vec<Row>, m_tr: &[&crate::methodinfo::Transition], data: 
         used[h] = true;
         let x = d_tr[h];
         let (ce, dwell) = (g(x, "ce"), g(x, "dwell").map(|d| if d < 5.0 { d * 1000.0 } else { d }));
-        let ok = ce.is_none_or(|c| t.ce.is_none_or(|m| (c - m).abs() < 0.5)) && dwell.is_none_or(|d| (d - t.dwell).abs() < 1.0);
+        // the method of a negative-mode run stores the energy with its sign, the data its magnitude
+        let ok = ce.is_none_or(|c| t.ce.is_none_or(|m| (c.abs() - m.abs()).abs() < 0.5)) && dwell.is_none_or(|d| (d - t.dwell).abs() < 1.0);
         let got = match (ce, dwell) {
             (Some(c), Some(d)) => s(format!("CE {} eV, dwell {} ms", fmt_g(c), fmt_g(d))),
             _ => msg("chk.present"),
@@ -204,4 +205,23 @@ pub fn method_kind(lab: &Method) -> Option<&'static str> {
         return Some("full");
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::methodinfo::{Experiment, Transition};
+
+    /// The transition row (after the scan-type row): a negative-mode method (energy stored as -20) agrees with data that carry the magnitude (20); a different magnitude still differs.
+    #[test]
+    fn a_negative_mode_energy_matches_its_magnitude() {
+        let t = Transition { q1: 364.1, q3: 194.1, dwell: 25.0, ce: Some(-20.0), ..Default::default() };
+        let lab = Method { name: String::new(), sample: None, source: vec![], compound: vec![], file: vec![], experiments: vec![Experiment { index: 0, kind: Kind::Mrm(vec![t]) }], lc: None };
+        let status = |ce: f64| {
+            let data = crate::json::parse(format!(r#"{{"kind":"mrm","transitions":[{{"q1":364.1,"q3":194.1,"ce":{ce},"dwell":0.025}}]}}"#).as_bytes()).unwrap();
+            check_against(&data, &lab)[1].status
+        };
+        assert_eq!(status(20.0), "ok");
+        assert_eq!(status(30.0), "diff");
+    }
 }
