@@ -126,6 +126,8 @@ pub struct Experiment {
     pub precursor: Option<f64>,
     /// The first precursor of an MS3 experiment (`precursor` is the second one, isolated from the fragments of the first).
     pub parent: Option<f64>,
+    /// The fixed mass of a precursor-ion scan (the product m/z Q3 stays on) or of a neutral-loss scan (the loss, Da): not a precursor.
+    pub fixed: Option<f64>,
     /// Collision energy (eV) of a product-ion experiment, when the method gives one value for it.
     pub ce: Option<f64>,
     /// Half-width (m/z) of the isolation window of a product-ion experiment.
@@ -268,6 +270,7 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             level: if product { 2 } else { 1 },
             precursor: if product { prec } else { None },
             parent: None,
+            fixed: None,
             ce: None,
             iso_half: None,
             window_s: None,
