@@ -2,7 +2,7 @@
 Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.129 e `tools/wasm_opt.sh` (`wasm-opt -O3`, binaryen 133; `@motore` per motore, feat, tabelle e rotte, `@estesi` per i lettori) salvo «grezzo» = `tools/cargo_wasm.sh build --release` prima di `wasm-opt`; la crescita in % è il rapporto della coppia. I tetti stanno in `tools/build_*_wasm.sh` (`docs/agenti/wasm-tetti.md`), nessuna riga qui li cambia; i valori del passo «size» della CI fanno fede.
 
 ## Tetti
-- motore 2 174 976; `thermo` 774 144; `sciex` 475 136; `aperti` 561 152; `andi` 344 064; librerie 614 400; `hr` 1 703 936; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; i tetti degli altri moduli stanno solo negli script.
+- motore 2 174 976; `thermo` 774 144; `sciex` 475 136; `aperti` 561 152; `andi` 344 064; librerie 614 400; `hr` 1 716 224; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; i tetti degli altri moduli stanno solo negli script.
 
 ## Motore
 - Centroidi del lettore: `readers_mzml::profile_of` nella stima di `readers_centroids::stima` (il profilo, non i centroidi del produttore) motore grezzo 3 602 657 → 3 603 263 (+606 B; `cargo build --release` senza `wasm-opt`).
@@ -37,6 +37,9 @@ Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.
 - Comuni, grezzo: scrittura igienica (caratteri fuori da `Char`, termini generici con il testo del fornitore in un userParam, `mzmlwrite/text.rs`) e controllo di buona formazione del validatore (`mzml_validate/wellformed.rs`): `aperti` 1 289 919 → 1 294 982 (+0,39 %), `andi` 951 052 → 953 403 (+0,25 %), `agilent` 1 206 848 → 1 209 151 (+0,19 %), `valida` 1 004 862 → 1 010 928 (+0,60 %), motore 3 574 301 → 3 584 441 (+0,28 %); tetti invariati.
 
 - Comuni, grezzo: lettore condiviso della testa mzML (`spechead`, con `spechead/tags.rs`) nella tabella delle scansioni: `aperti` 1 297 402 → 1 316 561 (+1,48 %), motore 3 607 188 → 3 625 164 (+0,50 %); `andi`, `thermo`, `sciex`, `bruker`, `valida` identici, `agilent`, `waters`, `shimadzu` ±8 B; tetti invariati.
+
+- Comuni, grezzo: lettore mzML del motore su `spechead` (`mzml/build.rs`, conteggio dichiarati/letti `parse_counted`): motore 3 641 031 → 3 638 353 (−0,07 %), `aperti` 1 320 284 → 1 326 700 (+0,49 %); gli altri lettori entro +24 B; tetti invariati.
+- `hr`, lettore mzML del motore su `spechead` (locale, `cargo_wasm.sh` + `wasm-bindgen` + `wasm-opt @motore`): main 1 701 543 → 1 717 304 col lettore; liste al posto delle mappe hash, termine in un passaggio, regola del precursore `&dyn`, helper fuori linea 1 709 289; dopo la crescita di main 1 712 419 → 1 711 880 (nome dell'elemento condiviso, gruppi in coda, −539 B); tetto `limit_hr` 1 716 224.
 
 ## Feature, tabelle, rotte, librerie
 - Stima della lettura (`mzml_estimate`): `hr` (`flow_ms2` con `budget_mb`) 1 685 996 → 1 689 721 (+0,22 %), `formula` (`flow_ms1_rows` con `budget_mb`) 397 841 → 401 847 (+1,01 %), tetti invariati.
