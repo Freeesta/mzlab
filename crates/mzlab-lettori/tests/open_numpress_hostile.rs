@@ -45,7 +45,7 @@ fn a_zlib_inflating_past_the_declared_size_is_an_error() {
     let da = b.find("<binary>").unwrap() + 8;
     let a = da + b[da..].find("</binary>").unwrap();
     b.replace_range(da..a, &bomb);
-    assert_eq!(error(b.into_bytes()), "error.memoryBudget");
+    assert_eq!(error(b.into_bytes()), "error.fixedLimit");
 }
 
 #[test]
