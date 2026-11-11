@@ -39,6 +39,76 @@ fn activation_terms(a: Activation) -> Vec<(String, String)> {
         .collect()
 }
 
+fn energy_term(nce: bool) -> String {
+    if nce { "MS:1000138" } else { "MS:1000045" }.to_string()
+}
+
+/// The precursor of one reaction: its m/z is the target, the selected ion the step's own when known (else the target), its window, activation and
+/// energy its own (absent when the file does not give them for this step).
+fn reaction_precursor(r: &opentfraw::ReactionInfo, spectrum_ref: Option<String>) -> Precursore {
+    let half = r.isolation_width.map(|w| w / 2.0);
+    Precursore {
+        selected_mz: r.selected_mz.or(Some(r.precursor_mz)),
+        charge: r.charge.filter(|&z| z > 0),
+        intensity: None,
+        iso_target: Some(r.precursor_mz),
+        iso_lower: half,
+        iso_upper: half,
+        activation: r.activation.map(activation_terms).unwrap_or_default(),
+        energy: r.energy.map(|v| (energy_term(r.energy_is_nce), v)),
+        spectrum_ref,
+    }
+}
+
+/// The precursors of a scan. Several isolated together (MSX, multi-band): one per reaction, each with its own target, window and energy. An MSn
+/// chain: one per step, the final step's first (its SPS ions when the trailer names them), the trailer's selected ion and charge on the first step
+/// only. A single step: the trailer's selected ion (`fallback`: the spectrum's own when the trailer gives none).
+fn precursors(
+    p: &opentfraw::PrecursorInfo,
+    fallback: Option<f64>,
+    spectrum_ref: Option<String>,
+) -> Vec<Precursore> {
+    if p.reactions.iter().any(|r| r.multiple) {
+        return p
+            .reactions
+            .iter()
+            .map(|r| reaction_precursor(r, spectrum_ref.clone()))
+            .collect();
+    }
+    if let [earlier @ .., last] = p.reactions.as_slice()
+        && !earlier.is_empty()
+    {
+        let mut out: Vec<Precursore> = if p.sps_mz.is_empty() {
+            vec![reaction_precursor(last, spectrum_ref)]
+        } else {
+            p.sps_mz
+                .iter()
+                .map(|&mz| Precursore {
+                    selected_mz: Some(mz),
+                    iso_target: Some(mz),
+                    iso_lower: None,
+                    iso_upper: None,
+                    ..reaction_precursor(last, spectrum_ref.clone())
+                })
+                .collect()
+        };
+        out.extend(earlier.iter().rev().map(|r| reaction_precursor(r, None)));
+        return out;
+    }
+    let half = p.isolation_width.map(|w| w / 2.0);
+    vec![Precursore {
+        selected_mz: p.selected_mz.or(p.target_mz).or(fallback),
+        charge: p.charge.filter(|&z| z > 0),
+        intensity: None,
+        iso_target: p.target_mz,
+        iso_lower: half,
+        iso_upper: half,
+        activation: p.activation.map(activation_terms).unwrap_or_default(),
+        energy: p.collision_energy.map(|v| (energy_term(p.ce_is_nce), v)),
+        spectrum_ref,
+    }]
+}
+
 /// `Lettore::scan_extra` of the `.raw`: nothing when the sample cannot be opened, the plain precursor of the spectrum when the scan cannot be read.
 pub(super) fn di_scansione(l: &mut RawReader, c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
     if l.one(c).is_err() {
@@ -77,28 +147,7 @@ fn extra_di_scansione(l: &mut RawReader, k: usize, s: &Spectrum) -> Option<Spect
         let parent = (level >= 2)
             .then(|| l.indice[..k].iter().rev().find(|v| v.livello + 1 == level))
             .flatten();
-        let half = p.isolation_width.map(|w| w / 2.0);
-        e.precursors.push(Precursore {
-            selected_mz: p.selected_mz.or(p.target_mz).or(s.precursor),
-            charge: p.charge.filter(|&z| z > 0),
-            intensity: None,
-            iso_target: p.target_mz,
-            iso_lower: half,
-            iso_upper: half,
-            activation: p.activation.map(activation_terms).unwrap_or_default(),
-            energy: p.collision_energy.map(|v| {
-                (
-                    if p.ce_is_nce {
-                        "MS:1000138"
-                    } else {
-                        "MS:1000045"
-                    }
-                    .to_string(),
-                    v,
-                )
-            }),
-            spectrum_ref: parent.map(|v| v.id.clone()),
-        });
+        e.precursors = precursors(p, s.precursor, parent.map(|v| v.id.clone()));
     }
     e.params = scan_extras_with(&l.raw, params, &m, &ExtraFields::All)
         .into_iter()
@@ -159,3 +208,7 @@ pub(super) fn scan_header(l: &mut RawReader, c: usize, k: usize) -> Result<Vec<F
     out.extend(noise_fields(&l.raw, &mut l.src, k as u32));
     Ok(out)
 }
+
+#[cfg(test)]
+#[path = "extra_tests.rs"]
+mod tests;

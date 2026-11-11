@@ -1631,14 +1631,11 @@ impl RawFileReader {
     ) -> Option<String> {
         let entry = self.scan_index.get(idx)?;
 
-        // SRM files have no scan events; build the filter string from
-        // the pre-loaded Q1 and Q3 window maps.
+        // An SRM scan's own event holds its Q1 and product ranges; the transition table found in the method is the source only for a run without events.
         if self.flat_peaks {
-            let Some(text) = self.srm_filters.get(&entry.scan_event) else {
-                // A TSQ run whose events are one per scan (no event class): the event itself holds Q1 and the product ranges.
-                return self.srm_event_filter(idx);
-            };
-            return Some(text.clone());
+            return self
+                .srm_event_filter(idx)
+                .or_else(|| self.srm_filters.get(&entry.scan_event).cloned());
         }
 
         let owned;
@@ -1871,6 +1868,8 @@ const SCAN_PARAM_LABELS: &[&str] = &[
     "Reagent Ion AGC:",
     "Reagent Ion Injection Time (ms):",
     "S-Lens RF Level:",
+    "SPS Masses Continued:",
+    "SPS Masses:",
     "Scan Description:",
     "Source CID eV:",
     "Supplemental Activation CE:",
@@ -2005,15 +2004,14 @@ impl<'a> ScanParams<'a> {
             .or_else(|| self.0.get_f64("MS2 Isolation Width (M/Z):"))
     }
 
-    /// MSn isolation window target m/z (the center of the isolation window).
-    ///
-    /// Some instruments write this separately from the precursor m/z; when
-    /// absent, callers should fall back to [`Self::monoisotopic_mz`] or to
-    /// the event's first reaction `precursor_mz`.
+    /// MSn isolation window target m/z (`Target M/Z`); the event's final reaction is the first source (`scan_metadata`).
     pub fn isolation_target_mz(&self) -> Option<f64> {
-        self.0
-            .get_f64("MS2 Isolation Offset:")
-            .or_else(|| self.0.get_f64("Target M/Z:"))
+        self.0.get_f64("Target M/Z:")
+    }
+
+    /// Offset of the isolation window from its target (`MS2 Isolation Offset`, m/z): an offset, never a target m/z.
+    pub fn isolation_offset(&self) -> Option<f64> {
+        self.0.get_f64("MS2 Isolation Offset:")
     }
 
     /// Activation energy (eV or %) for the primary activation step.
