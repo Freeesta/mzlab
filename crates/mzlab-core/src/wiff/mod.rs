@@ -12,6 +12,7 @@ pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
 pub mod idx;
+mod mass_check;
 mod method_name;
 pub mod modes;
 pub mod names;
@@ -365,6 +366,15 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             experiment: k % n_exp,
         })
         .collect();
+    let no = method_no(ole, sample);
+    let no = if ole.has(&format!(
+        "MethodSubtree/Method{no}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
+    )) {
+        no
+    } else {
+        sample
+    };
+    mass_check::check(ole, no, &experiments)?;
     let method = methodinfo::method_of_sample(ole, method_no(ole, sample));
     let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);
