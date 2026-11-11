@@ -4,16 +4,15 @@
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
 mod build;
+pub(crate) mod help;
+mod peaks;
 #[cfg(test)]
 mod tests_head;
-mod peaks;
-pub(crate) mod help;
-use help::Decode;
-pub use help::courier::{Corriere, Decodificatore};
 use crate::numarray::Num;
 use crate::spechead::{self, tags::local};
+pub use help::courier::{Corriere, Decodificatore};
+use help::Decode;
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::io::{BufReader, Read};
 
 use quick_xml::events::{BytesStart, Event};
@@ -214,7 +213,6 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobil
     peaks::assemble(s, p)
 }
 
-
 fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     let (mut t, mut y) = (Vec::new(), Vec::new());
     let mut minutes = 1.0;
@@ -289,14 +287,25 @@ pub fn parse_counted<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<Los
 }
 
 /// `parse` with the arrays decoded by another instance through `c` (the browser's helper workers, `help::corriere`): the same items in the same order.
-pub fn parse_corriere<R: Read, F: FnMut(Item)>(reader: R, mut f: F, c: &mut dyn Corriere) -> Result<()> {
+pub fn parse_corriere<R: Read, F: FnMut(Item)>(
+    reader: R,
+    mut f: F,
+    c: &mut dyn Corriere,
+) -> Result<()> {
     help::parse_with(reader, &mut f, &mut help::courier::Sent::new(c)).map(|_| ())
 }
 
 /// A spectrum or chromatogram whose two arrays differ in length: a damaged file, never cut to the shorter.
 pub(crate) fn lengths(id: &str, index: usize, a: usize, b: usize) -> Error {
-    let chi = if id.is_empty() { (index + 1).to_string() } else { id.to_string() };
-    Error::new("err.file.mzmlLengths").with("scan", chi).with("a", a).with("b", b)
+    let chi = if id.is_empty() {
+        (index + 1).to_string()
+    } else {
+        id.to_string()
+    };
+    Error::new("err.file.mzmlLengths")
+        .with("scan", chi)
+        .with("a", a)
+        .with("b", b)
 }
 
 /// The tags of the file go to the shared header reader (`spechead`, local names, CDATA as text); each finished header becomes an item. The analyzer
@@ -307,7 +316,7 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
     let (mut n_spec, mut n_chrom) = (0usize, 0usize);
     let mut rd = spechead::Reader::default();
     rd.keep_binary = true;
-    let mut levels: HashMap<String, u8> = HashMap::new();
+    let mut levels = build::Levels::default();
     let mut in_analyzer = false;
     // items the lists declare and the items met: a file that declares some and shows none was not understood
     let (mut declared, mut met) = (0usize, 0usize);
@@ -327,7 +336,9 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
                         out.item(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()), f)?
                     }
                     "spectrumList" | "chromatogramList" => {
-                        let n: usize = get(&a, "count").and_then(|v| v.trim().parse().ok()).unwrap_or(0);
+                        let n: usize = get(&a, "count")
+                            .and_then(|v| v.trim().parse().ok())
+                            .unwrap_or(0);
                         declared += n;
                         if name == "spectrumList" {
                             spec_declared += n;
@@ -366,7 +377,7 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
                             out.spectrum(s, f)?;
                             n_spec += 1;
                         }
-                        levels.insert(id, level);
+                        levels.push(id, level);
                     }
                     None => {}
                 }
@@ -378,7 +389,11 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
     if declared > 0 && met == 0 {
         return Err(Error::new("err.file.mzmlNoItems").with("count", declared));
     }
-    let cause = if closed { FEWER } else { crate::readers::TRUNCATED };
+    let cause = if closed {
+        FEWER
+    } else {
+        crate::readers::TRUNCATED
+    };
     Ok(Losses::of(spec_declared, spec_read, cause))
 }
 

@@ -4,7 +4,6 @@
 //! scanner (`tags`, for header text) or from a streaming XML parser; names are local (no namespace prefix).
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 
 pub mod tags;
 
@@ -19,20 +18,27 @@ pub struct Term {
 }
 
 impl Term {
+    /// One pass over the attributes; the first of a repeated one wins, as a lookup would give.
     fn of(t: &[(&str, Cow<str>)], user: bool) -> Term {
-        let g = |k: &str| {
-            t.iter()
-                .find(|(n, _)| *n == k)
-                .map_or(String::new(), |(_, v)| v.to_string())
-        };
-        Term {
-            acc: if user { String::new() } else { g("accession") },
-            name: g("name"),
-            value: g("value"),
-            unit_acc: g("unitAccession"),
-            unit_name: g("unitName"),
+        let mut out = Term::default();
+        let mut seen = [false; 5];
+        for (k, v) in t {
+            let (i, to) = match *k {
+                "accession" if !user => (0, &mut out.acc),
+                "name" => (1, &mut out.name),
+                "value" => (2, &mut out.value),
+                "unitAccession" => (3, &mut out.unit_acc),
+                "unitName" => (4, &mut out.unit_name),
+                _ => continue,
+            };
+            if !seen[i] {
+                seen[i] = true;
+                to.push_str(v);
+            }
         }
+        out
     }
+    #[inline(never)]
     pub fn float(&self) -> Option<f64> {
         self.value.trim().parse().ok()
     }
@@ -43,16 +49,19 @@ impl Term {
 pub struct Terms(pub Vec<Term>);
 
 impl Terms {
+    #[inline(never)]
     pub fn get(&self, acc: &str) -> Option<&Term> {
         self.0.iter().find(|t| t.acc == acc)
     }
     pub fn has(&self, acc: &str) -> bool {
         self.get(acc).is_some()
     }
+    #[inline(never)]
     pub fn float(&self, acc: &str) -> Option<f64> {
         self.get(acc).and_then(Term::float)
     }
     /// The value of the first userParam named `name`.
+    #[inline(never)]
     pub fn user(&self, name: &str) -> Option<&str> {
         self.0
             .iter()
@@ -73,6 +82,7 @@ pub struct Stage {
 
 impl Stage {
     /// A stage read from loose terms (a selected ion or target written outside a `<precursor>`).
+    #[inline(never)]
     pub fn loose(t: &Terms) -> Stage {
         Stage {
             window: t.clone(),
@@ -81,10 +91,12 @@ impl Stage {
             ..Stage::default()
         }
     }
+    #[inline(never)]
     pub fn target(&self) -> Option<f64> {
         self.window.float("MS:1000827")
     }
     /// The low and high edges of the isolation window (target minus and plus its offsets).
+    #[inline(never)]
     pub fn edges(&self) -> (Option<f64>, Option<f64>) {
         let t = self.target();
         (
@@ -92,6 +104,7 @@ impl Stage {
             t.zip(self.window.float("MS:1000829")).map(|(t, o)| t + o),
         )
     }
+    #[inline(never)]
     pub fn selected(&self) -> Option<f64> {
         self.ion.float("MS:1000744")
     }
@@ -171,11 +184,13 @@ pub struct Head {
 
 impl Head {
     /// The level (`MS:1000511`), 1 when absent.
+    #[inline(never)]
     pub fn level(&self) -> u8 {
         // a level is a small integer; `as` saturates
         self.terms.float("MS:1000511").map_or(1, |v| v as u8)
     }
     /// +1, -1 or 0 (not said).
+    #[inline(never)]
     pub fn polarity(&self) -> i8 {
         if self.terms.has("MS:1000130") {
             1
@@ -185,6 +200,7 @@ impl Head {
             0
         }
     }
+    #[inline(never)]
     pub fn profile(&self) -> bool {
         self.terms.has("MS:1000128")
     }
@@ -194,9 +210,11 @@ impl Head {
         Some((t.float().unwrap_or(0.0), RtUnit::of(t)))
     }
     /// The retention time in minutes (0 when absent).
+    #[inline(never)]
     pub fn rt_minutes(&self) -> f64 {
         self.rt().map_or(0.0, |(v, u)| v * u.minutes())
     }
+    #[inline(never)]
     pub fn filter(&self) -> &str {
         self.terms
             .get("MS:1000512")
@@ -211,7 +229,7 @@ pub fn immediate(
     stages: &[(Option<f64>, Option<f64>, Option<&str>)],
     level: u8,
     path_last: Option<f64>,
-    level_of: impl Fn(&str) -> Option<u8>,
+    level_of: &dyn Fn(&str) -> Option<u8>,
 ) -> Option<usize> {
     if stages.is_empty() {
         return None;
@@ -247,8 +265,25 @@ enum Ctx {
     Other,
 }
 
-/// The `referenceableParamGroup`s of a file, by id.
-pub type Groups = HashMap<String, Vec<Term>>;
+/// The `referenceableParamGroup`s of a file, by id: a list, since a file has a handful (a hash map costs the `.wasm` modules a few KB).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Groups(Vec<(String, Vec<Term>)>);
+
+impl Groups {
+    pub fn new() -> Groups {
+        Groups::default()
+    }
+    pub fn get(&self, id: &str) -> Option<&Vec<Term>> {
+        self.0.iter().find(|(k, _)| k == id).map(|(_, g)| g)
+    }
+    /// Adds group `id`; a repeated id replaces the earlier one.
+    pub fn insert(&mut self, id: String, g: Vec<Term>) {
+        match self.0.iter_mut().find(|(k, _)| *k == id) {
+            Some(e) => e.1 = g,
+            None => self.0.push((id, g)),
+        }
+    }
+}
 
 /// The terms kept in one list (an item, an array, a stage part, a group) and the precursors or products kept per item: lookups take the first
 /// occurrence, so a file that repeats a param millions of times costs no more memory than a real header.
@@ -296,13 +331,14 @@ impl<'g> Reader<'g> {
             }
             "cvParam" | "userParam" => {
                 let t = Term::of(attrs, name == "userParam");
-                self.put(vec![t]);
+                self.put(t);
                 Ctx::Other
             }
             "referenceableParamGroupRef" => {
                 if let Some(g) = get("ref").and_then(|r| self.groups.get(r)) {
-                    let g = g.clone();
-                    self.put(g);
+                    for t in g.clone() {
+                        self.put(t);
+                    }
                 }
                 Ctx::Other
             }
@@ -317,6 +353,7 @@ impl<'g> Reader<'g> {
     }
 
     /// An element inside a spectrum or chromatogram (scans, precursors, products, arrays).
+    #[inline(never)]
     fn item_tag(&mut self, name: &str, attrs: &[(&str, Cow<str>)], top: Option<Ctx>) -> Ctx {
         let get = |k: &str| attrs.iter().find(|(n, _)| *n == k).map(|(_, v)| v.as_ref());
         match name {
@@ -390,7 +427,7 @@ impl<'g> Reader<'g> {
     }
 
     /// Params where the reader stands (a cvParam, a userParam or a replayed group).
-    fn put(&mut self, ts: Vec<Term>) {
+    fn put(&mut self, t: Term) {
         let ctx = self.stack.last().copied();
         let to = match ctx {
             Some(Ctx::Group) => self.group.as_mut().map(|(_, g)| g),
@@ -410,9 +447,8 @@ impl<'g> Reader<'g> {
             }),
             _ => None,
         };
-        if let Some(to) = to {
-            let room = MAX_TERMS.saturating_sub(to.len());
-            to.extend(ts.into_iter().take(room));
+        if let Some(to) = to.filter(|to| to.len() < MAX_TERMS) {
+            to.push(t);
         }
     }
 

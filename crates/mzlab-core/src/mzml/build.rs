@@ -6,7 +6,28 @@ use super::{mobility_of, Array, ArrayKind, Chrom, Spec};
 use crate::error::{Error, Result};
 use crate::numarray::Num;
 use crate::spechead::{self, ArrayHead, Head, RtUnit, Stage, Term};
-use std::collections::HashMap;
+
+/// The level of the spectra read so far, by id, newest last. A `spectrumRef` names a recent scan (the MS1 of its cycle), so the lookup walks back
+/// from the newest over at most `LOOKBACK` of them; one further back falls to the last listed precursor. A list, not a hash map: a few KB less in
+/// every `.wasm` that reads mzML.
+#[derive(Default)]
+pub(super) struct Levels(Vec<(String, u8)>);
+
+const LOOKBACK: usize = 4096;
+
+impl Levels {
+    pub(super) fn push(&mut self, id: String, level: u8) {
+        self.0.push((id, level));
+    }
+    fn get(&self, id: &str) -> Option<u8> {
+        self.0
+            .iter()
+            .rev()
+            .take(LOOKBACK)
+            .find(|(k, _)| k == id)
+            .map(|&(_, l)| l)
+    }
+}
 
 /// Where a damaged item is named: its id, else its 1-based position.
 fn who(h: &Head, n: usize) -> String {
@@ -67,19 +88,16 @@ fn array(a: ArrayHead, item: &str) -> Result<Array> {
 }
 
 fn arrays(h: &mut Head, item: &str) -> Result<Vec<Array>> {
-    std::mem::take(&mut h.arrays)
-        .into_iter()
-        .map(|a| array(a, item))
-        .collect()
+    let mut out = Vec::with_capacity(h.arrays.len());
+    for a in std::mem::take(&mut h.arrays) {
+        out.push(array(a, item)?);
+    }
+    Ok(out)
 }
 
 /// The spectrum of header `h` (the `n`-th of the file), `None` for an optical spectrum (`mzml_dad` reads those). `levels` gives the level of the
 /// spectra read so far, by id, for the immediate precursor of an MSn scan.
-pub(super) fn spectrum(
-    mut h: Head,
-    n: usize,
-    levels: &HashMap<String, u8>,
-) -> Result<Option<Spec>> {
+pub(super) fn spectrum(mut h: Head, n: usize, levels: &Levels) -> Result<Option<Spec>> {
     if h.terms.has("MS:1000804") {
         return Ok(None);
     }
@@ -97,20 +115,19 @@ pub(super) fn spectrum(
         .iter()
         .map(|s| (s.target(), s.selected(), s.refer.as_deref()))
         .collect();
-    let precursor = spechead::immediate(&keys, level, None, |r| levels.get(r).copied())
+    let precursor = spechead::immediate(&keys, level, None, &|r| levels.get(r))
         .and_then(|i| stages.get(i))
         .and_then(|s| s.selected().or(s.target()));
     // the scan's own mobility first, then one a precursor's selected ion carries
-    let mobility_scan = h
-        .terms
-        .0
+    let mut lists: Vec<&[Term]> = vec![&h.terms.0];
+    for s in &h.precursors {
+        lists.push(&s.ion.0);
+        lists.push(&s.window.0);
+    }
+    let mobility_scan = lists
         .iter()
-        .chain(
-            h.precursors
-                .iter()
-                .flat_map(|s| s.ion.0.iter().chain(&s.window.0)),
-        )
-        .find_map(|t: &Term| mobility_of(&t.acc).zip(t.float()).map(|(u, v)| (v, u)));
+        .flat_map(|l| l.iter())
+        .find_map(|t| mobility_of(&t.acc).zip(t.float()).map(|(u, v)| (v, u)));
     Ok(Some(Spec {
         index: h.index.unwrap_or(n),
         len: h.length.unwrap_or(0),
@@ -124,6 +141,14 @@ pub(super) fn spectrum(
         arrays: arrays(&mut h, &item)?,
         id: h.id,
     }))
+}
+
+/// Whether a term of `lists` has one of `accs` (one copy, not one per call).
+#[inline(never)]
+fn any_of(lists: &[&[Term]], accs: &[&str]) -> bool {
+    lists
+        .iter()
+        .any(|l| l.iter().any(|t| accs.contains(&t.acc.as_str())))
 }
 
 /// The number after `key` in an id ("SRM SIC Q1=400.2 Q3=150.1").
@@ -140,19 +165,12 @@ pub(super) fn number_after(id: &str, key: &str) -> Option<f64> {
 pub(super) fn chromatogram(mut h: Head, n: usize) -> Result<Chrom> {
     let item = who(&h, n);
     // every term of the chromatogram, its arrays and its precursor and product decides its kind (as in `mzlab/reader/mzml.py`)
-    let all = || {
-        h.terms
-            .0
-            .iter()
-            .chain(h.arrays.iter().flat_map(|a| a.terms.0.iter()))
-            .chain(
-                h.precursors
-                    .iter()
-                    .chain(&h.products)
-                    .flat_map(|s| s.window.0.iter().chain(&s.ion.0).chain(&s.activation.0)),
-            )
-    };
-    let any = |accs: &[&str]| all().any(|t| accs.contains(&t.acc.as_str()));
+    let mut lists: Vec<&[Term]> = vec![&h.terms.0];
+    lists.extend(h.arrays.iter().map(|a| &a.terms.0[..]));
+    for s in h.precursors.iter().chain(&h.products) {
+        lists.extend([&s.window.0[..], &s.ion.0, &s.activation.0]);
+    }
+    let any = |accs: &[&str]| any_of(&lists, accs);
     let unit = h
         .arrays
         .iter()
