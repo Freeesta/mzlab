@@ -2003,15 +2003,14 @@ impl<'a> ScanParams<'a> {
             .or_else(|| self.0.get_f64("MS2 Isolation Width (M/Z):"))
     }
 
-    /// MSn isolation window target m/z (the center of the isolation window).
-    ///
-    /// Some instruments write this separately from the precursor m/z; when
-    /// absent, callers should fall back to [`Self::monoisotopic_mz`] or to
-    /// the event's first reaction `precursor_mz`.
+    /// MSn isolation window target m/z (`Target M/Z`); the event's final reaction is the first source (`scan_metadata`).
     pub fn isolation_target_mz(&self) -> Option<f64> {
-        self.0
-            .get_f64("MS2 Isolation Offset:")
-            .or_else(|| self.0.get_f64("Target M/Z:"))
+        self.0.get_f64("Target M/Z:")
+    }
+
+    /// Offset of the isolation window from its target (`MS2 Isolation Offset`, m/z): an offset, never a target m/z.
+    pub fn isolation_offset(&self) -> Option<f64> {
+        self.0.get_f64("MS2 Isolation Offset:")
     }
 
     /// Activation energy (eV or %) for the primary activation step.

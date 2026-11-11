@@ -127,6 +127,9 @@ const EXTRA_FIELDS: &[(&str, Getter)] = &[
     ("opentfraw.number_of_lock_masses", |s| {
         param(s, |p| p.number_of_lock_masses())
     }),
+    ("opentfraw.isolation_offset", |s| {
+        param(s, |p| p.isolation_offset())
+    }),
     ("opentfraw.supplemental_activation_energy", |s| {
         param(s, |p| p.supplemental_activation_energy())
     }),

@@ -199,15 +199,18 @@ pub fn scan_metadata_with(
     let is_ms1 = !is_srm && level == 1;
     let is_dia = event.is_some_and(|e| e.preamble.is_dia());
     let is_wideband = event.is_some_and(|e| e.preamble.is_wideband());
-    let srm_q1 = if is_srm {
-        raw.srm_q1_by_event.get(&entry.scan_event).copied()
+    // the reaction of the final step: the last one with a precursor (an MS3 names its MS2 precursor first)
+    let final_reaction =
+        event.and_then(|e| e.reactions.iter().rev().find(|r| r.precursor_mz > 0.0));
+    // the Q1 and energy of an SRM scan are its event's own reaction; the transition table is the source only for a run without events
+    let (srm_q1, srm_ce) = if is_srm {
+        srm_transition(
+            final_reaction,
+            raw.srm_q1_by_event.get(&entry.scan_event).copied(),
+            raw.srm_ce_by_event.get(&entry.scan_event).copied(),
+        )
     } else {
-        None
-    };
-    let srm_ce = if is_srm {
-        raw.srm_ce_by_event.get(&entry.scan_event).copied()
-    } else {
-        None
+        (None, None)
     };
 
     let precursor = if !is_ms1 {
@@ -215,7 +218,8 @@ pub fn scan_metadata_with(
             PrecursorInfo {
                 target_mz: Some(q1),
                 selected_mz: Some(q1),
-                isolation_width: Some(0.7),
+                // the Q1 resolution is not in the file: no width rather than an assumed 0.7
+                isolation_width: None,
                 charge: None,
                 collision_energy: srm_ce,
                 ce_is_nce: false,
@@ -226,37 +230,24 @@ pub fn scan_metadata_with(
                 sps_mz: Vec::new(),
             }
         } else {
-            let reaction = event.and_then(|e| e.reactions.first());
-            let tm = params
-                .as_ref()
-                .and_then(|p| p.isolation_target_mz())
-                .filter(|&mz| mz > 0.0)
-                .or_else(|| {
-                    params
-                        .as_ref()
-                        .and_then(|p| p.monoisotopic_mz())
-                        .filter(|&mz| mz > 0.0)
-                })
-                // the last stage of the chain is the one isolated for this scan (an MS3 names its MS2 precursor first)
-                .or_else(|| {
-                    event.and_then(|e| {
-                        e.reactions
-                            .iter()
-                            .rev()
-                            .map(|r| r.precursor_mz)
-                            .find(|&mz| mz > 0.0)
-                    })
-                });
-            let sm = params
-                .as_ref()
-                .and_then(|p| p.monoisotopic_mz())
-                .filter(|&mz| mz > 0.0)
-                .or(tm);
+            let reaction = final_reaction;
+            // the isolation target is the precursor the event isolated; the trailer's `Target M/Z` only when the event has none
+            let tm = isolation_target(
+                reaction,
+                params.as_ref().and_then(|p| p.isolation_target_mz()),
+            );
             let iw = params.as_ref().and_then(|p| p.isolation_width_mz());
             let ch = params
                 .as_ref()
                 .and_then(|p| p.charge_state())
                 .filter(|&z| z > 0);
+            // the selected ion is the trailer's monoisotopic m/z when it lies where the window could have taken it from, else the target
+            let sm = params
+                .as_ref()
+                .and_then(|p| p.monoisotopic_mz())
+                .filter(|&mz| mz > 0.0)
+                .filter(|&mono| plausible_selected_ion(mono, tm, iw, ch))
+                .or(tm);
             let ae_from_params = params
                 .as_ref()
                 .and_then(|p| p.activation_energy())
@@ -334,6 +325,48 @@ pub fn scan_metadata_with(
         faims_cv,
         precursor,
     })
+}
+
+/// Q1 and collision energy of an SRM scan: its event's final reaction when it has one (an energy of 0 is no energy), else the run's transition table
+/// for that event.
+pub fn srm_transition(
+    reaction: Option<&crate::scan_event::Reaction>,
+    table_q1: Option<f64>,
+    table_ce: Option<f64>,
+) -> (Option<f64>, Option<f64>) {
+    match reaction {
+        Some(r) => (Some(r.precursor_mz), Some(r.energy).filter(|&e| e > 0.0)),
+        None => (table_q1, table_ce),
+    }
+}
+
+/// The isolation target: the precursor of the event's final reaction, else the trailer's `Target M/Z` when it is a real m/z.
+pub fn isolation_target(
+    reaction: Option<&crate::scan_event::Reaction>,
+    trailer_target: Option<f64>,
+) -> Option<f64> {
+    reaction
+        .map(|r| r.precursor_mz)
+        .or_else(|| trailer_target.filter(|&mz| mz > 0.0))
+}
+
+/// Whether the trailer's monoisotopic m/z `mono` can be the selected ion of a window centred on `target`: inside the half width, or below it by at
+/// most the isotopes (up to 3) a window of charge `z` may have caught above the monoisotopic peak; any m/z when the target is not known.
+pub fn plausible_selected_ion(
+    mono: f64,
+    target: Option<f64>,
+    width: Option<f64>,
+    z: Option<i32>,
+) -> bool {
+    let Some(t) = target else {
+        return true;
+    };
+    let half = width
+        .filter(|w| w.is_finite() && *w > 0.0)
+        .map_or(0.0, |w| w / 2.0);
+    let isotopes = 3.0 * 1.003_355 / f64::from(z.unwrap_or(1).max(1));
+    let d = mono - t;
+    d.abs() <= half + 0.01 || (d < 0.0 && -d <= half + isotopes + 0.01)
 }
 
 /// Extract a single spectrum's record from `raw` at scan-index `idx`
@@ -1230,6 +1263,98 @@ mod tests {
         assert_eq!(p.faims_cv(), Some(-45.0));
         assert!(sps_masses(&trailer(&[])).is_empty());
         assert_eq!(trailer(&[]).faims_cv(), None);
+    }
+
+    #[test]
+    fn a_selected_ion_outside_the_isolation_window_is_not_plausible() {
+        // inside the half width, or below it by the isotopes a 2+ window may have caught
+        assert!(plausible_selected_ion(
+            500.2,
+            Some(500.0),
+            Some(1.0),
+            Some(1)
+        ));
+        assert!(plausible_selected_ion(
+            499.0,
+            Some(500.0),
+            Some(1.0),
+            Some(2)
+        ));
+        // a monoisotopic m/z of another ion: far from the window on either side
+        assert!(!plausible_selected_ion(
+            620.3,
+            Some(500.0),
+            Some(1.0),
+            Some(1)
+        ));
+        assert!(!plausible_selected_ion(
+            501.0,
+            Some(500.0),
+            Some(1.0),
+            Some(1)
+        ));
+        assert!(!plausible_selected_ion(
+            495.0,
+            Some(500.0),
+            Some(1.0),
+            Some(1)
+        ));
+        // no target: nothing to check against
+        assert!(plausible_selected_ion(620.3, None, None, None));
+        // an unknown width is treated as a point window
+        assert!(!plausible_selected_ion(500.2, Some(500.0), None, Some(1)));
+        assert!(plausible_selected_ion(498.0, Some(500.0), None, Some(1)));
+    }
+
+    fn rx(mz: f64, energy: f64) -> crate::scan_event::Reaction {
+        crate::scan_event::Reaction {
+            precursor_mz: mz,
+            unknown_double: 1.0,
+            energy,
+            unknown_long1: 1,
+            unknown_long2: 0,
+        }
+    }
+
+    #[test]
+    fn an_srm_scan_takes_q1_and_energy_from_its_own_event() {
+        let r = rx(301.1, 22.0);
+        // the event wins over the transition table, even when the table differs
+        assert_eq!(
+            srm_transition(Some(&r), Some(999.0), Some(5.0)),
+            (Some(301.1), Some(22.0))
+        );
+        // an energy of 0 in the event is no energy, not the table's
+        assert_eq!(
+            srm_transition(Some(&rx(301.1, 0.0)), Some(999.0), Some(5.0)),
+            (Some(301.1), None)
+        );
+        // without an event: the table, or nothing
+        assert_eq!(
+            srm_transition(None, Some(450.2), Some(18.0)),
+            (Some(450.2), Some(18.0))
+        );
+        assert_eq!(srm_transition(None, None, None), (None, None));
+    }
+
+    #[test]
+    fn the_isolation_target_is_the_reaction_before_the_trailer() {
+        let r = rx(612.33, 30.0);
+        assert_eq!(isolation_target(Some(&r), Some(612.5)), Some(612.33));
+        assert_eq!(isolation_target(None, Some(612.5)), Some(612.5));
+        assert_eq!(isolation_target(None, Some(0.0)), None);
+        assert_eq!(isolation_target(None, None), None);
+    }
+
+    #[test]
+    fn the_isolation_target_and_offset_are_separate_trailer_fields() {
+        use crate::generic_data::GenericValue::Float32;
+        let p = trailer(&[("MS2 Isolation Offset:", Float32(0.25))]);
+        assert_eq!(p.isolation_target_mz(), None);
+        assert_eq!(p.isolation_offset(), Some(0.25));
+        let p = trailer(&[("Target M/Z:", Float32(445.12))]);
+        assert!((p.isolation_target_mz().unwrap() - 445.12).abs() < 1e-3);
+        assert_eq!(p.isolation_offset(), None);
     }
 
     #[test]
