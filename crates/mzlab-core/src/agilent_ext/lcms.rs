@@ -25,6 +25,8 @@ pub const SCAN_PRODUCT: i32 = 512;
 
 /// The most bytes a spectrum block may hold, stored or unpacked.
 const MAX_BLOCK: u64 = 1 << 26;
+/// Bytes one decoded profile point holds at once: the intensity of the stream (4), the flight time, the m/z and the intensity of the spectrum (24).
+pub(super) const PROFILE_POINT: usize = 28;
 
 impl AgilentD {
     /// The calibration of the run (a Q-TOF's), from `MSMassCal.bin` and `DefaultMassCal.xml`.
@@ -160,6 +162,8 @@ impl AgilentD {
                 r.points
             )));
         }
+        // a run-length stream of a few bytes may claim millions of points: they must fit the memory of the target before any is decoded
+        crate::budget::points_fit(n, PROFILE_POINT, crate::budget::TARGET_BYTES)?;
         let raw = self.read_block(peak, r)?;
         if raw.len() < 20 {
             return Err(bad(format!(
