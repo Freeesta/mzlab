@@ -12,6 +12,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::hashio::HashWrite;
 use mzlab_core::idxread::Index;
+use mzlab_core::json::Value;
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::{Options, ZLIB_LEVEL};
 use mzlab_core::readers::Limits;
@@ -346,12 +347,21 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let gate = r.gate(job);
     let (path, label) = (r.path(input), input.label.as_deref());
     let mut pace = gate.pace();
-    let (profile, bytes, sha256) =
+    let (profile, bytes, sha256, lost) =
         write_mzml_with(&path, label, &out, (peaks, opz), &mut pace, &gate.stop)?;
     crate::flow_set::remember_sha(&out, bytes, &sha256);
     let mut made = Made::new("mzml", r.keep_known(out, DataType::Mzml, bytes, sha256));
     if profile {
         made.warnings.push("warn.flow.profile".into());
+    }
+    // a partial read is in the record of the run (prov.json, corsa.json, flowrun/1): its cause among the warnings, its counts as the note of the file
+    if lost.partial() {
+        made.warnings.push(lost.cause.into());
+        made.file = Some(Value::Obj(vec![
+            ("declared".into(), Value::Num(lost.declared as f64)),
+            ("read".into(), Value::Num(lost.read as f64)),
+            ("cause".into(), Value::Str(lost.cause.into())),
+        ]));
     }
     Ok(made)
 }
@@ -369,8 +379,8 @@ pub(crate) fn write_mzml(
 }
 
 /// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`. With the flag
-/// `stop` up the write ends at the next piece with `err.flow.cancelled`. Gives whether the file keeps its profile points, and the size and SHA-256 of the file
-/// written, hashed while it was written.
+/// `stop` up the write ends at the next piece with `err.flow.cancelled`. Gives whether the file keeps its profile points, the size and SHA-256 of the file
+/// written, hashed while it was written, and what the read of the sample lost.
 pub(crate) fn write_mzml_with(
     path: &Path,
     label: Option<&str>,
@@ -378,7 +388,7 @@ pub(crate) fn write_mzml_with(
     (peaks, opz): (Peaks, Options),
     step: &mut dyn FnMut(usize, usize),
     stop: &Stop,
-) -> Result<(bool, u64, String)> {
+) -> Result<(bool, u64, String, mzlab_core::readers::Losses)> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
@@ -421,7 +431,7 @@ pub(crate) fn write_mzml_with(
         Ok((bytes, sha256))
     });
     match written {
-        Ok((bytes, sha256)) => Ok((profile, bytes, sha256)),
+        Ok((bytes, sha256)) => Ok((profile, bytes, sha256, lost)),
         Err(e) => {
             let _ = std::fs::remove_file(out);
             Err(e)
@@ -445,3 +455,7 @@ pub(crate) fn table_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     std::fs::write(&out, csv?).map_err(io)?;
     r.keep(out, DataType::Report)
 }
+
+#[cfg(test)]
+#[path = "flow_partial_tests.rs"]
+mod partial_tests;

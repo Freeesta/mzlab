@@ -1,7 +1,7 @@
 """The manual integrations of SIM traces on the built site with the Rust engine (synthetic SIM .wiff of tools/wiff_sim.py, `sim3`: a blank and three named
 samples, seven ions at a 0.8 s cycle, an isomer pair in one channel; no laboratory data): dragging the pair with an msconvert log opens four files (the
 log is skipped with a note); windows integrated on the ion traces fill the card «Manual integrations», one row per window grouped by channel; the card
-and its CSV export (with and without the sum rows) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
+and its CSV export (with and without the sum rows) and «Copy table» (tab-separated) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
 a row's Delete removes the integration; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
 points before the cut. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_wiff.py"""
 import json, shutil, subprocess, sys, os, tempfile
@@ -52,6 +52,7 @@ r = Run(port=8876, wd="/tmp/wd_sim_wiff")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
+        pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         stage(pg, [D / "sim3.wiff", D / "sim3.wiff.scan", D / "sim3.wiff.log"]); pg.click("text=Carica dati"); ready(pg); wait_for_js(pg, "E.files.length >= 4", timeout=120000)
         open_first(pg)
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
@@ -74,6 +75,10 @@ try:
             want = manual(st, files)
             assert st["csv"] == want, (st, want)
             assert download(pg) == want
+            pg.click("#manint [data-copy]")
+            wait_for_js(pg, "document.querySelector('#manint [data-ok]').textContent === I18N.t('canali.manint.copied')", timeout=10000)
+            got = pg.evaluate("navigator.clipboard.readText()")
+            assert got.startswith("# mzLab ") and got.split("\n", 1)[1] == want.replace(",", "\t"), got
             pg.click("#manint [data-sums]")
             wait_for_js(pg, "MANINT.state().sums && /,sum,/.test(MANINT.state().csv)", timeout=60000)
             want = manual(st, files, sums=True)
