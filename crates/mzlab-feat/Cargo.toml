@@ -14,6 +14,8 @@ default = ["chem"]
 chem = []
 # `record`: the structure graph built from a `mol/1` record (`graph::Mol::from_record`, crate `mzlab-mol`). Off by default and in every .wasm: no site module changes until an engine asks for it.
 record = ["chem", "dep:mzlab-mol"]
+# `check`: `check/1`, the structure check of a drawing (`chem::check`, molfile read by `mzlab-mol`). Off by default; the grafo `.wasm`, the CLI and the desktop app carry it.
+check = ["chem", "dep:mzlab-mol"]
 # `crippen`: `LogPValues::from_smiles`, the Crippen logP and descriptors of a SMILES from our own tables (`mzlab-mol`), for the RT-logP check of the Banco 2b. Off by default; the `.wasm` `attributio` carries it through its feature `rev`.
 crippen = ["dep:mzlab-mol"]
 # `attributio`: reading of the campaign folders of Attributio (campaign.toml, mzMine/SIRIUS/GNPS2 tables, decisions), its review matching on top of `mzlab-lib` and its level cascade and table (`docs/agenti/attributio.md`). Off by default; the `.wasm` `attributio` (`crates/mzlab-attributio-wasm`) and the desktop app carry it.
@@ -37,6 +39,10 @@ mzlab-mol = { path = "../mzlab-mol", optional = true }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 mzlab-lib = { path = "../mzlab-lib" }
 sha2 = { version = "0.11", default-features = false }
+
+[[test]]
+name = "check"
+required-features = ["check"]
 
 [[test]]
 name = "grafo_record"

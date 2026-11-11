@@ -1,8 +1,8 @@
 //! The subcommands of `mzlab-cli` that take their arguments as a plain list, and the old command names still accepted for them.
 
 use crate::{
-    channels_cmd, flow_explain, ion_pattern_cmd, llm, manual_table_cmd, mol_cut_cmd, mol_label_cmd,
-    msn_rules, peaks_auto_cmd, peaks_edges_cmd, samples_cmd, steps_cmd, Outcome,
+    channels_cmd, flow_explain, ion_pattern_cmd, llm, manual_table_cmd, mol_check_cmd, mol_cut_cmd,
+    mol_label_cmd, msn_rules, peaks_auto_cmd, peaks_edges_cmd, samples_cmd, steps_cmd, Outcome,
 };
 
 #[path = "dda_window_cmd.rs"]
@@ -15,7 +15,7 @@ pub(crate) mod peak_area_cmd;
 mod peak_window_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 16] = [
+pub(crate) const PLAIN: [&str; 17] = [
     "llm",
     "steps",
     "explain-missing",
@@ -25,6 +25,7 @@ pub(crate) const PLAIN: [&str; 16] = [
     "ion-pattern",
     "ion-mz",
     "mol-label",
+    "mol-check",
     "mol-cut",
     "samples",
     "peak-edges",
@@ -59,6 +60,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "ion-pattern" => ion_pattern_cmd::run(args),
         "ion-mz" => ion_mz_cmd::run(args),
         "mol-label" => mol_label_cmd::run(args),
+        "mol-check" => mol_check_cmd::run(args),
         "mol-cut" => mol_cut_cmd::run(args),
         "samples" => samples_cmd::run(args),
         "manual-table" => manual_table_cmd::run(args),

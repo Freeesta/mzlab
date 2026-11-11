@@ -107,7 +107,7 @@ fn atom(t: &[String]) -> Result<DraftAtom, MolError> {
     if t.len() < 5 {
         return Err(fail(format!("atom line {t:?} is too short")));
     }
-    let (el, iso) = symbol(&t[1])?;
+    let (el, iso, query) = symbol(&t[1]);
     let p = props(&t[5..]);
     let rad = match p.get("RAD").copied() {
         Some("1" | "3") => 2,
@@ -128,6 +128,7 @@ fn atom(t: &[String]) -> Result<DraftAtom, MolError> {
             _ => None,
         },
         xyz: [number(&t[2])?, number(&t[3])?, number(&t[4])?],
+        query,
     })
 }
 
@@ -141,12 +142,13 @@ fn bond(t: &[String], ids: &HashMap<usize, usize>) -> Result<DraftBond, MolError
             .ok_or_else(|| fail(format!("bond names unknown atom {s}")))
     };
     let (a, b) = (find(&t[2])?, find(&t[3])?);
-    let order = match number::<u8>(&t[1])? {
-        o @ 1..=3 => o,
-        4 => 0,
-        o => return Err(fail(format!("bond type {o} (a query or unsupported bond)"))),
+    let (order, query) = match number::<u8>(&t[1])? {
+        o @ 1..=3 => (o, 0),
+        4 => (0, 0),
+        o => (1, i32::from(o).max(1)),
     };
-    let wedge = match (order, props(&t[4..]).get("CFG").copied()) {
+    let cfg = props(&t[4..]).get("CFG").copied();
+    let wedge = match (order, cfg) {
         (1, Some("1")) => Wedge::Up,
         (1, Some("3")) => Wedge::Down,
         (1 | 2, Some("2")) => Wedge::Either,
@@ -158,6 +160,8 @@ fn bond(t: &[String], ids: &HashMap<usize, usize>) -> Result<DraftBond, MolError
         order,
         wedge,
         arom: order == 0,
+        query,
+        multi_wedge: order != 1 && matches!(cfg, Some("1" | "3")),
     })
 }
 
