@@ -66,7 +66,17 @@ pub(super) fn notes(name: &str, funs: &[Fun], ext: &Extern, header: bool) -> Vec
     if !header && funs.iter().any(|f| f.cod.is_some()) {
         v.push("_HEADER.TXT missing: m/z without the calibration polynomial".into());
     }
-    v.into_iter()
+    let mut out: Vec<(String, String)> = v
+        .into_iter()
         .map(|a| (KEY.to_string(), format!("{name}: {a}")))
-        .collect()
+        .collect();
+    out.extend(
+        funs.iter()
+            .flat_map(|f| super::idx::mark_notes(name, f.f.indice, &f.righe)),
+    );
+    // IMS functions are read summed over the drift bins: the drift time is not decoded
+    if funs.iter().any(|f| f.ext.mobilita) {
+        out.push((KEY.to_string(), format!("{name}: ion mobility")));
+    }
+    out
 }

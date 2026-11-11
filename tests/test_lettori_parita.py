@@ -167,6 +167,17 @@ def test_module_mzml_equals_the_cli_one(tools, fam):
     assert sha(wasm) == sha(cli), (fam, len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def test_waters_index_marks_equal_the_cli(tools):
+    """A folder with the index marks set both ways (0x18 scans get the polynomial of `_HEADER.TXT`, 0x4C scans keep the stored m/z; a flag bit above the 22-bit count):
+    the module and `mzlab-cli convert` write the same mzML, byte for byte."""
+    import waters_sintetico
+    ds = waters_sintetico.write_flags(tools["tmp"] / "in_waters_flags")
+    cli = da_cli(tools, "waters_flags", ds)
+    wasm = da_wasm(tools, "waters", ds)
+    assert cli.count(b"<spectrum ") == 40
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
     """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte."""
     ds = create("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")

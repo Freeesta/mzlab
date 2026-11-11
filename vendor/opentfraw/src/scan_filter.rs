@@ -132,6 +132,15 @@ pub fn build_filter_with(
         Some(MsPower::Ms7) => 7,
         Some(MsPower::Ms8) => 8,
     };
+    let steps = if n >= 2 {
+        crate::reaction::chain(event, &crate::reaction::FinalReaction::default())
+    } else {
+        Vec::new()
+    };
+    // several precursors isolated together (MSX)
+    if steps.iter().any(|s| s.multiple) {
+        out.push_str("msx ");
+    }
     if n == 1 {
         out.push_str("ms");
     } else {
@@ -179,7 +188,7 @@ pub fn build_filter_with(
             // activation_energy from scan_params when available (more accurate label).
             let last = reactions.len() - 1;
             // each clause carries the activation of its own step (MS3 CID then HCD: `@cid35.00 ... @hcd30.00`)
-            let steps = crate::reaction::chain(event, &crate::reaction::FinalReaction::default());
+            let several = steps.len() >= 2;
             let mut step = steps.iter();
             for (i, rx) in reactions.iter().enumerate() {
                 let mz = rx.precursor_mz;
@@ -209,7 +218,7 @@ pub fn build_filter_with(
                     } else {
                         let astr = activation_str(analyzer, a);
                         out.push_str(astr);
-                        let energy = if is_last {
+                        let energy = if is_last && !several {
                             activation_energy.or({
                                 if rx.energy > 0.0 {
                                     Some(rx.energy)
@@ -604,12 +613,16 @@ mod tests {
     }
 
     #[test]
-    fn simultaneous_precursors_stay_one_clause_each() {
+    fn simultaneous_precursors_are_msx_with_one_clause_each() {
         let idx = make_index(50.0, 500.0);
         let msx = ftms_event(2, 1, vec![rxn(400.0, 0.0, 11), rxn(410.0, 0.0, 11)]);
         assert_eq!(
             build_filter(&msx, &idx, Some(410.0), Some(30.0), None),
-            "FTMS + c NSI d Full ms2 400.0000@hcd30.00 410.0000@hcd30.00 [50.0000-500.0000]"
+            "FTMS + c NSI d Full msx ms2 400.0000@hcd30.00 410.0000@hcd30.00 [50.0000-500.0000]"
         );
+        // each step's own energy wins over the trailer's one value
+        let own = ftms_event(2, 1, vec![rxn(400.0, 27.0, 11), rxn(410.0, 33.0, 11)]);
+        assert!(build_filter(&own, &idx, Some(410.0), Some(30.0), None)
+            .contains(" 400.0000@hcd27.00 410.0000@hcd33.00 "));
     }
 }
