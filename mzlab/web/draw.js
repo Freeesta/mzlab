@@ -9,7 +9,7 @@ import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
 import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
-import { fragmentItems } from "./disegno-frammenti.js";
+import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js";
 import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
@@ -47,7 +47,7 @@ function start() {
   starting.finally(() => { clearInterval(kldTimer); }).catch(() => {});
   starting = starting.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); exwarn(""); });      // a change makes «Nothing to export» stale
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
-    hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); dnote("");
+    hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); mountCut(fr); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
     const doc = fr.contentDocument;
@@ -197,6 +197,7 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
       if ((sel.bonds || []).length) {                                   // «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
         const nb = sel.bonds.length, bids = [...sel.bonds];
         ctxRow(m, I18N.t("draw.ctx.breakBonds", { n: nb }), () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); }, I18N.t("draw.ctx.breakBonds.title"));
+        ctxRow(m, I18N.t("draw.cut.selected", { n: nb, mode: I18N.t("draw.cut.mode." + cutMode()).split(":")[0] }), () => { m.hidden = true; doCut(bids, { x: mx, y: my }); }, I18N.t("draw.cut.selected.title"));
       }
       for (const it of [...await partialItems(K, ev, set, fragHelpers).catch(() => []), ...await fragmentItems(K, ev, fragHelpers).catch(() => [])]) {   // brackets with a delta (disegno-parziali.js); the two pieces of the bond, all cuts
         ctxRow(m, it.text, () => { m.hidden = true; if (it.run) it.run(); }, it.title);
@@ -372,6 +373,15 @@ function breakBonds(/** @type {number[]} */ ids) {
   } catch (_) { return false; }
 }
 window.breakBonds = breakBonds;
+// the cut tool (disegno-taglio.js): the mode of the «Bond cuts» card, the cut line over the frame, the status line with the pieces
+const cutMode = () => { const r = /** @type {HTMLInputElement | null} */ (document.querySelector("input[name=cut-mode]:checked")); return r ? r.value : "homolytic"; };
+async function doCut(/** @type {number[]} */ bids, /** @type {{ x: number, y: number }} */ at) {
+  const pick = (/** @type {{ text: string, run: () => void }[]} */ rows) => { const m = Q("#ctx"); m.innerHTML = ""; rows.forEach(r => ctxRow(m, r.text, () => { m.hidden = true; r.run(); })); ctxShow(m, at.x, at.y, 360, false); };
+  Q("#cut-note").textContent = await cutWith(K, bids, cutMode(), fragHelpers, pick).catch(() => I18N.t("draw.frag.off"));
+  FRAME.next(drawLabels);
+}
+let cutLine = /** @type {{ off: () => void } | null} */ (null);
+function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine = mountCutLine({ frame: fr, button: Q("#cut-line"), K: () => K, cut: doCut }); }
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
 // selects the bonds between the given pairs of atoms (ids as in the SMILES just loaded) so Ketcher highlights them; returns how many were found
@@ -498,6 +508,7 @@ function labelParts(/** @type {DrawStruct} */ d) {
   if (f) {
     parts.push(...formulaParts(d.formula));
     if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
+    if (d.unpaired || d.odd) parts.push(["•", "sup"]);                    // a radical: a mark on an atom or an odd electron count (M+• for a radical cation)
   }
   if (m) {
     const line = f ? (lines.push([]), lines[1]) : parts;

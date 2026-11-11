@@ -75,7 +75,7 @@ impl Denso {
         self.buf.resize(p.lunghezza as usize, 0);
         self.file
             .read_exact_at(&mut self.buf, p.offset)
-            .map_err(|_| Error::new("err.file.raw"))
+            .map_err(|_| Error::new("err.file.raw").with("detail", "read"))
     }
 
     fn spettro(&self, k: usize, profile: bool, mz: Vec<f64>, intensity: Vec<f32>) -> Spectrum {

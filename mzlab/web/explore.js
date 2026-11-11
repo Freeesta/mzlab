@@ -340,8 +340,8 @@ const J = (/** @type {string} */ u) => fetch(u).then(async r => { const j = awai
 const prk = (/** @type {unknown} */ pr, /** @type {string | undefined} */ ft) => ft ? `${pr ?? ""}~${ft}` : pr;
 const prSplit = (/** @type {unknown} */ pr) => { const t = String(pr ?? ""), i = t.indexOf("~"); return i < 0 ? [/** @type {string} */ (pr ?? ""), ""] : [t.slice(0, i), t.slice(i + 1)]; };
 const FT = (/** @type {string | undefined} */ ft) => ft ? `&filt=${encodeURIComponent(ft)}` : "";
-// precursor > fragment pairs of an MS2 file (unit resolution)
-const getMs2Tr = (/** @type {string | number} */ k) => memo(`m2t${k}`, () => J(`api/ms2tr?k=${k}`)).then((/** @type {Bag} */ d) => d.files[0].transitions);
+const lvN = (/** @type {any} */ k) => Math.max(2, E.files[k]?.lv || 2);      // MSn level of a product file; getMs2Tr: its precursor > fragment pairs (unit resolution)
+const getMs2Tr = (/** @type {string | number} */ k, lv = 2) => memo(`m2t${k}|${lv}`, () => J(`api/ms2tr?k=${k}&level=${lv}`)).then((/** @type {Bag} */ d) => d.files[0].transitions);
 (() => {
   addEventListener("mzlab-index", (/** @type {any} */ e) => {
     const d = e && e.detail;
@@ -460,7 +460,7 @@ async function bootSession0() {
   E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
     // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
     const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
-    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...CAMPIONI.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? 2 : 1 };
+    const t = TIPOF.apply(s, s.file), o = oldVis[s.file], e = { ...t, ...CAMPIONI.keep(o), k, vis, label: noExt(noFullScan(o ? o.label : s.label, s.dda)), lv: t.kind === "ms2" ? t.msn_level || 2 : 1 };
     return o && o.gone ? Object.assign(o, e, { vis: false }) : e;      // a removed file stays removed, the same object as in its «Removed · Undo» entry (lista-file.js fileRemoval)
   }); uniqueLabels(E.files);
   paintFiles(); if (window.SIMUI) SIMUI.mark(E.files);

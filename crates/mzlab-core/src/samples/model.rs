@@ -238,7 +238,7 @@ pub fn apply_model(input: &str) -> Result<String> {
     let model = v
         .get("modello")
         .and_then(|x| x.str())
-        .ok_or_else(|| Error::new("error.badModello"))?;
+        .ok_or_else(|| Error::new("error.badRequest"))?;
     let t = match v.get("campioni") {
         Some(d) => table_from_value(d)?,
         None => {

@@ -16,10 +16,10 @@ impl Format {
         match s {
             "msp" => Ok(Format::Msp),
             "massbank" => Ok(Format::MassBank),
-            _ => {
-                Err(Error::new("err.flow.param.type")
-                    .with("detail", "--formato is msp or massbank"))
-            }
+            _ => Err(Error::new("err.flow.param.type")
+                .with("instance", "msn-lib")
+                .with("param", "format")
+                .with("detail", format!("{s}: msp or massbank"))),
         }
     }
 }

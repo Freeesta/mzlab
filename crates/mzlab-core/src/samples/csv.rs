@@ -423,7 +423,7 @@ fn sep_of(v: &crate::json::Value) -> Result<Option<char>> {
         Some(",") => Ok(Some(',')),
         Some(";") => Ok(Some(';')),
         Some("\t") | Some("tab") => Ok(Some('\t')),
-        Some(_) => Err(Error::new("error.badCsv")),
+        Some(_) => Err(Error::new("error.badRequest")),
     }
 }
 
@@ -433,7 +433,7 @@ pub fn csv_read(input: &str) -> Result<String> {
     let text = v
         .get("testo")
         .and_then(|x| x.str())
-        .ok_or_else(|| Error::new("error.badCsv"))?;
+        .ok_or_else(|| Error::new("error.badRequest"))?;
     let declared = match v.get("colonne") {
         Some(c) => {
             let mut o = Out::default();
@@ -454,7 +454,7 @@ pub fn csv_write(input: &str) -> Result<String> {
     let v = parse(input.as_bytes())?;
     let doc = v
         .get("campioni")
-        .ok_or_else(|| Error::new("error.badCsv"))?;
+        .ok_or_else(|| Error::new("error.badRequest"))?;
     let t = table_from_value(doc)?;
     let text = write(&t, sep_of(&v)?.unwrap_or(','));
     let mut j = Out::default();

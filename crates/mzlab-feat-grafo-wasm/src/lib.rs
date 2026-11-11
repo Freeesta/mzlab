@@ -5,7 +5,7 @@ use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/6";
+const BRIDGE: &str = "mzfeat-grafo/7";
 
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())
@@ -41,6 +41,13 @@ pub fn partial(molfile: &str, delta: &str) -> std::result::Result<String, JsValu
 #[wasm_bindgen]
 pub fn labels(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::labels::labels_json(request).map_err(js_err)
+}
+
+/// `cut/1` of a request `{"molfile", "bonds", "mode", "cation", "gap"}`: the pieces of a cut across one or more bonds (homolytic, heterolytic or «+H»),
+/// the atoms it changes and how far each piece moves (see `mzlab_feat::chem::cut::cut_json`; the same as `mzlab-cli mol-cut`).
+#[wasm_bindgen]
+pub fn cut(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::cut::cut_json(request).map_err(js_err)
 }
 
 /// `posiz/1` of a SMILES, a transformation («+O», «-CH2», «+O-2H», «+Cl-H», «+Br-H») and the MS2 of the product (`peaks_json` `[[mz,int],..]`): the classes of positions
