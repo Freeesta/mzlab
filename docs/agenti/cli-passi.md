@@ -1,7 +1,7 @@
 # Passi della CLI: una riga per passo nativo
 Elenco dei passi eseguiti da `FileRunner`, con file, ingressi, uscita e prova; regole, registri e buchi stanno in `cli.md` («Copertura»).
 
-- `spectra.centroid`: mzML a profilo → centroidi (`--set ISTANZA.fwhm=|threshold=`); vedi `rust-flow.md`.
+- `spectra.centroid`: mzML a profilo → centroidi (`--set ISTANZA.fwhm=|threshold=`); vedi `rust-flow.md`. `fwhm` omesso si misura sui picchi isolati (dati continui cercati di nuovo a 8, 24 e 64 punti di griglia) ed è una stima in `estimates`, col numero di picchi, solo se misurato; sotto 8 picchi si usa la larghezza di ripiego 0,7 Da, mai detta stimata, con `warn.centroid.widthFallback` e `fwhm_basis` = `fallback` nel record del file. `threshold` ha il valore predefinito 3 sigma.
 - BASE: la ricetta è quella del pannello Pipeline senza impostazioni (`run::recipe_for` sul primo file della serie) con sopra i valori che il piano scrive (preset e parametri, `mzlab_feat::steps::recipe_map`, la sola corrispondenza descrittore → `Recipe`).
   `features.detect`, `tp.dig_lr` e il Da: dettagli in `rust-flow.md`.
 - `structure.render` (`flow_render.rs`): `drawings/1` dal `sites/1` di `tp.position` e dal genitore (`interp::redraw::render_text`, anche nel `.wasm` `interp`): stessi byte del `drawing` del blocco `interp`.
