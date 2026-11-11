@@ -154,7 +154,10 @@ fn the_registry_and_the_mzml_keep_the_sim_channels() {
         );
         assert_eq!(
             (c.dwell, c.name.as_str()),
-            (ion["dwell"].as_f64(), ion["name"].as_str().unwrap())
+            (
+                ion["dwell"].as_f64().map(|ms| ms / 1000.0),
+                ion["name"].as_str().unwrap()
+            )
         );
     }
 }

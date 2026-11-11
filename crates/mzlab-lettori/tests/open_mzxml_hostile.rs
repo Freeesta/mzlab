@@ -59,9 +59,26 @@ fn a_zlib_inflating_past_the_declared_size_is_an_error() {
     let da = b.find("compressedLen=\"").unwrap();
     let a = da + b[da..].find('>').unwrap() + 1;
     let fine = a + b[a..].find("</peaks>").unwrap();
-    let bomb = b64(&zlib(&vec![0u8; 8 << 20]));
-    let b = format!("{}{}{}", &b[..a], bomb, &b[fine..]);
-    assert_eq!(mzxml_error(b.into_bytes()), "error.memoryBudget");
+    let with = |peaks: &str| format!("{}{}{}", &b[..a], peaks, &b[fine..]);
+    let bomb = with(&b64(&zlib(&vec![0u8; 8 << 20])));
+    let count = bomb.find("peaksCount=\"").unwrap();
+    let end = count + bomb[count + 12..].find('"').unwrap() + 13;
+    // a scan that declares no points, or says nothing, still inflates no further than the budget: the size, not damage
+    for declared in ["peaksCount=\"0\"", ""] {
+        let b = format!("{}{}{}", &bomb[..count], declared, &bomb[end..]);
+        assert_eq!(
+            mzxml_error(b.into_bytes()),
+            "error.memoryBudget",
+            "{declared:?}"
+        );
+    }
+    assert_eq!(mzxml_error(bomb.into_bytes()), "error.memoryBudget");
+    let mut broken = zlib(&vec![7u8; 4096]);
+    broken.truncate(broken.len() / 2);
+    assert_eq!(
+        mzxml_error(with(&b64(&broken)).into_bytes()),
+        "err.file.zlib"
+    );
 }
 
 #[test]

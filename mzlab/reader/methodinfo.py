@@ -244,7 +244,8 @@ def check_against(data: dict, lab: dict) -> list[dict]:
             used.add(hit)
             x = d_tr[hit]
             dw = x["dwell"] * 1000 if x.get("dwell") is not None and x["dwell"] < 5 else x.get("dwell")
-            ok = (x.get("ce") is None or t.get("ce") is None or abs(x["ce"] - t["ce"]) < 0.5) and (dw is None or abs(dw - t["dwell"]) < 1)
+            # the method of a negative-mode run stores the energy with its sign, the data its magnitude
+            ok = (x.get("ce") is None or t.get("ce") is None or abs(abs(x["ce"]) - abs(t["ce"])) < 0.5) and (dw is None or abs(dw - t["dwell"]) < 1)
             add(message("chk.transition", q1=fmt(t["q1"]), q3=fmt(t["q3"])), mtxt, f"CE {fmt(x['ce'])} eV, dwell {fmt(dw)} ms" if x.get("ce") is not None and dw is not None else message("chk.present"), "ok" if ok else "diff")
         for i, x in enumerate(d_tr):
             if i not in used and x.get("q1") is not None:

@@ -276,6 +276,9 @@ def test_method_experiments_are_decoded_and_checked_against_the_data():
     assert {r["status"] for r in rows} == {"ok"}
     rows = check_against({"kind": "mrm", "transitions": [tr[0], {"q1": 364.1, "q3": 100.0, "ce": 20.0, "dwell": 0.025}]}, {"experiments": ex[:1]})
     assert [r["status"] for r in rows].count("diff") == 2          # missing 152.1 in the file, extra 100.0 in the file
+    # a negative-mode method stores the energy with its sign, the data its magnitude
+    neg = [{**ex[0], "transitions": [{**t, "ce": -t["ce"]} for t in ex[0]["transitions"]]}]
+    assert {r["status"] for r in check_against({"kind": "mrm", "transitions": tr}, {"experiments": neg})} == {"ok"}
     rows = check_against({"kind": "full", "scan_window": [120.0, 480.0], "rt_max": 21.9}, {"experiments": ex[1:], "lc": {"run_time": 22.0}})
     assert {r["status"] for r in rows} == {"ok"}
     assert [r for r in check_against({"kind": "full", "scan_window": [100.0, 300.0]}, {"experiments": ex[1:]}) if r["what"]["key"] == "chk.massRange"][0]["status"] == "diff"
