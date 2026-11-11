@@ -114,3 +114,32 @@ fn the_sample_name_has_no_folder() {
         assert_eq!(l.samples()[0].nome, "a.qgd", "{p}");
     }
 }
+
+#[test]
+fn tlm_entries_that_share_one_record_are_not_inflated_again() {
+    // 2 000 index entries all naming the record of the first: a record is inflated once per entry, so a 16 MB zlib record would cost 2 000 x 16 MB
+    let good = lcd_tlm(3);
+    let mut l = open("q.lcd", good).unwrap();
+    let id = l
+        .chromatograms(0)
+        .unwrap()
+        .into_iter()
+        .find(|v| v.tipo == ChromKind::Srm)
+        .unwrap()
+        .id;
+    assert_eq!(
+        l.chromatogram(0, &id).unwrap().intensity,
+        vec![50.0, 51.0, 52.0]
+    );
+    let mut l = open("q.lcd", lcd_tlm_shared(2000)).unwrap();
+    let srm: Vec<_> = l
+        .chromatograms(0)
+        .unwrap()
+        .into_iter()
+        .filter(|v| v.tipo == ChromKind::Srm)
+        .collect();
+    // only the entry whose record is its own is read
+    assert!(srm
+        .iter()
+        .all(|c| l.chromatogram(0, &c.id).unwrap().intensity.len() <= 1));
+}

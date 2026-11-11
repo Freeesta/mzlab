@@ -42,7 +42,7 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
 - Parameter `peaks` (`file` default, `profile`, `mzlab`) is `readers_mzml::Picchi`.
   `file`: the scans of the reader; a profile sample stays profile and the run records `warn.flow.profile` in `warnings` of `prov/1` and `corsa/1` (also when taken from the cache), the next step picks the peaks.
   `profile`: the profile points (`scansione_profilo`, else the profile scans of the reader, else `err.conv.noProfile`).
-  `mzlab`: our centroids (`readers_centroids::stima` on at most 64 scans, then `picchi` scan by scan); the file says `MS:1000035` and the estimated parameters in the userParam `mzLab centroids` of the run.
+  `mzlab`: our centroids (`readers_centroids::stima` on at most 64 scans, then `picchi` scan by scan); the file says `MS:1000035` and the parameters in the userParam `mzLab centroids` of the run, with `w_basis` (`measured on N isolated peaks` or `fallback`).
   The warning key is shown as it is by `rapporto-flow.js` (no `lang/` text until a screen shows it).
 - Tests of `peaks`: `cargo test -p mzlab-core --test readers_mzml_peaks` (gaussian profile at known centres), `cargo test -p mzlab-cli picchi` (`--set c.peaks=…`, the warning).
 - Tests: `cargo test -p mzlab-core --lib mzmlwrite` (offsets, checksum, read back, steps; `tests_xsd.rs` validates the indexed file against `mzML1.1.2_idx.xsd` with `xmllint`, schema fetched into `MZLAB_XSD_DIR` or the temp folder, skipped without `xmllint`, `curl` or network), `--test readers_mzml` (Agilent synthetic), `cargo test -p mzlab-lettori --features aperti --test open_numpress` (indexed file reopened by the reader of open mzML), `cargo test -p mzlab-cli --lib` (plan `convert.mzml` then `features.table`).

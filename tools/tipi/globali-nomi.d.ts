@@ -15,6 +15,7 @@ declare var BANCO: any;
 declare var BARRA: any;
 declare var BARRE: any;
 declare var BIANCO: any;
+declare var BMODES: any;
 declare var BrukerD: any;
 declare var CACHE: any;
 declare var CACHE_BUD: any;

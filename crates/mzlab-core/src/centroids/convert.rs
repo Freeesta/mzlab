@@ -3,7 +3,7 @@
 
 use std::io::{Read, Write};
 
-use super::{centroids, estimate, Buf, Params};
+use super::{centroids, estimate, Buf, Estimate};
 use crate::error::Result;
 use crate::mzml::{self, Item};
 use crate::mzmlwrite::{Header, MzmlWriter};
@@ -37,8 +37,8 @@ impl Sample {
     }
 }
 
-/// The parameters of the centroids from the profile scans of a stream (`None`: there is no profile scan) and the number of spectra.
-fn params_of<R: Read>(reader: R) -> Result<(Option<Params>, usize)> {
+/// The estimate of the centroids from the profile scans of a stream (`None`: there is no profile scan) and the number of spectra.
+fn params_of<R: Read>(reader: R) -> Result<(Option<Estimate>, usize)> {
     let mut sample = Sample {
         scans: Vec::new(),
         every: 1,
@@ -61,7 +61,7 @@ fn params_of<R: Read>(reader: R) -> Result<(Option<Params>, usize)> {
         .map(|i| &sample.scans[i * sample.scans.len() / n])
         .map(|(a, b)| (a.as_slice(), b.as_slice()))
         .collect();
-    Ok((Some(estimate(&refs, 0.7).params), count))
+    Ok((Some(estimate(&refs, 0.7)), count))
 }
 
 /// Values that replace what the estimate finds from the file; `None` keeps the estimate (the `spectra.centroid` step of the Flow).
@@ -84,20 +84,22 @@ pub fn mzml_to_centroids<R: Read, W: Write>(
     Ok(mzml_to_centroids_with(open, out, name, Over::default(), progress)?.is_some())
 }
 
-/// `mzml_to_centroids` with `over` applied to the estimated parameters; returns the parameters used, `None` when the file has no profile spectrum.
+/// `mzml_to_centroids` with `over` applied to the estimated parameters; returns the estimate with the parameters used (`peaks` 0: the width is the
+/// fallback, not measured), `None` when the file has no profile spectrum.
 pub fn mzml_to_centroids_with<R: Read, W: Write>(
     mut open: impl FnMut() -> Result<R>,
     out: W,
     name: &str,
     over: Over,
     progress: &mut dyn FnMut(usize, usize),
-) -> Result<Option<Params>> {
-    let (p, count) = params_of(open()?)?;
-    let Some(mut p) = p else {
+) -> Result<Option<Estimate>> {
+    let (e, count) = params_of(open()?)?;
+    let Some(mut e) = e else {
         return Ok(None);
     };
-    p.w = over.fwhm.unwrap_or(p.w);
-    p.k = over.threshold.unwrap_or(p.k);
+    e.params.w = over.fwhm.unwrap_or(e.params.w);
+    e.params.k = over.threshold.unwrap_or(e.params.k);
+    let p = &e.params;
     let header = Header {
         run: name
             .trim_end_matches(".mzML")
@@ -125,7 +127,7 @@ pub fn mzml_to_centroids_with<R: Read, W: Write>(
             Item::Spectrum(mut s) => {
                 if s.profile {
                     let y: Vec<f64> = (0..s.mz.len()).map(|i| s.intensity_f64(i)).collect();
-                    let c = centroids(&s.mz, &y, &p, &mut buf);
+                    let c = centroids(&s.mz, &y, p, &mut buf);
                     s.mz = c.iter().map(|c| c.mz).collect();
                     let v: Vec<f64> = c.iter().map(|c| c.value).collect();
                     s.intensity = v.iter().map(|&x| narrow(x)).collect();
@@ -159,5 +161,5 @@ pub fn mzml_to_centroids_with<R: Read, W: Write>(
         w.close_chromatograms()?;
     }
     w.finish()?;
-    Ok(Some(p))
+    Ok(Some(e))
 }

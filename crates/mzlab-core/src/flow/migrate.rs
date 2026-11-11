@@ -75,6 +75,14 @@ fn features_detect_1_2(p: Params) -> Params {
         .collect()
 }
 
+/// `chrom.transitions@1 → @2`: version 1 measured the areas from the line between the edges, version 2 from zero; a saved plan keeps the edges.
+fn transitions_1_2(mut p: Params) -> Params {
+    if !p.iter().any(|(k, _)| k == "baseline") {
+        p.push(("baseline".to_string(), Value::Str("edges".to_string())));
+    }
+    p
+}
+
 /// Every migration of the engine, one row per step and version.
 pub const MIGRATIONS: &[Migration] = &[
     Migration {
@@ -96,6 +104,13 @@ pub const MIGRATIONS: &[Migration] = &[
         from: 1,
         to: 2,
         apply: features_detect_1_2,
+        from_only: true,
+    },
+    Migration {
+        step: "chrom.transitions",
+        from: 1,
+        to: 2,
+        apply: transitions_1_2,
         from_only: true,
     },
 ];

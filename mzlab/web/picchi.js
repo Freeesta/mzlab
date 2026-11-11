@@ -24,8 +24,11 @@ const specColor = (/** @type {any} */ x) => (x.multi ? PAL[(x.idx + 3) % PAL.len
 // those of the Rust engine (LrParams, AutoParams), where the other detector numbers stay fixed (mzlab-cli peak-edges / peak-auto --set only).
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
 /** @type {Record<string, number>} */
-const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, base: 0 };      // base: 0 edges, 1 zero, 2 line (new integrations)
-const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
+// bmode = the baseline of new integrations: 0 zero (the default, as mzlab_core::baseline::DEFAULT), 1 edges, 2 line. The older key `base` (0 edges, 1 zero,
+// 2 line) was saved with every setting, so its 0 cannot tell a choice from the old default: only its line is carried over.
+const PK_DEF = { edgeFrac: 3, win: 1.2, tail: 1.5, snMin: 0, multi: 50, hrSmooth: 5, hrSn: 5, bmode: 0 };
+const PK = (() => { /** @type {Record<string, unknown>} */ const o = lsObj(NOMI.KEY("picchi")); const r = { ...PK_DEF }; if (o.bmode === undefined && o.base === 2) o.bmode = 2; Object.keys(r).forEach(k => { const v = o[k]; if (typeof v === "number" && v >= 0) r[k] = v; }); return r; })();
+const BMODES = ["zero", "edges", "line"];
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 // Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
 // moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
@@ -116,7 +119,7 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
 function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null), zero = false) {
   const f = E.files[s.k];
   return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}), ...(zero ? { zero: true } : {}),
-    ...(!zero && PK.base ? PK.base === 1 ? { bm: "zero" } : { bm: "line", bl: edgeLine(s, lo, hi, base) } : {}) };
+    ...(zero ? {} : PK.bmode === 2 ? { bm: "line", bl: edgeLine(s, lo, hi, base) } : { bm: BMODES[PK.bmode] || "zero" }) };      // every new record names its baseline
 }
 // [t0, y0, t1, y1] of the line between the edges: a custom line starts there
 const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? baseAt(base, s.x[i]) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
@@ -164,7 +167,7 @@ function peakParams() {
   const f = (/** @type {string} */ k) => `<label class="pk-row"><span>${I18N.t(`pk.${k}`)}</span><input data-pk="${k}" data-num="${B[k]}" value="${PK[k]}" inputmode="decimal"><span class="muted sm">${I18N.t(`pk.${k}.h`)}</span></label>`;
   const sec = (/** @type {string} */ k, /** @type {string[]} */ keys) => `<fieldset class="pk-sec"><legend>${I18N.t(`pk.sec.${k}`)}</legend>${keys.map(f).join("")}</fieldset>`;
   big(I18N.t("pk.title"), `<div class="muted sm pk-intro">${I18N.t("pk.intro")}</div>
-    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="base">${["edges", "zero", "line"].map((k, v) => `<option value="${v}"${PK.base === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
+    <div class="pk-grid">${sec("lr", ["edgeFrac", "win", "tail", "snMin", "multi"])}${sec("hr", ["hrSmooth", "hrSn"])}<fieldset class="pk-sec"><legend>${I18N.t("pk.sec.base")}</legend><label class="pk-row"><span>${I18N.t("pk.base")}</span><select data-pk="bmode">${BMODES.map((k, v) => `<option value="${v}"${PK.bmode === v ? " selected" : ""}>${I18N.t(`int.base.${k}`)}</option>`).join("")}</select><span class="muted sm">${I18N.t("pk.base.h")}</span></label></fieldset></div>
     <div class="pk-act"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = String(PK[i.dataset.pk]); });
     Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };

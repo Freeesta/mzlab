@@ -83,7 +83,14 @@ fn execute_mzidx(m: &[(String, Vec<u8>)]) -> Vec<String> {
 /// The container of a `.wiff` and the methods read from it (the `.dam` parser).
 fn execute_ole(m: &[(String, Vec<u8>)]) -> Vec<String> {
     let mut k = Vec::new();
-    if let Some(ole) = note(Ole::open(m[0].1.clone(), "x.wiff"), &mut k) {
+    if let Some(ole) = note(
+        Ole::open(
+            m[0].1.clone(),
+            "x.wiff",
+            &mzlab_core::readers::Limits::held(),
+        ),
+        &mut k,
+    ) {
         let paths: Vec<String> = ole.paths_list().map(String::from).collect();
         paths.iter().take(64).for_each(|p| drop(ole.read(p)));
         let _ = ole.sha1_hex();
