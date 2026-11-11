@@ -135,8 +135,8 @@ impl Reader for WatersReader {
             f.dat.ok_or_else(|| read_error("no DAT"))?,
         );
         let (off, len) = idx::extension(&f.righe, r, cod.width() as u64, f.dat_len)?;
-        let (tar, livello, polarity, rt, precursor) =
-            (f.tar.clone(), v.livello, v.polarita, v.rt, v.precursore);
+        let tar = f.tar.for_mark(f.righe[r].mark);
+        let (livello, polarity, rt, precursor) = (v.livello, v.polarita, v.rt, v.precursore);
         let id = v.id.clone();
         let filter = v.filtro.clone();
         let b = self.c.read_from(dat, off, len)?;
@@ -200,9 +200,13 @@ impl Reader for WatersReader {
         if let Some(p) = v.precursore {
             out.push(field("precursor", p.to_string(), Some("m/z")));
         }
+        let stored = f.righe[r].mark == idx::CALIBRATED;
+        out.push(field("m/z calibration", f.tar.label(stored).into(), None));
         if let Some(t) = &f.sts {
+            let note =
+                ["(not applied)", "(applied by the acquisition, if at all)"][usize::from(stored)];
             for (n, x) in t.all(r).into_iter().filter(|(n, _)| n.contains("ock mass")) {
-                out.push(field(&format!("{n} (not applied)"), x.to_string(), None));
+                out.push(field(&format!("{n} {note}"), x.to_string(), None));
             }
         }
         Ok(out)
@@ -454,6 +458,10 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     for i in 0..funs.len() {
         funs[i].livello = level_of(&funs, i);
     }
+    warnings.extend(
+        funs.iter()
+            .flat_map(|f| idx::mark_notes(&c.name, f.f.indice, &f.righe)),
+    );
     if funs.iter().any(|f| f.ext.mobilita) {
         warnings.push((
             "meta.nonDecodificato".into(),
