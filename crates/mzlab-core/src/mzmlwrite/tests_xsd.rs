@@ -96,7 +96,11 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
     let text = String::from_utf8_lossy(&out);
     let pis = &text[text.find("id=\"scan=3\"").unwrap()..];
     let pis = &pis[..pis.find("</spectrum>").unwrap()];
-    assert!(pis.contains("<productList count=\"1\"><product><isolationWindow>") && !pis.contains("<precursor"), "{pis}");
+    assert!(
+        pis.contains("<productList count=\"1\"><product><isolationWindow>")
+            && !pis.contains("<precursor"),
+        "{pis}"
+    );
     validate(&out);
 }
 

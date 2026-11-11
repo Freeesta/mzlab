@@ -78,7 +78,9 @@ impl Cur {
                     }
                 }
             }
-        } else if let (Scope::Spectrum, Some(s), false) = (self.scope, self.spec.as_mut(), self.in_product_list) {
+        } else if let (Scope::Spectrum, Some(s), false) =
+            (self.scope, self.spec.as_mut(), self.in_product_list)
+        {
             spectrum_cv(s, acc, value, seconds, self.in_precursor_list);
         }
         Ok(())

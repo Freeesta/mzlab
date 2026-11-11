@@ -303,7 +303,10 @@ fn real_files_match_proteowizard_mzml() {
         chroms += c;
         scheduled += s;
         let loss = |id: &str| {
-            let n = id.rsplit("experiment=").next().and_then(|v| v.parse::<usize>().ok());
+            let n = id
+                .rsplit("experiment=")
+                .next()
+                .and_then(|v| v.parse::<usize>().ok());
             n.and_then(|n| w.experiments.get(n.wrapping_sub(1)))
                 .is_some_and(|x| x.code == Some(mzlab_core::wiff::modes::CODE_NEUTRAL_LOSS))
         };
