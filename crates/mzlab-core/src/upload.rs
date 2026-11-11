@@ -324,15 +324,19 @@ pub fn index_reader_with(
     let n = l.index(c)?.len();
     // the members are asked for last, where the source is written (`build_after`): their hash may still be running
     let mut sha256 = String::new();
+    // the losses are asked once the scans are decoded (a damaged block of a `.wiff.scan` is seen there), where the source is written
+    let l = std::cell::RefCell::new(l);
     let mut late = || -> Result<String> {
         let (source, sha, _) = sorgente(&members()?, &sample, name);
         sha256 = sha;
-        Ok(source)
+        Ok(with_lost(source, &l.borrow_mut().losses(c)?))
     };
     let st = crate::mzidx::build_after(
         &p.table,
         before,
-        &mut |on| (0..n).try_for_each(|k| mzidx_reader::spettro(l, c, k).map(&mut *on)),
+        &mut |on| {
+            (0..n).try_for_each(|k| mzidx_reader::spettro(*l.borrow_mut(), c, k).map(&mut *on))
+        },
         out,
         budget,
         true,
@@ -423,6 +427,17 @@ fn sample_of(l: &mut dyn Reader, c: usize) -> Result<crate::readers::Sample> {
         .get(c)
         .cloned()
         .ok_or_else(|| Error::new("error.badIndex").with("c", c))
+}
+
+/// `source` with `lost` (`Losses::note`) when the read of the sample was partial (`index.mzidx` records it, `Losses::of_source`); a whole read keeps its bytes.
+fn with_lost(source: String, lost: &crate::readers::Losses) -> String {
+    match source.strip_suffix('}') {
+        Some(head) if lost.partial() => format!(
+            "{head},\"lost\":{{\"declared\":{},\"read\":{},\"cause\":\"{}\"}}}}",
+            lost.declared, lost.read, lost.cause
+        ),
+        _ => source,
+    }
 }
 
 /// The `source` of the index of sample `campione` of the members, its SHA-256 and probe.

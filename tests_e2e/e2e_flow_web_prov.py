@@ -36,6 +36,15 @@ subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flo
 print("native outputs:", sorted(x.name for x in (run / "out").iterdir() if not x.name.endswith(".mzidx")))
 data = site / "static" / "dati_flow_prov"; data.mkdir()
 for n in NAMES: shutil.copy2(run / "out" / ("idx-" + n + ".mzidx"), data / (n + ".mzidx"))
+# a synthetic .wiff whose data file is cut at two thirds, indexed by `flow run`: the index keeps what its read lost (`source.lost`), the step of flowrun/1 says it
+cut, CUT = run / "cut", None
+if subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(cut / "in"), "--name", "c", "--samples", "1", "--scans", "12", "--points", "40"], capture_output=True).returncode == 0:
+    sc = cut / "in" / "c.wiff.scan"; b = sc.read_bytes(); sc.write_bytes(b[: len(b) * 2 // 3])
+    (cut / "plan.json").write_text(json.dumps({"format": "mzflow/2", "inputs": [{"name": "c.wiff@1", "type": "raw"}], "steps": [
+        {"id": "imp", "step": "import.raw@1", "in": {"files": ["file:c.wiff@1"]}}, {"id": "idx", "step": "index.mzidx@1", "in": {"source": ["imp.raw"]}}]}))
+    o = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(cut / "plan.json"), "--in", str(cut / "in"), "--out", str(cut / "out"), "--json"], cwd=ROOT, check=True, capture_output=True, text=True)
+    CUT = next(x for x in json.loads(o.stdout)["steps"] if x["instance"] == "idx")
+    shutil.copy2(cut / "out" / "idx-c-1.mzidx", data / "cut.mzidx")
 
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -56,6 +65,16 @@ KEPT = """async () => {
   out.alone = await (async () => { try { await d.getFileHandle('alone.mzfeat'); return true; } catch (_) { return false; } })();
   out.report = await (await FLOW.lastRunReport()).text();
   return out;
+}"""
+# what the facts worker of the record (worker-flow-web.js, op `source`) reads of the index of the cut file, put in OPFS
+SOURCE = """async () => {
+  let d = await navigator.storage.getDirectory();
+  for (const p of ["mzlab", "prova"]) d = await d.getDirectoryHandle(p, { create: true });
+  const w0 = await (await d.getFileHandle("cut.mzidx", { create: true })).createWritable(); await (await fetch("static/dati_flow_prov/cut.mzidx")).body.pipeTo(w0);
+  const p = await FLOW.runners.web.kit.getPool(), w = new Worker(new URL("mzfinder/lazy/worker-flow-web.js", QTOOLS.ctx.base), { type: "module" });
+  try {
+    return await new Promise((ok, no) => { w.onmessage = ev => ev.data.error ? no(new Error(ev.data.error.text)) : ok(JSON.parse(ev.data.json)); w.postMessage({ id: 1, wasm: p.featWasm, op: "source", paths: ["mzlab/prova/cut.mzidx"] }); });
+  } finally { w.terminate(); await d.removeEntry("cut.mzidx"); }
 }"""
 # the record of a run whose alignment failed: the jobs as the scheduler reports them (the gap filling blocked after it)
 FAILED = """async () => {
@@ -123,6 +142,13 @@ try:
             assert "gap" not in web["activity"] and "gap.table" not in web["entity"], "the gap filling that did not run is in the record"
             for i in ("idx", "det"): assert blank(web["activity"][i]) == blank(nat["activity"][i]), (i, diff(blank(nat["activity"][i]), blank(web["activity"][i])))
         step("a run whose alignment failed is recorded with the error and its parameters, without the steps after it", failed)
+
+        def cut_file():
+            if CUT is None: print("SKIP cut file: tools/wiff_grande.py needs numpy"); return
+            got = pg.evaluate(SOURCE)
+            assert CUT.get("warnings") == ["warn.file.truncated"], CUT
+            assert got.get("warnings") == CUT["warnings"] and got.get("file") == CUT["files"]["c.wiff@1"], (got, CUT)
+        step("the facts the browser reads of the index of a cut vendor file give the warning and the counts of the step of flow run", cut_file)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

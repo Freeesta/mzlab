@@ -73,7 +73,9 @@
         let r;
         if (id === "index.mzidx") {
           if (!it) return null;
-          r = { outputs: [await fileOut(inst, it.idx.path, "mzidx")], estimates: [], mem: null };
+          // a partial read the index says (`source.lost`): its warning and the note of its file, as `flow run` records them (`idx_source_json`)
+          const s = sources.get(it.input) || {};
+          r = { outputs: [await fileOut(inst, it.idx.path, "mzidx")], estimates: [], mem: null, ...(s.warnings ? { warnings: s.warnings, file: s.file } : {}) };
         } else if (id === "features.detect") {
           if (!it || !key) return null;
           r = { outputs: [await fileOut(inst, D + key + ".mzfeatf", "mzfeatf")], ...(await ask(w, wasm, { op: "meta", paths: [first, x.source(it).path], plan: planText, registry: JSON.stringify(x.registry), instance: j.instance, budgetMb: Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0 })) };

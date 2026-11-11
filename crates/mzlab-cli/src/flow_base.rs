@@ -12,10 +12,9 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::hashio::HashWrite;
 use mzlab_core::idxread::Index;
-use mzlab_core::json::Value;
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::{Options, ZLIB_LEVEL};
-use mzlab_core::readers::Limits;
+use mzlab_core::readers::{Limits, Losses};
 use mzlab_core::readers_mzml::{Conversion, Peaks};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
@@ -75,6 +74,8 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
         return Err(e);
     }
     let name = r.source_name(&job.inputs[0].1[0]);
+    // what the index says its read lost (`source.lost`, a vendor file): the site reads the same key of the index it keeps
+    let lost = Losses::of_source(&open(&out)?.source).unwrap_or_default();
     let a = r.keep(out, DataType::Mzidx)?;
     r.trace(
         &a,
@@ -85,7 +86,9 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
             ..Lineage::default()
         },
     );
-    Ok(Made::new("index", a))
+    let mut made = Made::new("index", a);
+    note_losses(&mut made, &lost);
+    Ok(made)
 }
 
 /// The recipe a lineage means: the one of the panel on its first index, then the parameters of each feature step.
@@ -354,16 +357,16 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     if profile {
         made.warnings.push("warn.flow.profile".into());
     }
-    // a partial read is in the record of the run (prov.json, corsa.json, flowrun/1): its cause among the warnings, its counts as the note of the file
+    note_losses(&mut made, &lost);
+    Ok(made)
+}
+
+/// A partial read in the record of the run (prov.json, corsa.json, flowrun/1): its cause among the warnings, its counts as the note of the file.
+fn note_losses(made: &mut Made, lost: &Losses) {
     if lost.partial() {
         made.warnings.push(lost.cause.into());
-        made.file = Some(Value::Obj(vec![
-            ("declared".into(), Value::Num(lost.declared as f64)),
-            ("read".into(), Value::Num(lost.read as f64)),
-            ("cause".into(), Value::Str(lost.cause.into())),
-        ]));
+        made.file = Some(lost.note());
     }
-    Ok(made)
 }
 
 /// Writes the sample `label` (`ID` of a `NAME@ID` input; the first when empty) of the dataset at `path` to `out` as indexed mzML; true when the file keeps
@@ -388,7 +391,7 @@ pub(crate) fn write_mzml_with(
     (peaks, opz): (Peaks, Options),
     step: &mut dyn FnMut(usize, usize),
     stop: &Stop,
-) -> Result<(bool, u64, String, mzlab_core::readers::Losses)> {
+) -> Result<(bool, u64, String, Losses)> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
@@ -459,3 +462,7 @@ pub(crate) fn table_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
 #[cfg(test)]
 #[path = "flow_partial_tests.rs"]
 mod partial_tests;
+
+#[cfg(test)]
+#[path = "flow_partial_idx_tests.rs"]
+mod partial_idx_tests;
