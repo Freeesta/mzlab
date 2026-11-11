@@ -973,6 +973,7 @@
   "mrm.capNoticeSim": "Avviso sotto il grafico: si mostrano solo i primi {n} di {t} file SIM; {n}, {t} = numeri.",
   "canali.sim.cell": "Cella «Esperimento» della tabella dei file per un file SIM; {n} = numero di ioni monitorati.",
   "canali.btn.aria": "Nome accessibile del pulsante dei canali; {n} = numero di canali tracciati.",
+  "canali.pick.ck": "Suggerimento al passaggio sulla casella di una riga del selettore di transizioni / ioni SIM; {et} = etichetta del canale (m/z).",
   "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di punti (scansioni), {a} e {b} = tempo iniziale e finale in minuti.",
   "canali.kind.aria": "Nome accessibile del pulsante che sceglie cosa traccia il cromatogramma; {v} = testo del pulsante (per esempio TIC o TIC + 1).",
   "canali.tip.time": "Riga del suggerimento di un canale con il suo intervallo di tempo; {a} e {b} = tempo iniziale e finale in minuti.",
