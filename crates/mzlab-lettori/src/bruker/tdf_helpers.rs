@@ -115,6 +115,13 @@ pub(super) fn absent(name: &str, file: &str) -> Error {
         .with("file", file)
 }
 
+/// The error of a run whose frame `frame` names no usable `MzCalibration` row (missing, another model, non-finite constants): no m/z without it.
+pub(super) fn no_calibration(frame: i64) -> Error {
+    Error::new("err.file.brukerCalibration")
+        .with("frame", frame.to_string())
+        .with("detail", "no usable MzCalibration")
+}
+
 pub(super) fn take(fs: &mut FileSet, suffix: &str) -> Option<Member> {
     let i = fs.find(suffix)?;
     Some(fs.membri.remove(i))

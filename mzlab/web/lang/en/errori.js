@@ -29,6 +29,7 @@ I18N.add("en", {
   "err.file.rawVersion": "Version {version} of the Thermo .raw format is not supported yet: convert the file to mzML.",
   "err.file.notAgilentD": "The folder {name} has no AcqData/MSScan.bin and AcqData/MSPeak.bin (nor a data.ms file): the whole .D folder is needed, with its AcqData subfolder.",
   "err.file.agilentNoEngine": "Agilent .D folders open only with the Rust engine of the program ({name}).",
+  "err.file.brukerCalibration": "Frame {frame} of this Bruker .d folder has no usable m/z calibration (the MzCalibration table of analysis.tdf/.tsf is missing, lacks its row or has invalid constants): no mass can be computed without it, so nothing was loaded. Export the run to mzML with the instrument software.",
   "err.file.brukerDamaged": "A part of this Bruker .d folder cannot be read: analysis.tdf/.tsf or its _bin file is damaged, cut short or written in a layout this program does not read, so nothing was loaded. Copy the whole .d folder again; if the notice remains, export the run to mzML with the instrument software and open that file.",
   "err.file.brukerBaf": "Bruker folders with only analysis.baf cannot be read without the vendor's software: export it to mzML first.",
   "err.file.brukerYep": "Bruker folders with analysis.yep (ion traps) cannot be read without the vendor's software: export them to mzML first with the instrument software.",

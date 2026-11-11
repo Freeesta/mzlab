@@ -4,7 +4,8 @@
 - Le cartelle Bruker senza `analysis.tdf`/`.tsf` che il modulo non legge si riconoscono (`Forse`, `legacy_key` in `tdf_helpers.rs`) per dire quale sono: solo `analysis.baf` → `err.file.brukerBaf`, `analysis.yep` (trappole ioniche) → `err.file.brukerYep`, `ser` o `fid` direttamente nella cartella `.d` (FT-ICR) → `err.file.brukerFtms`, un `fid` accanto ad `acqu`/`acqus` fuori da una `.d` (MALDI FLEX) → `err.file.brukerFlex`; tutte dicono di esportare in mzML.
 - La pagina dà le stesse chiavi (`BrukerD.legacyKey` in `agilent-d.js`; FLEX tra i file ignorati, `CartCarica.flexMaldi`). BAF, YEP, FT-ICR e FLEX restano illeggibili senza l'SDK.
 - Un database senza il suo `_bin`, un `_bin` senza il suo database o un database che non è SQLite (copia vuota o tagliata) sono `Forse`: `apri` dà `err.file.brukerNoBin` (`name` = cartella, `file` = il file che manca) o l'errore SQLite con chiave; la pagina fa lo stesso conto (`BrukerD.missing` in `agilent-d.js`).
-- Un `.tdf`/`.tsf` o un `_bin` danneggiato, tagliato o con un layout non letto (pagina SQLite, blocco zstd, nessuna `MzCalibration` usabile) è `err.file.brukerDamaged`: il testo dell'avviso non mostra il dettaglio del lettore (`detail`, scritto dal CLI dopo la chiave).
+- Un frame dell'indice che nomina una riga di `MzCalibration` assente o inutilizzabile (`MzCal::validate`) fa rifiutare la corsa all'apertura con `err.file.brukerCalibration` (`frame` = `Frames.Id`), non al primo spettro.
+- Un `.tdf`/`.tsf` o un `_bin` danneggiato, tagliato o con un layout non letto (pagina SQLite, blocco zstd) è `err.file.brukerDamaged`: il testo dell'avviso non mostra il dettaglio del lettore (`detail`, scritto dal CLI dopo la chiave).
 
 ## File del modulo
 - `sqlite_min.rs`, `sqlite_schema.rs`, `sqlite_wal.rs`: lettore SQLite 3 in sola lettura senza motore SQL (nessun `rusqlite`). Pagine b-tree di tabella (5, 13) e di indice (2, 10, per le tabelle `WITHOUT ROWID`, con le colonne riordinate: la chiave primaria per prima), overflow, log WAL. Visita iterativa con ogni puntatore, lunghezza, profondità e numero di pagine passati da `Limiti`; una pagina già vista o un ciclo è un errore, non un giro infinito.
@@ -49,3 +50,4 @@ Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` d
 - TSF: m/z uguale a quello del `.mgf` di Bruker su un campione; mobilità non verificata.
 - Mobilità inversa 1/K0 (`TimsCalibration`, `ModelType` 2): la formula non è nota né ricavabile dai file, quindi non si calcola; si scrivono gli intervalli di scansione (DEV-10 userà i punti con mobilità).
 - Il BAF non si legge (serve l'SDK Bruker).
+- TIC dell'indice: il fattore `AccumulationTime/100` presuppone `SummedIntensities` normalizzato a 100 ms in ogni versione dello schema; non è verificato su tutte le versioni (nessun file sintetico né documento lo decide), quindi la regola resta questa.

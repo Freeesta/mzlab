@@ -6,7 +6,7 @@ use super::spectra::{build, summed, Desc};
 use super::sqlite_min::Sqlite;
 use super::tables::Data;
 use super::tdf_helpers::{
-    absent, bad_index, cartella, cut_ones, legacy_key, recognize, sum_scan, take,
+    absent, bad_index, cartella, cut_ones, legacy_key, no_calibration, recognize, sum_scan, take,
 };
 use super::tsf;
 use mzlab_core::error::{Error, Result};
@@ -71,6 +71,14 @@ impl BrukerReader {
         let all = desc.len();
         desc.retain(|d| !cut[d.frame]);
         let missing_ones = all - desc.len();
+        // a frame without a usable MzCalibration: refused when the run opens, not at its first spectrum
+        let uncalibrated = desc
+            .iter()
+            .map(|d| &data.frames[d.frame])
+            .find(|f| !data.cal.get(&f.cal).is_some_and(|c| c.validate()));
+        if let Some(f) = uncalibrated {
+            return Err(no_calibration(f.id));
+        }
         let header = BrukerHeader::read(&data, tsf);
         let compression = data
             .meta
@@ -190,9 +198,7 @@ impl BrukerReader {
             .cal
             .get(&f.cal)
             .filter(|c| c.validate())
-            .ok_or_else(|| {
-                Error::new("err.file.brukerDamaged").with("detail", "no usable MzCalibration")
-            })?
+            .ok_or_else(|| no_calibration(f.id))?
             .clone();
         let (tof, y, profilo) = self.points(&d)?;
         self.maxima[k] = Some(maximum(&y));
