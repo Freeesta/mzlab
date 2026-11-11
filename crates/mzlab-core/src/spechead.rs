@@ -23,21 +23,19 @@ pub struct Term {
 }
 
 impl Term {
-    /// One pass over the attributes; the first of a repeated one wins, as a lookup would give.
+    /// One pass over the attributes; of a repeated one (malformed XML) the first non-empty value wins.
     fn of(t: &[(&str, Cow<str>)], user: bool) -> Term {
         let mut out = Term::default();
-        let mut seen = [false; 5];
         for (k, v) in t {
-            let (i, to) = match *k {
-                "accession" if !user => (0, &mut out.acc),
-                "name" => (1, &mut out.name),
-                "value" => (2, &mut out.value),
-                "unitAccession" => (3, &mut out.unit_acc),
-                "unitName" => (4, &mut out.unit_name),
+            let to = match *k {
+                "accession" if !user => &mut out.acc,
+                "name" => &mut out.name,
+                "value" => &mut out.value,
+                "unitAccession" => &mut out.unit_acc,
+                "unitName" => &mut out.unit_name,
                 _ => continue,
             };
-            if !seen[i] {
-                seen[i] = true;
+            if to.is_empty() {
                 to.push_str(v);
             }
         }

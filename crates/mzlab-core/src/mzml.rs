@@ -296,16 +296,21 @@ pub fn parse_corriere<R: Read, F: FnMut(Item)>(
 }
 
 /// A spectrum or chromatogram whose two arrays differ in length: a damaged file, never cut to the shorter.
+#[cold]
 pub(crate) fn lengths(id: &str, index: usize, a: usize, b: usize) -> Error {
-    let chi = if id.is_empty() {
+    Error::new("err.file.mzmlLengths")
+        .with("scan", name_of(id, index))
+        .with("a", a)
+        .with("b", b)
+}
+
+/// How a damaged item is named: its id, else its 1-based position.
+pub(crate) fn name_of(id: &str, index: usize) -> String {
+    if id.is_empty() {
         (index + 1).to_string()
     } else {
         id.to_string()
-    };
-    Error::new("err.file.mzmlLengths")
-        .with("scan", chi)
-        .with("a", a)
-        .with("b", b)
+    }
 }
 
 /// The tags of the file go to the shared header reader (`spechead`, local names, CDATA as text); each finished header becomes an item. The analyzer

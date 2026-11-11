@@ -31,11 +31,7 @@ impl Levels {
 
 /// Where a damaged item is named: its id, else its 1-based position.
 fn who(h: &Head, n: usize) -> String {
-    if h.id.is_empty() {
-        (h.index.unwrap_or(n) + 1).to_string()
-    } else {
-        h.id.clone()
-    }
+    super::name_of(&h.id, h.index.unwrap_or(n))
 }
 
 /// The array of `a`: its kind (the first m/z, intensity, time or mobility term), number type, zlib flag and the minutes per time unit.
