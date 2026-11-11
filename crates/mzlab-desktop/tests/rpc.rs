@@ -203,3 +203,38 @@ fn a_file_changed_on_disk_loses_its_index_at_the_next_boot_even_after_another_li
     let boot = text(st3.rpc("lr_boot", &json!({}), &[]).unwrap());
     assert!(boot.contains("\"indexed\":true"), "the index built after the change is kept: {boot}");
 }
+
+/// Other bytes of the same size with the date put back (a copy that keeps the date): size and date agree, the probe does not.
+fn same_size_and_date(f: &Path) {
+    let when = std::fs::metadata(f).unwrap().modified().unwrap();
+    let mut b = std::fs::read(f).unwrap();
+    b[0..5].copy_from_slice(b"<?XML");
+    std::fs::write(f, b).unwrap();
+    std::fs::File::options().write(true).open(f).unwrap().set_modified(when).unwrap();
+}
+
+#[test]
+fn a_file_replaced_with_the_same_size_and_date_loses_its_index() {
+    let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let data = tempfile::tempdir().unwrap();
+    let (f, g) = (data.path().join("a.mzML"), data.path().join("w.mzML"));
+    std::fs::copy(&ex, &f).unwrap();
+    std::fs::copy(&ex, &g).unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    st.set_index_folder(data.path().join("idx")).unwrap();
+    let (id, _) = st.pick(f.clone()).unwrap();
+    st.rpc("lr_put", &json!({"name": "a.mzML", "fid": id}), &[]).unwrap();
+    st.rpc("lr_index", &json!({"name": "a.mzML"}), &[]).unwrap();
+    let (wid, _) = st.pick(g.clone()).unwrap();
+    st.rpc("lr_warm", &json!({"name": "w.mzML", "fid": wid}), &[]).unwrap();
+    same_size_and_date(&g);
+    let miss = text(st.rpc("lr_warm_claim", &json!({"name": "w.mzML", "fid": wid}), &[]).unwrap());
+    assert_eq!(miss, "{\"hit\":false}", "a warm index of the old bytes is not claimed");
+    same_size_and_date(&f);
+    let st2 = State::new();
+    st2.set_data_folder(data.path().join("app"));
+    st2.set_index_folder(data.path().join("idx")).unwrap();
+    let boot = text(st2.rpc("lr_boot", &json!({}), &[]).unwrap());
+    assert!(boot.contains("\"indexed\":false"), "the index of the old bytes is dropped: {boot}");
+}

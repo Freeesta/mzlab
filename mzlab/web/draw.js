@@ -10,7 +10,7 @@ import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./d
 import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -509,7 +509,7 @@ function labelParts(/** @type {DrawStruct} */ d) {
   if (f) {
     parts.push(...formulaParts(d.formula));
     if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
-    if (d.unpaired || d.odd) parts.push(["•", "sup"]);                    // a radical: a mark on an atom or an odd electron count (M+• for a radical cation)
+    if (dots(d)) parts.push([dots(d), "sup"]);                             // a radical: a mark on an atom or an odd electron count (M+• for a radical cation)
   }
   if (m) {
     const line = f ? (lines.push([]), lines[1]) : parts;

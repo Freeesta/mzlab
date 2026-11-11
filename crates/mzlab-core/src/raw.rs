@@ -11,13 +11,17 @@ use crate::error::{Error, Result};
 use crate::mzml::{Run, Spectrum};
 
 /// What the metadata of a run's scans leave to a notice: how many have their scan event, how many had the trailer's monoisotopic m/z put aside (outside
-/// the isolation window), how many SRM scans take Q1 and energy from the method's transition table.
+/// the isolation window), how many SRM scans take Q1 and energy from the method's transition table, how many name an MS order not decoded, how many
+/// found their event by number in a table cut short, how many have a profile calibration no known conversion uses.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ScanNotes {
     pub scans: usize,
     pub with_event: usize,
     pub ion_rejected: usize,
     pub srm_from_table: usize,
+    pub order_unknown: usize,
+    pub event_by_class: usize,
+    pub calibration_unknown: usize,
 }
 
 impl ScanNotes {
@@ -26,6 +30,9 @@ impl ScanNotes {
         self.with_event += usize::from(m.has_event);
         self.ion_rejected += usize::from(m.selected_ion_rejected);
         self.srm_from_table += usize::from(m.srm_from_table);
+        self.order_unknown += usize::from(m.ms_order_unknown);
+        self.event_by_class += usize::from(m.event_by_class);
+        self.calibration_unknown += usize::from(m.calibration_unknown);
     }
     /// The notes of every scan of `raw`, read from its scan index, events and trailer.
     pub fn of<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> ScanNotes {

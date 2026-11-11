@@ -60,13 +60,19 @@ function sync(/** @type {Bag} */ p) {
   const a = p._a, old = /** @type {Bag[]} */ (p._ep || []); p._ep = [];
   const list = a && a.sr && !a.cas && a.X && a.Y && a.U && !p._exp && p.type !== "spec" && p.type !== "map" ? p.ints : [];
   const pts = (p._bp || []).filter((/** @type {HTMLElement} */ b) => !b.hidden).map((/** @type {HTMLElement} */ b) => [parseFloat(b.style.left), parseFloat(b.style.top)]);
+  // the two ends of a window narrower than a handle move apart just enough not to overlap (each stays over its point); where handles meet (the same window
+  // on two traces, two windows that touch) the first stands for both; the one in hand stays. pts: the centres shown (a point of a custom line too)
   for (const it of list) {
     const s = a.sr.find((/** @type {Bag} */ q) => q.key === it.key); if (!s) continue;
+    const at = (/** @type {string} */ e) => { const t = shown(s, it, e); return [t, a.X(t), a.Y(a.U(s, baseY(s, it, t)))]; };
+    const L = at(lo(it)), H = at(lo(it) === "a" ? "b" : "a"), d = Math.abs(L[2] - H[2]) < 24 ? Math.max(0, (24 - (H[1] - L[1])) / 2) : 0;
     for (const e of ["a", "b"]) {
-      const b = old.shift() || button(p), t = shown(s, it, e); b._it = it; b._e = e; b._s = s; b.dataset.e = e === lo(it) ? "0" : "1"; p._ep.push(b);
-      const px = a.X(t), py = a.Y(a.U(s, baseY(s, it, t))), x = p.cv.offsetLeft + px, y = p.cv.offsetTop + py;
+      const b = old.shift() || button(p), first = e === lo(it), [t, px, py] = first ? L : H; b._it = it; b._e = e; b._s = s; b.dataset.e = first ? "0" : "1"; p._ep.push(b);
+      const x = p.cv.offsetLeft + px + (first ? -d : d), y = p.cv.offsetTop + py;
       const out = px < M.l - 2 || px > a.W - M.r + 2 || py < M.t - 2 || py > a.H - M.b + 2;
-      b.hidden = out || pts.some(q => Math.abs(q[0] - x) < 24 && Math.abs(q[1] - y) < 24);          // a point of a custom line sits there: that one is dragged
+      const held = b.classList.contains("on") || document.activeElement === b;
+      b.hidden = out || (!held && pts.some(q => Math.abs(q[0] - x) < 24 && Math.abs(q[1] - y) < 24));
+      if (!b.hidden) pts.push([x, y]);
       b.style.left = x + "px"; b.style.top = y + "px";
       const v = label(it, e, t); b.setAttribute("aria-label", v); b.title = v;
       b.setAttribute("aria-valuenow", t.toFixed(3)); b.setAttribute("aria-valuetext", I18N.t("cursor.handle.value", { rt: t.toFixed(3) }));

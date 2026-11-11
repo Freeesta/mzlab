@@ -259,6 +259,11 @@ pub(crate) fn event_slot(n_events: usize, n_scans: usize, idx: usize, row_event:
     }
 }
 
+/// Whether [`event_slot`] finds the events by number in a table the open stopped inside (`cut`): one event per scan is each scan's own, checked or not.
+pub(crate) fn by_class_in_cut_table(n_events: usize, n_scans: usize, cut: bool) -> bool {
+    cut && n_events != n_scans
+}
+
 /// Model strings from the InstID block that follows the MS controller's
 /// RunHeader (`docs/docs/format/03-raw-file-info.md` section 11), most
 /// specific first: `model[2]` always names the model, while `model[1]` is
@@ -1413,6 +1418,20 @@ impl RawFileReader {
         )
     }
 
+    /// Whether the scans find their event by the index's event number in a table the open cut short: the lookup a compact table uses, unchecked here.
+    pub fn events_by_class(&self) -> bool {
+        let cut = self.warnings.iter().any(|w| {
+            matches!(
+                w,
+                Warning::Skipped {
+                    stage: "ScanEvents",
+                    ..
+                }
+            )
+        });
+        by_class_in_cut_table(self.scan_events.len(), self.scan_index.len(), cut)
+    }
+
     /// The event of scan `idx`: its own entry when the file holds one event per scan, otherwise the entry of the shared event table that the scan's index row names (ion-trap runs list each distinct event once).
     pub fn scan_event(&self, idx: usize) -> Option<ScanEvent> {
         let slot = event_slot(
@@ -2404,6 +2423,10 @@ mod tests {
         assert_eq!(event_slot(7, 99, 40, 3), 3);
         // one event per scan: the scan's own position, whatever the row says
         assert_eq!(event_slot(99, 99, 40, 3), 40);
+        // only a table cut short makes the lookup by number a guess: a whole compact table is the layout, one event per scan is each scan's own
+        assert!(by_class_in_cut_table(7, 99, true));
+        assert!(!by_class_in_cut_table(7, 99, false));
+        assert!(!by_class_in_cut_table(99, 99, true));
     }
     use std::io::Cursor;
 

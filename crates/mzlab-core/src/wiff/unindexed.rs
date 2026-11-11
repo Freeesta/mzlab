@@ -152,6 +152,7 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
                 tic: 0.0,
                 cycle: cycle / n_exp,
                 experiment: cycle % n_exp,
+                points: f64::NAN,
             })
         })
         .collect::<Option<Vec<_>>>()?;

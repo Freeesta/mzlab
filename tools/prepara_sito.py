@@ -3,7 +3,8 @@
     python3 tools/prepara_sito.py
 
 `tools/build_site.py`, then `cargo build` of mzlab-wasm for wasm32 and `wasm-bindgen` into site/static/wasm (the same two commands the site
-tests run when the engine is missing), and the library engine mzlab-lib-wasm into site/static/wasm-lib as the published site has it. Nothing is done when site/ is newer than its sources; cargo skips what is up to date; the wasm-bindgen version must be the one of Cargo.lock.
+tests run when the engine is missing), the library engine mzlab-lib-wasm into site/static/wasm-lib and the reader modules with their manifest into
+site/static/wasm-lettori (tools/build_lettori_wasm.sh, the script of pages.yml) as the published site has them. Nothing is done when site/ is newer than its sources; cargo skips what is up to date; the wasm-bindgen version must be the one of Cargo.lock.
 """
 import hashlib
 import json
@@ -44,7 +45,8 @@ def bindgen_version() -> str:
 def up_to_date() -> bool:
     """site/ and its .wasm exist and nothing they are made from is newer (a site built with mzFinder's Pyodide, as the site tests do, is kept)."""
     out = ROOT / "site" / "static" / "wasm" / "mzlab_wasm_bg.wasm"
-    if not out.exists() or not (ROOT / "site" / "index.html").exists() or not (ROOT / "site" / "static" / "wasm-lib" / "mzlab_lib_wasm.js").exists():
+    st = ROOT / "site" / "static"
+    if not out.exists() or not (ROOT / "site" / "index.html").exists() or not (st / "wasm-lib" / "mzlab_lib_wasm.js").exists() or not (st / "wasm-lettori" / "manifest.json").exists():
         return False
     t = out.stat().st_mtime
     sources = [ROOT / "Cargo.lock", *(ROOT / "mzlab" / "web").rglob("*"), *(ROOT / "crates").rglob("*.rs")]
@@ -84,6 +86,8 @@ def main() -> int:
     # its own cargo run: built with mzlab-wasm, unified features could change the engine's bytes
     run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm"], build_env("wasm32-unknown-unknown", commit=False))
     run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", "site/static/wasm-lib", str(WASM.with_name("mzlab_lib_wasm.wasm"))])
+    # the readers (one .wasm per family of formats) and their manifest: without them a .wiff, .raw or .d asks the page for a file the site does not have
+    run(["bash", "tools/build_lettori_wasm.sh", "site/static"], build_env("wasm32-unknown-unknown", commit=False))
     run([sys.executable, "tools/build_site.py", "--build-json"])      # the .wasm is in place now: build.json names its SHA-256
     return 0
 

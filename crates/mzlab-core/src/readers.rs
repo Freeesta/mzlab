@@ -198,7 +198,7 @@ pub struct ChromatogramEntry {
 }
 
 pub use listing::samples_json;
-pub use outcome::{Losses, ReadOutcome, ReadOutcomes, EVENTS_REFUSED, TRUNCATED};
+pub use outcome::{Losses, ReadOutcome, ReadOutcomes, DAMAGED, EVENTS_REFUSED, TRUNCATED};
 
 /// A reader of one dataset. Random access: `indice` is read once, `scansione` reads only the bytes of one scan; streaming is `scansione(c, 0..n)`.
 /// An error is a key (`err.file.*`), never a panic; what a file lacks is absent from the answer, not an error.

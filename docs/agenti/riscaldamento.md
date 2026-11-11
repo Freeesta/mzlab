@@ -10,7 +10,7 @@ Dopo che la cartella puntata (`CartPunt`, `CartPuntDesk`) è elencata, i file mz
 - `riscalda.js` (modulo ES, caricato al bisogno da `cartella-puntata.js`): coda nell'ordine dell'elenco, un file alla volta, solo `.mzML` di dati, nomi doppi saltati. Parte quando la pagina è quieta (scheda visibile, `UPBUSY` zero, nessun input da 1,5 s). Salta telefono, `saveData`, `deviceMemory` < 4, batteria < 25 % non in carica. Limite: 128 MB sul sito (`prepare_upload` è sincrono nel worker), 1 GiB su desktop. Errori silenziosi, nessun testo nuovo.
 - Sito: `/api/warm` → `lr_warm` (`rust-scalda.js`, lazy nel worker) esegue `lr_put` + `lr_index` e scrive il marcatore `warm/<nome>.json` (size, mtime); `lr_boot` nasconde i file con marcatore. Budget: un quarto della quota con 256 MB di scorta; un caricamento vero espelle i file caldi (`makeRoom`).
 - Desktop: `lr_warm` (`rpc_warm.rs`) costruisce l'indice senza voce nel negozio; `lr_boot` salta i nomi caldi.
-- All'apertura `upload()` chiama prima `lr_warm_claim`: se dimensione e mtime coincidono salta copia e indice (stessi byte dell'apertura a freddo), altrimenti il percorso normale. Un clic su un file in coda lo toglie dalla coda (`claim`) o attende quello in corso: lavoro mai doppio.
+- All'apertura `upload()` chiama prima `lr_warm_claim`: se dimensione e mtime coincidono e l'indice è del file (`index_built_from`: dimensione e probe) salta copia e indice (stessi byte dell'apertura a freddo), altrimenti il percorso normale. Un clic su un file in coda lo toglie dalla coda (`claim`) o attende quello in corso: lavoro mai doppio.
 - `forget()` della cartella ferma la coda; `lr_clear`, `lr_remove` cancellano i caldi.
 
 ## Prove

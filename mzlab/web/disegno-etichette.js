@@ -7,6 +7,9 @@ import { carica } from "./disegno-frammenti.js";
 /** a Ketcher label that is an element symbol (not R#, A, Q, M, X, L, *, an atom list) */
 export const isElement = (/** @type {string} */ l) => /^[A-Z][a-z]?$/.test(l) && !/^[AQMXLR]$/.test(l);
 
+/** the radical mark of a label: one • per unpaired electron (•• for a carbene left by a cut), one • for an odd electron count without marks */
+export const dots = (/** @type {{ unpaired?: number, odd?: boolean }} */ l) => l.unpaired ? "•".repeat(Math.min(l.unpaired, 3)) : l.odd ? "•" : "";
+
 /** the atom as the engine reads it */
 export const atomOf = (/** @type {any} */ a) => ({ el: a.label, iso: a.isotope || 0, h: a.implicitH || 0, q: a.charge || 0, r: a.radical || 0 });
 

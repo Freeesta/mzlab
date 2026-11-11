@@ -25,7 +25,7 @@ total      dimensione del file: un file di dimensione diversa (troncato) non si 
 - **`mob`** (22ª colonna, solo se la scansione ha una mobilità come attributo della scansione; la 21ª è `null` se manca il tipo): `[valore, unità]` con unità `k0` (`MS:1002815`, 1/K0 in V·s/cm²) o `ms` (`MS:1002476`, tempo di deriva); `idxread::Scan.mob`. Gli array di mobilità per punto non sono nell'indice: si leggono dalla scansione (`Scansioni::mobilita`).
 - **T** = `<f4` per l'MS1 di un file ad alta risoluzione (`Run.hr1`), altrimenti `<f8` (stessa regola della tabella in memoria).
 - **Sezioni**: una per ogni livello × polarità (`all`, `+`, `-`: `+` prende le scansioni di polarità +1 o 0, come `Run.table(livello, 1)`); gruppi con le stesse scansioni condividono la sezione. `keys` dice quale.
-- **Validità**: `source.size`, `source.mtime_ns` (solo con la cartella predefinita) e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) devono combaciare con il file; `source.sha256` è l'impronta dell'intero file (calcolata durante la copia in OPFS o, senza, da `upload::impronte`: stesso valore) (la stessa che usa `.mzflow`).
+- **Validità**: `source.size` e `source.probe` (SHA-1 di dimensione, primi e ultimi 64 KB) descrivono il file (`source.mtime_ns` vale 0; il riuso controlla come in `rust-mzidx.md`); `source.sha256` è l'impronta dell'intero file (dalla copia in OPFS o da `upload::impronte`, stesso valore; la usa `.mzflow`).
 - **Scrittura atomica**: file temporaneo accanto alla destinazione, poi rinomina; l'intestazione si scrive per ultima.
 
 ## Indice di un file del produttore (versione 2)

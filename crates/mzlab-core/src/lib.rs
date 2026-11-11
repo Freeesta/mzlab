@@ -50,6 +50,7 @@ mod idxcheck;
 pub mod idxread;
 mod readat;
 pub mod idxsearch;
+pub mod idxsource;
 pub mod idxwalk;
 pub mod ionpattern;
 pub mod isofine;
@@ -116,7 +117,7 @@ mod mzmlarray;
 pub mod mzmlhead;
 pub(crate) mod trace_unit;
 pub mod mzmlsrm;
-pub mod simtab;
+pub mod manint;
 #[cfg(feature = "mappa-dad")]
 mod mzml_dad;
 pub mod numarray;

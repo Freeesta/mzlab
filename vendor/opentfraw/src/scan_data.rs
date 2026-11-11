@@ -488,13 +488,20 @@ enum Conversione {
 }
 
 impl Conversione {
-    fn di(c: &[f64]) -> Self {
+    /// `None`: a count of coefficients no known conversion uses (its points would stay in frequency units).
+    fn di(c: &[f64]) -> Option<Self> {
         match c.len() {
-            4 => Conversione::Ft(c[1], c[2], c[3]),
-            5 | 7 => Conversione::Orbitrap(c[2], c[3], c[4]),
-            _ => Conversione::Nessuna,
+            0 => Some(Conversione::Nessuna),
+            4 => Some(Conversione::Ft(c[1], c[2], c[3])),
+            5 | 7 => Some(Conversione::Orbitrap(c[2], c[3], c[4])),
+            _ => None,
         }
     }
+}
+
+/// Whether a profile with these calibration coefficients converts to m/z: none (already m/z), 4 (FT-ICR), 5 or 7 (Orbitrap).
+pub fn calibration_known(coefficients: &[f64]) -> bool {
+    Conversione::di(coefficients).is_some()
 }
 
 /// The points of one chunk (the `f32` signal in `b`, bins from `first_bin`) appended to `mz` and `int`, keeping m/z > 0, as [`Profile::to_mz_intensity_into`]:
@@ -580,7 +587,9 @@ impl Profile {
         r.check_count(peak_count as u64, 8)?;
         // A profile already in the m/z domain (ion trap) starts one step after its first value, as the vendor library gives it.
         let origin = if coefficients.is_empty() { 1.0 } else { 0.0 };
-        let conv = Conversione::di(coefficients);
+        let conv = Conversione::di(coefficients).ok_or(Error::UnsupportedOperation(
+            "profile calibration with a count of coefficients no known conversion uses",
+        ))?;
         for _ in 0..peak_count {
             let (first_bin, chunk_nbins, fudge) =
                 con_blocco(r, if has_fudge { 12 } else { 8 }, |b| {
@@ -963,6 +972,16 @@ mod tests {
             );
         }
         b
+    }
+
+    #[test]
+    fn only_the_known_counts_of_coefficients_calibrate_a_profile() {
+        assert!([0usize, 4, 5, 7]
+            .iter()
+            .all(|&n| calibration_known(&vec![1.0; n])));
+        assert!([1usize, 2, 3, 6, 8]
+            .iter()
+            .all(|&n| !calibration_known(&vec![1.0; n])));
     }
 
     #[test]

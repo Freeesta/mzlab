@@ -143,7 +143,7 @@ I18N.add("en", {
   "draw.frag.col.bond": "Bond",
   "draw.frag.col.formula": "Fragment {n}: formula (mass)",
   "draw.frag.col.mz": "m/z [F{n}+H]+",
-  "draw.frag.note": "Each fragment takes one H per bond order; m/z of the ion [F+H]+.",
+  "draw.frag.note": "Each fragment takes one H per bond order; m/z of the ion [F+H]+. • = odd electron count (a drawn radical): the ion is an odd-electron one (M+•).",
   "draw.cut.heading": "Bond cuts",
   "draw.cut.help": "Draw a line across the bonds to break (two bonds of a ring too), or select them and right-click. Formula and mass appear under each piece: candidates to judge, not the answer.",
   "draw.cut.mode": "Cleavage",

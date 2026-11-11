@@ -84,6 +84,7 @@ try:
             # Draw's «See an example drawing» works: the dialog shows both drawings, loaded from the lab build
             assert pg.is_visible("#ex-link"), "example drawing link hidden"
             assert pg.inner_text("#ex-link").strip() == pg.evaluate("I18N.t('draw.example.link')")
+            wait_for_js(pg, "!!window.TPDraw", timeout=120000)      # the link is in the page before draw.js (a lazy module) binds its click
             pg.click("#ex-link"); pg.wait_for_selector("#bigdlg[open] #bigbody img", timeout=10000)
             pg.wait_for_function("[...document.querySelectorAll('#bigbody img')].every(i => i.complete && i.naturalWidth > 0)", timeout=15000)
             srcs = pg.evaluate("[...document.querySelectorAll('#bigbody img')].map(i => i.getAttribute('src'))")
