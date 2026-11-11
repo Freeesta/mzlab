@@ -400,6 +400,7 @@ let infoRun = 0;
 // only marks "again" and the run repeats once with the final selection.
 let infoBusy = false, infoAgain = false;
 async function showInfo() {
+  analysis();
   if (infoBusy) { infoAgain = true; return; }
   infoBusy = true;
   try { do { infoAgain = false; await showInfo1(); } while (infoAgain); }
@@ -457,6 +458,20 @@ async function showInfo1() {
     + (usedNeutral ? '<div class="muted sm">' + EH(I18N.t("draw.props.usedNeutral")) + '</div>' : "")
     + (perm ? '<div class="muted sm">' + EH(I18N.t("draw.props.permanent")) + '</div>' : "");
 }
+// «Formula analysis» card (disegno-analisi.js, loaded when first opened): the selected atoms, or the only structure of the canvas
+let analCard = /** @type {Promise<{ refresh: () => void }> | null} */ (null);
+const analHelpers = { t: fragHelpers.t, copy: (/** @type {string} */ s) => { copyText(s); }, table: fragHelpers.table, atoms: () => {
+  if (!K || !K.editor) return null;
+  const st = K.editor.struct(), sel = K.editor.selection() || {}, set = new Set(sel.atoms || []);
+  (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+  const ps = pieces(set.size ? set : null);
+  return set.size || ps.length === 1 ? ps.flatMap(p => p.ids).map((/** @type {number} */ i) => st.atoms.get(i)) : null;
+} };
+function analysis() {
+  const c = /** @type {HTMLDetailsElement | null} */ (Q("#anal-card")); if (!c || !c.open) return;
+  (analCard = analCard || import("./disegno-analisi.js").then(m => m.mount(analHelpers))).then(a => a.refresh()).catch(() => { analCard = null; });
+}
+document.addEventListener("toggle", e => { if (/** @type {any} */ (e.target).id === "anal-card") analysis(); }, true);   // toggle does not bubble: caught on the way down
 let neutOn = true;                                                             // "Escludi la carica": on by default
 document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
 const fmtF = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");

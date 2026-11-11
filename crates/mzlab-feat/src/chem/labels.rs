@@ -10,9 +10,9 @@ use mzlab_core::nuclides::NUCLIDES;
 use crate::sortc::SortC;
 
 /// One element-and-isotope of a formula: symbol (from the nuclide table) and mass number (0 = the element at natural abundance, written plain).
-type Key = (&'static str, u16);
+pub(super) type Key = (&'static str, u16);
 /// A few keys per structure: a plain list keeps the .wasm small (no map instantiated for these keys).
-type Counts = Vec<(Key, u64)>;
+pub(super) type Counts = Vec<(Key, u64)>;
 
 fn add(n: &mut Counts, k: Key, c: u64) {
     match n.iter_mut().find(|(x, _)| *x == k) {
@@ -26,10 +26,10 @@ fn count(n: &Counts, k: &Key) -> u64 {
 }
 
 pub(super) struct Shape {
-    n: Counts,
-    q: i64,
-    mass: f64,
-    nominal: u64,
+    pub(super) n: Counts,
+    pub(super) q: i64,
+    pub(super) mass: f64,
+    pub(super) nominal: u64,
     /// Unpaired electrons of the radical marks (Ketcher / `M  RAD` code 2 = one, 3 = two; 1, a singlet pair, = none).
     unpaired: u64,
     /// Electrons of the species: atomic numbers plus hydrogens minus the charge (an odd count is a radical whatever the marks say).
@@ -106,7 +106,7 @@ pub fn with_charge(f: &str, q: i64) -> String {
     }
 }
 
-fn atom_in(v: &Value) -> AtomIn<'_> {
+pub(super) fn atom_in(v: &Value) -> AtomIn<'_> {
     let num = |k: &str| v.get(k).and_then(Value::f64).unwrap_or(0.0);
     AtomIn {
         el: v.get("el").and_then(Value::str).unwrap_or(""),
