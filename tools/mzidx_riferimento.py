@@ -13,6 +13,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import dati_sintetici as ds  # noqa: E402
+import dati_sintetici_msn as dm  # noqa: E402
 from mzlab.reader import mzidx  # noqa: E402
 from mzlab.reader.mzml import Run  # noqa: E402
 
@@ -30,6 +31,7 @@ def synthetic(p: Path) -> list[Path]:
     ds.full_scan(p / "press_psi.mzML", 0, np.random.default_rng(9), pressure="psi")
     ds.full_scan(p / "press_counts.mzML", 0, np.random.default_rng(9), pressure="counts")
     ds.mixed_mrm_epi(p / "mre.mzML", np.random.default_rng(10))
+    dm.ms2_ms3(p / "ms23.mzML", np.random.default_rng(11))
     return sorted(p.glob("*.mzML"))
 
 

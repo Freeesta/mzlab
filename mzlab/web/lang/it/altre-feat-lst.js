@@ -8,7 +8,7 @@ I18N.add("it", {
   "files.group.standard": "Standard",
   "files.group.sample": "Campioni",
   "files.group.full": "Full Scan",
-  "files.group.ms2": "MS2 (Product Ion)",
+  "files.group.ms2": "{ms} (Product Ion)",
   "files.group.prompt": "Nome del gruppo",
   "files.group.infusion": "Infusione",
   "files.group.blank": "Bianchi",

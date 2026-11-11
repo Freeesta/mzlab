@@ -167,6 +167,7 @@
   "files.remove.confirm": "{label} = nome del campione (già protetto).",
   "panel.title.ticMs2": "Titolo del cromatogramma TIC dei prodotti con un solo precursore; {ms} = livello (MS², MS³).",
   "panel.title.ticMs2All": "Titolo del cromatogramma TIC dei prodotti con tutti i precursori; {ms} = livello (MS², MS³).",
+  "files.group.ms2": "Nome del gruppo dei file di prodotto (alta risoluzione) nella lista dei file; {ms} = livelli presenti (MS2, MS3 o MS2/MS3).",
   "panel.title.ms2prec": "Titolo del cromatogramma TIC dei prodotti quando il file ha più precursori e uno è scelto; {ms} = livello (MS², MS³), {prec} = m/z del precursore.",
   "panel.title.kindPrec": "Titolo di un cromatogramma (TIC o BPC) limitato a un precursore; {kind} = TIC o BPC, {prec} = m/z.",
   "panel.title.pda": "Titolo di un cromatogramma PDA a una lunghezza d'onda o a un intervallo; {nm} = valore o intervallo in nm.",
