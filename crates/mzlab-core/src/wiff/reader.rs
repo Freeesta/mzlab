@@ -342,7 +342,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     let mut raw_names = Vec::new();
     let sha1 = ole.sha1_hex();
     for (i, s) in samples(&ole).into_iter().enumerate() {
-        let mut w = Wiff::open(&ole, &name, Some(scan_len), s)?;
+        let mut w = Wiff::open_or_refuse(&ole, &name, scan_len, s)?;
         w.wiff_sha1 = Some(sha1.clone());
         total += w.records.len() as u64;
         limits.ok_entries(total)?;
@@ -372,6 +372,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         (&ole, limits, only),
         &mut total,
     )?;
+    Wiff::all_refused(parti.iter().map(|p| &p.w))?;
     for (c, n) in campioni
         .iter_mut()
         .zip(super::names::display_names(&name, &raw_names))
@@ -496,3 +497,6 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
     }
     Ok(())
 }
+
+/// The userParam of an MS3 spectrum that holds the m/z of its first precursor (`Spectrum::precursor` is the second).
+pub const PARENT_PARAM: &str = "ms3 first precursor m/z";

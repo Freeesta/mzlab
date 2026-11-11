@@ -282,4 +282,14 @@ impl mzlab_feat::slabs::Stored for Series {
     fn weak(&mut self, k: usize) -> Result<Option<Vec<u8>>> {
         Ok(Some(self.1[k].clone()).filter(|w| !w.is_empty()))
     }
+    fn part(
+        &mut self,
+        k: usize,
+    ) -> Result<Option<(Box<dyn mzlab_core::idxread::ReadAt + '_>, u64)>> {
+        let b = &self.0[k];
+        Ok(Some((
+            Box::new(mzlab_feat::store::Slice(b)),
+            b.len() as u64,
+        )))
+    }
 }

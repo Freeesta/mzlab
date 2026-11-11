@@ -1,5 +1,5 @@
 //! The synthetic HR file of `tests/dati/stima_detect.json` (noise and a few Gaussian ions, deterministic), shared through `#[path]` by the parity tests of
-//! the detection estimate: the Rust route, `flow run`, the app's `feat/estimate_detect` and the `.wasm` `estimate_detect` (the example `stima_detect`
+//! the detection estimate: the Rust route, `flow run`, the app's `feat/estimate_detect` and the `.wasm` `estimate_detect` (the example `estimate_detect`
 //! writes its index). The fixture also holds the expected estimate and, per budget, the way: `memory` or `refused`.
 #![allow(dead_code)]
 

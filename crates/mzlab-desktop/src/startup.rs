@@ -1,8 +1,8 @@
 //! Start of the app (`setup` of the builder in `main.rs`): the folders of the engine, the files given on the command line, and the window, which
 //! answers from the updated web part (if any) before the embedded copy.
 
-use super::{apri, data_dir};
-use mzlab_desktop::librerie;
+use super::{data_dir, open};
+use mzlab_desktop::libraries;
 use mzlab_desktop::update;
 use mzlab_desktop::State;
 use std::borrow::Cow;
@@ -12,7 +12,7 @@ use tauri::http::{header, StatusCode};
 use tauri::{App, Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
-    apri::queue_command_line(app.handle());
+    open::queue_command_line(app.handle());
     // the indexes (.mzidx) built natively live in the cache folder of the app, where the system may clear them (they are rebuilt)
     if let Ok(cache) = app.path().app_cache_dir() {
         let _ = app
@@ -28,7 +28,7 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     }
     if let Some(dir) = data_dir(app.handle())
         .ok()
-        .and_then(|d| librerie::read_config(&d).cartella)
+        .and_then(|d| libraries::read_config(&d).cartella)
     {
         app.state::<Arc<State>>().libs.set_root(PathBuf::from(dir));
     }

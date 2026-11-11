@@ -12,11 +12,11 @@ pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
 pub mod idx;
-pub mod reader;
 mod reader_extra;
 mod method_name;
 pub mod modes;
 pub mod names;
+pub mod reader;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
@@ -83,6 +83,9 @@ impl Wiff {
     /// The engine (no `estesi`) reads the native scan types only: a sample with an experiment of another code is refused when its data are read, never
     /// taken for level-1 scans (the `sciex` module reads it; `Wiff::variante` routes the pair there). The other samples of the pair stay readable.
     pub(crate) fn readable(&self) -> Result<()> {
+        if let Some(e) = &self.failure {
+            return Err(e.clone());
+        }
         #[cfg(not(feature = "estesi"))]
         if let Some((k, e)) = self
             .experiments
@@ -112,6 +115,8 @@ pub struct Experiment {
     /// 1 for a full scan (and unknown types), 2 for a product-ion scan.
     pub level: u8,
     pub precursor: Option<f64>,
+    /// The first precursor of an MS3 experiment (`precursor` is the second one, isolated from the fragments of the first).
+    pub parent: Option<f64>,
     /// Collision energy (eV) of a product-ion experiment, when the method gives one value for it.
     pub ce: Option<f64>,
     /// Half-width (m/z) of the isolation window of a product-ion experiment.
@@ -168,6 +173,8 @@ pub struct Wiff {
     /// Set when the sample is a section of the `.wiff.scan` that the `.wiff` index does not list: its name, method and times are those of this indexed sample.
     pub inferred_from: Option<u32>,
     scan_len: u64,
+    /// Why this sample could not be opened (its method is refused): it has no records, and reading its data gives this error while the other samples stay readable.
+    failure: Option<Error>,
 }
 
 /// A scan type the reader does not read: the code, the experiment and the name of the type (`modi`), so that the message says what it is.
@@ -267,6 +274,7 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             code,
             level: if product { 2 } else { 1 },
             precursor: if product { prec } else { None },
+            parent: None,
             ce: None,
             iso_half: None,
             window_s: None,
@@ -289,7 +297,7 @@ fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
     for (i, e) in experiments
         .iter_mut()
         .enumerate()
-        .filter(|(_, e)| e.level == 2)
+        .filter(|(_, e)| e.level >= 2)
     {
         e.iso_half = Some(UNIT_HALF_WIDTH);
         if let Some(methodinfo::Kind::Scan { ce, .. }) =
@@ -390,10 +398,55 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         trim_scheduled: false,
         inferred_from: None,
         scan_len,
+        failure: None,
     })
 }
 
 impl Wiff {
+    /// A sample whose method the reader refuses, kept in the list with no scans: `readable` gives `failure` when its data are asked for, so that one sample
+    /// never makes the whole file fail.
+    pub fn refused(sample: u32, scan_len: u64, failure: Error) -> Wiff {
+        Wiff {
+            sample,
+            records: Vec::new(),
+            experiments: Vec::new(),
+            polarity: 0,
+            method: None,
+            dad: None,
+            model: None,
+            serial: None,
+            source_type: None,
+            created: None,
+            wiff_sha1: None,
+            trim_scheduled: false,
+            inferred_from: None,
+            scan_len,
+            failure: Some(failure),
+        }
+    }
+
+    /// Sample `sample` of the container, or (a scan type the reader does not know, several periods, a `.wiff2`) the sample kept with its reason: only a file-level error ends the open.
+    pub fn open_or_refuse(ole: &Ole, name: &str, scan_len: u64, sample: u32) -> Result<Wiff> {
+        match open_wiff(ole, name, Some(scan_len), sample) {
+            Err(e) if e.key.starts_with("err.file.wiff") && e.key != "err.file.wiffNoScan" => {
+                Ok(Wiff::refused(sample, scan_len, e))
+            }
+            other => other,
+        }
+    }
+
+    /// A pair where no sample opens is refused with the reason of the first one; with one readable (or empty) sample the others stay listed.
+    pub fn all_refused<'a>(samples: impl Iterator<Item = &'a Wiff>) -> Result<()> {
+        let mut first = None;
+        for w in samples {
+            match &w.failure {
+                Some(e) => first = first.or(Some(e)),
+                None => return Ok(()),
+            }
+        }
+        first.map_or(Ok(()), |e| Err(e.clone()))
+    }
+
     /// Sample `sample` of the container. `scan_len` is the size of the `.wiff.scan`, `None` when that file is missing (`err.file.wiffNoScan`).
     pub fn open(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
         open_wiff(ole, name, scan_len, sample)

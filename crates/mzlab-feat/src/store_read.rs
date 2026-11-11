@@ -74,7 +74,7 @@ pub(crate) struct Opened {
     scratch: RefCell<Vec<u8>>,
 }
 
-pub(crate) fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
+pub(crate) fn open<R: ReadAt + ?Sized>(r: &mut R, size: u64, kind: &str) -> Result<Opened> {
     let mut h = [0u8; 16];
     if size < 16 {
         return Err(bad());
@@ -120,6 +120,30 @@ fn whole(e: &Value, k: &str) -> Result<u64> {
 }
 
 impl Opened {
+    /// The rows of the m/z column (sorted) below `x`, as `partition_point(|m| m < x)`, by halving with 8 bytes read a step, not the whole column: a
+    /// slab of the alignment asks it of every file.
+    fn mz_rank<R: ReadAt + ?Sized>(&self, r: &mut R, size: u64, x: f64) -> Result<usize> {
+        let (count, off) = self.entry("mz", "f64")?;
+        let end = u64::try_from(count)
+            .ok()
+            .and_then(|n| n.checked_mul(8))
+            .and_then(|n| off.checked_add(n));
+        if end.is_none_or(|e| e > size) {
+            return Err(bad());
+        }
+        let (mut a, mut b, mut v) = (0usize, count, [0u8; 8]);
+        while a < b {
+            let mid = a + (b - a) / 2;
+            r.read_at(off + mid as u64 * 8, &mut v)?;
+            if f64::from_le_bytes(v) < x {
+                a = mid + 1;
+            } else {
+                b = mid;
+            }
+        }
+        Ok(a)
+    }
+
     /// `(count, offset)` of the array `name` when it has `dtype`.
     pub(crate) fn entry(&self, name: &str, dtype: &str) -> Result<(usize, u64)> {
         let e = self.meta.get("arrays").map(|a| a.arr()).unwrap_or(&[]);
@@ -138,7 +162,7 @@ impl Opened {
     }
 
     /// Rows `rows` (all when `None`) of the array `name`, decoded `N` bytes at a time and read in pieces.
-    pub(crate) fn col<R: ReadAt, T, const N: usize>(
+    pub(crate) fn col<R: ReadAt + ?Sized, T, const N: usize>(
         &self,
         r: &mut R,
         size: u64,
@@ -159,10 +183,11 @@ impl Opened {
             return Err(bad());
         }
         let mut out = mzlab_core::budget::try_vec::<T>(b - a)?;
-        // at most PIECE * N bytes, the piece the reader works on
+        // at most PIECE * N bytes, the piece the reader works on (a few rows of a slab do not zero a whole piece)
         let mut buf = self.scratch.borrow_mut();
-        if buf.len() < PIECE * N {
-            buf.resize(PIECE * N, 0);
+        let need = (b - a).min(PIECE) * N;
+        if buf.len() < need {
+            buf.resize(need, 0);
         }
         let mut at = a;
         while at < b {
@@ -213,16 +238,15 @@ pub fn read_file_from<R: ReadAt>(
     size: u64,
     want: Want,
 ) -> Result<(FileFeatures, Value)> {
+    read_file_dyn(r, size, want)
+}
+
+/// The body of `read_file_from`, once for every reader (its columns are many: one copy of them keeps the `.wasm` small).
+fn read_file_dyn(r: &mut dyn ReadAt, size: u64, want: Want) -> Result<(FileFeatures, Value)> {
     let o = open(r, size, "file")?;
     let rows = match want.mz {
         None => None,
-        Some((lo, hi)) => {
-            let mz = o.col(r, size, "mz", "f64", None, f64::from_le_bytes)?;
-            Some((
-                mz.partition_point(|&m| m < lo),
-                mz.partition_point(|&m| m < hi),
-            ))
-        }
+        Some((lo, hi)) => Some((o.mz_rank(r, size, lo)?, o.mz_rank(r, size, hi)?)),
     };
     let mut f = if want.lean {
         cols!(o, r, size, rows; mz: f64, rt: f32, left: f32, right: f32, area: f64, height: f32, flags: u8, charge: i8, family_id: u32, role: u8)

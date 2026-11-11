@@ -37,6 +37,11 @@ pub(super) fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::Spectr
     };
     let Some(e) = e else { return extra };
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
+    if let Some(p) = e.parent {
+        extra
+            .params
+            .push((super::reader::PARENT_PARAM.into(), p.to_string()));
+    }
     if let Some(sg) = super::modes::tag(e.code) {
         extra
             .params

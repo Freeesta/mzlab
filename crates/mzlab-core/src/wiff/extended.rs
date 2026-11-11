@@ -8,7 +8,19 @@ use crate::error::{Error, Result};
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 
-pub use super::modes::{spectrum_term, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_PRODUCT_ION};
+pub use super::modes::{
+    spectrum_term, CODE_MS3, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_PRODUCT_ION,
+};
+
+/// Offset of the second precursor (f64) of an MS3 experiment in `ExperimentHeaderQTrapEX`.
+const QTRAP_PRECURSOR2: usize = 64;
+
+/// The positive finite f64 at `at` of `stream`.
+fn f64_at(ole: &Ole, stream: &str, at: usize) -> Option<f64> {
+    let b = ole.read(stream)?;
+    let v = f64::from_le_bytes(b.get(at..at + 8)?.try_into().ok()?);
+    (v.is_finite() && v > 0.0).then_some(v)
+}
 
 /// The detection window of each scheduled MRM experiment (`Experiment::window_s`).
 pub(crate) fn mark_windows(ole: &Ole, sample: u32, experiments: &mut [super::Experiment]) {
@@ -41,6 +53,7 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
     if p > 1 {
         return Err(Error::new("err.file.wiffPeriods").with("periods", p));
     }
+    let base = format!("MethodSubtree/Method{m}/DeviceMethod0/Period0/Experiment");
     for (i, e) in ex.iter_mut().enumerate() {
         match e.code {
             Some(c) if super::modes::nativo(Some(c)) => {}
@@ -51,6 +64,23 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
                     .get(HEADER_PRECURSOR..HEADER_PRECURSOR + 8)
                     .map(|b| f64::from_le_bytes(b.try_into().unwrap_or([0; 8])))
                     .filter(|m| m.is_finite() && *m > 0.0);
+            }
+            Some(CODE_MS3) => {
+                let first = f64_at(
+                    ole,
+                    &format!("{base}{i}/ExperimentHeader"),
+                    HEADER_PRECURSOR,
+                );
+                let second = f64_at(
+                    ole,
+                    &format!("{base}{i}/ExperimentHeaderQTrapEX"),
+                    QTRAP_PRECURSOR2,
+                );
+                // a header that holds one mass only is read as an MS2 of it rather than refused
+                (e.level, e.precursor, e.parent) = match (first, second) {
+                    (Some(a), Some(b)) => (3, Some(b), Some(a)),
+                    (a, b) => (2, a.or(b), None),
+                };
             }
             Some(c) if !super::modes::confirmed(Some(c)) => {
                 if crate::wiff::dad::wiff2_sample_info(ole, sample).is_some() {

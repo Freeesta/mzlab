@@ -1,6 +1,6 @@
 //! Families of the peaks of one or more `.mzidx` files: count, size, roles and time; with the truth of a synthetic series, the check.
 //!
-//!     cargo run --release -p mzlab-feat --example famiglie -- <file.mzidx>... [--neg] [--truth verita.json] [--mz M]...
+//!     cargo run --release -p mzlab-feat --example families -- <file.mzidx>... [--neg] [--truth verita.json] [--mz M]...
 //!
 //! `--orient evidence` lets the proof of an arc stand in for the parent factor (`family::Orient`).
 //!

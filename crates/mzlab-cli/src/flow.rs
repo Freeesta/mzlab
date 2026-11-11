@@ -390,7 +390,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .iter()
         .chain(crate::flow_msnlib::EXECUTORS)
         .chain(crate::flow_refilter::review::EXECUTORS)
-        .chain(crate::flow_msnfigura::EXECUTORS)
+        .chain(crate::flow_msnfigure::EXECUTORS)
         .chain(crate::flow_tablematch::EXECUTORS)
         .chain(crate::flow_chimeric::EXECUTORS)
         .chain(crate::flow_lookup::EXECUTORS)

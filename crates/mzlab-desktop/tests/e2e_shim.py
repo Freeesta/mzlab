@@ -25,8 +25,8 @@ _ts = [0.05 * k for k in range(40)]
 _w = wr.Writer(); _w.sample(1, [("scan", [(100 + k, 50 + k)], 1000.0 * k, 50.0 + k) for k in range(40)], {"Experiment0/ExperimentHeader": wr.header(15, 30.0)},
                             dad=(_ts, 200.0, 1.0, [[10 + 400 * math.exp(-((j - 60) / 12) ** 2) * math.exp(-((t - 1.0) / 0.2) ** 2) for j in range(201)] for t in _ts])); _w.save(WIFF_DIR, "uv")
 WIFF_FILES = [WIFF_DIR / "uv.wiff", WIFF_DIR / "uv.wiff.scan"]
-RAW_DIR = Path(tempfile.mkdtemp(prefix="mzlab-raw-"))                  # a synthetic Thermo .raw (crates/mzlab-lettori examples/sintetici, invented numbers)
-subprocess.run(["cargo", "run", "-q", "-p", "mzlab-lettori", "--example", "sintetici", "--", str(RAW_DIR)], cwd=ROOT, check=True)
+RAW_DIR = Path(tempfile.mkdtemp(prefix="mzlab-raw-"))                  # a synthetic Thermo .raw (crates/mzlab-lettori examples/synthetic, invented numbers)
+subprocess.run(["cargo", "run", "-q", "-p", "mzlab-lettori", "--example", "synthetic", "--", str(RAW_DIR)], cwd=ROOT, check=True)
 RAW_FILE = RAW_DIR / "thermo" / "synt.raw"
 import agilent_sintetico  # noqa: E402  (synthetic Agilent .D folders, invented numbers)
 D_DIR = Path(tempfile.mkdtemp(prefix="mzlab-d-")) / "serie"
@@ -302,7 +302,7 @@ try:
             pg.evaluate("window.__UPD.delay = 0")
         step("settings: a click during the silent check takes it over", upd_click_during_silent)
         step("silent check: nothing when up to date, a small notice when an update exists", upd_silent)
-        # ---- the native folder of the libraries (crates/mzlab-desktop/src/librerie.rs behind lib/*, read by libreria-worker.js with the same code as the browsers)
+        # ---- the native folder of the libraries (crates/mzlab-desktop/src/libraries.rs behind lib/*, read by libreria-worker.js with the same code as the browsers)
         def rec(name, prec): return f"Name: {name}\nPrecursorMZ: {prec}\nIon_mode: Positive\nPrecursor_type: [M+H]+\nNum Peaks: 4\n60.5\t100\n100.1\t400\n150.2\t900\n200.3\t300\n"
         Q = [[60.5, 100], [100.1, 400], [150.2, 900], [200.3, 300]]
         def states(): return pg.evaluate("LIB.call('list').then(r => ({ mode: r.folder.mode, dir: r.folder.name, v: r.voci.map(v => [v.nome, v.tipo, v.stato]) }))")

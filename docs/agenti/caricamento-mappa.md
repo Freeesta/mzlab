@@ -27,7 +27,7 @@ Un solo worker del motore serve TUTTE le richieste (`rust-worker.js` `handle`): 
 | Formato | Estensioni | Strada nel sito | Strada nel desktop | Cosa legge all'apertura |
 |---|---|---|---|---|
 | mzML | `.mzml` | §1, motore `.wasm` | `lr_index` → `IdxBuilder::build` (`idxbuild.rs` 131): `mmap`, `prepare_parallelo`, `build_mzml_spill` | testata, indice, intestazioni (§1 passo 5); array solo nell'indice |
-| mzML con MS-Numpress | `.mzml` | il motore rifiuta (`err.file.numpress`); la pagina lo apre come campione nativo (`numpressToNat` in `shell.js`) e il motore lo indicizza dal lettore del modulo `aperti` (`aperti/mzml_numpress.rs`), senza riscrivere l'mzML | CLI: `flow_pace::is_numpress_mzml` manda l'indice al lettore `mzml-numpress` del registro; app: `moduliToNat` (`shell.js`) → campione nativo (`natsamples`, `lr_put` con `nat`; `tests/numpress_mzml.rs`, passo «module types» di `e2e_shim.py`) | tabella (`scantable::read`) + byte di ogni spettro |
+| mzML con MS-Numpress | `.mzml` | il motore rifiuta (`err.file.numpress`); la pagina lo apre come campione nativo (`numpressToNat` in `shell.js`) e il motore lo indicizza dal lettore del modulo `aperti` (`open/mzml_numpress.rs`), senza riscrivere l'mzML | CLI: `flow_pace::is_numpress_mzml` manda l'indice al lettore `mzml-numpress` del registro; app: `moduliToNat` (`shell.js`) → campione nativo (`natsamples`, `lr_put` con `nat`; `tests/numpress_mzml.rs`, passo «module types» di `e2e_shim.py`) | tabella (`scantable::read`) + byte di ogni spettro |
 | mzXML | `.mzxml` | solo modulo `aperti` (`soloModulo`, `lettori-famiglie.js`): conversione in mzML in OPFS, poi §1 | campione nativo (`moduliToNat`, lettore `mzxml` del registro); `pick_files` lo offre | `mzxml_index.rs`: un passaggio sequenziale a blocchi da 1 MiB (l'`<index>` finale non è usato) |
 | Thermo `.raw` | `.raw` | modulo `thermo` caricato a richiesta (`lettore-esterno.js`, `carica-modulo.js`, SHA-256 verificato), il motore lo legge via `native_external` SENZA mzML; indice v2 dal lettore | lettore nel core (feature `thermo`), `build_nat` (`idxbuild_nat.rs`) | `rawreader.rs`: indici e tabella eventi, nessun picco; pacchetto per offset a richiesta; finestra 64 KB (3 blocchi da 256 KB nel modulo) |
 | Waters `.raw` (cartella) | cartella con `_FUNC001.DAT` | modulo `waters` (conversione in mzML) | lettore nativo | `_FUNCTNS.INF` e indici; `.DAT` per posizione |
@@ -49,7 +49,7 @@ Campioni nativi (`.raw`, `.wiff`, `.D`): `lr_put` con `nat` copia i membri in OP
 
 ## 3. App desktop
 
-- **Ingresso**: clic su `#drop` o `#dropdam` intercettato da `shim/desktop-shim.js` → comando Tauri `pick_files` (dialogo in `spawn_blocking`, filtro dal registro dei lettori); trascinamento: `register_paths` (`main.rs` 116, solo `metadata`); doppio clic dal sistema: `apri.rs` (`single_instance`, argv, macOS `RunEvent::Opened`; coda `Pending`, `opening.rs`; solo estensioni del registro). La pagina non vede mai il percorso: `State::pick` (`engine.rs` 137) assegna un numero, `toFile` crea un `File` vuoto con `type=application/x-mzlab-file;id=N`. Nessun dato letto in questo passo.
+- **Ingresso**: clic su `#drop` o `#dropdam` intercettato da `shim/desktop-shim.js` → comando Tauri `pick_files` (dialogo in `spawn_blocking`, filtro dal registro dei lettori); trascinamento: `register_paths` (`main.rs` 116, solo `metadata`); doppio clic dal sistema: `open.rs` (`single_instance`, argv, macOS `RunEvent::Opened`; coda `Pending`, `opening.rs`; solo estensioni del registro). La pagina non vede mai il percorso: `State::pick` (`engine.rs` 137) assegna un numero, `toFile` crea un `File` vuoto con `type=application/x-mzlab-file;id=N`. Nessun dato letto in questo passo.
 - **Trasporto**: `desktop-worker.js` (thread Worker JS) fa `fetch` su `mzlab://` (POST con JSON; risposte JSON o binarie per `tic`/`xic`/`spectra`, `scanbin`, `idxxicbin`, `natsrm`); coda unica dei messaggi (`line`), fuori coda solo `lr_index`, `lr_index_cen`, `nat2mzml`, `mzml2cen`. Lato Rust ogni richiesta ha un `std::thread::spawn` (`main.rs` 456). `State::rpc` (`rpc.rs` 340): le operazioni lunghe vanno SENZA il lock `Mutex<Eng>`; `lr_put`, `lr_entry`, `idxopen`, `route`, `scanbin` lo prendono e sono seriali.
 - **mzML**: `lr_put` (`rpc_lr.rs` 65) non copia (stamp size+mtime in `store.rs`), tranne un file temporaneo dell'app (`fs::copy`); cancella l'indice del nome. `lr_index` (`rpc.rs` 125) → `IdxBuilder::build`: `Mapped::open` (mmap, `mapped.rs`), `upload::prepare_parallelo` (tabella + SHA-256 su un secondo thread), `ram::check_index`, `mzidx::build_mzml_spill` (budget 64 MB, scorta `.sp.part`), scrive `.part` poi `rename`. Pool rayon: min(core−1, 4), 1 minimo (`idxbuild.rs` 23-28). Decodifica con
   `parse_helped` (3 thread, `mzml/help/pool.rs`) e ordinamento dei secchi fino a 8 thread (`mzidx_order.rs`).
@@ -179,9 +179,9 @@ crates/mzlab-core/src/agilent/reader.rs
 crates/mzlab-lettori/src/waters/reader.rs
 crates/mzlab-lettori/src/shimadzu/mod.rs
 crates/mzlab-lettori/src/andi/ms.rs
-crates/mzlab-lettori/src/aperti/mzxml.rs
-crates/mzlab-lettori/src/aperti/mzxml_index.rs
-crates/mzlab-lettori/src/aperti/mzml_numpress.rs
+crates/mzlab-lettori/src/open/mzxml.rs
+crates/mzlab-lettori/src/open/mzxml_index.rs
+crates/mzlab-lettori/src/open/mzml_numpress.rs
 
 @lotto 5
 crates/mzlab-desktop/shim/desktop-worker.js
@@ -199,7 +199,7 @@ crates/mzlab-desktop/src/ram.rs
 crates/mzlab-desktop/src/natives.rs
 crates/mzlab-desktop/src/natives_slots.rs
 crates/mzlab-desktop/src/conv_queue.rs
-crates/mzlab-desktop/src/apri.rs
+crates/mzlab-desktop/src/open.rs
 crates/mzlab-desktop/src/opening.rs
 crates/mzlab-desktop/src/startup.rs
 crates/mzlab-desktop/src/folder.rs

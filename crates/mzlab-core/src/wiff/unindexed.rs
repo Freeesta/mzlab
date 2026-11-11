@@ -169,5 +169,6 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
         trim_scheduled: false,
         inferred_from: Some(donor.sample),
         scan_len: donor.scan_len,
+        failure: None,
     })
 }

@@ -1,6 +1,6 @@
 //! Streaming gunzip for the page: a `.mzML.gz` is inflated piece by piece (pieces of the File in, pieces of the mzML out) so the worker of the engine writes the mzML
 //! into OPFS without ever holding it whole (docs/agenti/lettori-aperti.md, «mzML gzip»). Several gzip members one after the other (bgzip, `cat a.gz b.gz`) are one stream, as
-//! `Membri` reads them in `aperti/mzml_gz.rs` for the desktop app and the CLI: the bytes out are the same. Zero bytes after a whole member (a file padded to a block size)
+//! `Membri` reads them in `open/mzml_gz.rs` for the desktop app and the CLI: the bytes out are the same. Zero bytes after a whole member (a file padded to a block size)
 //! end the stream, as GNU gzip reads them; a byte other than zero after that padding is `err.file.zlib`.
 
 use std::io::{self, BufRead, Read, Write};
@@ -93,7 +93,7 @@ impl Gunzip {
     }
 }
 
-/// The members of a gzip file one after the other as one stream, for the app and the CLI (`aperti/mzml_gz.rs`): the bytes `Gunzip` gives the page, zero padding
+/// The members of a gzip file one after the other as one stream, for the app and the CLI (`open/mzml_gz.rs`): the bytes `Gunzip` gives the page, zero padding
 /// after a member included.
 pub struct Members<R: BufRead> {
     dec: Option<flate2::bufread::GzDecoder<R>>,

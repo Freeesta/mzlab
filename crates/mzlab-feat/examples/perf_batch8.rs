@@ -1,6 +1,6 @@
 //! Times the table steps of the series on synthetic data: alignment, isotopes, RT correction, normalisation and the deconvolution of isomers.
 //!
-//!     cargo run --release -p mzlab-feat --example perf_lotto8 -- [features=50000] [files=40]
+//!     cargo run --release -p mzlab-feat --example perf_batch8 -- [features=50000] [files=40]
 //!
 //! Prints one line per operation (best of three) and the SHA-256 of its result, so two builds can be compared for time and for bytes.
 

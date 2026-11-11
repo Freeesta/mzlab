@@ -296,12 +296,12 @@ fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>, body: &[
 }
 
 /// The routes of the folder of the libraries: `lib/dir`, `lib/list?sub`, `lib/stat?name`, `lib/read?name&off&len`, `lib/put?name&off&total` (POST),
-/// `lib/remove?name`, `lib/rename?from&to`. Names are relative to the folder (`librerie.rs` refuses anything else).
+/// `lib/remove?name`, `lib/rename?from&to`. Names are relative to the folder (`libraries.rs` refuses anything else).
 fn lib_route(state: &State, route: &str, q: &HashMap<&str, &str>, body: &[u8]) -> Response {
     let name = q.get("name").map(|v| decode(v));
     let n = |k: &str| q.get(k).and_then(|v| v.parse::<u64>().ok());
     let bad = || error(&Error::new("lib.err.io").with("detail", "bad request"));
-    let ok = |r: crate::librerie::Result<()>| match r {
+    let ok = |r: crate::libraries::Result<()>| match r {
         Ok(()) => json(200, "{}".into()),
         Err(e) => error(&e),
     };

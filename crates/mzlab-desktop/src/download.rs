@@ -1,4 +1,4 @@
-//! Download of the spectral-library packages into the folder of the libraries (`librerie.rs`), only on a click of the user.
+//! Download of the spectral-library packages into the folder of the libraries (`libraries.rs`), only on a click of the user.
 //! Packages of the site (`static/librerie/catalogo.json`): pieces of 4 MiB checked one by one with their SHA-256, resumed from the first piece that is missing
 //! or wrong, assembled into `.mzlab/<id>.new`, checked as a whole (size, SHA-256, header of the format) and only then swapped for the old `<id>.mzlib` in one rename
 //! (the old one stays until the new one is verified). External sources (the `esterne` list of the catalog, e.g. GNPS): ONLY with the switch «Scarica librerie
@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::download_sources::CatalogSource;
-use crate::librerie::{Folder, META};
+use crate::libraries::{Folder, META};
 use crate::update::{sha256_hex, Source};
 
 /// The highest `.mzlib` version this app reads (`mzlab_lib::format::VERSION`; a test keeps them equal).
