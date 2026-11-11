@@ -305,10 +305,11 @@ impl Rows {
         let res = t
             .float("MS:1000800")
             .or_else(|| t.user("opentfraw.resolution").and_then(float));
+        // the table keeps a native id as the writer escapes it (the direct path's `esc` too)
         let native = if sh.id.is_empty() {
             self.intern("")
         } else {
-            self.native_id(&sh.id, level)
+            self.native_id(&esc(&sh.id), level)
         };
         let act = m.act.map(|a| self.intern(&a));
         let mut detail = Detail {
@@ -444,7 +445,7 @@ impl Rows {
             ..Msn::default()
         };
         for st in &sh.precursors {
-            let rf = st.refer.as_deref().map(|r| self.shared(r));
+            let rf = st.refer.as_deref().map(|r| self.shared(&esc(r)));
             m.precs.push(precursor_of(st, rf));
         }
         if m.precs.is_empty() && (sh.terms.has("MS:1000744") || sh.terms.has("MS:1000827")) {
