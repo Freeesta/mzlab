@@ -22,7 +22,8 @@ struct JsMember {
 
 impl ReadAt for JsMember {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
-        let bad = || mzlab_core::idxread::read_error(off, buf.len());
+        let len = buf.len();
+        let bad = || mzlab_core::idxread::read_error(off, len);
         let (i, o) = (JsValue::from(self.i), JsValue::from(off as f64));
         if let Some(into) = &self.into {
             let mem: js_sys::WebAssembly::Memory = wasm_bindgen::memory().unchecked_into();
