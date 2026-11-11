@@ -15,6 +15,11 @@ pub const WASM_BUDGET_MB: usize = 192;
 /// Budget of the native builds (desktop, tests): same code, other number.
 pub const NATIVE_BUDGET_MB: usize = 1024;
 
+/// How far a zlib array whose spectrum declares no length may inflate: 32 times its compressed bytes (real spectra compress 2 to 20 times), at least 1 MB, never past `TARGET_BYTES`.
+pub fn undeclared_inflate(compressed: usize) -> usize {
+    compressed.saturating_mul(32).clamp(1 << 20, TARGET_BYTES)
+}
+
 /// What a phase may hold at once. `reserve` hands out a `Guard` that gives the bytes back when dropped.
 #[derive(Debug)]
 pub struct MemBudget {
@@ -107,6 +112,21 @@ pub fn refusal_free(phase: &'static str, estimate: usize, cap: usize, free: usiz
             "eccesso_mb",
             estimate.saturating_sub(free).div_ceil(MB).max(1),
         )
+}
+
+/// The memory of this target, bytes: what the decoded points of one spectrum may take at most.
+pub const TARGET_BYTES: usize = if cfg!(target_family = "wasm") {
+    WASM_BUDGET_MB
+} else {
+    NATIVE_BUDGET_MB
+} * MB;
+
+/// `error.memoryBudget` when `n` points of `per_point` bytes each exceed `budget` bytes: `n` is a count read from a file, checked before anything is decoded.
+pub fn points_fit(n: usize, per_point: usize, budget: usize) -> Result<()> {
+    if n.saturating_mul(per_point) > budget {
+        return Err(Error::memory_budget());
+    }
+    Ok(())
 }
 
 /// An empty `Vec` with room for `n` items, or the memory error (never a trap).

@@ -177,7 +177,7 @@ fn polarity_and_a_sim_precursor_validate() {
     );
     assert!(
         b.contains("name=\"positive scan\"")
-            && b.contains("<userParam name=\"MS_dwell_time\" value=\"20\"/>"),
+            && b.contains("<userParam name=\"MS_dwell_time\" value=\"0.02\"/>"),
         "{b}"
     );
     assert!(

@@ -144,8 +144,8 @@ fn xml(why: &str) -> Error {
     Error::new("err.file.xml").with("detail", why)
 }
 
-/// The bytes of the `<peaks>` text: base64, then zlib when the file says so (at most `limite` bytes).
-fn raw_values(text: &str, zlib: bool, limit: usize) -> Result<Vec<u8>> {
+/// The bytes of the `<peaks>` text: base64, then zlib when the file says so (at most `limit` bytes; without a declared size, what the compressed bytes explain).
+fn raw_values(text: &str, zlib: bool, limit: usize, declared: Option<usize>) -> Result<Vec<u8>> {
     let clean: Vec<u8> = text.bytes().filter(|c| !c.is_ascii_whitespace()).collect();
     let raw = base64::engine::general_purpose::STANDARD
         .decode(&clean)
@@ -153,6 +153,8 @@ fn raw_values(text: &str, zlib: bool, limit: usize) -> Result<Vec<u8>> {
     if !zlib {
         return Ok(raw);
     }
+    let limit =
+        limit.min(declared.unwrap_or_else(|| mzlab_core::budget::undeclared_inflate(raw.len())));
     let mut out = Vec::new();
     flate2::read::ZlibDecoder::new(&raw[..])
         .take(limit as u64 + 1)
@@ -190,7 +192,12 @@ pub(super) fn peaks(tag: Tag, text: &str, count: Option<usize>, limits: &Limits)
     let limit = usize::try_from(limits.byte)
         .unwrap_or(usize::MAX)
         .min(cap.saturating_mul(2 * width));
-    let b = raw_values(text, zlib, limit)?;
+    let b = raw_values(
+        text,
+        zlib,
+        limit,
+        count.map(|n| n.saturating_mul(2 * width)),
+    )?;
     let n = (b.len() / (2 * width)).min(count.unwrap_or(usize::MAX));
     let (mut mz, mut intensities) = (Vec::new(), Vec::new());
     mz.try_reserve_exact(n)
