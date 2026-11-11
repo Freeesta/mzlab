@@ -51,13 +51,23 @@ impl Folder {
             .position(|m| base(&m.nome).eq_ignore_ascii_case(file))
     }
 
-    /// The whole member `file`, or `None` when the folder has none; a member over the limit is an error (no allocation).
+    /// The whole member `file`, or `None` when the folder has none; a member that is there and over the limit, or unreadable, is an error, never
+    /// taken for absent (no allocation).
     pub(super) fn read(&mut self, file: &str) -> Result<Option<Vec<u8>>> {
+        self.read_within(file, SMALL_MAX)
+    }
+
+    /// `read` of a member that grows with the run (the index, the per-scan tables): capped by the byte budget, not by the 8 MB of the small members.
+    pub(super) fn read_run(&mut self, file: &str) -> Result<Option<Vec<u8>>> {
+        self.read_within(file, u64::MAX)
+    }
+
+    fn read_within(&mut self, file: &str, cap: u64) -> Result<Option<Vec<u8>>> {
         let Some(i) = self.search(file) else {
             return Ok(None);
         };
         let m = &mut self.fs.membri[i];
-        if m.dim > SMALL_MAX.min(self.limits.byte) {
+        if m.dim > cap.min(self.limits.byte) {
             return Err(Error::memory_budget());
         }
         let n = usize::try_from(m.dim).map_err(|_| Error::memory_budget())?;
