@@ -12,7 +12,7 @@ const LETTORI_FAM = {
   andi: { ext: [".cdf", ".nc"], membri: [], errori: [], soloModulo: [".cdf", ".nc"] },
   thermo: { ext: [".raw"], membri: [], errori: [], soloModulo: [] },
   // bruker before agilent: both are `.d` folders and `famigliaDi` takes the first family that matches, so the members `analysis.*` decide, never the extension
-  bruker: { ext: [], membri: ["analysis.tdf", "analysis.tsf", "analysis.baf"], errori: [], soloModulo: [] },
+  bruker: { ext: [], membri: ["analysis.tdf", "analysis.tsf", "analysis.baf", "analysis.yep"], errori: [], soloModulo: [] },
   agilent: { ext: [".d"], membri: ["acqdata/", ".d/"], errori: ["err.file.agilent", "err.file.agilentNoPeaks"], soloModulo: [] },
   sciex: { ext: [".wiff", ".wiff.scan"], membri: [], errori: ["err.file.wiff"], soloModulo: [], sonda: true },
   waters: { ext: [".raw"], membri: ["_func001.dat"], errori: [], soloModulo: [] },

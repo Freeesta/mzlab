@@ -92,7 +92,8 @@ fn trace(c: &mut Folder, a: &Analog, indice: usize) -> Result<Option<Chromatogra
     }))
 }
 
-/// The id of a channel of an SRM function: `SRM SIC Q1=277.1 Q3=71 ce=34 function=1 offset=0 name=ALA` (a SIR channel: `SIC 277.1 function=… offset=…`).
+/// The id of a channel of an SRM function: `SRM SIC Q1=277.1 Q3=71 ce=34 polarity=negative function=1 offset=0 name=ALA` (a SIR channel: `SIC 277.1 function=… offset=…`).
+/// Q1 and Q3 are the shortest decimals that give back the `f32` of `_FUNCTNS.INF`; `polarity=negative` only when `_extern.inf` says so, as in the other SRM readers.
 fn channel_id(f: &Fun, j: usize, q: Option<(f32, f32)>, ce: Option<f64>, name: &str) -> String {
     let mut id = match q {
         Some((q1, q3)) if q3 > 0.0 && q3 != q1 => format!("SRM SIC Q1={q1} Q3={q3}"),
@@ -102,11 +103,19 @@ fn channel_id(f: &Fun, j: usize, q: Option<(f32, f32)>, ce: Option<f64>, name: &
     if let Some(ce) = ce.filter(|&x| x > 0.0) {
         id.push_str(&format!(" ce={ce}"));
     }
+    if f.polarita < 0 {
+        id.push_str(" polarity=negative");
+    }
     id.push_str(&format!(" function={} offset={j}", f.f.indice));
     if !name.is_empty() {
         id.push_str(&format!(" name={}", name.replace(['\r', '\n'], " ")));
     }
     id
+}
+
+/// The `f32` of `_FUNCTNS.INF` as the decimal its label shows (`200.1`, not `200.10000610351562`), so the target m/z and the id agree.
+fn decimal(x: f32) -> f64 {
+    x.to_string().parse().unwrap_or(f64::from(x))
 }
 
 /// The chromatograms of one SIR/MRM function; `None` when its DAT cannot be read as channels.
@@ -124,7 +133,8 @@ fn channels(l: &mut WatersReader, i: usize, first_one: usize) -> Result<Option<V
         .ok_entries((n as u64).saturating_mul(rows.len() as u64))?;
     let datum = l.c.read_from(dat, 0, f.dat_len)?;
     let f = &l.funs[i];
-    let mut col: Vec<Vec<f64>> = vec![Vec::with_capacity(rows.len()); n];
+    // a channel has a point only in the scans that hold it: a scan with fewer records than channels gives no value, not 0
+    let mut col: Vec<(Vec<f64>, Vec<f64>)> = vec![(Vec::new(), Vec::new()); n];
     for r in &rows {
         let (o, len) = idx::extension(std::slice::from_ref(r), 0, larg, f.dat_len)?;
         let v = mrm::values(
@@ -132,38 +142,36 @@ fn channels(l: &mut WatersReader, i: usize, first_one: usize) -> Result<Option<V
             larg,
             r.count as usize,
         )?;
-        for (j, c) in col.iter_mut().enumerate() {
-            c.push(v.get(j).copied().unwrap_or(0.0));
+        for (j, x) in v.into_iter().enumerate() {
+            col[j].0.push(f64::from(r.rt));
+            col[j].1.push(x);
         }
     }
-    let moment: Vec<f64> = rows.iter().map(|r| f64::from(r.rt)).collect();
     let can = f.f.channels();
-    Ok(Some(
-        col.into_iter()
-            .enumerate()
-            .map(|(j, intensity)| {
-                let q = can.get(j).map(|c| (c.0, c.1));
-                let ce = f.ee.as_ref().and_then(|t| t.value("Collision Energy", j));
-                let name = f.names.get(j).map_or("", String::as_str);
-                Chromatogram {
-                    index: first_one + j,
-                    id: channel_id(f, j, q, ce, name),
-                    kind: if q.is_some_and(|(a, b)| b > 0.0 && b != a) {
-                        ChromKind::Srm
-                    } else {
-                        ChromKind::Sic
-                    },
-                    q1: q.map(|c| f64::from(c.0)),
-                    q3: q
-                        .filter(|c| c.1 > 0.0 && c.1 != c.0)
-                        .map(|c| f64::from(c.1)),
-                    unit: UNITS.into(),
-                    time: moment.clone(),
-                    intensity,
-                }
-            })
-            .collect(),
-    ))
+    let out = col
+        .into_iter()
+        .enumerate()
+        .map(|(j, (time, intensity))| {
+            let q = can.get(j).map(|c| (c.0, c.1));
+            let ce = f.ee.as_ref().and_then(|t| t.value("Collision Energy", j));
+            let name = f.names.get(j).map_or("", String::as_str);
+            Chromatogram {
+                index: first_one + j,
+                id: channel_id(f, j, q, ce, name),
+                kind: if q.is_some_and(|(a, b)| b > 0.0 && b != a) {
+                    ChromKind::Srm
+                } else {
+                    ChromKind::Sic
+                },
+                q1: q.map(|c| decimal(c.0)),
+                q3: q.filter(|c| c.1 > 0.0 && c.1 != c.0).map(|c| decimal(c.1)),
+                unit: UNITS.into(),
+                time,
+                intensity,
+            }
+        })
+        .collect();
+    Ok(Some(out))
 }
 
 /// The TIC of the scans of a set of functions, in the order of time.

@@ -4,9 +4,11 @@
     python3 tools/wiff_mrm_rado.py OUT [SAMPLES]
 
 Writes OUT/mrmrado.wiff(.scan), no Log: SAMPLES samples (default 1), each one MRM experiment of 136 transitions over 40 cycles, every block
-sparse (`-(136.01)`, then cps of the acquired transitions and `-(k + 0.01)` for k skipped ones). Built with the Writer of wiff_riferimento.py; the
-numbers are invented, no laboratory data is used.
+sparse (`-(136.01)`, then the cps of consecutive transitions and `-(k + 0.01)` for a run of k transitions that measured zero), and OUT/mrmrado.json:
+the trace each transition must give (one point per cycle, the zeros included). Built with the Writer of wiff_riferimento.py; the numbers are
+invented, no laboratory data is used.
 """
+import json
 import sys
 from pathlib import Path
 
@@ -17,15 +19,20 @@ TRANSITIONS = 136
 CYCLES = 40
 
 
+def cps(j: int, c: int) -> float:
+    """Transition `j` in cycle `c`: a count within 12 of `3.5 * c` (a made-up elution), zero elsewhere."""
+    return 100.0 + 7.0 * j + c if abs(j - 3.5 * c) <= 12 else 0.0
+
+
 def block(c: int) -> list:
-    """Cycle `c`: the transitions within 12 of `3.5 * c` were acquired (window of a made-up schedule), the others skipped."""
+    """Cycle `c` as a sparse block: the counts as they are, every run of zeros as one `-(k + 0.01)` token."""
     out, jump = [-(TRANSITIONS + 0.01)], 0
     for j in range(TRANSITIONS):
-        if abs(j - 3.5 * c) <= 12:
+        if cps(j, c) > 0:
             if jump:
                 out.append(-(jump + 0.01))
                 jump = 0
-            out.append(100.0 + 7.0 * j + c)
+            out.append(cps(j, c))
         else:
             jump += 1
     if jump:
@@ -48,6 +55,8 @@ def main():
             blocks.append(("mrm", b, 3000.0 * c, sum(x for x in b if x > 0)))
         w.sample(n, blocks, method)
     w.save(out, "mrmrado")
+    traces = [{"time": [3000.0 * c / 60000.0 for c in range(CYCLES)], "intensity": [cps(j, c) for c in range(CYCLES)]} for j in range(TRANSITIONS)]
+    (out / "mrmrado.json").write_text(json.dumps(traces))
 
 
 if __name__ == "__main__":

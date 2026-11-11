@@ -117,37 +117,46 @@ fn kv(k: &str, v: &str) -> Option<V> {
 
 /// OLE property set (MS-OLEPS): (property id, text) of the string properties and the creation time (id 12) as `YYYY-MM-DDTHH:MM:SS`, local time of the instrument PC.
 fn properties(b: &[u8]) -> Vec<(u32, String)> {
-    let rd = |at: usize| {
-        b.get(at..at + 4)
+    // every offset is a sum of numbers read from the file: checked, so that on a 32-bit target (the site) a sum past 4 GB never wraps onto other bytes
+    let rd = |at: Option<usize>| {
+        b.get(at?..at?.checked_add(4)?)
             .map(|x| u32::from_le_bytes([x[0], x[1], x[2], x[3]]))
     };
-    let (Some(off), Some(_)) = (rd(0x2c).map(|o| o as usize), rd(0x2c)) else {
+    let add = |a: usize, k: u64| usize::try_from(k).ok().and_then(|k| a.checked_add(k));
+    let slice = |at: usize, len: u64| b.get(add(at, 8)?..add(at, 8 + len)?);
+    let Some(off) = rd(Some(0x2c)).map(|o| o as usize) else {
         return vec![];
     };
-    let n = rd(off + 4).unwrap_or(0).min(64) as usize;
+    let n = rd(add(off, 4)).unwrap_or(0).min(64) as usize;
     let mut out = vec![];
     for i in 0..n {
-        let (Some(pid), Some(po)) = (rd(off + 8 + 8 * i), rd(off + 12 + 8 * i)) else {
+        let (Some(pid), Some(po)) = (
+            rd(add(off, 8 + 8 * i as u64)),
+            rd(add(off, 12 + 8 * i as u64)),
+        ) else {
             break;
         };
-        let at = off + po as usize;
-        let s = match rd(at) {
-            Some(30) => rd(at + 4)
-                .and_then(|l| b.get(at + 8..at + 8 + l as usize))
+        let Some(at) = add(off, u64::from(po)) else {
+            continue;
+        };
+        let s = match rd(Some(at)) {
+            Some(30) => rd(add(at, 4))
+                .and_then(|l| slice(at, u64::from(l)))
                 .map(|x| {
                     String::from_utf8_lossy(x)
                         .trim_end_matches('\0')
                         .to_string()
                 }),
-            Some(31) => rd(at + 4)
-                .and_then(|l| b.get(at + 8..at + 8 + 2 * l as usize))
+            Some(31) => rd(add(at, 4))
+                .and_then(|l| slice(at, 2 * u64::from(l)))
                 .map(|x| {
                     String::from_utf16_lossy(&u16s(x).collect::<Vec<_>>())
                         .trim_end_matches('\0')
                         .to_string()
                 }),
-            Some(64) => b
-                .get(at + 4..at + 12)
+            Some(64) => add(at, 4)
+                .zip(add(at, 12))
+                .and_then(|(a, e)| b.get(a..e))
                 .map(|x| filetime(u64::from_le_bytes(x.try_into().unwrap_or([0; 8])))),
             _ => None,
         };

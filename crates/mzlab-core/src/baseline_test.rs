@@ -93,7 +93,7 @@ fn the_parameters_and_the_page_measure() {
     let num = |v: &'static [(&'static str, f64)]| {
         move |k: &str| v.iter().find(|(n, _)| *n == k).map(|(_, x)| *x)
     };
-    assert_eq!(Baseline::from_params(None, num(&[])), Ok(Baseline::Edges));
+    assert_eq!(Baseline::from_params(None, num(&[])), Ok(Baseline::Zero));
     assert_eq!(
         Baseline::from_params(Some("zero"), num(&[])),
         Ok(Baseline::Zero)
@@ -142,5 +142,34 @@ fn the_json_of_the_page() {
     assert_eq!(
         super::peak_area_json(&rt, &y, 0.0, 1.0, Baseline::Edges),
         None
+    );
+}
+
+#[test]
+fn no_mode_named_measures_from_zero_with_the_sloped_background_inside() {
+    // a Gaussian on the background 1000 + 4000 t: from zero the area holds the trapezoid of the background, the edge line takes it out
+    let (c, s, h, w) = (3.0, 0.05, 1.0e5, 0.4);
+    let (rt, g) = gauss(c, s, h, w, 0.001);
+    let bg = |t: f64| 1000.0 + 4000.0 * t;
+    let y: Vec<f64> = rt.iter().zip(&g).map(|(t, v)| v + bg(*t)).collect();
+    let none = Baseline::from_params(None, |_| None).unwrap();
+    assert_eq!((none, super::DEFAULT.name()), (Baseline::Zero, "zero"));
+    let n = rt.len() - 1;
+    let z = integrate(&rt, &y, 0, n, |t| none.at(t).unwrap());
+    let back = (bg(c - w) + bg(c + w)) / 2.0 * 2.0 * w;
+    let want = g_int(s, h, w) + back;
+    assert!((z.area - want).abs() < 1e-6 * want, "{} {want}", z.area);
+    let e = integrate(&rt, &y, 0, n, |t| {
+        y[0] + (y[n] - y[0]) * (t - rt[0]) / (rt[n] - rt[0])
+    });
+    assert!(
+        (e.area - g_int(s, h, w)).abs() < 1e-3 * g_int(s, h, w),
+        "{}",
+        e.area
+    );
+    // the old default is still a name the user can choose
+    assert_eq!(
+        Baseline::from_params(Some("edges"), |_| None),
+        Ok(Baseline::Edges)
     );
 }

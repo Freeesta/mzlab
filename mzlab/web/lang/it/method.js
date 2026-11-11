@@ -14,6 +14,7 @@ I18N.add("it", {
   "method.m.col.curve": "Curva",
   "method.doc.title": "Metodo registrato nel file",
   "method.doc.none": "Questo file non contiene un metodo di acquisizione leggibile.",
+  "method.doc.notes": "Ciò che il lettore non ha potuto leggere",
   "method.doc.created": "Creato (ora dello strumento)",
   "method.doc.name": "Nome del campione",
   "method.doc.inject": "Volume iniettato",
