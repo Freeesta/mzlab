@@ -124,6 +124,15 @@ class Writer:
         if log:
             self.streams[f"SampleSubtree/Sample{n}/Log"] = b"\0\0" + f"Mass Spectrometer: Config Table, Component ID: {log}, Version: 1".encode("utf-16le") + b"\0\0"
 
+    def unindexed(self, n, blocks, cut=0):
+        """A section the `.wiff` index does not list (a copy made while Analyst was acquiring): the section marker with sample number `n`, then the MRM blocks (lists of values)
+        with no table row and no Idx stream; `cut` bytes of a last block are missing (the copy ended inside it)."""
+        self.scan += b"\x11\x11\x11\x11\x82\x05\x00\x00" + struct.pack("<I", n) + bytes(12)
+        for v in blocks:
+            self.scan += struct.pack(f"<{len(v)}f", *v)
+        if cut:
+            del self.scan[-cut:]
+
     def save(self, out: Path, name: str):
         t = bytearray(32)
         for n, base in self.table:
@@ -208,6 +217,7 @@ def main():
         w.sample(n, blocks, {f"Experiment{e}/ExperimentHeader": header(11, pr) for e, pr in enumerate(precs)} | {"Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "prodotto")
     energia = energy(out)
+    unindexed(out)
     transizioni = transitions(out)
     programmati = scheduled(out)
     variante, refusals = variants(out)
@@ -233,6 +243,35 @@ def ida_file(out: Path):
     w.save(out, "ida")
     precs = {"1": [None, None, None], "2": [None, 500.0, 321.0]}
     return {n: [{"id": f"sample={n} period=1 cycle={c + 1} experiment={e + 1}", "level": 1 if e == 0 else 2, "precursor": precs[n][e]} for c in range(3) for e in range(3)] for n in precs}
+
+
+def unindexed(out: Path):
+    """Pairs whose `.wiff.scan` is newer than its `.wiff`: indexed MRM samples (two transitions per block, 1 s per cycle), then sections the index does not list.
+    `nonindicizzato`: sections 3 (4 blocks) and 4 (8 blocks, more than the donor has, the last one cut by 3 bytes); `nonindicizzato_scansione`: the donor holds full scans, so the
+    section cannot be read (left out); `nonindicizzato_guasto`: a block with a negative count is not what the layout says (left out). Written to nonindicizzati.json."""
+    trs = [(300.0, 100.0, 50.0, "q1", 30.0, 9.0, 15.0, 4.0), (300.0, 80.0, 50.0, "q2", 30.0, 9.0, 25.0, 4.0)]
+    method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(trs), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    mine = [[float(10 * (k + 1)), float(k)] for k in range(6)]
+    w = Writer()
+    for n in (1, 2):
+        w.sample(n, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(mine)], method)
+    a = [[100.0 + k, 50.0 + k] for k in range(4)]
+    b = [[200.0 + k, 0.0] for k in range(8)]
+    w.unindexed(3, a)
+    w.unindexed(4, b, cut=3)
+    w.save(out, "nonindicizzato")
+    w = Writer()
+    w.sample(1, [("scan", FULL, 1000.0, 1.0), ("scan", FULL, 2000.0, 1.0)], {"Experiment0/ExperimentHeader": header(15, 30.0)})
+    w.unindexed(2, a)
+    w.save(out, "nonindicizzato_scansione")
+    w = Writer()
+    w.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(mine)], method)
+    w.unindexed(2, [[1.0, 2.0], [-3.0, 4.0]])
+    w.save(out, "nonindicizzato_guasto")
+    t = [1000.0 * k / 60000.0 for k in range(8)]
+    ref = {"sections": {"3": {"time": t[:4], "q1": [v[0] for v in a], "q2": [v[1] for v in a]}, "4": {"time": t[:7], "q1": [v[0] for v in b[:7]], "q2": [v[1] for v in b[:7]]}}}
+    (out / "nonindicizzati.json").write_text(json.dumps(ref))
+    return ref
 
 
 def energy(out: Path):
@@ -316,20 +355,22 @@ def scheduled(out: Path):
 
 
 def variants(out: Path):
-    """The files of the readers module. A QTRAP 5500 with four experiments (survey V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1) over two cycles, and the refused files."""
+    """The files of the readers module. A QTRAP 5500 with four experiments (survey V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1) over two cycles, and the refused files.
+    The mass of the header is a precursor of the product-ion scan only: the precursor-ion scan has it as its product, the neutral-loss scan as its loss (Da)."""
     ex = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 55.5), "Experiment2/ExperimentHeader": header(5, 184.0),
           "Experiment3/ExperimentHeader": header(7, 217.3), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
     pts = {1: FULL, 3: PRODUCT, 5: [(5, 4), (6, 9), (400, 12000)], 7: [(70, 1), (71, 2), (72, 7), (900, 300)]}
     blocks, want = [], []
     for cycle in range(2):
-        for e, (code, level, prec, version, term) in enumerate([(15, 1, None, 1, None), (11, 2, 55.5, 3, None), (5, 2, 184.0, 1, ("MS:1000341", "precursor ion spectrum")),
-                                                                (7, 2, 217.3, 1, ("MS:1000326", "constant neutral loss spectrum"))]):
+        for e, (code, level, prec, version, term) in enumerate([(15, 1, None, 1, None), (11, 2, 55.5, 3, None), (5, 2, None, 1, ("MS:1000341", "precursor ion spectrum")),
+                                                                (7, 2, None, 1, ("MS:1000326", "constant neutral loss spectrum"))]):
             p = [pts[1], pts[3], pts[5], pts[7]][e]
             p = p if not (e == 3 and cycle == 1) else []  # an empty block (no spectrum)
             t = 1000.0 * cycle + 100.0 * e
             blocks.append(("scan", p, t, float(sum(c for _, c in p)), version))
             if p:
-                want.append(spectrum(f"sample=1 period=1 cycle={cycle + 1} experiment={e + 1}", level, prec, t, p, version, term))
+                want.append(spectrum(f"sample=1 period=1 cycle={cycle + 1} experiment={e + 1}", level, prec, t, p, version, term)
+                            | {"product": 184.0 if code == 5 else None, "loss": 217.3 if code == 7 else None})
     w = Writer()
     w.sample(1, blocks, ex, log="QTRAP 5500")
     w.save(out, "variante")

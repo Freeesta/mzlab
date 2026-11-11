@@ -17,6 +17,11 @@ fn text_in(catalog: &'static str, key: &str) -> Option<&'static str> {
 }
 
 /// The catalogue text of `key`.
+/// The catalogue text of `key` (the language of the terminal), `None` when the key has none.
+pub(crate) fn catalog_text(key: &str) -> Option<&'static str> {
+    text_of(key)
+}
+
 fn text_of(key: &str) -> Option<&'static str> {
     text_in(CATALOG, key)
 }

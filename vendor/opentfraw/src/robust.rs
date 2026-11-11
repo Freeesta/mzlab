@@ -1,4 +1,4 @@
-//! What `RawFileReader::open` does with a file that is not exactly as the format says: a version number nobody documented, a copy that stops early, a stream
+//! What `RawFileReader::open` does with a file that is not exactly as the format says: a version no real file has verified, a copy that stops early, a stream
 //! that cannot be read. Each case opens the file as far as it is sound and says what was left out (`Warning`); a file with nothing sound in it is refused with
 //! an error that names the structure, the format version and the byte where it stopped. Used by `reader.rs` and by mzLab's `raw.rs`/`rawlettore.rs`.
 
@@ -6,11 +6,9 @@ use crate::error::Error;
 use crate::scan_format::ScanDataFormat;
 use crate::scan_index::ScanIndexEntry;
 
-/// The format versions whose layout is documented and checked against real files.
-pub const DECLARED_VERSIONS: [u32; 8] = [8, 47, 57, 60, 62, 63, 64, 66];
-
-/// Highest version number that is tried with the nearest declared layout; anything above is a damaged header rather than a newer format.
-const MAX_TRIED_VERSION: u32 = 100;
+/// The format versions whose layout has been checked against real files. Any other number, including the documented 8, 47, 60 and 62 whose layouts the code
+/// still knows, is refused (`Error::UnsupportedVersion`) until a real file verifies it: a layout read on trust would give values nobody checked.
+pub const VERIFIED_VERSIONS: [u32; 4] = [57, 63, 64, 66];
 
 /// What `open` left out or assumed. Order of the file is kept; every entry is one line in `metodo/1.avvisi`.
 #[derive(Debug, Clone, PartialEq)]
@@ -23,8 +21,6 @@ pub enum Warning {
         scans_declared: u32,
         scans_readable: u32,
     },
-    /// The version in the header is not one of [`DECLARED_VERSIONS`]; the layout of `used` was read and the scan index passed the checks of `plausible_index`.
-    UnverifiedVersion { declared: u32, used: u32 },
     /// A structure that is not needed to list and read the scans could not be read; the file opens without it.
     Skipped {
         stage: &'static str,
@@ -46,9 +42,6 @@ impl Warning {
                 "File cut: {scans_readable} of {scans_declared} scans are whole before byte {file_len} (scan {} starts at byte {cut_at})",
                 scans_readable + 1
             ),
-            Self::UnverifiedVersion { declared, used } => format!(
-                "Format version {declared} is not verified: read with the layout of version {used}"
-            ),
             Self::Skipped {
                 stage,
                 offset,
@@ -56,21 +49,6 @@ impl Warning {
             } => format!("{stage} not read (byte {offset}): {detail}"),
         }
     }
-}
-
-/// The documented version whose layout a header version is read with: itself when declared, the nearest declared one for a number between 1 and 100 (a tie
-/// goes to the lower), `None` for anything else.
-pub fn schema_version(declared: u32) -> Option<u32> {
-    if DECLARED_VERSIONS.contains(&declared) {
-        return Some(declared);
-    }
-    if declared == 0 || declared > MAX_TRIED_VERSION {
-        return None;
-    }
-    DECLARED_VERSIONS
-        .iter()
-        .copied()
-        .min_by_key(|v| (v.abs_diff(declared), *v))
 }
 
 /// Smallest packet of a scan in the packet layout (its header).
@@ -138,22 +116,6 @@ pub fn ordered_prefix(index: &[ScanIndexEntry]) -> usize {
     index.len()
 }
 
-/// The checks that stand in for a documented layout when the version is not documented: times finite, not negative and non-decreasing over the whole index,
-/// and every scan record starting inside the file.
-pub fn plausible_index(index: &[ScanIndexEntry], data_addr: u64, file_len: u64) -> bool {
-    let (Some(first), Some(last)) = (index.first(), index.last()) else {
-        return false;
-    };
-    let times_ok = index
-        .windows(2)
-        .all(|w| matches!(w, [a, b] if a.start_time.is_finite() && b.start_time.is_finite() && a.start_time >= 0.0 && b.start_time >= a.start_time));
-    times_ok
-        && first.start_time.is_finite()
-        && last.start_time.is_finite()
-        && data_addr.saturating_add(first.offset) <= file_len
-        && data_addr.saturating_add(last.offset) <= file_len
-}
-
 /// An error of a structure the file cannot do without, with the structure and the version in front of the reason. Errors that already say what is wrong
 /// with the file as a whole (signature, version, a cut) pass through; a stream that ends inside the structure is a cut (`Error::Truncated`).
 pub fn stage_error(stage: &'static str, version: u32, file_len: u64, e: Error) -> Error {
@@ -215,22 +177,6 @@ mod tests {
     }
 
     #[test]
-    fn declared_versions_map_to_themselves_and_others_to_the_nearest() {
-        for v in DECLARED_VERSIONS {
-            assert_eq!(schema_version(v), Some(v));
-        }
-        assert_eq!(schema_version(65), Some(64));
-        assert_eq!(schema_version(67), Some(66));
-        assert_eq!(schema_version(99), Some(66));
-        assert_eq!(schema_version(53), Some(57));
-        assert_eq!(schema_version(52), Some(47));
-        assert_eq!(schema_version(1), Some(8));
-        assert_eq!(schema_version(0), None);
-        assert_eq!(schema_version(101), None);
-        assert_eq!(schema_version(u32::MAX), None);
-    }
-
-    #[test]
     fn whole_prefix_stops_at_the_first_scan_that_does_not_fit() {
         let ix: Vec<_> = (0..5).map(|k| entry(k as f64, k * 100, 100)).collect();
         let f = ScanDataFormat::PacketHeader;
@@ -257,17 +203,5 @@ mod tests {
         assert_eq!(ordered_prefix(&ix[..2]), 2);
         assert_eq!(ordered_prefix(&[entry(f64::NAN, 0, 1)]), 0);
         assert_eq!(ordered_prefix(&[]), 0);
-    }
-
-    #[test]
-    fn an_index_that_runs_backwards_or_leaves_the_file_is_not_plausible() {
-        let good = vec![entry(0.1, 0, 10), entry(0.2, 10, 10)];
-        assert!(plausible_index(&good, 0, 100));
-        assert!(!plausible_index(&[], 0, 100));
-        assert!(!plausible_index(&good, 0, 5));
-        let back = vec![entry(0.2, 0, 10), entry(0.1, 10, 10)];
-        assert!(!plausible_index(&back, 0, 100));
-        let nan = vec![entry(f64::NAN, 0, 10)];
-        assert!(!plausible_index(&nan, 0, 100));
     }
 }

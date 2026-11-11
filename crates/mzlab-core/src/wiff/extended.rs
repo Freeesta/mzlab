@@ -42,8 +42,9 @@ fn periods(ole: &Ole, sample: u32) -> usize {
     super::period_count(ole, method_no(ole, sample))
 }
 
-/// The experiments of `sample` checked: a method of several periods or a scan type this reader does not know is an error; the precursor-ion and
-/// product-ion (6) and neutral-loss scans are MS2 whose selected ion is the fixed mass of the header (as ProteoWizard writes them).
+/// The experiments of `sample` checked: a method of several periods or a scan type this reader does not know is an error. The precursor-ion,
+/// product-ion (6) and neutral-loss scans are MS2; the mass of the header is the selected ion of a product-ion scan only. Of the other two it is `fixed`:
+/// the product of a precursor-ion scan, written as its `<product>` with no precursor (as ProteoWizard does), and the loss of a neutral-loss scan.
 pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<Vec<Experiment>> {
     let m = method_no(ole, sample);
     if ex.is_empty() && m != sample {
@@ -57,13 +58,18 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
     for (i, e) in ex.iter_mut().enumerate() {
         match e.code {
             Some(c) if super::modes::nativo(Some(c)) => {}
-            Some(CODE_PRECURSOR_ION | CODE_PRODUCT_ION | CODE_NEUTRAL_LOSS) => {
+            Some(c @ (CODE_PRECURSOR_ION | CODE_PRODUCT_ION | CODE_NEUTRAL_LOSS)) => {
                 let header = ole.read(&format!("MethodSubtree/Method{m}/DeviceMethod0/Period0/Experiment{i}/ExperimentHeader")).unwrap_or_default();
                 e.level = 2;
-                e.precursor = header
+                let mass = header
                     .get(HEADER_PRECURSOR..HEADER_PRECURSOR + 8)
                     .map(|b| f64::from_le_bytes(b.try_into().unwrap_or([0; 8])))
                     .filter(|m| m.is_finite() && *m > 0.0);
+                if c == CODE_PRODUCT_ION {
+                    e.precursor = mass;
+                } else {
+                    e.fixed = mass;
+                }
             }
             Some(CODE_MS3) => {
                 let first = f64_at(
@@ -86,9 +92,7 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
                 if crate::wiff::dad::wiff2_sample_info(ole, sample).is_some() {
                     return Err(Error::new("err.file.wiffNeeds2"));
                 }
-                return Err(Error::new("err.file.wiffScanType")
-                    .with("code", c)
-                    .with("experiment", i + 1));
+                return Err(super::scan_type_error(c, i + 1));
             }
             Some(_) => {}
             None => return Err(bad(&format!("no scan type code (experiment {})", i + 1))),

@@ -56,6 +56,9 @@ window.QUALITA = {
   /** Area of the peak between the times a and b (min) from zero (mode 1) or from the line `line` = [t0, y0, t1, y1] (mode 2), by the engine (baseline.rs):
    * the JSON text { baseline, area (signed, counts x s), below (the part under the line), height, rt }, the bytes of `mzlab-cli peak-area`; null without the engine. */
   peakArea(x, y, a, b, mode, line) { return call({ op: "area", rt: f64(x), y: f64(y), a, b, mode, line: f64(line || []) }); },
+  /** Where the end `cur` of a window (other end `other`) goes, by the engine (intwin.rs): onto a point of the trace, before/after the other end, between the neighbours'
+   * borders lo/hi (null: none); `at` = the pointer (null: move `step` points). The JSON text { t, i }, the bytes of `mzlab-cli peak-window`; null without the engine or no free point. */
+  windowEnd(x, cur, other, at, step, lo, hi) { const n = v => (v == null ? NaN : v); return call({ op: "wend", rt: f64(x), cur, other, at: n(at), step: step | 0, lo: n(lo), hi: n(hi) }); },
   /** The peaks worth a label (at most maxN, height >= rel of the tallest, S/N >= snr), by RT: [{ apex, rt, height, snr }] (apex = index into the trace), or null. */
   labels(x, y, maxN, rel, snr, ends) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr, ends: !!ends }); },
   /** The tallest point of a spectrum { x, y } (m/z or nm; refine = parabola through the apex), null when none or without the engine. */

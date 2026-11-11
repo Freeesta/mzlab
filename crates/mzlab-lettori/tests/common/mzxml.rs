@@ -135,9 +135,9 @@ fn emit(s: &mut String, x: &Sc, o: Opz, pos: &mut Vec<usize>) {
     }
 }
 
-/// The mzXML of `scans`, with `<index>` and `<indexOffset>` when `o.indice`.
+/// The mzXML of `scans`, with `<index>` and `<indexOffset>` when `o.indice`; `scanCount` declares the scans written (a whole file, not a cut one).
 pub fn mzxml(scans: &[Sc], o: Opz) -> Vec<u8> {
-    let mut s = String::from(HEADER);
+    let mut s = HEADER.replace("scanCount=\"5\"", &format!("scanCount=\"{}\"", scans.len()));
     let mut pos = Vec::new();
     for x in scans {
         emit(&mut s, x, o, &mut pos);

@@ -184,3 +184,25 @@ fn the_indexed_file_with_a_chain_validates_against_the_psi_schema() {
     w.close_spectra().unwrap();
     super::tests_xsd::validate(&w.finish().unwrap());
 }
+
+/// A spectrum whose file does not say its level (0) gets neither `ms level` nor a spectrum type: no MS1 is stated for it.
+#[test]
+fn a_spectrum_of_unknown_level_states_no_level_and_no_spectrum_type() {
+    let sp = Spectrum {
+        id: "scan=1".into(),
+        level: 0,
+        mz: vec![100.0],
+        intensity: vec![1.0],
+        ..Default::default()
+    };
+    let head = spectrum_head(0, &sp, &SpectrumExtra::default());
+    for acc in ["MS:1000511", "MS:1000579", "MS:1000580"] {
+        assert!(!head.contains(acc), "{acc} in {head}");
+    }
+    let sp = Spectrum { level: 1, ..sp };
+    let head = spectrum_head(0, &sp, &SpectrumExtra::default());
+    assert!(
+        head.contains("MS:1000511") && head.contains("MS:1000579"),
+        "{head}"
+    );
+}

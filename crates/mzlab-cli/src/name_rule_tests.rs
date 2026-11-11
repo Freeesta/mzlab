@@ -47,6 +47,7 @@ const COMMANDS: &[&[&str]] = &[
     &["peak-edges"],
     &["sim-table"],
     &["peak-area"],
+    &["peak-window"],
     &["explain-missing"],
     &["convert"],
     &["validate"],

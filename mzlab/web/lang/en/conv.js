@@ -50,7 +50,7 @@ I18N.add("en", {
   "conv.row.done": "Loaded ✓ ({scans} scans, {secs} s)",
   "conv.row.cancel": "Cancelled",
   "conv.row.cached": "Loaded from cache ✓ ({scans} scans)",
-  "conv.row.missing": "{n} scans missing: the file ends before them",
+  "conv.row.missing": "partial read: {read} of {declared} scans, the file ends before the rest",
   "conv.sum.head": "{n} files: {parts} · {time}",
   "conv.sum.full": "{n} full scan",
   "conv.sum.ms2": "{n} MS2",
