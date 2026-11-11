@@ -372,11 +372,9 @@ pub struct RawFileReader {
     pub inst_log: std::sync::Arc<[GenericRecord]>,
     /// The status log as the file stores it (temperatures, voltages, vacuum...); `None` when no schema is found or the records do not fit.
     pub status_log: Option<crate::status_log::StatusLog>,
-    /// Layout the file is read with: the version in the header when documented, else the nearest documented one (`declared_version` has the number written).
+    /// The format version in the file header, one of `robust::VERIFIED_VERSIONS`.
     pub version: u32,
-    /// The version number written in the file header.
-    pub declared_version: u32,
-    /// What `open` left out or assumed (a cut file, an undocumented version, a structure that could not be read); empty for a sound file.
+    /// What `open` left out (a cut file, a structure that could not be read); empty for a sound file.
     pub warnings: Vec<Warning>,
     /// Number of scans.
     pub num_scans: u32,
@@ -485,22 +483,10 @@ pub struct ControllerInfo {
 impl RawFileReader {
     /// Open and parse a RAW file from a reader.
     ///
-    /// A version number that is not documented is read with the nearest documented layout when the scan index then looks sound (`Warning::UnverifiedVersion`);
-    /// otherwise the error is `Error::UnsupportedVersion` with the number written. A file that stops inside the scan data opens with the scans that are whole
-    /// (`Warning::Truncated`); one that stops before its scan index is `Error::Truncated`. Every other error names the structure, the version and the file size.
+    /// A version that no real file has verified (`robust::VERIFIED_VERSIONS`) is `Error::UnsupportedVersion` with the number written. A file that stops
+    /// inside the scan data opens with the scans that are whole (`Warning::Truncated`); one that stops before its scan index is `Error::Truncated`. Every
+    /// other error names the structure, the version and the file size.
     pub fn open<R: Read + Seek>(source: R) -> Result<Self> {
-        let mut undocumented = None;
-        match Self::open_with(source, &mut undocumented) {
-            Err(e) if !matches!(e, Error::UnsupportedVersion(_)) => match undocumented {
-                Some(v) => Err(Error::UnsupportedVersion(v)),
-                None => Err(e),
-            },
-            other => other,
-        }
-    }
-
-    /// `open`; `undocumented` receives the header version when it is not a documented one.
-    fn open_with<R: Read + Seek>(source: R, undocumented: &mut Option<u32>) -> Result<Self> {
         let mut r = BinaryReader::new(source);
         let file_len = r.length()?;
         let mut warnings: Vec<Warning> = Vec::new();
@@ -509,10 +495,6 @@ impl RawFileReader {
         let header = FileHeader::read(&mut r)
             .map_err(|e| robust::stage_error("FileHeader", 0, file_len, e))?;
         let version = header.version;
-        let header_declared = header.declared_version;
-        if header.declared_version != version {
-            *undocumented = Some(header.declared_version);
-        }
         let stage = |name: &'static str, e: Error| robust::stage_error(name, version, file_len, e);
 
         // 2. SeqRow
@@ -640,15 +622,6 @@ impl RawFileReader {
                     declared: num_scans,
                 });
             }
-        }
-        if let Some(declared) = *undocumented {
-            if !robust::plausible_index(&scan_index, data_addr, file_len) {
-                return Err(Error::UnsupportedVersion(declared));
-            }
-            warnings.push(Warning::UnverifiedVersion {
-                declared,
-                used: version,
-            });
         }
 
         // Flat-peak (TSQ/SRM) layout: a run without scan events, or a first record too small to be a packet.
@@ -1063,7 +1036,6 @@ impl RawFileReader {
             inst_log,
             status_log,
             version,
-            declared_version: header_declared,
             warnings,
             num_scans,
             data_addr,
@@ -1107,16 +1079,15 @@ impl RawFileReader {
         let mut r = BinaryReader::new(source);
         let len = r.length().unwrap_or(0);
         let _ = writeln!(out, "file: {len} bytes");
-        let Ok(header) = FileHeader::read(&mut r) else {
-            let _ = writeln!(out, "FileHeader: not readable");
-            return out;
+        let header = match FileHeader::read(&mut r) {
+            Ok(h) => h,
+            Err(e) => {
+                let _ = writeln!(out, "FileHeader: {e}");
+                return out;
+            }
         };
         let v = header.version;
-        let _ = writeln!(
-            out,
-            "FileHeader: declared v{} read as v{v}",
-            header.declared_version
-        );
+        let _ = writeln!(out, "FileHeader: v{v}");
         let info = (|| -> Result<RawFileInfo> {
             SeqRow::read(&mut r, v)?;
             r.read_bytes(24)?;
