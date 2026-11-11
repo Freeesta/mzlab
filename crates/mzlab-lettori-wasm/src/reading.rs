@@ -288,7 +288,7 @@ fn open_probe(
     #[cfg(any(feature = "sciex", feature = "tutte"))]
     if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::reader::ENTRY.id)
     {
-        return mzlab_core::wiff::reader::open_only(fs, &Limits::sito(), Some(0));
+        return mzlab_lettori::finite::wiff_sample(fs, &Limits::sito(), 0);
     }
     mzlab_lettori::apri(fs, &Limits::sito())
 }
@@ -301,7 +301,7 @@ fn open_sample(
     #[cfg(any(feature = "sciex", feature = "tutte"))]
     if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::reader::ENTRY.id)
     {
-        let l = mzlab_core::wiff::reader::open_only(fs, &Limits::sito(), Some(c))?;
+        let l = mzlab_lettori::finite::wiff_sample(fs, &Limits::sito(), c)?;
         return Ok(Box::new(mzlab_lettori::srm::SrmFromScans::new(l)));
     }
     let _ = c;
