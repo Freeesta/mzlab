@@ -30,6 +30,7 @@ function nativo() {
     fragments: (/** @type {string} */ molfile, /** @type {number} */ a, /** @type {number} */ b) => ask({ kind: "fragments", molfile, a, b }),
     partial: (/** @type {string} */ molfile, /** @type {string} */ delta) => ask({ kind: "partial", molfile, delta }),
     labels: (/** @type {string} */ request) => ask({ kind: "labels", request }),
+    cut: (/** @type {string} */ request) => ask({ kind: "cut", request }),
   };
 }
 
