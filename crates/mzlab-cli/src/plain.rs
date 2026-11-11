@@ -11,9 +11,11 @@ mod dda_window_cmd;
 mod ion_mz_cmd;
 #[path = "peak_area_cmd.rs"]
 pub(crate) mod peak_area_cmd;
+#[path = "peak_window_cmd.rs"]
+mod peak_window_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 14] = [
+pub(crate) const PLAIN: [&str; 15] = [
     "llm",
     "steps",
     "explain-missing",
@@ -28,6 +30,7 @@ pub(crate) const PLAIN: [&str; 14] = [
     "sim-table",
     "peak-auto",
     "peak-area",
+    "peak-window",
 ];
 
 /// Old command names still accepted on input, as `(old, new)`; they are never printed outside `--help`.
@@ -59,6 +62,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "sim-table" => sim_table_cmd::run(args),
         "peak-auto" => peaks_auto_cmd::run(args),
         "peak-area" => peak_area_cmd::run(args),
+        "peak-window" => peak_window_cmd::run(args),
         _ => peaks_edges_cmd::run(args),
     }
 }

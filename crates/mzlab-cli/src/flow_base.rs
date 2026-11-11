@@ -383,13 +383,19 @@ pub(crate) fn write_mzml_with(
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
-    let lacking = reader.missing(sample);
-    if lacking > 0 {
-        let have = reader.index(sample)?.len();
+    let lost = reader.losses(sample)?;
+    if lost.partial() {
         eprintln!(
-            "warn.file.truncated: {}: {have} of {} spectra read, the file ends before the rest",
+            "{}: {}: {} of {} spectra read{}",
+            lost.cause,
             path.display(),
-            have + lacking
+            lost.read,
+            lost.declared,
+            if lost.cause == mzlab_core::readers::TRUNCATED {
+                ", the file ends before the rest"
+            } else {
+                ""
+            }
         );
     }
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
@@ -406,6 +412,12 @@ pub(crate) fn write_mzml_with(
         let mut w = conv.write(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))?;
         w.flush().map_err(io)?;
         let (_, bytes, sha256) = w.into_inner().map_err(|e| io(e.into_error()))?.finish();
+        // the file is read again by the validator: a conversion its own `validate` would call INVALID fails here (a `.wasm` build of the CLI, the
+        // workflow study's harness, has no validator: the site checks through its `valida` module)
+        #[cfg(not(target_family = "wasm"))]
+        mzlab_core::mzml_validate::check_written(std::io::BufReader::new(
+            File::open(out).map_err(io)?,
+        ))?;
         Ok((bytes, sha256))
     });
     match written {

@@ -79,7 +79,8 @@ pub fn sps_masses(p: &crate::ScanParams<'_>) -> Vec<f64> {
 pub struct SpectrumRecord {
     pub index: usize,
     pub scan_number: u32,
-    pub ms_level: u32,
+    /// `None` when the file does not say it (a scan without a readable event, or an undefined MS power).
+    pub ms_level: Option<u32>,
     pub is_ms1: bool,
     /// Whether this MS2+ scan uses data-independent acquisition.
     pub is_dia: bool,
@@ -121,7 +122,8 @@ pub struct ScanMetadata {
     pub scan_segment: u16,
     /// Size of the scan data packet in bytes, as stored in the scan index.
     pub data_size: u32,
-    pub ms_level: u32,
+    /// `None` when the file does not say it (a scan without a readable event, or an undefined MS power).
+    pub ms_level: Option<u32>,
     pub is_ms1: bool,
     /// Whether this MS2+ scan uses data-independent acquisition.
     pub is_dia: bool,
@@ -184,13 +186,14 @@ pub fn scan_metadata_with(
     // A v66 flat-peak run that names no Q1 transition (GC-MS/MS with Q1 RF only, scanning in Q3) is a full scan, as RawFileReader reports it; the older TSQ layouts without a readable transition table stay SRM.
     let q3_scan = raw.flat_peaks && raw.version >= 66 && raw.srm_q1_by_event.is_empty();
     let is_srm = raw.flat_peaks && !q3_scan;
+    // SRM is MS2 by construction, and a Q3 full scan is MS1 as RawFileReader reports it; any other scan says its level only through its event
+    let event_level = event.and_then(|e| e.preamble.ms_power()).and_then(ms_level);
     let level = if is_srm {
-        2
+        Some(2)
+    } else if q3_scan {
+        event_level.or(Some(1))
     } else {
-        event
-            .and_then(|e| e.preamble.ms_power())
-            .map(ms_level)
-            .unwrap_or(1)
+        event_level
     };
     // an SRM run without scan events (older TSQ layouts) does not say its polarity: unknown, not positive
     let polarity = event.and_then(|e| e.preamble.polarity());
@@ -203,7 +206,7 @@ pub fn scan_metadata_with(
         Some(e) => raw.scan_filter_of(idx as usize, Some(e), params.as_ref()),
         None => raw.scan_filter_with(scan_number, params.as_ref()),
     };
-    let is_ms1 = !is_srm && level == 1;
+    let is_ms1 = !is_srm && level == Some(1);
     let is_dia = event.is_some_and(|e| e.preamble.is_dia());
     let is_wideband = event.is_some_and(|e| e.preamble.is_wideband());
     // the reaction of the final step: the last one with a precursor (an MS3 names its MS2 precursor first)
@@ -525,9 +528,9 @@ pub fn iter_spectra<'a, R: Read + Seek>(
 }
 // -- Helpers used by extract_spectrum --
 
-fn ms_level(power: MsPower) -> u32 {
-    match power {
-        MsPower::Undefined => 1,
+fn ms_level(power: MsPower) -> Option<u32> {
+    Some(match power {
+        MsPower::Undefined => return None,
         MsPower::Ms1 => 1,
         MsPower::Ms2 => 2,
         MsPower::Ms3 => 3,
@@ -536,7 +539,7 @@ fn ms_level(power: MsPower) -> u32 {
         MsPower::Ms6 => 6,
         MsPower::Ms7 => 7,
         MsPower::Ms8 => 8,
-    }
+    })
 }
 
 /// Resolve the m/z and intensity arrays for a single scan.
@@ -765,7 +768,8 @@ fn to_msc_record(
         index: meta.index,
         scan_number: meta.scan_number,
         native_id: native_id_for(meta.scan_number),
-        ms_level: meta.ms_level,
+        // openmassspec-core has no optional level: 0 stands for «not said», never a guessed 1
+        ms_level: meta.ms_level.unwrap_or(0),
         polarity: convert_polarity(meta.polarity),
         scan_mode: convert_scan_mode(scan_mode),
         analyzer: convert_analyzer(meta.analyzer),

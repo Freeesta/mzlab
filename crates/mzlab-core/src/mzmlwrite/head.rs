@@ -73,11 +73,17 @@ pub(crate) fn spectrum_head_into(
     let _ = write!(s, "{index}\" id=\"");
     esc_into(s, &sp.id);
     let _ = write!(s, "\" defaultArrayLength=\"{}\">", sp.mz.len());
-    cv_into(s, "MS:1000511", "ms level", sp.level);
-    if sp.level <= 1 {
-        cv_into(s, "MS:1000579", "MS1 spectrum", "");
-    } else {
-        cv_into(s, "MS:1000580", "MSn spectrum", "");
+    // level 0: the file does not say it, so neither the level nor the spectrum type is written
+    match sp.level {
+        0 => {}
+        1 => {
+            cv_into(s, "MS:1000511", "ms level", 1);
+            cv_into(s, "MS:1000579", "MS1 spectrum", "");
+        }
+        l => {
+            cv_into(s, "MS:1000511", "ms level", l);
+            cv_into(s, "MS:1000580", "MSn spectrum", "");
+        }
     }
     match sp.polarity {
         1 => cv_into(s, "MS:1000130", "positive scan", ""),

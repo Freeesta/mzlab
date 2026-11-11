@@ -30,14 +30,14 @@ fn msn_chain_scans_keep_their_level_and_precursors() {
     let mut src = BufReader::new(File::open(&path).unwrap());
     let raw = opentfraw::RawFileReader::open(&mut src).unwrap();
     assert_eq!(raw.num_scans, 9000);
-    let mut levels: BTreeMap<u32, u32> = BTreeMap::new();
+    let mut levels: BTreeMap<Option<u32>, u32> = BTreeMap::new();
     let mut deepest = String::new();
     for idx in 0..raw.num_scans {
         let rec = extract_spectrum(&raw, &mut src, idx, false).unwrap();
         *levels.entry(rec.ms_level).or_default() += 1;
         let filter = rec.filter.clone().unwrap_or_default();
         assert!(filter.starts_with("FTMS + p ESI"), "scan {idx}: {filter}");
-        if rec.ms_level == 8 && deepest.is_empty() {
+        if rec.ms_level == Some(8) && deepest.is_empty() {
             deepest = filter;
         }
     }
@@ -52,6 +52,10 @@ fn msn_chain_scans_keep_their_level_and_precursors() {
         (8, 278),
     ]
     .into();
+    let levels: BTreeMap<u32, u32> = levels
+        .into_iter()
+        .map(|(l, n)| (l.expect("every scan of this file has its event"), n))
+        .collect();
     assert_eq!(levels, want);
     let mut at = 0;
     for p in [

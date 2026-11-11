@@ -7,9 +7,12 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::mzmlarray::{decode_array, Inflate, Want};
 
+mod params;
 mod reading;
 mod tags;
 mod windows;
+
+use params::{names, with_texts};
 use tags::{find_tag, time_in_seconds};
 
 /// Values an array may inflate to at least (see `decode`).
@@ -93,31 +96,6 @@ fn has_accession(head: &str, x: &str) -> bool {
 }
 fn is_word(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
-}
-
-/// `name="..."` as the LAST `name="` of a tag head (the regex `<cvParam [^>]*name="([^"]*)"` is greedy), for every `<cvParam ` of `block`.
-fn names(block: &str) -> Vec<String> {
-    let mut out = vec![];
-    let mut rest = block;
-    while let Some(p) = rest.find("<cvParam ") {
-        let tag = &rest[p + 9..];
-        let end = tag.find('>').unwrap_or(tag.len());
-        let head = &tag[..end];
-        match head.rfind("name=\"") {
-            Some(q) => {
-                let v = &head[q + 6..];
-                match v.find('"') {
-                    Some(e) => {
-                        out.push(v[..e].to_string());
-                        rest = &tag[q + 6 + e + 1..];
-                    }
-                    None => rest = &tag[end..],
-                }
-            }
-            None => rest = &tag[end..],
-        }
-    }
-    out
 }
 
 /// The text of every `<kind ...>...</kind>` block in `s` (the regex `<kind .*?</kind>` with DOTALL).
@@ -413,7 +391,12 @@ impl<R: ReadAt> Mzml<R> {
             if let Some(q) = cv[..head_end].rfind("name=\"") {
                 let nv = &cv[q + 6..];
                 if let Some(e3) = nv.find('"') {
-                    soft.push((v[..e2].to_string(), nv[..e3].to_string()));
+                    let mut name = vec![nv[..e3].to_string()];
+                    with_texts(
+                        &tail[..tail.find("</software>").unwrap_or(tail.len())],
+                        &mut name,
+                    );
+                    soft.push((v[..e2].to_string(), name.swap_remove(0)));
                 }
             }
         }

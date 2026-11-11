@@ -82,6 +82,7 @@ const CONV = {
     let blob = this.held(name);
     if (!blob && this.writes(name)) blob = await this.make(name);
     if (!blob) return false;
+    if (!window.MZLAB_DESKTOP && !await this.valid(blob, name)) return false;
     if (window.MZLAB_DESKTOP) {
       if (blob.mzlabId == null || !/** @type {any} */ (window).MZLAB_SAVE_MZML) return false;
       try { const ok = !!(await /** @type {any} */ (window).MZLAB_SAVE_MZML(blob.mzlabId, name)); return ok; }
@@ -89,6 +90,19 @@ const CONV = {
     }
     saveBlob(blob, name, 60000);
     return true;
+  },
+  // the check of `mzlab-cli convert` (the app makes it natively): an mzML the validator calls INVALID is not saved; each Blob is checked once
+  checked: new WeakSet(),
+  async valid(/** @type {Blob} */ blob, /** @type {string} */ name) {
+    const M = window.LETTORI_MOD;
+    if (this.checked.has(blob) || !M || !M.valida) return true;
+    const j = JSON.parse(await M.valida(blob, name))[0], p = (j.problems || []).find((/** @type {Bag} */ x) => x.severity === "error");
+    if (j.valid) { this.checked.add(blob); return true; }
+    const n = document.getElementById("up"), d = document.createElement("div");
+    d.className = "note"; d.setAttribute("role", "alert");
+    d.textContent = I18N.err({ error_key: "err.file.mzmlInvalid", params: { detail: p ? `${p.code} at ${p.path}: ${p.message}` : "" } }).message;
+    if (n) n.appendChild(d);
+    return false;
   },
   // all of them, one after the other (a pause between browser downloads, a dialog each in the desktop app)
   // the icon of the download buttons (the label is the aria-label)
@@ -249,7 +263,7 @@ const CONVROWS = {
     }, 1000);
   },
   label(/** @type {ConvRow} */ r) {
-    if (r.state === "done") return (r.cached ? I18N.t("conv.row.cached", { scans: I18N.fix(r.scans || 0, 0) }) : I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) })) + (r.missing ? " · " + I18N.t("conv.row.missing", { n: I18N.fix(r.missing, 0) }) : "");
+    if (r.state === "done") return (r.cached ? I18N.t("conv.row.cached", { scans: I18N.fix(r.scans || 0, 0) }) : I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) })) + (r.missing ? " · " + I18N.t("conv.row.missing", { read: I18N.fix(r.scans || 0, 0), declared: I18N.fix((r.scans || 0) + r.missing, 0) }) : "");
     if (r.state === "fail") return r.msg || "";
     const T = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p), mb = (/** @type {number} */ v) => I18N.fix(v / 1e6, 1);
     if ((r.state === "get" || r.state === "load") && r.det) return T(r.state === "get" ? "conv.row.getmb" : "conv.row.loadmb", { done: mb(r.det.done), total: mb(r.det.total) });

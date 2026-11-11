@@ -257,7 +257,7 @@ fn peak_scans(scans: &Scans, full: bool) -> Vec<usize> {
     let mut pick = vec![0, n - 1, n / 2];
     pick.extend(top);
     for lv in 1..=8 {
-        pick.extend(scans.iter().position(|s| s.1.ms_level == lv));
+        pick.extend(scans.iter().position(|s| s.1.ms_level == Some(lv)));
     }
     pick.sort_unstable();
     pick.dedup();

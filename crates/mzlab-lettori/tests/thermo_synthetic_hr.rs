@@ -103,6 +103,92 @@ fn the_synthetic_orbitrap_file_opens_with_its_cycle() {
     assert!(s.precursor.is_some_and(|p| p > 150.0));
 }
 
+/// TH-15: a sound v66 file whose header says another number is refused with that number, not read with the nearest layout.
+#[test]
+fn a_v66_file_relabelled_with_an_unverified_version_is_refused_with_its_number() {
+    let d = folder("versione");
+    let f = d.join("hr.raw");
+    generate(&f, &["--scans", "12", "--seed", "3"]);
+    let b = std::fs::read(&f).unwrap();
+    let _ = std::fs::remove_dir_all(&d);
+    // the version is the u32 after the magic (2 bytes), the signature (18) and four reserved u32
+    assert_eq!(b[36..40], 66u32.to_le_bytes());
+    for v in [8u32, 47, 60, 62, 65, 67, 70, 100] {
+        let mut x = b.clone();
+        x[36..40].copy_from_slice(&v.to_le_bytes());
+        let set = FileSet {
+            membri: vec![Member {
+                nome: "hr.raw".into(),
+                dim: x.len() as u64,
+                dati: Box::new(x),
+                sha1: None,
+            }],
+        };
+        match mzlab_lettori::apri(set, &Limits::sito()) {
+            Ok(_) => panic!("v{v} opened"),
+            Err(e) => {
+                assert_eq!(e.key, "err.file.rawVersion", "v{v}");
+                assert!(
+                    e.params
+                        .iter()
+                        .any(|(k, val)| *k == "version" && *val == v.to_string()),
+                    "v{v}: {:?}",
+                    e.params
+                );
+            }
+        }
+    }
+}
+
+/// A v66 file whose scan-event table no layout walks is refused by name (TH-01); its scans then have no event, so their MS level is unknown (0), not MS1.
+#[test]
+fn scans_without_a_readable_event_have_no_ms_level() {
+    let d = folder("senza_eventi");
+    let f = d.join("hr.raw");
+    generate(&f, &["--scans", "12", "--seed", "5"]);
+    let mut b = std::fs::read(&f).unwrap();
+    let _ = std::fs::remove_dir_all(&d);
+    let raw = opentfraw::RawFileReader::open(std::io::Cursor::new(b.clone())).expect("open");
+    assert!(raw.warnings.is_empty(), "{:?}", raw.warnings);
+    // 12 events of 288 bytes declared as 11 (v66: `ntrailer` of the run header, 72 bytes before its 64-bit trailer address): no layout of 11 events fills them
+    let rh = raw.run_header.own_addr as usize;
+    let trailer = raw.run_header.scan_trailer_addr.to_le_bytes();
+    let at = rh + b[rh..].windows(8).position(|w| w == trailer).unwrap() - 72;
+    assert_eq!(b[at..at + 4], 12u32.to_le_bytes());
+    b[at..at + 4].copy_from_slice(&11u32.to_le_bytes());
+    let raw = opentfraw::RawFileReader::open(std::io::Cursor::new(b.clone())).expect("open");
+    assert!(
+        raw.warnings.iter().any(|w| matches!(
+            w,
+            opentfraw::Warning::Skipped {
+                stage: "ScanEvents",
+                ..
+            }
+        )),
+        "{:?}",
+        raw.warnings
+    );
+    let m = opentfraw::mzml::scan_metadata(&raw, &mut std::io::Cursor::new(b.clone()), 0).unwrap();
+    assert_eq!(m.ms_level, None);
+    let set = FileSet {
+        membri: vec![Member {
+            nome: "hr.raw".into(),
+            dim: b.len() as u64,
+            dati: Box::new(b),
+            sha1: None,
+        }],
+    };
+    let mut l = mzlab_lettori::apri(set, &Limits::sito()).expect("open");
+    let ix = l.index(0).expect("index").to_vec();
+    assert_eq!(ix.len(), 12);
+    assert!(
+        ix.iter().all(|e| e.livello == 0),
+        "{:?}",
+        ix.iter().map(|e| e.livello).collect::<Vec<_>>()
+    );
+    assert_eq!(l.scan(0, 0).expect("scan").level, 0);
+}
+
 #[test]
 fn the_same_seed_writes_the_same_bytes() {
     let d = folder("seme");

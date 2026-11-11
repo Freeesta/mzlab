@@ -84,6 +84,7 @@ pub(super) fn run<R: Read>(reader: R, sink: &mut dyn FnMut(Item)) -> Result<Repo
     let mut buf = Vec::new();
     let mut w = Walk::new(sink);
     let mut stopped = false;
+    let mut doc = super::wellformed::Doc::default();
     loop {
         let pos = xml.buffer_position();
         let ev = match xml.read_event_into(&mut buf) {
@@ -94,6 +95,11 @@ pub(super) fn run<R: Read>(reader: R, sink: &mut dyn FnMut(Item)) -> Result<Repo
                 break;
             }
         };
+        if let Some(why) = super::wellformed::check(&ev, w.stack.len(), &mut doc) {
+            w.fatal(format!("not well-formed XML: {why} (byte {pos})"));
+            stopped = true;
+            break;
+        }
         match ev {
             Event::Eof => break,
             Event::Start(ref e) | Event::Empty(ref e) => {
