@@ -1,5 +1,6 @@
 //! What two sources of the same count of a folder do not agree on, as notices of `apri`: the channels of a SIR/MRM function (`_FUNCTNS.INF` against the records per scan of
-//! the IDX, and scans with fewer records than the others) and the functions (`_extern.inf` against `_FUNCTNS.INF`). Nothing is guessed: the notice names what is absent.
+//! the IDX, and scans with fewer records than the others), the functions (`_extern.inf` against `_FUNCTNS.INF`), scans past a DAT cut short and a missing `_HEADER.TXT`.
+//! Nothing is guessed: the notice names what is absent.
 
 use super::inf::Extern;
 use super::reader::Fun;
@@ -32,12 +33,21 @@ fn channel_notes(f: &Fun) -> Vec<String> {
 }
 
 /// The notices of folder `name`, as (key, where).
-pub(super) fn notes(name: &str, funs: &[Fun], ext: &Extern) -> Vec<(String, String)> {
+pub(super) fn notes(name: &str, funs: &[Fun], ext: &Extern, header: bool) -> Vec<(String, String)> {
     let mut v: Vec<String> = funs
         .iter()
         .filter(|f| f.f.mirato())
         .flat_map(channel_notes)
         .collect();
+    // scans of the index past the end of a DAT cut short are not read: how many, and in which function
+    v.extend(funs.iter().filter(|f| f.cut > 0).map(|f| {
+        let k = f.f.indice;
+        format!(
+            "function {k}: {} of {} scans past the end of _FUNC{k:03}.DAT",
+            f.cut,
+            f.righe.len()
+        )
+    }));
     // a function `_extern.inf` describes past the end of `_FUNCTNS.INF` is named; it has no data to read
     let past: Vec<String> = ext
         .funzioni
@@ -51,6 +61,10 @@ pub(super) fn notes(name: &str, funs: &[Fun], ext: &Extern) -> Vec<(String, Stri
             past.join(", "),
             funs.len()
         ));
+    }
+    // without `_HEADER.TXT` there is no calibration polynomial: the m/z of a scanning function are the uncalibrated ones of the DAT
+    if !header && funs.iter().any(|f| f.cod.is_some()) {
+        v.push("_HEADER.TXT missing: m/z without the calibration polynomial".into());
     }
     v.into_iter()
         .map(|a| (KEY.to_string(), format!("{name}: {a}")))

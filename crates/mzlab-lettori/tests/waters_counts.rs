@@ -182,3 +182,50 @@ fn a_function_of_extern_inf_past_the_function_table_is_named() {
         "{n:?}"
     );
 }
+
+#[test]
+fn an_ion_mode_ending_in_the_sign_gives_the_polarity() {
+    let mut f = folder_file();
+    let t = "Function Parameters - Function 2 - MRM of 2 channels\r\nPolarity\t\t\tESCi-\r\n";
+    f.push(("_extern.inf".into(), t.as_bytes().to_vec()));
+    let mut l = open(f);
+    let ids: Vec<String> = l
+        .chromatograms(0)
+        .unwrap()
+        .into_iter()
+        .map(|c| c.id)
+        .collect();
+    assert!(ids[1].contains(" polarity=negative "), "{ids:?}");
+}
+
+#[test]
+fn scans_past_a_dat_cut_short_are_counted_in_a_notice() {
+    let mut f = folder_file();
+    let dat = f.iter().find(|x| x.0 == "_FUNC001.DAT").unwrap().1.clone();
+    replace(&mut f, "_FUNC001.DAT", dat[..dat.len() - 8].to_vec());
+    let mut l = open(f);
+    assert_eq!(l.missing(0), 1);
+    let n = notices(&mut l);
+    assert!(
+        n.iter()
+            .any(|x| x.ends_with("function 1: 1 of 3 scans past the end of _FUNC001.DAT")),
+        "{n:?}"
+    );
+}
+
+#[test]
+fn a_missing_header_says_the_m_z_are_uncalibrated() {
+    let f: Vec<_> = folder_file()
+        .into_iter()
+        .filter(|x| x.0 != "_HEADER.TXT")
+        .collect();
+    let mut l = open(f);
+    let n = notices(&mut l);
+    assert!(
+        n.iter()
+            .any(|x| x.ends_with("_HEADER.TXT missing: m/z without the calibration polynomial")),
+        "{n:?}"
+    );
+    let mut l = open(folder_file());
+    assert!(notices(&mut l).iter().all(|x| !x.contains("_HEADER.TXT")));
+}

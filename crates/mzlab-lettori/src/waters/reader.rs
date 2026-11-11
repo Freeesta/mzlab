@@ -441,6 +441,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
     whole_list(&c, list.len())?;
     let header = opzionale(&mut c, "_HEADER.TXT");
+    let has_header = header.is_some();
     whole_header(&c, header.as_deref())?;
     let testata = header.map_or_else(WatersHeader::default, |b| inf::file_header(&text(&b)));
     let ext = opzionale(&mut c, "_extern.inf")
@@ -460,7 +461,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     for i in 0..funs.len() {
         funs[i].livello = level_of(&funs, i);
     }
-    warnings.extend(super::counts::notes(&c.name, &funs, &ext));
+    warnings.extend(super::counts::notes(&c.name, &funs, &ext, has_header));
     if funs.iter().any(|f| f.ext.mobilita) {
         warnings.push((
             "meta.nonDecodificato".into(),
