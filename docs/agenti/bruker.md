@@ -1,6 +1,8 @@
 # Lettore Bruker timsTOF (`.d` con `analysis.tdf` o `analysis.tsf`)
 
-`crates/mzlab-lettori/src/bruker/` (feature `bruker`, modulo `.wasm` `bruker`, tetto 524 288 B; misurato dopo `wasm_opt -Oz`: 416 514 B con `ruzstd`). Voci del registro: `bruker-tdf` (membri `x.d/analysis.tdf` + `analysis.tdf_bin`) e `bruker-tsf` (`analysis.tsf` + `analysis.tsf_bin`); un eventuale `-wal` accanto al database si legge (vince l'ultimo frame confermato). Una cartella con solo `analysis.baf` si riconosce (`Forse`) per dire `err.file.brukerBaf` («esporta in mzML con Bruker DataAnalysis o msconvert»): il BAF resta impossibile senza l'SDK.
+`crates/mzlab-lettori/src/bruker/` (feature `bruker`, modulo `.wasm` `bruker`, tetto 524 288 B; misurato dopo `wasm_opt -Oz`: 416 514 B con `ruzstd`). Voci del registro: `bruker-tdf` (membri `x.d/analysis.tdf` + `analysis.tdf_bin`) e `bruker-tsf` (`analysis.tsf` + `analysis.tsf_bin`); un eventuale `-wal` accanto al database si legge (vince l'ultimo frame confermato).
+- Le cartelle Bruker senza `analysis.tdf`/`.tsf` che il modulo non legge si riconoscono (`Forse`, `legacy_key` in `tdf_helpers.rs`) per dire quale sono: solo `analysis.baf` → `err.file.brukerBaf`, `analysis.yep` (trappole ioniche) → `err.file.brukerYep`, `ser` o `fid` direttamente nella cartella `.d` (FT-ICR) → `err.file.brukerFtms`, un `fid` accanto ad `acqu`/`acqus` fuori da una `.d` (MALDI FLEX) → `err.file.brukerFlex`; tutte dicono di esportare in mzML.
+- La pagina dà le stesse chiavi (`BrukerD.legacyKey` in `agilent-d.js`; FLEX tra i file ignorati, `CartCarica.flexMaldi`). BAF, YEP, FT-ICR e FLEX restano illeggibili senza l'SDK.
 - Un database senza il suo `_bin`, un `_bin` senza il suo database o un database che non è SQLite (copia vuota o tagliata) sono `Forse`: `apri` dà `err.file.brukerNoBin` (`name` = cartella, `file` = il file che manca) o l'errore SQLite con chiave; la pagina fa lo stesso conto (`BrukerD.missing` in `agilent-d.js`).
 - Un `.tdf`/`.tsf` o un `_bin` danneggiato, tagliato o con un layout non letto (pagina SQLite, blocco zstd, nessuna `MzCalibration` usabile) è `err.file.brukerDamaged`: il testo dell'avviso non mostra il dettaglio del lettore (`detail`, scritto dal CLI dopo la chiave).
 
@@ -27,7 +29,7 @@ Sono conteggi grezzi (quelli del blocco). `SummedIntensities` e `MaxIntensity` d
 
 ## Spettri
 - `MsMsType` 0 (MS1): un frame è uno spettro, mobilità sommata.
-- 8 (DDA-PASEF): uno spettro per (frame, precursore), righe della stessa coppia unite, scansioni sommate, con isolamento (`IsolationMz`, `IsolationWidth`) e CE; ordine: prima scansione della finestra (come msconvert).
+- 8 (DDA-PASEF): uno spettro per (frame, precursore), righe della stessa coppia unite, scansioni sommate, con isolamento (`IsolationMz`, `IsolationWidth`) e CE; ordine: prima scansione della finestra (come msconvert). Nel `<precursor>` dell'mzML lo ione selezionato è `MonoisotopicMz` (o `LargestPeakMz`), il centro della finestra `IsolationMz` e la carica `Charge` di `Precursors` (una carica 0 o vuota non si scrive); prova `tests/bruker_precursor.rs`.
 - 9 (diaPASEF): uno spettro per finestra del gruppo (`DiaFrameMsMsInfo` → `DiaFrameMsMsWindows`) e per ciclo.
 - 10 (PRM-PASEF): uno spettro per riga di `PrmFrameMsMsInfo`.
 - Altri tipi: uno spettro per frame, livello 2 se esiste `FrameMsMsInfo`.

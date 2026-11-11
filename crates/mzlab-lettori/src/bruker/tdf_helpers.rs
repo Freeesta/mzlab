@@ -56,16 +56,46 @@ pub(super) fn sum_scan(p: &Peaks, scan: &[(u32, u32)]) -> f64 {
 
 const MAGIC: &[u8; 16] = b"SQLite format 3\0";
 
-/// A folder is Bruker's when its database starts with the SQLite magic and the file of the peaks is beside it; a folder with only `analysis.baf` is recognised to say why it does not open.
+/// The key of a Bruker folder no reader of this module reads (no `analysis.tdf` nor `analysis.tsf`): a BAF, a YEP (ion traps), an FT-ICR `ser`/`fid`
+/// directly inside a `.d` folder, or a FLEX MALDI `fid` beside its `acqu`/`acqus`. `None` for any other set of files.
+pub(super) fn legacy_key(fs: &FileSet) -> Option<&'static str> {
+    if fs.find("analysis.tdf").is_some() || fs.find("analysis.tsf").is_some() {
+        return None;
+    }
+    let names: Vec<String> = fs.membri.iter().map(|m| m.nome.to_lowercase()).collect();
+    let base = |n: &str| n.rsplit('/').next().unwrap_or(n).to_string();
+    // directly inside the `.d` folder, as the page groups the members of a `.d` (agilent-d.js `BrukerD`)
+    let in_d = |n: &str| {
+        n.split('/')
+            .rev()
+            .nth(1)
+            .is_some_and(|p| p.len() > 2 && p.ends_with(".d"))
+    };
+    if names.iter().any(|n| base(n) == "analysis.baf") {
+        return Some("err.file.brukerBaf");
+    }
+    if names.iter().any(|n| base(n) == "analysis.yep") {
+        return Some("err.file.brukerYep");
+    }
+    if names
+        .iter()
+        .any(|n| matches!(base(n).as_str(), "ser" | "fid") && in_d(n))
+    {
+        return Some("err.file.brukerFtms");
+    }
+    let acqu = names
+        .iter()
+        .any(|n| matches!(base(n).as_str(), "acqu" | "acqus"));
+    (acqu && names.iter().any(|n| base(n) == "fid")).then_some("err.file.brukerFlex")
+}
+
+/// A folder is Bruker's when its database starts with the SQLite magic and the file of the peaks is beside it; a BAF, YEP, FT-ICR or FLEX folder is
+/// recognised to say why it does not open (`legacy_key`).
 pub(super) fn recognize(fs: &mut FileSet, base: &str) -> Fiducia {
     let bin = fs.find(&format!("{base}_bin")).is_some();
     let Some(i) = fs.find(base) else {
         // a `*_bin` without its database is this reader's folder, refused by `apri` with the file it lacks
-        return if bin
-            || (fs.find("analysis.baf").is_some()
-                && fs.find("analysis.tdf").is_none()
-                && fs.find("analysis.tsf").is_none())
-        {
+        return if bin || legacy_key(fs).is_some() {
             Fiducia::Forse
         } else {
             Fiducia::No

@@ -7,15 +7,19 @@
 
 // A Bruker timsTOF `.d` folder shares the extension with Agilent's: its members tell it (analysis.tdf/.tsf with their bin, or only a BAF). The readers module `bruker` reads it; the engine does not.
 const BrukerD = {
-  BRUKER: { tdf: "analysis.tdf", tdfbin: "analysis.tdf_bin", tdfwal: "analysis.tdf-wal", tsf: "analysis.tsf", tsfbin: "analysis.tsf_bin", tsfwal: "analysis.tsf-wal", baf: "analysis.baf" },
-  is: (/** @type {any} */ r) => !!(r.files.tdf || r.files.tsf || r.files.baf || r.files.tdfbin || r.files.tsfbin),
+  BRUKER: { tdf: "analysis.tdf", tdfbin: "analysis.tdf_bin", tdfwal: "analysis.tdf-wal", tsf: "analysis.tsf", tsfbin: "analysis.tsf_bin", tsfwal: "analysis.tsf-wal", baf: "analysis.baf", yep: "analysis.yep", ser: "ser", fid: "fid" },
+  /** the members of the kinds no reader reads (as `bruker::tdf_helpers::legacy_key`): they only name the notice */
+  LEGACY: ["baf", "yep", "ser", "fid"],
+  is: (/** @type {any} */ r) => !!(r.files.tdf || r.files.tsf || r.files.tdfbin || r.files.tsfbin || BrukerD.LEGACY.some(k => r.files[k])),
+  /** the key of a folder of a kind no reader reads: BAF, YEP (ion traps), FT-ICR (`ser`/`fid` in a `.d`) */
+  legacyKey: (/** @type {any} */ r) => r.files.baf ? "err.file.brukerBaf" : r.files.yep ? "err.file.brukerYep" : "err.file.brukerFtms",
   /** the missing half of a database and bin pair (as `bruker::tdf_aiuti::riconosci`) */
   missing: (/** @type {any} */ r) => [["tdf", "tdfbin"], ["tsf", "tsfbin"]].flatMap(([a, b]) => r.files[a] && !r.files[b] ? [b] : !r.files[a] && r.files[b] ? [a] : []).map(k => BrukerD.BRUKER[k]),
   /** a Bruker run: an error with a key, or a sample the module writes as mzML (shell.js moduloToMzml) */
   toModulo(/** @type {any} */ r, /** @type {any} */ out, /** @type {any} */ T, /** @type {string} */ nm) {
-    const M = window.LETTORI_MOD, mem = Object.entries(r.files).filter(([n]) => n !== "baf" && BrukerD.BRUKER[n]).map(([n, f]) => ({ name: r.name + "/" + BrukerD.BRUKER[n], blob: f }));
+    const M = window.LETTORI_MOD, mem = Object.entries(r.files).filter(([n]) => !BrukerD.LEGACY.includes(n) && BrukerD.BRUKER[n]).map(([n, f]) => ({ name: r.name + "/" + BrukerD.BRUKER[n], blob: f }));
     if (r.missing.length) out.errs.push([T("err.file.brukerNoBin", { name: r.name, file: r.missing[0] }), r.name]);
-    else if (!mem.length) out.errs.push([T("err.file.brukerBaf"), r.name]);
+    else if (!mem.length) out.errs.push([T(BrukerD.legacyKey(r)), r.name]);
     else if (!M) out.errs.push([T("err.file.notAccepted", { name: r.name }), r.name]);
     else if (NATIVO.cachedModulo(mem, ST.files || [])) return;      // the same folder again: its sample stays the one of the list
     else out.files.push(M.stand(nm, mem, 0, "bruker"));
@@ -99,6 +103,6 @@ const AgilentD = (() => {
     return out.files;
   }
 
-  return { NEED, locate, group, groupMethods, held, mzmlName, toMzml };
+  return { NEED, BrukerD, locate, group, groupMethods, held, mzmlName, toMzml };
 })();
 if (typeof module !== "undefined") module.exports = AgilentD;
