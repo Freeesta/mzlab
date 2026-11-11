@@ -333,7 +333,13 @@ def transitions(out: Path):
     for k, dam in ((1, "mrm_batch.dam"), (2, "full_blank.dam")):
         mixed.streams[f"MethodSubtree/Method{k}/AcqMethodFileInfoStm"] = bytes(6) + ("D:\\Methods\\" + dam).encode("utf-16le") + bytes(4)
     mixed.save(out, "transizioni_misto")
-    return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs]}
+    # a negative-mode run: Analyst stores the energies with their sign (one left at 0); the chromatograms carry the magnitude, none for 0
+    neg = [t[:6] + (-t[6] if k < 2 else 0.0,) + t[7:] for k, t in enumerate(trs)]
+    w = Writer()
+    w.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method | {"Experiment0/ExperimentHeader": header(4, 0.0, 1), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(neg)})
+    w.save(out, "transizioni_neg")
+    return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs],
+            "negative": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": abs(t[6]) or None} for t in neg]}
 
 
 def scheduled(out: Path):
