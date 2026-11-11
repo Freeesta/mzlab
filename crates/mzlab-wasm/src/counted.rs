@@ -58,6 +58,7 @@ impl Reader for Counting {
     fn chromatogram(&mut self, c: usize, id: &str) -> mzlab_core::Result<mzlab_core::mzml::Chromatogram> { self.l.chromatogram(c, id) }
     fn method(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.method(c) }
     fn missing(&mut self, c: usize) -> usize { self.l.missing(c) }
+    fn refused(&mut self, c: usize) -> Option<mzlab_core::Error> { self.l.refused(c) }
     fn losses(&mut self, c: usize) -> mzlab_core::Result<readers::Losses> { self.l.losses(c) }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] { self.l.not_carried() }
     fn mzml_header(&mut self, c: usize) -> mzlab_core::Result<Option<mzlab_core::mzmlwrite::Header>> { self.l.mzml_header(c) }

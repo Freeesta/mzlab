@@ -33,6 +33,8 @@ mod llm;
 pub mod mapped;
 mod natives;
 mod natives_slots;
+#[cfg(test)]
+mod natives_tests;
 pub mod normative;
 pub mod opening;
 pub mod protocol;

@@ -189,6 +189,32 @@ def main():
         mz, y = continuous_scan(rng, 400.0, 120, 0.0003, peaks, 50.0)
         p = P(CONTINUOUS, 1.0, 0.001, fw, 3.0, 0.0, False)
         rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
+    # irregular grid whose spacing grows with m/z (Orbitrap-like), high resolution: no zero inside a peak at high m/z
+    for k in range(10):
+        fw = 0.012
+        mz, y, m = [], [], 795.0 + 0.0008 * rng.random()
+        cs = [800.0 + 0.4 * j + 0.05 * rng.random() for j in range(4)]
+        while m < 802.0:
+            v = sum(gauss(m, c, 1e5, fw) for c in cs)
+            if v > 50.0:
+                mz.append(m)
+                y.append(v + 20.0 * rng.random())
+            m += 0.0008 * (m / 400.0) ** 1.5
+        p = P(CONTINUOUS, 1.0, 0.00105, fw, 3.0, 0.0, False)
+        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
+    # saturated high-resolution peaks (a flat top at the ceiling) and an unsaturated tallest peak at 30 points per FWHM
+    for k in range(12):
+        fw = 0.025
+        mult, ppf = [(1.5, 10.0), (3.0, 10.0), (10.0, 10.0), (1.0, 30.0)][k % 4]
+        st, c = fw / ppf, 500.0 + rng.random()
+        mz, y, m = [], [], c - 3.0 * fw + rng.random() * fw / ppf
+        while m < c + 3.0 * fw:
+            mz.append(m)
+            y.append(min(gauss(m, c, mult * 1e5, fw), 1e5) + 10.0)
+            m += st
+        vmax = max(y) if mult == 1.0 else 1e5 + 10.0
+        p = P(CONTINUOUS, 1.0, st, fw, 3.0, vmax, False)
+        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
     est = []
     for k in range(4):
         scans = [counts_scan(rng, 0.06, 240, [(110.0 + 0.01 * t, 900.0, 0.7), (112.5, 700.0, 0.7), (115.0, 500.0, 0.7)], 0.3, 2.5, 107.0) for t in range(20)]
