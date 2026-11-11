@@ -256,10 +256,7 @@ pub trait Reader {
         &[]
     }
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) } // data sections the index lacks (an incomplete copy): (recovered, left out)
-    /// The scans the index of sample `c` lists but that lie beyond the end of the data file (a truncated copy): they are not in the index.
-    fn missing(&mut self, _c: usize) -> usize {
-        0
-    }
+    #[rustfmt::skip]    fn missing(&mut self, _c: usize) -> usize { 0 } // scans of sample `c` the index lists beyond the end of the data file (a truncated copy): not in the index
     /// The scans of sample `c` the file declares and the ones read (`ReadOutcomes` pairs them with the data). A reader that drops scans for another reason than a cut file overrides this; a wrapper forwards it. Default: the rows of `index_without_tic` plus `missing`.
     fn losses(&mut self, c: usize) -> Result<Losses> {
         outcome::default_losses(self, c)

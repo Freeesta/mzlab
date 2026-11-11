@@ -90,6 +90,23 @@ fn notes_of(text: &str) -> Vec<(String, String)> {
         .collect()
 }
 
+/// A partial read is written and said, never passed for a whole one: one warning line per file with its counts.
+pub(crate) fn partial_lines(items: &[Item]) -> String {
+    items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Done {
+                input,
+                conv: Some(c),
+                ..
+            } => partial_of(c).map(|(declared, read, cause)| {
+                format!("warning: {input}: partial read, {read} of {declared} scans ({cause})\n")
+            }),
+            _ => None,
+        })
+        .collect()
+}
+
 /// The scans declared and read and the cause key when the `conv/1` document `conv` says the read was partial.
 pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     let doc = mzlab_core::json::parse(conv.as_bytes()).ok()?;

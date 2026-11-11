@@ -109,6 +109,21 @@ pub fn refusal_free(phase: &'static str, estimate: usize, cap: usize, free: usiz
         )
 }
 
+/// The memory of this target, bytes: what the decoded points of one spectrum may take at most.
+pub const TARGET_BYTES: usize = if cfg!(target_family = "wasm") {
+    WASM_BUDGET_MB
+} else {
+    NATIVE_BUDGET_MB
+} * MB;
+
+/// `error.memoryBudget` when `n` points of `per_point` bytes each exceed `budget` bytes: `n` is a count read from a file, checked before anything is decoded.
+pub fn points_fit(n: usize, per_point: usize, budget: usize) -> Result<()> {
+    if n.saturating_mul(per_point) > budget {
+        return Err(Error::memory_budget());
+    }
+    Ok(())
+}
+
 /// An empty `Vec` with room for `n` items, or the memory error (never a trap).
 pub fn try_vec<T>(n: usize) -> Result<Vec<T>> {
     let mut v = Vec::new();
