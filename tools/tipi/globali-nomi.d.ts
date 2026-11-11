@@ -661,6 +661,7 @@ declare var lowerIdx: any;
 declare var lrTog: any;
 declare var lut: any;
 declare var lutSeq: any;
+declare var lvN: any;
 declare var makeSnap: any;
 declare var mapBg: any;
 declare var mapImage: any;

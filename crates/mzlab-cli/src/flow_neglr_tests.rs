@@ -77,7 +77,9 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
         let both = with(&format!("{own}{other}{extra}"));
         let e = crate::flow::run_plan(both.as_bytes(), &d, &d.join("work"), 2, None)
             .expect_err("a step of the other resolution");
-        assert_eq!(e.params, vec![("problems", refused.into())], "{tag}");
+        let (last, n) = (("problems", refused.into()), refused.split(' ').count());
+        assert_eq!(e.params.last(), Some(&last), "{tag}");
+        assert_eq!(e.params[0], ("count", n.to_string()), "{tag}");
         let prov = run(&d, &with(&format!("{own}{extra}")));
         let own_id = if hr { "pos" } else { "dig" };
         for id in [

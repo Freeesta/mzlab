@@ -376,7 +376,9 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
                 .find(|(n, _)| *n == k)
                 .map(|(_, v)| v.as_str())
         };
-        let err = Error::new("err.cli.set").with("set", of("set").unwrap_or(""));
+        let err = Error::new("err.cli.set")
+            .with("set", of("set").unwrap_or(""))
+            .with("message", of("message").unwrap_or(""));
         jfail(
             st,
             2,

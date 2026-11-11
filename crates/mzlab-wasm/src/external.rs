@@ -46,8 +46,9 @@ pub trait Module {
     }
 }
 
+/// An answer of the module the engine cannot decode (`err.module.reply`, as `transport` says it).
 fn broken(what: &str) -> Error {
-    Error::new("err.file.notAccepted").with("detail", what)
+    Error::new("err.module.reply").with("detail", what)
 }
 
 thread_local! { static NAMES: RefCell<HashSet<&'static str>> = RefCell::new(HashSet::new()); }

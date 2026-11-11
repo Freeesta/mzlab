@@ -41,3 +41,15 @@ pub(crate) fn check(sections: &[Section], keys: &[(String, usize)], size: u64) -
     }
     Ok(())
 }
+
+/// Errors with `error.badIndex` when a scan id falls outside the scan table of `rows` rows (an index opened lean has none and is not checked): the routes index the table with them.
+pub(crate) fn scan_ids(ids: &[i64], rows: usize) -> Result<()> {
+    if rows > 0
+        && ids
+            .iter()
+            .any(|&i| usize::try_from(i).map_or(true, |i| i >= rows))
+    {
+        return Err(Error::new("error.badIndex"));
+    }
+    Ok(())
+}

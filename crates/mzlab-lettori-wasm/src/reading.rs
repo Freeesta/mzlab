@@ -360,9 +360,8 @@ pub fn to_mzml_with(
     };
     conv.write(&mut *l, c as usize, &mut out, &mut tell)
         .map_err(|e| error_json(&e))?;
-    out.flush().map_err(|_| {
-        error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
-    })?;
+    out.flush()
+        .map_err(|_| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     Ok(lacking as f64)
 }
 

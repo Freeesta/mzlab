@@ -173,11 +173,10 @@ pub fn migrate(text: &[u8]) -> Result<String> {
     if v.get("schema").and_then(Value::str) != Some("mzrun/1") {
         return Err(Error::new("err.mzrun.read"));
     }
-    if v.get("min_reader")
-        .and_then(Value::f64)
-        .is_none_or(|n| n > 1.0)
-    {
-        return Err(Error::new("error.newerFormat"));
+    let min_reader = v.get("min_reader").and_then(Value::f64);
+    if min_reader.is_none_or(|n| n > 1.0) {
+        let version = min_reader.map_or_else(|| "?".to_string(), |n| n.to_string());
+        return Err(Error::new("error.newerFormat").with("version", version));
     }
     let mut plan = v
         .get("plan")

@@ -113,7 +113,7 @@ impl Members {
             Ok(v) => v,
             Err(e) => {
                 return Some(Err(e.as_string().map_or_else(
-                    || mzlab_core::Error::new("err.file.notAccepted"),
+                    || mzlab_core::Error::new("err.module.reply").with("detail", "open"),
                     |t| module_error(&t),
                 )))
             }
@@ -455,7 +455,6 @@ pub fn native_to_mzml(
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     readers_mzml::write_with(&mut *l, c as usize, &mut out, &mut tell, opt)
         .map_err(|e| error_json(&e))?;
-    std::io::Write::flush(&mut out).map_err(|_| {
-        error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
-    })
+    std::io::Write::flush(&mut out)
+        .map_err(|_| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))
 }

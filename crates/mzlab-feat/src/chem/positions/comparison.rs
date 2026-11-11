@@ -336,7 +336,7 @@ pub fn match_spectrum(
     pol: Pol,
 ) -> Result<Report> {
     if sites.is_empty() {
-        return Err(Error::new("error.posiz.noSites"));
+        return Err(Error::new("error.posiz.noSites").with("transform", "–"));
     }
     super::sites::check_formulas(sites)?;
     let tp = elements::parse_formula(&sites[0].tp_formula)?;

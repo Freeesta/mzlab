@@ -67,7 +67,7 @@ async function analogSeries(p) {
 const MS2TR_MAX = 12;
 async function ms2trSeries(p) {
   const mf = shownFor(p).filter(f => f.kind === "ms2" && !(window.HR && HR.isHr(f, f.lv)));
-  const data = await Promise.all(mf.map(f => getMs2Tr(f.k).then(tr => ({ f, tr }))));
+  const data = await Promise.all(mf.map(f => getMs2Tr(f.k, f.lv).then(tr => ({ f, tr }))));
   const seen = new Map();
   data.forEach(({ tr }) => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, q1: t.q1, q3: t.q3, y: 0 }); seen.get(key).y += t.y; }));
   const list = [...seen.values()].sort((a, b) => a.q1 - b.q1 || a.q3 - b.q3).slice(0, MS2TR_MAX * 4);

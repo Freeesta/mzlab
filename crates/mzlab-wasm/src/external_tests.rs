@@ -183,7 +183,7 @@ fn the_module_error_keeps_key_and_params() {
         (e.key, e.params),
         ("err.file.raw", vec![("detail", "member".to_string())])
     );
-    assert_eq!(module_error("boom").key, "err.file.notAccepted");
+    assert_eq!(module_error("boom").key, "err.module.reply");
     assert_eq!(
         interned("err.file.raw").as_ptr(),
         interned("err.file.raw").as_ptr()

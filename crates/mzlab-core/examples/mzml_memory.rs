@@ -60,7 +60,7 @@ impl mzidx::Output for ASuFile {
     fn write_at(&mut self, o: u64, d: &[u8]) -> mzlab_core::Result<()> {
         self.0
             .write_all_at(d, o)
-            .map_err(|_| mzlab_core::Error::new("err.file.index"))
+            .map_err(|_| mzlab_core::Error::new("err.file.index").with("detail", "write"))
     }
 }
 
