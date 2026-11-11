@@ -5,7 +5,12 @@
 
 use std::borrow::Cow;
 
+mod groups;
+mod immediate;
 pub mod tags;
+
+pub use groups::Groups;
+pub use immediate::immediate;
 
 /// One cvParam (or userParam: `acc` empty, the user name in `name`).
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -222,33 +227,6 @@ impl Head {
     }
 }
 
-/// Which precursor of a level-`level` spectrum is the immediate one (the stage just before it): the one rule of every mzML path. `stages` gives the
-/// target, selected m/z and `spectrumRef` of each precursor in file order (first stage to last). The one whose target or selected m/z is `path_last`
-/// (the last stage of a filter path) within 0.01, else the last whose `spectrumRef` is a scan of level `level - 1`, else the last listed.
-pub fn immediate(
-    stages: &[(Option<f64>, Option<f64>, Option<&str>)],
-    level: u8,
-    path_last: Option<f64>,
-    level_of: &dyn Fn(&str) -> Option<u8>,
-) -> Option<usize> {
-    if stages.is_empty() {
-        return None;
-    }
-    let by_path = path_last.and_then(|last| {
-        stages.iter().position(|(t, s, _)| {
-            [t, s]
-                .iter()
-                .any(|v| v.is_some_and(|v| (v - last).abs() <= 0.01))
-        })
-    });
-    let by_ref = || {
-        stages.iter().rposition(|(_, _, r)| {
-            r.is_some_and(|r| !r.is_empty() && level_of(r) == Some(level.wrapping_sub(1)))
-        })
-    };
-    by_path.or_else(by_ref).or(Some(stages.len() - 1))
-}
-
 /// Where a param goes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Ctx {
@@ -263,26 +241,6 @@ enum Ctx {
     Binary,
     Group,
     Other,
-}
-
-/// The `referenceableParamGroup`s of a file, by id: a list, since a file has a handful (a hash map costs the `.wasm` modules a few KB).
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Groups(Vec<(String, Vec<Term>)>);
-
-impl Groups {
-    pub fn new() -> Groups {
-        Groups::default()
-    }
-    pub fn get(&self, id: &str) -> Option<&Vec<Term>> {
-        self.0.iter().find(|(k, _)| k == id).map(|(_, g)| g)
-    }
-    /// Adds group `id`; a repeated id replaces the earlier one.
-    pub fn insert(&mut self, id: String, g: Vec<Term>) {
-        match self.0.iter_mut().find(|(k, _)| *k == id) {
-            Some(e) => e.1 = g,
-            None => self.0.push((id, g)),
-        }
-    }
 }
 
 /// The terms kept in one list (an item, an array, a stage part, a group) and the precursors or products kept per item: lookups take the first
