@@ -83,7 +83,7 @@ Campioni nativi (`.raw`, `.wiff`, `.D`): `lr_put` con `nat` copia i membri in OP
 | Zero-copy Rust/WASM/JS | parziale | risultati numerici trasferiti e riciclati; `Blob` per riferimento; `mmap` nel desktop. Una copia per ogni `read` verso WASM e per ogni pezzo scritto in OPFS; tabelle copiate in `prepare_upload` |
 | Strutture compatte | presente | `.mzidx` a colonne con `fence` per blocchi di 16384, MS1 HR in `f32`, trasporto binario a colonne dei moduli (`transport.rs`), `xicbin`; righe della tabella come JSON compatto |
 | Annullamento | parziale | sito: coda, copia e builder sì, `prepare_upload` no; desktop: costruzioni dell'indice sì (`lr_cancel`), `natsamples` e `nat2mzml` no |
-| Limiti di memoria | presente | §4; tetti dei moduli (`tools/build_lettori_wasm.sh`), `.wasm` del motore ≤ 1 712 128 B |
+| Limiti di memoria | presente | §4; tetti dei moduli (`tools/build_lettori_wasm.sh`), `.wasm` del motore ≤ 2 174 976 B |
 | Progresso fedele | presente nel sito, parziale nel desktop | `progresso.md`; desktop senza eventi per l'indicizzazione |
 
 ## 6. Dubbi e discrepanze trovate (da verificare prima di agire)
