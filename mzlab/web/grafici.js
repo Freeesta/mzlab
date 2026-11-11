@@ -427,8 +427,8 @@ async function drawLines(p) {
   for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    const r = it.bm ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
-    if (it.bm) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
+    const own = it.bm && it.bm !== "edges", r = own ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
+    if (own) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));

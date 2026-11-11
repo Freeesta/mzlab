@@ -70,8 +70,9 @@ fn each_experiment_has_its_tic_and_a_scheduled_transition_its_target_and_window(
         "{}",
         s0.id
     );
-    assert_eq!(s0.intensity, vec![10.0, 20.0, 5.0]);
-    assert_eq!(s0.time.len(), 3);
+    // the `-1.01` of cycle 3 is a measured zero, not a missing point
+    assert_eq!(s0.intensity, vec![10.0, 20.0, 0.0, 5.0]);
+    assert_eq!(s0.time.len(), 4);
     assert!(find(&c, "experiment=1 transition=0")
         .id
         .contains("dwell=50"));

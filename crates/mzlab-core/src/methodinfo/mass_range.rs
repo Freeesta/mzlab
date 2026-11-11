@@ -64,6 +64,18 @@ pub(super) fn announced(ole: &Ole, base: &str, i: usize) -> Option<u32> {
     .filter(|n| *n > 0)
 }
 
+/// A mass the method stores as an f32, at the precision the file holds: the shortest decimal that reads back as the same f32 (364.125 stays
+/// 364.125, 364.1 does not become 364.100006).
+#[allow(clippy::cast_possible_truncation)]
+pub(super) fn mass(x: f64) -> f64 {
+    let f = x as f32;
+    if f.is_finite() {
+        f.to_string().parse().unwrap_or(x)
+    } else {
+        x
+    }
+}
+
 /// The experiment read by the counted grammar; a stream that does not hold the announced entries keeps no table (the `.wiff` reader refuses the sample).
 pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
     let Ok(entries) = parse(d, n) else {
@@ -89,8 +101,8 @@ pub(super) fn counted(d: &[u8], n: u32, is_mrm: bool) -> Kind {
             entries
                 .iter()
                 .map(|e| Transition {
-                    q1: round(f64::from(e.m0), 2),
-                    q3: round(f64::from(e.m2), 2),
+                    q1: mass(f64::from(e.m0)),
+                    q3: mass(f64::from(e.m2)),
                     dwell: round(f64::from(e.dwell), 1),
                     name: e.name.clone(),
                     ce: p(e, "CE"),

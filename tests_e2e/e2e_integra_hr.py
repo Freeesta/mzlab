@@ -46,11 +46,12 @@ for kind in ("hr", "lr"):
                 def parity():
                     v = pg.evaluate("""(async()=>{const p=E.panels.find(q=>q.type==='xic'),s=p._a.sr[0],a=p._a;
                       const r=await QUALITA.autoIntegrate(s.x,s.y,a.x0,a.x1,{smooth:PK.hrSmooth,snr:PK.hrSn});
-                      const it=[...p.ints].sort((u,w)=>u.a-w.a);return it.map((i,k)=>[i.area,r[k].area*60,!!i.base,integ(s,i.a,i.b).area])})()""")
-                    for page, rust, has_base, chord in v:
-                        assert has_base and abs(page - rust) <= 1e-6 * rust, v       # the page area over the Rust baseline is the Rust area
-                        assert chord > 0, v
-                step("the area shown is the one of the Rust engine, over its own baseline", parity)
+                      const it=[...p.ints].sort((u,w)=>u.a-w.a);const z=await Promise.all(it.map(i=>QUALITA.peakArea(s.x,s.y,i.a,i.b,1,[])));
+                      return it.map((i,k)=>[i.area,JSON.parse(z[k]).area,!!i.base,i.bm,r[k].area*60])})()""")
+                    for page, zero, has_base, bm, over in v:
+                        assert bm == "zero" and has_base and abs(page - zero) <= 1e-6 * zero, v       # from zero by default: the Rust area from y = 0
+                        assert over > 0 and over <= zero * (1 + 1e-6), v                              # the engine's own baseline only takes background away
+                step("the area shown is the Rust area from zero; the engine's baseline is kept on the record", parity)
                 def undo_redo():
                     pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length===0")
                     click_at(pg, 10.2); wait_for_js(pg, "E.panels.find(q=>q.type==='xic').ints.length===2")

@@ -2,8 +2,8 @@
 //! the long table (one row per resolved peak: isomers at one m/z are separate peaks); the other outputs pivot it, one row per sample and one column per
 //! channel (layout `samples`) or the reverse (`channels`). A column is one m/z across files; a channel without Q1 is its place in the list, kept apart
 //! per group. Input = the `/api/mrm` transitions of each file and its group, so the site (`mzlab-wasm` `sim_table`), the app (`rpc.rs` op `simtab`) and
-//! `mzlab-cli sim-table` write the same bytes. Areas and heights in `numfmt::sci`, against the line between the peak's edges (`edges`, the default) or
-//! from zero (`zero`, a trailing `baseline` column says so). docs/agenti/transizioni.md.
+//! `mzlab-cli sim-table` write the same bytes. Areas and heights in `numfmt::sci`, from zero (`zero`, the default) or against the line between the
+//! peak's edges (`edges`); a trailing `baseline` column says which. docs/agenti/transizioni.md.
 
 use crate::error::{Error, Result};
 use crate::json::{parse, Value};
@@ -28,6 +28,9 @@ pub const OUTPUTS: [&str; 6] = [
 ];
 /// The baselines of the areas and heights (`baseline::MODES` without `line`: one user line cannot fit every channel of a table).
 pub const BASELINES: [&str; 2] = ["edges", "zero"];
+
+/// The baseline of a table that names none: from zero (the background under a peak is part of its area).
+pub const DEFAULT_BASELINE: &str = "zero";
 
 /// One SIM channel of a file: its place in the file's transition list, Q1 (absent when the id has none), name, times (min) and intensities.
 struct Trace {
@@ -136,10 +139,11 @@ fn cell(p: Option<&Vec<Found>>, output: &str) -> String {
 /// when a file has one. `output` is one of `OUTPUTS`; `layout` `samples` (default: one row per sample) or `channels` (one row per channel, no group).
 /// Columns in the order the channels first appear. `err.simtab.noChannel` when no file has a SIM channel, `err.simtab.output` for an unknown output or layout.
 pub fn table_text(files: &str, output: &str, layout: &str) -> Result<String> {
-    table_text_with(files, output, layout, "edges")
+    table_text_with(files, output, layout, DEFAULT_BASELINE)
 }
 
-/// `table_text` with the areas and heights against `baseline` (one of `BASELINES`); not `edges`: a last column `baseline` with its name in every row.
+/// `table_text` with the areas and heights against `baseline` (one of `BASELINES`): a last column `baseline` with its name in every row, so a table
+/// always says what its areas were measured from.
 /// `err.simtab.baseline` for another name.
 pub fn table_text_with(files: &str, output: &str, layout: &str, baseline: &str) -> Result<String> {
     if !OUTPUTS.contains(&output) || !matches!(layout, "samples" | "channels") {
@@ -150,11 +154,7 @@ pub fn table_text_with(files: &str, output: &str, layout: &str, baseline: &str) 
     if !BASELINES.contains(&baseline) {
         return Err(Error::new("err.simtab.baseline").with("baseline", baseline));
     }
-    let tail = if baseline == "edges" {
-        String::new()
-    } else {
-        format!(",{baseline}")
-    };
+    let tail = format!(",{baseline}");
     let list = parse(files.as_bytes())?;
     let mut order: Vec<&str> = Vec::new();
     for f in list.arr() {
@@ -200,7 +200,7 @@ pub fn table_text_with(files: &str, output: &str, layout: &str, baseline: &str) 
                     },
                 });
             }
-            cells.push((key, found(&tr, !tail.is_empty())));
+            cells.push((key, found(&tr, baseline == "zero")));
         }
         samples.push((sample_of(name).to_string(), group.to_string(), cells));
     }
@@ -217,21 +217,15 @@ pub fn table_text_with(files: &str, output: &str, layout: &str, baseline: &str) 
     })
 }
 
-/// The end of the header: the `baseline` column when the rows carry one (`tail` = "," + its name).
-fn head_end(tail: &str) -> &'static str {
-    if tail.is_empty() {
-        "\n"
-    } else {
-        ",baseline\n"
-    }
-}
+/// The end of the header: the `baseline` column that every row ends with.
+const HEAD_END: &str = ",baseline\n";
 
 /// The long table: one row per peak, a channel without peaks = peak 0.
 fn peaks_text(samples: &[Sample], cols: &[Column], grouped: bool, tail: &str) -> String {
     let mut out = String::new();
     out += if grouped { "sample,group," } else { "sample," };
     out += "q1,name,peak,apex_rt,area,height,snr,fwhm_s";
-    out += head_end(tail);
+    out += HEAD_END;
     for (s, g, cells) in samples {
         for c in cols {
             let Some(p) = get(cells, &c.key) else {
@@ -281,7 +275,7 @@ fn by_sample(
         out += ",";
         out += &field(&c.label);
     }
-    out += head_end(tail);
+    out += HEAD_END;
     for (s, g, cells) in samples {
         out += &field(s);
         if grouped {
@@ -306,7 +300,7 @@ fn by_channel(samples: &[Sample], cols: &[Column], output: &str, tail: &str) -> 
         out += ",";
         out += &field(s);
     }
-    out += head_end(tail);
+    out += HEAD_END;
     for c in cols {
         out += &format!("{},{}", field(&c.label), field(&c.name));
         for (_, _, cells) in samples {

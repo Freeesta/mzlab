@@ -28,10 +28,10 @@ try:
         def dlg():
             pg.evaluate("Object.assign(PK, PK_DEF); peakParams()"); pg.wait_for_selector("#pk-ok", timeout=5000)
             assert pg.locator("#bigbody [data-pk]").count() == 8 and pg.locator("#bigbody fieldset.pk-sec").count() == 3   # the low, the high resolution, the baseline
-            pg.fill("[data-pk=edgeFrac]", "7"); pg.fill("[data-pk=hrSmooth]", "6"); pg.select_option("[data-pk=base]", "1"); pg.click("#pk-ok"); pg.wait_for_timeout(300)
-            assert pg.evaluate("PK.edgeFrac") == 7 and pg.evaluate("PK.hrSmooth") == 7 and pg.evaluate("PK.base") == 1          # the smoothing window is odd
-            assert json.loads(pg.evaluate("localStorage.getItem('mzlab.picchi')")) == {**pg.evaluate("PK_DEF"), "edgeFrac": 7, "hrSmooth": 7, "base": 1}
-            pg.evaluate("peakParams()"); pg.click("#pk-def"); assert pg.evaluate("PK.edgeFrac") == 3 and pg.evaluate("PK.hrSmooth") == 5 and pg.evaluate("PK.base") == 0
+            pg.fill("[data-pk=edgeFrac]", "7"); pg.fill("[data-pk=hrSmooth]", "6"); pg.select_option("[data-pk=bmode]", "1"); pg.click("#pk-ok"); pg.wait_for_timeout(300)
+            assert pg.evaluate("PK.edgeFrac") == 7 and pg.evaluate("PK.hrSmooth") == 7 and pg.evaluate("PK.bmode") == 1          # edges chosen; the smoothing window is odd
+            assert json.loads(pg.evaluate("localStorage.getItem('mzlab.picchi')")) == {**pg.evaluate("PK_DEF"), "edgeFrac": 7, "hrSmooth": 7, "bmode": 1}
+            pg.evaluate("peakParams()"); pg.click("#pk-def"); assert pg.evaluate("PK.edgeFrac") == 3 and pg.evaluate("PK.hrSmooth") == 5 and pg.evaluate("PK.bmode") == 0
             pg.evaluate("document.querySelector('#bigdlg').close()")
         step("the dialog sets, remembers and resets the settings", dlg)
         def dropped():
