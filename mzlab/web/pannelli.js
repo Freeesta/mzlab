@@ -561,14 +561,14 @@ function plotName(/** @type {Pannello} */ p) {
   if (p.type === "chrom") parts = [p.kind.toUpperCase() + (p.kind === "pda" && p.mz0 != null ? "-" + p.mz0 + (p.mz1 != null && p.mz1 !== p.mz0 ? "-" + p.mz1 : "") + "nm" : ""), pr, ft];
   else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, (/** @type {number} */ v) => +v.toFixed(mzd(p))) : "", ft];
   else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, (/** @type {string} */ v) => String(v).replace(">", "-")) : "", ft];
-  else if (p.type === "spec") parts = [p.uv ? "UV" : I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, p.level === 2 ? pr : "", rtm];
+  else if (p.type === "spec") parts = [p.uv ? "UV" : p.level > 1 ? I18N.t("export.file.spectrumMsn", { n: p.level }) : I18N.t("export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, p.level > 1 ? pr : "", rtm];
   else parts = [I18N.t("export.file.map"), ft];
   if (p.title && p.title[0] !== "@") parts = [p.title, ft];  // a title typed by the student names the file; the default titles are codes
   return fname(parts.filter(Boolean).join("_")).slice(0, 60) || I18N.t("export.file.chart");
 }
 function plotMeta(/** @type {Pannello} */ p) {
   const a = p._a || {}, fs = plotFiles(p), d = [];
-  d.push({ chrom: I18N.t("export.desc.chrom", { kind: (p.kind || "").toUpperCase() }), xic: "XIC (" + p.traces.map((/** @type {Traccia} */ t) => t.w == null ? t.mz + " +-" + p.tol : (t.mz - t.w).toFixed(mzd(p)) + "-" + (t.mz + t.w).toFixed(mzd(p))).join("; ") + ")", mrm: I18N.t("export.desc.mrm"), spec: I18N.t("export.desc.spec", { ms: p.level === 2 ? "MS2" : "MS1" }), map: I18N.t("export.desc.map") }[p.type] || p.type);
+  d.push({ chrom: I18N.t("export.desc.chrom", { kind: (p.kind || "").toUpperCase() }), xic: "XIC (" + p.traces.map((/** @type {Traccia} */ t) => t.w == null ? t.mz + " +-" + p.tol : (t.mz - t.w).toFixed(mzd(p)) + "-" + (t.mz + t.w).toFixed(mzd(p))).join("; ") + ")", mrm: I18N.t("export.desc.mrm"), spec: I18N.t("export.desc.spec", { ms: "MS" + (p.level || 1) }), map: I18N.t("export.desc.map") }[p.type] || p.type);
   const mzs = a.sr ? [...new Set(a.sr.map((/** @type {Bag} */ s) => s.mz).filter((/** @type {number} */ v) => v != null))] : [];
   if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(mzd(p))).join(", "));
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${/** @type {number} */ (p.r1).toFixed(2)} min`);
