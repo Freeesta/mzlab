@@ -120,20 +120,56 @@ fn gaussian(buf: &Buf, sigma: f64, apex: usize) -> Option<f64> {
     )
 }
 
-/// True when three or more consecutive raw bins of the region are within 1 % of the highest intensity of the file.
+/// True when three or more consecutive raw bins of the region are within 1 % of the highest intensity of the file and span at least 0.15 FWHM: the top
+/// of an unsaturated Gaussian within 1 % of its maximum spans at most 0.12 FWHM, so the tallest peak of a densely sampled file is not taken for a flat top.
 fn saturated(buf: &Buf, p: &Params, g: &Group) -> bool {
     if p.vmax <= 0.0 {
         return false;
     }
     let t = 0.99 * p.vmax;
-    let mut run = 0;
+    let mut start = None;
     for j in g.lo..=g.hi {
-        run = if buf.v[j] >= t { run + 1 } else { 0 };
-        if run >= 3 {
+        if buf.v[j] < t {
+            start = None;
+            continue;
+        }
+        let a = *start.get_or_insert(j);
+        if j - a >= 2 && buf.x[j] - buf.x[a] >= 0.15 * p.w {
             return true;
         }
     }
     false
+}
+
+/// Adjacent regions that share one flat top at the saturation level are one peak: smoothing a plateau leaves a maximum at each of its edges.
+fn merge_plateaus(buf: &Buf, p: &Params, groups: &[Group]) -> Vec<Group> {
+    let t = 0.99 * p.vmax;
+    let mut out: Vec<Group> = Vec::with_capacity(groups.len());
+    for g in groups {
+        if let Some(last) = out.last_mut() {
+            let (a, b) = (last.apex.min(g.apex), last.apex.max(g.apex));
+            if p.vmax > 0.0
+                && g.lo <= last.hi + 1
+                && b > a + 1
+                && buf.v[a + 1..b].iter().all(|&v| v >= t)
+            {
+                let apex = if buf.s[g.apex] > buf.s[last.apex] {
+                    g.apex
+                } else {
+                    last.apex
+                };
+                *last = Group {
+                    apex,
+                    lo: last.lo.min(g.lo),
+                    hi: last.hi.max(g.hi),
+                    members: last.members + g.members,
+                };
+                continue;
+            }
+        }
+        out.push(g.clone());
+    }
+    out
 }
 
 /// Centre of a saturated peak: the middle of the flat top, then the weighted centroid of the unsaturated bins in a window as wide as the flat top plus w
@@ -184,7 +220,8 @@ fn one(buf: &Buf, p: &Params, sigma: f64, g: &Group, out: &mut Vec<Centroid>) {
     area -= shoulders.iter().map(|s| s.area).sum::<f64>();
     out.push(Centroid {
         mz,
-        value: if p.area || sat { area } else { height },
+        // one unit per spectrum: a saturated peak of a high-resolution scan keeps its height (the ceiling, a lower bound) and the SATURATED flag
+        value: if p.area { area } else { height },
         area,
         height,
         flags,
@@ -194,7 +231,7 @@ fn one(buf: &Buf, p: &Params, sigma: f64, g: &Group, out: &mut Vec<Centroid>) {
 
 pub(super) fn emit(buf: &Buf, p: &Params, sigma: f64, groups: &[Group]) -> Vec<Centroid> {
     let mut out = Vec::new();
-    for g in groups {
+    for g in &merge_plateaus(buf, p, groups) {
         one(buf, p, sigma, g, &mut out);
     }
     out

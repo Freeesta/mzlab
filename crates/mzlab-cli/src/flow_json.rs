@@ -176,8 +176,32 @@ fn outputs(o: &mut Out, run: &Run, instance: &str, generated: &[String]) {
     o.raw("]");
 }
 
-/// `flowrun/1`: how a run ended. Per instance the status (`ok|cached|error|skipped`), `ms` and the files it wrote with their SHA-256, as `prov/1`
-/// has them; the instances that did not run come last.
+/// The `warn.*` keys of an instance and what its per-file jobs said of their files (a partial read: `declared`, `read`, `cause`), as `prov/1` has them;
+/// nothing when it has neither.
+fn noticed(o: &mut Out, warnings: &[String], files: &[(String, mzlab_core::json::Value)]) {
+    if !warnings.is_empty() {
+        o.raw(",\"warnings\":[");
+        for (k, w) in warnings.iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" }).str(w);
+        }
+        o.raw("]");
+    }
+    if !files.is_empty() {
+        let mut by_name: Vec<&(String, mzlab_core::json::Value)> = files.iter().collect();
+        by_name.sort_by(|x, y| x.0.cmp(&y.0));
+        o.raw(",\"files\":{");
+        for (k, (name, v)) in by_name.into_iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" })
+                .str(name)
+                .raw(":")
+                .raw(&mzlab_core::flow::value_text(v));
+        }
+        o.raw("}");
+    }
+}
+
+/// `flowrun/1`: how a run ended. Per instance the status (`ok|cached|error|skipped`), `ms`, the files it wrote with their SHA-256 and its warnings and
+/// notes of files, as `prov/1` has them; the instances that did not run come last.
 pub(crate) fn run_json(code: u8, out: &Path, plan_sha256: &str, run: &Run) -> String {
     let mut o = Out::default();
     o.raw("{\"schema\":\"flowrun/1\",\"code\":")
@@ -207,6 +231,7 @@ pub(crate) fn run_json(code: u8, out: &Path, plan_sha256: &str, run: &Run) -> St
         .num((a.ms * 10.0).round() / 10.0)
         .raw(",\"outputs\":");
         outputs(&mut o, run, &a.instance, &a.generated);
+        noticed(&mut o, &a.warnings, &a.files);
         if let Some(e) = &a.error {
             let params: Vec<(&str, String)> = e
                 .params

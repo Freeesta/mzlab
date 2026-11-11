@@ -1,5 +1,7 @@
 //! The points of a scan on a regular grid. Regular files (the 3200: 0.06 Da): every bin between the first and the last point, absent ones are zero.
-//! Irregular files (Orbitrap, TOF): the points themselves, with a zero on each side of a gap wider than 1.5 steps (the gap is not filled).
+//! Irregular files (Orbitrap, TOF): the points themselves, with a zero on each side of a gap wider than 1.5 local steps (the gap is not filled). The
+//! local step is the smallest spacing among the three on each side, never below the step of the file: the spacing of an Orbitrap or TOF grows with m/z,
+//! and a gap judged on the median step alone puts zeros inside every peak at high m/z.
 
 use super::{Buf, Params};
 
@@ -55,15 +57,28 @@ fn dense(mz: &[f64], y: &[f64], step: f64, buf: &mut Buf) {
     }
 }
 
+/// The step around the spacing `mz[i] - mz[i - 1]`: the smallest of the three spacings before and after it, never below `step`.
+fn local_step(mz: &[f64], i: usize, step: f64) -> f64 {
+    let (lo, hi) = (i.saturating_sub(3).max(1), (i + 3).min(mz.len() - 1));
+    (lo..=hi)
+        .filter(|&j| j != i)
+        .map(|j| mz[j] - mz[j - 1])
+        .fold(f64::INFINITY, f64::min)
+        .max(step)
+}
+
 fn sparse(mz: &[f64], y: &[f64], step: f64, buf: &mut Buf) {
     for i in 0..mz.len() {
         if i > 0 && mz[i] - mz[i - 1] > 1.5 * step {
+            let s = local_step(mz, i, step);
             let gap = mz[i] - mz[i - 1];
-            buf.x.push(mz[i - 1] + step);
-            buf.v.push(0.0);
-            if gap > 2.0 * step {
-                buf.x.push(mz[i] - step);
+            if gap > 1.5 * s {
+                buf.x.push(mz[i - 1] + s);
                 buf.v.push(0.0);
+                if gap > 2.0 * s {
+                    buf.x.push(mz[i] - s);
+                    buf.v.push(0.0);
+                }
             }
         }
         buf.x.push(mz[i]);
