@@ -143,7 +143,7 @@ pub fn add_downstream(
             d.insert("mzidx".into(), Value::Object(z));
         }
         let chain = chain_of(&entries[k].filtro);
-        if meta.ms_level > 1 && !chain.is_empty() {
+        if meta.ms_level.is_some_and(|l| l > 1) && !chain.is_empty() {
             let node = msntree_build::node_id(&chain);
             let c: Vec<Value> = chain
                 .iter()

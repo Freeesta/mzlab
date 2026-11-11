@@ -11,7 +11,7 @@ use mzlab_core::flow::{file_roots, parse, plan_json};
 use mzlab_core::json::Out;
 
 use crate::convert_entries::{entries, Entry};
-use crate::convert_report::{compression_sets, head_of, report, Item};
+use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
@@ -38,7 +38,8 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
-progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 4 an input is missing or holds nothing to convert";
+progress goes to stderr (one line per file), stdout lists the mzML files; exit codes: 0 done, 1 a file failed (the others are written), 2 usage, 3 a file was written with scans missing (conv/1 parziale; a
+warning line names it), 4 an input is missing or holds nothing to convert";
 
 #[derive(Default)]
 pub(crate) struct Args {
@@ -200,6 +201,18 @@ pub struct Notice {
     pub params: Vec<(&'static str, String)>,
 }
 
+/// The notice of a dataset whose data file holds sections the container's index does not list (`recovered` of them rebuilt as samples, `skipped` left out), or `None`.
+pub fn unindexed_sections(recovered: usize, skipped: usize) -> Option<Notice> {
+    (recovered + skipped > 0).then(|| Notice {
+        key: "warn.wiff.unindexed",
+        params: vec![
+            ("n", (recovered + skipped).to_string()),
+            ("recovered", recovered.to_string()),
+            ("skipped", skipped.to_string()),
+        ],
+    })
+}
+
 /// The notice of a memory budget `auto_mb` that runs fewer than `wanted` conversions at once, or `None`: the desktop queue gives it to its
 /// page, `convert` prints it (`testo_errore::avviso`).
 pub fn fewer_workers(auto_mb: f64, wanted: usize) -> Option<Notice> {
@@ -304,11 +317,12 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
             Item::Failed { .. } => Vec::new(),
         })
         .collect();
+    let partial = partial_lines(items);
     let (code, stderr) = if failed == 0 {
         (
-            0,
+            if partial.is_empty() { 0 } else { 3 },
             format!(
-                "{notes}done: {converted} converted, {skipped} skipped; outputs in {}\n",
+                "{notes}{partial}done: {converted} converted, {skipped} skipped; outputs in {}\n",
                 out.display()
             ),
         )
@@ -324,7 +338,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
             "error: {failed} of {} failed ({converted} converted, {skipped} skipped)\n",
             items.len()
         );
-        (1, notes + &causes + &line + "hint: the other files are written; run again to retry the failed ones, the converted ones are skipped\n")
+        (1, notes + &partial + &causes + &line + "hint: the other files are written; run again to retry the failed ones, the converted ones are skipped\n")
     };
     Outcome {
         code,

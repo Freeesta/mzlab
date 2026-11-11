@@ -90,6 +90,34 @@ fn notes_of(text: &str) -> Vec<(String, String)> {
         .collect()
 }
 
+/// A partial read is written and said, never passed for a whole one: one warning line per file with its counts.
+pub(crate) fn partial_lines(items: &[Item]) -> String {
+    items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Done {
+                input,
+                conv: Some(c),
+                ..
+            } => partial_of(c).map(|(declared, read, cause)| {
+                format!("warning: {input}: partial read, {read} of {declared} scans ({cause})\n")
+            }),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The scans declared and read and the cause key when the `conv/1` document `conv` says the read was partial.
+pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
+    let doc = mzlab_core::json::parse(conv.as_bytes()).ok()?;
+    if doc.get("parziale").and_then(|p| p.bool()) != Some(true) {
+        return None;
+    }
+    let n = |k: &str| doc.get(k).and_then(|v| v.f64()).unwrap_or(0.0) as usize;
+    let cause = doc.get("perdita").and_then(|s| s.str()).unwrap_or_default();
+    Some((n("dichiarate"), n("lette"), cause.to_string()))
+}
+
 /// The `--report` document: a JSON array with `{ingresso, uscita, sha256, spettri, secondi, saltato, conv/1}` or `{ingresso, errore, causa}` per input.
 pub(crate) fn report(items: &[Item]) -> String {
     let mut o = Out::default();

@@ -178,3 +178,26 @@ fn the_early_tic_keeps_the_ms1_scans_or_every_scan_when_none_is_ms1() {
     assert_eq!(tic_ms1(&v), (vec![0.1, 0.2], vec![4.0, 5.0]));
     assert_eq!(tic_ms1(&[]), (vec![], vec![]));
 }
+
+/// The default account of a read: the rows of the index plus the scans `missing` counts, the cause only when something is lost.
+#[test]
+fn losses_count_the_index_and_the_missing_scans() {
+    use super::outcome::ReadOutcomes;
+    assert_eq!(Losses::of(3, 3, TRUNCATED), Losses::complete(3));
+    assert!(!Losses::complete(3).partial());
+    let l = Losses::of(5, 2, TRUNCATED);
+    assert!(l.partial());
+    assert_eq!((l.lost(), l.cause), (3, TRUNCATED));
+    // a reader that reads more than it declares is not partial
+    assert_eq!(Losses::of(1, 2, TRUNCATED), Losses::complete(2));
+    let mut r = Empty {
+        campioni: vec![],
+        indice: vec![],
+    };
+    let o = r.index_outcome(0).unwrap();
+    assert_eq!((o.data.len(), o.losses), (0, Losses::complete(0)));
+    assert_eq!(
+        r.chromatograms_outcome(0).unwrap().losses,
+        Losses::complete(0)
+    );
+}
