@@ -226,7 +226,6 @@ I18N.add("it", {
   "meta.nonDecodificato": "Non decodificato da questo programma: {dove}. Il resto del file è letto.",
   "meta.mancante": "Non presente nel file: {dove}.",
   "meta.troncato": "Il file è troncato: {dove}. Si legge quello che viene prima del taglio.",
-  "meta.versioneNonVerificata": "Una versione del file che questo programma non ha verificato: {dove}. Si legge con la disposizione nota più vicina: controlla i valori.",
   "err.file.agilentNoPeaks": "Nella cartella {name} il file degli spettri AcqData/MSPeak.bin manca o è vuoto: l'elenco delle scansioni c'è, ma senza i loro punti non è stato caricato nulla. Copia di nuovo l'intera cartella .D; se il file manca anche nell'originale, converti la cartella in mzML con il programma dello strumento e apri quel file.",
   "err.file.agilentIms": "Questa cartella .D è un'acquisizione a mobilità ionica (IMS): AcqData/MSScan.xsd descrive frame IMS divisi in bin di drift (FrameID, DriftBin), un formato che questo programma non legge ancora, quindi non è stato caricato nulla. Converti la cartella in mzML con il programma dello strumento e apri quel file.",
   "err.file.base64": "Il file è danneggiato: un array di picchi non è base64 valido ({detail}). Copia di nuovo il file o esportalo di nuovo dal programma dello strumento.",

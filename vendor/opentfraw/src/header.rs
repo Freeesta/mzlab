@@ -8,10 +8,8 @@ use std::io::{Read, Seek};
 pub struct FileHeader {
     pub magic: u16,
     pub signature: String,
-    /// The layout the rest of the file is read with: `declared_version` when documented, else the nearest documented one (`robust::schema_version`).
+    /// The version written in the file, one of `robust::VERIFIED_VERSIONS`.
     pub version: u32,
-    /// The number written in the file.
-    pub declared_version: u32,
     pub audit_start: AuditTag,
     pub audit_end: AuditTag,
     pub tag: String,
@@ -35,9 +33,10 @@ impl FileHeader {
         // unknown_long[1..4]: 4 × u32 = 16 bytes
         r.skip(16)?;
 
-        let declared_version = r.read_u32()?;
-        let version = crate::robust::schema_version(declared_version)
-            .ok_or(Error::UnsupportedVersion(declared_version))?;
+        let version = r.read_u32()?;
+        if !crate::robust::VERIFIED_VERSIONS.contains(&version) {
+            return Err(Error::UnsupportedVersion(version));
+        }
 
         // AuditTag start (112 bytes)
         let audit_start = AuditTag::read(r)?;
@@ -57,7 +56,6 @@ impl FileHeader {
             magic,
             signature,
             version,
-            declared_version,
             audit_start,
             audit_end,
             tag,
@@ -88,10 +86,15 @@ mod tests {
     }
 
     #[test]
-    fn every_supported_version_parses() {
-        for &v in &[8u32, 47, 57, 60, 62, 63, 64, 66] {
-            let hdr = read(file_header_bytes(v)).unwrap();
-            assert_eq!(hdr.version, v);
+    fn every_verified_version_parses_and_no_other() {
+        for v in 0..=200u32 {
+            match read(file_header_bytes(v)) {
+                Ok(hdr) => assert!([57, 63, 64, 66].contains(&v) && hdr.version == v, "v{v}"),
+                Err(e) => assert!(
+                    matches!(e, Error::UnsupportedVersion(n) if n == v),
+                    "v{v}: {e}"
+                ),
+            }
         }
     }
 
@@ -118,12 +121,6 @@ mod tests {
         let bytes = file_header_bytes(999);
         let err = read(bytes).unwrap_err();
         assert!(matches!(err, Error::UnsupportedVersion(999)));
-    }
-
-    #[test]
-    fn an_undeclared_version_is_read_with_the_nearest_layout() {
-        let hdr = read(file_header_bytes(65)).unwrap();
-        assert_eq!((hdr.declared_version, hdr.version), (65, 64));
     }
 
     #[test]

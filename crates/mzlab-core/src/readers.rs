@@ -160,6 +160,7 @@ pub struct ScanEntry {
     pub id: String,
     /// Minutes.
     pub rt: f64,
+    /// MS level, 0 when the file does not say it.
     pub livello: u8,
     /// +1, -1 or 0 (not said).
     pub polarita: i8,

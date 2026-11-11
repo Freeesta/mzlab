@@ -226,7 +226,6 @@ I18N.add("en", {
   "meta.nonDecodificato": "Not decoded by this program: {dove}. The rest of the file is read.",
   "meta.mancante": "Not in the file: {dove}.",
   "meta.troncato": "The file is cut short: {dove}. What comes before the cut is read.",
-  "meta.versioneNonVerificata": "A file version this program has not checked: {dove}. It is read with the nearest known layout: check the values.",
   "err.file.agilentNoPeaks": "In the folder {name} the spectrum file AcqData/MSPeak.bin is missing or empty: the scan list is there, but without its points nothing was loaded. Copy the whole .D folder again; if the file is missing in the original too, convert the folder to mzML with the instrument software and open that file.",
   "err.file.agilentIms": "This .D folder is an ion-mobility (IMS) run: AcqData/MSScan.xsd describes IMS frames split into drift bins (FrameID, DriftBin), a format this program does not read yet, so nothing was loaded. Convert the folder to mzML with the instrument software and open that file.",
   "err.file.base64": "The file is damaged: a peak array is not valid base64 ({detail}). Copy the file again or export it again from the instrument software.",
