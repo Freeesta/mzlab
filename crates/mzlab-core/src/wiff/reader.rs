@@ -2,7 +2,7 @@
 //! the `.wiff.scan` never, a scan reads only its own block. One `Campione` per injection; the index lists the scans (the MRM blocks are chromatograms).
 
 use super::window::Window;
-use super::{container, samples, scan, Record, Wiff, SAMPLES};
+use super::{container_within, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::method::{sha1_hex, Source, SrcFile};
@@ -317,7 +317,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     }
     let mut bytes = vec![0u8; usize::try_from(m.dim).map_err(|_| Error::memory_budget())?];
     m.dati.read_at(0, &mut bytes)?;
-    let ole = container(bytes, &name)?;
+    let ole = container_within(bytes, &name, limits)?;
     let sm = member(&mut fs, si)?;
     let scan_len = sm.dim;
     // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `impronte_note`): the header does not read the whole file again

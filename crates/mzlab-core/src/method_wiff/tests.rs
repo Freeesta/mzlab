@@ -73,3 +73,28 @@ fn the_creation_time_of_a_property_set_is_a_local_timestamp() {
         vec![(12, "2025-11-11T13:15:22".to_string())]
     );
 }
+
+/// A property set of one section at offset 48 with one property at `po` (from the section) of type 30 (an 8-bit string) holding "ok".
+fn property_set(po: u32) -> Vec<u8> {
+    let mut b = vec![0u8; 48];
+    b[0x2c..0x30].copy_from_slice(&48u32.to_le_bytes());
+    b.extend(0u32.to_le_bytes()); // section size
+    b.extend(1u32.to_le_bytes()); // one property
+    b.extend(2u32.to_le_bytes()); // its id
+    b.extend(po.to_le_bytes());
+    b.extend(30u32.to_le_bytes());
+    b.extend(2u32.to_le_bytes());
+    b.extend(*b"ok");
+    b
+}
+
+#[test]
+fn a_property_offset_past_4_gb_reads_nothing_on_every_target() {
+    assert_eq!(properties(&property_set(16)), [(2, "ok".to_string())]);
+    // the section at 48 and an offset of 2^32 - 40: their sum wraps to 8 in 32-bit arithmetic (the site), where this set holds a string the app never reads
+    let mut b = property_set(u32::MAX - 39);
+    b[8..12].copy_from_slice(&30u32.to_le_bytes());
+    b[12..16].copy_from_slice(&2u32.to_le_bytes());
+    b[16..18].copy_from_slice(b"no");
+    assert!(properties(&b).is_empty());
+}

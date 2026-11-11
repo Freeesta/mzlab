@@ -29,4 +29,4 @@ Un formato che il motore non porta nasce in `crates/mzlab-lettori/src/` dietro l
 4. Chiavi di testo `err.file.*` in `lang/it.js` e `lang/en.js`.
 
 ## Difetti dei parser corretti per costruzione
-`ole.rs` accetta settori di 512 o 4096 byte e mini-settori di 64, visita ogni settore DIFAT una sola volta (al più quanti ne ha il file) e percorre la directory senza ricorsione, una voce una volta; `xmltree.rs` rifiuta oltre 256 livelli di annidamento (il metodo si legge come «assente»).
+`ole.rs` (`Ole::open(dati, nome, &Limits)`) accetta settori di 512 o 4096 byte e mini-settori di 64, visita ogni settore DIFAT una sola volta, percorre la directory senza ricorsione, una voce una volta, rifiuta storage annidati oltre `Limits::profondita` (`err.dam.unreadable`) e directory oltre `Limits::entries` (`error.memoryBudget`), e ferma ogni catena (anche quella del mini FAT) alla dimensione del flusso; chi ha già i byte in memoria passa `Limits::held()`. `xmltree.rs` rifiuta oltre 256 livelli di annidamento (il metodo si legge come «assente»).

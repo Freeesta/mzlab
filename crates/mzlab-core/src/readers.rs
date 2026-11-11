@@ -71,6 +71,13 @@ impl Limits {
             byte: (crate::budget::NATIVE_BUDGET_MB as u64) << 20,
         }
     }
+    /// Bytes the caller already holds in memory (a `.dam`, the container of a `.wiff`): only entries and depth are checked, both as on the site.
+    pub const fn held() -> Limits {
+        Limits {
+            byte: u64::MAX,
+            ..Limits::sito()
+        }
+    }
     /// `n` entries asked by a file: an error with a key when they are more than the limit (and so never an allocation).
     pub fn ok_entries(&self, n: u64) -> Result<usize> {
         usize::try_from(n)

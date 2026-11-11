@@ -63,7 +63,6 @@ fn params(remainder: &str) -> Vec<(String, String)> {
     v
 }
 
-/// `msg` with its leading error key rendered: «text (key, unused=params)».
 pub(crate) fn human(msg: &str) -> String {
     let (key, remainder) = msg.split_once(' ').unwrap_or((msg, ""));
     if !(key.starts_with("err.") || key.starts_with("error.")) {
@@ -78,6 +77,15 @@ pub fn warning(n: &crate::convert::Notice) -> String {
     render(n.key, n.key, &remainder)
 }
 
+/// An entry of `metodo/1.avvisi` (key and place) as the Method window says it: «text (key)», or «key: place» for a key without a text.
+pub(crate) fn method_note(key: &str, dove: &str) -> String {
+    match text_of(key) {
+        Some(t) => format!("{} ({key})", t.replace("{dove}", dove)),
+        None => format!("{key}: {dove}"),
+    }
+}
+
+/// `msg` with its leading error key rendered: «text (key, unused=params)».
 fn render(msg: &str, key: &str, remainder: &str) -> String {
     let par = params(remainder);
     let fase = par

@@ -17,6 +17,8 @@ pub(crate) enum Item {
         seconds: f64,
         skipped: bool,
         conv: Option<String>,
+        /// `metodo/1.avvisi`: key and place of what the reader could not read.
+        notes: Vec<(String, String)>,
     },
     Failed {
         input: String,
@@ -27,9 +29,9 @@ pub(crate) enum Item {
 /// The read step through the head of an mzML.
 const CHUNK: u64 = 1 << 20;
 
-/// Number of spectra and the `conv/1` document of the mzML at `path`. Both sit in the header before the first spectrum, after the `metodo/1`
+/// Number of spectra, the `conv/1` document and the `metodo/1.avvisi` entries of the mzML at `path`. Both sit in the header before the first spectrum, after the `metodo/1`
 /// document, which can be many MiB: the head is read until the `spectrumList` opening (or the `chromatogramList`, or the end), not a fixed size.
-pub(crate) fn head_of(path: &Path) -> (usize, Option<String>) {
+pub(crate) fn head_of(path: &Path) -> (usize, Option<String>, Vec<(String, String)>) {
     let mut bytes = Vec::new();
     if let Ok(mut f) = File::open(path) {
         loop {
@@ -60,7 +62,32 @@ pub(crate) fn head_of(path: &Path) -> (usize, Option<String>) {
         .split_once("name=\"mzLab conv/1\" value=\"")
         .and_then(|(_, r)| r.split_once('"'))
         .map(|(v, _)| mzlab_core::method::xml_unescape(v));
-    (spectra, conv)
+    (spectra, conv, notes_of(&text))
+}
+
+/// The `avvisi` of the `metodo/1` document in the head `text` of an mzML, as (key, place).
+fn notes_of(text: &str) -> Vec<(String, String)> {
+    let Some(doc) = text
+        .split_once("name=\"mzLab metodo/1\" value=\"")
+        .and_then(|(_, r)| r.split_once('"'))
+        .map(|(v, _)| mzlab_core::method::xml_unescape(v))
+        .and_then(|v| mzlab_core::json::parse(v.as_bytes()).ok())
+    else {
+        return Vec::new();
+    };
+    let s = |a: &mzlab_core::json::Value, k: &str| {
+        a.get(k)
+            .and_then(|v| v.str())
+            .unwrap_or_default()
+            .to_string()
+    };
+    doc.get("avvisi")
+        .map(|a| a.arr())
+        .unwrap_or_default()
+        .iter()
+        .map(|a| (s(a, "chiave"), s(a, "dove")))
+        .filter(|(k, _)| !k.is_empty())
+        .collect()
 }
 
 /// The scans declared and read and the cause key when the `conv/1` document `conv` says the read was partial.
@@ -89,6 +116,7 @@ pub(crate) fn report(items: &[Item]) -> String {
                 seconds,
                 skipped,
                 conv,
+                notes,
             } => {
                 o.raw("{\"ingresso\":").str(input);
                 o.raw(",\"uscita\":").str(output);
@@ -103,6 +131,16 @@ pub(crate) fn report(items: &[Item]) -> String {
                 if let Some(c) = conv {
                     o.raw(",\"conv/1\":").raw(c);
                 }
+                o.raw(",\"avvisi\":[");
+                for (i, (k, d)) in notes.iter().enumerate() {
+                    o.raw(if i > 0 {
+                        ",{\"chiave\":"
+                    } else {
+                        "{\"chiave\":"
+                    });
+                    o.str(k).raw(",\"dove\":").str(d).raw("}");
+                }
+                o.raw("]");
                 o.raw("}");
             }
             Item::Failed { input, cause } => {

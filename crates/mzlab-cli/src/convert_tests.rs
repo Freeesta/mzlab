@@ -420,7 +420,7 @@ fn the_report_reads_spectra_and_conv_past_a_large_method_blob() {
             "x".repeat(blob)
         );
         std::fs::write(&file, text).unwrap();
-        let (n, conv) = crate::convert_report::head_of(&file);
+        let (n, conv, _) = crate::convert_report::head_of(&file);
         assert_eq!((n, conv.as_deref()), (7, Some("{\"a\":1}")), "blob {blob}");
     }
     let _ = std::fs::remove_dir_all(&dir);
@@ -460,36 +460,30 @@ fn a_budget_too_small_for_the_default_converts_fewer_files_at_once_and_says_so()
     );
 }
 
-/// An mzXML cut in half is written with the scans it holds: code 3, a warning line with the counts, and `conv/1` of the report says them.
+/// Each entry of `metodo/1.avvisi` in the head of an mzML is a note with its catalogue text and place, and a key without a text keeps its place.
 #[test]
-fn a_cut_file_is_written_with_code_3_and_its_counts() {
-    use crate::convert_fixtures::mzxml;
-    let dir = folder("cut");
-    let src = dir.join("in");
-    std::fs::create_dir_all(&src).unwrap();
-    let o = mzxml::Opz {
-        zlib: false,
-        ..mzxml::FLAT
-    };
-    let whole = mzxml::mzxml(&mzxml::run(), o);
-    std::fs::write(src.join("t.mzXML"), &whole[..whole.len() / 2]).unwrap();
-    let (out, report) = (dir.join("out"), dir.join("r.json"));
-    let o = convert(&[p(&src), "--out", p(&out), "--report", p(&report)]);
-    assert_eq!(o.code, 3, "{}", o.stderr);
-    assert!(o.stderr.contains("warning: ") && o.stderr.contains("partial read, "));
-    let r = parse(&std::fs::read(&report).unwrap()).unwrap();
-    let conv = r.arr()[0].get("conv/1").expect("conv/1");
-    let n = |k: &str| conv.get(k).and_then(|v| v.f64()).unwrap();
-    assert_eq!(conv.get("parziale").and_then(|v| v.bool()), Some(true));
-    assert!(n("lette") < n("dichiarate"), "{}", o.stderr);
-    assert!(o.stderr.contains(&format!(
-        "partial read, {} of {} scans (warn.file.truncated)",
-        n("lette"),
-        n("dichiarate")
-    )));
-    // the whole file is not partial
-    std::fs::write(src.join("t.mzXML"), &whole).unwrap();
-    let o = convert(&[p(&src), "--out", p(&out), "--fresh"]);
-    assert_eq!(o.code, 0, "{}", o.stderr);
+fn the_method_warnings_are_notes_with_their_text() {
+    let dir = folder("notes");
+    let file = dir.join("n.mzML");
+    let doc = "{&quot;schema&quot;:&quot;metodo/1&quot;,&quot;avvisi&quot;:[{&quot;chiave&quot;:&quot;meta.troncato&quot;,&quot;dove&quot;:&quot;scan 7&quot;},{&quot;chiave&quot;:&quot;meta.nuovo&quot;,&quot;dove&quot;:&quot;x&quot;}]}";
+    let text = format!(
+        "<?xml version=\"1.0\"?>\n<mzML><run id=\"r\"><userParam name=\"mzLab metodo/1\" value=\"{doc}\"/>\n<spectrumList count=\"0\" defaultDataProcessingRef=\"c\">\n</spectrumList></run></mzML>\n"
+    );
+    std::fs::write(&file, text).unwrap();
+    let (_, _, notes) = crate::convert_report::head_of(&file);
+    let lines: Vec<String> = notes
+        .iter()
+        .map(|(k, d)| crate::error_text::method_note(k, d))
+        .collect();
+    assert_eq!(
+        lines,
+        [
+            "The file is cut short: scan 7. What comes before the cut is read. (meta.troncato)",
+            "meta.nuovo: x"
+        ]
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[path = "convert_partial_tests.rs"]
+mod partial;
