@@ -304,10 +304,7 @@ impl Rows {
             level,
             rt: sh.rt_minutes(),
             polarity: sh.polarity(),
-            tic: t
-                .float("MS:1000285")
-                .filter(|v| *v != 0.0)
-                .unwrap_or(0.0),
+            tic: t.float("MS:1000285").filter(|v| *v != 0.0).unwrap_or(0.0),
             an: self.head.analyzer(filt, sh.ic_ref.as_deref()),
             kind: (level > 1)
                 .then(|| super::kind_of(|acc| t.has(acc), filt))

@@ -16,7 +16,10 @@ fn quotes_order_entities_and_prefixes_do_not_matter() {
     )
     .unwrap();
     assert_eq!(h.id, "scan=1 & b");
-    assert_eq!((h.index, h.length, h.level(), h.polarity()), (Some(0), Some(4), 2, 0));
+    assert_eq!(
+        (h.index, h.length, h.level(), h.polarity()),
+        (Some(0), Some(4), 2, 0)
+    );
     assert_eq!(h.rt(), Some((5.5, RtUnit::Minute)));
 }
 
@@ -54,7 +57,11 @@ fn every_unit_of_a_retention_time_becomes_minutes() {
     for (unit, v, min) in [
         (r#"unitAccession="UO:0000031" unitName="minute""#, 1.5, 1.5),
         (r#"unitAccession="UO:0000010" unitName="second""#, 90.0, 1.5),
-        (r#"unitAccession="UO:0000028" unitName="millisecond""#, 120000.0, 2.0),
+        (
+            r#"unitAccession="UO:0000028" unitName="millisecond""#,
+            120000.0,
+            2.0,
+        ),
         (r#"unitAccession="UO:0000032" unitName="hour""#, 0.5, 30.0),
         ("", 3.0, 3.0),
     ] {
@@ -63,7 +70,11 @@ fn every_unit_of_a_retention_time_becomes_minutes() {
             &Groups::new(),
         )
         .unwrap();
-        assert!((h.rt_minutes() - min).abs() < 1e-12, "{unit}: {}", h.rt_minutes());
+        assert!(
+            (h.rt_minutes() - min).abs() < 1e-12,
+            "{unit}: {}",
+            h.rt_minutes()
+        );
         assert_eq!(h.rt().unwrap().1 == RtUnit::Missing, unit.is_empty());
     }
 }
@@ -76,7 +87,10 @@ fn the_first_scan_gives_the_time_and_the_configuration() {
         &Groups::new(),
     )
     .unwrap();
-    assert_eq!((h.rt_minutes(), h.scans, h.ic_ref.as_deref()), (1.0, 2, Some("IC2")));
+    assert_eq!(
+        (h.rt_minutes(), h.scans, h.ic_ref.as_deref()),
+        (1.0, 2, Some("IC2"))
+    );
 }
 
 #[test]
@@ -93,25 +107,52 @@ fn precursors_keep_their_order_and_a_product_is_never_one() {
     .unwrap();
     let p = &h.precursors;
     assert_eq!(p.len(), 2);
-    assert_eq!((p[0].target(), p[0].edges(), p[0].selected(), p[0].charge()), (Some(600.0), (Some(599.0), Some(602.0)), Some(600.3), Some(2.0)));
-    assert_eq!((p[0].energy(), p[0].method(), p[0].refer.as_deref()), (Some(35.0), Some("CID"), Some("scan=1")));
-    assert_eq!((p[1].selected(), p[1].refer.as_deref()), (Some(400.0), Some("scan=2")));
+    assert_eq!(
+        (p[0].target(), p[0].edges(), p[0].selected(), p[0].charge()),
+        (
+            Some(600.0),
+            (Some(599.0), Some(602.0)),
+            Some(600.3),
+            Some(2.0)
+        )
+    );
+    assert_eq!(
+        (p[0].energy(), p[0].method(), p[0].refer.as_deref()),
+        (Some(35.0), Some("CID"), Some("scan=1"))
+    );
+    assert_eq!(
+        (p[1].selected(), p[1].refer.as_deref()),
+        (Some(400.0), Some("scan=2"))
+    );
     assert_eq!(h.products[0].target(), Some(250.0));
     assert!(!h.terms.has("MS:1000827") && !h.terms.has("MS:1000744"));
 }
 
 #[test]
 fn cut_or_broken_text_ends_the_scan_without_a_panic() {
-    for t in [r#"<spectrum id="s"><cvParam accession="MS:1000511" value="2"/><cvPar"#, r#"<spectrum id="s"><cvParam accession=MS:1/>"#, "<", "<spectrum", ""] {
+    for t in [
+        r#"<spectrum id="s"><cvParam accession="MS:1000511" value="2"/><cvPar"#,
+        r#"<spectrum id="s"><cvParam accession=MS:1/>"#,
+        "<",
+        "<spectrum",
+        "",
+    ] {
         let _ = parse(t, &Groups::new());
     }
-    let h = parse(r#"<spectrum id="s"><cvParam accession="MS:1000511" value="2"/><cvPar"#, &Groups::new()).unwrap();
+    let h = parse(
+        r#"<spectrum id="s"><cvParam accession="MS:1000511" value="2"/><cvPar"#,
+        &Groups::new(),
+    )
+    .unwrap();
     assert_eq!(h.level(), 2);
 }
 
 #[test]
 fn unescape_keeps_a_broken_reference_and_normalizes_attribute_white_space() {
-    assert_eq!(tags::unescape("a&lt;b&#65;&#x42;&bogus;&", false), "a<bAB&bogus;&");
+    assert_eq!(
+        tags::unescape("a&lt;b&#65;&#x42;&bogus;&", false),
+        "a<bAB&bogus;&"
+    );
     assert_eq!(tags::unescape("a\tb\nc", true), "a b c");
     assert_eq!(tags::unescape("a&#9;b", true), "a\tb");
 }

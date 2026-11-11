@@ -101,7 +101,9 @@ fn head_is_unchanged_and_the_first_read_is_reused() {
 fn scan_start_time_in_seconds_by_unit_name_or_accession() {
     let rt = |u: &str| {
         let h = format!("<spectrum id=\"s\"><scanList><scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"90\" {u}/>");
-        crate::spechead::parse(&h, &Default::default()).unwrap().rt_minutes()
+        crate::spechead::parse(&h, &Default::default())
+            .unwrap()
+            .rt_minutes()
     };
     assert_eq!(rt("unitName=\"second\""), 1.5);
     assert_eq!(rt("unitAccession=\"UO:0000010\""), 1.5);

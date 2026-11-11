@@ -696,8 +696,8 @@ fn finished(t: Table) -> Result<Table> {
 #[cfg(test)]
 mod tests_header;
 #[cfg(test)]
+mod tests_variants;
+#[cfg(test)]
 mod tests_walk;
 #[cfg(test)]
 mod tests_window;
-#[cfg(test)]
-mod tests_variants;

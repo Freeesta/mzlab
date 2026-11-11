@@ -15,7 +15,9 @@ fn run(n: usize, pad: usize) -> (Option<(f64, f64)>, f64) {
     let t = Instant::now();
     let g = Default::default();
     for i in 0..n {
-        let t = crate::spechead::parse(if i < 100 { &h } else { &late }, &g).unwrap().terms;
+        let t = crate::spechead::parse(if i < 100 { &h } else { &late }, &g)
+            .unwrap()
+            .terms;
         w.note_span(
             t.float("MS:1000501").zip(t.float("MS:1000500")),
             if i % 2 == 0 { 1 } else { 2 },
