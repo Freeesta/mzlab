@@ -4,6 +4,8 @@
 //! built-in list (`Layout::builtin`, the fallback when the folder has no xsd). A layout that does not divide the file (unless the copy is cut short, `parse`), a field
 //! of an unknown type or a missing required field is an error that names the numbers, never a guess.
 
+use std::collections::{HashMap, HashSet};
+
 use crate::error::{Error, Result};
 
 const DATA_OFFSET_AT: usize = 88;
@@ -97,6 +99,8 @@ struct Field {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layout {
     fields: Vec<Field>,
+    /// The first field of each name: an `MSScan.xsd` may list thousands of fields, and every record looks up about twenty of them.
+    index: HashMap<String, usize>,
     pub record_len: usize,
 }
 
@@ -112,14 +116,17 @@ impl Layout {
             });
             at += kind.size();
         }
-        if let Some(m) = REQUIRED
-            .iter()
-            .find(|r| !fields.iter().any(|f| f.name == **r))
-        {
+        let names: HashSet<&str> = fields.iter().map(|f| f.name.as_str()).collect();
+        if let Some(m) = REQUIRED.iter().find(|r| !names.contains(**r)) {
             return Err(bad(format!("the record layout has no {m}")));
+        }
+        let mut index = HashMap::with_capacity(fields.len());
+        for (k, f) in fields.iter().enumerate() {
+            index.entry(f.name.clone()).or_insert(k);
         }
         Ok(Layout {
             fields,
+            index,
             record_len: at,
         })
     }
@@ -221,31 +228,37 @@ impl Layout {
     }
 
     fn at(&self, name: &str) -> Option<&Field> {
-        self.fields.iter().find(|f| f.name == name)
+        self.fields.get(*self.index.get(name)?)
     }
 
     fn int(&self, r: &[u8], name: &str) -> Option<i64> {
-        let f = self.at(name)?;
-        let b = &r[f.at..f.at + f.kind.size()];
-        Some(match f.kind {
-            Kind::I8 => b[0] as i8 as i64,
-            Kind::I16 => i16::from_le_bytes([b[0], b[1]]) as i64,
-            Kind::I32 => i32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64,
-            Kind::I64 => i64::from_le_bytes(b.try_into().ok()?),
-            Kind::F32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64,
-            Kind::F64 => f64::from_le_bytes(b.try_into().ok()?) as i64,
-        })
+        int_of(r, self.at(name)?)
     }
 
     fn real(&self, r: &[u8], name: &str) -> Option<f64> {
-        let f = self.at(name)?;
-        let b = &r[f.at..f.at + f.kind.size()];
-        Some(match f.kind {
-            Kind::F32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]) as f64,
-            Kind::F64 => f64::from_le_bytes(b.try_into().ok()?),
-            _ => self.int(r, name)? as f64,
-        })
+        real_of(r, self.at(name)?)
     }
+}
+
+fn int_of(r: &[u8], f: &Field) -> Option<i64> {
+    let b = &r[f.at..f.at + f.kind.size()];
+    Some(match f.kind {
+        Kind::I8 => b[0] as i8 as i64,
+        Kind::I16 => i16::from_le_bytes([b[0], b[1]]) as i64,
+        Kind::I32 => i32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64,
+        Kind::I64 => i64::from_le_bytes(b.try_into().ok()?),
+        Kind::F32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]) as i64,
+        Kind::F64 => f64::from_le_bytes(b.try_into().ok()?) as i64,
+    })
+}
+
+fn real_of(r: &[u8], f: &Field) -> Option<f64> {
+    let b = &r[f.at..f.at + f.kind.size()];
+    Some(match f.kind {
+        Kind::F32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]) as f64,
+        Kind::F64 => f64::from_le_bytes(b.try_into().ok()?),
+        _ => int_of(r, f)? as f64,
+    })
 }
 
 fn attr(tag: &str, name: &str) -> Option<String> {

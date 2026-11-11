@@ -340,13 +340,15 @@ impl Sqlite {
             record_in(local_p, &self.limits, want, out)?;
             return Ok(rowid as i64);
         }
+        // every overflow page holds u - 4 bytes and comes once: a payload larger than the pages of the file, or a chain that meets a page again, is not read
+        if tot > self.pagine.saturating_mul(u as u64 - 4) {
+            return Err(broken("overflow payload"));
+        }
         let mut data = local_p.to_vec();
         let mut next = u32_be(p, start + local).ok_or_else(|| broken("overflow"))?;
-        let max_pages = tot / (u as u64 - 4) + 2;
-        let mut views = 0u64;
+        let mut seen = HashSet::new();
         while (data.len() as u64) < tot {
-            views += 1;
-            if views > max_pages {
+            if !seen.insert(next) {
                 return Err(broken("overflow chain"));
             }
             self.page_in(next, q)?;
