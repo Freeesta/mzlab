@@ -50,6 +50,7 @@ mod idxcheck;
 pub mod idxread;
 mod readat;
 pub mod idxsearch;
+pub mod idxsource;
 pub mod idxwalk;
 pub mod ionpattern;
 pub mod isofine;
