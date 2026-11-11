@@ -2,6 +2,7 @@
 (lxml/libxml2, strict: no recovery), in both compressions. The readers modules write the same bytes (`test_lettori_parita.py`), so this covers the
 site too. A vendor model text that is not a CV term name (angle brackets, quotes) stays in a userParam, and MS:1000031 keeps its CV name.
 lxml is a test-only dependency (`.[test]`); without it the test is skipped (MZLAB_GOLDEN_STRICT=1: fails)."""
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -13,7 +14,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from test_lettori_parita import create, mzxml, need, run  # noqa: E402
 
-etree = pytest.importorskip("lxml.etree")
+if os.environ.get("MZLAB_GOLDEN_STRICT") == "1":
+    from lxml import etree
+else:
+    etree = pytest.importorskip("lxml.etree")
 NS = "{http://psi.hupo.org/ms/mzml}"
 FAMILIES = ["aperti", "agilent", "waters", "shimadzu", "sciex", "thermo", "bruker", "andi"]
 
