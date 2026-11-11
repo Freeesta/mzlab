@@ -140,6 +140,7 @@ pub mod llm;
 mod llm_ctx;
 mod manual_table_cmd;
 mod mol_cut_cmd;
+mod mol_ions_cmd;
 mod mol_label_cmd;
 #[cfg(test)]
 mod msn_figure_tests;
@@ -180,6 +181,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
        mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help)
        mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help)
+       mzlab-cli mol-ions REQUEST.json|- [--set decimals=N] [--set ppm=X] [--out PATH]   the ESI+ and ESI- ions expected for drawn structures as JSON (mol-ions --help)
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
        mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help)

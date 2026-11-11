@@ -119,3 +119,28 @@ def test_labels_with_a_radical_mark_equal_the_cli(pkg, tmp_path):
     methyl, aminium = json.loads(site)["structures"]
     assert (methyl["unpaired"], methyl["odd"], methyl["kind"]) == (1, True, "radical")
     assert (aminium["kind"], aminium["electrons"]) == ("radicalCation", 9) and aminium["odd"]
+
+
+# ions/1: a chloro amine, a quaternary ammonium, a deuterated acid and a 13C-labelled sugar (atoms as the Draw page sends them)
+IONS = {"structures": [[{"el": "C", "h": 3}, {"el": "N", "h": 1}, {"el": "C", "h": 2}, {"el": "Cl"}], [{"el": "N", "q": 1}, {"el": "C", "h": 3}, {"el": "C", "h": 3}, {"el": "C", "h": 3}, {"el": "C", "h": 3}],
+                        [{"el": "C", "iso": 0}, {"el": "D"}, {"el": "D"}, {"el": "D"}, {"el": "C"}, {"el": "O"}, {"el": "O"}, {"el": "D"}],
+                        [{"el": "C", "iso": 13, "h": 2}, *[{"el": "C", "iso": 13, "h": 1}] * 4, {"el": "C", "iso": 13, "h": 1}, *[{"el": "O", "h": 1}] * 5, {"el": "O"}], [{"el": "R#"}]], "decimals": 4}
+
+
+@pytest.mark.parametrize("sets", [[], ["decimals=6", "ppm=2.5"]])
+def test_ions_through_wasm_equal_the_cli_byte_for_byte(pkg, tmp_path, sets):
+    req = tmp_path / "req.json"
+    body = dict(IONS)
+    for kv in sets:
+        k, v = kv.split("=")
+        body[k] = float(v)
+    req.write_text(json.dumps(IONS), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps(body), "ions")
+    app = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-ions", str(req), *[a for kv in sets for a in ("--set", kv)])
+    assert site == app
+    amine, quat, acid, sugar, bad = json.loads(site)["structures"]
+    rows = {r["name"]: r["mzText"] for r in amine["rows"]}
+    assert amine["formula"] == "C2H6ClN" and "[M+H]+" in rows and "[M-H]-" in rows
+    assert [(r["name"], r["z"]) for r in quat["rows"]] == [("[M]+", 1)]
+    assert next(r for r in acid["rows"] if r["name"] == "[M-H]-")["formula"] == "C2D3O2"
+    assert sugar["formula"] == "[13C]6H12O6" and bad["error"] == "error.etich.element"

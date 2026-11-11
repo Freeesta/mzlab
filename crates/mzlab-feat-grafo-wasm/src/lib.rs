@@ -43,6 +43,13 @@ pub fn labels(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::labels::labels_json(request).map_err(js_err)
 }
 
+/// `ions/1` of a request `{"structures", "decimals", "ppm"}`: the ESI+ and ESI− ions expected for each drawn structure (the adducts of the m/z
+/// calculator), m/z and XIC window (see `mzlab_feat::chem::ions::ions_json`; the same as `mzlab-cli mol-ions`).
+#[wasm_bindgen]
+pub fn ions(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::ions::ions_json(request).map_err(js_err)
+}
+
 /// `cut/1` of a request `{"molfile", "bonds", "mode", "cation", "gap"}`: the pieces of a cut across one or more bonds (homolytic, heterolytic or «+H»),
 /// the atoms it changes and how far each piece moves (see `mzlab_feat::chem::cut::cut_json`; the same as `mzlab-cli mol-cut`).
 #[wasm_bindgen]

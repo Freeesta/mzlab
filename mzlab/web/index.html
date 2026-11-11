@@ -84,6 +84,9 @@
     <div style="margin:2px 0"><label><input type="radio" name="cut-mode" value="hydrogen" autocomplete="off"> <span data-i18n="draw.cut.mode.hydrogen">Scorciatoia +H: un H per parte</span></label></div></fieldset>
    <div class="bar" style="margin-top:4px"><button type="button" id="cut-line" aria-pressed="false" data-i18n-title="draw.cut.line.title" title="Trascina sulla tela una linea attraverso i legami da rompere; Esc per uscire" data-i18n="draw.cut.line">Linea di taglio</button></div>
    <div id="cut-note" class="sm" role="status" style="margin-top:4px"></div></div>
+  <div class="card" id="ions-card"><h2 id="ions-h" data-i18n="draw.ions.heading">Ioni attesi</h2><p class="muted sm" style="margin:0 0 4px" data-i18n="draw.ions.help">Gli m/z della struttura disegnata (o della selezione) con gli addotti ESI consueti. Ogni riga &egrave; un candidato da cercare, non un'identificazione.</p>
+   <div class="bar"><button type="button" id="ions-go" data-i18n-title="draw.ions.go.title" title="Calcola gli ioni ESI+ ed ESI&minus; della struttura disegnata, o di quella selezionata" data-i18n="draw.ions.go">Mostra gli ioni attesi</button></div>
+   <div id="ions-body" class="sm" role="status" style="margin-top:4px"></div></div>
   <div class="card"><h2 data-i18n="draw.quick.heading">Disegna veloce</h2><div class="bar"><input id="ex-smi" data-i18n-placeholder="draw.quick.placeholder" placeholder="Incolla uno SMILES o cerca un composto" data-i18n-aria-label="draw.quick.label" aria-label="Incolla uno SMILES o cerca un composto" style="flex:1" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go"><button id="ex-load" data-i18n="draw.quick.button">Disegna</button></div>
    <div id="smi-warn" class="sm" role="status" style="color:var(--bad);margin-top:4px" hidden></div></div>
   <div class="card" id="sel-card" hidden><h2 data-i18n="draw.selection.heading">SMILES della selezione</h2><div id="sel-body"></div></div>

@@ -47,6 +47,7 @@
     "../../mzlab/web/disegno-cerca.js",
     "../../mzlab/web/disegno-barra.js",
     "../../mzlab/web/disegno-frammenti.js",
+    "../../mzlab/web/disegno-ioni.js",
     "../../mzlab/web/feat-manifesto.js",
     "../../mzlab/web/disegno-parziali.js",
     "../../mzlab/web/disegno-taglio.js",
