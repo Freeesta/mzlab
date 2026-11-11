@@ -81,8 +81,9 @@ pub fn max_bytes(n: usize) -> usize {
 }
 
 /// The values of a numpress stream: `expected` is the number the array declares (0: not said, then at most 8 M), and more than that is an error.
-/// The reference encoder ends an odd number of half bytes with a padding half byte 0x8 and its decoder stops at a lone 0x8, which is also the head of a zero (a zero difference
-/// at the very end, as in a perfectly linear axis): when the declared length is one more than the values read, that lone half byte is the last value, a zero.
+/// The reference encoder ends an odd number of half bytes with a padding half byte 0x0 and its decoder stops at a lone 0x0 (a 0 head is followed by eight half bytes, so it
+/// never ends a value). A lone 0x8 is the head of a zero (a zero difference at the very end, as in a perfectly linear axis) and the reference reads it as the last value;
+/// files mzLab wrote before it matched pad with 0x8 instead, so a lone 0x8 is padding only when the declared length is already reached.
 pub fn decode(np: Np, data: &[u8], expected: usize) -> Result<Vec<f64>> {
     let max = if expected == 0 { 8 << 20 } else { expected };
     match np {
@@ -165,7 +166,7 @@ impl Nibbles<'_> {
     fn left_is_zero_head(&self) -> bool {
         self.data.last().is_some_and(|b| b & 0xf == 0x8)
     }
-    /// True when only the padding half byte is left (the reference writes 0x8; a 0 is read the same, it cannot start an integer).
+    /// True when one half byte is left that cannot start an integer of its own: the reference's pad 0x0, or 0x8 (a zero, or the pad of older mzLab files).
     fn only_padding(&self) -> bool {
         if self.left() != 1 {
             return false;
@@ -207,7 +208,7 @@ fn linear(data: &[u8], max: usize, expected: usize) -> Result<Vec<f64>> {
     };
     while n.left() > 0 {
         if n.only_padding() {
-            if expected == out.len() + 1 && n.left_is_zero_head() {
+            if n.left_is_zero_head() && expected != out.len() {
                 push(&mut out, (p1 + (p1 - p0)) as f64 / fp, max)?;
             }
             break;
@@ -225,7 +226,7 @@ fn pic(data: &[u8], max: usize, expected: usize) -> Result<Vec<f64>> {
     let mut n = Nibbles { data, at: 0 };
     while n.left() > 0 {
         if n.only_padding() {
-            if expected == out.len() + 1 && n.left_is_zero_head() {
+            if n.left_is_zero_head() && expected != out.len() {
                 push(&mut out, 0.0, max)?;
             }
             break;
@@ -257,7 +258,7 @@ fn slof(data: &[u8], max: usize) -> Result<Vec<f64>> {
 
 // ---- encoders (the reference, for the tests; `mzmlwrite` writes with the `_into` forms) ----
 
-/// The half bytes of an integer sequence, packed two to a byte (high first) straight into the output; `end` pads an odd number with the half byte 0x8.
+/// The half bytes of an integer sequence, packed two to a byte (high first) straight into the output; `end` pads an odd number with the half byte 0x0, as the reference does.
 struct Halves<'a> {
     out: &'a mut Vec<u8>,
     pending: Option<u8>,
@@ -272,7 +273,7 @@ impl Halves<'_> {
     }
     fn end(self) {
         if let Some(hi) = self.pending {
-            self.out.push((hi << 4) | 0x8);
+            self.out.push(hi << 4);
         }
     }
 }
