@@ -224,6 +224,58 @@ export async function mechOf(/** @type {Record<string, any>} */ req) {
   catch (e) { try { return { error: /** @type {string} */ (JSON.parse(String(e)).error_key) }; } catch (_) { return null; } }
 }
 
+/** the overlay layer over the editor frame that takes the pointer while a tool is on */
+function makeLayer(/** @type {HTMLElement} */ host) {
+  const layer = document.createElement("div");
+  layer.id = "mech-layer"; layer.hidden = true; layer.setAttribute("aria-hidden", "true");
+  layer.innerHTML = '<svg width="100%" height="100%"><line stroke-dasharray="6 4" stroke-width="2.5" stroke-linecap="round" visibility="hidden"/></svg>';
+  host.appendChild(layer);
+  return layer;
+}
+
+/** atom names (symbol and position in the drawing, «O3») and the text of an end and of a row of the list */
+function words(/** @type {() => any} */ K, /** @type {Helpers} */ h) {
+  const t = h.t, name = (/** @type {number} */ i) => { const all = h.pieces().flatMap(p => p.ids), a = K().editor.struct().atoms.get(i); return `${a ? a.label : "?"}${all.indexOf(i) + 1}`; };
+  const endText = (/** @type {End} */ e) => e.t === "bond" ? t("draw.mech.end.bond", { a: name(e.i), b: name(e.j) }) : t(ENDS[e.t], { atom: name(e.i) });
+  const rowText = (/** @type {Arrow} */ a, /** @type {number} */ n) => t("draw.mech.row", { n, kind: t(a.pair ? "draw.mech.row.pair" : "draw.mech.row.single"), from: endText(a.from), to: endText(a.to) });
+  return { name, endText, rowText };
+}
+
+/** the list: one row per arrow with its check (`r`, the `mecc/1` answer or null) and a button that removes it; the status line under it */
+function fillList(/** @type {any} */ K, /** @type {Helpers} */ h, /** @type {HTMLElement} */ list, /** @type {HTMLElement} */ note, /** @type {any} */ r) {
+  const t = h.t, { name, rowText } = words(() => K, h);
+  const as = arrows(K); list.textContent = "";
+  if (!as.length) { const li = document.createElement("li"); li.className = "muted"; li.textContent = t("draw.mech.empty"); list.appendChild(li); }
+  as.forEach((a, k) => {
+    const li = document.createElement("li"), s = document.createElement("span"), x = document.createElement("button"), c = r && r.arrows && r.arrows[k];
+    s.textContent = rowText(a, k + 1) + (c ? " — " + (c.ok ? t("draw.mech.ok") : t(PROBLEMS[c.problem] || "draw.mech.problem.same")) : "");
+    if (c && !c.ok) s.style.color = "var(--bad)";
+    x.type = "button"; x.className = "sm"; x.textContent = t("draw.mech.remove"); x.setAttribute("aria-label", t("draw.mech.remove.label", { n: k + 1 }));
+    x.style.minWidth = x.style.minHeight = "24px"; x.addEventListener("click", () => { removeArrow(K, a); });
+    li.append(s, " ", x); list.appendChild(li);
+  });
+  const lp = r && r.lone ? r.lone.filter((/** @type {any} */ l) => !l.ok) : [], all = h.pieces().flatMap(p => p.ids);
+  const lines = lp.map((/** @type {any} */ l) => t("draw.mech.lp.bad", { atom: name(all[l.atom]), pairs: l.pairs, max: l.max }));
+  if (r && r.error) lines.push(t(r.error));
+  else if (r && as.length) lines.unshift(r.arrows.every((/** @type {any} */ c) => c.ok) ? t("draw.mech.all.ok") : t("draw.mech.all.bad", { n: r.arrows.filter((/** @type {any} */ c) => !c.ok).length }));
+  if (lines.length || r) note.textContent = lines.join(" ");
+}
+
+/** draws the arrows and dots over Ketcher's canvas and hides Ketcher's own text of the S-groups; returns the key of the drawing (a new key asks for a check) */
+function drawOver(/** @type {any} */ K, /** @type {SVGSVGElement} */ svg, /** @type {number} */ sc, /** @type {boolean[]} */ bad) {
+  let g = svg.querySelector("#mz-meccanismo");
+  if (!g) { g = svg.ownerDocument.createElementNS(NS, "g"); g.id = "mz-meccanismo"; g.setAttribute("pointer-events", "none"); }
+  svg.appendChild(g); g.textContent = "";
+  const as = arrows(K), lp = lonePairs(K), texts = new Set([...as.map(a => a.data), ...[...lp.values()].map(n => `lp ${n}`)]);
+  paint(K, g, sc, { ox: 0, oy: 0 }, bad);
+  if (texts.size) svg.querySelectorAll("text").forEach(x => {   // the text and the white box Ketcher puts under it, which would cover bonds
+    if (!texts.has((x.textContent || "").trim())) return;
+    x.style.visibility = "hidden"; const r = x.previousElementSibling; if (r && r.tagName.toLowerCase() === "rect") /** @type {SVGElement} */ (r).style.visibility = "hidden";
+  });
+  const st = K.editor.struct();
+  return JSON.stringify([as.map(a => a.data + a.atoms), [...lp], [...st.atoms].map(([i, a]) => [i, a.label, a.charge, a.radical]), [...st.bonds.values()].map(b => [b.begin, b.end, b.type])]);
+}
+
 /**
  * The «Mechanism» card: arrow kind, the arrow, lone-pair and «•+» tools over the editor frame, the keyboard path (start and end from the selection), the
  * list with one row per arrow and the status of the check. `draw(svg, sc)` is called by the labels of draw.js after every change of the drawing.
@@ -232,11 +284,7 @@ export async function mechOf(/** @type {Record<string, any>} */ req) {
 export function mountMech(o) {
   const q = (/** @type {string} */ s) => /** @type {HTMLElement} */ (o.root.querySelector(s));
   const btn = { arrow: q("#mech-arrow"), lone: q("#mech-lone"), ion: q("#mech-ion") }, keyBtn = q("#mech-key"), list = q("#mech-list"), note = q("#mech-note");
-  const host = /** @type {HTMLElement} */ (o.frame.parentElement), layer = document.createElement("div");
-  layer.id = "mech-layer"; layer.hidden = true; layer.setAttribute("aria-hidden", "true");
-  layer.innerHTML = '<svg width="100%" height="100%"><line stroke-dasharray="6 4" stroke-width="2.5" stroke-linecap="round" visibility="hidden"/></svg>';
-  host.appendChild(layer);
-  const line = /** @type {SVGLineElement} */ (layer.querySelector("line"));
+  const host = /** @type {HTMLElement} */ (o.frame.parentElement), layer = makeLayer(host), line = /** @type {SVGLineElement} */ (layer.querySelector("line"));
   /** @type {"arrow" | "lone" | "ion" | null} */ let mode = null;
   /** @type {{ x: number, y: number } | null} */ let from = null;
   /** @type {End | null} */ let keyStart = null;
@@ -248,9 +296,7 @@ export function mountMech(o) {
     if (m) { const f = o.frame.getBoundingClientRect(), hb = host.getBoundingClientRect(); Object.assign(layer.style, { left: f.left - hb.left + "px", top: f.top - hb.top + "px", width: f.width + "px", height: f.height + "px" }); }
   };
   const selected = () => { const s = o.K().editor.selection() || {}; return { atoms: /** @type {number[]} */ (s.atoms || []), bonds: /** @type {number[]} */ (s.bonds || []) }; };
-  const name = (/** @type {number} */ i) => { const all = o.h.pieces().flatMap(p => p.ids), a = o.K().editor.struct().atoms.get(i); return `${a ? a.label : "?"}${all.indexOf(i) + 1}`; };
-  const endText = (/** @type {End} */ e) => e.t === "bond" ? t("draw.mech.end.bond", { a: name(e.i), b: name(e.j) }) : t(ENDS[e.t], { atom: name(e.i) });
-  const rowText = (/** @type {Arrow} */ a, /** @type {number} */ n) => t("draw.mech.row", { n, kind: t(a.pair ? "draw.mech.row.pair" : "draw.mech.row.single"), from: endText(a.from), to: endText(a.to) });
+  const { endText, rowText } = words(o.K, o.h);
   const add = async (/** @type {End} */ f, /** @type {End} */ e) => {
     const K = o.K(), p = pair();
     if (!(await addArrow(K, p, f, e))) { note.textContent = t("draw.mech.onePiece"); return; }
@@ -292,24 +338,7 @@ export function mountMech(o) {
     const f = keyStart; keyStart = null; keyBtn.textContent = t("draw.mech.key");
     add(f, b ? { t: "bond", i: b.begin, j: b.end } : { t: "atom", i: s.atoms[0] });
   });
-  /** the list: one row per arrow with its check, and a button that removes it */
-  const fill = (/** @type {any} */ r) => {
-    const as = arrows(o.K()); list.textContent = "";
-    if (!as.length) { const li = document.createElement("li"); li.className = "muted"; li.textContent = t("draw.mech.empty"); list.appendChild(li); }
-    as.forEach((a, k) => {
-      const li = document.createElement("li"), s = document.createElement("span"), x = document.createElement("button"), c = r && r.arrows && r.arrows[k];
-      s.textContent = rowText(a, k + 1) + (c ? " — " + (c.ok ? t("draw.mech.ok") : t(PROBLEMS[c.problem] || "draw.mech.problem.same")) : "");
-      if (c && !c.ok) s.style.color = "var(--bad)";
-      x.type = "button"; x.className = "sm"; x.textContent = t("draw.mech.remove"); x.setAttribute("aria-label", t("draw.mech.remove.label", { n: k + 1 }));
-      x.style.minWidth = x.style.minHeight = "24px"; x.addEventListener("click", () => { removeArrow(o.K(), a); });
-      li.append(s, " ", x); list.appendChild(li);
-    });
-    const lp = r && r.lone ? r.lone.filter((/** @type {any} */ l) => !l.ok) : [], all = o.h.pieces().flatMap(p => p.ids);
-    const lines = lp.map((/** @type {any} */ l) => t("draw.mech.lp.bad", { atom: name(all[l.atom]), pairs: l.pairs, max: l.max }));
-    if (r && r.error) lines.push(t(r.error));
-    else if (r && as.length) lines.unshift(r.arrows.every((/** @type {any} */ c) => c.ok) ? t("draw.mech.all.ok") : t("draw.mech.all.bad", { n: r.arrows.filter((/** @type {any} */ c) => !c.ok).length }));
-    if (lines.length || r) note.textContent = lines.join(" ");
-  };
+  const fill = (/** @type {any} */ r) => fillList(o.K(), o.h, list, note, r);
   const check = async (/** @type {() => void} */ redraw) => {
     const me = ++run, K = o.K(), r = requestOf(K, o.h);
     if (!r || (!r.req.arrows.length && !r.req.lone.length)) { bad = []; fill(null); return; }
@@ -322,16 +351,7 @@ export function mountMech(o) {
     off: () => set(null),
     /** draws the arrows and dots over Ketcher's canvas and hides Ketcher's own text of the S-groups; a changed drawing is checked again */
     draw(/** @type {SVGSVGElement} */ svg, /** @type {number} */ sc) {
-      const K = o.K(); let g = svg.querySelector("#mz-meccanismo");
-      if (!g) { g = svg.ownerDocument.createElementNS(NS, "g"); g.id = "mz-meccanismo"; g.setAttribute("pointer-events", "none"); }
-      svg.appendChild(g); g.textContent = "";
-      const as = arrows(K), lp = lonePairs(K), texts = new Set([...as.map(a => a.data), ...[...lp.values()].map(n => `lp ${n}`)]);
-      paint(K, g, sc, { ox: 0, oy: 0 }, bad);
-      if (texts.size) svg.querySelectorAll("text").forEach(x => {   // the text and the white box Ketcher puts under it, which would cover bonds
-        if (!texts.has((x.textContent || "").trim())) return;
-        x.style.visibility = "hidden"; const r = x.previousElementSibling; if (r && r.tagName.toLowerCase() === "rect") /** @type {SVGElement} */ (r).style.visibility = "hidden";
-      });
-      const st = K.editor.struct(), key = JSON.stringify([as.map(a => a.data + a.atoms), [...lp], [...st.atoms].map(([i, a]) => [i, a.label, a.charge, a.radical]), [...st.bonds.values()].map(b => [b.begin, b.end, b.type])]);
+      const key = drawOver(o.K(), svg, sc, bad);
       if (key !== lastKey) { lastKey = key; check(() => { const R = o.K().editor.render; if (R) this.draw(R.paper.canvas, R.options.microModeScale || 40); }); }
     },
   };

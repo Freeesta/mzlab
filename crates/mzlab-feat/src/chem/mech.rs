@@ -115,9 +115,16 @@ struct Drawn {
     pairs: Vec<Option<u32>>,
 }
 
-/// Reads the molfile. Explicit H atoms (the γ-H of a McLafferty rearrangement is drawn) are taken out before the graph reader, which fills them back
-/// by valence on their heavy atom; an H keeps its own place for the arrows and holds no lone pair.
-fn drawn(mf: &str) -> Result<Drawn> {
+/// The molfile without its explicit H atoms (the graph reader fills them back by valence on their heavy atom), with every bond of the drawing,
+/// the radical codes and, for each drawn atom, its position in the new molfile (None for an H).
+struct Heavy {
+    mf: String,
+    bonds: Vec<(usize, usize)>,
+    rad: Vec<(usize, i32)>,
+    at: Vec<Option<usize>>,
+}
+
+fn heavy(mf: &str) -> Result<Heavy> {
     let bad = || Error::new("error.grafo.molfile");
     let lines: Vec<&str> = mf.lines().collect();
     let num =
@@ -130,12 +137,14 @@ fn drawn(mf: &str) -> Result<Drawn> {
     if lines.len() < 4 + na + nb {
         return Err(bad());
     }
-    let is_h: Vec<bool> = lines[4..4 + na]
-        .iter()
-        .map(|l| l.get(31..34).map(str::trim) == Some("H"))
-        .collect();
-    let heavy: Vec<usize> = (0..na).filter(|i| !is_h[*i]).collect();
-    let new_of = |i: usize| heavy.iter().position(|h| *h == i);
+    let mut at = vec![None; na];
+    let mut n = 0;
+    for (i, l) in lines[4..4 + na].iter().enumerate() {
+        if l.get(31..34).map(str::trim) != Some("H") {
+            at[i] = Some(n);
+            n += 1;
+        }
+    }
     let mut bonds = vec![];
     let mut kept = vec![];
     for l in &lines[4 + na..4 + na + nb] {
@@ -144,7 +153,7 @@ fn drawn(mf: &str) -> Result<Drawn> {
             return Err(bad());
         }
         bonds.push((a - 1, b - 1));
-        if let (Some(x), Some(y)) = (new_of(a - 1), new_of(b - 1)) {
+        if let (Some(x), Some(y)) = (at[a - 1], at[b - 1]) {
             kept.push(format!(
                 "{:>3}{:>3}{}",
                 x + 1,
@@ -154,36 +163,47 @@ fn drawn(mf: &str) -> Result<Drawn> {
         }
     }
     let tail = &lines[4 + na + nb..];
-    let (chg, rad, iso) = (
-        props(tail, "M  CHG", na),
-        props(tail, "M  RAD", na),
-        props(tail, "M  ISO", na),
-    );
-    let mut heavy_mf = lines[..3].join("\n")
+    let rad = props(tail, "M  RAD", na);
+    let mut out = lines[..3].join("\n")
         + &format!(
             "\n{:>3}{:>3}{}\n",
-            heavy.len(),
+            n,
             kept.len(),
             counts.get(6..).unwrap_or("")
         );
-    for &i in &heavy {
-        heavy_mf += lines[4 + i];
-        heavy_mf += "\n";
+    for i in (0..na).filter(|i| at[*i].is_some()) {
+        out += lines[4 + i];
+        out += "\n";
     }
     for l in &kept {
-        heavy_mf += l;
-        heavy_mf += "\n";
+        out += l;
+        out += "\n";
     }
-    for (key, list) in [("M  CHG", &chg), ("M  RAD", &rad), ("M  ISO", &iso)] {
-        for &(i, v) in list.iter() {
-            if let Some(x) = new_of(i) {
-                heavy_mf += &format!("{key}  1 {:>3} {v:>3}\n", x + 1);
+    for (key, list) in [
+        ("M  CHG", props(tail, "M  CHG", na)),
+        ("M  RAD", rad.clone()),
+        ("M  ISO", props(tail, "M  ISO", na)),
+    ] {
+        for (i, v) in list {
+            if let Some(x) = at[i] {
+                out += &format!("{key}  1 {:>3} {v:>3}\n", x + 1);
             }
         }
     }
-    let m = Mol::from_molfile(&(heavy_mf + "M  END"))?;
-    let mut unp = vec![0u64; na];
-    for &(i, c) in &rad {
+    Ok(Heavy {
+        mf: out + "M  END",
+        bonds,
+        rad,
+        at,
+    })
+}
+
+/// Reads the molfile (explicit H atoms, such as the γ-H of a McLafferty rearrangement, keep their own place for the arrows and hold no lone pair).
+fn drawn(mf: &str) -> Result<Drawn> {
+    let h = heavy(mf)?;
+    let m = Mol::from_molfile(&h.mf)?;
+    let mut unp = vec![0u64; h.at.len()];
+    for &(i, c) in &h.rad {
         unp[i] = unpaired_of(c as i64);
     }
     let mut order = vec![0f32; m.atoms.len()];
@@ -191,8 +211,8 @@ fn drawn(mf: &str) -> Result<Drawn> {
         order[b.a] += b.order;
         order[b.b] += b.order;
     }
-    let pairs = (0..na)
-        .map(|i| match new_of(i) {
+    let pairs = (0..h.at.len())
+        .map(|i| match h.at[i] {
             None => Some(0),
             Some(x) => {
                 let a = &m.atoms[x];
@@ -204,7 +224,11 @@ fn drawn(mf: &str) -> Result<Drawn> {
             }
         })
         .collect();
-    Ok(Drawn { bonds, unp, pairs })
+    Ok(Drawn {
+        bonds: h.bonds,
+        unp,
+        pairs,
+    })
 }
 
 /// The first reason an arrow is not well formed, or None.
