@@ -92,9 +92,7 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
                 if crate::wiff::dad::wiff2_sample_info(ole, sample).is_some() {
                     return Err(Error::new("err.file.wiffNeeds2"));
                 }
-                return Err(Error::new("err.file.wiffScanType")
-                    .with("code", c)
-                    .with("experiment", i + 1));
+                return Err(super::scan_type_error(c, i + 1));
             }
             Some(_) => {}
             None => return Err(bad(&format!("no scan type code (experiment {})", i + 1))),

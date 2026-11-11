@@ -423,6 +423,7 @@ impl<'a, 'b> Scans<'a, 'b> {
 impl Reader for Scans<'_, '_> {
     fn format(&self) -> Format { self.l.format() }
     fn samples(&self) -> &[Sample] { self.l.samples() }
+    fn unindexed(&self) -> (usize, usize) { self.l.unindexed() }
     fn index(&mut self, c: usize) -> mzlab_core::Result<&[ScanEntry]> { self.l.index(c) }
     fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scan(c, k); self.count(c); s }
     fn scan_data(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scan_data(c, k); self.count(c); s }

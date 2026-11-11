@@ -31,7 +31,7 @@ def engine(work, c):
 
 def test_the_engine_refuses_a_scan_type_it_does_not_read(work):
     p = engine(work, 1)
-    assert p.returncode != 0 and "scan type code 6 (experiment 1)" in p.stderr, (p.returncode, p.stdout[-500:], p.stderr[-1500:])
+    assert p.returncode != 0 and "err.file.wiffScanType" in p.stderr and '"code":"6"' in p.stderr and '"experiment":"1"' in p.stderr and '"type":"PI"' in p.stderr, (p.returncode, p.stdout[-500:], p.stderr[-1500:])
 
 
 def test_the_engine_still_reads_the_native_sample(work):

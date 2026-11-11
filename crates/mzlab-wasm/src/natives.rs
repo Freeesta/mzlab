@@ -201,36 +201,6 @@ pub(crate) fn reader(n: &mut Natives, ds: String) -> Result<&mut dyn Reader, JsV
     }
 }
 
-/// The samples of a dataset (`names`, `sizes`, `read(member, offset, length)`): JSON `{"format": id, "samples": [{"id", "name", "scans"}]}`.
-#[wasm_bindgen]
-pub fn native_samples(
-    names: js_sys::Array,
-    sizes: &[f64],
-    read: Function,
-) -> Result<String, JsValue> {
-    use mzlab_core::json::Out;
-    let l = Members::new(names, sizes, read)?.open(false)?;
-    let mut o = Out::default();
-    o.raw("{\"format\":")
-        .str(&format!("{:?}", l.format()))
-        .raw(",\"samples\":[");
-    for (i, s) in l.samples().iter().enumerate() {
-        let p = if i > 0 { ",{\"id\":" } else { "{\"id\":" };
-        o.raw(p)
-            .int(i64::from(s.id))
-            .raw(",\"name\":")
-            .str(&s.nome)
-            .raw(",\"scans\":")
-            .int(s.scansioni as i64);
-        if let Some(dim) = s.size {
-            o.raw(",\"size\":").int(dim as i64);
-        }
-        o.raw("}");
-    }
-    o.raw("]}");
-    Ok(o.0)
-}
-
 /// The fingerprints of a member taken while it is copied: `aggiorna(piece)` for each piece in file order, then `fine()` gives `[sha256, sha1, probe]`
 /// (`undefined` when the pieces do not add up to `size`). The page passes them on to `build_mzidx_native` and to the reader of the header of the mzML.
 #[wasm_bindgen]

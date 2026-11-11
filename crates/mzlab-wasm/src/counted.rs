@@ -48,6 +48,7 @@ impl Counting {
 impl Reader for Counting {
     fn format(&self) -> readers::Format { self.l.format() }
     fn samples(&self) -> &[readers::Sample] { self.l.samples() }
+    fn unindexed(&self) -> (usize, usize) { self.l.unindexed() }
     fn index(&mut self, c: usize) -> mzlab_core::Result<&[readers::ScanEntry]> { self.l.index(c) }
     fn index_without_tic(&mut self, c: usize) -> mzlab_core::Result<&[readers::ScanEntry]> { self.l.index_without_tic(c) }
     fn scan(&mut self, c: usize, k: usize) -> mzlab_core::Result<mzlab_core::mzml::Spectrum> { let s = self.l.scan(c, k); self.count(c); s }
