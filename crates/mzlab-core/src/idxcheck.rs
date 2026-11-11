@@ -82,9 +82,18 @@ pub(crate) fn sum(crcs: &[Option<[u32; 10]>], si: usize, k: usize, bytes: &[u8])
     else {
         return Ok(());
     };
-    // the small table CRC of `zip`, not flate2's: the feature modules link this reader without flate2, under their size caps
-    if crate::zip::crc32(bytes) != want {
+    if crc32(bytes) != want {
         return Err(Error::new("error.badIndex"));
     }
     Ok(())
+}
+
+/// IEEE CRC-32, bit by bit: no table and no flate2, so the feature modules that link this reader keep their size caps and their memory layout
+/// (the arrays checked are the per-scan ones and the fence, small beside the peaks).
+fn crc32(bytes: &[u8]) -> u32 {
+    !bytes.iter().fold(!0u32, |c, &b| {
+        (0..8).fold(c ^ u32::from(b), |c, _| {
+            (c >> 1) ^ (0xEDB8_8320 & 0u32.wrapping_sub(c & 1))
+        })
+    })
 }
