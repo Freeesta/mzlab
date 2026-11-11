@@ -7,11 +7,14 @@ import { ensureRoom } from "./archivio.js";
 export function makeNativo(h) {
   // the files of the session that are samples of a maker's file
   const names = new Set();
-  const fail = (/** @type {any} */ r, /** @type {string} */ key) => {
-    let e = { error_key: key, params: {} };
-    try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* the worker was lost */ }
+  // the engine's worded refusal when it gave one; else (the worker was lost, a bare error text) `key` names the file and carries the text as `detail`
+  const fail = (/** @type {any} */ r, /** @type {string} */ key, /** @type {string} */ name) => {
+    let e = { error_key: key, params: { name, detail: String(r.error || "–").slice(0, 300) } };
+    try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* not a refusal of the engine */ }
     return Object.assign(new Error(e.error_key), { json: { error: e.error_key, ...e } });
   };
+  // a dataset is named by its first member: the .wiff of a pair, the folder of a .D
+  const dataset = (/** @type {{ name: string }[]} */ m) => (m[0] ? m[0].name.split("/")[0] : "");
   return {
     nativo: true,
     markNative: (/** @type {string} */ n) => { names.add(h.base(n)); },
@@ -22,7 +25,7 @@ export function makeNativo(h) {
     /** the samples of a dataset (`members`: [{ name, blob }], names relative to the dataset): { format, samples: [{ id, name, scans }] } */
     async nativeSamples(/** @type {{ name: string, blob: Blob }[]} */ members) {
       const r = await h.rpc({ op: "natsamples", members });
-      if (r.dead || r.error) throw fail(r, "err.file.notAccepted");
+      if (r.dead || r.error) throw fail(r, "err.file.nativeStopped", dataset(members));
       return JSON.parse(r.info);
     },
     /** which of `names` (files of the session) are samples of these very files (`members`: [{ name, blob }]: same names, sizes and lastModified) with their index kept: the same dataset given again (the blob: the desktop app knows a file by its number) */
@@ -34,13 +37,13 @@ export function makeNativo(h) {
     /** the SRM traces of the sample `name` as `srm::impacchetta` writes them (a Uint8Array): mzFinder integrates an MRM file from them without an mzML */
     async nativeSrm(/** @type {string} */ name) {
       const r = await h.rpc({ op: "natsrm", name: h.base(name) });
-      if (r.dead || r.error) throw fail(r, "err.file.notAccepted");
+      if (r.dead || r.error) throw fail(r, "err.file.nativeStopped", h.base(name));
       return r.srm;
     },
     /** the index of the sample `name` with its scans as centroids (`<name>.cen.mzidx` of OPFS idx/, apart from the one of the Data tab), for mzFinder */
     async nativeCentroidIndex(/** @type {string} */ name) {
       const r = await h.rpc({ op: "lr_index_cen", name: h.base(name) });
-      if (r.dead || r.error) throw fail(r, "err.engine.index");
+      if (r.dead || r.error) throw fail(r, "err.engine.index", h.base(name));
     },
     /** desktop app: the background conversion queue (`conv_add` / `conv_list` / `conv_cancel`); `{jobs: [{name, state, error}], notice?: {key, params}}` or null */
     async convQueue(/** @type {string} */ op, /** @type {string | undefined} */ name) {
@@ -65,7 +68,7 @@ export function makeNativo(h) {
       const r = await h.rpc({ op: "nat2mzml", name: h.base(name), dest, compression: compression || "standard" }, onProgress);
       if (signal) signal.removeEventListener("abort", onAbort);
       if (r.cancelled || signal && signal.aborted) { drop(); throw cancelled(); }
-      if (r.dead || r.error) { drop(); throw fail(r, "err.file.mzmlWrite"); }
+      if (r.dead || r.error) { drop(); throw fail(r, "err.file.mzmlWrite", h.base(name)); }
       // desktop app: the mzML is on the disk, saved from there (conversione.js download)
       if (r.tid != null) return Object.assign(new Blob([]), { mzlabId: r.tid, mzlabSize: r.size });
       return r.file || new Blob(r.parts, { type: "application/xml" });
