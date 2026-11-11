@@ -1629,14 +1629,11 @@ impl RawFileReader {
     ) -> Option<String> {
         let entry = self.scan_index.get(idx)?;
 
-        // SRM files have no scan events; build the filter string from
-        // the pre-loaded Q1 and Q3 window maps.
+        // An SRM scan's own event holds its Q1 and product ranges; the transition table found in the method is the source only for a run without events.
         if self.flat_peaks {
-            let Some(text) = self.srm_filters.get(&entry.scan_event) else {
-                // A TSQ run whose events are one per scan (no event class): the event itself holds Q1 and the product ranges.
-                return self.srm_event_filter(idx);
-            };
-            return Some(text.clone());
+            return self
+                .srm_event_filter(idx)
+                .or_else(|| self.srm_filters.get(&entry.scan_event).cloned());
         }
 
         let owned;
@@ -1869,6 +1866,8 @@ const SCAN_PARAM_LABELS: &[&str] = &[
     "Reagent Ion AGC:",
     "Reagent Ion Injection Time (ms):",
     "S-Lens RF Level:",
+    "SPS Masses Continued:",
+    "SPS Masses:",
     "Scan Description:",
     "Source CID eV:",
     "Supplemental Activation CE:",

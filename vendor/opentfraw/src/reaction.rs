@@ -27,6 +27,9 @@ pub struct ReactionInfo {
     pub raw_long2: u32,
     /// Several precursors isolated together at this level (MSX, multi-band DIA): more steps than the level has, so they are not a chain.
     pub multiple: bool,
+    /// Selected ion and charge of this step, when the trailer's monoisotopic m/z and charge are known to be this step's (the first of an MSn chain).
+    pub selected_mz: Option<f64>,
+    pub charge: Option<i32>,
 }
 
 /// What the trailer says about the final reaction.
@@ -115,14 +118,23 @@ pub fn chain(event: &ScanEvent, fin: &FinalReaction) -> Vec<ReactionInfo> {
                 multiple,
                 ..info(rx)
             };
+            // precursors isolated together share the event's one isolation setting
+            if multiple {
+                out.isolation_width = fin.isolation_width;
+            }
             if i != last {
                 out.activation = rx.activation().or(act);
                 out.energy_is_nce = fin.energy_is_nce;
                 return out;
             }
             out.isolation_width = fin.isolation_width;
-            out.energy = fin.energy.or(out.energy);
-            out.energy_is_nce = fin.energy.is_some() && fin.energy_is_nce;
+            // with several steps the trailer's one energy may be any step's: each step keeps its own, the trailer only fills a step without one
+            if valid >= 2 && out.energy.is_some() {
+                out.energy_is_nce = fin.energy_is_nce;
+            } else {
+                out.energy = fin.energy.or(out.energy);
+                out.energy_is_nce = fin.energy.is_some() && fin.energy_is_nce;
+            }
             out.energy_steps = fin.energy_steps.clone();
             if act == Some(Activation::EThcD) {
                 out.activation = Some(Activation::ETD);
@@ -304,6 +316,7 @@ mod tests {
         }
         let mut r = crate::reader::BinaryReader::new(std::io::Cursor::new(bytes));
         let e = ScanEvent::read(&mut r, 66, [COUNTED_BODY; 3]).unwrap();
+        // the trailer's 40 may be either step's: each step keeps the energy of its own reaction
         let c = chain(&e, &fin(40.0, true));
         let got: Vec<_> = c
             .iter()
@@ -313,7 +326,7 @@ mod tests {
             got,
             vec![
                 (500.0, Some(Activation::CID), Some(25.0)),
-                (300.0, Some(Activation::HCD), Some(40.0))
+                (300.0, Some(Activation::HCD), Some(25.0))
             ]
         );
     }
@@ -366,6 +379,8 @@ mod tests {
         );
         assert_eq!(msx.len(), 3);
         assert!(msx.iter().all(|r| r.multiple));
+        // one isolation setting for the whole event: every window has its width
+        assert!(msx.iter().all(|r| r.isolation_width == Some(1.2)));
         let ms3 = chain(
             &event(3, 4, 4, vec![rx(500.0, 35.0, 1), rx(300.0, 0.0, 11)]),
             &fin(40.0, true),

@@ -43,8 +43,8 @@ fn energy_term(nce: bool) -> String {
     if nce { "MS:1000138" } else { "MS:1000045" }.to_string()
 }
 
-/// The precursor of one of several reactions isolated together: its m/z is target and selected ion, its window and energy are its own (absent when
-/// the file gives them only for the final reaction).
+/// The precursor of one reaction: its m/z is the target, the selected ion the step's own when known (else the target), its window, activation and
+/// energy its own (absent when the file does not give them for this step).
 fn reaction_precursor(
     r: &opentfraw::ReactionInfo,
     analyzer: Option<Analyzer>,
@@ -52,8 +52,8 @@ fn reaction_precursor(
 ) -> Precursore {
     let half = r.isolation_width.map(|w| w / 2.0);
     Precursore {
-        selected_mz: Some(r.precursor_mz),
-        charge: None,
+        selected_mz: r.selected_mz.or(Some(r.precursor_mz)),
+        charge: r.charge.filter(|&z| z > 0),
         intensity: None,
         iso_target: Some(r.precursor_mz),
         iso_lower: half,
@@ -67,8 +67,9 @@ fn reaction_precursor(
     }
 }
 
-/// The precursors of a scan: one per reaction when several were isolated together (MSX, multi-band), each with its own target, window and energy;
-/// else the one precursor of the final reaction, its selected ion from the trailer (`fallback`: the spectrum's own when the trailer gives none).
+/// The precursors of a scan. Several isolated together (MSX, multi-band): one per reaction, each with its own target, window and energy. An MSn
+/// chain: one per step, the final step's first (its SPS ions when the trailer names them), the trailer's selected ion and charge on the first step
+/// only. A single step: the trailer's selected ion (`fallback`: the spectrum's own when the trailer gives none).
 fn precursors(
     p: &opentfraw::PrecursorInfo,
     fallback: Option<f64>,
@@ -80,6 +81,31 @@ fn precursors(
             .iter()
             .map(|r| reaction_precursor(r, p.analyzer, spectrum_ref.clone()))
             .collect();
+    }
+    if let [earlier @ .., last] = p.reactions.as_slice()
+        && !earlier.is_empty()
+    {
+        let mut out: Vec<Precursore> = if p.sps_mz.is_empty() {
+            vec![reaction_precursor(last, p.analyzer, spectrum_ref)]
+        } else {
+            p.sps_mz
+                .iter()
+                .map(|&mz| Precursore {
+                    selected_mz: Some(mz),
+                    iso_target: Some(mz),
+                    iso_lower: None,
+                    iso_upper: None,
+                    ..reaction_precursor(last, p.analyzer, spectrum_ref.clone())
+                })
+                .collect()
+        };
+        out.extend(
+            earlier
+                .iter()
+                .rev()
+                .map(|r| reaction_precursor(r, p.analyzer, None)),
+        );
+        return out;
     }
     let half = p.isolation_width.map(|w| w / 2.0);
     vec![Precursore {
@@ -222,8 +248,8 @@ mod tests {
             isolation_width: Some(2.0),
             collision_energy: Some(30.0),
             reactions: vec![
-                rx(400.2, Some(25.0), None, true),
-                rx(550.3, Some(28.0), None, true),
+                rx(400.2, Some(25.0), Some(2.0), true),
+                rx(550.3, Some(28.0), Some(2.0), true),
                 rx(700.0, Some(30.0), Some(2.0), true),
             ],
             ..Default::default()
@@ -233,8 +259,8 @@ mod tests {
         let mz: Vec<_> = v.iter().map(|q| q.selected_mz).collect();
         assert_eq!(mz, [Some(400.2), Some(550.3), Some(700.0)]);
         assert_eq!(v[0].iso_target, Some(400.2));
-        // only the final reaction's window is in the file: the others have none, not the final one's
-        assert_eq!((v[0].iso_lower, v[2].iso_lower), (None, Some(1.0)));
+        // each window around its own target, not one window around the last
+        assert!(v.iter().all(|q| q.iso_lower == Some(1.0)));
         assert_eq!(v[1].energy.as_ref().map(|e| e.1), Some(28.0));
         assert!(v
             .iter()
@@ -242,14 +268,57 @@ mod tests {
     }
 
     #[test]
-    fn a_chain_is_one_precursor_and_an_unknown_activation_has_no_term() {
+    fn an_msn_chain_gives_one_precursor_per_step_with_the_trailer_ion_on_the_first() {
+        let mut first = rx(800.0, Some(35.0), None, false);
+        first.selected_mz = Some(799.9);
+        first.charge = Some(2);
+        let p = PrecursorInfo {
+            target_mz: Some(500.0),
+            selected_mz: Some(500.0),
+            isolation_width: Some(1.0),
+            reactions: vec![first, rx(500.0, Some(27.0), Some(1.0), false)],
+            ..Default::default()
+        };
+        let v = precursors(&p, None, Some("scan=2".into()));
+        assert_eq!(v.len(), 2);
+        // the final step first, with its own energy and window and no charge of another step
+        assert_eq!((v[0].selected_mz, v[0].charge), (Some(500.0), None));
+        assert_eq!(v[0].energy.as_ref().map(|e| e.1), Some(27.0));
+        assert_eq!(v[0].iso_lower, Some(0.5));
+        assert_eq!(v[0].spectrum_ref.as_deref(), Some("scan=2"));
+        assert_eq!((v[1].selected_mz, v[1].charge), (Some(799.9), Some(2)));
+        assert_eq!(v[1].iso_target, Some(800.0));
+        assert_eq!(v[1].energy.as_ref().map(|e| e.1), Some(35.0));
+        assert!(v[1].spectrum_ref.is_none());
+    }
+
+    #[test]
+    fn the_sps_ions_are_the_final_step_of_an_ms3() {
+        let p = PrecursorInfo {
+            target_mz: Some(677.3),
+            reactions: vec![
+                rx(599.8, Some(27.0), None, false),
+                rx(677.3, Some(33.0), Some(2.0), false),
+            ],
+            sps_mz: vec![410.2, 520.3, 633.4],
+            ..Default::default()
+        };
+        let v = precursors(&p, None, None);
+        let mz: Vec<_> = v.iter().map(|q| q.iso_target).collect();
+        assert_eq!(mz, [Some(410.2), Some(520.3), Some(633.4), Some(599.8)]);
+        // a notch has no window the file gives
+        assert!(v[..3].iter().all(|q| q.iso_lower.is_none()));
+        assert!(v[..3]
+            .iter()
+            .all(|q| q.energy.as_ref().map(|e| e.1) == Some(33.0)));
+    }
+
+    #[test]
+    fn a_single_step_is_one_precursor_and_an_unknown_activation_has_no_term() {
         let p = PrecursorInfo {
             target_mz: Some(500.0),
             isolation_width: Some(1.0),
-            reactions: vec![
-                rx(800.0, None, None, false),
-                rx(500.0, None, Some(1.0), false),
-            ],
+            reactions: vec![rx(500.0, None, Some(1.0), false)],
             ..Default::default()
         };
         let v = precursors(&p, Some(499.0), None);

@@ -49,8 +49,18 @@ pub struct PrecursorInfo {
     pub sps_mz: Vec<f64>,
 }
 
-/// The SPS-MS3 synchronous precursors of a scan: `SPS Mass 1..N` of the trailer in channel order, up to the first channel the trailer does not have.
+/// The SPS-MS3 synchronous precursors of a scan: the comma lists `SPS Masses` and `SPS Masses Continued` of the trailer when it has them, else
+/// `SPS Mass 1..N` in channel order, up to the first channel the trailer does not have.
 pub fn sps_masses(p: &crate::ScanParams<'_>) -> Vec<f64> {
+    let listed: Vec<f64> = ["SPS Masses:", "SPS Masses Continued:"]
+        .iter()
+        .filter_map(|l| p.0.get_string(l))
+        .flat_map(|t| t.split(',').filter_map(|x| x.trim().parse::<f64>().ok()))
+        .filter(|x| x.is_finite() && *x > 0.0)
+        .collect();
+    if !listed.is_empty() {
+        return listed;
+    }
     (0..64)
         .map_while(|c| p.sps_mass(c))
         .map(f64::from)
@@ -241,13 +251,13 @@ pub fn scan_metadata_with(
                 .as_ref()
                 .and_then(|p| p.charge_state())
                 .filter(|&z| z > 0);
-            // the selected ion is the trailer's monoisotopic m/z when it lies where the window could have taken it from, else the target
-            let sm = params
+            let mono = params
                 .as_ref()
                 .and_then(|p| p.monoisotopic_mz())
-                .filter(|&mz| mz > 0.0)
-                .filter(|&mono| plausible_selected_ion(mono, tm, iw, ch))
-                .or(tm);
+                .filter(|&mz| mz > 0.0);
+            let n_steps = event.map_or(0, |e| {
+                e.reactions.iter().filter(|r| r.precursor_mz > 0.0).count()
+            });
             let ae_from_params = params
                 .as_ref()
                 .and_then(|p| p.activation_energy())
@@ -257,13 +267,19 @@ pub fn scan_metadata_with(
                     .as_ref()
                     .map(|p| p.activation_energy_is_nce())
                     .unwrap_or(false);
-            let ae = ae_from_params.or_else(|| reaction.map(|r| r.energy).filter(|&e| e > 0.0));
+            let own_energy = reaction.map(|r| r.energy).filter(|&e| e > 0.0);
+            // with several steps each keeps its own energy; the trailer's one value only for a step without one
+            let ae = if n_steps >= 2 && own_energy.is_some() {
+                own_energy
+            } else {
+                ae_from_params.or(own_energy)
+            };
             let master = params
                 .as_ref()
                 .and_then(|p| p.master_scan_number())
                 .filter(|&n| n > 0)
                 .map(|n| n as u32);
-            let reactions = event.map_or_else(Vec::new, |e| {
+            let mut reactions = event.map_or_else(Vec::new, |e| {
                 crate::reaction::chain(
                     e,
                     &crate::reaction::FinalReaction {
@@ -279,11 +295,28 @@ pub fn scan_metadata_with(
                     },
                 )
             });
+            // an MSn chain (two or more steps, not simultaneous): the trailer's monoisotopic m/z and charge are its first step's, not the final one's
+            let msn_chain = reactions.len() >= 2 && !reactions.iter().any(|r| r.multiple);
+            // the selected ion is the trailer's monoisotopic m/z when it lies where the window could have taken it from, else the target
+            let sm = if msn_chain {
+                tm
+            } else {
+                mono.filter(|&m| plausible_selected_ion(m, tm, iw, ch))
+                    .or(tm)
+            };
+            let final_charge = if msn_chain { None } else { ch };
+            if msn_chain {
+                if let Some(first) = reactions.first_mut() {
+                    first.selected_mz = mono
+                        .filter(|&m| plausible_selected_ion(m, Some(first.precursor_mz), None, ch));
+                    first.charge = ch;
+                }
+            }
             PrecursorInfo {
                 target_mz: tm,
                 selected_mz: sm,
                 isolation_width: iw,
-                charge: ch,
+                charge: final_charge,
                 collision_energy: ae,
                 ce_is_nce: ae_is_nce,
                 master_scan_number: master,
@@ -892,7 +925,9 @@ fn build_chromatograms<R: Read + Seek>(
     out.extend(tic_record(&raw.tic_chromatogram()));
     out.extend(bpc_record(&raw.bpc_chromatogram()));
 
-    if raw.flat_peaks && !raw.srm_q1_by_event.is_empty() {
+    // one trace per transition from the events; the transition table only for a run whose events do not name them
+    let traces = raw.srm_traces(source);
+    if traces.is_empty() && raw.flat_peaks && !raw.srm_q1_by_event.is_empty() {
         let scans: Vec<(u16, f64, f64)> = raw
             .scan_index
             .iter()
@@ -905,7 +940,7 @@ fn build_chromatograms<R: Read + Seek>(
         ));
     }
 
-    out.extend(raw.srm_traces(source).iter().map(srm_trace_record));
+    out.extend(traces.iter().map(srm_trace_record));
 
     for (i, rec) in out.iter_mut().enumerate() {
         rec.index = i;
@@ -1262,6 +1297,14 @@ mod tests {
         assert_eq!(sps_masses(&p), vec![400.25, 512.5]);
         assert_eq!(p.faims_cv(), Some(-45.0));
         assert!(sps_masses(&trailer(&[])).is_empty());
+        // the comma lists win over the numbered channels
+        use crate::generic_data::GenericValue::String as Text;
+        let p = trailer(&[
+            ("SPS Masses:", Text("410.21,520.33,".into())),
+            ("SPS Masses Continued:", Text("633.40".into())),
+            ("SPS Mass 1:", Float32(400.25)),
+        ]);
+        assert_eq!(sps_masses(&p), vec![410.21, 520.33, 633.40]);
         assert_eq!(trailer(&[]).faims_cv(), None);
     }
 
