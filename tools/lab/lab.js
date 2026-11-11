@@ -3,7 +3,7 @@
 //  1. expiry: after the date baked into the build (UTC, whole day included) the page is replaced by a short notice in English and Italian; nothing else
 //     is loaded, no data is read. The date cannot be computed (bad date, no clock) = expired, never open. This is a SOFT block, not security: whoever
 //     controls their own browser (clock, devtools, offline copy) can get round it. It only keeps the lab page from living on by itself.
-//  2. no examples: see below (the build deletes static/esempi and the example drawings; here their buttons go).
+//  2. no example files: see below (the build deletes static/esempi; here their buttons go). The two example drawings of Draw stay.
 //  3. only Data and Draw: window.MZLAB_LAB tells the Tabui loader (tpmine-loader.js, which brings Tabui and mzFlow) and carica.js not to start, so no
 //     package is downloaded and no tab is drawn; addresses of any other view go back to #/data. The administrator flag (the Libro editor and the like)
 //     reads as «off» and cannot be written. Nothing is deleted from the program: the normal build is untouched.
@@ -53,18 +53,15 @@
     P.setItem = function (k, v) { if (!HIDDEN.test(String(k))) set.call(this, k, v); };
   } catch (e) { /* no storage: nothing to hide */ }
 
-  // no example files in the lab (the build does not ship them either): the example-set chooser of Data, the example-drawings link of Draw and the
-  // tour's example loader are hidden / inert. The elements stay in the DOM (draw.js binds #ex-link when it loads), hidden by CSS and `hidden`.
+  // no example files in the lab (the build does not ship them either): the example-set chooser of Data and the tour's example loader are hidden /
+  // inert. #demo stays in the DOM (shell.js binds it), hidden by CSS and `hidden`. Draw's example-drawings link (#ex-link) works: its two images ship.
   try {
     var css = document.createElement("style");
-    css.textContent = "#demo,#ex-link,:has(> #ex-link){display:none!important}#nav{min-width:0!important}";      // #nav keeps room for four tabs; with two it would leave a wide gap before the panels button
+    css.textContent = "#demo{display:none!important}#nav{min-width:0!important}";      // #nav keeps room for four tabs; with two it would leave a wide gap before the panels button
     document.head.appendChild(css);
     var hideExamples = function () {
-      var ids = ["demo", "ex-link"];
-      for (var i = 0; i < ids.length; i++) {
-        var el = document.getElementById(ids[i]);
-        if (el) { el.hidden = true; if (ids[i] === "ex-link" && el.parentElement) el.parentElement.hidden = true; }
-      }
+      var el = document.getElementById("demo");
+      if (el) el.hidden = true;
     };
     document.addEventListener("DOMContentLoaded", hideExamples);
     var tries = 0, wait = setInterval(function () {
