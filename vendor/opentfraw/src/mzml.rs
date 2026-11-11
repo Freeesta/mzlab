@@ -182,11 +182,8 @@ pub fn scan_metadata_with(
             .map(ms_level)
             .unwrap_or(1)
     };
-    let polarity = if is_srm {
-        Some(Polarity::Positive)
-    } else {
-        event.and_then(|e| e.preamble.polarity())
-    };
+    // an SRM run without scan events (older TSQ layouts) does not say its polarity: unknown, not positive
+    let polarity = event.and_then(|e| e.preamble.polarity());
     let scan_mode = if is_srm {
         Some(crate::ScanMode::Centroid)
     } else {
