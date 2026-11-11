@@ -12,7 +12,10 @@ use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
 fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_massrange_{}", std::process::id()));
+    // one folder per call: the tests run in parallel and each one writes the pairs anew
+    static CALL: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = CALL.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_massrange_{}_{k}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_massrange.py");
     let ok = Command::new("python3")
         .arg(script)
@@ -102,6 +105,17 @@ fn every_announced_transition_is_read() {
         .collect();
     assert_eq!(srm.len(), rows.len());
     assert!(srm[2].id.ends_with("name=Qual-é"), "{}", srm[2].id);
+    // the masses keep the precision of the file: no rounding to 2 decimals in the id or in the chromatogram
+    let (q1, q3) = (
+        rows[3]["q1"].as_f64().unwrap(),
+        rows[3]["q3"].as_f64().unwrap(),
+    );
+    assert!(
+        srm[3].id.starts_with(&format!("SRM SIC Q1={q1} Q3={q3} ")),
+        "{}",
+        srm[3].id
+    );
+    assert_eq!((srm[3].q1, srm[3].q3), (Some(q1), Some(q3)));
     let mut l = readers::apri(set(&dir, "tabella"), &Limits::sito()).unwrap();
     let chroms = l.chromatograms(0).unwrap();
     let ids: Vec<&str> = chroms.iter().map(|c| c.id.as_str()).collect();
@@ -130,4 +144,37 @@ fn a_table_that_disagrees_with_its_header_is_refused() {
             .unwrap_or_else(|| panic!("{name}: Lettore"));
         assert_eq!(e.key, "err.file.wiffMassRange", "{name}: Lettore");
     }
+}
+
+/// A SIM table in the counted grammar (records `Q1, Q1, 0, dwell` with an empty name, the layout the heuristic missed): each ion is a SIM
+/// chromatogram whose id and isolation target carry its m/z, with its dwell, in the engine and in the `Lettore`.
+#[test]
+fn a_counted_sim_table_gives_each_ion_its_mass() {
+    let Some((dir, want)) = reference() else {
+        return;
+    };
+    let ions = want["sim"].as_array().unwrap();
+    let (w, mut scan) = open(&dir, "sim");
+    let run = w.unwrap().run(&mut scan).unwrap();
+    let sim: Vec<_> = run
+        .chromatograms
+        .iter()
+        .filter(|c| c.kind == ChromKind::Sic)
+        .collect();
+    assert_eq!(sim.len(), ions.len());
+    for (c, ion) in sim.iter().zip(ions) {
+        let (q1, dwell) = (ion["q1"].as_f64().unwrap(), ion["dwell"].as_f64().unwrap());
+        assert!(c.id.starts_with(&format!("SIM SIC Q1={q1} ")), "{}", c.id);
+        assert!(c.id.contains(&format!(" dwell={dwell} ")), "{}", c.id);
+        assert_eq!((c.q1, c.q3), (Some(q1), None), "{}", c.id);
+    }
+    let mut l = readers::apri(set(&dir, "sim"), &Limits::sito()).unwrap();
+    let ids: Vec<String> = l
+        .chromatograms(0)
+        .unwrap()
+        .into_iter()
+        .map(|c| c.id)
+        .collect();
+    let want_ids: Vec<String> = run.chromatograms.iter().map(|c| c.id.clone()).collect();
+    assert_eq!(ids, want_ids, "engine and Lettore");
 }

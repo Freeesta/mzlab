@@ -4,6 +4,7 @@
 use crate::error::Result;
 use crate::json::round;
 use crate::ole::Ole;
+use mass_range::mass;
 
 const NAMES: [(&str, &str, &str); 13] = [
     ("CUR", "Curtain gas (CUR)", "psi"),
@@ -180,8 +181,8 @@ fn mrm_at(d: &[u8], i: usize) -> Option<MrmHit> {
 fn transition_from_hit(d: &[u8], h: &MrmHit, end: usize) -> Transition {
     let p = |tag: &[u8]| param_after(d, h.start + 22, end, tag).map(|v| round(v, 2));
     Transition {
-        q1: round(h.q1, 2),
-        q3: round(h.q3, 2),
+        q1: mass(h.q1),
+        q3: mass(h.q3),
         dwell: round(h.dwell, 1),
         name: ascii(&h.name),
         ce: p(&[4, 0, b'C', 0, b'E', 0]),
