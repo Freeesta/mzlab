@@ -103,13 +103,13 @@ fn every_real_folder_opens_and_its_scans_add_up_to_the_index() {
     }
 }
 
-/// An id without the `ce=` and `name=` words mzLab adds to the one of msconvert.
+/// An id without the `ce=`, `polarity=` and `name=` words mzLab adds to the one of msconvert (which writes the polarity as a `- ` prefix, stripped by the caller).
 fn bare(id: &str) -> String {
     id.split(" name=")
         .next()
         .unwrap_or(id)
         .split(' ')
-        .filter(|w| !w.starts_with("ce="))
+        .filter(|w| !w.starts_with("ce=") && !w.starts_with("polarity="))
         .collect::<Vec<_>>()
         .join(" ")
 }
