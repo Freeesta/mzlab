@@ -1,7 +1,7 @@
 """Every mzML `mzlab-cli convert` writes from the synthetic dataset of each reader family is well-formed XML for a second, independent parser
 (lxml/libxml2, strict: no recovery), in both compressions. The readers modules write the same bytes (`test_lettori_parita.py`), so this covers the
 site too. A vendor model text that is not a CV term name (angle brackets, quotes) stays in a userParam, and MS:1000031 keeps its CV name.
-lxml is a test-only dependency; without it the test is skipped (MZLAB_GOLDEN_STRICT=1: fails)."""
+lxml is a test-only dependency (`.[test]`); without it the test is skipped (MZLAB_GOLDEN_STRICT=1: fails)."""
 import shutil
 import sys
 from pathlib import Path
