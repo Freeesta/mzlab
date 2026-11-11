@@ -34,24 +34,34 @@ fn read(src: &str) -> Result<String, String> {
     }
 }
 
-pub fn run(args: Vec<String>) -> Outcome {
+/// Positional arguments, `--out` and the `--set` pairs; `Err` is the outcome to return at once (help or a usage error).
+type Args = (Vec<String>, Option<PathBuf>, Vec<(String, String)>);
+fn parse(args: Vec<String>) -> Result<Args, Outcome> {
     let (mut pos, mut out, mut sets) = (Vec::new(), None, Vec::new());
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
-            "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
+            "--help" | "-h" => return Err(Outcome::ok(format!("{HELP}\n").into_bytes())),
             "--out" => match it.next() {
                 Some(p) => out = Some(PathBuf::from(p)),
-                None => return Outcome::fail("--out needs a path"),
+                None => return Err(Outcome::fail("--out needs a path")),
             },
             "--set" => match it.next().as_deref().and_then(|kv| kv.split_once('=')) {
                 Some((k, v)) => sets.push((k.to_string(), v.to_string())),
-                None => return Outcome::fail("--set needs NAME=VALUE"),
+                None => return Err(Outcome::fail("--set needs NAME=VALUE")),
             },
-            o if o.starts_with("--") => return Outcome::fail(&format!("unknown option {o}")),
+            o if o.starts_with("--") => return Err(Outcome::fail(&format!("unknown option {o}"))),
             _ => pos.push(a),
         }
     }
+    Ok((pos, out, sets))
+}
+
+pub fn run(args: Vec<String>) -> Outcome {
+    let (pos, out, sets) = match parse(args) {
+        Ok(a) => a,
+        Err(o) => return o,
+    };
     if let Some((k, _)) = sets
         .iter()
         .find(|(k, _)| !["smiles", "catalogue"].contains(&k.as_str()))
@@ -64,14 +74,12 @@ pub fn run(args: Vec<String>) -> Outcome {
             .find(|(k, _)| k == n)
             .map(|(_, v)| v.clone())
     };
-    let smiles = set("smiles");
-    let mut o = Out::default();
-    match (pos.as_slice(), &smiles) {
+    let drawing = match (pos.as_slice(), set("smiles")) {
         ([src], None) => match read(src) {
-            Ok(t) => o.raw("{\"molfile\":").str(&t),
+            Ok(t) => ("molfile", t),
             Err(e) => return Outcome::fail(&e),
         },
-        ([], Some(s)) => o.raw("{\"smiles\":").str(s),
+        ([], Some(s)) => ("smiles", s),
         _ => {
             return Outcome::fail(
                 "mol-id needs one molfile (or - for the standard input) or --set smiles=TEXT",
@@ -85,24 +93,32 @@ pub fn run(args: Vec<String>) -> Outcome {
         },
         None => CATALOGUE.to_string(),
     };
-    o.raw(",\"catalogo\":").str(&cat).raw("}");
-    match mzlab_feat::chem::identity::identity_json(&o.0) {
+    let req = request(drawing.0, &drawing.1, &cat);
+    match mzlab_feat::chem::identity::identity_json(&req) {
         Ok(j) => crate::emit(format!("{j}\n"), &out),
         Err(e) => Outcome::fail(&e.to_string()),
     }
+}
+
+/// The request of `identity_json`: `{"molfile"|"smiles": text, "catalogo": csv}`, as the page sends it.
+fn request(field: &str, text: &str, catalogue: &str) -> String {
+    let mut o = Out::default();
+    o.raw("{\"").raw(field).raw("\":").str(text);
+    o.raw(",\"catalogo\":").str(catalogue).raw("}");
+    o.0
 }
 
 #[cfg(test)]
 mod tests {
     use crate::execute;
 
-    fn run(a: &[&str]) -> crate::Outcome {
+    fn cli(a: &[&str]) -> crate::Outcome {
         execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>())
     }
 
     #[test]
     fn the_command_prints_the_function_json() {
-        let o = run(&["mol-id", "--set", "smiles=Oc1ccc(NC(C)=O)cc1"]);
+        let o = cli(&["mol-id", "--set", "smiles=Oc1ccc(NC(C)=O)cc1"]);
         assert_eq!(o.code, 0);
         let req = mzlab_core::json::Out::default()
             .raw("{\"smiles\":")
@@ -127,8 +143,8 @@ mod tests {
             vec!["mol-id", "/no/such/file.mol"],
             vec!["mol-id", "--set", "smiles="],
         ] {
-            assert_eq!(run(&a).code, 2, "{a:?}");
+            assert_eq!(cli(&a).code, 2, "{a:?}");
         }
-        assert_eq!(run(&["mol-id", "--help"]).code, 0);
+        assert_eq!(cli(&["mol-id", "--help"]).code, 0);
     }
 }

@@ -733,8 +733,13 @@ Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v)
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // «Is this in the catalogue?»: every piece of the drawing (or of the selection) is looked up by the Rust engine (disegno-identita.js, loaded on the first click)
-Q("#ex-id").onclick = async () => { await start(); const sel = K.editor.selection() || {}, only = sel.atoms && sel.atoms.length ? new Set(/** @type {number[]} */ (sel.atoms)) : null;
-  (await import("./disegno-identita.js")).show(pieces(only).map(p => pieceMolfile(p.ids)), Q("#id-out"), (k, p) => I18N.t(k, p)); };
+// «Is this in the catalogue?»: the button looks up the selection or the whole canvas, the canvas menu row what the menu acts on; the answer is in #id-out
+async function identify(/** @type {Set<number> | null} */ only) {
+  const out = Q("#id-out"); out.scrollIntoView({ block: "nearest" });
+  (await import("./disegno-identita.js")).show(pieces(only).map(p => pieceMolfile(p.ids)), out, (k, p) => I18N.t(k, p));
+}
+Q("#ex-id").onclick = async () => { await start(); const sel = K.editor.selection() || {}; identify(sel.atoms && sel.atoms.length ? new Set(/** @type {number[]} */ (sel.atoms)) : null); };
+menuAdd({ id: "catalogue-id", order: 70, label: "draw.id.button", title: "draw.id.title", run: (/** @type {any} */ c) => { identify(c.whole ? null : c.atoms); } });
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
 window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };

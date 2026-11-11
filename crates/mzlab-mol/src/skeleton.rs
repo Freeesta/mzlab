@@ -62,6 +62,48 @@ impl Mol {
     /// Drops every H atom of natural abundance with no charge, radical or H of its own and one single bond to a heavier atom, unless a stereo
     /// element names it; its neighbour gains one `h`. The kept atoms keep their relative order, so bonds stay `a < b` and refs ascending.
     pub fn with_implicit_hydrogens(&self) -> Mol {
+        let into = self.foldable_hydrogens();
+        if into.iter().all(|x| x.is_none()) {
+            return self.clone();
+        }
+        let n = self.atoms.len();
+        let mut atoms = self.atoms.clone();
+        into.iter().flatten().for_each(|&o| atoms[o].h += 1);
+        let mut new_of = vec![u32::MAX; n];
+        let mut k = 0u32;
+        for i in (0..n).filter(|&i| into[i].is_none()) {
+            new_of[i] = k;
+            k += 1;
+        }
+        let at = |i: u32| new_of[i as usize];
+        let kept = |i: u32| into[i as usize].is_none();
+        let atoms = atoms
+            .into_iter()
+            .enumerate()
+            .filter(|(i, _)| into[*i].is_none())
+            .map(|(_, a)| a)
+            .collect();
+        let bonds = self
+            .bonds
+            .iter()
+            .filter(|b| kept(b.a) && kept(b.b))
+            .map(|b| crate::model::Bond {
+                a: at(b.a),
+                b: at(b.b),
+                o: b.o,
+            })
+            .collect();
+        let stereo = self.stereo.iter().map(|s| remap_stereo(s, &at)).collect();
+        let mut groups = self.groups.clone();
+        groups
+            .iter_mut()
+            .for_each(|g| g.atoms.iter_mut().for_each(|a| *a = at(*a)));
+        Mol::new(atoms, bonds, stereo, groups)
+    }
+
+    /// For every atom: the heavy neighbour it folds into when it is a plain H (no isotope, charge, radical or H count, one single bond to a
+    /// non-H, not named by a stereo element), else `None`.
+    fn foldable_hydrogens(&self) -> Vec<Option<usize>> {
         let n = self.atoms.len();
         let mut named = vec![false; n];
         for s in &self.stereo {
@@ -91,81 +133,47 @@ impl Mol {
                 && deg[i] == 1
                 && !named[i]
         };
-        let mut drop = vec![false; n];
-        let mut atoms = self.atoms.clone();
-        for b in &self.bonds {
+        let mut into = vec![None; n];
+        for b in self.bonds.iter().filter(|b| b.o == 1) {
             let (x, y) = (b.a as usize, b.b as usize);
             for (h, other) in [(x, y), (y, x)] {
-                if b.o == 1 && plain(h) && self.atoms[other].el != "H" {
-                    drop[h] = true;
-                    atoms[other].h += 1;
+                if plain(h) && self.atoms[other].el != "H" {
+                    into[h] = Some(other);
                 }
             }
         }
-        if !drop.iter().any(|d| *d) {
-            return self.clone();
-        }
-        let mut new_of = vec![u32::MAX; n];
-        let mut k = 0u32;
-        for i in 0..n {
-            if !drop[i] {
-                new_of[i] = k;
-                k += 1;
-            }
-        }
-        let at = |i: u32| new_of[i as usize];
-        let atoms = atoms
-            .into_iter()
-            .enumerate()
-            .filter(|(i, _)| !drop[*i])
-            .map(|(_, a)| a)
-            .collect();
-        let bonds = self
-            .bonds
-            .iter()
-            .filter(|b| !drop[b.a as usize] && !drop[b.b as usize])
-            .map(|b| crate::model::Bond {
-                a: at(b.a),
-                b: at(b.b),
-                o: b.o,
-            })
-            .collect();
-        let stereo = self
-            .stereo
-            .iter()
-            .map(|s| match s.clone() {
-                Stereo::Tetra {
-                    c,
-                    refs,
-                    implicit_h,
-                    par,
-                    status,
-                } => Stereo::Tetra {
-                    c: at(c),
-                    refs: refs.map(|r| r.into_iter().map(at).collect()),
-                    implicit_h,
-                    par,
-                    status,
-                },
-                Stereo::Db {
-                    a,
-                    b,
-                    refs,
-                    cfg,
-                    status,
-                } => Stereo::Db {
-                    a: at(a),
-                    b: at(b),
-                    refs: refs.map(|r| r.map(at)),
-                    cfg,
-                    status,
-                },
-            })
-            .collect();
-        let mut groups = self.groups.clone();
-        groups
-            .iter_mut()
-            .for_each(|g| g.atoms.iter_mut().for_each(|a| *a = at(*a)));
-        Mol::new(atoms, bonds, stereo, groups)
+        into
+    }
+}
+
+/// A stereo element with its atom ids renumbered.
+fn remap_stereo(s: &Stereo, at: &impl Fn(u32) -> u32) -> Stereo {
+    match s.clone() {
+        Stereo::Tetra {
+            c,
+            refs,
+            implicit_h,
+            par,
+            status,
+        } => Stereo::Tetra {
+            c: at(c),
+            refs: refs.map(|r| r.into_iter().map(at).collect()),
+            implicit_h,
+            par,
+            status,
+        },
+        Stereo::Db {
+            a,
+            b,
+            refs,
+            cfg,
+            status,
+        } => Stereo::Db {
+            a: at(a),
+            b: at(b),
+            refs: refs.map(|r| r.map(at)),
+            cfg,
+            status,
+        },
     }
 }

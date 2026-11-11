@@ -1,6 +1,6 @@
 """Disegno: «È nel catalogo?» looks the drawing up in the molecule catalogue through the Rust engine (molid .wasm): draw → identify is two clicks; the
 enantiomer is a near match that says «other stereo», two structures get one answer each, an unknown structure and an empty canvas say so, and the button
-works from the keyboard with a target of at least 24 px. Needs site/static/wasm-feat with the molid module (tools/build_feat_wasm.sh); SKIP without it."""
+works from the keyboard with a target of at least 24 px; the canvas menu has the same row. Needs site/static/wasm-feat with the molid module (tools/build_feat_wasm.sh); SKIP without it."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 MAN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")
@@ -16,8 +16,9 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
-        pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.wait_for_timeout(800)
+        pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
         KJ = "document.querySelector('#kframe').contentWindow.ketcher"
+        wait_for_js(pg, f"!!({KJ} && {KJ}.editor && {KJ}.editor.struct())")
         out = pg.locator("#id-out")
         def answer(text):
             try: pg.wait_for_function(f"document.querySelector('#id-out').textContent.includes({json.dumps(text)})", timeout=30000)
@@ -56,6 +57,13 @@ try:
             pg.focus("#ex-id"); pg.keyboard.press("Enter"); t = answer("metronidazole")
             assert out.get_attribute("role") == "status", out.get_attribute("role")
         step("the button works from the keyboard, is at least 24 px and the answer is a status", keyboard)
+        def menu_row():
+            pg.evaluate(f"{KJ}.setMolecule('Cn1cnc2c1c(=O)n(C)c(=O)n2C')"); wait_for_js(pg, f"{KJ}.editor.struct().atoms.size > 10")
+            pg.evaluate("""(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()""")
+            wait_for_js(pg, "!document.querySelector('#ctx').hidden && !!document.querySelector('#ctx div[data-row=catalogue-id]')")
+            row = pg.locator("#ctx div[data-row=catalogue-id]"); assert "catalogo" in row.inner_text(), row.inner_text()
+            row.click(); t = answer("caffeine"); assert "Nel catalogo come" in t, t
+        step("the canvas menu row «È nel catalogo?» (TPDraw.menu registry) gives the same answer", menu_row)
 finally:
     r.close()
 r.report()
