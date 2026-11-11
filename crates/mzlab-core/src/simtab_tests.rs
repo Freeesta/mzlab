@@ -4,6 +4,11 @@
 
 use super::*;
 
+/// The table against the line between the edges (the numbers these tests were written for).
+fn edges(files: &str, output: &str, layout: &str) -> Result<String> {
+    table_text_with(files, output, layout, "edges")
+}
+
 /// A trace of 20 min at 0.8 s with ripple noise and Gaussian peaks `(apex min, height)` of sigma 3.2 s (about 13 s at the base).
 fn trace(id: i64, q1: Option<f64>, name: &str, peaks: &[(f64, f64)]) -> String {
     let (mut t, mut y) = (Vec::new(), Vec::new());
@@ -73,27 +78,27 @@ fn set() -> String {
 
 #[test]
 fn rows_are_samples_and_columns_channels() {
-    let area = table_text(&set(), "area_sum", "samples").unwrap();
+    let area = edges(&set(), "area_sum", "samples").unwrap();
     let lines: Vec<&str> = area.lines().collect();
-    assert_eq!(lines[0], "sample,237.1,253.1,ion 2");
+    assert_eq!(lines[0], "sample,237.1,253.1,ion 2,baseline");
     assert_eq!(lines.len(), 4, "{area}");
     assert!(
-        lines[1].starts_with("t0,") && lines[1].ends_with(','),
+        lines[1].starts_with("t0,") && lines[1].ends_with(",,edges"),
         "{area}"
     );
     assert_eq!(
-        lines[2], "blank,0.00000E+00,0.00000E+00,",
+        lines[2], "blank,0.00000E+00,0.00000E+00,,edges",
         "a blank: no peak, sum 0, no error"
     );
     assert!(lines[3].starts_with("\"s, 3h\",,"), "{area}");
-    let n = table_text(&set(), "n_peaks", "samples").unwrap();
+    let n = edges(&set(), "n_peaks", "samples").unwrap();
     assert_eq!(
         n.lines().nth(1).unwrap(),
-        "t0,1,2,",
+        "t0,1,2,,edges",
         "the isomer pair is two peaks of one channel"
     );
-    let max = table_text(&set(), "area_max", "samples").unwrap();
-    assert_eq!(max.lines().nth(2).unwrap(), "blank,,,");
+    let max = edges(&set(), "area_max", "samples").unwrap();
+    assert_eq!(max.lines().nth(2).unwrap(), "blank,,,,edges");
     let sum: f64 = area
         .lines()
         .nth(1)
@@ -113,17 +118,17 @@ fn rows_are_samples_and_columns_channels() {
         .parse()
         .unwrap();
     assert!(sum > top * 1.4, "{sum} {top}");
-    let rt = table_text(&set(), "apex_rt", "channels").unwrap();
+    let rt = edges(&set(), "apex_rt", "channels").unwrap();
     assert_eq!(
         rt.lines().next().unwrap(),
-        "channel,name,t0,blank,\"s, 3h\""
+        "channel,name,t0,blank,\"s, 3h\",baseline"
     );
-    assert_eq!(rt.lines().nth(2).unwrap(), "253.1,B,8.000,,8.120");
+    assert_eq!(rt.lines().nth(2).unwrap(), "253.1,B,8.000,,8.120,edges");
 }
 
 #[test]
 fn the_peak_table_has_one_row_per_resolved_peak() {
-    let p = table_text(&set(), "peaks", "samples").unwrap();
+    let p = edges(&set(), "peaks", "samples").unwrap();
     let rows: Vec<&str> = p
         .lines()
         .filter(|l| l.starts_with("t0,253.1000,B,"))
@@ -141,7 +146,7 @@ fn the_peak_table_has_one_row_per_resolved_peak() {
         rows[0].split(',').nth(3) == Some("1") && rows[1].split(',').nth(3) == Some("2"),
         "peaks numbered in RT order"
     );
-    assert!(p.contains("\nblank,237.1000,A,0,,,,,\n"), "{p}");
+    assert!(p.contains("\nblank,237.1000,A,0,,,,,,edges\n"), "{p}");
     let area = rows[0].split(',').nth(5).unwrap();
     assert!(
         area.len() == 11 && &area[7..9] == "E+" && area.parse::<f64>().is_ok(),
@@ -155,15 +160,15 @@ fn no_sim_channel_and_bad_options() {
     let mrm = "{\"id\":1,\"q1\":100,\"q3\":50,\"name\":\"\",\"rt\":[0,1,2],\"y\":[1,9,1]}";
     let only = format!("[{{\"name\":\"x\",\"transitions\":[{mrm}]}}]");
     assert_eq!(
-        table_text(&only, "area_sum", "samples").unwrap_err().key,
+        edges(&only, "area_sum", "samples").unwrap_err().key,
         "err.simtab.noChannel"
     );
     assert_eq!(
-        table_text(&set(), "area", "samples").unwrap_err().key,
+        edges(&set(), "area", "samples").unwrap_err().key,
         "err.simtab.output"
     );
     assert_eq!(
-        table_text(&set(), "area_sum", "rows").unwrap_err().key,
+        edges(&set(), "area_sum", "rows").unwrap_err().key,
         "err.simtab.output"
     );
 }
@@ -180,8 +185,8 @@ fn a_column_is_one_mz_across_files_whatever_its_place() {
             ],
         ),
     ]);
-    let t = table_text(&set, "n_peaks", "samples").unwrap();
-    assert_eq!(t, "sample,253.1,196.1\na,1,\nb,1,1\n");
+    let t = edges(&set, "n_peaks", "samples").unwrap();
+    assert_eq!(t, "sample,253.1,196.1,baseline\na,1,,edges\nb,1,1,edges\n");
 }
 
 #[test]
@@ -192,16 +197,19 @@ fn groups_order_the_rows_and_keep_channels_without_q1_apart() {
         ("b1", "List B", vec![trace(1, None, "", &[(6.0, 8e4)])]),
         ("a2", "List A", vec![trace(1, None, "", &[(5.0, 8e4)])]),
     ]);
-    let t = table_text(&set, "n_peaks", "samples").unwrap();
+    let t = edges(&set, "n_peaks", "samples").unwrap();
     assert_eq!(
         t,
-        "sample,group,ion 1 [List A],ion 1 [List B],300.2\na1,List A,1,,\na2,List A,1,,\nb1,List B,,1,\nfree,,,,1\n"
+        "sample,group,ion 1 [List A],ion 1 [List B],300.2,baseline\na1,List A,1,,,edges\na2,List A,1,,,edges\nb1,List B,,1,,edges\nfree,,,,1,edges\n"
     );
-    let p = table_text(&set, "peaks", "samples").unwrap();
+    let p = edges(&set, "peaks", "samples").unwrap();
     assert!(p.starts_with("sample,group,q1,name,peak,"), "{p}");
     assert!(p.contains("\nb1,List B,,,1,6.000,"), "{p}");
-    let c = table_text(&set, "n_peaks", "channels").unwrap();
-    assert_eq!(c.lines().next().unwrap(), "channel,name,a1,a2,b1,free");
+    let c = edges(&set, "n_peaks", "channels").unwrap();
+    assert_eq!(
+        c.lines().next().unwrap(),
+        "channel,name,a1,a2,b1,free,baseline"
+    );
 }
 
 #[test]
@@ -232,8 +240,8 @@ fn from_zero_is_the_analytic_area_and_says_so() {
     assert!(peaks.lines().next().unwrap().ends_with(",fwhm_s,baseline"));
     // on a background of about 50 counts the area from zero is larger than the one against the edge line, in every output and layout
     let (e, z) = (
+        edges(&set(), "area_max", "samples").unwrap(),
         table_text(&set(), "area_max", "samples").unwrap(),
-        table_text_with(&set(), "area_max", "samples", "zero").unwrap(),
     );
     let first = |t: &str| -> f64 {
         t.lines()
@@ -254,10 +262,10 @@ fn from_zero_is_the_analytic_area_and_says_so() {
         let z = table_text_with(&set(), o, l, "zero").unwrap();
         assert!(z.lines().next().unwrap().ends_with(",baseline"), "{z}");
         assert!(z.lines().skip(1).all(|r| r.ends_with(",zero")), "{z}");
-        assert_eq!(
-            table_text_with(&set(), o, l, "edges").unwrap(),
-            table_text(&set(), o, l).unwrap()
-        );
+        // no baseline named = zero; edges is still a choice and says so too
+        assert_eq!(z, table_text(&set(), o, l).unwrap());
+        let e = edges(&set(), o, l).unwrap();
+        assert!(e.lines().skip(1).all(|r| r.ends_with(",edges")), "{e}");
     }
     for b in ["line", "valley"] {
         let e = table_text_with(&set(), "area_sum", "samples", b).unwrap_err();

@@ -1,7 +1,7 @@
 // @ts-check
 // The SIM table of the Data view (#simtab): with SIM files loaded (kind «mrm», Q1-only transitions, e.g. a SCIEX .wiff in SIM), every SIM channel of
 // every file integrated by the engine (`api/simtab`, mzlab_core::simtab: a column per m/z, every peak), as a pivot (rows by sidebar group) or swapped, or
-// the peak table, edge line or zero; CSV = `mzlab-cli sim-table`. Picked columns draw a kinetic plot (QAQC.chart). Called by syncWork. docs/agenti/transizioni.md.
+// the peak table, from zero (the default, as mzlab_core::simtab::DEFAULT_BASELINE) or the edge line; CSV = `mzlab-cli sim-table`. Picked columns draw a kinetic plot (QAQC.chart). Called by syncWork. docs/agenti/transizioni.md.
 const G = /** @type {any} */ (window);
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => G.I18N.t(k, p);
 
@@ -14,8 +14,8 @@ const HEADS = () => /** @type {Record<string, string>} */ ({ sample: t("canali.s
 
 /** @typedef {{ k: number, g: string, f: any }} Entry */
 /** @type {{ sig: string, files: Entry[], out: string, layout: "samples" | "channels", base: string, csv: Record<string, string>, size: { channels: number, samples: number } | null, busy: number, sel: Set<string>, shut: Set<string>, ksig: string }} */
-const st = { sig: "", files: [], out: "area_sum", layout: "samples", base: "", csv: {}, size: null, busy: 0, sel: new Set(), shut: new Set(), ksig: "" };
-const bv = () => st.base ? "|" + st.base : "", view = () => `${st.out}|${st.out === "peaks" ? "samples" : st.layout}` + bv();
+const st = { sig: "", files: [], out: "area_sum", layout: "samples", base: "zero", csv: {}, size: null, busy: 0, sel: new Set(), shut: new Set(), ksig: "" };
+const bv = () => "|" + st.base, view = () => `${st.out}|${st.out === "peaks" ? "samples" : st.layout}` + bv();
 /** The pivot the kinetic plot reads: the chosen value, the sum of the areas for the peak table. */
 const kview = () => `${st.out === "peaks" ? "area_sum" : st.out}|samples` + bv();
 
@@ -36,7 +36,7 @@ function rows(text) {
 }
 
 /** An area or height of the CSV (7.84077E+04) in the one form of the page (7.841E+04); any other cell as the engine wrote it. @param {string} v */
-const fmt = v => /^-?\d(\.\d+)?E[+-]\d+$/.test(v) ? G.I18N.sciE(Number(v)) : v;
+const fmt = v => /^-?\d(\.\d+)?E[+-]\d+$/.test(v) ? G.I18N.sciE(Number(v)) : v === "zero" || v === "edges" ? t("canali.simtab.base." + v) : v;
 /** A channel column of the CSV as shown: the m/z, or «ione N» (`ion N`, ` [group]` when kept apart per group). @param {string} c */
 const shown = c => c.replace(/^ion (\d+)/, (_, n) => t("canali.sim.ion", { n: +n })).replace(/ \[(.*)\]( #\d+)?$/, (_, g, k) => `${k || ""} · ${g}`);
 
@@ -124,7 +124,7 @@ function draw() {
   const ths = cols.map((x, i) => i >= lead && pick && x !== "baseline" ? h`<th scope="col" class="num">${shown(x)}${raw(pickBtn(x))}</th>` : h`<th scope="col"${raw(i >= lead ? ' class="num"' : "")}>${heads[x] || shown(x)}</th>`);
   const kin = kinetic();
   el.innerHTML = h`<details${raw(open ? " open" : "")}><summary><h3 id="simtab-h">${t("canali.simtab.title", st.size)}</h3></summary>
-<div class="simtab-bar"><label>${t("canali.simtab.show")} <select data-o>${raw(opts.join(""))}</select></label><label>${t("canali.simtab.base")} <select data-b><option value="">${t("canali.simtab.base.edges")}</option><option value="zero"${raw(st.base ? " selected" : "")}>${t("canali.simtab.base.zero")}</option></select></label>
+<div class="simtab-bar"><label>${t("canali.simtab.show")} <select data-o>${raw(opts.join(""))}</select></label><label>${t("canali.simtab.base")} <select data-b>${raw(["zero", "edges"].map(b => `<option value="${b}"${b === st.base ? " selected" : ""}>${t("canali.simtab.base." + b)}</option>`).join(""))}</select></label>
 <button type="button" class="sec sm" data-flip aria-pressed="${String(st.layout === "channels")}"${raw(st.out === "peaks" ? " disabled" : "")}>${t("canali.simtab.flip")}</button><button type="button" class="sec sm" data-dl${raw(csv ? "" : " disabled")}>${t("canali.simtab.csv")}</button></div>
 <div class="simtab-wrap" tabindex="0" role="region" aria-labelledby="simtab-h"><table class="qq-tab"><caption>${label}</caption>
 <thead><tr>${raw(ths.join(""))}</tr></thead><tbody>${raw(bodyHtml(body, gcol, lead, cols.length))}</tbody></table></div>
@@ -164,7 +164,7 @@ async function show(q) {
 /** The key of a set of files and groups. @param {Entry[]} fs */
 const sigOf = fs => fs.map(e => `${e.k}:${e.g}`).join(",");
 
-/** The CSV of view `v` («output|layout») of the files `fs` (with their groups), kept in `st.csv`; false when the engine refused it. @param {Entry[]} fs @param {string} v */
+/** The CSV of view `v` («output|layout|baseline», no baseline = zero) of the files `fs` (with their groups), kept in `st.csv`; false when the engine refused it. @param {Entry[]} fs @param {string} v */
 async function ask(fs, v) {
   const [output, layout, base] = v.split("|");
   try {
@@ -179,9 +179,9 @@ async function ask(fs, v) {
 
 /** The first view of the files `fs` (sum of the areas, one row per sample) gives the size of the table; a 400 (no SIM channel) or no engine hides the card. @param {Entry[]} fs */
 async function compute(fs) {
-  const n = ++st.busy, ok = await ask(fs, "area_sum|samples");
+  const first = "area_sum|samples" + bv(), n = ++st.busy, ok = await ask(fs, first);
   if (n !== st.busy) return;
-  const r = ok ? rows(st.csv["area_sum|samples"] || "") : [], gcol = r[0] && r[0][1] === "group";
+  const r = ok ? rows(st.csv[first] || "") : [], gcol = r[0] && r[0][1] === "group";
   st.size = r.length ? { channels: r[0].length - (gcol ? 2 : 1), samples: r.length - 1 } : null;
   if (st.size && !st.csv[view()]) await ask(fs, view());
   if (st.size && st.sel.size && !st.csv[kview()]) await ask(fs, kview());
