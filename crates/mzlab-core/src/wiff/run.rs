@@ -26,7 +26,7 @@ impl Wiff {
     }
 
     /// The id of the SRM chromatogram of transition `j` of experiment `e` (0-based), as msconvert spells it (Q1, Q3, sample, period, experiment, transition),
-    /// then the collision energy, dwell (ms) (target RT in min and window in s when scheduled) and name of the method when it has them; the mzML writer and `mzmlhead` read them back from it.
+    /// then the collision energy, dwell (ms) (target RT in min and window in s when scheduled), the polarity of the experiment and the name of the method when it has them; the mzML writer and `mzmlhead` read them back from it.
     pub(super) fn srm_id(&self, e: usize, j: usize, t: Option<&Transition>) -> String {
         let mut id = String::from("SRM SIC");
         if let Some(t) = t {
@@ -45,11 +45,25 @@ impl Wiff {
                 Some(w) => id += &format!(" rt={} window={w}", t.dwell),
                 None => id += &format!(" dwell={}", t.dwell),
             }
-            if !t.name.is_empty() {
-                id += &format!(" name={}", t.name);
-            }
+        }
+        id += self.polarity_term(e);
+        if let Some(t) = t.filter(|t| !t.name.is_empty()) {
+            id += &format!(" name={}", t.name);
         }
         id
+    }
+
+    /// ` polarity=positive` or ` polarity=negative` for experiment `e` (its header, else the ion spray voltage), empty when neither tells.
+    fn polarity_term(&self, e: usize) -> &'static str {
+        let pol = self
+            .experiments
+            .get(e)
+            .map_or(self.polarity, |x| self.polarity_of(x));
+        match pol {
+            1 => " polarity=positive",
+            -1 => " polarity=negative",
+            _ => "",
+        }
     }
 
     /// The id of the SIM chromatogram of ion `j` of experiment `e` (0-based), as msconvert spells it (`SIM SIC Q1=<m/z> sample period experiment transition`),
@@ -67,15 +81,7 @@ impl Wiff {
         if let Some(t) = t {
             id += &format!(" dwell={}", t.dwell);
         }
-        let pol = self
-            .experiments
-            .get(e)
-            .map_or(self.polarity, |x| self.polarity_of(x));
-        match pol {
-            1 => id += " polarity=positive",
-            -1 => id += " polarity=negative",
-            _ => {}
-        }
+        id += self.polarity_term(e);
         if let Some(t) = t.filter(|t| !t.name.is_empty()) {
             id += &format!(" name={}", t.name);
         }
