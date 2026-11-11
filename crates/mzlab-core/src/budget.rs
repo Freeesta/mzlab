@@ -15,6 +15,21 @@ pub const WASM_BUDGET_MB: usize = 192;
 /// Budget of the native builds (desktop, tests): same code, other number.
 pub const NATIVE_BUDGET_MB: usize = 1024;
 
+/// The engine memory of this target, in bytes: no single array is decoded past it.
+pub const TARGET_BUDGET: usize = (if cfg!(target_family = "wasm") {
+    WASM_BUDGET_MB
+} else {
+    NATIVE_BUDGET_MB
+}) << 20;
+
+/// How far a zlib array whose spectrum declares no length may inflate: 32 times its compressed bytes (real spectra compress 2 to 20 times), at least 1 MB, never past `TARGET_BUDGET`.
+pub fn undeclared_inflate(compressed: usize) -> usize {
+    compressed
+        .saturating_mul(32)
+        .max(1 << 20)
+        .min(TARGET_BUDGET)
+}
+
 /// What a phase may hold at once. `reserve` hands out a `Guard` that gives the bytes back when dropped.
 #[derive(Debug)]
 pub struct MemBudget {

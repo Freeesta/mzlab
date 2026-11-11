@@ -6,6 +6,7 @@ Fixture: `tools/mzml_varianti.py OUT_DIR` (20 file sintetici, numeri inventati);
 |---|---|---|
 | mzML semplice, indicizzato (`indexedmzML`), offset assurdi | `plain_*`, `indexed`, `bigoffsets` | si apre; gli offset dell'indice non si usano per leggere |
 | float 32/64 bit × senza compressione/zlib | `plain_32_*`, `plain_64_*` | si apre |
+| `defaultArrayLength` `0` o assente con array zlib non vuoti | `robustness_mzml.rs` | prima di gonfiare, i punti dichiarati per i byte tenuti devono stare in `budget::TARGET_BUDGET`; senza lunghezza l'array si gonfia al più fino a `budget::undeclared_inflate` (32 volte i byte compressi, almeno 1 MB): oltre è `error.memoryBudget` (la dimensione, non un danno); uno zlib rotto o incompleto è `err.file.zlib` |
 | CRLF, BOM UTF-8 | `crlf`, `bom` | si apre |
 | MS2, MS3, MS4 | `ms3_4`, `ms3_only_idx` | si apre; il tipo proposto da `canali` è `lc-ms2-mirato` |
 | profilo / centroidi | `profile` | si apre |

@@ -167,10 +167,19 @@ pub(crate) fn decode_array(
     let Some(raw) = unbase64(text)? else {
         return Ok((Vec::new(), Vec::new()));
     };
+    let kept = match want {
+        Want::F64 => 8,
+        Want::F32 => 4,
+        Want::Both => 12,
+    };
+    // the declared points must fit the budget of this target before a byte is inflated
+    if expected.saturating_mul(num.width() + kept) > crate::budget::TARGET_BUDGET {
+        return Err(Error::memory_budget());
+    }
     let bytes: &[u8] = if zlib {
-        // an array inflates to what the spectrum declares (64 MB when it declares nothing): a zlib stream may claim far more than the file holds
+        // an array inflates to what the spectrum declares; when it declares nothing, to what the bytes of the file explain: a zlib stream may claim far more
         let limit = match expected.saturating_mul(num.width()) {
-            0 => 64 << 20,
+            0 => crate::budget::undeclared_inflate(raw.len()) / (1 + kept / num.width()),
             n => n,
         };
         inf.run(&raw, limit)?;
