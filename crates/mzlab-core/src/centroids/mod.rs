@@ -20,6 +20,8 @@ mod tests;
 mod tests_fast;
 #[cfg(test)]
 mod tests_hr;
+#[cfg(test)]
+mod tests_grid_sat;
 
 pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
 pub use params::{estimate, Estimate};
