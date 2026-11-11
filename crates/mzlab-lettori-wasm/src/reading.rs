@@ -308,7 +308,7 @@ fn open_sample(
     mzlab_lettori::apri(fs, &Limits::sito())
 }
 
-/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra a truncated file lacks (`Lettore::missing`).
+/// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written. Gives the spectra the file declares beyond the ones read (`Reader::losses`).
 /// Indexed mzML with no processing steps and the optical matrix when the sample has one (the page reads UV spectra and the PDA from this file only):
 /// the form `mzlab-cli convert --set conv.dad=true` writes (`flow_base.rs` `write_mzml_with`), byte for byte.
 #[wasm_bindgen]
@@ -341,7 +341,7 @@ pub fn to_mzml_with(
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     let m = Members::new(names, sizes, read)?;
     let mut l = open_sample(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
-    let lacking = l.missing(c as usize);
+    let lacking = l.losses(c as usize).map_err(|e| error_json(&e))?.lost();
     let mut out = BlockWriter {
         sink,
         buf: Vec::new(),

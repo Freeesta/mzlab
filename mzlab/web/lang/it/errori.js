@@ -413,6 +413,7 @@ I18N.add("it", {
   "warn.wiff.emptySample": "Acquisizione vuota: l'indice del .wiff elenca questo campione senza scansioni (acquisizione interrotta o fallita, oppure copia incompleta).",
   "warn.wiff.inferredSample": "Recuperato da dati che l'indice del .wiff non elenca: il nome e il metodo sono dedotti dal campione precedente, non letti dal file.",
   "warn.centroid.widthFallback": "Nelle scansioni profilo ci sono meno di 8 picchi isolati, quindi la larghezza dei picchi non è stata misurata: i centroidi usano la larghezza di ripiego di 0,7 Da. Sui dati ad alta risoluzione indica tu la larghezza (fwhm).",
+  "warn.file.truncated": "Il file finisce prima di alcune scansioni che dichiara: si legge e si scrive quello che contiene, il resto manca. Controlla la copia del file.",
   "warn.flow.formula.subformulas": "Questo ione ha più sotto-formule di max_subformulas, quindi nessun frammento è stato provato: alza max_subformulas o indica meno elementi.",
   "warn.flow.group.corrFiles": "La correlazione tra le righe richiede almeno tanti file quanti min_corr_samples (3 se non lo cambi): con meno file non è stata calcolata, quindi non ci sono archi di correlazione. Isotopi e specie ioniche restano.",
   "warn.msngrafo.rottureCapped": "Ci sono troppe rotture di legami: sono state provate solo le prime.",

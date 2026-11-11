@@ -487,3 +487,6 @@ fn the_method_warnings_are_notes_with_their_text() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[path = "convert_partial_tests.rs"]
+mod partial;
