@@ -282,3 +282,20 @@ fn a_numpress_array_ending_on_its_prediction_has_all_its_values() {
     let r = report(&w.finish().unwrap());
     assert!(r.is_valid(), "{}", show_all(&r));
 }
+
+#[test]
+fn an_optical_spectrum_is_profile_and_needs_no_ms_level() {
+    let h = Header {
+        run: "x".into(),
+        sources: vec!["x.wiff".into()],
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Options::default()).unwrap();
+    w.open_spectra(1).unwrap();
+    w.uv_spectrum(0, 0.25, &[200.0, 202.0, 204.0], &[1.5, 2.5, 3.5])
+        .unwrap();
+    w.close_spectra().unwrap();
+    let b = w.finish().unwrap();
+    let r = report(&b);
+    assert!(errors(&r).is_empty(), "{}", show_all(&r));
+}
