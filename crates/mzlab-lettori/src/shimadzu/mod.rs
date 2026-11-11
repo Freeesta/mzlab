@@ -107,7 +107,8 @@ fn cut_before(m: &mut mzlab_core::readers::Member) -> Option<Error> {
 }
 
 fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    let (i, c) = find(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted"))?;
+    let refused = fs.not_accepted();
+    let (i, c) = find(&mut fs).ok_or(refused)?;
     match &c {
         Content::Ignoto(v) => {
             return Err(refusal(&format!(

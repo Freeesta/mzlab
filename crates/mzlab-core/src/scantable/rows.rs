@@ -9,6 +9,7 @@ use super::inert::{extra_inerte, tic_read};
 use super::*;
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, SpectrumExtra};
+use crate::spechead::{self, Groups, Stage};
 
 /// A level and the key of a filter path (`path_key`).
 type PathKey = (u8, Vec<(i64, String, u64)>);
@@ -21,6 +22,8 @@ pub(super) struct Head {
     default_ic: Option<String>,
     /// `count` of the `<spectrumList` that follows the `<run ` tag: what the file says it holds (0 when absent).
     declared: usize,
+    /// The `referenceableParamGroup`s of the file header.
+    groups: Groups,
 }
 
 impl Head {
@@ -59,11 +62,17 @@ impl Head {
             .filter(|d| ic.iter().any(|(k, _)| k == d))
             .or_else(|| ic.first().map(|(k, _)| k.clone()));
         let declared = super::head_read::declared_count(run_text);
+        let groups = if head.contains("referenceableParamGroup") {
+            crate::spechead::groups(head)
+        } else {
+            Groups::new()
+        };
         Head {
             nce,
             ic,
             default_ic,
             declared,
+            groups,
         }
     }
 
@@ -103,6 +112,7 @@ impl Head {
             ic: vec![("IC1".to_string(), analyzer_from_components(&names))],
             default_ic: Some("IC1".to_string()),
             declared: 0,
+            groups: Groups::new(),
         })
     }
 
@@ -187,30 +197,6 @@ impl Rows {
     }
 }
 
-/// The retention time of a spectrum header, in minutes.
-pub(super) fn rt_minutes(h: &str) -> f64 {
-    let mut rt = cv(h, "MS:1000016").and_then(float).unwrap_or(0.0);
-    if let Some(p) = h.find("accession=\"MS:1000016\"") {
-        let tag_end = h[p..].find('>').map_or(h.len(), |g| p + g);
-        let tag = &h[p..tag_end];
-        if crate::mzml::is_seconds(attr(tag, "unitName"), attr(tag, "unitAccession")) {
-            rt /= 60.0;
-        }
-    }
-    rt
-}
-
-/// The resolution of a spectrum header (`hs` is its part before the precursors).
-fn resolution(hs: &str, h: &str) -> Option<f64> {
-    cv(hs, "MS:1000800").and_then(float).or_else(|| {
-        let pat = "<userParam name=\"opentfraw.resolution\" value=\"";
-        h.find(pat).and_then(|p| {
-            let s = p + pat.len();
-            h[s..].find('"').and_then(|e| float(&h[s..s + e]))
-        })
-    })
-}
-
 impl Rows {
     /// Links every MSn row to its parent (`_link_parents`) and closes the table.
     pub(crate) fn finish(self, n_chromatograms: usize) -> Table {
@@ -271,54 +257,33 @@ impl Rows {
     }
 }
 
-/// The first ` id="..."` of a spectrum header (`\sid="..."`).
-fn first_id(h: &str) -> Option<String> {
-    let mut from = 0;
-    while let Some(p) = h[from..].find("id=\"") {
-        let at = from + p;
-        if at > 0 && h.as_bytes()[at - 1].is_ascii_whitespace() {
-            let s = at + 4;
-            return h[s..].find('"').map(|e| h[s..s + e].to_string());
-        }
-        from = at + 3;
-    }
-    None
-}
-
 impl Rows {
-    /// One spectrum: `a`, `b` are its bytes in the mzML, `h` its header text.
+    /// One spectrum: `a`, `b` are its bytes in the mzML, `h` its header text (read by `spechead`, the reader every mzML path shares).
     pub(crate) fn spectrum(&mut self, a: u64, b: u64, h: &str) {
-        let id = first_id(h);
-        let lvl = cv(h, "MS:1000511").filter(|v| !v.is_empty());
-        let pol = if h.contains("accession=\"MS:1000130\"") {
-            1
-        } else if h.contains("accession=\"MS:1000129\"") {
-            -1
-        } else {
-            0
-        };
-        let rt = rt_minutes(h);
-        let level = lvl.and_then(float).map_or(1, |v| v as u8);
-        self.window.note(h, level);
-        let hs = h.split("<precursorList").next().unwrap_or("");
-        let filt = cv(hs, "MS:1000512").unwrap_or("");
+        let sh = spechead::parse(h, &self.head.groups).unwrap_or_default();
+        let t = &sh.terms;
+        let level = sh.level();
+        self.window
+            .note_span(t.float("MS:1000501").zip(t.float("MS:1000500")), level);
+        let filt = sh.filter();
         let mut m = if level > 1 {
-            self.msn(h, level, filt)
+            self.msn(&sh, level, filt)
         } else {
             Msn::default()
         };
-        if m.ce.is_none() && h.contains("accession=\"MS:1000045\"") {
-            m.ce = cv(h, "MS:1000045").and_then(float);
+        if m.ce.is_none() {
+            m.ce = t
+                .float("MS:1000045")
+                .or_else(|| sh.precursors.iter().find_map(Stage::energy));
         }
-        let icref = hs.find("<scan").and_then(|p| {
-            let t = &hs[p..];
-            let tag = &t[..t.find('>').unwrap_or(t.len())];
-            attr(tag, "instrumentConfigurationRef")
-        });
-        let res = resolution(hs, h);
-        let native = match &id {
-            Some(i) => self.native_id(i, level),
-            None => self.intern(""),
+        let res = t
+            .float("MS:1000800")
+            .or_else(|| t.user("opentfraw.resolution").and_then(float));
+        // the table keeps a native id as the writer escapes it (the direct path's `esc` too)
+        let native = if sh.id.is_empty() {
+            self.intern("")
+        } else {
+            self.native_id(&esc(&sh.id), level)
         };
         let act = m.act.map(|a| self.intern(&a));
         let mut detail = Detail {
@@ -337,20 +302,20 @@ impl Rows {
             end: b,
             at: None,
             level,
-            rt,
-            polarity: pol,
-            tic: cv(h, "MS:1000285")
-                .and_then(float)
-                .filter(|v| *v != 0.0)
-                .unwrap_or(0.0),
-            an: self.head.analyzer(filt, icref),
+            rt: sh.rt_minutes(),
+            polarity: sh.polarity(),
+            tic: t.float("MS:1000285").filter(|v| *v != 0.0).unwrap_or(0.0),
+            an: self.head.analyzer(filt, sh.ic_ref.as_deref()),
             kind: (level > 1)
-                .then(|| super::kind_of(h, filt))
+                .then(|| super::kind_of(|acc| t.has(acc), filt))
                 .flatten()
-                .or_else(|| crate::wiff::modes::scan_type_of(h)),
-            mob: super::mobility_of_header(h),
+                .or_else(|| {
+                    t.user(crate::wiff::modes::SCAN_TYPE_PARAM)
+                        .and_then(crate::wiff::modes::scan_type_named)
+                }),
+            mob: super::mobility_of_terms(t),
             filter: self.intern(filt),
-            profile: h.contains("accession=\"MS:1000128\""),
+            profile: sh.profile(),
             parent: None,
             res,
             native,
@@ -414,7 +379,7 @@ impl Rows {
             tic: Some(tic_read(tic)).filter(|v| *v != 0.0).unwrap_or(0.0),
             an: self.head.analyzer(filt, None),
             kind: (level > 1)
-                .then(|| super::kind_of("", filt))
+                .then(|| super::kind_of(|_| false, filt))
                 .flatten()
                 .or_else(|| crate::wiff::modes::scan_type_param(&extra.params)),
             filter: self.intern(filt),
@@ -445,34 +410,18 @@ struct Msn {
 
 impl Rows {
     /// The precursor part of the header of an MSn spectrum.
-    fn msn(&mut self, h: &str, level: u8, filt: &str) -> Msn {
+    fn msn(&mut self, sh: &spechead::Head, level: u8, filt: &str) -> Msn {
         let mut m = Msn {
             path: filter_path(filt),
             ..Msn::default()
         };
-        let mut from = 0;
-        while let Some(p) = h[from..].find("<precursor") {
-            let s = from + p;
-            let after = s + 10;
-            let nxt = h.as_bytes().get(after).copied().unwrap_or(b'>');
-            if nxt.is_ascii_alphanumeric() || nxt == b'_' {
-                from = after;
-                continue;
-            }
-            let Some(g) = h[after..].find('>') else { break };
-            let attrs = &h[after..after + g];
-            let Some(close) = h[after + g + 1..].find("</precursor>") else {
-                break;
-            };
-            let body = &h[after + g + 1..after + g + 1 + close];
-            let rf = attr(attrs, "spectrumRef").map(|r| self.shared(r));
-            m.precs.push(precursor_element(body, rf));
-            from = after + g + 1 + close + 12;
+        for st in &sh.precursors {
+            let rf = st.refer.as_deref().map(|r| self.shared(&esc(r)));
+            m.precs.push(precursor_of(st, rf));
         }
-        // the isolation window of a `<product>` (a precursor-ion scan) is not a precursor
-        let lone = h.find("<productList").map_or(h, |p| &h[..p]);
-        if m.precs.is_empty() && (lone.contains("MS:1000744") || lone.contains("MS:1000827")) {
-            m.precs.push(precursor_element(lone, None));
+        if m.precs.is_empty() && (sh.terms.has("MS:1000744") || sh.terms.has("MS:1000827")) {
+            // a selected ion or a target written outside a <precursor>
+            m.precs.push(precursor_of(&Stage::loose(&sh.terms), None));
         }
         // the parent of an MS3+ is its immediate precursor, not the first one listed (which may be the MS1)
         let mut immediate_ref = None;

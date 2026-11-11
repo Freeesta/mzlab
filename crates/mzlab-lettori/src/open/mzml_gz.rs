@@ -100,9 +100,7 @@ fn open_mzxml(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 
 /// The set with its gzip member inflated into memory, named without `.gz`.
 fn inflate(mut fs: FileSet, suffix: &str, limits: &Limits) -> Result<FileSet> {
-    let i = fs
-        .find(suffix)
-        .ok_or_else(|| Error::new("err.file.notAccepted"))?;
+    let i = fs.find(suffix).ok_or_else(|| fs.not_accepted())?;
     let m = fs.membri.swap_remove(i);
     let name = m.nome[..m.nome.len() - ".gz".len()].to_string();
     let mut outside = Vec::new();

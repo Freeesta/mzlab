@@ -39,6 +39,15 @@ pub use sched_route::{
 };
 pub use write::plan_json;
 
+/// `err.flow.check` for a plan with `problems` (not empty): their count and the first one's instance and key, the values its text names.
+pub fn check_error(problems: &[Problem]) -> crate::Error {
+    let first = problems.first();
+    crate::Error::new("err.flow.check")
+        .with("count", problems.len())
+        .with("instance", first.map_or("", |p| p.instance.as_str()))
+        .with("error_key", first.map_or("", |p| p.error_key))
+}
+
 use crate::json::Value;
 
 /// `program` of the file: the program that wrote it.

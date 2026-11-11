@@ -64,6 +64,20 @@ fn name(o: &mut Vec<u8>, s: &str) {
     pad(o);
 }
 
+/// `x` as an element of type `kind` holds it (the integer types saturate).
+pub fn stored(kind: u32, x: f64) -> f64 {
+    let mut o = Vec::new();
+    element(&mut o, kind, x);
+    match kind {
+        1 => f64::from(o[0] as i8),
+        2 => f64::from(o[0]),
+        3 => f64::from(i16::from_be_bytes([o[0], o[1]])),
+        4 => f64::from(i32::from_be_bytes([o[0], o[1], o[2], o[3]])),
+        5 => f64::from(f32::from_be_bytes([o[0], o[1], o[2], o[3]])),
+        _ => x,
+    }
+}
+
 fn element(o: &mut Vec<u8>, kind: u32, x: f64) {
     match kind {
         1 => o.push(x as i8 as u8),
@@ -293,6 +307,27 @@ pub fn andi_ms_with(
     points: impl Fn(usize) -> Vec<(f64, f64)>,
     tic: bool,
 ) -> Vec<u8> {
+    andi_ms_edited(c, scans, points, tic, |_| {})
+}
+
+/// The TIC of each scan, of its points as stored; a NaN point (the tests of the BPC) leaves it finite.
+fn tics(c: &Run, scans: usize, points: &impl Fn(usize) -> Vec<(f64, f64)>) -> Vec<f64> {
+    (0..scans)
+        .map(|k| {
+            let it = points(k).into_iter().map(|p| stored(c.kind_it, p.1));
+            it.filter(|x| !x.is_nan()).sum()
+        })
+        .collect()
+}
+
+/// `andi_ms_with` whose variables `edit` changes before they are written (a value that lies, a variable taken away).
+pub fn andi_ms_edited(
+    c: &Run,
+    scans: usize,
+    points: impl Fn(usize) -> Vec<(f64, f64)>,
+    tic: bool,
+    edit: impl Fn(&mut Vec<Vb>),
+) -> Vec<u8> {
     let counts: Vec<usize> = (0..scans).map(|k| points(k).len()).collect();
     let total: usize = counts.iter().sum();
     let mut starts = vec![0usize];
@@ -339,14 +374,7 @@ pub fn andi_ms_with(
     }
     let mut vars = vec![
         moment,
-        per_scan(
-            "total_intensity",
-            6,
-            (0..scans)
-                // a NaN point (the tests of the BPC) leaves the TIC of the file finite
-                .map(|k| points(k).iter().map(|p| p.1).filter(|x| !x.is_nan()).sum())
-                .collect(),
-        ),
+        per_scan("total_intensity", 6, tics(c, scans, &points)),
         per_scan("mass_range_min", 6, vec![40.0; scans]),
         per_scan("mass_range_max", 6, vec![400.0; scans]),
         per_scan("scan_index", 4, starts.iter().map(|&x| x as f64).collect()),
@@ -361,6 +389,7 @@ pub fn andi_ms_with(
     if !tic {
         vars.retain(|v| v.name != "total_intensity");
     }
+    edit(&mut vars);
     let g = globals_ms(c);
     let _ = total;
     cdf(c.v2, &dims, &g, &vars, total as u32)
