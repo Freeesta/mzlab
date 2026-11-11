@@ -1,4 +1,4 @@
-//! `chrom.transitions@1` through `flow run` on the SIM `.wiff` of `tools/wiff_sim.py` written as mzML (skipped without python3): the CSV is the bytes
+//! `chrom.transitions@2` through `flow run` on the SIM `.wiff` of `tools/wiff_sim.py` written as mzML (skipped without python3): the CSV is the bytes
 //! of `transitions_text` on the same files, the two isomers of 237.1 keep their own RT, the negative ion needs a negative row, and the example preset
 //! gives candidates for its rows without an RT.
 
@@ -55,11 +55,16 @@ fn fixture(tag: &str) -> Option<PathBuf> {
     Some(d)
 }
 
-/// The CSV of a plan with one `chrom.transitions` instance; `extra` are more keys of the instance (`"params":{…}` and the like).
+/// The CSV of a plan with one `chrom.transitions@2` instance; `extra` are more keys of the instance (`"params":{…}` and the like).
 fn run(d: &Path, extra: &str) -> String {
+    run_at(d, 2, extra)
+}
+
+/// `run` with the instance written at `version` (a saved version 1 plan is migrated by `flow::parse`).
+fn run_at(d: &Path, version: u32, extra: &str) -> String {
     let plan = format!(
         r#"{{"format":"mzflow/2","inputs":[{{"name":"s1.mzML","type":"mzml"}},{{"name":"s2.mzML","type":"mzml"}}],"steps":[
-        {{"id":"tr","step":"chrom.transitions@1","in":{{"source":["file:s1.mzML","file:s2.mzML"]}}{extra}}}]}}"#
+        {{"id":"tr","step":"chrom.transitions@{version}","in":{{"source":["file:s1.mzML","file:s2.mzML"]}}{extra}}}]}}"#
     );
     let (r, prov) = crate::flow::run_plan(plan.as_bytes(), d, &d.join("work"), 1, None).unwrap();
     assert!(
@@ -198,7 +203,15 @@ fn from_zero_the_cli_and_the_browser_entry_agree_and_say_so() {
         .str(TABLE)
         .raw("}");
     let zero = run(&d, &o.0);
-    let edges = run(&d, &params("peaks", TABLE));
+    assert_eq!(zero, run(&d, &params("peaks", TABLE)));
+    // a saved version 1 plan keeps the numbers of the edge line it was made with, and now says so
+    let edges = run_at(&d, 1, &params("peaks", TABLE));
+    let mut o = Out::default();
+    o.raw(",\"params\":{\"output\":\"peaks\",\"baseline\":\"edges\",\"transitions\":")
+        .str(TABLE)
+        .raw("}");
+    assert_eq!(edges, run(&d, &o.0));
+    assert_eq!(cell(&edges, "s1.mzML", "isoA", "baseline"), "edges");
     assert!(zero
         .lines()
         .next()
@@ -280,7 +293,7 @@ fn flow_run_below_the_read_estimate_refuses_the_step() {
     };
     let plan = format!(
         r#"{{"format":"mzflow/2","inputs":[{{"name":"s1.mzML","type":"mzml"}},{{"name":"s2.mzML","type":"mzml"}}],"steps":[
-        {{"id":"tr","step":"chrom.transitions@1","in":{{"source":["file:s1.mzML","file:s2.mzML"]}}{}}}]}}"#,
+        {{"id":"tr","step":"chrom.transitions@2","in":{{"source":["file:s1.mzML","file:s2.mzML"]}}{}}}]}}"#,
         params("table", TABLE)
     );
     std::fs::write(d.join("plan.json"), plan).unwrap();
