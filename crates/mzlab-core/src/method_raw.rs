@@ -196,9 +196,34 @@ fn open_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
         .collect()
 }
 
-/// What the scans themselves leave to a notice: trailer ions put aside for the isolation target, SRM transitions taken from the method's table.
+/// What the scans themselves leave to a notice: trailer ions put aside for the isolation target, SRM transitions taken from the method's table, and what
+/// the reader passes on unverified (an MS order it does not decode, an event found by number in a cut table) or refuses (a profile it cannot calibrate).
 fn scan_warnings(n: &crate::raw::ScanNotes) -> Vec<Option<V>> {
+    let note = |key: &str, text: String| {
+        obj(vec![
+            ("chiave", Some(V::s(key))),
+            ("dove", Some(V::s(text))),
+        ])
+    };
     let mut out = Vec::new();
+    if n.order_unknown > 0 {
+        out.push(note("meta.nonDecodificato", format!(
+            "MS order of {} of {} scans (precursor-ion, neutral-loss or MS9 and above): their level is unknown, though their filter text says ms",
+            n.order_unknown, n.scans
+        )));
+    }
+    if n.event_by_class > 0 {
+        out.push(note("meta.nonDecodificato", format!(
+            "the own scan event of {} of {} scans: the event table is cut short, so each takes the event its number names, unchecked (level, polarity, filter)",
+            n.event_by_class, n.scans
+        )));
+    }
+    if n.calibration_unknown > 0 {
+        out.push(note("meta.nonDecodificato", format!(
+            "profile calibration of {} of {} scans (a count of coefficients no known conversion uses): their profile is refused, it would be in frequency units",
+            n.calibration_unknown, n.scans
+        )));
+    }
     if n.ion_rejected > 0 {
         out.push(obj(vec![
             ("chiave", Some(V::s("meta.ioneScartata"))),
