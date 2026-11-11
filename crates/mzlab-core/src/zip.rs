@@ -223,7 +223,7 @@ pub fn unzip_stored(z: &[u8]) -> Result<Vec<(String, Vec<u8>)>, String> {
         out.push((name.to_string(), data.to_vec()));
         p += 46 + nl + el + cl;
     }
-    spans.sort_unstable();
+    crate::sortc::slice_ord(&mut spans);
     if spans.windows(2).any(|w| w[1].0 < w[0].1) {
         return Err("zip: entries overlap".into());
     }
