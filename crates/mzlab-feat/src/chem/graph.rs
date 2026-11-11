@@ -33,7 +33,7 @@ impl Mol {
     }
 
     /// One molecule from a V2000 molfile written by the drawing page (`pieceMolfile`): heavy atoms in file order (so atom `i` here is atom `i + 1` of
-    /// the file), implicit hydrogens by valence, `M  CHG` charges, bond type 4 aromatic. Disconnected pieces are accepted (the page cuts bonds).
+    /// the file), implicit hydrogens by valence, `M  CHG` charges, `M  RAD` radicals (fewer hydrogens), bond type 4 aromatic. Disconnected pieces are accepted (the page cuts bonds).
     pub fn from_molfile(mf: &str) -> Result<Mol> {
         let bad = || Error::new("error.grafo.molfile");
         let lines: Vec<&str> = mf.lines().collect();
@@ -91,6 +91,17 @@ impl Mol {
         let mut m = Mol::assemble(raw, written, true);
         for (i, w) in props(&lines[4 + na + nb..], "M  ISO", na) {
             m.atoms[i].iso = w.max(0) as u32;
+        }
+        // a radical mark takes the place of hydrogens: one for a doublet, two for a singlet or triplet
+        for (i, r) in props(&lines[4 + na + nb..], "M  RAD", na) {
+            let less = if r == 2 {
+                1
+            } else if r == 1 || r == 3 {
+                2
+            } else {
+                0
+            };
+            m.atoms[i].h = m.atoms[i].h.saturating_sub(less);
         }
         Ok(m)
     }
@@ -349,7 +360,7 @@ fn typed_bonds(raw: &[RawAtom], written: Vec<RawBond>) -> Vec<Bond> {
 }
 
 /// The (atom index, value) pairs of the `M  CHG` / `M  ISO` lines (`prefix`) of a molfile with `na` atoms.
-fn props(lines: &[&str], prefix: &str, na: usize) -> Vec<(usize, i32)> {
+pub(super) fn props(lines: &[&str], prefix: &str, na: usize) -> Vec<(usize, i32)> {
     let mut out = vec![];
     for rest in lines.iter().filter_map(|l| l.strip_prefix(prefix)) {
         let v: Vec<i32> = rest

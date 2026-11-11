@@ -25,11 +25,41 @@ fn count(n: &Counts, k: &Key) -> u64 {
     n.iter().find(|(x, _)| x == k).map_or(0, |(_, c)| *c)
 }
 
-struct Shape {
+pub(super) struct Shape {
     n: Counts,
     q: i64,
     mass: f64,
     nominal: u64,
+    /// Unpaired electrons of the radical marks (Ketcher / `M  RAD` code 2 = one, 3 = two; 1, a singlet pair, = none).
+    unpaired: u64,
+    /// Electrons of the species: atomic numbers plus hydrogens minus the charge (an odd count is a radical whatever the marks say).
+    electrons: i64,
+}
+
+/// One atom of a structure: element (or D, T), mass number (0 = natural), hydrogens, charge and radical code.
+pub(super) struct AtomIn<'a> {
+    pub el: &'a str,
+    pub iso: f64,
+    pub h: f64,
+    pub q: f64,
+    pub r: f64,
+}
+
+/// Unpaired electrons of a radical code (`M  RAD`: 1 singlet, 2 doublet, 3 triplet).
+pub(super) fn unpaired_of(code: i64) -> u64 {
+    match code {
+        2 => 1,
+        3 => 2,
+        _ => 0,
+    }
+}
+
+/// Atomic number of an element of the nuclide table (it runs from H in order).
+fn z_of(e: &str) -> i64 {
+    NUCLIDES
+        .iter()
+        .position(|n| n.0 == e)
+        .map_or(0, |p| p as i64 + 1)
 }
 
 /// The text of one key: `C`, `[13C]`, `D` and `T` for hydrogen 2 and 3.
@@ -76,9 +106,19 @@ pub fn with_charge(f: &str, q: i64) -> String {
     }
 }
 
-fn atom(v: &Value) -> Result<(Key, u64, i64)> {
-    let el = v.get("el").and_then(Value::str).unwrap_or("");
-    let iso = v.get("iso").and_then(Value::f64).unwrap_or(0.0);
+fn atom_in(v: &Value) -> AtomIn<'_> {
+    let num = |k: &str| v.get(k).and_then(Value::f64).unwrap_or(0.0);
+    AtomIn {
+        el: v.get("el").and_then(Value::str).unwrap_or(""),
+        iso: num("iso"),
+        h: num("h"),
+        q: num("q"),
+        r: num("r"),
+    }
+}
+
+fn atom(v: &AtomIn) -> Result<(Key, u64, i64, u64)> {
+    let (el, iso) = (v.el, v.iso);
     let bad = |k: &'static str| Error::new(k).with("label", el);
     if !(0.0..=400.0).contains(&iso) || iso.fract() != 0.0 {
         return Err(bad("error.etich.isotope"));
@@ -98,30 +138,24 @@ fn atom(v: &Value) -> Result<(Key, u64, i64)> {
             (e, if given.is_some() { a } else { 0 })
         }
     };
-    let h = v
-        .get("h")
-        .and_then(Value::f64)
-        .unwrap_or(0.0)
-        .clamp(0.0, 16.0) as u64;
-    let q = v
-        .get("q")
-        .and_then(Value::f64)
-        .unwrap_or(0.0)
-        .clamp(-16.0, 16.0) as i64;
-    Ok((key, h, q))
+    let h = v.h.clamp(0.0, 16.0) as u64;
+    let q = v.q.clamp(-16.0, 16.0) as i64;
+    Ok((key, h, q, unpaired_of(v.r as i64)))
 }
 
-fn shape(atoms: &[Value]) -> Result<Shape> {
+pub(super) fn shape(atoms: &[AtomIn]) -> Result<Shape> {
     let mut n = Counts::new();
-    let mut q = 0;
+    let (mut q, mut unpaired) = (0, 0);
     for v in atoms {
-        let (k, h, c) = atom(v)?;
+        let (k, h, c, u) = atom(v)?;
         add(&mut n, k, 1);
         if h > 0 {
             add(&mut n, ("H", 0), h);
         }
         q += c;
+        unpaired += u;
     }
+    let electrons = n.iter().map(|((e, _), c)| z_of(e) * *c as i64).sum::<i64>() - q;
     let (mut mass, mut nominal) = (Vec::new(), 0);
     for ((e, a), c) in &n {
         let (aa, m) = elements::nuclide(e, (*a > 0).then_some(*a)).unwrap_or((0, 0.0));
@@ -133,10 +167,25 @@ fn shape(atoms: &[Value]) -> Result<Shape> {
         q,
         mass: mzlab_core::pysum::pysum(mass),
         nominal,
+        unpaired,
+        electrons,
     })
 }
 
-fn shape_json(o: &mut Out, s: &Shape) {
+/// What the species is: `neutral`, `radical`, `cation`, `anion`, `radicalCation`, `radicalAnion`; a radical has a mark or an odd electron count.
+fn kind(s: &Shape) -> &'static str {
+    let rad = s.unpaired > 0 || s.electrons % 2 != 0;
+    match (s.q.signum(), rad) {
+        (0, false) => "neutral",
+        (0, true) => "radical",
+        (1, false) => "cation",
+        (1, true) => "radicalCation",
+        (_, false) => "anion",
+        (_, true) => "radicalAnion",
+    }
+}
+
+pub(super) fn shape_json(o: &mut Out, s: &Shape) {
     let f = hill(&s.n);
     o.raw("{\"formula\":")
         .str(&f)
@@ -153,7 +202,14 @@ fn shape_json(o: &mut Out, s: &Shape) {
     } else {
         o.num((s.mass - s.q as f64 * ELECTRON) / s.q.abs() as f64);
     }
-    o.raw("}");
+    o.raw(",\"unpaired\":").int(s.unpaired as i64);
+    o.raw(",\"electrons\":").int(s.electrons);
+    o.raw(",\"odd\":").raw(if s.electrons % 2 != 0 {
+        "true"
+    } else {
+        "false"
+    });
+    o.raw(",\"kind\":").str(kind(s)).raw("}");
 }
 
 /// Gain and loss across an arrow, `isotopologue` when the elements are the same and only isotopes moved, `dm` and `dnominal` after minus before.
@@ -194,15 +250,16 @@ fn arrow_json(o: &mut Out, a: &Shape, b: &Shape) {
         .raw("}");
 }
 
-/// `etich/1` of a request `{"structures": [[{el, iso, h, q}, ...], ...], "arrows": [[before, after], ...]}`. A structure with an atom that is
-/// no element (R group, atom list, `*`) or an isotope outside the table is `{"error": key, "label"}`; an arrow touching one is `null`.
+/// `etich/1` of a request `{"structures": [[{el, iso, h, q, r}, ...], ...], "arrows": [[before, after], ...]}` (`r` the radical code, optional). A structure
+/// gives `unpaired`, `electrons`, `odd` and `kind` besides formula and masses. A structure with an atom that is no element (R group, atom list, `*`) or an
+/// isotope outside the table is `{"error": key, "label"}`; an arrow touching one is `null`.
 pub fn labels_json(request: &str) -> Result<String> {
     let v = json::parse(request.as_bytes()).map_err(|_| Error::new("error.etich.request"))?;
     let shapes: Vec<Result<Shape>> = v
         .get("structures")
         .map_or(&[][..], Value::arr)
         .iter()
-        .map(|s| shape(s.arr()))
+        .map(|s| shape(&s.arr().iter().map(atom_in).collect::<Vec<_>>()))
         .collect();
     let mut o = Out::default();
     o.raw("{\"format\":\"etich/1\",\"structures\":[");
