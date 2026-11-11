@@ -15,6 +15,8 @@ const PRUNE: f64 = 1e-12;
 
 /// Lightest mass number, then (probability, probability x mass) per mass number from there: dense vectors keep the .wasm small (no map).
 type Dist = (u32, Vec<(f64, f64)>);
+/// Per element: symbol, count and mass of its atoms.
+type Per = Vec<(&'static str, u64, f64)>;
 
 fn conv(a: &Dist, b: &Dist) -> Dist {
     let mut out = vec![(0.0, 0.0); a.1.len() + b.1.len() - 1];
@@ -61,14 +63,13 @@ fn element(el: &str, a: u16) -> Result<(Dist, f64)> {
 }
 
 /// Average mass, then per element (isotopes and D/T under their element) count and mass in Hill order, then the pattern of the whole structure.
-fn tally(n: &Counts) -> Result<(f64, Vec<(&'static str, u64, f64)>, Dist)> {
+fn tally(n: &Counts) -> Result<(f64, Per, Dist)> {
     let rank = |e: &'static str| match e {
         "C" => (0, ""),
         "H" => (1, ""),
         _ => (2, e),
     };
-    let (mut per, mut dist): (Vec<(&'static str, u64, f64)>, Dist) =
-        (Vec::new(), (0, vec![(1.0, 0.0)]));
+    let (mut per, mut dist): (Per, Dist) = (Vec::new(), (0, vec![(1.0, 0.0)]));
     for ((e, a), c) in n {
         let (d, m) = element(e, *a)?;
         for _ in 0..*c {
@@ -147,7 +148,7 @@ pub fn analysis_json(request: &str) -> Result<String> {
         .unwrap_or(0);
     for (key, (p, pm)) in dist.1.iter().enumerate() {
         let rel = 100.0 * p / top;
-        if !(rel >= MIN_REL) {
+        if rel < MIN_REL {
             continue;
         }
         let m = pm / p;
