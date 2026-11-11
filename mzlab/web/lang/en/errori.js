@@ -224,6 +224,7 @@ I18N.add("en", {
   "err.cli.line": "The command line cannot be read: {message}.",
   "err.cli.set": "The setting “{set}” is not valid: {message}.",
   "err.conv.noProfile": "This file has only centroided peaks and no profile data, so it cannot be converted to a profile mzML. Use the centroid mzML as it is.",
+  "err.conv.mzlabNoProfile": "This file has only the instrument's centroids and no profile data, so mzLab cannot compute its own centroids. Convert with peaks = file to keep the instrument's centroids.",
   "err.corsa.prov": "The provenance record of this run is missing or has an unknown format: run the analysis again.",
   "err.file.agilent": "A part of this Agilent .D folder cannot be read: one of its files is damaged, cut short or written in a layout this program does not read, so nothing was loaded. If the .D folder is a copy, copy the whole folder again; if the notice remains, convert the folder to mzML with the instrument software and open that file.",
   "err.file.agilentCut": "In the folder {name} the copy is cut short: AcqData/MSScan.bin or AcqData/MSPeak.bin ends before the first whole scan, so nothing was loaded. Copy the whole .D folder again.",
