@@ -39,7 +39,10 @@ fn array(a: ArrayHead, item: &str) -> Result<Array> {
         break;
     }
     // numpress alone and followed by zlib: read as plain floats, a zlib variant gives garbage or an infinity
-    if t.0.iter().any(|x| crate::numpress::ACCESSIONS.contains(&x.acc.as_str())) {
+    if t.0
+        .iter()
+        .any(|x| crate::numpress::ACCESSIONS.contains(&x.acc.as_str()))
+    {
         return Err(Error::new("err.file.numpress"));
     }
     let num = t.0.iter().find_map(|x| Num::of_accession(&x.acc));
@@ -72,19 +75,24 @@ fn arrays(h: &mut Head, item: &str) -> Result<Vec<Array>> {
 
 /// The spectrum of header `h` (the `n`-th of the file), `None` for an optical spectrum (`mzml_dad` reads those). `levels` gives the level of the
 /// spectra read so far, by id, for the immediate precursor of an MSn scan.
-pub(super) fn spectrum(mut h: Head, n: usize, levels: &HashMap<String, u8>) -> Result<Option<Spec>> {
+pub(super) fn spectrum(
+    mut h: Head,
+    n: usize,
+    levels: &HashMap<String, u8>,
+) -> Result<Option<Spec>> {
     if h.terms.has("MS:1000804") {
         return Ok(None);
     }
     let item = who(&h, n);
     let level = h.level();
     let loose;
-    let stages: &[Stage] = if h.precursors.is_empty() && (h.terms.has("MS:1000744") || h.terms.has("MS:1000827")) {
-        loose = [Stage::loose(&h.terms)];
-        &loose
-    } else {
-        &h.precursors
-    };
+    let stages: &[Stage] =
+        if h.precursors.is_empty() && (h.terms.has("MS:1000744") || h.terms.has("MS:1000827")) {
+            loose = [Stage::loose(&h.terms)];
+            &loose
+        } else {
+            &h.precursors
+        };
     let keys: Vec<_> = stages
         .iter()
         .map(|s| (s.target(), s.selected(), s.refer.as_deref()))
@@ -97,7 +105,11 @@ pub(super) fn spectrum(mut h: Head, n: usize, levels: &HashMap<String, u8>) -> R
         .terms
         .0
         .iter()
-        .chain(h.precursors.iter().flat_map(|s| s.ion.0.iter().chain(&s.window.0)))
+        .chain(
+            h.precursors
+                .iter()
+                .flat_map(|s| s.ion.0.iter().chain(&s.window.0)),
+        )
         .find_map(|t: &Term| mobility_of(&t.acc).zip(t.float()).map(|(u, v)| (v, u)));
     Ok(Some(Spec {
         index: h.index.unwrap_or(n),
@@ -149,7 +161,13 @@ pub(super) fn chromatogram(mut h: Head, n: usize) -> Result<Chrom> {
     let pda = any(&["MS:1000812", "MS:1000813"]);
     let pressure = any(&["MS:1003019"]);
     let srm = any(&["MS:1001473"]);
-    let ms_term = any(&["MS:1000235", "MS:1000627", "MS:1000628", "MS:1001473", "MS:1001472"]);
+    let ms_term = any(&[
+        "MS:1000235",
+        "MS:1000627",
+        "MS:1000628",
+        "MS:1001473",
+        "MS:1001472",
+    ]);
     // Q1 and Q3 are the targets of the precursor and product isolation windows; an id in the msconvert form is the fallback
     let q1 = h.precursors.first().and_then(Stage::target);
     let q3 = h.products.first().and_then(Stage::target);

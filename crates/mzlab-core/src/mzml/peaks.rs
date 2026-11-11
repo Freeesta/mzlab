@@ -74,12 +74,7 @@ fn all<T: Copy>(v: &[T], ok: impl Fn(T) -> bool) -> bool {
 /// guard `mzlab_lettori::finiti`), checked here because both the parser and the helpers' answers pass through.
 #[inline(never)]
 pub(crate) fn assemble(s: Spec, p: Peaks) -> Result<(Spectrum, Option<Mobility>)> {
-    let Peaks {
-        mz,
-        it,
-        wide,
-        mob,
-    } = p;
+    let Peaks { mz, it, wide, mob } = p;
     let mob_unit = s
         .arrays
         .iter()
