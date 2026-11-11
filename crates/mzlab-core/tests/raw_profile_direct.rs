@@ -121,7 +121,8 @@ fn bit(p: &Option<(Vec<f64>, Vec<f32>)>) -> Option<(Vec<u64>, Vec<u32>)> {
 
 #[test]
 fn the_direct_profile_gives_the_points_of_the_chunks_to_the_bit() {
-    // none (ion trap), LTQ-FT/ICR, Orbitrap v66, Orbitrap, counts freq_to_mz does not convert, one with A < 0 (m/z <= 0 for the high frequencies)
+    // none (ion trap), LTQ-FT/ICR, Orbitrap v66, Orbitrap, counts freq_to_mz does not convert (refused: their points would be frequencies), one with
+    // A < 0 (m/z <= 0 for the high frequencies)
     let coeffs: [&[f64]; 9] = [
         &[],
         &[0.0, 1.5, 2.0e8, -3.0e12],
@@ -148,6 +149,10 @@ fn the_direct_profile_gives_the_points_of_the_chunks_to_the_bit() {
         for c in coeffs {
             let (a, b) = (vecchia(&bytes, c), new_one(&bytes, c));
             assert!(a.is_some(), "giro {lap}");
+            if !opentfraw::scan_data::calibration_known(c) {
+                assert!(b.is_none(), "giro {lap}, {} coefficients", c.len());
+                continue;
+            }
             points += a.as_ref().map_or(0, |p| p.0.len());
             assert_eq!(bit(&a), bit(&b), "giro {lap}, {} coefficients", c.len());
         }

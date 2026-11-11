@@ -151,6 +151,12 @@ pub struct ScanMetadata {
     pub selected_ion_rejected: bool,
     /// Whether this SRM scan's Q1 and energy come from the run's transition table, its event naming no reaction.
     pub srm_from_table: bool,
+    /// Whether the event names an MS order the reader does not decode: the level is absent, yet the filter text says `ms`.
+    pub ms_order_unknown: bool,
+    /// Whether the event was found by the index's event number in a table cut short (`ScanEvents` skipped): not checked to be this scan's own.
+    pub event_by_class: bool,
+    /// Whether the event's calibration has a count of coefficients no known conversion uses: its profile is refused, not given in frequency units.
+    pub calibration_unknown: bool,
 }
 
 /// Extract the metadata of the scan at scan-index `idx` (zero-based offset
@@ -371,6 +377,10 @@ pub fn scan_metadata_with(
         has_event: event.is_some(),
         selected_ion_rejected,
         srm_from_table,
+        ms_order_unknown: event.is_some_and(|e| e.preamble.ms_power_unknown()),
+        event_by_class: event.is_some() && raw.events_by_class(),
+        calibration_unknown: event
+            .is_some_and(|e| !crate::scan_data::calibration_known(&e.coefficients)),
     })
 }
 
