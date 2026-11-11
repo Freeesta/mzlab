@@ -33,6 +33,8 @@ Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.
 - `waters`, grezzo: polarità e decimali negli id SRM, canali mancanti senza punti, membri e conteggi nominati 1 036 930 → 1 044 197 (+0,7 %). `shimadzu`: `Ole::header_cut` (taglio prima della directory) 337 425 → 339 087; `cut_short` 336 007 → 336 324. `agilent`: mobilità ionica 528 588 → 529 271; copia tagliata 527 486 → 528 477.
 - Comuni, grezzo: scrittura igienica (caratteri fuori da `Char`, termini generici con il testo del fornitore in un userParam, `mzmlwrite/text.rs`) e controllo di buona formazione del validatore (`mzml_validate/wellformed.rs`): `aperti` 1 289 919 → 1 294 982 (+0,39 %), `andi` 951 052 → 953 403 (+0,25 %), `agilent` 1 206 848 → 1 209 151 (+0,19 %), `valida` 1 004 862 → 1 010 928 (+0,60 %), motore 3 574 301 → 3 584 441 (+0,28 %); tetti invariati.
 
+- Comuni, grezzo: lettore condiviso della testa mzML (`spechead`, con `spechead/tags.rs`) nella tabella delle scansioni: `aperti` 1 297 402 → 1 316 561 (+1,48 %), motore 3 607 188 → 3 625 164 (+0,50 %); `andi`, `thermo`, `sciex`, `bruker`, `valida` identici, `agilent`, `waters`, `shimadzu` ±8 B; tetti invariati.
+
 ## Feature, tabelle, rotte, librerie
 - Stima della lettura (`mzml_estimate`): `hr` (`flow_ms2` con `budget_mb`) 1 685 996 → 1 689 721 (+0,22 %), `formula` (`flow_ms1_rows` con `budget_mb`) 397 841 → 401 847 (+1,01 %), tetti invariati.
 - `hr`: riempimento dei vuoti che apre gli indici senza tabella delle scansioni (`Index::open_lean`, `FillOpen` in `series_into`) e `align_series` che passa per `series_into` come `align_series_to` (una copia dell'allineamento nel modulo invece di due) 1 703 926 → 1 699 926 (−4 000, tetto invariato).

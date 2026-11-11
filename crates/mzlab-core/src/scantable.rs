@@ -143,22 +143,6 @@ pub(crate) struct DeclaredWindow {
 }
 
 impl DeclaredWindow {
-    /// From the header text of a spectrum.
-    pub fn note(&mut self, h: &str, level: u8) {
-        // the header is searched only for a survey that still counts
-        if level != 1 || self.surveys >= 50 {
-            return;
-        }
-        let w = match (
-            cv(h, "MS:1000501").and_then(float),
-            cv(h, "MS:1000500").and_then(float),
-        ) {
-            (Some(a), Some(z)) => Some((a, z)),
-            _ => None,
-        };
-        self.note_span(w, level);
-    }
-
     /// From the window a reader gives (the one the header would say).
     pub fn note_span(&mut self, w: Option<(f64, f64)>, level: u8) {
         if level != 1 || self.surveys >= 50 {
@@ -187,19 +171,17 @@ impl Table {
 /// The scan type of a spectrum, from the CV term of its header (`MS:1000341` precursor ion, `MS:1000326` constant neutral loss, `MS:1000325`
 /// constant neutral gain, `MS:1000789` enhanced multiply charged `EMC`, `MS:1000790` time-delayed fragmentation `TDF`, `MS:1000791` enhanced resolution `ER`) or, when the
 /// header says nothing, from a Thermo filter token (`pr`, `cnl`, `cng`). Never from a name.
-pub(crate) fn kind_of(h: &str, filter: &str) -> Option<&'static str> {
+pub(crate) fn kind_of(has: impl Fn(&str) -> bool, filter: &str) -> Option<&'static str> {
     const TERMS: [(&str, &str); 6] = [
-        ("accession=\"MS:1000341\"", "PREC"),
-        ("accession=\"MS:1000326\"", "NL"),
-        ("accession=\"MS:1000325\"", "NG"),
-        ("accession=\"MS:1000789\"", "EMC"),
-        ("accession=\"MS:1000790\"", "TDF"),
-        ("accession=\"MS:1000791\"", "ER"),
+        ("MS:1000341", "PREC"),
+        ("MS:1000326", "NL"),
+        ("MS:1000325", "NG"),
+        ("MS:1000789", "EMC"),
+        ("MS:1000790", "TDF"),
+        ("MS:1000791", "ER"),
     ];
-    for (pat, k) in TERMS {
-        if h.contains(pat) {
-            return Some(k);
-        }
+    if let Some((_, k)) = TERMS.iter().find(|(acc, _)| has(acc)) {
+        return Some(k);
     }
     filter
         .split_whitespace()
@@ -212,32 +194,14 @@ pub(crate) fn kind_of(h: &str, filter: &str) -> Option<&'static str> {
 }
 
 /// The mobility of a scan from its header: the scan attribute `MS:1002815` (inverse reduced, `k0`) or `MS:1002476` (drift time, `ms`).
-pub(crate) fn mobility_of_header(h: &str) -> Option<(f64, &'static str)> {
+pub(crate) fn mobility_of_terms(t: &crate::spechead::Terms) -> Option<(f64, &'static str)> {
     [("MS:1002815", "k0"), ("MS:1002476", "ms")]
         .into_iter()
-        .find_map(|(acc, u)| cv(h, acc).and_then(float).map(|v| (v, u)))
+        .find_map(|(acc, u)| t.float(acc).map(|v| (v, u)))
 }
 
 fn float(s: &str) -> Option<f64> {
     s.trim().parse().ok()
-}
-
-/// Value of the first cvParam with this accession that has a `value` in the same tag (`accession="X"[^>]*?value="([^"]*)"`).
-fn cv<'a>(h: &'a str, acc: &str) -> Option<&'a str> {
-    let pat = format!("accession=\"{acc}\"");
-    let mut from = 0;
-    while let Some(i) = h[from..].find(&pat) {
-        let at = from + i + pat.len();
-        let tag_end = h[at..].find('>').map_or(h.len(), |g| at + g);
-        if let Some(v) = h[at..tag_end].find("value=\"") {
-            let s = at + v + 7;
-            if let Some(e) = h[s..].find('"') {
-                return Some(&h[s..s + e]);
-            }
-        }
-        from = at;
-    }
-    None
 }
 
 /// `value="..."` of the first attribute of that name in a tag-like text.
@@ -248,40 +212,18 @@ fn attr<'a>(t: &'a str, name: &str) -> Option<&'a str> {
     Some(&t[s..s + e])
 }
 
-fn precursor_element(e: &str, refer: Option<Arc<str>>) -> Prec {
-    // _RX_PCV.findall: every accession of the set that has a value in its tag; the first occurrence of each wins
-    const SET: [&str; 7] = ["827", "828", "829", "744", "041", "045", "042"];
-    let mut found: Vec<(&str, Option<f64>)> = Vec::new();
-    let mut from = 0;
-    while let Some(i) = e[from..].find("accession=\"MS:1000") {
-        let at = from + i + 18;
-        let code = e.get(at..at + 3).unwrap_or("");
-        from = at;
-        if !SET.contains(&code) || e.get(at + 3..at + 4) != Some("\"") {
-            continue;
-        }
-        let rest = at + 4;
-        let tag_end = e[rest..].find('>').map_or(e.len(), |g| rest + g);
-        if let Some(v) = e[rest..tag_end].find("value=\"") {
-            let s = rest + v + 7;
-            if let Some(q) = e[s..].find('"') {
-                found.push((code, float(&e[s..s + q])));
-                from = s + q;
-            }
-        }
-    }
-    let get = |c: &str| found.iter().find(|(k, _)| *k == c).and_then(|(_, v)| *v);
-    let (tgt, off_lo, off_hi, ch) = (get("827"), get("828"), get("829"), get("041"));
+fn precursor_of(st: &crate::spechead::Stage, refer: Option<Arc<str>>) -> Prec {
+    let (lo, hi) = st.edges();
     Prec {
-        target: tgt,
-        lo: tgt.zip(off_lo).map(|(t, o)| t - o),
-        hi: tgt.zip(off_hi).map(|(t, o)| t + o),
-        selected: get("744"),
-        charge: ch.filter(|c| *c != 0.0).map(|c| c as i64),
+        target: st.target(),
+        lo,
+        hi,
+        selected: st.selected(),
+        charge: st.charge().filter(|c| *c != 0.0).map(|c| c as i64),
         refer,
-        act: crate::activations::name_in(e),
-        ce: get("045"),
-        pint: get("042"),
+        act: st.method(),
+        ce: st.energy(),
+        pint: st.intensity(),
     }
 }
 
@@ -366,34 +308,20 @@ fn activation_in_filter(f: &str) -> Option<String> {
     None
 }
 
+/// The immediate precursor among `precs` (`spechead::immediate`).
 fn immediate<'a>(
     precs: &'a [Prec],
     path: &Option<Vec<(f64, String, f64)>>,
     level: u8,
     level_of: &std::collections::HashMap<Arc<str>, u8>,
 ) -> Option<&'a Prec> {
-    if precs.is_empty() {
-        return None;
-    }
-    if let Some(p) = path {
-        let last = p[p.len() - 1].0;
-        if let Some(e) = precs.iter().find(|e| {
-            [e.target, e.selected]
-                .iter()
-                .any(|v| v.is_some_and(|v| (v - last).abs() <= 0.01))
-        }) {
-            return Some(e);
-        }
-    }
-    for e in precs {
-        if let Some(r) = &e.refer
-            && !r.is_empty()
-            && level_of.get(r).copied() == Some(level.wrapping_sub(1))
-        {
-            return Some(e);
-        }
-    }
-    precs.first()
+    let stages: Vec<_> = precs
+        .iter()
+        .map(|e| (e.target, e.selected, e.refer.as_deref()))
+        .collect();
+    let last = path.as_ref().map(|p| p[p.len() - 1].0);
+    crate::spechead::immediate(&stages, level, last, |r| level_of.get(r).copied())
+        .map(|i| &precs[i])
 }
 
 fn analyzer_from_components(names: &[String]) -> &'static str {
@@ -767,6 +695,8 @@ fn finished(t: Table) -> Result<Table> {
 
 #[cfg(test)]
 mod tests_header;
+#[cfg(test)]
+mod tests_variants;
 #[cfg(test)]
 mod tests_walk;
 #[cfg(test)]
