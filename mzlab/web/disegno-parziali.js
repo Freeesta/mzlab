@@ -71,7 +71,7 @@ async function checkDelta(/** @type {string} */ molfile, /** @type {string} */ d
 }
 
 /** for every Ketcher atom id, its molecule node and position in the .ket (matched on the coordinates: the .ket has its own numbering) */
-function ketIndex(/** @type {any} */ j, /** @type {any} */ st, /** @type {number[]} */ ids) {
+export function ketIndex(/** @type {any} */ j, /** @type {any} */ st, /** @type {number[]} */ ids) {
   const nodes = Object.keys(j).filter(k => j[k] && j[k].type === "molecule");
   /** @type {{ mol: string, idx: number }[]} */ const out = [];
   for (const id of ids) {

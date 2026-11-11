@@ -1,6 +1,6 @@
 // @ts-check
 // Formula, mass and arrow change of the structures of the drawing, from the Rust engine (`labels` of the grafo .wasm, `etich/1`; the app asks `feat/grafo`):
-// isotopes ([13C], D), every element, charge. The page sends the atoms as Ketcher holds them and which structures each arrow joins; the answers are kept by
+// isotopes ([13C], D), every element, charge, radical marks (unpaired electrons, odd electron count). The page sends the atoms as Ketcher holds them and which structures each arrow joins; the answers are kept by
 // request, so the labels are drawn at once from a known answer and redrawn when a new one arrives (nothing is shown until then).
 import { carica } from "./disegno-frammenti.js";
 
@@ -8,7 +8,7 @@ import { carica } from "./disegno-frammenti.js";
 export const isElement = (/** @type {string} */ l) => /^[A-Z][a-z]?$/.test(l) && !/^[AQMXLR]$/.test(l);
 
 /** the atom as the engine reads it */
-export const atomOf = (/** @type {any} */ a) => ({ el: a.label, iso: a.isotope || 0, h: a.implicitH || 0, q: a.charge || 0 });
+export const atomOf = (/** @type {any} */ a) => ({ el: a.label, iso: a.isotope || 0, h: a.implicitH || 0, q: a.charge || 0, r: a.radical || 0 });
 
 /** @type {Map<string, any>} request text -> answer (null while it is asked) */
 const cache = new Map();
