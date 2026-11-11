@@ -155,6 +155,20 @@ try:
             assert not errs, errs
             c5.close()
         step("an injection that acquired nothing is listed as an empty sample under its own number", empty_injection)
+        def refused_sample():                            # one pair: a sample read, one that acquired nothing, one the engine refuses (a TOF experiment): the refused one is told with its reason, never as an empty injection (H6-15)
+            c7 = b.new_context(viewport={"width": 1500, "height": 1800}); c7.set_default_timeout(120000); pg = c7.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange", timeout=60000)
+            pg.set_input_files("#pick", [str(D / "rifiutato.wiff"), str(D / "rifiutato.wiff.scan")])
+            told = r"Array.from(document.querySelectorAll('.fi')).filter(e => /rifiutato_s3/.test(e.innerText) && /(code|codice) 8\b/.test(e.innerText)).length"
+            got = "[ST.files.map(f => [f.name, f.kind || '']), Array.from(document.querySelectorAll('.fi')).map(e => e.innerText.slice(0, 200))]"
+            try: pg.wait_for_function(told + " > 0 && UPBUSY === 0", timeout=60000)
+            except Exception: raise AssertionError(pg.evaluate(got))
+            assert sorted(pg.evaluate(got)[0]) == [["rifiutato_s1.mzML", "full"], ["rifiutato_s2.mzML", "empty"]], pg.evaluate(got)
+            assert not errs, errs
+            c7.close()
+        step("a sample the engine refuses is told with its reason, apart from the empty injection of the same pair", refused_sample)
         def variant():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
                 print("   (variante: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return

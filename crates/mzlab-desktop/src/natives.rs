@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use mzlab_core::idxread::ReadAt;
-use mzlab_core::json::Out;
 use mzlab_core::readers::{FileSet, Limits, Member, Reader};
 use mzlab_core::{readers_centroids, Error, Result};
 
@@ -47,27 +46,10 @@ pub(crate) fn open(members: &[(String, PathBuf)], centroid: bool) -> Result<Box<
     })
 }
 
-/// The samples of a dataset: JSON `{"format": id, "samples": [{"id", "name", "scans"}]}`.
+/// The samples of a dataset: the JSON of `readers::samples_json`, the listing the site gives too.
 pub(crate) fn samples(members: &[(String, PathBuf)]) -> Result<String> {
-    let l = open(members, false)?;
-    let mut o = Out::default();
-    o.raw("{\"format\":")
-        .str(&format!("{:?}", l.format()))
-        .raw(",\"samples\":[");
-    for (i, s) in l.samples().iter().enumerate() {
-        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
-            .int(i64::from(s.id))
-            .raw(",\"name\":")
-            .str(&s.nome)
-            .raw(",\"scans\":")
-            .int(s.scansioni as i64);
-        if let Some(dim) = s.size {
-            o.raw(",\"size\":").int(dim as i64);
-        }
-        o.raw("}");
-    }
-    o.raw("]}");
-    Ok(o.0)
+    let mut l = open(members, false)?;
+    Ok(mzlab_core::readers::samples_json(&mut *l))
 }
 
 pub(super) struct Dataset {

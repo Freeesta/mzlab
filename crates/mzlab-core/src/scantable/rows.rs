@@ -27,7 +27,7 @@ pub(super) struct Head {
 }
 
 impl Head {
-    /// `head`: the text before `<run `; `run_text`: the text from `<run ` on (2000 bytes are enough).
+    /// `head`: the text before `<run `; `run_text`: the text from `<run ` through `<spectrumList …>` (`run_end`).
     pub(super) fn parse(head: &str, run_text: &str) -> Head {
         let nce = head.contains("accession=\"MS:1000768\"");
         let mut ic: Vec<(String, &'static str)> = Vec::new();
@@ -510,7 +510,7 @@ impl Rows {
         let at = find(doc, b"<run ");
         let head = String::from_utf8_lossy(&doc[..at.unwrap_or(200000.min(doc.len()))]);
         let lo = at.unwrap_or(0);
-        let run_text = String::from_utf8_lossy(&doc[lo..(lo + 2000).min(doc.len())]);
+        let run_text = String::from_utf8_lossy(&doc[lo..super::head_read::run_end(doc, lo)]);
         Rows::with(Head::parse(&head, &run_text))
     }
 }
