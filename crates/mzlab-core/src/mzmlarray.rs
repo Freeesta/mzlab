@@ -70,7 +70,7 @@ impl Inflate {
             let made = usize::try_from(self.dec.total_out() - before_out).unwrap_or(0);
             self.n += made;
             if self.n > limit {
-                return Err(Error::memory_budget());
+                return Err(Error::fixed_limit("zlib array", limit as u64));
             }
             match st {
                 Status::StreamEnd => return Ok(()),

@@ -1,7 +1,7 @@
 //! Search in the m/z array of an index: the element at a position, the range of a section and `np.searchsorted`, through the fence and the block cache.
 
 use crate::error::Result;
-use crate::idxread::{Index, ReadAt, BLOCK};
+use crate::idxread::{index_bytes, Index, ReadAt, BLOCK};
 
 /// One element of the m/z array as `f64`: 4 bytes are the `f32` of a high-resolution survey (widened exactly), else 8 bytes of `f64`.
 fn widen(c: &[u8]) -> f64 {
@@ -28,7 +28,7 @@ impl<R: ReadAt> Index<R> {
                 let first = blk * BLOCK;
                 let cnt = (n - first).min(BLOCK) as usize;
                 let mut b = vec![0u8; cnt * w];
-                self.r.read_at(off + first * w as u64, &mut b)?;
+                index_bytes(&mut self.r, off + first * w as u64, &mut b)?;
                 if self.cache.len() >= 8 {
                     // the least recently used block, not the first read: the blocks of a search stay while a window is read
                     if let Some(old) = (0..self.cache.len()).min_by_key(|&k| self.cache[k].4) {
@@ -76,7 +76,7 @@ impl<R: ReadAt> Index<R> {
             let mut fence = Vec::new();
             if ok {
                 let mut b = vec![0u8; n_f * w];
-                self.r.read_at(s.off[6], &mut b)?;
+                index_bytes(&mut self.r, s.off[6], &mut b)?;
                 fence = b.chunks_exact(w).map(widen).collect();
             }
             self.fences[si] = Some(fence);

@@ -161,7 +161,7 @@ fn raw_values(text: &str, zlib: bool, limit: usize, declared: Option<usize>) -> 
         .read_to_end(&mut out)
         .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
     if out.len() > limit {
-        return Err(Error::memory_budget());
+        return Err(Error::fixed_limit("mzXML peaks", limit as u64));
     }
     Ok(out)
 }

@@ -204,7 +204,7 @@ fn in_parallelo<T: Num>(
 fn first_error(hs: Vec<std::thread::ScopedJoinHandle<'_, Result<()>>>) -> Result<()> {
     let mut res = Ok(());
     for h in hs {
-        let r = h.join().unwrap_or_else(|_| Err(Error::memory_budget()));
+        let r = h.join().unwrap_or_else(|_| Err(Error::work_stopped("order")));
         if res.is_ok() {
             res = r;
         }

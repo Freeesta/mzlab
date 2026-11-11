@@ -126,6 +126,8 @@
   "err.file.wiffMassRange": "{experiment} = numero dell'esperimento nel metodo (da 1); {expected} = voci annunciate dall'intestazione; {detail} = causa tecnica in inglese.",
   "err.file.shimadzu": "{detail} = motivo tecnico (testo inglese del lettore).",
   "err.file.unknown": "{detail} = motivo tecnico (testo inglese del motore).",
+  "error.fixedLimit": "Un limite fisso del programma (non la memoria): {what} = la parte del file, parole inglesi del motore; {limit_mb} = il limite in MB.",
+  "err.file.read": "Una lettura del file sorgente (mzML o file del produttore) fallita o troncata; {offset} = byte di inizio, {length} = byte chiesti. Non è l'indice: quello resta error.badIndex.",
   "err.module.reply": "Errore del sito: il modulo di un lettore (wasm-lettori) risponde con byte che il motore non decodifica; non è colpa del tipo di file. {detail} = parte della risposta (index, scan, protocol, module, samples, open).",
   "error.workStopped": "Errore del motore: un thread di lavoro (impronta del file) si è fermato senza risultato. {detail} = quale lavoro (hash).",
   "err.file.raw": "{detail} = motivo tecnico (testo inglese della libreria).",
