@@ -16,6 +16,8 @@ use mzlab_core::readers::{
 };
 
 mod bpc;
+mod counts;
+use counts::{agrees_with_tic, column, is_fill, plausible};
 
 /// The bytes of the start of the file that `riconosci` looks at: the names of the variables are in the header.
 const HEAD: usize = 1 << 18;
@@ -30,38 +32,6 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
 };
 
 impl AndiReader {
-    /// Reads the per-scan variables and builds the index.
-    /// First point and number of points of each scan: `scan_index` and `point_count`.
-    fn points_per_scan(&mut self) -> Result<usize> {
-        let (cdf, limits) = (&self.cdf, self.limits);
-        let sx = cdf
-            .find("scan_index")
-            .ok_or_else(|| broken("no scan_index"))?;
-        let n = cdf.count(sx, &limits)?;
-        let points = cdf.find("mass_values").map_or(0, |v| cdf.elements(v));
-        let starts: Vec<u64> = cdf
-            .read(&mut self.data, &limits, sx, 0, n as u64)?
-            .iter()
-            .map(|&x| x.max(0.0) as u64)
-            .collect();
-        self.counts = match column(cdf, &mut self.data, &limits, "point_count")? {
-            Some(c) => (0..n)
-                .map(|k| c.get(k).map_or(0, |&x| x.max(0.0) as u64))
-                .collect(),
-            None => (0..n)
-                .map(|k| {
-                    starts
-                        .get(k + 1)
-                        .copied()
-                        .unwrap_or(points)
-                        .saturating_sub(starts[k])
-                })
-                .collect(),
-        };
-        self.inizi = starts;
-        Ok(n)
-    }
-
     /// The traits the whole file has (SIM, profile) and its polarity.
     fn stretches(&mut self) -> i8 {
         self.sim = [
@@ -98,21 +68,27 @@ impl AndiReader {
         let moment = col(self, "scan_acquisition_time")?;
         let tot = col(self, "total_intensity")?;
         let (lo, hi) = (col(self, "mass_range_min")?, col(self, "mass_range_max")?);
-        self.known_tic = tot.is_some();
         let pol = self.stretches();
         for k in 0..n {
-            let rt = match &moment {
-                Some(t) => t.get(k).copied(),
-                None => self.point_time(k)?,
+            // a fill is no value: NaN in `column`
+            let v = |c: &Option<Vec<f64>>| {
+                c.as_ref()
+                    .and_then(|c| c.get(k).copied())
+                    .filter(|x| !x.is_nan())
             };
-            let v = |c: &Option<Vec<f64>>| c.as_ref().and_then(|c| c.get(k).copied());
+            let rt = match v(&moment) {
+                Some(t) => t,
+                None => self
+                    .point_time(k)?
+                    .ok_or_else(|| broken("a scan has no acquisition time"))?,
+            };
             self.windows.push(v(&lo).zip(v(&hi)));
             self.indice.push(ScanEntry {
                 id: format!("scan={}", k + 1),
-                rt: rt.unwrap_or(0.0) / 60.0,
+                rt: rt / 60.0,
                 livello: 1,
                 polarita: pol,
-                tic: v(&tot).unwrap_or(0.0),
+                tic: v(&tot).unwrap_or(f64::NAN),
                 base_peak: None,
                 filtro: if self.sim {
                     "SIM".into()
@@ -127,6 +103,7 @@ impl AndiReader {
                 }),
             });
         }
+        self.known_tic = self.indice.iter().all(|e| !e.tic.is_nan());
         Ok(n)
     }
 
@@ -149,6 +126,7 @@ impl AndiReader {
         let mut x = self
             .cdf
             .read(&mut self.data, &self.limits, v, self.inizi[k], 1)?;
+        x.retain(|&t| !is_fill(v, t));
         scale(&mut x, v);
         Ok(x.first().copied())
     }
@@ -174,8 +152,21 @@ impl AndiReader {
         };
         let mut mz = self.cdf.read(&mut self.data, &self.limits, m, da, n)?;
         let mut it = self.cdf.read(&mut self.data, &self.limits, y, da, n)?;
+        if mz
+            .iter()
+            .chain(&it)
+            .any(|&x| is_fill(m, x) || is_fill(y, x))
+        {
+            // a point whose m/z or intensity is a fill is no point
+            let p: Vec<(f64, f64)> = (mz.iter().copied().zip(it.iter().copied()))
+                .filter(|&(a, b)| !is_fill(m, a) && !is_fill(y, b))
+                .collect();
+            (mz, it) = p.into_iter().unzip();
+        }
         scale(&mut mz, m);
         scale(&mut it, y);
+        plausible(&mz)?;
+        agrees_with_tic(&it, self.indice.get(k).map_or(f64::NAN, |e| e.tic))?;
         if mz.windows(2).any(|w| w[0] > w[1]) {
             let mut p: Vec<(f64, f64)> = mz.iter().copied().zip(it.iter().copied()).collect();
             p.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -215,7 +206,10 @@ impl AndiReader {
         if self.known_tic {
             return Ok(());
         }
-        for k in 0..self.indice.len() {
+        let unknown: Vec<usize> = (0..self.indice.len())
+            .filter(|&k| self.indice[k].tic.is_nan())
+            .collect();
+        for k in unknown {
             let (_, it, broad) = self.points_of(k)?;
             self.bpc_note(k, &it, broad);
             // the sum of what `Spectrum::intensity_f64` gives: the narrow types are summed as f32
@@ -383,7 +377,7 @@ pub struct AndiReader {
     counts: Vec<u64>,
     /// The mass range of each scan, when the file says it.
     windows: Vec<Option<(f64, f64)>>,
-    /// Whether the TIC of the scans is that of the file (else it is summed from the points when asked).
+    /// Whether every scan has its TIC (a scan without one in the file, NaN, has it summed from its points when asked).
     known_tic: bool,
     /// The base peak of each scan, noted at each decode (NaN: not yet); `bpc_visti` counts the noted ones.
     bpc: Vec<f64>,
@@ -412,21 +406,6 @@ fn recognize(fs: &mut FileSet) -> Fiducia {
     } else {
         Fiducia::No
     }
-}
-
-/// A whole variable of the scans as numbers, `scale_factor`/`add_offset` applied (`None`: the file has no such variable).
-fn column(
-    cdf: &Cdf,
-    data: &mut dyn ReadAt,
-    limits: &Limits,
-    name: &str,
-) -> Result<Option<Vec<f64>>> {
-    let Some(v) = cdf.find(name) else {
-        return Ok(None);
-    };
-    let mut x = cdf.read(data, limits, v, 0, cdf.elements(v))?;
-    scale(&mut x, v);
-    Ok(Some(x))
 }
 
 fn bad_index(k: usize) -> Error {

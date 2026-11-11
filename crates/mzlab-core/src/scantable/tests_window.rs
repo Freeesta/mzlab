@@ -3,7 +3,7 @@ use std::time::Instant;
 
 fn header(lo: f64, hi: f64, pad: usize) -> String {
     format!(
-        "<spectrum index=\"0\"><cvParam cvRef=\"MS\" accession=\"MS:1000511\" name=\"ms level\" value=\"1\"/>{}<scanWindow><cvParam cvRef=\"MS\" accession=\"MS:1000501\" name=\"scan window lower limit\" value=\"{lo}\"/><cvParam cvRef=\"MS\" accession=\"MS:1000500\" name=\"scan window upper limit\" value=\"{hi}\"/></scanWindow>",
+        "<spectrum index=\"0\"><scanList><scan><cvParam cvRef=\"MS\" accession=\"MS:1000511\" name=\"ms level\" value=\"1\"/>{}<scanWindow><cvParam cvRef=\"MS\" accession=\"MS:1000501\" name=\"scan window lower limit\" value=\"{lo}\"/><cvParam cvRef=\"MS\" accession=\"MS:1000500\" name=\"scan window upper limit\" value=\"{hi}\"/></scanWindow></scan></scanList>",
         " ".repeat(pad)
     )
 }
@@ -13,9 +13,13 @@ fn run(n: usize, pad: usize) -> (Option<(f64, f64)>, f64) {
     let late = header(1.0, 5000.0, pad);
     let mut w = DeclaredWindow::default();
     let t = Instant::now();
+    let g = Default::default();
     for i in 0..n {
-        w.note(
-            if i < 100 { &h } else { &late },
+        let t = crate::spechead::parse(if i < 100 { &h } else { &late }, &g)
+            .unwrap()
+            .terms;
+        w.note_span(
+            t.float("MS:1000501").zip(t.float("MS:1000500")),
             if i % 2 == 0 { 1 } else { 2 },
         );
     }

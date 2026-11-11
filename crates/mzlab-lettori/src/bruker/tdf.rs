@@ -14,12 +14,15 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::method::SrcFile;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::readers::{
-    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Reader, ReaderEntry, Sample,
-    ScanEntry, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Losses, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
 };
 
 use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
 use traces::maximum;
+
+/// Cause of the spectra whose frames lie past the end of a `*_bin` cut short (`Reader::losses`).
+pub const CUT_BIN: &str = "warn.file.brukerCutBin";
 
 #[path = "traces.rs"]
 mod traces;
@@ -286,6 +289,12 @@ impl Reader for BrukerReader {
 
     fn missing(&mut self, _c: usize) -> usize {
         self.missing_ones
+    }
+
+    fn losses(&mut self, c: usize) -> Result<Losses> {
+        self.one(c)?;
+        let n = self.desc.len();
+        Ok(Losses::of(n + self.missing_ones, n, CUT_BIN))
     }
 
     fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {

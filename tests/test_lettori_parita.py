@@ -178,12 +178,27 @@ def test_waters_index_marks_equal_the_cli(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def test_waters_function_without_its_dat_equals_the_cli(tools):
+    """The folder of the index marks without `_FUNC002.DAT`: both faces write the 20 scans of function 1, byte for byte, and `conv/1` counts 20 of 40 with the
+    key of the missing member (`Reader::losses` of the Waters reader)."""
+    import waters_sintetico
+    ds = waters_sintetico.write_flags(tools["tmp"] / "in_waters_senza_dat")
+    (ds / "_FUNC002.DAT").unlink()
+    cli = da_cli(tools, "waters_senza_dat", ds, code=3)
+    wasm = da_wasm(tools, "waters", ds)
+    assert cli.count(b"<spectrum ") == 20
+    assert b"warn.file.memberMissing" in cli
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
-    """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte."""
+    """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte, and the conv/1 of both
+    names the cut `_bin` as the cause of the partial read."""
     ds = create("bruker_tagliato", tools["tmp"] / "in_bruker_tagliato")
     cli = da_cli(tools, "bruker_tagliato", ds, code=3)
     wasm = da_wasm(tools, "bruker", ds)
     assert cli.count(b"<spectrum ") == 3
+    assert b"warn.file.brukerCutBin" in cli
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 

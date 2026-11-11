@@ -157,7 +157,7 @@ fn a_cv_parameter_of_the_file_is_escaped_in_the_header() {
     assert!(head.contains("<userParam name=\"k&lt;\" value=\"v&amp;\"/>"));
 }
 
-/// The collision energy and the dwell an SRM id spells are written whatever readers the build carries: the `thermo` and `waters` readers modules of the
+/// The collision energy and the dwell (ms) an SRM id spells are written (the dwell in seconds, as msconvert writes it) whatever readers the build carries: the `thermo` and `waters` readers modules of the
 /// site build mzlab-core without `sciex`, `mzlab-cli convert` with every feature, and both must write the same mzML.
 #[test]
 fn an_srm_id_with_energy_and_dwell_writes_them_in_every_build() {
@@ -169,7 +169,7 @@ fn an_srm_id_with_energy_and_dwell_writes_them_in_every_build() {
     w.chromatogram(&ch).unwrap();
     w.close_chromatograms().unwrap();
     let xml = String::from_utf8(w.finish().unwrap()).unwrap();
-    assert!(xml.contains("<userParam name=\"MS_dwell_time\" value=\"50\"/>"), "{xml}");
+    assert!(xml.contains("<userParam name=\"MS_dwell_time\" value=\"0.05\"/>"), "{xml}");
     assert!(xml.contains("name=\"collision energy\" value=\"25\""), "{xml}");
 }
 
