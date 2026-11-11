@@ -250,6 +250,11 @@ enum Ctx {
 /// The `referenceableParamGroup`s of a file, by id.
 pub type Groups = HashMap<String, Vec<Term>>;
 
+/// The terms kept in one list (an item, an array, a stage part, a group) and the precursors or products kept per item: lookups take the first
+/// occurrence, so a file that repeats a param millions of times costs no more memory than a real header.
+const MAX_TERMS: usize = 4096;
+const MAX_STAGES: usize = 64;
+
 /// The builder: feed it the tags of a file (or of a header text) and take each spectrum or chromatogram header at its end tag.
 #[derive(Default)]
 pub struct Reader<'g> {
@@ -332,10 +337,14 @@ impl<'g> Reader<'g> {
                     ..Stage::default()
                 };
                 if name == "precursor" {
-                    h.precursors.push(st);
+                    if h.precursors.len() < MAX_STAGES {
+                        h.precursors.push(st);
+                    }
                     Ctx::Precursor
                 } else {
-                    h.products.push(st);
+                    if h.products.len() < MAX_STAGES {
+                        h.products.push(st);
+                    }
                     Ctx::Product
                 }
             }
@@ -402,7 +411,8 @@ impl<'g> Reader<'g> {
             _ => None,
         };
         if let Some(to) = to {
-            to.extend(ts);
+            let room = MAX_TERMS.saturating_sub(to.len());
+            to.extend(ts.into_iter().take(room));
         }
     }
 
