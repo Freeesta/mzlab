@@ -12,8 +12,8 @@ const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.
 const BASES = () => /** @type {Record<string, string>} */ ({ zero: t("int.base.zero"), edges: t("int.base.edges"), line: t("int.base.line") });
 
 /** @typedef {{ p: any, it: any, k: number, tr: number, label: string }} Rec */
-/** @type {{ sig: string, recs: Rec[], ks: number[], windows: string, csv: string, sums: boolean, busy: number }} */
-const st = { sig: "", recs: [], ks: [], windows: "[]", csv: "", sums: false, busy: 0 };
+/** @type {{ sig: string, recs: Rec[], ks: number[], windows: string, csv: string, sums: boolean, busy: number, tm: any }} */
+const st = { sig: "", recs: [], ks: [], windows: "[]", csv: "", sums: false, busy: 0, tm: 0 };
 
 /** The rows of a CSV with quoted fields. @param {string} text */
 function rows(text) {
@@ -84,7 +84,8 @@ function draw() {
   const open = !el.querySelector("details") || /** @type {HTMLDetailsElement} */ (el.querySelector("details")).open;
   el.innerHTML = h`<details${raw(open ? " open" : "")}><summary><h3 id="manint-h">${t("canali.manint.title", { n })}</h3></summary>
 <div class="manint-bar"><label title="${t("canali.manint.sums.title")}"><input type="checkbox" data-sums${raw(st.sums ? " checked" : "")}> ${t("canali.manint.sums")}</label>
-<button type="button" class="sec sm" data-dl>${t("canali.manint.csv")}</button></div>
+<button type="button" class="sec sm" data-dl>${t("canali.manint.csv")}</button>
+<button type="button" class="sec sm" data-copy>${t("canali.manint.copy")}</button><span class="sm" role="status" aria-live="polite" data-ok></span></div>
 <div class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h"><table class="qq-tab"><caption>${t("canali.manint.caption")}</caption>
 <thead><tr>${raw(ths)}<th scope="col">${t("canali.manint.h.act")}</th></tr></thead><tbody>${raw(trs)}</tbody></table></div>
 <p class="muted sm">${t("canali.manint.note")}</p></details>`;
@@ -92,6 +93,7 @@ function draw() {
   el.hidden = !(ws && (ws.dataset.work === "panels" || ws.dataset.work === "table"));
   el.querySelector("[data-sums]")?.addEventListener("change", e => { st.sums = /** @type {HTMLInputElement} */ (e.target).checked; ask().then(() => { draw(); /** @type {HTMLElement | null} */ (card()?.querySelector("[data-sums]"))?.focus(); }); });
   el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl(st.sums ? "manual-integrations-sums.csv" : "manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
+  el.querySelector("[data-copy]")?.addEventListener("click", () => copy(all));
   el.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)]); if (!rec) return;
     G.reveal(rec.p); G.draw(rec.p);
@@ -99,6 +101,14 @@ function draw() {
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)]); if (rec) G.delInts(rec.p, [rec.it]);
   }));
+}
+
+/** The engine rows as TSV (raw numbers, so a spreadsheet reads them) after the provenance line; the outcome in the status line. @param {string[][]} all */
+async function copy(all) {
+  let ok = true;
+  try { await G.clipboardCopy({ "text/plain": await PROV.tsv(all.map(r => r.join("\t")).join("\n") + "\n", { table: "manint" }) }); } catch (_) { ok = false; }
+  const m = card()?.querySelector("[data-ok]"); if (!m) return;
+  m.textContent = t(ok ? "canali.manint.copied" : "canali.manint.copy.fail"); clearTimeout(st.tm); st.tm = setTimeout(() => { m.textContent = ""; }, 3000);
 }
 
 /** Asks the engine for the table of the records; false when it refused or is missing. */
