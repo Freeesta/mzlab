@@ -94,11 +94,19 @@ impl State {
         let b = self.indexer()?;
         // same size and date are not the same bytes: the index must have been built from the file as it is (size and probe)
         let built_from = || {
-            let (Ok(ip), Ok(mut f)) = (b.path(name), std::fs::File::open(&w.path)) else { return false };
-            let ix = crate::rpc::map_file(&ip).and_then(|(r, n)| mzlab_core::idxread::Index::open_lean(r, n));
-            ix.and_then(|ix| ix.built_from(&mut f, w.size)).unwrap_or(false)
+            let (Ok(ip), Ok(mut f)) = (b.path(name), std::fs::File::open(&w.path)) else {
+                return false;
+            };
+            let ix = crate::rpc::map_file(&ip)
+                .and_then(|(r, n)| mzlab_core::idxread::Index::open_lean(r, n));
+            ix.and_then(|ix| ix.built_from(&mut f, w.size))
+                .unwrap_or(false)
         };
-        if pk.path != w.path || stamp(&w.path) != Some((w.size, w.mtime)) || b.size(name).is_none() || !built_from() {
+        if pk.path != w.path
+            || stamp(&w.path) != Some((w.size, w.mtime))
+            || b.size(name).is_none()
+            || !built_from()
+        {
             b.remove(name);
             return text("{\"hit\":false}");
         }

@@ -64,6 +64,7 @@ try:
             # other bytes with the same size, and a marker with the new file's date (a copy that kept the date): the old index must not be served
             pg.evaluate(PUT, ["b.mzML", base64.b64encode((D / "b.mzML").read_bytes().replace(b'<run id="b">', b'<run id="x">', 1)).decode()])
             pg.evaluate(STAMP, "b.mzML"); pg.evaluate("window.__ev.length = 0")
+            pg.evaluate("document.querySelector('#addf').click()"); pg.wait_for_selector('#cartbody .cprow', timeout=30000)      # the first click opened the session: «+» brings the folder back
             pg.click('.cprow:has-text("b.mzML")'); pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=2", timeout=90000)
             for _ in range(120):
                 new = pg.evaluate(SHA, "idx/b.mzML.mzidx")

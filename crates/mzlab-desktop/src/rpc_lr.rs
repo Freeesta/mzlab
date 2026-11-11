@@ -52,20 +52,7 @@ impl State {
                 let list = self.visible_list();
                 let mut rows = Vec::new();
                 for (name, e, changed) in list {
-                    let mzml = e.nat.is_some() || name.to_ascii_lowercase().ends_with(".mzml");
-                    if changed {
-                        self.indexer()?.remove(&name);
-                        Self::drop_slot(eng, &name);
-                        self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(&name, (e.size, e.mtime));
-                    }
-                    let mut indexed = mzml && self.open_lr(eng, &name).is_ok();
-                    if indexed && e.nat.is_none() && !self.index_belongs(eng, &name, &e) {
-                        // same size and date, other bytes: the index is built again when the file is opened
-                        self.indexer()?.remove(&name);
-                        Self::drop_slot(eng, &name);
-                        indexed = false;
-                    }
-                    rows.push(json!({ "name": name, "size": e.size, "indexed": indexed, "nat": e.nat.is_some(), "id": self.pick_path(&e.path) }));
+                    rows.push(self.boot_row(eng, &name, &e, changed)?);
                 }
                 text(Value::Array(rows).to_string())
             }
@@ -349,6 +336,23 @@ impl State {
         };
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).put_nat(name, n)?;
         text(json!({ "size": e.size, "id": self.pick_path(&e.path) }).to_string())
+    }
+
+    /// One row of `lr_boot`: a file changed on disk, or whose bytes are not those of its index (same size and date), loses its index.
+    fn boot_row(&self, eng: &mut Eng, name: &str, e: &crate::store::Entry, changed: bool) -> Result<Value> {
+        let mzml = e.nat.is_some() || name.to_ascii_lowercase().ends_with(".mzml");
+        if changed {
+            self.indexer()?.remove(name);
+            Self::drop_slot(eng, name);
+            self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(name, (e.size, e.mtime));
+        }
+        let mut indexed = mzml && self.open_lr(eng, name).is_ok();
+        if indexed && e.nat.is_none() && !self.index_belongs(eng, name, e) {
+            self.indexer()?.remove(name);
+            Self::drop_slot(eng, name);
+            indexed = false;
+        }
+        Ok(json!({ "name": name, "size": e.size, "indexed": indexed, "nat": e.nat.is_some(), "id": self.pick_path(&e.path) }))
     }
 
     /// Whether the open index of `name` was built from the file of `e` (`Index::built_from`: size and probe); a file that cannot be read keeps it.

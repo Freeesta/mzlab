@@ -18,11 +18,25 @@ fn index_of(file: &[u8]) -> Index<Vec<u8>> {
     let mut l = Finto::vario(40, 20, 7);
     let p = upload::prepare_reader(&mut l, 0, &[], "x.mzML").unwrap();
     let mut out = Cursor::new(Vec::new());
-    mzlab_core::mzidx::build_reader(&p.table, &mut l, 0, &mut out, mzlab_core::mzidx::DEFAULT_BUDGET).unwrap();
+    mzlab_core::mzidx::build_reader(
+        &p.table,
+        &mut l,
+        0,
+        &mut out,
+        mzlab_core::mzidx::DEFAULT_BUDGET,
+    )
+    .unwrap();
     let b = out.into_inner();
     let size = b.len() as u64;
     let mut ix = Index::open(b, size).unwrap();
-    ix.source = mzlab_core::json::parse(format!("{{\"name\":\"x.mzML\",\"size\":{},\"probe\":\"{probe}\"}}", file.len()).as_bytes()).unwrap();
+    ix.source = mzlab_core::json::parse(
+        format!(
+            "{{\"name\":\"x.mzML\",\"size\":{},\"probe\":\"{probe}\"}}",
+            file.len()
+        )
+        .as_bytes(),
+    )
+    .unwrap();
     ix
 }
 
@@ -35,10 +49,16 @@ fn an_index_belongs_only_to_the_bytes_it_was_built_from() {
     for at in [10, file.len() - 10] {
         let mut other = file.clone();
         other[at] ^= 1;
-        assert!(!ix.built_from(&mut other, n).unwrap(), "a byte changed at {at}");
+        assert!(
+            !ix.built_from(&mut other, n).unwrap(),
+            "a byte changed at {at}"
+        );
     }
     let mut longer = file.clone();
     longer.push(0);
     assert!(!ix.built_from(&mut longer, n + 1).unwrap());
-    assert!(!idxsource::same_print(&mzlab_core::json::Value::Null, n, "x"), "a source without size and probe");
+    assert!(
+        !idxsource::same_print(&mzlab_core::json::Value::Null, n, "x"),
+        "a source without size and probe"
+    );
 }

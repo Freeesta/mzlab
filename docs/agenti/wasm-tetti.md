@@ -43,3 +43,4 @@ Il tetto di un .wasm (byte dopo `wasm-opt -O3`) sta in UN punto: la variabile `l
 - **Conteggi ANDI** (`andi/netcdf/counts.rs`, `andi/ms/counts.rs`): il `.wasm` `andi` di cargo, prima di `wasm-bindgen` e `wasm-opt`, passa da 942 089 a 965 108 B (+2,4 %); tetto `andi` invariato.
 - **Thermo, precursori dall'evento** (target dalla reazione, ione selezionato plausibile, un precursore per passo MSn/SPS/MSX, SRM dall'evento): `thermo` prima di wasm-bindgen/wasm-opt 1 463 261 → 1 470 035 B (+6 774 B, +0,46 %).
 - **Thermo, versioni verificate e livello MS non detto** (versioni non verificate rifiutate, `ms_level` opzionale): `thermo` prima di wasm-bindgen/wasm-opt 1 472 060 → 1 471 326 B (−734 B, −0,05 %); il tetto non cambia.
+- **Indice e file d'origine** (`index_built_from`, `source_check.rs`): il `.wasm` del motore di cargo, prima di `wasm-bindgen` e `wasm-opt`, passa da 3 641 956 a 3 644 634 B (+0,07 %); tetto del motore invariato.
