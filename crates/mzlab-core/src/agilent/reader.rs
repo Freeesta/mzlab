@@ -117,7 +117,7 @@ fn header_fields(d: &AgilentD, r: &ScanRec) -> Vec<Field> {
         field("Fragmentor", r.fragmentor, None, None),
         field(
             "CollisionEnergy",
-            r.collision_energy,
+            r.collision_energy.unwrap_or(0.0),
             Some("electron volt"),
             Some("MS:1000045"),
         ),
@@ -128,6 +128,10 @@ fn header_fields(d: &AgilentD, r: &ScanRec) -> Vec<Field> {
         field("PointCount", r.points, None, None),
         field("MaxY", r.max_y, None, None),
     ];
+    if r.collision_energy.is_none() {
+        // a layout without the field: no energy was decoded, none is shown
+        v.retain(|f| f.nome != "CollisionEnergy");
+    }
     if let Some(u) = r.uncompressed {
         v.push(field("UncompressedByteCount", u, None, None));
     }

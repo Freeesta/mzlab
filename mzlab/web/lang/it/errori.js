@@ -28,6 +28,7 @@ I18N.add("it", {
   "err.file.rawDamaged": "Questo file .raw (Thermo) è danneggiato: una sua parte punta fuori dal file o contiene valori illeggibili, quindi non è stato aperto nulla. Copia di nuovo il file, oppure esportalo di nuovo dal PC dello strumento.",
   "err.file.rawVersion": "La versione {version} del formato .raw Thermo non è ancora supportata: converti il file in mzML.",
   "err.file.notAgilentD": "La cartella {name} non contiene AcqData/MSScan.bin e AcqData/MSPeak.bin (né il file data.ms): serve la cartella .D intera, con la sua sottocartella AcqData.",
+  "err.file.agilentCalibration": "La scansione {scan} di questa cartella Agilent .D non ha il suo record di taratura di massa (AcqData/MSMassCal.bin manca, è tagliato o svuotato): le sue masse non si possono calcolare senza spostarle, quindi non è stato caricato nulla. Copia di nuovo l'intera cartella .D.",
   "err.file.agilentNoEngine": "Le cartelle Agilent .D si aprono solo con il motore Rust del programma ({name}).",
   "err.file.brukerDamaged": "Una parte di questa cartella Bruker .d non si legge: analysis.tdf/.tsf o il suo file _bin è danneggiato, troncato o scritto in una forma che questo programma non legge, quindi non è stato caricato nulla. Copia di nuovo tutta la cartella .d; se l'avviso resta, esporta la corsa in mzML con il programma dello strumento e apri quel file.",
   "err.file.brukerBaf": "Le cartelle Bruker con solo analysis.baf non si leggono senza il software del produttore: esportali prima in mzML.",

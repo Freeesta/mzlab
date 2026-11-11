@@ -134,6 +134,7 @@
   "err.file.notAgilentD": "{name} = nome della cartella .D.",
   "error.newerFormat": "Errore quando un indice (.mzidx) o una tabella della pipeline (.mzfeat, .mzfeatf) è di un formato più nuovo del programma; {version} = versione del formato trovata (il motore aggiunge anche {kind}, {file}). Il file non si tocca.",
   "err.file.agilentNoEngine": "{name} = nome della cartella .D.",
+  "err.file.agilentCalibration": "{scan} = numero della scansione (ScanID) senza il suo record in AcqData/MSMassCal.bin.",
   "err.file.brukerNoBin": "{name} = nome della cartella .d; {file} = il file che manca (analysis.tdf_bin o analysis.tsf_bin).",
   "load.wiffTwin": "Motivo nell'avviso unico dopo il nome del .wiff (unopen.err.one) di due coppie omonime arrivate senza cartella nello stesso caricamento.",
   "load.wiffWait": "Motivo nell'avviso unico dopo il nome (unopen.err.one) del file della coppia .wiff/.wiff.scan arrivato senza l'altro.",
