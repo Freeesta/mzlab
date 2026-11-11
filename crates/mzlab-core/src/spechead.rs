@@ -412,6 +412,11 @@ impl<'g> Reader<'g> {
         }
     }
 
+    /// Whether the reader stands inside a `<binary>` (where only `keep_binary` makes text count).
+    pub fn in_binary(&self) -> bool {
+        self.stack.last() == Some(&Ctx::Binary)
+    }
+
     /// Character data: kept inside `<binary>` when `keep_binary`.
     pub fn text(&mut self, t: &str) {
         if self.keep_binary

@@ -75,9 +75,9 @@ fn all<T: Copy>(v: &[T], ok: impl Fn(T) -> bool) -> bool {
 #[inline(never)]
 pub(crate) fn assemble(s: Spec, p: Peaks) -> Result<(Spectrum, Option<Mobility>)> {
     let Peaks {
-        mut mz,
-        mut it,
-        mut wide,
+        mz,
+        it,
+        wide,
         mob,
     } = p;
     let mob_unit = s
@@ -86,12 +86,10 @@ pub(crate) fn assemble(s: Spec, p: Peaks) -> Result<(Spectrum, Option<Mobility>)
         .rev()
         .find(|a| a.kind == ArrayKind::Mobility)
         .map_or("", |a| a.mobility);
-    let n = mz.len().min(it.len());
-    mz.truncate(n);
-    it.truncate(n);
-    if let Some(w) = wide.as_mut() {
-        w.truncate(n);
+    if mz.len() != it.len() {
+        return Err(super::lengths(&s.id, s.index, mz.len(), it.len()));
     }
+    let n = mz.len();
     // an array of another length does not belong to these peaks
     let mob = mob.filter(|m| m.len() == n && n > 0);
     // a branch-free pass over each array (vectorised); the search that names the value runs only on a damaged file
@@ -132,11 +130,11 @@ pub(crate) fn assemble(s: Spec, p: Peaks) -> Result<(Spectrum, Option<Mobility>)
             index: s.index,
             id: s.id,
             level: s.level,
-            rt: if s.rt_seconds { s.rt / 60.0 } else { s.rt },
+            rt: s.rt,
             polarity: s.polarity,
             profile: s.profile,
             filter: s.filter,
-            precursor: s.selected.or(s.target),
+            precursor: s.precursor,
             mz,
             intensity: it,
             wide,
