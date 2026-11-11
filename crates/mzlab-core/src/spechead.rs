@@ -207,8 +207,8 @@ impl Head {
 /// Which precursor of a level-`level` spectrum is the immediate one (the stage just before it): the one rule of every mzML path. `stages` gives the
 /// target, selected m/z and `spectrumRef` of each precursor in file order (first stage to last). The one whose target or selected m/z is `path_last`
 /// (the last stage of a filter path) within 0.01, else the last whose `spectrumRef` is a scan of level `level - 1`, else the last listed.
-pub fn immediate<'a>(
-    stages: &[(Option<f64>, Option<f64>, Option<&'a str>)],
+pub fn immediate(
+    stages: &[(Option<f64>, Option<f64>, Option<&str>)],
     level: u8,
     path_last: Option<f64>,
     level_of: impl Fn(&str) -> Option<u8>,

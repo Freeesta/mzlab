@@ -115,6 +115,11 @@ fn lettori_mzml_picchi_mzlab_gives_the_centres_within_half_a_ppm() {
     let (doc, spettri) = convert(&mut finto(true), Peaks::Mzlab).unwrap();
     assert!(doc.contains("MS:1000035") && !doc.contains("MS:1000128"));
     assert!(doc.contains("mzLab centroids"));
+    // the width is written with what it rests on: measured on the peaks of the scans, or the fallback
+    assert!(
+        doc.contains("w_basis=measured on ") || doc.contains("w_basis=fallback"),
+        "{doc}"
+    );
     assert_eq!(spettri.len(), 5);
     for s in &spettri {
         assert_eq!(s.mz.len(), CENTRI.len(), "scan {}", s.index);

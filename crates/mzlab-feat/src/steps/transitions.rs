@@ -1,4 +1,4 @@
-//! The `step/1` descriptor of `chrom.transitions@1` (`transitions/`): the integration of the SIM ions and SRM transitions of a table in triple quadrupole
+//! The `step/1` descriptor of `chrom.transitions@2` (`transitions/`): the integration of the SIM ions and SRM transitions of a table in triple quadrupole
 //! mzML files. In `flowtab` in the browser and native in `flow run`; exported with the steps of `mzlab-cli` (`docs/schemi/steps-cli-1.json`).
 
 use super::FEAT_CEILING;
@@ -46,10 +46,10 @@ pub fn transitions() -> Step {
                 .default_num(0.3)
                 .unit("min")
                 .doc("The peak is searched in RT plus and minus this when the row writes no window"),
-            Param::choice("baseline", "Baseline", &["edges", "zero"])
-                .default_str("edges")
-                .doc("edges: the area above the straight line between the edges of the peak; zero: the whole area under the trace down to zero between the same edges (signed; a baseline column says which)")
-                .tip("Line between the edges, or down to zero."),
+            Param::choice("baseline", "Baseline", &["zero", "edges"])
+                .default_str("zero")
+                .doc("zero: the whole area under the trace down to zero between the edges of the peak (signed), so any background under the peak is part of it; edges: the area above the straight line between the same edges (what a version 1 plan keeps); a baseline column says which")
+                .tip("Down to zero, or the line between the edges."),
             Param::number("snr_min", "Min. S/N")
                 .min(0.0)
                 .default_num(3.0)
@@ -81,6 +81,7 @@ pub fn transitions() -> Step {
             native: true,
         },
         errors: vec!["err.transitions.table", "err.transitions.empty", "err.transitions.noChannel", "err.transitions.manifest"],
+        version: 2,
         ..Step::core(
             "chrom.transitions",
             "Transition table",

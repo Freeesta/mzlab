@@ -9,18 +9,28 @@ const HEAD: &str = r#"<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://
 <cvParam cvRef="MS" accession="MS:1000128" name="profile spectrum"/></referenceableParamGroup></referenceableParamGroupList>"#;
 
 fn rt(v: &str, unit: &str) -> String {
-    format!(r#"<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{v}" {unit}/></scan></scanList>"#)
+    format!(
+        r#"<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{v}" {unit}/></scan></scanList>"#
+    )
 }
 
 fn sel(mz: f64, refer: &str) -> String {
-    format!(r#"<precursor spectrumRef="{refer}"><selectedIonList count="1"><selectedIon><cvParam cvRef="MS" accession="MS:1000744" name="selected ion m/z" value="{mz}"/></selectedIon></selectedIonList></precursor>"#)
+    format!(
+        r#"<precursor spectrumRef="{refer}"><selectedIonList count="1"><selectedIon><cvParam cvRef="MS" accession="MS:1000744" name="selected ion m/z" value="{mz}"/></selectedIon></selectedIonList></precursor>"#
+    )
 }
 
 /// A non-indexed mzML with these spectrum bodies (what goes between the start tag and the end tag).
 fn table(bodies: &[String]) -> Table {
-    let mut s = format!("{HEAD}<run id=\"r\"><spectrumList count=\"{}\">\n", bodies.len());
+    let mut s = format!(
+        "{HEAD}<run id=\"r\"><spectrumList count=\"{}\">\n",
+        bodies.len()
+    );
     for (i, b) in bodies.iter().enumerate() {
-        s.push_str(&format!("<spectrum index=\"{i}\" id=\"scan={}\" defaultArrayLength=\"0\">{b}</spectrum>\n", i + 1));
+        s.push_str(&format!(
+            "<spectrum index=\"{i}\" id=\"scan={}\" defaultArrayLength=\"0\">{b}</spectrum>\n",
+            i + 1
+        ));
     }
     s.push_str("</spectrumList></run></mzML>\n");
     let mut data = s.into_bytes();
@@ -42,7 +52,10 @@ fn single_quotes_and_value_before_accession_are_read() {
 
 #[test]
 fn spectrum_terms_inherited_from_a_group_are_read() {
-    let t = table(&[format!("<referenceableParamGroupRef ref=\"ms2neg\"/>{}", rt("1", MIN))]);
+    let t = table(&[format!(
+        "<referenceableParamGroupRef ref=\"ms2neg\"/>{}",
+        rt("1", MIN)
+    )]);
     let r = &t.rows[0];
     assert_eq!((r.level, r.polarity, r.profile), (2, -1, true));
 }
@@ -51,7 +64,10 @@ fn spectrum_terms_inherited_from_a_group_are_read() {
 fn every_retention_time_unit_becomes_minutes() {
     let t = table(&[
         rt("0.5", r#"unitAccession="UO:0000032" unitName="hour""#),
-        rt("120000", r#"unitAccession="UO:0000028" unitName="millisecond""#),
+        rt(
+            "120000",
+            r#"unitAccession="UO:0000028" unitName="millisecond""#,
+        ),
         rt("90", r#"unitAccession="UO:0000010" unitName="second""#),
         rt("4", MIN),
     ]);
@@ -85,7 +101,10 @@ fn a_product_window_is_not_the_precursor() {
 
 #[test]
 fn the_immediate_precursor_is_the_stage_just_before() {
-    let ms1 = format!("<cvParam accession=\"MS:1000511\" value=\"1\"/>{}", rt("1", MIN));
+    let ms1 = format!(
+        "<cvParam accession=\"MS:1000511\" value=\"1\"/>{}",
+        rt("1", MIN)
+    );
     let ms2 = format!(
         "<cvParam accession=\"MS:1000511\" value=\"2\"/>{}<precursorList count=\"1\">{}</precursorList>",
         rt("1.1", MIN),

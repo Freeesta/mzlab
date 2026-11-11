@@ -43,7 +43,7 @@ impl Centroidato {
         if let Some(Some(p)) = self.params.get(c) {
             return Ok(p.clone());
         }
-        let p = stima(&mut *self.l, c)?;
+        let p = stima(&mut *self.l, c)?.params;
         if let Some(slot) = self.params.get_mut(c) {
             *slot = Some(p.clone());
         }
@@ -51,8 +51,8 @@ impl Centroidato {
     }
 }
 
-/// The parameters of the peak picking of sample `c`, estimated on at most 64 equally spaced scans of its index.
-pub(crate) fn stima(l: &mut dyn Reader, c: usize) -> Result<Params> {
+/// The estimate of the peak picking of sample `c` on at most 64 equally spaced scans of its index (`peaks` 0: the width is the fallback).
+pub(crate) fn stima(l: &mut dyn Reader, c: usize) -> Result<centroids::Estimate> {
     let len = l.index(c)?.len();
     let n = len.min(64);
     let mut scans = Vec::new();
@@ -67,7 +67,7 @@ pub(crate) fn stima(l: &mut dyn Reader, c: usize) -> Result<Params> {
         .iter()
         .map(|(a, b)| (a.as_slice(), b.as_slice()))
         .collect();
-    Ok(centroids::estimate(&refs, 0.7).params)
+    Ok(centroids::estimate(&refs, 0.7))
 }
 
 /// `s` as centroids when it is a profile scan, with the parameters `p`; a scan already centroided stays as it is.

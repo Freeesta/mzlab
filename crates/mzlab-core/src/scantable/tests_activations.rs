@@ -53,7 +53,9 @@ fn an_accession_that_only_starts_like_a_term_is_not_that_term() {
     let e = "<activation><cvParam cvRef=\"MS\" accession=\"MS:10001360\" name=\"x\" value=\"\"/><cvParam cvRef=\"MS\" accession=\"MS:1000598\" name=\"electron transfer dissociation\" value=\"\"/></activation>";
     assert_eq!(act(&wrapped(e)), Some("ETD"));
     assert_eq!(
-        act(&wrapped("<activation><cvParam accession=\"MS:1000136\" value=\"\"/></activation>")),
+        act(&wrapped(
+            "<activation><cvParam accession=\"MS:1000136\" value=\"\"/></activation>"
+        )),
         Some("SID")
     );
     assert_eq!(act(&wrapped("<activation></activation>")), None);

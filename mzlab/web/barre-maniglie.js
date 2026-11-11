@@ -30,6 +30,7 @@ function sync(/** @type {Bag} */ p) {
     if (a.full) { b.setAttribute("aria-valuemin", a.full[0].toFixed(2)); b.setAttribute("aria-valuemax", a.full[1].toFixed(2)); }
   }));
   old.forEach(n => n.remove()); if (typeof INTBASE !== "undefined") INTBASE.sync(p);          // the points of a custom baseline (integra-base.js)
+  const W = /** @type {any} */ (window); if (W.INTEND) W.INTEND.sync(p); else if (list.length) carica("m:integra-estremi.js").then(() => W.INTEND && W.INTEND.sync(p));   // the ends on the baseline (integra-estremi.js)
 }
   return { sync };
 })();

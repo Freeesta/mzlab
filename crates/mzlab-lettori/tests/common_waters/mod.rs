@@ -150,3 +150,56 @@ pub fn check_schema(method: &str, label: &str) -> serde_json::Value {
     }
     doc
 }
+
+/// The polynomial of both functions of `flags_folder` (`_HEADER.TXT` `Cal Function N: C0,C1,T1`).
+pub const FLAGS_CAL: (f64, f64) = (0.0005, 1.0001);
+
+/// One row of variant A with the whole word at byte 4 given: count in the low 22 bits, flags above.
+pub fn idx_row_word(offset: u32, word: u32, tic: f32, rt_min: f32) -> Vec<u8> {
+    let mut r = idx_row(offset, 0, tic, rt_min);
+    r[4..8].copy_from_slice(&word.to_le_bytes());
+    r
+}
+
+/// A folder whose index marks are set both ways: function 1 continuum scans stored uncalibrated (mark 0x18, 8-byte records; odd scans also set bit 22
+/// above the 22-bit count), function 2 centroid scans the acquisition stored calibrated (mark 0x4C, 12-byte records). Both have a `Cal Function` line;
+/// `mark2` replaces the mark of function 2 (an unknown one for the notice test). The peaks of scan `k` are `peaks(k)` in both.
+pub fn flags_folder(mark2: u8) -> Vec<(String, Vec<u8>)> {
+    let mut inf = function_record(0x12, 0x25, 1.0, &[(100.0, 1000.0, 0.0)]);
+    inf.extend(function_record(0x0D, 0x25, 1.0, &[(100.0, 1000.0, 0.0)]));
+    let (mut dat1, mut idx1, mut dat2, mut idx2) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    for (k, rt) in RT.iter().enumerate() {
+        let p = peaks(k as u32);
+        let tic = p.iter().map(|x| x.1 as f32).sum();
+        let flag = if k % 2 == 1 { 1 << 22 } else { 0 };
+        idx1.extend(idx_row_word(
+            dat1.len() as u32,
+            0x1800_0000 | flag | 3,
+            tic,
+            *rt,
+        ));
+        idx2.extend(idx_row_word(
+            dat2.len() as u32,
+            (u32::from(mark2) << 24) | 3,
+            tic,
+            *rt,
+        ));
+        for (mz, i) in p {
+            dat1.extend(word_int(i).to_le_bytes());
+            dat1.extend(word_mz(mz).to_le_bytes());
+            dat2.extend(word_int(i).to_le_bytes());
+            dat2.extend(word_mz(mz).to_le_bytes());
+            dat2.extend([0u8; 4]);
+        }
+    }
+    let (a, b) = FLAGS_CAL;
+    let header = format!("$$ Acquired Name: FLAGS_001\r\n$$ Cal Function 1: {a},{b},T1\r\n$$ Cal Function 2: {a},{b},T1\r\n");
+    vec![
+        ("_FUNCTNS.INF".into(), inf),
+        ("_FUNC001.DAT".into(), dat1),
+        ("_FUNC001.IDX".into(), idx1),
+        ("_FUNC002.DAT".into(), dat2),
+        ("_FUNC002.IDX".into(), idx2),
+        ("_HEADER.TXT".into(), header.into_bytes()),
+    ]
+}

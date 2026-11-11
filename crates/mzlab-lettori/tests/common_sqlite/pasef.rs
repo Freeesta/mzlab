@@ -5,6 +5,8 @@ use super::V;
 const SCANS: u32 = 918;
 const PASEF_PER_CYCLE: usize = 10;
 const PRECURSORS_PER_FRAME: usize = 12;
+/// `IsolationMz` minus `MonoisotopicMz` of every precursor.
+pub const ISO_OFFSET: f64 = 0.25;
 
 /// xorshift: the same numbers on every machine.
 pub struct Case(pub u64);
@@ -152,7 +154,8 @@ pub fn folder(cycles: usize, n1: usize, n2: usize) -> (Vec<u8>, Vec<u8>) {
                         V::I(pid),
                         V::I(i64::from(a)),
                         V::I(i64::from(b)),
-                        V::R(mz),
+                        // the window is centred off the monoisotopic ion, as an instrument centres it on the isotope cluster
+                        V::R(mz + ISO_OFFSET),
                         V::R(2.0),
                         V::R(30.0),
                     ]);

@@ -61,3 +61,12 @@ fn a_bin_before_t0_has_no_mz() {
     let mz: Vec<f64> = (0..100).map(|b| t.bin_to_mz(0, b)).collect();
     assert!(mz.windows(2).all(|w| w[0] <= w[1]), "monotone");
 }
+
+#[test]
+fn a_row_count_that_wraps_a_32_bit_length_does_not_fit() {
+    // 32 + 8 * (2^29 + 1) is 40 in 32-bit arithmetic: the site would pass a check of 40 bytes that the app fails, then loop 2^29 times
+    let n = (1usize << 29) + 1;
+    assert!(span(32, 8, n).is_none_or(|v| v as u64 == 32 + 8 * n as u64));
+    assert_eq!(span(32, 8, 3), Some(56));
+    assert_eq!(span(0, 8, usize::MAX), None);
+}

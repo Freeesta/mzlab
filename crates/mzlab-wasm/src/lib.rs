@@ -25,7 +25,7 @@ mod natives_engine;
 mod blocks;
 mod gunzip;
 mod peak_area;
-pub use peak_area::peak_area;
+pub use peak_area::{peak_area, window_end};
 pub(crate) use blocks::{js_blocks, BLOCK};
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.

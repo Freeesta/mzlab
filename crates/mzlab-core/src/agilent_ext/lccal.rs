@@ -1,4 +1,6 @@
-//! Mass calibration of a Q-TOF run (`MSMassCal.bin`, `DefaultMassCal.xml`), see `lcms.rs`.
+//! Mass calibration of a Q-TOF run (`MSMassCal.bin`, `DefaultMassCal.xml`), see `lcms.rs`. A scan whose record says it has its own coefficients
+//! (`MassCalOffset` > 0) and has no record behind it (file missing, cut short, record emptied) has no calibration (`Miss::NoRecord`), and a `CalibrationID`
+//! that names no default calibration is `Miss::NoDefault`: never the default or first coefficients, which would shift its masses.
 
 pub(super) const MASS_CAL_HEAD: usize = 72;
 const MASS_CAL_REC: usize = 84;
@@ -35,15 +37,26 @@ impl Calibration {
         self.defaults.is_empty()
     }
 
-    /// m/z of the flight time `t` of the scan record number `index`, whose `CalibrationID` is `id`.
-    pub(super) fn mz(&self, id: i32, index: Option<usize>, t: f64) -> Option<f64> {
-        let def = self
-            .defaults
-            .iter()
-            .find(|d| d.id == id)
-            .or(self.defaults.first())?;
-        let own = index.and_then(|i| self.scans.get(i).copied().flatten());
-        let (a, t0, tmin, tmax, c): (f64, f64, f64, f64, &[f64]) = match &own {
+    /// m/z of the flight time `t` of the scan record number `index`, whose `CalibrationID` is `id` (`None`: a layout without the field, the first
+    /// default): the coefficients of its own record in `MSMassCal.bin`, required when `own` (its `MassCalOffset` > 0), else the default ones; the powers
+    /// of the polynomial always from the default calibration it names.
+    pub(super) fn mz(
+        &self,
+        id: Option<i32>,
+        index: Option<usize>,
+        own: bool,
+        t: f64,
+    ) -> Result<f64, Miss> {
+        let def = match id {
+            Some(id) => self.defaults.iter().find(|d| d.id == id),
+            None => self.defaults.first(),
+        }
+        .ok_or(Miss::NoDefault)?;
+        let rec = index.and_then(|i| self.scans.get(i).copied().flatten());
+        if own && rec.is_none() {
+            return Err(Miss::NoRecord);
+        }
+        let (a, t0, tmin, tmax, c): (f64, f64, f64, f64, &[f64]) = match &rec {
             Some(s) => (s[0], s[1], s[2], s[3], &s[4..]),
             None => (def.a, def.t0, def.tmin, def.tmax, &def.c[..]),
         };
@@ -55,8 +68,21 @@ impl Calibration {
             .map(|(p, c)| c * tt.powi(*p as i32))
             .sum();
         let x = a * (t - t0);
-        Some(x * x - corr).filter(|v| v.is_finite())
+        Some(x * x - corr)
+            .filter(|v| v.is_finite())
+            .ok_or(Miss::NotFinite)
     }
+}
+
+/// Why a flight time has no m/z.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum Miss {
+    /// `DefaultMassCal.xml` has no calibration with the `CalibrationID` of the scan.
+    NoDefault,
+    /// The scan says it has its own record (`MassCalOffset` > 0) and `MSMassCal.bin` has none for it (missing, shorter than the run, record emptied).
+    NoRecord,
+    /// The coefficients give no finite m/z.
+    NotFinite,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]

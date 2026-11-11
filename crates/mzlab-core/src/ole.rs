@@ -1,14 +1,20 @@
 //! Minimal reader of OLE2 compound files (the container of Analyst `.wiff` and `.dam` files): `mzlab/reader/ole.py`.
-//! Only what is needed to list and read streams; the whole file is held in memory (a method is a few KB).
+//! Only what is needed to list and read streams; the whole file is held in memory (a method is a few KB). Every chain and walk is bounded by the bytes
+//! present and by `Limits` (bytes, directory entries, storage depth), so a damaged or hostile header costs at most a linear pass over the file.
 
 use crate::error::{Error, Result};
+use crate::readers::Limits;
 
 const END: u32 = 0xFFFF_FFFE;
 const FREE: u32 = 0xFFFF_FFFF;
 
 impl Ole {
-    /// `name` is the file name, only for the error of a file that is not OLE2.
-    pub fn open(data: Vec<u8>, name: &str) -> Result<Ole> {
+    /// `name` is the file name, only for the error of a file that is not OLE2. `limits`: the bytes of the file, the directory entries and the
+    /// nesting of storages it may ask for (`error.memoryBudget`, `err.dam.unreadable` past them).
+    pub fn open(data: Vec<u8>, name: &str, limits: &Limits) -> Result<Ole> {
+        if data.len() as u64 > limits.byte {
+            return Err(Error::memory_budget());
+        }
         if !matches!(
             data.get(..8),
             Some([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])
@@ -69,18 +75,18 @@ impl Ole {
                 o.fat.push(u32_at(&sec, 4 * i)?);
             }
         }
-        o.dir = o.parse_dir(dir0);
+        o.dir = o.parse_dir(dir0, limits)?;
         let root = o.dir.first().cloned().ok_or_else(bad)?;
         if root.start < END {
-            o.ministream = o.chain_bytes(root.start);
+            o.ministream = o.chain_bytes(root.start, usize::MAX);
         }
         if mfat0 < END {
-            let raw = o.chain_bytes(mfat0);
+            let raw = o.chain_bytes(mfat0, usize::MAX);
             o.minifat = (0..raw.len() / 4)
                 .map(|i| u32_at(&raw, 4 * i))
                 .collect::<Result<_>>()?;
         }
-        o.streams = o.paths();
+        o.streams = o.paths(limits)?;
         Ok(o)
     }
 
@@ -93,9 +99,11 @@ impl Ole {
             .to_vec()
     }
 
-    fn chain_bytes(&self, start: u32) -> Vec<u8> {
+    /// The sectors of the chain from `start`, up to `cap` bytes: a chain is at most as long as the file has sectors, so a loop ends after one pass.
+    fn chain_bytes(&self, start: u32, cap: usize) -> Vec<u8> {
         let (mut out, mut sid, mut seen) = (Vec::new(), start, 0);
-        while sid < END && seen <= self.fat.len().min(self.data.len() / self.ss) {
+        while sid < END && out.len() < cap && seen <= self.fat.len().min(self.data.len() / self.ss)
+        {
             out.extend(self.sector(sid));
             sid = self.fat.get(sid as usize).copied().unwrap_or(END);
             seen += 1;
@@ -103,9 +111,11 @@ impl Ole {
         out
     }
 
-    fn parse_dir(&self, start: u32) -> Vec<Entry> {
-        let raw = self.chain_bytes(start);
-        raw.chunks_exact(128)
+    fn parse_dir(&self, start: u32, limits: &Limits) -> Result<Vec<Entry>> {
+        let raw = self.chain_bytes(start, usize::MAX);
+        limits.ok_entries((raw.len() / 128) as u64)?;
+        Ok(raw
+            .chunks_exact(128)
             .map(|e| {
                 let b = |a: usize| e.get(a).copied().unwrap_or(0);
                 let nlen = u16::from_le_bytes([b(0x40), b(0x41)]) as usize;
@@ -126,12 +136,13 @@ impl Ole {
                     size: w(0x78),
                 }
             })
-            .collect()
+            .collect())
     }
 
     /// `(path, directory index)` of every stream, in the order of an in-order walk of the directory tree (left, entry, children, right). Iterative, with
-    /// each entry visited once: a directory that loops, or a chain of 131 000 entries, costs neither stack nor quadratic time.
-    fn paths(&self) -> Vec<(String, usize)> {
+    /// each entry visited once: a directory that loops, or a chain of 131 000 entries, costs neither stack nor quadratic time. Storages nested deeper
+    /// than `limits.profondita` are refused: each level copies the path above it, so an unbounded nesting would cost the square of the entries.
+    fn paths(&self, limits: &Limits) -> Result<Vec<(String, usize)>> {
         enum Todo {
             Visit(u32, Vec<String>),
             Emit(u32, Vec<String>),
@@ -170,13 +181,14 @@ impl Ole {
                     if e.typ == 2 {
                         out.push((p.join("/"), idx as usize));
                     } else if e.typ == 1 {
+                        limits.profondita_ok(p.len())?;
                         stack.push(Todo::Visit(e.child, p));
                     }
                 }
                 Todo::Right(idx, prefix) => stack.push(Todo::Visit(idx, prefix)),
             }
         }
-        out
+        Ok(out)
     }
 
     /// Paths of all the streams.
@@ -231,8 +243,9 @@ impl Ole {
             .get(self.streams.iter().rev().find(|(p, _)| p == path)?.1)?;
         let size = e.size as usize;
         if e.size < self.cutoff {
+            // the chain stops at the size of the stream: a mini FAT that loops would otherwise copy 64 bytes per entry, 16 times the file
             let (mut out, mut sid, mut n) = (Vec::new(), e.start, 0);
-            while sid < END && n < self.minifat.len() + 1 {
+            while sid < END && out.len() < size && n < self.minifat.len() + 1 {
                 let off = (sid as usize).saturating_mul(self.mss);
                 let a = off.min(self.ministream.len());
                 let end = off.saturating_add(self.mss).min(self.ministream.len());
@@ -243,7 +256,7 @@ impl Ole {
             out.truncate(size);
             return Some(out);
         }
-        let mut b = self.chain_bytes(e.start);
+        let mut b = self.chain_bytes(e.start, size);
         b.truncate(size);
         Some(b)
     }
