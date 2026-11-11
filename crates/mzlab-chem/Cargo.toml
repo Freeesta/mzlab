@@ -13,7 +13,7 @@ mzlab-core = { path = "../mzlab-core" }
 mzlab-feat = { path = "../mzlab-feat", features = ["chem"] }
 mzlab-mol = { path = "../mzlab-mol", optional = true }
 nalgebra = { version = "0.35", default-features = false, features = ["std"] }
-sci-form = { version = "=0.15.2", default-features = false }
+sci-form = { version = "=1.0.0", default-features = false }
 
 [features]
 # `Mol3d::from_record`: the 3D molecule from a `mol/1` record (`mzlab-mol`). Off by default and in every .wasm.
