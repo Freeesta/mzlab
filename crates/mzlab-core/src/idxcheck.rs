@@ -72,12 +72,19 @@ pub(crate) fn crcs(s: &Value) -> Result<Option<[u32; 10]>> {
     Ok(Some(o))
 }
 
-/// Errors with `error.badIndex` when array `k` of `s`, read whole as `bytes`, does not match the sum the section records.
-pub(crate) fn sum(s: &Section, k: usize, bytes: &[u8]) -> Result<()> {
-    let Some(c) = s.crc else { return Ok(()) };
+/// Errors with `error.badIndex` when array `k` of section `si`, read whole as `bytes`, does not match the sum the section records (`crcs` of `Index`).
+pub(crate) fn sum(crcs: &[Option<[u32; 10]>], si: usize, k: usize, bytes: &[u8]) -> Result<()> {
+    let Some(want) = crcs
+        .get(si)
+        .copied()
+        .flatten()
+        .and_then(|c| c.get(k).copied())
+    else {
+        return Ok(());
+    };
     let mut h = flate2::Crc::new();
     h.update(bytes);
-    if h.sum() != c[k] {
+    if h.sum() != want {
         return Err(Error::new("error.badIndex"));
     }
     Ok(())
