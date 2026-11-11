@@ -169,6 +169,24 @@ try:
             assert not errs, errs
             c7.close()
         step("a sample the engine refuses is told with its reason, apart from the empty injection of the same pair", refused_sample)
+        def worker_lost():                               # the engine's worker is lost while it lists the samples of a pair: the row names the .wiff and says the engine stopped, never «type not accepted» with a bare {name}
+            c8 = b.new_context(viewport={"width": 1500, "height": 1800}); c8.set_default_timeout(120000); pg = c8.new_page()
+            pg.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+            pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange && !!window.MZLAB_RUST && !!window.MZLAB_RUST.nativeSamples", timeout=60000)
+            pg.evaluate("""async () => { const { makeNativo } = await import('./static/rust-nativo-pagina.js'), rb = window.MZLAB_RUST;
+              rb.nativeSamples = makeNativo({ rpc: async () => ({ dead: true }), base: n => n, current: () => null, abort: () => {} }).nativeSamples; }""")
+            pg.set_input_files("#pick", [str(D / "one.wiff"), str(D / "one.wiff.scan")])
+            told = r"Array.from(document.querySelectorAll('.fi, #unopen')).map(e => e.innerText).filter(t => /one\.wiff/.test(t) && /(engine stopped|motore si è fermato)/.test(t))"
+            got = "Array.from(document.querySelectorAll('.fi, #unopen')).map(e => e.innerText.slice(0, 300))"
+            try: pg.wait_for_function(told + ".length > 0 && UPBUSY === 0", timeout=60000)
+            except Exception: raise AssertionError(pg.evaluate(got))
+            t = " ".join(pg.evaluate(told))
+            assert "{" not in t and not __import__("re").search("not accepted|non accettato", t), t
+            assert pg.evaluate("ST.files.length") == 0, pg.evaluate("ST.files.map(f => f.name)")
+            assert not errs, errs
+            c8.close()
+        step("a worker lost while a pair is listed: the row names the .wiff and says the engine stopped", worker_lost)
         def variant():                                  # a QTRAP 5500 file (survey, EPI, precursor-ion and neutral-loss experiments, two block versions): the engine reads the 3200 QTRAP only, the sciex module takes the pair
             if not (ROOT / "site" / "static" / "wasm-lettori" / "manifest.json").exists():
                 print("   (variante: skipped, build the modules: tools/build_lettori_wasm.sh site/static)"); return

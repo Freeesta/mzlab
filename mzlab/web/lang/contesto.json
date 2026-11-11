@@ -153,6 +153,7 @@
   "load.wiffWait": "Motivo nell'avviso unico dopo il nome (unopen.err.one) del file della coppia .wiff/.wiff.scan arrivato senza l'altro.",
   "load.note.hashRenamed": "Nota dell'avviso unico: un file con # nel nome entra con _ al posto di #; {from} = nome dato, {to} = nome nell'elenco.",
   "err.file.notAccepted": "{name} = nome del file.",
+  "err.file.nativeStopped": "Il lavoratore del motore si è perso (o ha dato un testo senza chiave) mentre leggeva un file di un produttore. {name} = nome del file o della cartella .d; {detail} = testo dell'errore, «–» se non c'è.",
   "err.engine.index": "{name} = nome del file.",
   "err.engine.indexWhy": "L'indice di un file non si è costruito. {name} = nome del file, {detail} = causa tecnica.",
   "err.engine.indexCrash": "Il lavoratore che costruisce l'indice è morto (di solito memoria). {name} = nome del file.",

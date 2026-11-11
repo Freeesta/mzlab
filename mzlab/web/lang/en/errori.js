@@ -63,6 +63,7 @@ I18N.add("en", {
   "err.file.empty": "The file {name} is empty (0 bytes): the copy did not finish. Copy the whole file again.",
   "err.file.notThisFormat": "The start of {name} ({size} bytes) is not that of a {ext} file: the copy is probably cut short or damaged. Copy the whole file again, or export it again from the instrument software.",
   "err.file.notAccepted": "File type not accepted: {name}. Accepted: .mzML, .mzXML, .cdf, .wiff together with its .wiff.scan, .raw, .d folders and .dam methods. Anything else: convert it to mzML with MSConvert first.",
+  "err.file.nativeStopped": "{name} could not be read: the engine stopped before it finished ({detail}). Load the file again; if it happens again, close the other tabs to free memory and report it.",
   "err.file.notMzml": "{name} does not look like an mzML file.",
   "err.file.cdfDamaged": "This .cdf file is damaged or cut short: its header describes more data than the file holds, so nothing was loaded. Copy the file again, or export it again as netCDF-3/AIA from the instrument software.",
   "err.file.netcdf4": "This is a netCDF-4 (HDF5) file: export it as netCDF-3/AIA (.cdf) from the instrument software.",
