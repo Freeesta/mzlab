@@ -6,10 +6,10 @@
 const EPS = 1e-6;
 const lo = (/** @type {Bag} */ it) => (it.a <= it.b ? "a" : "b");
 // the time an end is drawn at (the manual window keeps its exact bar times) and the baseline there, in counts of the trace
-const shown = (/** @type {Bag} */ s, /** @type {Bag} */ it, /** @type {string} */ e) => (it.zero && window.INTZERO ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]);
+const shown = (/** @type {Bag} */ s, /** @type {Bag} */ it, /** @type {string} */ e) => (it.zero && typeof INTZERO !== "undefined" ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]);
 function baseY(/** @type {Bag} */ s, /** @type {Bag} */ it, /** @type {number} */ t) {
   if (it.zero || it.bm === "zero") return 0;
-  if (it.bm === "line" && it.bl && window.INTBASE) return INTBASE.lineAt(it, t);
+  if (it.bm === "line" && it.bl && typeof INTBASE !== "undefined") return INTBASE.lineAt(it, t);
   return it.base ? baseAt(it.base, t) : edge3(s.y, nearIdx(s.x, t));
 }
 // the borders of the other integrations on the trace this end may touch but not cross: [lo, hi] (null: none)
@@ -49,10 +49,10 @@ function button(/** @type {Bag} */ p) {
 // the live text of the panel: the end that moved and the area it gives, once the area is known
 function say(/** @type {Bag} */ p) {
   const w = p._iepSay, s = w && p._a && p._a.sr && p._a.sr.find((/** @type {Bag} */ q) => q.key === w.it.key); if (!w || !s || !Number.isFinite(w.it.area)) return;
-  if (w.it.bm && w.it.bm !== "edges" && window.INTBASE && INTBASE.area(p, s, w.it).wait) return;          // the engine's area of the new window is not there yet
+  const own = w.it.bm && w.it.bm !== "edges" && typeof INTBASE !== "undefined" ? INTBASE.area(p, s, w.it) : null; if (own && own.wait) return;          // the engine's area of the new window is not there yet
   let r = p.el.querySelector(".iep-live");
   if (!r) { r = document.createElement("div"); r.className = "iep-live sr-only"; r.setAttribute("role", "status"); r.setAttribute("aria-live", "polite"); p.el.appendChild(r); }
-  const v = I18N.t(w.e === lo(w.it) ? "int.end.liveA" : "int.end.liveB", { rt: w.it[w.e].toFixed(3), area: I18N.sciE(w.it.area) });
+  const v = I18N.t(w.e === lo(w.it) ? "int.end.liveA" : "int.end.liveB", { rt: w.it[w.e].toFixed(3), area: I18N.sciE(own ? own.area : w.it.area) });
   if (r.textContent !== v) r.textContent = v;
   p._iepSay = null;
 }

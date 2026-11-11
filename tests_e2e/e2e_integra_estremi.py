@@ -78,7 +78,9 @@ try:
             assert json.loads(want)["t"] == v["x"][v["ia"] - 1]
             pg.keyboard.press("Shift+ArrowLeft"); wait_for_js(pg, f"Math.min({IT}.a,{IT}.b)==={v['x'][v['ia'] - 6]!r}")
             settle(pg); w = rec(pg); assert w["area"] > v["area"], (w["area"], v["area"])
-            wait_for_js(pg, f"(document.querySelector('.iep-live')||{{}}).textContent==={pg.evaluate('([rt,a])=>I18N.t(\"int.end.liveA\",{rt:rt.toFixed(3),area:I18N.sciE(a)})', [w['a'], w['area']])!r}")
+            live = pg.evaluate('([rt,a])=>I18N.t("int.end.liveA",{rt:rt.toFixed(3),area:I18N.sciE(a)})', [w['a'], w['area']])
+            try: wait_for_js(pg, f"(document.querySelector('.iep-live')||{{}}).textContent==={live!r}", 5000)
+            except Exception: raise AssertionError((live, pg.evaluate(f"(()=>{{const p={PN},i={IT};return [document.querySelector('.iep-live').textContent,i.area,INTBASE.area(p,p._a.sr[0],i),p._iepSay?1:0,document.querySelectorAll('.iep-live').length]}})()")))
             assert pg.evaluate("document.querySelector('.iep-live').getAttribute('aria-live')") == "polite"
             assert f"{w['a']:.3f}" in loc.get_attribute("aria-label") and pg.evaluate("document.activeElement.classList.contains('iep')")
             pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"Math.min({IT}.a,{IT}.b)==={v['x'][v['ia'] - 1]!r}")   # one undo per key press
@@ -100,7 +102,8 @@ try:
         def table():
             v = rec(pg)
             pg.evaluate(f"{PN}.cv.focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]")
-            rows = pg.evaluate("[...document.querySelectorAll('#tdati tbody tr')].map(r=>[...r.children].map(c=>c.textContent))")
+            assert pg.evaluate("document.querySelectorAll('#tdati tbody tr').length") > 0
+            rows = pg.evaluate(f"TDATI_P.data({PN}).rows")          # every row of the table (the dialog shows the first ones and adds the rest on scroll)
             names = [pg.evaluate("([k,a,b])=>I18N.t(k,{a:TDATI.num(a,2),b:TDATI.num(b,2)})", [k, v["a"], v["b"]]) for k in ("tdati.int.a", "tdati.int.b")]
             for n, t in zip(names, (v["a"], v["b"])):
                 got = [r_ for r_ in rows if r_[0].endswith(n)]
