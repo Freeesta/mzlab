@@ -146,3 +146,86 @@ fn slof_gives_the_bits_of_libm_on_every_face() {
         }
     }
 }
+
+fn unhex(s: &str) -> Vec<u8> {
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+        .collect()
+}
+
+/// Streams written by the reference C++ (through pyopenms 3.6, an independent build): an odd number of half bytes ends with the pad 0x0, which its decoder drops;
+/// a pad 0x8 would read back as one more value. The linear fixed point is the reference's own, taken from the stream.
+const REFERENCE: [(Np, &[f64], &str); 9] = [
+    (
+        Np::Linear,
+        &[100.0, 101.0, 102.0, 103.0],
+        "417446f8600000005890bb7edeffff7f88",
+    ),
+    (
+        Np::Linear,
+        &[100.0, 101.0, 102.5],
+        "417446f8600000005890bb7edeffff7f23c732a0",
+    ),
+    (
+        Np::Linear,
+        &[1.0, 2.0, 3.0],
+        "41cfffffff800000ffffff3ffeffff7f80",
+    ),
+    (
+        Np::Linear,
+        &[0.0; 5],
+        "41dfffffffc0000000000000000000008880",
+    ),
+    (
+        Np::Linear,
+        &[1.0, 2.0, 3.0, 5.0],
+        "41cfffffff800000ffffff3ffeffff7f80fffffff3",
+    ),
+    (Np::Pic, &[100.0, 101.0, 102.0, 103.0], "646656666676"),
+    (Np::Pic, &[100.0, 101.0, 103.0], "6466566760"),
+    (Np::Pic, &[0.0; 5], "888880"),
+    (Np::Pic, &[1.0, 2.0, 3.0], "717273"),
+];
+
+#[test]
+fn the_encoders_write_the_reference_bytes() {
+    for (np, v, hex) in REFERENCE {
+        let want = unhex(hex);
+        let got = match np {
+            Np::Linear => encode_linear(v, f64::from_be_bytes(want[..8].try_into().unwrap())),
+            _ => encode_pic(v),
+        };
+        assert_eq!(got, want, "{np:?} {v:?}");
+    }
+}
+
+#[test]
+fn reference_streams_decode_to_the_declared_count() {
+    for (np, v, hex) in REFERENCE {
+        for expected in [v.len(), 0] {
+            let back = decode(np, &unhex(hex), expected).unwrap();
+            assert_eq!(back.len(), v.len(), "{np:?} {v:?} declared {expected}");
+            for (a, b) in v.iter().zip(&back) {
+                assert!((a - b).abs() < 1e-6, "{np:?} {a} {b}");
+            }
+        }
+    }
+}
+
+#[test]
+fn older_streams_padded_with_0x8_still_decode() {
+    // the same streams as mzLab wrote them before matching the reference: the last half byte 0x8
+    for (np, v, hex) in [
+        (
+            Np::Linear,
+            &[1.0, 2.0, 3.0][..],
+            "41cfffffff800000ffffff3ffeffff7f88",
+        ),
+        (Np::Pic, &[100.0, 101.0, 103.0][..], "6466566768"),
+        (Np::Pic, &[0.0; 5][..], "888888"),
+    ] {
+        let back = decode(np, &unhex(hex), v.len()).unwrap();
+        assert_eq!(back.len(), v.len(), "{np:?} {v:?}");
+    }
+}
