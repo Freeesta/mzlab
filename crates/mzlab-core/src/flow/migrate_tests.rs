@@ -89,6 +89,20 @@ fn table_filter_1_keeps_the_filled_blank_cells_and_2_is_left_alone() {
 }
 
 #[test]
+fn transitions_1_keeps_the_edge_line_and_2_measures_from_zero() {
+    let edges = ("baseline".to_string(), Value::Str("edges".to_string()));
+    let (v, out, _) = migrate_params("chrom.transitions", 1, &p(&[("snr_min", 3.0)])).unwrap();
+    assert_eq!(v, 2);
+    assert!(out.contains(&edges));
+    // a version 2 plan that leaves the baseline out takes the default of the step (zero)
+    assert!(migrate_params("chrom.transitions", 2, &p(&[("snr_min", 3.0)])).is_none());
+    // a version 1 plan that chose zero keeps it
+    let given = vec![("baseline".to_string(), Value::Str("zero".to_string()))];
+    let (_, out, _) = migrate_params("chrom.transitions", 1, &given).unwrap();
+    assert_eq!(out, given);
+}
+
+#[test]
 fn features_detect_1_counts_max_gap_as_missed_scans_and_2_is_left_alone() {
     // the scan distance N of version 1 is N - 1 missed scans, never below 0
     for (old, new) in [(0.0, 0.0), (1.0, 0.0), (2.0, 1.0), (3.0, 2.0), (6.0, 5.0)] {

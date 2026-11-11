@@ -36,7 +36,7 @@ Il metodo `variante` del trait `Lettore` e i parametri `cv:` di `mzmlwrite.rs` s
 
 ## Cosa NON si legge
 - Più periodi (`Period1…`): `err.file.wiffPeriods` (`periods`); nessun file vero li ha, la disposizione dei cicli non è verificata.
-- Il precursore vero di un EPI: la massa a +42 è quella del metodo, non quella scelta dall'IDA a ogni ciclo (`DDERealTimeData` non si legge).
+- Il precursore vero di un EPI dipendente: la massa a +42 è quella salvata col metodo, non quella scelta dall'IDA a ogni ciclo, e `DDERealTimeData` non si legge; per questo un campione che ha il flusso `DDERealTimeData` scrive i suoi esperimenti 11 SENZA precursore (livello 2, canale `dd:2:EPI`), in motore, lettore e mzML (`wiff/mod.rs::dependent_scans`; prova `crates/mzlab-core/tests/wiff_ida.rs`, file `ida` di `tools/wiff_riferimento.py`: un campione IDA e uno a massa fissa). Senza quel flusso l'EPI tiene la massa dell'intestazione.
 - `.wiff2` (SCIEX OS) e TOF (codici 8, 9): rifiutati, altro codec e nessun mzML di riferimento.
 
 ## DAD

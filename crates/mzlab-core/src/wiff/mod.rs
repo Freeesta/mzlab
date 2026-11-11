@@ -265,6 +265,18 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
     out
 }
 
+/// The product-ion experiments of a sample acquired by IDA (it has a `DDERealTimeData` stream) are dependent scans: the survey picks their precursor at
+/// every cycle, and the mass of their header is only the value the method was saved with. That stream is not decoded, so they carry no precursor rather
+/// than an invented one (level 2 stays; the channels group them as `dd:2:EPI`).
+fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) {
+    if !ole.has(&format!("{SAMPLES}Sample{sample}/DDERealTimeData")) {
+        return;
+    }
+    for e in experiments.iter_mut().filter(|e| e.code == Some(CODE_PRODUCT)) {
+        e.precursor = None;
+    }
+}
+
 /// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
 fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
     let Some(m) = method else { return };
@@ -336,6 +348,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         extended::mark_windows(ole, sample, &mut experiments);
     }
     sim_periods(ole, sample, &experiments)?;
+    dependent_scans(ole, sample, &mut experiments);
     let n_exp = experiments.len().max(1);
     let records = entries
         .iter()
