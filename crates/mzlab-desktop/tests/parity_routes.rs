@@ -311,6 +311,58 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
     }
 }
 
+/// A full-scan run made for the test: 300 scans, 12 pairs of co-eluting ions (an ion and its parent 40 Da up) with a fixed noise, so that the
+/// traces of `api/origin` are long and noisy, as on real data.
+fn origin_mzml() -> Vec<u8> {
+    use mzlab_core::mzml::Spectrum;
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let h = Header {
+        run: "origin".into(),
+        sources: vec!["origin.mzML".into()],
+        software: ("mzLab".into(), "0".into()),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::new(Vec::new(), &h).unwrap();
+    let mut seed = 7u64;
+    let mut noise = || {
+        seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (seed >> 11) as f64 / (1u64 << 53) as f64
+    };
+    w.open_spectra(300).unwrap();
+    for t in 0..300 {
+        let rt = 1.0 + t as f64 * 0.01;
+        let (mut mz, mut intensity) = (Vec::new(), Vec::new());
+        for k in 0..12 {
+            let apex = 1.3 + 0.2 * k as f64;
+            for (m, h, w) in [
+                (150.0 + 10.0 * k as f64, 4e4, 0.05),
+                (190.0 + 10.0 * k as f64, 1e5, 0.045),
+            ] {
+                let d = (rt - apex) / w;
+                mz.push(m + 0.001 * k as f64);
+                intensity.push((h * (-0.5 * d * d).exp() + 400.0 * noise()) as f32);
+            }
+        }
+        let mut order: Vec<usize> = (0..mz.len()).collect();
+        order.sort_by(|&a, &b| mz[a].total_cmp(&mz[b]));
+        let s = Spectrum {
+            index: t,
+            id: format!("scan={}", t + 1),
+            level: 1,
+            rt,
+            polarity: 1,
+            mz: order.iter().map(|&i| mz[i]).collect(),
+            intensity: order.iter().map(|&i| intensity[i]).collect(),
+            ..Default::default()
+        };
+        w.spectrum(&s).unwrap();
+    }
+    w.close_spectra().unwrap();
+    w.finish().unwrap()
+}
+
 /// The evidence of origin (`api/origin`): its profile similarity runs the peak picking of `mzlab-picchi` (SNIP baseline, wavelet widths), whose
 /// `exp`/`ln` must give the same bits natively and in the `.wasm`; its numbers are written unrounded, so any last-bit difference shows.
 #[test]
@@ -319,31 +371,33 @@ fn the_origin_route_gives_the_same_report_in_the_app_and_in_the_wasm() {
         return;
     };
     let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("origin.mzML");
+    std::fs::write(&file, origin_mzml()).unwrap();
     let st = State::new();
     st.set_data_folder(dir.path().join("app"));
     st.set_index_folder(dir.path().join("idx")).unwrap();
-    let (fid, _) = st.pick(example()).unwrap();
-    st.rpc("lr_put", &json!({"name": NAME, "fid": fid}), &[])
+    let (fid, _) = st.pick(file.clone()).unwrap();
+    st.rpc("lr_put", &json!({"name": "origin.mzML", "fid": fid}), &[])
         .unwrap();
-    st.rpc("lr_index", &json!({"name": NAME}), &[]).unwrap();
-    let items = json!([{"slot": 0, "label": NAME, "time": 0.0, "full": true}]).to_string();
-    let mut plan = vec![json!({"op": "idxopen", "slot": 0, "name": NAME})];
-    for (mz, parent) in [(149, 198), (141, 214), (122, 158), (150, 194), (158, 214), (198, 214)] {
+    st.rpc("lr_index", &json!({"name": "origin.mzML"}), &[])
+        .unwrap();
+    let items = json!([{"slot": 0, "label": "origin.mzML", "time": 0.0, "full": true}]).to_string();
+    let mut plan = vec![json!({"op": "idxopen", "slot": 0, "name": "origin.mzML"})];
+    for k in 0..12 {
+        let (mz, parent) = (150.0 + 10.0 * k as f64, 190.0 + 10.0 * k as f64);
         plan.push(json!({"op": "origin", "items": items, "k": 0, "query": format!("?mz={mz}&parent={parent}")}));
     }
-    let wasm = run_wasm(
-        &pkg,
-        dir.path(),
-        &dir.path().join("idx").join(format!("{NAME}.mzidx")),
-        &example(),
-        &plan,
-    );
+    let idx = dir.path().join("idx").join("origin.mzML.mzidx");
+    let wasm = run_wasm(&pkg, dir.path(), &idx, &file, &plan);
     compare(&st, fid, &plan, &wasm, &[1]);
     let reports = wasm[1..]
         .iter()
         .filter(|w| matches!(from_wasm(w), Got::Text(t) if t.contains("\"x_snr\"")))
         .count();
-    assert!(reports > 0, "no origin report carries a profile similarity: {wasm:?}");
+    assert!(
+        reports >= 6,
+        "{reports} origin reports carry a profile similarity: {wasm:?}"
+    );
 }
 
 /// A small SRM acquisition made for the test: three MS1 scans and three SRM traces, written by the writer of the core.
