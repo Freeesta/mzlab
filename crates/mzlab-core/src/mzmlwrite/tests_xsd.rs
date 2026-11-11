@@ -53,6 +53,7 @@ fn the_indexed_file_validates_against_the_psi_schema() {
     }
 }
 
+/// A product-ion spectrum with its plain precursor, and a precursor-ion one: its fixed m/z as its `<product>`, with no precursor.
 #[test]
 fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
     let h = Header {
@@ -60,12 +61,17 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
         ..Default::default()
     };
     let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Options::default()).unwrap();
-    w.open_spectra(2).unwrap();
+    w.open_spectra(3).unwrap();
     for (i, extra) in [
         SpectrumExtra::default(),
         SpectrumExtra {
             ce: Some(25.5),
             iso_half: Some(0.35),
+            ..Default::default()
+        },
+        SpectrumExtra {
+            iso_half: Some(0.35),
+            product: Some(184.0),
             ..Default::default()
         },
     ]
@@ -78,7 +84,7 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
             level: 2,
             rt: 0.5,
             polarity: 1,
-            precursor: Some(229.1),
+            precursor: extra.product.is_none().then_some(229.1),
             mz: vec![100.5, 200.25],
             intensity: vec![10.0, 20.0],
             ..Default::default()
@@ -86,7 +92,16 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
         w.spectrum_with(&sp, extra).unwrap();
     }
     w.close_spectra().unwrap();
-    validate(&w.finish().unwrap());
+    let out = w.finish().unwrap();
+    let text = String::from_utf8_lossy(&out);
+    let pis = &text[text.find("id=\"scan=3\"").unwrap()..];
+    let pis = &pis[..pis.find("</spectrum>").unwrap()];
+    assert!(
+        pis.contains("<productList count=\"1\"><product><isolationWindow>")
+            && !pis.contains("<precursor"),
+        "{pis}"
+    );
+    validate(&out);
 }
 
 #[test]
