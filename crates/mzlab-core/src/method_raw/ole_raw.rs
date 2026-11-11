@@ -61,7 +61,7 @@ pub fn streams<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Option<Ve
     let at = buf[..len.min(SEARCH)]
         .windows(SIGNATURE.len())
         .position(|w| w == SIGNATURE)?;
-    let ole = Ole::open(buf.split_off(at), "raw").ok()?;
+    let ole = Ole::open(buf.split_off(at), "raw", &crate::readers::Limits::held()).ok()?;
     let out: Vec<Stream> = ole
         .paths_list()
         .filter(|p| NAMES.contains(&p.rsplit('/').next().unwrap_or("")))

@@ -468,7 +468,7 @@ pub fn method_of_sample(ole: &Ole, n: u32) -> Option<Method> {
 
 /// `[{name, source, compound, file, ...}]` for a `.dam` (one method) or a `.wiff` (one per sample).
 pub fn read_methods(data: Vec<u8>, file_name: &str) -> Result<Vec<Method>> {
-    let ole = Ole::open(data, file_name)?;
+    let ole = Ole::open(data, file_name, &crate::readers::Limits::held())?;
     let mut subs: Vec<String> = ole
         .paths_list()
         .filter(|k| k.starts_with("MethodSubtree/Method"))
