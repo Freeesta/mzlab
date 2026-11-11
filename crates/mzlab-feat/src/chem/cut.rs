@@ -8,6 +8,7 @@ use mzlab_core::json::{self, round, Out, Value};
 
 use super::graph::{props, Mol};
 use super::labels::{shape, shape_json, unpaired_of, AtomIn};
+use crate::sortc::SortC;
 
 /// How the electrons of a cut bond go.
 #[derive(Clone, Copy, PartialEq)]
@@ -259,7 +260,7 @@ fn pieces(m: &Mol, ks: &[usize]) -> Vec<Vec<usize>> {
                 }
             }
         }
-        atoms.sort_unstable();
+        atoms.sortc();
         out.push(atoms);
     }
     out
