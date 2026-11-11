@@ -27,6 +27,8 @@ fn fs(m: &Members) -> FileSet {
 struct ReadOne {
     scans: Vec<Spectrum>,
     missing: usize,
+    /// What the reader says it lost: scans declared, read, cause.
+    losses: mzlab_core::readers::Losses,
     /// Every chromatogram as (id, time, intensity) pairs.
     chroms: Vec<(String, Vec<(f64, f64)>)>,
 }
@@ -61,6 +63,7 @@ fn read(m: &Members, at: &str) -> Result<ReadOne, &'static str> {
     Ok(ReadOne {
         scans,
         missing: l.missing(0),
+        losses: ok(l.losses(0), at, "the losses"),
         chroms,
     })
 }
@@ -109,6 +112,18 @@ fn every_cut_is_counted(name: &str, file: Members) {
                 "{at}: {} of {} scans and no notice",
                 have.scans.len(),
                 want.scans.len()
+            );
+            let lost = &have.losses;
+            assert!(
+                lost.read == have.scans.len()
+                    && lost.declared == lost.read + have.missing
+                    && lost.cause.is_empty() == (have.missing == 0),
+                "{at}: losses {}/{} {:?} for {} scans, {} missing",
+                lost.read,
+                lost.declared,
+                lost.cause,
+                have.scans.len(),
+                have.missing
             );
             for (id, pts) in &have.chroms {
                 if let Some((_, all)) = want.chroms.iter().find(|(w, _)| w == id) {

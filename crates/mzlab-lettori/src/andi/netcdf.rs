@@ -6,6 +6,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::readers::Limits;
 
+mod counts;
 mod pieces;
 
 /// The bytes of the window the header is read through.
@@ -197,11 +198,13 @@ impl Cdf {
             var: Vec::new(),
             recsize: 0,
             size: dim,
+            streaming: numrecs == 0xFFFF_FFFF,
         };
         cdf.sizes(&mut c)?;
         cdf.att = c.attributes()?;
         cdf.variables(&mut c, v64)?;
         cdf.record(numrecs);
+        cdf.counts_agree(c.pos)?;
         Ok(cdf)
     }
 
@@ -423,6 +426,8 @@ pub struct Cdf {
     /// Bytes of one record (all the record variables).
     pub recsize: u64,
     pub size: u64,
+    /// `numrecs` was not written ("streaming"): it is counted from the bytes of the file.
+    pub streaming: bool,
 }
 
 /// The header read through a window over the file.
