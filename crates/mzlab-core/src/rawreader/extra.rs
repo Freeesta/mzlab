@@ -2,7 +2,7 @@
 
 use opentfraw::extra::scan_extras_with;
 use opentfraw::mzml::scan_metadata_with;
-use opentfraw::{Activation, Analyzer, ExtraFields};
+use opentfraw::{Activation, ExtraFields};
 
 use super::{field, header_fields, raw_error, Field, RawReader, Stream};
 use crate::error::Result;
@@ -10,8 +10,9 @@ use crate::mzml::Spectrum;
 use crate::mzmlwrite::{CvPar, Precursore, SpectrumExtra};
 use opentfraw::RawFileReader;
 
-/// The dissociation terms the Thermo activation maps to (as the converters of the maker's data write them); none for the ones PSI-MS has no term for.
-fn activation_terms(a: Activation, analyzer: Option<Analyzer>) -> Vec<(String, String)> {
+/// The dissociation terms the Thermo activation maps to, the same as the mzML writer of `opentfraw` (`to_msc_record`): CID is ion-trap CID on any
+/// analyzer, since `ScanEvent::activation` already names the beam-type collisions HCD; none for the ones PSI-MS has no term for.
+fn activation_terms(a: Activation) -> Vec<(String, String)> {
     const BEAM: (&str, &str) = ("MS:1000422", "beam-type collision-induced dissociation");
     const ETD: (&str, &str) = ("MS:1000598", "electron transfer dissociation");
     let t: &[(&str, &str)] = match a {
@@ -24,7 +25,6 @@ fn activation_terms(a: Activation, analyzer: Option<Analyzer>) -> Vec<(String, S
                 "electron-transfer/higher-energy collision dissociation",
             ),
         ],
-        Activation::CID if analyzer == Some(Analyzer::FTMS) => &[BEAM],
         Activation::CID => &[("MS:1000133", "collision-induced dissociation")],
         Activation::MPID => &[("MS:1000435", "photodissociation")],
         Activation::ECD => &[("MS:1000250", "electron capture dissociation")],
@@ -45,11 +45,7 @@ fn energy_term(nce: bool) -> String {
 
 /// The precursor of one reaction: its m/z is the target, the selected ion the step's own when known (else the target), its window, activation and
 /// energy its own (absent when the file does not give them for this step).
-fn reaction_precursor(
-    r: &opentfraw::ReactionInfo,
-    analyzer: Option<Analyzer>,
-    spectrum_ref: Option<String>,
-) -> Precursore {
+fn reaction_precursor(r: &opentfraw::ReactionInfo, spectrum_ref: Option<String>) -> Precursore {
     let half = r.isolation_width.map(|w| w / 2.0);
     Precursore {
         selected_mz: r.selected_mz.or(Some(r.precursor_mz)),
@@ -58,10 +54,7 @@ fn reaction_precursor(
         iso_target: Some(r.precursor_mz),
         iso_lower: half,
         iso_upper: half,
-        activation: r
-            .activation
-            .map(|a| activation_terms(a, analyzer))
-            .unwrap_or_default(),
+        activation: r.activation.map(activation_terms).unwrap_or_default(),
         energy: r.energy.map(|v| (energy_term(r.energy_is_nce), v)),
         spectrum_ref,
     }
@@ -79,14 +72,14 @@ fn precursors(
         return p
             .reactions
             .iter()
-            .map(|r| reaction_precursor(r, p.analyzer, spectrum_ref.clone()))
+            .map(|r| reaction_precursor(r, spectrum_ref.clone()))
             .collect();
     }
     if let [earlier @ .., last] = p.reactions.as_slice()
         && !earlier.is_empty()
     {
         let mut out: Vec<Precursore> = if p.sps_mz.is_empty() {
-            vec![reaction_precursor(last, p.analyzer, spectrum_ref)]
+            vec![reaction_precursor(last, spectrum_ref)]
         } else {
             p.sps_mz
                 .iter()
@@ -95,16 +88,11 @@ fn precursors(
                     iso_target: Some(mz),
                     iso_lower: None,
                     iso_upper: None,
-                    ..reaction_precursor(last, p.analyzer, spectrum_ref.clone())
+                    ..reaction_precursor(last, spectrum_ref.clone())
                 })
                 .collect()
         };
-        out.extend(
-            earlier
-                .iter()
-                .rev()
-                .map(|r| reaction_precursor(r, p.analyzer, None)),
-        );
+        out.extend(earlier.iter().rev().map(|r| reaction_precursor(r, None)));
         return out;
     }
     let half = p.isolation_width.map(|w| w / 2.0);
@@ -115,10 +103,7 @@ fn precursors(
         iso_target: p.target_mz,
         iso_lower: half,
         iso_upper: half,
-        activation: p
-            .activation
-            .map(|a| activation_terms(a, p.analyzer))
-            .unwrap_or_default(),
+        activation: p.activation.map(activation_terms).unwrap_or_default(),
         energy: p.collision_energy.map(|v| (energy_term(p.ce_is_nce), v)),
         spectrum_ref,
     }]

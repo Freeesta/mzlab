@@ -162,7 +162,10 @@ pub fn build_filter_with(
             && reactions.len() >= 2
             && n_valid_precursors == 1
             && matches!(analyzer, Some(Analyzer::FTMS))
-            && matches!(act, Some(Activation::CID) | Some(Activation::HCD));
+            && matches!(
+                event.preamble_activation(),
+                Some(Activation::CID) | Some(Activation::HCD)
+            );
 
         if is_tribrid_ethcd {
             // Eclipse / Fusion Lumos EThcD: one valid precursor, two-clause filter.
@@ -194,9 +197,9 @@ pub fn build_filter_with(
                 }
                 out.push(' ');
                 let _ = write!(out, "{mz:.mz_decimals$}");
+                // a step whose activation is not known gets no `@<activation>` clause (the chain does not lend it the final step's)
                 let own = step.next().and_then(|s| s.activation);
-                let ethcd = act == Some(Activation::EThcD);
-                if let Some(a) = if ethcd { act } else { own.or(act) } {
+                if let Some(a) = own {
                     out.push('@');
                     let is_last = i == last;
                     let is_ethcd = a == Activation::EThcD;
@@ -459,7 +462,7 @@ mod tests {
                     precursor_mz: 810.50,
                     unknown_double: 1.0,
                     energy: 35.0,
-                    unknown_long1: 0,
+                    unknown_long1: 1, // CID coded by the reaction
                     unknown_long2: 0,
                 },
                 Reaction {
@@ -485,11 +488,40 @@ mod tests {
     }
 
     #[test]
-    fn ethcd_filter() {
+    fn an_earlier_step_without_its_own_code_gets_no_activation_clause() {
+        let mut pre = make_preamble(1, 0, 3, 0);
+        pre.bytes[10] = 1;
+        pre.bytes[40] = 0; // ITMS
+        pre.bytes[24] = 4;
+        let ev = ScanEvent {
+            preamble: pre,
+            reactions: vec![rxn(810.5, 35.0, 0), rxn(265.27, 35.0, 0)],
+            fraction_collectors: vec![FractionCollector {
+                low_mz: 100.0,
+                high_mz: 1000.0,
+            }],
+            coefficients: vec![],
+        };
+        let s = build_filter(
+            &ev,
+            &make_index(100.0, 1000.0),
+            Some(265.27),
+            Some(35.0),
+            None,
+        );
+        assert_eq!(
+            s,
+            "ITMS + c NSI d Full ms3 810.5000 265.2700@cid35.00 [100.0000-1000.0000]"
+        );
+    }
+
+    /// Preamble code 12 (EThcD in the firmware documentation) was never seen in a real file: the filter names the precursor and no activation.
+    #[test]
+    fn an_unconfirmed_preamble_code_gives_no_activation_clause() {
         let mut pre = make_preamble(1, 0, 2, 0);
         pre.bytes[10] = 1; // dependent
         pre.bytes[40] = 4; // FTMS
-        pre.bytes[24] = 12; // EThcD
+        pre.bytes[24] = 12;
         let ev = ScanEvent {
             preamble: pre,
             reactions: vec![],
@@ -501,11 +533,9 @@ mod tests {
         };
         let idx = make_index(150.0, 2000.0);
         let s = build_filter(&ev, &idx, Some(649.12), Some(35.0), Some(28.0));
-        assert_eq!(
-            s,
-            "FTMS + c NSI d Full ms2 649.1200@etd35.00@hcd28.00 [150.0000-2000.0000]"
-        );
+        assert_eq!(s, "FTMS + c NSI d Full ms2 649.1200 [150.0000-2000.0000]");
     }
+
     fn rxn(mz: f64, energy: f64, flags: u32) -> Reaction {
         Reaction {
             precursor_mz: mz,

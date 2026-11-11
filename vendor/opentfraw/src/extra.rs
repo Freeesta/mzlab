@@ -89,6 +89,13 @@ fn possible_charge_states(p: &ScanParams<'_>) -> Option<String> {
     )
 }
 
+/// The activation of an MSn scan by name, or `unknown` when neither its final reaction nor a confirmed preamble code says it
+/// (`ScanEvent::activation`): the reader never fills the gap with CID. Nothing for an MS1 scan.
+fn activation(scan: &Scan<'_>) -> Option<String> {
+    let p = scan.meta.precursor.as_ref()?;
+    Some(p.activation.map_or("unknown", |a| a.as_str()).to_string())
+}
+
 /// Every registered extra field: its key and how it is read. Fields that
 /// `openmassspec_core::SpectrumRecord` already carries (injection time,
 /// charge, precursor m/z, isolation window, collision energy, FAIMS CV,
@@ -96,6 +103,7 @@ fn possible_charge_states(p: &ScanParams<'_>) -> Option<String> {
 const EXTRA_FIELDS: &[(&str, Getter)] = &[
     // Scan event and scan index.
     ("opentfraw.is_dia", |s| Some(s.meta.is_dia.to_string())),
+    ("opentfraw.activation", activation),
     ("opentfraw.is_wideband", |s| {
         Some(s.meta.is_wideband.to_string())
     }),
