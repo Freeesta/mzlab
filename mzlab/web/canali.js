@@ -110,6 +110,13 @@
   }
   /** the label of a row: the engine's name, with TIC and BPC in the words of the page; the scan mode (EMS, EPI…) has its own column, so it leaves the name @param {Nodo} n */
   const label = n => n.omo === "tic" ? T("ctl.kind.tic") : n.omo === "bpc" ? T("ctl.kind.bpc") : n.fam === "srm" ? srmLabel(n.et) : n.fam === "sim" ? bare(n).replace(/^#(\d+)/, (_, d) => T("canali.sim.ion", { n: d })) : bare(n);
+  /** a SIM ion as the picker names it: the m/z (or «ion N» without Q1), with the polarity only when the files hold both; dwell, mode and name stay in the hover text
+   * @param {Nodo} n @param {boolean} mixed */
+  const simShort = (n, mixed) => { const m = simParts(n); if (!m) return label(n); const ion = m[1].startsWith("#") ? T("canali.sim.ion", { n: m[1].slice(1) }) : m[1]; return mixed && m[2] ? `${ion} (${m[2]})` : ion; };
+  /** m/z (or «#N») and polarity sign of the engine's SIM name «SIM 223.1 (+) 100 ms «name»» @param {Nodo} n */
+  const simParts = n => /^(#\d+|[\d.]+)(?:\s+\(([+−])\))?/.exec(bare(n));
+  /** true when the SIM ions of the tree come in both polarities @param {Nodo[]} tree */
+  const mixedPol = tree => new Set(tree.filter(n => n.fam === "sim").map(n => (simParts(n) || [])[2] || "")).size > 1;
   /** the engine's name without the scan-mode word that the «Experiment» column already shows («MS¹ EMS» → «MS¹») @param {Nodo} n */
   const bare = n => n.sigla ? n.et.split(" ").filter(w => w !== n.sigla).join(" ") || n.et : n.et;
   /** a transition in the notation of the legend, «precursor>product role», from the engine's «MRM q1→q3 @CE «role»» @param {string} et */
@@ -123,20 +130,26 @@
   /** the hover text of a row: what the channel is (time range and points have their own columns) @param {Nodo} n */
   const tip = n => n.fam === "dd" ? T("canali.tip.dd") : n.fam === "ms" && n.liv === 1 ? T("canali.tip.ms1") : n.omo === "tic" ? T("canali.tip.tic") : n.omo === "bpc" ? T("ctl.kind.bpc.title") : "";
   /** the label of the row for screen readers @param {Nodo} n */
-  const rowLabel = n => n.n ? T("canali.row", { et: label(n), n: n.n, a: +n.rt0.toFixed(2), b: +n.rt1.toFixed(2) }) : label(n);
-  /** the rows of the tree (a collapsed parent hides its descendants) @param {any} p @param {Nodo[]} tree @param {Set<string>} sel @param {boolean} onlySrm @param {number} nfiles */
-  function rows(p, tree, sel, onlySrm, nfiles) {
+  const rowLabel = n => rowLabelOf(n, label(n));
+  /** @param {Nodo} n @param {string} et */
+  const rowLabelOf = (n, et) => n.n ? T("canali.row", { et, n: n.n, a: +n.rt0.toFixed(2), b: +n.rt1.toFixed(2) }) : et;
+  /** the rows of the tree (a collapsed parent hides its descendants); a SIM picker (sim) shows the m/z alone, the rest in the hover text
+   * @param {any} p @param {Nodo[]} tree @param {Set<string>} sel @param {boolean} onlySrm @param {number} nfiles @param {boolean} [sim] */
+  function rows(p, tree, sel, onlySrm, nfiles, sim = false) {
     const col = /** @type {Set<string>} */ (p._canCol || (p._canCol = new Set()));
     const byO = new Map(tree.map(x => [x.omo, x]));
     const depth = (/** @type {Nodo} */ n) => { let d = 1, u = n.up; while (u) { d++; u = (byO.get(u) || { up: null }).up; } return d; };
-    const hidden = new Set(), many = nfiles > 1;
+    const hidden = new Set(), many = nfiles > 1, mixed = sim && mixedPol(tree);
     tree.forEach(n => { if (n.up && (col.has(n.up) || hidden.has(n.up))) hidden.add(n.omo); });
     const vis = tree.filter(n => !hidden.has(n.omo) && (!onlySrm || isTr(n)));
     return vis.map(n => {
-      const lv = onlySrm ? 1 : depth(n), has = n.kids.length > 0 && !onlySrm, open = has && !col.has(n.omo), t = tip(n);
-      return `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.omo)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-omo="${EH(n.omo)}" aria-label="${EH(rowLabel(n))}"${t ? ` title="${EH(t)}"` : ""}>` +
-        `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span><span class="can-ck" aria-hidden="true"></span><span class="can-et">${EH(label(n))}</span></span>` +
-        `<span class="can-sg" aria-hidden="true"${sgTitle(n.sigla)}>${EH(sgShort(n.sigla))}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt0.toFixed(1)}–${+n.rt1.toFixed(1)}` : ""}</span>` +
+      const lv = onlySrm ? 1 : depth(n), has = n.kids.length > 0 && !onlySrm, open = has && !col.has(n.omo), et = sim && n.fam === "sim" ? simShort(n, mixed) : label(n);
+      const t = sim ? (n.n ? T("canali.row", { et: n.et, n: n.n, a: +n.rt0.toFixed(2), b: +n.rt1.toFixed(2) }) : n.et) : tip(n);
+      const ck = onlySrm ? `<span class="can-hit" aria-hidden="true" title="${EH(T("canali.pick.ck", { et }))}"><span class="can-ck"></span></span>` : `<span class="can-ck" aria-hidden="true"></span>`;
+      const head = `<div class="can-row" role="treeitem" aria-level="${lv}" aria-selected="${sel.has(n.omo)}"${has ? ` aria-expanded="${open}"` : ""} tabindex="-1" data-omo="${EH(n.omo)}" aria-label="${EH(sim ? rowLabelOf(n, et) : rowLabel(n))}"${t ? ` title="${EH(t)}"` : ""}>` +
+        `<span class="can-in" style="padding-left:${(lv - 1) * 14}px"><span class="can-car" aria-hidden="true">${has ? (open ? "▾" : "▸") : ""}</span>${ck}<span class="can-et">${EH(et)}</span></span>`;
+      if (sim) return head + `</div>`;
+      return head + `<span class="can-sg" aria-hidden="true"${sgTitle(n.sigla)}>${EH(sgShort(n.sigla))}</span><span class="can-n" aria-hidden="true">${n.n || ""}</span><span class="can-rt" aria-hidden="true">${n.n ? `${+n.rt0.toFixed(1)}–${+n.rt1.toFixed(1)}` : ""}</span>` +
         (many ? `<span class="can-fl" aria-hidden="true" title="${EH(T("canali.files.title"))}">${n.files}</span>` : "") + `</div>`;
     }).join("");
   }
@@ -165,35 +178,52 @@
     ensure(p);
     const files = filesOf(p), only = ESP.mrm(p), raw = albero(files);
     if (only && !raw.length) return "";
-    const tree = only ? raw : msTree(raw, cx || null), sel = ticked(p, tree), open = !!p._canOpen;
-    const head = `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span><span>${T("canali.col.sigla")}</span><span title="${EH(T("canali.col.n.title"))}">${T("canali.col.n")}</span><span title="${EH(T("canali.col.rt.title"))}">${T("canali.col.rt")}</span>${files.length > 1 ? `<span>${T("canali.col.file")}</span>` : ""}</div>`;
+    const tree = only ? raw : msTree(raw, cx || null), sel = ticked(p, tree), open = !!p._canOpen, sim = only && isSim(tree);
+    const hint = `can-hint-${EH(String(p.id))}`, tools = only ? `<div class="can-tb"><span class="can-hint" id="${hint}">${EH(T("canali.pick.hint"))}</span><button type="button" class="sec sm can-all" aria-label="${EH(T("canali.pick.all.aria"))}" aria-pressed="${sel.size === tree.filter(isTr).length}">${EH(T("canali.pick.all"))}</button></div>` : "";
+    const head = sim ? `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span></div>` : `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span><span>${T("canali.col.sigla")}</span><span title="${EH(T("canali.col.n.title"))}">${T("canali.col.n")}</span><span title="${EH(T("canali.col.rt.title"))}">${T("canali.col.rt")}</span>${files.length > 1 ? `<span>${T("canali.col.file")}</span>` : ""}</div>`;
     const grp = (/** @type {string} */ name, /** @type {string} */ body) => body ? `<div role="group" aria-label="${EH(name)}"><div class="can-gh" aria-hidden="true">${EH(name)}</div>${body}</div>` : "";
     const [det, log] = cx ? others(cx) : [[], []];
-    const body = only ? rows(p, tree, sel, true, files.length) : grp(T("canali.grp.ms"), rows(p, tree, sel, false, files.length)) + grp(T("canali.grp.det"), kindRows(p, det)) + grp(T("canali.grp.log"), kindRows(p, log));
-    const txt = only ? T(tree.some(n => n.fam === "sim") && !tree.some(n => n.fam === "srm") ? "canali.sim.btn" : "canali.btn.mrm") : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
+    const body = only ? rows(p, tree, sel, true, files.length, sim) : grp(T("canali.grp.ms"), rows(p, tree, sel, false, files.length)) + grp(T("canali.grp.det"), kindRows(p, det)) + grp(T("canali.grp.log"), kindRows(p, log));
+    const txt = only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
     return `<span class="can"><button class="bt canb" type="button" data-o="${only ? "canali" : "kind"}" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T(only ? "canali.btn.title" : "ctl.kind.title"))}" aria-label="${EH(aria)}"><span class="can-bt">${EH(txt)}</span><span class="can-dn" aria-hidden="true">▾</span></button>` +
-      `<div class="sp-pop can-pop" ${open ? "" : "hidden"}>${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true" class="can-tree">${body}</div></div></span>`;
+      `<div class="sp-pop can-pop${sim ? " can-sim" : ""}" ${open ? "" : "hidden"}>${tools}${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true"${only ? ` aria-describedby="${hint}"` : ""} class="can-tree">${body}</div></div></span>`;
+  }
+
+  /** a picker of SIM ions only (no MRM transition) @param {Nodo[]} tree */
+  const isSim = tree => tree.some(n => n.fam === "sim") && !tree.some(n => n.fam === "srm");
+  /** the button of a transition / SIM picker: «Ions», with the one ion plotted or how many of them @param {Nodo[]} tree @param {Set<string>} sel @param {boolean} sim */
+  function onlyText(tree, sel, sim) {
+    const tr = tree.filter(isTr), base = T(sim ? "canali.sim.btn" : "canali.btn.mrm");
+    if (sel.size === 1 && tr.length > 1) { const n = /** @type {Nodo} */ (tr.find(x => sel.has(x.omo))); return `${base}: ${sim ? simShort(n, mixedPol(tree)) : label(n)}`; }
+    return sel.size && sel.size < tr.length ? `${base} (${sel.size}/${tr.length})` : base;
   }
 
   /** the channels ticked in the picker: one channel of scans that is TIC or BPC is the kind, anything else a list @param {any} p @param {string[]} order */
   function setMs(p, order) {
     if (order.length === 1 && (order[0] === "tic" || order[0] === "bpc")) { p.kind = order[0]; p.canali = undefined; } else { p.kind = "tic"; p.canali = order; }
   }
-  /** a click on a row of scans: the channel is ticked or not (the first click after another kind starts again from that channel) @param {any} p @param {string} omo @param {Nodo[]} tree */
-  function toggle(p, omo, tree) {
+  /** a click on a row of scans: the channel is ticked or not (the first click after another kind starts again from that channel); in a transition / SIM picker
+   * solo plots that channel alone, and the last ticked channel cannot be unticked (an empty choice would plot them all) @param {any} p @param {string} omo @param {Nodo[]} tree @param {boolean} [solo] */
+  function toggle(p, omo, tree, solo = false) {
+    if (ESP.mrm(p)) {
+      const srm = tree.filter(isTr), cur = solo ? new Set() : new Set(ticked(p, tree));
+      if (cur.has(omo)) cur.delete(omo); else cur.add(omo);
+      const pick = srm.filter(n => cur.has(n.omo)).map(nodeKey);
+      if (pick.length) { COMANDI.fai("panel.source", p, () => { p.tr = pick.length === srm.length ? "" : pick; }); ctl(p); draw(p); uiSave(); }
+      return;
+    }
     COMANDI.fai("panel.source", p, () => {
-      if (ESP.mrm(p)) {
-        const srm = tree.filter(isTr), cur = new Set(ticked(p, tree));
-        if (cur.has(omo)) cur.delete(omo); else cur.add(omo);
-        const pick = srm.filter(n => cur.has(n.omo)).map(nodeKey);
-        p.tr = pick.length === srm.length || !pick.length ? "" : pick;
-        return;
-      }
       const cur = new Set(isOther(p) ? [] : chosen(p)); if (cur.has(omo)) cur.delete(omo); else cur.add(omo);
       const order = tree.map(n => n.omo).filter(o => cur.has(o));
       if (order.length) setMs(p, order);
     });
     ctl(p); draw(p); uiSave();
+  }
+  /** «All» of a transition / SIM picker: every channel is plotted @param {any} p */
+  function pickAll(p) {
+    COMANDI.fai("panel.source", p, () => { p.tr = ""; });
+    ctl(p); draw(p); uiSave();
+    const b = /** @type {HTMLElement | null} */ (p.el.querySelector(".can-all")); if (b) b.focus();
   }
   /** a click on a row of another kind (PDA, a detector, the log): the panel plots that and nothing else @param {any} p @param {string} v */
   function pickKind(p, v) {
@@ -213,7 +243,9 @@
     if (!cc._canR) { cc._canR = true; c.addEventListener("change", e => { if (/^(prec|tr)$/.test((/** @type {HTMLElement} */ (e.target)).dataset?.o || "")) p.canali = undefined; }, true); }
     const b = /** @type {HTMLElement | null} */ (c.querySelector('[data-o="canali"],[data-o="kind"]')), pop = /** @type {HTMLElement | null} */ (c.querySelector(".can-pop"));
     if (!b || !pop) return;
-    const tree = msTree(albero(filesOf(p)), null);
+    // a transition / SIM panel lists its own rows (msTree keeps only the families the chromatogram draws, no SIM ion)
+    const only = ESP.mrm(p), tree = only ? albero(filesOf(p)) : msTree(albero(filesOf(p)), null);
+    const all = /** @type {HTMLElement | null} */ (pop.querySelector(".can-all")); if (all) { all.onclick = () => pickAll(p); all.onkeydown = e => { if (e.key === " " || e.key === "Enter") e.stopPropagation(); }; }
     const place = () => { if (pop.hidden) return; const op = /** @type {HTMLElement} */ (pop.offsetParent || p.el), pr = op.getBoundingClientRect(), br = b.getBoundingClientRect(); pop.style.left = Math.max(4, Math.min(br.left - pr.left, op.clientWidth - pop.offsetWidth - 6)) + "px"; pop.style.top = br.bottom - pr.top + 4 + "px"; };
     const rowsOf = () => [...pop.querySelectorAll(".can-row")].filter(x => /** @type {HTMLElement} */ (x).offsetParent);
     const focusRow = (/** @type {Element | null | undefined} */ r) => { if (!r) return; pop.querySelectorAll(".can-row").forEach(x => x.setAttribute("tabindex", "-1")); r.setAttribute("tabindex", "0"); /** @type {HTMLElement} */ (r).focus({ preventScroll: true }); };
@@ -223,10 +255,12 @@
     if (p._canOpen) place();
     pop.querySelectorAll(".can-row").forEach(el => {
       const row = /** @type {HTMLElement} */ (el), omo = row.dataset.omo || "", kind = row.dataset.kind || "";
-      const act = () => { if (kind) pickKind(p, kind); else toggle(p, omo, tree); };
+      const act = (/** @type {boolean} */ solo) => { if (kind) pickKind(p, kind); else toggle(p, omo, tree, solo); };
       row.onclick = e => {
         if ((/** @type {HTMLElement} */ (e.target)).closest(".can-car") && row.hasAttribute("aria-expanded")) { const col = /** @type {Set<string>} */ (p._canCol ||= new Set()); if (col.has(omo)) col.delete(omo); else col.add(omo); p._canFocus = omo; ctl(p); return; }
-        act();
+        // transitions / SIM ions: a click on the name plots that one alone, the box (or Ctrl/⌘) adds or removes it
+        p._canFocus = omo || kind;
+        act(only && !(/** @type {HTMLElement} */ (e.target)).closest(".can-hit") && !e.ctrlKey && !e.metaKey);
       };
       row.onkeydown = e => {
         // the tree owns its keys: the page-wide handlers (Space = play the scans, arrows = step them) must not see them
@@ -242,7 +276,7 @@
           if (row.getAttribute("aria-expanded") === "true") { col.add(omo); p._canFocus = omo; ctl(p); }
           else { const lv = +(row.getAttribute("aria-level") || 1), all = rowsOf(), i = all.indexOf(row); for (let j = i - 1; j >= 0; j--) if (+(all[j].getAttribute("aria-level") || 1) < lv) { moveFocus(row, j - i); break; } }
         }
-        else if (e.key === " " || e.key === "Enter") { e.preventDefault(); p._canFocus = omo || kind; act(); }
+        else if (e.key === " " || e.key === "Enter") { e.preventDefault(); p._canFocus = omo || kind; act(only && e.key === "Enter"); }
       };
     });
     if (p._canFocus) { const key = p._canFocus, r = [...pop.querySelectorAll(".can-row")].find(x => /** @type {HTMLElement} */ (x).dataset.omo === key || /** @type {HTMLElement} */ (x).dataset.kind === key); p._canFocus = null; if (r && p._canOpen) focusRow(r); }

@@ -6,7 +6,7 @@
 // Module script; helpers (rh, EH, toast, ...) come from the classic scripts through window.
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
-import { mountBar } from "./disegno-barra.js";
+import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
 import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js";
@@ -230,7 +230,8 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
     const fit0 = fit; kFit = () => { fit0(); placePill(d); };
     fit(); placePill(d); /** @type {Window} */ (d.defaultView).addEventListener("resize", () => kFit());
     d.head.appendChild(st);
-    kBar = mountBar(d, k => I18N.t(k));
+    const rad = mountRadical({ d, K: () => K, changed: () => { if (kBar) kBar.sync(); FRAME.next(drawLabels); } });
+    kBar = mountBar(d, k => I18N.t(k), { radical: { run: rad.run, on: rad.on } });
     applyTools();
   } catch (_) { /* not critical */ }
 }

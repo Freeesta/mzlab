@@ -187,15 +187,15 @@ fn a_zlib_array_that_inflates_to_hundreds_of_megabytes() {
     verde(case("zlib bomb", mzml_with("3", &bomba, &bomba, true)));
 }
 
-/// A spectrum that declares no points (`defaultArrayLength` 0 or missing) and holds a zlib array of 60 MB: memory follows the bytes of the file and
-/// the refusal is `error.memoryBudget` (the size, not damage). A truly corrupt stream keeps `err.file.zlib`.
+/// A spectrum that declares no points (`defaultArrayLength` 0 or missing) and holds a zlib array of 60 MB: the inflate limit follows the bytes of the file and
+/// the refusal is `error.fixedLimit` (the size, not damage, and not the memory the pool retries). A truly corrupt stream keeps `err.file.zlib`.
 #[test]
 fn a_zlib_array_of_a_spectrum_that_declares_no_points() {
     let bomb = b64(&zlib(&vec![0u8; 60 << 20]));
     let mut g = Vec::new();
     for l in ["0", ""] {
         let text = mzml_with(l, &bomb, &bomb, true).replace(" defaultArrayLength=\"\"", "");
-        assert_eq!(reads(text.clone()), ["error.memoryBudget"], "length {l:?}");
+        assert_eq!(reads(text.clone()), ["error.fixedLimit"], "length {l:?}");
         g.extend(case(&format!("length {l:?}"), text));
     }
     let mut broken = zlib(&vec![7u8; 64 << 10]);

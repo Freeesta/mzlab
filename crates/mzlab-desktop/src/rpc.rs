@@ -472,7 +472,7 @@ impl ReadAt for MapAt {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         let b = self.0.bytes();
         let a = off as usize;
-        let src = a.checked_add(buf.len()).and_then(|e| b.get(a..e)).ok_or_else(|| Error::new("error.badIndex"))?;
+        let src = a.checked_add(buf.len()).and_then(|e| b.get(a..e)).ok_or_else(|| mzlab_core::idxread::read_error(off, buf.len()))?;
         buf.copy_from_slice(src);
         Ok(())
     }
