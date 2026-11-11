@@ -324,7 +324,7 @@ pub fn record(
             let step = registry
                 .iter()
                 .find(|s| s.id == inst.step && s.version == inst.version)
-                .ok_or_else(|| Error::new("err.flow.step.unknown"))?;
+                .ok_or_else(|| Error::new("err.flow.step.unknown").with("step", &inst.step))?;
             let sources: Vec<usize> = inst
                 .sources()
                 .iter()

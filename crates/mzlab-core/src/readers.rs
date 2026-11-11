@@ -117,6 +117,11 @@ pub struct FileSet {
 }
 
 impl FileSet {
+    /// `err.file.notAccepted` for this set, named by its first member (the name the page and the CLI show).
+    pub fn not_accepted(&self) -> Error {
+        let name = self.membri.first().map(|m| m.nome.as_str()).unwrap_or_default();
+        Error::new("err.file.notAccepted").with("name", name)
+    }
     /// Index of the member whose name ends with `suffisso`, ignoring case.
     pub fn find(&self, suffisso: &str) -> Option<usize> {
         let s = suffisso.to_lowercase();
@@ -308,13 +313,8 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
 /// Opens `fs` with the reader that recognises it; `err.file.notAccepted` when none does.
 pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let mut fs = fs;
-    let name = fs
-        .membri
-        .first()
-        .map(|m| m.nome.clone())
-        .unwrap_or_default();
-    let v =
-        riconosci(&mut fs).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
+    let refused = fs.not_accepted();
+    let v = riconosci(&mut fs).ok_or(refused)?;
     (v.apri)(fs, limits)
 }
 

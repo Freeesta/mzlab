@@ -55,10 +55,10 @@ pub fn prepare_late<R: ReadAt, R2: ReadAt + Send + 'static>(
     Ok((table_with(t, String::new()), move || {
         let h = prints
             .take()
-            .ok_or_else(|| Error::new("err.file.unknown"))?;
+            .ok_or_else(|| Error::new("error.workStopped").with("detail", "hash"))?;
         let (sha256, _, probe) = h
             .join()
-            .unwrap_or_else(|_| Err(Error::new("err.file.unknown")))?;
+            .unwrap_or_else(|_| Err(Error::new("error.workStopped").with("detail", "hash")))?;
         Ok(source_text(&name, size, &probe, &sha256))
     }))
 }

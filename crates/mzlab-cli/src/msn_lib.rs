@@ -53,7 +53,7 @@ fn read_lib(path: &Path) -> Result<String> {
 
 /// `add LIB FILE --id ID [msn-graph options]`: returns the notice for stderr.
 fn add(args: Vec<String>, tmp: &Path) -> Result<String> {
-    let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
+    let bad = |m: &str| Error::new("err.cli.line").with("message", m);
     let (mut lib, mut id, mut rest) = (None, None, Vec::new());
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
@@ -107,7 +107,7 @@ fn column<'a>(row: &'a [(String, String)], name: &str) -> &'a str {
 }
 
 fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
-    let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
+    let bad = |m: &str| Error::new("err.cli.line").with("message", m);
     let (mut manifest, mut dir, mut out) = (None, None, None);
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
@@ -151,7 +151,7 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
 }
 
 fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
-    let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
+    let bad = |m: &str| Error::new("err.cli.line").with("message", m);
     let (mut lib, mut out, mut clean, mut all, mut annotate) = (None, None, false, false, false);
     let mut lib_format = Format::Msp;
     let mut it = args.into_iter();
@@ -180,7 +180,7 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
 
 /// `search LIB GRAPH [options]`: the text of `msncerca/1` and the file it goes to, if any.
 fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
-    let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
+    let bad = |m: &str| Error::new("err.cli.line").with("message", m);
     let (mut files, mut out, mut o) = (Vec::new(), None, OpzioniCerca::default());
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
@@ -238,8 +238,8 @@ pub fn run(args: Vec<String>, tmp: &Path) -> Result<(Vec<u8>, String)> {
             let (t, out) = search(rest)?;
             deliver(t, out)
         }
-        _ => Err(Error::new("err.flow.param.type")
-            .with("detail", "usage: mzlab-cli msn-lib add|build|export|search")),
+        _ => Err(Error::new("err.cli.line")
+            .with("message", "usage: mzlab-cli msn-lib add|build|export|search")),
     }
 }
 

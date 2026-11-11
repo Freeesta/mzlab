@@ -259,7 +259,7 @@ impl Ctx {
             let step = registry
                 .iter()
                 .find(|s| s.id == inst.step && s.version == inst.version)
-                .ok_or_else(|| Error::new("err.flow.step.unknown"))?;
+                .ok_or_else(|| Error::new("err.flow.step.unknown").with("step", &inst.step))?;
             ctx.resolved.push(canonical(inst, step)?);
             ctx.steps.push(step.clone());
             let mine = all.iter().filter(|(j, _)| j.instance == inst.id);

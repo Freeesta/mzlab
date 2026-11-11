@@ -11,10 +11,12 @@ use crate::recipe::Recipe;
 const JOIN_KEYS: [&str; 4] = ["mz_weight", "rt_weight", "rt_tol", "abs_da"];
 const FINDER_KEYS: [&str; 2] = ["intensity_tol", "abs_da"];
 
-fn bad(step: &str, name: &str) -> Error {
+/// `err.flow.param.type` of parameter `name` of `step`, with the value it was given.
+fn bad(step: &str, name: &str, v: &Value) -> Error {
     Error::new("err.flow.param.type")
         .with("instance", step)
         .with("param", name)
+        .with("detail", mzlab_core::flow::value_text(v))
 }
 
 fn unknown(step: &str, name: &str) -> Error {
@@ -42,14 +44,14 @@ pub(super) fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> 
             (true, Some("join")) => r.join = Some(JoinAlign::default()),
             (false, Some("integrate")) => r.peak_finder = None,
             (false, Some("peak_finder")) => r.peak_finder = Some(PeakFinder::default()),
-            _ => return Err(bad(step, k)),
+            _ => return Err(bad(step, k, v)),
         }
         return Ok(());
     }
     let x = v
         .f64()
         .filter(|x| x.is_finite() && *x >= 0.0)
-        .ok_or_else(|| bad(step, k))?;
+        .ok_or_else(|| bad(step, k, v))?;
     match (align, r.join.as_mut(), r.peak_finder.as_mut(), k) {
         (true, Some(j), _, "mz_weight") => j.mz_weight = x,
         (true, Some(j), _, "rt_weight") => j.rt_weight = x,

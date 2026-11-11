@@ -23,8 +23,9 @@ const PROFILO: u8 = 1;
 const LARGHE: u8 = 2;
 const WITH_PRECURSOR: u8 = 4;
 
+/// An answer of the module the engine cannot decode: a fault of the module or a module of another version, never the user's file type.
 fn guasto(what: &str) -> Error {
-    Error::new("err.file.notAccepted").with("detail", what)
+    Error::new("err.module.reply").with("detail", what)
 }
 
 fn u32_di(n: usize) -> u32 {
