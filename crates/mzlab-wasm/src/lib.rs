@@ -22,6 +22,7 @@ mod zip;
 mod natives; mod natives_samples; mod fingerprints;
 mod courier;
 mod natives_engine;
+mod source_check;
 mod blocks;
 mod gunzip;
 mod peak_area;

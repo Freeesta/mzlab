@@ -5,8 +5,8 @@
 /** @typedef {{ size: number, mtime: number, bytes: number, at: number, missing: number }} Marker */
 const SHARE = 0.25, SPARE = 256 << 20;           // the warm files take at most a quarter of the quota and always leave 256 MB free
 
-/** @param {{ ARCH: any, lrPut: (m: any) => Promise<any>, lrIndex: (m: any) => Promise<any>, lrOpen: (n: string) => Promise<boolean>, lrFile: Map<string, File>, closeSlot: (n: string) => void }} d */
-export function createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot }) {
+/** @param {{ ARCH: any, lrPut: (m: any) => Promise<any>, lrIndex: (m: any) => Promise<any>, lrOpen: (n: string) => Promise<boolean>, lrFile: Map<string, File>, closeSlot: (n: string) => void, builtFrom: (n: string, blob: Blob) => boolean }} d */
+export function createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot, builtFrom }) {
   const key = (/** @type {string} */ n) => n + ".json";
   /** @param {string} name @returns {Promise<Marker | null>} */
   async function marker(name) {
@@ -58,7 +58,8 @@ export function createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot }
   async function claim(m) {
     const size = m.blob.size, mtime = +(m.mtime ?? m.blob.lastModified ?? 0), mk = await marker(m.name);
     if (!mk) return { info: JSON.stringify({ hit: false }) };
-    if (!(await fresh(m.name, mk, size, mtime)) || !(await lrOpen(m.name).catch(() => false))) { await drop(m.name); return { info: JSON.stringify({ hit: false }) }; }
+    // same size and date are not the same bytes: the index must have been built from this file (size and probe), else it is built again
+    if (!(await fresh(m.name, mk, size, mtime)) || !(await lrOpen(m.name).catch(() => false)) || !builtFrom(m.name, m.blob)) { await drop(m.name); return { info: JSON.stringify({ hit: false }) }; }
     await ARCH.remove("warm", key(m.name));
     const f = await ARCH.get("files", m.name); if (f) lrFile.set(m.name, f);
     return { info: JSON.stringify({ hit: true, size, missing: mk.missing || 0 }), files: f ? [[m.name, f]] : [] };

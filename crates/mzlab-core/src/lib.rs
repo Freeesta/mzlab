@@ -49,6 +49,7 @@ pub mod blocks;
 mod idxcheck;
 pub mod idxread;
 pub mod idxsearch;
+pub mod idxsource;
 pub mod idxwalk;
 pub mod ionpattern;
 pub mod isofine;

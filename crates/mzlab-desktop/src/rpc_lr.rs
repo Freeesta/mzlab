@@ -58,7 +58,13 @@ impl State {
                         Self::drop_slot(eng, &name);
                         self.store.lock().unwrap_or_else(|e| e.into_inner()).restamp(&name, (e.size, e.mtime));
                     }
-                    let indexed = mzml && self.open_lr(eng, &name).is_ok();
+                    let mut indexed = mzml && self.open_lr(eng, &name).is_ok();
+                    if indexed && e.nat.is_none() && !self.index_belongs(eng, &name, &e) {
+                        // same size and date, other bytes: the index is built again when the file is opened
+                        self.indexer()?.remove(&name);
+                        Self::drop_slot(eng, &name);
+                        indexed = false;
+                    }
                     rows.push(json!({ "name": name, "size": e.size, "indexed": indexed, "nat": e.nat.is_some(), "id": self.pick_path(&e.path) }));
                 }
                 text(Value::Array(rows).to_string())
@@ -343,5 +349,11 @@ impl State {
         };
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).put_nat(name, n)?;
         text(json!({ "size": e.size, "id": self.pick_path(&e.path) }).to_string())
+    }
+
+    /// Whether the open index of `name` was built from the file of `e` (`Index::built_from`: size and probe); a file that cannot be read keeps it.
+    fn index_belongs(&self, eng: &Eng, name: &str, e: &crate::store::Entry) -> bool {
+        let (Some(slot), Ok(mut f)) = (eng.lr_slot.get(name), std::fs::File::open(&e.path)) else { return true };
+        eng.idx.get(slot).is_none_or(|r| r.idx.built_from(&mut f, e.size).unwrap_or(true))
     }
 }
