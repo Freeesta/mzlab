@@ -48,6 +48,7 @@ pub mod idx_newer;
 pub mod blocks;
 mod idxcheck;
 pub mod idxread;
+mod readat;
 pub mod idxsearch;
 pub mod idxwalk;
 pub mod ionpattern;

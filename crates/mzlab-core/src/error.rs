@@ -39,6 +39,18 @@ impl Error {
     pub fn memory_budget() -> Self {
         Error::new("error.memoryBudget")
     }
+
+    /// A part of a file (`what`, engine words) above `bytes`, a limit of the program that no memory budget moves: the index pool retries only `error.memoryBudget`.
+    pub fn fixed_limit(what: &str, bytes: u64) -> Self {
+        Error::new("error.fixedLimit")
+            .with("what", what)
+            .with("limit_mb", bytes.div_ceil(1 << 20))
+    }
+
+    /// A helper thread that stopped without its answer (a panic): `detail` names the work, never the memory.
+    pub fn work_stopped(detail: &str) -> Self {
+        Error::new("error.workStopped").with("detail", detail)
+    }
 }
 
 /// `s` as a `&'static str`, leaked once per distinct text: the error keys, parameter names and descriptor texts read at run time (job reports,

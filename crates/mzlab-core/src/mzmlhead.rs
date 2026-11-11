@@ -218,7 +218,7 @@ impl<R: ReadAt> Mzml<R> {
             return Ok(vec![]);
         }
         if b - a > MAX_REGION {
-            return Err(Error::memory_budget());
+            return Err(Error::fixed_limit("mzML region", MAX_REGION));
         }
         let len = usize::try_from(b - a).map_err(|_| Error::memory_budget())?;
         let mut v = Vec::new();
