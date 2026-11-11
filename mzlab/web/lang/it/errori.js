@@ -416,6 +416,7 @@ I18N.add("it", {
   "warn.wiff.emptySample": "Acquisizione vuota: l'indice del .wiff elenca questo campione senza scansioni (acquisizione interrotta o fallita, oppure copia incompleta).",
   "warn.wiff.inferredSample": "Recuperato da dati che l'indice del .wiff non elenca: il nome e il metodo sono dedotti dal campione precedente, non letti dal file.",
   "warn.centroid.widthFallback": "Nelle scansioni profilo ci sono meno di 8 picchi isolati, quindi la larghezza dei picchi non è stata misurata: i centroidi usano la larghezza di ripiego di 0,7 Da. Sui dati ad alta risoluzione indica tu la larghezza (fwhm).",
+  "warn.file.mzmlFewer": "La lista degli spettri del file ne dichiara più di quanti il file ne contenga: quelli presenti si leggono e si scrivono, il conteggio della lista è sbagliato. Controlla la copia del file.",
   "warn.file.truncated": "Il file finisce prima di alcune scansioni che dichiara: si legge e si scrive quello che contiene, il resto manca. Controlla la copia del file.",
   "warn.file.brukerCutBin": "Il file analysis.tdf_bin (o analysis.tsf_bin) di questa cartella .d finisce prima di alcuni frame elencati in analysis.tdf: si leggono e si scrivono gli spettri dei frame interi, mancano quelli dei frame oltre la sua fine. Copia di nuovo l'intera cartella .d.",
   "warn.flow.formula.subformulas": "Questo ione ha più sotto-formule di max_subformulas, quindi nessun frammento è stato provato: alza max_subformulas o indica meno elementi.",

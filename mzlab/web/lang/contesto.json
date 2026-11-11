@@ -747,6 +747,7 @@
   "warn.wiff.emptySample": "Motivo mostrato per un campione .wiff senza scansioni né cromatogrammi (riga del campione, riga di avanzamento della CLI): calmo, una riga.",
   "warn.wiff.inferredSample": "Motivo mostrato per un campione ricostruito da una sezione che l'indice del .wiff non elenca (accanto alla nota di file warn.wiff.unindexed).",
   "warn.centroid.widthFallback": "Avviso del passo spectra.centroid (Flow, CLI e sito): la larghezza non è misurata ma di ripiego; mai chiamarla stimata.",
+  "warn.file.mzmlFewer": "Avviso calmo di lettura parziale del motore mzML (Run.losses): il file si chiude ma il conteggio di spectrumList è più alto degli spettri presenti.",
   "warn.file.truncated": "Avviso calmo di lettura parziale (conv/1.perdita, CLI): il file è tagliato, le scansioni dichiarate oltre la fine mancano.",
   "warn.file.brukerCutBin": "Avviso calmo di lettura parziale (conv/1.perdita, CLI) di una cartella .d: il file *_bin è tagliato, gli spettri dei frame oltre la fine mancano.",
   "error.memoryBudget.native": "Come error.memoryBudget, ma nell'app desktop e nella CLI: il limite è la memoria scelta per il computer, non quella del browser.",

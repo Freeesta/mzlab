@@ -169,3 +169,17 @@ fn refusals_have_their_keys() {
     let hidden = file("", &[plain("")], &[]).replace("<spectrum ", "<spectra ").replace("</spectrum>", "</spectra>");
     assert_eq!(key(hidden), "err.file.mzmlNoItems");
 }
+
+#[test]
+fn the_spectra_declared_and_read_are_counted() {
+    use crate::readers::{Losses, TRUNCATED};
+    let whole = file("", &[plain(""), plain("").replace(r#"id="s""#, r#"id="t""#)], &[]);
+    assert_eq!(read(whole.as_bytes()).unwrap().losses, Losses::complete(2));
+    // the list says three, the file holds two and closes
+    let fewer = whole.replace(r#"<spectrumList count="2">"#, r#"<spectrumList count="3">"#);
+    assert_eq!(read(fewer.as_bytes()).unwrap().losses, Losses::of(3, 2, crate::mzml::FEWER));
+    // cut after the first spectrum
+    let cut = &whole[..whole.find("</spectrum>").unwrap() + "</spectrum>".len()];
+    let run = read(cut.as_bytes()).unwrap();
+    assert_eq!((run.spectra.len(), run.losses), (1, Losses::of(2, 1, TRUNCATED)));
+}

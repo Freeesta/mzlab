@@ -183,7 +183,7 @@ pub(crate) fn parse_helped<R: Read>(
     reader: R,
     f: &mut dyn FnMut(Item),
     helpers: usize,
-) -> Result<()> {
+) -> Result<crate::readers::Losses> {
     if helpers == 0 {
         return parse_with(reader, f, &mut super::Plain(Inflate::new()));
     }

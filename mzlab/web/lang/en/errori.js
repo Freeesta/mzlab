@@ -416,6 +416,7 @@ I18N.add("en", {
   "warn.wiff.emptySample": "Empty acquisition: the .wiff index lists this sample with no scans (acquisition aborted or failed, or the copy is incomplete).",
   "warn.wiff.inferredSample": "Recovered from data the .wiff index does not list: the name and the method are inferred from the previous sample, not read from the file.",
   "warn.centroid.widthFallback": "Fewer than 8 isolated peaks were found in the profile scans, so the peak width was not measured: the centroids use the fallback width of 0.7 Da. On high-resolution data give the width (fwhm) yourself.",
+  "warn.file.mzmlFewer": "The list of spectra in the file declares more spectra than the file holds: the ones it holds are read and written, the count of the list is wrong. Check the copy of the file.",
   "warn.file.truncated": "The file ends before some of the scans it declares: what it holds is read and written, the rest is missing. Check the copy of the file.",
   "warn.file.brukerCutBin": "The analysis.tdf_bin (or analysis.tsf_bin) file of this .d folder ends before some of the frames analysis.tdf lists: the spectra of the whole frames are read and written, those of the frames past its end are missing. Copy the whole .d folder again.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",

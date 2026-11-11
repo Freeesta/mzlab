@@ -20,6 +20,7 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
 use crate::error::{Error, Result};
+use crate::readers::Losses;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Spectrum {
@@ -116,17 +117,20 @@ pub struct Run {
     pub chromatograms: Vec<Chromatogram>,
     /// Names of the analyzer components of the instrument (lower case), in file order.
     pub analyzers: Vec<String>,
+    /// The spectra the file declares and the spectra read (`parse_counted`).
+    pub losses: Losses,
 }
 
 /// Reads the whole file into memory.
 pub fn read<R: Read>(reader: R) -> Result<Run> {
     let mut run = Run::default();
-    parse(reader, |item| match item {
+    let losses = parse_counted(reader, |item| match item {
         Item::Spectrum(s) => run.spectra.push(s),
         Item::Chromatogram(c) => run.chromatograms.push(c),
         Item::Analyzer(n) => run.analyzers.push(n.to_lowercase()),
         Item::Mobility(_) => {}
     })?;
+    run.losses = losses;
     Ok(run)
 }
 
@@ -268,7 +272,13 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
 
 /// Parses an mzML stream, calling `f` for every spectrum and chromatogram in file order. Spare cores decode the arrays (`help`); the items and their
 /// order are the same without them.
-pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
+pub fn parse<R: Read, F: FnMut(Item)>(reader: R, f: F) -> Result<()> {
+    parse_counted(reader, f).map(|_| ())
+}
+
+/// `parse` that also says how many spectra the file declares (its `spectrumList` count) and how many were read: fewer read is a cut file
+/// (`readers::TRUNCATED`) or a list whose count is wrong (`warn.file.mzmlFewer`), never silent.
+pub fn parse_counted<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<Losses> {
     #[cfg(not(target_family = "wasm"))]
     {
         let lease = crate::spare::lease(help::pool::HELPERS);
@@ -280,7 +290,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
 
 /// `parse` with the arrays decoded by another instance through `c` (the browser's helper workers, `help::corriere`): the same items in the same order.
 pub fn parse_corriere<R: Read, F: FnMut(Item)>(reader: R, mut f: F, c: &mut dyn Corriere) -> Result<()> {
-    help::parse_with(reader, &mut f, &mut help::courier::Sent::new(c))
+    help::parse_with(reader, &mut f, &mut help::courier::Sent::new(c)).map(|_| ())
 }
 
 /// A spectrum or chromatogram whose two arrays differ in length: a damaged file, never cut to the shorter.
@@ -291,7 +301,7 @@ pub(crate) fn lengths(id: &str, index: usize, a: usize, b: usize) -> Error {
 
 /// The tags of the file go to the shared header reader (`spechead`, local names, CDATA as text); each finished header becomes an item. The analyzer
 /// names of the instrument are read here.
-fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode) -> Result<()> {
+fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode) -> Result<Losses> {
     let mut xml = Reader::from_reader(BufReader::with_capacity(1 << 16, reader));
     let mut buf = Vec::new();
     let (mut n_spec, mut n_chrom) = (0usize, 0usize);
@@ -301,6 +311,8 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
     let mut in_analyzer = false;
     // items the lists declare and the items met: a file that declares some and shows none was not understood
     let (mut declared, mut met) = (0usize, 0usize);
+    // the spectra the list declares, the spectra whose end was read (optical ones included) and whether the document closes
+    let (mut spec_declared, mut spec_read, mut closed) = (0usize, 0usize, false);
     loop {
         let ev = xml.read_event_into(&mut buf).map_err(xml_error)?;
         match ev {
@@ -315,7 +327,11 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
                         out.item(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()), f)?
                     }
                     "spectrumList" | "chromatogramList" => {
-                        declared += get(&a, "count").and_then(|v| v.trim().parse().ok()).unwrap_or(0)
+                        let n: usize = get(&a, "count").and_then(|v| v.trim().parse().ok()).unwrap_or(0);
+                        declared += n;
+                        if name == "spectrumList" {
+                            spec_declared += n;
+                        }
                     }
                     "spectrum" | "chromatogram" => met += 1,
                     _ => {}
@@ -333,8 +349,10 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
             Event::CData(ref t) if rd.in_binary() => rd.text(&t[..]),
             Event::End(ref e) => {
                 let name = local(e.local_name().into_inner());
-                if name == "analyzer" {
-                    in_analyzer = false;
+                match name {
+                    "analyzer" => in_analyzer = false,
+                    "mzML" => closed = true,
+                    _ => {}
                 }
                 match rd.end(name) {
                     Some(h) if h.chromatogram => {
@@ -342,6 +360,7 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
                         n_chrom += 1;
                     }
                     Some(h) => {
+                        spec_read += 1;
                         let (id, level) = (h.id.clone(), h.level());
                         if let Some(s) = build::spectrum(h, n_spec, &levels)? {
                             out.spectrum(s, f)?;
@@ -359,8 +378,12 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
     if declared > 0 && met == 0 {
         return Err(Error::new("err.file.mzmlNoItems").with("count", declared));
     }
-    Ok(())
+    let cause = if closed { FEWER } else { crate::readers::TRUNCATED };
+    Ok(Losses::of(spec_declared, spec_read, cause))
 }
+
+/// Cause of a complete file whose `spectrumList` declares more spectra than it holds.
+pub const FEWER: &str = "warn.file.mzmlFewer";
 
 /// Whether a time cvParam is in seconds: its `unitName` starts with "second" or its `unitAccession` is UO:0000010 (either alone is enough).
 /// The one rule of every mzML reader of the engine.
