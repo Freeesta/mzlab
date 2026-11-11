@@ -320,7 +320,7 @@ fn immediate<'a>(
         .map(|e| (e.target, e.selected, e.refer.as_deref()))
         .collect();
     let last = path.as_ref().map(|p| p[p.len() - 1].0);
-    crate::spechead::immediate(&stages, level, last, |r| level_of.get(r).copied())
+    crate::spechead::immediate(&stages, level, last, &|r| level_of.get(r).copied())
         .map(|i| &precs[i])
 }
 

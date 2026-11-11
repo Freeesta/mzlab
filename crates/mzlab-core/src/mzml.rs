@@ -3,20 +3,23 @@
 //! Numpress is not supported (an error with a key, as in the Python reader).
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
-mod cv;
-mod peaks;
+mod build;
 pub(crate) mod help;
-use help::Decode;
-pub use help::courier::{Corriere, Decodificatore};
+mod peaks;
+#[cfg(test)]
+mod tests_head;
 use crate::numarray::Num;
+use crate::spechead::{self, tags::local};
+pub use help::courier::{Corriere, Decodificatore};
+use help::Decode;
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::io::{BufReader, Read};
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
 use crate::error::{Error, Result};
+use crate::readers::Losses;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Spectrum {
@@ -113,17 +116,20 @@ pub struct Run {
     pub chromatograms: Vec<Chromatogram>,
     /// Names of the analyzer components of the instrument (lower case), in file order.
     pub analyzers: Vec<String>,
+    /// The spectra the file declares and the spectra read (`parse_counted`).
+    pub losses: Losses,
 }
 
 /// Reads the whole file into memory.
 pub fn read<R: Read>(reader: R) -> Result<Run> {
     let mut run = Run::default();
-    parse(reader, |item| match item {
+    let losses = parse_counted(reader, |item| match item {
         Item::Spectrum(s) => run.spectra.push(s),
         Item::Chromatogram(c) => run.chromatograms.push(c),
         Item::Analyzer(n) => run.analyzers.push(n.to_lowercase()),
         Item::Mobility(_) => {}
     })?;
+    run.losses = losses;
     Ok(run)
 }
 
@@ -141,16 +147,10 @@ struct Array {
     kind: ArrayKind,
     num: Num,
     zlib: bool,
-    seconds: bool,
+    /// Minutes per unit of a time array.
+    minutes: f64,
     mobility: &'static str,
     text: String,
-}
-
-#[derive(PartialEq, Clone, Copy)]
-enum Scope {
-    None,
-    Spectrum,
-    Chromatogram,
 }
 
 /// The attributes of an element as borrowed text (no allocation when the value has no escapes).
@@ -161,28 +161,8 @@ fn attrs<'a>(e: &'a BytesStart) -> Vec<(&'a str, Cow<'a, str>)> {
             .normalized_value(quick_xml::XmlVersion::Implicit1_0)
             .unwrap_or_default();
         // `Attribute::key` borrows the element's buffer, not the temporary `a`
-        let key = a.key.into_inner();
+        let key = local(a.key.into_inner());
         out.push((key, v));
-    }
-    out
-}
-
-const CV_KEYS: [&str; 5] = ["name", "accession", "value", "unitName", "unitAccession"];
-
-/// The five cvParam attributes in `CV_KEYS` order, read in one pass without allocating a list.
-fn cv_attrs<'a>(e: &'a BytesStart) -> [Cow<'a, str>; 5] {
-    let mut out: [Cow<'a, str>; 5] = Default::default();
-    for a in e.attributes().with_checks(false).filter_map(|a| a.ok()) {
-        let key = a.key.into_inner();
-        if let Some(slot) = CV_KEYS
-            .iter()
-            .position(|k| *k == key)
-            .and_then(|i| out.get_mut(i))
-        {
-            *slot = a
-                .normalized_value(quick_xml::XmlVersion::Implicit1_0)
-                .unwrap_or_default();
-        }
     }
     out
 }
@@ -200,16 +180,14 @@ struct Spec {
     id: String,
     len: usize,
     level: u8,
+    /// Minutes.
     rt: f64,
-    rt_seconds: bool,
     polarity: i8,
     profile: bool,
     filter: String,
-    selected: Option<f64>,
-    target: Option<f64>,
+    /// The selected ion (or isolation target) of the immediate precursor.
+    precursor: Option<f64>,
     mobility_scan: Option<(f64, &'static str)>,
-    /// An optical (`MS:1000804`) spectrum: read by `mzml_dad`, not a scan.
-    uv: bool,
     arrays: Vec<Array>,
 }
 
@@ -219,10 +197,15 @@ struct Chrom {
     len: usize,
     arrays: Vec<Array>,
     unit: String,
-    /// Accessions seen in the header of the chromatogram: they decide its kind like in `mzlab/reader/mzml.py`.
+    /// Terms of the chromatogram: they decide its kind like in `mzlab/reader/mzml.py`.
     pda: bool,
     pressure: bool,
     ms_term: bool,
+    /// `MS:1001473` (selected reaction monitoring chromatogram).
+    srm: bool,
+    /// The targets of the precursor and product isolation windows.
+    q1: Option<f64>,
+    q3: Option<f64>,
 }
 
 fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobility>)> {
@@ -230,24 +213,14 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobil
     peaks::assemble(s, p)
 }
 
-
-fn number_after(id: &str, key: &str) -> Option<f64> {
-    let k = id.find(key)? + key.len();
-    let rest = &id[k..];
-    let end = rest
-        .find(|c: char| !(c.is_ascii_digit() || c == '.'))
-        .unwrap_or(rest.len());
-    rest[..end].parse().ok()
-}
-
 fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     let (mut t, mut y) = (Vec::new(), Vec::new());
-    let mut seconds = false;
+    let mut minutes = 1.0;
     for a in &c.arrays {
         match a.kind {
             ArrayKind::Time => {
                 t = decode_array(a.num, a.zlib, &a.text, c.len, inf, Want::F64)?.0;
-                seconds = a.seconds;
+                minutes = a.minutes;
             }
             ArrayKind::Intensity => {
                 y = decode_array(a.num, a.zlib, &a.text, c.len, inf, Want::F64)?.0
@@ -255,11 +228,11 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
             _ => {}
         }
     }
-    let n = t.len().min(y.len());
-    t.truncate(n);
-    y.truncate(n);
-    if seconds {
-        t.iter_mut().for_each(|v| *v /= 60.0);
+    if t.len() != y.len() {
+        return Err(lengths(&c.id, c.index, t.len(), y.len()));
+    }
+    if minutes != 1.0 {
+        t.iter_mut().for_each(|v| *v *= minutes);
     }
     let kind = match c.id.as_str() {
         s if s == "TIC" || s.starts_with("TIC ") => ChromKind::Tic,
@@ -268,15 +241,17 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
         _ if c.pda => ChromKind::Pda,
         s if c.pressure || s.starts_with("Pump Pressure") => ChromKind::Pressure,
         s if s.starts_with("SRM") => ChromKind::Srm,
+        _ if c.srm => ChromKind::Srm,
         s if s.starts_with("SIC ") || s.starts_with("SIM SIC ") => ChromKind::Sic,
         _ if !c.ms_term => ChromKind::Analog,
         _ => ChromKind::Other,
     };
+    let q1 = || c.q1.or_else(|| build::number_after(&c.id, "Q1="));
     let (q1, q3) = if kind == ChromKind::Srm {
-        (number_after(&c.id, "Q1="), number_after(&c.id, "Q3="))
+        (q1(), c.q3.or_else(|| build::number_after(&c.id, "Q3=")))
     } else if kind == ChromKind::Sic {
         // msconvert names a SIM trace "SIM SIC Q1=<m/z> ..."; the plain "SIC <m/z>" of our own writer has no Q1
-        (number_after(&c.id, "Q1="), None)
+        (q1(), None)
     } else {
         (None, None)
     };
@@ -295,7 +270,13 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
 
 /// Parses an mzML stream, calling `f` for every spectrum and chromatogram in file order. Spare cores decode the arrays (`help`); the items and their
 /// order are the same without them.
-pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
+pub fn parse<R: Read, F: FnMut(Item)>(reader: R, f: F) -> Result<()> {
+    parse_counted(reader, f).map(|_| ())
+}
+
+/// `parse` that also says how many spectra the file declares (its `spectrumList` count) and how many were read: fewer read is a cut file
+/// (`readers::TRUNCATED`) or a list whose count is wrong (`warn.file.mzmlFewer`), never silent.
+pub fn parse_counted<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<Losses> {
     #[cfg(not(target_family = "wasm"))]
     {
         let lease = crate::spare::lease(help::pool::HELPERS);
@@ -306,181 +287,123 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
 }
 
 /// `parse` with the arrays decoded by another instance through `c` (the browser's helper workers, `help::corriere`): the same items in the same order.
-pub fn parse_corriere<R: Read, F: FnMut(Item)>(reader: R, mut f: F, c: &mut dyn Corriere) -> Result<()> {
-    help::parse_with(reader, &mut f, &mut help::courier::Sent::new(c))
+pub fn parse_corriere<R: Read, F: FnMut(Item)>(
+    reader: R,
+    mut f: F,
+    c: &mut dyn Corriere,
+) -> Result<()> {
+    help::parse_with(reader, &mut f, &mut help::courier::Sent::new(c)).map(|_| ())
 }
 
-fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode) -> Result<()> {
+/// A spectrum or chromatogram whose two arrays differ in length: a damaged file, never cut to the shorter.
+#[cold]
+pub(crate) fn lengths(id: &str, index: usize, a: usize, b: usize) -> Error {
+    Error::new("err.file.mzmlLengths")
+        .with("scan", name_of(id, index))
+        .with("a", a)
+        .with("b", b)
+}
+
+/// How a damaged item is named: its id, else its 1-based position.
+pub(crate) fn name_of(id: &str, index: usize) -> String {
+    if id.is_empty() {
+        (index + 1).to_string()
+    } else {
+        id.to_string()
+    }
+}
+
+/// The tags of the file go to the shared header reader (`spechead`, local names, CDATA as text); each finished header becomes an item. The analyzer
+/// names of the instrument are read here.
+fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode) -> Result<Losses> {
     let mut xml = Reader::from_reader(BufReader::with_capacity(1 << 16, reader));
     let mut buf = Vec::new();
     let (mut n_spec, mut n_chrom) = (0usize, 0usize);
-    let mut cur = cv::Cur::default();
-    let mut in_binary = false;
-
-    let mut groups: HashMap<String, Vec<[String; 5]>> = HashMap::new();
-    // the `referenceableParamGroup` being read: id and its cvParams (name, accession, value, unitName, unitAccession)
-    let mut group: Option<(String, Vec<[String; 5]>)> = None;
+    let mut rd = spechead::Reader::default();
+    rd.keep_binary = true;
+    let mut levels = build::Levels::default();
+    let mut in_analyzer = false;
+    // items the lists declare and the items met: a file that declares some and shows none was not understood
+    let (mut declared, mut met) = (0usize, 0usize);
+    // the spectra the list declares, the spectra whose end was read (optical ones included) and whether the document closes
+    let (mut spec_declared, mut spec_read, mut closed) = (0usize, 0usize, false);
     loop {
         let ev = xml.read_event_into(&mut buf).map_err(xml_error)?;
         match ev {
             Event::Eof => break,
             Event::Start(ref e) | Event::Empty(ref e) => {
                 let empty = matches!(ev, Event::Empty(_));
-                let name = e.name().into_inner();
+                let name = local(e.local_name().into_inner());
+                let a = attrs(e);
                 match name {
-                    "spectrum" => {
-                        let a = attrs(e);
-                        cur.spec = Some(Spec {
-                            index: get(&a, "index")
-                                .and_then(|v| v.parse().ok())
-                                .unwrap_or(n_spec),
-                            id: get(&a, "id").unwrap_or("").to_string(),
-                            len: get(&a, "defaultArrayLength")
-                                .and_then(|v| v.parse().ok())
-                                .unwrap_or(0),
-                            level: 1,
-                            rt: 0.0,
-                            rt_seconds: false,
-                            polarity: 0,
-                            profile: false,
-                            filter: String::new(),
-                            selected: None,
-                            target: None,
-                            mobility_scan: None,
-                            uv: false,
-                            arrays: Vec::new(),
-                        });
-                        cur.scope = Scope::Spectrum;
-                        cur.in_precursor_list = false;
+                    "analyzer" if !empty => in_analyzer = true,
+                    "cvParam" if in_analyzer => {
+                        out.item(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()), f)?
                     }
-                    "chromatogram" => {
-                        let a = attrs(e);
-                        cur.chrom = Some(Chrom {
-                            index: get(&a, "index")
-                                .and_then(|v| v.parse().ok())
-                                .unwrap_or(n_chrom),
-                            id: get(&a, "id").unwrap_or("").to_string(),
-                            len: get(&a, "defaultArrayLength")
-                                .and_then(|v| v.parse().ok())
-                                .unwrap_or(0),
-                            arrays: Vec::new(),
-                            unit: String::new(),
-                            pda: false,
-                            pressure: false,
-                            ms_term: false,
-                        });
-                        cur.scope = Scope::Chromatogram;
-                    }
-                    "precursorList" => cur.in_precursor_list = true,
-                    "productList" => cur.in_product_list = true,
-                    "analyzer" if !empty => cur.in_analyzer = true,
-                    "binaryDataArray" => {
-                        cur.array = Some(Array {
-                            kind: ArrayKind::Other,
-                            num: Num::F64,
-                            zlib: false,
-                            seconds: false,
-                            mobility: "",
-                            text: String::new(),
-                        });
-                    }
-                    "binary" if !empty => in_binary = true,
-                    "referenceableParamGroup" if !empty => {
-                        group = get(&attrs(e), "id").map(|id| (id.to_string(), Vec::new()));
-                    }
-                    "cvParam" if group.is_some() => {
-                        let cv = cv_attrs(e).map(|v| v.into_owned());
-                        if let Some((_, list)) = group.as_mut() {
-                            list.push(cv);
+                    "spectrumList" | "chromatogramList" => {
+                        let n: usize = get(&a, "count")
+                            .and_then(|v| v.trim().parse().ok())
+                            .unwrap_or(0);
+                        declared += n;
+                        if name == "spectrumList" {
+                            spec_declared += n;
                         }
                     }
-                    "cvParam" | "referenceableParamGroupRef" => {
-                        let own: [Cow<str>; 5];
-                        let a;
-                        // a cvParam is one entry; a group reference replays the cvParams of its group, in the same order
-                        let group_list: Vec<[&str; 5]>;
-                        let one: [[&str; 5]; 1];
-                        let list: &[[&str; 5]] = if name == "cvParam" {
-                            own = cv_attrs(e);
-                            one = [[&*own[0], &*own[1], &*own[2], &*own[3], &*own[4]]];
-                            &one
-                        } else {
-                            a = attrs(e);
-                            group_list = get(&a, "ref")
-                                .and_then(|r| groups.get(r))
-                                .into_iter()
-                                .flatten()
-                                .map(|cv| [&*cv[0], &*cv[1], &*cv[2], &*cv[3], &*cv[4]])
-                                .collect();
-                            &group_list
-                        };
-                        for &cv in list {
-                            cur.apply(cv, out, f)?;
-                        }
-                    }
+                    "spectrum" | "chromatogram" => met += 1,
                     _ => {}
                 }
-                if empty && name == "binaryDataArray" {
-                    // an empty element has no data: close it at once
-                    if let (Some(arr), Some(s)) = (cur.array.take(), cur.spec.as_mut()) {
-                        s.arrays.push(arr);
-                    }
+                rd.start(name, &a, empty);
+            }
+            Event::Text(ref t) if rd.in_binary() => {
+                // base64 has no entities and decode_array drops white space itself: take the raw text unless it has a reference
+                if t.contains('&') {
+                    rd.text(&t.xml10_content());
+                } else {
+                    rd.text(t);
                 }
             }
-            Event::Text(ref t) if in_binary => {
-                if let Some(arr) = cur.array.as_mut() {
-                    // base64 has no entities and decode_array drops white space itself: take the raw text unless it has a reference
-                    if t.contains('&') {
-                        arr.text.push_str(&t.xml10_content());
-                    } else {
-                        arr.text.push_str(t);
-                    }
-                }
-            }
+            Event::CData(ref t) if rd.in_binary() => rd.text(&t[..]),
             Event::End(ref e) => {
-                let name = e.name().into_inner();
+                let name = local(e.local_name().into_inner());
                 match name {
-                    "binary" => in_binary = false,
-                    "binaryDataArray" => {
-                        if let Some(arr) = cur.array.take() {
-                            match cur.scope {
-                                Scope::Spectrum => cur.spec.as_mut().map(|s| s.arrays.push(arr)),
-                                Scope::Chromatogram => cur.chrom.as_mut().map(|c| c.arrays.push(arr)),
-                                Scope::None => None,
-                            };
-                        }
+                    "analyzer" => in_analyzer = false,
+                    "mzML" => closed = true,
+                    _ => {}
+                }
+                match rd.end(name) {
+                    Some(h) if h.chromatogram => {
+                        out.chromatogram(build::chromatogram(h, n_chrom)?, f)?;
+                        n_chrom += 1;
                     }
-                    "precursorList" => cur.in_precursor_list = false,
-                    "productList" => cur.in_product_list = false,
-                    "analyzer" => cur.in_analyzer = false,
-                    "referenceableParamGroup" => {
-                        if let Some((id, list)) = group.take() {
-                            groups.insert(id, list);
-                        }
-                    }
-                    "spectrum" => {
-                        if let Some(s) = cur.spec.take().filter(|s| !s.uv) {
+                    Some(h) => {
+                        spec_read += 1;
+                        let (id, level) = (h.id.clone(), h.level());
+                        if let Some(s) = build::spectrum(h, n_spec, &levels)? {
                             out.spectrum(s, f)?;
                             n_spec += 1;
                         }
-                        cur.scope = Scope::None;
+                        levels.push(id, level);
                     }
-                    "chromatogram" => {
-                        if let Some(c) = cur.chrom.take() {
-                            out.chromatogram(c, f)?;
-                            n_chrom += 1;
-                        }
-                        cur.scope = Scope::None;
-                    }
-                    _ => {}
+                    None => {}
                 }
             }
             _ => {}
         }
         buf.clear();
     }
-    Ok(())
+    if declared > 0 && met == 0 {
+        return Err(Error::new("err.file.mzmlNoItems").with("count", declared));
+    }
+    let cause = if closed {
+        FEWER
+    } else {
+        crate::readers::TRUNCATED
+    };
+    Ok(Losses::of(spec_declared, spec_read, cause))
 }
+
+/// Cause of a complete file whose `spectrumList` declares more spectra than it holds.
+pub const FEWER: &str = "warn.file.mzmlFewer";
 
 /// Whether a time cvParam is in seconds: its `unitName` starts with "second" or its `unitAccession` is UO:0000010 (either alone is enough).
 /// The one rule of every mzML reader of the engine.

@@ -10,7 +10,7 @@ import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./d
 import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -184,24 +184,7 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
       const frRect = fr.getBoundingClientRect();
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
       const m = Q("#ctx"); if (!m) return;
-      m.innerHTML = "";
-      const shortSmi = smi.length > 24 ? smi.slice(0, 21) + "…" : smi;
-      ctxRow(m, smi ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi }) : I18N.t("draw.ctx.copySmiles"), () => {
-        if (smi) copyText(smi);
-        m.hidden = true;
-      });
-      ctxRow(m, I18N.t("draw.ctx.center"), () => {
-        if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); }
-        m.hidden = true;
-      });
-      if ((sel.bonds || []).length) {                                   // «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
-        const nb = sel.bonds.length, bids = [...sel.bonds];
-        ctxRow(m, I18N.t("draw.ctx.breakBonds", { n: nb }), () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); }, I18N.t("draw.ctx.breakBonds.title"));
-        ctxRow(m, I18N.t("draw.cut.selected", { n: nb, mode: I18N.t("draw.cut.mode." + cutMode()).split(":")[0] }), () => { m.hidden = true; doCut(bids, { x: mx, y: my }); }, I18N.t("draw.cut.selected.title"));
-      }
-      for (const it of [...await partialItems(K, ev, set, fragHelpers).catch(() => []), ...await fragmentItems(K, ev, fragHelpers).catch(() => [])]) {   // brackets with a delta (disegno-parziali.js); the two pieces of the bond, all cuts
-        ctxRow(m, it.text, () => { m.hidden = true; if (it.run) it.run(); }, it.title);
-      }
+      await menuFill(m, { K, ev, sel, atoms: set, bonds: [...(sel.bonds || [])], whole: !set.size, smiles: smi, x: mx, y: my, kbd });
       ctxShow(m, mx, my, 240, kbd);
     };
     let kbdCtxAt = 0;                                                    // the ContextMenu key also raises a native contextmenu event: only the first one opens
@@ -385,6 +368,15 @@ let cutLine = /** @type {{ off: () => void } | null} */ (null);
 function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine = mountCutLine({ frame: fr, button: Q("#cut-line"), K: () => K, cut: doCut }); }
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
+// built-in rows of the canvas menu (disegno-menu.js registry; other modules add theirs with TPDraw.menu.add, between these orders)
+const shortSmi = (/** @type {string} */ s) => s.length > 24 ? s.slice(0, 21) + "…" : s;
+menuAdd({ id: "copy-smiles", order: 10, label: (/** @type {any} */ c) => c.smiles ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi(c.smiles) }) : I18N.t("draw.ctx.copySmiles"), run: (/** @type {any} */ c) => { if (c.smiles) copyText(c.smiles); } });
+menuAdd({ id: "center", order: 20, label: "draw.ctx.center", run: () => { if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); } } });
+// «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
+menuAdd({ id: "break-bonds", when: "selection", order: 30, show: (/** @type {any} */ c) => c.bonds.length > 0, label: (/** @type {any} */ c) => I18N.t("draw.ctx.breakBonds", { n: c.bonds.length }), title: "draw.ctx.breakBonds.title", run: (/** @type {any} */ c) => { setTimeout(() => breakBonds(c.bonds), 60); } });
+menuAdd({ id: "cut-bonds", when: "selection", order: 40, show: (/** @type {any} */ c) => c.bonds.length > 0, label: (/** @type {any} */ c) => I18N.t("draw.cut.selected", { n: c.bonds.length, mode: I18N.t("draw.cut.mode." + cutMode()).split(":")[0] }), title: "draw.cut.selected.title", run: (/** @type {any} */ c) => { doCut(c.bonds, { x: c.x, y: c.y }); } });
+menuAdd({ id: "partials", order: 50, rows: (/** @type {any} */ c) => partialItems(K, c.ev, c.atoms, fragHelpers).catch(() => []) });     // brackets with a delta (disegno-parziali.js)
+menuAdd({ id: "fragments", order: 60, rows: (/** @type {any} */ c) => fragmentItems(K, c.ev, fragHelpers).catch(() => []) });          // the two pieces of the bond, all cuts
 // selects the bonds between the given pairs of atoms (ids as in the SMILES just loaded) so Ketcher highlights them; returns how many were found
 function markBonds(/** @type {[number, number][]} */ pairs) {
   const ids = /** @type {number[]} */ ([]); K.editor.struct().bonds.forEach((/** @type {DrawKet} */ b, /** @type {number} */ id) => { if (pairs.some(([a, c]) => (b.begin === a && b.end === c) || (b.begin === c && b.end === a))) ids.push(id); });
@@ -745,7 +737,7 @@ Q("#ex-id").onclick = async () => { await start(); const sel = K.editor.selectio
   (await import("./disegno-identita.js")).show(pieces(only).map(p => pieceMolfile(p.ids)), Q("#id-out"), (k, p) => I18N.t(k, p)); };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
+window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });

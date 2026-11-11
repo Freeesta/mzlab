@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "flowrun/1",
   "title": "flowrun/1: the answer of `mzlab-cli flow run --json`",
-  "description": "How a run ended: the exit code, the run folder and per instance the status, the milliseconds and the files it wrote with their SHA-256 (as in prov/1). Instances that did not run (skipped after a failure) come last. Code: crates/mzlab-cli/src/flow_json.rs.",
+  "description": "How a run ended: the exit code, the run folder and per instance the status, the milliseconds and the files it wrote with their SHA-256, its warnings and notes of files (as in prov/1). Instances that did not run (skipped after a failure) come last. Code: crates/mzlab-cli/src/flow_json.rs.",
   "type": "object",
   "required": [
     "schema",
@@ -86,6 +86,20 @@
                   "minimum": 0
                 }
               }
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "warn.* keys of what the instance noticed and went on with (a partial read names its cause, e.g. warn.file.truncated), as in prov/1; absent when none"
+          },
+          "files": {
+            "type": "object",
+            "description": "what its per-file jobs said of each input, by input name, as in prov/1; a partial read gives {declared, read, cause}",
+            "additionalProperties": {
+              "type": "object"
             }
           },
           "error": {

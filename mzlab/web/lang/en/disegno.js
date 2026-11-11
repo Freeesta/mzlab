@@ -140,6 +140,8 @@ I18N.add("en", {
   "draw.zoom.in": "Zoom in",
   "draw.zoom.out": "Zoom out",
   "draw.zoom.reset": "Reset: 100 % and centered",
+  "draw.ctx.head.sel": "{n, plural, one {Selection (# atom)} other {Selection (# atoms)}}",
+  "draw.ctx.head.whole": "Whole drawing",
   "draw.ctx.copySmiles": "Copy SMILES",
   "draw.ctx.copySmilesOf": "Copy SMILES ({smiles})",
   "draw.ctx.center": "Center drawing",
