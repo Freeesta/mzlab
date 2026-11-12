@@ -74,21 +74,25 @@ pub(crate) fn stima(l: &mut dyn Reader, c: usize) -> Result<centroids::Estimate>
     Ok(centroids::estimate(&refs, 0.7))
 }
 
-/// `s` as centroids when it is a profile scan, with the parameters `p`; a scan already centroided stays as it is.
-pub(crate) fn picchi(s: &mut Spectrum, p: &Params, buf: &mut Buf) {
+/// `s` as centroids when it is a profile scan, with the parameters `p`; a scan already centroided stays as it is. Gives its centroids flagged
+/// (merged, saturated).
+pub(crate) fn picchi(s: &mut Spectrum, p: &Params, buf: &mut Buf) -> (usize, usize) {
     if !s.profile {
-        return;
+        return (0, 0);
     }
     let y = s
         .wide
         .take()
         .unwrap_or_else(|| s.intensity.iter().map(|&v| f64::from(v)).collect());
     let cs = centroids::centroids(&s.mz, &y, p, buf);
+    let flagged = |f: u8| cs.iter().filter(|c| c.flags & f != 0).count();
+    let counts = (flagged(centroids::MERGED), flagged(centroids::SATURATED));
     s.mz = cs.iter().map(|c| c.mz).collect();
     let v: Vec<f64> = cs.iter().map(|c| c.value).collect();
     s.intensity = v.iter().map(|&x| narrow(x)).collect();
     s.wide = Some(v);
     s.profile = false;
+    counts
 }
 
 /// The intensity kept in 32 bits, as the mzML of the conversion writes it.

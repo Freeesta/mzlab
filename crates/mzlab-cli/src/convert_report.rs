@@ -19,6 +19,8 @@ pub(crate) enum Item {
         conv: Option<String>,
         /// `metodo/1.avvisi`: key and place of what the reader could not read.
         notes: Vec<(String, String)>,
+        /// With `--peaks mzlab`: the centroids flagged (merged, saturated).
+        flagged: Option<(usize, usize)>,
     },
     Failed {
         input: String,
@@ -107,6 +109,24 @@ pub(crate) fn partial_lines(items: &[Item]) -> String {
         .collect()
 }
 
+/// One stderr line per input with centroids flagged merged: a notice (`warn.centroid.merged`), not an answer.
+pub(crate) fn merged_lines(items: &[Item]) -> String {
+    let text = crate::error_text::catalog_text("warn.centroid.merged").unwrap_or_default();
+    items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Done {
+                input,
+                flagged: Some((m, _)),
+                ..
+            } if *m > 0 => Some(format!(
+                "warning: {input}: {m} centroids merged: {text} (warn.centroid.merged)\n"
+            )),
+            _ => None,
+        })
+        .collect()
+}
+
 /// The scans declared and read and the cause key when the `conv/1` document `conv` says the read was partial.
 pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     let doc = mzlab_core::json::parse(conv.as_bytes()).ok()?;
@@ -118,7 +138,8 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     Some((n("dichiarate"), n("lette"), cause.to_string()))
 }
 
-/// The `--report` document: a JSON array with `{ingresso, uscita, sha256, spettri, secondi, saltato, conv/1}` or `{ingresso, errore, causa}` per input.
+/// The `--report` document: a JSON array with `{ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi}` (and `centroidi` {merged, saturated}
+/// with `--peaks mzlab`) or `{ingresso, errore, causa}` per input.
 pub(crate) fn report(items: &[Item]) -> String {
     let mut o = Out::default();
     o.raw("[");
@@ -134,6 +155,7 @@ pub(crate) fn report(items: &[Item]) -> String {
                 skipped,
                 conv,
                 notes,
+                flagged,
             } => {
                 o.raw("{\"ingresso\":").str(input);
                 o.raw(",\"uscita\":").str(output);
@@ -158,6 +180,10 @@ pub(crate) fn report(items: &[Item]) -> String {
                     o.str(k).raw(",\"dove\":").str(d).raw("}");
                 }
                 o.raw("]");
+                if let Some((m, s)) = flagged {
+                    o.raw(",\"centroidi\":{\"merged\":").int(*m as i64);
+                    o.raw(",\"saturated\":").int(*s as i64).raw("}");
+                }
                 o.raw("}");
             }
             Item::Failed { input, cause } => {

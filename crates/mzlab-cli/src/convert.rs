@@ -11,7 +11,7 @@ use mzlab_core::flow::{file_roots, parse, plan_json};
 use mzlab_core::json::Out;
 
 use crate::convert_entries::{entries, Entry};
-use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
+use crate::convert_report::{compression_sets, head_of, merged_lines, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
@@ -32,7 +32,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi; or ingresso, errore, causa
+  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi (centroidi with --peaks mzlab); or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
@@ -282,10 +282,23 @@ fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path
                 skipped,
                 conv,
                 notes,
+                flagged: None,
             }
         }
         Err(cause) => Item::Failed { input, cause },
     }
+}
+
+/// The centroids flagged (merged, saturated) of our own peak picking on the input `label`, from the note of its file in the record of the run (a file
+/// taken from the cache keeps the note of the run that wrote it).
+fn flagged_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(usize, usize)> {
+    let note = run
+        .activities
+        .iter()
+        .flat_map(|a| &a.files)
+        .find(|(n, _)| n == label)?;
+    let n = |k: &str| note.1.get(k).and_then(|v| v.f64()).map(|x| x as usize);
+    Some((n("merged")?, n("saturated")?))
 }
 
 /// The last lines on stderr and the code: every file written, or the number that failed.
@@ -318,6 +331,8 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
         })
         .collect();
     let partial = partial_lines(items);
+    // a notice, not a failure: the code stays the one of the conversion
+    let notes = notes + &merged_lines(items);
     let (code, stderr) = if failed == 0 {
         (
             if partial.is_empty() { 0 } else { 3 },
@@ -467,15 +482,22 @@ pub fn run(args: Vec<String>) -> Outcome {
     if let Some(n) = note.filter(|_| list.len() > workers) {
         eprintln!("{n}");
     }
-    if let Err(e) = run_checked(&ready, text.as_bytes(), &runner, workers) {
-        return fail(3, &e.to_string(), "this is a bug of mzlab-cli convert");
-    }
+    let run = match run_checked(&ready, text.as_bytes(), &runner, workers) {
+        Ok((run, _)) => run,
+        Err(e) => return fail(3, &e.to_string(), "this is a bug of mzlab-cli convert"),
+    };
     let ended = ended.lock().unwrap_or_else(|e| e.into_inner());
     let roots = file_roots(&plan);
     let items: Vec<Item> = list
         .iter()
         .enumerate()
-        .map(|(k, e)| item(&roots[k], e, ended[k].as_ref(), (&work, &out)))
+        .map(|(k, e)| {
+            let mut it = item(&roots[k], e, ended[k].as_ref(), (&work, &out));
+            if let Item::Done { flagged, .. } = &mut it {
+                *flagged = flagged_of(&run, &e.label);
+            }
+            it
+        })
         .collect();
     if let Some(path) = &a.report
         && let Err(e) = std::fs::write(path, report(&items))

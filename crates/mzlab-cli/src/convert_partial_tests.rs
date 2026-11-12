@@ -130,3 +130,6 @@ fn an_ida_wiff_is_written_whole_with_code_0() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[path = "convert_tests_centroids.rs"]
+mod centroid_counts;
