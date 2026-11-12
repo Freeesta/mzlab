@@ -1,6 +1,7 @@
 """Flow «This browser» runs structure.moiety@1 (.wasm `molkit`, `flow_moiety`) over the synthetic candidate table of tests/dati/moiety.json: the CSV the browser keeps for each instance (rows that
 contain the moiety, rows that lack it) is the file of `mzlab-cli flow run` of the same plan, byte for byte; `molkit` is fetched only when the step runs; a second run takes the texts from OPFS;
-an empty moiety stops the job with error.sub.query. Builds the site and the .wasm modules (needs cargo and wasm-bindgen: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_web_moiety.py"""
+an empty moiety stops the job with error.sub.query. The plan indexes one synthetic mzML too (the runner of the page follows a plan of scan files). Builds the site and the .wasm modules
+(needs cargo, wasm-bindgen and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_web_moiety.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -12,8 +13,27 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
+try: import numpy as np
+except ImportError: print("SKIP numpy is needed for the synthetic mzML"); sys.exit(0)
 if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
     print("SKIP cargo and wasm-bindgen are needed to build the .wasm modules"); sys.exit(0)
+import dati_sintetici as ds
+from valida import sintetici_mzml as sm
+
+NAME = "MO_01"
+def write_mzml(path):
+    """MS1 centroids every 0.02 min with one compound at 1.0 min and a little noise."""
+    rng = np.random.default_rng(7)
+    rts = np.arange(0.6, 1.6, 0.02)
+    specs, tic = [], []
+    for n, rt in enumerate(rts):
+        y = 1.0e6 * np.exp(-0.5 * ((rt - 1.0) / 0.04) ** 2)
+        mz = np.concatenate([rng.uniform(100, 900, 40), [301.1234]]); it = np.concatenate([rng.lognormal(np.log(8e3), 0.7, 40), [max(y, 1e3)]])
+        o = np.argsort(mz, kind="stable")
+        specs.append(sm._scan(n, rt, 1, mz[o], it[o], filt=sm.FILTER1, res=60000)); tic.append(float(it.sum()))
+    chroms = [ds._chrom(0, "TIC", rts, np.array(tic))]
+    path.write_text(ds._hr_head("exploris", False, path.stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
+                    + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
 
 FX = json.loads((ROOT / "tests" / "dati" / "moiety.json").read_text(encoding="utf-8"))
 TABLE = FX["table"]
@@ -22,7 +42,8 @@ OUTS = {"mc": "mc.csv", "ml": "ml.csv"}
 def plan(moiety=True, query="c1ccccc1O"):
     st = [{"id": "mc", "step": "structure.moiety@1", "in": {"candidates": "file:list.csv"}, "params": {"query": query}},
           {"id": "ml", "step": "structure.moiety@1", "in": {"candidates": "file:list.csv"}, "params": {"query": query, "keep": "lacking"}}] if moiety else []
-    return {"format": "mzflow/2", "inputs": [{"name": "list.csv", "sha256": "", "type": "candidates"}], "steps": st}
+    return {"format": "mzflow/2", "inputs": [{"name": NAME + ".mzML", "sha256": "", "type": "mzml"}, {"name": "list.csv", "sha256": "", "type": "candidates"}],
+            "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + NAME + ".mzML"]}}] + st}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_moiety_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
@@ -30,11 +51,18 @@ subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", 
 from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
-(run / "list.csv").write_text(TABLE, encoding="utf-8")
+(run / "list.csv").write_text(TABLE, encoding="utf-8"); write_mzml(run / (NAME + ".mzML"))
 (run / "plan.json").write_text(json.dumps(plan()))
 nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "plan.json"), "--in", str(run), "--out", str(run / "out")], cwd=ROOT, capture_output=True, text=True)
 assert nat_run.returncode == 0, nat_run.stderr[-1500:]
 NATIVE = {i: (run / "out" / n).read_text(encoding="utf-8") for i, n in OUTS.items()}
+data = site / "static" / "dati_flow_moiety"; data.mkdir()
+shutil.copy2(next((run / "out").glob("*-" + NAME + ".mzidx")), data / (NAME + ".mzidx"))
+PUT = """async (n) => {
+  let d = await navigator.storage.getDirectory();
+  for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
+  const w = await (await d.getFileHandle(n + ".mzidx", { create: true })).createWritable(); await (await fetch("static/dati_flow_moiety/" + n + ".mzidx")).body.pipeTo(w);
+}"""
 
 # sets the plan and its file in the open Flow page, runs it, resolves with the events and the error key
 RUN = """async ([plan, table]) => {
@@ -67,6 +95,8 @@ try:
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
         pg.on("request", lambda r: asked.append(r.url) if "/molkit/" in r.url else None)
         pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
+        pg.wait_for_function("window.QTOOLS", timeout=120000)
+        pg.evaluate(PUT, NAME)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
 
