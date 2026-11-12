@@ -63,15 +63,15 @@ fn elements_match_the_whole_parse() {
         "[0]",
     ];
     for t in ok {
-        let whole = parse(t.as_bytes()).unwrap();
+        let whole = parse(t.as_bytes()).ok();
         let mut each = Vec::new();
-        each_element(t.as_bytes(), |v| {
+        let walked = each_element(t.as_bytes(), |v| {
             each.push(v.clone());
             Ok(())
-        })
-        .unwrap();
-        assert_eq!(each, whole.arr(), "{t}");
-        assert_eq!(count_elements(t.as_bytes()).unwrap(), each.len(), "{t}");
+        });
+        assert!(walked.is_ok(), "{t}");
+        assert_eq!(Some(each.as_slice()), whole.as_ref().map(Value::arr), "{t}");
+        assert_eq!(count_elements(t.as_bytes()).ok(), Some(each.len()), "{t}");
     }
     let bad = ["", "{}", "[1,]", "[1 2]", "[1]x", "[\"\\u", "[[1]", "1"];
     for t in bad {
@@ -86,5 +86,5 @@ fn elements_match_the_whole_parse() {
         Some(x) if x > 1.0 => Err(crate::error::Error::new("stop")),
         _ => Ok(()),
     });
-    assert_eq!(e.unwrap_err().key, "stop");
+    assert!(matches!(e, Err(x) if x.key == "stop"));
 }
