@@ -78,6 +78,8 @@ pub struct Finto {
     pub cards: Vec<Card>,
     pub testata: Option<Header>,
     pub traces: Vec<Chromatogram>,
+    /// The extras only from `scan_extra`, as a Thermo `.raw` gives them (its trailer is read again), none from `extra_mzml`.
+    pub trailer: bool,
 }
 
 fn spettro(
@@ -280,6 +282,7 @@ impl Finto {
             cards,
             testata: None,
             traces,
+            trailer: false,
         }
     }
 
@@ -290,6 +293,12 @@ impl Finto {
                 s.spettro.intensity.push(1.0);
             }
         }
+        self
+    }
+
+    /// The extras (the maker's totals among them) only through `scan_extra`, as the Thermo `.raw` reader gives them.
+    pub fn with_extras_in_the_trailer(mut self) -> Finto {
+        self.trailer = true;
         self
     }
 
@@ -344,8 +353,20 @@ impl Reader for Finto {
         Ok(self.testata.clone())
     }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
+        if self.trailer {
+            return SpectrumExtra::default();
+        }
         self.cards
             .get(s.index)
+            .map(|x| x.extra.clone())
+            .unwrap_or_default()
+    }
+    fn scan_extra(&mut self, _c: usize, k: usize, s: &Spectrum) -> SpectrumExtra {
+        if !self.trailer {
+            return self.extra_mzml(s);
+        }
+        self.cards
+            .get(k)
             .map(|x| x.extra.clone())
             .unwrap_or_default()
     }

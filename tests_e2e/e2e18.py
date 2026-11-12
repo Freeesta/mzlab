@@ -21,13 +21,13 @@ try:
             pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
             assert pg.locator("#xic-rows .xrw").count() == 2 and pg.locator("#xic-add").is_enabled(), "two rows to start with"
             t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "oppure" in t and "neutra" in t  and "cifra decimale" not in t and "m/z o formula" not in t, t
-            pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
+            pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.3" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "C14H13F4N3O2S"); hold(pg, 1300)
-            assert "363.8 - 364.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "C14H13F4N3O2S", pg.inner_text("#xic-sum")
-            pg.select_option("#xic-ad", "[M+Na]+"); wait_for_js(pg, "document.querySelector('#xic-sum').innerText.includes('385.8 - 386.8')")
-            assert "385.8 - 386.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
+            assert "363.8 - 364.3" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "C14H13F4N3O2S", pg.inner_text("#xic-sum")
+            pg.select_option("#xic-ad", "[M+Na]+"); wait_for_js(pg, "document.querySelector('#xic-sum').innerText.includes('385.8 - 386.3')")
+            assert "385.8 - 386.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "364"); pg.click("#xic-go"); ready(pg)
-            assert not dlg() and pg.evaluate("E.panels.some(p=>p.type==='xic' && p.traces[0].w===0.5 && p._a && p._a.sr.length>0)")
+            assert not dlg() and pg.evaluate("E.panels.some(p=>p.type==='xic' && p.traces[0].w===0.25 && p._a && p._a.sr.length>0)")
             assert "cifra" not in pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').closest('label').title")
         step("XIC window: one m/z value, oppure, neutral formula, unit window around the nominal mass", window_)
         def noadduct_():
@@ -37,11 +37,11 @@ try:
             pg.fill("#xic-mz", ""); pg.select_option("#xic-ad", "none")
             assert "ione" in pg.get_attribute("#xic-mz", "placeholder"), pg.get_attribute("#xic-mz", "placeholder")
             pg.fill("#xic-mz", "C14H13F4N3O2S+H"); hold(pg, 1300)
-            assert "363.8 - 364.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # the +H written in the text is the adduct: the same window as [M+H]+
+            assert "363.8 - 364.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # the +H written in the text is the adduct: the same window as [M+H]+
             pg.fill("#xic-mz", "C14H13F4N3O2S"); hold(pg, 1300)
-            assert "362.8 - 363.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # no adduct at all: the mass of the formula is the m/z
+            assert "362.8 - 363.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # no adduct at all: the mass of the formula is the m/z
             pg.select_option("#xic-ad", "[M+H]+"); hold(pg, 700)
-            assert "363.8 - 364.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
+            assert "363.8 - 364.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.click("#xic-no")
         step("XIC window: «No adduct» in the menu of every row (the text is already the ion)", noadduct_)
         def enter_():
@@ -83,7 +83,7 @@ try:
             assert not dlg(), "no dialog: the XIC appears at once"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             t = pg.evaluate("(()=>{const x=E.panels.filter(p=>p.type==='xic').pop().traces[0];return [x.mz,x.w,x.label]})()"); print(t)
-            assert t[2].startswith("m/z ") and abs(t[1] - 0.5) < 1e-9, t          # default unit window [n-0.2, n+0.8]
+            assert t[2].startswith("m/z ") and abs(t[1] - 0.25) < 1e-9, t          # default unit window [n-0.2, n+0.3]
         step("right click on a peak of the spectrum extracts the XIC at once, no window", spec_menu)
         def groups():
             for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "smooth", "log", "xic", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "smooth", "log", "dl", "max"]), (".pnl.spec", ["xicb", "fit", "rul", "par", "rel", "lock", "dl", "tabp", "max"])]:

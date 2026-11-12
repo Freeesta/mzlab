@@ -197,6 +197,17 @@ fn varied_without_header() {
     }
 }
 
+/// The extras only from `scan_extra` (the trailer of a Thermo `.raw`): the rows from the reader take the maker's totals the mzML writes, not the sum of
+/// the points.
+#[test]
+fn extras_only_in_the_trailer() {
+    for (n, peaks, seed) in [(60, 40, 4), (400, 60, 5)] {
+        let l = Finto::vario(n, peaks, seed).with_extras_in_the_trailer();
+        assert!(l.cards.iter().any(|c| c.extra.tic.is_some()));
+        trial(&format!("trailer{n}"), l);
+    }
+}
+
 #[test]
 fn varied_with_orbitrap_header() {
     trial(

@@ -33,3 +33,9 @@ Free LC-MS analysis program, in the browser only (https://freeesta.github.io/mzl
 - **Docs** (`docs/agenti/`) describe the current state only: rewrite the line you change (no «now», «was», PR numbers, dates). A doc line is at most 600 characters, an area file at most 25 KB.
 - **Front end not tried in a browser is broken.** Every interface change keeps the guided tour (`tour.js`, `tests_e2e/e2e_tour.py`) valid.
 - Do not read vendored or generated bulk: `mzlab/web/vendor/`, `mzlab/web/elements.js`, `mzlab/web/esempi/`, `.git/`, `site/` (grep is fine).
+
+## Token economy (every chat)
+- One chat, one task, one PR. When the PR is merged, stop: no scheduled check-ins, no polling, no idle waiting. The coordinator wakes a chat when it is needed.
+- Read narrowly: `grep` and `docs/agenti/INDICE.md` first, then line ranges, not whole files. Use the `cercatore` agent for lookups.
+- Run only the tests of what changed (`python3 tools/verifica.py --cambiati`); the full round once, before the push.
+- Reports are one line: PR number, head SHA, CI status, what remains.

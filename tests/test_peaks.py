@@ -9,7 +9,7 @@ import pytest
 
 from mzlab import api
 from mzlab.app import App
-from mzlab.peaks import XIC_BELOW, XIC_DRIFT, merge_unit, nominal, pad_zeros, profile_peaks
+from mzlab.peaks import XIC_BELOW, merge_unit, nominal, pad_zeros, profile_peaks
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -27,7 +27,6 @@ def _gauss_profile(centres, heights, sigma=0.3, lo=300.0, hi=372.0, step=0.06, f
 def test_xic_constants_are_shared_with_the_front_end():
     js = "".join((ROOT / "mzlab" / "web" / n).read_text(encoding="utf-8") for n in ("explore.js", "pannelli.js", "grafici.js", "picchi.js", "eventi.js"))
     assert float(re.search(r"XIC_BELOW\s*=\s*([0-9.]+)", js).group(1)) == XIC_BELOW
-    assert float(re.search(r"XIC_DRIFT\s*=\s*([0-9.]+)", js).group(1)) == XIC_DRIFT
 
 
 def test_one_peak_per_nominal_mass_and_isotopes_stay_apart():

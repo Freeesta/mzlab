@@ -280,7 +280,6 @@
   "panel.rt.held": "Etichetta del tempo di ritenzione accanto al titolo di uno spettro fermato (non seguito al cursore); {rt} = tempo già formattato, es. «12.34 min» o «12.30-12.50 min».",
   "panel.pair.to": "Suggerimento sull'etichetta «→ n» del grafico sorgente; {n} = numero del pannello (spettro) che lo segue.",
   "panel.scanOf": "Etichetta nell'intestazione di un cromatogramma con più file sovrapposti che guida uno spettro: {f} = nome del file attivo, di cui sono le scansioni.",
-  "panel.pair.from": "Suggerimento sull'etichetta «← n» dello spettro; {n} = numero del pannello (cromatogramma) che lo guida.",
   "spec.follow.aria": "Etichetta accessibile del chip dello spettro agganciato; {n} = numero del pannello.",
   "spec.follow.item": "Voce del menu del chip: un cromatogramma da seguire; {n} = numero del pannello, {title} = suo titolo.",
   "ctl.ms2tr.opt": "Voce del menu delle transizioni MS2; {q1} = m/z del precursore, {q3} = m/z del frammento.",

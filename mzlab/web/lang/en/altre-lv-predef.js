@@ -109,7 +109,6 @@ I18N.add("en", {
   "panel.num.title": "Key {n}: activates the panel",
   "panel.pair.to": "Panel {n} follows this graph",
   "panel.scanOf": "spectrum of {f}",
-  "panel.pair.from": "Follows panel {n}",
   "panel.pairArrow.title": "The spectrum below belongs to the precursor chosen above",
   "panel.rt.held": "held at {rt}",
   "panel.title.isosim": "Isotope simulation",

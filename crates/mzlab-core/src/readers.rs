@@ -262,7 +262,7 @@ pub trait Reader {
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra::default()
     }
-    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML writer asks this one; the index builders ask `extra_mzml` (cheap, no read), so what only this one gives is in the mzML and not in the rows of an index.
+    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML writer and the rows of an index built from the reader (`mzidx_reader`, `source::scan_text`) ask this one, so both hold what only it gives.
     fn scan_extra(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
         self.extra_mzml(s)
     }

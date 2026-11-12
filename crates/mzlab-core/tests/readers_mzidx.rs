@@ -7,6 +7,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_synth;
+mod mzidx_sections;
 mod readers_routes;
 
 use std::io::Cursor;
@@ -15,6 +16,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use agilent_synth::{encode, sample};
+use mzidx_sections::first_difference;
 use mzlab_core::idxread::{Index, Scan, READER_FLAG};
 use mzlab_core::json::{self, Value};
 use mzlab_core::mzml::ChromKind;
@@ -129,7 +131,8 @@ fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_members: usize, id: 
     assert_eq!(u64_at(b, 32) as usize, scans_off, "{label}: sections");
     assert!(
         a[64..scans_off] == b[64..scans_off],
-        "{label}: sections differ"
+        "{label}: sections differ: {}",
+        first_difference(a, b, scans_off)
     );
     // rows: all but the first two columns
     let (ra, rb) = (json_at(a, 32, 40), json_at(b, 32, 40));
@@ -292,6 +295,36 @@ fn d_set(dir: &Path) -> FileSet {
             })
             .collect(),
     }
+}
+
+/// The message of a sections mismatch names the array holding the first different byte: here one byte of the m/z of the first section.
+#[test]
+fn a_sections_mismatch_names_its_array() {
+    let (idx, peak) = encode(&sample());
+    let fs = FileSet {
+        membri: vec![
+            file("x.D/AcqData/MSScan.bin", idx),
+            file("x.D/AcqData/MSPeak.bin", peak),
+        ],
+    };
+    let mut l = readers::apri(fs, &Limits::desktop()).unwrap();
+    let mzml = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let p = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "x.mzML").unwrap();
+    let (a, _) = mzidx::build_mzml_to_vec(&p.table, &mzml, BIG).unwrap();
+    let scans_off = u64_at(&a, 32) as usize;
+    assert_eq!(first_difference(&a, &a, scans_off), "2 vs 2 sections");
+    let meta = json_at(&a, 16, 24);
+    let s0 = &meta.get("sections").unwrap().arr()[0];
+    let at = s0
+        .get("off")
+        .and_then(|o| o.get("mz"))
+        .and_then(Value::f64)
+        .unwrap() as usize
+        + 5;
+    let mut b = a.clone();
+    b[at] ^= 1;
+    let m = first_difference(&a, &b, scans_off);
+    assert!(m.ends_with("array mz at byte 5"), "{m}");
 }
 
 #[test]

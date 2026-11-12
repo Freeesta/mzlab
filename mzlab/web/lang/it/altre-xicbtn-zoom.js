@@ -18,11 +18,13 @@ I18N.add("it", {
   "xicbtn.apex": "apice RT {rt} min · intensità {y}",
   "xicbtn.nopeak": "nessun picco qui",
   "xicdlg.title": "Estrai ioni (XIC)",
-  "xicdlg.desc": "XIC (Extracted Ion Chromatogram): il cromatogramma dei soli segnali con m/z dentro un intervallo largo 1 Da attorno alla massa nominale dello ione. Si integra da qui. In ogni riga scrivi un m/z oppure una formula neutra (con l'addotto).",
+  "xicdlg.desc": "XIC (Extracted Ion Chromatogram): il cromatogramma dei soli segnali con m/z da n − 0.2 a n + 0.3, con n l'intero più vicino all'm/z dello ione. Si integra da qui. In ogni riga scrivi un m/z oppure una formula neutra (con l'addotto).",
   "xicdlg.add.title": "Fino a 10 ioni nello stesso grafico",
   "xicdlg.add": "+ ione",
   "xicdlg.file.title": "File da cui estrarre gli XIC",
   "xicdlg.go": "Estrai",
   "export.int.areaUv": "Area (mAU*s)",
-  "export.int.areaMix": "Area (conteggi*s; DAD: mAU*s)"
+  "export.int.areaMix": "Area (conteggi*s; DAD: mAU*s)",
+  "corr.from.file": "Da un file",
+  "corr.from.bg": "Dal fondo"
 });

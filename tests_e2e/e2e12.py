@@ -56,7 +56,7 @@ with sync_playwright() as p:
         # XIC panel with a chosen window, then auto + manual integration on a chosen file
         pg.click("#np-xic"); pg.fill("#xic-mz", "364"); pg.click("#xic-go"); ready(pg)
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp = pg.locator('.pnl.xic').first
-        assert pg.evaluate(f"E.panels[{xi}].traces[0].w") == 0.5
+        assert pg.evaluate(f"E.panels[{xi}].traces[0].w") == 0.25
         hd_click(pg, ".pnl.xic [data-a=iauto]"); assert shown(pg, ".pnl.xic [data-a=intf]")
         xbox = xp.locator("canvas").bounding_box(); xx = pg.evaluate(f"E.panels[{xi}]._a.X(14.33)")
         intf_pick(xp.locator('[data-a=intf]'), value="all"); pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); pg.wait_for_timeout(600)
@@ -70,7 +70,8 @@ with sync_playwright() as p:
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and shown(pg, ".pnl.xic [data-a=itab]")
         hd_click(pg, ".pnl.xic [data-a=iman]")
         # header: only the m/z range; quick file chooser; RT readout bottom right; clear integrations
-        assert xp.locator('[data-o=xlo]').input_value() == "363.8" and xp.locator('[data-o=xhi]').input_value() == "364.8" and xp.locator('#xic-q, [data-o=tol]').count() == 0
+        xp.locator('[data-a=cpar]').click()      # the m/z edges live in «Intervallo»
+        assert xp.locator('[data-o=xlo]').input_value() == "363.8" and xp.locator('[data-o=xhi]').input_value() == "364.3" and xp.locator('#xic-q, [data-o=tol]').count() == 0
         xp.locator('[data-o=xlo]').fill("363,9"); xp.locator('[data-o=xlo]').press("Enter"); xp.locator('[data-o=xhi]').fill("364.3"); xp.locator('[data-o=xhi]').press("Enter"); pg.wait_for_timeout(1500)
         tw = pg.evaluate(f"[E.panels[{xi}].traces[0].mz, E.panels[{xi}].traces[0].w]"); assert abs(tw[0] - 364.1) < 0.011 and abs(tw[1] - 0.2) < 0.011, tw
         nv = pg.evaluate("tabFiles().filter(f=>f.vis).length")
