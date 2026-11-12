@@ -51,7 +51,7 @@ function enhance(/** @type {HTMLElement} */ c) {
   // the explanations are no visible paragraphs: a tooltip on the header and, for assistive tech, the toggle's description
   const ds = [...c.querySelectorAll(":scope > .rq-d")];
   ds.forEach((d, n) => { d.id = d.id || c.id + "-d" + n; d.className = "sr-only"; });
-  if (ds.length) { h.title = ds.map(d => d.textContent).join(" "); b.setAttribute("aria-describedby", ds.map(d => d.id).join(" ")); }
+  if (ds.length) b.setAttribute("aria-describedby", ds.map(d => d.id).join(" "));
   body.className = "rq-b"; body.id = c.id + "-b";
   [...c.children].filter(e => e !== h && !ds.includes(e) && e.tagName !== "STYLE").forEach(e => body.appendChild(e));
   c.appendChild(body);
@@ -59,14 +59,23 @@ function enhance(/** @type {HTMLElement} */ c) {
   setOpen(c, st == null ? OPEN.includes(c.id) || c.dataset.rqOpen === "1" : !!st);
 }
 
+/** the header tooltip repeats the hidden description, so it follows the catalog text (a literal title would be a long tooltip in the HTML) */
+function tips(/** @type {Element} */ side) {
+  side.querySelectorAll(".rq-tg[aria-describedby]").forEach((/** @type {Element} */ b) => {
+    const h = b.closest(".rq-h"), v = (b.getAttribute("aria-describedby") || "").split(" ").map(id => document.getElementById(id)?.textContent || "").join(" ").trim();
+    if (h instanceof HTMLElement && h.title !== v) h.title = v;
+  });
+}
+
 /** a status line of a closed card that gets a text (a cut, a check, an error) opens the card */
-function opener(/** @type {MutationRecord[]} */ ms) {
+function opener(/** @type {MutationRecord[]} */ ms, /** @type {MutationObserver} */ _o, side = document.querySelector("#v-draw aside")) {
   for (const m of ms) {
     const n = m.target instanceof Element ? m.target : m.target.parentElement;
     const st = n && n.closest("[role=status]"), c = st && st.closest(".card");
     if (c && !isOpen(c) && (st.textContent || "").trim()) setOpen(c, true);
     if (m.type === "childList") m.addedNodes.forEach(x => { if (x instanceof HTMLElement && x.classList.contains("card")) enhance(x); });
   }
+  if (side) tips(side);
 }
 
 /** wires the static cards of index.html and the ones the modules add later */
@@ -82,6 +91,7 @@ export function mountCards() {
   side.addEventListener("toggle", (/** @type {Event} */ e) => { const d = e.target; if (d instanceof HTMLDetailsElement && d.classList.contains("card") && d.dataset.rqUser) { remember(d.id, d.open); delete d.dataset.rqUser; } }, true);
   side.addEventListener("click", (/** @type {Event} */ e) => { const s = e.target instanceof Element && e.target.closest("summary"), d = s && s.parentElement; if (d instanceof HTMLDetailsElement) d.dataset.rqUser = "1"; }, true);
   side.querySelectorAll(".rq-tg").forEach((/** @type {Element} */ b) => { const c = b.closest(".card"); if (c) label(c); });
+  tips(side);
   // a <details> card opened from storage before draw.js listened: its content comes with a toggle event
   side.querySelectorAll("details.card[open]").forEach((/** @type {Element} */ d) => d.dispatchEvent(new Event("toggle")));
   new MutationObserver(opener).observe(side, { childList: true, subtree: true, characterData: true });
