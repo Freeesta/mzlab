@@ -1,5 +1,5 @@
 """Integrating DAD traces on the built site with the Rust engine, on the synthetic MRM `.wiff` of tools/wiff_dad_mrm.py (no laboratory data): an XWC
-integrates like an XIC (no question, its area in the integration table); the TWC asks `int.guard.uv` (not the ion text of `int.guard`) and «yes» opens
+integrates like an XIC (no question, its area in the integration table); its area is in mAU·s (table header, tooltip); the TWC asks `int.guard.uv` (not the ion text of `int.guard`) and «yes» opens
 the XWC the engine proposes (274 ± 2 nm) under it; «no» opens nothing. The DAD names are on screen: «DAD (TWC)» in the picker, «DAD TWC» and «XWC» titles.
 Run from the repo root: python3 tests_e2e/e2e_dad_integra.py"""
 import json, subprocess, sys, os, tempfile
@@ -58,8 +58,12 @@ try:
             assert i["area"] > 0 and abs(i["rt"] - TRUE["a"]["rt"]) < 0.05, i
             pg.evaluate("showInts()"); wait_for_js(pg, "document.querySelector('#bigdlg') && document.querySelector('#bigdlg').open")
             wait_for_js(pg, "document.querySelector('#bigbody').innerText.includes('XWC')", timeout=30000)
+            hs = pg.evaluate("[...document.querySelectorAll('#bigbody th')].map(e => e.textContent)")
+            assert pg.evaluate("I18N.t('int.tbl.areaUv')") in hs and pg.evaluate("I18N.t('int.tbl.area')") not in hs, hs
             pg.evaluate("document.querySelector('#bigdlg').close()")
-        step("an XWC integrates like an XIC: no question, the peak of compound A has its area in the integration table", integrate)
+            tip = pg.evaluate(f"(() => {{ const l = ({XWCS}[0]._a.lbls || []).find(l => l.int); return l ? l.tip : ''; }})()")
+            assert "mAU·s" in tip, tip
+        step("an XWC integrates like an XIC: no question, the peak of compound A has its area in mAU·s in the integration table and its tooltip", integrate)
         def unit():
             t = pg.evaluate(f"JSON.stringify(plotSheets({XWCS}[0]))")
             assert pg.evaluate("I18N.t('export.col.pdaSignal')") in t and "mAU" in t and "PDA" not in t, t[max(0, t.find("PDA") - 300):t.find("PDA") + 100]

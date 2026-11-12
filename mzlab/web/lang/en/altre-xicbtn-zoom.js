@@ -22,5 +22,7 @@ I18N.add("en", {
   "xicdlg.add.title": "Up to 10 ions in the same chart",
   "xicdlg.add": "+ ion",
   "xicdlg.file.title": "File to extract the XICs from",
-  "xicdlg.go": "Extract"
+  "xicdlg.go": "Extract",
+  "export.int.areaUv": "Area (mAU*s)",
+  "export.int.areaMix": "Area (counts*s; DAD: mAU*s)"
 });

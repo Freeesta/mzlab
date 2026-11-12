@@ -22,5 +22,7 @@ I18N.add("it", {
   "xicdlg.add.title": "Fino a 10 ioni nello stesso grafico",
   "xicdlg.add": "+ ione",
   "xicdlg.file.title": "File da cui estrarre gli XIC",
-  "xicdlg.go": "Estrai"
+  "xicdlg.go": "Estrai",
+  "export.int.areaUv": "Area (mAU*s)",
+  "export.int.areaMix": "Area (conteggi*s; DAD: mAU*s)"
 });
