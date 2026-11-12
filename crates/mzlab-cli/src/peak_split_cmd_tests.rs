@@ -27,9 +27,9 @@ fn text(o: &crate::Outcome) -> String {
 
 const PAIR: [&str; 4] = ["file=2", "tr=2", "a=6.33", "b=7.05"];
 
-#[test]
-fn the_isomer_pair_splits_once_and_its_parts_add_up() {
-    let d = std::env::temp_dir().join(format!("mzlab_cli_valley_{}", std::process::id()));
+/// The SIM `.wiff` in a fresh folder, or None (SKIP) without python3.
+fn sim(tag: &str) -> Option<std::path::PathBuf> {
+    let d = std::env::temp_dir().join(format!("mzlab_cli_{tag}_{}", std::process::id()));
     std::fs::create_dir_all(&d).unwrap();
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_sim.py");
     let made = std::process::Command::new("python3")
@@ -44,8 +44,26 @@ fn the_isomer_pair_splits_once_and_its_parts_add_up() {
             "python3 not available"
         );
         eprintln!("SKIP peak-split: python3 not available");
-        return;
+        return None;
     }
+    Some(d)
+}
+
+/// `manual-table` of one windows JSON on the `.wiff`.
+fn table(d: &Path, windows: &str) -> String {
+    let w = d.join("w.json");
+    std::fs::write(&w, windows).unwrap();
+    text(&execute(&[
+        "manual-table".into(),
+        d.join("sim3.wiff").to_string_lossy().into_owned(),
+        "--set".into(),
+        format!("windows={}", w.display()),
+    ]))
+}
+
+#[test]
+fn the_isomer_pair_splits_once_and_its_parts_add_up() {
+    let Some(d) = sim("valley") else { return };
     let wiff = d.join("sim3.wiff");
     let truth = parse(&std::fs::read(d.join("sim3.json")).unwrap()).unwrap();
     let apex = |k: usize| {
@@ -85,14 +103,7 @@ fn the_isomer_pair_splits_once_and_its_parts_add_up() {
             .all(|r| r[10] == "drop" && r[11].parse::<f64>().unwrap() > 1.0),
         "{parts}"
     );
-    let w = d.join("w.json");
-    std::fs::write(&w, r#"[{"file":2,"tr":2,"a":6.33,"b":7.05}]"#).unwrap();
-    let whole = text(&execute(&[
-        "manual-table".into(),
-        wiff.to_string_lossy().into_owned(),
-        "--set".into(),
-        format!("windows={}", w.display()),
-    ]));
+    let whole = table(&d, r#"[{"file":2,"tr":2,"a":6.33,"b":7.05}]"#);
     let area = |r: &Vec<&str>| r[6].parse::<f64>().unwrap();
     let total: f64 = whole
         .lines()
@@ -101,24 +112,22 @@ fn the_isomer_pair_splits_once_and_its_parts_add_up() {
         .unwrap();
     let sum: f64 = rows.iter().map(area).sum();
     assert!((sum - total).abs() <= 1e-4 * total, "{sum} vs {total}");
-    std::fs::write(
-        &w,
-        format!(
-            r#"[{{"file":2,"tr":2,"a":6.33,"b":7.05,"splits":[{}]}}]"#,
-            at[0]
-        ),
-    )
-    .unwrap();
-    let table = text(&execute(&[
-        "manual-table".into(),
-        wiff.to_string_lossy().into_owned(),
-        "--set".into(),
-        format!("windows={}", w.display()),
-    ]));
+    let split = format!(
+        r#"[{{"file":2,"tr":2,"a":6.33,"b":7.05,"splits":[{}]}}]"#,
+        at[0]
+    );
     assert_eq!(
-        parts, table,
+        parts,
+        table(&d, &split),
         "the bytes of manual-table for the same window"
     );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn full_depth_finds_no_valley_and_bad_settings_fail() {
+    let Some(d) = sim("valley_bad") else { return };
+    let wiff = d.join("sim3.wiff");
     assert_eq!(
         text(&run(&wiff, &[&PAIR[..], &["depth=1"]].concat())),
         "{\"splits\":[]}"
