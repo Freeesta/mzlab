@@ -239,7 +239,7 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
   if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
   if (!o.step) { p._msg = null; p._sk = null; }              // a click or a drag starts a new walk: the axes of the spectrum are free again
   E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => {
-    const sh = s.uv && p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0; s.r0 = r0 - sh; s.r1 = r1 - sh; if (!(s.kSet && E.files[s.k]?.vis && !E.files[s.k].gone) && (!s.uv || E.files[k]?.pda)) { s.k = k; s.kSet = false; } s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
+    const sh = s.uv && window.DISP ? DISP.pdaShift(p) : 0; s.r0 = r0 - sh; s.r1 = r1 - sh; if (!(s.kSet && E.files[s.k]?.vis && !E.files[s.k].gone) && (!s.uv || E.files[k]?.pda)) { s.k = k; s.kSet = false; } s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
     if (!keepZoom) s.zoom = null;
     if (!o.step) { s.lock = null; ctl(s); }                  // no rebuilding of the controls while scrolling
     if (o.step) scAhead(s);
@@ -286,7 +286,7 @@ function freezeSpec(s) {
 function liveSpec(s, from) {
   E.panels.filter(q => q !== s && q.type === "spec" && q.link === from.id).forEach(freezeSpec);
   s.link = from.id; s.src = from.id; ctl(s);
-  if (from.cur != null && (s.uv || s.r0 == null)) { const dt = s.uv ? 0 : scanStep() / 2, sh = s.uv && from.kind === "pda" && window.DISP ? DISP.pdaShift(from) : 0; s.r0 = from.cur - dt - sh; s.r1 = from.cur + dt - sh; }
+  if (from.cur != null && (s.uv || s.r0 == null)) { const dt = s.uv ? 0 : scanStep() / 2, sh = s.uv && window.DISP ? DISP.pdaShift(from) : 0; s.r0 = from.cur - dt - sh; s.r1 = from.cur + dt - sh; }
   draw(s); uiSave();
 }
 COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); rtLabel(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one

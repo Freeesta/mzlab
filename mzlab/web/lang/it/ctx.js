@@ -64,6 +64,8 @@ I18N.add("it", {
   "ctx.chrom.grad.aria": "Mostra o nascondi il gradiente (%B) sopra il cromatogramma, con l'asse a destra",
   "ctx.chrom.press": "Mostra la pressione",
   "ctx.chrom.press.aria": "Mostra o nascondi la pressione della pompa sopra il cromatogramma, con l'asse a destra",
+  "ctx.mrm.twc": "TWC",
+  "ctx.mrm.twc.aria": "Mostra o nascondi la traccia DAD totale (TWC) sopra l'MRM, con l'asse a destra",
   "ctx.uv.atRt": "Spettro UV a questo RT",
   "ctx.uv.avgSel": "Spettro UV medio della selezione",
   "ctx.uv.where": "Spettro UV · {nm} nm",
