@@ -1,5 +1,5 @@
 //! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
-//! `grafo` and of `mzlab-cli mol-label`), with the request as an object or as text, and keeps the key of an error; `kind: "cut"` gives `cut/1` the same way;
+//! `grafo` and of `mzlab-cli mol-label`), with the request as an object or as text, and keeps the key of an error; `kind: "cut"` gives `cut/1` and `kind: "ions"` gives `ions/1` the same way;
 //! `kind: "analysis"` gives `anal/1`, `kind: "sel"` `sel/1` and `kind: "link"` `link/1` (every case of `tests/dati/link_golden.json`) the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "cip"` the `cip/1` bytes of `tests/dati/cip_disegno.json`, `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`, and `kind: "mech"` the `mecc/1` bytes of `tests/dati/mecc_mclafferty.json`.
 
 use mzlab_desktop::rpc::Answer;
@@ -215,4 +215,28 @@ fn link_route_gives_the_golden_bytes() {
     }
     let bad = st.rpc("feat/grafo", &json!({"kind": "link", "request": "{}"}), &[]);
     assert_eq!(bad.err().map(|e| e.key), Some("error.link.request"));
+}
+
+#[test]
+fn ions_route_equals_the_function() {
+    // `ions/1`: the same bytes as the `.wasm` `grafo` and `mzlab-cli mol-ions` (tests/test_feat_grafo_wasm.py)
+    let st = State::new();
+    let req = r#"{"structures":[[{"el":"C","h":3},{"el":"N","h":1},{"el":"Cl"}],[{"el":"N","h":4,"q":1}]],"decimals":5,"ppm":3}"#;
+    let direct = mzlab_feat::chem::ions::ions_json(req).unwrap();
+    let as_object =
+        json!({"kind": "ions", "request": serde_json::from_str::<serde_json::Value>(req).unwrap()});
+    assert_eq!(text(st.rpc("feat/grafo", &as_object, &[]).unwrap()), direct);
+    assert_eq!(
+        text(
+            st.rpc("feat/grafo", &json!({"kind": "ions", "request": req}), &[])
+                .unwrap()
+        ),
+        direct
+    );
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "ions", "request": "nope"}),
+        &[],
+    );
+    assert_eq!(bad.err().map(|e| e.key), Some("error.ions.request"));
 }

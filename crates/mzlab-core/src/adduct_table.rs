@@ -68,6 +68,25 @@ pub fn composition(name: &str) -> Option<(u8, &'static str, &'static str, i8)> {
         .map(|a| (a.k, a.add, a.sub, a.z))
 }
 
+/// One catalogue row: name, note id, molecules `k` of M, formula added, formula removed, charge, common.
+pub type Row = (
+    &'static str,
+    &'static str,
+    u8,
+    &'static str,
+    &'static str,
+    i8,
+    bool,
+);
+
+/// The catalogue, most frequent first per polarity: the adduct list other engines (the expected ions of a drawing, `mzlab_feat::chem::ions`)
+/// apply instead of keeping their own.
+pub fn catalog() -> impl Iterator<Item = Row> {
+    CATALOG
+        .iter()
+        .map(|a| (a.name, a.id, a.k, a.add, a.sub, a.z, a.common))
+}
+
 /// Pairs worth knowing by heart (same compound, same RT): label, adduct, reference adduct.
 const PAIRS: [(&str, &str, &str); 7] = [
     ("Na − H", "[M+Na]+", "[M+H]+"),
