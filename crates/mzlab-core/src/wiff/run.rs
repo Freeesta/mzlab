@@ -129,8 +129,8 @@ impl Wiff {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
         let mut n = 0;
         for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
-            if let Some(p) = scan::read_scan(scan, self.scan_len, r.at, r.end)? {
-                if p.mz.is_empty() || r.damaged(Some(p.mz.len())) {
+            if let Some(p) = scan::read_scan_block(scan, self.scan_len, r.at, r.end, r.size)? {
+                if p.mz.is_empty() {
                     continue;
                 }
                 if self.is_full_scan(r.experiment) {
@@ -194,12 +194,10 @@ impl Wiff {
         {
             let count = match counts.and_then(|c| c.get(i)) {
                 Some(&c) => c,
-                None => scan::point_count(scan, self.scan_len, r.at, r.end)?,
+                None => scan::point_count(scan, self.scan_len, r.at, r.end, r.size)?,
             };
             if let Some(count) = count {
-                // a scan head is never decoded as MRM values, also when the block is damaged (`visit` leaves it out of the TIC too)
-                if count > 0 && self.is_full_scan(r.experiment) && !r.damaged(Some(count as usize))
-                {
+                if count > 0 && self.is_full_scan(r.experiment) {
                     blocks.add_tic(r, None);
                 }
                 continue;
@@ -222,7 +220,7 @@ impl Wiff {
     pub fn spectrum_count<R: ReadAt>(&self, scan: &mut R) -> Result<usize> {
         let mut n = 0;
         for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
-            n += scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some_and(|c| c > 0)
+            n += scan::point_count(scan, self.scan_len, r.at, r.end, r.size)?.is_some_and(|c| c > 0)
                 as usize;
         }
         Ok(n)

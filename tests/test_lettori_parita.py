@@ -241,6 +241,19 @@ def test_wiff_with_device_traces_equals_cli(tools):
     assert cli.count(b'name="pressure array"') == 2 and b"Oven Temperature" in cli
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
+def test_wiff_with_sparse_product_scans_equals_cli(tools):
+    """A 3200 QTRAP product-ion sample of sparse scans (tools/wiff_prodotto_rado.py: 0 to 5 points, padded streams, an index value at +26 that is not
+    the point count): the module writes every scan, byte for byte what `mzlab-cli convert` writes."""
+    d = tools["tmp"] / "in_rado"
+    r = run([sys.executable, str(ROOT / "tools/wiff_prodotto_rado.py"), str(d)])
+    assert r.returncode == 0, r.stderr[-1500:]
+    ds = d / "rado.wiff"
+    cli = da_cli(tools, "sciex_rado", ds)
+    wasm = da_wasm(tools, "sciex", ds)
+    assert cli.count(b"<spectrum ") == len(json.loads((d / "rado.json").read_text())["spectra"])
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def first_diff(a: bytes, b: bytes):
     for i, (x, y) in enumerate(zip(a, b)):
         if x != y:
