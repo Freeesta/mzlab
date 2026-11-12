@@ -9,6 +9,9 @@ pub const DOC_MAX: usize = 1 << 20;
 
 const WARN_ROOM: usize = 1024;
 
+/// The members of the document, in order.
+type Top = [(String, Value)];
+
 /// `doc` when `size(doc) <= room`, else the same document cut to fit (`size` = bytes as written, e.g. after XML escaping).
 pub fn fit(doc: &str, room: usize, size: &dyn Fn(&str) -> usize) -> String {
     if size(doc) <= room {
@@ -50,10 +53,7 @@ fn section<'a>(top: &'a mut [(String, Value)], key: &str) -> Option<&'a mut Vec<
 }
 
 /// Cuts the `testo` of `grezzo`, the longest first, until `fits`; whether anything was cut.
-fn cut_raw_texts(
-    top: &mut Vec<(String, Value)>,
-    fits: &dyn Fn(&[(String, Value)]) -> bool,
-) -> bool {
+fn cut_raw_texts(top: &mut Top, fits: &dyn Fn(&Top) -> bool) -> bool {
     let mut cut = false;
     while !fits(top) {
         let Some(texts) = section(top, "grezzo") else {
@@ -83,7 +83,7 @@ fn cut_raw_texts(
 }
 
 /// Keeps the longest head of `campi` that `fits` (binary search on the count); whether anything was cut.
-fn cut_fields(top: &mut Vec<(String, Value)>, fits: &dyn Fn(&[(String, Value)]) -> bool) -> bool {
+fn cut_fields(top: &mut Top, fits: &dyn Fn(&Top) -> bool) -> bool {
     let Some(at) = top
         .iter()
         .position(|(k, v)| k == "campi" && matches!(v, Value::Arr(_)))
