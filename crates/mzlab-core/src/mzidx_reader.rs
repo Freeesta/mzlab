@@ -56,7 +56,7 @@ fn table(l: &mut dyn Reader, c: usize, mut before: Option<&mut First<'_>>) -> Re
     let n = l.index(c)?.len();
     for k in 0..n {
         let s = spettro(l, c, k)?;
-        row(&mut rows, l, k, &s, before.as_deref_mut())?;
+        row(&mut rows, l, (c, k), &s, before.as_deref_mut())?;
     }
     Ok(rows.finish(chromatograms_written(l, c)?))
 }
@@ -74,12 +74,13 @@ fn empty_rows(l: &mut dyn Reader, c: usize) -> Result<Rows> {
 fn row(
     rows: &mut Rows,
     l: &mut dyn Reader,
-    k: usize,
+    (c, k): (usize, usize),
     s: &Spectrum,
     before: Option<&mut First<'_>>,
 ) -> Result<()> {
-    let extra = l.extra_mzml(s);
-    // the total `spectrum_head` writes: the maker's, else the sum of the points
+    // what the writer asks (`scan_extra`: a Thermo `.raw` gives its totals and precursors only there); the total `spectrum_head` writes: the maker's,
+    // else the sum of the points
+    let extra = l.scan_extra(c, k, s);
     let tic = extra
         .tic
         .unwrap_or_else(|| (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum());
@@ -121,10 +122,10 @@ pub(crate) fn rows_before_double(
     let n = l.index(c)?.len();
     for k in 0..n {
         let s = cut(l.grezza(c, k)?)?;
-        row(&mut rows, l.simple(), k, &s, Some(&mut *before))?;
+        row(&mut rows, l.simple(), (c, k), &s, Some(&mut *before))?;
         drop(s);
         let s = spettro(l, c, k)?;
-        row(&mut rows_cen, l, k, &s, Some(&mut *first_cen))?;
+        row(&mut rows_cen, l, (c, k), &s, Some(&mut *first_cen))?;
     }
     let ncr = chromatograms_written(l.simple(), c)?;
     Ok((rows.finish(ncr), rows_cen.finish(ncr)))

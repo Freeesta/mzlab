@@ -94,7 +94,8 @@ fn spettro_e_mobilita(buf: &[u8]) -> Result<(Peaks, Option<crate::mzml::Mobility
 pub fn scan_text<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
     if let (Some(k), Some((l, c))) = (sc.k, m.reader()) {
         let s = crate::mzidx_reader::spettro(&mut *l, c, k)?;
-        return Ok(crate::mzmlwrite::spectrum_head(k, &s, &l.extra_mzml(&s)));
+        let extra = l.scan_extra(c, k, &s);
+        return Ok(crate::mzmlwrite::spectrum_head(k, &s, &extra));
     }
     crate::scaninfo::header(m, sc.start, sc.end)
 }
