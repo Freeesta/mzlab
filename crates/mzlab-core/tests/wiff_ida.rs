@@ -1,6 +1,7 @@
 //! Dependent (IDA) product-ion scans of a `.wiff` carry no precursor: the mass of their method header is not the one the survey picked, and the
 //! real-time stream that holds it is not decoded. Checked on `ida` of `tools/wiff_riferimento.py` (an independent writer) through `Wiff::run`, the
-//! `Lettore` index (what the site reads) and the mzML; the sample without that stream keeps its fixed masses. Skipped without python3.
+//! `Lettore` index (what the site reads) and the mzML; the sample without that stream keeps its fixed masses. The index rows of the IDA sample hold no
+//! point count, so none of its blocks is counted as damaged. Skipped without python3.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -61,6 +62,11 @@ fn dependent_product_scans_get_no_invented_precursor() {
         let index = l.index(c).unwrap().to_vec();
         assert_eq!(run.spectra.len(), rows.len(), "sample {n}");
         assert_eq!(index.len(), rows.len(), "sample {n}: index");
+        let lost = l.losses(c).unwrap();
+        assert!(
+            !lost.partial(),
+            "sample {n}: no block is damaged ({lost:?})"
+        );
         for ((g, i), e) in run.spectra.iter().zip(&index).zip(rows) {
             let p = e["precursor"].as_f64();
             assert_eq!(g.id, e["id"].as_str().unwrap());
