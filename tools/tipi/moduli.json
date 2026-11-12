@@ -59,6 +59,7 @@
     "../../mzlab/web/disegno-indigo.js",
     "../../mzlab/web/disegno-molfile.js",
     "../../mzlab/web/disegno-analisi.js",
+    "../../mzlab/web/disegno-esporta.js",
     "../../mzlab/web/disegno-etichette.js",
     "../../mzlab/web/disegno-menu.js",
     "../../mzlab/web/disegno-selezione.js",

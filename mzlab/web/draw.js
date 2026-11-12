@@ -740,6 +740,7 @@ async function doExport(/** @type {string} */ kind) {
     await start();
     if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return; }
     if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
+    if (kind === "mol" || kind === "sdf") return await (await import("./disegno-esporta.js")).save(K, kind, Q("#ex-ion").value, exportName(kind), saveBlob);   // written by the Rust engine
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
@@ -747,10 +748,7 @@ async function doExport(/** @type {string} */ kind) {
     if (window.toast) toast(I18N.t("draw.export.saved"));
   } catch (e_) { const e = /** @type {Lanciato} */ (e_); exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
 }
-Q("#ex-png").onclick = () => doExport("png");
-Q("#ex-jpg").onclick = () => doExport("jpg");
-Q("#ex-svg").onclick = () => doExport("svg");
-Q("#ex-ket").onclick = () => doExport("ket");
+for (const k of ["png", "jpg", "svg", "ket", "mol", "sdf"]) Q("#ex-" + k).onclick = () => doExport(k);
 function syncBg() {                                    // JPEG cannot be transparent: its button is off (grey) while "Sfondo trasparente" is on
   const on = Q("#ex-nobg").checked, j = Q("#ex-jpg");
   j.disabled = on; j.title = on ? I18N.t("draw.export.jpegNoAlpha") : "";
