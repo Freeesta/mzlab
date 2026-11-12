@@ -310,6 +310,7 @@
   "zoom.rt": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in minuti.",
   "int.base.tip": "Riga del riquadro sull'etichetta «A = …» di un'integrazione: la linea di base usata; {b} = nome della modalità (int.base.tag.*).",
   "int.follow.sn": "Riquadro sull'etichetta di una finestra che segue il campione (SIM/MRM): rapporto segnale/rumore misurato dal motore; {sn} = numero, «…» in attesa, «—» senza picco.",
+  "canali.manint.cp.aria": "Nome accessibile di una cella copiabile (apice, area, altezza) della tabella «Integrazioni manuali»; {c} = intestazione della colonna, {v} = valore mostrato.",
   "int.follow.note": "Riquadro sull'etichetta di una finestra che segue il campione: da quale campione viene e come diventa una riga della tabella; {f} = nome del campione dove è stata tracciata.",
   "int.anchor.a": "Suggerimento (title e aria-label) del primo punto di ancoraggio di un'integrazione SIM/MRM; {rt} = tempo in minuti, {y} = intensità, {m} = modo di aggancio (Segui la curva, A zero, Manuale).",
   "int.anchor.b": "Come int.anchor.a, per il secondo punto di ancoraggio.",
