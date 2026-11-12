@@ -42,7 +42,8 @@ fn array(a: ArrayHead, item: &str) -> Result<Array> {
     for term in &t.0 {
         let k = match term.acc.as_str() {
             "MS:1000514" => ArrayKind::Mz,
-            "MS:1000515" => ArrayKind::Intensity,
+            // the y values of a pressure chromatogram are a `pressure array` (MS:1000821) where the unit is pascal
+            "MS:1000515" | "MS:1000821" => ArrayKind::Intensity,
             "MS:1000595" => ArrayKind::Time,
             acc => match mobility_of(acc) {
                 Some(u) => {
@@ -170,7 +171,7 @@ pub(super) fn chromatogram(mut h: Head, n: usize) -> Result<Chrom> {
     let unit = h
         .arrays
         .iter()
-        .find_map(|a| a.terms.get("MS:1000515"))
+        .find_map(|a| a.terms.get("MS:1000515").or_else(|| a.terms.get("MS:1000821")))
         .map_or(String::new(), |t| t.unit_name.clone());
     // our writer puts the generic counts on every trace array and the real unit (pascal, bar, ...) in the userParam `unità`, as `trace_unit::resolve`
     let unit = match h.terms.user("unità") {

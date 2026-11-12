@@ -129,6 +129,7 @@ fn kind_term(kind: &str) -> (&'static str, &'static str) {
         "time" => ("MS:1000595", "time array"),
         "mz" => ("MS:1000514", "m/z array"),
         "wavelength" => ("MS:1000617", "wavelength array"),
+        "pressure" => ("MS:1000821", "pressure array"),
         _ => ("MS:1000515", "intensity array"),
     }
 }

@@ -141,9 +141,9 @@ impl<W: Write> MzmlWriter<W> {
         }
         s += "<binaryDataArrayList count=\"2\">\n";
         self.enc.array(&mut s, "time", "time", Data::F64(&c.time))?;
-        // a pressure in pascal says its unit on the array, as msconvert writes it; every other trace keeps the counts and its unit in `unità`
-        let unit = if c.kind == ChromKind::Pressure && c.unit == "pascal" { "pascal" } else { "counts" };
-        self.enc.array(&mut s, "intensity", unit, Data::F64(&c.intensity))?;
+        // a pressure in pascal is a `pressure array` with its unit (the term PSI-MS gives the unit to); every other trace keeps the counts and its unit in `unità`
+        let (kind, unit) = if c.kind == ChromKind::Pressure && c.unit == "pascal" { ("pressure", "pascal") } else { ("intensity", "counts") };
+        self.enc.array(&mut s, kind, unit, Data::F64(&c.intensity))?;
         s += "</binaryDataArrayList></chromatogram>\n";
         self.chroms += 1;
         self.mark(false, &c.id);
