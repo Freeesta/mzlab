@@ -59,7 +59,7 @@ try:
             assert exp(pg, "quick-card") == "false" and exp(pg, "mech-card") == "true" and exp(pg, "cut-card") == "false" and exp(pg, "prop-card") == "true"
             assert pg.evaluate("document.getElementById('anal-card').open") and pg.is_visible("#mech-arrow") and not pg.is_visible("#ex-smi")
             assert pg.get_attribute("#quick-card .rq-tg", "aria-label").startswith("Espandi")
-            pg.click("#quick-card .rq-tg"); pg.click("#mech-card .rq-tg"); pg.click("#anal-card summary"); pg.wait_for_timeout(200)
+            pg.click("#quick-card .rq-tg"); pg.click("#mech-card .rq-tg"); pg.click("#anal-card summary"); wait_for_js(pg, "!document.getElementById('anal-card').open")
         step("the choice is remembered after a reload", reload)
         def result():
             pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
@@ -72,20 +72,21 @@ try:
             assert exp(pg, "ions-card") == "false"                                         # opened by a result, not by the student: not stored
         step("a result in a folded card opens it, without storing it", result)
         def hide_all():
-            pg.click("#side-toggle"); pg.wait_for_timeout(200)
+            pg.click("#side-toggle"); wait_for_js(pg, "document.getElementById('v-draw').classList.contains('noside')")
             assert pg.evaluate("document.getElementById('v-draw').classList.contains('noside')") and not pg.is_visible("#quick-card")
-            pg.click("#side-toggle"); pg.wait_for_timeout(200)
+            pg.click("#side-toggle"); wait_for_js(pg, "!document.getElementById('v-draw').classList.contains('noside')")
             assert pg.is_visible("#quick-card") and exp(pg, "quick-card") == "true" and exp(pg, "lb-card") == "false"
         step("«Nascondi i riquadri» still hides and shows them all, the folds kept", hide_all)
         def tour():
             pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
-            pg.evaluate("TOUR.disegno()"); pg.wait_for_timeout(400)
-            for _ in range(3): pg.evaluate("TOUR.avanti()"); pg.wait_for_timeout(300)
+            pg.evaluate("TOUR.disegno()"); wait_for_js(pg, "!!document.getElementById('tour-dialog')")
+            for _ in range(3): pg.evaluate("TOUR.avanti()")
+            wait_for_js(pg, "document.querySelector('#lb-card .rq-tg').getAttribute('aria-expanded') === 'true'")
             assert pg.evaluate("TOUR.active") and pg.inner_text("#tour-dialog h3"), "tour"
             assert exp(pg, "lb-card") == "true" and pg.is_visible("#lb-f"), "labels step: card not opened"
-            pg.evaluate("TOUR.avanti()"); pg.wait_for_timeout(300)
+            pg.evaluate("TOUR.avanti()"); wait_for_js(pg, "document.querySelector('#lb-card .rq-tg').getAttribute('aria-expanded') === 'false'")
             assert exp(pg, "lb-card") == "false", "labels card not folded again"
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!TOUR.active")
             assert "lb-card" not in (pg.evaluate("localStorage.getItem('mzlab.disegno.schede')") or "")
         step("the tour opens the folded labels card for its step and folds it again", tour)
         def english():
