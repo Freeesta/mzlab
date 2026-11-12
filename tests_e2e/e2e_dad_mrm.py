@@ -22,7 +22,7 @@ try:
         pg.set_input_files("#pick", [str(D / f) for f in ("dadmrm.wiff", "dadmrm.wiff.scan", "dadsim.wiff", "dadsim.wiff.scan")])     # two pairs: two samples
         wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=90000); pg.click("text=Carica dati"); ready(pg)
         wait_for_js(pg, "E.files.length >= 2", timeout=120000)
-        K = {kind: pg.evaluate(f"E.files.find(f => f.name.startsWith('{kind}')).k") for kind in ("dadmrm", "dadsim")}
+        K = {kind: pg.evaluate(f"E.files.find(f => (f.label || f.file || '').startsWith('{kind}')).k") for kind in ("dadmrm", "dadsim")}
         def files():
             got = pg.evaluate("E.files.map(f => [f.kind, f.pda === true])")
             assert got == [["mrm", True], ["mrm", True]], got
