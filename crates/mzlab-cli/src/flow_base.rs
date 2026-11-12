@@ -422,19 +422,8 @@ pub(crate) fn write_mzml_with(
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
     let lost = reader.losses(sample)?;
-    if lost.partial() {
-        eprintln!(
-            "{}: {}: {} of {} spectra read{}",
-            lost.cause,
-            path.display(),
-            lost.read,
-            lost.declared,
-            if lost.cause == mzlab_core::readers::TRUNCATED {
-                ", the file ends before the rest"
-            } else {
-                ""
-            }
-        );
+    if let Some(t) = lost.report(path) {
+        eprintln!("{t}");
     }
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
     let profile = peaks == Peaks::File
@@ -460,7 +449,15 @@ pub(crate) fn write_mzml_with(
         Ok((bytes, sha256, flagged))
     });
     match written {
-        Ok((bytes, sha256, flagged)) => Ok((profile, bytes, sha256, lost, flagged)),
+        // asked again once the scans are decoded: a Thermo scan that does not decode is counted only then (`warn.raw.damaged`)
+        Ok((bytes, sha256, flagged)) => {
+            let after = reader.losses(sample)?;
+            match after.report(path) {
+                Some(t) if after != lost => eprintln!("{t}"),
+                _ => {}
+            }
+            Ok((profile, bytes, sha256, after, flagged))
+        }
         Err(e) => {
             let _ = std::fs::remove_file(out);
             Err(e)

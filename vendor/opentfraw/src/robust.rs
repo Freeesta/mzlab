@@ -103,6 +103,47 @@ pub fn whole_prefix(
     (index.len(), None)
 }
 
+/// First byte after the start of the record of `e` that its own entry names (its header for the packet layout): data past the end of the file from it
+/// cannot be read, whatever the entries around it say.
+fn own_end(e: &ScanIndexEntry, format: ScanDataFormat, data_addr: u64) -> u64 {
+    let at = data_addr.saturating_add(e.offset);
+    match format {
+        ScanDataFormat::FlatV63 => at,
+        ScanDataFormat::FlatV66 => at.saturating_add(u64::from(e.data_size)),
+        ScanDataFormat::PacketHeader => at.saturating_add(PACKET_HEADER_BYTES),
+    }
+}
+
+/// [`whole_prefix`] that tells a cut from one damaged entry: the index is kept up to the last entry that lies whole, so an entry pointing past the end among
+/// sound ones loses its scan only (left in the index, listed in the third value, its data never read), while a cut loses the scans after it (the second
+/// value is the first byte of the first scan past the cut).
+pub fn kept_prefix(
+    index: &[ScanIndexEntry],
+    format: ScanDataFormat,
+    data_addr: u64,
+    streams: &[u64],
+    file_len: u64,
+) -> (usize, Option<u64>, Vec<u32>) {
+    let (whole, cut_at) = whole_prefix(index, format, data_addr, streams, file_len);
+    if cut_at.is_none() {
+        return (whole, None, Vec::new());
+    }
+    let keep = (whole..index.len())
+        .rev()
+        .find(|&k| record_end(index, k, format, data_addr, streams) <= file_len)
+        .map_or(whole, |k| k + 1);
+    let damaged = (whole..keep)
+        .filter(|&k| {
+            index
+                .get(k)
+                .is_some_and(|e| own_end(e, format, data_addr) > file_len)
+        })
+        .map(|k| k as u32)
+        .collect();
+    let cut_at = index.get(keep).map(|e| data_addr.saturating_add(e.offset));
+    (keep, cut_at, damaged)
+}
+
 /// Length of the longest prefix of the index whose times are finite, not negative and never decrease. An index that the file cuts short is followed by bytes of
 /// other structures that read as entries; they do not keep the order.
 pub fn ordered_prefix(index: &[ScanIndexEntry]) -> usize {
@@ -193,6 +234,29 @@ mod tests {
         assert_eq!(
             whole_prefix(&flat, ScanDataFormat::FlatV63, 100, &[], 200),
             (2, Some(250))
+        );
+    }
+
+    #[test]
+    fn one_entry_past_the_end_among_sound_ones_is_damaged_not_a_cut() {
+        let mut ix: Vec<_> = (0..5).map(|k| entry(k as f64, k * 100, 100)).collect();
+        let f = ScanDataFormat::PacketHeader;
+        // a sound file: nothing damaged, nothing cut
+        assert_eq!(kept_prefix(&ix, f, 1000, &[1500], 1500), (5, None, vec![]));
+        // a cut keeps its meaning: the scans past it are lost, none is damaged
+        assert_eq!(
+            kept_prefix(&ix, f, 1000, &[1500], 1299),
+            (2, Some(1200), vec![])
+        );
+        // scan 2 points far past the end: only scan 2 is left without data (scan 1 starts where its own entry says)
+        ix[2].offset = 1 << 40;
+        assert_eq!(kept_prefix(&ix, f, 1000, &[1500], 1500), (5, None, vec![2]));
+        // the first scan damaged: the file is not refused
+        let mut first: Vec<_> = (0..3).map(|k| entry(k as f64, k * 100, 100)).collect();
+        first[0].offset = 1 << 40;
+        assert_eq!(
+            kept_prefix(&first, f, 1000, &[1300], 1300),
+            (3, None, vec![0])
         );
     }
 

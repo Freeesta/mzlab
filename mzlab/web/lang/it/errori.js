@@ -458,6 +458,7 @@ I18N.add("it", {
   "warn.file.recordWidth": "Una funzione della cartella registra i punti con una dimensione di record che mzLab non decodifica: le sue scansioni non si leggono, il resto si legge e si scrive.",
   "warn.wiff.damaged": "Alcuni blocchi di scansione del .wiff.scan non corrispondono all'indice del .wiff (una copia danneggiata): sono lasciati fuori e contati, il resto si legge e si scrive. Controlla la copia del file.",
   "warn.raw.eventsRefused": "La tabella degli eventi di scansione non si è potuta leggere: le scansioni dopo il punto in cui si ferma sono lette e scritte, con livello MS e polarità sconosciuti.",
+  "warn.raw.damaged": "Alcune scansioni del .raw non si possono leggere (i loro dati puntano oltre la fine del file o non si decodificano): ognuna resta senza i suoi punti ed è contata, le altre scansioni sono lette e scritte. Controlla la copia del file.",
   "warn.flow.formula.subformulas": "Questo ione ha più sotto-formule di max_subformulas, quindi nessun frammento è stato provato: alza max_subformulas o indica meno elementi.",
   "warn.flow.group.corrFiles": "La correlazione tra le righe richiede almeno tanti file quanti min_corr_samples (3 se non lo cambi): con meno file non è stata calcolata, quindi non ci sono archi di correlazione. Isotopi e specie ioniche restano.",
   "warn.msngrafo.rottureCapped": "Ci sono troppe rotture di legami: sono state provate solo le prime.",

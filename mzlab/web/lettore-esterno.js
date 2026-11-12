@@ -53,7 +53,7 @@ export function createEsterno(native_external) {
       file_header: (/** @type {number} */ c) => w.file_header(h, c),
       // the spectra a truncated file declares but does not hold (a module of an older build has none)
       missing: (/** @type {number} */ c) => (w.missing ? w.missing(h, c) : 0),
-      // why: `warn.file.truncated`, `warn.raw.eventsRefused` (empty for a module of an older build)
+      // why: `warn.file.truncated`, `warn.raw.eventsRefused`, `warn.raw.damaged` (empty for a module of an older build)
       cause: (/** @type {number} */ c) => (w.cause ? w.cause(h, c) : ""),
       close: () => w.close(h),
     });
