@@ -137,8 +137,12 @@ impl<'a, M: ReadAt> MzmlTraces<'a, M> {
     }
 }
 
-/// The kind `mzml::read` gives a chromatogram, from the kind `Mzml::chromatograms` gives it.
+/// The kind `mzml::read` gives a chromatogram, from the kind `Mzml::chromatograms` gives it: a SIM ion (`SIM SIC …`, no Q3) is listed with the SRM
+/// transitions there (`mzmlhead::chrom_of`), but it is a SIC, as `mzml::read` and the readers say.
 fn kind(c: &Chrom) -> ChromKind {
+    if c.id.starts_with("SIM SIC ") && c.q3.is_none() {
+        return ChromKind::Sic;
+    }
     match c.kind.as_str() {
         "tic" => ChromKind::Tic,
         "bpc" => ChromKind::Bpc,

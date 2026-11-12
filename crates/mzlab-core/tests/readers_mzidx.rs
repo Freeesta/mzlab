@@ -412,3 +412,35 @@ fn the_real_files_give_the_index_of_their_mzml() {
     eprintln!("read_mzidx.rs: {samples} real samples equal ({scans} scans)");
     assert!(samples > 0);
 }
+
+/// SIM ions with a DAD (`tools/wiff_dad_mrm.py`, `dadsim`): the index of the mzML gives each SIM ion the kind the reader gives it (a SIC, not an SRM
+/// transition), and the TWC with its points.
+#[test]
+fn a_synthetic_sim_wiff_gives_its_ions_the_kind_of_the_reader() {
+    let out = std::env::temp_dir().join(format!("mzlab_lettori_mzidx_sim_{}", std::process::id()));
+    let ok = Command::new("python3")
+        .arg(root().join("tools/wiff_dad_mrm.py"))
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
+    if ok.is_none() {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("SKIP read_mzidx.rs: python3 not available");
+        return;
+    }
+    // no scans to count: the check that ran is the one of the SIM traces
+    same_all("dadsim", &|| wiff_set(&out, "dadsim"));
+    let mut l = readers::apri(wiff_set(&out, "dadsim"), &Limits::desktop()).unwrap();
+    let sic = l
+        .chromatograms(0)
+        .unwrap()
+        .iter()
+        .filter(|v| v.tipo == ChromKind::Sic)
+        .count();
+    let _ = std::fs::remove_dir_all(&out);
+    assert_eq!(sic, 2, "the two SIM ions of dadsim");
+}
