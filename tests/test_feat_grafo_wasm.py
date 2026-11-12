@@ -1,5 +1,5 @@
 """The structure bridge of mzFinder in WebAssembly (crates/mzlab-feat-grafo-wasm) answers a SMILES with the formula, the groups and the cleavage products that
-the Rust library gives natively, the piece labels, the bond cuts and the analysis card (`anal/1`, every golden molecule) and the selection info (`sel/1`) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
+the Rust library gives natively, the piece labels, the bond cuts and the analysis card (`anal/1`, every golden molecule) the selection info (`sel/1`) and the lookup URLs (`link/1`, every golden case) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import json
 import shutil
@@ -153,3 +153,12 @@ def test_analysis_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path):
         site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "analysis")
         assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-anal", str(req)), c
     assert [c["el"] for c in json.loads(site)["composition"]] == ["H", "Cl", "Cu", "N"]
+
+
+def test_link_through_wasm_equals_the_cli_and_the_reference(pkg, tmp_path):
+    # every case of tools/link_riferimento.py: charges, brackets, stereo, isotopes, #, + and / percent-encoded the same in the page and the app
+    for i, c in enumerate(json.loads((ROOT / "tests/dati/link_golden.json").read_text(encoding="utf-8"))):
+        req = tmp_path / f"link{i}.json"
+        req.write_text(json.dumps(c["request"]), encoding="utf-8")
+        site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "link")
+        assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-link", str(req)) == c["link"] + "\n", c

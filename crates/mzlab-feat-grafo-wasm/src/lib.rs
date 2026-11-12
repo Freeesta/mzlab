@@ -5,7 +5,7 @@ use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/9";
+const BRIDGE: &str = "mzfeat-grafo/10";
 
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())
@@ -48,6 +48,13 @@ pub fn labels(request: &str) -> std::result::Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn sel(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::sel::sel_json(request).map_err(js_err)
+}
+
+/// `link/1` of a request `{"smiles", "inchi", "part"}`: the percent-encoded URLs of the outside lookups of the right-click menu (PubChem, ChEBI,
+/// BioTransformer) and what to copy before opening each (see `mzlab_feat::chem::link::link_json`; the same as `mzlab-cli mol-link`). Nothing is fetched.
+#[wasm_bindgen]
+pub fn link(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::link::link_json(request).map_err(js_err)
 }
 
 /// `anal/1` of one drawn structure `{"atoms": [...]}`: the `etich/1` numbers plus average mass, mass % per element and the theoretical isotope pattern

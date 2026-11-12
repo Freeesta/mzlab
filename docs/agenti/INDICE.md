@@ -28,6 +28,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |
 | motore di confronto spettrale con più librerie per mzFlow (nodo «Attribution», `table.attribute`) e pannello laterale MSⁿ: `libset`, `libmatch/1`, preset, analoghi con ΔFormula, catalogo `librerie/2` | `docs/agenti/match-spettrale.md` (prompt dei lavori: `docs/archivio/prompt-match/`) |
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
+| menu del tasto destro del Disegno (`#ctx`, `disegno-menu.js`, registro `menuAdd`, «Informazioni…», ricerche PubChem/ChEBI/BioTransformer, `sel/1`, `link/1`) | `docs/agenti/disegno-menu.md` |
 | campi numerici scritti a mano (`campi.js`, `CAMPI.num`, `data-num`, calcolatori, nota di rifiuto `campo.*`, `numIt` senza Infinity, `lib_campi.sweep`) | `docs/agenti/campi-numerici.md` |
 | accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
