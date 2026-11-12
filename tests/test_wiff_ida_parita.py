@@ -31,15 +31,13 @@ def test_the_engine_and_the_app_index_ida_scans_with_the_precursor_of_their_row(
     ref = work / "ref"
     eng = work / "eng.mzidx"
     run("node", str(ROOT / "tests" / "mzidx_nativo_node.js"), str(work / "pkg"), str(eng), "0", "epi.wiff", str(ref / "ida_epi.wiff"), str(ref / "ida_epi.wiff.scan"))
-    # the app indexes the same sample: a copy of the pair with only sample 1 would change the method, so the plan names sample 1 of the dataset
+    # the index step of the app indexes the first sample of a .wiff, the one the engine is asked for (index 0)
     plan = work / "plan.json"
     plan.write_text('{"format": "mzflow/2", "inputs": [{"name": "ida_epi.wiff", "type": "raw"}], "steps": [{"id": "idx", "step": "index.mzidx@1", '
                     '"in": {"source": ["file:ida_epi.wiff"]}}]}', encoding="utf-8")
     run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(plan), "--in", str(ref / "ida_epi.wiff"), "--in",
         str(ref / "ida_epi.wiff.scan"), "--out", str(work / "run"))
-    apps = sorted((work / "run").glob("idx-*.mzidx"))
-    assert apps, list((work / "run").iterdir())
-    app = apps[0]
+    app = work / "run" / "idx-ida_epi.mzidx"
     got = rows(eng)
     assert got == rows(app)
     assert parts(eng) == parts(app)
