@@ -53,7 +53,7 @@ fn the_hash_taken_while_writing_is_the_hash_of_the_file_and_the_memo_of_the_inpu
     let how = (Peaks::File, Options::default());
     // no memo of the input yet: the reader takes the SHA-1 of the header itself
     let a = d.join("a.mzML");
-    let (_, bytes, sha, _) =
+    let (_, bytes, sha, _, _) =
         crate::flow_base::write_mzml_with(&src, None, &a, how, &mut |_, _| {}, &None).unwrap();
     assert_eq!(
         crate::flow_hash::file_sha256(&a).unwrap(),

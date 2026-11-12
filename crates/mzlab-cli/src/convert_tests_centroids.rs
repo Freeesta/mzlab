@@ -3,12 +3,12 @@
 
 use mzlab_core::json::parse;
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 
 use super::super::convert;
 use crate::flow_run_tests::p;
 
-/// `n` unit-resolution profile scans (0.1 Da grid, FWHM 0.7 Da) with single peaks and a 1:1 doublet 0.35 Da apart at m/z 300.
+/// `n` unit-resolution profile scans in a numpress mzML (0.1 Da grid, FWHM 0.7 Da) with single peaks and a 1:1 doublet 0.35 Da apart at m/z 300.
 fn profile(n: usize) -> Vec<u8> {
     let peaks = [
         (290.0, 4000.0),
@@ -16,14 +16,16 @@ fn profile(n: usize) -> Vec<u8> {
         (300.35, 3000.0),
         (310.0, 2500.0),
     ];
-    let mut w = MzmlWriter::new(
-        Vec::new(),
-        &Header {
-            run: "prof".into(),
-            ..Default::default()
-        },
-    )
-    .unwrap();
+    // numpress: a plain mzML is no input of `convert`, a numpress one is (the reader that writes it again as plain)
+    let numpress = Options {
+        numpress: true,
+        ..Options::default()
+    };
+    let head = Header {
+        run: "prof".into(),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::with_options(Vec::new(), &head, numpress).unwrap();
     w.open_spectra(n).unwrap();
     for i in 0..n {
         let mz: Vec<f64> = (0..400).map(|k| 280.0 + 0.1 * k as f64).collect();
