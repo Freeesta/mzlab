@@ -50,6 +50,13 @@ pub fn ions(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::ions::ions_json(request).map_err(js_err)
 }
 
+/// `tray/1` of a request `{"op": "adducts" | "entries" | "csv" | "read", ...}`: the structure tray of Draw (the formula and mass of drawn structures,
+/// the suspect list as CSV and its entries read back; see `mzlab_feat::chem::tray::tray_text`; the same as `mzlab-cli mol-suspects`).
+#[wasm_bindgen]
+pub fn tray(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::tray::tray_text(request).map_err(js_err)
+}
+
 /// `sel/1` of a request `{"molfile", "part"}`: formula, charge, monoisotopic and average mass, m/z, heavy atoms, rings and aromatic rings of a selection
 /// or of the whole drawing (see `mzlab_feat::chem::sel::sel_json`; the same as `mzlab-cli mol-sel`).
 #[wasm_bindgen]

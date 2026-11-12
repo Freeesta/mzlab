@@ -10,7 +10,7 @@ import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./d
 import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -719,19 +719,6 @@ async function image(/** @type {string} */ format) {
   }
   return out;
 }
-// ---- export file names: disegno_AAAA-MM-GG_HHMM.<ext>; one base name for PNG, JPEG, SVG and .ket of the same minute, "_trasparente" for a transparent
-// PNG/SVG, "-2", "-3" for a repeated name; ASCII lower case only (works on Mac, Windows and the web). The student can change the base name.
-const AUTO = /^(disegno|drawing)_\d{4}-\d\d-\d\d_\d{4}$/, usedNames = new Map();
-const stamp = () => { const d = new Date(), z = (/** @type {number} */ n) => String(n).padStart(2, "0"); return `${I18N.t("draw.export.filePrefix")}_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };
-const cleanName = (/** @type {unknown} */ t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").replace(/_{2,}/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 60);
-function freshName() { const f = Q("#ex-name"); if (!f.value.trim() || AUTO.test(f.value.trim())) f.value = stamp(); }
-/** @param {string} ext @param {boolean} [clear] */ function exportName(ext, clear) {
-  freshName();
-  const base = (cleanName(Q("#ex-name").value) || stamp()) + (clear ? "_" + I18N.t("draw.export.transparentSuffix") : ""), key = base + "." + ext, n = (usedNames.get(key) || 0) + 1;
-  usedNames.set(key, n);
-  return base + (n > 1 ? "-" + n : "") + "." + ext;
-}
-Q("#ex-name").addEventListener("change", () => { const c = cleanName(Q("#ex-name").value); Q("#ex-name").value = c || stamp(); NB.drawName = AUTO.test(Q("#ex-name").value) ? "" : Q("#ex-name").value; nbSave(); });
 const exwarn = (/** @type {string} */ msg) => { const w = Q("#ex-warn"); w.textContent = msg || ""; w.hidden = !msg; };
 // every export goes through here: a failure is written in the page instead of being silent
 async function doExport(/** @type {string} */ kind) {
@@ -758,8 +745,11 @@ Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
-async function drawnAtoms() { await start(); const sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []); (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } }); return pieces(set.size ? set : null).map(p => p.ids.map((/** @type {number} */ i) => atomOf(st.atoms.get(i)))); }   // the atoms of each structure of the selection (bond ends included), or of the whole canvas: the «Expected ions» card (disegno-ioni.js)
+async function drawnAtoms(withSmiles = false) { await start(); const sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []); (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } }); const ps = pieces(set.size ? set : null), at = (/** @type {{ ids: number[] }} */ p) => p.ids.map(i => atomOf(st.atoms.get(i))); return withSmiles ? Promise.all(ps.map(async p => ({ atoms: at(p), smiles: plainSmiles(await pieceSmiles(p.ids) || "") }))) : ps.map(at); }   // the atoms of each structure of the selection (bond ends included), or of the whole canvas, with its SMILES for the tray: «Expected ions» (disegno-ioni.js) and «Structure tray» (disegno-vassoio.js)
 const showIons = () => import("./disegno-ioni.js").then(m => m.carica()); Q("#ions-go")?.addEventListener("click", showIons); menuAdd({ id: "expected-ions", order: 70, label: "draw.ctx.ions", title: "draw.ctx.ions.title", run: () => { Q("#ions-card")?.scrollIntoView({ block: "nearest" }); showIons(); } });   // of the selection, or of the whole drawing
+// the «Structure tray» card (disegno-vassoio.js): loaded on its first use, or at once when the session already holds a tray
+const tray = (/** @type {string} */ act, /** @type {Event | undefined} */ ev = undefined) => import("./disegno-vassoio.js").then(m => m.carica(act, ev)); Q("#tray-add")?.addEventListener("click", () => tray("add")); Q("#tray-load")?.addEventListener("click", () => Q("#tray-file").click()); Q("#tray-file")?.addEventListener("change", (/** @type {Event} */ e) => tray("file", e));
+menuAdd({ id: "add-to-tray", order: 75, label: "draw.ctx.tray", title: "draw.ctx.tray.title", run: () => { Q("#tray-card")?.scrollIntoView({ block: "nearest" }); tray("add"); } }); try { if (sessionStorage.getItem("mzlab.draw.tray")) tray(""); } catch (_) { /* no storage: nothing kept */ }
 const identify = async (/** @type {Set<number> | null} */ only) => { const out = Q("#id-out"); out.scrollIntoView({ block: "nearest" }); (await import("./disegno-identita.js")).show(pieces(only).map(p => pieceMolfile(p.ids)), out, (k, p) => I18N.t(k, p)); }; Q("#ex-id").onclick = async () => { await start(); const sel = K.editor.selection() || {}; identify(sel.atoms && sel.atoms.length ? new Set(/** @type {number[]} */ (sel.atoms)) : null); }; menuAdd({ id: "catalogue-id", order: 75, label: "draw.id.button", title: "draw.id.title", run: (/** @type {any} */ c) => { identify(c.whole ? null : c.atoms); } });   // «Is this in the catalogue?»: the button looks up the selection or the whole canvas, the menu row what the menu acts on; the answer is in #id-out
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
 window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, structures: drawnAtoms, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
