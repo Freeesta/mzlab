@@ -234,7 +234,7 @@ const CONVROWS = {
   base(/** @type {string} */ name, /** @type {number} */ pc) { const r = this.find(name); if (r) { r.floor = pc; r.mono = true; } },
   // the last message of the worker, for the diagnosis
   note(/** @type {string} */ name, /** @type {string | number} */ text) { const r = this.find(name); if (r) r.last = String(text).slice(0, 200); },
-  // the end of a row: "done" ({ scans }), "fail" ({ msg, diag }) or "cancel"; it stays until «Close» or the next loading
+  // the end of a row: "done" ({ scans }), "fail" ({ msg, diag }) or "cancel"; it stays until «Close», the next loading or the removal of its file
   finish(/** @type {string} */ name, /** @type {string} */ state, /** @type {Bag | undefined} */ extra) {
     const r = this.find(name); if (!r || CONV_FINAL.includes(r.state)) return;
     const now = Date.now(); r.secs = (now - (r.t0 || now)) / 1000; Object.assign(r, extra || {});
@@ -244,8 +244,10 @@ const CONVROWS = {
     if (this.running().length) this.fill(r); else this.paint();
   },
   drop(/** @type {string} */ name) { const i = this.rows.findIndex(r => r.name === name); if (i >= 0) { this.rows.splice(i, 1); this.paint(); } },
-  // the rows that ended go away (a new loading, «Close»)
+  // the rows that ended go away (a new loading, «Close», «Remove all files»)
   clearDone() { const n = this.rows.length; this.rows = this.running(); if (n !== this.rows.length) this.paint(); },
+  // the ended row of a removed file goes with it: the summary keeps no line for a file no longer in the list
+  dropEnded(/** @type {string} */ name) { const r = this.find(name); if (r && CONV_FINAL.includes(r.state)) this.drop(name); },
   // the table is drawn again at most once per task, however many rows change together (a whole batch is added in one loop); the rows themselves change in place (fill)
   paint() {
     if (this.pq) return;
