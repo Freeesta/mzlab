@@ -171,7 +171,11 @@ pub(super) fn chromatogram(mut h: Head, n: usize) -> Result<Chrom> {
     let unit = h
         .arrays
         .iter()
-        .find_map(|a| a.terms.get("MS:1000515").or_else(|| a.terms.get("MS:1000821")))
+        .find_map(|a| {
+            a.terms
+                .get("MS:1000515")
+                .or_else(|| a.terms.get("MS:1000821"))
+        })
         .map_or(String::new(), |t| t.unit_name.clone());
     // our writer puts the generic counts on every trace array and the real unit (pascal, bar, ...) in the userParam `unità`, as `trace_unit::resolve`
     let unit = match h.terms.user("unità") {

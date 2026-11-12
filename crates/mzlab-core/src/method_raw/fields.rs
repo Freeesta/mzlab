@@ -337,7 +337,9 @@ pub fn fields(
     }
     // an XML item is a field only when a section carries it: an Orbitrap method has some 17 000 items, all kept as text in `grezzo`
     for it in xml.iter().filter(|it| it.name.contains("/ScanEvent/")) {
-        all.push(Field::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value).map("ms.periodi"));
+        all.push(
+            Field::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value).map("ms.periodi"),
+        );
     }
     for c in &mut all {
         c.identita |= ident.names(&c.valore);

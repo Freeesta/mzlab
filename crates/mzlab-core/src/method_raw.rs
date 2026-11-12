@@ -139,7 +139,9 @@ fn sampler(pairs: &[script::Pair]) -> Option<V> {
 /// never pushed out by a long XML), without the characters outside the XML `Char` production.
 fn raw_texts(blocks: &[String]) -> Vec<V> {
     let mut order: Vec<usize> = (0..blocks.len()).collect();
-    crate::sortc::slice_by(&mut order, |&a, &b| blocks[a].len().cmp(&blocks[b].len()).then(a.cmp(&b)));
+    crate::sortc::slice_by(&mut order, |&a, &b| {
+        blocks[a].len().cmp(&blocks[b].len()).then(a.cmp(&b))
+    });
     let mut room = vec![0; blocks.len()];
     let mut left = GRAW_MAX;
     for i in order {
