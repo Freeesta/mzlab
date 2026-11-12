@@ -9,6 +9,7 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-mzlab-core = { path = "../mzlab-core" }
+# `isotopi-tutti`: the natural abundances of every element for the isotope pattern of `anal/1`, as the app and the CLI have them (same bytes)
+mzlab-core = { path = "../mzlab-core", features = ["isotopi-tutti"] }
 mzlab-feat = { path = "../mzlab-feat" }
 wasm-bindgen = "0.2"
