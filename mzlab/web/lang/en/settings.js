@@ -29,7 +29,7 @@ I18N.add("en", {
   "settings.reset.title": "Starting values; open files do not change",
   "settings.close": "Close the settings",
   "bug.what.tip": "What you did and what happened",
-  "bug.info.tip": "Diagnostics with no names or data; the site sends nothing",
+  "bug.info.tip": "Shows the diagnostics added, with no file names",
   "bug.open.tip": "New GitHub issue with this text",
   "bug.copy.tip": "Copies the whole report",
   "bug.mail.tip": "Opens your mail with the report",
