@@ -754,7 +754,9 @@ mod activation_tests {
                     high_mz: 50.0 * f64::from(k + 2) + f64::from(i),
                 })
                 .collect();
-            e.coefficients = (0..i % 6).map(|k| f64::from(i) * 1e-3 + f64::from(k)).collect();
+            e.coefficients = (0..i % 6)
+                .map(|k| f64::from(i) * 1e-3 + f64::from(k))
+                .collect();
             events.push(e);
         }
         let mut table = ScanEventTable::with_capacity(events.len());
@@ -763,7 +765,11 @@ mod activation_tests {
         }
         assert_eq!(table.len(), events.len());
         for (i, e) in events.iter().enumerate() {
-            assert_eq!(format!("{:?}", table.get(i).unwrap()), format!("{e:?}"), "event {i}");
+            assert_eq!(
+                format!("{:?}", table.get(i).unwrap()),
+                format!("{e:?}"),
+                "event {i}"
+            );
         }
         assert!(table.get(events.len()).is_none());
     }
