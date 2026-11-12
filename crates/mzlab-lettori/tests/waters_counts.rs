@@ -162,7 +162,7 @@ fn a_missing_member_of_a_function_is_named() {
         let n = notices(&mut l);
         assert!(
             n.iter()
-                .any(|x| x.ends_with(&format!("function 2: {gone} missing"))),
+                .any(|x| x.contains(&format!("function 2: {gone} missing"))),
             "{gone}: {n:?}"
         );
     }

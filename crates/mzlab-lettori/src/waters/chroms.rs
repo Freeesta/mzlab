@@ -25,8 +25,18 @@ pub(super) struct Analog {
     pub(super) raw_value: String,
 }
 
-/// The analog traces `_CHROMS.INF` lists (none when the folder has no `_CHROMS.INF`); a list that is there and cannot be read is an error, not an empty list.
-pub(super) fn analog(c: &mut Folder) -> Result<Vec<Analog>> {
+/// The analog traces `_CHROMS.INF` lists (none when the folder has no `_CHROMS.INF`); a list that is there and cannot be read leaves the traces out, with the notice that says so.
+pub(super) fn analog(c: &mut Folder) -> (Vec<Analog>, Option<String>) {
+    match listed(c) {
+        Ok(v) => (v, None),
+        Err(_) => (
+            Vec::new(),
+            Some(format!("{CHROMS_INF} unreadable: analog traces left out")),
+        ),
+    }
+}
+
+fn listed(c: &mut Folder) -> Result<Vec<Analog>> {
     let Some(b) = c.read(CHROMS_INF)? else {
         return Ok(Vec::new());
     };
@@ -209,17 +219,32 @@ pub(super) fn all_of_them(l: &mut WatersReader) -> Result<Vec<Chromatogram>> {
         if !l.funs[i].f.mirato() {
             continue;
         }
-        match channels(l, i, out.len() + 1)? {
+        // a function whose channels cannot be read is left out with its notice, the other chromatograms are read
+        match channels(l, i, out.len() + 1).ok().flatten() {
             Some(v) => out.extend(v),
+            None if l.funs[i].left_out.is_some() => {}
             None => {
                 let a = format!("{}: function {} channels", l.c.name, l.funs[i].f.indice);
                 l.warnings.push(("meta.nonDecodificato".into(), a));
             }
         }
     }
+    let mut gone = Vec::new();
     for a in l.analogiche.clone() {
         let n = out.len();
-        out.extend(trace(&mut l.c, &a, n)?);
+        match trace(&mut l.c, &a, n) {
+            Ok(h) => out.extend(h),
+            Err(_) => gone.push(format!("{} ({})", a.n, a.name)),
+        }
+    }
+    if !gone.is_empty() {
+        let a = format!(
+            "{}: {} analog traces unreadable, left out: {}",
+            l.c.name,
+            gone.len(),
+            gone.join(", ")
+        );
+        l.warnings.push(("meta.nonDecodificato".into(), a));
     }
     for (i, h) in out.iter_mut().enumerate() {
         h.index = i;

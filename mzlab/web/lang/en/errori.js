@@ -457,6 +457,7 @@ I18N.add("en", {
   "warn.file.memberMissing": "A data file of the folder is missing (for example _FUNC002.DAT): the scans its index lists are not read, the rest is read and written. Check the copy of the folder.",
   "warn.file.recordWidth": "A function of the folder stores its points in a record size mzLab does not decode: its scans are not read, the rest is read and written.",
   "warn.wiff.damaged": "Some scan blocks of the .wiff.scan do not match the index of the .wiff (a damaged copy): they are left out and counted, the rest is read and written. Check the copy of the file.",
+  "warn.waters.damaged": "Some parts of the .raw folder are damaged (a scan with records no acquisition writes, an index that does not match its data, functions the function list or the calibration lines of _HEADER.TXT lost): they are left out and counted, never read with other m/z; the rest is read and written. Check the copy of the folder.",
   "warn.raw.eventsRefused": "The table of scan events could not be read: the scans after the point where it stops are read and written, with their MS level and polarity unknown.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
   "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",

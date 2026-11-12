@@ -11,7 +11,7 @@ use mzlab_core::json::{self, Value};
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::readers::{
-    ChromatogramEntry, Field, Format, Losses, Reader, Sample, ScanEntry, DAMAGED, EVENTS_REFUSED,
+    cause_key, ChromatogramEntry, Field, Format, Losses, Reader, Sample, ScanEntry, EVENTS_REFUSED,
     TRUNCATED,
 };
 use mzlab_core::transport::{
@@ -347,14 +347,13 @@ impl<M: Module> Reader for ExternalReader<M> {
     fn missing(&mut self, c: usize) -> usize {
         self.m.missing(c).unwrap_or(0) as usize
     }
-    /// As the module's reader: scans past the end of a cut file or in damaged blocks (out of the index), or scans it lists without their event (in it).
+    /// As the module's reader: scans it lists without their event (in it), else scans out of the index with the cause key the module gives (a cut file by default).
     fn losses(&mut self, c: usize) -> Result<Losses> {
         let lacking = self.missing(c);
         let n = self.index(c)?.len();
         Ok(match self.m.cause(c)?.as_str() {
             EVENTS_REFUSED => Losses::of(n, n.saturating_sub(lacking), EVENTS_REFUSED),
-            DAMAGED => Losses::of(n + lacking, n, DAMAGED),
-            _ => Losses::of(n + lacking, n, TRUNCATED),
+            k => Losses::of(n + lacking, n, cause_key(k).unwrap_or(TRUNCATED)),
         })
     }
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
