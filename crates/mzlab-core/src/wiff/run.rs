@@ -197,7 +197,9 @@ impl Wiff {
                 None => scan::point_count(scan, self.scan_len, r.at, r.end)?,
             };
             if let Some(count) = count {
-                if count > 0 && self.is_full_scan(r.experiment) {
+                // a scan head is never decoded as MRM values, also when the block is damaged (`visit` leaves it out of the TIC too)
+                if count > 0 && self.is_full_scan(r.experiment) && !r.damaged(Some(count as usize))
+                {
                     blocks.add_tic(r, None);
                 }
                 continue;
