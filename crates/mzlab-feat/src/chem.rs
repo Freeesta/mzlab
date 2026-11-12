@@ -17,6 +17,7 @@ pub mod graph;
 mod graph_record;
 mod groups;
 pub mod labels;
+pub mod link;
 pub mod mech;
 #[cfg(feature = "sub")]
 pub mod moiety;
