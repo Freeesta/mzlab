@@ -81,7 +81,6 @@ I18N.add("it", {
   "int.snap.zero": "A zero",
   "int.snap.man": "Manuale",
   "int.snap.menu": "Aggancio del punto",
-  "canali.sim.help": "File SIM aperto: ogni ione monitorato è un canale. Aggiungi un grafico con «+ Ioni SIM», scegli gli ioni e integra i loro picchi: ogni finestra entra nella tabella «Integrazioni manuali».",
   "canali.manint.h.channel": "Canale",
   "canali.manint.h.name": "Nome",
   "canali.manint.h.sample": "Campione",

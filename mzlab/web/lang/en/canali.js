@@ -81,7 +81,6 @@ I18N.add("en", {
   "int.snap.zero": "To zero",
   "int.snap.man": "Manual",
   "int.snap.menu": "Point snap",
-  "canali.sim.help": "SIM file open: every monitored ion is a channel. Add a graph with «+ SIM ions», choose the ions and integrate their peaks: each window goes into the «Manual integrations» table.",
   "canali.manint.h.channel": "Channel",
   "canali.manint.h.name": "Name",
   "canali.manint.h.sample": "Sample",
