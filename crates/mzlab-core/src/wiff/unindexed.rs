@@ -163,6 +163,7 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
         polarity: donor.polarity,
         method: donor.method.clone(),
         dad: None,
+        devices: Vec::new(),
         model: donor.model.clone(),
         serial: donor.serial.clone(),
         source_type: donor.source_type.clone(),
