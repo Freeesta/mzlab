@@ -302,7 +302,6 @@ declare var addMs2Spec: any;
 declare var addPanel: any;
 declare var addTrace: any;
 declare var adductPair: any;
-declare var affAccanto: any;
 declare var affAnnulla: any;
 declare var affBusy: any;
 declare var affCloseMenu: any;

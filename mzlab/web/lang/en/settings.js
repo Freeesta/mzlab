@@ -64,8 +64,6 @@ I18N.add("en", {
   "settings.pal.rainbow": "Rainbow",
   "settings.pal.bw": "Black and white",
   "settings.merge": "Merge the centroids of the same nominal mass",
-  "settings.beside": "Spectrum beside the chromatogram",
-  "settings.beside.title": "The double-click spectrum, in the same row",
   "settings.xiclens": "XIC lens on peak hover",
   "settings.xiclens.title": "XIC preview on a peak; a click opens it",
   "settings.libs.label": "Spectral libraries",

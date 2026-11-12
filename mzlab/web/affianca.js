@@ -268,15 +268,6 @@ if (typeof AZIONI !== "undefined") {
   reg({ id: "disp.ripristina", ordine: 6, menu: false, nome: () => AFF_T("aff.menu.reset"), disponibile: () => affSplit(), esegui: () => affRipristina() });
 }
 
-/** The spectrum opened from `from` goes to its right, in the same row, when `from` is alone in its row and the two fit; otherwise it stays below. */
-function affAccanto(/** @type {any} */ s, /** @type {any} */ from) {
-  if (!s.el || !from.el || !affEligible(s) || !affEligible(from)) return false;
-  const row = LAYOUT.righeDi(affStack()).find(r => r.includes(from));
-  if (!row || row.length !== 1) return false;
-  const d = { k: "dx", t: from.id };
-  return affOkFor(s, d) && affFai(s, d, false);
-}
-
-const AFFIANCA = { accanto: affAccanto, grip: affGrip, sync: affSync, annulla: affAnnulla, ultimo: affUltimo, fai: affFai, rifai: affRifai, ripristina: affRipristina, eligible: affEligible };
+const AFFIANCA = { grip: affGrip, sync: affSync, annulla: affAnnulla, ultimo: affUltimo, fai: affFai, rifai: affRifai, ripristina: affRipristina, eligible: affEligible };
 window.AFFIANCA = AFFIANCA;
 if (window.BARRA && BARRA.late) BARRA.late();
