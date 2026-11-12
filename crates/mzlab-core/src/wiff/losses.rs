@@ -20,9 +20,8 @@ impl WiffReader {
                 .filter(|(r, k)| !r.cut(len) && r.damaged(k.is_some()))
                 .count();
         let cause = if cut > 0 { TRUNCATED } else { DAMAGED };
-        let scans = (0..p.w.experiments.len()).any(|e| p.w.scan_experiment(e));
-        // a whole MRM sample stays `complete(0)`, as every record of it was before cycles were counted
-        if n == 0 && p.damaged == 0 && !scans && cut + bad > 0 {
+        // an MRM sample (cycles, no spectra) counts its cycles; a whole one stays `complete(0)`, as every record of it was before cycles were counted
+        if n == 0 && p.damaged == 0 && p.cycles != Default::default() && cut + bad > 0 {
             return Ok(Losses::of(p.cycles.read + cut + bad, p.cycles.read, cause).in_cycles());
         }
         Ok(Losses::of(n + cut + bad, n, cause))

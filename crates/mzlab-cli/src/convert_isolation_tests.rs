@@ -66,7 +66,7 @@ fn the_healthy_samples_of_a_pair_with_a_damaged_one_are_written_as_from_the_whol
         o.stderr
     );
     assert!(
-        o.stderr.contains("err.file.wiff detail=TOF block blocks=3"),
+        o.stderr.contains("err.file.wiff detail=TOF block"),
         "{}",
         o.stderr
     );

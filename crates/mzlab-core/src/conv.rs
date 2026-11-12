@@ -91,7 +91,7 @@ pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
         s += lost.cause;
         s.push('"');
         // an MRM sample counts its cycles: the key is there only then, so every other record is as it was
-        if lost.unit == crate::readers::CYCLES {
+        if !lost.unit.is_empty() {
             s += ",\"unita\":\"cicli\"";
         }
     }

@@ -166,14 +166,8 @@ fn refusal(fs: &FileSet, name: String) -> Error {
         }
         if ONLY_HERE.contains(e) {
             // a `.wiff.scan` has no signature of its own: its pair is refused for the `.wiff` beside it, which is the file to name
-            let pair = (*e == ".wiff.scan")
-                .then(|| {
-                    fs.membri
-                        .iter()
-                        .find(|w| w.nome.to_ascii_lowercase().ends_with(".wiff"))
-                })
-                .flatten();
-            let (m, e) = pair.map_or((m, *e), |w| (w, ".wiff"));
+            let pair = fs.find(".wiff").filter(|_| *e == ".wiff.scan");
+            let (m, e) = pair.and_then(|i| fs.membri.get(i)).map_or((m, *e), |w| (w, ".wiff"));
             return Error::new("err.file.notThisFormat")
                 .with("name", short(&m.nome))
                 .with("ext", e)

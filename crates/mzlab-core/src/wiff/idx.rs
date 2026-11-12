@@ -76,30 +76,28 @@ pub(super) fn place(
     let Some(section) = section else {
         return (Vec::new(), entries.len());
     };
-    let kept: Vec<(usize, &Entry)> = entries
-        .iter()
-        .enumerate()
-        .filter(|(_, e)| !e.zeroed())
-        .collect();
-    let empty_first =
-        entries.first().is_some_and(Entry::zeroed) && entries.get(1).is_some_and(|e| !e.zeroed());
     let start = |e: &Entry| section + u64::from(e.offset) + super::scan::PAYLOAD_SKIP;
-    let records = kept
-        .iter()
-        .enumerate()
-        .map(|(i, &(k, e))| super::Record {
+    let (mut records, mut zeroed) = (Vec::<super::Record>::new(), 0);
+    for (k, e) in entries.iter().enumerate() {
+        if e.zeroed() {
+            zeroed += 1;
+            continue;
+        }
+        if let Some(last) = records.last_mut() {
+            last.end = start(e);
+        }
+        records.push(super::Record {
             at: start(e),
-            end: kept.get(i + 1).map_or(scan_len, |n| start(n.1)),
+            end: scan_len,
             size: e.size,
             time_min: e.time_ms / 60000.0,
             tic: e.tic,
             cycle: k / n_exp,
             experiment: k % n_exp,
             points: if ida { f64::NAN } else { e.points },
-        })
-        .collect();
-    (
-        records,
-        entries.len() - kept.len() - usize::from(empty_first),
-    )
+        });
+    }
+    let empty_first =
+        entries.first().is_some_and(Entry::zeroed) && entries.get(1).is_some_and(|e| !e.zeroed());
+    (records, zeroed - usize::from(empty_first))
 }

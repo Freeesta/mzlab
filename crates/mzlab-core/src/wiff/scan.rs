@@ -220,10 +220,10 @@ pub struct Tally {
 }
 
 impl Tally {
-    /// The count of damaged blocks, or the refusal of a sample that has nothing else (with that count: `blocks`).
+    /// The count of damaged blocks, or the refusal of a sample that has nothing else.
     pub fn check(self) -> Result<usize> {
         match self.first {
-            Some(c) if !self.usable => Err(c.error().with("blocks", self.damaged)),
+            Some(c) if !self.usable => Err(c.error()),
             _ => Ok(self.damaged),
         }
     }

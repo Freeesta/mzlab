@@ -125,8 +125,9 @@ impl WiffReader {
             .get_mut(c)
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
         if !p.ready {
-            p.w.readable()?;
-            build(p, &mut self.scan, self.scan_len, self.scan_member)?;
+            if p.w.readable().is_ok() {
+                build(p, &mut self.scan, self.scan_len, self.scan_member)?;
+            }
             p.w.readable()?;
             // the list of samples told 0 scans for an injection `apri_solo` left out
             if let Some(k) = self.campioni.get_mut(c) {

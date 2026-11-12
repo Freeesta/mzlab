@@ -79,10 +79,7 @@ fn a_sample_with_every_block_damaged_is_refused_alone() {
     let e = broken.refused(0).expect("sample 1 is refused");
     assert_eq!(e.key, "err.file.wiff");
     let param = |k: &str| e.params.iter().find(|p| p.0 == k).map(|p| p.1.clone());
-    assert_eq!(
-        (param("detail").as_deref(), param("blocks").as_deref()),
-        (Some("TOF block"), Some("3"))
-    );
+    assert_eq!(param("detail").as_deref(), Some("TOF block"));
     assert!(broken.index(0).is_err());
     for c in 1..3 {
         assert!(broken.refused(c).is_none());

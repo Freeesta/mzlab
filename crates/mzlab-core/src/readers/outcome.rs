@@ -46,7 +46,7 @@ impl Losses {
     }
     /// The word of the unit in a line of text.
     pub fn unit_word(&self) -> &'static str {
-        if self.unit == CYCLES {
+        if !self.unit.is_empty() {
             "MRM cycles"
         } else {
             "spectra"
