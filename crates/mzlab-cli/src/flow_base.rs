@@ -403,6 +403,9 @@ pub(crate) fn write_mzml(
     write_mzml_with(path, label, out, (peaks, opz), &mut |_, _| {}, &None).map(|w| w.0)
 }
 
+/// What `write_mzml_with` gives: profile kept, size, SHA-256, losses of the read, centroids flagged (merged, saturated).
+type Written = (bool, u64, String, Losses, (usize, usize));
+
 /// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`. With the flag
 /// `stop` up the write ends at the next piece with `err.flow.cancelled`. Gives whether the file keeps its profile points, the size and SHA-256 of the file
 /// written, hashed while it was written, what the read of the sample lost and the centroids of our own peak picking flagged (merged, saturated).
@@ -413,7 +416,7 @@ pub(crate) fn write_mzml_with(
     (peaks, opz): (Peaks, Options),
     step: &mut dyn FnMut(usize, usize),
     stop: &Stop,
-) -> Result<(bool, u64, String, Losses, (usize, usize))> {
+) -> Result<Written> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
