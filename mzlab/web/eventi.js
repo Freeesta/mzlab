@@ -36,7 +36,7 @@ function attach(p) {
   const moveCur = x => {
     const a = p._a; if (!a || x == null) return;
     p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
-    if (!p._lm) { p._lm = true; FRAME.next(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
+    if (!p._lm) { p._lm = true; FRAME.next(() => { p._lm = false; const sn = ms2Chrom(p) ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
   };
   // the dot on top of the line: dragged with mouse, finger or pen; the arrows move it one scan (Shift: five)
   if (p.ch) {
@@ -169,7 +169,7 @@ function attach(p) {
     else if (p.type !== "spec") {
       const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 12 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { if (window.DDA && DDA.onTri(p, tt)) return; goMs2(tt); return; }          // a triangle: that MS2 scan (in the DDA trio, or in the MS2 tab)
-      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); if (p.sel && x0 >= p.sel[0] && x0 <= p.sel[1]) p._dsel = [p.sel, e ? e.timeStamp : performance.now()]; p.sel = null; p.cur = xs; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs && !p.sel) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
+      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); if (p.sel && x0 >= p.sel[0] && x0 <= p.sel[1]) p._dsel = [p.sel, e ? e.timeStamp : performance.now()]; p.sel = null; p.cur = xs; const sn = ms2Chrom(p) && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs && !p.sel) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }
   };
   addEventListener("mouseup", p._up, { signal: p._ac.signal });
@@ -259,6 +259,7 @@ function wlCtl(p) {
   p._kw = p.kind;
   if (pda) { p.mz0 ??= p.mz1; p.mz1 ??= p.mz0; }      // a wavelength range has both ends, or none
   if (b) { b.dataset.t0 ??= b.title; b.textContent = pda ? "λ" : "XIC"; b.title = pda ? I18N.t("panel.wl.title") : b.dataset.t0; }
+  if (b && (p.tab || E.tab) === "ms2") { b.disabled = ms2Chrom(p); if (!pda) b.title = I18N.t(b.disabled ? "panel.xic.off" : "panel.xic.title"); }      // MS2 tab: the XIC is off on the MS2 scans only
   return !pda || p.mz0 == null ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
 }
 /** A trace of the DAD at the wavelengths nm0..nm1 (a PDA chromatogram) under panel `from`. @param {any} from @param {number} nm0 @param {number} nm1 @param {number} [k] */

@@ -2,7 +2,9 @@
 "use strict";
 // Channels of the files (api/canali, canali-dati.md): the cache of the channels of a file, the trace of a channel, the same channel across files (omologo),
 // the tree selector of the chromatogram and MRM panels and the default channel of an experiment type. Only glue: every number comes from the engine.
-// Classic helpers used by name: E, I18N, EH, J, memo, getMrm, PAL, DASHES, fdash, shownFor, tabFiles, ESC, COMANDI, ctl, draw, uiSave, CAL, ESP.
+// In an MRM / SIM panel and in the MS2 chromatogram the UV/Vis rows open a chromatogram of that detector right under the panel, in the same tab.
+// Classic helpers used by name: E, I18N, EH, J, memo, getMrm, PAL, DASHES, fdash, shownFor, tabFiles, ESC, COMANDI, ctl, draw, uiSave, CAL, ESP,
+// addPanel, apriAnnullabile, stackAfter, relayout, fitHost, reveal.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
@@ -89,16 +91,21 @@
     Promise.all(fl.map((/** @type {any} */ f) => canali(f.k).catch(() => null))).then(() => { p._canLoading = false; if (p.el && p.el.isConnected) { ctl(p); } });
   }
 
-  /** @typedef {{ hasScan: boolean, hasPda: boolean, an: [string, any][], reg: boolean }} Ctx what the files of the tab have besides mass spectra */
-  /** the kinds that are not channels of scans: [value, label, title] by group @param {Ctx} cx @returns {[string, string, string][][]} */
+  /** @typedef {{ hasScan: boolean, hasPda: boolean, an: [string, any][], reg: boolean, ms2?: boolean }} Ctx what the files of the tab have besides mass spectra (ms2: the MS2 chromatogram) */
+  /** the kinds that are not channels of scans: [value, label, title] by group (UV/Vis, the other detectors, the log) @param {Ctx} cx @returns {[string, string, string][][]} */
   const others = cx => {
+    /** @type {[string, string, string][]} */ const uv = [];
     /** @type {[string, string, string][]} */ const det = [];
     /** @type {[string, string, string][]} */ const log = [];
-    if (cx.hasPda) det.push(["pda", T("ctl.kind.pda"), T("ctl.kind.pda.title")]);
+    if (cx.hasPda) uv.push(["pda", T("ctl.kind.pda"), T("ctl.kind.pda.title")]);
     cx.an.forEach(([v, a]) => det.push([v, v === "press" ? T("ctl.kind.press") : a.id, ""]));
     if (cx.reg) log.push(["reg", T("ctl.kind.reg"), T("ctl.kind.reg.title")]);
-    return [det, log];
+    return [uv, det, log];
   };
+  /** the files have this detector trace (DAD or an analog trace): what a UV/Vis row of the picker can open @param {string} v @param {any[]} files */
+  const hasKind = (v, files) => v === "pda" ? files.some(f => f.pda) : (v === "press" || v.startsWith("an:")) && files.some(f => (f.analog || []).some((/** @type {any} */ a) => (a.kind === "pressure" ? "press" : "an:" + a.id) === v));
+  /** a panel whose UV/Vis rows open a new chromatogram (its own rows are transitions, SIM ions or the MS2 scans) @param {any} p */
+  const opener = p => ESP.mrm(p) || (p.type === "chrom" && (p.tab || E.tab) === ESP.ms2 && !isOther(p));
   /** a panel that plots a kind that is not a channel of scans (PDA, pressure, log of the instrument) @param {any} p */
   const isOther = p => ["pda", "press", "reg"].includes(p.kind) || (typeof p.kind === "string" && p.kind.startsWith("an:"));
   /** the rows of the tree the picker lists: the channels of the files, or TIC and BPC while they are not known @param {Nodo[]} tree @param {Ctx | null} cx @returns {Nodo[]} */
@@ -162,8 +169,8 @@
   const sgShort = (/** @type {string} */ g) => SG()[g] ? SG()[g][0] : g;
   const sgTitle = (/** @type {string} */ g) => SG()[g] ? ` title="${EH(SG()[g][1])}"` : "";
   /** the rows of the other kinds (one at a time, a round mark) @param {any} p @param {[string, string, string][]} list */
-  const kindRows = (p, list) => list.map(([v, et, t]) =>
-    `<div class="can-row" role="treeitem" aria-level="1" aria-selected="${p.kind === v}" tabindex="-1" data-kind="${EH(v)}" aria-label="${EH(et)}"${t ? ` title="${EH(t)}"` : ""}><span class="can-in"><span class="can-car" aria-hidden="true"></span><span class="can-ck can-rd" aria-hidden="true"></span><span class="can-et">${EH(et)}</span></span></div>`).join("");
+  const kindRows = (p, list, cur = p.kind) => list.map(([v, et, t]) =>
+    `<div class="can-row" role="treeitem" aria-level="1" aria-selected="${cur === v}" tabindex="-1" data-kind="${EH(v)}" aria-label="${EH(et)}"${t ? ` title="${EH(t)}"` : ""}><span class="can-in"><span class="can-car" aria-hidden="true"></span><span class="can-ck can-rd" aria-hidden="true"></span><span class="can-et">${EH(et)}</span></span></div>`).join("");
   /** transition key of a merged srm row @param {Nodo} n */
   const nodeKey = n => srmKey(/** @type {any} */ ({ id: n.ids[0] }));
   /** the omologhi that the panel shows as ticked @param {any} p @param {Nodo[]} tree */
@@ -176,16 +183,18 @@
    * lists only its transitions ("" while nothing is known about the files) @param {any} p @param {Ctx} [cx] */
   function html(p, cx) {
     ensure(p);
-    const files = filesOf(p), only = ESP.mrm(p), raw = albero(files);
+    const files = filesOf(p), only = ESP.mrm(p), raw = albero(files), ms2 = !!(cx && cx.ms2);
     if (only && !raw.length) return "";
     const tree = only ? raw : msTree(raw, cx || null), sel = ticked(p, tree), open = !!p._canOpen, sim = only && isSim(tree);
     // the how-to reaches screen readers (aria-describedby) and the hover text of the list; on screen the rows speak for themselves
     const hint = `can-hint-${EH(String(p.id))}`, nTr = tree.filter(isTr).length, tools = only ? `<div class="can-tb"><span class="can-hint sr-only" id="${hint}">${EH(T("canali.pick.hint"))}</span><button type="button" class="sec sm can-all" aria-label="${EH(T("canali.pick.all.aria"))}" aria-pressed="${sel.size === nTr}">${EH(T("canali.pick.all"))}</button><button type="button" class="sec sm can-none" aria-label="${EH(T("canali.pick.none.aria"))}" aria-pressed="${!sel.size}">${EH(T("canali.pick.none"))}</button></div>` : "";
-    const head = sim ? `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span></div>` : `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span><span>${T("canali.col.sigla")}</span><span title="${EH(T("canali.col.n.title"))}">${T("canali.col.n")}</span><span title="${EH(T("canali.col.rt.title"))}">${T("canali.col.rt")}</span>${files.length > 1 ? `<span>${T("canali.col.file")}</span>` : ""}</div>`;
+    const head = sim || ms2 ? `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span></div>` : `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span><span>${T("canali.col.sigla")}</span><span title="${EH(T("canali.col.n.title"))}">${T("canali.col.n")}</span><span title="${EH(T("canali.col.rt.title"))}">${T("canali.col.rt")}</span>${files.length > 1 ? `<span>${T("canali.col.file")}</span>` : ""}</div>`;
     const grp = (/** @type {string} */ name, /** @type {string} */ body) => body ? `<div role="group" aria-label="${EH(name)}"><div class="can-gh" aria-hidden="true">${EH(name)}</div>${body}</div>` : "";
-    const [det, log] = cx ? others(cx) : [[], []];
-    const body = only ? rows(p, tree, sel, true, files.length, sim) : grp(T("canali.grp.ms"), rows(p, tree, sel, false, files.length)) + grp(T("canali.grp.det"), kindRows(p, det)) + grp(T("canali.grp.log"), kindRows(p, log));
-    const txt = only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
+    const [uv, det, log] = cx ? others(cx) : [[], [], []], kinds = grp(T("canali.grp.uv"), kindRows(p, uv, ms2 ? "ms2" : undefined)) + grp(T("canali.grp.det"), kindRows(p, det, ms2 ? "ms2" : undefined));
+    const body = ms2 ? grp(T("canali.grp.ms"), kindRows(p, [["ms2", T("ctl.ms2scans"), T("ctl.noMs2")]], "ms2")) + kinds
+      : only ? (kinds ? grp(T("canali.grp.ms"), rows(p, tree, sel, true, files.length, sim)) + kinds : rows(p, tree, sel, true, files.length, sim))
+      : grp(T("canali.grp.ms"), rows(p, tree, sel, false, files.length)) + kinds + grp(T("canali.grp.log"), kindRows(p, log));
+    const txt = ms2 ? T("ctl.ms2scans") : only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
     return `<span class="can"><button class="bt canb" type="button" data-o="${only ? "canali" : "kind"}" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T(only ? "canali.btn.title" : "ctl.kind.title"))}" aria-label="${EH(aria)}"><span class="can-bt">${EH(txt)}</span><span class="can-dn" aria-hidden="true">▾</span></button>` +
       `<div class="sp-pop can-pop${sim ? " can-sim" : ""}" ${open ? "" : "hidden"}>${tools}${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true"${only ? ` aria-describedby="${hint}" title="${EH(T("canali.pick.hint"))}"` : ""} class="can-tree">${body}</div></div></span>`;
   }
@@ -232,11 +241,27 @@
     ctl(p); draw(p); uiSave();
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector(".can-none")); if (b) b.focus();
   }
-  /** a click on a row of another kind (PDA, a detector, the log): the panel plots that and nothing else @param {any} p @param {string} v */
+  /** a click on a row of another kind (PDA, a detector, the log): the panel plots that and nothing else; in an MRM / SIM panel or the MS2 chromatogram
+   * the row opens (or shows again) a chromatogram of that detector right under the panel, time-linked as every new chromatogram @param {any} p @param {string} v */
   function pickKind(p, v) {
+    if (opener(p)) return openKind(p, v);
     COMANDI.fai("panel.source", p, () => { p.kind = v; p.canali = undefined; });
     p._canOpen = false; ctl(p); draw(p); uiSave();
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-o="kind"]')); if (b) b.focus();
+  }
+  /** @param {any} p @param {string} v */
+  function openKind(p, v) {
+    p._canOpen = false; ctl(p);
+    const files = filesOf(p), back = () => { const b = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-o="canali"],[data-o="kind"]')); if (b) b.focus(); };
+    if (!hasKind(v, files)) return back();
+    let q = E.panels.find((/** @type {any} */ x) => x.type === "chrom" && x.tab === p.tab && x.kind === v && x.mz0 == null);
+    if (!q) {
+      q = apriAnnullabile(addPanel("chrom", { kind: v, tab: p.tab }));
+      q.el.classList.add("drag"); q.y = p.y + p.h; q.el.style.top = q.y + "px"; void q.el.offsetHeight; q.el.classList.remove("drag");
+      stackAfter(q, p); relayout(); fitHost(); uiSave();
+    }
+    reveal(q);
+    const b = /** @type {HTMLElement | null} */ (q.el.querySelector('[data-o="kind"]')); if (b) b.focus(); else back();
   }
   /** the focus moves among the visible rows @param {HTMLElement} row @param {number} d */
   function moveFocus(row, d) {
@@ -257,6 +282,10 @@
     const rowsOf = () => [...pop.querySelectorAll(".can-row")].filter(x => /** @type {HTMLElement} */ (x).offsetParent);
     const focusRow = (/** @type {Element | null | undefined} */ r) => { if (!r) return; pop.querySelectorAll(".can-row").forEach(x => x.setAttribute("tabindex", "-1")); r.setAttribute("tabindex", "0"); /** @type {HTMLElement} */ (r).focus({ preventScroll: true }); };
     const set = (/** @type {boolean} */ v) => { p._canOpen = v; pop.hidden = !v; b.setAttribute("aria-expanded", String(v)); if (v) { place(); focusRow(pop.querySelector(".can-row[aria-selected=true]") || pop.querySelector(".can-row")); } };
+    // a redraw of the controls replaces the button: the focus it had (keyboard, a panel just opened from a UV/Vis row) comes back to the new one
+    b.addEventListener("focus", () => { p._canBtnF = true; });
+    b.addEventListener("blur", e => { if (/** @type {FocusEvent} */ (e).relatedTarget) p._canBtnF = false; });
+    if (p._canBtnF && !p._canOpen && (!document.activeElement || document.activeElement === document.body)) b.focus({ preventScroll: true });
     b.onclick = () => set(!p._canOpen);
     b.onkeydown = e => { if (e.key === "ArrowDown" && !p._canOpen) { e.preventDefault(); set(true); } };
     if (p._canOpen) place();
@@ -343,5 +372,5 @@
   }
   /** the id of the channel with this omologo in file f (null: none, or no omologo) @param {any} f @param {string | null | undefined} omo */
   const idOf = (f, omo) => { const c = omo && f ? find(f.k, omo) : null; return c ? c.id : null; };
-  /** @type {any} */ (window).CANALI = { canali, cached, find, traccia, omologhi, albero, on, html, wire, series, legend, iniziale, tipo, xicOmo, idOf, ensure, chosen };
+  /** @type {any} */ (window).CANALI = { canali, cached, find, traccia, omologhi, albero, on, html, wire, series, legend, iniziale, tipo, xicOmo, idOf, ensure, chosen, isOther, hasKind };
 })();
