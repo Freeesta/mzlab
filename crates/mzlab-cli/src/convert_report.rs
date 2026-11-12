@@ -115,7 +115,10 @@ pub(crate) fn partial_lines(items: &[Item]) -> String {
                 ..
             } => partial_of(c).map(|(declared, read, cause)| {
                 // an MRM sample counts its cycles (`unita`), every other its scans
-                let unit = match mzlab_core::json::parse(c.as_bytes()).ok().and_then(|d| d.get("unita").and_then(|u| u.str().map(str::to_string))) {
+                let unit = match mzlab_core::json::parse(c.as_bytes())
+                    .ok()
+                    .and_then(|d| d.get("unita").and_then(|u| u.str().map(str::to_string)))
+                {
                     Some(u) if u == "cicli" => "MRM cycles",
                     _ => "scans",
                 };

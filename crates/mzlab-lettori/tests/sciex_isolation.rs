@@ -9,11 +9,22 @@ use std::process::Command;
 use mzlab_core::readers::{FileSet, Limits, Losses, Member, Reader, CYCLES, DAMAGED};
 
 fn pairs(tag: &str) -> Option<PathBuf> {
-    let out = std::env::temp_dir().join(format!("mzlab_sciex_isolamento_{tag}_{}", std::process::id()));
+    let out = std::env::temp_dir().join(format!(
+        "mzlab_sciex_isolamento_{tag}_{}",
+        std::process::id()
+    ));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_isolamento.py");
-    let ok = Command::new("python3").arg(script).arg(&out).output().ok().filter(|o| o.status.success());
+    let ok = Command::new("python3")
+        .arg(script)
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
     if ok.is_none() {
-        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 not available");
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
         eprintln!("SKIP sciex_isolation: python3 not available");
         return None;
     }
@@ -23,9 +34,19 @@ fn pairs(tag: &str) -> Option<PathBuf> {
 fn set(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let b = std::fs::read(dir.join(&file)).unwrap();
-        Member { nome: file, dim: b.len() as u64, dati: Box::new(b), sha1: None }
+        Member {
+            nome: file,
+            dim: b.len() as u64,
+            dati: Box::new(b),
+            sha1: None,
+        }
     };
-    FileSet { membri: vec![member(format!("{name}.wiff")), member(format!("{name}.wiff.scan"))] }
+    FileSet {
+        membri: vec![
+            member(format!("{name}.wiff")),
+            member(format!("{name}.wiff.scan")),
+        ],
+    }
 }
 
 fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
@@ -33,11 +54,26 @@ fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
 }
 
 /// What sample `c` gives: its refusal key, or its scans (id, rt, points), chromatograms (id, finite values) and losses.
-fn result(l: &mut dyn Reader, c: usize) -> Result<(Vec<(String, f64, usize)>, Vec<(String, Vec<f64>)>, Losses), &'static str> {
+fn result(
+    l: &mut dyn Reader,
+    c: usize,
+) -> Result<(Vec<(String, f64, usize)>, Vec<(String, Vec<f64>)>, Losses), &'static str> {
     let n = l.index(c).map_err(|e| e.key)?.len();
-    let scans = (0..n).map(|k| l.scan(c, k).map(|s| (s.id, s.rt, s.mz.len()))).collect::<Result<_, _>>().map_err(|e| e.key)?;
-    let ids: Vec<String> = l.chromatograms(c).map_err(|e| e.key)?.into_iter().map(|e| e.id).collect();
-    let traces = ids.iter().map(|id| l.chromatogram(c, id).map(|t| (t.id, t.intensity))).collect::<Result<_, _>>().map_err(|e| e.key)?;
+    let scans = (0..n)
+        .map(|k| l.scan(c, k).map(|s| (s.id, s.rt, s.mz.len())))
+        .collect::<Result<_, _>>()
+        .map_err(|e| e.key)?;
+    let ids: Vec<String> = l
+        .chromatograms(c)
+        .map_err(|e| e.key)?
+        .into_iter()
+        .map(|e| e.id)
+        .collect();
+    let traces = ids
+        .iter()
+        .map(|id| l.chromatogram(c, id).map(|t| (t.id, t.intensity)))
+        .collect::<Result<_, _>>()
+        .map_err(|e| e.key)?;
     Ok((scans, traces, l.losses(c).map_err(|e| e.key)?))
 }
 
@@ -58,8 +94,16 @@ fn the_module_refuses_a_damaged_sample_alone_and_reads_the_others_whole() {
 fn the_module_leaves_out_a_nan_cycle_and_counts_it() {
     let Some(d) = pairs("nan") else { return };
     let (_, traces, lost) = result(open(&d, "mrm_nan").as_mut(), 0).unwrap();
-    assert!(!traces.is_empty() && traces.iter().all(|t| t.1.len() == 9 && t.1.iter().all(|x| x.is_finite())));
-    assert_eq!((lost.declared, lost.read, lost.cause, lost.unit), (10, 9, DAMAGED, CYCLES));
+    assert!(
+        !traces.is_empty()
+            && traces
+                .iter()
+                .all(|t| t.1.len() == 9 && t.1.iter().all(|x| x.is_finite()))
+    );
+    assert_eq!(
+        (lost.declared, lost.read, lost.cause, lost.unit),
+        (10, 9, DAMAGED, CYCLES)
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -84,6 +128,9 @@ fn a_wiff_with_a_damaged_start_is_the_file_named() {
     fs.membri[0].dati = Box::new(b);
     let e = mzlab_lettori::apri(fs, &Limits::desktop()).err().unwrap();
     let param = |k: &str| e.params.iter().find(|p| p.0 == k).map(|p| p.1.clone());
-    assert_eq!((e.key, param("name").as_deref(), param("ext").as_deref()), ("err.file.notThisFormat", Some("sano.wiff"), Some(".wiff")));
+    assert_eq!(
+        (e.key, param("name").as_deref(), param("ext").as_deref()),
+        ("err.file.notThisFormat", Some("sano.wiff"), Some(".wiff"))
+    );
     let _ = std::fs::remove_dir_all(&d);
 }

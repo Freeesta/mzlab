@@ -144,7 +144,9 @@ impl Wiff {
                 || self.empty_sim_row(r)
             {
                 continue;
-            } else if let Some(v) = blocks.take(dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?) {
+            } else if let Some(v) =
+                blocks.take(dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?)
+            {
                 blocks.add_dense(r, v);
             }
         }
@@ -207,7 +209,8 @@ impl Wiff {
             if self.scan_experiment(r.experiment) || self.empty_sim_row(r) {
                 continue;
             }
-            if let Some(v) = blocks.take(dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?) {
+            if let Some(v) = blocks.take(dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?)
+            {
                 blocks.add_dense(r, v);
             }
         }
@@ -285,7 +288,11 @@ fn dense_mrm<R: ReadAt>(
     if v.first().is_some_and(|x| *x < 0.0 && x.is_finite()) {
         return Err(crate::error::Error::new("err.file.wiff").with("detail", "sparse MRM block"));
     }
-    Ok(if v.iter().all(|x| x.is_finite()) { Mrm::Read(v) } else { Mrm::Damaged })
+    Ok(if v.iter().all(|x| x.is_finite()) {
+        Mrm::Read(v)
+    } else {
+        Mrm::Damaged
+    })
 }
 
 /// A dense MRM block: a point of the TIC of its experiment and one of each of its transitions.

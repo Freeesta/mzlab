@@ -5,9 +5,9 @@
 mod base;
 pub use base::*;
 
+use super::chromatograms::Mrm;
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use super::chromatograms::Mrm;
 
 /// A count read from the file as a float: saturates, the callers compare it with their limits.
 #[allow(clippy::cast_possible_truncation)]
@@ -28,7 +28,12 @@ const WIDTH_MAX: usize = 100_000;
 /// transitions of the experiment, and goes on with the cps of consecutive transitions and `-(k + 0.01)` for a run of k transitions that measured zero, in
 /// order: every transition gets its point, zeros included, as the vendor library gives them. A block that is neither (a negative or non-finite count, a
 /// sparse block that does not add up to N, a NaN or infinite cps) is `Mrm::Damaged`: the reader leaves that cycle out and counts it, the others are read.
-pub(crate) fn mrm_cols<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, bytes: usize) -> Result<Mrm<Cols>> {
+pub(crate) fn mrm_cols<R: ReadAt>(
+    scan: &mut R,
+    scan_len: u64,
+    at: u64,
+    bytes: usize,
+) -> Result<Mrm<Cols>> {
     let Some(v) = base::read_mrm(scan, scan_len, at, bytes / 4)? else {
         return Ok(Mrm::Absent);
     };

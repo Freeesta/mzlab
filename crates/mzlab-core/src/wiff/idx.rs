@@ -42,7 +42,11 @@ impl Entry {
     /// Every field of the row is zero: it places no block (its offset 0 would read the first block of the section again, and the last row would run
     /// to the end of the file), so it is left out and counted, never read as a scan at rt 0.
     pub fn zeroed(&self) -> bool {
-        self.offset == 0 && self.size == 0 && self.time_ms == 0.0 && self.tic == 0.0 && self.points == 0.0
+        self.offset == 0
+            && self.size == 0
+            && self.time_ms == 0.0
+            && self.tic == 0.0
+            && self.points == 0.0
     }
 }
 
@@ -62,12 +66,23 @@ pub fn parse(data: &[u8]) -> Vec<Entry> {
 /// The blocks the rows of a sample place in a section that starts at `section`: each runs to the start of the next placed row, the last to `scan_len`.
 /// A zeroed row places none, and no row of a sample without a section does; they are counted (`unplaced`, `warn.wiff.damaged`), except a zeroed first
 /// row before a placed one (an empty first scan at time 0 holds nothing to lose).
-pub(super) fn place(entries: &[Entry], section: Option<u64>, scan_len: u64, n_exp: usize, ida: bool) -> (Vec<super::Record>, usize) {
+pub(super) fn place(
+    entries: &[Entry],
+    section: Option<u64>,
+    scan_len: u64,
+    n_exp: usize,
+    ida: bool,
+) -> (Vec<super::Record>, usize) {
     let Some(section) = section else {
         return (Vec::new(), entries.len());
     };
-    let kept: Vec<(usize, &Entry)> = entries.iter().enumerate().filter(|(_, e)| !e.zeroed()).collect();
-    let empty_first = entries.first().is_some_and(Entry::zeroed) && entries.get(1).is_some_and(|e| !e.zeroed());
+    let kept: Vec<(usize, &Entry)> = entries
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| !e.zeroed())
+        .collect();
+    let empty_first =
+        entries.first().is_some_and(Entry::zeroed) && entries.get(1).is_some_and(|e| !e.zeroed());
     let start = |e: &Entry| section + u64::from(e.offset) + super::scan::PAYLOAD_SKIP;
     let records = kept
         .iter()
@@ -83,5 +98,8 @@ pub(super) fn place(entries: &[Entry], section: Option<u64>, scan_len: u64, n_ex
             points: if ida { f64::NAN } else { e.points },
         })
         .collect();
-    (records, entries.len() - kept.len() - usize::from(empty_first))
+    (
+        records,
+        entries.len() - kept.len() - usize::from(empty_first),
+    )
 }

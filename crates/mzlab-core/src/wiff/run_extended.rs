@@ -41,7 +41,8 @@ impl Wiff {
             } else if !matches!(block, scan::Block::Damaged)
                 && !self.is_empty_row(r)
                 && !self.scan_experiment(r.experiment)
-                && let Some(c) = blocks.take(scan::mrm_cols(scan, self.scan_len, r.at, r.size as usize)?)
+                && let Some(c) =
+                    blocks.take(scan::mrm_cols(scan, self.scan_len, r.at, r.size as usize)?)
             {
                 blocks.add(r, c);
             }
@@ -77,7 +78,9 @@ impl Wiff {
             if self.is_empty_row(r) || self.scan_experiment(r.experiment) {
                 continue;
             }
-            if let Some(c) = blocks.take(scan::mrm_cols(scan, self.scan_len, r.at, r.size as usize)?) {
+            if let Some(c) =
+                blocks.take(scan::mrm_cols(scan, self.scan_len, r.at, r.size as usize)?)
+            {
                 blocks.add(r, c);
             }
         }

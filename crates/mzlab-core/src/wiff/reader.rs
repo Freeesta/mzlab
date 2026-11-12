@@ -62,7 +62,7 @@ pub(super) struct Part {
 }
 
 impl Part {
-    fn new(w: Wiff) -> Self {
+    pub(super) fn new(w: Wiff) -> Self {
         Part {
             w,
             scans: Vec::new(),
@@ -126,7 +126,7 @@ impl WiffReader {
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
         if !p.ready {
             p.w.readable()?;
-            isolate(build(p, &mut self.scan, self.scan_len, self.scan_member), &mut p.w.failure)?;
+            build(p, &mut self.scan, self.scan_len, self.scan_member)?;
             p.w.readable()?;
             // the list of samples told 0 scans for an injection `apri_solo` left out
             if let Some(k) = self.campioni.get_mut(c) {
@@ -146,7 +146,8 @@ impl WiffReader {
             p.w.readable()?;
             let mut win = Window::new(&mut self.scan, self.scan_len);
             let counts = Some(&p.counts[..]).filter(|c| p.ready && c.len() == p.w.records.len());
-            (p.chroms, p.cycles) = p.w.chromatograms(&mut win, counts).map(|(t, n)| (Some(t), n))?;
+            let (chroms, cycles) = p.w.chromatograms(&mut win, counts)?;
+            (p.chroms, p.cycles) = (Some(chroms), cycles);
         }
         Ok(p.chroms.as_deref().unwrap_or_default())
     }
@@ -351,7 +352,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         let mut part = Part::new(w);
         // a sample the engine cannot read is left unbuilt: `pronta` refuses it when it is asked for, the others open
         if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
-            isolate(build(&mut part, &mut scan, scan_len, membro), &mut part.w.failure)?;
+            build(&mut part, &mut scan, scan_len, membro)?;
         }
         raw_names.push((
             s,
@@ -366,7 +367,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         });
         parti.push(part);
     }
-    let unindexed = add_unindexed(
+    let unindexed = super::unindexed::add(
         &mut parti,
         &mut campioni,
         &mut raw_names,
@@ -394,42 +395,18 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     }))
 }
 
-/// The sections of the `.wiff.scan` the `.wiff` index does not list (the copy was made while the acquisition ran), rebuilt as samples after the indexed ones
-/// with an inferred name and method; `(recovered, left out)`.
-fn add_unindexed(
-    parti: &mut Vec<Part>,
-    campioni: &mut Vec<Sample>,
-    raw_names: &mut Vec<(u32, Option<String>)>,
-    (scan, scan_len, membro): (&mut Box<dyn ReadAt>, u64, u16),
-    (ole, limits, only): (&Ole, &Limits, Option<usize>),
-    total: &mut u64,
-) -> Result<(usize, usize)> {
-    let known: Vec<&Wiff> = parti.iter().map(|p| &p.w).collect();
-    let (end, last_id) = super::unindexed::index_end(ole, &known);
-    let found = super::unindexed::recover(scan, scan_len, &known, end, last_id);
-    let counts = (found.samples.len(), found.skipped);
-    for w in found.samples {
-        let (i, s) = (parti.len(), w.sample);
-        *total += w.records.len() as u64;
-        limits.ok_entries(*total)?;
-        let mut part = Part::new(w);
-        if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
-            isolate(build(&mut part, scan, scan_len, membro), &mut part.w.failure)?;
-        }
-        raw_names.push((s, None));
-        campioni.push(Sample {
-            id: s,
-            nome: String::new(),
-            scansioni: part.scans.len(),
-            size: None,
-        });
-        parti.push(part);
-    }
-    Ok(counts)
+/// The index of an injection: one row per non-empty scan block whose bytes agree with its head (the blocks are read through a window, front to back).
+/// `blocks` of one injection, a damaged one kept as its refusal (`losses::isolate`).
+pub(super) fn build(
+    p: &mut Part,
+    scan: &mut Box<dyn ReadAt>,
+    scan_len: u64,
+    member: u16,
+) -> Result<()> {
+    isolate(blocks(p, scan, scan_len, member), &mut p.w.failure)
 }
 
-/// The index of an injection: one row per non-empty scan block whose bytes agree with its head (the blocks are read through a window, front to back).
-fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Result<()> {
+fn blocks(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Result<()> {
     let w = &p.w;
     // each block is read whole, its points checked against its bytes: the window stops where the last block's own length ends (the last block of the file
     // runs to its end, a window there would read 1 MB per injection)
