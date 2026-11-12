@@ -43,14 +43,14 @@ function ibPaint(g, X, Y, U, s, it, chosen) {
   if (chosen) { region(); g.strokeStyle = s.color; g.lineWidth = 2.5; g.stroke(); }
   const t0 = it.bm === "line" ? Math.min(xa, it.bl[0], it.bl[2]) : xa, t1 = it.bm === "line" ? Math.max(xb, it.bl[0], it.bl[2]) : xb;
   g.strokeStyle = s.color; g.lineWidth = 1.5; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(X(t0), L(t0)); g.lineTo(X(t1), L(t1)); g.stroke(); g.setLineDash([]);
-  if (it.bm === "line") for (const k of [0, 2]) {
+  if (it.bm === "line" && !it.snap) for (const k of [0, 2]) {          // two anchors (SIM/MRM) are buttons of integra-estremi.js
     g.beginPath(); g.arc(X(it.bl[k]), L(it.bl[k]), 5, 0, 2 * Math.PI); g.fillStyle = ecss("--panel"); g.fill(); g.lineWidth = 2; g.strokeStyle = s.color; g.stroke();
   }
 }
 // the two points of a custom line as 24 px buttons over the chart: drag with mouse, finger or pen; ← → one sample (Shift five), ↑ ↓ 1 % of the axis (Shift 10 %)
 function ibSync(p) {
   const a = p._a, old = p._bp || []; p._bp = [];
-  const list = a && a.sr && !a.cas && a.X && a.yinv && !p._exp ? p.ints.filter(it => it.bm === "line" && it.bl && a.sr.some(q => q.key === it.key)) : [];
+  const list = a && a.sr && !a.cas && a.X && a.yinv && !p._exp ? p.ints.filter(it => it.bm === "line" && it.bl && !it.snap && a.sr.some(q => q.key === it.key)) : [];
   for (const it of list) for (const k of [0, 2]) {
     const s = a.sr.find(q => q.key === it.key), b = old.shift() || ibButton(p);
     b._it = it; b._k = k; b._s = s; b.dataset.k = String(k / 2); p._bp.push(b);
@@ -101,6 +101,10 @@ function ibOpen(p, it) {
       if (k === "edges") { it.bm = "edges"; delete it.bl; delete it.lvl; }
       else if (k === "zero") { it.bm = "zero"; delete it.bl; delete it.lvl; }
       else { it.bm = "line"; it.bl = lvl ? [v[0], v[1], v[2], v[1]] : v; if (lvl) it.lvl = true; else delete it.lvl; }
+      if (it.snap) {                                               // two anchors: the dialog sets their modes (a line: both manual at its two points)
+        const q = k === "line" ? "man" : k === "zero" ? "zero" : "curve"; it.snap = { a: q, b: q }; it.st = E.seq++;
+        if (q === "man") { const l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a"; it[l] = it.bl[0]; it[h] = it.bl[2]; it.my = { [l]: it.bl[1], [h]: it.bl[3] }; } else delete it.my;
+      }
       Q("#bigdlg").close(); uiSave(); draw(p);
     };
   });
