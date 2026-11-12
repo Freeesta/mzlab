@@ -739,7 +739,7 @@ async function doExport(/** @type {string} */ kind) {
     await start();
     if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return; }
     if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
-    if (kind === "mol" || kind === "sdf") return (await import("./disegno-esporta.js")).save(K, kind, Q("#ex-ion").value, exportName(kind), saveBlob);   // written by the Rust engine
+    if (kind === "mol" || kind === "sdf") return await (await import("./disegno-esporta.js")).save(K, kind, Q("#ex-ion").value, exportName(kind), saveBlob);   // written by the Rust engine
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
