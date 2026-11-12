@@ -51,6 +51,7 @@
     "../../mzlab/web/disegno-parziali.js",
     "../../mzlab/web/disegno-taglio.js",
     "../../mzlab/web/disegno-verifica.js",
+    "../../mzlab/web/disegno-cip.js",
     "../../mzlab/web/disegno-radicale.js",
     "../../mzlab/web/disegno-tablet.js",
     "../../mzlab/web/disegno-indigo.js",

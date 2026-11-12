@@ -4,6 +4,10 @@
 pub mod breaks;
 #[cfg(feature = "check")]
 pub mod check;
+#[cfg(feature = "check")]
+pub mod cip;
+#[cfg(feature = "check")]
+mod cip_rank;
 pub mod cut;
 pub mod fragmenter;
 pub mod fragments;
