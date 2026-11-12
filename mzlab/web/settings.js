@@ -213,9 +213,7 @@ function uipOpen(btn) {
   const close = () => { d.remove(); if (btn.isConnected) btn.focus(); };
   on("#uip-x", "click", close);
   document.addEventListener("keydown", function esc(e) { if (!d.isConnected) return document.removeEventListener("keydown", esc); if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); } });       // Esc closes the settings and gives the focus back to the gear
-  // armed at once (a timer could fire after a quick tap on a busy page); the event that opened the settings is skipped
-  const opening = window.event;
-  document.addEventListener("pointerdown", function h(e) { if (e === opening) return; if (!d.isConnected) return document.removeEventListener("pointerdown", h); if (!TEMASOFT.busy() && !d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target) && !/** @type {Element} */ (e.target).closest("dialog")) { d.remove(); document.removeEventListener("pointerdown", h); } });
+  closeOutside(d, e => TEMASOFT.busy() || btn.contains(e.target) || !!e.target.closest("dialog"));
   (d.querySelector("input:checked") || d.querySelector("input,button")).focus();
 }
 

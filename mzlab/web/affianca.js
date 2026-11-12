@@ -175,9 +175,7 @@ function affOpenMenu(/** @type {any} */ p, /** @type {any} */ g) {
     else if (e.key === "ArrowUp") { e.preventDefault(); b[(i - 1 + b.length) % b.length].focus(); }
     else if (e.key === "Tab") affCloseMenu(false);
   });
-  // armed at once (a timer could fire after a quick tap on a busy page); the event that opened the menu is skipped
-  const opening = window.event, away = (/** @type {Event} */ e) => { if (e === opening) return; if (affMenu && !affMenu.contains(/** @type {Node} */ (e.target)) && !g.contains(/** @type {Node} */ (e.target))) { affCloseMenu(false); document.removeEventListener("pointerdown", away, true); } };
-  document.addEventListener("pointerdown", away, true);
+  closeOutside(affMenu, e => g.contains(e.target), () => affCloseMenu(false), true);
   (btns().find(b => b.getAttribute("aria-disabled") !== "true") || btns()[0]).focus();
 }
 function affGrip(/** @type {any} */ p) {
