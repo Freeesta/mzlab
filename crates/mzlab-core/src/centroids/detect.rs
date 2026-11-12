@@ -95,7 +95,7 @@ fn insignificant(buf: &Buf, p: &Params, sigma: f64, a: usize, c: usize, v: usize
     let lower_apex = if buf.s[c] < buf.s[a] { c } else { a };
     match p.mode {
         Mode::Counts => {
-            let h = ((0.25 * p.wb() as f64).ceil() as usize).max(1);
+            let h = ((0.25 * p.wb_at(buf, lower_apex) as f64).ceil() as usize).max(1);
             let (ca, cv) = (raw_near(buf, lower_apex, h), raw_near(buf, v, h));
             ca + cv <= 0.0 || (ca - cv) / (ca + cv).sqrt() < p.k
         }
@@ -105,10 +105,10 @@ fn insignificant(buf: &Buf, p: &Params, sigma: f64, a: usize, c: usize, v: usize
 
 /// The peaks of a scan: candidates merged into the highest apex when they are closer than 0.5 w or the valley between them is not significant.
 pub(super) fn groups(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
-    let wb = p.wb();
     let mut out: Vec<Group> = Vec::new();
     let mut valley = Valley::start(0);
     for c in candidates(buf) {
+        let wb = p.wb_at(buf, c);
         let (lo, hi) = bounds(buf, c, wb);
         let g = Group {
             apex: c,
@@ -159,9 +159,9 @@ pub(super) fn groups_reference(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> 
         }
         v
     };
-    let wb = p.wb();
     let mut out: Vec<Group> = Vec::new();
     for c in candidates(buf) {
+        let wb = p.wb_at(buf, c);
         let (lo, hi) = bounds(buf, c, wb);
         let merge = match out.last() {
             Some(last) => {
