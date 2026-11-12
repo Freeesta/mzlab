@@ -231,7 +231,7 @@ I18N.add("en", {
   "draw.tray.load": "Open list…",
   "draw.tray.load.title": "Adds the structures of a CSV suspect list to the tray",
   "draw.tray.save": "Save suspect list (CSV)",
-  "draw.tray.save.title": "Name, SMILES, formula, monoisotopic mass, charge and the ticked adducts, one structure per line: candidates to look for in the data, never an identification",
+  "draw.tray.save.title": "Download the tray as a suspect list (CSV), one row per structure with the ticked adducts",
   "draw.tray.adducts": "Adducts in the list",
   "draw.tray.caption": "Structure tray, {n} structures",
   "draw.tray.defaultName": "Structure {n}",

@@ -231,7 +231,7 @@ I18N.add("it", {
   "draw.tray.load": "Apri lista…",
   "draw.tray.load.title": "Aggiunge al vassoio le strutture di una lista di sospetti CSV",
   "draw.tray.save": "Salva lista di sospetti (CSV)",
-  "draw.tray.save.title": "Nome, SMILES, formula, massa monoisotopica, carica e gli addotti spuntati, una struttura per riga: candidati da cercare nei dati, mai un'identificazione",
+  "draw.tray.save.title": "Scarica il vassoio come lista di sospetti (CSV), una riga per struttura con i suoi addotti",
   "draw.tray.adducts": "Addotti nella lista",
   "draw.tray.caption": "Vassoio delle strutture, {n} strutture",
   "draw.tray.defaultName": "Struttura {n}",
