@@ -11,7 +11,7 @@ impl WiffReader {
         let p = self.ready(c)?;
         let rows = p.w.records.iter().zip(&p.counts);
         let bad = rows
-            .filter(|(r, k)| k.is_none() && !r.cut(len) && r.points > 0.0)
+            .filter(|(r, k)| !r.cut(len) && r.damaged(k.is_some()))
             .count();
         Ok(Losses::of(
             n + cut + bad,

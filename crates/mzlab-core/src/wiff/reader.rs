@@ -205,7 +205,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.ready(c)?;
         let (p, r) = row(&self.parts, c, k)?;
-        let pts = scan::read_scan(&mut self.scan, self.scan_len, r.at, r.end)?
+        let pts = scan::read_scan_block(&mut self.scan, self.scan_len, r.at, r.end, r.size)?
             .ok_or_else(|| Error::new("err.file.wiff").with("detail", "not a scan"))?;
         Ok(p.w.spectrum_of(k, r, pts))
     }
@@ -444,9 +444,9 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
         let points = if r.cut(scan_len) {
             None
         } else {
-            scan::point_count(&mut win, scan_len, r.at, r.end)?
+            scan::point_count(&mut win, scan_len, r.at, r.end, r.size)?
         };
-        counts.push(points.filter(|&c| !r.damaged(Some(c as usize))));
+        counts.push(points);
         // the first MRM block of each experiment: a sparse (scheduled) one starts with `-(N + 0.01)`, even when the method has no `sMRM` stream to say so
         #[cfg(feature = "sciex")]
         if points.is_none()
@@ -458,7 +458,7 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
             other |= scan::read_mrm(&mut win, scan_len, r.at, 1)?
                 .is_some_and(|v| v.first().is_some_and(|x| *x < 0.0));
         }
-        if !counts.last().copied().flatten().is_some_and(|c| c > 0) {
+        if !points.is_some_and(|c| c > 0) {
             continue;
         }
         #[cfg(feature = "sciex")]

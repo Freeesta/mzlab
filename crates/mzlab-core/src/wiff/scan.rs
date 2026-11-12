@@ -47,6 +47,11 @@ impl Nibbles<'_> {
 
 /// `(bin, count)` of up to `n` points: nibble 1..7 a point of that count; 0 a point with a long count; 8 a long skip; 9..15 a skip of nibble - 8.
 pub fn decode(buf: &[u8], n: usize) -> Vec<(u64, u32)> {
+    decode_used(buf, n).0
+}
+
+/// As `decode`, with the bytes of `buf` the points took (a final half byte counts whole).
+fn decode_used(buf: &[u8], n: usize) -> (Vec<(u64, u32)>, usize) {
     let mut out = Vec::with_capacity(n.min(buf.len().saturating_mul(2)));
     let (mut r, mut pos) = (Nibbles { buf, at: 0 }, 0u64);
     while out.len() < n {
@@ -71,7 +76,7 @@ pub fn decode(buf: &[u8], n: usize) -> Vec<(u64, u32)> {
         }
         pos += 1;
     }
-    out
+    (out, r.at.div_ceil(2))
 }
 
 /// Bytes a decoded point holds at once: `(bin, count)` (16), m/z and intensity (16), the f32 and f64 intensities of the spectrum (12).
@@ -149,6 +154,11 @@ fn head<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Opt
     Ok(Some(Head { ranges, n, len }))
 }
 
+/// Most bytes a block keeps after its points: the 3200 QTRAP files pad a stream of `u` bytes to `u + 4 - u % 4` (1 to 4), the reference writer adds none.
+const PADDING: usize = 4;
+/// The `detail` of a block whose points do not take its bytes.
+const SIZE: &str = "points do not fill the block";
+
 /// The scan whose block starts at `at` (the payload) and whose data end before `end`; `None` when the block is not a scan.
 /// An empty scan gives empty vectors; a block whose stream holds fewer points than its head declares is `err.file.wiff`.
 pub fn read_scan<R: ReadAt>(
@@ -156,6 +166,29 @@ pub fn read_scan<R: ReadAt>(
     scan_len: u64,
     at: u64,
     end: u64,
+) -> Result<Option<Points>> {
+    read_sized(scan, scan_len, at, end, 0)
+}
+
+/// As `read_scan` for a block of `size` bytes from its index row (0: not known): its points must take those bytes, up to `PADDING` left, or the head
+/// declares another number of points than the block holds and the block is `err.file.wiff`. The index row's own value at +26 is not a point count on
+/// every file (sparse product-ion scans: 1 where the head has 2 to 5 points), so the block is checked against its own bytes.
+pub fn read_scan_block<R: ReadAt>(
+    scan: &mut R,
+    scan_len: u64,
+    at: u64,
+    end: u64,
+    size: u32,
+) -> Result<Option<Points>> {
+    read_sized(scan, scan_len, at, end, size as usize)
+}
+
+fn read_sized<R: ReadAt>(
+    scan: &mut R,
+    scan_len: u64,
+    at: u64,
+    end: u64,
+    size: usize,
 ) -> Result<Option<Points>> {
     let Some(h) = head(scan, scan_len, at, end)? else {
         return Ok(None);
@@ -175,10 +208,18 @@ pub fn read_scan<R: ReadAt>(
     if n > 0 {
         scan.read_at(at + h.len as u64, &mut data)?;
     }
-    let pts = if n > 0 { decode(&data, n) } else { Vec::new() };
+    let (pts, used) = if n > 0 {
+        decode_used(&data, n)
+    } else {
+        (Vec::new(), 0)
+    };
     // a stream that ends before the points its head declares is a damaged block: never a scan read short
     if pts.len() != h.n {
         return Err(bad(format!("{} of {} points", pts.len(), h.n)));
+    }
+    let left = size.saturating_sub(h.len).saturating_sub(used);
+    if size > 0 && (h.len + used > size || left > PADDING) {
+        return Err(bad(SIZE));
     }
     let Some(&r0) = h.ranges.first() else {
         return Ok(None);
@@ -200,14 +241,22 @@ pub fn read_scan<R: ReadAt>(
     Ok(Some(Points { mz, intensity }))
 }
 
-/// The number of points of the scan block at `at`, `None` when the block is not a scan.
+/// The number of points of the scan block at `at` of `size` bytes (its index row; 0: not known), `None` when the block is not a scan. Only the head is read:
+/// an empty head that leaves more than `PADDING` bytes of its block is of another layout than its version says (`err.file.wiff`).
 pub fn point_count<R: ReadAt>(
     scan: &mut R,
     scan_len: u64,
     at: u64,
     end: u64,
+    size: u32,
 ) -> Result<Option<u32>> {
-    Ok(head(scan, scan_len, at, end)?.map(|h| u32::try_from(h.n).unwrap_or(u32::MAX)))
+    let Some(h) = head(scan, scan_len, at, end)? else {
+        return Ok(None);
+    };
+    if h.n == 0 && size as usize > h.len + PADDING {
+        return Err(bad(SIZE));
+    }
+    Ok(Some(u32::try_from(h.n).unwrap_or(u32::MAX)))
 }
 
 /// The cps of each of `n` transitions of an MRM block starting at `at`.

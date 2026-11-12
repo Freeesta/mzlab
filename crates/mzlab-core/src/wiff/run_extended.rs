@@ -27,8 +27,8 @@ impl Wiff {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
         let mut n = 0;
         for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
-            if let Some(p) = scan::read_scan(scan, self.scan_len, r.at, r.end)? {
-                if p.mz.is_empty() || r.damaged(Some(p.mz.len())) {
+            if let Some(p) = scan::read_scan_block(scan, self.scan_len, r.at, r.end, r.size)? {
+                if p.mz.is_empty() {
                     continue;
                 }
                 if self.is_full_scan(r.experiment) {
@@ -65,7 +65,7 @@ impl Wiff {
         {
             let count = match counts.and_then(|c| c.get(i)) {
                 Some(&c) => c,
-                None => scan::point_count(scan, self.scan_len, r.at, r.end)?,
+                None => scan::point_count(scan, self.scan_len, r.at, r.end, r.size)?,
             };
             if let Some(count) = count {
                 if count > 0 && self.is_full_scan(r.experiment) {
