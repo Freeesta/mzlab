@@ -36,6 +36,7 @@ fn params(v: &Value) -> Params {
         k: v[4].as_f64().unwrap(),
         vmax: v[5].as_f64().unwrap(),
         area: v[6].as_bool().unwrap(),
+        wm: v.get(7).and_then(|m| Some((m.get(0)?.as_f64()?, m.get(1)?.as_f64()?))),
     }
 }
 

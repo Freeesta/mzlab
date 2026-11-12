@@ -21,6 +21,8 @@ mod tests_fast;
 #[cfg(test)]
 mod tests_grid_sat;
 #[cfg(test)]
+mod tests_merged;
+#[cfg(test)]
 mod tests_hr;
 
 pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
@@ -56,9 +58,15 @@ pub struct Params {
     pub vmax: f64,
     /// The value written for a centroid: the area (counts, low resolution) or the height (high resolution).
     pub area: bool,
+    /// FWHM against m/z, `a * m^b`, measured on the isolated peaks of a high-resolution file (`None`: one width `w` for every m/z).
+    pub wm: Option<(f64, f64)>,
 }
 
 impl Params {
+    /// FWHM expected at `mz`: the model of the file, else `w`.
+    pub fn w_at(&self, mz: f64) -> f64 {
+        self.wm.map_or(self.w, |(a, b)| a * libm::pow(mz, b))
+    }
     /// Width of a peak in grid points (at least 3).
     pub fn wb(&self) -> usize {
         ((self.w / self.step).round() as usize).max(3)

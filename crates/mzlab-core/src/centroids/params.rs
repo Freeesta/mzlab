@@ -87,7 +87,7 @@ fn step_and_grid(scans: &[(&[f64], &[f64])]) -> (f64, bool) {
 }
 
 /// FWHM of the isolated peaks of a smoothed scan, by linear interpolation at half height.
-fn fwhms(buf: &Buf, p: &Params, sigma: f64, out: &mut Vec<f64>) {
+fn fwhms(buf: &Buf, p: &Params, sigma: f64, out: &mut Vec<(f64, f64)>) {
     let n = buf.s.len();
     let wb = p.wb();
     let u = if p.mode == Mode::Counts { p.unit } else { 1.0 };
@@ -129,8 +129,33 @@ fn fwhms(buf: &Buf, p: &Params, sigma: f64, out: &mut Vec<f64>) {
             buf.x[l] + (half - buf.s[l]) / (buf.s[l + 1] - buf.s[l]) * (buf.x[l + 1] - buf.x[l]);
         let xr = buf.x[r - 1]
             + (buf.s[r - 1] - half) / (buf.s[r - 1] - buf.s[r]) * (buf.x[r] - buf.x[r - 1]);
-        out.push(xr - xl);
+        out.push((buf.x[j], xr - xl));
     }
+}
+
+/// Median of the widths of `(m/z, width)` pairs.
+fn median_w(pairs: &[(f64, f64)]) -> f64 {
+    median(&mut pairs.iter().map(|&(_, w)| w).collect::<Vec<_>>())
+}
+
+/// `(a, b)` of FWHM = a * m^b by least squares on the logarithms of the isolated peaks, when they span at least 1.3 x in m/z and give
+/// 0 <= b <= 2 (a quadrupole is flat, a TOF ~1, an Orbitrap ~1.5); `None` keeps one width for every m/z.
+fn width_model(pairs: &[(f64, f64)]) -> Option<(f64, f64)> {
+    let pts: Vec<(f64, f64)> = pairs
+        .iter()
+        .filter(|&&(m, w)| m > 0.0 && w > 0.0)
+        .map(|&(m, w)| (libm::log(m), libm::log(w)))
+        .collect();
+    let n = pts.len() as f64;
+    let (lo, hi) = pts.iter().fold((f64::MAX, f64::MIN), |(l, h), &(x, _)| (l.min(x), h.max(x)));
+    if pts.len() < 8 || hi - lo < libm::log(1.3) {
+        return None;
+    }
+    let (mx, my) = (pts.iter().map(|p| p.0).sum::<f64>() / n, pts.iter().map(|p| p.1).sum::<f64>() / n);
+    let sxx: f64 = pts.iter().map(|&(x, _)| (x - mx) * (x - mx)).sum();
+    let sxy: f64 = pts.iter().map(|&(x, y)| (x - mx) * (y - my)).sum();
+    let b = sxy / sxx;
+    (0.0..=2.0).contains(&b).then(|| (libm::exp(my - b * mx), b))
 }
 
 fn median(v: &mut [f64]) -> f64 {
@@ -139,7 +164,7 @@ fn median(v: &mut [f64]) -> f64 {
 }
 
 /// FWHMs of the isolated peaks of `scans` measured with the background and the isolation test of the width `p.w`.
-fn widths_at(scans: &[(&[f64], &[f64])], p: &Params) -> Vec<f64> {
+fn widths_at(scans: &[(&[f64], &[f64])], p: &Params) -> Vec<(f64, f64)> {
     let mut buf = Buf::default();
     let mut widths = Vec::new();
     for (mz, y) in scans {
@@ -175,6 +200,7 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
         k: 3.0,
         vmax,
         area: true,
+        wm: None,
     };
     let mut widths = widths_at(scans, &p);
     // Continuous data whose peaks are much narrower than the fallback (high-resolution profile): at the fallback width
@@ -192,7 +218,7 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
             let found = widths_at(scans, &q);
             if found.len() >= 8 {
                 let again = Params {
-                    w: median(&mut found.clone()).max(3.0 * step),
+                    w: median_w(&found).max(3.0 * step),
                     ..p.clone()
                 };
                 let more = widths_at(scans, &again);
@@ -203,9 +229,12 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
     }
     let peaks = if widths.len() >= 8 { widths.len() } else { 0 };
     if peaks > 0 {
-        p.w = median(&mut widths).max(3.0 * step);
+        p.w = median_w(&widths).max(3.0 * step);
     }
     p.area = !p.hr();
+    if peaks > 0 && p.hr() {
+        p.wm = width_model(&widths);
+    }
     Estimate {
         params: p,
         regular,
