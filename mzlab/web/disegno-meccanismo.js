@@ -134,7 +134,7 @@ function freeDirs(/** @type {any} */ st, /** @type {number} */ i, /** @type {num
   const out = /** @type {number[]} */ ([]);
   for (let k = 0; k < n; k++) {
     let best = -Math.PI / 2, score = -1;
-    for (let c = 0; c < 16; c++) { const a = -Math.PI / 2 + c * Math.PI / 8, s = Math.min(Math.PI, ...[...used, ...out].map(u => gap(a, u))); if (s > score + 1e-6) { score = s; best = a; } }
+    for (let c = 0; c < 16; c++) { const a = -Math.PI / 2 + c * Math.PI / 8, s = [...used, ...out].reduce((m, u) => Math.min(m, gap(a, u)), Math.PI); if (s > score + 1e-6) { score = s; best = a; } }
     out.push(best);
   }
   return out;
@@ -199,7 +199,8 @@ export function addExportMech(/** @type {any} */ K, /** @type {string} */ svgTex
   if (vb.length !== 4 || vb.some(isNaN)) return svgText;
   const g = doc.createElementNS(NS, "g"); g.setAttribute("id", "mz-meccanismo"); root.appendChild(g);
   const { dots, curves } = paint(K, g, sc, off, []), pts = [...dots, ...curves.flatMap(c => [c.p, c.c, c.q])].map(p => [p.x * sc + off.ox, p.y * sc + off.oy]);
-  const x0 = Math.min(vb[0], ...pts.map(p => p[0] - 8)), y0 = Math.min(vb[1], ...pts.map(p => p[1] - 8)), x1 = Math.max(vb[0] + vb[2], ...pts.map(p => p[0] + 8)), y1 = Math.max(vb[1] + vb[3], ...pts.map(p => p[1] + 8));
+  let [x0, y0, x1, y1] = [vb[0], vb[1], vb[0] + vb[2], vb[1] + vb[3]];
+  for (const [x, y] of pts) { x0 = Math.min(x0, x - 8); y0 = Math.min(y0, y - 8); x1 = Math.max(x1, x + 8); y1 = Math.max(y1, y + 8); }
   root.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
   const pw = parseFloat(root.getAttribute("width") || ""), ph = parseFloat(root.getAttribute("height") || "");
   if (pw) root.setAttribute("width", String(pw * (x1 - x0) / vb[2])); if (ph) root.setAttribute("height", String(ph * (y1 - y0) / vb[3]));
