@@ -200,7 +200,7 @@ pub struct ChromatogramEntry {
 pub use listing::samples_json;
 pub use outcome::{
     cause_key, Losses, ReadOutcome, ReadOutcomes, DAMAGED, EVENTS_REFUSED, MEMBER_MISSING,
-    RECORD_WIDTH, TRUNCATED, WATERS_DAMAGED,
+    RAW_DAMAGED, RECORD_WIDTH, TRUNCATED, WATERS_DAMAGED,
 };
 
 /// A reader of one dataset. Random access: `indice` is read once, `scansione` reads only the bytes of one scan; streaming is `scansione(c, 0..n)`.

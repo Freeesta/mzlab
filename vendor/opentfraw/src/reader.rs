@@ -381,6 +381,8 @@ pub struct RawFileReader {
     pub version: u32,
     /// What `open` left out (a cut file, a structure that could not be read); empty for a sound file.
     pub warnings: Vec<Warning>,
+    /// Positions in `scan_index` of the scans whose own entry points past the end of the file among sound ones (`robust::kept_prefix`): in the index, never read.
+    pub damaged: Vec<u32>,
     /// Number of scans.
     pub num_scans: u32,
     /// Data stream base address (for computing absolute scan offsets).
@@ -539,13 +541,24 @@ impl RawFileReader {
         let (run_header, run_header_end) = {
             let addrs = &raw_file_info.preamble.run_header_addrs;
             let mut chosen = None;
+            // a run header that cannot be read is another controller's (UV, pump) only once the MS one is found; else its error refuses the file
+            let mut unread: Option<(u64, Error)> = None;
             for &addr in addrs {
                 if addr == 0 {
                     continue;
                 }
-                cut_check("RunHeader", addr, file_len, SampleInfo::SIZE as u64, 0)?;
-                r.seek_to(addr)?;
-                let rh = RunHeader::read(&mut r, version).map_err(|e| stage("RunHeader", e))?;
+                let read = cut_check("RunHeader", addr, file_len, SampleInfo::SIZE as u64, 0)
+                    .and_then(|()| r.seek_to(addr))
+                    .and_then(|()| {
+                        RunHeader::read(&mut r, version).map_err(|e| stage("RunHeader", e))
+                    });
+                let rh = match read {
+                    Ok(rh) => rh,
+                    Err(e) => {
+                        unread.get_or_insert((addr, e));
+                        continue;
+                    }
+                };
                 // Heuristic for identifying the MS controller:
                 // 1. For v64+: ntrailer > 0 (scan events present) - catches most instruments.
                 // 2. For all versions: RunHeader.data_addr == preamble.data_addr - the MS
@@ -564,9 +577,14 @@ impl RawFileReader {
                 }
             }
             // Fall back to first address if no MS controller found
-            match chosen {
-                Some(found) => found,
-                None => {
+            match (chosen, unread) {
+                (Some(found), Some((addr, e))) => {
+                    skipped(&mut warnings, "RunHeader", addr, &e);
+                    found
+                }
+                (Some(found), None) => found,
+                (None, Some((_, e))) => return Err(e),
+                (None, None) => {
                     let addr = addrs.first().copied().unwrap_or(0);
                     cut_check("RunHeader", addr, file_len, SampleInfo::SIZE as u64, 0)?;
                     r.seek_to(addr)?;
@@ -646,8 +664,22 @@ impl RawFileReader {
             run_header.scan_trailer_addr,
             run_header.scan_params_addr,
         ];
-        let (whole, cut_at) =
-            robust::whole_prefix(&scan_index, scan_format, data_addr, &streams, file_len);
+        let (whole, cut_at, damaged) =
+            robust::kept_prefix(&scan_index, scan_format, data_addr, &streams, file_len);
+        if let Some(&first) = damaged.first() {
+            let at = scan_index
+                .get(first as usize)
+                .map_or(0, |e| data_addr.saturating_add(e.offset));
+            warnings.push(Warning::Skipped {
+                stage: "ScanData",
+                offset: at,
+                detail: format!(
+                    "{} of {} scans point past the end of the file: left without data",
+                    damaged.len(),
+                    num_scans
+                ),
+            });
+        }
         if let Some(cut_at) = cut_at {
             if whole == 0 {
                 return Err(Error::Truncated {
@@ -1042,6 +1074,7 @@ impl RawFileReader {
             status_log,
             version,
             warnings,
+            damaged,
             num_scans,
             data_addr,
             flat_peaks,
@@ -1210,91 +1243,125 @@ impl RawFileReader {
     /// follow the controller's RunHeader (`name`, `device`, then `"<name> <unit>"` as the ninth string); the data are the `f64` values just
     /// before the RunHeader, which is how the files read so far are laid out - a controller whose samples do not end exactly at its RunHeader is skipped.
     pub fn analog_traces<R: Read + Seek>(&self, source: &mut R) -> Result<Vec<AnalogTrace>> {
-        const MAX_SAMPLES: u64 = 20_000_000;
+        Ok(self.analog_traces_counted(source).0)
+    }
+
+    /// [`Self::analog_traces`] one controller at a time: a controller whose run header or samples cannot be read (or whose times are not numbers) is left
+    /// out with a [`Warning::Skipped`] «AnalogTrace» naming it, and the other channels are read.
+    pub fn analog_traces_counted<R: Read + Seek>(
+        &self,
+        source: &mut R,
+    ) -> (Vec<AnalogTrace>, Vec<Warning>) {
         let mut r = BinaryReader::new(source);
-        let mut out = Vec::new();
-        for (controller, &addr) in self
-            .raw_file_info
-            .preamble
-            .run_header_addrs
-            .iter()
-            .enumerate()
-        {
-            if addr == 0 {
+        let (mut out, mut skipped_traces) = (Vec::new(), Vec::new());
+        let addrs = &self.raw_file_info.preamble.run_header_addrs;
+        // a run header the open could not read is already in `warnings`
+        let unread = |a: u64| {
+            self.warnings.iter().any(|w| {
+                matches!(w, Warning::Skipped { stage: "RunHeader", offset, .. } if *offset == a)
+            })
+        };
+        for (controller, &addr) in addrs.iter().enumerate() {
+            if addr == 0 || unread(addr) {
                 continue;
             }
-            r.seek_to(addr)?;
-            let rh = RunHeader::read(&mut r, self.version)?;
-            let info = &rh.sample_info;
-            let n = u64::from(info.last_scan_number)
-                .saturating_sub(u64::from(info.first_scan_number))
-                + 1;
-            let is_ms = rh.ntrailer > 0 || rh.data_addr == self.data_addr;
-            if is_ms || info.last_scan_number < info.first_scan_number || n > MAX_SAMPLES {
-                continue;
+            match self.analog_trace(&mut r, controller, addr) {
+                Ok(Some(t)) => out.push(t),
+                Ok(None) => {}
+                Err(e) => skipped(&mut skipped_traces, "AnalogTrace", addr, &e),
             }
-            // 8 bytes per sample (the value; the time is evenly spaced) or 16 (the value and its time in minutes, the layout of the UV and temperature channels of Dionex devices)
-            let stride = if rh.data_addr.checked_add(8 * n) == Some(rh.own_addr) {
-                8
-            } else if rh.data_addr.checked_add(16 * n) == Some(rh.own_addr) {
-                16
-            } else {
-                continue;
-            };
-            let at = r.position();
-            let strings = read_inst_id_strings(&mut r, at, 9);
-            let name = strings
-                .first()
-                .map(|t| t.trim().to_string())
-                .unwrap_or_default();
-            if name.is_empty() {
-                continue;
-            }
-            let unit = strings
-                .get(8)
-                .and_then(|t| t.trim().strip_prefix(name.as_str()))
-                .map(|t| t.trim().to_string())
-                .unwrap_or_default();
-            r.seek_to(rh.data_addr)?;
-            r.check_count(n, stride)?;
-            let mut values = Vec::with_capacity(n as usize);
-            let mut times = Vec::new();
-            for _ in 0..n {
-                values.push(r.read_f64()?);
-                if stride == 16 {
-                    times.push(r.read_f64()?);
-                }
-            }
-            if stride == 16 && !times.iter().all(|t| t.is_finite()) {
-                continue;
-            }
-            let step = if n > 1 {
-                (info.end_time - info.start_time) / (n - 1) as f64
-            } else {
-                0.0
-            };
-            let text = |i: usize| {
-                strings
-                    .get(i)
-                    .map(|t| t.trim().to_string())
-                    .unwrap_or_default()
-            };
-            out.push(AnalogTrace {
-                controller,
-                name,
-                unit,
-                driver: text(1),
-                model: text(2),
-                serial: text(3),
-                time_min: if stride == 16 {
-                    times
-                } else {
-                    (0..n).map(|i| info.start_time + i as f64 * step).collect()
-                },
-                values,
-            });
         }
-        Ok(out)
+        let n = skipped_traces.len();
+        for w in &mut skipped_traces {
+            if let Warning::Skipped { detail, .. } = w {
+                *detail = format!(
+                    "{n} of {} controllers: {detail}",
+                    addrs.iter().filter(|&&a| a != 0).count()
+                );
+            }
+        }
+        (out, skipped_traces)
+    }
+
+    /// The trace of the controller whose run header is at `addr`, `None` when it is not an analog trace of a known layout (the MS controller, a 3D field).
+    fn analog_trace<R: Read + Seek>(
+        &self,
+        r: &mut BinaryReader<R>,
+        controller: usize,
+        addr: u64,
+    ) -> Result<Option<AnalogTrace>> {
+        const MAX_SAMPLES: u64 = 20_000_000;
+        r.seek_to(addr)?;
+        let rh = RunHeader::read(r, self.version)?;
+        let info = &rh.sample_info;
+        let n =
+            u64::from(info.last_scan_number).saturating_sub(u64::from(info.first_scan_number)) + 1;
+        let is_ms = rh.ntrailer > 0 || rh.data_addr == self.data_addr;
+        if is_ms || info.last_scan_number < info.first_scan_number || n > MAX_SAMPLES {
+            return Ok(None);
+        }
+        // 8 bytes per sample (the value; the time is evenly spaced) or 16 (the value and its time in minutes, the layout of the UV and temperature channels of Dionex devices)
+        let stride = if rh.data_addr.checked_add(8 * n) == Some(rh.own_addr) {
+            8
+        } else if rh.data_addr.checked_add(16 * n) == Some(rh.own_addr) {
+            16
+        } else {
+            return Ok(None);
+        };
+        let at = r.position();
+        let strings = read_inst_id_strings(r, at, 9);
+        let name = strings
+            .first()
+            .map(|t| t.trim().to_string())
+            .unwrap_or_default();
+        if name.is_empty() {
+            return Ok(None);
+        }
+        let unit = strings
+            .get(8)
+            .and_then(|t| t.trim().strip_prefix(name.as_str()))
+            .map(|t| t.trim().to_string())
+            .unwrap_or_default();
+        r.seek_to(rh.data_addr)?;
+        r.check_count(n, stride)?;
+        let mut values = Vec::with_capacity(n as usize);
+        let mut times = Vec::new();
+        for _ in 0..n {
+            values.push(r.read_f64()?);
+            if stride == 16 {
+                times.push(r.read_f64()?);
+            }
+        }
+        if stride == 16 && !times.iter().all(|t| t.is_finite()) {
+            return Err(Error::UnsupportedOperation(
+                "analog trace times that are not numbers",
+            ));
+        }
+        let step = if n > 1 {
+            (info.end_time - info.start_time) / (n - 1) as f64
+        } else {
+            0.0
+        };
+        let text = |i: usize| {
+            strings
+                .get(i)
+                .map(|t| t.trim().to_string())
+                .unwrap_or_default()
+        };
+        Ok(Some(AnalogTrace {
+            controller,
+            name,
+            unit,
+            driver: text(1),
+            model: text(2),
+            serial: text(3),
+            time_min: if stride == 16 {
+                times
+            } else {
+                (0..n).map(|i| info.start_time + i as f64 * step).collect()
+            },
+            values,
+        }))
     }
 
     /// Look up the [`ScanIndexEntry`] for a 1-based scan number, bounds- and

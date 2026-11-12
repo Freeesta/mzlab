@@ -149,7 +149,7 @@ def create(fam: str, d: Path) -> Path:
     raise AssertionError(fam)
 
 
-SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "andi": "andi/synt.cdf"}
+SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "thermo_danneggiato": "thermo_danneggiato/danneggiato.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "andi": "andi/synt.cdf"}
 
 
 def synthetic(base: Path):
@@ -231,6 +231,17 @@ def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
     wasm = da_wasm(tools, "bruker", ds)
     assert cli.count(b"<spectrum ") == 3
     assert b"warn.file.brukerCutBin" in cli
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
+def test_thermo_damaged_units_equal_the_cli(tools):
+    """A `.raw` with one of every damaged unit (an unreadable controller before the MS one, an unreadable analog controller, a scan pointing past the end,
+    a record that does not decode): both faces write the 12 scans, the damaged two without points, byte for byte, and conv/1 names `warn.raw.damaged`."""
+    ds = create("thermo_danneggiato", tools["tmp"] / "in_thermo_danneggiato")
+    cli = da_cli(tools, "thermo_danneggiato", ds, code=3)
+    wasm = da_wasm(tools, "thermo", ds)
+    assert cli.count(b"<spectrum ") == 12
+    assert b"warn.raw.damaged" in cli
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
