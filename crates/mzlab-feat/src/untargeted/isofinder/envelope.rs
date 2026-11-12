@@ -129,7 +129,7 @@ pub fn heavy_contribution(symbol: &str) -> Option<(usize, f64)> {
 
 fn poisson(lambda: f64) -> Vec<f64> {
     let mut p = vec![0.0; CAP + 1];
-    p[0] = (-lambda).exp();
+    p[0] = libm::exp(-lambda);
     for k in 1..=CAP {
         p[k] = p[k - 1] * lambda / k as f64;
     }

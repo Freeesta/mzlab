@@ -136,6 +136,19 @@ fn main() {
     );
     if std::env::var("MZ_NULL").is_err() {
         println!("mzidx     sha256 {}", sha256_file(&idx));
+        // opening the index as the readers of the page do (`Index::open`: header, meta, scan table)
+        let _ = peak();
+        let size = std::fs::metadata(&idx).expect("idx").len();
+        let ix = mzlab_core::idxread::Index::open(File::open(&idx).expect("idx"), size);
+        println!(
+            "open      heap peak {:>7.1} MB, rss peak {:>7.1} MB | {}",
+            peak(),
+            rss_max(),
+            ix.map_or_else(
+                |e| e.key.to_string(),
+                |i| format!("{} scans", i.scans.len())
+            )
+        );
     }
     let _ = (std::fs::remove_file(&idx), std::fs::remove_file(&spool));
 }

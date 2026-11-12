@@ -48,12 +48,18 @@ pub fn entropy_weights(w: &[f64]) -> Vec<f64> {
     };
     let s = -p
         .iter()
-        .map(|&x| if x > 0.0 { x * x.ln() } else { 0.0 })
+        .map(|&x| if x > 0.0 { x * libm::log(x) } else { 0.0 })
         .sum::<f64>();
     let e = if s < 3.0 { 0.25 + 0.25 * s } else { 1.0 };
     let q: Vec<f64> = p
         .iter()
-        .map(|&x| if x > 0.0 { x.powf(e) } else { 0.0f64.powf(e) })
+        .map(|&x| {
+            if x > 0.0 {
+                libm::pow(x, e)
+            } else {
+                libm::pow(0.0f64, e)
+            }
+        })
         .collect();
     let tot: f64 = q.iter().sum();
     if tot > 0.0 {
@@ -65,7 +71,7 @@ pub fn entropy_weights(w: &[f64]) -> Vec<f64> {
 
 fn xlogx(x: f64) -> f64 {
     if x > 0.0 {
-        x * x.ln()
+        x * libm::log(x)
     } else {
         0.0
     }

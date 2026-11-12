@@ -10,6 +10,8 @@ crate-type = ["rlib"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
+# exp/ln/pow of a native build from libm, the bits of the .wasm (src/fm.rs, docs/agenti/parita.md)
+libm = "0.2"
 mzlab-feat = { path = "../mzlab-feat", features = ["chem"] }
 mzlab-mol = { path = "../mzlab-mol", optional = true }
 nalgebra = { version = "0.35", default-features = false, features = ["std"] }

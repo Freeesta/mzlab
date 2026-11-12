@@ -264,7 +264,7 @@ fn classify(el: &[ElementIsotopes], matched: &BTreeSet<usize>, ev: &Evidence) ->
         } else {
             (ev.max_ratio / e.m2_rel).min(1.0)
         };
-        let mut s = (-defect * defect).exp() * prior * reach.max(MIN_REACH_WEIGHT);
+        let mut s = libm::exp(-defect * defect) * prior * reach.max(MIN_REACH_WEIGHT);
         if e.m2_rel < STRONG_ABUNDANCE {
             if e.bears_m1() {
                 s *= if ev.m1_ratio >= SI_M1_MIN { 1.3 } else { 0.7 };

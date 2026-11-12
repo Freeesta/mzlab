@@ -155,7 +155,7 @@ fn on_ring(
             let (cx, cy) = if r == 0 {
                 (0.0, 0.0)
             } else {
-                (rad * a.sin(), -rad * a.cos())
+                (rad * libm::sin(a), -rad * libm::cos(a))
             };
             (
                 i.id.clone(),
@@ -215,7 +215,10 @@ fn lay_out_radial(sc: &Scena, vis: &[usize], size: &HashMap<&str, (f64, f64)>) -
         }
         if r > 0 {
             let b = list[0].1;
-            rings.push((r as f64, (b.x + b.w / 2.0).hypot(b.y + b.h / 2.0).max(0.0)));
+            rings.push((
+                r as f64,
+                libm::hypot(b.x + b.w / 2.0, b.y + b.h / 2.0).max(0.0),
+            ));
         }
         for (id, b) in list {
             at.insert(id.clone(), b);

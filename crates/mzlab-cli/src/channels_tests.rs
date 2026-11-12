@@ -209,6 +209,30 @@ fn channels_of_the_synthetic_files() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// A SIM channel id has spaces and `name=` words: the error line names it whole, never split into parameters.
+#[test]
+fn an_unknown_sim_id_is_named_whole() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_canale_sim_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let f = dir.join("e.mzML");
+    std::fs::write(
+        &f,
+        "<mzML><run><chromatogramList count=\"0\"></chromatogramList></run></mzML>",
+    )
+    .unwrap();
+    let id = "sim:SIM SIC Q1=237.1 sample=1 polarity=positive name=ionA";
+    let o = execute(&[
+        "canali".into(),
+        f.to_string_lossy().into_owned(),
+        "--canale".into(),
+        id.into(),
+    ]);
+    assert_eq!(o.code, 2);
+    let want = format!("error: Channel {id} does not exist in this file. (err.canali.unknown)\n");
+    assert!(o.stderr.starts_with(&want), "{}", o.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// An mzML with a TWC (a 2 × 2 `dad_matrix` is not needed for the trace) and a pump pressure trace: `--canale` reads them as the old routes do.
 #[test]
 fn canale_reads_a_uv_and_an_analog_trace() {

@@ -142,7 +142,6 @@ mod manual_table_cmd;
 mod mol_cut_cmd;
 mod mol_label_cmd;
 mod mol_search_cmd;
-mod mol_sel_cmd;
 #[cfg(test)]
 mod msn_figure_tests;
 pub mod msn_graph;
@@ -180,8 +179,9 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli channels FILE [--out PATH]   the channels of a file as JSON (channels --help); dda-window FILE --from MIN --to MIN: the MS2 of a window by precursor (dda-window --help)
        mzlab-cli ion-pattern FORMULA ADDUCT [--out PATH]   the unit-resolution isotope pattern of an ion as JSON (ion-pattern --help); ion-mz TEXT [--adduct A]: the m/z of an ion with a signed shift (ion-mz --help)
-       mzlab-cli mol-label|mol-sel REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows; mol-sel: masses, heavy atoms and rings of a selection, as JSON (--help)
-       mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help)
+       mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help); mol-anal: average mass, mass % and theoretical isotope pattern of one structure (mol-anal --help)
+       mzlab-cli mol-check REQUEST.json|- [--out PATH]   what is wrong in a drawing (valence, charge, isotope, wedges) as JSON (mol-check --help); mol-sel REQUEST.json|-: masses, heavy atoms and rings of a selection (mol-sel --help)
+       mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help); mol-mech REQUEST.json|-: whether the curved arrows of a drawn mechanism are well formed (mol-mech --help)
        mzlab-cli mol-search --sub QUERY TARGET... [--set NAME=VALUE...]   where a substructure occurs in structures as JSON (mol-search --help)
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
@@ -366,7 +366,7 @@ fn features_cmd(args: impl Iterator<Item = String>) -> Outcome {
     let _ = std::fs::remove_dir_all(&tmp);
     let csv = match r {
         Ok(c) => c,
-        Err(e) => return Outcome::fail(&e.to_string()),
+        Err(e) => return Outcome::fail_error(&e),
     };
     match &a.out {
         None => Outcome::ok(csv.into_bytes()),

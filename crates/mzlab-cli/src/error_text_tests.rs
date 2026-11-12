@@ -1,5 +1,5 @@
 //! `testo_errore`: catalogue keys to English text, the parameters filled in, the hint of the command run.
-use super::{human, text_of, CATALOG};
+use super::{human, human_error, text_of, CATALOG};
 use mzlab_core::error::Error;
 
 #[test]
@@ -220,4 +220,17 @@ fn a_memory_refusal_reads_as_in_the_desktop_app() {
             "{tail}"
         );
     }
+}
+
+/// A parameter whose value holds spaces and `name=` words stays one value when the error is rendered from itself; other parameters keep their place.
+#[test]
+fn a_value_with_name_words_stays_whole() {
+    let id = "sim:SIM SIC Q1=237.1 sample=1 dwell=50 name=ionA";
+    let e = Error::new("err.canali.unknown")
+        .with("id", id)
+        .with("at", 3);
+    assert_eq!(
+        human_error(&e),
+        format!("Channel {id} does not exist in this file. (err.canali.unknown, at=3)")
+    );
 }

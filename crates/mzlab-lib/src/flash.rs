@@ -39,7 +39,11 @@ pub fn by_score(a: &FlashScore, b: &FlashScore) -> std::cmp::Ordering {
 /// `ln(q / 65535)` for every index intensity `q`: the library side of the entropy term is `b = q / 65535 * scale`, so `ln b = LN_Q[q] + ln scale`.
 fn ln_q() -> &'static [f64] {
     static T: std::sync::OnceLock<Vec<f64>> = std::sync::OnceLock::new();
-    T.get_or_init(|| (0..=65535u32).map(|q| (q as f64 / 65535.0).ln()).collect())
+    T.get_or_init(|| {
+        (0..=65535u32)
+            .map(|q| libm::log(q as f64 / 65535.0))
+            .collect()
+    })
 }
 
 /// Entropy term of one pair (as `scores::pair_term`) with `c = a ln a` and `ln_b` known: one logarithm instead of three.
@@ -258,7 +262,7 @@ fn query_tables(q: &Query) -> (Vec<f64>, Vec<f64>) {
     let pa = weighted(&q.spec.it);
     let pc = pa
         .iter()
-        .map(|a| if *a > 0.0 { a * a.ln() } else { 0.0 })
+        .map(|a| if *a > 0.0 { a * libm::log(*a) } else { 0.0 })
         .collect();
     (pa, pc)
 }

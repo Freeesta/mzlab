@@ -15,7 +15,7 @@ fn sphere() -> Vec<[f64; 3]> {
             let z = 1.0 - (2.0 * k as f64 + 1.0) / POINTS as f64;
             let r = (1.0 - z * z).sqrt();
             let phi = golden * k as f64;
-            [r * phi.cos(), r * phi.sin(), z]
+            [r * crate::fm::cos(phi), r * crate::fm::sin(phi), z]
         })
         .collect()
 }

@@ -449,7 +449,7 @@ pub(crate) fn cmd(args: impl Iterator<Item = String>) -> Outcome {
     if args.next_if(|a| a == "compare").is_some() {
         return match crate::msn_graph_compare::run_compare(args) {
             Ok((t, out)) => crate::emit(t, &out),
-            Err(e) => Outcome::fail(&e.to_string()),
+            Err(e) => Outcome::fail_error(&e),
         };
     }
     if args.next_if(|a| a == "complete").is_some() {

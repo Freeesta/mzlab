@@ -85,11 +85,12 @@ fn frame_row(id: i64, ms1: bool, pos: i64, summed: u64, np: u64) -> Vec<V<'stati
     ]
 }
 
-/// `analysis.tdf`: the rows of the frames, precursors and PASEF windows, one calibration, codec 2.
+/// `analysis.tdf`: the rows of the frames, precursors and PASEF windows, one calibration, codec 2, and `extra` rows of `GlobalMetadata`.
 fn database(
     frames: Vec<Vec<V<'static>>>,
     prec: Vec<Vec<V<'static>>>,
     pasef: Vec<Vec<V<'static>>>,
+    extra: &[(&'static str, &'static str)],
 ) -> Vec<u8> {
     let cal = vec![vec![
         V::N,
@@ -106,7 +107,8 @@ fn database(
         V::R(0.0),
         V::R(0.0),
     ]];
-    let meta = vec![vec![V::T("TimsCompressionType"), V::T("2")]];
+    let mut meta = vec![vec![V::T("TimsCompressionType"), V::T("2")]];
+    meta.extend(extra.iter().map(|(k, v)| vec![V::T(k), V::T(v)]));
     super::db_rows(&[
         ("GlobalMetadata", "CREATE TABLE GlobalMetadata (Key TEXT, Value TEXT)", meta),
         ("Frames", "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL, Polarity TEXT, ScanMode INTEGER, MsMsType INTEGER, TimsId INTEGER, SummedIntensities INTEGER, MaxIntensity INTEGER, NumScans INTEGER, NumPeaks INTEGER, MzCalibration INTEGER, T1 REAL, T2 REAL, AccumulationTime REAL)", frames),
@@ -118,6 +120,16 @@ fn database(
 
 /// `analysis.tdf` and `analysis.tdf_bin` of `cicli` cycles of one MS1 frame (`n1` points) and 10 PASEF frames (`n2` points).
 pub fn folder(cycles: usize, n1: usize, n2: usize) -> (Vec<u8>, Vec<u8>) {
+    folder_with(cycles, n1, n2, &[])
+}
+
+/// `folder` with `extra` rows of `GlobalMetadata` (`AcquisitionSoftware`, ...).
+pub fn folder_with(
+    cycles: usize,
+    n1: usize,
+    n2: usize,
+    extra: &[(&'static str, &'static str)],
+) -> (Vec<u8>, Vec<u8>) {
     let mut c = Case(0x9E37_79B9_7F4A_7C15);
     let mut bin = Vec::new();
     let (mut frames, mut prec, mut pasef) = (Vec::new(), Vec::new(), Vec::new());
@@ -163,5 +175,5 @@ pub fn folder(cycles: usize, n1: usize, n2: usize) -> (Vec<u8>, Vec<u8>) {
             }
         }
     }
-    (database(frames, prec, pasef), bin)
+    (database(frames, prec, pasef, extra), bin)
 }

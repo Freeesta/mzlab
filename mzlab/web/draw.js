@@ -9,7 +9,7 @@ import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
 import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
-import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js";
+import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
 import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
@@ -365,7 +365,8 @@ async function doCut(/** @type {number[]} */ bids, /** @type {{ x: number, y: nu
   FRAME.next(drawLabels);
 }
 let cutLine = /** @type {{ off: () => void } | null} */ (null);
-function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine = mountCutLine({ frame: fr, button: Q("#cut-line"), K: () => K, cut: doCut }); }
+let mech = /** @type {{ off: () => void, draw: (svg: SVGSVGElement, sc: number) => void } | null} */ (null);   // mechanism arrows (disegno-meccanismo.js)
+function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine = mountCutLine({ frame: fr, button: Q("#cut-line"), K: () => K, cut: doCut }); if (!mech) { mech = mountMech({ frame: fr, K: () => K, h: fragHelpers, root: Q("#mech-card") }); FRAME.next(drawLabels); } }
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
 // built-in rows of the canvas menu (disegno-menu.js registry; other modules add theirs with TPDraw.menu.add, between these orders)
@@ -397,6 +398,7 @@ let infoRun = 0;
 // only marks "again" and the run repeats once with the final selection.
 let infoBusy = false, infoAgain = false;
 async function showInfo() {
+  analysis();
   if (infoBusy) { infoAgain = true; return; }
   infoBusy = true;
   try { do { infoAgain = false; await showInfo1(); } while (infoAgain); }
@@ -454,6 +456,26 @@ async function showInfo1() {
     + (usedNeutral ? '<div class="muted sm">' + EH(I18N.t("draw.props.usedNeutral")) + '</div>' : "")
     + (perm ? '<div class="muted sm">' + EH(I18N.t("draw.props.permanent")) + '</div>' : "");
 }
+// «Formula analysis» card (disegno-analisi.js, loaded when first opened): the selected atoms, or the only structure of the canvas
+let analCard = /** @type {Promise<{ refresh: () => void }> | null} */ (null);
+const analHelpers = { t: fragHelpers.t, copy: (/** @type {string} */ s) => { copyText(s); }, table: fragHelpers.table, atoms: () => {
+  if (!K || !K.editor) return null;
+  const st = K.editor.struct(), sel = K.editor.selection() || {}, set = new Set(sel.atoms || []);
+  (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+  const ps = pieces(set.size ? set : null);
+  return set.size || ps.length === 1 ? ps.flatMap(p => p.ids).map((/** @type {number} */ i) => st.atoms.get(i)) : null;
+} };
+function analysis() {
+  const c = /** @type {HTMLDetailsElement | null} */ (Q("#anal-card")); if (!c || !c.open) return;
+  (analCard = analCard || import("./disegno-analisi.js").then(m => m.mount(analHelpers))).then(a => a.refresh()).catch(() => { analCard = null; });
+}
+document.addEventListener("toggle", e => { if (/** @type {any} */ (e.target).id === "anal-card") analysis(); }, true);   // toggle does not bubble: caught on the way down
+// the menu row opens the card on what the menu acts on (the selection, or the only structure); the toggle above computes it
+menuAdd({ id: "analysis", order: 70, label: "draw.ctx.analysis", title: "draw.ctx.analysis.title", run: () => {
+  const c = /** @type {HTMLDetailsElement | null} */ (Q("#anal-card")); if (!c) return;
+  if (c.open) analysis(); else c.open = true;
+  c.scrollIntoView({ block: "nearest" }); const sm = c.querySelector("summary"); if (sm) sm.focus();
+} });
 let neutOn = true;                                                             // "Escludi la carica": on by default
 document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
 const fmtF = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
@@ -523,6 +545,7 @@ function drawLabels() {
   svg.appendChild(g);                                     // always last: drawn above the structure
   g.textContent = "";
   drawPartials(K, svg, sc);                               // brackets of the partial structures, always drawn
+  if (mech) mech.draw(svg, sc);                           // mechanism arrows and lone pairs, always drawn
   if (!labelsOn()) return;
   // the Ketcher canvas stays white in every app theme, so the labels (and the exports) always use the dark-on-white colours
   const text = (/** @type {number} */ x, /** @type {number} */ y, /** @type {DrawLine[]} */ lines, /** @type {string} */ color, /** @type {number} */ size) => lines.forEach((/** @type {DrawLine} */ parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
@@ -670,11 +693,11 @@ function noBackground(/** @type {string} */ svgText) {
 }
 async function image(/** @type {string} */ format) {
   await start();
-  const raw = ketWithoutPartials(await K.getKet()), gen = (/** @type {DrawKet} */ k) => indigo(() => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" }));
+  const raw = ketWithoutMech(ketWithoutPartials(await K.getKet())), gen = (/** @type {DrawKet} */ k) => indigo(() => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" }));
   let svgText = null;
   if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
   if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
-  const po = exportOffset(svgText, JSON.parse(raw)); if (po) svgText = addExportPartials(K, svgText, po);       // brackets and Δ of the partial structures (disegno-parziali.js)
+  const po = exportOffset(svgText, JSON.parse(raw)); if (po) svgText = addExportMech(K, addExportPartials(K, svgText, po), po);       // brackets and Δ of the partial structures (disegno-parziali.js)
   svgText = padSvg(svgText, 16);
   const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
   if (clear) svgText = noBackground(svgText);
@@ -801,3 +824,5 @@ function frameExtras(/** @type {HTMLIFrameElement} */ fr) {
   else rows.push([t("draw.keys.trackpad.key"), t("draw.keys.trackpad")]);
   Q("#keys-body").innerHTML = `<table>${rows.map(r => h`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
 })();
+import("./disegno-verifica.js").then(m => m.mountCheck()).catch((/** @type {unknown} */ e) => console.error("QqQ Draw: check card", e));   // structure check card, its own module
+import("./disegno-sottostruttura.js").then(m => m.mountSub()).catch((/** @type {unknown} */ e) => console.error("QqQ Draw: substructure search", e));   // menu rows of the substructure search, its own module

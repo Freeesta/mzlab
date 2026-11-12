@@ -38,7 +38,7 @@ pub(super) fn molecule(molfile: &str) -> Option<String> {
     for b in &m.bonds {
         let (p, q) = (at(&xy[b.a as usize]), at(&xy[b.b as usize]));
         let (dx, dy) = (q.0 - p.0, q.1 - p.1);
-        let len = dx.hypot(dy).max(1e-6);
+        let len = libm::hypot(dx, dy).max(1e-6);
         let (nx, ny) = (-dy / len * 2.2, dx / len * 2.2);
         let offs: &[f64] = match b.o {
             2 => &[-0.5, 0.5],
@@ -138,7 +138,11 @@ pub(super) fn edges_svg(sc: &Scena, d: &Layout, view: View, vis: &HashSet<&str>)
         let best = sc.best.contains(&format!("{}>{}", a.da, a.a));
         let rel = a.measures.iter().map(|m| m.rel).fold(0.0f64, f64::max);
         let (stroke, width, dash) = if best {
-            (BEST, format!("{:.2}", 1.0 + (1.0 + rel).log10() * 1.2), "")
+            (
+                BEST,
+                format!("{:.2}", 1.0 + libm::log10(1.0 + rel) * 1.2),
+                "",
+            )
         } else {
             (LINE, "1".into(), " stroke-dasharray=\"4 3\"")
         };

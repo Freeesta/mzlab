@@ -5,7 +5,7 @@ use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/8";
+const BRIDGE: &str = "mzfeat-grafo/9";
 
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())
@@ -50,11 +50,25 @@ pub fn sel(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::sel::sel_json(request).map_err(js_err)
 }
 
+/// `anal/1` of one drawn structure `{"atoms": [...]}`: the `etich/1` numbers plus average mass, mass % per element and the theoretical isotope pattern
+/// (see `mzlab_feat::chem::analysis::analysis_json`; the same as `mzlab-cli mol-anal`).
+#[wasm_bindgen]
+pub fn analysis(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::analysis::analysis_json(request).map_err(js_err)
+}
+
 /// `cut/1` of a request `{"molfile", "bonds", "mode", "cation", "gap"}`: the pieces of a cut across one or more bonds (homolytic, heterolytic or «+H»),
 /// the atoms it changes and how far each piece moves (see `mzlab_feat::chem::cut::cut_json`; the same as `mzlab-cli mol-cut`).
 #[wasm_bindgen]
 pub fn cut(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::cut::cut_json(request).map_err(js_err)
+}
+
+/// `mecc/1` of a request `{"molfile", "arrows", "lone"}`: whether each curved arrow of a mechanism starts at a lone pair, a bond or a radical and ends at
+/// an atom or a bond, and whether the drawn lone pairs fit (see `mzlab_feat::chem::mech::mech_json`; the same as `mzlab-cli mol-mech`). Form only.
+#[wasm_bindgen]
+pub fn mech(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::mech::mech_json(request).map_err(js_err)
 }
 
 /// `posiz/1` of a SMILES, a transformation («+O», «-CH2», «+O-2H», «+Cl-H», «+Br-H») and the MS2 of the product (`peaks_json` `[[mz,int],..]`): the classes of positions

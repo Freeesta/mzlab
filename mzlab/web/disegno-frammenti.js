@@ -32,6 +32,7 @@ function nativo() {
     labels: (/** @type {string} */ request) => ask({ kind: "labels", request }),
     cut: (/** @type {string} */ request) => ask({ kind: "cut", request }),
     sel: (/** @type {string} */ request) => ask({ kind: "sel", request }),
+    mech: (/** @type {string} */ request) => ask({ kind: "mech", request }),
   };
 }
 

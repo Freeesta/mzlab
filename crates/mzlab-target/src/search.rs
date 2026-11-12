@@ -208,8 +208,8 @@ fn compute_isotope_score(
         (Some((_, i0)), Some((m1_obs, i1))) if i0 > 0.0 => {
             let obs_ratio = i1 / i0;
             let d_ppm = (m1_obs - exp_m1_mz) / exp_m1_mz * 1e6;
-            let tm = (-0.5 * (d_ppm / tolerance_ppm).powi(2)).exp();
-            let ti = (-0.5 * ((obs_ratio / exp_m1_ratio).ln() / 0.35).powi(2)).exp();
+            let tm = libm::exp(-0.5 * (d_ppm / tolerance_ppm).powi(2));
+            let ti = libm::exp(-0.5 * (libm::log(obs_ratio / exp_m1_ratio) / 0.35).powi(2));
             let s = tm * ti;
             Some((s * 100.0).round() / 100.0)
         }
