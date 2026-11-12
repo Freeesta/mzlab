@@ -47,14 +47,15 @@ try:
             pg.click("text=Carica dati"); ready(pg)
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2000)
             pg.evaluate("document.querySelector('.pnl.xic [data-a=cpar]').click()"); pg.wait_for_timeout(200)
-            b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Sottrai" in b.get_attribute("aria-label")      # icon of the choice + the arrow; no words in the header
+            b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Sottrazione" in b.get_attribute("aria-label")      # icon of the choice + the arrow; no words in the header
+            assert pg.locator('.pnl.xic [data-o="bkg"]').count() == 0, "one «Sottrazione» button, not two"
             assert pg.locator(".pnl.xic select[data-o=corr]").count() == 0, "no longer a plain select"
             b.click(); pg.wait_for_timeout(150)
-            pg.keyboard.press("Escape"); pg.click('.pnl.xic [data-o="bkg"]'); pg.wait_for_timeout(150)      # the background has its own menu, independent from the file
-            items = pg.locator(".pnl.xic .corrw >> nth=1 >> .corri"); assert items.count() == 4 and all(items.nth(i).locator("svg").count() == 1 for i in range(items.count()))
-            t = pg.inner_text(".pnl.xic .corrw >> nth=1 >> .corrm"); assert "Nessuna" in t and "Fondo di un tratto" in t and "Fondo: finestra piatta" in t and "Fondo automatico" in t, t
+            assert pg.locator(".pnl.xic .corrm legend").all_inner_texts() == ["Da un file", "Dal fondo"], "one menu, two labelled groups"
+            items = pg.locator('.pnl.xic .corrg[data-g="1"] .corri'); assert items.count() == 4 and all(items.nth(i).locator("svg").count() == 1 for i in range(items.count()))
+            t = pg.inner_text('.pnl.xic .corrg[data-g="1"]'); assert "Nessuna" in t and "Fondo di un tratto" in t and "Fondo: finestra piatta" in t and "Fondo automatico" in t, t
             pg.click('.pnl.xic .corri[data-c="snip"]'); pg.wait_for_timeout(800)
-            assert pg.evaluate("E.panels.find(p=>p.type==='xic').fondo.mode") == "auto" and "Fondo automatico" in pg.get_attribute('.pnl.xic [data-o="bkg"]', "aria-label")
+            assert pg.evaluate("E.panels.find(p=>p.type==='xic').fondo.mode") == "auto" and "Fondo automatico" in pg.get_attribute('.pnl.xic [data-o="corr"]', "aria-label")
             pg.screenshot(path=SH + "correzione.png")
         step("Correzione: a drop-down with an icon and a short label for every choice", correction)
     r.close()

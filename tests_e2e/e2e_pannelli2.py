@@ -20,19 +20,26 @@ try:
             assert pg.evaluate(f"!{CH}.el.querySelector('.cpop').contains({CH}.el.querySelector('.corrb'))")
             pg.click(".pnl.chrom [data-o=corr]"); pg.wait_for_selector(".pnl.chrom .corrm", state="visible")
             t = pg.inner_text(".pnl.chrom .corrw >> nth=0 >> .corrm"); print(t)
+            assert "Da un file" in t and "Dal fondo" in t, t
             assert t.count("Sottrai file:") == 1 and pg.locator(".pnl.chrom .corrm option").count() == 3, t      # one entry, any of the 3 files in its chooser, not only the blank
             pg.keyboard.press("Escape")
         step("Correzione: in the header, one entry and a chooser with the 3 files", corr_out)
         def corr_icons():
             b = pg.evaluate("[...document.querySelectorAll('.pnl.chrom .corrb')].map(b=>({svg:b.querySelector('svg').innerHTML,aria:b.getAttribute('aria-label'),on:b.classList.contains('on')}))")
-            assert len(b) == 2 and b[0]["svg"] != b[1]["svg"], "«Subtract a file» and «Subtract the background» have different icons"
-            assert b[0]["aria"] == "Sottrai un file" and b[1]["aria"] == "Sottrai il fondo", b
-            assert "<circle" not in b[0]["svg"] and "<circle" not in b[1]["svg"], "neither idle icon is the «none» ⊘"
+            assert len(b) == 1 and b[0]["aria"] == "Sottrazione" and "<circle" not in b[0]["svg"], b      # one button; its idle icon is not the «none» ⊘
+            aria = lambda: pg.get_attribute(".pnl.chrom [data-o=corr]", "aria-label")
             pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Sottrai file").first.click()
             wait_for_js(pg, "document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")      # active state is marked
-            pg.click(".pnl.chrom [data-o=corr]"); pg.locator(".pnl.chrom .corri", has_text="Nessuna").first.click()
+            assert aria().startswith("Sottrazione: −") and "Fondo" not in aria(), aria()      # says that the file is the one on
+            pg.click(".pnl.chrom [data-o=corr]"); pg.click('.pnl.chrom .corrg[data-g="1"] .corri[data-c="snip"]')
+            wait_for_js(pg, "document.querySelector('.pnl.chrom [data-o=corr]').getAttribute('aria-label').includes('Fondo automatico')")
+            assert aria().count("−") == 1 and pg.evaluate(f"{CH}.bk") not in ("", None), aria()      # both kinds on, each named
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator('.pnl.chrom .corrg[data-g="0"] .corri', has_text="Nessuna").click()
+            wait_for_js(pg, f"(()=>{{const b={CH}.bk;return b===''||b==null}})()")
+            assert pg.evaluate(f"{CH}.fondo.mode") == "auto" and "−" not in aria(), "the background stays: two states in one menu"
+            pg.click(".pnl.chrom [data-o=corr]"); pg.locator('.pnl.chrom .corrg[data-g="1"] .corri', has_text="Nessuna").click()
             wait_for_js(pg, "!document.querySelector('.pnl.chrom [data-o=corr]').classList.contains('on')")
-        step("Correzione: the two subtract buttons have different icons and explicit names", corr_icons)
+        step("Sottrazione: one button, the file and the background each named in its label", corr_icons)
         def corr_info():
             B, M = ".pnl.chrom [data-o=cinfo]", ".pnl.chrom .corrbar"
             assert pg.is_visible(B) and not pg.is_visible(M) and pg.evaluate(f"document.querySelector('{M}').offsetHeight") == 0, "one icon, no bar taking height"
