@@ -49,10 +49,11 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
     const r = await rpc({ op: "fileinfo", slot: ks[0], name: base(s.name).split("#")[0], blob: s.blob });
     return r.dead || r.error || !r.info ? null : done(r.info);
   }
-  // an MRM file: the chromatogram of the mzML of that kind (the m/z window, precursor and filter do not apply)
+  // an MRM file: the chromatogram of the mzML of that kind (the m/z window, precursor and filter do not apply); the DAD (`pda`, with or without a band in nm)
+  // is not read from the mzML's chromatograms: null, so lr-method.js answers it (mrm_chrom would give the TWC for any band)
   if (path === "/api/chrom") {
     const s = slots[ks[0]];
-    if (ks.length !== 1 || s.idx.scans || !s.blob) return null;
+    if (ks.length !== 1 || s.idx.scans || !s.blob || q.get("kind") === "pda") return null;
     const r = await rpc({ op: "mrmchrom", slot: ks[0], kind: q.get("kind") || "tic", blob: s.blob });
     return r.dead || r.error || !r.info ? null : done(r.info);
   }

@@ -47,7 +47,7 @@ function syncWork(/** @type {boolean} */ force = false) {
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
   const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
   // the card of the manual integrations follows the state written here (integrazioni-manuali.js); the provisional TIC of a first loading too (tic-provvisorio.js)
-  const simtab = () => { /** @type {any} */ (window).MANINT?.sync(); /** @type {any} */ (window).SIMUI?.help(); /** @type {any} */ (window).TICPROV?.sync(); };
+  const simtab = () => { /** @type {any} */ (window).MANINT?.sync(); /** @type {any} */ (window).TICPROV?.sync(); };
   if (sig === _workSig && !force) { simtab(); return; }
   const was = ws.dataset.work;
   _workSig = sig; ws.dataset.work = w;

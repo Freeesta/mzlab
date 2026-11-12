@@ -68,6 +68,11 @@ function recOf(row) {
 const fmt = (v, col) => col === "baseline" ? BASES()[v] || v : /^-?\d(\.\d+)?E[+-]\d+$/.test(v) ? G.I18N.sciE(Number(v)) : v;
 /** A channel as shown: the m/z, «q1 > q3», or «ione N». @param {string} c */
 const chShown = c => c.replace(/^ion (\d+)$/, (_, n) => t("canali.sim.ion", { n: +n })).replace(">", " > ");
+const COPY = ["apex_rt_min", "area", "height"];
+/** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision). @param {string} v @param {string} col */
+const cell = (v, col) => COPY.includes(col) && v !== ""
+  ? h`<span class="manint-cp" role="button" tabindex="0" data-cp="${v}" aria-label="${t("canali.manint.cp.aria", { c: HEADS()[col] || col, v: fmt(v, col) })}" title="${t("canali.manint.cp")}">${fmt(v, col)}</span>`
+  : h`${fmt(v, col)}`;
 
 function draw() {
   const el = card(); if (!el) return;
@@ -76,10 +81,10 @@ function draw() {
   const H = HEADS(), n = body.filter(r => r[2] !== "sum" || r[3] !== "").length;
   const ths = head.map(c => h`<th scope="col"${raw(["channel", "name", "sample", "baseline"].includes(c) ? "" : ' class="num"')}>${H[c] || c}</th>`).join("");
   const trs = body.map((r, i) => {
-    if (r[2] === "sum" && r[3] === "") return h`<tr class="manint-sum"><th scope="row">${chShown(r[0])}</th><td>${r[1]}</td><td>${t("canali.manint.sum")}</td><td></td><td></td><td></td><td class="num">${fmt(r[6], "area")}</td><td></td><td></td><td></td><td></td></tr>`;
+    if (r[2] === "sum" && r[3] === "") return h`<tr class="manint-sum"><th scope="row">${chShown(r[0])}</th><td>${r[1]}</td><td>${t("canali.manint.sum")}</td><td></td><td></td><td></td><td class="num">${raw(cell(r[6], "area"))}</td><td></td><td></td><td></td><td></td></tr>`;
     const rec = recOf(r), who = { ch: chShown(r[0]), s: r[2] };
     const act = rec ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
-    return h`<tr${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[0])}</th>${raw(r.slice(1).map((v, j) => h`<td${raw(j >= 2 && j <= 7 ? ' class="num"' : "")}>${fmt(v, head[j + 1])}</td>`).join(""))}<td>${raw(act)}</td></tr>`;
+    return h`<tr${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[0])}</th>${raw(r.slice(1).map((v, j) => h`<td${raw(j >= 2 && j <= 7 ? ' class="num"' : "")}>${raw(cell(v, head[j + 1]))}</td>`).join(""))}<td>${raw(act)}</td></tr>`;
   }).join("");
   const open = !el.querySelector("details") || /** @type {HTMLDetailsElement} */ (el.querySelector("details")).open;
   el.innerHTML = h`<details${raw(open ? " open" : "")}><summary><h3 id="manint-h">${t("canali.manint.title", { n })}</h3></summary>
@@ -99,6 +104,15 @@ function draw() {
   el.querySelectorAll("tr[data-go]").forEach(b => {
     b.addEventListener("click", e => { if (!/** @type {Element} */ (e.target).closest("button")) show(b); });
     b.addEventListener("keydown", e => { const k = /** @type {KeyboardEvent} */ (e); if (k.target === b && (k.key === "Enter" || k.key === " ")) { k.preventDefault(); show(b); } });
+  });
+  // a copyable cell: click (by the pointer), Enter or Space (by the cell); never shows the row's integration
+  el.querySelectorAll("[data-cp]").forEach(c => {
+    const go = (/** @type {number} */ x, /** @type {number} */ y) => G.AREACOPY && G.AREACOPY.put(/** @type {HTMLElement} */ (c).dataset.cp || "", x, y);
+    c.addEventListener("click", e => { e.stopPropagation(); const m = /** @type {MouseEvent} */ (e); go(m.clientX, m.clientY); });
+    c.addEventListener("keydown", e => {
+      const k = /** @type {KeyboardEvent} */ (e); if (k.key !== "Enter" && k.key !== " ") return;
+      k.preventDefault(); k.stopPropagation(); const b = c.getBoundingClientRect(); go(b.left + b.width / 2, b.bottom);
+    });
   });
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)]); if (rec) G.delInts(rec.p, [rec.it]);
