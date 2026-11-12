@@ -1133,6 +1133,8 @@
   "error.grafo.element": "Messaggio d'errore del motore; {element} = elemento.",
   "error.grafo.smiles": "Messaggio d'errore del motore; {smiles} = SMILES.",
   "error.grafo.tooBig": "Messaggio d'errore del motore; {max} = massimo.",
+  "error.sub.query": "Messaggio d'errore del motore (ricerca per sottostruttura); {detail} = motivo tecnico in inglese.",
+  "error.sub.request": "Messaggio d'errore del motore (ricerca per sottostruttura).",
   "error.gruppi.sizeMismatch": "Messaggio d'errore del motore; {what} = cosa.",
   "error.hypo.fragment": "Messaggio d'errore del motore; {formula} = formula.",
   "error.hypo.imported": "Messaggio d'errore del motore; {name} = nome.",

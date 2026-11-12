@@ -1,0 +1,8363 @@
+{
+"source": "RDKit 2026.09.2",
+"pairs": [
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "c1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "Oc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "Cc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "Clc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "Brc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "Fc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "Nc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "benzene",
+"query": "c1ccccc1",
+"target": "c1ccc2ccccc2c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "c1ccncc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "Clc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "Brc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "Fc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "Nc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "pyridine",
+"query": "c1ccncc1",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "C1CCCCC1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "Clc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "Brc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "Fc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "Nc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclohexane",
+"query": "C1CCCCC1",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "c1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "Oc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "Cc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "Clc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "Brc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "Fc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "Nc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "kekule benzene",
+"query": "C1=CC=CC=C1",
+"target": "c1ccc2ccccc2c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "Clc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "Brc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "Fc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "Nc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "c1ccc2ccccc2c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6,
+7,
+8,
+9
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6,
+7,
+8,
+9
+]
+]
+},
+{
+"name": "naphthalene",
+"query": "c1ccc2ccccc2c1",
+"target": "c1ccc2cc3ccccc3cc2c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+10,
+11,
+12,
+13
+],
+[
+3,
+4,
+5,
+6,
+7,
+8,
+9,
+10,
+11,
+12
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+10,
+11,
+12,
+13
+],
+[
+3,
+4,
+5,
+6,
+7,
+8,
+9,
+10,
+11,
+12
+]
+]
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "c1ccncc1",
+"plain": [
+[
+3
+]
+],
+"stereo": [
+[
+3
+]
+]
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "c1cncnc1",
+"plain": [
+[
+2
+],
+[
+4
+]
+],
+"stereo": [
+[
+2
+],
+[
+4
+]
+]
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "Clc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "Brc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "Fc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "Nc1ccccc1",
+"plain": [
+[
+0
+]
+],
+"stereo": [
+[
+0
+]
+]
+},
+{
+"name": "aliphatic N matches aromatic n",
+"query": "N",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "carbonyl",
+"query": "C=O",
+"target": "CC(=O)O",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "carbonyl",
+"query": "C=O",
+"target": "CC(=O)[O-]",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "carbonyl",
+"query": "C=O",
+"target": "CC(=O)OC",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "carbonyl",
+"query": "C=O",
+"target": "OC(=O)c1ccccc1",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "carbonyl",
+"query": "C=O",
+"target": "CC(=O)N",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "carbonyl",
+"query": "C=O",
+"target": "CC=O",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "carbonyl",
+"query": "C=O",
+"target": "OCC(=O)O",
+"plain": [
+[
+2,
+3
+]
+],
+"stereo": [
+[
+2,
+3
+]
+]
+},
+{
+"name": "carboxylic acid",
+"query": "C(=O)O",
+"target": "CC(=O)O",
+"plain": [
+[
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+1,
+2,
+3
+]
+]
+},
+{
+"name": "carboxylic acid",
+"query": "C(=O)O",
+"target": "CC(=O)[O-]",
+"plain": [
+[
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+1,
+2,
+3
+]
+]
+},
+{
+"name": "carboxylic acid",
+"query": "C(=O)O",
+"target": "CC(=O)OC",
+"plain": [
+[
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+1,
+2,
+3
+]
+]
+},
+{
+"name": "carboxylic acid",
+"query": "C(=O)O",
+"target": "OC(=O)c1ccccc1",
+"plain": [
+[
+0,
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1,
+2
+]
+]
+},
+{
+"name": "carboxylic acid",
+"query": "C(=O)O",
+"target": "CC(=O)N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "carboxylic acid",
+"query": "C(=O)O",
+"target": "CC=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "carboxylic acid",
+"query": "C(=O)O",
+"target": "OCC(=O)O",
+"plain": [
+[
+2,
+3,
+4
+]
+],
+"stereo": [
+[
+2,
+3,
+4
+]
+]
+},
+{
+"name": "carboxylate charge",
+"query": "C(=O)[O-]",
+"target": "CC(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "carboxylate charge",
+"query": "C(=O)[O-]",
+"target": "CC(=O)[O-]",
+"plain": [
+[
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+1,
+2,
+3
+]
+]
+},
+{
+"name": "carboxylate charge",
+"query": "C(=O)[O-]",
+"target": "CC(=O)OC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "carboxylate charge",
+"query": "C(=O)[O-]",
+"target": "OC(=O)c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "carboxylate charge",
+"query": "C(=O)[O-]",
+"target": "CC(=O)N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "carboxylate charge",
+"query": "C(=O)[O-]",
+"target": "CC=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "carboxylate charge",
+"query": "C(=O)[O-]",
+"target": "OCC(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ester",
+"query": "C(=O)OC",
+"target": "CC(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ester",
+"query": "C(=O)OC",
+"target": "CC(=O)[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ester",
+"query": "C(=O)OC",
+"target": "CC(=O)OC",
+"plain": [
+[
+1,
+2,
+3,
+4
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4
+]
+]
+},
+{
+"name": "ester",
+"query": "C(=O)OC",
+"target": "OC(=O)c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ester",
+"query": "C(=O)OC",
+"target": "CC(=O)N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ester",
+"query": "C(=O)OC",
+"target": "CC=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ester",
+"query": "C(=O)OC",
+"target": "OCC(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "sulfonamide",
+"query": "S(=O)(=O)N",
+"target": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+"plain": [
+[
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "sulfonamide",
+"query": "S(=O)(=O)N",
+"target": "CS(=O)(=O)N",
+"plain": [
+[
+1,
+2,
+3,
+4
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4
+]
+]
+},
+{
+"name": "sulfonamide",
+"query": "S(=O)(=O)N",
+"target": "CS(=O)(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "sulfonamide",
+"query": "S(=O)(=O)N",
+"target": "NS(N)(=O)=O",
+"plain": [
+[
+0,
+1,
+3,
+4
+],
+[
+1,
+2,
+3,
+4
+]
+],
+"stereo": [
+[
+0,
+1,
+3,
+4
+],
+[
+1,
+2,
+3,
+4
+]
+]
+},
+{
+"name": "sulfonamide",
+"query": "S(=O)(=O)N",
+"target": "CS(=O)(=O)NC(C)=O",
+"plain": [
+[
+1,
+2,
+3,
+4
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4
+]
+]
+},
+{
+"name": "sulfonamide",
+"query": "S(=O)(=O)N",
+"target": "CSC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aryl sulfonamide",
+"query": "c1ccccc1S(=O)(=O)N",
+"target": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+"plain": [
+[
+4,
+5,
+6,
+7,
+8,
+9,
+10,
+11,
+13,
+14
+]
+],
+"stereo": [
+[
+4,
+5,
+6,
+7,
+8,
+9,
+10,
+11,
+13,
+14
+]
+]
+},
+{
+"name": "aryl sulfonamide",
+"query": "c1ccccc1S(=O)(=O)N",
+"target": "CS(=O)(=O)N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aryl sulfonamide",
+"query": "c1ccccc1S(=O)(=O)N",
+"target": "CS(=O)(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aryl sulfonamide",
+"query": "c1ccccc1S(=O)(=O)N",
+"target": "NS(N)(=O)=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aryl sulfonamide",
+"query": "c1ccccc1S(=O)(=O)N",
+"target": "CS(=O)(=O)NC(C)=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aryl sulfonamide",
+"query": "c1ccccc1S(=O)(=O)N",
+"target": "CSC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chlorophenol ortho",
+"query": "Oc1ccccc1Cl",
+"target": "Oc1ccc(Cl)cc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "chlorophenol ortho",
+"query": "Oc1ccccc1Cl",
+"target": "Oc1ccccc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "chlorophenol ortho",
+"query": "Oc1ccccc1Cl",
+"target": "Oc1cccc(Cl)c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chlorophenol ortho",
+"query": "Oc1ccccc1Cl",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chlorophenol ortho",
+"query": "Oc1ccccc1Cl",
+"target": "Clc1ccccc1Cl",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chlorophenol ortho",
+"query": "Oc1ccccc1Cl",
+"target": "COc1ccccc1Cl",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "chlorophenol any",
+"query": "Oc1ccccc1",
+"target": "Oc1ccc(Cl)cc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+6,
+7
+]
+]
+},
+{
+"name": "chlorophenol any",
+"query": "Oc1ccccc1",
+"target": "Oc1ccccc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "chlorophenol any",
+"query": "Oc1ccccc1",
+"target": "Oc1cccc(Cl)c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+7
+]
+]
+},
+{
+"name": "chlorophenol any",
+"query": "Oc1ccccc1",
+"target": "Oc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "chlorophenol any",
+"query": "Oc1ccccc1",
+"target": "Clc1ccccc1Cl",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chlorophenol any",
+"query": "Oc1ccccc1",
+"target": "COc1ccccc1Cl",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "chlorobenzene",
+"query": "Clc1ccccc1",
+"target": "Oc1ccc(Cl)cc1Cl",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "chlorobenzene",
+"query": "Clc1ccccc1",
+"target": "Oc1ccccc1Cl",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "chlorobenzene",
+"query": "Clc1ccccc1",
+"target": "Oc1cccc(Cl)c1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "chlorobenzene",
+"query": "Clc1ccccc1",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chlorobenzene",
+"query": "Clc1ccccc1",
+"target": "Clc1ccccc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "chlorobenzene",
+"query": "Clc1ccccc1",
+"target": "COc1ccccc1Cl",
+"plain": [
+[
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "C[C@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "C[C@@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC(N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC(=O)[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC(=O)OC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "OC(=O)c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC(=O)N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "CC=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "anion",
+"query": "[O-]",
+"target": "OCC(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "C[C@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "C[C@@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isotope",
+"query": "[13C]",
+"target": "CC(N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "C[C@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "C[C@@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "quaternary N",
+"query": "[N+]",
+"target": "CC(N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C=CC",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C[C@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C[C@@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "CC(N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "C1=CCCCC1",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "Clc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "Brc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "Fc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "Nc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "alkene",
+"query": "C=C",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "CC#N",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "C[C@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "C[C@@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "nitrile",
+"query": "C#N",
+"target": "CC(N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "C1CC1",
+"plain": [
+[
+0,
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1,
+2
+]
+]
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "CC1CC1",
+"plain": [
+[
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+1,
+2,
+3
+]
+]
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "C[C@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "C[C@@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cyclopropane",
+"query": "C1CC1",
+"target": "CC(N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "CC(C)(C)C",
+"plain": [
+[
+0,
+1,
+2,
+3
+],
+[
+0,
+1,
+2,
+4
+],
+[
+0,
+1,
+3,
+4
+],
+[
+1,
+2,
+3,
+4
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3
+],
+[
+0,
+1,
+2,
+4
+],
+[
+0,
+1,
+3,
+4
+],
+[
+1,
+2,
+3,
+4
+]
+]
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "CC(C)C",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3
+]
+]
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "CC1CC1",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3
+]
+]
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "C[C@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "C[C@@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "isobutane symmetry",
+"query": "CC(C)C",
+"target": "CC(N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "CO",
+"plain": [
+[
+1
+]
+],
+"stereo": [
+[
+1
+]
+]
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "CCO",
+"plain": [
+[
+2
+]
+],
+"stereo": [
+[
+2
+]
+]
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "COC",
+"plain": [
+[
+1
+]
+],
+"stereo": [
+[
+1
+]
+]
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "C[O-]",
+"plain": [
+[
+1
+]
+],
+"stereo": [
+[
+1
+]
+]
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "OCCO",
+"plain": [
+[
+0
+],
+[
+3
+]
+],
+"stereo": [
+[
+0
+],
+[
+3
+]
+]
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "C=O",
+"plain": [
+[
+1
+]
+],
+"stereo": [
+[
+1
+]
+]
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "C[C@H](N)O",
+"plain": [
+[
+3
+]
+],
+"stereo": [
+[
+3
+]
+]
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "C[C@@H](N)O",
+"plain": [
+[
+3
+]
+],
+"stereo": [
+[
+3
+]
+]
+},
+{
+"name": "oxygen",
+"query": "O",
+"target": "CC(N)O",
+"plain": [
+[
+3
+]
+],
+"stereo": [
+[
+3
+]
+]
+},
+{
+"name": "two pieces",
+"query": "C.O",
+"target": "CO",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "two pieces",
+"query": "C.O",
+"target": "CCO",
+"plain": [
+[
+0,
+2
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+2
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "two pieces",
+"query": "C.O",
+"target": "C=O",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "two pieces",
+"query": "C.O",
+"target": "OCCO",
+"plain": [
+[
+0,
+1
+],
+[
+0,
+2
+],
+[
+1,
+3
+],
+[
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+0,
+2
+],
+[
+1,
+3
+],
+[
+2,
+3
+]
+]
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "CO",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "CCO",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "OCCO",
+"plain": [
+[
+0,
+1
+],
+[
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+2,
+3
+]
+]
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "C[C@H](N)O",
+"plain": [
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+3
+]
+]
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "C[C@@H](N)O",
+"plain": [
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+3
+]
+]
+},
+{
+"name": "hydroxyl H",
+"query": "[H]OC",
+"target": "CC(N)O",
+"plain": [
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+3
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "CCO",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "CC#N",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "C=CC",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "CC(C)(C)C",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+],
+[
+1,
+4
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+],
+[
+1,
+4
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "CC(C)C",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "CC1CC1",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "CC[N+](C)(C)C",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "C[C@H](N)O",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "C[C@@H](N)O",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "methyl H3",
+"query": "[H]C([H])([H])C",
+"target": "CC(N)O",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "C[O-]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "C[C@H](N)O",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3
+]
+]
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "C[C@@H](N)O",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": []
+},
+{
+"name": "chiral amino alcohol",
+"query": "C[C@H](N)O",
+"target": "CC(N)O",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": []
+},
+{
+"name": "alanine",
+"query": "C[C@@H](N)C(=O)O",
+"target": "C[C@@H](N)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "alanine",
+"query": "C[C@@H](N)C(=O)O",
+"target": "C[C@H](N)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": []
+},
+{
+"name": "alanine",
+"query": "C[C@@H](N)C(=O)O",
+"target": "N[C@@H](C)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": []
+},
+{
+"name": "alanine",
+"query": "C[C@@H](N)C(=O)O",
+"target": "OC(=O)[C@H](C)N",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": []
+},
+{
+"name": "alanine",
+"query": "C[C@@H](N)C(=O)O",
+"target": "C[C@@H](NC)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "alanine",
+"query": "C[C@@H](N)C(=O)O",
+"target": "CC(N)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": []
+},
+{
+"name": "alanine",
+"query": "C[C@@H](N)C(=O)O",
+"target": "C[C@@](N)(O)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+4,
+5,
+6
+]
+],
+"stereo": []
+},
+{
+"name": "alanine without stereo",
+"query": "CC(N)C(=O)O",
+"target": "C[C@@H](N)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "alanine without stereo",
+"query": "CC(N)C(=O)O",
+"target": "C[C@H](N)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "alanine without stereo",
+"query": "CC(N)C(=O)O",
+"target": "N[C@@H](C)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "alanine without stereo",
+"query": "CC(N)C(=O)O",
+"target": "OC(=O)[C@H](C)N",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "alanine without stereo",
+"query": "CC(N)C(=O)O",
+"target": "C[C@@H](NC)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "alanine without stereo",
+"query": "CC(N)C(=O)O",
+"target": "CC(N)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "alanine without stereo",
+"query": "CC(N)C(=O)O",
+"target": "C[C@@](N)(O)C(=O)O",
+"plain": [
+[
+0,
+1,
+2,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "trans difluoroethene",
+"query": "F/C=C/F",
+"target": "F/C=C/F",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3
+]
+]
+},
+{
+"name": "trans difluoroethene",
+"query": "F/C=C/F",
+"target": "F/C=C\\F",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": []
+},
+{
+"name": "trans difluoroethene",
+"query": "F/C=C/F",
+"target": "FC=CF",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": []
+},
+{
+"name": "trans difluoroethene",
+"query": "F/C=C/F",
+"target": "F/C=C/C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "trans difluoroethene",
+"query": "F/C=C/F",
+"target": "C/C(F)=C/F",
+"plain": [
+[
+1,
+2,
+3,
+4
+]
+],
+"stereo": []
+},
+{
+"name": "trans difluoroethene",
+"query": "F/C=C/F",
+"target": "F/C(C)=C/F",
+"plain": [
+[
+0,
+1,
+3,
+4
+]
+],
+"stereo": [
+[
+0,
+1,
+3,
+4
+]
+]
+},
+{
+"name": "trans difluoroethene",
+"query": "F/C=C/F",
+"target": "FC=C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cis difluoroethene",
+"query": "F/C=C\\F",
+"target": "F/C=C/F",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": []
+},
+{
+"name": "cis difluoroethene",
+"query": "F/C=C\\F",
+"target": "F/C=C\\F",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3
+]
+]
+},
+{
+"name": "cis difluoroethene",
+"query": "F/C=C\\F",
+"target": "FC=CF",
+"plain": [
+[
+0,
+1,
+2,
+3
+]
+],
+"stereo": []
+},
+{
+"name": "cis difluoroethene",
+"query": "F/C=C\\F",
+"target": "F/C=C/C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "cis difluoroethene",
+"query": "F/C=C\\F",
+"target": "C/C(F)=C/F",
+"plain": [
+[
+1,
+2,
+3,
+4
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4
+]
+]
+},
+{
+"name": "cis difluoroethene",
+"query": "F/C=C\\F",
+"target": "F/C(C)=C/F",
+"plain": [
+[
+0,
+1,
+3,
+4
+]
+],
+"stereo": []
+},
+{
+"name": "cis difluoroethene",
+"query": "F/C=C\\F",
+"target": "FC=C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "c1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "c1ccncc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "ring list C,N",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  2 F C   N   \nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "c1ccncc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "ring list not C",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\nM  ALS   4  1 T C   \nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccc(Cl)cc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1cccc(Cl)c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+7
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+7
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Clc1ccccc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "any atom on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "COc1ccccc1Cl",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccc(Cl)cc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1cccc(Cl)c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+7
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+7
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Clc1ccccc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "hetero on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 Q   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "COc1ccccc1Cl",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccc(Cl)cc1Cl",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+],
+[
+1,
+2,
+3,
+4,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1Cl",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1cccc(Cl)c1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "Clc1ccccc1Cl",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5,
+6
+],
+[
+1,
+2,
+3,
+4,
+5,
+6,
+7
+]
+]
+},
+{
+"name": "halogen on phenyl",
+"query": "\n  sub\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 X   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n",
+"target": "COc1ccccc1Cl",
+"plain": [
+[
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+2,
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "c1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "aromatic bonds ring",
+"query": "\n  sub\n\n  6  6  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  4  0  0  0  0\n  2  3  4  0  0  0  0\n  3  4  4  0  0  0  0\n  4  5  4  0  0  0  0\n  5  6  4  0  0  0  0\n  6  1  4  0  0  0  0\nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC(=O)O",
+"plain": [
+[
+1,
+2
+],
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+2
+],
+[
+1,
+3
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC(=O)[O-]",
+"plain": [
+[
+1,
+2
+],
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+2
+],
+[
+1,
+3
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC(=O)OC",
+"plain": [
+[
+1,
+2
+],
+[
+1,
+3
+],
+[
+3,
+4
+]
+],
+"stereo": [
+[
+1,
+2
+],
+[
+1,
+3
+],
+[
+3,
+4
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "OC(=O)c1ccccc1",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC(=O)N",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC=O",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "OCC(=O)O",
+"plain": [
+[
+0,
+1
+],
+[
+2,
+3
+],
+[
+2,
+4
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+2,
+3
+],
+[
+2,
+4
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CO",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CCO",
+"plain": [
+[
+1,
+2
+]
+],
+"stereo": [
+[
+1,
+2
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "COC",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "C[O-]",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "OCCO",
+"plain": [
+[
+0,
+1
+],
+[
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+2,
+3
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "C=O",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "C[C@H](N)O",
+"plain": [
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+3
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "C[C@@H](N)O",
+"plain": [
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+3
+]
+]
+},
+{
+"name": "any bond C~O",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  8  0  0  0  0\nM  END\n",
+"target": "CC(N)O",
+"plain": [
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+3
+]
+]
+},
+{
+"name": "single or double C-C",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  5  0  0  0  0\nM  END\n",
+"target": "C=C",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "single or double C-C",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  5  0  0  0  0\nM  END\n",
+"target": "CC",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "single or double C-C",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  5  0  0  0  0\nM  END\n",
+"target": "C#C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "single or double C-C",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  5  0  0  0  0\nM  END\n",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "single or double C-C",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  5  0  0  0  0\nM  END\n",
+"target": "C=CC",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "single or aromatic C-N",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  6  0  0  0  0\nM  END\n",
+"target": "CN",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "single or aromatic C-N",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  6  0  0  0  0\nM  END\n",
+"target": "C=N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "single or aromatic C-N",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  6  0  0  0  0\nM  END\n",
+"target": "c1ccncc1",
+"plain": [
+[
+2,
+3
+],
+[
+3,
+4
+]
+],
+"stereo": [
+[
+2,
+3
+],
+[
+3,
+4
+]
+]
+},
+{
+"name": "single or aromatic C-N",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  6  0  0  0  0\nM  END\n",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "double or aromatic C-N",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  7  0  0  0  0\nM  END\n",
+"target": "CN",
+"plain": [],
+"stereo": []
+},
+{
+"name": "double or aromatic C-N",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  7  0  0  0  0\nM  END\n",
+"target": "C=N",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "double or aromatic C-N",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  7  0  0  0  0\nM  END\n",
+"target": "c1ccncc1",
+"plain": [
+[
+2,
+3
+],
+[
+3,
+4
+]
+],
+"stereo": [
+[
+2,
+3
+],
+[
+3,
+4
+]
+]
+},
+{
+"name": "double or aromatic C-N",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  7  0  0  0  0\nM  END\n",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC(=O)[O-]",
+"plain": [
+[
+1,
+3
+]
+],
+"stereo": [
+[
+1,
+3
+]
+]
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC(=O)OC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "OC(=O)c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC(=O)N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "OCC(=O)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "COC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "C[O-]",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "OCCO",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "C=O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC#N",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "C=CC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC(C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "C1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC1CC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "C1CCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC[N+](C)(C)C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "C[C@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "C[C@@H](N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "charged list atom molfile",
+"query": "\n  sub\n\n  2  1  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\nM  CHG  1   2  -1\nM  END\n",
+"target": "CC(N)O",
+"plain": [],
+"stereo": []
+},
+{
+"name": "list S,P with oxygens",
+"query": "\n  sub\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  1  3  2  0  0  0  0\nM  ALS   1  2 F S   P   \nM  END\n",
+"target": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+"plain": [
+[
+5,
+6,
+7
+]
+],
+"stereo": [
+[
+5,
+6,
+7
+]
+]
+},
+{
+"name": "list S,P with oxygens",
+"query": "\n  sub\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  1  3  2  0  0  0  0\nM  ALS   1  2 F S   P   \nM  END\n",
+"target": "CS(=O)(=O)N",
+"plain": [
+[
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+1,
+2,
+3
+]
+]
+},
+{
+"name": "list S,P with oxygens",
+"query": "\n  sub\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  1  3  2  0  0  0  0\nM  ALS   1  2 F S   P   \nM  END\n",
+"target": "CS(=O)(=O)O",
+"plain": [
+[
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+1,
+2,
+3
+]
+]
+},
+{
+"name": "list S,P with oxygens",
+"query": "\n  sub\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  1  3  2  0  0  0  0\nM  ALS   1  2 F S   P   \nM  END\n",
+"target": "NS(N)(=O)=O",
+"plain": [
+[
+1,
+3,
+4
+]
+],
+"stereo": [
+[
+1,
+3,
+4
+]
+]
+},
+{
+"name": "list S,P with oxygens",
+"query": "\n  sub\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  1  3  2  0  0  0  0\nM  ALS   1  2 F S   P   \nM  END\n",
+"target": "CS(=O)(=O)NC(C)=O",
+"plain": [
+[
+1,
+2,
+3
+]
+],
+"stereo": [
+[
+1,
+2,
+3
+]
+]
+},
+{
+"name": "list S,P with oxygens",
+"query": "\n  sub\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  1  3  2  0  0  0  0\nM  ALS   1  2 F S   P   \nM  END\n",
+"target": "CSC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "list S,P with oxygens",
+"query": "\n  sub\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  1  3  2  0  0  0  0\nM  ALS   1  2 F S   P   \nM  END\n",
+"target": "COP(=O)(OC)OC",
+"plain": [],
+"stereo": []
+},
+{
+"name": "list S,P with oxygens",
+"query": "\n  sub\n\n  3  2  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  1  3  2  0  0  0  0\nM  ALS   1  2 F S   P   \nM  END\n",
+"target": "O=S=O",
+"plain": [
+[
+0,
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1,
+2
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccccc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccncc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+],
+"stereo": [
+[
+1,
+2,
+3,
+4,
+5,
+6
+]
+]
+},
+{
+"name": "V3000 list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 [C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+8,
+9
+],
+[
+3,
+4,
+5,
+6,
+7,
+8
+]
+]
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccncc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccoc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 not list",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 NOT[C,N] 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 C 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 2 1 2\nM  V30 2 1 2 3\nM  V30 3 2 3 4\nM  V30 4 1 4 5\nM  V30 5 2 5 6\nM  V30 6 1 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccsc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "CO",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "CCO",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "COC",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C[O-]",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "OCCO",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+2,
+3
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C=O",
+"plain": [
+[
+0,
+1
+]
+],
+"stereo": [
+[
+0,
+1
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "CC#N",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C=CC",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "CC(C)(C)C",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+],
+[
+1,
+4
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+],
+[
+1,
+4
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "CC(C)C",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C1CC1",
+"plain": [
+[
+0,
+1
+],
+[
+0,
+2
+],
+[
+1,
+2
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+0,
+2
+],
+[
+1,
+2
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "CC1CC1",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+],
+[
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+],
+[
+2,
+3
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C1CCC1",
+"plain": [
+[
+0,
+1
+],
+[
+0,
+3
+],
+[
+1,
+2
+],
+[
+2,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+0,
+3
+],
+[
+1,
+2
+],
+[
+2,
+3
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "[13CH4]",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "CC[N+](C)(C)C",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+2,
+3
+],
+[
+2,
+4
+],
+[
+2,
+5
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+2,
+3
+],
+[
+2,
+4
+],
+[
+2,
+5
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C[C@H](N)O",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C[C@@H](N)O",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+]
+},
+{
+"name": "V3000 any bond",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 2 1 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 * 1.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 8 1 2\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "CC(N)O",
+"plain": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+],
+"stereo": [
+[
+0,
+1
+],
+[
+1,
+2
+],
+[
+1,
+3
+]
+]
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccncc1",
+"plain": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+],
+"stereo": [
+[
+0,
+1,
+2,
+3,
+4,
+5
+]
+]
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1cncnc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C1CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "C1=CCCCC1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Oc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Cc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Clc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Brc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Fc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "Nc1ccccc1",
+"plain": [],
+"stereo": []
+},
+{
+"name": "V3000 aromatic ring",
+"query": "\n  sub\n\n  0  0  0     0  0            999 V3000\nM  V30 BEGIN CTAB\nM  V30 COUNTS 6 6 0 0 0\nM  V30 BEGIN ATOM\nM  V30 1 C 0.0000 0.0000 0 0\nM  V30 2 C 1.5000 0.8000 0 0\nM  V30 3 C 3.0000 0.0000 0 0\nM  V30 4 C 4.5000 0.8000 0 0\nM  V30 5 C 6.0000 0.0000 0 0\nM  V30 6 N 7.5000 0.8000 0 0\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 1 4 1 2\nM  V30 2 4 2 3\nM  V30 3 4 3 4\nM  V30 4 4 4 5\nM  V30 5 4 5 6\nM  V30 6 4 6 1\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n",
+"target": "c1ccc2ccccc2c1",
+"plain": [],
+"stereo": []
+}
+]
+}
