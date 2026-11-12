@@ -18,6 +18,8 @@ mod graph_record;
 mod groups;
 pub mod labels;
 pub mod mech;
+#[cfg(feature = "sub")]
+pub mod moiety;
 pub mod positions;
 pub mod rules;
 mod rules_site;

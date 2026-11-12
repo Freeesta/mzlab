@@ -2,7 +2,8 @@
 //! drawing; `substructure` gives `sub/1` (`subdb/1` over a structure list), where a drawn moiety occurs; `cip` gives `cip/1`, its R/S and E/Z.
 //! A `.wasm` of its own (`molkit`), so the grafo one does not carry the record; the CLI (`mol-check`, `mol-search`, `mol-cip`) and the app
 //! (`feat/grafo`, kinds `check`, `sub`, `cip`) run the same `mzlab_feat::chem::check::check_json`, `substructure::search_json` and
-//! `cip::cip_json`. Errors are JSON `{"error_key", "params"}` strings.
+//! `cip::cip_json`. `flow_moiety` is the Flow step `structure.moiety` (`moiety::moiety_text`, the function `flow run` calls). Errors are JSON
+//! `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
 
@@ -34,4 +35,13 @@ pub fn substructure(request: &str) -> std::result::Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn cip(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::cip::cip_json(request).map_err(js_err)
+}
+
+/// `structure.moiety`: the rows of the candidate table `table` that contain (or lack) the moiety; `params_json` is the step's parameters merged with
+/// its defaults. The same bytes as `flow run`.
+#[wasm_bindgen]
+pub fn flow_moiety(params_json: &str, table: &[u8]) -> std::result::Result<String, JsValue> {
+    let params = mzlab_core::json::parse(params_json.as_bytes())
+        .map_err(|_| js_err(Error::new("error.sub.request")))?;
+    mzlab_feat::chem::moiety::moiety_text(&params, table).map_err(js_err)
 }

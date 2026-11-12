@@ -1,0 +1,32 @@
+{
+ "about": "structure.moiety on a synthetic candidate table: the rows whose SMILES contain (or lack) a moiety, with moiety_matches; the Rust test, the CLI flow run and the molkit .wasm give these bytes",
+ "table": "name;smiles;note\nphenol-S1;Oc1ccccc1;\"a; b\"\nhydroquinone-S2;Oc1ccc(O)cc1;\nhexane-S3;CCCCCC;\nnothing-S4;;\nbroken-S5;C1CC;\nethanol-S6;CCO;#x\n",
+ "cases": [
+  {
+   "params": "{\"query\":\"c1ccccc1O\"}",
+   "out": "name;smiles;note;moiety_matches\nphenol-S1;Oc1ccccc1;\"a; b\";1\nhydroquinone-S2;Oc1ccc(O)cc1;;2\n"
+  },
+  {
+   "params": "{\"query\":\"c1ccccc1O\",\"keep\":\"lacking\"}",
+   "out": "name;smiles;note;moiety_matches\nhexane-S3;CCCCCC;;0\nethanol-S6;CCO;\"#x\";0\n"
+  },
+  {
+   "params": "{\"query\":\"O\",\"column\":\"SMILES\",\"stereo\":true}",
+   "out": "name;smiles;note;moiety_matches\nphenol-S1;Oc1ccccc1;\"a; b\";1\nhydroquinone-S2;Oc1ccc(O)cc1;;2\nethanol-S6;CCO;\"#x\";1\n"
+  }
+ ],
+ "errors": [
+  {
+   "params": "{\"query\":\"\"}",
+   "key": "error.sub.query"
+  },
+  {
+   "params": "{\"query\":\"CO\",\"column\":\"structure\"}",
+   "key": "error.sub.column"
+  },
+  {
+   "params": "{\"query\":\"CO\",\"keep\":\"some\"}",
+   "key": "error.sub.request"
+  }
+ ]
+}
