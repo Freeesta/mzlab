@@ -1,6 +1,6 @@
 [package]
 name = "mzlab-mol-wasm"
-description = "wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (check/1 of mzlab_feat::chem::check); a .wasm of its own (molkit), loaded by the page only when the user asks for it"
+description = "wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (check/1 of mzlab_feat::chem::check, sub/1 and subdb/1 of mzlab_feat::chem::substructure); a .wasm of its own (molkit), loaded by the page only when the user asks for it"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,5 +10,5 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
-mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["check"] }
+mzlab-feat = { path = "../mzlab-feat", default-features = false, features = ["check", "sub"] }
 wasm-bindgen = "0.2"

@@ -90,6 +90,12 @@ fn records(text: &str, d: char) -> Vec<(usize, Vec<String>)> {
     out
 }
 
+/// The cells of a `;`/tab/`,` table with the 1-based line where each record starts, header first: the reader of `from_csv` without its checks, for the
+/// structure lists of the substructure search (a catalogue row without a formula still has its SMILES).
+pub fn table(text: &str) -> Vec<(usize, Vec<String>)> {
+    records(text, delimiter(text))
+}
+
 fn err(line: usize, key: &'static str, detail: impl Into<String>) -> RowError {
     RowError {
         line,

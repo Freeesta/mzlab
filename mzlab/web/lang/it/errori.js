@@ -383,6 +383,8 @@ I18N.add("it", {
   "error.grafo.ring": "Un legame in un anello non si può rompere da solo: scegli un legame fuori dagli anelli.",
   "error.grafo.smiles": "La struttura «{smiles}» non si legge: controlla lo SMILES.",
   "error.grafo.tooBig": "La molecola ha più di {max} atomi: è troppo grande per questo calcolo.",
+  "error.sub.db": "L'elenco di strutture non contiene strutture da cercare (SDF, elenco di SMILES o tabella con una colonna smiles).",
+  "error.sub.dbSize": "L'elenco di strutture ha {n} voci; se ne cercano al massimo {max} per volta.",
   "error.sub.query": "La struttura disegnata non si può usare come ricerca: {detail}.",
   "error.sub.request": "La richiesta di ricerca della sottostruttura non è valida.",
   "error.gruppi.badOpts": "Le opzioni dei gruppi non sono valide: controlla i numeri.",
