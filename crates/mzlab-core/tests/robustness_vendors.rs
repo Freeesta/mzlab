@@ -186,8 +186,8 @@ fn wiff_pairs() -> &'static BTreeMap<String, Members> {
 }
 
 /// One pair per variant the reader serves: full and product scans, MRM, MRM with collision energies, scheduled MRM, periods, the TOF block layout, the v13
-/// blocks, a DAD method.
-const PAIRS: [&str; 9] = [
+/// blocks, a DAD method, device traces.
+const PAIRS: [&str; 10] = [
     "one",
     "two",
     "transizioni",
@@ -197,6 +197,7 @@ const PAIRS: [&str; 9] = [
     "bloccotof",
     "blocchi",
     "dadmetodo",
+    "dispositivi",
 ];
 
 #[test]
