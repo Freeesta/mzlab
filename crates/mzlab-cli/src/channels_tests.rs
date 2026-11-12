@@ -90,6 +90,33 @@ fn usage_errors_exit_with_2() {
     assert_eq!(execute(&["canali".into(), "--help".into()]).code, 0);
 }
 
+/// `--channel uv:auto` prints the XWC band of `itemroutes::pda_propose` (what `api/uvpropose` answers in the site and the app), with and without `--rt`.
+#[test]
+fn uv_auto_prints_the_band_the_engine_proposes() {
+    let f = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let p = f.to_string_lossy().into_owned();
+    let engine = |a: f64, b: f64| {
+        let file = std::fs::File::open(&f).unwrap();
+        let size = file.metadata().unwrap().len();
+        mzlab_core::itemroutes::pda_propose(&mut mzlab_core::mzmlhead::Mzml::new(file, size), a, b)
+            .unwrap()
+            + "\n"
+    };
+    let all = vec!["--channel", "uv:auto"];
+    let window = vec!["--channel", "uv:auto", "--rt", "1,2"];
+    for (extra, want) in [
+        (all, engine(f64::NAN, f64::NAN)),
+        (window, engine(1.0, 2.0)),
+    ] {
+        let o = run_new(&p, &extra);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        let got = String::from_utf8(o.stdout).unwrap();
+        assert_eq!(got, want, "{extra:?}");
+        let v = parse(got.trim().as_bytes()).unwrap();
+        assert_eq!(v.get("bw").and_then(|x| x.f64()), Some(4.0), "{got}");
+    }
+}
+
 /// The files of `tools/dati_sintetici.py` the tests need, in a new folder; `None` without python3 and numpy.
 fn synthetic() -> Option<PathBuf> {
     // one directory per call: the tests run in parallel
@@ -443,24 +470,4 @@ fn canale_reads_a_uv_and_an_analog_trace() {
     assert_eq!(run(&["--canale", "tic"]).code, 2);
     assert_eq!(run(&["--rt", "1"]).code, 2);
     let _ = std::fs::remove_dir_all(&dir);
-}
-
-/// `--channel uv:auto` prints the XWC band of `itemroutes::pda_propose` (what `api/uvpropose` answers in the site and the app), with and without `--rt`.
-#[test]
-fn uv_auto_prints_the_band_the_engine_proposes() {
-    let f = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
-    let p = f.to_string_lossy().into_owned();
-    let engine = |a: f64, b: f64| {
-        let file = std::fs::File::open(&f).unwrap();
-        let size = file.metadata().unwrap().len();
-        mzlab_core::itemroutes::pda_propose(&mut mzlab_core::mzmlhead::Mzml::new(file, size), a, b).unwrap() + "\n"
-    };
-    for (extra, want) in [(vec!["--channel", "uv:auto"], engine(f64::NAN, f64::NAN)), (vec!["--channel", "uv:auto", "--rt", "1,2"], engine(1.0, 2.0))] {
-        let o = run_new(&p, &extra);
-        assert_eq!(o.code, 0, "{}", o.stderr);
-        let got = String::from_utf8(o.stdout).unwrap();
-        assert_eq!(got, want, "{extra:?}");
-        let v = parse(got.trim().as_bytes()).unwrap();
-        assert_eq!(v.get("bw").and_then(|x| x.f64()), Some(4.0), "{got}");
-    }
 }

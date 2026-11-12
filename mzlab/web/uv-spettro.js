@@ -90,6 +90,7 @@ export async function draw(p) {
   /** @param {string} t */
   const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const f = E.files[p.k];
+  import("./xwc.js").then(m => (/** @type {any} */ (window).XWC = m).dressSpec(p));      // the XWC split button of the spectrum
   if (!f || p.r0 == null) return say(T("spec.pickRange"));
   /** @param {number} k @returns {Promise<any>} the slice of file k at r0..r1, or the answer of api/uvspec, or the error */
   const one = async k => {

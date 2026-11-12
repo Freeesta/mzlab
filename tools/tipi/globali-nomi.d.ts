@@ -1021,6 +1021,7 @@ declare var xicTraceFor: any;
 declare var xicWin: any;
 declare var xlsxBuild: any;
 declare var xlsxCrc32: any;
+declare var xwc: any;
 declare var y: any;
 declare var yTitleI: any;
 declare var yesno: any;

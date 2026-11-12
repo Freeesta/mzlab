@@ -5,7 +5,9 @@ use crate::channels::{Channel, Famiglia, Source};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::iteminfo::Facts;
-use crate::itemroutes::{analog as analog_route, pda_propose, pda_spectrum, pda_trace, pda_wavelength};
+use crate::itemroutes::{
+    analog as analog_route, pda_propose, pda_spectrum, pda_trace, pda_wavelength,
+};
 use crate::json::fmt_g;
 use crate::mzmlhead::{Chrom, Mzml};
 

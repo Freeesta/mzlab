@@ -160,7 +160,10 @@ fn answers<R: ReadAt>(st: &State, name: &str, m: &mut Mzml<R>) -> Vec<Pair> {
         ),
         (
             "proposed band in a window",
-            nat("lr_pda_propose", json!({"name": name, "rt0": 0.9, "rt1": 1.1})),
+            nat(
+                "lr_pda_propose",
+                json!({"name": name, "rt0": 0.9, "rt1": 1.1}),
+            ),
             e(itemroutes::pda_propose(m, 0.9, 1.1)),
         ),
     ]
@@ -226,7 +229,11 @@ fn a_wiff_with_a_dad_answers_as_the_core_with_the_peak_at_260_nm() {
         nm[top], PEAK_NM,
         "the UV spectrum at the peak has its maximum at 260 nm"
     );
-    let band: Value = serde_json::from_str(&text(st.rpc("lr_pda_propose", &json!({"name": name}), &[]).unwrap())).unwrap();
+    let band: Value = serde_json::from_str(&text(
+        st.rpc("lr_pda_propose", &json!({"name": name}), &[])
+            .unwrap(),
+    ))
+    .unwrap();
     assert_eq!(
         (band["nm"].as_f64(), band["bw"].as_f64()),
         (Some(PEAK_NM), Some(4.0)),

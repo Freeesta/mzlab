@@ -37,7 +37,7 @@ Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta 
 - `tic` (tutti gli scan MS, ordine del tempo; per un file solo MRM = somma delle transizioni, il TIC del costruttore se c'è), `bpc`.
 - `ms:<chiave>`: un gruppo di scan con la stessa `Scan::key()` (MS1 full, SIM, EMS, EPI a precursore fisso, MS2/MS3… di un percorso). Figli di `tic`; per MSn il genitore è il canale del precursore (`ms:<chiave>` di livello n-1), così l'albero dei precursori È la gerarchia dei canali.
 - `dd:<livello>[:<sigla>]`: aggregato degli MSn dipendenti dai dati (DDA, IDA EMS→EPI) quando le chiavi distinte di quel livello superano 64 (stesso tetto di `infusion.rs`): un solo canale con gli scan e i precursori come sotto-vista a richiesta (non 3 000 canali).
-- `srm:<q1>><q3>[@ce]` (una transizione MRM/SRM/CRM), `sim:<id>` (cromatogrammi SIC), `uv:twc`, `uv:<nm>[±bw]` (lunghezza d'onda chiesta dall'utente: canale derivato), `an:<i>` (pressione, flusso, UV singolo).
+- `srm:<q1>><q3>[@ce]` (una transizione MRM/SRM/CRM), `sim:<id>` (cromatogrammi SIC), `uv:twc`, `uv:<nm>[±bw]` (lunghezza d'onda chiesta dall'utente: canale derivato), `uv:auto` (solo CLI: la banda proposta), `an:<i>` (pressione, flusso, UV singolo).
 - `omologo`: chiave per sovrapporre file diversi (livello + masse nominali del percorso + attivazione + CE arrotondata; q1/q3 a 0,1; nm). Due file condividono un canale se hanno lo stesso `omologo`.
 
 **Struttura in Rust (`crates/mzlab-core/src/channels.rs`, ≤500 righe, nuovo).**

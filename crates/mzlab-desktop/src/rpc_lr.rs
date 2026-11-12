@@ -281,15 +281,12 @@ impl State {
                 let (mut m, _, _) = self.chroms(eng, name)?;
                 text(mzlab_core::itemroutes::pda_wavelength(&mut m, p["nm0"].as_f64().unwrap_or(f64::NAN), p["nm1"].as_f64().unwrap_or(f64::NAN))?)
             }
-            "lr_pda_spectrum" => {
+            // the UV spectrum, or the XWC band proposed, of rt0..rt1
+            "lr_pda_spectrum" | "lr_pda_propose" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let (mut m, _, _) = self.chroms(eng, name)?;
-                text(mzlab_core::itemroutes::pda_spectrum(&mut m, p["rt0"].as_f64().unwrap_or(f64::NAN), p["rt1"].as_f64().unwrap_or(f64::NAN))?)
-            }
-            "lr_pda_propose" => {
-                let name = s("name").split('#').next().unwrap_or("");
-                let (mut m, _, _) = self.chroms(eng, name)?;
-                text(mzlab_core::itemroutes::pda_propose(&mut m, p["rt0"].as_f64().unwrap_or(f64::NAN), p["rt1"].as_f64().unwrap_or(f64::NAN))?)
+                let (a, b) = (p["rt0"].as_f64().unwrap_or(f64::NAN), p["rt1"].as_f64().unwrap_or(f64::NAN));
+                text(if op == "lr_pda_propose" { mzlab_core::itemroutes::pda_propose(&mut m, a, b) } else { mzlab_core::itemroutes::pda_spectrum(&mut m, a, b) }?)
             }
             "lr_delay" => {
                 let name = s("name").split('#').next().unwrap_or("");
