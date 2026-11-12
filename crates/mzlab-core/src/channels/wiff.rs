@@ -41,12 +41,21 @@ fn experiment_of(native: &str) -> String {
 }
 
 /// The EPI experiments of the scans whose precursor changes from cycle to cycle (to 0.1 mDa): an IDA picks it from the survey at every cycle, a targeted
-/// EPI keeps the one of its method. Read from the scans alone, so an mzML from msconvert is grouped as the reader's own.
+/// EPI keeps the one of its method. Read from the scans alone, so an mzML from msconvert is grouped as the reader's own; a scan with a filter string
+/// (another maker's, which names its precursor) is never one, nor an experiment of a file with no survey experiment beside it.
 pub(super) fn varying(scans: &[Scan]) -> HashSet<String> {
+    let wiff = |s: &&Scan| s.filter.is_empty() && sigla(s).is_some();
+    let surveys: HashSet<String> = scans
+        .iter()
+        .filter(wiff)
+        .filter(|s| s.level == 1)
+        .map(|s| experiment_of(&s.native))
+        .collect();
     let mut first: HashMap<String, i64> = HashMap::new();
     let mut out = HashSet::new();
     for s in scans
         .iter()
+        .filter(wiff)
         .filter(|s| s.level == 2 && sigla(s) == Some("EPI"))
     {
         let p = s.prec(f64::NAN);
@@ -59,6 +68,8 @@ pub(super) fn varying(scans: &[Scan]) -> HashSet<String> {
             out.insert(e);
         }
     }
+    // an IDA picks from a survey of its own experiment: without one the precursors are the targets of a fixed method
+    out.retain(|e| surveys.iter().any(|v| v != e));
     out
 }
 
