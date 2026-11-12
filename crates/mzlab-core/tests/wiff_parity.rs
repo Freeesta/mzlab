@@ -130,7 +130,7 @@ fn compare(w: &Wiff, got: &Run, want: &Run, label: &str) -> usize {
 }
 
 /// Each mzML is its own case: a mismatch is recorded and the next file still runs, so one acquisition mode (FullMass, MS2, MRM) never hides another.
-/// `MZLAB_WIFF_CASE=MS2` runs that mode only; MS2 truth is looked for in both mzML folders.
+/// `MZLAB_WIFF_CASE=MS2` runs that mode only. FullMass and MS2 are compared with the profile export (the centroided one drops sparse product-ion scans).
 #[test]
 fn real_files_match_proteowizard() {
     let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
@@ -140,7 +140,7 @@ fn real_files_match_proteowizard() {
     let only = std::env::var("MZLAB_WIFF_CASE").ok();
     let (mut done, mut failed) = (0, Vec::new());
     let (profile, centroid) = ("dati/3200 qtrap/mzML_profilo", "dati/3200 qtrap/mzML");
-    for (wiff, prefix, dirs) in [("FullMass", "B_FullMass-", &[profile][..]), ("MS2", "B_MS2-", &[profile, centroid][..]), ("MRM", "B_MRM-", &[centroid][..])] {
+    for (wiff, prefix, dirs) in [("FullMass", "B_FullMass-", &[profile][..]), ("MS2", "B_MS2-", &[profile][..]), ("MRM", "B_MRM-", &[centroid][..])] {
         if only.as_deref().is_some_and(|o| o != wiff) {
             continue;
         }
