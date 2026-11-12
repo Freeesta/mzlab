@@ -18,10 +18,10 @@ try:
         def copy_first(mode):
             pg.evaluate("window.__t.length = 0; document.getElementById('errbox') && document.getElementById('errbox').remove()")       # an earlier error (e.g. a wasm not built) must not hide this check
             pg.evaluate("(m) => Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: () => m ? Promise.reject(new DOMException('no', 'NotAllowedError')) : Promise.resolve() })", mode == "refuse")
-            for _ in range(200):
+            for _ in range(20):                                          # one right click at a time: a newer one replaces the menu of an older one still filling
                 pg.evaluate(OPEN)
-                if pg.locator("#ctx:not([hidden]) div[role=menuitem]").count(): break
-                pg.evaluate("new Promise(r => requestAnimationFrame(r))")
+                try: pg.wait_for_selector("#ctx:not([hidden]) div[role=menuitem]", timeout=3000); break
+                except Exception: pass
             pg.locator("#ctx div[role=menuitem]").first.click()
             wait_for_js(pg, "window.__t.length > 0")
             return pg.evaluate("window.__t.join('|')")

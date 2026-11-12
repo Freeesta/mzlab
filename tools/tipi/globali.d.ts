@@ -184,7 +184,6 @@ declare var _v3: any;
 declare var _xe: any;
 declare var avvisoAuto: any;
 declare var b64F32: any;
-declare var breakBonds: any;
 declare var calcEval: any;
 declare var calcFmt: any;
 declare var calcIsExpr: any;

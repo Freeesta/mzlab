@@ -22,10 +22,10 @@ try:
 
         def menu_row(row):
             """opens the canvas menu until it lists `row`, returns its locator"""
-            for _ in range(200):
+            for _ in range(20):                                          # one right click at a time: a newer one replaces the menu of an older one still filling
                 pg.evaluate(OPEN)
-                if pg.locator(f"#ctx:not([hidden]) [data-row={row}]").count(): break
-                pg.evaluate("new Promise(r => requestAnimationFrame(r))")
+                try: pg.wait_for_selector(f"#ctx:not([hidden]) [data-row={row}]", timeout=3000); break
+                except Exception: pass
             return pg.locator(f"#ctx [data-row={row}]")
 
         def search():

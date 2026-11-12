@@ -1,5 +1,5 @@
 """The structure bridge of mzFinder in WebAssembly (crates/mzlab-feat-grafo-wasm) answers a SMILES with the formula, the groups and the cleavage products that
-the Rust library gives natively, the piece labels, the bond cuts and the analysis card (`anal/1`, every golden molecule) the selection info (`sel/1`) and the lookup URLs (`link/1`, every golden case) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
+the Rust library gives natively, the piece labels (also with the delta of a bracket), the bond cuts and the analysis card (`anal/1`, every golden molecule) the selection info (`sel/1`) and the lookup URLs (`link/1`, every golden case) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import json
 import shutil
@@ -130,6 +130,15 @@ def test_labels_with_a_radical_mark_equal_the_cli(pkg, tmp_path):
     methyl, aminium = json.loads(site)["structures"]
     assert (methyl["unpaired"], methyl["odd"], methyl["kind"]) == (1, True, "radical")
     assert (aminium["kind"], aminium["electrons"]) == ("radicalCation", 9) and aminium["odd"]
+
+
+def test_labels_with_a_bracket_delta_equal_the_cli(pkg, tmp_path):
+    req = tmp_path / "req.json"   # the Draw label of a structure in brackets with «+O»: formula and masses of structure plus delta
+    req.write_text(json.dumps({"structures": [[{"el": "C", "h": 3}, {"el": "C", "h": 3}], [{"el": "C", "h": 4}]], "deltas": ["+O", "-O"], "arrows": []}), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "labels")
+    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-label", str(req))
+    ethanol, bad = json.loads(site)["structures"]
+    assert (ethanol["formula"], ethanol["nominal"], ethanol["delta"]) == ("C2H6O", 46, "+O") and bad["error"] == "error.grafo.delta.neg"
 
 
 # ions/1: a chloro amine, a quaternary ammonium, a deuterated acid and a 13C-labelled sugar (atoms as the Draw page sends them)
