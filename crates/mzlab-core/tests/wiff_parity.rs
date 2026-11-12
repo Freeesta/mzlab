@@ -129,30 +129,48 @@ fn compare(w: &Wiff, got: &Run, want: &Run, label: &str) -> usize {
     n
 }
 
+/// Each mzML is its own case: a mismatch is recorded and the next file still runs, so one acquisition mode (FullMass, MS2, MRM) never hides another.
+/// `MZLAB_WIFF_CASE=MS2` runs that mode only; MS2 truth is looked for in both mzML folders.
 #[test]
 fn real_files_match_proteowizard() {
     let Some(folder) = dati_percorsi::percorso("dati/3200 qtrap/wiff") else {
         eprintln!("SKIP wiff_parity: no data repository (MZLAB_DATI)");
         return;
     };
-    let mut done = 0;
-    for (wiff, prefix, dir) in [("FullMass", "B_FullMass-", "dati/3200 qtrap/mzML_profilo"), ("MS2", "B_MS2-", "dati/3200 qtrap/mzML_profilo"), ("MRM", "B_MRM-", "dati/3200 qtrap/mzML")] {
-        let Ok(bytes) = std::fs::read(folder.join(format!("{wiff}.wiff"))) else { continue };
+    let only = std::env::var("MZLAB_WIFF_CASE").ok();
+    let (mut done, mut failed) = (0, Vec::new());
+    let (profile, centroid) = ("dati/3200 qtrap/mzML_profilo", "dati/3200 qtrap/mzML");
+    for (wiff, prefix, dirs) in [("FullMass", "B_FullMass-", &[profile][..]), ("MS2", "B_MS2-", &[profile, centroid][..]), ("MRM", "B_MRM-", &[centroid][..])] {
+        if only.as_deref().is_some_and(|o| o != wiff) {
+            continue;
+        }
+        let Ok(bytes) = std::fs::read(folder.join(format!("{wiff}.wiff"))) else {
+            eprintln!("SKIP wiff_parity {wiff}: no {wiff}.wiff");
+            continue;
+        };
         let ole = container(bytes, wiff).unwrap();
-        let mut scan = std::fs::read(folder.join(format!("{wiff}.wiff.scan"))).unwrap();
+        let scan = std::fs::read(folder.join(format!("{wiff}.wiff.scan"))).unwrap();
         let len = scan.len() as u64;
-        let mut files: Vec<PathBuf> = std::fs::read_dir(dati_percorsi::percorso(dir).unwrap()).unwrap().flatten().map(|e| e.path()).filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix)).collect();
+        let mut files: Vec<PathBuf> = dirs.iter().filter_map(|d| dati_percorsi::percorso(d)).filter_map(|d| std::fs::read_dir(d).ok()).flat_map(|r| r.flatten().map(|e| e.path())).filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix)).collect();
         files.sort();
+        eprintln!("wiff_parity {wiff}: {} mzML", files.len());
         for f in files {
-            let want = mzml::read(std::io::BufReader::new(std::fs::File::open(&f).unwrap())).unwrap();
-            let id = want.spectra.first().map(|s| s.id.clone()).or_else(|| want.chromatograms.iter().find(|c| c.id.contains("sample=")).map(|c| c.id.clone())).unwrap();
-            let w = Wiff::open(&ole, wiff, Some(len), sample_of(&id).unwrap()).unwrap();
-            let got = w.run(&mut scan).unwrap();
-            compare(&w, &got, &want, &f.display().to_string());
-            done += 1;
+            let label = f.display().to_string();
+            let case = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let want = mzml::read(std::io::BufReader::new(std::fs::File::open(&f).unwrap())).unwrap();
+                let id = want.spectra.first().map(|s| s.id.clone()).or_else(|| want.chromatograms.iter().find(|c| c.id.contains("sample=")).map(|c| c.id.clone())).unwrap();
+                let w = Wiff::open(&ole, wiff, Some(len), sample_of(&id).unwrap()).unwrap();
+                let got = w.run(&mut scan.clone()).unwrap();
+                compare(&w, &got, &want, &label)
+            }));
+            match case {
+                Ok(_) => done += 1,
+                Err(_) => failed.push(format!("{wiff}: {label}")),
+            }
         }
     }
-    eprintln!("compared {done} mzML files");
+    eprintln!("compared {done} mzML files, {} failed", failed.len());
+    assert!(failed.is_empty(), "mzML not matched:\n{}", failed.join("\n"));
     assert!(done > 0, "no mzML paired with a wiff");
 }
 
