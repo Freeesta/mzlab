@@ -185,6 +185,40 @@ fn rows_cols_gives_the_same_values_as_rows() {
     );
 }
 
+/// A WITHOUT ROWID table of two levels: the root is an interior index page whose one cell holds a key between its two leaves; the keys come in order.
+#[test]
+fn a_two_level_without_rowid_table_gives_its_keys_in_order() {
+    let cell = |b: &str, a: i64| {
+        let r = record(&[V::T(b), V::I(a)]);
+        let mut c = varint(r.len() as u64);
+        c.extend(r);
+        c
+    };
+    // root page 2: left child 3, key ("m", 5), right-most child 4
+    let mut root = 3u32.to_be_bytes().to_vec();
+    root.extend(cell("m", 5));
+    let pages = [
+        page(2, 0, &[root], 4),
+        page(10, 0, &[cell("a", 1), cell("b", 2)], 0),
+        page(10, 0, &[cell("x", 3)], 0),
+    ]
+    .concat();
+    let sql = "CREATE TABLE W (a INTEGER, b TEXT, PRIMARY KEY (b)) WITHOUT ROWID";
+    let mut s = open_db(db(&[("W", sql, pages)]), None).unwrap();
+    let t = s.table("W").unwrap().clone();
+    let mut seen = Vec::new();
+    s.rows(&t, |r| {
+        seen.push(r.iter().find_map(|v| v.text().map(str::to_string)));
+        Ok(true)
+    })
+    .unwrap();
+    let keys: Vec<Option<String>> = ["a", "b", "m", "x"]
+        .iter()
+        .map(|k| Some(k.to_string()))
+        .collect();
+    assert_eq!(seen, keys);
+}
+
 /// Timing of a full scan of a 10^6-row table: all columns (`righe`) against the two that are needed.
 /// The pages of a two-level table of `n_rows` rows: the root (page 2), then the middle pages, then the leaves.
 fn large(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
