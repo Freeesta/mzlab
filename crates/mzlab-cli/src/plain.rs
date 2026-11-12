@@ -1,15 +1,16 @@
 //! The subcommands of `mzlab-cli` that take their arguments as a plain list, and the old command names still accepted for them.
 
 use crate::{
-    channels_cmd, flow_explain, ion_pattern_cmd, llm, manual_table_cmd, mol_check_cmd, mol_cut_cmd,
-    mol_label_cmd, mol_search_cmd, msn_rules, peaks_auto_cmd, peaks_edges_cmd, samples_cmd,
-    steps_cmd, Outcome,
+    channels_cmd, flow_explain, ion_pattern_cmd, llm, manual_table_cmd, mol_cut_cmd, mol_label_cmd,
+    mol_search_cmd, msn_rules, peaks_auto_cmd, peaks_edges_cmd, samples_cmd, steps_cmd, Outcome,
 };
 
 #[path = "dda_window_cmd.rs"]
 mod dda_window_cmd;
 #[path = "ion_mz_cmd.rs"]
 mod ion_mz_cmd;
+#[path = "mol_check_cmd.rs"]
+mod mol_check_cmd;
 #[path = "peak_area_cmd.rs"]
 pub(crate) mod peak_area_cmd;
 #[path = "peak_window_cmd.rs"]
