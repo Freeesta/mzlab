@@ -95,6 +95,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | assistente LLM: esecutore dei lettori sulla pagina (`llm-agente.js`, router, `sub`) | `docs/agenti/llm-lettori.md` |
 | proxy pubblico anonimo dell'assistente (`proxy/`, Worker Cloudflare, `Ledger` della spesa, porte, elenco degli hash) | `docs/agenti/assistente-proxy.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV, stesso motore e ricetta della pagina) | `docs/agenti/cli.md` (passo per passo: `cli-passi.md`) |
+| `mzlab-cli convert`: file e cartelle dei produttori in mzML, `--peaks`, `--report`, codici d'uscita | `docs/agenti/cli-convert.md` |
 | agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md` (mzFinder nativo: `rust-desktop-finder.md`), `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |

@@ -60,6 +60,25 @@ pub(super) struct Effect {
     pub ppm_doublet: f64,
 }
 
+/// The parameters a conversion estimates on 6 scans of singles: a width model is fitted.
+fn estimated(
+    singles: &dyn Fn(&mut Rng) -> Vec<Vec<(f64, f64)>>,
+    snr: f64,
+    grid: Grid,
+    rng: &mut Rng,
+) -> Params {
+    let scans: Vec<_> = (0..6)
+        .map(|_| scan(&singles(rng), snr, grid, rng))
+        .collect();
+    let refs: Vec<(&[f64], &[f64])> = scans
+        .iter()
+        .map(|(a, b)| (a.as_slice(), b.as_slice()))
+        .collect();
+    let p = estimate(&refs, 0.7).params;
+    assert!(p.wm.is_some(), "a width model for the file");
+    p
+}
+
 pub(super) fn measure(snr: f64, grid: Grid, model: bool) -> Effect {
     let mut rng = Rng(5);
     let centre = |i: usize, rng: &mut Rng| 150.0 + 26.0 * i as f64 + 5.0 * rng.next();
@@ -68,15 +87,7 @@ pub(super) fn measure(snr: f64, grid: Grid, model: bool) -> Effect {
             .map(|i| vec![(centre(i, rng), 1e4 * (0.5 + rng.next()))])
             .collect()
     };
-    let scans: Vec<_> = (0..6)
-        .map(|_| scan(&singles(&mut rng), snr, grid, &mut rng))
-        .collect();
-    let refs: Vec<(&[f64], &[f64])> = scans
-        .iter()
-        .map(|(a, b)| (a.as_slice(), b.as_slice()))
-        .collect();
-    let mut p = estimate(&refs, 0.7).params;
-    assert!(p.wm.is_some(), "a width model for the file");
+    let mut p = estimated(&singles, snr, grid, &mut rng);
     if !model {
         p.wm = None;
     }
