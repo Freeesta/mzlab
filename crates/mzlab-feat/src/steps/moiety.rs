@@ -31,7 +31,8 @@ pub fn moiety() -> Step {
                 .doc("The stereo of the moiety must match too; off, the stereo of both is ignored"),
             Param::choice("keep", "Rows kept", &["containing", "lacking"])
                 .default_str("containing")
-                .doc("containing: the rows whose structure contains the moiety; lacking: the rows whose structure does not. Rows without a readable structure are left out either way"),
+                .doc("containing: the rows whose structure contains the moiety; lacking: the rows whose structure does not. Rows without a readable structure are left out either way")
+                .tip("Keep the rows with the moiety, or the rows without it."),
         ],
         runs_in: RunsIn {
             wasm: Some("molkit"),
