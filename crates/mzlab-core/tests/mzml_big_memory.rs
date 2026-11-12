@@ -143,13 +143,18 @@ fn large_mzml_fits_the_budget() {
         );
     }
 
-    // opening the index: the scan table is held as its bytes and as the scans, never as one JSON tree of every row as well (that took ten times the bytes)
-    let copy = large.clone();
+    open_holds_no_tree(&large, p.table.scans_json.len());
+    let _ = std::fs::remove_file(&path);
+}
+
+/// Opening the index `large` whose rows JSON is `rows` bytes long.
+fn open_holds_no_tree(large: &[u8], rows: usize) {
+    // opening the index: the scan table is held as its bytes and as the scans, never as one JSON tree of every row as well
+    let copy = large.to_vec();
     let base = start();
     let ix = mzlab_core::idxread::Index::open(copy, large.len() as u64).unwrap();
     let open = above(base);
     assert_eq!(ix.scans.len(), SCANS);
-    let rows = p.table.scans_json.len();
     // the rows' bytes, one `Scan` (328 B) a scan and the header: about 780 B a scan here; the tree took about twelve times the rows
     assert!(
         open <= rows + 400 * SCANS + MB,
@@ -157,5 +162,4 @@ fn large_mzml_fits_the_budget() {
         open,
         rows
     );
-    let _ = std::fs::remove_file(&path);
 }
