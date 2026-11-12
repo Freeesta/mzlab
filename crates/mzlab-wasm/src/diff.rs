@@ -61,23 +61,3 @@ pub fn mrm_diff_post(files: &str, reference: &str, query: &str) -> String {
         Some(Err(json)) => format!("E{json}"),
     }
 }
-
-/// `api/manint`: the table of the integrations drawn by hand (`manint::table_text`): `files` = `[{"name", "transitions"}]` (the transitions as
-/// `api/mrm` gives them), `windows` = `[{"file", "tr", "a", "b", "baseline"?, "line"?}]`, `sums` = a sum row per channel. "E" + JSON = the user's error.
-#[wasm_bindgen]
-pub fn manual_table(files: &str, windows: &str, sums: bool) -> String {
-    match mzlab_core::manint::table_text(files, windows, sums) {
-        Ok(csv) => csv,
-        Err(e) => format!("E{}", e.to_json()),
-    }
-}
-
-/// `api/manvalley`: where one window of `manual_table` splits at `depth` (`manint::valleys_text`): `{"splits":[MIN,...]}`; "E" + JSON = the user's
-/// error.
-#[wasm_bindgen]
-pub fn manual_valleys(files: &str, window: &str, depth: f64) -> String {
-    match mzlab_core::manint::valleys_text(files, window, depth) {
-        Ok(json) => json,
-        Err(e) => format!("E{}", e.to_json()),
-    }
-}
