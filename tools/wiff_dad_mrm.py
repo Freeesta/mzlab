@@ -2,10 +2,11 @@
 
     python3 tools/wiff_dad_mrm.py OUT
 
-Writes OUT/dadmrm.wiff (one MRM experiment, two transitions) and OUT/dadsim.wiff (one Q1MI experiment, two ions), both with the same DAD matrix:
-191 wavelengths, 210-400 nm, 1 nm step, a strong band at 274 nm (compound A, 2.0 min) and a weak one at 230 nm (compound B, 3.5 min) on a flat
-baseline; OUT/dadmrm.json holds the expected band means at the apexes. OUT/dadscan.wiff has the same DAD after one full scan experiment
-(crates/mzlab-core/tests/wiff_reader.rs: its BPC and TWC keep one order on every path). Invented numbers, no laboratory data.
+Writes OUT/dadmrm.wiff (one MRM experiment, two transitions), OUT/dadsim.wiff (one Q1MI experiment, two ions), OUT/dadms2.wiff (one product-ion
+experiment) and OUT/dadscan.wiff (one full scan experiment), all with the same DAD matrix: 191 wavelengths, 210-400 nm, 1 nm step, a strong band at
+274 nm (compound A, 2.0 min) and a weak one at 230 nm (compound B, 3.5 min) on a flat baseline; OUT/nodad.wiff is the MRM one without a DAD;
+OUT/dadmrm.json holds the expected band means at the apexes; dadscan keeps its BPC and TWC in one order on every path (crates/mzlab-core/tests/
+wiff_reader.rs). Invented numbers, no laboratory data.
 """
 import json
 import math
@@ -45,6 +46,18 @@ def ms_blocks():
     return out
 
 
+def ms2_blocks():
+    """Product-ion scans of one precursor, one every 6 s, with a fragment peak at compound A's apex."""
+    out = []
+    for k in range(60):
+        t = 6000.0 * k
+        height = round(4.0e4 * math.exp(-0.5 * ((t / 60000.0 - BANDS[0][0]) / 0.1) ** 2))
+        pts = [(1500 + j, 5 + round(height * math.exp(-(j / 2.5) ** 2))) for j in range(-4, 5)] + [(800 + 37 * j, 3 + j % 4) for j in range(20)]
+        pts.sort()
+        out.append(("scan", pts, t, float(sum(c for _, c in pts))))
+    return out
+
+
 def band_mean(t, lo, hi):
     """The mean of the channels in lo..=hi at time t, as the engine computes an XWC."""
     nms = [NM0 + STEP * j for j in range(NCH) if lo <= NM0 + STEP * j <= hi]
@@ -61,6 +74,13 @@ def main(out=None):
         wr = w.Writer()
         wr.sample(1, ms_blocks(), method, log="3200 QTRAP", dad=(ts, NM0, STEP, rows))
         wr.save(out, name)
+    wr = w.Writer()
+    wr.sample(1, ms_blocks(), {"Experiment0/ExperimentHeader": w.header(4, 0.0, polarity=0), "Experiment0/MassRangeEx/MassRangeEx": w.mrm_method(TRS)}, log="3200 QTRAP")
+    wr.save(out, "nodad")
+    wr = w.Writer()
+    wr.sample(1, ms2_blocks(), {"Experiment0/ExperimentHeader": w.header(11, 300.0, polarity=0),
+                                "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": w.ion_spray(5500.0)}, log="3200 QTRAP", dad=(ts, NM0, STEP, rows))
+    wr.save(out, "dadms2")
     wr = w.Writer()
     scans = [("scan", w.FULL, 6000.0 * k, 1.0e3 * (k + 1)) for k in range(5)]
     wr.sample(1, scans, {"Experiment0/ExperimentHeader": w.header(15, 0.0)}, log="3200 QTRAP", dad=(ts, NM0, STEP, rows))

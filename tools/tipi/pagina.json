@@ -114,6 +114,7 @@
     "../../mzlab/web/liste-nomi.js",
     "../../mzlab/web/integra-zero.js",
     "../../mzlab/web/integra-base.js",
+    "../../mzlab/web/canali-uv.js",
     "../../mzlab/web/integra-segue.js",
     "../../mzlab/web/barre-maniglie.js",
     "../../mzlab/web/scroll.js",

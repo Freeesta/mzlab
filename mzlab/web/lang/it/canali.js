@@ -28,6 +28,7 @@ I18N.add("it", {
   "canali.pick.hint": "Clic su un canale: solo quello. Casella, Ctrl+clic o Spazio: aggiungi o togli.",
   "canali.pick.ck": "Aggiungi o togli {et}",
   "canali.grp.ms": "Spettrometria di massa",
+  "canali.grp.uv": "UV/Vis",
   "canali.grp.det": "Rivelatori",
   "canali.grp.log": "Registri",
   "canali.col.canale": "Canale",

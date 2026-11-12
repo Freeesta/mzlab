@@ -28,6 +28,7 @@ I18N.add("en", {
   "canali.pick.hint": "Click a channel: only that one. Box, Ctrl+click or Space: add or remove it.",
   "canali.pick.ck": "Add or remove {et}",
   "canali.grp.ms": "Mass spectrometry",
+  "canali.grp.uv": "UV/Vis",
   "canali.grp.det": "Detectors",
   "canali.grp.log": "Logs",
   "canali.col.canale": "Channel",
