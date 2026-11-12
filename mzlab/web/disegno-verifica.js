@@ -132,7 +132,7 @@ export function mountCheck() {
   if (document.querySelector("#chk-card")) return;
   const card = document.createElement("div");
   card.className = "card"; card.id = "chk-card";
-  card.innerHTML = '<h2 data-i18n="draw.check.heading"></h2><p class="muted sm" style="margin:0 0 4px" data-i18n="draw.check.intro"></p>'
+  card.innerHTML = '<h2 data-i18n="draw.check.heading"></h2><p class="rq-d" data-i18n="draw.check.intro"></p>'
     + '<div class="bar"><button type="button" id="chk-run" data-i18n="draw.check.run" data-i18n-title="draw.check.run.title"></button></div>'
     + '<div style="margin:3px 0"><label><input type="checkbox" autocomplete="off" id="chk-auto"> <span data-i18n="draw.check.auto"></span></label></div>'
     + '<div id="chk-status" class="sm" role="status"></div><ul id="chk-list" class="sm"></ul>';
@@ -142,7 +142,7 @@ export function mountCheck() {
   css.textContent = "#chk-list{list-style:none;padding:0;margin:4px 0 0}#chk-list li{margin:4px 0;padding-left:6px;border-left:3px solid var(--muted)}#chk-list li.chk-warn{border-left-color:var(--bad)}"
     + "#chk-list button{min-height:24px;min-width:24px}.chk-sel{text-align:left;background:none;border:0;padding:2px 0;color:var(--ink);cursor:pointer;font:inherit}.chk-x{margin:2px 0 4px}";
   card.appendChild(css);
-  const after = document.querySelector("#prop-card");
+  const after = document.querySelector("#anal-card");
   if (!after || !after.parentNode) return;
   after.parentNode.insertBefore(card, after.nextSibling);
   /** @type {HTMLElement} */ (card.querySelector("#chk-run")).onclick = () => { checkNow(); };
@@ -180,6 +180,7 @@ async function whyRows(/** @type {any} */ c) {
 function openWhy(/** @type {number} */ k) {
   const box = document.getElementById("chk-x" + k), why = document.querySelector(`[aria-controls="chk-x${k}"]`);
   if (!box || !(why instanceof HTMLElement)) return;
+  document.dispatchEvent(new CustomEvent("mzlab-card-open", { detail: document.getElementById("chk-card") }));
   box.hidden = false; why.setAttribute("aria-expanded", "true");
   why.scrollIntoView({ block: "nearest" }); why.focus();
 }

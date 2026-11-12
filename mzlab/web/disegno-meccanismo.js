@@ -246,7 +246,6 @@ function words(/** @type {() => any} */ K, /** @type {Helpers} */ h) {
 function fillList(/** @type {any} */ K, /** @type {Helpers} */ h, /** @type {HTMLElement} */ list, /** @type {HTMLElement} */ note, /** @type {any} */ r) {
   const t = h.t, { name, rowText } = words(() => K, h);
   const as = arrows(K); list.textContent = "";
-  if (!as.length) { const li = document.createElement("li"); li.className = "muted"; li.textContent = t("draw.mech.empty"); list.appendChild(li); }
   as.forEach((a, k) => {
     const li = document.createElement("li"), s = document.createElement("span"), x = document.createElement("button"), c = r && r.arrows && r.arrows[k];
     s.textContent = rowText(a, k + 1) + (c ? " — " + (c.ok ? t("draw.mech.ok") : t(PROBLEMS[c.problem] || "draw.mech.problem.same")) : "");
