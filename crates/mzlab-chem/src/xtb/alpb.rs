@@ -65,10 +65,14 @@ fn psi_pair(d: f64, rho: f64, rj: f64) -> f64 {
     let (pl, mi) = (d + rho, d - rho);
     if d < rj + rho && pl > rj {
         let (rj1, pl1) = (1.0 / rj, 1.0 / pl);
-        rj1 - pl1 + 0.5 / d * (0.5 * mi * (pl1 - rj1 * pl * rj1) - (pl * rj1).ln())
+        rj1 - pl1 + 0.5 / d * (0.5 * mi * (pl1 - rj1 * pl * rj1) - crate::fm::log(pl * rj1))
     } else {
         let qu = mi / pl;
-        let ln = if qu > 0.0 { 0.5 * qu.ln() / d } else { 0.0 };
+        let ln = if qu > 0.0 {
+            0.5 * crate::fm::log(qu) / d
+        } else {
+            0.0
+        };
         rho / (pl * mi) + ln
     }
 }
@@ -89,7 +93,7 @@ pub fn born_radii(el: &[u8], pos: &[[f64; 3]], s: &Solvent) -> Vec<f64> {
             let sr = rvdw[j] - s.born_offset;
             let p2 = 0.5 * psi * sr;
             let t = p2 * (OBC[0] + p2 * (OBC[2] * p2 - OBC[1]));
-            s.born_scale / (1.0 / sr - t.tanh() / rvdw[j])
+            s.born_scale / (1.0 / sr - crate::fm::tanh(t) / rvdw[j])
         })
         .collect()
 }
@@ -118,7 +122,7 @@ fn adet(el: &[u8], pos: &[[f64; 3]]) -> f64 {
     let det = t[0][0] * (t[1][1] * t[2][2] - t[1][2] * t[2][1])
         - t[0][1] * (t[1][0] * t[2][2] - t[1][2] * t[2][0])
         + t[0][2] * (t[1][0] * t[2][1] - t[1][1] * t[2][0]);
-    (5.0 * det.cbrt() / (2.0 * vt)).sqrt()
+    (5.0 * crate::fm::cbrt(det) / (2.0 * vt)).sqrt()
 }
 
 /// Atom-pair ALPB matrix (Hartree, positions in bohr): energy ½ qᵀAq, potential Aq.

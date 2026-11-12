@@ -172,7 +172,7 @@ fn covalent_d3(z: u8) -> f64 {
 
 /// Coordination numbers with the double-exponential counting function of GFN2 (positions in bohr).
 pub fn coordination(el: &[u8], pos: &[[f64; 3]]) -> Vec<f64> {
-    let count = |k: f64, r: f64, r0: f64| 1.0 / (1.0 + (-k * (r0 / r - 1.0)).exp());
+    let count = |k: f64, r: f64, r0: f64| 1.0 / (1.0 + crate::fm::exp(-k * (r0 / r - 1.0)));
     let mut cn = vec![0.0; el.len()];
     for i in 0..el.len() {
         for j in (i + 1)..el.len() {

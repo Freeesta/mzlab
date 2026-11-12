@@ -32,7 +32,7 @@ pub fn weights(method: Method, window: usize) -> Vec<f64> {
             Method::SavitzkyGolay => (3 * m * (m + 1) - 1 - 5 * k * k) as f64,
             _ => {
                 let sigma = w as f64 / 6.0;
-                (-((k * k) as f64) / (2.0 * sigma * sigma)).exp()
+                libm::exp(-((k * k) as f64) / (2.0 * sigma * sigma))
             }
         })
         .collect();

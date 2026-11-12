@@ -14,7 +14,7 @@ pub fn fmt_g(v: f64) -> String {
     if v == 0.0 || !v.is_finite() {
         return if v == 0.0 { "0".into() } else { format!("{v}") };
     }
-    let exp = v.abs().log10().floor() as i32;
+    let exp = libm::log10(v.abs()).floor() as i32;
     let sci = format!("{:.5e}", v);
     // the exponent after rounding to six digits decides the notation
     let (mant, e) = sci.split_once('e').unwrap_or((&sci, "0"));

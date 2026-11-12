@@ -39,7 +39,7 @@ pub fn ri_factor(dri: f64, sigma: f64) -> f64 {
     if sigma <= 0.0 {
         return 1.0;
     }
-    (-0.5 * (dri / sigma).powi(2)).exp()
+    libm::exp(-0.5 * (dri / sigma).powi(2))
 }
 
 /// Stein weighted cosine of `q` against `l`: one-to-one pairs within `tol` (highest weighted product first), `Σ wq wl / sqrt(Σ wq² Σ wl²)`.
@@ -55,7 +55,7 @@ pub fn stein_cosine(
     let w = |s: &Spec| -> Vec<f64> {
         s.mz.iter()
             .zip(&s.it)
-            .map(|(m, i)| i.max(0.0).powf(o.a) * m.powf(o.b))
+            .map(|(m, i)| libm::pow(i.max(0.0), o.a) * libm::pow(*m, o.b))
             .collect()
     };
     let (wq, wl) = (w(q), w(l));

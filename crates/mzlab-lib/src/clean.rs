@@ -102,7 +102,7 @@ fn centroid(p: &[(f64, f64)], tol: f64) -> Vec<(f64, f64)> {
 pub fn entropy_of(p: &[f64]) -> f64 {
     -p.iter()
         .filter(|&&v| v > 0.0)
-        .map(|&v| v * v.ln())
+        .map(|&v| v * libm::log(v))
         .sum::<f64>()
 }
 
@@ -126,7 +126,7 @@ pub fn weighted_into(it: &[f64], p: &mut Vec<f64>) {
     if big_s < 3.0 {
         let w = 0.25 + 0.25 * big_s;
         for v in p.iter_mut() {
-            *v = v.powf(w);
+            *v = libm::pow(*v, w);
         }
         let t: f64 = p.iter().sum();
         for v in p.iter_mut() {
