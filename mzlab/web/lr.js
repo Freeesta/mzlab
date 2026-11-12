@@ -50,7 +50,7 @@ export function createLr({ rb }) {
   let hr = false, lr = false;            // the kinds of file in the session: the two cannot be mixed
   const mr = createMethodRoutes({ rpc: m => rpc(m), json: (o, st) => json(o, st), items: () => items });      // the methods (.dam) and how the items were acquired
   const missing = new Map(), causes = new Map();      // name -> scans its index lacks (a truncated data file, `build_mzidx_native`) and why (`Losses::cause`: a .raw may hold them without their event; noteKey = the row text then, not a cut file): for the row of the loading, not part of the row of App.files()
-  const api = { files, missing, causes, noteKey: (/** @type {string} */ n) => causes.get(n) === "warn.raw.eventsRefused" ? "conv.row.noEvent" : "", earlyTics, earlyTic: (/** @type {string} */ name) => earlyTics.get(name) };
+  const api = { files, missing, causes, noteKey: (/** @type {string} */ n) => ({ "warn.raw.eventsRefused": "conv.row.noEvent", "warn.file.damaged": "conv.row.damaged" })[causes.get(n) || ""] || "", earlyTics, earlyTic: (/** @type {string} */ name) => earlyTics.get(name) };
   const rpc = async (msg, onp) => {
     const tr = /** @type {any} */ (window).MZLAB_TRACE, t0 = tr ? performance.now() : 0;      // tests: where the time goes
     const r = await rb.rpc(msg, onp);

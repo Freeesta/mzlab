@@ -21,6 +21,8 @@ pub(crate) enum Item {
         notes: Vec<(String, String)>,
         /// With `--peaks mzlab`: the centroids flagged (merged, saturated).
         flagged: Option<(usize, usize)>,
+        /// A partial read as the record of the run has it, once the scans were read (declared, read, cause).
+        lost: Option<(usize, usize, String)>,
     },
     Failed {
         input: String,
@@ -38,6 +40,19 @@ pub(crate) fn flagged_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(us
         .find(|(n, _)| n == label)?;
     let n = |k: &str| note.1.get(k).and_then(|v| v.f64()).map(|x| x as usize);
     Some((n("merged")?, n("saturated")?))
+}
+
+/// The partial read (declared, read, cause) of the input `label`, from the note of its file in the record of the run: counted once the scans were read,
+/// so it holds the scans left out because their data do not decode, which the `conv/1` of the header, written before them, cannot.
+pub(crate) fn lost_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(usize, usize, String)> {
+    let note = run
+        .activities
+        .iter()
+        .flat_map(|a| &a.files)
+        .find(|(n, _)| n == label)?;
+    let n = |k: &str| note.1.get(k).and_then(|v| v.f64()).map(|x| x as usize);
+    let cause = note.1.get("cause").and_then(|v| v.str())?.to_string();
+    Some((n("declared")?, n("read")?, cause))
 }
 
 /// The read step through the head of an mzML.
@@ -110,12 +125,15 @@ pub(crate) fn partial_lines(items: &[Item]) -> String {
         .iter()
         .filter_map(|i| match i {
             Item::Done {
-                input,
-                conv: Some(c),
-                ..
-            } => partial_of(c).map(|(declared, read, cause)| {
-                format!("warning: {input}: partial read, {read} of {declared} scans ({cause})\n")
-            }),
+                input, conv, lost, ..
+            } => lost
+                .clone()
+                .or_else(|| conv.as_deref().and_then(partial_of))
+                .map(|(declared, read, cause)| {
+                    format!(
+                        "warning: {input}: partial read, {read} of {declared} scans ({cause})\n"
+                    )
+                }),
             _ => None,
         })
         .collect()
@@ -168,6 +186,7 @@ pub(crate) fn report(items: &[Item]) -> String {
                 conv,
                 notes,
                 flagged,
+                ..
             } => {
                 o.raw("{\"ingresso\":").str(input);
                 o.raw(",\"uscita\":").str(output);

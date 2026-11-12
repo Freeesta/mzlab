@@ -52,6 +52,7 @@ I18N.add("en", {
   "conv.row.cached": "Loaded from cache ✓ ({scans} scans)",
   "conv.row.missing": "partial read: {read} of {declared} scans, the file ends before the rest",
   "conv.row.noEvent": "{n} of {read} scans without their scan event: level and polarity unknown",
+  "conv.row.damaged": "{n} of {read} scans do not decode: left out with no points, the rest is read",
   "conv.sum.head": "{n} files: {parts} · {time}",
   "conv.sum.full": "{n} full scan",
   "conv.sum.ms2": "{n} MS2",

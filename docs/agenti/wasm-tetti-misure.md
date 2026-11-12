@@ -5,6 +5,7 @@ Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.
 - motore 2 174 976; `thermo` 774 144; `sciex` 481 280; `aperti` 561 152; `andi` 344 064; librerie 614 400; `hr` 1 716 224; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; i tetti degli altri moduli stanno solo negli script.
 
 ## Motore
+- Scansione danneggiata lasciata fuori e contata (`readers::Skips` nei cicli di `readers_mzml` e `mzidx_reader`, `Finished::losses`): motore grezzo 3 620 739 → 3 627 362 (+0,18 %), `agilent` grezzo 1 235 554 → 1 245 118 (+0,77 %), `sciex` grezzo 1 138 198 → 1 148 445 (+0,90 %; `tools/cargo_wasm.sh build --release` senza `wasm-opt`), tetti invariati.
 - Tracce dei dispositivi `.wiff` (`wiff/devices.rs`, `dad::device_channels`, `pressure_unit`): motore 2 148 349 → 2 154 332 (+5 983 B, +0,28 %), tetto invariato.
 - Centroidi del lettore: `readers_mzml::profile_of` nella stima di `readers_centroids::stima` (il profilo, non i centroidi del produttore) motore grezzo 3 602 657 → 3 603 263 (+606 B; `cargo build --release` senza `wasm-opt`).
 - Lettura e indice `.mzidx`: `read.into` (`JsMember` di `natives/member.rs`) 2 113 537 → 2 114 054; `lend` di `natives.rs` e `mzidx_spill::record` 2 113 470 → 2 113 537; `mzidx_spill::allinea` 2 112 878 → 2 113 470; `Sec::emit`, `mzidx_order::key64` 2 111 986 → 2 112 878; `scan_parts`/`JsModule::scan_spectrum` 2 109 296 → 2 111 986; impronte tardive (`prints` di `build_mzidx_native`) 2 104 337 → 2 106 625.

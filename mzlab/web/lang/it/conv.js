@@ -52,6 +52,7 @@ I18N.add("it", {
   "conv.row.cached": "Caricato dalla cache ✓ ({scans} scansioni)",
   "conv.row.missing": "lettura parziale: {read} di {declared} scansioni, il file finisce prima del resto",
   "conv.row.noEvent": "{n} di {read} scansioni senza il loro evento di scansione: livello e polarità sconosciuti",
+  "conv.row.damaged": "{n} di {read} scansioni non si decodificano: lasciate fuori senza punti, il resto è letto",
   "conv.sum.head": "{n} file: {parts} · {time}",
   "conv.sum.full": "{n} full scan",
   "conv.sum.ms2": "{n} MS2",

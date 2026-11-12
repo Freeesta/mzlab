@@ -1,18 +1,22 @@
 //! The guard every reader is opened through (`readers::apri` of the engine, `open_bare` of mzlab-lettori, the single-sample `.wiff` opens of both
 //! modules): a retention time, TIC, m/z, intensity or chromatogram point that is NaN or infinite is a damaged file
 //! (`err.file.nonFinite`, `err.file.nonFiniteTrace`, with the scan or trace and what is wrong), never a number passed on to the index, the charts or the mzML. A finite but odd value (negative RT, RT out
-//! of order) is the file's own and goes through.
+//! of order) is the file's own and goes through. A scan whose data do not decode is noted and counted in `losses` (`readers::Skips` leaves it out).
 use crate::error::{Error, Result};
 use crate::mzml::{Chromatogram, Spectrum};
 use crate::mzmlwrite::{Header, SpectrumExtra};
 use crate::readers::{
-    ChromatogramEntry, Field, FileSet, Format, Limits, Losses, Reader, Sample, ScanEntry,
+    damages_one, ChromatogramEntry, Field, FileSet, Format, Limits, Losses, Reader, Sample,
+    ScanEntry, SPECTRUM_DAMAGED,
 };
+use std::collections::BTreeSet;
 
 pub struct Finished {
     inner: Box<dyn Reader>,
     /// The samples whose index has been checked (an index is read once and asked for many times).
     seen: Vec<bool>,
+    /// (sample, scan) whose data did not decode (`readers::damages_one`): left out of a whole-sample read, counted in `losses`.
+    damaged: BTreeSet<(usize, usize)>,
 }
 
 impl Finished {
@@ -20,7 +24,17 @@ impl Finished {
         Finished {
             inner,
             seen: Vec::new(),
+            damaged: BTreeSet::new(),
         }
+    }
+    /// `s` as it is, noting scan `k` of sample `c` when its data do not decode.
+    fn noted<T>(&mut self, (c, k): (usize, usize), s: Result<T>) -> Result<T> {
+        if let Err(e) = &s
+            && damages_one(e)
+        {
+            self.damaged.insert((c, k));
+        }
+        s
     }
 }
 
@@ -104,16 +118,19 @@ impl Reader for Finished {
         self.inner.index_without_tic(c)
     }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        spectrum(self.inner.scan(c, k), k)
+        let s = spectrum(self.inner.scan(c, k), k);
+        self.noted((c, k), s)
     }
     fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
-        spectrum(self.inner.scan_data(c, k), k)
+        let s = spectrum(self.inner.scan_data(c, k), k);
+        self.noted((c, k), s)
     }
     fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
-        self.inner
-            .scan_profile(c, k)?
-            .map(|s| spectrum(Ok(s), k))
-            .transpose()
+        let s = self
+            .inner
+            .scan_profile(c, k)
+            .and_then(|s| s.map(|s| spectrum(Ok(s), k)).transpose());
+        self.noted((c, k), s)
     }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.inner.scan_header(c, k)
@@ -169,8 +186,19 @@ impl Reader for Finished {
     fn refused(&mut self, c: usize) -> Option<crate::Error> {
         self.inner.refused(c)
     }
+    // the spectra left out because their data do not decode count as not read; a cut file keeps its own cause
     fn losses(&mut self, c: usize) -> Result<Losses> {
-        self.inner.losses(c)
+        let l = self.inner.losses(c)?;
+        let bad = self.damaged.range((c, 0)..(c + 1, 0)).count();
+        if bad == 0 {
+            return Ok(l);
+        }
+        let cause = if l.partial() {
+            l.cause
+        } else {
+            SPECTRUM_DAMAGED
+        };
+        Ok(Losses::of(l.declared, l.read.saturating_sub(bad), cause))
     }
     #[cfg(feature = "sciex")]
     fn variant(&mut self, c: usize) -> bool {

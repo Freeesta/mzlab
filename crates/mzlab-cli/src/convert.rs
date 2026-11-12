@@ -288,6 +288,7 @@ fn item(
                 conv,
                 notes,
                 flagged: crate::convert_report::flagged_of(run, &e.label),
+                lost: crate::convert_report::lost_of(run, &e.label),
             }
         }
         Err(cause) => Item::Failed { input, cause },

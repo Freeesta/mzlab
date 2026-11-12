@@ -87,24 +87,47 @@ fn the_masses_come_from_the_record_of_the_scan() {
 }
 
 #[test]
-fn a_missing_cut_or_emptied_record_or_a_wrong_id_is_a_named_error() {
-    let whole = mass_cal(&[Some(0.1), Some(0.2)]);
+fn a_run_with_no_usable_calibration_record_is_a_named_error() {
     for (what, cal, id) in [
         ("no MSMassCal.bin", None, 1),
         ("an empty MSMassCal.bin", Some(Vec::new()), 1),
-        ("a record short", Some(mass_cal(&[Some(0.1)])), 1),
         (
-            "cut inside the last record",
-            Some(whole[..whole.len() - 30].to_vec()),
-            1,
+            "a CalibrationID with no default",
+            Some(mass_cal(&[Some(0.1), Some(0.2)])),
+            9,
         ),
-        ("an emptied record", Some(mass_cal(&[Some(0.1), None])), 1),
-        ("a CalibrationID with no default", Some(whole.clone()), 9),
     ] {
         let e = mzml(folder_id(cal, id))
             .err()
             .unwrap_or_else(|| panic!("{what}: no error"));
         assert_eq!(e.key, "err.file.agilentCalibration", "{what}");
+    }
+}
+
+#[test]
+fn a_scan_with_a_missing_cut_or_emptied_record_is_left_out_and_counted() {
+    let whole = mass_cal(&[Some(0.1), Some(0.2)]);
+    for (what, cal) in [
+        ("a record short", mass_cal(&[Some(0.1)])),
+        (
+            "cut inside the last record",
+            whole[..whole.len() - 30].to_vec(),
+        ),
+        ("an emptied record", mass_cal(&[Some(0.1), None])),
+    ] {
+        let mut l = readers::apri(folder(Some(cal)), &Limits::desktop()).unwrap();
+        let mut out = Vec::new();
+        mzlab_core::readers_mzml::scrivi(&mut *l, 0, &mut out, &mut |_, _| {})
+            .unwrap_or_else(|e| panic!("{what}: {e}"));
+        let x = String::from_utf8(out).unwrap();
+        // scan 1 keeps its masses, scan 2 is in the list with no points
+        assert_eq!(x.matches("<spectrum ").count(), 2, "{what}");
+        assert!(x.contains("defaultArrayLength=\"0\""), "{what}");
+        assert_eq!(
+            l.losses(0).unwrap(),
+            readers::Losses::of(2, 1, readers::SPECTRUM_DAMAGED),
+            "{what}"
+        );
     }
 }
 
