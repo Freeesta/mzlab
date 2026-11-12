@@ -32,7 +32,6 @@ function nativo() {
     labels: (/** @type {string} */ request) => ask({ kind: "labels", request }),
     cut: (/** @type {string} */ request) => ask({ kind: "cut", request }),
     ions: (/** @type {string} */ request) => ask({ kind: "ions", request }),
-    tray: (/** @type {string} */ request) => ask({ kind: "tray", request }),
     sel: (/** @type {string} */ request) => ask({ kind: "sel", request }),
     link: (/** @type {string} */ request) => ask({ kind: "link", request }),
     mech: (/** @type {string} */ request) => ask({ kind: "mech", request }),

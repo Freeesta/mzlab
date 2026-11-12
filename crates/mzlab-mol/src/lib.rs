@@ -1,7 +1,6 @@
 //! The chemical structure as a first-class record `mol/1` (docs/agenti/mol.md): atoms, Kekulé bonds, stereo elements with a status,
 //! enhanced-stereo groups, and optional coordinate, id, property and region layers. Used by the readers and writers of this crate, the
-//! substructure matcher (`SubQuery`) and the engines that need a molecule; it links nothing beyond serde and sha2 and on the site only the
-//! molid .wasm carries it.
+//! substructure matcher (`SubQuery`) and the engines that need a molecule; it links nothing beyond serde and sha2.
 
 mod aromatic;
 mod canon;
@@ -25,7 +24,6 @@ pub use molfile_write::fixed;
 mod query;
 mod renumber;
 mod sites;
-mod skeleton;
 mod smiles;
 mod smiles_parse;
 mod smiles_stereo;
@@ -47,6 +45,5 @@ pub use model::{
 };
 pub use query::{read_target, AtomTest, BondTest, SubQuery};
 pub use sites::Site;
-pub use skeleton::{LOOKUP_VERSION, SKELETON_VERSION};
 pub use substruct::SubOptions;
 pub use transform::{Evidence, TRegion, TSite, Transformation, TRANSFORMATION_FORMAT};
