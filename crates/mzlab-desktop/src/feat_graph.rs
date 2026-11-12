@@ -14,7 +14,8 @@
 
 use mzlab_core::{Error, Result};
 use mzlab_feat::chem::{
-    analysis, check, cip, cut, fragments, graph, labels, link, mech, positions, sdf, sel, substructure,
+    analysis, check, cip, cut, fragments, graph, labels, link, mech, positions, sdf, sel,
+    substructure,
 };
 use serde_json::Value;
 
@@ -38,7 +39,8 @@ impl State {
                 p["positive"].as_bool().unwrap_or(true),
                 s("reatt"),
             )?),
-            "labels" | "cut" | "sel" | "link" | "sub" | "analysis" | "check" | "cip" | "mech" | "sdf" => {
+            "labels" | "cut" | "sel" | "link" | "sub" | "analysis" | "check" | "cip" | "mech"
+            | "sdf" => {
                 let req = if p["request"].is_object() {
                     p["request"].to_string()
                 } else {
