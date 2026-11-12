@@ -2,12 +2,13 @@
 
     python3 tools/analisi_riferimento.py [--scrivi]
 
-Own tables (AME2020 masses, IUPAC abundances), exact convolution without pruning; writes tests/dati/anal_golden.json with --scrivi, otherwise
+Own tables (AME2020 masses, IUPAC abundances), exact convolution without pruning, `math.fsum` sums (the same bytes on every Python); writes tests/dati/anal_golden.json with --scrivi, otherwise
 checks that the file holds what this script computes. The Rust test crates/mzlab-feat/tests/analysis.rs compares the engine with the file.
 """
 from __future__ import annotations
 
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -84,16 +85,16 @@ def analyse(f: str, q: int) -> dict:
     dist = {0: (1.0, 0.0)}
     for el, a, n in parse(f):
         iso = isotopes(el, a)
-        avg = sum(m * p for _, m, p in iso)
+        avg = math.fsum(m * p for _, m, p in iso)
         c = per.setdefault(el, [0, 0.0])
         c[0] += n
         c[1] += n * avg
         one = {k: (p, m * p) for k, m, p in iso}
         for _ in range(n):
             dist = convolve(dist, one)
-    average = sum(c[1] for c in per.values())
+    average = math.fsum(c[1] for c in per.values())
     order = sorted(per, key=lambda e: ({"C": 0, "H": 1}.get(e, 2), e))
-    top, total, first = max(p for p, _ in dist.values()), sum(p for p, _ in dist.values()), min(dist)
+    top, total, first = max(p for p, _ in dist.values()), math.fsum(p for p, _ in dist.values()), min(dist)
     sticks = []
     for k in sorted(dist):
         p, pm = dist[k]

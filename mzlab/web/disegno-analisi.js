@@ -35,7 +35,7 @@ const peakName = (/** @type {number} */ off) => off ? `M+${off}` : "M";
 function chartSvg(/** @type {Stick[]} */ p, /** @type {string} */ xl, /** @type {Helpers["t"]} */ t) {
   const lo = p[0].mz, hi = p[p.length - 1].mz, pad = Math.max(0.6, (hi - lo) * 0.08), x0 = lo - pad, x1 = hi + pad;
   const X = (/** @type {number} */ v) => ML + (v - x0) / (x1 - x0) * (W - ML - MR), Y = (/** @type {number} */ r) => MT + (1 - r / 100) * (H - MT - MB);
-  const gap = p.length > 1 ? Math.min(...p.slice(1).map((s, i) => X(s.mz) - X(p[i].mz))) : 40, tw = Math.max(24, Math.min(40, gap));
+  const gap = p.slice(1).reduce((g, s, i) => Math.min(g, X(s.mz) - X(p[i].mz)), 40), tw = Math.max(24, Math.min(40, gap));
   const axes = `<line x1="${ML}" y1="${Y(0)}" x2="${W - MR}" y2="${Y(0)}" stroke="var(--muted)"/><line x1="${ML}" y1="${MT}" x2="${ML}" y2="${Y(0)}" stroke="var(--muted)"/>`
     + [0, 50, 100].map(r => `<text x="${ML - 4}" y="${Y(r) + 3}" text-anchor="end" font-size="9" fill="var(--muted)">${r}</text>`).join("")
     + `<text x="${(ML + W - MR) / 2}" y="${H - 2}" text-anchor="middle" font-size="10" fill="var(--muted)" font-style="italic">${esc(xl)}</text>`;
