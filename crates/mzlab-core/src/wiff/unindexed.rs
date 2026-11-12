@@ -232,6 +232,10 @@ mod tests {
         assert_eq!(time_of(&d, 2, 1), 3.0);
         // three steps of 1 min from 1.0: cycle 6 is at 7.0
         assert_eq!(time_of(&d, 6, 1), 7.0);
+        // two experiments per cycle: the cycles are every other row, the last one is cycle 3
+        let two = sample(&[1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5], 8, &[4, 4]);
+        assert_eq!(time_of(&two, 1, 2), 2.0);
+        assert_eq!(time_of(&two, 6, 2), 7.0);
         assert_eq!(time_of(&sample(&[], 8, &[4]), 3, 1), 0.0);
     }
 
