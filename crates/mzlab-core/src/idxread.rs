@@ -341,11 +341,16 @@ impl<R: ReadAt> Index<R> {
         let size = head.size;
         let nativo = nativo(&head.h).ok_or_else(bad)?;
         let meta = json::parse(&head.meta)?;
-        let rows = head.rows.as_deref().map(json::parse).transpose()?;
-        let scans: Vec<Scan> = (rows.as_ref().map_or(&[][..], Value::arr).iter())
-            .map(|r| crate::scanrow::scan_of_row(r, nativo))
-            .collect::<Option<_>>()
-            .ok_or_else(bad)?;
+        // row by row: the rows are held as bytes and as `Scan`s, never as one JSON tree as well
+        let mut scans: Vec<Scan> = Vec::new();
+        if let Some(rows) = head.rows.as_deref() {
+            // counted first: a `Vec` that doubles holds one and a half times its rows while it moves; no room is `error.memoryBudget`, not a trap
+            scans = crate::budget::try_vec(json::count_elements(rows)?)?;
+            json::each_element(rows, |r| {
+                scans.push(crate::scanrow::scan_of_row(r, nativo).ok_or_else(bad)?);
+                Ok(())
+            })?;
+        }
         let (mut sections, mut crcs) = (Vec::new(), Vec::new());
         for s in meta.get("sections").ok_or_else(bad)?.arr() {
             let n = |k: &str| s.get(k).and_then(Value::f64).ok_or_else(bad);

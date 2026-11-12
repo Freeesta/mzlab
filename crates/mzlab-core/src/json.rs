@@ -245,7 +245,7 @@ pub fn parse(b: &[u8]) -> Result<Value> {
     }
 }
 
-pub use crate::json_members::parse_members;
+pub use crate::json_members::{count_elements, each_element, parse_members};
 
 /// JSON text builder: the routes write their answers straight into it.
 #[derive(Default)]
