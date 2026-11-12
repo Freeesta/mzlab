@@ -222,6 +222,7 @@ I18N.add("en", {
   "error.msngrafo.badFile": "{file} is not a fragmentation graph the program can read ({raw}).",
   "error.msngrafo.tooBig": "{file} is a saved fragmentation graph of {mb} MB: this page opens saved graphs up to {max} MB, so it was not opened. To see it, open the raw data it was made from: the «Fragmentation graph» tab builds it again.",
   "err.canali.unknown": "Channel {id} does not exist in this file.",
+  "err.canali.sample": "This file has no sample {id}: its samples are {ids}.",
   "err.cli.line": "The command line cannot be read: {message}.",
   "err.cli.set": "The setting “{set}” is not valid: {message}.",
   "err.conv.noProfile": "This file has only centroided peaks and no profile data, so it cannot be converted to a profile mzML. Use the centroid mzML as it is.",
