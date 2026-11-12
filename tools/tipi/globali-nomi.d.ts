@@ -244,6 +244,7 @@ declare var TOOLS_OFF: any;
 declare var TOUCH: any;
 declare var TOUR: any;
 declare var TOURDOPO: any;
+declare var TOURINVITO: any;
 declare var TRACE_LW: any;
 declare var TYPORD: any;
 declare var UIP: any;
