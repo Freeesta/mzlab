@@ -16,7 +16,7 @@ GEO = """(() => {
 r = Run(port=8993, wd="/tmp/wd_tour_disegno")
 try:
     with sync_playwright() as p:
-        pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
+        pg = r.page(p, draw_cards=True); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000); pg.wait_for_timeout(1500)
         def walk():

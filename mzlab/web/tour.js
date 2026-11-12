@@ -163,19 +163,19 @@ const TOUR = (() => {
     };
   };
   const card = (/** @type {string} */ sel) => document.querySelector(sel)?.closest(".card") || null;
-  // the right-hand panels may be hidden by the student: the steps about them show them and hide them again when the step ends
-  function showSidePanels() {
-    const v = document.getElementById("v-draw"), b = document.getElementById("side-toggle");
-    if (v && b && v.classList.contains("noside")) { b.click(); return () => { if (!v.classList.contains("noside")) b.click(); }; }
-  }
+  // the right-hand panels may be hidden by the student and a card folded (disegno-riquadri.js): the step shows them and puts them back when it ends
+  const openCard = (/** @type {string} */ sel) => () => {
+    const v = document.getElementById("v-draw"), b = document.getElementById("side-toggle"), hid = !!(v && b && v.classList.contains("noside") && (b.click(), true)), c = card(sel), shut = !!(c && c.querySelector(".rq-tg[aria-expanded=false]")); if (shut) document.dispatchEvent(new CustomEvent("mzlab-card-open", { detail: c }));
+    return () => { if (shut) document.dispatchEvent(new CustomEvent("mzlab-card-fold", { detail: c })); if (hid && v && b && !v.classList.contains("noside")) b.click(); };
+  };
   const STEPS_D = [
     { id: "d_tela", target: () => document.getElementById("kframe") },
     { id: "d_zoom", target: () => frameBox(['[data-testid="zoom-in-tp"]', '[data-testid="zoom-out-tp"]', '[data-testid="zoom-reset-tp"]']) },
     { id: "d_riquadri", target: () => document.getElementById("side-toggle") },
-    { id: "d_etichette", prep: showSidePanels, target: () => card("#lb-f") },
-    { id: "d_proprieta", prep: showSidePanels, target: () => document.getElementById("prop-card") },
+    { id: "d_etichette", prep: openCard("#lb-f"), target: () => card("#lb-f") },
+    { id: "d_proprieta", prep: openCard("#prop-body"), target: () => document.getElementById("prop-card") },
     { id: "d_parziali", target: () => document.getElementById("kframe") },
-    { id: "d_export", prep: showSidePanels, target: () => card("#ex-png") }
+    { id: "d_export", prep: openCard("#ex-png"), target: () => card("#ex-png") }
   ];
   let cap1 = STEPS_CAP1;
   const stepsOf = (/** @type {number} */ cap) => cap === 1 ? cap1 : cap === 3 ? STEPS_D : STEPS_CAP2;

@@ -19,7 +19,7 @@ function attach(p) {
     return { it, e, mate, snap: intSnap(p) };
   };
   const edgeAt = px => {
-    if (!p._a || p.type === "spec") return null; let best = null, bd = tol(); for (const it of p.ints) for (const e of ["a", "b"]) { const d = Math.abs(p._a.X(it[e]) - px); if (d < bd) { bd = d; best = { it, e }; } }
+    if (!p._a || p.type === "spec" || ESP.mrm(p)) return null; let best = null, bd = tol(); for (const it of p.ints) for (const e of ["a", "b"]) { const d = Math.abs(p._a.X(it[e]) - px); if (d < bd) { bd = d; best = { it, e }; } }
     return best ? edgeOf(best.it, best.e) : null;                             // the nearest border: with a finger's tolerance two close borders both qualify
   };
   const edgeMove = (ed, x) => {                                              // the border stops at the neighbouring peak (touching is fine, overlapping is not)
