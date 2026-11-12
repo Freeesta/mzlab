@@ -19,6 +19,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - `mzlab-lib` + `mzlab-lib-wasm`: spectral libraries (MSP/MGF/MassBank/JSON parsers, `.mzlib`, Flash indexes, scores); used only by `libreria-worker.js` (`librerie.md`).
 - `mzlab-feat` + `mzlab-feat-wasm`, `-table-wasm`, `-grafo-wasm`, `-import-wasm`, `mzlab-attributio-wasm`, `mzlab-finder-lr-wasm`: feature detection, tables, mzFinder and Attributio (`mzfeat.md`, `attributio*.md`, `wasm-tetti.md`).
 - `mzlab-msngrafo-wasm`, `mzlab-msnregole-wasm`: the MSn fragmentation graph and its structure rules, separate `.wasm` loaded on first use (`msn-grafo.md`).
+- `mzlab-molid-wasm`: the catalogue identity of a drawing (`molid/1`, carries `mzlab-mol`), a separate `.wasm` loaded on the first «Is this in the catalogue?» (`disegno.md`).
 - `mzlab-chem` + `mzlab-chem-wasm`: 3D geometry from SMILES and reactivity (`reatt/1`), administrator mode only.
 - `mzlab-mol`: the `mol/1` structure record (SMILES/CXSMILES, molfile, deterministic JSON, core hash); in no `.wasm` (`mol.md`).
 - `mzlab-target`: target and suspect lists (RFC 4180 CSV). `mzlab-llm` + `-wasm`: the assistant's tool catalog and streams.

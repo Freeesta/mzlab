@@ -47,6 +47,7 @@ const COMMANDS: &[&[&str]] = &[
     &["mol-check"],
     &["mol-export"],
     &["mol-cut"],
+    &["mol-id"],
     &["mol-ions"],
     &["mol-sel"],
     &["mol-link"],

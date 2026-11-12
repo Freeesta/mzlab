@@ -161,9 +161,10 @@ impl Record {
             || self.end > scan_len
             || self.at.saturating_add(u64::from(self.size)) > scan_len
     }
-    /// The index row says the block is a scan of points and its head (`n` points, `None`: not a scan) disagrees: left out, counted (`warn.wiff.damaged`).
-    pub fn damaged(&self, n: Option<usize>) -> bool {
-        self.points > 0.0 && n.is_none_or(|n| n as f64 != self.points)
+    /// The index row says the block holds points (+26 > 0) and it has no scan head (`head` false): left out, counted (`warn.wiff.damaged`). The value
+    /// at +26 is not compared with the head's point count: on sparse product-ion scans it is not one; `scan::read_scan_block` checks the block's bytes.
+    pub fn damaged(&self, head: bool) -> bool {
+        !head && self.points > 0.0
     }
 }
 
