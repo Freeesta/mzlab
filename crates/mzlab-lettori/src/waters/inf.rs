@@ -310,3 +310,7 @@ pub(super) fn inlet(t: &str) -> Inlet {
     }
     l
 }
+
+#[cfg(test)]
+#[path = "inf_tests.rs"]
+mod tests;
