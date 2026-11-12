@@ -142,7 +142,7 @@ function hoverPress(/** @type {Bag} */ p, /** @type {number} */ t, /** @type {nu
 }
 function draw(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {Bag} */ a) {
   if (p.overlay === "press") return drawPress(p, g, a);
-  const c = curve(p); if (!c) return;
+  const c = p.overlay === "grad" && curve(p); if (!c) return;
   const { W, H, X, x0, x1 } = a, ph = H - M.t - M.b, Y = (/** @type {number} */ v) => H - M.b - v / 100 * ph, col = colorOf(p), d = delayOf(p), z = typeof fz === "function" ? fz() : 1;
   g.save();
   g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1; g.font = fpx(12);

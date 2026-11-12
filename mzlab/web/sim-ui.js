@@ -27,6 +27,7 @@
   /** reads the ions of the MRM-kind and empty files and sets f.sim; the file table and the lists are painted again when something changed @param {any[]} files */
   async function mark(files) {
     let changed = false;
+    if (files.some(f => f.pda && isTr(f))) import("./dad-mrm.js");      // the DAD on the MRM panel
     await Promise.all(files.filter(f => isTr(f) || isNone(f)).map(async f => {
       let ions = /** @type {Ione[]} */ ([]);
       try {

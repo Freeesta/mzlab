@@ -64,6 +64,8 @@ I18N.add("en", {
   "ctx.chrom.grad.aria": "Show or hide the gradient (%B) over the chromatogram, with its axis on the right",
   "ctx.chrom.press": "Show the pressure",
   "ctx.chrom.press.aria": "Show or hide the pump pressure over the chromatogram, with its axis on the right",
+  "ctx.mrm.twc": "TWC",
+  "ctx.mrm.twc.aria": "Show or hide the total DAD trace (TWC) over the MRM, with its axis on the right",
   "ctx.uv.atRt": "UV spectrum at this RT",
   "ctx.uv.avgSel": "Mean UV spectrum of the selection",
   "ctx.uv.where": "UV spectrum · {nm} nm",
