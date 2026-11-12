@@ -18,15 +18,14 @@ function pickFileColor(f) {
   i.addEventListener("change", () => i.remove()); document.body.appendChild(i);
   try { i.showPicker(); } catch (_) { i.click(); }
 }
-// a pointerdown outside `d` removes it. Armed at once, not after a timer: on a busy page a timer fired after a quick tap, which then left the pop-up open.
+// a pointerdown outside `d` (and not one `keep` accepts) runs `close`. Armed at once, not after a timer: on a busy page a timer fired after a quick tap, which then left the pop-up open.
 // The event being dispatched when `d` opened (an opener run from a pointerdown) is skipped, so the opening touch does not close it.
-function closeOutside(/** @type {HTMLElement} */ d) {
+function closeOutside(/** @type {HTMLElement} */ d, keep = (/** @type {any} */ _e) => false, close = () => d.remove(), cap = false) {
   const opening = window.event;
   document.addEventListener("pointerdown", function h(e) {
-    if (e === opening) return;
-    if (d.isConnected && d.contains(/** @type {Node} */ (e.target))) return;
-    d.remove(); document.removeEventListener("pointerdown", h);
-  });
+    if (e === opening || d.isConnected && (d.contains(/** @type {Node} */ (e.target)) || keep(e))) return;
+    if (d.isConnected) close(); document.removeEventListener("pointerdown", h, cap);
+  }, cap);
 }
 function colorFile(f, ev) {
   Q("#colpop")?.remove();
