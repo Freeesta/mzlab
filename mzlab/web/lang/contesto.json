@@ -1165,5 +1165,8 @@
   "draw.check.charge.what": "Carica insolita; {q} = carica con segno (es. +2), {el} = simbolo dell'elemento.",
   "draw.check.isotope.what": "Isotopo sconosciuto; {iso} = numero di massa scritto, {el} = simbolo dell'elemento.",
   "draw.check.pieces.what": "Nota sui pezzi separati; {n} = numero di strutture non legate fra loro.",
-  "error.check.tooBig": "Errore del controllo del disegno; {max} = numero massimo di atomi."
+  "error.check.tooBig": "Errore del controllo del disegno; {max} = numero massimo di atomi.",
+  "error.sdf.ion": "Errore dell'esportazione MOL/SDF del disegno; {ion} = nome dell'addotto chiesto, non presente nella tabella.",
+  "error.sdf.molfile": "Errore dell'esportazione MOL/SDF del disegno; {message} = testo tecnico del lettore di molfile.",
+  "error.sdf.tooBig": "Errore dell'esportazione MOL/SDF del disegno; {max} = numero massimo di atomi."
 }

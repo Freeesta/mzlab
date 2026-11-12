@@ -11,13 +11,15 @@ mod dda_window_cmd;
 mod ion_mz_cmd;
 #[path = "mol_check_cmd.rs"]
 mod mol_check_cmd;
+#[path = "mol_export_cmd.rs"]
+mod mol_export_cmd;
 #[path = "peak_area_cmd.rs"]
 pub(crate) mod peak_area_cmd;
 #[path = "peak_window_cmd.rs"]
 mod peak_window_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 19] = [
+pub(crate) const PLAIN: [&str; 20] = [
     "llm",
     "steps",
     "explain-missing",
@@ -29,6 +31,7 @@ pub(crate) const PLAIN: [&str; 19] = [
     "mol-label",
     "mol-anal",
     "mol-check",
+    "mol-export",
     "mol-cut",
     "mol-search",
     "samples",
@@ -66,6 +69,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "mol-label" => mol_label_cmd::run(args),
         "mol-anal" => mol_label_cmd::run_anal(args),
         "mol-check" => mol_check_cmd::run(args),
+        "mol-export" => mol_export_cmd::run(args),
         "mol-cut" => mol_cut_cmd::run(args),
         "mol-search" => mol_search_cmd::run(args),
         "samples" => samples_cmd::run(args),

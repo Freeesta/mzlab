@@ -5,6 +5,8 @@ pub mod analysis;
 pub mod breaks;
 #[cfg(feature = "check")]
 pub mod check;
+#[cfg(feature = "check")]
+pub mod sdf;
 pub mod cut;
 pub mod fragmenter;
 pub mod fragments;

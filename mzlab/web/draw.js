@@ -732,6 +732,10 @@ async function doExport(/** @type {string} */ kind) {
     await start();
     if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return; }
     if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
+    if (kind === "mol" || kind === "sdf") {           // plain open formats, written by the Rust engine (disegno-esporta.js)
+      const file = exportName(kind), text = await (await import("./disegno-esporta.js")).exportText(K, kind, Q("#ex-ion").value, file.replace(/\.[a-z]+$/, ""));
+      saveBlob(new Blob([text], { type: "chemical/x-mdl-" + (kind === "mol" ? "molfile" : "sdfile") }), file); if (window.toast) toast(I18N.t("draw.export.saved")); return;
+    }
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
@@ -743,6 +747,8 @@ Q("#ex-png").onclick = () => doExport("png");
 Q("#ex-jpg").onclick = () => doExport("jpg");
 Q("#ex-svg").onclick = () => doExport("svg");
 Q("#ex-ket").onclick = () => doExport("ket");
+Q("#ex-mol").onclick = () => doExport("mol");
+Q("#ex-sdf").onclick = () => doExport("sdf");
 function syncBg() {                                    // JPEG cannot be transparent: its button is off (grey) while "Sfondo trasparente" is on
   const on = Q("#ex-nobg").checked, j = Q("#ex-jpg");
   j.disabled = on; j.title = on ? I18N.t("draw.export.jpegNoAlpha") : "";
