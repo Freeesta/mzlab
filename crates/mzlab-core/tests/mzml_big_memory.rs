@@ -1,7 +1,7 @@
 //! A big mzML must be indexed inside the memory the WASM instance has (256 MB hard, 192 MB of work): the scan table keeps no header of the spectra,
 //! the rows are freed while their JSON is written, and the rounds of the builder leave room for what the build holds besides them. A counting
 //! allocator measures the heap peak of each phase over a file written by the made-up reader (`fake_reader`, no real data); the `.mzidx` must be the
-//! same bytes whatever the budget and with or without a scratch file. One test only: the counters are global.
+//! same bytes whatever the budget and with or without a scratch file, and opening it holds its scan table without a JSON tree of the rows. One test only: the counters are global.
 #![allow(clippy::indexing_slicing, clippy::disallowed_methods)]
 
 mod fake_reader;
@@ -142,5 +142,20 @@ fn large_mzml_fits_the_budget() {
             budget / MB
         );
     }
+
+    // opening the index: the scan table is held as its bytes and as the scans, never as one JSON tree of every row as well (that took ten times the bytes)
+    let copy = large.clone();
+    let base = start();
+    let ix = mzlab_core::idxread::Index::open(copy, large.len() as u64).unwrap();
+    let open = above(base);
+    assert_eq!(ix.scans.len(), SCANS);
+    let rows = p.table.scans_json.len();
+    // the rows' bytes, one `Scan` (328 B) a scan and the header: about 780 B a scan here; the tree took about twelve times the rows
+    assert!(
+        open <= rows + 400 * SCANS + MB,
+        "open held {} B for rows of {} B",
+        open,
+        rows
+    );
     let _ = std::fs::remove_file(&path);
 }
