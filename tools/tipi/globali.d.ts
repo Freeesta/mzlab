@@ -161,6 +161,7 @@ declare var XICBORDI: any;
 declare var XICBTN: any;
 declare var XICLENS: any;
 declare var XLSX_MIME: any;
+declare var ZRESET: any;
 declare var _ASC: any;
 declare var _TOP: any;
 declare var _TOPA: any;

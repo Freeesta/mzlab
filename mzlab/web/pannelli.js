@@ -532,6 +532,7 @@ function afterDraw(/** @type {Pannello} */ p) {
   if (window.BANCO) BANCO.header(p);
   const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
   if (p.type !== "spec" && p.type !== "map" && p._rngOn != null && p._rngOn !== rngIsOn(p)) ctl(p);  // the «Range» button follows zooming too
+  window.ZRESET?.sync(p, z);  // «Reset zoom» of the «Range» popover (zoom-reset.js)
   if (btn) btn.disabled = !z;  // always there (the layout does not jump), active only when zoomed
   lockButton(p); cursorLine(p);
   placeLeg(p);
@@ -708,7 +709,7 @@ function ctl(/** @type {Pannello} */ p) {
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover, next to its button in the tab order; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
-  const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button><span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}</span>`;
+  const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button><span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}${window.ZRESET?.btn(p) ?? ""}</span>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}</span>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
   const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${p._trs.map((/** @type {Bag} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</select>` : "";
   const canBtn = p.type === "chrom" ? "" : window.CANALI?.html(p) ?? "";
@@ -777,6 +778,7 @@ function ctl(/** @type {Pannello} */ p) {
     /** @type {HTMLElement} */ (cpB.parentElement).onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Esc: the popover closes, a half-written pair is dropped, the focus goes back to its button
       if (e.key !== "Escape" || !p._parOpen) return; e.stopPropagation();
       cpP?.querySelectorAll("input").forEach((/** @type {HTMLInputElement} */ i) => { i.value = i.defaultValue; }); parToggle(false); cpB.focus(); };
+    window.ZRESET?.wire(p, c);
     const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { COMANDI.fai("panel.source", p, () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; p.zoom = null; p.zoomY = null; }); p._parOpen = false; ctl(p); draw(p); uiSave(); };
     if (!p._parAway) { p._parAway = (/** @type {Event} */ e) => { if (p._parOpen && p.el.isConnected && !/** @type {Element} */ (e.target).closest(".cpop") && !/** @type {Element} */ (e.target).closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("pointerdown", p._parAway, { capture: true, signal: p._ac.signal }); } }
   c.querySelectorAll("[data-o]").forEach((/** @type {HTMLInputElement} */ x) => {

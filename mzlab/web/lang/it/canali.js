@@ -70,7 +70,6 @@ I18N.add("it", {
   "canali.manint.del": "Elimina",
   "canali.manint.del.aria": "Elimina l'integrazione di {ch} in {s}",
   "canali.manint.sum": "Somma",
-  "canali.sim.help": "File SIM aperto: ogni ione monitorato è un canale. Aggiungi un grafico con «+ Ioni SIM», scegli gli ioni e integra i loro picchi: ogni finestra entra nella tabella «Integrazioni manuali».",
   "canali.manint.h.channel": "Canale",
   "canali.manint.h.name": "Nome",
   "canali.manint.h.sample": "Campione",

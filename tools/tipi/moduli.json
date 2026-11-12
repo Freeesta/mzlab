@@ -143,6 +143,7 @@
     "../../mzlab/web/xic-lente.js",
     "../../mzlab/web/canali.js",
     "../../mzlab/web/sim-ui.js",
+    "../../mzlab/web/zoom-reset.js",
     "../../mzlab/web/menu-sotto.js",
     "../../mzlab/web/integrazioni-manuali.js",
     "../../mzlab/web/rust-nativo.js",

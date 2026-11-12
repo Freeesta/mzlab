@@ -1,7 +1,7 @@
 """The SIM wording and controls of the Data view on the built site with the Rust engine (synthetic SIM .wiff pair of tools/wiff_sim.py, no laboratory data): the engine types every file «lc-sim», the
 experiment cell says «SIM · N ions» (not «no data»), the side list group, the panel title, the toolbar button and the channel picker speak of SIM ions, overlaid traces take
 the colour of their sample and a dash per ion, the chromatogram menu holds the «Extract ion ›» submenu (check mark, «All», click / Ctrl / Shift rules) in place
-of XIC, and the «Area» toggle fills the traces (on by default). Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_ui.py"""
+of XIC, the «Area» toggle fills the traces (on by default), the Range popover has «Reset zoom» and no how-to sentence is on screen. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_ui.py"""
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -63,6 +63,24 @@ try:
             pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'); p.zoom = null; draw(p); })()")
             wait_for_js(pg, "E.panels.find(p => p.type === 'mrm').el.querySelector('.zbar').hidden", timeout=20000)
         step("zoomed: the range is in the zoom bar's title and aria-label (no text on the chart), gone at full view", zoombar)
+        def zreset():
+            PQ = "E.panels.find(p => p.type === 'mrm')"
+            pg.evaluate("(() => { const p = %s, [f0, f1] = p._a.full; zoomTo(p, f0 + (f1 - f0) / 4, f1 - (f1 - f0) / 4); })()" % PQ)
+            wait_for_js(pg, "!!%s.zoom" % PQ, timeout=20000)
+            pg.evaluate("%s.el.querySelector('[data-a=cpar]').click()" % PQ)
+            wait_for_js(pg, "(() => { const c = %s.el.querySelector('.cpop'); return c && !c.hidden; })()" % PQ, timeout=20000)
+            b = pg.evaluate("(() => { const b = %s.el.querySelector('.cpop [data-a=zreset]'); return b && [b.getAttribute('aria-disabled'), b.title, b.textContent, b.tabIndex, (r => [r.width, r.height])(b.getBoundingClientRect())]; })()" % PQ)
+            need(b and b[0] == "false" and b[1] and b[2] == pg.evaluate("I18N.t('ctl.zreset')") and b[3] >= 0 and b[4][0] >= 24 and b[4][1] >= 24, b)
+            pg.evaluate("%s.el.querySelector('.cpop [data-o=rt1]').focus()" % PQ); pg.keyboard.press("Tab")
+            need(pg.evaluate("document.activeElement.dataset.a") == "zreset", "not next in the tab order: %s" % pg.evaluate("document.activeElement.outerHTML.slice(0, 80)"))
+            pg.keyboard.press("Enter")
+            wait_for_js(pg, "!%s.zoom && !%s.zoomY" % (PQ, PQ), timeout=20000); frames(pg, 3)
+            st = pg.evaluate("(() => { const p = %s, q = p.el.querySelector('.cpop'), v = [...q.querySelectorAll('[data-o=rt0],[data-o=rt1]')].map(i => +i.value), f = p._a.full; return { open: !q.hidden, v, f, dis: q.querySelector('[data-a=zreset]').getAttribute('aria-disabled'), foc: document.activeElement.dataset.a }; })()" % PQ)
+            need(st["open"] and st["dis"] == "true" and st["foc"] == "zreset", st)
+            need(all(abs(a - b) < 0.006 for a, b in zip(st["v"], st["f"])), "fields do not show the full range: %s" % st)
+            pg.keyboard.press("Escape")
+            need(pg.evaluate("%s.el.querySelector('.cpop').hidden" % PQ), "Esc did not close the popover")
+        step("«Reset zoom» in the Range popover: tab-reachable, back to the whole run, fields show the full range, then disabled; Esc closes", zreset)
         step("«Area» is on by default and the traces are filled", lambda: need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area !== false") and pg.evaluate("document.querySelector('[data-a=area]').getAttribute('aria-pressed')") == "true", "area"))
         def toggle():
             pg.click("[data-a=area]"); need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area") is False, "off")
@@ -148,11 +166,12 @@ try:
             pg.locator("#ctx .ctxsub [role=menuitemcheckbox]").nth(0).click()
             need(pg.evaluate("E.panels.find(p => p.type === 'mrm').tr") == "", "all")
         step("Ctrl adds an ion, Shift takes a range, All clears the selection", ctrl_shift)
-        def helpline():
-            pg.click("#np-closeall"); wait_for_js(pg, "!E.panels.some(p => p.el)", timeout=20000)
-            wait_for_js(pg, "(() => { const h = document.querySelector('#simhelp'); return !!h && !h.hidden; })()", timeout=20000)
-            need(pg.evaluate("document.querySelector('#simhelp').textContent === I18N.t('canali.sim.help') && !document.querySelector('#simhelp button')"), pg.inner_text("#simhelp"))
-        step("with no graph the help line says how to add one and integrate", helpline)
+        def no_howto():
+            pg.click("#np-closeall"); wait_for_js(pg, "!E.panels.some(p => p.el)", timeout=20000); frames(pg, 2)
+            need(pg.evaluate("!document.querySelector('#simhelp')"), "the SIM how-to card is still there")
+            body = pg.inner_text("#v-data") if pg.query_selector("#v-data") else pg.inner_text("body")
+            need("Integrazioni manuali»." not in body and "«+ Ioni SIM»" not in body and "«+ SIM ions»" not in body, "how-to text on screen")
+        step("with no graph no how-to sentence is on screen", no_howto)
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
     r.close()
 except Exception as e:
