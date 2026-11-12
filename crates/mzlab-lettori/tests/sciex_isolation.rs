@@ -53,11 +53,11 @@ fn open(dir: &Path, name: &str) -> Box<dyn Reader> {
     mzlab_lettori::apri(set(dir, name), &Limits::desktop()).unwrap()
 }
 
-/// What sample `c` gives: its refusal key, or its scans (id, rt, points), chromatograms (id, finite values) and losses.
-fn result(
-    l: &mut dyn Reader,
-    c: usize,
-) -> Result<(Vec<(String, f64, usize)>, Vec<(String, Vec<f64>)>, Losses), &'static str> {
+/// The scans (id, rt, points), chromatograms (id, finite values) and losses of a sample.
+type Content = (Vec<(String, f64, usize)>, Vec<(String, Vec<f64>)>, Losses);
+
+/// What sample `c` gives: its refusal key, or its `Content`.
+fn result(l: &mut dyn Reader, c: usize) -> Result<Content, &'static str> {
     let n = l.index(c).map_err(|e| e.key)?.len();
     let scans = (0..n)
         .map(|k| l.scan(c, k).map(|s| (s.id, s.rt, s.mz.len())))
