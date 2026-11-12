@@ -228,6 +228,19 @@ def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+
+def test_wiff_with_device_traces_equals_cli(tools):
+    """A 3200 QTRAP variant with device traces (two pressures, a flow, a temperature: tools/wiff_dispositivi.py): the module writes them as chromatograms,
+    the pressures in pascal as a `pressure array`, byte for byte what `mzlab-cli convert` writes."""
+    d = tools["tmp"] / "in_dispositivi"
+    r = run([sys.executable, str(ROOT / "tools/wiff_riferimento.py"), str(d)])
+    assert r.returncode == 0, r.stderr[-1500:]
+    ds = d / "dispositivi.wiff"
+    cli = da_cli(tools, "sciex_dev", ds)
+    wasm = da_wasm(tools, "sciex", ds)
+    assert cli.count(b'name="pressure array"') == 2 and b"Oven Temperature" in cli
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
 def first_diff(a: bytes, b: bytes):
     for i, (x, y) in enumerate(zip(a, b)):
         if x != y:

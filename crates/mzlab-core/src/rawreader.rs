@@ -148,34 +148,18 @@ fn entry(raw: &RawFileReader, m: &ScanMetadata) -> ScanEntry {
 /// the rest (temperatures) are analog. A spectrum of the UV field is never a trace of this list: it is not decoded (`metodo/1.avvisi`).
 fn tipo_analogico(t: &opentfraw::AnalogTrace) -> ChromKind {
     let n = t.name.to_ascii_lowercase();
-    let u = t.unit.to_ascii_lowercase();
     if n.starts_with("uv_vis") || n.starts_with("pda") {
         ChromKind::Pda
-    } else if n.contains("pressure")
-        || matches!(u.as_str(), "psi" | "bar" | "mbar" | "pa" | "kpa" | "mpa")
-    {
+    } else if crate::pressure_unit::is_pressure(&t.name, &t.unit) {
         ChromKind::Pressure
     } else {
         ChromKind::Analog
     }
 }
 
-/// Pascal in one unit of a pressure channel, by the name the file gives (compared in lower case); `None` for any other unit.
-fn pascal_per(unit: &str) -> Option<f64> {
-    match unit.trim().to_ascii_lowercase().as_str() {
-        "psi" => Some(6_894.757_293_168),
-        "bar" => Some(1e5),
-        "mbar" => Some(100.0),
-        "pa" | "pascal" => Some(1.0),
-        "kpa" => Some(1e3),
-        "mpa" => Some(1e6),
-        _ => None,
-    }
-}
-
 /// A pressure channel in pascal, as msconvert writes it (and the mzML says so with `UO:0000110`); any other channel as the file gives it.
 fn in_pascal(kind: ChromKind, mut t: opentfraw::AnalogTrace) -> opentfraw::AnalogTrace {
-    if let (ChromKind::Pressure, Some(k)) = (kind, pascal_per(&t.unit)) {
+    if let (ChromKind::Pressure, Some(k)) = (kind, crate::pressure_unit::pascal_per(&t.unit)) {
         t.values.iter_mut().for_each(|v| *v *= k);
         t.unit = "pascal".into();
     }

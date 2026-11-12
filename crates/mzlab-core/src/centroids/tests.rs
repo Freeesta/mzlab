@@ -38,6 +38,7 @@ pub(super) fn params(unit: f64) -> Params {
         k: 3.0,
         vmax: 0.0,
         area: true,
+        wm: None,
     }
 }
 
@@ -277,6 +278,7 @@ fn a_high_resolution_peak_on_an_irregular_grid_is_within_half_a_ppm() {
         k: 3.0,
         vmax: 0.0,
         area: false,
+        wm: None,
     };
     let out = run(&mz, &y, &p);
     assert_eq!(out.len(), 1, "{out:?}");

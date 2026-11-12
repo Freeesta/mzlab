@@ -39,7 +39,7 @@ pub use canon::CAN_VERSION;
 pub use codec::{hex, MolError};
 pub use descr::Descriptors;
 pub use drawing::{allowed_valences, has_valence_rules, Drawing, WedgeMark};
-pub use elements::is_element;
+pub use elements::{atomic_number, is_element};
 pub use model::{
     Atom, Bond, Cfg, Coords, GroupKind, Ids, Mol, Parity, Prop, Region, RegionKind, Status, Stereo,
     StereoGroup, FORMAT,

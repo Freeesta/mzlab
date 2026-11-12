@@ -5,15 +5,16 @@
 //! `kind: "labels"` (`request` as a JSON object or text) gives the `etich/1` of the structures of a drawing (`mzlab-cli mol-label`); `kind: "cut"`
 //! (`request` the same way) the `cut/1` of a cut across bonds (`mzlab-cli mol-cut`); `kind: "sub"` (`request` the same way) the `sub/1` of a
 //! substructure search (`mzlab-cli mol-search --sub`); `kind: "analysis"` (`request` the same way) the `anal/1` of one drawn structure
-//! (`mzlab-cli mol-anal`); `kind: "check"` the `check/1` of a drawing (`mzlab-cli mol-check`); `kind: "sdf"` the `.mol`/`.sdf` text of a drawing (`sdf/1`, `mzlab-cli mol-export`); `kind: "mech"` the `mecc/1` check of the
-//! curved arrows of a mechanism (`mzlab-cli mol-mech`); `kind: "sel"` the `sel/1` of a selection (`mzlab-cli mol-sel`); `kind: "link"`
-//! the `link/1` URLs of the outside lookups of the right-click menu (`mzlab-cli mol-link`).
+//! (`mzlab-cli mol-anal`); `kind: "check"` the `check/1` of a drawing (`mzlab-cli mol-check`), `kind: "cip"` its `cip/1` (`mzlab-cli mol-cip`);
+//! `kind: "sdf"` the `.mol`/`.sdf` text of a drawing (`sdf/1`, `mzlab-cli mol-export`); `kind: "mech"` the `mecc/1` check of the curved arrows
+//! of a mechanism (`mzlab-cli mol-mech`); `kind: "sel"` the `sel/1` of a selection (`mzlab-cli mol-sel`); `kind: "link"` the `link/1` URLs of
+//! the outside lookups of the right-click menu (`mzlab-cli mol-link`).
 //! `kind: "reactivity"` (`smiles`, `opts` as a JSON object or text) gives the `reatt/1` of `mzlab_chem::reactivity_json` (the same function as the `.wasm` `chem`).
 //! An error keeps its key (`error.grafo.ring`, `error.grafo.delta.neg`, ...) as the `.wasm` throws it.
 
 use mzlab_core::{Error, Result};
 use mzlab_feat::chem::{
-    analysis, check, cut, fragments, graph, labels, link, mech, positions, sdf, sel, substructure,
+    analysis, check, cip, cut, fragments, graph, labels, link, mech, positions, sdf, sel, substructure,
 };
 use serde_json::Value;
 
@@ -37,7 +38,7 @@ impl State {
                 p["positive"].as_bool().unwrap_or(true),
                 s("reatt"),
             )?),
-            "labels" | "cut" | "sel" | "link" | "sub" | "analysis" | "check" | "mech" | "sdf" => {
+            "labels" | "cut" | "sel" | "link" | "sub" | "analysis" | "check" | "cip" | "mech" | "sdf" => {
                 let req = if p["request"].is_object() {
                     p["request"].to_string()
                 } else {
@@ -52,6 +53,7 @@ impl State {
                     "analysis" => analysis::analysis_json(&req)?,
                     "check" => check::check_json(&req)?,
                     "sdf" => sdf::sdf_json(&req)?,
+                    "cip" => cip::cip_json(&req)?,
                     _ => labels::labels_json(&req)?,
                 })
             }

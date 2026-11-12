@@ -29,6 +29,7 @@ fn main() {
         k: 3.0,
         vmax: 0.0,
         area: true,
+        wm: None,
     };
     let centres: Vec<(f64, f64)> = (0..peaks)
         .map(|_| (r() * n as f64 * 0.06, 5.0 + 400.0 * r() * r()))

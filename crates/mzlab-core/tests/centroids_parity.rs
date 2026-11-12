@@ -36,6 +36,9 @@ fn params(v: &Value) -> Params {
         k: v[4].as_f64().unwrap(),
         vmax: v[5].as_f64().unwrap(),
         area: v[6].as_bool().unwrap(),
+        wm: v
+            .get(7)
+            .and_then(|m| Some((m.get(0)?.as_f64()?, m.get(1)?.as_f64()?))),
     }
 }
 
@@ -102,7 +105,11 @@ fn centroids_like_python() {
                 && close(e.params.step, w.step)
                 && close(e.params.w, w.w)
                 && close(e.params.vmax, w.vmax)
-                && e.params.area == w.area,
+                && e.params.area == w.area
+                && match (e.params.wm, w.wm) {
+                    (Some((a, b)), Some((c, d))) => close(a, c) && close(b, d),
+                    (x, y) => x.is_none() && y.is_none(),
+                },
             "estimate {r}: {:?} against {w:?}",
             e.params
         );

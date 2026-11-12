@@ -4,5 +4,13 @@ const SYMBOLS: &str = "H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti 
 
 /// True when `s` is the symbol of a chemical element (exact case).
 pub fn is_element(s: &str) -> bool {
-    SYMBOLS.split(' ').any(|e| e == s)
+    atomic_number(s).is_some()
+}
+
+/// The atomic number of an element symbol (exact case), `None` for anything else.
+pub fn atomic_number(s: &str) -> Option<u16> {
+    SYMBOLS
+        .split(' ')
+        .position(|e| e == s)
+        .map(|p| p as u16 + 1)
 }
