@@ -100,6 +100,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
 | misure dei motori | `docs/agenti/misure.md` (misure Rust e dei moduli: `misure-rust.md`; clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
+| prove di mutazione (`cargo-mutants`) di `mzlab-lettori` e del modulo wiff: comandi, campioni, sopravvissuti e perché restano | `docs/agenti/mutanti.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
 | tagli della CI già misurati e scartati, tempi dei job Rust | `docs/agenti/ci-tagli.md` |
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
