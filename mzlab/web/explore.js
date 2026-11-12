@@ -55,7 +55,7 @@ window.avvisoAuto = function(el, o = {}) {
 "use strict";
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
 // merge = join the centroids of the same nominal mass (centroid files only)
-const UIP = { theme: "light", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true };
+const UIP = { theme: "light", pal: "file", merge: true, hrPpm: 5, hrDec: 4, xicLens: true };
 // peak labels, background levels and axis ticks: at least 3 decimals (2.243e+6); area and height columns use I18N.sciE
 const fmtA = (/** @type {number} */ v) => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 let EXPORTING = false;          // true while a plot is drawn for a saved image

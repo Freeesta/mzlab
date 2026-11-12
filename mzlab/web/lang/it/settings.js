@@ -64,8 +64,6 @@ I18N.add("it", {
   "settings.pal.rainbow": "Arcobaleno",
   "settings.pal.bw": "Bianco e nero",
   "settings.merge": "Unisci i centroidi della stessa massa nominale",
-  "settings.beside": "Spettro accanto al cromatogramma",
-  "settings.beside.title": "Lo spettro del doppio clic, nella stessa riga",
   "settings.xiclens": "Lente XIC al passaggio sul picco",
   "settings.xiclens.title": "Anteprima dello XIC sul picco; un clic la apre",
   "settings.libs.label": "Librerie di spettri",
