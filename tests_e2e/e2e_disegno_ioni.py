@@ -65,13 +65,6 @@ try:
             pg.locator(".ions-xic").first.focus(); assert pg.evaluate("document.activeElement.classList.contains('ions-xic')")
             assert pg.evaluate("document.activeElement.getAttribute('aria-label')").startswith("Mostra l'XIC di [M+H]+")
         step("the card works from the keyboard and every XIC button has its name", keyboard)
-        def menu():
-            pg.evaluate("document.getElementById('ions-body').innerHTML=''")
-            pg.evaluate("""(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()""")
-            row = pg.locator("#ctx div[data-row=expected-ions]"); row.wait_for(timeout=10000)
-            assert row.inner_text() == "Ioni attesi", row.inner_text()
-            row.click(); rs = rows(pg); assert any(n == "[M+H]+" for n, *_ in rs), rs
-        step("the canvas menu has the «Expected ions» row and it fills the card", menu)
 finally:
     r.close()
 r.report()

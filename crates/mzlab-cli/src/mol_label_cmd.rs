@@ -12,9 +12,10 @@ usage: mzlab-cli mol-label REQUEST.json|- [--out PATH]
 
   REQUEST.json  {\"structures\": [[{\"el\", \"iso\", \"h\", \"q\"}, ...], ...], \"arrows\": [[before, after], ...]}: element, mass number
                 (0 or absent = natural), implicit hydrogens and charge of every atom; - reads the standard input
+                optional \"deltas\": [\"+O\", ...] by structure: the delta of its brackets, added to formula and masses
   --out PATH    write there instead of the standard output
 
-The answer is {\"format\": \"etich/1\", \"structures\": [{formula, text, charge, mass, nominal, mz} or {error, label}],
+The answer is {\"format\": \"etich/1\", \"structures\": [{formula, text, charge, mass, nominal, mz, delta?} or {error, label}],
 \"arrows\": [{gain, loss, isotopologue, dm, dnominal} or null]}.";
 
 pub const HELP_ANAL: &str = "mzlab-cli mol-anal: average mass, mass % per element and the theoretical isotope pattern of one drawn structure, as JSON (anal/1).

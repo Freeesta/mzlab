@@ -89,3 +89,26 @@ fn the_ion_mz_is_not_rounded_twice() {
     assert!(s.contains(r#""text":"C8H10NO2+""#), "{s}");
     assert_eq!(format!("{:.5}", num(&s, "mz")), "152.07060", "{s}");
 }
+
+#[test]
+fn a_bracket_delta_is_in_the_formula_and_the_nominal_mass() {
+    let s = labels_json(
+        r#"{"structures":[[{"el":"C","h":4}],[{"el":"C","h":3},{"el":"O","h":1}]],"deltas":["+O",""],"arrows":[[0,1]]}"#,
+    )
+    .unwrap();
+    assert!(
+        s.contains(r#""formula":"CH4O""#) && s.contains(r#""delta":"+O""#),
+        "{s}"
+    );
+    assert!(
+        (num(&s, "mass") - 32.0262).abs() < 5e-5 && num(&s, "nominal") == 32.0,
+        "{s}"
+    );
+    assert!(
+        s.contains(r#""gain":"","loss":"","isotopologue":false"#),
+        "{s}"
+    ); // CH4 + O and CH3OH: same formula across the arrow
+    assert_eq!(s.matches("\"delta\"").count(), 1, "{s}");
+    let bad = labels_json(r#"{"structures":[[{"el":"C","h":4}]],"deltas":["-O"]}"#).unwrap();
+    assert!(bad.contains(r#""error":"error.grafo.delta.neg""#), "{bad}");
+}

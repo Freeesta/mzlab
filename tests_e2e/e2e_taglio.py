@@ -1,6 +1,6 @@
 """Disegno, «Bond cuts»: a cut line drawn across the aryl-N bond of 4'-fluoroacetanilide breaks it homolytically (default), moves the two pieces apart,
 puts a radical mark on each cut atom and labels each piece with formula (radical dot) and exact mass, like the fragmentation tool of a drawing program;
-a charge put on a piece afterwards changes its label and gives an m/z; heterolytic asks which piece takes the +; two bonds of a ring give two pieces; undo brings the molecule back.
+a charge put on a piece afterwards changes its label and gives an m/z; heterolytic asks which piece takes the +; one line across two bonds of a ring gives two pieces; undo brings the molecule back.
 Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -65,14 +65,14 @@ try:
         step("heterolytic asks which piece takes the + and labels a cation and an anion", hetero)
         def ring():
             load("C1CCCCC1", 6); pg.check("input[name=cut-mode][value=homolytic]")
-            ids = pg.evaluate(f"""(()=>{{const st={KJ}.editor.struct(),b=[...st.bonds.keys()];return [b[0],b[3]]}})()""")
-            pg.evaluate(f"{KJ}.editor.selection({{bonds:{ids}}})")
-            pt = bond_pt("C", "C")
-            pg.evaluate("""([x,y])=>{const fr=document.querySelector('#kframe'),f=fr.getBoundingClientRect(),d=fr.contentDocument;const e=d.elementFromPoint(x-f.left,y-f.top)||d.body;e.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:x-f.left,clientY:y-f.top}))}""", pt[:2])
-            pg.locator("#ctx div", has_text="Taglia i 2 legami").first.click()
+            a, b = pg.evaluate(f"""(()=>{{const K={KJ},st=K.editor.struct(),R=K.editor.render,o1=R.page2obj({{clientX:0,clientY:0}}),o2=R.page2obj({{clientX:100,clientY:100}});
+              const f=document.querySelector('#kframe').getBoundingClientRect(),bs=[...st.bonds.values()],mid=b=>{{const p=st.atoms.get(b.begin).pp,q=st.atoms.get(b.end).pp;return [f.left+((p.x+q.x)/2-o1.x)*100/(o2.x-o1.x),f.top+((p.y+q.y)/2-o1.y)*100/(o2.y-o1.y)]}};
+              return [mid(bs[0]),mid(bs[3])]}})()""")                    # two opposite bonds: one straight line through the ring crosses only them
+            dx, dy = b[0] - a[0], b[1] - a[1]; n = (dx * dx + dy * dy) ** 0.5; ex, ey = dx / n * 25, dy / n * 25
+            pg.click("#cut-line"); pg.mouse.move(a[0] - ex, a[1] - ey); pg.mouse.down(); pg.mouse.move(b[0], b[1], steps=6); pg.mouse.move(b[0] + ex, b[1] + ey, steps=4); pg.mouse.up()
             wait_for_js(pg, f"{KJ}.editor.struct().bonds.size === 4")
             wait_for_js(pg, f"({LABELS}).split('C3H6').length === 3", timeout=10000)
-        step("two selected bonds of a ring, cut from the right-click menu, give two pieces", ring)
+        step("one cut line across two bonds of a ring gives two pieces", ring)
 finally:
     r.close()
 r.report()

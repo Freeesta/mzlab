@@ -155,6 +155,11 @@ pub(super) fn shape(atoms: &[AtomIn]) -> Result<Shape> {
         q += c;
         unpaired += u;
     }
+    Ok(finish(n, q, unpaired))
+}
+
+/// Masses and electron count of a set of counts.
+fn finish(n: Counts, q: i64, unpaired: u64) -> Shape {
     let electrons = n.iter().map(|((e, _), c)| z_of(e) * *c as i64).sum::<i64>() - q;
     let (mut mass, mut nominal) = (Vec::new(), 0);
     for ((e, a), c) in &n {
@@ -162,14 +167,39 @@ pub(super) fn shape(atoms: &[AtomIn]) -> Result<Shape> {
         mass.push(m * *c as f64);
         nominal += aa as u64 * c;
     }
-    Ok(Shape {
+    Shape {
         n,
         q,
         mass: mzlab_core::pysum::pysum(mass),
         nominal,
         unpaired,
         electrons,
-    })
+    }
+}
+
+/// The structure with the delta of its brackets («+O -H2», `parz/1`): the drawn piece plus a change whose position is unknown. Elements of the delta
+/// are at natural abundance; one that would go below zero gives `error.grafo.delta.neg`. Returns the delta written back («+O -H2»).
+fn with_delta(s: Shape, delta: &str) -> Result<(Shape, String)> {
+    let d = super::fragments::parse_delta(delta)?;
+    let mut n = s.n;
+    for (sign, f) in &d {
+        for (e, c) in f {
+            let k = NUCLIDES
+                .iter()
+                .find(|x| x.0 == e)
+                .map(|x| (x.0, 0))
+                .ok_or_else(|| Error::new("error.grafo.delta").with("delta", delta.trim()))?;
+            let now = count(&n, &k) as i64 + sign * *c as i64;
+            if now < 0 {
+                return Err(Error::new("error.grafo.delta.neg").with("element", e));
+            }
+            match n.iter_mut().find(|(x, _)| *x == k) {
+                Some((_, v)) => *v = now as u64,
+                None => n.push((k, now as u64)),
+            }
+        }
+    }
+    Ok((finish(n, s.q, s.unpaired), super::fragments::fmt_delta(&d)))
 }
 
 /// What the species is: `neutral`, `radical`, `cation`, `anion`, `radicalCation`, `radicalAnion`; a radical has a mark or an odd electron count.
@@ -252,21 +282,36 @@ fn arrow_json(o: &mut Out, a: &Shape, b: &Shape) {
 
 /// `etich/1` of a request `{"structures": [[{el, iso, h, q, r}, ...], ...], "arrows": [[before, after], ...]}` (`r` the radical code, optional). A structure
 /// gives `unpaired`, `electrons`, `odd` and `kind` besides formula and masses. A structure with an atom that is no element (R group, atom list, `*`) or an
-/// isotope outside the table is `{"error": key, "label"}`; an arrow touching one is `null`.
+/// isotope outside the table is `{"error": key, "label"}`; an arrow touching one is `null`. `"deltas": ["+O", ...]` (optional, by structure index) adds the
+/// delta of the brackets drawn on a structure: formula and masses are those of structure plus delta, and the structure gives `delta` written back.
 pub fn labels_json(request: &str) -> Result<String> {
     let v = json::parse(request.as_bytes()).map_err(|_| Error::new("error.etich.request"))?;
-    let shapes: Vec<Result<Shape>> = v
+    let deltas = v.get("deltas").map_or(&[][..], Value::arr);
+    let shapes: Vec<Result<(Shape, String)>> = v
         .get("structures")
         .map_or(&[][..], Value::arr)
         .iter()
-        .map(|s| shape(&s.arr().iter().map(atom_in).collect::<Vec<_>>()))
+        .enumerate()
+        .map(|(i, s)| {
+            let sh = shape(&s.arr().iter().map(atom_in).collect::<Vec<_>>())?;
+            match deltas.get(i).and_then(Value::str).map(str::trim) {
+                Some(d) if !d.is_empty() => with_delta(sh, d),
+                _ => Ok((sh, String::new())),
+            }
+        })
         .collect();
     let mut o = Out::default();
     o.raw("{\"format\":\"etich/1\",\"structures\":[");
     for (i, s) in shapes.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" });
         match s {
-            Ok(s) => shape_json(&mut o, s),
+            Ok((s, d)) => {
+                shape_json(&mut o, s);
+                if !d.is_empty() {
+                    o.0.pop();
+                    o.raw(",\"delta\":").str(d).raw("}");
+                }
+            }
             Err(e) => {
                 let label = e
                     .params
@@ -294,6 +339,7 @@ pub fn labels_json(request: &str) -> Result<String> {
                 .and_then(Value::f64)
                 .and_then(|x| shapes.get(x as usize))
                 .and_then(|s| s.as_ref().ok())
+                .map(|(s, _)| s)
         };
         match (at(0), at(1)) {
             (Some(x), Some(y)) => arrow_json(&mut o, x, y),

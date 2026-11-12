@@ -22,10 +22,10 @@ try:
         pg.evaluate(f"{KJ}.addFragment('CCO')"); wait_for_js(pg, f"!{KJ}.editor.struct().isBlank()")
         OPEN = """(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()"""
         def opened():
-            for _ in range(200):
+            for _ in range(20):                                          # one right click at a time: a newer one replaces the menu of an older one still filling
                 pg.evaluate(OPEN)
-                if pg.locator("#ctx:not([hidden]) div[role=menuitem]").count(): return
-                pg.evaluate("new Promise(r => requestAnimationFrame(r))")
+                try: pg.wait_for_selector("#ctx:not([hidden]) div[role=menuitem]", timeout=3000); return
+                except Exception: pass
             raise AssertionError("menu did not open")
         step("the menu opens with role=menu and menuitem rows", lambda: (opened(), pg.wait_for_selector("#ctx[role=menu]")))
         def click_closes():
