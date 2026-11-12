@@ -95,7 +95,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match mzlab_feat::chem::substructure::search_json(&req) {
         Ok(j) => crate::emit(format!("{j}\n"), &out),
-        Err(e) => Outcome::fail(&e.to_string()),
+        Err(e) => Outcome::fail_error(&e),
     }
 }
 

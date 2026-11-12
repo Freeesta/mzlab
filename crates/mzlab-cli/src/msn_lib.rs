@@ -260,6 +260,6 @@ pub(crate) fn cmd(args: Vec<String>) -> crate::Outcome {
             stdout: data,
             stderr: note,
         },
-        Err(e) => crate::Outcome::fail(&e.to_string()),
+        Err(e) => crate::Outcome::fail_error(&e),
     }
 }

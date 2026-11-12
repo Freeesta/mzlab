@@ -366,7 +366,7 @@ fn features_cmd(args: impl Iterator<Item = String>) -> Outcome {
     let _ = std::fs::remove_dir_all(&tmp);
     let csv = match r {
         Ok(c) => c,
-        Err(e) => return Outcome::fail(&e.to_string()),
+        Err(e) => return Outcome::fail_error(&e),
     };
     match &a.out {
         None => Outcome::ok(csv.into_bytes()),
