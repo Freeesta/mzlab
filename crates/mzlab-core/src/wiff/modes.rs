@@ -122,9 +122,43 @@ pub fn spectrum_term(code: Option<u32>) -> Option<(&'static str, &'static str)> 
     code.and_then(mode).and_then(|x| x.term)
 }
 
+/// The polarity of the ion spray voltage (`IS`) of a method: 1, -1, or 0 with no method, no `IS` or a voltage of zero; the experiment header wins over it.
+pub fn source_polarity(method: Option<&crate::methodinfo::Method>) -> i8 {
+    method
+        .and_then(|m| m.source.iter().find(|p| p.id == "IS"))
+        .map_or(0, |p| {
+            if p.value > 0.0 {
+                1
+            } else if p.value < 0.0 {
+                -1
+            } else {
+                0
+            }
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::methodinfo::{Method, Param};
+
+    #[test]
+    fn the_sign_of_the_ion_spray_voltage_is_the_polarity() {
+        let with = |id: &str, value: f64| Method {
+            source: vec![Param {
+                id: id.to_string(),
+                label: "",
+                value,
+                unit: "V",
+            }],
+            ..Method::default()
+        };
+        assert_eq!(source_polarity(Some(&with("IS", 5500.0))), 1);
+        assert_eq!(source_polarity(Some(&with("IS", -4500.0))), -1);
+        assert_eq!(source_polarity(Some(&with("IS", 0.0))), 0);
+        assert_eq!(source_polarity(Some(&with("TEM", -4500.0))), 0);
+        assert_eq!(source_polarity(None), 0);
+    }
 
     #[test]
     fn table_is_indexed_by_code() {

@@ -373,7 +373,8 @@ fn write_synthetic_ci_wiff(out: &Path) {
         "cn, cu = 'Column Pressure'.encode('utf-16le'), '(psi)'.encode('utf-16le')\n",
         "ch_s = bytes(36) + struct.pack('<HIH', 1, 1, len(cn)) + cn + struct.pack('<H', len(cu)) + cu + struct.pack('<dHffI', 6.0, 0, 0.0, 5000.0, 0xffffffff)\n",
         "w2 = bytearray(126); struct.pack_into('<I', w2, 32, 1); struct.pack_into('<H', w2, 52, 56); w2[54:110] = b'01234567-89ab-cdef-0123-456789abcdef_0000000000000001234'\n",
-        "dde = bytearray(32) + struct.pack('<dddHHi', 413.266, 0.0, 1540.0, 1, 0, 0)\n",
+        "dde = bytearray(32) + b''.join(struct.pack('<dddHHi', mz, 0.0, 1540.0, 1, 0, 0) for mz in (413.266, 520.1, 610.2))\n",
+        "dad_off = bytearray(dad_hdr); struct.pack_into('<f', dad_off, 54, 205.0)\n",
         "tdc = bytearray(72); struct.pack_into('<d', tdc, 32, 1.0 / 38.4)\n",
         "tcal = bytearray(32) + struct.pack('<ddII', 0.001, 100.0, 0, 1) + struct.pack('<ddI', 0.001, 100.0, 0)\n",
         "idx1 = bytearray(32) + struct.pack('<IId', 0, 8, 6000.0) + b'\\x01\\x00' + struct.pack('<dd', 1500.0, 0.0) + bytes(20)\n",
@@ -398,6 +399,9 @@ fn write_synthetic_ci_wiff(out: &Path) {
         "  'MethodSubtree/Method1/DeviceMethod0/Period0/Experiment0/sMRM': bytes(smrm),\n",
         "  'MethodSubtree/Method1/DeviceMethod1/VendorAppMethod': bytes(vam_shim),\n",
         "  'SampleSubtree/Sample2/Idx': bytes(idx1),\n",
+        "  'SampleSubtree/Sample2/Devices/Device_1/DAD/DADSampleHeader': bytes(dad_off),\n",
+        "  'SampleSubtree/Sample2/Devices/Device_1/DAD/DADIdx': bytes(dad_idx),\n",
+        "  'SampleSubtree/Sample2/Devices/Device_1/DAD/DADRealTimeData': bytes(dad_rtd),\n",
         "  'MethodSubtree/Method2/DeviceMethod0/Period0/Experiment0/ExperimentHeader': bytes(exp_hdr),\n",
         "  'MethodSubtree/Method2/DeviceMethod1/VendorAppMethod': bytes(vam_acq),\n",
         "  'SampleSubtree/Sample3/Idx': bytes(idx1),\n",
@@ -430,6 +434,9 @@ fn synthetic_ci_dad_mrm_gradient_and_tof_roundtrip() {
 
     let dad = w.dad.as_ref().expect("synthetic DAD");
     assert_eq!((dad.points(), dad.channels()), (3, 5));
+    assert_eq!(dad.wavelengths_nm, vec![200.0, 201.0, 202.0, 203.0, 204.0]);
+    // a stop wavelength one step past the channels (205 for 5 channels from 200) is a header that does not add up: no DAD
+    assert!(DadData::read(&ole, 2).is_none());
     assert_eq!(dad.twc_chromatogram(0).intensity, vec![15.0, 12.5, 30.0]);
     assert_eq!(
         dad.wavelength_chromatogram(202.0, None, 0)
@@ -479,13 +486,17 @@ fn synthetic_ci_dad_mrm_gradient_and_tof_roundtrip() {
         ),
         (1, "Column Pressure", "psi", 3)
     );
-    let dde = dde_records(&ole, 1, 2);
+    // one survey and two dependent experiments: the records go cycle by cycle, experiments 1 and 2
+    let dde = dde_records(&ole, 1, 3);
     assert_eq!(
         (dde.len(), dde[0].precursor_mz, dde[0].precursor_intensity),
-        (1, 413.266, 1540.0)
+        (3, 413.266, 1540.0)
     );
+    let order: Vec<_> = dde.iter().map(|d| (d.cycle, d.experiment)).collect();
+    assert_eq!(order, vec![(0, 1), (0, 2), (1, 1)]);
     let tof = TofSampleData::read(&ole, 1).unwrap();
     assert_eq!(tof.scan_calibration.len(), 1);
+    assert_eq!(tof.itc, vec![0.5]);
     let tof_blk = [
         0xff, 0xff, 0xff, 0xff, 100, 0, 0, 0, 0, 5, 0x82, 0x7c, 200, 0xff,
     ];
