@@ -28,6 +28,18 @@ pub(crate) enum Item {
     },
 }
 
+/// The centroids flagged (merged, saturated) of our own peak picking on the input `label`, from the note of its file in the record of the run (a file
+/// taken from the cache keeps the note of the run that wrote it).
+pub(crate) fn flagged_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(usize, usize)> {
+    let note = run
+        .activities
+        .iter()
+        .flat_map(|a| &a.files)
+        .find(|(n, _)| n == label)?;
+    let n = |k: &str| note.1.get(k).and_then(|v| v.f64()).map(|x| x as usize);
+    Some((n("merged")?, n("saturated")?))
+}
+
 /// The read step through the head of an mzML.
 const CHUNK: u64 = 1 << 20;
 
@@ -109,7 +121,7 @@ pub(crate) fn partial_lines(items: &[Item]) -> String {
         .collect()
 }
 
-/// One stderr line per input with centroids flagged merged: a notice (`warn.centroid.merged`), not an answer.
+/// One stderr line per input with centroids flagged merged: a notice (`warn.centroid.merged`), not an answer, that leaves the exit code alone.
 pub(crate) fn merged_lines(items: &[Item]) -> String {
     let text = crate::error_text::catalog_text("warn.centroid.merged").unwrap_or_default();
     items

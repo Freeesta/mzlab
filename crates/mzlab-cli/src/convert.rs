@@ -7,11 +7,11 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use mzlab_core::flow::{file_roots, parse, plan_json};
+use mzlab_core::flow::{file_roots, parse, plan_json, Run};
 use mzlab_core::json::Out;
 
 use crate::convert_entries::{entries, Entry};
-use crate::convert_report::{compression_sets, head_of, merged_lines, partial_lines, report, Item};
+use crate::convert_report::{compression_sets, head_of, partial_lines, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
@@ -245,8 +245,13 @@ fn place(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::hard_link(from, to).or_else(|_| std::fs::copy(from, to).map(|_| ()))
 }
 
-/// The `--report` item of an entry (its file-name root in the work folder is `root`) after its job `ended`, with the mzML placed in `out`.
-fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path)) -> Item {
+/// The `--report` item of an entry (its file-name root in the work folder is `root`) after its job `ended` in `run`, with the mzML placed in `out`.
+fn item(
+    root: &str,
+    e: &Entry,
+    (ended, run): (Option<&Ended>, &Run),
+    (work, out): (&Path, &Path),
+) -> Item {
     let input = e.input.display().to_string();
     let (seconds, skipped) = match ended {
         Some((ms, cached, None)) => (ms / 1e3, *cached),
@@ -282,23 +287,11 @@ fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path
                 skipped,
                 conv,
                 notes,
-                flagged: None,
+                flagged: crate::convert_report::flagged_of(run, &e.label),
             }
         }
         Err(cause) => Item::Failed { input, cause },
     }
-}
-
-/// The centroids flagged (merged, saturated) of our own peak picking on the input `label`, from the note of its file in the record of the run (a file
-/// taken from the cache keeps the note of the run that wrote it).
-fn flagged_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(usize, usize)> {
-    let note = run
-        .activities
-        .iter()
-        .flat_map(|a| &a.files)
-        .find(|(n, _)| n == label)?;
-    let n = |k: &str| note.1.get(k).and_then(|v| v.f64()).map(|x| x as usize);
-    Some((n("merged")?, n("saturated")?))
 }
 
 /// The last lines on stderr and the code: every file written, or the number that failed.
@@ -331,8 +324,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
         })
         .collect();
     let partial = partial_lines(items);
-    // a notice, not a failure: the code stays the one of the conversion
-    let notes = notes + &merged_lines(items);
+    let notes = notes + &crate::convert_report::merged_lines(items);
     let (code, stderr) = if failed == 0 {
         (
             if partial.is_empty() { 0 } else { 3 },
@@ -491,13 +483,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     let items: Vec<Item> = list
         .iter()
         .enumerate()
-        .map(|(k, e)| {
-            let mut it = item(&roots[k], e, ended[k].as_ref(), (&work, &out));
-            if let Item::Done { flagged, .. } = &mut it {
-                *flagged = flagged_of(&run, &e.label);
-            }
-            it
-        })
+        .map(|(k, e)| item(&roots[k], e, (ended[k].as_ref(), &run), (&work, &out)))
         .collect();
     if let Some(path) = &a.report
         && let Err(e) = std::fs::write(path, report(&items))
