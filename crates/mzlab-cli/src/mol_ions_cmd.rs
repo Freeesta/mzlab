@@ -20,55 +20,76 @@ each row is {name, id, pol, k, z, common, formula, text, mz, mzText, lo, hi, odd
 calculator (doubly charged ones only above 150 Da with two N for 2+ or four O for 2-), a charged one its own ion. Every row is a
 candidate m/z to look for, never an identification.";
 
-pub fn run(args: Vec<String>) -> Outcome {
+/// The options of the command: request path, --out, --set decimals and ppm; Err is the outcome to return (help or a usage error).
+struct Args {
+    src: String,
+    out: Option<PathBuf>,
+    dec: Option<f64>,
+    ppm: Option<f64>,
+}
+
+fn parse(args: Vec<String>) -> Result<Args, Outcome> {
     let (mut pos, mut out, mut dec, mut ppm) = (Vec::new(), None, None, None);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
-            "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
-            "--out" => match it.next() {
-                Some(p) => out = Some(PathBuf::from(p)),
-                None => return Outcome::fail("--out needs a path"),
-            },
+            "--help" | "-h" => return Err(Outcome::ok(format!("{HELP}\n").into_bytes())),
+            "--out" => {
+                out = Some(PathBuf::from(
+                    it.next()
+                        .ok_or_else(|| Outcome::fail("--out needs a path"))?,
+                ))
+            }
             "--set" => {
-                let Some(kv) = it.next() else {
-                    return Outcome::fail("--set needs NAME=VALUE");
-                };
+                let kv = it
+                    .next()
+                    .ok_or_else(|| Outcome::fail("--set needs NAME=VALUE"))?;
                 let (k, v) = kv.split_once('=').unwrap_or((kv.as_str(), ""));
-                let Ok(n) = v.trim().parse::<f64>() else {
-                    return Outcome::fail(&format!("--set {k}: {v} is not a number"));
-                };
+                let n = v
+                    .trim()
+                    .parse::<f64>()
+                    .map_err(|_| Outcome::fail(&format!("--set {k}: {v} is not a number")))?;
                 match k {
                     "decimals" => dec = Some(n),
                     "ppm" => ppm = Some(n),
                     _ => {
-                        return Outcome::fail(&format!(
+                        return Err(Outcome::fail(&format!(
                             "--set {k}: unknown parameter (decimals, ppm)"
-                        ))
+                        )))
                     }
                 }
             }
-            o if o.starts_with("--") => return Outcome::fail(&format!("unknown option {o}")),
+            o if o.starts_with("--") => return Err(Outcome::fail(&format!("unknown option {o}"))),
             _ => pos.push(a),
         }
     }
-    let [src] = pos.as_slice() else {
-        return Outcome::fail("mol-ions needs one request file (or - for the standard input)");
+    match <[String; 1]>::try_from(pos) {
+        Ok([src]) => Ok(Args { src, out, dec, ppm }),
+        Err(_) => Err(Outcome::fail(
+            "mol-ions needs one request file (or - for the standard input)",
+        )),
+    }
+}
+
+pub fn run(args: Vec<String>) -> Outcome {
+    let a = match parse(args) {
+        Ok(a) => a,
+        Err(o) => return o,
     };
-    let text = if src == "-" {
+    let text = if a.src == "-" {
         let mut t = String::new();
         if let Err(e) = std::io::Read::read_to_string(&mut std::io::stdin(), &mut t) {
             return Outcome::fail(&e.to_string());
         }
         t
     } else {
-        match std::fs::read_to_string(src) {
+        match std::fs::read_to_string(&a.src) {
             Ok(t) => t,
-            Err(e) => return Outcome::fail(&format!("{src}: {e}")),
+            Err(e) => return Outcome::fail(&format!("{}: {e}", a.src)),
         }
     };
-    match mzlab_feat::chem::ions::ions_json_set(&text, dec, ppm) {
-        Ok(j) => crate::emit(format!("{j}\n"), &out),
+    match mzlab_feat::chem::ions::ions_json_set(&text, a.dec, a.ppm) {
+        Ok(j) => crate::emit(format!("{j}\n"), &a.out),
         Err(e) => Outcome::fail(&e.to_string()),
     }
 }
