@@ -378,4 +378,4 @@ pub fn cut_json(text: &str) -> Result<String> {
 
 #[cfg(test)]
 #[path = "cut_tests.rs"]
-mod tests;
+pub(crate) mod tests;
