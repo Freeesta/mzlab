@@ -516,6 +516,7 @@ declare var fmtTime: any;
 declare var fmz: any;
 declare var fname: any;
 declare var follow: any;
+declare var followMenu: any;
 declare var followSpectra: any;
 declare var followers: any;
 declare var fondoOnStack: any;
