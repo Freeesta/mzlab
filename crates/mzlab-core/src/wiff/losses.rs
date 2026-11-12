@@ -1,5 +1,5 @@
 //! What a read of a `.wiff` pair left out of a sample (`Reader::losses`): the blocks cut by the end of the `.wiff.scan` (`Record::cut`), the blocks with
-//! no scan head where the index row says points (`Record::damaged`) and the scan blocks whose bytes contradict their head (`scan::Block::Damaged`).
+//! no scan head where the index row says points (`Record::damaged`) and the damaged scan blocks (`scan::Block::Damaged`: bytes that contradict their head, an unknown version, a TOF block).
 
 use super::reader::WiffReader;
 use crate::error::Result;

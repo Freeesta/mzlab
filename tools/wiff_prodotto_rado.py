@@ -21,10 +21,10 @@ from wiff_riferimento import RANGES, Writer, encode, expected_scan, header, idx_
 SCANS = 60
 
 
-def block(points, extra=0, more=0) -> bytes:
-    """A version-1 block; `extra` bytes after the 3200 padding, `more` points declared beyond the ones written."""
+def block(points, extra=0, more=0, start=b"\xfe\xff\xff\xff", version=1) -> bytes:
+    """A version-1 block; `extra` bytes after the 3200 padding, `more` points declared beyond the ones written; `start` and `version` make an odd head."""
     data = encode(points)
-    head = b"\xfe\xff\xff\xff" + struct.pack("<I", 1) + struct.pack("<4d", *RANGES[1][0]) + struct.pack("<I", len(points) + more)
+    head = start + struct.pack("<I", version) + struct.pack("<4d", *RANGES[1][0]) + struct.pack("<I", len(points) + more)
     return head + data + bytes(4 - len(data) % 4 + extra)
 
 
@@ -41,15 +41,18 @@ def main():
         n = 300 if k % 20 == 7 else rnd.randrange(6)
         bins = sorted(rnd.sample(range(0, 3000), n))
         pts = [(b, 1 + rnd.randrange(300 if j % 3 else 7)) for j, b in enumerate(bins)]
-        # --odd: every 10th block keeps 5 to 8 bytes after its points, one head declares 50 points more than its stream holds
+        # --odd: every 10th block keeps 5 to 8 bytes after its points, one head declares 50 points more than its stream holds, one head is of version 4
+        # and one starts as a TOF block
         extra, more = (1 + k // 10 % 4 + 4, 0) if odd and k % 10 == 3 else (0, 50) if odd and k == 25 else (0, 0)
-        bad += bool(extra or more)
-        b = block(pts, extra, more)
+        start, version = (b"\xff" * 4, 1) if odd and k == 37 else (b"\xfe\xff\xff\xff", 4) if odd and k == 48 else (b"\xfe\xff\xff\xff", 1)
+        weird = bool(extra or more or start[0] == 0xFF or version != 1)
+        bad += weird
+        b = block(pts, extra, more, start, version)
         t = 1500.0 * (k + 1)
         idx += idx_row(off, len(b), t, float(sum(c for _, c in pts)), 0 if not pts else 2 if n == 1 else 1)
         w.scan += b
         off += len(b)
-        if pts and not (extra or more):
+        if pts and not weird:
             mz, inten = expected_scan(pts, 1)
             want.append({"id": f"sample=1 period=1 cycle={k + 1} experiment=1", "mz": mz, "intensity": inten})
     w.streams["SampleSubtree/Sample1/Idx"] = bytes(idx)

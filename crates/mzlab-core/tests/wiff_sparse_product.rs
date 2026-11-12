@@ -1,7 +1,8 @@
 //! Sparse product-ion scans of a 3200 QTRAP `.wiff` (`rado` of `tools/wiff_prodotto_rado.py`, an independent writer: scan code 6, 0 to 5 points a scan,
 //! streams padded to 4 bytes, an index value at +26 that is not the point count) are read whole: every scan with its points through the reader the site
 //! uses (index, scans, losses, TIC) and through `Wiff::run` (the app and the CLI), none judged damaged, the sample never refused. `storto` (`--odd`) holds
-//! a few blocks their bytes contradict: those are left out and counted, the others read whole, the sample still never refused. Skipped without python3.
+//! a few odd blocks (bytes that contradict their head, a TOF block, a head of version 4): those are left out and counted, the others read whole, the sample
+//! still never refused. Skipped without python3.
 
 #![cfg(feature = "sciex")]
 
@@ -127,7 +128,7 @@ fn sparse_product_ion_scans_are_read_whole() {
     );
 }
 
-/// Blocks with 5 to 8 bytes after their points and a head that declares more points than its stream holds are left out and counted
+/// Blocks with 5 to 8 bytes after their points, a head that declares more points than its stream holds, a TOF block and a head of version 4 are left out and counted
 /// (`warn.wiff.damaged`, «x of y read»): the sample opens with every other scan, never `err.file.wiff`.
 #[test]
 fn blocks_their_bytes_contradict_are_counted_not_a_refusal() {

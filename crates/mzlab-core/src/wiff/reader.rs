@@ -44,7 +44,7 @@ pub(super) struct Part {
     pub(super) scans: Vec<usize>,
     /// The point count of each record's block as `build` read it (`scan::read_block`; 0 for a damaged block): the chromatograms do not read the blocks again.
     pub(super) counts: Vec<Option<u32>>,
-    /// Scan blocks whose own bytes contradict their head (`scan::Block::Damaged`): left out of the index, counted by `losses`.
+    /// Damaged scan blocks (`scan::Block::Damaged`): left out of the index, counted by `losses`.
     pub(super) damaged: usize,
     indice: Vec<ScanEntry>,
     chroms: Option<Vec<Chromatogram>>,
@@ -208,7 +208,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.ready(c)?;
         let (p, r) = row(&self.parts, c, k)?;
-        let scan::Block::Scan(pts) = scan::read_block(&mut self.scan, self.scan_len, r.at, r.end, r.size)? else {
+        let scan::Block::Scan(pts) = scan::read_block(&mut self.scan, self.scan_len, r, None)? else {
             return Err(Error::new("err.file.wiff").with("detail", "not a scan"));
         };
         Ok(p.w.spectrum_of(k, r, pts))
@@ -431,10 +431,11 @@ fn add_unindexed(
 /// The index of an injection: one row per non-empty scan block whose bytes agree with its head (the blocks are read through a window, front to back).
 fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Result<()> {
     let w = &p.w;
-    // each block is read whole, its points checked against its bytes: the window stops at the end of the injection's last block
-    let stop = w.records.iter().map(|r| r.end).max().unwrap_or(0);
+    // each block is read whole, its points checked against its bytes: the window stops where the last block's own length ends (the last block of the file
+    // runs to its end, a window there would read 1 MB per injection)
+    let stop = w.records.iter().map(|r| r.data_end()).max().unwrap_or(0);
     let mut win = Window::until(scan, scan_len, stop);
-    let (mut scans, mut index, mut damaged) = (Vec::new(), Vec::new(), 0);
+    let (mut scans, mut index, mut tally) = (Vec::new(), Vec::new(), scan::Tally::default());
     let mut counts = Vec::with_capacity(w.records.len());
     #[cfg(feature = "sciex")]
     let (mut other, mut mrm_seen) = (false, vec![false; w.experiments.len().max(1)]);
@@ -443,8 +444,11 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
         let points = if r.cut(scan_len) {
             None
         } else {
-            let b = scan::read_block(&mut win, scan_len, r.at, r.end, r.size)?;
-            damaged += usize::from(matches!(b, scan::Block::Damaged));
+            let b = scan::read_block(&mut win, scan_len, r, Some(&mut tally))?;
+            #[cfg(feature = "sciex")]
+            {
+                other |= matches!(&b, scan::Block::Scan(p) if p.version != 2 && !p.mz.is_empty());
+            }
             b.count()
         };
         counts.push(points);
@@ -461,10 +465,6 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
         }
         if !points.is_some_and(|c| c > 0) {
             continue;
-        }
-        #[cfg(feature = "sciex")]
-        {
-            other |= scan::other_version(&mut win, scan_len, r.at, r.end)?;
         }
         let e = w.experiments.get(r.experiment).cloned().unwrap_or_default();
         index.push(ScanEntry {
@@ -489,7 +489,8 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
         });
         scans.push(i);
     }
-    (p.scans, p.indice, p.counts, p.damaged, p.ready) = (scans, index, counts, damaged, true);
+    (p.scans, p.indice, p.counts, p.damaged, p.ready) =
+        (scans, index, counts, tally.check()?, true);
     #[cfg(feature = "sciex")]
     {
         p.other_version = other;

@@ -166,6 +166,13 @@ impl Record {
     pub fn damaged(&self, head: bool) -> bool {
         !head && self.points > 0.0
     }
+    /// Where the block's bytes end: its own length when the index row gives one, else the start of the next block.
+    pub fn data_end(&self) -> u64 {
+        match self.size {
+            0 => self.end,
+            n => self.end.min(self.at.saturating_add(u64::from(n))),
+        }
+    }
 }
 
 /// One sample (injection) of a `.wiff`.

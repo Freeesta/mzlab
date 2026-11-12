@@ -127,9 +127,9 @@ impl Wiff {
         on: &mut dyn FnMut(Spectrum) -> Result<()>,
     ) -> Result<Vec<Chromatogram>> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
-        let mut n = 0;
+        let (mut n, mut tally) = (0, scan::Tally::default());
         for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
-            let block = scan::read_block(scan, self.scan_len, r.at, r.end, r.size)?;
+            let block = scan::read_block(scan, self.scan_len, r, Some(&mut tally))?;
             if let scan::Block::Scan(p) = block {
                 if p.mz.is_empty() {
                     continue;
@@ -148,6 +148,7 @@ impl Wiff {
                 blocks.add_dense(r, v);
             }
         }
+        tally.check()?;
         let mut chroms = self.chromatograms_of(blocks);
         if let Some(dad) = &self.dad {
             chroms.push(dad.twc_chromatogram(chroms.len()));
@@ -314,7 +315,7 @@ pub(super) fn block_count(
     scan_len: u64,
     r: &super::Record,
 ) -> Result<Option<u32>> {
-    Ok(scan::read_block(scan, scan_len, r.at, r.end, r.size)?.count())
+    Ok(scan::read_block(scan, scan_len, r, None)?.count())
 }
 
 #[cfg(feature = "estesi")]
