@@ -1150,5 +1150,16 @@
   "error.qc.tooFew": "Messaggio d'errore del motore; {have} = quante ce ne sono.",
   "error.rowNotFound": "Messaggio d'errore del motore; {id} = identificativo.",
   "error.stats.condition": "Messaggio d'errore del motore; {name} = nome.",
-  "error.generic": "Errore senza testo proprio; {detail} = messaggio tecnico del motore."
+  "error.generic": "Errore senza testo proprio; {detail} = messaggio tecnico del motore.",
+  "draw.check.ctx": "Riga del menu del tasto destro su un atomo con un'osservazione del controllo; apre le tre parti. {what} = il problema in una frase.",
+  "draw.check.found": "Stato del controllo del disegno; {n} = numero di osservazioni trovate.",
+  "draw.check.fail": "Stato quando il controllo del disegno non parte; {message} = messaggio dell'errore.",
+  "draw.check.atoms": "Atomi a cui si riferisce un'osservazione; {list} = simbolo e numero degli atomi, es. «C1, N7».",
+  "draw.check.valence.what": "Problema di valenza; {el} = simbolo dell'elemento, {valence} = legami contati (H compresi), {allowed} = valenze ammesse separate da /.",
+  "draw.check.valenceCharge.what": "Valenza che non torna con la carica; {el} = simbolo dell'elemento, {valence} = legami contati.",
+  "draw.check.valenceCharge.next": "Prossimo passo; {fix} = la carica (es. +1) che renderebbe giusta la valenza.",
+  "draw.check.charge.what": "Carica insolita; {q} = carica con segno (es. +2), {el} = simbolo dell'elemento.",
+  "draw.check.isotope.what": "Isotopo sconosciuto; {iso} = numero di massa scritto, {el} = simbolo dell'elemento.",
+  "draw.check.pieces.what": "Nota sui pezzi separati; {n} = numero di strutture non legate fra loro.",
+  "error.check.tooBig": "Errore del controllo del disegno; {max} = numero massimo di atomi."
 }

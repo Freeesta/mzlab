@@ -29,22 +29,22 @@ fn float(line: &str, a: usize, b: usize) -> Result<f64, MolError> {
         .map_err(|_| fail(format!("{f:?} is not a number (line {line:?})")))
 }
 
-/// Element symbol and isotope of an atom-block symbol (`D` and `T` are hydrogen isotopes).
-pub(crate) fn symbol(s: &str) -> Result<(String, u16), MolError> {
+/// Element symbol, isotope and query flag of an atom-block symbol (`D` and `T` are hydrogen isotopes; any other non-element is a query atom).
+pub(crate) fn symbol(s: &str) -> (String, u16, bool) {
     match s {
-        "D" => Ok(("H".into(), 2)),
-        "T" => Ok(("H".into(), 3)),
-        _ if is_element(s) => Ok((s.to_string(), 0)),
-        _ => Err(fail(format!("atom symbol {s:?} is not an element"))),
+        "D" => ("H".into(), 2, false),
+        "T" => ("H".into(), 3, false),
+        _ => (s.to_string(), 0, !is_element(s)),
     }
 }
 
 /// One atom line: the atom, the charge code of the legacy column and the unpaired electrons it implies.
 fn atom_line(line: &str) -> Result<(DraftAtom, i8, u8), MolError> {
-    let (el, iso) = symbol(field(line, 31, 34))?;
+    let (el, iso, query) = symbol(field(line, 31, 34));
     let atom = DraftAtom {
         el,
         iso,
+        query,
         chg: 0,
         rad: 0,
         valence: match int(line, 48, 51)? {
@@ -144,12 +144,13 @@ fn bond(line: &str, na: usize) -> Result<DraftBond, MolError> {
             "bond line {line:?} names atoms outside 1..{na}"
         )));
     }
-    let order = match int(line, 6, 9)? {
-        t @ 1..=3 => t as u8,
-        4 => 0,
-        t => return Err(fail(format!("bond type {t} (a query or unsupported bond)"))),
+    let (order, query) = match int(line, 6, 9)? {
+        t @ 1..=3 => (t as u8, 0),
+        4 => (0, 0),
+        t => (1, t.max(1)),
     };
-    let wedge = match (order, int(line, 9, 12)?) {
+    let mark = int(line, 9, 12)?;
+    let wedge = match (order, mark) {
         (1, 1) => Wedge::Up,
         (1, 6) => Wedge::Down,
         (1, 4) | (2, 3) => Wedge::Either,
@@ -161,6 +162,8 @@ fn bond(line: &str, na: usize) -> Result<DraftBond, MolError> {
         order,
         wedge,
         arom: order == 0,
+        query,
+        multi_wedge: order != 1 && matches!(mark, 1 | 6),
     })
 }
 

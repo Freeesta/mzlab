@@ -2,6 +2,8 @@
 //! the user gives the SMILES of the parent.
 
 pub mod breaks;
+#[cfg(feature = "check")]
+pub mod check;
 pub mod cut;
 pub mod fragmenter;
 pub mod fragments;

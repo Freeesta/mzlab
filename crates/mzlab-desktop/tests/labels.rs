@@ -1,6 +1,6 @@
 //! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
 //! `grafo` and of `mzlab-cli mol-label`), with the request as an object or as text, and keeps the key of an error; `kind: "cut"` gives `cut/1` the same way;
-//! `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`.
+//! `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`.
 
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
@@ -73,4 +73,25 @@ fn fragments_route_gives_the_bytes_of_the_fixture() {
         text(st.rpc("feat/grafo", &p, &[]).unwrap()),
         fx["frag"].as_str().unwrap()
     );
+}
+
+#[test]
+fn check_route_gives_the_bytes_of_the_fixture() {
+    // the same fixture is checked against the `.wasm` `grafo` and `mzlab-cli mol-check` in tests/test_feat_grafo_wasm.py
+    let fx: serde_json::Value =
+        serde_json::from_str(include_str!("../../../tests/dati/check_disegno.json")).unwrap();
+    let st = State::new();
+    for req in [fx["request"].clone(), fx["request"].to_string().into()] {
+        let p = json!({"kind": "check", "request": req});
+        assert_eq!(
+            text(st.rpc("feat/grafo", &p, &[]).unwrap()),
+            fx["check"].as_str().unwrap()
+        );
+    }
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "check", "request": {"molfile": "x"}}),
+        &[],
+    );
+    assert_eq!(bad.err().map(|e| e.key), Some("error.check.molfile"));
 }
