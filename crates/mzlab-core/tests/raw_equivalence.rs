@@ -1,7 +1,7 @@
 //! RV-01: the memory work on the `.raw` reader (trailers and events kept compact) changes no result. Proof on the real files: the three reads of a trailer
 //! agree field by field, and `opentfraw` tests that the compact event table gives back every event. Regression pins: the SHA-256 of the `.mzidx`, the mzML,
 //! the `metodo/1` document and the headers of a sample of scans; a change meant to change the output re-pins them (`RAW_EQ_PRINT=1`) and says which change.
-//! Needs the private data repository (`MZLAB_DATI`; LAB-A by `dati/formati/raw_veloce_alias.tsv`; the big DDA as `$MZLAB_RAW_BAF` or `dati/formati/thermo/raw/BAF_GEE_37.raw`); a missing file skips its case.
+//! Needs the private data repository (`MZLAB_DATI`; LAB-A by `dati/formati/raw_veloce_alias.tsv`; the big public DDA as `$MZLAB_RAW_BAF` or by the name its download row in `dati/formati/_grandi_thermo_aperti.tsv` gives); a missing file skips its case.
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
@@ -124,7 +124,20 @@ fn file(case: &str) -> Option<PathBuf> {
             })?,
         _ => match std::env::var_os("MZLAB_RAW_BAF") {
             Some(v) => PathBuf::from(v),
-            None => dati_percorsi::percorso("dati/formati/thermo/raw/BAF_GEE_37.raw")?,
+            // the name of the file is the one its download row (accession PXD070375) gives, in the list of big files of the data repository
+            None => {
+                let list = std::fs::read_to_string(dati_percorsi::percorso(
+                    "dati/formati/_grandi_thermo_aperti.tsv",
+                )?)
+                .ok()?;
+                let url = list
+                    .lines()
+                    .find(|l| l.contains("PXD070375") && l.contains(".raw"))?
+                    .split('\t')
+                    .find(|c| c.starts_with("http"))?;
+                let name = url.rsplit('/').next()?;
+                dati_percorsi::percorso(&format!("dati/formati/thermo/raw/{name}"))?
+            }
         },
     };
     p.is_file().then_some(p)
