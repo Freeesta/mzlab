@@ -1,6 +1,6 @@
 """The SIM wording and controls of the Data view on the built site with the Rust engine (synthetic SIM .wiff pair of tools/wiff_sim.py, no laboratory data): the engine types every file «lc-sim», the
-experiment cell says «SIM · N ions» (not «no data»), the side list group, the panel title, the toolbar button and the channel picker speak of SIM ions, every ion has one
-colour that is the same in every sample, the chromatogram menu holds the «Extract ion ›» submenu (colour swatch, check mark, «All», click / Ctrl / Shift rules) in place
+experiment cell says «SIM · N ions» (not «no data»), the side list group, the panel title, the toolbar button and the channel picker speak of SIM ions, overlaid traces take
+the colour of their sample and a dash per ion, the chromatogram menu holds the «Extract ion ›» submenu (check mark, «All», click / Ctrl / Shift rules) in place
 of XIC, and the «Area» toggle fills the traces (on by default). Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_ui.py"""
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
@@ -34,12 +34,35 @@ try:
         pg.click("#np-mrm"); wait_for_js(pg, "E.panels.some(p => p.type === 'mrm' && p._a)", timeout=60000)
         step("the panel title says SIM ions", lambda: need(pg.evaluate("E.panels.find(p => p.type === 'mrm').title") == "@sim", pg.evaluate("E.panels.find(p => p.type === 'mrm').title")))
         def colours():
-            s = pg.evaluate("E.panels.find(p => p.type === 'mrm')._a.sr.map(s => [s.ion, s.color, s.k])")
-            by = {}
-            for ion, col, k in s: by.setdefault(ion, set()).add(col)
-            need(all(len(v) == 1 for v in by.values()), by)
-            need(len({next(iter(v)) for v in by.values()}) == len(by), by)
-        step("one colour per ion, the same in every sample", colours)
+            # both samples in view, two ions plotted (the panel opens on the first file and one ion)
+            pg.evaluate("(() => { E.files.forEach(f => { f.vis = true; }); const p = E.panels.find(p => p.type === 'mrm'); p.tr = SIMUI.ions(p).slice(0, 2).map(x => x.key); renderFileList(); draw(p); })()")
+            wait_for_js(pg, "(() => { const a = E.panels.find(p => p.type === 'mrm')._a; return a && new Set(a.sr.map(s => s.k)).size === 2 && new Set(a.sr.map(s => s.ion)).size === 2; })()", timeout=30000)
+            s = pg.evaluate("E.panels.find(p => p.type === 'mrm')._a.sr.map(s => [s.ion, s.color, s.k, JSON.stringify(s.dash)])")
+            square = pg.evaluate("Object.fromEntries(E.files.map(f => [f.k, getComputedStyle(document.querySelector(`#flst .fl .nm[data-k=\"${f.k}\"]`).closest('.fl').querySelector(':scope > i')).backgroundColor]))")
+            css = lambda c: pg.evaluate("(c => { const e = document.createElement('i'); e.style.background = c; document.body.appendChild(e); const v = getComputedStyle(e).backgroundColor; e.remove(); return v; })(%s)" % json.dumps(c))
+            by_ion, by_k = {}, {}
+            for ion, col, k, dash in s: by_ion.setdefault(ion, set()).add(col); by_k.setdefault(k, []).append((col, dash))
+            need(len(by_k) >= 2, by_k)
+            need(all(len(v) == len(by_k) for v in by_ion.values()), "two samples on one ion share a colour: %s" % by_ion)
+            for k, v in by_k.items():
+                need(len({c for c, _ in v}) == 1, "one sample, several colours: %s" % v)
+                need(css(v[0][0]) == square[str(k)], "trace %s vs file square %s" % (css(v[0][0]), square[str(k)]))
+                need(len({d for _, d in v}) == len(v), "two ions of one sample share a dash: %s" % v)
+            leg = pg.evaluate("[...E.panels.find(p => p.type === 'mrm').leg.querySelectorAll('.tg')].map(e => e.textContent)")
+            names = pg.evaluate("E.files.map(f => f.label)")
+            need(leg and all(any(x.startswith(n) for n in names) for x in leg), "legend does not lead with the sample: %s" % leg)
+            tip = pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'); const d = document.createElement('div'); d.innerHTML = p._a.hov(p._a.X ? p._a.X((p._a.x0 + p._a.x1) / 2) : 300, 50).html; return [...d.querySelectorAll('i')].map(i => i.style.background); })()")
+            need(tip and set(map(css, tip)) <= {css(c) for _, c, _, _ in s}, "tooltip colours %s" % tip)
+            pg.evaluate("(() => { E.files.forEach((f, i) => { f.vis = i === 0; }); const p = E.panels.find(p => p.type === 'mrm'); p.tr = ''; renderFileList(); draw(p); })()")
+        step("SIM overlay: colour = the sample (its file-list square), dash = the ion; legend and tooltip agree", colours)
+        def zoombar():
+            pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'), [f0, f1] = p._a.full; zoomTo(p, f0 + (f1 - f0) / 4, f1 - (f1 - f0) / 4); })()")
+            wait_for_js(pg, "(() => { const z = E.panels.find(p => p.type === 'mrm').el.querySelector('.zbar'); return !!z && !z.hidden; })()", timeout=20000)
+            z = pg.evaluate("(() => { const z = E.panels.find(p => p.type === 'mrm').el.querySelector('.zbar'); return [z.getAttribute('role'), z.getAttribute('aria-label'), z.title]; })()")
+            need(z[0] == "img" and z[1] and z[1] == z[2] and "RT" in z[1] and "min" in z[1], z)
+            pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'); p.zoom = null; draw(p); })()")
+            wait_for_js(pg, "E.panels.find(p => p.type === 'mrm').el.querySelector('.zbar').hidden", timeout=20000)
+        step("zoomed: the range is in the zoom bar's title and aria-label (no text on the chart), gone at full view", zoombar)
         step("«Area» is on by default and the traces are filled", lambda: need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area !== false") and pg.evaluate("document.querySelector('[data-a=area]').getAttribute('aria-pressed')") == "true", "area"))
         def toggle():
             pg.click("[data-a=area]"); need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area") is False, "off")
@@ -110,7 +133,7 @@ try:
             need(pg.evaluate("[...document.querySelectorAll('#ctx div[role=menuitem]')].some(e => /Extract ion|Estrai ione/.test(e.textContent))"), "entry")
             need(not pg.evaluate("[...document.querySelectorAll('#ctx div')].some(e => e.dataset.azione === 'chrom.xic')"), "XIC still there")
             pg.hover("#ctx .hsub"); need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub:not([hidden]) [role=menuitemcheckbox]').length") == N + 1, "rows")
-            need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub .sw').length") == N, "swatches")
+            need(pg.evaluate("document.querySelectorAll('#ctx .ctxsub .sw').length") == 0, "an ion swatch: colour belongs to the sample")
             pg.locator("#ctx .ctxsub [role=menuitemcheckbox]").nth(2).click()
             need(pg.evaluate("E.panels.find(p => p.type === 'mrm').tr.length") == 1, pg.evaluate("E.panels.find(p => p.type === 'mrm').tr"))
         step("the chromatogram menu extracts one ion with a click", submenu)

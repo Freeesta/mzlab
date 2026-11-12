@@ -96,7 +96,7 @@ Canale                         Sigla   n     RT (min)
 - DAD Shimadzu/`.wiff`: `UV TWC` e `λ` aggiunte dall'utente; spettro UV per scan.
 - SIM: un canale `SIM [m1–m2]` per finestra (Thermo) o `sim:` (SIC; del `.wiff` Q1MI/Q3MI un canale per ione, etichetta `SIM <m/z> (+|−) <dwell> ms «nome»`).
 
-**Sovrapposizione di file.** Il pannello salva il canale come `omologo`, non come indice: ogni file risolve il suo; un file che non lo ha compare in legenda «—» (nessun errore). La stessa transizione in 12 campioni = 12 tracce di colori Okabe-Ito; tabella dei dati (`TDATI`) con una colonna per file.
+**Sovrapposizione di file.** Il pannello salva il canale come `omologo`, non come indice: ogni file risolve il suo; un file che non lo ha compare in legenda «—» (nessun errore). La stessa transizione in 12 campioni = 12 tracce col colore di ogni campione (canali `sim`/`srm`: `SIMUI.style`, tratteggio per canale); tabella dei dati (`TDATI`) con una colonna per file.
 
 **Pannello XIC / lente.** Lavora nel canale selezionato (`api/xic?canale`). Default: lente proposta se il canale ha `spettri` e un intervallo RT > 1 min con più di 20 scan; mai bloccata.
 
