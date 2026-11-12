@@ -142,14 +142,18 @@ function defaultLayoutTab(/** @type {string} */ t) {
     list.forEach(e => { addMs2Pair(e, y); y += 550; });
   } else if (t === "mrm") {
     if (E._mrmLoading) return; E._mrmLoading = true;
-    calLoad().catch(() => {}).then(() => {
-      E._mrmLoading = false; if (tabPanels("mrm").length) return;
+    calLoad().catch(() => {}).then(async () => {
+      if (tabPanels("mrm").length) { E._mrmLoading = false; return; }
       const mfs = tabFiles("mrm");
       // the whole series is shown (up to MRM_SHOW_MAX files, so the chart stays readable): "integrate all" covers every visible file
       if (!mfs.some((/** @type {MzFile} */ f) => f.vis)) mfs.forEach((/** @type {MzFile} */ f, /** @type {number} */ i) => { f.vis = i < MRM_SHOW_MAX; });
       if (typeof renderFileList === "function") renderFileList();
-      const w2 = hostWidth(), keys = [CAL.quant, CAL.qual].filter(Boolean);
-      addPanel("mrm", { tab: "mrm", tr: keys.length ? keys : "", title: window.SIMUI && SIMUI.allSim() ? "@sim" : PT.mrm, x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all", intfFixed: true });
+      const shown = await mrmShownKeys(mfs.filter((/** @type {MzFile} */ f) => f.vis)).catch(() => /** @type {string[]} */ ([]));
+      E._mrmLoading = false; if (tabPanels("mrm").length) return;
+      // the student's last choice of channels when the samples shown have some of them, otherwise the quantifier / qualifier
+      const w2 = hostWidth(), keys = [CAL.quant, CAL.qual].filter(Boolean), mem = mrmRecall(shown);
+      const pn = addPanel("mrm", { tab: "mrm", tr: mem ?? (keys.length ? keys : ""), title: window.SIMUI && SIMUI.allSim() ? "@sim" : PT.mrm, x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all", intfFixed: true });
+      pn._trAuto = pn.tr;   // what the layout chose is not the student's choice: it is not remembered
       relayout(); fitHost(); uiSave();
       if (mfs.length > MRM_SHOW_MAX) mrmShowAllNotice(mfs);
     });
@@ -160,6 +164,21 @@ function defaultLayoutTab(/** @type {string} */ t) {
 function mrmSel(/** @type {string | string[] | null | undefined} */ tr, /** @type {string[]} */ keys) {
   const want = Array.isArray(tr) ? tr : tr ? [tr] : [];
   return want.length && !want.some(k => keys.includes(k)) ? "" : tr;
+}
+// the channels last plotted by an MRM / SIM panel, one choice per kind (SIM ions, transitions), for this session: a sample unticked and ticked again, or another
+// sample with those channels, opens on that choice (the program only remembers what the student picked); channels the samples shown lack are left out
+const MRM_MEM = /** @type {Record<string, string | string[]>} */ ({});
+const mrmKindOf = (/** @type {string[]} */ keys) => keys.every(k => !k.includes(">")) ? "sim" : "srm";
+function mrmRemember(/** @type {string | string[] | null | undefined} */ tr, /** @type {string[]} */ keys) {
+  if (keys.length && tr != null) MRM_MEM[mrmKindOf(keys)] = Array.isArray(tr) ? [...tr] : tr;
+}
+// "" (every channel), the remembered channels the samples shown have, or null (nothing remembered or none of them there: the default)
+function mrmRecall(/** @type {string[]} */ keys) {
+  const m = keys.length ? MRM_MEM[mrmKindOf(keys)] : undefined; if (m === undefined) return null; if (m === "") return "";
+  const w = (Array.isArray(m) ? m : [m]).filter(k => keys.includes(k)); return w.length ? w : null;
+}
+async function mrmShownKeys(/** @type {MzFile[]} */ fs) {
+  return [...new Set((await Promise.all(fs.map(f => getMrm(f.k)))).flat().map((/** @type {Bag} */ t) => trKey(t)))];
 }
 const MRM_SHOW_MAX = 12;
 // beyond the cap only the first files are drawn: a visible, keyboard-reachable button shows them all
