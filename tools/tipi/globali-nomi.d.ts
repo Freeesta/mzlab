@@ -404,6 +404,7 @@ declare var cleanupOrphanPanels: any;
 declare var closeAllBtn: any;
 declare var closeAllPanels: any;
 declare var closeOnTouch: any;
+declare var closeOutside: any;
 declare var closePanel: any;
 declare var closeUnopen: any;
 declare var closedAll: any;
