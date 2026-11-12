@@ -232,6 +232,9 @@ impl Reader for SrmFromScans {
     fn refused(&mut self, c: usize) -> Option<mzlab_core::Error> {
         self.inner.refused(c)
     }
+    fn unread_precursors(&mut self, c: usize) -> usize {
+        self.inner.unread_precursors(c)
+    }
     fn losses(&mut self, c: usize) -> Result<Losses> {
         self.inner.losses(c)
     }

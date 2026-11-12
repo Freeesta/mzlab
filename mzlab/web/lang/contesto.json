@@ -800,6 +800,7 @@
   "warn.wiff.unindexed": "Avviso calmo, uno per file (sito, CLI e app): il .wiff.scan di una coppia SCIEX contiene sezioni di dati che l'indice del .wiff non elenca (copia fatta durante l'acquisizione). {n} = sezioni trovate, {recovered} = recuperate come campioni (nome e metodo dedotti, il nome è <file>_s<N>), {skipped} = lasciate fuori perché non verificabili.",
   "warn.wiff.emptySample": "Motivo mostrato per un campione .wiff senza scansioni né cromatogrammi (riga del campione, riga di avanzamento della CLI): calmo, una riga.",
   "warn.wiff.inferredSample": "Motivo mostrato per un campione ricostruito da una sezione che l'indice del .wiff non elenca (accanto alla nota di file warn.wiff.unindexed).",
+  "warn.wiff.idaPrecursor": "Avviso calmo, uno per campione (sito, CLI e app): scansioni MS2 dipendenti (IDA) di un .wiff scritte senza precursore, perché il flusso DDERealTimeData manca o non torna con le scansioni. {sample} = numero del campione, {n} = scansioni senza precursore.",
   "warn.centroid.widthFallback": "Avviso del passo spectra.centroid (Flow, CLI e sito): la larghezza non è misurata ma di ripiego; mai chiamarla stimata.",
   "warn.centroid.merged": "Avviso del passo spectra.centroid (Flow, CLI e sito): centroidi con il flag MERGED (larghezza a metà altezza oltre 1,12 volte quella del file alla loro m/z); un avviso, non una risposta.",
   "warn.file.mzmlFewer": "Avviso calmo di lettura parziale del motore mzML (Run.losses): il file si chiude ma il conteggio di spectrumList è più alto degli spettri presenti.",

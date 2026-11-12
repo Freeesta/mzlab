@@ -1,6 +1,8 @@
 //! SCIEX `.wiff` scans in the channels: the abbreviation of the experiment (EMS, EPI) and the IDA grouping. A scan of a `.wiff` (or of its msconvert mzML)
 //! has no filter, only the id `sample= period= cycle= experiment=`; the scan table names the experiment (`wiff/modes.rs`), else the level tells it.
-//! Used by `gruppi::{sigla_di, id_ms}`.
+//! Used by `groups::{code_of, id_ms, group}`.
+
+use std::collections::{HashMap, HashSet};
 
 use crate::idxread::Scan;
 use crate::wiff::modes::{self, CODE_FULL, CODE_PRODUCT};
@@ -29,9 +31,42 @@ pub(super) fn sigla(s: &Scan) -> Option<&'static str> {
     }))
 }
 
-/// The product-ion scan of an IDA experiment: the method gives it no precursor, which the survey scan picks at every cycle.
-pub(super) fn dipendente(s: &Scan) -> bool {
-    s.level == 2 && sigla(s) == Some("EPI") && s.prec(f64::NAN).is_nan()
+/// The experiment of a `.wiff` scan without its cycle: `sample=1 period=1 experiment=2`.
+fn experiment_of(native: &str) -> String {
+    native
+        .split_whitespace()
+        .filter(|w| !w.starts_with("cycle="))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The EPI experiments of the scans whose precursor changes from cycle to cycle (to 0.1 mDa): an IDA picks it from the survey at every cycle, a targeted
+/// EPI keeps the one of its method. Read from the scans alone, so an mzML from msconvert is grouped as the reader's own.
+pub(super) fn varying(scans: &[Scan]) -> HashSet<String> {
+    let mut first: HashMap<String, i64> = HashMap::new();
+    let mut out = HashSet::new();
+    for s in scans
+        .iter()
+        .filter(|s| s.level == 2 && sigla(s) == Some("EPI"))
+    {
+        let p = s.prec(f64::NAN);
+        if p.is_nan() {
+            continue;
+        }
+        let q = (p * 1e4).round() as i64;
+        let e = experiment_of(&s.native);
+        if *first.entry(e.clone()).or_insert(q) != q {
+            out.insert(e);
+        }
+    }
+    out
+}
+
+/// The product-ion scan of an IDA experiment: no precursor (the file did not give it), or one of an experiment whose precursor varies (`varying`).
+pub(super) fn dipendente(s: &Scan, varying: &HashSet<String>) -> bool {
+    s.level == 2
+        && sigla(s) == Some("EPI")
+        && (s.prec(f64::NAN).is_nan() || varying.contains(&experiment_of(&s.native)))
 }
 
 /// The channel of the dependent scans of an IDA: `dd:2:EPI`.

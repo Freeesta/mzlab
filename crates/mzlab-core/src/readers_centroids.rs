@@ -137,6 +137,9 @@ impl Reader for Centroidato {
     fn refused(&mut self, c: usize) -> Option<crate::Error> {
         self.l.refused(c)
     }
+    fn unread_precursors(&mut self, c: usize) -> usize {
+        self.l.unread_precursors(c)
+    }
     fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> {
         self.l.losses(c)
     }

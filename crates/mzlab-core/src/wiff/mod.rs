@@ -12,6 +12,7 @@ pub mod dad;
 pub mod dad_map;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_uv;
+mod dde;
 pub mod idx;
 mod losses;
 mod mass_check;
@@ -151,6 +152,9 @@ pub struct Record {
     pub experiment: usize,
     /// The point count of the scan as the index row tells it (0 for an MRM block or an empty scan, NaN when the row is not known or holds none: IDA).
     pub points: f64,
+    /// The precursor m/z and charge of a dependent (IDA) scan from its `DDERealTimeData` row (`dde.rs`); `None` for the other scans.
+    pub precursor: Option<f64>,
+    pub charge: Option<u8>,
 }
 
 impl Record {
@@ -198,6 +202,8 @@ pub struct Wiff {
     /// Set when the sample is a section of the `.wiff.scan` that the `.wiff` index does not list: its name, method and times are those of this indexed sample.
     pub inferred_from: Option<u32>,
     scan_len: u64,
+    /// Acquired dependent (IDA) scans whose precursor could not be read (`dde::assign`): written with none, counted in `warn.wiff.idaPrecursor`.
+    pub unread_precursors: usize,
     /// Why this sample could not be opened (its method is refused): it has no records, and reading its data gives this error while the other samples stay readable.
     failure: Option<Error>,
 }
@@ -273,12 +279,14 @@ pub(crate) fn period_count(ole: &Ole, method: u32) -> usize {
     n
 }
 
+/// The `ExperimentHeader` of experiment `i` of method `no` (also read by `dde.rs`).
+fn header(ole: &Ole, no: u32, i: usize) -> Option<Vec<u8>> {
+    ole.read(&format!("MethodSubtree/Method{no}/DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"))
+}
+
 fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
     let mut out = Vec::new();
-    while let Some(d) = ole.read(&format!(
-        "MethodSubtree/Method{sample}/DeviceMethod0/Period0/Experiment{}/ExperimentHeader",
-        out.len()
-    )) {
+    while let Some(d) = header(ole, sample, out.len()) {
         let code = d
             .get(HEADER_CODE..HEADER_CODE + 4)
             .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]));
@@ -307,17 +315,6 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
         });
     }
     out
-}
-
-/// The product-ion experiments of a sample acquired by IDA (it has a `DDERealTimeData` stream) are dependent scans: the survey picks their precursor at
-/// every cycle, and the mass of their header is only the value the method was saved with. That stream is not decoded, so they carry no precursor rather
-/// than an invented one (level 2 stays; the channels group them as `dd:2:EPI`). True for such a sample: its index rows hold no point count at +26.
-fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) -> bool {
-    if !ole.has(&format!("{SAMPLES}Sample{sample}/DDERealTimeData")) {
-        return false;
-    }
-    experiments.iter_mut().filter(|e| e.code == Some(CODE_PRODUCT)).for_each(|e| e.precursor = None);
-    true
 }
 
 /// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
@@ -376,9 +373,9 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         extended::mark_windows(ole, sample, &mut experiments);
     }
     sim_periods(ole, sample, &experiments)?;
-    let ida = dependent_scans(ole, sample, &mut experiments);
+    let ida = dde::ida_of(ole, sample, &mut experiments);
     let n_exp = experiments.len().max(1);
-    let records = entries
+    let mut records: Vec<Record> = entries
         .iter()
         .enumerate()
         .map(|(k, e)| Record {
@@ -391,7 +388,9 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             tic: e.tic,
             cycle: k / n_exp,
             experiment: k % n_exp,
-            points: if ida { f64::NAN } else { e.points },
+            points: if ida == dde::Ida::Stream { f64::NAN } else { e.points },
+            precursor: None,
+            charge: None,
         })
         .collect();
     let no = method_no(ole, sample);
@@ -406,6 +405,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     let method = methodinfo::method_of_sample(ole, method_no(ole, sample));
     let method = method.or_else(|| methodinfo::method_of_sample(ole, sample));
     activation(&mut experiments, &method);
+    let unread_precursors = dde::assign(ole, sample, ida, &experiments, &mut records, &method);
     let dad = dad::DadData::read(ole, sample);
     let (model, created, serial, source_type) = crate::method_wiff::run_facts_full(ole, sample);
     Ok(Wiff {
@@ -424,6 +424,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         trim_scheduled: false,
         inferred_from: None,
         scan_len,
+        unread_precursors,
         failure: None,
     })
 }
@@ -448,6 +449,7 @@ impl Wiff {
             trim_scheduled: false,
             inferred_from: None,
             scan_len,
+            unread_precursors: 0,
             failure: Some(failure),
         }
     }

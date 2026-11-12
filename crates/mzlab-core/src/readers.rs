@@ -267,11 +267,10 @@ pub trait Reader {
         self.extra_mzml(s)
     }
     /// What the format holds and the mzML of the conversion does not carry, as (field, reason) with the reasons of `conv`: the account `conv/1` gives.
-    fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        &[]
-    }
+    #[rustfmt::skip]    fn not_carried(&self) -> &'static [(&'static str, &'static str)] { &[] }
     #[rustfmt::skip]    fn unindexed(&self) -> (usize, usize) { (0, 0) } // data sections the index lacks (an incomplete copy): (recovered, left out)
     #[rustfmt::skip]    fn missing(&mut self, _c: usize) -> usize { 0 } // scans of sample `c` the index lists beyond the end of the data file (a truncated copy): not in the index
+    #[rustfmt::skip]    fn unread_precursors(&mut self, _c: usize) -> usize { 0 } // dependent (IDA) scans of sample `c` written without the precursor the file could not give (`warn.wiff.idaPrecursor`); a wrapper forwards it
     #[rustfmt::skip]    fn refused(&mut self, _c: usize) -> Option<Error> { None } // why sample `c` will not be read (its method, a damaged block): the listing carries it; a wrapper forwards it
     /// The scans of sample `c` the file declares and the ones read (`ReadOutcomes` pairs them with the data). A reader that drops scans for another reason than a cut file overrides this; a wrapper forwards it. Default: the rows of `index_without_tic` plus `missing`.
     fn losses(&mut self, c: usize) -> Result<Losses> {

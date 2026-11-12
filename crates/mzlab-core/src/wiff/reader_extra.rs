@@ -14,8 +14,8 @@ fn id_field(id: &str, key: &str) -> Option<usize> {
         .and_then(|v| v.parse::<usize>().ok())
 }
 
-/// The TIC the index of the file holds for the block of `s`, when the block is where the spectrum number says and the value is usable.
-fn header_tic(l: &WiffReader, s: &Spectrum) -> Option<f64> {
+/// The index record of the block of `s`, when the block is where the spectrum number says.
+fn record_of<'a>(l: &'a WiffReader, s: &Spectrum) -> Option<&'a super::Record> {
     let p = l
         .parts
         .iter()
@@ -23,7 +23,7 @@ fn header_tic(l: &WiffReader, s: &Spectrum) -> Option<f64> {
     let r = p.w.records.get(*p.scans.get(s.index)?)?;
     let same = id_field(&s.id, "cycle=") == Some(r.cycle + 1)
         && id_field(&s.id, "experiment=") == Some(r.experiment + 1);
-    (same && r.tic.is_finite() && r.tic > 0.0).then_some(r.tic)
+    same.then_some(r)
 }
 
 /// What the mzML says of a spectrum besides its points: the collision energy and isolation window of its experiment, and (readers module) the spectrum
@@ -34,8 +34,10 @@ pub(super) fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::Spectr
         .zip(id_field(&s.id, "experiment="))
         .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)));
     // the vendor TIC of the block in every build: the engine (no `estesi`) writes the same mzML and index as the CLI and the app
+    let r = record_of(l, s);
     let mut extra = crate::mzmlwrite::SpectrumExtra {
-        tic: header_tic(l, s),
+        tic: r.map(|r| r.tic).filter(|t| t.is_finite() && *t > 0.0),
+        charge: r.and_then(|r| r.charge),
         ..Default::default()
     };
     let Some(e) = e else { return extra };

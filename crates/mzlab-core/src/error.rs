@@ -17,8 +17,13 @@ impl Error {
         }
     }
 
-    pub fn with(mut self, name: &'static str, value: impl ToString) -> Self {
-        self.params.push((name, value.to_string()));
+    pub fn with(self, name: &'static str, value: impl ToString) -> Self {
+        self.param(name, value.to_string())
+    }
+
+    // one body for every value type: the generic `with` adds only its `to_string` to the size-capped `.wasm`
+    fn param(mut self, name: &'static str, value: String) -> Self {
+        self.params.push((name, value));
         self
     }
 

@@ -357,6 +357,36 @@ fn wiff_ida_dependent_scans_are_one_dd_channel() {
 }
 
 #[test]
+fn wiff_ida_scans_with_their_own_precursors_are_one_dd_channel() {
+    // EMS + EPI: the IDA picks another precursor at every cycle (the reader gives it from DDERealTimeData); a targeted EPI keeps the one of its method
+    let picked = [493.27, 547.30, 687.85];
+    let mut ida = vec![];
+    let mut fixed = vec![];
+    for c in 1..=3 {
+        ida.push(scan_wiff(c, 1, 1, None));
+        ida.push(scan_wiff(c, 2, 2, Some(picked[c - 1])));
+        fixed.push(scan_wiff(c, 1, 1, None));
+        fixed.push(scan_wiff(c, 2, 2, Some(188.40)));
+    }
+    let c = da(&ida);
+    let dd: Vec<_> = c.v.iter().filter(|x| x.famiglia == Famiglia::Dd).collect();
+    assert_eq!(dd.len(), 1, "{:?}", summary(&c));
+    assert_eq!(
+        (dd[0].id.as_str(), dd[0].sigla, dd[0].n),
+        ("dd:2:EPI", Some("EPI"), 3)
+    );
+    assert!(c.v.iter().all(|x| !x.id.starts_with("ms:EPI")));
+    let c = da(&fixed);
+    assert!(c.v.iter().all(|x| x.famiglia != Famiglia::Dd));
+    assert!(
+        c.v.iter()
+            .any(|x| x.famiglia == Famiglia::Ms && x.sigla == Some("EPI") && x.n == 3),
+        "{:?}",
+        summary(&c)
+    );
+}
+
+#[test]
 fn a_scan_without_the_wiff_id_has_no_wiff_sigla() {
     let c = da(&[scan(1, 0.0, &[]), scan(2, 0.1, &[(222.0, 30.0)])]);
     assert!(c.v.iter().skip(2).all(|x| x.sigla.is_none()));

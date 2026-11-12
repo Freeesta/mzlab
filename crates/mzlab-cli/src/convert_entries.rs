@@ -7,6 +7,14 @@ use mzlab_core::readers::{Format, Limits};
 
 use crate::flow_set::file_set;
 
+/// The notice of a sample whose `n` dependent (IDA) scans are written without a precursor (`Reader::unread_precursors`), or `None`.
+pub(crate) fn unread_precursors(sample: u32, n: usize) -> Option<crate::convert::Notice> {
+    (n > 0).then(|| crate::convert::Notice {
+        key: "warn.wiff.idaPrecursor",
+        params: vec![("n", n.to_string()), ("sample", sample.to_string())],
+    })
+}
+
 /// One mzML to make: the dataset, the name of the plan input (`NAME` or `NAME@ID`) and the file written.
 pub(crate) struct Entry {
     pub(crate) input: PathBuf,
@@ -28,6 +36,12 @@ fn sample_ids(p: &Path) -> Vec<(u32, bool, bool)> {
             eprintln!("note: {} ({})", crate::error_text::warning(&n), p.display());
         }
         let wiff = l.format() == Format::SciexWiff;
+        for c in 0..l.samples().len() {
+            let n = unread_precursors(l.samples()[c].id, l.unread_precursors(c));
+            if let Some(n) = n {
+                eprintln!("note: {} ({})", crate::error_text::warning(&n), p.display());
+            }
+        }
         let ids: Vec<(u32, u32, usize)> = l
             .samples()
             .iter()

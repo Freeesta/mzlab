@@ -246,6 +246,8 @@ pub struct SpectrumExtra {
     /// `MS:1000045` collision energy (eV) and half-width of the isolation window (m/z) of a spectrum with a plain `Spectrum::precursor`: written in its `<precursor>`.
     pub ce: Option<f64>,
     pub iso_half: Option<f64>,
+    /// `MS:1000041` charge state of the selected ion of a plain `Spectrum::precursor` (a `.wiff` IDA scan, in every build).
+    pub charge: Option<u8>,
     /// The m/z Q3 stays on in a precursor-ion scan: written as its `<product>` (isolation target, `iso_half` offsets), the spectrum has no precursor.
     pub product: Option<f64>,
     /// userParams of the spectrum: (name, value).
@@ -327,6 +329,11 @@ fn cv(acc: &str, name: &str, value: impl std::fmt::Display) -> String {
 
 /// `cv` appended to `s`: the header of a spectrum is written without a temporary string per parameter.
 fn cv_into(s: &mut String, acc: &str, name: &str, value: impl std::fmt::Display) {
+    cv_dyn(s, acc, name, &value);
+}
+
+/// One body for every value type: the generic shim above is all each type adds to the `.wasm`.
+fn cv_dyn(s: &mut String, acc: &str, name: &str, value: &dyn std::fmt::Display) {
     use std::fmt::Write;
     s.push_str("<cvParam cvRef=\"MS\" accession=\"");
     esc_into(s, acc);

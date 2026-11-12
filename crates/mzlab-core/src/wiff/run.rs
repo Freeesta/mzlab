@@ -172,7 +172,7 @@ impl Wiff {
             polarity: self.polarity_of(&e),
             profile: true,
             filter: String::new(),
-            precursor: e.precursor,
+            precursor: r.precursor.or(e.precursor),
             mz: p.mz,
             intensity: p.intensity.iter().map(|&v| v as f32).collect(),
             wide: Some(p.intensity),

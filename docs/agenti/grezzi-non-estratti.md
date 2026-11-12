@@ -23,7 +23,7 @@ Regola: nessuna perdita di informazione dei file grezzi (`.wiff`, `.raw`, `.dam`
 - PDA/UV 3D del `.wiff` (flussi `DAD/DADSampleHeader`, `DADIdx`, `DADRealTimeData`): decodificato in `crates/mzlab-core/src/wiff/dad.rs` (`DadData`, `read_dad`), `dad_map.rs`, `dad_uv.rs` (feature `mappa-dad`, attiva in `mzlab-wasm`).
   - Estrae matrice 2D tempo × lunghezza d'onda in mAU (row-major `f32`), TWC pre-sommato e cromatogrammi a singola lunghezza d'onda (`ChromKind::Pda`, `"mAU"`). Mappa 2D, spettri UV e tracce per λ accessibili sia nativi sia dal sito via `itemroutes::pda_map/pda_spectrum/pda_wavelength`. Stato: decodificato, non validato contro Analyst (nessun confronto numerico con export di Analyst; nessun avviso `meta.nonDecodificato`).
 - Tracce dei dispositivi (`Devices/Device_N/DevData`: pressione in pascal, flusso, temperatura): cromatogrammi del lettore (`wiff/devices.rs`, `wiff-varianti.md`).
-- Non decodificati: `DDERealTimeData` (IDA), blocchi dei TripleTOF/ZenoTOF (altro codec, rifiutati), binari `MSConfigInfo*`, `MassSpecMethod*`, `ExperimentHeader*Ex`, `PeriodStream*`, `CycleDepParam`.
+- Non decodificati: di `DDERealTimeData` (IDA) l'intensità del survey e i flag (il precursore e la carica si leggono, `wiff-varianti.md`), blocchi dei TripleTOF/ZenoTOF (altro codec, rifiutati), binari `MSConfigInfo*`, `MassSpecMethod*`, `ExperimentHeader*Ex`, `PeriodStream*`, `CycleDepParam`.
 - Calibrazione di massa e risoluzione (`GLPTables`) e stringhe di `DabsInfo`/`SampleTable`: in `metodo/1.campi` dal modulo `sciex`; stato del Log a inizio e fine corsa, audit CFR, ora di acquisizione per campione: non estratti.
 - Utente, computer, ente e percorsi stanno nelle proprietà OLE e in `CFR_INFO`: identità, non copiati nell'mzML.
 

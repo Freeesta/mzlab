@@ -151,6 +151,9 @@ fn plain_precursor_into(s: &mut String, p: f64, extra: &SpectrumExtra) {
     isolation_into(s, p, extra.iso_half);
     s.push_str("</isolationWindow><selectedIonList count=\"1\"><selectedIon>");
     mz_cv_into(s, "MS:1000744", "selected ion m/z", p);
+    if let Some(z) = extra.charge {
+        cv_into(s, "MS:1000041", "charge state", i32::from(z));
+    }
     s.push_str("</selectedIon></selectedIonList><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>");
     if let Some(ce) = extra.ce {
         use std::fmt::Write;

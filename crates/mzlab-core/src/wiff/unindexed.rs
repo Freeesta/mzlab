@@ -153,9 +153,20 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
                 cycle: cycle / n_exp,
                 experiment: cycle % n_exp,
                 points: f64::NAN,
+                precursor: None,
+                charge: None,
             })
         })
         .collect::<Option<Vec<_>>>()?;
+    // the product-ion scans of a dependent (IDA) donor have no precursor here: the section has no real-time rows
+    let unread_precursors = records
+        .iter()
+        .filter(|r| {
+            donor.experiments.get(r.experiment).is_some_and(|e| {
+                e.code == Some(super::modes::CODE_PRODUCT) && e.precursor.is_none()
+            })
+        })
+        .count();
     Some(Wiff {
         sample: id,
         records,
@@ -172,6 +183,7 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
         trim_scheduled: false,
         inferred_from: Some(donor.sample),
         scan_len: donor.scan_len,
+        unread_precursors,
         failure: None,
     })
 }
@@ -215,6 +227,8 @@ mod tests {
                 cycle: 0,
                 experiment: 0,
                 points: 0.0,
+                precursor: None,
+                charge: None,
             })
             .collect();
         w.experiments = codes

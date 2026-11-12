@@ -4,7 +4,7 @@
 use super::Reader;
 use crate::json::Out;
 
-/// JSON `{"format", "samples": [{"id", "name", "scans", "size"?, "why"?, "refused"?}], "unindexed"?: {"recovered", "skipped"}}`. `why` is `refused`
+/// JSON `{"format", "samples": [{"id", "name", "scans", "size"?, "why"?, "refused"?, "noPrecursor"?}], "unindexed"?: {"recovered", "skipped"}}`. `why` is `refused`
 /// (with the error as `refused`), `inferred` (rebuilt from sections the index does not list: the last `recovered` samples) or `empty` (no scans, no chromatograms).
 pub fn samples_json(l: &mut dyn Reader) -> String {
     let (found, skipped) = l.unindexed();
@@ -15,6 +15,7 @@ pub fn samples_json(l: &mut dyn Reader) -> String {
         .raw(",\"samples\":[");
     for i in 0..n {
         let refused = l.refused(i);
+        let unread = l.unread_precursors(i);
         let none = refused.is_none()
             && l.samples()[i].scansioni == 0
             && l.chromatograms(i).is_ok_and(|v| v.is_empty());
@@ -40,6 +41,10 @@ pub fn samples_json(l: &mut dyn Reader) -> String {
         }
         if let Some(e) = refused {
             o.raw(",\"refused\":").raw(&e.to_json());
+        }
+        // dependent (IDA) scans written without a precursor: the page gives the sample one calm note (`warn.wiff.idaPrecursor`)
+        if unread > 0 {
+            o.raw(",\"noPrecursor\":").int(unread as i64);
         }
         o.raw("}");
     }

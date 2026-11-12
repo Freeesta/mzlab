@@ -1,7 +1,7 @@
 //! Grouping of the scans into channels: ids, labels, polarity split, DDA merge, ranking and the counting-sort partition.
 //! Used only by `Canali::da`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::{wiff, MAX_KEYS};
 use crate::idxread::Scan;
@@ -69,8 +69,8 @@ pub(super) fn activation_of(s: &Scan) -> (String, Option<f64>) {
 }
 
 /// The id of the channel a scan belongs to. For an MS2 scan the key of the scan does not name the precursor, the channel does.
-pub(super) fn id_ms(s: &Scan, path: &[i64]) -> String {
-    if wiff::dipendente(s) {
+pub(super) fn id_ms(s: &Scan, path: &[i64], varying: &HashSet<String>) -> String {
+    if wiff::dipendente(s, varying) {
         return wiff::ID_IDA.into();
     }
     let key = s.key();
@@ -165,9 +165,10 @@ pub(super) fn group(scans: &[Scan]) -> (Vec<Group>, Vec<u32>) {
     let mut groups: Vec<Group> = Vec::new();
     let mut per_id: HashMap<String, u32> = HashMap::new();
     let mut di: Vec<u32> = Vec::with_capacity(scans.len());
+    let varying = wiff::varying(scans);
     for s in scans {
         let path = if s.level >= 2 { path_of(s) } else { Vec::new() };
-        let id = id_ms(s, &path);
+        let id = id_ms(s, &path, &varying);
         let key = format!("{id}\u{1}{}", s.polarity);
         let g = *per_id.entry(key).or_insert_with(|| {
             groups.push(new_group(id, s, path));

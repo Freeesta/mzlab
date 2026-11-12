@@ -39,10 +39,14 @@ pub struct Field {
 
 impl Field {
     pub fn new(origin: &str, key: &str, value: impl ToString) -> Field {
+        Field::text(origin, key, value.to_string())
+    }
+    // one body for every value type: the generic `new` adds only its `to_string` to the size-capped `.wasm`
+    fn text(origin: &str, key: &str, valore: String) -> Field {
         Field {
             origine: origin.into(),
             chiave: key.into(),
-            valore: value.to_string(),
+            valore,
             unita: None,
             mappato: None,
             identita: false,
