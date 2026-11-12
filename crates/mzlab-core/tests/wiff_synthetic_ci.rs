@@ -23,7 +23,7 @@ fn write_synthetic_ci_wiff(out: &Path) {
         "sys.path.insert(0, str(Path(sys.argv[1]) / 'tools'))\n",
         "import cfb_scrivi\n",
         "out = Path(sys.argv[2])\n",
-        "dad_hdr = bytearray(86); struct.pack_into('<I', dad_hdr, 4, 4); struct.pack_into('<II', dad_hdr, 34, 3, 5); struct.pack_into('<ffff', dad_hdr, 46, 0.012, 200.0, 204.0, 1.0)\n",
+        "dad_hdr = bytearray(86); struct.pack_into('<I', dad_hdr, 4, 4); struct.pack_into('<II', dad_hdr, 34, 3, 5); struct.pack_into('<ffff', dad_hdr, 46, 0.012, 200.0, 208.0, 2.0)\n",
         "rows = [[1.0, 2.0, 3.0, 4.0, 5.0], [0.5, 1.5, 2.5, 3.5, 4.5], [2.0, 4.0, 6.0, 8.0, 10.0]]\n",
         "dad_idx = bytearray(32) + b''.join(struct.pack('<ff', (i+1)*0.004, sum(r)) for i, r in enumerate(rows))\n",
         "dad_rtd = bytearray(32) + b''.join(struct.pack('<5f', *r) for r in rows)\n",
@@ -39,7 +39,7 @@ fn write_synthetic_ci_wiff(out: &Path) {
         "ch_s = bytes(36) + struct.pack('<HIH', 1, 1, len(cn)) + cn + struct.pack('<H', len(cu)) + cu + struct.pack('<dHffI', 6.0, 0, 0.0, 5000.0, 0xffffffff)\n",
         "w2 = bytearray(126); struct.pack_into('<I', w2, 32, 1); struct.pack_into('<H', w2, 52, 56); w2[54:110] = b'01234567-89ab-cdef-0123-456789abcdef_0000000000000001234'\n",
         "dde = bytearray(32) + b''.join(struct.pack('<dddHHi', mz, 0.0, 1540.0, 1, 0, 0) for mz in (413.266, 520.1, 610.2))\n",
-        "dad_off = bytearray(dad_hdr); struct.pack_into('<f', dad_off, 54, 205.0)\n",
+        "dad_off = bytearray(dad_hdr); struct.pack_into('<f', dad_off, 54, 210.0)\n",
         "tdc = bytearray(72); struct.pack_into('<d', tdc, 32, 1.0 / 38.4)\n",
         "tcal = bytearray(32) + struct.pack('<ddII', 0.001, 100.0, 0, 1) + struct.pack('<ddI', 0.001, 100.0, 0)\n",
         "idx1 = bytearray(32) + struct.pack('<IId', 0, 8, 6000.0) + b'\\x01\\x00' + struct.pack('<dd', 1500.0, 0.0) + bytes(20)\n",
@@ -104,15 +104,15 @@ fn synthetic_ci_dad_mrm_and_gradient() {
 
     let dad = w.dad.as_ref().expect("synthetic DAD");
     assert_eq!((dad.points(), dad.channels()), (3, 5));
-    assert_eq!(dad.wavelengths_nm, vec![200.0, 201.0, 202.0, 203.0, 204.0]);
-    // a stop wavelength one step past the channels (205 for 5 channels from 200) is a header that does not add up: no DAD
+    assert_eq!(dad.wavelengths_nm, vec![200.0, 202.0, 204.0, 206.0, 208.0]);
+    // a stop wavelength one step past the channels (210 for 5 channels of 2 nm from 200) is a header that does not add up: no DAD
     assert!(DadData::read(&ole, 2).is_none());
     assert_eq!(dad.twc_chromatogram(0).intensity, vec![15.0, 12.5, 30.0]);
     assert_eq!(
         dad.wavelength_chromatogram(202.0, None, 0)
             .unwrap()
             .intensity,
-        vec![3.0, 2.5, 6.0]
+        vec![2.0, 1.5, 4.0]
     );
 
     let m1 = method_of_sample(&ole, 1).unwrap();
