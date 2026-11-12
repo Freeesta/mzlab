@@ -1,4 +1,5 @@
 //! Tests of `dad_uv.rs`: the UV spectrum, the wavelength trace and the XWC band proposed, on small synthetic DAD matrices.
+#![allow(clippy::cast_possible_truncation)]
 use super::*;
 
 fn dad(nt: usize, nl: usize) -> DadData {

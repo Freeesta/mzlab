@@ -75,8 +75,10 @@ function filesOf(p) {
 export async function openWl(from, nm0, nm1, k) {
   const fk = k ?? E.files.findIndex(f => f.pda), q = `api/chrom?k=${Math.max(0, fk)}&kind=pda&level=1&mz0=${nm0}&mz1=${nm1}`;
   try { const j = await (await fetch(q)).json(); if (j.error) throw j; } catch (e) { if (window.toast) toast(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); return null; }
-  const np = apriAnnullabile(addPanel("chrom", { kind: "pda", mz0: nm0, mz1: nm1 }));
-  if (from && E.panels.includes(from) && from.type === "chrom") {
+  const under = from && E.panels.includes(from) && from.type === "chrom";
+  // in the tab of the chromatogram it goes under: a UV spectrum of a DAD trace of an MRM file lives in another tab
+  const np = apriAnnullabile(addPanel("chrom", { kind: "pda", mz0: nm0, mz1: nm1, ...(under ? { tab: from.tab } : {}) }));
+  if (under) {
     np.el.classList.add("drag"); np.y = from.y + from.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
     stackAfter(np, from); relayout(); fitHost();
   } else reveal(np);

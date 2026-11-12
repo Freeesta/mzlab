@@ -8,7 +8,7 @@ const num = (/** @type {string} */ v) => Number(String(v).trim().replace(",", ".
 
 /** The proposal of file k (window rt0..rt1 or none): {nm, bw, rt, n}, or null when the file has no matrix (the answer is kept per file and window). @param {number} k @param {number[] | null} [w] */
 export function propose(k, w) {
-  const f = g.E.files[k];
+  const f = E.files[k];
   if (!f) return Promise.resolve(null);
   const q = w ? `&rt0=${w[0]}&rt1=${w[1]}` : "", m = (f._xwc ||= {});
   return (m[q] ||= fetch(`api/uvpropose?k=${k}${q}`).then(r => r.json()).then(j => j && !j.error && isFinite(j.nm) ? j : null, () => null));
@@ -16,8 +16,8 @@ export function propose(k, w) {
 
 /** The files of a panel that can have a matrix (the files of its tab with a DAD, the one of a UV spectrum first). @param {any} p @returns {any[]} */
 const dadFiles = p => {
-  const fs = (typeof shownFor === "function" ? shownFor(p) : g.E.files).filter((/** @type {any} */ f) => f && f.pda && !f.gone);
-  const own = p.uv ? g.E.files[p.k] : null;
+  const fs = (typeof shownFor === "function" ? shownFor(p) : E.files).filter((/** @type {any} */ f) => f && f.pda && !f.gone);
+  const own = p.uv ? E.files[p.k] : null;
   return own ? [own, ...fs.filter((/** @type {any} */ f) => f !== own)] : fs;
 };
 /** The first file of the panel with a matrix, or null. @param {any} p */
@@ -28,9 +28,9 @@ async function fileOf(p) {
 
 /** The XWC panel a Shift adds to: this one if it is an XWC, else the newest XWC of its tab. @param {any} from */
 const target = from => from && from.type === "chrom" && from.kind === "pda" && from.mz0 != null ? from
-  : [...g.E.panels].reverse().find((/** @type {any} */ q) => q.type === "chrom" && q.kind === "pda" && q.mz0 != null && q.tab === (from?.tab || g.E.tab)) || null;
+  : [...E.panels].reverse().find((/** @type {any} */ q) => q.type === "chrom" && q.kind === "pda" && q.mz0 != null && q.tab === (from?.tab || E.tab)) || null;
 /** The panel a new XWC goes under: the chromatogram of a UV spectrum. @param {any} from */
-const anchor = from => from && from.type === "spec" ? g.E.panels.find((/** @type {any} */ q) => q.id === (from.link || from.src)) || from : from;
+const anchor = from => from && from.type === "spec" ? E.panels.find((/** @type {any} */ q) => q.id === (from.link || from.src)) || from : from;
 
 /** Opens the band nm0..nm1 of file k, or with `add` puts it in the XWC panel as one more trace. @param {any} from @param {number} nm0 @param {number} nm1 @param {number} k @param {boolean} add */
 export async function band(from, nm0, nm1, k, add) {

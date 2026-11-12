@@ -79,9 +79,9 @@ try:
             n = pg.evaluate("E.panels.filter(x => x.type === 'chrom' && x.kind === 'pda').length")
             pg.evaluate(f"{SPEC}.el.querySelector('[data-a=xwc]').click()")
             wait_for_js(pg, f"E.panels.filter(x => x.type === 'chrom' && x.kind === 'pda').length === {n + 1}", timeout=60000)
-            q = pg.evaluate("(() => { const q = E.panels.filter(x => x.type === 'chrom' && x.kind === 'pda').pop(); return [q.mz0, q.mz1]; })()")
-            assert abs((q[0] + q[1]) / 2 - 230) <= 2, q
-        step("the UV spectrum at compound B has the XWC button: its band is 230 ± 2 nm", spec)
+            q = pg.evaluate("(() => { const q = E.panels.filter(x => x.type === 'chrom' && x.kind === 'pda').sort((a, b) => a.id - b.id).pop(); return [q.mz0, q.mz1, q.tab]; })()")
+            assert abs((q[0] + q[1]) / 2 - 230) <= 2 and q[2] == 'mrm', q
+        step("the UV spectrum at compound B has the XWC button: its band (230 ± 2 nm) opens in the tab of the TWC", spec)
         step("the engine answered every request", lambda: (lambda m: m and (_ for _ in ()).throw(AssertionError(m)))(pg.evaluate("window.MZLAB_LR_MISS || []")))
         step("no page error", lambda: (lambda e: e and (_ for _ in ()).throw(AssertionError(e)))([x for x in r.errs if x[0] == "pageerror"]))
 

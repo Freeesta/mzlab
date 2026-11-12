@@ -99,21 +99,25 @@ pub fn dad_propose_json(dad: &DadData, rt0: f64, rt1: f64) -> Option<String> {
         .fold(f64::INFINITY, f64::min)
         + END_ABSORPTION_NM;
     // above the skipped range only a band counts (a local maximum), not the tail of the end absorption
-    let band = |j: usize| (j == 0 || d[j] >= d[j - 1]) && (j + 1 == nc || d[j] >= d[j + 1]);
+    let at = |j: usize| d.get(j).copied().unwrap_or(f64::NEG_INFINITY);
+    let band = |j: usize| (j == 0 || at(j) >= at(j - 1)) && at(j) >= at(j + 1);
     let best = |skip: bool| {
-        (0..nc)
-            .filter(|&j| !skip || (dad.wavelengths_nm[j] >= lo && band(j)))
-            .filter(|&j| d[j] > 0.0)
-            .max_by(|&a, &b| d[a].total_cmp(&d[b]).then(b.cmp(&a)))
+        dad.wavelengths_nm
+            .iter()
+            .enumerate()
+            .filter(|&(j, &w)| !skip || (w >= lo && band(j)))
+            .filter(|&(j, _)| at(j) > 0.0)
+            .max_by(|a, b| at(a.0).total_cmp(&at(b.0)).then(b.0.cmp(&a.0)))
     };
-    let j = best(true).or_else(|| best(false)).unwrap_or(nc / 2);
+    let mid = dad.wavelengths_nm.get(nc / 2).copied()?;
+    let nm = best(true).or_else(|| best(false)).map_or(mid, |(_, &w)| w);
     let rt = rows
         .get(rows.len() / 2)
         .and_then(|&i| dad.time_min.get(i))
         .copied()?;
     Some(format!(
         "{{\"nm\":{},\"bw\":{PROPOSE_BW},\"rt\":{rt:.4},\"n\":{}}}",
-        dad.wavelengths_nm[j],
+        nm,
         rows.len()
     ))
 }
@@ -136,15 +140,16 @@ fn twc_apex(dad: &DadData) -> usize {
     };
     let e = (np / 20).max(1);
     let mean = |s: &[f64]| s.iter().sum::<f64>() / s.len().max(1) as f64;
-    let (a, b) = (mean(&twc[..e]), mean(&twc[np - e..]));
+    let (a, b) = (
+        mean(twc.get(..e).unwrap_or_default()),
+        mean(twc.get(np.saturating_sub(e)..).unwrap_or_default()),
+    );
     let line = |i: usize| a + (b - a) * i as f64 / (np - 1).max(1) as f64;
-    (0..np)
-        .max_by(|&x, &y| {
-            (twc[x] - line(x))
-                .total_cmp(&(twc[y] - line(y)))
-                .then(y.cmp(&x))
-        })
-        .unwrap_or(0)
+    twc.iter()
+        .enumerate()
+        .map(|(i, &v)| (i, v - line(i)))
+        .max_by(|x, y| x.1.total_cmp(&y.1).then(y.0.cmp(&x.0)))
+        .map_or(0, |x| x.0)
 }
 
 /// The baseline spectrum: per channel, the median of the rows in the first and the last 5 % of the run (at least one row at each end).
@@ -161,11 +166,11 @@ fn baseline_spectrum(dad: &DadData) -> Vec<f64> {
                 .filter_map(|&i| dad.spectrum_at(i)?.get(j))
                 .map(|&x| f64::from(x))
                 .collect();
-            v.sort_by(f64::total_cmp);
-            match v.len() {
-                0 => 0.0,
-                n if n % 2 == 1 => v[n / 2],
-                n => (v[n / 2 - 1] + v[n / 2]) / 2.0,
+            crate::sortc::slice_by(&mut v, f64::total_cmp);
+            let n = v.len();
+            match (v.get(n.wrapping_sub(1) / 2), v.get(n / 2)) {
+                (Some(x), Some(y)) => (x + y) / 2.0,
+                _ => 0.0,
             }
         })
         .collect()
