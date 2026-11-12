@@ -702,6 +702,8 @@ declare var mrmRemember: any;
 declare var mrmSel: any;
 declare var mrmShowAllNotice: any;
 declare var mrmShownKeys: any;
+declare var mrmUv: any;
+declare var ms2Chrom: any;
 declare var ms2Drawn: any;
 declare var ms2Exps: any;
 declare var ms2Follow: any;
