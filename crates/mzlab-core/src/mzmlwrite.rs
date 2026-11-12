@@ -72,8 +72,17 @@ impl<W: Write> MzmlWriter<W> {
         }
         s += &step_methods(h);
         s += &format!("</processingMethod></dataProcessing></dataProcessingList>\n<run id=\"{}\" defaultInstrumentConfigurationRef=\"IC1\"{}>\n", esc(&h.run), h.acquired.as_ref().map(|t| format!(" startTimeStamp=\"{}\"", esc(t))).unwrap_or_default());
+        let run_at = s.rfind("<run ").unwrap_or(s.len());
         for (k, v) in &h.run_params {
-            s += &format!("<userParam name=\"{}\" value=\"{}\"/>\n", esc(k), esc(v));
+            let open = format!("<userParam name=\"{}\" value=\"", esc(k));
+            // the readers of the document read DOC_MAX bytes after `<run`: a longer one is cut to that room, never lost whole (`method_fit`)
+            let v = if k == crate::method::USERPARAM {
+                let room = crate::method_fit::DOC_MAX.saturating_sub(s.len() - run_at + open.len() + 4);
+                crate::method_fit::fit(v, room, &|d| esc(d).len())
+            } else {
+                v.clone()
+            };
+            s += &format!("{open}{}\"/>\n", esc(&v));
         }
         let mut w = MzmlWriter { out, spectra: 0, chroms: 0, opz, enc: Encoding::new(opz), text: String::new(), idx: indexed.then(index::Index::new) };
         w.put(s.as_bytes())?;
