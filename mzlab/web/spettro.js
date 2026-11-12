@@ -170,8 +170,9 @@ function specParams(p, btn) {
       apply();
     };
   });
-  const away = e => { if (!pop.contains(e.target) && !btn.contains(e.target)) { pop.remove(); document.removeEventListener("pointerdown", away, true); } };
-  setTimeout(() => document.addEventListener("pointerdown", away, true), 0);
+  // armed at once (a timer could fire after a quick tap on a busy page); the event that opened the pop-up is skipped
+  const opening = window.event, away = e => { if (e === opening) return; if (!pop.contains(e.target) && !btn.contains(e.target)) { pop.remove(); document.removeEventListener("pointerdown", away, true); } };
+  document.addEventListener("pointerdown", away, true);
 }
 
 // ---------------------------------------------------------------- linked time axes: the panels with the chain on share the interval of time

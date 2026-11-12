@@ -112,7 +112,7 @@ const BANCO = (() => {
       <div class="lst" role="listbox" tabindex="0" aria-label="${EH(I18N.t("bn.scan.list"))}"></div><div class="muted" data-sp="n"></div>`;
     document.body.appendChild(pop); scanPop = pop;
     const r = btn.getBoundingClientRect(); pop.style.left = Math.max(4, Math.min(r.left, innerWidth - pop.offsetWidth - 4)) + "px"; pop.style.top = Math.max(4, Math.min(r.bottom + 2, innerHeight - pop.offsetHeight - 4)) + "px";
-    setTimeout(() => document.addEventListener("pointerdown", scanAway, true), 0);
+    document.addEventListener("pointerdown", scanAway, true);      // armed at once (a timer could fire after a quick tap on a busy page); after the await above the opening event is over
     const L = /** @type {HTMLElement} */ (pop.querySelector(".lst")), N = /** @type {HTMLElement} */ (pop.querySelector('[data-sp="n"]')), tp = /** @type {HTMLSelectElement} */ (pop.querySelector('[data-sp="type"]')), wh = /** @type {HTMLSelectElement} */ (pop.querySelector('[data-sp="where"]'));
     const H = 22; /** @type {any[]} */ let rows = []; let cur = 0;
     const cur0 = () => { const c = p.link != null ? E.panels.find(q => q.id === p.link) : null; return c && c.cur != null ? c.cur : p.r0 != null && p.r1 != null ? (p.r0 + p.r1) / 2 : null; };

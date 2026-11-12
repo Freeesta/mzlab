@@ -42,6 +42,15 @@ try:
         def esc():
             pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('.bsp')")
         step("Esc closes it", esc)
+        def quick_tap():
+            # a tap in the microtask right after the list appears, before any timer of the page can run (a busy page), closes it
+            pg.evaluate("""new MutationObserver((ms, o) => { if (document.querySelector('.bsp')) { o.disconnect();
+              document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' })); window.__bspTap = !!document.querySelector('.bsp'); } })
+              .observe(document.body, { childList: true })""")
+            pg.evaluate(f"{sel()}.querySelector('[data-bf=scan]').click()"); wait_for_js(pg, "window.__bspTap !== undefined", 15000)
+            assert pg.evaluate("window.__bspTap") is False, "a tap right after the list opens leaves it open"
+            pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('.bsp')")
+        step("a tap outside at once closes it", quick_tap)
         def open_at(where, idx):
             n0 = pg.evaluate("E.panels.length"); ids0 = pg.evaluate("E.panels.map(p=>p.id)")
             opener(); pg.select_option(".bsp [data-sp=where]", where)
