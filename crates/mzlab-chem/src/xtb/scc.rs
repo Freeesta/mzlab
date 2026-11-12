@@ -246,12 +246,12 @@ fn fermi(emo: &[f64], n: usize) -> (Vec<f64>, f64) {
         for (k, e) in emo.iter().enumerate() {
             let x = (e - ef) / KT;
             f[k] = if x < 50.0 {
-                1.0 / (libm::exp(x) + 1.0)
+                1.0 / (crate::fm::exp(x) + 1.0)
             } else {
                 0.0
             };
             if x < 50.0 {
-                der += libm::exp(x) / (KT * (libm::exp(x) + 1.0).powi(2));
+                der += crate::fm::exp(x) / (KT * (crate::fm::exp(x) + 1.0).powi(2));
             }
             tot += f[k];
         }
@@ -268,7 +268,7 @@ fn fermi(emo: &[f64], n: usize) -> (Vec<f64>, f64) {
     let ts: f64 = f
         .iter()
         .filter(|&&v| v > 1e-15 && 1.0 - v > 1e-15)
-        .map(|&v| v * libm::log(v) + (1.0 - v) * libm::log(1.0 - v))
+        .map(|&v| v * crate::fm::log(v) + (1.0 - v) * crate::fm::log(1.0 - v))
         .sum();
     (f, ts * KT)
 }

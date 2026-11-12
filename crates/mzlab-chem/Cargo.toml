@@ -10,7 +10,7 @@ crate-type = ["rlib"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
-# exp/ln/pow from libm on every target: the system library of a native build and the libm port of wasm32 differ in the last bit (docs/agenti/parita.md)
+# exp/ln/pow of a native build from libm, the bits of the .wasm (src/fm.rs, docs/agenti/parita.md)
 libm = "0.2"
 mzlab-feat = { path = "../mzlab-feat", features = ["chem"] }
 mzlab-mol = { path = "../mzlab-mol", optional = true }
