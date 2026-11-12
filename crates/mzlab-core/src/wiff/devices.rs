@@ -17,7 +17,7 @@ pub(super) fn traces(ole: &Ole, sample: u32) -> Vec<Chromatogram> {
         let mut id = d.name;
         if out.iter().any(|c| c.id == id) {
             id.push_str(" #");
-            id.push(char::from(b'0' + d.device_index as u8)); // devices 0..8
+            id.push(char::from_digit(d.device_index, 10).unwrap_or('?')); // devices 0..8
         }
         let (mut kind, mut unit, mut intensity) = (ChromKind::Analog, d.unit, d.values);
         if is_pressure(&id, &unit) {
