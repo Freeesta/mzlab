@@ -2,7 +2,7 @@
 
 use super::detect::Group;
 use super::shoulder;
-use super::{Buf, Centroid, Mode, Params, ASYMMETRIC, SATURATED, TRUNCATED};
+use super::{Buf, Centroid, Mode, Params, ASYMMETRIC, MERGED, SATURATED, TRUNCATED};
 
 /// Accepts a region: counts mode needs Z = (A - F) / sqrt(A + F) >= k, at least 3 counts above the background and two non-zero bins; continuous mode
 /// needs the smoothed apex k sigma over the background.
@@ -141,6 +141,24 @@ fn saturated(buf: &Buf, p: &Params, g: &Group) -> bool {
     false
 }
 
+/// A single peak is at most this many FWHM wide at half height (noise and a coarse grid included); a wider one holds two.
+const MERGED_WIDTH: f64 = 1.25;
+
+/// Width at half height of the region (raw signal over its background, crossings interpolated outward from the highest bin); `None` when a side
+/// never falls to half within the region.
+pub(super) fn half_width(buf: &Buf, g: &Group) -> Option<f64> {
+    let net = |j: usize| buf.v[j] - buf.b[j];
+    let top = (g.lo..=g.hi).fold(g.lo, |m, j| if net(j) > net(m) { j } else { m });
+    let half = 0.5 * net(top);
+    if half <= 0.0 {
+        return None;
+    }
+    let cross = |a: usize, b: usize| buf.x[a] + (half - net(a)) / (net(b) - net(a)) * (buf.x[b] - buf.x[a]);
+    let left = (g.lo..top).rev().find(|&j| net(j) < half).map(|j| cross(j, j + 1))?;
+    let right = (top + 1..=g.hi).find(|&j| net(j) < half).map(|j| cross(j, j - 1))?;
+    Some(right - left)
+}
+
 /// Adjacent regions that share one flat top at the saturation level are one peak: smoothing a plateau leaves a maximum at each of its edges.
 fn merge_plateaus(buf: &Buf, p: &Params, groups: &[Group]) -> Vec<Group> {
     let t = 0.99 * p.vmax;
@@ -210,6 +228,9 @@ fn one(buf: &Buf, p: &Params, sigma: f64, g: &Group, out: &mut Vec<Centroid>) {
     };
     if (mz - x0).abs() > 0.25 * p.w {
         flags |= ASYMMETRIC;
+    }
+    if !sat && half_width(buf, g).is_some_and(|w| w > MERGED_WIDTH * p.w) {
+        flags |= MERGED;
     }
     let mut area: f64 = buf.v[g.lo..=g.hi].iter().sum();
     let height = buf.s[g.apex];

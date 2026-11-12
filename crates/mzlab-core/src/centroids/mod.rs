@@ -38,6 +38,8 @@ pub const TRUNCATED: u8 = 1;
 pub const SATURATED: u8 = 2;
 pub const ASYMMETRIC: u8 = 4;
 pub const SHOULDER: u8 = 8;
+/// One centroid for a peak wider than one: two peaks closer than about one FWHM (a doublet the scan cannot separate), at their weighted middle.
+pub const MERGED: u8 = 16;
 
 #[derive(Clone, Debug)]
 pub struct Params {
