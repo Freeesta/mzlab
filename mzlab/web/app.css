@@ -570,7 +570,7 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 /* the panel title is a focusable control (F2, double click or double tap renames it): 24 px tall for WCAG 2.5.8 with any pointer */
 .hd .ttl{line-height:24px}.pnl .ttl sup{font-size:.7em}.pnl .rtl{font-variant-numeric:tabular-nums}
 .pnl .leg .tg.act{font-weight:700}
-.pnl .ctl .fol{margin-left:2px}
+button.ppair{min-width:24px;height:24px;border-radius:12px;background:var(--surface,transparent);cursor:pointer}
 @media (pointer:coarse){.pnl .ovb{min-width:40px;min-height:40px}}
 #inf-tree .inf-sort{border:0;background:none;padding:2px 4px;min-height:24px;min-width:24px;font:inherit;font-weight:600;color:inherit;cursor:pointer}
 #inf-tree th[aria-sort=descending] .inf-sort::after{content:" \25BC"}

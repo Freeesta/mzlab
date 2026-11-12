@@ -88,16 +88,18 @@ try:
             b.click(); assert b.get_attribute("aria-pressed") == "false" and "on" not in b.get_attribute("class").split(); b.click()
         step("chromatogram link button: own icon, label and aria-pressed", tlink)
         def follow():
-            pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom');newSpec(c,5,5.2,E.cur)})()"); ready(pg); pg.wait_for_selector(".pnl.spec .fol.on")
-            S = ".pnl.spec"; fol = pg.locator(f'{S} .fol.on').first
-            assert fol.inner_text().strip().startswith("\u2190") and "on" in fol.get_attribute("class").split() and "segue il pannello" in fol.get_attribute("aria-label")
-            fol.click(); wait_for_js(pg, "!document.getElementById('ctx').hidden")
+            pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom');newSpec(c,5,5.2,E.cur)})()"); ready(pg); pg.wait_for_selector(".pnl.spec .ppair.fol:has-text('\u2190')")
+            S = ".pnl.spec"; fol = pg.locator(f'{S} .pnum + .ppair.fol', has_text="\u2190").first
+            assert fol.inner_text().strip().startswith("\u2190") and fol.get_attribute("aria-haspopup") == "menu" and "segue il pannello" in fol.get_attribute("aria-label")
+            bb = fol.bounding_box(); assert bb["width"] >= 24 and bb["height"] >= 24 and len(fol.get_attribute("title")) <= 90, bb
+            assert pg.locator(f'{S} .ctl .fol').count() == 0, "one follow control: the tag, not a toolbar button"
+            fol.focus(); pg.keyboard.press("Enter"); wait_for_js(pg, "!document.getElementById('ctx').hidden")
             t = pg.inner_text("#ctx"); assert "Nessuno (spettro fisso)" in t and "Pannello" in t, t
             pg.locator("#ctx div", has_text="Nessuno").click(); wait_for_js(pg, "E.panels.filter(p=>p.type==='spec').every(p=>!p.link)")
-            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>!p.link)") and pg.locator(f'{S} .fol:not(.on)').count() >= 1 and "fisso" in pg.locator(f'{S} .fol:not(.on)').first.get_attribute("aria-label")
+            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>!p.link)") and pg.locator(f'{S} .ctl .fol').count() == 0 and "fisso" in pg.locator(f'{S} .ppair.fol', has_text="\u2298").first.get_attribute("aria-label")
             pg.locator(f'{S} .fol').first.click(); pg.locator("#ctx div", has_text="Pannello").first.click(); wait_for_js(pg, "E.panels.some(p=>p.type==='spec'&&p.link)")
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.link)")
-        step("spectrum chip: follows panel N, menu picks the chromatogram or «none» (fixed)", follow)
+        step("spectrum pair tag is the follow button: follows panel N, menu picks the chromatogram or «none» (fixed)", follow)
         def spcorr():
             S = ".pnl.spec"; pg.locator(f'{S} [data-o=corr]').first.click(); wait_for_js(pg, "!document.querySelector('.pnl.spec .corrm').hidden")
             n = (pg.locator(f'{S} .corrm').first.locator('.corri').count(), pg.locator(f'{S} .corrm').first.locator('select').count())
