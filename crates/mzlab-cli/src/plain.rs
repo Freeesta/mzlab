@@ -1,9 +1,8 @@
 //! The subcommands of `mzlab-cli` that take their arguments as a plain list, and the old command names still accepted for them.
 
 use crate::{
-    channels_cmd, flow_explain, ion_pattern_cmd, llm, manual_table_cmd, mol_cut_cmd, mol_id_cmd,
-    mol_label_cmd, mol_search_cmd, msn_rules, peaks_auto_cmd, peaks_edges_cmd, samples_cmd,
-    steps_cmd, Outcome,
+    channels_cmd, flow_explain, ion_pattern_cmd, llm, manual_table_cmd, mol_cut_cmd, mol_label_cmd,
+    mol_search_cmd, msn_rules, peaks_auto_cmd, peaks_edges_cmd, samples_cmd, steps_cmd, Outcome,
 };
 
 #[path = "dda_window_cmd.rs"]
@@ -24,15 +23,13 @@ mod mol_link_cmd;
 mod mol_mech_cmd;
 #[path = "mol_sel_cmd.rs"]
 mod mol_sel_cmd;
-#[path = "mol_suspects_cmd.rs"]
-mod mol_suspects_cmd;
 #[path = "peak_area_cmd.rs"]
 pub(crate) mod peak_area_cmd;
 #[path = "peak_window_cmd.rs"]
 mod peak_window_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 27] = [
+pub(crate) const PLAIN: [&str; 25] = [
     "llm",
     "steps",
     "explain-missing",
@@ -47,13 +44,11 @@ pub(crate) const PLAIN: [&str; 27] = [
     "mol-export",
     "mol-cip",
     "mol-cut",
-    "mol-id",
     "mol-ions",
     "mol-mech",
     "mol-search",
     "mol-sel",
     "mol-link",
-    "mol-suspects",
     "samples",
     "peak-edges",
     "manual-table",
@@ -92,13 +87,11 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "mol-export" => mol_export_cmd::run(args),
         "mol-cip" => mol_cip_cmd::run(args),
         "mol-cut" => mol_cut_cmd::run(args),
-        "mol-id" => mol_id_cmd::run(args),
         "mol-ions" => mol_ions_cmd::run(args),
         "mol-mech" => mol_mech_cmd::run(args),
         "mol-search" => mol_search_cmd::run(args),
         "mol-sel" => mol_sel_cmd::run(args),
         "mol-link" => mol_link_cmd::run(args),
-        "mol-suspects" => mol_suspects_cmd::run(args),
         "samples" => samples_cmd::run(args),
         "manual-table" => manual_table_cmd::run(args),
         "peak-auto" => peaks_auto_cmd::run(args),

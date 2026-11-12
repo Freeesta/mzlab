@@ -1,4 +1,4 @@
-# Disegno: «Ioni attesi» e «Vassoio delle strutture»
+# Disegno: «Ioni attesi»
 Il nucleo è in CLAUDE.md; il resto del Disegno in `disegno.md`, il menu del tasto destro in `disegno-menu.md`.
 
 ## Ioni attesi
@@ -7,8 +7,3 @@ Con un file HR nella scheda Dati: decimali e ppm del profilo (`HR.prof`, imposta
 Motore `ions/1` (`chem/ions.rs`; `ions` di `grafo`, `feat/grafo` `kind: "ions"`, `mzlab-cli mol-ions REQUEST|- [--set decimals=N] [--set ppm=X]`; parità `test_feat_grafo_wasm.py`, desktop `tests/labels.rs`; 17 goldens): atomi come `etich/1`, addotti solo da `adduct_table::catalog`; per riga `mz`, `mzText`, `lo`/`hi` a ±ppm, `odd`.
 Regole: una struttura carica dà solo sé stessa; [M]± non vale per una neutra; manca la riga che toglie ciò che non c'è (CCl4 [M−H]−); prima l'H naturale, poi D (CD3COOD: [M−D]−); 2+ con ≥2 N, 2− con ≥4 O, entrambi ≥150 Da. Ogni riga è un candidato, mai un'identificazione.
 
-## Vassoio delle strutture
-**Vassoio delle strutture** (`#tray-card`, `disegno-vassoio.js`, modulo ES caricato da `draw.js` al clic di «Aggiungi al vassoio», di «Apri lista…» o della riga `add-to-tray` 75 del menu della tela, e subito se `sessionStorage` `mzlab.draw.tray` ha già voci): ogni pezzo della selezione o della tela (`TPDraw.structures(true)`: atomi e SMILES di `pieceSmiles`) entra con un nome modificabile («Struttura N»); per voce ↑, ↓, «Disegna» (`TPDraw.load`, spento senza SMILES) e ✕; il fuoco resta sulla voce mossa. Nessun testo di istruzioni: solo `title`.
-Addotti della lista: caselle degli addotti `common` del catalogo (più quelli di una lista letta), spuntati all'inizio [M+H]+ e [M-H]-. «Salva lista di sospetti (CSV)» scarica `disegno_AAAA-MM-GG_HHMM.csv` (`exportName` di `disegno-nomi.js`). Il vassoio vive nella sessione (`sessionStorage`, in `try`).
-Motore `tray/1` (`chem/tray.rs`; `tray` di `grafo`, `feat/grafo` `kind: "tray"`, `mzlab-cli mol-suspects REQUEST|-`; parità `test_feat_grafo_wasm.py`, desktop `tests/labels.rs`): `op` `adducts` (catalogo senza [M]±), `entries` (formula di Hill, carica e massa monoisotopica dagli atomi `etich/1`), `csv`, `read`.
-CSV: `name,smiles,formula,mass,charge,adducts` (massa a 6 decimali, addotti separati da `;`, campi con virgola o virgolette tra virgolette, righe `\n`): le colonne che leggono `screen.suspects` e mzFinder. `read` prende le colonne per nome (anche `neutral_mass`, `monoisotopic_mass`), salta e conta le righe senza massa né formula; una lista riletta riscrive gli stessi byte. Errori `error.tray.*`. La lista è di candidati da cercare, mai di ciò che un campione contiene.
