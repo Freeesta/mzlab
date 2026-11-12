@@ -200,3 +200,17 @@ fn the_written_mzml_keeps_the_precursor_charge_and_activation() {
         assert!(p.contains(r#"accession="MS:1000133""#), "{p}");
     }
 }
+
+/// The path of the parent file is identity (it names a folder of the acquisition PC); its type is not.
+#[test]
+fn the_parent_file_path_is_marked_as_identity() {
+    let mut l = open_mzxml(mzxml(&run(), FLAT));
+    let m = l.method(0).unwrap();
+    let field = |key: &str| {
+        let i = m.find(&format!("\"chiave\":\"{key}\"")).unwrap();
+        let end = i + m[i..].find('}').unwrap();
+        m[i..end].to_string()
+    };
+    assert!(field("fileName").contains("\"identita\":true"), "{m}");
+    assert!(!field("fileType").contains("identita"), "{m}");
+}
