@@ -62,11 +62,13 @@ pub fn page(kind: u8, base: usize, cell_list: &[Vec<u8>], right: u32) -> Vec<u8>
         p[fine..fine + c.len()].copy_from_slice(c);
         ptr.push(fine as u16);
     }
-    let intest = if kind == 5 { 12 } else { 8 };
+    // interior pages (table 5, index 2) carry the right-most child after the 8-byte header
+    let interior = kind == 5 || kind == 2;
+    let intest = if interior { 12 } else { 8 };
     p[base] = kind;
     p[base + 3..base + 5].copy_from_slice(&(cell_list.len() as u16).to_be_bytes());
     p[base + 5..base + 7].copy_from_slice(&(fine as u16).to_be_bytes());
-    if kind == 5 {
+    if interior {
         p[base + 8..base + 12].copy_from_slice(&right.to_be_bytes());
     }
     for (i, o) in ptr.iter().enumerate() {

@@ -293,3 +293,7 @@ fn lzf(z: &[u8], out: &mut Vec<u8>, max: usize) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "block_tests.rs"]
+mod tests;

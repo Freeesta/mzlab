@@ -185,6 +185,59 @@ fn rows_cols_gives_the_same_values_as_rows() {
     );
 }
 
+/// A WITHOUT ROWID table of two levels: the root is an interior index page whose one cell holds a key between its two leaves; the keys come in order.
+#[test]
+fn a_two_level_without_rowid_table_gives_its_keys_in_order() {
+    let cell = |b: &str, a: i64| {
+        let r = record(&[V::T(b), V::I(a)]);
+        let mut c = varint(r.len() as u64);
+        c.extend(r);
+        c
+    };
+    // root page 2: left child 3, key ("m", 5), right-most child 4
+    let mut root = 3u32.to_be_bytes().to_vec();
+    root.extend(cell("m", 5));
+    let pages = [
+        page(2, 0, &[root], 4),
+        page(10, 0, &[cell("a", 1), cell("b", 2)], 0),
+        page(10, 0, &[cell("x", 3)], 0),
+    ]
+    .concat();
+    let sql = "CREATE TABLE W (a INTEGER, b TEXT, PRIMARY KEY (b)) WITHOUT ROWID";
+    let mut s = open_db(db(&[("W", sql, pages)]), None).unwrap();
+    let t = s.table("W").unwrap().clone();
+    let mut seen = Vec::new();
+    s.rows(&t, |r| {
+        seen.push(r.iter().find_map(|v| v.text().map(str::to_string)));
+        Ok(true)
+    })
+    .unwrap();
+    let keys: Vec<Option<String>> = ["a", "b", "m", "x"]
+        .iter()
+        .map(|k| Some(k.to_string()))
+        .collect();
+    assert_eq!(seen, keys);
+}
+
+/// Integers stored in fewer than 8 bytes keep their sign in both readers (serial types 1 and 2: one and two bytes).
+#[test]
+fn short_negative_integers_keep_their_sign() {
+    // record header (3 bytes: its length, types 1 and 2), then -5 in one byte and -300 in two
+    let rec = [3u8, 1, 2, 0xfb, 0xfe, 0xd4];
+    let pages = page(13, 0, &[leaf_cell(1, &rec), leaf_cell(2, &rec)], 0);
+    let sql = "CREATE TABLE N (a INTEGER, b INTEGER)";
+    let mut s = open_db(db(&[("N", sql, pages)]), None).unwrap();
+    let t = s.table("N").unwrap().clone();
+    let mut all = Vec::new();
+    s.rows_cols(&t, &[Some(0), Some(1)], |r| {
+        all.push((r[0].i64(), r[1].i64()));
+        Ok(true)
+    })
+    .unwrap();
+    assert_eq!(all, vec![(Some(-5), Some(-300)); 2]);
+    compare(&mut s, "N");
+}
+
 /// Timing of a full scan of a 10^6-row table: all columns (`righe`) against the two that are needed.
 /// The pages of a two-level table of `n_rows` rows: the root (page 2), then the middle pages, then the leaves.
 fn large(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {

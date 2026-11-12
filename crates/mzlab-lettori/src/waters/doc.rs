@@ -374,3 +374,7 @@ pub(super) fn file_header(l: &mut WatersReader) -> Result<Header> {
     h.run_params.push((method::USERPARAM.to_string(), doc));
     Ok(h)
 }
+
+#[cfg(test)]
+#[path = "doc_tests.rs"]
+mod tests;

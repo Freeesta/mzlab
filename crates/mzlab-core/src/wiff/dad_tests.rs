@@ -70,3 +70,28 @@ fn a_row_count_that_wraps_a_32_bit_length_does_not_fit() {
     assert_eq!(span(32, 8, 3), Some(56));
     assert_eq!(span(0, 8, usize::MAX), None);
 }
+
+#[test]
+fn every_tdc_token_moves_the_bin_and_keeps_its_count() {
+    // header: marker, start bin 0, one byte the reader skips; then each token kind once
+    let mut b = vec![0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0];
+    b.push(0x01); // count 1 at bin 0
+    b.extend([0xfc, 3]); // skip 3 steps of 4 ticks
+    b.push(0x02); // count 2 at bin 16
+    b.extend([0xfd, 0x10, 0x00]); // skip 16 steps
+    b.push(0x7e);
+    b.extend(70_000u32.to_le_bytes()); // count 70 000 at bin 84
+    b.push(0x7d);
+    b.extend(300u16.to_le_bytes()); // count 300 at bin 88
+    b.push(0xfe);
+    b.extend(1u32.to_le_bytes()); // skip 1 step
+    b.extend([0x83, 0x03]); // skip 3 steps, count 3 at bin 108
+    b.push(0xff);
+    assert_eq!(
+        decode_tof_block(&b).unwrap(),
+        vec![(0, 1), (16, 2), (84, 70_000), (88, 300), (108, 3)]
+    );
+    // a token outside the table and a count cut by the end of the block are errors
+    assert!(decode_tof_block(&[0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0x80]).is_err());
+    assert!(decode_tof_block(&[0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0x7e, 1]).is_err());
+}

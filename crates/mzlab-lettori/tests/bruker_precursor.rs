@@ -1,5 +1,5 @@
 //! The precursor of a DDA-PASEF spectrum in the mzML: the selected ion is the monoisotopic m/z of `Precursors`, the isolation target the centre of the
-//! window the instrument isolated (`IsolationMz`), and the charge of `Precursors` is written (synthetic folder, no lab data).
+//! window the instrument isolated (`IsolationMz`), the charge of `Precursors` and the collision energy and half-width of the window are written (synthetic folder, no lab data).
 #![cfg(feature = "bruker")]
 
 use mzlab_core::readers::{FileSet, Limits, Member};
@@ -38,5 +38,9 @@ fn isolation_target_is_isolation_mz_and_charge_is_written() {
         let d = target - selected - common_sqlite::pasef::ISO_OFFSET;
         assert!(d.abs() < 1e-9, "target {target} selected {selected}");
         assert_eq!(cv(b, "MS:1000041"), Some(2.0), "charge state");
+        // the energy of `PasefFrameMsMsInfo` and half its width (2) on both sides of the target
+        assert_eq!(cv(b, "MS:1000045"), Some(30.0), "collision energy");
+        assert_eq!(cv(b, "MS:1000828"), Some(1.0), "lower offset");
+        assert_eq!(cv(b, "MS:1000829"), Some(1.0), "upper offset");
     }
 }

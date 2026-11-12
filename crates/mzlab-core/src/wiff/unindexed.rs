@@ -195,3 +195,57 @@ pub(super) fn index_end(ole: &Ole, indexed: &[&Wiff]) -> (u64, u32) {
         table.iter().map(|s| s.0).max().unwrap_or(0),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use crate::error::Error;
+
+    fn sample(times: &[f64], size: u32, codes: &[u32]) -> Wiff {
+        let mut w = Wiff::refused(1, 0, Error::new("x"));
+        w.records = times
+            .iter()
+            .map(|&time_min| Record {
+                at: 0,
+                end: 0,
+                size,
+                time_min,
+                tic: 0.0,
+                cycle: 0,
+                experiment: 0,
+                points: 0.0,
+            })
+            .collect();
+        w.experiments = codes
+            .iter()
+            .map(|&c| super::super::Experiment {
+                code: Some(c),
+                ..Default::default()
+            })
+            .collect();
+        w
+    }
+
+    #[test]
+    fn a_cycle_past_the_donor_continues_its_mean_step() {
+        let d = sample(&[1.0, 2.0, 3.0, 4.0], 8, &[4]);
+        assert_eq!(time_of(&d, 2, 1), 3.0);
+        // three steps of 1 min from 1.0: cycle 6 is at 7.0
+        assert_eq!(time_of(&d, 6, 1), 7.0);
+        // two experiments per cycle: the cycles are every other row, the last one is cycle 3
+        let two = sample(&[1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5], 8, &[4, 4]);
+        assert_eq!(time_of(&two, 1, 2), 2.0);
+        assert_eq!(time_of(&two, 6, 2), 7.0);
+        assert_eq!(time_of(&sample(&[], 8, &[4]), 3, 1), 0.0);
+    }
+
+    #[test]
+    fn only_an_mrm_sample_of_one_block_size_can_be_continued() {
+        assert_eq!(block_size(&sample(&[0.0, 1.0], 8, &[4])), Some(8));
+        // a full scan (EMS) or no experiment at all: the blocks have no fixed size
+        assert_eq!(block_size(&sample(&[0.0, 1.0], 8, &[15])), None);
+        assert_eq!(block_size(&sample(&[0.0, 1.0], 8, &[])), None);
+        assert_eq!(block_size(&sample(&[0.0, 1.0], 6, &[4])), None);
+    }
+}

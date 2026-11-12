@@ -332,21 +332,6 @@ fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
     }
 }
 
-fn polarity(method: &Option<Method>) -> i8 {
-    method
-        .as_ref()
-        .and_then(|m| m.source.iter().find(|p| p.id == "IS"))
-        .map_or(0, |p| {
-            if p.value > 0.0 {
-                1
-            } else if p.value < 0.0 {
-                -1
-            } else {
-                0
-            }
-        })
-}
-
 /// A SIM method of several periods is `err.file.wiffPeriods`, as the readers module refuses it: only Period0 is read, so its cycles would be laid out wrong.
 fn sim_periods(ole: &Ole, sample: u32, experiments: &[Experiment]) -> Result<()> {
     if experiments.iter().any(|e| modes::sim(e.code)) {
@@ -419,7 +404,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         sample,
         records,
         experiments,
-        polarity: polarity(&method),
+        polarity: modes::source_polarity(method.as_ref()),
         method,
         dad,
         devices: devices::traces(ole, sample),

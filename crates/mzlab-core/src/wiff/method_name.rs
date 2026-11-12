@@ -50,3 +50,24 @@ pub(super) fn by_name(ole: &Ole, sample: u32) -> Option<u32> {
     }
     (1..=256).find(|&k| matches(k))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn utf16(t: &str) -> Vec<u8> {
+        t.bytes().flat_map(|c| [c, 0]).collect()
+    }
+
+    #[test]
+    fn dam_names_end_at_the_extension_whatever_the_alignment() {
+        // a folder before the name, a control character after it, and the same name one byte off the even alignment
+        let mut b = utf16("C:\\Methods\\Quant_A.DAM");
+        b.extend([1, 0]);
+        b.push(0x55);
+        b.extend(utf16("x\\Blank.dam"));
+        assert_eq!(dam_names(&b), vec!["quant_a.dam", "blank.dam"]);
+        // a bare extension is no name
+        assert!(dam_names(&utf16(".dam")).is_empty());
+    }
+}

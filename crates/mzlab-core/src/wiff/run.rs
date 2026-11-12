@@ -308,3 +308,55 @@ impl Blocks {
 #[cfg(feature = "estesi")]
 #[path = "run_extended.rs"]
 mod estesi_run;
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use crate::error::Error;
+
+    fn sample(model: Option<&str>) -> Wiff {
+        let mut w = Wiff::refused(1, 0, Error::new("x"));
+        w.model = model.map(str::to_string);
+        w.wiff_sha1 = Some("aa".into());
+        w.created = Some("2020-01-02T03:04:05Z".into());
+        w.serial = Some("S1".into());
+        w
+    }
+
+    #[test]
+    fn the_mzml_header_names_both_files_their_digests_and_the_instrument() {
+        let h = sample(Some("3200 QTRAP")).header("Run_1.wiff", Some("bb".into()), true);
+        assert_eq!(h.run, "Run_1");
+        assert_eq!(h.sources, ["Run_1.wiff", "Run_1.wiff.scan"]);
+        assert_eq!(h.source_sha1, ["aa", "bb"]);
+        assert_eq!(h.acquired.as_deref(), Some("2020-01-02T03:04:05Z"));
+        assert_eq!(h.serial.as_deref(), Some("S1"));
+        assert!(h.centroided && h.run_params.is_empty());
+        assert_eq!(
+            h.instrument,
+            Some(("MS:1000651".into(), "3200 QTRAP".into()))
+        );
+        assert_eq!(h.components.len(), 5);
+        assert_eq!(
+            h.components.first().map(|c| c.1.as_str()),
+            Some("MS:1000073")
+        );
+        assert_eq!(h.software.0, "mzLab");
+        assert!(!sample(None).header("a.wiff", None, false).centroided);
+    }
+
+    #[test]
+    fn an_unknown_model_is_the_generic_term_with_its_name_as_a_parameter() {
+        let generic = ("MS:1000031".to_string(), "instrument model".to_string());
+        let h = sample(Some("Other Q")).header("a.wiff", None, false);
+        assert_eq!(h.instrument.as_ref(), Some(&generic));
+        assert_eq!(
+            h.run_params,
+            [("instrument model".to_string(), "Other Q".to_string())]
+        );
+        let h = sample(None).header("a.wiff", None, false);
+        assert_eq!(h.instrument, Some(generic));
+        assert!(h.run_params.is_empty() && h.source_sha1 == ["aa"]);
+    }
+}
