@@ -39,6 +39,23 @@ impl Losses {
     pub fn lost(&self) -> usize {
         self.declared - self.read
     }
+    /// The stderr line of a partial read of `file` (cause, file, spectra read of declared), none for a complete one.
+    pub fn report(&self, file: &std::path::Path) -> Option<String> {
+        let end = if self.cause == TRUNCATED {
+            ", the file ends before the rest"
+        } else {
+            ""
+        };
+        self.partial().then(|| {
+            format!(
+                "{}: {}: {} of {} spectra read{end}",
+                self.cause,
+                file.display(),
+                self.read,
+                self.declared
+            )
+        })
+    }
     /// `{declared, read, cause}`: what the `source` of an index (`lost`) and the note of a file in the record of a run (`files`) say.
     pub fn note(&self) -> Value {
         Value::Obj(vec![
@@ -62,6 +79,10 @@ pub const TRUNCATED: &str = "warn.file.truncated";
 /// Cause of the scan blocks of a `.wiff.scan` whose head disagrees with the index row (`wiff::Record::damaged`): left out, never read as other scans.
 pub const DAMAGED: &str = "warn.wiff.damaged";
 
+/// Cause of the scans of a Thermo `.raw` whose packet cannot be read (an index entry past the end of the file, a packet that does not decode): each keeps
+/// its row with no points, the other scans are read.
+pub const RAW_DAMAGED: &str = "warn.raw.damaged";
+
 /// Cause of the scans a run lists without their scan event: the table of events was refused, the scans are read with level and polarity unknown.
 pub const EVENTS_REFUSED: &str = "warn.raw.eventsRefused";
 
@@ -81,6 +102,7 @@ pub fn cause_key(s: &str) -> Option<&'static str> {
         TRUNCATED,
         DAMAGED,
         EVENTS_REFUSED,
+        RAW_DAMAGED,
         MEMBER_MISSING,
         RECORD_WIDTH,
         WATERS_DAMAGED,

@@ -155,6 +155,14 @@ try:
                 for _ in range(2): pg.keyboard.press("Escape")
                 pg.evaluate("(() => { const c = document.getElementById('ctx'); if (c) c.hidden = true; for (const s of ['#colpop', '#fpop', '#uipset']) document.querySelector(s)?.remove(); })()")
             assert not left, f"still open after a tap outside them: {left}"
+            # a tap that comes before any timer of the page has run (a busy page) closes them too; the touch that opened one does not close it
+            TAP = "document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }))"
+            for sel, opener in (("#colpop", "colorFile(E.files[0], { clientX: 300, clientY: 200 })"), ("#fpop", "fileMenu(document.querySelector('.pnl .hd button'))")):
+                quick = pg.evaluate(f"(() => {{ {opener}; {TAP}; return !!document.querySelector({sel!r}); }})()")
+                kept = pg.evaluate(f"(() => {{ document.body.addEventListener('pointerdown', () => {opener}, {{ once: true }}); {TAP}; return !!document.querySelector({sel!r}); }})()")
+                pg.evaluate(f"document.querySelector({sel!r})?.remove()")
+                assert not quick, f"{sel}: a tap right after the opening leaves it open"
+                assert kept, f"{sel}: the touch that opened it closed it"
             touch(bb["x"] + bb["width"] - 4, bb["y"] + bb["height"] * 0.5, 800); wait_for_js(pg, ctx, 5000)       # opened at the right edge, the menu stays in the window
             right = pg.evaluate("document.getElementById('ctx').getBoundingClientRect().right - innerWidth")
             assert right <= 0, f"the chart menu sticks out of the window by {right} px"

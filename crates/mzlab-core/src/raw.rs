@@ -5,7 +5,7 @@
 
 use std::io::{Read, Seek, SeekFrom};
 
-use opentfraw::{iter_spectra, Polarity, RawFileReader, ScanMode, SpectrumRecord};
+use opentfraw::{Polarity, RawFileReader, ScanMode, SpectrumRecord};
 
 use crate::error::{Error, Result};
 use crate::mzml::{Run, Spectrum};
@@ -143,6 +143,46 @@ pub(crate) fn spectrum(r: SpectrumRecord) -> Spectrum {
     }
 }
 
+/// The spectrum of a scan whose packet cannot be read (`RawFileReader::damaged`, or a decode that fails): its row from the metadata, with no points.
+/// It is counted, never a refusal of the file (`Reader::losses`, cause `warn.raw.damaged`).
+pub(crate) fn without_points(m: &opentfraw::mzml::ScanMetadata) -> Spectrum {
+    Spectrum {
+        index: m.index,
+        id: format!("controllerType=0 controllerNumber=1 scan={}", m.scan_number),
+        level: m.ms_level.map_or(0, |l| l.min(255) as u8),
+        rt: m.retention_time_min,
+        polarity: match m.polarity {
+            Some(Polarity::Positive) => 1,
+            Some(Polarity::Negative) => -1,
+            None => 0,
+        },
+        profile: false,
+        filter: m.filter.clone().unwrap_or_default(),
+        precursor: m
+            .precursor
+            .as_ref()
+            .and_then(|p| p.selected_mz.or(p.target_mz)),
+        mz: Vec::new(),
+        intensity: Vec::new(),
+        wide: None,
+    }
+}
+
+/// Scan `idx` decoded, or its row without points (`without_points`) and `true` when its packet cannot be read; `None` only past the end of the index.
+pub(crate) fn scan_or_row<R: Read + Seek>(
+    raw: &RawFileReader,
+    source: &mut R,
+    idx: u32,
+    profile: bool,
+) -> Option<(Spectrum, bool)> {
+    if raw.damaged.binary_search(&idx).is_err()
+        && let Some(rec) = opentfraw::mzml::extract_spectrum(raw, source, idx, profile)
+    {
+        return Some((spectrum(rec), false));
+    }
+    opentfraw::mzml::scan_metadata(raw, source, idx).map(|m| (without_points(&m), true))
+}
+
 /// Opens the container (indexes only: no scan is read).
 pub fn open<R: Read + Seek>(source: R) -> Result<RawFileReader> {
     RawFileReader::open(source).map_err(|e| thermo_error(&e))
@@ -186,8 +226,11 @@ pub(crate) fn metodo_sha1<R: Read + Seek>(
 /// Streams the spectra one at a time (centroids); `on` gets each before the next is read.
 pub fn parse<R: Read + Seek>(mut source: R, mut on: impl FnMut(Spectrum)) -> Result<()> {
     let raw = open(&mut source)?;
-    for rec in iter_spectra(&raw, &mut source, false) {
-        on(spectrum(rec));
+    // a scan whose packet cannot be read keeps its row without points, as in the reader (`rawreader.rs`): the same spectra
+    for idx in 0..raw.num_scans {
+        if let Some((s, _)) = scan_or_row(&raw, &mut source, idx, false) {
+            on(s);
+        }
     }
     Ok(())
 }

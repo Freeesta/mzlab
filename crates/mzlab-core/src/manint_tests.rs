@@ -143,7 +143,7 @@ fn a_sum_row_closes_each_channel() {
     assert_eq!(&r[2][..3], ["237.1", "A", "sum"]);
     let s: f64 = r[0][6].parse::<f64>().unwrap() + r[1][6].parse::<f64>().unwrap();
     assert_eq!(r[2][6], sci(s, 5));
-    assert_eq!(r[2].len(), 10);
+    assert_eq!(r[2].len(), 11);
     assert_eq!(
         &r[3][..3],
         ["ion 3", "", "s1"],
@@ -192,4 +192,22 @@ fn transition_label_and_quoted_names() {
             .starts_with("152.1>110,\"Quant, 1\",\"a,b\","),
         "{r}"
     );
+}
+
+#[test]
+fn the_name_of_a_window_is_its_last_column_cleaned_and_cut() {
+    let long = "x".repeat(LABEL_MAX + 5);
+    let w = format!(
+        "[{{\"file\":0,\"tr\":0,\"a\":2.8,\"b\":3.2,\"label\":\"  Peak 1, left\\n \"}},{{\"file\":1,\"tr\":0,\"a\":2.8,\"b\":3.2,\"label\":\"{long}\"}},{}]",
+        win(0, 2, 6.8, 7.2, "zero")
+    );
+    let t = table_text(&files(), &w, true).unwrap();
+    let l: Vec<&str> = t.lines().collect();
+    assert!(l[1].ends_with(",zero,\"Peak 1, left\""), "{t}");
+    assert!(
+        l[2].ends_with(&format!(",zero,{}", "x".repeat(LABEL_MAX))),
+        "{t}"
+    );
+    assert!(l[3].ends_with(",,,,"), "a sum row has no name: {t}");
+    assert!(l[4].ends_with(",zero,"), "a window without a name: {t}");
 }

@@ -229,7 +229,7 @@ impl Module for Says {
 }
 
 /// The losses of the module's reader cross whole: scans past the end of a cut file (also from a module of an older build, which names no cause),
-/// or scans of the index without their event or whose data do not decode, read but fewer than the rows; a cause key the engine does not know reads as a cut file.
+/// or scans of the index without their event or damaged or undecodable (no points), read but fewer than the rows; a cause key the engine does not know reads as a cut file.
 #[test]
 fn the_losses_keep_the_cause_the_module_gives() {
     let l = |m: Says| ExternalReader::new(m).unwrap().losses(0).unwrap();
@@ -242,6 +242,8 @@ fn the_losses_keep_the_cause_the_module_gives() {
         Losses::of(2, 1, SPECTRUM_DAMAGED)
     );
     assert_eq!(l(Says(3, DAMAGED)), Losses::of(5, 2, DAMAGED));
+    // a damaged Thermo scan keeps its row, with no points: read is fewer than the rows, as in the module's `RawReader`
+    assert_eq!(l(Says(1, RAW_DAMAGED)), Losses::of(2, 1, RAW_DAMAGED));
     assert_eq!(l(Says(3, WATERS_DAMAGED)), Losses::of(5, 2, WATERS_DAMAGED));
     assert_eq!(
         l(Says(3, "warn.file.memberMissing")),

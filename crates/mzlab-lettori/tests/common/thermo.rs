@@ -23,7 +23,19 @@ pub struct Raw {
     pub error_entries: u32,
     /// Scan-event count written at the scan-trailer address.
     pub events: u32,
+    /// Controllers after the MS one, appended after the run: `true` a sound analog channel (`Analog <k>`, unit `bar`, one value per scan), `false` a
+    /// controller whose run-header address points past the end of the file.
+    pub analog: Vec<bool>,
+    /// A controller whose run-header address points past the end of the file, listed before the MS one.
+    pub stray_first: bool,
+    /// The scan whose index entry points past the end of the file (found when the file opens).
+    pub entry_past_the_end: Option<u32>,
+    /// The scan whose index entry declares more peaks than any record holds (found when its packet is decoded).
+    pub entry_too_big: Option<u32>,
 }
+
+/// A run-header address past the end of every synthetic file.
+pub const PAST_THE_END: u32 = 0x7fff_0000;
 
 impl Raw {
     pub fn tsq(version: u32, scans: u32) -> Self {
@@ -35,6 +47,10 @@ impl Raw {
             layout: Layout::DataFirst,
             error_entries: 0,
             events: 0,
+            analog: Vec::new(),
+            stray_first: false,
+            entry_past_the_end: None,
+            entry_too_big: None,
         }
     }
 
@@ -55,8 +71,15 @@ impl Raw {
             rh_len,
         );
         let trailer_addr = index_addr + index.len() as u32;
+        let run_len = after_mid + data.len() as u32 + index.len() as u32 + 4 + rh_len;
+        let (blocks, analog_addrs) = analog_blocks(self, run_len, rh_len);
+        let mut addrs = vec![rh_addr];
+        if self.stray_first {
+            addrs.insert(0, PAST_THE_END);
+        }
+        addrs.extend(analog_addrs);
         let mut out = head;
-        out.extend(middle(self, data_addr, rh_addr));
+        out.extend(middle_with(self, data_addr, &addrs));
         let mut stream_events = u32s(&[self.events]);
         stream_events.truncate(4);
         match self.layout {
@@ -85,8 +108,44 @@ impl Raw {
                 out.extend(&data);
             }
         }
+        assert_eq!(out.len() as u32, run_len);
+        out.extend(blocks);
         out
     }
+}
+
+/// The analog controllers of `r` written from byte `at`: per sound one its values, its run header (data before it, no trailer) and its InstID strings.
+fn analog_blocks(r: &Raw, mut at: u32, rh_len: u32) -> (Vec<u8>, Vec<u32>) {
+    let (mut out, mut addrs) = (Vec::new(), Vec::new());
+    for (k, &sound) in r.analog.iter().enumerate() {
+        if !sound {
+            addrs.push(PAST_THE_END);
+            continue;
+        }
+        let values: Vec<f64> = (0..r.scans)
+            .map(|i| 100.0 + f64::from(i) + k as f64)
+            .collect();
+        let data_at = at;
+        let rh_at = data_at + 8 * r.scans;
+        let mut b = f64s(&values);
+        b.extend(run_header(r, rh_at, 0, data_at, 0));
+        b.extend(u32s(&[0, 0, 0]));
+        let name = format!("Analog {k}");
+        for i in 0..9 {
+            let t = match i {
+                0 => name.clone(),
+                8 => format!("{name} bar"),
+                _ => String::new(),
+            };
+            b.extend(u32s(&[t.encode_utf16().count() as u32]));
+            b.extend(t.encode_utf16().flat_map(u16::to_le_bytes));
+        }
+        assert_eq!(rh_at - data_at + rh_len, 8 * r.scans + rh_len);
+        at += b.len() as u32;
+        addrs.push(rh_at);
+        out.extend(b);
+    }
+    (out, addrs)
 }
 
 fn header(r: &Raw) -> Vec<u8> {
@@ -102,6 +161,11 @@ fn header(r: &Raw) -> Vec<u8> {
 
 /// SeqRow, ASInfo and RawFileInfo: only their size matters, so the strings are empty.
 fn middle(r: &Raw, data_addr: u32, run_header_addr: u32) -> Vec<u8> {
+    middle_with(r, data_addr, &[run_header_addr])
+}
+
+/// `middle` with the run-header address of every controller (the first two in their slots, the others in the area after them).
+fn middle_with(r: &Raw, data_addr: u32, addrs: &[u32]) -> Vec<u8> {
     let v = r.layout_version;
     let mut b = u32s(&[0, 1, 0]);
     b.extend(utf16("1", 12));
@@ -120,8 +184,15 @@ fn middle(r: &Raw, data_addr: u32, run_header_addr: u32) -> Vec<u8> {
     b.extend([0u8; 24 + 4]); // ASInfo preamble and empty string
     b.extend(u32s(&[0])); // RawFileInfo: method file present
     b.extend(u16s(&[2020, 1, 3, 1, 10, 0, 0, 0]));
-    b.extend(u32s(&[0, data_addr, 1, 1, 0, 0, run_header_addr, 0, 0, 0]));
-    b.extend(vec![0u8; 744]);
+    let at = |i: usize| addrs.get(i).copied().unwrap_or(0);
+    let n = addrs.len().max(1) as u32;
+    b.extend(u32s(&[0, data_addr, n, n, 0, 0, at(0), 0, 0, at(1)]));
+    let mut area = vec![0u8; 8];
+    for &a in addrs.iter().skip(2) {
+        area.extend(u32s(&[a, 0, 0]));
+    }
+    area.resize(744, 0);
+    b.extend(area);
     b.extend(vec![0u8; 6 * 4]);
     b
 }
@@ -170,9 +241,20 @@ fn index(r: &Raw, data_len: &[u32]) -> Vec<u8> {
     let mut end = 0u32;
     for (k, len) in data_len.iter().enumerate() {
         end += len;
-        b.extend(u32s(&[end, k as u32 + 1]));
+        let at = |o: Option<u32>| o == Some(k as u32);
+        let offset = if at(r.entry_past_the_end) {
+            PAST_THE_END
+        } else {
+            end
+        };
+        let size = if at(r.entry_too_big) {
+            0x00ff_ffff
+        } else {
+            r.peaks + 1
+        };
+        b.extend(u32s(&[offset, k as u32 + 1]));
         b.extend(u16s(&[1, 1]));
-        b.extend(u32s(&[0, 0, r.peaks + 1]));
+        b.extend(u32s(&[0, 0, size]));
         b.extend(f64s(&[
             0.1 * (k as f64 + 1.0),
             5000.0,

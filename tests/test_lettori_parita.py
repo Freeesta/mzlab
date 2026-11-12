@@ -149,7 +149,7 @@ def create(fam: str, d: Path) -> Path:
     raise AssertionError(fam)
 
 
-SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "andi": "andi/synt.cdf"}
+SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "thermo_danneggiato": "thermo_danneggiato/danneggiato.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "andi": "andi/synt.cdf"}
 
 
 def synthetic(base: Path):
@@ -234,6 +234,17 @@ def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def test_thermo_damaged_units_equal_the_cli(tools):
+    """A `.raw` with one of every damaged unit (an unreadable controller before the MS one, an unreadable analog controller, a scan pointing past the end,
+    a record that does not decode): both faces write the 12 scans, the damaged two without points, byte for byte, and conv/1 names `warn.raw.damaged`."""
+    ds = create("thermo_danneggiato", tools["tmp"] / "in_thermo_danneggiato")
+    cli = da_cli(tools, "thermo_danneggiato", ds, code=3)
+    wasm = da_wasm(tools, "thermo", ds)
+    assert cli.count(b"<spectrum ") == 12
+    assert b"warn.raw.damaged" in cli
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 @pytest.mark.parametrize("membro", ["MSScan.bin", "MSPeak.bin"])
 def test_cropped_agilent_equals_the_cli(tools, membro):
     """A `.D` whose index or points file ends inside the last of 60 scans: both faces write the 59 whole scans, byte for byte."""
@@ -305,6 +316,19 @@ def test_wiff_with_sparse_product_scans_equals_cli(tools):
     cli = da_cli(tools, "sciex_rado", ds)
     wasm = da_wasm(tools, "sciex", ds)
     assert cli.count(b"<spectrum ") == len(json.loads((d / "rado.json").read_text())["spectra"])
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
+def test_wiff_with_odd_scan_blocks_equals_cli(tools):
+    """Sparse product-ion scans with a few blocks their bytes contradict (tools/wiff_prodotto_rado.py --odd): the CLI writes the sample with the other
+    scans and code 3 (warn.wiff.damaged), never a refusal, and the module writes the same bytes."""
+    d = tools["tmp"] / "in_storto"
+    r = run([sys.executable, str(ROOT / "tools/wiff_prodotto_rado.py"), str(d), "--odd"])
+    assert r.returncode == 0, r.stderr[-1500:]
+    ds = d / "storto.wiff"
+    cli = da_cli(tools, "sciex_storto", ds, code=3)
+    wasm = da_wasm(tools, "sciex", ds)
+    assert cli.count(b"<spectrum ") == len(json.loads((d / "storto.json").read_text())["spectra"])
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 

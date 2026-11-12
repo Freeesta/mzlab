@@ -421,15 +421,14 @@ pub(crate) fn write_mzml_with(
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
     let sample = crate::flow_set::sample_index(label.unwrap_or(""), &ids)?;
+    let lost = reader.losses(sample)?;
+    if let Some(t) = lost.report(path) {
+        eprintln!("{t}");
+    }
     // The file keeps its profile points: the index of the next step picks the peaks, and the run says so.
     let profile = peaks == Peaks::File
         && !reader.index(sample)?.is_empty()
-        && match reader.scan(sample, 0) {
-            Ok(s) => s.profile,
-            // a first scan that does not decode is left out of the file: it says nothing of the profile
-            Err(e) if mzlab_core::readers::damages_one(&e) => false,
-            Err(e) => return Err(e),
-        };
+        && reader.scan(sample, 0)?.profile;
     let conv = Conversion {
         peaks,
         opz,
@@ -450,20 +449,14 @@ pub(crate) fn write_mzml_with(
         Ok((bytes, sha256, flagged))
     });
     match written {
+        // asked again once the scans are decoded: a Thermo scan that does not decode is counted only then (`warn.raw.damaged`)
         Ok((bytes, sha256, flagged)) => {
-            // asked once the scans are read: the ones whose data did not decode are counted then
-            let lost = reader.losses(sample)?;
-            if lost.partial() {
-                let (c, n, of) = (lost.cause, lost.read, lost.declared);
-                let end = (c == mzlab_core::readers::TRUNCATED)
-                    .then_some(", the file ends before the rest");
-                eprintln!(
-                    "{c}: {}: {n} of {of} spectra read{}",
-                    path.display(),
-                    end.unwrap_or("")
-                );
+            let after = reader.losses(sample)?;
+            match after.report(path) {
+                Some(t) if after != lost => eprintln!("{t}"),
+                _ => {}
             }
-            Ok((profile, bytes, sha256, lost, flagged))
+            Ok((profile, bytes, sha256, after, flagged))
         }
         Err(e) => {
             let _ = std::fs::remove_file(out);

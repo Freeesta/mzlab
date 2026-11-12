@@ -3,6 +3,7 @@
 
 use super::super::chromatograms::Blocks;
 use super::super::{scan, Record, Wiff};
+use super::block_count;
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::mzml::{Chromatogram, Spectrum};
@@ -25,9 +26,10 @@ impl Wiff {
         on: &mut dyn FnMut(Spectrum) -> Result<()>,
     ) -> Result<Vec<Chromatogram>> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
-        let mut n = 0;
+        let (mut n, mut tally) = (0, scan::Tally::default());
         for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
-            if let Some(p) = scan::read_scan_block(scan, self.scan_len, r.at, r.end, r.size)? {
+            let block = scan::read_block(scan, self.scan_len, r, Some(&mut tally))?;
+            if let scan::Block::Scan(p) = block {
                 if p.mz.is_empty() {
                     continue;
                 }
@@ -36,13 +38,15 @@ impl Wiff {
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
-            } else if !self.is_empty_row(r)
+            } else if !matches!(block, scan::Block::Damaged)
+                && !self.is_empty_row(r)
                 && !self.scan_experiment(r.experiment)
                 && let Some(c) = scan::read_mrm_cols(scan, self.scan_len, r.at, r.size as usize)?
             {
                 blocks.add(r, c);
             }
         }
+        tally.check()?;
         let mut chroms = self.chromatograms_of(blocks);
         if let Some(dad) = &self.dad {
             chroms.push(dad.twc_chromatogram(chroms.len()));
@@ -65,7 +69,7 @@ impl Wiff {
         {
             let count = match counts.and_then(|c| c.get(i)) {
                 Some(&c) => c,
-                None => scan::point_count(scan, self.scan_len, r.at, r.end, r.size)?,
+                None => block_count(scan, self.scan_len, r)?,
             };
             if let Some(count) = count {
                 if count > 0 && self.is_full_scan(r.experiment) {

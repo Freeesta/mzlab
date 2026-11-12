@@ -191,7 +191,12 @@ fn trailer_warning(raw: &RawFileReader) -> Vec<Option<V>> {
 
 /// What `RawFileReader::open` left out: a cut file, a structure that could not be read.
 fn open_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
-    raw.warnings
+    skipped_warnings(&raw.warnings)
+}
+
+/// One `avvisi` entry per warning of the reader (`RawFileReader::warnings`, the analog controllers left out by `analog_traces_counted`).
+fn skipped_warnings(warnings: &[opentfraw::Warning]) -> Vec<Option<V>> {
+    warnings
         .iter()
         .map(|w| {
             let key = match w {
@@ -420,7 +425,7 @@ pub fn from_raw<R: Read + Seek>(
         ..Default::default()
     };
     let (blocks, mut warn) = method_blocks(raw, source);
-    let traces = raw.analog_traces(source).unwrap_or_default();
+    let (traces, unread) = raw.analog_traces_counted(source);
     let by = |b: Block| blocks.iter().find(|t| script::classify(t) == b);
     let script_text = by(Block::Script).map(String::as_str).unwrap_or("");
     let pairs = script::script_pairs(script_text);
@@ -436,6 +441,7 @@ pub fn from_raw<R: Read + Seek>(
         v
     });
     warn.extend(file_warnings(raw, notes));
+    warn.extend(skipped_warnings(&unread));
     let (exps, settings) = experiments_of(&blocks, &items, &mut warn);
     warn.extend(block_warnings(&blocks));
     let lock = lock::section(raw, source, &blocks);

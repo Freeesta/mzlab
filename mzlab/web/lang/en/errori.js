@@ -465,6 +465,7 @@ I18N.add("en", {
   "warn.wiff.damaged": "Some scan blocks of the .wiff.scan do not match the index of the .wiff (a damaged copy): they are left out and counted, the rest is read and written. Check the copy of the file.",
   "warn.waters.damaged": "Some parts of the .raw folder are damaged (a scan with records no acquisition writes, an index that does not match its data, functions the function list or the calibration lines of _HEADER.TXT lost): they are left out and counted, never read with other m/z; the rest is read and written. Check the copy of the folder.",
   "warn.raw.eventsRefused": "The table of scan events could not be read: the scans after the point where it stops are read and written, with their MS level and polarity unknown.",
+  "warn.raw.damaged": "Some scans of the .raw cannot be read (their data point past the end of the file or do not decode): each is kept without its points and counted, the other scans are read and written. Check the copy of the file.",
   "warn.flow.formula.subformulas": "This ion has more sub-formulas than max_subformulas, so none of its fragments was tried: raise max_subformulas or give fewer elements.",
   "warn.flow.group.corrFiles": "Correlating rows needs at least as many files as min_corr_samples (3 unless you change it): with fewer files none was computed, so there are no correlation edges. Isotopes and ion species stay.",
   "warn.msngrafo.rottureCapped": "There are too many bond cleavages: only the first ones were tried.",
