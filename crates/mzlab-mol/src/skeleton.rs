@@ -70,10 +70,8 @@ impl Mol {
         let mut atoms = self.atoms.clone();
         into.iter().flatten().for_each(|&o| atoms[o].h += 1);
         let mut new_of = vec![u32::MAX; n];
-        let mut k = 0u32;
-        for i in (0..n).filter(|&i| into[i].is_none()) {
-            new_of[i] = k;
-            k += 1;
+        for (k, i) in (0..n).filter(|&i| into[i].is_none()).enumerate() {
+            new_of[i] = k as u32;
         }
         let at = |i: u32| new_of[i as usize];
         let kept = |i: u32| into[i as usize].is_none();
