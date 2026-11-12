@@ -817,3 +817,4 @@ function frameExtras(/** @type {HTMLIFrameElement} */ fr) {
   else rows.push([t("draw.keys.trackpad.key"), t("draw.keys.trackpad")]);
   Q("#keys-body").innerHTML = `<table>${rows.map(r => h`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
 })();
+import("./disegno-verifica.js").then(m => m.mountCheck()).catch((/** @type {unknown} */ e) => console.error("QqQ Draw: check card", e));   // structure check card, its own module
