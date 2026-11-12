@@ -102,6 +102,26 @@ try:
             need(n == 3, n)
             wait_for_js(pg, SHOWN % 3, timeout=10000)
         step("a row shows its integration (click, Enter, Space) and its X is the only button", row_actions)
+        def copy_cells():
+            need = lambda c, m: c or throw(m)
+            csv = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n")]
+            head, row = csv[0], csv[1]
+            cells = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')[0].querySelectorAll('[data-cp]')].map(c => { const r = c.getBoundingClientRect(); return [c.dataset.cp, c.getAttribute('role'), c.tabIndex, c.getAttribute('aria-label'), c.title, r.width, r.height, r.x + r.width / 2, r.y + r.height / 2]; })")
+            need([c[0] for c in cells] == [row[head.index(k)] for k in ("apex_rt_min", "area", "height")], (cells, row))
+            need(all(c[1] == "button" and c[2] == 0 and c[3] and c[4] and c[5] >= 24 and c[6] >= 24 for c in cells), cells)
+            pg.evaluate("(() => { window.__show = 0; const o = window.reveal; window.__orev = o; window.reveal = p => { window.__show++; return o(p); }; })()")
+            pg.evaluate("navigator.clipboard.writeText('x')")
+            area = cells[1]; pg.mouse.click(area[7], area[8])
+            wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
+            need(pg.evaluate("navigator.clipboard.readText()") == area[0], "the CSV value, full precision")
+            n = pg.evaluate("(() => { const n = document.querySelector('.areacopied'), r = n.getBoundingClientRect(); return [n.textContent, n.getAttribute('aria-live'), r.x + r.width / 2, r.y]; })()")
+            need(n[0] == pg.evaluate("I18N.t('int.copy.done')") and n[1] == "polite" and abs(n[2] - area[7]) < 60 and 0 < n[3] - area[8] < 60, ("by the pointer", n, area))
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", timeout=4000)
+            pg.focus("#manint tbody tr:first-child [data-cp]"); pg.keyboard.press("Enter")
+            wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
+            need(pg.evaluate("navigator.clipboard.readText()") == cells[0][0], "Enter copies the apex")
+            need(pg.evaluate("(() => { const n = window.__show; window.reveal = window.__orev; return n; })()") == 0, "a copy does not show the row's integration")
+        step("apex, area and height cells copy the CSV value with a «Copiato!» by the pointer", copy_cells)
         def delete():
             pg.click("#manint tbody tr:nth-child(2) [data-del]")
             wait_for_js(pg, SHOWN % 2, timeout=60000)

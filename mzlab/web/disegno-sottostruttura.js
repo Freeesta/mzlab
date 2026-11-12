@@ -44,8 +44,8 @@ function card() {
   const have = document.querySelector("#sub-card");
   if (have) return /** @type {HTMLElement} */ (have);
   const c = document.createElement("div");
-  c.className = "card"; c.id = "sub-card";
-  c.innerHTML = '<h2 data-i18n="draw.sub.heading"></h2><p class="muted sm" style="margin:0 0 4px" data-i18n="draw.sub.intro"></p>'
+  c.className = "card"; c.id = "sub-card"; c.dataset.rqOpen = "1";   // made by a menu row: it opens
+  c.innerHTML = '<h2 data-i18n="draw.sub.heading"></h2><p class="rq-d" data-i18n="draw.sub.intro"></p>'
     + '<div id="sub-query" class="sm"></div>'
     + '<fieldset class="sub-src"><legend class="sm" data-i18n="draw.sub.source"></legend>'
     + '<label><input type="radio" name="sub-src" value="cat" checked> <span data-i18n="draw.sub.source.cat"></span></label> '
@@ -64,7 +64,7 @@ function card() {
     + "#sub-card button,#sub-card input[type=file]{min-height:24px;min-width:24px}#sub-card fieldset{border:0;padding:0;margin:4px 0}"
     + "#sub-card label{display:inline-flex;align-items:center;min-height:24px;margin-right:8px}#sub-card input[type=file]{max-width:100%;box-sizing:border-box}.sub-show{margin-left:6px}";
   c.appendChild(css);
-  const after = document.querySelector("#chk-card") || document.querySelector("#prop-card");
+  const after = document.querySelector("#chk-card") || document.querySelector("#anal-card");
   if (!after || !after.parentNode) throw new Error("Draw cards");
   after.parentNode.insertBefore(c, after.nextSibling);
   /** @type {HTMLInputElement} */ (c.querySelector("#sub-file")).onchange = async (e) => {
@@ -178,6 +178,7 @@ async function fromMenu(/** @type {any} */ c) {
   saved = null; $("#sub-back").hidden = true;
   $("#sub-query").textContent = t(c.whole ? "draw.sub.query.whole" : "draw.sub.query.sel", { n: ids.length });
   $("#sub-list").textContent = ""; $("#sub-status").textContent = ""; $("#sub-table").hidden = true;
+  document.dispatchEvent(new CustomEvent("mzlab-card-open", { detail: box }));
   box.scrollIntoView({ block: "nearest" });
   $("#sub-run").focus();
 }

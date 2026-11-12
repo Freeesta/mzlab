@@ -1,7 +1,8 @@
 //! Checks that a Waters folder is not cut short: an IDX cut at a whole row, a DAT cut inside a scan, a `_FUNCTNS.INF` that lists fewer functions than the folder holds,
-//! a `_HEADER.TXT` emptied or cut inside a calibration line. Each gives one keyed error or the count of scans left out, never data read short.
+//! a `_HEADER.TXT` emptied or cut inside a calibration line. Each leaves the part out with its count of scans, never data read short; the folder is refused only when nothing else in it can be read.
 
 use super::folder::Folder;
+use super::idx;
 use super::idx::Row;
 use mzlab_core::error::{Error, Result};
 
@@ -42,36 +43,32 @@ pub(super) fn cuts(
     Some(cut)
 }
 
-/// A `_FUNCTNS.INF` cut short at a whole record still parses: the data of the next function tell that functions are missing.
-pub(super) fn whole_list(c: &Folder, n: usize) -> Result<()> {
-    let after = n + 1;
-    if [
-        format!("_FUNC{after:03}.IDX"),
-        format!("_FUNC{after:03}.DAT"),
-    ]
-    .iter()
-    .any(|f| c.search(f).is_some())
-    {
-        return Err(Error::new("err.file.functionsCut")
-            .with("name", &c.name)
-            .with("listed", n));
+/// The functions past the end of a `_FUNCTNS.INF` cut short at a whole record (their IDX or DAT is in the folder), and the rows of their indexes: they have
+/// no record to read them by, so they are left out and counted.
+pub(super) fn unlisted(c: &mut Folder, n: usize) -> Result<(usize, usize)> {
+    let (mut funs, mut rows) = (0, 0);
+    for k in n + 1..1000 {
+        let name = |e: &str| format!("_FUNC{k:03}.{e}");
+        if c.search(&name("IDX")).is_none() && c.search(&name("DAT")).is_none() {
+            break;
+        }
+        funs += 1;
+        if let Some(b) = c.read_run(&name("IDX"))? {
+            rows += idx::whole_rows(&b);
+        }
     }
-    Ok(())
+    Ok((funs, rows))
 }
 
-/// The calibration of every function is a line of `_HEADER.TXT`: one emptied, or cut inside a calibration line, would give other m/z unsaid.
-pub(super) fn whole_header(c: &Folder, header: Option<&[u8]>) -> Result<()> {
-    let truncate = |b: &[u8]| {
+/// Whether `_HEADER.TXT` was emptied or cut inside a calibration line: the functions without a whole `Cal Function` line are then left out, never read with other m/z unsaid.
+pub(super) fn header_cut(header: Option<&[u8]>) -> bool {
+    header.is_some_and(|b| {
         b.is_empty()
             || (b.last() != Some(&b'\n')
                 && b.rsplit(|&x| x == b'\n')
                     .next()
                     .is_some_and(|r| r.trim_ascii_start().starts_with(b"$$ Cal")))
-    };
-    if header.is_some_and(truncate) {
-        return Err(nel_file(c, "err.file.headerCut", "_HEADER.TXT"));
-    }
-    Ok(())
+    })
 }
 
 /// The error `chiave` about one `file` of the folder, with the folder name.

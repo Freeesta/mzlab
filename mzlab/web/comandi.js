@@ -12,7 +12,7 @@
 
 // TAB-BEGIN
 const COMANDI_TAB = [
-  { id: "view.zoom", nome: "storia.zoom", modulo: "eventi.js", dove: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js", "xic-bordi.js"], campi: ["zoom", "zoomY", "lock"],
+  { id: "view.zoom", nome: "storia.zoom", modulo: "eventi.js", dove: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js", "xic-bordi.js", "zoom-reset.js"], campi: ["zoom", "zoomY", "lock"],
     parametri: "m/z or RT interval, intensity interval", tasto: "wheel, Backspace, double click, Shift+drag", unisci: "a burst of wheel steps, a drag and a pan are one step", annulla: "istantanea" },
   { id: "peaks.integration", nome: "storia.int", modulo: "picchi.js", dove: ["picchi.js", "eventi.js", "xic-spettro.js", "pannelli.js", "pannelli-annulla.js", "integra-estremi.js"], campi: ["ints", "isel"],
     parametri: "limits of the integrated peak", tasto: "I, Del", unisci: "an edge drag is one step", annulla: "istantanea" },

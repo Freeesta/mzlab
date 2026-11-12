@@ -191,6 +191,38 @@ def test_waters_function_without_its_dat_equals_the_cli(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def _waters_damaged(ds, part):
+    """One part of the folder of the index marks damaged, the rest whole (`warn.waters.damaged`); returns the spectra the reader keeps."""
+    if part == "record":
+        # scan 2 of function 1 (24-byte scans): an intensity word without its leading bit
+        b = bytearray((ds / "_FUNC001.DAT").read_bytes())
+        b[24:28] = (1).to_bytes(4, "little")
+        (ds / "_FUNC001.DAT").write_bytes(bytes(b))
+        return 39
+    if part == "index":
+        (ds / "_FUNC002.IDX").write_bytes((ds / "_FUNC002.IDX").read_bytes()[:-5])
+    elif part == "list":
+        (ds / "_FUNCTNS.INF").write_bytes((ds / "_FUNCTNS.INF").read_bytes()[:416])
+    else:
+        head = (ds / "_HEADER.TXT").read_bytes()
+        (ds / "_HEADER.TXT").write_bytes(head[: head.index(b"Cal Function 2") + 22])
+    return 20
+
+
+@pytest.mark.parametrize("part", ["record", "index", "list", "calibration"])
+def test_waters_damaged_part_equals_the_cli(tools, part):
+    """The folder of the index marks with one part damaged (a record, an index cut inside a row, a function list cut at a whole record, a calibration line
+    cut): both faces leave that part out, write the rest byte for byte, and `conv/1` names `warn.waters.damaged`."""
+    import waters_sintetico
+    ds = waters_sintetico.write_flags(tools["tmp"] / f"in_waters_{part}")
+    n = _waters_damaged(ds, part)
+    cli = da_cli(tools, f"waters_{part}", ds, code=3)
+    wasm = da_wasm(tools, "waters", ds)
+    assert cli.count(b"<spectrum ") == n
+    assert b"warn.waters.damaged" in cli
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def test_bruker_con_tdf_bin_tagliato_uguale_al_cli(tools):
     """A `.d` whose `analysis.tdf_bin` ends inside the fourth of five frames: both faces write the three whole frames, byte for byte, and the conv/1 of both
     names the cut `_bin` as the cause of the partial read."""

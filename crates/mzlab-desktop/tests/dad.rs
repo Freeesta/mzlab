@@ -237,3 +237,86 @@ fn a_wiff_without_a_dad_has_no_pda_in_the_desktop_and_in_the_core() {
         }
     }
 }
+
+/// `dadmrm.wiff` and `dadsim.wiff` (no scans, a DAD with bands at 274 and 230 nm) and their `dadmrm.json` in `dir`, by `tools/wiff_dad_mrm.py`.
+fn write_no_scan_pairs(dir: &Path) -> Option<Value> {
+    let ok = std::process::Command::new("python3")
+        .arg("-I")
+        .arg(root().join("tools/wiff_dad_mrm.py"))
+        .arg(dir)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    ok.then(|| {
+        serde_json::from_str(&std::fs::read_to_string(dir.join("dadmrm.json")).unwrap()).unwrap()
+    })
+}
+
+fn max_of(json: &str) -> f64 {
+    let v: Value = serde_json::from_str(json).unwrap();
+    v["y"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(Value::as_f64)
+        .fold(f64::MIN, f64::max)
+}
+
+/// An MRM or SIM file has no scans: its `api/chrom?kind=pda&mz0&mz1` must be the wavelength trace of the DAD (op `lr_pda_wavelength`, the bytes of
+/// `pda_wavelength`), never `mrm_chrom`, which knows only the chromatograms of the mzML and answers the TWC for `pda` whatever the wavelengths.
+#[test]
+fn a_file_with_no_scans_and_a_dad_answers_the_wavelength_trace_not_the_twc() {
+    let dir = tempfile::tempdir().unwrap();
+    let Some(want) = write_no_scan_pairs(dir.path()) else {
+        eprintln!("SKIP: python3 cannot write the synthetic .wiff pairs");
+        return;
+    };
+    let st = state(dir.path());
+    for file in ["dadmrm.wiff", "dadsim.wiff"] {
+        let name = register_wiff(&st, &dir.path().join(file));
+        let mut m = reference_wiff(&dir.path().join(file));
+        let chroms = m.chromatograms(0).unwrap();
+        for band in ["a", "b"] {
+            let (nm0, nm1) = (
+                want[band]["nm0"].as_f64().unwrap(),
+                want[band]["nm1"].as_f64().unwrap(),
+            );
+            let got = text(
+                st.rpc(
+                    "lr_pda_wavelength",
+                    &json!({"name": name, "nm0": nm0, "nm1": nm1}),
+                    &[],
+                )
+                .unwrap(),
+            );
+            assert_eq!(
+                got,
+                itemroutes::pda_wavelength(&mut m, nm0, nm1).unwrap(),
+                "{file} {band}: desktop and core"
+            );
+            let v: Value = serde_json::from_str(&got).unwrap();
+            assert_eq!(
+                (v["nm0"].as_f64(), v["nm1"].as_f64()),
+                (Some(nm0), Some(nm1)),
+                "{file} {band}: the band answered"
+            );
+            let top = want[band]["max"].as_f64().unwrap();
+            assert!(
+                (max_of(&got) - top).abs() < 0.01 * top,
+                "{file} {band}: max {} vs {top}",
+                max_of(&got)
+            );
+            let twc = itemroutes::mrm_chrom(&mut m, &chroms, "pda").unwrap();
+            assert!(
+                max_of(&twc) > 10.0 * max_of(&got),
+                "{file} {band}: mrm_chrom answers the TWC, not the band"
+            );
+        }
+        let twc = text(st.rpc("lr_pda", &json!({"name": name}), &[]).unwrap());
+        assert_eq!(
+            twc,
+            itemroutes::pda_trace(&mut m, &chroms).unwrap(),
+            "{file}: the TWC, desktop and core"
+        );
+    }
+}

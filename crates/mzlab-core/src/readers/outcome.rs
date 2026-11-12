@@ -65,6 +65,31 @@ pub const DAMAGED: &str = "warn.wiff.damaged";
 /// Cause of the scans a run lists without their scan event: the table of events was refused, the scans are read with level and polarity unknown.
 pub const EVENTS_REFUSED: &str = "warn.raw.eventsRefused";
 
+/// Cause of the scans of a Waters scanning function whose `_FUNCnnn.DAT` is not in the folder.
+pub const MEMBER_MISSING: &str = "warn.file.memberMissing";
+
+/// Cause of the scans of a Waters scanning function whose DAT record width is none of the decoded ones.
+pub const RECORD_WIDTH: &str = "warn.file.recordWidth";
+
+/// Cause of the Waters scans left out as damaged: a record no acquisition writes, an index that does not match its DAT, a function the list or the
+/// calibration lines of `_HEADER.TXT` lost.
+pub const WATERS_DAMAGED: &str = "warn.waters.damaged";
+
+/// The cause keys a reader may give: a key that crosses a boundary as text (the readers module of the site) is given back as its constant.
+pub fn cause_key(s: &str) -> Option<&'static str> {
+    [
+        TRUNCATED,
+        DAMAGED,
+        EVENTS_REFUSED,
+        MEMBER_MISSING,
+        RECORD_WIDTH,
+        WATERS_DAMAGED,
+        super::SPECTRUM_DAMAGED,
+    ]
+    .into_iter()
+    .find(|k| *k == s)
+}
+
 /// `Reader::losses` of a reader that does not override it: the rows of `index_without_tic` plus the scans `missing` counts.
 pub(super) fn default_losses<R: Reader + ?Sized>(r: &mut R, c: usize) -> Result<Losses> {
     let lacking = r.missing(c);

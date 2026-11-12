@@ -4,13 +4,9 @@
 
 use super::inf::Extern;
 use super::reader::Fun;
-use mzlab_core::readers::{Losses, TRUNCATED};
+use mzlab_core::readers::{Losses, MEMBER_MISSING, RECORD_WIDTH, TRUNCATED, WATERS_DAMAGED};
 
 const KEY: &str = "meta.nonDecodificato";
-/// Scans of a scanning function whose `_FUNCnnn.DAT` is not in the folder.
-pub(super) const MEMBER_MISSING: &str = "warn.file.memberMissing";
-/// Scans of a scanning function whose DAT record width is none of the decoded ones.
-pub(super) const RECORD_WIDTH: &str = "warn.file.recordWidth";
 
 /// Scans of the index past the end of a DAT cut short (the rows of a function without its DAT are a missing member, not a cut).
 pub(super) fn cut(funs: &[Fun]) -> usize {
@@ -18,8 +14,9 @@ pub(super) fn cut(funs: &[Fun]) -> usize {
 }
 
 /// The scans of sample `c` the index lists and the `n` read: past the end of a DAT cut short, of a scanning function without its DAT, of one whose record
-/// width is not decoded. The cause is the one of the most scans (the first of that order on a tie).
-pub(super) fn losses(funs: &[Fun], c: usize, n: usize) -> Losses {
+/// width is not decoded, and the `damaged` ones (scans with a record no acquisition writes, functions past a cut `_FUNCTNS.INF`) with the rows of the scanning
+/// functions left out whole. The cause is the one of the most scans (the first of that order on a tie).
+pub(super) fn losses(funs: &[Fun], c: usize, n: usize, damaged: usize) -> Losses {
     if c != 0 {
         return Losses::complete(n);
     }
@@ -32,6 +29,10 @@ pub(super) fn losses(funs: &[Fun], c: usize, n: usize) -> Losses {
         (cut(funs), TRUNCATED),
         (gone, MEMBER_MISSING),
         (width.map(rows).sum(), RECORD_WIDTH),
+        (
+            damaged + scanning().filter_map(|f| f.left_out).sum::<usize>(),
+            WATERS_DAMAGED,
+        ),
     ];
     let lost: usize = parts.iter().map(|p| p.0).sum();
     let cause = parts

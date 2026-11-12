@@ -105,7 +105,7 @@ async function rawSeries(p) {
   const mf = files.filter(f => f.kind === "mrm"), out = [], seen = new Map();
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
   data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
-  const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key));
+  const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key)); if (p.tr !== p._trAuto) mrmRemember(p.tr, list.map(l => l.key));   // the student's choice outlives the panel
   if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
   const want = key => !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key), shown = list.filter(l => want(l.key)).map(l => l.key);
   const lab = key => window.SIMUI ? SIMUI.label(key) : key;
@@ -441,7 +441,7 @@ async function drawLines(p) {
     if (ESP.mrm(p)) { if (it.fol && window.SEGUE) SEGUE.dots(g, X, Y, U, s, it); } else for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }      // SIM/MRM: no bars, the two anchors are buttons (integra-estremi.js); a follower gets two dashed rings
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + (it.none ? "—" : r.wait && !Number.isFinite(r.area) ? "…" : I18N.sciE(r.area)) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak; the baseline mode is in the hover text
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, text: lab, copy: it.none ? null : I18N.sciE(r.area), tip: (it.none ? "" : I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) })) + (it.fol ? SEGUE.tip(p, it) : it.bm ? `<div class="sm">${I18N.t("int.base.tip", { b: I18N.t("int.base.tag." + it.bm) })}</div>` : "") + (it.none ? "" : `<div class="sm">${I18N.t("int.copy.tip")}</div>`) }); g.font = fpx(12);
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, text: lab, copy: it.none ? null : I18N.sciE(r.area, 5), tip: (it.none ? "" : I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) })) + (it.fol ? SEGUE.tip(p, it) : it.bm ? `<div class="sm">${I18N.t("int.base.tip", { b: I18N.t("int.base.tag." + it.bm) })}</div>` : "") + (it.none ? "" : `<div class="sm">${I18N.t("int.copy.tip")}</div>`) }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {

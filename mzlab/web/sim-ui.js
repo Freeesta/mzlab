@@ -107,15 +107,6 @@
   /** the panel draws the area under the traces (a tint of the line colour): MRM and SIM overlays, on by default @param {any} p */
   const area = p => panelTr(p) && p.area !== false;
 
-  /** the help line of the empty Data view of a SIM session (no graph yet): what to do next */
-  function help() {
-    const el = document.getElementById("simhelp"); if (!el) return;
-    const on = allSim() && !E.panels.some((/** @type {any} */ p) => p.el);
-    if (!on) { el.hidden = true; return; }
-    if (el.dataset.on !== I18N.lang) { el.textContent = I18N.t("canali.sim.help"); el.dataset.on = I18N.lang; }
-    el.hidden = false;
-  }
-
   /** the text of the «Experiment» cell for a SIM file, «SIM · N ions» (also for a file the engine called empty); null for any other file @param {any} f @param {string} kind */
   const cell = (f, kind) => { const c = f ? n(f) : 0; return c > 0 && ESP.voce(kind)?.spettri !== true && kind !== "infusion" ? I18N.t(c === 1 ? "canali.sim.cell1" : "canali.sim.cell", { n: c }) : null; };
 
@@ -148,5 +139,5 @@
   AZIONI.registra({ id: "mrm.estrai", gruppo: "xic", viste: ["chrom", "mrm"], visibile: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     nome: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), sotto: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, help, n, mark, filesOf, panelSim, allSim, ions, style, rows, area, trKey };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, n, mark, filesOf, panelSim, allSim, ions, style, rows, area, trKey };
 })();
