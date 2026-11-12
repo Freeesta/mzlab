@@ -2540,6 +2540,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-mol-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-msnfigura-wasm"
 version = "1.0.0"
 dependencies = [

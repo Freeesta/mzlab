@@ -25,7 +25,7 @@ fn bridge_gives_the_same_json_as_the_library() {
 
 #[test]
 fn bridge_version_names_the_current_contract() {
-    assert!(version().starts_with("mzfeat-grafo/7"));
+    assert!(version().starts_with("mzfeat-grafo/9"));
 }
 
 #[test]

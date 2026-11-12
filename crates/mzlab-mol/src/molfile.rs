@@ -18,25 +18,46 @@ const ORGANIC: &[&str] = &["B", "C", "N", "O", "P", "S", "F", "Cl", "Br", "I"];
 impl Mol {
     /// Reads the first record of a V2000 or V3000 molfile (an SDF is cut at `$$$$`).
     pub fn from_molfile(text: &str) -> Result<Mol, MolError> {
-        let text = text.replace("\r\n", "\n");
-        let record = text.split("\n$$$$").next().unwrap_or("");
-        let lines: Vec<&str> = record.lines().collect();
-        let counts = lines
-            .get(3)
-            .ok_or_else(|| fail("the file has no counts line"))?;
-        let draft = if counts.contains("V3000") {
-            read_v3000(&lines)?
-        } else {
-            read_v2000(&lines)?
-        };
-        let m = draft.finish()?;
+        let draft = read_draft(text)?;
+        draft.refuse_queries()?;
+        let (m, _) = draft.finish(false)?;
         m.validate()?;
         Ok(m)
     }
 }
 
+/// The draft of the first record of a molfile, query atoms and bonds kept (see `Draft::refuse_queries`).
+pub(crate) fn read_draft(text: &str) -> Result<Draft, MolError> {
+    let text = text.replace("\r\n", "\n");
+    let record = text.split("\n$$$$").next().unwrap_or("");
+    let lines: Vec<&str> = record.lines().collect();
+    let counts = lines
+        .get(3)
+        .ok_or_else(|| fail("the file has no counts line"))?;
+    if counts.contains("V3000") {
+        read_v3000(&lines)
+    } else {
+        read_v2000(&lines)
+    }
+}
+
 impl Draft {
-    fn finish(mut self) -> Result<Mol, MolError> {
+    /// The error of a strict read: a symbol that is not an element, a bond type outside 1-4.
+    fn refuse_queries(&self) -> Result<(), MolError> {
+        if let Some(a) = self.atoms.iter().find(|a| a.query) {
+            return Err(fail(format!("atom symbol {:?} is not an element", a.el)));
+        }
+        if let Some(b) = self.bonds.iter().find(|b| b.query != 0) {
+            return Err(fail(format!(
+                "bond type {} (a query or unsupported bond)",
+                b.query
+            )));
+        }
+        Ok(())
+    }
+
+    /// The record and whether the aromatic bonds could be kekulised; with `lenient` a failed kekulisation leaves them single instead of an error.
+    pub(crate) fn finish(mut self, lenient: bool) -> Result<(Mol, bool), MolError> {
         let n = self.atoms.len();
         let ends: Vec<(usize, usize)> = self.bonds.iter().map(|b| (b.a, b.b)).collect();
         let mut orders: Vec<u8> = self.bonds.iter().map(|b| b.order).collect();
@@ -49,8 +70,12 @@ impl Draft {
                 h: 0,
             })
             .collect();
-        if !assign(&ends, &mut orders, &facts) {
+        let kekule = assign(&ends, &mut orders, &facts);
+        if !kekule && !lenient {
             return Err(fail("the aromatic system cannot be kekulised"));
+        }
+        if !kekule {
+            orders = self.bonds.iter().map(|b| b.order.max(1)).collect();
         }
         for (b, &o) in self.bonds.iter_mut().zip(&orders) {
             b.order = o;
@@ -76,7 +101,7 @@ impl Draft {
         let groups = groups(&self, &stereo)?;
         let mut m = Mol::new(atoms, bonds, stereo, groups);
         m.coords = self.coords();
-        Ok(m)
+        Ok((m, kekule))
     }
 
     fn final_atoms(&self, sum: &[u32]) -> Vec<Atom> {
@@ -133,6 +158,8 @@ pub(crate) struct DraftAtom {
     pub xyz: [f64; 3],
     /// Total valence the file states (`Some(0)` is "no bonds, no hydrogens"), None when it leaves it to the defaults.
     pub valence: Option<u8>,
+    /// The symbol is not an element (a query atom, an R-group, a list): `el` keeps it as written.
+    pub query: bool,
 }
 
 pub(crate) struct DraftBond {
@@ -143,6 +170,10 @@ pub(crate) struct DraftBond {
     pub wedge: Wedge,
     /// Written as an aromatic bond (its order is replaced by the Kekulé one).
     pub arom: bool,
+    /// The bond type as written when it is a query or unsupported one (read as single), else 0.
+    pub query: i32,
+    /// A wedge or hash written on a double, triple or aromatic bond (it says nothing; kept for the structure check).
+    pub multi_wedge: bool,
 }
 
 /// What the two readers hand over: the atoms and bonds as written, enhanced-stereo collections as 0-based atom lists.

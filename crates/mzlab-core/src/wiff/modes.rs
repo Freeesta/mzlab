@@ -62,7 +62,7 @@ pub const MODI: [Modo; 17] = [
     m(9, "TOF MS/MS", 2, None, Spettro, false),
     m(10, "?", 1, None, Spettro, false),
     m(CODE_PRODUCT, "EPI", 2, None, Spettro, true),
-    m(12, "ER", 1, Some(("MS:1000791", "enhanced resolution spectrum")), Spettro, false),
+    m(12, "ER", 1, Some(("MS:1000791", "enhanced resolution scan")), Spettro, false),
     m(CODE_MS3, "MS3", 3, None, Spettro, true),
     m(14, "TDF", 2, Some(("MS:1000790", "time-delayed fragmentation spectrum")), Spettro, false),
     m(CODE_FULL, "EMS", 1, None, Spettro, true),

@@ -1,0 +1,31 @@
+{
+ "about": "Synthetic structure lists for the subdb/1 substructure search: the same answer from the molkit .wasm (tests/test_molkit_wasm.py), mzlab-cli mol-search --db (mol_search_tests.rs) and the app route feat/grafo (crates/mzlab-desktop/tests/substructure.rs).",
+ "cases": [
+  {
+   "name": "sdf",
+   "request": {
+    "query": "c1ccccc1O",
+    "db": "phenol-S1\n  synthetic\n\n  7  7  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\nM  END\n> <id>\nS-1\n\n$$$$\n\n  synthetic\n\n  8  8  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    9.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   10.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  2  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  2  0  0  0  0\n  6  1  1  0  0  0  0\n  1  7  1  0  0  0  0\n  7  8  1  0  0  0  0\nM  END\n> <NAME>\nanisole-S2\n\n> <id>\nS-2\n\n$$$$\nhexane-S3\n  synthetic\n\n  6  5  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\n  3  4  1  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  1  0  0  0  0\nM  END\n$$$$\nbroken\n\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\nM  END\n$$$$\n"
+   },
+   "answer": "{\"format\":\"subdb/1\",\"atoms\":7,\"stereo\":false,\"source\":\"sdf\",\"total\":4,\"skipped\":0,\"hits\":[{\"i\":0,\"name\":\"phenol-S1\",\"id\":\"S-1\",\"structure\":\"phenol-S1\\n  synthetic\\n\\n  7  7  0  0  0  0  0  0  0  0999 V2000\\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    9.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\\n  1  2  2  0  0  0  0\\n  2  3  1  0  0  0  0\\n  3  4  2  0  0  0  0\\n  4  5  1  0  0  0  0\\n  5  6  2  0  0  0  0\\n  6  1  1  0  0  0  0\\n  1  7  1  0  0  0  0\\nM  END\\n\",\"n\":1,\"maps\":[[1,2,3,4,5,0,6]]},{\"i\":1,\"name\":\"anisole-S2\",\"id\":\"S-2\",\"structure\":\"\\n  synthetic\\n\\n  8  8  0  0  0  0  0  0  0  0999 V2000\\n    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    1.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    3.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    4.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    6.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    7.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n    9.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\\n   10.5000    0.8000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\\n  1  2  2  0  0  0  0\\n  2  3  1  0  0  0  0\\n  3  4  2  0  0  0  0\\n  4  5  1  0  0  0  0\\n  5  6  2  0  0  0  0\\n  6  1  1  0  0  0  0\\n  1  7  1  0  0  0  0\\n  7  8  1  0  0  0  0\\nM  END\\n\",\"n\":1,\"maps\":[[1,2,3,4,5,0,6]]}],\"errors\":[{\"i\":3,\"name\":\"broken\",\"error\":\"molfile: \\\"M  END\\\" is not a number (line \\\"M  END\\\")\"}]}"
+  },
+  {
+   "name": "smiles list, max 1",
+   "request": {
+    "query": "Oc1ccccc1",
+    "db": "# synthetic list\nOc1ccccc1 phenol-A\nCCO\tethanol-B\n\nOc1ccc(Cl)cc1 4-chlorophenol-C\nC1CC broken-D\nOc1ccc(O)cc1 hydroquinone-E\n",
+    "max": 1
+   },
+   "answer": "{\"format\":\"subdb/1\",\"atoms\":7,\"stereo\":false,\"source\":\"smiles\",\"total\":5,\"skipped\":0,\"hits\":[{\"i\":0,\"name\":\"phenol-A\",\"id\":\"\",\"structure\":\"Oc1ccccc1\",\"n\":1,\"maps\":[[0,1,2,3,4,5,6]]},{\"i\":2,\"name\":\"4-chlorophenol-C\",\"id\":\"\",\"structure\":\"Oc1ccc(Cl)cc1\",\"n\":1,\"maps\":[[0,1,2,3,4,6,7]]},{\"i\":4,\"name\":\"hydroquinone-E\",\"id\":\"\",\"structure\":\"Oc1ccc(O)cc1\",\"n\":1,\"maps\":[[0,1,2,3,4,6,7]]}],\"errors\":[{\"i\":3,\"name\":\"broken-D\",\"error\":\"SMILES: ring closure 1 is never closed\"}]}"
+  },
+  {
+   "name": "table",
+   "request": {
+    "query": "c1ccccc1",
+    "db": "id;name;smiles\nx:1;\"phenol; synthetic\";Oc1ccccc1\nx:2;mass only;\nx:3;toluene;Cc1ccccc1\n",
+    "stereo": true
+   },
+   "answer": "{\"format\":\"subdb/1\",\"atoms\":6,\"stereo\":true,\"source\":\"table\",\"total\":2,\"skipped\":1,\"hits\":[{\"i\":0,\"name\":\"phenol; synthetic\",\"id\":\"x:1\",\"structure\":\"Oc1ccccc1\",\"n\":1,\"maps\":[[1,2,3,4,5,6]]},{\"i\":1,\"name\":\"toluene\",\"id\":\"x:3\",\"structure\":\"Cc1ccccc1\",\"n\":1,\"maps\":[[1,2,3,4,5,6]]}],\"errors\":[]}"
+  }
+ ]
+}

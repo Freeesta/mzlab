@@ -150,9 +150,10 @@ impl BrukerHeader {
             .collect(),
             ..Header::default()
         };
+        // the generic term `software`: the writer keeps its CV name and puts the program the file names in a userParam (`header_term`)
         if let Some((n, v)) = &self.software {
             h.extra_software.push((
-                "MS:1000799".into(),
+                "MS:1000531".into(),
                 n.clone(),
                 v.clone().unwrap_or_default(),
             ));
