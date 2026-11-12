@@ -200,7 +200,7 @@ pub fn pda_spectrum<M: ReadAt>(m: &mut Mzml<M>, rt0: f64, rt1: f64) -> Result<St
 
 /// `/api/chrom` of an MRM file (no scans): the first chromatogram of the mzML with that kind (`tic`, `bpc`, `srm`), empty when it has none. The m/z window, the
 /// precursor and the filter do not apply to it. Not the UV route: for `pda` it would answer the TWC whatever the wavelengths, so the page sends `kind=pda` to
-/// `pda_trace`/`pda_wavelength` (ops `lr_pda`, `lr_pda_wavelength`) and the analog kinds to `api/analog`.
+/// `pda_trace`/`pda_wavelength` (ops `lr_pda`, `lr_pda_wavelength`).
 pub fn mrm_chrom<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom], kind: &str) -> Result<String> {
     let (t, y) = match chroms.iter().find(|c| c.kind == kind) {
         Some(c) => m.chromatogram(c)?,
