@@ -120,6 +120,8 @@ I18N.add("en", {
   "int.tbl.rt1": "RT end",
   "int.tbl.apex": "Apex RT",
   "int.tbl.area": "Area (counts·s)",
+  "int.tbl.areaUv": "Area (mAU·s)",
+  "int.tbl.areaMix": "Area (counts·s; DAD: mAU·s)",
   "int.tbl.height": "Height",
   "int.tbl.plates": "N (plates)",
   "int.tbl.tail": "Tailing (USP, 5%)",

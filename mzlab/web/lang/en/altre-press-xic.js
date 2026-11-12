@@ -86,6 +86,7 @@ I18N.add("en", {
   "xic.err.row": "A row is not valid: type an m/z or a neutral formula.",
   "tip.raw": "raw {v}",
   "tip.area": "<b>Area</b> {area} <span class=\"sm\">counts·s</span> · intensity <b>{y}</b>",
+  "tip.areaUv": "<b>Area</b> {area} <span class=\"sm\">mAU·s</span> · absorbance <b>{y}</b>",
   "tip.more": "... and {n} more",
   "spec.isMrm": "This file is MRM: it contains only transition chromatograms, no spectra.",
   "spec.pickRange": "Click or drag on the chromatogram to choose the time interval, or use ← → after placing the cursor.",

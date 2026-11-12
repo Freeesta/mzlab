@@ -120,6 +120,8 @@ I18N.add("it", {
   "int.tbl.rt1": "RT fine",
   "int.tbl.apex": "RT apice",
   "int.tbl.area": "Area (conteggi·s)",
+  "int.tbl.areaUv": "Area (mAU·s)",
+  "int.tbl.areaMix": "Area (conteggi·s; DAD: mAU·s)",
   "int.tbl.height": "Altezza",
   "int.tbl.plates": "N (piatti)",
   "int.tbl.tail": "Coda (USP, 5%)",

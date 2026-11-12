@@ -258,6 +258,7 @@
   "ibk.first": "Il nome tra virgolette è la voce di menu del clic destro (ctx.ibk.line).",
   "ibk.leg": "Chip nella legenda sopra il grafico che dice quale tratto è il bianco interno e il suo livello; {ranges} = intervallo/i in min, {level} = livello con unità (per esempio 2.70e8 cps).",
   "tip.area": "Riquadro sull'etichetta di un'area integrata; {area} = valore, {y} = intensità dell'apice.",
+  "tip.areaUv": "Come tip.area per una traccia DAD (TWC/XWC): {area} = valore in mAU·s, {y} = assorbanza dell'apice in mAU.",
   "tip.more": "Riquadro del mouse sul cromatogramma: tracce non elencate.",
   "map.height3d": "Scritta sulla mappa 3D; {scale} = scala dei colori.",
   "map.hov": "Riquadro del mouse sulla mappa; {what} = «differenza» oppure «intensità media».",
