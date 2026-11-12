@@ -160,8 +160,6 @@ I18N.add("en", {
   "corr.info.none": "No active correction",
   "corr.info.dlg": "Summary of the active corrections",
   "corr.sub.title": "Subtraction",
-  "corr.from.file": "From a file",
-  "corr.from.bg": "From the background",
   "export.meta.fondoAuto": "Automatic background",
   "export.note.fondoAuto": "The intensities in this sheet already have the automatic background removed (SNIP baseline centred on the mean noise level): areas may differ from those of the raw signal.",
   "export.desc.fondoAuto": "{text} (baseline removed from the whole trace)",

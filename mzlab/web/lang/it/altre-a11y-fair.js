@@ -157,8 +157,6 @@ I18N.add("it", {
   "corr.info.none": "Nessuna correzione attiva",
   "corr.info.dlg": "Riepilogo delle correzioni attive",
   "corr.sub.title": "Sottrazione",
-  "corr.from.file": "Da un file",
-  "corr.from.bg": "Dal fondo",
   "export.meta.fondoAuto": "Fondo automatico",
   "export.note.fondoAuto": "Le intensità di questo foglio hanno già il fondo automatico tolto (baseline SNIP centrata sul livello medio del rumore): le aree possono differire da quelle del segnale grezzo.",
   "export.desc.fondoAuto": "{text} (baseline tolta a tutta la traccia)",
