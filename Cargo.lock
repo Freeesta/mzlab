@@ -2321,6 +2321,7 @@ dependencies = [
 name = "mzlab-chem"
 version = "1.0.0"
 dependencies = [
+ "libm",
  "mzlab-core",
  "mzlab-feat",
  "mzlab-mol",
@@ -2496,6 +2497,7 @@ dependencies = [
 name = "mzlab-lib"
 version = "1.0.0"
 dependencies = [
+ "libm",
  "mzlab-core",
  "mzlab-picchi",
  "ruzstd",
@@ -2535,6 +2537,15 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
+]
+
+[[package]]
+name = "mzlab-mol-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-feat",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -2594,6 +2605,7 @@ dependencies = [
 name = "mzlab-target"
 version = "1.0.0"
 dependencies = [
+ "libm",
  "mzlab-core",
  "serde",
 ]

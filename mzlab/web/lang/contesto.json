@@ -22,6 +22,10 @@
   "draw.ctx.copyMassMz": "Come sopra, per uno ione: la massa è un m/z.",
   "draw.frag.col.formula": "Intestazione di colonna della tabella delle rotture; {n} = 1 o 2, il frammento.",
   "draw.frag.col.mz": "Intestazione di colonna della tabella delle rotture; {n} = 1 o 2, il frammento; m/z dello ione [F+H]+.",
+  "error.anal.abundance": "Errore del motore per l'analisi della formula; {label} = il simbolo dell'elemento senza abbondanze naturali in tabella.",
+  "draw.anal.error": "Scheda «Analisi della formula» quando il motore rifiuta la struttura; {label} = l'atomo che non ha formula o abbondanze.",
+  "draw.anal.stick": "Etichetta accessibile di un bastoncino del pattern isotopico; {peak} = M, M+1, ...; {x} = «m/z» o «Massa»; {mz} = il valore; {rel} = % del più alto.",
+  "draw.anal.title": "Titolo del pattern isotopico teorico della scheda «Analisi della formula»; {formula} = la formula disegnata con la carica.",
   "draw.frag.side": "Riga del menu del tasto destro su un legame: un frammento. {formula} = formula, {mass} = massa neutra, {mz} = m/z di [F+H]+.",
   "draw.cut.selected": "Voce del menu del tasto destro su legami selezionati nel Disegno. {n} = numero di legami, {mode} = tipo di rottura scelto (omolitica, eterolitica, +H).",
   "draw.mech.end.atom": "Fine di una freccia del meccanismo nella lista; {atom} = simbolo e numero dell'atomo nel disegno (es. O3).",
@@ -1160,5 +1164,16 @@
   "error.qc.tooFew": "Messaggio d'errore del motore; {have} = quante ce ne sono.",
   "error.rowNotFound": "Messaggio d'errore del motore; {id} = identificativo.",
   "error.stats.condition": "Messaggio d'errore del motore; {name} = nome.",
-  "error.generic": "Errore senza testo proprio; {detail} = messaggio tecnico del motore."
+  "error.generic": "Errore senza testo proprio; {detail} = messaggio tecnico del motore.",
+  "draw.check.ctx": "Riga del menu del tasto destro su un atomo con un'osservazione del controllo; apre le tre parti. {what} = il problema in una frase.",
+  "draw.check.found": "Stato del controllo del disegno; {n} = numero di osservazioni trovate.",
+  "draw.check.fail": "Stato quando il controllo del disegno non parte; {message} = messaggio dell'errore.",
+  "draw.check.atoms": "Atomi a cui si riferisce un'osservazione; {list} = simbolo e numero degli atomi, es. «C1, N7».",
+  "draw.check.valence.what": "Problema di valenza; {el} = simbolo dell'elemento, {valence} = legami contati (H compresi), {allowed} = valenze ammesse separate da /.",
+  "draw.check.valenceCharge.what": "Valenza che non torna con la carica; {el} = simbolo dell'elemento, {valence} = legami contati.",
+  "draw.check.valenceCharge.next": "Prossimo passo; {fix} = la carica (es. +1) che renderebbe giusta la valenza.",
+  "draw.check.charge.what": "Carica insolita; {q} = carica con segno (es. +2), {el} = simbolo dell'elemento.",
+  "draw.check.isotope.what": "Isotopo sconosciuto; {iso} = numero di massa scritto, {el} = simbolo dell'elemento.",
+  "draw.check.pieces.what": "Nota sui pezzi separati; {n} = numero di strutture non legate fra loro.",
+  "error.check.tooBig": "Errore del controllo del disegno; {max} = numero massimo di atomi."
 }

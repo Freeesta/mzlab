@@ -121,7 +121,7 @@ fn smiles_mass(smiles: &str) -> Option<f64> {
 
 /// MetFrag's fragmenter score of the explained peaks: `Σ w(explained) / Σ w(all)`.
 pub fn fragmenter_score(peaks: &[(f64, f64)], explained: &[f64]) -> f64 {
-    let w = |mz: f64, it: f64| mz.powf(W_MASS) * it.powf(W_INT);
+    let w = |mz: f64, it: f64| libm::pow(mz, W_MASS) * libm::pow(it, W_INT);
     let all: f64 = peaks.iter().map(|&(m, i)| w(m, i)).sum();
     let got: f64 = peaks
         .iter()
@@ -137,7 +137,7 @@ pub fn fragmenter_score(peaks: &[(f64, f64)], explained: &[f64]) -> f64 {
 
 /// The fragmenter score is the sum, over the explained peaks, of the share `w(peak) / Σ w(all)`: `(m/z, share)` of each one.
 pub fn fragmenter_contributions(peaks: &[(f64, f64)], explained: &[f64]) -> Vec<(f64, f64)> {
-    let w = |mz: f64, it: f64| mz.powf(W_MASS) * it.powf(W_INT);
+    let w = |mz: f64, it: f64| libm::pow(mz, W_MASS) * libm::pow(it, W_INT);
     let all: f64 = peaks.iter().map(|&(m, i)| w(m, i)).sum();
     if all <= 0.0 {
         return Vec::new();

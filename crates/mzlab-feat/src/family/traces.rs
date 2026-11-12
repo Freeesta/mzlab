@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn identical_shapes_correlate_and_flat_does_not() {
         let g: Vec<f64> = (0..21)
-            .map(|i| (-((i as f64 - 10.0).powi(2)) / 8.0).exp())
+            .map(|i| libm::exp(-((i as f64 - 10.0).powi(2)) / 8.0))
             .collect();
         let scaled: Vec<f64> = g.iter().map(|v| v * 0.1).collect();
         assert!((pearson(&g, &scaled).unwrap() - 1.0).abs() < 1e-12);

@@ -1,7 +1,7 @@
 //! The two `.mzidx` of a sample whose scans may be profile (as they are, and centroided) from one decoding of its scans, with the fingerprints of the
 //! members asked for at the end, as `index_reader_with`.
 
-use super::{sample_of, sorgente, table, Fingerprint};
+use super::{sample_of, sorgente, table, with_lost, Fingerprint};
 use crate::error::Result;
 use crate::mzidx_reader;
 use crate::readers::Reader as _;
@@ -37,15 +37,22 @@ pub fn index_reader_twice(
     let n = l.index(c)?.len();
     // as `index_reader_with`: the members are asked for once, where the first source is written; the second index has the same
     let (mut sha256, mut src) = (String::new(), String::new());
+    // the losses are asked once the scans are decoded, as `index_reader_with` asks them
+    let cell = std::cell::RefCell::new(&mut *l);
     let mut late = || -> Result<String> {
         let (source, sha, _) = sorgente(&members()?, &sample, name);
+        let source = with_lost(source, &cell.borrow_mut().simple().losses(c)?);
         (sha256, src) = (sha, source.clone());
         Ok(source)
     };
     let st = crate::mzidx::build_after(
         &p.table,
         before,
-        &mut |on| (0..n).try_for_each(|k| mzidx_reader::spettro(l.simple(), c, k).map(&mut *on)),
+        &mut |on| {
+            (0..n).try_for_each(|k| {
+                mzidx_reader::spettro(cell.borrow_mut().simple(), c, k).map(&mut *on)
+            })
+        },
         out,
         meta,
         true,

@@ -1,7 +1,10 @@
 //! Chemistry from a structure. Not used by the engine of the proofs: it lives in a `.wasm` of its own (`crates/mzlab-feat-grafo-wasm`), loaded when
 //! the user gives the SMILES of the parent.
 
+pub mod analysis;
 pub mod breaks;
+#[cfg(feature = "check")]
+pub mod check;
 pub mod cut;
 pub mod fragmenter;
 pub mod fragments;

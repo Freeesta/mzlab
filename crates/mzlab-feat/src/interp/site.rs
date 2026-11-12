@@ -293,10 +293,10 @@ fn votes_of(
     let sum: f64 = votes
         .iter()
         .filter(|v| alive(v))
-        .map(|v| (v.ll - top).exp())
+        .map(|v| libm::exp(v.ll - top))
         .sum();
     for v in votes.iter_mut().filter(|v| alive(v)) {
-        v.support = (v.ll - top).exp() / sum;
+        v.support = libm::exp(v.ll - top) / sum;
     }
     votes
 }

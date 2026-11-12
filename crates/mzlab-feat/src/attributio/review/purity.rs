@@ -282,7 +282,7 @@ pub fn chance_probability(n_exp: i64, n_ref: i64, matched: i64, tol: f64, span: 
         if k > 0 {
             fact *= k as f64;
         }
-        cdf += (-lam).exp() * lam.powi(k as i32) / fact;
+        cdf += libm::exp(-lam) * lam.powi(k as i32) / fact;
     }
     f64::max(0.0, 1.0 - cdf)
 }

@@ -43,6 +43,13 @@ pub fn labels(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::labels::labels_json(request).map_err(js_err)
 }
 
+/// `anal/1` of one drawn structure `{"atoms": [...]}`: the `etich/1` numbers plus average mass, mass % per element and the theoretical isotope pattern
+/// (see `mzlab_feat::chem::analysis::analysis_json`; the same as `mzlab-cli mol-anal`).
+#[wasm_bindgen]
+pub fn analysis(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::analysis::analysis_json(request).map_err(js_err)
+}
+
 /// `cut/1` of a request `{"molfile", "bonds", "mode", "cation", "gap"}`: the pieces of a cut across one or more bonds (homolytic, heterolytic or «+H»),
 /// the atoms it changes and how far each piece moves (see `mzlab_feat::chem::cut::cut_json`; the same as `mzlab-cli mol-cut`).
 #[wasm_bindgen]

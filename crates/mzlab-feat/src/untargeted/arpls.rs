@@ -113,7 +113,7 @@ pub fn baseline(y: &[f64], lambda: f64, max_iter: usize) -> Vec<f64> {
         let cutoff = 2.0 * std - mean;
         let (mut num, mut den) = (0.0, 0.0);
         for i in 0..n {
-            let wt = 1.0 / (1.0 + (2.0 * (y[i] - z[i] - cutoff) / std).exp());
+            let wt = 1.0 / (1.0 + libm::exp(2.0 * (y[i] - z[i] - cutoff) / std));
             num += (wt - w[i]) * (wt - w[i]);
             den += w[i] * w[i];
             w[i] = wt;

@@ -283,13 +283,12 @@ mod export {
         Ok(format!("{{\"bytes\":{size},\"sha256\":\"{sha}\"}}"))
     }
 
-    /// `{"bytes","sha256"}` of the source file an index (file 0 of `read`) was made from: what the plan names as input in the record of a run.
+    /// The `source` of the index that is file 0 of `read`, as it is: `size` and `sha256` of the file it was made from (what the plan names as input in
+    /// the record of a run) and `lost` when its read was partial, which the page hands to `record_prov` as `flow run` records `index.mzidx`.
     #[wasm_bindgen]
     pub fn flow_idx_source(read: Function, size: f64) -> std::result::Result<String, JsValue> {
         let ix = crate::open_one(&read, 0, size).map_err(crate::js_err)?;
-        let bytes = ix.source.get("size").and_then(|v| v.f64()).unwrap_or(0.0);
-        let sha = ix.source.get("sha256").and_then(|v| v.str()).unwrap_or("");
-        Ok(format!("{{\"bytes\":{bytes},\"sha256\":\"{sha}\"}}"))
+        Ok(super::value_text(&ix.source))
     }
 
     /// The meta of `instance` (`job_meta`, JSON): `plan` is the `mzflow/2` text, `registry` the `step/1` array. `read(k, offset, length)` reads index 0 (the

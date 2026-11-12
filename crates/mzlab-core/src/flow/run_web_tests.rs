@@ -227,3 +227,46 @@ fn the_route_refuses_what_it_cannot_read() {
     assert!(route("prov", &body, &agent()).is_err());
     assert!(route("nothing", "{}", &agent()).is_err());
 }
+
+#[test]
+fn the_lost_of_an_index_is_recorded_as_its_warning_and_the_note_of_its_file() {
+    let r = Reporting {
+        reports: Mutex::new(Vec::new()),
+        tab_fails: false,
+        rich: false,
+    };
+    execute(&parse(text().as_bytes()).unwrap(), &registry(), &r, 1).unwrap();
+    let reports = r.reports.into_inner().unwrap();
+    let lost = r#"{"declared":12,"read":7,"cause":"warn.file.truncated"}"#;
+    // the report of the page (`lost` of the index) and the one of a runner that says the same itself
+    let with = |tail: &str| {
+        let jobs: Vec<String> = reports
+            .iter()
+            .map(|j| match j.starts_with(r#"{"instance":"idx""#) {
+                true => j.replacen(
+                    "\"cached\":false}",
+                    &format!("\"cached\":false,{tail}}}"),
+                    1,
+                ),
+                false => j.clone(),
+            })
+            .collect();
+        let (run, _) = record_jobs(
+            text().as_bytes(),
+            &registry(),
+            &format!("[{}]", jobs.join(",")),
+        )
+        .unwrap();
+        prov_json(&agent(), Some("p"), &run)
+    };
+    let page = with(&format!("\"lost\":{lost}"));
+    let said = with(&format!(
+        "\"warnings\":[\"warn.file.truncated\"],\"file\":{lost}"
+    ));
+    assert!(
+        page.contains("warn.file.truncated") && page.contains("\"declared\":12"),
+        "{page}"
+    );
+    assert_eq!(page, said);
+    assert_ne!(page, with("\"x\":1"), "a report without lost says nothing");
+}
