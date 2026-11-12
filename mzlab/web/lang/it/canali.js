@@ -68,6 +68,8 @@ I18N.add("it", {
   "canali.manint.show.aria": "Mostra l'integrazione di {ch} in {s}",
   "canali.manint.del": "Elimina integrazione",
   "canali.manint.del.aria": "Elimina l'integrazione di {ch} in {s}",
+  "canali.manint.cp": "Copia il valore",
+  "canali.manint.cp.aria": "Copia {c}: {v}",
   "canali.manint.sum": "Somma",
   "int.base.tip": "Linea di base: {b}",
   "int.follow.sn": "S/N <b>{sn}</b>",

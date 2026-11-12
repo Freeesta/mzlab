@@ -68,6 +68,8 @@ I18N.add("en", {
   "canali.manint.show.aria": "Show the integration of {ch} in {s}",
   "canali.manint.del": "Delete integration",
   "canali.manint.del.aria": "Delete the integration of {ch} in {s}",
+  "canali.manint.cp": "Copy the value",
+  "canali.manint.cp.aria": "Copy {c}: {v}",
   "canali.manint.sum": "Sum",
   "int.base.tip": "Baseline: {b}",
   "int.follow.sn": "S/N <b>{sn}</b>",
