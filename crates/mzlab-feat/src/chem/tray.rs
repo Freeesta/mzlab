@@ -153,7 +153,7 @@ fn csv(v: &Value) -> Result<String> {
                     .map(|f| elements::mass(&f))
             })
             .filter(|m| m.is_finite() && *m > 0.0)
-            .ok_or_else(|| Error::new("error.tray.mass").with("n", &(i + 1).to_string()))?;
+            .ok_or_else(|| Error::new("error.tray.mass").with("n", i + 1))?;
         let charge = e.get("charge").and_then(Value::f64).unwrap_or(0.0) as i64;
         let name = match text(e, "name").trim() {
             "" => format!("structure {}", i + 1),
@@ -209,10 +209,8 @@ fn read(o: &mut Out, csv: &str) -> Result<()> {
             continue;
         };
         for a in get(ca).split(';').map(str::trim) {
-            if let Some(row) = adducts().find(|x| x.0 == a) {
-                if !seen.contains(&row.0) {
-                    seen.push(row.0);
-                }
+            if let Some(row) = adducts().find(|x| x.0 == a && !seen.contains(&x.0)) {
+                seen.push(row.0);
             }
         }
         o.raw(if n > 0 { ",{\"name\":" } else { "{\"name\":" })
