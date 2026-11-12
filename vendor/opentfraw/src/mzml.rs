@@ -652,8 +652,8 @@ fn native_id_format_cv() -> msc::CvTerm {
 fn instrument_cv(raw: &RawFileReader) -> msc::CvTerm {
     if let Some(model) = raw.instrument_model {
         let known: &[(&str, &str, &str)] = &[
-            ("Orbitrap Astral", "MS:1003355", "Orbitrap Astral"),
-            ("Orbitrap Ascend", "MS:1003028", "Orbitrap Ascend"),
+            ("Orbitrap Astral", "MS:1003378", "Orbitrap Astral"),
+            ("Orbitrap Ascend", "MS:1003356", "Orbitrap Ascend"),
             ("Orbitrap Eclipse", "MS:1003029", "Orbitrap Eclipse"),
             (
                 "Orbitrap Fusion Lumos",
@@ -668,12 +668,12 @@ fn instrument_cv(raw: &RawFileReader) -> msc::CvTerm {
             ),
             (
                 "Orbitrap Exploris 240",
-                "MS:1003098",
+                "MS:1003094",
                 "Orbitrap Exploris 240",
             ),
             (
                 "Orbitrap Exploris 120",
-                "MS:1003199",
+                "MS:1003095",
                 "Orbitrap Exploris 120",
             ),
             ("Q Exactive HF-X", "MS:1002877", "Q Exactive HF-X"),
@@ -683,21 +683,21 @@ fn instrument_cv(raw: &RawFileReader) -> msc::CvTerm {
             ("Q Exactive", "MS:1001911", "Q Exactive"),
             ("LTQ Orbitrap Velos Pro", "MS:1001742", "LTQ Orbitrap Velos"),
             ("LTQ Orbitrap Velos", "MS:1001742", "LTQ Orbitrap Velos"),
-            ("LTQ Orbitrap Elite", "MS:1001910", "LTQ Orbitrap Elite"),
+            ("LTQ Orbitrap Elite", "MS:1001910", "Orbitrap Elite"),
             ("LTQ Orbitrap XL", "MS:1000556", "LTQ Orbitrap XL"),
             ("LTQ Orbitrap", "MS:1000449", "LTQ Orbitrap"),
-            ("LTQ Velos Pro", "MS:1001096", "LTQ Velos Pro"),
+            ("LTQ Velos Pro", "MS:1003495", "Velos Pro"),
             ("LTQ Velos", "MS:1000855", "LTQ Velos"),
             ("LTQ XL", "MS:1000854", "LTQ XL"),
             ("LTQ FT", "MS:1000448", "LTQ FT"),
             ("LTQ", "MS:1000447", "LTQ"),
-            ("TSQ Altis", "MS:1003108", "TSQ Altis"),
-            ("TSQ Quantiva", "MS:1002498", "TSQ Quantiva"),
-            ("TSQ Endura", "MS:1002497", "TSQ Endura"),
+            ("TSQ Altis", "MS:1002874", "TSQ Altis"),
+            ("TSQ Quantiva", "MS:1002418", "TSQ Quantiva"),
+            ("TSQ Endura", "MS:1002419", "TSQ Endura"),
             ("TSQ Vantage", "MS:1001510", "TSQ Vantage"),
-            ("LCQ Classic", "MS:1000443", "LCQ Classic"),
-            ("LCQ Deca", "MS:1000446", "LCQ Deca"),
-            ("LCQ Advantage", "MS:1000590", "LCQ Advantage"),
+            ("LCQ Classic", "MS:1000168", "LCQ Classic"),
+            ("LCQ Deca", "MS:1000554", "LCQ Deca"),
+            ("LCQ Advantage", "MS:1000167", "LCQ Advantage"),
         ];
         for (prefix, acc, name) in known {
             if model.starts_with(prefix) {
@@ -927,7 +927,7 @@ fn srm_chromatograms(
             index: 0,
             id,
             chromatogram_type: Some(msc::CvTerm::new(
-                "MS:1000627",
+                "MS:1001473",
                 "selected reaction monitoring chromatogram",
             )),
             precursor_mz: Some(q1),
@@ -979,7 +979,7 @@ fn srm_trace_record(t: &crate::SrmTrace) -> msc::ChromatogramRecord {
         index: 0,
         id: t.id(),
         chromatogram_type: Some(msc::CvTerm::new(
-            "MS:1000627",
+            "MS:1001473",
             "selected reaction monitoring chromatogram",
         )),
         precursor_mz: Some(t.q1),
@@ -1484,7 +1484,7 @@ mod tests {
         assert_eq!(r1.product_mz, Some(100.5)); // (100 + 101) / 2
         assert_eq!(r1.id, "SRM Q1=500.0000 Q3=100.5000");
         let cv = r1.chromatogram_type.as_ref().unwrap();
-        assert_eq!(cv.accession, "MS:1000627");
+        assert_eq!(cv.accession, "MS:1001473");
         assert_eq!(cv.name, "selected reaction monitoring chromatogram");
         assert_eq!(r1.time_sec, vec![0.0, 30.0]);
         assert_eq!(r1.intensity, vec![10.0, 12.0]);
