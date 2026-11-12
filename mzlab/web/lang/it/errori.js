@@ -372,6 +372,7 @@ I18N.add("it", {
   "error.etich.isotope": "L'isotopo di «{label}» non è nella tabella dei nuclidi.",
   "error.etich.request": "La richiesta delle etichette non è un JSON valido.",
   "error.grafo.molfile": "Il molfile non ha legami da rompere.",
+  "error.sel.request": "La richiesta delle informazioni sulla selezione non è un JSON valido o non ha il molfile.",
   "error.grafo.ring": "Un legame in un anello non si può rompere da solo: scegli un legame fuori dagli anelli.",
   "error.grafo.smiles": "La struttura «{smiles}» non si legge: controlla lo SMILES.",
   "error.grafo.tooBig": "La molecola ha più di {max} atomi: è troppo grande per questo calcolo.",

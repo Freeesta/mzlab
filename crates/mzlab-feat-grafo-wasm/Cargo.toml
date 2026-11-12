@@ -10,5 +10,5 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
-mzlab-feat = { path = "../mzlab-feat" }
+mzlab-feat = { path = "../mzlab-feat", features = ["sel"] }
 wasm-bindgen = "0.2"

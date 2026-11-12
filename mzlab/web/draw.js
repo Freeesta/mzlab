@@ -371,6 +371,11 @@ const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]
 // built-in rows of the canvas menu (disegno-menu.js registry; other modules add theirs with TPDraw.menu.add, between these orders)
 const shortSmi = (/** @type {string} */ s) => s.length > 24 ? s.slice(0, 21) + "…" : s;
 menuAdd({ id: "copy-smiles", order: 10, label: (/** @type {any} */ c) => c.smiles ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi(c.smiles) }) : I18N.t("draw.ctx.copySmiles"), run: (/** @type {any} */ c) => { if (c.smiles) copyText(c.smiles); } });
+menuAdd({ id: "info", order: 15, label: "draw.ctx.info", title: "draw.ctx.info.title", run: (/** @type {any} */ c) => {   // formula, masses, rings, InChI (disegno-selezione.js)
+  const ids = c.whole ? [...K.editor.struct().atoms.keys()] : [...c.atoms], mf = pieceMolfile(ids);
+  if (!mf) { if (window.toast) toast(I18N.t("draw.info.none")); return; }
+  import("./disegno-selezione.js").then(m => m.infoOpen({ molfile: mf, part: !c.whole, smiles: c.smiles || "", esc: EH, big: window.big,
+    convert: (/** @type {string} */ f) => indigo(() => K.structService.convert({ struct: mf, output_format: f }, {})).then((/** @type {any} */ r) => r.struct) })); } });
 menuAdd({ id: "center", order: 20, label: "draw.ctx.center", run: () => { if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); } } });
 // «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
 menuAdd({ id: "break-bonds", when: "selection", order: 30, show: (/** @type {any} */ c) => c.bonds.length > 0, label: (/** @type {any} */ c) => I18N.t("draw.ctx.breakBonds", { n: c.bonds.length }), title: "draw.ctx.breakBonds.title", run: (/** @type {any} */ c) => { setTimeout(() => breakBonds(c.bonds), 60); } });

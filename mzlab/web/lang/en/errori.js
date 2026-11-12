@@ -372,6 +372,7 @@ I18N.add("en", {
   "error.etich.isotope": "The isotope of «{label}» is not in the table of nuclides.",
   "error.etich.request": "The request for the labels is not valid JSON.",
   "error.grafo.molfile": "The molfile has no bond to cut.",
+  "error.sel.request": "The request for the selection info is not valid JSON or has no molfile.",
   "error.grafo.ring": "A bond in a ring cannot be cut alone: choose a bond outside the rings.",
   "error.grafo.smiles": "The structure “{smiles}” cannot be read: check the SMILES.",
   "error.grafo.tooBig": "The molecule has more than {max} atoms: it is too big for this calculation.",

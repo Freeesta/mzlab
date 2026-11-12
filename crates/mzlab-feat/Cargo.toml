@@ -16,6 +16,8 @@ chem = []
 record = ["chem", "dep:mzlab-mol"]
 # `crippen`: `LogPValues::from_smiles`, the Crippen logP and descriptors of a SMILES from our own tables (`mzlab-mol`), for the RT-logP check of the Banco 2b. Off by default; the `.wasm` `attributio` carries it through its feature `rev`.
 crippen = ["dep:mzlab-mol"]
+# `sel`: `chem::sel::sel_json` (`sel/1`), the Info of a selection or of the whole drawing read with `mzlab-mol` (molfile, aromaticity, average weight). The `.wasm` `grafo`, the CLI and the desktop app carry it.
+sel = ["chem", "dep:mzlab-mol"]
 # `attributio`: reading of the campaign folders of Attributio (campaign.toml, mzMine/SIRIUS/GNPS2 tables, decisions), its review matching on top of `mzlab-lib` and its level cascade and table (`docs/agenti/attributio.md`). Off by default; the `.wasm` `attributio` (`crates/mzlab-attributio-wasm`) and the desktop app carry it.
 attributio = ["dep:mzlab-lib", "chem"]
 # `flow_formula`: the text of `formula.ms2@1` (`flow_formula_ms2`), which reads the MGF with the reader of `mzlab-lib` (`flowmatch`). Off by default; the `.wasm` `attributio` (feature `all`) and the CLI carry it.
