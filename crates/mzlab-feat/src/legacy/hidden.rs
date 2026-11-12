@@ -29,7 +29,7 @@ pub(super) fn rises(files: &[FileIn], parent: &[f64], ion: &[f64]) -> bool {
         .filter(|&k| parent[k] >= MIN_PARENT_AREA)
         .collect();
     let r = |k: usize| ion[k] / parent[k];
-    let se = |k: usize| (REL_SE * r(k)).hypot(FLOOR_AREA / parent[k]);
+    let se = |k: usize| libm::hypot(REL_SE * r(k), FLOOR_AREA / parent[k]);
     let refs: Vec<usize> = ok.iter().copied().filter(|&k| files[k].is_ref()).collect();
     if refs.is_empty() {
         return false;
@@ -42,7 +42,7 @@ pub(super) fn rises(files: &[FileIn], parent: &[f64], ion: &[f64]) -> bool {
         .iter()
         .copied()
         .filter(|&k| files[k].is_treated() && ion[k] >= MIN_ION_AREA)
-        .filter(|&k| (r(k) - r0) / se(k).hypot(se0) > Z_MIN)
+        .filter(|&k| (r(k) - r0) / libm::hypot(se(k), se0) > Z_MIN)
         .count();
     up >= MIN_SAMPLES
 }

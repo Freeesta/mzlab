@@ -102,7 +102,7 @@ pub fn features(rep: &Value) -> [f64; 9] {
     };
     let fr = fnum(pr, "fwhm_ratio");
     let fwhm = if fr.is_finite() {
-        fr.max(1e-2).ln().abs().min(3.0)
+        libm::log(fr.max(1e-2)).abs().min(3.0)
     } else {
         1.5
     };
@@ -119,7 +119,7 @@ pub fn features(rep: &Value) -> [f64; 9] {
         fwhm,
         if cv.is_finite() { cv.min(3.0) } else { 1.5 },
         if p_c.is_finite() {
-            p_c.max(1e-12).log10().max(-12.0)
+            libm::log10(p_c.max(1e-12)).max(-12.0)
         } else {
             f64::NAN
         },
@@ -130,7 +130,7 @@ pub fn features(rep: &Value) -> [f64; 9] {
         },
         fnum(kin, "spearman_parent"),
         if p_sh.is_finite() {
-            p_sh.max(1e-3).log10().max(-3.0)
+            libm::log10(p_sh.max(1e-3)).max(-3.0)
         } else {
             0.0
         },
@@ -172,5 +172,5 @@ pub fn predict_logit(x: &[f64; 9]) -> (f64, [f64; 9]) {
 }
 
 pub fn sigmoid(x: f64) -> f64 {
-    1.0 / (1.0 + (-x.clamp(-30.0, 30.0)).exp())
+    1.0 / (1.0 + libm::exp(-x.clamp(-30.0, 30.0)))
 }

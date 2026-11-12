@@ -45,6 +45,7 @@ const COMMANDS: &[&[&str]] = &[
     &["mol-label"],
     &["mol-cut"],
     &["mol-id"],
+    &["mol-search"],
     &["samples"],
     &["peak-edges"],
     &["manual-table"],

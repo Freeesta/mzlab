@@ -93,7 +93,7 @@ pub fn pair_term(a: f64, b: f64) -> f64 {
         return 0.0;
     }
     (a + b) / 2.0
-        - (a * a.ln() + b * b.ln() - (a + b) * ((a + b) / 2.0).ln())
+        - (a * libm::log(a) + b * libm::log(b) - (a + b) * libm::log((a + b) / 2.0))
             / (2.0 * std::f64::consts::LN_2)
 }
 

@@ -234,7 +234,7 @@ pub fn identity_gradient(
 }
 
 fn summarize(rows: &[GradientRow], fold: f64, sites: [&str; 2]) -> Result<GradientSummary> {
-    let thr = fold.log2();
+    let thr = libm::log2(fold);
     let both: Vec<&GradientRow> = rows.iter().filter(|r| r.status == "both").collect();
     let count = |f: &dyn Fn(f64) -> bool| {
         both.iter()
@@ -283,7 +283,7 @@ pub fn feature_cloud_gradient(
                 area_of(&f.pol, sites[1], f.id),
             );
             let (status, l, abs) = if u > 0.0 && d > 0.0 {
-                ("both", Some((u / d).log2()), u.max(d))
+                ("both", Some(libm::log2(u / d)), u.max(d))
             } else if u > 0.0 {
                 ("US_only", None, u)
             } else if d > 0.0 {

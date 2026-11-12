@@ -53,7 +53,7 @@ fn entropy_with_query(
             .filter(|(j, _)| !s.ib[*j])
             .map(|(_, v)| v / 2.0),
     );
-    (1.0 - (2.0 * entropy_of(&s.m) - ha - entropy_of(pb)) / 4f64.ln()).clamp(0.0, 1.0)
+    (1.0 - (2.0 * entropy_of(&s.m) - ha - entropy_of(pb)) / libm::log(4f64)).clamp(0.0, 1.0)
 }
 
 /// Scores one query `a` against many library spectra.

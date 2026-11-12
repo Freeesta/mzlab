@@ -52,7 +52,8 @@ fn mem(v: &Value) -> Option<Mem> {
 }
 
 /// The outcome of one job from its report; a report with `error_key` (and its `params`) is a failure. `warnings` are the `warn.*` keys of the job and
-/// `file` what a per-file step says of its file, as the runner gives them.
+/// `file` what a per-file step says of its file, as the runner gives them; `lost` (the `source.lost` of an index the job made) gives both, as `flow run`
+/// records `index.mzidx`: its cause among the warnings, itself as the note of the file.
 fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
     if let Some(key) = text(r, "error_key") {
         let mut e = Error::new(crate::error::intern(key));
@@ -87,6 +88,11 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
         .get("file")
         .filter(|v| matches!(v, Value::Obj(_)))
         .cloned();
+    if let Some(lost) = r.get("lost").filter(|v| matches!(v, Value::Obj(_))) {
+        o.warnings
+            .push(text(lost, "cause").ok_or_else(bad)?.to_string());
+        o.file = Some(lost.clone());
+    }
     Ok(o)
 }
 

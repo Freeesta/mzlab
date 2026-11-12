@@ -48,13 +48,13 @@ pub fn mcnemar_p_value(n10: usize, n01: usize) -> f64 {
     } else {
         let mut log_p = 0.0_f64;
         for j in 1..=k {
-            log_p += ((n - j + 1) as f64 / j as f64).ln();
+            log_p += libm::log((n - j + 1) as f64 / j as f64);
         }
         log_p -= n as f64 * std::f64::consts::LN_2;
         if log_p < -740.0 {
             return 0.0;
         }
-        let mut cur = log_p.exp();
+        let mut cur = libm::exp(log_p);
         let mut sum = cur;
         for i in (1..=k).rev() {
             cur = cur * i as f64 / (n - i + 1) as f64;

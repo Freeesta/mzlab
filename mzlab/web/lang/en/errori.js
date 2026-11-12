@@ -382,6 +382,8 @@ I18N.add("en", {
   "error.grafo.ring": "A bond in a ring cannot be cut alone: choose a bond outside the rings.",
   "error.grafo.smiles": "The structure “{smiles}” cannot be read: check the SMILES.",
   "error.grafo.tooBig": "The molecule has more than {max} atoms: it is too big for this calculation.",
+  "error.sub.query": "The drawn structure cannot be used as a search query: {detail}.",
+  "error.sub.request": "The substructure search request is not valid.",
   "error.gruppi.badOpts": "The grouping options are not valid: check the numbers.",
   "error.gruppi.noConditions": "No conditions to compare: assign at least one file to a condition.",
   "error.gruppi.sizeMismatch": "The groups do not match the table ({what}): rebuild the groups.",
