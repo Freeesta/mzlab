@@ -338,7 +338,10 @@ mod tests {
             Some(("MS:1000651".into(), "3200 QTRAP".into()))
         );
         assert_eq!(h.components.len(), 5);
-        assert_eq!(h.components[0].1, "MS:1000073");
+        assert_eq!(
+            h.components.first().map(|c| c.1.as_str()),
+            Some("MS:1000073")
+        );
         assert_eq!(h.software.0, "mzLab");
         assert!(!sample(None).header("a.wiff", None, false).centroided);
     }
