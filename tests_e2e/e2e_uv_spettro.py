@@ -113,18 +113,18 @@ try:
         step("UV spectrum: exactly one «Follows» button after the line moves and the source changes, and no XIC button", fol_once)
         def wl_panel():
             c = "E.panels.find(q=>q.type==='chrom')"
-            assert pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').textContent") == "λ"
+            assert pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').textContent") == "XWC"
             pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').click()")
             wait_for_js(pg, "E.panels.filter(q=>q.type==='chrom').length === 2 && E.panels.filter(q=>q.type==='chrom')[1]._a")
             w = "E.panels.filter(q=>q.type==='chrom')[1]"
-            assert pg.evaluate(f"[{w}.kind, {w}.mz0, {w}.mz1]") == ["pda", 250, 260]
+            assert pg.evaluate(f"[{w}.kind, {w}.mz0, {w}.mz1]") == ["pda", 258, 262]      # the band the engine proposes: λmax of the synthetic peak (260 nm), 4 nm
             assert pg.evaluate(f"{w}.el.querySelectorAll('input[data-o=mz0], input[data-o=mz1]').length") == 2
-            pg.evaluate(f"(()=>{{const i={w}.el.querySelector('input[data-o=mz0]'); i.value='258'; i.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
-            wait_for_js(pg, f"{w}.mz0 === 258 && {w}._a")
+            pg.evaluate(f"(()=>{{const i={w}.el.querySelector('input[data-o=mz0]'); i.value='256'; i.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
+            wait_for_js(pg, f"{w}.mz0 === 256 && {w}._a")
             got = pg.evaluate("fetch('api/chrom?k=0&kind=pda&level=1&mz0=255&mz1=265').then(r=>r.json()).then(j=>({max: Math.max(...j.y), nm0: j.nm0, nm1: j.nm1}))")
             want = max(sum(r[j] for j in range(55, 66)) / 11 for r in rows)      # the mean of the 255-265 nm channels of the synthetic matrix at its apex
             assert (got["nm0"], got["nm1"]) == (255, 265) and abs(got["max"] - want) < 0.01 * want, (got, want)
-        step("PDA trace: the button is λ; it opens a trace by wavelength with an nm range that can be edited", wl_panel)
+        step("DAD trace: the button is XWC; it opens the proposed band, with an nm range that can be edited", wl_panel)
         def wl_menu():
             ids = pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); return AZIONI.per({vista:'chrom', p:c, k:0, x:0.5}).map(a=>a.id)})()")
             assert "chrom.wl" in ids and "chrom.xic" not in ids, ids

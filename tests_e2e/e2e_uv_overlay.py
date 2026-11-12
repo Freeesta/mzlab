@@ -73,11 +73,11 @@ try:
         step("double click on the UV spectrum: the trace of the DAD at that wavelength", back_to_wl)
         def toolbar():
             n0 = pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")
-            assert pg.evaluate(f"{C}.el.querySelector('[data-a=xic]').textContent") == "λ"
+            assert pg.evaluate(f"{C}.el.querySelector('[data-a=xic]').textContent") == "XWC"
             pg.evaluate(f"{C}.el.querySelector('[data-a=xic]').click()")
             wait_for_js(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1} && E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
             assert pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a.sr.length") == 2
-        step("the λ button of the PDA trace opens the trace by wavelength of both samples", toolbar)
+        step("the XWC button of the DAD trace opens the proposed band of both samples", toolbar)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
