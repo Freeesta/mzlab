@@ -66,8 +66,8 @@ impl Reader for Counting {
     fn scan_extra(&mut self, c: usize, k: usize, s: &mzlab_core::mzml::Spectrum) -> mzlab_core::mzmlwrite::SpectrumExtra { self.l.scan_extra(c, k, s) }
 }
 
-/// The reader of the dataset for the index of sample `c`: phase 4 (`tell`) begins, the dataset opens (a SCIEX pair reads only the blocks of sample `c`, `wiff::lettore::apri_solo`:
-/// a container may hold dozens of samples, one builder each; any other set with `open_fs`), and it counts its scans for `step` when the page gave one.
+/// The reader of the dataset for the index of sample `c`: phase 4 (`tell`) begins, the dataset opens (a SCIEX pair reads only the blocks of sample `c`, behind the non-finite guard:
+/// a container may hold dozens of samples, one builder each, `readers_finite::wiff_sample`; any other set with `open_fs`), and it counts its scans for `step` when the page gave one.
 pub(crate) fn open(
     mut fs: FileSet,
     open_fs: impl FnOnce(FileSet) -> mzlab_core::Result<Box<dyn Reader>>,
@@ -77,7 +77,7 @@ pub(crate) fn open(
 ) -> Result<Box<dyn Reader>, JsValue> {
     tell(4);
     let l = if readers::riconosci(&mut fs).is_some_and(|v| v.id == wiff::reader::ENTRY.id) {
-        wiff::reader::open_only(fs, &Limits::sito(), Some(c))
+        mzlab_core::readers_finite::wiff_sample(fs, &Limits::sito(), c)
     } else {
         open_fs(fs)
     }

@@ -4,9 +4,13 @@
 //! scanner (`tags`, for header text) or from a streaming XML parser; names are local (no namespace prefix).
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 
+mod groups;
+mod immediate;
 pub mod tags;
+
+pub use groups::Groups;
+pub use immediate::immediate;
 
 /// One cvParam (or userParam: `acc` empty, the user name in `name`).
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -19,20 +23,25 @@ pub struct Term {
 }
 
 impl Term {
+    /// One pass over the attributes; of a repeated one (malformed XML) the first non-empty value wins.
     fn of(t: &[(&str, Cow<str>)], user: bool) -> Term {
-        let g = |k: &str| {
-            t.iter()
-                .find(|(n, _)| *n == k)
-                .map_or(String::new(), |(_, v)| v.to_string())
-        };
-        Term {
-            acc: if user { String::new() } else { g("accession") },
-            name: g("name"),
-            value: g("value"),
-            unit_acc: g("unitAccession"),
-            unit_name: g("unitName"),
+        let mut out = Term::default();
+        for (k, v) in t {
+            let to = match *k {
+                "accession" if !user => &mut out.acc,
+                "name" => &mut out.name,
+                "value" => &mut out.value,
+                "unitAccession" => &mut out.unit_acc,
+                "unitName" => &mut out.unit_name,
+                _ => continue,
+            };
+            if to.is_empty() {
+                to.push_str(v);
+            }
         }
+        out
     }
+    #[inline(never)]
     pub fn float(&self) -> Option<f64> {
         self.value.trim().parse().ok()
     }
@@ -43,16 +52,19 @@ impl Term {
 pub struct Terms(pub Vec<Term>);
 
 impl Terms {
+    #[inline(never)]
     pub fn get(&self, acc: &str) -> Option<&Term> {
         self.0.iter().find(|t| t.acc == acc)
     }
     pub fn has(&self, acc: &str) -> bool {
         self.get(acc).is_some()
     }
+    #[inline(never)]
     pub fn float(&self, acc: &str) -> Option<f64> {
         self.get(acc).and_then(Term::float)
     }
     /// The value of the first userParam named `name`.
+    #[inline(never)]
     pub fn user(&self, name: &str) -> Option<&str> {
         self.0
             .iter()
@@ -73,6 +85,7 @@ pub struct Stage {
 
 impl Stage {
     /// A stage read from loose terms (a selected ion or target written outside a `<precursor>`).
+    #[inline(never)]
     pub fn loose(t: &Terms) -> Stage {
         Stage {
             window: t.clone(),
@@ -81,10 +94,12 @@ impl Stage {
             ..Stage::default()
         }
     }
+    #[inline(never)]
     pub fn target(&self) -> Option<f64> {
         self.window.float("MS:1000827")
     }
     /// The low and high edges of the isolation window (target minus and plus its offsets).
+    #[inline(never)]
     pub fn edges(&self) -> (Option<f64>, Option<f64>) {
         let t = self.target();
         (
@@ -92,6 +107,7 @@ impl Stage {
             t.zip(self.window.float("MS:1000829")).map(|(t, o)| t + o),
         )
     }
+    #[inline(never)]
     pub fn selected(&self) -> Option<f64> {
         self.ion.float("MS:1000744")
     }
@@ -171,11 +187,13 @@ pub struct Head {
 
 impl Head {
     /// The level (`MS:1000511`), 1 when absent.
+    #[inline(never)]
     pub fn level(&self) -> u8 {
         // a level is a small integer; `as` saturates
         self.terms.float("MS:1000511").map_or(1, |v| v as u8)
     }
     /// +1, -1 or 0 (not said).
+    #[inline(never)]
     pub fn polarity(&self) -> i8 {
         if self.terms.has("MS:1000130") {
             1
@@ -185,6 +203,7 @@ impl Head {
             0
         }
     }
+    #[inline(never)]
     pub fn profile(&self) -> bool {
         self.terms.has("MS:1000128")
     }
@@ -194,41 +213,16 @@ impl Head {
         Some((t.float().unwrap_or(0.0), RtUnit::of(t)))
     }
     /// The retention time in minutes (0 when absent).
+    #[inline(never)]
     pub fn rt_minutes(&self) -> f64 {
         self.rt().map_or(0.0, |(v, u)| v * u.minutes())
     }
+    #[inline(never)]
     pub fn filter(&self) -> &str {
         self.terms
             .get("MS:1000512")
             .map_or("", |t| t.value.as_str())
     }
-}
-
-/// Which precursor of a level-`level` spectrum is the immediate one (the stage just before it): the one rule of every mzML path. `stages` gives the
-/// target, selected m/z and `spectrumRef` of each precursor in file order (first stage to last). The one whose target or selected m/z is `path_last`
-/// (the last stage of a filter path) within 0.01, else the last whose `spectrumRef` is a scan of level `level - 1`, else the last listed.
-pub fn immediate(
-    stages: &[(Option<f64>, Option<f64>, Option<&str>)],
-    level: u8,
-    path_last: Option<f64>,
-    level_of: impl Fn(&str) -> Option<u8>,
-) -> Option<usize> {
-    if stages.is_empty() {
-        return None;
-    }
-    let by_path = path_last.and_then(|last| {
-        stages.iter().position(|(t, s, _)| {
-            [t, s]
-                .iter()
-                .any(|v| v.is_some_and(|v| (v - last).abs() <= 0.01))
-        })
-    });
-    let by_ref = || {
-        stages.iter().rposition(|(_, _, r)| {
-            r.is_some_and(|r| !r.is_empty() && level_of(r) == Some(level.wrapping_sub(1)))
-        })
-    };
-    by_path.or_else(by_ref).or(Some(stages.len() - 1))
 }
 
 /// Where a param goes.
@@ -246,9 +240,6 @@ enum Ctx {
     Group,
     Other,
 }
-
-/// The `referenceableParamGroup`s of a file, by id.
-pub type Groups = HashMap<String, Vec<Term>>;
 
 /// The terms kept in one list (an item, an array, a stage part, a group) and the precursors or products kept per item: lookups take the first
 /// occurrence, so a file that repeats a param millions of times costs no more memory than a real header.
@@ -296,13 +287,14 @@ impl<'g> Reader<'g> {
             }
             "cvParam" | "userParam" => {
                 let t = Term::of(attrs, name == "userParam");
-                self.put(vec![t]);
+                self.put(t);
                 Ctx::Other
             }
             "referenceableParamGroupRef" => {
                 if let Some(g) = get("ref").and_then(|r| self.groups.get(r)) {
-                    let g = g.clone();
-                    self.put(g);
+                    for t in g.clone() {
+                        self.put(t);
+                    }
                 }
                 Ctx::Other
             }
@@ -317,6 +309,7 @@ impl<'g> Reader<'g> {
     }
 
     /// An element inside a spectrum or chromatogram (scans, precursors, products, arrays).
+    #[inline(never)]
     fn item_tag(&mut self, name: &str, attrs: &[(&str, Cow<str>)], top: Option<Ctx>) -> Ctx {
         let get = |k: &str| attrs.iter().find(|(n, _)| *n == k).map(|(_, v)| v.as_ref());
         match name {
@@ -390,7 +383,7 @@ impl<'g> Reader<'g> {
     }
 
     /// Params where the reader stands (a cvParam, a userParam or a replayed group).
-    fn put(&mut self, ts: Vec<Term>) {
+    fn put(&mut self, t: Term) {
         let ctx = self.stack.last().copied();
         let to = match ctx {
             Some(Ctx::Group) => self.group.as_mut().map(|(_, g)| g),
@@ -410,9 +403,8 @@ impl<'g> Reader<'g> {
             }),
             _ => None,
         };
-        if let Some(to) = to {
-            let room = MAX_TERMS.saturating_sub(to.len());
-            to.extend(ts.into_iter().take(room));
+        if let Some(to) = to.filter(|to| to.len() < MAX_TERMS) {
+            to.push(t);
         }
     }
 
@@ -420,6 +412,11 @@ impl<'g> Reader<'g> {
         if let Some((id, g)) = self.group.take() {
             self.groups.to_mut().insert(id, g);
         }
+    }
+
+    /// Whether the reader stands inside a `<binary>` (where only `keep_binary` makes text count).
+    pub fn in_binary(&self) -> bool {
+        self.stack.last() == Some(&Ctx::Binary)
     }
 
     /// Character data: kept inside `<binary>` when `keep_binary`.
