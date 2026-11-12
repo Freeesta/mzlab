@@ -36,7 +36,8 @@ fn alias(h: &str) -> String {
     .to_string()
 }
 
-fn delimiter(text: &str) -> char {
+/// The delimiter of a table: `;`, else tab, else `,`, whichever the first line that is not empty or `#` holds first in that order (`;` when none).
+pub fn delimiter(text: &str) -> char {
     let head = text
         .lines()
         .map(str::trim)
@@ -88,6 +89,12 @@ fn records(text: &str, d: char) -> Vec<(usize, Vec<String>)> {
     }
     end(&mut fields, &mut cur, start);
     out
+}
+
+/// The cells of a `;`/tab/`,` table with the 1-based line where each record starts, header first: the reader of `from_csv` without its checks, for the
+/// structure lists of the substructure search (a catalogue row without a formula still has its SMILES).
+pub fn table(text: &str) -> Vec<(usize, Vec<String>)> {
+    records(text, delimiter(text))
 }
 
 fn err(line: usize, key: &'static str, detail: impl Into<String>) -> RowError {

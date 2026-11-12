@@ -1,7 +1,14 @@
 //! Chemistry from a structure. Not used by the engine of the proofs: it lives in a `.wasm` of its own (`crates/mzlab-feat-grafo-wasm`), loaded when
 //! the user gives the SMILES of the parent.
 
+pub mod analysis;
 pub mod breaks;
+#[cfg(feature = "check")]
+pub mod check;
+#[cfg(feature = "check")]
+pub mod cip;
+#[cfg(feature = "check")]
+mod cip_rank;
 pub mod cut;
 pub mod fragmenter;
 pub mod fragments;
@@ -11,11 +18,19 @@ mod graph_record;
 mod groups;
 pub mod ions;
 pub mod labels;
+pub mod link;
+pub mod mech;
+#[cfg(feature = "sub")]
+pub mod moiety;
 pub mod positions;
 pub mod rules;
 mod rules_site;
+#[cfg(feature = "check")]
+pub mod sdf;
+#[cfg(feature = "sel")]
+pub mod sel;
 mod shuffle;
 mod smiles;
 pub mod structures;
-#[cfg(feature = "record")]
+#[cfg(feature = "sub")]
 pub mod substructure;

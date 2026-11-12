@@ -15,7 +15,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::json::Value;
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::{Options, ZLIB_LEVEL};
-use mzlab_core::readers::Limits;
+use mzlab_core::readers::{Limits, Losses};
 use mzlab_core::readers_mzml::{Conversion, Peaks};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
@@ -70,10 +70,14 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let mut pace = gate.pace();
     let built =
         crate::flow_pace::build_index_with(&source, &label, &out, budget, &mut pace, &gate.stop);
-    if let Err(e) = built {
-        let _ = std::fs::remove_file(&out);
-        return Err(e);
-    }
+    // what the read lost (a vendor file), the counts the index keeps as `source.lost`: the site reads that key of the index it keeps
+    let lost = match built {
+        Ok(lost) => lost,
+        Err(e) => {
+            let _ = std::fs::remove_file(&out);
+            return Err(e);
+        }
+    };
     let name = r.source_name(&job.inputs[0].1[0]);
     let a = r.keep(out, DataType::Mzidx)?;
     r.trace(
@@ -85,7 +89,9 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
             ..Lineage::default()
         },
     );
-    Ok(Made::new("index", a))
+    let mut made = Made::new("index", a);
+    note_losses(&mut made, &lost);
+    Ok(made)
 }
 
 /// The recipe a lineage means: the one of the panel on its first index, then the parameters of each feature step.
@@ -347,23 +353,42 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let gate = r.gate(job);
     let (path, label) = (r.path(input), input.label.as_deref());
     let mut pace = gate.pace();
-    let (profile, bytes, sha256, lost) =
+    let (profile, bytes, sha256, lost, flagged) =
         write_mzml_with(&path, label, &out, (peaks, opz), &mut pace, &gate.stop)?;
     crate::flow_set::remember_sha(&out, bytes, &sha256);
     let mut made = Made::new("mzml", r.keep_known(out, DataType::Mzml, bytes, sha256));
     if profile {
         made.warnings.push("warn.flow.profile".into());
     }
-    // a partial read is in the record of the run (prov.json, corsa.json, flowrun/1): its cause among the warnings, its counts as the note of the file
-    if lost.partial() {
-        made.warnings.push(lost.cause.into());
-        made.file = Some(Value::Obj(vec![
-            ("declared".into(), Value::Num(lost.declared as f64)),
-            ("read".into(), Value::Num(lost.read as f64)),
-            ("cause".into(), Value::Str(lost.cause.into())),
-        ]));
+    note_losses(&mut made, &lost);
+    if peaks == Peaks::Mzlab {
+        note_flagged(&mut made, flagged);
     }
     Ok(made)
+}
+
+/// The centroids of our own peak picking flagged merged and saturated in the note of the file (`--report` of `convert`); a merged one raises
+/// `warn.centroid.merged`, a notice and not an answer.
+fn note_flagged(made: &mut Made, (merged, saturated): (usize, usize)) {
+    let counts = [
+        ("merged".to_string(), Value::Num(merged as f64)),
+        ("saturated".to_string(), Value::Num(saturated as f64)),
+    ];
+    match &mut made.file {
+        Some(Value::Obj(o)) => o.extend(counts),
+        _ => made.file = Some(Value::Obj(counts.to_vec())),
+    }
+    if merged > 0 {
+        made.warnings.push("warn.centroid.merged".into());
+    }
+}
+
+/// A partial read in the record of the run (prov.json, corsa.json, flowrun/1): its cause among the warnings, its counts as the note of the file.
+fn note_losses(made: &mut Made, lost: &Losses) {
+    if lost.partial() {
+        made.warnings.push(lost.cause.into());
+        made.file = Some(lost.note());
+    }
 }
 
 /// Writes the sample `label` (`ID` of a `NAME@ID` input; the first when empty) of the dataset at `path` to `out` as indexed mzML; true when the file keeps
@@ -378,9 +403,12 @@ pub(crate) fn write_mzml(
     write_mzml_with(path, label, out, (peaks, opz), &mut |_, _| {}, &None).map(|w| w.0)
 }
 
+/// What `write_mzml_with` gives: profile kept, size, SHA-256, losses of the read, centroids flagged (merged, saturated).
+type Written = (bool, u64, String, Losses, (usize, usize));
+
 /// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`. With the flag
 /// `stop` up the write ends at the next piece with `err.flow.cancelled`. Gives whether the file keeps its profile points, the size and SHA-256 of the file
-/// written, hashed while it was written, and what the read of the sample lost.
+/// written, hashed while it was written, what the read of the sample lost and the centroids of our own peak picking flagged (merged, saturated).
 pub(crate) fn write_mzml_with(
     path: &Path,
     label: Option<&str>,
@@ -388,7 +416,7 @@ pub(crate) fn write_mzml_with(
     (peaks, opz): (Peaks, Options),
     step: &mut dyn FnMut(usize, usize),
     stop: &Stop,
-) -> Result<(bool, u64, String, mzlab_core::readers::Losses)> {
+) -> Result<Written> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limits::desktop())?;
     let ids: Vec<u32> = reader.samples().iter().map(|s| s.id).collect();
@@ -419,7 +447,8 @@ pub(crate) fn write_mzml_with(
     };
     let written = File::create(out).map_err(io).and_then(|f| {
         let sink = BufWriter::new(HashWrite::new(Stopping::new(f, stop.clone())));
-        let mut w = conv.write(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))?;
+        let (mut w, flagged) =
+            conv.write_counted(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))?;
         w.flush().map_err(io)?;
         let (_, bytes, sha256) = w.into_inner().map_err(|e| io(e.into_error()))?.finish();
         // the file is read again by the validator: a conversion its own `validate` would call INVALID fails here (a `.wasm` build of the CLI, the
@@ -428,10 +457,10 @@ pub(crate) fn write_mzml_with(
         mzlab_core::mzml_validate::check_written(std::io::BufReader::new(
             File::open(out).map_err(io)?,
         ))?;
-        Ok((bytes, sha256))
+        Ok((bytes, sha256, flagged))
     });
     match written {
-        Ok((bytes, sha256)) => Ok((profile, bytes, sha256, lost)),
+        Ok((bytes, sha256, flagged)) => Ok((profile, bytes, sha256, lost, flagged)),
         Err(e) => {
             let _ = std::fs::remove_file(out);
             Err(e)
@@ -459,3 +488,7 @@ pub(crate) fn table_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
 #[cfg(test)]
 #[path = "flow_partial_tests.rs"]
 mod partial_tests;
+
+#[cfg(test)]
+#[path = "flow_partial_idx_tests.rs"]
+mod partial_idx_tests;

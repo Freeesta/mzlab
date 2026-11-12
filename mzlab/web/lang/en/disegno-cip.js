@@ -1,0 +1,20 @@
+I18N.add("en", {
+  "draw.cip.heading": "Stereodescriptors (CIP)",
+  "draw.cip.intro": "R/S of the centres and E/Z of the double bonds that the drawing defines with wedges and geometry, by the Cahn-Ingold-Prelog rules.",
+  "draw.cip.show": "Show R/S and E/Z",
+  "draw.cip.note": "Mass spectrometry cannot tell these stereoisomers apart: the labels describe the drawing, not a sample.",
+  "draw.cip.show.title": "Select the atoms of this label on the drawing",
+  "draw.cip.busy": "Working out the descriptors…",
+  "draw.cip.empty": "The drawing is empty.",
+  "draw.cip.none": "No centre or double bond with defined stereochemistry.",
+  "draw.cip.found": "Descriptors in the drawing: {n}.",
+  "draw.cip.fail": "Descriptors not worked out: {message}",
+  "draw.cip.atom": "{atom}: {label}",
+  "draw.cip.atomLow": "{atom}: {label} (pseudoasymmetric: only R against S of the substituents tells them apart)",
+  "draw.cip.bond": "{a}={b}: {label}",
+  "draw.cip.skip.query": "The drawing has generic (query) atoms or bonds: no descriptors.",
+  "draw.cip.skip.kekule": "An aromatic ring cannot be written with alternating double bonds: no descriptors.",
+  "draw.cip.skip.tooBig": "The drawing is too big for the descriptors (over 400 atoms).",
+  "error.cip.request": "The request of the CIP descriptors is not valid JSON with a molfile.",
+  "error.cip.molfile": "The drawing cannot be read as a molfile."
+});

@@ -61,7 +61,7 @@
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(/* webpackIgnore: true */ url);
     const w = (/** @type {any} */ m) => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
-    pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.interp ? { interp: w(man.interp) } : {}), ...(man.table ? { table: w(man.table) } : {}), ...(man.finder_lr ? { finder_lr: w(man.finder_lr) } : {}), ...(man.attributio_ms2 ? { attributio_ms2: w(man.attributio_ms2) } : {}), ...(man.formula ? { formula: w(man.formula) } : {}), ...(man.flowtab ? { flowtab: w(man.flowtab) } : {}), ...(man.flowstat ? { flowstat: w(man.flowstat) } : {}), ...(man.chem ? { chem: w(man.chem) } : {}), ...(man.msnfigura ? { msnfigura: w(man.msnfigura) } : {}) } });
+    pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.interp ? { interp: w(man.interp) } : {}), ...(man.table ? { table: w(man.table) } : {}), ...(man.finder_lr ? { finder_lr: w(man.finder_lr) } : {}), ...(man.attributio_ms2 ? { attributio_ms2: w(man.attributio_ms2) } : {}), ...(man.formula ? { formula: w(man.formula) } : {}), ...(man.flowtab ? { flowtab: w(man.flowtab) } : {}), ...(man.flowstat ? { flowstat: w(man.flowstat) } : {}), ...(man.chem ? { chem: w(man.chem) } : {}), ...(man.msnfigura ? { msnfigura: w(man.msnfigura) } : {}), ...(man.molkit ? { molkit: w(man.molkit) } : {}) } });
     pool.featWasm = w(man.feat);
     pool.limit = Math.max(1, mod.poolSize(false, navigator.hardwareConcurrency));
     return pool;

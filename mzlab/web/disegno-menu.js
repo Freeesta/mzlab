@@ -31,7 +31,7 @@ export async function copyText(/** @type {string} */ text, /** @type {string} */
 }
 
 // Registry of the canvas menu. An entry: {id, when: "selection" | "whole" | "any", order, label: i18n key or (ctx) => text,
-// title?: key or (ctx) => text, show?: (ctx) => boolean, run: (ctx) => void} or, for rows computed at open time, {id, when, order, rows: async (ctx) => [{text, title?, run}]}.
+// title?: key or (ctx) => text, show?: (ctx) => boolean, run: (ctx) => void} or, for rows computed at open time, {id, when, order, rows: async (ctx) => [{text, title?, id?, run}]} (id: the row's data-row, else the entry's).
 // ctx: {K, ev, sel, atoms (Set of atom ids), bonds (selected bond ids), whole (no selection), smiles, x, y, kbd}. Same id = replaced.
 /** @type {any[]} */
 const REG = [];
@@ -52,7 +52,7 @@ export async function menuFill(/** @type {any} */ m, /** @type {any} */ c) {
   for (const r of REG) {
     if (r.when === "selection" ? c.whole : r.when === "whole" ? !c.whole : false) continue;
     try {
-      if (r.rows) { for (const it of await r.rows(c)) { ctxRow(m, it.text, () => { m.hidden = true; if (it.run) it.run(); }, it.title); /** @type {HTMLElement} */ (m.lastElementChild).dataset.row = r.id; } continue; }
+      if (r.rows) { for (const it of await r.rows(c)) { ctxRow(m, it.text, () => { m.hidden = true; if (it.run) it.run(); }, it.title); /** @type {HTMLElement} */ (m.lastElementChild).dataset.row = it.id || r.id; } continue; }
       if (r.show && !r.show(c)) continue;
       ctxRow(m, txt(r.label, c), () => { m.hidden = true; r.run(c); }, txt(r.title, c));
       /** @type {HTMLElement} */ (m.lastElementChild).dataset.row = r.id;

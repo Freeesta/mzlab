@@ -105,6 +105,7 @@ pub mod readers_mzml;
 pub mod readers_session;
 pub mod conv;
 pub mod method;
+pub mod method_fit;
 pub mod method_fields;
 pub mod method_mzml;
 #[cfg(feature = "thermo")]
@@ -160,6 +161,7 @@ pub mod rawfilter;
 pub mod rawreader;
 #[cfg(feature = "thermo")]
 mod rawreader_reactions;
+mod pressure_unit;
 pub mod rng;
 pub mod rois;
 pub mod roi_cluster;

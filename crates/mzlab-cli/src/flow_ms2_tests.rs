@@ -171,6 +171,7 @@ fn descriptor_export_is_up_to_date() {
         crate::flow_lookup::lookup_step(),
         mzlab_feat::steps::table_match(),
         mzlab_feat::steps::transitions(),
+        mzlab_feat::steps::moiety(),
     ]);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi/steps-cli-1.json");
     if std::env::var_os("MZLAB_UPDATE_STEPS").is_some() {

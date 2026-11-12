@@ -10,6 +10,7 @@ fn params(step: f64) -> Params {
         k: 3.0,
         vmax: 0.0,
         area: true,
+        wm: None,
     }
 }
 

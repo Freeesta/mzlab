@@ -18,6 +18,7 @@ fn hr(step: f64, w: f64, vmax: f64) -> Params {
         k: 3.0,
         vmax,
         area: false,
+        wm: None,
     }
 }
 

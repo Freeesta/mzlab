@@ -1,6 +1,7 @@
-//! RV-01: the memory work on the `.raw` reader (trailers and indexes kept compact) changes no result. For each real file the `.mzidx` (as `raw_times` builds it), the mzML of `readers_mzml::scrivi`, the
-//! `metodo/1` document and the header of an array of scans have the SHA-256 recorded before the change. Needs the private data repository (`MZLAB_DATI`, `dati/formati/raw_veloce_alias.tsv` for LAB-A);
-//! the big DDA is looked for as `$MZLAB_RAW_BAF` or `dati/formati/thermo/raw/BAF_GEE_37.raw`. A file that is missing skips its case. `RAW_EQ_PRINT=1` prints the hashes instead of checking them.
+//! RV-01: the memory work on the `.raw` reader (trailers and events kept compact) changes no result. Proof on the real files: the three reads of a trailer
+//! agree field by field, and `opentfraw` tests that the compact event table gives back every event. Regression pins: the SHA-256 of the `.mzidx`, the mzML,
+//! the `metodo/1` document and the headers of a sample of scans; a change meant to change the output re-pins them (`RAW_EQ_PRINT=1`) and says which change.
+//! Needs the private data repository (`MZLAB_DATI`; LAB-A by `dati/formati/raw_veloce_alias.tsv`; the big public DDA as `$MZLAB_RAW_BAF` or by the name its download row in `dati/formati/_grandi_thermo_aperti.tsv` gives); a missing file skips its case.
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
@@ -65,33 +66,33 @@ impl std::io::Write for Sha256Sink {
     }
 }
 
-/// (case, hashes before the change: mzidx, mzml, metodo, intestazioni).
-const BEFORE: &[(&str, [&str; 4])] = &[
+/// (case, pinned hashes: mzidx, mzml, metodo, intestazioni); re-pinned on main after #3129.
+const PINNED: &[(&str, [&str; 4])] = &[
     (
         "LAB-A",
         [
-            "a4ac51c69f03843d300e6ad21a984c71d9077b6c3eff7cf12c2e47c3f941b468",
-            "0b6d6c7bb20c07d1b684e929b26baa32340e48e6ed3237df3ab98007edc2a58f",
-            "bbd8e719a87d0e85ef64d731a8d68b65d1cc55f777fae707fa44e1995edeae32",
-            "fdb802dc4346660bdeba3cddf1d7cbb8a23d4b99d3e6d3d57a3253d61d9517d4",
+            "d4a3ff4a5f804c1903ae148e92dedf3ee0645ada6ba61eecd4a0bed2477edce8",
+            "0016e68470322082f8d480fd8360a58a4dff4cf3d9ab81202b515c492d389a46",
+            "a0b8cf5e8842050982725bed2d2e0f53e269066b667a3877cdafd7f0a77ce887",
+            "9aea18ce54aed30996187adbf32d15255a83ef102b2b4ca428a8b7b5b776d9ab",
         ],
     ),
     (
         "PXD077492",
         [
-            "1516465e726f8ab470f4f6e2e3655bc6ac2dd63a16b57824caa05e7d7530e09f",
-            "97df227f539ec3928e5f6c2d71a36d84f75ca2407c7a8f40a9a7a0c6e3810200",
-            "783ea8ef3683eb2914a5912a71ed0b45da92ed5889f9f2bdb572de21367bb840",
-            "41be13e4d786327c12cbb8e8ce7c5af7b539ec228957534da5473d1169544d6b",
+            "03b07cbfee6b98a5f4e770a58580e00da525d4a64ef6c64056fc689b0ca80862",
+            "bf006e1395e2ab091e6b00b3fd7cbff7c63a9414d6b9fa8b91809e850f2b3889",
+            "27267e8b1fee3fafbe6d541768e6cbad21cebeec6968f1a7139a7336459343f1",
+            "d146d4ece74e6fad473d0465d4cac9bfccdd5f416e4843779fd904b189b7e3bf",
         ],
     ),
     (
         "BAF",
         [
-            "e35a63eba81e3a872f74dd9903d83a4f9bc9748076c471c536a0250c0cd43cd6",
-            "1da5d58af5ca8cec238230d4857553296726cbee9642b7d18308c84b153ef2bc",
-            "4f9312ccd9e290b25cb0d305e933e1a102855f200a5a53435439bfa9f822a36a",
-            "648a3fded6940230011583d50681cbcd96940f7e1a2f20605751e626751b8e7a",
+            "48d8960dd148675eee710f66997e66aa55459716f3884d128b7b0212ec6e7034",
+            "e5807b218ae0d75a72612a4269c972f0e3836da75ac7eb12ec23797d712b5b97",
+            "a92a6388f50c1fcf97600493d6448604bd49bcccc49658be671572e3c4a27535",
+            "9a567e42e206f912e48d7187963bea9ec45ba090038cbb3f82dbda69571dc2a4",
         ],
     ),
 ];
@@ -123,20 +124,33 @@ fn file(case: &str) -> Option<PathBuf> {
             })?,
         _ => match std::env::var_os("MZLAB_RAW_BAF") {
             Some(v) => PathBuf::from(v),
-            None => dati_percorsi::percorso("dati/formati/thermo/raw/BAF_GEE_37.raw")?,
+            // the name of the file is the one its download row (accession PXD070375) gives, in the list of big files of the data repository
+            None => {
+                let list = std::fs::read_to_string(dati_percorsi::percorso(
+                    "dati/formati/_grandi_thermo_aperti.tsv",
+                )?)
+                .ok()?;
+                let url = list
+                    .lines()
+                    .find(|l| l.contains("PXD070375") && l.contains(".raw"))?
+                    .split('\t')
+                    .find(|c| c.starts_with("http"))?;
+                let name = url.rsplit('/').next()?;
+                dati_percorsi::percorso(&format!("dati/formati/thermo/raw/{name}"))?
+            }
         },
     };
     p.is_file().then_some(p)
 }
 
 #[test]
-fn the_compact_memory_changes_no_result() {
+fn the_outputs_keep_their_pinned_hashes() {
     let Some(_) = dati_percorsi::radice() else {
         eprintln!("SKIP raw_equivalence: no data repository (MZLAB_DATI)");
         return;
     };
     let print = std::env::var_os("RAW_EQ_PRINT").is_some();
-    for (case, before) in BEFORE {
+    for (case, pinned) in PINNED {
         let Some(p) = file(case) else {
             eprintln!("SKIP raw_equivalence {case}: file not found");
             continue;
@@ -148,7 +162,7 @@ fn the_compact_memory_changes_no_result() {
         }
         assert_eq!(
             [a.as_str(), b.as_str(), c.as_str(), e.as_str()],
-            *before,
+            *pinned,
             "{case}"
         );
     }
@@ -276,4 +290,59 @@ fn the_table_header_has_the_fields_of_the_full_header() {
         seen += 1;
     }
     assert!(seen > 0, "no .raw opened");
+}
+
+/// The trailer records stay in the file and are decoded when asked: a whole record (`get`), a few fields (`get_fields`) and the walk over all of them
+/// (`for_each`) give the same value for every field of every record, so the three ways the reader reads a trailer agree on the real files.
+#[test]
+fn the_trailer_reads_agree_on_every_field() {
+    let Some(_) = dati_percorsi::radice() else {
+        eprintln!("SKIP raw_equivalence: no data repository (MZLAB_DATI)");
+        return;
+    };
+    for (case, _) in PINNED {
+        let Some(p) = file(case) else {
+            eprintln!("SKIP raw_equivalence {case}: file not found");
+            continue;
+        };
+        let mut src = std::io::BufReader::new(std::fs::File::open(&p).unwrap());
+        let raw = opentfraw::RawFileReader::open(&mut src).unwrap();
+        let t = &raw.scan_parameters;
+        assert!(!t.is_empty(), "{case}: no trailer");
+        let step = (t.len() / 300).max(1);
+        let mut walked = vec![None; t.len()];
+        let n_fields = t.get(&mut src, 0).unwrap().values.len();
+        assert!(t.for_each(&mut src, &mut |i, view| {
+            if i % step == 0 {
+                walked[i] = Some(
+                    (0..n_fields)
+                        .map(|f| format!("{:?}", view.value(f)))
+                        .collect::<Vec<_>>(),
+                );
+            }
+        }));
+        for i in (0..t.len()).step_by(step) {
+            let whole = t.get(&mut src, i).unwrap();
+            let fields: Vec<usize> = (0..n_fields).collect();
+            let some = t.get_fields(&mut src, i, &fields).unwrap();
+            let from_walk = walked[i].as_ref().unwrap();
+            assert_eq!(whole.values.len(), n_fields, "{case}: record {i}");
+            assert_eq!(some.values.len(), n_fields, "{case}: record {i}");
+            for (f, ((w, s), walk)) in whole
+                .values
+                .iter()
+                .zip(&some.values)
+                .zip(from_walk)
+                .enumerate()
+            {
+                let a = format!("{:?}", Some(&w.1));
+                assert_eq!(
+                    a,
+                    format!("{:?}", Some(&s.1)),
+                    "{case}: record {i} field {f} (get_fields)"
+                );
+                assert_eq!(&a, walk, "{case}: record {i} field {f} (for_each)");
+            }
+        }
+    }
 }

@@ -43,7 +43,7 @@ pub fn decay(kin: &[Point]) -> Option<Decay> {
     let pts: Vec<(f64, f64)> = kin
         .iter()
         .filter(|p| p.area > 0.0)
-        .map(|p| (p.time, p.area.ln()))
+        .map(|p| (p.time, libm::log(p.area)))
         .collect();
     if pts.len() < 3 {
         return None;

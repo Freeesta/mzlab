@@ -7,7 +7,7 @@ use crate::molfile::{fail, Draft, Wedge};
 use std::collections::VecDeque;
 
 /// Neighbours of every atom with the index of the joining bond.
-fn adjacency(d: &Draft) -> Vec<Vec<(usize, usize)>> {
+pub(crate) fn adjacency(d: &Draft) -> Vec<Vec<(usize, usize)>> {
     let mut adj = vec![Vec::new(); d.atoms.len()];
     for (i, b) in d.bonds.iter().enumerate() {
         adj[b.a].push((b.b, i));
@@ -90,7 +90,7 @@ pub(crate) fn tetra(d: &Draft, atoms: &[Atom]) -> Vec<Stereo> {
 
 /// Parity of the neighbours in ascending order (implicit hydrogen or lone pair last) from the wedges: neighbours below the plane get a
 /// negative height, above a positive one. None when the drawing does not decide (flat arrangement).
-fn parity(
+pub(crate) fn parity(
     d: &Draft,
     c: usize,
     nbrs: &[(usize, usize)],

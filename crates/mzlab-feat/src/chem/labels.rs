@@ -29,7 +29,7 @@ pub(super) struct Shape {
     pub(super) n: Counts,
     pub(super) q: i64,
     pub(super) mass: f64,
-    nominal: u64,
+    pub(super) nominal: u64,
     /// Unpaired electrons of the radical marks (Ketcher / `M  RAD` code 2 = one, 3 = two; 1, a singlet pair, = none).
     pub(super) unpaired: u64,
     /// Electrons of the species: atomic numbers plus hydrogens minus the charge (an odd count is a radical whatever the marks say).

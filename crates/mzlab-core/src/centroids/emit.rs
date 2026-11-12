@@ -2,7 +2,7 @@
 
 use super::detect::Group;
 use super::shoulder;
-use super::{Buf, Centroid, Mode, Params, ASYMMETRIC, SATURATED, TRUNCATED};
+use super::{Buf, Centroid, Mode, Params, ASYMMETRIC, MERGED, SATURATED, TRUNCATED};
 
 /// Accepts a region: counts mode needs Z = (A - F) / sqrt(A + F) >= k, at least 3 counts above the background and two non-zero bins; continuous mode
 /// needs the smoothed apex k sigma over the background.
@@ -134,11 +134,36 @@ fn saturated(buf: &Buf, p: &Params, g: &Group) -> bool {
             continue;
         }
         let a = *start.get_or_insert(j);
-        if j - a >= 2 && buf.x[j] - buf.x[a] >= 0.15 * p.w {
+        if j - a >= 2 && buf.x[j] - buf.x[a] >= 0.15 * p.w_at(buf.x[a]) {
             return true;
         }
     }
     false
+}
+
+/// A single peak is at most this many times the FWHM expected at its m/z at half height (measured as `params::fwhms` measures the isolated
+/// peaks: smoothed signal over its background); a wider one holds two peaks the scan cannot separate. On synthetic singles with the width
+/// estimated from the file, SNR 50 and 1000, none passes it (`tests_merged.rs`).
+const MERGED_WIDTH: f64 = 1.12;
+
+/// Width at half height of the region around its apex (smoothed signal over its background, crossings interpolated); `None` when a side never
+/// falls to half within the region.
+pub(super) fn half_width(buf: &Buf, g: &Group) -> Option<f64> {
+    let net = |j: usize| buf.s[j] - buf.b[j];
+    let half = 0.5 * net(g.apex);
+    if half <= 0.0 {
+        return None;
+    }
+    let cross =
+        |a: usize, b: usize| buf.x[a] + (half - net(a)) / (net(b) - net(a)) * (buf.x[b] - buf.x[a]);
+    let left = (g.lo..g.apex)
+        .rev()
+        .find(|&j| net(j) < half)
+        .map(|j| cross(j, j + 1))?;
+    let right = (g.apex + 1..=g.hi)
+        .find(|&j| net(j) < half)
+        .map(|j| cross(j, j - 1))?;
+    Some(right - left)
 }
 
 /// Adjacent regions that share one flat top at the saturation level are one peak: smoothing a plateau leaves a maximum at each of its edges.
@@ -178,7 +203,7 @@ fn saturated_centre(buf: &Buf, p: &Params, g: &Group) -> Option<f64> {
     let t = 0.99 * p.vmax;
     let top: Vec<usize> = (g.lo..=g.hi).filter(|&j| buf.v[j] >= t).collect();
     let (a, b) = (*top.first()?, *top.last()?);
-    let half = 0.5 * (buf.x[b] - buf.x[a]) + 0.5 * p.w;
+    let half = 0.5 * (buf.x[b] - buf.x[a]) + 0.5 * p.w_at(buf.x[a]);
     let mut c = 0.5 * (buf.x[a] + buf.x[b]);
     for _ in 0..2 {
         c = centroid_at(buf, p, c, Some(t), half).unwrap_or(c);
@@ -198,18 +223,27 @@ fn one(buf: &Buf, p: &Params, sigma: f64, g: &Group, out: &mut Vec<Centroid>) {
     let mut flags = if truncated { TRUNCATED } else { 0 };
     let sat = saturated(buf, p, g);
     let x0 = apex_x(buf, g.apex);
+    let w = p.w_at(x0);
     let mz = if sat {
         flags |= SATURATED;
         saturated_centre(buf, p, g).unwrap_or(x0)
     } else if p.hr() {
         gaussian(buf, sigma, g.apex)
-            .or_else(|| centroid_at(buf, p, x0, None, 0.5 * p.w))
+            .or_else(|| centroid_at(buf, p, x0, None, 0.5 * w))
             .unwrap_or(x0)
     } else {
-        centroid_at(buf, p, x0, None, 0.5 * p.w).unwrap_or(x0)
+        centroid_at(buf, p, x0, None, 0.5 * w).unwrap_or(x0)
     };
-    if (mz - x0).abs() > 0.25 * p.w {
+    if (mz - x0).abs() > 0.25 * w {
         flags |= ASYMMETRIC;
+    }
+    // with the model, a peak of fewer than 5 points per FWHM has no width at half height to compare (one point more or less is 20 % of it)
+    let sampled = p.wm.is_none() || p.wb_at(buf, g.apex) >= 5;
+    if !sat
+        && sampled
+        && half_width(buf, g).is_some_and(|w| w > MERGED_WIDTH * p.w_at(buf.x[g.apex]))
+    {
+        flags |= MERGED;
     }
     let mut area: f64 = buf.v[g.lo..=g.hi].iter().sum();
     let height = buf.s[g.apex];

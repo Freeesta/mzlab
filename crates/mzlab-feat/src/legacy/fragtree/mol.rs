@@ -118,8 +118,10 @@ impl Subs {
         let w: Vec<f64> = idx
             .iter()
             .map(|&i| {
-                (-3.0 * (self.cuts[i] - cmin) as f64 - (self.f[i][ih] + 1 - ion[ih]).abs() as f64)
-                    .exp()
+                libm::exp(
+                    -3.0 * (self.cuts[i] - cmin) as f64
+                        - (self.f[i][ih] + 1 - ion[ih]).abs() as f64,
+                )
             })
             .collect();
         let tot = w.iter().fold(0.0, |a, b| a + b);

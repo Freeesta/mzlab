@@ -1,0 +1,10 @@
+{
+ "_note": "A synthetic drawing (L-alanine with a drawn Na+) and its sdf/1 text, written by mzlab-cli mol-export; the app, the molkit .wasm and the CLI must give these bytes.",
+ "request": {
+  "molfile": "\n  mzLab draw        2D\n\n  7  5  0  0  0  0  0  0  0  0999 V2000\n    1.5000    1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.7500    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000   -1.2990    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.7500   -0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.5000    1.2990    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.5000   -1.2990    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n    3.0000    2.0000    0.0000 Na  0  0  0  0  0  0  0  0  0  0  0  0\n  2  1  1  6\n  2  3  1  0\n  2  4  1  0\n  4  5  2  0\n  4  6  1  0\nM  CHG  1   7   1\nM  END\n",
+  "format": "sdf",
+  "ion": "[M+H]+",
+  "name": "alanine"
+ },
+ "sdf": "alanine\n  mzLab             2D\n\n  6  5  0  0  1  0  0  0  0  0999 V2000\n    1.5000    1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.7500    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.5000   -1.2990    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.7500   -0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.5000    1.2990    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.5000   -1.2990    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n  2  1  1  6  0  0  0\n  2  3  1  0  0  0  0\n  2  4  1  0  0  0  0\n  4  5  2  0  0  0  0\n  4  6  1  0  0  0  0\nM  END\n> <MZLAB_FORMULA>\nC3H7NO2\n\n> <MZLAB_EXACT_MASS>\n89.04768\n\n> <MZLAB_ION>\n[M+H]+\n\n> <MZLAB_MZ>\n90.05495\n\n> <MZLAB_HASH>\nmol1:377848dd1f731f8d3d73e36f755721d189afb3130397e55f1078b461b30cf9cb\n\n$$$$\nalanine\n  mzLab             2D\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\n    3.0000    2.0000    0.0000 Na  0  0  0  0  0  0  0  0  0  0  0  0\nM  CHG  1   1   1\nM  END\n> <MZLAB_FORMULA>\nNa+\n\n> <MZLAB_EXACT_MASS>\n22.98977\n\n> <MZLAB_ION>\ndrawn\n\n> <MZLAB_MZ>\n22.98922\n\n> <MZLAB_HASH>\nmol1:f6614a086158188b9c2d7a04c2f37bf938d87e7e29d7b3e3b9f7c58d071f9b99\n\n$$$$\n"
+}

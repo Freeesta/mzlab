@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use mzlab_core::flow::{file_roots, parse, plan_json};
+use mzlab_core::flow::{file_roots, parse, plan_json, Run};
 use mzlab_core::json::Out;
 
 use crate::convert_entries::{entries, Entry};
@@ -32,7 +32,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--compression KIND] [--zlib N] [
                        points of the profile) or mzlab (centroids of mzLab)
   --workers N          files converted at once (default: the cores but one, 1 to 4, fewer when the memory budget of the computer does not give
                        each its share, with a note; the bytes written do not depend on it)
-  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi; or ingresso, errore, causa
+  --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi (centroidi with --peaks mzlab); or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
   --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
@@ -245,8 +245,13 @@ fn place(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::hard_link(from, to).or_else(|_| std::fs::copy(from, to).map(|_| ()))
 }
 
-/// The `--report` item of an entry (its file-name root in the work folder is `root`) after its job `ended`, with the mzML placed in `out`.
-fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path)) -> Item {
+/// The `--report` item of an entry (its file-name root in the work folder is `root`) after its job `ended` in `run`, with the mzML placed in `out`.
+fn item(
+    root: &str,
+    e: &Entry,
+    (ended, run): (Option<&Ended>, &Run),
+    (work, out): (&Path, &Path),
+) -> Item {
     let input = e.input.display().to_string();
     let (seconds, skipped) = match ended {
         Some((ms, cached, None)) => (ms / 1e3, *cached),
@@ -282,6 +287,7 @@ fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path
                 skipped,
                 conv,
                 notes,
+                flagged: crate::convert_report::flagged_of(run, &e.label),
             }
         }
         Err(cause) => Item::Failed { input, cause },
@@ -318,6 +324,7 @@ fn summary(items: &[Item], out: &Path) -> Outcome {
         })
         .collect();
     let partial = partial_lines(items);
+    let notes = notes + &crate::convert_report::merged_lines(items);
     let (code, stderr) = if failed == 0 {
         (
             if partial.is_empty() { 0 } else { 3 },
@@ -467,15 +474,16 @@ pub fn run(args: Vec<String>) -> Outcome {
     if let Some(n) = note.filter(|_| list.len() > workers) {
         eprintln!("{n}");
     }
-    if let Err(e) = run_checked(&ready, text.as_bytes(), &runner, workers) {
-        return fail(3, &e.to_string(), "this is a bug of mzlab-cli convert");
-    }
+    let run = match run_checked(&ready, text.as_bytes(), &runner, workers) {
+        Ok((run, _)) => run,
+        Err(e) => return fail(3, &e.to_string(), "this is a bug of mzlab-cli convert"),
+    };
     let ended = ended.lock().unwrap_or_else(|e| e.into_inner());
     let roots = file_roots(&plan);
     let items: Vec<Item> = list
         .iter()
         .enumerate()
-        .map(|(k, e)| item(&roots[k], e, ended[k].as_ref(), (&work, &out)))
+        .map(|(k, e)| item(&roots[k], e, (ended[k].as_ref(), &run), (&work, &out)))
         .collect();
     if let Some(path) = &a.report
         && let Err(e) = std::fs::write(path, report(&items))
