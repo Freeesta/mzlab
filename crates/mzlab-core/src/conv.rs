@@ -90,6 +90,10 @@ pub(crate) fn resoconto(l: &mut dyn Reader, c: usize) -> Result<String> {
         // a catalogue key: letters, dots and digits only
         s += lost.cause;
         s.push('"');
+        // an MRM sample counts its cycles: the key is there only then, so every other record is as it was
+        if lost.unit == crate::readers::CYCLES {
+            s += ",\"unita\":\"cicli\"";
+        }
     }
     s += ",\"non_portati\":[";
     for (i, (campo, motivo)) in l.not_carried().iter().enumerate() {

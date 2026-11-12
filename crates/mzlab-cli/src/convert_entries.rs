@@ -34,14 +34,14 @@ fn sample_ids(p: &Path) -> Vec<(u32, bool, bool)> {
             .enumerate()
             .map(|(c, s)| (s.id, c as u32, s.scansioni))
             .collect();
-        // empty = no scans and no chromatograms (an MRM sample has chromatograms only)
+        // empty = no scans and no chromatograms (an MRM sample has chromatograms only), and nothing lost: a damaged sample is not an empty acquisition
         ids.into_iter()
             .map(|(id, c, scans)| {
-                (
-                    id,
-                    scans == 0 && l.chromatograms(c as usize).is_ok_and(|v| v.is_empty()),
-                    wiff,
-                )
+                let c = c as usize;
+                let empty = scans == 0
+                    && l.chromatograms(c).is_ok_and(|v| v.is_empty())
+                    && l.losses(c).is_ok_and(|x| !x.partial());
+                (id, empty, wiff)
             })
             .collect()
     });

@@ -497,3 +497,6 @@ fn the_method_warnings_are_notes_with_their_text() {
 
 #[path = "convert_partial_tests.rs"]
 mod partial;
+
+#[path = "convert_isolation_tests.rs"]
+mod isolation;

@@ -144,7 +144,7 @@ impl Wiff {
                 || self.empty_sim_row(r)
             {
                 continue;
-            } else if let Some(v) = dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
+            } else if let Some(v) = blocks.take(dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?) {
                 blocks.add_dense(r, v);
             }
         }
@@ -179,13 +179,14 @@ impl Wiff {
         }
     }
 
-    /// The chromatograms of the MRM blocks only (no scan is decoded). `counts`: the point count of each record's head when the reader already read them.
+    /// The chromatograms of the MRM blocks only (no scan is decoded), and the MRM cycles read and left out. `counts`: the point count of each record's
+    /// head when the reader already read them.
     #[cfg(not(feature = "estesi"))]
     pub fn chromatograms<R: ReadAt>(
         &self,
         scan: &mut R,
         counts: Option<&[Option<u32>]>,
-    ) -> Result<Vec<Chromatogram>> {
+    ) -> Result<(Vec<Chromatogram>, super::chromatograms::Cycles)> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
         for (i, r) in self
             .records
@@ -206,11 +207,12 @@ impl Wiff {
             if self.scan_experiment(r.experiment) || self.empty_sim_row(r) {
                 continue;
             }
-            if let Some(v) = dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
+            if let Some(v) = blocks.take(dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?) {
                 blocks.add_dense(r, v);
             }
         }
-        Ok(self.chromatograms_of(blocks))
+        let cycles = blocks.cycles;
+        Ok((self.chromatograms_of(blocks), cycles))
     }
 
     /// How many spectra `visit` will give (reads the head of each block only).
@@ -267,19 +269,23 @@ impl Wiff {
 }
 
 /// The cps of an MRM block, read dense. A scheduled (sMRM) block, which starts with `-(N + 0.01)`, is `err.file.wiff`: only the readers module
-/// (`scan_extended.rs`) reads it, and its skip markers must never become intensities.
+/// (`scan_extended.rs`) reads it, and its skip markers must never become intensities. A block with a NaN or infinite value is damaged: left out and
+/// counted, the other cycles are read.
 #[cfg(not(feature = "estesi"))]
 fn dense_mrm<R: ReadAt>(
     scan: &mut R,
     scan_len: u64,
     at: u64,
     n: usize,
-) -> Result<Option<Vec<f64>>> {
-    let v = scan::read_mrm(scan, scan_len, at, n)?;
-    if v.as_ref().and_then(|v| v.first()).is_some_and(|x| *x < 0.0) {
+) -> Result<super::chromatograms::Mrm<Vec<f64>>> {
+    use super::chromatograms::Mrm;
+    let Some(v) = scan::read_mrm(scan, scan_len, at, n)? else {
+        return Ok(Mrm::Absent);
+    };
+    if v.first().is_some_and(|x| *x < 0.0 && x.is_finite()) {
         return Err(crate::error::Error::new("err.file.wiff").with("detail", "sparse MRM block"));
     }
-    Ok(v)
+    Ok(if v.iter().all(|x| x.is_finite()) { Mrm::Read(v) } else { Mrm::Damaged })
 }
 
 /// A dense MRM block: a point of the TIC of its experiment and one of each of its transitions.

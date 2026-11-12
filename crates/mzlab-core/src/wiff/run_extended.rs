@@ -41,7 +41,7 @@ impl Wiff {
             } else if !matches!(block, scan::Block::Damaged)
                 && !self.is_empty_row(r)
                 && !self.scan_experiment(r.experiment)
-                && let Some(c) = scan::read_mrm_cols(scan, self.scan_len, r.at, r.size as usize)?
+                && let Some(c) = blocks.take(scan::mrm_cols(scan, self.scan_len, r.at, r.size as usize)?)
             {
                 blocks.add(r, c);
             }
@@ -50,12 +50,13 @@ impl Wiff {
         Ok(self.chromatograms_of(blocks))
     }
 
-    /// The chromatograms of the MRM blocks only (no scan is decoded). `counts`: the point count of each record's head when the reader already read them.
+    /// The chromatograms of the MRM blocks only (no scan is decoded), and the MRM cycles read and left out. `counts`: the point count of each record's
+    /// head when the reader already read them.
     pub fn chromatograms<R: ReadAt>(
         &self,
         scan: &mut R,
         counts: Option<&[Option<u32>]>,
-    ) -> Result<Vec<Chromatogram>> {
+    ) -> Result<(Vec<Chromatogram>, super::super::chromatograms::Cycles)> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
         for (i, r) in self
             .records
@@ -76,11 +77,12 @@ impl Wiff {
             if self.is_empty_row(r) || self.scan_experiment(r.experiment) {
                 continue;
             }
-            if let Some(c) = scan::read_mrm_cols(scan, self.scan_len, r.at, r.size as usize)? {
+            if let Some(c) = blocks.take(scan::mrm_cols(scan, self.scan_len, r.at, r.size as usize)?) {
                 blocks.add(r, c);
             }
         }
-        Ok(self.chromatograms_of(blocks))
+        let cycles = blocks.cycles;
+        Ok((self.chromatograms_of(blocks), cycles))
     }
 }
 

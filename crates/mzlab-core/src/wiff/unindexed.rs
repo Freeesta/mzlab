@@ -172,6 +172,7 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
         trim_scheduled: false,
         inferred_from: Some(donor.sample),
         scan_len: donor.scan_len,
+        unplaced: 0,
         failure: None,
     })
 }
@@ -183,7 +184,7 @@ pub(super) fn index_end(ole: &Ole, indexed: &[&Wiff]) -> (u64, u32) {
         .read(&format!("{}SampleIdxTable", super::SAMPLES))
         .map(|t| super::idx::sections(&t))
         .unwrap_or_default();
-    let heads = table.iter().map(|s| s.1 + 20 + 24).max().unwrap_or(0);
+    let heads = table.iter().filter_map(|s| Some(s.1? + 20 + 24)).max().unwrap_or(0);
     let blocks = indexed
         .iter()
         .flat_map(|w| w.records.iter())

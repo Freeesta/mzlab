@@ -273,7 +273,8 @@ fn tof_sciex_os_ida_streams_and_scan_blocks() {
     let section = idx::sections(&table)
         .into_iter()
         .find(|x| x.0 == s)
-        .map_or(20, |x| x.1);
+        .and_then(|x| x.1)
+        .unwrap_or(20);
     for i in 0..18 {
         let rec = &idx_bytes[32 + 54 * i..32 + 54 * (i + 1)];
         let off = u32::from_le_bytes([rec[0], rec[1], rec[2], rec[3]]) as u64;

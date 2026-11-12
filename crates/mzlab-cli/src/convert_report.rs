@@ -114,7 +114,12 @@ pub(crate) fn partial_lines(items: &[Item]) -> String {
                 conv: Some(c),
                 ..
             } => partial_of(c).map(|(declared, read, cause)| {
-                format!("warning: {input}: partial read, {read} of {declared} scans ({cause})\n")
+                // an MRM sample counts its cycles (`unita`), every other its scans
+                let unit = match mzlab_core::json::parse(c.as_bytes()).ok().and_then(|d| d.get("unita").and_then(|u| u.str().map(str::to_string))) {
+                    Some(u) if u == "cicli" => "MRM cycles",
+                    _ => "scans",
+                };
+                format!("warning: {input}: partial read, {read} of {declared} {unit} ({cause})\n")
             }),
             _ => None,
         })

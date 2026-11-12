@@ -198,6 +198,8 @@ pub struct Wiff {
     /// Set when the sample is a section of the `.wiff.scan` that the `.wiff` index does not list: its name, method and times are those of this indexed sample.
     pub inferred_from: Option<u32>,
     scan_len: u64,
+    /// Index rows that place no block (`idx::place`: zeroed, or the sample has no section): counted by `losses`.
+    pub(crate) unplaced: usize,
     /// Why this sample could not be opened (its method is refused): it has no records, and reading its data gives this error while the other samples stay readable.
     failure: Option<Error>,
 }
@@ -229,7 +231,7 @@ pub fn container_within(wiff: Vec<u8>, name: &str, limits: &crate::readers::Limi
     let size = wiff.len();
     let cut = Ole::header_cut(&wiff);
     let ole = Ole::open(wiff, name, limits).map_err(|e| match cut {
-        _ if e.key == Error::memory_budget().key => e,
+        _ if e.key == Error::memory_budget().key || e.key == "error.fixedLimit" => e,
         Some(needed) => truncated(name, size, needed),
         None => Error::new("err.file.notWiff").with("name", name),
     })?;
@@ -378,22 +380,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     sim_periods(ole, sample, &experiments)?;
     let ida = dependent_scans(ole, sample, &mut experiments);
     let n_exp = experiments.len().max(1);
-    let records = entries
-        .iter()
-        .enumerate()
-        .map(|(k, e)| Record {
-            at: section + e.offset as u64 + scan::PAYLOAD_SKIP,
-            end: entries
-                .get(k + 1)
-                .map_or(scan_len, |n| section + n.offset as u64 + scan::PAYLOAD_SKIP),
-            size: e.size,
-            time_min: e.time_ms / 60000.0,
-            tic: e.tic,
-            cycle: k / n_exp,
-            experiment: k % n_exp,
-            points: if ida { f64::NAN } else { e.points },
-        })
-        .collect();
+    let (records, unplaced) = idx::place(&entries, section, scan_len, n_exp, ida);
     let no = method_no(ole, sample);
     let no = if ole.has(&format!(
         "MethodSubtree/Method{no}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
@@ -424,6 +411,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         trim_scheduled: false,
         inferred_from: None,
         scan_len,
+        unplaced,
         failure: None,
     })
 }
@@ -448,6 +436,7 @@ impl Wiff {
             trim_scheduled: false,
             inferred_from: None,
             scan_len,
+            unplaced: 0,
             failure: Some(failure),
         }
     }
