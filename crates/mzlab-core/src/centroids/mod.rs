@@ -24,6 +24,8 @@ mod tests_grid_sat;
 mod tests_hr;
 #[cfg(test)]
 mod tests_merged;
+#[cfg(test)]
+mod tests_pin;
 
 pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
 pub use params::{estimate, Estimate};
