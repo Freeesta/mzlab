@@ -258,8 +258,7 @@ function wlCtl(p) {
   if (p._kw !== undefined && p._kw !== p.kind && (pda || p._kw === "pda")) p.mz0 = p.mz1 = null;      // m/z and nm are different ranges: the choice of the kind clears it
   p._kw = p.kind;
   if (pda) { p.mz0 ??= p.mz1; p.mz1 ??= p.mz0; }      // a wavelength range has both ends, or none
-  if (b) { b.dataset.t0 ??= b.title; b.textContent = pda ? "λ" : "XIC"; b.title = pda ? I18N.t("panel.wl.title") : b.dataset.t0; }
-  if (b && (p.tab || E.tab) === "ms2") { b.disabled = ms2Chrom(p); if (!pda) b.title = I18N.t(b.disabled ? "panel.xic.off" : "panel.xic.title"); }      // MS2 tab: the XIC is off on the MS2 scans only
+  if (b) { b.disabled = ms2Chrom(p); b.textContent = pda ? "λ" : "XIC"; b.title = I18N.t(pda ? "panel.wl.title" : b.disabled ? "panel.xic.off" : "panel.xic.title"); }
   return !pda || p.mz0 == null ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
 }
 /** A trace of the DAD at the wavelengths nm0..nm1 (a PDA chromatogram) under panel `from`. @param {any} from @param {number} nm0 @param {number} nm1 @param {number} [k] */
