@@ -176,5 +176,12 @@ mod tests {
         assert!(nativo(Some(4)) && nativo(Some(0)) && !nativo(Some(5)));
         assert!(nativo(Some(1)) && sim(Some(1)) && sim(Some(3)) && !sim(Some(4)) && !sim(None));
         assert_eq!(tag(Some(0)), Some("Q1"));
+        // the spectrum type term of the mzML: only the scan types that need one
+        assert_eq!(
+            spectrum_term(Some(CODE_NEUTRAL_LOSS)),
+            Some(("MS:1000326", "constant neutral loss spectrum"))
+        );
+        assert_eq!(spectrum_term(Some(CODE_FULL)), None);
+        assert_eq!(spectrum_term(None), None);
     }
 }
