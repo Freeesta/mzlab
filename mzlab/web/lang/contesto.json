@@ -1049,6 +1049,7 @@
   "files.up.close": "× of a failed progress row: removes the row; {name} = file name.",
   "normative.lib.coverage": "Copertura di una lista nella finestra Librerie; {entries} = voci della lista, {screenable} = voci con struttura cercate, {groups} = gruppi e miscele, {inorganic} = voci inorganiche.",
   "err.canali.unknown": "Messaggio d'errore del motore; {id} = identificativo.",
+  "err.canali.sample": "Messaggio d'errore della CLI channels; {id} = campione chiesto, {ids} = elenco dei campioni del file.",
   "err.cli.line": "Messaggio d'errore del motore; {message} = messaggio.",
   "err.cli.set": "Messaggio d'errore del motore; {message} = messaggio, {set} = impostazione.",
   "err.file.brukerDamaged": "Nessun segnaposto nel testo. L’errore porta {detail} (la tabella SQLite o il blocco del file _bin che non torna, in inglese dal lettore): il CLI lo scrive tra parentesi dopo la chiave, la pagina no.",
