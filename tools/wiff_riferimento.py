@@ -8,7 +8,7 @@ tools/cfb_scrivi.py, and OUT/riferimento.json: what the reader must give (spectr
 chromatograms), computed here from the inputs with an encoder of the nibble stream that shares no code with the reader. No laboratory data is used.
 The variants of the readers module (feature `estesi`): `variante.wiff` (Log model QTRAP 5500; survey scan V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1,
 under "variante" in the JSON) and the files the module refuses (under "rifiuti": name -> the cause as the tests spell it: `periods=N`, `scan type code C (experiment E)` for `err.file.wiffPeriods` / `wiffScanType`, else the `detail` of `err.file.wiff`): two periods, a TOF scan type, a TOF block, a block version 4.
-`dadmetodo.wiff`: a 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method (under "dadmetodo"); `dispositivi.wiff`: the same with device traces (tools/wiff_dispositivi.py).
+`dadmetodo.wiff`: a 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method (under "dadmetodo").
 """
 import json
 import math
@@ -19,7 +19,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cfb_scrivi  # noqa: E402
-import wiff_dispositivi  # noqa: E402
 
 MARKER = b"\xfe\xff\xff\xff\x02\x00\x00\x00"
 HEAD = [100.02, 300.0, 0.06, 16666.667, 250.02, 400.0, 0.06, 50000.0]  # start1 end1 step scale1 start2 end2 step2 scale2
@@ -227,7 +226,7 @@ def main():
     ms3 = ms3_file(out)
     dad = dad_method(out)
     ida = ida_file(out)
-    (out / "riferimento.json").write_text(json.dumps({"dispositivi": wiff_dispositivi.devices_file(out, Writer, header), "ida": ida, "dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi, "ms3": ms3}))
+    (out / "riferimento.json").write_text(json.dumps({"ida": ida, "dadmetodo": dad, "one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": refusals, "totale": total, "blocchi": blocchi, "ms3": ms3}))
 
 
 def ida_file(out: Path):

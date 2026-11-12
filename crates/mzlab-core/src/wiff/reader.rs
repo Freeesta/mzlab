@@ -195,7 +195,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn format(&self) -> Format { Format::SciexWiff }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
-        &[("DDERealTimeData, TripleTOF and ZenoTOF blocks, MSConfigInfo, MassSpecMethod, ExperimentHeader, PeriodStream and CycleDepParam binaries", NON_DECODIFICATO), ("log state at start and end, CFR audit, acquisition time per sample", NON_DECODIFICATO), ("user, computer, site and paths", IDENTITA)]
+        &[("device traces (Devices/Device_N/DevData), DDERealTimeData, TripleTOF and ZenoTOF blocks, MSConfigInfo, MassSpecMethod, ExperimentHeader, PeriodStream and CycleDepParam binaries", NON_DECODIFICATO), ("log state at start and end, CFR audit, acquisition time per sample", NON_DECODIFICATO), ("user, computer, site and paths", IDENTITA)]
     }
     fn missing(&mut self, c: usize) -> usize { let n = self.scan_len; self.parts.get(c).map_or(0, |p| p.w.records.iter().filter(|r| r.cut(n)).count()) }
     fn refused(&mut self, c: usize) -> Option<Error> { self.parts.get(c).and_then(|p| p.w.readable().err()) }

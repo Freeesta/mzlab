@@ -161,7 +161,6 @@ pub mod rawfilter;
 pub mod rawreader;
 #[cfg(feature = "thermo")]
 mod rawreader_reactions;
-mod pressure_unit;
 pub mod rng;
 pub mod rois;
 pub mod roi_cluster;

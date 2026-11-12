@@ -312,57 +312,6 @@ fn each_sample_of_a_wiff_has_the_channels_of_its_mzml() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// The device traces of a `.wiff` (`dispositivi` of `tools/wiff_riferimento.py`: two pressures, a flow, a temperature) are `an:` channels, the same the
-/// converted mzML lists; `--channel an:1` of the mzML gives the column pressure (2000 psi, shown in bar).
-#[test]
-fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
-    let dir = std::env::temp_dir().join(format!("mzlab_cli_canali_dev_{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
-    let made = Command::new("python3")
-        .arg(tools.join("wiff_riferimento.py"))
-        .arg(dir.join("in"))
-        .output();
-    if !made.is_ok_and(|o| o.status.success()) {
-        assert!(
-            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
-            "python3 not available"
-        );
-        eprintln!("skipped: python3 not available");
-        return;
-    }
-    let s = |p: PathBuf| p.to_string_lossy().into_owned();
-    let wiff = s(dir.join("in/dispositivi.wiff"));
-    let conv = execute(&[
-        "convert".into(),
-        wiff.clone(),
-        "--out".into(),
-        s(dir.join("out")),
-    ]);
-    assert_eq!(conv.code, 0, "{}", conv.stderr);
-    let mzml = s(dir.join("out/dispositivi.mzML"));
-    let o = execute(&["channels".into(), wiff.clone()]);
-    assert_eq!(o.stdout, execute(&["channels".into(), mzml.clone()]).stdout);
-    let list = String::from_utf8(o.stdout).unwrap();
-    for et in [
-        "Column Pressure (pascal)",
-        "Pump A Flowrate (µL/min)",
-        "Column Pressure #1 (pascal)",
-        "Oven Temperature (°C)",
-    ] {
-        assert!(list.contains(&format!("\"et\":\"{et}\"")), "{et}: {list}");
-    }
-    assert!(!list.contains("Empty"), "{list}");
-    let one = execute(&["channels".into(), mzml, "--channel".into(), "an:1".into()]);
-    assert_eq!(one.code, 0, "{}", one.stderr);
-    let one = String::from_utf8(one.stdout).unwrap();
-    assert!(
-        one.contains("\"kind\":\"pressure\"") && one.contains("\"y\":[137.895,"),
-        "2000 psi in bar: {one}"
-    );
-    let _ = std::fs::remove_dir_all(&dir);
-}
-
 /// An mzML with a TWC (a 2 × 2 `dad_matrix` is not needed for the trace) and a pump pressure trace: `--canale` reads them as the old routes do.
 #[test]
 fn canale_reads_a_uv_and_an_analog_trace() {
