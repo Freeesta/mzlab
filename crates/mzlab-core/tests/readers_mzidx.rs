@@ -176,21 +176,39 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn readers::Reade
     }
     let mut m = Mzml::new(by_offset, size);
     let mut tr = MzmlTraces::new(&mut m, rows.last().map_or(0, |s| s.end));
-    let written: Vec<ChromatogramEntry> = src
-        .chromatograms()
-        .unwrap()
-        .into_iter()
-        .filter(|v| {
-            let t = src.chromatogram(&v.id).unwrap();
-            !t.time.is_empty()
-                && !matches!(
-                    t.kind,
-                    ChromKind::Pda | ChromKind::Pressure | ChromKind::Analog | ChromKind::Other
-                )
-        })
-        .collect();
-    let listed = tr.chromatograms().unwrap();
+    // the mass-spectrometer traces are compared with their kind; the optical, pressure and device ones (whose kind the mzML may spell otherwise) by id
+    // and points, on both sides
+    let ms = |k: ChromKind| {
+        !matches!(
+            k,
+            ChromKind::Pda | ChromKind::Pressure | ChromKind::Analog | ChromKind::Other
+        )
+    };
+    let (mut written, mut other): (Vec<ChromatogramEntry>, Vec<_>) = (Vec::new(), Vec::new());
+    for v in src.chromatograms().unwrap() {
+        let t = src.chromatogram(&v.id).unwrap();
+        match (t.time.is_empty(), ms(t.kind)) {
+            (true, _) => {}
+            (false, true) => written.push(v),
+            (false, false) => other.push(t),
+        }
+    }
+    let all = tr.chromatograms().unwrap();
+    let listed: Vec<_> = all.iter().filter(|x| ms(x.tipo)).collect();
     assert_eq!(listed.len(), written.len(), "{label}: chromatograms");
+    assert_eq!(
+        all.len(),
+        written.len() + other.len(),
+        "{label}: other traces"
+    );
+    for q in &other {
+        let p = tr.chromatogram(&q.id).unwrap();
+        assert!(
+            p.time == q.time && p.intensity == q.intensity,
+            "{label}: trace {}",
+            q.id
+        );
+    }
     for (x, y) in listed.iter().zip(&written) {
         assert_eq!((&x.id, x.tipo), (&y.id, y.tipo), "{label}");
         let (p, q) = (
@@ -316,6 +334,29 @@ fn the_synthetic_wiff_pairs_give_the_index_of_their_mzml() {
         MANY.load(Ordering::Relaxed) > 0,
         "no index built in more than one pass"
     );
+}
+
+/// A full scan with a DAD (`tools/wiff_dad_mrm.py`, `dadscan`): the TWC is in the mzML with the points the reader gives.
+#[test]
+fn a_synthetic_wiff_with_a_dad_gives_the_index_of_its_mzml() {
+    let out = std::env::temp_dir().join(format!("mzlab_lettori_mzidx_dad_{}", std::process::id()));
+    let ok = Command::new("python3")
+        .arg(root().join("tools/wiff_dad_mrm.py"))
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
+    if ok.is_none() {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("SKIP read_mzidx.rs: python3 not available");
+        return;
+    }
+    let n = same_all("dadscan", &|| wiff_set(&out, "dadscan"));
+    let _ = std::fs::remove_dir_all(&out);
+    assert!(n > 0);
 }
 
 #[test]

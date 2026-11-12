@@ -7,7 +7,7 @@ use super::{container_within, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::method::{sha1_hex, Source, SrcFile};
-use crate::mzml::{ChromKind, Chromatogram, Spectrum};
+use crate::mzml::{Chromatogram, Spectrum};
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 use crate::readers::{
@@ -221,9 +221,6 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         let mut v: Vec<ChromatogramEntry> = self.chromatograms(c)?.iter().map(|h| ChromatogramEntry { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }).collect();
         self.list_bpc(c, &mut v)?;
-        if self.part(c)?.w.dad.is_some() && !v.iter().any(|x| x.tipo == ChromKind::Pda) {
-            v.push(ChromatogramEntry { id: "DAD TWC".into(), tipo: ChromKind::Pda, unita: "mAU".into() });
-        }
         Ok(v)
     }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {

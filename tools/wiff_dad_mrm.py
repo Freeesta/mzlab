@@ -2,10 +2,11 @@
 
     python3 tools/wiff_dad_mrm.py OUT
 
-Writes OUT/dadmrm.wiff (one MRM experiment, two transitions), OUT/dadsim.wiff (one Q1MI experiment, two ions) and OUT/dadms2.wiff (one product-ion
-experiment), all with the same DAD matrix: 191 wavelengths, 210-400 nm, 1 nm step, a strong band at 274 nm (compound A, 2.0 min) and a weak one at
-230 nm (compound B, 3.5 min) on a flat baseline; OUT/nodad.wiff is the MRM one without a DAD; OUT/dadmrm.json holds the expected band means at the
-apexes. Invented numbers, no laboratory data.
+Writes OUT/dadmrm.wiff (one MRM experiment, two transitions), OUT/dadsim.wiff (one Q1MI experiment, two ions), OUT/dadms2.wiff (one product-ion
+experiment) and OUT/dadscan.wiff (one full scan experiment), all with the same DAD matrix: 191 wavelengths, 210-400 nm, 1 nm step, a strong band at
+274 nm (compound A, 2.0 min) and a weak one at 230 nm (compound B, 3.5 min) on a flat baseline; OUT/nodad.wiff is the MRM one without a DAD;
+OUT/dadmrm.json holds the expected band means at the apexes; dadscan keeps its BPC and TWC in one order on every path (crates/mzlab-core/tests/
+wiff_reader.rs). Invented numbers, no laboratory data.
 """
 import json
 import math
@@ -80,6 +81,10 @@ def main(out=None):
     wr.sample(1, ms2_blocks(), {"Experiment0/ExperimentHeader": w.header(11, 300.0, polarity=0),
                                 "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": w.ion_spray(5500.0)}, log="3200 QTRAP", dad=(ts, NM0, STEP, rows))
     wr.save(out, "dadms2")
+    wr = w.Writer()
+    scans = [("scan", w.FULL, 6000.0 * k, 1.0e3 * (k + 1)) for k in range(5)]
+    wr.sample(1, scans, {"Experiment0/ExperimentHeader": w.header(15, 0.0)}, log="3200 QTRAP", dad=(ts, NM0, STEP, rows))
+    wr.save(out, "dadscan")
     a_rt, b_rt = BANDS[0][0], BANDS[1][0]
     info = {"rows": ROWS, "nm": [NM0, NM0 + STEP * (NCH - 1), NCH],
             "a": {"rt": a_rt, "nm0": 270.0, "nm1": 278.0, "max": band_mean(a_rt, 270.0, 278.0)},
