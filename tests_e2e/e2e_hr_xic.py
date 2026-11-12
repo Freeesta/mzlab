@@ -81,7 +81,7 @@ try:
             pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
             load(pg, [D / "B_FullMass-t0.mzML"], 4000, 1)
             a = pg.evaluate("(t=>HR.xicArgs(E.files[0],t,{tab:E.tab,tol:0.5}))(%s)" % __import__("json").dumps(T0)); print(a)
-            assert abs(a[0] - 305.3) < 1e-6 and abs(a[1] - 0.5) < 1e-6, a   # QqQ: the unit window [304.8, 305.8] of today
+            assert abs(a[0] - 305.05) < 1e-6 and abs(a[1] - 0.25) < 1e-6, a   # QqQ: the unit window [304.8, 305.3]
         step("a QqQ file (its own session) keeps the unit window", lr_session)
     r.close()
 except Exception as e:

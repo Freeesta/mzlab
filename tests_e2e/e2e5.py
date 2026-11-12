@@ -15,7 +15,7 @@ try:
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
             pg.fill("#xic-mz", t); hold(pg, 1300)
             if ok: pg.click("#xic-go"); ready(pg)
-        def addwin(v):                                # write ONE m/z value: the unit window [n-0.2, n+0.8] is built around its nominal mass
+        def addwin(v):                                # write ONE m/z value: the unit window [n-0.2, n+0.3] is built around its nearest integer
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
             pg.fill("#xic-mz", v)
             pg.click("#xic-go"); ready(pg)
@@ -30,26 +30,26 @@ try:
             else: pg.click(f'.pnl.xic .corrg[data-g="1"] .corri[data-c="{v}"]')
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
-            # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and a window of +-0.5 Da around it
-            assert t and abs(t[0][0] - 364.3) < 1e-6 and t[0][1] == 0.5 and "C14H13F4N3O2S" in t[0][2] and "m/z 364.3" in t[0][2], t
-            addwin("163.3")                                       # nominal 163: window 162.8-163.8
-            tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.3) < 1e-6 and abs(tr["w"] - 0.5) < 1e-6, tr
+            # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and the window [n-0.2, n+0.3] around its nearest integer n
+            assert t and abs(t[0][0] - 364.05) < 1e-6 and t[0][1] == 0.25 and "C14H13F4N3O2S" in t[0][2] and "m/z 363.8\u2013364.3" in t[0][2], t
+            addwin("163.3")                                       # nominal 163: window 162.8-163.3
+            tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.05) < 1e-6 and abs(tr["w"] - 0.25) < 1e-6, tr
             addion("C2H6Qq", ok=False)
             assert "non valida" in pg.inner_text("#xic-sum"); pg.click("#xic-no")
-            # one decimal only: the value is rounded half up to 0.1, commas are accepted, and the window comes from the nominal mass (100.6 -> n = 101 -> 100.8-101.8)
-            pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "100,26"); assert "99.8 - 100.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
-            pg.fill("#xic-mz", "100.6"); assert "100.8 - 101.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
+            # one decimal only: the value is rounded half up to 0.1, commas are accepted, and the window comes from the nominal mass (100.6 -> n = 101 -> 100.8-101.3)
+            pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "100,26"); assert "99.8 - 100.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
+            pg.fill("#xic-mz", "100.6"); assert "100.8 - 101.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.click("#xic-go"); ready(pg)
-            tr = pg.evaluate(f"E.panels[{xi}].traces[2]"); assert abs(tr["mz"] - 101.3) < 1e-6 and abs(tr["w"] - 0.5) < 1e-6, tr
+            tr = pg.evaluate(f"E.panels[{xi}].traces[2]"); assert abs(tr["mz"] - 101.05) < 1e-6 and abs(tr["w"] - 0.25) < 1e-6, tr
             pg.evaluate(f"E.panels[{xi}].traces.pop()"); pg.evaluate(f"E.panels[{xi}].traces.pop()")
         step("XIC window: formula (neutral) and one m/z value (unit window around the nominal mass)", formula_in_xic)
         def xicdlg_layout():
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))")
-            t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "1 Da" in t, t
+            t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "n + 0.3" in t, t
             assert not pg.query_selector("#xic-lo") and not pg.query_selector("#xic-hi") and "compromesso" not in t and "0.7 Da" not in t, t
             pg.fill("#xic-mz", ""); hold(pg, 700)      # (the window opens with the last ion: clear it, then nothing is written)
             pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "Scrivi un valore di m/z" in err, err      # nothing written
-            pg.fill("#xic-mz", "C2H6O"); hold(pg, 1300); assert "46.8 - 47.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # one box: an m/z or a formula
+            pg.fill("#xic-mz", "C2H6O"); hold(pg, 1300); assert "46.8 - 47.3" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # one box: an m/z or a formula
             pg.click("#xic-no")
         step("XIC window layout: new text, one m/z value, oppure, neutral formula; no from/to fields", xicdlg_layout)
         def blank():
@@ -87,7 +87,7 @@ try:
             t = pg.inner_text("#sb-panel-adducts"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "363.1" in t and "364.07" not in t and "1 decimale" not in t
             pg.screenshot(path=SH + "53_calc.png")
             pg.locator("#sb-panel-adducts button.cxic").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
-            assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-mz") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-mz"), pg.inner_text("#xic-sum"))
+            assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-mz") == "C14H13F4N3O2S" and "363.8 - 364.3" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-mz"), pg.inner_text("#xic-sum"))
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)") == n0 + 1
         step("calculator", calc)

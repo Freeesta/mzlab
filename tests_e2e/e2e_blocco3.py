@@ -20,7 +20,7 @@ try:
             pg.click("#np-xic"); assert rows().count() == 2
             t = pg.inner_text("#xic-rows"); assert "Ione 1" in t and "Ione 2" in t and "facoltativo" not in t, t
             pg.locator("#xic-rows input").nth(0).fill("194.2"); pg.locator("#xic-rows input").nth(1).fill("152"); pg.wait_for_timeout(300)
-            s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "193.8 - 194.8" in s[0] and "151.8 - 152.8" in s[1], s
+            s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "193.8 - 194.3" in s[0] and "151.8 - 152.3" in s[1], s
             n0 = pg.evaluate(f"{XP}.length"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate(f"{XP}.length") == n0 + 1 and pg.evaluate(f"{XP}.pop().traces.length") == 2
         step("3.1: two ions -> one panel with two traces", two)
@@ -38,7 +38,7 @@ try:
         step("3.1: up to 10 rows, × removes one", limit)
         def mixed():
             pg.click("#np-xic"); pg.locator("#xic-rows input").nth(0).fill("c14h13f4n3o2s"); pg.locator("#xic-rows input").nth(1).fill("300"); hold(pg, 1300)
-            s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "363.8 - 364.8" in s[0] and "interpretata" in s[0] and "299.8 - 300.8" in s[1], s
+            s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "363.8 - 364.3" in s[0] and "interpretata" in s[0] and "299.8 - 300.3" in s[1], s
             assert pg.locator("#xic-rows select").nth(0).is_visible() and not pg.locator("#xic-rows select").nth(1).is_visible(), "the adduct only for a formula"
             pg.click("#xic-no")
         step("3.1: formula and m/z in the same kind of box", mixed)
