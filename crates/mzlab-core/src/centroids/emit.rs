@@ -154,9 +154,15 @@ pub(super) fn half_width(buf: &Buf, g: &Group) -> Option<f64> {
     if half <= 0.0 {
         return None;
     }
-    let cross = |a: usize, b: usize| buf.x[a] + (half - net(a)) / (net(b) - net(a)) * (buf.x[b] - buf.x[a]);
-    let left = (g.lo..g.apex).rev().find(|&j| net(j) < half).map(|j| cross(j, j + 1))?;
-    let right = (g.apex + 1..=g.hi).find(|&j| net(j) < half).map(|j| cross(j, j - 1))?;
+    let cross =
+        |a: usize, b: usize| buf.x[a] + (half - net(a)) / (net(b) - net(a)) * (buf.x[b] - buf.x[a]);
+    let left = (g.lo..g.apex)
+        .rev()
+        .find(|&j| net(j) < half)
+        .map(|j| cross(j, j + 1))?;
+    let right = (g.apex + 1..=g.hi)
+        .find(|&j| net(j) < half)
+        .map(|j| cross(j, j - 1))?;
     Some(right - left)
 }
 

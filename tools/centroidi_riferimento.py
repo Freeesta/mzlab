@@ -187,6 +187,36 @@ def continuous_scan(rng, mz0, n, jitter, peaks, noise_amp):
     return mz, y
 
 
+def orbitrap(rng, rows, est):
+    # Orbitrap-like file over m/z 150-1200 (FWHM = a * m^1.5, points only near the peaks): the width model is fitted from the isolated peaks
+    def fw(m):
+        return 200.0 / 60000.0 * (m / 200.0) ** 1.5
+    scans = []
+    for _ in range(3):
+        mz, y = [], []
+        for j in range(16):
+            c, h = 150.0 + 65.0 * j + 5.0 * rng.random(), 1e4 * (0.5 + rng.random())
+            m = c - 6.0 * fw(c)
+            while m < c + 6.0 * fw(c):
+                mz.append(m)
+                y.append(gauss(m, c, h, fw(c)) + 20.0 * rng.random())
+                m += fw(m) / 10.0
+        scans.append((mz, y))
+    p, reg, peaks = estimate(scans, 0.7)
+    est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "regular": reg, "peaks": peaks})
+    # the same file centroided with its model: singles and 1:1 doublets 0.5 FWHM apart (MERGED at the width of their own m/z)
+    mz, y = [], []
+    for j in range(12):
+        c = 180.0 + 85.0 * j + rng.random()
+        pair = [(c, 5e3)] if j % 2 else [(c, 5e3), (c + 0.5 * fw(c), 5e3)]
+        m = c - 6.0 * fw(c)
+        while m < c + 7.0 * fw(c):
+            mz.append(m)
+            y.append(sum(gauss(m, x, h, fw(x)) for x, h in pair) + 20.0 * rng.random())
+            m += fw(m) / 10.0
+    rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
+
+
 def main():
     rng = random.Random(2024)
     rows = []
@@ -242,33 +272,7 @@ def main():
         scans = [continuous_scan(rng, 300.0, 3000, 0.0, [(300.1 + 0.24 * j, 5000.0 + 400.0 * j, 0.005) for j in range(n_peaks)], 40.0) for _ in range(3)]
         p, reg, peaks = estimate(scans, 0.7)
         est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "regular": reg, "peaks": peaks})
-    # Orbitrap-like file over m/z 150-1200 (FWHM = a * m^1.5, points only near the peaks): the width model is fitted from the isolated peaks
-    def fw(m):
-        return 200.0 / 60000.0 * (m / 200.0) ** 1.5
-    scans = []
-    for _ in range(3):
-        mz, y = [], []
-        for j in range(16):
-            c, h = 150.0 + 65.0 * j + 5.0 * rng.random(), 1e4 * (0.5 + rng.random())
-            m = c - 6.0 * fw(c)
-            while m < c + 6.0 * fw(c):
-                mz.append(m)
-                y.append(gauss(m, c, h, fw(c)) + 20.0 * rng.random())
-                m += fw(m) / 10.0
-        scans.append((mz, y))
-    p, reg, peaks = estimate(scans, 0.7)
-    est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "regular": reg, "peaks": peaks})
-    # the same file centroided with its model: singles and 1:1 doublets 0.5 FWHM apart (MERGED at the width of their own m/z)
-    mz, y = [], []
-    for j in range(12):
-        c = 180.0 + 85.0 * j + rng.random()
-        pair = [(c, 5e3)] if j % 2 else [(c, 5e3), (c + 0.5 * fw(c), 5e3)]
-        m = c - 6.0 * fw(c)
-        while m < c + 7.0 * fw(c):
-            mz.append(m)
-            y.append(sum(gauss(m, x, h, fw(x)) for x, h in pair) + 20.0 * rng.random())
-            m += fw(m) / 10.0
-    rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
+    orbitrap(rng, rows, est)
     json.dump({"scans": rows, "estimates": est}, open(sys.argv[1], "w"))
 
 

@@ -11,6 +11,9 @@ pub struct Estimate {
     pub regular: bool,
     /// Isolated peaks that gave the width (0 = the fallback width was used).
     pub peaks: usize,
+    /// Centroids of a conversion flagged `MERGED` and `SATURATED` (0 for an estimate alone).
+    pub merged: usize,
+    pub saturated: usize,
 }
 
 /// Value of the highest frequency among `v` rounded to 6 significant digits (the smallest on a tie).
@@ -147,15 +150,22 @@ fn width_model(pairs: &[(f64, f64)]) -> Option<(f64, f64)> {
         .map(|&(m, w)| (libm::log(m), libm::log(w)))
         .collect();
     let n = pts.len() as f64;
-    let (lo, hi) = pts.iter().fold((f64::MAX, f64::MIN), |(l, h), &(x, _)| (l.min(x), h.max(x)));
+    let (lo, hi) = pts
+        .iter()
+        .fold((f64::MAX, f64::MIN), |(l, h), &(x, _)| (l.min(x), h.max(x)));
     if pts.len() < 8 || hi - lo < libm::log(1.3) {
         return None;
     }
-    let (mx, my) = (pts.iter().map(|p| p.0).sum::<f64>() / n, pts.iter().map(|p| p.1).sum::<f64>() / n);
+    let (mx, my) = (
+        pts.iter().map(|p| p.0).sum::<f64>() / n,
+        pts.iter().map(|p| p.1).sum::<f64>() / n,
+    );
     let sxx: f64 = pts.iter().map(|&(x, _)| (x - mx) * (x - mx)).sum();
     let sxy: f64 = pts.iter().map(|&(x, y)| (x - mx) * (y - my)).sum();
     let b = sxy / sxx;
-    (0.0..=2.0).contains(&b).then(|| (libm::exp(my - b * mx), b))
+    (0.0..=2.0)
+        .contains(&b)
+        .then(|| (libm::exp(my - b * mx), b))
 }
 
 fn median(v: &mut [f64]) -> f64 {
@@ -239,5 +249,7 @@ pub fn estimate(scans: &[(&[f64], &[f64])], fallback_w: f64) -> Estimate {
         params: p,
         regular,
         peaks,
+        merged: 0,
+        saturated: 0,
     }
 }
