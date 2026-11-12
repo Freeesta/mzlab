@@ -1,11 +1,11 @@
-//! UV (PDA/DAD) and analog channels (`uv:twc`, `uv:<nm>±<bw>`, `an:<i>`) of a file: listed next to `tic` as roots, read through the routes that already
+//! UV (PDA/DAD) and analog channels (`uv:twc`, `uv:<nm>±<bw>`, `uv:auto`, `an:<i>`) of a file: listed next to `tic` as roots, read through the routes that already
 //! serve them (`pda_trace`, `pda_wavelength`, `pda_spectrum`, `analog`), so `canale=` answers byte for byte what `kind=pda` and `api/analog` answer.
 
 use crate::channels::{Channel, Famiglia, Source};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::iteminfo::Facts;
-use crate::itemroutes::{analog as analog_route, pda_spectrum, pda_trace, pda_wavelength};
+use crate::itemroutes::{analog as analog_route, pda_propose, pda_spectrum, pda_trace, pda_wavelength};
 use crate::json::fmt_g;
 use crate::mzmlhead::{Chrom, Mzml};
 
@@ -14,6 +14,8 @@ use crate::mzmlhead::{Chrom, Mzml};
 pub enum Reading {
     /// `uv:twc`: the total wavelength chromatogram of the file.
     Twc,
+    /// `uv:auto`: the XWC band proposed from the data (`pda_propose`), not a trace.
+    Auto,
     /// `uv:<nm>±<bw>` (or `+-`): the trace between `nm - bw` and `nm + bw`; a bare `uv:<nm>` has bandwidth 0.
     Nm(f64, f64),
     /// `an:<i>`: the chromatogram of that index (pressure, flow, single UV).
@@ -28,6 +30,9 @@ pub fn read_id(id: &str) -> Option<Reading> {
     let r = id.strip_prefix("uv:")?;
     if r == "twc" {
         return Some(Reading::Twc);
+    }
+    if r == "auto" {
+        return Some(Reading::Auto);
     }
     let (nm, bw) = match r.split_once('±').or_else(|| r.split_once("+-")) {
         Some((a, b)) => (a, b),
@@ -78,20 +83,22 @@ pub fn add(v: &mut Vec<Channel>, chroms: &[Chrom], facts: &Facts) {
     }
 }
 
-/// The trace of the channel `id` (`{rt, y}`; an analog one as `api/analog`, `n` points at most per extreme).
+/// The trace of the channel `id` (`{rt, y}`; an analog one as `api/analog`, `n` points at most per extreme); `uv:auto` answers the proposed band.
 pub fn trace<M: ReadAt>(m: &mut Mzml<M>, chroms: &[Chrom], id: &str, n: i64) -> Result<String> {
     let unknown = || Error::new("err.canali.unknown").with("id", id);
     match read_id(id).ok_or_else(unknown)? {
         Reading::Twc => pda_trace(m, chroms),
         Reading::Nm(nm, bw) => pda_wavelength(m, nm - bw, nm + bw),
+        Reading::Auto => pda_propose(m, f64::NAN, f64::NAN),
         Reading::Analog(i) => analog_route(m, chroms, i, n),
     }
 }
 
-/// The UV spectrum between `rt0` and `rt1` of `uv:twc` (the spectrum of one scan: `rt0 == rt1`).
+/// The UV spectrum between `rt0` and `rt1` of `uv:twc` (the spectrum of one scan: `rt0 == rt1`); for `uv:auto` the band proposed in that window.
 pub fn spettro<M: ReadAt>(m: &mut Mzml<M>, id: &str, rt0: f64, rt1: f64) -> Result<String> {
     match read_id(id) {
         Some(Reading::Twc) => pda_spectrum(m, rt0, rt1),
+        Some(Reading::Auto) => pda_propose(m, rt0, rt1),
         _ => Err(Error::new("err.canali.unknown").with("id", id)),
     }
 }

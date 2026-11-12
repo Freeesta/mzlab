@@ -241,6 +241,10 @@ pub trait Reader {
     fn dad_wavelength(&mut self, _c: usize, _nm0: f64, _nm1: f64) -> Result<Option<String>> {
         Ok(None)
     }
+    /// The XWC band proposed from the DAD / PDA of sample `c` (JSON `{nm, bw, rt, n}`, `wiff::dad_uv::dad_propose_json`), if it has the optical matrix.
+    fn dad_propose(&mut self, _c: usize, _rt0: f64, _rt1: f64) -> Result<Option<String>> {
+        Ok(None)
+    }
     /// The optical (DAD / PDA) matrix of sample `c` as the reader holds it, for `convert.mzml` with `dad`; `None` when the sample has none.
     #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
     fn dad_data(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {

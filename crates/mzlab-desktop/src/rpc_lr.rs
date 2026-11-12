@@ -286,6 +286,11 @@ impl State {
                 let (mut m, _, _) = self.chroms(eng, name)?;
                 text(mzlab_core::itemroutes::pda_spectrum(&mut m, p["rt0"].as_f64().unwrap_or(f64::NAN), p["rt1"].as_f64().unwrap_or(f64::NAN))?)
             }
+            "lr_pda_propose" => {
+                let name = s("name").split('#').next().unwrap_or("");
+                let (mut m, _, _) = self.chroms(eng, name)?;
+                text(mzlab_core::itemroutes::pda_propose(&mut m, p["rt0"].as_f64().unwrap_or(f64::NAN), p["rt1"].as_f64().unwrap_or(f64::NAN))?)
+            }
             "lr_delay" => {
                 let name = s("name").split('#').next().unwrap_or("");
                 let slot = self.open_lr(eng, name)?;

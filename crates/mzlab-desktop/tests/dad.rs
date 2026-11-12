@@ -1,4 +1,4 @@
-//! The optical detector (DAD) in the desktop engine: the ops `lr_pda`, `lr_pda_map`, `lr_pda_spectrum` and `lr_pda_wavelength` answer, for a demo mzML with the
+//! The optical detector (DAD) in the desktop engine: the ops `lr_pda`, `lr_pda_map`, `lr_pda_spectrum`, `lr_pda_wavelength` and `lr_pda_propose` answer, for a demo mzML with the
 //! matrix and for a synthetic `.wiff` + `.wiff.scan` pair with a DAD, the very strings of the routes of `mzlab-core` that the wasm engine runs on the same file.
 //! The pair is written by `tools/wiff_riferimento.py` (no binary in the repository); the wiff cases are skipped when python3 is not there.
 use mzlab_core::idxread::ReadAt;
@@ -153,6 +153,16 @@ fn answers<R: ReadAt>(st: &State, name: &str, m: &mut Mzml<R>) -> Vec<Pair> {
             nat("lr_pda", json!({"name": name})),
             e(itemroutes::pda_trace(m, &chroms)),
         ),
+        (
+            "proposed band",
+            nat("lr_pda_propose", json!({"name": name})),
+            e(itemroutes::pda_propose(m, f64::NAN, f64::NAN)),
+        ),
+        (
+            "proposed band in a window",
+            nat("lr_pda_propose", json!({"name": name, "rt0": 0.9, "rt1": 1.1})),
+            e(itemroutes::pda_propose(m, 0.9, 1.1)),
+        ),
     ]
 }
 
@@ -215,6 +225,12 @@ fn a_wiff_with_a_dad_answers_as_the_core_with_the_peak_at_260_nm() {
     assert_eq!(
         nm[top], PEAK_NM,
         "the UV spectrum at the peak has its maximum at 260 nm"
+    );
+    let band: Value = serde_json::from_str(&text(st.rpc("lr_pda_propose", &json!({"name": name}), &[]).unwrap())).unwrap();
+    assert_eq!(
+        (band["nm"].as_f64(), band["bw"].as_f64()),
+        (Some(PEAK_NM), Some(4.0)),
+        "the proposed XWC band is 260 ± 2 nm: {band}"
     );
 }
 

@@ -125,6 +125,12 @@ impl Engine {
         mzlab_core::itemroutes::pda_spectrum(&mut m, rt0, rt1).map_err(|e| error_json(&e))
     }
 
+    /// `/api/uvpropose`: the XWC band proposed from the DAD (at the strongest TWC peak, or in `rt0`..`rt1`).
+    pub fn item_pda_propose(&mut self, slot: u32, size: f64, read: Function, rt0: f64, rt1: f64) -> Result<String, JsValue> {
+        let mut m = self.mzml_of(slot, size, read)?;
+        mzlab_core::itemroutes::pda_propose(&mut m, rt0, rt1).map_err(|e| error_json(&e))
+    }
+
     /// `api/chrom` of the MRM file at `slot`: the chromatogram of the mzML with that kind (`tic`, `bpc`, `srm`).
     pub fn mrm_chrom(
         &mut self,

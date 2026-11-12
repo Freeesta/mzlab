@@ -251,6 +251,10 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
         Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
     }
+    #[cfg(feature = "mappa-dad")]
+    fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
+        Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_propose_json(d, rt0, rt1)))
+    }
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> { with_method(self, c).map(Some) }
     fn table_header(&mut self, c: usize) -> Result<Option<Header>> { file_header(self, c).map(Some) }
     fn method(&mut self, c: usize) -> Result<String> {
