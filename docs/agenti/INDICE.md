@@ -98,7 +98,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md` (mzFinder nativo: `rust-desktop-finder.md`), `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
-| record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
+| record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile; descrittori CIP R/S ed E/Z, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
 | misure dei motori | `docs/agenti/misure.md` (misure Rust e dei moduli: `misure-rust.md`; clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |

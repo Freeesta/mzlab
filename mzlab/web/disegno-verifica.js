@@ -34,25 +34,26 @@ export function carica() {
 }
 
 /** Ketcher of the frame, once Draw has started it */
-async function ketcher() {
+export async function ketcher() {
   await /** @type {any} */ (window).TPDraw.when();
   return /** @type {any} */ (document.querySelector("#kframe")).contentWindow.ketcher;
 }
 
-/** `check/1` text of a request: the native engine in the app, the molkit .wasm on the site */
-async function ask(/** @type {string} */ request) {
+/** `check/1` (or, with kind `cip`, `cip/1`) text of a request: the native engine in the app, the molkit .wasm on the site */
+export async function ask(/** @type {string} */ request, /** @type {"check" | "cip"} */ kind = "check") {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) {
     const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
-    const r = await fetch(base + "rpc", { method: "POST", body: JSON.stringify({ op: "feat/grafo", kind: "check", request }) });
+    const r = await fetch(base + "rpc", { method: "POST", body: JSON.stringify({ op: "feat/grafo", kind, request }) });
     const x = await r.text();
     if (r.status !== 200) throw x;
     return x;
   }
-  return (await carica()).check(request);
+  const mod = await carica();
+  return kind === "cip" ? mod.cip(request) : mod.check(request);
 }
 
 /** the message of an engine error (`{error_key, params}` text) or of anything else */
-function message(/** @type {any} */ e) {
+export function message(/** @type {any} */ e) {
   try { const j = JSON.parse(String(e)); if (j.error_key) return t(j.error_key, j.params || {}); } catch (_) { /* not JSON */ }
   return e && e.message ? e.message : String(e);
 }
