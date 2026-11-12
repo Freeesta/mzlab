@@ -187,10 +187,14 @@ def continuous_scan(rng, mz0, n, jitter, peaks, noise_amp):
     return mz, y
 
 
-def orbitrap(rng, rows, est):
-    # Orbitrap-like file over m/z 150-1200 (FWHM = a * m^1.5, points only near the peaks): the width model is fitted from the isolated peaks
+def orbitrap(rng, rows, est, steep=False):
+    # Orbitrap-like file over m/z 150-1200 (FWHM = a * m^1.5, points only near the peaks): the width model is fitted from the isolated peaks; on the
+    # steep grid the spacing grows as m^0.5 while the widths grow as m^1.5 (3 points per FWHM at m/z 180, 20 at 1200), so the windows in points change with m/z
     def fw(m):
         return 200.0 / 60000.0 * (m / 200.0) ** 1.5
+
+    def spacing(m):
+        return fw(600.0) / 10.0 * math.sqrt(m / 600.0) if steep else fw(m) / 10.0
     scans = []
     for _ in range(3):
         mz, y = [], []
@@ -200,20 +204,20 @@ def orbitrap(rng, rows, est):
             while m < c + 6.0 * fw(c):
                 mz.append(m)
                 y.append(gauss(m, c, h, fw(c)) + 20.0 * rng.random())
-                m += fw(m) / 10.0
+                m += spacing(m)
         scans.append((mz, y))
     p, reg, peaks = estimate(scans, 0.7)
     est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "regular": reg, "peaks": peaks})
-    # the same file centroided with its model: singles and 1:1 doublets 0.5 FWHM apart (MERGED at the width of their own m/z)
+    # the same file centroided with its model: singles, 1:1 doublets 0.5 and 1.2 FWHM apart and 1:0.3 shoulders 1 FWHM away, each at the width of its m/z
     mz, y = [], []
     for j in range(12):
         c = 180.0 + 85.0 * j + rng.random()
-        pair = [(c, 5e3)] if j % 2 else [(c, 5e3), (c + 0.5 * fw(c), 5e3)]
+        pair = [[(c, 5e3)], [(c, 5e3), (c + 0.5 * fw(c), 5e3)], [(c, 5e3), (c + 1.2 * fw(c), 5e3)], [(c, 5e3), (c + fw(c), 1.5e3)]][j % 4]
         m = c - 6.0 * fw(c)
-        while m < c + 7.0 * fw(c):
+        while m < c + 8.0 * fw(c):
             mz.append(m)
             y.append(sum(gauss(m, x, h, fw(x)) for x, h in pair) + 20.0 * rng.random())
-            m += fw(m) / 10.0
+            m += spacing(m)
     rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
 
 
@@ -273,6 +277,7 @@ def main():
         p, reg, peaks = estimate(scans, 0.7)
         est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "regular": reg, "peaks": peaks})
     orbitrap(rng, rows, est)
+    orbitrap(rng, rows, est, steep=True)
     json.dump({"scans": rows, "estimates": est}, open(sys.argv[1], "w"))
 
 

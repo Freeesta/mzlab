@@ -27,9 +27,9 @@ fn second_consts(l: usize) -> (f64, f64, f64) {
 
 /// The residual window around `j` after the main Gaussian: (positive residual, its weighted m/z, highest value, background sum).
 fn residual(buf: &Buf, p: &Params, j: usize, x0: f64, h: f64) -> Option<(f64, f64, f64, f64)> {
-    let hw = (0.5 * p.wb() as f64).ceil() as usize;
+    let hw = (0.5 * p.wb_at(buf, j) as f64).ceil() as usize;
     let (lo, hi) = (j.saturating_sub(hw), (j + hw).min(buf.v.len() - 1));
-    let sg = p.w / 2.355;
+    let sg = p.w_at(x0) / 2.355;
     let (mut a, mut am, mut top, mut f) = (0.0, 0.0, 0.0f64, 0.0);
     for i in lo..=hi {
         let r = buf.v[i] - buf.b[i] - h * libm::exp(-(buf.x[i] - x0).powi(2) / (2.0 * sg * sg));
@@ -54,7 +54,7 @@ pub(super) fn find(
 ) -> Vec<Centroid> {
     let l = p.sg_len();
     let consts = second_consts(l);
-    let dist = (0.6 * p.wb() as f64).ceil() as usize;
+    let dist = (0.6 * p.wb_at(buf, g.apex) as f64).ceil() as usize;
     let h = buf.s[g.apex] - buf.b[g.apex];
     let mut out = Vec::new();
     for side in [-1isize, 1] {
@@ -82,7 +82,7 @@ pub(super) fn find(
             }
             Mode::Continuous => top >= (p.k + 1.0) * sigma,
         };
-        if ok && a >= 0.10 * area && (mz - x0).abs() >= 0.5 * p.w {
+        if ok && a >= 0.10 * area && (mz - x0).abs() >= 0.5 * p.w_at(x0) {
             out.push(Centroid {
                 mz,
                 value: if p.area { a } else { top },

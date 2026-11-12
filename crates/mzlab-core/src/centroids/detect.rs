@@ -2,7 +2,7 @@
 
 use super::{Buf, Mode, Params};
 
-/// A peak before the threshold: its apex and its region (indices of the grid, both included); `members` = candidates merged into it.
+/// A peak before the threshold: its apex and its region (indices of the grid, both included); `members` = candidates merged into it (`merged`).
 #[derive(Clone, Debug)]
 pub(super) struct Group {
     pub apex: usize,
@@ -95,7 +95,7 @@ fn insignificant(buf: &Buf, p: &Params, sigma: f64, a: usize, c: usize, v: usize
     let lower_apex = if buf.s[c] < buf.s[a] { c } else { a };
     match p.mode {
         Mode::Counts => {
-            let h = ((0.25 * p.wb() as f64).ceil() as usize).max(1);
+            let h = ((0.25 * p.wb_at(buf, lower_apex) as f64).ceil() as usize).max(1);
             let (ca, cv) = (raw_near(buf, lower_apex, h), raw_near(buf, v, h));
             ca + cv <= 0.0 || (ca - cv) / (ca + cv).sqrt() < p.k
         }
@@ -103,12 +103,30 @@ fn insignificant(buf: &Buf, p: &Params, sigma: f64, a: usize, c: usize, v: usize
     }
 }
 
+/// Whether candidate `c` merges into the group of apex `a` (valley `v`): closer than 0.5 w or the valley is not significant. With the width model,
+/// a candidate whose valley is not significant is noise on the peak (the second item): it does not count as a member, so the shoulder test, which
+/// runs on single-member groups, is not blocked by the noise of a continuous scan. Without the model every merged candidate counts.
+fn merged(
+    buf: &Buf,
+    p: &Params,
+    sigma: f64,
+    (a, c, v): (usize, usize, usize),
+    wb: usize,
+) -> (bool, bool) {
+    let close = ((c - a) as f64) < 0.5 * wb as f64;
+    if p.wm.is_none() {
+        return (close || insignificant(buf, p, sigma, a, c, v), false);
+    }
+    let noise = insignificant(buf, p, sigma, a, c, v);
+    (close || noise, noise)
+}
+
 /// The peaks of a scan: candidates merged into the highest apex when they are closer than 0.5 w or the valley between them is not significant.
 pub(super) fn groups(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
-    let wb = p.wb();
     let mut out: Vec<Group> = Vec::new();
     let mut valley = Valley::start(0);
     for c in candidates(buf) {
+        let wb = p.wb_at(buf, c);
         let (lo, hi) = bounds(buf, c, wb);
         let g = Group {
             apex: c,
@@ -116,13 +134,12 @@ pub(super) fn groups(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
             hi,
             members: 1,
         };
-        let merge = match out.last() {
+        let (merge, noise) = match out.last() {
             Some(last) => {
                 let v = valley.extend(buf, c);
-                ((c - last.apex) as f64) < 0.5 * wb as f64
-                    || insignificant(buf, p, sigma, last.apex, c, v)
+                merged(buf, p, sigma, (last.apex, c, v), wb)
             }
-            None => false,
+            None => (false, false),
         };
         if merge {
             let last = out.last_mut().unwrap();
@@ -132,7 +149,7 @@ pub(super) fn groups(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> {
             }
             last.lo = last.lo.min(lo);
             last.hi = last.hi.max(hi);
-            last.members += 1;
+            last.members += usize::from(!noise);
         } else {
             out.push(g);
             valley = Valley::start(c);
@@ -159,16 +176,13 @@ pub(super) fn groups_reference(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> 
         }
         v
     };
-    let wb = p.wb();
     let mut out: Vec<Group> = Vec::new();
     for c in candidates(buf) {
+        let wb = p.wb_at(buf, c);
         let (lo, hi) = bounds(buf, c, wb);
-        let merge = match out.last() {
-            Some(last) => {
-                ((c - last.apex) as f64) < 0.5 * wb as f64
-                    || insignificant(buf, p, sigma, last.apex, c, valley(last.apex, c))
-            }
-            None => false,
+        let (merge, noise) = match out.last() {
+            Some(last) => merged(buf, p, sigma, (last.apex, c, valley(last.apex, c)), wb),
+            None => (false, false),
         };
         if merge {
             let last = out.last_mut().unwrap();
@@ -177,7 +191,7 @@ pub(super) fn groups_reference(buf: &Buf, p: &Params, sigma: f64) -> Vec<Group> 
             }
             last.lo = last.lo.min(lo);
             last.hi = last.hi.max(hi);
-            last.members += 1;
+            last.members += usize::from(!noise);
         } else {
             out.push(Group {
                 apex: c,

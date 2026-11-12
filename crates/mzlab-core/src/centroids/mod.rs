@@ -24,6 +24,10 @@ mod tests_grid_sat;
 mod tests_hr;
 #[cfg(test)]
 mod tests_merged;
+#[cfg(test)]
+mod tests_model;
+#[cfg(test)]
+mod tests_pin;
 
 pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
 pub use params::{estimate, Estimate};
@@ -70,6 +74,20 @@ impl Params {
     /// Width of a peak in grid points (at least 3).
     pub fn wb(&self) -> usize {
         ((self.w / self.step).round() as usize).max(3)
+    }
+    /// Width in grid points of a peak at point `j` of `buf`: the model at its m/z over the spacing of the 2 points on each side (the spacing of an
+    /// Orbitrap or TOF grows with m/z, not always as the width does), else `wb()` for every point.
+    pub(crate) fn wb_at(&self, buf: &Buf, j: usize) -> usize {
+        if self.wm.is_none() {
+            return self.wb();
+        }
+        let (lo, hi) = (j.saturating_sub(2), (j + 2).min(buf.x.len() - 1));
+        let dx = if hi > lo {
+            (buf.x[hi] - buf.x[lo]) / (hi - lo) as f64
+        } else {
+            self.step
+        };
+        ((self.w_at(buf.x[j]) / dx.max(f64::MIN_POSITIVE)).round() as usize).max(3)
     }
     /// High resolution: continuous values with at least 7 points per FWHM.
     pub fn hr(&self) -> bool {
