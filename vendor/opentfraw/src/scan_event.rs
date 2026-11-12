@@ -732,6 +732,42 @@ mod activation_tests {
         }
     }
 
+    /// The compact table gives back every event as it was pushed: shared preambles, and the reactions, collectors and coefficients of each event in its
+    /// own slice of the flat tables, including events with none of them (the memory work on the `.raw` reader changes no event).
+    #[test]
+    fn the_compact_table_gives_back_every_event_as_pushed() {
+        let mut events = Vec::new();
+        for i in 0..200u32 {
+            let mut e = event((i % 3) as u8, (i % 5) as u8, i);
+            e.reactions = (0..i % 4)
+                .map(|k| Reaction {
+                    precursor_mz: 100.0 + f64::from(i) + f64::from(k) / 7.0,
+                    unknown_double: f64::from(k),
+                    energy: f64::from(i % 9),
+                    unknown_long1: i ^ k,
+                    unknown_long2: k,
+                })
+                .collect();
+            e.fraction_collectors = (0..i % 3)
+                .map(|k| FractionCollector {
+                    low_mz: 50.0 * f64::from(k + 1),
+                    high_mz: 50.0 * f64::from(k + 2) + f64::from(i),
+                })
+                .collect();
+            e.coefficients = (0..i % 6).map(|k| f64::from(i) * 1e-3 + f64::from(k)).collect();
+            events.push(e);
+        }
+        let mut table = ScanEventTable::with_capacity(events.len());
+        for e in &events {
+            table.push(e.clone());
+        }
+        assert_eq!(table.len(), events.len());
+        for (i, e) in events.iter().enumerate() {
+            assert_eq!(format!("{:?}", table.get(i).unwrap()), format!("{e:?}"), "event {i}");
+        }
+        assert!(table.get(events.len()).is_none());
+    }
+
     #[test]
     fn ftms_code_4_is_cid_or_hcd_by_the_reaction_flag() {
         assert_eq!(Analyzer::from_byte(4), Some(Analyzer::FTMS));

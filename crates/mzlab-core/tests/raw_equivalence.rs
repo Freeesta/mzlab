@@ -277,3 +277,50 @@ fn the_table_header_has_the_fields_of_the_full_header() {
     }
     assert!(seen > 0, "no .raw opened");
 }
+
+/// The trailer records stay in the file and are decoded when asked: a whole record (`get`), a few fields (`get_fields`) and the walk over all of them
+/// (`for_each`) give the same value for every field of every record, so the three ways the reader reads a trailer agree on the real files.
+#[test]
+fn the_trailer_reads_agree_on_every_field() {
+    let Some(_) = dati_percorsi::radice() else {
+        eprintln!("SKIP raw_equivalence: no data repository (MZLAB_DATI)");
+        return;
+    };
+    for (case, _) in BEFORE {
+        let Some(p) = file(case) else {
+            eprintln!("SKIP raw_equivalence {case}: file not found");
+            continue;
+        };
+        let mut src = std::io::BufReader::new(std::fs::File::open(&p).unwrap());
+        let raw = opentfraw::RawFileReader::open(&mut src).unwrap();
+        let t = &raw.scan_parameters;
+        assert!(!t.is_empty(), "{case}: no trailer");
+        let step = (t.len() / 300).max(1);
+        let mut walked = vec![None; t.len()];
+        let n_fields = t.get(&mut src, 0).unwrap().values.len();
+        assert!(t.for_each(&mut src, &mut |i, view| {
+            if i % step == 0 {
+                walked[i] = Some(
+                    (0..n_fields)
+                        .map(|f| format!("{:?}", view.value(f)))
+                        .collect::<Vec<_>>(),
+                );
+            }
+        }));
+        for i in (0..t.len()).step_by(step) {
+            let whole = t.get(&mut src, i).unwrap();
+            let fields: Vec<usize> = (0..n_fields).collect();
+            let some = t.get_fields(&mut src, i, &fields).unwrap();
+            let from_walk = walked[i].as_ref().unwrap();
+            for f in 0..n_fields {
+                let a = format!("{:?}", Some(&whole.values[f].1));
+                assert_eq!(
+                    a,
+                    format!("{:?}", Some(&some.values[f].1)),
+                    "{case}: record {i} field {f} (get_fields)"
+                );
+                assert_eq!(&a, &from_walk[f], "{case}: record {i} field {f} (for_each)");
+            }
+        }
+    }
+}
