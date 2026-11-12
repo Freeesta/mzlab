@@ -105,7 +105,7 @@ async function rawSeries(p) {
   const mf = files.filter(f => f.kind === "mrm"), out = [], seen = new Map();
   const data = await Promise.all(mf.map(f => getMrm(f.k).then(tr => ({ f, tr }))));
   data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
-  const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key));
+  const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key)); if (p.tr !== p._trAuto) mrmRemember(p.tr, list.map(l => l.key));   // the student's choice outlives the panel
   if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
   const want = key => !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key), shown = list.filter(l => want(l.key)).map(l => l.key);
   const lab = key => window.SIMUI ? SIMUI.label(key) : key;

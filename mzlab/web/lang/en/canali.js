@@ -24,7 +24,7 @@ I18N.add("en", {
   "canali.pick.all.aria": "Plot every channel",
   "canali.pick.none": "None",
   "canali.pick.none.aria": "Plot no channel",
-  "canali.pick.none.msg": "No channel chosen: tick a channel in the picker",
+  "canali.pick.none.msg": "No channel chosen",
   "canali.pick.hint": "Click a channel: only that one. Box, Ctrl+click or Space: add or remove it.",
   "canali.pick.ck": "Add or remove {et}",
   "canali.grp.ms": "Mass spectrometry",

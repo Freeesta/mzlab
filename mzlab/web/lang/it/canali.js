@@ -24,7 +24,7 @@ I18N.add("it", {
   "canali.pick.all.aria": "Traccia tutti i canali",
   "canali.pick.none": "Nessuno",
   "canali.pick.none.aria": "Non tracciare nessun canale",
-  "canali.pick.none.msg": "Nessun canale scelto: spunta un canale nel selettore",
+  "canali.pick.none.msg": "Nessun canale scelto",
   "canali.pick.hint": "Clic su un canale: solo quello. Casella, Ctrl+clic o Spazio: aggiungi o togli.",
   "canali.pick.ck": "Aggiungi o togli {et}",
   "canali.grp.ms": "Spettrometria di massa",
