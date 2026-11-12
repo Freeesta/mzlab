@@ -160,6 +160,28 @@ fn tipo_analogico(t: &opentfraw::AnalogTrace) -> ChromKind {
     }
 }
 
+/// Pascal in one unit of a pressure channel, by the name the file gives (compared in lower case); `None` for any other unit.
+fn pascal_per(unit: &str) -> Option<f64> {
+    match unit.trim().to_ascii_lowercase().as_str() {
+        "psi" => Some(6_894.757_293_168),
+        "bar" => Some(1e5),
+        "mbar" => Some(100.0),
+        "pa" | "pascal" => Some(1.0),
+        "kpa" => Some(1e3),
+        "mpa" => Some(1e6),
+        _ => None,
+    }
+}
+
+/// A pressure channel in pascal, as msconvert writes it (and the mzML says so with `UO:0000110`); any other channel as the file gives it.
+fn in_pascal(kind: ChromKind, mut t: opentfraw::AnalogTrace) -> opentfraw::AnalogTrace {
+    if let (ChromKind::Pressure, Some(k)) = (kind, pascal_per(&t.unit)) {
+        t.values.iter_mut().for_each(|v| *v *= k);
+        t.unit = "pascal".into();
+    }
+    t
+}
+
 /// Id, kind and samples of every analog channel; two channels with the same name get the number of their controller after it.
 fn analogiche(l: &mut RawReader) -> &[(String, ChromKind, opentfraw::AnalogTrace)] {
     if l.analogiche.is_none() {
@@ -172,7 +194,8 @@ fn analogiche(l: &mut RawReader) -> &[(String, ChromKind, opentfraw::AnalogTrace
             } else {
                 t.name.clone()
             };
-            out.push((id, tipo_analogico(&t), t));
+            let kind = tipo_analogico(&t);
+            out.push((id, kind, in_pascal(kind, t)));
         }
         l.analogiche = Some(out);
     }
@@ -450,3 +473,7 @@ fn header_fields(
 #[cfg(test)]
 #[path = "rawreader_stream_tests.rs"]
 mod stream_tests;
+
+#[cfg(test)]
+#[path = "rawreader_pressure_tests.rs"]
+mod pressure_tests;

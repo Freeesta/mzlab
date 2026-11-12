@@ -335,13 +335,11 @@ pub fn fields(
                 .map_opt(script_map(k)),
         );
     }
-    for it in xml {
-        let c = Field::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value);
-        all.push(if it.name.contains("/ScanEvent/") {
-            c.map("ms.periodi")
-        } else {
-            c
-        });
+    // an XML item is a field only when a section carries it: an Orbitrap method has some 17 000 items, all kept as text in `grezzo`
+    for it in xml.iter().filter(|it| it.name.contains("/ScanEvent/")) {
+        all.push(
+            Field::new("thermo-raw:InstrumentMethod/XML", &it.name, &it.value).map("ms.periodi"),
+        );
     }
     for c in &mut all {
         c.identita |= ident.names(&c.valore);
