@@ -16,6 +16,8 @@ pub enum MolError {
     Smiles(String),
     /// The text is not a molfile (V2000 or V3000) the reader understands.
     Molfile(String),
+    /// The substructure query uses a feature the matcher does not honour, or the search hit its step cap.
+    Query(String),
 }
 
 impl fmt::Display for MolError {
@@ -25,6 +27,7 @@ impl fmt::Display for MolError {
             MolError::Invalid(m) => write!(f, "mol/1 invalid: {m}"),
             MolError::Smiles(m) => write!(f, "SMILES: {m}"),
             MolError::Molfile(m) => write!(f, "molfile: {m}"),
+            MolError::Query(m) => write!(f, "query: {m}"),
         }
     }
 }

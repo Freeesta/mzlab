@@ -8,7 +8,7 @@ use mzlab_core::readers::{self, Fiducia, FileSet, Limits, Reader, ReaderEntry};
 pub mod andi;
 #[cfg(any(feature = "bruker", feature = "tutte"))]
 pub mod bruker;
-pub mod finite;
+pub use mzlab_core::readers_finite as finite;
 pub mod json;
 pub mod not_carried;
 #[cfg(any(feature = "aperti", feature = "tutte"))]
@@ -119,7 +119,7 @@ pub fn riconosci(fs: &mut FileSet) -> Option<&'static ReaderEntry> {
 
 /// Opens `fs` with the reader that recognises it, as it is (the sessions of the modules: the engine decides itself what it does with SRM scans), except
 /// a Thermo `.raw`: a TSQ keeps its SRM transitions only as scans, so its reader is wrapped to give them as chromatograms (`srm::SrmFromScans`). Every reader
-/// answers through `finiti::Finiti`: a NaN or infinite number of the file is an error, not a value.
+/// answers through `finite::Finished`: a NaN or infinite number of the file is an error, not a value.
 pub fn open_bare(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let name = fs
         .membri

@@ -18,3 +18,5 @@ pub mod sel;
 mod shuffle;
 mod smiles;
 pub mod structures;
+#[cfg(feature = "record")]
+pub mod substructure;
