@@ -5,6 +5,9 @@
 // Returns { status, text, ms } or null (the route is unavailable: browser.js answers err.route.unavailable).
 import { cercaRoute, grafoRoute, libreriaRoute } from "./rust-msngrafo-pagina.js";
 
+// the kinds of `api/chrom` that `itemroutes::mrm_chrom` serves for a file with no scans
+const MRM_KINDS = new Set(["tic", "bpc", "srm"]);
+
 /** @param {string} path  @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, base: (n: string) => string, stats: any, t0: number, init?: any}} env */
 export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) {
   if (path === "/api/manint") return manintRoute(u, { slots, rpc, stats, t0 });
@@ -49,10 +52,11 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
     const r = await rpc({ op: "fileinfo", slot: ks[0], name: base(s.name).split("#")[0], blob: s.blob });
     return r.dead || r.error || !r.info ? null : done(r.info);
   }
-  // an MRM file: the chromatogram of the mzML of that kind (the m/z window, precursor and filter do not apply)
+  // an MRM file: the chromatogram of the mzML of that kind (the m/z window, precursor and filter do not apply); the DAD (`pda`, with or without a band in nm)
+  // and the analog kinds are not chromatograms of the mzML: null, so lr-method.js answers them
   if (path === "/api/chrom") {
     const s = slots[ks[0]];
-    if (ks.length !== 1 || s.idx.scans || !s.blob) return null;
+    if (ks.length !== 1 || s.idx.scans || !s.blob || !MRM_KINDS.has(q.get("kind") || "tic")) return null;
     const r = await rpc({ op: "mrmchrom", slot: ks[0], kind: q.get("kind") || "tic", blob: s.blob });
     return r.dead || r.error || !r.info ? null : done(r.info);
   }
