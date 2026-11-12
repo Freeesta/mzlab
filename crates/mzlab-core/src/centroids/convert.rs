@@ -3,7 +3,7 @@
 
 use std::io::{Read, Write};
 
-use super::{centroids, estimate, Buf, Estimate};
+use super::{centroids, estimate, Buf, Estimate, MERGED, SATURATED};
 use crate::error::Result;
 use crate::mzml::{self, Item};
 use crate::mzmlwrite::{Header, MzmlWriter};
@@ -84,6 +84,20 @@ pub fn mzml_to_centroids<R: Read, W: Write>(
     Ok(mzml_to_centroids_with(open, out, name, Over::default(), progress)?.is_some())
 }
 
+/// The header of the centroid mzML of the file `name`.
+fn header_of(name: &str) -> Header {
+    Header {
+        run: name
+            .trim_end_matches(".mzML")
+            .trim_end_matches(".mzml")
+            .to_string(),
+        sources: vec![name.to_string()],
+        software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
+        centroided: true,
+        ..Default::default()
+    }
+}
+
 /// `mzml_to_centroids` with `over` applied to the estimated parameters; returns the estimate with the parameters used (`peaks` 0: the width is the
 /// fallback, not measured), `None` when the file has no profile spectrum.
 pub fn mzml_to_centroids_with<R: Read, W: Write>(
@@ -97,20 +111,15 @@ pub fn mzml_to_centroids_with<R: Read, W: Write>(
     let Some(mut e) = e else {
         return Ok(None);
     };
-    e.params.w = over.fwhm.unwrap_or(e.params.w);
+    if let Some(w) = over.fwhm {
+        // a width given in the plan holds for every m/z
+        e.params.w = w;
+        e.params.wm = None;
+    }
     e.params.k = over.threshold.unwrap_or(e.params.k);
     let p = &e.params;
-    let header = Header {
-        run: name
-            .trim_end_matches(".mzML")
-            .trim_end_matches(".mzml")
-            .to_string(),
-        sources: vec![name.to_string()],
-        software: ("mzLab".into(), env!("CARGO_PKG_VERSION").into()),
-        centroided: true,
-        ..Default::default()
-    };
-    let mut w = MzmlWriter::new(out, &header)?;
+    let mut flagged = (0, 0);
+    let mut w = MzmlWriter::new(out, &header_of(name))?;
     let mut buf = Buf::default();
     let mut chroms = Vec::new();
     let mut done = 0;
@@ -126,13 +135,7 @@ pub fn mzml_to_centroids_with<R: Read, W: Write>(
         match item {
             Item::Spectrum(mut s) => {
                 if s.profile {
-                    let y: Vec<f64> = (0..s.mz.len()).map(|i| s.intensity_f64(i)).collect();
-                    let c = centroids(&s.mz, &y, p, &mut buf);
-                    s.mz = c.iter().map(|c| c.mz).collect();
-                    let v: Vec<f64> = c.iter().map(|c| c.value).collect();
-                    s.intensity = v.iter().map(|&x| narrow(x)).collect();
-                    s.wide = Some(v);
-                    s.profile = false;
+                    reduce(&mut s, p, &mut buf, &mut flagged);
                 }
                 if let Err(e) = w.spectrum(&s) {
                     failed = Some(e);
@@ -161,5 +164,22 @@ pub fn mzml_to_centroids_with<R: Read, W: Write>(
         w.close_chromatograms()?;
     }
     w.finish()?;
-    Ok(Some(e))
+    Ok(Some(Estimate {
+        merged: flagged.0,
+        saturated: flagged.1,
+        ..e
+    }))
+}
+
+/// Profile scan `s` as its centroids, adding to `flagged` its centroids flagged (merged, saturated).
+fn reduce(s: &mut mzml::Spectrum, p: &super::Params, buf: &mut Buf, flagged: &mut (usize, usize)) {
+    let y: Vec<f64> = (0..s.mz.len()).map(|i| s.intensity_f64(i)).collect();
+    let c = centroids(&s.mz, &y, p, buf);
+    flagged.0 += c.iter().filter(|c| c.flags & MERGED != 0).count();
+    flagged.1 += c.iter().filter(|c| c.flags & SATURATED != 0).count();
+    s.mz = c.iter().map(|c| c.mz).collect();
+    let v: Vec<f64> = c.iter().map(|c| c.value).collect();
+    s.intensity = v.iter().map(|&x| narrow(x)).collect();
+    s.wide = Some(v);
+    s.profile = false;
 }

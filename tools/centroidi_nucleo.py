@@ -2,7 +2,8 @@
 order. Used by tools/centroidi_riferimento.py; only a reference for the tests."""
 import math
 
-TRUNCATED, SATURATED, ASYMMETRIC, SHOULDER = 1, 2, 4, 8
+TRUNCATED, SATURATED, ASYMMETRIC, SHOULDER, MERGED = 1, 2, 4, 8, 16
+MERGED_WIDTH = 1.12
 COUNTS, CONTINUOUS = "counts", "continuous"
 
 
@@ -12,8 +13,11 @@ def rnd(x):
 
 
 class P:
-    def __init__(self, mode, unit, step, w, k=3.0, vmax=0.0, area=True):
-        self.mode, self.unit, self.step, self.w, self.k, self.vmax, self.area = mode, unit, step, w, k, vmax, area
+    def __init__(self, mode, unit, step, w, k=3.0, vmax=0.0, area=True, wm=None):
+        self.mode, self.unit, self.step, self.w, self.k, self.vmax, self.area, self.wm = mode, unit, step, w, k, vmax, area, wm
+
+    def w_at(self, mz):
+        return self.w if self.wm is None else self.wm[0] * math.pow(mz, self.wm[1])
 
     def wb(self):
         return max(int(rnd(self.w / self.step)), 3)
@@ -395,6 +399,19 @@ def find_shoulders(buf, p, sigma, g, x0, area):
     return out
 
 
+def half_width(buf, g):
+    net = lambda j: buf.s[j] - buf.b[j]  # noqa: E731
+    half = 0.5 * net(g["apex"])
+    if half <= 0.0:
+        return None
+    cross = lambda a, b: buf.x[a] + (half - net(a)) / (net(b) - net(a)) * (buf.x[b] - buf.x[a])  # noqa: E731
+    left = next((cross(j, j + 1) for j in range(g["apex"] - 1, g["lo"] - 1, -1) if net(j) < half), None)
+    right = next((cross(j, j - 1) for j in range(g["apex"] + 1, g["hi"] + 1) if net(j) < half), None)
+    if left is None or right is None:
+        return None
+    return right - left
+
+
 def one(buf, p, sigma, g, out):
     if not passes(buf, p, sigma, g):
         return
@@ -421,6 +438,9 @@ def one(buf, p, sigma, g, out):
             mz = x0
     if abs(mz - x0) > 0.25 * p.w:
         flags |= ASYMMETRIC
+    hw = None if sat else half_width(buf, g)
+    if hw is not None and hw > MERGED_WIDTH * p.w_at(buf.x[g["apex"]]):
+        flags |= MERGED
     area = fsum(buf.v[g["lo"]:g["hi"] + 1])
     height = buf.s[g["apex"]]
     sh = find_shoulders(buf, p, sigma, g, x0, area) if g["members"] == 1 and not sat else []

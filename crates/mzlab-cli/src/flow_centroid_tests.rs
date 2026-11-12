@@ -117,6 +117,12 @@ fn a_profile_file_gets_the_centres_of_its_peaks_and_the_bytes_of_the_archive_con
     );
     assert!(prov.contains("\"fwhm_basis\":\"measured\""), "{prov}");
     assert!(!prov.contains("widthFallback"), "{prov}");
+    // single peaks at unit resolution: one width for every m/z, nothing merged
+    assert!(prov.contains("\"fwhm_model\":\"single\""), "{prov}");
+    assert!(
+        prov.contains("\"merged\":0") && !prov.contains("warn.centroid.merged"),
+        "{prov}"
+    );
     run_again(&d, &got);
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -383,5 +389,35 @@ fn a_fallback_width_is_never_called_estimated() {
         given.contains("\"fwhm_basis\":\"given\"") && !given.contains("widthFallback"),
         "{given}"
     );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// Two peaks of one height 0.35 Da (half a FWHM) apart are one wide centroid: counted in the record and named by a notice; the file is the same bytes as
+/// the conversion of the archive (the flags are not written in the mzML).
+#[test]
+fn a_doublet_is_counted_as_merged_and_named_by_a_notice() {
+    let src = profile(
+        30,
+        &[
+            (290.0, 4000.0),
+            (300.0, 3000.0),
+            (300.35, 3000.0),
+            (310.0, 2500.0),
+        ],
+    );
+    let d = dir("m", &[("p.mzML", src.clone())]);
+    let prov = run(&d, &plan("{}"), "w").1;
+    assert!(prov.contains("warn.centroid.merged"), "{prov}");
+    assert!(prov.contains("\"merged\":30,"), "{prov}");
+    assert!(prov.contains("\"saturated\":0"), "{prov}");
+    let mut want = Vec::new();
+    mzlab_core::centroids::mzml_to_centroids(
+        || Ok(src.as_slice()),
+        &mut want,
+        "p.mzML",
+        &mut |_, _| {},
+    )
+    .unwrap();
+    assert_eq!(std::fs::read(d.join("w/c-p.mzML")).unwrap(), want);
     let _ = std::fs::remove_dir_all(&d);
 }

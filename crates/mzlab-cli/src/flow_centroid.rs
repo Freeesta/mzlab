@@ -129,8 +129,9 @@ fn width_basis(given: bool, e: &Estimate) -> &'static str {
     }
 }
 
-/// The file made and what the record says of it: `centroided` (with the values used and where the width comes from), or `passthrough` when the file had no
-/// profile scan. Only a measured width is an estimate; a fallback width is never called estimated and raises `warn.centroid.widthFallback`.
+/// The file made and what the record says of it: `centroided` (with the values used, where the width comes from, the FWHM(m) model or `single` when one
+/// width holds for every m/z, and the centroids flagged merged or saturated), or `passthrough` when the file had no profile scan. Only a measured width is an
+/// estimate; a fallback width is never called estimated and raises `warn.centroid.widthFallback`; a merged centroid raises `warn.centroid.merged` (a notice).
 fn made_of(job: &Job, a: Artifact, used: Option<Estimate>) -> Made {
     let mut made = Made::new("mzml", a);
     let Some(e) = used else {
@@ -153,11 +154,24 @@ fn made_of(job: &Job, a: Artifact, used: Option<Estimate>) -> Made {
         "fallback" => made.warnings.push("warn.centroid.widthFallback".into()),
         _ => {}
     }
+    if e.merged > 0 {
+        made.warnings.push("warn.centroid.merged".into());
+    }
+    let model = match e.params.wm {
+        Some((a, b)) => Value::Obj(vec![
+            ("a".into(), Value::Num(a)),
+            ("b".into(), Value::Num(b)),
+        ]),
+        None => Value::Str("single".into()),
+    };
     made.file = Some(Value::Obj(vec![
         ("via".into(), Value::Str("centroided".into())),
         ("fwhm".into(), Value::Num(e.params.w)),
         ("fwhm_basis".into(), Value::Str(basis.into())),
+        ("fwhm_model".into(), model),
         ("threshold".into(), Value::Num(e.params.k)),
+        ("merged".into(), Value::Num(e.merged as f64)),
+        ("saturated".into(), Value::Num(e.saturated as f64)),
     ]));
     made
 }

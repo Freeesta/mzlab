@@ -93,9 +93,10 @@ pub(crate) fn profile_of(l: &mut dyn Reader, c: usize, k: usize) -> Result<Optio
     Ok(Some(l.scan(c, k)?).filter(|s| s.profile))
 }
 
-/// What the peak picking of our own centroids needs while the scans go by (nothing in the browser build, which has none).
+/// What the peak picking of our own centroids needs while the scans go by, and its centroids flagged (merged, saturated); nothing in the browser build,
+/// which has none.
 #[cfg(not(target_family = "wasm"))]
-struct Pick(Option<Params>, Buf);
+struct Pick(Option<Params>, Buf, (usize, usize));
 #[cfg(target_family = "wasm")]
 struct Pick;
 
@@ -106,7 +107,17 @@ fn pick_di(peaks: Peaks, l: &mut dyn Reader, c: usize, h: &mut Header) -> Result
         Peaks::Mzlab => centroids_of(l, c, h)?,
         _ => None,
     };
-    Ok(Pick(p, Buf::default()))
+    Ok(Pick(p, Buf::default(), (0, 0)))
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn flagged(pick: &Pick) -> (usize, usize) {
+    pick.2
+}
+
+#[cfg(target_family = "wasm")]
+fn flagged(_: &Pick) -> (usize, usize) {
+    (0, 0)
 }
 
 #[cfg(target_family = "wasm")]
@@ -130,7 +141,9 @@ fn scansione_di(
                 None => l.scan(c, k)?,
             };
             if let Some(p) = &pick.0 {
-                picchi(&mut s, p, &mut pick.1);
+                let (m, sat) = picchi(&mut s, p, &mut pick.1);
+                pick.2 .0 += m;
+                pick.2 .1 += sat;
             }
             Ok(s)
         }
@@ -214,6 +227,18 @@ impl Conversion<'_> {
         out: W,
         progress: &mut dyn FnMut(usize, usize),
     ) -> Result<W> {
+        self.write_counted(l, c, out, progress).map(|(w, _)| w)
+    }
+
+    /// `write` that also gives the centroids of our own peak picking flagged (merged, saturated): (0, 0) for any other `peaks`. The counts are not in
+    /// the file, whose bytes are the same.
+    pub fn write_counted<W: Write>(
+        &self,
+        l: &mut dyn Reader,
+        c: usize,
+        out: W,
+        progress: &mut dyn FnMut(usize, usize),
+    ) -> Result<(W, (usize, usize))> {
         if c >= l.samples().len() {
             return Err(Error::new("error.badIndex").with("c", c));
         }
@@ -242,7 +267,7 @@ impl Conversion<'_> {
             w.close_spectra()?;
         }
         chromatograms(l, c, &mut w)?;
-        w.finish()
+        Ok((w.finish()?, flagged(&pick)))
     }
 }
 
