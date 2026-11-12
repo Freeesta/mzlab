@@ -255,7 +255,7 @@ fn each_sample_of_a_wiff_has_the_channels_of_its_mzml() {
         return;
     }
     let s = |p: PathBuf| p.to_string_lossy().into_owned();
-    let run = |a: &[String]| execute(&a.to_vec());
+    let run = |a: &[String]| execute(a);
     let wiff = s(dir.join("in/two.wiff"));
     let conv = run(&[
         "convert".into(),
