@@ -66,7 +66,7 @@ function refreshIntf(/** @type {Bag} */ p) {
   sel.value = p.intf || "";
 }
 // students integrate only from an XIC (or an MRM transition): the total chromatograms add up every ion, so their area belongs to no compound
-const canInt = (/** @type {Bag} */ p) => p.type !== "chrom" || p.tab === "ms2";
+const canInt = (/** @type {Bag} */ p) => p.type !== "chrom" || ms2Chrom(p);
 // integration needs the traces on one axis: a stacked or cascade panel goes back to overlaid first (existing integrations stay in p.ints and are drawn as before)
 function toOverlaid(/** @type {Bag} */ p) {
   if (p.mode !== "stk" && p.mode !== "cas") return;
