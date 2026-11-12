@@ -129,7 +129,8 @@ impl Wiff {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
         let mut n = 0;
         for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
-            if let Some(p) = scan::read_scan_block(scan, self.scan_len, r.at, r.end, r.size)? {
+            let block = scan::read_block(scan, self.scan_len, r.at, r.end, r.size)?;
+            if let scan::Block::Scan(p) = block {
                 if p.mz.is_empty() {
                     continue;
                 }
@@ -138,7 +139,10 @@ impl Wiff {
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
-            } else if self.scan_experiment(r.experiment) || self.empty_sim_row(r) {
+            } else if matches!(block, scan::Block::Damaged)
+                || self.scan_experiment(r.experiment)
+                || self.empty_sim_row(r)
+            {
                 continue;
             } else if let Some(v) = dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)? {
                 blocks.add_dense(r, v);
@@ -194,7 +198,7 @@ impl Wiff {
         {
             let count = match counts.and_then(|c| c.get(i)) {
                 Some(&c) => c,
-                None => scan::point_count(scan, self.scan_len, r.at, r.end, r.size)?,
+                None => block_count(scan, self.scan_len, r)?,
             };
             if let Some(count) = count {
                 if count > 0 && self.is_full_scan(r.experiment) {
@@ -220,8 +224,7 @@ impl Wiff {
     pub fn spectrum_count<R: ReadAt>(&self, scan: &mut R) -> Result<usize> {
         let mut n = 0;
         for r in self.records.iter().filter(|r| !r.cut(self.scan_len)) {
-            n += scan::point_count(scan, self.scan_len, r.at, r.end, r.size)?.is_some_and(|c| c > 0)
-                as usize;
+            n += block_count(scan, self.scan_len, r)?.is_some_and(|c| c > 0) as usize;
         }
         Ok(n)
     }
@@ -303,6 +306,15 @@ impl Blocks {
             col.1.push(x);
         }
     }
+}
+
+/// The point count of the block of `r` as the reader's index takes it (`scan::Block::count`).
+pub(super) fn block_count(
+    scan: &mut dyn ReadAt,
+    scan_len: u64,
+    r: &super::Record,
+) -> Result<Option<u32>> {
+    Ok(scan::read_block(scan, scan_len, r.at, r.end, r.size)?.count())
 }
 
 #[cfg(feature = "estesi")]

@@ -103,6 +103,13 @@ pub(super) fn bad(detail: impl ToString) -> Error {
     Error::new("err.file.wiff").with("detail", detail)
 }
 
+/// The parameter that marks a scan block its own bytes contradict (`broken`): `read_block` gives it as `Block::Damaged`, one block, never the sample.
+const DAMAGED: &str = "block";
+
+fn broken(detail: impl ToString) -> Error {
+    bad(detail).with(DAMAGED, "damaged")
+}
+
 fn f64_at(b: &[u8], at: usize) -> f64 {
     b.get(at..at + 8)
         .and_then(|s| <[u8; 8]>::try_from(s).ok())
@@ -122,7 +129,7 @@ struct Head {
     len: usize,
 }
 
-fn head<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Option<Head>> {
+fn head(scan: &mut dyn ReadAt, scan_len: u64, at: u64, end: u64) -> Result<Option<Head>> {
     let avail =
         usize::try_from(end.min(scan_len).saturating_sub(at)).map_or(HEAD_MAX, |a| a.min(HEAD_MAX));
     if avail < 8 {
@@ -145,7 +152,7 @@ fn head<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<Opt
     }
     let len = 12 + 32 * v;
     if avail < len {
-        return Err(bad("short scan block"));
+        return Err(broken("short scan block"));
     }
     let ranges = (0..v)
         .map(|k| [0, 1, 2, 3].map(|j| f64_at(&b, 8 + 32 * k + 8 * j)))
@@ -170,21 +177,45 @@ pub fn read_scan<R: ReadAt>(
     read_sized(scan, scan_len, at, end, 0)
 }
 
-/// As `read_scan` for a block of `size` bytes from its index row (0: not known): its points must take those bytes, up to `PADDING` left, or the head
-/// declares another number of points than the block holds and the block is `err.file.wiff`. The index row's own value at +26 is not a point count on
-/// every file (sparse product-ion scans: 1 where the head has 2 to 5 points), so the block is checked against its own bytes.
-pub fn read_scan_block<R: ReadAt>(
-    scan: &mut R,
+/// What the bytes of a block hold (`read_block`): no scan head (an MRM block), a scan, or a scan head they contradict.
+pub enum Block {
+    Other,
+    Scan(Points),
+    Damaged,
+}
+
+impl Block {
+    /// The point count the index takes: `None` with no scan head, 0 for a damaged block (left out, never read as MRM values).
+    pub fn count(&self) -> Option<u32> {
+        match self {
+            Block::Scan(p) => Some(u32::try_from(p.mz.len()).unwrap_or(u32::MAX)),
+            Block::Other => None,
+            Block::Damaged => Some(0),
+        }
+    }
+}
+
+/// The block of `size` bytes from its index row (0: not known) at `at`. Its points must take those bytes, up to `PADDING` left; a head whose version,
+/// length or point count the bytes contradict is `Block::Damaged`, which the callers leave out and count (`warn.wiff.damaged`): one odd block never
+/// refuses the sample. The index row's value at +26 is not a point count on every file (sparse product-ion scans), so the block is judged by its bytes.
+pub fn read_block(
+    scan: &mut dyn ReadAt,
     scan_len: u64,
     at: u64,
     end: u64,
     size: u32,
-) -> Result<Option<Points>> {
-    read_sized(scan, scan_len, at, end, size as usize)
+) -> Result<Block> {
+    match read_sized(scan, scan_len, at, end, size as usize) {
+        Ok(Some(p)) => Ok(Block::Scan(p)),
+        Ok(None) => Ok(Block::Other),
+        Err(e) if e.params.iter().any(|(k, _)| *k == DAMAGED) => Ok(Block::Damaged),
+        Err(e) => Err(e),
+    }
 }
 
-fn read_sized<R: ReadAt>(
-    scan: &mut R,
+// one copy of the decoder whatever reader serves the bytes (the site's window and its member, the app's file): `dyn`, not generic
+fn read_sized(
+    scan: &mut dyn ReadAt,
     scan_len: u64,
     at: u64,
     end: u64,
@@ -215,11 +246,11 @@ fn read_sized<R: ReadAt>(
     };
     // a stream that ends before the points its head declares is a damaged block: never a scan read short
     if pts.len() != h.n {
-        return Err(bad(format!("{} of {} points", pts.len(), h.n)));
+        return Err(broken(format!("{} of {} points", pts.len(), h.n)));
     }
     let left = size.saturating_sub(h.len).saturating_sub(used);
     if size > 0 && (h.len + used > size || left > PADDING) {
-        return Err(bad(SIZE));
+        return Err(broken(SIZE));
     }
     let Some(&r0) = h.ranges.first() else {
         return Ok(None);
@@ -239,24 +270,6 @@ fn read_sized<R: ReadAt>(
         })
         .collect();
     Ok(Some(Points { mz, intensity }))
-}
-
-/// The number of points of the scan block at `at` of `size` bytes (its index row; 0: not known), `None` when the block is not a scan. Only the head is read:
-/// an empty head that leaves more than `PADDING` bytes of its block is of another layout than its version says (`err.file.wiff`).
-pub fn point_count<R: ReadAt>(
-    scan: &mut R,
-    scan_len: u64,
-    at: u64,
-    end: u64,
-    size: u32,
-) -> Result<Option<u32>> {
-    let Some(h) = head(scan, scan_len, at, end)? else {
-        return Ok(None);
-    };
-    if h.n == 0 && size as usize > h.len + PADDING {
-        return Err(bad(SIZE));
-    }
-    Ok(Some(u32::try_from(h.n).unwrap_or(u32::MAX)))
 }
 
 /// The cps of each of `n` transitions of an MRM block starting at `at`.

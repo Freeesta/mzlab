@@ -42,8 +42,10 @@ pub(super) struct Part {
     pub(super) w: Wiff,
     /// Indexes into `w.records` of the scans with points.
     pub(super) scans: Vec<usize>,
-    /// The point count of each record's head as `build` read it (`scan::point_count`): the chromatograms do not read the heads again.
+    /// The point count of each record's block as `build` read it (`scan::read_block`; 0 for a damaged block): the chromatograms do not read the blocks again.
     pub(super) counts: Vec<Option<u32>>,
+    /// Scan blocks whose own bytes contradict their head (`scan::Block::Damaged`): left out of the index, counted by `losses`.
+    pub(super) damaged: usize,
     indice: Vec<ScanEntry>,
     chroms: Option<Vec<Chromatogram>>,
     /// Base peak intensity of each scan as the mzML writer saw it (NaN: not yet) and how many it has seen: the BPC of the full scan experiments is listed
@@ -64,6 +66,7 @@ impl Part {
             w,
             scans: Vec::new(),
             counts: Vec::new(),
+            damaged: 0,
             indice: Vec::new(),
             chroms: None,
             bpc: Vec::new(),
@@ -205,8 +208,9 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.ready(c)?;
         let (p, r) = row(&self.parts, c, k)?;
-        let pts = scan::read_scan_block(&mut self.scan, self.scan_len, r.at, r.end, r.size)?
-            .ok_or_else(|| Error::new("err.file.wiff").with("detail", "not a scan"))?;
+        let scan::Block::Scan(pts) = scan::read_block(&mut self.scan, self.scan_len, r.at, r.end, r.size)? else {
+            return Err(Error::new("err.file.wiff").with("detail", "not a scan"));
+        };
         Ok(p.w.spectrum_of(k, r, pts))
     }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
@@ -424,19 +428,14 @@ fn add_unindexed(
     Ok(counts)
 }
 
-/// The index of an injection: one row per non-empty scan block (the heads of the blocks are read through a window, front to back).
+/// The index of an injection: one row per non-empty scan block whose bytes agree with its head (the blocks are read through a window, front to back).
 fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Result<()> {
     let w = &p.w;
-    // only the head of each block is read here (`scan::HEAD_MAX`): the window stops after the last head, not at the end of the last block (the end of the file)
-    let stop = w
-        .records
-        .iter()
-        .map(|r| r.at.saturating_add(scan::HEAD_MAX as u64).min(r.end))
-        .max()
-        .unwrap_or(0);
+    // each block is read whole, its points checked against its bytes: the window stops at the end of the injection's last block
+    let stop = w.records.iter().map(|r| r.end).max().unwrap_or(0);
     let mut win = Window::until(scan, scan_len, stop);
-    let (mut scans, mut index, mut counts) =
-        (Vec::new(), Vec::new(), Vec::with_capacity(w.records.len()));
+    let (mut scans, mut index, mut damaged) = (Vec::new(), Vec::new(), 0);
+    let mut counts = Vec::with_capacity(w.records.len());
     #[cfg(feature = "sciex")]
     let (mut other, mut mrm_seen) = (false, vec![false; w.experiments.len().max(1)]);
     for (i, r) in w.records.iter().enumerate() {
@@ -444,7 +443,9 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
         let points = if r.cut(scan_len) {
             None
         } else {
-            scan::point_count(&mut win, scan_len, r.at, r.end, r.size)?
+            let b = scan::read_block(&mut win, scan_len, r.at, r.end, r.size)?;
+            damaged += usize::from(matches!(b, scan::Block::Damaged));
+            b.count()
         };
         counts.push(points);
         // the first MRM block of each experiment: a sparse (scheduled) one starts with `-(N + 0.01)`, even when the method has no `sMRM` stream to say so
@@ -488,7 +489,7 @@ fn build(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -
         });
         scans.push(i);
     }
-    (p.scans, p.indice, p.counts, p.ready) = (scans, index, counts, true);
+    (p.scans, p.indice, p.counts, p.damaged, p.ready) = (scans, index, counts, damaged, true);
     #[cfg(feature = "sciex")]
     {
         p.other_version = other;
