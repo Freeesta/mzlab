@@ -130,6 +130,8 @@ I18N.add("en", {
   "draw.ctx.head.whole": "Whole drawing",
   "draw.ctx.copySmiles": "Copy SMILES",
   "draw.ctx.copySmilesOf": "Copy SMILES ({smiles})",
+  "draw.ctx.ions": "Expected ions",
+  "draw.ctx.ions.title": "ESI+ and ESI− ions of the selection, or of the whole drawing, in the «Expected ions» card",
   "draw.ctx.center": "Center drawing",
   "draw.ctx.breakBonds": "{n, plural, one {Break the bond} other {Break the # selected bonds}}",
   "draw.ctx.breakBonds.title": "Removes the bond between the two atoms",
