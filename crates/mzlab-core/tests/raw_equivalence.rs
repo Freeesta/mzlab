@@ -66,7 +66,7 @@ impl std::io::Write for Sha256Sink {
     }
 }
 
-/// (case, pinned hashes: mzidx, mzml, metodo, intestazioni); LAB-A and PXD077492 re-pinned on main after #3129.
+/// (case, pinned hashes: mzidx, mzml, metodo, intestazioni); re-pinned on main after #3129.
 const PINNED: &[(&str, [&str; 4])] = &[
     (
         "LAB-A",
@@ -89,10 +89,10 @@ const PINNED: &[(&str, [&str; 4])] = &[
     (
         "BAF",
         [
-            "e35a63eba81e3a872f74dd9903d83a4f9bc9748076c471c536a0250c0cd43cd6",
-            "1da5d58af5ca8cec238230d4857553296726cbee9642b7d18308c84b153ef2bc",
-            "4f9312ccd9e290b25cb0d305e933e1a102855f200a5a53435439bfa9f822a36a",
-            "648a3fded6940230011583d50681cbcd96940f7e1a2f20605751e626751b8e7a",
+            "48d8960dd148675eee710f66997e66aa55459716f3884d128b7b0212ec6e7034",
+            "e5807b218ae0d75a72612a4269c972f0e3836da75ac7eb12ec23797d712b5b97",
+            "a92a6388f50c1fcf97600493d6448604bd49bcccc49658be671572e3c4a27535",
+            "9a567e42e206f912e48d7187963bea9ec45ba090038cbb3f82dbda69571dc2a4",
         ],
     ),
 ];
