@@ -155,7 +155,7 @@ _SAFARI_SEEN = "try{localStorage.setItem('mzlab.safari.seen','1')}catch(e){}"
 # Draw's side cards start folded but for three (disegno-riquadri.js): the tests that work inside them find them open, as a student who opened them
 # would; e2e_disegno_riquadri asks for the real first visit (draw_cards=True).
 _CARDS_OPEN = ("try{if(!localStorage.getItem('mzlab.disegno.schede'))localStorage.setItem('mzlab.disegno.schede',JSON.stringify(Object.fromEntries("
-               "['sel-card','lb-card','cut-card','ions-card','mech-card','chk-card','cip-card','sub-card'].map(k=>[k,1]))))}catch(e){}")
+               "['sel-card','lb-card','cut-card','mech-card','chk-card','cip-card','sub-card'].map(k=>[k,1]))))}catch(e){}")
 def _extra(c, k, cards=False):
     if not k: c.add_init_script(_SAFARI_SEEN)
     if not cards: c.add_init_script(_CARDS_OPEN)
