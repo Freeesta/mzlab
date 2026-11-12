@@ -19,6 +19,8 @@ pub mod rules;
 mod rules_site;
 #[cfg(feature = "check")]
 pub mod sdf;
+#[cfg(feature = "sel")]
+pub mod sel;
 mod shuffle;
 mod smiles;
 pub mod structures;

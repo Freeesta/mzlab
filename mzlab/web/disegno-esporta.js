@@ -1,7 +1,7 @@
 // @ts-check
 // MOL / SDF export of Draw: the molfile of the canvas goes to the Rust writer (`sdf` of the molkit .wasm, `sdf/1`; the app asks `feat/grafo`,
 // kind "sdf"; `mzlab-cli mol-export` gives the same bytes). A .mol keeps the whole canvas in one record; an .sdf has one record per structure
-// with formula, exact mass, the m/z of the chosen ion and the mol1: identifier. This file only builds the request and returns the text.
+// with formula, exact mass, the m/z of the chosen ion and the mol1: identifier. This file builds the request and saves the returned text.
 import { molfileOf } from "./disegno-molfile.js";
 import { carica } from "./disegno-verifica.js";
 
@@ -33,4 +33,14 @@ export async function exportText(K, format, ion, name) {
   const st = K.editor.struct(), mf = molfileOf(st, [...st.atoms.keys()], undefined, () => true);
   try { return await ask(JSON.stringify({ molfile: mf, format, ion, name })); }
   catch (e) { throw new Error(message(e)); }
+}
+
+/**
+ * Saves the .mol or .sdf of the whole canvas under `file` (its stem is the title line of the records).
+ * @param {any} K Ketcher @param {"mol" | "sdf"} format @param {string} ion @param {string} file @param {(b: Blob, name: string) => void} saveBlob
+ */
+export async function save(K, format, ion, file, saveBlob) {
+  const text = await exportText(K, format, ion, file.replace(/\.[a-z]+$/, ""));
+  saveBlob(new Blob([text], { type: "chemical/x-mdl-" + (format === "mol" ? "molfile" : "sdfile") }), file);
+  if (/** @type {any} */ (window).toast) /** @type {any} */ (window).toast(I18N.t("draw.export.saved"));
 }

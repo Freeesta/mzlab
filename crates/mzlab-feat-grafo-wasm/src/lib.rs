@@ -5,7 +5,7 @@ use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
-const BRIDGE: &str = "mzfeat-grafo/8";
+const BRIDGE: &str = "mzfeat-grafo/9";
 
 fn js_err(e: Error) -> JsValue {
     JsValue::from_str(&e.to_json())
@@ -41,6 +41,13 @@ pub fn partial(molfile: &str, delta: &str) -> std::result::Result<String, JsValu
 #[wasm_bindgen]
 pub fn labels(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::labels::labels_json(request).map_err(js_err)
+}
+
+/// `sel/1` of a request `{"molfile", "part"}`: formula, charge, monoisotopic and average mass, m/z, heavy atoms, rings and aromatic rings of a selection
+/// or of the whole drawing (see `mzlab_feat::chem::sel::sel_json`; the same as `mzlab-cli mol-sel`).
+#[wasm_bindgen]
+pub fn sel(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::sel::sel_json(request).map_err(js_err)
 }
 
 /// `anal/1` of one drawn structure `{"atoms": [...]}`: the `etich/1` numbers plus average mass, mass % per element and the theoretical isotope pattern

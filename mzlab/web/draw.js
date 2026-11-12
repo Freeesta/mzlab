@@ -372,6 +372,11 @@ const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]
 // built-in rows of the canvas menu (disegno-menu.js registry; other modules add theirs with TPDraw.menu.add, between these orders)
 const shortSmi = (/** @type {string} */ s) => s.length > 24 ? s.slice(0, 21) + "…" : s;
 menuAdd({ id: "copy-smiles", order: 10, label: (/** @type {any} */ c) => c.smiles ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi(c.smiles) }) : I18N.t("draw.ctx.copySmiles"), run: (/** @type {any} */ c) => { if (c.smiles) copyText(c.smiles); } });
+menuAdd({ id: "info", order: 15, label: "draw.ctx.info", title: "draw.ctx.info.title", run: (/** @type {any} */ c) => {   // formula, masses, rings, InChI (disegno-selezione.js)
+  const ids = c.whole ? [...K.editor.struct().atoms.keys()] : [...c.atoms], mf = pieceMolfile(ids);
+  if (!mf) { if (window.toast) toast(I18N.t("draw.info.none")); return; }
+  import("./disegno-selezione.js").then(m => m.infoOpen({ molfile: mf, part: !c.whole, smiles: c.smiles || "", esc: EH, big: window.big,
+    convert: (/** @type {string} */ f) => indigo(() => K.structService.convert({ struct: mf, output_format: f }, {})).then((/** @type {any} */ r) => r.struct) })); } });
 menuAdd({ id: "center", order: 20, label: "draw.ctx.center", run: () => { if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); } } });
 // «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
 menuAdd({ id: "break-bonds", when: "selection", order: 30, show: (/** @type {any} */ c) => c.bonds.length > 0, label: (/** @type {any} */ c) => I18N.t("draw.ctx.breakBonds", { n: c.bonds.length }), title: "draw.ctx.breakBonds.title", run: (/** @type {any} */ c) => { setTimeout(() => breakBonds(c.bonds), 60); } });
@@ -734,10 +739,7 @@ async function doExport(/** @type {string} */ kind) {
     await start();
     if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return; }
     if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
-    if (kind === "mol" || kind === "sdf") {           // plain open formats, written by the Rust engine (disegno-esporta.js)
-      const file = exportName(kind), text = await (await import("./disegno-esporta.js")).exportText(K, kind, Q("#ex-ion").value, file.replace(/\.[a-z]+$/, ""));
-      saveBlob(new Blob([text], { type: "chemical/x-mdl-" + (kind === "mol" ? "molfile" : "sdfile") }), file); if (window.toast) toast(I18N.t("draw.export.saved")); return;
-    }
+    if (kind === "mol" || kind === "sdf") return (await import("./disegno-esporta.js")).save(K, kind, Q("#ex-ion").value, exportName(kind), saveBlob);   // written by the Rust engine
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
@@ -745,12 +747,7 @@ async function doExport(/** @type {string} */ kind) {
     if (window.toast) toast(I18N.t("draw.export.saved"));
   } catch (e_) { const e = /** @type {Lanciato} */ (e_); exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
 }
-Q("#ex-png").onclick = () => doExport("png");
-Q("#ex-jpg").onclick = () => doExport("jpg");
-Q("#ex-svg").onclick = () => doExport("svg");
-Q("#ex-ket").onclick = () => doExport("ket");
-Q("#ex-mol").onclick = () => doExport("mol");
-Q("#ex-sdf").onclick = () => doExport("sdf");
+for (const k of ["png", "jpg", "svg", "ket", "mol", "sdf"]) Q("#ex-" + k).onclick = () => doExport(k);
 function syncBg() {                                    // JPEG cannot be transparent: its button is off (grey) while "Sfondo trasparente" is on
   const on = Q("#ex-nobg").checked, j = Q("#ex-jpg");
   j.disabled = on; j.title = on ? I18N.t("draw.export.jpegNoAlpha") : "";
