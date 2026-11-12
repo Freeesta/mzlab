@@ -1,5 +1,5 @@
 """The structure bridge of mzFinder in WebAssembly (crates/mzlab-feat-grafo-wasm) answers a SMILES with the formula, the groups and the cleavage products that
-the Rust library gives natively, the piece labels, the bond cuts and the analysis card (`anal/1`, every golden molecule) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
+the Rust library gives natively, the piece labels, the bond cuts and the analysis card (`anal/1`, every golden molecule) and the selection info (`sel/1`) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import json
 import shutil
@@ -130,6 +130,17 @@ def test_labels_with_a_radical_mark_equal_the_cli(pkg, tmp_path):
     methyl, aminium = json.loads(site)["structures"]
     assert (methyl["unpaired"], methyl["odd"], methyl["kind"]) == (1, True, "radical")
     assert (aminium["kind"], aminium["electrons"]) == ("radicalCation", 9) and aminium["odd"]
+
+
+@pytest.mark.parametrize("part", [False, True])
+def test_sel_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, part):
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps({"molfile": ANILIDE, "part": part}), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "sel")
+    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-sel", str(req))
+    r = json.loads(site)
+    assert (r["format"], r["part"], r["label"]["formula"], r["heavy"], r["rings"], r["aromaticRings"], r["aromaticAtoms"]) == ("sel/1", part, "C8H8FNO", 11, 1, 1, 6)
+    assert round(r["label"]["mass"], 4) == 153.0590
 
 
 def test_analysis_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path):

@@ -61,6 +61,7 @@
     "../../mzlab/web/disegno-analisi.js",
     "../../mzlab/web/disegno-etichette.js",
     "../../mzlab/web/disegno-menu.js",
+    "../../mzlab/web/disegno-selezione.js",
     "../../mzlab/web/parentesi.js",
     "../../mzlab/web/fair.js",
     "../../mzlab/web/fair-azioni.js",
