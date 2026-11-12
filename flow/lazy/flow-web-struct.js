@@ -1,13 +1,14 @@
 // @ts-check
-// Flow (administrator mode): structure.render, structure.reactivity and msn.figure in this browser. The texts are `flow_render` of the `interp` .wasm, `flow_reactivity` of the `chem` .wasm
-// and `flow_figure` of the `msnfigura` .wasm (each loaded here only, when its step runs): `interp::redraw::render_text`, `mzlab_chem::flow::reactivity_text` and `msnfigura::figure_text`,
-// the functions `flow run` calls, so drawings/1, reatt/1 and the SVG or HTML are the same bytes. A PNG figure stays with the computer (resvg is native only). English only.
+// Flow (administrator mode): structure.render, structure.reactivity, structure.moiety and msn.figure in this browser. The texts are `flow_render` of the `interp` .wasm, `flow_reactivity` of the
+// `chem` .wasm, `flow_moiety` of the `molkit` .wasm and `flow_figure` of the `msnfigura` .wasm (each loaded here only, when its step runs): `interp::redraw::render_text`,
+// `mzlab_chem::flow::reactivity_text`, `chem::moiety::moiety_text` and `msnfigura::figure_text`, the functions `flow run` calls, so drawings/1, reatt/1, the CSV and the SVG or HTML are the
+// same bytes. A PNG figure stays with the computer (resvg is native only). English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   // step -> the .wasm, its function, the input ports it reads (in the order of the arguments) and the extension of the output
   /** @type {Record<string, [string, string, string[], string]>} */
-  const OPS = { "structure.render": ["interp", "flow_render", ["sites", "parent"], "json"], "structure.reactivity": ["chem", "flow_reactivity", ["parent"], "json"], "msn.figure": ["msnfigura", "flow_figure", ["graph"], ""] };
+  const OPS = { "structure.render": ["interp", "flow_render", ["sites", "parent"], "json"], "structure.reactivity": ["chem", "flow_reactivity", ["parent"], "json"], "msn.figure": ["msnfigura", "flow_figure", ["graph"], ""], "structure.moiety": ["molkit", "flow_moiety", ["candidates"], "csv"] };
   const STEPS = Object.keys(OPS);
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
   const enc = (/** @type {string} */ s) => new TextEncoder().encode(s);

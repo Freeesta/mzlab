@@ -47,6 +47,7 @@
           "spectra.match",
           "spectra.ms2",
           "spectra.msn_graph",
+          "structure.moiety",
           "structure.reactivity",
           "structure.render",
           "table.drift",
@@ -115,6 +116,7 @@
               "spectra.ms2@1",
               "spectra.msn_graph@2",
               "structure.draw@1",
+              "structure.moiety@1",
               "structure.reactivity@1",
               "structure.render@1",
               "table.drift@1",
@@ -2074,6 +2076,37 @@
           },
           {
             "properties":{
+              "step":{"const":"structure.moiety@1"},
+              "name":{"enum":["query","column","stereo","keep"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"SMILES of the moiety searched for (the selection of the Draw editor gives one); explicit H atoms must be matched"
+                  },
+                  {
+                    "type":"string",
+                    "default":"smiles",
+                    "description":"Header of the column with the SMILES of each row, compared without case"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"The stereo of the moiety must match too; off, the stereo of both is ignored"
+                  },
+                  {
+                    "enum":["containing","lacking"],
+                    "default":"containing",
+                    "description":"containing: the rows whose structure contains the moiety; lacking: the rows whose structure does not. Rows without a readable structure are left out either way"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"structure.reactivity@1"},
               "name":{"enum":["algorithm","solvent","conformers","protomer","seed"]},
               "value":{
@@ -2880,6 +2913,7 @@
                 "spectra.ms2@1",
                 "spectra.msn_graph@2",
                 "structure.draw@1",
+                "structure.moiety@1",
                 "structure.reactivity@1",
                 "structure.render@1",
                 "table.drift@1",
