@@ -1,19 +1,28 @@
 // @ts-check
-// The card «Manual integrations» of the Data view (#manint): every window drawn by hand on an ion or transition trace (the `p.ints` of the transition
-// panels, kept in the session), measured again by the engine (`api/manint`, mzlab_core::manint) as one row per window grouped by channel, an optional
-// sum row per channel; the CSV export is the engine's bytes, as `mzlab-cli manual-table`. Loaded by grafici.js on the first integration of such a panel.
+// The card «Manual integrations» of the Data view (#manint, under the panels): every window drawn by hand on an ion or transition trace (the `p.ints`
+// of the transition panels, kept in the session), measured again by the engine (`api/manint`, mzlab_core::manint) as one row per window grouped by
+// channel, with the name the user gives it; the CSV export is the engine's bytes, as `mzlab-cli manual-table`. Loaded by grafici.js on the first integration.
 const G = /** @type {any} */ (window);
 const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) => G.I18N.t(k, p);
 
 /** The columns of the engine (manint::HEAD) with their labels (literal keys: tools/controlla_i18n.py reads them). */
 const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.manint.h.channel"), name: t("canali.manint.h.name"), sample: t("canali.manint.h.sample"),
   start_min: t("canali.manint.h.start"), end_min: t("canali.manint.h.end"), apex_rt_min: t("canali.manint.h.apex"), area: t("canali.manint.h.area"),
-  height: t("canali.manint.h.height"), snr: t("canali.manint.h.snr"), baseline: t("canali.manint.h.base") });
+  height: t("canali.manint.h.height"), snr: t("canali.manint.h.snr"), baseline: t("canali.manint.h.base"), label: t("canali.manint.h.label") });
 const BASES = () => /** @type {Record<string, string>} */ ({ zero: t("int.base.zero"), edges: t("int.base.edges"), line: t("int.base.line") });
+/** The longest name of an integration (manint::LABEL_MAX). */
+const NM_MAX = 40;
+/** The columns as shown: the name the user gives right after the sample. @param {string[]} head */
+const order = head => { const o = head.map((_, i) => i).filter(i => head[i] !== "label"), l = head.indexOf("label"), s = o.indexOf(head.indexOf("sample")); if (l >= 0) o.splice(s + 1, 0, l); return o; };
+const ICON = {
+  dl: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 2.5v7.5M4.8 7L8 10.2 11.2 7M3 12.5v1h10v-1"/></svg>',
+  copy: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5.5" y="5.5" width="8" height="8" rx="1.3"/><path d="M10.5 5.5V3.8a1.3 1.3 0 0 0-1.3-1.3H3.8a1.3 1.3 0 0 0-1.3 1.3v5.4a1.3 1.3 0 0 0 1.3 1.3h1.7"/></svg>',
+};
 
 /** @typedef {{ p: any, it: any, k: number, tr: number, label: string }} Rec */
-/** @type {{ sig: string, recs: Rec[], ks: number[], windows: string, csv: string, sums: boolean, busy: number, tm: any }} */
-const st = { sig: "", recs: [], ks: [], windows: "[]", csv: "", sums: false, busy: 0, tm: 0 };
+/** `had`: rows at the last draw (null before the first), so an integration after none opens the card. */
+/** @type {{ sig: string, recs: Rec[], ks: number[], windows: string, csv: string, busy: number, focus: any, had: number | null }} */
+const st = { sig: "", recs: [], ks: [], windows: "[]", csv: "", busy: 0, focus: null, had: null };
 
 /** The rows of a CSV with quoted fields. @param {string} text */
 function rows(text) {
@@ -56,8 +65,8 @@ async function records() {
   return out;
 }
 
-/** The windows JSON of the records, files numbered in the order of `ks`. @param {Rec[]} recs @param {number[]} ks */
-const windowsOf = (recs, ks) => JSON.stringify(recs.map(r => ({ file: ks.indexOf(r.k), tr: r.tr, a: Math.min(r.it.a, r.it.b), b: Math.max(r.it.a, r.it.b), ...baseOf(r.it) })));
+/** The windows JSON of the records, files numbered in the order of `ks`; a name only when the user gave one. @param {Rec[]} recs @param {number[]} ks */
+const windowsOf = (recs, ks) => JSON.stringify(recs.map(r => ({ file: ks.indexOf(r.k), tr: r.tr, a: Math.min(r.it.a, r.it.b), b: Math.max(r.it.a, r.it.b), ...baseOf(r.it), ...(r.it.nm ? { label: r.it.nm } : {}) })));
 
 /** The record of a row: same sample, channel and edges (the engine writes the edges at 0.001 min). @param {string[]} row */
 function recOf(row) {
@@ -69,40 +78,56 @@ const fmt = (v, col) => col === "baseline" ? BASES()[v] || v : /^-?\d(\.\d+)?E[+
 /** A channel as shown: the m/z, «q1 > q3», or «ione N». @param {string} c */
 const chShown = c => c.replace(/^ion (\d+)$/, (_, n) => t("canali.sim.ion", { n: +n })).replace(">", " > ");
 const COPY = ["apex_rt_min", "area", "height"];
-/** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision). @param {string} v @param {string} col */
-const cell = (v, col) => COPY.includes(col) && v !== ""
-  ? h`<span class="manint-cp" role="button" tabindex="0" data-cp="${v}" aria-label="${t("canali.manint.cp.aria", { c: HEADS()[col] || col, v: fmt(v, col) })}" title="${t("canali.manint.cp")}">${fmt(v, col)}</span>`
-  : h`${fmt(v, col)}`;
+/** A cell: its value as shown; apex, area and height are buttons that copy the CSV value (full precision); the name is an input. @param {string} v @param {string} col @param {number} i */
+const cell = (v, col, i) => col === "label"
+  ? h`<input type="text" class="manint-nm" maxlength="${NM_MAX}" data-nm="${i}" value="${v}" aria-label="${t("canali.manint.nm.aria")}" autocomplete="off" spellcheck="false">`
+  : COPY.includes(col) && v !== ""
+    ? h`<span class="manint-cp" role="button" tabindex="0" data-cp="${v}" aria-label="${t("canali.manint.cp.aria", { c: HEADS()[col] || col, v: fmt(v, col) })}" title="${t("canali.manint.cp")}">${fmt(v, col)}</span>`
+    : h`${fmt(v, col)}`;
+
+/** Open or closed as the user left it (NOMI key, this browser only). */
+const OPEN = () => NOMI.KEY("manint.open");
+const isOpen = () => { try { return localStorage.getItem(OPEN()) !== "0"; } catch (_) { return true; } };
+/** @param {boolean} v */
+const setOpen = v => { try { localStorage.setItem(OPEN(), v ? "1" : "0"); } catch (_) { /* this session only */ } };
+
+/** A name typed in a row: kept on the integration (undoable, saved with the session), then the engine writes it. @param {Rec} rec @param {string} v */
+function rename(rec, v) {
+  const nm = v.trim().slice(0, NM_MAX);
+  if (nm === (rec.it.nm || "")) return false;
+  G.pushIh(rec.p);
+  if (nm) rec.it.nm = nm; else delete rec.it.nm;
+  G.draw(rec.p); G.uiSave(); return true;
+}
 
 function draw() {
   const el = card(); if (!el) return;
-  const all = rows(st.csv), head = all[0] || [], body = all.slice(1);
+  const all = rows(st.csv), head = all[0] || [], body = all.slice(1).filter(r => r[2] !== "sum" || r[3] !== "");
+  const had = st.had; st.had = body.length;
   if (!body.length) { el.hidden = true; el.innerHTML = ""; return; }
-  const H = HEADS(), n = body.filter(r => r[2] !== "sum" || r[3] !== "").length;
-  const ths = head.map(c => h`<th scope="col"${raw(["channel", "name", "sample", "baseline"].includes(c) ? "" : ' class="num"')}>${H[c] || c}</th>`).join("");
+  if (had === 0) setOpen(true);      // an integration after none opens the card; otherwise it stays as the user left it (a reload included)
+  const H = HEADS(), cols = order(head), open = isOpen(), plain = ["channel", "name", "sample", "baseline", "label"];
+  const ths = cols.map(c => h`<th scope="col"${raw(plain.includes(head[c]) ? "" : ' class="num"')}>${H[head[c]] || head[c]}</th>`).join("");
   const trs = body.map((r, i) => {
-    if (r[2] === "sum" && r[3] === "") return h`<tr class="manint-sum"><th scope="row">${chShown(r[0])}</th><td>${r[1]}</td><td>${t("canali.manint.sum")}</td><td></td><td></td><td></td><td class="num">${raw(cell(r[6], "area"))}</td><td></td><td></td><td></td><td></td></tr>`;
     const rec = recOf(r), who = { ch: chShown(r[0]), s: r[2] };
     const act = rec ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
-    return h`<tr${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[0])}</th>${raw(r.slice(1).map((v, j) => h`<td${raw(j >= 2 && j <= 7 ? ' class="num"' : "")}>${raw(cell(v, head[j + 1]))}</td>`).join(""))}<td>${raw(act)}</td></tr>`;
+    const tds = cols.slice(1).map(c => h`<td${raw(plain.includes(head[c]) ? "" : ' class="num"')}>${raw(head[c] === "label" && !rec ? h`${r[c]}` : cell(r[c], head[c], i))}</td>`).join("");
+    return h`<tr${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[cols[0]])}</th>${raw(tds)}<td>${raw(act)}</td></tr>`;
   }).join("");
-  const open = !el.querySelector("details") || /** @type {HTMLDetailsElement} */ (el.querySelector("details")).open;
-  el.innerHTML = h`<details${raw(open ? " open" : "")}><summary><h3 id="manint-h">${t("canali.manint.title", { n })}</h3></summary>
-<div class="manint-bar"><label title="${t("canali.manint.sums.title")}"><input type="checkbox" data-sums${raw(st.sums ? " checked" : "")}> ${t("canali.manint.sums")}</label>
-<button type="button" class="sec sm" data-dl>${t("canali.manint.csv")}</button>
-<button type="button" class="sec sm" data-copy>${t("canali.manint.copy")}</button><span class="sm" role="status" aria-live="polite" data-ok></span></div>
-<div class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h"><table class="qq-tab"><caption>${t("canali.manint.caption")}</caption>
-<thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table></div>
-<p class="muted sm">${t("canali.manint.note")}</p></details>`;
+  el.innerHTML = h`<div class="manint-head"><h3><button type="button" class="manint-tg" id="manint-h" aria-expanded="${open ? "true" : "false"}" aria-controls="manint-b" aria-describedby="manint-d" title="${t("canali.manint.note")}"><svg class="manint-chev" width="12" height="12" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" focusable="false"><path d="M1.5 3.5h7L5 7.5z"/></svg>${t("canali.manint.title", { n: body.length })}</button></h3>
+<button type="button" class="manint-ic" data-dl aria-label="${t("canali.manint.csv")}" title="${t("canali.manint.csv")}">${raw(ICON.dl)}</button><button type="button" class="manint-ic" data-copy aria-label="${t("canali.manint.copy")}" title="${t("canali.manint.copy")}">${raw(ICON.copy)}</button><span id="manint-d" class="sr-only">${t("canali.manint.note")}</span></div>
+<div id="manint-b" class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h" aria-describedby="manint-d"${raw(open ? "" : " hidden")}><table class="qq-tab">
+<thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table></div>`;
   const ws = document.getElementById("v-workspace");
   el.hidden = !(ws && (ws.dataset.work === "panels" || ws.dataset.work === "table"));
-  el.querySelector("[data-sums]")?.addEventListener("change", e => { st.sums = /** @type {HTMLInputElement} */ (e.target).checked; ask().then(() => { draw(); /** @type {HTMLElement | null} */ (card()?.querySelector("[data-sums]"))?.focus(); }); });
-  el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl(st.sums ? "manual-integrations-sums.csv" : "manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
-  el.querySelector("[data-copy]")?.addEventListener("click", () => copy(all));
+  const tg = /** @type {HTMLElement} */ (el.querySelector(".manint-tg")), bx = /** @type {HTMLElement} */ (el.querySelector("#manint-b"));
+  tg.addEventListener("click", () => { const v = bx.hidden; bx.hidden = !v; tg.setAttribute("aria-expanded", String(v)); setOpen(v); });
+  el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl("manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
+  el.querySelector("[data-copy]")?.addEventListener("click", e => copy(all, /** @type {HTMLElement} */ (e.currentTarget)));
   /** A row shows its integration on the chart (click, Enter or Space); its X deletes it. @param {Element} b */
   const show = b => { const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)]); if (rec) { G.reveal(rec.p); G.draw(rec.p); } };
   el.querySelectorAll("tr[data-go]").forEach(b => {
-    b.addEventListener("click", e => { if (!/** @type {Element} */ (e.target).closest("button")) show(b); });
+    b.addEventListener("click", e => { if (!/** @type {Element} */ (e.target).closest("button, input")) show(b); });
     b.addEventListener("keydown", e => { const k = /** @type {KeyboardEvent} */ (e); if (k.target === b && (k.key === "Enter" || k.key === " ")) { k.preventDefault(); show(b); } });
   });
   // a copyable cell: click (by the pointer), Enter or Space (by the cell); never shows the row's integration
@@ -114,17 +139,27 @@ function draw() {
       k.preventDefault(); k.stopPropagation(); const b = c.getBoundingClientRect(); go(b.left + b.width / 2, b.bottom);
     });
   });
+  // the name of a row: kept on blur or Enter, Esc gives back the name it had
+  el.querySelectorAll("input[data-nm]").forEach(n => {
+    const inp = /** @type {HTMLInputElement} */ (n), rec = recOf(body[Number(inp.dataset.nm)]), was = inp.value;
+    if (rec && st.focus === rec.it) { st.focus = null; inp.focus(); }
+    inp.addEventListener("keydown", e => {
+      e.stopPropagation();
+      if (e.key === "Escape") { e.preventDefault(); inp.value = was; inp.blur(); }
+      else if (e.key === "Enter") { e.preventDefault(); if (rec && rename(rec, inp.value)) st.focus = rec.it; }
+    });
+    inp.addEventListener("blur", () => { if (rec) rename(rec, inp.value); });
+  });
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)]); if (rec) G.delInts(rec.p, [rec.it]);
   }));
 }
 
-/** The engine rows as TSV (raw numbers, so a spreadsheet reads them) after the provenance line; the outcome in the status line. @param {string[][]} all */
-async function copy(all) {
+/** The engine rows as TSV (raw numbers, so a spreadsheet reads them) after the provenance line; «Copiato!» or the failure by the button. @param {string[][]} all @param {HTMLElement} b */
+async function copy(all, b) {
   let ok = true;
   try { await G.clipboardCopy({ "text/plain": await PROV.tsv(all.map(r => r.join("\t")).join("\n") + "\n", { table: "manint" }) }); } catch (_) { ok = false; }
-  const m = card()?.querySelector("[data-ok]"); if (!m) return;
-  m.textContent = t(ok ? "canali.manint.copied" : "canali.manint.copy.fail"); clearTimeout(st.tm); st.tm = setTimeout(() => { m.textContent = ""; }, 3000);
+  const r = b.getBoundingClientRect(); if (G.AREACOPY) G.AREACOPY.say(r.left + r.width / 2, r.bottom, ok);
 }
 
 /** Asks the engine for the table of the records; false when it refused or is missing. */
@@ -132,7 +167,7 @@ async function ask() {
   const n = ++st.busy;
   if (!st.recs.length) { st.csv = ""; return true; }
   try {
-    const r = await fetch(`api/manint?k=${st.ks.join(",")}&sums=${st.sums ? 1 : 0}&w=${encodeURIComponent(st.windows)}`);
+    const r = await fetch(`api/manint?k=${st.ks.join(",")}&sums=0&w=${encodeURIComponent(st.windows)}`);
     const text = r.ok ? await r.text() : "";
     if (n === st.busy) st.csv = text;
     return r.ok;
@@ -173,5 +208,5 @@ let timer = /** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined)
 /** Every redraw of a panel calls this: one sync after the last of a burst (a dragged edge redraws at every move). */
 const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 
-G.MANINT = { sync: soon, now: sync, snr, state: () => ({ ks: [...st.ks], windows: st.windows, sums: st.sums, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
+G.MANINT = { sync: soon, now: sync, snr, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
 soon();

@@ -19,13 +19,14 @@ pub const HELP: &str = "mzlab-cli manual-table: the integrations drawn by hand o
 usage: mzlab-cli manual-table FILE... --set windows=PATH [--set sums=true] [--out PATH]
 
   FILE        an mzML, or a vendor file the app reads (a .wiff with its .wiff.scan gives one sample per sample of the file), in the order of the page
-  --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1]}]:
-                      I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min
+  --set windows=PATH  a JSON list of windows [{\"file\": I, \"tr\": J, \"a\": MIN, \"b\": MIN, \"baseline\": \"zero\"|\"edges\"|\"line\", \"line\": [t0, y0, t1, y1], \"label\": NAME}]:
+                      I = the sample (from 0, in the order above), J = its transition in the list of the file, a and b the edges in min,
+                      NAME the name given to the window (at most 40 characters, optional)
   --set sums=true     after the windows of each channel a row sum with the sum of their areas
   --out PATH  write there instead of the standard output
 
 Columns: channel (m/z of a SIM ion, q1>q3 of a transition, ion N without Q1), name, sample, start_min, end_min, apex_rt_min, area (counts x s),
-height, snr (peak1d around the window), baseline. Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal
+height, snr (peak1d around the window), baseline, label (the name of the window). Rows grouped by channel, then by sample. Areas and heights in scientific notation with a decimal
 point (7.84077E+04), read as numbers by a spreadsheet in any locale.";
 
 struct Request {
