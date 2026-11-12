@@ -290,7 +290,6 @@ I18N.add("en", {
   "bug.open": "GitHub",
   "bug.mail": "Send by email",
   "bug.info.btn": "What is included",
-  "bug.info": "The report holds your description and the diagnostics (version, browser, format and size of the files, recent errors): no file, sample or person names and no data. The site sends nothing: GitHub or your email program opens only when you press the button, and there you read and edit everything before sending.",
   "bug.r.what": "What happened",
   "bug.r.diag": "Diagnostics",
   "bug.r.none": "(not given)",

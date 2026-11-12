@@ -290,7 +290,6 @@ I18N.add("it", {
   "bug.open": "GitHub",
   "bug.mail": "Invia per email",
   "bug.info.btn": "Cosa è incluso",
-  "bug.info": "Il rapporto contiene la tua descrizione e la diagnostica (versione, browser, formato e dimensione dei file, ultimi errori): nessun nome di file, di campioni o di persone e nessun dato. Il sito non invia nulla: GitHub o il programma di posta si aprono solo quando premi il pulsante, e lì leggi e modifichi tutto prima di inviare.",
   "bug.r.what": "Cosa è successo",
   "bug.r.diag": "Diagnostica",
   "bug.r.none": "(non indicato)",

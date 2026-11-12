@@ -29,7 +29,7 @@ I18N.add("it", {
   "settings.reset.title": "Valori iniziali; i file aperti non cambiano",
   "settings.close": "Chiudi le impostazioni",
   "bug.what.tip": "Cosa hai fatto e cosa è successo",
-  "bug.info.tip": "Mostra la diagnostica aggiunta",
+  "bug.info.tip": "Mostra la diagnostica aggiunta, senza nomi di file",
   "bug.open.tip": "Nuova issue su GitHub con questo testo",
   "bug.copy.tip": "Copia il rapporto intero",
   "bug.mail.tip": "Apre la posta con il rapporto",
