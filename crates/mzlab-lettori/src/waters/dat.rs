@@ -108,6 +108,40 @@ fn mz_a(r: &[u8]) -> Result<f64> {
     Ok(f64::from(m) * 2f64.powi(i32::from(r[2] >> 4) - 24))
 }
 
+/// One record: its m/z (not yet calibrated) and intensity, `None` for a record without intensity; an error for a word no acquisition writes.
+fn point(c: Encoding, r: &[u8]) -> Result<Option<(f64, f32)>> {
+    Ok(match c {
+        Encoding::A => {
+            let n = u16_at(r, 0);
+            if n == 0 {
+                return Ok(None);
+            }
+            Some((mz_a(r)?, f32::from(n)))
+        }
+        Encoding::D | Encoding::E => {
+            let word = u32_at(r, 0);
+            let m = word & 0x001F_FFFF;
+            if m == 0 {
+                return Ok(None);
+            }
+            if m & (1 << 20) == 0 || word & (1 << 21) != 0 {
+                return Err(damage("intensity word of the record"));
+            }
+            let e = ((word >> 22) & 0x1F) as i32;
+            Some((
+                mz_d(u32_at(r, 4))?,
+                (f64::from(m) * 2f64.powi(e - 21)) as f32,
+            ))
+        }
+    })
+}
+
+/// Whether every record of scan `b` is one an acquisition writes: a scan that is not is left out of the index (`warn.waters.damaged`).
+pub(super) fn whole(c: Encoding, b: &[u8]) -> bool {
+    let w = c.width();
+    b.len().is_multiple_of(w) && b.chunks_exact(w).all(|r| point(c, r).is_ok())
+}
+
 /// The points of one scan: calibrated m/z and intensity. Records without intensity are left out.
 pub(super) fn decode(c: Encoding, b: &[u8], t: &Calibration) -> Result<(Vec<f64>, Vec<f32>)> {
     let w = c.width();
@@ -119,32 +153,10 @@ pub(super) fn decode(c: Encoding, b: &[u8], t: &Calibration) -> Result<(Vec<f64>
         Vec::with_capacity(b.len() / w),
     );
     for r in b.chunks_exact(w) {
-        let (x, i) = match c {
-            Encoding::A => {
-                let n = u16_at(r, 0);
-                if n == 0 {
-                    continue;
-                }
-                (mz_a(r)?, f32::from(n))
-            }
-            Encoding::D | Encoding::E => {
-                let word = u32_at(r, 0);
-                let m = word & 0x001F_FFFF;
-                if m == 0 {
-                    continue;
-                }
-                if m & (1 << 20) == 0 || word & (1 << 21) != 0 {
-                    return Err(damage("intensity word of the record"));
-                }
-                let e = ((word >> 22) & 0x1F) as i32;
-                (
-                    mz_d(u32_at(r, 4))?,
-                    (f64::from(m) * 2f64.powi(e - 21)) as f32,
-                )
-            }
-        };
-        mz.push(t.apply(x));
-        it.push(i);
+        if let Some((x, i)) = point(c, r)? {
+            mz.push(t.apply(x));
+            it.push(i);
+        }
     }
     Ok((mz, it))
 }

@@ -1,19 +1,20 @@
 //! The `Lettore` of a MassLynx `.raw` folder: the functions of `_FUNCTNS.INF`, the scans of the scanning ones (MS, MSe, DDA) by position in `_FUNCnnn.DAT`, and the SIR/MRM channels,
 //! the TIC, the lock mass and the analog traces as chromatograms (`chroms.rs`). The lock mass function is also in the spectra (level 1, filter "lock mass", as msconvert does); its correction is not applied.
 
-use super::cuts::{cuts, nel_file, whole_header, whole_list};
+use super::cuts::{header_cut, nel_file, unlisted};
 use super::dat::{decode, Calibration, Encoding};
 use super::folder::{read_error, text, Folder};
 use super::functions::{self, Function};
 use super::idx::{self, Row};
 use super::inf::{self, Extern, FunctionExt, Inlet, Mode, WatersHeader};
-use super::sides::{compound_names, Table};
+use super::load::Loading;
+use super::sides::Table;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::readers::{
-    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Losses, Position, Reader,
-    ReaderEntry, Sample, ScanEntry, CONTRATTO,
+    ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Losses, Reader, ReaderEntry,
+    Sample, ScanEntry, CONTRATTO,
 };
 
 const FUNCTNS: &str = "_FUNCTNS.INF";
@@ -28,64 +29,11 @@ pub const ENTRY: ReaderEntry = ReaderEntry {
 };
 
 impl WatersReader {
-    /// The spectra: every scan with points of a scanning function (the lock mass included, marked in its filter), in the order of time.
-    fn build_index(&mut self) {
-        let mut v: Vec<(f32, usize, usize)> = Vec::new();
-        for (i, f) in self.funs.iter().enumerate() {
-            if f.f.mirato() || f.cod.is_none() || f.dat.is_none() {
-                continue;
-            }
-            v.extend(
-                f.righe
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, r)| r.count > 0)
-                    .map(|(k, r)| (r.rt, i, k)),
-            );
-        }
-        v.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
-        for &(_, i, k) in &v {
-            let f = &self.funs[i];
-            let r = f.righe[k];
-            let precursor = (f.livello == 2)
-                .then(|| {
-                    f.sts
-                        .as_ref()
-                        .and_then(|t| t.value("Set Mass", k))
-                        .filter(|&m| m > 0.0)
-                        .or(f.ext.set_mass)
-                })
-                .flatten();
-            self.indice.push(ScanEntry {
-                id: format!("function={} process=0 scan={}", f.f.indice, k + 1),
-                rt: f64::from(r.rt),
-                livello: f.livello,
-                polarita: f.polarita,
-                tic: f64::from(r.tic),
-                base_peak: None,
-                filtro: if f.f.riferimento() {
-                    format!("function {} lock mass", f.f.indice)
-                } else {
-                    format!("function {}", f.f.indice)
-                },
-                precursore: precursor,
-                position: f.dat.map(|m| Position {
-                    membro: u16::try_from(m).unwrap_or(0),
-                    offset: r.offset,
-                    lunghezza: u32::try_from(
-                        u64::from(r.count) * f.cod.map_or(0, |c| c.width() as u64),
-                    )
-                    .unwrap_or(u32::MAX),
-                }),
-            });
-            self.map.push((i, k));
-        }
-    }
-
-    fn entry(&self, c: usize, k: usize) -> Result<(&Fun, usize, &ScanEntry)> {
+    fn entry(&mut self, c: usize, k: usize) -> Result<(&Fun, usize, &ScanEntry)> {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
+        self.ready()?;
         let (i, r) = *self
             .map
             .get(k)
@@ -109,13 +57,15 @@ impl Reader for WatersReader {
         ]
     }
 
+    /// Every scan the index lists and the reader does not read (a DAT cut short, a member missing, a record width or a damaged part), as `losses`.
     fn missing(&mut self, c: usize) -> usize {
-        super::counts::cut(&self.funs) * usize::from(c == 0)
+        self.losses(c).map_or(0, |l| l.lost())
     }
 
     fn losses(&mut self, c: usize) -> Result<Losses> {
         let n = self.index_without_tic(c)?.len();
-        Ok(super::counts::losses(&self.funs, c, n))
+        let damaged = self.bad + self.unlisted;
+        Ok(super::counts::losses(&self.funs, c, n, damaged))
     }
 
     fn samples(&self) -> &[Sample] {
@@ -126,6 +76,7 @@ impl Reader for WatersReader {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
+        self.ready()?;
         Ok(&self.indice)
     }
 
@@ -237,6 +188,7 @@ impl Reader for WatersReader {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
+        self.ready()?;
         super::doc::file_header(self).map(Some)
     }
 
@@ -244,6 +196,7 @@ impl Reader for WatersReader {
         if c != 0 {
             return Err(Error::new("error.badIndex").with("c", c));
         }
+        self.ready()?;
         super::doc::document(self)
     }
 }
@@ -293,6 +246,8 @@ pub(super) struct Fun {
     pub(super) polarita: i8,
     /// Scans of the index past the end of a DAT cut short (emptied in `righe`).
     pub(super) cut: usize,
+    /// Rows of the index of a function left out whole as damaged (an index that does not match its DAT, a calibration line lost): no data is read from it.
+    pub(super) left_out: Option<usize>,
 }
 
 pub struct WatersReader {
@@ -302,10 +257,16 @@ pub struct WatersReader {
     pub(super) ext: Extern,
     pub(super) inlet: Option<Inlet>,
     pub(super) analogiche: Vec<super::chroms::Analog>,
-    samples: Vec<Sample>,
-    indice: Vec<ScanEntry>,
+    pub(super) samples: Vec<Sample>,
+    pub(super) indice: Vec<ScanEntry>,
     /// For each row of `indice`: (function, row of its IDX).
-    map: Vec<(usize, usize)>,
+    pub(super) map: Vec<(usize, usize)>,
+    /// Whether the scans of `indice` were checked (`ready`).
+    pub(super) checked: bool,
+    /// Scans `ready` left out as damaged.
+    pub(super) bad: usize,
+    /// Index rows of the functions past the end of a `_FUNCTNS.INF` cut short at a whole record.
+    pub(super) unlisted: usize,
     /// What the reader did not decode: (key of the notice, where).
     pub(super) warnings: Vec<(String, String)>,
     pub(super) sha1: Option<Vec<Option<String>>>,
@@ -358,109 +319,74 @@ fn unknown_variant(name: &str, funs: &[Fun], without_analog: bool) -> Result<()>
     }
 }
 
-/// Everything of function `f`: its index, the DAT and the side tables.
-fn load(
-    c: &mut Folder,
-    f: Function,
-    ext: &Extern,
-    tars: &WatersHeader,
-    spent: &mut u64,
-) -> Result<(Fun, Option<String>)> {
-    let n = f.indice;
-    let name = |e: &str| format!("_FUNC{n:03}.{e}");
-    let idx_b = c.read_run(&name("IDX"))?;
-    let ha_idx = idx_b.is_some();
-    let mut rows = match idx_b {
-        Some(b) => idx::read(&b, &c.limits)?
-            .ok_or_else(|| nel_file(c, "err.file.indexCut", &name("IDX")))?,
-        None => Vec::new(),
-    };
-    *spent += rows.len() as u64;
-    c.limits.ok_entries(*spent)?;
-    let dat = c.search(&name("DAT"));
-    let dat_len = dat.map_or(0, |i| c.fs.membri[i].dim);
-    let larg = idx::width(&rows, dat_len);
-    let cod = if f.mirato() {
-        None
-    } else {
-        larg.and_then(Encoding::from_width)
-    };
-    let tagliate = cuts(&mut rows, larg, dat.is_some(), dat_len, ha_idx)
-        .ok_or_else(|| nel_file(c, "err.file.indexCut", &name("IDX")))?;
-    let lim = c.limits;
-    let tab = |c: &mut Folder, e: &str| -> Result<_> {
-        Ok(c.read_run(&name(e))?.and_then(|b| Table::read(&b, &lim)))
-    };
-    let (sts, ee) = (tab(c, "STS")?, tab(c, "EE")?);
-    let nomi = c
-        .read(&name("CMP"))?
-        .map_or(Vec::new(), |b| compound_names(&b, &lim));
-    let x = ext.funzioni.get(&n).cloned().unwrap_or_default();
-    // the member that is not there is named: a function with an index and no DAT is not the same loss as a function without scans
-    let warning = if dat.is_some() != ha_idx {
-        Some(format!(
-            "function {n}: {} missing",
-            name(if ha_idx { "DAT" } else { "IDX" })
-        ))
-    } else if dat.is_none() || rows.is_empty() {
-        Some(format!("function {n}: no scans"))
-    } else if !f.mirato() && cod.is_none() {
-        Some(format!("function {n}: record width"))
-    } else {
-        None
-    };
-    let polarity = x.polarita.or(ext.polarita).unwrap_or(0);
-    let tar = tars.tarature.get(&n).cloned().unwrap_or_default();
-    let fun = Fun {
-        f,
-        ext: x,
-        righe: rows,
-        dat,
-        dat_len,
-        larg,
-        cod,
-        tar,
-        sts,
-        ee,
-        names: nomi,
-        livello: 1,
-        polarita: polarity,
-        cut: tagliate,
-    };
-    Ok((fun, warning))
+/// A notice of folder `name`: what is not decoded or was left out.
+fn note(w: &mut Vec<(String, String)>, name: &str, a: String) {
+    w.push(("meta.nonDecodificato".to_string(), format!("{name}: {a}")));
 }
 
-fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
-    let mut c = Folder::new(fs, *limits);
-    // Every run has `_FUNCTNS.INF`: a folder without it is a copy that left files behind.
+/// The functions `_FUNCTNS.INF` lists. Every run has it: a folder without it is a copy that left files behind.
+fn listed(c: &mut Folder) -> Result<Vec<Function>> {
     let inf = c
         .read(FUNCTNS)?
-        .ok_or_else(|| nel_file(&c, "err.file.folderIncomplete", FUNCTNS))?;
+        .ok_or_else(|| nel_file(c, "err.file.folderIncomplete", FUNCTNS))?;
     if c.search(FIRST_DAT).is_none() {
         return Err(read_error("_FUNC001.DAT is missing"));
     }
     if inf.is_empty() {
         return Err(Error::new("err.file.functionsEmpty").with("name", &c.name));
     }
-    let list = functions::read(&inf, limits)?
-        .ok_or_else(|| nel_file(&c, "err.file.folderFileCut", FUNCTNS))?;
-    whole_list(&c, list.len())?;
+    functions::read(&inf, &c.limits)?.ok_or_else(|| nel_file(c, "err.file.folderFileCut", FUNCTNS))
+}
+
+impl WatersReader {
+    /// The index of the spectra and the one sample, named as the acquisition named it.
+    fn with_index(mut self) -> Self {
+        self.build_index();
+        let name = self
+            .testata
+            .get("Acquired Name")
+            .map_or_else(|| self.c.name.clone(), str::to_string);
+        self.samples = vec![Sample {
+            id: 0,
+            nome: name,
+            scansioni: self.indice.len(),
+            size: None,
+        }];
+        self
+    }
+}
+
+fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
+    let mut c = Folder::new(fs, *limits);
+    let list = listed(&mut c)?;
+    let (more, unlisted) = unlisted(&mut c, list.len())?;
+    let mut warnings = Vec::new();
+    let mut refusal = None;
+    if more > 0 {
+        refusal = Some(nel_file(&c, "err.file.functionsCut", FUNCTNS).with("listed", list.len()));
+        let a = format!("{more} functions past the end of {FUNCTNS}, {unlisted} scans left out");
+        note(&mut warnings, &c.name, a);
+    }
     let header = c.read("_HEADER.TXT")?;
     let has_header = header.is_some();
-    whole_header(&c, header.as_deref())?;
+    let header_cut = header_cut(header.as_deref());
     let testata = header.map_or_else(WatersHeader::default, |b| inf::file_header(&text(&b)));
     let ext = c
         .read("_extern.inf")?
         .map_or_else(Extern::default, |b| inf::extern_inf(&text(&b)));
     let inlet = c.read("_INLET.INF")?.map(|b| inf::inlet(&text(&b)));
-    let (mut funs, mut warnings, mut spent) = (Vec::new(), Vec::new(), 0u64);
+    let mut ld = Loading {
+        ext: &ext,
+        tars: &testata,
+        header_cut,
+        spent: 0,
+        refusal,
+    };
+    let mut funs = Vec::new();
     for f in list {
-        let (fun, av) = load(&mut c, f, &ext, &testata, &mut spent)?;
+        let (fun, av) = ld.load(&mut c, f)?;
         if let Some(a) = av {
-            warnings.push((
-                "meta.nonDecodificato".to_string(),
-                format!("{}: {a}", c.name),
-            ));
+            note(&mut warnings, &c.name, a);
         }
         funs.push(fun);
     }
@@ -468,9 +394,19 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         funs[i].livello = level_of(&funs, i);
     }
     warnings.extend(super::counts::notes(&c.name, &funs, &ext, has_header));
-    let analogiche = super::chroms::analog(&mut c)?;
+    let (analogiche, a) = super::chroms::analog(&mut c);
+    if let Some(a) = a {
+        note(&mut warnings, &c.name, a);
+    }
+    // a folder whose every part with data was left out as damaged gives nothing: refused with the key of the first, as before any part was left out
+    let data = funs
+        .iter()
+        .any(|f| f.dat.is_some() && f.righe.iter().any(|r| r.count > 0));
+    if let Some(e) = ld.refusal.filter(|_| !data && analogiche.is_empty()) {
+        return Err(e);
+    }
     unknown_variant(&c.name, &funs, analogiche.is_empty())?;
-    let mut l = WatersReader {
+    let l = WatersReader {
         c,
         funs,
         testata,
@@ -480,20 +416,12 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         samples: Vec::new(),
         indice: Vec::new(),
         map: Vec::new(),
+        checked: false,
+        bad: 0,
+        unlisted,
         warnings,
         sha1: None,
         chroms: None,
     };
-    l.build_index();
-    let name = l
-        .testata
-        .get("Acquired Name")
-        .map_or_else(|| l.c.name.clone(), str::to_string);
-    l.samples = vec![Sample {
-        id: 0,
-        nome: name,
-        scansioni: l.indice.len(),
-        size: None,
-    }];
-    Ok(Box::new(l))
+    Ok(Box::new(l.with_index()))
 }

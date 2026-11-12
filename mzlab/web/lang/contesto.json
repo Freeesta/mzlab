@@ -808,6 +808,7 @@
   "warn.file.brukerCutBin": "Avviso calmo di lettura parziale (conv/1.perdita, CLI) di una cartella .d: il file *_bin è tagliato, gli spettri dei frame oltre la fine mancano.",
   "warn.file.memberMissing": "Avviso calmo di lettura parziale (conv/1.perdita, CLI): manca un membro di dati di una cartella (Waters _FUNCnnn.DAT), le sue scansioni mancano.",
   "warn.file.recordWidth": "Avviso calmo di lettura parziale (conv/1.perdita, CLI): record di dimensione non decodificata, le scansioni di quella funzione mancano.",
+  "warn.waters.damaged": "Avviso calmo di lettura parziale (conv/1.perdita, CLI) di una cartella Waters: scansioni o funzioni danneggiate lasciate fuori e contate; il resto si legge.",
   "error.memoryBudget.native": "Come error.memoryBudget, ma nell'app desktop e nella CLI: il limite è la memoria scelta per il computer, non quella del browser.",
   "error.memoryBudgetFase.native": "Come error.memoryBudgetFase, ma nell'app desktop e nella CLI. Stessi segnaposto: {fase}, {stima_mb}, {budget_mb}, {libero_mb}, {eccesso_mb}.",
   "error.memoryBudgetFase.indexPeaks.native": "Come error.memoryBudgetFase.indexPeaks, ma nell'app desktop e nella CLI. {stima_mb} = MB di picchi dell'intervallo di 1 Da, {budget_mb} = MB al massimo per un intervallo.",

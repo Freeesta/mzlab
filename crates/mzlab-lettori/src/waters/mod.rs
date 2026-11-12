@@ -13,7 +13,9 @@ mod folder;
 mod functions;
 mod idx;
 mod inf;
+mod load;
 mod mrm;
+mod scans;
 mod sides;
 
 pub use reader::ENTRY;
