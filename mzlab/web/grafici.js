@@ -316,7 +316,7 @@ async function drawLines(p) {
   const { g, W, H } = setup(p.cv);
   const sr = all.filter(s => !isHid(p, s));
   if (!sr.length) {
-    g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(all.length ? I18N.t("leg.allHidden") : MSG[p.type], M.l, 30);
+    g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(all.length ? I18N.t("leg.allHidden") : ESP.mrm(p) && Array.isArray(p.tr) && !p.tr.length ? I18N.t("canali.pick.none.msg") : MSG[p.type], M.l, 30);
     p._a = null; if (all.length) legend(p, all); else { p.leg.innerHTML = ""; if (p.corrbar) p.corrbar.innerHTML = ""; } return;
   }
   let lo = Infinity, hi = -Infinity;
