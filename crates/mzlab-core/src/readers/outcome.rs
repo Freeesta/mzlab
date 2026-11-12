@@ -47,17 +47,6 @@ impl Losses {
             ("cause".into(), Value::Str(self.cause.into())),
         ])
     }
-    /// The losses an index says in `source.lost` (`note`), when its read was partial; a cause this build does not know reads as `TRUNCATED`.
-    pub fn of_source(source: &Value) -> Option<Losses> {
-        let lost = source.get("lost")?;
-        let n = |k: &str| lost.get(k).and_then(Value::f64).map(|v| v as usize);
-        let cause = match lost.get("cause").and_then(Value::str) {
-            Some(DAMAGED) => DAMAGED,
-            Some(EVENTS_REFUSED) => EVENTS_REFUSED,
-            _ => TRUNCATED,
-        };
-        Some(Losses::of(n("declared")?, n("read")?, cause)).filter(Losses::partial)
-    }
 }
 
 /// The data of a read with what it lost.

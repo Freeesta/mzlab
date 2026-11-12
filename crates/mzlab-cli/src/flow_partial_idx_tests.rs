@@ -1,6 +1,6 @@
 //! `index.mzidx` on a cut vendor file: the index keeps what its read lost (`source.lost`), and the run record says it as `convert.mzml` does (the cause
-//! among the warnings, the counts as the note of the file) in `flowrun/1` and `prov.json`; the facts the page reads of the same index and hands to
-//! `record_prov` as the report of the job (`idx_source_json`) are the same. The whole file writes no `lost` and says nothing.
+//! among the warnings, the counts as the note of the file) in `flowrun/1` and `prov.json`; the `lost` the page reads of the same index and hands to
+//! `record_prov` is that note. The whole file writes no `lost` and says nothing.
 use mzlab_core::json::{parse, Value};
 
 use crate::convert_fixtures::{folder, wiff};
@@ -74,19 +74,13 @@ fn a_cut_vendor_file_is_in_the_record_of_its_index() {
     let act = prov.get("activity").and_then(|a| a.get("idx")).unwrap();
     assert_eq!(said(act), (w.clone(), Some(note.clone())), "prov.json");
 
-    // the page: the facts of the same index, the report of its job
+    // the page hands the `lost` of the same index to `record_prov`, which reads it as these warnings and this note (`run_web_tests.rs`)
     let ix = crate::flow_base::open(&dir.join("out/idx-c-1.mzidx")).unwrap();
-    let facts = parse(mzlab_feat_wasm::run::meta::idx_source_json(&ix.source).as_bytes()).unwrap();
-    let page = Value::Obj(vec![
-        ("warnings".into(), facts.get("warnings").cloned().unwrap()),
-        (
-            "files".into(),
-            Value::Obj(vec![(
-                "c.wiff@1".into(),
-                facts.get("file").cloned().unwrap(),
-            )]),
-        ),
-    ]);
-    assert_eq!(said(&page), (w, Some(note)), "idx_source_json");
+    let lost = ix.source.get("lost").expect("source.lost");
+    // the same fields (the record writes its keys sorted)
+    for k in ["declared", "read", "cause"] {
+        assert_eq!(lost.get(k), note.get(k), "source.lost {k}");
+    }
+    assert_eq!(lost.get("cause").and_then(Value::str), Some(w[0].as_str()));
     let _ = std::fs::remove_dir_all(&dir);
 }

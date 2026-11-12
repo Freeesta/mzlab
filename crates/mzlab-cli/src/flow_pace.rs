@@ -12,7 +12,7 @@ use std::sync::Arc;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::mzidx::build_mzml_late;
-use mzlab_core::readers::{FileSet, Limits, Member};
+use mzlab_core::readers::{FileSet, Limits, Losses, Member};
 use mzlab_core::upload::{
     index_reader_with, prepare_with, probe, with_parallel_prints, without_sha1,
 };
@@ -188,7 +188,7 @@ pub(crate) fn reads_as_mzml(path: &Path) -> bool {
 
 /// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
 pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
-    build_index_with(path, label, idx, budget, &mut |_, _| {}, &None)
+    build_index_with(path, label, idx, budget, &mut |_, _| {}, &None).map(|_| ())
 }
 
 /// `build_index_of` telling `step(done, total)` how far pass 1 has got (scans of the sample, bytes of an mzML), at most once per 1 %; same bytes with any
@@ -200,7 +200,7 @@ pub(crate) fn build_index_with(
     budget: usize,
     step: &mut dyn FnMut(usize, usize),
     stop: &Stop,
-) -> Result<()> {
+) -> Result<Losses> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let name = path
         .file_name()
@@ -209,7 +209,7 @@ pub(crate) fn build_index_with(
         Error::new("err.flow.io").with("detail", format!("{}: {e}", path.display()))
     })?;
     let mut out = File::create(idx).map_err(io)?;
-    if reads_as_mzml(path) {
+    let lost = if reads_as_mzml(path) {
         let size = std::fs::metadata(path).map_err(io)?.len();
         let mut file = File::open(path).map_err(io)?;
         let (table, mut late) = match flow_set::known_sha(path) {
@@ -249,11 +249,12 @@ pub(crate) fn build_index_with(
         drop(scratch);
         let _ = std::fs::remove_file(&scratch_path);
         built?;
+        Losses::default()
     } else {
-        index_reader(path, label, idx, &mut out, budget, &mut pace, stop)?;
-    }
+        index_reader(path, label, idx, &mut out, budget, &mut pace, stop)?
+    };
     pace.at(1, 1);
-    Ok(())
+    Ok(lost)
 }
 
 /// The index of a file read through the registry (maker's files, Numpress, gzip). The peaks that do not fit in `budget` wait in a scratch file, so the
@@ -267,7 +268,7 @@ fn index_reader(
     budget: usize,
     pace: &mut Pace<'_>,
     stop: &Stop,
-) -> Result<()> {
+) -> Result<Losses> {
     let name = path
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
@@ -334,7 +335,7 @@ fn index_reader(
     };
     drop(scratch);
     let _ = std::fs::remove_file(&scratch_path);
-    built.map(|_| ())
+    built.and_then(|_| l.losses(sample)) // once the scans are decoded, as for `source.lost`
 }
 
 /// The members as the fingerprint thread reads them: each read fails with `err.flow.cancelled` once the job is cancelled (`stop`) or the build has

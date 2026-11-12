@@ -69,13 +69,15 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let mut pace = gate.pace();
     let built =
         crate::flow_pace::build_index_with(&source, &label, &out, budget, &mut pace, &gate.stop);
-    if let Err(e) = built {
-        let _ = std::fs::remove_file(&out);
-        return Err(e);
-    }
+    // what the read lost (a vendor file), the counts the index keeps as `source.lost`: the site reads that key of the index it keeps
+    let lost = match built {
+        Ok(lost) => lost,
+        Err(e) => {
+            let _ = std::fs::remove_file(&out);
+            return Err(e);
+        }
+    };
     let name = r.source_name(&job.inputs[0].1[0]);
-    // what the index says its read lost (`source.lost`, a vendor file): the site reads the same key of the index it keeps
-    let lost = Losses::of_source(&open(&out)?.source).unwrap_or_default();
     let a = r.keep(out, DataType::Mzidx)?;
     r.trace(
         &a,

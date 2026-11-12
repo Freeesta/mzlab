@@ -147,7 +147,8 @@ try:
             if CUT is None: print("SKIP cut file: tools/wiff_grande.py needs numpy"); return
             got = pg.evaluate(SOURCE)
             assert CUT.get("warnings") == ["warn.file.truncated"], CUT
-            assert got.get("warnings") == CUT["warnings"] and got.get("file") == CUT["files"]["c.wiff@1"], (got, CUT)
+            # the page hands `lost` to record_prov, which reads it as its cause among the warnings and itself as the note (run_web_tests.rs)
+            assert got.get("lost") == CUT["files"]["c.wiff@1"] and [got["lost"]["cause"]] == CUT["warnings"], (got, CUT)
         step("the facts the browser reads of the index of a cut vendor file give the warning and the counts of the step of flow run", cut_file)
         b.close()
 finally:

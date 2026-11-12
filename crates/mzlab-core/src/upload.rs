@@ -429,7 +429,7 @@ fn sample_of(l: &mut dyn Reader, c: usize) -> Result<crate::readers::Sample> {
         .ok_or_else(|| Error::new("error.badIndex").with("c", c))
 }
 
-/// `source` with `lost` (`Losses::note`) when the read of the sample was partial (`index.mzidx` records it, `Losses::of_source`); a whole read keeps its bytes.
+/// `source` with `lost` (`Losses::note`) when the read of the sample was partial (`index.mzidx` records it; the page hands it to `record_prov`); a whole read keeps its bytes.
 fn with_lost(source: String, lost: &crate::readers::Losses) -> String {
     match source.strip_suffix('}') {
         Some(head) if lost.partial() => format!(
