@@ -46,7 +46,8 @@ try:
         def keep():
             pg.reload(); pg.wait_for_timeout(1500); ready(pg)
             assert not RINGS(), "the choice is kept after a reload"
-            pg.click("#tools-card summary"); pg.click("#tools-def"); pg.wait_for_timeout(300)
+            assert pg.is_visible("#tools-def"), "the card opened before the reload is open again (disegno-riquadri.js)"
+            pg.click("#tools-def"); pg.wait_for_timeout(300)
             assert RINGS()
         step("the choice is kept in this browser", keep)
         def font():

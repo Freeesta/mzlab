@@ -55,16 +55,16 @@ export function mountCip() {
   if (document.querySelector("#cip-card")) return;
   const card = document.createElement("div");
   card.className = "card"; card.id = "cip-card";
-  card.innerHTML = '<h2 data-i18n="draw.cip.heading"></h2><p class="muted sm" style="margin:0 0 4px" data-i18n="draw.cip.intro"></p>'
+  card.innerHTML = '<h2 data-i18n="draw.cip.heading"></h2><p class="rq-d" data-i18n="draw.cip.intro"></p>'
     + '<div style="margin:3px 0"><label><input type="checkbox" autocomplete="off" id="cip-show"> <span data-i18n="draw.cip.show"></span></label></div>'
-    + '<p class="sm" id="cip-note" style="margin:2px 0 4px" data-i18n="draw.cip.note"></p>'
+    + '<p class="rq-d" id="cip-note" data-i18n="draw.cip.note"></p>'
     + '<div id="cip-status" class="sm" role="status"></div><ul id="cip-list" class="sm"></ul>';
   card.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = t(/** @type {string} */ (e.getAttribute("data-i18n"))); });
   const css = document.createElement("style");
   css.textContent = "#cip-list{list-style:none;padding:0;margin:4px 0 0}#cip-list li{margin:2px 0}"
     + ".cip-sel{min-height:24px;min-width:24px;text-align:left;background:none;border:0;padding:2px 0;color:var(--ink);cursor:pointer;font:inherit}";
   card.appendChild(css);
-  const after = document.querySelector("#chk-card") || document.querySelector("#prop-card");
+  const after = document.querySelector("#chk-card") || document.querySelector("#anal-card");
   if (!after || !after.parentNode) return;
   after.parentNode.insertBefore(card, after.nextSibling);
   /** @type {HTMLInputElement} */ (card.querySelector("#cip-show")).onchange = async (e) => {

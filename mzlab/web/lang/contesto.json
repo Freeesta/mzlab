@@ -44,6 +44,8 @@
   "draw.cut.done": "Riga di stato dopo un taglio dei legami. {pieces} = i pezzi, ciascuno con formula, tipo (radicale, catione...) e massa, separati da punto e virgola.",
   "draw.cut.hetero.row": "Riga del menu dopo un taglio eterolitico: quale pezzo prende la carica +. {cation} e {anion} = formula, tipo e m/z dei due pezzi.",
   "draw.ions.caption": "Didascalia della tabella «Ioni attesi» del Disegno. {n} = numero della struttura, {formula} = formula con la carica, {mass} = massa esatta.",
+  "draw.card.expand": "Nome accessibile del pulsante a freccia di un riquadro chiuso del Disegno; {name} = titolo del riquadro.",
+  "draw.card.collapse": "Nome accessibile del pulsante a freccia di un riquadro aperto del Disegno; {name} = titolo del riquadro.",
   "draw.ions.hr": "Nota sopra la tabella degli ioni attesi con un file ad alta risoluzione. {file} = nome del file, {ppm} = tolleranza in ppm del file.",
   "draw.ions.xic.aria": "Nome accessibile del pulsante «XIC» di una riga. {ion} = addotto (es. [M+H]+), {mz} = m/z scritto.",
   "error.grafo.cut.radical": "Messaggio d'errore del motore; {atom} = numero dell'atomo (da 1).",
