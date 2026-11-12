@@ -18,5 +18,5 @@ mod rules_site;
 mod shuffle;
 mod smiles;
 pub mod structures;
-#[cfg(feature = "record")]
+#[cfg(feature = "sub")]
 pub mod substructure;

@@ -9,7 +9,7 @@ mod levels;
 mod routes;
 mod search;
 
-pub use csv::{from_csv, to_csv};
+pub use csv::{from_csv, table, to_csv};
 pub use ion::ione;
 pub use json::{digest, errors_json, from_json, hits_json, record_json, to_json};
 pub use levels::merge;
