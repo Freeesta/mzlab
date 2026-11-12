@@ -196,7 +196,11 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn readers::Reade
     let all = tr.chromatograms().unwrap();
     let listed: Vec<_> = all.iter().filter(|x| ms(x.tipo)).collect();
     assert_eq!(listed.len(), written.len(), "{label}: chromatograms");
-    assert_eq!(all.len(), written.len() + other.len(), "{label}: other traces");
+    assert_eq!(
+        all.len(),
+        written.len() + other.len(),
+        "{label}: other traces"
+    );
     for q in &other {
         let p = tr.chromatogram(&q.id).unwrap();
         assert!(
