@@ -9,6 +9,8 @@ mod ident_annot;
 mod ident_formula;
 mod ident_screen;
 mod ident_spectra;
+mod moiety;
+pub use moiety::moiety;
 pub use ident_spectra::table_match;
 mod qcreport;
 mod recipe_algo;

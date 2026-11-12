@@ -1134,6 +1134,7 @@
   "error.grafo.element": "Messaggio d'errore del motore; {element} = elemento.",
   "error.grafo.smiles": "Messaggio d'errore del motore; {smiles} = SMILES.",
   "error.grafo.tooBig": "Messaggio d'errore del motore; {max} = massimo.",
+  "error.sub.column": "Messaggio d'errore del motore (passo Flow structure.moiety); {column} = nome della colonna cercata.",
   "error.sub.db": "Messaggio d'errore del motore (ricerca per sottostruttura in un elenco di strutture).",
   "error.sub.dbSize": "Messaggio d'errore del motore (ricerca per sottostruttura); {n} = voci dell'elenco, {max} = massimo.",
   "error.sub.query": "Messaggio d'errore del motore (ricerca per sottostruttura); {detail} = motivo tecnico in inglese.",

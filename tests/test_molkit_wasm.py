@@ -1,6 +1,7 @@
 """The molkit .wasm (crates/mzlab-mol-wasm) gives the `check/1` of a drawing byte for byte like `mzlab-cli mol-check` and the app fixture
 (tests/dati/check_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad molfile as a keyed JSON error; the `subdb/1` of a
-structure list like `mzlab-cli mol-search --db` and the app (tests/dati/sub_db.json). Skipped without cargo, wasm-bindgen or node."""
+structure list like `mzlab-cli mol-search --db` and the app (tests/dati/sub_db.json); the Flow step `structure.moiety` (`flow_moiety`) like
+`mzlab-cli flow run --set` (tests/dati/moiety.json). Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess
@@ -51,3 +52,24 @@ def test_substructure_over_a_list_through_wasm_equals_the_cli_and_the_fixture(pk
         assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-search", "--sub", r["query"], "--db", str(db), *sets)
     bad = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({"query": "C", "db": "# none\n"}), "sub"], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert bad.returncode == 1 and json.loads(bad.stderr)["error_key"] == "error.sub.db"
+
+
+def test_moiety_step_through_wasm_equals_flow_run_with_set_and_the_fixture(pkg, tmp_path):
+    fx = json.loads((ROOT / "tests" / "dati" / "moiety.json").read_text(encoding="utf-8"))
+    table = tmp_path / "list.csv"
+    table.write_bytes(fx["table"].encode("utf-8"))
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps({"format": "mzflow/2", "inputs": [{"name": "list.csv", "type": "candidates"}],
+                                "steps": [{"id": "m", "step": "structure.moiety@1", "in": {"candidates": "file:list.csv"}, "params": {}}]}), encoding="utf-8")
+    defaults = {"query": "", "column": "smiles", "stereo": False, "keep": "containing"}
+    for k, c in enumerate(fx["cases"]):
+        params = json.loads(c["params"])
+        site = run("node", "tests/molkit_wasm_node.js", str(pkg), json.dumps({**defaults, **params}), "moiety", str(table))
+        assert site == c["out"], c["params"]
+        sets = [a for n, v in params.items() for a in ("--set", f"m.{n}={json.dumps(v) if isinstance(v, bool) else v}")]
+        out = tmp_path / f"run{k}"
+        run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(plan), "--in", str(table), "--out", str(out), *sets)
+        assert (out / "m.csv").read_text(encoding="utf-8") == site, c["params"]
+    for c in fx["errors"]:
+        bad = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), c["params"], "moiety", str(table)], cwd=ROOT, capture_output=True, encoding="utf-8")
+        assert bad.returncode == 1 and json.loads(bad.stderr)["error_key"] == c["key"], c["params"]

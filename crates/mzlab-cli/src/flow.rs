@@ -81,6 +81,11 @@ mod flow_methods;
 mod flow_qcreport_tests;
 #[path = "flow_runorder.rs"]
 mod flow_runorder;
+#[path = "flow_moiety.rs"]
+mod flow_moiety;
+#[cfg(test)]
+#[path = "flow_moiety_tests.rs"]
+mod flow_moiety_tests;
 
 /// The steps a plan can use here, every family of descriptors: the registry of the flagship chain, `features.table`, Attributio, the whole Tabui
 /// family, `spectra.ms2` and `meta.compare`. Whether a step also runs here is `executable`.
@@ -98,6 +103,7 @@ pub fn steps() -> Vec<Step> {
     all.extend([mzlab_feat::steps::run_order(), mzlab_feat::steps::methods()]);
     all.push(mzlab_feat::steps::export_annotations());
     all.push(mzlab_feat::steps::transitions());
+    all.push(mzlab_feat::steps::moiety());
     all
 }
 
@@ -398,6 +404,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(plausible::EXECUTORS)
         .chain(crate::flow_massacc::EXECUTORS)
         .chain(flow_runorder::EXECUTORS)
+        .chain(flow_moiety::EXECUTORS)
         .chain(flow_methods::EXECUTORS)
         .chain(flow_export_annot::EXECUTORS)
         .chain(crate::flow_transitions::EXECUTORS)
