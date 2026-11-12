@@ -126,6 +126,7 @@ declare var RIFERIMENTO: any;
 declare var RISCALDA: any;
 declare var SCARICA: any;
 declare var SCORCIATOIE: any;
+declare var SEGUE: any;
 declare var SIMUI: any;
 declare var SPECBAR: any;
 declare var SUBREF: any;

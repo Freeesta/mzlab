@@ -1,8 +1,8 @@
 // @ts-check
 "use strict";
 // SIM files in the interface (engine side: canali-dati.md). A SIM file opens as an MRM-kind file whose transitions have a Q1 and no Q3; this module tells the two apart
-// (f.sim = number of ions, 0 for MRM), keeps one colour per monitored m/z and builds the entries of the ion menu of the chromatogram. Only glue: every number comes from the engine.
-// Classic helpers used by name: E, J, I18N, PAL, getMrm, shownFor, ctl, draw, uiSave, COMANDI, addPanel, reveal, apriAnnullabile, renderFiles, renderFileList, toolbar.
+// (f.sim = number of ions, 0 for MRM), colours overlaid traces by sample and builds the entries of the ion menu of the chromatogram. Only glue: every number comes from the engine.
+// Classic helpers used by name: E, J, I18N, PAL, DASHES, fdash, getMrm, shownFor, ctl, draw, uiSave, COMANDI, addPanel, reveal, apriAnnullabile, renderFiles, renderFileList, toolbar.
 (() => {
   /** @typedef {{ key: string, name: string, sim: boolean }} Ione */
   /** transitions of a file, read once: k|file -> list @type {Map<string, Ione[]>} */
@@ -60,18 +60,18 @@
     const rank = (/** @type {Ione} */ x) => /^quant/i.test(x.name) ? 0 : 1, q1 = (/** @type {Ione} */ x) => x.key.split(">")[0], l = [...m.values()], first = new Map(/** @type {[string, number][]} */ (l.map((x, i) => [q1(x), i])).reverse());
     return l.map((x, i) => ({ x, i })).sort((a, b) => (first.get(q1(a.x)) ?? 0) - (first.get(q1(b.x)) ?? 0) || rank(a.x) - rank(b.x) || a.i - b.i).map(o => o.x);
   }
-  /** colour index of an ion: its place among the ions of every file of the session, so the same m/z has the same colour in every sample and panel @param {string} key */
-  function colorIdx(key) {
-    /** @type {string[]} */ const seen = [];
-    E.files.filter((/** @type {any} */ f) => isTr(f) && !f.gone).forEach((/** @type {any} */ f) => (LIST.get(keyOf(f.k)) || []).forEach(x => { if (!seen.includes(x.key)) seen.push(x.key); }));
-    const i = seen.indexOf(key); return i < 0 ? 0 : i;
+  /** colour and line style of a trace of an MRM / SIM overlay: colour = the sample (its square in the file list), so overlaid samples compare at a glance;
+   * channels of one sample differ by dash. A lone sample with more channels than dash patterns keeps one palette colour per channel (dashes would repeat).
+   * @param {any} f the file @param {number} ci place of the channel among those plotted @param {number} nCh channels plotted @param {number} nFiles files plotted */
+  function style(f, ci, nCh, nFiles) {
+    if (nFiles === 1 && nCh > DASHES.length) return { color: PAL[ci % PAL.length], dash: [] };
+    return { color: f.color, dash: nCh === 1 ? fdash(f) : DASHES[ci % DASHES.length] };
   }
-  const color = (/** @type {string} */ key) => PAL[colorIdx(key) % PAL.length];
 
   /** the keys the panel plots now (all when it names none) @param {any} p @param {Ione[]} all */
   const picked = (p, all) => { if (!panelTr(p)) return []; const tr = mrmSel(p.tr, all.map(x => x.key)); return !tr ? all.map(x => x.key) : (Array.isArray(tr) ? tr : [tr]); };
 
-  /** the entries of the «Extract ion ›» submenu: «All», then one per ion with its colour; click = only this one, Ctrl/⌘+click adds or removes it, Shift+click takes the range
+  /** the entries of the «Extract ion ›» submenu: «All», then one per ion; click = only this one, Ctrl/⌘+click adds or removes it, Shift+click takes the range
    * from the last one clicked @param {any} c the context of the menu @returns {any[]} */
   function rows(c) {
     const p = c.p, all = ions(p), cur = new Set(picked(p, all)), T = (/** @type {string} */ k) => I18N.t(k);
@@ -81,7 +81,7 @@
     };
     const out = [{ nome: T("canali.sim.all"), check: cur.size === all.length && all.length > 0, esegui: () => set(all.map(x => x.key)), aria: T("canali.sim.all") }];
     all.forEach((x, i) => out.push({
-      nome: x.name ? `${label(x.key)} ${x.name}` : label(x.key), color: color(x.key), check: cur.has(x.key), aria: label(x.key) + (x.name ? " " + x.name : ""),
+      nome: x.name ? `${label(x.key)} ${x.name}` : label(x.key), check: cur.has(x.key), aria: label(x.key) + (x.name ? " " + x.name : ""),
       // @ts-ignore the event comes from the menu
       esegui: (/** @type {MouseEvent | undefined} */ ev) => {
         const multi = panelTr(p) && ev && (ev.ctrlKey || ev.metaKey), range = panelTr(p) && ev && ev.shiftKey;
@@ -144,9 +144,9 @@
   /** @param {any} p */
   function wireArea(p) { const b = p.el.querySelector('[data-a="area"]'); if (b) b.onclick = () => { p.area = p.area === false; syncArea(p); draw(p); uiSave(); }; }
 
-  // a file of transitions or SIM ions has no XIC: the same place of the menu holds the ions to extract (a submenu, colour swatch and check mark each)
+  // a file of transitions or SIM ions has no XIC: the same place of the menu holds the ions to extract (a submenu, a check mark each)
   AZIONI.registra({ id: "mrm.estrai", gruppo: "xic", viste: ["chrom", "mrm"], visibile: (/** @type {any} */ c) => c.p.kind !== "pda" && ions(c.p).length > 0,
     nome: (/** @type {any} */ c) => I18N.t(ions(c.p).every(x => x.sim) ? "canali.sim.extract" : "canali.tr.extract"), sotto: (/** @type {any} */ c) => rows(c) });
 
-  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, help, n, mark, filesOf, panelSim, allSim, ions, colorIdx, color, rows, area, trKey };
+  window.SIMUI = { chKey, label, methodTable, cell, button, fill, areaOf, areaBtn, syncArea, wireArea, help, n, mark, filesOf, panelSim, allSim, ions, style, rows, area, trKey };
 })();

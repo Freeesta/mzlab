@@ -1,4 +1,4 @@
-"""Settings and tour: the tour invitation dismisses itself after a minute (counts as «Not now», never comes back), the Guided tour button of the settings
+"""Settings and tour: the tour invitation dismisses itself after 30 s on a fake clock (counts as «Not now», never comes back; a pointer on it holds it), the Guided tour button of the settings
 starts the tour in Dati also from Disegno, the storage section is gone (no reset: the header button is the only entry), the accessibility options sit in a submenu."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -16,11 +16,26 @@ try:
         def invite():
             pg.wait_for_selector("#tour-invito", timeout=8000); pg.mouse.move(700, 100)
             t = pg.inner_text("#tour-invito"); assert "Prima volta?" in t and "minut" not in t, t
-            hold(pg, 55000); assert pg.is_visible("#tour-invito"), "still there before a minute"
-            hold(pg, 8000); assert not pg.is_visible("#tour-invito"), "dismissed by itself after a minute"
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.tour.lr')).stato") == "invitato"
             pg.reload(); ready(pg); pg.wait_for_timeout(1500); assert not pg.is_visible("#tour-invito"), "does not come back on reload"
-        step("the invitation closes by itself after a minute and does not come back", invite)
+            # fake timers (still running in real time) only now: installed earlier they stall the loading, and a reload on them breaks the page; the invitation opens again on them
+            pg.evaluate("TOUR.chiudiInvito()"); pg.clock.install(); pg.evaluate("TOUR.mostraInvito()")
+            pg.clock.run_for(28000); assert pg.is_visible("#tour-invito"), "still there before 30 s"
+            pg.clock.run_for(3000); assert not pg.is_visible("#tour-invito"), "dismissed by itself after 30 s"
+            assert pg.locator("#tour-later").count() == 1, "the dismissal is a «Not now»: the bubble on the gear says where the tour is"
+            pg.clock.run_for(11000); assert pg.locator("#tour-later").count() == 0
+        step("the invitation does not come back on reload and closes by itself after 30 s, like «Not now»", invite)
+        def hover():
+            pg.evaluate("TOUR.mostraInvito()"); pg.wait_for_selector("#tour-invito", timeout=8000)
+            pg.hover("#tour-invito p"); pg.clock.run_for(60000); assert pg.is_visible("#tour-invito"), "a pointer on it keeps it"
+            pg.mouse.move(700, 100); pg.clock.run_for(25000); assert pg.is_visible("#tour-invito"), "the countdown goes on from where it stopped, not from zero"
+            pg.clock.run_for(8000); assert not pg.is_visible("#tour-invito"), "gone once the pointer has left for 30 s"
+            pg.clock.run_for(11000)
+            pg.evaluate("TOUR.mostraInvito()"); pg.wait_for_selector("#tour-invito", timeout=8000); pg.click("#tour-inv-si")
+            pg.clock.run_for(31000); assert pg.locator("#tour-later").count() == 0, "no «Not now» bubble once the tour has started"
+            assert pg.evaluate("TOUR.active"), "the countdown of the invitation does not touch the tour once it has started"
+            pg.evaluate("TOUR.chiudi()"); wait_for_js(pg, "!TOUR.active")
+        step("hovering holds the invitation; starting the tour drops its countdown", hover)
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             t = pg.inner_text("#uipset")

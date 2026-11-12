@@ -308,7 +308,9 @@
         if (!c) { miss.push({ f, omo }); return null; }
         const t = await traccia(f.k, c, { kind: p.kind, mz0: p.mz0, mz1: p.mz1 }); if (!t || !t.rt.length) return null;
         const et = c.et;
-        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${omo}`, ion: et, time: f.time, color: one ? f.color : PAL[ci % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [], name: one ? f.label : files.length > 1 ? `${et} · ${f.label}` : et, tid_label: et };
+        // SIM / SRM channels: colour = sample, dash = channel (SIMUI.style); other channels: colour = channel, dash = file
+        const sr = c.fam === "sim" || c.fam === "srm", st = sr && window.SIMUI ? SIMUI.style(f, ci, list.length, files.length) : { color: one ? f.color : PAL[ci % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [] };
+        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${omo}`, ion: et, time: f.time, color: st.color, dash: st.dash, name: one ? f.label : files.length > 1 ? (sr ? `${f.label} · ${et}` : `${et} · ${f.label}`) : et, tid_label: et };
       }));
       got.forEach(s => { if (s) out.push(s); });
     }

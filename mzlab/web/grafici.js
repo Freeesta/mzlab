@@ -107,14 +107,14 @@ async function rawSeries(p) {
   data.forEach(({ tr }) => tr.forEach(t => { const key = trKey(t); if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
   const list = [...seen.values()], sel = mrmSel(p.tr, list.map(l => l.key)); if (p.tr !== p._trAuto) mrmRemember(p.tr, list.map(l => l.key));   // the student's choice outlives the panel
   if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
-  data.forEach(({ f, tr }, fi) => tr.forEach(t => {
-    const key = trKey(t);
-    const matchTr = !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key);
-    if (!matchTr) return;
-    const ti = list.findIndex(l => l.key === key), single = !!sel && !Array.isArray(sel);
-    const multiTr = Array.isArray(sel) && sel.length > 1;
-    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: t.q3 == null && window.SIMUI ? SIMUI.color(key) : (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
-      dash: (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${window.SIMUI ? SIMUI.label(key) : key} · ${f.label}` : `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim(), tid_label: `${window.SIMUI ? SIMUI.label(key) : key} ${t.name || ""}`.trim() });
+  const want = key => !sel || (Array.isArray(sel) ? sel.includes(key) : sel === key), shown = list.filter(l => want(l.key)).map(l => l.key);
+  const lab = key => window.SIMUI ? SIMUI.label(key) : key;
+  data.forEach(({ f, tr }) => tr.forEach(t => {
+    const key = trKey(t); if (!want(key)) return;
+    // colour = sample (as in the file list), dash = channel (sim-ui.js style)
+    const ci = shown.indexOf(key), st = window.SIMUI ? SIMUI.style(f, ci, shown.length, mf.length) : { color: f.color, dash: fdash(f) };
+    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, q1: t.q1, q3: t.q3, tname: t.name || "", time: f.time, color: st.color, dash: st.dash,
+      name: mf.length > 1 ? `${f.label} · ${lab(key)}` : `${lab(key)} ${t.name || ""}`.trim(), tid_label: `${lab(key)} ${t.name || ""}`.trim() });
   }));
   return out;
 }
@@ -261,16 +261,16 @@ if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.ibk", gruppo: "t
   voci: c => ibkMenuItems(c.p).map(/** @param {any} i */ i => ({ nome: i.label, esegui: i.fn })) });
 function legend(p, all, note = "") {
   const sw = c => `<i style="background:${c}"></i>`, off = h => (h ? " off" : "");
+  const dsw = (c, d) => d && d.length ? `<i style="background:repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)"></i>` : sw(c);
   if (p.type === "xic") {
     // one trace: the trace is in the title of the panel and the legend lists only the files; several traces: two levels, the traces in bold, then the files
     const files = scanFiles(shownFor(p)), one = p.traces.length === 1;
-    const dsw = (c, d) => d && d.length ? `<i style="background:repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)"></i>` : sw(c);
     const trs = one ? "" : `<span class="lvl">` + p.traces.map(t => `<span class="tr${off(p.hid["t" + t.mz])}"><span class="tg" data-h="t${t.mz}">${sw(PAL[p.traces.indexOf(t) % PAL.length])}</span><b data-t="${t.id}" tabindex="0" role="button" title="${I18N.t("leg.ion.hint")}">${fmtFormula(t.label)}</b> ${t.w == null ? `<span>(${t.mz} ±${p.tol})</span>` : ""}<button data-r="${t.id}" title="${I18N.t("xic.remove.title")}">&times;</button></span>`).join("") + `</span>`;
     const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}${files.length > 1 && f.k === E.cur ? " act" : ""}" data-h="x|${f.k}|${p.traces[0].mz}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMANDI.fai("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
-  } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
+  } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}">${raw(dsw(s.color, s.dash))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
   if (window.CANALI && CANALI.on(p)) p.leg.insertAdjacentHTML("beforeend", CANALI.legend(p));      // the files that lack a channel ticked in the panel: «—»
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
@@ -423,12 +423,12 @@ async function drawLines(p) {
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(/** @type {any} */ (seg).x); seg = null; } }); if (seg) tri(/** @type {any} */ (seg).x);
   }
   // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js); the card «Manual integrations» follows the windows of the transition panels (integrazioni-manuali.js, read on the first one)
-  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js"); const mi = /** @type {any} */ (window).MANINT; if (mi) mi.sync(); else if (ESP.mrm(p) && p.ints.length) carica("m:integrazioni-manuali.js");
-  for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
+  if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js"); if (typeof SEGUE === "undefined" && ESP.mrm(p) && p.ints.length) await carica("integra-segue.js"); const mi = /** @type {any} */ (window).MANINT; if (mi) mi.sync(); else if (ESP.mrm(p) && p.ints.length) carica("m:integrazioni-manuali.js");
+  for (const it of cas ? [] : window.SEGUE ? SEGUE.all(p, sr) : p.ints) {          // integrations: filled area + draggable bars (not in the waterfall view); a SIM/MRM window also follows the sample shown (integra-segue.js)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const nz = noiseZone(p, it); if (nz && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(nz[0]), M.l), xb = Math.min(X(nz[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
-    const own = it.bm && it.bm !== "edges", r = own ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
-    if (own) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
+    const own = it.bm && it.bm !== "edges", r = it.none ? SEGUE.none(it) : own ? INTBASE.area(p, s, it) : integ(s, it.a, it.b, it.base, !!it.zero); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, below: r.below, corr: corrText(p) }); const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
+    if (it.none) { /* a follower with no points of this sample: only its bars and «A = —» */ } else if (own) INTBASE.paint(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (it.zero) INTZERO.draw(g, X, Y, U, s, it, it.id === p.isel && !p._exp); else if (i1 > i0) {          // manual window: trace between the bars down to zero
       const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
       g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
@@ -438,10 +438,10 @@ async function drawLines(p) {
       g.strokeStyle = s.color; g.lineWidth = 1; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(X(s.x[i0]), b0); g.lineTo(X(s.x[i1]), b1); g.stroke(); g.setLineDash([]);
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
-    for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
-    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + (r.wait && !Number.isFinite(r.area) ? "…" : I18N.sciE(r.area)) + (it.bm ? " (" + I18N.t("int.base.tag." + it.bm) + ")" : "") + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
+    for (const e of ["a", "b"]) { const px = X(it.none ? it[e] : it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.setLineDash(it.fol ? [4, 3] : []); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.setLineDash([]); g.fillStyle = s.color; if (!it.fol) g.fillRect(px - 4, M.t, 8, 12); }      // a follower: dashed bars without grips (draw a window to commit it)
+    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + (it.none ? "—" : r.wait && !Number.isFinite(r.area) ? "…" : I18N.sciE(r.area)) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak; the baseline mode is in the hover text
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, copy: I18N.sciE(r.area), tip: I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) }) + `<div class="sm">${I18N.t("int.copy.tip")}</div>` }); g.font = fpx(12);
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, text: lab, copy: it.none ? null : I18N.sciE(r.area), tip: (it.none ? "" : I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) })) + (it.fol ? SEGUE.tip(p, it) : it.bm ? `<div class="sm">${I18N.t("int.base.tip", { b: I18N.t("int.base.tag." + it.bm) })}</div>` : "") + (it.none ? "" : `<div class="sm">${I18N.t("int.copy.tip")}</div>`) }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
