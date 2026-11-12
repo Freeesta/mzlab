@@ -1032,7 +1032,7 @@ function plotSheets(/** @type {Pannello} */ p) {
   const metaRows = [
     [{ v: I18N.t("export.meta.property"), b: true }, { v: I18N.t("export.meta.value"), b: true }],
     [{ v: I18N.t("export.meta.title"), b: true }, ptitleP(p) || I18N.t("export.meta.chart")],
-    [{ v: I18N.t("export.meta.type"), b: true }, (/** @type {Record<string, string>} */ ({ chrom: I18N.t("export.type.chrom", { kind: (p.kind || "").toUpperCase() }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: "MS" + ["¹", "²", "³"][Math.min(p.level || 1, 3) - 1] }), map: I18N.t("panel.title.map") }))[p.type] || p.type],
+    [{ v: I18N.t("export.meta.type"), b: true }, (/** @type {Record<string, string>} */ ({ chrom: I18N.t("export.type.chrom", { kind: kindUp(p) }), xic: I18N.t("export.type.xic"), mrm: I18N.t("panel.title.mrm"), spec: I18N.t("export.type.spec", { ms: "MS" + ["¹", "²", "³"][Math.min(p.level || 1, 3) - 1] }), map: I18N.t("panel.title.map") }))[p.type] || p.type],
     [{ v: I18N.t("export.meta.samples"), b: true }, plotFiles(p).map((/** @type {FileAperto} */ f) => f.label).join(", ")],
     [{ v: I18N.t("export.meta.caption"), b: true }, plotCaption(p)],
     [{ v: I18N.t("export.meta.date"), b: true }, new Date().toLocaleString(LOCALE)],

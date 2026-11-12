@@ -40,7 +40,7 @@ const DISP = (() => {
 
   register("chrom", { id: "etpk", label: "ctx.chrom.etpk", title: "ctx.chrom.etpk.aria", kind: "check", when: p => !isAnalog(p.kind) && !!window.ETPK, get: p => ETPK.on(p, p._a && p._a.sr ? p._a.sr.length : 1), set: (p, v) => { p.etpk = !!v; redraw(p); } });
   // ---- PDA in series before the mass spectrometer: the delay is measured by the server (cross-correlation of PDA and TIC of the file) and can be corrected by hand;
-  // «Allinea PDA e massa» only moves the time axis of the PDA trace on the screen (data and results stay as they are)
+  // «Allinea DAD e massa» only moves the time axis of the PDA trace on the screen (data and results stay as they are)
   const pdel = new Map();
   const dfile = p => (typeof shownFor === "function" ? shownFor(p).find(f => f.pda) : null) || null;
   function measured(p) {

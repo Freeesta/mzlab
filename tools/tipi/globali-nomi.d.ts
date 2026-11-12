@@ -619,6 +619,7 @@ declare var isoRes: any;
 declare var kbdMenu: any;
 declare var keyLoop: any;
 declare var kindOf: any;
+declare var kindUp: any;
 declare var lastMs2: any;
 declare var lcHtml: any;
 declare var ldAction: any;

@@ -65,8 +65,8 @@ function refreshIntf(/** @type {Bag} */ p) {
   if (sel._sig !== sig) { sel._sig = sig; sel.innerHTML = opts.map(o => h`<option value="${o[0]}">${o[1]}</option>`).join(""); }
   sel.value = p.intf || "";
 }
-// students integrate only from an XIC (or an MRM transition): the total chromatograms add up every ion, so their area belongs to no compound
-const canInt = (/** @type {Bag} */ p) => p.type !== "chrom" || ms2Chrom(p);
+// a total trace (TIC, TWC) sums every ion or λ: no compound's area
+const canInt = (/** @type {Bag} */ p) => p.type !== "chrom" || ms2Chrom(p) || p.kind === "pda" && p.mz0 != null;
 // integration needs the traces on one axis: a stacked or cascade panel goes back to overlaid first (existing integrations stay in p.ints and are drawn as before)
 function toOverlaid(/** @type {Bag} */ p) {
   if (p.mode !== "stk" && p.mode !== "cas") return;
@@ -75,7 +75,7 @@ function toOverlaid(/** @type {Bag} */ p) {
 }
 function guardInt(/** @type {Bag} */ p) {
   if (canInt(p)) { toOverlaid(p); return true; }
-  yesno(I18N.t("int.guard")).then((/** @type {boolean} */ v) => { if (v) openXic(null); });
+  const uv = p.kind === "pda"; yesno(I18N.t(uv ? "int.guard.uv" : "int.guard")).then((/** @type {boolean} */ v) => { if (v) uv ? xwc().then((/** @type {any} */ m) => m.press(p, false)) : openXic(null); });
   return false;
 }
 // integrations never overlap (same trace and file): at most two peaks touch and share the border (drop line)

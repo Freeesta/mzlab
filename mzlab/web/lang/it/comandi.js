@@ -226,7 +226,7 @@ I18N.add("it", {
   "cmd.pressure.name": "Mostra la pressione sul cromatogramma",
   "cmd.pressure.tip": "Pressione della pompa sopra il cromatogramma attivo, con l'asse a destra",
   "cmd.pressure.kw": "pressione pompa bar pressure pump overlay",
-  "cmd.mapxic.menuWl": "Traccia a λ",
+  "cmd.mapxic.menuWl": "XWC",
   "cmd.annotation": "nota",
   "cmd.display": "opzioni di visualizzazione",
   "cmd.source": "scelta del pannello",

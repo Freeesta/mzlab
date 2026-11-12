@@ -36,11 +36,11 @@ def mrm(pg):
     t = pg.evaluate("E.panels.find(q => q.type === 'mrm').el.querySelector('.ttl').textContent"); assert t == "MRM", t
 def pda_single(pg):
     pick_kind(pg, "pda"); ready(pg)
-    assert pg.evaluate(TTL(CH)) == "PDA (tutte le λ)", pg.evaluate(TTL(CH))
-    assert pg.evaluate(f"TITOLI.di(Object.assign({CH}, {{ mz0: 254, mz1: 254 }}))") == "PDA 254 nm"
+    assert pg.evaluate(TTL(CH)) == "DAD TWC", pg.evaluate(TTL(CH))
+    assert pg.evaluate(f"TITOLI.di(Object.assign({CH}, {{ mz0: 254, mz1: 254 }}))") == "XWC 254 nm"
 def pda_overlay(pg):
     pg.evaluate("E.files.forEach(f => { f.vis = true; })"); pick_kind(pg, "pda"); ready(pg)
-    t = pg.evaluate(TTL(CH)); assert t == "PDA (tutte le λ)" and "PDA_t" not in t, t
+    t = pg.evaluate(TTL(CH)); assert t == "DAD TWC" and "PDA_t" not in t, t
     assert pg.evaluate("![...document.querySelectorAll('.pnl.chrom .pscan')].length"), "a chromatogram header names a file"
 step("MS2: TIC on top, precursor in the spectrum title", lambda: run(8901, "/tmp/wd_tit1", [str(ES / f"MS2_t{t}.mzML") for t in (15, 60)], ms2))
 step("MS1: TIC / MS¹", lambda: run(8902, "/tmp/wd_tit2", [str(ES / "FullScan_t15.mzML")], ms1))

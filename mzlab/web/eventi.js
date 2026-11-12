@@ -391,7 +391,7 @@ function ctxFor(p, e, x, px, py) {
       p.cur = at; newSpec(p, r0, r1, kk);          // every new spectrum is LIVE right under the chromatogram; the previous ones freeze
       if (c.dbl) draw(p);
     } });
-  // DAD trace: the double click gives the UV spectrum at that time (shifted back by «Allinea PDA e massa»), a selection the mean
+  // DAD trace: the double click gives the UV spectrum at that time (shifted back by «Allinea DAD e massa»), a selection the mean
   /** @param {any} p */
   const pdaT = p => (window.DISP ? DISP.pdaShift(p) : 0);
   reg({ id: "chrom.uvAtRt", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", nome: () => T("ctx.uv.atRt"), doppioOrd: 3,

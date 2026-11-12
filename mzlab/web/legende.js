@@ -41,3 +41,5 @@ function legPlace(/** @type {any} */ p, /** @type {HTMLElement} */ el) {
   return true;
 }
 const LEGENDE = { place: legPlace };
+// saved kind "pda": its TWC or XWC on screen
+const kindUp = (/** @type {Bag} */ p) => p.kind === "pda" ? p.mz0 != null ? "XWC" : "TWC" : (p.kind || "").toUpperCase();

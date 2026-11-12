@@ -87,9 +87,9 @@ async function rawSeries(p) {
   if (p.type === "chrom") {
     let fl = shownFor(p);
     if (p.kind !== "pda" && p.prec != null) fl = fl.filter(f => f.kind !== "ms2" || (f.precursors || []).some(v => Math.abs(v - p.prec) < 0.6));   // an MS2 experiment is a precursor: only the files that have it
-    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt, p.ptol).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
+    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt, p.ptol).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: kindUp(p), time: f.time }))));
     if (p.xw && p.mz0 != null) r.push(...await (await xwc()).series(p, fl));      // extra XWC bands
-    const sh = p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0;       // «Allinea PDA e massa»: the PDA trace is shown later by the delay of the detector in series (display only)
+    const sh = p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0;       // «Allinea DAD e massa»: the PDA trace is shown later by the delay of the detector in series (display only)
     if (sh) r.forEach(s => { s.x = Array.from(s.x, v => v + sh); });
     return r.filter(s => s.x.length);
   }
