@@ -76,16 +76,16 @@ pub fn table_step() -> Step {
 mod flow_export_annot;
 #[path = "flow_methods.rs"]
 mod flow_methods;
-#[cfg(test)]
-#[path = "flow_qcreport_tests.rs"]
-mod flow_qcreport_tests;
-#[path = "flow_runorder.rs"]
-mod flow_runorder;
 #[path = "flow_moiety.rs"]
 mod flow_moiety;
 #[cfg(test)]
 #[path = "flow_moiety_tests.rs"]
 mod flow_moiety_tests;
+#[cfg(test)]
+#[path = "flow_qcreport_tests.rs"]
+mod flow_qcreport_tests;
+#[path = "flow_runorder.rs"]
+mod flow_runorder;
 
 /// The steps a plan can use here, every family of descriptors: the registry of the flagship chain, `features.table`, Attributio, the whole Tabui
 /// family, `spectra.ms2` and `meta.compare`. Whether a step also runs here is `executable`.
