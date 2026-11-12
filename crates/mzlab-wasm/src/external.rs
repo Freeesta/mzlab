@@ -347,12 +347,11 @@ impl<M: Module> Reader for ExternalReader<M> {
     fn missing(&mut self, c: usize) -> usize {
         self.m.missing(c).unwrap_or(0) as usize
     }
-    /// As the module's reader: scans it lists without their event or with data that do not decode (in it), else scans out of the index with the cause key the module gives (a cut file by default).
+    /// As the module's reader: scans it lists without their event or with data that do not decode (rows of its index, the latter with no points), else scans out of the index with the cause key the module gives (a cut file by default).
     fn losses(&mut self, c: usize) -> Result<Losses> {
         let lacking = self.missing(c);
         let n = self.index(c)?.len();
         Ok(match self.m.cause(c)?.as_str() {
-            // in the index: rows without their event, or scans left out with no points because their data do not decode
             EVENTS_REFUSED => Losses::of(n, n.saturating_sub(lacking), EVENTS_REFUSED),
             SPECTRUM_DAMAGED => Losses::of(n, n.saturating_sub(lacking), SPECTRUM_DAMAGED),
             k => Losses::of(n + lacking, n, cause_key(k).unwrap_or(TRUNCATED)),
