@@ -2,7 +2,7 @@
 samples, seven ions at a 0.8 s cycle, an isomer pair in one channel; no laboratory data): dragging the pair with an msconvert log opens four files (the
 log is skipped with a note); windows integrated on the ion traces fill the card «Manual integrations», one row per window grouped by channel; the card
 and its CSV export (with and without the sum rows) and «Copy table» (tab-separated) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
-a row's Delete removes the integration; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
+a row's Delete removes the integration; a window drawn on one sample stays drawn when another sample is chosen in the left panel, measured on that sample with no row added; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
 points before the cut. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_wiff.py"""
 import json, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
@@ -92,6 +92,39 @@ try:
             wait_for_js(pg, SHOWN % 2, timeout=60000)
             assert pg.evaluate("E.panels.find(q => q.type === 'mrm').ints.length") == 2
         step("Delete removes the integration and its row", delete)
+        def follow():
+            need = lambda c, m: c or throw(m)
+            kof = lambda n: pg.evaluate("n => E.files.find(x => x.label === n || x.file.startsWith(n + '.')).k", n)
+            ka, kb = kof("Sample_A"), kof("Sample_B")
+            def only(k):                                     # the left panel: tick the sample, then untick the others (a first click may only close a popup)
+                for _ in range(3):
+                    if not pg.evaluate(f"E.files[{k}].vis"): pg.click(f"#flst .fl:not(.pr) > input[data-k='{k}']"); frames(pg, 2)
+                    for x in pg.evaluate("E.files.filter(f => f.vis && !f.gone).map(f => f.k)"):
+                        if x != k: pg.click(f"#flst .fl:not(.pr) > input[data-k='{x}']"); frames(pg, 2)
+                    if pg.evaluate(f"E.files.every(f => f.gone || f.vis === (f.k === {k}))"): break
+                wait_for_js(pg, f"(() => {{ const p = E.panels.find(q => q.type === 'mrm' && q._a); return !!p && p._a.sr.length > 0 && p._a.sr.every(s => s.k === {k}) && (p._a.lbls || []).some(l => l.int); }})()", timeout=60000)
+            LB = "E.panels.find(q => q.type === 'mrm' && q._a)._a.lbls.filter(l => l.int).map(l => ({ text: l.text, tip: l.tip, fol: !!l.int.fol, ion: l.int.ion, a: l.int.a, b: l.int.b, area: l.int.area, key: l.int.key }))"
+            table = lambda: pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].map(r => r.textContent)")
+            before = table()
+            only(ka)
+            la = [l for l in pg.evaluate(LB) if not l["fol"]]
+            need(len(la) == 1 and la[0]["key"].startswith(f"m|{ka}|"), la)
+            need(la[0]["text"].startswith("A = ") and "(" not in la[0]["text"], la[0]["text"])
+            need(pg.evaluate("I18N.t('int.base.tag.edges')") in la[0]["tip"], "the baseline mode is in the hover text")
+            only(kb)
+            fb = [l for l in pg.evaluate(LB) if l["fol"]]
+            need(len(fb) == 1 and fb[0]["ion"] == la[0]["ion"] and fb[0]["key"].startswith(f"m|{kb}|"), fb)
+            need(abs(fb[0]["a"] - la[0]["a"]) < 1e-9 and abs(fb[0]["b"] - la[0]["b"]) < 1e-9, (fb, la))
+            need(fb[0]["text"] not in ("A = —", la[0]["text"]) and fb[0]["area"] > 0 and fb[0]["area"] != la[0]["area"], (fb, la))
+            need(not any(l["fol"] and l["ion"] == x["ion"] for l in pg.evaluate(LB) for x in pg.evaluate(LB) if not x["fol"]), "a committed window is shown as it is")
+            wait_for_js(pg, LB + ".some(l => l.fol && !l.tip.includes('…') && l.tip.includes('S/N'))", timeout=60000)
+            frames(pg, 3); need(table() == before, "a follower adds no row")
+            none = pg.evaluate("SEGUE.all({ type: 'mrm', ints: [{ id: 1, ion: 'x', key: 'm|0|x', a: 50, b: 51, bm: 'edges' }] }, [{ key: 'm|1|x', ion: 'x', k: 1, name: 'n', x: [1, 2, 3] }]).filter(i => i.fol).map(i => i.none)")
+            need(none == [True], none)
+            only(ka)
+            need([l for l in pg.evaluate(LB) if not l["fol"]] == la and table() == before, "the committed row of A is unchanged")
+            all_ions(pg)
+        step("a manual window follows the sample chosen in the left panel, measured on that sample, with no row added", follow)
         step("the msconvert log is skipped with a note", lambda: (lambda u: "sim3.wiff.log" in u or throw(u))(pg.evaluate("document.getElementById('unopen').textContent")))
         def channels():
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")

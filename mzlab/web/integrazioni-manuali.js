@@ -137,9 +137,25 @@ async function sync() {
   }
 }
 
+/** @type {WeakMap<any, { v: string | undefined }>} */ const SN = new WeakMap();
+/** The S/N of a window that follows the sample (integra-segue.js), by the engine as a table row would have it, without adding a row; undefined until it
+ * answers (the panel is then drawn again), "" when there is no peak. @param {any} p @param {any} f */
+function snr(p, f) {
+  const c = SN.get(f); if (c) return c.v;
+  const e = { v: /** @type {string | undefined} */ (undefined) }, m = /^m\|(\d+)\|(.+)$/.exec(f.key || ""), b = baseOf(f); SN.set(f, e);
+  if (!m || !b) { e.v = ""; return e.v; }
+  getMrm(+m[1]).then(async (/** @type {any[]} */ list) => {
+    const tr = list.findIndex(x => String(x.id) === m[2]); if (tr < 0) { e.v = ""; return; }
+    const w = JSON.stringify([{ file: 0, tr, a: f.a, b: f.b, ...b }]), r = await fetch(`api/manint?k=${m[1]}&sums=0&w=${encodeURIComponent(w)}`);
+    const all = r.ok ? rows(await r.text()) : [], i = (all[0] || []).indexOf("snr");
+    e.v = i >= 0 && all[1] ? all[1][i] : ""; G.draw(p);
+  }).catch(() => { e.v = ""; });
+  return undefined;
+}
+
 let timer = /** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined);
 /** Every redraw of a panel calls this: one sync after the last of a burst (a dragged edge redraws at every move). */
 const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 
-G.MANINT = { sync: soon, now: sync, state: () => ({ ks: [...st.ks], windows: st.windows, sums: st.sums, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
+G.MANINT = { sync: soon, now: sync, snr, state: () => ({ ks: [...st.ks], windows: st.windows, sums: st.sums, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
 soon();
