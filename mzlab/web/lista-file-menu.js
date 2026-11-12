@@ -18,6 +18,16 @@ function pickFileColor(f) {
   i.addEventListener("change", () => i.remove()); document.body.appendChild(i);
   try { i.showPicker(); } catch (_) { i.click(); }
 }
+// a pointerdown outside `d` removes it. Armed at once, not after a timer: on a busy page a timer fired after a quick tap, which then left the pop-up open.
+// The event being dispatched when `d` opened (an opener run from a pointerdown) is skipped, so the opening touch does not close it.
+function closeOutside(/** @type {HTMLElement} */ d) {
+  const opening = window.event;
+  document.addEventListener("pointerdown", function h(e) {
+    if (e === opening) return;
+    if (d.isConnected && d.contains(/** @type {Node} */ (e.target))) return;
+    d.remove(); document.removeEventListener("pointerdown", h);
+  });
+}
 function colorFile(f, ev) {
   Q("#colpop")?.remove();
   const d = document.createElement("div"); d.id = "colpop";
@@ -30,7 +40,7 @@ function colorFile(f, ev) {
   d.querySelector("input").onchange = e => set(e.target.value);
   d.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); d.remove(); } });
   document.body.appendChild(d); (d.querySelector("[aria-pressed=true]") || d.querySelector("button"))?.focus(); const bx = d.getBoundingClientRect(); d.style.left = Math.max(COLOR_MARGIN, Math.min(ev.clientX, innerWidth - COLOR_MARGIN - bx.width)) + "px"; d.style.top = Math.max(COLOR_MARGIN, Math.min(ev.clientY, innerHeight - COLOR_MARGIN - bx.height)) + "px";
-  setTimeout(() => document.addEventListener("pointerdown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("pointerdown", h); } }), 0);
+  closeOutside(d);
 }
 function fileCtx(e, f) {
   if (!f) return; e.stopPropagation();
@@ -56,5 +66,5 @@ function fileMenu(btn) {
   };
   paint(); document.body.appendChild(d);
   const r = btn.getBoundingClientRect(); d.style.left = Math.min(r.left, innerWidth - 240) + "px"; d.style.top = r.bottom + 4 + "px";
-  setTimeout(() => document.addEventListener("pointerdown", function h(e) { if (!d.contains(/** @type {Node} */ (e.target))) { d.remove(); document.removeEventListener("pointerdown", h); } }), 0);
+  closeOutside(d);
 }
