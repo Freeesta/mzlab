@@ -48,7 +48,7 @@ const DISP = (() => {
     if (!pdel.has(f.k)) { pdel.set(f.k, null); J(`api/delay?k=${f.k}`).then(j => { pdel.set(f.k, j.delay || false); if (window.BANCO) BANCO.renderInfo(); if (p.pdaAlign) draw(p); }).catch(() => pdel.set(f.k, false)); }
     return pdel.get(f.k) || null;
   }
-  const pdaShift = p => { if (!p.pdaAlign) return 0; const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; };
+  const pdaShift = p => { if (!p.pdaAlign || p.kind !== "pda" && !ESP.mrm(p)) return 0; const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; };
   register("chrom", { id: "pdadelay", label: "disp.pdaDelay", title: "disp.pdaDelay.title", kind: "number", min: -2, max: 2, step: 0.01, when: p => p.kind === "pda" && !!dfile(p),
     get: p => { const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; },
     set: (p, v) => { const n = numIt(v); p.pdaDelay = isFinite(n) ? clamp(n, -2, 2) : null; redraw(p); },

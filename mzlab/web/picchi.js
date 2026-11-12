@@ -236,10 +236,10 @@ async function qualityOf(/** @type {Bag} */ r) {
   return QUALITA.quality(s.x, s.y, nearIdx(s.x, r.a), nearIdx(s.x, r.b));
 }
 async function showInts() {
-  const /** @type {Bag[]} */ rows = allInts().map((/** @type {Bag} */ r) => ({ ...r, ...intExtra(r) }));
+  const /** @type {Bag[]} */ rows = allInts().map((/** @type {Bag} */ r) => ({ ...r, ...intExtra(r) })), uv = (/** @type {Bag} */ r) => r._p.kind === "pda", ak = rows.some(uv) ? rows.every(uv) ? "Uv" : "Mix" : "";      // a DAD area is in mAU·s
   if (INTOPT.q) { const qs = await Promise.all(rows.map(qualityOf)); rows.forEach((/** @type {Bag} */ r, /** @type {number} */ i) => { r.qg = qs[i] ? qs[i].gaussian : null; r.qa = qs[i] ? qs[i].asymmetry : null; r.qn = qs[i] ? qs[i].noise : null; }); }
   const fx = (/** @type {number | null | undefined} */ v, /** @type {number} */ d) => v == null || !isFinite(v) ? "" : String(+v.toFixed(d));
-  const head = [INT_HEADS[0], INT_HEADS[1], INT_HEADS[2], I18N.t("int.tbl.time"), I18N.t("int.tbl.conc"), I18N.t("int.tbl.rt0"), I18N.t("int.tbl.rt1"), I18N.t("int.tbl.apex"), I18N.t("int.tbl.area"), I18N.t("int.tbl.height"), I18N.t("int.tbl.base"), I18N.t("int.tbl.below")], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1];
+  const head = [INT_HEADS[0], INT_HEADS[1], INT_HEADS[2], I18N.t("int.tbl.time"), I18N.t("int.tbl.conc"), I18N.t("int.tbl.rt0"), I18N.t("int.tbl.rt1"), I18N.t("int.tbl.apex"), I18N.t("int.tbl.area" + ak), I18N.t("int.tbl.height"), I18N.t("int.tbl.base"), I18N.t("int.tbl.below")], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1];
   const th = (/** @type {string} */ t, /** @type {number} */ n) => `<th${n ? ' class="num"' : ""}>${t}</th>`;
   const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>1/2</sub> (min)", 1) + th(I18N.t("int.tbl.plates"), 1) + th(I18N.t("int.tbl.tail"), 1) : "") +
     (INTOPT.q ? ["gauss", "asym", "nscore"].map(k => `<th class="num" title="${I18N.t(`int.tbl.${k}.h`)}">${I18N.t(`int.tbl.${k}`)}</th>`).join("") : "");
@@ -264,7 +264,7 @@ async function showInts() {
       stepMsg(r._p, I18N.t("int.pickNoise.msg"), true);
     });
     const bx = rows.some((/** @type {Bag} */ r) => r._it.bm);          // only then the two columns: old exports unchanged
-    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS, ...(bx ? [I18N.t("export.int.base"), I18N.t("export.int.below")] : [])],
+    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS.map((h, i) => i === 9 && ak ? I18N.t("export.int.area" + ak) : h), ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : []), ...INT_NEW_HEADS, ...(bx ? [I18N.t("export.int.base"), I18N.t("export.int.below")] : [])],
       rows: rows.map((/** @type {Bag} */ r) => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : []), ...INT_NEW.map(c => r[c]), ...(bx ? [I18N.t(`int.base.${bName(r._it)}`), r._it.bm ? r.below : null] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18, 14, 10, 10, 22] }];
     Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
     Q("#ig-csv").onclick = () => dlc(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });

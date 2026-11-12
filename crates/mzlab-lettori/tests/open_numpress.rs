@@ -275,3 +275,70 @@ fn a_truncated_numpress_declares_the_missing_spectra() {
     assert!(ha > 0 && ha < scan.len(), "{ha} of {}", scan.len());
     assert_eq!(ha + l.missing(0), scan.len());
 }
+
+/// `mzml_di` with two SIM ions after the TIC, in msconvert's spelling (`SIM SIC Q1=…`, listed by the header with the SRM transitions) and in ours
+/// (`SIC <m/z>`), whose arrays are those of the TIC.
+fn with_sim_ions(scan: &[Scan], cod: Cod) -> Vec<u8> {
+    let text = String::from_utf8(mzml_di(scan, cod, None)).unwrap();
+    let (open, close) = ("<binaryDataArrayList count=\"2\">", "</chromatogram>");
+    let tic = &text[text.find("<chromatogram index=\"0\"").unwrap()..];
+    let arrays = &tic[tic.find(open).unwrap()..tic.find(close).unwrap()];
+    let ions = [
+        (
+            "SIM SIC Q1=300 sample=1 period=1 experiment=1 transition=0",
+            "MS:1001472\" name=\"selected ion monitoring chromatogram",
+        ),
+        (
+            "SIC 301",
+            "MS:1000627\" name=\"selected ion current chromatogram",
+        ),
+    ];
+    let mut more = String::new();
+    for (i, (id, cv)) in ions.iter().enumerate() {
+        more += &format!(
+            "<chromatogram index=\"{}\" id=\"{id}\" defaultArrayLength=\"{}\"><cvParam cvRef=\"MS\" accession=\"{cv}\"/>{arrays}{close}\n",
+            i + 1,
+            scan.len()
+        );
+    }
+    text.replace(
+        "<chromatogramList count=\"1\">",
+        "<chromatogramList count=\"3\">",
+    )
+    .replace(
+        "</chromatogram></chromatogramList>",
+        &format!("</chromatogram>\n{more}</chromatogramList>"),
+    )
+    .into_bytes()
+}
+
+/// The numpress reader gives every chromatogram the kind `mzml::read` gives it in the plain twin: a SIM ion is a SIC, not an SRM transition.
+#[test]
+fn a_sim_ion_has_the_kind_of_the_engine() {
+    let scan = scans();
+    let twin = mzml::read(&with_sim_ions(&scan, Cod::Piano)[..]).unwrap();
+    let expected: Vec<_> = twin
+        .chromatograms
+        .iter()
+        .map(|c| (c.id.clone(), c.kind))
+        .collect();
+    assert_eq!(expected.len(), 3);
+    assert_eq!(expected[1].1, mzml::ChromKind::Sic);
+    let mut l = open(with_sim_ions(
+        &scan,
+        Cod::Np {
+            intensities: Np::Linear,
+            zlib: false,
+        },
+    ));
+    let listed: Vec<_> = l
+        .chromatograms(0)
+        .unwrap()
+        .into_iter()
+        .map(|v| (v.id, v.tipo))
+        .collect();
+    assert_eq!(listed, expected);
+    for (id, kind) in &expected {
+        assert_eq!(l.chromatogram(0, id).unwrap().kind, *kind, "{id}");
+    }
+}
