@@ -184,7 +184,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help); mol-mech REQUEST.json|-: whether the curved arrows of a drawn mechanism are well formed (mol-mech --help); mol-ions REQUEST.json|- [--set decimals=N] [--set ppm=X] [--out PATH]: the ESI+ and ESI- ions expected for drawn structures as JSON (mol-ions --help); mol-search --sub QUERY TARGET...: where a substructure occurs in structures (mol-search --help)
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
-       mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help)
+       mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help); peak-split FILE... --set tr=J --set a=MIN --set b=MIN: one of them split at its valleys (peak-split --help)
        mzlab-cli peak-auto TRACE.csv [--from MIN --to MIN] [--set NAME=VALUE...]   every peak of a high-resolution trace (peak-auto --help); peak-area: one peak from zero or a line (peak-area --help); peak-window: where a dragged window end goes (peak-window --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)

@@ -1,13 +1,14 @@
 // @ts-check
 // @ts-strict
 // The routes of the bridge that read the head of a file or one answer per file from the indexes: `api/ms2tr`, `api/fileinfo`, `api/msn_grafo` (the graph) and `api/msn_grafo/export` (its spectra as text), `api/msnlib/aggiungi` and `api/msnlib/cerca` (POST) and the `api/chrom` of an MRM file.
-// `api/manint` (the table of the integrations drawn by hand: the api/mrm transitions of the files measured again by the engine, manint.rs).
+// `api/manint` (the table of the integrations drawn by hand: the api/mrm transitions of the files measured again by the engine, manint.rs) and
+// `api/manvalley` (where one of them splits at its valleys).
 // Returns { status, text, ms } or null (the route is unavailable: browser.js answers err.route.unavailable).
 import { cercaRoute, grafoRoute, libreriaRoute } from "./rust-msngrafo-pagina.js";
 
 /** @param {string} path  @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, base: (n: string) => string, stats: any, t0: number, init?: any}} env */
 export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) {
-  if (path === "/api/manint") return manintRoute(u, { slots, rpc, stats, t0 });
+  if (path === "/api/manint" || path === "/api/manvalley") return manintRoute(u, { slots, rpc, stats, t0 }, path === "/api/manvalley");
   if (path === "/api/msnlib/aggiungi") {                               // add an entry to the msnlib/1 library of the user (POST)
     const r = await libreriaRoute({ slots, rpc, stats }, init);
     return r && { ...r, ms: performance.now() - t0 };
@@ -68,9 +69,10 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
 }
 
 /** api/manint?k=..&w=JSON windows (manint::table_text, `file` = the place in k)[&sums=1]: the `mrm` transitions of every slot, then the op `manint` of the
- * worker; "E" + JSON (a window that names no channel, an unknown baseline) = a 400.
- * @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, stats: any, t0: number}} env */
-async function manintRoute(u, { slots, rpc, stats, t0 }) {
+ * worker; "E" + JSON (a window that names no channel, an unknown baseline) = a 400. api/manvalley?k=..&w=JSON window&depth=D: the op `valleys`
+ * (manint::valleys_text), `{"splits":[MIN,...]}`.
+ * @param {URL} u  @param {{slots: any[], rpc: (m: any) => Promise<any>, stats: any, t0: number}} env  @param {boolean} [valleys] */
+async function manintRoute(u, { slots, rpc, stats, t0 }, valleys = false) {
   const q = u.searchParams, ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), windows = q.get("w") || "[]";
   if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
   await Promise.all(ks.map(k => slots[k].opening));
@@ -78,9 +80,10 @@ async function manintRoute(u, { slots, rpc, stats, t0 }) {
   const rs = await Promise.all(ks.map(k => rpc({ op: "mrm", slot: k, blob: slots[k].blob })));
   if (rs.some(r => r.dead || r.error || !r.info)) return null;
   const files = `[${ks.map((k, i) => `{"name":${JSON.stringify(slots[k].name)},"transitions":${rs[i].info}}`).join(",")}]`;
-  const r = await rpc({ op: "manint", files, windows, sums: q.get("sums") === "1" });
+  const r = await rpc(valleys ? { op: "valleys", files, window: windows, depth: Number(q.get("depth") || "NaN") }
+    : { op: "manint", files, windows, sums: q.get("sums") === "1" });
   if (r.dead || r.error || !r.info) return null;
   stats.rust++;
   const bad = r.info[0] === "E";
-  return { status: bad ? 400 : 200, text: bad ? r.info.slice(1) : r.info, type: bad ? "application/json" : "text/csv", ms: performance.now() - t0 };
+  return { status: bad ? 400 : 200, text: bad ? r.info.slice(1) : r.info, type: bad || valleys ? "application/json" : "text/csv", ms: performance.now() - t0 };
 }

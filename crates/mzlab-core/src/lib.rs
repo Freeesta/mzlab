@@ -133,6 +133,7 @@ pub mod pace;
 pub mod peak1d;
 pub mod baseline;
 pub mod intwin;
+pub mod valley;
 pub mod peakq;
 pub mod peakq_auto;
 pub mod peakq_lr;

@@ -1,5 +1,5 @@
 //! `manint::table_text` on synthetic SIM / MRM traces sampled every 0.8 s: rows grouped by channel then sample, the three baselines, the S/N, the
-//! `sum` row, a channel without Q1, and the errors.
+//! `sum` row, a channel without Q1, the errors, and a window split at its valleys.
 
 use super::*;
 
@@ -143,7 +143,7 @@ fn a_sum_row_closes_each_channel() {
     assert_eq!(&r[2][..3], ["237.1", "A", "sum"]);
     let s: f64 = r[0][6].parse::<f64>().unwrap() + r[1][6].parse::<f64>().unwrap();
     assert_eq!(r[2][6], sci(s, 5));
-    assert_eq!(r[2].len(), 11);
+    assert_eq!(r[2].len(), 13);
     assert_eq!(
         &r[3][..3],
         ["ion 3", "", "s1"],
@@ -203,11 +203,86 @@ fn the_name_of_a_window_is_its_last_column_cleaned_and_cut() {
     );
     let t = table_text(&files(), &w, true).unwrap();
     let l: Vec<&str> = t.lines().collect();
-    assert!(l[1].ends_with(",zero,\"Peak 1, left\""), "{t}");
+    assert!(l[1].ends_with(",zero,,,\"Peak 1, left\""), "{t}");
     assert!(
-        l[2].ends_with(&format!(",zero,{}", "x".repeat(LABEL_MAX))),
+        l[2].ends_with(&format!(",zero,,,{}", "x".repeat(LABEL_MAX))),
         "{t}"
     );
     assert!(l[3].ends_with(",,,,"), "a sum row has no name: {t}");
-    assert!(l[4].ends_with(",zero,"), "a window without a name: {t}");
+    assert!(l[4].ends_with(",zero,,,"), "a window without a name: {t}");
+}
+
+/// Two peaks of sample 1 on channel A that overlap: apexes 3.0 and 3.2 min, the second of half height.
+fn pair() -> String {
+    format!(
+        "[{{\"name\":\"s1.mzML\",\"transitions\":[{}]}}]",
+        trace(Some(237.1), None, "A", &[(3.0, 8e4), (3.2, 4e4)])
+    )
+}
+
+#[test]
+fn a_window_split_at_its_valley_gives_a_row_per_part_that_add_up() {
+    for base in ["zero", "edges"] {
+        let one = format!("{{\"file\":0,\"tr\":0,\"a\":2.7,\"b\":3.5,\"baseline\":\"{base}\"}}");
+        let v = valleys_text(&pair(), &one, valley::DEPTH).unwrap();
+        let at: f64 = v
+            .strip_prefix("{\"splits\":[")
+            .and_then(|r| r.strip_suffix("]}"))
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert!(at > 3.05 && at < 3.2, "{v}");
+        let split = format!("[{}]", one.replace('}', &format!(",\"splits\":[{at}]}}")));
+        let t = table_text(&pair(), &split, false).unwrap();
+        let r = rows(&t);
+        assert_eq!(r.len(), 2, "{t}");
+        assert_eq!((r[0][3].as_str(), r[1][4].as_str()), ("2.700", "3.500"));
+        assert_eq!(r[0][4], r[1][3], "the parts meet at the drop line");
+        assert_eq!((r[0][10].as_str(), r[1][10].as_str()), ("drop", "drop"));
+        let pv: Vec<f64> = r.iter().map(|x| x[11].parse().unwrap()).collect();
+        assert!(pv[0] > pv[1] && pv[1] > 1.0, "{pv:?}");
+        assert!((r[0][5].parse::<f64>().unwrap() - 3.0).abs() < 0.02);
+        // the parts add up to the window measured against the same line
+        let t0 = &samples_and_keys(&pair()).unwrap().0[0].1[0];
+        let (lo, hi) = (near_idx(&t0.t, 2.7), near_idx(&t0.t, 3.5));
+        let line = drop_line(
+            baseline_of(&parse(one.as_bytes()).unwrap()).unwrap(),
+            t0,
+            lo,
+            hi,
+        );
+        let whole =
+            crate::baseline::integrate(&t0.t, &t0.y, lo, hi, |x| line.at(x).unwrap()).area * 60.0;
+        let sum: f64 = valley::parts(&t0.t, &t0.y, lo, hi, &[near_idx(&t0.t, at)], |x| {
+            line.at(x).unwrap()
+        })
+        .iter()
+        .map(|p| p.area * 60.0)
+        .sum();
+        assert!(
+            (sum - whole).abs() <= 1e-9 * whole,
+            "{base}: {sum} vs {whole}"
+        );
+        let printed: f64 = r.iter().map(|x| x[6].parse::<f64>().unwrap()).sum();
+        assert!(
+            (printed - whole).abs() <= 1e-4 * whole,
+            "{base}: {printed} vs {whole}"
+        );
+    }
+}
+
+#[test]
+fn splits_outside_the_window_leave_one_row() {
+    let w = r#"[{"file":0,"tr":0,"a":2.7,"b":3.5,"splits":[1.0,2.7,9.0,null]}]"#;
+    let r = rows(&table_text(&pair(), w, false).unwrap());
+    assert_eq!(r.len(), 1);
+    assert_eq!((r[0][10].as_str(), r[0][11].as_str()), ("", ""));
+    let one = r#"{"file":0,"tr":0,"a":2.7,"b":3.5}"#;
+    assert_eq!(valleys_text(&pair(), one, 1.0).unwrap(), "{\"splits\":[]}");
+    assert_eq!(
+        valleys_text(&pair(), r#"{"file":3,"tr":0,"a":1,"b":2}"#, 0.1)
+            .unwrap_err()
+            .key,
+        "err.manint.channel"
+    );
 }

@@ -55,6 +55,7 @@ const COMMANDS: &[&[&str]] = &[
     &["samples"],
     &["peak-edges"],
     &["manual-table"],
+    &["peak-split"],
     &["peak-area"],
     &["peak-window"],
     &["explain-missing"],

@@ -3,7 +3,8 @@ samples, seven ions at a 0.8 s cycle, an isomer pair in one channel; no laborato
 log is skipped with a note); windows integrated on the ion traces fill the card «Manual integrations» under the chart (collapsible and remembered,
 fixed-height scroll with a sticky header, no layout shift), one row per window grouped by channel, each with a name the user types; the card, its CSV
 export, the engine's sum rows and «Copy table» (tab-separated) are the bytes of `mzlab-cli manual-table` on the same .wiff and windows (after the provenance line);
-a row's Delete removes the integration; a window drawn on one sample stays drawn when another sample is chosen in the left panel, measured on that sample with no row added; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
+a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak-split`), moved by mouse, keys and finger and
+confirmed into one row per part; a window drawn on one sample stays drawn when another sample is chosen in the left panel, measured on that sample with no row added; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
 points before the cut. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_wiff.py"""
 import json, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
@@ -31,6 +32,8 @@ SHOWN = "(() => { const c = document.querySelector('#manint'); return !!c && !c.
 INTEG = """([name, ion, a, b, bm]) => { const p = E.panels.find(q => q.type === 'mrm' && q._a);
   const f = E.files.find(x => x.label === name || x.file.startsWith(name + '.')); const s = p._a.sr.filter(x => x.k === f.k)[ion];
   addInt(p, s, a, b, false); if (bm) { const it = p.ints[p.ints.length - 1], q = bm === "zero" ? "zero" : "curve"; it.snap = { a: q, b: q }; it.st = E.seq++; draw(p); } return s.key; }"""
+# the trace key of ion `ion` of sample `name` on the SIM panel
+SKEY = """([name, ion]) => { const p = E.panels.find(q => q.type === 'mrm' && q._a); const f = E.files.find(x => x.label === name || x.file.startsWith(name + '.')); return p._a.sr.filter(x => x.k === f.k)[ion].key; }"""
 # the anchor buttons (.iep) of integration `id` on the SIM panel: [end, x, y, mode, hidden] in page pixels
 ANCH = """id => E.panels.find(q => q.type === 'mrm' && q._a)._ep.filter(b => b._it.id === id).map(b => { const r = b.getBoundingClientRect(); return [b._e, r.x + r.width / 2, r.y + r.height / 2, b.dataset.m, b.hidden, r.width, r.height]; })"""
 REC = "id => { const i = E.panels.find(q => q.type === 'mrm').ints.find(x => x.id === id); return i && JSON.parse(JSON.stringify({ snap: i.snap, my: i.my || null, bm: i.bm, bl: i.bl || null, st: i.st || 0, a: i.a, b: i.b })); }"
@@ -274,6 +277,83 @@ try:
             assert n == 4 and html.count(ion) == 1 and html.startswith("<b>") and f" · {ion}</b>" in html and html.count("<div>") == 4, h
             all_ions(pg)
         step("one channel over several samples: the hover text names the channel once", hover_once)
+        def split():
+            need = lambda c, m: c or throw(m)
+            P = "E.panels.find(q => q.type === 'mrm' && q._a)"
+            p0, p1 = sorted(pk[2][2][:2])
+            # the window of the rows step covers the first isomer only: it goes, so one window holds the pair
+            pg.evaluate(f"(() => {{ const p = {P}; p.ints = p.ints.filter(i => !(i.key === {json.dumps(pg.evaluate(SKEY, ['Sample_B', 2]))} && i.a < {p1 + 0.15} && i.b > {p0 - 0.15})); draw(p); }})()")
+            key = pg.evaluate(INTEG, ["Sample_B", 2, p0 - 0.15, p1 + 0.15, None])
+            it = pg.evaluate(f"{P}.ints[{P}.ints.length - 1].id")
+            need(pg.evaluate(f"{P}.ints[{P}.ints.length - 1].key") == key, "the pair window is drawn")
+            kb = pg.evaluate("E.files.find(x => x.label === 'Sample_B' || x.file.startsWith('Sample_B.')).k")
+            ours = lambda st: [x for x in json.loads(st["windows"] or "[]") if st["ks"][x["file"]] == kb and x["a"] < p0 and x["b"] > p1]
+            wait_for_js(pg, f"(() => {{ const s = MANINT.state(); return JSON.parse(s.windows || '[]').some(x => s.ks[x.file] === {kb} && x.a < {p0} && x.b > {p1}); }})()", timeout=60000)
+            w = ours(pg.evaluate("MANINT.state()"))[0]
+            one = {k: v for k, v in w.items() if k != "label"} | {"file": 0}
+            table = lambda w: pg.evaluate("([k, w]) => fetch(`api/manint?k=${k}&sums=0&w=${encodeURIComponent(JSON.stringify([w]))}`).then(r => r.text())", [kb, w])
+            body = lambda t: [l.split(",") for l in t.strip().split("\n")[1:]]
+            whole = body(table(one))
+            need(len(whole) == 1, whole); whole = whole[0]
+            sets = [f"file={TRUE['campioni'].index('Sample_B')}", "tr=2", f"a={w['a']}", f"b={w['b']}", f"baseline={w.get('baseline', 'zero')}"] + ([f"line={','.join(str(v) for v in w['line'])}"] if "line" in w else [])
+            peak_split = lambda *extra: cli("peak-split", D / "sim3.wiff", *[x for kv in sets + list(extra) for x in ("--set", kv)])
+            # V on the chart with the integration selected: the engine's drop line at the depth shown, the bytes of mzlab-cli peak-split
+            pg.evaluate(f"(() => {{ const p = {P}; p.isel = {it}; draw(p); p.cv.focus(); }})()"); frames(pg, 2)
+            pg.keyboard.press("v")
+            wait_for_js(pg, f"{P}.el.querySelectorAll('.ivl-mk').length === 1 && !!{P}.el.querySelector('.ivl-bar')", timeout=60000)
+            got = pg.evaluate("([k, w]) => fetch(`api/manvalley?k=${k}&depth=0.1&w=${encodeURIComponent(JSON.stringify(w))}`).then(r => r.text())", [kb, one])
+            need(got == peak_split(), ("api/manvalley = peak-split", got, peak_split()))
+            t0 = json.loads(got)["splits"][0]
+            need(p0 < t0 < p1 and pg.evaluate(f"{P}._split.ts[0]") == t0, (t0, p0, p1))
+            bar = pg.evaluate(f"(() => {{ const b = {P}.el.querySelector('.ivl-bar'), i = b.querySelector('input'); return [i.value, i.title === I18N.t('int.split.depth.tip'), i.getAttribute('aria-describedby'), [...b.querySelectorAll('button')].every(x => x.getBoundingClientRect().height >= 24), b.querySelector('.ivl-none').textContent]; }})()")
+            need(bar == ["10", True, "ivl-d", True, ""], bar)
+            mk = pg.evaluate(f"(() => {{ const m = {P}.el.querySelector('.ivl-mk'), r = m.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2, r.width, m.getAttribute('role'), m.getAttribute('aria-valuenow'), document.activeElement === m]; }})()")
+            need(mk[2] >= 24 and mk[3] == "slider" and mk[4] == f"{t0:.3f}" and mk[5], ("a focused slider of 24 px", mk))
+            # mouse: 30 px right lands on a point of the trace; keyboard: ← one point back; touch: a finger drags it back near the valley
+            pg.mouse.move(mk[0], mk[1]); pg.mouse.down(); pg.mouse.move(mk[0] + 15, mk[1], steps=3); pg.mouse.move(mk[0] + 30, mk[1], steps=3); pg.mouse.up()
+            t1 = pg.evaluate(f"{P}._split.ts[0]"); xs = pg.evaluate(f"{P}._a.sr.find(s => s.key === '{key}').x")
+            need(t1 > t0 and t1 in xs, ("dragged onto a point", t0, t1))
+            pg.keyboard.press("ArrowLeft"); t2 = pg.evaluate(f"{P}._split.ts[0]")
+            need(xs.index(t2) == xs.index(t1) - 1, (t1, t2))
+            pg.evaluate(f"""(() => {{ const m = {P}.el.querySelector('.ivl-mk'), r = m.getBoundingClientRect(), y = r.y + r.height / 2, x = r.x + r.width / 2, o = {{ pointerId: 7, pointerType: 'touch', bubbles: true, isPrimary: true }};
+              m.dispatchEvent(new PointerEvent('pointerdown', {{ ...o, clientX: x, clientY: y, button: 0 }})); m.dispatchEvent(new PointerEvent('pointermove', {{ ...o, clientX: x - 30, clientY: y }}));
+              m.dispatchEvent(new PointerEvent('pointerup', {{ ...o, clientX: x - 30, clientY: y }})); }})()""")
+            t3 = pg.evaluate(f"{P}._split.ts[0]")
+            need(t3 < t2 and t3 in xs, ("a finger drags it", t2, t3))
+            pg.evaluate(f"{P}.el.querySelector('.ivl-mk').focus()"); pg.keyboard.press("Enter")
+            wait_for_js(pg, f"!{P}.el.querySelector('.ivl-mk, .ivl-bar') && JSON.stringify({P}.ints.find(i => i.id === {it}).splits) === '[{t3}]'", timeout=10000)
+            wait_for_js(pg, "MANINT.state().csv.includes(',drop,')", timeout=60000)
+            st = pg.evaluate("MANINT.state()")
+            need(st["csv"] == manual(st, [D / "sim3.wiff"]), "the table with the parts = mzlab-cli manual-table")
+            parts = [l.split(",") for l in st["csv"].strip().split("\n") if ",drop," in l]
+            need(len(parts) == 2 and parts[0][4] == parts[1][3] and float(parts[0][11]) > 0 and float(parts[1][11]) > 0, parts)
+            area = sum(float(x[6]) for x in parts)
+            need(abs(area - float(whole[6])) <= 1e-4 * float(whole[6]), ("the parts add up to the window", area, whole))
+            cut = table(one | {"splits": [t3]})
+            need(cut == peak_split(f"split={t3}"), ("api/manint of the split window = peak-split", cut))
+            th = pg.evaluate("[...document.querySelectorAll('#manint thead th')].map(t => [t.textContent, t.title])")
+            need([pg.evaluate("I18N.t('canali.manint.h.overlap')"), pg.evaluate("I18N.t('canali.manint.h.overlap.tip')")] in th and any(x[0] == "p/v" and x[1] for x in th), th)
+            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].filter(r => r.textContent.includes(I18N.t('canali.manint.drop'))).length") == 2, "two rows say «yes»")
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, "!MANINT.state().csv.includes(',drop,')", timeout=60000)
+            need(pg.evaluate(f"{P}.ints.find(i => i.id === {it}).splits") is None, "undo makes it whole")
+            pg.evaluate("STORIA.ripeti()"); wait_for_js(pg, "MANINT.state().csv.includes(',drop,')", timeout=60000)
+            # the depth: 100 % finds no valley (said in the bar); Esc keeps the split as it was; Delete on the last marker, then Split, makes it whole
+            pg.evaluate(f"(() => {{ const p = {P}; p.isel = {it}; draw(p); p.cv.focus(); }})()"); frames(pg, 2); pg.keyboard.press("v")
+            wait_for_js(pg, f"{P}.el.querySelectorAll('.ivl-mk').length === 1 && {P}._split.ts[0] === {t3}", timeout=10000)
+            pg.fill(f".ivl-bar input", "100"); pg.keyboard.press("Enter")
+            wait_for_js(pg, f"{P}.el.querySelectorAll('.ivl-mk').length === 0 && {P}.el.querySelector('.ivl-none').textContent === I18N.t('int.split.none')", timeout=60000)
+            need(pg.evaluate(f"localStorage.getItem(NOMI.KEY('int.split.depth'))") == "100", "the depth is remembered")
+            pg.keyboard.press("Escape"); wait_for_js(pg, f"!{P}.el.querySelector('.ivl-bar')", timeout=5000)
+            need(pg.evaluate(f"{P}.ints.find(i => i.id === {it}).splits") == [t3], "Esc keeps the split")
+            pg.evaluate("localStorage.removeItem(NOMI.KEY('int.split.depth'))")
+            pg.evaluate(f"(() => {{ const p = {P}; p.isel = {it}; draw(p); p.cv.focus(); }})()"); frames(pg, 2); pg.keyboard.press("v")
+            wait_for_js(pg, f"document.activeElement && document.activeElement.classList.contains('ivl-mk')", timeout=10000)
+            pg.keyboard.press("Delete"); pg.click(".ivl-bar [data-ok]")
+            wait_for_js(pg, "!MANINT.state().csv.includes(',drop,')", timeout=60000)
+            need(pg.evaluate(f"{P}.ints.find(i => i.id === {it}).splits") is None, "no drop line: whole again")
+            menu = pg.evaluate("AZIONI.voci.find(a => a.id === 'int.split')")
+            need(menu and menu["scorciatoia"]["tasto"] == "v", menu)
+        step("«Split at the valleys»: the engine's drop line (= peak-split), moved by mouse, keys and finger, confirmed into one row per part (= manual-table), undo, depth, Esc", split)
         step("the msconvert log is skipped with a note", lambda: (lambda u: "sim3.wiff.log" in u or throw(u))(pg.evaluate("document.getElementById('unopen').textContent")))
         def channels():
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")

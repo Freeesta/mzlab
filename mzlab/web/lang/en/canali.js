@@ -88,5 +88,17 @@ I18N.add("en", {
   "canali.manint.h.label": "Name",
   "canali.manint.nm.aria": "Name of the integration",
   "canali.manint.h.base": "Baseline",
+  "int.split.menu": "Split at the valleys",
+  "int.split.tip": "Drop lines at the valleys between overlapping peaks; a shoulder is not split",
+  "int.split.depth": "Depth (%)",
+  "int.split.depth.tip": "Smallest rise of the lower peak over the valley, as % of the window's highest point",
+  "int.split.ok": "Split",
+  "int.split.none": "No valley",
+  "int.split.mark": "Drop line: {rt} min. Arrows ← →: move; Delete: remove; Enter: split; Esc: cancel",
+  "canali.manint.h.overlap": "Overlapped",
+  "canali.manint.h.overlap.tip": "Part of a window split at a valley",
+  "canali.manint.h.pv": "p/v",
+  "canali.manint.h.pv.tip": "Height of the part over the higher valley next to it (Ph. Eur. 2.2.46)",
+  "canali.manint.drop": "yes",
   "canali.manint.h.act": "Actions"
 });

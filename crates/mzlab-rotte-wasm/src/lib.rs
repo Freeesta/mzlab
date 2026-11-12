@@ -1,5 +1,5 @@
 //! wasm-bindgen bridge of the routes that the engine `.wasm` (`mzlab-wasm`) does not carry: the statistics of the series (`stat_post`), `molecules/1`,
-//! `campioni/2` and `/3` (the Data view) and the Flow's command, line and scheduler. A `.wasm` of its own, fetched by the worker of the engine on the
+//! `campioni/2` and `/3` (the Data view), the manual integrations (`api/manint`, `api/manvalley`) and the Flow's command, line and scheduler. A `.wasm` of its own, fetched by the worker of the engine on the
 //! first request of one of them (`load("rotte")` of `mzlab/web/rust-msngrafo.js`, called by `rust-worker.js`). Errors are JSON `{"error_key", "params"}` strings, as in the engine.
 #![forbid(unsafe_code)]
 use wasm_bindgen::prelude::*;
@@ -66,4 +66,24 @@ pub fn flow_line(body: &str) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn flow_sched(op: &str, body: &str) -> Result<String, JsValue> {
     mzlab_core::flow::sched_route(op, body).map_err(|e| error_json(&e))
+}
+
+/// `api/manint`: the table of the integrations drawn by hand (`manint::table_text`): `files` = `[{"name", "transitions"}]` (the transitions as
+/// `api/mrm` gives them), `windows` = `[{"file", "tr", "a", "b", "baseline"?, "line"?}]`, `sums` = a sum row per channel. "E" + JSON = the user's error.
+#[wasm_bindgen]
+pub fn manual_table(files: &str, windows: &str, sums: bool) -> String {
+    match mzlab_core::manint::table_text(files, windows, sums) {
+        Ok(csv) => csv,
+        Err(e) => format!("E{}", e.to_json()),
+    }
+}
+
+/// `api/manvalley`: where one window of `manual_table` splits at `depth` (`manint::valleys_text`): `{"splits":[MIN,...]}`; "E" + JSON = the user's
+/// error.
+#[wasm_bindgen]
+pub fn manual_valleys(files: &str, window: &str, depth: f64) -> String {
+    match mzlab_core::manint::valleys_text(files, window, depth) {
+        Ok(json) => json,
+        Err(e) => format!("E{}", e.to_json()),
+    }
 }
