@@ -78,8 +78,8 @@ function draw() {
   const trs = body.map((r, i) => {
     if (r[2] === "sum" && r[3] === "") return h`<tr class="manint-sum"><th scope="row">${chShown(r[0])}</th><td>${r[1]}</td><td>${t("canali.manint.sum")}</td><td></td><td></td><td></td><td class="num">${fmt(r[6], "area")}</td><td></td><td></td><td></td><td></td></tr>`;
     const rec = recOf(r), who = { ch: chShown(r[0]), s: r[2] };
-    const act = rec ? h`<button type="button" class="sec sm" data-go="${i}" aria-label="${t("canali.manint.show.aria", who)}">${t("canali.manint.show")}</button> <button type="button" class="sec sm" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}">${t("canali.manint.del")}</button>` : "";
-    return h`<tr><th scope="row">${chShown(r[0])}</th>${raw(r.slice(1).map((v, j) => h`<td${raw(j >= 2 && j <= 7 ? ' class="num"' : "")}>${fmt(v, head[j + 1])}</td>`).join(""))}<td>${raw(act)}</td></tr>`;
+    const act = rec ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
+    return h`<tr${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[0])}</th>${raw(r.slice(1).map((v, j) => h`<td${raw(j >= 2 && j <= 7 ? ' class="num"' : "")}>${fmt(v, head[j + 1])}</td>`).join(""))}<td>${raw(act)}</td></tr>`;
   }).join("");
   const open = !el.querySelector("details") || /** @type {HTMLDetailsElement} */ (el.querySelector("details")).open;
   el.innerHTML = h`<details${raw(open ? " open" : "")}><summary><h3 id="manint-h">${t("canali.manint.title", { n })}</h3></summary>
@@ -87,17 +87,19 @@ function draw() {
 <button type="button" class="sec sm" data-dl>${t("canali.manint.csv")}</button>
 <button type="button" class="sec sm" data-copy>${t("canali.manint.copy")}</button><span class="sm" role="status" aria-live="polite" data-ok></span></div>
 <div class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h"><table class="qq-tab"><caption>${t("canali.manint.caption")}</caption>
-<thead><tr>${raw(ths)}<th scope="col">${t("canali.manint.h.act")}</th></tr></thead><tbody>${raw(trs)}</tbody></table></div>
+<thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table></div>
 <p class="muted sm">${t("canali.manint.note")}</p></details>`;
   const ws = document.getElementById("v-workspace");
   el.hidden = !(ws && (ws.dataset.work === "panels" || ws.dataset.work === "table"));
   el.querySelector("[data-sums]")?.addEventListener("change", e => { st.sums = /** @type {HTMLInputElement} */ (e.target).checked; ask().then(() => { draw(); /** @type {HTMLElement | null} */ (card()?.querySelector("[data-sums]"))?.focus(); }); });
   el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl(st.sums ? "manual-integrations-sums.csv" : "manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
   el.querySelector("[data-copy]")?.addEventListener("click", () => copy(all));
-  el.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
-    const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)]); if (!rec) return;
-    G.reveal(rec.p); G.draw(rec.p);
-  }));
+  /** A row shows its integration on the chart (click, Enter or Space); its X deletes it. @param {Element} b */
+  const show = b => { const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)]); if (rec) { G.reveal(rec.p); G.draw(rec.p); } };
+  el.querySelectorAll("tr[data-go]").forEach(b => {
+    b.addEventListener("click", e => { if (!/** @type {Element} */ (e.target).closest("button")) show(b); });
+    b.addEventListener("keydown", e => { const k = /** @type {KeyboardEvent} */ (e); if (k.target === b && (k.key === "Enter" || k.key === " ")) { k.preventDefault(); show(b); } });
+  });
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)]); if (rec) G.delInts(rec.p, [rec.it]);
   }));

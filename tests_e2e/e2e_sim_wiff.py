@@ -87,6 +87,18 @@ try:
             assert pg.evaluate("document.querySelectorAll('#manint tr.manint-sum').length") == 2
             pg.click("#manint [data-sums]"); wait_for_js(pg, "!MANINT.state().sums && !/,sum,/.test(MANINT.state().csv)", timeout=60000)
         step("the table and its CSV (with and without the sums) are the bytes of mzlab-cli manual-table", parity)
+        def row_actions():
+            need = lambda c, m: c or throw(m)
+            need(pg.evaluate("[...document.querySelectorAll('#manint tbody tr[data-go]')].every(r => r.tabIndex === 0 && r.getAttribute('aria-label') && r.querySelectorAll('button').length === 1)"), "a row is one focusable control with one X")
+            x = pg.evaluate("(() => { const b = document.querySelector('#manint tbody [data-del]'), r = b.getBoundingClientRect(); return [r.width, r.height, b.title, b.textContent.trim(), !!document.querySelector('#manint [data-go] button:not([data-del])')]; })()")
+            need(x[0] >= 24 and x[1] >= 24 and x[2] == pg.evaluate("I18N.t('canali.manint.del')") and x[3] == "×" and not x[4], x)
+            pg.evaluate("(() => { window.__show = []; const o = window.reveal; window.reveal = p => { window.__show.push(p.id); return o(p); }; window.__orev = o; })()")
+            pg.click("#manint tbody tr[data-go] td:nth-child(4)")
+            pg.focus("#manint tbody tr[data-go]"); pg.keyboard.press("Enter"); pg.keyboard.press(" ")
+            n = pg.evaluate("(() => { const n = window.__show.length; window.reveal = window.__orev; return n; })()")
+            need(n == 3, n)
+            wait_for_js(pg, SHOWN % 3, timeout=10000)
+        step("a row shows its integration (click, Enter, Space) and its X is the only button", row_actions)
         def delete():
             pg.click("#manint tbody tr:nth-child(2) [data-del]")
             wait_for_js(pg, SHOWN % 2, timeout=60000)
