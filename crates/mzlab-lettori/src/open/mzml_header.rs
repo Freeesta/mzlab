@@ -305,3 +305,7 @@ fn model(h: &mut Header, acc: &str, name: &str, value: &str) {
         h.instrument = Some((acc.to_string(), name.to_string()));
     }
 }
+
+#[cfg(test)]
+#[path = "mzml_header_tests.rs"]
+mod tests;

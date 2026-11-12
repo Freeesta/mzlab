@@ -117,4 +117,27 @@ mod prove {
         b[1] = 0xff;
         assert!(read_frame(&mut b.clone(), 16, 0, 1, 1, &Limits::sito()).is_err());
     }
+
+    /// A zstd frame of one raw block holding `d`.
+    fn raw_zstd(d: &[u8]) -> Vec<u8> {
+        let n = u32::try_from(d.len()).unwrap_or(0);
+        let mut z = vec![0x28, 0xb5, 0x2f, 0xfd, 0xa0];
+        z.extend(n.to_le_bytes());
+        z.extend(((n << 3) | 1).to_le_bytes()[..3].iter());
+        z.extend(d);
+        z
+    }
+
+    #[test]
+    fn a_profile_keeps_the_zero_on_each_side_of_its_signal() {
+        let v: Vec<u8> = [0u32, 0, 5, 0, 0, 0]
+            .iter()
+            .flat_map(|x| x.to_le_bytes())
+            .collect();
+        let l = profilo(&raw_zstd(&v), 6, &Limits::sito())
+            .map_err(|e| e.key)
+            .ok();
+        let l = l.map(|l| (l.tof, l.int, l.profile));
+        assert_eq!(l, Some((vec![1.0, 2.0, 3.0], vec![0.0, 5.0, 0.0], true)));
+    }
 }
