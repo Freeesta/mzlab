@@ -63,12 +63,13 @@ try:
         step("Range: m/z and RT set and cleared, active state and ×", rng)
         def corr():
             pg.click(f'{X} [data-o=corr]'); wait_for_js(pg, "!document.querySelector('.pnl.xic .corrm').hidden")
-            it = pg.locator(f'{X} .corrw >> nth=0 >> .corri'); assert it.count() == 2, it.count()          # «Sottrai»: none + the file; «Fondo» has its own menu
+            it = pg.locator(f'{X} .corrg[data-g="0"] .corri'); assert it.count() == 2, it.count()          # «Da un file»: none + the file
+            assert pg.locator(f'{X} .corrg[data-g="1"] .corri').count() >= 3, "«Dal fondo» in the same menu"
             assert pg.locator(f'{X} .corrm select').count() == 1, "one file chooser"
             assert pg.locator(f'{X} .corri', has_text="Sottrai file").count() == 1
             assert all(len(t) < 60 for t in pg.locator(f'{X} .corri .sm').all_inner_texts()), "one-line hints"
             pg.keyboard.press("Escape"); wait_for_js(pg, "document.querySelector('.pnl.xic .corrm').hidden"); assert pg.evaluate("document.querySelector('.pnl.xic .corrm').hidden")
-        step("Correz. menus: Sottrai (2 entries, one file chooser), Esc closes", corr)
+        step("Sottrazione menu: from a file (2 entries, one file chooser) and from the background, Esc closes", corr)
         def pick():
             exp = pg.evaluate("(()=>{const r=SUBREF.autoFile('full');return r.label})()")
             pg.click(f'{X} [data-o=corr]'); wait_for_js(pg, "!document.querySelector('.pnl.xic .corrm').hidden")
@@ -79,7 +80,7 @@ try:
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == int(other)
             assert pg.locator(f'{X} .subchip').count() == 1 and "on" in pg.get_attribute(f'{X} [data-o=corr]', "class").split()
             assert pg.eval_on_selector(f'{X} .subchip', "c=>c.textContent").find(pg.evaluate(f"E.files[{other}].label")) >= 0, "the legend chip names the file"
-            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrw >> nth=0 >> .corri', has_text="Nessuna").click(); wait_for_js(pg, f"{XP}.bk === ''")
+            pg.click(f'{X} [data-o=corr]'); pg.locator(f'{X} .corrg[data-g="0"] .corri', has_text="Nessuna").click(); wait_for_js(pg, f"{XP}.bk === ''")
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == ""
         step("Subtract file: default = session reference, choosing updates the chip", pick)
         def tlink():

@@ -23,11 +23,11 @@ try:
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
         def CORR(v):      # the "Correzione" drop-down: open it, click the choice
-            pg.click('.pnl.xic [data-o="%s"]' % ("bkg" if v in ("snip", "tract", "") else "corr")); pg.wait_for_timeout(150)      # «Sottrai» (file) and «Fondo» are two menus
+            pg.click('.pnl.xic [data-o="corr"]'); pg.wait_for_timeout(150)      # «Sottrazione»: one menu, a group for the file and one for the background
             if v.startswith("f"):      # the file entry has a chooser of the file
                 try: pg.select_option('.pnl.xic [data-o="corrf"]', v[1:], timeout=30000)
                 except Exception as e: raise AssertionError("file chooser: " + pg.evaluate("(v) => JSON.stringify({sel: [...document.querySelectorAll('.pnl.xic [data-o=corrf]')].map(s => ({vis: s.offsetParent !== null, opts: [...s.options].map(o => o.value)})), want: v, pop: [...document.querySelectorAll('.pnl.xic .cpop')].map(c => c.hidden), files: E.files.map(f => [f.k, f.type, f.vis, f.kind])})", v[1:]) + " | " + str(e).replace("\n", " ")[:300])
-            else: pg.click(f'.pnl.xic .corri[data-c="{v}"]')
+            else: pg.click(f'.pnl.xic .corrg[data-g="1"] .corri[data-c="{v}"]')
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
             # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and a window of +-0.5 Da around it

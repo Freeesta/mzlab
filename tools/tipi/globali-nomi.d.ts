@@ -430,6 +430,7 @@ declare var corrActive: any;
 declare var corrInfo: any;
 declare var corrInfoSync: any;
 declare var corrInfoWire: any;
+declare var corrRows: any;
 declare var corrText: any;
 declare var corrWidget: any;
 declare var corrWire: any;

@@ -24,5 +24,7 @@ I18N.add("it", {
   "xicdlg.file.title": "File da cui estrarre gli XIC",
   "xicdlg.go": "Estrai",
   "export.int.areaUv": "Area (mAU*s)",
-  "export.int.areaMix": "Area (conteggi*s; DAD: mAU*s)"
+  "export.int.areaMix": "Area (conteggi*s; DAD: mAU*s)",
+  "corr.from.file": "Da un file",
+  "corr.from.bg": "Dal fondo"
 });

@@ -592,40 +592,43 @@ function plotMeta(/** @type {Pannello} */ p) {
   return [["Title", ptitleP(p) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
 }
 
-// ---- «Correzione»: ONE menu for chromatogram and spectrum (None · Subtract file with its chooser · Background of a stretch · Automatic baseline). Icon + one-line hints;
-// o = { files: files that can be subtracted, cur: "" | "f<k>" | "tract" | "snip", snip: offer the automatic baseline, dis: reason why it is off ("" = on) }
+// ---- «Correzione» (spectrum, map), «Sottrazione» (chromatograms): one button, one menu; o = { files, cur: "" | "f<k>" | "tract" | "snip", snip, dis: why off }
+// o.grp: one labelled group per kind (file, background), each with its own state
 const ICN = (/** @type {string} */ d) => `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 /** @type {Record<string, string>} */
 const CIC = { none: ICN('<circle cx="9" cy="9" r="6"/><path d="M4.8 13.2L13.2 4.8"/>'), blank: ICN('<path d="M4 2.5h5.5L12.5 5.5v10H4z"/><path d="M9.5 2.5v3h3"/><path d="M6.2 10.5h3.6" stroke-width="2"/>'),
   tract: ICN('<path d="M2 13c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-width="2.2"/><path d="M5 14v3M13 14v3"/>'), snip: ICN('<path d="M2 14c3 0 4-9 7-9s4 9 7 9"/><path d="M2 13c3-2 4-.5 7-.5s4-1.5 7 .5" stroke-dasharray="2 2"/>'),
-  file: ICN('<path d="M4 2.5h5.5L12.5 5.5v10H4z"/><path d="M9.5 2.5v3h3"/><path d="M6.2 10.5h3.6" stroke-width="2"/>'), bg: ICN('<path d="M2 11.5c3 0 4-7 7-7s4 7 7 7"/><path d="M2 14.5h14" stroke-width="2.4"/><path d="M6 16.8h6" stroke-width="1.5"/>') };  // file / bg: idle icons of «Subtract a file» / «Subtract the background»
-  // one «Subtract file» entry with a file chooser (default: the session reference, else the t0); tract and SNIP keep their one-line hint
-function corrWidget(/** @type {Pannello} */ p, /** @type {Bag} */ o) {
+  msub: ICN('<path d="M1.5 14c2.5 0 3.5-9 6-9s3.5 9 6 9"/><path d="M12 4h4.5" stroke-width="2"/>') };  // a peak and a «−»
+function corrRows(/** @type {Pannello} */ p, /** @type {Bag} */ o) {  // the file entry has a chooser (default: the session reference, else the t0)
   const T0 = p.tab || E.tab, fileOpts = o.files.length > (o.min ?? 1) ? o.files : [], cfile = o.cur[0] === "f";
   const refK = /** @type {unknown} */ (S.ref.k) !== "auto" && fileOpts.some((/** @type {MzFile} */ x) => x.k === /** @type {unknown} */ (S.ref.k)) ? S.ref.k : (SUBREF.autoFile(T0) || {}).k;  // default file: the reference of the session
   const subK = cfile ? +o.cur.slice(1) : fileOpts.some((/** @type {MzFile} */ x) => x.k === refK) ? refK : fileOpts.length ? fileOpts[0].k : null, subF = subK != null ? E.files[subK] : null;
-  // [value, icon, label, subtitle (only where non-obvious), short label, tooltip]: «None» and the file entry keep their sentence as a tooltip
+  // [value, icon, label, subtitle, short label, tooltip]
   const items = [["", "none", I18N.t("corr.none"), "", "", I18N.t("corr.none.desc")],
     [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? "" : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : "", subF ? o.fileDesc || I18N.t("corr.file.desc") : ""],
     ["tract", "tract", I18N.t("corr.tract"), o.tractDesc || I18N.t("corr.tract.desc")],
     ...FONDOP.item(o),
-    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])].filter(i => !o.parts || i[1] === "none" || o.parts.includes(i[1]));  // parts: only these entries (two menus: «Sottrai», «Fondo»)
+    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])].filter(i => !o.parts || i[1] === "none" || o.parts.includes(i[1]));
   const now = items.find(i => i[1] === "blank" ? cfile : i[0] === o.cur && i[1] !== "none") || items[0];
-  const ttl = o.title || I18N.t("corr.button.title"), tip = ttl + (now === items[0] ? "" : ": " + (now[4] ?? now[2]));
   const sel = subF ? `<select class="corrsel" data-o="corrf" aria-label="${EH(I18N.t("corr.file.pick"))}" title="${EH(I18N.t("corr.file.pick"))}">${fileOpts.map((/** @type {MzFile} */ x) => `<option value="${x.k}"${x.k === subK ? " selected" : ""}>${EH(x.label)}</option>`).join("")}</select>` : "";
-  const CK = '<span class="corrck" aria-hidden="true">&#10003;</span>';  // the tick closes the row of the active entry (hidden, not removed, so the rows stay aligned)
+  const CK = '<span class="corrck" aria-hidden="true">&#10003;</span>';  // hidden, not removed: the rows stay aligned
   const btn = (/** @type {string[]} */ i, /** @type {string} */ inner) => `<button type="button" class="corri${i === now ? " on" : ""}" aria-pressed="${i === now}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? ` disabled title="${EH(I18N.t("corr.fileNone.desc"))}"` : i[5] ? ` title="${EH(i[5])}"` : ""}${i[1] === "blank" && subF ? ` aria-label="${EH(I18N.t("corr.file", { label: subF.label }))}"` : ""}>${CIC[i[1]]}${inner}</button>`;
   const row = (/** @type {string[]} */ i) => i[1] === "blank" && subF ? `<span class="corrrow${i === now ? " on" : ""}">${btn(i, `<span><b>${EH(I18N.t("corr.file.lab"))}</b></span>`)}${sel}${CK}</span>`  // fixed label · chooser · tick
     : btn(i, `<span><b>${EH(i[2])}</b>${i[3] ? `<span class="sm muted">${EH(i[3])}</span>` : ""}</span>${i === now ? CK : '<span class="corrck" aria-hidden="true"></span>'}`);
-  return `<span class="corrw"><button type="button" data-o="${o.wire || "corr"}" class="corrb${now === items[0] ? "" : " on"}" aria-haspopup="true" aria-expanded="false"${o.dis ? ` disabled title="${o.dis}"` : ` title="${EH(tip)}"`} aria-label="${EH(tip)}">${now === items[0] && o.idle ? CIC[o.idle] : CIC[now[1]]}<span aria-hidden="true">&#9662;</span></button>
-    <span class="corrm" role="group" aria-label="${EH(ttl)}" hidden>${items.map(row).join("")}</span></span>`;
+  return { now, on: now !== items[0], rows: items.map(row).join("") };
 }
-function corrWire(/** @type {HTMLElement & { disabled: boolean }} */ x, /** @type {(v: string) => void} */ pick) {  // pick("" | "f<k>" | "tract" | "snip")
+function corrWidget(/** @type {Pannello} */ p, /** @type {Bag} */ o) {
+  const g = /** @type {Bag[]} */ (o.grp || [o]).map(q => corrRows(p, q)), on = g.filter(x => x.on), ttl = o.title || I18N.t("corr.button.title"), tip = ttl + (on.length ? ": " + on.map(x => x.now[4] || x.now[2]).join(" · ") : "");
+  const body = o.grp ? g.map((x, i) => `<fieldset class="corrg" data-g="${i}"${o.grp[i].dis ? ` disabled title="${o.grp[i].dis}"` : ""}><legend>${EH(o.grp[i].head)}</legend>${x.rows}</fieldset>`).join("") : g[0].rows;
+  return `<span class="corrw"><button type="button" data-o="corr" class="corrb${on.length ? " on" : ""}" aria-haspopup="true" aria-expanded="false"${o.dis ? ` disabled title="${o.dis}"` : ` title="${EH(tip)}"`} aria-label="${EH(tip)}">${on.length === 1 ? CIC[on[0].now[1]] : CIC[o.idle || "none"]}<span aria-hidden="true">&#9662;</span></button>
+    <span class="corrm" role="group" aria-label="${EH(ttl)}" hidden>${body}</span></span>`;
+}
+function corrWire(/** @type {HTMLElement & { disabled: boolean }} */ x, /** @type {(v: string, g?: string) => void} */ pick) {  // pick("" | "f<k>" | "tract" | "snip", group of «Sottrazione»)
   const m = /** @type {HTMLElement} */ (/** @type {ParentNode} */ (x.parentNode).querySelector(".corrm")), items = () => [...m.querySelectorAll("button:not(:disabled),select")];
   const shut = (/** @type {boolean} */ back) => { m.hidden = true; x.setAttribute("aria-expanded", "false"); if (back) x.focus(); };
   x.onclick = () => { m.hidden = !m.hidden; x.setAttribute("aria-expanded", String(!m.hidden)); if (!m.hidden) { m.style.left = ""; const o = m.getBoundingClientRect().right + 8 - document.documentElement.clientWidth; if (o > 0) m.style.left = -o + "px"; (m.querySelector(".corri.on:not(:disabled)") || items()[0] || m).focus(); } };  // kept in the page (clientWidth: an iPad zooms innerWidth out)
   x.onkeydown = (/** @type {KeyboardEvent} */ e) => { if ((e.key === "ArrowDown" || e.key === "ArrowUp") && m.hidden && !x.disabled) { e.preventDefault(); x.click(); } };
-  m.querySelectorAll("[data-c]").forEach((/** @type {HTMLElement} */ b) => b.onclick = () => { shut(false); pick(/** @type {string} */ (b.dataset.c)); });
+  m.querySelectorAll("[data-c]").forEach((/** @type {HTMLElement} */ b) => b.onclick = () => { shut(false); pick(/** @type {string} */ (b.dataset.c), /** @type {HTMLElement} */ (b.closest("[data-g]"))?.dataset.g); });
   const cf = m.querySelector('[data-o="corrf"]'); if (cf) cf.onchange = () => { shut(false); pick("f" + cf.value); };
   m.onkeydown = (/** @type {KeyboardEvent} */ e) => {  // arrows move between the entries, Enter activates (native), Esc closes and gives the focus back
     if (e.key === "Escape") { e.stopPropagation(); shut(true); return; }
@@ -704,8 +707,8 @@ function ctl(/** @type {Pannello} */ p) {
     const blanks = TF.filter((/** @type {MzFile} */ x) => x.kind !== "mrm" || p.type === "mrm"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
   const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);  // an old notebook may point to a file that is not marked as blank: keep it
   const fo0 = p.fondo || { mode: "none", w: 1 }, fm = fo0.mode, fval = FONDOP.is(fo0) ? "flat" : fm === "tract" || p._pickIbk ? "tract" : fm === "auto" ? "snip" : "";
-  const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), idle: "file", dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
-    + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
+  const corr = corrWidget(p, { grp: [{ files: bkList, cur: bkOn ? "f" + p.bk : "", parts: ["blank"], head: I18N.t("corr.from.file"), dis: mrmP ? NOMRM : "" },
+    { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], head: I18N.t("corr.from.bg") }], title: I18N.t("corr.sub.title"), idle: "msub", dis: ms2c ? NOMS2 : "" })
     + corrInfo(p)
     + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" data-num="0.2:" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
@@ -796,8 +799,7 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "split") x.onclick = () => splitPanel(p);
     else if (k === "rt0" || k === "rt1" || k === "mz0" || k === "mz1") window.XICBORDI?.range(p, x);  // xic-bordi.js: the pairs of the «Range» popover
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
-    else if (k === "corr") corrWire(x, (/** @type {string} */ v) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
-    else if (k === "bkg") corrWire(x, (/** @type {string} */ v) => setFondo(p, v));
+    else if (k === "corr") corrWire(x, (/** @type {string} */ v, /** @type {string|undefined} */ g) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : g === "1" ? setFondo(p, v) : setSub(p, v)));
     else if (k === "cinfo") corrInfoWire(p, x);
     else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
         else x.onchange = () => choosePanelOption(p, k, x);
