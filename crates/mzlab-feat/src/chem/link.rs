@@ -1,5 +1,5 @@
 //! `link/1`: the outside lookups of the Draw right-click menu (PubChem, ChEBI, BioTransformer) for the selection or the whole drawing. The page
-//! never fetches them: it opens the URL in a new tab only when the user clicks, and copies `copy` first when the site takes no structure in its URL.
+//! never fetches them: it opens the URL in a new tab only when the user clicks, and copies `copy` first (the SMILES, for a site whose URL may not prefill it).
 //! Here the URLs are built with RFC 3986 percent-encoding (every byte outside the unreserved set), so a SMILES or InChI with `#`, `+`, `/`, `[`, `=`
 //! or `@` reaches the site intact. A part defaults to the substructure search, the whole drawing to the exact one.
 
@@ -27,9 +27,19 @@ struct Link {
 }
 
 fn links(smiles: &str, inchi: Option<&str>, preferred: &'static str) -> Vec<Link> {
+    // PubChem's search page reads `#query=` (and `&tab=` for similarity or substructure) from the fragment; the SMILES is copied too, so a
+    // prefill PubChem ignores costs only a paste
     let pubchem = |id| Link {
         id,
-        url: "https://pubchem.ncbi.nlm.nih.gov/".into(),
+        url: format!(
+            "https://pubchem.ncbi.nlm.nih.gov/#query={}{}",
+            pct(smiles),
+            match id {
+                "pubchem-similar" => "&tab=similarity",
+                "pubchem-sub" => "&tab=substructure",
+                _ => "",
+            }
+        ),
         copy: Some(smiles.into()),
     };
     // the preferred PubChem search first, then the others in their fixed order

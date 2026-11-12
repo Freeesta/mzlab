@@ -52,3 +52,15 @@ fn bad_requests_keep_the_key() {
         assert_eq!(link_json(r).unwrap_err().key, "error.link.request", "{r}");
     }
 }
+
+#[test]
+fn pubchem_urls_carry_the_query_and_the_tab() {
+    let r = link_json(r#"{"smiles":"C#N","part":false}"#).unwrap();
+    for row in [
+        r#"{"id":"pubchem-exact","url":"https://pubchem.ncbi.nlm.nih.gov/#query=C%23N","copy":"C#N"}"#,
+        r#"{"id":"pubchem-similar","url":"https://pubchem.ncbi.nlm.nih.gov/#query=C%23N&tab=similarity","copy":"C#N"}"#,
+        r#"{"id":"pubchem-sub","url":"https://pubchem.ncbi.nlm.nih.gov/#query=C%23N&tab=substructure","copy":"C#N"}"#,
+    ] {
+        assert!(r.contains(row), "{row} in {r}");
+    }
+}

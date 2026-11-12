@@ -32,7 +32,8 @@ def link(req: dict) -> dict:
     inchi = req.get("inchi", "").strip()
     preferred = "pubchem-sub" if part else "pubchem-exact"
     order = [preferred] + [i for i in ("pubchem-exact", "pubchem-similar", "pubchem-sub") if i != preferred]
-    pubchem = [{"id": i, "url": "https://pubchem.ncbi.nlm.nih.gov/", "copy": smiles} for i in order]
+    tab = {"pubchem-exact": "", "pubchem-similar": "&tab=similarity", "pubchem-sub": "&tab=substructure"}
+    pubchem = [{"id": i, "url": "https://pubchem.ncbi.nlm.nih.gov/#query=" + quote(smiles, safe="") + tab[i], "copy": smiles} for i in order]
     chebi = [{"id": "chebi", "url": "https://www.ebi.ac.uk/chebi/search?query=" + quote(inchi, safe=""), "copy": None}] if inchi.startswith("InChI=") else []
     bio = [{"id": "biotransformer", "url": "https://biotransformer.ca/new", "copy": smiles}]
     return {"format": "link/1", "part": part, "preferred": preferred, "links": pubchem + chebi + bio}

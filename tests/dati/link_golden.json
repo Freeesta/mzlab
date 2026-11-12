@@ -5,7 +5,7 @@
    "inchi": "InChI=1S/C2H6O/c1-2-3/h3H,2H2,1H3",
    "part": false
   },
-  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"CCO\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"CCO\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"CCO\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FC2H6O%2Fc1-2-3%2Fh3H%2C2H2%2C1H3\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"CCO\"}]}"
+  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=CCO\",\"copy\":\"CCO\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=CCO&tab=similarity\",\"copy\":\"CCO\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=CCO&tab=substructure\",\"copy\":\"CCO\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FC2H6O%2Fc1-2-3%2Fh3H%2C2H2%2C1H3\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"CCO\"}]}"
  },
  {
   "request": {
@@ -13,7 +13,7 @@
    "inchi": "InChI=1S/H3N/h1H3/p+1",
    "part": true
   },
-  "link": "{\"format\":\"link/1\",\"part\":true,\"preferred\":\"pubchem-sub\",\"links\":[{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"[NH4+]\"},{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"[NH4+]\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"[NH4+]\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FH3N%2Fh1H3%2Fp%2B1\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"[NH4+]\"}]}"
+  "link": "{\"format\":\"link/1\",\"part\":true,\"preferred\":\"pubchem-sub\",\"links\":[{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=%5BNH4%2B%5D&tab=substructure\",\"copy\":\"[NH4+]\"},{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=%5BNH4%2B%5D\",\"copy\":\"[NH4+]\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=%5BNH4%2B%5D&tab=similarity\",\"copy\":\"[NH4+]\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FH3N%2Fh1H3%2Fp%2B1\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"[NH4+]\"}]}"
  },
  {
   "request": {
@@ -21,7 +21,7 @@
    "inchi": "InChI=1S/CHN/c1-2/h1H",
    "part": false
   },
-  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"C#N\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"C#N\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"C#N\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FCHN%2Fc1-2%2Fh1H\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"C#N\"}]}"
+  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=C%23N\",\"copy\":\"C#N\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=C%23N&tab=similarity\",\"copy\":\"C#N\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=C%23N&tab=substructure\",\"copy\":\"C#N\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FCHN%2Fc1-2%2Fh1H\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"C#N\"}]}"
  },
  {
   "request": {
@@ -29,7 +29,7 @@
    "inchi": "InChI=1S/C3H7NO2/c1-2(4)3(5)6/h2H,4H2,1H3,(H,5,6)/t2-/m0/s1",
    "part": false
   },
-  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"N[C@@H](C)C(=O)O\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"N[C@@H](C)C(=O)O\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"N[C@@H](C)C(=O)O\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FC3H7NO2%2Fc1-2%284%293%285%296%2Fh2H%2C4H2%2C1H3%2C%28H%2C5%2C6%29%2Ft2-%2Fm0%2Fs1\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"N[C@@H](C)C(=O)O\"}]}"
+  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=N%5BC%40%40H%5D%28C%29C%28%3DO%29O\",\"copy\":\"N[C@@H](C)C(=O)O\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=N%5BC%40%40H%5D%28C%29C%28%3DO%29O&tab=similarity\",\"copy\":\"N[C@@H](C)C(=O)O\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=N%5BC%40%40H%5D%28C%29C%28%3DO%29O&tab=substructure\",\"copy\":\"N[C@@H](C)C(=O)O\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FC3H7NO2%2Fc1-2%284%293%285%296%2Fh2H%2C4H2%2C1H3%2C%28H%2C5%2C6%29%2Ft2-%2Fm0%2Fs1\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"N[C@@H](C)C(=O)O\"}]}"
  },
  {
   "request": {
@@ -37,14 +37,14 @@
    "inchi": "InChI=1S/C4H8/c1-3-4-2/h3-4H,1-2H3/b4-3+",
    "part": true
   },
-  "link": "{\"format\":\"link/1\",\"part\":true,\"preferred\":\"pubchem-sub\",\"links\":[{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"C/C=C/C\"},{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"C/C=C/C\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"C/C=C/C\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FC4H8%2Fc1-3-4-2%2Fh3-4H%2C1-2H3%2Fb4-3%2B\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"C/C=C/C\"}]}"
+  "link": "{\"format\":\"link/1\",\"part\":true,\"preferred\":\"pubchem-sub\",\"links\":[{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=C%2FC%3DC%2FC&tab=substructure\",\"copy\":\"C/C=C/C\"},{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=C%2FC%3DC%2FC\",\"copy\":\"C/C=C/C\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=C%2FC%3DC%2FC&tab=similarity\",\"copy\":\"C/C=C/C\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FC4H8%2Fc1-3-4-2%2Fh3-4H%2C1-2H3%2Fb4-3%2B\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"C/C=C/C\"}]}"
  },
  {
   "request": {
    "smiles": "CC(=O)[O-]",
    "part": false
   },
-  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"CC(=O)[O-]\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"CC(=O)[O-]\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"CC(=O)[O-]\"},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"CC(=O)[O-]\"}]}"
+  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=CC%28%3DO%29%5BO-%5D\",\"copy\":\"CC(=O)[O-]\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=CC%28%3DO%29%5BO-%5D&tab=similarity\",\"copy\":\"CC(=O)[O-]\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=CC%28%3DO%29%5BO-%5D&tab=substructure\",\"copy\":\"CC(=O)[O-]\"},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"CC(=O)[O-]\"}]}"
  },
  {
   "request": {
@@ -52,7 +52,7 @@
    "inchi": " InChI=1S/CH4/h1H4/i1+1 ",
    "part": true
   },
-  "link": "{\"format\":\"link/1\",\"part\":true,\"preferred\":\"pubchem-sub\",\"links\":[{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"[13CH4]\"},{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"[13CH4]\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"[13CH4]\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FCH4%2Fh1H4%2Fi1%2B1\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"[13CH4]\"}]}"
+  "link": "{\"format\":\"link/1\",\"part\":true,\"preferred\":\"pubchem-sub\",\"links\":[{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=%5B13CH4%5D&tab=substructure\",\"copy\":\"[13CH4]\"},{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=%5B13CH4%5D\",\"copy\":\"[13CH4]\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=%5B13CH4%5D&tab=similarity\",\"copy\":\"[13CH4]\"},{\"id\":\"chebi\",\"url\":\"https://www.ebi.ac.uk/chebi/search?query=InChI%3D1S%2FCH4%2Fh1H4%2Fi1%2B1\",\"copy\":null},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"[13CH4]\"}]}"
  },
  {
   "request": {
@@ -60,6 +60,6 @@
    "inchi": "",
    "part": false
   },
-  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"c1ccccc1Cl\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"c1ccccc1Cl\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/\",\"copy\":\"c1ccccc1Cl\"},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"c1ccccc1Cl\"}]}"
+  "link": "{\"format\":\"link/1\",\"part\":false,\"preferred\":\"pubchem-exact\",\"links\":[{\"id\":\"pubchem-exact\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=c1ccccc1Cl\",\"copy\":\"c1ccccc1Cl\"},{\"id\":\"pubchem-similar\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=c1ccccc1Cl&tab=similarity\",\"copy\":\"c1ccccc1Cl\"},{\"id\":\"pubchem-sub\",\"url\":\"https://pubchem.ncbi.nlm.nih.gov/#query=c1ccccc1Cl&tab=substructure\",\"copy\":\"c1ccccc1Cl\"},{\"id\":\"biotransformer\",\"url\":\"https://biotransformer.ca/new\",\"copy\":\"c1ccccc1Cl\"}]}"
  }
 ]
