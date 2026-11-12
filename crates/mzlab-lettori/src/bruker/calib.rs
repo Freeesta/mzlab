@@ -64,4 +64,33 @@ mod test {
         assert!((m - 405.164).abs() < 1e-3, "{m}");
         assert!(c.mz(2.0e5) < c.mz(2.1e5));
     }
+
+    #[test]
+    fn the_quadratic_and_offset_terms_invert_the_forward_law() {
+        let c = MzCal {
+            model: 1,
+            timebase: 0.125,
+            delay: 18502.75,
+            c: [280.0, 150_000.0, 2.0, 0.0, 0.5],
+            ..MzCal::default()
+        };
+        // t = C0 + k·√(m/z + C4) + C2·(m/z) for m/z 400, back to its TOF index
+        let k = 1e6 / c.c[1].sqrt();
+        let t = c.c[0] + k * (400.0f64 + c.c[4]).sqrt() + c.c[2] * 400.0;
+        let m = c.mz((t - c.delay) / c.timebase);
+        assert!((m - 400.0).abs() < 1e-6, "{m}");
+    }
+
+    #[test]
+    fn the_temperature_factor_adds_both_terms() {
+        let c = MzCal {
+            temp: [25.0, 30.0],
+            coef: [2.0, 3.0],
+            ..MzCal::default()
+        };
+        // 1 - 1e-6·(2·(26 - 25) + 3·(32 - 30)) = 1 - 8e-6
+        assert!((c.factor(26.0, 32.0) - (1.0 - 8e-6)).abs() < 1e-12);
+        assert_eq!(c.factor(25.0, 30.0), 1.0);
+        assert_eq!(c.factor(f64::NAN, 30.0), 1.0);
+    }
 }
