@@ -428,7 +428,7 @@ function plotCaption(/** @type {Pannello} */ p) {
   const parts = [];
   if (fn) parts.push(fn + (pol ? ` (${pol})` : ""));
   if (p.type === "chrom") {
-    parts.push((p.kind || "TIC").toUpperCase());
+    parts.push(kindUp(p) || "TIC");
   } else if (p.type === "xic") {
     const trLab = (p.traces || []).map((/** @type {Traccia} */ t) => t.label || ("m/z " + t.mz.toFixed(mzd(p)))).join(", ");
     parts.push("XIC" + (trLab ? ` · ${trLab}` : ""));
@@ -571,7 +571,7 @@ function plotName(/** @type {Pannello} */ p) {
   const rtm = p.r0 != null ? "RT" + ((p.r0 + p.r1) / 2).toFixed(1) : "";
   let parts;
   const pr = p.prec != null && p.prec !== "" ? "prec" + +(+p.prec).toFixed(2) : "";  // the ion a panel belongs to is in its file name too
-  if (p.type === "chrom") parts = [p.kind.toUpperCase() + (p.kind === "pda" && p.mz0 != null ? "-" + p.mz0 + (p.mz1 != null && p.mz1 !== p.mz0 ? "-" + p.mz1 : "") + "nm" : ""), pr, ft];
+  if (p.type === "chrom") parts = [kindUp(p) + (p.kind === "pda" && p.mz0 != null ? "-" + p.mz0 + (p.mz1 != null && p.mz1 !== p.mz0 ? "-" + p.mz1 : "") + "nm" : ""), pr, ft];
   else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, (/** @type {number} */ v) => +v.toFixed(mzd(p))) : "", ft];
   else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, (/** @type {string} */ v) => String(v).replace(">", "-")) : "", ft];
   else if (p.type === "spec") parts = [p.uv ? "UV" : p.level > 1 ? I18N.t("export.file.spectrumMsn", { n: p.level }) : I18N.t("export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, p.level > 1 ? pr : "", rtm];
@@ -581,7 +581,7 @@ function plotName(/** @type {Pannello} */ p) {
 }
 function plotMeta(/** @type {Pannello} */ p) {
   const a = p._a || {}, fs = plotFiles(p), d = [];
-  d.push({ chrom: I18N.t("export.desc.chrom", { kind: (p.kind || "").toUpperCase() }), xic: "XIC (" + p.traces.map((/** @type {Traccia} */ t) => t.w == null ? t.mz + " +-" + p.tol : (t.mz - t.w).toFixed(mzd(p)) + "-" + (t.mz + t.w).toFixed(mzd(p))).join("; ") + ")", mrm: I18N.t("export.desc.mrm"), spec: I18N.t("export.desc.spec", { ms: "MS" + (p.level || 1) }), map: I18N.t("export.desc.map") }[p.type] || p.type);
+  d.push({ chrom: I18N.t("export.desc.chrom", { kind: kindUp(p) }), xic: "XIC (" + p.traces.map((/** @type {Traccia} */ t) => t.w == null ? t.mz + " +-" + p.tol : (t.mz - t.w).toFixed(mzd(p)) + "-" + (t.mz + t.w).toFixed(mzd(p))).join("; ") + ")", mrm: I18N.t("export.desc.mrm"), spec: I18N.t("export.desc.spec", { ms: "MS" + (p.level || 1) }), map: I18N.t("export.desc.map") }[p.type] || p.type);
   const mzs = a.sr ? [...new Set(a.sr.map((/** @type {Bag} */ s) => s.mz).filter((/** @type {number} */ v) => v != null))] : [];
   if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(mzd(p))).join(", "));
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${/** @type {number} */ (p.r1).toFixed(2)} min`);

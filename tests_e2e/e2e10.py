@@ -24,7 +24,7 @@ try:
             with pg.expect_file_chooser() as fc: pg.click("#m-load")
             fc.value.set_files(str(DAM)); pg.wait_for_timeout(1500)
             t = pg.inner_text("#bigdlg")
-            assert "Manca il metodo" not in t and "Curtain gas (CUR)" in t and "Metodo cromatografico (LC)" in t and "PDA" in t and DAM.name in t, t[:300]
+            assert "Manca il metodo" not in t and "Curtain gas (CUR)" in t and "Metodo cromatografico (LC)" in t and "DAD" in t and DAM.name in t, t[:300]
             pg.screenshot(path=SH + "101_method_loaded.png")
         step("loading the .dam from the Metodo window shows all parameters", load_here)
         def two():

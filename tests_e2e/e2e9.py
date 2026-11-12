@@ -19,7 +19,7 @@ try:
             n = pg.evaluate("E.panels[0]._a.sr.length"); assert n >= 3, n          # one trace per Full Scan file (other types live in their own tab)
             apex = pg.evaluate("(()=>{const s=E.panels[0]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return s.x[m]})()")
             print("PDA apex of first file", apex); assert 13 < apex < 19
-            assert "PDA" in pg.evaluate("plotName(E.panels[0])")
+            assert "DAD" in pg.evaluate("plotName(E.panels[0])")
             pg.screenshot(path=SH + "90_pda.png")
         step("PDA kind: one trace per file incl. MRM", pda)
         def noxls():

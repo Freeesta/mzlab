@@ -50,7 +50,7 @@ I18N.add("it", {
   "method.runTime": "Durata della corsa",
   "method.oven": "Temperatura del forno",
   "method.lc.title": "Metodo cromatografico (LC)",
-  "method.pda.title": "Rivelatore PDA (UV)",
+  "method.pda.title": "Rivelatore DAD (UV)",
   "method.pda.range": "Intervallo di lunghezze d'onda",
   "method.pda.value": "{start}-{stop} nm (passo {step} nm)",
   "method.none": "Apri prima almeno un file.",
