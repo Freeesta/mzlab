@@ -203,3 +203,7 @@ fn iso(t: &str) -> Option<String> {
         &d[12..]
     ))
 }
+
+#[cfg(test)]
+#[path = "header_tests.rs"]
+mod tests;
