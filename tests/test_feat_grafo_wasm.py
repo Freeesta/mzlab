@@ -1,5 +1,5 @@
 """The structure bridge of mzFinder in WebAssembly (crates/mzlab-feat-grafo-wasm) answers a SMILES with the formula, the groups and the cleavage products that
-the Rust library gives natively, the piece labels and the bond cuts of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
+the Rust library gives natively, the piece labels, the bond cuts and the analysis card (`anal/1`, every golden molecule) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import json
 import shutil
@@ -119,3 +119,15 @@ def test_labels_with_a_radical_mark_equal_the_cli(pkg, tmp_path):
     methyl, aminium = json.loads(site)["structures"]
     assert (methyl["unpaired"], methyl["odd"], methyl["kind"]) == (1, True, "radical")
     assert (aminium["kind"], aminium["electrons"]) == ("radicalCation", 9) and aminium["odd"]
+
+
+def test_analysis_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path):
+    # every golden molecule of tools/analisi_riferimento.py, plus CuCl2(NH3)2 (Cu: the abundances of `isotopi-tutti`, on in the .wasm as in the app)
+    cases = [c["request"] for c in json.loads((ROOT / "tests/dati/anal_golden.json").read_text(encoding="utf-8"))]
+    cases.append({"atoms": [{"el": "Cl"}, {"el": "Cu"}, {"el": "Cl"}, {"el": "N", "h": 3}, {"el": "N", "h": 3}]})
+    for i, c in enumerate(cases):
+        req = tmp_path / f"anal{i}.json"
+        req.write_text(json.dumps(c), encoding="utf-8")
+        site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "analysis")
+        assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-anal", str(req)), c
+    assert [c["el"] for c in json.loads(site)["composition"]] == ["H", "Cl", "Cu", "N"]

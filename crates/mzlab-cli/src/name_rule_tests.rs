@@ -43,6 +43,7 @@ const COMMANDS: &[&[&str]] = &[
     &["ion-pattern"],
     &["ion-mz"],
     &["mol-label"],
+    &["mol-anal"],
     &["mol-check"],
     &["mol-cut"],
     &["mol-search"],
