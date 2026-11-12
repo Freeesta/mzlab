@@ -3,7 +3,7 @@
 //! the index rows that place no block (`idx::place`) and the MRM cycles with a NaN or infinite cps (`chromatograms::Cycles`).
 
 use super::reader::WiffReader;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::readers::{Losses, Reader, DAMAGED, TRUNCATED};
 
 impl WiffReader {
@@ -26,5 +26,18 @@ impl WiffReader {
             return Ok(Losses::of(p.cycles.read + cut + bad, p.cycles.read, cause).in_cycles());
         }
         Ok(Losses::of(n + cut + bad, n, cause))
+    }
+}
+
+/// What `build` of one injection gave: a damaged injection (`err.file.wiff*`: every block damaged, a block that cannot be decoded) keeps that error as its
+/// refusal (`readable`, `Reader::refused`) and is `Ok` here, so the other injections of the pair still open and convert; any other error (memory, a read
+/// that fails) is the caller's.
+pub(super) fn isolate(built: Result<()>, failure: &mut Option<Error>) -> Result<()> {
+    match built {
+        Err(e) if e.key.starts_with("err.file.wiff") => {
+            *failure = Some(e);
+            Ok(())
+        }
+        r => r,
     }
 }

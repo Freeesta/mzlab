@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::convert;
+use super::super::convert;
 use crate::convert_fixtures::folder;
 use crate::flow_run_tests::p;
 

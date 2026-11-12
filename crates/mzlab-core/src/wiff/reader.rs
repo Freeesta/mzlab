@@ -3,7 +3,7 @@
 
 use super::reader_extra::extra_of;
 use super::window::Window;
-use super::{container_within, samples, scan, Record, Wiff, SAMPLES};
+use super::{container_within, losses::isolate, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::method::{sha1_hex, Source, SrcFile};
@@ -48,8 +48,7 @@ pub(super) struct Part {
     pub(super) damaged: usize,
     indice: Vec<ScanEntry>,
     chroms: Option<Vec<Chromatogram>>,
-    /// The MRM cycles read and left out as damaged when `chroms` was read.
-    pub(super) cycles: super::chromatograms::Cycles,
+    pub(super) cycles: super::chromatograms::Cycles, // the MRM cycles read and left out as damaged when `chroms` was read
     /// Base peak intensity of each scan as the mzML writer saw it (NaN: not yet) and how many it has seen: the BPC of the full scan experiments is listed
     /// once all of them were seen, so that listing the chromatograms never decodes a scan.
     pub(super) bpc: Vec<f64>,
@@ -127,7 +126,7 @@ impl WiffReader {
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))?;
         if !p.ready {
             p.w.readable()?;
-            isolate(p, |p| build(p, &mut self.scan, self.scan_len, self.scan_member))?;
+            isolate(build(p, &mut self.scan, self.scan_len, self.scan_member), &mut p.w.failure)?;
             p.w.readable()?;
             // the list of samples told 0 scans for an injection `apri_solo` left out
             if let Some(k) = self.campioni.get_mut(c) {
@@ -147,8 +146,7 @@ impl WiffReader {
             p.w.readable()?;
             let mut win = Window::new(&mut self.scan, self.scan_len);
             let counts = Some(&p.counts[..]).filter(|c| p.ready && c.len() == p.w.records.len());
-            let (chroms, cycles) = p.w.chromatograms(&mut win, counts)?;
-            (p.chroms, p.cycles) = (Some(chroms), cycles);
+            (p.chroms, p.cycles) = p.w.chromatograms(&mut win, counts).map(|(t, n)| (Some(t), n))?;
         }
         Ok(p.chroms.as_deref().unwrap_or_default())
     }
@@ -353,7 +351,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
         let mut part = Part::new(w);
         // a sample the engine cannot read is left unbuilt: `pronta` refuses it when it is asked for, the others open
         if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
-            isolate(&mut part, |p| build(p, &mut scan, scan_len, membro))?;
+            isolate(build(&mut part, &mut scan, scan_len, membro), &mut part.w.failure)?;
         }
         raw_names.push((
             s,
@@ -416,7 +414,7 @@ fn add_unindexed(
         limits.ok_entries(*total)?;
         let mut part = Part::new(w);
         if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
-            isolate(&mut part, |p| build(p, scan, scan_len, membro))?;
+            isolate(build(&mut part, scan, scan_len, membro), &mut part.w.failure)?;
         }
         raw_names.push((s, None));
         campioni.push(Sample {
@@ -428,19 +426,6 @@ fn add_unindexed(
         parti.push(part);
     }
     Ok(counts)
-}
-
-/// `build` of one injection: a damaged injection (`err.file.wiff*`: every block damaged, a block that cannot be decoded) keeps that error as its refusal
-/// (`readable`, `Reader::refused`) and is `Ok` here, so the other injections of the pair still open and convert; any other error (memory, a read that
-/// fails) is the caller's.
-fn isolate(p: &mut Part, f: impl FnOnce(&mut Part) -> Result<()>) -> Result<()> {
-    match f(p) {
-        Err(e) if e.key.starts_with("err.file.wiff") => {
-            p.w.failure = Some(e);
-            Ok(())
-        }
-        r => r,
-    }
 }
 
 /// The index of an injection: one row per non-empty scan block whose bytes agree with its head (the blocks are read through a window, front to back).
