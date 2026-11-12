@@ -3,7 +3,7 @@
 //! so listing a run touches no peak data. Peaks are what the file holds (the centroid list of a scan, its profile when it has no other), as `raw::read`.
 
 use opentfraw::extra::scan_extras_with;
-use opentfraw::mzml::{extract_arrays, extract_spectrum, scan_metadata, ScanMetadata};
+use opentfraw::mzml::{extract_arrays, scan_metadata, ScanMetadata};
 use opentfraw::{ExtraFields, RawFileReader, ScanParams};
 
 use crate::error::{Error, Result};
@@ -11,7 +11,7 @@ use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::mzmlwrite::{Header, SpectrumExtra};
 use crate::readers::{
     ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Losses, Position, Reader,
-    ReaderEntry, Sample, ScanEntry, CONTRATTO, EVENTS_REFUSED, TRUNCATED,
+    ReaderEntry, Sample, ScanEntry, CONTRATTO, EVENTS_REFUSED, RAW_DAMAGED, TRUNCATED,
 };
 use stream::Stream;
 #[cfg(test)]
@@ -56,6 +56,9 @@ pub struct RawReader {
     analogiche: Option<Vec<(String, ChromKind, opentfraw::AnalogTrace)>>,
     /// What the metadata of the scans leave to a notice, counted while the index is built.
     notes: crate::raw::ScanNotes,
+    /// Rows whose packet cannot be read: the ones the open found pointing past the end of the file, then any whose decoding fails. Each gives its row with
+    /// no points and is counted in `losses` (`warn.raw.damaged`); one damaged scan never refuses the file.
+    damaged: std::collections::BTreeSet<usize>,
 }
 
 fn raw_error(e: impl std::fmt::Display) -> Error {
@@ -91,6 +94,7 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
             entry(&raw, &m)
         })
         .collect();
+    let damaged = raw.damaged.iter().map(|&k| k as usize).collect();
     let stem = nome
         .rsplit_once('.')
         .map_or(&nome[..], |(s, _)| s)
@@ -110,14 +114,17 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         sha1,
         analogiche: None,
         notes,
+        damaged,
     }))
 }
 
 /// The row of the index of a scan, from its metadata alone.
 fn entry(raw: &RawFileReader, m: &ScanMetadata) -> ScanEntry {
+    // a scan the open found pointing past the end of the file has no place to read
     let at = raw
         .scan_index
         .get(m.index)
+        .filter(|_| raw.damaged.binary_search(&(m.index as u32)).is_err())
         .map(|e| (raw.data_addr.saturating_add(e.offset), e.data_size));
     ScanEntry {
         id: format!("controllerType=0 controllerNumber=1 scan={}", m.scan_number),
@@ -169,7 +176,8 @@ fn in_pascal(kind: ChromKind, mut t: opentfraw::AnalogTrace) -> opentfraw::Analo
 /// Id, kind and samples of every analog channel; two channels with the same name get the number of their controller after it.
 fn analogiche(l: &mut RawReader) -> &[(String, ChromKind, opentfraw::AnalogTrace)] {
     if l.analogiche.is_none() {
-        let traces = l.raw.analog_traces(&mut l.src).unwrap_or_default();
+        // a controller that cannot be read is left out; `metodo/1.avvisi` counts it (`method_raw::from_raw`)
+        let (traces, _) = l.raw.analog_traces_counted(&mut l.src);
         let mut out: Vec<(String, ChromKind, opentfraw::AnalogTrace)> = Vec::new();
         for t in traces {
             let double = out.iter().any(|(id, ..)| *id == t.name);
@@ -265,13 +273,17 @@ impl RawReader {
         u32::try_from(k).map_err(|_| raw_error("scan number"))
     }
 
-    /// Scan `k` of sample `c` decoded, with the profile points when `profilo` and otherwise the centroids the file holds.
+    /// Scan `k` of sample `c` decoded, with the profile points when `profilo` and otherwise the centroids the file holds; a scan whose packet cannot be
+    /// read gives its row with no points and is counted (`damaged`).
     fn decodificata(&mut self, c: usize, k: usize, profilo: bool) -> Result<Spectrum> {
         self.one(c)?;
         let idx = self.row(k)?;
-        let rec = extract_spectrum(&self.raw, &mut self.src, idx, profilo)
+        let (s, bad) = crate::raw::scan_or_row(&self.raw, &mut self.src, idx, profilo)
             .ok_or_else(|| raw_error("scan cannot be decoded"))?;
-        Ok(crate::raw::spectrum(rec))
+        if bad {
+            self.damaged.insert(k);
+        }
+        Ok(s)
     }
 }
 
@@ -314,8 +326,14 @@ impl Reader for RawReader {
     fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         self.one(c)?;
         let idx = self.row(k)?;
-        let (mz, intensity, mode) = extract_arrays(&self.raw, &mut self.src, idx)
-            .ok_or_else(|| raw_error("scan cannot be decoded"))?;
+        let arrays = (!self.damaged.contains(&k))
+            .then(|| extract_arrays(&self.raw, &mut self.src, idx))
+            .flatten();
+        // a packet that cannot be read: the row with no points, counted
+        let (mz, intensity, mode) = arrays.unwrap_or_else(|| {
+            self.damaged.insert(k);
+            (Vec::new(), Vec::new(), None)
+        });
         let v = self
             .indice
             .get(k)
@@ -352,12 +370,17 @@ impl Reader for RawReader {
     fn missing(&mut self, _c: usize) -> usize {
         crate::raw::cut_scans(&self.raw)
     }
-    /// A cut file lacks the scans past its end; a refused table of scan events leaves the scans after it without their event (read, level and polarity unknown).
+    /// A cut file lacks the scans past its end; a damaged scan (a packet that cannot be read) keeps its row with no points; a refused table of scan events
+    /// leaves the scans after it without their event (read, level and polarity unknown). The damaged ones are those found so far: asked after the scans
+    /// are decoded (index, conversion), the count is whole. A cut file counts its damaged scans with the cut ones, as the engine's external reader does.
     fn losses(&mut self, c: usize) -> Result<Losses> {
         self.one(c)?;
         let (n, cut) = (self.indice.len(), crate::raw::cut_scans(&self.raw));
+        let bad = self.damaged.len();
         Ok(if cut > 0 {
-            Losses::of(n + cut, n, TRUNCATED)
+            Losses::of(n + cut + bad, n, TRUNCATED)
+        } else if bad > 0 {
+            Losses::of(n, n - bad, RAW_DAMAGED)
         } else if crate::raw::events_refused(&self.raw) {
             Losses::of(n, self.notes.with_event, EVENTS_REFUSED)
         } else {

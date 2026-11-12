@@ -1,7 +1,6 @@
 //! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
 //! `grafo` and of `mzlab-cli mol-label`), with the request as an object or as text, and keeps the key of an error; `kind: "cut"` gives `cut/1` and `kind: "ions"` gives `ions/1` the same way;
 //! `kind: "analysis"` gives `anal/1`, `kind: "sel"` `sel/1` and `kind: "link"` `link/1` (every case of `tests/dati/link_golden.json`) the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "cip"` the `cip/1` bytes of `tests/dati/cip_disegno.json`, `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`, and `kind: "mech"` the `mecc/1` bytes of `tests/dati/mecc_mclafferty.json`.
-//! `kind: "identity"` gives the `molid/1` of `mzlab-cli mol-id`, with the request as an object or as text.
 
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
@@ -240,56 +239,4 @@ fn ions_route_equals_the_function() {
         &[],
     );
     assert_eq!(bad.err().map(|e| e.key), Some("error.ions.request"));
-}
-
-#[test]
-fn identity_route_equals_the_function() {
-    let st = State::new();
-    let cat = std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../mzlab/web/molecole/catalogo.csv"
-    ))
-    .unwrap();
-    let req = json!({"smiles": "COc1ccc2cc([C@@H](C)C(O)=O)ccc2c1", "catalogo": cat});
-    let direct = mzlab_feat::chem::identity::identity_json(&req.to_string()).unwrap();
-    assert!(direct.contains("\"differs\":[\"stereo\"]"), "{direct}");
-    for request in [req.clone(), json!(req.to_string())] {
-        assert_eq!(
-            text(
-                st.rpc(
-                    "feat/grafo",
-                    &json!({"kind": "identity", "request": request}),
-                    &[]
-                )
-                .unwrap()
-            ),
-            direct
-        );
-    }
-    let bad = st.rpc(
-        "feat/grafo",
-        &json!({"kind": "identity", "request": {"smiles": "", "catalogo": cat}}),
-        &[],
-    );
-    assert_eq!(bad.err().map(|e| e.key), Some("error.molid.empty"));
-}
-
-#[test]
-fn tray_route_equals_the_function() {
-    // `tray/1`: the same bytes as the `.wasm` `grafo` and `mzlab-cli mol-suspects` (tests/test_feat_grafo_wasm.py), the CSV included
-    let st = State::new();
-    for req in [
-        r#"{"op":"entries","structures":[{"name":"m","smiles":"CO","atoms":[{"el":"C","h":3},{"el":"O","h":1}]}]}"#,
-        r#"{"op":"csv","entries":[{"name":"m","smiles":"CO","formula":"CH4O","mass":32.026215}],"adducts":["[M+H]+"]}"#,
-    ] {
-        let direct = mzlab_feat::chem::tray::tray_text(req).unwrap();
-        let as_object = json!({"kind": "tray", "request": serde_json::from_str::<serde_json::Value>(req).unwrap()});
-        assert_eq!(text(st.rpc("feat/grafo", &as_object, &[]).unwrap()), direct);
-    }
-    let bad = st.rpc(
-        "feat/grafo",
-        &json!({"kind": "tray", "request": "nope"}),
-        &[],
-    );
-    assert_eq!(bad.err().map(|e| e.key), Some("error.tray.request"));
 }

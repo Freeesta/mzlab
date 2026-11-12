@@ -32,6 +32,12 @@ fn main() {
         std::fs::write(p, b).unwrap();
     };
     w("thermo/synt.raw", thermo::Raw::tsq(63, 12).bytes());
+    // one of every damaged unit: a controller before the MS one and an analog one that cannot be read, a scan pointing past the end, a record that does
+    // not decode; every other scan and the sound analog channel are read
+    let mut d = thermo::Raw::tsq(63, 12);
+    (d.stray_first, d.analog) = (true, vec![true, false]);
+    (d.entry_past_the_end, d.entry_too_big) = (Some(4), Some(7));
+    w("thermo_danneggiato/danneggiato.raw", d.bytes());
     w("bruker/synt.d/analysis.tdf", common_sqlite::minimal_tdf(3));
     w("bruker/synt.d/analysis.tdf_bin", common_sqlite::blocco2());
     // five frames, the copy of `tdf_bin` cut inside the fourth block: three spectra read, two counted as missing
