@@ -2552,7 +2552,6 @@ dependencies = [
 name = "mzlab-molid-wasm"
 version = "1.0.0"
 dependencies = [
- "mzlab-core",
  "mzlab-feat",
  "wasm-bindgen",
 ]
