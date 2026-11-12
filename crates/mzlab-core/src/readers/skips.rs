@@ -35,9 +35,12 @@ impl Skips {
                 Ok(s)
             }
             Err(e) if damages_one(&e) => {
-                let row = l.index_without_tic(c)?.get(k).cloned();
+                // a scan with no row of its own cannot be put in its place: the read stops
+                let Some(s) = l.index_without_tic(c)?.get(k).map(|r| empty(k, r)) else {
+                    return Err(e);
+                };
                 self.first.get_or_insert(e);
-                Ok(empty(k, row.as_ref()))
+                Ok(s)
             }
             Err(e) => Err(e),
         }
@@ -52,18 +55,15 @@ impl Skips {
 }
 
 /// Spectrum `k` with the header of its index row and no points.
-fn empty(k: usize, row: Option<&ScanEntry>) -> Spectrum {
+fn empty(k: usize, r: &ScanEntry) -> Spectrum {
     Spectrum {
         index: k,
-        id: row.map_or_else(|| format!("scan={}", k + 1), |r| r.id.clone()),
-        level: row.map_or(1, |r| r.livello),
-        rt: row.map_or(0.0, |r| r.rt),
-        polarity: row.map_or(0, |r| r.polarita),
-        profile: false,
-        filter: row.map_or_else(String::new, |r| r.filtro.clone()),
-        precursor: row.and_then(|r| r.precursore),
-        mz: Vec::new(),
-        intensity: Vec::new(),
-        wide: None,
+        id: r.id.clone(),
+        level: r.livello,
+        rt: r.rt,
+        polarity: r.polarita,
+        filter: r.filtro.clone(),
+        precursor: r.precursore,
+        ..Spectrum::default()
     }
 }

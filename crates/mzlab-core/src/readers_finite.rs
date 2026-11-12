@@ -9,14 +9,13 @@ use crate::readers::{
     damages_one, ChromatogramEntry, Field, FileSet, Format, Limits, Losses, Reader, Sample,
     ScanEntry, SPECTRUM_DAMAGED,
 };
-use std::collections::BTreeSet;
 
 pub struct Finished {
     inner: Box<dyn Reader>,
     /// The samples whose index has been checked (an index is read once and asked for many times).
     seen: Vec<bool>,
     /// (sample, scan) whose data did not decode (`readers::damages_one`): left out of a whole-sample read, counted in `losses`.
-    damaged: BTreeSet<(usize, usize)>,
+    damaged: Vec<(usize, usize)>,
 }
 
 impl Finished {
@@ -24,17 +23,15 @@ impl Finished {
         Finished {
             inner,
             seen: Vec::new(),
-            damaged: BTreeSet::new(),
+            damaged: Vec::new(),
         }
     }
-    /// `s` as it is, noting scan `k` of sample `c` when its data do not decode.
-    fn noted<T>(&mut self, (c, k): (usize, usize), s: Result<T>) -> Result<T> {
-        if let Err(e) = &s
-            && damages_one(e)
-        {
-            self.damaged.insert((c, k));
+    /// Notes scan `k` of sample `c` when its read failed with `e` because its data do not decode (one copy: three readers call it).
+    #[inline(never)]
+    fn note(&mut self, (c, k): (usize, usize), e: Option<&crate::Error>) {
+        if e.is_some_and(damages_one) && !self.damaged.contains(&(c, k)) {
+            self.damaged.push((c, k));
         }
-        s
     }
 }
 
@@ -119,18 +116,21 @@ impl Reader for Finished {
     }
     fn scan(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let s = spectrum(self.inner.scan(c, k), k);
-        self.noted((c, k), s)
+        self.note((c, k), s.as_ref().err());
+        s
     }
     fn scan_data(&mut self, c: usize, k: usize) -> Result<Spectrum> {
         let s = spectrum(self.inner.scan_data(c, k), k);
-        self.noted((c, k), s)
+        self.note((c, k), s.as_ref().err());
+        s
     }
     fn scan_profile(&mut self, c: usize, k: usize) -> Result<Option<Spectrum>> {
         let s = self
             .inner
             .scan_profile(c, k)
             .and_then(|s| s.map(|s| spectrum(Ok(s), k)).transpose());
-        self.noted((c, k), s)
+        self.note((c, k), s.as_ref().err());
+        s
     }
     fn scan_header(&mut self, c: usize, k: usize) -> Result<Vec<Field>> {
         self.inner.scan_header(c, k)
@@ -188,17 +188,13 @@ impl Reader for Finished {
     }
     // the spectra left out because their data do not decode count as not read; a cut file keeps its own cause
     fn losses(&mut self, c: usize) -> Result<Losses> {
-        let l = self.inner.losses(c)?;
-        let bad = self.damaged.range((c, 0)..(c + 1, 0)).count();
-        if bad == 0 {
-            return Ok(l);
+        let mut l = self.inner.losses(c)?;
+        let bad = self.damaged.iter().filter(|d| d.0 == c).count();
+        if bad > 0 && !l.partial() {
+            l.cause = SPECTRUM_DAMAGED;
         }
-        let cause = if l.partial() {
-            l.cause
-        } else {
-            SPECTRUM_DAMAGED
-        };
-        Ok(Losses::of(l.declared, l.read.saturating_sub(bad), cause))
+        l.read = l.read.saturating_sub(bad);
+        Ok(l)
     }
     #[cfg(feature = "sciex")]
     fn variant(&mut self, c: usize) -> bool {
