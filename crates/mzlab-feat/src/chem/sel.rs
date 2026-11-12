@@ -20,10 +20,10 @@ fn rad_codes(mf: &str, n: usize) -> Vec<i64> {
             .filter_map(|t| t.parse().ok())
             .collect();
         for p in v.get(1..).unwrap_or(&[]).chunks(2) {
-            if let [a, c] = p {
-                if (1..=n as i64).contains(a) {
-                    r[*a as usize - 1] = *c;
-                }
+            if let [a, c] = p
+                && (1..=n as i64).contains(a)
+            {
+                r[*a as usize - 1] = *c;
             }
         }
     }
