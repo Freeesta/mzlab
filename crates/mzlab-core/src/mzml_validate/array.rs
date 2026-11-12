@@ -28,7 +28,7 @@ impl Arr {
         for t in &self.terms {
             match t.as_str() {
                 "MS:1000514" => return Kind::Mz,
-                "MS:1000515" => return Kind::Intensity,
+                "MS:1000515" | "MS:1000821" => return Kind::Intensity,
                 "MS:1000595" => return Kind::Time,
                 _ => {}
             }
