@@ -97,4 +97,24 @@ mod tests {
         let n = b.len();
         assert!(read_mrm_cols(&mut b, n as u64, 0, n).is_err());
     }
+
+    fn cols(v: &[f32]) -> Option<(usize, Vec<(usize, f64)>)> {
+        let mut b = block(v);
+        let n = b.len();
+        let c = read_mrm_cols(&mut b, n as u64, 0, n).ok()??;
+        Some((c.width, c.points))
+    }
+
+    // 4 transitions: a cps, a run of two zeros, a cps; every transition gets its point
+    #[test]
+    fn sparse_block_fills_the_zero_runs() {
+        assert_eq!(
+            cols(&[-4.01, 7.0, -2.01, 9.0]),
+            Some((4, vec![(0, 7.0), (1, 0.0), (2, 0.0), (3, 9.0)]))
+        );
+        // a block that ends short of its transitions, a width below one and a dense block
+        assert_eq!(cols(&[-4.01, 7.0, -1.01]), None);
+        assert_eq!(cols(&[-0.5, 7.0]), None);
+        assert_eq!(cols(&[3.0, 4.0]), Some((2, vec![(0, 3.0), (1, 4.0)])));
+    }
 }
