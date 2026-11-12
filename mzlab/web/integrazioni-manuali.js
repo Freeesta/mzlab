@@ -78,8 +78,8 @@ function draw() {
   const trs = body.map((r, i) => {
     if (r[2] === "sum" && r[3] === "") return h`<tr class="manint-sum"><th scope="row">${chShown(r[0])}</th><td>${r[1]}</td><td>${t("canali.manint.sum")}</td><td></td><td></td><td></td><td class="num">${fmt(r[6], "area")}</td><td></td><td></td><td></td><td></td></tr>`;
     const rec = recOf(r), who = { ch: chShown(r[0]), s: r[2] };
-    const act = rec ? h`<button type="button" class="sec sm" data-go="${i}" aria-label="${t("canali.manint.show.aria", who)}">${t("canali.manint.show")}</button> <button type="button" class="sec sm" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}">${t("canali.manint.del")}</button>` : "";
-    return h`<tr><th scope="row">${chShown(r[0])}</th>${raw(r.slice(1).map((v, j) => h`<td${raw(j >= 2 && j <= 7 ? ' class="num"' : "")}>${fmt(v, head[j + 1])}</td>`).join(""))}<td>${raw(act)}</td></tr>`;
+    const act = rec ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
+    return h`<tr${raw(rec ? h` class="manint-go" data-go="${i}" tabindex="0" aria-label="${t("canali.manint.show.aria", who)}"` : "")}><th scope="row">${chShown(r[0])}</th>${raw(r.slice(1).map((v, j) => h`<td${raw(j >= 2 && j <= 7 ? ' class="num"' : "")}>${fmt(v, head[j + 1])}</td>`).join(""))}<td>${raw(act)}</td></tr>`;
   }).join("");
   const open = !el.querySelector("details") || /** @type {HTMLDetailsElement} */ (el.querySelector("details")).open;
   el.innerHTML = h`<details${raw(open ? " open" : "")}><summary><h3 id="manint-h">${t("canali.manint.title", { n })}</h3></summary>
@@ -87,17 +87,19 @@ function draw() {
 <button type="button" class="sec sm" data-dl>${t("canali.manint.csv")}</button>
 <button type="button" class="sec sm" data-copy>${t("canali.manint.copy")}</button><span class="sm" role="status" aria-live="polite" data-ok></span></div>
 <div class="manint-wrap" tabindex="0" role="region" aria-labelledby="manint-h"><table class="qq-tab"><caption>${t("canali.manint.caption")}</caption>
-<thead><tr>${raw(ths)}<th scope="col">${t("canali.manint.h.act")}</th></tr></thead><tbody>${raw(trs)}</tbody></table></div>
+<thead><tr>${raw(ths)}<th scope="col"><span class="sr-only">${t("canali.manint.h.act")}</span></th></tr></thead><tbody>${raw(trs)}</tbody></table></div>
 <p class="muted sm">${t("canali.manint.note")}</p></details>`;
   const ws = document.getElementById("v-workspace");
   el.hidden = !(ws && (ws.dataset.work === "panels" || ws.dataset.work === "table"));
   el.querySelector("[data-sums]")?.addEventListener("change", e => { st.sums = /** @type {HTMLInputElement} */ (e.target).checked; ask().then(() => { draw(); /** @type {HTMLElement | null} */ (card()?.querySelector("[data-sums]"))?.focus(); }); });
   el.querySelector("[data-dl]")?.addEventListener("click", () => G.dl(st.sums ? "manual-integrations-sums.csv" : "manual-integrations.csv", st.csv, "text/csv", { table: "manint" }));
   el.querySelector("[data-copy]")?.addEventListener("click", () => copy(all));
-  el.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
-    const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)]); if (!rec) return;
-    G.reveal(rec.p); G.draw(rec.p);
-  }));
+  /** A row shows its integration on the chart (click, Enter or Space); its X deletes it. @param {Element} b */
+  const show = b => { const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.go)]); if (rec) { G.reveal(rec.p); G.draw(rec.p); } };
+  el.querySelectorAll("tr[data-go]").forEach(b => {
+    b.addEventListener("click", e => { if (!/** @type {Element} */ (e.target).closest("button")) show(b); });
+    b.addEventListener("keydown", e => { const k = /** @type {KeyboardEvent} */ (e); if (k.target === b && (k.key === "Enter" || k.key === " ")) { k.preventDefault(); show(b); } });
+  });
   el.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
     const rec = recOf(body[Number(/** @type {HTMLElement} */ (b).dataset.del)]); if (rec) G.delInts(rec.p, [rec.it]);
   }));
@@ -137,9 +139,25 @@ async function sync() {
   }
 }
 
+/** @type {WeakMap<any, { v: string | undefined }>} */ const SN = new WeakMap();
+/** The S/N of a window that follows the sample (integra-segue.js), by the engine as a table row would have it, without adding a row; undefined until it
+ * answers (the panel is then drawn again), "" when there is no peak. @param {any} p @param {any} f */
+function snr(p, f) {
+  const c = SN.get(f); if (c) return c.v;
+  const e = { v: /** @type {string | undefined} */ (undefined) }, m = /^m\|(\d+)\|(.+)$/.exec(f.key || ""), b = baseOf(f); SN.set(f, e);
+  if (!m || !b) { e.v = ""; return e.v; }
+  getMrm(+m[1]).then(async (/** @type {any[]} */ list) => {
+    const tr = list.findIndex(x => String(x.id) === m[2]); if (tr < 0) { e.v = ""; return; }
+    const w = JSON.stringify([{ file: 0, tr, a: f.a, b: f.b, ...b }]), r = await fetch(`api/manint?k=${m[1]}&sums=0&w=${encodeURIComponent(w)}`);
+    const all = r.ok ? rows(await r.text()) : [], i = (all[0] || []).indexOf("snr");
+    e.v = i >= 0 && all[1] ? all[1][i] : ""; G.draw(p);
+  }).catch(() => { e.v = ""; });
+  return undefined;
+}
+
 let timer = /** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined);
 /** Every redraw of a panel calls this: one sync after the last of a burst (a dragged edge redraws at every move). */
 const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 
-G.MANINT = { sync: soon, now: sync, state: () => ({ ks: [...st.ks], windows: st.windows, sums: st.sums, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
+G.MANINT = { sync: soon, now: sync, snr, state: () => ({ ks: [...st.ks], windows: st.windows, sums: st.sums, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
 soon();
