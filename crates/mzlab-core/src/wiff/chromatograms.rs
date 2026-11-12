@@ -1,7 +1,7 @@
 //! The chromatogram list of a sample, the same for the engine (`run.rs`) and the readers module (`run_extended.rs`, `mzlab-cli convert`): one TIC per experiment
 //! with data (full scan: the TIC of the index; MRM: the TIC of the blocks), `TIC sample=N period=1 experiment=E` when there are several, the SRM / SIM
-//! chromatograms after the TIC of their experiment, the device traces (`devices.rs`) and the BPC of each full scan experiment last (only when its scans were
-//! decoded).
+//! chromatograms after the TIC of their experiment, the device traces (`devices.rs`), the BPC of each full scan experiment (only when its scans were
+//! decoded) and the DAD TWC last.
 
 use super::modes::{CODE_FULL, CODE_Q1};
 use super::{Record, Wiff};
@@ -9,12 +9,13 @@ use crate::mzml::{ChromKind, Chromatogram};
 
 impl Wiff {
     /// Appends the BPC of each `(experiment, times, intensities)` after the transitions, so that the list a reader that decodes later (`WiffReader`) completes is in
-    /// the same order.
+    /// the same order, then the DAD TWC with the index it has after the `later` BPC that reader inserts before it once the scans are read.
     fn push_bpc(
         &self,
         chroms: &mut Vec<Chromatogram>,
         bpcs: Vec<(usize, Vec<f64>, Vec<f64>)>,
         many: bool,
+        later: usize,
     ) {
         for (e, time, intensity) in bpcs {
             let unit = "number of detector counts".into();
@@ -28,6 +29,9 @@ impl Wiff {
                 time,
                 intensity,
             });
+        }
+        if let Some(dad) = &self.dad {
+            chroms.push(dad.twc_chromatogram(chroms.len() + later));
         }
     }
 
@@ -48,11 +52,12 @@ impl Wiff {
     }
 
     /// One TIC per MRM experiment that has blocks (just `TIC` when there is one) and one SRM chromatogram per transition that was acquired at least once.
-    /// With `trim_scheduled`, a scheduled transition keeps only the points within its window around the target RT, as msconvert does.
+    /// With `trim_scheduled`, a scheduled transition keeps only the points within its window around the target RT, as msconvert does. The DAD TWC comes last,
+    /// after the BPC of each full scan experiment (`push_bpc`).
     pub(super) fn chromatograms_of(&self, blocks: Blocks) -> Vec<Chromatogram> {
         let unit = "number of detector counts";
         let mut chroms = Vec::new();
-        let mut bpcs = Vec::new();
+        let (mut bpcs, mut later) = (Vec::new(), 0);
         let many = blocks
             .experiments
             .iter()
@@ -67,6 +72,7 @@ impl Wiff {
                 true => format!("TIC sample={} period=1 experiment={}", self.sample, e + 1),
                 false => "TIC".into(),
             };
+            later += (ex.bpc.is_empty() && self.is_full_scan(e)) as usize;
             if !ex.bpc.is_empty() && ex.bpc.len() == ex.time.len() {
                 bpcs.push((e, ex.time.clone(), ex.bpc));
             }
@@ -120,7 +126,7 @@ impl Wiff {
                 ..d.clone()
             });
         }
-        self.push_bpc(&mut chroms, bpcs, many);
+        self.push_bpc(&mut chroms, bpcs, many, later);
         chroms
     }
 }

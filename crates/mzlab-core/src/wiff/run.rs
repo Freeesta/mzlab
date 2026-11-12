@@ -149,11 +149,7 @@ impl Wiff {
             }
         }
         tally.check()?;
-        let mut chroms = self.chromatograms_of(blocks);
-        if let Some(dad) = &self.dad {
-            chroms.push(dad.twc_chromatogram(chroms.len()));
-        }
-        Ok(chroms)
+        Ok(self.chromatograms_of(blocks))
     }
 
     /// The spectrum `n` (counting the non-empty scans) made of the block `r` and its points: the one `visit` gives and `lettore::WiffReader::scansione` serves.
@@ -214,11 +210,7 @@ impl Wiff {
                 blocks.add_dense(r, v);
             }
         }
-        let mut chroms = self.chromatograms_of(blocks);
-        if let Some(dad) = &self.dad {
-            chroms.push(dad.twc_chromatogram(chroms.len()));
-        }
-        Ok(chroms)
+        Ok(self.chromatograms_of(blocks))
     }
 
     /// How many spectra `visit` will give (reads the head of each block only).

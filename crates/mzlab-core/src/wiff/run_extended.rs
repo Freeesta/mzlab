@@ -47,11 +47,7 @@ impl Wiff {
             }
         }
         tally.check()?;
-        let mut chroms = self.chromatograms_of(blocks);
-        if let Some(dad) = &self.dad {
-            chroms.push(dad.twc_chromatogram(chroms.len()));
-        }
-        Ok(chroms)
+        Ok(self.chromatograms_of(blocks))
     }
 
     /// The chromatograms of the MRM blocks only (no scan is decoded). `counts`: the point count of each record's head when the reader already read them.
@@ -84,11 +80,7 @@ impl Wiff {
                 blocks.add(r, c);
             }
         }
-        let mut chroms = self.chromatograms_of(blocks);
-        if let Some(dad) = &self.dad {
-            chroms.push(dad.twc_chromatogram(chroms.len()));
-        }
-        Ok(chroms)
+        Ok(self.chromatograms_of(blocks))
     }
 }
 

@@ -144,6 +144,29 @@ fn the_synthetic_pairs_read_the_same_through_the_registry() {
     no_idx(&out, "buchi");
 }
 
+/// A full scan with a DAD (`tools/wiff_dad_mrm.py`, `dadscan`): the TWC carries the same place in the list on the reader the site uses and in `Wiff::run`,
+/// though the reader lists the BPC only after the scans went through the mzML writer.
+#[test]
+fn a_full_scan_with_a_dad_reads_the_same_through_the_registry() {
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_dad_{}", std::process::id()));
+    let ok = Command::new("python3")
+        .arg(root().join("tools/wiff_dad_mrm.py"))
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
+    if ok.is_none() {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("SKIP wiff_reader: python3 not available");
+        return;
+    }
+    assert!(same(&out, "dadscan") > 0);
+    let _ = std::fs::remove_dir_all(&out);
+}
+
 /// An injection in the sample table with no `Idx` stream (it acquired nothing) is listed with 0 scans and its number, not dropped: the samples after it keep theirs.
 fn no_idx(dir: &Path, name: &str) {
     let mut l = readers::apri(set(dir, name), &Limits::sito()).unwrap();
