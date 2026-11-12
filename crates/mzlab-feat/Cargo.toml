@@ -12,9 +12,9 @@ crate-type = ["rlib"]
 # `chem`: the structure graph (SMILES -> groups, cleavages). On by default; the engine of the proofs (`mzlab-feat-wasm`) turns it off so its .wasm does not carry it.
 default = ["chem"]
 chem = []
-# `record`: the structure graph built from a `mol/1` record (`graph::Mol::from_record`, crate `mzlab-mol`). Off by default and in every .wasm: no site module changes until an engine asks for it.
+# `record`: the structure graph built from a `mol/1` record (`graph::Mol::from_record`, crate `mzlab-mol`) and the substructure search `chem::substructure` (`sub/1`). Off by default and in every .wasm: no site module carries it yet.
 record = ["chem", "dep:mzlab-mol"]
-# `check`: `check/1`, the structure check of a drawing (`chem::check`, molfile read by `mzlab-mol`). Off by default; the grafo `.wasm`, the CLI and the desktop app carry it.
+# `check`: `check/1`, the structure check of a drawing (`chem::check`, molfile read by `mzlab-mol`). Off by default; the molkit `.wasm` (`mzlab-mol-wasm`), the CLI and the desktop app carry it.
 check = ["chem", "dep:mzlab-mol"]
 # `crippen`: `LogPValues::from_smiles`, the Crippen logP and descriptors of a SMILES from our own tables (`mzlab-mol`), for the RT-logP check of the Banco 2b. Off by default; the `.wasm` `attributio` carries it through its feature `rev`.
 crippen = ["dep:mzlab-mol"]
