@@ -141,7 +141,6 @@ mod llm_ctx;
 mod manual_table_cmd;
 mod mol_cut_cmd;
 mod mol_label_cmd;
-mod mol_mech_cmd;
 mod mol_search_cmd;
 #[cfg(test)]
 mod msn_figure_tests;
