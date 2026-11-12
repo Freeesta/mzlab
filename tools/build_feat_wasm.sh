@@ -48,6 +48,9 @@ wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit_table "mzFinder tabl
 # the structure graph, loaded only when the user gives a SMILES: crates/mzlab-feat-grafo-wasm
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-grafo-wasm
 wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo" @motore
+# the catalogue identity of a drawing (crates/mzlab-molid-wasm: molid/1, it carries mzlab-mol), loaded by disegno-identita.js on the first «Is this in the catalogue?»; standard limit
+tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-molid-wasm
+wasm_pack "$out/molid" $R/mzlab_molid_wasm.wasm $limit "molid" @motore
 # the molecule kit of Draw (crates/mzlab-mol-wasm on the mol/1 record: check/1), loaded by disegno-verifica.js only when the user asks for the check; standard limit
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-mol-wasm
 wasm_pack "$out/molkit" $R/mzlab_mol_wasm.wasm $limit "molkit" @motore
@@ -112,6 +115,8 @@ m["interp"] = {"js": "interp/mzlab_feat_wasm.js", "wasm": "interp/mzlab_feat_was
 m["untargeted"] = {"js": "untargeted/mzlab_feat_wasm.js", "wasm": "untargeted/mzlab_feat_wasm_bg.wasm", "sha256": sha("untargeted")}
 m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["molid"] = {"js": "molid/mzlab_molid_wasm.js", "wasm": "molid/mzlab_molid_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/molid/mzlab_molid_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["molkit"] = {"js": "molkit/mzlab_mol_wasm.js", "wasm": "molkit/mzlab_mol_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/molkit/mzlab_mol_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["chem"] = {"js": "chem/mzlab_chem_wasm.js", "wasm": "chem/mzlab_chem_wasm_bg.wasm",

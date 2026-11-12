@@ -96,7 +96,7 @@ Canale                         Sigla   n     RT (min)
 - DAD Shimadzu/`.wiff`: `UV TWC` e `λ` aggiunte dall'utente; spettro UV per scan.
 - SIM: un canale `SIM [m1–m2]` per finestra (Thermo) o `sim:` (SIC; del `.wiff` Q1MI/Q3MI un canale per ione, etichetta `SIM <m/z> (+|−) <dwell> ms «nome»`).
 
-**Sovrapposizione di file.** Il pannello salva il canale come `omologo`, non come indice: ogni file risolve il suo; un file che non lo ha compare in legenda «—» (nessun errore). La stessa transizione in 12 campioni = 12 tracce di colori Okabe-Ito; tabella dei dati (`TDATI`) con una colonna per file.
+**Sovrapposizione di file.** Il pannello salva il canale come `omologo`, non come indice: ogni file risolve il suo; un file che non lo ha compare in legenda «—» (nessun errore). La stessa transizione in 12 campioni = 12 tracce col colore di ogni campione (canali `sim`/`srm`: `SIMUI.style`, tratteggio per canale); tabella dei dati (`TDATI`) con una colonna per file.
 
 **Pannello XIC / lente.** Lavora nel canale selezionato (`api/xic?canale`). Default: lente proposta se il canale ha `spettri` e un intervallo RT > 1 min con più di 20 scan; mai bloccata.
 
@@ -139,5 +139,6 @@ Uno per file in `docs/archivio/prompt-canali/` (`a.md` motore, `b.md` `.wiff`, `
 
 ## 7. Selettore dei canali (pagina Dati)
 `canali.js` (`window.CANALI`, `canali.css`, chiavi `canali.*`): il selettore unico del cromatogramma (pulsante `data-o=kind`, etichetta «TIC», «TIC + 1») apre un albero a gruppi (`role=tree`, frecce/Spazio/Invio/Esc): «Spettrometria di massa» (nome senza la sigla del modo, già nella colonna «Esperimento»; a scelta multipla: `p.canali`, salvato da `panelRec`; solo le famiglie che `traccia()` disegna), «Rivelatori» (PDA, analogici) e «Registri», righe a scelta singola (`data-kind`, impostano `p.kind`); il pannello MRM ha «Transizioni» / «Ioni» (`data-o=canali`, `p.tr`).
-Selettore MRM/SIM (`ESP.mrm`): clic sul nome = solo quel canale; casella `.can-hit` (24 px), Ctrl/⌘+clic o Spazio = aggiungi/togli; Invio = solo quello; «Tutti» (`.can-all`) = `p.tr` vuoto; l'ultimo canale resta. Aiuto `.can-hint` (`aria-describedby`). Solo ioni SIM (`can-sim`): una colonna, il m/z (o «ione N»), la polarità solo se i file le hanno entrambe; nome del motore, dwell, punti e tempo nel `title`. Prova: `e2e_sim_ui.py`.
+Selettore MRM/SIM (`ESP.mrm`): clic sul nome = solo quel canale; casella `.can-hit` (24 px), Ctrl/⌘+clic o Spazio = aggiungi/togli (l'ultimo resta); Invio = solo quello; «Tutti» (`.can-all`) = `p.tr` vuoto; «Nessuno» (`.can-none`) = `p.tr` `[]`, grafico vuoto con `canali.pick.none.msg`. Aiuto `.can-hint` `sr-only` (`aria-describedby`) e `title` dell'albero.
+Solo ioni SIM (`can-sim`): una colonna, il m/z (o «ione N»), la polarità solo se i file le hanno entrambe; nome del motore, dwell, punti e tempo nel `title`. Prova: `e2e_sim_ui.py`.
 Una traccia per file × canale, «—» in legenda se il file non ha il canale, XIC dentro il canale con `canale=`. Il motore serve `api/canali` (`Routes::canali`, metodo wasm `canali`) e `canale=` su chrom/xic/scanlist/spectrum/nearest_scan; transizioni e UV passano da `api/mrm`. Il canale iniziale per tipo sta in `ESP.predefinito` (`esperimenti.js`).

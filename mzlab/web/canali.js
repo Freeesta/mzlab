@@ -169,7 +169,7 @@
   /** the omologhi that the panel shows as ticked @param {any} p @param {Nodo[]} tree */
   function ticked(p, tree) {
     if (!ESP.mrm(p)) return isOther(p) ? new Set() : new Set(chosen(p));
-    const tr = mrmSel(p.tr, tree.filter(isTr).map(nodeKey)), all = !tr || (Array.isArray(tr) && !tr.length), want = new Set(Array.isArray(tr) ? tr : [tr]);
+    const tr = mrmSel(p.tr, tree.filter(isTr).map(nodeKey)), all = !tr, want = new Set(Array.isArray(tr) ? tr : [tr]);
     return new Set(tree.filter(n => isTr(n) && (all || want.has(nodeKey(n)))).map(n => n.omo));
   }
   /** the control of a panel: a button with what is plotted and the popover with the channels in groups. The chromatogram passes what its files have (cx); the MRM panel
@@ -179,14 +179,15 @@
     const files = filesOf(p), only = ESP.mrm(p), raw = albero(files);
     if (only && !raw.length) return "";
     const tree = only ? raw : msTree(raw, cx || null), sel = ticked(p, tree), open = !!p._canOpen, sim = only && isSim(tree);
-    const hint = `can-hint-${EH(String(p.id))}`, tools = only ? `<div class="can-tb"><span class="can-hint" id="${hint}">${EH(T("canali.pick.hint"))}</span><button type="button" class="sec sm can-all" aria-label="${EH(T("canali.pick.all.aria"))}" aria-pressed="${sel.size === tree.filter(isTr).length}">${EH(T("canali.pick.all"))}</button></div>` : "";
+    // the how-to reaches screen readers (aria-describedby) and the hover text of the list; on screen the rows speak for themselves
+    const hint = `can-hint-${EH(String(p.id))}`, nTr = tree.filter(isTr).length, tools = only ? `<div class="can-tb"><span class="can-hint sr-only" id="${hint}">${EH(T("canali.pick.hint"))}</span><button type="button" class="sec sm can-all" aria-label="${EH(T("canali.pick.all.aria"))}" aria-pressed="${sel.size === nTr}">${EH(T("canali.pick.all"))}</button><button type="button" class="sec sm can-none" aria-label="${EH(T("canali.pick.none.aria"))}" aria-pressed="${!sel.size}">${EH(T("canali.pick.none"))}</button></div>` : "";
     const head = sim ? `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span></div>` : `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span><span>${T("canali.col.sigla")}</span><span title="${EH(T("canali.col.n.title"))}">${T("canali.col.n")}</span><span title="${EH(T("canali.col.rt.title"))}">${T("canali.col.rt")}</span>${files.length > 1 ? `<span>${T("canali.col.file")}</span>` : ""}</div>`;
     const grp = (/** @type {string} */ name, /** @type {string} */ body) => body ? `<div role="group" aria-label="${EH(name)}"><div class="can-gh" aria-hidden="true">${EH(name)}</div>${body}</div>` : "";
     const [det, log] = cx ? others(cx) : [[], []];
     const body = only ? rows(p, tree, sel, true, files.length, sim) : grp(T("canali.grp.ms"), rows(p, tree, sel, false, files.length)) + grp(T("canali.grp.det"), kindRows(p, det)) + grp(T("canali.grp.log"), kindRows(p, log));
     const txt = only ? onlyText(tree, sel, sim) : summary(p, tree, /** @type {Ctx} */ (cx)), aria = only ? T("canali.btn.aria", { n: sel.size }) : T("canali.kind.aria", { v: txt });
     return `<span class="can"><button class="bt canb" type="button" data-o="${only ? "canali" : "kind"}" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T(only ? "canali.btn.title" : "ctl.kind.title"))}" aria-label="${EH(aria)}"><span class="can-bt">${EH(txt)}</span><span class="can-dn" aria-hidden="true">▾</span></button>` +
-      `<div class="sp-pop can-pop${sim ? " can-sim" : ""}" ${open ? "" : "hidden"}>${tools}${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true"${only ? ` aria-describedby="${hint}"` : ""} class="can-tree">${body}</div></div></span>`;
+      `<div class="sp-pop can-pop${sim ? " can-sim" : ""}" ${open ? "" : "hidden"}>${tools}${head}<div role="tree" aria-label="${EH(T("canali.btn"))}" aria-multiselectable="true"${only ? ` aria-describedby="${hint}" title="${EH(T("canali.pick.hint"))}"` : ""} class="can-tree">${body}</div></div></span>`;
   }
 
   /** a picker of SIM ions only (no MRM transition) @param {Nodo[]} tree */
@@ -195,7 +196,7 @@
   function onlyText(tree, sel, sim) {
     const tr = tree.filter(isTr), base = T(sim ? "canali.sim.btn" : "canali.btn.mrm");
     if (sel.size === 1 && tr.length > 1) { const n = /** @type {Nodo} */ (tr.find(x => sel.has(x.omo))); return `${base}: ${sim ? simShort(n, mixedPol(tree)) : label(n)}`; }
-    return sel.size && sel.size < tr.length ? `${base} (${sel.size}/${tr.length})` : base;
+    return sel.size < tr.length ? `${base} (${sel.size}/${tr.length})` : base;
   }
 
   /** the channels ticked in the picker: one channel of scans that is TIC or BPC is the kind, anything else a list @param {any} p @param {string[]} order */
@@ -225,6 +226,12 @@
     ctl(p); draw(p); uiSave();
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector(".can-all")); if (b) b.focus();
   }
+  /** «None»: no channel is plotted (p.tr = [], the chart says so); a click on a channel then starts again from it @param {any} p */
+  function pickNone(p) {
+    COMANDI.fai("panel.source", p, () => { p.tr = []; });
+    ctl(p); draw(p); uiSave();
+    const b = /** @type {HTMLElement | null} */ (p.el.querySelector(".can-none")); if (b) b.focus();
+  }
   /** a click on a row of another kind (PDA, a detector, the log): the panel plots that and nothing else @param {any} p @param {string} v */
   function pickKind(p, v) {
     COMANDI.fai("panel.source", p, () => { p.kind = v; p.canali = undefined; });
@@ -245,7 +252,7 @@
     if (!b || !pop) return;
     // a transition / SIM panel lists its own rows (msTree keeps only the families the chromatogram draws, no SIM ion)
     const only = ESP.mrm(p), tree = only ? albero(filesOf(p)) : msTree(albero(filesOf(p)), null);
-    const all = /** @type {HTMLElement | null} */ (pop.querySelector(".can-all")); if (all) { all.onclick = () => pickAll(p); all.onkeydown = e => { if (e.key === " " || e.key === "Enter") e.stopPropagation(); }; }
+    [[".can-all", pickAll], [".can-none", pickNone]].forEach(([q, f]) => { const x = /** @type {HTMLElement | null} */ (pop.querySelector(/** @type {string} */ (q))); if (x) { x.onclick = () => /** @type {Function} */ (f)(p); x.onkeydown = e => { if (e.key === " " || e.key === "Enter") e.stopPropagation(); }; } });
     const place = () => { if (pop.hidden) return; const op = /** @type {HTMLElement} */ (pop.offsetParent || p.el), pr = op.getBoundingClientRect(), br = b.getBoundingClientRect(); pop.style.left = Math.max(4, Math.min(br.left - pr.left, op.clientWidth - pop.offsetWidth - 6)) + "px"; pop.style.top = br.bottom - pr.top + 4 + "px"; };
     const rowsOf = () => [...pop.querySelectorAll(".can-row")].filter(x => /** @type {HTMLElement} */ (x).offsetParent);
     const focusRow = (/** @type {Element | null | undefined} */ r) => { if (!r) return; pop.querySelectorAll(".can-row").forEach(x => x.setAttribute("tabindex", "-1")); r.setAttribute("tabindex", "0"); /** @type {HTMLElement} */ (r).focus({ preventScroll: true }); };
@@ -301,7 +308,9 @@
         if (!c) { miss.push({ f, omo }); return null; }
         const t = await traccia(f.k, c, { kind: p.kind, mz0: p.mz0, mz1: p.mz1 }); if (!t || !t.rt.length) return null;
         const et = c.et;
-        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${omo}`, ion: et, time: f.time, color: one ? f.color : PAL[ci % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [], name: one ? f.label : files.length > 1 ? `${et} · ${f.label}` : et, tid_label: et };
+        // SIM / SRM channels: colour = sample, dash = channel (SIMUI.style); other channels: colour = channel, dash = file
+        const sr = c.fam === "sim" || c.fam === "srm", st = sr && window.SIMUI ? SIMUI.style(f, ci, list.length, files.length) : { color: one ? f.color : PAL[ci % PAL.length], dash: one ? fdash(f) : fi > 0 ? DASHES[fi % 4] : [] };
+        return { x: t.rt, y: t.y, k: f.k, key: `c|${f.k}|can|${omo}`, ion: et, time: f.time, color: st.color, dash: st.dash, name: one ? f.label : files.length > 1 ? (sr ? `${f.label} · ${et}` : `${et} · ${f.label}`) : et, tid_label: et };
       }));
       got.forEach(s => { if (s) out.push(s); });
     }

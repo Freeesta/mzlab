@@ -520,7 +520,13 @@ function rtLabel(/** @type {Pannello} */ p) {
   const rl = p.el.querySelector(".rtl");
   if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? I18N.t("panel.rt.held", { rt }) : rt; } }
 }
-// "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button
+// "zoom bar" in the top margin: where the visible window sits in the whole axis (its range in words in an overlay with role=img); "Vista intera" button
+/** the overlay of the zoom bar: carries the visible range for hover and assistive tech @param {Pannello} p @returns {HTMLElement} */
+function zoomBar(p) {
+  let z = /** @type {HTMLElement | null} */ (p.el.querySelector(":scope > .zbar"));
+  if (!z) { z = document.createElement("span"); z.className = "zbar"; z.setAttribute("role", "img"); z.hidden = true; p.el.appendChild(z); }
+  return z;
+}
 function afterDraw(/** @type {Pannello} */ p) {
   rtLabel(p);
   if (window.BANCO) BANCO.header(p);
@@ -534,11 +540,15 @@ function afterDraw(/** @type {Pannello} */ p) {
   const tb = p.el.querySelector('[data-a="itab"]'); if (tb) tb.hidden = !p.ints.length;
   const cb = p.el.querySelector('[data-a="iclr"]'); if (cb) cb.hidden = !p.ints.length;
   refreshIntf(p);
-  if (!(p._a && (p.zoom || p.zoomY)) || p._exp) return;
+  const zb = zoomBar(p);
+  if (!(p._a && (p.zoom || p.zoomY)) || p._exp) { zb.hidden = true; return; }
   const a = p._a, g = p.cv.getContext("2d"), bw = 90, x = a.W - M.r - bw, y = 3, f0 = a.full[0], f1 = a.full[1], u = p.type === "spec" ? "m/z" : "RT";
   const txt = `${u} ${a.x0.toFixed(p.type === "spec" ? 1 : 2)}-${a.x1.toFixed(p.type === "spec" ? 1 : 2)}` + (p.type === "spec" ? "" : " min") + (a.map && p.zoomY ? ` · m/z ${a.y0.toFixed(0)}-${a.y1.toFixed(0)}` : "");
-  g.save(); g.font = fpx(12); g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText(I18N.t("ctl.zoomed", { range: txt }), x - 6, y + 7);
-  g.fillStyle = "rgba(120,120,120,.25)"; g.fillRect(x, y, bw, 6);
+  // the range in words is for screen readers and hover only: on screen the x axis already says it
+  const lbl = I18N.t("ctl.zoomed", { range: txt });
+  zb.hidden = false; zb.title = lbl; zb.setAttribute("aria-label", lbl);
+  Object.assign(zb.style, { left: p.cv.offsetLeft + x + "px", top: p.cv.offsetTop + y + "px", width: bw + "px" });
+  g.save(); g.fillStyle = "rgba(120,120,120,.25)"; g.fillRect(x, y, bw, 6);
   g.fillStyle = css("--accent"); const l = x + (a.x0 - f0) / (f1 - f0) * bw, r = x + (a.x1 - f0) / (f1 - f0) * bw; g.fillRect(l, y, Math.max(2, r - l), 6);
   g.restore();
 }

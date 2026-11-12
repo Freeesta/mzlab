@@ -184,6 +184,8 @@ const TOUR = (() => {
   let curCap = 1;
   let curStep = 0;
   let prevFocus = null;
+  /** @type {null | (() => void)} closes the open invitation (TOURINVITO.apri) and drops its timer and key listener */
+  let invClose = null;
   let tryTimer = null;
   let provaState = null;
   let currentTargetEl = null;
@@ -599,54 +601,13 @@ const TOUR = (() => {
     mostraInvito: () => {
       if (document.getElementById("tour-invito")) return;
       ensureStyles();
-      const div = document.createElement("div");
-      div.id = "tour-invito";
-      div.setAttribute("role", "dialog");
-      div.setAttribute("aria-modal", "false");
-      div.setAttribute("aria-label", I18N.t("tour.impost.titolo"));
-      div.style.cssText = "position:fixed;bottom:12px;left:12px;z-index:7000;width:260px;max-width:calc(100vw - 24px);background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.18);padding:12px 14px;box-sizing:border-box;font:13px/1.4 system-ui,-apple-system,sans-serif";
-      div.innerHTML = `
-        <p style="margin:0 0 10px;line-height:1.45">${I18N.t("tour.invito.testo")}</p>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button type="button" id="tour-inv-no" style="background:var(--panel,#fff);color:var(--ink,#25282c);border:1px solid var(--line,#e2e5ea);border-radius:5px;padding:4px 10px;cursor:pointer">${I18N.t("tour.invito.no")}</button>
-          <button type="button" id="tour-inv-si" style="background:var(--accent,#2b5c8a);color:#fff;border:1px solid var(--accent,#2b5c8a);border-radius:5px;padding:4px 12px;font-weight:500;cursor:pointer">${I18N.t("tour.invito.si")}</button>
-        </div>
-      `;
-      document.body.appendChild(div); TOURDOPO.centra(div);
-
-      let idle = 0;
-      const closeInv = () => {
-        clearTimeout(idle);
-        if (div.parentNode) div.remove();
-        document.removeEventListener("keydown", onInvKeyDown);
-      };
-      // no answer within a minute counts as «Not now» (the invitation is already marked as offered)
-      idle = setTimeout(closeInv, 60000);
-
-      const onInvKeyDown = e => {
-        if (e.key === "Escape") {
-          closeInv(); TOURDOPO.mostra();
-        }
-      };
-
-      document.addEventListener("keydown", onInvKeyDown);
-      try { div.querySelector("#tour-inv-si").focus({ preventScroll: true }); } catch (_) { /* focus is only a help: the invitation works without it */ }
-      // whoever is reading or choosing keeps it
-      ["pointerenter", "focusin"].forEach(ev => div.addEventListener(ev, () => clearTimeout(idle)));
-
-      div.querySelector("#tour-inv-si").onclick = () => {
-        closeInv();
-        TOUR.inizia(1, 0);
-      };
-      div.querySelector("#tour-inv-no").onclick = () => {
-        closeInv(); TOURDOPO.mostra();
-        try { document.getElementById("np-set")?.focus({ preventScroll: true }); } catch (_) { /* focus is only a help: the settings panel works without it */ }
-      };
+      invClose = TOURINVITO.apri(() => TOUR.inizia(1, 0));
     },
 
     chiudiInvito: () => {
-      const el = document.getElementById("tour-invito");
-      if (el) el.remove();
+      if (invClose) invClose();
+      invClose = null;
+      document.getElementById("tour-invito")?.remove();
     },
 
     inizia: (cap = 1, step = 0) => {
