@@ -22,6 +22,12 @@ mod tests_fast;
 mod tests_grid_sat;
 #[cfg(test)]
 mod tests_hr;
+#[cfg(test)]
+mod tests_merged;
+#[cfg(test)]
+mod tests_model;
+#[cfg(test)]
+mod tests_pin;
 
 pub use convert::{mzml_to_centroids, mzml_to_centroids_with, Over};
 pub use params::{estimate, Estimate};
@@ -38,6 +44,8 @@ pub const TRUNCATED: u8 = 1;
 pub const SATURATED: u8 = 2;
 pub const ASYMMETRIC: u8 = 4;
 pub const SHOULDER: u8 = 8;
+/// One centroid for a peak wider than one: two peaks closer than about one FWHM (a doublet the scan cannot separate), at their weighted middle.
+pub const MERGED: u8 = 16;
 
 #[derive(Clone, Debug)]
 pub struct Params {
@@ -54,12 +62,32 @@ pub struct Params {
     pub vmax: f64,
     /// The value written for a centroid: the area (counts, low resolution) or the height (high resolution).
     pub area: bool,
+    /// FWHM against m/z, `a * m^b`, measured on the isolated peaks of a high-resolution file (`None`: one width `w` for every m/z).
+    pub wm: Option<(f64, f64)>,
 }
 
 impl Params {
+    /// FWHM expected at `mz`: the model of the file, else `w`.
+    pub fn w_at(&self, mz: f64) -> f64 {
+        self.wm.map_or(self.w, |(a, b)| a * libm::pow(mz, b))
+    }
     /// Width of a peak in grid points (at least 3).
     pub fn wb(&self) -> usize {
         ((self.w / self.step).round() as usize).max(3)
+    }
+    /// Width in grid points of a peak at point `j` of `buf`: the model at its m/z over the spacing of the 2 points on each side (the spacing of an
+    /// Orbitrap or TOF grows with m/z, not always as the width does), else `wb()` for every point.
+    pub(crate) fn wb_at(&self, buf: &Buf, j: usize) -> usize {
+        if self.wm.is_none() {
+            return self.wb();
+        }
+        let (lo, hi) = (j.saturating_sub(2), (j + 2).min(buf.x.len() - 1));
+        let dx = if hi > lo {
+            (buf.x[hi] - buf.x[lo]) / (hi - lo) as f64
+        } else {
+            self.step
+        };
+        ((self.w_at(buf.x[j]) / dx.max(f64::MIN_POSITIVE)).round() as usize).max(3)
     }
     /// High resolution: continuous values with at least 7 points per FWHM.
     pub fn hr(&self) -> bool {

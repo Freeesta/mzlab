@@ -10,13 +10,27 @@ use crate::{
 mod dda_window_cmd;
 #[path = "ion_mz_cmd.rs"]
 mod ion_mz_cmd;
+#[path = "mol_check_cmd.rs"]
+mod mol_check_cmd;
+#[path = "mol_cip_cmd.rs"]
+mod mol_cip_cmd;
+#[path = "mol_export_cmd.rs"]
+mod mol_export_cmd;
+#[path = "mol_ions_cmd.rs"]
+mod mol_ions_cmd;
+#[path = "mol_link_cmd.rs"]
+mod mol_link_cmd;
+#[path = "mol_mech_cmd.rs"]
+mod mol_mech_cmd;
+#[path = "mol_sel_cmd.rs"]
+mod mol_sel_cmd;
 #[path = "peak_area_cmd.rs"]
 pub(crate) mod peak_area_cmd;
 #[path = "peak_window_cmd.rs"]
 mod peak_window_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 18] = [
+pub(crate) const PLAIN: [&str; 26] = [
     "llm",
     "steps",
     "explain-missing",
@@ -26,9 +40,17 @@ pub(crate) const PLAIN: [&str; 18] = [
     "ion-pattern",
     "ion-mz",
     "mol-label",
+    "mol-anal",
+    "mol-check",
+    "mol-export",
+    "mol-cip",
     "mol-cut",
     "mol-id",
+    "mol-ions",
+    "mol-mech",
     "mol-search",
+    "mol-sel",
+    "mol-link",
     "samples",
     "peak-edges",
     "manual-table",
@@ -62,9 +84,17 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "ion-pattern" => ion_pattern_cmd::run(args),
         "ion-mz" => ion_mz_cmd::run(args),
         "mol-label" => mol_label_cmd::run(args),
+        "mol-anal" => mol_label_cmd::run_anal(args),
+        "mol-check" => mol_check_cmd::run(args),
+        "mol-export" => mol_export_cmd::run(args),
+        "mol-cip" => mol_cip_cmd::run(args),
         "mol-cut" => mol_cut_cmd::run(args),
         "mol-id" => mol_id_cmd::run(args),
+        "mol-ions" => mol_ions_cmd::run(args),
+        "mol-mech" => mol_mech_cmd::run(args),
         "mol-search" => mol_search_cmd::run(args),
+        "mol-sel" => mol_sel_cmd::run(args),
+        "mol-link" => mol_link_cmd::run(args),
         "samples" => samples_cmd::run(args),
         "manual-table" => manual_table_cmd::run(args),
         "peak-auto" => peaks_auto_cmd::run(args),

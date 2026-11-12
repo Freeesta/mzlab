@@ -11,6 +11,7 @@ window.toast = function(/** @type {string} */ msg) {
     t = document.createElement("div");
     t.id = "toast-container";
     t.className = "toast-container";
+    t.setAttribute("role", "status");
     t.setAttribute("aria-live", "polite");
     document.body.appendChild(t);
   }

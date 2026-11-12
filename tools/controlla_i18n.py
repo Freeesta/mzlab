@@ -431,7 +431,7 @@ NAME_FORMAT_OK = {"cart.method", "cart.method.one", "cart.none", "conv.help.step
 NAME_TOOL_OK = {"cmd.bio.kw", "cmd.bio.lab", "cmd.bio.name", "cmd.bio.tip", "cmd.more.tip", "cmd.pubchem.kw", "cmd.pubchem.lab", "cmd.pubchem.name",
            "cmd.pubchem.tip", "conv.help.step1", "conv.help.step2", "ctx.spec.exportMassbank", "draw.error.ketcherNotStarted", "draw.tools.file",
            "err.file.notAccepted", "err.file.wiff", "err.file.wiffMassRange", "err.file.wiffNeeds2", "err.file.wiffPeriods", "err.file.wiffScanType", "err.memory.over4gb", "err.memory.tooBig",
-           "fair.mb.note", "fair.mb.title", "help.filegrandi.body", "help.prop.body", "help.start.body", "lib.avail.intro", "lib.intro", "load.hrnote"}
+           "fair.mb.note", "fair.mb.title", "help.filegrandi.body", "help.prop.body", "help.start.body", "lib.avail.intro", "lib.intro", "load.hrnote", "draw.link.pubchem-exact", "draw.link.pubchem-similar", "draw.link.pubchem-sub", "draw.link.biotransformer", "draw.link.copied.pubchem-exact", "draw.link.copied.pubchem-similar", "draw.link.copied.pubchem-sub"}
 
 
 def check_names(cats: dict[str, dict[str, str]], errs: list) -> None:

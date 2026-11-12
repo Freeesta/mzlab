@@ -19,11 +19,25 @@ pub(crate) enum Item {
         conv: Option<String>,
         /// `metodo/1.avvisi`: key and place of what the reader could not read.
         notes: Vec<(String, String)>,
+        /// With `--peaks mzlab`: the centroids flagged (merged, saturated).
+        flagged: Option<(usize, usize)>,
     },
     Failed {
         input: String,
         cause: String,
     },
+}
+
+/// The centroids flagged (merged, saturated) of our own peak picking on the input `label`, from the note of its file in the record of the run (a file
+/// taken from the cache keeps the note of the run that wrote it).
+pub(crate) fn flagged_of(run: &mzlab_core::flow::Run, label: &str) -> Option<(usize, usize)> {
+    let note = run
+        .activities
+        .iter()
+        .flat_map(|a| &a.files)
+        .find(|(n, _)| n == label)?;
+    let n = |k: &str| note.1.get(k).and_then(|v| v.f64()).map(|x| x as usize);
+    Some((n("merged")?, n("saturated")?))
 }
 
 /// The read step through the head of an mzML.
@@ -107,6 +121,24 @@ pub(crate) fn partial_lines(items: &[Item]) -> String {
         .collect()
 }
 
+/// One stderr line per input with centroids flagged merged: a notice (`warn.centroid.merged`), not an answer, that leaves the exit code alone.
+pub(crate) fn merged_lines(items: &[Item]) -> String {
+    let text = crate::error_text::catalog_text("warn.centroid.merged").unwrap_or_default();
+    items
+        .iter()
+        .filter_map(|i| match i {
+            Item::Done {
+                input,
+                flagged: Some((m, _)),
+                ..
+            } if *m > 0 => Some(format!(
+                "warning: {input}: {m} centroids merged: {text} (warn.centroid.merged)\n"
+            )),
+            _ => None,
+        })
+        .collect()
+}
+
 /// The scans declared and read and the cause key when the `conv/1` document `conv` says the read was partial.
 pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     let doc = mzlab_core::json::parse(conv.as_bytes()).ok()?;
@@ -118,7 +150,8 @@ pub(crate) fn partial_of(conv: &str) -> Option<(usize, usize, String)> {
     Some((n("dichiarate"), n("lette"), cause.to_string()))
 }
 
-/// The `--report` document: a JSON array with `{ingresso, uscita, sha256, spettri, secondi, saltato, conv/1}` or `{ingresso, errore, causa}` per input.
+/// The `--report` document: a JSON array with `{ingresso, uscita, sha256, spettri, secondi, saltato, conv/1, avvisi}` (and `centroidi` {merged, saturated}
+/// with `--peaks mzlab`) or `{ingresso, errore, causa}` per input.
 pub(crate) fn report(items: &[Item]) -> String {
     let mut o = Out::default();
     o.raw("[");
@@ -134,6 +167,7 @@ pub(crate) fn report(items: &[Item]) -> String {
                 skipped,
                 conv,
                 notes,
+                flagged,
             } => {
                 o.raw("{\"ingresso\":").str(input);
                 o.raw(",\"uscita\":").str(output);
@@ -158,6 +192,10 @@ pub(crate) fn report(items: &[Item]) -> String {
                     o.str(k).raw(",\"dove\":").str(d).raw("}");
                 }
                 o.raw("]");
+                if let Some((m, s)) = flagged {
+                    o.raw(",\"centroidi\":{\"merged\":").int(*m as i64);
+                    o.raw(",\"saturated\":").int(*s as i64).raw("}");
+                }
                 o.raw("}");
             }
             Item::Failed { input, cause } => {

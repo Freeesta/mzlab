@@ -43,6 +43,7 @@
     "structure.render": ["Draw the change", "output", "Draws the parent with the modified position marked."],
     "structure.draw": ["Draw a structure", "input", "Lets you draw the parent compound."],
     "structure.reactivity": ["Where it reacts", "search", "Estimates which parts of the parent are most reactive."],
+    "structure.moiety": ["Contains moiety", "process", "Keeps the candidates whose structure holds a group you name (or the ones without it)."],
     "spectra.msn_graph": ["Fragmentation graph", "process", "Builds the tree of fragments and neutral losses of one infusion."],
     "msn.library_export": ["Save as library", "output", "Writes the spectra of the tree as a library file."],
     "msn.table_export": ["Save as tables", "output", "Writes the ions and the losses of the graph as CSV tables."],

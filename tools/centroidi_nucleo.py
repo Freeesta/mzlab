@@ -1,8 +1,10 @@
 """Core of the Python reference of crates/mzlab-core/src/centroids (grid, smoothing, background, detection, centroids), same operations in the same
 order. Used by tools/centroidi_riferimento.py; only a reference for the tests."""
 import math
+import sys
 
-TRUNCATED, SATURATED, ASYMMETRIC, SHOULDER = 1, 2, 4, 8
+TRUNCATED, SATURATED, ASYMMETRIC, SHOULDER, MERGED = 1, 2, 4, 8, 16
+MERGED_WIDTH = 1.12
 COUNTS, CONTINUOUS = "counts", "continuous"
 
 
@@ -12,11 +14,21 @@ def rnd(x):
 
 
 class P:
-    def __init__(self, mode, unit, step, w, k=3.0, vmax=0.0, area=True):
-        self.mode, self.unit, self.step, self.w, self.k, self.vmax, self.area = mode, unit, step, w, k, vmax, area
+    def __init__(self, mode, unit, step, w, k=3.0, vmax=0.0, area=True, wm=None):
+        self.mode, self.unit, self.step, self.w, self.k, self.vmax, self.area, self.wm = mode, unit, step, w, k, vmax, area, wm
+
+    def w_at(self, mz):
+        return self.w if self.wm is None else self.wm[0] * math.pow(mz, self.wm[1])
 
     def wb(self):
         return max(int(rnd(self.w / self.step)), 3)
+
+    def wb_at(self, buf, j):
+        if self.wm is None:
+            return self.wb()
+        lo, hi = max(j - 2, 0), min(j + 2, len(buf.x) - 1)
+        dx = (buf.x[hi] - buf.x[lo]) / (hi - lo) if hi > lo else self.step
+        return max(int(rnd(self.w_at(buf.x[j]) / max(dx, sys.float_info.min))), 3)
 
     def hr(self):
         return self.mode == CONTINUOUS and self.wb() >= 7
@@ -201,23 +213,31 @@ def insignificant(buf, p, sigma, a, c):
     v = valley(buf, a, c)
     low = c if buf.s[c] < buf.s[a] else a
     if p.mode == COUNTS:
-        h = max(int(math.ceil(0.25 * p.wb())), 1)
+        h = max(int(math.ceil(0.25 * p.wb_at(buf, low))), 1)
         ca, cv = raw_near(buf, low, h), raw_near(buf, v, h)
         return ca + cv <= 0.0 or (ca - cv) / math.sqrt(ca + cv) < p.k
     return buf.s[low] - buf.s[v] < p.k * sigma
 
 
+def merged(buf, p, sigma, a, c, wb):
+    close = (c - a) < 0.5 * wb
+    if p.wm is None:
+        return close or insignificant(buf, p, sigma, a, c), False
+    noise = insignificant(buf, p, sigma, a, c)
+    return close or noise, noise
+
+
 def groups(buf, p, sigma):
-    wb = p.wb()
     out = []
     for c in candidates(buf):
+        wb = p.wb_at(buf, c)
         lo, hi = bounds(buf, c, wb)
-        merge = bool(out) and ((c - out[-1]["apex"]) < 0.5 * wb or insignificant(buf, p, sigma, out[-1]["apex"], c))
+        merge, noise = merged(buf, p, sigma, out[-1]["apex"], c, wb) if out else (False, False)
         if merge:
             last = out[-1]
             if buf.s[c] > buf.s[last["apex"]]:
                 last["apex"] = c
-            last["lo"], last["hi"], last["members"] = min(last["lo"], lo), max(last["hi"], hi), last["members"] + 1
+            last["lo"], last["hi"], last["members"] = min(last["lo"], lo), max(last["hi"], hi), last["members"] + (0 if noise else 1)
         else:
             out.append({"apex": c, "lo": lo, "hi": hi, "members": 1})
     for i in range(1, len(out)):
@@ -300,7 +320,7 @@ def saturated(buf, p, g):
             continue
         if start is None:
             start = j
-        if j - start >= 2 and buf.x[j] - buf.x[start] >= 0.15 * p.w:
+        if j - start >= 2 and buf.x[j] - buf.x[start] >= 0.15 * p.w_at(buf.x[start]):
             return True
     return False
 
@@ -325,7 +345,7 @@ def saturated_centre(buf, p, g):
     if not top:
         return None
     a, b = top[0], top[-1]
-    half = 0.5 * (buf.x[b] - buf.x[a]) + 0.5 * p.w
+    half = 0.5 * (buf.x[b] - buf.x[a]) + 0.5 * p.w_at(buf.x[a])
     c = 0.5 * (buf.x[a] + buf.x[b])
     for _ in range(2):
         r = centroid_at(buf, p, c, t, half)
@@ -349,9 +369,9 @@ def second(buf, l, j):
 
 
 def residual(buf, p, j, x0, h):
-    hw = int(math.ceil(0.5 * p.wb()))
+    hw = int(math.ceil(0.5 * p.wb_at(buf, j)))
     lo, hi = max(j - hw, 0), min(j + hw, len(buf.v) - 1)
-    sg = p.w / 2.355
+    sg = p.w_at(x0) / 2.355
     a = am = top = f = 0.0
     for i in range(lo, hi + 1):
         r = buf.v[i] - buf.b[i] - h * math.exp(-((buf.x[i] - x0) ** 2) / (2.0 * sg * sg))
@@ -365,7 +385,7 @@ def residual(buf, p, j, x0, h):
 
 def find_shoulders(buf, p, sigma, g, x0, area):
     l = p.sg_len()
-    dist = int(math.ceil(0.6 * p.wb()))
+    dist = int(math.ceil(0.6 * p.wb_at(buf, g["apex"])))
     h = buf.s[g["apex"]] - buf.b[g["apex"]]
     out = []
     for side in (-1, 1):
@@ -390,9 +410,22 @@ def find_shoulders(buf, p, sigma, g, x0, area):
             ok = ac / math.sqrt(ac + 2.0 * fc) >= p.k + 1.0
         else:
             ok = top >= (p.k + 1.0) * sigma
-        if ok and a >= 0.10 * area and abs(mz - x0) >= 0.5 * p.w:
+        if ok and a >= 0.10 * area and abs(mz - x0) >= 0.5 * p.w_at(x0):
             out.append([mz, a if p.area else top, a, top, SHOULDER])
     return out
+
+
+def half_width(buf, g):
+    net = lambda j: buf.s[j] - buf.b[j]  # noqa: E731
+    half = 0.5 * net(g["apex"])
+    if half <= 0.0:
+        return None
+    cross = lambda a, b: buf.x[a] + (half - net(a)) / (net(b) - net(a)) * (buf.x[b] - buf.x[a])  # noqa: E731
+    left = next((cross(j, j + 1) for j in range(g["apex"] - 1, g["lo"] - 1, -1) if net(j) < half), None)
+    right = next((cross(j, j - 1) for j in range(g["apex"] + 1, g["hi"] + 1) if net(j) < half), None)
+    if left is None or right is None:
+        return None
+    return right - left
 
 
 def one(buf, p, sigma, g, out):
@@ -405,6 +438,7 @@ def one(buf, p, sigma, g, out):
     flags = TRUNCATED if truncated else 0
     sat = saturated(buf, p, g)
     x0 = apex_x(buf, g["apex"])
+    w = p.w_at(x0)
     if sat:
         flags |= SATURATED
         c = saturated_centre(buf, p, g)
@@ -412,15 +446,20 @@ def one(buf, p, sigma, g, out):
     elif p.hr():
         mz = gaussian(buf, sigma, g["apex"])
         if mz is None:
-            mz = centroid_at(buf, p, x0, None, 0.5 * p.w)
+            mz = centroid_at(buf, p, x0, None, 0.5 * w)
         if mz is None:
             mz = x0
     else:
-        mz = centroid_at(buf, p, x0, None, 0.5 * p.w)
+        mz = centroid_at(buf, p, x0, None, 0.5 * w)
         if mz is None:
             mz = x0
-    if abs(mz - x0) > 0.25 * p.w:
+    if abs(mz - x0) > 0.25 * w:
         flags |= ASYMMETRIC
+    # with the model, a peak of fewer than 5 points per FWHM has no width at half height to compare
+    sampled = p.wm is None or p.wb_at(buf, g["apex"]) >= 5
+    hw = half_width(buf, g) if not sat and sampled else None
+    if hw is not None and hw > MERGED_WIDTH * p.w_at(buf.x[g["apex"]]):
+        flags |= MERGED
     area = fsum(buf.v[g["lo"]:g["hi"] + 1])
     height = buf.s[g["apex"]]
     sh = find_shoulders(buf, p, sigma, g, x0, area) if g["members"] == 1 and not sat else []

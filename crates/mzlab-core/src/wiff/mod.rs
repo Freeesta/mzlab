@@ -6,6 +6,7 @@
 
 mod bpc;
 mod chromatograms;
+mod devices;
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
@@ -33,8 +34,7 @@ pub(super) const SAMPLES: &str = "SampleSubtree/";
 /// Offsets inside `ExperimentHeader`: the precursor m/z (f64) and the scan-type code (u32).
 const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
-/// Offset of the polarity in `ExperimentHeader`.
-const HEADER_POLARITY: usize = 86;
+const HEADER_POLARITY: usize = 86; // the polarity in `ExperimentHeader`
 use modes::{Output, CODE_PRODUCT};
 /// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
 /// method), the nearest one before it if it acquires what the sample's own blocks hold (scans or MRM); otherwise none is borrowed.
@@ -149,7 +149,7 @@ pub struct Record {
     pub tic: f64,
     pub cycle: usize,
     pub experiment: usize,
-    /// The point count of the scan as the index row tells it (0 for an MRM block or an empty scan, NaN when the row is not known).
+    /// The point count of the scan as the index row tells it (0 for an MRM block or an empty scan, NaN when the row is not known or holds none: IDA).
     pub points: f64,
 }
 
@@ -177,6 +177,7 @@ pub struct Wiff {
     pub method: Option<Method>,
     /// Optical DAD / PDA 3D matrix and TWC when the sample has a `DAD` storage.
     pub dad: Option<dad::DadData>,
+    pub devices: Vec<crate::mzml::Chromatogram>, // pressure, flow, ... of `Devices/Device_N/DevData` (`devices.rs`)
     /// `Component ID` of the mass spectrometer in the Log, and the creation time of the file: the header of the mzML.
     pub model: Option<String>,
     pub serial: Option<String>,
@@ -302,14 +303,13 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
 
 /// The product-ion experiments of a sample acquired by IDA (it has a `DDERealTimeData` stream) are dependent scans: the survey picks their precursor at
 /// every cycle, and the mass of their header is only the value the method was saved with. That stream is not decoded, so they carry no precursor rather
-/// than an invented one (level 2 stays; the channels group them as `dd:2:EPI`).
-fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) {
+/// than an invented one (level 2 stays; the channels group them as `dd:2:EPI`). True for such a sample: its index rows hold no point count at +26.
+fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) -> bool {
     if !ole.has(&format!("{SAMPLES}Sample{sample}/DDERealTimeData")) {
-        return;
+        return false;
     }
-    for e in experiments.iter_mut().filter(|e| e.code == Some(CODE_PRODUCT)) {
-        e.precursor = None;
-    }
+    experiments.iter_mut().filter(|e| e.code == Some(CODE_PRODUCT)).for_each(|e| e.precursor = None);
+    true
 }
 
 /// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
@@ -383,7 +383,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         extended::mark_windows(ole, sample, &mut experiments);
     }
     sim_periods(ole, sample, &experiments)?;
-    dependent_scans(ole, sample, &mut experiments);
+    let ida = dependent_scans(ole, sample, &mut experiments);
     let n_exp = experiments.len().max(1);
     let records = entries
         .iter()
@@ -398,7 +398,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             tic: e.tic,
             cycle: k / n_exp,
             experiment: k % n_exp,
-            points: e.points,
+            points: if ida { f64::NAN } else { e.points },
         })
         .collect();
     let no = method_no(ole, sample);
@@ -422,6 +422,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         polarity: polarity(&method),
         method,
         dad,
+        devices: devices::traces(ole, sample),
         model,
         serial,
         source_type,
@@ -445,6 +446,7 @@ impl Wiff {
             polarity: 0,
             method: None,
             dad: None,
+            devices: Vec::new(),
             model: None,
             serial: None,
             source_type: None,
@@ -483,6 +485,11 @@ impl Wiff {
     pub fn open(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Result<Wiff> {
         open_wiff(ole, name, scan_len, sample)
     }
+
+    /// The polarity of the scans of experiment `e`: the one of its header (offset 86, u32: 0 positive, 1 negative), else the sign of the ion spray voltage of the method.
+    pub(crate) fn polarity_of(&self, e: &Experiment) -> i8 {
+        e.polarity.unwrap_or(self.polarity)
+    }
 }
 
 #[cfg(feature = "estesi")]
@@ -490,10 +497,3 @@ pub(crate) mod extended;
 #[cfg(feature = "estesi")]
 #[path = "scan_extended.rs"]
 pub mod scan;
-
-impl Wiff {
-    /// The polarity of the scans of experiment `e`: the one of its header (offset 86, u32: 0 positive, 1 negative), else the sign of the ion spray voltage of the method.
-    pub(crate) fn polarity_of(&self, e: &Experiment) -> i8 {
-        e.polarity.unwrap_or(self.polarity)
-    }
-}

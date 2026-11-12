@@ -78,6 +78,8 @@ fn usage_errors_exit_with_2() {
         vec!["canali", "a", "b"],
         vec!["canali", "--nope"],
         vec!["canali", "/nonexistent/x.mzML"],
+        vec!["canali", "a.mzML", "--sample", "1"],
+        vec!["canali", "a.wiff", "--sample", "x"],
     ] {
         assert_eq!(
             execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>()).code,
@@ -207,6 +209,158 @@ fn channels_of_the_synthetic_files() {
         .sum();
     assert_eq!(ms2, 320.0);
     let _ = std::fs::remove_dir_all(&d);
+}
+
+/// A SIM channel id has spaces and `name=` words: the error line names it whole, never split into parameters.
+#[test]
+fn an_unknown_sim_id_is_named_whole() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_canale_sim_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let f = dir.join("e.mzML");
+    std::fs::write(
+        &f,
+        "<mzML><run><chromatogramList count=\"0\"></chromatogramList></run></mzML>",
+    )
+    .unwrap();
+    let id = "sim:SIM SIC Q1=237.1 sample=1 polarity=positive name=ionA";
+    let o = execute(&[
+        "canali".into(),
+        f.to_string_lossy().into_owned(),
+        "--canale".into(),
+        id.into(),
+    ]);
+    assert_eq!(o.code, 2);
+    let want = format!("error: Channel {id} does not exist in this file. (err.canali.unknown)\n");
+    assert!(o.stderr.starts_with(&want), "{}", o.stderr);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Each sample of a `.wiff` (`two.wiff` of `tools/wiff_riferimento.py`: a scan sample, an MRM sample) answers with the bytes of the mzML `convert` writes
+/// for it, as the site and the app list each sample on its own; without `--sample` the first one, with the others named on the standard error.
+#[test]
+fn each_sample_of_a_wiff_has_the_channels_of_its_mzml() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_canali_wiff_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
+    let made = Command::new("python3")
+        .arg(tools.join("wiff_riferimento.py"))
+        .arg(dir.join("in"))
+        .output();
+    if !made.is_ok_and(|o| o.status.success()) {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("skipped: python3 not available");
+        return;
+    }
+    let s = |p: PathBuf| p.to_string_lossy().into_owned();
+    let run = |a: &[String]| execute(a);
+    let wiff = s(dir.join("in/two.wiff"));
+    let conv = run(&[
+        "convert".into(),
+        wiff.clone(),
+        "--out".into(),
+        s(dir.join("out")),
+    ]);
+    assert_eq!(conv.code, 0, "{}", conv.stderr);
+    for k in ["1", "2"] {
+        let o = run(&["channels".into(), wiff.clone(), "--sample".into(), k.into()]);
+        let want = run(&["channels".into(), s(dir.join(format!("out/two-{k}.mzML")))]);
+        assert_eq!(
+            (o.code, &o.stdout, o.stderr.as_str()),
+            (0, &want.stdout, ""),
+            "sample {k}"
+        );
+    }
+    let mrm = String::from_utf8(
+        run(&[
+            "channels".into(),
+            wiff.clone(),
+            "--sample".into(),
+            "2".into(),
+        ])
+        .stdout,
+    )
+    .unwrap();
+    assert!(
+        mrm.contains("\"proposto\":\"lc-mrm\"") && mrm.contains("\"id\":\"srm:"),
+        "{mrm}"
+    );
+    let first = run(&["channels".into(), wiff.clone()]);
+    let one = run(&[
+        "channels".into(),
+        wiff.clone(),
+        "--sample".into(),
+        "1".into(),
+    ]);
+    assert_eq!(first.stdout, one.stdout);
+    assert!(
+        first.stderr.contains("2 samples (ids 1, 2)"),
+        "{}",
+        first.stderr
+    );
+    let bad = run(&["channels".into(), wiff, "--sample".into(), "9".into()]);
+    assert_eq!(bad.code, 2);
+    assert!(
+        bad.stderr.starts_with(
+            "error: This file has no sample 9: its samples are 1, 2. (err.canali.sample)"
+        ),
+        "{}",
+        bad.stderr
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The device traces of a `.wiff` (`dispositivi` of `tools/wiff_riferimento.py`: two pressures, a flow, a temperature) are `an:` channels, the same the
+/// converted mzML lists; `--channel an:1` of the mzML gives the column pressure (2000 psi, shown in bar).
+#[test]
+fn the_device_traces_of_a_wiff_are_the_analog_channels_of_its_mzml() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_canali_dev_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
+    let made = Command::new("python3")
+        .arg(tools.join("wiff_riferimento.py"))
+        .arg(dir.join("in"))
+        .output();
+    if !made.is_ok_and(|o| o.status.success()) {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("skipped: python3 not available");
+        return;
+    }
+    let s = |p: PathBuf| p.to_string_lossy().into_owned();
+    let wiff = s(dir.join("in/dispositivi.wiff"));
+    let conv = execute(&[
+        "convert".into(),
+        wiff.clone(),
+        "--out".into(),
+        s(dir.join("out")),
+    ]);
+    assert_eq!(conv.code, 0, "{}", conv.stderr);
+    let mzml = s(dir.join("out/dispositivi.mzML"));
+    let o = execute(&["channels".into(), wiff.clone()]);
+    assert_eq!(o.stdout, execute(&["channels".into(), mzml.clone()]).stdout);
+    let list = String::from_utf8(o.stdout).unwrap();
+    for et in [
+        "Column Pressure (pascal)",
+        "Pump A Flowrate (µL/min)",
+        "Column Pressure #1 (pascal)",
+        "Oven Temperature (°C)",
+    ] {
+        assert!(list.contains(&format!("\"et\":\"{et}\"")), "{et}: {list}");
+    }
+    assert!(!list.contains("Empty"), "{list}");
+    let one = execute(&["channels".into(), mzml, "--channel".into(), "an:1".into()]);
+    assert_eq!(one.code, 0, "{}", one.stderr);
+    let one = String::from_utf8(one.stdout).unwrap();
+    assert!(
+        one.contains("\"kind\":\"pressure\"") && one.contains("\"y\":[137.895,"),
+        "2000 psi in bar: {one}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 /// An mzML with a TWC (a 2 × 2 `dad_matrix` is not needed for the trace) and a pump pressure trace: `--canale` reads them as the old routes do.

@@ -52,3 +52,39 @@ fn members_match_the_whole_parse() {
     )
     .is_err());
 }
+
+/// `count_elements` and `each_element` give the elements `parse` gives for the same array, and fail on the texts `parse` fails on.
+#[test]
+fn elements_match_the_whole_parse() {
+    let ok = [
+        r#" [[1,"a",null,[2.5,1e-3]],{"k":[true]},"è😀\n",-1e3] "#,
+        "[]",
+        " [ ] ",
+        "[0]",
+    ];
+    for t in ok {
+        let whole = parse(t.as_bytes()).ok();
+        let mut each = Vec::new();
+        let walked = each_element(t.as_bytes(), |v| {
+            each.push(v.clone());
+            Ok(())
+        });
+        assert!(walked.is_ok(), "{t}");
+        assert_eq!(Some(each.as_slice()), whole.as_ref().map(Value::arr), "{t}");
+        assert_eq!(count_elements(t.as_bytes()).ok(), Some(each.len()), "{t}");
+    }
+    let bad = ["", "{}", "[1,]", "[1 2]", "[1]x", "[\"\\u", "[[1]", "1"];
+    for t in bad {
+        assert!(count_elements(t.as_bytes()).is_err(), "count {t:?}");
+        assert!(
+            each_element(t.as_bytes(), |_| Ok(())).is_err(),
+            "each {t:?}"
+        );
+    }
+    // an error of the caller stops the walk and is returned as it is
+    let e = each_element(b"[1,2,3]", |v| match v.f64() {
+        Some(x) if x > 1.0 => Err(crate::error::Error::new("stop")),
+        _ => Ok(()),
+    });
+    assert!(matches!(e, Err(x) if x.key == "stop"));
+}

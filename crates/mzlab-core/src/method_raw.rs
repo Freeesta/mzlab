@@ -23,7 +23,8 @@ use opentfraw::RawFileReader;
 use script::Block;
 use std::io::{Read, Seek};
 
-const GRAW_MAX: usize = 256 * 1024;
+// the whole method of an Orbitrap (an XML of about 400 KB) fits; `method_fit` keeps the document within what the readers read
+const GRAW_MAX: usize = 512 * 1024;
 
 /// The last element of a Windows or Unix path.
 fn leaf(p: &str) -> &str {
@@ -134,18 +135,27 @@ fn sampler(pairs: &[script::Pair]) -> Option<V> {
     obj(vec![("parametri", Some(V::Arr(params)))])
 }
 
-/// The texts of the method as they are (`grezzo`), cut to `GRAW_MAX` in all, without the characters outside the XML `Char` production.
+/// The texts of the method as they are (`grezzo`), cut to `GRAW_MAX` in all, the shortest given their room first (the LC script and the MS text are
+/// never pushed out by a long XML), without the characters outside the XML `Char` production.
 fn raw_texts(blocks: &[String]) -> Vec<V> {
+    let mut order: Vec<usize> = (0..blocks.len()).collect();
+    crate::sortc::slice_by(&mut order, |&a, &b| {
+        blocks[a].len().cmp(&blocks[b].len()).then(a.cmp(&b))
+    });
+    let mut room = vec![0; blocks.len()];
     let mut left = GRAW_MAX;
+    for i in order {
+        room[i] = blocks[i].len().min(left);
+        left -= room[i];
+    }
     let mut out = Vec::new();
-    for b in blocks {
+    for (b, &room) in blocks.iter().zip(&room) {
         let t = b;
-        let mut end = t.len().min(left);
+        let mut end = room;
         while !t.is_char_boundary(end) {
             end -= 1;
         }
         let part = t.get(..end).unwrap_or("");
-        left = left.saturating_sub(part.len());
         // a block decoded from binary holds characters (U+FFFF, controls) no XML or JSON reader of the method accepts as text
         let part: String = part
             .chars()

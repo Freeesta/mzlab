@@ -1,0 +1,20 @@
+I18N.add("it", {
+  "draw.cip.heading": "Stereodescrittori (CIP)",
+  "draw.cip.intro": "R/S dei centri e E/Z dei doppi legami che il disegno definisce con cunei e geometria, secondo le regole di Cahn-Ingold-Prelog.",
+  "draw.cip.show": "Mostra R/S ed E/Z",
+  "draw.cip.note": "La spettrometria di massa non distingue questi stereoisomeri: le etichette descrivono il disegno, non un campione.",
+  "draw.cip.show.title": "Seleziona sul disegno gli atomi di questa etichetta",
+  "draw.cip.busy": "Calcolo dei descrittori…",
+  "draw.cip.empty": "Il disegno è vuoto.",
+  "draw.cip.none": "Nessun centro o doppio legame con stereochimica definita.",
+  "draw.cip.found": "Descrittori nel disegno: {n}.",
+  "draw.cip.fail": "Descrittori non calcolati: {message}",
+  "draw.cip.atom": "{atom}: {label}",
+  "draw.cip.atomLow": "{atom}: {label} (pseudoasimmetrico: lo distingue solo R contro S dei sostituenti)",
+  "draw.cip.bond": "{a}={b}: {label}",
+  "draw.cip.skip.query": "Il disegno ha atomi o legami generici (query): nessun descrittore.",
+  "draw.cip.skip.kekule": "Un anello aromatico non si scrive con doppi legami alterni: nessun descrittore.",
+  "draw.cip.skip.tooBig": "Il disegno è troppo grande per i descrittori (oltre 400 atomi).",
+  "error.cip.request": "La richiesta dei descrittori CIP non è un JSON valido con un molfile.",
+  "error.cip.molfile": "Il disegno non si legge come molfile."
+});

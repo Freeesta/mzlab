@@ -1,5 +1,5 @@
 """The structure bridge of mzFinder in WebAssembly (crates/mzlab-feat-grafo-wasm) answers a SMILES with the formula, the groups and the cleavage products that
-the Rust library gives natively, the piece labels and the bond cuts of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
+the Rust library gives natively, the piece labels, the bond cuts and the analysis card (`anal/1`, every golden molecule) the selection info (`sel/1`) and the lookup URLs (`link/1`, every golden case) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import json
 import shutil
@@ -68,6 +68,17 @@ def test_fragments_of_a_radical_equal_the_app_fixture(pkg):
     assert '"formula":"CH3O","mass":31.0184,"mz":32.0257,"odd":true' in fx["frag"]
 
 
+def test_mechanism_check_through_wasm_equals_the_app_fixture_and_the_cli(pkg, tmp_path):
+    fx = json.loads((Path(__file__).parent / "dati" / "mecc_mclafferty.json").read_text(encoding="utf-8"))
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps(fx["request"]), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "mech")
+    assert site.strip() == fx["mecc"]   # crates/mzlab-desktop/tests/labels.rs reads the same bytes
+    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-mech", str(req))
+    r = json.loads(site)
+    assert [a["ok"] for a in r["arrows"]] == [True] * 5 + [False] and r["arrows"][5]["problem"] == "pairFromRadical"
+
+
 LABELS = {"structures": [[{"el": "C", "iso": 13, "h": 4}], [{"el": "C", "h": 3}, {"el": "O", "h": 1}], [{"el": "Pt"}, {"el": "Cl"}, {"el": "Cl"}, {"el": "N", "h": 2}, {"el": "N", "h": 2}],
                          [{"el": "C", "h": 2}, {"el": "C"}, {"el": "O", "q": -1}, {"el": "O", "q": -1}, {"el": "O"}, {"el": "O"}], [{"el": "R#"}]], "arrows": [[1, 0], [0, 4]]}
 
@@ -119,3 +130,60 @@ def test_labels_with_a_radical_mark_equal_the_cli(pkg, tmp_path):
     methyl, aminium = json.loads(site)["structures"]
     assert (methyl["unpaired"], methyl["odd"], methyl["kind"]) == (1, True, "radical")
     assert (aminium["kind"], aminium["electrons"]) == ("radicalCation", 9) and aminium["odd"]
+
+
+# ions/1: a chloro amine, a quaternary ammonium, a deuterated acid and a 13C-labelled sugar (atoms as the Draw page sends them)
+IONS = {"structures": [[{"el": "C", "h": 3}, {"el": "N", "h": 1}, {"el": "C", "h": 2}, {"el": "Cl"}], [{"el": "N", "q": 1}, {"el": "C", "h": 3}, {"el": "C", "h": 3}, {"el": "C", "h": 3}, {"el": "C", "h": 3}],
+                        [{"el": "C", "iso": 0}, {"el": "D"}, {"el": "D"}, {"el": "D"}, {"el": "C"}, {"el": "O"}, {"el": "O"}, {"el": "D"}],
+                        [{"el": "C", "iso": 13, "h": 2}, *[{"el": "C", "iso": 13, "h": 1}] * 4, {"el": "C", "iso": 13, "h": 1}, *[{"el": "O", "h": 1}] * 5, {"el": "O"}], [{"el": "R#"}]], "decimals": 4}
+
+
+@pytest.mark.parametrize("sets", [[], ["decimals=6", "ppm=2.5"]])
+def test_ions_through_wasm_equal_the_cli_byte_for_byte(pkg, tmp_path, sets):
+    req = tmp_path / "req.json"
+    body = dict(IONS)
+    for kv in sets:
+        k, v = kv.split("=")
+        body[k] = float(v)
+    req.write_text(json.dumps(IONS), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps(body), "ions")
+    app = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-ions", str(req), *[a for kv in sets for a in ("--set", kv)])
+    assert site == app
+    amine, quat, acid, sugar, bad = json.loads(site)["structures"]
+    rows = {r["name"]: r["mzText"] for r in amine["rows"]}
+    assert amine["formula"] == "C2H6ClN" and "[M+H]+" in rows and "[M-H]-" in rows
+    assert [(r["name"], r["z"]) for r in quat["rows"]] == [("[M]+", 1)]
+    assert next(r for r in acid["rows"] if r["name"] == "[M-H]-")["formula"] == "C2D3O2"
+    assert sugar["formula"] == "[13C]6H12O6" and bad["error"] == "error.etich.element"
+
+
+@pytest.mark.parametrize("part", [False, True])
+def test_sel_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, part):
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps({"molfile": ANILIDE, "part": part}), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "sel")
+    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-sel", str(req))
+    r = json.loads(site)
+    assert (r["format"], r["part"], r["label"]["formula"], r["heavy"], r["rings"], r["aromaticRings"], r["aromaticAtoms"]) == ("sel/1", part, "C8H8FNO", 11, 1, 1, 6)
+    assert round(r["label"]["mass"], 4) == 153.0590
+
+
+def test_analysis_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path):
+    # every golden molecule of tools/analisi_riferimento.py, plus CuCl2(NH3)2 (Cu: the abundances of `isotopi-tutti`, on in the .wasm as in the app)
+    cases = [c["request"] for c in json.loads((ROOT / "tests/dati/anal_golden.json").read_text(encoding="utf-8"))]
+    cases.append({"atoms": [{"el": "Cl"}, {"el": "Cu"}, {"el": "Cl"}, {"el": "N", "h": 3}, {"el": "N", "h": 3}]})
+    for i, c in enumerate(cases):
+        req = tmp_path / f"anal{i}.json"
+        req.write_text(json.dumps(c), encoding="utf-8")
+        site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "analysis")
+        assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-anal", str(req)), c
+    assert [c["el"] for c in json.loads(site)["composition"]] == ["H", "Cl", "Cu", "N"]
+
+
+def test_link_through_wasm_equals_the_cli_and_the_reference(pkg, tmp_path):
+    # every case of tools/link_riferimento.py: charges, brackets, stereo, isotopes, #, + and / percent-encoded the same in the page and the app
+    for i, c in enumerate(json.loads((ROOT / "tests/dati/link_golden.json").read_text(encoding="utf-8"))):
+        req = tmp_path / f"link{i}.json"
+        req.write_text(json.dumps(c["request"]), encoding="utf-8")
+        site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "link")
+        assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-link", str(req)) == c["link"] + "\n", c

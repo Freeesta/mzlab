@@ -9,7 +9,7 @@ import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
 import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
-import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js";
+import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
 import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
@@ -365,12 +365,19 @@ async function doCut(/** @type {number[]} */ bids, /** @type {{ x: number, y: nu
   FRAME.next(drawLabels);
 }
 let cutLine = /** @type {{ off: () => void } | null} */ (null);
-function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine = mountCutLine({ frame: fr, button: Q("#cut-line"), K: () => K, cut: doCut }); }
+let mech = /** @type {{ off: () => void, draw: (svg: SVGSVGElement, sc: number) => void } | null} */ (null);   // mechanism arrows (disegno-meccanismo.js)
+function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine = mountCutLine({ frame: fr, button: Q("#cut-line"), K: () => K, cut: doCut }); if (!mech) { mech = mountMech({ frame: fr, K: () => K, h: fragHelpers, root: Q("#mech-card") }); FRAME.next(drawLabels); } }
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
 // built-in rows of the canvas menu (disegno-menu.js registry; other modules add theirs with TPDraw.menu.add, between these orders)
 const shortSmi = (/** @type {string} */ s) => s.length > 24 ? s.slice(0, 21) + "…" : s;
 menuAdd({ id: "copy-smiles", order: 10, label: (/** @type {any} */ c) => c.smiles ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi(c.smiles) }) : I18N.t("draw.ctx.copySmiles"), run: (/** @type {any} */ c) => { if (c.smiles) copyText(c.smiles); } });
+const ctxMolfile = (/** @type {any} */ c) => pieceMolfile(c.whole ? [...K.editor.struct().atoms.keys()] : [...c.atoms]), convertOf = (/** @type {string} */ mf, /** @type {string} */ f) => indigo(() => K.structService.convert({ struct: mf, output_format: f }, {})).then((/** @type {any} */ r) => String(r.struct));
+menuAdd({ id: "info", order: 15, label: "draw.ctx.info", title: "draw.ctx.info.title", run: (/** @type {any} */ c) => {   // formula, masses, rings, InChI (disegno-selezione.js)
+  const mf = ctxMolfile(c);
+  if (!mf) { if (window.toast) toast(I18N.t("draw.info.none")); return; }
+  import("./disegno-selezione.js").then(m => m.infoOpen({ molfile: mf, part: !c.whole, smiles: c.smiles || "", esc: EH, big: window.big, convert: (/** @type {string} */ f) => convertOf(mf, f) })); } });
+menuAdd({ id: "links", order: 17, rows: (/** @type {any} */ c) => !c.smiles ? [] : import("./disegno-link.js").then(m => m.linkRows(c.smiles, !c.whole, () => { const mf = ctxMolfile(c); return mf ? convertOf(mf, "chemical/x-inchi") : Promise.resolve(""); })) });   // PubChem, ChEBI, BioTransformer: a new tab only on a click (disegno-link.js)
 menuAdd({ id: "center", order: 20, label: "draw.ctx.center", run: () => { if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); } } });
 // «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
 menuAdd({ id: "break-bonds", when: "selection", order: 30, show: (/** @type {any} */ c) => c.bonds.length > 0, label: (/** @type {any} */ c) => I18N.t("draw.ctx.breakBonds", { n: c.bonds.length }), title: "draw.ctx.breakBonds.title", run: (/** @type {any} */ c) => { setTimeout(() => breakBonds(c.bonds), 60); } });
@@ -392,6 +399,7 @@ let infoRun = 0;
 // only marks "again" and the run repeats once with the final selection.
 let infoBusy = false, infoAgain = false;
 async function showInfo() {
+  analysis();
   if (infoBusy) { infoAgain = true; return; }
   infoBusy = true;
   try { do { infoAgain = false; await showInfo1(); } while (infoAgain); }
@@ -449,6 +457,26 @@ async function showInfo1() {
     + (usedNeutral ? '<div class="muted sm">' + EH(I18N.t("draw.props.usedNeutral")) + '</div>' : "")
     + (perm ? '<div class="muted sm">' + EH(I18N.t("draw.props.permanent")) + '</div>' : "");
 }
+// «Formula analysis» card (disegno-analisi.js, loaded when first opened): the selected atoms, or the only structure of the canvas
+let analCard = /** @type {Promise<{ refresh: () => void }> | null} */ (null);
+const analHelpers = { t: fragHelpers.t, copy: (/** @type {string} */ s) => { copyText(s); }, table: fragHelpers.table, atoms: () => {
+  if (!K || !K.editor) return null;
+  const st = K.editor.struct(), sel = K.editor.selection() || {}, set = new Set(sel.atoms || []);
+  (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+  const ps = pieces(set.size ? set : null);
+  return set.size || ps.length === 1 ? ps.flatMap(p => p.ids).map((/** @type {number} */ i) => st.atoms.get(i)) : null;
+} };
+function analysis() {
+  const c = /** @type {HTMLDetailsElement | null} */ (Q("#anal-card")); if (!c || !c.open) return;
+  (analCard = analCard || import("./disegno-analisi.js").then(m => m.mount(analHelpers))).then(a => a.refresh()).catch(() => { analCard = null; });
+}
+document.addEventListener("toggle", e => { if (/** @type {any} */ (e.target).id === "anal-card") analysis(); }, true);   // toggle does not bubble: caught on the way down
+// the menu row opens the card on what the menu acts on (the selection, or the only structure); the toggle above computes it
+menuAdd({ id: "analysis", order: 70, label: "draw.ctx.analysis", title: "draw.ctx.analysis.title", run: () => {
+  const c = /** @type {HTMLDetailsElement | null} */ (Q("#anal-card")); if (!c) return;
+  if (c.open) analysis(); else c.open = true;
+  c.scrollIntoView({ block: "nearest" }); const sm = c.querySelector("summary"); if (sm) sm.focus();
+} });
 let neutOn = true;                                                             // "Escludi la carica": on by default
 document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
 const fmtF = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
@@ -518,6 +546,7 @@ function drawLabels() {
   svg.appendChild(g);                                     // always last: drawn above the structure
   g.textContent = "";
   drawPartials(K, svg, sc);                               // brackets of the partial structures, always drawn
+  if (mech) mech.draw(svg, sc);                           // mechanism arrows and lone pairs, always drawn
   if (!labelsOn()) return;
   // the Ketcher canvas stays white in every app theme, so the labels (and the exports) always use the dark-on-white colours
   const text = (/** @type {number} */ x, /** @type {number} */ y, /** @type {DrawLine[]} */ lines, /** @type {string} */ color, /** @type {number} */ size) => lines.forEach((/** @type {DrawLine} */ parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
@@ -665,11 +694,11 @@ function noBackground(/** @type {string} */ svgText) {
 }
 async function image(/** @type {string} */ format) {
   await start();
-  const raw = ketWithoutPartials(await K.getKet()), gen = (/** @type {DrawKet} */ k) => indigo(() => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" }));
+  const raw = ketWithoutMech(ketWithoutPartials(await K.getKet())), gen = (/** @type {DrawKet} */ k) => indigo(() => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" }));
   let svgText = null;
   if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
   if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
-  const po = exportOffset(svgText, JSON.parse(raw)); if (po) svgText = addExportPartials(K, svgText, po);       // brackets and Δ of the partial structures (disegno-parziali.js)
+  const po = exportOffset(svgText, JSON.parse(raw)); if (po) svgText = addExportMech(K, addExportPartials(K, svgText, po), po);       // brackets and Δ of the partial structures (disegno-parziali.js)
   svgText = padSvg(svgText, 16);
   const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
   if (clear) svgText = noBackground(svgText);
@@ -711,6 +740,7 @@ async function doExport(/** @type {string} */ kind) {
     await start();
     if (K.editor.struct().isBlank()) { exwarn(I18N.t("draw.export.empty")); return; }
     if (kind === "ket") { saveBlob(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
+    if (kind === "mol" || kind === "sdf") return await (await import("./disegno-esporta.js")).save(K, kind, Q("#ex-ion").value, exportName(kind), saveBlob);   // written by the Rust engine
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
@@ -718,31 +748,21 @@ async function doExport(/** @type {string} */ kind) {
     if (window.toast) toast(I18N.t("draw.export.saved"));
   } catch (e_) { const e = /** @type {Lanciato} */ (e_); exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
 }
-Q("#ex-png").onclick = () => doExport("png");
-Q("#ex-jpg").onclick = () => doExport("jpg");
-Q("#ex-svg").onclick = () => doExport("svg");
-Q("#ex-ket").onclick = () => doExport("ket");
+for (const k of ["png", "jpg", "svg", "ket", "mol", "sdf"]) Q("#ex-" + k).onclick = () => doExport(k);
 function syncBg() {                                    // JPEG cannot be transparent: its button is off (grey) while "Sfondo trasparente" is on
   const on = Q("#ex-nobg").checked, j = Q("#ex-jpg");
   j.disabled = on; j.title = on ? I18N.t("draw.export.jpegNoAlpha") : "";
 }
-Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
-freshName();
+Q("#ex-nobg").addEventListener("change", syncBg); syncBg(); freshName();
 Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote(""); const named = await nameToSmiles(v, dnote, I18N.t.bind(I18N)); if (named === null) return; v = named;   // a name draws its first suggestion; never sent to Ketcher as text (query atoms)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
-// «Is this in the catalogue?»: every piece of the drawing (or of the selection) is looked up by the Rust engine (disegno-identita.js, loaded on the first click)
-// «Is this in the catalogue?»: the button looks up the selection or the whole canvas, the canvas menu row what the menu acts on; the answer is in #id-out
-async function identify(/** @type {Set<number> | null} */ only) {
-  const out = Q("#id-out"); out.scrollIntoView({ block: "nearest" });
-  (await import("./disegno-identita.js")).show(pieces(only).map(p => pieceMolfile(p.ids)), out, (k, p) => I18N.t(k, p));
-}
-Q("#ex-id").onclick = async () => { await start(); const sel = K.editor.selection() || {}; identify(sel.atoms && sel.atoms.length ? new Set(/** @type {number[]} */ (sel.atoms)) : null); };
-menuAdd({ id: "catalogue-id", order: 70, label: "draw.id.button", title: "draw.id.title", run: (/** @type {any} */ c) => { identify(c.whole ? null : c.atoms); } });
-
+async function drawnAtoms() { await start(); const sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []); (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } }); return pieces(set.size ? set : null).map(p => p.ids.map((/** @type {number} */ i) => atomOf(st.atoms.get(i)))); }   // the atoms of each structure of the selection (bond ends included), or of the whole canvas: the «Expected ions» card (disegno-ioni.js)
+const showIons = () => import("./disegno-ioni.js").then(m => m.carica()); Q("#ions-go")?.addEventListener("click", showIons); menuAdd({ id: "expected-ions", order: 70, label: "draw.ctx.ions", title: "draw.ctx.ions.title", run: () => { Q("#ions-card")?.scrollIntoView({ block: "nearest" }); showIons(); } });   // of the selection, or of the whole drawing
+const identify = async (/** @type {Set<number> | null} */ only) => { const out = Q("#id-out"); out.scrollIntoView({ block: "nearest" }); (await import("./disegno-identita.js")).show(pieces(only).map(p => pieceMolfile(p.ids)), out, (k, p) => I18N.t(k, p)); }; Q("#ex-id").onclick = async () => { await start(); const sel = K.editor.selection() || {}; identify(sel.atoms && sel.atoms.length ? new Set(/** @type {number[]} */ (sel.atoms)) : null); }; menuAdd({ id: "catalogue-id", order: 75, label: "draw.id.button", title: "draw.id.title", run: (/** @type {any} */ c) => { identify(c.whole ? null : c.atoms); } });   // «Is this in the catalogue?»: the button looks up the selection or the whole canvas, the menu row what the menu acts on; the answer is in #id-out
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
+window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, structures: drawnAtoms, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
@@ -805,3 +825,6 @@ function frameExtras(/** @type {HTMLIFrameElement} */ fr) {
   else rows.push([t("draw.keys.trackpad.key"), t("draw.keys.trackpad")]);
   Q("#keys-body").innerHTML = `<table>${rows.map(r => h`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
 })();
+import("./disegno-verifica.js").then(m => m.mountCheck()).catch((/** @type {unknown} */ e) => console.error("QqQ Draw: check card", e))   // structure check card, its own module
+  .then(() => import("./disegno-cip.js")).then(m => m.mountCip()).catch((/** @type {unknown} */ e) => console.error("QqQ Draw: CIP card", e));   // R/S and E/Z card after it
+import("./disegno-sottostruttura.js").then(m => m.mountSub()).catch((/** @type {unknown} */ e) => console.error("QqQ Draw: substructure search", e));   // menu rows of the substructure search, its own module

@@ -1,6 +1,7 @@
 //! The chromatogram list of a sample, the same for the engine (`run.rs`) and the readers module (`run_extended.rs`, `mzlab-cli convert`): one TIC per experiment
 //! with data (full scan: the TIC of the index; MRM: the TIC of the blocks), `TIC sample=N period=1 experiment=E` when there are several, the SRM / SIM
-//! chromatograms after the TIC of their experiment and the BPC of each full scan experiment last (only when its scans were decoded).
+//! chromatograms after the TIC of their experiment, the device traces (`devices.rs`) and the BPC of each full scan experiment last (only when its scans were
+//! decoded).
 
 use super::modes::{CODE_FULL, CODE_Q1};
 use super::{Record, Wiff};
@@ -112,6 +113,12 @@ impl Wiff {
                     intensity,
                 });
             }
+        }
+        for d in &self.devices {
+            chroms.push(Chromatogram {
+                index: chroms.len(),
+                ..d.clone()
+            });
         }
         self.push_bpc(&mut chroms, bpcs, many);
         chroms

@@ -11,6 +11,7 @@ mod crippen_tab;
 mod cxsmiles;
 pub mod delta;
 mod descr;
+mod drawing;
 mod elements;
 mod kekule;
 mod model;
@@ -18,6 +19,9 @@ mod molfile;
 mod molfile_stereo;
 mod molfile_v2000;
 mod molfile_v3000;
+mod molfile_write;
+mod pieces;
+pub use molfile_write::fixed;
 mod query;
 mod renumber;
 mod sites;
@@ -35,6 +39,8 @@ mod validate;
 pub use canon::CAN_VERSION;
 pub use codec::{hex, MolError};
 pub use descr::Descriptors;
+pub use drawing::{allowed_valences, has_valence_rules, Drawing, WedgeMark};
+pub use elements::{atomic_number, is_element};
 pub use model::{
     Atom, Bond, Cfg, Coords, GroupKind, Ids, Mol, Parity, Prop, Region, RegionKind, Status, Stereo,
     StereoGroup, FORMAT,

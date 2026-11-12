@@ -51,6 +51,9 @@ wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo" @mo
 # the catalogue identity of a drawing (crates/mzlab-molid-wasm: molid/1, it carries mzlab-mol), loaded by disegno-identita.js on the first «Is this in the catalogue?»; standard limit
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-molid-wasm
 wasm_pack "$out/molid" $R/mzlab_molid_wasm.wasm $limit "molid" @motore
+# the molecule kit of Draw (crates/mzlab-mol-wasm on the mol/1 record: check/1), loaded by disegno-verifica.js only when the user asks for the check; standard limit
+tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-mol-wasm
+wasm_pack "$out/molkit" $R/mzlab_mol_wasm.wasm $limit "molkit" @motore
 # the reactivity of the parent (crates/mzlab-chem-wasm: reatt/1), loaded only in administrator mode
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-chem-wasm
 wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem" @motore
@@ -114,6 +117,8 @@ m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_
               "sha256": hashlib.sha256(open(f"{o}/grafo/mzlab_feat_grafo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["molid"] = {"js": "molid/mzlab_molid_wasm.js", "wasm": "molid/mzlab_molid_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/molid/mzlab_molid_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["molkit"] = {"js": "molkit/mzlab_mol_wasm.js", "wasm": "molkit/mzlab_mol_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/molkit/mzlab_mol_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["chem"] = {"js": "chem/mzlab_chem_wasm.js", "wasm": "chem/mzlab_chem_wasm_bg.wasm",
              "sha256": hashlib.sha256(open(f"{o}/chem/mzlab_chem_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["llm"] = {"js": "llm/mzlab_llm_wasm.js", "wasm": "llm/mzlab_llm_wasm_bg.wasm",

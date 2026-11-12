@@ -1,5 +1,6 @@
 """Disegno with the trimmed Ketcher bundle (no macromolecules mode, empty monomer library): a structure is drawn from SMILES, a bond is added with the editor,
-and the result exports as SMILES, molfile V2000 and .ket; the macromolecules switch is not in the page."""
+and the result exports as SMILES, molfile V2000 and .ket, and through the MOL / SDF buttons (Rust writer, sdf/1) as one .mol and one SDF record
+per structure with its data items; the macromolecules switch is not in the page."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -36,6 +37,23 @@ try:
             ket = pg.evaluate(f"{K}.getKet()")
             assert '"mol1"' in ket and "monomer" not in ket.lower(), ket[:200]
         step("a second structure is added and the .ket has no monomers", draw_more)
+        def mol_sdf():
+            pg.select_option("#ex-ion", "[M+H]+")
+            with pg.expect_download(timeout=60000) as d: pg.click("#ex-sdf")
+            sdf = open(d.value.path(), encoding="utf-8").read()
+            assert d.value.suggested_filename.endswith(".sdf"), d.value.suggested_filename
+            recs = [x for x in sdf.split("$$$$\n") if x.strip()]
+            assert len(recs) == 2, sdf[:400]
+            forms = sorted(x.split("> <MZLAB_FORMULA>\n")[1].split("\n")[0] for x in recs)
+            assert forms == ["C2H6O", "C8H9NO2"], forms
+            assert all("> <MZLAB_ION>\n[M+H]+\n" in x and "> <MZLAB_HASH>\nmol1:" in x for x in recs), sdf[:600]
+            assert "152.0706" in sdf, "paracetamol [M+H]+"
+            with pg.expect_download(timeout=60000) as d: pg.click("#ex-mol")
+            mol = open(d.value.path(), encoding="utf-8").read()
+            assert d.value.suggested_filename.endswith(".mol") and mol.endswith("M  END\n") and "$$$$" not in mol and "> <" not in mol, mol[-200:]
+            assert int(mol.split("\n")[3][:3]) == 14, mol.split("\n")[3]
+            assert pg.evaluate("document.querySelector('#ex-warn').hidden"), pg.inner_text("#ex-warn")
+        step("MOL and SDF are written by the engine: one record per structure with formula, ion, m/z and hash", mol_sdf)
         def no_macro():
             assert not pg.evaluate("!!document.querySelector('#kframe').contentDocument.querySelector('[data-testid=polymer-toggler]')")
         step("the macromolecules switch is not in the editor", no_macro)

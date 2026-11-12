@@ -89,3 +89,47 @@ fn a_damaged_scan_block_of_a_wiff_is_written_with_code_3_and_its_cause() {
     assert!(o.stderr.contains("(warn.wiff.damaged)"), "{}", o.stderr);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// The IDA pair `ida` of `tools/wiff_riferimento.py` (its index rows hold no point count): both samples are written whole, code 0, nothing partial.
+/// Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
+#[test]
+fn an_ida_wiff_is_written_whole_with_code_0() {
+    let dir = folder("ida");
+    let src = dir.join("in");
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let made = std::process::Command::new("python3")
+        .arg(root.join("tools/wiff_riferimento.py"))
+        .arg(&src)
+        .output();
+    if !made.is_ok_and(|o| o.status.success()) {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        return eprintln!("SKIP an_ida_wiff: python3 not available");
+    }
+    let (out, report) = (dir.join("out"), dir.join("r.json"));
+    let o = convert(&[
+        p(&src.join("ida.wiff")),
+        "--out",
+        p(&out),
+        "--report",
+        p(&report),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let r = parse(&std::fs::read(&report).unwrap()).unwrap();
+    for row in r.arr() {
+        let conv = row.get("conv/1").expect("conv/1");
+        let n = |k: &str| conv.get(k).and_then(|v| v.f64()).unwrap();
+        assert_eq!(
+            (conv.get("parziale").and_then(|v| v.bool()), n("lette")),
+            (Some(false), 9.0),
+            "{}",
+            o.stderr
+        );
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[path = "convert_tests_centroids.rs"]
+mod centroid_counts;
