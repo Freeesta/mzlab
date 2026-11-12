@@ -284,6 +284,7 @@
   "map.leg3d.scale": "Dopo la legenda 3D; {scale} = radice/lineare/log, {norm} = normalizzazione o vuoto.",
   "int.clash": "«Elimina» è la voce di menu int.menu.del.",
   "int.tbl.none": "Il nome tra virgolette è int.menu.auto.",
+  "int.split.mark": "aria-label di un marcatore della divisione nelle valli; {rt} = tempo della linea verticale in minuti, 3 decimali.",
   "tip.peak": "Riquadro del mouse su un picco dello spettro; {y} = valore (con % se relativo), {abs} = HTML con i cps assoluti o vuoto.",
   "ctx.spec.known": "Voce grigia del menu (HR); {adduct} = addotto oppure «solo m/z», {more} = « e altri N» oppure vuoto.",
   "ctx.spec.iso.prompt": "{adduct} = addotto predefinito (già protetto).",

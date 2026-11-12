@@ -87,5 +87,17 @@ I18N.add("it", {
   "canali.manint.h.label": "Nome",
   "canali.manint.nm.aria": "Nome dell'integrazione",
   "canali.manint.h.base": "Linea di base",
+  "int.split.menu": "Dividi nelle valli",
+  "int.split.tip": "Linee verticali nelle valli tra picchi sovrapposti, proposte dal motore: spostale, poi Dividi. Una spalla senza minimo non si divide",
+  "int.split.depth": "Profondità (%)",
+  "int.split.depth.tip": "Una valle divide quando il picco più piccolo sale sopra di essa di questa percentuale del punto più alto della finestra",
+  "int.split.ok": "Dividi",
+  "int.split.none": "Nessuna valle",
+  "int.split.mark": "Linea di divisione: {rt} min. Frecce ← →: sposta; Canc: togli; Invio: dividi; Esc: annulla",
+  "canali.manint.h.overlap": "Sovrapposto",
+  "canali.manint.h.overlap.tip": "Parte di un'integrazione divisa con una linea verticale nella valle",
+  "canali.manint.h.pv": "p/v",
+  "canali.manint.h.pv.tip": "Altezza della parte sulla valle più alta accanto (Ph. Eur. 2.2.46: il valore del picco più piccolo)",
+  "canali.manint.drop": "sì",
   "canali.manint.h.act": "Azioni"
 });

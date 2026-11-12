@@ -71,3 +71,13 @@ pub fn manual_table(files: &str, windows: &str, sums: bool) -> String {
         Err(e) => format!("E{}", e.to_json()),
     }
 }
+
+/// `api/manvalley`: where one window of `manual_table` splits at `depth` (`manint::valleys_text`): `{"splits":[MIN,...]}`; "E" + JSON = the user's
+/// error.
+#[wasm_bindgen]
+pub fn manual_valleys(files: &str, window: &str, depth: f64) -> String {
+    match mzlab_core::manint::valleys_text(files, window, depth) {
+        Ok(json) => json,
+        Err(e) => format!("E{}", e.to_json()),
+    }
+}

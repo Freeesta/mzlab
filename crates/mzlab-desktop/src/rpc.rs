@@ -357,6 +357,7 @@ impl State {
                 Ok(csv) => csv,
                 Err(e) => format!("E{}", e.to_json()),
             }),
+            "valleys" => text(mzlab_core::manint::valleys_text(s("files"), s("window"), p["depth"].as_f64().unwrap_or(f64::NAN)).unwrap_or_else(|e| format!("E{}", e.to_json()))),
             "mrmdiff" => match mzlab_core::diffroute::mrm_diff(s("files"), s("ref"), &q()) {
                 None => text(""),
                 Some(Ok(j)) => text(j),

@@ -166,12 +166,13 @@ fn samples_of(
     Ok(out)
 }
 
-fn table(c: &Request, warn: &mut String) -> Result<String> {
+/// The `files` of `manint` (`[{"name", "transitions"}]`) for the files given, in order.
+pub(crate) fn files_json(files: &[PathBuf], warn: &mut String) -> Result<String> {
     let mut taken = Vec::new();
     let mut o = Out::default();
     o.raw("[");
     let mut first = true;
-    for p in &c.files {
+    for p in files {
         for (name, tr) in samples_of(p, &mut taken, warn)? {
             o.raw(if first { "{\"name\":" } else { ",{\"name\":" })
                 .str(&name)
@@ -182,8 +183,13 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
         }
     }
     o.raw("]");
+    Ok(o.0)
+}
+
+fn table(c: &Request, warn: &mut String) -> Result<String> {
+    let files = files_json(&c.files, warn)?;
     let windows = std::fs::read_to_string(&c.windows).map_err(io)?;
-    mzlab_core::manint::table_text(&o.0, &windows, c.sums)
+    mzlab_core::manint::table_text(&files, &windows, c.sums)
 }
 
 pub fn run(args: Vec<String>) -> Outcome {

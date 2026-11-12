@@ -28,11 +28,13 @@ mod mol_sel_cmd;
 mod mol_suspects_cmd;
 #[path = "peak_area_cmd.rs"]
 pub(crate) mod peak_area_cmd;
+#[path = "peak_split_cmd.rs"]
+mod peak_split_cmd;
 #[path = "peak_window_cmd.rs"]
 mod peak_window_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 27] = [
+pub(crate) const PLAIN: [&str; 28] = [
     "llm",
     "steps",
     "explain-missing",
@@ -57,6 +59,7 @@ pub(crate) const PLAIN: [&str; 27] = [
     "samples",
     "peak-edges",
     "manual-table",
+    "peak-split",
     "peak-auto",
     "peak-area",
     "peak-window",
@@ -101,6 +104,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "mol-suspects" => mol_suspects_cmd::run(args),
         "samples" => samples_cmd::run(args),
         "manual-table" => manual_table_cmd::run(args),
+        "peak-split" => peak_split_cmd::run(args),
         "peak-auto" => peaks_auto_cmd::run(args),
         "peak-area" => peak_area_cmd::run(args),
         "peak-window" => peak_window_cmd::run(args),

@@ -137,6 +137,8 @@ function sync(/** @type {Bag} */ p) {
     }
   }
   old.forEach(n => n.remove()); say(p);
+  const W = /** @type {any} */ (window);                          // the drop lines and the proposal of «Split at the valleys» (integra-valli.js)
+  if (W.INTVALLI) W.INTVALLI.sync(p); else if (p._split || p.ints.some((/** @type {Bag} */ i) => i.splits)) carica("m:integra-valli.js").then(() => draw(p));
 }
 {                                                                  // the look of the handles: a ring on the baseline (colours from the CSS variables)
   const st = document.createElement("style");
