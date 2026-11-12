@@ -441,3 +441,7 @@ pub(super) fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> 
         last: RefCell::new(None),
     }))
 }
+
+#[cfg(test)]
+#[path = "mzml_numpress_tests.rs"]
+mod tests;

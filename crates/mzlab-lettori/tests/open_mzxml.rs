@@ -183,3 +183,20 @@ fn the_header_carries_every_scan_attribute() {
     assert_eq!(value("peaks.precision").as_deref(), Some("64"));
     assert_eq!(value("ion injection time").as_deref(), Some("12.5"));
 }
+
+/// The mzML of an mzXML carries the charge and the activation of each precursor (`extra_mzml` of the scan just read).
+#[test]
+fn the_written_mzml_keeps_the_precursor_charge_and_activation() {
+    let mut l = open_mzxml(mzxml(&run(), FLAT));
+    let x = String::from_utf8(written_mzml(&mut l)).unwrap();
+    let precursors: Vec<&str> = x.split("<precursor>").skip(1).collect();
+    assert!(!precursors.is_empty());
+    for p in precursors {
+        let p = &p[..p.find("</precursor>").unwrap()];
+        assert!(
+            p.contains(r#"accession="MS:1000041" name="charge state" value="2""#),
+            "{p}"
+        );
+        assert!(p.contains(r#"accession="MS:1000133""#), "{p}");
+    }
+}
