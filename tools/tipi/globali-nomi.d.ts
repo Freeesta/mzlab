@@ -1010,5 +1010,6 @@ declare var yTitleI: any;
 declare var yesno: any;
 declare var zeroMarks: any;
 declare var zipStore: any;
+declare var zoomBar: any;
 declare var zoomTo: any;
 declare var zoomYTo: any;

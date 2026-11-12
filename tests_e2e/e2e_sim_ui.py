@@ -51,6 +51,14 @@ try:
             tip = pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'); const d = document.createElement('div'); d.innerHTML = p._a.hov(p._a.X ? p._a.X((p._a.x0 + p._a.x1) / 2) : 300, 50).html; return [...d.querySelectorAll('i')].map(i => i.style.background); })()")
             need(tip and set(map(css, tip)) <= {css(c) for _, c, _, _ in s}, "tooltip colours %s" % tip)
         step("SIM overlay: colour = the sample (its file-list square), dash = the ion; legend and tooltip agree", colours)
+        def zoombar():
+            pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'), a = p._a; p.zoom = [a.x0 + (a.x1 - a.x0) / 4, a.x1 - (a.x1 - a.x0) / 4]; draw(p); })()")
+            wait_for_js(pg, "(() => { const z = E.panels.find(p => p.type === 'mrm').el.querySelector('.zbar'); return !!z && !z.hidden; })()", timeout=20000)
+            z = pg.evaluate("(() => { const z = E.panels.find(p => p.type === 'mrm').el.querySelector('.zbar'); return [z.getAttribute('role'), z.getAttribute('aria-label'), z.title]; })()")
+            need(z[0] == "img" and z[1] and z[1] == z[2] and "RT" in z[1] and "min" in z[1], z)
+            pg.evaluate("(() => { const p = E.panels.find(p => p.type === 'mrm'); p.zoom = null; draw(p); })()")
+            wait_for_js(pg, "E.panels.find(p => p.type === 'mrm').el.querySelector('.zbar').hidden", timeout=20000)
+        step("zoomed: the range is in the zoom bar's title and aria-label (no text on the chart), gone at full view", zoombar)
         step("«Area» is on by default and the traces are filled", lambda: need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area !== false") and pg.evaluate("document.querySelector('[data-a=area]').getAttribute('aria-pressed')") == "true", "area"))
         def toggle():
             pg.click("[data-a=area]"); need(pg.evaluate("E.panels.find(p => p.type === 'mrm').area") is False, "off")
