@@ -3,7 +3,7 @@
 //! tetrahedral centres as one wedge chosen with the reader's own parity rule, `unknown` centres and double bonds as "either" marks. Stereo
 //! needs the 2D coordinate layer; without coordinates every atom sits at the origin and only the constitution travels.
 
-use crate::model::{Mol, Status, Stereo, StereoGroup};
+use crate::model::{Mol, Parity, Status, Stereo};
 use crate::molfile::{Draft, DraftAtom, DraftBond, Wedge};
 use crate::molfile_stereo::{adjacency, parity};
 use crate::valence::shortfall;
@@ -48,114 +48,6 @@ impl Mol {
         }
         s.push_str("M  END\n");
         s
-    }
-
-    /// Each connected piece as its own record, in the order of its first atom; atoms keep their relative order and their layers.
-    pub fn pieces(&self) -> Vec<Mol> {
-        let n = self.atoms.len();
-        let mut piece = vec![usize::MAX; n];
-        let mut count = 0;
-        let mut nb = vec![Vec::new(); n];
-        for b in &self.bonds {
-            nb[b.a as usize].push(b.b as usize);
-            nb[b.b as usize].push(b.a as usize);
-        }
-        for s in 0..n {
-            if piece[s] != usize::MAX {
-                continue;
-            }
-            let mut stack = vec![s];
-            piece[s] = count;
-            while let Some(x) = stack.pop() {
-                for &y in &nb[x] {
-                    if piece[y] == usize::MAX {
-                        piece[y] = count;
-                        stack.push(y);
-                    }
-                }
-            }
-            count += 1;
-        }
-        if count <= 1 {
-            return vec![self.clone()];
-        }
-        let mut out = Vec::new();
-        for k in 0..count {
-            out.extend(self.only_piece(&piece, k));
-        }
-        out
-    }
-
-    fn only_piece(&self, piece: &[usize], k: usize) -> Option<Mol> {
-        // plain loops: iterator adapters and `retain` closures cost the `.wasm` more
-        let n = piece.len();
-        let mut new_of_old = vec![0u32; n];
-        let mut size = 0u32;
-        for i in 0..n {
-            if piece[i] == k {
-                new_of_old[i] = size;
-                size += 1;
-            }
-        }
-        let mut next = size;
-        for i in 0..n {
-            if piece[i] != k {
-                new_of_old[i] = next;
-                next += 1;
-            }
-        }
-        let mut m = self.renumbered(&new_of_old).ok()?;
-        let s = size as usize;
-        m.atoms.truncate(s);
-        let mut bonds = Vec::new();
-        for b in m.bonds {
-            if b.b < size {
-                bonds.push(b);
-            }
-        }
-        m.bonds = bonds;
-        let mut stereo = Vec::new();
-        for x in m.stereo {
-            let at = match x {
-                Stereo::Tetra { c, .. } => c,
-                Stereo::Db { b, .. } => b,
-            };
-            if at < size {
-                stereo.push(x);
-            }
-        }
-        m.stereo = stereo;
-        let mut groups = Vec::new();
-        for g in m.groups {
-            let mut atoms = Vec::new();
-            for a in g.atoms {
-                if a < size {
-                    atoms.push(a);
-                }
-            }
-            if !atoms.is_empty() {
-                groups.push(StereoGroup {
-                    kind: g.kind,
-                    atoms,
-                });
-            }
-        }
-        m.groups = groups;
-        if let Some(c) = m.coords.as_mut() {
-            c.xy.truncate(s);
-        }
-        for p in &mut m.props {
-            p.v.truncate(s);
-        }
-        let mut regions = Vec::new();
-        for r in m.regions {
-            if r.atoms.iter().all(|&a| a < size) {
-                regions.push(r);
-            }
-        }
-        m.regions = regions;
-        m.id = None;
-        Some(m)
     }
 
     /// x, y, z of every atom (zeros without a coordinate layer).
@@ -217,32 +109,13 @@ impl Mol {
                     ..
                 } => {
                     let c = *c as usize;
-                    let mut cands: Vec<(usize, usize)> = adj[c]
-                        .iter()
-                        .copied()
-                        .filter(|&(_, bi)| out[bi].o == 1 && out[bi].mark == Wedge::None)
-                        .collect();
-                    // insertion sort: few candidates, and a generic sort costs the `.wasm` more than this loop
-                    let key = |&(n, _): &(usize, usize)| (centres.contains(&n), adj[n].len(), n);
-                    for i in 1..cands.len() {
-                        let mut j = i;
-                        while j > 0 && key(&cands[j - 1]) > key(&cands[j]) {
-                            cands.swap(j - 1, j);
-                            j -= 1;
-                        }
-                    }
-                    'pick: for (n, bi) in cands {
-                        for w in [Wedge::Up, Wedge::Down] {
-                            if parity(&draft, c, &adj[c], &[(n, w)]) == Some(*p) {
-                                out[bi] = OutBond {
-                                    a: c,
-                                    b: n,
-                                    o: 1,
-                                    mark: w,
-                                };
-                                break 'pick;
-                            }
-                        }
+                    if let Some((n, bi, w)) = wedge_for(&draft, &adj, &out, &centres, c, *p) {
+                        out[bi] = OutBond {
+                            a: c,
+                            b: n,
+                            o: 1,
+                            mark: w,
+                        };
                     }
                 }
                 Stereo::Tetra {
@@ -443,6 +316,41 @@ impl Mol {
         }
         v("END CTAB".into());
     }
+}
+
+/// The wedge that gives centre `c` its parity `par` under the reader's rule: `(neighbour, bond, mark)` on a free single bond, preferring
+/// neighbours that are not centres themselves and have few bonds.
+fn wedge_for(
+    draft: &Draft,
+    adj: &[Vec<(usize, usize)>],
+    out: &[OutBond],
+    centres: &[usize],
+    c: usize,
+    par: Parity,
+) -> Option<(usize, usize, Wedge)> {
+    let mut cands = Vec::new();
+    for &(n, bi) in &adj[c] {
+        if out[bi].o == 1 && out[bi].mark == Wedge::None {
+            cands.push((n, bi));
+        }
+    }
+    // insertion sort: few candidates, and a generic sort costs the `.wasm` more than this loop
+    let key = |&(n, _): &(usize, usize)| (centres.contains(&n), adj[n].len(), n);
+    for i in 1..cands.len() {
+        let mut j = i;
+        while j > 0 && key(&cands[j - 1]) > key(&cands[j]) {
+            cands.swap(j - 1, j);
+            j -= 1;
+        }
+    }
+    for (n, bi) in cands {
+        for w in [Wedge::Up, Wedge::Down] {
+            if parity(draft, c, &adj[c], &[(n, w)]) == Some(par) {
+                return Some((n, bi, w));
+            }
+        }
+    }
+    None
 }
 
 /// `M  RAD` / `RAD=` code: 2 for one unpaired electron (doublet), 3 for two (triplet); the reader reads 1 and 3 as two electrons.
