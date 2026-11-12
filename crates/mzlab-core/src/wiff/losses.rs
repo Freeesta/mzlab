@@ -1,5 +1,5 @@
-//! What a read of a `.wiff` pair left out of a sample (`Reader::losses`): the blocks cut by the end of the `.wiff.scan` (`Record::cut`) and the scan
-//! blocks whose head disagrees with their index row (`Record::damaged`), which `build` leaves out of the index with no point count.
+//! What a read of a `.wiff` pair left out of a sample (`Reader::losses`): the blocks cut by the end of the `.wiff.scan` (`Record::cut`), the blocks with
+//! no scan head where the index row says points (`Record::damaged`) and the damaged scan blocks (`scan::Block::Damaged`: bytes that contradict their head, an unknown version, a TOF block).
 
 use super::reader::WiffReader;
 use crate::error::Result;
@@ -10,9 +10,10 @@ impl WiffReader {
         let (cut, n, len) = (self.missing(c), self.index(c)?.len(), self.scan_len);
         let p = self.ready(c)?;
         let rows = p.w.records.iter().zip(&p.counts);
-        let bad = rows
-            .filter(|(r, k)| !r.cut(len) && r.damaged(k.is_some()))
-            .count();
+        let bad = p.damaged
+            + rows
+                .filter(|(r, k)| !r.cut(len) && r.damaged(k.is_some()))
+                .count();
         Ok(Losses::of(
             n + cut + bad,
             n,

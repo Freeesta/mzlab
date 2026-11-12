@@ -286,6 +286,19 @@ def test_wiff_with_sparse_product_scans_equals_cli(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def test_wiff_with_odd_scan_blocks_equals_cli(tools):
+    """Sparse product-ion scans with a few blocks their bytes contradict (tools/wiff_prodotto_rado.py --odd): the CLI writes the sample with the other
+    scans and code 3 (warn.wiff.damaged), never a refusal, and the module writes the same bytes."""
+    d = tools["tmp"] / "in_storto"
+    r = run([sys.executable, str(ROOT / "tools/wiff_prodotto_rado.py"), str(d), "--odd"])
+    assert r.returncode == 0, r.stderr[-1500:]
+    ds = d / "storto.wiff"
+    cli = da_cli(tools, "sciex_storto", ds, code=3)
+    wasm = da_wasm(tools, "sciex", ds)
+    assert cli.count(b"<spectrum ") == len(json.loads((d / "storto.json").read_text())["spectra"])
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def first_diff(a: bytes, b: bytes):
     for i, (x, y) in enumerate(zip(a, b)):
         if x != y:

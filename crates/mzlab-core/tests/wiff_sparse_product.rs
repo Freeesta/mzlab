@@ -1,6 +1,8 @@
 //! Sparse product-ion scans of a 3200 QTRAP `.wiff` (`rado` of `tools/wiff_prodotto_rado.py`, an independent writer: scan code 6, 0 to 5 points a scan,
 //! streams padded to 4 bytes, an index value at +26 that is not the point count) are read whole: every scan with its points through the reader the site
-//! uses (index, scans, losses, TIC) and through `Wiff::run` (the app and the CLI), none judged damaged, the sample never refused. Skipped without python3.
+//! uses (index, scans, losses, TIC) and through `Wiff::run` (the app and the CLI), none judged damaged, the sample never refused. `storto` (`--odd`) holds
+//! a few odd blocks (bytes that contradict their head, a TOF block, a head of version 4): those are left out and counted, the others read whole, the sample
+//! still never refused. Skipped without python3.
 
 #![cfg(feature = "sciex")]
 
@@ -11,12 +13,13 @@ use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
-fn reference() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_rado_{}", std::process::id()));
+fn reference(name: &str) -> Option<(PathBuf, Value)> {
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_{name}_{}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_prodotto_rado.py");
     let ok = Command::new("python3")
         .arg(script)
         .arg(&out)
+        .args((name == "storto").then_some("--odd"))
         .output()
         .ok()
         .filter(|o| o.status.success());
@@ -28,11 +31,12 @@ fn reference() -> Option<(PathBuf, Value)> {
         eprintln!("SKIP wiff_sparse_product: python3 not available");
         return None;
     }
-    let json = serde_json::from_slice(&std::fs::read(out.join("rado.json")).unwrap()).unwrap();
+    let json =
+        serde_json::from_slice(&std::fs::read(out.join(format!("{name}.json"))).unwrap()).unwrap();
     Some((out, json))
 }
 
-fn set(dir: &Path) -> FileSet {
+fn set(dir: &Path, name: &str) -> FileSet {
     let member = |file: &str| {
         let bytes = std::fs::read(dir.join(file)).unwrap();
         Member {
@@ -43,7 +47,10 @@ fn set(dir: &Path) -> FileSet {
         }
     };
     FileSet {
-        membri: vec![member("rado.wiff"), member("rado.wiff.scan")],
+        membri: vec![
+            member(&format!("{name}.wiff")),
+            member(&format!("{name}.wiff.scan")),
+        ],
     }
 }
 
@@ -64,26 +71,23 @@ fn same(got: &[f64], want: &Value, rel: f64, what: &str) {
     }
 }
 
-#[test]
-fn sparse_product_ion_scans_are_read_whole() {
-    let Some((dir, want)) = reference() else {
-        return;
-    };
-    let want = want["spectra"].as_array().unwrap();
-    let ole = container(std::fs::read(dir.join("rado.wiff")).unwrap(), "rado.wiff").unwrap();
-    let mut scan = std::fs::read(dir.join("rado.wiff.scan")).unwrap();
-    let run = Wiff::open(&ole, "rado.wiff", Some(scan.len() as u64), 1)
+/// Every spectrum of `name` as its JSON lists it, through `Wiff::run` and the site's reader; returns the reader's losses and index TIC.
+fn read_as_listed(name: &str) -> Option<(readers::Losses, Value, Vec<f64>)> {
+    let (dir, json) = reference(name)?;
+    let want = json["spectra"].as_array().unwrap();
+    let wiff = format!("{name}.wiff");
+    let ole = container(std::fs::read(dir.join(&wiff)).unwrap(), &wiff).unwrap();
+    let mut scan = std::fs::read(dir.join(format!("{wiff}.scan"))).unwrap();
+    let run = Wiff::open(&ole, &wiff, Some(scan.len() as u64), 1)
         .unwrap()
         .run(&mut scan)
         .unwrap();
-    let mut l = readers::apri(set(&dir), &Limits::sito()).unwrap();
+    let mut l = readers::apri(set(&dir, name), &Limits::sito()).unwrap();
     let n = l.index(0).unwrap().len();
-    let lost = l.losses(0).unwrap();
-    assert!(!lost.partial(), "no block is damaged ({lost:?})");
     assert_eq!(
         (run.spectra.len(), n),
         (want.len(), want.len()),
-        "spectra (app, site)"
+        "{name}: spectra (app, site)"
     );
     for (k, (g, e)) in run.spectra.iter().zip(want).enumerate() {
         let s = l.scan(0, k).unwrap();
@@ -102,10 +106,40 @@ fn sparse_product_ion_scans_are_read_whole() {
     }
     // the site draws the TIC of a product-ion experiment from the index: one value a scan, the one its index row gives
     let tic: Vec<f64> = l.index(0).unwrap().iter().map(|e| e.tic).collect();
-    assert_eq!(tic.len(), want.len(), "a TIC value per scan");
+    let lost = l.losses(0).unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+    Some((lost, json, tic))
+}
+
+#[test]
+fn sparse_product_ion_scans_are_read_whole() {
+    let Some((lost, json, tic)) = read_as_listed("rado") else {
+        return;
+    };
+    assert!(!lost.partial(), "no block is damaged ({lost:?})");
+    assert_eq!(
+        tic.len(),
+        json["spectra"].as_array().unwrap().len(),
+        "a TIC value per scan"
+    );
     assert!(
         tic.iter().any(|&v| v != tic[0]),
         "the TIC is not flat: {tic:?}"
     );
-    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Blocks with 5 to 8 bytes after their points, a head that declares more points than its stream holds, a TOF block and a head of version 4 are left out and counted
+/// (`warn.wiff.damaged`, «x of y read»): the sample opens with every other scan, never `err.file.wiff`.
+#[test]
+fn blocks_their_bytes_contradict_are_counted_not_a_refusal() {
+    let Some((lost, json, _)) = read_as_listed("storto") else {
+        return;
+    };
+    let bad = json["damaged"].as_u64().unwrap() as usize;
+    assert!(bad >= 2, "the fixture holds odd blocks");
+    assert_eq!(
+        (lost.cause, lost.lost()),
+        (readers::DAMAGED, bad),
+        "{lost:?}"
+    );
 }
