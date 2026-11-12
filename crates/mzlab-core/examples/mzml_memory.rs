@@ -144,7 +144,10 @@ fn main() {
             "open      heap peak {:>7.1} MB, rss peak {:>7.1} MB | {}",
             peak(),
             rss_max(),
-            ix.map_or_else(|e| e.key.to_string(), |i| format!("{} scans", i.scans.len()))
+            ix.map_or_else(
+                |e| e.key.to_string(),
+                |i| format!("{} scans", i.scans.len())
+            )
         );
     }
     let _ = (std::fs::remove_file(&idx), std::fs::remove_file(&spool));
