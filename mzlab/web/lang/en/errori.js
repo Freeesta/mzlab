@@ -28,7 +28,7 @@ I18N.add("en", {
   "err.file.index": "The index of the file could not be built ({detail}).",
   "err.file.raw": "The .raw file (Thermo) or the .raw folder (Waters) cannot be read: the whole file is needed, with all its files ({detail}).",
   "err.file.rawTruncated": "The Thermo .raw file is cut short: it is {size} bytes long and the “{stage}” part needs at least {needed}, so no scan can be read. Copy the whole file again.",
-  "err.file.rawUnfinished": "This .raw file (Thermo) holds no finished run: the acquisition stopped before the instrument closed the file, so no scan index was written and its scans cannot be found. Nothing was opened and nothing was written. Copy the file again once the acquisition has finished, or export or recover it again from the instrument PC.",
+  "err.file.rawUnfinished": "This .raw file (Thermo) holds no scans to read: either the acquisition stopped before the instrument closed the file, so no scan index was written, or the run recorded no scan. Nothing was opened and nothing was written. If the acquisition was still running, copy the file again once it has finished, or export or recover it again from the instrument PC.",
   "err.file.rawDamaged": "This .raw file (Thermo) is damaged: a part of it points outside the file or holds values that cannot be read, so nothing was opened. Copy the file again, or export it again from the instrument PC.",
   "err.file.rawVersion": "Version {version} of the Thermo .raw format is not supported yet: convert the file to mzML.",
   "err.file.notAgilentD": "The folder {name} has no AcqData/MSScan.bin and AcqData/MSPeak.bin (nor a data.ms file): the whole .D folder is needed, with its AcqData subfolder.",
