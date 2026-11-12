@@ -103,7 +103,11 @@ fn centroids_like_python() {
                 && close(e.params.step, w.step)
                 && close(e.params.w, w.w)
                 && close(e.params.vmax, w.vmax)
-                && e.params.area == w.area,
+                && e.params.area == w.area
+                && match (e.params.wm, w.wm) {
+                    (Some((a, b)), Some((c, d))) => close(a, c) && close(b, d),
+                    (x, y) => x.is_none() && y.is_none(),
+                },
             "estimate {r}: {:?} against {w:?}",
             e.params
         );

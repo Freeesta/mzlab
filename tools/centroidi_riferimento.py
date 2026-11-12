@@ -84,12 +84,28 @@ def fwhms(buf, p, sigma, out):
             continue
         xl = buf.x[l] + (half - buf.s[l]) / (buf.s[l + 1] - buf.s[l]) * (buf.x[l + 1] - buf.x[l])
         xr = buf.x[r - 1] + (buf.s[r - 1] - half) / (buf.s[r - 1] - buf.s[r]) * (buf.x[r] - buf.x[r - 1])
-        out.append(xr - xl)
+        out.append((buf.x[j], xr - xl))
 
 
 def median(v):
     v.sort()
     return v[(len(v) - 1) // 2]
+
+
+def median_w(pairs):
+    return median([w for _, w in pairs])
+
+
+def width_model(pairs):
+    pts = [(math.log(m), math.log(w)) for m, w in pairs if m > 0.0 and w > 0.0]
+    if len(pts) < 8 or max(x for x, _ in pts) - min(x for x, _ in pts) < math.log(1.3):
+        return None
+    n = len(pts)
+    mx, my = sum(x for x, _ in pts) / n, sum(y for _, y in pts) / n
+    sxx = sum((x - mx) * (x - mx) for x, _ in pts)
+    sxy = sum((x - mx) * (y - my) for x, y in pts)
+    b = sxy / sxx
+    return (math.exp(my - b * mx), b) if 0.0 <= b <= 2.0 else None
 
 
 def widths_at(scans, p):
@@ -122,14 +138,16 @@ def estimate(scans, fallback_w):
                 break
             found = widths_at(scans, q)
             if len(found) >= 8:
-                again = P(mode, unit, step, max(median(list(found)), 3.0 * step), 3.0, vmax, True)
+                again = P(mode, unit, step, max(median_w(found), 3.0 * step), 3.0, vmax, True)
                 more = widths_at(scans, again)
                 widths = more if len(more) >= 8 else found
                 break
     peaks = len(widths) if len(widths) >= 8 else 0
     if peaks:
-        p.w = max(median(widths), 3.0 * step)
+        p.w = max(median_w(widths), 3.0 * step)
     p.area = not p.hr()
+    if peaks and p.hr():
+        p.wm = width_model(widths)
     return p, reg, peaks
 
 
@@ -182,13 +200,13 @@ def main():
             vmax = 0.6 * max(y)
             y = [min(v, vmax) for v in y]
         p = P(COUNTS, unit, 0.06, w, 3.0, vmax, True)
-        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
+        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
     for k in range(30):
         fw = 400.0 / 60000.0
         peaks = [(400.05 + 0.01 * rng.random() + 0.03 * j, 10.0 ** rng.uniform(4.0, 7.0), fw) for j in range(rng.randint(1, 3))]
         mz, y = continuous_scan(rng, 400.0, 120, 0.0003, peaks, 50.0)
         p = P(CONTINUOUS, 1.0, 0.001, fw, 3.0, 0.0, False)
-        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
+        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
     # irregular grid whose spacing grows with m/z (Orbitrap-like), high resolution: no zero inside a peak at high m/z
     for k in range(10):
         fw = 0.012
@@ -201,7 +219,7 @@ def main():
                 y.append(v + 20.0 * rng.random())
             m += 0.0008 * (m / 400.0) ** 1.5
         p = P(CONTINUOUS, 1.0, 0.00105, fw, 3.0, 0.0, False)
-        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
+        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
     # saturated high-resolution peaks (a flat top at the ceiling) and an unsaturated tallest peak at 30 points per FWHM
     for k in range(12):
         fw = 0.025
@@ -214,16 +232,43 @@ def main():
             m += st
         vmax = max(y) if mult == 1.0 else 1e5 + 10.0
         p = P(CONTINUOUS, 1.0, st, fw, 3.0, vmax, False)
-        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
+        rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
     est = []
     for k in range(4):
         scans = [counts_scan(rng, 0.06, 240, [(110.0 + 0.01 * t, 900.0, 0.7), (112.5, 700.0, 0.7), (115.0, 500.0, 0.7)], 0.3, 2.5, 107.0) for t in range(20)]
         p, reg, peaks = estimate(scans, 0.7)
-        est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "regular": reg, "peaks": peaks})
+        est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "regular": reg, "peaks": peaks})
     for n_peaks in (12, 2):                       # high-resolution profile: the width is looked for on the scale of the grid
         scans = [continuous_scan(rng, 300.0, 3000, 0.0, [(300.1 + 0.24 * j, 5000.0 + 400.0 * j, 0.005) for j in range(n_peaks)], 40.0) for _ in range(3)]
         p, reg, peaks = estimate(scans, 0.7)
-        est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area], "regular": reg, "peaks": peaks})
+        est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "regular": reg, "peaks": peaks})
+    # Orbitrap-like file over m/z 150-1200 (FWHM = a * m^1.5, points only near the peaks): the width model is fitted from the isolated peaks
+    def fw(m):
+        return 200.0 / 60000.0 * (m / 200.0) ** 1.5
+    scans = []
+    for _ in range(3):
+        mz, y = [], []
+        for j in range(16):
+            c, h = 150.0 + 65.0 * j + 5.0 * rng.random(), 1e4 * (0.5 + rng.random())
+            m = c - 6.0 * fw(c)
+            while m < c + 6.0 * fw(c):
+                mz.append(m)
+                y.append(gauss(m, c, h, fw(c)) + 20.0 * rng.random())
+                m += fw(m) / 10.0
+        scans.append((mz, y))
+    p, reg, peaks = estimate(scans, 0.7)
+    est.append({"scans": [{"mz": a, "y": b} for a, b in scans], "params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "regular": reg, "peaks": peaks})
+    # the same file centroided with its model: singles and 1:1 doublets 0.5 FWHM apart (MERGED at the width of their own m/z)
+    mz, y = [], []
+    for j in range(12):
+        c = 180.0 + 85.0 * j + rng.random()
+        pair = [(c, 5e3)] if j % 2 else [(c, 5e3), (c + 0.5 * fw(c), 5e3)]
+        m = c - 6.0 * fw(c)
+        while m < c + 7.0 * fw(c):
+            mz.append(m)
+            y.append(sum(gauss(m, x, h, fw(x)) for x, h in pair) + 20.0 * rng.random())
+            m += fw(m) / 10.0
+    rows.append({"params": [p.mode, p.unit, p.step, p.w, p.k, p.vmax, p.area, p.wm], "mz": mz, "y": y, "centroids": centroids(mz, y, p)})
     json.dump({"scans": rows, "estimates": est}, open(sys.argv[1], "w"))
 
 
