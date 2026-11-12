@@ -234,15 +234,13 @@ fn compare_chromatograms(label: &str, want: &Run, got: &Run) -> (usize, usize) {
     (chroms, scheduled)
 }
 
+/// The scan-type code and fixed mass of the experiment of a spectrum id.
+type Fixed<'a> = dyn Fn(&str) -> Option<(u32, Option<f64>)> + 'a;
+
 /// Every spectrum of the reference (but the last block) is ours: time, level, polarity, precursor and the nonzero points. A neutral-loss or
 /// precursor-ion scan (`fixed`: the code and fixed mass of its experiment) has no precursor m/z whatever the reference says: its header mass is the
 /// loss or the product Q3 stays on, not an ion Q1 selected. ProteoWizard writes the product of a precursor-ion scan as its selected ion: that m/z is ours.
-fn compare_spectra(
-    label: &str,
-    want: &Run,
-    got: &Run,
-    fixed: &dyn Fn(&str) -> Option<(u32, Option<f64>)>,
-) -> usize {
+fn compare_spectra(label: &str, want: &Run, got: &Run, fixed: &Fixed) -> usize {
     let n = want.spectra.len().saturating_sub(1);
     for e in &want.spectra[..n] {
         let g = got
