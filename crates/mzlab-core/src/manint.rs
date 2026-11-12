@@ -14,10 +14,12 @@ use crate::peakq_lr::near_idx;
 pub const BASELINES: [&str; 3] = ["zero", "edges", "line"];
 /// The header of the table.
 pub const HEAD: &str =
-    "channel,name,sample,start_min,end_min,apex_rt_min,area,height,snr,baseline\n";
+    "channel,name,sample,start_min,end_min,apex_rt_min,area,height,snr,baseline,label\n";
 /// Smoothing and points across the peak of the S/N (`peak1d::find_peak` around the window, the defaults of `chrom.transitions@2`).
 const SN_SMOOTH: usize = 3;
 const SN_POINTS: usize = 3;
+/// The longest name the user gives a window (characters), as the page's input allows.
+pub const LABEL_MAX: usize = 40;
 
 /// One channel of a file: its place in the file's list, Q1 / Q3 (absent when the reader gives none), name, times (min) and intensities.
 struct Trace {
@@ -40,6 +42,8 @@ struct Row {
     height: f64,
     snr: Option<f64>,
     base: &'static str,
+    /// The place of the window in the request, for its name (`label_of_window`).
+    w: usize,
 }
 
 /// The group of a channel across files: Q1 and Q3 at 0.01 (or the place in the list without Q1) and the name the method gives it.
@@ -179,8 +183,20 @@ fn samples_and_keys(files: &str) -> Result<(Vec<Sample>, Vec<Channel>)> {
     Ok((samples, keys))
 }
 
+/// The name the user gave a window: no control characters, trimmed, at most `LABEL_MAX` characters.
+fn label_of_window(w: &Value) -> String {
+    let s = w.get("label").and_then(Value::str).unwrap_or("");
+    let s: String = s.chars().filter(|c| !c.is_control()).collect();
+    s.trim()
+        .chars()
+        .take(LABEL_MAX)
+        .collect::<String>()
+        .trim_end()
+        .to_string()
+}
+
 /// One window measured on its channel: (the place of the channel in `keys`, the row).
-fn measure(w: &Value, samples: &[Sample], keys: &[Channel]) -> Result<(usize, Row)> {
+fn measure(i: usize, w: &Value, samples: &[Sample], keys: &[Channel]) -> Result<(usize, Row)> {
     let num = |k: &str| w.get(k).and_then(Value::f64);
     let (fi, ti, a, b) = (num("file"), num("tr"), num("a"), num("b"));
     let tr = fi
@@ -220,21 +236,25 @@ fn measure(w: &Value, samples: &[Sample], keys: &[Channel]) -> Result<(usize, Ro
         height,
         snr,
         base: base.name(),
+        w: i,
     };
     Ok((ch, row))
 }
 
 /// The table for `files` (JSON `[{"name", "transitions"}]`, `transitions` as `/api/mrm` gives them) and `windows` (JSON `[{"file", "tr", "a", "b",
-/// "baseline"?, "line"?}]`: index of the file, index of its transition, the edges in min). Channels in the order they first appear in the files, the
-/// windows of a channel by file then start; `sums` adds after each channel a row `sum` with the sum of its areas. `err.manint.channel` for a window
+/// "baseline"?, "line"?, "label"?}]`: index of the file, index of its transition, the edges in min, the name the user gave the window, last column).
+/// Channels in the order they first appear in the files, the windows of a channel by file then start; `sums` adds after each channel a row `sum` with the sum of its areas. `err.manint.channel` for a window
 /// that names no channel or no times, `err.manint.baseline` for an unknown baseline or a `line` without its four numbers.
 pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
-    let mut rows = parse(windows.as_bytes())?
+    let list = parse(windows.as_bytes())?;
+    let mut rows = list
         .arr()
         .iter()
-        .map(|w| measure(w, &samples, &keys))
+        .enumerate()
+        .map(|(i, w)| measure(i, w, &samples, &keys))
         .collect::<Result<Vec<_>>>()?;
+    let labels: Vec<String> = list.arr().iter().map(label_of_window).collect();
     crate::sortc::by(&mut rows, |x, y| {
         (x.0, x.1.file)
             .cmp(&(y.0, y.1.file))
@@ -249,7 +269,7 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
         let head = format!("{},{}", field(label), field(name));
         for r in &mine {
             out += &format!(
-                "{head},{},{:.3},{:.3},{:.3},{},{},{},{}\n",
+                "{head},{},{:.3},{:.3},{:.3},{},{},{},{},{}\n",
                 field(&samples[r.file].0),
                 r.a,
                 r.b,
@@ -257,12 +277,13 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
                 sci(r.area, 5),
                 sci(r.height, 5),
                 r.snr.map_or(String::new(), |v| format!("{v:.1}")),
-                r.base
+                r.base,
+                field(&labels[r.w])
             );
         }
         if sums {
             out += &format!(
-                "{head},sum,,,,{},,,\n",
+                "{head},sum,,,,{},,,,\n",
                 sci(mine.iter().map(|r| r.area).sum(), 5)
             );
         }
