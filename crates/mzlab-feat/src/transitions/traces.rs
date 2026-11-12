@@ -33,7 +33,9 @@ pub fn channels(bytes: &[u8]) -> Result<Vec<Channel>> {
     let mut t = MzmlTraces::new(&mut m, 0);
     let mut out = Vec::new();
     for v in t.chromatograms()? {
-        if v.tipo != ChromKind::Srm {
+        // a SIM ion (`SIM SIC Q1=…`) is a SIC with no Q3: a channel like a transition
+        let sim = v.tipo == ChromKind::Sic && v.id.starts_with("SIM SIC ");
+        if v.tipo != ChromKind::Srm && !sim {
             continue;
         }
         let c = t.chromatogram(&v.id)?;

@@ -123,9 +123,29 @@ fn real_qtrap_files_open_with_the_tic_of_the_index_or_are_refused() {
     );
 }
 
+/// The part of an SRM / SIM id that names the trace, `experiment=E transition=N`: what follows it (`ce=`, `rt=`, `window=`, `dwell=`, polarity,
+/// name) is written by mzLab and by recent ProteoWizard only, and an older ProteoWizard puts `- ` before an id with no name.
 fn transition_key(id: &str) -> Option<String> {
-    let at = id.find("experiment=")?;
-    Some(id[at..].to_string())
+    let rest = &id[id.find("experiment=")?..];
+    let t = rest.find("transition=")?;
+    let end = rest[t..].find(' ').map_or(rest.len(), |e| t + e);
+    Some(rest[..end].to_string())
+}
+
+#[test]
+fn a_transition_is_named_by_its_experiment_and_number() {
+    let old = "- SRM SIC Q1=255 Q3=235.1 sample=1 period=1 experiment=1 transition=0";
+    let ours = "SRM SIC Q1=255 Q3=235.1 sample=1 period=1 experiment=1 transition=0 ce=29 rt=12.7 window=120 polarity=negative";
+    assert_eq!(
+        transition_key(old).as_deref(),
+        Some("experiment=1 transition=0")
+    );
+    assert_eq!(transition_key(old), transition_key(ours));
+    assert_ne!(
+        transition_key(ours),
+        transition_key(&ours.replace("transition=0", "transition=10"))
+    );
+    assert_eq!(transition_key("TIC sample=1 period=1 experiment=1"), None);
 }
 
 fn mzml_files() -> Vec<PathBuf> {
