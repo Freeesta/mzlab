@@ -23,6 +23,7 @@ globalThis.STATO = { file(k) { E.cur = k; } }; globalThis.BARRA = null;
 globalThis.tabFiles = () => E.files.filter(f => !f.gone);
 globalThis.post = async (_u, b) => { N.posts.push(b.name); return { files: [] }; };
 globalThis.STORIA = { tolto(o) { globalThis.ENTRY = o; } };
+globalThis.CONVROWS = { dropEnded() {}, clearDone() {} };      // the summary of the loading (conversione.js): nothing ended to drop here
 globalThis.OPENNOW = { isOpen: n => E.files.some(f => !f.gone && f.file === n), held: () => false, hold() {}, release: () => false, tick() {}, idle: async () => {} };
 const n = 200;
 globalThis.E = { cur: 0, panels: [], files: Array.from({ length: n }, (_, k) => ({ k, file: `S_${k}.mzML`, label: `S_${k}`, kind: "full", vis: true })) };
