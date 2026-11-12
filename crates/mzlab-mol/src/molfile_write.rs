@@ -55,9 +55,8 @@ impl Mol {
         let mut out = vec![[0.0; 3]; self.atoms.len()];
         if let Some(c) = &self.coords {
             for (o, r) in out.iter_mut().zip(&c.xy) {
-                for k in 0..r.len().min(3) {
-                    o[k] = r[k];
-                }
+                let n = r.len().min(3);
+                o[..n].copy_from_slice(&r[..n]);
             }
         }
         out
