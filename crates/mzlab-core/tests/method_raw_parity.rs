@@ -5,7 +5,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 use mzlab_core::json::{self, Value};
-use mzlab_core::{chromeleon, method, mzml, raw};
+use mzlab_core::{chromeleon, method, method_fit, mzml, raw};
 mod conv_help;
 
 use std::fs::File;
@@ -116,9 +116,21 @@ fn the_conversion_carries_the_document() {
     for (raw_path, _) in pairs(&d) {
         let full = doc(&raw_path);
         let out = conv_help::mzml_file(&raw_path, "sample.raw");
-        let head = String::from_utf8_lossy(&out[..out.len().min(2 << 20)]).into_owned();
+        // what every reader of the document reads: DOC_MAX bytes after `<run`
+        let run = out.windows(5).position(|w| w == b"<run ").unwrap();
+        let head =
+            String::from_utf8_lossy(&out[..out.len().min(run + method_fit::DOC_MAX)]).into_owned();
+        // the conversion also names the source by its SHA-1, which the document read from the file alone cannot know
+        let written = method::from_userparam(&head).map(|d| {
+            let sha = d.find(",\"sha1\":\"").map_or(0, |p| p);
+            if sha > 0 {
+                format!("{}{}", &d[..sha], &d[sha + 50..])
+            } else {
+                d
+            }
+        });
         assert_eq!(
-            method::from_userparam(&head).as_deref(),
+            written.as_deref(),
             Some(full.as_str()),
             "document in the mzML of {raw_path:?}"
         );

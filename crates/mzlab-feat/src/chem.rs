@@ -13,9 +13,12 @@ pub mod graph;
 mod graph_record;
 mod groups;
 pub mod labels;
+pub mod mech;
 pub mod positions;
 pub mod rules;
 mod rules_site;
+#[cfg(feature = "sel")]
+pub mod sel;
 mod shuffle;
 mod smiles;
 pub mod structures;

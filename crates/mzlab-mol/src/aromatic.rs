@@ -3,7 +3,6 @@
 //! of the engines (`mzlab-feat::chem::grafo`) uses to keep the flag it always had from lower-case SMILES.
 
 use crate::model::Mol;
-use std::collections::{BTreeSet, VecDeque};
 
 impl Mol {
     /// For every entry of `bonds`: whether the bond belongs to an aromatic ring.
@@ -32,8 +31,9 @@ impl Mol {
                 if shared != 1 {
                     continue;
                 }
-                let union: BTreeSet<usize> = x.atoms.iter().chain(&y.atoms).copied().collect();
-                let union: Vec<usize> = union.into_iter().collect();
+                let mut union: Vec<usize> = x.atoms.iter().chain(&y.atoms).copied().collect();
+                union.sort_unstable();
+                union.dedup();
                 if huckel(g.electrons(&union)) {
                     // the bond the two rings share is aromatic only if a ring is aromatic alone
                     x.bonds
@@ -80,17 +80,16 @@ impl<'a> Graph<'a> {
         g
     }
 
-    /// The shortest ring through every ring bond, each ring once (sorted by atoms).
+    /// The shortest ring through every ring bond, each ring once (sorted by atoms). Plain vectors, no set or deque: the `.wasm` `grafo` carries this.
     fn find_rings(&self) -> Vec<Ring> {
-        let mut seen: BTreeSet<Vec<usize>> = BTreeSet::new();
-        let mut out = Vec::new();
+        let mut out: Vec<Ring> = Vec::new();
         for (k, b) in self.m.bonds.iter().enumerate() {
             let Some(path) = self.shortest(b.a as usize, b.b as usize, k) else {
                 continue;
             };
             let mut key = path.clone();
             key.sort_unstable();
-            if !seen.insert(key.clone()) {
+            if out.iter().any(|r| r.atoms == key) {
                 continue;
             }
             let bonds = self.ring_bonds(&path);
@@ -103,8 +102,9 @@ impl<'a> Graph<'a> {
     fn shortest(&self, s: usize, t: usize, skip: usize) -> Option<Vec<usize>> {
         let mut prev = vec![usize::MAX; self.adj.len()];
         prev[s] = s;
-        let mut queue = VecDeque::from([s]);
-        while let Some(u) = queue.pop_front() {
+        let (mut queue, mut head) = (vec![s], 0);
+        while let Some(&u) = queue.get(head) {
+            head += 1;
             if u == t {
                 let mut path = vec![t];
                 while *path.last()? != s {
@@ -115,7 +115,7 @@ impl<'a> Graph<'a> {
             for &(v, k) in &self.adj[u] {
                 if k != skip && prev[v] == usize::MAX {
                     prev[v] = u;
-                    queue.push_back(v);
+                    queue.push(v);
                 }
             }
         }

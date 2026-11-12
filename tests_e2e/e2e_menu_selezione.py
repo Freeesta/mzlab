@@ -29,21 +29,21 @@ try:
             opened("Tutto il disegno", None)
             assert pg.evaluate("document.querySelector('#ctx').getAttribute('aria-label')") == "Tutto il disegno"
             assert pg.evaluate("document.querySelector('#ctx .ctx-head').getAttribute('aria-hidden')") == "true"
-            rr = rows(); assert rr[:2] == ["copy-smiles", "center"] and "break-bonds" not in rr, rr
+            rr = rows(); assert rr[:3] == ["copy-smiles", "info", "center"] and "break-bonds" not in rr, rr
         step("no selection: header «Tutto il disegno», no bond rows", whole)
         def part():
             opened("Selezione (2 atomi)", 0)
-            rr = rows(); assert rr[:4] == ["copy-smiles", "center", "break-bonds", "cut-bonds"], rr
+            rr = rows(); assert rr[:5] == ["copy-smiles", "info", "center", "break-bonds", "cut-bonds"], rr
             t = pg.locator("#ctx div[data-row=copy-smiles]").inner_text(); assert "CC" in t and "O" not in t, t     # the piece, not the whole drawing
         step("a selected bond: header «Selezione (2 atomi)», SMILES of the piece, bond rows", part)
         def added():
             pg.evaluate("""(() => { window._got = null;
-              TPDraw.menu.add({ id: 'test-sel', when: 'selection', order: 15, label: c => 'Prova ' + c.atoms.size, run: c => { window._got = [c.atoms.size, c.whole, c.bonds.length]; } });
+              TPDraw.menu.add({ id: 'test-sel', when: 'selection', order: 12, label: c => 'Prova ' + c.atoms.size, run: c => { window._got = [c.atoms.size, c.whole, c.bonds.length]; } });
               TPDraw.menu.add({ id: 'test-whole', when: 'whole', order: 25, label: 'draw.ctx.center', run: () => {} });
               TPDraw.menu.add({ id: 'test-bad', order: 16, show: () => { throw new Error('boom'); }, label: 'x', run: () => {} }); })()""")
             ids = pg.evaluate("TPDraw.menu.ids()"); assert ids.index("test-sel") == ids.index("copy-smiles") + 1, ids
             opened("Selezione (2 atomi)", 0)
-            rr = rows(); assert rr[:3] == ["copy-smiles", "test-sel", "center"] and "test-whole" not in rr and "test-bad" not in rr, rr
+            rr = rows(); assert rr[:4] == ["copy-smiles", "test-sel", "info", "center"] and "test-whole" not in rr and "test-bad" not in rr, rr
             pg.locator("#ctx div[data-row=test-sel]").click()                # select, right click, row: two clicks
             assert pg.evaluate("window._got") == [2, False, 1], pg.evaluate("window._got")
             assert pg.locator("#ctx").is_hidden()
@@ -55,7 +55,7 @@ try:
             pg.locator("#kframe").focus()
             pg.evaluate("(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'F10',shiftKey:true,bubbles:true}))})()")
             wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.activeElement && document.activeElement.dataset.row === 'copy-smiles'")
-            pg.keyboard.press("ArrowDown"); assert pg.evaluate("document.activeElement.dataset.row") == "center"
+            pg.keyboard.press("ArrowDown"); assert pg.evaluate("document.activeElement.dataset.row") == "info"
             pg.keyboard.press("ArrowUp"); pg.keyboard.press("ArrowUp"); assert pg.evaluate("document.activeElement.getAttribute('role')") == "menuitem"   # the header is skipped
             pg.keyboard.press("Escape"); assert pg.locator("#ctx").is_hidden()
         def axe_menu():
