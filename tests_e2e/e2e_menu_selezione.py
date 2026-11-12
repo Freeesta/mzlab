@@ -24,7 +24,12 @@ try:
                 try: wait_for_js(pg, f"(()=>{{const m=document.querySelector('#ctx');return !m.hidden&&m.querySelector('.ctx-head')&&m.querySelector('.ctx-head').textContent==={head!r}}})()", timeout=1500); return
                 except Exception: pass
             raise AssertionError("menu with header %r did not open: %r" % (head, pg.inner_text("#ctx")))
-        rows = lambda: pg.evaluate("[...document.querySelectorAll('#ctx div[role=menuitem]')].map(d=>d.dataset.row)")
+        # the outside lookups (link-*, order 17) come only with the grafo .wasm and are checked by e2e_menu_link: here they must sit between info and center
+        def rows():
+            rr = pg.evaluate("[...document.querySelectorAll('#ctx div[role=menuitem]')].map(d=>d.dataset.row)")
+            ln = [i for i, x in enumerate(rr) if x.startswith("link-")]
+            assert not ln or (rr[ln[0] - 1] == "info" and rr[ln[-1] + 1] == "center" and ln == list(range(ln[0], ln[-1] + 1))), rr
+            return [x for x in rr if not x.startswith("link-")]
         def whole():
             opened("Tutto il disegno", None)
             assert pg.evaluate("document.querySelector('#ctx').getAttribute('aria-label')") == "Tutto il disegno"

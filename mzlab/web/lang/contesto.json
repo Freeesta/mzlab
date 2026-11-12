@@ -17,6 +17,7 @@
   "fair.warn.precMismatch": "Avviso nel dialogo del record MassBank; {ppm} = differenza in ppm, già formattata, tra la massa esatta della formula più l'addotto e il precursore dello spettro.",
   "draw.ctx.breakBonds": "Voce del menu del tasto destro su uno o più legami selezionati nel Disegno. {n} = numero di legami selezionati.",
   "draw.info.ringsValue": "Valore della riga Anelli nella finestra Informazioni del Disegno. {n} = numero di anelli (cicli del grafo), {a} = quanti sono aromatici.",
+  "draw.link.title": "Descrizione (title) delle voci PubChem/ChEBI/BioTransformer del menu del tasto destro nel Disegno. {host} = nome del sito (es. pubchem.ncbi.nlm.nih.gov).",
   "draw.info.copyOf": "Etichetta accessibile del pulsante Copia nella finestra Informazioni del Disegno. {what} = nome della riga (Formula, InChI, ...).",
   "draw.ctx.head.sel": "Intestazione muta del menu del tasto destro nel Disegno: su cosa agisce il menu. {n} = numero di atomi selezionati.",
   "draw.ctx.copyFormula": "Voce del menu del tasto destro sull'etichetta sotto una molecola; {formula} = formula con carica (es. C10H14N+).",
