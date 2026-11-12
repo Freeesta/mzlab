@@ -132,7 +132,10 @@ fn sdf_route_gives_the_bytes_of_the_fixture() {
     let st = State::new();
     for req in [fx["request"].clone(), fx["request"].to_string().into()] {
         let p = json!({"kind": "sdf", "request": req});
-        assert_eq!(text(st.rpc("feat/grafo", &p, &[]).unwrap()), fx["sdf"].as_str().unwrap());
+        assert_eq!(
+            text(st.rpc("feat/grafo", &p, &[]).unwrap()),
+            fx["sdf"].as_str().unwrap()
+        );
     }
     let bad = st.rpc(
         "feat/grafo",

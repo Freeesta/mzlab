@@ -134,7 +134,10 @@ impl Mol {
                 }
             }
             if !atoms.is_empty() {
-                groups.push(StereoGroup { kind: g.kind, atoms });
+                groups.push(StereoGroup {
+                    kind: g.kind,
+                    atoms,
+                });
             }
         }
         m.groups = groups;
@@ -190,7 +193,12 @@ impl Mol {
     fn out_bonds(&self, xyz: &[[f64; 3]]) -> Vec<OutBond> {
         let mut out = Vec::with_capacity(self.bonds.len());
         for b in &self.bonds {
-            out.push(OutBond { a: b.a as usize, b: b.b as usize, o: b.o, mark: Wedge::None });
+            out.push(OutBond {
+                a: b.a as usize,
+                b: b.b as usize,
+                o: b.o,
+                mark: Wedge::None,
+            });
         }
         let draft = self.draft(xyz, &out);
         let adj = adjacency(&draft);
@@ -226,7 +234,12 @@ impl Mol {
                     'pick: for (n, bi) in cands {
                         for w in [Wedge::Up, Wedge::Down] {
                             if parity(&draft, c, &adj[c], &[(n, w)]) == Some(*p) {
-                                out[bi] = OutBond { a: c, b: n, o: 1, mark: w };
+                                out[bi] = OutBond {
+                                    a: c,
+                                    b: n,
+                                    o: 1,
+                                    mark: w,
+                                };
                                 break 'pick;
                             }
                         }
@@ -242,7 +255,12 @@ impl Mol {
                         .iter()
                         .find(|&&(_, bi)| out[bi].o == 1 && out[bi].mark == Wedge::None)
                     {
-                        out[bi] = OutBond { a: c, b: n, o: 1, mark: Wedge::Either };
+                        out[bi] = OutBond {
+                            a: c,
+                            b: n,
+                            o: 1,
+                            mark: Wedge::Either,
+                        };
                     }
                 }
                 Stereo::Db {
@@ -266,7 +284,11 @@ impl Mol {
 
     /// The draft the reader would build from these coordinates and bonds, for its parity rule.
     fn draft(&self, xyz: &[[f64; 3]], bonds: &[OutBond]) -> Draft {
-        let mut d = Draft { atoms: Vec::new(), bonds: Vec::new(), collections: Vec::new() };
+        let mut d = Draft {
+            atoms: Vec::new(),
+            bonds: Vec::new(),
+            collections: Vec::new(),
+        };
         for (i, a) in self.atoms.iter().enumerate() {
             d.atoms.push(DraftAtom {
                 el: a.el.clone(),
@@ -279,22 +301,39 @@ impl Mol {
             });
         }
         for b in bonds {
-            d.bonds.push(DraftBond { a: b.a, b: b.b, order: b.o, wedge: b.mark, arom: false, query: 0, multi_wedge: false });
+            d.bonds.push(DraftBond {
+                a: b.a,
+                b: b.b,
+                order: b.o,
+                wedge: b.mark,
+                arom: false,
+                query: 0,
+                multi_wedge: false,
+            });
         }
         d
     }
 
     fn v2000(&self, s: &mut String, xyz: &[[f64; 3]], bonds: &[OutBond], valence: &[Option<u32>]) {
-        let chiral = u8::from(self.stereo.iter().any(
-            |x| matches!(x, Stereo::Tetra { status: Status::Defined, .. }),
-        ));
+        let chiral = u8::from(self.stereo.iter().any(|x| {
+            matches!(
+                x,
+                Stereo::Tetra {
+                    status: Status::Defined,
+                    ..
+                }
+            )
+        }));
         s.push_str(&format!(
             "{:>3}{:>3}  0  0{chiral:>3}  0  0  0  0  0999 V2000\n",
             self.atoms.len(),
             bonds.len()
         ));
         for (i, a) in self.atoms.iter().enumerate() {
-            let (p, v) = (xyz[i], valence[i].map_or(0, |v| if v == 0 { 15 } else { v }));
+            let (p, v) = (
+                xyz[i],
+                valence[i].map_or(0, |v| if v == 0 { 15 } else { v }),
+            );
             s.push_str(&format!(
                 "{:>10}{:>10}{:>10} {:<3} 0  0  0  0  0{v:>3}  0  0  0  0  0  0\n",
                 fixed(p[0], 4),
@@ -311,7 +350,12 @@ impl Mol {
                 (Wedge::Either, _) => 3,
                 (Wedge::None, _) => 0,
             };
-            s.push_str(&format!("{:>3}{:>3}{:>3}{mark:>3}  0  0  0\n", b.a + 1, b.b + 1, b.o));
+            s.push_str(&format!(
+                "{:>3}{:>3}{:>3}{mark:>3}  0  0  0\n",
+                b.a + 1,
+                b.b + 1,
+                b.o
+            ));
         }
         let prop = |s: &mut String, tag: &str, v: Vec<(u32, i32)>| {
             for chunk in v.chunks(8) {
@@ -418,7 +462,12 @@ pub fn fixed(v: f64, nd: u32) -> String {
     let sign = if v.is_sign_negative() { "-" } else { "" };
     let a = n.unsigned_abs();
     // two u32 parts: the u64 formatter is not otherwise in the `.wasm`
-    format!("{sign}{}.{:0w$}", (a / p) as u32, (a % p) as u32, w = nd as usize)
+    format!(
+        "{sign}{}.{:0w$}",
+        (a / p) as u32,
+        (a % p) as u32,
+        w = nd as usize
+    )
 }
 
 /// One `M  V30` line, cut between tokens with `-` continuations so that no line passes 80 characters.

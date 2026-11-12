@@ -35,7 +35,11 @@ pub fn run(args: Vec<String>) -> Outcome {
             "--set" => match it.next().as_deref().and_then(|kv| kv.split_once('=')) {
                 Some((k, v)) => match NAMES.iter().position(|n| *n == k) {
                     Some(i) => set[i] = v.to_string(),
-                    None => return Outcome::fail(&format!("unknown --set name {k} (format, ion, name)")),
+                    None => {
+                        return Outcome::fail(&format!(
+                            "unknown --set name {k} (format, ion, name)"
+                        ))
+                    }
                 },
                 None => return Outcome::fail("--set needs NAME=VALUE"),
             },

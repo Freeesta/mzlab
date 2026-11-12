@@ -17,7 +17,12 @@ pub fn sdf_json(request: &str) -> Result<String> {
     let v = json::parse(request.as_bytes()).map_err(|_| bad())?;
     let text = |k: &str| v.get(k).and_then(Value::str);
     let mf = text("molfile").ok_or_else(bad)?;
-    export(mf, text("format").unwrap_or("sdf"), text("ion").unwrap_or(NO_ADDUCT), text("name").unwrap_or(""))
+    export(
+        mf,
+        text("format").unwrap_or("sdf"),
+        text("ion").unwrap_or(NO_ADDUCT),
+        text("name").unwrap_or(""),
+    )
 }
 
 /// The `.mol` or `.sdf` text of a molfile; `ion` is an adduct of `elements::adducts` or `none`, `name` the title line of every record.
@@ -126,7 +131,10 @@ fn nuclide_mass(el: &str, iso: Option<u16>) -> f64 {
 
 /// The `&'static str` of an element symbol, from the nuclide table.
 fn static_el(el: &str) -> &'static str {
-    mzlab_core::nuclides::NUCLIDES.iter().find(|x| x.0 == el).map_or("", |x| x.0)
+    mzlab_core::nuclides::NUCLIDES
+        .iter()
+        .find(|x| x.0 == el)
+        .map_or("", |x| x.0)
 }
 
 /// The data items of one structure.
@@ -142,7 +150,10 @@ fn items(out: &mut String, m: &Mol, ion: &str) {
     item("MZLAB_FORMULA", &f);
     item("MZLAB_EXACT_MASS", &fixed(mass, 5));
     let mz = if q != 0 {
-        Some(("drawn", (mass - q as f64 * ELECTRON) / q.unsigned_abs() as f64))
+        Some((
+            "drawn",
+            (mass - q as f64 * ELECTRON) / q.unsigned_abs() as f64,
+        ))
     } else {
         adduct_shift(ion).map(|d| (ion, mass + d))
     };

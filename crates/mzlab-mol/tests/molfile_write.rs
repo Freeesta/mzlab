@@ -46,11 +46,23 @@ fn every_golden_molfile_survives_a_write_and_a_read() {
         tetra += m
             .stereo
             .iter()
-            .filter(|s| matches!(s, Stereo::Tetra { status: Status::Defined, .. }))
+            .filter(|s| {
+                matches!(
+                    s,
+                    Stereo::Tetra {
+                        status: Status::Defined,
+                        ..
+                    }
+                )
+            })
             .count();
         assert_eq!(at4(&back(&m)), at4(&m), "{name}\n{out}");
         if out.contains("V3000") {
-            assert_eq!(back(&m).to_json(), m.to_json(), "{name}: V3000 keeps every digit");
+            assert_eq!(
+                back(&m).to_json(),
+                m.to_json(),
+                "{name}: V3000 keeps every digit"
+            );
         }
     }
     assert!(tetra >= 20, "defined centres: {tetra}");
@@ -74,7 +86,12 @@ fn charges_isotopes_radicals_and_odd_hydrogens_round_trip() {
         "C1=CC=CC=C1",
     ] {
         let m = Mol::from_smiles(smi).unwrap();
-        assert_eq!(back(&m).to_json(), m.to_json(), "{smi}\n{}", m.to_molfile(smi));
+        assert_eq!(
+            back(&m).to_json(),
+            m.to_json(),
+            "{smi}\n{}",
+            m.to_molfile(smi)
+        );
     }
 }
 
@@ -89,7 +106,9 @@ fn groups_and_large_records_are_written_as_v3000() {
         .map(|t| Mol::from_molfile(t).unwrap())
         .find(|m| !m.groups.is_empty())
         .expect("a golden molfile with groups");
-    assert!(with_groups.to_molfile("g").contains("M  V30 BEGIN COLLECTION"));
+    assert!(with_groups
+        .to_molfile("g")
+        .contains("M  V30 BEGIN COLLECTION"));
     let chain = format!("C{}", "C".repeat(1199));
     let m = Mol::from_smiles(&chain).unwrap();
     let out = m.to_molfile("chain");

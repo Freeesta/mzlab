@@ -5,8 +5,6 @@ pub mod analysis;
 pub mod breaks;
 #[cfg(feature = "check")]
 pub mod check;
-#[cfg(feature = "check")]
-pub mod sdf;
 pub mod cut;
 pub mod fragmenter;
 pub mod fragments;
@@ -18,6 +16,8 @@ pub mod labels;
 pub mod positions;
 pub mod rules;
 mod rules_site;
+#[cfg(feature = "check")]
+pub mod sdf;
 mod shuffle;
 mod smiles;
 pub mod structures;

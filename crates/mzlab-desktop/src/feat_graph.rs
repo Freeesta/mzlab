@@ -10,7 +10,9 @@
 //! An error keeps its key (`error.grafo.ring`, `error.grafo.delta.neg`, ...) as the `.wasm` throws it.
 
 use mzlab_core::{Error, Result};
-use mzlab_feat::chem::{analysis, check, cut, fragments, graph, labels, positions, sdf, substructure};
+use mzlab_feat::chem::{
+    analysis, check, cut, fragments, graph, labels, positions, sdf, substructure,
+};
 use serde_json::Value;
 
 use crate::engine::State;

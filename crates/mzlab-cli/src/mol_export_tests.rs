@@ -13,14 +13,24 @@ fn the_command_prints_the_function_text() {
     let p = std::env::temp_dir().join(format!("mol_export_{}.mol", std::process::id()));
     std::fs::write(&p, MOL).unwrap();
     let path = p.to_str().unwrap();
-    let o = run(&["mol-export", path, "--set", "ion=[M+H]+", "--set", "name=methanol"]);
+    let o = run(&[
+        "mol-export",
+        path,
+        "--set",
+        "ion=[M+H]+",
+        "--set",
+        "name=methanol",
+    ]);
     let m = run(&["mol-export", path, "--set", "format=mol"]);
     std::fs::remove_file(&p).ok();
     assert_eq!(o.code, 0);
     let want = mzlab_feat::chem::sdf::export(MOL, "sdf", "[M+H]+", "methanol").unwrap();
     assert_eq!(String::from_utf8(o.stdout).unwrap(), want);
     assert!(want.contains("> <MZLAB_FORMULA>\nCH4O\n") && want.ends_with("$$$$\n"));
-    assert_eq!(String::from_utf8(m.stdout).unwrap(), mzlab_feat::chem::sdf::export(MOL, "mol", "none", "").unwrap());
+    assert_eq!(
+        String::from_utf8(m.stdout).unwrap(),
+        mzlab_feat::chem::sdf::export(MOL, "mol", "none", "").unwrap()
+    );
 }
 
 #[test]
