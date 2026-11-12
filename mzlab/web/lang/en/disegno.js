@@ -120,7 +120,7 @@ I18N.add("en", {
   "draw.export.mol.title": "The whole canvas in one molfile (V2000; V3000 when large or with stereo groups)",
   "draw.export.sdf.title": "One record per structure, with formula, exact mass, m/z of the chosen ion and an identifier",
   "draw.export.ion": "Ion in the SDF",
-  "draw.export.ion.title": "The adduct whose m/z the SDF writes for neutral structures; a drawn ion keeps its own m/z",
+  "draw.export.ion.title": "Adduct of the SDF m/z for neutral structures; a drawn ion keeps its own m/z",
   "draw.export.ion.none": "none",
   "error.sdf.request": "The export request is not valid JSON with a molfile and a format (mol or sdf).",
   "error.sdf.ion": "Unknown ion {ion}: choose one of the list.",

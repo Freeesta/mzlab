@@ -120,7 +120,7 @@ I18N.add("it", {
   "draw.export.mol.title": "Tutta la tela in un solo molfile (V2000; V3000 se grande o con gruppi stereo)",
   "draw.export.sdf.title": "Un record per struttura, con formula, massa esatta, m/z dello ione scelto e identificativo",
   "draw.export.ion": "Ione nell'SDF",
-  "draw.export.ion.title": "L'addotto di cui l'SDF scrive l'm/z per le strutture neutre; uno ione disegnato tiene il suo m/z",
+  "draw.export.ion.title": "Addotto dell'm/z dell'SDF per le strutture neutre; uno ione disegnato tiene il suo m/z",
   "draw.export.ion.none": "nessuno",
   "error.sdf.request": "La richiesta di esportazione non è un JSON valido con un molfile e un formato (mol o sdf).",
   "error.sdf.ion": "Ione sconosciuto {ion}: scegline uno dall'elenco.",
