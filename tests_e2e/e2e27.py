@@ -1,4 +1,4 @@
-"""XIC window (synthetic data): new text, one m/z field or neutral formula, unit window [n-0.2, n+0.8] around the nominal mass, one decimal, observed (clicked) centroid minus the drift, no '+ XIC' button."""
+"""XIC window (synthetic data): new text, one m/z field or neutral formula, unit window [n-0.2, n+0.3] around the nearest integer n, one decimal, clicked or typed alike, no '+ XIC' button."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth
@@ -18,24 +18,25 @@ try:
         sm = lambda: pg.inner_text("#xic-sum")
         def dialog():
             pg.click("#np-xic"); t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description")
-            assert "Extracted Ion Chromatogram" in t and "1 Da" in t and "oppure" in t, t
+            assert "Extracted Ion Chromatogram" in t and "n + 0.3" in t and "oppure" in t, t
             assert not pg.query_selector("#xic-lo") and "compromesso" not in t, t
-            pg.fill("#xic-mz", "364.37"); assert "363.8 - 364.8" in sm(), sm()
-            pg.fill("#xic-mz", "364,6"); assert "364.8 - 365.8" in sm(), sm()
-            pg.fill("#xic-mz", "364.15"); assert "363.8 - 364.8" in sm()
+            pg.fill("#xic-mz", "364.37"); assert "363.8 - 364.3" in sm(), sm()
+            pg.fill("#xic-mz", "364,6"); assert "364.8 - 365.3" in sm(), sm()
+            pg.fill("#xic-mz", "364.15"); assert "363.8 - 364.3" in sm()
             pg.fill("#xic-mz", "C14H13F4N3O2S"); pg.wait_for_timeout(1300)
-            assert "363.8 - 364.8" in sm(), sm()
+            assert "363.8 - 364.3" in sm(), sm()
             pg.click("#xic-go"); ready(pg)
-            tr = pg.evaluate("E.panels.find(p=>p.type==='xic').traces[0]"); assert tr["mz"] == 364.3 and tr["w"] == 0.5 and "m/z 364.3" in tr["label"], tr
+            tr = pg.evaluate("E.panels.find(p=>p.type==='xic').traces[0]"); assert tr["mz"] == 364.05 and tr["w"] == 0.25 and "m/z 363.8\u2013364.3" in tr["label"], tr
         step("dialog: text, one value or formula, unit window, one decimal", dialog)
         def obs():
-            pg.evaluate("openXic(null,{mz:364.37,obs:true})"); assert "363.8 - 364.8" in sm() and pg.input_value("#xic-mz") == "364.4", sm()
+            pg.evaluate("openXic(null,{mz:364.37,obs:true})"); assert "363.8 - 364.3" in sm() and pg.input_value("#xic-mz") == "364.4", sm()
             pg.click("#xic-no")
-            pg.evaluate("openXic(null,{mz:365.1,obs:true})"); assert "364.8 - 365.8" in sm(), sm(); pg.click("#xic-no")
-        step("clicked centroid: drift taken off before the nominal mass (364.37 -> 364)", obs)
+            pg.evaluate("openXic(null,{mz:365.1,obs:true})"); assert "364.8 - 365.3" in sm(), sm(); pg.click("#xic-no")
+        step("clicked centroid: nearest integer (364.37 -> 364, 365.1 -> 365)", obs)
         def panel():
             assert pg.evaluate("document.querySelectorAll('.pnl.xic [data-o=addb]').length") == 0
-            assert pg.input_value('.pnl.xic [data-o="xlo"]') == "363.8" and pg.input_value('.pnl.xic [data-o="xhi"]') == "364.8"
+            pg.click('.pnl.xic [data-a="cpar"]')     # the m/z edges live in «Intervallo»
+            assert pg.input_value('.pnl.xic [data-o="xlo"]') == "363.8" and pg.input_value('.pnl.xic [data-o="xhi"]') == "364.3"
             pg.fill('.pnl.xic [data-o="xlo"]', "363.26"); pg.press('.pnl.xic [data-o="xlo"]', "Enter"); pg.wait_for_timeout(300); pg.locator('.pnl.xic [data-o="xhi"]').focus(); pg.wait_for_timeout(500)
             assert pg.input_value('.pnl.xic [data-o="xlo"]') == "363.3", pg.input_value('.pnl.xic [data-o="xlo"]')
         step("XIC panel: no + XIC button, fields with one decimal", panel)

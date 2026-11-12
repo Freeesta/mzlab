@@ -1,5 +1,6 @@
-"""XIC panel (low resolution): the «m/z from / to» header fields take ABSOLUTE m/z edges, keep what was typed and extract that window, whichever edge is
-written first; bad input is refused with a calm note and the old edges back; undo, redo and a reload keep the edges. A range typed in «Extract ions»
+"""XIC panel (low resolution): the «m/z from / to» fields of the «Range» popover (not the title row) take ABSOLUTE m/z edges, keep what was typed and extract that window, whichever edge is
+written first; bad input is refused with a calm note and the old edges back, Esc drops a half-written pair; undo, redo and a reload keep the edges;
+a clicked peak gets the default window [n-0.2, n+0.3] around its nearest integer n, and the popover fits an iPad-wide window. A range typed in «Extract ions»
 («250.8-251.5») is that window, never an m/z shifted below zero."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -17,7 +18,9 @@ def vals(pg): return pg.evaluate(f"(() => {{ const h = {X}.el; return [h.querySe
 def edges(pg, i=0): return pg.evaluate(f"(() => {{ const t = {X}.traces[{i}]; return [+(t.mz - t.w).toFixed(2), +(t.mz + t.w).toFixed(2)]; }})()")
 def field(pg, k): return pg.locator(f"#dpanels .pnl.xic .hd [data-o={k}]")
 def write(pg, k, txt, key=None):
-    f = field(pg, k); f.click(); f.press("ControlOrMeta+a"); f.press_sequentially(txt)
+    f = field(pg, k)
+    if not f.is_visible(): pg.locator("#dpanels .pnl.xic .hd [data-a=cpar]").click()
+    f.click(); f.press("ControlOrMeta+a"); f.press_sequentially(txt)
     if key: f.press(key)
     # Enter: the header is drawn again (fresh fields); Tab: the focus is on the other edge, which waits
     q = f"document.querySelector('#dpanels .pnl.xic .hd [data-o={k}]')"
@@ -68,11 +71,30 @@ try:
         def several():
             pg.evaluate(f"xicDirect(300.4, null, {X})"); frames(pg, 4); ready(pg)
             assert pg.evaluate(f"{X}.traces.length") == 2
+            assert edges(pg, 1) == [299.8, 300.3] and pg.evaluate(f"{X}.traces[1].label") == "m/z 299.8\u2013300.3", (edges(pg, 1), pg.evaluate(f"{X}.traces[1].label"))
             pg.select_option("#dpanels .pnl.xic .hd [data-o=xt]", "1"); frames(pg, 2)
             write(pg, "xlo", "299.9", "Tab"); write(pg, "xhi", "300.5", "Enter")
             assert edges(pg, 1) == [299.9, 300.5], edges(pg, 1)
             assert edges(pg, 0) == [260.9, 263.5], f"the other series changed: {edges(pg, 0)}"
-        step("two overlaid XICs (one from a clicked peak): the second series takes its own edges", several)
+        step("two overlaid XICs (one from a clicked peak, default 299.8-300.3): the second series takes its own edges", several)
+        def place():
+            assert pg.evaluate(f"[...{X}.el.querySelectorAll('[data-o=xlo],[data-o=xhi]')].every(i => i.closest('.cpop'))"), "m/z edges outside «Range»"
+            assert pg.evaluate(f"[...{X}.el.querySelectorAll('[data-o=xlo],[data-o=xhi]')].every(i => i.getAttribute('aria-label'))")
+            b = pg.locator("#dpanels .pnl.xic .hd [data-a=cpar]")
+            if pg.evaluate(f"!!{X}._parOpen"): b.click()
+            b.focus(); pg.keyboard.press("Enter"); assert b.get_attribute("aria-expanded") == "true"
+            f = field(pg, "xlo"); f.click(); f.press("ControlOrMeta+a"); f.press_sequentially("299.0"); f.press("Escape")
+            wait_for_js(pg, f"{X}.el.querySelector('.cpop').hidden && document.activeElement && document.activeElement.dataset.a === 'cpar'", 5000)
+            assert edges(pg, 1) == [299.9, 300.5] and vals(pg) == ["299.9", "300.5"], (edges(pg, 1), vals(pg))
+        step("the edges live in «Range» (aria-labels); Enter opens it, Esc drops a half-written pair and gives the focus back", place)
+        def ipad():
+            pg.set_viewport_size({"width": 820, "height": 1180}); frames(pg, 4)
+            b = pg.locator("#dpanels .pnl.xic .hd [data-a=cpar]")
+            if not field(pg, "xlo").is_visible(): b.click()
+            for k in ("xlo", "xhi"):
+                bb = field(pg, k).bounding_box(); assert bb and bb["x"] >= 0 and bb["x"] + bb["width"] <= 820 and bb["width"] >= 24 and bb["height"] >= 24, (k, bb)
+            b.click(); pg.set_viewport_size({"width": 1280, "height": 800}); frames(pg, 4)
+        step("iPad width: the popover fields are on screen, at least 24x24 px", ipad)
         def reload():
             saved(pg); pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.panels.some(q => q.type === 'xic' && q.traces.length === 2)", 90000); ready(pg)
             assert edges(pg, 0) == [260.9, 263.5] and edges(pg, 1) == [299.9, 300.5], (edges(pg, 0), edges(pg, 1))

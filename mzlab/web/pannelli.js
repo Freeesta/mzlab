@@ -719,11 +719,12 @@ function ctl(/** @type {Pannello} */ p) {
   if (p.type === "chrom") c.innerHTML = `${kindSel || `${CANALI.html(p, { hasScan, hasPda, an: anKinds, reg: !!(window.REGISTRO && REGISTRO.has(TF)) })}${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}<span class="ibkslot"></span>${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some((/** @type {MzFile} */ x) => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
-    const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;  // xed: lower / upper m/z of an ion read in high resolution (ppm window)
+    const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0;
     const xsel = p.traces.length > 1 ? `<select data-o="xt" title="${I18N.t("ctl.xt.title")}">${p.traces.map((/** @type {Traccia} */ t, /** @type {number} */ i) => `<option value="${i}" ${i === p._xt ? "selected" : ""}>XIC ${i + 1}</option>`).join("")}</select>` : "";
     const hrX = !!(window.HR && HR.xicFiles(p.tab).some((/** @type {MzFile} */ x) => HR.isHr(x, x.lv)));  // high resolution: only the label, m/z and interval are in «Display options» of this chromatogram
-    const xr = xt && hrX ? `${xsel}<b class="xlab" title="${EH(I18N.t("ctl.xlab.title"))}">XIC \u2022 m/z ${(+xt.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}</b>` : xt ? `${xsel}<label class="muted" title="${I18N.t("ctl.xr.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[0] : fmz(xt.mz - xw1)}"> ${I18N.t("ctl.range.to")} <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[1] : fmz(xt.mz + xw1)}"></label>` : "";
-    c.innerHTML = `${xr}${fsel}${view}${corr}${parBox(rtbar + lrExtra)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
+    const xr = xt && hrX ? `<b class="xlab" title="${EH(I18N.t("ctl.xlab.title"))}">XIC \u2022 m/z ${(+xt.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}</b>` : "", xe = (/** @type {string} */ o, /** @type {string} */ v, /** @type {string} */ a) => `<input data-o="${o}" class="mzf" inputmode="decimal" autocomplete="off" aria-label="${a}" value="${v}">`;
+    const xin = xt && !hrX ? `<label class="muted" title="${I18N.t("ctl.xr.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} ${xe("xlo", fmz(xt.mz - xw1), I18N.t("ctl.xr.xlo"))} ${I18N.t("ctl.range.to")} ${xe("xhi", fmz(xt.mz + xw1), I18N.t("ctl.xr.xhi"))}</label>` : "";  // low resolution: the extracted window lives in «Range»
+    c.innerHTML = `${xsel}${xr}${fsel}${view}${corr}${parBox(xin + rtbar + lrExtra)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
   }
   if (p.type === "mrm") c.innerHTML = `${canBtn}${view}${corr}${parBox(rtbar + lrExtra)}`;      // the transitions list is the one control for what is shown (no second dropdown, no files counter)
   if (p.type === "map") {
@@ -896,22 +897,20 @@ const mzd = (/** @type {Pannello | null | undefined} */ p, lv = 1) => window.HR 
 const fmt2 = (/** @type {number | string} */ v) => String(+(+v).toFixed(2));
 /** @param {number | string} v @param {Pannello | null} [p] @param {number} [lv] */
 const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trailing zeros)
-// THE tool that extracts an ion (XIC). The student gives ONE m/z value, or the NEUTRAL formula plus the adduct; the window is always a unit window (1 Da, unit resolution)
-// anchored to the nominal mass n of the calculated value: [n - XIC_BELOW, n + 1 - XIC_BELOW]. Every way to create an XIC (XIC button, warning when integrating from a TIC,
+// THE tool that extracts an ion (XIC). The student gives ONE m/z value, or the NEUTRAL formula plus the adduct; at unit resolution the window is
+// [n - XIC_BELOW, n + XIC_ABOVE] around the nearest integer n of that m/z (HR: ppm, hr.js). Every way to create an XIC (XIC button, warning when integrating from a TIC,
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
-//   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
+//   pre = { mz, obs }   one m/z value (obs = an OBSERVED centroid)   pre = { formula, adduct }
 const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
-const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose some; this keeps them and leaves out n-1 and n+1
-const XIC_DRIFT = 0.25;  // mean offset (Da) of observed centroids over the calculated m/z: a CLICKED centroid back to its nominal mass (364.37 -> n = 364)
-const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
-const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
+const XIC_BELOW = 0.2, XIC_ABOVE = 0.3;  // 264 -> 263.8..264.3, clicked or typed alike (_obs is kept for the callers): n-1 and n+1 stay out
+const xicWin = (/** @type {number} */ v, /** @type {any} */ _obs) => { const n = rh(v, 0); return [rh(n - XIC_BELOW, 1), rh(n + XIC_ABOVE, 1)]; };
 /** @type {Bag | null} */
 let XIC_LAST = null;  // the last ion the student asked for ({mz} or {formula, adduct}): the window opens with it, still editable
 // Right click on a peak of the spectrum: the XIC appears at once, with the default unit window and no dialog; the window is changed afterwards from the header of the XIC panel.
 // the default trace of a clicked centroid: the ion with its ppm window when a high-resolution file is among the files, else the unit window (ref: any panel, for its tab)
 const xicTraceFor = (/** @type {number} */ mz, /** @type {Pannello | null | undefined} */ ref) => {
-  const [a, b] = xicWin(mz, true), c = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2);
-  return (window.HR && HR.ionTrace(mz, { obs: true, tab: ref && ref.tab })) || { id: E.seq++, mz: c, w, label: `m/z ${c.toFixed(mzd(ref))}` };
+  const [a, b] = xicWin(mz, true);
+  return (window.HR && HR.ionTrace(mz, { obs: true, tab: ref && ref.tab })) || { id: E.seq++, mz: rh((a + b) / 2, 2), w: rh((b - a) / 2, 2), label: `m/z ${a}\u2013${b}` };
 };
 // over: a trace already made by the caller (button «XIC» of the spectrum, xic-spettro.js), else the default one
 /** @param {number} mz @param {Pannello | null} [after] @param {Pannello | null} [panel] @param {Bag} [over] */
@@ -927,7 +926,7 @@ function xicDirect(mz, after, panel, over) {
   } else reveal(np);
   return np;
 }
-const xicName = (/** @type {Pannello} */ q) => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(mzd(q)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : I18N.t("xic.empty"); };
+const xicName = (/** @type {Pannello} */ q) => { const t = q.traces[0]; return t ? (t.label || "m/z " + t.mz.toFixed(mzd(q))) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : I18N.t("xic.empty"); };
 // Estrai ioni (XIC): 2-10 rows (m/z or neutral formula + adduct), ONE panel, one trace each; a removed row keeps the focus in the dialog.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 /** @param {Pannello | null} [panel] */
@@ -1004,7 +1003,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
         const ht = HR.ionTrace(r.ex, { obs: r.obs, prefix: r.label, tab: xtab() }), key = "ion|" + ht.mz; if (seen.has(key)) return; seen.add(key); traces.push(ht); return;
       }
       const [a, b] = r.win, d = r.range ? 5 : 2, mz = rh((a + b) / 2, d), w = rh((b - a) / 2, d), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
-      traces.push({ id: E.seq++, mz, w, label: r.range ? `m/z ${fmz(a, panel)}\u2013${fmz(b, panel)}` : (r.label ? r.label + " · " : "") + `m/z ${mz.toFixed(mzd(panel))}` });
+      traces.push({ id: E.seq++, mz, w, label: (r.label && !r.range ? r.label + " · " : "") + `m/z ${fmz(a, panel)}\u2013${fmz(b, panel)}` });
     });
     d.close();
     const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: r0.ex ?? numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
