@@ -36,7 +36,8 @@ fn alias(h: &str) -> String {
     .to_string()
 }
 
-fn delimiter(text: &str) -> char {
+/// The delimiter of a table: `;`, else tab, else `,`, whichever the first line that is not empty or `#` holds first in that order (`;` when none).
+pub fn delimiter(text: &str) -> char {
     let head = text
         .lines()
         .map(str::trim)
