@@ -251,18 +251,20 @@ async function uvOpen(from, k, r0, r1) {
   if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
   return window.UVSPEC.open(from, k, r0, r1);
 }
-/** The controls of a PDA chromatogram: the extract button is "λ" (wavelength) instead of "XIC", and a trace by wavelength has its range in nm. @param {any} p @returns {string} */
+/** The controls of a DAD chromatogram: the XWC split button (xwc.js) instead of "XIC", and the band of the trace in nm. @param {any} p @returns {string} */
 function wlCtl(p) {
   const b = p.el.querySelector('[data-a="xic"]');
   const pda = p.kind === "pda";
-  if (p._kw !== undefined && p._kw !== p.kind && (pda || p._kw === "pda")) p.mz0 = p.mz1 = null;      // m/z and nm are different ranges: the choice of the kind clears it
+  if (p._kw !== undefined && p._kw !== p.kind && (pda || p._kw === "pda")) p.mz0 = p.mz1 = p.xw = null;      // m/z and nm ranges differ: a new kind clears them
   p._kw = p.kind;
   if (pda) { p.mz0 ??= p.mz1; p.mz1 ??= p.mz0; }      // a wavelength range has both ends, or none
-  if (b) { b.disabled = ms2Chrom(p); b.textContent = pda ? "λ" : "XIC"; b.title = I18N.t(pda ? "panel.wl.title" : b.disabled ? "panel.xic.off" : "panel.xic.title"); }
-  return !pda || p.mz0 == null ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
+  if (b) { b.disabled = ms2Chrom(p); b.textContent = pda ? "XWC" : "XIC"; b.title = I18N.t(pda ? "panel.wl.title" : b.disabled ? "panel.xic.off" : "panel.xic.title"); if (pda || b._xw) xwc().then(m => m.dress(p)); }
+  return !pda ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
 }
-/** A trace of the DAD at the wavelengths nm0..nm1 (a PDA chromatogram) under panel `from`. @param {any} from @param {number} nm0 @param {number} nm1 @param {number} [k] */
-async function wlOpen(from, nm0 = 250, nm1 = 260, k) {
+const xwc = async () => window.XWC ||= await import("./xwc.js");
+/** An XWC (DAD trace at nm0..nm1) under panel `from`; without a band, the one the engine proposes. @param {any} from @param {number} [nm0] @param {number} [nm1] @param {number} [k] */
+async function wlOpen(from, nm0, nm1, k) {
+  if (nm0 == null) return (await xwc()).press(from, false);
   if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
   return window.UVSPEC.openWl(from, nm0, nm1, k);
 }
@@ -389,7 +391,7 @@ function ctxFor(p, e, x, px, py) {
       p.cur = at; newSpec(p, r0, r1, kk);          // every new spectrum is LIVE right under the chromatogram; the previous ones freeze
       if (c.dbl) draw(p);
     } });
-  // PDA trace: the double click gives the UV spectrum at that time of the detector (the trace may be shown later by «Allinea PDA e massa»); with a selection, the mean (uv-spettro.js)
+  // DAD trace: the double click gives the UV spectrum at that time (shifted back by «Allinea PDA e massa»), a selection the mean
   /** @param {any} p */
   const pdaT = p => (window.DISP ? DISP.pdaShift(p) : 0);
   reg({ id: "chrom.uvAtRt", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", nome: () => T("ctx.uv.atRt"), doppioOrd: 3,

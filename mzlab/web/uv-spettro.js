@@ -75,8 +75,10 @@ function filesOf(p) {
 export async function openWl(from, nm0, nm1, k) {
   const fk = k ?? E.files.findIndex(f => f.pda), q = `api/chrom?k=${Math.max(0, fk)}&kind=pda&level=1&mz0=${nm0}&mz1=${nm1}`;
   try { const j = await (await fetch(q)).json(); if (j.error) throw j; } catch (e) { if (window.toast) toast(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); return null; }
-  const np = apriAnnullabile(addPanel("chrom", { kind: "pda", mz0: nm0, mz1: nm1 }));
-  if (from && E.panels.includes(from) && from.type === "chrom") {
+  const under = from && E.panels.includes(from) && from.type === "chrom";
+  // in the tab of the chromatogram it goes under: a UV spectrum of a DAD trace of an MRM file lives in another tab
+  const np = apriAnnullabile(addPanel("chrom", { kind: "pda", mz0: nm0, mz1: nm1, ...(under ? { tab: from.tab } : {}) }));
+  if (under) {
     np.el.classList.add("drag"); np.y = from.y + from.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
     stackAfter(np, from); relayout(); fitHost();
   } else reveal(np);
@@ -90,6 +92,7 @@ export async function draw(p) {
   /** @param {string} t */
   const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const f = E.files[p.k];
+  import("./xwc.js").then(m => (/** @type {any} */ (window).XWC = m).dressSpec(p));      // the XWC split button of the spectrum
   if (!f || p.r0 == null) return say(T("spec.pickRange"));
   /** @param {number} k @returns {Promise<any>} the slice of file k at r0..r1, or the answer of api/uvspec, or the error */
   const one = async k => {

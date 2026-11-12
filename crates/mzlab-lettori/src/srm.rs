@@ -283,6 +283,9 @@ impl Reader for SrmFromScans {
     fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> Result<Option<String>> {
         self.inner.dad_wavelength(c, nm0, nm1)
     }
+    fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
+        self.inner.dad_propose(c, rt0, rt1)
+    }
     #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
     fn dad_data(&mut self, c: usize) -> Result<Option<mzlab_core::wiff::dad::DadData>> {
         self.inner.dad_data(c)
