@@ -50,6 +50,7 @@
     "../../mzlab/web/feat-manifesto.js",
     "../../mzlab/web/disegno-parziali.js",
     "../../mzlab/web/disegno-taglio.js",
+    "../../mzlab/web/disegno-meccanismo.js",
     "../../mzlab/web/disegno-sottostruttura.js",
     "../../mzlab/web/disegno-verifica.js",
     "../../mzlab/web/disegno-cip.js",

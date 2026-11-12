@@ -90,9 +90,34 @@ pub(crate) fn method_note(key: &str, dove: &str) -> String {
     }
 }
 
+/// An engine error as the terminal says it, from its own key and parameters: a value with spaces and `name=` words (a channel id) stays whole,
+/// which the text form `key k=v` cannot tell apart.
+pub(crate) fn human_error(e: &mzlab_core::Error) -> String {
+    let par = e
+        .params
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect();
+    render_params(&e.to_string(), e.key, par)
+}
+
+impl crate::Outcome {
+    /// A usage or engine error (code 2) with its text rendered from the error itself (`human_error`).
+    pub(crate) fn fail_error(e: &mzlab_core::Error) -> Self {
+        crate::Outcome {
+            code: 2,
+            stdout: Vec::new(),
+            stderr: format!("error: {}\n", human_error(e)),
+        }
+    }
+}
+
 /// `msg` with its leading error key rendered: «text (key, unused=params)».
 fn render(msg: &str, key: &str, remainder: &str) -> String {
-    let par = params(remainder);
+    render_params(msg, key, params(remainder))
+}
+
+fn render_params(msg: &str, key: &str, par: Vec<(String, String)>) -> String {
     let fase = par
         .iter()
         .find(|(k, _)| k == "fase")

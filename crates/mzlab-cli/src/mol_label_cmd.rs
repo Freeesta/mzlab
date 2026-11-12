@@ -72,7 +72,7 @@ fn run_json(
     };
     match read_request(src).map(|t| f(&t)) {
         Ok(Ok(j)) => crate::emit(format!("{j}\n"), &out),
-        Ok(Err(e)) => Outcome::fail(&e.to_string()),
+        Ok(Err(e)) => Outcome::fail_error(&e),
         Err(e) => Outcome::fail(&e),
     }
 }

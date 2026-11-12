@@ -5,13 +5,14 @@
 //! `kind: "labels"` (`request` as a JSON object or text) gives the `etich/1` of the structures of a drawing (`mzlab-cli mol-label`); `kind: "cut"`
 //! (`request` the same way) the `cut/1` of a cut across bonds (`mzlab-cli mol-cut`); `kind: "sub"` (`request` the same way) the `sub/1` of a
 //! substructure search (`mzlab-cli mol-search --sub`); `kind: "analysis"` (`request` the same way) the `anal/1` of one drawn structure
-//! (`mzlab-cli mol-anal`); `kind: "check"` the `check/1` of a drawing (`mzlab-cli mol-check`), `kind: "cip"` its `cip/1` (`mzlab-cli mol-cip`).
+//! (`mzlab-cli mol-anal`); `kind: "check"` the `check/1` of a drawing (`mzlab-cli mol-check`), `kind: "cip"` its `cip/1` (`mzlab-cli mol-cip`);
+//! `kind: "mech"` the `mecc/1` check of the curved arrows of a mechanism (`mzlab-cli mol-mech`).
 //! `kind: "reactivity"` (`smiles`, `opts` as a JSON object or text) gives the `reatt/1` of `mzlab_chem::reactivity_json` (the same function as the `.wasm` `chem`).
 //! An error keeps its key (`error.grafo.ring`, `error.grafo.delta.neg`, ...) as the `.wasm` throws it.
 
 use mzlab_core::{Error, Result};
 use mzlab_feat::chem::{
-    analysis, check, cip, cut, fragments, graph, labels, positions, substructure,
+    analysis, check, cip, cut, fragments, graph, labels, mech, positions, substructure,
 };
 use serde_json::Value;
 
@@ -35,7 +36,7 @@ impl State {
                 p["positive"].as_bool().unwrap_or(true),
                 s("reatt"),
             )?),
-            "labels" | "cut" | "sub" | "analysis" | "check" | "cip" => {
+            "labels" | "cut" | "sub" | "analysis" | "check" | "cip" | "mech" => {
                 let req = if p["request"].is_object() {
                     p["request"].to_string()
                 } else {
@@ -43,6 +44,7 @@ impl State {
                 };
                 text(match s("kind") {
                     "cut" => cut::cut_json(&req)?,
+                    "mech" => mech::mech_json(&req)?,
                     "sub" => substructure::search_json(&req)?,
                     "analysis" => analysis::analysis_json(&req)?,
                     "check" => check::check_json(&req)?,

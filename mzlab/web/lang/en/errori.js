@@ -363,6 +363,8 @@ I18N.add("en", {
   "error.generic": "The operation failed: {detail}. Try again; if it happens again, reload the page.",
   "error.grafo.delta": "The formula change “{delta}” cannot be read: write it like +O, -H2 or -Cl+H.",
   "error.grafo.delta.neg": "The structure has no {element} to remove.",
+  "error.grafo.mech.request": "The request of the arrow check is not valid.",
+  "error.grafo.mech.atom": "An arrow or a lone pair points to an atom that is not in the drawing.",
   "error.grafo.cut.none": "No bond to cut: draw the line across at least one bond.",
   "error.grafo.cut.aromatic": "An aromatic bond cannot be cut: draw the structure with alternating single and double bonds.",
   "error.grafo.cut.order": "A heterolytic cleavage here works on single bonds only.",
