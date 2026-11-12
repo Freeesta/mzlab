@@ -234,9 +234,13 @@ fn compare_chromatograms(label: &str, want: &Run, got: &Run) -> (usize, usize) {
     (chroms, scheduled)
 }
 
-/// Every spectrum of the reference (but the last block) is ours: time, level, polarity, precursor and the nonzero points. A neutral-loss scan
-/// (`loss`: its experiment) has no precursor m/z whatever the reference says: its header mass is the loss, not an ion it selected.
-fn compare_spectra(label: &str, want: &Run, got: &Run, loss: &dyn Fn(&str) -> bool) -> usize {
+/// The scan-type code and fixed mass of the experiment of a spectrum id.
+type Fixed<'a> = dyn Fn(&str) -> Option<(u32, Option<f64>)> + 'a;
+
+/// Every spectrum of the reference (but the last block) is ours: time, level, polarity, precursor and the nonzero points. A neutral-loss or
+/// precursor-ion scan (`fixed`: the code and fixed mass of its experiment) has no precursor m/z whatever the reference says: its header mass is the
+/// loss or the product Q3 stays on, not an ion Q1 selected. ProteoWizard writes the product of a precursor-ion scan as its selected ion: that m/z is ours.
+fn compare_spectra(label: &str, want: &Run, got: &Run, fixed: &Fixed) -> usize {
     let n = want.spectra.len().saturating_sub(1);
     for e in &want.spectra[..n] {
         let g = got
@@ -255,12 +259,22 @@ fn compare_spectra(label: &str, want: &Run, got: &Run, loss: &dyn Fn(&str) -> bo
             g.polarity,
             e.polarity
         );
+        use mzlab_core::wiff::modes::{CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION};
+        let code = fixed(&e.id);
+        let no_precursor = matches!(code, Some((CODE_NEUTRAL_LOSS | CODE_PRECURSOR_ION, _)));
         assert_eq!(
             g.precursor.is_some(),
-            e.precursor.is_some() && !loss(&e.id),
+            e.precursor.is_some() && !no_precursor,
             "{label} {}: precursor",
             e.id
         );
+        if let (Some((CODE_PRECURSOR_ION, mass)), Some(p)) = (code, e.precursor) {
+            assert!(
+                mass.is_some_and(|m| (m - p).abs() < 1e-3),
+                "{label} {}: fixed product {mass:?} vs selected ion {p}",
+                e.id
+            );
+        }
         let pts: Vec<(f64, f64)> = (0..e.mz.len())
             .map(|k| (e.mz[k], e.intensity_f64(k)))
             .filter(|p| p.1 > 0.0)
@@ -302,15 +316,15 @@ fn real_files_match_proteowizard_mzml() {
         let (c, s) = compare_chromatograms(&label, &want, &got);
         chroms += c;
         scheduled += s;
-        let loss = |id: &str| {
+        let fixed = |id: &str| {
             let n = id
                 .rsplit("experiment=")
                 .next()
                 .and_then(|v| v.parse::<usize>().ok());
             n.and_then(|n| w.experiments.get(n.wrapping_sub(1)))
-                .is_some_and(|x| x.code == Some(mzlab_core::wiff::modes::CODE_NEUTRAL_LOSS))
+                .and_then(|x| Some((x.code?, x.fixed)))
         };
-        spectra += compare_spectra(&label, &want, &got, &loss);
+        spectra += compare_spectra(&label, &want, &got, &fixed);
         eprintln!(
             "compared {label}: {} chromatograms, {} spectra",
             want.chromatograms.len(),
