@@ -7,7 +7,7 @@
 // OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
 import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./disegno-radicale.js";
-import { mountTablet } from "./disegno-tablet.js"; import "./disegno-storage.js";
+import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
 import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js";
@@ -47,7 +47,7 @@ function start() {
   starting.finally(() => { clearInterval(kldTimer); }).catch(() => {});
   starting = starting.then(async k => { mountTablet(/** @type {Document} */ (fr.contentDocument)); await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); FRAME.next(drawLabels); exwarn(""); });      // a change makes «Nothing to export» stale
     k.editor.subscribe("selectionChange", () => FRAME.next(showInfo));
-    hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); mountCut(fr); dnote("");
+    hideMacro(fr); applyFont(k); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr); mountCut(fr); mountNew(/** @type {Document} */ (fr.contentDocument), k); dnote("");
     [150, 700].forEach(ms => setTimeout(drawLabels, ms));                 // Ketcher redraws its canvas after the first fit: the labels (formula, mass) of the saved options are put back on
     
     const doc = fr.contentDocument;
