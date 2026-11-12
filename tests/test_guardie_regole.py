@@ -230,6 +230,32 @@ def test_guard_engine_math_from_libm():
     assert not found, f"use libm:: (libm::exp, libm::log, libm::pow, ...) instead of std math: {found}"
 
 
+# A term the readers or the writer emit as (accession, name) must carry the CV name of its accession: the strict check of every converted mzML refuses
+# a wrong pair (err.file.mzmlInvalid), so one wrong table row stops every file of that instrument. Generic terms (`GENERIC` of mzmlwrite/text.rs) are
+# exempt: the writer keeps their CV name and moves the text of the file to a userParam.
+CV_PAIR = re.compile(r'"(MS:\d{7})"\s*(?:\.(?:into|to_string|to_owned)\(\))?\s*,\s*"([^"\\]+)"')
+
+
+def test_guard_cv_pairs_of_readers_and_writer_match_psi_ms():
+    cv = {a: n for a, n, _ in json.loads((ROOT / "crates/mzlab-core/data/psims-cv.json").read_text(encoding="utf-8"))["terms"]}
+    testo = (ROOT / "crates/mzlab-core/src/mzmlwrite/text.rs").read_text(encoding="utf-8")
+    generic = set(re.findall(r'\("(MS:\d{7})", "[^"]*"\)', testo.split("const GENERIC")[1].split("];")[0]))
+    found = []
+    for root in ("crates", "vendor/opentfraw"):
+        for f in sorted((ROOT / root).rglob("*.rs")):
+            if "test" in f.stem or "tests" in f.parts or "target" in f.parts:
+                continue
+            codice = f.read_text(encoding="utf-8").split("#[cfg(test)]")[0]
+            for m in CV_PAIR.finditer(codice):
+                acc, name = m.groups()
+                # codes and field names next to an accession (`"PREC"`, `"k0"`, `"collision_energy"`) and lists of accessions are not term names
+                if acc in generic or name.startswith("MS:") or "_" in name or len(name) < 3 or re.fullmatch(r"[A-Z0-9]+", name):
+                    continue
+                if cv.get(acc) != name:
+                    found.append(f"{f.relative_to(ROOT).as_posix()}:{codice[: m.start()].count(chr(10)) + 1} {acc} {name!r} (CV: {cv.get(acc)!r})")
+    assert not found, f"(accession, name) pairs that the PSI-MS CV does not have: {found}"
+
+
 def test_guardia_costanti_di_massa_solo_in_elements():
     """Proton, electron and 13C step are written once (mzlab-core elements.rs); crates import them by name."""
     pat = re.compile(r"1\.00727|1\.007_276|0\.00054858|1\.00335|1\.003_35")
