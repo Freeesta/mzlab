@@ -121,8 +121,8 @@ pub fn identity_json(request: &str) -> Result<String> {
         let by_name = |a: &&Entry, b: &&Entry| {
             (a.mol.nome.as_str(), a.mol.id.as_str()).cmp(&(b.mol.nome.as_str(), b.mol.id.as_str()))
         };
-        exact.sort_by(by_name);
-        near.sort_by(by_name);
+        crate::sortc::by(&mut exact, by_name);
+        crate::sortc::by(&mut near, by_name);
         let mut j = Out::default();
         j.raw("{\"format\":")
             .str(FORMAT)

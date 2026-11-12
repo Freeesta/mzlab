@@ -27,7 +27,7 @@ I18N.add("it", {
   "draw.quick.invalidNone": "SMILES non valido: non è stata aggiunta nessuna struttura.",
   "draw.quick.invalid": "SMILES non valido: {message}",
   "draw.id.button": "È nel catalogo?",
-  "draw.id.title": "Cerca nel catalogo delle molecole le strutture disegnate (o quella selezionata), senza rete",
+  "draw.id.title": "Cerca nel catalogo delle molecole le strutture disegnate (o la selezionata), senza rete",
   "draw.id.empty": "Prima disegna una struttura.",
   "draw.id.busy": "Ricerca nel catalogo…",
   "draw.id.piece": "Struttura {n}",
