@@ -381,6 +381,8 @@ I18N.add("en", {
   "error.grafo.ring": "A bond in a ring cannot be cut alone: choose a bond outside the rings.",
   "error.grafo.smiles": "The structure “{smiles}” cannot be read: check the SMILES.",
   "error.grafo.tooBig": "The molecule has more than {max} atoms: it is too big for this calculation.",
+  "error.sub.db": "The structure list holds no structure to search (SDF, SMILES list or table with a smiles column).",
+  "error.sub.dbSize": "The structure list has {n} entries; at most {max} are searched at once.",
   "error.sub.query": "The drawn structure cannot be used as a search query: {detail}.",
   "error.sub.request": "The substructure search request is not valid.",
   "error.gruppi.badOpts": "The grouping options are not valid: check the numbers.",

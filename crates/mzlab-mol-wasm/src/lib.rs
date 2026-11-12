@@ -1,6 +1,7 @@
 //! wasm-bindgen bridge of the molecule kit of Draw on the mol/1 record (`mzlab-mol` linked once): `check` gives `check/1`, what is wrong in the
-//! drawing, and `sdf` the `sdf/1` file (molfile or SDF with data items). A `.wasm` of its own (`molkit`), so the grafo one does not carry the
-//! record; the CLI (`mol-check`, `mol-export`) and the app (`feat/grafo`, kinds `check`, `sdf`) run the same functions. Errors are JSON
+//! drawing; `substructure` gives `sub/1` (`subdb/1` over a structure list), where a drawn moiety occurs; `sdf` gives the `sdf/1` file (molfile or
+//! SDF with data items). A `.wasm` of its own (`molkit`), so the grafo one does not carry the record; the CLI (`mol-check`, `mol-search`,
+//! `mol-export`) and the app (`feat/grafo`, kinds `check`, `sub`, `sdf`) run the same `mzlab_feat::chem` functions. Errors are JSON
 //! `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
 use wasm_bindgen::prelude::*;
@@ -21,6 +22,12 @@ pub fn version() -> String {
 #[wasm_bindgen]
 pub fn check(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::check::check_json(request).map_err(js_err)
+}
+
+/// `sub/1` of a request `{"query", "targets"}`, or `subdb/1` of `{"query", "db"}`: the same bytes as `mzlab-cli mol-search --sub`.
+#[wasm_bindgen]
+pub fn substructure(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::substructure::search_json(request).map_err(js_err)
 }
 
 /// `sdf/1` text of a request `{"molfile", "format", "ion", "name"}`, the same bytes as `mzlab-cli mol-export`.

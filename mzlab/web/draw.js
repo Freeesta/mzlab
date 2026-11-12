@@ -824,3 +824,4 @@ function frameExtras(/** @type {HTMLIFrameElement} */ fr) {
   Q("#keys-body").innerHTML = `<table>${rows.map(r => h`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
 })();
 import("./disegno-verifica.js").then(m => m.mountCheck()).catch((/** @type {unknown} */ e) => console.error("QqQ Draw: check card", e));   // structure check card, its own module
+import("./disegno-sottostruttura.js").then(m => m.mountSub()).catch((/** @type {unknown} */ e) => console.error("QqQ Draw: substructure search", e));   // menu rows of the substructure search, its own module
