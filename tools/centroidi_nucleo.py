@@ -219,17 +219,25 @@ def insignificant(buf, p, sigma, a, c):
     return buf.s[low] - buf.s[v] < p.k * sigma
 
 
+def merged(buf, p, sigma, a, c, wb):
+    close = (c - a) < 0.5 * wb
+    if p.wm is None:
+        return close or insignificant(buf, p, sigma, a, c), False
+    noise = insignificant(buf, p, sigma, a, c)
+    return close or noise, noise
+
+
 def groups(buf, p, sigma):
     out = []
     for c in candidates(buf):
         wb = p.wb_at(buf, c)
         lo, hi = bounds(buf, c, wb)
-        merge = bool(out) and ((c - out[-1]["apex"]) < 0.5 * wb or insignificant(buf, p, sigma, out[-1]["apex"], c))
+        merge, noise = merged(buf, p, sigma, out[-1]["apex"], c, wb) if out else (False, False)
         if merge:
             last = out[-1]
             if buf.s[c] > buf.s[last["apex"]]:
                 last["apex"] = c
-            last["lo"], last["hi"], last["members"] = min(last["lo"], lo), max(last["hi"], hi), last["members"] + 1
+            last["lo"], last["hi"], last["members"] = min(last["lo"], lo), max(last["hi"], hi), last["members"] + (0 if noise else 1)
         else:
             out.append({"apex": c, "lo": lo, "hi": hi, "members": 1})
     for i in range(1, len(out)):

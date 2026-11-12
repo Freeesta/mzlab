@@ -48,7 +48,7 @@ fn scan(groups: &[Vec<(f64, f64)>], snr: f64, grid: Grid, rng: &mut Rng) -> (Vec
     (mz, y)
 }
 
-/// What a file of 20 scans of each kind gives: singles flagged asymmetric or shoulder, singles flagged merged, 1:1 doublets 1.2 FWHM apart resolved,
+/// What a file of 20 scans of each kind gives: singles flagged asymmetric or given a shoulder (of any size), singles flagged merged, 1:1 doublets 1.2 FWHM apart resolved,
 /// 1:0.3 shoulders 1 FWHM away found (each as (count, of)), and the mean m/z error in ppm of the singles and of the resolved doublets.
 #[derive(Debug, PartialEq)]
 pub(super) struct Effect {
@@ -87,12 +87,12 @@ pub(super) fn measure(snr: f64, grid: Grid, model: bool) -> Effect {
     for _ in 0..20 {
         let truth = singles(&mut rng);
         let (mz, y) = scan(&truth, snr, grid, &mut rng);
-        for c in centroids(&mz, &y, &p, &mut buf)
-            .iter()
-            .filter(|c| c.value > 2e3)
-        {
+        let cs = centroids(&mz, &y, &p, &mut buf);
+        // a shoulder of a single is a false positive whatever its size
+        out[0].0 += cs.iter().filter(|c| c.flags & SHOULDER != 0).count();
+        for c in cs.iter().filter(|c| c.value > 2e3) {
             out[0].1 += 1;
-            out[0].0 += usize::from(c.flags & (ASYMMETRIC | SHOULDER) != 0);
+            out[0].0 += usize::from(c.flags & ASYMMETRIC != 0);
             merged += usize::from(c.flags & MERGED != 0);
             let m = truth
                 .iter()
@@ -141,15 +141,21 @@ pub(super) fn measure(snr: f64, grid: Grid, model: bool) -> Effect {
     }
 }
 
+/// The numbers of the PR, on every grid and noise level: with the model no single is flagged (asymmetric, shoulder or merged), no doublet or m/z gets
+/// worse than with one width, and the 1:0.3 shoulders that one width never finds are found.
 #[test]
 fn the_model_of_the_file_drives_the_windows() {
     for grid in [Grid::Orbitrap, Grid::Tof, Grid::Steep] {
         for snr in [1000.0, 50.0] {
-            eprintln!(
-                "{grid:?} snr {snr}\n  model  {:?}\n  single {:?}",
-                measure(snr, grid, true),
-                measure(snr, grid, false)
-            );
+            let (m, s) = (measure(snr, grid, true), measure(snr, grid, false));
+            let at = format!("{grid:?} snr {snr}: model {m:?}, single {s:?}");
+            assert_eq!((m.flagged.0, m.merged), (0, 0), "{at}");
+            assert_eq!(m.flagged.1, 800, "{at}");
+            assert!(m.resolved.0 >= s.resolved.0, "{at}");
+            assert!(m.ppm_doublet <= s.ppm_doublet + 1e-9, "{at}");
+            assert!((m.ppm_single - s.ppm_single).abs() < 0.01, "{at}");
+            assert_eq!(s.shoulders.0, 0, "{at}");
+            assert!(m.shoulders.0 >= if snr > 100.0 { 300 } else { 180 }, "{at}");
         }
     }
 }
