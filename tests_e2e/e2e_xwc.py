@@ -102,7 +102,7 @@ try:
             pick_kind(q, "pda")
             wait_for_js(q, f"!!{TWC} && !!{TWC}._a", timeout=60000)
             wait_for_js(q, f"E.files[0]._xwc && Object.keys(E.files[0]._xwc).length > 0", timeout=30000)
-            q.wait_for_timeout(500)
+            wait_for_js(q, f"{TWC}.el.querySelector('[data-a=xic]').hidden && !!{TWC}.el.querySelector('[data-a=xwcl][hidden]')", timeout=30000)
             assert not visible(q, TWC, "xic") and not visible(q, TWC, "xwcl"), "button shown without a matrix"
             assert not q.evaluate("[...document.querySelectorAll('.toast')].some(t => t.textContent.includes(I18N.t('uv.none').slice(0, 20)))")
         step("TWC-only mzML: no XWC button and no «no UV spectra» toast", alone)
