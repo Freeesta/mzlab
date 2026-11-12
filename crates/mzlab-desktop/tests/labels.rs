@@ -1,6 +1,6 @@
 //! The route `feat/grafo` with `kind: "labels"` gives the same `etich/1` as `mzlab_feat::chem::labels::labels_json` (the function of the `.wasm`
 //! `grafo` and of `mzlab-cli mol-label`), with the request as an object or as text, and keeps the key of an error; `kind: "cut"` gives `cut/1` the same way;
-//! `kind: "analysis"` gives `anal/1` the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`.
+//! `kind: "analysis"` gives `anal/1` the same way; `kind: "fragments"` gives the `frag/1` bytes of the fixture `tests/dati/frag_radicale.json`, `kind: "check"` the `check/1` bytes of `tests/dati/check_disegno.json`, `kind: "sdf"` the `sdf/1` bytes of `tests/dati/sdf_disegno.json`, and `kind: "mech"` the `mecc/1` bytes of `tests/dati/mecc_mclafferty.json`.
 
 use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
@@ -73,6 +73,28 @@ fn fragments_route_gives_the_bytes_of_the_fixture() {
         text(st.rpc("feat/grafo", &p, &[]).unwrap()),
         fx["frag"].as_str().unwrap()
     );
+}
+
+#[test]
+fn mech_route_gives_the_bytes_of_the_fixture() {
+    let st = State::new();
+    let fx: serde_json::Value =
+        serde_json::from_str(include_str!("../../../tests/dati/mecc_mclafferty.json")).unwrap();
+    let got = text(
+        st.rpc(
+            "feat/grafo",
+            &json!({"kind": "mech", "request": fx["request"]}),
+            &[],
+        )
+        .unwrap(),
+    );
+    assert_eq!(got, fx["mecc"].as_str().unwrap());
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "mech", "request": "nope"}),
+        &[],
+    );
+    assert_eq!(bad.err().map(|e| e.key), Some("error.grafo.mech.request"));
 }
 
 #[test]

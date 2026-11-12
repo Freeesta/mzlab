@@ -57,6 +57,13 @@ pub fn cut(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::cut::cut_json(request).map_err(js_err)
 }
 
+/// `mecc/1` of a request `{"molfile", "arrows", "lone"}`: whether each curved arrow of a mechanism starts at a lone pair, a bond or a radical and ends at
+/// an atom or a bond, and whether the drawn lone pairs fit (see `mzlab_feat::chem::mech::mech_json`; the same as `mzlab-cli mol-mech`). Form only.
+#[wasm_bindgen]
+pub fn mech(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::mech::mech_json(request).map_err(js_err)
+}
+
 /// `posiz/1` of a SMILES, a transformation («+O», «-CH2», «+O-2H», «+Cl-H», «+Br-H») and the MS2 of the product (`peaks_json` `[[mz,int],..]`): the classes of positions
 /// the spectrum supports, excludes or cannot tell apart (see `mzlab_feat::chem::positions::positions_json`). `tol` in Da (`ppm` false) or ppm; `positive` is the polarity.
 #[wasm_bindgen]

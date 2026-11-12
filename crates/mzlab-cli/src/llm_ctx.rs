@@ -123,7 +123,7 @@ pub(crate) fn context(args: Vec<String>) -> Outcome {
     };
     match build(&sources(Path::new(&dir), hide), budget) {
         Ok(t) => Outcome::ok((t + "\n").into_bytes()),
-        Err(e) => Outcome::fail(&e.to_string()),
+        Err(e) => Outcome::fail_error(&e),
     }
 }
 

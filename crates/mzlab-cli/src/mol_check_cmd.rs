@@ -47,7 +47,7 @@ pub fn run(args: Vec<String>) -> Outcome {
     };
     match mzlab_feat::chem::check::check_json(&text) {
         Ok(j) => crate::emit(format!("{j}\n"), &out),
-        Err(e) => Outcome::fail(&e.to_string()),
+        Err(e) => Outcome::fail_error(&e),
     }
 }
 
