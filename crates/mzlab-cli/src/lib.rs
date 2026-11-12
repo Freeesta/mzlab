@@ -142,6 +142,7 @@ mod manual_table_cmd;
 mod mol_cut_cmd;
 mod mol_label_cmd;
 mod mol_mech_cmd;
+mod mol_search_cmd;
 #[cfg(test)]
 mod msn_figure_tests;
 pub mod msn_graph;
@@ -182,6 +183,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli mol-label REQUEST.json|- [--out PATH]   formula, charge and masses of drawn structures and arrows as JSON (mol-label --help)
        mzlab-cli mol-cut MOLFILE|- --set bonds=A-B[,...] [--set NAME=VALUE...]   the pieces of a homolytic, heterolytic or +H cut as JSON (mol-cut --help)
        mzlab-cli mol-mech REQUEST.json|- [--out PATH]   whether the curved arrows of a drawn mechanism are well formed, as JSON (mol-mech --help)
+       mzlab-cli mol-search --sub QUERY TARGET... [--set NAME=VALUE...]   where a substructure occurs in structures as JSON (mol-search --help)
        mzlab-cli samples vars|group ...   how the file names split the files, as JSON (samples --help)
        mzlab-cli peak-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peak-edges --help)
        mzlab-cli manual-table FILE... --set windows=PATH   the integrations drawn by hand on transition / SIM traces, as CSV (manual-table --help)
