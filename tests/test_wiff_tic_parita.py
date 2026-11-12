@@ -43,15 +43,27 @@ def tic(p: Path):
     return list(struct.unpack_from(f"<{s['n_scans']}d", data, s["off"]["tic"]))
 
 
-def test_the_engine_and_the_app_index_a_wiff_sample_with_the_same_bytes_and_the_header_tic(work):
+def indexes(work, name):
+    """The .mzidx of the first sample of `name`.wiff from the engine (.wasm through Node) and from `mzlab-cli flow run`."""
     ref = work / "ref"
-    eng = work / "eng.mzidx"
-    run("node", str(ROOT / "tests" / "mzidx_nativo_node.js"), str(work / "pkg"), str(eng), "0", "totale.wiff", str(ref / "totale.wiff"), str(ref / "totale.wiff.scan"))
-    plan = work / "plan.json"
-    plan.write_text(json.dumps({"format": "mzflow/2", "inputs": [{"name": "totale.wiff", "type": "raw"}],
-                                "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:totale.wiff"]}}]}), encoding="utf-8")
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(plan), "--in", str(ref / "totale.wiff"), "--in", str(ref / "totale.wiff.scan"), "--out", str(work / "run"))
-    app = work / "run" / "idx-totale.mzidx"
-    want = json.loads((ref / "riferimento.json").read_text())["totale"]["tic"]
+    eng = work / f"eng-{name}.mzidx"
+    run("node", str(ROOT / "tests" / "mzidx_nativo_node.js"), str(work / "pkg"), str(eng), "0", f"{name}.wiff", str(ref / f"{name}.wiff"), str(ref / f"{name}.wiff.scan"))
+    plan = work / f"plan-{name}.json"
+    plan.write_text(json.dumps({"format": "mzflow/2", "inputs": [{"name": f"{name}.wiff", "type": "raw"}],
+                                "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": [f"file:{name}.wiff"]}}]}), encoding="utf-8")
+    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(plan), "--in", str(ref / f"{name}.wiff"), "--in", str(ref / f"{name}.wiff.scan"), "--out", str(work / f"run-{name}"))
+    return eng, work / f"run-{name}" / f"idx-{name}.mzidx"
+
+
+def test_the_engine_and_the_app_index_a_wiff_sample_with_the_same_bytes_and_the_header_tic(work):
+    eng, app = indexes(work, "totale")
+    want = json.loads((work / "ref" / "riferimento.json").read_text())["totale"]["tic"]
     assert tic(eng) == pytest.approx(want, rel=1e-12) and tic(eng)[0] == 1234567.891, tic(eng)
+    assert parts(eng) == parts(app)
+
+
+def test_an_ida_sample_keeps_every_scan_in_the_engine_and_the_app(work):
+    """The IDA sample of `ida` (its index rows hold no point count at +26): all 9 scans, none counted as damaged, the same bytes on site and app."""
+    eng, app = indexes(work, "ida")
+    assert sum(s["n_scans"] for s in parts(eng)[1]["sections"]) == 9
     assert parts(eng) == parts(app)

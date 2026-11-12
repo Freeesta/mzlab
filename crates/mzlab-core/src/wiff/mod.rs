@@ -149,7 +149,7 @@ pub struct Record {
     pub tic: f64,
     pub cycle: usize,
     pub experiment: usize,
-    /// The point count of the scan as the index row tells it (0 for an MRM block or an empty scan, NaN when the row is not known).
+    /// The point count of the scan as the index row tells it (0 for an MRM block or an empty scan, NaN when the row is not known or holds none: IDA).
     pub points: f64,
 }
 
@@ -302,14 +302,13 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
 
 /// The product-ion experiments of a sample acquired by IDA (it has a `DDERealTimeData` stream) are dependent scans: the survey picks their precursor at
 /// every cycle, and the mass of their header is only the value the method was saved with. That stream is not decoded, so they carry no precursor rather
-/// than an invented one (level 2 stays; the channels group them as `dd:2:EPI`).
-fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) {
+/// than an invented one (level 2 stays; the channels group them as `dd:2:EPI`). True for such a sample: its index rows hold no point count at +26.
+fn dependent_scans(ole: &Ole, sample: u32, experiments: &mut [Experiment]) -> bool {
     if !ole.has(&format!("{SAMPLES}Sample{sample}/DDERealTimeData")) {
-        return;
+        return false;
     }
-    for e in experiments.iter_mut().filter(|e| e.code == Some(CODE_PRODUCT)) {
-        e.precursor = None;
-    }
+    experiments.iter_mut().filter(|e| e.code == Some(CODE_PRODUCT)).for_each(|e| e.precursor = None);
+    true
 }
 
 /// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
@@ -383,7 +382,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         extended::mark_windows(ole, sample, &mut experiments);
     }
     sim_periods(ole, sample, &experiments)?;
-    dependent_scans(ole, sample, &mut experiments);
+    let ida = dependent_scans(ole, sample, &mut experiments);
     let n_exp = experiments.len().max(1);
     let records = entries
         .iter()
@@ -398,7 +397,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
             tic: e.tic,
             cycle: k / n_exp,
             experiment: k % n_exp,
-            points: e.points,
+            points: if ida { f64::NAN } else { e.points },
         })
         .collect();
     let no = method_no(ole, sample);
