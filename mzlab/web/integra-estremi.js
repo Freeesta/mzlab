@@ -152,4 +152,10 @@ function sync(/** @type {Bag} */ p) {
     "@media (prefers-reduced-motion:reduce){.iep{transition:none}}@media (forced-colors:active){.iep::after{border-color:CanvasText;background:Canvas}.iep:focus-visible{outline-color:Highlight}.iep.on{background:Highlight}}";
   document.head.appendChild(st);
 }
+// «Split at the valleys» of a window drawn on a SIM/MRM trace (key V): registered here, loaded with the first integration of a panel; drop lines proposed
+// by the engine, moved and confirmed in integra-valli.js
+const splittable = (/** @type {Bag} */ c) => { const l = AREACOPY.target(c.p, c.x, c.px, c.py), it = l && l.int; return it && !it.fol && /^m\|/.test(it.key || "") && it.bm ? it : null; };
+AZIONI.registra({ id: "int.split", gruppo: "tools", ordine: 0, viste: ["mrm"], scorciatoia: { tasto: "v", dove: "chart", et: "int.split.menu" },
+  visibile: (/** @type {Bag} */ c) => !!splittable(c), nome: () => I18N.t("int.split.menu"), tip: () => I18N.t("int.split.tip"),
+  esegui: (/** @type {Bag} */ c) => { const it = splittable(c); if (it) carica("m:integra-valli.js").then(() => /** @type {any} */ (window).INTVALLI.start(c.p, it)); } });
 window.INTEND = { sync, baseY, shown };

@@ -94,7 +94,7 @@ pub fn parts(
     let mut b = vec![lo];
     b.extend(cuts.iter().copied().filter(|&k| k > lo && k < hi));
     b.push(hi);
-    b.sort_unstable();
+    crate::sortc::ord(&mut b);
     b.dedup();
     let hv = |k: usize| y[k] - line(t[k]);
     b.windows(2)
