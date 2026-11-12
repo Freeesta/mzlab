@@ -219,6 +219,25 @@ fn a_two_level_without_rowid_table_gives_its_keys_in_order() {
     assert_eq!(seen, keys);
 }
 
+/// Integers stored in fewer than 8 bytes keep their sign in both readers (serial types 1 and 2: one and two bytes).
+#[test]
+fn short_negative_integers_keep_their_sign() {
+    // record header (3 bytes: its length, types 1 and 2), then -5 in one byte and -300 in two
+    let rec = [3u8, 1, 2, 0xfb, 0xfe, 0xd4];
+    let pages = page(13, 0, &[leaf_cell(1, &rec), leaf_cell(2, &rec)], 0);
+    let sql = "CREATE TABLE N (a INTEGER, b INTEGER)";
+    let mut s = open_db(db(&[("N", sql, pages)]), None).unwrap();
+    let t = s.table("N").unwrap().clone();
+    let mut all = Vec::new();
+    s.rows_cols(&t, &[Some(0), Some(1)], |r| {
+        all.push((r[0].i64(), r[1].i64()));
+        Ok(true)
+    })
+    .unwrap();
+    assert_eq!(all, vec![(Some(-5), Some(-300)); 2]);
+    compare(&mut s, "N");
+}
+
 /// Timing of a full scan of a 10^6-row table: all columns (`righe`) against the two that are needed.
 /// The pages of a two-level table of `n_rows` rows: the root (page 2), then the middle pages, then the leaves.
 fn large(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
