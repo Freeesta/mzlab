@@ -44,6 +44,16 @@ fn variant_a(b: &[u8]) -> bool {
     }
 }
 
+/// The whole rows of an index cut inside a row: as many as the variant its whole part reads as holds.
+pub(super) fn whole_rows(b: &[u8]) -> usize {
+    let a = &b[..b.len() - b.len() % A];
+    if variant_a(a) {
+        a.len() / A
+    } else {
+        b.len() / B
+    }
+}
+
 /// The rows of `b`; `None` when its size is no whole number of rows of either variant (an index cut inside a row).
 pub(super) fn read(b: &[u8], limits: &Limits) -> Result<Option<Vec<Row>>> {
     if b.is_empty() {

@@ -59,7 +59,7 @@ function fileRemoval(/** @type {any} */ f) {
   const take = (quiet = false) => {
     const before = E.panels.map(q => /** @type {[any, any]} */ ([q, panelRec(q)]));
     f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k);
-    syncRow(quiet);
+    CONVROWS.dropEnded(src(f)); syncRow(quiet);
     E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
     if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
     // a panel left with no file of its tab closes (the undo opens it again)
@@ -118,7 +118,7 @@ function rowRemoval(/** @type {FileRiga} */ r0) {
   let undone = false, /** @type {any[]} */ late = [];
   // the batch repaints once (removeAllFiles): the `quiet` flag of fileRemoval has nothing to skip here
   const take = (_quiet = false) => {
-    undone = false; OPENNOW.hold([name]);
+    undone = false; OPENNOW.hold([name]); CONVROWS.dropEnded(name);
     // the file being opened at this moment still opens: it joins the removal when it lands
     OPENNOW.idle().then(() => { if (undone) return; late = E.files.filter(g => !g.gone && (g.file || "").split("#")[0] === name).map(fileRemoval); late.forEach((x, i) => x.take(i < late.length - 1)); });
   };
@@ -140,6 +140,8 @@ function rowRemoval(/** @type {FileRiga} */ r0) {
 function removeAllFiles(/** @type {any[] | null} */ fs = null, /** @type {string | null} */ what = null) {
   const rows = fs ? [] : unopenedRows().map(rowRemoval);
   const rs = rows.concat((fs || E.files.filter(f => !f.gone)).map(fileRemoval)); if (!rs.length) return;      // the rows first: the last step repaints
+  // the whole list: the summary of the loading goes too (its failed and cancelled lines have no row to remove)
+  if (!fs) CONVROWS.clearDone();
   rs.forEach((r, i) => r.take(i < rs.length - 1)); if (rows.length === rs.length) renderFiles();
   // removed from a hidden side bar (palette, shortcut): bring it back so the notice and the empty list are in view
   if (window.BARRA && BARRA.isDataView() && !BARRA.open) BARRA.show("file");

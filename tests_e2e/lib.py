@@ -152,8 +152,13 @@ def _site():
 # The Safari first-visit notice (avviso-safari.js) would sit over the page in every WebKit round and in the tests that stub GestureEvent: it is marked
 # as seen, unless a test asks for it (safari_notice=True, e2e_safari_avviso).
 _SAFARI_SEEN = "try{localStorage.setItem('mzlab.safari.seen','1')}catch(e){}"
-def _extra(c, k):
+# Draw's side cards start folded but for three (disegno-riquadri.js): the tests that work inside them find them open, as a student who opened them
+# would; e2e_disegno_riquadri asks for the real first visit (draw_cards=True).
+_CARDS_OPEN = ("try{if(!localStorage.getItem('mzlab.disegno.schede'))localStorage.setItem('mzlab.disegno.schede',JSON.stringify(Object.fromEntries("
+               "['sel-card','lb-card','cut-card','ions-card','tray-card','mech-card','chk-card','cip-card','sub-card'].map(k=>[k,1]))))}catch(e){}")
+def _extra(c, k, cards=False):
     if not k: c.add_init_script(_SAFARI_SEEN)
+    if not cards: c.add_init_script(_CARDS_OPEN)
 def _start_prefs(k):
     """The site starts in Italian with the light theme whatever the browser says. A test that asks for an English locale or a dark system scheme
     wants that UI, so the stored choice it would have made is set for it (only if the page has none yet). `lang_auto=True` leaves the real defaults."""
@@ -165,15 +170,15 @@ def _start_prefs(k):
     return ("try{if(window.name.indexOf('|mzseed')<0){window.name+='|mzseed';" + js + "}}catch(e){}") if js else None
 def _new_page(self, *a, **k):
     k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
-    sp, sn = _start_prefs(k), k.pop("safari_notice", False)
-    pg = _np(self, *a, **k); pg.add_init_script(_TRACK); _extra(pg, sn)
+    sp, sn, dc = _start_prefs(k), k.pop("safari_notice", False), k.pop("draw_cards", False)
+    pg = _np(self, *a, **k); pg.add_init_script(_TRACK); _extra(pg, sn, dc)
     if sp: pg.add_init_script(sp)
     if _site(): pg.add_init_script(_site())
     return pg
 def _new_context(self, *a, **k):
     k.setdefault("locale", "it-IT")
-    sp, sn = _start_prefs(k), k.pop("safari_notice", False)
-    c = _nc(self, *a, **k); c.add_init_script(_TRACK); _extra(c, sn)
+    sp, sn, dc = _start_prefs(k), k.pop("safari_notice", False), k.pop("draw_cards", False)
+    c = _nc(self, *a, **k); c.add_init_script(_TRACK); _extra(c, sn, dc)
     if sp: c.add_init_script(sp)
     if _site(): c.add_init_script(_site())
     return c
@@ -188,10 +193,10 @@ class _PersistentWebKit:
     def new_context(self, **k):
         import tempfile
         k.setdefault("locale", "it-IT")
-        sp, sn = _start_prefs(k), k.pop("safari_notice", False)
+        sp, sn, dc = _start_prefs(k), k.pop("safari_notice", False), k.pop("draw_cards", False)
         d = tempfile.mkdtemp(prefix="mzlab-wkprofile-")
         c = self._bt.launch_persistent_context(d, **self._kw, **k)
-        self._open.append((c, d)); c.add_init_script(_TRACK); _extra(c, sn)
+        self._open.append((c, d)); c.add_init_script(_TRACK); _extra(c, sn, dc)
         if sp: c.add_init_script(sp)
         if _site(): c.add_init_script(_site())
         return c
@@ -411,9 +416,9 @@ class Run:
                 urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).read(); break
             except Exception:
                 time.sleep(0.1)
-    def page(s, p, tour=False, qaqc=False, motion=False):
+    def page(s, p, tour=False, qaqc=False, motion=False, draw_cards=False):
         s.b = p.chromium.launch()
-        pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="no-preference" if motion else "reduce")
+        pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="no-preference" if motion else "reduce", draw_cards=draw_cards)
         pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload',new URLSearchParams(location.search).get('ripn')||'1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")

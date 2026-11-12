@@ -157,6 +157,30 @@ def test_ions_through_wasm_equal_the_cli_byte_for_byte(pkg, tmp_path, sets):
     assert sugar["formula"] == "[13C]6H12O6" and bad["error"] == "error.etich.element"
 
 
+# tray/1: the formula and mass of drawn structures, the suspect list as CSV (a name with a comma is quoted) and the list read back
+TRAY_ATOMS = [{"name": "ethanol", "smiles": "CCO", "atoms": [{"el": "C", "h": 3}, {"el": "C", "h": 2}, {"el": "O", "h": 1}]},
+              {"name": "glucose, 13C6", "smiles": "", "atoms": IONS["structures"][3]}, {"name": "bad", "atoms": [{"el": "R#"}]}]
+TRAY_CSV = {"op": "csv", "adducts": ["[M+H]+", "[M+Na]+", "[M-H]-"],
+            "entries": [{"name": "ethanol", "smiles": "CCO", "formula": "C2H6O", "mass": 46.041865, "charge": 0}, {"name": "x, \"y\"", "formula": "C6H6"}]}
+
+
+@pytest.mark.parametrize("body", [{"op": "adducts"}, {"op": "entries", "structures": TRAY_ATOMS}, TRAY_CSV,
+                                  {"op": "read", "text": "name,smiles,formula,mass,charge,adducts\n\"a, b\",CO,CH4O,32.026215,0,[M+H]+;[M+K]+\nnone,,,,0,\n"}])
+def test_tray_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, body):
+    req = tmp_path / "req.json"
+    req.write_text(json.dumps(body), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps(body), "tray")
+    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-suspects", str(req))
+    if body["op"] == "csv":
+        assert site.splitlines()[2].startswith('"x, ""y""",,C6H6,78.046950,0,')
+    elif body["op"] == "entries":
+        ethanol, sugar, bad = json.loads(site)["entries"]
+        assert (ethanol["formula"], sugar["formula"], bad["error"]) == ("C2H6O", "[13C]6H12O6", "error.etich.element")
+    elif body["op"] == "read":
+        back = json.loads(site)
+        assert (back["entries"][0]["name"], back["adducts"], back["skipped"]) == ("a, b", ["[M+H]+", "[M+K]+"], 1)
+
+
 @pytest.mark.parametrize("part", [False, True])
 def test_sel_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, part):
     req = tmp_path / "req.json"

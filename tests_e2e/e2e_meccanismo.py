@@ -22,7 +22,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
         pg.click("#nav [data-v=draw]")
         pg.wait_for_function("!!(window.TPDraw && TPDraw.ready())", timeout=60000)
-        wait_for_js(pg, "!!document.querySelector('#mech-list li')", 60000)
+        wait_for_js(pg, "!!document.getElementById('mech-layer')", 60000)                   # the mechanism tools are mounted
         def px(i):                                                        # page point of the i-th atom, or of the middle of atoms i and j
             return pg.evaluate(f"""(i=>{{const K={KJ},R=K.editor.render,o1=R.page2obj({{clientX:0,clientY:0}}),o2=R.page2obj({{clientX:100,clientY:100}});
               const f=document.querySelector('#kframe').getBoundingClientRect(),A=[...K.editor.struct().atoms.values()],a=i.map(k=>A[k].pp),x=a.reduce((s,q)=>s+q.x,0)/a.length,y=a.reduce((s,q)=>s+q.y,0)/a.length;
@@ -90,7 +90,7 @@ try:
         step("the SVG export draws the arrow (no S-group text) and the PNG export works", export)
         def remove():
             pg.click("#mech-list li button[aria-label='Togli la freccia 1']")
-            wait_for_js(pg, f"/Nessuna freccia/.test({ROWS}) && {OVER}.querySelectorAll('path').length === 0", timeout=15000)
+            wait_for_js(pg, f"document.querySelectorAll('#mech-list li').length === 0 && {OVER}.querySelectorAll('path').length === 0", timeout=15000)
             assert "MZLAB_MECH" not in pg.evaluate(f"{KJ}.getKet()")
         step("the row button removes the arrow", remove)
 finally:

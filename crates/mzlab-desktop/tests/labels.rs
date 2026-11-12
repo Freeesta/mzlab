@@ -273,3 +273,23 @@ fn identity_route_equals_the_function() {
     );
     assert_eq!(bad.err().map(|e| e.key), Some("error.molid.empty"));
 }
+
+#[test]
+fn tray_route_equals_the_function() {
+    // `tray/1`: the same bytes as the `.wasm` `grafo` and `mzlab-cli mol-suspects` (tests/test_feat_grafo_wasm.py), the CSV included
+    let st = State::new();
+    for req in [
+        r#"{"op":"entries","structures":[{"name":"m","smiles":"CO","atoms":[{"el":"C","h":3},{"el":"O","h":1}]}]}"#,
+        r#"{"op":"csv","entries":[{"name":"m","smiles":"CO","formula":"CH4O","mass":32.026215}],"adducts":["[M+H]+"]}"#,
+    ] {
+        let direct = mzlab_feat::chem::tray::tray_text(req).unwrap();
+        let as_object = json!({"kind": "tray", "request": serde_json::from_str::<serde_json::Value>(req).unwrap()});
+        assert_eq!(text(st.rpc("feat/grafo", &as_object, &[]).unwrap()), direct);
+    }
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "tray", "request": "nope"}),
+        &[],
+    );
+    assert_eq!(bad.err().map(|e| e.key), Some("error.tray.request"));
+}

@@ -1,5 +1,5 @@
 //! A Waters folder copied short gives one keyed notice that names the folder and the file: `_FUNCTNS.INF` left behind, `_FUNCTNS.INF` or an index
-//! cut inside a record. Synthetic folders only.
+//! cut inside a record, every index cut inside a row. Synthetic folders only.
 
 mod common_waters;
 
@@ -53,11 +53,32 @@ fn a_function_list_cut_inside_a_record_is_named() {
 }
 
 #[test]
-fn an_index_cut_inside_a_row_is_named() {
+fn an_index_cut_inside_a_row_is_named_when_nothing_else_reads() {
     let k = (
         "err.file.indexCut".into(),
         "X.raw".into(),
         "_FUNC001.IDX".into(),
     );
-    assert_eq!(refusal(|f| shorten(f, "_FUNC001.IDX", 5)), k);
+    assert_eq!(
+        refusal(|f| {
+            shorten(f, "_FUNC001.IDX", 5);
+            shorten(f, "_FUNC002.IDX", 5);
+        }),
+        k
+    );
+}
+
+/// With the SIR/MRM function whole, the scanning function of the cut index is left out and its whole rows counted; the channels read.
+#[test]
+fn an_index_cut_inside_a_row_leaves_the_rest_readable() {
+    let mut f = folder_file();
+    shorten(&mut f, "_FUNC001.IDX", 5);
+    let mut l = mzlab_lettori::open_bare(file_set(f), &Limits::sito()).expect("opened");
+    let x = l.losses(0).unwrap();
+    assert_eq!((x.declared, x.read, x.cause), (2, 0, "warn.waters.damaged"));
+    assert!(l
+        .chromatograms(0)
+        .unwrap()
+        .iter()
+        .any(|c| c.id.starts_with("SRM SIC")));
 }

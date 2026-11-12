@@ -36,3 +36,4 @@ mod smiles;
 pub mod structures;
 #[cfg(feature = "sub")]
 pub mod substructure;
+pub mod tray;

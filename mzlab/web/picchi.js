@@ -104,12 +104,9 @@ function setNoiseZone(/** @type {Bag} */ p, /** @type {Bag} */ it, /** @type {nu
 function delInts(/** @type {Bag} */ p, /** @type {Bag[]} */ list) { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => !list.includes(i)); if (list.some((/** @type {Bag} */ i) => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
 function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, mirror = true, zero = false) {
   const lo = Math.min(a, b), hi = Math.max(a, b);
-  if (p.type === "mrm") { pushIh(p); p.ints = p.ints.filter((/** @type {Bag} */ i) => i.key !== s.key); }       // calibration: one peak per transition and file, a new window replaces the old one
-  else {
-    if (p.ints.some((/** @type {Bag} */ i) => i.key === s.key && Math.abs(i.a - lo) < 1e-6 && Math.abs(i.b - hi) < 1e-6)) return false;     // same peak clicked twice
-    if (intClash(p, s.key, lo, hi)) { nearMsg(I18N.t("int.clash")); return false; }
-  }
-  if (p.type !== "mrm") pushIh(p);
+  if (p.ints.some((/** @type {Bag} */ i) => i.key === s.key && Math.abs(i.a - lo) < 1e-6 && Math.abs(i.b - hi) < 1e-6)) return false;     // same peak clicked twice
+  if (intClash(p, s.key, lo, hi)) { nearMsg(I18N.t("int.clash")); return false; }      // several windows per trace (MRM/SIM too), never overlapping
+  pushIh(p);
   p.ints.push(intRec(p, s, lo, hi, null, zero));
   draw(p);
   // MRM: the same window goes to the other transition panels (quantifier and qualifier), where it can still be moved on its own
@@ -117,10 +114,18 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
   return true;
 }
 function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null), zero = false) {
-  const f = E.files[s.k];
-  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}), ...(zero ? { zero: true } : {}),
-    ...(zero ? {} : PK.bmode === 2 ? { bm: "line", bl: edgeLine(s, lo, hi, base) } : { bm: BMODES[PK.bmode] || "zero" }) };      // every new record names its baseline
+  const f = E.files[s.k], an = ESP.mrm(p) ? snapNew(p) : null; if (an) zero = false;
+  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base && !an ? { base } : {}), ...(zero ? { zero: true } : {}),
+    ...(an ? snapBase(s, { a: lo, b: hi, ...an }) : zero ? {} : PK.bmode === 2 ? { bm: "line", bl: edgeLine(s, lo, hi, base) } : { bm: BMODES[PK.bmode] || "zero" }) };      // every new record names its baseline
 }
+// SIM/MRM: an integration is two anchors, each end on the trace (curve), at zero or where the user put it (man, `my` = counts); two curve = edges, two zero = zero, else the line through them
+function snapBase(/** @type {Bag} */ s, /** @type {Bag} */ it) {
+  const q = it.snap, l = it.a <= it.b ? "a" : "b", h = l === "a" ? "b" : "a", y = (/** @type {string} */ e) => (q[e] === "zero" ? 0 : q[e] === "man" ? +((it.my || {})[e] || 0) : edge3(s.y, nearIdx(s.x, it[e])));
+  if (q.a === q.b && q.a !== "man") { it.bm = q.a === "zero" ? "zero" : "edges"; delete it.bl; } else { it.bm = "line"; it.bl = [it[l], y(l), it[h], y(h)]; }
+  delete it.zero; delete it.lvl; delete it.base; return it;
+}
+// the anchors of a new integration: those of the last one the user made or changed on the panel (a manual point keeps its counts), else both on the curve
+const snapNew = (/** @type {Bag} */ p) => { const o = p.ints.filter((/** @type {Bag} */ i) => i.snap).sort((/** @type {Bag} */ x, /** @type {Bag} */ y) => (y.st || y.id) - (x.st || x.id))[0]; return o ? { snap: { ...o.snap }, ...(o.my ? { my: { ...o.my } } : {}) } : { snap: { a: "curve", b: "curve" } }; };
 // [t0, y0, t1, y1] of the line between the edges: a custom line starts there
 const edgeLine = (/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, /** @type {number[] | null | undefined} */ base) => { const i0 = nearIdx(s.x, Math.min(a, b)), i1 = nearIdx(s.x, Math.max(a, b)), y = (/** @type {number} */ i) => (base ? baseAt(base, s.x[i]) : edge3(s.y, i)); return [s.x[i0], y(i0), s.x[i1], y(i1)]; };
 // a trace of a high-resolution file: the automatic tool integrates all its peaks at once (low resolution keeps one peak per click)
@@ -143,7 +148,7 @@ async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {nu
   const ed = await autoEdges(s, x);
   if (!ed) { nearMsg(I18N.t("int.belowSn")); return; }
   let [l, r] = ed;
-  if (p.type !== "mrm") {
+  {
     const c = p.ints.filter((/** @type {Bag} */ i) => i.key === s.key);
     if (c.some((/** @type {Bag} */ i) => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS)) { nearMsg(I18N.t("int.clash")); return; }
     c.forEach((/** @type {Bag} */ i) => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });

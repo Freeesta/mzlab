@@ -29,7 +29,10 @@ SHOWN = "(() => { const c = document.querySelector('#manint'); return !!c && !c.
 # integrates the window [a, b] (min) of ion `ion` (place in the list of ions) of sample `name` on the SIM panel, as a drag of the user ends (addInt, no copy to other panels)
 INTEG = """([name, ion, a, b, bm]) => { const p = E.panels.find(q => q.type === 'mrm' && q._a);
   const f = E.files.find(x => x.label === name || x.file.startsWith(name + '.')); const s = p._a.sr.filter(x => x.k === f.k)[ion];
-  addInt(p, s, a, b, false); if (bm) { const it = p.ints[p.ints.length - 1]; it.bm = bm; draw(p); } return s.key; }"""
+  addInt(p, s, a, b, false); if (bm) { const it = p.ints[p.ints.length - 1], q = bm === "zero" ? "zero" : "curve"; it.snap = { a: q, b: q }; it.st = E.seq++; draw(p); } return s.key; }"""
+# the anchor buttons (.iep) of integration `id` on the SIM panel: [end, x, y, mode, hidden] in page pixels
+ANCH = """id => E.panels.find(q => q.type === 'mrm' && q._a)._ep.filter(b => b._it.id === id).map(b => { const r = b.getBoundingClientRect(); return [b._e, r.x + r.width / 2, r.y + r.height / 2, b.dataset.m, b.hidden, r.width, r.height]; })"""
+REC = "id => { const i = E.panels.find(q => q.type === 'mrm').ints.find(x => x.id === id); return i && JSON.parse(JSON.stringify({ snap: i.snap, my: i.my || null, bm: i.bm, bl: i.bl || null, st: i.st || 0, a: i.a, b: i.b })); }"
 
 def manual(st, files, sums=False):
     # the page numbers the files it sends; the CLI reads every sample of the .wiff, the blank first
@@ -99,6 +102,26 @@ try:
             need(n == 3, n)
             wait_for_js(pg, SHOWN % 3, timeout=10000)
         step("a row shows its integration (click, Enter, Space) and its X is the only button", row_actions)
+        def copy_cells():
+            need = lambda c, m: c or throw(m)
+            csv = [l.split(",") for l in pg.evaluate("MANINT.state().csv").strip().split("\n")]
+            head, row = csv[0], csv[1]
+            cells = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')[0].querySelectorAll('[data-cp]')].map(c => { const r = c.getBoundingClientRect(); return [c.dataset.cp, c.getAttribute('role'), c.tabIndex, c.getAttribute('aria-label'), c.title, r.width, r.height, r.x + r.width / 2, r.y + r.height / 2]; })")
+            need([c[0] for c in cells] == [row[head.index(k)] for k in ("apex_rt_min", "area", "height")], (cells, row))
+            need(all(c[1] == "button" and c[2] == 0 and c[3] and c[4] and c[5] >= 24 and c[6] >= 24 for c in cells), cells)
+            pg.evaluate("(() => { window.__show = 0; const o = window.reveal; window.__orev = o; window.reveal = p => { window.__show++; return o(p); }; })()")
+            pg.evaluate("navigator.clipboard.writeText('x')")
+            area = cells[1]; pg.mouse.click(area[7], area[8])
+            wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
+            need(pg.evaluate("navigator.clipboard.readText()") == area[0], "the CSV value, full precision")
+            n = pg.evaluate("(() => { const n = document.querySelector('.areacopied'), r = n.getBoundingClientRect(); return [n.textContent, n.getAttribute('aria-live'), r.x + r.width / 2, r.y]; })()")
+            need(n[0] == pg.evaluate("I18N.t('int.copy.done')") and n[1] == "polite" and abs(n[2] - area[7]) < 60 and 0 < n[3] - area[8] < 60, ("by the pointer", n, area))
+            wait_for_js(pg, "!document.querySelector('.areacopied.show')", timeout=4000)
+            pg.focus("#manint tbody tr:first-child [data-cp]"); pg.keyboard.press("Enter")
+            wait_for_js(pg, "!!document.querySelector('.areacopied.show')", timeout=5000)
+            need(pg.evaluate("navigator.clipboard.readText()") == cells[0][0], "Enter copies the apex")
+            need(pg.evaluate("(() => { const n = window.__show; window.reveal = window.__orev; return n; })()") == 0, "a copy does not show the row's integration")
+        step("apex, area and height cells copy the CSV value with a «Copiato!» by the pointer", copy_cells)
         def delete():
             pg.click("#manint tbody tr:nth-child(2) [data-del]")
             wait_for_js(pg, SHOWN % 2, timeout=60000)
@@ -137,6 +160,58 @@ try:
             need([l for l in pg.evaluate(LB) if not l["fol"]] == la and table() == before, "the committed row of A is unchanged")
             all_ions(pg)
         step("a manual window follows the sample chosen in the left panel, measured on that sample, with no row added", follow)
+        def anchors():
+            need = lambda c, m: c or throw(m)
+            P = "E.panels.find(q => q.type === 'mrm' && q._a)"
+            a0 = pk[1][0][0]
+            need(pg.evaluate(f"{P}.el.querySelectorAll('.ibh').length === 0 && !{P}.ints.some(i => !i.snap)"), "SIM/MRM: no bars, every integration is two anchors")
+            n0 = pg.evaluate(f"{P}.ints.length")
+            pg.evaluate(INTEG, ["Sample_A", 0, a0 + 0.3, a0 + 0.6, None])
+            ints = pg.evaluate(f"{P}.ints.filter(i => i.key.startsWith('m|' + E.files.find(x => x.label === 'Sample_A' || x.file.startsWith('Sample_A.')).k + '|')).map(i => i.id)")
+            need(pg.evaluate(f"{P}.ints.length") == n0 + 1 and len(ints) == 2, ("a click on another peak adds an integration", ints))
+            wait_for_js(pg, SHOWN % (n0 + 1), timeout=60000)
+            pg.evaluate(f"(() => {{ const p = {P}; p.zoom = [{a0 - 0.4}, {a0 + 1.4}]; draw(p); }})()")   # close anchors of two windows stand for each other: zoom in
+            frames(pg, 3); new = ints[-1]
+            an = pg.evaluate(ANCH, new)
+            need(len(an) == 2 and all(x[5] >= 24 and x[6] >= 24 and x[3] == "curve" for x in an), an)
+            need(pg.evaluate(REC, new)["bm"] == "edges", "a new integration follows the curve at both ends")
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"{P}.ints.length === {n0}", timeout=10000)
+            pg.evaluate("STORIA.ripeti()"); wait_for_js(pg, f"{P}.ints.length === {n0 + 1}", timeout=10000); frames(pg, 3)
+            new = pg.evaluate(f"{P}.ints[{P}.ints.length - 1].id")
+            # S cycles the mode of the focused anchor: curve -> zero; a mixed pair is the line through the two anchors
+            pg.evaluate(f"{P}._ep.find(b => b._it.id === {new} && b.dataset.e === '0').focus()"); pg.keyboard.press("s")
+            v = pg.evaluate(REC, new); lo = "a" if v["a"] <= v["b"] else "b"
+            need(v["snap"][lo] == "zero" and v["bm"] == "line" and v["bl"][1] == 0 and v["st"] > 0, v)
+            title = pg.evaluate(f"document.activeElement.title")
+            need(pg.evaluate("I18N.t('int.snap.zero')") in title and pg.evaluate("document.activeElement.getAttribute('aria-valuenow')") in title and pg.evaluate("I18N.sciE(0)") in title, title)
+            # the menu of the anchor (Shift+F10): three radio items, the checked one first in focus; ↓ Enter picks «Manual»
+            pg.keyboard.press("Shift+F10"); wait_for_js(pg, "document.querySelectorAll('.iep-menu [role=menuitemradio]').length === 3", timeout=5000)
+            need(pg.evaluate("document.activeElement.dataset.m === 'zero' && document.activeElement.getAttribute('aria-checked') === 'true'"), "focus on the checked mode")
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter")
+            wait_for_js(pg, "!document.querySelector('.iep-menu') && document.activeElement.classList.contains('iep')", timeout=5000)
+            v = pg.evaluate(REC, new); need(v["snap"][lo] == "man" and abs(v["my"][lo]) < 1e-9, v)
+            pg.keyboard.press("ArrowUp"); v2 = pg.evaluate(REC, new); need(v2["my"][lo] > 0 and v2["bl"][1] == v2["my"][lo], (v, v2))
+            pg.evaluate("STORIA.annulla()"); need(pg.evaluate(REC, new)["my"][lo] == v["my"][lo], "one undo per key")
+            # dragging the other anchor (on the curve) 40 px up makes it manual at the pointer's level
+            hi = "b" if lo == "a" else "a"; e1 = [x for x in pg.evaluate(ANCH, new) if x[0] == hi][0]
+            pg.mouse.move(e1[1], e1[2]); pg.mouse.down(); pg.mouse.move(e1[1], e1[2] - 20, steps=3); pg.mouse.move(e1[1], e1[2] - 40, steps=3); pg.mouse.up()
+            v = pg.evaluate(REC, new); need(v["snap"][hi] == "man" and v["my"][hi] > 0 and v["bm"] == "line", v)
+            need(pg.evaluate(f"{P}.isel") == new and pg.evaluate(f"{P}._ep.filter(b => b._it.id === {new}).every(b => b.classList.contains('sel'))"), "the integration in hand is the selected one")
+            pg.evaluate(f"draw({P})"); frames(pg, 2)
+            need(pg.evaluate(f"{P}._ep.filter(b => b._it.id !== {new}).every(b => !b.classList.contains('sel'))"), "only one selected")
+            # a new integration inherits the last mode the user chose: both anchors manual at the same levels
+            pg.evaluate(INTEG, ["Sample_A", 0, a0 + 0.8, a0 + 1.1, None]); w = pg.evaluate(f"{P}.ints[{P}.ints.length - 1].id")
+            u = pg.evaluate(REC, w); need(u["snap"] == v["snap"] and u["my"] == v["my"] and u["bm"] == "line", (u, v))
+            wait_for_js(pg, SHOWN % (n0 + 2), timeout=60000)
+            rows = pg.evaluate("[...document.querySelectorAll('#manint tbody tr')].map(r => r.textContent)")
+            need(sum(pg.evaluate("I18N.t('int.base.line')") in x for x in rows) >= 2, rows)
+            # «Clear integrations» empties the panel; undo brings every integration back
+            k = pg.evaluate(f"{P}.ints.length"); pg.evaluate(f"{P}.el.querySelector('[data-a=iclr]').click()")
+            wait_for_js(pg, f"{P}.ints.length === 0", timeout=10000)
+            pg.evaluate("STORIA.annulla()"); wait_for_js(pg, f"{P}.ints.length === {k}", timeout=10000)
+            pg.evaluate(f"(() => {{ const p = {P}; p.zoom = null; draw(p); }})()")
+            all_ions(pg)
+        step("SIM/MRM: an integration is two anchors (curve, zero, manual: S, menu, drag), several per trace, the last mode inherited, undo", anchors)
         step("the msconvert log is skipped with a note", lambda: (lambda u: "sim3.wiff.log" in u or throw(u))(pg.evaluate("document.getElementById('unopen').textContent")))
         def channels():
             k = pg.evaluate("E.files.find(f => f.label === 'Blank' || /Blank/.test(f.file)).k")
