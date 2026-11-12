@@ -49,18 +49,23 @@ function numberPanels() {
   st.forEach((/** @type {Pannello} */ q, /** @type {number} */ i) => { const n = q.el.querySelector(".pnum"); q.num = i + 1; n.textContent = i + 1; n.hidden = false; n.title = I18N.t("panel.num.title", { n: i + 1 }); });
   markPairs(st);
 }
-// a spectrum following a chromatogram: both share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hover or focus on one lights the other
+// a spectrum following a chromatogram: both share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hover or focus on one lights the other.
+// the spectrum's tag («⊘»: follows nothing) is the button of the follow menu; the MS2 tab follows by precursor
 function markPairs(/** @type {Pannello[]} */ st) {
-  let ord = 0; const idx = new Map();
+  let ord = 0; const idx = new Map(), tag = (/** @type {Pannello} */ a, /** @type {string} */ txt, /** @type {string} */ tip) => {
+    const fo = a.type === "spec" && (a.tab || E.tab) !== "ms2", t = document.createElement(fo ? "button" : "span"); t.className = fo ? "ppair fol" : "ppair"; t.textContent = txt; t.title = tip; t.setAttribute("aria-label", tip);
+    if (fo) { /** @type {HTMLButtonElement} */ (t).type = "button"; t.setAttribute("aria-haspopup", "menu"); t.onclick = (/** @type {MouseEvent} */ e) => followMenu(a, e); }
+    (a.el.querySelector(".pnum") || a.el.firstChild).after(t);
+  };
   E.panels.forEach((/** @type {Pannello} */ q) => { if (q.el) { delete q.el.dataset.pair; q.el.querySelectorAll(".ppair").forEach((/** @type {Element} */ x) => x.remove()); } });
   st.forEach((/** @type {Pannello} */ sp) => {
-    const src = sp.type === "spec" && sp.link ? st.find((/** @type {Pannello} */ q) => q.id === sp.link) : null; if (!src) return;
+    const src = sp.type === "spec" && sp.link ? st.find((/** @type {Pannello} */ q) => q.id === sp.link) : null;
+    if (!src) { if (sp.type === "spec" && (sp.tab || E.tab) !== "ms2") tag(sp, "\u2298", I18N.t("spec.follow.none.title")); return; }
     if (!idx.has(src)) idx.set(src, ++ord);
     const c = (idx.get(src) - 1) % 4 + 1;
-    /** @type {[Pannello, string, Pannello, string][]} */ ([[src, "→", sp, "panel.pair.to"], [sp, "←", src, "panel.pair.from"]]).forEach(([a, arrow, b, key]) => {
+    /** @type {[Pannello, string, Pannello, string][]} */ ([[src, "→", sp, "panel.pair.to"], [sp, "←", src, "spec.follow.aria"]]).forEach(([a, arrow, b, key]) => {
       a.el.dataset.pair = String(c);
-      const t = document.createElement("span"); t.className = "ppair"; t.textContent = `${arrow} ${b.num}`; t.title = I18N.t(key, { n: b.num }); t.setAttribute("aria-label", t.title);
-      (a.el.querySelector(".pnum") || a.el.firstChild).after(t);
+      tag(a, `${arrow} ${b.num}`, I18N.t(key, { n: b.num }));
       if (!(/** @type {Bag} */ (a.el))._pairBound) {
         /** @type {Bag} */ (a.el)._pairBound = true;
         const lit = (/** @type {boolean} */ on) => { const m = a._mate; if (m && m.el) m.el.classList.toggle("pair-hi", on); };
@@ -71,6 +76,12 @@ function markPairs(/** @type {Pannello[]} */ st) {
     });
   });
   paintScanOf();
+}
+function followMenu(/** @type {Pannello} */ p, /** @type {MouseEvent} */ e) {  // which chromatogram of the tab drives the spectrum, or none
+  e.stopPropagation(); const kb = !e.detail, back = () => { if (kb) /** @type {HTMLElement | null} */ (p.el && p.el.querySelector(".ppair.fol"))?.focus(); };  // the tag is rebuilt: focus back
+  const cands = E.panels.filter((/** @type {Pannello} */ q) => ["chrom", "xic", "mrm"].includes(q.type) && (q.tab || E.tab) === (p.tab || E.tab) && q.el);
+  menu(e, [...cands.map((/** @type {Pannello} */ q) => ({ label: (p.link === q.id ? "\u2713 " : "") + I18N.t("spec.follow.item", { n: q.num || "?", title: ptitle(q.title) }), fn: () => { spLinkFollow(p, q); back(); } })),
+    ...(cands.length ? ["-"] : []), { label: (p.link ? "" : "\u2713 ") + I18N.t("spec.follow.menu.none"), fn: () => { spLinkFreeze(p); uiSave(); back(); } }]);
 }
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
@@ -762,20 +773,7 @@ function ctl(/** @type {Pannello} */ p) {
       (p.bg === "w" ? FONDOSP.box(p) : "") +
       (p.level > 1 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:7em"><option value="">${I18N.t("ctl.prec.all")}</option>${(prodTab ? precN : [...new Set(f.flatMap((/** @type {MzFile} */ x) => x.precursors))].sort((a, b) => a - b).map(v => ({ prec: v }))).map((/** @type {Bag} */ e) => `<option value="${e.prec}" ${String(p.prec) === String(e.prec) ? "selected" : ""}>${e.prec}</option>`).join("")}</select>` : "");
   }
-  if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {  // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
-    const srcP = p.link ? E.panels.find((/** @type {Pannello} */ q) => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
-    const fh = `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? "\u2190" + n : "\u2298"}</button>`;
-    c.querySelectorAll(".fol").forEach((/** @type {Element} */ x) => x.remove());          // UV controls are not rewritten by innerHTML
-    if (c.firstElementChild) c.firstElementChild.insertAdjacentHTML("afterend", fh); else c.innerHTML = fh;
-    const fb = c.querySelector(".fol");
-    if (!p.link) fb.classList.remove("lk");
-    fb.onclick = (/** @type {MouseEvent} */ e) => {
-      e.stopPropagation();
-      const cands = E.panels.filter((/** @type {Pannello} */ q) => ["chrom", "xic", "mrm"].includes(q.type) && (q.tab || E.tab) === (p.tab || E.tab) && q.el);
-      menu(e, [...cands.map((/** @type {Pannello} */ q) => ({ label: (p.link === q.id ? "\u2713 " : "") + I18N.t("spec.follow.item", { n: q.num || "?", title: ptitle(q.title) }), fn: () => spLinkFollow(p, q) })),
-        ...(cands.length ? ["-"] : []), { label: (p.link ? "" : "\u2713 ") + I18N.t("spec.follow.menu.none"), fn: () => { spLinkFreeze(p); uiSave(); } }]);
-    };
-  }
+  if (p.type === "spec" && p.el) numberPanels();  // a new link or «none» changes the follow tag
   if (window.BANCO) BANCO.decorate(p, c); mapNavWire(p, c);
   if (window.MAPPA && p.type === "map") MAPPA.decorate(p, c);
   const cpB = c.querySelector('[data-a="cpar"]'), cpP = c.querySelector(".cpop");
