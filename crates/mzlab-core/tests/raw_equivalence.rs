@@ -313,14 +313,22 @@ fn the_trailer_reads_agree_on_every_field() {
             let fields: Vec<usize> = (0..n_fields).collect();
             let some = t.get_fields(&mut src, i, &fields).unwrap();
             let from_walk = walked[i].as_ref().unwrap();
-            for f in 0..n_fields {
-                let a = format!("{:?}", Some(&whole.values[f].1));
+            assert_eq!(whole.values.len(), n_fields, "{case}: record {i}");
+            assert_eq!(some.values.len(), n_fields, "{case}: record {i}");
+            for (f, ((w, s), walk)) in whole
+                .values
+                .iter()
+                .zip(&some.values)
+                .zip(from_walk)
+                .enumerate()
+            {
+                let a = format!("{:?}", Some(&w.1));
                 assert_eq!(
                     a,
-                    format!("{:?}", Some(&some.values[f].1)),
+                    format!("{:?}", Some(&s.1)),
                     "{case}: record {i} field {f} (get_fields)"
                 );
-                assert_eq!(&a, &from_walk[f], "{case}: record {i} field {f} (for_each)");
+                assert_eq!(&a, walk, "{case}: record {i} field {f} (for_each)");
             }
         }
     }
