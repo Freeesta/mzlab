@@ -9,6 +9,7 @@ use mzlab_core::json::{self, round, Out, Value};
 use mzlab_core::nuclides::NUCLIDES;
 
 use super::labels::{self, Counts, Key, Shape};
+use crate::sortc::SortC;
 
 /// Below this neutral mass a doubly charged ion of a small molecule falls under any usual scan range.
 const Z2_MIN_MASS: f64 = 150.0;
@@ -41,7 +42,7 @@ fn take(n: &mut Counts, e: &str, mut c: u64) -> bool {
         return false;
     }
     let mut idx: Vec<usize> = (0..n.len()).filter(|&i| n[i].0 .0 == e).collect();
-    idx.sort_by_key(|&i| n[i].0 .1);
+    idx.sortc_by_key(|&i| n[i].0 .1);
     for i in idx {
         let t = n[i].1.min(c);
         n[i].1 -= t;
