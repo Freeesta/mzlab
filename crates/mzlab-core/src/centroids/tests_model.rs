@@ -60,13 +60,11 @@ pub(super) struct Effect {
     pub ppm_doublet: f64,
 }
 
+/// Groups of peaks (centre, height) of a scan.
+type Groups = Vec<Vec<(f64, f64)>>;
+
 /// The parameters a conversion estimates on 6 scans of singles: a width model is fitted.
-fn estimated(
-    singles: &dyn Fn(&mut Rng) -> Vec<Vec<(f64, f64)>>,
-    snr: f64,
-    grid: Grid,
-    rng: &mut Rng,
-) -> Params {
+fn estimated(singles: &dyn Fn(&mut Rng) -> Groups, snr: f64, grid: Grid, rng: &mut Rng) -> Params {
     let scans: Vec<_> = (0..6)
         .map(|_| scan(&singles(rng), snr, grid, rng))
         .collect();
