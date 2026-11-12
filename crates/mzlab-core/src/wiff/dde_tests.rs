@@ -31,6 +31,12 @@ fn stream(rows: &[[u8; ROW]]) -> Vec<u8> {
     b
 }
 
+/// A stream one byte short of its last row.
+fn cut(mut b: Vec<u8>) -> Vec<u8> {
+    b.pop();
+    b
+}
+
 /// Three cycles of survey + one EPI.
 fn records() -> Vec<Record> {
     (0..3).flat_map(|c| [record(c, 0), record(c, 1)]).collect()
@@ -39,12 +45,17 @@ fn records() -> Vec<Record> {
 #[test]
 fn a_stream_with_one_row_per_dependent_slot_is_read() {
     let b = stream(&[entry(493.27, 1), entry(547.30, 2), entry(687.85, 0)]);
-    let t = rows(&b, 2, &records()).unwrap();
-    assert_eq!(t.len(), 3 * ROW);
+    let rs = records();
+    let t = rows(&b, 2, &rs);
+    let at = |k: usize| t.and_then(|t| row(t, k));
+    assert_eq!(t.map(<[u8]>::len), Some(3 * ROW));
     assert_eq!(slot(&record(2, 1), 2), 2);
-    assert_eq!(plausible(row(t, 1).unwrap(), None), Some((547.30, Some(2))));
-    assert_eq!(plausible(row(t, 2).unwrap(), None), Some((687.85, None)));
-    assert!(row(t, 3).is_none());
+    assert_eq!(
+        at(1).and_then(|r| plausible(r, None)),
+        Some((547.30, Some(2)))
+    );
+    assert_eq!(at(2).and_then(|r| plausible(r, None)), Some((687.85, None)));
+    assert!(at(3).is_none());
 }
 
 #[test]
@@ -59,8 +70,11 @@ fn a_stream_that_does_not_fit_the_scans_gives_no_rows() {
             entry(687.85, 1),
             entry(700.0, 1),
         ]),
-        stream(&[entry(493.27, 1), entry(547.30, 1), entry(687.85, 1)])[..HEAD + 3 * ROW - 1]
-            .to_vec(),
+        cut(stream(&[
+            entry(493.27, 1),
+            entry(547.30, 1),
+            entry(687.85, 1),
+        ])),
         vec![0u8; 8],
         vec![0u8; HEAD],
     ] {
