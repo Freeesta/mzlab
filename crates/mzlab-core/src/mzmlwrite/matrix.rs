@@ -82,7 +82,7 @@ impl Encoding {
         }
         let len = self.packed.len().div_ceil(3) * 4;
         let ((unit_acc, unit_name), (cv, label)) = (unit_term(unit), kind_term(kind));
-        let unit_cv = if matches!(unit, "time" | "nm" | "au") {
+        let unit_cv = if matches!(unit, "time" | "nm" | "au" | "pascal") {
             "UO"
         } else {
             "MS"
@@ -118,6 +118,7 @@ fn unit_term(unit: &str) -> (&'static str, &'static str) {
         "mz" => ("MS:1000040", "m/z"),
         "nm" => ("UO:0000018", "nanometer"),
         "au" => ("UO:0000269", "absorbance unit"),
+        "pascal" => ("UO:0000110", "pascal"),
         _ => ("MS:1000131", "number of detector counts"),
     }
 }
