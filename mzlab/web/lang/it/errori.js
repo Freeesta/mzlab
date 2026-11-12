@@ -222,6 +222,7 @@ I18N.add("it", {
   "error.msngrafo.badFile": "{file} non è un grafo di frammentazione che il programma sa leggere ({raw}).",
   "error.msngrafo.tooBig": "{file} è un grafo di frammentazione salvato di {mb} MB: questa pagina apre i grafi salvati fino a {max} MB, quindi non è stato aperto. Per vederlo, apri i dati grezzi da cui è stato fatto: la scheda «Grafo di frammentazione» lo ricostruisce.",
   "err.canali.unknown": "Il canale {id} non esiste in questo file.",
+  "err.canali.sample": "Questo file non ha il campione {id}: i suoi campioni sono {ids}.",
   "err.cli.line": "La riga di comando non si legge: {message}.",
   "err.cli.set": "L'impostazione «{set}» non è valida: {message}.",
   "err.conv.noProfile": "Questo file ha solo picchi centroidi e nessun dato di profilo, quindi non si può convertire in un mzML di profilo. Usa l'mzML centroide così com'è.",
