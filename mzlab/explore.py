@@ -853,7 +853,8 @@ class Item:
                 b = self._cells(mz, bin_da, level)
                 u, inv = np.unique(b, return_inverse=True)
                 sy = np.bincount(inv, weights=y)
-                mz, y = np.bincount(inv, weights=y * mz) / np.maximum(sy, 1e-12), sy
+                mean = np.bincount(inv, weights=mz) / np.bincount(inv)             # a zero-sum cell keeps its m/z, never 0
+                mz, y = np.where(sy > 0, np.bincount(inv, weights=y * mz) / np.maximum(sy, 1e-12), mean), sy
             out.append({"i": i, "sid": int(ids[i]), "rt": float(rt[i]), "mz": mz, "y": y})
         return out
 

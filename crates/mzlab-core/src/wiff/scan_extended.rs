@@ -24,7 +24,7 @@ pub struct Cols {
 /// Most transitions one experiment may have (a count read from the file).
 const WIDTH_MAX: usize = 100_000;
 
-/// The MRM block of `bytes` bytes starting at `at`. A dense block is one f32 (cps) per transition. A sparse block starts with `-(N + 0.01)`, N being the
+/// The MRM block of `bytes` bytes starting at `at`. A dense block is one f32 (cps) per transition, negative noise included. A sparse block starts with `-(N + 0.01)` (`sparse_head`), N being the
 /// transitions of the experiment, and goes on with the cps of consecutive transitions and `-(k + 0.01)` for a run of k transitions that measured zero, in
 /// order: every transition gets its point, zeros included, as the vendor library gives them. A block that is neither (a negative or non-finite count, a
 /// sparse block that does not add up to N, a NaN or infinite cps) is `Mrm::Damaged`: the reader leaves that cycle out and counts it, the others are read.
@@ -44,7 +44,7 @@ fn cols_of(v: Vec<f64>) -> Option<Cols> {
     if v.iter().any(|x| !x.is_finite()) {
         return None;
     }
-    let Some(&first) = v.first().filter(|x| **x < 0.0) else {
+    let Some(&first) = v.first().filter(|x| base::sparse_head(**x)) else {
         return Some(Cols {
             width: v.len(),
             points: v.into_iter().enumerate().collect(),
@@ -82,7 +82,7 @@ mod tests {
     // a skip count that saturates the position, followed by a point, is an error and not an overflow
     #[test]
     fn sparse_block_with_a_saturating_skip_is_an_error() {
-        let mut b = block(&[-4.0, -1.0e30, 5.0, 6.0]);
+        let mut b = block(&[-4.01, -1.0e30, 5.0, 6.0]);
         let n = b.len();
         assert!(matches!(mrm_cols(&mut b, n as u64, 0, n), Ok(Mrm::Damaged)));
     }
@@ -105,7 +105,10 @@ mod tests {
         );
         // a block that ends short of its transitions, a width below one and a dense block
         assert_eq!(cols(&[-4.01, 7.0, -1.01]), None);
-        assert_eq!(cols(&[-0.5, 7.0]), None);
+        assert_eq!(cols(&[-0.01, 7.0]), None);
         assert_eq!(cols(&[3.0, 4.0]), Some((2, vec![(0, 3.0), (1, 4.0)])));
+        // a dense block whose first cps is negative noise, not of the `-(N + 0.01)` shape, stays dense
+        assert_eq!(cols(&[-0.5, 7.0]), Some((2, vec![(0, -0.5), (1, 7.0)])));
+        assert_eq!(cols(&[-4.0, 7.0]), Some((2, vec![(0, -4.0), (1, 7.0)])));
     }
 }
