@@ -3,7 +3,9 @@
     python3 tools/wiff_esperimenti.py OUT
 
 Writes OUT/esperimenti.wiff(.scan) and OUT/esperimenti.json. Experiments 0-16 are full scans, 17-19 product-ion scans with their own collision energy,
-so a reader that stops the method at sixteen experiments loses the energies. Built with the Writer of wiff_riferimento.py; the numbers are invented.
+so a reader that stops the method at sixteen experiments loses the energies. Sample 2 (one full scan) has a log written by SCIEX OS (`Component Id:`): the
+method names that software and the model. Sample 3 is sample 1 with the MassRangeEx of experiment 18 cut inside its energy: still twenty experiments, that
+one without energy. Built with the Writer of wiff_riferimento.py; the numbers are invented.
 """
 import json
 import sys
@@ -25,8 +27,13 @@ def main():
     blocks = [("scan", PRODUCT if e in CE else FULL, 1000.0 * c + 10.0 * e, 1.0) for c in range(2) for e in range(N)]
     w = Writer()
     w.sample(1, blocks, method)
+    w.sample(2, [("scan", FULL, 1000.0, 1.0)], {"Experiment0/ExperimentHeader": header(15, 30.0)})
+    # SCIEX OS writes the key as `Component Id:`, Analyst as `Component ID:`
+    w.streams["SampleSubtree/Sample2/Log"] = b"\0\0" + "Mass Spectrometer: Config Table, Component Id: QTRAP 6500+, Software: SCIEX OS 2.1, Version: 1".encode("utf-16le") + b"\0\0"
+    cut = dict(method, **{"Experiment18/MassRangeEx/MassRangeEx": mass_range(CE[18])[:16]})
+    w.sample(3, blocks, cut)
     w.save(out, "esperimenti")
-    (out / "esperimenti.json").write_text(json.dumps({"ce": [CE.get(e) for e in range(N)]}))
+    (out / "esperimenti.json").write_text(json.dumps({"ce": [CE.get(e) for e in range(N)], "ce_cut": [None if e == 18 else CE.get(e) for e in range(N)]}))
 
 
 if __name__ == "__main__":
