@@ -1,0 +1,128 @@
+{
+ "_doc": "Synthetic drawing of 4-chlorophenol (Cl first) for hilite/1: the HR request colours every layer, the LR one only the selected atoms; the same bytes from the molkit .wasm, the app (feat/grafo, kind hilite) and mzlab-cli mol-hilite.",
+ "request": {
+  "molfile": "\n  mzLab             2D\n\n  8  8  0  0  0  0  0  0  0  0999 V2000\n   -2.6000    0.0000    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0\n   -1.6000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.4000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\n  2  8  2  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  1  0  0  0  0\n  5  7  2  0  0  0  0\n  7  8  1  0  0  0  0\nM  END\n",
+  "world": "hr",
+  "layers": [
+   {
+    "kind": "moiety",
+    "label": "phenol",
+    "query": "c1ccccc1O"
+   },
+   {
+    "kind": "sites",
+    "label": "reactive sites",
+    "smiles": "Oc1ccc(Cl)cc1",
+    "atoms": [
+     0,
+     5
+    ]
+   },
+   {
+    "kind": "cuts",
+    "label": "cut supported by a peak",
+    "smiles": "Oc1ccc(Cl)cc1",
+    "bonds": [
+     [
+      4,
+      5
+     ]
+    ]
+   },
+   {
+    "kind": "moiety",
+    "label": "amine",
+    "query": "N"
+   }
+  ]
+ },
+ "lr": {
+  "molfile": "\n  mzLab             2D\n\n  8  8  0  0  0  0  0  0  0  0999 V2000\n   -2.6000    0.0000    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0\n   -1.6000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.4000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\n  2  8  2  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  1  0  0  0  0\n  5  7  2  0  0  0  0\n  7  8  1  0  0  0  0\nM  END\n",
+  "world": "lr",
+  "selected": [
+   0,
+   1
+  ],
+  "layers": [
+   {
+    "kind": "moiety",
+    "label": "phenol",
+    "query": "c1ccccc1O"
+   },
+   {
+    "kind": "sites",
+    "label": "reactive sites",
+    "smiles": "Oc1ccc(Cl)cc1",
+    "atoms": [
+     0,
+     5
+    ]
+   },
+   {
+    "kind": "cuts",
+    "label": "cut supported by a peak",
+    "smiles": "Oc1ccc(Cl)cc1",
+    "bonds": [
+     [
+      4,
+      5
+     ]
+    ]
+   },
+   {
+    "kind": "moiety",
+    "label": "amine",
+    "query": "N"
+   }
+  ]
+ },
+ "hilite": "{\"format\":\"hilite/1\",\"layers\":[{\"kind\":\"moiety\",\"label\":\"phenol\",\"atoms\":[1,2,3,4,5,6,7],\"bonds\":[[1,2],[1,7],[2,3],[3,4],[4,5],[4,6],[6,7]]},{\"kind\":\"sites\",\"label\":\"reactive sites\",\"atoms\":[0,5],\"bonds\":[]},{\"kind\":\"cuts\",\"label\":\"cut supported by a peak\",\"atoms\":[],\"bonds\":[[0,1]]},{\"kind\":\"moiety\",\"label\":\"amine\",\"atoms\":[],\"bonds\":[],\"skip\":\"noMatch\"}]}",
+ "hilite_lr": "{\"format\":\"hilite/1\",\"layers\":[{\"kind\":\"moiety\",\"label\":\"phenol\",\"atoms\":[1],\"bonds\":[]},{\"kind\":\"sites\",\"label\":\"reactive sites\",\"atoms\":[0],\"bonds\":[]},{\"kind\":\"cuts\",\"label\":\"cut supported by a peak\",\"atoms\":[],\"bonds\":[[0,1]]},{\"kind\":\"moiety\",\"label\":\"amine\",\"atoms\":[],\"bonds\":[],\"skip\":\"noMatch\"}]}",
+ "errors": [
+  [
+   {
+    "molfile": "\n  mzLab             2D\n\n  8  8  0  0  0  0  0  0  0  0999 V2000\n   -2.6000    0.0000    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0\n   -1.6000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.4000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\n  2  8  2  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  1  0  0  0  0\n  5  7  2  0  0  0  0\n  7  8  1  0  0  0  0\nM  END\n",
+    "layers": [
+     {
+      "kind": "moiety",
+      "query": ""
+     }
+    ]
+   },
+   "error.hilite.query"
+  ],
+  [
+   {
+    "molfile": "nonsense",
+    "layers": []
+   },
+   "error.hilite.molfile"
+  ],
+  [
+   {
+    "molfile": "\n  mzLab             2D\n\n  8  8  0  0  0  0  0  0  0  0999 V2000\n   -2.6000    0.0000    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0\n   -1.6000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.4000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\n  2  8  2  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  1  0  0  0  0\n  5  7  2  0  0  0  0\n  7  8  1  0  0  0  0\nM  END\n",
+    "layers": [
+     {
+      "kind": "glow"
+     }
+    ]
+   },
+   "error.hilite.request"
+  ],
+  [
+   {
+    "molfile": "\n  mzLab             2D\n\n  8  8  0  0  0  0  0  0  0  0999 V2000\n   -2.6000    0.0000    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0\n   -1.6000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000    0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    0.4000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n    1.4000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n   -0.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n   -1.1000   -0.8660    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n  1  2  1  0  0  0  0\n  2  3  1  0  0  0  0\n  2  8  2  0  0  0  0\n  3  4  2  0  0  0  0\n  4  5  1  0  0  0  0\n  5  6  1  0  0  0  0\n  5  7  2  0  0  0  0\n  7  8  1  0  0  0  0\nM  END\n",
+    "layers": [
+     {
+      "kind": "sites",
+      "smiles": "Oc1ccc(Cl)cc1",
+      "atoms": [
+       9
+      ]
+     }
+    ]
+   },
+   "error.hilite.request"
+  ]
+ ]
+}

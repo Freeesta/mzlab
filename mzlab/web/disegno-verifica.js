@@ -39,8 +39,8 @@ export async function ketcher() {
   return /** @type {any} */ (document.querySelector("#kframe")).contentWindow.ketcher;
 }
 
-/** `check/1` (or, with kind `cip`, `cip/1`) text of a request: the native engine in the app, the molkit .wasm on the site */
-export async function ask(/** @type {string} */ request, /** @type {"check" | "cip"} */ kind = "check") {
+/** `check/1` (or, with kind `cip`, `cip/1`; with kind `hilite`, `hilite/1`) text of a request: the native engine in the app, the molkit .wasm on the site */
+export async function ask(/** @type {string} */ request, /** @type {"check" | "cip" | "hilite"} */ kind = "check") {
   if (/** @type {any} */ (window).MZLAB_DESKTOP) {
     const base = /Windows/.test(navigator.userAgent) ? "http://mzlab.localhost/" : "mzlab://localhost/";
     const r = await fetch(base + "rpc", { method: "POST", body: JSON.stringify({ op: "feat/grafo", kind, request }) });
@@ -49,7 +49,7 @@ export async function ask(/** @type {string} */ request, /** @type {"check" | "c
     return x;
   }
   const mod = await carica();
-  return kind === "cip" ? mod.cip(request) : mod.check(request);
+  return kind === "cip" ? mod.cip(request) : kind === "hilite" ? mod.hilite(request) : mod.check(request);
 }
 
 /** the message of an engine error (`{error_key, params}` text) or of anything else */
