@@ -2,7 +2,7 @@
 Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.129 e `tools/wasm_opt.sh` (`wasm-opt -O3`, binaryen 133; `@motore` per motore, feat, tabelle e rotte, `@estesi` per i lettori) salvo «grezzo» = `tools/cargo_wasm.sh build --release` prima di `wasm-opt`; la crescita in % è il rapporto della coppia. I tetti stanno in `tools/build_*_wasm.sh` (`docs/agenti/wasm-tetti.md`), nessuna riga qui li cambia; i valori del passo «size» della CI fanno fede.
 
 ## Tetti
-- motore 2 174 976; `thermo` 774 144; `sciex` 483 328; `aperti` 563 200; `andi` 344 064; librerie 614 400; `hr` 1 716 224; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; i tetti degli altri moduli stanno solo negli script.
+- motore 2 174 976; `thermo` 774 144; `sciex` 483 328; `aperti` 563 200; `andi` 344 064; librerie 614 400; `hr` 1 716 224; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; `ticfondo` 512 000; i tetti degli altri moduli stanno solo negli script.
 
 ## Motore
 - Scansione danneggiata lasciata fuori e contata (`readers::Skips` nei cicli di `readers_mzml` e `mzidx_reader`, il conteggio di `Finished` in `losses`), ottimizzato su un target pulito: lettori `aperti` 560 765 → 562 655 (+0,34 %), `sciex` 481 016 → 482 990 (+0,41 %); tetti alzati: `aperti` 561 152 → 563 200, `sciex` 481 280 → 483 328 (misura + margine, arrotondato a 512 B; il ciclo di `Skips` circa 0,9 KB, il conteggio di `Finished` circa 1 KB).
@@ -48,6 +48,7 @@ Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.
 - `hr`, lettore mzML del motore su `spechead` (locale, `cargo_wasm.sh` + `wasm-bindgen` + `wasm-opt @motore`): main 1 701 543 → 1 717 304 col lettore; liste al posto delle mappe hash, termine in un passaggio, regola del precursore `&dyn`, helper fuori linea 1 709 289; dopo la crescita di main 1 712 419 → 1 711 880 (nome dell'elemento condiviso, gruppi in coda, −539 B); tetto `limit_hr` 1 716 224.
 
 ## Feature, tabelle, rotte, librerie
+- TIC senza fondo (`ticbg`, modulo nuovo `ticfondo`): `ticfondo` 142 156 B (tetto 512 000); motore 2 155 135 → 2 155 131 (invariato; con la rotta dentro 2 179 890, oltre il tetto 2 174 976); `rotte` invariato (con la rotta 855 782 → 915 746, oltre 884 736).
 - `grafo` senza l'export `tray` (Disegna senza la scheda delle strutture salvate): 295 762 → 287 362 (−2,8 %; tetto `limit` 512 000 invariato). Il modulo `molid` (335 638 B) non esiste: il Disegno non ha la ricerca nel catalogo del disegno, nessun manifest lo elenca e nessun tetto cambia.
 - `molkit`: ricerca per sottostruttura (`substructure`, `sub/1` e `subdb/1` su SDF, elenco di SMILES o catalogo; il matcher, il lettore SMILES e la percezione aromatica di `mzlab-mol` entrano nel modulo) 216 708 → 312 587 (+44,2 %; sopra il +10 % per funzione, sotto il tetto standard 512 000, che non sale).
 - `molkit`: passo Flow `structure.moiety` (`flow_moiety`, `chem::moiety::moiety_text`; il matcher c'era già) 301 994 → 305 510 (+1,2 %; misurati con la stessa compilazione e `tools/wasm_opt.sh`, sotto il tetto standard 512 000).

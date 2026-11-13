@@ -276,6 +276,7 @@ impl State {
                 Some(r) => opt(mzlab_core::subxic::subxic(r, p["k"].as_i64().unwrap_or(-1), &q())?),
                 None => text(""),
             },
+            "ticbg" => opt(mzlab_core::ticbg_route::route_files(&mut eng.idx, u("slot"), p["blank"].as_i64().unwrap_or(-1), &q())?),
             "map" => {
                 let metas = session_items(s("items"))?;
                 opt(mzlab_core::maproute::map_route(s("path"), &metas, &mut eng.idx, &q())?)

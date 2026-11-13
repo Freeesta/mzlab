@@ -153,6 +153,10 @@ fn plan() -> Vec<Value> {
     ] {
         steps.push(json!({"op": "lr_formula", "f": f, "adduct": adduct}));
     }
+    // the TIC/BPC without the chemical background (`api/tic_background`): automatic, options, the file as its own blank, a bad value
+    for (query, blank) in [("", -1), ("&kind=bpc&action=exclude&ex=300:0.5&keep=301", -1), ("&mode=quiet&rt0=0.1&rt1=0.3&res=hr&floor=0", -1), ("&mode=blank&blank=0", 0), ("&mode=nope", -1)] {
+        steps.push(json!({"op": "ticbg", "slot": 0, "blank": blank, "query": format!("?k=0&level=1{query}")}));
+    }
     steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
         json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
