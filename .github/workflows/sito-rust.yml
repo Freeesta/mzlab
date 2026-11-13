@@ -355,6 +355,10 @@ jobs:
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
           python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_indice_parallelo,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_lettori_modulo,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf,e2e_flow_motore,e2e_flow_msn,e2e_msn_un_clic,e2e_flow_live' }}"
+      # post-merge net, push to main only (never a pull request, not a required check): the areas that broke unseen between two nightly runs (groups, load folder, Ketcher focus, integration, QA/QC, panel headers, tour); a red step marks the run of the commit red in the actions list
+      - name: e2e of the user paths (push to main only)
+        if: ${{ !cancelled() && github.event_name == 'push' && !inputs.solo }}
+        run: python tools/verifica.py --fumo --browser chromium --solo "e2e_gruppi_nomi,e2e_gruppi_per,e2e_gruppi_singoli,e2e_gruppi_su_file,e2e_gruppi_trascina,e2e_gruppi_utente,e2e_gruppi_visibile,e2e_carica_cartella,e2e_disegno_caricamento,e2e_disegno_click,e2e_strumenti_ketcher,e2e_integra_base,e2e_integra_hr,e2e_integra_modi,e2e_integrazioni,e2e_qaqc,e2e_intestazioni,e2e_tour"
       # saved right after the e2e (a red one keeps the build); incremental data is dropped so the cache stays small
       - name: Prepare the cache of the native builds
         if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true' }}
