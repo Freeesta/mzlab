@@ -70,7 +70,9 @@ fn spectra() -> Vec<u8> {
 fn spectra_with_twc(n: usize) -> Vec<u8> {
     let t: Vec<f64> = (0..n).map(|i| i as f64 * 0.01).collect();
     let y: Vec<f64> = (0..n).map(|i| 10.0 + i as f64).collect();
-    let arr = |acc: &str, name: &str, v: &[f64]| format!("<binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"{acc}\" name=\"{name}\"/><binary>{}</binary></binaryDataArray>", b64(v, true, false));
+    let arr = |acc: &str, name: &str, v: &[f64]| {
+        format!("<binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"{acc}\" name=\"{name}\"/><binary>{}</binary></binaryDataArray>", b64(v, true, false))
+    };
     let chrom = format!("<chromatogramList count=\"1\"><chromatogram index=\"0\" id=\"TWC\" defaultArrayLength=\"{n}\"><cvParam cvRef=\"MS\" accession=\"MS:1000813\" name=\"absorption chromatogram\"/><binaryDataArrayList count=\"2\">{}{}</binaryDataArrayList></chromatogram></chromatogramList>", arr("MS:1000595", "time array", &t), arr("MS:1000515", "intensity array", &y));
     String::from_utf8(spectra())
         .unwrap()
