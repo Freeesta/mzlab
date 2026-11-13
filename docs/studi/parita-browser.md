@@ -32,7 +32,8 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `qc.run_order` | sì | `.wasm` `flowstat` (`flow_runorder`, `mzlab-feat::runorder`): esecutore `F.webQcReport.runOrder`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
 | `report.methods` | sì | `.wasm` `flowstat` (`flow_methods`, `mzlab-feat::methods`): esecutore `F.webQcReport.methods`, stessi byte di `flow run` | `e2e_flow_qcreport.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
 | `export.annotations` | sì | `.wasm` `flowstat` (`flow_export_annot`, `mzlab-feat::flow_export_annot`): esecutore `F.webExportAnnot` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_export_annot.py` (SHA-256 uguale al nativo, secondo giro `reused`) | fatto | S | 1 |
-| `table.filter`, `table.plausible` | sì | pannello per plausibilità (`.wasm` `table`: `table_plausible`, `table_check`); filtro non verificato | `test_feat_table_wasm.py` per `check.json`; passi no | da fare: nessun esecutore in `F.liveJobs` | S | 1 |
+| `table.filter` | sì | pannello (`.wasm` `table`); filtro non verificato | `test_feat_table_wasm.py` per `check.json`; passo no | da fare: nessun esecutore | S | 1 |
+| `table.plausible` | sì | `.wasm` `flowtab` (`flow_plausible`, `mzlab-feat::plausible`): esecutore `F.webPlausible` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_web_plausible.py` (SHA-256 uguale al nativo) | fatto | S | 1 |
 | `table.stats`, `table.pca`, `table.kmd` | sì | sì (`flow-web-stat.js`, `.wasm` `flowstat`) | `e2e_flow_web_stat.py` | fatto | M | 2 |
 | `export.table_csv`, `export.mztab` | sì | pannello (`export_table`); mzTab del passo no | no | da fare | M | 1 |
 | `export.inclusion` | sì | `.wasm` `interp` (`flow_inclusion`, `mzlab-feat::export_inclusione_tp`): esecutore `F.webInclusion` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_neg_lr.py` | fatto | S | 1 |

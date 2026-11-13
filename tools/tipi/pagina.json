@@ -291,6 +291,7 @@
     "../../flow/lazy/flow-web-ident.js",
     "../../flow/lazy/flow-web-insilico.js",
     "../../flow/lazy/flow-web-drift.js",
+    "../../flow/lazy/flow-web-plausible.js",
     "../../flow/lazy/flow-web-stat.js",
     "../../flow/lazy/flow-web-struct.js",
     "../../flow/lazy/flow-web-estimate.js",
