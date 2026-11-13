@@ -231,11 +231,9 @@ fn scan_data_and_transport_give_the_same_scan() {
                 (&index[k].id, &index[k].filtro),
                 "{case}: row {k}"
             );
-            let t = mzlab_core::transport::decode_scansione(
-                k,
-                &mzlab_core::transport::encode_scansione(&b),
-            )
-            .unwrap();
+            let t =
+                mzlab_core::transport::decode_scansione(k, &mzlab_core::transport::encode_scan(&b))
+                    .unwrap();
             assert_eq!(
                 (&t.mz, &t.intensity, t.rt, t.profile),
                 (&b.mz, &b.intensity, b.rt, b.profile),

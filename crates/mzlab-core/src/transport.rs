@@ -226,7 +226,7 @@ pub fn testa_scansione(s: &Spectrum) -> [u8; SCAN_HEAD] {
 }
 
 /// A scan as a block of bytes: the fixed head, the m/z, the intensities.
-pub fn encode_scansione(s: &Spectrum) -> Vec<u8> {
+pub fn encode_scan(s: &Spectrum) -> Vec<u8> {
     let n = s.mz.len();
     let mut o: Vec<u8> = Vec::with_capacity(SCAN_HEAD + n * if s.wide.is_some() { 16 } else { 12 });
     o.extend_from_slice(&testa_scansione(s));
@@ -289,7 +289,7 @@ fn larghe(y: Vec<f64>) -> (Vec<f32>, Option<Vec<f64>>) {
     (f, (!without_loss).then_some(y))
 }
 
-/// The scan `k` of a block written by `encode_scansione`; its `id` and `filter` are empty (the index has them).
+/// The scan `k` of a block written by `encode_scan`; its `id` and `filter` are empty (the index has them).
 pub fn decode_scansione(k: usize, b: &[u8]) -> Result<Spectrum> {
     if b.len() < SCAN_HEAD {
         return Err(guasto("scan"));

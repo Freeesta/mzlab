@@ -209,13 +209,13 @@ fn compression() -> Value {
         "miniz_oxide"
     };
     let mut rows = Vec::new();
-    let casi = [
+    let cases = [
         ("lab-a-centroidi", "lab-a", true),
         ("lab-b-centroidi", "lab-b", true),
         ("lab-b-profilo", "lab-b", false),
         ("denso-profilo", "denso", false),
     ];
-    for (name, f, list) in casi {
+    for (name, f, list) in cases {
         let mut pk = Vec::new();
         packet(&mut pk, &shape(f), 0, None);
         let (mz, int) = array_f64_f32(&pk, list);

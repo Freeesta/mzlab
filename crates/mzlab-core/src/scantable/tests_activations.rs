@@ -1,6 +1,6 @@
 //! The dissociation methods the writer can write are the ones the scan table reads back.
 
-use crate::activations::ATTIVAZIONI;
+use crate::activations::ACTIVATIONS;
 
 /// The dissociation method of the first precursor of a spectrum header.
 fn act(xml: &str) -> Option<&'static str> {
@@ -19,7 +19,7 @@ fn wrapped(activation: &str) -> String {
 fn every_activation_the_writer_writes_is_named_back_by_the_reader() {
     use crate::mzml::Spectrum;
     use crate::mzmlwrite::{activation_from_name, spectrum_head, Precursore, SpectrumExtra};
-    for (name, acc, term) in ATTIVAZIONI {
+    for (name, acc, term) in ACTIVATIONS {
         let p = Precursore {
             selected_mz: Some(300.25),
             activation: vec![(acc.into(), term.into())],

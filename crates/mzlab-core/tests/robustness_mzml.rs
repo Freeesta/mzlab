@@ -57,7 +57,7 @@ fn zlib(b: &[u8]) -> Vec<u8> {
     z.finish().unwrap()
 }
 
-/// `testa`, then `pezzo` repeated `n` times, then `coda`: a file of hundreds of megabytes that is never in memory.
+/// `testa`, then `piece` repeated `n` times, then `coda`: a file of hundreds of megabytes that is never in memory.
 struct Repeat {
     parts: Vec<(Vec<u8>, usize)>,
     part: usize,
@@ -76,8 +76,8 @@ impl Repeat {
 
 impl Read for Repeat {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let mut scritti = 0;
-        while scritti < buf.len() && self.part < self.parts.len() {
+        let mut written = 0;
+        while written < buf.len() && self.part < self.parts.len() {
             let (p, n) = &self.parts[self.part];
             let total = p.len() * n;
             if self.pos >= total || p.is_empty() {
@@ -85,12 +85,12 @@ impl Read for Repeat {
                 self.pos = 0;
                 continue;
             }
-            let k = (buf.len() - scritti).min(p.len() - self.pos % p.len());
-            buf[scritti..scritti + k].copy_from_slice(&p[self.pos % p.len()..][..k]);
-            scritti += k;
+            let k = (buf.len() - written).min(p.len() - self.pos % p.len());
+            buf[written..written + k].copy_from_slice(&p[self.pos % p.len()..][..k]);
+            written += k;
             self.pos += k;
         }
-        Ok(scritti)
+        Ok(written)
     }
 }
 
