@@ -149,7 +149,7 @@ def create(fam: str, d: Path) -> Path:
     raise AssertionError(fam)
 
 
-SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "thermo_danneggiato": "thermo_danneggiato/danneggiato.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "andi": "andi/synt.cdf"}
+SYNTHETIC_RUST = {"thermo": "thermo/synt.raw", "thermo_danneggiato": "thermo_danneggiato/danneggiato.raw", "bruker": "bruker/synt.d", "bruker_tagliato": "bruker_tagliato/tagliato.d", "bruker_danneggiato": "bruker_danneggiato/danneggiato.d", "andi": "andi/synt.cdf"}
 
 
 def synthetic(base: Path):
@@ -220,6 +220,17 @@ def test_waters_damaged_part_equals_the_cli(tools, part):
     wasm = da_wasm(tools, "waters", ds)
     assert cli.count(b"<spectrum ") == n
     assert b"warn.waters.damaged" in cli
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
+def test_bruker_con_un_frame_senza_calibrazione_uguale_al_cli(tools):
+    """A `.d` of three frames whose middle one names an absent m/z calibration: both faces write the two whole frames, byte for byte, and the conv/1 of both
+    names `warn.bruker.noCalibration` as the cause of the partial read."""
+    ds = create("bruker_danneggiato", tools["tmp"] / "in_bruker_danneggiato")
+    cli = da_cli(tools, "bruker_danneggiato", ds, code=3)
+    wasm = da_wasm(tools, "bruker", ds)
+    assert cli.count(b"<spectrum ") == 2
+    assert b"warn.bruker.noCalibration" in cli
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 

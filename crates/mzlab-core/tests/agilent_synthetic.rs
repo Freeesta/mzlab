@@ -142,6 +142,11 @@ fn what_it_cannot_read_is_an_error_with_the_numbers() {
         d.records.iter().map(|r| r.id).collect::<Vec<_>>(),
         [1, 3, 4]
     );
+    // the last record with no time is damaged too, not a cut copy
+    let mut last = idx.clone();
+    last[160 + 3 * 184 + 12..160 + 3 * 184 + 20].copy_from_slice(&f64::NAN.to_le_bytes());
+    let d = open(&last, peak.len() as u64).unwrap();
+    assert_eq!((d.records.len(), d.missing, d.damaged), (3, 0, 1));
     assert_eq!(
         open(&idx[..160], 0).err().unwrap().key,
         "err.file.agilent",

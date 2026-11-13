@@ -47,5 +47,12 @@ fn main() {
     w("bruker_tagliato/tagliato.d/analysis.tdf", tdf);
     let bin: Vec<u8> = b.iter().copied().cycle().take(3 * b.len() + 9).collect();
     w("bruker_tagliato/tagliato.d/analysis.tdf_bin", bin);
+    // three frames, the middle one naming a calibration that is not there: its spectrum is left out and counted, the other two are read
+    let tdf = common_sqlite::db(&common_sqlite::tdf_tables(&[0, n, 2 * n], 3, &[1, 7, 1]));
+    w("bruker_danneggiato/danneggiato.d/analysis.tdf", tdf);
+    w(
+        "bruker_danneggiato/danneggiato.d/analysis.tdf_bin",
+        b.iter().copied().cycle().take(3 * b.len()).collect(),
+    );
     w("andi/synt.cdf", andi::andi_ms(&andi::FLAT_RUN));
 }
