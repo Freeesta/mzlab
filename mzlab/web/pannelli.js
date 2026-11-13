@@ -264,6 +264,11 @@ function cleanupOrphanPanels() {
 
 /** a chromatogram of the MS2 scans @param {Pannello | Bag} p */
 const ms2Chrom = p => p.type === "chrom" && (p.tab || E.tab) === ESP.ms2 && !/^(pda|press|reg|an:)/.test(p.kind);
+/** The tab of a panel opened by a «+» button: the active one if it shows a file, else that of the first ticked file (scan files only for `scan`), else the active one.
+ * @param {boolean} [scan] */
+const tabNuovo = (scan = false) => (tabFiles().some((/** @type {MzFile} */ f) => f.vis) ? E.tab : (E.files.find((/** @type {MzFile} */ f) => f.vis && !f.gone && ESP.ids.includes(f.kind) && (!scan || f.kind !== "mrm")) || { kind: E.tab }).kind);
+/** the view moves to tab t before a «+» panel is made there (its current file becomes one of its own) @param {string} t */
+const suTab = t => { if (t !== E.tab && window.setTab) window.setTab(t, true, "new-panel"); return t; };
 /** @param {string} type @param {Bag} o @param {Pannello} [after] */
 function addPanel(type, o, after) {
   // the panel is completed field by field below, by type: it only satisfies Pannello at the end
@@ -722,7 +727,7 @@ function ctl(/** @type {Pannello} */ p) {
     { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], head: I18N.t("corr.from.bg") }], title: I18N.t("corr.sub.title"), idle: "msub", dis: ms2c ? NOMS2 : "" })
     + corrInfo(p)
     + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" data-num="0.2:" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
-  const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
+  const fsel = `<button data-o="fpop" class="fcount"${ONEF ? " disabled" : ""} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover, next to its button in the tab order; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
   const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button><span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}${window.ZRESET?.btn(p) ?? ""}</span>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}</span>`;
@@ -942,7 +947,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     rows.forEach((r, i) => { r.lab.textContent = i === 0 ? I18N.t("xic.ion1") : I18N.t("xic.ionN", { n: i + 1 }); r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? I18N.t(r.ad.value === "none" ? "xic.placeholderIon" : "xic.placeholder") : I18N.t(r.ad.value === "none" ? "xic.optionalIon" : "xic.optional"); r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
     addB.disabled = rows.length >= XIC_MAXROWS;
   };
-  const xtab = () => panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab;
+  const nt = panel && E.panels.includes(panel) ? panel.tab || E.tab : tabNuovo(true), xtab = () => nt;
   const hrFile = () => window.HR ? HR.xicFiles(xtab()).find((/** @type {MzFile} */ f) => HR.isHr(f, f.lv)) : null;  // high resolution: the ion is a number with the decimals of the profile, ppm window
   const lowFiles = () => window.HR ? HR.xicFiles(xtab()).some((/** @type {MzFile} */ f) => !HR.isHr(f, f.lv)) : true;
   const sumText = (/** @type {Bag} */ r) => {  // one line under the row: the window(s) that will be used
@@ -989,7 +994,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
   const first = pre.formula ? { text: pre.formula, adduct: pre.adduct } : pre.mz != null ? { text: fmz(pre.mz), obs: !!pre.obs } : {};
   addRow(first); addRow();
   addB.onclick = () => { if (rows.length < XIC_MAXROWS) addRow().inp.focus(); };
-  const ff = scanFiles(tabFiles(panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab));
+  const ff = scanFiles(tabFiles(nt));
   fsel.innerHTML = `<option value="">${I18N.t("xic.shownFiles")}</option>` + ff.map((/** @type {MzFile} */ f) => h`<option value="${f.k}">${f.label}</option>`).join("");
   Q("#xic-no").onclick = () => d.close();
   Q("#xic-go").onclick = async () => {
@@ -1010,7 +1015,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     let np;
     if (panel && E.panels.includes(panel)) { COMANDI.fai("xic.traces", panel, () => traces.forEach(t => panel.traces.push(t))); np = panel; ctl(np); }
     else {
-      np = apriAnnullabile(addPanel("xic", { traces }));
+      np = apriAnnullabile(addPanel("xic", { traces, tab: suTab(nt) }));
       if (pre.after && E.panels.includes(pre.after)) {
         np.el.classList.add("drag"); np.y = pre.after.y + pre.after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
         stackAfter(np, pre.after); relayout(); fitHost();

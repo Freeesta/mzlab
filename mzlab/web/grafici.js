@@ -189,7 +189,7 @@ async function draw(p) {
   }
   p._sz = sizeKey(p); try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) { p._sz = ""; return; } afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { p._sz = ""; const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
-const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
+const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") }, msgOf = (/** @type {Pannello} */ p) => tabFiles(p.tab || E.tab).some((/** @type {MzFile} */ f) => f.vis) ? MSG[p.type] : I18N.t("msg.noFiles");   // nothing to draw: no file of the panel's type ticked, or the panel asks for nothing
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
 
 // the one "Correzione" menu of a chromatogram / XIC / MRM panel: none | a blank file | the background of a stretch (mean) | automatic baseline. One at a time.
@@ -317,7 +317,7 @@ async function drawLines(p) {
   const { g, W, H } = setup(p.cv);
   const sr = all.filter(s => !isHid(p, s));
   if (!sr.length) {
-    g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(all.length ? I18N.t("leg.allHidden") : ESP.mrm(p) && Array.isArray(p.tr) && !p.tr.length ? I18N.t("canali.pick.none.msg") : MSG[p.type], M.l, 30);
+    g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(all.length ? I18N.t("leg.allHidden") : ESP.mrm(p) && Array.isArray(p.tr) && !p.tr.length ? I18N.t("canali.pick.none.msg") : msgOf(p), M.l, 30);
     p._a = null; if (all.length) legend(p, all); else { p.leg.innerHTML = ""; if (p.corrbar) p.corrbar.innerHTML = ""; } return;
   }
   let lo = Infinity, hi = -Infinity;

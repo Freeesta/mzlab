@@ -523,8 +523,8 @@ function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noop
 window.openBT = openBT;
 
 // ------------------------------------------------------------------ toolbar
-Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
-Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
+Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", { tab: suTab(tabNuovo()) })));
+Q("#np-spec").onclick = () => { const t = suTab(tabNuovo(true)), f = scanFiles(tabFiles(t).filter((/** @type {MzFile} */ x) => x.vis))[0] || scanFiles(tabFiles(t))[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1, tab: t }))); };
 Q("#np-xic").onclick = () => openXic(null);
 Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
 Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true })));
