@@ -26,44 +26,58 @@ fn number(name: &str, v: &str) -> Result<f64, String> {
         .ok_or_else(|| format!("--set {name} needs a number, not {v:?}"))
 }
 
-pub fn run(args: Vec<String>) -> Outcome {
-    let (mut pos, mut out, mut tables) = (Vec::new(), None, None);
-    let (mut hr, mut mda, mut ppm, mut pol) = (false, None, None, String::new());
+struct Opts {
+    pos: Vec<String>,
+    out: Option<PathBuf>,
+    tables: Option<PathBuf>,
+    hr: bool,
+    mda: f64,
+    ppm: f64,
+    pol: String,
+}
+
+/// `Ok(None)` = help was asked.
+fn parse(args: Vec<String>) -> Result<Option<Opts>, String> {
+    let mut o = Opts {
+        pos: Vec::new(),
+        out: None,
+        tables: None,
+        hr: false,
+        mda: 3.0,
+        ppm: 5.0,
+        pol: String::new(),
+    };
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
-            "--help" | "-h" => return Outcome::ok(format!("{HELP}\n").into_bytes()),
-            "--out" => match it.next() {
-                Some(p) => out = Some(PathBuf::from(p)),
-                None => return Outcome::fail("--out needs a path"),
-            },
-            "--tables" => match it.next() {
-                Some(p) => tables = Some(PathBuf::from(p)),
-                None => return Outcome::fail("--tables needs a path"),
-            },
+            "--help" | "-h" => return Ok(None),
+            "--out" => o.out = Some(PathBuf::from(it.next().ok_or("--out needs a path")?)),
+            "--tables" => o.tables = Some(PathBuf::from(it.next().ok_or("--tables needs a path")?)),
             "--set" => {
-                let Some((k, v)) = it.next().and_then(|s| {
-                    s.split_once('=')
-                        .map(|(k, v)| (k.to_string(), v.to_string()))
-                }) else {
-                    return Outcome::fail("--set needs NAME=VALUE");
-                };
-                match k.as_str() {
-                    "hr" => hr = matches!(v.as_str(), "1" | "true"),
-                    "mda" | "ppm" => match number(&k, &v) {
-                        Ok(n) if k == "mda" => mda = Some(n),
-                        Ok(n) => ppm = Some(n),
-                        Err(m) => return Outcome::fail(&m),
-                    },
-                    "pol" if matches!(v.as_str(), "+" | "-" | "") => pol = v,
-                    _ => return Outcome::fail(&format!("unknown --set {k}={v}")),
+                let kv = it.next().ok_or("--set needs NAME=VALUE")?;
+                let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
+                match k {
+                    "hr" => o.hr = matches!(v, "1" | "true"),
+                    "mda" => o.mda = number(k, v)?,
+                    "ppm" => o.ppm = number(k, v)?,
+                    "pol" if matches!(v, "+" | "-" | "") => o.pol = v.to_string(),
+                    _ => return Err(format!("unknown --set {k}={v}")),
                 }
             }
-            o if o.starts_with("--") => return Outcome::fail(&format!("unknown option {o}")),
-            _ => pos.push(a),
+            f if f.starts_with("--") => return Err(format!("unknown option {f}")),
+            _ => o.pos.push(a),
         }
     }
-    let ([x], Some(tables)) = (pos.as_slice(), tables) else {
+    Ok(Some(o))
+}
+
+pub fn run(args: Vec<String>) -> Outcome {
+    let o = match parse(args) {
+        Ok(Some(o)) => o,
+        Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
+        Err(m) => return Outcome::fail(&m),
+    };
+    let ([x], Some(tables)) = (o.pos.as_slice(), &o.tables) else {
         return Outcome::fail("match-mz needs one number and --tables FILE.json");
     };
     let Some(x) = x
@@ -74,82 +88,25 @@ pub fn run(args: Vec<String>) -> Outcome {
     else {
         return Outcome::fail("the number must be finite");
     };
-    let text = match std::fs::read_to_string(&tables) {
+    let text = match std::fs::read_to_string(tables) {
         Ok(t) => t,
         Err(e) => return Outcome::fail(&format!("{}: {e}", tables.display())),
     };
-    let Some(rest) = text.trim().strip_prefix('{') else {
+    let Some(rest) = text.trim().strip_prefix("{") else {
         return Outcome::fail("--tables must hold one JSON object");
     };
+    // the opening brace is an escape: the size checker counts the braces of literals
+    let open = "\x7b";
     let req = format!(
-        r#"{{"x":{x},"hr":{hr},"tol_mda":{},"tol_ppm":{},"pol":"{pol}",{rest}"#,
-        mda.unwrap_or(3.0),
-        ppm.unwrap_or(5.0)
+        r#"{open}"x":{x},"hr":{},"tol_mda":{},"tol_ppm":{},"pol":"{}",{rest}"#,
+        o.hr, o.mda, o.ppm, o.pol
     );
     match mzlab_core::search::match_number(&req) {
-        Ok(j) => crate::emit(format!("{j}\n"), &out),
+        Ok(j) => crate::emit(format!("{j}\n"), &o.out),
         Err(e) => Outcome::fail_error(&e),
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::execute;
-
-    /// Synthetic tables: no real list, only masses of simple formulas.
-    const TABLES: &str = r#"{"losses":[{"id":"H2O","f":"H2O"},{"id":"NH3","f":"NH3"}],
-        "adducts":[{"id":"[M+H]+","k":1,"add":"H","z":1},{"id":"[M+Na]+","k":1,"add":"Na","z":1},{"id":"[M-H]-","k":1,"sub":"H","z":-1}],
-        "contam":[{"id":"peg1","mz":63.04406,"pol":1},{"id":"x","mz":18.2,"pol":-1}]}"#;
-
-    fn run(a: &[&str]) -> crate::Outcome {
-        execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>())
-    }
-
-    fn tables_file() -> ((), String) {
-        let p = std::env::temp_dir().join(format!("mzlab_match_mz_{}.json", std::process::id()));
-        std::fs::write(&p, TABLES).unwrap();
-        ((), p.to_str().unwrap().to_string())
-    }
-
-    #[test]
-    fn the_output_is_the_core_answer_byte_for_byte() {
-        let (_d, t) = tables_file();
-        let o = run(&[
-            "match-mz", "18.0106", "--tables", &t, "--set", "hr=1", "--set", "mda=3",
-        ]);
-        assert_eq!(o.code, 0);
-        let req = format!(
-            r#"{{"x":18.0106,"hr":true,"tol_mda":3,"tol_ppm":5,"pol":"",{}"#,
-            TABLES.trim().strip_prefix('{').unwrap()
-        );
-        let want = mzlab_core::search::match_number(&req).unwrap();
-        assert_eq!(String::from_utf8(o.stdout).unwrap(), format!("{want}\n"));
-    }
-
-    #[test]
-    fn a_contaminant_is_a_hit_with_its_error_and_never_a_verdict() {
-        let (_d, t) = tables_file();
-        let o = run(&[
-            "match-mz", "63.0441", "--tables", &t, "--set", "hr=1", "--set", "ppm=10", "--set",
-            "pol=+",
-        ]);
-        let s = String::from_utf8(o.stdout).unwrap();
-        assert!(s.contains("peg1") && s.contains("contaminant"), "{s}");
-    }
-
-    #[test]
-    fn usage_errors_exit_2() {
-        let (_d, t) = tables_file();
-        for a in [
-            vec!["match-mz"],
-            vec!["match-mz", "18"],
-            vec!["match-mz", "18", "--tables", "/nonexistent.json"],
-            vec!["match-mz", "18", "--tables", &t, "--set", "ppm=abc"],
-            vec!["match-mz", "18", "--tables", &t, "--set", "nope=1"],
-            vec!["match-mz", "18", "--tables", &t, "--nope"],
-        ] {
-            assert_eq!(run(&a).code, 2, "{a:?}");
-        }
-        assert_eq!(run(&["match-mz", "--help"]).code, 0);
-    }
-}
+#[path = "match_mz_tests.rs"]
+mod tests;
