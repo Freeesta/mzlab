@@ -322,6 +322,12 @@ fn read_sized(
 }
 
 /// The cps of each of `n` transitions of an MRM block starting at `at`.
+/// True when `x` is the head of a sparse (scheduled) MRM block, `-(N + 0.01)`: negative with the fraction 0.01 (within the f32 rounding of N up to
+/// 1e5), so that a dense block whose first cps is negative noise stays dense.
+pub fn sparse_head(x: f64) -> bool {
+    x < 0.0 && ((-x).fract() - 0.01).abs() < 0.004
+}
+
 pub fn read_mrm<R: ReadAt>(
     scan: &mut R,
     scan_len: u64,

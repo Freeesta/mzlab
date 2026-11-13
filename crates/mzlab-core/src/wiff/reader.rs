@@ -439,7 +439,7 @@ fn blocks(p: &mut Part, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
         {
             *seen = true;
             other |= scan::read_mrm(&mut win, scan_len, r.at, 1)?
-                .is_some_and(|v| v.first().is_some_and(|x| *x < 0.0));
+                .is_some_and(|v| v.first().is_some_and(|x| scan::sparse_head(*x)));
         }
         if !points.is_some_and(|c| c > 0) {
             continue;

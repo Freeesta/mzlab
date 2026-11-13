@@ -1,5 +1,6 @@
 //! The spectra and chromatograms of a sample (a TIC for each full scan or MRM experiment) for the readers module (feature `estesi`): as `run.rs` (SIM experiments as in `run.rs`), and the MRM blocks may be scheduled (sMRM: a transition
-//! is a point of its chromatogram only in the scans where it was acquired) and the experiments of a sample may be several (one TIC each).
+//! is a point of its chromatogram only in the scans where it was acquired) and the experiments of a sample may be several (one TIC each). A row of size 0
+//! (a cycle that acquired nothing) is left out, so that the TIC and every transition of a dense experiment keep the same times.
 
 use super::super::chromatograms::Blocks;
 use super::super::{scan, Record, Wiff};
@@ -9,16 +10,6 @@ use crate::idxread::ReadAt;
 use crate::mzml::{Chromatogram, Spectrum};
 
 impl Wiff {
-    /// True when block `r` is one of an experiment that has no scans or transitions to give (a scan experiment's row without data).
-    fn is_empty_row(&self, r: &Record) -> bool {
-        r.size == 0
-            && self
-                .experiments
-                .get(r.experiment)
-                .and_then(|e| e.code)
-                .is_some_and(|c| c != super::super::modes::CODE_MRM)
-    }
-
     /// Gives the spectra one at a time to `on` (profile; the empty scans are left out) and returns the chromatograms of the MRM blocks.
     pub fn visit<R: ReadAt>(
         &self,
@@ -39,7 +30,7 @@ impl Wiff {
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
             } else if !matches!(block, scan::Block::Damaged)
-                && !self.is_empty_row(r)
+                && r.size > 0
                 && !self.scan_experiment(r.experiment)
                 && let Some(c) =
                     blocks.take(scan::mrm_cols(scan, self.scan_len, r.at, r.size as usize)?)
@@ -75,7 +66,7 @@ impl Wiff {
                 }
                 continue;
             }
-            if self.is_empty_row(r) || self.scan_experiment(r.experiment) {
+            if r.size == 0 || self.scan_experiment(r.experiment) {
                 continue;
             }
             if let Some(c) =

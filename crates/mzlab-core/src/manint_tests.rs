@@ -286,3 +286,25 @@ fn splits_outside_the_window_leave_one_row() {
         "err.manint.channel"
     );
 }
+
+// two transitions closer than 0.005 Da in one file are two channels, each with its own rows, never folded into the first
+#[test]
+fn transitions_closer_than_the_rounding_stay_two_channels() {
+    let f = format!(
+        "[{{\"name\":\"s1.mzML\",\"transitions\":[{},{}]}}]",
+        trace(Some(300.001), Some(150.0), "", &[(3.0, 8e4)]),
+        trace(Some(300.004), Some(150.0), "", &[(5.0, 4e4)])
+    );
+    let w = format!(
+        "[{},{}]",
+        win(0, 0, 2.8, 3.2, "zero"),
+        win(0, 1, 4.8, 5.2, "zero")
+    );
+    let r = rows(&table_text(&f, &w, true).unwrap());
+    let ch: Vec<&str> = r.iter().map(|x| x[0].as_str()).collect();
+    assert_eq!(
+        ch,
+        ["300.001>150", "300.001>150", "300.004>150", "300.004>150"]
+    );
+    assert_eq!((r[1][2].as_str(), r[3][2].as_str()), ("sum", "sum"));
+}

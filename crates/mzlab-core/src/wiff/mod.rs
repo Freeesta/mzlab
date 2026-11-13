@@ -105,12 +105,6 @@ impl Wiff {
         }
         Ok(())
     }
-
-    #[cfg(not(feature = "estesi"))]
-    /// A row of a SIM experiment without values: left out, so that it does not cut the columns of the ions.
-    pub(crate) fn empty_sim_row(&self, r: &Record) -> bool {
-        r.size == 0 && modes::sim(self.experiments.get(r.experiment).and_then(|x| x.code))
-    }
 }
 
 /// Half of the 0.7 m/z (FWHM) that Q1 transmits at unit resolution, the only setting the method is assumed to hold (the resolution is not read per experiment).

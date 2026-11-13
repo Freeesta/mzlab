@@ -23,9 +23,11 @@ const SN_POINTS: usize = 3;
 /// The longest name the user gives a window (characters), as the page's input allows.
 pub const LABEL_MAX: usize = 40;
 
-/// One channel of a file: its place in the file's list, Q1 / Q3 (absent when the reader gives none), name, times (min) and intensities.
+/// One channel of a file: its place in the file's list, Q1 / Q3 (absent when the reader gives none), name, times (min) and intensities. `dup`: how
+/// many earlier channels of the file round to the same Q1 / Q3 and name, so that two transitions closer than 0.005 Da stay two channels.
 struct Trace {
     pos: usize,
+    dup: usize,
     q1: Option<f64>,
     q3: Option<f64>,
     name: String,
@@ -51,8 +53,8 @@ struct Row {
     w: usize,
 }
 
-/// The group of a channel across files: Q1 and Q3 at 0.01 (or the place in the list without Q1) and the name the method gives it.
-type Key = (i64, i64, String);
+/// The group of a channel across files: Q1 and Q3 at 0.01 (or the place in the list without Q1), the name the method gives it and `Trace::dup`.
+type Key = (i64, i64, String, usize);
 /// A sample: its name without `.mzML` and its channels.
 type Sample = (String, Vec<Trace>);
 /// A channel group with its label and name.
@@ -66,22 +68,23 @@ fn nums(v: Option<&Value>) -> Vec<f64> {
 
 /// The channels of one `/api/mrm` transition list.
 fn traces(list: &Value) -> Vec<Trace> {
-    list.arr()
-        .iter()
-        .enumerate()
-        .map(|(pos, t)| {
-            let (rt, y) = (nums(t.get("rt")), nums(t.get("y")));
-            let n = rt.len().min(y.len());
-            Trace {
-                pos,
-                q1: t.get("q1").and_then(Value::f64),
-                q3: t.get("q3").and_then(Value::f64),
-                name: t.get("name").and_then(Value::str).unwrap_or("").to_string(),
-                t: rt[..n].to_vec(),
-                y: y[..n].to_vec(),
-            }
-        })
-        .collect()
+    let mut out: Vec<Trace> = Vec::new();
+    for (pos, t) in list.arr().iter().enumerate() {
+        let (rt, y) = (nums(t.get("rt")), nums(t.get("y")));
+        let n = rt.len().min(y.len());
+        let mut tr = Trace {
+            pos,
+            dup: 0,
+            q1: t.get("q1").and_then(Value::f64),
+            q3: t.get("q3").and_then(Value::f64),
+            name: t.get("name").and_then(Value::str).unwrap_or("").to_string(),
+            t: rt[..n].to_vec(),
+            y: y[..n].to_vec(),
+        };
+        tr.dup = out.iter().filter(|o| key_of(o) == key_of(&tr)).count();
+        out.push(tr);
+    }
+    out
 }
 
 fn key_of(tr: &Trace) -> Key {
@@ -90,6 +93,7 @@ fn key_of(tr: &Trace) -> Key {
         tr.q1.map_or(-1 - tr.pos as i64, c),
         tr.q3.map_or(-1, c),
         tr.name.clone(),
+        tr.dup,
     )
 }
 

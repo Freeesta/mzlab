@@ -203,20 +203,25 @@ fn index(q: &Query, k: &str) -> Option<i64> {
     q.some(k)?.trim().parse().ok()
 }
 
-/// The points of one scan summed per cell of the grid (`np.unique` + `bincount`), m/z weighted by intensity.
+/// The points of one scan summed per cell of the grid (`np.unique` + `bincount`), m/z weighted by intensity; a cell whose intensities do not add up
+/// to more than zero takes the plain mean of its m/z, never m/z 0.
 fn merge_cells(mz: &[f64], y: &[f64], step: f64) -> (Vec<f64>, Vec<f64>) {
     let cell = rint(step);
     let (mut om, mut oy) = (Vec::new(), Vec::new());
     let mut i = 0;
     while i < mz.len() {
         let c = cell(mz[i]);
-        let (mut sy, mut smy) = (0.0, 0.0);
+        let (mut sy, mut smy, mut sm, n0) = (0.0, 0.0, 0.0, i);
         while i < mz.len() && cell(mz[i]) == c {
             sy += y[i];
             smy += y[i] * mz[i];
+            sm += mz[i];
             i += 1;
         }
-        om.push(smy / f64::max(sy, 1e-12));
+        om.push(match sy > 0.0 {
+            true => smy / f64::max(sy, 1e-12),
+            false => sm / (i - n0) as f64,
+        });
         oy.push(sy);
     }
     (om, oy)
@@ -286,4 +291,16 @@ fn gap_step(gap: f64) -> Option<f64> {
     }
     let step = (gap * 1e4).round_ties_even() / 1e4;
     (step > 0.0).then_some(step)
+}
+
+#[cfg(test)]
+mod tests {
+    // a cell of zero intensities keeps the m/z of its points, the others are weighted by intensity
+    #[test]
+    fn a_zero_sum_cell_is_never_at_mz_zero() {
+        let (mz, y) = super::merge_cells(&[100.0, 100.02, 101.0], &[0.0, 0.0, 5.0], 0.1);
+        assert_eq!(y, vec![0.0, 5.0]);
+        assert!((mz[0] - 100.01).abs() < 1e-9, "{mz:?}");
+        assert_eq!(mz[1], 101.0);
+    }
 }

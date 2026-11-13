@@ -141,7 +141,7 @@ impl Wiff {
                 n += 1;
             } else if matches!(block, scan::Block::Damaged)
                 || self.scan_experiment(r.experiment)
-                || self.empty_sim_row(r)
+                || r.size == 0
             {
                 continue;
             } else if let Some(v) =
@@ -206,7 +206,7 @@ impl Wiff {
                 }
                 continue;
             }
-            if self.scan_experiment(r.experiment) || self.empty_sim_row(r) {
+            if self.scan_experiment(r.experiment) || r.size == 0 {
                 continue;
             }
             if let Some(v) = blocks.take(dense_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?)
@@ -285,7 +285,7 @@ fn dense_mrm<R: ReadAt>(
     let Some(v) = scan::read_mrm(scan, scan_len, at, n)? else {
         return Ok(Mrm::Absent);
     };
-    if v.first().is_some_and(|x| *x < 0.0 && x.is_finite()) {
+    if v.first().is_some_and(|x| scan::sparse_head(*x)) {
         return Err(crate::error::Error::new("err.file.wiff").with("detail", "sparse MRM block"));
     }
     Ok(if v.iter().all(|x| x.is_finite()) {
