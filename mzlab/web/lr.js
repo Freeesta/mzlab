@@ -44,6 +44,8 @@ const tellIndex = (/** @type {string} */ name, /** @type {number} */ frac, /** @
   if (phase === "open" || frac >= 1) earlyTics.delete(name);
   window.dispatchEvent(new CustomEvent("mzlab-index", { detail: { name, frac, phase, done: p.done || 0, total: p.total || 0, wait: !!p.wait, early_tic: p.early_tic || null } }));
 };
+/** an mzML's whole-file fraction from its stage (mzmlFrac, progresso.js: each stage weighs its measured cost); a stage it does not know (a queued notice) counts as nothing */
+const mzF = (/** @type {number} */ size, /** @type {string} */ phase, /** @type {number} */ local) => { const f = /** @type {any} */ (globalThis).mzmlFrac; return f ? f(size, phase, local) : 0; };
 export function createLr({ rb }) {
   const files = new Map();               // name -> row of App.files() (as an object)
   let items = null;                      // Item.info() of every item (objects), null = no session
@@ -103,11 +105,11 @@ export function createLr({ rb }) {
     if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
     let fase = "copy";                                                 // where it fails, for the diagnosis (diagnosi.js): copy → index → open
     try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
-      const hit = nat || gz || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob), put = hit || await rpc({ op: "lr_put", name: n, blob, nat, gz }, nat ? p => tellIndex(n, W.copy * p.frac, "read", p) : p => tellIndex(n, 0.4 * p.frac, "load", p));
+      const hit = nat || gz || !/\.mzml$/i.test(n) ? null : await warmClaim(rpc, n, blob), put = hit || await rpc({ op: "lr_put", name: n, blob, nat, gz }, nat ? p => tellIndex(n, W.copy * p.frac, "read", p) : p => tellIndex(n, mzF(blob.size, "load", p.frac), "load", p));
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { fase = "index"; const ix = hit ? { missing: hit.missing, cause: hit.cause } : JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : 0.4 + 0.585 * p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, (ix.missing || 0) + (window.LETTORI_MOD?.missing?.get(n) || 0)); causes.set(n, ix.cause || ""); }
+      else { fase = "index"; if (!nat && !hit) tellIndex(n, mzF(blob.size, "start", 0), "start");      /* the copy is over: the next stage starts */ const ix = hit ? { missing: hit.missing, cause: hit.cause } : JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : mzF(blob.size, p.phase, p.frac), p.phase, p))).info || "{}"); fase = "open"; if (!nat && !hit) tellIndex(n, mzF(blob.size, "list", 0), "list"); files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, (ix.missing || 0) + (window.LETTORI_MOD?.missing?.get(n) || 0)); causes.set(n, ix.cause || ""); }
     } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (__) { const _ = /** @type {Lanciato} */ (__); /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
