@@ -16,7 +16,6 @@ pub mod graph;
 #[cfg(feature = "record")]
 mod graph_record;
 mod groups;
-pub mod ions;
 pub mod labels;
 pub mod link;
 pub mod mech;

@@ -14,7 +14,7 @@ pub(super) type Key = (&'static str, u16);
 /// A few keys per structure: a plain list keeps the .wasm small (no map instantiated for these keys).
 pub(super) type Counts = Vec<(Key, u64)>;
 
-pub(super) fn add(n: &mut Counts, k: Key, c: u64) {
+fn add(n: &mut Counts, k: Key, c: u64) {
     match n.iter_mut().find(|(x, _)| *x == k) {
         Some((_, v)) => *v += c,
         None => n.push((k, c)),
@@ -31,9 +31,9 @@ pub(super) struct Shape {
     pub(super) mass: f64,
     pub(super) nominal: u64,
     /// Unpaired electrons of the radical marks (Ketcher / `M  RAD` code 2 = one, 3 = two; 1, a singlet pair, = none).
-    pub(super) unpaired: u64,
+    unpaired: u64,
     /// Electrons of the species: atomic numbers plus hydrogens minus the charge (an odd count is a radical whatever the marks say).
-    pub(super) electrons: i64,
+    electrons: i64,
 }
 
 /// One atom of a structure: element (or D, T), mass number (0 = natural), hydrogens, charge and radical code.
@@ -203,7 +203,7 @@ fn with_delta(s: Shape, delta: &str) -> Result<(Shape, String)> {
 }
 
 /// What the species is: `neutral`, `radical`, `cation`, `anion`, `radicalCation`, `radicalAnion`; a radical has a mark or an odd electron count.
-pub(super) fn kind(s: &Shape) -> &'static str {
+fn kind(s: &Shape) -> &'static str {
     let rad = s.unpaired > 0 || s.electrons % 2 != 0;
     match (s.q.signum(), rad) {
         (0, false) => "neutral",
