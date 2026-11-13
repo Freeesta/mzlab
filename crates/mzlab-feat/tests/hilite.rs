@@ -68,5 +68,8 @@ fn a_molfile_query_with_a_blank_header_line_matches() {
     req["molfile"] = Value::from(mf.clone());
     req["layers"] = serde_json::json!([{"kind": "moiety", "query": format!("\n{}", mf.trim_start_matches('\n'))}]);
     let r: Value = serde_json::from_str(&hilite_json(&req.to_string()).unwrap()).unwrap();
-    assert_eq!(r["layers"][0]["atoms"], serde_json::json!([0, 1, 2, 3, 4, 5, 6, 7]));
+    assert_eq!(
+        r["layers"][0]["atoms"],
+        serde_json::json!([0, 1, 2, 3, 4, 5, 6, 7])
+    );
 }
