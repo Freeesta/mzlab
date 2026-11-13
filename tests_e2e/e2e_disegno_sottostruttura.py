@@ -1,10 +1,11 @@
 """Disegno, substructure search (`subdb/1` of the molkit .wasm): the right-click row of the whole drawing (or of a selection) opens the search card;
 the catalogue gives candidates (never identifications), «Show» draws one with its matched atoms selected and «Back» restores the drawing; a file the user
 picks (a synthetic SMILES list) is searched in memory, an unreadable entry is counted; the data table (TDATI) lists every candidate.
-Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without site/static/wasm-feat."""
+Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without molkit there."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
-    print("SKIP site/static/wasm-feat is missing (tools/build_feat_wasm.sh site/static)"); sys.exit(0)
+MF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")
+if not os.path.exists(MF) or "molkit" not in json.load(open(MF, encoding="utf-8")):
+    print("SKIP no molkit in site/static/wasm-feat (tools/build_feat_wasm.sh site/static)"); sys.exit(0)
 from lib import *
 steps = []
 def step(name, fn):

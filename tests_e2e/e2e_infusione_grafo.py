@@ -16,7 +16,8 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 FX = json.loads((Path(__file__).parent / "fixtures" / "msngrafo_esempio.json").read_text())
 MF = ROOT / "site" / "static" / "wasm-feat" / "manifest.json"
-MOLKIT = MF.exists() and "molkit" in json.loads(MF.read_text())
+FEAT = json.loads(MF.read_text()) if MF.exists() else {}               # the lazy .wasm modules of the site (verifica.py builds only `rotte`)
+MOLKIT = "molkit" in FEAT
 SX = json.loads((Path(__file__).parent / "fixtures" / "msngrafo_strutture.json").read_text())
 D = synth("infgrafo")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
@@ -350,7 +351,8 @@ try:
             assert not [m for m in pg4.evaluate("window.MZLAB_LR_MISS || []") if "msn_grafo" in m], pg4.evaluate("window.MZLAB_LR_MISS")
             pg4.wait_for_selector(".ig-node[data-id=n3] .ig-thumb .ig-hl", timeout=30000)
             assert pg4.locator(".ig-node[data-id=n0] .ig-thumb").count() == 1
-        step("the real engine answers the cut table of a node (no stand-in)", real_cuts)
+        if "msngrafo" in FEAT: step("the real engine answers the cut table of a node (no stand-in)", real_cuts)
+        else: print("SKIP the real engine: no msngrafo .wasm in site/static/wasm-feat (tools/build_feat_wasm.sh site/static)")
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         # two files loaded: no tab
