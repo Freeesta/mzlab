@@ -3,13 +3,17 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::wiff::{container, samples, Wiff};
 use serde_json::Value;
 
 fn reference() -> (PathBuf, Value) {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_many_exp_{}", std::process::id()));
+    // One directory per call: the tests run in parallel and must not read a file another is rewriting.
+    static N: AtomicUsize = AtomicUsize::new(0);
+    let n = N.fetch_add(1, Ordering::Relaxed);
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_many_exp_{}_{n}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_esperimenti.py");
     let o = Command::new("python3")
         .arg(script)
