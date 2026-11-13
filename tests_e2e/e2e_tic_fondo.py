@@ -30,7 +30,7 @@ try:
         print("OK  the module is not fetched at start-up")
 
         get = """async u => { const x = await fetch(u); return [x.status, await x.text()]; }"""
-        k = pg.evaluate("E.files.findIndex(f => f.name.startsWith('tic_fondo-'))"); b = 1 - k
+        k, b = pg.evaluate("[0, 1].map(i => E.files.find(f => String(f.file).startsWith(i ? 'tic_fondo_bianco' : 'tic_fondo-')).k)")
         st, txt = pg.evaluate(get, f"api/tic_background?k={k}&level=1")
         assert st == 200, (st, txt[:300])
         ions = sorted(round(i["mz"]) for i in json.loads(txt)["ions"])
