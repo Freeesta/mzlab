@@ -1,5 +1,5 @@
 """The chromatograms of a .wiff sample read by the engine on the site (synthetic pairs of tools/wiff_cromatogrammi.py: Full Scan and MRM experiments in one
-sample, two MRM experiments, Full Scan alone; no laboratory data): the index counts one TIC per experiment with data and the SRM chromatograms, as
+sample, two MRM experiments, Full Scan alone; no laboratory data): the index counts one TIC per experiment with data, the BPCs and the SRM chromatograms, as
 `mzlab-cli convert` lists them (tests/test_wiff_cromatogrammi.py compares the arrays); an index of an older generation of the readers (`"reader":1` in its
 `source`) is refused when the sample is opened again and built once more. Needs the site and the .wasm (python3 tools/prepara_sito.py).
 Run from the repo root: python3 tests_e2e/e2e_wiff_cromatogrammi.py"""
@@ -15,7 +15,7 @@ def step(name, fn):
 
 D = Path(tempfile.mkdtemp(prefix="wiff_crom_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_cromatogrammi.py"), str(D)], check=True, capture_output=True)
-WANT = {n: len([x for x in ids if not x.startswith("BPC")]) for n, ids in json.loads((D / "attesi.json").read_text()).items()}   # the BPC is listed once the scans were decoded
+WANT = {n: len(ids) for n, ids in json.loads((D / "attesi.json").read_text()).items()}   # every BPC too: the index is built from every decoded scan
 PAIRS = [str(D / f"{n}.wiff{x}") for n in WANT for x in ("", ".scan")]
 INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
 DONE = f"ST.files.length === {len(WANT)} && ST.files.every(f => f.kind) && UPBUSY === 0 && OPENNOW.busy() === 0"
