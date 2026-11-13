@@ -91,6 +91,22 @@ fn run_queries(lib: &Library<&[u8]>, qs: &[(Spectrum, bool)]) -> Run {
     }
 }
 
+// Best of `reps` timed blocks of `passes` full query passes: long enough to sit above timer noise.
+fn best_secs(lib: &Library<&[u8]>, qs: &[(Spectrum, bool)]) -> f64 {
+    const PASSES: usize = 8;
+    const REPS: usize = 5;
+    run_queries(lib, qs); // warm-up (caches, allocator)
+    (0..REPS)
+        .map(|_| {
+            let t0 = Instant::now();
+            for _ in 0..PASSES {
+                run_queries(lib, qs);
+            }
+            t0.elapsed().as_secs_f64() / PASSES as f64
+        })
+        .fold(f64::INFINITY, f64::min)
+}
+
 fn library(n: usize, with: bool) -> (Vec<Spectrum>, Vec<u8>) {
     let mut t = synth_set(11, n, 12);
     t.iter_mut().for_each(|s| s.pol = 1);
@@ -124,13 +140,13 @@ fn synthetic_library_of_5000_entries_with_500_queries() {
     let a = run_queries(&lib, &qs);
     let b = run_queries(&lib, &qs);
     assert_eq!(a.best, b.best, "two runs give the same scores");
-    let pl = run_queries(&plain, &qs);
-    let ratio = a.secs.min(b.secs) / pl.secs;
+    let with_secs = best_secs(&lib, &qs);
+    let plain_secs = best_secs(&plain, &qs);
+    let ratio = with_secs / plain_secs;
     eprintln!(
-        "search time with decoys {:.3}s, without {:.3}s, ratio {ratio:.2}",
-        a.secs.min(b.secs),
-        pl.secs
+        "search time with decoys {with_secs:.4}s, without {plain_secs:.4}s, ratio {ratio:.2}"
     );
+    // decoys add work, measured ~1.6x; 2x keeps the original bound now that timing noise is averaged out
     assert!(ratio <= 2.0, "ratio {ratio}");
     let t: Vec<f32> = a.best.iter().map(|x| x.target).collect();
     let d: Vec<f32> = a.best.iter().map(|x| x.decoy).collect();
