@@ -55,6 +55,7 @@ try:
 
         def show_and_back():
             li = pg.locator("#sub-list li").filter(has_text="acetaminophen").first
+            pg.evaluate("window.__cleared = []; document.addEventListener('mzlab-ev-cleared', e => window.__cleared.push(e.detail.atoms))")
             li.locator(".sub-show").click()
             pg.wait_for_function("!document.querySelector('#sub-back').hidden", timeout=20000)
             n = pg.evaluate(f"{KJ}.editor.struct().atoms.size")
@@ -63,11 +64,11 @@ try:
             painted = f"{KJ}.editor.highlights.getAll().map(x => x.highlight || x).map(x => [(x.atoms || []).length, (x.bonds || []).length])"
             pg.wait_for_function(f"JSON.stringify({painted}) === '[[7,7]]'", timeout=20000)    # the moiety coloured too (disegno-evidenza.js)
             assert pg.locator("#ev-card").is_visible()
-            frames(pg, 6)                                                                       # painting is no edit: no "change" clears the colours
-            assert pg.evaluate(f"JSON.stringify({painted})") == "[[7,7]]", pg.evaluate(painted)
             pg.click("#sub-back")
             pg.wait_for_function("document.querySelector('#sub-back').hidden", timeout=20000)
-            pg.wait_for_function(f"{painted}.length === 0", timeout=20000)
+            pg.wait_for_function("window.__cleared.length > 0", timeout=20000)
+            assert pg.evaluate("window.__cleared") == [7], pg.evaluate("window.__cleared")   # cleared by «Back» (the phenol), never by painting
+            assert pg.evaluate(f"{painted}.length") == 0
             assert pg.evaluate(f"{KJ}.editor.struct().atoms.size") == 7
             assert pg.inner_text("#sub-status") == pg.evaluate("I18N.t('draw.sub.restored')")
         step("«Show» draws acetaminophen with the 7 matched atoms and 7 bonds selected and coloured; «Back» restores the phenol, uncoloured", show_and_back)

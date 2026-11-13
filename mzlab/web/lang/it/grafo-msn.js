@@ -177,6 +177,7 @@ I18N.add("it", {
   "msngrafo.str.show.tip": "Mostra questo legame nel disegno",
   "msngrafo.str.none": "Nessun taglio della struttura dà l'm/z di questo ione.",
   "msngrafo.str.nomark": "Il legame non si trova nel disegno",
+  "msngrafo.str.ev.label": "taglio {bond} del grafo MSn",
   "msngrafo.str.hyp": "Sono tagli candidati con le loro prove: il legame rotto resta un'ipotesi.",
   "msngrafo.find": "Cerca nella libreria",
   "msngrafo.find.tip": "Confronta questo albero con la tua libreria locale di alberi MSn",

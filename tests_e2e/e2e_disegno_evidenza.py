@@ -35,7 +35,7 @@ try:
             assert [l.get("skip") for l in got["layers"]] == ["lr", "lr", "lr", "noMatch"], got
             assert pg.evaluate(PAINTED) == [], pg.evaluate(PAINTED)
             assert pg.locator("#ev-card").is_visible()
-            assert pg.inner_text("#ev-status") == pg.evaluate("I18N.t('draw.ev.done.lr')")
+            assert pg.inner_text("#ev-status") == pg.evaluate("I18N.t('draw.ev.painted', {n: 0, total: 4})")
             assert pg.get_attribute("#ev-status", "role") == "status"
         step("LR world, nothing selected: no colour, the legend says why", lr_nothing_selected)
 
@@ -53,13 +53,13 @@ try:
             want = pg.evaluate("['moiety', 'sites', 'cuts'].map(k => getComputedStyle(document.documentElement).getPropertyValue('--ev-' + k).trim())")
             assert all(want), want
             assert pg.evaluate(PAINTED) == [[want[0], 7, 7], [want[1], 2, 0], [want[2], 0, 1]], (pg.evaluate(PAINTED), want)
-            frames(pg, 6)                                                                       # painting fires no "change" that would clear it
-            assert len(pg.evaluate(PAINTED)) == 3, pg.evaluate(PAINTED)
             assert pg.inner_text("#ev-status") == pg.evaluate("I18N.t('draw.ev.painted', {n: 3, total: 4})")
             ev = "getComputedStyle(document.documentElement).getPropertyValue('--ev-moiety').trim()"
             theme = pg.evaluate("document.documentElement.getAttribute('data-theme')")
             pg.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
-            try: assert pg.evaluate(ev).lower() == "#56b4e9", pg.evaluate(ev)                  # lighter on a dark panel
+            try:
+                assert pg.evaluate(ev).lower() == "#56b4e9", pg.evaluate(ev)                    # lighter on a dark panel, and painted again in it
+                pg.wait_for_function(f"(() => {{ const p = {PAINTED}; return p.length === 3 && p[0][0].toLowerCase() === '#56b4e9'; }})()", timeout=10000)
             finally: pg.evaluate(f"(t => t === null ? document.documentElement.removeAttribute('data-theme') : document.documentElement.setAttribute('data-theme', t))({json.dumps(theme)})")
             assert pg.get_attribute("#ev-legend", "aria-label") == pg.evaluate("I18N.t('draw.ev.table.caption')")
             rows = pg.evaluate("[...document.querySelectorAll('#ev-legend li')].map(li => li.innerText)")
@@ -83,11 +83,15 @@ try:
         step("«Remove colours» by keyboard takes them off", clear_keyboard)
 
         def edit_clears():
+            pg.evaluate("window.__cleared = []; document.addEventListener('mzlab-ev-cleared', e => window.__cleared.push(e.detail.atoms))")
             pg.evaluate(ASK, [MOL, LAYERS, [0, 1]])
             assert len(pg.evaluate(PAINTED)) == 3
             pg.evaluate(f"{KJ}.setMolecule('CCO')")
-            pg.wait_for_function(f"{PAINTED}.length === 0", timeout=10000)
-        step("an edit of the drawing takes the colours off (they belong to the old drawing)", edit_clears)
+            pg.wait_for_function("window.__cleared.length > 0", timeout=10000)
+            # the first clear came on the edited drawing (3 atoms), not on the painted one (8): painting fires no "change"
+            assert pg.evaluate("window.__cleared") == [3], pg.evaluate("window.__cleared")
+            assert pg.evaluate(PAINTED) == []
+        step("an edit of the drawing takes the colours off, painting never does", edit_clears)
 finally:
     r.close()
 r.report()

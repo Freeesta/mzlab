@@ -133,6 +133,9 @@ try:
             pg.wait_for_function("S.view==='draw'", timeout=15000)
             pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=90000)
             wait_for_js(pg, "TPDraw.smiles().then(s => s.length > 5)", 30000)
+            # the cut is coloured too (evidence colours, hilite/1): one bond in the colour of the cuts, listed in the legend with its label
+            pg.wait_for_function("(() => { const c = document.querySelector('#ev-card'); return c && !c.hidden && document.querySelectorAll('#ev-legend li').length === 1; })()", timeout=30000)
+            print("DBG", pg.evaluate("[window.HR, typeof BANCO !== 'undefined' && BANCO.on()]"), pg.inner_text("#ev-legend"), pg.inner_text("#ev-status"))
             assert pg.evaluate("TPDraw.mark([[1, 2]])") == 1 and pg.evaluate("TPDraw.mark([[0, 9]])") == 0
             pg.evaluate("setView('data')"); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=15000)
         step("a node with a SMILES lists the cut candidates with ppm; one opens Draw and marks the bond", cuts)

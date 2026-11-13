@@ -4,7 +4,6 @@ I18N.add("it", {
   "draw.ev.clear": "Togli i colori",
   "draw.ev.cleared": "Colori tolti.",
   "draw.ev.empty": "Il disegno è vuoto: niente da colorare.",
-  "draw.ev.done.lr": "Colorati solo gli atomi selezionati.",
   "draw.ev.painted": "Colorati: {n} di {total} strati di evidenza.",
   "draw.ev.fail": "Colori non applicati: {message}",
   "draw.ev.row": "{kind} · {label}: {what}",
