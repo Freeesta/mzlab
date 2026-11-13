@@ -102,7 +102,7 @@ function pairArrows() {
     host.appendChild(a);
   });
 }
-// a full-width panel (with its child spectra) swaps with its neighbour; the panels are moved by dragging their header (movePanel is the same move, for tests)
+// a full-width panel (with its child spectra) swaps with its neighbour, dragged by its header (movePanel: the same move, for tests)
 function stackOrder() { return tabPanels().filter((/** @type {Pannello} */ q) => q.full && q.el && !dockedP(q)).sort(LAYOUT.ordine); }
 // block that moves together: a chromatogram with its child spectra; the others, in order
 function blockOf(/** @type {Pannello} */ p) { const grp = [p, ...(p.type === "chrom" || p.type === "xic" || p.type === "mrm" ? followers(p).sort((a, b) => a.y - b.y) : [])].filter(q => q === p || !dockedP(q)), st = stackOrder(), others = st.filter((/** @type {Pannello} */ q) => !grp.includes(q)); return { grp, others, at: others.filter((/** @type {Pannello} */ q) => q.y < p.y).length }; }
@@ -411,7 +411,7 @@ ESC.registra({
   aperto: () => !!E.panels.find((/** @type {Pannello} */ q) => q.el && q.el.classList.contains("max") && q._setMax),
   chiudi: () => { const m = E.panels.find((/** @type {Pannello} */ q) => q.el && q.el.classList.contains("max")); if (m && m._setMax) m._setMax(false); },
 });
-// full screen: ONLY that panel exists. Everything else (header, file list, tabs, toolbar, the other panels) is inert: no click, wheel or key reaches it
+// full screen: ONLY that panel exists; the rest (header, file list, tabs, toolbar, other panels) is inert to click, wheel and keys
 const fsPanel = () => E.panels.find((/** @type {Pannello} */ q) => q.el && q.el.classList.contains("max"));
 /** @param {Pannello | null} on @param {Pannello | null} [closing] */
 function fsInert(on, closing) {
@@ -523,7 +523,7 @@ function stepScan(/** @type {Pannello} */ p, /** @type {number} */ d, /** @type 
 }
 /** @param {Pannello} p @param {string} t @param {boolean} [keep] @param {boolean} [notice] */
 function stepMsg(p, t, keep, notice) { if (p.rd) { p.rd.textContent = t; p.rd.classList.toggle("show", !!notice); } if (keep) p._msg = t; }   // the line under the graph is gone: only the "nearest scan with data" notice of MS2 still shows
-// the legend sits INSIDE the graph (top right) for chromatograms, XIC and MRM; for the spectrum the scan line is on the x-axis title row, the file legend inside
+// legend INSIDE the graph (top right) for chromatograms, XIC, MRM; a spectrum's scan line is on the x-axis title row, its file legend inside
 function placeLeg(/** @type {Pannello} */ p) {
   if (!p.cv || p.type === "map") return;
   if (p.type === "spec") {
@@ -827,7 +827,7 @@ function syncTb(/** @type {Pannello} */ p) {
     lg.disabled = off; lg.classList.toggle("on", !!p.log && !off); lg.setAttribute("aria-pressed", String(!!p.log && !off)); lg.title = off && ms2c ? I18N.t("ctl.noMs2") : I18N.t("ctl.log.title");
   }
 }
-// ---- one header row: what does not fit goes into the «⋯» menu (nodes are moved, keeping their handlers, and put back when there is room); nothing wraps or is cut.
+// ---- one header row: what does not fit goes into «⋯» (nodes moved with their handlers, put back when there is room); nothing wraps or is cut.
 // Order: the NL note, then the icon groups from the right, then the controls from the right.
 function hdRestore(/** @type {Pannello} */ p) {
   const l = p._hm || []; p._hm = [];
