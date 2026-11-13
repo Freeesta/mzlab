@@ -12,6 +12,7 @@ the signed values over the ions of a scenario):
   mz window  +-6 ppm (the trace of `area_from=window`) / +-10 ppm
   table      the area of the row / the +-6 ppm sum above the floor (channels, stitching, pieces)
   vs XIC     the area of the row / the XIC over the row (trapezoid, +-10 ppm): the number a user sees when comparing to the chromatogram.
+A split ion is two peaks; the whole-peak window of each half takes the tail of the other (the 95th percentile of `sampling`).
 Python here only reads results; the areas are computed by the Rust engine.
 """
 import json
@@ -64,11 +65,22 @@ def trapz(y: np.ndarray, t: np.ndarray) -> float:
     return float(np.sum(0.5 * (y[1:] + y[:-1]) * np.diff(t))) if len(y) > 1 else 0.0
 
 
+def targets(ions: list[dict]) -> list[dict]:
+    """The peaks to find: a split ion is two peaks (5 sigma apart, each its own row), the others one."""
+    out = []
+    for i in ions:
+        if i["kind"] == "split":
+            out += [{**i, "comps": [c], "area": a} for c, a in zip(i["comps"], i["comp_area"])]
+        else:
+            out.append(i)
+    return out
+
+
 def stages(ion: dict, pts: dict, f: dict, dt: float) -> dict | None:
     """The areas of one ion stage by stage, from its largest row; None when no row has its m/z and RT."""
     t = pts["rt"] * 60
     a, z = ion["comps"][0], ion["comps"][-1]
-    lo_t, hi_t = a[0] - 6 * a[1] / 60, z[0] + 6 * z[1] / 60
+    lo_t, hi_t = a[0] - 4 * a[1] / 60, z[0] + 4 * z[1] / 60
     near = np.where((np.abs(f["mz"] - ion["mz"]) <= 10e-6 * ion["mz"]) & (f["rt"] >= lo_t) & (f["rt"] <= hi_t))[0]
     if len(near) == 0:
         return None
@@ -108,10 +120,10 @@ def main(argv) -> int:
         pts = dict(np.load(d / f"{name}.npz"))
         f = run(cli, d / f"{name}.mzML", sets)
         dt = float(np.median(np.diff(pts["rt"]))) * 60
-        rows = [r for r in (stages(i, pts, f, dt) for i in truth["ions"]) if r]
+        rows = [r for r in (stages(i, pts, f, dt) for i in targets(truth["ions"])) if r]
         s = summary(rows)
         print(f"{name:9}" + "".join(f"{s[k][0]:>+8.3f}/{s[k][1]:<7.3f}" for k in (*STAGES, "vs XIC", "vs true"))
-              + f"  {len(rows):>2}/{len(truth['ions'])} {s['split']:>3}")
+              + f"  {len(rows):>2}/{len(targets(truth['ions']))} {s['split']:>3}")
     return 0
 
 
