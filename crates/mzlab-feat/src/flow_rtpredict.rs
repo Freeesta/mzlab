@@ -8,6 +8,7 @@ use crate::attributio::review::rtlogp::{
     calibrate, check, check_terms, organic_fraction, CalPoint, LogPValues, MIN_N,
 };
 use crate::hypo::Dir;
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
 use std::collections::HashMap;
@@ -277,7 +278,7 @@ fn sort_by_residual(rows: &mut [Row]) {
     }
     let rank = |q: &str| seen.iter().position(|s| s == q);
     let key = |r: &Row| r.2.unwrap_or(f64::INFINITY);
-    rows.sort_by(|a, b| {
+    rows.sortc_by(|a, b| {
         rank(&a.1)
             .cmp(&rank(&b.1))
             .then(key(a).total_cmp(&key(b)))
