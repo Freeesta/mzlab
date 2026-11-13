@@ -257,9 +257,9 @@ fn compare_chromatograms(label: &str, want: &Run, got: &Run) -> (usize, usize) {
 /// The scan-type code and fixed mass of the experiment of a spectrum id.
 type Fixed<'a> = dyn Fn(&str) -> Option<(u32, Option<f64>)> + 'a;
 
-/// Every spectrum of the reference (but the last block) is ours: time, level, polarity, precursor and the nonzero points. A neutral-loss or
-/// precursor-ion scan (`fixed`: the code and fixed mass of its experiment) has no precursor m/z whatever the reference says: its header mass is the
-/// loss or the product Q3 stays on, not an ion Q1 selected. ProteoWizard writes the product of a precursor-ion scan as its selected ion: that m/z is ours.
+/// Every spectrum of the reference (but the last block) is ours: time, level, polarity, precursor and the nonzero points. A neutral-loss scan
+/// (`fixed`: the code and fixed mass of its experiment) has no precursor m/z whatever the reference says: its header mass is the loss. A precursor-ion
+/// scan has the m/z Q3 stays on as its selected ion, as ProteoWizard writes it, and that m/z is the fixed mass of its experiment.
 fn compare_spectra(label: &str, want: &Run, got: &Run, fixed: &Fixed) -> usize {
     let n = want.spectra.len().saturating_sub(1);
     for e in &want.spectra[..n] {
@@ -281,18 +281,19 @@ fn compare_spectra(label: &str, want: &Run, got: &Run, fixed: &Fixed) -> usize {
         );
         use mzlab_core::wiff::modes::{CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION};
         let code = fixed(&e.id);
-        let no_precursor = matches!(code, Some((CODE_NEUTRAL_LOSS | CODE_PRECURSOR_ION, _)));
+        let no_precursor = matches!(code, Some((CODE_NEUTRAL_LOSS, _)));
         assert_eq!(
             g.precursor.is_some(),
             e.precursor.is_some() && !no_precursor,
             "{label} {}: precursor",
             e.id
         );
-        if let (Some((CODE_PRECURSOR_ION, mass)), Some(p)) = (code, e.precursor) {
+        if let (Some((CODE_PRECURSOR_ION, _)), Some(p)) = (code, e.precursor) {
             assert!(
-                mass.is_some_and(|m| (m - p).abs() < 1e-3),
-                "{label} {}: fixed product {mass:?} vs selected ion {p}",
-                e.id
+                g.precursor.is_some_and(|m| (m - p).abs() < 1e-3),
+                "{label} {}: selected ion {:?} vs {p}",
+                e.id,
+                g.precursor
             );
         }
         let pts: Vec<(f64, f64)> = (0..e.mz.len())
