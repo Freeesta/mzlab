@@ -26,7 +26,7 @@ Professional free LC-MS analysis program, in the browser only (https://freeesta.
 - **English only** for code, comments, commit messages and PRs; user-facing text in both languages via `lang/` keys (`tools/controlla_i18n.py` enforces it). Tabui (`TP_Mine/`) is English-only, no `lang/` keys, and never the bare word «formula».
 - **Never push to `main`.** Work on `claude/<topic>` from `origin/main`, open a PR (ready for review), never merge it yourself. Merge `main` into the branch only if the PR conflicts (`tools/fondi_main.py`); never rebase or force-push.
 - **Never skip, disable or quarantine a test** to get green. Fix the cause.
-- **Candidates, not truth**: an m/z is a candidate until evidence supports it; libraries, formulas and analogues are scored candidates with evidence, never certainties; every automatic choice shows reason, parameters and confidence, and is logged. Hiding answers for teaching belongs to the `qqq` edition only.
+- **The user decides**: the program shows its evidence (scores, errors, parameters) and logs every automatic choice; it never hedges with disclaimers or blocks a result.
 - **Accessibility** (WCAG 2.2 AA): colours only from CSS variables, `prefers-reduced-motion`, keyboard and `aria-label`, colour-blind-safe (Okabe-Ito) charts; every new chart ships with its data table (`TDATI`), targets of at least 24x24 px.
 - **Light**: no bundler or heavy dependency; the site never runs Python.
 - **Comments**: brief, on the why; 2-4 line header per module; no commented-out code.
