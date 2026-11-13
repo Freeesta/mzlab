@@ -1,41 +1,31 @@
-# CLAUDE.md - mzLab (repository Freeesta/mzlab)
+# CLAUDE.md - mzLab (Freeesta/mzlab)
 
-Rules for every chat that changes this repository. Area details live in `docs/agenti/`: find the file with `grep -n '<word>' docs/agenti/INDICE.md`, read only that one. Find code with `python3 tools/indice.py`, then `grep -n '<name>' docs/agenti/mappa.md`.
+Professional free LC-MS analysis program: in the browser only (https://freeesta.github.io/mzlab/, Pages from `main`) plus a desktop/CLI app. Low-resolution triple-quad (ESI+) and HR non-targeted screening, feature tables, reproducible reports. Files never leave the user's computer. The `qqq` lab site is the only teaching edition. Area rules load by path from `.claude/rules/` (rust, frontend, docs).
 
-## What it is
-Professional free LC-MS analysis program, in the browser only (https://freeesta.github.io/mzlab/, GitHub Pages from `main`) plus a downloadable desktop/CLI app: low-resolution triple-quad data (ESI+) and HR non-targeted screening, feature tables, reproducible reports. The `qqq` lab site is the only teaching edition. Files never leave the user's computer.
+## Find things (read narrowly)
+- Docs: `grep -n '<word>' docs/agenti/INDICE.md`, then read only that area file (line ranges, `Read` offset/limit).
+- Code: `python3 tools/indice.py` first (it writes `docs/agenti/mappa.md`, which is gitignored and absent in a fresh clone), then `grep -n '<name>' docs/agenti/mappa.md`. Lookups: the `cercatore` agent.
+- Never read `mzlab/web/vendor/`, `mzlab/web/elements.js`, `mzlab/web/esempi/`, `.git/`, `site/` (grep is fine).
 
 ## Layout
-- `crates/`: Rust engine (`mzlab-core`, `mzlab-feat`, `mzlab-cli`, `mzlab-desktop` (Tauri v2), `*-wasm`). This is where logic lives.
-- `mzlab/web/`: plain HTML/JS interface (classic scripts in `index.html` order, ES modules for new files; no bundler). Texts only in `lang/it.js` and `lang/en.js`.
-- `mzlab/*.py`, `tools/golden.py`, `tools/*_reference.py`: Python reference for parity tests only.
-- `tools/`: dev tools. `tests/` pytest, `tests_e2e/` Playwright (`lib.py`). `docs/agenti/`: area files (current state only).
+`crates/` Rust engine (all logic: `mzlab-core`, `mzlab-feat`, `mzlab-cli`, `mzlab-desktop`, `*-wasm`) · `mzlab/web/` plain HTML/JS interface · `mzlab/*.py`, `tools/golden.py`, `tools/*_reference.py` Python reference for parity tests only · `tools/` dev tools · `tests/` pytest · `tests_e2e/` Playwright · `docs/agenti/` current-state docs.
 
 ## Commands
-- Before pushing: `python3 tools/pre_pr.py` (fast round; in cloud it skips browser tests and exits 0; `--completo` forces all).
-- Full round: `python3 tools/verifica.py` (`--cambiati` = e2e of changed files only). Test levels and known reds: `docs/agenti/test.md`.
-- Tests that need the built site: `python3 tools/build_site.py` first (writes `site/`, delete it afterwards).
-- Size and doc limits: `python3 tools/controlla.py`. Code map: `python3 tools/indice.py`.
+- Before pushing: `python3 tools/pre_pr.py` (fast; in cloud skips browser tests; `--completo` forces all). Changed e2e only: `python3 tools/verifica.py --cambiati`; full round once: `python3 tools/verifica.py`. Levels and known reds: `docs/agenti/test.md`.
+- Tests needing the site: `python3 tools/build_site.py` first, delete `site/` afterwards.
+- Limits: `python3 tools/controlla.py`; i18n: `python3 tools/controlla_i18n.py`.
 - Generated files (schemas, `mappa.md`, `strumenti-1.json`, ...): regenerate with their tool, never by hand.
 
 ## Rules
-- **Parity**: every function (Flow step, reader, converter, export, model, engine route) exists both in the site (`.wasm` + OPFS) and in the app (native desktop + CLI), with a byte-for-byte parity test. A PR delivering one half is incomplete unless a real technical limit is stated in the PR body.
-- **All logic in Rust.** Python is only for tests, `tools/` and reference; JS is interface only. New modules get a CLI (`--set INSTANCE.NAME=VALUE` per step parameter; checklist in `docs/agenti/cli.md`).
-- **Wasm caps**: a `.wasm` may grow by up to +10 % per new function; record before/after in `docs/agenti/wasm-tetti.md`. Never raise a cap by editing a workflow.
-- **No real data in this public repo.** Lab data live in the private repo `Freeesta/mzlab-dati` (found by `tools/dati_percorsi.py`; without it `tools/dati_sintetici.py` makes stand-ins). Only the anonymous files in `mzlab/web/esempi/` are allowed. Surnames in the private `nomi_vietati.txt` never appear here.
-- **English only** for code, comments, commit messages and PRs; user-facing text in both languages via `lang/` keys (`tools/controlla_i18n.py` enforces it). Tabui (`TP_Mine/`) is English-only, no `lang/` keys, and never the bare word «formula».
-- **Never push to `main`.** Work on `claude/<topic>` from `origin/main`, open a PR (ready for review), never merge it yourself. Merge `main` into the branch only if the PR conflicts (`tools/fondi_main.py`); never rebase or force-push.
-- **Never skip, disable or quarantine a test** to get green. Fix the cause.
-- **The user decides**: the program shows its evidence (scores, errors, parameters) and logs every automatic choice; it never hedges with disclaimers or blocks a result.
-- **Accessibility** (WCAG 2.2 AA): colours only from CSS variables, `prefers-reduced-motion`, keyboard and `aria-label`, colour-blind-safe (Okabe-Ito) charts; every new chart ships with its data table (`TDATI`), targets of at least 24x24 px.
-- **Light**: no bundler or heavy dependency; the site never runs Python.
+- **Parity**: every function (Flow step, reader, converter, export, model, engine route) exists in the site (`.wasm` + OPFS) and in the app (native + CLI) with a byte-for-byte parity test; one half alone is incomplete unless a real technical limit is stated in the PR body.
+- **All logic in Rust.** Python only for tests, `tools/`, reference; JS is interface only; the site never runs Python.
+- **No real data in this public repo.** Lab data live in private `Freeesta/mzlab-dati` (`tools/dati_percorsi.py`; else `tools/dati_sintetici.py`). Only the anonymous `mzlab/web/esempi/` files are allowed. Surnames in the private `nomi_vietati.txt` never appear here.
+- **English only** for code, comments, commits, PRs. User-facing text in both languages via `lang/` keys.
+- **Git**: never push to `main`; work on `claude/<topic>` from `origin/main`, open the PR ready for review, never merge it yourself; merge `main` in only on a real conflict (`tools/fondi_main.py`); never rebase or force-push.
+- **Never skip, disable or quarantine a test.** Fix the cause.
+- **The user decides**: show the evidence (scores, errors, parameters) and log every automatic choice; no disclaimers, no blocked results.
 - **Comments**: brief, on the why; 2-4 line header per module; no commented-out code.
-- **Docs** (`docs/agenti/`) describe the current state only: rewrite the line you change (no «now», «was», PR numbers, dates). A doc line is at most 600 characters, an area file at most 25 KB.
-- **Front end not tried in a browser is broken.** Every interface change keeps the guided tour (`tour.js`, `tests_e2e/e2e_tour.py`) valid.
-- Do not read vendored or generated bulk: `mzlab/web/vendor/`, `mzlab/web/elements.js`, `mzlab/web/esempi/`, `.git/`, `site/` (grep is fine).
+- **Light**: no bundler or heavy dependency.
 
-## Token economy (every chat)
-- One chat, one task, one PR. When the PR is merged, stop: no scheduled check-ins, no polling, no idle waiting. The coordinator wakes a chat when it is needed.
-- Read narrowly: `grep` and `docs/agenti/INDICE.md` first, then line ranges, not whole files. Use the `cercatore` agent for lookups.
-- Run only the tests of what changed (`python3 tools/verifica.py --cambiati`); the full round once, before the push.
-- Reports are one line: PR number, head SHA, CI status, what remains.
+## Chats
+One chat, one task, one PR; after the merge stop (no scheduled check-ins, no polling). Report in one line: PR number, head SHA, CI status, what remains.
