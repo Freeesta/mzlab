@@ -185,7 +185,19 @@ pub fn tdf_tables(
     num_peaks: i64,
     cals: &[i64],
 ) -> Vec<(&'static str, &'static str, Vec<u8>)> {
-    let rows: Vec<Vec<V<'_>>> = tims
+    tdf_rows(tims, num_peaks, cals)
+        .into_iter()
+        .map(|(n, sql, rows)| (n, sql, leaf(&rows)))
+        .collect()
+}
+
+/// The rows of `tdf_tables`, to give to `db_rows` (a table larger than a page spans several leaves under an interior root).
+pub fn tdf_rows(
+    tims: &[i64],
+    num_peaks: i64,
+    cals: &[i64],
+) -> Vec<(&'static str, &'static str, Vec<Vec<V<'static>>>)> {
+    let rows: Vec<Vec<V<'static>>> = tims
         .iter()
         .zip(cals)
         .enumerate()
@@ -208,8 +220,7 @@ pub fn tdf_tables(
             ]
         })
         .collect();
-    let frames = leaf(&rows);
-    let cal = leaf(&[vec![
+    let cal = vec![vec![
         V::N,
         V::I(1),
         V::R(0.125),
@@ -223,9 +234,9 @@ pub fn tdf_tables(
         V::R(30.0),
         V::R(0.0),
         V::R(0.0),
-    ]]);
+    ]];
     vec![
-        ("Frames", "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL, Polarity TEXT, ScanMode INTEGER, MsMsType INTEGER, TimsId INTEGER, SummedIntensities INTEGER, MaxIntensity INTEGER, NumScans INTEGER, NumPeaks INTEGER, MzCalibration INTEGER, T1 REAL, T2 REAL, AccumulationTime REAL)", frames),
+        ("Frames", "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL, Polarity TEXT, ScanMode INTEGER, MsMsType INTEGER, TimsId INTEGER, SummedIntensities INTEGER, MaxIntensity INTEGER, NumScans INTEGER, NumPeaks INTEGER, MzCalibration INTEGER, T1 REAL, T2 REAL, AccumulationTime REAL)", rows),
         ("MzCalibration", "CREATE TABLE MzCalibration (Id INTEGER PRIMARY KEY, ModelType INTEGER, DigitizerTimebase REAL, DigitizerDelay REAL, C0 REAL, C1 REAL, C2 REAL, C3 REAL, C4 REAL, T1 REAL, T2 REAL, dC1 REAL, dC2 REAL)", cal),
     ]
 }

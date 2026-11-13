@@ -17,6 +17,7 @@ use std::collections::{HashMap, HashSet};
 
 mod cols;
 use cols::record_in;
+mod walk;
 
 const MAGIC: &[u8; 16] = b"SQLite format 3\0";
 
@@ -88,6 +89,9 @@ impl Sqlite {
             pagine: 0,
             tables: Vec::new(),
             limits: *limits,
+            tolerant: false,
+            skips: (0, 0),
+            left_out: Vec::new(),
         };
         let mut h = [0u8; 100];
         let read_items = (dim as usize).min(100);
@@ -223,77 +227,6 @@ impl Sqlite {
         Ok((base, kind, ncells, cap))
     }
 
-    /// `scorri` that decodes only the record positions `voglio` marks `true` (the others are `Val::Null`; `None` = all) and hands `f` one vector reused from row to row, which `f` may take from.
-    pub fn walk_with<F>(&mut self, root: u32, want: Option<&[bool]>, mut f: F) -> Result<()>
-    where
-        F: FnMut(i64, &mut Vec<Val>) -> Result<bool>,
-    {
-        let mut stack: Vec<Step> = vec![Step::Page(root, 0)];
-        let mut views = HashSet::new();
-        let (mut p, mut q, mut row) = (Vec::new(), Vec::new(), Vec::new());
-        while let Some(step) = stack.pop() {
-            let (n, prof) = match step {
-                Step::Row(mut v) => {
-                    if !f(0, &mut v)? {
-                        return Ok(());
-                    }
-                    continue;
-                }
-                Step::Page(n, prof) => (n, prof),
-            };
-            self.limits.profondita_ok(prof)?;
-            if !views.insert(n) {
-                return Err(broken("page cycle"));
-            }
-            self.page_in(n, &mut p)?;
-            let (base, kind, ncells, cap) = self.page_header(&p, n)?;
-            let npag = self.page;
-            let cell_list = |i: usize| -> Result<usize> {
-                let c = u16_be(&p, cap + 2 * i).ok_or_else(|| broken("cell pointer"))?;
-                (c < npag).then_some(c).ok_or_else(|| broken("cell offset"))
-            };
-            match kind {
-                INT_TAB => {
-                    let right = u32_be(&p, base + 8).ok_or_else(|| broken("page"))?;
-                    stack.push(Step::Page(right, prof + 1));
-                    for i in (0..ncells).rev() {
-                        let c = cell_list(i)?;
-                        stack.push(Step::Page(
-                            u32_be(&p, c).ok_or_else(|| broken("cell"))?,
-                            prof + 1,
-                        ));
-                    }
-                }
-                INT_IDX => {
-                    // left subtree, the key of the cell, the next left subtree, ..., the right-most child
-                    let destra = u32_be(&p, base + 8).ok_or_else(|| broken("page"))?;
-                    stack.push(Step::Page(destra, prof + 1));
-                    for i in (0..ncells).rev() {
-                        let c = cell_list(i)?;
-                        let mut v = Vec::new();
-                        self.cell(&p, c + 4, true, want, &mut q, &mut v)?;
-                        stack.push(Step::Row(v));
-                        stack.push(Step::Page(
-                            u32_be(&p, c).ok_or_else(|| broken("cell"))?,
-                            prof + 1,
-                        ));
-                    }
-                }
-                LEAF_TAB | LEAF_IDX => {
-                    for i in 0..ncells {
-                        let c = cell_list(i)?;
-                        let rowid = self.cell(&p, c, kind == LEAF_IDX, want, &mut q, &mut row)?;
-                        if !f(rowid, &mut row)? {
-                            return Ok(());
-                        }
-                    }
-                }
-                _ => return Err(broken("page type")),
-            }
-        }
-        Ok(())
-    }
-
     /// A cell: payload (with its overflow chain) decoded into values; `indice`: a cell of an index tree (no rowid, other payload limit), `c` at its payload size.
     /// The values go to `out` (`voglio` as in `scorri_con`), the rowid is returned; `q` is the page buffer of the overflow chain.
     fn cell(
@@ -424,6 +357,12 @@ pub struct Sqlite {
     pagine: u64,
     tables: Vec<Table>,
     limits: Limits,
+    /// Leave out a damaged page (with what hangs from it) or record and count it, instead of stopping the walk (`walk_with`); off by default.
+    pub tolerant: bool,
+    /// Pages and records left out since the last `take_skips`.
+    skips: (usize, usize),
+    /// (table, pages, records) left out in `tolerant` mode, one entry per table (`note_skips`).
+    pub left_out: Vec<(String, usize, usize)>,
 }
 
 /// Reads `n` bytes at `off` (an error when the file is shorter).
