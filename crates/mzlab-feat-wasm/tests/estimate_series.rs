@@ -1,4 +1,4 @@
-//! `stima_json` (behind the export `estimate_series`) reports the way and the memory that `slabs::stima` gives for the same series, and the page's budget
+//! `estimate_json` (behind the export `estimate_series`) reports the way and the memory that `slabs::stima` gives for the same series, and the page's budget
 //! decides between memory, slabs and refusal. The files are synthetic `.mzfeatf` of a few features each.
 #![cfg(feature = "detect")]
 
@@ -6,7 +6,7 @@ use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{rows_of, stima};
 use mzlab_feat::store::{write_file, Origin};
 use mzlab_feat::table::FileFeatures;
-use mzlab_feat_wasm::estimate::stima_json;
+use mzlab_feat_wasm::estimate::estimate_json;
 
 fn file(rows: usize) -> Vec<u8> {
     let mut f = FileFeatures {
@@ -54,7 +54,7 @@ fn the_report_is_the_estimate_of_the_slabs_module() {
     let rows = rows_of(&mut series).unwrap();
     assert_eq!(rows, [300, 200, 250]);
     let want = stima(&rows, &r, 192 << 20);
-    let got = stima_json(&mut series, &r, 192.0).unwrap();
+    let got = estimate_json(&mut series, &r, 192.0).unwrap();
     assert_eq!(
         got,
         format!(
@@ -69,6 +69,6 @@ fn the_report_is_the_estimate_of_the_slabs_module() {
 #[test]
 fn a_budget_that_holds_nothing_says_refused() {
     let mut series = vec![file(300), file(200)];
-    let got = stima_json(&mut series, &Recipe::default(), 0.001).unwrap();
+    let got = estimate_json(&mut series, &Recipe::default(), 0.001).unwrap();
     assert!(got.contains("\"refused\""), "{got}");
 }

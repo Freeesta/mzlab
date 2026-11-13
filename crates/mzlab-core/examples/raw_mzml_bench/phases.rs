@@ -256,7 +256,7 @@ pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> V
         indexed: indicizzato,
         su_file,
     };
-    let varianti = [
+    let variants = [
         v("xml-solo", 0, true, false, false),
         v("livello0", 0, false, false, false),
         v("livello1", 1, false, false, false),
@@ -268,7 +268,7 @@ pub fn phases(src: &Source, giri: usize, h: &Header, tmp: &std::path::Path) -> V
     let mut rows = Vec::new();
     let mut l = src.apri();
     let mut mediane: Vec<Median> = Vec::new();
-    for var in varianti {
+    for var in variants {
         let (row, m) = measure_variant(src, &mut *l, giri, h, tmp, var);
         rows.push(row);
         mediane.push(m);

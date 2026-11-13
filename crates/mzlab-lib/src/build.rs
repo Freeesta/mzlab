@@ -21,6 +21,8 @@ mod record;
 use record::{quantise_into, record_into};
 
 const S_REC: usize = 0;
+/// Largest record stream (bytes) the sorted pass keeps in memory.
+const REC_IN_MEMORY: u64 = 48 << 20;
 const S_META: usize = 1;
 const S_TABLE: usize = 2;
 const BUCKETS: usize = 128;
@@ -185,13 +187,21 @@ impl<T: Scratch> Builder<T> {
         let mut n_peaks = 0u64;
         let (mut pos_n, mut neg_n) = (0u32, 0u32);
 
+        // the records of a library that fits stay in memory for the sorted pass: one scratch read per record is a JavaScript call each in the browser
+        let recs = self.store.load_stream(S_REC, REC_IN_MEMORY)?;
         for (i, k) in keys.iter().enumerate() {
             let i = i as u32;
             buf.clear();
             buf.try_reserve(k.len as usize)
                 .map_err(|_| Error::memory_budget())?;
             buf.resize(k.len as usize, 0);
-            self.store.read_at(S_REC, k.off as u64, &mut buf)?;
+            match &recs {
+                Some(all) => buf.copy_from_slice(
+                    all.get(k.off as usize..k.off as usize + k.len as usize)
+                        .ok_or_else(|| Error::corrupt("scratch"))?,
+                ),
+                None => self.store.read_at(S_REC, k.off as u64, &mut buf)?,
+            }
             // record: prec f64 | pol | licence | flags u16 | orig u32 | rt f32 | ri f32 | inchikey14 u64 | n u16 | n x (mz u32, it u16) | 10 x (varint len, bytes)
             let n_pk = le_u16(&buf, 32) as usize;
             let peaks_at = 34;

@@ -5,7 +5,7 @@ use super::tests::ion;
 use super::*;
 
 /// Fragments of a drug-sized root, as sub-formulas: the targets of the target-decoy tests (the decoys are the same m/z moved by +0.02 Da).
-const FRAMMENTI: [&str; 16] = [
+const FRAGMENTS: [&str; 16] = [
     "C17H20N3O4",
     "C16H18N3O4",
     "C15H18N3O3",
@@ -34,7 +34,7 @@ fn noise(i: usize) -> f64 {
 fn mixed(shift: f64) -> (usize, usize) {
     let mz = |i: usize, f: &str| ion(f) * (1.0 + (-2.5 + noise(i)) * 1e-6);
     let mut peaks: Vec<(f64, f64)> = vec![];
-    for (i, f) in FRAMMENTI.iter().enumerate() {
+    for (i, f) in FRAGMENTS.iter().enumerate() {
         peaks.push((mz(i, f), 100.0 - i as f64 * 5.0));
         peaks.push((mz(i, f) + shift, 97.0 - i as f64 * 5.0));
     }
@@ -48,9 +48,9 @@ fn mixed(shift: f64) -> (usize, usize) {
             .iter()
             .any(|n| (n.mz - m).abs() < 1e-4 && n.formula.is_some())
     };
-    let bersagli = peaks.iter().step_by(2).filter(|p| found(p)).count();
+    let targets = peaks.iter().step_by(2).filter(|p| found(p)).count();
     let decoys = peaks.iter().skip(1).step_by(2).filter(|p| found(p)).count();
-    (bersagli, decoys)
+    (targets, decoys)
 }
 
 /// The co-isolated infusion (a root whose MS2 holds a strong fragment A (C4H7N2) and an ion P (C5H6N3O) that is isolated for an MS3, where A appears
@@ -133,14 +133,14 @@ fn decoys_mixed_with_the_fragments_leave_most_of_them_without_a_formula() {
     // measured on a drug-sized root: 10 ppm alone lets 28 of the 80 decoys (shifts of 0.02-0.11 Da) hold a candidate; with the recalibration 18 do, and the 16 targets all keep theirs
     let mut decoys = 0;
     for d in [0.02, 0.03, 0.05, 0.07, 0.11] {
-        let (bersagli, e) = mixed(d);
-        assert_eq!(bersagli, 16, "targets at {d}");
+        let (targets, e) = mixed(d);
+        assert_eq!(targets, 16, "targets at {d}");
         decoys += e;
     }
     assert!((10..=20).contains(&decoys), "{decoys} of 80 decoys");
 }
 
-/// Sub-formulas of a sulfur-bearing root (C22H31N6O7S, m/z of the ion) that are even-electron ions: a denser lattice than `FRAMMENTI`.
+/// Sub-formulas of a sulfur-bearing root (C22H31N6O7S, m/z of the ion) that are even-electron ions: a denser lattice than `FRAGMENTS`.
 fn targets_s(n: usize) -> Vec<String> {
     let mut v = vec![];
     for c in 4..=22 {
@@ -214,12 +214,12 @@ fn decoys_among_the_targets_of_a_dense_lattice_are_fewer_with_the_recalibration_
     // a root of m/z ~490 with sulfur: at 10 ppm more than half of the decoys fit a sub-formula (the decoys of 0.03-0.04 Da are near the
     // CH4/O swap, 0.0364 Da, and fit exactly); the window read from the densest 40 % of the values and floored at 2 ppm leaves 92 of 176
     // (108 with the floor at 3 ppm and the quartile), and every target keeps its formula
-    let (mut bersagli, mut decoys) = (0, 0);
+    let (mut targets, mut decoys) = (0, 0);
     for d in [0.02, 0.03, 0.04, 0.05] {
         let (b, e) = mixed_s(44, d);
-        bersagli += b;
+        targets += b;
         decoys += e;
     }
-    assert!(bersagli >= 175, "{bersagli} of 176 targets");
+    assert!(targets >= 175, "{targets} of 176 targets");
     assert!(decoys <= 95, "{decoys} of 176 decoys");
 }

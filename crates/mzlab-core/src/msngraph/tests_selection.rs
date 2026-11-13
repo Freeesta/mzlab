@@ -4,7 +4,7 @@ use super::tests::ion;
 use super::*;
 
 /// Fragments of a drug-sized root, as sub-formulas: the targets of the target-decoy tests (the decoys are the same m/z moved by +0.02 Da).
-const FRAMMENTI: [&str; 16] = [
+const FRAGMENTS: [&str; 16] = [
     "C17H20N3O4",
     "C16H18N3O4",
     "C15H18N3O3",
@@ -30,7 +30,7 @@ fn noise(i: usize) -> f64 {
 
 /// (nodes with a candidate, nodes with one chosen formula) of the graph of one MS2 whose fragments are moved by `spostamento` Da.
 fn counts(shift: f64) -> (usize, usize) {
-    let peaks: Vec<(f64, f64)> = FRAMMENTI
+    let peaks: Vec<(f64, f64)> = FRAGMENTS
         .iter()
         .enumerate()
         .map(|(i, f)| {
@@ -46,10 +46,10 @@ fn counts(shift: f64) -> (usize, usize) {
     };
     let g = graph_from_peaks((ion("C17H22N3O5"), 1), ("CID", 30.0), &peaks, &o);
     let con = |n: &&GNode| n.formula.as_ref().is_some_and(|f| !f.candidates.is_empty());
-    let unici = |n: &&GNode| n.formula.as_ref().is_some_and(|f| f.choice.is_some());
+    let unique = |n: &&GNode| n.formula.as_ref().is_some_and(|f| f.choice.is_some());
     (
         g.nodi.iter().filter(con).count(),
-        g.nodi.iter().filter(unici).count(),
+        g.nodi.iter().filter(unique).count(),
     )
 }
 
@@ -62,8 +62,8 @@ fn an_even_electron_candidate_is_preferred_to_a_radical_one_without_evidence() {
 #[test]
 fn decoys_do_not_gain_a_choice_from_the_preference() {
     // a decoy that matches a sub-formula is kept (the window is 10 ppm) but a radical candidate never adds a second one
-    let (con, unici) = counts(0.02);
-    assert!(con < 17 && con == unici, "{con} {unici}");
+    let (con, unique) = counts(0.02);
+    assert!(con < 17 && con == unique, "{con} {unique}");
 }
 
 /// Decoys among the targets (the same spectrum): how many of the 16 decoys, the fragments moved by `spostamento` Da, get a candidate, and how
@@ -71,7 +71,7 @@ fn decoys_do_not_gain_a_choice_from_the_preference() {
 fn mixed(shift: f64) -> (usize, usize) {
     let mz = |i: usize, f: &str| ion(f) * (1.0 + (-2.5 + noise(i)) * 1e-6);
     let mut peaks: Vec<(f64, f64)> = vec![];
-    for (i, f) in FRAMMENTI.iter().enumerate() {
+    for (i, f) in FRAGMENTS.iter().enumerate() {
         peaks.push((mz(i, f), 100.0 - i as f64 * 5.0));
         peaks.push((mz(i, f) + shift, 97.0 - i as f64 * 5.0));
     }
@@ -85,17 +85,17 @@ fn mixed(shift: f64) -> (usize, usize) {
             .iter()
             .any(|n| (n.mz - m).abs() < 1e-4 && n.formula.is_some())
     };
-    let bersagli = peaks.iter().step_by(2).filter(|p| found(p)).count();
+    let targets = peaks.iter().step_by(2).filter(|p| found(p)).count();
     let decoys = peaks.iter().skip(1).step_by(2).filter(|p| found(p)).count();
-    (bersagli, decoys)
+    (targets, decoys)
 }
 
 #[test]
 fn the_systematic_error_is_taken_out_and_decoys_among_targets_mostly_leave() {
     let mut decoys = 0;
     for d in [0.02, 0.03, 0.05, 0.07, 0.11] {
-        let (bersagli, e) = mixed(d);
-        assert_eq!(bersagli, 16, "targets at {d}");
+        let (targets, e) = mixed(d);
+        assert_eq!(targets, 16, "targets at {d}");
         decoys += e;
     }
     // 10 ppm alone lets 28 of the 80 decoys keep a candidate; around the systematic error, with the residue read from the scatter, 18

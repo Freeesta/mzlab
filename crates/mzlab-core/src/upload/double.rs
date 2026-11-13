@@ -19,7 +19,7 @@ pub fn index_reader_twice(
     out_cen: &mut dyn crate::mzidx::Output,
     budget: usize,
     spill: Option<&mut dyn crate::mzidx_spill::Spill>,
-    fase: &mut dyn FnMut(u32),
+    phase: &mut dyn FnMut(u32),
 ) -> Result<((crate::mzidx::Stats, String), (crate::mzidx::Stats, String))> {
     use crate::mzidx_spill::{Meta, Spill};
     let meta = budget / 2;
@@ -33,7 +33,7 @@ pub fn index_reader_twice(
     let none = String::new;
     let p = table(t, l.simple(), c, none(), none(), none())?;
     let mut p_cen = table(t_cen, l.simple(), c, none(), none(), none())?;
-    fase(3);
+    phase(3);
     let n = l.index(c)?.len();
     // as `index_reader_with`: the members are asked for once, where the first source is written; the second index has the same
     let (mut sha256, mut src) = (String::new(), String::new());

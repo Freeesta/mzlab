@@ -44,9 +44,9 @@ fn job(iter: u64) -> f64 {
     x
 }
 
-/// The pool of `mzmlwrite/pool.rs` reduced to its channels: a producer sends `compiti` tasks of about `us` microseconds to `t` workers that share the receiver
+/// The pool of `mzmlwrite/pool.rs` reduced to its channels: a producer sends `tasks` tasks of about `us` microseconds to `t` workers that share the receiver
 /// behind a mutex and answer on a second channel; `blocco` tasks travel together. Returns the wall seconds.
-fn canale(t: usize, compiti: usize, us: f64, block: usize, ns_iter: f64) -> f64 {
+fn canale(t: usize, tasks: usize, us: f64, block: usize, ns_iter: f64) -> f64 {
     let iter = (us * 1e3 / ns_iter) as u64;
     let (tx, rx) = mpsc::channel::<Vec<usize>>();
     let (txr, rxr) = mpsc::channel::<Vec<usize>>();
@@ -71,9 +71,9 @@ fn canale(t: usize, compiti: usize, us: f64, block: usize, ns_iter: f64) -> f64 
         let mut spediti = 0;
         let mut finished = 0;
         let mut k = 0;
-        while finished < compiti {
-            while spediti < compiti && spediti - finished < 4 * t * block {
-                let n = block.min(compiti - spediti);
+        while finished < tasks {
+            while spediti < tasks && spediti - finished < 4 * t * block {
+                let n = block.min(tasks - spediti);
                 tx.send((k..k + n).collect()).expect("send");
                 k += n;
                 spediti += n;
@@ -124,12 +124,12 @@ pub fn all(thread: &[usize]) -> Value {
     for us in [10.0, 50.0, 200.0] {
         for &t in thread {
             for block in [1usize, 32] {
-                let compiti = 20_000;
-                let s = canale(t, compiti, us, block, ns_iter);
-                let ideale = compiti as f64 * us * 1e-6 / t as f64;
+                let tasks = 20_000;
+                let s = canale(t, tasks, us, block, ns_iter);
+                let ideale = tasks as f64 * us * 1e-6 / t as f64;
                 channels.push(json!({
                     "compito_us": us, "thread": t, "compiti_per_messaggio": block, "secondi": round_to(s), "ideale_s": round_to(ideale),
-                    "sovraccosto_us_per_compito": round_to((s - ideale) / compiti as f64 * 1e6),
+                    "sovraccosto_us_per_compito": round_to((s - ideale) / tasks as f64 * 1e6),
                 }));
             }
         }

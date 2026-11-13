@@ -135,12 +135,12 @@ fn parity_decisions_non_inferior_and_superior() {
         let lo = c["ic_basso"].as_f64().expect("lo");
         let hi = c["ic_alto"].as_f64().expect("hi");
         let dir_up = c["direzione_alto"].as_bool().expect("dir");
-        let margine = c["margine"].as_f64().expect("margine");
+        let margin = c["margine"].as_f64().expect("margine");
         let rej = c["rifiutata"].as_bool().expect("rej");
         let want_ni = c["non_inferiore"].as_bool().expect("ni");
         let want_sup = c["superiore"].as_bool().expect("sup");
 
-        let got_ni = non_inferiore(lo, hi, dir_up, margine);
+        let got_ni = non_inferiore(lo, hi, dir_up, margin);
         let got_sup = superiore(lo, hi, dir_up, rej);
         assert_eq!(got_ni, want_ni, "decision case {i} non_inferiore");
         assert_eq!(got_sup, want_sup, "decision case {i} superiore");

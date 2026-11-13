@@ -9,7 +9,7 @@ use mzlab_feat::slabs::{rows_of, stima, Stored, Via};
 
 /// What aligning the stored series `src` asks for under `budget_mb` (0/NaN = the default): `{"mb", "via", "files", "rows"}` with `via` = `memory`, `slabs` or
 /// `refused` (the slabs do not fit either: what `align_and_fill_stored` refuses with `error.memoryBudget`).
-pub fn stima_json(src: &mut dyn Stored, r: &Recipe, budget_mb: f64) -> Result<String> {
+pub fn estimate_json(src: &mut dyn Stored, r: &Recipe, budget_mb: f64) -> Result<String> {
     let rows = rows_of(src)?;
     let cap = MemBudget::from_request(budget_mb).cap();
     let s = stima(&rows, r, cap);
@@ -62,7 +62,7 @@ mod export {
         budget_mb: f64,
     ) -> std::result::Result<String, JsValue> {
         let r = crate::run::recipe_from_json(recipe).map_err(crate::js_err)?;
-        super::stima_json(&mut crate::JsStored { files }, &r, budget_mb).map_err(crate::js_err)
+        super::estimate_json(&mut crate::JsStored { files }, &r, budget_mb).map_err(crate::js_err)
     }
 
     /// The memory detecting one index (`read(0, offset, length)`, `size` bytes) asks for under `budget_mb`, with the recipe of `recipe_for`: JSON `{"mb","via"}`.

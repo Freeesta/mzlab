@@ -32,9 +32,9 @@ fn same_prints_in_another_thread() {
         assert!(job.membri.iter().all(|m| m.sha1.as_deref() == Some("")));
         let avute = upload::with_parallel_prints(
             move || Ok(file_set(n)),
-            |attendi| {
-                let x = attendi()?;
-                assert!(attendi().is_err(), "the fingerprints are given once");
+            |wait| {
+                let x = wait()?;
+                assert!(wait().is_err(), "the fingerprints are given once");
                 Ok(x)
             },
         )

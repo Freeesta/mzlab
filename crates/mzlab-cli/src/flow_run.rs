@@ -291,8 +291,8 @@ pub(crate) fn memory_advice(
         return String::new();
     }
     let p = |k: &str| get(k).and_then(|v| v.parse::<usize>().ok());
-    let fase = get("fase");
-    match (fase.as_deref(), p("stima_mb"), p("budget_mb")) {
+    let phase = get("fase");
+    match (phase.as_deref(), p("stima_mb"), p("budget_mb")) {
         (Some("indexPeaks"), Some(est), Some(cap)) => format!(
             "\n    the densest 1-Da m/z range of this file holds at least {est} MB of peaks and the index builder holds {} of one range \
              (twice its budget): try --set {instance}.budget={} (bytes; the index is the same at any budget)",
