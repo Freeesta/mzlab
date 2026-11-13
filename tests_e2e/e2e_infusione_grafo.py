@@ -15,6 +15,8 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_infusione_grafo.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 FX = json.loads((Path(__file__).parent / "fixtures" / "msngrafo_esempio.json").read_text())
+MF = ROOT / "site" / "static" / "wasm-feat" / "manifest.json"
+MOLKIT = MF.exists() and "molkit" in json.loads(MF.read_text())
 SX = json.loads((Path(__file__).parent / "fixtures" / "msngrafo_strutture.json").read_text())
 D = synth("infgrafo")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
@@ -134,8 +136,8 @@ try:
             pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=90000)
             wait_for_js(pg, "TPDraw.smiles().then(s => s.length > 5)", 30000)
             # the cut is coloured too (evidence colours, hilite/1): one bond in the colour of the cuts, listed in the legend with its label
-            pg.wait_for_function("(() => { const c = document.querySelector('#ev-card'); return c && !c.hidden && document.querySelectorAll('#ev-legend li').length === 1; })()", timeout=30000)
-            print("DBG", pg.evaluate("[window.HR, typeof BANCO !== 'undefined' && BANCO.on()]"), pg.inner_text("#ev-legend"), pg.inner_text("#ev-status"))
+            if MOLKIT:                                                   # without the molkit .wasm (a site built by verifica.py) hilite/1 cannot run
+                pg.wait_for_function("(() => { const c = document.querySelector('#ev-card'); return c && !c.hidden && document.querySelectorAll('#ev-legend li').length === 1; })()", timeout=30000)
             assert pg.evaluate("TPDraw.mark([[1, 2]])") == 1 and pg.evaluate("TPDraw.mark([[0, 9]])") == 0
             pg.evaluate("setView('data')"); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=15000)
         step("a node with a SMILES lists the cut candidates with ppm; one opens Draw and marks the bond", cuts)
