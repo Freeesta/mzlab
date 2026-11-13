@@ -17,7 +17,8 @@ usage: mzlab-cli channels FILE [--sample ID] [--channel ID [--rt T0[,T1]] [--n N
 
   FILE        an mzML, or any single file the app reads (.raw, mzXML, ...); SRM, SIC, UV and analog channels only for an mzML
   --sample ID the sample of a file with several (.wiff), by its id (default: the first; the others are named on the standard error)
-  --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc
+  --channel ID the trace of a UV or analog channel (uv:twc, uv:<nm>±<bw>, an:<i>) instead of the list; with --rt (minutes) the UV spectrum of uv:twc;
+              uv:auto prints the XWC band proposed from the DAD matrix ({nm, bw, rt, n}), in the --rt window when given
   --n N       points at most per extreme of an analog trace (default 2000)
   --out PATH  write there instead of the standard output
 

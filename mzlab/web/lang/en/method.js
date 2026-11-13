@@ -50,7 +50,7 @@ I18N.add("en", {
   "method.runTime": "Run time",
   "method.oven": "Oven temperature",
   "method.lc.title": "Chromatographic method (LC)",
-  "method.pda.title": "PDA detector (UV)",
+  "method.pda.title": "DAD detector (UV)",
   "method.pda.range": "Wavelength range",
   "method.pda.value": "{start}-{stop} nm (step {step} nm)",
   "method.none": "First open at least one file.",

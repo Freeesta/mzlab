@@ -19,14 +19,20 @@ export async function linkOf(/** @type {string} */ smiles, /** @type {string} */
 /** opens `url` in a new tab cut off from this page (no opener, no referrer) */
 export function openOut(/** @type {string} */ url) { window.open(url, "_blank", "noopener,noreferrer"); }
 
-/** the menu rows; the copy starts inside the click, before the new tab takes the focus */
+/**
+ * The menu rows: a «PubChem» submenu that starts with the exact structure (then substructure and similar, in the engine's order) and an «Other sites» submenu
+ * (ChEBI when Indigo gives the InChI, BioTransformer). The copy starts inside the click, before the new tab takes the focus.
+ */
 export async function linkRows(/** @type {string} */ smiles, /** @type {boolean} */ part, /** @type {() => Promise<string>} */ inchi) {
   let i = "";
   try { i = await inchi(); } catch (_) { /* no InChI: no ChEBI row */ }
   const r = await linkOf(smiles, i, part);
   if (!r) return [];
-  return r.links.map(l => /** @type {Row} */ ({
+  const rows = r.links.map(l => /** @type {Row} */ ({
     id: "link-" + l.id, text: I18N.t(`draw.link.${l.id}`), title: I18N.t("draw.link.title", { host: new URL(l.url).host }),
     run: () => { if (l.copy) copyText(l.copy, `draw.link.copied.${l.id}`); openOut(l.url); }
   }));
+  const pub = rows.filter(x => x.id.startsWith("link-pubchem-")).sort((a, b) => +(b.id === "link-pubchem-exact") - +(a.id === "link-pubchem-exact"));
+  return [{ id: "link-pubchem", text: I18N.t("draw.link.pubchem"), title: I18N.t("draw.link.pubchem.title"), sub: pub },
+    { id: "link-other", text: I18N.t("draw.link.other"), title: I18N.t("draw.link.other.title"), sub: rows.filter(x => !x.id.startsWith("link-pubchem-")) }];
 }

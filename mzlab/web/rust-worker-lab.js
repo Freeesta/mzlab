@@ -42,6 +42,7 @@ export function createLabOps({ engine, ARCH, fileOf, lrOpen, slotOf, readerFor, 
       case "lr_pda_map": { const o = await open(m); return { info: e.item_pda_map(o.slot, o.f.size, o.rd) }; }
       case "lr_pda_wavelength": { const o = await open(m); return { info: e.item_pda_wavelength(o.slot, o.f.size, o.rd, m.nm0, m.nm1) }; }
       case "lr_pda_spectrum": { const o = await open(m); return { info: e.item_pda_spectrum(o.slot, o.f.size, o.rd, m.rt0, m.rt1) }; }
+      case "lr_pda_propose": { const o = await open(m); return { info: e.item_pda_propose(o.slot, o.f.size, o.rd, m.rt0, m.rt1) }; }
       case "lr_delay": { const o = await open(m); return { info: e.item_delay(o.slot, m.name, o.f.size, o.rd) }; }
     }
     return undefined;

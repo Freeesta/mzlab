@@ -17,6 +17,9 @@ try:
         rects = lambda: pg.evaluate("stackOrder().slice(-3).map(q => [q.id, q.x, q.y, q.w, q.h])")
         def grip_box(i):
             return pg.evaluate("(i) => { const q = stackOrder().at(i - 3); q.el.dispatchEvent(new MouseEvent('mouseover')); const b = q.el.querySelector('.aff-grip').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2, b.width, b.height]; }", i)
+        def grip_click(i):
+            # the element itself, not a point read before: after an undo the panels still move, and Playwright clicks once the grip is in view and stable
+            pg.evaluate_handle("(i) => { const q = stackOrder().at(i - 3); q.el.dispatchEvent(new MouseEvent('mouseover')); return q.el.querySelector('.aff-grip'); }", i).as_element().click()
         def drag_to_right_of(src, dst):
             b = grip_box(src)
             t = pg.evaluate("(i) => { const r = stackOrder().at(i - 3).el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }", dst)
@@ -49,14 +52,14 @@ try:
             assert pg.evaluate("document.querySelector('.aff-prev') === null")
         step("Esc cancels the drag", esc)
         def menu():
-            b = grip_box(2); pg.mouse.click(b[0], b[1]); pg.wait_for_timeout(100)
+            grip_click(2); wait_for_js(pg, "!!document.querySelector('.aff-menu')")
             assert pg.evaluate("!!document.querySelector('.aff-menu [role=menuitem]')")
             num = pg.evaluate("stackOrder().at(-2).num")      # the row of the previous panel: «N · title» in the part «Place beside»
             pg.click(f".aff-menu button:text-matches('^{num} · ')"); pg.wait_for_timeout(300)
             assert [len(x) for x in rows()] == [1, 2], rows()
         step("menu 'Place beside' does it without dragging", menu)
         def equal_full():
-            b = grip_box(2); pg.mouse.click(b[0], b[1]); pg.click(".aff-menu button >> nth=-3"); pg.wait_for_timeout(300)      # the menu ends with Full width, Equal widths, Reset
+            grip_click(2); pg.click(".aff-menu button >> nth=-3"); pg.wait_for_timeout(300)      # the menu ends with Full width, Equal widths, Reset
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
         step("menu 'Full width'", equal_full)
         def keys():
@@ -95,7 +98,7 @@ try:
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
             pg.keyboard.press("Control+z"); wait_shape("2,1"); assert [len(x) for x in rows()] == [2, 1], rows()           # the reset can be undone
             # the grip menu also resets the layout
-            g = grip_box(2); pg.mouse.click(g[0], g[1]); pg.click(".aff-menu button >> nth=-1"); wait_shape("1,1,1")
+            grip_click(2); pg.click(".aff-menu button >> nth=-1"); wait_shape("1,1,1")
         step("right-click menu: Move up / Move down in one row; the other arrangement actions stay in the registry and the grip menu", disp_menu)
         def divider():
             pg.evaluate("(() => { const s = stackOrder().slice(-3); const a = s[1], b = s[2]; AFFIANCA.fai(b, {k:'dx', t:a.id}, false); })()"); pg.wait_for_timeout(300)

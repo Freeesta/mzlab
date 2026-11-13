@@ -157,12 +157,16 @@ try:
             assert not left, f"still open after a tap outside them: {left}"
             # a tap that comes before any timer of the page has run (a busy page) closes them too; the touch that opened one does not close it
             TAP = "document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }))"
-            for sel, opener in (("#colpop", "colorFile(E.files[0], { clientX: 300, clientY: 200 })"), ("#fpop", "fileMenu(document.querySelector('.pnl .hd button'))")):
-                quick = pg.evaluate(f"(() => {{ {opener}; {TAP}; return !!document.querySelector({sel!r}); }})()")
-                kept = pg.evaluate(f"(() => {{ document.body.addEventListener('pointerdown', () => {opener}, {{ once: true }}); {TAP}; return !!document.querySelector({sel!r}); }})()")
-                pg.evaluate(f"document.querySelector({sel!r})?.remove()")
-                assert not quick, f"{sel}: a tap right after the opening leaves it open"
-                assert kept, f"{sel}: the touch that opened it closed it"
+            bad = []; SP = "E.panels.find(q => q.type === 'spec' && q.el.querySelector('[data-a=par]'))"
+            for sel, opener in (("#colpop", "colorFile(E.files[0], { clientX: 300, clientY: 200 })"), ("#fpop", "fileMenu(document.querySelector('.pnl .hd button'))"),
+                                ("#uipset", "uipOpen(document.getElementById('np-set'))"), (".pnl > .sp-pop", f"(q => specParams(q, q.el.querySelector('[data-a=par]')))({SP})"),
+                                (".aff-menu", "(q => affOpenMenu(q, q._grip))(E.panels.find(q => q._grip))")):
+                shut = f"affCloseMenu(false); document.querySelector({sel!r})?.remove()"          # the menu of «side by side» keeps a reference: closed by its own function
+                quick = pg.evaluate(f"(() => {{ {opener}; {TAP}; const o = !!document.querySelector({sel!r}); {shut}; return o; }})()")
+                kept = pg.evaluate(f"(() => {{ document.body.addEventListener('pointerdown', () => {opener}, {{ once: true }}); {TAP}; const o = !!document.querySelector({sel!r}); {shut}; return o; }})()")
+                if quick: bad.append(f"{sel}: a tap right after the opening leaves it open")
+                if not kept: bad.append(f"{sel}: the touch that opened it closed it")
+            assert not bad, bad
             touch(bb["x"] + bb["width"] - 4, bb["y"] + bb["height"] * 0.5, 800); wait_for_js(pg, ctx, 5000)       # opened at the right edge, the menu stays in the window
             right = pg.evaluate("document.getElementById('ctx').getBoundingClientRect().right - innerWidth")
             assert right <= 0, f"the chart menu sticks out of the window by {right} px"

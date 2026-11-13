@@ -7,6 +7,7 @@
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
 mod agilent_synth;
+mod mzidx_sections;
 mod readers_routes;
 
 use std::io::Cursor;
@@ -15,6 +16,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use agilent_synth::{encode, sample};
+use mzidx_sections::first_difference;
 use mzlab_core::idxread::{Index, Scan, READER_FLAG};
 use mzlab_core::json::{self, Value};
 use mzlab_core::mzml::ChromKind;
@@ -129,7 +131,8 @@ fn compare(label: &str, a: &[u8], b: &[u8], sha256: &str, n_members: usize, id: 
     assert_eq!(u64_at(b, 32) as usize, scans_off, "{label}: sections");
     assert!(
         a[64..scans_off] == b[64..scans_off],
-        "{label}: sections differ"
+        "{label}: sections differ: {}",
+        first_difference(a, b, scans_off)
     );
     // rows: all but the first two columns
     let (ra, rb) = (json_at(a, 32, 40), json_at(b, 32, 40));
@@ -176,21 +179,39 @@ fn same_sources(label: &str, mzml: Vec<u8>, a: &[u8], l: &mut dyn readers::Reade
     }
     let mut m = Mzml::new(by_offset, size);
     let mut tr = MzmlTraces::new(&mut m, rows.last().map_or(0, |s| s.end));
-    let written: Vec<ChromatogramEntry> = src
-        .chromatograms()
-        .unwrap()
-        .into_iter()
-        .filter(|v| {
-            let t = src.chromatogram(&v.id).unwrap();
-            !t.time.is_empty()
-                && !matches!(
-                    t.kind,
-                    ChromKind::Pda | ChromKind::Pressure | ChromKind::Analog | ChromKind::Other
-                )
-        })
-        .collect();
-    let listed = tr.chromatograms().unwrap();
+    // the mass-spectrometer traces are compared with their kind; the optical, pressure and device ones (whose kind the mzML may spell otherwise) by id
+    // and points, on both sides
+    let ms = |k: ChromKind| {
+        !matches!(
+            k,
+            ChromKind::Pda | ChromKind::Pressure | ChromKind::Analog | ChromKind::Other
+        )
+    };
+    let (mut written, mut other): (Vec<ChromatogramEntry>, Vec<_>) = (Vec::new(), Vec::new());
+    for v in src.chromatograms().unwrap() {
+        let t = src.chromatogram(&v.id).unwrap();
+        match (t.time.is_empty(), ms(t.kind)) {
+            (true, _) => {}
+            (false, true) => written.push(v),
+            (false, false) => other.push(t),
+        }
+    }
+    let all = tr.chromatograms().unwrap();
+    let listed: Vec<_> = all.iter().filter(|x| ms(x.tipo)).collect();
     assert_eq!(listed.len(), written.len(), "{label}: chromatograms");
+    assert_eq!(
+        all.len(),
+        written.len() + other.len(),
+        "{label}: other traces"
+    );
+    for q in &other {
+        let p = tr.chromatogram(&q.id).unwrap();
+        assert!(
+            p.time == q.time && p.intensity == q.intensity,
+            "{label}: trace {}",
+            q.id
+        );
+    }
     for (x, y) in listed.iter().zip(&written) {
         assert_eq!((&x.id, x.tipo), (&y.id, y.tipo), "{label}");
         let (p, q) = (
@@ -276,6 +297,36 @@ fn d_set(dir: &Path) -> FileSet {
     }
 }
 
+/// The message of a sections mismatch names the array holding the first different byte: here one byte of the m/z of the first section.
+#[test]
+fn a_sections_mismatch_names_its_array() {
+    let (idx, peak) = encode(&sample());
+    let fs = FileSet {
+        membri: vec![
+            file("x.D/AcqData/MSScan.bin", idx),
+            file("x.D/AcqData/MSPeak.bin", peak),
+        ],
+    };
+    let mut l = readers::apri(fs, &Limits::desktop()).unwrap();
+    let mzml = readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
+    let p = upload::prepare(&mut mzml.clone(), mzml.len() as u64, "x.mzML").unwrap();
+    let (a, _) = mzidx::build_mzml_to_vec(&p.table, &mzml, BIG).unwrap();
+    let scans_off = u64_at(&a, 32) as usize;
+    assert_eq!(first_difference(&a, &a, scans_off), "2 vs 2 sections");
+    let meta = json_at(&a, 16, 24);
+    let s0 = &meta.get("sections").unwrap().arr()[0];
+    let at = s0
+        .get("off")
+        .and_then(|o| o.get("mz"))
+        .and_then(Value::f64)
+        .unwrap() as usize
+        + 5;
+    let mut b = a.clone();
+    b[at] ^= 1;
+    let m = first_difference(&a, &b, scans_off);
+    assert!(m.ends_with("array mz at byte 5"), "{m}");
+}
+
 #[test]
 fn a_synthetic_d_gives_the_index_of_its_mzml() {
     let (idx, peak) = encode(&sample());
@@ -316,6 +367,29 @@ fn the_synthetic_wiff_pairs_give_the_index_of_their_mzml() {
         MANY.load(Ordering::Relaxed) > 0,
         "no index built in more than one pass"
     );
+}
+
+/// A full scan with a DAD (`tools/wiff_dad_mrm.py`, `dadscan`): the TWC is in the mzML with the points the reader gives.
+#[test]
+fn a_synthetic_wiff_with_a_dad_gives_the_index_of_its_mzml() {
+    let out = std::env::temp_dir().join(format!("mzlab_lettori_mzidx_dad_{}", std::process::id()));
+    let ok = Command::new("python3")
+        .arg(root().join("tools/wiff_dad_mrm.py"))
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
+    if ok.is_none() {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("SKIP read_mzidx.rs: python3 not available");
+        return;
+    }
+    let n = same_all("dadscan", &|| wiff_set(&out, "dadscan"));
+    let _ = std::fs::remove_dir_all(&out);
+    assert!(n > 0);
 }
 
 #[test]
@@ -370,4 +444,36 @@ fn the_real_files_give_the_index_of_their_mzml() {
     }
     eprintln!("read_mzidx.rs: {samples} real samples equal ({scans} scans)");
     assert!(samples > 0);
+}
+
+/// SIM ions with a DAD (`tools/wiff_dad_mrm.py`, `dadsim`): the index of the mzML gives each SIM ion the kind the reader gives it (a SIC, not an SRM
+/// transition), and the TWC with its points.
+#[test]
+fn a_synthetic_sim_wiff_gives_its_ions_the_kind_of_the_reader() {
+    let out = std::env::temp_dir().join(format!("mzlab_lettori_mzidx_sim_{}", std::process::id()));
+    let ok = Command::new("python3")
+        .arg(root().join("tools/wiff_dad_mrm.py"))
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
+    if ok.is_none() {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
+        eprintln!("SKIP read_mzidx.rs: python3 not available");
+        return;
+    }
+    // no scans to count: the check that ran is the one of the SIM traces
+    same_all("dadsim", &|| wiff_set(&out, "dadsim"));
+    let mut l = readers::apri(wiff_set(&out, "dadsim"), &Limits::desktop()).unwrap();
+    let sic = l
+        .chromatograms(0)
+        .unwrap()
+        .iter()
+        .filter(|v| v.tipo == ChromKind::Sic)
+        .count();
+    let _ = std::fs::remove_dir_all(&out);
+    assert_eq!(sic, 2, "the two SIM ions of dadsim");
 }

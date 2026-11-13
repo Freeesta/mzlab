@@ -49,18 +49,23 @@ function numberPanels() {
   st.forEach((/** @type {Pannello} */ q, /** @type {number} */ i) => { const n = q.el.querySelector(".pnum"); q.num = i + 1; n.textContent = i + 1; n.hidden = false; n.title = I18N.t("panel.num.title", { n: i + 1 }); });
   markPairs(st);
 }
-// a spectrum following a chromatogram: both share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hover or focus on one lights the other
+// a spectrum following a chromatogram: both share a coloured side bar and a «→ n» / «← n» title tag (not colour alone); hover or focus on one lights the other.
+// the spectrum's tag («⊘»: follows nothing) is the button of the follow menu; the MS2 tab follows by precursor
 function markPairs(/** @type {Pannello[]} */ st) {
-  let ord = 0; const idx = new Map();
+  let ord = 0; const idx = new Map(), tag = (/** @type {Pannello} */ a, /** @type {string} */ txt, /** @type {string} */ tip) => {
+    const fo = a.type === "spec" && (a.tab || E.tab) !== "ms2", t = document.createElement(fo ? "button" : "span"); t.className = fo ? "ppair fol" : "ppair"; t.textContent = txt; t.title = tip; t.setAttribute("aria-label", tip);
+    if (fo) { /** @type {HTMLButtonElement} */ (t).type = "button"; t.setAttribute("aria-haspopup", "menu"); t.onclick = (/** @type {MouseEvent} */ e) => followMenu(a, e); }
+    (a.el.querySelector(".pnum") || a.el.firstChild).after(t);
+  };
   E.panels.forEach((/** @type {Pannello} */ q) => { if (q.el) { delete q.el.dataset.pair; q.el.querySelectorAll(".ppair").forEach((/** @type {Element} */ x) => x.remove()); } });
   st.forEach((/** @type {Pannello} */ sp) => {
-    const src = sp.type === "spec" && sp.link ? st.find((/** @type {Pannello} */ q) => q.id === sp.link) : null; if (!src) return;
+    const src = sp.type === "spec" && sp.link ? st.find((/** @type {Pannello} */ q) => q.id === sp.link) : null;
+    if (!src) { if (sp.type === "spec" && (sp.tab || E.tab) !== "ms2") tag(sp, "\u2298", I18N.t("spec.follow.none.title")); return; }
     if (!idx.has(src)) idx.set(src, ++ord);
     const c = (idx.get(src) - 1) % 4 + 1;
-    /** @type {[Pannello, string, Pannello, string][]} */ ([[src, "→", sp, "panel.pair.to"], [sp, "←", src, "panel.pair.from"]]).forEach(([a, arrow, b, key]) => {
+    /** @type {[Pannello, string, Pannello, string][]} */ ([[src, "→", sp, "panel.pair.to"], [sp, "←", src, "spec.follow.aria"]]).forEach(([a, arrow, b, key]) => {
       a.el.dataset.pair = String(c);
-      const t = document.createElement("span"); t.className = "ppair"; t.textContent = `${arrow} ${b.num}`; t.title = I18N.t(key, { n: b.num }); t.setAttribute("aria-label", t.title);
-      (a.el.querySelector(".pnum") || a.el.firstChild).after(t);
+      tag(a, `${arrow} ${b.num}`, I18N.t(key, { n: b.num }));
       if (!(/** @type {Bag} */ (a.el))._pairBound) {
         /** @type {Bag} */ (a.el)._pairBound = true;
         const lit = (/** @type {boolean} */ on) => { const m = a._mate; if (m && m.el) m.el.classList.toggle("pair-hi", on); };
@@ -71,6 +76,12 @@ function markPairs(/** @type {Pannello[]} */ st) {
     });
   });
   paintScanOf();
+}
+function followMenu(/** @type {Pannello} */ p, /** @type {MouseEvent} */ e) {  // which chromatogram of the tab drives the spectrum, or none
+  e.stopPropagation(); const kb = !e.detail, back = () => { if (kb) /** @type {HTMLElement | null} */ (p.el && p.el.querySelector(".ppair.fol"))?.focus(); };  // the tag is rebuilt: focus back
+  const cands = E.panels.filter((/** @type {Pannello} */ q) => ["chrom", "xic", "mrm"].includes(q.type) && (q.tab || E.tab) === (p.tab || E.tab) && q.el);
+  menu(e, [...cands.map((/** @type {Pannello} */ q) => ({ label: (p.link === q.id ? "\u2713 " : "") + I18N.t("spec.follow.item", { n: q.num || "?", title: ptitle(q.title) }), fn: () => { spLinkFollow(p, q); back(); } })),
+    ...(cands.length ? ["-"] : []), { label: (p.link ? "" : "\u2713 ") + I18N.t("spec.follow.menu.none"), fn: () => { spLinkFreeze(p); uiSave(); back(); } }]);
 }
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
@@ -251,11 +262,13 @@ function cleanupOrphanPanels() {
   }
 }
 
+/** a chromatogram of the MS2 scans @param {Pannello | Bag} p */
+const ms2Chrom = p => p.type === "chrom" && (p.tab || E.tab) === ESP.ms2 && !/^(pda|press|reg|an:)/.test(p.kind);
 /** @param {string} type @param {Bag} o @param {Pannello} [after] */
 function addPanel(type, o, after) {
   // the panel is completed field by field below, by type: it only satisfies Pannello at the end
   const p = /** @type {Pannello} */ (/** @type {unknown} */ ({ id: E.seq++, type, anns: [], ints: [], ...o }));
-  if (!p.tab) { p.tab = type === "mrm" ? "mrm" : E.tab === "mrm" ? (tabFiles("full").length || !tabFiles("ms2").length ? "full" : "ms2") : E.tab; if (p.tab !== E.tab && window.setTab) window.setTab(p.tab, true, "new-panel"); }
+  if (!p.tab) { p.tab = type === "mrm" || (E.tab === "mrm" && /^(pda|press|an:)/.test(o.kind)) ? "mrm" : E.tab === "mrm" ? (tabFiles("full").length || !tabFiles("ms2").length ? "full" : "ms2") : E.tab; if (p.tab !== E.tab && window.setTab) window.setTab(p.tab, true, "new-panel"); }
   const lv0 = (E.files[o?.k ?? 0] || {}).lv || 1;
   if (type === "chrom") Object.assign(p, { prec: o.prec ?? null, ks: o.ks ?? null, ptol: o.ptol ?? null, kind: o.kind || "tic", sel: null, cur: null, smooth: o.smooth ?? true, zoom: o.zoom || null, title: ptNorm(o.title) || PT.chrom });
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.spec });
@@ -266,7 +279,7 @@ function addPanel(type, o, after) {
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
   if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", fondo: FONDO.migra(o), clipDraw: FONDO.clipOld(o) });
   if (type !== "spec" && type !== "map") {
-    p.pdaAlign = !!o.pdaAlign; p.pdaDelay = typeof o.pdaDelay === "number" ? o.pdaDelay : null; p.overlay = o.overlay === "grad" || o.overlay === "press" ? o.overlay : null; p.gdelay = +o.gdelay || 0;  // gradient over the traces (gradiente.js) and its delay at the column, in min
+    p.pdaAlign = !!o.pdaAlign; p.pdaDelay = typeof o.pdaDelay === "number" ? o.pdaDelay : null; p.overlay = ["grad", "press", "twc"].includes(o.overlay) ? o.overlay : null; p.gdelay = +o.gdelay || 0;  // gradient over the traces (gradiente.js) and its delay at the column, in min
     p.etpk = typeof o.etpk === "boolean" ? o.etpk : undefined;  // peak labels (etichette-picchi.js): undefined = the default for the number of traces
     p.tl = o.tl ?? true;  // the chromatograms of a view are linked by default (one panel can be unlinked)
     const mate = p.tl && o.zoom === undefined ? E.panels.find((/** @type {Pannello} */ q) => q.tl && q.tab === p.tab && q.type !== "spec" && q.type !== "map" && q.zoom) : null;
@@ -291,7 +304,7 @@ function addPanel(type, o, after) {
     const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" aria-pressed="${!!p.tl}" aria-label="${I18N.t("panel.tlink.aria")}" title="${I18N.t("panel.tlink.title")}">${IC_SYNC}</button></span>` : "";
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
     const gt = lens ? `<span class="tbg"><button type="button" class="bt tgs" data-a="smooth" aria-pressed="false" aria-label="${I18N.t("ctl.smooth")}" title="${I18N.t("ctl.smooth.title")}">${IC_SMOOTH}</button><button type="button" class="bt tgl" data-a="log" aria-pressed="false" aria-label="${I18N.t("ctl.log.title")}" title="${I18N.t("ctl.log.title")}">${I18N.t("ctl.log")}</button>${window.SIMUI ? SIMUI.areaBtn(type) : ""}</span>` : "";
-    const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
+    const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${ms2Chrom(p) ? "disabled " : ""}title="${I18N.t(ms2Chrom(p) ? "panel.xic.off" : "panel.xic.title")}">XIC</button></span>` : "";
     const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
     const more = `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
     return `<span class="tbs">${gxb + gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
@@ -378,7 +391,7 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
     el.querySelector('[data-a="intf"]').onchange = (/** @type {Event} */ e) => { p.intf = /** @type {HTMLSelectElement} */ (e.target).value; };
   }
-  if (bX) bX.onclick = () => p.kind === "pda" ? wlOpen(p) : openXic(null, { after: p });  // the new XIC (or wavelength trace on a PDA) sits right under this chromatogram
+  if (bX) bX.onclick = () => p.kind === "pda" ? wlOpen(p) : openXic(null, { after: p });  // under this chromatogram (xwc.js on a DAD)
   el.querySelector(".x").onclick = () => chiudiPannello(p);
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { COMANDI.fai("panel.rename", p, () => { p.title = v === ptitle(p.title) ? p.title : v; }); ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
@@ -426,7 +439,7 @@ function plotCaption(/** @type {Pannello} */ p) {
   const parts = [];
   if (fn) parts.push(fn + (pol ? ` (${pol})` : ""));
   if (p.type === "chrom") {
-    parts.push((p.kind || "TIC").toUpperCase());
+    parts.push(kindUp(p) || "TIC");
   } else if (p.type === "xic") {
     const trLab = (p.traces || []).map((/** @type {Traccia} */ t) => t.label || ("m/z " + t.mz.toFixed(mzd(p)))).join(", ");
     parts.push("XIC" + (trLab ? ` · ${trLab}` : ""));
@@ -569,7 +582,7 @@ function plotName(/** @type {Pannello} */ p) {
   const rtm = p.r0 != null ? "RT" + ((p.r0 + p.r1) / 2).toFixed(1) : "";
   let parts;
   const pr = p.prec != null && p.prec !== "" ? "prec" + +(+p.prec).toFixed(2) : "";  // the ion a panel belongs to is in its file name too
-  if (p.type === "chrom") parts = [p.kind.toUpperCase() + (p.kind === "pda" && p.mz0 != null ? "-" + p.mz0 + (p.mz1 != null && p.mz1 !== p.mz0 ? "-" + p.mz1 : "") + "nm" : ""), pr, ft];
+  if (p.type === "chrom") parts = [kindUp(p) + (p.kind === "pda" && p.mz0 != null ? "-" + p.mz0 + (p.mz1 != null && p.mz1 !== p.mz0 ? "-" + p.mz1 : "") + "nm" : ""), pr, ft];
   else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, (/** @type {number} */ v) => +v.toFixed(mzd(p))) : "", ft];
   else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, (/** @type {string} */ v) => String(v).replace(">", "-")) : "", ft];
   else if (p.type === "spec") parts = [p.uv ? "UV" : p.level > 1 ? I18N.t("export.file.spectrumMsn", { n: p.level }) : I18N.t("export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, p.level > 1 ? pr : "", rtm];
@@ -579,7 +592,7 @@ function plotName(/** @type {Pannello} */ p) {
 }
 function plotMeta(/** @type {Pannello} */ p) {
   const a = p._a || {}, fs = plotFiles(p), d = [];
-  d.push({ chrom: I18N.t("export.desc.chrom", { kind: (p.kind || "").toUpperCase() }), xic: "XIC (" + p.traces.map((/** @type {Traccia} */ t) => t.w == null ? t.mz + " +-" + p.tol : (t.mz - t.w).toFixed(mzd(p)) + "-" + (t.mz + t.w).toFixed(mzd(p))).join("; ") + ")", mrm: I18N.t("export.desc.mrm"), spec: I18N.t("export.desc.spec", { ms: "MS" + (p.level || 1) }), map: I18N.t("export.desc.map") }[p.type] || p.type);
+  d.push({ chrom: I18N.t("export.desc.chrom", { kind: kindUp(p) }), xic: "XIC (" + p.traces.map((/** @type {Traccia} */ t) => t.w == null ? t.mz + " +-" + p.tol : (t.mz - t.w).toFixed(mzd(p)) + "-" + (t.mz + t.w).toFixed(mzd(p))).join("; ") + ")", mrm: I18N.t("export.desc.mrm"), spec: I18N.t("export.desc.spec", { ms: "MS" + (p.level || 1) }), map: I18N.t("export.desc.map") }[p.type] || p.type);
   const mzs = a.sr ? [...new Set(a.sr.map((/** @type {Bag} */ s) => s.mz).filter((/** @type {number} */ v) => v != null))] : [];
   if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(mzd(p))).join(", "));
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${/** @type {number} */ (p.r1).toFixed(2)} min`);
@@ -590,40 +603,43 @@ function plotMeta(/** @type {Pannello} */ p) {
   return [["Title", ptitleP(p) || I18N.t("export.meta.chart")], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
 }
 
-// ---- «Correzione»: ONE menu for chromatogram and spectrum (None · Subtract file with its chooser · Background of a stretch · Automatic baseline). Icon + one-line hints;
-// o = { files: files that can be subtracted, cur: "" | "f<k>" | "tract" | "snip", snip: offer the automatic baseline, dis: reason why it is off ("" = on) }
+// ---- «Correzione» (spectrum, map), «Sottrazione» (chromatograms): one button, one menu; o = { files, cur: "" | "f<k>" | "tract" | "snip", snip, dis: why off }
+// o.grp: one labelled group per kind (file, background), each with its own state
 const ICN = (/** @type {string} */ d) => `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 /** @type {Record<string, string>} */
 const CIC = { none: ICN('<circle cx="9" cy="9" r="6"/><path d="M4.8 13.2L13.2 4.8"/>'), blank: ICN('<path d="M4 2.5h5.5L12.5 5.5v10H4z"/><path d="M9.5 2.5v3h3"/><path d="M6.2 10.5h3.6" stroke-width="2"/>'),
   tract: ICN('<path d="M2 13c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-width="2.2"/><path d="M5 14v3M13 14v3"/>'), snip: ICN('<path d="M2 14c3 0 4-9 7-9s4 9 7 9"/><path d="M2 13c3-2 4-.5 7-.5s4-1.5 7 .5" stroke-dasharray="2 2"/>'),
-  file: ICN('<path d="M4 2.5h5.5L12.5 5.5v10H4z"/><path d="M9.5 2.5v3h3"/><path d="M6.2 10.5h3.6" stroke-width="2"/>'), bg: ICN('<path d="M2 11.5c3 0 4-7 7-7s4 7 7 7"/><path d="M2 14.5h14" stroke-width="2.4"/><path d="M6 16.8h6" stroke-width="1.5"/>') };  // file / bg: idle icons of «Subtract a file» / «Subtract the background»
-  // one «Subtract file» entry with a file chooser (default: the session reference, else the t0); tract and SNIP keep their one-line hint
-function corrWidget(/** @type {Pannello} */ p, /** @type {Bag} */ o) {
+  msub: ICN('<path d="M1.5 14c2.5 0 3.5-9 6-9s3.5 9 6 9"/><path d="M12 4h4.5" stroke-width="2"/>') };  // a peak and a «−»
+function corrRows(/** @type {Pannello} */ p, /** @type {Bag} */ o) {  // the file entry has a chooser (default: the session reference, else the t0)
   const T0 = p.tab || E.tab, fileOpts = o.files.length > (o.min ?? 1) ? o.files : [], cfile = o.cur[0] === "f";
   const refK = /** @type {unknown} */ (S.ref.k) !== "auto" && fileOpts.some((/** @type {MzFile} */ x) => x.k === /** @type {unknown} */ (S.ref.k)) ? S.ref.k : (SUBREF.autoFile(T0) || {}).k;  // default file: the reference of the session
   const subK = cfile ? +o.cur.slice(1) : fileOpts.some((/** @type {MzFile} */ x) => x.k === refK) ? refK : fileOpts.length ? fileOpts[0].k : null, subF = subK != null ? E.files[subK] : null;
-  // [value, icon, label, subtitle (only where non-obvious), short label, tooltip]: «None» and the file entry keep their sentence as a tooltip
+  // [value, icon, label, subtitle, short label, tooltip]
   const items = [["", "none", I18N.t("corr.none"), "", "", I18N.t("corr.none.desc")],
     [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? "" : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : "", subF ? o.fileDesc || I18N.t("corr.file.desc") : ""],
     ["tract", "tract", I18N.t("corr.tract"), o.tractDesc || I18N.t("corr.tract.desc")],
     ...FONDOP.item(o),
-    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])].filter(i => !o.parts || i[1] === "none" || o.parts.includes(i[1]));  // parts: only these entries (two menus: «Sottrai», «Fondo»)
+    ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])].filter(i => !o.parts || i[1] === "none" || o.parts.includes(i[1]));
   const now = items.find(i => i[1] === "blank" ? cfile : i[0] === o.cur && i[1] !== "none") || items[0];
-  const ttl = o.title || I18N.t("corr.button.title"), tip = ttl + (now === items[0] ? "" : ": " + (now[4] ?? now[2]));
   const sel = subF ? `<select class="corrsel" data-o="corrf" aria-label="${EH(I18N.t("corr.file.pick"))}" title="${EH(I18N.t("corr.file.pick"))}">${fileOpts.map((/** @type {MzFile} */ x) => `<option value="${x.k}"${x.k === subK ? " selected" : ""}>${EH(x.label)}</option>`).join("")}</select>` : "";
-  const CK = '<span class="corrck" aria-hidden="true">&#10003;</span>';  // the tick closes the row of the active entry (hidden, not removed, so the rows stay aligned)
+  const CK = '<span class="corrck" aria-hidden="true">&#10003;</span>';  // hidden, not removed: the rows stay aligned
   const btn = (/** @type {string[]} */ i, /** @type {string} */ inner) => `<button type="button" class="corri${i === now ? " on" : ""}" aria-pressed="${i === now}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? ` disabled title="${EH(I18N.t("corr.fileNone.desc"))}"` : i[5] ? ` title="${EH(i[5])}"` : ""}${i[1] === "blank" && subF ? ` aria-label="${EH(I18N.t("corr.file", { label: subF.label }))}"` : ""}>${CIC[i[1]]}${inner}</button>`;
   const row = (/** @type {string[]} */ i) => i[1] === "blank" && subF ? `<span class="corrrow${i === now ? " on" : ""}">${btn(i, `<span><b>${EH(I18N.t("corr.file.lab"))}</b></span>`)}${sel}${CK}</span>`  // fixed label · chooser · tick
     : btn(i, `<span><b>${EH(i[2])}</b>${i[3] ? `<span class="sm muted">${EH(i[3])}</span>` : ""}</span>${i === now ? CK : '<span class="corrck" aria-hidden="true"></span>'}`);
-  return `<span class="corrw"><button type="button" data-o="${o.wire || "corr"}" class="corrb${now === items[0] ? "" : " on"}" aria-haspopup="true" aria-expanded="false"${o.dis ? ` disabled title="${o.dis}"` : ` title="${EH(tip)}"`} aria-label="${EH(tip)}">${now === items[0] && o.idle ? CIC[o.idle] : CIC[now[1]]}<span aria-hidden="true">&#9662;</span></button>
-    <span class="corrm" role="group" aria-label="${EH(ttl)}" hidden>${items.map(row).join("")}</span></span>`;
+  return { now, on: now !== items[0], rows: items.map(row).join("") };
 }
-function corrWire(/** @type {HTMLElement & { disabled: boolean }} */ x, /** @type {(v: string) => void} */ pick) {  // pick("" | "f<k>" | "tract" | "snip")
+function corrWidget(/** @type {Pannello} */ p, /** @type {Bag} */ o) {
+  const g = /** @type {Bag[]} */ (o.grp || [o]).map(q => corrRows(p, q)), on = g.filter(x => x.on), ttl = o.title || I18N.t("corr.button.title"), tip = ttl + (on.length ? ": " + on.map(x => x.now[4] || x.now[2]).join(" · ") : "");
+  const body = o.grp ? g.map((x, i) => `<fieldset class="corrg" data-g="${i}"${o.grp[i].dis ? ` disabled title="${o.grp[i].dis}"` : ""}><legend>${EH(o.grp[i].head)}</legend>${x.rows}</fieldset>`).join("") : g[0].rows;
+  return `<span class="corrw"><button type="button" data-o="corr" class="corrb${on.length ? " on" : ""}" aria-haspopup="true" aria-expanded="false"${o.dis ? ` disabled title="${o.dis}"` : ` title="${EH(tip)}"`} aria-label="${EH(tip)}">${on.length === 1 ? CIC[on[0].now[1]] : CIC[o.idle || "none"]}<span aria-hidden="true">&#9662;</span></button>
+    <span class="corrm" role="group" aria-label="${EH(ttl)}" hidden>${body}</span></span>`;
+}
+function corrWire(/** @type {HTMLElement & { disabled: boolean }} */ x, /** @type {(v: string, g?: string) => void} */ pick) {  // pick("" | "f<k>" | "tract" | "snip", group of «Sottrazione»)
   const m = /** @type {HTMLElement} */ (/** @type {ParentNode} */ (x.parentNode).querySelector(".corrm")), items = () => [...m.querySelectorAll("button:not(:disabled),select")];
   const shut = (/** @type {boolean} */ back) => { m.hidden = true; x.setAttribute("aria-expanded", "false"); if (back) x.focus(); };
   x.onclick = () => { m.hidden = !m.hidden; x.setAttribute("aria-expanded", String(!m.hidden)); if (!m.hidden) { m.style.left = ""; const o = m.getBoundingClientRect().right + 8 - document.documentElement.clientWidth; if (o > 0) m.style.left = -o + "px"; (m.querySelector(".corri.on:not(:disabled)") || items()[0] || m).focus(); } };  // kept in the page (clientWidth: an iPad zooms innerWidth out)
   x.onkeydown = (/** @type {KeyboardEvent} */ e) => { if ((e.key === "ArrowDown" || e.key === "ArrowUp") && m.hidden && !x.disabled) { e.preventDefault(); x.click(); } };
-  m.querySelectorAll("[data-c]").forEach((/** @type {HTMLElement} */ b) => b.onclick = () => { shut(false); pick(/** @type {string} */ (b.dataset.c)); });
+  m.querySelectorAll("[data-c]").forEach((/** @type {HTMLElement} */ b) => b.onclick = () => { shut(false); pick(/** @type {string} */ (b.dataset.c), /** @type {HTMLElement} */ (b.closest("[data-g]"))?.dataset.g); });
   const cf = m.querySelector('[data-o="corrf"]'); if (cf) cf.onchange = () => { shut(false); pick("f" + cf.value); };
   m.onkeydown = (/** @type {KeyboardEvent} */ e) => {  // arrows move between the entries, Enter activates (native), Esc closes and gives the focus back
     if (e.key === "Escape") { e.stopPropagation(); shut(true); return; }
@@ -677,7 +693,7 @@ function ctl(/** @type {Pannello} */ p) {
   if (window.SPECBAR && p.type === "spec") SPECBAR.title(p, t);
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";  // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some((/** @type {Pannello} */ q) => q.id === p.link) || E.panels.some((/** @type {Pannello} */ q) => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
-  const T0 = p.tab || E.tab, prodTab = T0 === "ms2", ms2c = p.type === "chrom" && prodTab, mrmP = p.type === "mrm";
+  const T0 = p.tab || E.tab, prodTab = T0 === "ms2", ms2c = ms2Chrom(p), mrmP = p.type === "mrm";
   if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.fondo = { mode: "none", w: p.fondo.w, ib: null }; p.log = false; }  // precursor chromatogram: only the MS2 scans of the precursor
   if (mrmP) p.bk = "";
   if (p.type === "spec" && prodTab && !p.filt) p.level = lvN(p.k);
@@ -702,25 +718,27 @@ function ctl(/** @type {Pannello} */ p) {
     const blanks = TF.filter((/** @type {MzFile} */ x) => x.kind !== "mrm" || p.type === "mrm"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
   const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);  // an old notebook may point to a file that is not marked as blank: keep it
   const fo0 = p.fondo || { mode: "none", w: 1 }, fm = fo0.mode, fval = FONDOP.is(fo0) ? "flat" : fm === "tract" || p._pickIbk ? "tract" : fm === "auto" ? "snip" : "";
-  const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), idle: "file", dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
-    + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
+  const corr = corrWidget(p, { grp: [{ files: bkList, cur: bkOn ? "f" + p.bk : "", parts: ["blank"], head: I18N.t("corr.from.file"), dis: mrmP ? NOMRM : "" },
+    { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], head: I18N.t("corr.from.bg") }], title: I18N.t("corr.sub.title"), idle: "msub", dis: ms2c ? NOMS2 : "" })
     + corrInfo(p)
     + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" data-num="0.2:" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
   // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover, next to its button in the tab order; the button is accented when one of them is set, and a «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
   const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button><span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}${window.ZRESET?.btn(p) ?? ""}</span>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}</span>`;
-  const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
+  const uvCx = { hasScan: false, hasPda, an: anKinds, reg: false }, uvAny = hasPda || anKinds.length > 0;
+  const kindSel = ms2c && uvAny ? CANALI.html(p, { ...uvCx, ms2: true }) : ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
   const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${p._trs.map((/** @type {Bag} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</select>` : "";
-  const canBtn = p.type === "chrom" ? "" : window.CANALI?.html(p) ?? "";
+  const canBtn = p.type === "chrom" ? "" : window.CANALI?.html(p, mrmP && uvAny ? uvCx : undefined) ?? "";
   if (p.type === "chrom") c.innerHTML = `${kindSel || `${CANALI.html(p, { hasScan, hasPda, an: anKinds, reg: !!(window.REGISTRO && REGISTRO.has(TF)) })}${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}<span class="ibkslot"></span>${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some((/** @type {MzFile} */ x) => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
-    const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;  // xed: lower / upper m/z of an ion read in high resolution (ppm window)
+    const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0;
     const xsel = p.traces.length > 1 ? `<select data-o="xt" title="${I18N.t("ctl.xt.title")}">${p.traces.map((/** @type {Traccia} */ t, /** @type {number} */ i) => `<option value="${i}" ${i === p._xt ? "selected" : ""}>XIC ${i + 1}</option>`).join("")}</select>` : "";
     const hrX = !!(window.HR && HR.xicFiles(p.tab).some((/** @type {MzFile} */ x) => HR.isHr(x, x.lv)));  // high resolution: only the label, m/z and interval are in «Display options» of this chromatogram
-    const xr = xt && hrX ? `${xsel}<b class="xlab" title="${EH(I18N.t("ctl.xlab.title"))}">XIC \u2022 m/z ${(+xt.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}</b>` : xt ? `${xsel}<label class="muted" title="${I18N.t("ctl.xr.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[0] : fmz(xt.mz - xw1)}"> ${I18N.t("ctl.range.to")} <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[1] : fmz(xt.mz + xw1)}"></label>` : "";
-    c.innerHTML = `${xr}${fsel}${view}${corr}${parBox(rtbar + lrExtra)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
+    const xr = xt && hrX ? `<b class="xlab" title="${EH(I18N.t("ctl.xlab.title"))}">XIC \u2022 m/z ${(+xt.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}</b>` : "", xe = (/** @type {string} */ o, /** @type {string} */ v, /** @type {string} */ a) => `<input data-o="${o}" class="mzf" inputmode="decimal" autocomplete="off" aria-label="${a}" value="${v}">`;
+    const xin = xt && !hrX ? `<label class="muted" title="${I18N.t("ctl.xr.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} ${xe("xlo", fmz(xt.mz - xw1), I18N.t("ctl.xr.xlo"))} ${I18N.t("ctl.range.to")} ${xe("xhi", fmz(xt.mz + xw1), I18N.t("ctl.xr.xhi"))}</label>` : "";  // low resolution: the extracted window lives in «Range»
+    c.innerHTML = `${xsel}${xr}${fsel}${view}${corr}${parBox(xin + rtbar + lrExtra)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
   }
   if (p.type === "mrm") c.innerHTML = `${canBtn}${view}${corr}${parBox(rtbar + lrExtra)}`;      // the transitions list is the one control for what is shown (no second dropdown, no files counter)
   if (p.type === "map") {
@@ -755,20 +773,7 @@ function ctl(/** @type {Pannello} */ p) {
       (p.bg === "w" ? FONDOSP.box(p) : "") +
       (p.level > 1 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:7em"><option value="">${I18N.t("ctl.prec.all")}</option>${(prodTab ? precN : [...new Set(f.flatMap((/** @type {MzFile} */ x) => x.precursors))].sort((a, b) => a - b).map(v => ({ prec: v }))).map((/** @type {Bag} */ e) => `<option value="${e.prec}" ${String(p.prec) === String(e.prec) ? "selected" : ""}>${e.prec}</option>`).join("")}</select>` : "");
   }
-  if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {  // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
-    const srcP = p.link ? E.panels.find((/** @type {Pannello} */ q) => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
-    const fh = `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? "\u2190" + n : "\u2298"}</button>`;
-    c.querySelectorAll(".fol").forEach((/** @type {Element} */ x) => x.remove());          // UV controls are not rewritten by innerHTML
-    if (c.firstElementChild) c.firstElementChild.insertAdjacentHTML("afterend", fh); else c.innerHTML = fh;
-    const fb = c.querySelector(".fol");
-    if (!p.link) fb.classList.remove("lk");
-    fb.onclick = (/** @type {MouseEvent} */ e) => {
-      e.stopPropagation();
-      const cands = E.panels.filter((/** @type {Pannello} */ q) => ["chrom", "xic", "mrm"].includes(q.type) && (q.tab || E.tab) === (p.tab || E.tab) && q.el);
-      menu(e, [...cands.map((/** @type {Pannello} */ q) => ({ label: (p.link === q.id ? "\u2713 " : "") + I18N.t("spec.follow.item", { n: q.num || "?", title: ptitle(q.title) }), fn: () => spLinkFollow(p, q) })),
-        ...(cands.length ? ["-"] : []), { label: (p.link ? "" : "\u2713 ") + I18N.t("spec.follow.menu.none"), fn: () => { spLinkFreeze(p); uiSave(); } }]);
-    };
-  }
+  if (p.type === "spec" && p.el) numberPanels();  // a new link or «none» changes the follow tag
   if (window.BANCO) BANCO.decorate(p, c); mapNavWire(p, c);
   if (window.MAPPA && p.type === "map") MAPPA.decorate(p, c);
   const cpB = c.querySelector('[data-a="cpar"]'), cpP = c.querySelector(".cpop");
@@ -793,8 +798,7 @@ function ctl(/** @type {Pannello} */ p) {
     else if (k === "split") x.onclick = () => splitPanel(p);
     else if (k === "rt0" || k === "rt1" || k === "mz0" || k === "mz1") window.XICBORDI?.range(p, x);  // xic-bordi.js: the pairs of the «Range» popover
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
-    else if (k === "corr") corrWire(x, (/** @type {string} */ v) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
-    else if (k === "bkg") corrWire(x, (/** @type {string} */ v) => setFondo(p, v));
+    else if (k === "corr") corrWire(x, (/** @type {string} */ v, /** @type {string|undefined} */ g) => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : g === "1" ? setFondo(p, v) : setSub(p, v)));
     else if (k === "cinfo") corrInfoWire(p, x);
     else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, numIt(x.value) || 1); draw(p); uiSave(); };
         else x.onchange = () => choosePanelOption(p, k, x);
@@ -805,13 +809,13 @@ function ctl(/** @type {Pannello} */ p) {
   fitHdSoon(p);
 }
 function rngIsOn(/** @type {Pannello} */ p) {
-  const ms2c = p.type === "chrom" && (p.tab || E.tab) === "ms2";
+  const ms2c = ms2Chrom(p);
   return (p.type !== "mrm" && !(p.type === "chrom" && p.kind === "pda") && (p.mz0 != null || p.mz1 != null)) || !!p.zoom || (p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "" && !ms2c);
 }
 // state of the smoothing and log buttons of the right-hand group (they live in the static header, not in ctl)
 function syncTb(/** @type {Pannello} */ p) {
   const el = p.el; if (!el) return;
-  const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2";
+  const ms2c = ms2Chrom(p);
   const sm = el.querySelector('[data-a="smooth"]'), lg = el.querySelector('[data-a="log"]'); if (window.SIMUI) SIMUI.syncArea(p);
   if (sm) { const tip = I18N.t(p.type === "mrm" ? "ctl.mrm.smooth.title" : "ctl.smooth.title"); sm.classList.toggle("on", !!p.smooth); sm.setAttribute("aria-pressed", String(!!p.smooth)); sm.title = tip; }
   if (lg) {
@@ -893,22 +897,20 @@ const mzd = (/** @type {Pannello | null | undefined} */ p, lv = 1) => window.HR 
 const fmt2 = (/** @type {number | string} */ v) => String(+(+v).toFixed(2));
 /** @param {number | string} v @param {Pannello | null} [p] @param {number} [lv] */
 const fmz = (v, p, lv = 1) => String(rh(v, mzd(p, lv)));  // 363.8, 364 (no trailing zeros)
-// THE tool that extracts an ion (XIC). The student gives ONE m/z value, or the NEUTRAL formula plus the adduct; the window is always a unit window (1 Da, unit resolution)
-// anchored to the nominal mass n of the calculated value: [n - XIC_BELOW, n + 1 - XIC_BELOW]. Every way to create an XIC (XIC button, warning when integrating from a TIC,
+// THE tool that extracts an ion (XIC). The student gives ONE m/z value, or the NEUTRAL formula plus the adduct; at unit resolution the window is
+// [n - XIC_BELOW, n + XIC_ABOVE] around the nearest integer n of that m/z (HR: ppm, hr.js). Every way to create an XIC (XIC button, warning when integrating from a TIC,
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice, Disegno) opens this window, possibly pre-filled:
-//   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
+//   pre = { mz, obs }   one m/z value (obs = an OBSERVED centroid)   pre = { formula, adduct }
 const TIP_DELAY = 1250;  // ms before the label of a button appears (one value for the whole program)
-const XIC_BELOW = 0.2;  // unit window [n-0.2, n+0.8]: lab centroids sit +0.14..+0.37 Da over the calculated m/z, so [n-0.5, n+0.5] would lose some; this keeps them and leaves out n-1 and n+1
-const XIC_DRIFT = 0.25;  // mean offset (Da) of observed centroids over the calculated m/z: a CLICKED centroid back to its nominal mass (364.37 -> n = 364)
-const xicNominal = (/** @type {number} */ v, /** @type {boolean} */ obs) => Math.round(obs ? v - XIC_DRIFT : v);
-const xicWin = (/** @type {number} */ v, /** @type {boolean} */ obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
+const XIC_BELOW = 0.2, XIC_ABOVE = 0.3;  // 264 -> 263.8..264.3, clicked or typed alike (_obs is kept for the callers): n-1 and n+1 stay out
+const xicWin = (/** @type {number} */ v, /** @type {any} */ _obs) => { const n = rh(v, 0); return [rh(n - XIC_BELOW, 1), rh(n + XIC_ABOVE, 1)]; };
 /** @type {Bag | null} */
 let XIC_LAST = null;  // the last ion the student asked for ({mz} or {formula, adduct}): the window opens with it, still editable
 // Right click on a peak of the spectrum: the XIC appears at once, with the default unit window and no dialog; the window is changed afterwards from the header of the XIC panel.
 // the default trace of a clicked centroid: the ion with its ppm window when a high-resolution file is among the files, else the unit window (ref: any panel, for its tab)
 const xicTraceFor = (/** @type {number} */ mz, /** @type {Pannello | null | undefined} */ ref) => {
-  const [a, b] = xicWin(mz, true), c = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2);
-  return (window.HR && HR.ionTrace(mz, { obs: true, tab: ref && ref.tab })) || { id: E.seq++, mz: c, w, label: `m/z ${c.toFixed(mzd(ref))}` };
+  const [a, b] = xicWin(mz, true);
+  return (window.HR && HR.ionTrace(mz, { obs: true, tab: ref && ref.tab })) || { id: E.seq++, mz: rh((a + b) / 2, 2), w: rh((b - a) / 2, 2), label: `m/z ${a}\u2013${b}` };
 };
 // over: a trace already made by the caller (button «XIC» of the spectrum, xic-spettro.js), else the default one
 /** @param {number} mz @param {Pannello | null} [after] @param {Pannello | null} [panel] @param {Bag} [over] */
@@ -924,7 +926,7 @@ function xicDirect(mz, after, panel, over) {
   } else reveal(np);
   return np;
 }
-const xicName = (/** @type {Pannello} */ q) => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(mzd(q)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : I18N.t("xic.empty"); };
+const xicName = (/** @type {Pannello} */ q) => { const t = q.traces[0]; return t ? (t.label || "m/z " + t.mz.toFixed(mzd(q))) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : I18N.t("xic.empty"); };
 // Estrai ioni (XIC): 2-10 rows (m/z or neutral formula + adduct), ONE panel, one trace each; a removed row keeps the focus in the dialog.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 /** @param {Pannello | null} [panel] */
@@ -1001,7 +1003,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
         const ht = HR.ionTrace(r.ex, { obs: r.obs, prefix: r.label, tab: xtab() }), key = "ion|" + ht.mz; if (seen.has(key)) return; seen.add(key); traces.push(ht); return;
       }
       const [a, b] = r.win, d = r.range ? 5 : 2, mz = rh((a + b) / 2, d), w = rh((b - a) / 2, d), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
-      traces.push({ id: E.seq++, mz, w, label: r.range ? `m/z ${fmz(a, panel)}\u2013${fmz(b, panel)}` : (r.label ? r.label + " · " : "") + `m/z ${mz.toFixed(mzd(panel))}` });
+      traces.push({ id: E.seq++, mz, w, label: (r.label && !r.range ? r.label + " · " : "") + `m/z ${fmz(a, panel)}\u2013${fmz(b, panel)}` });
     });
     d.close();
     const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: r0.ex ?? numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
@@ -1059,7 +1061,7 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
 }
 
 // the choices of the panel menu (file, level, precursor, kind, mode, m/z limits, scale…) with what they reset are one undoable action (comandi.js)
-const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "canali", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi"];
+const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "canali", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi", "xw"];
 COMANDI.gestore("panel.source", {
   leggi: (/** @type {Pannello} */ p) => JSON.stringify([SORGENTE.filter(k => p[k] !== undefined).map(k => [k, p[k]]), p.fondo]),  // the background setting is reset by a mode choice
   applica: (/** @type {Pannello} */ p, /** @type {string} */ snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); syncTb(p); },

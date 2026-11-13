@@ -175,8 +175,7 @@ function affOpenMenu(/** @type {any} */ p, /** @type {any} */ g) {
     else if (e.key === "ArrowUp") { e.preventDefault(); b[(i - 1 + b.length) % b.length].focus(); }
     else if (e.key === "Tab") affCloseMenu(false);
   });
-  const away = (/** @type {Event} */ e) => { if (affMenu && !affMenu.contains(/** @type {Node} */ (e.target)) && !g.contains(/** @type {Node} */ (e.target))) { affCloseMenu(false); document.removeEventListener("pointerdown", away, true); } };
-  setTimeout(() => document.addEventListener("pointerdown", away, true), 0);
+  closeOutside(affMenu, e => g.contains(e.target), () => affCloseMenu(false), true);
   (btns().find(b => b.getAttribute("aria-disabled") !== "true") || btns()[0]).focus();
 }
 function affGrip(/** @type {any} */ p) {
@@ -269,15 +268,6 @@ if (typeof AZIONI !== "undefined") {
   reg({ id: "disp.ripristina", ordine: 6, menu: false, nome: () => AFF_T("aff.menu.reset"), disponibile: () => affSplit(), esegui: () => affRipristina() });
 }
 
-/** The spectrum opened from `from` goes to its right, in the same row, when `from` is alone in its row and the two fit; otherwise it stays below. */
-function affAccanto(/** @type {any} */ s, /** @type {any} */ from) {
-  if (!s.el || !from.el || !affEligible(s) || !affEligible(from)) return false;
-  const row = LAYOUT.righeDi(affStack()).find(r => r.includes(from));
-  if (!row || row.length !== 1) return false;
-  const d = { k: "dx", t: from.id };
-  return affOkFor(s, d) && affFai(s, d, false);
-}
-
-const AFFIANCA = { accanto: affAccanto, grip: affGrip, sync: affSync, annulla: affAnnulla, ultimo: affUltimo, fai: affFai, rifai: affRifai, ripristina: affRipristina, eligible: affEligible };
+const AFFIANCA = { grip: affGrip, sync: affSync, annulla: affAnnulla, ultimo: affUltimo, fai: affFai, rifai: affRifai, ripristina: affRipristina, eligible: affEligible };
 window.AFFIANCA = AFFIANCA;
 if (window.BARRA && BARRA.late) BARRA.late();

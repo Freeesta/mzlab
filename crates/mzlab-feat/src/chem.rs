@@ -16,9 +16,6 @@ pub mod graph;
 #[cfg(feature = "record")]
 mod graph_record;
 mod groups;
-#[cfg(feature = "identita")]
-pub mod identity;
-pub mod ions;
 pub mod labels;
 pub mod link;
 pub mod mech;
@@ -36,4 +33,3 @@ mod smiles;
 pub mod structures;
 #[cfg(feature = "sub")]
 pub mod substructure;
-pub mod tray;

@@ -1,5 +1,6 @@
-"""Disegno: the canvas menu says what it acts on («Selezione (n atomi)» or «Tutto il disegno»), its rows come from the TPDraw.menu registry
-(ordered, filtered by selection / whole drawing, one failing row never hides the others) and stay keyboard menu items."""
+"""Disegno: the canvas menu has no header line; its name (aria-label) says what it acts on («Selezione (n atomi)» or «Tutto il disegno»), its rows come from
+the TPDraw.menu registry (ordered, filtered by selection / whole drawing, one failing row never hides the others) and stay keyboard menu items. No bond rows
+(«Spezza», «Taglia») and no «Ioni attesi» row."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -21,10 +22,10 @@ try:
         def opened(head, bond):
             for _ in range(40):                                           # under load Ketcher may need a moment before the menu answers
                 pg.evaluate("document.querySelector('#ctx').hidden = true"); sel(bond); pg.evaluate(OPEN)
-                try: wait_for_js(pg, f"(()=>{{const m=document.querySelector('#ctx');return !m.hidden&&m.querySelector('.ctx-head')&&m.querySelector('.ctx-head').textContent==={head!r}}})()", timeout=1500); return
+                try: wait_for_js(pg, f"(()=>{{const m=document.querySelector('#ctx');return !m.hidden&&m.getAttribute('aria-label')==={head!r}&&!!m.querySelector('[role=menuitem]')}})()", timeout=1500); return
                 except Exception: pass
-            raise AssertionError("menu with header %r did not open: %r" % (head, pg.inner_text("#ctx")))
-        # the outside lookups (link-*, order 17) come only with the grafo .wasm and are checked by e2e_menu_link: here they must sit between info and center
+            raise AssertionError("menu named %r did not open: %r" % (head, pg.inner_text("#ctx")))
+        # the outside lookups (submenu rows link-pubchem and link-other, order 17) come only with the grafo .wasm and are checked by e2e_menu_link: here they must sit between info and center
         def rows():
             rr = pg.evaluate("[...document.querySelectorAll('#ctx div[role=menuitem]')].map(d=>d.dataset.row)")
             ln = [i for i, x in enumerate(rr) if x.startswith("link-")]
@@ -33,14 +34,14 @@ try:
         def whole():
             opened("Tutto il disegno", None)
             assert pg.evaluate("document.querySelector('#ctx').getAttribute('aria-label')") == "Tutto il disegno"
-            assert pg.evaluate("document.querySelector('#ctx .ctx-head').getAttribute('aria-hidden')") == "true"
-            rr = rows(); assert rr[:3] == ["copy-smiles", "info", "center"] and "break-bonds" not in rr, rr
-        step("no selection: header «Tutto il disegno», no bond rows", whole)
+            assert not pg.evaluate("document.querySelector('#ctx .ctx-head')") and pg.evaluate("document.querySelector('#ctx').firstElementChild.getAttribute('role')") == "menuitem"
+            rr = rows(); assert rr[:3] == ["copy-smiles", "info", "center"] and "expected-ions" not in rr, rr
+        step("no selection: no header line, the menu is named «Tutto il disegno»", whole)
         def part():
             opened("Selezione (2 atomi)", 0)
-            rr = rows(); assert rr[:5] == ["copy-smiles", "info", "center", "break-bonds", "cut-bonds"], rr
+            rr = rows(); assert rr[:3] == ["copy-smiles", "info", "center"] and not {"break-bonds", "cut-bonds", "expected-ions"} & set(rr), rr
             t = pg.locator("#ctx div[data-row=copy-smiles]").inner_text(); assert "CC" in t and "O" not in t, t     # the piece, not the whole drawing
-        step("a selected bond: header «Selezione (2 atomi)», SMILES of the piece, bond rows", part)
+        step("a selected bond: menu named «Selezione (2 atomi)», SMILES of the piece, no bond rows", part)
         def added():
             pg.evaluate("""(() => { window._got = null;
               TPDraw.menu.add({ id: 'test-sel', when: 'selection', order: 12, label: c => 'Prova ' + c.atoms.size, run: c => { window._got = [c.atoms.size, c.whole, c.bonds.length]; } });
@@ -61,7 +62,7 @@ try:
             pg.evaluate("(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'F10',shiftKey:true,bubbles:true}))})()")
             wait_for_js(pg, "!document.querySelector('#ctx').hidden && document.activeElement && document.activeElement.dataset.row === 'copy-smiles'")
             pg.keyboard.press("ArrowDown"); assert pg.evaluate("document.activeElement.dataset.row") == "info"
-            pg.keyboard.press("ArrowUp"); pg.keyboard.press("ArrowUp"); assert pg.evaluate("document.activeElement.getAttribute('role')") == "menuitem"   # the header is skipped
+            pg.keyboard.press("ArrowUp"); pg.keyboard.press("ArrowUp"); assert pg.evaluate("document.activeElement.getAttribute('role')") == "menuitem"   # arrows wrap over the rows
             pg.keyboard.press("Escape"); assert pg.locator("#ctx").is_hidden()
         def axe_menu():
             if not axe_path(): raise AssertionError("axe-core not available (pip install axe-playwright-python)")
@@ -70,8 +71,8 @@ try:
             v = pg.evaluate("""() => axe.run({include: [['#ctx']]}, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa']}})
               .then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.nodes.length]))"""); assert not v, v
             pg.evaluate("document.querySelector('#ctx').hidden = true")
-        step("axe: the open menu with its header has no serious violation", axe_menu)
-        step("Shift+F10 focuses the first row (not the header), arrows wrap, Esc closes", keys)
+        step("axe: the open menu has no serious violation", axe_menu)
+        step("Shift+F10 focuses the first row, arrows wrap, Esc closes", keys)
 finally:
     r.close()
 r.report()

@@ -25,7 +25,7 @@ export function createMethodRoutes({ rpc, json, items }) {
       if (!its) return json({ warnings: [] });
       return raw(await rpc({ op: "lr_method_warnings", have: [...new Set(its.map(x => x.kind))].sort() }));
     }
-    if (!["/api/method", "/api/metodo", "/api/analog", "/api/registro", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda") && !(path === "/api/map" && q.get("kind") === "pda") && path !== "/api/uvspec") return undefined;
+    if (!["/api/method", "/api/metodo", "/api/analog", "/api/registro", "/api/delay", "/api/gradient"].includes(path) && !(path === "/api/chrom" && q.get("kind") === "pda") && !(path === "/api/map" && q.get("kind") === "pda") && path !== "/api/uvspec" && path !== "/api/uvpropose") return undefined;
     const it = item(q), name = it && it.file;
     if (!it || q.get("ref")) return null;
     try {
@@ -44,6 +44,8 @@ export function createMethodRoutes({ rpc, json, items }) {
       if (path === "/api/chrom") return raw(await rpc(q.get("mz0") != null && q.get("mz1") != null ? { op: "lr_pda_wavelength", name, nm0: num(q, "mz0", NaN), nm1: num(q, "mz1", NaN) } : { op: "lr_pda", name }));
       if (path === "/api/map") return raw(await rpc({ op: "lr_pda_map", name }));
       if (path === "/api/uvspec") return raw(await rpc({ op: "lr_pda_spectrum", name, rt0: num(q, "rt0", NaN), rt1: num(q, "rt1", NaN) }));
+      // the XWC band the engine proposes (at the strongest TWC peak, or in rt0..rt1)
+      if (path === "/api/uvpropose") return raw(await rpc({ op: "lr_pda_propose", name, rt0: num(q, "rt0", NaN), rt1: num(q, "rt1", NaN) }));
       // a part of a mixed file with a PDA reads its own scans: not served (null)
       return raw(await rpc({ op: "lr_delay", name }));
     } catch (e) { return fail(e, 500); }

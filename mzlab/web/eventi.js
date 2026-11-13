@@ -36,7 +36,7 @@ function attach(p) {
   const moveCur = x => {
     const a = p._a; if (!a || x == null) return;
     p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
-    if (!p._lm) { p._lm = true; FRAME.next(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
+    if (!p._lm) { p._lm = true; FRAME.next(() => { p._lm = false; const sn = ms2Chrom(p) ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
   };
   // the dot on top of the line: dragged with mouse, finger or pen; the arrows move it one scan (Shift: five)
   if (p.ch) {
@@ -169,7 +169,7 @@ function attach(p) {
     else if (p.type !== "spec") {
       const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 12 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { if (window.DDA && DDA.onTri(p, tt)) return; goMs2(tt); return; }          // a triangle: that MS2 scan (in the DDA trio, or in the MS2 tab)
-      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); if (p.sel && x0 >= p.sel[0] && x0 <= p.sel[1]) p._dsel = [p.sel, e ? e.timeStamp : performance.now()]; p.sel = null; p.cur = xs; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs && !p.sel) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
+      const xs = pk ? pk.rt : x0; pickTrace(p, xs, pk ? pk.ay : d.y0); if (p.sel && x0 >= p.sel[0] && x0 <= p.sel[1]) p._dsel = [p.sel, e ? e.timeStamp : performance.now()]; p.sel = null; p.cur = xs; const sn = ms2Chrom(p) && p._a.sr ? ms2Near(p, xs, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, I18N.t("ms2.nearestScan", { rt: sn.rt.toFixed(2) }), true, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, xs); pushLinked(p, xs - dt / 2, xs + dt / 2, k0); nearScan(k0, xs).then(n => { if (n && p.cur === xs && !p.sel) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }
   };
   addEventListener("mouseup", p._up, { signal: p._ac.signal });
@@ -239,7 +239,7 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
   if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
   if (!o.step) { p._msg = null; p._sk = null; }              // a click or a drag starts a new walk: the axes of the spectrum are free again
   E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => {
-    const sh = s.uv && p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0; s.r0 = r0 - sh; s.r1 = r1 - sh; if (!(s.kSet && E.files[s.k]?.vis && !E.files[s.k].gone) && (!s.uv || E.files[k]?.pda)) { s.k = k; s.kSet = false; } s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
+    const sh = s.uv && window.DISP ? DISP.pdaShift(p) : 0; s.r0 = r0 - sh; s.r1 = r1 - sh; if (!(s.kSet && E.files[s.k]?.vis && !E.files[s.k].gone) && (!s.uv || E.files[k]?.pda)) { s.k = k; s.kSet = false; } s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
     if (!keepZoom) s.zoom = null;
     if (!o.step) { s.lock = null; ctl(s); }                  // no rebuilding of the controls while scrolling
     if (o.step) scAhead(s);
@@ -251,18 +251,20 @@ async function uvOpen(from, k, r0, r1) {
   if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
   return window.UVSPEC.open(from, k, r0, r1);
 }
-/** The controls of a PDA chromatogram: the extract button is "λ" (wavelength) instead of "XIC", and a trace by wavelength has its range in nm. @param {any} p @returns {string} */
+/** The controls of a DAD chromatogram: the XWC split button (xwc.js) instead of "XIC", and the band of the trace in nm. @param {any} p @returns {string} */
 function wlCtl(p) {
   const b = p.el.querySelector('[data-a="xic"]');
   const pda = p.kind === "pda";
-  if (p._kw !== undefined && p._kw !== p.kind && (pda || p._kw === "pda")) p.mz0 = p.mz1 = null;      // m/z and nm are different ranges: the choice of the kind clears it
+  if (p._kw !== undefined && p._kw !== p.kind && (pda || p._kw === "pda")) p.mz0 = p.mz1 = p.xw = null;      // m/z and nm ranges differ: a new kind clears them
   p._kw = p.kind;
   if (pda) { p.mz0 ??= p.mz1; p.mz1 ??= p.mz0; }      // a wavelength range has both ends, or none
-  if (b) { b.dataset.t0 ??= b.title; b.textContent = pda ? "λ" : "XIC"; b.title = pda ? I18N.t("panel.wl.title") : b.dataset.t0; }
-  return !pda || p.mz0 == null ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
+  if (b) { b.disabled = ms2Chrom(p); b.textContent = pda ? "XWC" : "XIC"; b.title = I18N.t(pda ? "panel.wl.title" : b.disabled ? "panel.xic.off" : "panel.xic.title"); if (pda || b._xw) xwc().then(m => m.dress(p)); }
+  return !pda ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
 }
-/** A trace of the DAD at the wavelengths nm0..nm1 (a PDA chromatogram) under panel `from`. @param {any} from @param {number} nm0 @param {number} nm1 @param {number} [k] */
-async function wlOpen(from, nm0 = 250, nm1 = 260, k) {
+const xwc = async () => window.XWC ||= await import("./xwc.js");
+/** An XWC (DAD trace at nm0..nm1) under panel `from`; without a band, the one the engine proposes. @param {any} from @param {number} [nm0] @param {number} [nm1] @param {number} [k] */
+async function wlOpen(from, nm0, nm1, k) {
+  if (nm0 == null) return (await xwc()).press(from, false);
   if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
   return window.UVSPEC.openWl(from, nm0, nm1, k);
 }
@@ -284,7 +286,7 @@ function freezeSpec(s) {
 function liveSpec(s, from) {
   E.panels.filter(q => q !== s && q.type === "spec" && q.link === from.id).forEach(freezeSpec);
   s.link = from.id; s.src = from.id; ctl(s);
-  if (from.cur != null && (s.uv || s.r0 == null)) { const dt = s.uv ? 0 : scanStep() / 2, sh = s.uv && from.kind === "pda" && window.DISP ? DISP.pdaShift(from) : 0; s.r0 = from.cur - dt - sh; s.r1 = from.cur + dt - sh; }
+  if (from.cur != null && (s.uv || s.r0 == null)) { const dt = s.uv ? 0 : scanStep() / 2, sh = s.uv && window.DISP ? DISP.pdaShift(from) : 0; s.r0 = from.cur - dt - sh; s.r1 = from.cur + dt - sh; }
   draw(s); uiSave();
 }
 COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); rtLabel(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one
@@ -304,7 +306,6 @@ function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   s.el.classList.remove("drag");
   
   stackAfter(s, from); relayout(); fitHost();
-  if (UIP.beside && window.AFFIANCA) AFFIANCA.accanto(s, from);        // the option «Spectrum beside the chromatogram»: same row when there is room (affianca.js)
   // Do NOT reveal(s) so the viewport does not shift randomly
   return apriAnnullabile(s);
 }
@@ -389,7 +390,7 @@ function ctxFor(p, e, x, px, py) {
       p.cur = at; newSpec(p, r0, r1, kk);          // every new spectrum is LIVE right under the chromatogram; the previous ones freeze
       if (c.dbl) draw(p);
     } });
-  // PDA trace: the double click gives the UV spectrum at that time of the detector (the trace may be shown later by «Allinea PDA e massa»); with a selection, the mean (uv-spettro.js)
+  // DAD trace: the double click gives the UV spectrum at that time (shifted back by «Allinea DAD e massa»), a selection the mean
   /** @param {any} p */
   const pdaT = p => (window.DISP ? DISP.pdaShift(p) : 0);
   reg({ id: "chrom.uvAtRt", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", nome: () => T("ctx.uv.atRt"), doppioOrd: 3,

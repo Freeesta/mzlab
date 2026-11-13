@@ -8,7 +8,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:300]))
 # what the controls of a product-ion spectrum offer
 RULES = """(p => { const c = p.el.querySelector('.ctl'), o = n => { const s = c.querySelector(`select[data-o="${n}"]`); return s ? [...s.options].map(x => x.text) : null; };
-  return { files: o('k'), prec: o('prec'), fol: !!c.querySelector('.fol'), all: !!c.querySelector('[data-o="all"]'), file: E.files[p.k].label }; })"""
+  return { files: o('k'), prec: o('prec'), fol: !!p.el.querySelector('.fol'), all: !!c.querySelector('[data-o="all"]'), file: E.files[p.k].label }; })"""
 def specs(pg): return "E.panels.filter(p => p.tab === 'ms2' && p.type === 'spec')"
 r = Run(port=8899, wd="/tmp/wd_ms2prod")
 try:

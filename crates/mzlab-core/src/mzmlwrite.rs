@@ -130,7 +130,7 @@ impl<W: Write> MzmlWriter<W> {
     /// Every trace of a reader: the mass-spectrometer kinds with their term, the other ones (pressure, detector, device) as `chromatogram type` with the unit in a userParam.
     pub fn chromatogram(&mut self, c: &Chromatogram) -> Result<()> {
         let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{}", self.chroms, esc(&c.id), c.time.len(), chromatogram_kind(c));
-        if matches!(c.kind, ChromKind::Pressure | ChromKind::Analog | ChromKind::Other) && !c.unit.is_empty() {
+        if matches!(c.kind, ChromKind::Pressure | ChromKind::Analog | ChromKind::Other | ChromKind::Pda) && !c.unit.is_empty() {
             s += &format!("<userParam name=\"unità\" value=\"{}\"/>", esc(&c.unit));
         }
         s += chromatogram_polarity(&c.id);

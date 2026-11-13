@@ -16,6 +16,7 @@ use mzlab_core::readers::{
     Sample, ScanEntry, CONTRATTO,
 };
 use mzlab_core::scantable::{self, Row};
+use mzlab_core::source;
 
 use super::mzml_header::{extra_di, header_from, param_list};
 use super::np_rewrite;
@@ -131,7 +132,7 @@ impl NumpressReader {
         let mut m = Mzml::new(Loan(&mut *self.data), self.dim);
         for t in traces {
             out.push(ChromatogramEntry {
-                tipo: tipo(&t.kind),
+                tipo: source::kind(&t),
                 unita: m.chromatogram_unit(&t)?,
                 id: t.id,
             });
@@ -169,7 +170,7 @@ impl NumpressReader {
         Ok(Chromatogram {
             index: t.index,
             id: t.id.clone(),
-            kind: tipo(&t.kind),
+            kind: source::kind(&t),
             q1: t.q1,
             q3: t.q3,
             unit,
@@ -215,18 +216,6 @@ fn closed(data: &mut dyn ReadAt, dim: u64) -> bool {
     }
     let tail = tail.trim_ascii_end();
     tail.ends_with(b"</indexedmzML>") || tail.ends_with(b"</mzML>")
-}
-
-fn tipo(k: &str) -> ChromKind {
-    match k {
-        "tic" => ChromKind::Tic,
-        "bpc" => ChromKind::Bpc,
-        "pda" => ChromKind::Pda,
-        "pressure" => ChromKind::Pressure,
-        "srm" => ChromKind::Srm,
-        "analog" => ChromKind::Analog,
-        _ => ChromKind::Other,
-    }
 }
 
 impl NumpressReader {

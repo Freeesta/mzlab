@@ -1,4 +1,5 @@
-# e2e_spettro_accanto: the option «Spectrum beside the chromatogram» (Settings): off = the spectrum of the double click goes below; on = in the row of the chromatogram; Ctrl+Z undoes; a narrow window keeps it below
+# e2e_spettro_accanto: the spectrum of the double click always goes below the chromatogram, in its own row; an old stored «beside» preference is ignored;
+# the settings panel has no switch for it; a narrow window keeps it below
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -18,24 +19,26 @@ try:
             c = pg.locator(".pnl.chrom canvas").first; c.scroll_into_view_if_needed(); b = c.bounding_box()
             pg.mouse.dblclick(b["x"] + b["width"] * fx, b["y"] + b["height"] * 0.5)
         def live(): return pg.evaluate(f"(()=>{{const c={CH};const s=E.panels.find(q=>q.type==='spec'&&q.link===c.id&&q.el);return s?s.id:null}})()")
-        def spenta():
-            open_kind(pg, "full"); ready(pg); assert pg.evaluate("UIP.beside") is False, "off by default"
+        def below():
+            open_kind(pg, "full"); ready(pg)
             dbl(0.4); wait_for_js(pg, f"(()=>{{const c={CH};return !!E.panels.find(q=>q.type==='spec'&&q.link===c.id&&q.el)}})()")
-            assert alone() == 1, "off: the chromatogram stays alone in its row"
-        step("off (default): the spectrum goes below the chromatogram", spenta)
-        def accesa():
-            pg.evaluate("UIP.beside = true; uipSave()")
+            assert alone() == 1, "the chromatogram stays alone in its row"
+        step("the spectrum goes below the chromatogram", below)
+        def old_pref():
+            # a value stored by an older visit: read back, ignored, dropped at the next save
+            pg.evaluate("(()=>{const o=JSON.parse(localStorage.getItem('mzlab.prefs')||'{}');o.beside=true;localStorage.setItem('mzlab.prefs',JSON.stringify(o));uipLoad();uipSave()})()")
+            assert pg.evaluate("'beside' in UIP") is False, "no beside field in the preferences"
+            assert "beside" not in pg.evaluate("localStorage.getItem('mzlab.prefs')"), "the old key is dropped at the next save"
             pg.evaluate(f"(()=>{{const c={CH};c.cur=null}})()")
-            dbl(0.6); wait_for_js(pg, f"{CH} && LAYOUT.righeDi(stackOrder()).find(r=>r.includes({CH})).length === 2")
-            same = pg.evaluate(f"(()=>{{const c={CH};const s=E.panels.find(q=>q.type==='spec'&&q.link===c.id&&q.el);return LAYOUT.righeDi(stackOrder()).some(r=>r.includes(c)&&r.includes(s))}})()")
-            assert same, "on: the live spectrum is in the row of the chromatogram"
-        step("on: the spectrum is in the same row as the chromatogram", accesa)
-        def ricordata():
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.prefs')).beside") is True, "remembered in the preferences"
-        step("the choice is remembered", ricordata)
-        def undo_step():
-            pg.keyboard.press("Control+z"); wait_for_js(pg, f"LAYOUT.righeDi(stackOrder()).find(r=>r.includes({CH})).length === 1")
-        step("Ctrl+Z puts the spectrum back below", undo_step)
+            dbl(0.6); wait_for_js(pg, f"(()=>{{const c={CH};return !!E.panels.find(q=>q.type==='spec'&&q.link===c.id&&q.el)}})()")
+            assert alone() == 1, "an old beside:true still leaves the spectrum below"
+        step("an old stored «beside» is ignored", old_pref)
+        def no_switch():
+            pg.evaluate("document.querySelector('#np-set').click()"); wait_for_js(pg, "!!document.querySelector('#uipset')")      # as the command «settings» of the bar (clickEl)
+            assert pg.locator("#uip-beside").count() == 0, "the switch is gone"
+            assert pg.locator("#uip-xiclens").count() == 1, "the panel still opens with its other switches"
+            pg.evaluate("document.querySelector('#np-set').click()")
+        step("the settings panel has no «beside» switch", no_switch)
         def narrow():
             pg.set_viewport_size({"width": 700, "height": 900}); wait_for_js(pg, "performance.now() > 0")
             pg.evaluate(f"(()=>{{const c={CH};c.cur=null}})()")

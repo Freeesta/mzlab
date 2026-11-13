@@ -439,6 +439,7 @@ impl Reader for Scans<'_, '_> {
     fn dad_map(&mut self, c: usize) -> mzlab_core::Result<Option<String>> { self.l.dad_map(c) }
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_spectrum(c, rt0, rt1) }
     fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_wavelength(c, nm0, nm1) }
+    fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_propose(c, rt0, rt1) }
     fn method(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.method(c) }
     fn mzml_header(&mut self, c: usize) -> mzlab_core::Result<Option<Header>> { self.l.mzml_header(c) }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra { self.l.extra_mzml(s) }

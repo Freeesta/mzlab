@@ -1,7 +1,0 @@
-# Disegno: «È nel catalogo?»
-Il nucleo è in CLAUDE.md; il resto del Disegno in `disegno.md`, il menu del tasto destro in `disegno-menu.md`.
-
-«È nel catalogo?» (`#ex-id` nella scheda «Disegna veloce» e riga `catalogue-id` 75 del menu del tasto destro, `identify(only)` di `draw.js`; risposta in `#id-out` `role=status`; `disegno-identita.js`, modulo ES caricato al primo clic): ogni pezzo della tela (o della selezione; `pieces` + `pieceMolfile` di `draw.js`) va come molfile al motore `molid/1` (`chem/identity.rs`).
-Motore: il `.wasm` `molid` nel sito, `feat/grafo` con `kind: "identity"` nell'app, `mzlab-cli mol-id MOL|- [--set smiles=TEXT] [--set catalogue=CSV]` (catalogo del sito incluso) da riga di comando, stessi byte (`tests/test_molid_wasm.py`, `crates/mzlab-desktop/tests/labels.rs`).
-Esatte = stessa `lookup_key()` (qualunque ordine degli atomi o forma di Kekulé, H esplicito piegato); vicine = stesso scheletro (`skeleton()`: senza stereo né isotopi) con «altra stereo» / «altri isotopi»; un catione o un anione non coincide con il neutro. Nome, formula e massa monoisotopica del catalogo; la nota dice che nomina il disegno, non un segnale.
-Il catalogo `static/molecole/catalogo.csv` va col testo della richiesta; il motore tiene le chiavi del testo ricevuto (impronta FNV), quindi la seconda ricerca è immediata. Pezzi con gruppi R o abbreviazioni: «non cercato». Prove `crates/mzlab-feat/tests/identita.rs` (18 scritture sintetiche, 3 molfile, ogni voce del catalogo in ordine inverso), `e2e_disegno_identita`.

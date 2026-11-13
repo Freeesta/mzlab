@@ -12,7 +12,7 @@ use crate::routes::Routes;
 #[cfg(feature = "mappa-dad")]
 use crate::wiff::dad_map::dad_to_map_json;
 #[cfg(feature = "mappa-dad")]
-use crate::wiff::dad_uv::{dad_spectrum_json, dad_wavelength_json};
+use crate::wiff::dad_uv::{dad_propose_json, dad_spectrum_json, dad_wavelength_json};
 
 /// The scans of the item `file` (`name` or `name#tag`): the experiment of a mixed file, else all.
 fn item_scans<'a, R: ReadAt>(idx: &'a Index<R>, chroms: &[Chrom], file: &str) -> (Option<Part>, Vec<&'a Scan>) {
@@ -193,6 +193,20 @@ pub fn pda_spectrum<M: ReadAt>(m: &mut Mzml<M>, rt0: f64, rt1: f64) -> Result<St
         }
     #[cfg(feature = "mappa-dad")]
     if let Some(json) = m.dad_memo()?.and_then(|d| dad_spectrum_json(&d, rt0, rt1)) {
+        return Ok(json);
+    }
+    Err(Error::new("err.pda.none"))
+}
+
+/// `/api/uvpropose`: the XWC band proposed from the DAD (`{nm, bw, rt, n}`): at the apex of the strongest TWC peak, or in the window `rt0`..`rt1` when both
+/// are finite; `err.pda.none` when the file has no optical matrix.
+pub fn pda_propose<M: ReadAt>(m: &mut Mzml<M>, rt0: f64, rt1: f64) -> Result<String> {
+    if let Some((l, c)) = m.r.reader()
+        && let Some(json) = l.dad_propose(c, rt0, rt1)? {
+            return Ok(json);
+        }
+    #[cfg(feature = "mappa-dad")]
+    if let Some(json) = m.dad_memo()?.and_then(|d| dad_propose_json(&d, rt0, rt1)) {
         return Ok(json);
     }
     Err(Error::new("err.pda.none"))

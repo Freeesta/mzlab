@@ -87,8 +87,9 @@ async function rawSeries(p) {
   if (p.type === "chrom") {
     let fl = shownFor(p);
     if (p.kind !== "pda" && p.prec != null) fl = fl.filter(f => f.kind !== "ms2" || (f.precursors || []).some(v => Math.abs(v - p.prec) < 0.6));   // an MS2 experiment is a precursor: only the files that have it
-    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt, p.ptol).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
-    const sh = p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0;       // «Allinea PDA e massa»: the PDA trace is shown later by the delay of the detector in series (display only)
+    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt, p.ptol).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: kindUp(p), time: f.time }))));
+    if (p.xw && p.mz0 != null) r.push(...await (await xwc()).series(p, fl));      // extra XWC bands
+    const sh = p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0;       // «Allinea DAD e massa»: the PDA trace is shown later by the delay of the detector in series (display only)
     if (sh) r.forEach(s => { s.x = Array.from(s.x, v => v + sh); });
     return r.filter(s => s.x.length);
   }
@@ -438,10 +439,10 @@ async function drawLines(p) {
       g.strokeStyle = s.color; g.lineWidth = 1; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(X(s.x[i0]), b0); g.lineTo(X(s.x[i1]), b1); g.stroke(); g.setLineDash([]);
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
-    if (ESP.mrm(p)) { if (it.fol && window.SEGUE) SEGUE.dots(g, X, Y, U, s, it); } else for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }      // SIM/MRM: no bars, the two anchors are buttons (integra-estremi.js); a follower gets two dashed rings
+    if (ESP.mrm(p)) { if (it.fol && window.SEGUE) SEGUE.dots(g, X, Y, U, s, it); if (it.splits && window.INTVALLI && !it.fol) INTVALLI.paint(p, g, X, Y, U, s, it); } else for (const e of ["a", "b"]) { const px = X(it.zero ? INTZERO.clamp(s, it[e]) : s.x[nearIdx(s.x, it[e])]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }      // SIM/MRM: no bars, the two anchors are buttons (integra-estremi.js); a follower gets two dashed rings
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + (it.none ? "—" : r.wait && !Number.isFinite(r.area) ? "…" : I18N.sciE(r.area)) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak; the baseline mode is in the hover text
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, text: lab, copy: it.none ? null : I18N.sciE(r.area, 5), tip: (it.nm ? `<div><b>${EH(it.nm)}</b></div>` : "") + (it.none ? "" : I18N.t("tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) })) + (it.fol ? SEGUE.tip(p, it) : it.bm ? `<div class="sm">${I18N.t("int.base.tip", { b: I18N.t("int.base.tag." + it.bm) })}</div>` : "") + (it.none ? "" : `<div class="sm">${I18N.t("int.copy.tip")}</div>`) }); g.font = fpx(12);
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), int: it, text: lab, copy: it.none ? null : I18N.sciE(r.area, 5), tip: (it.nm ? `<div><b>${EH(it.nm)}</b></div>` : "") + (it.none ? "" : I18N.t(p.kind === "pda" ? "tip.areaUv" : "tip.area", { area: I18N.sciE(r.area, 5), y: I18N.sciE(r.height) })) + (it.fol ? SEGUE.tip(p, it) : it.bm ? `<div class="sm">${I18N.t("int.base.tip", { b: I18N.t("int.base.tag." + it.bm) })}</div>` : "") + (it.none ? "" : `<div class="sm">${I18N.t("int.copy.tip")}</div>`) }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
@@ -522,8 +523,7 @@ const palCss = (name, diff) => diff ? "linear-gradient(90deg,#D55E00,#fafaf6,#00
 const getMap = (k, lv, bg) => memo(`g${k}|${lv}|${bg}`, () => J(lv === "pda" ? `api/map?k=${k}&kind=pda${bg}` : `api/map?k=${k}&level=${lv}${bg}`).then(j => {
   return { ...j, m: b64F32(j.data, Number.isInteger(j.nrt) && Number.isInteger(j.nmz) ? j.nrt * j.nmz : null) };
 }));
-// Whether a file has a PDA matrix (RT x wavelength) for the map: a PDA trace alone is not one and the browser engine reads none, so the answer is probed once
-// from the route (a plain fetch: the error is the answer, not a message) and kept on the file (`_pdaMap`); true re-renders the controls of the map panels, which then offer the PDA choice.
+// Whether a file has a DAD matrix (not a trace alone), probed once and kept in `_pdaMap`; true re-renders the map controls (the PDA choice).
 function pdaMapOk(f) {
   if (f._pdaMap === undefined) {
     f._pdaMap = null;

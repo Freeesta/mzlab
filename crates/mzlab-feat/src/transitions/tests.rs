@@ -316,3 +316,35 @@ fn from_zero_the_area_is_the_trapezoid_of_the_trace_between_the_same_edges() {
         );
     }
 }
+
+/// A SIM ion of an mzML (`SIM SIC Q1=…`, a SIC with no Q3) is a channel next to an SRM transition; a TIC is not.
+#[test]
+fn a_sim_ion_of_an_mzml_is_a_channel() {
+    use mzlab_core::mzml::{ChromKind, Chromatogram};
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let trace = |id: &str, kind, q1, q3| Chromatogram {
+        index: 0,
+        id: id.into(),
+        kind,
+        q1,
+        q3,
+        unit: String::new(),
+        time: vec![0.0, 0.1, 0.2],
+        intensity: vec![1.0, 5.0, 2.0],
+    };
+    let mut w = MzmlWriter::new(Vec::new(), &Header::default()).unwrap();
+    w.open_chromatograms(3).unwrap();
+    w.chromatogram(&trace("TIC", ChromKind::Tic, None, None))
+        .unwrap();
+    let sim =
+        "SIM SIC Q1=300 sample=1 period=1 experiment=1 transition=0 dwell=50 polarity=positive";
+    w.chromatogram(&trace(sim, ChromKind::Sic, Some(300.0), None))
+        .unwrap();
+    let srm = "SRM SIC Q1=300 Q3=150 sample=1 period=1 experiment=2 transition=0 polarity=positive";
+    w.chromatogram(&trace(srm, ChromKind::Srm, Some(300.0), Some(150.0)))
+        .unwrap();
+    let bytes = w.finish().unwrap();
+    let c = traces::channels(&bytes).unwrap();
+    let got: Vec<_> = c.iter().map(|c| (c.q1, c.q3, c.polarity)).collect();
+    assert_eq!(got, [(300.0, None, Some(1)), (300.0, Some(150.0), Some(1))]);
+}

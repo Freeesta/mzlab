@@ -1,5 +1,5 @@
 """The structure bridge of mzFinder in WebAssembly (crates/mzlab-feat-grafo-wasm) answers a SMILES with the formula, the groups and the cleavage products that
-the Rust library gives natively, the piece labels, the bond cuts and the analysis card (`anal/1`, every golden molecule) the selection info (`sel/1`) and the lookup URLs (`link/1`, every golden case) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
+the Rust library gives natively, the piece labels (also with the delta of a bracket), the bond cuts and the analysis card (`anal/1`, every golden molecule) the selection info (`sel/1`) and the lookup URLs (`link/1`, every golden case) of the Drawing byte for byte like the CLI (checked by the formula and the sets), and a bad SMILES with a JSON error. Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import json
 import shutil
@@ -132,53 +132,13 @@ def test_labels_with_a_radical_mark_equal_the_cli(pkg, tmp_path):
     assert (aminium["kind"], aminium["electrons"]) == ("radicalCation", 9) and aminium["odd"]
 
 
-# ions/1: a chloro amine, a quaternary ammonium, a deuterated acid and a 13C-labelled sugar (atoms as the Draw page sends them)
-IONS = {"structures": [[{"el": "C", "h": 3}, {"el": "N", "h": 1}, {"el": "C", "h": 2}, {"el": "Cl"}], [{"el": "N", "q": 1}, {"el": "C", "h": 3}, {"el": "C", "h": 3}, {"el": "C", "h": 3}, {"el": "C", "h": 3}],
-                        [{"el": "C", "iso": 0}, {"el": "D"}, {"el": "D"}, {"el": "D"}, {"el": "C"}, {"el": "O"}, {"el": "O"}, {"el": "D"}],
-                        [{"el": "C", "iso": 13, "h": 2}, *[{"el": "C", "iso": 13, "h": 1}] * 4, {"el": "C", "iso": 13, "h": 1}, *[{"el": "O", "h": 1}] * 5, {"el": "O"}], [{"el": "R#"}]], "decimals": 4}
-
-
-@pytest.mark.parametrize("sets", [[], ["decimals=6", "ppm=2.5"]])
-def test_ions_through_wasm_equal_the_cli_byte_for_byte(pkg, tmp_path, sets):
-    req = tmp_path / "req.json"
-    body = dict(IONS)
-    for kv in sets:
-        k, v = kv.split("=")
-        body[k] = float(v)
-    req.write_text(json.dumps(IONS), encoding="utf-8")
-    site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps(body), "ions")
-    app = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-ions", str(req), *[a for kv in sets for a in ("--set", kv)])
-    assert site == app
-    amine, quat, acid, sugar, bad = json.loads(site)["structures"]
-    rows = {r["name"]: r["mzText"] for r in amine["rows"]}
-    assert amine["formula"] == "C2H6ClN" and "[M+H]+" in rows and "[M-H]-" in rows
-    assert [(r["name"], r["z"]) for r in quat["rows"]] == [("[M]+", 1)]
-    assert next(r for r in acid["rows"] if r["name"] == "[M-H]-")["formula"] == "C2D3O2"
-    assert sugar["formula"] == "[13C]6H12O6" and bad["error"] == "error.etich.element"
-
-
-# tray/1: the formula and mass of drawn structures, the suspect list as CSV (a name with a comma is quoted) and the list read back
-TRAY_ATOMS = [{"name": "ethanol", "smiles": "CCO", "atoms": [{"el": "C", "h": 3}, {"el": "C", "h": 2}, {"el": "O", "h": 1}]},
-              {"name": "glucose, 13C6", "smiles": "", "atoms": IONS["structures"][3]}, {"name": "bad", "atoms": [{"el": "R#"}]}]
-TRAY_CSV = {"op": "csv", "adducts": ["[M+H]+", "[M+Na]+", "[M-H]-"],
-            "entries": [{"name": "ethanol", "smiles": "CCO", "formula": "C2H6O", "mass": 46.041865, "charge": 0}, {"name": "x, \"y\"", "formula": "C6H6"}]}
-
-
-@pytest.mark.parametrize("body", [{"op": "adducts"}, {"op": "entries", "structures": TRAY_ATOMS}, TRAY_CSV,
-                                  {"op": "read", "text": "name,smiles,formula,mass,charge,adducts\n\"a, b\",CO,CH4O,32.026215,0,[M+H]+;[M+K]+\nnone,,,,0,\n"}])
-def test_tray_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path, body):
-    req = tmp_path / "req.json"
-    req.write_text(json.dumps(body), encoding="utf-8")
-    site = run("node", "tests/feat_grafo_node.js", str(pkg), json.dumps(body), "tray")
-    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-suspects", str(req))
-    if body["op"] == "csv":
-        assert site.splitlines()[2].startswith('"x, ""y""",,C6H6,78.046950,0,')
-    elif body["op"] == "entries":
-        ethanol, sugar, bad = json.loads(site)["entries"]
-        assert (ethanol["formula"], sugar["formula"], bad["error"]) == ("C2H6O", "[13C]6H12O6", "error.etich.element")
-    elif body["op"] == "read":
-        back = json.loads(site)
-        assert (back["entries"][0]["name"], back["adducts"], back["skipped"]) == ("a, b", ["[M+H]+", "[M+K]+"], 1)
+def test_labels_with_a_bracket_delta_equal_the_cli(pkg, tmp_path):
+    req = tmp_path / "req.json"   # the Draw label of a structure in brackets with «+O»: formula and masses of structure plus delta
+    req.write_text(json.dumps({"structures": [[{"el": "C", "h": 3}, {"el": "C", "h": 3}], [{"el": "C", "h": 4}]], "deltas": ["+O", "-O"], "arrows": []}), encoding="utf-8")
+    site = run("node", "tests/feat_grafo_node.js", str(pkg), req.read_text(encoding="utf-8"), "labels")
+    assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-label", str(req))
+    ethanol, bad = json.loads(site)["structures"]
+    assert (ethanol["formula"], ethanol["nominal"], ethanol["delta"]) == ("C2H6O", 46, "+O") and bad["error"] == "error.grafo.delta.neg"
 
 
 @pytest.mark.parametrize("part", [False, True])

@@ -7,7 +7,7 @@ use super::{container_within, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::method::{sha1_hex, Source, SrcFile};
-use crate::mzml::{ChromKind, Chromatogram, Spectrum};
+use crate::mzml::{Chromatogram, Spectrum};
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 use crate::readers::{
@@ -194,7 +194,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { self.losses_of(c) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) }
+#[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { self.losses_of(c) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) } #[cfg(feature = "mappa-dad")] fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> { Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_propose_json(d, rt0, rt1))) }
     fn format(&self) -> Format { Format::SciexWiff }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
@@ -221,9 +221,6 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         let mut v: Vec<ChromatogramEntry> = self.chromatograms(c)?.iter().map(|h| ChromatogramEntry { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }).collect();
         self.list_bpc(c, &mut v)?;
-        if self.part(c)?.w.dad.is_some() && !v.iter().any(|x| x.tipo == ChromKind::Pda) {
-            v.push(ChromatogramEntry { id: "DAD TWC".into(), tipo: ChromKind::Pda, unita: "mAU".into() });
-        }
         Ok(v)
     }
     fn chromatogram(&mut self, c: usize, id: &str) -> Result<Chromatogram> {

@@ -49,10 +49,10 @@ CASES = {
 }
 EXPECT = {
     "en": ["TIC · MS²", "TIC · MS² (all precursors)", "TIC · MS² · precursor 414.1", "MS² of 414.1", "TIC", "MS¹", "MRM", "MRM · 414.1>195.0",
-           "PDA (all λ)", "PDA 254 nm", "PDA 250–260 nm", "UV spectrum", "My trace", "SIM · ion 1", "SIM · 305.1",
+           "DAD TWC", "XWC 254 nm", "XWC 250–260 nm", "UV spectrum", "My trace", "SIM · ion 1", "SIM · 305.1",
            "TIC · MS³", "TIC · MS³ (all precursors)", "TIC · MS³ · precursor 194.1", "MS³ of 194.1"],
     "it": ["TIC · MS²", "TIC · MS² (tutti i precursori)", "TIC · MS² · precursore 414.1", "MS² di 414.1", "TIC", "MS¹", "MRM", "MRM · 414.1>195.0",
-           "PDA (tutte le λ)", "PDA 254 nm", "PDA 250–260 nm", "Spettro UV", "My trace", "SIM · ione 1", "SIM · 305.1",
+           "DAD TWC", "XWC 254 nm", "XWC 250–260 nm", "Spettro UV", "My trace", "SIM · ione 1", "SIM · 305.1",
            "TIC · MS³", "TIC · MS³ (tutti i precursori)", "TIC · MS³ · precursore 194.1", "MS³ di 194.1"],
 }
 

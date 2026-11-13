@@ -2,6 +2,7 @@
 //! by channel so a column of areas pastes into a sheet, an optional `sum` row of the areas per channel. The engine measures every window again from
 //! the traces, so the site (`mzlab-wasm` `manual_table`), the app (`rpc.rs` op `manint`) and `mzlab-cli manual-table` write the same bytes.
 //! Baselines as the Data view draws them: `zero`, `line` (`baseline::peak_area`) and `edges` (the page's line between the 3-point means of the edges).
+//! A window with `splits` gives one row per part (`valley::parts`, drop lines on the window's line, `overlap` = `drop`, `pv` = Hp/Hv).
 
 use crate::baseline::{peak_area, Baseline};
 use crate::error::{Error, Result};
@@ -9,12 +10,13 @@ use crate::json::{parse, Value};
 use crate::numfmt::sci;
 use crate::peak1d::find_peak;
 use crate::peakq_lr::near_idx;
+use crate::valley;
 
 /// The baselines a window can name (`baseline::MODES`).
 pub const BASELINES: [&str; 3] = ["zero", "edges", "line"];
 /// The header of the table.
 pub const HEAD: &str =
-    "channel,name,sample,start_min,end_min,apex_rt_min,area,height,snr,baseline,label\n";
+    "channel,name,sample,start_min,end_min,apex_rt_min,area,height,snr,baseline,overlap,pv,label\n";
 /// Smoothing and points across the peak of the S/N (`peak1d::find_peak` around the window, the defaults of `chrom.transitions@2`).
 const SN_SMOOTH: usize = 3;
 const SN_POINTS: usize = 3;
@@ -42,6 +44,9 @@ struct Row {
     height: f64,
     snr: Option<f64>,
     base: &'static str,
+    /// A part of a window split at its valleys, with its Hp/Hv.
+    drop: bool,
+    pv: Option<f64>,
     /// The place of the window in the request, for its name (`label_of_window`).
     w: usize,
 }
@@ -195,54 +200,126 @@ fn label_of_window(w: &Value) -> String {
         .to_string()
 }
 
-/// One window measured on its channel: (the place of the channel in `keys`, the row).
-fn measure(i: usize, w: &Value, samples: &[Sample], keys: &[Channel]) -> Result<(usize, Row)> {
+/// The channel of a window and its edges (in order): (file, trace, a, b).
+fn channel_of<'a>(w: &Value, samples: &'a [Sample]) -> Result<(usize, &'a Trace, f64, f64)> {
     let num = |k: &str| w.get(k).and_then(Value::f64);
     let (fi, ti, a, b) = (num("file"), num("tr"), num("a"), num("b"));
     let tr = fi
         .zip(ti)
         .and_then(|(f, t)| samples.get(f as usize).and_then(|s| s.1.get(t as usize)));
-    let (Some(tr), Some(a), Some(b)) = (tr, a, b) else {
-        return Err(Error::new("err.manint.channel"));
-    };
-    if tr.t.len() < 2 || !a.is_finite() || !b.is_finite() {
-        return Err(Error::new("err.manint.channel"));
+    match (tr, a, b) {
+        (Some(tr), Some(a), Some(b)) if tr.t.len() >= 2 && a.is_finite() && b.is_finite() => {
+            Ok((fi.unwrap_or(0.0) as usize, tr, a.min(b), a.max(b)))
+        }
+        _ => Err(Error::new("err.manint.channel")),
     }
-    let base = baseline_of(w)?;
-    let [area, height, apex] = match peak_area(&tr.t, &tr.y, a, b, base) {
-        Some([area, _, height, apex]) => [area, height, apex],
-        None => edges_area(&tr.t, &tr.y, a, b),
-    };
-    let snr = find_peak(
+}
+
+/// The line the parts of a split window share: `edges` as the line between the 3-point means of the edges, the others as they are.
+fn drop_line(base: Baseline, tr: &Trace, lo: usize, hi: usize) -> Baseline {
+    match base {
+        Baseline::Edges => Baseline::Line {
+            t0: tr.t[lo],
+            y0: edge3(&tr.y, lo),
+            t1: tr.t[hi],
+            y1: edge3(&tr.y, hi),
+        },
+        b => b,
+    }
+}
+
+/// The S/N of `peak1d::find_peak` around `a..b`.
+fn snr_of(tr: &Trace, a: f64, b: f64) -> Option<f64> {
+    find_peak(
         &tr.t,
         &tr.y,
         Some((a + b) / 2.0),
-        (b - a).abs() / 2.0,
+        (b - a) / 2.0,
         SN_SMOOTH,
         SN_POINTS,
     )
     .map(|f| f.snr)
-    .filter(|v| v.is_finite());
+    .filter(|v| v.is_finite())
+}
+
+/// One window measured on its channel: (the place of the channel in `keys`, a row, or a row per part when `splits` cuts it).
+fn measure(i: usize, w: &Value, samples: &[Sample], keys: &[Channel]) -> Result<Vec<(usize, Row)>> {
+    let (file, tr, a, b) = channel_of(w, samples)?;
+    let base = baseline_of(w)?;
     let ch = keys
         .iter()
         .position(|(k, _, _)| *k == key_of(tr))
         .unwrap_or(0);
-    let row = Row {
-        file: fi.unwrap_or(0.0) as usize,
-        a: a.min(b),
-        b: a.max(b),
-        apex,
-        area,
-        height,
-        snr,
-        base: base.name(),
-        w: i,
-    };
-    Ok((ch, row))
+    let row =
+        |a: f64, b: f64, apex: f64, area: f64, height: f64, pv: Option<f64>, drop: bool| Row {
+            file,
+            a,
+            b,
+            apex,
+            area,
+            height,
+            snr: snr_of(tr, a, b),
+            base: base.name(),
+            drop,
+            pv,
+            w: i,
+        };
+    let (lo, hi) = (near_idx(&tr.t, a), near_idx(&tr.t, b));
+    let cuts: Vec<usize> = nums(w.get("splits"))
+        .iter()
+        .filter(|s| s.is_finite())
+        .map(|&s| near_idx(&tr.t, s))
+        .filter(|&k| k > lo && k < hi)
+        .collect();
+    if cuts.is_empty() {
+        let [area, height, apex] = match peak_area(&tr.t, &tr.y, a, b, base) {
+            Some([area, _, height, apex]) => [area, height, apex],
+            None => edges_area(&tr.t, &tr.y, a, b),
+        };
+        return Ok(vec![(ch, row(a, b, apex, area, height, None, false))]);
+    }
+    let line = drop_line(base, tr, lo, hi);
+    let parts = valley::parts(&tr.t, &tr.y, lo, hi, &cuts, |x| line.at(x).unwrap_or(0.0));
+    let n = parts.len();
+    Ok(parts
+        .iter()
+        .enumerate()
+        .map(|(j, p)| {
+            let (pa, pb) = (
+                if j == 0 { a } else { tr.t[p.lo] },
+                if j + 1 == n { b } else { tr.t[p.hi] },
+            );
+            (
+                ch,
+                row(pa, pb, tr.t[p.apex], p.area * 60.0, p.height, p.pv, true),
+            )
+        })
+        .collect())
+}
+
+/// The valleys where the window `window` (JSON, as one window of `table_text`) splits at `depth` (`valley::valleys` on the trace minus the line the
+/// parts would share): `{"splits":[MIN,...]}`, times of the points of the trace.
+pub fn valleys_text(files: &str, window: &str, depth: f64) -> Result<String> {
+    let (samples, _) = samples_and_keys(files)?;
+    let w = parse(window.as_bytes())?;
+    let (_, tr, a, b) = channel_of(&w, &samples)?;
+    let (lo, hi) = (near_idx(&tr.t, a), near_idx(&tr.t, b));
+    let line = drop_line(baseline_of(&w)?, tr, lo, hi);
+    let d: Vec<f64> =
+        tr.t.iter()
+            .zip(&tr.y)
+            .map(|(&t, &y)| y - line.at(t).unwrap_or(0.0))
+            .collect();
+    let at: Vec<String> = valley::valleys(&d, lo, hi, depth)
+        .iter()
+        .map(|&k| format!("{}", tr.t[k]))
+        .collect();
+    Ok(format!("{{\"splits\":[{}]}}", at.join(",")))
 }
 
 /// The table for `files` (JSON `[{"name", "transitions"}]`, `transitions` as `/api/mrm` gives them) and `windows` (JSON `[{"file", "tr", "a", "b",
-/// "baseline"?, "line"?, "label"?}]`: index of the file, index of its transition, the edges in min, the name the user gave the window, last column).
+/// "baseline"?, "line"?, "label"?, "splits"?}]`: index of the file, index of its transition, the edges in min, the name the user gave the window, last
+/// column, the times of its drop lines).
 /// Channels in the order they first appear in the files, the windows of a channel by file then start; `sums` adds after each channel a row `sum` with the sum of its areas. `err.manint.channel` for a window
 /// that names no channel or no times, `err.manint.baseline` for an unknown baseline or a `line` without its four numbers.
 pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
@@ -253,7 +330,8 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
         .iter()
         .enumerate()
         .map(|(i, w)| measure(i, w, &samples, &keys))
-        .collect::<Result<Vec<_>>>()?;
+        .collect::<Result<Vec<_>>>()?
+        .concat();
     let labels: Vec<String> = list.arr().iter().map(label_of_window).collect();
     crate::sortc::by(&mut rows, |x, y| {
         (x.0, x.1.file)
@@ -269,7 +347,7 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
         let head = format!("{},{}", field(label), field(name));
         for r in &mine {
             out += &format!(
-                "{head},{},{:.3},{:.3},{:.3},{},{},{},{},{}\n",
+                "{head},{},{:.3},{:.3},{:.3},{},{},{},{},{},{},{}\n",
                 field(&samples[r.file].0),
                 r.a,
                 r.b,
@@ -278,12 +356,14 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
                 sci(r.height, 5),
                 r.snr.map_or(String::new(), |v| format!("{v:.1}")),
                 r.base,
+                if r.drop { "drop" } else { "" },
+                r.pv.map_or(String::new(), |v| format!("{v:.1}")),
                 field(&labels[r.w])
             );
         }
         if sums {
             out += &format!(
-                "{head},sum,,,,{},,,,\n",
+                "{head},sum,,,,{},,,,,,\n",
                 sci(mine.iter().map(|r| r.area).sum(), 5)
             );
         }

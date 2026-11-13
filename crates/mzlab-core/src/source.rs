@@ -94,7 +94,8 @@ fn spettro_e_mobilita(buf: &[u8]) -> Result<(Peaks, Option<crate::mzml::Mobility
 pub fn scan_text<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
     if let (Some(k), Some((l, c))) = (sc.k, m.reader()) {
         let s = crate::mzidx_reader::spettro(&mut *l, c, k)?;
-        return Ok(crate::mzmlwrite::spectrum_head(k, &s, &l.extra_mzml(&s)));
+        let extra = l.scan_extra(c, k, &s);
+        return Ok(crate::mzmlwrite::spectrum_head(k, &s, &extra));
     }
     crate::scaninfo::header(m, sc.start, sc.end)
 }
@@ -137,8 +138,12 @@ impl<'a, M: ReadAt> MzmlTraces<'a, M> {
     }
 }
 
-/// The kind `mzml::read` gives a chromatogram, from the kind `Mzml::chromatograms` gives it.
-fn kind(c: &Chrom) -> ChromKind {
+/// The kind `mzml::read` gives a chromatogram, from the kind `Mzml::chromatograms` gives it: a SIM ion (`SIM SIC …`, no Q3) is listed with the SRM
+/// transitions there (`mzmlhead::chrom_of`), but it is a SIC, as `mzml::read` and the readers say. Shared by every reader of an mzML's chromatogram list.
+pub fn kind(c: &Chrom) -> ChromKind {
+    if c.id.starts_with("SIM SIC ") && c.q3.is_none() {
+        return ChromKind::Sic;
+    }
     match c.kind.as_str() {
         "tic" => ChromKind::Tic,
         "bpc" => ChromKind::Bpc,

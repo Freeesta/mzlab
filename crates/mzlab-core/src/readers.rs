@@ -242,6 +242,8 @@ pub trait Reader {
     fn dad_wavelength(&mut self, _c: usize, _nm0: f64, _nm1: f64) -> Result<Option<String>> {
         Ok(None)
     }
+    /// The XWC band proposed from the DAD / PDA of sample `c` (JSON `{nm, bw, rt, n}`, `wiff::dad_uv::dad_propose_json`), if it has the optical matrix.
+    #[rustfmt::skip]    fn dad_propose(&mut self, _c: usize, _rt0: f64, _rt1: f64) -> Result<Option<String>> { Ok(None) }
     /// The optical (DAD / PDA) matrix of sample `c` as the reader holds it, for `convert.mzml` with `dad`; `None` when the sample has none.
     #[cfg(any(not(target_family = "wasm"), feature = "sciex"))]
     fn dad_data(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
@@ -261,7 +263,7 @@ pub trait Reader {
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra::default()
     }
-    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML writer asks this one; the index builders ask `extra_mzml` (cheap, no read), so what only this one gives is in the mzML and not in the rows of an index.
+    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML writer and the rows of an index built from the reader (`mzidx_reader`, `source::scan_text`) ask this one, so both hold what only it gives.
     fn scan_extra(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
         self.extra_mzml(s)
     }

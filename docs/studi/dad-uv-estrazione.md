@@ -1,5 +1,7 @@
 # UV/Vis detector (DAD) and wavelength extraction (XWC): study
 
+**Status: done.** All five steps are in the program: the λ route of MRM/SIM files, the detector switch on every panel, XWC extraction (engine and `xwc.js`), the UV guard with XWC integration and the DAD/TWC/XWC names, and the DAD on the MRM panel (UV spectrum at a time, TWC on the right axis, `dad-mrm.js`). An integrated DAD area is in mAU·s. Current description: `docs/agenti/dad.md`; the sections below are the original plan.
+
 Study for the request: «on the 3200 QTRAP every file also has UV/Vis; when a UV/Vis signal is present I must be able to change detector (MRM today cannot show the DAD); wavelength extraction does not work; it must work like the XIC: easy, fast, the program proposes a range from the data». Plus: the integration guard on the UV trace speaks of ions (`int.guard`). State read on `origin/main` at `e8029d4f`. No product code here; the PRs are in «Prompts».
 
 ## 1. Where the UV/Vis channel is read

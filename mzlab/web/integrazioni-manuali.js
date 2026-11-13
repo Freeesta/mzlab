@@ -8,7 +8,10 @@ const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) =
 /** The columns of the engine (manint::HEAD) with their labels (literal keys: tools/controlla_i18n.py reads them). */
 const HEADS = () => /** @type {Record<string, string>} */ ({ channel: t("canali.manint.h.channel"), name: t("canali.manint.h.name"), sample: t("canali.manint.h.sample"),
   start_min: t("canali.manint.h.start"), end_min: t("canali.manint.h.end"), apex_rt_min: t("canali.manint.h.apex"), area: t("canali.manint.h.area"),
-  height: t("canali.manint.h.height"), snr: t("canali.manint.h.snr"), baseline: t("canali.manint.h.base"), label: t("canali.manint.h.label") });
+  height: t("canali.manint.h.height"), snr: t("canali.manint.h.snr"), baseline: t("canali.manint.h.base"), overlap: t("canali.manint.h.overlap"),
+  pv: t("canali.manint.h.pv"), label: t("canali.manint.h.label") });
+/** The tooltips of the columns of a split window. */
+const TIPS = () => /** @type {Record<string, string>} */ ({ overlap: t("canali.manint.h.overlap.tip"), pv: t("canali.manint.h.pv.tip") });
 const BASES = () => /** @type {Record<string, string>} */ ({ zero: t("int.base.zero"), edges: t("int.base.edges"), line: t("int.base.line") });
 /** The longest name of an integration (manint::LABEL_MAX). */
 const NM_MAX = 40;
@@ -65,16 +68,19 @@ async function records() {
   return out;
 }
 
-/** The windows JSON of the records, files numbered in the order of `ks`; a name only when the user gave one. @param {Rec[]} recs @param {number[]} ks */
-const windowsOf = (recs, ks) => JSON.stringify(recs.map(r => ({ file: ks.indexOf(r.k), tr: r.tr, a: Math.min(r.it.a, r.it.b), b: Math.max(r.it.a, r.it.b), ...baseOf(r.it), ...(r.it.nm ? { label: r.it.nm } : {}) })));
+/** The window of a record as `api/manint` reads it: a name only when the user gave one, the drop lines of a split one. @param {any} it @param {number} file @param {number} tr */
+const windowOf = (it, file, tr) => ({ file, tr, a: Math.min(it.a, it.b), b: Math.max(it.a, it.b), ...baseOf(it), ...(it.nm ? { label: it.nm } : {}), ...(it.splits && it.splits.length ? { splits: it.splits } : {}) });
+/** The windows JSON of the records, files numbered in the order of `ks`. @param {Rec[]} recs @param {number[]} ks */
+const windowsOf = (recs, ks) => JSON.stringify(recs.map(r => windowOf(r.it, ks.indexOf(r.k), r.tr)));
 
-/** The record of a row: same sample, channel and edges (the engine writes the edges at 0.001 min). @param {string[]} row */
+/** The record of a row: same sample and channel, the row inside its edges (the engine writes the edges at 0.001 min; a part of a split window lies
+ * between them). @param {string[]} row */
 function recOf(row) {
-  return st.recs.find(r => sampleOf(E.files[r.k].file || "") === row[2] && r.label === row[0] && Math.min(r.it.a, r.it.b).toFixed(3) === row[3] && Math.max(r.it.a, r.it.b).toFixed(3) === row[4]) || null;
+  return st.recs.find(r => sampleOf(E.files[r.k].file || "") === row[2] && r.label === row[0] && +Math.min(r.it.a, r.it.b).toFixed(3) <= +row[3] && +row[4] <= +Math.max(r.it.a, r.it.b).toFixed(3)) || null;
 }
 
 /** An area or height of the CSV (7.84077E+04) in the one form of the page; a baseline by its name. @param {string} v @param {string} col */
-const fmt = (v, col) => col === "baseline" ? BASES()[v] || v : /^-?\d(\.\d+)?E[+-]\d+$/.test(v) ? G.I18N.sciE(Number(v)) : v;
+const fmt = (v, col) => col === "baseline" ? BASES()[v] || v : col === "overlap" ? (v === "drop" ? t("canali.manint.drop") : v) : /^-?\d(\.\d+)?E[+-]\d+$/.test(v) ? G.I18N.sciE(Number(v)) : v;
 /** A channel as shown: the m/z, «q1 > q3», or «ione N». @param {string} c */
 const chShown = c => c.replace(/^ion (\d+)$/, (_, n) => t("canali.sim.ion", { n: +n })).replace(">", " > ");
 const COPY = ["apex_rt_min", "area", "height"];
@@ -106,8 +112,8 @@ function draw() {
   const had = st.had; st.had = body.length;
   if (!body.length) { el.hidden = true; el.innerHTML = ""; return; }
   if (had === 0) setOpen(true);      // an integration after none opens the card; otherwise it stays as the user left it (a reload included)
-  const H = HEADS(), cols = order(head), open = isOpen(), plain = ["channel", "name", "sample", "baseline", "label"];
-  const ths = cols.map(c => h`<th scope="col"${raw(plain.includes(head[c]) ? "" : ' class="num"')}>${H[head[c]] || head[c]}</th>`).join("");
+  const H = HEADS(), tips = TIPS(), cols = order(head).filter(c => !(head[c] in tips) || body.some(r => r[c] !== "")), open = isOpen(), plain = ["channel", "name", "sample", "baseline", "overlap", "label"];
+  const ths = cols.map(c => h`<th scope="col"${raw(plain.includes(head[c]) ? "" : ' class="num"')}${raw(tips[head[c]] ? h` title="${tips[head[c]]}"` : "")}>${H[head[c]] || head[c]}</th>`).join("");
   const trs = body.map((r, i) => {
     const rec = recOf(r), who = { ch: chShown(r[0]), s: r[2] };
     const act = rec ? h`<button type="button" class="manint-x" data-del="${i}" aria-label="${t("canali.manint.del.aria", who)}" title="${t("canali.manint.del")}">×</button>` : "";
@@ -188,6 +194,17 @@ async function sync() {
   }
 }
 
+/** Where a record splits at `depth` (0..1): the times of the engine (`api/manvalley`, manint::valleys_text), null when it refused. @param {any} it @param {number} depth */
+async function valleys(it, depth) {
+  const m = /^m\|(\d+)\|(.+)$/.exec(it.key || ""), b = baseOf(it); if (!m || !b) return null;
+  try {
+    const list = await getMrm(+m[1]), tr = list.findIndex((/** @type {any} */ x) => String(x.id) === m[2]); if (tr < 0) return null;
+    const w = JSON.stringify({ file: 0, tr, a: Math.min(it.a, it.b), b: Math.max(it.a, it.b), ...b });
+    const r = await fetch(`api/manvalley?k=${m[1]}&depth=${depth}&w=${encodeURIComponent(w)}`);
+    return r.ok ? JSON.parse(await r.text()).splits : null;
+  } catch (_) { return null; }
+}
+
 /** @type {WeakMap<any, { v: string | undefined }>} */ const SN = new WeakMap();
 /** The S/N of a window that follows the sample (integra-segue.js), by the engine as a table row would have it, without adding a row; undefined until it
  * answers (the panel is then drawn again), "" when there is no peak. @param {any} p @param {any} f */
@@ -208,5 +225,5 @@ let timer = /** @type {ReturnType<typeof setTimeout> | undefined} */ (undefined)
 /** Every redraw of a panel calls this: one sync after the last of a burst (a dragged edge redraws at every move). */
 const soon = () => { clearTimeout(timer); timer = setTimeout(sync, 150); };
 
-G.MANINT = { sync: soon, now: sync, snr, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
+G.MANINT = { sync: soon, now: sync, snr, valleys, state: () => ({ ks: [...st.ks], windows: st.windows, csv: st.csv, names: st.ks.map(k => E.files[k].file) }) };
 soon();
