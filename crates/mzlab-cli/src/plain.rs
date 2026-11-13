@@ -9,6 +9,8 @@ use crate::{
 mod dda_window_cmd;
 #[path = "ion_mz_cmd.rs"]
 mod ion_mz_cmd;
+#[path = "match_mz_cmd.rs"]
+mod match_mz_cmd;
 #[path = "mol_check_cmd.rs"]
 mod mol_check_cmd;
 #[path = "mol_cip_cmd.rs"]
@@ -31,7 +33,7 @@ mod peak_split_cmd;
 mod peak_window_cmd;
 
 /// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 26] = [
+pub(crate) const PLAIN: [&str; 27] = [
     "llm",
     "steps",
     "explain-missing",
@@ -40,6 +42,7 @@ pub(crate) const PLAIN: [&str; 26] = [
     "dda-window",
     "ion-pattern",
     "ion-mz",
+    "match-mz",
     "mol-label",
     "mol-anal",
     "mol-check",
@@ -84,6 +87,7 @@ pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
         "dda-window" => dda_window_cmd::run(args),
         "ion-pattern" => ion_pattern_cmd::run(args),
         "ion-mz" => ion_mz_cmd::run(args),
+        "match-mz" => match_mz_cmd::run(args),
         "mol-label" => mol_label_cmd::run(args),
         "mol-anal" => mol_label_cmd::run_anal(args),
         "mol-check" => mol_check_cmd::run(args),
