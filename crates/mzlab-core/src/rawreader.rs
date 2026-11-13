@@ -153,7 +153,7 @@ fn entry(raw: &RawFileReader, m: &ScanMetadata) -> ScanEntry {
 
 /// The kind of an analog channel: the UV channels of a Dionex detector (`UV_VIS_1`) are PDA traces, a channel with a pressure unit or a pump pressure is a pressure,
 /// the rest (temperatures) are analog. A spectrum of the UV field is never a trace of this list: it is not decoded (`metodo/1.avvisi`).
-fn tipo_analogico(t: &opentfraw::AnalogTrace) -> ChromKind {
+fn analog_kind(t: &opentfraw::AnalogTrace) -> ChromKind {
     let n = t.name.to_ascii_lowercase();
     if n.starts_with("uv_vis") || n.starts_with("pda") {
         ChromKind::Pda
@@ -186,7 +186,7 @@ fn analogiche(l: &mut RawReader) -> &[(String, ChromKind, opentfraw::AnalogTrace
             } else {
                 t.name.clone()
             };
-            let kind = tipo_analogico(&t);
+            let kind = analog_kind(&t);
             out.push((id, kind, in_pascal(kind, t)));
         }
         l.analogiche = Some(out);
@@ -389,7 +389,7 @@ impl Reader for RawReader {
     }
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
-        Ok(crate::raw::metodo_sha1(
+        Ok(crate::raw::method_sha1(
             &self.raw,
             &mut self.src,
             &self.name,

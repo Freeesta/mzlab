@@ -52,7 +52,7 @@ fn thermo_like() -> Finto {
 }
 
 /// The maker's centroids of the double reader: the centres moved by 0.01 Da (about 100 ppm), so that a copy of them shows.
-fn centroidi_maker(k: usize) -> Spectrum {
+fn centroid_maker(k: usize) -> Spectrum {
     let mut s = spettro(k, false);
     s.mz.iter_mut().for_each(|m| *m += 0.01);
     s
@@ -95,7 +95,7 @@ impl Reader for Finto {
     // The scans as the reader gives them: profile, or the centroids of the maker when `profilo_ok` is false.
     fn scan(&mut self, _c: usize, k: usize) -> Result<Spectrum> {
         if self.doppio {
-            return Ok(centroidi_maker(k));
+            return Ok(centroid_maker(k));
         }
         Ok(spettro(k, self.profilo_ok))
     }

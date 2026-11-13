@@ -227,7 +227,7 @@ impl State {
                 let chroms = m.chromatograms(end)?;
                 text(mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, if s("kind").is_empty() { "tic" } else { s("kind") })?)
             }
-            "msngrafo" => self.op_msngrafo(eng, p),
+            "msngrafo" => self.op_msngraph(eng, p),
             "masscal" => self.op_masscal(p),
             "canali" => self.op_channels(eng, p),
             "fileinfo" => {

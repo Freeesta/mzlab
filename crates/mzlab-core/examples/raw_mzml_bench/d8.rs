@@ -11,7 +11,7 @@ use crate::measure::round_to;
 use crate::micro::ns_per_op;
 
 /// `ops` resets of a level-1 zlib stream on each of `t` threads at once; the time one reset takes when the threads run together.
-fn reset_in_parallelo(t: usize, ops: usize) -> f64 {
+fn reset_in_parallel(t: usize, ops: usize) -> f64 {
     let start = Instant::now();
     std::thread::scope(|sc| {
         for _ in 0..t {
@@ -118,7 +118,7 @@ pub fn all(thread: &[usize]) -> Value {
     let ns_iter = calibrate_job();
     let reset: Vec<Value> = thread
         .iter()
-        .map(|&t| json!({"thread": t, "ns_per_reset": round_to(reset_in_parallelo(t, 40_000))}))
+        .map(|&t| json!({"thread": t, "ns_per_reset": round_to(reset_in_parallel(t, 40_000))}))
         .collect();
     let mut channels = Vec::new();
     for us in [10.0, 50.0, 200.0] {

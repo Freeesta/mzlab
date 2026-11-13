@@ -14,7 +14,7 @@ fn reference() -> serde_json::Value {
 }
 
 #[test]
-fn heavy_atoms_keep_the_grafo_order() {
+fn heavy_atoms_keep_the_graph_order() {
     for smi in ["CC(=O)Nc1ccc(O)cc1", "NC(=O)N1c2ccccc2C=Cc2ccccc21"] {
         let g = Mol::parse(smi).unwrap();
         let m = Mol3d::from_mol(&g).unwrap();

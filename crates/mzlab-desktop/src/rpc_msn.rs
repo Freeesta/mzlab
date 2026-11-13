@@ -30,7 +30,7 @@ impl State {
     /// `msngrafo {slot, name, fid, query, esporta?, cerca?, libreria?, molecola?}`: the graph of the file `name` (its `.mzidx` and the mzML at `slot`), or its export as text,
     /// or the library text with an entry added (`libreria` given), or the library search (`cerca`). A sample of a maker's file is read from the mzML made from it (`derived_mzml`:
     /// written once to the temporary folder with its own index), as the `.wasm` does with its copy on OPFS.
-    pub(crate) fn op_msngrafo(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
+    pub(crate) fn op_msngraph(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let slot = p["slot"].as_u64().unwrap_or(0) as u32;
         let name = s("name");

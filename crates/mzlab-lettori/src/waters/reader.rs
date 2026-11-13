@@ -1,7 +1,7 @@
 //! The `Lettore` of a MassLynx `.raw` folder: the functions of `_FUNCTNS.INF`, the scans of the scanning ones (MS, MSe, DDA) by position in `_FUNCnnn.DAT`, and the SIR/MRM channels,
 //! the TIC, the lock mass and the analog traces as chromatograms (`chroms.rs`). The lock mass function is also in the spectra (level 1, filter "lock mass", as msconvert does); its correction is not applied.
 
-use super::cuts::{header_cut, nel_file, unlisted};
+use super::cuts::{header_cut, in_file, unlisted};
 use super::dat::{decode, Calibration, Encoding};
 use super::folder::{read_error, text, Folder};
 use super::functions::{self, Function};
@@ -48,12 +48,12 @@ impl Reader for WatersReader {
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        use mzlab_core::conv::{IDENTITA, NON_DECODIFICATO, OUT_OF_MODEL};
+        use mzlab_core::conv::{IDENTITY, NOT_DECODED, OUT_OF_MODEL};
         &[
-            ("drift time and mobility calibration", NON_DECODIFICATO),
+            ("drift time and mobility calibration", NOT_DECODED),
             ("lock mass correction of the m/z", OUT_OF_MODEL),
-            ("FUNC rows beyond Set Mass and Collision Energy, _HISTORY.INF, ramp parameters beyond _extern.inf, MALDI functions", NON_DECODIFICATO),
-            ("User Name, Submitter, Laboratory Name and computer paths", IDENTITA),
+            ("FUNC rows beyond Set Mass and Collision Energy, _HISTORY.INF, ramp parameters beyond _extern.inf, MALDI functions", NOT_DECODED),
+            ("User Name, Submitter, Laboratory Name and computer paths", IDENTITY),
         ]
     }
 
@@ -328,14 +328,14 @@ fn note(w: &mut Vec<(String, String)>, name: &str, a: String) {
 fn listed(c: &mut Folder) -> Result<Vec<Function>> {
     let inf = c
         .read(FUNCTNS)?
-        .ok_or_else(|| nel_file(c, "err.file.folderIncomplete", FUNCTNS))?;
+        .ok_or_else(|| in_file(c, "err.file.folderIncomplete", FUNCTNS))?;
     if c.search(FIRST_DAT).is_none() {
         return Err(read_error("_FUNC001.DAT is missing"));
     }
     if inf.is_empty() {
         return Err(Error::new("err.file.functionsEmpty").with("name", &c.name));
     }
-    functions::read(&inf, &c.limits)?.ok_or_else(|| nel_file(c, "err.file.folderFileCut", FUNCTNS))
+    functions::read(&inf, &c.limits)?.ok_or_else(|| in_file(c, "err.file.folderFileCut", FUNCTNS))
 }
 
 impl WatersReader {
@@ -363,7 +363,7 @@ fn open(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     let mut warnings = Vec::new();
     let mut refusal = None;
     if more > 0 {
-        refusal = Some(nel_file(&c, "err.file.functionsCut", FUNCTNS).with("listed", list.len()));
+        refusal = Some(in_file(&c, "err.file.functionsCut", FUNCTNS).with("listed", list.len()));
         let a = format!("{more} functions past the end of {FUNCTNS}, {unlisted} scans left out");
         note(&mut warnings, &c.name, a);
     }

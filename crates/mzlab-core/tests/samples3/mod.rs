@@ -187,7 +187,7 @@ fn valida_checks_columns_keys_and_pairs() {
 }
 
 #[test]
-fn dal_file_fills_what_the_file_says() {
+fn from_file_fills_what_the_file_says() {
     let mut t = rich();
     t.campioni[0].sha256 = "aa".into();
     t.campioni[0].polarity = Some(-1); // the name was wrong

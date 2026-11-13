@@ -39,9 +39,9 @@ fn main() {
     (d.entry_past_the_end, d.entry_too_big) = (Some(4), Some(7));
     w("thermo_danneggiato/danneggiato.raw", d.bytes());
     w("bruker/synt.d/analysis.tdf", common_sqlite::minimal_tdf(3));
-    w("bruker/synt.d/analysis.tdf_bin", common_sqlite::blocco2());
+    w("bruker/synt.d/analysis.tdf_bin", common_sqlite::block2());
     // five frames, the copy of `tdf_bin` cut inside the fourth block: three spectra read, two counted as missing
-    let b = common_sqlite::blocco2();
+    let b = common_sqlite::block2();
     let n = b.len() as i64;
     let tdf = common_sqlite::tdf_frames(&[0, n, 2 * n, 3 * n, 4 * n], 3);
     w("bruker_tagliato/tagliato.d/analysis.tdf", tdf);

@@ -182,7 +182,7 @@ pub(super) fn group(scans: &[Scan]) -> (Vec<Group>, Vec<u32>) {
 }
 
 /// The same key in both polarities is two channels: the sign tells them apart.
-pub(super) fn distingui_polarita(groups: &mut [Group]) {
+pub(super) fn split_by_polarity(groups: &mut [Group]) {
     let mut doppi: HashMap<String, u32> = HashMap::new();
     for g in groups.iter() {
         *doppi.entry(g.id.clone()).or_default() += 1;
@@ -195,7 +195,7 @@ pub(super) fn distingui_polarita(groups: &mut [Group]) {
 }
 
 /// Too many keys at a level: one aggregate (DDA). Returns the final groups and `verso[k]`, the final group of group `k`.
-pub(super) fn fondi_dd(groups: Vec<Group>) -> (Vec<Group>, Vec<u32>) {
+pub(super) fn merge_dd(groups: Vec<Group>) -> (Vec<Group>, Vec<u32>) {
     let mut keys: HashMap<u8, usize> = HashMap::new();
     for g in groups
         .iter()

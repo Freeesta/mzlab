@@ -135,8 +135,8 @@ pub(crate) fn sort_buckets<T: Num>(
         let t = std::thread::available_parallelism()
             .map_or(1, usize::from)
             .min(8);
-        if t > 1 && n >= PARALLELO {
-            return in_parallelo(round, start, ends, per_scan, t);
+        if t > 1 && n >= PARALLEL {
+            return in_parallel(round, start, ends, per_scan, t);
         }
     }
     sequenziale(round, start, ends, per_scan)
@@ -158,11 +158,11 @@ fn sequenziale<T: Num>(
 
 /// Fewer peaks than this in a round are not worth the threads.
 #[cfg(not(target_arch = "wasm32"))]
-const PARALLELO: usize = 1 << 16;
+const PARALLEL: usize = 1 << 16;
 
 /// `t` threads, each with consecutive buckets holding about the same number of peaks.
 #[cfg(not(target_arch = "wasm32"))]
-fn in_parallelo<T: Num>(
+fn in_parallel<T: Num>(
     round: &mut [Peak<T>],
     start: usize,
     ends: &[usize],

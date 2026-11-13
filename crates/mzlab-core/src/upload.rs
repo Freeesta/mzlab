@@ -226,7 +226,7 @@ pub fn impronte(fs: &mut FileSet) -> Result<Vec<Fingerprint>> {
 
 /// The fingerprints of a set already taken (during the copy of the file): `valori` are `(sha256, sha1, probe)` of each member of `fs`, in its order;
 /// the SHA-1 goes to the members. `None` when they do not match the members (the caller takes them with `impronte`).
-pub fn impronte_note(
+pub fn known_fingerprints(
     fs: &mut FileSet,
     values: &[(String, String, String)],
 ) -> Option<Vec<Fingerprint>> {

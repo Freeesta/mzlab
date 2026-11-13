@@ -20,14 +20,14 @@ pub struct Counter;
 const REAL_CAP: usize = 256 << 20;
 
 thread_local! {
-    static VIVI: Cell<isize> = const { Cell::new(0) };
+    static ALIVE: Cell<isize> = const { Cell::new(0) };
     static PEAK: Cell<isize> = const { Cell::new(0) };
     static LARGE: Cell<usize> = const { Cell::new(0) };
     static REQUEST: Cell<u64> = const { Cell::new(0) };
 }
 
 fn count(delta: isize, size: usize) {
-    VIVI.with(|v| {
+    ALIVE.with(|v| {
         v.set(v.get().saturating_add(delta));
         PEAK.with(|p| p.set(p.get().max(v.get())));
     });
@@ -308,7 +308,7 @@ pub fn note<T>(r: Result<T>, keys: &mut Vec<String>) -> Option<T> {
 pub type Execute = fn(&[(String, Vec<u8>)]) -> Vec<String>;
 
 fn one_case(job: Box<dyn FnOnce() -> Vec<String> + Send>) -> Outcome {
-    VIVI.with(|v| v.set(0));
+    ALIVE.with(|v| v.set(0));
     PEAK.with(|v| v.set(0));
     LARGE.with(|v| v.set(0));
     REQUEST.with(|v| v.set(0));

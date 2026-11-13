@@ -14,11 +14,11 @@ impl Reader for ShimadzuReader {
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        use mzlab_core::conv::{IDENTITA, NON_DECODIFICATO};
+        use mzlab_core::conv::{IDENTITY, NOT_DECODED};
         &[
-            ("oven and injector programs, GCMS Configuration, embedded .qgm method, Status curves, MS Status Data, Mass Parameters", NON_DECODIFICATO),
-            ("UV (LSS Raw Data, PDA 3D Raw Data)", NON_DECODIFICATO),
-            ("operator, computer, paths and file names", IDENTITA),
+            ("oven and injector programs, GCMS Configuration, embedded .qgm method, Status curves, MS Status Data, Mass Parameters", NOT_DECODED),
+            ("UV (LSS Raw Data, PDA 3D Raw Data)", NOT_DECODED),
+            ("operator, computer, paths and file names", IDENTITY),
         ]
     }
 

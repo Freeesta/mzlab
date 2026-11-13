@@ -17,10 +17,10 @@ pub const PROTOCOLLO: u32 = 2;
 
 const INDEX_HEAD: usize = 24;
 /// Bytes of the fixed head of a scan.
-pub const TESTA_SCANSIONE: usize = 24;
+pub const SCAN_HEAD: usize = 24;
 
 const PROFILO: u8 = 1;
-const LARGHE: u8 = 2;
+const WIDE: u8 = 2;
 const WITH_PRECURSOR: u8 = 4;
 
 /// An answer of the module the engine cannot decode: a fault of the module or a module of another version, never the user's file type.
@@ -206,18 +206,18 @@ pub fn decode_index(b: &[u8]) -> Result<Vec<ScanEntry>> {
 }
 
 /// The fixed head of a scan: level, polarity, flags, the number of points, rt and precursor (NaN: none).
-pub fn testa_scansione(s: &Spectrum) -> [u8; TESTA_SCANSIONE] {
+pub fn testa_scansione(s: &Spectrum) -> [u8; SCAN_HEAD] {
     let mut flag = 0u8;
     if s.profile {
         flag |= PROFILO;
     }
     if s.wide.is_some() {
-        flag |= LARGHE;
+        flag |= WIDE;
     }
     if s.precursor.is_some() {
         flag |= WITH_PRECURSOR;
     }
-    let mut t = [0u8; TESTA_SCANSIONE];
+    let mut t = [0u8; SCAN_HEAD];
     t[..4].copy_from_slice(&[s.level, s.polarity as u8, flag, 0]);
     t[4..8].copy_from_slice(&u32_di(s.mz.len()).to_le_bytes());
     t[8..16].copy_from_slice(&s.rt.to_le_bytes());
@@ -228,8 +228,7 @@ pub fn testa_scansione(s: &Spectrum) -> [u8; TESTA_SCANSIONE] {
 /// A scan as a block of bytes: the fixed head, the m/z, the intensities.
 pub fn encode_scansione(s: &Spectrum) -> Vec<u8> {
     let n = s.mz.len();
-    let mut o: Vec<u8> =
-        Vec::with_capacity(TESTA_SCANSIONE + n * if s.wide.is_some() { 16 } else { 12 });
+    let mut o: Vec<u8> = Vec::with_capacity(SCAN_HEAD + n * if s.wide.is_some() { 16 } else { 12 });
     o.extend_from_slice(&testa_scansione(s));
     column(&mut o, s.mz.iter().copied());
     match &s.wide {
@@ -251,14 +250,14 @@ pub enum Intensity {
 
 /// The scan `k` from its head and its columns, as `decode_scansione` gives it from the block (the columns cross separately, without the block).
 pub fn scan_from_parts(k: usize, t: &[u8], mz: Vec<f64>, y: Intensity) -> Result<Spectrum> {
-    if t.len() != TESTA_SCANSIONE {
+    if t.len() != SCAN_HEAD {
         return Err(guasto("scan"));
     }
     let flag = t[2];
     let n = u32::from_le_bytes([t[4], t[5], t[6], t[7]]) as usize;
     let (intensity, wide) = match y {
-        Intensity::Larghe(y) if flag & LARGHE != 0 && y.len() == n => larghe(y),
-        Intensity::Strette(f) if flag & LARGHE == 0 && f.len() == n => (f, None),
+        Intensity::Larghe(y) if flag & WIDE != 0 && y.len() == n => larghe(y),
+        Intensity::Strette(f) if flag & WIDE == 0 && f.len() == n => (f, None),
         _ => return Err(guasto("scan")),
     };
     if mz.len() != n {
@@ -292,22 +291,22 @@ fn larghe(y: Vec<f64>) -> (Vec<f32>, Option<Vec<f64>>) {
 
 /// The scan `k` of a block written by `encode_scansione`; its `id` and `filter` are empty (the index has them).
 pub fn decode_scansione(k: usize, b: &[u8]) -> Result<Spectrum> {
-    if b.len() < TESTA_SCANSIONE {
+    if b.len() < SCAN_HEAD {
         return Err(guasto("scan"));
     }
-    let larghe = b[2] & LARGHE != 0;
+    let larghe = b[2] & WIDE != 0;
     let n = u32::from_le_bytes([b[4], b[5], b[6], b[7]]) as usize;
     if n.checked_mul(if larghe { 16 } else { 12 })
-        .and_then(|x| x.checked_add(TESTA_SCANSIONE))
+        .and_then(|x| x.checked_add(SCAN_HEAD))
         != Some(b.len())
     {
         return Err(guasto("scan"));
     }
-    let mz: Vec<f64> = b[TESTA_SCANSIONE..TESTA_SCANSIONE + 8 * n]
+    let mz: Vec<f64> = b[SCAN_HEAD..SCAN_HEAD + 8 * n]
         .chunks_exact(8)
         .map(f64_di)
         .collect();
-    let rest = &b[TESTA_SCANSIONE + 8 * n..];
+    let rest = &b[SCAN_HEAD + 8 * n..];
     let y = if larghe {
         Intensity::Larghe(rest.chunks_exact(8).map(f64_di).collect())
     } else {
@@ -317,7 +316,7 @@ pub fn decode_scansione(k: usize, b: &[u8]) -> Result<Spectrum> {
                 .collect(),
         )
     };
-    scan_from_parts(k, &b[..TESTA_SCANSIONE], mz, y)
+    scan_from_parts(k, &b[..SCAN_HEAD], mz, y)
 }
 
 #[cfg(test)]

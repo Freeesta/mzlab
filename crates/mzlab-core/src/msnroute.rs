@@ -71,7 +71,7 @@ impl<R: ReadAt> Routes<R> {
     }
 
     /// `/api/msn_albero?k&tol=nom|<Da>|<n>ppm&ce=1|0`: the tree of the precursors of the file from its index alone (no spectrum), `msn_albero/1`.
-    pub(crate) fn msn_albero_route(&mut self, q: &Query) -> Result<Option<String>> {
+    pub(crate) fn msn_tree_route(&mut self, q: &Query) -> Result<Option<String>> {
         let r = group_of(q, "tol", "ce")?;
         let a = self.tree_per(&r);
         if a.nodi.len() > MAX_NODES {

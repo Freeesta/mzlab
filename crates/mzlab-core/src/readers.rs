@@ -332,7 +332,7 @@ pub fn apri(fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
 }
 
 /// Every extension of `registro`, in order and without repeats: the `accept=` of the pickers comes from here.
-pub fn estensioni_in(registry: &[ReaderEntry]) -> Vec<&'static str> {
+pub fn extensions_in(registry: &[ReaderEntry]) -> Vec<&'static str> {
     let mut out: Vec<&'static str> = Vec::new();
     for e in registry.iter().flat_map(|v| v.estensioni.iter().copied()) {
         if !out.contains(&e) {
@@ -343,7 +343,7 @@ pub fn estensioni_in(registry: &[ReaderEntry]) -> Vec<&'static str> {
 }
 
 pub fn estensioni() -> Vec<&'static str> {
-    estensioni_in(LETTORI)
+    extensions_in(LETTORI)
 }
 
 /// The MS1 retention times and TICs of an index, in scan order (every scan when none is MS1): the trace the page draws while the `.mzidx` of a sample is

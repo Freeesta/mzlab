@@ -11,11 +11,11 @@ use mzlab_core::msngraph::{tabella_regole, Expectation, Options, Rule, Table, Ti
 /// A rule with no structure condition is not listed (the core decides it by the formula alone); a rule that reads a structure but has no product to
 /// compute (`remote_fixed_charge`) is not listed either.
 pub fn attese(smiles: &str, t: &Table) -> Result<Vec<Expectation>> {
-    Ok(attese_mol(&Mol::parse(smiles)?, t))
+    Ok(expected_mol(&Mol::parse(smiles)?, t))
 }
 
 /// `attese` of a structure already read (the decoys of `mzlab-cli msn-rules` are built as graphs).
-pub fn attese_mol(m: &Mol, t: &Table) -> Vec<Expectation> {
+pub fn expected_mol(m: &Mol, t: &Table) -> Vec<Expectation> {
     let groups = m.groups_ext();
     let mut out = vec![];
     for r in t

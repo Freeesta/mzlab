@@ -325,8 +325,8 @@ impl Channels {
     /// The channels of a file from its scan table and the headers of its chromatograms (`chroms` may be empty); `nome` is the file name (the infusion hint).
     pub fn da(scans: &[Scan], chroms: &[Chrom], facts: &Facts, name: &str) -> Channels {
         let (mut groups, di) = group(scans);
-        distingui_polarita(&mut groups);
-        let (finali, direction) = fondi_dd(groups);
+        split_by_polarity(&mut groups);
+        let (finali, direction) = merge_dd(groups);
         let (rank, pos_di) = sort(&finali);
         let (start, scan_ids) = partiziona(scans.len(), &finali, &rank, &pos_di, &di, &direction);
         drop(di);

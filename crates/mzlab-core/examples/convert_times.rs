@@ -15,27 +15,27 @@ use mzlab_core::readers_mzml::{Conversion, Peaks};
 use sha2::{Digest as _, Sha256};
 
 struct Tally;
-static VIVI: AtomicUsize = AtomicUsize::new(0);
+static ALIVE: AtomicUsize = AtomicUsize::new(0);
 static PEAK: AtomicUsize = AtomicUsize::new(0);
 // SAFETY: forwards every call to the system allocator and only counts the bytes.
 unsafe impl GlobalAlloc for Tally {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
         unsafe {
-            let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
+            let v = ALIVE.fetch_add(l.size(), Ordering::Relaxed) + l.size();
             PEAK.fetch_max(v, Ordering::Relaxed);
             System.alloc(l)
         }
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
         unsafe {
-            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            ALIVE.fetch_sub(l.size(), Ordering::Relaxed);
             System.dealloc(p, l)
         }
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
         unsafe {
-            let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
-            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            let v = (ALIVE.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
+            ALIVE.fetch_sub(l.size(), Ordering::Relaxed);
             PEAK.fetch_max(v, Ordering::Relaxed);
             System.realloc(p, l, n)
         }
@@ -190,7 +190,7 @@ fn main() {
     ))
     .expect("read mzML");
     let mut l = DaMzml::nuovo(run);
-    let base = VIVI.load(Ordering::Relaxed);
+    let base = ALIVE.load(Ordering::Relaxed);
     PEAK.store(base, Ordering::Relaxed);
     let t = Instant::now();
     let conv = Conversion {

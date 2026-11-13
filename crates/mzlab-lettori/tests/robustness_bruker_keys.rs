@@ -98,7 +98,7 @@ fn hunt(name: &str, seed: &Members) {
 fn tdf_seed() -> Members {
     vec![
         ("x.d/analysis.tdf".into(), minimal_tdf(3)),
-        ("x.d/analysis.tdf_bin".into(), blocco2()),
+        ("x.d/analysis.tdf_bin".into(), block2()),
     ]
 }
 

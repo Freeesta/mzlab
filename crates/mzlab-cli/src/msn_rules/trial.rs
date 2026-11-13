@@ -10,7 +10,7 @@ use mzlab_core::msngraph::{
     RuleParams,
 };
 use mzlab_feat::chem::graph::Mol;
-use mzlab_feat::chem::rules::attese_mol;
+use mzlab_feat::chem::rules::expected_mol;
 
 /// Shift of the losses of the third decoy, Da (no loss of the table is near it).
 pub const SHIFT_LOSSES: f64 = 0.0137;
@@ -159,7 +159,7 @@ pub fn measure(
 /// The expectations of the structure of the record (`None` when the SMILES cannot be read).
 pub fn registry_expectations(r: &Registry) -> Option<Vec<Expectation>> {
     let m = Mol::parse(&r.smiles).ok()?;
-    Some(attese_mol(&m, tabella_regole()))
+    Some(expected_mol(&m, tabella_regole()))
 }
 
 /// FNV-1a of the id: a seed per record that does not depend on the order of the batch.
@@ -200,7 +200,7 @@ pub fn decoy(
     expected: &[Expectation],
 ) -> Decoy {
     let structure = Mol::parse(&r.smiles).ok().map(|m| {
-        let d = attese_mol(&m.rimescola(seed_of(seed, &r.id)), tabella_regole());
+        let d = expected_mol(&m.rimescola(seed_of(seed, &r.id)), tabella_regole());
         measure(r, &r.peaks, &d, true)
     });
     Decoy {

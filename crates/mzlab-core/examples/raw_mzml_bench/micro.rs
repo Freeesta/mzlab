@@ -53,11 +53,11 @@ fn shape(name: &str) -> Parameters {
     }
 }
 
-const FORME: [&str; 3] = ["lab-a", "lab-b", "denso"];
+const SHAPES: [&str; 3] = ["lab-a", "lab-b", "denso"];
 
 fn decode_ft() -> Value {
     let mut out = Vec::new();
-    for name in FORME {
+    for name in SHAPES {
         let mut b = Vec::new();
         packet(&mut b, &shape(name), 0, None);
         let complete = ns_per_op(|| {

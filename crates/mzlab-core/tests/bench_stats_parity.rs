@@ -164,8 +164,8 @@ fn parity_bootstrap_confidence_interval() {
         let want_lo = c["ic_basso"].as_f64().expect("lo");
         let want_hi = c["ic_alto"].as_f64().expect("hi");
 
-        let tipo_str = c["tipo"].as_str().unwrap_or("media");
-        let tipo = if tipo_str == "mediana" {
+        let kind_str = c["tipo"].as_str().unwrap_or("media");
+        let tipo = if kind_str == "mediana" {
             StatTipo::Median
         } else {
             StatTipo::Media

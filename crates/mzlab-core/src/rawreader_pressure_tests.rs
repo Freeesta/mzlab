@@ -1,7 +1,7 @@
 //! A pump pressure of a `.raw` in psi, bar or Pa goes in the mzML in pascal as a `pressure array` (MS:1000821, UO:0000110): the file passes the strict
 //! check, reads back with the unit `pascal`, and the bar the page shows is the bar of the file (one conversion, never two).
 
-use super::{in_pascal, tipo_analogico, ChromKind};
+use super::{analog_kind, in_pascal, ChromKind};
 use crate::mzml;
 use crate::mzml::Chromatogram;
 use crate::mzmlwrite::{Header, MzmlWriter};
@@ -27,7 +27,7 @@ fn a_pressure_in_psi_bar_or_pa_round_trips_as_the_same_bar() {
         ("Pa", 2.7579e7, 275.79),
     ] {
         let t = trace(unit, v);
-        let kind = tipo_analogico(&t);
+        let kind = analog_kind(&t);
         assert_eq!(kind, ChromKind::Pressure);
         let t = in_pascal(kind, t);
         let h = Header {
@@ -75,7 +75,7 @@ fn a_pressure_in_psi_bar_or_pa_round_trips_as_the_same_bar() {
 #[test]
 fn another_channel_keeps_the_unit_of_the_file() {
     let t = trace("°C", 40.0);
-    let kind = tipo_analogico(&t);
+    let kind = analog_kind(&t);
     let t = in_pascal(kind, t);
     assert_eq!((t.unit.as_str(), t.values[0]), ("°C", 40.0));
 }

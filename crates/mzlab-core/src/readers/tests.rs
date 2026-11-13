@@ -57,7 +57,7 @@ fn file_set(name: &str, byte: &[u8]) -> FileSet {
 }
 
 /// Recognised by its first bytes, whatever the name says.
-fn riconosci_a(fs: &mut FileSet) -> Fiducia {
+fn recognize_aa(fs: &mut FileSet) -> Fiducia {
     if fs.testa(0, 2) == b"AA" {
         Fiducia::Si
     } else {
@@ -65,7 +65,7 @@ fn riconosci_a(fs: &mut FileSet) -> Fiducia {
     }
 }
 
-fn riconosci_forse(fs: &mut FileSet) -> Fiducia {
+fn recognize_maybe(fs: &mut FileSet) -> Fiducia {
     if fs.find(".dat").is_some() {
         Fiducia::Forse
     } else {
@@ -78,14 +78,14 @@ const REGISTRY: &[ReaderEntry] = &[
         id: "forse",
         contratto: CONTRATTO,
         estensioni: &[".dat", ".x"],
-        riconosci: riconosci_forse,
+        riconosci: recognize_maybe,
         apri: open_empty,
     },
     ReaderEntry {
         id: "a",
         contratto: CONTRATTO,
         estensioni: &[".x", ".a"],
-        riconosci: riconosci_a,
+        riconosci: recognize_aa,
         apri: open_empty,
     },
     ReaderEntry {
@@ -109,7 +109,7 @@ fn the_surest_reader_wins_and_a_reader_of_another_contract_is_not_asked() {
 
 #[test]
 fn the_extensions_for_the_pickers_come_from_the_registry_without_repeats() {
-    assert_eq!(estensioni_in(REGISTRY), [".dat", ".x", ".a", ".old"]);
+    assert_eq!(extensions_in(REGISTRY), [".dat", ".x", ".a", ".old"]);
     // the real registry: whatever is registered, in lower case with the dot and without repeats
     let real = estensioni();
     assert!(real
