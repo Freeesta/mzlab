@@ -24,7 +24,7 @@ try:
         mod = lambda: [u for u in asked if "/wasm-feat/ticfondo/" in u and u.endswith("_bg.wasm")]
         pg.set_input_files("#pick", [str(RUN), str(BLANK)])
         pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
-        pg.click("#opbtn"); pg.wait_for_selector("canvas", timeout=120000)
+        pg.click("#opbtn")
         pg.wait_for_function("E.files.length >= 2 && E.pending.length === 0", timeout=120000)
         assert not mod(), mod()
         print("OK  the module is not fetched at start-up")

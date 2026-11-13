@@ -23,7 +23,11 @@ pub fn version() -> String {
 #[wasm_bindgen(start)]
 pub fn start() {
     std::panic::set_hook(Box::new(|info| {
-        let _ = js_sys::Reflect::set(&js_sys::global(), &"__mzlabPanic".into(), &info.to_string().into());
+        let _ = js_sys::Reflect::set(
+            &js_sys::global(),
+            &"__mzlabPanic".into(),
+            &info.to_string().into(),
+        );
     }));
 }
 
@@ -33,7 +37,14 @@ struct JsReader(Function);
 impl ReadAt for JsReader {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
         let bad = || mzlab_core::idxread::read_error(off, buf.len());
-        let v = self.0.call2(&JsValue::NULL, &(off as f64).into(), &(buf.len() as f64).into()).map_err(|_| bad())?;
+        let v = self
+            .0
+            .call2(
+                &JsValue::NULL,
+                &(off as f64).into(),
+                &(buf.len() as f64).into(),
+            )
+            .map_err(|_| bad())?;
         let a: Uint8Array = v.dyn_into().map_err(|_| bad())?;
         if a.length() as usize != buf.len() {
             return Err(bad());
@@ -52,12 +63,21 @@ fn routes_of(size: f64, read: Function, pol: i32) -> Result<Routes<JsReader>, Js
 /// `api/tic_background` (`ticbg_route::route_pair`) over the `.mzidx` of a file and, for `mode=blank`, of its blank (`blank_read` null = none);
 /// `pol` as the engine's `set_polarity` (0 = every section). Empty = not served (a filtered trace).
 #[wasm_bindgen]
-pub fn tic_background(size: f64, read: Function, pol: i32, blank_size: f64, blank_read: Option<Function>, blank_pol: i32, query: &str) -> Result<String, JsValue> {
+pub fn tic_background(
+    size: f64,
+    read: Function,
+    pol: i32,
+    blank_size: f64,
+    blank_read: Option<Function>,
+    blank_pol: i32,
+    query: &str,
+) -> Result<String, JsValue> {
     let mut r = routes_of(size, read, pol)?;
     let mut b = match blank_read {
         Some(f) => Some(routes_of(blank_size, f, blank_pol)?),
         None => None,
     };
-    let out = mzlab_core::ticbg_route::route_pair(&mut r, b.as_mut(), &Query::parse(query)).map_err(|e| error_json(&e))?;
+    let out = mzlab_core::ticbg_route::route_pair(&mut r, b.as_mut(), &Query::parse(query))
+        .map_err(|e| error_json(&e))?;
     Ok(out.unwrap_or_default())
 }

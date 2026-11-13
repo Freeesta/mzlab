@@ -53,7 +53,20 @@ pub struct Params {
 
 impl Default for Params {
     fn default() -> Self {
-        Params { mode: Mode::Auto, action: Action::Subtract, persist: 0.8, bin_da: 1.0, bin_ppm: 10.0, hr: false, block: 0.01, window: 15, quiet: None, windows: Vec::new(), keep: Vec::new(), floor: true }
+        Params {
+            mode: Mode::Auto,
+            action: Action::Subtract,
+            persist: 0.8,
+            bin_da: 1.0,
+            bin_ppm: 10.0,
+            hr: false,
+            block: 0.01,
+            window: 15,
+            quiet: None,
+            windows: Vec::new(),
+            keep: Vec::new(),
+            floor: true,
+        }
     }
 }
 
@@ -73,7 +86,9 @@ impl Params {
     }
     fn kept(&self, lo: f64, hi: f64) -> bool {
         let pad = if self.hr { 0.0 } else { self.bin_da / 2.0 };
-        self.keep.iter().any(|&m| m >= lo - pad - 1e-9 && m <= hi + pad + 1e-9)
+        self.keep
+            .iter()
+            .any(|&m| m >= lo - pad - 1e-9 && m <= hi + pad + 1e-9)
     }
 }
 
@@ -121,11 +136,19 @@ struct Bin {
 
 /// Per bin: the number of distinct scans it is in (first pass). `peaks` streams (scan, m/z, intensity) in m/z order.
 #[inline(never)]
-pub fn presence(n: usize, p: &Params, peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64))) -> Vec<(i64, u32)> {
+pub fn presence(
+    n: usize,
+    p: &Params,
+    peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)),
+) -> Vec<(i64, u32)> {
     let mut seen = vec![i64::MIN; n];
     let mut out: Vec<(i64, u32)> = Vec::new();
     bins(n, p, peaks, &mut |b| {
-        let c = b.pts.iter().filter(|q| std::mem::replace(&mut seen[q.0], b.id) != b.id).count();
+        let c = b
+            .pts
+            .iter()
+            .filter(|q| std::mem::replace(&mut seen[q.0], b.id) != b.id)
+            .count();
         out.push((b.id, c as u32));
     });
     out
@@ -133,8 +156,16 @@ pub fn presence(n: usize, p: &Params, peaks: &mut dyn FnMut(&mut dyn FnMut(usize
 
 /// The peaks grouped by bin, one bin at a time in m/z order; peaks in the manual windows are left out. Returns (raw total, windows total).
 #[inline(never)]
-fn bins(n: usize, p: &Params, peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)), f: &mut dyn FnMut(Bin)) -> (f64, f64) {
-    let mut cur = Bin { id: i64::MIN, pts: Vec::new() };
+fn bins(
+    n: usize,
+    p: &Params,
+    peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)),
+    f: &mut dyn FnMut(Bin),
+) -> (f64, f64) {
+    let mut cur = Bin {
+        id: i64::MIN,
+        pts: Vec::new(),
+    };
     let (mut raw, mut win) = (0.0, 0.0);
     peaks(&mut |s, mz, y| {
         if s >= n {
@@ -147,7 +178,13 @@ fn bins(n: usize, p: &Params, peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f
         }
         let b = p.bin(mz);
         if cur.id != b {
-            let done = std::mem::replace(&mut cur, Bin { id: b, pts: Vec::new() });
+            let done = std::mem::replace(
+                &mut cur,
+                Bin {
+                    id: b,
+                    pts: Vec::new(),
+                },
+            );
             if !done.pts.is_empty() {
                 f(done);
             }
@@ -163,15 +200,27 @@ fn bins(n: usize, p: &Params, peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f
 /// The bins treated as background: persistence over `persist` (high resolution: the bin and its two neighbours together, a line that
 /// straddles a bin edge counts whole), or the bins of the blank; minus the ions the user kept.
 #[inline(never)]
-pub fn flagged(n: usize, p: &Params, pres: &[(i64, u32)], blank: Option<&BlankProfile>) -> Vec<i64> {
+pub fn flagged(
+    n: usize,
+    p: &Params,
+    pres: &[(i64, u32)],
+    blank: Option<&BlankProfile>,
+) -> Vec<i64> {
     if let Some(b) = blank {
         return b.iter().map(|x| x.0).collect();
     }
     let need = p.persist * n as f64;
-    let count = |b: i64| pres.binary_search_by_key(&b, |x| x.0).map_or(0, |i| pres[i].1);
+    let count = |b: i64| {
+        pres.binary_search_by_key(&b, |x| x.0)
+            .map_or(0, |i| pres[i].1)
+    };
     pres.iter()
         .filter(|&&(b, c)| {
-            let c = if p.hr { count(b - 1) + c + count(b + 1) } else { c };
+            let c = if p.hr {
+                count(b - 1) + c + count(b + 1)
+            } else {
+                c
+            };
             n > 0 && c as f64 >= need
         })
         .map(|x| x.0)
@@ -191,7 +240,10 @@ pub fn rolling_baseline(x: &[f64], p: &Params) -> Vec<f64> {
     let r: Vec<f64> = x.iter().zip(&first).map(|(a, b)| a - b).collect();
     let rm = median_of(&r);
     let sigma = 1.4826 * median_of(&r.iter().map(|v| (v - rm).abs()).collect::<Vec<_>>());
-    let peak: Vec<bool> = r.iter().map(|v| *v - rm > 3.0 * sigma && *v > 0.0).collect();
+    let peak: Vec<bool> = r
+        .iter()
+        .map(|v| *v - rm > 3.0 * sigma && *v > 0.0)
+        .collect();
     block_baseline(x, Some(&peak), m, p.window.max(1) / 2)
 }
 
@@ -200,14 +252,21 @@ fn block_baseline(x: &[f64], masked: Option<&[bool]>, m: usize, h: usize) -> Vec
     let n = x.len();
     let meds: Vec<Option<f64>> = (0..n.div_ceil(m))
         .map(|k| {
-            let v: Vec<f64> = (k * m..((k + 1) * m).min(n)).filter(|&j| !masked.is_some_and(|ms| ms[j])).map(|j| x[j]).collect();
+            let v: Vec<f64> = (k * m..((k + 1) * m).min(n))
+                .filter(|&j| !masked.is_some_and(|ms| ms[j]))
+                .map(|j| x[j])
+                .collect();
             (!v.is_empty()).then(|| median_of(&v))
         })
         .collect();
     let all: Vec<f64> = meds.iter().flatten().copied().collect();
     let base: Vec<f64> = (0..meds.len())
         .map(|k| {
-            let w: Vec<f64> = meds[k.saturating_sub(h)..(k + h + 1).min(meds.len())].iter().flatten().copied().collect();
+            let w: Vec<f64> = meds[k.saturating_sub(h)..(k + h + 1).min(meds.len())]
+                .iter()
+                .flatten()
+                .copied()
+                .collect();
             median_of(if w.is_empty() { &all } else { &w })
         })
         .collect();
@@ -232,11 +291,23 @@ fn block_baseline(x: &[f64], masked: Option<&[bool]>, m: usize, h: usize) -> Vec
 
 /// The cleaned TIC and BPC (second pass). `rt` gives the scans (the quiet window); `raw_total` is the sum of the raw TIC.
 #[inline(never)]
-pub fn clean(rt: &[f64], p: &Params, flags: &[i64], blank: Option<&BlankProfile>, peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64))) -> Cleaned {
+pub fn clean(
+    rt: &[f64],
+    p: &Params,
+    flags: &[i64],
+    blank: Option<&BlankProfile>,
+    peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)),
+) -> Cleaned {
     let n = rt.len();
-    let mut out = Cleaned { tic: vec![0.0; n], bpc: vec![0.0; n], ..Default::default() };
+    let mut out = Cleaned {
+        tic: vec![0.0; n],
+        bpc: vec![0.0; n],
+        ..Default::default()
+    };
     let mut parts: Vec<(i64, Ion, f64)> = Vec::new();
-    let (raw_total, win) = bins(n, p, peaks, &mut |b| finish(b, rt, p, flags, blank, &mut out, &mut parts));
+    let (raw_total, win) = bins(n, p, peaks, &mut |b| {
+        finish(b, rt, p, flags, blank, &mut out, &mut parts)
+    });
     let share = |v: f64| if raw_total > 0.0 { v / raw_total } else { 0.0 };
     out.ions = merge(parts, raw_total);
     out.windows = share(win);
@@ -247,14 +318,61 @@ pub fn clean(rt: &[f64], p: &Params, flags: &[i64], blank: Option<&BlankProfile>
     }
     out.removed = out.windows + out.floor + out.ions.iter().map(|i| i.share).sum::<f64>();
     // largest share first; equal shares keep the m/z order (a stable sort)
-    let order = crate::specpeaks::order_by_f64(&out.ions.iter().map(|i| i.share).collect::<Vec<_>>(), true);
+    let order =
+        crate::specpeaks::order_by_f64(&out.ions.iter().map(|i| i.share).collect::<Vec<_>>(), true);
     out.ions = order.into_iter().map(|k| out.ions[k].clone()).collect();
     out
 }
 
+/// The baseline of one bin's trace: none for a bin that is not background, the whole trace under `exclude`, else the one of the mode.
+#[inline(never)]
+fn baseline_of(
+    x: &[f64],
+    rt: &[f64],
+    p: &Params,
+    bg: bool,
+    id: i64,
+    blank: Option<&BlankProfile>,
+) -> Vec<f64> {
+    let n = x.len();
+    if !bg {
+        vec![0.0; n]
+    } else if p.action == Action::Exclude {
+        x.to_vec()
+    } else {
+        match p.mode {
+            Mode::Auto => rolling_baseline(x, p),
+            Mode::Quiet => {
+                let (a, z) = p.quiet.unwrap_or((f64::NEG_INFINITY, f64::INFINITY));
+                let q: Vec<f64> = x
+                    .iter()
+                    .zip(rt)
+                    .filter(|(_, t)| **t >= a && **t <= z)
+                    .map(|(v, _)| *v)
+                    .collect();
+                vec![if q.is_empty() { 0.0 } else { median_of(&q) }; n]
+            }
+            Mode::Blank => {
+                let v = blank
+                    .and_then(|bl| bl.binary_search_by_key(&id, |x| x.0).ok().map(|i| bl[i].1))
+                    .unwrap_or(0.0);
+                vec![v; n]
+            }
+        }
+    }
+}
+
 /// One bin done: its trace, its baseline, its part of the cleaned TIC and BPC, and its measures when it is background.
 #[inline(never)]
-fn finish(b: Bin, rt: &[f64], p: &Params, flags: &[i64], blank: Option<&BlankProfile>, out: &mut Cleaned, parts: &mut Vec<(i64, Ion, f64)>) {
+fn finish(
+    b: Bin,
+    rt: &[f64],
+    p: &Params,
+    flags: &[i64],
+    blank: Option<&BlankProfile>,
+    out: &mut Cleaned,
+    parts: &mut Vec<(i64, Ion, f64)>,
+) {
     let n = rt.len();
     let mut x = vec![0.0; n];
     let (mut sw, mut swm, mut lo, mut hi) = (0.0, 0.0, f64::INFINITY, f64::NEG_INFINITY);
@@ -266,24 +384,7 @@ fn finish(b: Bin, rt: &[f64], p: &Params, flags: &[i64], blank: Option<&BlankPro
         hi = hi.max(mz);
     }
     let bg = flags.binary_search(&b.id).is_ok() && !p.kept(lo, hi);
-    let base = if !bg {
-        vec![0.0; n]
-    } else if p.action == Action::Exclude {
-        x.clone()
-    } else {
-        match p.mode {
-            Mode::Auto => rolling_baseline(&x, p),
-            Mode::Quiet => {
-                let (a, z) = p.quiet.unwrap_or((f64::NEG_INFINITY, f64::INFINITY));
-                let q: Vec<f64> = x.iter().zip(rt).filter(|(_, t)| **t >= a && **t <= z).map(|(v, _)| *v).collect();
-                vec![if q.is_empty() { 0.0 } else { median_of(&q) }; n]
-            }
-            Mode::Blank => {
-                let v = blank.and_then(|bl| bl.binary_search_by_key(&b.id, |x| x.0).ok().map(|i| bl[i].1)).unwrap_or(0.0);
-                vec![v; n]
-            }
-        }
-    };
+    let base = baseline_of(&x, rt, p, bg, b.id, blank);
     let mut removed = 0.0;
     for j in 0..n {
         let v = x[j] - base[j];
@@ -295,11 +396,28 @@ fn finish(b: Bin, rt: &[f64], p: &Params, flags: &[i64], blank: Option<&BlankPro
     }
     if bg {
         let present: Vec<f64> = x.iter().copied().filter(|v| *v > 0.0).collect();
-        let med = if present.is_empty() { 0.0 } else { median_of(&present) };
-        let mad = if present.is_empty() { 0.0 } else { median_of(&present.iter().map(|v| (v - med).abs()).collect::<Vec<_>>()) };
+        let med = if present.is_empty() {
+            0.0
+        } else {
+            median_of(&present)
+        };
+        let mad = if present.is_empty() {
+            0.0
+        } else {
+            median_of(&present.iter().map(|v| (v - med).abs()).collect::<Vec<_>>())
+        };
         let cv = if med > 0.0 { 1.4826 * mad / med } else { 0.0 };
         let persistence = present.len() as f64 / n.max(1) as f64;
-        let ion = Ion { mz: if sw > 0.0 { swm / sw } else { (lo + hi) / 2.0 }, lo, hi, persistence, cv, level: median_of(&base), share: 0.0, confidence: persistence / (1.0 + cv) };
+        let ion = Ion {
+            mz: if sw > 0.0 { swm / sw } else { (lo + hi) / 2.0 },
+            lo,
+            hi,
+            persistence,
+            cv,
+            level: median_of(&base),
+            share: 0.0,
+            confidence: persistence / (1.0 + cv),
+        };
         parts.push((b.id, ion, removed));
     }
 }
@@ -339,9 +457,22 @@ fn merge(parts: Vec<(i64, Ion, f64)>, total: f64) -> Vec<Ion> {
 
 /// The blank profile of `Mode::Blank` from the blank's peaks: median per bin of the bins present in `persist` of its scans.
 #[inline(never)]
-pub fn blank_profile(n: usize, p: &Params, peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64))) -> BlankProfile {
+pub fn blank_profile(
+    n: usize,
+    p: &Params,
+    peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)),
+) -> BlankProfile {
     let pres = presence(n, p, peaks);
-    let keep: Vec<i64> = flagged(n, &Params { hr: p.hr, persist: p.persist, ..Params::default() }, &pres, None);
+    let keep: Vec<i64> = flagged(
+        n,
+        &Params {
+            hr: p.hr,
+            persist: p.persist,
+            ..Params::default()
+        },
+        &pres,
+        None,
+    );
     let mut out: BlankProfile = Vec::new();
     bins(n, p, peaks, &mut |b| {
         if keep.binary_search(&b.id).is_ok() {

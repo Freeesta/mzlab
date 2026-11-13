@@ -21,7 +21,10 @@ usage: mzlab-cli background FILE [--blank FILE] [--set NAME=VALUE...] [--out PAT
   --out PATH  write there instead of the standard output
   output      {\"rt\",\"y\",\"raw\",\"kind\",\"ions\":[{mz,lo,hi,persistence,cv,level,share,confidence}],\"removed\",\"windows\",\"floor\",\"params\"}";
 
-const NAMES: [&str; 15] = ["kind", "level", "mode", "action", "persist", "res", "bin", "ppm", "block", "window", "floor", "rt0", "rt1", "ex", "keep"];
+const NAMES: [&str; 15] = [
+    "kind", "level", "mode", "action", "persist", "res", "bin", "ppm", "block", "window", "floor",
+    "rt0", "rt1", "ex", "keep",
+];
 
 struct Request {
     file: PathBuf,
@@ -54,12 +57,22 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         }
     }
     let file = file.ok_or("background needs a file (see --help)")?;
-    Ok(Some(Request { file, blank, query, out }))
+    Ok(Some(Request {
+        file,
+        blank,
+        query,
+        out,
+    }))
 }
 
 fn index(file: &Path, tmp: &Path, k: u32) -> Result<Routes<std::fs::File>> {
     let idx = tmp.join(format!("{k}.mzidx"));
-    crate::flow_pace::build_index_of(file, "", &idx, mzlab_core::budget_auto::native_index_budget())?;
+    crate::flow_pace::build_index_of(
+        file,
+        "",
+        &idx,
+        mzlab_core::budget_auto::native_index_budget(),
+    )?;
     Ok(Routes::new(crate::open(&idx)?))
 }
 

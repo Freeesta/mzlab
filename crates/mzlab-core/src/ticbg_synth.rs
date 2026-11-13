@@ -4,16 +4,30 @@
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, MzmlWriter};
 
-const LINES: [(f64, f64); 6] = [(141.0, 30e3), (149.0, 80e3), (158.0, 25e3), (198.0, 40e3), (214.0, 20e3), (236.0, 50e3)];
+const LINES: [(f64, f64); 6] = [
+    (141.0, 30e3),
+    (149.0, 80e3),
+    (158.0, 25e3),
+    (198.0, 40e3),
+    (214.0, 20e3),
+    (236.0, 50e3),
+];
 const PEAK: [(f64, f64); 3] = [(198.0, 50e3), (158.0, 30e3), (305.0, 40e3)];
 
 /// The mzML of `n` scans over 20 min.
 pub fn mzml(n: usize, seed: u64, blank: bool) -> Vec<u8> {
-    let h = Header { run: "background".into(), sources: vec!["background.mzML".into()], software: ("mzLab".into(), "0".into()), ..Default::default() };
+    let h = Header {
+        run: "background".into(),
+        sources: vec!["background.mzML".into()],
+        software: ("mzLab".into(), "0".into()),
+        ..Default::default()
+    };
     let mut w = MzmlWriter::new(Vec::new(), &h).expect("memory");
     let mut s = seed;
     let mut u = || {
-        s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        s = s
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         ((s >> 11) as f64 + 0.5) / (1u64 << 53) as f64
     };
     w.open_spectra(n).expect("memory");
@@ -22,10 +36,16 @@ pub fn mzml(n: usize, seed: u64, blank: bool) -> Vec<u8> {
         let mut pts: Vec<(f64, f64)> = Vec::new();
         for (mz, h) in LINES {
             let g = (u() + u() + u() + u() - 2.0) * 1.732;
-            pts.push((mz + 0.1 * (u() - 0.5), h * (1.0 + 0.6 * t / 20.0) * (1.0 + 0.05 * g)));
+            pts.push((
+                mz + 0.1 * (u() - 0.5),
+                h * (1.0 + 0.6 * t / 20.0) * (1.0 + 0.05 * g),
+            ));
         }
         for _ in 0..8 {
-            pts.push(((100.0 + 300.0 * u()).round() + 0.2 * (u() - 0.5), 500.0 * u()));
+            pts.push((
+                (100.0 + 300.0 * u()).round() + 0.2 * (u() - 0.5),
+                500.0 * u(),
+            ));
         }
         // a peak of sigma 0.08 min as a raised-cosine bump of the same area (no exp)
         let d = (t - 14.3) / 0.08;
