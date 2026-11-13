@@ -371,8 +371,6 @@ fn baf_only_says_how_to_export() {
     assert_eq!(e.key, "err.file.brukerBaf");
 }
 
-/// A run whose frames name no usable `MzCalibration` row is refused when it opens, with its own key and the frame.
-
 /// The Bruker folders this module does not read say which kind they are: YEP (ion traps), FT-ICR (`ser`/`fid` in a `.d`), FLEX MALDI (`fid` with `acqu`).
 #[test]
 fn legacy_bruker_folders_have_named_keys() {
