@@ -35,6 +35,9 @@ broken = agilent_sintetico.write(top, "rotto.D", 30)
 damaged = agilent_sintetico.write(top, "danno.D", 30)
 pk = damaged / "AcqData/MSPeak.bin"; raw = bytearray(pk.read_bytes())
 raw[68 + 10 * 64 + 32:68 + 10 * 64 + 40] = struct.pack("<d", float("nan")); pk.write_bytes(bytes(raw))      # scan 11 does not decode
+badrec = agilent_sintetico.write(top, "guasto.D", 30)
+ix = badrec / "AcqData/MSScan.bin"; raw = bytearray(ix.read_bytes())
+at = 160 + 5 * agilent_sintetico.REC.size + 12; raw[at:at + 8] = struct.pack("<d", float("nan")); ix.write_bytes(bytes(raw))      # index record 6 has no time
 synth.write_full(top / "mix.mzML", 5, seed=1)
 agilent_sintetico.write_old(top)
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -53,12 +56,12 @@ try:
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def folder():
             pg.set_input_files("#pickdir", str(top))
-            try: pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=120000)
+            try: pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 6", timeout=120000)
             except Exception as e:      # say why a row is missing (a failed conversion keeps its message in CONVROWS and in the loading box)
                 st = pg.evaluate("() => ({ files: ST.files.map(f => f.name), conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), up: (document.querySelector('#up') || {}).innerText })")
                 raise AssertionError(f"{str(e)[:120]} | {st}") from None
-            n = sorted(names(pg)); assert n == ["danno", "due", "mix", "uno", "vecchia"], n
-        step("a folder with three .D runs (one with a scan that does not decode), an older .D with only data.ms and an mzML lists five files", folder)
+            n = sorted(names(pg)); assert n == ["danno", "due", "guasto", "mix", "uno", "vecchia"], n
+        step("a folder with four .D runs (one with a scan that does not decode, one with a damaged index record), an older .D with only data.ms and an mzML lists six files", folder)
         def notice():
             t = pg.inner_text("#up")
             assert "rotto.D" in t, t
@@ -68,6 +71,11 @@ try:
             assert r and r["s"] == "done", r
             assert "1 of 30 scans damaged" in r["t"] or "1 di 30 scansioni danneggiate" in r["t"], r      # the scan left out stays in the list with no points
         step("the .D with one scan that does not decode loads, its row counts the scan left out", damaged)
+        def badRecord():
+            r = pg.evaluate("() => { const r = CONVROWS.rows.find(r => r.name.startsWith('guasto')); return r && { s: r.state, t: CONVROWS.label(r) }; }")
+            assert r and r["s"] == "done", r
+            assert "29 of 30 scans, 1 damaged records left out" in r["t"] or "29 di 30 scansioni, 1 record danneggiati lasciati fuori" in r["t"], r
+        step("the .D with a damaged index record loads, its row says the record left out (not a file that ends early)", badRecord)
         def tidy():
             pg.wait_for_function("document.querySelector('#cartinfo').hidden || !document.querySelector('#cartinfo').textContent", timeout=60000)       # «Folder …: n files to load» goes away when the load is done
             assert ".D" in pg.inner_text("#drop")

@@ -459,12 +459,9 @@ impl Reader for AgilentReader {
     }
 
     fn missing(&mut self, c: usize) -> usize {
-        if c == 0 {
-            self.d.missing
-        } else {
-            0
-        }
+        self.d.losses(c, 0).lost()
     }
+    #[rustfmt::skip]    fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { let n = self.index(c)?.len(); Ok(self.d.losses(c, n)) }
     fn chromatograms(&mut self, c: usize) -> Result<Vec<ChromatogramEntry>> {
         self.one(c)?;
         listed(self)

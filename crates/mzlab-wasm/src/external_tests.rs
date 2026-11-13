@@ -1,6 +1,6 @@
 // The tests of external.rs: the answers of a fake module become the types of the contract (no JS).
 use super::*;
-use mzlab_core::readers::{Position, DAMAGED, SPECTRUM_DAMAGED, WATERS_DAMAGED};
+use mzlab_core::readers::{Position, AGILENT_DAMAGED, DAMAGED, SPECTRUM_DAMAGED, WATERS_DAMAGED};
 
 struct Fake;
 
@@ -245,6 +245,11 @@ fn the_losses_keep_the_cause_the_module_gives() {
     // a damaged Thermo scan keeps its row, with no points: read is fewer than the rows, as in the module's `RawReader`
     assert_eq!(l(Says(1, RAW_DAMAGED)), Losses::of(2, 1, RAW_DAMAGED));
     assert_eq!(l(Says(3, WATERS_DAMAGED)), Losses::of(5, 2, WATERS_DAMAGED));
+    // damaged Agilent index records are left out of the index, like scans past a cut
+    assert_eq!(
+        l(Says(3, AGILENT_DAMAGED)),
+        Losses::of(5, 2, AGILENT_DAMAGED)
+    );
     assert_eq!(
         l(Says(3, "warn.file.memberMissing")),
         Losses::of(5, 2, "warn.file.memberMissing")

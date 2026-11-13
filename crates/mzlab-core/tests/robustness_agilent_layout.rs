@@ -36,7 +36,7 @@ fn a_layout_of_20000_fields_reads_its_records_in_linear_time() {
     let mut bin = vec![0u8; 160];
     bin[88..92].copy_from_slice(&160i32.to_le_bytes());
     bin.resize(160 + RECORDS * layout.record_len, 0);
-    let (recs, _) = parse(&bin, &layout, 0, None).expect("records");
+    let (recs, _, _) = parse(&bin, &layout, 0, None).expect("records");
     assert_eq!(recs.len(), RECORDS);
     assert!(recs.iter().all(|r| r.extra.len() == FIELDS));
     assert!(t.elapsed().as_secs() < 5, "{:?}", t.elapsed());

@@ -4,7 +4,7 @@
 //! flag, `u16` 0, `u16` n, then n+1 pairs `(u16 m/z×20, u16 abundance)`: the base peak first, then the peaks from the highest m/z down; then `u16` 5, `u16` 4, `u16` 0
 //! and `u32` TIC. Abundance: the top 2 bits are an exponent e, the value is `(low 14 bits) << 3e`. The m/z is a whole number of twentieths: coarser than the calibrated
 //! values of `MSPeak.bin` (up to 0.05 apart; abundances differ by calibration too), the times and TICs are equal. Checked on three real runs (`tests/agilent_real.rs`).
-//! Anything with another record length, count or trailer is an error that names the numbers.
+//! A record that does not frame ends the read: the scans before it are read, the rest counted (`AgilentD::damaged`); whole records past the declared count are read.
 
 use super::{hashes, info, meta, metadata, method, AgilentD, Files, ScanRec, SCAN_FULL, SCAN_SIM};
 use crate::error::{Error, Result};
@@ -33,6 +33,12 @@ pub struct DataMs {
     /// Where the records start and end: the bytes after `end` (a table that is not decoded) are declared by `AgilentD::metadata`.
     pub start: usize,
     pub end: usize,
+    /// Scans the header declares (`u32` at 0x116); the records read can be more (whole records past them) or fewer (`cut`, `damaged`).
+    pub declared: usize,
+    /// Declared scans past the end of the file.
+    pub cut: usize,
+    /// Declared scans after a record that does not frame: the next record cannot be found.
+    pub damaged: usize,
 }
 
 const STRING_AT: [(usize, &str); 6] = [
@@ -81,56 +87,97 @@ pub fn parse(b: &[u8]) -> Result<DataMs> {
     scans
         .try_reserve_exact(n.min(1 << 20))
         .map_err(|_| Error::memory_budget())?;
-    let mut at = start;
-    for k in 0..n {
-        let words = be16(b, at)
-            .ok_or_else(|| bad(format!("data.ms: record {} lies past the end", k + 1)))?;
-        let peaks = be16(b, at + 12).unwrap_or(usize::MAX);
-        if peaks > 20_000 || 2 * words != FIXED + 4 * (peaks + 1) || at + 2 * words > b.len() {
-            return Err(bad(format!(
-                "data.ms: record {} has {words} words for {peaks} peaks",
-                k + 1
-            )));
+    let (mut at, mut lost) = (start, Lost::None);
+    while scans.len() < n {
+        match scan_at(b, at) {
+            Ok((s, len)) => {
+                scans.push(s);
+                at += len;
+            }
+            Err(why) => {
+                lost = why;
+                break;
+            }
         }
-        let pair = |i: usize| {
-            (
-                be16(b, at + 14 + 4 * i).unwrap_or(0),
-                be16(b, at + 16 + 4 * i).unwrap_or(0),
-            )
-        };
-        let (bm, bv) = pair(0);
-        let (mut mz, mut y) = (Vec::with_capacity(peaks), Vec::with_capacity(peaks));
-        for i in (1..=peaks).rev() {
-            let (m, a) = pair(i);
-            mz.push(m as f64 / 20.0);
-            y.push(abundance(a));
+    }
+    if scans.is_empty() {
+        return Err(bad(match lost {
+            Lost::Cut => "data.ms: record 1 lies past the end".into(),
+            _ => format!(
+                "data.ms: record 1 has {} words for {} peaks",
+                be16(b, start).unwrap_or(0),
+                be16(b, start + 12).unwrap_or(0)
+            ),
+        }));
+    }
+    // a header count damaged to a smaller number would drop the scans after it: the whole records past the declared ones are read too
+    if lost == Lost::None {
+        let last_ms = scans
+            .last()
+            .map_or(0, |s| (s.time_min * 60000.0).round() as u32);
+        for _ in 0..whole_records_after(b, at, last_ms) {
+            let Ok((s, len)) = scan_at(b, at) else { break };
+            scans.push(s);
+            at += len;
         }
-        scans.push(DmScan {
-            time_min: be32(b, at + 2).unwrap_or(0) as f64 / 60000.0,
-            tic: be32(b, at + 2 * words - 4).unwrap_or(0) as f64,
-            base_mz: bm as f64 / 20.0,
-            base_value: abundance(bv),
-            mz,
-            y,
-        });
-        at += 2 * words;
     }
-    // a header count damaged to a smaller number would drop the scans after it in silence: whole records past the declared ones are a named error
-    let last_ms = scans
-        .last()
-        .map_or(0, |s| (s.time_min * 60000.0).round() as u32);
-    let found = n + whole_records_after(b, at, last_ms);
-    if found > n {
-        return Err(Error::new("err.file.agilentDataMsCount")
-            .with("declared", n)
-            .with("found", found));
-    }
+    let left = n.saturating_sub(scans.len());
+    let (cut, damaged) = if lost == Lost::Cut {
+        (left, 0)
+    } else {
+        (0, left)
+    };
     Ok(DataMs {
         strings,
         scans,
         start,
         end: at,
+        declared: n,
+        cut,
+        damaged,
     })
+}
+
+/// Why the records of `data.ms` stopped before the declared count: none, the file ends, or a record does not frame (the next one cannot be found).
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Lost {
+    None,
+    Cut,
+    Damaged,
+}
+
+/// The scan of the record at `at` and its length in bytes.
+fn scan_at(b: &[u8], at: usize) -> std::result::Result<(DmScan, usize), Lost> {
+    let words = be16(b, at).ok_or(Lost::Cut)?;
+    let peaks = be16(b, at + 12).unwrap_or(usize::MAX);
+    if peaks > 20_000 || 2 * words != FIXED + 4 * (peaks + 1) {
+        return Err(Lost::Damaged);
+    }
+    if at + 2 * words > b.len() {
+        return Err(Lost::Cut);
+    }
+    let pair = |i: usize| {
+        (
+            be16(b, at + 14 + 4 * i).unwrap_or(0),
+            be16(b, at + 16 + 4 * i).unwrap_or(0),
+        )
+    };
+    let (bm, bv) = pair(0);
+    let (mut mz, mut y) = (Vec::with_capacity(peaks), Vec::with_capacity(peaks));
+    for i in (1..=peaks).rev() {
+        let (m, a) = pair(i);
+        mz.push(m as f64 / 20.0);
+        y.push(abundance(a));
+    }
+    let s = DmScan {
+        time_min: be32(b, at + 2).unwrap_or(0) as f64 / 60000.0,
+        tic: be32(b, at + 2 * words - 4).unwrap_or(0) as f64,
+        base_mz: bm as f64 / 20.0,
+        base_value: abundance(bv),
+        mz,
+        y,
+    };
+    Ok((s, 2 * words))
 }
 
 /// The header strings of `data.ms`, and the parts of the file that are not decoded (the header numbers, the table after the records), with size and SHA-1.
@@ -149,6 +196,13 @@ pub(super) fn items(d: &DataMs, b: &[u8]) -> Vec<meta::Item> {
         name: "scans".into(),
         value: d.scans.len().to_string(),
     });
+    if d.declared != d.scans.len() {
+        out.push(meta::Item {
+            origin: "data.ms".into(),
+            name: "scans declared by the header".into(),
+            value: d.declared.to_string(),
+        });
+    }
     out.extend(meta::collect(&[
         ("data.ms#header", &b[..d.start]),
         ("data.ms#after-records", b.get(d.end..).unwrap_or(&[])),
@@ -252,7 +306,8 @@ impl AgilentD {
             extra_names: Vec::new(),
             file_sha1: hashes(f),
             inline: Some(inline),
-            missing: 0,
+            missing: d.cut,
+            damaged: d.damaged,
         })
     }
 }

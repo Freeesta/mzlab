@@ -280,6 +280,35 @@ def test_one_undecodable_agilent_scan_is_left_out_on_both_faces(tools):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def test_one_damaged_agilent_index_record_is_left_out_on_both_faces(tools):
+    """A `.D` of 60 scans whose 31st index record has no time, and an old `.D` of 60 `data.ms` records whose 31st does not frame: the good records load,
+    the damaged ones are left out and counted (exit 3 and `warn.agilent.damaged` on the CLI), byte for byte the same mzML from the module."""
+    import agilent_sintetico
+    ds = agilent_sintetico.write(tools["tmp"] / "in_agilent_badrec", "synt.D", 60)
+    f = ds / "AcqData" / "MSScan.bin"
+    b = bytearray(f.read_bytes())
+    at = 160 + 30 * agilent_sintetico.REC.size + 12      # ScanTime of the 31st record
+    b[at:at + 8] = struct.pack("<d", float("nan"))
+    f.write_bytes(bytes(b))
+    old = agilent_sintetico.write_old(tools["tmp"] / "in_agilent_badms", "vecchia.D", 60)
+    g = old / "data.ms"
+    m = bytearray(g.read_bytes())
+    at = 0x140
+    for _ in range(30):                                     # each record starts with its length in 16-bit words
+        at += 2 * struct.unpack(">H", m[at:at + 2])[0]
+    m[at:at + 2] = struct.pack(">H", 999)                   # the 31st does not frame: the next one cannot be found
+    g.write_bytes(bytes(m))
+    for d, read in ((ds, 59), (old, 30)):
+        out = tools["tmp"] / f"cli_badrec_{d.name}"
+        r = run([str(tools["cli"]), "convert", str(d), "--out", str(out), "--fresh", "--workers", "1"])
+        assert r.returncode == 3, r.stderr[-1500:]
+        assert f"partial read, {read} of 60 scans (warn.agilent.damaged)" in r.stderr, r.stderr[-1500:]
+        cli = next(out.glob("*.mzML")).read_bytes()
+        assert cli.count(b"<spectrum ") == read
+        wasm = da_wasm(tools, "agilent", d)
+        assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
     (`mzLab metodo/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""

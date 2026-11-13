@@ -106,6 +106,10 @@ pub const DAMAGED: &str = "warn.wiff.damaged";
 /// its row with no points, the other scans are read.
 pub const RAW_DAMAGED: &str = "warn.raw.damaged";
 
+/// Cause of the scans of an Agilent `.D` whose index record is damaged (no time, points outside the data file, a `data.ms` record that does not frame):
+/// left out of the index, the others are read.
+pub const AGILENT_DAMAGED: &str = "warn.agilent.damaged";
+
 /// Cause of the scans a run lists without their scan event: the table of events was refused, the scans are read with level and polarity unknown.
 pub const EVENTS_REFUSED: &str = "warn.raw.eventsRefused";
 
@@ -129,6 +133,7 @@ pub fn cause_key(s: &str) -> Option<&'static str> {
         MEMBER_MISSING,
         RECORD_WIDTH,
         WATERS_DAMAGED,
+        AGILENT_DAMAGED,
         super::SPECTRUM_DAMAGED,
     ]
     .into_iter()

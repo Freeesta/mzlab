@@ -394,16 +394,17 @@ pub(super) fn record(layout: &Layout, r: &[u8]) -> ScanRec {
     }
 }
 
-/// The records of an `MSScan.bin` and the scans of a copy cut short that are left out. `peak_len`: size of `MSPeak.bin`, to check that every spectrum lies
-/// inside it. `scans`: how many scans the other files of the folder announce (`MSTS.xml`). A copy cut short keeps its whole scans: fewer whole records than
-/// announced scans are a cut (a part of a record at the end is dropped only then), and the records whose points lie past the end of `MSPeak.bin` only when they
-/// are the last ones and the offsets before them never go back; any other misfit stays an error.
+/// The records of an `MSScan.bin`, the scans of a copy cut short that are left out, and the damaged records left out. `peak_len`: size of `MSPeak.bin`, to
+/// check that every spectrum lies inside it. `scans`: how many scans the other files of the folder announce (`MSTS.xml`). A copy cut short keeps its whole
+/// scans: fewer whole records than announced scans are a cut (a part of a record at the end is dropped only then), and so are the last records whose points lie
+/// past the end of `MSPeak.bin`. A record before good ones with no time or with points outside `MSPeak.bin` is damaged: left out and counted, the others
+/// are read. A part of a record that no announced scan explains is an error (the layout does not fit the file).
 pub fn parse(
     bytes: &[u8],
     layout: &Layout,
     peak_len: u64,
     scans: Option<usize>,
-) -> Result<(Vec<ScanRec>, usize)> {
+) -> Result<(Vec<ScanRec>, usize, usize)> {
     if bytes.len() < HEADER_MIN {
         return Err(bad(format!("MSScan.bin has {} bytes", bytes.len())));
     }
@@ -435,40 +436,27 @@ pub fn parse(
             bytes.len()
         )));
     }
-    let outside = |k: usize| {
-        bad(format!(
-            "scan record {} points outside MSPeak.bin or has no time",
-            k + 1
-        ))
-    };
     let mut out = Vec::new();
     out.try_reserve_exact(whole)
         .map_err(|_| Error::memory_budget())?;
-    let mut first_out = None;
-    for (k, r) in bytes[start..].chunks_exact(n).enumerate() {
+    // records whose points lie inside MSPeak.bin and that have a time; the run of bad ones since the last good one
+    let (mut damaged, mut bad_run) = (0, 0);
+    for r in bytes[start..].chunks_exact(n) {
         let rec = record(layout, r);
         let inside = rec
             .offset
             .checked_add(rec.bytes as u64)
             .is_some_and(|e| e <= peak_len);
-        if !rec.time_min.is_finite() || (inside && first_out.is_some()) {
-            return Err(outside(first_out.unwrap_or(k)));
+        if rec.time_min.is_finite() && inside {
+            damaged += bad_run;
+            bad_run = 0;
+            out.push(rec);
+        } else {
+            bad_run += 1;
         }
-        if !inside && first_out.is_none() {
-            first_out = Some(k);
-        }
-        out.push(rec);
     }
-    let kept = first_out.unwrap_or(whole);
-    if !fragment && kept == whole && !scans.is_some_and(|a| a > whole) {
-        return Ok((out, 0));
-    }
-    if out[..kept].windows(2).any(|w| w[1].offset < w[0].offset) {
-        return Err(outside(kept));
-    }
-    out.truncate(kept);
     let attese = scans.unwrap_or(0).max(whole + usize::from(fragment));
-    Ok((out, attese - kept))
+    Ok((out, attese - whole + bad_run, damaged))
 }
 
 #[cfg(feature = "estesi")]
