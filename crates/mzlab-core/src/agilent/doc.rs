@@ -264,14 +264,10 @@ fn warnings(d: &AgilentD) -> Vec<V> {
             seen.push(&i.origin);
         }
     }
-    seen.into_iter()
-        .filter_map(|o| {
-            obj(vec![
-                ("chiave", Some(V::s("meta.nonDecodificato"))),
-                ("dove", text(o)),
-            ])
-        })
-        .collect()
+    let note = |k: &str, o: &str| obj(vec![("chiave", Some(V::s(k))), ("dove", text(o))]);
+    let undecoded = seen.into_iter().map(|o| note("meta.nonDecodificato", o));
+    let left_out = d.notes.iter().map(|o| note("meta.danneggiato", o));
+    undecoded.chain(left_out).flatten().collect()
 }
 
 impl AgilentD {

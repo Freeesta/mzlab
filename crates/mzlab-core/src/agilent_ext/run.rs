@@ -95,7 +95,7 @@ impl AgilentD {
         for (key, (time, intensity)) in sic {
             out.push(sic_chromatogram(out.len(), key, time, intensity));
         }
-        out.extend(self.srm_chromatograms(peak, out.len())?);
+        out.extend(self.srm_chromatograms(peak, out.len())?.0);
         Ok(out)
     }
 

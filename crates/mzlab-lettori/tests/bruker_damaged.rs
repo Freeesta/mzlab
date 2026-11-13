@@ -87,3 +87,23 @@ fn a_damaged_side_table_is_named_and_the_run_is_read() {
         "{doc}"
     );
 }
+
+#[test]
+fn a_cut_bin_and_a_frame_without_calibration_are_both_said() {
+    // four frames: the second names an absent calibration, the copy of `tdf_bin` ends inside the fourth block
+    let b = blocco2();
+    let n = b.len() as i64;
+    let bin: Vec<u8> = b.iter().copied().cycle().take(3 * b.len() + 9).collect();
+    let tdf = db(&tdf_tables(&[0, n, 2 * n, 3 * n], 3, &[1, 7, 1, 1]));
+    let mut l = mzlab_lettori::apri(folder(bin, tdf), &limits()).unwrap();
+    // the losses keep the cut `_bin` cause and count both; the method document counts the uncalibrated one
+    assert_eq!(
+        l.losses(0).unwrap(),
+        Losses::of(4, 2, "warn.file.brukerCutBin")
+    );
+    let doc = l.method(0).unwrap();
+    assert!(
+        doc.contains("1 spectra whose frame has no usable MzCalibration"),
+        "{doc}"
+    );
+}

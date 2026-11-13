@@ -102,7 +102,7 @@ function pairArrows() {
     host.appendChild(a);
   });
 }
-// a full-width panel (with its child spectra) swaps with its neighbour; the panels are moved by dragging their header (movePanel is the same move, for tests)
+// a full-width panel (with its child spectra) swaps with its neighbour, dragged by its header (movePanel: the same move, for tests)
 function stackOrder() { return tabPanels().filter((/** @type {Pannello} */ q) => q.full && q.el && !dockedP(q)).sort(LAYOUT.ordine); }
 // block that moves together: a chromatogram with its child spectra; the others, in order
 function blockOf(/** @type {Pannello} */ p) { const grp = [p, ...(p.type === "chrom" || p.type === "xic" || p.type === "mrm" ? followers(p).sort((a, b) => a.y - b.y) : [])].filter(q => q === p || !dockedP(q)), st = stackOrder(), others = st.filter((/** @type {Pannello} */ q) => !grp.includes(q)); return { grp, others, at: others.filter((/** @type {Pannello} */ q) => q.y < p.y).length }; }
@@ -264,6 +264,10 @@ function cleanupOrphanPanels() {
 
 /** a chromatogram of the MS2 scans @param {Pannello | Bag} p */
 const ms2Chrom = p => p.type === "chrom" && (p.tab || E.tab) === ESP.ms2 && !/^(pda|press|reg|an:)/.test(p.kind);
+/** «+» panel tab: the active one if it shows a file, else the first ticked file's (no MRM if `scan`) @param {boolean} [scan] */
+const tabNuovo = (scan = false) => tabFiles().some((/** @type {MzFile} */ f) => f.vis) ? E.tab : (E.files.find((/** @type {MzFile} */ f) => f.vis && !f.gone && ESP.ids.includes(f.kind) && !(scan && f.kind === "mrm")) || { kind: E.tab }).kind;
+/** @param {string} t */
+const suTab = t => { if (t !== E.tab) window.setTab?.(t, true, "new-panel"); return t; };
 /** @param {string} type @param {Bag} o @param {Pannello} [after] */
 function addPanel(type, o, after) {
   // the panel is completed field by field below, by type: it only satisfies Pannello at the end
@@ -407,7 +411,7 @@ ESC.registra({
   aperto: () => !!E.panels.find((/** @type {Pannello} */ q) => q.el && q.el.classList.contains("max") && q._setMax),
   chiudi: () => { const m = E.panels.find((/** @type {Pannello} */ q) => q.el && q.el.classList.contains("max")); if (m && m._setMax) m._setMax(false); },
 });
-// full screen: ONLY that panel exists. Everything else (header, file list, tabs, toolbar, the other panels) is inert: no click, wheel or key reaches it
+// full screen: ONLY that panel exists; the rest (header, file list, tabs, toolbar, other panels) is inert to click, wheel and keys
 const fsPanel = () => E.panels.find((/** @type {Pannello} */ q) => q.el && q.el.classList.contains("max"));
 /** @param {Pannello | null} on @param {Pannello | null} [closing] */
 function fsInert(on, closing) {
@@ -519,7 +523,7 @@ function stepScan(/** @type {Pannello} */ p, /** @type {number} */ d, /** @type 
 }
 /** @param {Pannello} p @param {string} t @param {boolean} [keep] @param {boolean} [notice] */
 function stepMsg(p, t, keep, notice) { if (p.rd) { p.rd.textContent = t; p.rd.classList.toggle("show", !!notice); } if (keep) p._msg = t; }   // the line under the graph is gone: only the "nearest scan with data" notice of MS2 still shows
-// the legend sits INSIDE the graph (top right) for chromatograms, XIC and MRM; for the spectrum the scan line is on the x-axis title row, the file legend inside
+// legend INSIDE the graph (top right) for chromatograms, XIC, MRM; a spectrum's scan line is on the x-axis title row, its file legend inside
 function placeLeg(/** @type {Pannello} */ p) {
   if (!p.cv || p.type === "map") return;
   if (p.type === "spec") {
@@ -647,7 +651,7 @@ function corrWire(/** @type {HTMLElement & { disabled: boolean }} */ x, /** @typ
     e.preventDefault(); const l = items(), i = l.indexOf(document.activeElement); if (l.length) l[(i + (e.key === "ArrowDown" ? 1 : l.length - 1)) % l.length].focus();
   };
 }
-  // «Corrections» summary: ONE icon opens the panel's .corrbar popover with what is active (reference file, factor, background, notes); a dot on the icon marks an active correction
+  // «Corrections»: ONE icon opens the .corrbar popover with what is active (reference, factor, background, notes); a dot marks an active one
 CIC.sub = ICN('<circle cx="9" cy="9" r="6.5"/><path d="M5.9 9h6.2"/>');
 function corrActive(/** @type {Pannello} */ p) {
   if (p.corrbar && p.corrbar.querySelector(".subchip,.ibk")) return true;
@@ -722,8 +726,8 @@ function ctl(/** @type {Pannello} */ p) {
     { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], head: I18N.t("corr.from.bg") }], title: I18N.t("corr.sub.title"), idle: "msub", dis: ms2c ? NOMS2 : "" })
     + corrInfo(p)
     + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" data-num="0.2:" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
-  const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length })}</button>`;
-  // «Range»: m/z, RT (and the precursor of an MS2 file) in a small popover, next to its button in the tab order; the button is accented when one of them is set, and a «×» clears them
+  const fc = { n: TF.filter((/** @type {MzFile} */ f) => f.vis).length, tot: TF.length }, fsel = `<button data-o="fpop" class="fcount"${ONEF ? " disabled" : ""} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", fc)}">${I18N.t("ctl.files", fc)}</button>`;
+  // «Range»: m/z, RT (and an MS2 precursor) in a popover after its button; the button is accented when one is set, «×» clears them
   const rngOn = p._rngOn = rngIsOn(p);
   const parBox = (/** @type {string} */ inner) => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button><span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}${window.ZRESET?.btn(p) ?? ""}</span>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}</span>`;
   const uvCx = { hasScan: false, hasPda, an: anKinds, reg: false }, uvAny = hasPda || anKinds.length > 0;
@@ -780,7 +784,7 @@ function ctl(/** @type {Pannello} */ p) {
   const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const op = cpP.offsetParent || p.el, pr = op.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, op.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
   const parToggle = (/** @type {boolean} */ on) => { p._parOpen = on; if (cpB) cpB.setAttribute("aria-expanded", String(!!on)); if (cpP) { cpP.hidden = !on; if (on) { const q = cpP.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'); if (q.length === 2) { q[0].value = p.zoom ? fmt2(p.zoom[0]) : ""; q[1].value = p.zoom ? fmt2(p.zoom[1]) : ""; } } parPlace(); } };
   if (cpB) { cpB.onclick = () => parToggle(!p._parOpen); parPlace();
-    /** @type {HTMLElement} */ (cpB.parentElement).onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Esc: the popover closes, a half-written pair is dropped, the focus goes back to its button
+    /** @type {HTMLElement} */ (cpB.parentElement).onkeydown = (/** @type {KeyboardEvent} */ e) => {  // Esc: popover closed, a half-written pair dropped, focus back to its button
       if (e.key !== "Escape" || !p._parOpen) return; e.stopPropagation();
       cpP?.querySelectorAll("input").forEach((/** @type {HTMLInputElement} */ i) => { i.value = i.defaultValue; }); parToggle(false); cpB.focus(); };
     window.ZRESET?.wire(p, c);
@@ -823,7 +827,7 @@ function syncTb(/** @type {Pannello} */ p) {
     lg.disabled = off; lg.classList.toggle("on", !!p.log && !off); lg.setAttribute("aria-pressed", String(!!p.log && !off)); lg.title = off && ms2c ? I18N.t("ctl.noMs2") : I18N.t("ctl.log.title");
   }
 }
-// ---- one header row: what does not fit goes into the «⋯» menu (nodes are moved, keeping their handlers, and put back when there is room); nothing wraps or is cut.
+// ---- one header row: what does not fit goes into «⋯» (nodes moved with their handlers, put back when there is room); nothing wraps or is cut.
 // Order: the NL note, then the icon groups from the right, then the controls from the right.
 function hdRestore(/** @type {Pannello} */ p) {
   const l = p._hm || []; p._hm = [];
@@ -906,8 +910,8 @@ const XIC_BELOW = 0.2, XIC_ABOVE = 0.3;  // 264 -> 263.8..264.3, clicked or type
 const xicWin = (/** @type {number} */ v, /** @type {any} */ _obs) => { const n = rh(v, 0); return [rh(n - XIC_BELOW, 1), rh(n + XIC_ABOVE, 1)]; };
 /** @type {Bag | null} */
 let XIC_LAST = null;  // the last ion the student asked for ({mz} or {formula, adduct}): the window opens with it, still editable
-// Right click on a peak of the spectrum: the XIC appears at once, with the default unit window and no dialog; the window is changed afterwards from the header of the XIC panel.
-// the default trace of a clicked centroid: the ion with its ppm window when a high-resolution file is among the files, else the unit window (ref: any panel, for its tab)
+// Right click on a spectrum peak: the XIC appears at once (default unit window, no dialog); the window changes from the XIC header.
+// a clicked centroid's default trace: the ion with its ppm window if a high-resolution file is among them, else the unit window (ref: a panel, for its tab)
 const xicTraceFor = (/** @type {number} */ mz, /** @type {Pannello | null | undefined} */ ref) => {
   const [a, b] = xicWin(mz, true);
   return (window.HR && HR.ionTrace(mz, { obs: true, tab: ref && ref.tab })) || { id: E.seq++, mz: rh((a + b) / 2, 2), w: rh((b - a) / 2, 2), label: `m/z ${a}\u2013${b}` };
@@ -942,9 +946,9 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     rows.forEach((r, i) => { r.lab.textContent = i === 0 ? I18N.t("xic.ion1") : I18N.t("xic.ionN", { n: i + 1 }); r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? I18N.t(r.ad.value === "none" ? "xic.placeholderIon" : "xic.placeholder") : I18N.t(r.ad.value === "none" ? "xic.optionalIon" : "xic.optional"); r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
     addB.disabled = rows.length >= XIC_MAXROWS;
   };
-  const xtab = () => panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab;
-  const hrFile = () => window.HR ? HR.xicFiles(xtab()).find((/** @type {MzFile} */ f) => HR.isHr(f, f.lv)) : null;  // high resolution: the ion is a number with the decimals of the profile, ppm window
-  const lowFiles = () => window.HR ? HR.xicFiles(xtab()).some((/** @type {MzFile} */ f) => !HR.isHr(f, f.lv)) : true;
+  const nt = panel && E.panels.includes(panel) ? panel.tab || E.tab : tabNuovo(true);
+  const hrFile = () => window.HR ? HR.xicFiles(nt).find((/** @type {MzFile} */ f) => HR.isHr(f, f.lv)) : null;  // high resolution: the ion is a number with the decimals of the profile, ppm window
+  const lowFiles = () => window.HR ? HR.xicFiles(nt).some((/** @type {MzFile} */ f) => !HR.isHr(f, f.lv)) : true;
   const sumText = (/** @type {Bag} */ r) => {  // one line under the row: the window(s) that will be used
     const hf = hrFile(), unit = r.win ? `<i>m/z</i> ${fmz(r.win[0])} - ${fmz(r.win[1])}` : "";
     return hf && r.ex != null ? HR.ionText(r.ex, hf).replace("m/z", "<i>m/z</i>") + (lowFiles() ? ` <span class="muted">${I18N.t("xic.lowRes", { unit })}</span>` : "") : unit;
@@ -989,7 +993,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
   const first = pre.formula ? { text: pre.formula, adduct: pre.adduct } : pre.mz != null ? { text: fmz(pre.mz), obs: !!pre.obs } : {};
   addRow(first); addRow();
   addB.onclick = () => { if (rows.length < XIC_MAXROWS) addRow().inp.focus(); };
-  const ff = scanFiles(tabFiles(panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab));
+  const ff = scanFiles(tabFiles(nt));
   fsel.innerHTML = `<option value="">${I18N.t("xic.shownFiles")}</option>` + ff.map((/** @type {MzFile} */ f) => h`<option value="${f.k}">${f.label}</option>`).join("");
   Q("#xic-no").onclick = () => d.close();
   Q("#xic-go").onclick = async () => {
@@ -1000,7 +1004,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     const /** @type {Bag[]} */ traces = [], seen = new Set();
     used.forEach(r => {
       if (r.ex != null && hrFile()) {  // high resolution: the ion (exact m/z), each file reads it with its own tolerance
-        const ht = HR.ionTrace(r.ex, { obs: r.obs, prefix: r.label, tab: xtab() }), key = "ion|" + ht.mz; if (seen.has(key)) return; seen.add(key); traces.push(ht); return;
+        const ht = HR.ionTrace(r.ex, { obs: r.obs, prefix: r.label, tab: nt }), key = "ion|" + ht.mz; if (seen.has(key)) return; seen.add(key); traces.push(ht); return;
       }
       const [a, b] = r.win, d = r.range ? 5 : 2, mz = rh((a + b) / 2, d), w = rh((b - a) / 2, d), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
       traces.push({ id: E.seq++, mz, w, label: (r.label && !r.range ? r.label + " · " : "") + `m/z ${fmz(a, panel)}\u2013${fmz(b, panel)}` });
@@ -1010,7 +1014,7 @@ function openXic(panel, /** @type {Bag} */ pre = {}) {
     let np;
     if (panel && E.panels.includes(panel)) { COMANDI.fai("xic.traces", panel, () => traces.forEach(t => panel.traces.push(t))); np = panel; ctl(np); }
     else {
-      np = apriAnnullabile(addPanel("xic", { traces }));
+      np = apriAnnullabile(addPanel("xic", { traces, tab: suTab(nt) }));
       if (pre.after && E.panels.includes(pre.after)) {
         np.el.classList.add("drag"); np.y = pre.after.y + pre.after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
         stackAfter(np, pre.after); relayout(); fitHost();

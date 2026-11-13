@@ -276,22 +276,26 @@ impl Srm {
 }
 
 impl AgilentD {
-    /// All the SRM chromatograms of the run, read from the MRM visits.
+    /// All the SRM chromatograms of the run, read from the MRM visits, and how many visits were left out because their points do not decode (`err.file.*`).
     pub(crate) fn srm_chromatograms<R: ReadAt>(
         &self,
         peak: &mut R,
         first: usize,
-    ) -> Result<Vec<Chromatogram>> {
+    ) -> Result<(Vec<Chromatogram>, usize)> {
         let mut srm = Srm::default();
+        let mut left_out = 0;
         for r in self
             .records
             .iter()
             .filter(|r| self.is_mrm(r) && r.points > 0)
         {
-            let (mz, it) = self.points_of(peak, r)?;
-            srm.add(r, &mz, &it);
+            match self.points_of(peak, r) {
+                Ok((mz, it)) => srm.add(r, &mz, &it),
+                Err(e) if crate::readers::damages_one(&e) => left_out += 1,
+                Err(e) => return Err(e),
+            }
         }
-        Ok(srm.finish(first))
+        Ok((srm.finish(first), left_out))
     }
 }
 

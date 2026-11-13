@@ -116,6 +116,28 @@ pub(super) fn absent(name: &str, file: &str) -> Error {
 }
 
 /// The error of a run whose frame `frame` names no usable `MzCalibration` row (missing, another model, non-finite constants): no m/z without it.
+/// Leaves out of `desc` the spectra whose frame has no usable `MzCalibration` (their m/z cannot be computed) and gives how many; a run with none left is
+/// refused with the first such frame.
+pub(super) fn keep_calibrated(
+    desc: &mut Vec<super::spectra::Desc>,
+    data: &super::tables::Data,
+) -> mzlab_core::error::Result<usize> {
+    let calibrated = |d: &super::spectra::Desc| {
+        let f = &data.frames[d.frame];
+        data.cal.get(&f.cal).is_some_and(|c| c.validate())
+    };
+    let first = desc
+        .iter()
+        .find(|d| !calibrated(d))
+        .map(|d| data.frames[d.frame].id);
+    let read = desc.len();
+    desc.retain(calibrated);
+    match (desc.is_empty(), first) {
+        (true, Some(f)) => Err(no_calibration(f)),
+        _ => Ok(read - desc.len()),
+    }
+}
+
 pub(super) fn no_calibration(frame: i64) -> Error {
     Error::new("err.file.brukerCalibration")
         .with("frame", frame.to_string())

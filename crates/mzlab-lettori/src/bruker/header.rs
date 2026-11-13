@@ -132,10 +132,17 @@ impl BrukerHeader {
             "analysis.tdf"
         };
         let mut out: Vec<V> = nondec.filter(|_| !self.tsf).into_iter().collect();
-        out.extend(self.damaged.iter().filter_map(|t| {
+        let damaged = self.damaged.iter().map(|t| format!("{db}: table {t}"));
+        let uncal = (self.uncalibrated > 0).then(|| {
+            format!(
+                "{db}: {} spectra whose frame has no usable MzCalibration",
+                self.uncalibrated
+            )
+        });
+        out.extend(damaged.chain(uncal).filter_map(|d| {
             obj(vec![
                 ("chiave", Some(V::s("meta.danneggiato"))),
-                ("dove", text(&format!("{db}: table {t}"))),
+                ("dove", text(&d)),
             ])
         }));
         (!out.is_empty()).then_some(V::Arr(out))
@@ -192,6 +199,8 @@ pub struct BrukerHeader {
     pub tsf: bool,
     /// Side tables found damaged (`Data::damaged`): named in `avvisi` as `meta.danneggiato`.
     pub damaged: Vec<&'static str>,
+    /// Spectra left out because their frame has no usable `MzCalibration`: counted in `avvisi` as `meta.danneggiato`.
+    pub uncalibrated: usize,
 }
 
 fn identity(name: &str) -> bool {
