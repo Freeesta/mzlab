@@ -44,7 +44,7 @@ fn periods(ole: &Ole, sample: u32) -> usize {
 
 /// The experiments of `sample` checked: a method of several periods or a scan type this reader does not know is an error. The precursor-ion,
 /// product-ion (6) and neutral-loss scans are MS2. The mass of the header is the selected ion of a product-ion scan and, as ProteoWizard writes it,
-/// of a precursor-ion scan (the m/z Q3 stays on, in its `<precursorList>`); of a neutral-loss scan it is the loss (`fixed`).
+/// of a precursor-ion scan (the m/z Q3 stays on, in its `<precursorList>`) and of a neutral-loss scan, where it is the loss (also `fixed`).
 pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<Vec<Experiment>> {
     let m = method_no(ole, sample);
     if ex.is_empty() && m != sample {
@@ -67,9 +67,8 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
                     .filter(|m| m.is_finite() && *m > 0.0);
                 if c == CODE_NEUTRAL_LOSS {
                     e.fixed = mass;
-                } else {
-                    e.precursor = mass;
                 }
+                e.precursor = mass;
             }
             Some(CODE_MS3) => {
                 let first = f64_at(

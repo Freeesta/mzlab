@@ -83,8 +83,8 @@ def today(sigla, code, kind, version):
         return {"esito": "letto", "spettri": 0, "cromatogrammi": (2 if bpc else 1) + len(TRS if kind == "mrm" else IONS), "tipo": None,
                 "tracce": ["TIC", "BPC"] if bpc else ["TIC"], "bpc": bpc}
     level = 1 if sigla in ("EMS", "Q1") else 3 if sigla == "MS3" else 2
-    # the header mass of a neutral-loss scan is its loss, never a precursor; that of a precursor-ion scan is its selected ion, as ProteoWizard writes it
-    prec = MS3_SECOND if sigla == "MS3" else PREC.get(sigla) if sigla not in ("EMS", "Q1", "NL") else None
+    # the header mass is the selected ion of a precursor-ion scan and of a neutral-loss scan (its loss), as ProteoWizard writes them
+    prec = MS3_SECOND if sigla == "MS3" else PREC.get(sigla) if sigla not in ("EMS", "Q1") else None
     sp = [w.spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", level, prec, 1000.0 * k, pts(k), version)
           for k in range(CYCLES)]
     tracce = ["TIC", "BPC"] if sigla in ("EMS", "Q1", "PREC", "NL") else ["TIC"] if sigla == "MS3" else []
@@ -113,7 +113,7 @@ def main(out=None):
         wr.save(out, sigla)
         info[sigla] = {"codice": code, "codice_confermato": confirmed, "polarita": 1,
                        "campioni": [{"n": n, "versione": v, "oggi": today(sigla, code, kind, v)} for n, v in samples],
-                       "futuro": {"livello": level, "tipo_cv": cv, "precursore": None if sigla == "NL" else PREC.get(sigla), "sim": sigla in ("Q1MI", "Q3MI"),
+                       "futuro": {"livello": level, "tipo_cv": cv, "precursore": PREC.get(sigla), "sim": sigla in ("Q1MI", "Q3MI"),
                                   "spettri": kind == "scan", "ioni": IONS if kind == "ions" else None}}
     (out / "modi.json").write_text(json.dumps(info))
 

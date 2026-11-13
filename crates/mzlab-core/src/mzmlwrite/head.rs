@@ -142,9 +142,13 @@ fn isolation_into(s: &mut String, target: f64, half: Option<f64>) {
 /// when the file does not say otherwise. The readers that know a collision energy and an isolation half-width (`SpectrumExtra::ce`, `iso_half`) add them,
 /// in every build: the engine reads a `.wiff` without `sciex` or `precursori`, and the row of its index is read back from this text.
 fn plain_precursor_into(s: &mut String, p: f64, extra: &SpectrumExtra) {
-    s.push_str("<precursorList count=\"1\"><precursor><isolationWindow>");
-    isolation_into(s, p, extra.iso_half);
-    s.push_str("</isolationWindow><selectedIonList count=\"1\"><selectedIon>");
+    s.push_str("<precursorList count=\"1\"><precursor>");
+    if !extra.no_window {
+        s.push_str("<isolationWindow>");
+        isolation_into(s, p, extra.iso_half);
+        s.push_str("</isolationWindow>");
+    }
+    s.push_str("<selectedIonList count=\"1\"><selectedIon>");
     mz_cv_into(s, "MS:1000744", "selected ion m/z", p);
     s.push_str("</selectedIon></selectedIonList><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>");
     if let Some(ce) = extra.ce {
