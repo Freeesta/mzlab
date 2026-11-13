@@ -131,7 +131,7 @@ impl Wiff {
 }
 
 /// A TIC or BPC chromatogram (of no transition), in detector counts.
-fn total(
+pub(super) fn total(
     index: usize,
     id: String,
     kind: ChromKind,

@@ -1,6 +1,7 @@
 //! The BPC of the full scan experiments of a `.wiff`: the mzML writer reads every scan once and `WiffReader::watch`
 //! notes its base peak on the way, so the chromatograms are listed with the BPC only after that pass and no scan is ever decoded twice.
 
+use super::chromatograms::total;
 use super::reader::WiffReader;
 use crate::error::Result;
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
@@ -35,31 +36,22 @@ impl WiffReader {
         if p.bpc.is_empty() || p.bpc_seen != p.scans.len() {
             return Ok(Vec::new());
         }
-        let mut by_experiment: std::collections::BTreeMap<usize, (Vec<f64>, Vec<f64>)> =
-            Default::default();
+        // indexed by experiment, so the BPCs come in the order of their experiments, as in `Wiff::chromatograms_of`
+        let mut by: Vec<(Vec<f64>, Vec<f64>)> = vec![Default::default(); p.w.experiments.len()];
         for (&i, &base) in p.scans.iter().zip(&p.bpc) {
             let Some(r) = p.w.records.get(i) else {
                 continue;
             };
-            if p.w.has_bpc(r.experiment) {
-                let (t, v) = by_experiment.entry(r.experiment).or_default();
+            if let (true, Some((t, v))) = (p.w.has_bpc(r.experiment), by.get_mut(r.experiment)) {
                 t.push(r.time_min);
                 v.push(base);
             }
         }
-        let unit = "number of detector counts";
-        Ok(by_experiment
+        Ok(by
             .into_iter()
-            .map(|(e, (time, intensity))| Chromatogram {
-                index: 0,
-                id: p.w.bpc_id(e, many),
-                kind: ChromKind::Bpc,
-                q1: None,
-                q3: None,
-                unit: unit.into(),
-                time,
-                intensity,
-            })
+            .enumerate()
+            .filter(|(_, (t, _))| !t.is_empty())
+            .map(|(e, (t, v))| total(0, p.w.bpc_id(e, many), ChromKind::Bpc, t, v))
             .collect())
     }
 
