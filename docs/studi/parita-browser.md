@@ -47,7 +47,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `spectra.insilico` | sì | sito e app (`flow-web-insilico.js` + `flow_insilico` del `.wasm` `attributio-all`; app: `mzlab-cli flow run` con `insilico.rs`); pacchetto PubChemLite scaricato a un clic | `e2e_flow_insilico.py` (stesso SHA-256 di `candidates/1` nel browser e in `flow run`) | — | — | — |
 | `spectra.chimeric` | sì | pannello (`.wasm` `attributio-all`: `ms2_to`) | `parita_attributio_ms2.json` (non verificato se sito↔app) | da fare | M | 2 |
 | `annot.level` | sì | sì (`F.webIdent.level`: `.wasm` `attributio-all`, `flow_level`) | `e2e_flow_web_ident2.py`, `flow_formula_web_tests.rs`, `flow_level_tests.rs` (`livelli_casi.json`) | fatto | | |
-| `rt.predict` | sì | pannello (`rt_descriptors`) | `test_attributio_descr_wasm.py` (descrittori a 1e-9) | da fare | M | 2 |
+| `rt.predict` | sì | `.wasm` `attributio-all` (`flow_rtpredict`, `mzlab-feat::flow_rtpredict`): esecutore `F.webRtPredict`, stessi byte di `flow run` | `e2e_flow_web_rtpredict.py` (SHA-256 uguale al nativo) | fatto | M | 2 |
 | `spectra.match` | sì (tutti gli algoritmi) | sì: `tree` in `msn`, gli altri in `F.webIdent.match` (`.wasm` `lib`, `flow_match`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs`; `e2e_flow_msn.py` per `tree` | fatto | | |
 | `spectra.lookup` | sì | no | no | da fare | M | 3 |
 | `annot.regulatory`, `annot.hazard` | no | no | — | da fare in entrambi (solo descrittore, `BUCHI`) | M | 3 |
