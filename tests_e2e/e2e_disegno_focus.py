@@ -14,9 +14,7 @@ try:
         cdp = pg.context.new_cdp_session(pg)
         ev = lambda x: cdp.send("Runtime.evaluate", {"expression": x, "awaitPromise": True, "returnByValue": True, "userGesture": False})["result"].get("value")
         pg.reload()        # a new document starts without user activation (the first visit's evaluate calls of the harness gave it)
-        for _ in range(240):
-            if ev("!!(window.TPDraw && TPDraw.ready())"): break
-            time.sleep(0.25)
+        ev("new Promise(r => { const i = setInterval(() => { if (window.TPDraw && TPDraw.ready()) { clearInterval(i); r(1); } }, 100); })")       # in the page: no gesture, no pause here
         if ev(T): fail.append("the clipboard textarea took focus before any gesture")
         box = pg.locator("#kframe").bounding_box(); pg.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
         if not pg.evaluate(T): fail.append("the clipboard textarea cannot be focused after a click in the frame")
