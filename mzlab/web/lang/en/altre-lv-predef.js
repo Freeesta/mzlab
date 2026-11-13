@@ -122,6 +122,7 @@ I18N.add("en", {
   "msg.xic": "Type an m/z above, or right-click a peak of the spectrum.",
   "msg.chrom": "No file visible (or no chromatogram in this type of file).",
   "msg.mrm": "No MRM file visible.",
+  "msg.noFiles": "No file of this experiment type is shown.",
   "map.sc.sqrt": "square root",
   "map.sc.lin": "linear",
   "map.sc.log": "log",

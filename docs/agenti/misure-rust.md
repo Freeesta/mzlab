@@ -15,7 +15,7 @@ Apertura progressiva ed early TIC: all'estrazione della tabella scansioni (~0,05
 ## Famiglie di ioni per file (`cargo run --release -p mzlab-feat --example families -- FILE.mzidx [--truth verita.json]`, 4 CPU, solo `analyse_families`)
 Serie sintetica d'identità (9672 feature in `t05min`): 0,03 s, famiglie giuste 98,9 % (basi con la famiglia giusta 181/183), ISF 12/13, addotti 31/31, falsi ISF dichiarati ISF 0/13, NH4 lasciati aperti 8/8. Tre file Orbitrap da circa 80 MB (indice 54-56 MB): 141 208 feature → 119 317 famiglie in 0,76 s (il file con più rumore), 77 197 → 65 645 in 0,32 s, 79 560 → 67 594 in 0,32 s. Il tempo è per due terzi nella lettura delle tracce (`traces::gather` scorre quasi tutta la tabella dei picchi) e nelle finestre di m/z dei candidati.
 
-## «Da dove viene questo ione?» (`api/origin`, `cargo test --release -p mzlab-core --test origin_parity` e `tools/origin_riferimento.py`, nativo, dati LR veri e sintetici, un report con 200 bootstrap, 400 spostamenti, 25 candidati)
+## «Da dove viene questo ione?» (`api/origin`, `cargo test --release -p mzlab-core --test origin_parity` e `tools/origin_reference.py`, nativo, dati LR veri e sintetici, un report con 200 bootstrap, 400 spostamenti, 25 candidati)
 | Motore | Tempo per rapporto (ms) |
 |---|---|
 | Python (numpy, `ionfamily.origin_report`) | 320-365 |
@@ -23,7 +23,7 @@ Serie sintetica d'identità (9672 feature in `t05min`): 0,03 s, famiglie giuste 
 
 Il tempo comprende ROI, tracce, somiglianza di profilo con p-value di permutazione, rapporto con bootstrap, cinetica, ruoli e candidati. Nel browser (WebAssembly) non misurato qui. Parità: stessi indici e conteggi, numeri uguali entro 1e-9, p-value Monte Carlo identici (stesso `default_rng`).
 
-## Mappa RT×m/z e punti segnati (`api/map`, `mapsnap`, `mappunti`, `mappunti3d`; `cargo test --release -p mzlab-core --test map_parity -- --nocapture` e `tools/mappa_riferimento.py`, nativo, tre file Full Scan veri)
+## Mappa RT×m/z e punti segnati (`api/map`, `mapsnap`, `mappunti`, `mappunti3d`; `cargo test --release -p mzlab-core --test map_parity -- --nocapture` e `tools/map_reference.py`, nativo, tre file Full Scan veri)
 | Richiesta | Python (ms) | Rust (ms) |
 |---|---|---|
 | mappa intera (prima richiesta, a freddo) | 216 | 12 |
@@ -34,7 +34,7 @@ Il tempo comprende ROI, tracce, somiglianza di profilo con p-value di permutazio
 
 Nel browser (sintetici, due file di 2,4 MB, prima richiesta di ogni rotta, `e2e_lr`): mappa intera 54 ms in Rust contro 46 in Pyodide già avviato, con sfondo 102 contro 73, regione 36 contro 24, aggancio 7 contro 2, punti 26 contro 3, punti 3D 22 contro 37. Il guadagno non è la velocità della singola richiesta (Pyodide ha già la tabella in memoria) ma che Pyodide non parte: avvio della pagina 1,3 s contro 5,0 s. Parità: celle e punti uguali bit a bit; dei punti 3D tagliati a `max` si confrontano gli insiemi per intensità (numpy sceglie a caso fra intensità uguali).
 
-## Formule compatibili (`api/composition`, `cargo test --release -p mzlab-core --test composition_route_parity -- --nocapture` e `tools/composizione_rotta_riferimento.py`, nativo) e XIC da formula (`api/subxic`, `--test subxic_parity` e `tools/subxic_riferimento.py`, due file Orbitrap veri di 80 MB)
+## Formule compatibili (`api/composition`, `cargo test --release -p mzlab-core --test composition_route_parity -- --nocapture` e `tools/composition_route_reference.py`, nativo) e XIC da formula (`api/subxic`, `--test subxic_parity` e `tools/subxic_reference.py`, due file Orbitrap veri di 80 MB)
 | Richiesta | Python (ms) | Rust (ms) |
 |---|---|---|
 | composizione con intervalli di elementi (C 0-20, H 0-40, N 0-5, O 0-8, S 0-2) | 1-7 | 0,1-2,5 |
@@ -46,7 +46,7 @@ Nel browser (sintetici, due file di 2,4 MB, prima richiesta di ogni rotta, `e2e_
 
 Parità: stessi candidati nello stesso ordine e numeri entro 1e-9 per `composition`; righe, ordine e numeri identici per `subxic` (anche sui file veri). Nel browser non misurato: la pagina HR passa a Python alla prima richiesta di spettro, quindi `subxic` ci arriva solo da un motore già avviato; `composition` non ha bisogno di file.
 
-## Spettri in profilo (`api/spectrum` e `api/spectra` di un file LR in profilo; `cargo test --release -p mzlab-core --test profile_parity -- --nocapture` e `tools/profilo_riferimento.py`, nativo; `e2e_lr` nel browser, file sintetico di 400 scansioni)
+## Spettri in profilo (`api/spectrum` e `api/spectra` di un file LR in profilo; `cargo test --release -p mzlab-core --test profile_parity -- --nocapture` e `tools/profile_reference.py`, nativo; `e2e_lr` nel browser, file sintetico di 400 scansioni)
 | Richiesta | Python (ms) | Rust (ms) | Browser: Pyodide già avviato / Rust (ms) |
 |---|---|---|---|
 | spettro di una finestra di 14 scansioni | 7-11 | 4-9 | 84 / 38 |
@@ -67,7 +67,7 @@ Passo dei profili radi (MS2 di prodotto ed EPI del 3200 QTRAP: pochi punti per s
 La CWT è il metodo predefinito (parità di bordi e aree con Python in `golden.rs`); la modalità a prominenza costa un decimo e separa i picchi doppi dove la CWT li unisce (prove sintetiche in `peakq.rs`: doppio parzialmente risolto, spalla, coda, solo rumore).
 
 ## Spettro HR e tabella DDA (`cargo test -p mzlab-core --test hr_parity --release -- --nocapture`, stessa macchina, un giro)
-Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 per scansione); «rust» = `Routes::handle`/`spectrum_exact` nativo dall'indice, «python» = `api.dispatch` nativo (senza il costo di Pyodide). Parità ≤1e-9 relativa su tutti i valori. Tempi in ms per richiesta:
+Due file Orbitrap DDA sintetici (`tools/hr_reference.py`, ~15.000 picchi MS1 per scansione); «rust» = `Routes::handle`/`spectrum_exact` nativo dall'indice, «python» = `api.dispatch` nativo (senza il costo di Pyodide). Parità ≤1e-9 relativa su tutti i valori. Tempi in ms per richiesta:
 
 | richiesta | rust | python |
 |---|---|---|
@@ -81,7 +81,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_riferimento.py`, ~15.000 picchi MS1 p
 ## Rilevamento delle feature (`cargo run --release -p mzlab-feat --example feat -- FILE.mzidx...`, nativo, 13 file reali Orbitrap da circa 80 MB con 3,8 M picchi MS1 ciascuno)
 1 259 216 feature in totale, le stesse di `features.detect` file per file; 0,5-0,7 s e 62-78 MB di picco per file (Python: 3,5 s e 565 MB); due esecuzioni e budget di 8 MB (picco 42-43 MB) danno lo stesso SHA-256.
 
-## Gesti della mappa (`python3 tools/bench_mappa.py lr,hrc,hrp --wd DIR`, Chromium headless 4 CPU, motore WASM, file sintetici)
+## Gesti della mappa (`python3 tools/bench_map.py lr,hrc,hrp --wd DIR`, Chromium headless 4 CPU, motore WASM, file sintetici)
 - Tabella completa, confronto nativo e diagnosi in `mappa-fluida.md`. Prima mappa: LR 1500×500 791 ms, HRC 3000×3000 (9 M picchi) 6332 ms (nativo 254 ms). Nitido dopo rotella: 176 ms LR, 249 ms HR; zoom solo RT in HR 1617 ms. Cambio di file caldo: 211 ms LR, 441 ms HR. Frame durante la rotella p95 33-50 ms. Picco WASM HR 175 MB.
 - Rendering colore accelerato (`grafici.js`, `mapImage`): scrittura a 32 bit con `Uint32Array` (`buf32` e `tab32`) e campionamento a 10 000 celle per il 99,5° percentile: generazione `ImageData` su griglia 600×901 ridotta da 314 ms a 52 ms (6× più veloce), cambio file caldo su HRC ≤ 50 ms.
 
@@ -105,7 +105,7 @@ Mediana (min-max) e RSS massimo, prima → dopo `ROUND_MAX` (32 MB): 64 MB 2684 
 
 ## Dig LR con più condizioni (`cargo test --release -p mzlab-finder-lr-wasm --test lr_groups -- --ignored --nocapture scale`, `N=20` o `N=40`, nativo, 4 CPU, file sintetici di `tests/data/gruppi/`)
 20 file (3 condizioni, bianco, standard): indici 90 ms, pipeline + Dig 130 ms, `summary` con `gruppi` 2 ms, picco di memoria 8,1 MB. 40 file (6 condizioni, bianco, standard, 2 repliche in più): 170-195 ms, 240-300 ms, 3 ms, 11,3 MB. Rapporto 40/20: tempo 1,9-2,3×, memoria 1,4×. `finder-lr.wasm` senza `wasm-opt`: 1 925 570 → 2 055 819 byte (+6,8 %).
-- Browser (`tools/misura_gruppi.py`, Chromium headless, sito costruito senza `wasm-opt`, 2 file per condizione: t0 e t10): Dig da «Run» alla tabella, 20 file (10 condizioni) 0,9-1,9 s (mediana 1,3 s), 40 file (20 condizioni) 2,4-2,9 s (mediana 2,4 s): rapporto 1,8× (singole prove 1,5-2,7×, tempi brevi e rumorosi). Picco di memoria del browser durante il Dig 770-840 MB con 20 file, 850-915 MB con 40 (1,03-1,1×). Primo disegno della vista «Compare conditions» 38-67 ms.
+- Browser (`tools/measure_groups.py`, Chromium headless, sito costruito senza `wasm-opt`, 2 file per condizione: t0 e t10): Dig da «Run» alla tabella, 20 file (10 condizioni) 0,9-1,9 s (mediana 1,3 s), 40 file (20 condizioni) 2,4-2,9 s (mediana 2,4 s): rapporto 1,8× (singole prove 1,5-2,7×, tempi brevi e rumorosi). Picco di memoria del browser durante il Dig 770-840 MB con 20 file, 850-915 MB con 40 (1,03-1,1×). Primo disegno della vista «Compare conditions» 38-67 ms.
 
 ## Interpretazione dei TP sui dati veri (`tools/valida/tp_timololo.py`)
 Metriche (numeri solo nel repository privato): TP di letteratura in vista, regioni concordi, disaccordi di posizione da rivedere, candidati nuovi, FDR delle esche (`decoys.survived / decoys.rules`), distribuzione nulla del margine, concordanza con l'oro di mzmine (se la lista c'è).
@@ -113,10 +113,10 @@ Metriche (numeri solo nel repository privato): TP di letteratura in vista, regio
 ## `.wasm` interp (`tools/build_feat_wasm.sh`, `cargo build --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features interp`)
 Dopo `wasm-bindgen --target web` e `wasm-opt -Oz` (binaryen da npm): 496 569 B dopo `wasm-opt` (388 039 B senza i siti e il disegno): sopra il cancello di 470 000 B e sotto il tetto di 512 000 B, che non si alza; l'albero MSn lo costruisce ancora `interp` stesso e è un'eccezione accettata per ora: `interp` non deve crescere oltre; ogni peso nuovo si paga prima spostando l'albero in `finder_msn` (piccola PR a parte). Gli altri `.wasm` non cambiano peso.
 Clic Tabui: `misure-clic.md`; mzTab-M: `misure-esporta.md`.
-Gesti del visualizzatore, sito e nativo: `tools/bench_visore.py`; tabella in `visore-veloce.md`.
+Gesti del visualizzatore, sito e nativo: `tools/bench_viewer.py`; tabella in `visore-veloce.md`.
 
 ## Librerie spettrali: `libset_bench` (nativo, 1 milione di spettri sintetici, `cargo run --release -p mzlab-lib --example libset_bench -- 1000000 unit|hr [librerie]`)
 hr, 1 libreria: identità 0.06 ms/query a caldo (0.28 a freddo); analoghi 51 ms; ricerca aperta ibrida con accumulatori piatti 49–52 ms contro 138 ms della versione a coppie (×2.8). unit, 1 libreria: identità 1.4 ms (1.7 a freddo); analoghi 73–93 ms; ibrida aperta 77–106 ms (la macchina varia) contro 207–230 ms a coppie (×2.1–2.8). unit, 3 librerie da 1M ciascuna fuse: identità 1.5 ms, ibrida aperta 70–81 ms per libreria cercata.
 
 ## Rapporto `corsa/1` di una corsa grande (`mzlab-cli flow report RUNDIR`)
-Un file HR sintetico denso (`dati_sintetici_grandi.py --files 1 --scans 12000 --compounds 20000`): il passo `features.group` scrive un `ionnet/1` di 631 MB (7,5 milioni di archi «MS1 correlation»: con meno di `min_corr_samples` file ogni coppia coeluita è un arco). `corsa_build` legge di ogni `.json` solo i membri che usa (`json::parse_members`, gli altri valori controllati ma non costruiti): 9,1 s e 5 581 MB di picco RSS prima, 2,0 s e 636 MB dopo; `corsa/1` identico byte per byte su tre cartelle (1, 2 e 24 file); `main` `e6bdc0e4c7dc4da88b5901a2729ee9d624d5fb42`.
+Un file HR sintetico denso (`synthetic_data_large.py --files 1 --scans 12000 --compounds 20000`): il passo `features.group` scrive un `ionnet/1` di 631 MB (7,5 milioni di archi «MS1 correlation»: con meno di `min_corr_samples` file ogni coppia coeluita è un arco). `corsa_build` legge di ogni `.json` solo i membri che usa (`json::parse_members`, gli altri valori controllati ma non costruiti): 9,1 s e 5 581 MB di picco RSS prima, 2,0 s e 636 MB dopo; `corsa/1` identico byte per byte su tre cartelle (1, 2 e 24 file); `main` `e6bdc0e4c7dc4da88b5901a2729ee9d624d5fb42`.

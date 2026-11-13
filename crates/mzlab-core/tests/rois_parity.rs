@@ -1,4 +1,4 @@
-//! `rois::build_rois` and `rois::extract_trace` give what `ionfamily.build_rois` and `ionfamily.extract_trace` give (`tools/roi_riferimento.py`):
+//! `rois::build_rois` and `rois::extract_trace` give what `ionfamily.build_rois` and `ionfamily.extract_trace` give (`tools/roi_reference.py`):
 //! the same ROIs (count, scans, intensities within 1e-9 relative, centres within 1e-9). Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -59,7 +59,7 @@ fn rust_rois_match_python() {
     let out = std::env::temp_dir().join(format!("mzlab-roi-{}", std::process::id()));
     let mut cmd = Command::new("python3");
     cmd.current_dir(root())
-        .arg("tools/roi_riferimento.py")
+        .arg("tools/roi_reference.py")
         .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
         let mut v: Vec<_> = rd

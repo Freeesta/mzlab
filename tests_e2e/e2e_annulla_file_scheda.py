@@ -1,4 +1,4 @@
-"""A file taken out from the list while the tab on screen is another one (synthetic pairs of tools/wiff_misto.py and tools/wiff_modi.py EPI: Full Scan and MS2
+"""A file taken out from the list while the tab on screen is another one (synthetic pairs of tools/wiff_mixed.py and tools/wiff_modes.py EPI: Full Scan and MS2
 files; no laboratory data): the list shows the files of every tab, so Ctrl/Cmd+Z and the Undo button take that file back at once, from the tab on screen,
 and Ctrl+Y takes it out again (storia.js: a removed file is an entry of no tab).
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_annulla_file_scheda.py"""
@@ -13,7 +13,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:600]))
 
 D = Path(tempfile.mkdtemp(prefix="annulla_scheda_"))
-for tool in ("wiff_misto.py", "wiff_modi.py"):
+for tool in ("wiff_mixed.py", "wiff_modes.py"):
     subprocess.run([sys.executable, str(ROOT / "tools" / tool), str(D)], check=True, capture_output=True)
 FILES = [D / "misto.wiff", D / "misto.wiff.scan", D / "modi" / "EPI.wiff", D / "modi" / "EPI.wiff.scan"]
 OPEN = "(() => { E._grpOpen = E._grpOpen || {}; E.files.forEach(f => { E._grpOpen[f.kind] = true; }); renderFileList(); })()"

@@ -1,4 +1,4 @@
-//! Parity with the references (tests/golden/librerie/, written by tools/parita_librerie.py from SYNTHETIC spectra):
+//! Parity with the references (tests/golden/librerie/, written by tools/parity_libraries.py from SYNTHETIC spectra):
 //! * not quantised (the scores of `scores.rs` on the spectra as they are) against `ms_entropy` / `matchms`: 1e-6;
 //! * through a `.mzlib` (quantised, Flash indexes): 1e-4, and the same ten best candidates in at least 99% of the queries;
 //! * the GNPS-style cosine against the synthetic cases of the Attributio parity file: 1e-9 (not quantised), 1e-4 (quantised).
@@ -23,7 +23,7 @@ fn golden(name: &str) -> Value {
         .join(name);
     serde_json::from_slice(
         &std::fs::read(&p)
-            .unwrap_or_else(|e| panic!("{}: {e} (python3 tools/parita_librerie.py)", p.display())),
+            .unwrap_or_else(|e| panic!("{}: {e} (python3 tools/parity_libraries.py)", p.display())),
     )
     .unwrap()
 }

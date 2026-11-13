@@ -15,6 +15,9 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_infusione_grafo.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 FX = json.loads((Path(__file__).parent / "fixtures" / "msngrafo_esempio.json").read_text())
+MF = ROOT / "site" / "static" / "wasm-feat" / "manifest.json"
+FEAT = json.loads(MF.read_text()) if MF.exists() else {}               # the lazy .wasm modules of the site (verifica.py builds only `rotte`)
+MOLKIT = "molkit" in FEAT
 SX = json.loads((Path(__file__).parent / "fixtures" / "msngrafo_strutture.json").read_text())
 D = synth("infgrafo")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
@@ -133,6 +136,9 @@ try:
             pg.wait_for_function("S.view==='draw'", timeout=15000)
             pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=90000)
             wait_for_js(pg, "TPDraw.smiles().then(s => s.length > 5)", 30000)
+            # the cut is coloured too (evidence colours, hilite/1): one bond in the colour of the cuts, listed in the legend with its label
+            if MOLKIT:                                                   # without the molkit .wasm (a site built by verifica.py) hilite/1 cannot run
+                pg.wait_for_function("(() => { const c = document.querySelector('#ev-card'); return c && !c.hidden && document.querySelectorAll('#ev-legend li').length === 1; })()", timeout=30000)
             assert pg.evaluate("TPDraw.mark([[1, 2]])") == 1 and pg.evaluate("TPDraw.mark([[0, 9]])") == 0
             pg.evaluate("setView('data')"); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=15000)
         step("a node with a SMILES lists the cut candidates with ppm; one opens Draw and marks the bond", cuts)
@@ -345,7 +351,8 @@ try:
             assert not [m for m in pg4.evaluate("window.MZLAB_LR_MISS || []") if "msn_grafo" in m], pg4.evaluate("window.MZLAB_LR_MISS")
             pg4.wait_for_selector(".ig-node[data-id=n3] .ig-thumb .ig-hl", timeout=30000)
             assert pg4.locator(".ig-node[data-id=n0] .ig-thumb").count() == 1
-        step("the real engine answers the cut table of a node (no stand-in)", real_cuts)
+        if "msngrafo" in FEAT: step("the real engine answers the cut table of a node (no stand-in)", real_cuts)
+        else: print("SKIP the real engine: no msngrafo .wasm in site/static/wasm-feat (tools/build_feat_wasm.sh site/static)")
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         # two files loaded: no tab

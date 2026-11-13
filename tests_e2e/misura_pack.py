@@ -16,7 +16,7 @@ from lib import *
 import numpy as np
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici as ds  # noqa: E402
-import bench_mirino  # noqa: E402
+import bench_crosshair  # noqa: E402
 
 WORK = Path("/tmp/wd_pack_files")
 HR_N, LR_N, OPFS_MB = 15, 20, 50
@@ -224,7 +224,7 @@ def draw_tic20(pg, port):
 
 def draw_map(pg, port):
     o = {}; f = WORK / "big_lr-t0.mzML"
-    if not f.exists(): bench_mirino.lr_file(f)
+    if not f.exists(): bench_crosshair.lr_file(f)
     pg.set_viewport_size({"width": 1920, "height": 1080})
     load_files(pg, port, [f])
     M = "E.panels.find(q => q.type === 'map')"

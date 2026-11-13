@@ -1,5 +1,5 @@
 //! The Rust reader of the methods (`.dam`: OLE2, binary streams, Analyst XML), their checks against a file, the gradient parsers and the analog helpers give what
-//! `mzlab.reader.methodinfo`, `mzlab.analog` and `App.method` give (`tools/dam_riferimento.py`): same texts and counts, numbers within 1e-9. Skipped without
+//! `mzlab.reader.methodinfo`, `mzlab.analog` and `App.method` give (`tools/dam_reference.py`): same texts and counts, numbers within 1e-9. Skipped without
 //! python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -48,7 +48,7 @@ fn parsed(text: &str) -> Value {
 fn reference() -> Option<(PathBuf, Value)> {
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let out = std::env::temp_dir().join(format!("mzlab-dam-{}-{}", std::process::id(), N.fetch_add(1, std::sync::atomic::Ordering::SeqCst)));
-    match Command::new("python3").current_dir(root()).arg("tools/dam_riferimento.py").arg(&out).output() {
+    match Command::new("python3").current_dir(root()).arg("tools/dam_reference.py").arg(&out).output() {
         Ok(o) if o.status.success() => {}
         other => {
             if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {

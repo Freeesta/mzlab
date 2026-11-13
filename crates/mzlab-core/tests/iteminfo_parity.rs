@@ -1,4 +1,4 @@
-//! `iteminfo::item_info` answers like `Item.info()` of `mzlab/explore.py` (`tools/info_riferimento.py`) on the synthetic files and the examples,
+//! `iteminfo::item_info` answers like `Item.info()` of `mzlab/explore.py` (`tools/info_reference.py`) on the synthetic files and the examples,
 //! whole files and the parts of mixed files: from the `.mzidx` and a few header facts. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -80,7 +80,7 @@ fn item_info_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-info-{}", std::process::id()));
     let mut cmd = Command::new("python3");
     cmd.current_dir(root())
-        .arg("tools/info_riferimento.py")
+        .arg("tools/info_reference.py")
         .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
         let mut v: Vec<_> = rd

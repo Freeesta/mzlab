@@ -1,6 +1,6 @@
 # Misure dei pannelli dei grafici (vista Dati)
 
-Costo del disegno dei cromatogrammi, della mappa e dello spettro su dati sintetici densi: `python3 tools/bench_grafici.py [--rate 1|4] [--only big,many,hr,hr100,map,spec]` (sito costruito con il motore, `tools/prepara_sito.py`; Chromium headless senza GPU, cioè tela 2D software, 1500×1000, 4 CPU; file in `/tmp/mzlab_bench_grafici`). Una misura, non un test.
+Costo del disegno dei cromatogrammi, della mappa e dello spettro su dati sintetici densi: `python3 tools/bench_charts.py [--rate 1|4] [--only big,many,hr,hr100,map,spec]` (sito costruito con il motore, `tools/prepara_sito.py`; Chromium headless senza GPU, cioè tela 2D software, 1500×1000, 4 CPU; file in `/tmp/mzlab_bench_grafici`). Una misura, non un test.
 
 - **Insiemi**: `big` = un file SRM con 4 transizioni da 10^6 punti (20 min), una mostrata; `many` = 20 file SRM da 10^5 punti, tutti spuntati e sovrapposti (riempimento «Area» acceso, il predefinito dei pannelli MRM). Rumore sulla linea di base, un picco gaussiano per transizione e 6 punte di un solo punto.
 - **Colonne**: «draw» = tempo di `draw()` (mediana di 8, ms) sulla vista intera e su uno zoom della sola linea di base (9,45-9,62 min); gesti = chiamate a `draw()`, intervalli tra i fotogrammi (mediana / p95 / massimo, ms) e attività lunghe (> 50 ms: numero / la più lunga).
@@ -34,7 +34,7 @@ Con lo zoom verticale i picchi (10^5) finivano ~10^5 px sopra la tela e la tela 
 
 Un file da 10^6 punti (stessa macchina): draw della vista intera 11 ms, dello zoom 0,9 ms; rotella, trascinamento e passaggio del mouse a 16,7 ms per fotogramma senza attività lunghe; ridimensionare ×10 = 15 chiamate a `draw()` (fotogrammi fino a 50 ms).
 
-## HR, 120 tracce da 50 000 scansioni, CPU 1x (`tools/bench_grafici.py --only hr`; `main` `28c73e8b1aa0932cd786d7b44eaf71d4a8518269` → massimi e minimi a blocchi in `decima.js`, Ctrl+rotella con `drawSoon`)
+## HR, 120 tracce da 50 000 scansioni, CPU 1x (`tools/bench_charts.py --only hr`; `main` `28c73e8b1aa0932cd786d7b44eaf71d4a8518269` → massimi e minimi a blocchi in `decima.js`, Ctrl+rotella con `drawSoon`)
 Un file Orbitrap sintetico di 50 000 scansioni aperto 6 volte, tutti spuntati; un pannello XIC di 20 ioni = 120 tracce.
 | azione | prima | dopo |
 |---|---|---|
@@ -65,7 +65,7 @@ Ogni zoom ricostruisce l'intestazione del pannello; `abort()` senza argomento cr
 
 Aprire, usare e chiudere 50 XIC trattiene invece ~280 nodi per ciclo nelle voci di annullamento (`storia.js`), che hanno un tetto (100 voci): si ferma a ~50 cicli, la memoria JS resta ~9 MB; nessuna modifica.
 
-## Tabella HR di 100 000 righe nella «Statistica», CPU 1x (`tools/bench_tabella_hr.py`; `main` `3f613c149d136538f016a75257d92c341975859a` → grafico KMD denso `kmd-nuvola.js`, tabella «Dati» a blocchi, `contain:paint` sui riquadri delle tabelle; prova `e2e_kmd_denso`)
+## Tabella HR di 100 000 righe nella «Statistica», CPU 1x (`tools/bench_table_hr.py`; `main` `3f613c149d136538f016a75257d92c341975859a` → grafico KMD denso `kmd-nuvola.js`, tabella «Dati» a blocchi, `contain:paint` sui riquadri delle tabelle; prova `e2e_kmd_denso`)
 | azione | prima | dopo |
 |---|---|---|
 | tabella caricata e pannello dipinto: fotogramma più lungo, ms | 4211 | 423 |

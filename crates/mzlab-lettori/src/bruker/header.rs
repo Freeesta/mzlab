@@ -132,10 +132,21 @@ impl BrukerHeader {
             "analysis.tdf"
         };
         let mut out: Vec<V> = nondec.filter(|_| !self.tsf).into_iter().collect();
-        out.extend(self.damaged.iter().filter_map(|t| {
+        let damaged = self.damaged.iter().map(|t| format!("{db}: table {t}"));
+        let pages = self.left_out.iter().map(|(t, p, r)| {
+            format!("{db}: table {t}, {p} damaged pages and {r} damaged records left out")
+        });
+        let damaged = damaged.chain(pages);
+        let uncal = (self.uncalibrated > 0).then(|| {
+            format!(
+                "{db}: {} spectra whose frame has no usable MzCalibration",
+                self.uncalibrated
+            )
+        });
+        out.extend(damaged.chain(uncal).filter_map(|d| {
             obj(vec![
                 ("chiave", Some(V::s("meta.danneggiato"))),
-                ("dove", text(&format!("{db}: table {t}"))),
+                ("dove", text(&d)),
             ])
         }));
         (!out.is_empty()).then_some(V::Arr(out))
@@ -192,6 +203,10 @@ pub struct BrukerHeader {
     pub tsf: bool,
     /// Side tables found damaged (`Data::damaged`): named in `avvisi` as `meta.danneggiato`.
     pub damaged: Vec<&'static str>,
+    /// Spectra left out because their frame has no usable `MzCalibration`: counted in `avvisi` as `meta.danneggiato`.
+    pub uncalibrated: usize,
+    /// (table, pages, records) of the database left out because they are damaged (`Sqlite::left_out`): counted in `avvisi` as `meta.danneggiato`.
+    pub left_out: Vec<(String, usize, usize)>,
 }
 
 fn identity(name: &str) -> bool {

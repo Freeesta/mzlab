@@ -1,4 +1,4 @@
-//! `/api/spectrum` with a background (`bgk`) from the index(es) answers like `api.dispatch` (`tools/fondo_riferimento.py`: synthetic low-resolution
+//! `/api/spectrum` with a background (`bgk`) from the index(es) answers like `api.dispatch` (`tools/background_reference.py`: synthetic low-resolution
 //! centroid, low-resolution profile and high-resolution sessions): same lines, numbers within 1e-9; a request Python refuses is left to Python.
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_FONDO_DIR` = a folder already written by the script.
 
@@ -48,7 +48,7 @@ fn spectrum_with_background_like_python() {
     let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-fondo-{}", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/fondo_riferimento.py").arg(&out).output(),
+        None => Command::new("python3").current_dir(root()).arg("tools/background_reference.py").arg(&out).output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");

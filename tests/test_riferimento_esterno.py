@@ -1,4 +1,4 @@
-"""The vendor-reference harness (tools/riferimento_esterno.py): its manifest is valid and public-only, its mzML reader and
+"""The vendor-reference harness (tools/external_reference.py): its manifest is valid and public-only, its mzML reader and
 comparison catch the differences they are meant to catch on synthetic files, and without data it says so and exits 0."""
 import base64
 import importlib.util
@@ -8,10 +8,10 @@ import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("riferimento_esterno", ROOT / "tools" / "riferimento_esterno.py")
+spec = importlib.util.spec_from_file_location("external_reference", ROOT / "tools" / "external_reference.py")
 re_ = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(re_)
-MANIFEST = json.loads((ROOT / "tools" / "riferimento_esterno.json").read_text())
+MANIFEST = json.loads((ROOT / "tools" / "external_reference.json").read_text())
 TOL = MANIFEST["tolerances"]
 
 

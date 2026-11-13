@@ -62,6 +62,8 @@ pub struct AgilentD {
     pub missing: usize,
     /// Scans whose index record is damaged, left out (`scan::parse`, `datams::parse`): the others are read.
     pub damaged: usize,
+    /// Side members left out because they could not be read: `meta.danneggiato` in `avvisi`.
+    pub(crate) notes: Vec<String>,
 }
 
 /// `ScanType` of a QqQ MRM visit (the twin of `agilent_ext::lcms::SCAN_MRM`).
@@ -115,6 +117,7 @@ impl AgilentD {
             inline: None,
             missing,
             damaged,
+            notes: Vec::new(),
         })
     }
 

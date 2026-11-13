@@ -1,4 +1,4 @@
-"""Seeded random sequences of list actions on synthetic .wiff pairs (tools/wiff_modi.py EPI / PI / MRM / Q1MI, tools/wiff_misto.py; no laboratory data).
+"""Seeded random sequences of list actions on synthetic .wiff pairs (tools/wiff_modes.py EPI / PI / MRM / Q1MI, tools/wiff_mixed.py; no laboratory data).
 After every action no panel on screen is blank: every MS2 pair draws a visible file that holds its precursor, a ticked precursor row is a drawn one, and the
 MRM / SIM panel draws the channels of the files shown. Actions: row click, double click (only this file), file / group / precursor boxes, user groups,
 the ‹ › arrows and the file chooser, remove + undo, undo, reload. Needs the site and the .wasm (python3 tools/prepara_sito.py).
@@ -12,7 +12,7 @@ SEEDS = [int(s) for s in sys.argv[1].split(",")] if len(sys.argv) > 1 else [1, 2
 N = 30
 steps = []
 D = Path(tempfile.mkdtemp(prefix="ms2_inv_"))
-for tool in ("wiff_modi.py", "wiff_misto.py"):
+for tool in ("wiff_modes.py", "wiff_mixed.py"):
     subprocess.run([sys.executable, str(ROOT / "tools" / tool), str(D)], check=True, capture_output=True)
 FILES = [D / "misto.wiff", D / "misto.wiff.scan"] + [D / "modi" / f"{m}.wiff{x}" for m in ("EPI", "PI", "MRM", "Q1MI") for x in ("", ".scan")]
 

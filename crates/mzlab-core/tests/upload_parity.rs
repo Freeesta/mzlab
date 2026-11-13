@@ -1,4 +1,4 @@
-//! `upload::prepare` gives what `mzidx.builder_inputs` gives (`tools/upload_riferimento.py`): the same scan arrays and rows, the same
+//! `upload::prepare` gives what `mzidx.builder_inputs` gives (`tools/upload_reference.py`): the same scan arrays and rows, the same
 //! `source` (name, size, probe, sha256; the modification date is left out) and `run` objects. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -48,7 +48,7 @@ fn upload_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-upl-{}", std::process::id()));
     let mut cmd = Command::new("python3");
     cmd.current_dir(root())
-        .arg("tools/upload_riferimento.py")
+        .arg("tools/upload_reference.py")
         .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
         let mut v: Vec<_> = rd

@@ -1,5 +1,5 @@
 //! Time, memory and checksum of a conversion to mzML, native: `cargo run --release -p mzlab-core --example convert_times -- FILE.mzML [--thread N] [--peaks file|profile|mzlab]`
-//! (FILE from `tools/mzml_enorme.py`). The core opens no mzML through its registry, so the file is read whole into a made-up reader and `Conversione::scrivi` converts that;
+//! (FILE from `tools/mzml_huge.py`). The core opens no mzML through its registry, so the file is read whole into a made-up reader and `Conversione::scrivi` converts that;
 //! the memory of the loaded file is left out of the heap peak. The mzML goes to a sink that only counts and hashes it; the heap peak is counted by the allocator
 //! (as `mzml_memory`), the process peak is the `VmHWM` of Linux.
 use std::alloc::{GlobalAlloc, Layout, System};

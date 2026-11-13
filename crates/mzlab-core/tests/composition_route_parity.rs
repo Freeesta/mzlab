@@ -1,4 +1,4 @@
-//! `comproute::composition_route` reads the query of `/api/composition` and answers like `api.dispatch` (`tools/composizione_rotta_riferimento.py`):
+//! `comproute::composition_route` reads the query of `/api/composition` and answers like `api.dispatch` (`tools/composition_route_reference.py`):
 //! the same JSON for the requests Python accepts (numbers within 1e-9), `None` (Python's) for the ones it rejects.
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -38,7 +38,7 @@ fn composition_route_like_python() {
     let golden = root().join("tests/golden/ref/composizione_rotta.json");
     let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
     let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab-comp-route-{}.json", std::process::id())) };
-    let ok = committed || Command::new("python3").current_dir(root()).arg("tools/composizione_rotta_riferimento.py").arg(&out).output().map(|o| o.status.success()).unwrap_or(false);
+    let ok = committed || Command::new("python3").current_dir(root()).arg("tools/composition_route_reference.py").arg(&out).output().map(|o| o.status.success()).unwrap_or(false);
     if !ok {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 or numpy missing");
         eprintln!("skipped: python3/numpy not available");

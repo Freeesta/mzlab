@@ -1,10 +1,10 @@
 # e2e_annulla_orfani: «Cancel» of a loading while builders are indexing leaves in OPFS only the files of the table: the copy of a cancelled file and its `.part`
-# index go even though the stopped builder's worker still holds them for a moment (archivio.js removeHeld). Synthetic files (tools/mzml_msconvert_sintetico.py),
+# index go even though the stopped builder's worker still holds them for a moment (archivio.js removeHeld). Synthetic files (tools/mzml_msconvert_synthetic.py),
 # no laboratory data. Needs the site and the .wasm: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_annulla_orfani.py
 import os, sys, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
-import mzml_msconvert_sintetico as gen
+import mzml_msconvert_synthetic as gen
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-import lang_catalogo  # noqa: E402
+import lang_catalog  # noqa: E402
 TP = ROOT / "TP_Mine"
 ITALIAN = re.compile(
     r"\b(nessun[a-z]*|della|delle|degli|dello|nella|nelle|sono|questo|questa|perch[eé]|anche|pi[uù]|pu[oò]|oppure|tabella|banco|scegli|apri|chiudi|salva|scarica|errore|avviso|"
@@ -59,5 +59,5 @@ def test_compounds_has_no_bare_formula_column():
 
 def test_tabui_has_no_lang_keys():
     for lang in ("it", "en"):
-        src = lang_catalogo.testo(lang)
+        src = lang_catalog.testo(lang)
         assert not re.search(r'"tpmine\.', src), f"lang/{lang}.js has keys of Tabui"

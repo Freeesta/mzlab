@@ -1,4 +1,4 @@
-//! `link/1` against the independent reference `tools/link_riferimento.py` (Python `urllib.parse.quote`): the same bytes for every case of
+//! `link/1` against the independent reference `tools/link_reference.py` (Python `urllib.parse.quote`): the same bytes for every case of
 //! `tests/dati/link_golden.json` (charges, brackets, stereo, isotopes, `#`, `+` and `/`).
 use mzlab_feat::chem::link::link_json;
 use serde_json::Value;

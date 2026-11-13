@@ -1,4 +1,4 @@
-"""The product-ion spectrum never asks a Full Scan file for MS2 scans (synthetic pairs of tools/wiff_misto.py and tools/wiff_modi.py, EPI of 55.5; no laboratory data):
+"""The product-ion spectrum never asks a Full Scan file for MS2 scans (synthetic pairs of tools/wiff_mixed.py and tools/wiff_modes.py, EPI of 55.5; no laboratory data):
 when the file of the spectrum lacks its precursor (the pair is switching, or the student picked another precursor) the spectrum falls back to a loaded file
 whose precursors include it, not to a file without a precursor list (a Full Scan sample, answered «route unavailable»), also when that sample is the target. Also after quick file switches.
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_ms2_spettro_file.py"""
@@ -13,7 +13,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 D = Path(tempfile.mkdtemp(prefix="ms2_spf_"))
-for tool in ("wiff_modi.py", "wiff_misto.py"):
+for tool in ("wiff_modes.py", "wiff_mixed.py"):
     subprocess.run([sys.executable, str(ROOT / "tools" / tool), str(D)], check=True, capture_output=True)
 FILES = [D / "misto.wiff", D / "misto.wiff.scan", D / "modi" / "EPI.wiff", D / "modi" / "EPI.wiff.scan"]
 # every MS2 spectrum request sent to a file that is not an MS2 experiment

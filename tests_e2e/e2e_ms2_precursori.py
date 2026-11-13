@@ -1,4 +1,4 @@
-"""Two MS2 .wiff with different precursors on the built site with the Rust engine (synthetic pairs of tools/wiff_modi.py, EPI of 55.5, and tools/wiff_misto.py,
+"""Two MS2 .wiff with different precursors on the built site with the Rust engine (synthetic pairs of tools/wiff_modes.py, EPI of 55.5, and tools/wiff_mixed.py,
 product ion of 305; no laboratory data): after a click on a file of the list (it becomes the current one) or a double click (it is shown alone), the
 MS2 chromatogram and product-ion spectrum draw a precursor of THAT file, not the precursor of the file shown before nor the lowest of all the MS2 files
 (a precursor the file does not have left both panels blank), whether the MS2 pair already exists (from MS2 file to MS2 file) or is made again (after a
@@ -15,7 +15,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 D = Path(tempfile.mkdtemp(prefix="ms2_prec_"))
-for tool in ("wiff_modi.py", "wiff_misto.py"):
+for tool in ("wiff_modes.py", "wiff_mixed.py"):
     subprocess.run([sys.executable, str(ROOT / "tools" / tool), str(D)], check=True, capture_output=True)
 FILES = [D / "modi" / "EPI.wiff", D / "modi" / "EPI.wiff.scan", D / "misto.wiff", D / "misto.wiff.scan"]
 # the MS2 panels that are on screen: precursor, files drawn, whether the chart has data

@@ -1,5 +1,5 @@
 //! `cache::file_key` and `cache::check_stored` (behind the exports `file_key` and `check_stored`): the key of the cached `.mzfeatf` moves with the detection
-//! and with nothing else. Synthetic series of `tools/feat_sintetici.py`; skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
+//! and with nothing else. Synthetic series of `tools/feat_synthetic.py`; skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 #![cfg(feature = "detect")]
 
 use std::path::Path;
@@ -13,7 +13,7 @@ fn make() -> Option<Vec<u8>> {
     let n = N.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     let out = std::env::temp_dir().join(format!("mzlab_file_key_{}_{n}", std::process::id()));
     let ok = std::process::Command::new("python3")
-        .arg(root.join("tools/feat_sintetici.py"))
+        .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
         .args(["--solo", "degdma"])
         .output()

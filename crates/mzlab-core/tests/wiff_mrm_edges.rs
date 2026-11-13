@@ -1,4 +1,4 @@
-//! The edge rows of a dense MRM run (`tools/wiff_mrm_bordi.py`): an empty row (size 0) is left out, so the TIC and every transition keep the same
+//! The edge rows of a dense MRM run (`tools/wiff_mrm_edges.py`): an empty row (size 0) is left out, so the TIC and every transition keep the same
 //! times, and a dense block whose first cps is negative noise is read as dense, never as a sparse head. Engine and readers module (`--features sciex`).
 //! Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -9,8 +9,8 @@ use mzlab_core::mzml::{ChromKind, Chromatogram};
 use mzlab_core::wiff::{container, samples, Wiff};
 
 fn open() -> Option<(Wiff, Vec<u8>)> {
-    let out = std::env::temp_dir().join(format!("mzlab_wiff_mrmbordi_{}", std::process::id()));
-    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_mrm_bordi.py");
+    let out = std::env::temp_dir().join(format!("mzlab_wiff_mrmedges_{}", std::process::id()));
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_mrm_edges.py");
     let ok = Command::new("python3")
         .arg(script)
         .arg(&out)
@@ -26,12 +26,12 @@ fn open() -> Option<(Wiff, Vec<u8>)> {
         return None;
     }
     let ole = container(
-        std::fs::read(out.join("mrmbordi.wiff")).unwrap(),
-        "mrmbordi",
+        std::fs::read(out.join("mrmedges.wiff")).unwrap(),
+        "mrmedges",
     )
     .unwrap();
-    let scan = std::fs::read(out.join("mrmbordi.wiff.scan")).unwrap();
-    let w = Wiff::open(&ole, "mrmbordi", Some(scan.len() as u64), samples(&ole)[0]).unwrap();
+    let scan = std::fs::read(out.join("mrmedges.wiff.scan")).unwrap();
+    let w = Wiff::open(&ole, "mrmedges", Some(scan.len() as u64), samples(&ole)[0]).unwrap();
     Some((w, scan))
 }
 

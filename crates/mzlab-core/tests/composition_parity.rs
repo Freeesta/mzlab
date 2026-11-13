@@ -1,4 +1,4 @@
-//! `composition::compose` and `parse_elements` answer like `mzlab/chem/composition.py` (`tools/composizione_riferimento.py`), without observed
+//! `composition::compose` and `parse_elements` answer like `mzlab/chem/composition.py` (`tools/composition_reference.py`), without observed
 //! isotope peaks or MS2 peaks: the same candidates in the same order, numbers within 1e-9, same error keys. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -56,7 +56,7 @@ fn composition_like_python() {
     let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
     let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab_comp_{}.json", std::process::id())) };
     let ok = committed || Command::new("python3")
-        .arg(root().join("tools/composizione_riferimento.py"))
+        .arg(root().join("tools/composition_reference.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())

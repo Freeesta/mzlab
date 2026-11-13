@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-import inventario_tooltip as T  # noqa: E402
+import inventory_tooltip as T  # noqa: E402
 
 # keys still waiting for the chromatogram-peak rework (CROMA-CLICK-PICCO)
 REPEATS_ALLOWED = {"etpk.tip.rt"}

@@ -201,3 +201,25 @@ fn losses_count_the_index_and_the_missing_scans() {
         Losses::complete(0)
     );
 }
+
+/// Every cause a reader gives is known by `cause_key` (the engine's external path keeps it), and an unknown key is none (read as a cut file there).
+#[test]
+fn cause_key_knows_every_cause_of_a_reader() {
+    for k in [
+        TRUNCATED,
+        DAMAGED,
+        EVENTS_REFUSED,
+        RAW_DAMAGED,
+        MEMBER_MISSING,
+        RECORD_WIDTH,
+        WATERS_DAMAGED,
+        AGILENT_DAMAGED,
+        BRUKER_CUT_BIN,
+        BRUKER_NO_CALIBRATION,
+        SPECTRUM_DAMAGED,
+    ] {
+        assert_eq!(cause_key(k), Some(k), "{k}");
+    }
+    assert_eq!(cause_key("warn.file.brukerCutBin"), Some(BRUKER_CUT_BIN));
+    assert_eq!(cause_key("warn.unknown"), None);
+}

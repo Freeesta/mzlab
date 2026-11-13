@@ -1,4 +1,4 @@
-//! The validator on the files the writer and `tools/mzml_msconvert_sintetico.py` produce: valid, and the checks that must not be silent.
+//! The validator on the files the writer and `tools/mzml_msconvert_synthetic.py` produce: valid, and the checks that must not be silent.
 use super::*;
 use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 use crate::mzmlwrite::{Header, MzmlWriter, Options};
@@ -184,10 +184,10 @@ fn a_file_that_is_not_xml_or_not_mzml_says_so() {
     assert_eq!(errors(&report(b"")), ["required"]);
 }
 
-/// The file `tools/mzml_msconvert_sintetico.py` writes (`variant`), or `None` when this machine has no `python3` with numpy.
+/// The file `tools/mzml_msconvert_synthetic.py` writes (`variant`), or `None` when this machine has no `python3` with numpy.
 fn synthetic(variant: &str) -> Option<Vec<u8>> {
     let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tools/mzml_msconvert_sintetico.py");
+        .join("../../tools/mzml_msconvert_synthetic.py");
     let out = std::env::temp_dir().join(format!(
         "mzlab-valida-{}-{variant}.mzML",
         std::process::id()

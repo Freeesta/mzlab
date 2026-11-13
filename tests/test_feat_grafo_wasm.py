@@ -165,7 +165,7 @@ def test_analysis_through_wasm_equals_the_cli_byte_for_byte(pkg, tmp_path):
 
 
 def test_link_through_wasm_equals_the_cli_and_the_reference(pkg, tmp_path):
-    # every case of tools/link_riferimento.py: charges, brackets, stereo, isotopes, #, + and / percent-encoded the same in the page and the app
+    # every case of tools/link_reference.py: charges, brackets, stereo, isotopes, #, + and / percent-encoded the same in the page and the app
     for i, c in enumerate(json.loads((ROOT / "tests/dati/link_golden.json").read_text(encoding="utf-8"))):
         req = tmp_path / f"link{i}.json"
         req.write_text(json.dumps(c["request"]), encoding="utf-8")

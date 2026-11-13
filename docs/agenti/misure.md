@@ -138,7 +138,7 @@ Il motore Rust risponde dall'indice `.mzidx` (TIC, XIC, filtri, elenco scansioni
 | TIC + 5 XIC di ogni file, s | 0.11 | 0.35 | 2.17 |
 | RSS del browser, MB | 1033 | 1073 |
 
-## Mirino della mappa (`python3 tools/bench_mirino.py [lr|hr] [--site]`, Chromium Linux)
+## Mirino della mappa (`python3 tools/bench_crosshair.py [lr|hr] [--site]`, Chromium Linux)
 Mappa a schermo intero con il mirino acceso. LR: un Full Scan sintetico di 1500 scansioni × 500 centroidi (750 000 picchi); HR: le scansioni Full Scan di un Orbitrap sintetico (poche, ~600 scansioni). «site» = sito costruito (Pyodide in un worker; `python_ms` = tempo in Python dalla intestazione `X-Py-Ms`, il resto è andata e ritorno e copie JS↔worker); «dev» = server di sviluppo. Un giro; tempi in ms, mediana / p95.
 
 | misura | valore |

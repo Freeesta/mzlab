@@ -1,5 +1,5 @@
 //! `trace::detect` against the frozen answers of the former Python detection (`tests/golden/feat/detect.json`) on the synthetic files of
-//! `tools/feat_sintetici.py`: same number of features, same apex and edge scans, m/z within 1e-6 and areas within 1e-4 (relative), same flags. Also
+//! `tools/feat_synthetic.py`: same number of features, same apex and edge scans, m/z within 1e-6 and areas within 1e-4 (relative), same flags. Also
 //! with a small slab (tiny memory budget). Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
@@ -84,7 +84,7 @@ fn check(name: &str, got: &FileFeatures, want: &Value) {
 fn detect_like_the_golden_file() {
     let out = std::env::temp_dir().join(format!("mzlab_feat_{}", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/feat_sintetici.py"))
+        .arg(root().join("tools/feat_synthetic.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())

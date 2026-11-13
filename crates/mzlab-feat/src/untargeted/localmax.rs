@@ -2,7 +2,7 @@
 //!
 //! Rewritten from scratch after `featdet_massdetection/local_max/LocalMaxMassDetector.java` of mzmine 4.10.90 (MIT, (c) 2004-2022 The mzmine
 //! Development Team); no code copied. Maxima and valleys are searched on the smoothed series (`smooth.rs`), height, area and centroid always on the
-//! raw intensities. Reference: `tools/localmax_riferimento.py` (numpy). Not yet wired into the pipeline: `adap.rs` starts from centroided scans.
+//! raw intensities. Reference: `tools/localmax_reference.py` (numpy). Not yet wired into the pipeline: `adap.rs` starts from centroided scans.
 //! Where the text of the study is looser than the source the source wins: the gap that splits the runs is measured on the spectrum (`max_mz_gap`)
 //! and the two-peak rule compares the valley with the ACTIVE peak (the highest of the merged ones).
 

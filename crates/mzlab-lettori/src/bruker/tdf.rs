@@ -6,7 +6,8 @@ use super::spectra::{build, summed, Desc};
 use super::sqlite_min::Sqlite;
 use super::tables::Data;
 use super::tdf_helpers::{
-    absent, bad_index, cartella, cut_ones, legacy_key, no_calibration, recognize, sum_scan, take,
+    absent, bad_index, cartella, cut_ones, keep_calibrated, legacy_key, no_calibration, recognize,
+    sum_scan, take,
 };
 use super::tsf;
 use mzlab_core::error::{Error, Result};
@@ -64,6 +65,8 @@ impl BrukerReader {
         let wal = take(&mut fs, &format!("{base}-wal")).map(|m| (m.dati, m.dim));
         let db = Sqlite::open(db_m.dati, db_m.dim, wal, limits);
         let mut db = db?;
+        // a damaged page or record of a table is left out and counted (`Sqlite::left_out`), the rest of the run is read
+        db.tolerant = true;
         let data = Data::read(&mut db, limits)?;
         let mut desc = build(&data);
         limits.ok_entries(desc.len() as u64)?;
@@ -75,21 +78,10 @@ impl BrukerReader {
         desc.retain(|d| !cut[d.frame]);
         let missing_ones = all - desc.len();
         // the spectra of a frame without a usable MzCalibration have no m/z: left out and counted; a run with none left is refused
-        let calibrated = |d: &Desc| {
-            let f = &data.frames[d.frame];
-            data.cal.get(&f.cal).is_some_and(|c| c.validate())
-        };
-        let first = desc
-            .iter()
-            .find(|d| !calibrated(d))
-            .map(|d| data.frames[d.frame].id);
-        let read = desc.len();
-        desc.retain(calibrated);
-        let uncalibrated = read - desc.len();
-        if let (true, Some(f)) = (desc.is_empty(), first) {
-            return Err(no_calibration(f));
-        }
-        let header = BrukerHeader::read(&data, tsf);
+        let uncalibrated = keep_calibrated(&mut desc, &data)?;
+        let mut header = BrukerHeader::read(&data, tsf);
+        header.uncalibrated = uncalibrated;
+        header.left_out = std::mem::take(&mut db.left_out);
         let compression = data
             .meta
             .get("TimsCompressionType")
@@ -302,7 +294,8 @@ impl Reader for BrukerReader {
     fn losses(&mut self, c: usize) -> Result<Losses> {
         self.one(c)?;
         let n = self.desc.len();
-        let cause = if self.uncalibrated > 0 {
+        // a cut `_bin` keeps its cause; the frames without calibration are counted in `metodo/1.avvisi` too, so both are said when both occur
+        let cause = if self.uncalibrated > 0 && self.missing_ones == 0 {
             BRUKER_NO_CALIBRATION
         } else {
             CUT_BIN

@@ -233,12 +233,19 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     limits.ok_entries(fs.membri.len() as u64)?;
     let mut left = limits.byte;
     let mut small: Vec<(&str, Vec<u8>)> = Vec::new();
+    let mut unread = Vec::new();
     for n in [SCAN, XSD, TS, DEVICES, CONTENTS, TREE, ACQMETH, DATA_MS]
         .into_iter()
         .chain(OTHERS)
     {
-        if let Some(i) = find(&fs, n) {
-            small.push((n, read_all(&mut fs, i, &mut left)?));
+        let Some(i) = find(&fs, n) else { continue };
+        // the index, its layout and data.ms are the run; any other member that cannot be read is left out and named
+        match read_all(&mut fs, i, &mut left) {
+            Ok(b) => small.push((n, b)),
+            Err(_) if ![SCAN, XSD, DATA_MS].contains(&n) => {
+                unread.push(format!("{n}: could not be read"))
+            }
+            Err(e) => return Err(e),
         }
     }
     let get = |n: &str| {
@@ -267,7 +274,8 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         others: &others,
     };
     limits.ok_entries((files.ms_scan.len() / 8) as u64)?;
-    let d = AgilentD::open(&name, &files)?;
+    let mut d = AgilentD::open(&name, &files)?;
+    d.notes = unread;
     limits.ok_entries(d.records.len() as u64)?;
     let peak =
         peak_at.map(|i| std::mem::replace(&mut fs.membri[i].dati, Box::new(Vec::<u8>::new())));

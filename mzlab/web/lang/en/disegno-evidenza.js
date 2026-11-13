@@ -4,7 +4,6 @@ I18N.add("en", {
   "draw.ev.clear": "Remove colours",
   "draw.ev.cleared": "Colours removed.",
   "draw.ev.empty": "The drawing is empty: nothing to colour.",
-  "draw.ev.done.lr": "Only your selected atoms are coloured.",
   "draw.ev.painted": "Coloured: {n} of {total} evidence layers.",
   "draw.ev.fail": "Colours not applied: {message}",
   "draw.ev.row": "{kind} · {label}: {what}",

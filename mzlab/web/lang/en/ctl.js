@@ -34,7 +34,7 @@ I18N.add("en", {
   "ctl.cpar.titleMap": "Colour scale and palette, noise threshold, normalisation and difference",
   "ctl.spec.overlayMs2": "MS²: one file per graph (open another panel to compare).",
   "ctl.files.one": "You have loaded only one file of this type of experiment.",
-  "ctl.files.title": "Files shown in all the charts, like the list on the left",
+  "ctl.files.title": "Files of this experiment type: shown / loaded",
   "ctl.files": "{n}/{tot} ▾",
   "ctl.ms2scans": "MS2",
   "ctl.kind.title": "Type of chromatogram",

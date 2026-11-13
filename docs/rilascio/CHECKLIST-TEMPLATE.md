@@ -1,6 +1,6 @@
 # Checklist di rilascio vX.Y.Z
 
-Copia in `CHECKLIST-vX.Y.Z.md` (stessa cartella), spunta ogni casella con `[x]`: `tools/cancello_rilascio.py` rifiuta il tag finché ne resta una aperta.
+Copia in `CHECKLIST-vX.Y.Z.md` (stessa cartella), spunta ogni casella con `[x]`: `tools/gate_release.py` rifiuta il tag finché ne resta una aperta.
 
 ## Mappe
 - [ ] `python3 tools/indice.py --controlla` è verde; `graphify-out` aggiornato se presente

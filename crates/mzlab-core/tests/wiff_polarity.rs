@@ -1,5 +1,5 @@
 //! The SRM chromatograms of a `.wiff` say their polarity: in the id (`polarity=`, read back by the channels) and as the scan polarity term of the mzML,
-//! from the experiment header (which wins over the ion spray voltage), and nothing when the sample has no method. Checked on `tools/wiff_polarita.py`
+//! from the experiment header (which wins over the ion spray voltage), and nothing when the sample has no method. Checked on `tools/wiff_polarity.py`
 //! (an independent writer) through `Wiff::run`, the `Lettore` (what the site reads) and the mzML. Skipped without python3.
 
 use std::path::{Path, PathBuf};
@@ -12,7 +12,7 @@ use serde_json::Value;
 
 fn reference() -> Option<(PathBuf, Value)> {
     let out = std::env::temp_dir().join(format!("mzlab_wiff_polarity_{}", std::process::id()));
-    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_polarita.py");
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_polarity.py");
     let ok = Command::new("python3")
         .arg(script)
         .arg(&out)

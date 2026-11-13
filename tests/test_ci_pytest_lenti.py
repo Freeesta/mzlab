@@ -1,9 +1,9 @@
-"""tools/ci_pytest_lenti.py: the slow-file list comes from the mean time of the last runs, slowest first, with a threshold."""
+"""tools/ci_pytest_slow.py: the slow-file list comes from the mean time of the last runs, slowest first, with a threshold."""
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-import ci_pytest_lenti as c  # noqa: E402
+import ci_pytest_slow as c  # noqa: E402
 
 
 def run(ts, **file):

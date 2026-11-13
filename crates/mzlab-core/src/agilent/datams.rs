@@ -308,6 +308,7 @@ impl AgilentD {
             inline: Some(inline),
             missing: d.cut,
             damaged: d.damaged,
+            notes: Vec::new(),
         })
     }
 }

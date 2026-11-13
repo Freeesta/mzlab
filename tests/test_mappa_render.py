@@ -11,7 +11,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-import confronta_etichette as ce  # noqa: E402
+import compare_labels as ce  # noqa: E402
 
 JS = ROOT / "mzlab" / "web" / "mappa-render.js"
 needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")

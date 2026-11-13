@@ -393,11 +393,13 @@ where
     };
     let idx: Vec<Option<usize>> = columns.iter().map(|c| t.col(c)).collect();
     let mut n = 0u64;
-    db.rows_cols(&t, &idx, |r| {
+    let r = db.rows_cols(&t, &idx, |r| {
         n += 1;
         limits.ok_entries(n)?;
         Ok(f(r))
-    })
+    });
+    db.note_skips(name);
+    r
 }
 
 fn n(v: &Val) -> f64 {

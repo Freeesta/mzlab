@@ -1,5 +1,5 @@
 #![cfg(feature = "attributio")]
-//! Parity of the Attributio readers with the golden data of the reference tool (`tools/attributio_riferimento.py`, Attributio 1.12.0) on the synthetic
+//! Parity of the Attributio readers with the golden data of the reference tool (`tools/attributio_reference.py`, Attributio 1.12.0) on the synthetic
 //! campaigns, the hand cases, and a read of the real campaigns when `MZLAB_DATI` points at the private data (skipped without).
 
 #[macro_use]

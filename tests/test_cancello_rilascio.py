@@ -1,10 +1,10 @@
-"""The release gate (tools/cancello_rilascio.py) on a small temporary tree: green when aligned, red for a missing cli.md row, an uncited area file or an open box."""
+"""The release gate (tools/gate_release.py) on a small temporary tree: green when aligned, red for a missing cli.md row, an uncited area file or an open box."""
 import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-import cancello_rilascio as g  # noqa: E402
+import gate_release as g  # noqa: E402
 
 
 def tree(tmp: Path) -> Path:

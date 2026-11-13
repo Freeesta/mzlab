@@ -312,6 +312,7 @@ impl AgilentD {
             lcm: None,
             devices_all: Vec::new(),
             data_file: "AcqData/MSPeak.bin",
+            notes: Vec::new(),
         })
     }
 }

@@ -33,7 +33,7 @@ def problems(txt):
 def files(D):
     sys.path.insert(0, str(ROOT / "tools"))
     import dati_sintetici as DS
-    DS.make(D / "mz"); subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_modi.py"), str(D)], check=True, capture_output=True)
+    DS.make(D / "mz"); subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_modes.py"), str(D)], check=True, capture_output=True)
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_sim.py"), str(D)], check=True, capture_output=True)
     pick = [D / "mz" / n for n in ("B_FullMass-t0.mzML", "B_MS2-t15.mzML", "B_MRM-t0.mzML", "C_IDA-t0.mzML", DS.HR_NAMES["exploris"])]
     for s in ("Q1", "EPI"): pick += [D / "modi" / f"{s}.wiff", D / "modi" / f"{s}.wiff.scan"]      # PI (code 6) is refused by the engine on purpose: it opens no row

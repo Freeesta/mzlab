@@ -1,4 +1,4 @@
-//! `lr::file_entry` and `lr::open_items` answer like `App.files()` and `Session(...).info()` (`tools/sessione_riferimento.py`) on the synthetic
+//! `lr::file_entry` and `lr::open_items` answer like `App.files()` and `Session(...).info()` (`tools/session_reference.py`) on the synthetic
 //! files and the examples, with the name guessed and with the sample table edited. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -105,7 +105,7 @@ fn session_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-lr-{}", std::process::id()));
     let mut cmd = Command::new("python3");
     cmd.current_dir(root())
-        .arg("tools/sessione_riferimento.py")
+        .arg("tools/session_reference.py")
         .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
         let mut v: Vec<_> = rd

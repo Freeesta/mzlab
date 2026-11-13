@@ -69,9 +69,9 @@ async function tilesDrop(/** @type {string | null} */ name, /** @type {Set<strin
 }
 
 // `held` = [kind, name] of a file with a read lease in archivio.js (the index in use): read straight from its SyncAccessHandle into a buffer reused by the next read (the WASM
-// copies it at once); no handle, or a short read -> the FileReaderSync of the Blob. `rdStat` counts the time spent inside the readers (sent with every answer: tools/bench_mappa.py)
+// copies it at once); no handle, or a short read -> the FileReaderSync of the Blob. `rdStat` counts the time spent inside the readers (sent with every answer: tools/bench_map.py)
 const rdStat = { ms: 0, n: 0, bytes: 0, hand: 0 };
-// `rdStat.ops`: the last 300 requests as [op, path or name, ms from start to answer, ms in the readers, reads]; the other requests' reads interleave at every await, so read it as a profile (tools/bench_mappa.py)
+// `rdStat.ops`: the last 300 requests as [op, path or name, ms from start to answer, ms in the readers, reads]; the other requests' reads interleave at every await, so read it as a profile (tools/bench_map.py)
 rdStat.ops = [];
 const opDone = (/** @type {any} */ m) => { const o = rdStat.ops; if (m.__t0 === undefined) return rdStat; if (o.length >= 300) o.shift(); o.push([m.op, m.path || m.name || "", Math.round(performance.now() - m.__t0), Math.round(rdStat.ms - m.__ms), rdStat.n - m.__n]); return rdStat; };
 const frSync = new FileReaderSync();   // one reader for every file: it holds no state between reads

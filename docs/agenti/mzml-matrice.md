@@ -1,6 +1,6 @@
 # Matrice di conformità mzML
 
-Fixture: `tools/mzml_varianti.py OUT_DIR` (20 file sintetici, numeri inventati); prova: `crates/mzlab-cli/src/mzml_variants_tests.rs` (`canali`, `features`, `validate` su ogni variante; salta senza python3 + numpy). Le fixture Numpress si scrivono con `MzmlWriter` (`Opzioni::numpress`), non da Python. Lettura = `mzlab-core` (tabella `scantable`) per l'mzML semplice, lettore `mzml-numpress` (`aperti`) per Numpress: `lettori-aperti.md`.
+Fixture: `tools/mzml_variants.py OUT_DIR` (20 file sintetici, numeri inventati); prova: `crates/mzlab-cli/src/mzml_variants_tests.rs` (`canali`, `features`, `validate` su ogni variante; salta senza python3 + numpy). Le fixture Numpress si scrivono con `MzmlWriter` (`Opzioni::numpress`), non da Python. Lettura = `mzlab-core` (tabella `scantable`) per l'mzML semplice, lettore `mzml-numpress` (`aperti`) per Numpress: `lettori-aperti.md`.
 
 | Variante | Fixture | Esito (CLI) |
 |---|---|---|

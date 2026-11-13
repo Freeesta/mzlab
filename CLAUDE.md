@@ -8,7 +8,7 @@ Free LC-MS analysis program, in the browser only (https://freeesta.github.io/mzl
 ## Layout
 - `crates/`: Rust engine (`mzlab-core`, `mzlab-feat`, `mzlab-cli`, `mzlab-desktop` (Tauri v2), `*-wasm`). This is where logic lives.
 - `mzlab/web/`: plain HTML/JS interface (classic scripts in `index.html` order, ES modules for new files; no bundler). Texts only in `lang/it.js` and `lang/en.js`.
-- `mzlab/*.py`, `tools/golden.py`, `tools/*_riferimento.py`: Python reference for parity tests only.
+- `mzlab/*.py`, `tools/golden.py`, `tools/*_reference.py`: Python reference for parity tests only.
 - `tools/`: dev tools. `tests/` pytest, `tests_e2e/` Playwright (`lib.py`). `docs/agenti/`: area files (current state only).
 
 ## Commands

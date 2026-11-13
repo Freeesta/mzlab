@@ -30,4 +30,4 @@ build stable "$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)" "" "
 build nightly "$nightly" "" ""
 build loc "$nightly" "-Zlocation-detail=none" ""
 build locimm "$nightly" "-Zlocation-detail=none -Zunstable-options -Cpanic=immediate-abort" "-Zbuild-std=std,panic_abort"
-printf '%s' "$rows" | python3 tools/wasm_nightly_tabella.py
+printf '%s' "$rows" | python3 tools/wasm_nightly_table.py

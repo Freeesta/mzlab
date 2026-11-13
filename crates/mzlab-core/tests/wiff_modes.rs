@@ -1,4 +1,4 @@
-//! The matrix of the scan modes of a QTRAP against the synthetic pairs of `tools/wiff_modi.py`: what the `.wiff` reader does today with each mode, exactly
+//! The matrix of the scan modes of a QTRAP against the synthetic pairs of `tools/wiff_modes.py`: what the `.wiff` reader does today with each mode, exactly
 //! (read with level / precursor / CV type, or refused with `err.file.wiffScanType`, `code` C and `experiment` 1), never a panic. Whoever adds
 //! a mode changes its entry in `modi.json`. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -19,7 +19,7 @@ fn generate() -> Option<(PathBuf, Value)> {
         std::process::id(),
         CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
     ));
-    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_modi.py");
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_modes.py");
     let ok = Command::new("python3")
         .arg(script)
         .arg(&out)
@@ -31,7 +31,7 @@ fn generate() -> Option<(PathBuf, Value)> {
             std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
             "python3 not available"
         );
-        eprintln!("SKIP wiff_modi: python3 not available");
+        eprintln!("SKIP wiff_modes: python3 not available");
         return None;
     }
     let dir = out.join("modi");

@@ -1,4 +1,4 @@
-//! The scan table read by Rust from the headers of an mzML is the one the Python reader wrote in its `.mzidx` (`tools/mzidx_riferimento.py`):
+//! The scan table read by Rust from the headers of an mzML is the one the Python reader wrote in its `.mzidx` (`tools/mzidx_reference.py`):
 //! every row equal (numbers exactly), and the `run` object (`nce`, `hr1`, `n_chromatograms`). Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -22,7 +22,7 @@ fn rust_scan_table_is_the_python_one() {
     let out = std::env::temp_dir().join(format!("mzlab-st-{}", std::process::id()));
     let mut cmd = Command::new("python3");
     cmd.current_dir(root())
-        .arg("tools/mzidx_riferimento.py")
+        .arg("tools/mzidx_reference.py")
         .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
         let mut v: Vec<_> = rd

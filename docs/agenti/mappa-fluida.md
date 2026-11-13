@@ -3,7 +3,7 @@
 Misure, diagnosi e pacchetti di lavoro numerati per zoom, spostamento, mirino, cambio di file, scala e 3D della mappa 2D, con file sintetici fino alla scala HRMS. Le funzioni della mappa sono descritte in `dati-mappa.md`.
 
 ## Come rifare le misure
-- `MZLAB_CHROMIUM=<chrome> python3 tools/bench_mappa.py lr,hrc,hrp --wd DIR [--json]`: crea i file mzML sintetici in `DIR` (non nel repository), costruisce il sito con il motore WASM (`build_site.py` + `cargo build` + `wasm-bindgen`), apre due file per caso in Chromium headless con profilo persistente (la quota di un contesto in incognito rifiuta i file da 300 MB) e misura i gesti. `--json` stampa una riga per caso.
+- `MZLAB_CHROMIUM=<chrome> python3 tools/bench_map.py lr,hrc,hrp --wd DIR [--json]`: crea i file mzML sintetici in `DIR` (non nel repository), costruisce il sito con il motore WASM (`build_site.py` + `cargo build` + `wasm-bindgen`), apre due file per caso in Chromium headless con profilo persistente (la quota di un contesto in incognito rifiuta i file da 300 MB) e misura i gesti. `--json` stampa una riga per caso.
 - Casi: `lr` 1500 scansioni × 500 picchi (0,75 M picchi, 14 MB); `hrc` 3000 × 3000 centroidi (9 M, 150 MB); `hrc_big` 6000 × 5000; `hrp` 400 × 50 000 in profilo (20 M, 320 MB); `hrp_big` 600 × 150 000. `nome:SxP` cambia le dimensioni.
 - Ganci dello script (solo nel browser del test): `fetch` delle rotte `api/map|spectra|xic`, `drawMap`, `mapImage`, `MAPPA.zoomImg` (vero = disegnata la regione nitida), intervalli fra `requestAnimationFrame` e long task, picco della memoria WASM dai messaggi del worker, RSS di Chromium da `/proc`.
 - Lettura: `rdStat` di `rust-worker.js` (campo `rd` di ogni risposta) conta tempo, byte e byte da handle dentro i lettori; lo script li riporta (`first_read` cumulativo, `read_ms` per gesto). `rdStat.ops` (campo `rd.ops`) elenca le ultime 300 richieste come [op, percorso o nome, ms fino alla risposta, ms nei lettori, letture]: le richieste si intrecciano a ogni `await`, quindi è un profilo, non una misura esatta.
@@ -81,19 +81,19 @@ Colore della mappa intera HRC (600 × 901, Node): algoritmo in uso 314 ms; con `
 | tetto dei `.wasm` più alto | — | vietato | no: P1-P2 aggiungono poco codice al motore (stimato < 20 KB su 1 703 936 B) |
 
 ## Pacchetti (in ordine)
-Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `bench_mappa.py` prima e dopo nella descrizione. «Libero» = non tocca i file di `mappa.js`/`grafici.js`, della lista dei file e pannelli, né del caricamento.
+Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `bench_map.py` prima e dopo nella descrizione. «Libero» = non tocca i file di `mappa.js`/`grafici.js`, della lista dei file e pannelli, né del caricamento.
 
 ### P1 Lettura veloce dell'indice nel worker (fatta)
 - Il worker legge l'`.mzidx` da un `SyncAccessHandle` (`archivio.js` `lease`/`leaseRead`, `rust-worker.js` `readerFor`) in un buffer riusato; il handle è esclusivo, quindi si apre a ogni richiesta che legge quell'indice (`wake`, con i soli file che `rust-lease-plan.js` `leasePlan` indica: nessuno per le op che non leggono indici, l'indice dello slot per le op di un file, tutti se l'op è ignota) e si chiude quando il worker non ha richieste in corso (`parkAll`) e prima di scrivere, spostare o rimuovere il file (`dropLease`); se è preso o assente si legge con `FileReaderSync`.
 - `facts_from` (`iteminfo.rs`) non legge più le polarità di tutto il file se ha scansioni e nessun SRM: i file HRP da 320 MB si aprono senza `error.memoryBudget`.
-- Prova: `tools/bench_mappa.py` riporta `first_read` e `read_ms` per gesto; `map_parity`, `e2e_mappa`, `e2e_hr_mappa`, `e2e_lr` verdi, `MZLAB_LR_MISS` vuota, `.wasm` entro i tetti. Safari/iPad non misurati.
+- Prova: `tools/bench_map.py` riporta `first_read` e `read_ms` per gesto; `map_parity`, `e2e_mappa`, `e2e_hr_mappa`, `e2e_lr` verdi, `MZLAB_LR_MISS` vuota, `.wasm` entro i tetti. Safari/iPad non misurati.
 
 ### P2 Piramide di tessere della mappa in Rust
 - Scopo: D2, D9 e prima mappa istantanea al secondo accesso. Livelli di massimi (e somme) su una griglia agganciata (RT per scansione, m/z a potenze di 2 della cella), a tessere 256 × 256 sparse; costruita una volta per file (in un passaggio sui picchi già ordinati per m/z) e salvata in OPFS accanto all'`.mzidx`; una rotta nuova `api/maptiles` rende il rettangolo della vista al livello giusto; la regione esatta resta per media, fondo, differenza e per lo zoom più profondo.
 - File: nuovo `crates/mzlab-core/src/maptiles.rs` + rotta in `maproute.rs`; `mzlab-wasm` per salvare/leggere le tessere; parità in `crates/mzlab-core/tests/` contro `region_map` su griglie allineate (Rust contro Rust, nessun Python nuovo).
 - Guadagno: ogni zoom e spostamento costa le celle della vista (≤ 2 M) e non i picchi; nitido HR ≤ 100 ms anche solo in RT; prima mappa ≤ 0,2 s quando la piramide esiste.
 - Rischio: medio (spazio OPFS: circa 1/8 dell'indice; invalidazione con l'impronta dell'indice; definizione del massimo per celle a cavallo).
-- Accettazione: test di parità nuovo `crates/mzlab-core/tests/maptiles_parity.rs` (tessere uguali a `region_map` su griglie allineate, file LR e HR sintetici); `bench_mappa.py lr,hrc` con zoom solo RT HRC ≤ 0,2 s via `api/maptiles` chiamata dal test; tetto del `.wasm` del motore invariato (1 703 936 B, soglia ufficiale verificata in `pages.yml` e `docs/agenti/lettura-nativa.md`); nessun cambio della pagina.
+- Accettazione: test di parità nuovo `crates/mzlab-core/tests/maptiles_parity.rs` (tessere uguali a `region_map` su griglie allineate, file LR e HR sintetici); `bench_map.py lr,hrc` con zoom solo RT HRC ≤ 0,2 s via `api/maptiles` chiamata dal test; tetto del `.wasm` del motore invariato (1 703 936 B, soglia ufficiale verificata in `pages.yml` e `docs/agenti/lettura-nativa.md`); nessun cambio della pagina.
 - Dipendenze e conflitti: meglio dopo P1 (stessa lettura), può partire in parallelo sulla parte di calcolo. Solo Rust: libero.
 
 ### P3 Colore veloce e immagini per file
@@ -101,7 +101,7 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - File: `mzlab/web/grafici.js` (`mapImage`, `drawMap`), `mzlab/web/mappa.js` (`p._img`).
 - Guadagno: colore HRC da 400 a ≤ 60 ms; cambio di file caldo da 441 a ≤ 50 ms; cambio di scala ≤ 60 ms.
 - Rischio: basso; i colori devono restare gli stessi pixel (test che confronta l'immagine prima e dopo).
-- Accettazione: test che confronta i pixel di `mapImage` vecchia e nuova sulle mappe di `e2e_mappa` (uguali); `bench_mappa.py lr,hrc` con colore HRC ≤ 60 ms e cambio di file caldo ≤ 50 ms; `e2e_mappa*`, `e2e_tour`, `e2e_axe_grafici` verdi.
+- Accettazione: test che confronta i pixel di `mapImage` vecchia e nuova sulle mappe di `e2e_mappa` (uguali); `bench_map.py lr,hrc` con colore HRC ≤ 60 ms e cambio di file caldo ≤ 50 ms; `e2e_mappa*`, `e2e_tour`, `e2e_axe_grafici` verdi.
 - Dipendenze e conflitti: nessuna sul motore. Stessi file di `mappa.js`/`grafici.js` della mappa 2D (spettro laterale in profilo, blocco dell'asse).
 
 ### P4 Trasporto binario delle rotte della mappa
@@ -109,7 +109,7 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - File: `crates/mzlab-wasm` (uscita a offset come in `memoria.md`), `rust-worker.js`, `rust-bridge.js`, `browser.js`, `explore.js` (`getMap`, `getRegion`), `mappa3d.js`; il JSON con base64 resta per l'app desktop e i test di parità.
 - Guadagno: -2 copie e -33 % di memoria per regione; 10-20 ms per mappa intera HR.
 - Rischio: medio (cambia il contratto fra worker e pagina; `MZLAB_LR_MISS` e gli e2e delle rotte vanno ricontrollati).
-- Accettazione: `bench_mappa.py lr,hrc` con meno memoria per regione (heap JS dopo 20 spostamenti) e rotta+parse della mappa intera HRC ≤ 60 ms; parità delle rotte invariata (JSON con base64 per desktop e test); `e2e_mappa3d`, `e2e_lr`, `MZLAB_LR_MISS` vuota.
+- Accettazione: `bench_map.py lr,hrc` con meno memoria per regione (heap JS dopo 20 spostamenti) e rotta+parse della mappa intera HRC ≤ 60 ms; parità delle rotte invariata (JSON con base64 per desktop e test); `e2e_mappa3d`, `e2e_lr`, `MZLAB_LR_MISS` vuota.
 - Dipendenze e conflitti: dopo P3 (stesso `getMap`). `rust-worker.js` e `rust-bridge.js` sono condivisi con il caricamento.
 
 ### P5 Regioni in memoria, prefetch e attesa adattiva
@@ -117,7 +117,7 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - File: `mzlab/web/mappa.js` (`getRegion`, `regionGrid`, `paint`), `mzlab/web/explore.js` (`CACHE`).
 - Guadagno: nitido dopo il gesto da 176-250 a ≤ 120 ms; memoria a tetto fisso.
 - Rischio: basso-medio (i test che contano le richieste).
-- Accettazione: `bench_mappa.py lr,hrc` con nitido dopo rotella ≤ 120 ms LR e ≤ 200 ms HRC, spostamento successivo già nitido (0 richieste), `CACHE` sotto il bilancio dopo 20 spostamenti; `e2e_mappa_nav`, `e2e_mappa_mirino`, `e2e_mappa_blocco` verdi.
+- Accettazione: `bench_map.py lr,hrc` con nitido dopo rotella ≤ 120 ms LR e ≤ 200 ms HRC, spostamento successivo già nitido (0 richieste), `CACHE` sotto il bilancio dopo 20 spostamenti; `e2e_mappa_nav`, `e2e_mappa_mirino`, `e2e_mappa_blocco` verdi.
 - Dipendenze e conflitti: dopo P3 e P6 (stessi file); con P2 chiede le tessere. Stessi file della mappa 2D (`mappa.js`).
 
 ### P6 Un disegno per frame
@@ -125,14 +125,14 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - File: `mzlab/web/mappa.js`, `mzlab/web/grafici.js` (`drawMap`).
 - Guadagno: frame p95 da 33-50 a ≤ 17 ms durante il gesto.
 - Rischio: basso; il tour e i test che leggono la tabella subito dopo un gesto vanno ricontrollati.
-- Accettazione: `bench_mappa.py lr,hrc` con frame p95 ≤ 17 ms durante rotella e spostamento in LR e HRC; `e2e_mappa*`, `e2e_tour` verdi (ogni passo trova il bersaglio).
+- Accettazione: `bench_map.py lr,hrc` con frame p95 ≤ 17 ms durante rotella e spostamento in LR e HRC; `e2e_mappa*`, `e2e_tour` verdi (ogni passo trova il bersaglio).
 - Dipendenze e conflitti: nessuna sul motore; stessi file di P3 (`mappa.js`, `grafici.js`).
 
 ### P7 Colore su GPU (ipotetico studio futuro, non implementato)
 - Studio architetturale (`mappa-gl.js` non esiste): qualora servisse uno zoom continuo a 60 fps anche su griglie 2048 × 1024. Celle in una texture float, scala come texture 1D, shader che applica log/lineare e percentile; ripiego su P3 se WebGL manca.
 - Guadagno stimato: colore < 5 ms, cambio di scala istantaneo.
 - Rischio: medio-alto (CSP e contesti persi su iPad, stessa resa dei colori, accessibilità invariata).
-- Accettazione ipotetica: `bench_mappa.py lr,hrc` con colore ≤ 5 ms e frame p95 ≤ 17 ms su griglia 2048 × 1024; confronto dei pixel con P3; ripiego senza WebGL provato; `e2e_axe_grafici` verde.
+- Accettazione ipotetica: `bench_map.py lr,hrc` con colore ≤ 5 ms e frame p95 ≤ 17 ms su griglia 2048 × 1024; confronto dei pixel con P3; ripiego senza WebGL provato; `e2e_axe_grafici` verde.
 - Dipendenze e conflitti: dopo P3-P6, solo se i frame non fossero ancora a 60 fps.
 
 ### P8 App desktop: lettura mappata e parallela
@@ -148,14 +148,14 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - File: `mzlab/web/mappa3d.js`.
 - Guadagno: apertura del 3D HR da secondi a ≤ 0,3 s.
 - Rischio: basso.
-- Accettazione: apertura del 3D su HRC ≤ 0,3 s (gesto aggiunto a `bench_mappa.py`); `e2e_mappa3d`, `e2e_mappa_nav3d`, `e2e_mappa3d_errori` verdi.
+- Accettazione: apertura del 3D su HRC ≤ 0,3 s (gesto aggiunto a `bench_map.py`); `e2e_mappa3d`, `e2e_mappa_nav3d`, `e2e_mappa3d_errori` verdi.
 - Dipendenze e conflitti: dopo P2 e P4. Solo `mappa3d.js`: libero.
 
 ### P10 Bilanci di memoria per iPad
 - Scopo: D8. Picco WASM ≤ 128 MB: con P1 il buffer di lettura è fisso, la mappa intera di Rust tiene 6 griglie per file solo se entrano nel bilancio di `mzlab-core::budget`; misura su iPad reale.
 - File: `crates/mzlab-core/src/budget.rs`, `maproute.rs` (`ion_map`), `docs/agenti/memoria.md`.
 - Rischio: basso.
-- Accettazione: picco WASM di `bench_mappa.py hrc` ≤ 128 MB; test di `budget` in `mzlab-core` verdi; prova su iPad reale annotata in `misure.md`.
+- Accettazione: picco WASM di `bench_map.py hrc` ≤ 128 MB; test di `budget` in `mzlab-core` verdi; prova su iPad reale annotata in `misure.md`.
 - Dipendenze e conflitti: insieme a P1 o subito dopo. Solo Rust e `memoria.md`: libero.
 
 ## Ordine consigliato

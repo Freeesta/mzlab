@@ -1,6 +1,6 @@
 # Azioni che cambiano stato (generato)
 
-Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab/web/comandi.js`: non si modifica a mano. Ogni azione che cambia stato nella vista Dati sta nella tabella; `tests/test_comandi.py` lo controlla.
+Generato da `python3 tools/doc_commands.py` dalla tabella `COMANDI_TAB` di `mzlab/web/comandi.js`: non si modifica a mano. Ogni azione che cambia stato nella vista Dati sta nella tabella; `tests/test_comandi.py` lo controlla.
 
 | Id | Nome | Modulo | Cosa sceglie l'utente | Stato che cambia | Tasto | Passi | Annullamento |
 |---|---|---|---|---|---|---|---|

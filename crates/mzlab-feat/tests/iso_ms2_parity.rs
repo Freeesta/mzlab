@@ -1,5 +1,5 @@
 //! Isotope groups and MS2 links of `pipeline::analyse` against the frozen plain-loop reference (`tests/golden/feat/iso_ms2_identita.json`, on
-//! `tools/feat_sintetici.py --solo identita`; same indices, purity within 1e-5), and against the truth of the synthetic identity series: purity of the MS2 within 0.05 and
+//! `tools/feat_synthetic.py --solo identita`; same indices, purity within 1e-5), and against the truth of the synthetic identity series: purity of the MS2 within 0.05 and
 //! isotopologues grouped with their base ion. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
@@ -129,7 +129,7 @@ fn check_truth(f: &FileFeatures, dir: &Path) {
 fn isotopes_and_ms2_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab_feat_iso_{}", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/feat_sintetici.py"))
+        .arg(root().join("tools/feat_synthetic.py"))
         .arg(&out)
         .args(["--solo", "identita"])
         .output()

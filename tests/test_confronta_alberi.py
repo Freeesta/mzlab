@@ -1,10 +1,10 @@
-"""tools/confronta_alberi.py: identical trees, a changed byte, a missing file, and the commit placeholder."""
+"""tools/compare_trees.py: identical trees, a changed byte, a missing file, and the commit placeholder."""
 import json
 import subprocess
 import sys
 from pathlib import Path
 
-TOOL = Path(__file__).resolve().parent.parent / "tools" / "confronta_alberi.py"
+TOOL = Path(__file__).resolve().parent.parent / "tools" / "compare_trees.py"
 
 
 def site(root: Path, commit: str, wasm: bytes = b"\0asm", extra: bool = False) -> Path:

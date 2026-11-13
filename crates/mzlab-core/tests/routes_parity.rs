@@ -1,4 +1,4 @@
-//! The routes that Rust answers from the `.mzidx` give the JSON of the Python engine (`tools/rotte_riferimento.py`): same keys, same
+//! The routes that Rust answers from the `.mzidx` give the JSON of the Python engine (`tools/routes_reference.py`): same keys, same
 //! lengths, identical indices and counts, numbers within 1e-9 (relative). Without python3 and numpy the test is skipped
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -70,7 +70,7 @@ fn rust_routes_match_python() {
     let out = std::env::temp_dir().join(format!("mzlab-rot-{}", std::process::id()));
     let mut cmd = Command::new("python3");
     cmd.current_dir(root())
-        .arg("tools/rotte_riferimento.py")
+        .arg("tools/routes_reference.py")
         .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
         let mut v: Vec<_> = rd

@@ -43,7 +43,7 @@ def work(tmp_path_factory):
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "mod"), str(WASM / "mzlab_lettori_wasm.wasm"))
     full_scan(d, "uno", 1)
     full_scan(d, "sei", 6)
-    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto_pi.py"), str(d)], check=True, capture_output=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed_pi.py"), str(d)], check=True, capture_output=True)
     return d
 
 

@@ -1,5 +1,5 @@
 //! Parity tests for ROI windowed correlation and average linkage clustering
-//! against `mzlab/ionfamily.py` via `tools/roi_cluster_riferimento.py`.
+//! against `mzlab/ionfamily.py` via `tools/roi_cluster_reference.py`.
 
 #![allow(clippy::disallowed_methods)]
 
@@ -150,7 +150,7 @@ fn verify_linkage_case(case: &Value) {
 fn roi_cluster_matches_python() {
     let out = std::env::temp_dir().join(format!("mzlab_roi_cluster_{}.json", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/roi_cluster_riferimento.py"))
+        .arg(root().join("tools/roi_cluster_reference.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())
@@ -159,7 +159,7 @@ fn roi_cluster_matches_python() {
     if !ok {
         assert!(
             std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
-            "python3 missing or roi_cluster_riferimento.py failed"
+            "python3 missing or roi_cluster_reference.py failed"
         );
         eprintln!("skipped: python3 not available");
         return;

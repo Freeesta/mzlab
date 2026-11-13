@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-import valida_feat as VF  # noqa: E402
+import validate_feat as VF  # noqa: E402
 from valida import cancello as C  # noqa: E402
 from valida import cancello_misure as M  # noqa: E402
 from valida import rapporto  # noqa: E402

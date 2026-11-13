@@ -1,4 +1,4 @@
-//! `isofine::isotope_fine_route` against `tools/isotopi_fini_riferimento.py` (the Python `fine_pattern` without a cut): same peaks, m/z within 1e-9
+//! `isofine::isotope_fine_route` against `tools/isotopes_fine_reference.py` (the Python `fine_pattern` without a cut): same peaks, m/z within 1e-9
 //! and intensities within 1e-6 relative. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 use std::path::{Path, PathBuf};
@@ -16,7 +16,7 @@ fn isotope_fine_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-isofine-{}.json", std::process::id()));
     let ok = Command::new("python3")
         .current_dir(root())
-        .arg("tools/isotopi_fini_riferimento.py")
+        .arg("tools/isotopes_fine_reference.py")
         .arg(&out)
         .output()
         .map(|o| o.status.success())

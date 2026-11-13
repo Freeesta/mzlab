@@ -1,4 +1,4 @@
-// Criterion 7 of the MSn graph v2 on the synthetic 80-ion graph (tests_e2e/fixtures/msngrafo_80.json, made by tools/genera_msngrafo_80.py): in both views every ion has a
+// Criterion 7 of the MSn graph v2 on the synthetic 80-ion graph (tests_e2e/fixtures/msngrafo_80.json, made by tools/generate_msngraph_80.py): in both views every ion has a
 // box and no two boxes overlap. The crossings of the tree view against the barycentre order are checked in Rust (tests_view.rs, 80 ions). Exit code 1 on the first failure.
 const fs = require("fs"), path = require("path"), vm = require("vm"), assert = require("assert");
 const src = fs.readFileSync(path.resolve(__dirname, "../mzlab/web/msngrafo-vista.js"), "utf8").split("\n").map(l => l.replace(/^export /, "")).join("\n");

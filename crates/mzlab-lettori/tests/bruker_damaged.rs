@@ -87,3 +87,47 @@ fn a_damaged_side_table_is_named_and_the_run_is_read() {
         "{doc}"
     );
 }
+
+#[test]
+fn a_cut_bin_and_a_frame_without_calibration_are_both_said() {
+    // four frames: the second names an absent calibration, the copy of `tdf_bin` ends inside the fourth block
+    let b = blocco2();
+    let n = b.len() as i64;
+    let bin: Vec<u8> = b.iter().copied().cycle().take(3 * b.len() + 9).collect();
+    let tdf = db(&tdf_tables(&[0, n, 2 * n, 3 * n], 3, &[1, 7, 1, 1]));
+    let mut l = mzlab_lettori::apri(folder(bin, tdf), &limits()).unwrap();
+    // the losses keep the cut `_bin` cause and count both; the method document counts the uncalibrated one
+    assert_eq!(
+        l.losses(0).unwrap(),
+        Losses::of(4, 2, "warn.file.brukerCutBin")
+    );
+    let doc = l.method(0).unwrap();
+    assert!(
+        doc.contains("1 spectra whose frame has no usable MzCalibration"),
+        "{doc}"
+    );
+}
+
+#[test]
+fn a_damaged_page_of_frames_leaves_out_its_frames_and_counts_it() {
+    // 300 frames span several leaves of `Frames` (pages 2, 3, ... under an interior root); the first leaf (page 2) gets a page type no SQLite page has
+    let b = blocco2();
+    let n = b.len() as i64;
+    let tims: Vec<i64> = (0..300).map(|i| i * n).collect();
+    let bin: Vec<u8> = b.iter().copied().cycle().take(300 * b.len()).collect();
+    let whole = db_rows(&tdf_rows(&tims, 3, &[1; 300]));
+    let mut l = mzlab_lettori::apri(folder(bin.clone(), whole.clone()), &limits()).unwrap();
+    assert_eq!(l.index(0).unwrap().len(), 300);
+    let mut broken = whole;
+    broken[PAG] = 99;
+    let mut l = mzlab_lettori::apri(folder(bin, broken), &limits()).unwrap();
+    // the frames of the other leaves are read, those of the damaged one are absent (their number is not in the file: not guessed)
+    let read = l.index(0).unwrap().len();
+    assert!(read > 0 && read < 300, "{read}");
+    assert_eq!(l.scan(0, 0).unwrap().mz.len(), 2);
+    let doc = l.method(0).unwrap();
+    assert!(
+        doc.contains("analysis.tdf: table Frames, 1 damaged pages and 0 damaged records left out"),
+        "{doc}"
+    );
+}

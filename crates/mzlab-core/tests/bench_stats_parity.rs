@@ -18,12 +18,12 @@ fn close(a: f64, b: f64, tol: f64) -> bool {
 fn load_reference_data() -> &'static Value {
     static DATA: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
     DATA.get_or_init(|| {
-        let script = root().join("tools/bench_stats_riferimento.py");
+        let script = root().join("tools/bench_stats_reference.py");
         let output = Command::new("python3")
             .arg(&script)
             .arg("-")
             .output()
-            .expect("Failed to execute python3 tools/bench_stats_riferimento.py");
+            .expect("Failed to execute python3 tools/bench_stats_reference.py");
         assert!(
             output.status.success(),
             "Reference generation script failed: {}",

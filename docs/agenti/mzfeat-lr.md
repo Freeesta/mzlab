@@ -27,7 +27,7 @@ La pipeline di `crates/mzlab-feat` gira anche sui dati LR (SCIEX 3200 QTRAP, Q1 
 - Il cancello di larghezza è spento di serie: con 0,5 la precisione sintetica sale (centroidi 0,50, `as_is` 0,49) ma taglia un prodotto stretto e documentato della serie dimostrativa (`lr_demo`). Con meno di 5 righe forti non c'è. I campi stanno nel testo della ricetta solo se diversi da 0.
 - Soglia per punto su scansioni di profilo (`recipe_lr::profile_floor`): se almeno metà delle prime 50 scansioni MS1 è di profilo, il floor è la moda del lump del rumore dell'istogramma delle intensità (se sotto `LR_FLOOR`); l'intensità di un centroide è un'area e tiene `LR_FLOOR`. Il floor da 3 sigma tagliava i fianchi del picco, con righe divise o perse.
 - Regola del bianco: già in `table.filter` (`blank_ratio`, `blank_quantity` = `height`; `--set flt.blank_ratio=3`), con la tabella allineata di campione e bianco; il rilevamento è per file e non vede il bianco.
-- Prova: `flow_lr_bench_tests` (generatore `tools/lr_sintetico.py`, jitter 0,05; le soglie sono i numeri misurati meno il 10 %): percorso centroidi precisione 0,35, richiamo 1,00, 140 righe sul bianco; percorso `as_is` precisione 0,38, richiamo 0,98, divisione 0,55, 91 righe sul bianco.
+- Prova: `flow_lr_bench_tests` (generatore `tools/lr_synthetic.py`, jitter 0,05; le soglie sono i numeri misurati meno il 10 %): percorso centroidi precisione 0,35, richiamo 1,00, 140 righe sul bianco; percorso `as_is` precisione 0,38, richiamo 0,98, divisione 0,55, 91 righe sul bianco.
 - Prova, bianchi: un bianco di solo rumore (`LR_bench-noise-s1.mzML`) dà 0 righe in entrambi. Con la regola del bianco sulla tabella allineata la precisione è 0,34 (centroidi) e 0,33 (`as_is`), contro 0,22 e 0,26 senza.
 
 ## Livelli

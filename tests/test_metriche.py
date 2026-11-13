@@ -1,4 +1,4 @@
-"""tools/metriche.py and tools/metriche_ci.py with synthetic files and a fake GitHub API."""
+"""tools/metriche.py and tools/metrics_ci.py with synthetic files and a fake GitHub API."""
 import json
 import sys
 from datetime import datetime, timezone
@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import metriche as m  # noqa: E402
-import metriche_ci as mc  # noqa: E402
+import metrics_ci as mc  # noqa: E402
 
 
 def test_comprimi_raw_and_gz():

@@ -1,6 +1,6 @@
 """A maker's dataset whose index would not fit the budget of the instance ends in the calm `error.memoryBudget` (phase `index`, with the numbers)
 before a scan is decoded, not in a tab that dies (`estimate::check_reader` in `build_mzidx_native`): proved with a small fake budget on the synthetic
-`mistopi` of tools/wiff_misto_pi.py; a budget that fits gives the same bytes as no budget. Skipped without cargo, wasm-bindgen or node."""
+`mistopi` of tools/wiff_mixed_pi.py; a budget that fits gives the same bytes as no budget. Skipped without cargo, wasm-bindgen or node."""
 import json
 import os
 import shutil
@@ -21,7 +21,7 @@ def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("budget")
     run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "eng"), str(WASM / "mzlab_wasm.wasm"))
-    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto_pi.py"), str(d / "ref")], check=True, capture_output=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed_pi.py"), str(d / "ref")], check=True, capture_output=True)
     return d
 
 

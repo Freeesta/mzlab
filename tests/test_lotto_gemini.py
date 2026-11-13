@@ -1,11 +1,11 @@
-"""tools/lotto_gemini.py: several files joined in one document, batches, size warning."""
+"""tools/batch_gemini.py: several files joined in one document, batches, size warning."""
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
-import lotto_gemini as L  # noqa: E402
+import batch_gemini as L  # noqa: E402
 
 
 def test_merge_headers_and_order(tmp_path):
@@ -27,9 +27,9 @@ def test_batches_in_markdown(tmp_path):
 
 
 def test_cli_warns_over_limit_and_missing(tmp_path):
-    big = ROOT / "tools" / "lotto_gemini.py"
+    big = ROOT / "tools" / "batch_gemini.py"
     lst = tmp_path / "l.txt"
-    lst.write_text("tools/lotto_gemini.py\n")
+    lst.write_text("tools/batch_gemini.py\n")
     r = subprocess.run([sys.executable, str(big), str(lst), "--max-kb", "1", "--strict", "-o", str(tmp_path / "o.txt")], capture_output=True, text=True)
     assert r.returncode == 1 and "WARNING" in r.stderr and (tmp_path / "o.txt").is_file()
     lst.write_text("tools/does_not_exist.py\n")

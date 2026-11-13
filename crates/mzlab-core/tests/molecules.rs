@@ -256,7 +256,7 @@ fn the_catalogue_is_canonical_and_complete() {
     let (text, all) = catalogue();
     // the last record (timolol) was added after the two old lists
     assert_eq!(all.len(), 625 + 645 - 43 + 1);
-    assert_eq!(to_csv(&all), text, "mzlab/web/molecole/catalogo.csv is not in the canonical form: run tools/genera_molecole.py");
+    assert_eq!(to_csv(&all), text, "mzlab/web/molecole/catalogo.csv is not in the canonical form: run tools/generate_molecules.py");
     let both = all.iter().filter(|m| m.origine.catalog.len() == 2).count();
     assert_eq!(both, 43 + 1);
     assert_eq!(

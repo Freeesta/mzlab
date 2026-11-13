@@ -1,5 +1,5 @@
 #![cfg(feature = "attributio")]
-//! Parity of the MS1 suspect screening (B2) with the golden data of the reference tool (`tools/attributio_riferimento.py`, stage `tox-b2`): suspects, those
+//! Parity of the MS1 suspect screening (B2) with the golden data of the reference tool (`tools/attributio_reference.py`, stage `tox-b2`): suspects, those
 //! already identified, hits with their classes, per-list summary, RT ~ logP model, method lines and the theoretical M+2 ratios.
 
 #[macro_use]

@@ -1,6 +1,6 @@
 #![cfg(feature = "attributio")]
 //! Formulas, adducts and structure fits of `attributio::formula` and `attributio::checks::norm_name` against a table generated once by Attributio 1.12.0
-//! (`tools/attributio_riferimento.py`, stage `formule`), and the measured distance of the 36-element mass table from the 14-element one of `mzlab-core`.
+//! (`tools/attributio_reference.py`, stage `formule`), and the measured distance of the 36-element mass table from the 14-element one of `mzlab-core`.
 
 mod attributio_common;
 use attributio_common::*;

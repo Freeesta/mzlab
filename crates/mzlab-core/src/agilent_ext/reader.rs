@@ -54,10 +54,14 @@ impl AgilentReader {
     fn srm(&mut self) -> Result<&[Chromatogram]> {
         if self.srm.is_none() {
             let first = 2 + self.sim_ions().len();
-            let found = match self.peak.as_mut() {
+            let (found, left_out) = match self.peak.as_mut() {
                 Some(p) => self.d.srm_chromatograms(p, first)?,
                 None => self.d.srm_chromatograms(&mut Vec::<u8>::new(), first)?,
             };
+            if left_out > 0 {
+                let n = self.d.data_file;
+                self.d.notes.push(format!("{n}: {left_out} MRM visits whose points do not decode, left out of the SRM chromatograms"));
+            }
             self.srm = Some(found);
         }
         Ok(self.srm.as_deref().unwrap_or(&[]))
@@ -159,18 +163,6 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
         Some(i) if fs.testa(i, 2) == [0x01, 0x32] => Fiducia::Si,
         _ => Fiducia::No,
     }
-}
-
-/// The bytes of member `i`, counted against what is left of `Limiti::byte`.
-fn read_all(fs: &mut FileSet, i: usize, left: &mut u64) -> Result<Vec<u8>> {
-    let m = &mut fs.membri[i];
-    if m.dim > *left {
-        return Err(Error::memory_budget());
-    }
-    *left -= m.dim;
-    let mut b = vec![0u8; m.dim as usize];
-    m.dati.read_at(0, &mut b)?;
-    Ok(b)
 }
 
 fn field(name: &str, value: impl ToString, unit: Option<&str>, cv: Option<&str>) -> Field {
@@ -302,9 +294,11 @@ fn trace(l: &mut AgilentReader, id: &str) -> Result<Chromatogram> {
         let mut sic = SicTraces::new();
         for i in l.scans.clone() {
             let r = l.d.records[i].clone();
-            if r.scan_type == SCAN_SIM {
-                let (m, y) = l.points(&r)?;
-                super::run::add_sic(&mut sic, r.time_min, &m, &y);
+            // a SIM scan whose points do not decode adds nothing: its spectrum is counted where it is read (`readers::Skips`)
+            match (r.scan_type == SCAN_SIM).then(|| l.points(&r)) {
+                Some(Ok((m, y))) => super::run::add_sic(&mut sic, r.time_min, &m, &y),
+                Some(Err(e)) if !crate::readers::damages_one(&e) => return Err(e),
+                _ => {}
             }
         }
         l.sic = Some(sic);
@@ -324,12 +318,16 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
     limits.ok_entries(fs.membri.len() as u64)?;
     let mut left = limits.byte;
     let mut small: Vec<(&str, Vec<u8>)> = Vec::new();
+    let mut unread = Vec::new();
     for n in [SCAN, XSD, TS, DEVICES, CONTENTS, TREE, ACQMETH, DATA_MS]
         .into_iter()
         .chain(OTHERS)
     {
-        if let Some(i) = find(&fs, n) {
-            small.push((n, read_all(&mut fs, i, &mut left)?));
+        // the index, its layout and data.ms are the run; any other member that cannot be read is left out and named
+        if let (Some(i), true) = (find(&fs, n), [SCAN, XSD, DATA_MS].contains(&n)) {
+            small.push((n, lc::read_all(&mut fs, i, &mut left)?));
+        } else if let Some(b) = lc::side(&mut fs, n, &mut left, &mut unread) {
+            small.push((n, b));
         }
     }
     let get = |n: &str| {
@@ -343,7 +341,8 @@ fn apri(mut fs: FileSet, limits: &Limits) -> Result<Box<dyn Reader>> {
         .filter(|&i| fs.membri[i].dim > 0)
         .or_else(|| find(&fs, PROFILE))
         .or(peak_at);
-    let lc = lc::read_lc(&mut fs, &mut left)?;
+    let mut lc = lc::read_lc(&mut fs, &mut left);
+    lc.unread.splice(0..0, unread);
     let data_file = match peak_at {
         Some(i) if find(&fs, PROFILE) == Some(i) => PROFILE,
         _ => PEAK,
@@ -474,11 +473,13 @@ impl Reader for AgilentReader {
 
     fn method(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
+        self.srm()?; // the MRM visits left out of the SRM chromatograms are counted in the document
         Ok(document(self))
     }
 
     fn mzml_header(&mut self, c: usize) -> Result<Option<Header>> {
         self.one(c)?;
+        self.srm()?;
         let sha = match (&mut self.peak, self.d.inline.is_some()) {
             (Some(p), false) => sha1_of(&mut Windowed::new(p, self.peak_len), self.peak_len)?,
             _ => String::new(),

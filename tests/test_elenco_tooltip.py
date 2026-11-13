@@ -1,9 +1,9 @@
-"""The tooltip list generator covers every source and its CSV matches the Markdown (tools/elenco_tooltip.py)."""
+"""The tooltip list generator covers every source and its CSV matches the Markdown (tools/list_tooltip.py)."""
 import csv, io, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-import elenco_tooltip as E
+import list_tooltip as E
 
 
 def test_list_is_complete_and_consistent():

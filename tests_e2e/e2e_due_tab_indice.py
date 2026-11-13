@@ -1,4 +1,4 @@
-"""Two tabs open the same .wiff (synthetic, tools/wiff_misto.py; no laboratory data): the second tab waits for the index the first one is building (Web Lock
+"""Two tabs open the same .wiff (synthetic, tools/wiff_mixed.py; no laboratory data): the second tab waits for the index the first one is building (Web Lock
 "mzlab-job:idx/<name>") instead of opening the same OPFS handle, which used to fail with NoModificationAllowedError, restart the engine and leave samples
 unread (LR_MISS, 501). The test stands in for the first tab by holding the locks itself, so it does not depend on timing.
 Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_due_tab_indice.py"""
@@ -13,7 +13,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 D = Path(tempfile.mkdtemp(prefix="due_tab_"))
-subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto.py"), str(D)], check=True, capture_output=True)
+subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed.py"), str(D)], check=True, capture_output=True)
 PAIR = [str(D / "misto.wiff"), str(D / "misto.wiff.scan")]
 N = len(json.loads((D / "tipi.json").read_text()))
 INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"

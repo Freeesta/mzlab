@@ -4,7 +4,7 @@
 //!
 //! The correction is refused, with a reason and no number, when a batch has fewer than `MIN_QC` QC files or when the first or the last injected file of a batch
 //! (blanks and dark files apart) is not a QC: a curve that is extrapolated at either end is not a correction. A row with too few QC peaks in a batch has NaN
-//! factors there (no guess). Sums run in a fixed order, so equal inputs give equal bytes. Reference: `tools/deriva_riferimento.py` (golden `deriva.json`).
+//! factors there (no guess). Sums run in a fixed order, so equal inputs give equal bytes. Reference: `tools/drift_reference.py` (golden `deriva.json`).
 
 use crate::sortc::SortC;
 use mzlab_core::drawing::{Design, DEFAULT_BATCH};

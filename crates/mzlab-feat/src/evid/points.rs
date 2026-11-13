@@ -1,5 +1,5 @@
 //! The table of points of the proofs: the section `punti` of the profile of `livelli/1` (`data/livelli-1.json`, written from `mzlab/web/livelli-1.js`
-//! by `tools/esporta_livelli.py`). Stepped points after Alygizakis et al. 2023, listed best step first; a step threshold given as a string is the key
+//! by `tools/export_levels.py`). Stepped points after Alygizakis et al. 2023, listed best step first; a step threshold given as a string is the key
 //! of a threshold of `soglie` of the same profile, so the points sit beside the thresholds and cannot drift from them.
 
 use super::Kind;

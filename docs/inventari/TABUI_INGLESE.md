@@ -19,7 +19,7 @@ pytest tests/test_tabui_inglese.py
 ## 2. Status of Previously Tracked Items
 
 Most items originally identified during initial audits have been completed:
-- **`TP_Mine/data/composti.csv`**: Renamed column `formula` to `neutral_formula` (generated via `tools/genera_composti.py`).
+- **`TP_Mine/data/composti.csv`**: Renamed column `formula` to `neutral_formula` (generated via `tools/generate_compounds.py`).
 - **`crates/mzlab-feat/src/attributio/review/feature.rs`**: Candidate label updated from `formula` to `neutral formula`.
 - **`TP_Mine/data/regole_tp_2.json`**: Transformation profiles translated to English (e.g. `TiO2/UV: ·OH radicals, h+ holes, O2·−`).
 - **`TP_Mine/js/52_attributio_banco.js` & `50_attributio.js`**: Renamed `Banco 2b` UI labels and accessibility titles to `Bench 2b`.

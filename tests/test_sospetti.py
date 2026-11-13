@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 import genera_sospetti as gs  # noqa: E402
-from sospetti_prova import make_sources  # noqa: E402
+from suspects_test import make_sources  # noqa: E402
 
 @pytest.fixture
 def mini(tmp_path):

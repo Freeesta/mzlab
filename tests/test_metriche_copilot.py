@@ -1,4 +1,4 @@
-"""tools/metriche_copilot.py with a fake GitHub API: Copilot against chat PRs, sensitive paths, reviews, verdicts, storage."""
+"""tools/metrics_copilot.py with a fake GitHub API: Copilot against chat PRs, sensitive paths, reviews, verdicts, storage."""
 import json
 import sys
 from datetime import datetime, timedelta, timezone
@@ -6,8 +6,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import metriche as m  # noqa: E402
-import metriche_copilot as c  # noqa: E402
-from metriche_ci import REQUIRED  # noqa: E402
+import metrics_copilot as c  # noqa: E402
+from metrics_ci import REQUIRED  # noqa: E402
 
 T0 = datetime(2026, 10, 30, 8, tzinfo=timezone.utc)
 iso = lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%SZ")
