@@ -397,8 +397,8 @@ pub(super) fn record(layout: &Layout, r: &[u8]) -> ScanRec {
 /// The records of an `MSScan.bin`, the scans of a copy cut short that are left out, and the damaged records left out. `peak_len`: size of `MSPeak.bin`, to
 /// check that every spectrum lies inside it. `scans`: how many scans the other files of the folder announce (`MSTS.xml`). A copy cut short keeps its whole
 /// scans: fewer whole records than announced scans are a cut (a part of a record at the end is dropped only then), and so are the last records whose points lie
-/// past the end of `MSPeak.bin`. A record before good ones with no time or with points outside `MSPeak.bin` is damaged: left out and counted, the others
-/// are read. A part of a record that no announced scan explains is an error (the layout does not fit the file).
+/// past the end of `MSPeak.bin`. A record with no time, or one before good ones with points outside `MSPeak.bin`, is damaged: left out and counted, the
+/// others are read. A part of a record that no announced scan explains is an error (the layout does not fit the file).
 pub fn parse(
     bytes: &[u8],
     layout: &Layout,
@@ -439,24 +439,27 @@ pub fn parse(
     let mut out = Vec::new();
     out.try_reserve_exact(whole)
         .map_err(|_| Error::memory_budget())?;
-    // records whose points lie inside MSPeak.bin and that have a time; the run of bad ones since the last good one
-    let (mut damaged, mut bad_run) = (0, 0);
+    // records whose points lie inside MSPeak.bin and that have a time; the bad ones since the last good one: past the end (a cut when they are the
+    // last ones) and with no time (damaged wherever they are)
+    let (mut damaged, mut past, mut no_time) = (0, 0, 0);
     for r in bytes[start..].chunks_exact(n) {
         let rec = record(layout, r);
         let inside = rec
             .offset
             .checked_add(rec.bytes as u64)
             .is_some_and(|e| e <= peak_len);
-        if rec.time_min.is_finite() && inside {
-            damaged += bad_run;
-            bad_run = 0;
-            out.push(rec);
+        if !rec.time_min.is_finite() {
+            no_time += 1;
+        } else if !inside {
+            past += 1;
         } else {
-            bad_run += 1;
+            damaged += past + no_time;
+            (past, no_time) = (0, 0);
+            out.push(rec);
         }
     }
     let attese = scans.unwrap_or(0).max(whole + usize::from(fragment));
-    Ok((out, attese - whole + bad_run, damaged))
+    Ok((out, attese - whole + past, damaged + no_time))
 }
 
 #[cfg(feature = "estesi")]

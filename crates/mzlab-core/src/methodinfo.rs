@@ -206,7 +206,7 @@ fn scan_code(ole: &Ole, base: &str, i: usize) -> Option<u32> {
 
 fn experiments(ole: &Ole, base: &str) -> Vec<Experiment> {
     let mut out = Vec::new();
-    for i in 0..16 {
+    for i in 0.. {
         let key = format!("{base}DeviceMethod0/Period0/Experiment{i}/MassRangeEx/MassRangeEx");
         let Some(d) = ole.read(&key) else { break };
         // MRM (4) or SIM (Q1MI 1, Q3MI 3): a row of their table may have no name

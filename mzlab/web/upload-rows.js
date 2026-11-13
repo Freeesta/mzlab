@@ -16,7 +16,7 @@ const UPROWS = /** @type {any} */ ((() => {
     return !!f && f.use && f.kind in GORD && OPENNOW.busy() > 0;
   };
   const rows = () => CONVROWS.rows.filter(shown).sort((/** @type {ConvRow} */ a, /** @type {ConvRow} */ b) => CONVROWS.rank(a.name) - CONVROWS.rank(b.name));
-  const pcOf = (/** @type {ConvRow} */ r) => r.state === "done" ? 100 : r.pc || 0;
+  const pcOf = (/** @type {ConvRow} */ r) => r.state === "done" ? 100 : r.pc ?? r.bar ?? 0;      // queued (pc null): the bar keeps what is done
   const txt = (/** @type {ConvRow} */ r) => { const s = CONVROWS.short(r); return r.state === "done" ? T("files.up.opening") : s.txt + (s.num ? " " + s.num : ""); };
   function one(/** @type {ConvRow} */ r) {
     const fail = r.state === "fail", lab = EH(r.name), x = T(fail ? "files.up.close" : "files.up.cancel", { name: r.name });

@@ -56,12 +56,15 @@ def guess_sample(name: str) -> tuple[str, float | None, str]:
         return base, None, "blank"
     if re.search(_STD, low) or (guess_conc(name) and not re.search(r"(^|[_\-\s])t\d", low)):
         return base, None, "standard"
-    m = re.search(r"(?:^|[_\-\s])t?(\d+(?:[.,]\d+)?)\s*(min|m|h|ore|d|days?|gg|giorni|giorno)?(?:[_\-\s]|$)", low)
-    if m:
-        v = float(m.group(1).replace(",", "."))
-        if m.group(2) in ("h", "ore"):
+    # the last number with a written unit or a `t` prefix: 'Smp_01_30h_2' is 30 h, a bare 'Run_5' has no time
+    last = None
+    for m in re.finditer(r"(?:^|(?<=[_\-\s]))(t?)(\d+(?:[.,]\d+)?)\s*(min|m|h|ore|d|days?|gg|giorni|giorno)?(?=[_\-\s]|$)", low):
+        if not m.group(1) and not m.group(3):
+            continue
+        v = float(m.group(2).replace(",", "."))
+        if m.group(3) in ("h", "ore"):
             v *= 60
-        elif m.group(2) in ("d", "day", "days", "gg", "giorni", "giorno"):
+        elif m.group(3) in ("d", "day", "days", "gg", "giorni", "giorno"):
             v *= 1440
-        return base, v, "sample"
-    return base, None, "sample"
+        last = v
+    return base, last, "sample"

@@ -200,7 +200,7 @@ function scanOp({ op, id, slot, path, query, blob }) {
 const derivata = createDerivata({ nativo, ARCH, indexPlain });
 async function indexPlain(name, blob, onProgress) {                             // the index of an mzML that is no file of the page (the one made for the graph of a maker's sample)
   const part = name + ".mzidx.part";
-  const res = await idxPool().build({ name, blob, prep: { size: blob.size, prints: [undefined, undefined] }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });
+  const res = await idxPool().build({ name, blob, prep: { size: blob.size, prints: [undefined, undefined] }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress: p => { if (p.phase === "read" || p.phase === "index") onProgress({ ...p, frac: (p.phase === "index" ? 0.5 : 0) + 0.5 * (p.frac || 0) }); } });      // the builder's stages, each 0..1 (idx-worker.js): reading the file is the first half, its rounds the second
   if (!res.ok) {
     await ARCH.remove("idx", part);
     let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
@@ -282,7 +282,7 @@ async function lrIndexOwn(m) {
   // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
   if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
   const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, cap: BUDGET_MB, budget: idxBudget(), onProgress }
-    : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
+    : { name: m.name, blob: f, prep: { size: f.size, prints: prints(m.name, f.size) }, part, cap: BUDGET_MB, budget: idxBudget(), onProgress, stages: true });      // frac: how far the builder has read; the pool worker makes the scan table itself (idx-worker.js), so two files prepare at once
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing
     if (res.ok && res.stats && res.stats.cen) await ARCH.promote("idx", partCen, m.name + ".cen.mzidx"); else await ARCH.remove("idx", partCen);
   }

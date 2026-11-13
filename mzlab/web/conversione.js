@@ -212,12 +212,12 @@ const CONVROWS = {
     this.rows.push({ name, state, pc: null, sub: null, t0: now, seen: now, tr: [`0.0 s ${state}`], last: "", mem: mem || "" });
     this.paint(); this.clock();
   },
-  // `det` = bytes { done, total } of a download or a copy; `sub` = scans { done, total }. A row of a loading (`base`) never goes back
+  // `det` = bytes { done, total } of a download or a copy; `sub` = scans { done, total }. A row of a loading (`base`) never goes back; `pc` null (queued) shows no percent and the bar keeps `bar`, the last one
   set(/** @type {string} */ name, /** @type {string} */ state, /** @type {number | null | undefined} */ pc, /** @type {{ done: number, total: number } | null | undefined} */ sub, /** @type {{ done: number, total: number } | null | undefined} */ det) {
     const r = this.find(name); if (!r || CONV_FINAL.includes(r.state)) return;
     if (r.mono && pc != null) pc = Math.max(pc, r.pc || 0, r.floor || 0);
     const was = r.state, was_pc = r.pc, was_sub = r.sub ? r.sub.done : -1, now = Date.now();
-    r.state = state; r.pc = pc == null ? null : pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null; if (det !== undefined) r.det = det && det.total ? det : null;
+    r.state = state; r.pc = pc == null ? null : pc; if (r.pc != null) r.bar = r.pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null; if (det !== undefined) r.det = det && det.total ? det : null;
     if (was !== state || was_pc !== r.pc || (r.sub ? r.sub.done : -1) !== was_sub || det) r.seen = now;
     if (was !== state) { (r.tr = r.tr || []).push(`${((now - (r.t0 || now)) / 1000).toFixed(1)} s ${state}${r.pc == null ? "" : " " + r.pc + "%"}`); this.fill(r); } else if (r.seen === now) this.queue(r);
   },

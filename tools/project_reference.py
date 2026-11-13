@@ -16,8 +16,9 @@ from mzlab.project import guess_conc, guess_sample  # noqa: E402
 def names() -> list[str]:
     heads = ["", "s_", "Sample-", "std_", "STD", "stds ", "calib_", "standard-", "cal", "taratura_", "curva ", "blank", "BLK_", "bianco_", "mrm-", "full_", "x"]
     cores = ["t0", "t7.5", "t30", "t7,5", "5", "0.5", "10", "120min", "2h", "1d", "3days", "3day", "2 ore", "4gg", "1giorno", "2giorni", "30 min", "7_2ppm", "5ppm", "0.5ppm",
-             "10mgL", "5_ug-L", "2 mg/L", "3p5ppb", "1ng/mL", "1,5 ppt", "5 g/l", "2mg/l-1", "4 mgml", "9µg/L", "8μg/l", "1d2", "t5m", "5ms", "20 xyz", "", "12", "3.", "3,"]
-    tails = ["", "_1", "-2", " rep", "_t3", "ppm", "_A", "5", "mgL"]
+             "10mgL", "5_ug-L", "2 mg/L", "3p5ppb", "1ng/mL", "1,5 ppt", "5 g/l", "2mg/l-1", "4 mgml", "9µg/L", "8μg/l", "1d2", "t5m", "5ms", "20 xyz", "", "12", "3.", "3,",
+             "01_30h", "2_65h", "01_7h (2)"]
+    tails = ["", "_1", "-2", " rep", "_t3", "ppm", "_A", "5", "mgL", "_24h"]
     exts = ["", ".mzML", ".MZML", ".raw", ".d", ".wiff"]
     out = []
     for h, c, t, e in itertools.product(heads, cores, tails, exts):

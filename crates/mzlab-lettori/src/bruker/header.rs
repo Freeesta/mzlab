@@ -30,6 +30,7 @@ impl BrukerHeader {
             user: m("OperatorName"),
             sample: m("SampleName"),
             tsf,
+            damaged: d.damaged.clone(),
             ..BrukerHeader::default()
         };
         let mut add = |c: Field, id: bool| {
@@ -118,12 +119,26 @@ impl BrukerHeader {
                 "campi",
                 Some(V::Arr(self.fields.iter().filter_map(Field::json).collect())),
             ),
-            (
-                "avvisi",
-                (!self.tsf).then(|| V::Arr(nondec.into_iter().collect())),
-            ),
+            ("avvisi", self.notes(nondec)),
         ]);
         doc.map_or_else(String::new, |d| d.json())
+    }
+
+    /// The notes of the method document: the 1/K0 not decoded (TDF), then each damaged side table; none for a TSF with nothing damaged.
+    fn notes(&self, nondec: Option<V>) -> Option<V> {
+        let db = if self.tsf {
+            "analysis.tsf"
+        } else {
+            "analysis.tdf"
+        };
+        let mut out: Vec<V> = nondec.filter(|_| !self.tsf).into_iter().collect();
+        out.extend(self.damaged.iter().filter_map(|t| {
+            obj(vec![
+                ("chiave", Some(V::s("meta.danneggiato"))),
+                ("dove", text(&format!("{db}: table {t}"))),
+            ])
+        }));
+        (!out.is_empty()).then_some(V::Arr(out))
     }
 
     pub fn header(&self, name: &str, files: &[(String, Option<String>)], doc: String) -> Header {
@@ -175,6 +190,8 @@ pub struct BrukerHeader {
     pub user: Option<String>,
     pub sample: Option<String>,
     pub tsf: bool,
+    /// Side tables found damaged (`Data::damaged`): named in `avvisi` as `meta.danneggiato`.
+    pub damaged: Vec<&'static str>,
 }
 
 fn identity(name: &str) -> bool {

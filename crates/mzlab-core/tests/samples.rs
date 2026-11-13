@@ -30,7 +30,7 @@ type Row = (
     u32,
 );
 #[rustfmt::skip]
-const ROWS: [Row; 36] = [
+const ROWS: [Row; 47] = [
         ("t0.mzML", "", "t0", Some(0.0), "min", Some(0.0), 1),
     ("t5.mzML", "", "sample", Some(5.0), "min", Some(5.0), 1),
     ("X_TiO2_t000min.mzML", "", "t0", Some(0.0), "min", Some(0.0), 1),
@@ -67,6 +67,18 @@ const ROWS: [Row; 36] = [
     ("cal_10ppm", "", "calibration", None, "min", None, 1),
     ("QC_1", "", "qc", None, "min", None, 1),
     ("x", "", "sample", None, "min", None, 1),
+    // an index or a replicate before or after the time is not the time: the last number with a unit is
+    ("Run_phot_24h", "", "sample", Some(24.0), "h", Some(1440.0), 1),
+    ("Smp_01_30h", "", "sample", Some(30.0), "h", Some(1800.0), 1),
+    ("Smp_01_60h", "", "sample", Some(60.0), "h", Some(3600.0), 1),
+    ("Smp_2_65h", "", "sample", Some(65.0), "h", Some(3900.0), 1),
+    ("Mix_01_7h (2)", "", "sample", Some(7.0), "h", Some(420.0), 2),
+    ("Mix_01_7h_2", "", "sample", Some(7.0), "h", Some(420.0), 1),
+    ("Mix_02_24h", "", "sample", Some(24.0), "h", Some(1440.0), 1),
+    ("Smp_01_30h_2", "", "sample", Some(30.0), "h", Some(1800.0), 1),
+    ("Smp_30h_01", "", "sample", Some(30.0), "h", Some(1800.0), 1),
+    ("Run_5", "", "sample", None, "min", None, 1),
+    ("t10", "", "sample", Some(10.0), "min", Some(10.0), 1),
 ];
 
 #[test]
@@ -140,12 +152,52 @@ fn generated() -> Vec<String> {
         "x",
     ];
     let cores = [
-        "t0", "t7.5", "t30", "t7,5", "5", "0.5", "10", "120min", "2h", "1d", "3days", "3day",
-        "2 ore", "4gg", "1giorno", "2giorni", "30 min", "7_2ppm", "5ppm", "0.5ppm", "10mgL",
-        "5_ug-L", "2 mg/L", "3p5ppb", "1ng/mL", "1,5 ppt", "5 g/l", "2mg/l-1", "4 mgml", "9µg/L",
-        "8μg/l", "1d2", "t5m", "5ms", "20 xyz", "", "12", "3.", "3,",
+        "t0",
+        "t7.5",
+        "t30",
+        "t7,5",
+        "5",
+        "0.5",
+        "10",
+        "120min",
+        "2h",
+        "1d",
+        "3days",
+        "3day",
+        "2 ore",
+        "4gg",
+        "1giorno",
+        "2giorni",
+        "30 min",
+        "7_2ppm",
+        "5ppm",
+        "0.5ppm",
+        "10mgL",
+        "5_ug-L",
+        "2 mg/L",
+        "3p5ppb",
+        "1ng/mL",
+        "1,5 ppt",
+        "5 g/l",
+        "2mg/l-1",
+        "4 mgml",
+        "9µg/L",
+        "8μg/l",
+        "1d2",
+        "t5m",
+        "5ms",
+        "20 xyz",
+        "",
+        "12",
+        "3.",
+        "3,",
+        "01_30h",
+        "2_65h",
+        "01_7h (2)",
     ];
-    let tails = ["", "_1", "-2", " rep", "_t3", "ppm", "_A", "5", "mgL"];
+    let tails = [
+        "", "_1", "-2", " rep", "_t3", "ppm", "_A", "5", "mgL", "_24h",
+    ];
     let exts = ["", ".mzML", ".MZML", ".raw", ".d", ".wiff"];
     let mut out = vec![];
     for h in heads {

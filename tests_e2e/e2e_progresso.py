@@ -1,5 +1,5 @@
 """One bar for every loading: loading a .mzML series and a SCIEX .wiff pair together, the bar of the loading card (role=progressbar in #up) only goes forward, is not 100 before the end, and the
-shares of the phases are printed (the weights of progresso.js). Synthetic data. Needs the site and the .wasm (python tools/build_site.py + the CI build). Run: python3 tests_e2e/e2e_progresso.py"""
+shares of the phases are printed (the weights of progresso.js); five small mzML: no row keeps the same percent for more than 400 ms unless it is queued. Synthetic data. Needs the site and the .wasm (python tools/build_site.py + the CI build). Run: python3 tests_e2e/e2e_progresso.py"""
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -17,6 +17,7 @@ if not (ROOT / "site" / "index.html").exists() or not (ROOT / "site" / "static" 
 
 D = Path(tempfile.mkdtemp(prefix="prog_e2e_"))
 synth.make_series(str(D), [0, 5, 10], False, False)
+D5 = D / "cinque"; FIVE = synth.make_series(str(D5), [0, 5, 10, 15, 20], False, False)
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(D)], check=True, capture_output=True)
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 import urllib.request
@@ -32,6 +33,16 @@ RECORD = """() => { window.__pc = {}; window.__over = false;
   new MutationObserver(() => { for (const x of document.querySelectorAll('#fl-up [data-up]')) window.__tx.add(x.title.trim());   /* the long text of a row is its title */ for (const h of document.querySelectorAll('#fl-up [data-cvhead]')) window.__head.add(h.textContent);
     window.__live += document.querySelectorAll('#flst [aria-live]').length; }).observe(document.querySelector('#flst'), { subtree: true, characterData: true, childList: true, attributes: true, attributeFilter: ['title'] });
   window.__ph = []; addEventListener('mzlab-index', e => window.__ph.push([e.detail.name, e.detail.phase || '', e.detail.frac, performance.now()])); }"""
+
+# per row: [ms, percent, short text] at every change of percent or text, until the row goes (its file is listed)
+STALL = """() => { const t0 = performance.now(); window.__st = {};
+  const read = () => { const now = Math.round(performance.now() - t0), here = new Set();
+    for (const c of document.querySelectorAll('#fl-up [data-up]')) { const b = c.querySelector('[role=progressbar]'), t = c.querySelector('[data-uptxt]'); if (!b || !t) continue;
+      const n = c.dataset.up, pc = Number(b.getAttribute('aria-valuenow')), tx = t.textContent, a = (window.__st[n] = window.__st[n] || []); here.add(n);
+      if (!a.length || a[a.length - 1][1] !== pc || a[a.length - 1][2] !== tx) a.push([now, pc, tx]); }
+    for (const [n, a] of Object.entries(window.__st)) if (!here.has(n) && a[a.length - 1][1] !== -1) a.push([now, -1, 'gone']); };
+  const mo = new MutationObserver(read); mo.observe(document.querySelector('#flst'), { subtree: true, attributes: true, characterData: true, childList: true });
+  window.__stEnd = () => { read(); mo.disconnect(); }; }"""
 
 try:
     with sync_playwright() as p:
@@ -81,6 +92,28 @@ try:
                 print("   ", name, "events", len(ev), "phases", sorted({e[0] for e in ev}), "last frac", round(fr[-1], 3))
             assert by, "no mzlab-index event"
         step("the readers tell their phases (printed)", weights)
+        # five files at once (more than the free builders): every row moves at least every 400 ms while it works; a queued row says so and shows no percent
+        c5 = b.new_context(viewport={"width": 1500, "height": 1400}); c5.set_default_timeout(120000)
+        p5 = c5.new_page()
+        p5.on("pageerror", lambda e: errs.append(("pageerror", str(e))))
+        p5.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+        p5.goto(f"http://127.0.0.1:{PORT}/")
+        p5.wait_for_selector("#drop", timeout=120000); p5.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+        p5.evaluate(STALL)
+        p5.set_input_files("#pick", FIVE)
+        wait_for_js(p5, "document.querySelectorAll('#flist input[data-k=use]').length >= 5 && !PROGRESSO.busy()", 120000)
+        p5.evaluate("window.__stEnd()")
+        seen = p5.evaluate("window.__st")
+        def no_stall():
+            assert len(seen) == 5, seen
+            for name, v in seen.items():
+                print("   ", name, [(t, pc, tx) for t, pc, tx in v])
+                for (t, pc, tx), (t2, pc2, tx2) in zip(v, v[1:]):
+                    queued = tx.startswith(("In coda", "Queued"))
+                    if queued: assert "%" not in tx, (name, tx)                      # queued: no percent
+                    assert queued or pc == 100 or pc2 != pc or t2 - t <= 400, (name, t, pc, tx, t2 - t)      # 100: read, waiting to open
+        step("five mzML: no row stays at the same percent for more than 400 ms unless queued", no_stall)
+        c5.close()
         assert not errs, errs
         b.close()
 finally:
