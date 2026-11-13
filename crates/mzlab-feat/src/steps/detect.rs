@@ -209,7 +209,8 @@ fn trace_choices() -> Vec<Param> {
     vec![
         Param::choice("area_from", "Area from", &["channel", "window", "xic"])
             .default_str("channel")
-            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area; xic integrates the same points by the trapezoidal rule on the real retention times, as the chromatogram does.")
+            .doc("Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
+            .tip("Window sums the quality trace over the row; xic integrates it by trapezoid on the real retention times.")
             .advanced(),
         Param::choice("stitch", "Stitch", &["strict", "wide"])
             .default_str("strict")
