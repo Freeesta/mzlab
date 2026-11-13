@@ -44,33 +44,39 @@ impl<R: ReadAt> Routes<R> {
         }
         // A converter that leaves the zero bins out (the `.wiff` reader) gives baseline scans of a few points: when none of the 20 has more than 20, the
         // spacing is read from the scans of the whole section that do (up to 20, the shortest gap of all). When no scan has that many (the product-ion
-        // and EPI scans of a 3200 QTRAP keep a handful of points each), the shortest gap of all the scans with two points or more.
-        // Streams `(pos, mz)` in `O(n_scans)` memory instead of loading all scans' peak vectors into RAM at once.
+        // and EPI scans of a 3200 QTRAP keep a handful of points each), `sparse_step`.
+        // Streams `(pos, mz)` in `O(n_scans)` memory instead of loading all scans' peak vectors into RAM at once; the first 20 points of each scan
+        // (all of them in a section that `sparse_step` reads) are kept with their gaps.
         let n_peaks = self.idx.sections[si].n_peaks;
         let mut last = vec![f64::NAN; n_scans];
         let mut min_gap = vec![f64::INFINITY; n_scans];
         let mut count = vec![0u32; n_scans];
+        let (mut inner, mut all) = (Vec::new(), Vec::new());
         self.idx.each_mz(si, 0, n_peaks, |p, mz| {
             if p < n_scans {
                 let d = mz - last[p];
                 if d > 1e-4 && d < min_gap[p] {
                     min_gap[p] = d;
                 }
+                if count[p] < 20 {
+                    inner.push(d);
+                    all.push(mz);
+                }
                 last[p] = mz;
                 count[p] += 1;
             }
         })?;
-        let (mut gap, mut sparse) = (f64::INFINITY, f64::INFINITY);
-        let mut used = 0;
+        let (mut gap, mut used) = (f64::INFINITY, 0);
         for p in 0..n_scans {
-            let g = min_gap[p];
             if count[p] > 20 && used < 20 {
                 used += 1;
-                gap = gap.min(g);
+                gap = gap.min(min_gap[p]);
             }
-            sparse = sparse.min(g);
         }
-        Ok(gap_step(if used > 0 { gap } else { sparse }))
+        if used > 0 {
+            return Ok(gap_step(gap));
+        }
+        Ok(gap_step(sparse_step(inner, all)))
     }
 
     /// The spacing of the profile points of `level` when ALL its scans are profile and the file can be answered here.
@@ -250,6 +256,28 @@ fn spec_json(o: &mut Out, mz: &[f64], y: &[f64], step: f64) {
 /// The spacing from the m/z of one scan: its shortest gap above 1e-4 Da, to 4 decimals.
 fn step_of(mz: &[f64]) -> Option<f64> {
     gap_step(mz.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).fold(f64::INFINITY, f64::min))
+}
+
+/// The spacing of a section whose scans all hold 20 points or fewer, from the gaps inside its scans (`inner`) and its m/z (`all`): the greatest
+/// common spacing of the gaps, or, when no scan has two points, of the gaps between the distinct m/z. The shortest gap alone is twice the bin when
+/// no scan holds two neighbouring bins, and then the grid merges them.
+fn sparse_step(mut inner: Vec<f64>, mut all: Vec<f64>) -> f64 {
+    inner.retain(|d| *d > 1e-4);
+    if inner.is_empty() {
+        crate::sortc::by(&mut all, f64::total_cmp);
+        inner = all.windows(2).map(|w| w[1] - w[0]).filter(|d| *d > 1e-4).collect();
+    }
+    common_spacing(&inner)
+}
+
+/// The largest `s = shortest / k` (k up to 8) of which every gap is a whole multiple within 5 % of `s`; the shortest gap when none is (INFINITY
+/// for no gap). Bins on one grid are 2, 3, ... bins apart: their common spacing is the bin.
+fn common_spacing(gaps: &[f64]) -> f64 {
+    let low = gaps.iter().copied().fold(f64::INFINITY, f64::min);
+    (1..=8)
+        .map(|k| low / f64::from(k))
+        .find(|s| gaps.iter().all(|g| (g / s - (g / s).round()).abs() <= 0.05))
+        .unwrap_or(low)
 }
 
 fn gap_step(gap: f64) -> Option<f64> {
