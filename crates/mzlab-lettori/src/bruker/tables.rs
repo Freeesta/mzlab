@@ -1,5 +1,6 @@
 //! The tables of `analysis.tdf` / `analysis.tsf` that the reader uses, loaded once: frames, precursors, isolation windows, calibrations, metadata and the properties of the first frame.
-//! Every table is optional (a file lacks what its acquisition mode does not use); every count is checked against `Limiti`.
+//! Every table is optional (a file lacks what its acquisition mode does not use); every count is checked against `Limiti`. A damaged side table (metadata,
+//! TIMS calibration, method properties) keeps the rows read before the damage and is named in `Data::damaged`; the run is read.
 
 use super::calib::MzCal;
 
@@ -7,7 +8,7 @@ use super::sqlite_min::{Sqlite, Val};
 
 use mzlab_core::error::Result;
 
-use mzlab_core::readers::Limits;
+use mzlab_core::readers::{damages_one, Limits};
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -25,11 +26,12 @@ impl Frame {
 impl Data {
     pub fn read(db: &mut Sqlite, limits: &Limits) -> Result<Data> {
         let mut d = Data::default();
-        rows(db, limits, "GlobalMetadata", &["Key", "Value"], |r| {
+        let r = rows(db, limits, "GlobalMetadata", &["Key", "Value"], |r| {
             if let (Some(k), Some(v)) = (r[0].text(), r[1].as_text()) {
                 d.meta.insert(k.to_string(), v);
             }
-        })?;
+        });
+        side(&mut d.damaged, "GlobalMetadata", r)?;
         d.frames_and_calibrations(db, limits)?;
         d.msms(db, limits)?;
         d.dia_prm(db, limits)?;
@@ -122,7 +124,7 @@ impl Data {
             .unwrap_or_default();
         let cn: Vec<&str> = cols.iter().map(String::as_str).collect();
         let mut tims = Vec::new();
-        rows(db, limits, "TimsCalibration", &cn, |r| {
+        let r = rows(db, limits, "TimsCalibration", &cn, |r| {
             if tims.is_empty() {
                 for (k, v) in cn.iter().zip(r) {
                     if let Some(t) = v.as_text() {
@@ -130,7 +132,8 @@ impl Data {
                     }
                 }
             }
-        })?;
+        });
+        side(&mut self.damaged, "TimsCalibration", r)?;
         self.tims = tims;
         Ok(())
     }
@@ -247,7 +250,7 @@ impl Data {
         };
         let mut def: HashMap<i64, (String, String)> = HashMap::new();
         let c = ["Id", "PermanentName", "DisplayName", "DisplayDimension"];
-        rows(db, limits, "PropertyDefinitions", &c, |r| {
+        let r = rows(db, limits, "PropertyDefinitions", &c, |r| {
             let name = r[1].text().unwrap_or_default().to_string();
             let vis = r[2].text().unwrap_or_default();
             let units = r[3].text().unwrap_or_default();
@@ -262,9 +265,10 @@ impl Data {
                     units.to_string(),
                 ),
             );
-        })?;
+        });
+        side(&mut self.damaged, "PropertyDefinitions", r)?;
         let mut out = Vec::new();
-        rows(
+        let r = rows(
             db,
             limits,
             "GroupProperties",
@@ -277,7 +281,8 @@ impl Data {
                     out.push((name.clone(), v, unita.clone()));
                 }
             },
-        )?;
+        );
+        side(&mut self.damaged, "GroupProperties", r)?;
         self.proprieta = out;
         Ok(())
     }
@@ -346,6 +351,19 @@ pub struct Data {
     pub proprieta: Vec<(String, String, String)>,
     /// Rows of `TimsCalibration` as `(column, value)`.
     pub tims: Vec<(String, String)>,
+    /// Side tables found damaged: the rows before the damage are kept.
+    pub damaged: Vec<&'static str>,
+}
+
+/// The read of side table `name`: damage of the file (`err.file.*`) is noted in `damaged` and the read goes on, any other error stops it.
+fn side(damaged: &mut Vec<&'static str>, name: &'static str, r: Result<()>) -> Result<()> {
+    match r {
+        Err(e) if damages_one(&e) => {
+            damaged.push(name);
+            Ok(())
+        }
+        r => r,
+    }
 }
 
 /// The rows of `nome` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows. The other columns of a row are skipped, not decoded.

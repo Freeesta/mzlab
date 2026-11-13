@@ -110,6 +110,12 @@ pub const RAW_DAMAGED: &str = "warn.raw.damaged";
 /// left out of the index, the others are read.
 pub const AGILENT_DAMAGED: &str = "warn.agilent.damaged";
 
+/// Cause of the spectra of a Bruker `.d` whose frames lie past the end of a `*_bin` cut short.
+pub const BRUKER_CUT_BIN: &str = "warn.file.brukerCutBin";
+
+/// Cause of the spectra of a Bruker `.d` whose frame has no usable `MzCalibration`: their m/z cannot be computed, so they are left out.
+pub const BRUKER_NO_CALIBRATION: &str = "warn.bruker.noCalibration";
+
 /// Cause of the scans a run lists without their scan event: the table of events was refused, the scans are read with level and polarity unknown.
 pub const EVENTS_REFUSED: &str = "warn.raw.eventsRefused";
 
@@ -134,6 +140,8 @@ pub fn cause_key(s: &str) -> Option<&'static str> {
         RECORD_WIDTH,
         WATERS_DAMAGED,
         AGILENT_DAMAGED,
+        BRUKER_CUT_BIN,
+        BRUKER_NO_CALIBRATION,
         super::SPECTRUM_DAMAGED,
     ]
     .into_iter()

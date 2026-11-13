@@ -176,10 +176,20 @@ pub fn tdf_frames(tims: &[i64], num_peaks: i64) -> Vec<u8> {
 
 /// `tdf_frames` whose frames name the calibration `cal_id` (the only `MzCalibration` row has id 1).
 pub fn tdf_frames_cal(tims: &[i64], num_peaks: i64, cal_id: i64) -> Vec<u8> {
+    db(&tdf_tables(tims, num_peaks, &vec![cal_id; tims.len()]))
+}
+
+/// The `Frames` and `MzCalibration` tables of `tdf_frames`, frame `i` naming the calibration `cals[i]`: to give to `db` with other tables.
+pub fn tdf_tables(
+    tims: &[i64],
+    num_peaks: i64,
+    cals: &[i64],
+) -> Vec<(&'static str, &'static str, Vec<u8>)> {
     let rows: Vec<Vec<V<'_>>> = tims
         .iter()
+        .zip(cals)
         .enumerate()
-        .map(|(i, &t)| {
+        .map(|(i, (&t, &cal_id))| {
             vec![
                 V::N,
                 V::R(1.0 + i as f64),
@@ -214,10 +224,10 @@ pub fn tdf_frames_cal(tims: &[i64], num_peaks: i64, cal_id: i64) -> Vec<u8> {
         V::R(0.0),
         V::R(0.0),
     ]]);
-    db(&[
+    vec![
         ("Frames", "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL, Polarity TEXT, ScanMode INTEGER, MsMsType INTEGER, TimsId INTEGER, SummedIntensities INTEGER, MaxIntensity INTEGER, NumScans INTEGER, NumPeaks INTEGER, MzCalibration INTEGER, T1 REAL, T2 REAL, AccumulationTime REAL)", frames),
         ("MzCalibration", "CREATE TABLE MzCalibration (Id INTEGER PRIMARY KEY, ModelType INTEGER, DigitizerTimebase REAL, DigitizerDelay REAL, C0 REAL, C1 REAL, C2 REAL, C3 REAL, C4 REAL, T1 REAL, T2 REAL, dC1 REAL, dC2 REAL)", cal),
-    ])
+    ]
 }
 
 /// A database of tables of any size: `(name, CREATE text, rows)`, every table its leaves of `rows` and, past one leaf, an interior root (at most one level: a few thousand rows).

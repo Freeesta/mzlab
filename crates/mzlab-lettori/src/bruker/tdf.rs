@@ -15,14 +15,14 @@ use mzlab_core::method::SrcFile;
 use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::readers::{
     ChromatogramEntry, Fiducia, Field, FileSet, Format, Limits, Losses, Reader, ReaderEntry,
-    Sample, ScanEntry, CONTRATTO,
+    Sample, ScanEntry, BRUKER_NO_CALIBRATION, CONTRATTO,
 };
 
 use mzlab_core::mzmlwrite::{Header, Precursore, SpectrumExtra};
 use traces::maximum;
 
 /// Cause of the spectra whose frames lie past the end of a `*_bin` cut short (`Reader::losses`).
-pub const CUT_BIN: &str = "warn.file.brukerCutBin";
+pub const CUT_BIN: &str = mzlab_core::readers::BRUKER_CUT_BIN;
 
 #[path = "traces.rs"]
 mod traces;
@@ -74,13 +74,20 @@ impl BrukerReader {
         let all = desc.len();
         desc.retain(|d| !cut[d.frame]);
         let missing_ones = all - desc.len();
-        // a frame without a usable MzCalibration: refused when the run opens, not at its first spectrum
-        let uncalibrated = desc
+        // the spectra of a frame without a usable MzCalibration have no m/z: left out and counted; a run with none left is refused
+        let calibrated = |d: &Desc| {
+            let f = &data.frames[d.frame];
+            data.cal.get(&f.cal).is_some_and(|c| c.validate())
+        };
+        let first = desc
             .iter()
-            .map(|d| &data.frames[d.frame])
-            .find(|f| !data.cal.get(&f.cal).is_some_and(|c| c.validate()));
-        if let Some(f) = uncalibrated {
-            return Err(no_calibration(f.id));
+            .find(|d| !calibrated(d))
+            .map(|d| data.frames[d.frame].id);
+        let read = desc.len();
+        desc.retain(calibrated);
+        let uncalibrated = read - desc.len();
+        if let (true, Some(f)) = (desc.is_empty(), first) {
+            return Err(no_calibration(f));
         }
         let header = BrukerHeader::read(&data, tsf);
         let compression = data
@@ -114,6 +121,7 @@ impl BrukerReader {
             sha1: None,
             compressione: compression,
             missing_ones,
+            uncalibrated,
         };
         l.build_index();
         Ok(l)
@@ -288,13 +296,18 @@ impl Reader for BrukerReader {
     }
 
     fn missing(&mut self, _c: usize) -> usize {
-        self.missing_ones
+        self.missing_ones + self.uncalibrated
     }
 
     fn losses(&mut self, c: usize) -> Result<Losses> {
         self.one(c)?;
         let n = self.desc.len();
-        Ok(Losses::of(n + self.missing_ones, n, CUT_BIN))
+        let cause = if self.uncalibrated > 0 {
+            BRUKER_NO_CALIBRATION
+        } else {
+            CUT_BIN
+        };
+        Ok(Losses::of(n + self.missing(c), n, cause))
     }
 
     fn index(&mut self, c: usize) -> Result<&[ScanEntry]> {
@@ -479,4 +492,6 @@ pub struct BrukerReader {
     compressione: u32,
     /// Spectra of frames whose block lies past the end of `*_bin`: not in the index.
     missing_ones: usize,
+    /// Spectra of frames without a usable `MzCalibration`, left out.
+    uncalibrated: usize,
 }

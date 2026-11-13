@@ -49,7 +49,7 @@ const METODO_DOC = (() => {
   }
 
   // the `metodo/1.avvisi` keys of the readers; another is shown as it is, with its place
-  const NOTE_KEYS = ["meta.nonDecodificato", "meta.mancante", "meta.troncato", "meta.ioneScartata", "meta.daTabella"];
+  const NOTE_KEYS = ["meta.nonDecodificato", "meta.mancante", "meta.troncato", "meta.danneggiato", "meta.ioneScartata", "meta.daTabella"];
   function notes(/** @type {any} */ d) {
     const a = (d.avvisi || []).filter((/** @type {any} */ x) => x && x.chiave);
     if (!a.length) return "";
