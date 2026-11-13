@@ -65,6 +65,8 @@ impl BrukerReader {
         let wal = take(&mut fs, &format!("{base}-wal")).map(|m| (m.dati, m.dim));
         let db = Sqlite::open(db_m.dati, db_m.dim, wal, limits);
         let mut db = db?;
+        // a damaged page or record of a table is left out and counted (`Sqlite::left_out`), the rest of the run is read
+        db.tolerant = true;
         let data = Data::read(&mut db, limits)?;
         let mut desc = build(&data);
         limits.ok_entries(desc.len() as u64)?;
@@ -79,6 +81,7 @@ impl BrukerReader {
         let uncalibrated = keep_calibrated(&mut desc, &data)?;
         let mut header = BrukerHeader::read(&data, tsf);
         header.uncalibrated = uncalibrated;
+        header.left_out = std::mem::take(&mut db.left_out);
         let compression = data
             .meta
             .get("TimsCompressionType")
