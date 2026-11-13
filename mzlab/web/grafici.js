@@ -52,7 +52,7 @@ async function corrected(p, all) {
   return out;
 }
 async function seriesOf(p) { return corrected(p, await rawSeries(p)); }
-// the kinds of chromatogram that come from an analog trace of the file: the pump pressure ("press"), any other device trace ("an:<id>") and a series of the instrument log ("reg", registro-serie.js)
+// chromatograms from an analog trace of the file: pump pressure ("press"), another device trace ("an:<id>"), an instrument log series ("reg", registro-serie.js)
 const isAnalog = k => k === "press" || k === "reg" || (typeof k === "string" && k.startsWith("an:"));
 const analogOf = (f, kind) => (f.analog || []).find(a => (kind === "press" ? a.kind === "pressure" : a.id === String(kind).slice(3)));
 async function analogSeries(p) {
@@ -63,7 +63,7 @@ async function analogSeries(p) {
   }));
   return r.filter(s => s.x.length);
 }
-// MS2 transitions (unit resolution), the counterpart of the MRM ones: the list comes from the scans, the chromatogram of a pair is the fragment window in the scans of its precursor
+// MS2 transitions (unit resolution), like the MRM ones: listed from the scans; a pair's chromatogram is the fragment window in its precursor's scans
 const MS2TR_MAX = 12;
 async function ms2trSeries(p) {
   const mf = shownFor(p).filter(f => f.kind === "ms2" && !(window.HR && HR.isHr(f, f.lv)));
@@ -144,7 +144,7 @@ function frame(g, W, H, xt, yt, xtitle, ytitle) {
   if (ytitle) { g.font = fnt(ytitle); g.translate(1 + 12 * fz(), (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
   g.restore(); g.font = fpx(12); g.lineWidth = 1;
 }
-// an annotation: a small framed label (panel background, accent border, 12 px text) joined to its point by a thin line; it stays inside the plot and goes to the side when there is no room above
+// an annotation: a framed label (panel background, accent border, 12 px) tied to its point by a thin line, inside the plot, aside when no room above
 function drawAnn(p, g, a, px, py, W, gap) {
   if (a.x < p._a.x0 || a.x > p._a.x1) return;                       // the annotated point is outside the zoomed range: neither label nor line (they come back when it is in view)
   g.save(); g.font = fpx(12); const tw = g.measureText(a.text).width, w = tw + 12, h = Math.round(20 * fz());
@@ -189,7 +189,7 @@ async function draw(p) {
   }
   p._sz = sizeKey(p); try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) { p._sz = ""; return; } afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { p._sz = ""; const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
-const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") }, msgOf = (/** @type {Pannello} */ p) => tabFiles(p.tab || E.tab).some((/** @type {MzFile} */ f) => f.vis) ? MSG[p.type] : I18N.t("msg.noFiles");   // nothing to draw: no file of the panel's type ticked, or the panel asks for nothing
+const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") }, msgOf = (/** @type {Pannello} */ p) => tabFiles(p.tab || E.tab).some(f => f.vis) ? MSG[p.type] : I18N.t("msg.noFiles");
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
 
 // the one "Correzione" menu of a chromatogram / XIC / MRM panel: none | a blank file | the background of a stretch (mean) | automatic baseline. One at a time.
@@ -283,7 +283,7 @@ function legend(p, all, note = "") {
   ibkChip(p);
   if (window.SUBREF) SUBREF.chip(p);
 }
-// with many traces the legend would cover the graph: a small chip («7 tracce») and the list when the pointer rests on it; a tap, Enter or Space keeps it open (no hover on touch or keys), Escape closes it
+// many traces: a chip («7 tracce») instead of a legend over the graph, the list on hover; tap, Enter or Space keeps it open, Escape closes it
 function legCollapse(p) {
   const L = p.leg, n = L.querySelectorAll(".tg").length; if (n <= 4) return;
   const lst = document.createElement("div"); lst.className = "lgl"; lst.append(...L.children);
@@ -423,7 +423,7 @@ async function drawLines(p) {
     if (DC.isSorted(s.x)) { const [i0, i1] = DC.windowIdx(s.x, x0, x1); for (const i of DC.runsAbove(s.ys, i0, i1, (/** @type {number} */ v) => U(s, v), ymax)) tri(s.x[i]); continue; }       // through the blocks of decima.js: 120 traces of 50 000 scans
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(/** @type {any} */ (seg).x); seg = null; } }); if (seg) tri(/** @type {any} */ (seg).x);
   }
-  // each handle sits on the sample the area ends at, and the dashed baseline is the one subtracted (integ in picchi.js); the card «Manual integrations» follows the windows of the transition panels (integrazioni-manuali.js, read on the first one)
+  // a handle sits on the sample the area ends at; the dashed baseline is the one subtracted (integ, picchi.js); «Manual integrations» follows the transition panels' windows (integrazioni-manuali.js)
   if (typeof INTZERO === "undefined" && p.ints.some(i => i.zero)) await carica("integra-zero.js"); if (typeof INTBASE === "undefined" && p.ints.some(i => i.bm)) await carica("integra-base.js"); if (typeof SEGUE === "undefined" && ESP.mrm(p) && p.ints.length) await carica("integra-segue.js"); const mi = /** @type {any} */ (window).MANINT; if (mi) mi.sync(); else if (ESP.mrm(p) && p.ints.length) carica("m:integrazioni-manuali.js");
   for (const it of cas ? [] : window.SEGUE ? SEGUE.all(p, sr) : p.ints) {          // integrations: filled area + draggable bars, or two anchors on SIM/MRM (not in the waterfall view); a SIM/MRM window also follows the sample shown (integra-segue.js)
     const s = sr.find(q => q.key === it.key); if (!s) continue;

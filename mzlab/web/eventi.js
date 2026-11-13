@@ -197,7 +197,7 @@ function attach(p) {
       if (window.MAPPA) MAPPA.dbl(p, rect(e)); else { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
       return;
     }
-    // one rule for every other graph, from the registry: an annotation = edit it; zoomed in = whole view (Esc / undo takes it back); not zoomed = the main action of the graph
+    // every other graph, from the registry: annotation = edit it; zoomed = whole view (Esc / undo reverts); not zoomed = the graph's main action
     const x = xd(rect(e)), ds = p._dsel; p._dsel = null;
     if (!p.sel && ds && e.timeStamp - ds[1] < 800 && x >= ds[0][0] && x <= ds[0][1]) { p.sel = ds[0]; draw(p); }      // the first click of the pair cleared the range it was in: the double click is for that range
     await AZIONI.doppio({ vista: p.type, p, x, k: p.type === "spec" ? 0 : nearestFile(p, x), near: hit && hit.ann, e, dbl: true, a: p._a, m: null, has: false });
@@ -262,7 +262,7 @@ function wlCtl(p) {
   return !pda ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
 }
 const xwc = async () => window.XWC ||= await import("./xwc.js");
-/** An XWC (DAD trace at nm0..nm1) under panel `from`; without a band, the one the engine proposes. @param {any} from @param {number} [nm0] @param {number} [nm1] @param {number} [k] */
+/** An XWC (DAD trace at nm0..nm1) under panel `from`; no band: the engine's. @param {any} from @param {number} [nm0] @param {number} [nm1] @param {number} [k] */
 async function wlOpen(from, nm0, nm1, k) {
   if (nm0 == null) return (await xwc()).press(from, false);
   if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
@@ -370,7 +370,7 @@ function ctxFor(p, e, x, px, py) {
 }
 
 // ---------------------------------------------------------------- actions of the right-click menu of the chromatogram, XIC and MRM (registry azioni/1, azioni.js)
-// c = { vista: p.type, p, x: the RT under the pointer, k: the nearest file, near: the annotation under the pointer, px, py, e }; the modules add theirs (visualizza.js, gradiente.js, dda.js, libreria.js, compare…, picchi.js, grafici.js)
+// c = { vista: p.type, p, x: RT under the pointer, k: nearest file, near: annotation under the pointer, px, py, e }; modules add theirs (visualizza.js, gradiente.js, dda.js, libreria.js, compare…, picchi.js, grafici.js)
 (() => {
   const V = ["chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
   /** @param {any} o */
@@ -524,7 +524,7 @@ window.openBT = openBT;
 
 // ------------------------------------------------------------------ toolbar
 Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", { tab: suTab(tabNuovo()) })));
-Q("#np-spec").onclick = () => { const t = suTab(tabNuovo(true)), f = scanFiles(tabFiles(t).filter((/** @type {MzFile} */ x) => x.vis))[0] || scanFiles(tabFiles(t))[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1, tab: t }))); };
+Q("#np-spec").onclick = () => { const t = suTab(tabNuovo(true)), f = scanFiles(tabFiles(t).filter(x => x.vis))[0] || scanFiles(tabFiles(t))[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1, tab: t }))); };
 Q("#np-xic").onclick = () => openXic(null);
 Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
 Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all", intfFixed: true })));
