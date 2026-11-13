@@ -188,10 +188,10 @@ impl Loaded {
 
 /// What is in the folder and not in the output.
 fn lost(l: &Loaded, d: &AgilentD) -> Vec<String> {
-    let scarti = listed("scarti.txt");
+    let discards = listed("scarti.txt");
     let mut lost = Vec::new();
     for (name, bytes) in &l.files {
-        if scarti.iter().any(|(p, _)| name.starts_with(p.as_str())) {
+        if discards.iter().any(|(p, _)| name.starts_with(p.as_str())) {
             continue;
         }
         let items: Vec<&meta::Item> = d.metadata.iter().filter(|i| i.origin == *name).collect();

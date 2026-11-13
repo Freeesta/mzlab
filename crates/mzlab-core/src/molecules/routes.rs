@@ -60,9 +60,9 @@ fn search(v: &Value) -> String {
         .and_then(|x| x.f64())
         .map_or(8, |x| x as usize);
     let ppm = v.get("ppm").and_then(|x| x.f64()).unwrap_or(10.0);
-    let ampia = v.get("ampia").is_some_and(|x| x.bool() == Some(true));
+    let wide = v.get("ampia").is_some_and(|x| x.bool() == Some(true));
     con(|a| {
-        let hits = if ampia {
+        let hits = if wide {
             search_wide(&a.tutte, q, limit, ppm)
         } else {
             cerca(&a.tutte, q, limit, ppm)

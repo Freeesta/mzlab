@@ -60,7 +60,7 @@ fn groups_ext_keeps_the_groups_of_the_proof_rules() {
 
 #[test]
 fn each_site_selects_its_rule() {
-    let casi = [
+    let cases = [
         ("CCC(N)=O", "loss_nh3_amide"),
         ("NC(=O)NC", "loss_hnco_ureido"),
         ("CN(C)CCc1ccccc1", "loss_c2h7n_n_dimethyl"),
@@ -80,7 +80,7 @@ fn each_site_selects_its_rule() {
         ("CCCN", "ion_immonium_alpha"),
         ("CC(=O)c1ccccc1", "ion_acylium"),
     ];
-    for (s, id) in casi {
+    for (s, id) in cases {
         assert!(ids(s).iter().any(|x| x == id), "{id} on {s}");
     }
 }

@@ -28,8 +28,8 @@ fn text_of(key: &str) -> Option<&'static str> {
 
 /// The key whose text the terminal shows, the same choice as `I18N.err` in the desktop app: a memory refusal that names its phase has the
 /// sentence with the numbers (`error.memoryBudgetFase[.<fase>]`), and a key with a `.native` text uses it (the limit is this computer's memory).
-fn returned_key(key: &str, fase: Option<&str>) -> String {
-    let base = match fase {
+fn returned_key(key: &str, phase: Option<&str>) -> String {
+    let base = match phase {
         Some(f) if key == "error.memoryBudget" => {
             let own = format!("error.memoryBudgetFase.{f}");
             if text_of(&own).is_some() {
@@ -118,11 +118,11 @@ fn render(msg: &str, key: &str, remainder: &str) -> String {
 }
 
 fn render_params(msg: &str, key: &str, par: Vec<(String, String)>) -> String {
-    let fase = par
+    let phase = par
         .iter()
         .find(|(k, _)| k == "fase")
         .map(|(_, v)| v.as_str());
-    let Some(text) = text_of(&returned_key(key, fase)) else {
+    let Some(text) = text_of(&returned_key(key, phase)) else {
         return msg.to_string();
     };
     let mut t = text.to_string();
@@ -155,12 +155,12 @@ pub(crate) fn with_help(args: &[String], mut o: crate::Outcome) -> crate::Outcom
             .map(|a| crate::plain::canonical(a))
             .filter(|a| !a.is_empty() && a.chars().all(|c| c.is_ascii_lowercase() || c == '-'))
     };
-    let comando = match (word(0), word(1)) {
+    let command = match (word(0), word(1)) {
         (Some(c @ ("flow" | "llm")), Some(sub)) => format!("{c} {sub} "),
         (Some(c), _) if c != "-h" && c != "--help" && !c.starts_with('-') => format!("{c} "),
         _ => String::new(),
     };
-    o.stderr += &format!("(mzlab-cli {comando}--help)\n");
+    o.stderr += &format!("(mzlab-cli {command}--help)\n");
     o
 }
 

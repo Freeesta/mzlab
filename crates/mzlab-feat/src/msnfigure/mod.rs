@@ -243,7 +243,7 @@ fn lay_out_radial(sc: &Scena, vis: &[usize], size: &HashMap<&str, (f64, f64)>) -
 }
 
 fn dispone(sc: &Scena, vis: &[usize], view: View, extra: &dyn Fn(&Ion, &Pos) -> f64) -> Layout {
-    let compatta = view == View::Radial;
+    let compact = view == View::Radial;
     let size: HashMap<&str, (f64, f64)> = vis
         .iter()
         .map(|&k| {
@@ -251,27 +251,27 @@ fn dispone(sc: &Scena, vis: &[usize], view: View, extra: &dyn Fn(&Ion, &Pos) -> 
             (
                 i.id.as_str(),
                 (
-                    if compatta { WR } else { W },
-                    height(&scatola(sc, i, p, compatta), extra(i, p)),
+                    if compact { WR } else { W },
+                    height(&scatola(sc, i, p, compact), extra(i, p)),
                 ),
             )
         })
         .collect();
-    let (caselle, centro, anelli) = if view == View::Albero {
+    let (boxes, center, anelli) = if view == View::Albero {
         (lay_out_tree(sc, vis, &size), (0.0, 0.0), Vec::new())
     } else {
         lay_out_radial(sc, vis, &size)
     };
     let (mut w, mut h) = (0.0f64, 0.0f64);
-    for b in caselle.values() {
+    for b in boxes.values() {
         w = w.max(b.x + b.w + 30.0);
         h = h.max(b.y + b.h + 30.0);
     }
     Layout {
-        cells: caselle,
+        cells: boxes,
         w: w.max(60.0),
         h: h.max(60.0),
-        centre: centro,
+        centre: center,
         rings: anelli,
     }
 }
