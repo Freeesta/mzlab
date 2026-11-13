@@ -153,6 +153,14 @@ fn plan() -> Vec<Value> {
     ] {
         steps.push(json!({"op": "lr_formula", "f": f, "adduct": adduct}));
     }
+    let tables = r#""losses":[{"id":"H2O","f":"H2O"}],"adducts":[{"id":"[M+Na]+","k":1,"add":"Na","z":1}],"contam":[{"id":"peg1","mz":63.04406,"pol":1}]"#;
+    for head in [
+        r#"{"x":63.0441,"hr":true,"tol_mda":3,"tol_ppm":10,"pol":"+","#,
+        r#"{"x":18,"hr":false,"#,
+        r#"{"x":"bad","#,
+    ] {
+        steps.push(json!({"op": "lr_ricerca", "body": format!("{head}{tables}}}")}));
+    }
     steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
         json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
