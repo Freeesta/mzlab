@@ -1,5 +1,5 @@
 //! The matrix of the scan modes of a QTRAP against the synthetic pairs of `tools/wiff_modes.py`: what the `.wiff` reader does today with each mode, exactly
-//! (read with level / precursor / CV type, or refused with `err.file.wiffScanType`, `code` C and `experiment` 1), never a panic. Whoever adds
+//! (read with level / precursor / CV type / TIC and BPC, or refused with `err.file.wiffScanType`, `code` C and `experiment` 1), never a panic. Whoever adds
 //! a mode changes its entry in `modi.json`. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![cfg(feature = "sciex")]
@@ -107,6 +107,29 @@ fn check(dir: &Path, tag: &str, sample: &Value) {
     }
     let (polarity, run) = got.unwrap_or_else(|e| panic!("{tag}: {}", e.key));
     assert_eq!(polarity, 1, "{tag}: polarity");
+    // TIC and BPC as ProteoWizard lists them: a BPC for MRM, full scan, precursor-ion and neutral-loss, a TIC only for MS3, none for product ions
+    let traces: Vec<&str> = run
+        .chromatograms
+        .iter()
+        .map(|c| c.id.as_str())
+        .filter(|id| *id == "TIC" || *id == "BPC")
+        .collect();
+    let want_traces: Vec<&str> = want["tracce"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x.as_str().unwrap())
+        .collect();
+    assert_eq!(traces, want_traces, "{tag}: TIC and BPC");
+    if let Some(b) = run.chromatograms.iter().find(|c| c.id == "BPC") {
+        let bpc = nums(&want["bpc"]);
+        assert_eq!(b.intensity.len(), bpc.len(), "{tag}: BPC points");
+        assert!(
+            (0..bpc.len()).all(|k| close(b.intensity[k], bpc[k])),
+            "{tag}: BPC {:?} vs {bpc:?}",
+            b.intensity
+        );
+    }
     assert_eq!(
         run.spectra.len() as u64,
         want["spettri"].as_u64().unwrap(),

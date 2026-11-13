@@ -131,6 +131,22 @@ fn a_qtrap_5500_reads_its_scan_types() {
             g.id
         );
     }
+    // a TIC and a BPC for the survey, precursor-ion and neutral-loss experiments, none for the product ions
+    let ch = r["chromatograms"].as_array().unwrap();
+    let ids: Vec<&str> = run.chromatograms.iter().map(|c| c.id.as_str()).collect();
+    let want_ids: Vec<&str> = ch.iter().map(|c| c["id"].as_str().unwrap()).collect();
+    assert_eq!(ids, want_ids);
+    for (g, e) in run.chromatograms.iter().zip(ch) {
+        let (t, v) = (nums(&e["time"]), nums(&e["intensity"]));
+        assert!(
+            g.time.len() == t.len()
+                && (0..t.len()).all(|k| close(g.time[k], t[k]) && close(g.intensity[k], v[k])),
+            "{}: {:?} {:?}",
+            g.id,
+            g.time,
+            g.intensity
+        );
+    }
 }
 
 #[test]
@@ -203,6 +219,34 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
             .count(),
         1 + 1
     );
+}
+
+/// The chromatograms the reader serves after the scans (the BPC noted on the way) are the list `run` gives.
+#[test]
+fn the_module_lists_the_chromatograms_of_run_once_the_scans_are_written() {
+    let Some((dir, want)) = reference() else {
+        return;
+    };
+    let mut l = readers::apri(set(&dir, "variante"), &Limits::sito()).unwrap();
+    let xml = String::from_utf8(
+        mzlab_core::readers_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+    )
+    .unwrap();
+    let ids: Vec<&str> = xml
+        .split("<chromatogram index=")
+        .skip(1)
+        .map(|h| {
+            let a = h.find(" id=\"").unwrap() + 5;
+            &h[a..a + h[a..].find('"').unwrap()]
+        })
+        .collect();
+    let want_ids: Vec<&str> = want["variante"]["1"]["chromatograms"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(ids, want_ids);
 }
 
 /// A 3200 QTRAP whose product-ion scan blocks are version 3 is a variant (the engine's reader decodes version 2 only and would list it with no scans); a 3200 file

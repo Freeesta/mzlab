@@ -134,7 +134,7 @@ impl Wiff {
                 if p.mz.is_empty() {
                     continue;
                 }
-                if self.is_full_scan(r.experiment) {
+                if self.has_tic(r.experiment) {
                     blocks.add_tic(r, p.intensity.iter().copied().reduce(f64::max));
                 }
                 on(self.spectrum_of(n, r, p))?;
@@ -201,7 +201,7 @@ impl Wiff {
                 None => block_count(scan, self.scan_len, r)?,
             };
             if let Some(count) = count {
-                if count > 0 && self.is_full_scan(r.experiment) {
+                if count > 0 && self.has_tic(r.experiment) {
                     blocks.add_tic(r, None);
                 }
                 continue;
@@ -307,10 +307,13 @@ impl Blocks {
         if e.cols.len() < v.len() {
             e.cols.resize_with(v.len(), Default::default);
         }
+        let mut top = f64::NEG_INFINITY;
         for (x, col) in v.into_iter().zip(&mut e.cols) {
+            top = top.max(x);
             col.0.push(r.time_min);
             col.1.push(x);
         }
+        e.bpc.push(if top.is_finite() { top } else { 0.0 });
     }
 }
 

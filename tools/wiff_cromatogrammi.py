@@ -44,8 +44,8 @@ def main():
     w.save(out, "solofs")
     many = lambda kind, e: f"{kind} sample=1 period=1 experiment={e}"
     (out / "attesi.json").write_text(json.dumps({
-        "fsmrm": [many("TIC", 1), many("TIC", 2), "SRM", "SRM", "SRM", many("BPC", 1)],
-        "duemrm": [many("TIC", 1), "SRM", "SRM", many("TIC", 2), "SRM", "SRM", "SRM"],
+        "fsmrm": [many("TIC", 1), many("TIC", 2), many("BPC", 2), "SRM", "SRM", "SRM", many("BPC", 1)],
+        "duemrm": [many("TIC", 1), many("BPC", 1), "SRM", "SRM", many("TIC", 2), many("BPC", 2), "SRM", "SRM", "SRM"],
         "solofs": ["TIC", "BPC"],
     }, indent=1))
 

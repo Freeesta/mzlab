@@ -1,5 +1,5 @@
 //! The edge rows of a dense MRM run (`tools/wiff_mrm_edges.py`): an empty row (size 0) is left out, so the TIC and every transition keep the same
-//! times, and a dense block whose first cps is negative noise is read as dense, never as a sparse head; an MRM or full scan method of two periods is
+//! times, and a dense block whose first cps is negative noise is read as dense, never as a sparse head; the BPC follows the TIC; an MRM or full scan method of two periods is
 //! `err.file.wiffPeriods`, never folded into Period0. Engine and readers module (`--features sciex`).
 //! Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -51,6 +51,13 @@ fn check(c: &[Chromatogram]) {
     }
     assert_eq!(srm[0].intensity, vec![10.0, -2.5, 60.0]);
     assert_eq!(srm[2].intensity, vec![30.0, 50.0, 80.0]);
+    // the BPC of an MRM experiment comes right after its TIC: the largest transition of each cycle, as ProteoWizard gives it
+    let ids: Vec<&str> = c.iter().map(|c| c.id.as_str()).take(2).collect();
+    assert_eq!(ids, ["TIC", "BPC"]);
+    assert_eq!(
+        (&c[1].time, &c[1].intensity),
+        (&tic.time, &vec![30.0, 50.0, 80.0])
+    );
 }
 
 #[test]
