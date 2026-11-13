@@ -90,7 +90,7 @@ Due file Orbitrap DDA sintetici (`tools/hr_reference.py`, ~15.000 picchi MS1 per
 - Memoria del modulo `thermo` (`tools/bench_raw.py`, memoria iniziale 32 MB) sul BAF DDA da 595 MB (56 061 scansioni): dopo `apri` 33,5 MB (`apri` 1,0 s), dopo `indice` 48,0 MB (186 ms, JSON da 13,7 MB), picco di tutti i passi 122 MB (`to_mzml` 21,8 s); su file più piccoli 44,4 MB per 7 952 scansioni e 85,1 MB per 16 524 (prima della memoria compatta).
 
 ## Profilo `desktop` (`Cargo.toml`, `opt-level = 3` contro `"z"`)
-- `mzlab_wasm.wasm` con `cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`: SHA-256 `d5cca2b7…d00da` prima e dopo l'aggiunta del profilo (identico). Tempi del `.raw` nativo con `raw_times` e profilo `desktop` (studio `docs/studi/RAW_VELOCE.md`, DDA da 595 MB): tabella 8,33 → 5,30 s, `.mzidx` 7,07 → 3,59 s, mzML 13,99 → 12,15 s.
+- `mzlab_wasm.wasm` con `cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm`: SHA-256 `d5cca2b7…d00da` prima e dopo l'aggiunta del profilo (identico). Tempi del `.raw` nativo con `raw_times` e profilo `desktop` (DDA da 595 MB): tabella 8,33 → 5,30 s, `.mzidx` 7,07 → 3,59 s, mzML 13,99 → 12,15 s.
 
 ## Tabella e `.mzidx` con una decodifica (righe dirette da `Spectrum`)
 - `upload::index_reader` decodifica ogni scansione una volta sola per la tabella e la prima passata di `build`, senza testa mzML né rilettura; passate successive solo se il budget è superato. `.mzidx` identico byte per byte alla strada via mzML (`tests/mzidx_rows_direct.rs`). SHA-1 della testata non nel percorso dell'indice (`index_reader` usa lo SHA-256 già calcolato). Peso di `mzlab_wasm.wasm` prima di `wasm-opt`: 3 409 576 → 3 438 828 B.

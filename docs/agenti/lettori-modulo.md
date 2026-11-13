@@ -1,6 +1,6 @@
 # Moduli lettori: un `.wasm` per famiglia di produttori
 
-Un `.wasm` per famiglia (`aperti`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`), caricato solo quando arriva un file di quella famiglia: apre i file che il motore non legge e ne scrive l'mzML in OPFS; il motore lo legge poi come ogni mzML. Il `.wasm` del motore non contiene i lettori dei moduli (`mzlab-wasm` usa `mzlab-core` senza `thermo` né `estesi`; `tests/test_lettori_wasm.py`); contiene solo il lettore esterno (`external.rs`) con cui legge un `.raw` attraverso il modulo `thermo`, senza mzML. Studio e piano dei pacchetti: `docs/studi/FORMATI_NATIVI_MS.md` §4.
+Un `.wasm` per famiglia (`aperti`, `thermo`, `agilent`, `sciex`, `waters`, `shimadzu`, `bruker`), caricato solo quando arriva un file di quella famiglia: apre i file che il motore non legge e ne scrive l'mzML in OPFS; il motore lo legge poi come ogni mzML. Il `.wasm` del motore non contiene i lettori dei moduli (`mzlab-wasm` usa `mzlab-core` senza `thermo` né `estesi`; `tests/test_lettori_wasm.py`); contiene solo il lettore esterno (`external.rs`) con cui legge un `.raw` attraverso il modulo `thermo`, senza mzML.
 
 ## Crate
 - `crates/mzlab-core`, feature Cargo `thermo` (di default; porta `opentfraw`, `raw`, `rawfilter`, `rawlettore`, `metodo_raw`; `method_fields.rs` tiene i tipi neutri `Ident`/`Campo` che usa anche Agilent) e `estesi` (vuota): varianti dei lettori del motore servite solo dai moduli, dietro `#[cfg(feature = "estesi")]`. `mzlab-wasm` non la accende (`cargo tree -e features -p mzlab-wasm`).

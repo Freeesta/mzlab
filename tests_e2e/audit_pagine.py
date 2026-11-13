@@ -1,4 +1,4 @@
-"""Page audit (docs/studi/AUDIT_PAGINE.md): every view x {no samples, 1 sample, 5 samples} x {cold, warm return}; every header button opened
+"""Page audit: every view x {no samples, 1 sample, 5 samples} x {cold, warm return}; every header button opened
 and closed; panels added and closed; CLS, panel movement, untranslated text, console errors, requests, memory over 20 open/close cycles.
 Not a test (no pass/fail): it writes audit.json and screenshots into OUT_DIR. Needs the built site (tools/prepara_sito.py).
 
