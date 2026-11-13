@@ -133,3 +133,6 @@ fn an_ida_wiff_is_written_whole_with_code_0() {
 
 #[path = "convert_tests_centroids.rs"]
 mod centroid_counts;
+
+#[path = "convert_isolation_tests.rs"]
+mod isolation;

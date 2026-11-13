@@ -5,9 +5,9 @@
 mod base;
 pub use base::*;
 
+use super::chromatograms::Mrm;
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use base::bad;
 
 /// A count read from the file as a float: saturates, the callers compare it with their limits.
 #[allow(clippy::cast_possible_truncation)]
@@ -27,54 +27,53 @@ const WIDTH_MAX: usize = 100_000;
 /// The MRM block of `bytes` bytes starting at `at`. A dense block is one f32 (cps) per transition. A sparse block starts with `-(N + 0.01)`, N being the
 /// transitions of the experiment, and goes on with the cps of consecutive transitions and `-(k + 0.01)` for a run of k transitions that measured zero, in
 /// order: every transition gets its point, zeros included, as the vendor library gives them. A block that is neither (a negative or non-finite count, a
-/// sparse block that does not add up to N) is an error.
-pub fn read_mrm_cols<R: ReadAt>(
+/// sparse block that does not add up to N, a NaN or infinite cps) is `Mrm::Damaged`: the reader leaves that cycle out and counts it, the others are read.
+pub(crate) fn mrm_cols<R: ReadAt>(
     scan: &mut R,
     scan_len: u64,
     at: u64,
     bytes: usize,
-) -> Result<Option<Cols>> {
+) -> Result<Mrm<Cols>> {
     let Some(v) = base::read_mrm(scan, scan_len, at, bytes / 4)? else {
-        return Ok(None);
+        return Ok(Mrm::Absent);
     };
-    if let Some(&first) = v.first().filter(|x| **x < 0.0) {
-        let width = (-first).floor();
-        if !(first.is_finite() && width >= 1.0 && count(width) <= WIDTH_MAX) {
-            return Err(bad("sparse MRM block"));
-        }
-        let (mut pos, mut points) = (0usize, Vec::new());
-        for &x in v.iter().skip(1) {
-            if x < 0.0 {
-                let run = count((-x).floor());
-                if pos.saturating_add(run) > count(width) {
-                    return Err(bad("sparse MRM block"));
-                }
-                points.extend((pos..pos + run).map(|j| (j, 0.0)));
-                pos += run;
-            } else if x.is_finite() {
-                points.push((pos, x));
-                pos = pos.saturating_add(1);
-            } else {
-                return Err(bad("sparse MRM block"));
-            }
-        }
-        if pos != count(width) {
-            return Err(bad("sparse MRM block"));
-        }
-        return Ok(Some(Cols { width: pos, points }));
-    }
+    Ok(cols_of(v).map_or(Mrm::Damaged, Mrm::Read))
+}
+
+fn cols_of(v: Vec<f64>) -> Option<Cols> {
     if v.iter().any(|x| !x.is_finite()) {
-        return Err(bad("MRM block"));
+        return None;
     }
-    Ok(Some(Cols {
-        width: v.len(),
-        points: v.into_iter().enumerate().collect(),
-    }))
+    let Some(&first) = v.first().filter(|x| **x < 0.0) else {
+        return Some(Cols {
+            width: v.len(),
+            points: v.into_iter().enumerate().collect(),
+        });
+    };
+    let width = (-first).floor();
+    if !(width >= 1.0 && count(width) <= WIDTH_MAX) {
+        return None;
+    }
+    let (mut pos, mut points) = (0usize, Vec::new());
+    for &x in v.iter().skip(1) {
+        if x < 0.0 {
+            let run = count((-x).floor());
+            if pos.saturating_add(run) > count(width) {
+                return None;
+            }
+            points.extend((pos..pos + run).map(|j| (j, 0.0)));
+            pos += run;
+        } else {
+            points.push((pos, x));
+            pos = pos.saturating_add(1);
+        }
+    }
+    (pos == count(width)).then_some(Cols { width: pos, points })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::read_mrm_cols;
+    use super::{mrm_cols, Mrm};
 
     fn block(v: &[f32]) -> Vec<u8> {
         v.iter().flat_map(|x| x.to_le_bytes()).collect()
@@ -85,14 +84,16 @@ mod tests {
     fn sparse_block_with_a_saturating_skip_is_an_error() {
         let mut b = block(&[-4.0, -1.0e30, 5.0, 6.0]);
         let n = b.len();
-        assert!(read_mrm_cols(&mut b, n as u64, 0, n).is_err());
+        assert!(matches!(mrm_cols(&mut b, n as u64, 0, n), Ok(Mrm::Damaged)));
     }
 
     fn cols(v: &[f32]) -> Option<(usize, Vec<(usize, f64)>)> {
         let mut b = block(v);
         let n = b.len();
-        let c = read_mrm_cols(&mut b, n as u64, 0, n).ok()??;
-        Some((c.width, c.points))
+        match mrm_cols(&mut b, n as u64, 0, n).ok()? {
+            Mrm::Read(c) => Some((c.width, c.points)),
+            _ => None,
+        }
     }
 
     // 4 transitions: a cps, a run of two zeros, a cps; every transition gets its point

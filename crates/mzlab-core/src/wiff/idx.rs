@@ -29,12 +29,25 @@ fn f64_at(b: &[u8], at: usize) -> f64 {
     f64::from_le_bytes(t)
 }
 
-/// `(sample number, start of its section in the .scan)` for each row of `SampleIdxTable`.
-pub fn sections(table: &[u8]) -> Vec<(u32, u64)> {
+/// `(sample number, start of its section in the .scan)` for each row of `SampleIdxTable`; `None` for a row whose position is before any section
+/// (an injection that acquired nothing writes 0): the sample is kept, with no blocks to place.
+pub fn sections(table: &[u8]) -> Vec<(u32, Option<u64>)> {
     let rows = table.get(HEADER..).unwrap_or(&[]);
     rows.chunks_exact(TABLE_ROW)
-        .filter_map(|r| Some((u32_at(r, 0), (u32_at(r, 4) as u64).checked_sub(TABLE_LEAD)?)))
+        .map(|r| (u32_at(r, 0), (u32_at(r, 4) as u64).checked_sub(TABLE_LEAD)))
         .collect()
+}
+
+impl Entry {
+    /// Every field of the row is zero: it places no block (its offset 0 would read the first block of the section again, and the last row would run
+    /// to the end of the file), so it is left out and counted, never read as a scan at rt 0.
+    pub fn zeroed(&self) -> bool {
+        self.offset == 0
+            && self.size == 0
+            && self.time_ms == 0.0
+            && self.tic == 0.0
+            && self.points == 0.0
+    }
 }
 
 pub fn parse(data: &[u8]) -> Vec<Entry> {
@@ -48,4 +61,43 @@ pub fn parse(data: &[u8]) -> Vec<Entry> {
             points: f64_at(r, 26),
         })
         .collect()
+}
+
+/// The blocks the rows of a sample place in a section that starts at `section`: each runs to the start of the next placed row, the last to `scan_len`.
+/// A zeroed row places none, and no row of a sample without a section does; they are counted (`unplaced`, `warn.wiff.damaged`), except a zeroed first
+/// row before a placed one (an empty first scan at time 0 holds nothing to lose).
+pub(super) fn place(
+    entries: &[Entry],
+    section: Option<u64>,
+    scan_len: u64,
+    n_exp: usize,
+    ida: bool,
+) -> (Vec<super::Record>, usize) {
+    let Some(section) = section else {
+        return (Vec::new(), entries.len());
+    };
+    let start = |e: &Entry| section + u64::from(e.offset) + super::scan::PAYLOAD_SKIP;
+    let (mut records, mut zeroed) = (Vec::<super::Record>::new(), 0);
+    for (k, e) in entries.iter().enumerate() {
+        if e.zeroed() {
+            zeroed += 1;
+            continue;
+        }
+        if let Some(last) = records.last_mut() {
+            last.end = start(e);
+        }
+        records.push(super::Record {
+            at: start(e),
+            end: scan_len,
+            size: e.size,
+            time_min: e.time_ms / 60000.0,
+            tic: e.tic,
+            cycle: k / n_exp,
+            experiment: k % n_exp,
+            points: if ida { f64::NAN } else { e.points },
+        });
+    }
+    let empty_first =
+        entries.first().is_some_and(Entry::zeroed) && entries.get(1).is_some_and(|e| !e.zeroed());
+    (records, zeroed - usize::from(empty_first))
 }

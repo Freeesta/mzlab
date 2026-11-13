@@ -144,12 +144,43 @@ pub(super) struct Experiment {
 /// The blocks of all the MRM experiments.
 pub(super) struct Blocks {
     pub(super) experiments: Vec<Experiment>,
+    pub(super) cycles: Cycles,
+}
+
+/// The MRM blocks (cycles) of a sample: read, and left out as damaged (a NaN or infinite cps, a sparse block that does not add up), counted by `losses`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Cycles {
+    pub read: usize,
+    pub damaged: usize,
+}
+
+/// An MRM block as read: not there (past the end of the file), damaged (left out and counted, never a NaN in a trace), or its values.
+pub(crate) enum Mrm<T> {
+    Absent,
+    Damaged,
+    Read(T),
 }
 
 impl Blocks {
     pub(super) fn new(experiments: usize) -> Self {
         Blocks {
             experiments: (0..experiments).map(|_| Experiment::default()).collect(),
+            cycles: Cycles::default(),
+        }
+    }
+
+    /// The values of an MRM block, counted as read or damaged.
+    pub(super) fn take<T>(&mut self, m: Mrm<T>) -> Option<T> {
+        match m {
+            Mrm::Absent => None,
+            Mrm::Damaged => {
+                self.cycles.damaged += 1;
+                None
+            }
+            Mrm::Read(v) => {
+                self.cycles.read += 1;
+                Some(v)
+            }
         }
     }
 

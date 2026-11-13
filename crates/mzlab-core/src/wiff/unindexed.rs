@@ -2,9 +2,12 @@
 //! the data grow all the time). Only MRM layouts are recovered: their blocks have one fixed size, so the geometry follows from the nearest indexed sample
 //! whose blocks fit; the name, the method and the times of such a sample are inferred, never read, and the sample says so (`Wiff::inferred_from`).
 
+use super::reader::{build, Part};
 use super::{Record, Wiff};
+use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::ole::Ole;
+use crate::readers::{Limits, Sample};
 
 /// Eight bytes that start every section of the `.wiff.scan`, then the u32 sample number; the first block lies `LEAD` bytes after the marker.
 const MARKER: [u8; 8] = [0x11, 0x11, 0x11, 0x11, 0x82, 0x05, 0, 0];
@@ -139,6 +142,40 @@ pub(super) fn recover(
     out
 }
 
+/// The sections of the `.wiff.scan` the `.wiff` index does not list (the copy was made while the acquisition ran), rebuilt as samples after the indexed ones
+/// with an inferred name and method; `(recovered, left out)`.
+pub(super) fn add(
+    parti: &mut Vec<Part>,
+    campioni: &mut Vec<Sample>,
+    raw_names: &mut Vec<(u32, Option<String>)>,
+    (scan, scan_len, membro): (&mut Box<dyn ReadAt>, u64, u16),
+    (ole, limits, only): (&Ole, &Limits, Option<usize>),
+    total: &mut u64,
+) -> Result<(usize, usize)> {
+    let known: Vec<&Wiff> = parti.iter().map(|p| &p.w).collect();
+    let (end, last_id) = index_end(ole, &known);
+    let found = recover(scan, scan_len, &known, end, last_id);
+    let counts = (found.samples.len(), found.skipped);
+    for w in found.samples {
+        let (i, s) = (parti.len(), w.sample);
+        *total += w.records.len() as u64;
+        limits.ok_entries(*total)?;
+        let mut part = Part::new(w);
+        if only.is_none_or(|c| c == i) && part.w.readable().is_ok() {
+            build(&mut part, scan, scan_len, membro)?;
+        }
+        raw_names.push((s, None));
+        campioni.push(Sample {
+            id: s,
+            nome: String::new(),
+            scansioni: part.scans.len(),
+            size: None,
+        });
+        parti.push(part);
+    }
+    Ok(counts)
+}
+
 fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wiff> {
     let n_exp = donor.experiments.len().max(1);
     let records = (0..rows)
@@ -172,6 +209,7 @@ fn rebuild(donor: &Wiff, id: u32, first: u64, rows: u64, size: u32) -> Option<Wi
         trim_scheduled: false,
         inferred_from: Some(donor.sample),
         scan_len: donor.scan_len,
+        unplaced: 0,
         failure: None,
     })
 }
@@ -183,7 +221,11 @@ pub(super) fn index_end(ole: &Ole, indexed: &[&Wiff]) -> (u64, u32) {
         .read(&format!("{}SampleIdxTable", super::SAMPLES))
         .map(|t| super::idx::sections(&t))
         .unwrap_or_default();
-    let heads = table.iter().map(|s| s.1 + 20 + 24).max().unwrap_or(0);
+    let heads = table
+        .iter()
+        .filter_map(|s| Some(s.1? + 20 + 24))
+        .max()
+        .unwrap_or(0);
     let blocks = indexed
         .iter()
         .flat_map(|w| w.records.iter())

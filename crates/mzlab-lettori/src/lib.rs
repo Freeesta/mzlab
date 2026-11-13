@@ -165,6 +165,15 @@ fn refusal(fs: &FileSet, name: String) -> Error {
             return Error::new("err.file.empty").with("name", short(&m.nome));
         }
         if ONLY_HERE.contains(e) {
+            // a `.wiff.scan` has no signature of its own: its pair is refused for the `.wiff` beside it, which is the file to name (only a build with
+            // the SCIEX reader knows the extension, and only there is `FileSet::find`, with its Unicode tables, already in the module)
+            #[cfg(any(feature = "sciex", feature = "tutte"))]
+            let pair = fs.find(".wiff").filter(|_| *e == ".wiff.scan");
+            #[cfg(not(any(feature = "sciex", feature = "tutte")))]
+            let pair: Option<usize> = None;
+            let (m, e) = pair
+                .and_then(|i| fs.membri.get(i))
+                .map_or((m, *e), |w| (w, ".wiff"));
             return Error::new("err.file.notThisFormat")
                 .with("name", short(&m.nome))
                 .with("ext", e)
