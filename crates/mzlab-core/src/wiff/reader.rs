@@ -202,8 +202,8 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
 #[rustfmt::skip] impl Reader for WiffReader { #[cfg(feature = "sciex")] fn variant(&mut self, c: usize) -> bool { variant_of(&self.parts, c) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn losses(&mut self, c: usize) -> Result<crate::readers::Losses> { self.losses_of(c) } fn scan_extra(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { self.watch(c, k, s); extra_of(self, s) } #[cfg(feature = "mappa-dad")] fn dad_propose(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> { Ok(self.part(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_propose_json(d, rt0, rt1))) }
     fn format(&self) -> Format { Format::SciexWiff }
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        use crate::conv::{IDENTITA, NON_DECODIFICATO};
-        &[("DDERealTimeData, TripleTOF and ZenoTOF blocks, MSConfigInfo, MassSpecMethod, ExperimentHeader, PeriodStream and CycleDepParam binaries", NON_DECODIFICATO), ("log state at start and end, CFR audit, acquisition time per sample", NON_DECODIFICATO), ("user, computer, site and paths", IDENTITA)]
+        use crate::conv::{IDENTITY, NOT_DECODED};
+        &[("DDERealTimeData, TripleTOF and ZenoTOF blocks, MSConfigInfo, MassSpecMethod, ExperimentHeader, PeriodStream and CycleDepParam binaries", NOT_DECODED), ("log state at start and end, CFR audit, acquisition time per sample", NOT_DECODED), ("user, computer, site and paths", IDENTITY)]
     }
     fn missing(&mut self, c: usize) -> usize { let n = self.scan_len; self.parts.get(c).map_or(0, |p| p.w.records.iter().filter(|r| r.cut(n)).count()) }
     fn refused(&mut self, c: usize) -> Option<Error> { self.parts.get(c).and_then(|p| p.w.readable().err()) }
@@ -338,7 +338,7 @@ pub fn open_only(mut fs: FileSet, limits: &Limits, only: Option<usize>) -> Resul
     let ole = container_within(bytes, &name, limits)?;
     let sm = member(&mut fs, si)?;
     let scan_len = sm.dim;
-    // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `impronte_note`): the header does not read the whole file again
+    // the SHA-1 of the `.wiff.scan` when the fingerprints were already taken (`upload::impronte`, `known_fingerprints`): the header does not read the whole file again
     let scan_sha1 = sm.sha1.take().filter(|s| !s.is_empty()).map(Some);
     let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);

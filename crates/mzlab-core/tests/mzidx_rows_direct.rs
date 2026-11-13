@@ -165,7 +165,7 @@ fn with_scratch(label: &str, l: &mut Finto, pb: &upload::Prepared, name: &str, b
     }
 }
 
-fn testata_orbitrap() -> Header {
+fn orbitrap_header() -> Header {
     Header {
         run: "r".into(),
         sources: vec!["r.raw".into()],
@@ -212,7 +212,7 @@ fn extras_only_in_the_trailer() {
 fn varied_with_orbitrap_header() {
     trial(
         "orbitrap",
-        Finto::vario(300, 50, 7).with_header(testata_orbitrap()),
+        Finto::vario(300, 50, 7).with_header(orbitrap_header()),
     );
 }
 
@@ -231,7 +231,7 @@ fn varied_at_low_resolution() {
 
 #[test]
 fn header_with_names_that_ask_for_the_text() {
-    let mut h = testata_orbitrap();
+    let mut h = orbitrap_header();
     h.components.push((
         "analyzer".into(),
         "MS:1000079".into(),

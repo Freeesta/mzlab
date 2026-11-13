@@ -34,7 +34,7 @@ fn hex_is_lowercase_two_digits_per_byte() {
 }
 
 #[test]
-fn passata_and_probe_agree_for_empty_small_and_large_files_in_one_two_or_three_pieces() {
+fn one_pass_and_probe_agree_for_empty_small_and_large_files_in_one_two_or_three_pieces() {
     for size in [
         0usize,
         1,

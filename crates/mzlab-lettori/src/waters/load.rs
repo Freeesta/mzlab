@@ -2,7 +2,7 @@
 //! calibration line a cut `_HEADER.TXT` lost, is left out whole and counted (`warn.waters.damaged`): its records are never read by rows that do not fit,
 //! nor its m/z uncalibrated. The first such part keeps the refusal of the folder, given only when nothing else in it can be read.
 
-use super::cuts::{cuts, nel_file};
+use super::cuts::{cuts, in_file};
 use super::dat::{Calibration, Encoding};
 use super::folder::Folder;
 use super::functions::Function;
@@ -40,7 +40,7 @@ impl Loading<'_> {
         let name = |e: &str| format!("_FUNC{n:03}.{e}");
         let idx_b = c.read_run(&name("IDX"))?;
         let ha_idx = idx_b.is_some();
-        let cut_idx = nel_file(c, "err.file.indexCut", &name("IDX"));
+        let cut_idx = in_file(c, "err.file.indexCut", &name("IDX"));
         let mut rows = match &idx_b {
             Some(b) => match idx::read(b, &c.limits)? {
                 Some(r) => r,
@@ -63,7 +63,7 @@ impl Loading<'_> {
         };
         if !ha_idx && dat_len > 0 {
             let why = format!("{} missing next to {}", name("IDX"), name("DAT"));
-            let e = nel_file(c, "err.file.folderIncomplete", &name("IDX"));
+            let e = in_file(c, "err.file.folderIncomplete", &name("IDX"));
             return Ok(self.left_out(f, 0, why, e));
         }
         let Some(cut) = cuts(&mut rows, larg, dat.is_some(), dat_len, ha_idx) else {
@@ -74,7 +74,7 @@ impl Loading<'_> {
         let lost = self.header_cut && !f.mirato() && dat.is_some();
         if lost && k > 0 && !self.tars.tarature.contains_key(&n) {
             let why = "no whole Cal Function line in _HEADER.TXT".to_string();
-            let e = nel_file(c, "err.file.headerCut", "_HEADER.TXT");
+            let e = in_file(c, "err.file.headerCut", "_HEADER.TXT");
             return Ok(self.left_out(f, k, why, e));
         }
         let p = Parts {

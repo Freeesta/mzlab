@@ -29,7 +29,7 @@ impl Fingerprints {
                 later: Some(f.clone()),
             });
         }
-        let now = match upload::impronte_note(fs, &prints_of(prints)) {
+        let now = match upload::known_fingerprints(fs, &prints_of(prints)) {
             Some(i) => i,
             None => {
                 tell(1);
@@ -52,7 +52,7 @@ impl Fingerprints {
             .as_ref()
             .and_then(|f| f.call0(&JsValue::NULL).ok());
         let mut fs = set();
-        match upload::impronte_note(&mut fs, &prints_of(&v.unwrap_or(JsValue::NULL))) {
+        match upload::known_fingerprints(&mut fs, &prints_of(&v.unwrap_or(JsValue::NULL))) {
             Some(i) => Ok(i),
             None => upload::impronte(&mut fs),
         }

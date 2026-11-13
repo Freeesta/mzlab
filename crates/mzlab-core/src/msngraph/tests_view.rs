@@ -12,7 +12,7 @@ fn con(formula: Option<&str>) -> Options {
     }
 }
 
-fn sintetico_json(order: &[usize]) -> String {
+fn synthetic_json(order: &[usize]) -> String {
     shifted_graph(&con(Some("C8H10N4O2+H")), order, false, 0.0).1
 }
 
@@ -31,7 +31,7 @@ fn node<'a>(v: &'a Value, id: &str) -> &'a Value {
 
 #[test]
 fn the_view_says_levels_intensities_and_the_best_path_of_each_ion() {
-    let v = view_of(&sintetico_json(&[0, 1, 2, 3]));
+    let v = view_of(&synthetic_json(&[0, 1, 2, 3]));
     assert_eq!(
         v.get("algoritmo").and_then(|x| x.str()),
         Some("best-path/1")
@@ -62,7 +62,7 @@ fn the_view_says_levels_intensities_and_the_best_path_of_each_ion() {
         Some("n0")
     );
     // rel = the most intense measure on the arc of its best path (the same number as `misure[].rel`)
-    let g = parse(sintetico_json(&[0, 1, 2, 3]).as_bytes()).unwrap();
+    let g = parse(synthetic_json(&[0, 1, 2, 3]).as_bytes()).unwrap();
     let edge = g
         .get("archi")
         .unwrap()
@@ -85,10 +85,10 @@ fn the_view_says_levels_intensities_and_the_best_path_of_each_ion() {
 
 #[test]
 fn the_same_inputs_give_the_same_bytes_and_the_view_completes_an_old_graph() {
-    let a = sintetico_json(&[0, 1, 2, 3]);
-    assert_eq!(a, sintetico_json(&[0, 1, 2, 3]));
-    assert_eq!(a, sintetico_json(&[3, 2, 1, 0]));
-    assert_eq!(a, sintetico_json(&[2, 0, 3, 1]));
+    let a = synthetic_json(&[0, 1, 2, 3]);
+    assert_eq!(a, synthetic_json(&[0, 1, 2, 3]));
+    assert_eq!(a, synthetic_json(&[3, 2, 1, 0]));
+    assert_eq!(a, synthetic_json(&[2, 0, 3, 1]));
     let without = &a[..a.find(",\"vista\":").unwrap()];
     let senza = format!("{without}}}");
     assert_eq!(completa(&senza).unwrap(), a);
@@ -193,13 +193,13 @@ fn parent_changes(d: &Data) -> usize {
 
 #[test]
 fn how_many_nodes_the_local_best_arc_would_move_in_the_synthetic_infusion() {
-    let j = sintetico_json(&[0, 1, 2, 3]);
+    let j = synthetic_json(&[0, 1, 2, 3]);
     let d = read(&parse(j.as_bytes()).unwrap()).unwrap();
     assert_eq!(parent_changes(&d), 2);
 }
 
 /// A layered graph of `n` nodes per level made with a fixed generator: every node has a precursor in the level above and one in five a second one.
-fn a_strati(levels: usize, per_level: usize) -> (Vec<u8>, Vec<f64>, Vec<(usize, usize)>) {
+fn layered(levels: usize, per_level: usize) -> (Vec<u8>, Vec<f64>, Vec<(usize, usize)>) {
     let mut s = 12345u64;
     let mut next = || {
         s = s
@@ -234,7 +234,7 @@ fn a_strati(levels: usize, per_level: usize) -> (Vec<u8>, Vec<f64>, Vec<(usize, 
 #[test]
 fn the_swaps_remove_crossings_and_no_two_nodes_share_a_place() {
     for (levels, per) in [(5, 6), (8, 10)] {
-        let (livello, mz, archi) = a_strati(levels, per);
+        let (livello, mz, archi) = layered(levels, per);
         let r = Network {
             level: &livello,
             mz: &mz,

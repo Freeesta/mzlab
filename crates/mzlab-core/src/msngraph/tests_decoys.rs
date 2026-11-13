@@ -141,7 +141,7 @@ fn decoys_mixed_with_the_fragments_leave_most_of_them_without_a_formula() {
 }
 
 /// Sub-formulas of a sulfur-bearing root (C22H31N6O7S, m/z of the ion) that are even-electron ions: a denser lattice than `FRAMMENTI`.
-fn bersagli_s(n: usize) -> Vec<String> {
+fn targets_s(n: usize) -> Vec<String> {
     let mut v = vec![];
     for c in 4..=22 {
         for h in 4..=31 {
@@ -183,7 +183,7 @@ fn ion_s(c: i32, h: i32, n: i32, o: i32, s: i32) -> f64 {
 
 /// (targets, decoys) among `n` targets of the sulfur root and their decoys moved by `d` Da, in one spectrum, that keep a formula candidate.
 fn mixed_s(n: usize, d: f64) -> (usize, usize) {
-    let ts = bersagli_s(n);
+    let ts = targets_s(n);
     let sc = |i: usize| (((i * 37) % 7) as f64 * 0.5 - 1.5) * 0.3e-6;
     let mut peaks = vec![];
     for (i, f) in ts.iter().enumerate() {

@@ -33,7 +33,7 @@ fn reference(b: &[u8]) -> (String, String, String) {
 }
 
 #[test]
-fn passata_equals_the_whole_file_hashes_whatever_the_pieces() {
+fn one_pass_equals_the_whole_file_hashes_whatever_the_pieces() {
     for n in [0, 1, 100, 65535, 65536, 65537, 131_072, 200_000, 3_145_733] {
         let b = bytes(n);
         let want = reference(&b);
@@ -92,7 +92,7 @@ fn set(b: &[u8]) -> FileSet {
 }
 
 #[test]
-fn impronte_gives_the_sha1_to_the_member_and_the_known_ones_replace_the_read() {
+fn fingerprints_give_the_sha1_to_the_member_and_the_known_ones_replace_the_read() {
     let b = bytes(300_000);
     let (sha256, sha1, probe) = reference(&b);
     let mut fs = set(&b);
@@ -111,11 +111,12 @@ fn impronte_gives_the_sha1_to_the_member_and_the_known_ones_replace_the_read() {
     let mut fs = set(&[]);
     fs.membri[0].dim = b.len() as u64;
     let known =
-        upload::impronte_note(&mut fs, &[(sha256.clone(), sha1.clone(), probe.clone())]).unwrap();
+        upload::known_fingerprints(&mut fs, &[(sha256.clone(), sha1.clone(), probe.clone())])
+            .unwrap();
     assert_eq!(known, imp);
     assert_eq!(fs.membri[0].sha1.as_deref(), Some(sha1.as_str()));
     // not as many as the members: the caller reads them
-    assert!(upload::impronte_note(&mut set(&b), &[]).is_none());
+    assert!(upload::known_fingerprints(&mut set(&b), &[]).is_none());
 }
 
 /// The fingerprints taken while the file is copied (`Passata` fed in pieces) given to `prepare_with` give the same `Prepared` as the full read, and the file is read once less.

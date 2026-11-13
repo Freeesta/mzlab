@@ -197,7 +197,7 @@ fn folder(bin: Vec<u8>, tdf: Vec<u8>) -> FileSet {
 
 #[test]
 fn a_hand_made_folder_opens_and_sums_the_scans() {
-    let mut l = mzlab_lettori::apri(folder(blocco2(), minimal_tdf(3)), &limits()).unwrap();
+    let mut l = mzlab_lettori::apri(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
     assert_eq!(l.format().id(), "bruker-tdf");
     assert_eq!(l.index(0).unwrap().len(), 1);
     let s = l.scan(0, 0).unwrap();
@@ -211,7 +211,7 @@ fn a_hand_made_folder_opens_and_sums_the_scans() {
 #[test]
 fn a_timstof_is_high_resolution() {
     // the header names the quadrupole-TOF: the scan table reads the run as high resolution (hr1), as the page and the record show it
-    let mut l = mzlab_lettori::apri(folder(blocco2(), minimal_tdf(3)), &limits()).unwrap();
+    let mut l = mzlab_lettori::apri(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
     let p = mzlab_core::upload::prepare_reader(&mut *l, 0, &[], "x.d").unwrap();
     assert!(p.table.hr1);
 }
@@ -219,7 +219,7 @@ fn a_timstof_is_high_resolution() {
 #[test]
 fn bpc_equal_before_and_after_the_round_trip() {
     // the BPC asked first decodes the frames; after every spectrum has been read it comes from the maxima kept by the reader
-    let open = || mzlab_lettori::apri(folder(blocco2(), minimal_tdf(3)), &limits()).unwrap();
+    let open = || mzlab_lettori::apri(folder(block2(), minimal_tdf(3)), &limits()).unwrap();
     let before = open().chromatogram(0, "BPC").unwrap();
     let mut l = open();
     let n = l.index(0).unwrap().len();
@@ -245,9 +245,9 @@ fn fake_zstd_and_broken_blocks_are_keyed_errors() {
         let mut l = mzlab_lettori::apri(folder(bin, minimal_tdf(np)), &limits()).unwrap();
         l.scan(0, 0).err().map(|e| e.key)
     };
-    assert!(key(blocco2(), 3).is_none());
+    assert!(key(block2(), 3).is_none());
     // not a zstd frame
-    let mut b = blocco2();
+    let mut b = block2();
     for x in &mut b[8..] {
         *x = 0x5a;
     }
@@ -262,17 +262,17 @@ fn fake_zstd_and_broken_blocks_are_keyed_errors() {
     b[4..8].copy_from_slice(&2u32.to_le_bytes());
     assert!(key(b, 3).is_some());
     // the table lies about the number of peaks
-    assert!(key(blocco2(), 4).is_some());
-    assert!(key(blocco2(), 1 << 40).is_some());
+    assert!(key(block2(), 4).is_some());
+    assert!(key(block2(), 1 << 40).is_some());
     // a block cut short, and an empty file of peaks
-    let b = blocco2();
+    let b = block2();
     assert!(key(b[..b.len() - 5].to_vec(), 3).is_some());
     assert!(key(Vec::new(), 3).is_some());
 }
 
 #[test]
 fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
-    let b = blocco2();
+    let b = block2();
     let n = b.len() as i64;
     let tims = [0, n, 2 * n, 3 * n, 4 * n];
     let whole: Vec<u8> = b.iter().copied().cycle().take(b.len() * 5).collect();
@@ -326,7 +326,7 @@ fn a_cut_tdf_bin_reads_whole_frames_and_counts_the_others() {
 
 #[test]
 fn the_mzml_of_a_cut_tdf_bin_carries_the_partial_read() {
-    let b = blocco2();
+    let b = block2();
     let n = b.len() as i64;
     let whole: Vec<u8> = b.iter().copied().cycle().take(b.len() * 5).collect();
     let conv = |bin: Vec<u8>| {
@@ -349,7 +349,7 @@ fn the_mzml_of_a_cut_tdf_bin_carries_the_partial_read() {
 fn no_truncation_of_a_folder_database_panics() {
     let t = minimal_tdf(3);
     for n in (0..t.len()).step_by(211) {
-        if let Ok(mut l) = mzlab_lettori::apri(folder(blocco2(), t[..n].to_vec()), &limits()) {
+        if let Ok(mut l) = mzlab_lettori::apri(folder(block2(), t[..n].to_vec()), &limits()) {
             let _ = l.index(0).map(|v| v.len());
             let _ = l.scan(0, 0);
         }
@@ -444,7 +444,7 @@ fn a_folder_missing_one_of_its_files_says_which() {
             e.params
         );
     }
-    let e = mzlab_lettori::apri(folder(blocco2(), Vec::new()), &limits())
+    let e = mzlab_lettori::apri(folder(block2(), Vec::new()), &limits())
         .err()
         .unwrap();
     assert!(

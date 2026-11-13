@@ -13,7 +13,7 @@ pub fn set_to(active_one: bool) {
 static ALLOC: AtomicU64 = AtomicU64::new(0);
 static LIBERE: AtomicU64 = AtomicU64::new(0);
 static BYTE: AtomicU64 = AtomicU64::new(0);
-static VIVI: AtomicUsize = AtomicUsize::new(0);
+static ALIVE: AtomicUsize = AtomicUsize::new(0);
 static PEAK: AtomicUsize = AtomicUsize::new(0);
 
 // SAFETY: every call forwards to `System` with the same layout; the counters are atomics.
@@ -25,7 +25,7 @@ unsafe impl GlobalAlloc for Tally {
             }
             ALLOC.fetch_add(1, Ordering::Relaxed);
             BYTE.fetch_add(l.size() as u64, Ordering::Relaxed);
-            let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
+            let v = ALIVE.fetch_add(l.size(), Ordering::Relaxed) + l.size();
             PEAK.fetch_max(v, Ordering::Relaxed);
             System.alloc(l)
         }
@@ -36,7 +36,7 @@ unsafe impl GlobalAlloc for Tally {
                 return System.dealloc(p, l);
             }
             LIBERE.fetch_add(1, Ordering::Relaxed);
-            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            ALIVE.fetch_sub(l.size(), Ordering::Relaxed);
             System.dealloc(p, l)
         }
     }
@@ -47,8 +47,8 @@ unsafe impl GlobalAlloc for Tally {
             }
             ALLOC.fetch_add(1, Ordering::Relaxed);
             BYTE.fetch_add(n as u64, Ordering::Relaxed);
-            let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
-            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            let v = (ALIVE.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
+            ALIVE.fetch_sub(l.size(), Ordering::Relaxed);
             PEAK.fetch_max(v, Ordering::Relaxed);
             System.realloc(p, l, n)
         }
@@ -90,7 +90,7 @@ impl std::ops::AddAssign for Alloc {
 
 /// Peak live heap in MB since the last call.
 pub fn heap_peak_mb() -> f64 {
-    PEAK.swap(VIVI.load(Ordering::Relaxed), Ordering::Relaxed) as f64 / 1048576.0
+    PEAK.swap(ALIVE.load(Ordering::Relaxed), Ordering::Relaxed) as f64 / 1048576.0
 }
 
 fn stat() -> Vec<String> {

@@ -7,7 +7,7 @@ use super::mzxml::number;
 use super::mzxml_scan::{attr, Head};
 
 /// Whether the file has the scan `id` (`scan=N`): the scans come in ascending number, so a bisection finds it.
-fn nel_file(index: &[ScanEntry], id: &str) -> bool {
+fn in_file(index: &[ScanEntry], id: &str) -> bool {
     let n = |s: &str| s.strip_prefix("scan=").and_then(|x| x.parse::<u64>().ok());
     let Some(want) = n(id) else { return false };
     index
@@ -38,7 +38,7 @@ pub(super) fn precursors_of(t: &Head, index: &[ScanEntry]) -> Vec<Precursore> {
                     .map(|(a, n)| vec![(a.to_string(), n.to_string())])
                     .unwrap_or_default(),
                 energy: None,
-                spectrum_ref: nel_file(index, &root).then_some(root),
+                spectrum_ref: in_file(index, &root).then_some(root),
             })
         })
         .collect();

@@ -397,10 +397,10 @@ impl Reader for AgilentReader {
     }
 
     fn not_carried(&self) -> &'static [(&'static str, &'static str)] {
-        use crate::conv::NON_DECODIFICATO;
+        use crate::conv::NOT_DECODED;
         &[(
             "sample type, GC method, effective values, quantification method and audit trail",
-            NON_DECODIFICATO,
+            NOT_DECODED,
         )]
     }
 

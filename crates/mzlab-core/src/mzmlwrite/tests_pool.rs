@@ -117,7 +117,7 @@ fn no_threads_and_an_empty_run_work() {
 }
 
 /// What the writer has written when the pool stopped: the file up to the first `n` spectra, never closed.
-fn fino_a(s: &[(Spectrum, SpectrumExtra)], n: usize, indexed: bool) -> Vec<u8> {
+fn up_to(s: &[(Spectrum, SpectrumExtra)], n: usize, indexed: bool) -> Vec<u8> {
     let mut w = apri(Options::default(), indexed, s.len());
     s[..n]
         .iter()
@@ -152,7 +152,7 @@ fn an_error_at_spectrum_1500_is_the_error_returned_and_the_file_is_not_closed() 
             ("err.test.injected", vec![("k", "1500".to_string())])
         );
         // nothing after the failed spectrum, nothing before it missing, and no closing tag
-        assert!(w.out == fino_a(&s, 1500, false), "threads={thread}");
+        assert!(w.out == up_to(&s, 1500, false), "threads={thread}");
         assert!(!String::from_utf8_lossy(&w.out).contains("</mzML>"));
     }
 }
@@ -187,7 +187,7 @@ fn the_first_error_in_the_order_wins_over_a_later_one_and_over_the_reader() {
         (e.key, e.params),
         ("err.test.injected", vec![("k", "120".to_string())])
     );
-    assert!(w.out == fino_a(&s, 120, true));
+    assert!(w.out == up_to(&s, 120, true));
 }
 
 #[test]
@@ -210,7 +210,7 @@ fn a_reader_error_is_returned_after_the_spectra_before_it() {
     });
     let e = w.spettri(to_read).unwrap_err();
     assert_eq!(e.key, "err.test.reader");
-    assert!(w.out == fino_a(&s, 200, false));
+    assert!(w.out == up_to(&s, 200, false));
 }
 
 #[test]
@@ -250,5 +250,5 @@ fn blocks_closed_by_points_write_the_same_bytes_and_stop_at_the_same_error() {
         .spectra_with(s.iter().cloned().map(Ok), &guasto)
         .unwrap_err();
     assert_eq!(e.key, "err.test.injected");
-    assert!(w.out == fino_a(&s, 41, false));
+    assert!(w.out == up_to(&s, 41, false));
 }

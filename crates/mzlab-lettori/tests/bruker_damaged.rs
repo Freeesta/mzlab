@@ -21,10 +21,10 @@ fn folder(bin: Vec<u8>, tdf: Vec<u8>) -> FileSet {
 
 #[test]
 fn a_frame_without_calibration_is_left_out_and_counted() {
-    let ok = mzlab_lettori::apri(folder(blocco2(), tdf_frames_cal(&[0], 3, 1)), &limits());
+    let ok = mzlab_lettori::apri(folder(block2(), tdf_frames_cal(&[0], 3, 1)), &limits());
     assert!(ok.is_ok(), "{:?}", ok.err().map(|e| e.key));
     // a run whose only frame has no usable calibration: nothing can be read, refused at open
-    let e = mzlab_lettori::apri(folder(blocco2(), tdf_frames_cal(&[0], 3, 7)), &limits())
+    let e = mzlab_lettori::apri(folder(block2(), tdf_frames_cal(&[0], 3, 7)), &limits())
         .err()
         .unwrap();
     assert_eq!(e.key, "err.file.brukerCalibration");
@@ -34,7 +34,7 @@ fn a_frame_without_calibration_is_left_out_and_counted() {
         e.params
     );
     // the middle one of three: its spectrum is left out (no m/z can be computed) and counted, the others are read
-    let b = blocco2();
+    let b = block2();
     let n = b.len() as i64;
     let whole = [b.clone(), b.clone(), b].concat();
     let tdf = db(&tdf_tables(&[0, n, 2 * n], 3, &[1, 7, 1]));
@@ -51,7 +51,7 @@ fn a_frame_without_calibration_is_left_out_and_counted() {
 #[test]
 fn an_undecodable_frame_is_zero_in_the_bpc() {
     // the second of three frames is not zstd: its spectrum fails (and is written with no points by a conversion), the BPC has 0 there
-    let b = blocco2();
+    let b = block2();
     let n = b.len() as i64;
     let mut bad = b.clone();
     for x in &mut bad[8..] {
@@ -78,7 +78,7 @@ fn a_damaged_side_table_is_named_and_the_run_is_read() {
         "CREATE TABLE GlobalMetadata (Key TEXT, Value TEXT)",
         page,
     ));
-    let mut l = mzlab_lettori::apri(folder(blocco2(), db(&tables)), &limits()).unwrap();
+    let mut l = mzlab_lettori::apri(folder(block2(), db(&tables)), &limits()).unwrap();
     assert_eq!(l.index(0).unwrap().len(), 1);
     assert_eq!(l.scan(0, 0).unwrap().mz.len(), 2);
     let doc = l.method(0).unwrap();
@@ -91,7 +91,7 @@ fn a_damaged_side_table_is_named_and_the_run_is_read() {
 #[test]
 fn a_cut_bin_and_a_frame_without_calibration_are_both_said() {
     // four frames: the second names an absent calibration, the copy of `tdf_bin` ends inside the fourth block
-    let b = blocco2();
+    let b = block2();
     let n = b.len() as i64;
     let bin: Vec<u8> = b.iter().copied().cycle().take(3 * b.len() + 9).collect();
     let tdf = db(&tdf_tables(&[0, n, 2 * n, 3 * n], 3, &[1, 7, 1, 1]));
@@ -111,7 +111,7 @@ fn a_cut_bin_and_a_frame_without_calibration_are_both_said() {
 #[test]
 fn a_damaged_page_of_frames_leaves_out_its_frames_and_counts_it() {
     // 300 frames span several leaves of `Frames` (pages 2, 3, ... under an interior root); the first leaf (page 2) gets a page type no SQLite page has
-    let b = blocco2();
+    let b = block2();
     let n = b.len() as i64;
     let tims: Vec<i64> = (0..300).map(|i| i * n).collect();
     let bin: Vec<u8> = b.iter().copied().cycle().take(300 * b.len()).collect();

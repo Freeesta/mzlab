@@ -218,7 +218,7 @@ fn node_pairs(ga: &Graph, gb: &Graph) -> Vec<(usize, usize, f64)> {
     })
 }
 
-fn c_formule(ga: &Graph, gb: &Graph, pairs: &[(usize, usize, f64)], body: &mut Out) -> bool {
+fn c_formulas(ga: &Graph, gb: &Graph, pairs: &[(usize, usize, f64)], body: &mut Out) -> bool {
     let (mut seen, mut different) = (0, 0);
     for &(i, j, _) in pairs {
         let (x, y) = (&ga.nodes[i].formula, &gb.nodes[j].formula);
@@ -275,7 +275,7 @@ pub fn compare(a: &str, b: &str) -> Result<String> {
     let oks = [
         c_nodes(&ga, &gb, &mut body),
         c_edges(&ga, &gb, &mut body),
-        c_formule(&ga, &gb, &pairs, &mut body),
+        c_formulas(&ga, &gb, &pairs, &mut body),
         c_entropy(&ga, &gb, &mut body),
         c_deviation(&pairs, &mut body),
     ];

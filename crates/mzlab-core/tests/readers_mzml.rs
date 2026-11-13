@@ -10,7 +10,7 @@ use mzlab_core::readers::{self, FileSet, Limits, Member};
 use mzlab_core::readers_mzml;
 
 #[test]
-fn agilent_through_lettore_gives_the_spectra_of_the_run() {
+fn agilent_through_the_reader_gives_the_spectra_of_the_run() {
     let (idx, peak) = encode(&sample());
     let want = {
         let d = AgilentD::open(

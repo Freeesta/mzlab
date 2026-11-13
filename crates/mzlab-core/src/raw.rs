@@ -199,11 +199,11 @@ pub fn instrument_method_text<R: Read + Seek>(mut source: R) -> Result<Option<St
 pub fn method<R: Read + Seek>(mut source: R, name: &str) -> Result<String> {
     let raw = open(&mut source)?;
     let notes = ScanNotes::of(&raw, &mut source);
-    Ok(metodo_sha1(&raw, &mut source, name, None, &notes))
+    Ok(method_sha1(&raw, &mut source, name, None, &notes))
 }
 
 /// The `metodo/1` document of an open `.raw`, with the SHA-1 of the file when the caller has it and the notes of its scans (`ScanNotes`).
-pub(crate) fn metodo_sha1<R: Read + Seek>(
+pub(crate) fn method_sha1<R: Read + Seek>(
     raw: &RawFileReader,
     source: &mut R,
     name: &str,

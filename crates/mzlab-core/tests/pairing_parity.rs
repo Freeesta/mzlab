@@ -86,7 +86,7 @@ fn parity_against_python_reference() {
 }
 
 /// A mutated implementation where the secondary tie-break criterion (ia) is inverted (descending).
-fn abbina_mutated_ia_descending(
+fn pair_mutated_ia_descending(
     mz_a: &[f64],
     rt_a: &[f64],
     mz_b: &[f64],
@@ -139,7 +139,7 @@ fn abbina_mutated_ia_descending(
 }
 
 /// A mutated implementation where the tertiary tie-break criterion (ib) is inverted (descending).
-fn abbina_mutated_ib_descending(
+fn pair_mutated_ib_descending(
     mz_a: &[f64],
     rt_a: &[f64],
     mz_b: &[f64],
@@ -203,7 +203,7 @@ fn mutational_test_inverted_ia_tie_break_fails() {
     let rt_b = [2.0];
 
     let correct = abbina(&mz_a, &rt_a, &mz_b, &rt_b, 5.0, 0.15);
-    let mutated = abbina_mutated_ia_descending(&mz_a, &rt_a, &mz_b, &rt_b, 5.0, 0.15);
+    let mutated = pair_mutated_ia_descending(&mz_a, &rt_a, &mz_b, &rt_b, 5.0, 0.15);
 
     assert_eq!(
         correct,
@@ -233,7 +233,7 @@ fn mutational_test_inverted_ib_tie_break_fails() {
     let rt_b = [2.0, 2.0];
 
     let correct = abbina(&mz_a, &rt_a, &mz_b, &rt_b, 5.0, 0.15);
-    let mutated = abbina_mutated_ib_descending(&mz_a, &rt_a, &mz_b, &rt_b, 5.0, 0.15);
+    let mutated = pair_mutated_ib_descending(&mz_a, &rt_a, &mz_b, &rt_b, 5.0, 0.15);
 
     assert_eq!(
         correct,

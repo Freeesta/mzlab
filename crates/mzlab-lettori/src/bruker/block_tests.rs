@@ -46,7 +46,7 @@ fn an_lzf_frame_keeps_its_empty_scans() {
         b.extend(u32::try_from(o).unwrap().to_le_bytes());
     }
     b.extend(&blob);
-    let p = decodifica1(&b, 2, 2, &Limits::default()).unwrap();
+    let p = decode1(&b, 2, 2, &Limits::default()).unwrap();
     assert_eq!(
         (p.start, p.tof, p.int),
         (vec![0, 0, 2], vec![0, 3], vec![5, 7])

@@ -96,7 +96,7 @@ fn scan(wide: Option<Vec<f64>>) -> Spectrum {
 fn the_scan_comes_back_equal_without_id_and_filter() {
     let s = scan(None);
     let b = encode_scansione(&s);
-    assert_eq!(b.len(), TESTA_SCANSIONE + 3 * 12);
+    assert_eq!(b.len(), SCAN_HEAD + 3 * 12);
     let d = decode_scansione(7, &b).unwrap();
     assert_eq!((d.id.as_str(), d.filter.as_str()), ("", ""));
     assert_eq!(
@@ -124,7 +124,7 @@ fn wide_intensities_stay_wide_only_when_needed() {
         ..scan(Some(w.clone()))
     };
     let b = encode_scansione(&s);
-    assert_eq!(b.len(), TESTA_SCANSIONE + 3 * 16);
+    assert_eq!(b.len(), SCAN_HEAD + 3 * 16);
     assert_eq!(decode_scansione(0, &b).unwrap().wide, Some(w));
     // 64-bit values that a 32-bit one holds exactly are not kept wide
     let exact = vec![1.5, 2.0, 3.0];

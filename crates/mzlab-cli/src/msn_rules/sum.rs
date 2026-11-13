@@ -14,7 +14,7 @@ const MIN_COUNT: usize = 20;
 /// A rule whose decoy rate is above this goes to priority 3.
 const MAX_RATE: f64 = 0.30;
 /// The coverage (c) of the true records must lose at most this share of itself against every decoy that applies, on average.
-const DIFFERENZA_MIN: f64 = 0.5;
+const MIN_DIFFERENCE: f64 = 0.5;
 /// A record with a smaller share of its intensity explained by sub-formulas (a) is nominal mass: counted apart, outside the 10 ppm test.
 const NOMINAL: f64 = 0.5;
 const DECOY: [&str; 3] = ["ds", "dp", "dl"];
@@ -128,7 +128,7 @@ fn write_layer(o: &mut Out, (layer_name, pol): &(String, i64), s: &Layer) {
         o.raw(",\"vero\":").num(r3(v)).raw(",\"decoy\":").num(r3(d));
         o.raw(",\"differenza\":").num(r3(v - d)).raw("}");
         if !c.is_empty() {
-            passes = Some(passes.unwrap_or(true) && v - d >= DIFFERENZA_MIN * v);
+            passes = Some(passes.unwrap_or(true) && v - d >= MIN_DIFFERENCE * v);
         }
     }
     o.raw("},\"soglia_copertura\":");
@@ -180,7 +180,7 @@ pub fn summed(text: &str) -> Result<String, String> {
     let mut o = Out::default();
     o.raw("{\"soglie\":{\"minime\":").int(MIN_COUNT as i64);
     o.raw(",\"tasso_max\":").num(MAX_RATE);
-    o.raw(",\"differenza_min\":").num(DIFFERENZA_MIN);
+    o.raw(",\"differenza_min\":").num(MIN_DIFFERENCE);
     o.raw("},\"saltati\":{");
     for (i, (k, n)) in skipped.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })

@@ -5,13 +5,13 @@ use std::path::PathBuf;
 
 use mzlab_target::{parse_rfc4180_str, parse_target_csv, validate_entries, AdductType, TargetList};
 
-fn path_sostanze_csv() -> PathBuf {
+fn substances_csv_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/data/liste/sostanze_hrms.csv")
 }
 
 #[test]
 fn test_loading_and_validation_of_645_substances() {
-    let path = path_sostanze_csv();
+    let path = substances_csv_path();
     assert!(path.exists(), "Target CSV file not found at {path:?}");
 
     let file = File::open(&path).expect("Failed to open target CSV");
@@ -34,7 +34,7 @@ fn test_loading_and_validation_of_645_substances() {
 
 #[test]
 fn test_handling_of_7_flagged_rows() {
-    let file = File::open(path_sostanze_csv()).expect("Failed to open target CSV");
+    let file = File::open(substances_csv_path()).expect("Failed to open target CSV");
     let entries = parse_target_csv(file).expect("Failed to parse target CSV");
     let list = TargetList::from_entries(entries);
 
@@ -80,7 +80,7 @@ fn test_handling_of_7_flagged_rows() {
 
 #[test]
 fn test_mz_index_search_and_adducts() {
-    let file = File::open(path_sostanze_csv()).expect("Failed to open target CSV");
+    let file = File::open(substances_csv_path()).expect("Failed to open target CSV");
     let entries = parse_target_csv(file).expect("Failed to parse target CSV");
     let list = TargetList::from_entries(entries);
 
@@ -146,7 +146,7 @@ fn test_rfc4180_parsing_edge_cases() {
 
 #[test]
 fn test_formula_mass_warnings() {
-    let entries = parse_target_csv(File::open(path_sostanze_csv()).unwrap()).unwrap();
+    let entries = parse_target_csv(File::open(substances_csv_path()).unwrap()).unwrap();
     assert!(validate_entries(&entries).warnings.is_empty());
 
     let base = entries[0].clone();

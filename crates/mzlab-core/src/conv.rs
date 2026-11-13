@@ -6,10 +6,10 @@ use crate::error::Result;
 use crate::readers::{Field, Reader};
 
 /// Reasons shared by the readers: one text each, so a module carries it once.
-pub const NON_DECODIFICATO: &str = "layout not decoded";
+pub const NOT_DECODED: &str = "layout not decoded";
 pub const WITHOUT_TERM: &str = "no mzML term";
-pub const IDENTITA: &str = "identity, kept out of the mzML";
-pub const IN_METODO: &str = "kept in metodo/1, not in the mzML";
+pub const IDENTITY: &str = "identity, kept out of the mzML";
+pub const IN_METHOD: &str = "kept in metodo/1, not in the mzML";
 pub const UNTRIED: &str = "no file at hand to validate";
 pub const OUT_OF_MODEL: &str = "outside the mzML model";
 
@@ -17,27 +17,27 @@ pub const OUT_OF_MODEL: &str = "outside the mzML model";
 pub const THERMO: &[(&str, &str)] = &[
     (
         "UV 3D field of a PDA detector (spectra per instant)",
-        NON_DECODIFICATO,
+        NOT_DECODED,
     ),
-    ("analog channels other than the pump pressure", IN_METODO),
-    ("status log series and error log", IN_METODO),
+    ("analog channels other than the pump pressure", IN_METHOD),
+    ("status log series and error log", IN_METHOD),
     ("tune block of LTQ and TSQ files", UNTRIED),
     (
         "embedded LC method of Dionex, EASY-nLC, Accela, Surveyor and ACQUITY",
-        IN_METODO,
+        IN_METHOD,
     ),
-    ("ion trap experiment settings (Scan Event N)", IN_METODO),
+    ("ion trap experiment settings (Scan Event N)", IN_METHOD),
 ];
 
 /// Gaps of the Agilent LC/MS readers.
 pub const AGILENT_EXT: &[(&str, &str)] = &[
     (
         "sample type, GC method, effective values, quantification method and audit trail",
-        NON_DECODIFICATO,
+        NOT_DECODED,
     ),
     (
         "DAD1 files, module traces (pressure, flow, temperature) and MSActual.bin",
-        IN_METODO,
+        IN_METHOD,
     ),
 ];
 

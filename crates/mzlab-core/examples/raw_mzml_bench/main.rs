@@ -224,7 +224,7 @@ fn file_sha256(p: &Path) -> String {
 }
 
 /// D11: the pieces of `mzlab-cli convert` that are not the writer, each timed alone with the code the CLI calls, to be added up against the whole.
-fn cli(src: &Source, a: &Args, intestazione_s: f64) -> Value {
+fn cli(src: &Source, a: &Args, header_s: f64) -> Value {
     let Origin::Raw(p) = &src.origin else {
         return json!({"saltato": "only for a real file"});
     };
@@ -271,7 +271,7 @@ fn cli(src: &Source, a: &Args, intestazione_s: f64) -> Value {
     json!({
         "sha256_ingresso_s": round_to(sha_in), "apertura_e_scrittura_indicizzata_s": round_to(sc), "sha256_uscita_s": round_to(sha_out),
         "hard_link_o_copia_s": round_to(place), "copia_dei_byte_s": round_to(copia), "apertura_sola_s": round_to(apri),
-        "testata_sha1_ingresso_e_metodo_s": round_to(intestazione_s), "byte_uscita": byte_out,
+        "testata_sha1_ingresso_e_metodo_s": round_to(header_s), "byte_uscita": byte_out,
         "somma_ipotesi_s": round_to(sum),
         "ipotesi": "SHA-256 of the input (fill_inputs) + open and indexed write (SHA-1 of the input and of the output inside) + SHA-256 of the output in keep() + link + SHA-256 of the output in item()",
         "scritture_giri_s": writing.iter().map(|g| round_to(g.s)).collect::<Vec<_>>(),
@@ -419,10 +419,10 @@ fn main() {
             ),
         );
     }
-    let mut denso_path = None;
+    let mut dense_path = None;
     if let Some((src, info)) = source(&a) {
         if let Origin::Denso(p) = &src.origin {
-            denso_path = Some(p.clone());
+            dense_path = Some(p.clone());
         }
         source_sections(
             &mut doc,
@@ -435,7 +435,7 @@ fn main() {
         );
     }
     if a.delete
-        && let Some(p) = denso_path
+        && let Some(p) = dense_path
     {
         let _ = std::fs::remove_file(p);
     }

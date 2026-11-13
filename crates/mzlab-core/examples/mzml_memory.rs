@@ -9,27 +9,27 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use mzlab_core::{mzidx, upload};
 
 struct Tally;
-static VIVI: AtomicUsize = AtomicUsize::new(0);
+static ALIVE: AtomicUsize = AtomicUsize::new(0);
 static PEAK: AtomicUsize = AtomicUsize::new(0);
 // SAFETY: forwards every call to the system allocator and only counts the bytes.
 unsafe impl GlobalAlloc for Tally {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
         unsafe {
-            let v = VIVI.fetch_add(l.size(), Ordering::Relaxed) + l.size();
+            let v = ALIVE.fetch_add(l.size(), Ordering::Relaxed) + l.size();
             PEAK.fetch_max(v, Ordering::Relaxed);
             System.alloc(l)
         }
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
         unsafe {
-            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            ALIVE.fetch_sub(l.size(), Ordering::Relaxed);
             System.dealloc(p, l)
         }
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
         unsafe {
-            let v = (VIVI.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
-            VIVI.fetch_sub(l.size(), Ordering::Relaxed);
+            let v = (ALIVE.fetch_add(n, Ordering::Relaxed) + n).saturating_sub(l.size());
+            ALIVE.fetch_sub(l.size(), Ordering::Relaxed);
             PEAK.fetch_max(v, Ordering::Relaxed);
             System.realloc(p, l, n)
         }
@@ -40,7 +40,7 @@ static A: Tally = Tally;
 
 /// Heap peak in MB since the last call.
 fn peak() -> f64 {
-    PEAK.swap(VIVI.load(Ordering::Relaxed), Ordering::Relaxed) as f64 / 1048576.0
+    PEAK.swap(ALIVE.load(Ordering::Relaxed), Ordering::Relaxed) as f64 / 1048576.0
 }
 
 /// Peak resident set of the process so far, in MB (`VmHWM`).

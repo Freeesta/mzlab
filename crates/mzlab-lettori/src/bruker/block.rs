@@ -113,8 +113,8 @@ pub fn decode(
     }
     let num_scans = ns;
     match kind {
-        2 => decodifica2(&block[8..], num_scans as usize, num_peaks as usize, limits),
-        1 => decodifica1(block, num_scans as usize, num_peaks as usize, limits),
+        2 => decode2(&block[8..], num_scans as usize, num_peaks as usize, limits),
+        1 => decode1(block, num_scans as usize, num_peaks as usize, limits),
         _ => Err(broken("unknown compression type")),
     }
 }
@@ -167,7 +167,7 @@ pub fn zstd(z: &[u8], expected: usize, limits: &Limits) -> Result<Vec<u8>> {
     Ok(inner)
 }
 
-fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks> {
+fn decode2(z: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks> {
     let words = ns
         .checked_add(np.checked_mul(2).ok_or_else(|| broken("peaks"))?)
         .ok_or_else(|| broken("peaks"))?;
@@ -207,7 +207,7 @@ fn decodifica2(z: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks>
     Ok(out)
 }
 
-fn decodifica1(b: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks> {
+fn decode1(b: &[u8], ns: usize, np: usize, limits: &Limits) -> Result<Peaks> {
     let tab = (ns + 1) * 4;
     let start = 8 + tab;
     if start > b.len() {

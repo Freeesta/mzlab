@@ -40,7 +40,7 @@ fn totals(sp: &Spectrum, extra: &SpectrumExtra) -> (f64, Option<(f64, f64)>) {
 }
 
 /// Room for the header of `sp`: the fixed elements, the filter and about 130 bytes for each parameter the reader gave.
-fn capacita_testa(sp: &Spectrum, extra: &SpectrumExtra) -> usize {
+fn head_capacity(sp: &Spectrum, extra: &SpectrumExtra) -> usize {
     #[cfg(feature = "precursori")]
     let n = extra.params.len()
         + extra.scan_params.len()
@@ -54,7 +54,7 @@ fn capacita_testa(sp: &Spectrum, extra: &SpectrumExtra) -> usize {
 /// The text of a spectrum up to its arrays (`<spectrum ...>` and every header element before `<binaryDataArrayList`): what `scantable` reads.
 pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) -> String {
     // a header is a few KB: one allocation instead of the doublings of a string that starts empty
-    let mut s = String::with_capacity(capacita_testa(sp, extra));
+    let mut s = String::with_capacity(head_capacity(sp, extra));
     spectrum_head_into(&mut s, index, sp, extra);
     s
 }
@@ -68,7 +68,7 @@ pub(crate) fn spectrum_head_into(
 ) {
     use std::fmt::Write;
     let (tic, base) = totals(sp, extra);
-    s.reserve(capacita_testa(sp, extra));
+    s.reserve(head_capacity(sp, extra));
     s.push_str("<spectrum index=\"");
     let _ = write!(s, "{index}\" id=\"");
     esc_into(s, &sp.id);

@@ -50,7 +50,7 @@ impl<M: ReadAt> Scansioni for M {
         if let (Some(_), Some((l, c))) = (sc.k, self.reader()) {
             return Ok((ReaderSource { l, c }.spettro(sc)?, None));
         }
-        spettro_e_mobilita(&read_line(self, sc)?)
+        spectrum_and_mobility(&read_line(self, sc)?)
     }
 
     fn scan_header(&mut self, sc: &Scan) -> Result<Vec<Field>> {
@@ -72,7 +72,7 @@ fn read_line<M: ReadAt + ?Sized>(m: &mut M, sc: &Scan) -> Result<Vec<u8>> {
 }
 
 /// The peaks and the ion mobility of the first spectrum in `buf`, from one parse.
-fn spettro_e_mobilita(buf: &[u8]) -> Result<(Peaks, Option<crate::mzml::Mobility>)> {
+fn spectrum_and_mobility(buf: &[u8]) -> Result<(Peaks, Option<crate::mzml::Mobility>)> {
     let (mut found, mut mob) = (None, None);
     crate::mzml::parse(buf, |it| match it {
         crate::mzml::Item::Spectrum(s) => {

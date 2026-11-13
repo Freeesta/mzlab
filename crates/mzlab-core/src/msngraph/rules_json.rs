@@ -13,7 +13,7 @@ fn list(o: &mut Out, v: &[&str]) {
     o.raw("]");
 }
 
-fn applicata_json(o: &mut Out, r: &Applicata) {
+fn applied_json(o: &mut Out, r: &Applicata) {
     o.raw("{\"id\":")
         .str(r.id)
         .raw(",\"formula\":")
@@ -43,7 +43,7 @@ fn edge_json(o: &mut Out, g: &Graph, i: usize, a: &EdgeVal) {
         .raw(",\"regole\":[");
     for (j, r) in a.rules.iter().enumerate() {
         o.raw(if j > 0 { "," } else { "" });
-        applicata_json(o, r);
+        applied_json(o, r);
     }
     o.raw("],\"composta\":[");
     for (j, (x, y)) in a.composta.iter().enumerate() {

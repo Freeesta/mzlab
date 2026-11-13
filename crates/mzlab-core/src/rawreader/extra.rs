@@ -114,12 +114,12 @@ pub(super) fn di_scansione(l: &mut RawReader, c: usize, k: usize, s: &Spectrum) 
     if l.one(c).is_err() {
         return SpectrumExtra::default();
     }
-    extra_di_scansione(l, k, s).unwrap_or_default()
+    scan_extra(l, k, s).unwrap_or_default()
 }
 
 /// What the mzML says of scan `k` besides its points. The parent of an MSn scan is the last scan of the level above that came before it (the "Master
 /// Index" of the trailer is not a scan number). `None` when the scan cannot be read: the writer then falls back to the plain precursor of the spectrum.
-fn extra_di_scansione(l: &mut RawReader, k: usize, s: &Spectrum) -> Option<SpectrumExtra> {
+fn scan_extra(l: &mut RawReader, k: usize, s: &Spectrum) -> Option<SpectrumExtra> {
     let idx = l.row(k).ok()?;
     let first = l.raw.run_header.sample_info.first_scan_number;
     let params = l.raw.scan_params(&mut l.src, first + idx);

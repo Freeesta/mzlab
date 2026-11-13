@@ -393,7 +393,7 @@ fn bruker_mutated() {
             "x.d/analysis.tdf".to_string(),
             common_sqlite::minimal_tdf(3),
         ),
-        ("x.d/analysis.tdf_bin".to_string(), common_sqlite::blocco2()),
+        ("x.d/analysis.tdf_bin".to_string(), common_sqlite::block2()),
     ];
     require_none(explore("bruker tdf", f.clone(), 0, false));
     require_none(explore("bruker bin", f, 1, false));

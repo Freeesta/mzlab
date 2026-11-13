@@ -10,7 +10,7 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::flow::Plan;
 use mzlab_core::hashio::hash_read_with;
 use mzlab_core::readers::{FileSet, Member};
-use mzlab_core::upload::{impronte_note, probe, Fingerprint};
+use mzlab_core::upload::{known_fingerprints, probe, Fingerprint};
 use mzlab_core::{Error, Result};
 
 use crate::flow::io;
@@ -127,7 +127,7 @@ pub(crate) fn known_prints(path: &Path) -> Result<Option<Vec<Fingerprint>>> {
     for (m, (sha256, sha1)) in fs.membri.iter_mut().zip(pairs) {
         values.push((sha256, sha1.unwrap_or_default(), probe(&mut m.dati, m.dim)?));
     }
-    Ok(impronte_note(&mut fs, &values))
+    Ok(known_fingerprints(&mut fs, &values))
 }
 
 /// SHA-256 of the lone files `digest` has hashed, by path, size and modification time: the `.mzidx` build takes its source's hash from here instead of reading the file again.

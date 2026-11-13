@@ -152,7 +152,7 @@ pub fn raw_zstd(d: &[u8]) -> Vec<u8> {
 }
 
 /// A codec-2 block of 2 scans: scan 0 has TOF 100 and 150, scan 1 has TOF 100.
-pub fn blocco2() -> Vec<u8> {
+pub fn block2() -> Vec<u8> {
     let words: [u32; 8] = [0, 4, 101, 10, 50, 20, 101, 5];
     let mut planes = Vec::new();
     for k in 0..4 {

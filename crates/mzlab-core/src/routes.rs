@@ -108,7 +108,7 @@ impl<R: ReadAt> Routes<R> {
             "/api/dda" => r.dda(q),
             "/api/dda_window" => r.dda_window(q),
             "/api/spectra" => r.spectra_profile(q),
-            "/api/msn_albero" => r.msn_albero_route(q),
+            "/api/msn_albero" => r.msn_tree_route(q),
             _ => Ok(None),
         })
     }

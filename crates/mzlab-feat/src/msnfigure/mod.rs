@@ -101,7 +101,7 @@ fn height(m: &Scatola, extra: f64) -> f64 {
 }
 
 /// The tree view: one column per level, rows of the height of their tallest box.
-fn dispone_albero(
+fn lay_out_tree(
     sc: &Scena,
     vis: &[usize],
     size: &HashMap<&str, (f64, f64)>,
@@ -258,7 +258,7 @@ fn dispone(sc: &Scena, vis: &[usize], view: View, extra: &dyn Fn(&Ion, &Pos) -> 
         })
         .collect();
     let (caselle, centro, anelli) = if view == View::Albero {
-        (dispone_albero(sc, vis, &size), (0.0, 0.0), Vec::new())
+        (lay_out_tree(sc, vis, &size), (0.0, 0.0), Vec::new())
     } else {
         lay_out_radial(sc, vis, &size)
     };
