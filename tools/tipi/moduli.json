@@ -164,6 +164,7 @@
     "../../mzlab/web/rust-opfs.js",
     "../../mzlab/web/rust-msngrafo.js",
     "../../mzlab/web/rust-masscal.js",
+    "../../mzlab/web/rust-ticfondo.js",
     "../../mzlab/web/rust-msngrafo-nativo.js",
     "../../mzlab/web/rust-msngrafo-pagina.js",
     "../../mzlab/web/rust-recycle.js",
