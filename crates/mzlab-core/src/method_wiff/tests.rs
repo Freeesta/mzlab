@@ -98,3 +98,13 @@ fn a_property_offset_past_4_gb_reads_nothing_on_every_target() {
     b[16..18].copy_from_slice(b"no");
     assert!(properties(&b).is_empty());
 }
+
+#[test]
+fn component_id_is_read_in_any_case_so_sciex_os_model_names_are_extracted() {
+    let cfg = "Mass Spectrometer: Config Table,Component Id: QTRAP 5500,Serial NUMBER: BH1234"
+        .to_string();
+    assert_eq!(field(&cfg, "Component ID:"), Some("QTRAP 5500"));
+    assert_eq!(field(&cfg, "Serial Number:"), Some("BH1234"));
+    assert_eq!(find_ci(b"Component Id:", b"COMPONENT id:"), Some(0));
+    assert_eq!(find_ci(b"abc", b"zz"), None);
+}

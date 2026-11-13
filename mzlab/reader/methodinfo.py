@@ -6,6 +6,7 @@ Values are 32-bit floats stored after the UTF-16 parameter name. Anything not re
 """
 from __future__ import annotations
 
+import itertools
 import re
 import struct
 import xml.etree.ElementTree as ET
@@ -108,7 +109,7 @@ def _experiments(ole: Ole, base: str) -> list[dict]:
     byte 240 (long layout) or 44 (short layout). Other layouts are reported without a range instead of guessing.
     """
     out = []
-    for i in range(16):
+    for i in itertools.count():  # every experiment the method stores, sixteen or more
         key = f"{base}DeviceMethod0/Period0/Experiment{i}/MassRangeEx/MassRangeEx"
         if key not in ole.streams:
             break
