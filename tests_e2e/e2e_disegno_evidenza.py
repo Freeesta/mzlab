@@ -53,6 +53,15 @@ try:
             want = pg.evaluate("['moiety', 'sites', 'cuts'].map(k => getComputedStyle(document.documentElement).getPropertyValue('--ev-' + k).trim())")
             assert all(want), want
             assert pg.evaluate(PAINTED) == [[want[0], 7, 7], [want[1], 2, 0], [want[2], 0, 1]], (pg.evaluate(PAINTED), want)
+            frames(pg, 6)                                                                       # painting fires no "change" that would clear it
+            assert len(pg.evaluate(PAINTED)) == 3, pg.evaluate(PAINTED)
+            assert pg.inner_text("#ev-status") == pg.evaluate("I18N.t('draw.ev.painted', {n: 3, total: 4})")
+            ev = "getComputedStyle(document.documentElement).getPropertyValue('--ev-moiety').trim()"
+            theme = pg.evaluate("document.documentElement.getAttribute('data-theme')")
+            pg.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
+            try: assert pg.evaluate(ev).lower() == "#56b4e9", pg.evaluate(ev)                  # lighter on a dark panel
+            finally: pg.evaluate(f"(t => t === null ? document.documentElement.removeAttribute('data-theme') : document.documentElement.setAttribute('data-theme', t))({json.dumps(theme)})")
+            assert pg.get_attribute("#ev-legend", "aria-label") == pg.evaluate("I18N.t('draw.ev.table.caption')")
             rows = pg.evaluate("[...document.querySelectorAll('#ev-legend li')].map(li => li.innerText)")
             assert len(rows) == 4 and rows[0].startswith(pg.evaluate("I18N.t('draw.ev.kind.moiety')")), rows
             assert pg.evaluate("I18N.t('draw.ev.skip.noMatch')") in rows[3], rows

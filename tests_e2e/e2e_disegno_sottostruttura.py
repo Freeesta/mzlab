@@ -42,7 +42,7 @@ try:
             row.click()
             assert pg.locator("#sub-card").is_visible()
             assert pg.inner_text("#sub-query") == pg.evaluate("I18N.t('draw.sub.query.whole', {n: 7})"), pg.inner_text("#sub-query")
-            assert pg.evaluate("document.activeElement && document.activeElement.id") == "sub-run"
+            pg.wait_for_function("document.activeElement && document.activeElement.id === 'sub-run'", timeout=5000)   # focused after the fold header
             text = search()
             assert pg.get_attribute("#sub-status", "role") == "status"
             n = pg.locator("#sub-list li").count()
@@ -63,6 +63,8 @@ try:
             painted = f"{KJ}.editor.highlights.getAll().map(x => x.highlight || x).map(x => [(x.atoms || []).length, (x.bonds || []).length])"
             pg.wait_for_function(f"JSON.stringify({painted}) === '[[7,7]]'", timeout=20000)    # the moiety coloured too (disegno-evidenza.js)
             assert pg.locator("#ev-card").is_visible()
+            frames(pg, 6)                                                                       # painting is no edit: no "change" clears the colours
+            assert pg.evaluate(f"JSON.stringify({painted})") == "[[7,7]]", pg.evaluate(painted)
             pg.click("#sub-back")
             pg.wait_for_function("document.querySelector('#sub-back').hidden", timeout=20000)
             pg.wait_for_function(f"{painted}.length === 0", timeout=20000)

@@ -180,8 +180,8 @@ async function fromMenu(/** @type {any} */ c) {
   saved = null; $("#sub-back").hidden = true;
   $("#sub-query").textContent = t(c.whole ? "draw.sub.query.whole" : "draw.sub.query.sel", { n: ids.length });
   $("#sub-list").textContent = ""; $("#sub-status").textContent = ""; $("#sub-table").hidden = true;
-  // a new card gets its fold header in a MutationObserver callback that moves the controls: open and focus it after that
-  await new Promise(r => setTimeout(r));
+  // a new card gets its fold header in a MutationObserver callback (a microtask, so before the next frame) that moves the controls: open and focus it after
+  await new Promise(r => requestAnimationFrame(() => r(null)));
   document.dispatchEvent(new CustomEvent("mzlab-card-open", { detail: box }));
   box.scrollIntoView({ block: "nearest" });
   $("#sub-run").focus();

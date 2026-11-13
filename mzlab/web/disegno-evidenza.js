@@ -22,13 +22,19 @@ function card() {
   if (c) return c;
   c = document.createElement("div");
   c.className = "card"; c.id = "ev-card"; c.hidden = true;
-  c.innerHTML = '<h2 data-i18n="draw.ev.heading"></h2><p class="rq-d" data-i18n="draw.ev.intro"></p>'
+  c.innerHTML = '<h2 data-i18n="draw.ev.heading"></h2>'
     + '<div id="ev-status" class="sm" role="status"></div><ul id="ev-legend" class="sm"></ul>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="sm" id="ev-table" data-i18n="draw.ev.table"></button>'
     + '<button type="button" class="sm" id="ev-clear" data-i18n="draw.ev.clear"></button></div>';
   c.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = t(/** @type {string} */ (e.getAttribute("data-i18n"))); });
+  /** @type {HTMLElement} */ (c.querySelector("#ev-legend")).setAttribute("aria-label", t("draw.ev.table.caption"));
   const css = document.createElement("style");
-  css.textContent = ":root{--ev-moiety:#0072B2;--ev-sites:#009E73;--ev-cuts:#D55E00}"
+  // Okabe-Ito on the light canvas; lighter ones on a dark panel and stronger ones in high contrast, with the same selectors as app.css
+  const light = "--ev-moiety:#0072B2;--ev-sites:#009E73;--ev-cuts:#D55E00", dark = "--ev-moiety:#56B4E9;--ev-sites:#33C69B;--ev-cuts:#F07F4A";
+  css.textContent = `:root{${light}}@media (prefers-color-scheme:dark){:root:not([data-theme=light]){${dark}}}:root[data-theme=dark]{${dark}}`
+    + ":root[data-a11y-bg=hc][data-theme=light],:root[data-a11y-bg=hc]:not([data-theme=dark]){--ev-moiety:#005A8C;--ev-sites:#00664A;--ev-cuts:#A63A00}"
+    + ":root[data-a11y-bg=hc][data-theme=dark]{--ev-moiety:#8FD0FF;--ev-sites:#6EE7A8;--ev-cuts:#FFA070}"
+    + "@media (forced-colors:active){#ev-legend .ev-sw{forced-color-adjust:none;border-color:CanvasText}}"
     + "#ev-legend{list-style:none;padding:0;margin:4px 0}#ev-legend li{margin:2px 0;display:flex;gap:6px;align-items:center}"
     + "#ev-legend .ev-sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid var(--line);flex:none}"
     + "#ev-card button{min-height:24px;min-width:24px}";
@@ -64,7 +70,7 @@ function dataTable() {
     for (const [a, b] of l.bonds) rows.push([kind, label, t("draw.ev.bond"), last.name(a) + "–" + last.name(b)]);
     if (!l.atoms.length && !l.bonds.length) rows.push([kind, label, "—", t(SKIP[l.skip] || SKIP.noMatch)]);
   }
-  /** @type {any} */ (window).TDATI.table({ title: t("draw.ev.table.caption"), head: [t("draw.ev.col.kind"), t("draw.ev.col.label"), t("draw.ev.col.what"), t("draw.ev.col.where")], rows, note: t("draw.ev.note") });
+  /** @type {any} */ (window).TDATI.table({ title: t("draw.ev.table.caption"), head: [t("draw.ev.col.kind"), t("draw.ev.col.label"), t("draw.ev.col.what"), t("draw.ev.col.where")], rows });
 }
 
 /** removes the colours (the drawing is left as it is) */
@@ -98,7 +104,8 @@ export async function highlight(/** @type {any[]} */ layers) {
     }
     last = { r, name: (/** @type {number} */ i) => (st.atoms.get(ids[i]).label || "") + (i + 1) };
     legend(r);
-    status.textContent = t(world === "lr" ? "draw.ev.done.lr" : "draw.ev.done");
+    const n = r.layers.filter((/** @type {any} */ l) => !l.skip).length;
+    status.textContent = world === "lr" ? t("draw.ev.done.lr") : t("draw.ev.painted", { n, total: r.layers.length });
     if (!listening) {
       listening = true;
       K.editor.subscribe("change", () => { if (painted) clear().catch(() => { /* the canvas went away */ }); });
