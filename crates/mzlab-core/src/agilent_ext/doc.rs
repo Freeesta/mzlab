@@ -259,7 +259,7 @@ fn raw_texts(d: &AgilentD) -> Vec<V> {
     out
 }
 
-/// The blocks the reader keeps only as bytes and SHA-1 (`undecoded bytes` in the metadata).
+/// The blocks the reader keeps only as bytes and SHA-1 (`undecoded bytes` in the metadata), then what was left out (`AgilentD::notes`).
 fn warnings(d: &AgilentD) -> Vec<V> {
     let mut seen: Vec<&str> = Vec::new();
     for i in d.metadata.iter().filter(|i| i.name == "undecoded bytes") {
@@ -267,14 +267,10 @@ fn warnings(d: &AgilentD) -> Vec<V> {
             seen.push(&i.origin);
         }
     }
-    seen.into_iter()
-        .filter_map(|o| {
-            obj(vec![
-                ("chiave", Some(V::s("meta.nonDecodificato"))),
-                ("dove", text(o)),
-            ])
-        })
-        .collect()
+    let note = |k: &str, o: &str| obj(vec![("chiave", Some(V::s(k))), ("dove", text(o))]);
+    let undecoded = seen.into_iter().map(|o| note("meta.nonDecodificato", o));
+    let left_out = d.notes.iter().map(|o| note("meta.danneggiato", o));
+    undecoded.chain(left_out).flatten().collect()
 }
 
 impl AgilentD {
