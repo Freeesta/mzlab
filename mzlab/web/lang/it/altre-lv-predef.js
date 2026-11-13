@@ -122,6 +122,7 @@ I18N.add("it", {
   "msg.xic": "Scrivi un m/z qui sopra, oppure clic destro su un picco dello spettro.",
   "msg.chrom": "Nessun file visibile (o nessun cromatogramma in questo tipo di file).",
   "msg.mrm": "Nessun file MRM visibile.",
+  "msg.noFiles": "Nessun file di questo tipo di esperimento è mostrato.",
   "map.sc.sqrt": "radice",
   "map.sc.lin": "lineare",
   "map.sc.log": "log",

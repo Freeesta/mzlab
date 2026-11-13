@@ -34,7 +34,7 @@ I18N.add("it", {
   "ctl.cpar.titleMap": "Scala e palette dei colori, soglia del rumore, normalizzazione e differenza",
   "ctl.spec.overlayMs2": "MS²: un solo file per grafico (apri un altro pannello per confrontare).",
   "ctl.files.one": "Hai caricato un solo file di questo tipo di esperimento.",
-  "ctl.files.title": "File mostrati in tutti i grafici, come la lista a sinistra",
+  "ctl.files.title": "File di questo tipo di esperimento: mostrati / caricati",
   "ctl.files": "{n}/{tot} ▾",
   "ctl.ms2scans": "MS2",
   "ctl.kind.title": "Tipo di cromatogramma",
