@@ -1,4 +1,4 @@
-//! Parity tests for `mzlab_core::pairing` against Python reference (`tools/abbina_riferimento.py`).
+//! Parity tests for `mzlab_core::pairing` against Python reference (`tools/match_reference.py`).
 //!
 //! Verifies 100% agreement on synthetic test cases (empty lists, boundary values, exact ties,
 //! greedy contention, and seeded pseudo-random distributions) and includes mutational tests
@@ -36,7 +36,7 @@ fn to_usize_vec(val: &Value) -> Vec<usize> {
 #[test]
 fn parity_against_python_reference() {
     let out = std::env::temp_dir().join(format!("mzlab_abbina_{}.json", std::process::id()));
-    let script = root().join("tools/abbina_riferimento.py");
+    let script = root().join("tools/match_reference.py");
     let run = Command::new("python3").arg(&script).arg(&out).output();
 
     let ok = matches!(run, Ok(ref o) if o.status.success());
@@ -44,7 +44,7 @@ fn parity_against_python_reference() {
     if !ok {
         assert!(
             std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
-            "python3 tools/abbina_riferimento.py failed to run"
+            "python3 tools/match_reference.py failed to run"
         );
         eprintln!("python3 or numpy not available: skipping python reference check");
         return;

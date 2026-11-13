@@ -33,7 +33,7 @@ from datetime import datetime, timedelta, timezone
 
 import ci_metrics_data as dati_ci
 import ci_metrics_file as file_ci
-import ci_metrics_giorno as giorno_ci
+import ci_metrics_day as giorno_ci
 from ci_metrics_file import active, branch_events, leggi, read_all, segmenti  # noqa: F401
 
 # Estimated minutes lost for the events that have no measured duration (printed with the summary).

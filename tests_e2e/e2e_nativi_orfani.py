@@ -1,4 +1,4 @@
-"""Members of a maker's file left in the browser storage by a copy that never finished (a tab closed during a .wiff upload, synthetic tools/wiff_misto.py
+"""Members of a maker's file left in the browser storage by a copy that never finished (a tab closed during a .wiff upload, synthetic tools/wiff_mixed.py
 pair and stand-in members; no laboratory data): at the next start the engine removes the `nat~` members no sample points to and says «loading of X was
 interrupted, load it again»; members another tab is still copying (it holds the Web Lock "mzlab-nat:<dataset>") stay; with no such members nothing is
 said; the samples already loaded keep their members and stay readable.
@@ -14,7 +14,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e)[:900]))
 
 D = Path(tempfile.mkdtemp(prefix="nat_orfani_"))
-subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto.py"), str(D)], check=True, capture_output=True)
+subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed.py"), str(D)], check=True, capture_output=True)
 PAIR = [str(D / "misto.wiff"), str(D / "misto.wiff.scan")]
 N = len(json.loads((D / "tipi.json").read_text()))
 INIT = "try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"

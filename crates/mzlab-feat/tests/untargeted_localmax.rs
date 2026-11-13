@@ -1,4 +1,4 @@
-//! Local-maximum mass detector: parity with the independent numpy reference (`tools/localmax_riferimento.py`) and small hand cases.
+//! Local-maximum mass detector: parity with the independent numpy reference (`tools/localmax_reference.py`) and small hand cases.
 
 use mzlab_feat::untargeted::localmax::{detect, max_mz_gap, Params};
 use mzlab_feat::untargeted::smooth::Method;

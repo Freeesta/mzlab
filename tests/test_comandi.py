@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "mzlab" / "web"
 sys.path.insert(0, str(ROOT / "tools"))
 pytestmark = pytest.mark.skipif(not shutil.which("node"), reason="node not available")
-import doc_comandi  # noqa: E402
+import doc_commands  # noqa: E402
 
 TO_PORT_MAX = 0      # only goes down: porting an action lowers it
 UNDO = {"istantanea", "comando", "tolto", "layout", "flow", "draw", "da-portare", "nessuna"}
@@ -20,13 +20,13 @@ SOURCES = [f for f in WEB.glob("*.js") if f.name not in ("comandi.js", "storia.j
 
 
 def rows():
-    return doc_comandi.tabella()
+    return doc_commands.tabella()
 
 
 def test_table_well_formed():
     ids = [r["id"] for r in rows()]
     assert len(ids) == len(set(ids)), "duplicate id"
-    it, en = doc_comandi.etichette("it"), doc_comandi.etichette("en")
+    it, en = doc_commands.etichette("it"), doc_commands.etichette("en")
     for r in rows():
         assert re.fullmatch(r"[a-z]+(\.[a-zA-Z]+)+", r["id"]), r["id"]
         assert r["annulla"] in UNDO, r["id"]
@@ -77,4 +77,4 @@ def test_to_port_count_never_grows():
 
 
 def test_page_up_to_date():
-    assert doc_comandi.OUT.exists() and doc_comandi.OUT.read_text(encoding="utf-8") == doc_comandi.pagina(), "run python3 tools/doc_comandi.py"
+    assert doc_commands.OUT.exists() and doc_commands.OUT.read_text(encoding="utf-8") == doc_commands.pagina(), "run python3 tools/doc_commands.py"

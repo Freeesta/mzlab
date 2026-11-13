@@ -1,4 +1,4 @@
-"""Flow «This browser» runs export.annotations@1 (flow/lazy/flow-web-export-annot.js, `flow_export_annot` of the `flowtab` .wasm): over the synthetic identity series (tools/feat_sintetici.py), a small MSP
+"""Flow «This browser» runs export.annotations@1 (flow/lazy/flow-web-export-annot.js, `flow_export_annot` of the `flowtab` .wasm): over the synthetic identity series (tools/feat_synthetic.py), a small MSP
 library and a suspect list made here, the plan detect → align → gap filling → spectra.ms2 → spectra.match → formula.ms1 → screen.suspects → annot.level → export.annotations goes to `mzlab-cli flow run`, and the CSV
 the browser keeps is the native file byte for byte (same SHA-256); every job is `done` with `via: "browser"`, a second run takes the CSV from OPFS (`reused`), no request is left unserved (`MZLAB_LR_MISS`),
 and the semicolon variant of the same plan changes only the separator. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
@@ -56,7 +56,7 @@ if not (site / "static" / "wasm-lib" / "mzlab_lib_wasm.js").exists():
         subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm"], cwd=ROOT, check=True, capture_output=True)
         subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(site / "static" / "wasm-lib"), "target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm"], cwd=ROOT, check=True)
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_sintetici.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_synthetic.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
 run = tmp / "run"; run.mkdir()
 for n in NAMES: shutil.copy2(ser / "identita" / (n + ".mzML"), run / (n + ".mzML"))
 (run / "samples.json").write_text(SAMPLES)

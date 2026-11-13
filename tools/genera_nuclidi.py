@@ -3,14 +3,14 @@ and the mass number of its monoisotopic isotope (the most abundant natural one; 
 Rf to Mt, whose longest-lived isotope OpenChemLib does not list, are left out). Only the isotopes within WINDOW mass numbers of the natural ones (of the monoisotopic
 one for the elements without a stable isotope) are kept: the labels people draw (2H, 3H, 11C, 14C, 18F, 32P, 123I to 131I, 137Cs, 99Tc) and a grafo .wasm that stays small.
 
-Sources, already in the program: exact masses from the isotope table inside OpenChemLib (tools/genera_elementi.py `ocl_masses`); natural abundances from
+Sources, already in the program: exact masses from the isotope table inside OpenChemLib (tools/generate_elements.py `ocl_masses`); natural abundances from
 `AB` there; the mass numbers of the elements outside `AB` are typed below (IUPAC/CIAAW most abundant isotope, or the conventional longest-lived one).
 A mass is stored as mass - A in units of 1e-9 u (an i32: the 9 decimals of OpenChemLib, exactly).
 Run from the project root:  python3 tools/genera_nuclidi.py   (no rustfmt: the table is `rustfmt::skip`, sixteen values per line)
 """
 from pathlib import Path
 
-from genera_elementi import AB, SYMBOLS, ocl_masses
+from generate_elements import AB, SYMBOLS, ocl_masses
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "crates" / "mzlab-core" / "src" / "nuclides.rs"

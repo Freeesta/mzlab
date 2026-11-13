@@ -126,12 +126,12 @@ fn verify_ramp_case(case: &Value, tol: f64) {
 fn source_ramp_python_parity() {
     let out = std::env::temp_dir().join(format!("mzlab_source_ramp_{}.json", std::process::id()));
     let status = Command::new("python3")
-        .arg(root().join("tools/source_ramp_riferimento.py"))
+        .arg(root().join("tools/source_ramp_reference.py"))
         .arg(&out)
         .status();
 
     let ok = status.map(|s| s.success()).unwrap_or(false);
-    assert!(ok, "failed to run tools/source_ramp_riferimento.py");
+    assert!(ok, "failed to run tools/source_ramp_reference.py");
 
     let content = std::fs::read_to_string(&out).expect("failed to read reference JSON");
     let _ = std::fs::remove_file(&out);

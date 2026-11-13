@@ -1,4 +1,4 @@
-//! `/api/msntree` from the index and the mzML (`Routes::mzml_route`) against `dispatch` of Python (`tools/msntree_rotta_riferimento.py`): the same
+//! `/api/msntree` from the index and the mzML (`Routes::mzml_route`) against `dispatch` of Python (`tools/msntree_route_reference.py`): the same
 //! tree (numbers within 1e-9) and the same error keys. `MZLAB_MSN_DIR` names a folder already written by the reference (a real file); without it the
 //! reference runs on a synthetic infusion. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -45,7 +45,7 @@ fn msntree_route_like_python() {
         Err(_) => {
             let out = std::env::temp_dir().join(format!("mzlab-msntree-route-{}", std::process::id()));
             let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-            let run = Command::new("python3").current_dir(&root).arg("tools/msntree_rotta_riferimento.py").arg(&out).output();
+            let run = Command::new("python3").current_dir(&root).arg("tools/msntree_route_reference.py").arg(&out).output();
             if !matches!(&run, Ok(o) if o.status.success()) {
                 assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");
                 eprintln!("python3/numpy not available: test skipped");

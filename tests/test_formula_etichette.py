@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
-import lang_catalogo  # noqa: E402
+import lang_catalog  # noqa: E402
 BARE = re.compile(r'"(?:formula|Formula)"')
 
 
@@ -36,7 +36,7 @@ def test_tabui_headers_and_labels_have_no_bare_formula():
 
 def test_catalog_labels_have_no_bare_formula():
     for lang in ("it", "en"):
-        t = lang_catalogo.testo(lang)
+        t = lang_catalog.testo(lang)
         for k in ("lst.col.formula", "cx.formula", "fair.formulaOpt"):
             m = re.search(r'"%s": *"([^"]*)"' % re.escape(k), t)
             assert m and m.group(1).strip().lower() not in ("formula", "formula (optional)", "formula (facoltativa)"), (lang, k)

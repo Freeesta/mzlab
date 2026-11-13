@@ -1,4 +1,4 @@
-"""tools/metriche_trend.py with a synthetic history: flattening, the 7/30 day comparison, noise threshold, text and HTML report."""
+"""tools/metrics_trend.py with a synthetic history: flattening, the 7/30 day comparison, noise threshold, text and HTML report."""
 import json
 import re
 import sys
@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import metriche as m  # noqa: E402
-import metriche_trend as t  # noqa: E402
+import metrics_trend as t  # noqa: E402
 
 T0 = datetime(2026, 9, 1, tzinfo=timezone.utc)
 

@@ -1,5 +1,5 @@
 //! `project::guess_sample` and `project::guess_conc` answer like `mzlab/project.py` on ~36000 generated file names
-//! (`tools/project_riferimento.py`). Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
+//! (`tools/project_reference.py`). Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
 
@@ -17,7 +17,7 @@ fn root() -> PathBuf {
 fn names_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab_project_{}.json", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/project_riferimento.py"))
+        .arg(root().join("tools/project_reference.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())

@@ -2,7 +2,7 @@
 // @ts-check
 // Registry of the actions of the Dati view that change state (one row per action) and the way to make them undoable: an action runs through
 // COMANDI.fai / COMANDI.inizia, which takes a small snapshot before and after and records ONE step in the stack of storia.js (STORIA).
-// The table is the only source of docs/azioni.md (python3 tools/doc_comandi.py) and of the guards of tests/test_comandi.py. Classic script, loaded before storia.js.
+// The table is the only source of docs/azioni.md (python3 tools/doc_commands.py) and of the guards of tests/test_comandi.py. Classic script, loaded before storia.js.
 //   id        = module.action          nome = i18n key of the label shown in «Undone: …»      modulo = file that owns the action
 //   dove      = every file that changes the fields (the test refuses an assignment to a registered field in another file)
 //   campi     = the state fields it changes     parametri = what the user chooses       tasto = shortcut      unisci = how drags / bursts become one step

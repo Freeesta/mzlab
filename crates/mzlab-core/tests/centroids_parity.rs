@@ -1,4 +1,4 @@
-//! `centroidi` answers like `tools/centroidi_riferimento.py`: same number of centroids, same flags, m/z and values within 1e-9 relative, and the same
+//! `centroidi` answers like `tools/centroids_reference.py`: same number of centroids, same flags, m/z and values within 1e-9 relative, and the same
 //! estimated parameters. Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -46,7 +46,7 @@ fn params(v: &Value) -> Params {
 fn centroids_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab_centroidi_{}.json", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/centroidi_riferimento.py"))
+        .arg(root().join("tools/centroids_reference.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())

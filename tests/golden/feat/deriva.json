@@ -1,5 +1,5 @@
 {
- "_note": "Answers of tools/deriva_riferimento.py for crates/mzlab-feat/src/drift.rs; invented numbers.",
+ "_note": "Answers of tools/drift_reference.py for crates/mzlab-feat/src/drift.rs; invented numbers.",
  "files": [
   {
    "kind": "qc",

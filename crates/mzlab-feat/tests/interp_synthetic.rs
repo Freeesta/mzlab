@@ -1,4 +1,4 @@
-//! The interpretation of the rows (`interp/1`) over the synthetic identity series (invented molecules, `tools/feat_sintetici.py`): the block is written
+//! The interpretation of the rows (`interp/1`) over the synthetic identity series (invented molecules, `tools/feat_synthetic.py`): the block is written
 //! into the `.mzfeat`, read back by row, the table still reads, and the MS2 scans of a product are linked with their purity. Skipped without python3 and
 //! numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -29,7 +29,7 @@ fn series() -> Option<PathBuf> {
     let out = std::env::temp_dir().join(format!("mzlab_feat_interp_{}", std::process::id()));
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let ok = Command::new("python3")
-        .arg(root.join("tools/feat_sintetici.py"))
+        .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
         .args(["--solo", "identita"])
         .output()

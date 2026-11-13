@@ -1,5 +1,5 @@
 """«Download .mzML» of a sample the readers module converted at the loading (shell.js `moduloToMzml`) follows the format picked in the menu: the second sample of
-`mistopi` (tools/wiff_misto_pi.py: a product-ion scan only the `sciex` module reads) is saved as mzML and as mzML + Numpress, and each file is byte for byte the one
+`mistopi` (tools/wiff_mixed_pi.py: a product-ion scan only the `sciex` module reads) is saved as mzML and as mzML + Numpress, and each file is byte for byte the one
 of `mzlab-cli convert --compression C` (conv.dad false: the optical matrix of the file of the loading is for the UV panel only). Needs cargo, the site, the engine .wasm and the `sciex`
 module: python3 tools/prepara_sito.py, tools/build_lettori_wasm.sh site/static."""
 import os, socket, subprocess, sys, tempfile
@@ -17,7 +17,7 @@ if not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists() or not (RO
     print("  ", ("site", "FAIL site/, its engine or the readers modules not built: python3 tools/prepara_sito.py; tools/build_lettori_wasm.sh site/static")); sys.exit(0)
 
 D = Path(tempfile.mkdtemp(prefix="numpress_modulo_"))
-subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto_pi.py"), str(D)], check=True, capture_output=True)
+subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed_pi.py"), str(D)], check=True, capture_output=True)
 PAIR = [D / "mistopi.wiff", D / "mistopi.wiff.scan"]
 cli = {}
 for k in ("standard", "smallest"):

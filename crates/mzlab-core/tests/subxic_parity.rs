@@ -1,4 +1,4 @@
-//! `subxic::subxic` answers like `api.dispatch` on `/api/subxic` (`tools/subxic_riferimento.py`, two synthetic high-resolution DDA files): the same
+//! `subxic::subxic` answers like `api.dispatch` on `/api/subxic` (`tools/subxic_reference.py`, two synthetic high-resolution DDA files): the same
 //! rows in the same order, numbers within 1e-9; the requests Python refuses are Python's here too (`None`). Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_SUBXIC_DIR` = a folder already written by the script (e.g. from real files).
 
@@ -42,7 +42,7 @@ fn subxic_like_python() {
     let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-subxic-{}", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/subxic_riferimento.py").arg(&out).output(),
+        None => Command::new("python3").current_dir(root()).arg("tools/subxic_reference.py").arg(&out).output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");

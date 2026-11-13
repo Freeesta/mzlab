@@ -1,4 +1,4 @@
-//! A sample without a `MethodN` of its own borrows the method before it only when that method acquires what its blocks hold (`tools/wiff_misto.py`):
+//! A sample without a `MethodN` of its own borrows the method before it only when that method acquires what its blocks hold (`tools/wiff_mixed.py`):
 //! the MRM sample s3 keeps its transitions next to the product-ion Method2, the scan sample s6 reads its scans as the MS2 of Method5.
 //! Skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -11,7 +11,7 @@ use mzlab_core::wiff::{container, Wiff};
 #[test]
 fn a_sample_borrows_only_a_method_that_fits_its_blocks() {
     let out = std::env::temp_dir().join(format!("mzlab_wiff_prestito_{}", std::process::id()));
-    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_misto.py");
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_mixed.py");
     let ok = Command::new("python3")
         .arg(script)
         .arg(&out)

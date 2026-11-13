@@ -169,7 +169,7 @@ def test_points_section_shape():
 
 
 def test_rust_json_is_generated_from_the_data_file():
-    out = subprocess.run(["python3", str(WEB.parent.parent / "tools" / "esporta_livelli.py"), "--controlla"], capture_output=True, encoding="utf-8")
+    out = subprocess.run(["python3", str(WEB.parent.parent / "tools" / "export_levels.py"), "--controlla"], capture_output=True, encoding="utf-8")
     assert out.returncode == 0, out.stderr
 
 

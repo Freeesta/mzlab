@@ -4,11 +4,11 @@
     python3 tools/metriche.py --registra --sito SITE --dati DIR [--sha SHA] [--ci]   # measure and append one line to DIR/metriche-YYYY-MM.jsonl
     python3 tools/metriche.py --aggiungi nome=valore ... --dati DIR [--sha SHA]       # hand-measured numbers (private-data benches) for a commit
     python3 tools/metriche.py --bench FILE.json ...                                    # synthetic bench numbers {name: number} with --registra/--aggiungi
-    python3 tools/metriche.py --copilot [--giorni N] --dati DIR                          # Copilot and chat PR rows (tools/metriche_copilot.py)
-    python3 tools/metriche.py --rapporto [--dati DIR] [--html FILE]                    # trend table and HTML page (tools/metriche_trend.py)
+    python3 tools/metriche.py --copilot [--giorni N] --dati DIR                          # Copilot and chat PR rows (tools/metrics_copilot.py)
+    python3 tools/metriche.py --rapporto [--dati DIR] [--html FILE]                    # trend table and HTML page (tools/metrics_trend.py)
 
 A line is `{v, sha, ts, part, ...}`; a commit may have several lines (parts `site`, `ci`, `manual`) and readers merge them by sha
-(`read_commit`). Lines are only appended; the data live on the branch `stat-ci`, never in main. The report is tools/metriche_trend.py."""
+(`read_commit`). Lines are only appended; the data live on the branch `stat-ci`, never in main. The report is tools/metrics_trend.py."""
 from __future__ import annotations
 
 import argparse
@@ -108,7 +108,7 @@ def copilot_rows(data: str) -> list[dict]:
 
 def record_copilot(data: str, api, giorni: int = 14, root: Path = ROOT, now: datetime | None = None) -> int:
     """Append a row for every PR closed in the last `giorni` days that has none yet (Copilot PRs and our chat PRs, the baseline)."""
-    import metriche_copilot as mcp
+    import metrics_copilot as mcp
     now = now or datetime.now(timezone.utc)
     known = {r["pr"]: r for r in copilot_rows(data)}
     wf = mcp.secret_workflows(root)
@@ -157,7 +157,7 @@ def read_commit(data: str) -> list[dict]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--registra", action="store_true", help="measure the commit and append the lines")
-    ap.add_argument("--aggiungi", nargs="+", metavar="NAME=VALUE", help="hand-measured numbers (e.g. bench_mappa on hrc) for the commit")
+    ap.add_argument("--aggiungi", nargs="+", metavar="NAME=VALUE", help="hand-measured numbers (e.g. bench_map on hrc) for the commit")
     ap.add_argument("--bench", metavar="FILE", help="JSON {name: number} of synthetic bench results")
     ap.add_argument("--sito", help="built site directory (static/ with the .wasm files)")
     ap.add_argument("--ci", action="store_true", help="also read the CI facts of the commit from the GitHub API")
@@ -169,10 +169,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dati", default="metriche", help="directory with the monthly files (the worktree of stat-ci)")
     a = ap.parse_args(argv)
     if a.rapporto:
-        import metriche_trend as t
+        import metrics_trend as t
         rows = t.analyse(read_commit(a.dati))
         print(t.text_report(rows))
-        import metriche_copilot as mcp
+        import metrics_copilot as mcp
         print("\n" + mcp.summary(copilot_rows(a.dati)))
         if a.html:
             Path(a.html).write_text(t.html_report(rows, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")), encoding="utf-8")
@@ -193,9 +193,9 @@ def main(argv: list[str] | None = None) -> int:
             sections["bench"] = load_bench(a.bench, [])
         righe.append(riga("site", sha, ts, **sections))
         if a.ci:
-            import metriche_ci
+            import metrics_ci
             from ci_metrics import api_get
-            righe.append(riga("ci", sha, ts, ci=metriche_ci.facts(sha, git("show", "-s", "--format=%s", sha), api_get)))
+            righe.append(riga("ci", sha, ts, ci=metrics_ci.facts(sha, git("show", "-s", "--format=%s", sha), api_get)))
     if a.aggiungi:
         righe.append(riga("manual", sha, ts, manual=load_bench(None, a.aggiungi)))
     if not righe:

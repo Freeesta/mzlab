@@ -141,7 +141,7 @@ def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool | str
     tp, yp = _pda(rng, _exp(-k * t))
     _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3, "" if pressure is True else pressure)] if pressure else []))
     if dad:                                           # opt-in: the extra array changes the bytes, so the golden answers keyed by SHA-256 keep the default
-        sys.path.insert(0, str(Path(__file__).resolve().parent)); from dati_sintetici_dad import inject_dad; inject_dad(path, t)
+        sys.path.insert(0, str(Path(__file__).resolve().parent)); from synthetic_data_dad import inject_dad; inject_dad(path, t)
 
 
 def ms2(path: Path, rng, t: float = 15) -> None:
@@ -486,7 +486,7 @@ def make(out: Path) -> Path:
     hr_dda(out / HR_NAMES["exploris"], rng4, "exploris"); hr_dda(out / HR_NAMES["fusion"], rng4, "fusion"); hr_dda(out / HR_NAMES["broken"], rng4, "exploris", broken=True)
     subtraction_series(out)                           # written last: nothing else changes
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from dati_sintetici_serie import dia, qc_series; from dati_sintetici_canali import channel_cases
+    from synthetic_data_series import dia, qc_series; from synthetic_data_channels import channel_cases
     dia(out / "D_DIA-t0.mzML", np.random.default_rng(67))      # written last: nothing else changes
     qc_series(out)                                    # written last: nothing else changes
     channel_cases(out / "canali")                       # written last, in a folder of its own: nothing else changes

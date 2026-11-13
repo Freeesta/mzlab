@@ -6,7 +6,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 
 ## What runs where
 - One engine, two targets: the site runs the crates as `.wasm` inside Web Workers (`static/wasm*/`); the desktop app and `mzlab-cli` run the same crates natively (mmap, threads, no wasm caps). Every function exists in both, with a byte-for-byte parity test (CLAUDE.md).
-- Python (`mzlab/`, `tools/*_riferimento.py`, `tools/golden.py`) is only the reference of the parity tests: a new computation is born in Rust; Python changes only to fix a bug the parity found.
+- Python (`mzlab/`, `tools/*_reference.py`, `tools/golden.py`) is only the reference of the parity tests: a new computation is born in Rust; Python changes only to fix a bug the parity found.
 - Rust returns i18n keys and parameters (`error.rs`, JSON `{error, error_key, params}` at the bridge), never user text.
 
 ## Crates (workspace in `Cargo.toml`; `vendor/opentfraw` is excluded)
@@ -49,8 +49,8 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - Numbers: m/z `f64`, intensity `f32` (an array is read only at the width it needs), entropy `f64`.
 
 ## Parity with the Python reference
-- Pattern: `crates/<crate>/tests/<name>_parity.rs` compares the Rust output with `tools/<name>_riferimento.py` (JSON compared leaf by leaf, tolerance stated in the test). Without python3 and numpy the test is skipped; `MZLAB_GOLDEN_STRICT=1` turns the skip into a failure.
-- Small references are committed in `tests/golden/ref/` (`componenti`, `composizione`, `composizione_rotta`, `msntree`, `msntree_rotta`, `statistica`, `statmat`, `stats`) and need no python3; rewrite them with `python3 tools/crea_golden_ref.py [name]` only after a deliberate change of the reference. The big ones (maps, origin, example indexes) are written by the test into a temporary folder.
+- Pattern: `crates/<crate>/tests/<name>_parity.rs` compares the Rust output with `tools/<name>_reference.py` (JSON compared leaf by leaf, tolerance stated in the test). Without python3 and numpy the test is skipped; `MZLAB_GOLDEN_STRICT=1` turns the skip into a failure.
+- Small references are committed in `tests/golden/ref/` (`componenti`, `composizione`, `composizione_rotta`, `msntree`, `msntree_rotta`, `statistica`, `statmat`, `stats`) and need no python3; rewrite them with `python3 tools/create_golden_ref.py [name]` only after a deliberate change of the reference. The big ones (maps, origin, example indexes) are written by the test into a temporary folder.
 - Golden reader data: `crates/mzlab-core/tests/golden.rs` against `tests/golden/` (edge indices identical, then areas 1e-4, m/z 1e-6, entropy 1e-9). `python3 tools/golden.py --controlla` checks, `--sintetici DIR` writes the synthetic mzML the Rust tests read, `--crea` only when the reference changes on purpose (it also rewrites `esempio_*` with format-only differences: commit only the file you meant).
 - A value out of tolerance is different logic: fix the logic, never widen the tolerance.
 - Traps for bit-identical results: Python ≥ 3.12 `sum()` on floats is Neumaier-compensated, so where Python uses `sum()` Rust uses `pysum`; `ndarray.sum()` is pairwise (`stats.rs`); numpy's `default_rng(seed)` is reproduced bit for bit by `rng.rs` (`Pcg64`, SeedSequence, Lemire bounded ints); `jsonb.rs` writes NaN as `null`; rounding is `elements::round_half_up`; `statmat::svd`/`eigh` match numpy up to the sign of eigenvectors, which the caller fixes.

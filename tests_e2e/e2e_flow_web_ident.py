@@ -1,5 +1,5 @@
 """Flow «This browser» spectra.ms2, spectra.match (the algorithms other than tree) and table.match (flow/lazy/flow-web-ident.js, `flow_ms2` of the `hr` .wasm, `flow_match` of the `lib` .wasm,
-`table_match_rows` of the `table` .wasm): over the synthetic identity series (tools/feat_sintetici.py) and a small MSP library made here (a true pair, a decoy, an entry that does not match) the browser
+`table_match_rows` of the `table` .wasm): over the synthetic identity series (tools/feat_synthetic.py) and a small MSP library made here (a true pair, a decoy, an entry that does not match) the browser
 writes the MGF, the candidates of every algorithm (decoys on) and the candidates of the rows of the table that `mzlab-cli flow run` writes of the same plans, byte for byte; a second run takes them from OPFS.
 Builds the site and the .wasm of mzFinder and of the library (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web_ident.py"""
@@ -57,7 +57,7 @@ if not (site / "static" / "wasm-lib" / "mzlab_lib_wasm.js").exists():
         subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm"], cwd=ROOT, check=True, capture_output=True)
         subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(site / "static" / "wasm-lib"), "target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm"], cwd=ROOT, check=True)
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_sintetici.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_synthetic.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
 run = tmp / "run"; run.mkdir()
 for n in NAMES: shutil.copy2(ser / "identita" / (n + ".mzML"), run / (n + ".mzML"))
 (run / "samples.json").write_text(SAMPLES)

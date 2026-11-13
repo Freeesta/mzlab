@@ -39,7 +39,7 @@ ISO = {
     "Br": [(78.9183376, 0.5069), (80.9162897, 0.4931)],
     "I": [(126.9044719, 1.0)],
 }
-ISO.update({el: [tuple(i) for i in row] for el, row in json.loads((Path(__file__).parent / "isotable.json").read_text()).items()})   # the elements beyond the core 13 (tools/genera_isotopi.py)
+ISO.update({el: [tuple(i) for i in row] for el, row in json.loads((Path(__file__).parent / "isotable.json").read_text()).items()})   # the elements beyond the core 13 (tools/generate_isotopes.py)
 MERGE_TOL = 0.0005            # Da: isotopologues closer than this are one peak (as in hr.js)
 WEIGHT_POW = 0.0              # a peak weighs rel ** WEIGHT_POW in the score (0: every peak the same, the monoisotopic one is fitted by construction; 1: its share of the theory)
 MAX_SHIFT = 6                 # nominal mass units above the monoisotopic peak that are considered

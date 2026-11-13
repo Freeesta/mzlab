@@ -35,7 +35,7 @@
   "mzlab/web/pannelli.js": 980,
   "mzlab/web/picchi.js": 534,
   "mzlab/web/tour.js": 719,
-  "tools/attributio_riferimento.py": 720
+  "tools/attributio_reference.py": 720
  },
  "funzioni": {
   "TP_Mine/files/feat-desktop-pool.js::createDesktopPool": 109,
@@ -166,7 +166,7 @@
   "mzlab/web/tour.js::renderStep": 127,
   "mzlab/web/visualizza.js::DISP": 110,
   "mzlab/web/workflow.js::WORKFLOW": 379,
-  "tools/bench_mirino.py::run": 85,
+  "tools/bench_crosshair.py::run": 85,
   "tools/dati_sintetici.py::hr_dda": 103
  }
 }

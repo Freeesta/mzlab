@@ -1,4 +1,4 @@
-//! `specpeaks` answers like `mzlab/peaks.py` (`tools/specpeaks_riferimento.py`): same peaks (count), m/z and heights within 1e-9
+//! `specpeaks` answers like `mzlab/peaks.py` (`tools/specpeaks_reference.py`): same peaks (count), m/z and heights within 1e-9
 //! relative. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -27,7 +27,7 @@ fn close(a: f64, b: f64) -> bool {
 fn peaks_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab_specpeaks_{}.json", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/specpeaks_riferimento.py"))
+        .arg(root().join("tools/specpeaks_reference.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())

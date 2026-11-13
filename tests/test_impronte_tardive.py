@@ -1,6 +1,6 @@
 """The fingerprints of the members of a vendor dataset given to the engine (mzlab-wasm, `build_mzidx_native`) in each way the site has: taken by the
 page during the copy, given late by a function the build calls after its first pass (the copy's hash still running), a late function giving nothing
-(the engine reads the members again), or none: the .mzidx is the same, byte for byte (synthetic `mistopi` of tools/wiff_misto_pi.py). Skipped without
+(the engine reads the members again), or none: the .mzidx is the same, byte for byte (synthetic `mistopi` of tools/wiff_mixed_pi.py). Skipped without
 cargo, wasm-bindgen or node."""
 import os
 import shutil
@@ -21,7 +21,7 @@ def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("tardive")
     run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "eng"), str(WASM / "mzlab_wasm.wasm"))
-    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto_pi.py"), str(d / "ref")], check=True, capture_output=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed_pi.py"), str(d / "ref")], check=True, capture_output=True)
     return d
 
 

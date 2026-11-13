@@ -1,4 +1,4 @@
-//! `ref=` on `api/chrom`, `api/xic` and `api/mrm` in Rust give the JSON of Python (`tools/differenza_riferimento.py`): same keys and
+//! `ref=` on `api/chrom`, `api/xic` and `api/mrm` in Rust give the JSON of Python (`tools/difference_reference.py`): same keys and
 //! lengths, numbers within 1e-9 (relative), the errors of the user's setting with the same key and parameters, a request Python must word
 //! itself declined. Without python3 and numpy the test is skipped (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -51,7 +51,7 @@ fn transitions(mzml: &str, routes: &Routes<std::fs::File>) -> String {
 fn reference_difference_matches_python() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab-diff-{}", std::process::id()));
-    let listing = match Command::new("python3").current_dir(&root).arg("tools/differenza_riferimento.py").arg(&out).output() {
+    let listing = match Command::new("python3").current_dir(&root).arg("tools/difference_reference.py").arg(&out).output() {
         Ok(o) if o.status.success() => String::from_utf8(o.stdout).unwrap(),
         other => {
             if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {

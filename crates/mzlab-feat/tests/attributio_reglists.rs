@@ -1,6 +1,6 @@
 #![cfg(feature = "attributio")]
 //! Parity of the regulatory-list matching (B1 by full InChIKey with the first block flagged, and the cross-campaign table P3) with the golden data of the
-//! reference tool (`tools/attributio_riferimento.py`, stage `tox-b1`) on the invented snapshots in `tests/data/attributio/istantanee_sintetiche/`.
+//! reference tool (`tools/attributio_reference.py`, stage `tox-b1`) on the invented snapshots in `tests/data/attributio/istantanee_sintetiche/`.
 
 #[macro_use]
 mod attributio_common;

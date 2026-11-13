@@ -1,5 +1,5 @@
 # File d'area: quale leggere
-Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo quello). Trovare una riga: `grep -n '<parola>' docs/agenti/INDICE.md`. Ogni `docs/agenti/*.md` è citato qui (`tools/cancello_rilascio.py`).
+Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo quello). Trovare una riga: `grep -n '<parola>' docs/agenti/INDICE.md`. Ogni `docs/agenti/*.md` è citato qui (`tools/gate_release.py`).
 | Se tocchi… | Leggi |
 |---|---|
 | vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro (finestra XIC di default `xicWin`), integrazione | `docs/agenti/dati.md` |
@@ -15,12 +15,12 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento, avvio progressivo (`AVVIO`), regola «interfaccia subito» | `docs/agenti/intestazione.md`, `avvio.md`, `avvio-rapido.md` |
 | barra di caricamento unica per ogni formato (`progresso.js`, `PROGRESSO`, evento `mzlab-index`, pesi delle fasi, prove di monotonia) | `docs/agenti/progresso.md` |
-| mappa del percorso di apertura di ogni file (clic → schermo, sito e app, per formato), strategie presenti/assenti, lotti di file per assistenti esterni (`tools/lotto_gemini.py`) | `docs/agenti/caricamento-mappa.md` |
+| mappa del percorso di apertura di ogni file (clic → schermo, sito e app, per formato), strategie presenti/assenti, lotti di file per assistenti esterni (`tools/batch_gemini.py`) | `docs/agenti/caricamento-mappa.md` |
 | carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop) | `docs/agenti/dati-cartella.md` |
 | riscaldamento in background dei file della cartella puntata (coda, `lr_warm`, `lr_warm_claim`) | `docs/agenti/riscaldamento.md` |
 | mappa RT×m/z, mirino, navigazione | `docs/agenti/dati-mappa.md` (visore 3D: `dati-mappa-3d.md`) |
-| velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
-| costo del disegno dei cromatogrammi su tracce dense (`tools/bench_grafici.py`: 10^6 punti, 20 file sovrapposti, rotella, trascinamento, ridimensionamento, linea di 1 px); tabella HR di 100 000 righe nella «Statistica» (`tools/bench_tabella_hr.py`: grafico KMD, clic, tabella «Dati») | `docs/agenti/misure-grafici.md` |
+| velocità della mappa: misure dei gesti (`tools/bench_map.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
+| costo del disegno dei cromatogrammi su tracce dense (`tools/bench_charts.py`: 10^6 punti, 20 file sovrapposti, rotella, trascinamento, ridimensionamento, linea di 1 px); tabella HR di 100 000 righe nella «Statistica» (`tools/bench_table_hr.py`: grafico KMD, clic, tabella «Dati») | `docs/agenti/misure-grafici.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
 | calcolatrice (gruppi «cosa può essere» sotto il numero), pannello Addotti, fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
 | mondo HR: Banco, formule, isotopi, librerie, albero MSn | `docs/agenti/alta-risoluzione.md` |
@@ -32,7 +32,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | campi numerici scritti a mano (`campi.js`, `CAMPI.num`, `data-num`, calcolatori, nota di rifiuto `campo.*`, `numIt` senza Infinity, `lib_campi.sweep`) | `docs/agenti/campi-numerici.md` |
 | accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
-| inglese nel codice (identificatori, commenti, nomi di file e cartelle): inventario misurato, `tools/controlla_inglese.py`, `tools/italian_words.tsv`, mappa delle rinomine (`tools/english_rename_map.py`), piano a lotti | `docs/agenti/inglese.md` |
+| inglese nel codice (identificatori, commenti, nomi di file e cartelle): inventario misurato, `tools/check_english.py`, `tools/italian_words.tsv`, mappa delle rinomine (`tools/english_rename_map.py`), piano a lotti | `docs/agenti/inglese.md` |
 | metodo di acquisizione (`metodo/1`, `method.rs`, `method_wiff`, `method_raw`, schema) | `docs/agenti/metodo.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
 | mzFinder: Dig in diretta (`js/24_tpmine_diretta.js`, `TPLIVE`), coppie progenitore-TP e interfaccia HR (`js/21_tpmine_hr.js`, `mass_network`, previsione) | `docs/agenti/mzfinder-diretta.md`, `mzfinder-coppie.md` (nucleo: `mzfinder.md`) |
@@ -74,7 +74,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
 | estremi di array grandi senza spread, ricerca binaria dei punti in una finestra (`numeri.js`: `maxOf`, `minOf`, `maxAbs`, `spanOf`) | `docs/agenti/numeri.md` |
 | tabella delle transizioni SIM/MRM di un triplo quadrupolo (`chrom.transitions`, `transitions/`, integrazione per campione, candidati di RT, preset di esempio) | `docs/agenti/transizioni.md` |
-| lista integrata di pesticidi e contaminanti ambientali (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/scarica_pesticidi.py`, seconda lista di `contaminanti.json`) | `docs/agenti/pesticidi.md` |
+| lista integrata di pesticidi e contaminanti ambientali (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/download_pesticides.py`, seconda lista di `contaminanti.json`) | `docs/agenti/pesticidi.md` |
 | liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
 | database delle molecole (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV e JSON canonico, ricerca, livelli catalogo/importata/utente, catalogo `mzlab/web/molecole/catalogo.csv`, rotte `api/molecules/*`) | `docs/agenti/molecules.md` (studio e piano a PR: `docs/studi/molecules/README.md`) |
 | canali dei dati (file → canali: TIC, filtri/transizioni/precursori, UV, analogici; tipo di esperimento come etichetta; piano DEV-a…f) | `docs/agenti/canali-dati.md` (prompt dei DEV: `docs/archivio/prompt-canali/a.md`…`f.md`) |
@@ -111,11 +111,11 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner, nessun file di esempio salvo i due disegni del link «Vedi un esempio di disegno»; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`, `tests_e2e/e2e_lab_vuoto.py` = giro senza file) |
 | contratto dei lettori dei produttori (`readers.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
 | modulo «aperti» (mzML con numpress, mzXML: `crates/mzlab-lettori/src/open/`, `numpress.rs`) | `docs/agenti/lettori-aperti.md` |
-| matrice di conformità mzML (varianti, fixture `tools/mzml_varianti.py`, buchi noti) | `docs/agenti/mzml-matrice.md` |
+| matrice di conformità mzML (varianti, fixture `tools/mzml_variants.py`, buchi noti) | `docs/agenti/mzml-matrice.md` |
 | modulo «andi» (netCDF/ANDI `.cdf`: `crates/mzlab-lettori/src/andi/`) | `docs/agenti/lettori-andi.md` |
 | moduli lettori, uno per famiglia (`crates/mzlab-lettori*`, `.wasm` a parte in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, regola R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, tetti) | `docs/agenti/lettori-modulo.md` |
 | Thermo `.raw`: attivazione, «unknown», tabella eventi rifiutata, scansioni e controller danneggiati (`warn.raw.damaged`), precursori (target, ione selezionato, catene MSn, SPS, MSX, SRM dall'evento) | `docs/agenti/lettori-thermo-precursori.md` |
-| rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`cancello_rilascio.py`) | `docs/agenti/rilascio.md` |
+| rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`gate_release.py`) | `docs/agenti/rilascio.md` |
 | Flow grafico (scheda: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`; copertura di Tabui: `flow-copertura-tabui.md`, `flow-pacchetto-tabui.md`; griglia dei metadati dei campioni: `flow-meta-griglia.md`) |
 | esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `estimate_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
 | raggruppamento degli ioni di un composto (`features.group`, `ionnet/1`: correlazione, isotopi, ion identity networking, archi per GNPS; `crates/mzlab-feat/src/ionnet/`) | `docs/agenti/gruppi-ioni.md` |
@@ -125,13 +125,13 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | scheduler a stati del Flow «live» (`mzlab_core::flow::sched`, `run_sched.rs`) | `docs/agenti/flow-live.md` |
 | dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
-| pulsante «XIC» nella barra dello spettro, lente XIC al passaggio sul picco (`xic-lente.js`), banco e tabella di partenza dei tempi del visualizzatore (`tools/bench_visore.py`, `viewer_times.rs`) | `docs/agenti/visore-veloce.md` |
+| pulsante «XIC» nella barra dello spettro, lente XIC al passaggio sul picco (`xic-lente.js`), banco e tabella di partenza dei tempi del visualizzatore (`tools/bench_viewer.py`, `viewer_times.rs`) | `docs/agenti/visore-veloce.md` |
 | pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusion.rs` (chiavi, blocchi, nome), comando `infusion_diagnosis` | `docs/agenti/infusione-lente.md` |
 | scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), intervallo `250.8-251.5`, `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; campi «m/z da / a» dell'XIC e coppie m/z / RT del riquadro «Intervallo» (`xic-bordi.js`, `ctl.range.order`); scheda dei pannelli nuovi «+» (`tabNuovo`), contatore `n/N`, `msg.noFiles` | `docs/agenti/xic-scarto.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
 | Safari e iPadOS (WebKit): API usate × versione minima × ripiego, pavimento 16.4, ripieghi di `compat.js` (`AbortSignal.any`, `createWritable`, appunti, `accept` sull'iPad) | `docs/agenti/compat-safari.md` |
-| tooltip: regola (solo se aggiungono informazione), inventario, elenco completo dei testi (`tools/elenco_tooltip.py`), hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
+| tooltip: regola (solo se aggiungono informazione), inventario, elenco completo dei testi (`tools/list_tooltip.py`), hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
 | file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
 | elenco degli esperimenti MSn di un file DDA nella finestra «Albero MSn» (schede Experiments/Tree, TIC e XIC di un precursore, `msn-elenco.js`, colonne `lev`/`z` di `/api/dda`, `ptol` di `/api/chrom`) | `docs/agenti/msn-elenco.md` |
 | file di prodotto di sole MS3 (o di un livello MSn ≠ 2): `msn_level` dell'info, livello di cromatogramma, scansioni, spettro e `/api/ms2tr`, titoli MS³ | `docs/agenti/msn-livello.md` |

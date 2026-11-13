@@ -35,7 +35,7 @@ subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", 
 from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_sintetici.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_synthetic.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
 run = tmp / "run"; run.mkdir()
 for n in NAMES: shutil.copy2(ser / "identita" / (n + ".mzML"), run / (n + ".mzML"))
 (run / "plan.json").write_text(json.dumps(plan()))

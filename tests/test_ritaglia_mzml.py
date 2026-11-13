@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("ritaglia_mzml", ROOT / "tools" / "ritaglia_mzml.py")
+spec = importlib.util.spec_from_file_location("crop_mzml", ROOT / "tools" / "crop_mzml.py")
 rit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(rit)
 

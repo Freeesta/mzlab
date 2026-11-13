@@ -10,7 +10,7 @@ import pytest
 pytest.importorskip("rdkit")
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "tools"))
-import interp_riferimento as ref  # noqa: E402
+import interp_reference as ref  # noqa: E402
 
 
 def test_classes_of_sites_match_rdkit(tmp_path):

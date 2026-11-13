@@ -1,5 +1,5 @@
 """Loading errors: a short message with the cause, a closed «Details» button (aria-expanded) with the phase, the format, the original error and the header (never the data), and «Copy diagnosis».
-Real failures of the engine: a truncated mzML and a file that is not XML (synthetic, tools/mzml_msconvert_sintetico.py). Needs the site and the .wasm. Run from the repo root: python3 tests_e2e/e2e_diagnosi.py"""
+Real failures of the engine: a truncated mzML and a file that is not XML (synthetic, tools/mzml_msconvert_synthetic.py). Needs the site and the .wasm. Run from the repo root: python3 tests_e2e/e2e_diagnosi.py"""
 import os, re, shutil, subprocess, sys, tempfile, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -14,7 +14,7 @@ def step(name, fn):
 if not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "FAIL site/ not built: python tools/build_site.py + wasm")); sys.exit(0)
 sys.path.insert(0, str(ROOT / "tools"))
-import mzml_msconvert_sintetico as gen
+import mzml_msconvert_synthetic as gen
 D = Path(tempfile.mkdtemp(prefix="diag_e2e_"))
 gen.scrivi(D / "ok.mzML", scans=30, peaks1=40, peaks2=10)
 whole = (D / "ok.mzML").read_bytes()

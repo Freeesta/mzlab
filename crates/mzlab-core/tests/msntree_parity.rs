@@ -1,4 +1,4 @@
-//! `msntree::msn_tree` answers like `mzlab/chem/msntree.py` on synthetic fragmentation cascades (`tools/msntree_riferimento.py`): the same nodes,
+//! `msntree::msn_tree` answers like `mzlab/chem/msntree.py` on synthetic fragmentation cascades (`tools/msntree_reference.py`): the same nodes,
 //! parents, precursors, formulas and peaks (numbers within 1e-9), the same error keys. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -55,7 +55,7 @@ fn tree_like_python() {
     let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
     let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab_msntree_{}.json", std::process::id())) };
     let ok = committed || Command::new("python3")
-        .arg(root().join("tools/msntree_riferimento.py"))
+        .arg(root().join("tools/msntree_reference.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())

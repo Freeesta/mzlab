@@ -279,7 +279,7 @@ try:
             import tempfile
             import numpy as np
             sys.path.insert(0, str(ROOT / "tools"))
-            import dati_sintetici as ds, dam_riferimento as dr
+            import dati_sintetici as ds, dam_reference as dr
             d = Path(tempfile.mkdtemp()); ds.full_scan(d / "press.mzML", 0, np.random.default_rng(9), pressure=True)
             dr.build(d)
             ca, pa, ra = context(); pa.goto(f"http://127.0.0.1:{PORT}/"); open_files(pa, files=[str(d / "press.mzML")], n=1)
@@ -322,7 +322,7 @@ try:
             import tempfile
             import numpy as np
             sys.path.insert(0, str(ROOT / "tools"))
-            import dati_sintetici as ds, dam_riferimento as dr
+            import dati_sintetici as ds, dam_reference as dr
             d = Path(tempfile.mkdtemp()); ds.hr_dda(d / "hrdda.mzML", np.random.default_rng(5)); dr.build(d)
             ca, pa, ra = context(); pa.goto(f"http://127.0.0.1:{PORT}/"); open_files(pa, files=[str(d / "hrdda.mzML")], n=1)
             pb = PyRef([str(d / "hrdda.mzML")])

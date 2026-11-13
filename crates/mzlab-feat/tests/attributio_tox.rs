@@ -1,5 +1,5 @@
 #![cfg(feature = "attributio")]
-//! Parity of the RG-xx data layer (GHS/CLP categories, snapshot readers) with the golden data of the reference tool (`tools/attributio_riferimento.py`,
+//! Parity of the RG-xx data layer (GHS/CLP categories, snapshot readers) with the golden data of the reference tool (`tools/attributio_reference.py`,
 //! stages `tox-ghs` and `tox-istantanee`) on the invented snapshots in `tests/data/attributio/istantanee_sintetiche/`.
 
 #[macro_use]

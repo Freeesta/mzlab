@@ -1,9 +1,9 @@
-# e2e_ms23: one file with MS2 and MS3 scans in turn (synthetic, tools/dati_sintetici_msn.ms2_ms3) opens as two items, «· MS2» at level 2 and «· MS3» at
+# e2e_ms23: one file with MS2 and MS3 scans in turn (synthetic, tools/synthetic_data_msn.ms2_ms3) opens as two items, «· MS2» at level 2 and «· MS3» at
 # level 3, in one group named «MS2/MS3 (Product Ion)»; switching the precursor to 194.1 draws the MS3 chromatogram titled «MS³» and its MS3 spectrum,
 # back to 237.1 the MS2 ones; scan lists and precursor tables are per level; IT and EN.
 import os, sys, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-sys.path.insert(0, str(ROOT / "tools")); import dati_sintetici_msn as ds, numpy as np
+sys.path.insert(0, str(ROOT / "tools")); import synthetic_data_msn as ds, numpy as np
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

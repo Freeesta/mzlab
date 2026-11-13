@@ -1,6 +1,6 @@
 //! One broken unit of a `.wiff` pair never takes the healthy ones with it (the engine's reader; the readers module: mzlab-lettori `sciex_isolation.rs`):
 //! a sample whose blocks are all damaged is refused alone, a NaN cps leaves out its MRM cycle only, zeroed Idx rows give no spectrum, a sample at
-//! position 0 of the sample table stays listed, and every loss is counted. Pairs of `tools/wiff_isolamento.py`; skipped without python3.
+//! position 0 of the sample table stays listed, and every loss is counted. Pairs of `tools/wiff_isolation.py`; skipped without python3.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -16,7 +16,7 @@ fn pairs(tag: &str) -> Option<PathBuf> {
         "mzlab_wiff_isolamento_{tag}_{}",
         std::process::id()
     ));
-    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_isolamento.py");
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_isolation.py");
     let ok = Command::new("python3")
         .arg(script)
         .arg(&out)

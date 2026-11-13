@@ -1,4 +1,4 @@
-//! `statroute::stat_route` answers like `api.dispatch` on the POST routes `api/stat/*` (`tools/statistica_riferimento.py`, invented tables):
+//! `statroute::stat_route` answers like `api.dispatch` on the POST routes `api/stat/*` (`tools/statistics_reference.py`, invented tables):
 //! the same JSON (numbers within 1e-9, indices, counts, labels and error keys identical). Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -49,7 +49,7 @@ fn stat_routes_like_python() {
     let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-stat-{}.json", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(&root).arg("tools/statistica_riferimento.py").arg(&out).output(),
+        None => Command::new("python3").current_dir(&root).arg("tools/statistics_reference.py").arg(&out).output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");

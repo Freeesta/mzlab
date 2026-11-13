@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import indice  # noqa: E402
-import html_sicuro  # noqa: E402
+import html_safe  # noqa: E402
 import safari_api  # noqa: E402
 
 BASE = indice.ROOT / "tools" / "soglie_base.json"
@@ -271,7 +271,7 @@ def main() -> int:
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {}
     # a limit that is not in the base file yet starts from the current state (--aggiorna writes it)
     base = {kind: base[kind] if kind in base else dict(now[kind]) for kind in KINDS}
-    bad = peggiori(now, base) + static_rules() + rules_state() + rules_layout() + rules_experiments("--aggiorna" in sys.argv) + rules_frame("--aggiorna" in sys.argv) + rules_expected("--aggiorna" in sys.argv) + safari_api.controlla() + html_sicuro.peggiori(html_sicuro.misura(), json.loads(html_sicuro.BASE.read_text(encoding="utf-8")) if html_sicuro.BASE.exists() else {})
+    bad = peggiori(now, base) + static_rules() + rules_state() + rules_layout() + rules_experiments("--aggiorna" in sys.argv) + rules_frame("--aggiorna" in sys.argv) + rules_expected("--aggiorna" in sys.argv) + safari_api.controlla() + html_safe.peggiori(html_safe.misura(), json.loads(html_safe.BASE.read_text(encoding="utf-8")) if html_safe.BASE.exists() else {})
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update the base, it would get worse:\n  " + "\n  ".join(bad))

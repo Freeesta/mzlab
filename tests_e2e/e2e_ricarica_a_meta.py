@@ -1,10 +1,10 @@
 # e2e_ricarica_a_meta: a file removed while others are still opening stays removed (explore.js bootSession0); after a reload of the page in the middle of a loading, the files
 # still being read open again by themselves (no notebook names them yet) and the removed file stays unticked: a row is ticked exactly when its file is open (shell.js restoreRows).
-# Synthetic files (tools/mzml_msconvert_sintetico.py), no laboratory data. Needs the site and the .wasm: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_ricarica_a_meta.py
+# Synthetic files (tools/mzml_msconvert_synthetic.py), no laboratory data. Needs the site and the .wasm: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_ricarica_a_meta.py
 import os, sys, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
-import mzml_msconvert_sintetico as gen
+import mzml_msconvert_synthetic as gen
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

@@ -1,4 +1,4 @@
-//! `stats` answers like the small statistics of `mzlab/ionfamily.py` (`tools/stats_riferimento.py`): ranks, correlations, Theil-Sen, chi-square
+//! `stats` answers like the small statistics of `mzlab/ionfamily.py` (`tools/stats_reference.py`): ranks, correlations, Theil-Sen, chi-square
 //! survival within 1e-9 relative, and the permutation p-values IDENTICAL (same numpy generator). Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -32,7 +32,7 @@ fn statistics_like_python() {
     let golden = root().join("tests/golden/ref/stats.json"); let committed = golden.exists();           // committed answers of Python: no python3 needed
     let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab_stats_{}.json", std::process::id())) };
     let ok = committed || Command::new("python3")
-        .arg(root().join("tools/stats_riferimento.py"))
+        .arg(root().join("tools/stats_reference.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())

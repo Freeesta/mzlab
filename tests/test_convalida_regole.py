@@ -16,7 +16,7 @@ pytestmark = pytest.mark.skipif(not shutil.which("cargo"), reason="cargo not ava
 @pytest.fixture(scope="module")
 def sommario(tmp_path_factory):
     out = tmp_path_factory.mktemp("convalida") / "somma.json"
-    r = subprocess.run([sys.executable, str(ROOT / "tools" / "convalida_regole.py"), "--registri", str(REGISTRIES), "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "validate_rules.py"), "--registri", str(REGISTRIES), "--out", str(out)], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-2000:]
     return json.loads(out.read_text())
 
@@ -36,5 +36,5 @@ def test_with_so_few_records_no_rule_is_measured(sommario):
 
 
 def test_the_script_computes_nothing_itself():
-    testo = (ROOT / "tools" / "convalida_regole.py").read_text()
+    testo = (ROOT / "tools" / "validate_rules.py").read_text()
     assert "msn-rules" in testo and "somma" in testo

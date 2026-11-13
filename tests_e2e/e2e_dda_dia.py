@@ -5,7 +5,7 @@ import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import load
 sys.path.insert(0, str(ROOT / "tools"))
-from dati_sintetici_serie import dia
+from synthetic_data_series import dia
 import numpy as np
 steps = []
 def step(name, fn):

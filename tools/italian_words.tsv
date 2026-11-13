@@ -1,4 +1,4 @@
-# Italian words of mzLab code and their proposed English form (tools/controlla_inglese.py).
+# Italian words of mzLab code and their proposed English form (tools/check_english.py).
 # One entry per line: italian<TAB>english. Inflected forms are listed one by one (no stemming: no false hits on English words).
 # An empty English column marks a word that is Italian but has no single translation (decided by hand in the rename map).
 abbina	match

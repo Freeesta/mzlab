@@ -96,7 +96,7 @@ Campioni nativi (`.raw`, `.wiff`, `.D`): `lr_put` con `nat` copia i membri in OP
 
 ## 7. Lotti per Gemini (priorità: ciò che pesa di più sul tempo di apertura)
 
-Uso: `python3 tools/lotto_gemini.py docs/agenti/caricamento-mappa.md --lotto 1 -o lotto1.txt` (avvisa se il lotto supera `--max-kb`, 200 per default; `--controlla` stampa le dimensioni). Dimensioni in KB tra parentesi nell'elenco di `--controlla`; i lotti sono ≈150-200 KB.
+Uso: `python3 tools/batch_gemini.py docs/agenti/caricamento-mappa.md --lotto 1 -o lotto1.txt` (avvisa se il lotto supera `--max-kb`, 200 per default; `--controlla` stampa le dimensioni). Dimensioni in KB tra parentesi nell'elenco di `--controlla`; i lotti sono ≈150-200 KB.
 
 @lotto 1
 crates/mzlab-core/src/upload.rs

@@ -1,4 +1,4 @@
-"""tools/wiff_dump.py on a container written by tools/cfb_scrivi.py: the counts, the experiment types, a sample name with spaces and parentheses, the Log hidden."""
+"""tools/wiff_dump.py on a container written by tools/cfb_write.py: the counts, the experiment types, a sample name with spaces and parentheses, the Log hidden."""
 import struct
 import subprocess
 import sys
@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-import cfb_scrivi
+import cfb_write
 
 
 def counted(s: str) -> bytes:
@@ -23,7 +23,7 @@ def header(code: int, prec: float) -> bytes:
 
 def test_dump(tmp_path):
     exp = "MethodSubtree/Method{}/DeviceMethod0/Period0/Experiment0/ExperimentHeader"
-    cfb_scrivi.write({
+    cfb_write.write({
         "SampleSubtree/SampleIdxTable": bytes(52),
         "SampleSubtree/Sample1/Idx": bytes(32 + 54 * 3),
         "SampleSubtree/Sample1/SampleDABE/DATA": counted("Prova_t15 (2)") + counted("Vial 7"),

@@ -1,4 +1,4 @@
-//! `components::estimate_components` against `ionfamily.estimate_components` (`tools/componenti_riferimento.py`): the number of components and
+//! `components::estimate_components` against `ionfamily.estimate_components` (`tools/components_reference.py`): the number of components and
 //! the scans of the evolving factor analysis are identical, the singular values, sigma and edge agree to 1e-9 (relative).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -24,7 +24,7 @@ fn components_like_python() {
     let golden = root.join("tests/golden/ref/componenti.json");
     let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
     let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab-components-{}.json", std::process::id())) };
-    let run = if committed { Command::new("true").output() } else { Command::new("python3").current_dir(&root).arg("tools/componenti_riferimento.py").arg(&out).output() };
+    let run = if committed { Command::new("true").output() } else { Command::new("python3").current_dir(&root).arg("tools/components_reference.py").arg(&out).output() };
     if !matches!(&run, Ok(o) if o.status.success()) {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");
         eprintln!("python3/numpy not available: test skipped");

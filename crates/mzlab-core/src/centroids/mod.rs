@@ -1,5 +1,5 @@
 //! Centroids of a profile scan: every peak becomes one point (m/z, area or height) with flags. One scan at a time, f64, no new dependency, no hash map
-//! iterated, ties go to the lowest index. Parity with `tools/centroidi_riferimento.py` (same operations in the same order): `tests/centroids_parity.rs`.
+//! iterated, ties go to the lowest index. Parity with `tools/centroids_reference.py` (same operations in the same order): `tests/centroids_parity.rs`.
 //!
 //! The steps, in order: the points are laid on a regular grid with zeros between the first and the last point (`grid`), smoothed with a quadratic
 //! Savitzky-Golay filter (`smooth`), a background is taken as the 25th percentile of the smoothed signal (`smooth::background`), the maxima that stand above

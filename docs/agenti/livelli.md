@@ -1,6 +1,6 @@
 # Livelli di identificazione (Tabui, Attributio, flusso untargeted)
 
-Definizioni scelte da Federico. Valgono per Tabui (MS2 a bassa risoluzione), Attributio, la vista «Cos'è?», «Identifica tutte le MS2» e il flusso untargeted di mzFinder. Regole in `mzlab/web/livelli-1.js` (dati), cascata in `mzlab/web/livelli.js`, copia per Rust in `crates/mzlab-feat/data/livelli-1.json` (`python3 tools/esporta_livelli.py`).
+Definizioni scelte da Federico. Valgono per Tabui (MS2 a bassa risoluzione), Attributio, la vista «Cos'è?», «Identifica tutte le MS2» e il flusso untargeted di mzFinder. Regole in `mzlab/web/livelli-1.js` (dati), cascata in `mzlab/web/livelli.js`, copia per Rust in `crates/mzlab-feat/data/livelli-1.json` (`python3 tools/export_levels.py`).
 
 ## Scala di Schymanski (livello di identificazione)
 - **L1**: standard di riferimento segnato dal chimico (massa, RT, MS2).

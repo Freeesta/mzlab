@@ -1,4 +1,4 @@
-//! The Rust `.mzidx` builder writes byte for byte the file of the Python builder (`tools/mzidx_riferimento.py`), on the example
+//! The Rust `.mzidx` builder writes byte for byte the file of the Python builder (`tools/mzidx_reference.py`), on the example
 //! files and the synthetic ones, with a large budget (peaks kept from the first pass) and a tiny one (rounds of buckets).
 //! Without python3 and numpy the test is skipped (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -104,7 +104,7 @@ fn rust_index_is_identical_to_the_python_one() {
     let out = std::env::temp_dir().join(format!("mzlab-idx-{}", std::process::id()));
     let mut cmd = Command::new("python3");
     cmd.current_dir(root())
-        .arg("tools/mzidx_riferimento.py")
+        .arg("tools/mzidx_reference.py")
         .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
         let mut v: Vec<_> = rd

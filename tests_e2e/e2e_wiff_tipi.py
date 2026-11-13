@@ -1,4 +1,4 @@
-"""The experiment type that the list of the files shows for each sample of a .wiff with mixed experiments (synthetic, tools/wiff_misto.py; no laboratory data), on the built site with the
+"""The experiment type that the list of the files shows for each sample of a .wiff with mixed experiments (synthetic, tools/wiff_mixed.py; no laboratory data), on the built site with the
 Rust engine: every sample has its own type (Full Scan, MS2 or MRM) in the state of the page and in the group of its row, not the one of the first sample or of the method.
 Needs the site and the .wasm (python tools/build_site.py + wasm, see e2e_wiff.py). Run from the repo root: python3 tests_e2e/e2e_wiff_tipi.py"""
 import json, subprocess, sys, tempfile, time
@@ -15,7 +15,7 @@ def step(name, fn):
 if not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "FAIL site/ not built: python tools/build_site.py + wasm")); sys.exit(0)
 D = Path(tempfile.mkdtemp(prefix="wiff_tipi_"))
-subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto.py"), str(D)], check=True, capture_output=True)
+subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed.py"), str(D)], check=True, capture_output=True)
 TRUE = json.loads((D / "tipi.json").read_text())
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 import urllib.request

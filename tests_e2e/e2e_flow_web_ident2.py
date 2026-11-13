@@ -1,6 +1,6 @@
 """Flow «This browser» formula.ms1, formula.ms2 and annot.level (flow/lazy/flow-web-ident.js: `flow_ms1_rows` and `flow_ms1_join` of the lazy `formula` .wasm, `flow_formula_ms2` and `flow_level` of
 the `attributio-all` .wasm: docs/agenti/flow-web.md):
-over the synthetic identity series (tools/feat_sintetici.py) and a small MSP library made here (the first MS2 spectrum of the series is in it, the others are not) the browser writes the sub-formulas that explain
+over the synthetic identity series (tools/feat_synthetic.py) and a small MSP library made here (the first MS2 spectrum of the series is in it, the others are not) the browser writes the sub-formulas that explain
 the MS2 and the level of each query as `mzlab-cli flow run` writes them for the same plan, byte for byte; a second run takes them from OPFS. The same files written as
 negative scans give formula.ms1 with no ion written the ion [M-H]- in both, byte for byte (in a fresh page whose OPFS holds only their indexes). One feature has a library
 match (a level above the one without evidence), another has none. A second annot.level of the same plan reads a standards CSV (the library match is on it, 0.05 min from its RT: Level 1) and a screen/1 file whose suspect has two listed fragments found
@@ -57,7 +57,7 @@ if not (site / "static" / "wasm-lib" / "mzlab_lib_wasm.js").exists():
         subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-lib-wasm"], cwd=ROOT, check=True, capture_output=True)
         subprocess.run(["wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(site / "static" / "wasm-lib"), "target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm"], cwd=ROOT, check=True)
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_sintetici.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_synthetic.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
 run = tmp / "run"; run.mkdir()
 for n in NAMES: shutil.copy2(ser / "identita" / (n + ".mzML"), run / (n + ".mzML"))
 (run / "samples.json").write_text(SAMPLES)

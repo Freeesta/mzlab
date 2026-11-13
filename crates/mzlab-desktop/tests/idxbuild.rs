@@ -1,4 +1,4 @@
-//! The native builder of the desktop writes, from a memory map, the same `.mzidx` as the Python builder (`tools/mzidx_riferimento.py`), through the
+//! The native builder of the desktop writes, from a memory map, the same `.mzidx` as the Python builder (`tools/mzidx_reference.py`), through the
 //! routes `idx/build`, `idx/read`, `idx/remove`; several files are built at once on the thread pool; bad names and bad tables are refused.
 //! Without python3 and numpy the parity test is skipped (`MZLAB_IDX_STRICT=1` fails instead).
 
@@ -65,7 +65,7 @@ fn reference() -> Option<(PathBuf, Vec<String>)> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let o = Command::new("python3")
         .current_dir(&root)
-        .arg("tools/mzidx_riferimento.py")
+        .arg("tools/mzidx_reference.py")
         .arg(&out)
         .output();
     match o {

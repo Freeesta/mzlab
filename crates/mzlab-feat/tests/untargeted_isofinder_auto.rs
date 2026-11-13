@@ -1,4 +1,4 @@
-//! Automatic detection of heavy elements in the isotope finder: synthetic [M+H]+ patterns with exact fine structure (`tools/isofinder_riferimento.py`).
+//! Automatic detection of heavy elements in the isotope finder: synthetic [M+H]+ patterns with exact fine structure (`tools/isofinder_reference.py`).
 
 use mzlab_feat::untargeted::isofinder::auto::{detect, detection_window, DEFAULT_CANDIDATES};
 use mzlab_feat::untargeted::isofinder::select;

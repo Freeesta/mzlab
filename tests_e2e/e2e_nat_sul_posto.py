@@ -1,4 +1,4 @@
-"""A maker's file (synthetic SCIEX .wiff + .wiff.scan pair of tools/wiff_misto.py, no laboratory data) whose members the browser refuses to copy is
+"""A maker's file (synthetic SCIEX .wiff + .wiff.scan pair of tools/wiff_mixed.py, no laboratory data) whose members the browser refuses to copy is
 read in place from the user's Files: every sample loads, no member is copied, the stubs are marked `sul`, the index of a sample is byte-identical to
 the one built from the copy, the members read in place are hashed by the hash workers (each stub records their SHA-1: the builder does not read them
 once more for it), and after a reload a calm notice per sample says to load it again while stubs, members and indexes go (no «interrupted
@@ -14,7 +14,7 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_nat_sul_posto.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + " ".join(str(e).split())[:600]))
 D = Path(tempfile.mkdtemp(prefix="nat_sul_posto_"))
-subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto.py"), str(D)], check=True, capture_output=True)
+subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed.py"), str(D)], check=True, capture_output=True)
 PAIR = [str(D / "misto.wiff"), str(D / "misto.wiff.scan")]
 with open(PAIR[1], "ab") as f: f.write(bytes(4 << 20))      # bytes past the last scan, which the reader never reads: the members outweigh the indexes, as in a real file
 N = len(json.loads((D / "tipi.json").read_text()))

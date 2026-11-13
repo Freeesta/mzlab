@@ -1,8 +1,8 @@
 # Dati d'oro di Attributio sulla campagna sintetica
 
-Scritti da `tools/attributio_riferimento.py` con Attributio 1.12.0:
+Scritti da `tools/attributio_reference.py` con Attributio 1.12.0:
 
-    ATTRIBUTIO_SRC=<percorso di attributio/src> python3 tools/attributio_riferimento.py [--controlla]
+    ATTRIBUTIO_SRC=<percorso di attributio/src> python3 tools/attributio_reference.py [--controlla]
 
 Un JSON per stadio in `sintetica/` (campagna, letture, rilevazione, livelli, identita, proposte, decisioni, sirius, standard, abbinamenti) e un JSON per la campagna dei sorbenti in `sorbenti/` (ingresso `tests/data/attributio/campagna_sorbenti/`). Ingresso: `tests/data/attributio/campagna_sintetica/` (sha256 in `tests/data/attributio/LEGGIMI.md`). Un caso che non torna non si risolve cambiando questi file.
 

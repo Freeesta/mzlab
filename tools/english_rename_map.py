@@ -1,4 +1,4 @@
-"""Proposed English names for the Italian file and directory names of mzLab (used by `tools/controlla_inglese.py --rinomine`).
+"""Proposed English names for the Italian file and directory names of mzLab (used by `tools/check_english.py --rinomine`).
 Word by word from tools/italian_words.tsv, then three Italian word-order rules: adjective after its noun, `X di Y`, and a head noun
 followed by its complement (`calibrazione_massa` -> `mass_calibration`). Topic-first names (`gruppi-vista`, `e2e_mappa_assi`) are
 already English order and stay as they are.
@@ -11,7 +11,7 @@ import re
 import sys
 from collections import Counter
 
-import controlla_inglese as ci
+import check_english as ci
 
 # Italian adjectives follow their noun: `lettore_finto` -> `fake_reader`
 ADJECTIVES = set("""sintetico sintetica sintetici sintetiche veloce veloci comune comuni pubblici pubblico pubbliche noti unito finto grezzi

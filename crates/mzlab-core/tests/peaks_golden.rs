@@ -1,4 +1,4 @@
-//! Golden traces of the peak finders (`tests/golden/picchi_qualita.json`, `tools/golden_picchi.py`): the CWT must give the limits of the
+//! Golden traces of the peak finders (`tests/golden/picchi_qualita.json`, `tools/golden_peaks.py`): the CWT must give the limits of the
 //! Python engine (indices identical, areas 1e-4); "prominence + local minimum" has no Python twin, so its limits are asserted here.
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts

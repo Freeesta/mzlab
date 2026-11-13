@@ -1,4 +1,4 @@
-//! The map routes of `maproute` give what `api.dispatch` gives (`tools/mappa_riferimento.py`): the same keys, the arrays of cells bit for bit,
+//! The map routes of `maproute` give what `api.dispatch` gives (`tools/map_reference.py`): the same keys, the arrays of cells bit for bit,
 //! the other numbers within 1e-9 relative; the answers Python refuses (an error) are Python's here too (`None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -113,7 +113,7 @@ fn rust_maps_match_python() {
     let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-map-{}", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/mappa_riferimento.py").arg(&out).output(),
+        None => Command::new("python3").current_dir(root()).arg("tools/map_reference.py").arg(&out).output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {
