@@ -21,3 +21,9 @@
   5) Software Heritage: su <https://archive.softwareheritage.org/save/> «Save code now» con l'indirizzo del repository (un clic, serve una volta e dopo ogni release se vuoi lo SWHID aggiornato)
   6) compila `doi` e `date-released` in `CITATION.cff` come in `docs/zenodo.md`.
 - Non incluso: firma di Windows (SignPath) e di macOS, dominio proprio, `update.rs` con la nuova origine.
+
+## Piano B: ospitare il sito altrove
+Il sito è una cartella statica; non c'è uno specchio attivo. **Costruire** `site/`: eseguire `pages.yml` (`workflow_dispatch` o push su un ramo di prova) e scaricarne l'artefatto, oppure ripeterne a mano i passi `run:` nello stesso ordine (`build_site.py`, `wasm_opt.sh`, `build_feat_wasm.sh`, `librerie_pacchetti.py`, `genera_sospetti.py`; Python ≥ 3.11, toolchain di `rust-toolchain.toml`, rete).
+**Controllare**: nessun file sopra 25 MiB (`find site -size +25M`, limite di Cloudflare Pages), nessun errore in console da `python3 -m http.server -d site` con service worker registrato, `.wasm` servito come `application/wasm`.
+**Pubblicare**: Cloudflare Pages «Direct Upload» (`npx wrangler pages deploy site --project-name mzlab`) o un altro ospite statico via HTTPS che serva i file come sono.
+**Nuovo indirizzo**: aggiornare `README.md`, `CITATION.cff`, `.zenodo.json`; l'app desktop controlla gli aggiornamenti solo da `https://freeesta.github.io/mzlab/` (`crates/mzlab-desktop/src/update.rs`), quindi serve prima una versione che accetti il nuovo e il vecchio indirizzo; i dati salvati nel browser restano legati al vecchio indirizzo. Annunciare con una issue fissata e nella pagina del corso.

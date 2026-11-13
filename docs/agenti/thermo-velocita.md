@@ -1,6 +1,6 @@
 # Lettore Thermo `.raw`: criteri di velocità e zero perdite, banco e numeri di partenza (T-7)
 
-Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` §1-3. Prompt delle fasi: `docs/studi/PROMPT_LETTORE_THERMO/T-7.md`. Oracolo e formato del dump: `scandump.md`. Due livelli con criteri e numeri SEPARATI, mai una tabella che li mescola: **A** = lettore fedele e veloce contro RFR; **B** = ponte senza perdite verso Flow sui centroidi.
+Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` §1-3. Oracolo e formato del dump: `scandump.md`. Due livelli con criteri e numeri SEPARATI, mai una tabella che li mescola: **A** = lettore fedele e veloce contro RFR; **B** = ponte senza perdite verso Flow sui centroidi.
 
 ## Come si dichiara ogni numero
 - Ogni numero porta lo SHA di 40 caratteri del commit di `main` su cui è stato misurato, la macchina, il bersaglio (`native` o `wasm`) e il profilo di compilazione (`cli` = `opt-level = 3`; `release` = `opt-level = "z"`, quello dei `.wasm`). Un numero senza questi quattro dati non entra nelle tabelle.
