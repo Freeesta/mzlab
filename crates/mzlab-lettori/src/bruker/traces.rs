@@ -3,6 +3,7 @@
 use super::{bad_index, BrukerReader, UNITS};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::mzml::{ChromKind, Chromatogram};
+use mzlab_core::readers::damages_one;
 
 impl BrukerReader {
     pub(super) fn trace(&mut self, id: &str) -> Result<Chromatogram> {
@@ -27,10 +28,15 @@ impl BrukerReader {
             } else {
                 match self.maxima[k] {
                     Some(m) => m,
-                    // the peaks of the spectrum, without the m/z axis the maximum does not need
+                    // the peaks of the spectrum, without the m/z axis the maximum does not need; a frame that does not decode is 0, as its spectrum
+                    // is written with no points and counted (`readers::Skips`), and it is not decoded again
                     None => {
                         let d = self.desc.get(k).cloned().ok_or_else(|| bad_index(k))?;
-                        let m = maximum(&self.points(&d)?.1);
+                        let m = match self.points(&d) {
+                            Ok(p) => maximum(&p.1),
+                            Err(e) if damages_one(&e) => 0.0,
+                            Err(e) => return Err(e),
+                        };
                         self.maxima[k] = Some(m);
                         m
                     }

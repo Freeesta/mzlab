@@ -53,7 +53,7 @@ fn the_indexed_file_validates_against_the_psi_schema() {
     }
 }
 
-/// A product-ion spectrum with its plain precursor, and a precursor-ion one: its fixed m/z as its `<product>`, with no precursor.
+/// A product-ion spectrum with its plain precursor, and a precursor-ion one: its fixed m/z as the selected ion of its `<precursorList>`, as ProteoWizard writes it.
 #[test]
 fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
     let h = Header {
@@ -71,7 +71,6 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
         },
         SpectrumExtra {
             iso_half: Some(0.35),
-            product: Some(184.0),
             ..Default::default()
         },
     ]
@@ -84,7 +83,7 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
             level: 2,
             rt: 0.5,
             polarity: 1,
-            precursor: extra.product.is_none().then_some(229.1),
+            precursor: Some(if i == 2 { 184.0 } else { 229.1 }),
             mz: vec![100.5, 200.25],
             intensity: vec![10.0, 20.0],
             ..Default::default()
@@ -96,9 +95,11 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
     let text = String::from_utf8_lossy(&out);
     let pis = &text[text.find("id=\"scan=3\"").unwrap()..];
     let pis = &pis[..pis.find("</spectrum>").unwrap()];
+    // a precursor-ion scan as ProteoWizard writes it: the fixed Q3 m/z is the selected ion of a `<precursorList>`, no `<productList>`
     assert!(
-        pis.contains("<productList count=\"1\"><product><isolationWindow>")
-            && !pis.contains("<precursor"),
+        pis.contains("<precursorList count=\"1\">")
+            && pis.contains("value=\"184\"")
+            && !pis.contains("<productList"),
         "{pis}"
     );
     validate(&out);

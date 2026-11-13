@@ -374,7 +374,7 @@ def variants(out: Path):
     pts = {1: FULL, 3: PRODUCT, 5: [(5, 4), (6, 9), (400, 12000)], 7: [(70, 1), (71, 2), (72, 7), (900, 300)]}
     blocks, want = [], []
     for cycle in range(2):
-        for e, (code, level, prec, version, term) in enumerate([(15, 1, None, 1, None), (11, 2, 55.5, 3, None), (5, 2, None, 1, ("MS:1000341", "precursor ion spectrum")),
+        for e, (code, level, prec, version, term) in enumerate([(15, 1, None, 1, None), (11, 2, 55.5, 3, None), (5, 2, 184.0, 1, ("MS:1000341", "precursor ion spectrum")),
                                                                 (7, 2, None, 1, ("MS:1000326", "constant neutral loss spectrum"))]):
             p = [pts[1], pts[3], pts[5], pts[7]][e]
             p = p if not (e == 3 and cycle == 1) else []  # an empty block (no spectrum)
@@ -382,7 +382,7 @@ def variants(out: Path):
             blocks.append(("scan", p, t, float(sum(c for _, c in p)), version))
             if p:
                 want.append(spectrum(f"sample=1 period=1 cycle={cycle + 1} experiment={e + 1}", level, prec, t, p, version, term)
-                            | {"product": 184.0 if code == 5 else None, "loss": 217.3 if code == 7 else None})
+                            | {"loss": 217.3 if code == 7 else None})
     w = Writer()
     w.sample(1, blocks, ex, log="QTRAP 5500")
     w.save(out, "variante")

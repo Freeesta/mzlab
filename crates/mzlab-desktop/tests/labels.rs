@@ -216,3 +216,25 @@ fn link_route_gives_the_golden_bytes() {
     let bad = st.rpc("feat/grafo", &json!({"kind": "link", "request": "{}"}), &[]);
     assert_eq!(bad.err().map(|e| e.key), Some("error.link.request"));
 }
+
+#[test]
+fn hilite_route_gives_the_bytes_of_the_fixture() {
+    // the same fixture is checked against the molkit `.wasm` and `mzlab-cli mol-hilite` in tests/test_molkit_wasm.py
+    let fx: serde_json::Value =
+        serde_json::from_str(include_str!("../../../tests/dati/hilite_disegno.json")).unwrap();
+    let st = State::new();
+    for (req, want) in [("request", "hilite"), ("lr", "hilite_lr")] {
+        let p = json!({"kind": "hilite", "request": fx[req].clone()});
+        assert_eq!(
+            text(st.rpc("feat/grafo", &p, &[]).unwrap()),
+            fx[want].as_str().unwrap(),
+            "{req}"
+        );
+    }
+    let bad = st.rpc(
+        "feat/grafo",
+        &json!({"kind": "hilite", "request": {"molfile": "x"}}),
+        &[],
+    );
+    assert_eq!(bad.err().map(|e| e.key), Some("error.hilite.molfile"));
+}

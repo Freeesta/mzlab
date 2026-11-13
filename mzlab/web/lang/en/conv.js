@@ -54,6 +54,7 @@ I18N.add("en", {
   "conv.row.noEvent": "{n} of {read} scans without their scan event: level and polarity unknown",
   "conv.row.damaged": "{n} of {read} scans damaged: left without their points, the other scans are read",
   "conv.row.leftOut": "partial read: {read} of {declared} scans, {n} damaged records left out",
+  "conv.row.noCalibration": "partial read: {read} of {declared} scans, {n} without a usable m/z calibration left out",
   "conv.sum.head": "{n} files: {parts} · {time}",
   "conv.sum.full": "{n} full scan",
   "conv.sum.ms2": "{n} MS2",

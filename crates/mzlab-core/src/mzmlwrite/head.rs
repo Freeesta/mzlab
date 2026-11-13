@@ -127,11 +127,6 @@ pub(crate) fn spectrum_head_into(
     if let (true, Some(p)) = (plain, sp.precursor) {
         plain_precursor_into(s, p, extra);
     }
-    if let Some(t) = extra.product {
-        s.push_str("<productList count=\"1\"><product><isolationWindow>");
-        isolation_into(s, t, extra.iso_half);
-        s.push_str("</isolationWindow></product></productList>");
-    }
 }
 
 /// The target of an isolation window and its offsets, the half-width each side.

@@ -259,6 +259,11 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         !s.is_empty() && s.chars().all(|c| c.is_ascii_digit() || c == '.') && s.contains('.')
     });
 
+    // SCIEX OS names itself in the log of the sample; Analyst never does
+    let os = log
+        .iter()
+        .any(|s| find_ci(s.as_bytes(), b"SCIEX OS").is_some());
+    let software = if os { "SCIEX OS" } else { "Analyst" };
     let source_type = source_type(&log);
     let (lc, det) = lc_with_pressure(method.as_ref(), get("Pumps", "P.Max 1"));
     let autosampler = autosampler(&entries);
@@ -271,7 +276,7 @@ pub fn from_wiff(ole: &Ole, n: u32, src: &Source) -> String {
         ("schema", Some(V::s(crate::method::SCHEMA))),
         ("origine", crate::method::origin(src, prop(12))),
         ("campione", campione(&data, get("", "Injection Volume"))),
-        ("strumento", strumento(cfg, version)),
+        ("strumento", strumento(cfg, software, version)),
         ("operatore", operator(user, computer)),
         ("ms", ms_sec(method.as_ref(), source_type.as_deref())),
         ("lc", lc),
@@ -374,11 +379,11 @@ fn source_type(log: &[String]) -> Option<String> {
         .map(String::from)
 }
 
-/// The `strumento` section from the "Config Table" record of the log and the software version of the `CFR_INFO` strings.
-fn strumento(cfg: Option<&String>, version: Option<&String>) -> Option<V> {
+/// The `strumento` section from the "Config Table" record of the log, the acquisition software and its version (`CFR_INFO`).
+fn strumento(cfg: Option<&String>, software: &str, version: Option<&String>) -> Option<V> {
     let f = |k| cfg.and_then(|r| field(r, k)).and_then(text);
     let sw = obj(vec![
-        ("nome", Some(V::s("Analyst"))),
+        ("nome", Some(V::s(software))),
         ("versione", version.and_then(|v| text(v))),
     ])
     .map(|s| V::Arr(vec![s]));

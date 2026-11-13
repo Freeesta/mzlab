@@ -14,7 +14,11 @@ use mzlab_core::readers_mzml::Conversion;
 use serde_json::Value;
 
 fn fixture() -> Option<(PathBuf, Value)> {
-    let out = std::env::temp_dir().join(format!("mzlab_sciex_dad_metodo_{}", std::process::id()));
+    // One folder per call: the tests run in parallel in one process and would rewrite each other's reference.
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let n = CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let out =
+        std::env::temp_dir().join(format!("mzlab_sciex_dad_metodo_{}_{n}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
     let ok = Command::new("python3")
         .arg(script)

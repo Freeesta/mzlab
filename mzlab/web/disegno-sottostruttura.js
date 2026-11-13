@@ -1,7 +1,8 @@
 // @ts-check
 // «Substructure search» of Draw: the right-click rows send the selection (or the whole drawing) as a query to the Rust search over a structure list
 // (`substructure` of the molkit .wasm, `subdb/1`; the app asks `feat/grafo`, kind `sub`): the catalogue of the program or a file the user picks, read
-// in memory. The hits are candidates to check, never identifications; «Show» draws one and selects its matched atoms, «Back» restores the drawing.
+// in memory. The hits are candidates to check, never identifications; «Show» draws one, selects its matched atoms and colours the moiety
+// (`disegno-evidenza.js`), «Back» restores the drawing.
 import { carica } from "./disegno-verifica.js";
 import { molfileOf } from "./disegno-molfile.js";
 
@@ -143,6 +144,7 @@ async function showHit(/** @type {any} */ h) {
   const inMatch = (/** @type {number} */ x, /** @type {number} */ y) => h.maps.some((/** @type {number[]} */ m) => m.some(a => ids[a] === x) && m.some(a => ids[a] === y));
   st.bonds.forEach((/** @type {any} */ b, /** @type {number} */ id) => { if (inMatch(b.begin, b.end)) bonds.push(id); });
   K.editor.selection({ atoms: [...atoms], bonds });
+  if (query) await /** @type {any} */ (window).TPDraw.highlight([{ kind: "moiety", query: query.query, label: t("draw.sub.ev.label") }]);
   $("#sub-back").hidden = false;
   $("#sub-status").textContent = t("draw.sub.shown", { name: nameOf(h), n: atoms.size });
 }
@@ -178,6 +180,8 @@ async function fromMenu(/** @type {any} */ c) {
   saved = null; $("#sub-back").hidden = true;
   $("#sub-query").textContent = t(c.whole ? "draw.sub.query.whole" : "draw.sub.query.sel", { n: ids.length });
   $("#sub-list").textContent = ""; $("#sub-status").textContent = ""; $("#sub-table").hidden = true;
+  // a new card gets its fold header in a MutationObserver callback (a microtask, so before the next frame) that moves the controls: open and focus it after
+  await new Promise(r => FRAME.next(() => r(null)));
   document.dispatchEvent(new CustomEvent("mzlab-card-open", { detail: box }));
   box.scrollIntoView({ block: "nearest" });
   $("#sub-run").focus();

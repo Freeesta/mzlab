@@ -1,6 +1,9 @@
 // The tests of external.rs: the answers of a fake module become the types of the contract (no JS).
 use super::*;
-use mzlab_core::readers::{Position, AGILENT_DAMAGED, DAMAGED, SPECTRUM_DAMAGED, WATERS_DAMAGED};
+use mzlab_core::readers::{
+    Position, AGILENT_DAMAGED, BRUKER_CUT_BIN, BRUKER_NO_CALIBRATION, DAMAGED, SPECTRUM_DAMAGED,
+    WATERS_DAMAGED,
+};
 
 struct Fake;
 
@@ -249,6 +252,12 @@ fn the_losses_keep_the_cause_the_module_gives() {
     assert_eq!(
         l(Says(3, AGILENT_DAMAGED)),
         Losses::of(5, 2, AGILENT_DAMAGED)
+    );
+    // Bruker frames past a cut `_bin` or without a usable calibration are left out of the index too
+    assert_eq!(l(Says(3, BRUKER_CUT_BIN)), Losses::of(5, 2, BRUKER_CUT_BIN));
+    assert_eq!(
+        l(Says(3, BRUKER_NO_CALIBRATION)),
+        Losses::of(5, 2, BRUKER_NO_CALIBRATION)
     );
     assert_eq!(
         l(Says(3, "warn.file.memberMissing")),
