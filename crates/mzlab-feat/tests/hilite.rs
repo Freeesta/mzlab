@@ -59,3 +59,14 @@ fn bad_requests_give_their_keys() {
         Some("error.hilite.request")
     );
 }
+
+#[test]
+fn a_molfile_query_with_a_blank_header_line_matches() {
+    // the substructure card of Draw sends its query as a molfile whose first line is blank
+    let mut req = fixture()["request"].clone();
+    let mf = req["molfile"].as_str().unwrap().replacen("  mzLab", "", 1);
+    req["molfile"] = Value::from(mf.clone());
+    req["layers"] = serde_json::json!([{"kind": "moiety", "query": format!("\n{}", mf.trim_start_matches('\n'))}]);
+    let r: Value = serde_json::from_str(&hilite_json(&req.to_string()).unwrap()).unwrap();
+    assert_eq!(r["layers"][0]["atoms"], serde_json::json!([0, 1, 2, 3, 4, 5, 6, 7]));
+}

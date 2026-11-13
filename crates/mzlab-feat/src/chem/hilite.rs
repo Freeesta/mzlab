@@ -104,8 +104,9 @@ fn layer<'a>(v: &'a Value, canvas: &Mol) -> Result<Layer<'a>> {
     };
     match kind {
         "moiety" => {
-            let text = v.get("query").and_then(Value::str).unwrap_or("").trim();
-            if text.is_empty() {
+            // Not trimmed: a molfile starts with a header line that may be blank.
+            let text = v.get("query").and_then(Value::str).unwrap_or("");
+            if text.trim().is_empty() {
                 return Err(query_err("empty"));
             }
             let q = SubQuery::from_text(text).map_err(query_err)?;

@@ -23,7 +23,7 @@ ASK = """async ([mol, layers, sel]) => {
   K.editor.selection(sel.length ? { atoms: sel.map(i => ids[i]) } : null);
   return await TPDraw.highlight(layers);
 }""" % KJ
-PAINTED = f"(() => {{ const h = {KJ}.editor.highlights; return h && h.getAll ? h.getAll().map(x => [x.color, (x.atoms || []).length, (x.bonds || []).length]) : null; }})()"
+PAINTED = f"(() => {{ const h = {KJ}.editor.highlights; return h && h.getAll ? h.getAll().map(x => x.highlight || x).map(x => [x.color, (x.atoms || []).length, (x.bonds || []).length]) : null; }})()"
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1440, "height": 900})
