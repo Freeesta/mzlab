@@ -66,6 +66,18 @@ fn spectra() -> Vec<u8> {
     .into_bytes()
 }
 
+/// `spectra()` plus the standard ProteoWizard `<chromatogram id="TWC">` (`MS:1000813`) of `n` points, as msconvert writes the 1D DAD trace.
+fn spectra_with_twc(n: usize) -> Vec<u8> {
+    let t: Vec<f64> = (0..n).map(|i| i as f64 * 0.01).collect();
+    let y: Vec<f64> = (0..n).map(|i| 10.0 + i as f64).collect();
+    let arr = |acc: &str, name: &str, v: &[f64]| format!("<binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"{acc}\" name=\"{name}\"/><binary>{}</binary></binaryDataArray>", b64(v, true, false));
+    let chrom = format!("<chromatogramList count=\"1\"><chromatogram index=\"0\" id=\"TWC\" defaultArrayLength=\"{n}\"><cvParam cvRef=\"MS\" accession=\"MS:1000813\" name=\"absorption chromatogram\"/><binaryDataArrayList count=\"2\">{}{}</binaryDataArrayList></chromatogram></chromatogramList>", arr("MS:1000595", "time array", &t), arr("MS:1000515", "intensity array", &y));
+    String::from_utf8(spectra())
+        .unwrap()
+        .replace("</run>", &format!("{chrom}</run>"))
+        .into_bytes()
+}
+
 fn mz(bytes: Vec<u8>) -> Mzml<Vec<u8>> {
     let n = bytes.len() as u64;
     Mzml::new(bytes, n)
@@ -123,6 +135,18 @@ fn optical_spectra_are_not_scans_and_answer_the_routes() {
         1,
         "the optical spectra are not in the scan table"
     );
+}
+
+#[test]
+fn proteowizard_twc_chromatogram_fills_the_trace() {
+    let d = mz(spectra_with_twc(NT)).dad().unwrap().unwrap();
+    assert_eq!(d.twc_mau, [10.0, 11.0, 12.0, 13.0]);
+    assert_eq!(d.time_min.len(), NT);
+    // a trace with another number of points than the matrix has rows is not mixed in
+    let d = mz(spectra_with_twc(NT + 1)).dad().unwrap().unwrap();
+    assert!(d.twc_mau.is_empty());
+    // no TWC chromatogram: the trace stays empty
+    assert!(mz(spectra()).dad().unwrap().unwrap().twc_mau.is_empty());
 }
 
 #[test]
