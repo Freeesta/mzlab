@@ -1,7 +1,7 @@
 """An Agilent MassHunter .D folder loaded with «Load a folder» (cartella-carica.js + agilent-d.js), on the built site with the Rust engine and WITHOUT Pyodide: the folder becomes one mzML (named like the folder), listed and indexed like any file, with its TIC; a .D without MSPeak.bin gives a notice;
 two .D folders give two files. Synthetic folders of tools/agilent_sintetico.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
-import os, shutil, subprocess, sys, tempfile, time
+import os, shutil, struct, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, wait_for_js
@@ -32,6 +32,9 @@ agilent_sintetico.write(top, "uno.D", 120)
 agilent_sintetico.write(top / "sub", "due.D", 90)
 broken = agilent_sintetico.write(top, "rotto.D", 30)
 (broken / "AcqData/MSPeak.bin").unlink()
+damaged = agilent_sintetico.write(top, "danno.D", 30)
+pk = damaged / "AcqData/MSPeak.bin"; raw = bytearray(pk.read_bytes())
+raw[68 + 10 * 64 + 32:68 + 10 * 64 + 40] = struct.pack("<d", float("nan")); pk.write_bytes(bytes(raw))      # scan 11 does not decode
 synth.write_full(top / "mix.mzML", 5, seed=1)
 agilent_sintetico.write_old(top)
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -50,16 +53,21 @@ try:
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def folder():
             pg.set_input_files("#pickdir", str(top))
-            try: pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 4", timeout=120000)
+            try: pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=120000)
             except Exception as e:      # say why a row is missing (a failed conversion keeps its message in CONVROWS and in the loading box)
                 st = pg.evaluate("() => ({ files: ST.files.map(f => f.name), conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), up: (document.querySelector('#up') || {}).innerText })")
                 raise AssertionError(f"{str(e)[:120]} | {st}") from None
-            n = sorted(names(pg)); assert n == ["due", "mix", "uno", "vecchia"], n
-        step("a folder with two .D runs, an older .D with only data.ms and an mzML lists four files", folder)
+            n = sorted(names(pg)); assert n == ["danno", "due", "mix", "uno", "vecchia"], n
+        step("a folder with three .D runs (one with a scan that does not decode), an older .D with only data.ms and an mzML lists five files", folder)
         def notice():
             t = pg.inner_text("#up")
             assert "rotto.D" in t, t
         step("the .D without MSPeak.bin gets a notice", notice)
+        def damaged():
+            r = pg.evaluate("() => { const r = CONVROWS.rows.find(r => r.name.startsWith('danno')); return r && { s: r.state, t: CONVROWS.label(r) }; }")
+            assert r and r["s"] == "done", r
+            assert "1 of 30 scans damaged" in r["t"] or "1 di 30 scansioni danneggiate" in r["t"], r      # the scan left out stays in the list with no points
+        step("the .D with one scan that does not decode loads, its row counts the scan left out", damaged)
         def tidy():
             pg.wait_for_function("document.querySelector('#cartinfo').hidden || !document.querySelector('#cartinfo').textContent", timeout=60000)       # «Folder …: n files to load» goes away when the load is done
             assert ".D" in pg.inner_text("#drop")

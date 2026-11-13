@@ -202,6 +202,7 @@ pub use outcome::{
     cause_key, Losses, ReadOutcome, ReadOutcomes, DAMAGED, EVENTS_REFUSED, MEMBER_MISSING,
     RAW_DAMAGED, RECORD_WIDTH, TRUNCATED, WATERS_DAMAGED,
 };
+pub use skips::{damages_one, Skips, SPECTRUM_DAMAGED};
 
 /// A reader of one dataset. Random access: `indice` is read once, `scansione` reads only the bytes of one scan; streaming is `scansione(c, 0..n)`.
 /// An error is a key (`err.file.*`), never a panic; what a file lacks is absent from the answer, not an error.
@@ -357,6 +358,7 @@ pub fn tic_ms1(entries: &[ScanEntry]) -> (Vec<f64>, Vec<f64>) {
 
 mod listing;
 mod outcome;
+mod skips;
 
 #[cfg(test)]
 mod tests;

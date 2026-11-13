@@ -106,6 +106,7 @@ pub fn cause_key(s: &str) -> Option<&'static str> {
         MEMBER_MISSING,
         RECORD_WIDTH,
         WATERS_DAMAGED,
+        super::SPECTRUM_DAMAGED,
     ]
     .into_iter()
     .find(|k| *k == s)

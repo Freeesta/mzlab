@@ -341,7 +341,6 @@ pub fn to_mzml_with(
         .ok_or_else(|| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
     let m = Members::new(names, sizes, read)?;
     let mut l = open_sample(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
-    let lacking = l.losses(c as usize).map_err(|e| error_json(&e))?.lost();
     let mut out = BlockWriter {
         sink,
         buf: Vec::new(),
@@ -362,6 +361,8 @@ pub fn to_mzml_with(
         .map_err(|e| error_json(&e))?;
     out.flush()
         .map_err(|_| error_json(&mzlab_core::Error::new("err.file.mzmlWrite")))?;
+    // asked once the scans are read: the ones whose data did not decode are counted then
+    let lacking = l.losses(c as usize).map_err(|e| error_json(&e))?.lost();
     Ok(lacking as f64)
 }
 
