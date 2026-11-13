@@ -3,7 +3,7 @@
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
-import bench_grafici as BG  # noqa: E402  (its synthetic SRM file: noisy baseline, one peak per transition, one-point spikes)
+import bench_charts as BG  # noqa: E402  (its synthetic SRM file: noisy baseline, one peak per transition, one-point spikes)
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

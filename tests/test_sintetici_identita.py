@@ -10,7 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
-import valida_feat as VF  # noqa: E402
+import validate_feat as VF  # noqa: E402
 from valida import sintetici_identita as SI  # noqa: E402
 from mzlab.chem import elements as E  # noqa: E402
 from mzlab.reader.mzml import Run  # noqa: E402

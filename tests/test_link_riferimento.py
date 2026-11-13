@@ -1,5 +1,5 @@
 """tests/dati/link_golden.json (read by crates/mzlab-feat/tests/link.rs, the desktop route test and the wasm parity test) is what the independent
-reference tools/link_riferimento.py computes, and its SMILES and InChI cover charges, brackets, stereo, isotopes, #, + and /."""
+reference tools/link_reference.py computes, and its SMILES and InChI cover charges, brackets, stereo, isotopes, #, + and /."""
 import json
 import subprocess
 import sys
@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_golden_is_the_reference():
-    r = subprocess.run([sys.executable, "tools/link_riferimento.py"], cwd=ROOT, capture_output=True, encoding="utf-8")
+    r = subprocess.run([sys.executable, "tools/link_reference.py"], cwd=ROOT, capture_output=True, encoding="utf-8")
     assert r.returncode == 0, r.stderr
 
 

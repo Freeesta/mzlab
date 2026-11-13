@@ -1,5 +1,5 @@
 #![cfg(feature = "attributio")]
-//! Parity of the MS2 confirmation (B3) with the golden data of the reference tool (`tools/attributio_riferimento.py`, stage `tox-b3`): the verdict of every
+//! Parity of the MS2 confirmation (B3) with the golden data of the reference tool (`tools/attributio_reference.py`, stage `tox-b3`): the verdict of every
 //! B2 candidate from synthetic SIRIUS tables, a MetFrag summary and the chemist's decisions, the accepted ones and the formula parser.
 
 #[macro_use]

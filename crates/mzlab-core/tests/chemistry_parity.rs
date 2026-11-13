@@ -1,4 +1,4 @@
-//! `elements` and `subformulas` answer like `mzlab/chem` (`tools/chimica_riferimento.py`): the same JSON (numbers within 1e-9 relative, rounded
+//! `elements` and `subformulas` answer like `mzlab/chem` (`tools/chemistry_reference.py`): the same JSON (numbers within 1e-9 relative, rounded
 //! values equal), the same names in the same order, the same error keys. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -46,7 +46,7 @@ fn same(path: &str, got: &Value, want: &Value) {
 fn chemistry_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab_chimica_{}.json", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/chimica_riferimento.py"))
+        .arg(root().join("tools/chemistry_reference.py"))
         .arg(&out)
         .output()
         .map(|o| o.status.success())

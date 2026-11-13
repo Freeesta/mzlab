@@ -152,7 +152,7 @@ Letture: con sei file da pochi MB la seconda lettura dell'mzML costava poco e la
 ## Teoria da telefono (`tests_e2e/e2e_teoria_mobile.py`, `e2e_indirizzi.py`)
 Chromium Linux, 390×844 con tocco, server di sviluppo, un giro, dati stampati come `MEASURE`: capitolo 4 ≈ 45 kB e LCP ≈ 0,18 s, capitolo 20 ≈ 140 kB (le due raster ridotte da 1400 px, 88 + 57 kB, caricate «lazy»; i file grandi da 384 + 182 kB solo all'apertura della figura), LCP ≈ 0,07 s. Apertura a freddo di `#/teoria` 11 richieste ≈ 160 kB, senza Pyodide, WASM, `api/` né script di Dati o Disegno (verificato). Rifare la misura: lanciare i due script (stampano le righe `MEASURE`).
 
-## Mirino della mappa (`python3 tools/bench_mirino.py [lr|hr] [--site]`, Chromium Linux, 2026-10-11)
+## Mirino della mappa (`python3 tools/bench_crosshair.py [lr|hr] [--site]`, Chromium Linux, 2026-10-11)
 Mappa a schermo intero con il mirino acceso. LR: un Full Scan sintetico di 1500 scansioni × 500 centroidi (750 000 picchi); HR: le scansioni Full Scan di un Orbitrap sintetico (poche, ~600 scansioni). «site» = sito costruito (Pyodide in un worker; `python_ms` = tempo in Python dalla intestazione `X-Py-Ms`, il resto è andata e ritorno e copie JS↔worker); «dev» = server di sviluppo. Prima = `origin/main` con la sola strumentazione `?perf`; dopo = questo pacchetto. Un giro; tempi in ms, mediana / p95.
 
 **Prima: dove va il tempo di un punto del mirino (sito, Pyodide)**
@@ -195,7 +195,7 @@ Peso: 0,9 KB gzip il CSS + 2,2 KB gzip il JS (3,1 KB in tutto, soglia 4 KB). Ape
 |---|---|---|
 | `golden.py --controlla` | 2 differenze (`differenza_hr`, `statistica_pca`: «missing in engine», senza WASM) | uguale |
 | `verifica.py` completa | 131 OK, rossi e2e16 e e2e25 | 137 OK (6 controlli in più: mappa, soglie, nuovi test di main), e2e16 e e2e25 NOTO |
-| `draw()` per 30 eventi resize (`tools/misura_redraw.py`, 2 pannelli) | 60 | 2 |
+| `draw()` per 30 eventi resize (`tools/measure_redraw.py`, 2 pannelli) | 60 | 2 |
 | `prototipi/` | 1478 KB, 14 file | cancellata |
 | `bench.py --velocita` / `--mzidx` | non eseguiti: servono `site/` e il WASM Rust, assenti nel cloud | non eseguiti |
 

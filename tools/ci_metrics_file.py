@@ -1,5 +1,5 @@
 """Rotating data files of tools/ci_metrics.py: one `eventi-YYYY-MM[-N].jsonl` per month on the branch `stat-ci`, plus the frozen legacy `eventi.jsonl`.
-Standard library only; used by ci_metrics.py, coo_unisci.py and ci_pytest_lenti.py."""
+Standard library only; used by ci_metrics.py, coo_merge.py and ci_pytest_slow.py."""
 from __future__ import annotations
 
 import json

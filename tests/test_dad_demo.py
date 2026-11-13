@@ -1,4 +1,4 @@
-"""The UV matrix of the Full Scan demos (tools/dati_sintetici_dad.py): the five files carry it in the TWC chromatogram, the index and the checksum agree, and the file stays small."""
+"""The UV matrix of the Full Scan demos (tools/synthetic_data_dad.py): the five files carry it in the TWC chromatogram, the index and the checksum agree, and the file stays small."""
 import base64
 import re
 import sys
@@ -10,7 +10,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici as ds  # noqa: E402
-import dati_sintetici_dad as dd  # noqa: E402
+import synthetic_data_dad as dd  # noqa: E402
 
 EXAMPLES = ROOT / "mzlab" / "web" / "esempi"
 

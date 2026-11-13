@@ -22,7 +22,7 @@ def work(tmp_path_factory):
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "mod"), str(WASM / "mzlab_lettori_wasm.wasm"))
     run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli")
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(d / "ref")], check=True, capture_output=True)
-    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto_pi.py"), str(d / "ref")], check=True, capture_output=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed_pi.py"), str(d / "ref")], check=True, capture_output=True)
     return d
 
 

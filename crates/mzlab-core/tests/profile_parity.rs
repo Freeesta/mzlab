@@ -1,4 +1,4 @@
-//! `/api/spectrum` and `/api/spectra` on PROFILE files answer from the index like `api.dispatch` (`tools/profilo_riferimento.py`, two synthetic
+//! `/api/spectrum` and `/api/spectra` on PROFILE files answer from the index like `api.dispatch` (`tools/profile_reference.py`, two synthetic
 //! profile files): the same peaks, the same padded line, numbers within 1e-9; the requests Python refuses are Python's here too (`None`).
 //! Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead). `MZLAB_PROFILE_DIR` = a folder already written by the script.
 
@@ -41,7 +41,7 @@ fn profile_spectra_like_python() {
     let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-profile-{}", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/profilo_riferimento.py").arg(&out).output(),
+        None => Command::new("python3").current_dir(root()).arg("tools/profile_reference.py").arg(&out).output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");

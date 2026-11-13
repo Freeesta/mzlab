@@ -1,11 +1,11 @@
-# e2e_ms3: a file of MS3 scans only (synthetic, tools/dati_sintetici_msn.ms3) opens in the product-ion tab at level 3: the precursor chromatogram is drawn
+# e2e_ms3: a file of MS3 scans only (synthetic, tools/synthetic_data_msn.ms3) opens in the product-ion tab at level 3: the precursor chromatogram is drawn
 # (never empty for lack of MS2 scans), titled «TIC · MS³», its spectrum is «MS³ of 194.1» with the MS3 product ions, the level menu offers MS3,
 # the scan list holds the MS3 scans and the precursor table lists 194.1; IT and EN. The MS3 spectrum behaves as an MS2 one: the axis fits its own peaks and
 # the precursor, the scan line gives the CE, the exports are named and described MS3; with a second MS3 file (precursors 210.1 and 230.1) the spectrum of
 # a precursor the shown file lacks falls back to the file that has it, and «all precursors» splits one spectrum per precursor.
 import os, sys, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-sys.path.insert(0, str(ROOT / "tools")); import dati_sintetici_msn as ds, numpy as np
+sys.path.insert(0, str(ROOT / "tools")); import synthetic_data_msn as ds, numpy as np
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-import genera_contaminanti as g  # noqa: E402
+import generate_contaminants as g  # noqa: E402
 from mzlab.chem.contaminants import builtin, expand  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent

@@ -15,7 +15,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import dati_sintetici as ds  # noqa: E402
-import dati_sintetici_msn as dsm  # noqa: E402
+import synthetic_data_msn as dsm  # noqa: E402
 
 GOLD = ROOT / "tests" / "golden" / "e2e"
 

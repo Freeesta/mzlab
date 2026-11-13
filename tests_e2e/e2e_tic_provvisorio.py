@@ -1,10 +1,10 @@
 # e2e_tic_provvisorio: while the first file of a loading is still being indexed, the work area shows its provisional TIC (tic-provvisorio.js: the MS1 rt/tic of the scan table,
 # event mzlab-index with early_tic) with its data table; the box goes when the real panel opens, and «Cancel» of the loading takes it away with no panel left behind.
-# Synthetic file (tools/mzml_msconvert_sintetico.py), no laboratory data. Needs the site and the .wasm: python3 tools/build_site.py, then python3 tests_e2e/e2e_tic_provvisorio.py
+# Synthetic file (tools/mzml_msconvert_synthetic.py), no laboratory data. Needs the site and the .wasm: python3 tools/build_site.py, then python3 tests_e2e/e2e_tic_provvisorio.py
 import os, sys, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
-import mzml_msconvert_sintetico as gen
+import mzml_msconvert_synthetic as gen
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

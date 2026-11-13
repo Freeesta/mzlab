@@ -4,7 +4,7 @@
     python3 tools/valida/sintetici_identita.py --seme N --profilo piccolo|completo --out DIR
 
 Writes in DIR one Orbitrap-like DDA mzML per sample (SIN_blank, SIN_dark, SIN_t0, SIN_tNNmin; tools/valida/sintetici_mzml.py) and the truth, `verita.csv` and
-`verita.json`. The same seed gives the same bytes. The JSON is the format of the real truth files (`parent`, `tps`: read as they are by tools/valida_feat.py)
+`verita.json`. The same seed gives the same bytes. The JSON is the format of the real truth files (`parent`, `tps`: read as they are by tools/validate_feat.py)
 plus `ioni` (every row of the truth), `file` and `meta`.
 
 Truth columns: id, ruolo, mz, rt_obs[], ion, famiglia, progenitore, generazione, forma, purezza, isf_in_ms2, presente, k_form, k_dec, note.

@@ -1,6 +1,6 @@
 //! `/api/dda_window?k&r0&r1[&hr=0]`: the MS2 started from the survey scans of a time window, grouped by precursor within the tolerance of the
 //! MS2 profile (ppm of a high-resolution profile, else 0.5 Da, as `tolOf` in dda.js). The most intense precursor first, members in order of
-//! acquisition. Reference: `tools/dda_finestra_riferimento.py`; parity test: `tests/hr_parity.rs`. A reader that gives no precursor intensity (Thermo
+//! acquisition. Reference: `tools/dda_reference_window.py`; parity test: `tests/hr_parity.rs`. A reader that gives no precursor intensity (Thermo
 //! .raw) has it filled from the source (`dda_window_src`, every surface): the highest point of the parent survey scan in its isolation window.
 //! `mz[&tol]` keeps only the MS2 of that precursor (tol in Da, else the profile's): the whole-file picks of dda.js read only their parents.
 

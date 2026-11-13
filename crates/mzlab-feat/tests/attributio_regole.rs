@@ -228,7 +228,7 @@ fn row_of(files: &MemFiles, id: i64) -> Vec<mzlab_feat::attributio::annotate::Fe
         .collect()
 }
 
-/// Every level of the campaign after the decision is the one `tools/attributio_riferimento.py` gives on the same folder (`livelli.json`).
+/// Every level of the campaign after the decision is the one `tools/attributio_reference.py` gives on the same folder (`livelli.json`).
 fn levels_match_reference(files: &MemFiles) {
     let want: Value = serde_json::from_str(
         &std::fs::read_to_string(root().join("tests/golden/attributio/banco/livelli.json"))

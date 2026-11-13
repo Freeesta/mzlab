@@ -1,7 +1,7 @@
 """A scheduled-MRM .wiff with no Log (`programmati` of tools/wiff_riferimento.py, synthetic, no laboratory data) on the site: the `probe` of the `sciex` module says
 «variante», so shell.js hands the pair to the module, whose mzML is byte for byte the one `mzlab-cli convert` writes (one TIC per experiment, the scheduled
 transitions without their skip markers, the generic instrument term: no Log names no model). The engine (mzlab-wasm, `build_mzidx_native`) refuses the sparse
-blocks (`err.file.wiff`, `sparse MRM block`) instead of reading the markers as intensities. `mrmrado` (tools/wiff_mrm_rado.py) has sparse blocks but no `sMRM`
+blocks (`err.file.wiff`, `sparse MRM block`) instead of reading the markers as intensities. `mrmrado` (tools/wiff_mrm_sparse.py) has sparse blocks but no `sMRM`
 stream in its method: the probe still says «variante» from the blocks themselves. Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
@@ -26,7 +26,7 @@ def work(tmp_path_factory):
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "eng"), str(WASM / "mzlab_wasm.wasm"))
     run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli")
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(d / "ref")], check=True, capture_output=True)
-    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mrm_rado.py"), str(d / "ref")], check=True, capture_output=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mrm_sparse.py"), str(d / "ref")], check=True, capture_output=True)
     return d
 
 

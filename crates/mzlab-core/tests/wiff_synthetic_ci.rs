@@ -1,4 +1,4 @@
-//! The synthetic SCIEX `.wiff` of the CI (written by `tools/cfb_scrivi.py`, invented numbers): DAD matrix and its header check, MRM parameters,
+//! The synthetic SCIEX `.wiff` of the CI (written by `tools/cfb_write.py`, invented numbers): DAD matrix and its header check, MRM parameters,
 //! LC gradients, device channels, DDE precursors in cycle order, TOF calibration, `Itc` and the TDC block decoder. Needs python3.
 
 #![allow(clippy::disallowed_methods)]
@@ -21,7 +21,7 @@ fn write_synthetic_ci_wiff(out: &Path) {
         "import struct, sys\n",
         "from pathlib import Path\n",
         "sys.path.insert(0, str(Path(sys.argv[1]) / 'tools'))\n",
-        "import cfb_scrivi\n",
+        "import cfb_write\n",
         "out = Path(sys.argv[2])\n",
         "dad_hdr = bytearray(86); struct.pack_into('<I', dad_hdr, 4, 4); struct.pack_into('<II', dad_hdr, 34, 3, 5); struct.pack_into('<ffff', dad_hdr, 46, 0.012, 200.0, 208.0, 2.0)\n",
         "rows = [[1.0, 2.0, 3.0, 4.0, 5.0], [0.5, 1.5, 2.5, 3.5, 4.5], [2.0, 4.0, 6.0, 8.0, 10.0]]\n",
@@ -44,7 +44,7 @@ fn write_synthetic_ci_wiff(out: &Path) {
         "tcal = bytearray(32) + struct.pack('<ddII', 0.001, 100.0, 0, 1) + struct.pack('<ddI', 0.001, 100.0, 0)\n",
         "idx1 = bytearray(32) + struct.pack('<IId', 0, 8, 6000.0) + b'\\x01\\x00' + struct.pack('<dd', 1500.0, 0.0) + bytes(20)\n",
         "tbl = bytearray(32) + b''.join(struct.pack('<II', s, 20) + bytes(8) for s in (1, 2, 3))\n",
-        "cfb_scrivi.write({\n",
+        "cfb_write.write({\n",
         "  'SampleSubtree/SampleIdxTable': bytes(tbl),\n",
         "  'SampleSubtree/Sample1/Idx': bytes(idx1),\n",
         "  'SampleSubtree/Sample1/Devices/Device_1/DAD/DADSampleHeader': bytes(dad_hdr),\n",

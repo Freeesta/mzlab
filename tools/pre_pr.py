@@ -54,7 +54,7 @@ def files_cambiati() -> list[str]:
 def doc_only_steps() -> list[tuple[str, list[str]]]:
     """The checks a documents-only diff needs."""
     p = [("mappa del codice", [PY, "tools/indice.py", "--controlla"]), ("soglie di dimensione", [PY, "tools/controlla.py"]),
-         ("percorsi nei documenti", [PY, "tools/controlla_link_docs.py"])]
+         ("percorsi nei documenti", [PY, "tools/check_link_docs.py"])]
     return p
 
 
@@ -66,7 +66,7 @@ def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     p = [
         ("mappa del codice", [PY, "tools/indice.py", "--controlla"]),
         ("soglie di dimensione", [PY, "tools/controlla.py"]),
-        ("percorsi nei documenti", [PY, "tools/controlla_link_docs.py"]),
+        ("percorsi nei documenti", [PY, "tools/check_link_docs.py"]),
         ("lingue (i18n)", [PY, "tools/controlla_i18n.py"]),
     ]
     if shutil.which("node") and changed("mzlab/web/"):
@@ -75,8 +75,8 @@ def steps(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
         ("globali dei tipi", [PY, "tools/tipi/genera_globali.py", "--controlla"]),
         ("tsc", [PY, "tools/tipi/controlla_tsc.py"]),
     ]
-    if (ROOT / "tools" / "controlla_import.py").exists():
-        p.append(("import degli e2e", [PY, "tools/controlla_import.py"]))
+    if (ROOT / "tools" / "check_import.py").exists():
+        p.append(("import degli e2e", [PY, "tools/check_import.py"]))
     if shutil.which("cargo") and changed("vendor/opentfraw/"):  # the crate is out of the workspace: no CI job runs its own tests
         p.append(("test lib di opentfraw", ["cargo", "test", "-q", "--manifest-path", "vendor/opentfraw/Cargo.toml", "--lib"]))
     if veloce:

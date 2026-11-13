@@ -2,7 +2,7 @@
 opening of «Elemental composition») and `origine.js` (first «Where does this ion come from?») right after a file is loaded, while the service
 worker fills its cache in the background; `--probe cmp` instead times the click on «Elemental composition» (BARRA.show) until its panel is
 drawn, as a user does it. Measures, never asserts: used by docs/agenti/misure-caricamento.md.
-Link model: 1.6 Mbit/s down shared by every connection and 150 ms before each answer, applied by the local server (tools/rete_lenta.py); CPU x4 over CDP (misura_ricarica.Throttle). The server speaks HTTP/1.1
+Link model: 1.6 Mbit/s down shared by every connection and 150 ms before each answer, applied by the local server (tools/slow_network.py); CPU x4 over CDP (misura_ricarica.Throttle). The server speaks HTTP/1.1
 (six connections per host), GitHub Pages HTTP/2: a request queues behind open ones here, there it shares the bandwidth only.
 """
 from __future__ import annotations
@@ -14,13 +14,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import misura_ricarica as mr
 import misura_lista_molti as mlm
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tools"))
-import rete_lenta
+import slow_network
 
 RATE, RTT = 1_600_000, 0.150
 
 
 def serve(folder: str) -> str:
-    SlowMirror = rete_lenta.lento(mr.Mirror, RATE, RTT)
+    SlowMirror = slow_network.lento(mr.Mirror, RATE, RTT)
     SlowMirror.root = Path(folder); SlowMirror.upstream = ""
     srv = ThreadingHTTPServer(("127.0.0.1", 0), SlowMirror)
     threading.Thread(target=srv.serve_forever, daemon=True).start()

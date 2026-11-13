@@ -17,7 +17,7 @@ fn make() -> Option<(std::path::PathBuf, Vec<u8>)> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab_family_record_{}", std::process::id()));
     let ok = std::process::Command::new("python3")
-        .arg(root.join("tools/feat_sintetici.py"))
+        .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
         .args(["--solo", "degdma"])
         .output()

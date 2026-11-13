@@ -2,7 +2,7 @@
 //! `cargo run --release -p mzlab-core --example viewer_times -- genera DIR [SCANS] [PEAKS]` writes a synthetic mzML and its `.mzidx` in DIR (timed);
 //! `cargo run --release -p mzlab-core --example viewer_times -- indicizza FILE.mzML OUT.mzidx` indexes any mzML the way the desktop does (timed);
 //! `cargo run --release -p mzlab-core --example viewer_times -- FILE.mzidx [N] [--json]` times N m/z (default 200) spread over the base peaks of the file.
-//! Used by `tools/bench_visore.py` and `docs/agenti/visore-veloce.md`.
+//! Used by `tools/bench_viewer.py` and `docs/agenti/visore-veloce.md`.
 #[path = "../tests/fake_reader/mod.rs"]
 mod finto;
 

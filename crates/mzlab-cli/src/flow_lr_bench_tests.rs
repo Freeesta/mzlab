@@ -1,4 +1,4 @@
-//! Benchmark of the unit-resolution feature chain on a synthetic QTRAP-like Q1 profile with ground truth and decoys (`tools/lr_sintetico.py`, run into a
+//! Benchmark of the unit-resolution feature chain on a synthetic QTRAP-like Q1 profile with ground truth and decoys (`tools/lr_synthetic.py`, run into a
 //! temp dir; skipped without python3 and numpy, `MZLAB_GOLDEN_STRICT=1` fails instead). Path A = `spectra.centroid` -> `index.mzidx` -> `features.detect`,
 //! path B = the profile index as it is -> `features.detect`. The rows are scored against the truth (0.2 Da / 4 s); the floors hold what the chain does today.
 
@@ -50,7 +50,7 @@ fn generate(tag: &str, jitter: f64) -> Option<PathBuf> {
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     let ok = Command::new("python3")
-        .arg(tools().join("lr_sintetico.py"))
+        .arg(tools().join("lr_synthetic.py"))
         .arg(&d)
         .args(["--seed", "1", "--jitter", &jitter.to_string()])
         .output()

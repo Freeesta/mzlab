@@ -1,4 +1,4 @@
-"""Flow «This browser» screen.suspects (flow/lazy/flow-web-suspects.js, `flow_screen_suspects` of the `table` .wasm): over the synthetic identity series (tools/feat_sintetici.py) and a suspect list made here from the
+"""Flow «This browser» screen.suspects (flow/lazy/flow-web-suspects.js, `flow_screen_suspects` of the `table` .wasm): over the synthetic identity series (tools/feat_synthetic.py) and a suspect list made here from the
 precursors of its MS2 scans (two true suspects, one with the fragments of its spectrum, a decoy 20 mDa away and an absent mass) the plan detect → align → gap-fill, spectra.ms2 → screen.suspects runs in the browser and writes the screen/1
 text that `mzlab-cli flow run` writes of the same plan, byte for byte; a second run takes it from OPFS; the engine had no route it could not serve. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen,
 python3 and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_suspects.py"""
@@ -39,7 +39,7 @@ subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", 
 from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 ser = tmp / "ser"
-subprocess.run([sys.executable, "tools/feat_sintetici.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
+subprocess.run([sys.executable, "tools/feat_synthetic.py", str(ser), "--solo", "identita"], cwd=ROOT, check=True, capture_output=True)
 run = tmp / "run"; run.mkdir()
 for n in NAMES: shutil.copy2(ser / "identita" / (n + ".mzML"), run / (n + ".mzML"))
 shutil.copy2(ser / "identita" / (ONE + ".mzML"), run / (MS2 + ".mzML"))

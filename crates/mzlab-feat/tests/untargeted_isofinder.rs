@@ -1,4 +1,4 @@
-//! Isotope finder (one charge): candidates and score on synthetic spectra with an exact binomial 13C envelope (`tools/isofinder_riferimento.py`).
+//! Isotope finder (one charge): candidates and score on synthetic spectra with an exact binomial 13C envelope (`tools/isofinder_reference.py`).
 
 use mzlab_feat::untargeted::isofinder::{Config, Engine, Tol};
 use serde_json::Value;

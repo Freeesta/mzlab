@@ -1,0 +1,421 @@
+{
+ "format": "riferimento-esterno/1",
+ "about": "Datasets for tools/external_reference.py: public files only, paths relative to the private data repository. expected maps a check to the finding it reproduces (an ID of the external reader review, or an RE-n of observations); the list only shrinks. ignore names checks that cannot be compared for that pair, with the reason.",
+ "tolerances": {
+  "rt_min": 0.0001,
+  "precursor_mz": 0.0001,
+  "collision_energy": 0.01,
+  "mz_ppm": 1.0,
+  "intensity_rel": 1e-05,
+  "q_exact": 0.0005,
+  "q_rounded": 0.006
+ },
+ "datasets": [
+  {
+   "name": "pwiz Thermo 090701-LTQVelos-unittest-01",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Thermo)",
+   "format": "thermo",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/090701-LTQVelos-unittest-01.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/090701-LTQVelos-unittest-01.mzML",
+   "producer": "msconvert (ProteoWizard 3.0.23188): no filters for the headers, vendor peak picking for the arrays",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "well_formed": "WR-01",
+    "isolation": "TH-10"
+   },
+   "reference_arrays": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/090701-LTQVelos-unittest-01-centroid.mzML",
+   "ignore": {
+    "count": "msconvert without --simAsSpectra writes the 14 SIM scans as chromatograms",
+    "chrom_count": "same: SIM scans are chromatograms there, spectra here",
+    "chrom_paired": "same"
+   }
+  },
+  {
+   "name": "pwiz Thermo BSA-FT-ETD",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Thermo)",
+   "format": "thermo",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/BSA-FT-ETD.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/BSA-FT-ETD.mzML",
+   "producer": "msconvert (ProteoWizard 3.0.23188): no filters for the headers, vendor peak picking for the arrays",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "representation": "RE-4",
+    "activation": "TH-03"
+   },
+   "reference_arrays": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/BSA-FT-ETD-centroid.mzML"
+  },
+  {
+   "name": "pwiz Thermo BSA-FT-HCD",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Thermo)",
+   "format": "thermo",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/BSA-FT-HCD.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/BSA-FT-HCD.mzML",
+   "producer": "msconvert (ProteoWizard 3.0.23188): no filters for the headers, vendor peak picking for the arrays",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "representation": "RE-4"
+   },
+   "reference_arrays": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/BSA-FT-HCD-centroid.mzML"
+  },
+  {
+   "name": "pwiz Thermo FT-HCD-MSX",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Thermo)",
+   "format": "thermo",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/FT-HCD-MSX.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/FT-HCD-MSX.mzML",
+   "producer": "msconvert (ProteoWizard 3.0.23188): no filters for the headers, vendor peak picking for the arrays",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "precursors": "TH-05",
+    "isolation": "TH-05"
+   },
+   "reference_arrays": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/FT-HCD-MSX-centroid.mzML"
+  },
+  {
+   "name": "pwiz Thermo IT-HCD-SPS",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Thermo)",
+   "format": "thermo",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/IT-HCD-SPS.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/IT-HCD-SPS.mzML",
+   "producer": "msconvert (ProteoWizard 3.0.23188): no filters for the headers, vendor peak picking for the arrays",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "precursors": "TH-06",
+    "isolation": "TH-06",
+    "selected_ion": "TH-06",
+    "collision_energy": "TH-06"
+   },
+   "reference_arrays": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/IT-HCD-SPS-centroid.mzML"
+  },
+  {
+   "name": "pwiz Thermo IsolationMzOffset-ReportedMassOffset",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Thermo)",
+   "format": "thermo",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/IsolationMzOffset-ReportedMassOffset.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/IsolationMzOffset-ReportedMassOffset.mzML",
+   "producer": "msconvert (ProteoWizard 3.0.23188): no filters for the headers, vendor peak picking for the arrays",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "representation": "RE-4",
+    "isolation": "TH-07",
+    "selected_ion": "TH-07"
+   },
+   "reference_arrays": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/IsolationMzOffset-ReportedMassOffset-centroid.mzML"
+  },
+  {
+   "name": "pwiz Thermo source_cid_test_3scans",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Thermo)",
+   "format": "thermo",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/source_cid_test_3scans.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/source_cid_test_3scans.mzML",
+   "producer": "msconvert (ProteoWizard 3.0.23188): no filters for the headers, vendor peak picking for the arrays",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "activation": "TH-01",
+    "level": "TH-01",
+    "polarity": "TH-01",
+    "isolation": "TH-01",
+    "selected_ion": "TH-01",
+    "precursors": "TH-01"
+   },
+   "reference_arrays": "dati/formati/aperti/lettori_open_test/pwiz/Thermo/source_cid_test_3scans-centroid.mzML"
+  },
+  {
+   "name": "pwiz Waters HDDDA_Short_noLM",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Waters)",
+   "format": "waters",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Waters/HDDDA_Short_noLM.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Waters/HDDDA_Short_noLM-combineIMS.mzML",
+   "producer": "msconvert (ProteoWizard), --combineIonMobilitySpectra",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "activation": "RE-2",
+    "collision_energy": "RE-2"
+   },
+   "tolerances": {
+    "precursor_mz": 0.0006
+   },
+   "tolerances_why": "msconvert writes the Waters set mass with 3 decimals",
+   "ignore": {
+    "points": "--combineIonMobilitySpectra merges the drift bins on another m/z grid than mzLab's sum; arrays not comparable",
+    "mz": "same",
+    "intensity": "same"
+   }
+  },
+  {
+   "name": "pwiz Waters HDMRM_Short_noLM",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Waters)",
+   "format": "waters",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Waters/HDMRM_Short_noLM.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Waters/HDMRM_Short_noLM-combineIMS.mzML",
+   "producer": "msconvert (ProteoWizard), --combineIonMobilitySpectra",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "activation": "RE-2",
+    "collision_energy": "RE-2"
+   },
+   "tolerances": {
+    "precursor_mz": 0.0006
+   },
+   "tolerances_why": "msconvert writes the Waters set mass with 3 decimals",
+   "ignore": {
+    "points": "--combineIonMobilitySpectra merges the drift bins on another m/z grid than mzLab's sum; arrays not comparable",
+    "mz": "same",
+    "intensity": "same"
+   }
+  },
+  {
+   "name": "pwiz Waters HDMSe_Short_noLM",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Waters)",
+   "format": "waters",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Waters/HDMSe_Short_noLM.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Waters/HDMSe_Short_noLM-combineIMS.mzML",
+   "producer": "msconvert (ProteoWizard), --combineIonMobilitySpectra",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "precursors": "WA-03"
+   },
+   "tolerances": {
+    "precursor_mz": 0.0006
+   },
+   "tolerances_why": "msconvert writes the Waters set mass with 3 decimals",
+   "ignore": {
+    "points": "--combineIonMobilitySpectra merges the drift bins on another m/z grid than mzLab's sum; arrays not comparable",
+    "mz": "same",
+    "intensity": "same"
+   }
+  },
+  {
+   "name": "pwiz Waters SONAR_Short",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Waters)",
+   "format": "waters",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Waters/SONAR_Short.raw",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Waters/SONAR_Short.mzML",
+   "producer": "msconvert (ProteoWizard), no filters",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "arrays",
+    "chromatograms"
+   ],
+   "expected": {
+    "count": "WA-07",
+    "points": "WA-07",
+    "rt": "WA-07",
+    "level": "WA-07"
+   },
+   "nonzero_points": true,
+   "tolerances": {
+    "precursor_mz": 0.0006
+   },
+   "tolerances_why": "msconvert writes the Waters set mass with 3 decimals"
+  },
+  {
+   "name": "pwiz Bruker CsI_Pos_0_G1_000003",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Bruker)",
+   "format": "bruker",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Bruker/CsI_Pos_0_G1_000003.d",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Bruker/CsI_Pos_0_G1_000003.mzML",
+   "producer": "msconvert (ProteoWizard)",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {
+    "count": "BR-04"
+   }
+  },
+  {
+   "name": "pwiz Bruker Hela_QC_PASEF_Slot1-first-6-frames",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Bruker)",
+   "format": "bruker",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Bruker/Hela_QC_PASEF_Slot1-first-6-frames.d",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Bruker/Hela_QC_PASEF_Slot1-first-6-frames-combineIMS.mzML",
+   "producer": "msconvert (ProteoWizard), --combineIonMobilitySpectra",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {
+    "count": "RE-1",
+    "isolation": "BR-01",
+    "activation": "RE-3"
+   }
+  },
+  {
+   "name": "pwiz Bruker Sample_1-A,1_01_985",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Bruker)",
+   "format": "bruker",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Bruker/Sample_1-A,1_01_985.d",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Bruker/Sample_1-A,1_01_985.mzML",
+   "producer": "msconvert (ProteoWizard)",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {
+    "count": "BR-04"
+   }
+  },
+  {
+   "name": "pwiz Bruker ThyroglobMRM000003",
+   "source": "ProteoWizard test data (pwiz/data/vendor_readers/Bruker)",
+   "format": "bruker",
+   "input": "dati/formati/aperti/lettori_open_test/pwiz/Bruker/ThyroglobMRM000003.d",
+   "reference": "dati/formati/aperti/lettori_open_test/pwiz/Bruker/ThyroglobMRM000003-combineIMS.mzML",
+   "producer": "msconvert (ProteoWizard), --combineIonMobilitySpectra",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {
+    "well_formed": "BR-02",
+    "activation": "RE-3"
+   }
+  },
+  {
+   "name": "ST004922 Agilent 6460 QqQ",
+   "source": "Metabolomics Workbench ST004922 (raw folder and depositor mzML)",
+   "format": "agilent",
+   "input": "dati/formati/agilent/D/qqq_6460_pair_ST004922/ST004922_BC102.d",
+   "reference": "dati/formati/agilent/D/qqq_6460_pair_ST004922/ST004922_BC102.mzML",
+   "producer": "depositor mzML (converter as declared in its softwareList)",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {
+    "chrom_q1q3": "AG-09",
+    "chrom_polarity": "AG-09"
+   }
+  },
+  {
+   "name": "ST004061 Agilent 6470 QqQ",
+   "source": "Metabolomics Workbench ST004061 (raw folder and depositor mzML)",
+   "format": "agilent",
+   "input": "dati/formati/agilent/D/qqq_6470_pair_ST004061/ST004061_T_2-r001.d",
+   "reference": "dati/formati/agilent/D/qqq_6470_pair_ST004061/ST004061_T_2-r001.mzML",
+   "producer": "depositor mzML (converter as declared in its softwareList)",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {
+    "chrom_q1q3": "AG-09",
+    "chrom_polarity": "AG-09"
+   }
+  },
+  {
+   "name": "ST003651 Agilent 6495 QqQ",
+   "source": "Metabolomics Workbench ST003651 (raw folder and depositor mzML)",
+   "format": "agilent",
+   "input": "dati/formati/agilent/D/qqq_6495_pair_ST003651/ST003651_CellLines_A1.d",
+   "reference": "dati/formati/agilent/D/qqq_6495_pair_ST003651/ST003651_CellLines_A1.mzML",
+   "producer": "depositor mzML (converter as declared in its softwareList)",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {
+    "chrom_q1q3": "AG-09",
+    "chrom_polarity": "AG-09"
+   }
+  },
+  {
+   "name": "ST003656 Agilent 6550 Q-TOF profile",
+   "source": "Metabolomics Workbench ST003656 (raw folder and depositor mzML)",
+   "format": "agilent",
+   "input": "dati/formati/agilent/D/qtof_6550_profile_pair_ST003656/ST003656_E00000150_P1-A4_4_NEG.d",
+   "reference": "dati/formati/agilent/D/qtof_6550_profile_pair_ST003656/ST003656_E00000150_P1-A4_4_NEG.mzML",
+   "producer": "depositor mzML (converter as declared in its softwareList)",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {},
+   "ignore": {
+    "representation": "the depositor mzML was peak-picked by its converter (dataProcessing: peak picking)"
+   }
+  },
+  {
+   "name": "ST004453 Waters Xevo TQ-XS",
+   "source": "Metabolomics Workbench ST004453 (raw folder and depositor mzML)",
+   "format": "waters",
+   "input": "dati/formati/waters/raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038.raw",
+   "reference": "dati/formati/waters/raw/xevo_tqxs_pair_ST004453/ST004453_TQXS_04292022_038.mzML",
+   "producer": "depositor mzML (converter as declared in its softwareList)",
+   "peaks": "file",
+   "compare": [
+    "spectra",
+    "chromatograms"
+   ],
+   "expected": {
+    "chrom_polarity": "WA-04"
+   }
+  }
+ ],
+ "observations": {
+  "RE-1": "Bruker TDF: the last MS1 frame that msconvert writes is absent from the conversion (14 of 15 spectra).",
+  "RE-2": "Waters MSMS/MRM: activation written as CID (MS:1000133) and no collision energy, where msconvert writes beam-type CID (MS:1000422) with the energy of the function.",
+  "RE-3": "Bruker PASEF/MRM: no dissociation-method term in <activation>, where msconvert writes CID (MS:1000133).",
+  "RE-4": "Thermo FT scans that store profile and vendor centroids: --peaks file writes the centroids, msconvert without filters writes the profile (a choice to state, not a decoding error)."
+ }
+}

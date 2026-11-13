@@ -1,4 +1,4 @@
-//! `origin::origin_report` gives what `ionfamily.origin_report` gives (`tools/origin_riferimento.py`): the same keys, the same indices
+//! `origin::origin_report` gives what `ionfamily.origin_report` gives (`tools/origin_reference.py`): the same keys, the same indices
 //! and counts, numbers within 1e-6 relative. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -102,7 +102,7 @@ fn rust_origin_matches_python() {
     let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-origin-{}", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/origin_riferimento.py").arg(&out).output(),
+        None => Command::new("python3").current_dir(root()).arg("tools/origin_reference.py").arg(&out).output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {

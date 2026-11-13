@@ -1,4 +1,4 @@
-//! `api/qaqc` in Rust gives the JSON of Python (`tools/qaqc_riferimento.py`): same keys, numbers within 1e-9 (relative), the user's error
+//! `api/qaqc` in Rust gives the JSON of Python (`tools/qaqc_reference.py`): same keys, numbers within 1e-9 (relative), the user's error
 //! with the same key, a request Python must word itself declined. Without python3 and numpy the test is skipped (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -42,7 +42,7 @@ fn enc(s: &str) -> String {
 fn qaqc_matches_python() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab-qaqc-{}", std::process::id()));
-    let listing = match Command::new("python3").current_dir(&root).arg("tools/qaqc_riferimento.py").arg(&out).output() {
+    let listing = match Command::new("python3").current_dir(&root).arg("tools/qaqc_reference.py").arg(&out).output() {
         Ok(o) if o.status.success() => String::from_utf8(o.stdout).unwrap(),
         other => {
             if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {

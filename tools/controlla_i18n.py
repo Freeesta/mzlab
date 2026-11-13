@@ -26,7 +26,7 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
-import lang_catalogo
+import lang_catalog
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "mzlab" / "web"
@@ -92,7 +92,7 @@ PARAM_RE = re.compile(r"\{([A-Za-z_][\w]*)")
 
 # ---------------------------------------------------------------- catalogs
 def load_catalog(lang: str) -> dict[str, str]:
-    return lang_catalogo.catalog(lang)
+    return lang_catalog.catalog(lang)
 
 
 def icu_signature(msg: str) -> tuple[list, list]:

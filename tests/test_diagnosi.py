@@ -1,5 +1,5 @@
 """The diagnosis of a loading error (mzlab/web/diagnosi.js, run by node): the cause per phase, no personal parts, the header without data, the text to copy; and the synthetic msconvert-style mzML
-(tools/mzml_msconvert_sintetico.py) with its variants."""
+(tools/mzml_msconvert_synthetic.py) with its variants."""
 import json
 import shutil
 import subprocess
@@ -10,7 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
-import mzml_msconvert_sintetico as gen  # noqa: E402
+import mzml_msconvert_synthetic as gen  # noqa: E402
 
 pytestmark = pytest.mark.skipif(not shutil.which("node"), reason="node missing")
 

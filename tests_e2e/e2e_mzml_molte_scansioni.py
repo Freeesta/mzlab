@@ -1,10 +1,10 @@
 # e2e_mzml_molte_scansioni: an msconvert-style DDA mzML with tens of thousands of scans (the scan table and the index of the engine grow with the scans, not only with the peaks) opens in the
-# browser: the file is listed, nothing is refused, the engine answers every route. Synthetic (tools/mzml_msconvert_sintetico.py), no laboratory data. The cases of a file that does not fit are in
+# browser: the file is listed, nothing is refused, the engine answers every route. Synthetic (tools/mzml_msconvert_synthetic.py), no laboratory data. The cases of a file that does not fit are in
 # crates/mzlab-core/tests/mzml_big_memory.rs (peak of the heap per phase) and tests/test_diagnosi.py (cause «engine» for a trap).
 import os, sys, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT / "tools"))
-import mzml_msconvert_sintetico as gen
+import mzml_msconvert_synthetic as gen
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

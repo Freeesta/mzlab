@@ -1,5 +1,5 @@
 """C40 phase 1, measurement only: the peak memory of the browser while it loads a huge synthetic DDA mzML (File from disk -> OPFS -> scan table -> .mzidx).
-For each size in MZLAB_ENORMI_GB (default "1", comma separated; `m` = the indexed-mzML of 1.2 million small scans) the file is written by tools/mzml_enorme.py, given
+For each size in MZLAB_ENORMI_GB (default "1", comma separated; `m` = the indexed-mzML of 1.2 million small scans) the file is written by tools/mzml_huge.py, given
 to the start screen and loaded while the renderer PSS and the WebAssembly memory of the page and of every worker are sampled; the table prints the peak of each,
 the OPFS usage, whether the 192 MB budget held (error.memoryBudget), and what broke. No threshold is asserted and no time is printed.
 Run: MZLAB_ENORMI_GB=1,2 python3 tests_e2e/e2e_file_enormi.py   (the site must be built, as for e2e_memoria_misure.py; the disk needs ~3 x the size)
@@ -17,7 +17,7 @@ DRAWN = "!document.querySelector('#v-data').hidden && !!window.PERF && PERF.rows
 def make(tmp, spec):
     out = tmp / "enorme.mzML"
     args = ["--scans", "1200000", "--peaks1", "40", "--peaks2", "25"]  if spec == "m" else ["--gb", spec]
-    subprocess.run([sys.executable, str(ROOT / "tools" / "mzml_enorme.py"), str(out), *args], check=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "mzml_huge.py"), str(out), *args], check=True)
     return out
 
 

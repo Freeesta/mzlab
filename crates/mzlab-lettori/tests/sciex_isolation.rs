@@ -1,6 +1,6 @@
 //! The readers module (feature `estesi`) isolates a broken unit of a `.wiff` pair as the engine does (mzlab-core `wiff_isolation.rs`): the same
 //! per-sample result for a sample with every block damaged, a NaN cps, zeroed Idx rows and a sample at position 0; and a `.wiff` whose OLE start is
-//! damaged is the file named by the refusal, not its `.wiff.scan`. Pairs of `tools/wiff_isolamento.py`; skipped without python3.
+//! damaged is the file named by the refusal, not its `.wiff.scan`. Pairs of `tools/wiff_isolation.py`; skipped without python3.
 #![cfg(feature = "sciex")]
 
 use std::path::{Path, PathBuf};
@@ -13,7 +13,7 @@ fn pairs(tag: &str) -> Option<PathBuf> {
         "mzlab_sciex_isolamento_{tag}_{}",
         std::process::id()
     ));
-    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_isolamento.py");
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_isolation.py");
     let ok = Command::new("python3")
         .arg(script)
         .arg(&out)

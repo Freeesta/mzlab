@@ -7,7 +7,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import ROOT, free_port, wait_for_js, frames  # noqa: E402  (lib also patches wait_for_function for the CSP)
-sys.path.insert(0, str(ROOT / "tools")); import lang_catalogo  # noqa: E402
+sys.path.insert(0, str(ROOT / "tools")); import lang_catalog  # noqa: E402
 
 PORT = free_port()
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -32,7 +32,7 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         for lang in ("it", "en"):
-            keys = [k for k in lang_catalogo.catalog(lang) if re.fullmatch(r"[a-z][\w-]*(\.[\w-]+){2,}", k)]      # dotted keys long enough to never be prose
+            keys = [k for k in lang_catalog.catalog(lang) if re.fullmatch(r"[a-z][\w-]*(\.[\w-]+){2,}", k)]      # dotted keys long enough to never be prose
             for size, kw in SIZES.items():
                 def run(lang=lang, size=size, kw=kw, keys=keys):
                     ctx = b.new_context(locale="it-IT", service_workers="block", **kw); pg = ctx.new_page(); pg.add_init_script(SKIP)

@@ -1,5 +1,5 @@
 //! `mzmlhead` reads the chromatogram list, the chromatogram arrays and the metadata of an mzML like `mzlab/reader/mzml.py`
-//! (`tools/mzmlhead_riferimento.py`) on the synthetic files and the examples. Skipped without python3 and numpy
+//! (`tools/mzmlhead_reference.py`) on the synthetic files and the examples. Skipped without python3 and numpy
 //! (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -37,7 +37,7 @@ fn head_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-head-{}", std::process::id()));
     let mut cmd = Command::new("python3");
     cmd.current_dir(root())
-        .arg("tools/mzmlhead_riferimento.py")
+        .arg("tools/mzmlhead_reference.py")
         .arg(&out);
     if let Ok(rd) = std::fs::read_dir(root().join("mzlab/web/esempi")) {
         let mut v: Vec<_> = rd

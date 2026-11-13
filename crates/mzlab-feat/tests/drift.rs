@@ -1,4 +1,4 @@
-//! Drift correction (`drift.rs`): the factors, curves and CVs agree with the frozen answers of `tools/deriva_riferimento.py` to 1e-9, the correction is
+//! Drift correction (`drift.rs`): the factors, curves and CVs agree with the frozen answers of `tools/drift_reference.py` to 1e-9, the correction is
 //! refused with too few QC files or QC files that are not at the ends of a batch, it lowers the CV of the QC on a series with a known drift, and it never
 //! changes the measured areas.
 

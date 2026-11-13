@@ -1,4 +1,4 @@
-//! MS-00: the MS2 engine (compiler + entropy search) against `tools/ms2_engine_riferimento.py` (`ms_entropy.FlashEntropySearch`) on invented spectra.
+//! MS-00: the MS2 engine (compiler + entropy search) against `tools/ms2_engine_reference.py` (`ms_entropy.FlashEntropySearch`) on invented spectra.
 //! Library read from GNPS-JSON text built from the golden; scores equal within 1e-6 (float32 peaks), hit sets equal.
 #![cfg(feature = "attributio")]
 

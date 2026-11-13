@@ -15,7 +15,7 @@ license = { text = "MIT" }
 # also when the changed-files job picks them; lxml: the second, strict XML parser of every converted fixture (tests/test_mzml_secondo_parser.py);
 # never in the site
 test = ["pytest", "jsonschema>=4.18", "pillow", "lxml>=5"]
-# only to regenerate tests/golden/librerie/ with tools/parita_librerie.py (not needed by the tests or the site)
+# only to regenerate tests/golden/librerie/ with tools/parity_libraries.py (not needed by the tests or the site)
 parita = ["ms_entropy>=1.5", "matchms>=0.33"]
 
 [tool.setuptools.packages.find]

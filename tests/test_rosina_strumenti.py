@@ -41,7 +41,7 @@ def _without_variables(d: dict) -> dict:
 
 
 def test_the_synthetic_truth_is_valid_and_equal_to_the_committed_one():
-    d = verita.da_mzml(FIX / "sintetico.mzML", ("generatore sintetico", "1", "tools/mzml_msconvert_sintetico.py"), FIX / "sintetico.mzML", None)
+    d = verita.da_mzml(FIX / "sintetico.mzML", ("generatore sintetico", "1", "tools/mzml_msconvert_synthetic.py"), FIX / "sintetico.mzML", None)
     assert verita.validate(d) == []
     assert _without_variables(d) == _without_variables(json.loads((FIX / "sintetico.verita.json").read_text()))
     assert d["conteggi"]["spettri"] == {"ms1": 1, "ms2": 3}

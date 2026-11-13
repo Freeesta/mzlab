@@ -1,9 +1,9 @@
-"""tools/controlla_inglese.py: Italian is found in names, comments and paths, English words that look Italian are not."""
+"""tools/check_english.py: Italian is found in names, comments and paths, English words that look Italian are not."""
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-import controlla_inglese as ci  # noqa: E402
+import check_english as ci  # noqa: E402
 import english_rename_map as rm  # noqa: E402
 
 

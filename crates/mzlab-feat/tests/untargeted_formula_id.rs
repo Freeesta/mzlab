@@ -1,5 +1,5 @@
 //! `untargeted::formula_id`: candidate compositions of known molecules ([M+H]+ and a doubly charged ion) whose spectra come from the natural isotope
-//! abundances (`tools/formula_id_riferimento.py`), the choice of the program, the confidence and the JSON `formula_id/1`.
+//! abundances (`tools/formula_id_reference.py`), the choice of the program, the confidence and the JSON `formula_id/1`.
 #![cfg(feature = "untargeted")]
 
 use mzlab_feat::untargeted::formula_id::{identify, to_json, ChargeSource, Opts};

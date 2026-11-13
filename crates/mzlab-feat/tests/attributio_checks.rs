@@ -1,7 +1,7 @@
 #![cfg(feature = "attributio")]
 //! The coherence checks of the registry (`attributio::checks`) on hand-made registries, the isotonic fit of RT against XLogP, and the cascade on the real
 //! campaigns when `MZLAB_DATI` points at the private data (skipped without). To compare the real levels with the reference tool, run
-//! `ATTRIBUTIO_SRC=<attributio/src> python3 tools/attributio_riferimento.py --campagna <campaign folder> --uscita <folder>` and set `MZLAB_ORO_LIVELLI=<folder>`
+//! `ATTRIBUTIO_SRC=<attributio/src> python3 tools/attributio_reference.py --campagna <campaign folder> --uscita <folder>` and set `MZLAB_ORO_LIVELLI=<folder>`
 //! (the test then compares `<folder>/livelli.json` with no tolerance).
 
 #[macro_use]

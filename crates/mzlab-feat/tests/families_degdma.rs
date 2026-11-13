@@ -24,7 +24,7 @@ fn the_fragment_of_a_later_product_is_not_joined_to_the_molecule() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab_feat_degdma_{}", std::process::id()));
     let ok = std::process::Command::new("python3")
-        .arg(root.join("tools/feat_sintetici.py"))
+        .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
         .args(["--solo", "degdma"])
         .output()
@@ -93,7 +93,7 @@ fn series(only: &str) -> Option<std::path::PathBuf> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab_feat_orient_{only}_{}", std::process::id()));
     let ok = std::process::Command::new("python3")
-        .arg(root.join("tools/feat_sintetici.py"))
+        .arg(root.join("tools/feat_synthetic.py"))
         .arg(&out)
         .args(["--solo", only])
         .output()

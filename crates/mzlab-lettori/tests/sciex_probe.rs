@@ -1,5 +1,5 @@
 //! What the `probe` of the `sciex` module tells the page (`motivi`): a scheduled-MRM pair with no Log (`programmati` of `tools/wiff_riferimento.py`) and a pair
-//! whose second sample only is a variant (`tools/wiff_misto_pi.py`) are `"variante"`, so the page hands them to the module and the engine never reads their blocks.
+//! whose second sample only is a variant (`tools/wiff_mixed_pi.py`) are `"variante"`, so the page hands them to the module and the engine never reads their blocks.
 //! Synthetic pairs; skipped without python3 (`MZLAB_GOLDEN_STRICT=1` fails instead).
 #![cfg(feature = "sciex")]
 
@@ -64,7 +64,7 @@ fn a_scheduled_mrm_pair_without_a_log_is_a_variant() {
 
 #[test]
 fn a_pair_is_a_variant_when_any_of_its_samples_is() {
-    let Some(dir) = generate("wiff_misto_pi.py") else {
+    let Some(dir) = generate("wiff_mixed_pi.py") else {
         return;
     };
     let mut l = open(&dir, "mistopi");
@@ -78,7 +78,7 @@ fn a_pair_is_a_variant_when_any_of_its_samples_is() {
 /// zeros: every trace has a point in each of the 40 cycles, as `mrmrado.json` (the generator's own counts) says.
 #[test]
 fn sparse_mrm_blocks_without_a_scheduled_method_are_a_variant() {
-    let Some(dir) = generate("wiff_mrm_rado.py") else {
+    let Some(dir) = generate("wiff_mrm_sparse.py") else {
         return;
     };
     let mut l = open(&dir, "mrmrado");

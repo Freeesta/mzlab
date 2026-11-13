@@ -1,4 +1,4 @@
-//! `suspects::Suspects` answers like `read_suspects().cerca` of Python on a synthetic mini index (`tools/sospetti_riferimento.py`; skipped without
+//! `suspects::Suspects` answers like `read_suspects().cerca` of Python on a synthetic mini index (`tools/suspects_reference.py`; skipped without
 //! python3, `MZLAB_GOLDEN_STRICT=1` fails instead), rejects bad files, and searches 10^6 synthetic rows in well under a millisecond.
 //! The `listings` extension (flag bit 0) gives the same JSON as the reference reader; a v1 file without the flag has none.
 
@@ -103,7 +103,7 @@ fn search_speed_one_million_rows() {
 fn parity_with_python_reader() {
     let dir = std::env::temp_dir().join(format!("mzsus-{}", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/sospetti_riferimento.py"))
+        .arg(root().join("tools/suspects_reference.py"))
         .arg(&dir)
         .status()
         .map(|s| s.success())
@@ -160,7 +160,7 @@ fn v1_file_has_no_listings() {
 fn listings_match_python_reference() {
     let dir = std::env::temp_dir().join(format!("mzsus-ext-{}", std::process::id()));
     let ok = Command::new("python3")
-        .arg(root().join("tools/sospetti_riferimento.py"))
+        .arg(root().join("tools/suspects_reference.py"))
         .arg(&dir)
         .status()
         .map(|s| s.success())

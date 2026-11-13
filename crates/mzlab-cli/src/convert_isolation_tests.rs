@@ -1,4 +1,4 @@
-//! `mzlab-cli convert` on a `.wiff` pair with one broken unit (`tools/wiff_isolamento.py`): the healthy samples are written byte for byte as from the
+//! `mzlab-cli convert` on a `.wiff` pair with one broken unit (`tools/wiff_isolation.py`): the healthy samples are written byte for byte as from the
 //! whole pair (the SHA-1 digests of the `.wiff.scan` and of the document aside), the damaged one fails alone with its cause; a NaN cps is never
 //! written and its cycle is counted; `manual-table` lists a sample at position 0 of the table. Skipped without python3.
 use std::path::{Path, PathBuf};
@@ -13,7 +13,7 @@ fn pair(dir: &Path, name: &str) -> Option<PathBuf> {
     let src = dir.join("src");
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let made = Command::new("python3")
-        .arg(root.join("tools/wiff_isolamento.py"))
+        .arg(root.join("tools/wiff_isolation.py"))
         .arg(&src)
         .output();
     if !made.is_ok_and(|o| o.status.success()) {

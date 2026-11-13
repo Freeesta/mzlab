@@ -1,4 +1,4 @@
-//! `origin_route` over a whole session gives what `api.dispatch` gives for `api/origin` (`tools/origin_riferimento.py`, `origin-api.json`):
+//! `origin_route` over a whole session gives what `api.dispatch` gives for `api/origin` (`tools/origin_reference.py`, `origin-api.json`):
 //! unit-resolution centroids, unit-resolution profile and high-resolution centroids, each with a product-ion file; same keys, indices and counts
 //! identical, numbers within 1e-8 relative. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
@@ -78,7 +78,7 @@ fn rust_origin_route_matches_python() {
     let out = ready.clone().unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-origin-api-{}", std::process::id())));
     let run = match ready {
         Some(_) => Command::new("true").output(),
-        None => Command::new("python3").current_dir(root()).arg("tools/origin_riferimento.py").arg(&out).output(),
+        None => Command::new("python3").current_dir(root()).arg("tools/origin_reference.py").arg(&out).output(),
     };
     if !matches!(&run, Ok(o) if o.status.success()) {
         if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {

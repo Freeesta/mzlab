@@ -8,7 +8,7 @@
  "oracolo": {
   "nome": "generatore sintetico",
   "versione": "1",
-  "opzioni": "tools/mzml_msconvert_sintetico.py",
+  "opzioni": "tools/mzml_msconvert_synthetic.py",
   "data": "2026-10-19",
   "piattaforma": "Linux x86_64"
  },

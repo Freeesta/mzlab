@@ -1,4 +1,4 @@
-//! arPLS baseline: parity with the independent numpy reference (`tools/arpls_riferimento.py`, dense solve) and properties.
+//! arPLS baseline: parity with the independent numpy reference (`tools/arpls_reference.py`, dense solve) and properties.
 
 use mzlab_feat::untargeted::arpls::{baseline, correct, correct_excluding_peaks};
 use serde_json::Value;

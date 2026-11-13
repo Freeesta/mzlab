@@ -1,4 +1,4 @@
-//! The spectrum of a high-resolution PROFILE file (the `hrp` case of `tools/bench_visore.py`, reduced): its MS1 section is single precision, so the
+//! The spectrum of a high-resolution PROFILE file (the `hrp` case of `tools/bench_viewer.py`, reduced): its MS1 section is single precision, so the
 //! spacing of the points comes from the mzML. The index route answers nothing at first, `specexact` answers (the bridge asks it next), and the app
 //! and the engine `.wasm` (`tests/rotte_wasm_node.js`, `MZLAB_WASM_PKG`, run by `tests/test_parita_rotte_app.py`) give the same text.
 use mzlab_desktop::rpc::Answer;
@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// A reduced `hrp` of `tools/bench_visore.py`: Orbitrap profile survey scans (`FTMS` filter, 64-bit m/z on a regular grid, single-precision index
+/// A reduced `hrp` of `tools/bench_viewer.py`: Orbitrap profile survey scans (`FTMS` filter, 64-bit m/z on a regular grid, single-precision index
 /// section), `n` scans of `points` points with a few Gaussian peaks. Numbers invented, fixed by the loop.
 fn hr_profile_mzml(n: usize, points: usize) -> Vec<u8> {
     use mzlab_core::mzml::Spectrum;

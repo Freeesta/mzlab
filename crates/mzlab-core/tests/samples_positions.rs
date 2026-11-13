@@ -3,7 +3,7 @@
 use mzlab_core::samples::{self, from_json, proponi};
 use serde_json::Value;
 
-/// The names of `tools/project_riferimento.py` (the parity table of `guess_sample`), all of them.
+/// The names of `tools/project_reference.py` (the parity table of `guess_sample`), all of them.
 fn generated() -> Vec<String> {
     let heads = [
         "",

@@ -1,4 +1,4 @@
-"""tools/coo_unisci.py with a temporary origin: green, red CI, different SHA, conflict, Cargo risk."""
+"""tools/coo_merge.py with a temporary origin: green, red CI, different SHA, conflict, Cargo risk."""
 import json
 import subprocess
 import sys
@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-import coo_unisci as c  # noqa: E402
+import coo_merge as c  # noqa: E402
 
 
 def sh(cwd, *a):

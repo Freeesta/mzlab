@@ -18,7 +18,7 @@ import zipfile
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
-from ci_metrics_giorno import COO_COLUMNS, daily, coo_rows  # noqa: F401
+from ci_metrics_day import COO_COLUMNS, daily, coo_rows  # noqa: F401
 
 SLOW_S = 5
 AREAS = [("workflow", r"^\.github/"), ("docs", r"^(docs/|CLAUDE\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto(-worker)?\.json|mappa\.md|manifest)"),

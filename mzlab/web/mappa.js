@@ -238,7 +238,7 @@ window.MAPPA = (() => {
   // same moments as the cache of explore.js
   { const clear = CACHE.clear.bind(CACHE); CACHE.clear = () => { clear(); SIGHT.clear(); AX.clear(); FLY.clear(); }; }
   const dropFile = (/** @type {number} */ k) => { SIGHT.drop(`s${k}|`); SIGHT.drop(`x${k}|`); SIGHT.drop(`x${k}+`); SIGHT.dropIf((/** @type {string} */ key) => key[0] === "s" ? key.includes(`-${k}|`) : key.includes(`+${k}|`)); for (const key of [...AX.keys()]) if (key.startsWith(`${k}|`)) AX.delete(key); };
-  // with ?perf: the cost of the exact answer of each stop of the sight (tools/bench_mirino.py)
+  // with ?perf: the cost of the exact answer of each stop of the sight (tools/bench_crosshair.py)
   const MEAS = /[?&]perf\b/.test(location.search), meas = /** @type {Record<string, number>[]} */ (window.__mir = []);
   const once = (/** @type {string} */ key, /** @type {() => Promise<any>} */ fn) => { if (!FLY.has(key)) FLY.set(key, fn().finally(() => FLY.delete(key))); return FLY.get(key); };
   // {rt, sid} of the scans of the level; null until it has arrived

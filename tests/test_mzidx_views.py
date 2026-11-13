@@ -1,6 +1,6 @@
 """The bytes the engine (mzlab-wasm, `build_mzidx_native`) hands to `write(offset, bytes)` are views of its own memory, not copies, valid during the call
 only: a callback that writes them at once (the worker's `writeFull`, `fs.writeSync` here) gets the same .mzidx as ever, one that keeps them without
-copying gets a wrong one (synthetic `mistopi` of tools/wiff_misto_pi.py). Skipped without cargo, wasm-bindgen or node."""
+copying gets a wrong one (synthetic `mistopi` of tools/wiff_mixed_pi.py). Skipped without cargo, wasm-bindgen or node."""
 import os
 import shutil
 import subprocess
@@ -20,7 +20,7 @@ def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("views")
     run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "eng"), str(WASM / "mzlab_wasm.wasm"))
-    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto_pi.py"), str(d / "ref")], check=True, capture_output=True)
+    subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_mixed_pi.py"), str(d / "ref")], check=True, capture_output=True)
     return d
 
 

@@ -1,4 +1,4 @@
-//! `statmat` against numpy (`tools/statmat_riferimento.py`): singular values and eigenvalues to 1e-12 (relative to the largest), the signs
+//! `statmat` against numpy (`tools/statmat_reference.py`): singular values and eigenvalues to 1e-12 (relative to the largest), the signs
 //! of the 2x2 eigenvectors exactly. Skipped without python3 and numpy (`MZLAB_GOLDEN_STRICT=1` fails instead).
 
 #![allow(clippy::disallowed_methods)] // tests compare against the standard sorts
@@ -23,7 +23,7 @@ fn statmat_like_numpy() {
     let golden = root.join("tests/golden/ref/statmat.json");
     let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
     let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab-statmat-{}.json", std::process::id())) };
-    let run = if committed { Command::new("true").output() } else { Command::new("python3").current_dir(&root).arg("tools/statmat_riferimento.py").arg(&out).output() };
+    let run = if committed { Command::new("true").output() } else { Command::new("python3").current_dir(&root).arg("tools/statmat_reference.py").arg(&out).output() };
     if !matches!(&run, Ok(o) if o.status.success()) {
         assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "the reference did not run: {run:?}");
         eprintln!("python3/numpy not available: test skipped");

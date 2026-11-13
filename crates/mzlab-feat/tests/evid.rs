@@ -1,4 +1,4 @@
-//! Proofs and points (`evid/1`): the table of points is the one of `livelli/1` (the JSON of the crate is what `tools/esporta_livelli.py` writes from the
+//! Proofs and points (`evid/1`): the table of points is the one of `livelli/1` (the JSON of the crate is what `tools/export_levels.py` writes from the
 //! data file of the web page), the points are stepped and explain the order, a proof against is never offset, 1/N, the reason codes and the schema.
 
 use std::path::{Path, PathBuf};
@@ -22,7 +22,7 @@ fn proof(t: &PointsTable, kind: Kind, value: f64, support: Option<f64>, opposed:
 #[test]
 fn json_of_the_crate_is_what_the_data_file_gives() {
     let ok = Command::new("python3")
-        .arg(root().join("tools/esporta_livelli.py"))
+        .arg(root().join("tools/export_levels.py"))
         .arg("--controlla")
         .status()
         .map(|s| s.success());
