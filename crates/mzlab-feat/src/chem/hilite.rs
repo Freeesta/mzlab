@@ -3,6 +3,7 @@
 //! the MSn graph) and are carried onto the drawing through a match of that SMILES. In the LR world only what the student selected is kept. The colours
 //! show where the evidence is, never that it is true. Same bytes in the molkit `.wasm`, the app (`feat/grafo`, `kind: "hilite"`) and `mzlab-cli mol-hilite`.
 
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, Out, Value};
 use mzlab_mol::{Mol, SubOptions, SubQuery};
@@ -193,9 +194,9 @@ pub fn hilite_json(request: &str) -> Result<String> {
                 l.skip = Some("lr");
             }
         }
-        l.atoms.sort_unstable();
+        l.atoms.sortc();
         l.atoms.dedup();
-        l.bonds.sort_unstable();
+        l.bonds.sortc();
         l.bonds.dedup();
         layers.push(l);
     }
