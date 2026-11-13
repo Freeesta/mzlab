@@ -191,3 +191,31 @@ fn the_recipe_of_the_table_decides_the_resolution_when_no_tolerance_is_given() {
     // an explicit tolerance wins over the recipe
     assert!(skipped(false, Some(0.3)) && !skipped(true, Some(0.005)));
 }
+
+/// The text the browser asks for (`plausible_text` with the parameters of the step as JSON) is the engine text under the same limits, and the same bytes twice.
+#[test]
+fn plausible_text_of_the_step_parameters_is_the_engine_text() {
+    use mzlab_feat::recipe::Recipe;
+    use mzlab_feat::store::{write_table, Origin};
+    let t = table(&[(200.1, 5.0), (3.0, 7.0), (410.4, 900.0)]);
+    let bytes = write_table(&t, &Recipe::default(), &Origin::default());
+    let params = |s: &str| match parse(s.as_bytes()).unwrap() {
+        Value::Obj(o) => o,
+        _ => unreachable!(),
+    };
+    let none = plausible::plausible_text(&params("{}"), &bytes).unwrap();
+    assert_eq!(none, plausible::to_json(&t, false, &Limits::default()));
+    let tight =
+        plausible::plausible_text(&params(r#"{"mz_max":300,"mz_tol_da":0.005}"#), &bytes).unwrap();
+    let limits = Limits {
+        mz_max: 300.0,
+        mz_tol_da: Some(0.005),
+        ..Limits::default()
+    };
+    assert_eq!(tight, plausible::to_json(&t, false, &limits));
+    assert_ne!(tight, none);
+    assert_eq!(
+        tight,
+        plausible::plausible_text(&params(r#"{"mz_max":300,"mz_tol_da":0.005}"#), &bytes).unwrap()
+    );
+}
