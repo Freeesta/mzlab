@@ -66,8 +66,21 @@ pub fn log_records(b: &[u8]) -> Vec<String> {
     recs
 }
 
+/// The first offset where `needle` occurs in `hay`, ASCII case folded (no allocation).
+fn find_ci(hay: &[u8], needle: &[u8]) -> Option<usize> {
+    let mut i = 0;
+    while i + needle.len() <= hay.len() {
+        if hay[i..i + needle.len()].eq_ignore_ascii_case(needle) {
+            return Some(i);
+        }
+        i += 1;
+    }
+    None
+}
+
+/// The value after `key` up to the next comma; the key matches in any ASCII case (Analyst writes `Component ID:`, SCIEX OS `Component Id:`).
 fn field<'a>(rec: &'a str, key: &str) -> Option<&'a str> {
-    let p = rec.find(key)?;
+    let p = find_ci(rec.as_bytes(), key.as_bytes())?;
     let v = rec[p + key.len()..].split(',').next()?.trim();
     (!v.is_empty()).then_some(v)
 }
@@ -165,31 +178,6 @@ fn properties(b: &[u8]) -> Vec<(u32, String)> {
         }
     }
     out
-}
-
-fn filetime(ft: u64) -> String {
-    let secs = (ft / 10_000_000) as i64 - 11_644_473_600;
-    let (days, rem) = (secs.div_euclid(86_400), secs.rem_euclid(86_400));
-    // civil-from-days (Howard Hinnant)
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let (doy, y) = (doe - (365 * yoe + yoe / 4 - yoe / 100), yoe + era * 400);
-    let mp = (5 * doy + 2) / 153;
-    let (d, m) = (
-        doy - (153 * mp + 2) / 5 + 1,
-        if mp < 10 { mp + 3 } else { mp - 9 },
-    );
-    format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
-        if m <= 2 { y + 1 } else { y },
-        m,
-        d,
-        rem / 3600,
-        rem % 3600 / 60,
-        rem % 60
-    )
 }
 
 /// The instrument facts (model, creation time, serial, source type) of sample `n`.
@@ -454,6 +442,9 @@ fn warnings(_ole: &Ole, _sample: &str, no_log: bool) -> Vec<Option<V>> {
     }
     warn
 }
+
+mod filetime;
+use filetime::filetime;
 
 #[cfg(test)]
 mod tests;
