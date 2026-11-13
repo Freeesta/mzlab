@@ -121,6 +121,7 @@
   "load.loaded.title": "Titolo del riquadro quando si aggiungono altri file a una sessione aperta; {n} = numero di file.",
   "settings.libs.title": "Librerie caricate qui; la ricerca parte dal clic destro su uno spettro MS2 (parte HR).",
   "settings.space.value": "Riga dell'ingranaggio (solo nel sito); {files} e {idx} = dimensioni già scritte, es. «31.9 MB».",
+  "err.flow.rtpredict.standards": "Messaggio d'errore del motore; {n} = standard leggibili, {min} = minimo richiesto.",
   "err.http": "Errore di rete senza dettagli; {status} = codice HTTP.",
   "err.file.notWiff": "{name} = nome del file.",
   "err.file.wiffNoScan": "{name} = nome del file .wiff.",
