@@ -76,19 +76,18 @@ async function build(m) {
       const blob = m.blob;
       // the copy in OPFS is read through a read-only handle; without one (or if the file is taken) the Blob is read as before
       fonte = await openSource("files", m.name, blob);
-      let tp = 0;
-      // the builder reads the file front to back: the offset is the progress (the page shows it, at most 5 times a second)
-      const read = (off, len) => {
-        const now = performance.now();
-        if (now - tp > 200) { tp = now; postMessage({ op: "progress", frac: blob.size ? Math.min(1, off / blob.size) : 0 }); }
-        return fonte.read(off, len);
-      };
       const { ins, declared: dec } = scanTable(m, blob, fonte);
       declared = dec;
-      const [levels, pols, rt, tic, rows, source, run, hr1] = ins;
+      const [levels, pols, rt, tic, rows, source, run, hr1] = ins, total = rt ? rt.byteLength / 8 : 0;      // the scans: rt holds one f64 each
+      // the builder reads the file front to back: the offset is the progress, and the share of the scans read; then its rounds read back what it put in the
+      // scratch file (bytes got / bytes put). Stages "read" and "index", each 0..1 (the page weighs them: mzmlFrac, progresso.js)
+      const read = (off, len) => { tick("read", blob.size ? Math.min(1, off / blob.size) : 0, total); return fonte.read(off, len); };
+      let put = 0, got = 0;
+      const spillPut = spill && ((off, data) => { put += data.length; return spill.put(off, data); });
+      const spillGet = spill && ((off, n) => { got += n; tick("index", put ? Math.min(1, got / put) : 0, total); return spill.get(off, n); });
       // helpers only where workers can share memory; without them the builder decodes alone (same code, same bytes)
       if (m.aiuti > 0 && self.crossOriginIsolated) aiuti = await creaAiuti(m.aiuti, wasmModule);
-      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spill ? spill.put : undefined, spill ? spill.get : undefined, m.cap || 0,
+      stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spillPut || undefined, spillGet || undefined, m.cap || 0,
         aiuti || undefined);
       if (aiuti) { aiuti.chiudi(); aiuti = null; }
     }
@@ -116,13 +115,23 @@ async function build(m) {
   }
 }
 
+// The progress of a stage of an mzML: at most 10 times a second (the rows repaint at most every 100 ms), the first news of a stage at once.
+let tickAt = 0, tickStage = "";
+function tick(stage, frac, total) {
+  const now = performance.now();
+  if (stage === tickStage && now - tickAt < 100) return;
+  tickAt = now; tickStage = stage;
+  postMessage({ op: "progress", phase: stage, frac, done: stage === "read" ? Math.round(total * frac) : stage === "index" ? total : 0, total });
+}
+
 // The scan table of the file (prepare_upload) is made here, in the pool worker, so that two files prepare at the same time; the page gets the first TIC at once.
 // declared: the spectra the file says it holds (a truncated mzML lists more than it has).
 function scanTable(m, blob, fonte) {
   if (m.inputs) return { ins: m.inputs, declared: m.declared || 0 };
   const [sha, probe] = m.prep.prints;
-  const prepared = Array.from(prepare_upload(blob.size, fonte.read, m.name, sha, probe, m.cap || 0));
+  // its reads are the progress of the stage "scan"; its end is told with the early TIC
+  const prepared = Array.from(prepare_upload(blob.size, (off, len) => { tick("scan", blob.size ? Math.min(1, off / blob.size) : 0, 0); return fonte.read(off, len); }, m.name, sha, probe, m.cap || 0));
   const early = earlyTicInputs(prepared.slice(0, 8));
-  if (early) postMessage({ op: "progress", frac: 0.05, phase: "scan", done: 0, total: early.rt.length, early_tic: early });
+  postMessage({ op: "progress", frac: 1, phase: "scan", done: 0, total: early ? early.rt.length : 0, early_tic: early || undefined });
   return { ins: prepared.slice(0, 8), declared: prepared[9] || 0 };
 }

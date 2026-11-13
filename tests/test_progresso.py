@@ -90,10 +90,29 @@ console.log(JSON.stringify(bad));""")
     assert out == []
 
 
-def test_the_bar_of_a_row_has_fixed_shares_for_every_reader():
-    # load / download 0-40 %, read 40-85 %, index 85-100 %: a maker's file by the model's 0.3 and 0.75, an mzML by 0.4 and 0.985; forward only in both
-    got = run("console.log(JSON.stringify([[0,.3,.525,.75,1].map(f=>R(true,f)),[0,.4,.6925,.985,1].map(f=>R(false,f)),R(true,-1),R(false,5),R(true,null)]))")
-    assert got[0] == [0, 40, 62.5, 85, 100] and got[1] == [0, 40, 62.5, 85, 100] and got[2:] == [0, 100, 0]
+def test_the_bar_of_a_row_has_fixed_shares_for_a_makers_file_and_the_model_for_an_mzml():
+    # a maker's file: load 0-40 %, read 40-85 %, index 85-100 % by the model's 0.3 and 0.75; an mzML: the model's fraction as is (mzmlFrac weighs its stages); forward only in both
+    got = run("console.log(JSON.stringify([[0,.3,.525,.75,1].map(f=>R(true,f)),[0,.25,.5,1].map(f=>R(false,f)),R(true,-1),R(false,5),R(true,null)]))")
+    assert got[0] == [0, 40, 62.5, 85, 100] and got[1] == [0, 25, 50, 100] and got[2:] == [0, 100, 0]
     for native in ("true", "false"):
         v = run(f"console.log(JSON.stringify(Array.from({{length:101}},(_,i)=>R({native},i/100))))")
         assert v == sorted(v) and v[0] == 0 and v[-1] == 100
+
+
+def mzml(code):
+    return json.loads(subprocess.run(["node", "-e", f"const {{mzmlFrac:F,MZML_STAGES:S}}=require({str(JS)!r});{code}"], check=True, capture_output=True, encoding="utf-8").stdout)
+
+
+def test_the_stages_of_an_mzml_weigh_their_cost_and_only_go_forward():
+    # every stage starts where the one before ends, and the whole runs forward from 0 to 1, for a small and a large file
+    for size in (160e3, 5e6, 76e6, 2e9):
+        v = mzml(f"const o=[];for(const k of S)for(let i=0;i<=10;i++)o.push(F({size},k,i/10));console.log(JSON.stringify(o))")
+        assert v == sorted(v) and v[0] == 0 and abs(v[-1] - 1) < 1e-9, size
+    # a small file: fixed costs (the start of the worker, the listing) weigh most, no rounds; a large one: the copy and the builder (reading, then its rounds) weigh most
+    small = mzml("console.log(JSON.stringify(S.map(k=>F(160e3,k,1)-F(160e3,k,0))))")
+    big = mzml("console.log(JSON.stringify(S.map(k=>F(76e6,k,1)-F(76e6,k,0))))")
+    st = dict(zip(["load", "start", "scan", "read", "index", "list"], small)); bg = dict(zip(st, big))
+    assert st["index"] == 0 and st["start"] > st["load"] and st["list"] > 0.1
+    assert bg["index"] > 0.3 and bg["read"] > 0.3 and bg["load"] > 0.15 and bg["start"] < 0.02
+    # an unknown stage (a queued notice) counts as nothing, a local fraction out of 0..1 is clamped
+    assert mzml("console.log(JSON.stringify([F(1e6,'?',1),F(1e6,undefined,1),F(1e6,'load',-1),F(1e6,'list',9)]))") == [0, 0, 0, 1]

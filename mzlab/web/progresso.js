@@ -17,13 +17,30 @@ function progCompose(profile, phase, local) {
   return Math.min(1, before + w[phase] * Math.max(0, Math.min(1, local || 0)));
 }
 
-/** the bar of a ROW of the loading, 0..100 whatever the reader: load / download 0-40, read 40-85, index 85-100. `frac` = the fraction of the whole file the model holds (a maker's file: copy+SHA 0.3,
- * open+scans up to 0.75, chromatograms after; an mzML: copy 0.4, then the builder up to 0.985); the same fraction always gives the same percent, so the bar never goes back with the model */
+/** the stages of an mzML's loading and their cost in ms ≈ fixed + per MB (Chromium, synthetic mzML of 0.16 and 76 MB, `progresso.md`): copy to OPFS, start of the
+ * pool worker, scan table, builder reading the file, its rounds from the scratch file (only when the peaks overflow the builder's memory), opening the index and listing the file («list», not «open»: that phase ends the provisional TIC, explore.js) */
+const MZML_STAGES = ["load", "start", "scan", "read", "index", "list"];
+const MZML_COST = { load: [25, 11.5], start: [60, 0], scan: [15, 2.7], read: [60, 19], index: [0, 19], list: [30, 0] };
+/** above this size the builder spills its peaks and runs rounds (a quarter of its default 64 MB budget, about the size of the peaks of the file) */
+const MZML_SPILL_MB = 16;
+
+/** whole-file fraction 0..1 of an mzML of `bytes` from its stage and how far that stage has got: each stage weighs what it costs, the stages before count full */
+function mzmlFrac(bytes, phase, local) {
+  const mb = Math.max(0, Number(bytes) || 0) / 1e6, cost = k => k === "index" && mb <= MZML_SPILL_MB ? 0 : MZML_COST[k][0] + MZML_COST[k][1] * mb;
+  const tot = MZML_STAGES.reduce((s, k) => s + cost(k), 0), at = MZML_STAGES.indexOf(phase);
+  if (at < 0) return 0;
+  let before = 0; for (let i = 0; i < at; i++) before += cost(MZML_STAGES[i]);
+  return Math.min(1, (before + cost(phase) * Math.max(0, Math.min(1, Number(local) || 0))) / tot);
+}
+
+/** the bar of a ROW of the loading, 0..100. A maker's file: load 0-40, read 40-85, index 85-100 by the model's 0.3 and 0.75 (copy+SHA, open+scans, chromatograms);
+ * an mzML: the model's fraction as is (mzmlFrac already weighs its stages by cost); the same fraction always gives the same percent, so the bar never goes back with the model */
 function rowPc(native, frac) {
-  const f = Math.max(0, Math.min(1, Number(frac) || 0)), a = native ? 0.3 : 0.4, b = native ? 0.75 : 0.985;
-  if (f < a) return 40 * f / a;
-  if (f < b) return 40 + 45 * (f - a) / (b - a);
-  return 85 + 15 * (f - b) / (1 - b);
+  const f = Math.max(0, Math.min(1, Number(frac) || 0));
+  if (!native) return 100 * f;
+  if (f < 0.3) return 40 * f / 0.3;
+  if (f < 0.75) return 40 + 45 * (f - 0.3) / 0.45;
+  return 85 + 15 * (f - 0.75) / 0.25;
 }
 
 const PROGRESSO = (() => {
@@ -84,4 +101,4 @@ const PROGRESSO = (() => {
   };
 })();
 
-if (typeof module !== "undefined") module.exports = { PROGRESSO, progCompose, PROG_W, rowPc };
+if (typeof module !== "undefined") module.exports = { PROGRESSO, progCompose, PROG_W, rowPc, mzmlFrac, MZML_STAGES };
