@@ -72,7 +72,7 @@ window.GRUPPI = (() => {
   /** True when `label` would make a second group of the same name: the name of an experiment-type group, or another spelling of an existing user group (the exact same label just joins it). @param {string} label @param {string} [except] a label that is being renamed */
   function clash(label, except = "") {
     const k = nk(label); if (!k) return false;
-    if ([...Object.values(KIND), ...Object.values(GRP_HR).map(/** @param {any} f */ f => f())].some(x => nk(x) === k)) return true;
+    if ([...Object.values(KIND), ...Object.values(GRP_HR).flatMap(/** @param {any} f */ f => [f([{ lv: 2 }]), f([{ lv: 3 }])])].some(x => nk(x) === k)) return true;
     return [...flSide().map(/** @param {any} x */ x => x.ugrp), ...rowsT().map(x => x.ugrp)].some(l => l && l !== label && l !== except && nk(l) === k);
   }
   /** The labels of a «Group by» result with every clash made unique by « (2)». @param {{ out: Map<string, string>, order: string[] }} r */
