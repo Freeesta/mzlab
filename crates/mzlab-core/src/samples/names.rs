@@ -89,8 +89,8 @@ fn after_prefix(s: &[char]) -> impl Iterator<Item = usize> + '_ {
     std::iter::once(0).chain((0..s.len()).filter(|&i| is_sep(s[i])).map(|i| i + 1))
 }
 
-/// The unit of the time that ends at `e` (`min` when none is written) and where the time ends, or None when what follows is not a time.
-fn time_tail(s: &[char], e: usize, after_t: bool) -> Option<(&'static str, usize)> {
+/// The unit of the time that ends at `e` (`min` when none is written), where the time ends and whether a unit is written, or None when what follows is not a time.
+fn time_tail(s: &[char], e: usize, after_t: bool) -> Option<(&'static str, usize, bool)> {
     // `(` ends a time too: `t30min(2)` is the second replicate of 30 min
     let term = |j: usize| j >= s.len() || is_sep(s[j]) || s[j] == '(';
     let k = skip_ws(s, e);
@@ -101,14 +101,14 @@ fn time_tail(s: &[char], e: usize, after_t: bool) -> Option<(&'static str, usize
         if starts(s, k, w) {
             let j = k + w.len();
             if term(j) {
-                return Some((unit, j));
+                return Some((unit, j, true));
             }
             if w == "day" && j < s.len() && s[j] == 's' && term(j + 1) {
-                return Some((unit, j + 1));
+                return Some((unit, j + 1, true));
             }
         }
     }
-    (k > e || term(e)).then_some(("min", e))
+    term(e).then_some(("min", e, false))
 }
 
 /// A time read from a name: the value as written, its unit and where the match starts and ends.
@@ -119,27 +119,33 @@ struct Time {
     end: usize,
 }
 
-/// `t?\d+([.,]\d+)?\s*unit?` after a separator, in the order of `guess_sample`.
+/// `t?\d+([.,]\d+)?\s*unit` after a separator: the LAST one with a written unit or a `t` prefix (`Smp_01_30h_2` is 30 h, its `01` and `_2`
+/// are an index and a replicate); a bare number (`Run_5`) is never a time. A bare `tN` is minutes.
 fn time_of(s: &[char]) -> Option<Time> {
+    let mut last = None;
     for p in after_prefix(s) {
         let after_t = p < s.len() && s[p] == 't';
         let i = if after_t { p + 1 } else { p };
         for e in number_ends(s, i, after_t) {
-            if let Some((unit, end)) = time_tail(s, e, after_t) {
+            if let Some((unit, end, written)) = time_tail(s, e, after_t) {
+                if !written && !after_t {
+                    break;
+                }
                 let text: String = s[i..e]
                     .iter()
                     .map(|c| if *c == ',' || *c == 'p' { '.' } else { *c })
                     .collect();
-                return Some(Time {
+                last = Some(Time {
                     value: text.parse().unwrap_or(0.0),
                     unit,
                     start: p,
                     end,
                 });
+                break;
             }
         }
     }
-    None
+    last
 }
 
 /// A word of the name with its folders (letters and digits) equal to one of `words`, or one followed by digits only (one pass over the name).
