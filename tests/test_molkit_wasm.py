@@ -1,7 +1,8 @@
 """The molkit .wasm (crates/mzlab-mol-wasm) gives the `check/1` and the `cip/1` of a drawing byte for byte like `mzlab-cli mol-check` and
 `mol-cip` and the app fixtures (tests/dati/check_disegno.json and cip_disegno.json, read by crates/mzlab-desktop/tests/labels.rs too), and a bad
 molfile as a keyed JSON error; the `subdb/1` of a structure list like `mzlab-cli mol-search --db` and the app (tests/dati/sub_db.json); the Flow
-step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json). Skipped without cargo, wasm-bindgen or node."""
+step `structure.moiety` (`flow_moiety`) like `mzlab-cli flow run --set` (tests/dati/moiety.json); the `hilite/1` of the evidence colours like
+`mzlab-cli mol-hilite` and the app (tests/dati/hilite_disegno.json). Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess
@@ -85,3 +86,16 @@ def test_moiety_step_through_wasm_equals_flow_run_with_set_and_the_fixture(pkg, 
     for c in fx["errors"]:
         bad = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), c["params"], "moiety", str(table)], cwd=ROOT, capture_output=True, encoding="utf-8")
         assert bad.returncode == 1 and json.loads(bad.stderr)["error_key"] == c["key"], c["params"]
+
+
+def test_hilite_through_wasm_equals_the_cli_and_the_app_fixture(pkg, tmp_path):
+    fx = json.loads((ROOT / "tests" / "dati" / "hilite_disegno.json").read_text(encoding="utf-8"))
+    for req_key, want in (("request", "hilite"), ("lr", "hilite_lr")):
+        req = tmp_path / (req_key + ".json")
+        req.write_text(json.dumps(fx[req_key]), encoding="utf-8")
+        site = run("node", "tests/molkit_wasm_node.js", str(pkg), req.read_text(encoding="utf-8"), "hilite")
+        assert site == run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "mol-hilite", str(req))
+        assert site.strip() == fx[want]
+    for bad, key in fx["errors"]:
+        r = subprocess.run(["node", "tests/molkit_wasm_node.js", str(pkg), json.dumps(bad), "hilite"], cwd=ROOT, capture_output=True, encoding="utf-8")
+        assert r.returncode == 1 and json.loads(r.stderr)["error_key"] == key

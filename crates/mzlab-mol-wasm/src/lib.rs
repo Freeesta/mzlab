@@ -43,6 +43,13 @@ pub fn cip(request: &str) -> std::result::Result<String, JsValue> {
     mzlab_feat::chem::cip::cip_json(request).map_err(js_err)
 }
 
+/// `hilite/1` of a request `{"molfile", "world", "selected", "layers"}`: the atoms and bonds a piece of evidence colours on the drawing, the same
+/// bytes as `mzlab-cli mol-hilite`.
+#[wasm_bindgen]
+pub fn hilite(request: &str) -> std::result::Result<String, JsValue> {
+    mzlab_feat::chem::hilite::hilite_json(request).map_err(js_err)
+}
+
 /// `structure.moiety`: the rows of the candidate table `table` that contain (or lack) the moiety; `params_json` is the step's parameters merged with
 /// its defaults. The same bytes as `flow run`.
 #[wasm_bindgen]
