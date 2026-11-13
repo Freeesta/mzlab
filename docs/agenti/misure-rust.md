@@ -120,3 +120,15 @@ hr, 1 libreria: identità 0.06 ms/query a caldo (0.28 a freddo); analoghi 51 ms;
 
 ## Rapporto `corsa/1` di una corsa grande (`mzlab-cli flow report RUNDIR`)
 Un file HR sintetico denso (`synthetic_data_large.py --files 1 --scans 12000 --compounds 20000`): il passo `features.group` scrive un `ionnet/1` di 631 MB (7,5 milioni di archi «MS1 correlation»: con meno di `min_corr_samples` file ogni coppia coeluita è un arco). `corsa_build` legge di ogni `.json` solo i membri che usa (`json::parse_members`, gli altri valori controllati ma non costruiti): 9,1 s e 5 581 MB di picco RSS prima, 2,0 s e 636 MB dopo; `corsa/1` identico byte per byte su tre cartelle (1, 2 e 24 file); `main` `e6bdc0e4c7dc4da88b5901a2729ee9d624d5fb42`.
+
+## Librerie spettrali: «Load folder…» (`tools/bench_librerie_cartella.py`)
+Cartella sintetica (`tools/librerie_cartella_sintetica.py`: MSP NIST da 110 000 spettri, 29 MB, 4 mix, 733 altri file), Chromium Linux, `mzlab-lib-wasm`, 6 giri alternati prima/dopo, mediana, `main` `88cf7b6a5c21bdae8a4c086e23061f8458f35ded`. Nessun long task sul thread principale (l'import gira nel worker). Il `.mzlib` prodotto è identico per `cmp`.
+
+| passo | prima | dopo | % |
+|---|---|---|---|
+| MSP grande, `LIB.add` (`Importer.finish` rilegge i record dallo scratch una volta sola: 110 509 chiamate OPFS → 0) | 2647 ms | 2319 ms | −12 % |
+| cartella intera (9 file letti, 733 ignorati) | 3182 ms | 2858 ms | −10 % |
+| `.wasm` ottimizzato | 494 207 B | 495 492 B | +0,26 % |
+
+Fasi del file grande prima: `push` (lettura e pulizia) 0,94 s, `finish` (ordinamento, indice, scrittura) 1,17 s, SHA-256 in JS 0,19 s; scansione e lista della cartella ≤ 50 ms. `opt-level 3` su `mzlab-lib`: `push` −35 %, ma `.wasm` +23,7 %, scartato.
+
