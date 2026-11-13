@@ -13,6 +13,8 @@ pub struct Losses {
     pub read: usize,
     /// Catalogue key of why items are missing (`warn.file.truncated`); empty when the read is complete.
     pub cause: &'static str,
+    /// What is counted: spectra (empty), or `CYCLES` for an MRM sample, which has no spectra.
+    pub unit: &'static str,
 }
 
 impl Losses {
@@ -22,6 +24,7 @@ impl Losses {
             declared: n,
             read: n,
             cause: "",
+            unit: "",
         }
     }
     /// `read` items of `declared`, missing for `cause` when fewer.
@@ -31,6 +34,22 @@ impl Losses {
             declared,
             read,
             cause: if read < declared { cause } else { "" },
+            unit: "",
+        }
+    }
+    /// The same counts, of MRM cycles.
+    pub fn in_cycles(self) -> Losses {
+        Losses {
+            unit: CYCLES,
+            ..self
+        }
+    }
+    /// The word of the unit in a line of text.
+    pub fn unit_word(&self) -> &'static str {
+        if !self.unit.is_empty() {
+            "MRM cycles"
+        } else {
+            "spectra"
         }
     }
     pub fn partial(&self) -> bool {
@@ -48,11 +67,12 @@ impl Losses {
         };
         self.partial().then(|| {
             format!(
-                "{}: {}: {} of {} spectra read{end}",
+                "{}: {}: {} of {} {} read{end}",
                 self.cause,
                 file.display(),
                 self.read,
-                self.declared
+                self.declared,
+                self.unit_word()
             )
         })
     }
@@ -72,6 +92,9 @@ pub struct ReadOutcome<T> {
     pub data: T,
     pub losses: Losses,
 }
+
+/// `Losses::unit` of an MRM sample: its blocks are cycles of transitions, not spectra.
+pub const CYCLES: &str = "cycles";
 
 /// Cause of the scans an index lists beyond the end of its data file (`Reader::missing`).
 pub const TRUNCATED: &str = "warn.file.truncated";
