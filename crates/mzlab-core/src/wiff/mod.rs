@@ -336,13 +336,13 @@ fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
     }
 }
 
-/// A SIM method of several periods is `err.file.wiffPeriods`, as the readers module refuses it: only Period0 is read, so its cycles would be laid out wrong.
-fn sim_periods(ole: &Ole, sample: u32, experiments: &[Experiment]) -> Result<()> {
-    if experiments.iter().any(|e| modes::sim(e.code)) {
-        let p = period_count(ole, sample);
-        if p > 1 {
-            return Err(Error::new("err.file.wiffPeriods").with("periods", p));
-        }
+/// A method of several periods, of any scan type, is `err.file.wiffPeriods` in the engine, as the readers module refuses it (`extended::refine`): only
+/// Period0 is read, so its cycles would be laid out wrong.
+#[cfg(not(feature = "estesi"))]
+fn one_period(ole: &Ole, sample: u32) -> Result<()> {
+    let p = period_count(ole, method_no(ole, sample));
+    if p > 1 {
+        return Err(Error::new("err.file.wiffPeriods").with("periods", p));
     }
     Ok(())
 }
@@ -371,7 +371,8 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         experiments = extended::refine(ole, sample, experiments)?;
         extended::mark_windows(ole, sample, &mut experiments);
     }
-    sim_periods(ole, sample, &experiments)?;
+    #[cfg(not(feature = "estesi"))]
+    one_period(ole, sample)?;
     let ida = dependent_scans(ole, sample, &mut experiments);
     let n_exp = experiments.len().max(1);
     let (records, unplaced) = idx::place(&entries, section, scan_len, n_exp, ida);
