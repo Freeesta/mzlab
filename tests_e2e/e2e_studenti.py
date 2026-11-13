@@ -94,7 +94,7 @@ try:
         def xicleg():
             pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
             pg.evaluate("openXic(null,{formula:'C14H13F4N3O2S',adduct:'[M+H]+'})"); pg.wait_for_timeout(700); pg.click("#xic-go"); ready(pg)
-            t = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().el.querySelector('.ttl').textContent"); assert t.startswith("XIC · C14H13F4N3O2S") and "m/z 364.3" in t, t
+            t = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().el.querySelector('.ttl').textContent"); assert t.startswith("XIC · C14H13F4N3O2S") and "m/z 363.8\u2013364.3" in t, t
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().leg.querySelectorAll('b[data-t]').length") == 0
             assert "B_FullMass-t0" in pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().leg.textContent")
             pg.evaluate("openXic(null)"); pg.wait_for_timeout(500); v = pg.input_value("#xic-mz"); assert v == "C14H13F4N3O2S", "the window remembers the last ion: " + v

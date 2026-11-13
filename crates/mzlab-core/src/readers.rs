@@ -202,6 +202,7 @@ pub use outcome::{
     cause_key, Losses, ReadOutcome, ReadOutcomes, CYCLES, DAMAGED, EVENTS_REFUSED, MEMBER_MISSING,
     RAW_DAMAGED, RECORD_WIDTH, TRUNCATED, WATERS_DAMAGED,
 };
+pub use skips::{damages_one, Skips, SPECTRUM_DAMAGED};
 
 /// A reader of one dataset. Random access: `indice` is read once, `scansione` reads only the bytes of one scan; streaming is `scansione(c, 0..n)`.
 /// An error is a key (`err.file.*`), never a panic; what a file lacks is absent from the answer, not an error.
@@ -262,7 +263,7 @@ pub trait Reader {
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra::default()
     }
-    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML writer asks this one; the index builders ask `extra_mzml` (cheap, no read), so what only this one gives is in the mzML and not in the rows of an index.
+    /// `extra_mzml` for a reader that has to read the file again to answer (the trailer of a Thermo scan): scan `k` of sample `c`, whose points are `s`. The mzML writer and the rows of an index built from the reader (`mzidx_reader`, `source::scan_text`) ask this one, so both hold what only it gives.
     fn scan_extra(&mut self, _c: usize, _k: usize, s: &Spectrum) -> SpectrumExtra {
         self.extra_mzml(s)
     }
@@ -357,6 +358,7 @@ pub fn tic_ms1(entries: &[ScanEntry]) -> (Vec<f64>, Vec<f64>) {
 
 mod listing;
 mod outcome;
+mod skips;
 
 #[cfg(test)]
 mod tests;

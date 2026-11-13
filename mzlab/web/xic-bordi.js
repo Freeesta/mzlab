@@ -1,8 +1,8 @@
 // @ts-check
-// The «from / to» pairs of the panel headers (pannelli.js ctl): the «m/z» edges of a low-resolution XIC and the m/z (nm of a PDA trace) and RT of the
-// «Range» popover, looked up in the whole panel (a narrow header moves them into «More»). A pair is read when the focus leaves it (Enter, or a click
-// elsewhere), so either end can be written first; a refused pair (not a number, from above to) brings the old values back with a calm note; an accepted
-// one is undoable and saved, and the focus stays where it went.
+// The «from / to» pairs of the «Range» popover (pannelli.js ctl): the «m/z» edges of a low-resolution XIC, and the m/z (nm of a PDA trace) and RT,
+// looked up in the whole panel (a narrow header moves them into «More»). A pair is read when the focus leaves it (Enter, or a click elsewhere), so
+// either end can be written first; a refused pair (not a number, from above to) brings the old values back with a calm note; an accepted one is
+// undoable and saved, and the focus stays where it went.
 (() => {
   /** @param {any} p @param {HTMLInputElement} x */
   function wire(p, x) {
@@ -11,9 +11,9 @@
       if (!t || !x.isConnected || q.length !== 2 || (q.includes(a) && a !== x) || q.every(i => i.value === i.defaultValue)) return;   // the other edge has the focus: wait for it
       const hrE = t.ion && window.HR && HR.xicEdges(t, p), nm = (/** @type {string} */ v) => hrE ? (isFinite(numIt(v)) && numIt(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);
       const lo = nm(q[0].value), hi = nm(q[1].value), ok = lo != null && hi != null && hi > lo, d = hrE ? 5 : 2;
-      if (ok) COMANDI.fai("xic.traces", p, () => { t.mz = rh((lo + hi) / 2, d); t.w = rh((hi - lo) / 2, d); t.label = `m/z ${hrE ? t.mz.toFixed(4) : t.mz.toFixed(mzd(p))}`; delete t.ion; delete t.obs; });
-      ctl(p); draw(p); if (ok) uiSave();
-      else CAMPI.note(I18N.t(lo == null || hi == null ? "xic.edge.num" : "xic.edge.order"), p.el);
+      if (!ok) { q.forEach(i => { i.value = i.defaultValue; }); return CAMPI.note(I18N.t(lo == null || hi == null ? "xic.edge.num" : "xic.edge.order"), x); }
+      COMANDI.fai("xic.traces", p, () => { t.mz = rh((lo + hi) / 2, d); t.w = rh((hi - lo) / 2, d); t.label = hrE ? `m/z ${t.mz.toFixed(4)}` : `m/z ${lo}\u2013${hi}`; delete t.ion; delete t.obs; });
+      keepFocus(p, () => { ctl(p); draw(p); }); uiSave();
     });
     x.onchange = go; x.onblur = go;
   }

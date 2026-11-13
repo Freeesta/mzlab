@@ -31,7 +31,6 @@ function nativo() {
     partial: (/** @type {string} */ molfile, /** @type {string} */ delta) => ask({ kind: "partial", molfile, delta }),
     labels: (/** @type {string} */ request) => ask({ kind: "labels", request }),
     cut: (/** @type {string} */ request) => ask({ kind: "cut", request }),
-    ions: (/** @type {string} */ request) => ask({ kind: "ions", request }),
     sel: (/** @type {string} */ request) => ask({ kind: "sel", request }),
     link: (/** @type {string} */ request) => ask({ kind: "link", request }),
     mech: (/** @type {string} */ request) => ask({ kind: "mech", request }),
@@ -102,7 +101,7 @@ export async function fragmentItems(/** @type {any} */ K, /** @type {MouseEvent}
   if (b) {
     const r = await cutsOf(mf, piece.ids.indexOf(b.begin), piece.ids.indexOf(b.end));
     if (r === "ring") items.push({ text: h.t("draw.frag.ring") });
-    else if (r && r[0]) r[0].sides.forEach(s => { const line = sideLine(s, h.num, h.t); items.push({ text: line, run: () => h.copy(line) }); });
+    else if (r && r[0]) r[0].sides.forEach(s => { const line = sideLine(s, h.num, h.t); items.push({ text: line, title: h.t("draw.frag.side.title"), run: () => h.copy(line) }); });
     else { items.push({ text: h.t("draw.frag.off") }); live = false; }
   } else live = await carica().then(() => true, () => false);
   if (live) items.push({ text: h.t("draw.frag.all"), title: h.t("draw.frag.all.title"), run: async () => {

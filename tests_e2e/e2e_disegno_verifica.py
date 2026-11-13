@@ -65,10 +65,10 @@ try:
             box = pg.locator("#chk-list li .chk-x").first
             pg.locator("#chk-list li .chk-why").first.click(); assert box.is_hidden()    # closed again; C1 is still selected
             OPEN = """(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()"""
-            for _ in range(200):
+            for _ in range(20):                                          # one right click at a time: a newer one replaces the menu of an older one still filling
                 pg.evaluate(OPEN)
-                if pg.locator("#ctx:not([hidden]) [data-row=check-why]").count(): break
-                pg.evaluate("new Promise(r => requestAnimationFrame(r))")
+                try: pg.wait_for_selector("#ctx:not([hidden]) [data-row=check-why]", timeout=3000); break
+                except Exception: pass
             row = pg.locator("#ctx [data-row=check-why]")
             assert row.count() == 1 and row.inner_text().startswith(pg.evaluate("I18N.t('draw.check.ctx', {what: ''})").strip()), pg.inner_text("#ctx")
             row.click()

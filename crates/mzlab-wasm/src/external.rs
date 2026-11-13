@@ -12,7 +12,7 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::Header;
 use mzlab_core::readers::{
     cause_key, ChromatogramEntry, Field, Format, Losses, Reader, Sample, ScanEntry, EVENTS_REFUSED,
-    RAW_DAMAGED, TRUNCATED,
+    RAW_DAMAGED, SPECTRUM_DAMAGED, TRUNCATED,
 };
 use mzlab_core::transport::{
     decode_index, decode_scansione, scan_from_parts, Intensity, PROTOCOLLO,
@@ -347,13 +347,14 @@ impl<M: Module> Reader for ExternalReader<M> {
     fn missing(&mut self, c: usize) -> usize {
         self.m.missing(c).unwrap_or(0) as usize
     }
-    /// As the module's reader: scans it lists without their event or, damaged, without their points (in it), else scans out of the index with the cause key the module gives (a cut file by default).
+    /// As the module's reader: scans it lists without their event or, damaged or with data that do not decode, without their points (in it), else scans out of the index with the cause key the module gives (a cut file by default).
     fn losses(&mut self, c: usize) -> Result<Losses> {
         let lacking = self.missing(c);
         let n = self.index(c)?.len();
         Ok(match self.m.cause(c)?.as_str() {
             EVENTS_REFUSED => Losses::of(n, n.saturating_sub(lacking), EVENTS_REFUSED),
             RAW_DAMAGED => Losses::of(n, n.saturating_sub(lacking), RAW_DAMAGED),
+            SPECTRUM_DAMAGED => Losses::of(n, n.saturating_sub(lacking), SPECTRUM_DAMAGED),
             k => Losses::of(n + lacking, n, cause_key(k).unwrap_or(TRUNCATED)),
         })
     }

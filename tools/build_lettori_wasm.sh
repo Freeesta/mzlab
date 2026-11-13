@@ -8,11 +8,12 @@ set -eu
 # zlib-rs (flate2: inflate x2.1 in wasm) weighs +30 KB per family that converts: andi, agilent, sciex, waters, shimadzu and bruker moved up by that, measured value rounded to 256 B
 # every family carries the indexed-mzML writer (feature `indice` of mzlab-core, +1.9 to +3.2 KB) so that to_mzml is byte for byte the mzML of `mzlab-cli convert` (tests/test_lettori_parita.py): the limits of the line above moved up to the size measured by the CI, rounded to 256 B
 # sciex carries the device traces of a .wiff (pressure, flow: wiff/devices.rs, +6 KB): its limit is the measured size plus margin, rounded to 1 KiB
-tetti="aperti 561152
+# aperti and sciex write a scan whose data do not decode with no points and count it (readers::Skips, Finished::losses, +1.9 KB): measured size plus margin, rounded to 512 B
+tetti="aperti 563200
 andi 344064
 thermo 774144
 agilent 606208
-sciex 481280
+sciex 483328
 waters 380928
 shimadzu 380928
 bruker 532480

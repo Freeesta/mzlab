@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPS = {"aperti": 561152, "andi": 344064, "thermo": 774144, "agilent": 606208, "sciex": 481280, "waters": 380928, "shimadzu": 380928, "bruker": 532480, "valida": 479744}
+CAPS = {"aperti": 563200, "andi": 344064, "thermo": 774144, "agilent": 606208, "sciex": 483328, "waters": 380928, "shimadzu": 380928, "bruker": 532480, "valida": 479744}
 
 
 def tabella():

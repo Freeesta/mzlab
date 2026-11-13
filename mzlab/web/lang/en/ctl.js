@@ -59,6 +59,8 @@ I18N.add("en", {
   "ctl.xt.title": "Which XIC to edit",
   "ctl.xlab.title": "m/z and tolerance of the XIC",
   "ctl.xr.title": "Two m/z ends and Enter",
+  "ctl.xr.xlo": "m/z from",
+  "ctl.xr.xhi": "m/z to",
   "ctl.split.title": "One panel for each ion",
   "ctl.split": "Split",
   "ctl.mrm.smooth.title": "Smooths the curve shown",

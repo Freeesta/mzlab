@@ -127,6 +127,48 @@ export function multiMolfile(/** @type {any} */ K, /** @type {number[]} */ ids, 
     "M  V30 END ATOM", "M  V30 BEGIN BOND", ...B.map((b, k) => `M  V30 ${k + 1} ${b}`), "M  V30 END BOND", "M  V30 END CTAB", "M  END"].join("\n");
 }
 
+/** @type {string} the bracket picked with a click (its atoms, sorted, as text): drawn thicker, removed by Delete or Backspace */
+let picked = "";
+const keyOf = (/** @type {number[]} */ atoms) => [...atoms].sort((a, b) => a - b).join(",");
+
+/**
+ * The partial structure at the pointer `ev` of the editor frame, in Ketcher units: `inside` when the point is within its brackets (or on its delta),
+ * `edge` when it is on a bracket line or on the delta. Null when there is none.
+ * @returns {{ p: Partial, edge: boolean } | null}
+ */
+export function bracketAt(/** @type {any} */ K, /** @type {{ clientX: number, clientY: number }} */ ev) {
+  let o; try { o = K.editor.render.page2obj(ev); } catch (_) { return null; }
+  const st = K.editor.struct(), sc = K.editor.render.options.microModeScale || 40, tol = 0.25;
+  for (const p of partials(K)) {
+    const pts = p.atoms.filter(i => st.atoms.has(i)).map(i => st.atoms.get(i).pp); if (!pts.length) continue;
+    const b = bracketBox(pts, 0.45), tw = (3 + 13 * 0.6 * p.delta.length) / sc;
+    const onText = o.x >= b.x1 && o.x <= b.x1 + tw + tol && o.y >= b.y0 - tol && o.y <= b.y0 + 13 / sc + tol;
+    const rows = o.y >= b.y0 - tol && o.y <= b.y1 + tol, arm = Math.max(5, 13 * 0.45) / sc + tol;
+    const onLine = rows && (Math.abs(o.x - b.x0) <= tol || Math.abs(o.x - b.x1) <= tol || ((Math.abs(o.y - b.y0) <= tol || Math.abs(o.y - b.y1) <= tol) && (o.x - b.x0 <= arm || b.x1 - o.x <= arm) && o.x >= b.x0 - tol && o.x <= b.x1 + tol));
+    if (onText || onLine) return { p, edge: true };
+    if (rows && o.x >= b.x0 - tol && o.x <= b.x1 + tol) return { p, edge: false };
+  }
+  return null;
+}
+
+/** a click on the frame: picks the bracket under it (on its line or delta) or drops the pick; true when the pick changed */
+export function pickBracket(/** @type {any} */ K, /** @type {{ clientX: number, clientY: number }} */ ev) {
+  let hit = null; try { hit = K.editor.findItem(ev, ["atoms", "bonds"]); } catch (_) { /* no item */ }
+  const h = hit ? null : bracketAt(K, ev), k = h && h.edge ? keyOf(h.p.atoms) : "";
+  if (k === picked) return false;
+  picked = k; return true;
+}
+
+/** Delete or Backspace with a bracket picked: removes it (undo puts it back); true when it did */
+export function deletePicked(/** @type {any} */ K) {
+  if (!picked || K.editor.selection()) return false;                 // a Ketcher selection is Ketcher's to delete
+  const p = partials(K).find(q => keyOf(q.atoms) === picked);
+  picked = "";
+  if (!p) return false;
+  removePartial(K, p.atoms);
+  return true;
+}
+
 /** draws the brackets of every partial structure in `svg` (units = Ketcher units × `sc`) and hides Ketcher's own text of the delta */
 export function drawPartials(/** @type {any} */ K, /** @type {SVGSVGElement} */ svg, /** @type {number} */ sc) {
   let g = svg.querySelector("#mz-parziali");
@@ -135,9 +177,18 @@ export function drawPartials(/** @type {any} */ K, /** @type {SVGSVGElement} */ 
   g.textContent = "";
   const st = K.editor.struct(), ps = partials(K), ms = multis(K), texts = new Set([...ps.map(p => p.delta), ...(ms.length ? [ANY] : [])]);
   const at = (/** @type {number} */ i) => { const a = st.atoms.get(i); return { x: a.pp.x * sc, y: a.pp.y * sc }; };
-  for (const p of ps) drawBrackets(g, p.atoms.filter(i => st.atoms.has(i)).map(at), { text: p.delta, pad: sc * 0.45 });
+  if (picked && !ps.some(p => keyOf(p.atoms) === picked)) picked = "";
+  for (const p of ps) { const b = drawBrackets(g, p.atoms.filter(i => st.atoms.has(i)).map(at), { text: p.delta, pad: sc * 0.45 }); if (b && keyOf(p.atoms) === picked) { b.setAttribute("stroke-width", "2.8"); b.classList.add("mz-scelta"); } }
   for (const m of ms) drawMulticenter(g, at(m.sub), m.ends.map(at), { r: sc * 0.12 });
-  svg.querySelectorAll("text").forEach(t => { if (!t.closest("#mz-parziali, #" + (typeof NOMI !== "undefined" ? NOMI.KEY("labels") : "qqq-labels"))) t.style.visibility = texts.has((t.textContent || "").trim()) ? "hidden" : ""; });
+  hide = texts; hideDat(svg);
+  // Ketcher draws the DAT text again on a selection change or a zoom, with no change event: hidden again whenever it adds nodes, or «+O» shows twice
+  if (!watched.has(svg)) { watched.add(svg); new (/** @type {any} */ (svg.ownerDocument.defaultView).MutationObserver)(() => { if (hide.size) hideDat(svg); }).observe(svg, { childList: true, subtree: true }); }
+}
+/** @type {Set<string>} */ let hide = new Set();
+const watched = new WeakSet();
+/** hides Ketcher's own text of the deltas (ours is drawn by parentesi.js) */
+function hideDat(/** @type {SVGSVGElement} */ svg) {
+  svg.querySelectorAll("text").forEach(t => { if (!t.closest("#mz-parziali, #" + (typeof NOMI !== "undefined" ? NOMI.KEY("labels") : "qqq-labels"))) { const v = hide.has((t.textContent || "").trim()) ? "hidden" : ""; if (t.style.visibility !== v) t.style.visibility = v; } });
 }
 
 /** the .ket text without the data S-groups of the partial structures: the exported image gets their brackets from `addExportPartials`, not Ketcher's DAT text */
@@ -194,7 +245,7 @@ export async function partialExport(K, molfile, v2000) {
   return { smiles: plainSmiles(await K.getSmiles()), delta, level: delta || ms.length ? 3 : null, positionUnknown: ms.length > 0, molfile: mf, info };
 }
 
-/** @typedef {{ pieces: () => { ids: number[] }[], pieceMolfile: (ids: number[]) => string | null, num: (v: number) => string, t: (k: string, p?: any) => string, copy: (s: string) => void, ask: (title: string, def: string) => Promise<string | null>, note: (s: string) => void }} Helpers */
+/** @typedef {{ pieces: () => { ids: number[] }[], pieceMolfile: (ids: number[]) => string | null, num: (v: number) => string, t: (k: string, p?: any) => string, copy: (s: string) => void, ask: (title: string, def: string) => Promise<string | null>, note: (s: string) => void, label?: (ids: number[], delta: string) => Promise<{ formula: string, mass: string } | null> }} Helpers */
 /** @typedef {{ text: string, title?: string, run?: () => void }} Item */
 
 /**
@@ -206,13 +257,15 @@ export async function partialItems(/** @type {any} */ K, /** @type {MouseEvent} 
   const st = K.editor.struct(), ps = partials(K), hit = K.editor.findItem(ev, ["atoms", "bonds"]);
   const atom = hit ? (hit.map === "bonds" ? st.bonds.get(hit.id)?.begin : hit.id) : undefined;
   /** @type {Item[]} */ const items = [];
-  const p = atom === undefined ? null : ps.find(q => q.atoms.includes(atom));
+  const on = atom === undefined ? bracketAt(K, ev) : null;          // on the bracket lines or inside them, off any atom; else a bracket on the selection (keyboard)
+  const p = atom !== undefined ? ps.find(q => q.atoms.includes(atom)) : on ? on.p : ps.find(q => q.atoms.some(a => sel.has(a))) || null;
   if (p) {
-    const piece = h.pieces().find(q => q.ids.includes(atom)), mf = piece && h.pieceMolfile(piece.ids);
+    const piece = h.pieces().find(q => q.ids.includes(p.atoms[0])), mf = piece && h.pieceMolfile(piece.ids);
     const all = ps.filter(q => piece && q.atoms.some(a => piece.ids.includes(a))).map(q => q.delta).join(" ");
     const r = mf ? await checkDelta(mf, all) : null;
-    if (r && !r.error) { const line = h.t("draw.part.line", { delta: r.delta, formula: r.formula, mass: h.num(r.mass), mz: h.num(r.mz) }); items.push({ text: line, run: () => h.copy(line) }); }
-    items.push({ text: h.t("draw.part.remove"), run: () => { removePartial(K, p.atoms); } });
+    const lb = r && !r.error && piece && h.label ? await h.label(piece.ids, all).catch(() => null) : null;   // formula and mass as the label under the structure writes them
+    if (r && !r.error) { const line = h.t("draw.part.line", { delta: r.delta, formula: lb ? lb.formula : r.formula, mass: lb ? lb.mass : h.num(r.mass), mz: h.num(r.mz) }); items.push({ text: line, title: h.t("draw.part.line.title"), run: () => h.copy(line) }); }
+    items.push({ text: h.t("draw.part.remove"), title: h.t("draw.part.remove.title"), run: () => { removePartial(K, p.atoms); } });
   }
   const m = atom === undefined ? null : multis(K).find(q => q.atoms.includes(atom));
   if (m) items.push({ text: h.t("draw.multi.remove"), run: () => { removePartial(K, m.atoms, KEY_M); } });

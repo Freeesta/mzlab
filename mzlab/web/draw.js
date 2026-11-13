@@ -10,7 +10,7 @@ import { mountBar } from "./disegno-barra.js"; import { mountRadical } from "./d
 import { mountTablet } from "./disegno-tablet.js"; import { mountNew } from "./disegno-nuovo.js"; import "./disegno-storage.js";
 import { initCerca, nameToSmiles, guardPaste } from "./disegno-cerca.js";
 import { fragmentItems } from "./disegno-frammenti.js"; import { cutBonds as cutWith, mountCutLine } from "./disegno-taglio.js"; import { mountMech, ketWithoutMech, addExportMech } from "./disegno-meccanismo.js";
-import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js";
+import { indigo } from "./disegno-indigo.js"; import { ctxRow, ctxShow, copyText, menuAdd, menuFill, menuIds } from "./disegno-menu.js"; import { molfileOf } from "./disegno-molfile.js"; import { isElement, atomOf, dots, labelsOf, labelsNow, formulaParts } from "./disegno-etichette.js"; import { partials, partialItems, pickBracket, deletePicked, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js"; import { stamp, freshName, exportName } from "./disegno-nomi.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -169,12 +169,14 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
     }
 
     // Context menu on canvas / molecule (right click, ContextMenu key or Shift+F10; closes on a click or Esc inside the Ketcher document too)
+    let ctxGen = 0;
     const openCtx = async (/** @type {any} */ ev, /** @type {boolean} */ kbd) => {
       const st = K && K.editor && K.editor.struct();
       if (!st || st.isBlank()) return;
       const hl = labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr, kbd); return; }      // right click on the label under a molecule
       ev.preventDefault();
       ev.stopPropagation();
+      const gen = ++ctxGen;                                              // the newest right click wins: an older one still waiting for Indigo neither fills nor shows the menu
       const sel = K.editor.selection() || {};
       const set = new Set(sel.atoms || []);
       (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
@@ -183,16 +185,16 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
       if (!smi) { try { smi = plainSmiles(await indigo(() => K.getSmiles())); } catch (_) {} }
       const frRect = fr.getBoundingClientRect();
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
-      const m = Q("#ctx"); if (!m) return;
-      await menuFill(m, { K, ev, sel, atoms: set, bonds: [...(sel.bonds || [])], whole: !set.size, smiles: smi, x: mx, y: my, kbd });
-      ctxShow(m, mx, my, 240, kbd);
+      const m = Q("#ctx"); if (!m || gen !== ctxGen) return;
+      if (await menuFill(m, { K, ev, sel, atoms: set, bonds: [...(sel.bonds || [])], whole: !set.size, smiles: smi, x: mx, y: my, kbd }) && gen === ctxGen) ctxShow(m, mx, my, 240, kbd);
     };
     let kbdCtxAt = 0;                                                    // the ContextMenu key also raises a native contextmenu event: only the first one opens
     d.addEventListener("contextmenu", (/** @type {MouseEvent} */ ev) => { if (Date.now() - kbdCtxAt < 300) { ev.preventDefault(); ev.stopPropagation(); return; } openCtx(ev, false); }, true);
-    d.addEventListener("mousedown", () => { const m = Q("#ctx"); if (m) m.hidden = true; }, true);
+    d.addEventListener("mousedown", (/** @type {MouseEvent} */ ev) => { const m = Q("#ctx"); if (m) m.hidden = true; if (ev.button === 0 && pickBracket(K, ev)) FRAME.next(drawLabels); }, true);   // a click on a bracket line picks it
     d.addEventListener("keydown", (/** @type {KeyboardEvent} */ ev) => {
       const m = Q("#ctx");
       if (ev.key === "Escape") { if (m) m.hidden = true; return; }
+      if ((ev.key === "Delete" || ev.key === "Backspace") && deletePicked(K)) { ev.preventDefault(); ev.stopPropagation(); return; }   // the picked bracket, not Ketcher's selection
       if (ev.key === "ContextMenu" || (ev.key === "F10" && ev.shiftKey)) {
         ev.preventDefault(); kbdCtxAt = Date.now();
         const w = /** @type {Window} */ (d.defaultView);
@@ -341,22 +343,6 @@ function neutralPlan(/** @type {number[]} */ ids, /** @type {number} */ q) {
   const ok = ids.filter(i => { const a = st.atoms.get(i); return a.charge && Math.sign(a.charge) === Math.sign(q) && Math.abs(a.charge) === 1 && VMAX[a.label] && /** @type {number} */ (bs.get(i)) <= VMAX[a.label] + 0.01; });
   return ok.length >= Math.abs(q) ? new Set(ok.slice(0, Math.abs(q))) : null;
 }
-// «Spezza il legame»: the Delete key of Ketcher on a selection made only of bonds removes the bonds and keeps the atoms (the same as the eraser on a bond)
-function breakBonds(/** @type {number[]} */ ids) {
-  try {
-    const d = Q("#kframe").contentDocument, bonds = ids || (K.editor.selection() || {}).bonds || []; if (!bonds.length) return false;
-    K.editor.selection({ bonds: [...bonds] });                       // only the bonds: Delete would also remove the selected atoms
-    try { d.defaultView.focus(); } catch (_) { /* focus is only a help */ }
-    const ta = d.querySelector("textarea");                              // Ketcher listens on its hidden text area when it has the focus, otherwise on the document
-    [...new Set([ta, d.activeElement, d.body].filter(Boolean))].forEach(tg => {
-      if (K.editor.selection() == null) return;                           // already done by the first one: Delete would find nothing
-      ["keydown", "keyup"].forEach(t => tg.dispatchEvent(new d.defaultView.KeyboardEvent(t, { key: "Delete", code: "Delete", keyCode: 46, which: 46, bubbles: true })));
-    });
-    setTimeout(() => { try { drawLabels(); showInfo(); } catch (_) { /* labels are redrawn at the next change */ } }, 300);
-    return true;
-  } catch (_) { return false; }
-}
-window.breakBonds = breakBonds;
 // the cut tool (disegno-taglio.js): the mode of the «Bond cuts» card, the cut line over the frame, the status line with the pieces
 const cutMode = () => { const r = /** @type {HTMLInputElement | null} */ (document.querySelector("input[name=cut-mode]:checked")); return r ? r.value : "homolytic"; };
 async function doCut(/** @type {number[]} */ bids, /** @type {{ x: number, y: number }} */ at) {
@@ -368,6 +354,7 @@ let cutLine = /** @type {{ off: () => void } | null} */ (null);
 let mech = /** @type {{ off: () => void, draw: (svg: SVGSVGElement, sc: number) => void } | null} */ (null);   // mechanism arrows (disegno-meccanismo.js)
 function mountCut(/** @type {HTMLIFrameElement} */ fr) { if (!cutLine) cutLine = mountCutLine({ frame: fr, button: Q("#cut-line"), K: () => K, cut: doCut }); if (!mech) { mech = mountMech({ frame: fr, K: () => K, h: fragHelpers, root: Q("#mech-card") }); FRAME.next(drawLabels); } }
 const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { copyText(s); },
+  label: async (/** @type {number[]} */ ids, /** @type {string} */ delta) => { const st = K.editor.struct(), r = await labelsNow({ structures: [ids.map(i => atomOf(st.atoms.get(i)))], arrows: [], deltas: [delta] }), d = r && r.structures[0]; return d && !d.error ? { formula: d.text, mass: massOf({ ...d, q: d.charge }, +Q("#lb-dec").value) } : null; },   // what the label under the structure says
   num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
 // built-in rows of the canvas menu (disegno-menu.js registry; other modules add theirs with TPDraw.menu.add, between these orders)
 const shortSmi = (/** @type {string} */ s) => s.length > 24 ? s.slice(0, 21) + "…" : s;
@@ -379,9 +366,6 @@ menuAdd({ id: "info", order: 15, label: "draw.ctx.info", title: "draw.ctx.info.t
   import("./disegno-selezione.js").then(m => m.infoOpen({ molfile: mf, part: !c.whole, smiles: c.smiles || "", esc: EH, big: window.big, convert: (/** @type {string} */ f) => convertOf(mf, f) })); } });
 menuAdd({ id: "links", order: 17, rows: (/** @type {any} */ c) => !c.smiles ? [] : import("./disegno-link.js").then(m => m.linkRows(c.smiles, !c.whole, () => { const mf = ctxMolfile(c); return mf ? convertOf(mf, "chemical/x-inchi") : Promise.resolve(""); })) });   // PubChem, ChEBI, BioTransformer: a new tab only on a click (disegno-link.js)
 menuAdd({ id: "center", order: 20, label: "draw.ctx.center", run: () => { if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); } } });
-// «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
-menuAdd({ id: "break-bonds", when: "selection", order: 30, show: (/** @type {any} */ c) => c.bonds.length > 0, label: (/** @type {any} */ c) => I18N.t("draw.ctx.breakBonds", { n: c.bonds.length }), title: "draw.ctx.breakBonds.title", run: (/** @type {any} */ c) => { setTimeout(() => breakBonds(c.bonds), 60); } });
-menuAdd({ id: "cut-bonds", when: "selection", order: 40, show: (/** @type {any} */ c) => c.bonds.length > 0, label: (/** @type {any} */ c) => I18N.t("draw.cut.selected", { n: c.bonds.length, mode: I18N.t("draw.cut.mode." + cutMode()).split(":")[0] }), title: "draw.cut.selected.title", run: (/** @type {any} */ c) => { doCut(c.bonds, { x: c.x, y: c.y }); } });
 menuAdd({ id: "partials", order: 50, rows: (/** @type {any} */ c) => partialItems(K, c.ev, c.atoms, fragHelpers).catch(() => []) });     // brackets with a delta (disegno-parziali.js)
 menuAdd({ id: "fragments", order: 60, rows: (/** @type {any} */ c) => fragmentItems(K, c.ev, fragHelpers).catch(() => []) });          // the two pieces of the bond, all cuts
 // selects the bonds between the given pairs of atoms (ids as in the SMILES just loaded) so Ketcher highlights them; returns how many were found
@@ -504,7 +488,8 @@ function drawing() {
     const before = ix.filter(i => near(i) && box[i].cx < left).sort((a, b) => box[b].x1 - box[a].x1)[0], after = ix.filter(i => near(i) && box[i].cx > right).sort((a, b) => box[a].x0 - box[b].x0)[0];
     if (before !== undefined && after !== undefined) arrows.push({ x: (p0.x + p1.x) / 2, y: ym, pair: [before, after] });
   });
-  const r = labelsOf({ structures: gs.map(g => g.map(atomOf)), arrows: arrows.map(a => a.pair) }, () => FRAME.next(drawLabels));
+  const roots = [...groups.keys()], ps = partials(K), deltas = roots.map(r => ps.filter(p => p.atoms.some(i => st.atoms.has(i) && root(i) === r)).map(p => p.delta).join(" "));   // a bracket's delta counts in its structure
+  const r = labelsOf({ structures: gs.map(g => g.map(atomOf)), arrows: arrows.map(a => a.pair), ...(deltas.some(Boolean) ? { deltas } : {}) }, () => FRAME.next(drawLabels));
   if (!r) return { structs: [], arrows: [] };
   return { structs: /** @type {DrawStruct[]} */ (box.map((b, i) => ({ ...r.structures[i], q: r.structures[i].charge, ...b })).filter(d => !d.error)), arrows: arrows.map((a, i) => ({ ...a, r: r.arrows[i] })).filter(a => a.r) };
 }
@@ -745,10 +730,8 @@ Q("#ex-load").onclick = async () => { let v = Q("#ex-smi").value.trim(); if (!v)
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
-async function drawnAtoms() { await start(); const sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []); (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } }); return pieces(set.size ? set : null).map(p => p.ids.map((/** @type {number} */ i) => atomOf(st.atoms.get(i)))); }   // the atoms of each structure of the selection (bond ends included), or of the whole canvas: «Expected ions» (disegno-ioni.js)
-const showIons = () => import("./disegno-ioni.js").then(m => m.carica()); Q("#ions-go")?.addEventListener("click", showIons); menuAdd({ id: "expected-ions", order: 70, label: "draw.ctx.ions", title: "draw.ctx.ions.title", run: () => { document.dispatchEvent(new CustomEvent("mzlab-card-open", { detail: Q("#ions-card") })); Q("#ions-card")?.scrollIntoView({ block: "nearest" }); showIons(); } });   // of the selection, or of the whole drawing
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, structures: drawnAtoms, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
+window.TPDraw = { menu: { add: menuAdd, ids: menuIds }, when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (!ed || typeof ed.undo !== "function" || typeof ed.redo !== "function") return; try { redo ? ed.redo() : ed.undo(); } catch (_) { /* nothing left to undo or redo */ } } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } });
 try { if (S.view === "draw") { start(); initCerca((k, p) => I18N.t(k, p), dnote); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });

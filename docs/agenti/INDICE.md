@@ -2,7 +2,7 @@
 Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo quello). Trovare una riga: `grep -n '<parola>' docs/agenti/INDICE.md`. Ogni `docs/agenti/*.md` è citato qui (`tools/cancello_rilascio.py`).
 | Se tocchi… | Leggi |
 |---|---|
-| vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione | `docs/agenti/dati.md` |
+| vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro (finestra XIC di default `xicWin`), integrazione | `docs/agenti/dati.md` |
 | «Group by» della lista file (`#sb-by`, `gruppi.js`, `gruppi-per.js`, chiave, «Then by», «Contains», segue i file nuovi, annulla) | `docs/agenti/gruppi-per.md` |
 | integrazione dei picchi nella vista Dati (strumento automatico, un clic = tutti i picchi in HR, parametri, `auto_integrate`) | `docs/agenti/dati-integrazione.md` |
 | primo caricamento di più file (si apre solo il primo), campi della tabella di carico | `docs/agenti/dati-carico.md` |
@@ -29,7 +29,6 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | motore di confronto spettrale con più librerie per mzFlow (nodo «Attribution», `table.attribute`) e pannello laterale MSⁿ: `libset`, `libmatch/1`, preset, analoghi con ΔFormula, catalogo `librerie/2` | `docs/agenti/match-spettrale.md` (prompt dei lavori: `docs/archivio/prompt-match/`) |
 | Disegno (Ketcher) | `docs/agenti/disegno.md` |
 | menu del tasto destro del Disegno (`#ctx`, `disegno-menu.js`, registro `menuAdd`, «Informazioni…», ricerche PubChem/ChEBI/BioTransformer, `sel/1`, `link/1`) | `docs/agenti/disegno-menu.md` |
-| «Ioni attesi» del Disegno (`#ions-card`, `ions/1`, `mzlab-cli mol-ions`, XIC) | `docs/agenti/disegno-ioni.md` |
 | campi numerici scritti a mano (`campi.js`, `CAMPI.num`, `data-num`, calcolatori, nota di rifiuto `campo.*`, `numIt` senza Infinity, `lib_campi.sweep`) | `docs/agenti/campi-numerici.md` |
 | accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
@@ -128,7 +127,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | tabella picchi dello spettro da copiare (TSV), asse y in % fino a 100, pulsante XIC solo su MS¹ | `docs/agenti/tabella-picchi.md` |
 | pulsante «XIC» nella barra dello spettro, lente XIC al passaggio sul picco (`xic-lente.js`), banco e tabella di partenza dei tempi del visualizzatore (`tools/bench_visore.py`, `viewer_times.rs`) | `docs/agenti/visore-veloce.md` |
 | pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusion.rs` (chiavi, blocchi, nome), comando `infusion_diagnosis` | `docs/agenti/infusione-lente.md` |
-| scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), intervallo `250.8-251.5`, `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; campi «m/z da / a» dell'intestazione XIC e coppie m/z / RT del riquadro «Intervallo» (`xic-bordi.js`, `ctl.range.order`) | `docs/agenti/xic-scarto.md` |
+| scarto con segno dopo l'm/z o la formula nella finestra «Estrai ioni» (`288.2+16`), intervallo `250.8-251.5`, `split_offset`, `mzlab-cli ion-mz`, `err.formula.offset`, `err.formula.mzLow`; campi «m/z da / a» dell'XIC e coppie m/z / RT del riquadro «Intervallo» (`xic-bordi.js`, `ctl.range.order`) | `docs/agenti/xic-scarto.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
 | Safari e iPadOS (WebKit): API usate × versione minima × ripiego, pavimento 16.4, ripieghi di `compat.js` (`AbortSignal.any`, `createWritable`, appunti, `accept` sull'iPad) | `docs/agenti/compat-safari.md` |

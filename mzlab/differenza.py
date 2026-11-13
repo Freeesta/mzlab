@@ -55,7 +55,7 @@ def norm_factor(kind: str, sample: float, ref: float) -> float:
 
 
 def _nominal(mz: np.ndarray, below: float) -> np.ndarray:
-    """Nominal mass of each m/z at unit resolution: the cell [n - below, n + 1 - below) (the same window as the XIC, XIC_BELOW in the page)."""
+    """Nominal mass of each m/z at unit resolution: the cell [n - below, n + 1 - below) (the spectrum cell of peaks.py)."""
     return np.floor(np.asarray(mz, dtype=np.float64) + below).astype(np.int64)
 
 

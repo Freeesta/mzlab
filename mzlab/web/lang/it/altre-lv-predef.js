@@ -109,7 +109,6 @@ I18N.add("it", {
   "panel.num.title": "Tasto {n}: attiva il pannello",
   "panel.pair.to": "Il pannello {n} segue questo grafico",
   "panel.scanOf": "spettro di {f}",
-  "panel.pair.from": "Segue il pannello {n}",
   "panel.pairArrow.title": "Lo spettro sotto è del precursore scelto sopra",
   "panel.rt.held": "fermo a {rt}",
   "panel.title.isosim": "Simulazione isotopica",

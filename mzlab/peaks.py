@@ -1,14 +1,13 @@
 """Peaks of a mass spectrum with unit resolution: the same rule for profile files and for centroid files.
 
-One nominal mass = one peak. The unit window of nominal mass n is [n - XIC_BELOW, n + 1 - XIC_BELOW] (the same window as the XIC,
-`xicWin` / `XIC_BELOW` in web/explore.js: tests/test_peaks.py checks that the two values are equal).
+One nominal mass = one peak. The unit cell of nominal mass n is [n - XIC_BELOW, n + 1 - XIC_BELOW]: the cells tile the axis, so it is
+wider than the default XIC window [n - 0.2, n + 0.3] of web/pannelli.js `xicWin` (tests/test_peaks.py checks the shared lower edge).
 """
 from __future__ import annotations
 
 import numpy as np
 
-XIC_BELOW = 0.2         # unit window of nominal mass n = [n - 0.2, n + 0.8]
-XIC_DRIFT = 0.25        # observed centroids sit about this far above the calculated mass (nominal = round(observed - drift))
+XIC_BELOW = 0.2         # unit cell of nominal mass n = [n - 0.2, n + 0.8]
 _SG5 = np.array([-3.0, 12.0, 17.0, 12.0, -3.0]) / 35.0      # Savitzky-Golay, 5 points, quadratic: a short smoothing that keeps the width of the peak
 
 

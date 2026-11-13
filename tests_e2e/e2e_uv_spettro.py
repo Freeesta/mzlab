@@ -108,7 +108,7 @@ try:
                 pg.evaluate(f"(()=>{{const c={c}; c.cur={rt}; pushLinked(c,{rt},{rt},0,true)}})()"); wait_for_js(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
             pg.evaluate(f"spLinkFreeze({u})"); frames(pg, 2); pg.evaluate(f"spLinkFollow({u}, {c})"); frames(pg, 3)
             pg.evaluate(f"(()=>{{ctl({u}); ctl({u}); ctl({u})}})()"); frames(pg, 3)          # every redraw of the controls (new file, tab, level)
-            assert pg.evaluate(f"{u}.el.querySelectorAll('.fol').length") == 1, "one «Follows» button, in the bar or in the «…» menu"
+            assert pg.evaluate(f"{u}.el.querySelectorAll('.fol').length") == 1, "one «Follows» button, the pair tag in the header"
             xb = pg.evaluate(f"[...{u}.el.querySelectorAll('[data-a=xicb],[data-a=xicl]')].every(b => b.hidden || !b.offsetParent)"); assert xb, "no XIC button on a UV spectrum"
         step("UV spectrum: exactly one «Follows» button after the line moves and the source changes, and no XIC button", fol_once)
         def wl_panel():

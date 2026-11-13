@@ -59,6 +59,8 @@ I18N.add("it", {
   "ctl.xt.title": "Quale XIC modificare",
   "ctl.xlab.title": "m/z e tolleranza dell'XIC",
   "ctl.xr.title": "Due estremi di m/z e Invio",
+  "ctl.xr.xlo": "m/z da",
+  "ctl.xr.xhi": "m/z a",
   "ctl.split.title": "Un pannello per ogni ione",
   "ctl.split": "Separa",
   "ctl.mrm.smooth.title": "Ammorbidisce la curva mostrata",

@@ -258,6 +258,28 @@ def test_cropped_agilent_equals_the_cli(tools, membro):
     assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
 
 
+def test_one_undecodable_agilent_scan_is_left_out_on_both_faces(tools):
+    """A `.D` of 60 scans whose 31st has a non-finite intensity: the other 59 load, that one stays in the list with no points and is counted as
+    damaged (exit 3 and `warn.file.damaged` on the CLI), byte for byte the same mzML from the module."""
+    import agilent_sintetico
+    ds = agilent_sintetico.write(tools["tmp"] / "in_agilent_damaged", "synt.D", 60)
+    f = ds / "AcqData" / "MSPeak.bin"
+    b = bytearray(f.read_bytes())
+    # 68-byte head, then per scan 4 m/z and 4 intensities as f64: the first intensity of scan 31
+    at = 68 + 30 * 64 + 32
+    b[at:at + 8] = struct.pack("<d", float("nan"))
+    f.write_bytes(bytes(b))
+    out = tools["tmp"] / "cli_damaged"
+    r = run([str(tools["cli"]), "convert", str(ds), "--out", str(out), "--fresh", "--workers", "1"])
+    assert r.returncode == 3, r.stderr[-1500:]
+    assert "partial read, 59 of 60 scans (warn.file.damaged)" in r.stderr, r.stderr[-1500:]
+    cli = next(out.glob("*.mzML")).read_bytes()
+    wasm = da_wasm(tools, "agilent", ds)
+    assert cli.count(b"<spectrum ") == 60
+    assert cli.count(b'defaultArrayLength="0"') == 1
+    assert sha(wasm) == sha(cli), (len(wasm), len(cli), first_diff(wasm, cli))
+
+
 def test_wiff_with_dad_and_method_equals_cli_with_dad(tools):
     """A 3200 QTRAP variant (version-1 blocks) with an optical detector and an LC method: the module writes the matrix (`MS:1000804` spectra) and the method
     (`mzLab metodo/1`), byte for byte what `mzlab-cli convert --set conv.dad=true` writes."""

@@ -6,7 +6,7 @@ use crate::centroids::{Buf, Params};
 use crate::error::{Error, Result};
 use crate::mzml::Spectrum;
 use crate::mzmlwrite::{Header, MzmlWriter, Options, ProcStep};
-use crate::readers::Reader;
+use crate::readers::{Reader, Skips};
 #[cfg(not(target_family = "wasm"))]
 use crate::readers_centroids::{picchi, stima};
 
@@ -272,7 +272,8 @@ impl Conversion<'_> {
 }
 
 /// The `n` scans of sample `c` into `w`: with `Opzioni::thread` above 1 the reading stays on this thread and the encoding goes to the pool of the writer
-/// (`MzmlWriter::spettri`), otherwise one scan at a time. The file is the same; `progress` counts the scans read.
+/// (`MzmlWriter::spettri`), otherwise one scan at a time. The file is the same; `progress` counts the scans read. A scan whose data do not decode is
+/// written with no points (`readers::Skips`).
 fn spettri<W: Write>(
     w: &mut MzmlWriter<W>,
     l: &mut dyn Reader,
@@ -282,24 +283,29 @@ fn spettri<W: Write>(
 ) -> Result<()> {
     #[cfg(not(target_family = "wasm"))]
     if w.thread() > 1 {
-        return w.spettri((0..n).map(|k| {
-            let s = scansione_di(peaks, l, (c, k), pick)?;
+        let mut skips = Skips::default();
+        w.spettri((0..n).map(|k| {
+            let s = scansione_di(peaks, l, (c, k), pick);
+            let s = skips.take(l, (c, k), s)?;
             let extra = l.scan_extra(c, k, &s);
             if (k + 1) % 32 == 0 {
                 progress(k + 1, n);
             }
             Ok((s, extra))
-        }));
+        }))?;
+        return skips.end(n);
     }
+    let mut skips = Skips::default();
     for k in 0..n {
-        let s = scansione_di(peaks, l, (c, k), pick)?;
+        let s = scansione_di(peaks, l, (c, k), pick);
+        let s = skips.take(l, (c, k), s)?;
         let extra = l.scan_extra(c, k, &s);
         w.spectrum_with(&s, &extra)?;
         if (k + 1) % 32 == 0 {
             progress(k + 1, n);
         }
     }
-    Ok(())
+    skips.end(n)
 }
 
 /// Writes sample `c` of `l` as mzML to `out`; `progress(done, total)` counts the spectra.
