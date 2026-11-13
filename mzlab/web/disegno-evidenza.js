@@ -10,6 +10,7 @@ const t = (/** @type {string} */ k, /** @type {Record<string, any>} */ p = {}) =
 /** @type {Record<string, string>} */ const KIND = { moiety: "draw.ev.kind.moiety", sites: "draw.ev.kind.sites", cuts: "draw.ev.kind.cuts" };
 /** @type {Record<string, string>} */ const SKIP = { noMatch: "draw.ev.skip.noMatch", lr: "draw.ev.skip.lr", tooBig: "draw.ev.skip.tooBig" };
 /** @type {any} */ let last = null;           // the last hilite/1 answer with the names of its atoms
+/** @type {{kind: string, atoms: number[], bonds: number[]}[]} */ let strokes = [];   // what is painted, in Ketcher ids, for a repaint in new colours
 let painted = false, listening = false;
 
 /** HR world: a high-resolution file open with the HR tools on (as the bar decides) */
@@ -73,11 +74,20 @@ function dataTable() {
   /** @type {any} */ (window).TDATI.table({ title: t("draw.ev.table.caption"), head: [t("draw.ev.col.kind"), t("draw.ev.col.label"), t("draw.ev.col.what"), t("draw.ev.col.where")], rows });
 }
 
+/** paints `strokes` with Ketcher's highlights in the current colours of their kind */
+function paint(/** @type {any} */ K) {
+  try { K.editor.highlights.clear(); } catch (_) { /* nothing painted */ }
+  for (const s of strokes) K.editor.highlights.create({ atoms: s.atoms, bonds: s.bonds, rgroupAttachmentPoints: [], color: colour(s.kind) });
+  painted = strokes.length > 0;
+}
+
 /** removes the colours (the drawing is left as it is) */
 export async function clear() {
   const K = await ketcher();
   if (painted) { try { K.editor.highlights.clear(); } catch (_) { /* an older editor */ } }
-  painted = false; last = null;
+  painted = false; last = null; strokes = [];
+  // tells listeners (the e2e) the colours went, and on which drawing: an edit clears them, painting never does
+  document.dispatchEvent(new CustomEvent("mzlab-ev-cleared", { detail: { atoms: K.editor.struct().atoms.size } }));
   const c = document.querySelector("#ev-card");
   if (c) { /** @type {HTMLElement} */ (c.querySelector("#ev-legend")).textContent = ""; /** @type {HTMLElement} */ (c.querySelector("#ev-status")).textContent = t("draw.ev.cleared"); }
 }
@@ -92,6 +102,7 @@ export async function highlight(/** @type {any[]} */ layers) {
   try {
     const K = await ketcher(), st = K.editor.struct(), ids = [...st.atoms.keys()];
     if (painted) { try { K.editor.highlights.clear(); } catch (_) { /* nothing painted */ } painted = false; }
+    strokes = [];
     if (!ids.length) { status.textContent = t("draw.ev.empty"); /** @type {HTMLElement} */ (c.querySelector("#ev-legend")).textContent = ""; return null; }
     const sel = (K.editor.selection() || {}).atoms || [], world = hrWorld() ? "hr" : "lr";
     const req = { molfile: molfileOf(st, ids, undefined, () => true), world, selected: sel.map((/** @type {number} */ a) => ids.indexOf(a)).filter((/** @type {number} */ i) => i >= 0),
@@ -100,15 +111,20 @@ export async function highlight(/** @type {any[]} */ layers) {
     for (const l of r.layers) {
       const atoms = l.atoms.map((/** @type {number} */ i) => ids[i]), bonds = /** @type {number[]} */ ([]);
       st.bonds.forEach((/** @type {any} */ b, /** @type {number} */ id) => { if (l.bonds.some((/** @type {number[]} */ p) => (ids[p[0]] === b.begin && ids[p[1]] === b.end) || (ids[p[0]] === b.end && ids[p[1]] === b.begin))) bonds.push(id); });
-      if (atoms.length || bonds.length) { K.editor.highlights.create({ atoms, bonds, rgroupAttachmentPoints: [], color: colour(l.kind) }); painted = true; }
+      if (atoms.length || bonds.length) strokes.push({ kind: l.kind, atoms, bonds });
     }
     last = { r, name: (/** @type {number} */ i) => (st.atoms.get(ids[i]).label || "") + (i + 1) };
     legend(r);
     const n = r.layers.filter((/** @type {any} */ l) => !l.skip).length;
-    status.textContent = world === "lr" ? t("draw.ev.done.lr") : t("draw.ev.painted", { n, total: r.layers.length });
+    paint(K);
+    status.textContent = t("draw.ev.painted", { n, total: r.layers.length });
     if (!listening) {
       listening = true;
       K.editor.subscribe("change", () => { if (painted) clear().catch(() => { /* the canvas went away */ }); });
+      // the colours are read when painting: a theme change paints the same atoms again in the colours of the new theme
+      const again = () => { if (painted) ketcher().then(paint).catch(() => { /* the canvas went away */ }); };
+      new MutationObserver(again).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-a11y-bg"] });
+      matchMedia("(prefers-color-scheme: dark)").addEventListener("change", again);
     }
     return r;
   } catch (e) {

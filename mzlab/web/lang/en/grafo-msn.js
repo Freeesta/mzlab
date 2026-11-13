@@ -177,6 +177,7 @@ I18N.add("en", {
   "msngrafo.str.show.tip": "Shows this bond in the drawing",
   "msngrafo.str.none": "No cut of the structure gives the m/z of this ion.",
   "msngrafo.str.nomark": "The bond is not found in the drawing",
+  "msngrafo.str.ev.label": "cut {bond} of the MSn graph",
   "msngrafo.str.hyp": "These are candidate cuts with their evidence: the broken bond stays a hypothesis.",
   "msngrafo.find": "Search lab library",
   "msngrafo.find.tip": "Compares this tree with your local library of MSn trees",

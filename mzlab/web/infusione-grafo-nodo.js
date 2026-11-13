@@ -117,16 +117,18 @@ async function fillCuts(/** @type {HTMLElement} */ host, /** @type {any} */ n) {
   box.innerHTML = hypothesis(s) + h`<b class="sm">${I18N.t("msngrafo.str.title")}</b>` + warn + cutsTable(s) + h`<p class="muted sm">${I18N.t("msngrafo.str.hyp")}</p>`;
   box.querySelectorAll(".ig-cut").forEach(b => b.addEventListener("click", () => {
     const d = /** @type {HTMLElement} */ (b).dataset;
-    showCut(s.candidati[+(d.i || 0)].tagli[+(d.k || 0)].legame.atomi);
+    const cut = s.candidati[+(d.i || 0)].tagli[+(d.k || 0)];
+    showCut(cut.legame.atomi, cut.legame.etichetta);
   }));
 }
 
-/** Opens Draw with the SMILES of the tab and marks the bond between two atoms (their order in the SMILES). */
-async function showCut(/** @type {number[]} */ atoms) {
+/** Opens Draw with the SMILES of the tab, marks the bond between two atoms (their order in the SMILES) and colours it as a cut (evidence colours, `hilite/1`). */
+async function showCut(/** @type {number[]} */ atoms, /** @type {string} */ bond) {
   if (typeof setView === "function") setView("draw");
   try {
     await TPDraw.load(G.smiles);
-    if (!(await TPDraw.mark([atoms]))) nearMsg(I18N.t("msngrafo.str.nomark"));
+    if (!(await TPDraw.mark([atoms]))) { nearMsg(I18N.t("msngrafo.str.nomark")); return; }
+    await TPDraw.highlight([{ kind: "cuts", smiles: G.smiles, bonds: [atoms], label: I18N.t("msngrafo.str.ev.label", { bond }) }]);
   } catch (e) { console.info("INFG cut", e); nearMsg(I18N.t("msngrafo.draw.notReady")); }
 }
 

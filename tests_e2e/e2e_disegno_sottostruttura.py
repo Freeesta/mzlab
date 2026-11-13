@@ -1,10 +1,11 @@
 """Disegno, substructure search (`subdb/1` of the molkit .wasm): the right-click row of the whole drawing (or of a selection) opens the search card;
 the catalogue gives candidates (never identifications), «Show» draws one with its matched atoms selected and «Back» restores the drawing; a file the user
 picks (a synthetic SMILES list) is searched in memory, an unreadable entry is counted; the data table (TDATI) lists every candidate.
-Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without site/static/wasm-feat."""
+Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without molkit there."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
-    print("SKIP site/static/wasm-feat is missing (tools/build_feat_wasm.sh site/static)"); sys.exit(0)
+MF = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")
+if not os.path.exists(MF) or "molkit" not in json.load(open(MF, encoding="utf-8")):
+    print("SKIP no molkit in site/static/wasm-feat (tools/build_feat_wasm.sh site/static)"); sys.exit(0)
 from lib import *
 steps = []
 def step(name, fn):
@@ -55,6 +56,7 @@ try:
 
         def show_and_back():
             li = pg.locator("#sub-list li").filter(has_text="acetaminophen").first
+            pg.evaluate("window.__cleared = []; document.addEventListener('mzlab-ev-cleared', e => window.__cleared.push(e.detail.atoms))")
             li.locator(".sub-show").click()
             pg.wait_for_function("!document.querySelector('#sub-back').hidden", timeout=20000)
             n = pg.evaluate(f"{KJ}.editor.struct().atoms.size")
@@ -63,11 +65,11 @@ try:
             painted = f"{KJ}.editor.highlights.getAll().map(x => x.highlight || x).map(x => [(x.atoms || []).length, (x.bonds || []).length])"
             pg.wait_for_function(f"JSON.stringify({painted}) === '[[7,7]]'", timeout=20000)    # the moiety coloured too (disegno-evidenza.js)
             assert pg.locator("#ev-card").is_visible()
-            frames(pg, 6)                                                                       # painting is no edit: no "change" clears the colours
-            assert pg.evaluate(f"JSON.stringify({painted})") == "[[7,7]]", pg.evaluate(painted)
             pg.click("#sub-back")
             pg.wait_for_function("document.querySelector('#sub-back').hidden", timeout=20000)
-            pg.wait_for_function(f"{painted}.length === 0", timeout=20000)
+            pg.wait_for_function("window.__cleared.length > 0", timeout=20000)
+            assert pg.evaluate("window.__cleared") == [7], pg.evaluate("window.__cleared")   # cleared by «Back» (the phenol), never by painting
+            assert pg.evaluate(f"{painted}.length") == 0
             assert pg.evaluate(f"{KJ}.editor.struct().atoms.size") == 7
             assert pg.inner_text("#sub-status") == pg.evaluate("I18N.t('draw.sub.restored')")
         step("«Show» draws acetaminophen with the 7 matched atoms and 7 bonds selected and coloured; «Back» restores the phenol, uncoloured", show_and_back)
