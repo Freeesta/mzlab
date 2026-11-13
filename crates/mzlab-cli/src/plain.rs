@@ -13,10 +13,10 @@ mod ion_mz_cmd;
 mod mol_check_cmd;
 #[path = "mol_cip_cmd.rs"]
 mod mol_cip_cmd;
-#[path = "mol_hilite_cmd.rs"]
-mod mol_hilite_cmd;
 #[path = "mol_export_cmd.rs"]
 mod mol_export_cmd;
+#[path = "mol_hilite_cmd.rs"]
+mod mol_hilite_cmd;
 #[path = "mol_link_cmd.rs"]
 mod mol_link_cmd;
 #[path = "mol_mech_cmd.rs"]
