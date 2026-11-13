@@ -41,7 +41,7 @@ impl WiffReader {
             let Some(r) = p.w.records.get(i) else {
                 continue;
             };
-            if p.w.is_full_scan(r.experiment) {
+            if p.w.has_bpc(r.experiment) {
                 let (t, v) = by_experiment.entry(r.experiment).or_default();
                 t.push(r.time_min);
                 v.push(base);

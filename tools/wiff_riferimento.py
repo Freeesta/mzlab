@@ -368,7 +368,7 @@ def scheduled(out: Path):
 
 def variants(out: Path):
     """The files of the readers module. A QTRAP 5500 with four experiments (survey V1, enhanced product ion V3, precursor-ion scan V1, neutral-loss scan V1) over two cycles, and the refused files.
-    The mass of the header is a precursor of the product-ion scan only: the precursor-ion scan has it as its product, the neutral-loss scan as its loss (Da)."""
+    The header mass is a precursor of the product-ion scan only (the precursor-ion scan's product, the neutral-loss scan's loss, Da); survey, precursor ion and neutral loss give a TIC and a BPC."""
     ex = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 55.5), "Experiment2/ExperimentHeader": header(5, 184.0),
           "Experiment3/ExperimentHeader": header(7, 217.3), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
     pts = {1: FULL, 3: PRODUCT, 5: [(5, 4), (6, 9), (400, 12000)], 7: [(70, 1), (71, 2), (72, 7), (900, 300)]}
@@ -389,7 +389,10 @@ def variants(out: Path):
     w = Writer()  # a 3200 QTRAP whose enhanced product ion scan blocks are version 3: the engine's reader (version 2 only) would list no scans, so the file is a variant
     w.sample(1, [("scan", FULL, 100.0, 1.0, 2), ("scan", PRODUCT, 200.0, 1.0, 3)], {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 239.0)}, log="3200 QTRAP")
     w.save(out, "epi3200")
-    variante = {"1": {"polarity": 1, "model": "QTRAP 5500", "spectra": want, "chromatograms": []}}
+    on = {e: [b for b in blocks[e::4] if b[1]] for e in (0, 2, 3)}
+    traces = [{"id": f"{k} sample=1 period=1 experiment={e + 1}", "time": [b[2] / 60000.0 for b in on[e]],
+               "intensity": [b[3] if k == "TIC" else max(expected_scan(b[1], b[4])[1]) for b in on[e]]} for k in ("TIC", "BPC") for e in on]
+    variante = {"1": {"polarity": 1, "model": "QTRAP 5500", "spectra": want, "chromatograms": traces}}
     refusals = {}
     one = [("scan", FULL, 1000.0, 1.0)]
     w = Writer()  # two periods: the reader has no real file with one, so it refuses

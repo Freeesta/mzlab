@@ -77,15 +77,20 @@ def blocks(sigla, kind, version):
 def today(sigla, code, kind, version):
     if sigla not in READ:
         return {"esito": "rifiuto", "detail": f"scan type code {code} (experiment 1)"}
+    # TIC and BPC as ProteoWizard lists them: an MRM a BPC of its largest transition per cycle, SIM none; full scan, precursor-ion and neutral-loss both, MS3 a TIC only
     if kind in ("mrm", "ions"):
-        return {"esito": "letto", "spettri": 0, "cromatogrammi": 1 + len(TRS if kind == "mrm" else IONS), "tipo": None}
+        bpc = [max(v) for _, v, _, _ in blocks(sigla, kind, version)] if kind == "mrm" else None
+        return {"esito": "letto", "spettri": 0, "cromatogrammi": (2 if bpc else 1) + len(TRS if kind == "mrm" else IONS), "tipo": None,
+                "tracce": ["TIC", "BPC"] if bpc else ["TIC"], "bpc": bpc}
     level = 1 if sigla in ("EMS", "Q1") else 3 if sigla == "MS3" else 2
     # the header mass of a neutral-loss scan is its loss, never a precursor; that of a precursor-ion scan is its selected ion, as ProteoWizard writes it
     prec = MS3_SECOND if sigla == "MS3" else PREC.get(sigla) if sigla not in ("EMS", "Q1", "NL") else None
     sp = [w.spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", level, prec, 1000.0 * k, pts(k), version)
           for k in range(CYCLES)]
+    tracce = ["TIC", "BPC"] if sigla in ("EMS", "Q1", "PREC", "NL") else ["TIC"] if sigla == "MS3" else []
     return {"esito": "letto", "spettri": CYCLES, "livello": sp[0]["level"], "precursore": sp[0]["precursor"], "tipo": CV.get(sigla),
-            "mz": sp[0]["mz"], "intensita": sp[0]["intensity"]}
+            "mz": sp[0]["mz"], "intensita": sp[0]["intensity"], "tracce": tracce,
+            "bpc": [max(s["intensity"]) for s in sp] if "BPC" in tracce else None}
 
 
 def main(out=None):

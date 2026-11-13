@@ -1,9 +1,8 @@
 //! The chromatogram list of a sample, the same for the engine (`run.rs`) and the readers module (`run_extended.rs`, `mzlab-cli convert`): one TIC per experiment
-//! with data (full scan: the TIC of the index; MRM: the TIC of the blocks), `TIC sample=N period=1 experiment=E` when there are several, the SRM / SIM
-//! chromatograms after the TIC of their experiment, the device traces (`devices.rs`), the BPC of each full scan experiment (only when its scans were
-//! decoded) and the DAD TWC last.
-
-use super::modes::{CODE_FULL, CODE_Q1};
+//! with data (full scan, precursor-ion, neutral-loss and MS3: the TIC of the index; MRM: the TIC of the blocks), `TIC sample=N period=1 experiment=E` when
+//! there are several; after an MRM TIC its BPC (the largest transition of each block) and its SRM / SIM chromatograms; the device traces (`devices.rs`),
+//! the BPC of each full scan, precursor-ion and neutral-loss experiment (only when its scans were decoded) and the DAD TWC last, as ProteoWizard lists them.
+use super::modes::{CODE_FULL, CODE_MRM, CODE_MS3, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_Q1};
 use super::{Record, Wiff};
 use crate::mzml::{ChromKind, Chromatogram};
 
@@ -18,17 +17,8 @@ impl Wiff {
         later: usize,
     ) {
         for (e, time, intensity) in bpcs {
-            let unit = "number of detector counts".into();
-            chroms.push(Chromatogram {
-                index: chroms.len(),
-                id: self.bpc_id(e, many),
-                kind: ChromKind::Bpc,
-                q1: None,
-                q3: None,
-                unit,
-                time,
-                intensity,
-            });
+            let id = self.bpc_id(e, many);
+            chroms.push(total(chroms.len(), id, ChromKind::Bpc, time, intensity));
         }
         if let Some(dad) = &self.dad {
             chroms.push(dad.twc_chromatogram(chroms.len() + later));
@@ -43,15 +33,28 @@ impl Wiff {
         }
     }
 
-    /// True when experiment `e` is a full scan (EMS or Q1): its spectra give a TIC chromatogram (the other scan experiments give none).
-    pub(crate) fn is_full_scan(&self, e: usize) -> bool {
+    fn code(&self, e: usize) -> Option<u32> {
+        self.experiments.get(e).and_then(|x| x.code)
+    }
+
+    /// True when the spectra of experiment `e` give a TIC chromatogram, as in ProteoWizard: full scan (EMS or Q1), precursor-ion, neutral-loss and MS3; the
+    /// product-ion scans give none.
+    pub(crate) fn has_tic(&self, e: usize) -> bool {
         matches!(
-            self.experiments.get(e).and_then(|x| x.code),
-            Some(CODE_FULL | CODE_Q1)
+            self.code(e),
+            Some(CODE_FULL | CODE_Q1 | CODE_PRECURSOR_ION | CODE_NEUTRAL_LOSS | CODE_MS3)
         )
     }
 
-    /// One TIC per MRM experiment that has blocks (just `TIC` when there is one) and one SRM chromatogram per transition that was acquired at least once.
+    /// True when the spectra of experiment `e` also give a BPC: the experiments with a TIC but MS3.
+    pub(crate) fn has_bpc(&self, e: usize) -> bool {
+        matches!(
+            self.code(e),
+            Some(CODE_FULL | CODE_Q1 | CODE_PRECURSOR_ION | CODE_NEUTRAL_LOSS)
+        )
+    }
+
+    /// One TIC per experiment that has blocks (just `TIC` when there is one), the BPC of an MRM one and one SRM chromatogram per transition that was acquired at least once.
     /// With `trim_scheduled`, a scheduled transition keeps only the points within its window around the target RT, as msconvert does. The DAD TWC comes last,
     /// after the BPC of each full scan experiment (`push_bpc`).
     pub(super) fn chromatograms_of(&self, blocks: Blocks) -> Vec<Chromatogram> {
@@ -72,20 +75,16 @@ impl Wiff {
                 true => format!("TIC sample={} period=1 experiment={}", self.sample, e + 1),
                 false => "TIC".into(),
             };
-            later += (ex.bpc.is_empty() && self.is_full_scan(e)) as usize;
-            if !ex.bpc.is_empty() && ex.bpc.len() == ex.time.len() {
-                bpcs.push((e, ex.time.clone(), ex.bpc));
+            later += (ex.bpc.is_empty() && self.has_bpc(e)) as usize;
+            let (time, bpc) = (ex.time.clone(), ex.bpc);
+            let full = !bpc.is_empty() && bpc.len() == time.len();
+            chroms.push(total(chroms.len(), id, ChromKind::Tic, ex.time, ex.tic));
+            if full && self.has_bpc(e) {
+                bpcs.push((e, time, bpc));
+            } else if full && self.code(e) == Some(CODE_MRM) {
+                let id = self.bpc_id(e, many);
+                chroms.push(total(chroms.len(), id, ChromKind::Bpc, time, bpc));
             }
-            chroms.push(Chromatogram {
-                index: chroms.len(),
-                id,
-                kind: ChromKind::Tic,
-                q1: None,
-                q3: None,
-                unit: unit.into(),
-                time: ex.time,
-                intensity: ex.tic,
-            });
             let known = self.mrm_transitions(e);
             let window = self.experiments.get(e).and_then(|x| x.window_s);
             for (j, (mut time, mut intensity)) in ex
@@ -131,12 +130,33 @@ impl Wiff {
     }
 }
 
+/// A TIC or BPC chromatogram (of no transition), in detector counts.
+fn total(
+    index: usize,
+    id: String,
+    kind: ChromKind,
+    time: Vec<f64>,
+    intensity: Vec<f64>,
+) -> Chromatogram {
+    let unit = "number of detector counts".into();
+    Chromatogram {
+        index,
+        id,
+        kind,
+        q1: None,
+        q3: None,
+        unit,
+        time,
+        intensity,
+    }
+}
+
 /// The MRM blocks of one experiment: the times (min) and TIC of every block, and per transition the times and cps of the scans that acquired it.
 #[derive(Default)]
 pub(super) struct Experiment {
     pub(super) time: Vec<f64>,
     pub(super) tic: Vec<f64>,
-    /// Base peak intensity of each block of `time`, empty when the blocks were not decoded.
+    /// Base peak intensity of each block of `time` (of an MRM block: its largest transition), empty when the blocks were not decoded.
     pub(super) bpc: Vec<f64>,
     pub(super) cols: Vec<(Vec<f64>, Vec<f64>)>,
 }
