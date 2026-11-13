@@ -120,17 +120,27 @@ fn what_it_cannot_read_is_an_error_with_the_numbers() {
     );
     // the last spectrum past the end of MSPeak.bin is a copy cut short: the whole scans are kept and the last is counted
     let cut = open(&idx, peak.len() as u64 - 1).unwrap();
-    assert_eq!((cut.records.len(), cut.missing), (3, 1));
-    // a spectrum past the end with whole ones after it is not a cut
+    assert_eq!((cut.records.len(), cut.missing, cut.damaged), (3, 1, 0));
+    // a spectrum past the end with whole ones after it is not a cut: that record is damaged, left out and counted, the others are read
     let mut swapped = idx.clone();
     let (a, b) = (160..160 + 184, 160 + 3 * 184..160 + 4 * 184);
     let first = swapped[a.clone()].to_vec();
     swapped.copy_within(b.clone(), a.start);
     swapped[b].copy_from_slice(&first);
+    let d = open(&swapped, peak.len() as u64 - 1).unwrap();
+    assert_eq!((d.records.len(), d.missing, d.damaged), (3, 0, 1));
     assert_eq!(
-        open(&swapped, peak.len() as u64 - 1).err().unwrap().key,
-        "err.file.agilent",
-        "a spectrum past the end of MSPeak.bin before whole ones"
+        d.losses(0, 3),
+        mzlab_core::readers::Losses::of(4, 3, mzlab_core::readers::AGILENT_DAMAGED)
+    );
+    // a record with no time among good ones: the same
+    let mut no_time = idx.clone();
+    no_time[160 + 184 + 12..160 + 184 + 20].copy_from_slice(&f64::NAN.to_le_bytes());
+    let d = open(&no_time, peak.len() as u64).unwrap();
+    assert_eq!((d.records.len(), d.missing, d.damaged), (3, 0, 1));
+    assert_eq!(
+        d.records.iter().map(|r| r.id).collect::<Vec<_>>(),
+        [1, 3, 4]
     );
     assert_eq!(
         open(&idx[..160], 0).err().unwrap().key,
@@ -351,7 +361,7 @@ fn a_run_with_only_data_ms_opens() {
         membri: vec![conv_help::member("old.D/data.ms", &bytes)],
     });
     assert_eq!(mzlab_core::mzml::read(&mzml[..]).unwrap().spectra.len(), 2);
-    // another record length is an error that names the numbers
+    // another length of the first record (nothing can be read) is an error that names the numbers
     let mut odd = bytes.clone();
     odd[0x140 + 13] = 5;
     assert!(AgilentD::open(
@@ -436,26 +446,4 @@ fn a_block_of_neither_width_is_an_error() {
     // the LC/MS variant reports the same block as a profile one
     assert_eq!(e.key, "err.file.agilent");
     assert!(e.to_string().contains("12 bytes"), "{e}");
-}
-
-#[test]
-fn a_data_ms_count_below_its_records_is_named() {
-    let bytes = encode_data_ms(&[(60000, vec![(1019, 10)]), (60300, vec![(1680, 20)])]);
-    // a header that declares fewer scans than the whole records the file holds is a named error, never the first scans alone
-    let mut fewer = bytes.clone();
-    fewer[0x116..0x11A].copy_from_slice(&1u32.to_be_bytes());
-    let e = AgilentD::open(
-        "old.D",
-        &Files {
-            data_ms: Some(&fewer),
-            ..Default::default()
-        },
-    )
-    .err()
-    .unwrap();
-    assert_eq!(e.key, "err.file.agilentDataMsCount");
-    assert_eq!(
-        e.params,
-        vec![("declared", "1".to_string()), ("found", "2".to_string())]
-    );
 }

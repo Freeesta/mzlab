@@ -72,6 +72,8 @@ pub struct AgilentD {
     pub(crate) inline: Option<Vec<(Vec<f64>, Vec<f64>)>>,
     /// Scans of a copy cut short that are left out (`scan::parse`): announced or begun in `MSScan.bin` but not whole in it or in `MSPeak.bin`.
     pub missing: usize,
+    /// Scans whose index record is damaged, left out (`scan::parse`, `datams::parse`): the others are read.
+    pub damaged: usize,
     /// The mass calibration of a Q-TOF run (`with_calibration`).
     pub(crate) calibration: lcms::Calibration,
     /// The LC/MS method of `AcqData/AcqMethod.xml` (`with_lc_files`).
@@ -97,7 +99,8 @@ impl AgilentD {
             None => scan::Layout::builtin(),
         };
         let announced = Some(segments.iter().map(|s| s.scans).sum::<usize>());
-        let (records, missing) = scan::parse(f.ms_scan, &layout, f.ms_peak_len, announced)?;
+        let (records, missing, damaged) =
+            scan::parse(f.ms_scan, &layout, f.ms_peak_len, announced)?;
         if records.is_empty() {
             // An index with no spectrum file behind it is not a cut copy: name the empty file.
             return Err(if missing > 0 && f.ms_peak_len == 0 {
@@ -121,11 +124,24 @@ impl AgilentD {
             file_sha1: hashes(f),
             inline: None,
             missing,
+            damaged,
             calibration: Default::default(),
             lcm: None,
             devices_all: Vec::new(),
             data_file: "AcqData/MSPeak.bin",
         })
+    }
+
+    /// The scans of sample `c` declared and read, with `n` rows in the index: damaged records name their cause, a cut copy alone is a file that ends early.
+    pub fn losses(&self, c: usize, n: usize) -> crate::readers::Losses {
+        use crate::readers::{Losses, AGILENT_DAMAGED, TRUNCATED};
+        let (cut, bad) = if c == 0 {
+            (self.missing, self.damaged)
+        } else {
+            (0, 0)
+        };
+        let cause = if bad > 0 { AGILENT_DAMAGED } else { TRUNCATED };
+        Losses::of(n + cut + bad, n, cause)
     }
 
     /// +1 / -1 / 0 (not said). Code 0 is "positive" in the three runs (the tree says "Positive" for it); code 1 as negative is the vendor convention
