@@ -187,7 +187,6 @@ fn dad_wl_chrom(
         .collect();
     Some(Chromatogram {
         index,
-        // shortest round-trip text: an integer wavelength keeps "DAD 254 nm", a fractional one gets its own id
         id: format!("DAD {nm} nm"),
         kind: ChromKind::Pda,
         q1: None,
