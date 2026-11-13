@@ -134,9 +134,6 @@ Pipeline TP (priorità 3): i passi del Flow ricevono un canale (`ms:<chiave MS1>
 - Nessuna dipendenza nuova; nessun cambio del formato `.mzidx`: la colonna `exp` di DEV-b resta una proposta.
 - Nomi visibili del Tipo: «LC full scan», «LC MS²», «LC DDA», «LC MRM», «MSn infusion», «mixed», «UV only» (id interni invariati); overlay con CE arrotondata all'intero, CE esatta nel `title` del canale.
 
-## 6. Prompt dei DEV
-Uno per file in `docs/archivio/prompt-canali/` (`a.md` motore, `b.md` `.wiff`, `c.md` UV e analogici, `d.md` selettore, `e.md` albero e lista scan, `f.md` tabella): formato a 7 punti, con ramo e dipendenze in testa. Ordine: A → (B, C, D in parallelo; D dopo `claude/xic-infusione`) → (E dopo ALBERO-PRECURSORI-UI, F) in parallelo.
-
 ## 7. Selettore dei canali (pagina Dati)
 `canali.js` (`window.CANALI`, `canali.css`, chiavi `canali.*`): il selettore unico del cromatogramma (pulsante `data-o=kind`, etichetta «TIC», «TIC + 1») apre un albero a gruppi (`role=tree`, frecce/Spazio/Invio/Esc): «Spettrometria di massa» (nome senza la sigla del modo, già nella colonna «Esperimento»; a scelta multipla: `p.canali`, salvato da `panelRec`; solo le famiglie che `traccia()` disegna), «UV/Vis» (DAD), «Rivelatori» (analogici) e «Registri», righe a scelta singola (`data-kind`, impostano `p.kind`); il pannello MRM ha «Transizioni» / «Ioni» (`data-o=canali`, `p.tr`).
 - UV/Vis fuori dal Full Scan: se i file della scheda hanno un DAD o una traccia analogica, il selettore MRM/SIM e il cromatogramma MS2 (riga fissa «MS2» al posto del `select` spento) hanno i gruppi «UV/Vis» e «Rivelatori»: la riga apre (o mostra, se c'è già) un cromatogramma `kind` di quel rivelatore nella stessa scheda, sotto il pannello, con l'asse del tempo collegato (`CANALIUV` in `canali-uv.js`, caricato su richiesta, annullabile); `addPanel` dalla scheda `mrm` lascia lì un cromatogramma DAD/analogico. Senza segnale i gruppi mancano. Prova: `tests_e2e/e2e_dad_mrm.py`.

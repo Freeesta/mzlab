@@ -1,5 +1,5 @@
 # Potenziale di WebAssembly: cosa costruiamo, cosa lasciamo sul tavolo
-Studio ARCH-F (nessuna modifica al prodotto). Bersaglio deciso da Federico: browser desktop aggiornati (Chrome/Edge, Firefox, Safari desktop) e app desktop; niente telefoni né iPad per ora. Prompt DEV pronti in `docs/studi/PROMPT_WASM_POTENZIALE/`.
+Studio ARCH-F (nessuna modifica al prodotto). Bersaglio deciso da Federico: browser desktop aggiornati (Chrome/Edge, Firefox, Safari desktop) e app desktop; niente telefoni né iPad per ora.
 
 ## 1. Risposta secca
 Sì, ci conteniamo, ma **per il peso, non per la compatibilità**. Il freno è `opt-level = "z"` nel profilo `release` di tutti i `.wasm`: sul nostro codice vero (Chromium 153, 4 vCPU) `opt-level = 3` legge un mzML HR 1,5× più veloce, lo indicizza 1,4× più veloce e fa il peak picking 2,7× più veloce, con risultati identici bit per bit.

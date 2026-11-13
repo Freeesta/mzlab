@@ -280,7 +280,7 @@ pub fn prepare_reader(
 }
 
 /// The table, the index and the SHA-256 of sample `c` of a vendor file set with one decoding of the scans for the table and for pass 1 of the builder
-/// (the later passes, when the peaks do not fit in `budget`, decode again). `fase(3)` is called when the table is done and the index starts.
+/// (the later passes, when the peaks do not fit in `budget`, decode again). `phase(3)` is called when the table is done and the index starts.
 /// Returns the statistics of the build and the `sha256` of the set. The index is the one `prepare_lettore` + `mzidx::build_lettore` write.
 pub fn index_reader(
     l: &mut dyn Reader,
@@ -289,7 +289,7 @@ pub fn index_reader(
     name: &str,
     out: &mut dyn crate::mzidx::Output,
     budget: usize,
-    fase: &mut dyn FnMut(u32),
+    phase: &mut dyn FnMut(u32),
 ) -> Result<(crate::mzidx::Stats, String)> {
     index_reader_with(
         l,
@@ -299,7 +299,7 @@ pub fn index_reader(
         out,
         budget,
         None,
-        fase,
+        phase,
     )
 }
 
@@ -315,12 +315,12 @@ pub fn index_reader_with(
     out: &mut dyn crate::mzidx::Output,
     budget: usize,
     spill: Option<&mut dyn crate::mzidx_spill::Spill>,
-    fase: &mut dyn FnMut(u32),
+    phase: &mut dyn FnMut(u32),
 ) -> Result<(crate::mzidx::Stats, String)> {
     let (t, before) = mzidx_reader::rows_before(l, c, budget, spill)?;
     let sample = sample_of(l, c)?;
     let p = table(t, l, c, String::new(), String::new(), String::new())?;
-    fase(3);
+    phase(3);
     let n = l.index(c)?.len();
     // the members are asked for last, where the source is written (`build_after`): their hash may still be running
     let mut sha256 = String::new();
@@ -355,13 +355,13 @@ pub fn with_parallel_prints<R>(
 ) -> Result<R> {
     std::thread::scope(|s| {
         let mut h = Some(s.spawn(move || recipe().and_then(|mut fs| impronte(&mut fs))));
-        let mut attendi = || match h.take() {
+        let mut wait = || match h.take() {
             Some(h) => h
                 .join()
                 .unwrap_or_else(|_| Err(Error::new("error.workStopped").with("detail", "hash"))),
             None => Err(Error::new("error.workStopped").with("detail", "hash")),
         };
-        job(&mut attendi)
+        job(&mut wait)
     })
 }
 

@@ -100,11 +100,11 @@ impl Sqlite {
             .map_err(|_| broken("short read"))?;
         let mut commit = None;
         if let Some((mut w, wdim)) = wal
-            && let Some((page, mappa, pages)) = read_wal(&mut *w, wdim, limits)?
+            && let Some((page, map, pages)) = read_wal(&mut *w, wdim, limits)?
         {
             s.page = page;
             commit = Some(pages);
-            s.wal = Some((w, mappa));
+            s.wal = Some((w, map));
         }
         if s.page == 0 {
             let raw = u16_be(&h, 16).ok_or_else(|| broken("header"))?;
@@ -190,8 +190,8 @@ impl Sqlite {
             return Err(broken("page number"));
         }
         let page = self.page;
-        if let Some((w, mappa)) = &mut self.wal
-            && let Some(&off) = mappa.get(&n)
+        if let Some((w, map)) = &mut self.wal
+            && let Some(&off) = map.get(&n)
         {
             return read_into(&mut **w, off, page, buf);
         }

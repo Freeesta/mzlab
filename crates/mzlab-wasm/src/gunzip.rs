@@ -13,11 +13,11 @@ pub struct Gunzip {
 
 #[wasm_bindgen]
 impl Gunzip {
-    /// `tetto`: the most bytes the mzML may have (`err.memory.over4gb` beyond).
+    /// `cap`: the most bytes the mzML may have (`err.memory.over4gb` beyond).
     #[wasm_bindgen(constructor)]
-    pub fn new(tetto: f64) -> Gunzip {
+    pub fn new(cap: f64) -> Gunzip {
         Gunzip {
-            g: mzlab_core::gunzip::Gunzip::new(tetto as u64),
+            g: mzlab_core::gunzip::Gunzip::new(cap as u64),
             whole: false,
         }
     }

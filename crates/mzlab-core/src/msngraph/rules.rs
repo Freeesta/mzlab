@@ -113,9 +113,9 @@ fn error(key: &'static str, detail: impl ToString) -> Error {
     Error::new(key).with("detail", detail)
 }
 
-fn only(v: &Value, ammesse: &[&str], at: &str) -> Result<()> {
+fn only(v: &Value, allowed: &[&str], at: &str) -> Result<()> {
     if let Value::Obj(o) = v {
-        if let Some((k, _)) = o.iter().find(|(k, _)| !ammesse.contains(&k.as_str())) {
+        if let Some((k, _)) = o.iter().find(|(k, _)| !allowed.contains(&k.as_str())) {
             return Err(error("err.fragrules.badKey", format!("{at}.{k}")));
         }
         return Ok(());

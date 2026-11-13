@@ -227,12 +227,12 @@ pub fn msnlib_add(
     read_file: Function,
     nome: &str,
     query: &str,
-    libreria: &str,
-    molecola_id: &str,
+    library: &str,
+    molecule_id: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
     let (g, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
-    let (l, duplicate) = aggiungi(libreria, molecola_id, &g, &j).map_err(js_err)?;
+    let (l, duplicate) = aggiungi(library, molecule_id, &g, &j).map_err(js_err)?;
     let mut o = Out::default();
     o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
     o.raw(if duplicate { "true}" } else { "false}" });
@@ -248,10 +248,10 @@ pub fn msnlib_search(
     read_file: Function,
     nome: &str,
     query: &str,
-    libreria: &str,
+    library: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
     let o = opzioni_cerca(&|k| q.get(k).map(String::from)).map_err(js_err)?;
     let (_, j) = compute(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
-    cerca(libreria, &j, &o).map_err(js_err)
+    cerca(library, &j, &o).map_err(js_err)
 }

@@ -8,7 +8,7 @@ use recalibrate::{prefer_even, ricalibra};
 use super::candidates::{below, known_loss, m1_consistent, Elementi};
 use super::formulas::warning;
 use super::rules_evaluate::{loss_vectors, root_adduct};
-use super::{Candidate, Graph, NodeFormula, Options, Unexplained, Warning, STRETTA};
+use super::{Candidate, Graph, NodeFormula, Options, Unexplained, Warning, NARROW};
 use crate::elements::parse_formula;
 
 struct Cand {
@@ -146,8 +146,8 @@ fn evidence(g: &Graph, st: &State, o: &Options, j: usize, c: &[u32]) -> Vec<&'st
         v.push("regola");
     }
     // behind a window narrower than the M+1 the isotopes are not expected: no evidence for or against
-    let stretta = g.nodi[j].upstream.is_some_and(|w| w < STRETTA);
-    if !stretta && g.nodi[j].m1.is_some_and(|x| m1_consistent(st.e, c, x)) {
+    let narrow = g.nodi[j].upstream.is_some_and(|w| w < NARROW);
+    if !narrow && g.nodi[j].m1.is_some_and(|x| m1_consistent(st.e, c, x)) {
         v.push("isotopi");
     }
     let msn = !g.nodi[j].albero.is_empty()
@@ -185,7 +185,7 @@ fn step(g: &Graph, st: &mut State, o: &Options) -> bool {
         let n = st.cand[j].len();
         // under a candidate of each precursor that has some, and at least one has some (a fragment only of unexplained ions is not one)
         let explained = st.genitori[j].iter().any(|&p| !st.cand[p].is_empty());
-        let tieni: Vec<bool> = st.cand[j]
+        let keep: Vec<bool> = st.cand[j]
             .iter()
             .map(|x| {
                 explained
@@ -195,8 +195,8 @@ fn step(g: &Graph, st: &mut State, o: &Options) -> bool {
             })
             .collect();
         // a precursor that does not hold any candidate (a co-isolated ion, a wrong formula) must not take a fragment away from the others
-        let tieni = if tieni.iter().any(|x| *x) {
-            tieni
+        let keep = if keep.iter().any(|x| *x) {
+            keep
         } else {
             st.cand[j]
                 .iter()
@@ -207,7 +207,7 @@ fn step(g: &Graph, st: &mut State, o: &Options) -> bool {
                 })
                 .collect()
         };
-        retain_mask(&mut st.cand[j], &tieni);
+        retain_mask(&mut st.cand[j], &keep);
         let pr: Vec<Vec<&'static str>> = st.cand[j]
             .iter()
             .map(|x| {
@@ -272,7 +272,7 @@ fn formula(g: &Graph, st: &State, o: &Options, j: usize) -> NodeFormula {
             .total_cmp(&b.ppm.abs())
             .then(a.formula.cmp(&b.formula))
     });
-    let fonte = if j == st.r {
+    let source = if j == st.r {
         Some("radice")
     } else if st.user[j] {
         Some("utente")
@@ -282,9 +282,9 @@ fn formula(g: &Graph, st: &State, o: &Options, j: usize) -> NodeFormula {
         None
     };
     NodeFormula {
-        choice: fonte.map(|_| cs[0].formula.clone()),
+        choice: source.map(|_| cs[0].formula.clone()),
         candidates: cs,
-        provenance: fonte,
+        provenance: source,
     }
 }
 
@@ -315,20 +315,20 @@ fn losses(g: &mut Graph, st: &State) {
 }
 
 /// Keeps the items whose flag is true.
-fn retain_mask<T>(v: &mut Vec<T>, tieni: &[bool]) {
-    let mut f = tieni.iter();
+fn retain_mask<T>(v: &mut Vec<T>, keep: &[bool]) {
+    let mut f = keep.iter();
     v.retain(|_| *f.next().unwrap_or(&false));
 }
 
 /// The peaks of each spectrum whose node leaves the graph, on the node of its precursor: how many nodes, the 3 most intense.
-fn unexplained(g: &mut Graph, tieni: &[bool]) {
+fn unexplained(g: &mut Graph, keep: &[bool]) {
     let mut per: Vec<Vec<(usize, f64, f64)>> = vec![vec![]; g.nodi.len()];
     for sp in &g.spettri {
-        let Some(p) = sp.precursore.filter(|&p| tieni[p]) else {
+        let Some(p) = sp.precursore.filter(|&p| keep[p]) else {
             continue;
         };
         for &(mz, rel, k) in &sp.picchi {
-            if let Some(k) = k.filter(|&k| !tieni[k]) {
+            if let Some(k) = k.filter(|&k| !keep[k]) {
                 per[p].push((k, mz, rel));
             }
         }
@@ -368,11 +368,11 @@ fn muchi_non_spiegati(g: &mut Graph) {
 }
 
 /// The nodes with a formula stay (with their isotopes), the others leave the graph; ids, arcs, spectra and notes follow.
-fn togli(g: &mut Graph, tieni: &[bool]) {
-    unexplained(g, tieni);
+fn togli(g: &mut Graph, keep: &[bool]) {
+    unexplained(g, keep);
     let mut new = vec![None; g.nodi.len()];
     let mut k = 0;
-    for (i, t) in tieni.iter().enumerate() {
+    for (i, t) in keep.iter().enumerate() {
         if *t {
             new[i] = Some(k);
             k += 1;
@@ -381,16 +381,16 @@ fn togli(g: &mut Graph, tieni: &[bool]) {
     let mut removed: Vec<String> = g
         .nodi
         .iter()
-        .zip(tieni)
+        .zip(keep)
         .filter(|(_, t)| !**t)
         .flat_map(|(n, _)| n.albero.iter().cloned())
         .collect();
     g.scartati.formula = g.nodi.len() - k;
-    retain_mask(&mut g.nodi, tieni);
+    retain_mask(&mut g.nodi, keep);
     for n in g.nodi.iter_mut() {
         n.isotope_of = n.isotope_of.and_then(|x| new[x]);
     }
-    g.archi.retain(|a| tieni[a.da] && tieni[a.a]);
+    g.archi.retain(|a| keep[a.da] && keep[a.a]);
     for a in g.archi.iter_mut() {
         (a.da, a.a) = (new[a.da].unwrap(), new[a.a].unwrap());
     }
@@ -440,18 +440,18 @@ pub(super) fn annotate(g: &mut Graph, e: &Elementi, r: usize, rc: Vec<u32>, o: &
             warning(g, "warn.msngrafo.userConflict", Some(j));
         }
     }
-    let mut tieni = vec![false; g.nodi.len()];
+    let mut keep = vec![false; g.nodi.len()];
     for &j in &st.order {
         if !st.cand[j].is_empty() {
             g.nodi[j].formula = Some(formula(g, &st, o, j));
-            tieni[j] = true;
+            keep[j] = true;
         }
     }
     for i in 0..g.nodi.len() {
-        if g.nodi[i].isotope_of.is_some_and(|m| tieni[m]) {
-            tieni[i] = true;
+        if g.nodi[i].isotope_of.is_some_and(|m| keep[m]) {
+            keep[i] = true;
         }
     }
     losses(g, &st);
-    togli(g, &tieni);
+    togli(g, &keep);
 }
