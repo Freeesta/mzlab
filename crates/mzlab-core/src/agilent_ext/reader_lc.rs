@@ -99,14 +99,43 @@ pub(super) struct LcRead {
     method: Option<Vec<u8>>,
     files: Vec<(String, Vec<u8>)>,
     sizes: Vec<(String, u64)>,
+    /// Side members that could not be read (`side`): left out and named in `avvisi`.
+    pub(super) unread: Vec<String>,
+}
+
+/// The bytes of member `i`, counted against what is left of `Limiti::byte`.
+pub(super) fn read_all(fs: &mut FileSet, i: usize, left: &mut u64) -> Result<Vec<u8>> {
+    let m = &mut fs.membri[i];
+    if m.dim > *left {
+        return Err(Error::memory_budget());
+    }
+    *left -= m.dim;
+    let mut b = vec![0u8; m.dim as usize];
+    m.dati.read_at(0, &mut b)?;
+    Ok(b)
+}
+
+/// Side member `n` (not the scan index, its layout or `data.ms`): one that cannot be read (I/O, byte budget) is left out and named in `unread`, never the run.
+pub(super) fn side(
+    fs: &mut FileSet,
+    n: &str,
+    left: &mut u64,
+    unread: &mut Vec<String>,
+) -> Option<Vec<u8>> {
+    let i = find(fs, n)?;
+    read_all(fs, i, left)
+        .map_err(|_| unread.push(n.to_string()))
+        .ok()
 }
 
 /// Reads the calibration, the method report and the small members of `AcqData` (a binary too large to hash is named by its size).
-pub(super) fn read_lc(fs: &mut FileSet, left: &mut u64) -> Result<LcRead> {
-    let mut one =
-        |fs: &mut FileSet, n: &str| find(fs, n).map(|i| read_all(fs, i, left)).transpose();
-    let cal = (one(fs, MASS_CAL)?, one(fs, DEFAULT_CAL)?);
-    let method = one(fs, ACQ_METHOD)?;
+pub(super) fn read_lc(fs: &mut FileSet, left: &mut u64) -> LcRead {
+    let mut unread = Vec::new();
+    let cal = (
+        side(fs, MASS_CAL, left, &mut unread),
+        side(fs, DEFAULT_CAL, left, &mut unread),
+    );
+    let method = side(fs, ACQ_METHOD, left, &mut unread);
     let mut files = Vec::new();
     let mut sizes = Vec::new();
     for (i, rel) in lc_extras(fs) {
@@ -114,15 +143,19 @@ pub(super) fn read_lc(fs: &mut FileSet, left: &mut u64) -> Result<LcRead> {
         if dim > UNDECODED_MAX || dim > *left {
             sizes.push((rel, dim));
         } else {
-            files.push((rel, read_all(fs, i, left)?));
+            match read_all(fs, i, left) {
+                Ok(b) => files.push((rel, b)),
+                Err(_) => unread.push(rel),
+            }
         }
     }
-    Ok(LcRead {
+    LcRead {
         cal,
         method,
         files,
         sizes,
-    })
+        unread,
+    }
 }
 
 impl LcRead {
@@ -140,6 +173,12 @@ impl LcRead {
             .map(|(n, b)| (n.as_str(), b.as_slice()))
             .collect();
         let sizes: Vec<(&str, u64)> = self.sizes.iter().map(|(n, s)| (n.as_str(), *s)).collect();
-        d.with_lc_files(self.method.as_deref(), devices, &refs, &sizes, data_file)
+        let mut d = d.with_lc_files(self.method.as_deref(), devices, &refs, &sizes, data_file);
+        d.notes.extend(
+            self.unread
+                .iter()
+                .map(|n| format!("{n}: could not be read")),
+        );
+        d
     }
 }
