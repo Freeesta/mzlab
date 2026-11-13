@@ -259,6 +259,16 @@ def _queries_from_msp(path: Path, n: int = 400) -> tuple[list, list]:
     return ident, analog
 
 
+def replace_section(txt: str, head: str, sec: list[str]) -> str:
+    """`txt` with the section that starts with `head` replaced by `sec`, up to the next `## ` heading: the sections after it stay."""
+    i = txt.find("\n" + head)
+    if i < 0:
+        return txt.rstrip("\n") + "\n\n" + "\n".join(sec) + "\n"
+    j = txt.find("\n## ", i + 1)
+    rest = "" if j < 0 else "\n" + txt[j + 1:]
+    return txt[:i].rstrip("\n") + "\n\n" + "\n".join(sec) + "\n" + rest
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--librerie", action="store_true", help="the spectral libraries: import, disk, identity, analogues, identify all (see the module doc)")
@@ -277,9 +287,7 @@ def main() -> None:
             md = ROOT / "docs" / "agenti" / "misure.md"
             commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
             sec = [f"## Librerie spettrali (`python3 tools/bench.py --librerie{' --gb' if a.gb else ''} --scrivi`, Chromium Linux, {time.strftime('%Y-%m-%d')}, commit {commit})"] + lines
-            txt = md.read_text(encoding="utf-8")
-            txt = txt.split("\n## Librerie spettrali")[0].rstrip("\n") + "\n\n" + "\n".join(sec) + "\n"
-            md.write_text(txt, encoding="utf-8")
+            md.write_text(replace_section(md.read_text(encoding="utf-8"), "## Librerie spettrali", sec), encoding="utf-8")
         return
     names = sorted(p for p in Path(MZ).glob("*FullMass*.mzML"))[:a.files]
     if not names:
