@@ -44,6 +44,7 @@ pub(super) fn extra_of(l: &WiffReader, s: &Spectrum) -> crate::mzmlwrite::Spectr
         extra.params.push((PARENT_PARAM.into(), p.to_string()));
     }
     if let (Some(super::modes::CODE_NEUTRAL_LOSS), Some(l)) = (e.code, e.fixed) {
+        extra.no_window = true;
         extra
             .params
             .push((super::modes::LOSS_PARAM.into(), l.to_string()));

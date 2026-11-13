@@ -182,8 +182,8 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
             "{term}"
         );
     }
-    // a precursor-ion scan has its fixed m/z as the selected ion of its precursor (as ProteoWizard writes it), a neutral-loss scan its loss as a userParam
-    // and no precursor; no spectrum has a product
+    // a precursor-ion scan has its fixed m/z as the selected ion of its precursor, a neutral-loss scan its loss, as ProteoWizard writes them; the loss is
+    // also a userParam and its precursor has no isolation window; no spectrum has a product
     for s in want["variante"]["1"]["spectra"].as_array().unwrap() {
         let at = xml
             .find(&format!("id=\"{}\"", s["id"].as_str().unwrap()))
@@ -204,6 +204,11 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
         assert_eq!(
             head.contains("<precursorList"),
             selected.is_some(),
+            "{head}"
+        );
+        assert_eq!(
+            head.contains("<isolationWindow>"),
+            selected.is_some() && loss.is_none(),
             "{head}"
         );
         assert!(selected.is_none_or(|m| head.contains(&m)), "{head}");
