@@ -233,6 +233,8 @@ pub fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
     }
     let low: Vec<char> = base.to_lowercase().chars().collect();
     let s = &low[..];
+    // the last number with a written unit or a `t` prefix: `Smp_01_30h_2` is 30 h, a bare `Run_5` has no time
+    let mut last = None;
     for p in after_prefix(s) {
         let mut i = p;
         if i < s.len() && s[i] == 't' {
@@ -240,22 +242,25 @@ pub fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
         }
         for e in number_ends(s, i, if i > p { &['.', ',', 'p'] } else { &['.', ','] }) {
             if let Some(m) = time_tail(s, e) {
+                if m.is_empty() && i == p {
+                    break;
+                }
                 let v: f64 = s[i..e]
                     .iter()
                     .map(|c| if *c == ',' || *c == 'p' { '.' } else { *c })
                     .collect::<String>()
                     .parse()
                     .unwrap_or(0.0);
-                let v = match m.as_str() {
+                last = Some(match m.as_str() {
                     "h" | "ore" => v * 60.0,
                     "d" | "day" | "days" | "gg" | "giorni" | "giorno" => v * 1440.0,
                     _ => v,
-                };
-                return (base, Some(v), "sample");
+                });
+                break;
             }
         }
     }
-    (base, None, "sample")
+    (base, last, "sample")
 }
 
 /// The stem of a name and what it is by its words: `blank`, `standard` or `sample` (the time of a sample is read by `guess_sample`).
