@@ -35,6 +35,10 @@ def main() -> None:
                     "peaks": [a.tolist() for a in profile_peaks(mz, y, 0.002 if False else 0.002)]})
         out[-1]["peaks"] = [a.tolist() for a in profile_peaks(mz, y, out[-1]["min_rel"])]
         out.append({"kind": "pad", "mz": mz.tolist(), "y": y.tolist(), "step": step, "peaks": [a.tolist() for a in pad_zeros(mz, y, step)]})
+    for n in [0, 1, 2]:                                   # a line of no point, of a single one (zeros on each side) and of two far apart
+        mz = np.sort(rng.uniform(100, 110, n))
+        out.append({"kind": "pad", "mz": mz.tolist(), "y": rng.uniform(1, 10, n).tolist(), "step": 0.06})
+        out[-1]["peaks"] = [a.tolist() for a in pad_zeros(mz, out[-1]["y"], 0.06)]
     for n in [0, 1, 2, 4, 5, 6]:
         mz = np.sort(rng.uniform(100, 110, n))
         y = rng.uniform(0, 10, n)

@@ -1,6 +1,6 @@
 """Synthetic .wiff + .wiff.scan of sparse product-ion scans as a 3200 QTRAP writes them (crates/mzlab-core/tests/wiff_sparse_product.rs, tests/test_lettori_parita.py).
 
-    python3 tools/wiff_prodotto_rado.py OUT [--odd]
+    python3 tools/wiff_prodotto_rado.py OUT [--odd | --spaced | --single]
 
 Writes OUT/rado.wiff(.scan) and OUT/rado.json. One sample, one product-ion experiment (scan code 6, precursor 251.1), 60 profile scans of version-1 blocks,
 each with 0 to 5 points (a few with up to 300), and two traits of the real files the reference writer lacks: the nibble stream of `u` bytes is padded to
@@ -8,6 +8,8 @@ each with 0 to 5 points (a few with up to 300), and two traits of the real files
 an empty one). rado.json lists the spectra the reader must give (id, m/z, intensity), computed with the encoder of tools/wiff_riferimento.py. No laboratory data.
 With --odd, OUT/storto.*: the same scans with a few blocks their bytes contradict (5 to 8 bytes after the points, a head that declares more points
 than the block holds); storto.json leaves them out and names how many ("damaged"): the reader must count them, never refuse the sample.
+With --spaced, OUT/spaziato.*: scans of 1 to 4 points, never two neighbouring bins (2 to 7 bins apart); with --single, OUT/singolo.*: one point a scan.
+No scan holds more than 20 points, so the spectrum route reads the bin (0.06, "step" of the json) from the scans' gaps or the distinct m/z.
 """
 import json
 import random
@@ -29,8 +31,8 @@ def block(points, extra=0, more=0, start=b"\xfe\xff\xff\xff", version=1) -> byte
 
 
 def main():
-    out, odd = Path(sys.argv[1]), "--odd" in sys.argv[2:]
-    name, bad = ("storto", 0) if odd else ("rado", 0)
+    out, odd, flag = Path(sys.argv[1]), "--odd" in sys.argv[2:], next((a for a in sys.argv[2:] if a in ("--spaced", "--single")), None)
+    name, bad = ("storto", 0) if odd else ("spaziato", 0) if flag == "--spaced" else ("singolo", 0) if flag else ("rado", 0)
     out.mkdir(parents=True, exist_ok=True)
     rnd = random.Random(11)
     w = Writer()
@@ -40,6 +42,11 @@ def main():
     for k in range(SCANS):
         n = 300 if k % 20 == 7 else rnd.randrange(6)
         bins = sorted(rnd.sample(range(0, 3000), n))
+        if flag:
+            n = 1 if flag == "--single" or k % 5 == 0 else rnd.randrange(2, 5)
+            bins = [100 + k % 9]
+            while len(bins) < n:
+                bins.append(bins[-1] + rnd.randrange(2, 8))
         pts = [(b, 1 + rnd.randrange(300 if j % 3 else 7)) for j, b in enumerate(bins)]
         # --odd: every 10th block keeps 5 to 8 bytes after its points, one head declares 50 points more than its stream holds, one head is of version 4
         # and one starts as a TOF block
@@ -57,7 +64,7 @@ def main():
             want.append({"id": f"sample=1 period=1 cycle={k + 1} experiment=1", "mz": mz, "intensity": inten})
     w.streams["SampleSubtree/Sample1/Idx"] = bytes(idx)
     w.save(out, name)
-    (out / f"{name}.json").write_text(json.dumps({"spectra": want, "damaged": bad}))
+    (out / f"{name}.json").write_text(json.dumps({"spectra": want, "damaged": bad, "step": RANGES[1][0][2]}))
 
 
 if __name__ == "__main__":

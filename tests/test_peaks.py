@@ -65,6 +65,9 @@ def test_merge_of_centroids():
 def test_zeros_put_back_next_to_gaps():
     m, y = pad_zeros([100.0, 100.06, 100.5, 100.56], [5.0, 6.0, 7.0, 8.0], 0.06)
     assert list(np.round(m, 2)) == [100.0, 100.06, 100.12, 100.44, 100.5, 100.56] and list(y) == [5, 6, 0, 0, 7, 8]
+    # a single point (a sparse product-ion scan of one bin): a zero on each side, so that its line is drawn
+    m, y = pad_zeros([100.2], [7.0], 0.06)
+    assert list(np.round(m, 2)) == [100.14, 100.2, 100.26] and list(y) == [0, 7, 0]
 
 
 def _real_profile():

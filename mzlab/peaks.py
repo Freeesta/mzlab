@@ -76,9 +76,12 @@ def merge_unit(mz, y):
 
 
 def pad_zeros(mz, y, step: float):
-    """Profile points with the zeros that the converter left out put back next to each gap, so that a line drawn through them goes down to zero."""
+    """Profile points with the zeros that the converter left out put back next to each gap, so that a line drawn through them goes down to zero;
+    a single point gets one on each side."""
     mz = np.asarray(mz, dtype=float)
     y = np.asarray(y, dtype=float)
+    if len(mz) == 1 and step and step > 0:
+        return np.array([mz[0] - step, mz[0], mz[0] + step]), np.array([0.0, y[0], 0.0])
     if len(mz) < 2 or not step:
         return mz, y
     gap = np.flatnonzero(np.diff(mz) > 1.5 * step)

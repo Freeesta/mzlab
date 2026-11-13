@@ -166,8 +166,14 @@ pub fn merge_unit(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     (smz, sy)
 }
 
-/// Profile points with the zeros that the converter left out put back next to each gap.
+/// Profile points with the zeros that the converter left out put back next to each gap; a single point gets one on each side (a line through one
+/// point draws nothing: a sparse product-ion scan of one bin stayed blank).
 pub fn pad_zeros(mz: &[f64], y: &[f64], step: f64) -> (Vec<f64>, Vec<f64>) {
+    if let ([m], [v]) = (mz, y)
+        && step > 0.0
+    {
+        return (vec![m - step, *m, m + step], vec![0.0, *v, 0.0]);
+    }
     if mz.len() < 2 || step == 0.0 {
         return (mz.to_vec(), y.to_vec());
     }
