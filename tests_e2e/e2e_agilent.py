@@ -56,7 +56,7 @@ try:
         pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
         def folder():
             pg.set_input_files("#pickdir", str(top))
-            try: pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=120000)
+            try: pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 6", timeout=120000)
             except Exception as e:      # say why a row is missing (a failed conversion keeps its message in CONVROWS and in the loading box)
                 st = pg.evaluate("() => ({ files: ST.files.map(f => f.name), conv: CONVROWS.rows.map(r => r.name + ':' + r.state + (r.msg ? ' [' + r.msg + ']' : '')), up: (document.querySelector('#up') || {}).innerText })")
                 raise AssertionError(f"{str(e)[:120]} | {st}") from None
