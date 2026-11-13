@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests_e2e"))
 from lib import MZ  # noqa: E402
 from dati_percorsi import percorso  # noqa: E402
+sys.path.insert(0, str(ROOT / "tools"))
+from md_sezione import replace_section  # noqa: E402
 
 MZS = [200, 250, 300, 364, 400]
 GETB = """async u => { const t = performance.now(); const r = await fetch(u); if (!r.ok) throw new Error(u + " " + r.status); await r.arrayBuffer(); return performance.now() - t; }"""
@@ -257,16 +259,6 @@ def _queries_from_msp(path: Path, n: int = 400) -> tuple[list, list]:
             if len(a) >= 2:
                 cur["peaks"].append([float(a[0]), float(a[1])])
     return ident, analog
-
-
-def replace_section(txt: str, head: str, sec: list[str]) -> str:
-    """`txt` with the section that starts with `head` replaced by `sec`, up to the next `## ` heading: the sections after it stay."""
-    i = txt.find("\n" + head)
-    if i < 0:
-        return txt.rstrip("\n") + "\n\n" + "\n".join(sec) + "\n"
-    j = txt.find("\n## ", i + 1)
-    rest = "" if j < 0 else "\n" + txt[j + 1:]
-    return txt[:i].rstrip("\n") + "\n\n" + "\n".join(sec) + "\n" + rest
 
 
 def main() -> None:

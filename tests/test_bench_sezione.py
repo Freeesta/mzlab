@@ -1,10 +1,9 @@
-"""`replace_section` of tools/bench.py: `--librerie --scrivi` rewrites only its own section of docs/agenti/misure.md and keeps the sections after it."""
-import importlib.util
+"""`replace_section` of tools/md_sezione.py: `--librerie --scrivi` rewrites only its own section of docs/agenti/misure.md and keeps the sections after it."""
+import sys
 from pathlib import Path
 
-SPEC = importlib.util.spec_from_file_location("bench_script", Path(__file__).resolve().parents[1] / "tools" / "bench.py")
-B = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(B)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+import md_sezione as B  # noqa: E402
 
 
 def test_the_sections_after_it_stay():
