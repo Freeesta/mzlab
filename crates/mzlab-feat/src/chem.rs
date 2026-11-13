@@ -16,6 +16,8 @@ pub mod graph;
 #[cfg(feature = "record")]
 mod graph_record;
 mod groups;
+#[cfg(all(feature = "check", feature = "sub"))]
+pub mod hilite;
 pub mod labels;
 pub mod link;
 pub mod mech;
