@@ -15,7 +15,6 @@ SOLO_APP = {
     "features.ms2_link": "inside features.detect on every face; no executor anywhere (BUCHI of flow_rule_tests.rs)",
     "annot.hazard": "descriptor only, no executor anywhere (BUCHI of flow_rule_tests.rs)",
     "convert.mzml": "gap: the site converts at upload (conversione.js), not as a Flow step",
-    "table.plausible": "gap: no Flow executor in the browser yet",
     "spectra.chimeric": "gap: no Flow executor in the browser yet",
     "rt.predict": "gap: no Flow executor in the browser yet",
     "meta.compare": "gap: flow-compare.js adds the comparison to the plan; the browser runner refuses it until the executor exists",
