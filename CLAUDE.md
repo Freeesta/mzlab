@@ -3,7 +3,7 @@
 Rules for every chat that changes this repository. Area details live in `docs/agenti/`: find the file with `grep -n '<word>' docs/agenti/INDICE.md`, read only that one. Find code with `python3 tools/indice.py`, then `grep -n '<name>' docs/agenti/mappa.md`.
 
 ## What it is
-Free LC-MS analysis program, in the browser only (https://freeesta.github.io/mzlab/, GitHub Pages from `main`) plus a downloadable desktop/CLI app. Teaching tool (low-resolution triple-quad data, ESI+) and research tool (HR non-targeted screening, feature tables, reproducible reports). Files never leave the user's computer.
+Professional free LC-MS analysis program, in the browser only (https://freeesta.github.io/mzlab/, GitHub Pages from `main`) plus a downloadable desktop/CLI app: low-resolution triple-quad data (ESI+) and HR non-targeted screening, feature tables, reproducible reports. The `qqq` lab site is the only teaching edition. Files never leave the user's computer.
 
 ## Layout
 - `crates/`: Rust engine (`mzlab-core`, `mzlab-feat`, `mzlab-cli`, `mzlab-desktop` (Tauri v2), `*-wasm`). This is where logic lives.
@@ -26,7 +26,7 @@ Free LC-MS analysis program, in the browser only (https://freeesta.github.io/mzl
 - **English only** for code, comments, commit messages and PRs; user-facing text in both languages via `lang/` keys (`tools/controlla_i18n.py` enforces it). Tabui (`TP_Mine/`) is English-only, no `lang/` keys, and never the bare word «formula».
 - **Never push to `main`.** Work on `claude/<topic>` from `origin/main`, open a PR (ready for review), never merge it yourself. Merge `main` into the branch only if the PR conflicts (`tools/fondi_main.py`); never rebase or force-push.
 - **Never skip, disable or quarantine a test** to get green. Fix the cause.
-- **Teaching principles**: in the low-resolution world the program does NOT give answers (no «here are the TPs», no calibration lines or report tables); an m/z is a candidate, not an identification. In the HR world, libraries/formulas/analogues are scored candidates with evidence, never truth.
+- **Candidates, not truth**: an m/z is a candidate until evidence supports it; libraries, formulas and analogues are scored candidates with evidence, never certainties; every automatic choice shows reason, parameters and confidence, and is logged. Hiding answers for teaching belongs to the `qqq` edition only.
 - **Accessibility** (WCAG 2.2 AA): colours only from CSS variables, `prefers-reduced-motion`, keyboard and `aria-label`, colour-blind-safe (Okabe-Ito) charts; every new chart ships with its data table (`TDATI`), targets of at least 24x24 px.
 - **Light**: no bundler or heavy dependency; the site never runs Python.
 - **Comments**: brief, on the why; 2-4 line header per module; no commented-out code.
