@@ -21814,3 +21814,4 @@
 {"v":1,"ts_utc":"2026-11-14T08:34:27Z","azione":"aperta","tipo":"pr","pr":3273,"sha":"2227ae9c2d1fc081094063df724ec445187ee7af"}
 {"v":1,"ts_utc":"2026-11-14T08:37:02Z","azione":"aperta","tipo":"pr","pr":3274,"sha":"467f84868fcd3001bfcddba8d0d0b6ceeb7e8521"}
 {"v":1,"ts_utc":"2026-11-14T08:51:49Z","azione":"aperta","tipo":"pr","pr":3275,"sha":"7c163091c0b0fa5d7d63526bb5d22d0cc8043181"}
+{"v":1,"ts_utc":"2026-11-14T08:53:52Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/reg-gen-indice","merge_main":true,"aree":{"workflow":5,"rust":3,"docs":6,"test":4,"tools":4},"tipo":"pr","pr":3267,"sha":"932d3fdff0548ff7228c5a33e28f8add269eae24"}
