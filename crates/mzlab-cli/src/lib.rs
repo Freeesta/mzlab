@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::budget::{sha256_hex, MemBudget};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
-use mzlab_ops::run::table::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
+use mzlab_ops::run::table::core::{samples_json, table_file};
 
 mod channels_cmd;
 mod cmd;
