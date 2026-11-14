@@ -37,7 +37,7 @@ try:
             assert not pg.evaluate("document.querySelector('#xicdlg').open"), "no dialog"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             tr = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().traces[0]"); n = round(lb["m"] - 0.25)
-            assert abs(tr["mz"] - (n + 0.3)) < 0.06 and abs(tr["w"] - 0.5) < 1e-9, (tr, lb)
+            assert abs(tr["mz"] - (n + 0.05)) < 0.06 and abs(tr["w"] - 0.25) < 1e-9, (tr, lb)
         step("1.3: the XIC from the spectrum appears at once", xic_direct)
         def overlay():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
@@ -52,13 +52,13 @@ try:
             for fr in (0.4, 0.6):
                 b = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return [q.left+p._a.X(p._a.full[0]+(p._a.full[1]-p._a.full[0])*{fr}),q.top+q.height*0.4]}})()")
                 pg.mouse.dblclick(b[0], b[1]); frames(pg, 2)
-            wait_for_js(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>p.el.querySelector('.lk')||p.el.querySelector('.rtl').textContent.startsWith('fermo a '))})()")
-            info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>[!!p.link,!!p.el.querySelector('.lk'),p.el.querySelector('.rtl').textContent])"); print(info)
+            wait_for_js(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←'))||p.el.querySelector('.rtl').textContent.startsWith('fermo a '))})()")
+            info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>[!!p.link,((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←')),p.el.querySelector('.rtl').textContent])"); print(info)
             assert sum(1 for i in info if i[1]) == 1 and sum(1 for i in info if i[0]) == 1, info
             assert all(i[2].startswith("fermo a ") for i in info if not i[1]), info
             # a spectrum linked by hand to the same chromatogram (an old notebook): only the newest stays live
             pg.evaluate(f"(()=>{{const c={CH},s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');s.forEach(x=>x.link=c.id);s.forEach(ctl)}})()")
-            info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>!!p.el.querySelector('.lk'))"); assert sum(info) == 1, info
+            info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>((p.el.querySelector('.ppair.fol')?.textContent||'').includes('←')))"); assert sum(info) == 1, info
         step("1.1: one live spectrum per chromatogram, the others 'fermo a RT'", live)
         def zoom_first():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
