@@ -4,11 +4,15 @@
 
 pub mod analogue;
 pub mod arms;
+// the NNLS of `spectra.chimeric`, compiled from its own source as the reference of arm C (mzlab-feat is not a dependency of mzlab-lib)
+#[path = "../../../mzlab-feat/src/attributio/ms2_engine/deconv.rs"]
+pub mod deconv;
 pub mod r#gen;
 pub mod idf;
 pub mod metrics;
 pub mod null;
 pub mod scen;
+pub mod subf;
 
 use mzlab_lib::search::Query;
 use serde_json::{json, Value};
@@ -90,12 +94,13 @@ pub fn check_engine(name: &str, n: usize) {
 /// A function that runs a set of arms on a scenario: (name, seed, n_lib, n) -> one JSON object per arm.
 pub type Runner = fn(&str, u64, usize, usize) -> Vec<Value>;
 
-/// The arm sets of the example and of `tools/studio_spettri.py`: the baselines, arm A (`null`) and arm B (`idf`).
+/// The arm sets of the example and of `tools/studio_spettri.py`: the baselines, arm A (`null`), arm B (`idf`) and arm C (`subf`).
 pub fn runner(set: &str) -> Runner {
     match set {
         "base" => run_baselines,
         "null" => null::run_null,
         "idf" => idf::run_idf,
+        "subf" => subf::run_subf,
         _ => panic!("unknown arm set {set}"),
     }
 }
@@ -125,11 +130,15 @@ pub fn pinned_with(run: Runner, name: &str, n: usize, pins: &[(&str, &str, &str,
             .iter()
             .find(|v| v["arm"] == arm)
             .unwrap_or_else(|| panic!("no arm {arm}"));
-        let x = if g == "all" {
-            &v["all"][m]
+        let mut x = if g == "all" {
+            &v["all"]
         } else {
-            &v["groups"][g][m]
+            &v["groups"][g]
         };
+        // `peaks.true_lost`: a field of a nested object
+        for k in m.split('.') {
+            x = &x[k];
+        }
         let got = x.as_f64().unwrap_or(f64::NAN);
         if (got - want).abs() > TOL || got.is_nan() {
             bad.push(format!("{arm} {g} {m}: {got} (pinned {want})"));
