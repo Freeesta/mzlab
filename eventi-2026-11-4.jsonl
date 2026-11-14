@@ -23931,3 +23931,4 @@
 {"v":1,"ts_utc":"2026-11-14T10:48:33Z","azione":"aperta","tipo":"pr","pr":3289,"sha":"a176e5f319a00232e9a00ecb7230346a78688892"}
 {"v":1,"ts_utc":"2026-11-14T10:50:23Z","azione":"aperta","tipo":"pr","pr":3290,"sha":"56b0d3a2089ae134729ddd3248f20e5092f0e8df"}
 {"v":1,"ts_utc":"2026-11-14T10:52:58Z","azione":"aperta","tipo":"pr","pr":3291,"sha":"268f70b3943a4b3cbc5378cf35e51e4538f9d9c9"}
+{"v":1,"tipo":"pr","pr":3287,"sha":"dd4576d89f8b21a82bc311dfee26d433079a2427","ts_utc":"2026-11-14T10:54:54Z","azione":"unita","aperta_s":3288,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":246,"righe_meno":0,"file_n":3,"file":["crates/mzlab-cli/src/flow_level_ms2_tests.rs","crates/mzlab-cli/src/lib.rs","docs/agenti/livelli.md"],"aree":{"rust":2,"docs":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":155}
