@@ -158,9 +158,12 @@ fn prompted_without_a_block_stays_text() {
 }
 
 fn prompted_text(text: &str) -> Vec<Event> {
+    let esc = text
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n");
     let sse = format!(
-        "data: {{\"choices\":[{{\"delta\":{{\"content\":{}}},\"finish_reason\":\"stop\"}}]}}\n\ndata: [DONE]\n\n",
-        format!("\"{}\"", text.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n"))
+        "data: {{\"choices\":[{{\"delta\":{{\"content\":\"{esc}\"}},\"finish_reason\":\"stop\"}}]}}\n\ndata: [DONE]\n\n"
     );
     run(
         Adapter::OpenAiCompat,
