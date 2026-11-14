@@ -1,5 +1,5 @@
 # LLM: strumenti, fornitori e registrazioni (`crates/mzlab-llm`)
-Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro del workspace, dipende solo da `mzlab-core`, nessuna rete, nessuna chiave) è usato da `mzlab-cli llm`; nessun `.wasm` lo include (arriva con il trasporto).
+Principi e scelte: `llm-scelte.md`. Il crate `mzlab-llm` (membro del workspace, dipende solo da `mzlab-core`, nessuna rete, nessuna chiave) è usato da `mzlab-cli llm`; nessun `.wasm` lo include (arriva con il trasporto).
 
 ## Catalogo `strumenti/1`
 - `mzlab_llm::tools::catalog(&[Step], &[UiTool], &dyn Fn(&str)->bool) -> Vec<Tool>` e `catalog_json(..) -> String`: 20 meta-strumenti fissi (`flow_list_steps`, `flow_describe_step`, `flow_get_plan`, `flow_check`, `flow_propose_plan`, `flow_add_step`, `flow_set_param`, `flow_remove_step`, `flow_run`, `flow_status`, `flow_read_result`, `data_summary`, `data_inspect`, `params_propose`, `table_check`, `table_rows`, `ask_user`, `chart_make`, `code_export`, `ui_show`), ognuno con `class` (`read|propose|edit|run|ui`) e `input_schema` JSON Schema 2020-12.

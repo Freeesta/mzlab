@@ -4,7 +4,7 @@
 //! Pairing: by the number after `scan=` in the spectrum id when every spectrum of A has a different one (`--per scan`), else by position (`--per indice`).
 //! Compared: ms level, polarity, retention time, the precursors (m/z, charge), number of points, m/z and intensity of every point, and the chromatograms
 //! (paired by type, Q1 and Q3, then by order).
-//! Tolerances (declared, `docs/studi/convertitore/README.md` §4): m/z 0 ppm for the same source (`--f32`: 0.05 ppm, B writes 32-bit m/z), RT 1e-6 min,
+//! Tolerances (declared in `docs/agenti/cli-convert.md`): m/z 0 ppm for the same source (`--f32`: 0.05 ppm, B writes 32-bit m/z), RT 1e-6 min,
 //! relative intensity 1e-6 (`--numpress`: 2e-4, the declared error of the codecs). `--tol-mz-ppm`, `--tol-rt`, `--tol-int` set them by hand.
 //! Exit code: 0 within tolerance and nothing unpaired, 1 otherwise, 2 a file that cannot be read or a wrong option.
 
