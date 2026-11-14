@@ -1,5 +1,5 @@
 I18N.add("it", {
-  "app.title": "{app} • Analisi MS",
+  "app.title": "Analisi MS · {app}",
   "common.close": "Chiudi",
   "common.cancel": "Annulla",
   "common.help": "Aiuto",
