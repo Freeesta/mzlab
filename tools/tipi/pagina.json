@@ -137,6 +137,7 @@
     "../../mzlab/web/impostazioni-comp.js",
     "../../mzlab/web/settings.js",
     "../../mzlab/web/aggiorna.js",
+    "../../mzlab/web/aggiorna-errore.js",
     "../../mzlab/web/predefinito.js",
     "../../mzlab/web/rapporto-flow.js",
     "../../mzlab/web/livelli-1.js",
