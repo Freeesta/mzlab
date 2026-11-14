@@ -19856,3 +19856,4 @@
 {"v":1,"ts_utc":"2026-11-14T04:21:56Z","tipo":"job","k":"132329742134","workflow":"rust","job":"rust-misc-b","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"4badeecdab2da2acb4f8bc1224962db619c4c417","run_id":43556257917,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T04:22:31Z","tipo":"carico","k":"2026-11-14T04:2","job_in_coda":0,"job_in_corso":29}
 {"v":1,"ts_utc":"2026-11-14T04:23:19Z","tipo":"coda","k":"2026-11-14T04:23:19Z","aperte":7,"indietro":5,"sporche":1,"verdi_in_attesa":2,"piu_vecchia_aperta_s":21205,"piu_vecchia_verde_s":9850}
+{"v":1,"tipo":"pr","pr":3256,"sha":"0a6bb8935416cc9b3dddfd32d1684bcaeb5a744c","ts_utc":"2026-11-14T04:26:26Z","azione":"unita","aperta_s":233,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":1,"righe_meno":1,"file_n":1,"file":["docs/agenti/flow-grafica.md"],"aree":{"docs":1},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":182}
