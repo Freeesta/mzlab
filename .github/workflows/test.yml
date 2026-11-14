@@ -337,6 +337,19 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.pwcache.outputs.cache-primary-key }}
+      # the two preparation phases verifica.py runs first, as steps of their own so the log shows what each costs; verifica.py then finds both up to date
+      - name: Site and engine of the e2e tests (tools/prepara_sito.py)
+        if: steps.solo.outputs.solo != 'true'
+        env:
+          RUSTUP_AUTO_INSTALL: "0"
+        run: python tools/prepara_sito.py
+      - name: Native binaries of the e2e tests
+        if: steps.solo.outputs.solo != 'true'
+        env:
+          RUSTUP_AUTO_INSTALL: "0"
+        run: |
+          cargo build --release -q -p mzlab-cli
+          cargo build --release -q -p mzlab-feat-wasm --example native
       - name: Smoke tests
         if: steps.solo.outputs.solo != 'true'
         run: python tools/verifica.py --browser chromium --fumo
