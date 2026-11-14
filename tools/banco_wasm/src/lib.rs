@@ -58,7 +58,7 @@ pub fn xic(k: u32, lo: f64, hi: f64, tol: f64) -> f64 {
 /// Centroids of every MS1 spectrum (continuous mode).
 #[wasm_bindgen]
 pub fn centroid(step: f64, w: f64, maxn: u32) -> f64 {
-    let p = centroids::Params { mode: centroids::Mode::Continuous, unit: 1.0, step, w, k: 3.0, vmax: 0.0, area: false };
+    let p = centroids::Params { mode: centroids::Mode::Continuous, unit: 1.0, step, w, k: 3.0, vmax: 0.0, area: false, wm: None };
     let mut buf = centroids::Buf::default();
     RUN.with(|r| {
         let r = r.borrow();
