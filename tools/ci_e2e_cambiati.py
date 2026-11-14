@@ -15,8 +15,9 @@ import verifica  # noqa: E402
 
 ELSEWHERE = {"sito", "dam", "veri", "wasm"}
 GREEN = Path(__file__).resolve().parent / "ci_e2e_verdi.json"   # the e2e that passed on the runner in the latest full nightly, with their seconds there: the only ones the safety set may take
-TEST_CAP_S = 60       # a test slower than this is not a representative: it would eat the budget of ten others
-BUDGET_S = 700        # sum of the nightly seconds of the safety set; the job's step took about 1.25x that on the runner, plus ~1.5 min of setup: the whole job stays under 22 of its 30 min
+TEST_CAP_S = 30       # a test slower than this is load-sensitive on the shared runner and not a representative
+HEAVY = re.compile(r"ketcher|kframe|TPDraw|worker|Pyodide|\.raw|\.wiff", re.I)   # Ketcher, workers and heavy fixtures slow down under the shared runner's load: never in the set
+BUDGET_S = 600        # sum of the nightly seconds of the safety set; the step took about 1.25x that on the runner, plus ~1.5 min of setup: about 12 min for the job
 
 
 def core_set() -> tuple[list[str], str]:
@@ -47,6 +48,7 @@ def core_set() -> tuple[list[str], str]:
 def write_green(reports: list[Path]) -> int:
     """Rewrite the allow list from the reports (ultimo.md) of the shards of a full nightly: only the lines «- OK e2e_x (12 s)»."""
     green = {m[1]: int(m[2]) for r in reports for m in (re.match(r"- OK +(e2e\w*) \((\d+) s\)", l) for l in r.read_text(encoding="utf-8").splitlines()) if m}
+    green = {n: t for n, t in green.items() if t <= TEST_CAP_S and (verifica.E2E / f"{n}.py").exists() and not HEAVY.search((verifica.E2E / f"{n}.py").read_text(encoding="utf-8"))}
     GREEN.write_text(json.dumps(dict(sorted(green.items())), indent=0) + "\n", encoding="utf-8")
     return len(green)
 
