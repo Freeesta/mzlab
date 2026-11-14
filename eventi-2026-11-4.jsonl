@@ -28422,3 +28422,4 @@
 {"v":1,"ts_utc":"2026-11-14T17:28:25Z","azione":"push","titolo":"Merge origin/main into claude/flow-exec-uv-peaks","merge_main":true,"aree":{"workflow":6,"altro":2,"rust":201,"docs":91},"tipo":"pr","pr":3251,"sha":"84cfc3c4c2833f8b6e8afdf5b1f4b28fb8e0f1de"}
 {"v":1,"ts_utc":"2026-11-14T17:29:47Z","azione":"push","titolo":"Name the installed web app «mzLab Web» with a web badge on its icons","merge_main":false,"aree":{"docs":1,"web":4,"generati":1,"tools":2},"tipo":"pr","pr":3319,"sha":"2e7e26c10523e1688a31c40eebe30789ea2b74c2"}
 {"v":1,"ts_utc":"2026-11-14T17:30:52Z","azione":"push","titolo":"Run e2e_llm in the sito-e2e solo list (it has the CI-built llm wasm there)","merge_main":false,"aree":{"workflow":1},"tipo":"pr","pr":3240,"sha":"dc7db6a0158ae34339de532c3f257feb8e068d05"}
+{"v":1,"ts_utc":"2026-11-14T17:33:34Z","azione":"aperta","tipo":"pr","pr":3320,"sha":"1b65f6f2dccd4d6cb6929f5afd245863302bbfac"}
