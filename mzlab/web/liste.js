@@ -315,19 +315,14 @@ const LISTE = (() => {
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = (/** @type {Bag[]} */ rows) => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
-  function idbOpen() {
-    return new Promise(async res => {
-      if (typeof indexedDB === "undefined") return res(null);
-      try {
-        // the schema is written once (qqq-db.js)
-        const { DB_NAME, DB_VER, upgrade } = await import("./qqq-db.js");
-        const req = indexedDB.open(DB_NAME, DB_VER);
-        req.onupgradeneeded = () => upgrade(req.result);
-        req.onsuccess = () => res(req.result);
-        req.onerror = () => res(null);
-        req.onblocked = () => window.dispatchEvent(new Event("mzlab:db-blocked"));     // browser.js shows the same message as for the engine's own open
-      } catch (_) { res(null); }
-    });
+  // The same self-closing connection as the engine (lab() in qqq-db.js): an idle one would block the reset's deleteDatabase.
+  /** @type {Promise<() => Promise<IDBDatabase>> | null} */ let getDb = null;
+  async function idbOpen() {
+    if (typeof indexedDB === "undefined") return null;
+    try {
+      getDb = getDb || import("./qqq-db.js").then(m => m.lab(() => window.dispatchEvent(new Event("mzlab:db-blocked"))));     // browser.js shows the same message as for the engine's own open
+      return await (await getDb)();
+    } catch (_) { return null; }
   }
 
   async function idbGetUserLists() {
