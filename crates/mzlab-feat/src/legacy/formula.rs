@@ -2,8 +2,12 @@
 //! `smiles_formula`), its neutral mass and the m/z of the ion. The error texts are those of Python (`str(e)`), since the page shows them.
 
 use mzlab_core::elements::{fmt, ion_mz, mass, mass_of, parse_formula, Formula};
-use mzlab_core::error::Error;
 use mzlab_core::json::{round, Out};
+
+use crate::transf_base::formula_text;
+
+/// The old path of `pyrepr`, which lives in `crate::transf_base` so that `lists` does not depend on `legacy`.
+pub use crate::transf_base::pyrepr;
 
 /// Normal valences of the organic subset (`_ORGANIC`).
 fn valences(el: &str) -> &'static [u32] {
@@ -15,52 +19,6 @@ fn valences(el: &str) -> &'static [u32] {
         "S" => &[2, 4, 6],
         "F" | "Cl" | "Br" | "I" => &[1],
         _ => &[0],
-    }
-}
-
-/// Python's `repr` of a string (quotes and the usual escapes; enough for the texts of the formulas).
-pub fn pyrepr(s: &str) -> String {
-    let q = if s.contains('\'') && !s.contains('"') {
-        '"'
-    } else {
-        '\''
-    };
-    let mut o = String::from(q);
-    for c in s.chars() {
-        match c {
-            '\\' => o.push_str("\\\\"),
-            '\n' => o.push_str("\\n"),
-            '\t' => o.push_str("\\t"),
-            '\r' => o.push_str("\\r"),
-            c if c == q => {
-                o.push('\\');
-                o.push(c);
-            }
-            c => o.push(c),
-        }
-    }
-    o.push(q);
-    o
-}
-
-/// `str(e)` of the `UserError` of `elements.parse_formula`.
-pub(crate) fn formula_text(e: &Error) -> String {
-    let p = |k: &str| {
-        e.params
-            .iter()
-            .find(|(n, _)| *n == k)
-            .map(|(_, v)| v.clone())
-            .unwrap_or_default()
-    };
-    match e.key {
-        "err.formula.empty" => "empty formula".into(),
-        "err.formula.element" => format!(
-            "unknown element {} in {}",
-            pyrepr(&p("element")),
-            pyrepr(&p("formula"))
-        ),
-        "err.formula.parens" => format!("unbalanced parentheses in {}", pyrepr(&p("formula"))),
-        _ => format!("cannot read the formula {}", pyrepr(&p("formula"))),
     }
 }
 
