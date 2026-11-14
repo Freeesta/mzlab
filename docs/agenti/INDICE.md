@@ -137,8 +137,8 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | conversione `.raw` → mzML: banco `raw_mzml_bench`, `tools/bench/raw_mzml.py`, T_min, punti di partenza V1-V9, cause di D8 e D11, caso denso sintetico, codifica in parallelo (`convert_times`) | `docs/agenti/raw-mzml.md` |
 | validazione sui siti sperimentali ed esperimenti scartati (area: motore di reattività del genitore (crates/mzlab-chem, .wasm chem,…) | `docs/agenti/reattivita-studi.md` |
 | motore di reattività del genitore (crates/mzlab-chem, .wasm chem, reatt/1, viewer 3D di Tabui) | `docs/agenti/reattivita.md` |
-| rete dei prodotti (`crates/mzlab-feat/src/network/`, `rete/1`: archi per regola su `tp/1`, passi, coordinate, motivo dell'arco) | `docs/agenti/rete.md` |
 | misure del reset del browser («tutto», «files», `qqHardReset`; `tests_e2e/misura_reset.py`, sonda `lib_reset.py`), righe MISURA reset_* | `docs/agenti/reset-misure.md` |
+| rete dei prodotti (`crates/mzlab-feat/src/network/`, `rete/1`: archi per regola su `tp/1`, passi, coordinate, motivo dell'arco) | `docs/agenti/rete.md` |
 | rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`gate_release.py`); Dependabot, CodeQL, impostazioni di sicurezza da accendere a mano | `docs/agenti/rilascio.md` |
 | mzFinder nativo (area: motore Rust (`crates/`, dati d'oro `tools/golden.py`)) | `docs/agenti/rust-desktop-finder.md` |
 | desktop (area: motore Rust (`crates/`, dati d'oro `tools/golden.py`)) | `docs/agenti/rust-desktop.md` |
