@@ -1,11 +1,11 @@
-//! The native executor of `features.estimate@1`: for each indexed file the `estimates/1` text of `mzlab_ops::run::feat::run_estimate` (the function the page's
+//! The native executor of `features.estimate@1`: for each indexed file the `estimates/1` text of `mzlab_feat_wasm::run_estimate` (the function the page's
 //! `flow_estimate` calls, so both write the same bytes) from the parameters the plan writes; what the file decided goes to the estimates of prov. Called by `flow.rs`.
 
 use mzlab_core::error::Result;
 use mzlab_core::flow::Job;
 use mzlab_core::json::Value;
 use mzlab_core::step::DataType;
-use mzlab_ops::run::feat::run_estimate::estimate_of;
+use mzlab_feat_wasm::run_estimate::estimate_of;
 
 use crate::flow::{io, FileRunner, Made};
 use crate::flow_base::{open, out_path};

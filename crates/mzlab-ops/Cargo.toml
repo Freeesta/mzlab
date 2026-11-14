@@ -13,6 +13,3 @@ mzlab-feat = { path = "../mzlab-feat", default-features = false }
 [features]
 # `table`: the modules of `run::table` (they read the rows of the block `interp/1` for the network of the products, `rete`)
 table = ["mzlab-feat/interp"]
-# same names as the features of `mzlab-feat-wasm`
-detect = ["mzlab-feat/untargeted"]
-proofs = []

@@ -52,10 +52,10 @@ pub mod run_tab;
 #[cfg(feature = "flow_stat")]
 pub mod run_stat;
 #[cfg(feature = "detect")]
-pub use mzlab_ops::run::feat::run_estimate;
+pub mod run_estimate;
 pub mod run_tp; pub mod estimate;
 #[cfg(feature = "proofs")]
-pub use mzlab_ops::run::feat::state;
+pub mod state;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 
