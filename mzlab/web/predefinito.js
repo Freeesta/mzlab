@@ -14,11 +14,22 @@ window.DESKDEF = (() => {
     if (!live() || window.QQ_RESETTING) return;                       // a cold start reloads the page: the files wait in the queue
     let r;
     try { r = await T().core.invoke("take_opened"); } catch (_) { return; }       // a binary without the command: nothing arrives
-    const files = (r && r.files) || [];
-    if (!files.length || typeof window.MZLAB_TOFILE !== "function") return;
-    for (let i = 0; i < 300 && typeof window.upload !== "function"; i++) await new Promise(ok => setTimeout(ok, 100));
-    if (typeof window.upload === "function") window.upload(files.map(window.MZLAB_TOFILE), "data");
-    if (r.ask) ask();
+    const files = (r && r.files) || [], drawings = (r && r.drawings) || [];
+    if (drawings.length) await openDrawing(drawings[drawings.length - 1]);
+    if (files.length && typeof window.MZLAB_TOFILE === "function") {
+      for (let i = 0; i < 300 && typeof window.upload !== "function"; i++) await new Promise(ok => setTimeout(ok, 100));
+      if (typeof window.upload === "function") window.upload(files.map(window.MZLAB_TOFILE), "data");
+    }
+    if (r.ask && (files.length || drawings.length)) ask();
+  }
+
+  /** A `.ket` from the system: the drawing editor with that structure (the last one when several arrive); saving stays the editor's own export, which asks where. */
+  async function openDrawing(/** @type {{name: string, text: string | null, error: string | null}} */ d) {
+    if (d.text == null) { alert(I18N.t("predef.ket.error", { name: d.name, detail: d.error || "" })); return; }
+    for (let i = 0; i < 300 && !(window.TPDraw && typeof setView === "function"); i++) await new Promise(ok => setTimeout(ok, 100));
+    if (!window.TPDraw || typeof setView !== "function") return;
+    setView("draw");
+    try { await window.TPDraw.load(d.text); } catch (_) { alert(I18N.t("predef.ket.error", { name: d.name, detail: "" })); }
   }
 
   const el = (/** @type {string} */ tag, /** @type {string} */ text = "") => { const e = document.createElement(tag); if (text) e.textContent = text; return e; };

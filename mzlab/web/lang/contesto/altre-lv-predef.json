@@ -94,5 +94,6 @@
   "mol.import.done": "Esito di un'importazione; {n} = molecole importate, {replaced} = quelle che ne hanno sostituita una già importata, {kept} = quelle che l'utente aveva modificato e restano come sono.",
   "mol.import.errors": "Titolo dell'elenco di errori di un file di molecole rifiutato; {n} = numero di errori.",
   "mol.err.row": "Inizio di una riga di errore di importazione; {riga} = numero della riga del file (o posizione del record nel JSON).",
-  "mol.err.more": "Chiusura dell'elenco di errori troncato; {n} = errori non mostrati."
+  "mol.err.more": "Chiusura dell'elenco di errori troncato; {n} = errori non mostrati.",
+  "predef.ket.error": "Errore (alert) se un disegno .ket aperto dal sistema non si legge; {name} = nome del file, {detail} = causa (può essere vuota)."
 }

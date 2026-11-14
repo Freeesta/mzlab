@@ -37,6 +37,7 @@ I18N.add("it", {
   "predef.text": "Hai aperto un file con un doppio clic. Vuoi che mzLab sia l'app predefinita per i file mzML, .raw Thermo e .wiff SCIEX? Le cartelle (Agilent .D, Bruker .d, Waters .raw) non si possono associare: si trascinano sulla finestra o si aprono con «Apri».",
   "predef.yes": "Sì, mostrami come",
   "predef.later": "Non ora",
+  "predef.ket.error": "Impossibile aprire il disegno «{name}»: {detail}",
   "predef.never": "Non chiedere più",
   "predef.done": "Chiudi",
   "predef.guide.title": "Come fare",
