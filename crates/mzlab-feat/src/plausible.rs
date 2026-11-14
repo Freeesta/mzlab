@@ -4,9 +4,11 @@
 
 use mzlab_core::elements;
 use mzlab_core::error::Result;
-use mzlab_core::json::Out;
+use mzlab_core::json::{Out, Value};
 
 use crate::aligned::{no_peak, Aligned, CELL_DETECTED};
+use crate::recipe::is_unit_text;
+use crate::store::read_table;
 
 pub const SCHEMA: &str = "plausible/1";
 /// Example rows listed by a check.
@@ -243,4 +245,30 @@ pub fn to_json(t: &Aligned, unit: bool, l: &Limits) -> String {
     }
     o.raw("]}");
     o.0
+}
+
+/// The `plausible/1` text of the `.mzfeat` bytes `table` under the parameters of the `table.plausible` step (the limits of `Limits`; a parameter without a
+/// value keeps the default); what `flow run` and the browser executor both call, so the bytes agree.
+pub fn plausible_text(params: &[(String, Value)], table: &[u8]) -> Result<String> {
+    let (t, meta) = read_table(table)?;
+    let get = |k: &str| {
+        params
+            .iter()
+            .find(|(n, _)| n == k)
+            .and_then(|(_, v)| v.f64())
+    };
+    let d = Limits::default();
+    let l = Limits {
+        mz_min: get("mz_min").unwrap_or(d.mz_min),
+        mz_max: get("mz_max").unwrap_or(d.mz_max),
+        rt_max: get("rt_max").unwrap_or(d.rt_max),
+        width_max: get("width_max").unwrap_or(d.width_max),
+        ppm_max: get("ppm_max").unwrap_or(d.ppm_max),
+        mz_tol_da: get("mz_tol_da"),
+    };
+    let unit = meta
+        .get("recipe")
+        .and_then(|v| v.str())
+        .is_some_and(is_unit_text);
+    Ok(to_json(&t, unit, &l))
 }

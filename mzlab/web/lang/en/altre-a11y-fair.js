@@ -272,7 +272,7 @@ I18N.add("en", {
   "calc.diff.name": "Pair",
   "calc.diff.pol": "Polarity",
   "calc.delta": "Δ between two peaks",
-  "calc.delta.title": "Type the difference between two observed m/z",
+  "calc.delta.title": "Difference between two observed m/z",
   "calc.delta.none": "no pair of adducts within {tol} ppm",
   "calc.err.sign": "I do not understand this sign",
   "cursor.handle": "Current position in the chromatogram: drag the dot with a finger or a pen, or use the arrow keys to move one scan (Shift: five)",
