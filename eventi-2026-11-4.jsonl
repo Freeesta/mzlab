@@ -24083,3 +24083,4 @@
 {"v":1,"ts_utc":"2026-11-14T11:17:38Z","tipo":"coda","k":"2026-11-14T11:17:38Z","aperte":14,"indietro":9,"sporche":3,"verdi_in_attesa":2,"piu_vecchia_aperta_s":46064,"piu_vecchia_verde_s":1457}
 {"v":1,"ts_utc":"2026-11-14T10:57:12Z","azione":"aperta","tipo":"pr","pr":3292,"sha":"0984adbb1783158978697acd7075341031ad46bb"}
 {"v":1,"ts_utc":"2026-11-14T11:01:10Z","azione":"aperta","tipo":"pr","pr":3293,"sha":"6827f3b1e673653e90e8d246c789991c6e444eb6"}
+{"v":1,"ts_utc":"2026-11-14T11:01:19Z","azione":"aperta","tipo":"pr","pr":3294,"sha":"cb3a550727bde89c911ae9a6d1d44e7f6ee9e20c"}
