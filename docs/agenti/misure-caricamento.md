@@ -168,7 +168,7 @@ On a fast computer the wait is the network: Fast 4G x1 is idle with a request in
 | 4 | load the chart and tool scripts (`pannelli, mappa, grafici, picchi, eventi, banco, liste, conversione, dda` = **184.5 KB gzip, measured**) after engine ready, before the first file opens; `shell.js` stops waiting for them | -185 | -0.17 s | -0.9 s | the first file open waits for them (hidden by choosing the file); `test_peso_avvio` cap |
 | 5 | concatenate the 152 list scripts into a few files in `build_site.py` (plain concatenation, not a bundler): **659 to 584 KB gzip and -150 requests, measured on disk** | -75 | -0.07 s, plus fewer requests (not measured on h2) | -0.4 s | the worker's per-file update diff gets coarser |
 | 6 | `lang/it-resto.js` in parts loaded on first use of an area | -99 | -0.09 s | -0.5 s | catalog data, no logic; `controlla_i18n.py` |
-| 7 | `draw.js` (and its modules) loaded on the first pointer or focus on the «Disegno» tab (`MZLAB_WARM_KETCHER` exists) instead of at boot (`shell.js:472`) | -23 | -0.02 s | -0.12 s | |
+| 7 | `draw.js` and the 16 `disegno-*.js` modules it pulls in (**79 KB gzip, measured from the chain table**) loaded on the first pointer or focus on the «Disegno» tab (`MZLAB_WARM_KETCHER` exists) instead of at boot (`shell.js:472`) | -79 | -0.07 s | -0.4 s | |
 | 8 | split `app.css` into a blocking first-screen part and a non-blocking rest | -15 to -20 on the paint | FCP about -20 ms | FCP about -0.1 s | how much CSS the first screen uses was not measured |
 
 Not candidates: brotli (GitHub Pages cannot send it), a bundler, a CDN, anything that sends a user file out of the computer.
