@@ -1,6 +1,6 @@
 # Dati di Riferimento Quantomeccanici xTB (GFN2-xTB)
 
-Questo archivio contiene i calcoli di riferimento quantomeccanici semiempirici **GFN2-xTB** eseguiti sulle 20 molecole di prova descritte in `docs/studi/CC_MOTORE_NEL_BROWSER.md` (§6), comprendenti i 10 composti modello della bozza iniziale e 10 inquinanti organici persistenti / micropollutanti tipici dei prodotti di trasformazione (TP).
+Questo archivio contiene i calcoli di riferimento quantomeccanici semiempirici **GFN2-xTB** eseguiti sulle 20 molecole di prova elencate in `MOLS` di `tools/cc_reference.py`, comprendenti i 10 composti modello della bozza iniziale e 10 inquinanti organici persistenti / micropollutanti tipici dei prodotti di trasformazione (TP).
 
 I dati servono come banco di prova e controllo di parità numerica per l'implementazione Rust/WASM in `crates/mzlab-chem`.
 

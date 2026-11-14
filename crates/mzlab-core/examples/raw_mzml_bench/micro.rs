@@ -1,5 +1,5 @@
 //! The micro-benchmarks that give the ceilings of the roofline: each stage of the conversion alone, on arrays and packets of the three shapes
-//! (centroid list only, Fusion profile, dense profile), with nothing else running. `tmin` puts them in the formula of `RISPOSTE.md` §1.3.
+//! (centroid list only, Fusion profile, dense profile), with nothing else running. `tmin` puts them in the lower bound `T_min` of `main.rs`.
 use std::hint::black_box;
 use std::time::Instant;
 
