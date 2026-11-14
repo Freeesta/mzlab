@@ -1,5 +1,5 @@
 // @ts-strict
-// Warm-up of the pointed folder (docs/agenti/riscaldamento.md): once the folder is on screen, its mzML files are copied and indexed one at a time in the background, in the
+// Warm-up of the pointed folder (docs/agenti/dati-cartella.md): once the folder is on screen, its mzML files are copied and indexed one at a time in the background, in the
 // order of the list, so that opening one is a cache hit (lr.js asks the engine: «is it warm?»). Nothing opens, no row appears. It waits for a quiet page (no loading, no
 // input for a moment), skips what is big, what the device cannot afford (phone, little memory, data saving, low battery) and stays silent on any error.
 // Loaded by cartella-puntata.js on first use (never at start-up). The user's click calls claim(): that file leaves the queue, and work already running on it is awaited, not repeated.

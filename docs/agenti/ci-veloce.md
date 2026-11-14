@@ -31,7 +31,7 @@
   Le guardie di memoria (`tests/test_guardie_memoria.py`, `tests/test_feat_wasm.py`) costruiscono, generano le serie e misurano in parallelo, ciascuna misura nella sua cartella: 112 s → 57 s con le build in cache.
 
 - **`e2e_flow_msn`**: il riferimento `mzlab-cli msn-graph` (211 s a freddo) va in background all'inizio e il passo `graph` ne raccoglie l'uscita.
-- **Misure dei job Rust e tagli scartati** (rust-det, opt-level, build unica a monte, fan-out delle crate): `docs/agenti/ci-tagli.md`.
+- **Misure dei job Rust e tagli scartati** (rust-det, opt-level, build unica a monte, fan-out delle crate): `docs/agenti/ottimizzazioni-tentate.md` («CI: misure dei job Rust e tagli scartati»).
 
 ## Dieci regole pratiche prima di aprire una PR
 Prima di aprire la PR: `python3 tools/pre_pr.py --veloce` (circa 30 s: solo i controlli economici, più hash CSP e l'elenco degli e2e che `--cambiati` eseguirebbe; mai clippy né e2e; ogni passo stampa «[i/N] nome» prima di partire) oppure `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18n, sintassi JS se hai toccato `mzlab/web/`, globali, tsc, import degli e2e, fmt, clippy e `cargo machete` se cambiano i percorsi Rust di `rust.yml`, poi `verifica.py --cambiati`; `--senza-e2e` salta l'ultimo passo).

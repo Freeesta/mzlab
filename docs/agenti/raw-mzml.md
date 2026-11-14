@@ -54,6 +54,15 @@ Sintetico lab-b (`--forma lab-b --solo scala --senza-conta --thread 1,2,3,4`, 7 
 `Parametri::denso`: 20 500 picchi centroidi con ≥ 200 000 punti di profilo per scansione (8-12 bin per picco), 271 scansioni per 0,4 GB, ≈ 1,4 MB per pacchetto; decodifica 4,6 ms/scansione (lista dei picchi 154 µs), 57 468 allocazioni per scansione nel decoder (una per picco e per bin: V7). Uscita non compressa 892 MB (0,4 GB), 4,46 GB (2 GB), 17,8 GB (8 GB): a livello 0 con 4 thread il limite diventa il disco di scrittura (216 MB/s → 4,1 s per 892 MB contro 2,46 s misurati: la cache di sistema assorbe la differenza).
 Il caso da 8 GB occupa 8 GB di disco più l'uscita: si cancella da solo con `--cancella`.
 
+## Codifica in parallelo: `convert_times`
+
+`convert_times` (`crates/mzlab-core/examples/`) converte un mzML già in memoria con `Conversione::scrivi` e stampa tempo, picco dell'heap, picco del processo, byte e SHA-256; il SHA-256 gira su un thread a parte come farebbe una scrittura su file. Container di 4 core, mzML sintetici di `tools/mzml_huge.py` (0,29 GB: 5271 scansioni, `--peaks1 20000 --peaks2 2000`; 0,4 GB: scansioni piccole, predefiniti), stesso SHA-256 con 1, 2 e 4 thread:
+
+- spettri grandi: 1 thread 4,09 s, 2 thread 2,83 s, 4 thread 1,75 s (2,3×); picco dell'heap 5,5 MB → 18 MB (in gran parte la coda del SHA dell'esempio);
+- spettri piccoli: 1 thread 6,66 s, 2 thread 3,95 s, 4 thread 3,18 s (2,1×); picco del processo invariato (237 → 239 MB, il file letto).
+
+La finestra è 4×`thread` spettri: gli MS1 costano 10 volte un MS2 e lo spettro in testa all'ordine ferma i thread, quindi 2× non basta (1,5-1,7×).
+
 ## Criteri di accettazione
 Le soglie cambiano solo con una decisione del Coordinatore scritta qui, mai per far passare una PR. «Corpus HR»: LAB-A, LAB-B, BAF, INF-A, i file Thermo del corpus della locale e i file pubblici. Prima di ogni guadagno di velocità valgono i controlli di fedeltà; `unsafe` resta isolato; una dipendenza nuova chiede un guadagno ≥ 3 %.
 - **F1** centroidi: m/z (f64) e intensità uguali al bit a RawFileReader (RFR) e a msconvert `peakPicking vendor` sul 100 % delle scansioni FT, stesso numero di picchi.

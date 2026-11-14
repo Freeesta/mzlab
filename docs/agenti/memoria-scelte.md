@@ -1,5 +1,5 @@
 # Memoria: regole di scelta, esperienza d'uso e proposte aperte
-Seguito di `memoria.md` (contratto, budget, lastre, prove) e `memoria-safari.md` (WebKit): perché il budget è fatto così, che cosa vede l'utente quando la memoria non basta, che cosa resta da costruire.
+Seguito di `memoria.md` (contratto, budget, lastre, prove) e `compat-safari.md` («Memoria su WebKit»): perché il budget è fatto così, che cosa vede l'utente quando la memoria non basta, che cosa resta da costruire.
 
 ## Regole
 - Un rifiuto per memoria si guarda prima a monte: troppe feature di rumore (soglia fissa sotto il rumore dei dati) pesano più di qualunque tetto; la soglia stimata dai dati (`params::noise_from_hist`) sta in `Recipe::for_index`, così sito, `mzlab-cli` e i passi del Flow hanno la stessa ricetta.

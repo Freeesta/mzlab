@@ -1,4 +1,4 @@
-"""Regression budget of the page's own load (docs/agenti/avvio-rapido.md): on the built site, a reload served by the service worker and a first
+"""Regression budget of the page's own load (docs/agenti/avvio.md): on the built site, a reload served by the service worker and a first
 visit must keep few requests and bytes before the first paint, few render-blocking files, no layout shift, and no long main-thread task with
 the CPU slowed 4x, both while the shell comes up and until every start-up script of the list L (carica.js) has run. Counts, bytes and task
 lengths, never wall-clock times; the margins are stated in BUDGET. Needs the site with the engine (python3 tools/prepara_sito.py): without it

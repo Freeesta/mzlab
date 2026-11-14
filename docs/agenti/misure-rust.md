@@ -112,7 +112,7 @@ Metriche (numeri solo nel repository privato): TP di letteratura in vista, regio
 
 ## `.wasm` interp (`tools/build_feat_wasm.sh`, `cargo build --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features interp`)
 Dopo `wasm-bindgen --target web` e `wasm-opt -Oz` (binaryen da npm): 496 569 B dopo `wasm-opt` (388 039 B senza i siti e il disegno): sopra il cancello di 470 000 B e sotto il tetto di 512 000 B, che non si alza; l'albero MSn lo costruisce ancora `interp` stesso e è un'eccezione accettata per ora: `interp` non deve crescere oltre; ogni peso nuovo si paga prima spostando l'albero in `finder_msn` (piccola PR a parte). Gli altri `.wasm` non cambiano peso.
-Clic Tabui: `misure-clic.md`; mzTab-M: `misure-esporta.md`.
+Clic Tabui e mzTab-M: `misure.md`, «Esportazioni validate e clic».
 Gesti del visualizzatore, sito e nativo: `tools/bench_viewer.py`; tabella in `visore-veloce.md`.
 
 ## Librerie spettrali: `libset_bench` (nativo, 1 milione di spettri sintetici, `cargo run --release -p mzlab-lib --example libset_bench -- 1000000 unit|hr [librerie]`)

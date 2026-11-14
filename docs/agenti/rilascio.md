@@ -35,3 +35,9 @@ Nessun crate o pacchetto npm è pubblicato; ogni azione verso l'esterno (crates.
 - Licenze: MIT ereditata con `license.workspace = true`; il job `deny` (`deny.toml`) controlla le dipendenze a ogni PR; con «MIT OR Apache-2.0» si sceglie MIT; chi ridistribuisce `opentfraw` porta la licenza Apache-2.0 e il NOTICE delle modifiche; nessun codice GPL copiato.
 - Una libreria pubblica chiede: facciata in inglese con semver (`0.x` finché cambia), rustdoc su ogni elemento pubblico e README con un esempio che compila, MSRV dichiarato, test con verità esterna senza il repository privato, `cargo package --list` senza dati di `mzlab-dati` né cognomi vietati, CHANGELOG per crate e `cargo semver-checks` prima di ogni rilascio; nomi liberi su crates.io e npm da verificare.
 - Proposta non realizzata: `publish = false` su tutti i crate (nessuno lo porta: un `cargo publish` per sbaglio passerebbe), da togliere solo dal crate scelto.
+
+## Igiene di sicurezza del repository
+
+- `dependabot.yml` (cargo, pip, github-actions: settimanale, un gruppo per ecosistema, massimo 3 PR aperte, mai unite da sole; `wasm-bindgen`, `js-sys`, `web-sys` senza salti major/minor, `tauri*` senza major) e `codeql.yml` (JavaScript e Rust, solo settimanale e a mano, non obbligatorio) non aggiungono job alle PR.
+- Impostazioni che solo il proprietario accende a mano (nessun file le può impostare), in Settings → Code security: Dependabot alerts, Dependabot security updates, push protection, Private vulnerability reporting; in Settings → General: Allow auto-merge. La scansione dei segreti per i repository pubblici è gratuita e automatica (docs.github.com, «About secret scanning»); per gli altri interruttori la documentazione non dichiara un'attivazione predefinita, quindi vanno controllati.
+- Niente CodeQL «default setup»: il flusso `codeql.yml` lo sostituisce (il default setup girerebbe anche sulle PR).

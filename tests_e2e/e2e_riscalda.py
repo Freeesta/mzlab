@@ -1,4 +1,4 @@
-"""Warm-up of the pointed folder (riscalda.js, rust-scalda.js, docs/agenti/riscaldamento.md), synthetic files, dev server. The folder is a REAL FileSystemDirectoryHandle
+"""Warm-up of the pointed folder (riscalda.js, rust-scalda.js, docs/agenti/dati-cartella.md), synthetic files, dev server. The folder is a REAL FileSystemDirectoryHandle
 (a folder of the browser's private file system, as in e2e_cartella_puntata). Steps: the mzML are copied and indexed in the background in list order and nothing shows (no row,
 no session, still hidden after a reload); a click on a warm file loads it without copying or indexing (no «load» phase, the index bytes are the ones of the warm-up); the same
 file loaded cold in another browser gives the same index bytes and the same TIC; a click on a file still waiting takes it out of the queue."""
