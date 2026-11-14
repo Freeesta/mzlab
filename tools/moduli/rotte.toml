@@ -1,5 +1,6 @@
 uscita = "wasm-feat/rotte"
 pacchetto = "mzlab-rotte-wasm"
+chiavi = { rotte = 19 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 884736

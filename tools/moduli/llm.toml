@@ -1,5 +1,6 @@
 uscita = "wasm-feat/llm"
 pacchetto = "mzlab-llm-wasm"
+chiavi = { llm = 15 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 397312

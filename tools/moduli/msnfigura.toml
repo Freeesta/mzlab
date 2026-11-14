@@ -1,5 +1,6 @@
 uscita = "wasm-feat/msnfigura"
 pacchetto = "mzlab-msnfigura-wasm"
+chiavi = { msnfigura = 17 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000

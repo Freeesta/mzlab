@@ -1,6 +1,7 @@
 uscita = "wasm-lettori/waters"
 pacchetto = "mzlab-lettori-wasm"
 feature = "waters"
+senza_default = true
 wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 380928

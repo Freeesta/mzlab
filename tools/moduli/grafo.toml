@@ -1,5 +1,6 @@
 uscita = "wasm-feat/grafo"
 pacchetto = "mzlab-feat-grafo-wasm"
+chiavi = { grafo = 12 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000

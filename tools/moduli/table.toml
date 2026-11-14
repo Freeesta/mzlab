@@ -1,6 +1,7 @@
 uscita = "wasm-feat/table"
 pacchetto = "mzlab-feat-table-wasm"
+chiavi = { table = 3 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 737280
-nota = "tabcheck/1 with all fifteen checks (Kendrick and PCA included); +20 % over 512000, decision of Federico, 22 Oct 2026"
+nota = "tabcheck/1 with all fifteen checks (Kendrick and PCA included); +20 % over 512000, decided on 22 Oct 2026"

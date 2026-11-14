@@ -1,6 +1,7 @@
 uscita = "wasm-lettori/sciex"
 pacchetto = "mzlab-lettori-wasm"
 feature = "sciex"
+senza_default = true
 wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 483328

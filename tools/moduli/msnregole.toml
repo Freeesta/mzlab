@@ -1,5 +1,6 @@
 uscita = "wasm-feat/msnregole"
 pacchetto = "mzlab-msnregole-wasm"
+chiavi = { msnregole = 18 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 196608

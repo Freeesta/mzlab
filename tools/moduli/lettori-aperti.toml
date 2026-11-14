@@ -1,6 +1,7 @@
 uscita = "wasm-lettori/aperti"
 pacchetto = "mzlab-lettori-wasm"
 feature = "aperti"
+senza_default = true
 wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 563200
