@@ -4,4 +4,5 @@ chiavi = { flowcal = 28 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000
+misura = 172783
 nota = "quant.calibrate of the Flow (the calibration curves applied to a feature table); standard cap, decided by the owner on 14 Nov 2026"
