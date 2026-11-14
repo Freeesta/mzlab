@@ -41,11 +41,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       # pull request only: is every changed file a document? (a push to main gets no base, so nothing is written)
       - id: solo
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
           python3 tools/ci_solo_doc.py "$BASE"   # documents only: appends solo=true and kind=doc
       # test files that rust.yml (rust-wasm) runs on the same diff are left out here (tools/ci_pytest_doppi.py); a push to main uses the previous head as base
@@ -54,6 +57,7 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE" || BASE=; fi
           python3 tools/ci_pytest_doppi.py "$BASE"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -191,11 +195,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       # pull request only: is every changed file a document? (a push to main gets no base, so nothing is written)
       - id: solo
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
           python3 tools/ci_solo_doc.py "$BASE"   # documents only: appends solo=true and kind=doc
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -289,10 +296,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       - id: scelta
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           git fetch --no-tags --depth=1 origin "$BASE"
           python3 tools/ci_e2e_cambiati.py "$BASE"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
