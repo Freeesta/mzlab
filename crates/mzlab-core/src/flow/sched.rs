@@ -1,6 +1,6 @@
 //! The live scheduler of a workflow: a state machine over the jobs of an `mzflow/2` plan (one per instance, or one per item of a `per_item` step) that knows
 //! which jobs exist, in which state they are and which are ready, and reacts to a plan that changes. Pure: no threads, files, clock or network; the executor
-//! (threads, Workers) asks `next`, reports `started`/`progress`/`finished`/`cached` and reads `events_since`. Design: `docs/studi/flow-live/README.md`.
+//! (threads, Workers) asks `next`, reports `started`/`progress`/`finished`/`cached` and reads `events_since`. Design: `docs/agenti/flow-live.md`.
 
 use crate::error::Error;
 use crate::flow::{check, Plan, Platform};

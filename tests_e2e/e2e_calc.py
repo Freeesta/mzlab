@@ -1,5 +1,6 @@
 """Block C: the m/z calculator sits on top of Adducts & losses in Dati and is a drop-down under its button in Disegno (no dark backdrop, graphs stay usable);
 «Cerca» hands the value to the page; lower-case formulas; no '1 decimale' column or offset sentence."""
+# covers: mzlab/web/calcola.js, mzlab/web/calc-addotti.js, mzlab/web/calc-addotti-html.js, mzlab/web/barra.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

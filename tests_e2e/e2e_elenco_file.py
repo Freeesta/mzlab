@@ -1,5 +1,6 @@
 """File list panel: «Remove all files» (one «Removed · Undo» notice, no question, the undo takes every file back) and files dropped on the panel: they are added at once
 without the loading screen (drop zone visible, announced in a status note), files of another resolution stay out, no duplicates."""
+# covers: mzlab/web/open-now.js
 import sys, os, base64; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import pathlib

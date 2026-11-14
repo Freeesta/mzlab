@@ -3,6 +3,7 @@ button; one click opens the band the engine proposes (274 ± 2 nm, the strongest
 (Shift+Enter adds 230 nm to the same panel as one more trace with its own series key, undoable; Esc closes); the UV spectrum has the button too, with the
 band of its time; `api/uvpropose` of the demo FullScan_t10.mzML is the JSON of `mzlab-cli channels --channel uv:auto`; a TWC-only mzML has no button and
 no toast. Run from the repo root: python3 tests_e2e/e2e_xwc.py"""
+# covers: tools/wiff_dad_mrm.py, mzlab/web/xwc.js
 import json, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,5 +1,6 @@
 """V-5: lens of the spectrum (low and high resolution): hovering a peak shows the XIC of that ion (one file) with the same numbers as api/xic (E1), one request in
 flight and the last peak wins on a fast sweep, Esc closes, click or Enter makes it the XIC panel of the button, keyboard only, data table, axe, preference off."""
+# covers: mzlab/web/xic-spettro.js, mzlab/web/xic-lente.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

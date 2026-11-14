@@ -58,7 +58,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | pseudo-spettri MS2 da DIA (`dia.rs`, `spectra.ms2` con `dia_pseudo`) | `docs/agenti/dia.md` |
 | pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`; tabella, id e campioni: `mzfeat-tabella.md`; vista dei prodotti `tp/1`: `mzfeat-tp.md`; bande larghe: `mzfeat-broad.md`; cinetica: `mzfeat-cinetica.md`; correzione dell'RT: `mzfeat-rt.md`) |
 | Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` e `untargeted`) | `docs/agenti/attributio.md` (binario MZ: `attributio-mz.md`, parità con mzmine: `attributio-mz-parita.md`; isotopi: `attributio-isotopi.md`; Banco 2b: `attributio-banco.md`; esportazioni: `attributio-export.md`; abbinamento: `attributio-abbinamento.md`; identità: `attributio-identita.md`; revisione: `attributio-revisione.md`; pannello: `attributio-pannello.md`; formule: `attributio-formula.md`) |
-| vista «Compare conditions» di Tabui (`TP_Mine/lazy/gruppi-vista.js`: matrice TP × condizione, UpSet, grafici, esportazioni; contratto `gruppi/1`) | `docs/agenti/gruppi-vista.md` (studio: `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`) |
+| vista «Compare conditions» di Tabui (`TP_Mine/lazy/gruppi-vista.js`: matrice TP × condizione, UpSet, grafici, esportazioni; contratto `gruppi/1`) | `docs/agenti/gruppi-vista.md` (regole e criteri: `docs/agenti/gruppi.md`) |
 | grafo di frammentazione MSn dell'infusione (`msngrafo/1`: ioni uniti fra livelli ed energie, formule proposte dei frammenti, scheda «Fragmentation graph») e libreria di alberi MSn degli standard (`msnlib/1`, protocollo di acquisizione) | `docs/agenti/msn-grafo.md` (libreria: `msnlib.md`; vista: `msn-grafo-vista.md`; scheda «Fragmentation graph» nella vista Dati: `infusione-grafo.md`; tagli per un nodo: `msn-grafo-strutture.md`; interpretazione dei frammenti: `msn-interpreta.md`; prove delle regole: `msn-regole-prove.md`; manuale: `msn-manuale.md`; figura: `msn-figura.md`) |
 | formule dei frammenti del grafo MSn (`msngraph/formulas.rs`, `candidates.rs`, `annotate.rs`: ingresso, radice, finestre, vincolo DAG, perdite) | `docs/agenti/msn-grafo-formule.md` (sintesi: `msn-grafo.md`) |
 | pacchetto dei candidati in silico (`mzlab-cli insilico pack`, `insilico-scarica.js`, `flow-web-insilico.js`, `crates/mzlab-desktop/src/insilico.rs`, `spectra.insilico` nel browser) | `docs/agenti/insilico.md` |
@@ -82,17 +82,19 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
 | misure prima/dopo dei .wasm per ogni modifica (byte dopo `wasm-opt`, tetti in vigore) | `docs/agenti/wasm-tetti-misure.md` |
-| parità sito ↔ app (funzioni e passi del Flow presenti da una parte sola, operazioni del motore assenti nell'app, test di parità mancanti, prossimi passi) | `docs/studi/parita-browser.md` (formati: `docs/studi/formati-matrice.md`) |
+| parità sito ↔ app (funzioni e passi del Flow presenti da una parte sola, operazioni del motore assenti nell'app, test di parità mancanti, prossimi passi) | `docs/agenti/parita.md` (formati: `docs/agenti/lettura-nativa.md`) |
 | tabella funzione × faccia (sito, app, CLI) × prova, guardia delle op di `rust-worker.js` senza ramo nell'app (`tests/test_parita_operazioni.py`), determinismo (ordine delle `HashMap`) | `docs/agenti/parita.md` |
 | potenziale di WebAssembly (profili `opt-level`, SIMD128, binaryen, zlib-rs, thread, memory64, browser minimi; misure) | `docs/agenti/wasm-potenziale.md` |
 | service worker, cache per versione del sito, `sw-manifest.json`, aggiornamenti | `docs/agenti/service-worker.md` |
 | esportazione di tutti i dati dell'utente: inventario dello storage nel browser, scrittore ZIP (`zip.rs`) | `docs/agenti/esporta-dati.md` |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | memoria su Safari, iPad e iPhone (budget senza `deviceMemory`, rifiuto calmo per percorso, stima dell'indice dai file del produttore `estimate::check_reader`) | `docs/agenti/memoria-safari.md` |
+| memoria: regole di scelta del budget, esperienza d'uso dell'avviso, proposte aperte (`memoria-avviso.js`) | `docs/agenti/memoria-scelte.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
 | assistente LLM: catalogo `strumenti/1` | `docs/agenti/llm.md` (subagenti e letture: `llm-subagenti.md`) |
+| assistente LLM e agenti esterni: principi, scelte, rischi, proposte non realizzate | `docs/agenti/llm-scelte.md` |
 | assistente LLM: esecutore dei lettori sulla pagina (`llm-agente.js`, router, `sub`) | `docs/agenti/llm-lettori.md` |
 | proxy pubblico anonimo dell'assistente (`proxy/`, Worker Cloudflare, `Ledger` della spesa, porte, elenco degli hash) | `docs/agenti/assistente-proxy.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV, stesso motore e ricetta della pagina) | `docs/agenti/cli.md` (passo per passo: `cli-passi.md`) |
@@ -100,7 +102,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md` (mzFinder nativo: `rust-desktop-finder.md`), `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
-| record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile; descrittori CIP R/S ed E/Z, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
+| record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile; descrittori CIP R/S ed E/Z, `cip/1`, `disegno-cip.js`) | `docs/agenti/mol.md` |
 | misure dei motori | `docs/agenti/misure.md` (misure Rust e dei moduli: `misure-rust.md`; clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | prove di mutazione (`cargo-mutants`) di `mzlab-lettori` e del modulo wiff: comandi, campioni, sopravvissuti e perché restano | `docs/agenti/mutanti.md` |
@@ -133,6 +135,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | Safari e iPadOS (WebKit): API usate × versione minima × ripiego, pavimento 16.4, ripieghi di `compat.js` (`AbortSignal.any`, `createWritable`, appunti, `accept` sull'iPad) | `docs/agenti/compat-safari.md` |
 | tooltip: regola (solo se aggiungono informazione), inventario, elenco completo dei testi (`tools/list_tooltip.py`), hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
 | file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
+| fondo chimico del TIC/BPC (ioni di fondo persistenti, linea di base per ione, finestra tranquilla, bianco, finestre m/z escluse: `ticbg.rs`, `api/tic_background`, `mzlab-cli background`) | `docs/agenti/tic-fondo.md` |
 | elenco degli esperimenti MSn di un file DDA nella finestra «Albero MSn» (schede Experiments/Tree, TIC e XIC di un precursore, `msn-elenco.js`, colonne `lev`/`z` di `/api/dda`, `ptol` di `/api/chrom`) | `docs/agenti/msn-elenco.md` |
 | file di prodotto di sole MS3 (o di un livello MSn ≠ 2): `msn_level` dell'info, livello di cromatogramma, scansioni, spettro e `/api/ms2tr`, titoli MS³ | `docs/agenti/msn-livello.md` |
 | audit delle pagine (ogni vista × campioni × pulsanti dell'header: CLS, pannelli che si spostano, memoria, errori; `tests_e2e/audit_pagine.py`, test di fumo `e2e_giro_intestazione`) | `docs/agenti/intestazione.md` |

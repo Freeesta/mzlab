@@ -1,4 +1,5 @@
 """A3: the header stays in view while the page scrolls; changing view or tab never scrolls the page."""
+# covers: mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

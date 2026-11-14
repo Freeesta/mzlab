@@ -4,6 +4,7 @@ the others wait in the list; at the end nothing of the loading is left («Loadin
 that lands after the files opened still reaches the open files; a high-resolution file dropped on a low-resolution session is set aside with «Switch»; a folder of more than
 50 data files asks «Open all / Choose» and «Choose» leaves them unticked; from the drop on there is no full-page veil and no «Full reset», also when the first
 file is of another tab (MRM, MS2). Synthetic files."""
+# covers: mzlab/web/open-now.js, mzlab/web/upload-rows.js
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 from lib import *

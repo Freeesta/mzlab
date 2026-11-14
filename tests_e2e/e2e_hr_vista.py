@@ -1,5 +1,6 @@
 """HR view: MS1 at full width with its «MS1» mark, the MS2 panel under it, no marks in the rows of the files, formula -> combined XIC with its table.
 Synthetic Orbitrap DDA file; in low resolution the entry of the menu and the endpoint do not exist."""
+# covers: mzlab/web/dda.js, mzlab/web/banco.js, mzlab/chem/subformulas.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

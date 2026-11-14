@@ -2,6 +2,7 @@
 PDA trace of several overlaid samples opens one UV spectrum panel with one trace per sample (x = the wavelength range); a second double click asks the engine
 nothing (the matrix is held); from a single-wavelength trace the spectrum marks that wavelength; a double click on the UV spectrum gives the trace at that
 wavelength. Synthetic files (tools/dati_sintetici_uv.py)."""
+# covers: mzlab/web/uv-spettro.js, mzlab/web/uv-azioni.js, tools/dati_sintetici_uv.py
 import sys, os, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path

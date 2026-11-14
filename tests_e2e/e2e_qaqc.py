@@ -1,4 +1,5 @@
 """QA/QC panel: low resolution (only the standards chosen and the blanks, no Δppm), high resolution (Δppm, mass accuracy), sample/blank ratio."""
+# covers: mzlab/web/qaqc.js, mzlab/web/features.js, mzlab/web/rapporto.js, mzlab/qaqc.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth
@@ -44,16 +45,16 @@ try:
             assert pg.locator("#qq-kind").count() == 0                                         # LR: standards only, no list of known ions
         step("LR: types guessed from the names, no «known ion» choice", lr_panel)
         def lr_std():
-            add(pg, "391.3", "18.3")
+            add(pg, "194.2", "14.3")
             hdr = pg.evaluate("Array.from(document.querySelectorAll('#qq-res th')).map(x=>x.textContent)")
             assert "Δppm" not in hdr and "RT" in hdr and "ΔRT" in hdr, hdr
             rows = pg.evaluate("QAQC.results.ions[0].r.rows.map(x=>x&&[x.rt,x.area])")
-            assert abs(rows[1][0] - 18.3) < 0.1 and rows[1][1] > 1e5 and (rows[0] is None or rows[0][1] < 0.01 * rows[1][1]), rows        # the blank (first by name) has only noise
+            assert abs(rows[1][0] - 14.3) < 0.1 and rows[1][1] > 1e5 and (rows[0] is None or rows[0][1] < 0.01 * rows[1][1]), rows        # the blank (first by name) has only noise
             assert pg.evaluate("QAQC.results.ions[0].r.mass_accuracy") is None
             assert pg.locator("#qq-res svg.qq-chart").count() == 2
         step("LR: RT, area and relative area of a standard along the series; the blank empty; two charts", lr_std)
         def lr_ratio():
-            pg.fill("#qq-rin", "391.3"); pg.fill("#qq-rrt", "18.3"); pg.select_option("#qq-thr", "10")
+            pg.fill("#qq-rin", "194.2"); pg.fill("#qq-rrt", "14.3"); pg.select_option("#qq-thr", "10")
             pg.click("#qq-rform button[type=submit]"); pg.wait_for_selector("#qq-rres table", timeout=60000)
             q = pg.evaluate("QAQC.results.ratio.r.ratio")
             assert q["threshold"] == 10 and q["rows"][0] is None and q["rows"][1]["ratio"] > 100 and q["rows"][1]["at_least"], q

@@ -1,6 +1,7 @@
 # e2e_agilent_riaggiunto: an Agilent .D folder given again (the same files: names, sizes, dates) keeps its one sample (agilent-d.js toMzml, nativo.js cached): no second row, no second
 # copy or index in OPFS, both in the same page and after a reload of the page (the session restored). Synthetic .D of tools/agilent_sintetico.py (invented numbers).
 # Needs the site: python3 tools/prepara_sito.py, then python3 tests_e2e/e2e_agilent_riaggiunto.py
+# covers: mzlab/web/agilent-d.js, mzlab/web/nativo
 import os, sys, tempfile, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *

@@ -55,6 +55,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - A value out of tolerance is different logic: fix the logic, never widen the tolerance.
 - Traps for bit-identical results: Python ≥ 3.12 `sum()` on floats is Neumaier-compensated, so where Python uses `sum()` Rust uses `pysum`; `ndarray.sum()` is pairwise (`stats.rs`); numpy's `default_rng(seed)` is reproduced bit for bit by `rng.rs` (`Pcg64`, SeedSequence, Lemire bounded ints); `jsonb.rs` writes NaN as `null`; rounding is `elements::round_half_up`; `statmat::svd`/`eigh` match numpy up to the sign of eigenvectors, which the caller fixes.
 - Tests without a Python reference (e.g. `peakq.rs`) prove themselves on synthetic traces in their `tests` module.
+- Python with no Rust equivalent: `ion_shift` and `expand` of `mzlab/chem/contaminants.py` (catalogue `mzlab/chem/contaminants.json`, PEG/PPG/siloxane series), to port with a parity test; the validation gates and metrics of `tools/valida/` (`metriche.py`, `cancello_misure.py`, `lr_criteri.py`, `isotopologhi.py`) and the endpoints `p1`…`p5` of `tools/bench/metriche.py` stay Python, since they are dev tools that check the engine from outside.
 
 ## Speed
 - A speed gain counts, even a few percent, when measured beyond the noise (repeated, median, same result) with small readable code: the PR gives the % on the step and on the total and adds a row to `misure-velocita.md`.
@@ -73,3 +74,7 @@ Module-level detail lives in the code (module headers) and in the area files lis
 - Readers modules: `lettori-modulo.md`. Memory and budget: `memoria.md`. `.wasm` caps: `wasm-tetti.md`. Measures: `misure-rust.md`, `misure-velocita.md`.
 - Desktop app: `rust-desktop.md` (mzFinder native: `rust-desktop-finder.md`). Flow: `rust-flow.md` (`mzflow/2`, `prov/1`), `rust-step.md` (`step/1`), `cli.md`.
 - `mol/1`: `mol.md`. Libraries: `librerie.md`. Features: `mzfeat.md`. MSn graph: `msn-grafo.md`.
+
+## Codice scritto due volte (regole)
+- **Consolidare senza crescere**: un aiuto JS condiviso va in un file d'avvio che tutti già caricano (`numeri.js`, `html-sicuro.js`, `i18n.js`), mai in un file d'avvio nuovo. Una funzione spostata in `mzlab-core` è gratis nei moduli che già lo collegano, ma porta JSON e formattazione in quelli che non lo usavano: `tools/ci_wasm_dimensioni.py` prima e dopo, i tetti non salgono. Ogni sostituzione in Rust tiene i byte dove un dato d'oro o una prova di parità li fissano.
+- **Non sono doppioni** (controllati): i riferimenti Python (`mzlab/*.py`, `tools/*_reference.py`), la colla JS (`rust-worker.js`, `rust-bridge.js`, `flow/lazy/flow-web-*.js`), il centroide a parabola di `composizione.js` contro quello gaussiano di `crates/mzlab-core/src/centroids/emit.rs`, `deconvolve/old/` (riferimento congelato dei test), `attributio/review/isotopes.rs` (a parte di proposito); desktop e `.wasm` condividono le rotte di `mzlab_core::routes::Routes`.

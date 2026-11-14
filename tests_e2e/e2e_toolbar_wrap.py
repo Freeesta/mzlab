@@ -1,5 +1,6 @@
 # e2e_toolbar_wrap: the second toolbar of Data (#tools) is ONE row at every width (900-3000 px, side panel open or closed, upload view and loaded file, long file names, UI zoom 1 and 1.5),
 # its height is reserved (the work area below never moves, not after first paint, not when the panel toggles), the groups keep the order file | add | undo-redo-close ... Method, and no divider sits at a row edge
+# covers: mzlab/web/app.css
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

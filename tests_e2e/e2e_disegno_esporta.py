@@ -1,6 +1,7 @@
 """Disegno with the trimmed Ketcher bundle (no macromolecules mode, empty monomer library): a structure is drawn from SMILES, a bond is added with the editor,
 and the result exports as SMILES, molfile V2000 and .ket, and through the MOL / SDF buttons (Rust writer, sdf/1) as one .mol and one SDF record
 per structure with its data items; the macromolecules switch is not in the page."""
+# covers: mzlab/web/disegno-esporta.js, mzlab/web/disegno-etichette.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

@@ -1,6 +1,7 @@
 """Disegno, radicals in the mass spectrometry reading: a radical cation drawn on an amine N is labelled CH5N+• with the m/z of the ion (M+•, mass − e);
 a cut of a bond next to a radical mark leaves a methyl radical CH3• and a carbene CH2•• (triplet mark), or, heterolytic, the odd-electron ion CH2+•;
 the «Fragments» rows of a bond mark with • the side that keeps a drawn radical (its [F+H]+ is an odd-electron ion) and the table note says why."""
+# covers: mzlab/web/disegno-frammenti.js, mzlab/web/disegno-taglio.js, mzlab/web/disegno-etichette.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

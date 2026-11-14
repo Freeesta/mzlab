@@ -1,4 +1,5 @@
 """One XIC window (da/a with automatic "a", "oppure", neutral formula), right-click menu with "Ripristina zoom", header button groups, xlsx exports."""
+# covers: mzlab/web/xlsx.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

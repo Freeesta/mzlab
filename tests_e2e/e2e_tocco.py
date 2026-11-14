@@ -1,5 +1,6 @@
 """Touch and pen (touch.js): one finger / pen = the mouse, long press = right click, double tap, two-finger pinch / pan / scroll, pen hover, palm rejection,
 the dot of the cursor, the grip for the height, 3D rotation. The touches are real pointer events (CDP Input.dispatchTouchEvent / pen mouse events)."""
+# covers: mzlab/web/draw.js, mzlab/web/touch.js, mzlab/web/pannelli.js, mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

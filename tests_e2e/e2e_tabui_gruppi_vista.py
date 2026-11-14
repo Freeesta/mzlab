@@ -3,6 +3,7 @@
 tools/gruppi_fixture_vista.py). Checks: counts of the UpSet equal to `sets`, the filter «Only in O2», bars with one time and curves with more, the files downloaded (name, header, content), the
 keyboard on the matrix and the UpSet, the table of the data of every chart, axe (light and dark), the first draw of 300 rows × 8 conditions (≤ 500 ms), small multiples with 9 and 12 conditions
 and no horizontal scroll of the page at 360 px. MZLAB_PIPE_SITE reuses a built site. Run from the repo root: python3 tests_e2e/e2e_tabui_gruppi_vista.py"""
+# covers: TP_Mine/lazy/gruppi-vista, TP_Mine/tests/gruppi_fixture, tools/gruppi_fixture_vista
 import json, os, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

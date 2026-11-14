@@ -2,7 +2,7 @@
 Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.129 e `tools/wasm_opt.sh` (`wasm-opt -O3`, binaryen 133; `@motore` per motore, feat, tabelle e rotte, `@estesi` per i lettori) salvo «grezzo» = `tools/cargo_wasm.sh build --release` prima di `wasm-opt`; la crescita in % è il rapporto della coppia. I tetti stanno in `tools/build_*_wasm.sh` (`docs/agenti/wasm-tetti.md`), nessuna riga qui li cambia; i valori del passo «size» della CI fanno fede.
 
 ## Tetti
-- motore 2 174 976; `thermo` 774 144; `sciex` 483 328; `aperti` 563 200; `andi` 344 064; librerie 614 400; `hr` 1 716 224; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; i tetti degli altri moduli stanno solo negli script.
+- motore 2 174 976; `thermo` 774 144; `sciex` 483 328; `aperti` 563 200; `andi` 344 064; librerie 614 400; `hr` 1 716 224; `untargeted` 585 728; `table` 737 280; `attributio-all` 1 536 000; `flowtab` 512 000; `rotte` 884 736; `ticfondo` 512 000; i tetti degli altri moduli stanno solo negli script.
 
 ## Motore
 - Conteggi ANDI (`andi/netcdf/counts.rs`, `andi/ms/counts.rs`): `andi` di cargo, prima di `wasm-opt`, 942 089 → 965 108 (+2,4 %). Indice e file d'origine (`index_built_from`, `source_check.rs`): motore di cargo 3 641 956 → 3 644 634 (+0,07 %).
@@ -91,4 +91,5 @@ Byte prima → dopo l'ultima modifica di ogni funzione, dopo `wasm-bindgen` 0.2.
 - Spettro di profilo di scansioni rade (`profspec::sparse_step`, spaziatura comune degli intervalli, e `pad_zeros` di un punto solo): motore `mzlab-wasm` 2 152 315 → 2 154 430 (+0,10 %, tetto 2 174 976); i moduli lettori non portano `profspec` (invariati).
 - `.wiff`: «Component ID» del Log in ogni maiuscola, esperimenti oltre il sedicesimo, «SCIEX OS», PIS come ProteoWizard: `sciex` 483 207 → 483 027 B (con `CFR_INFO` 483 368, oltre il tetto), `aperti` 562 829 → 562 295 B; riga MRM vuota lasciata fuori e testa rada `scan::sparse_head`: `sciex` 483 027 → 483 076 B, `aperti` 562 295 B; più periodi rifiutati in ogni tipo di scansione (`one_period`, solo motore): `sciex` 483 076 → 482 732 B, `aperti` 562 295 B; tetti invariati.
 - `.wiff`: TIC e BPC di PIS e NL, TIC di MS3, BPC delle MRM: `sciex` 482 732 → 483 311 B (con il precursore della NL 483 537, oltre il tetto: non incluso), `aperti` 562 295 B; `bpc_chroms` con `total` e un `Vec` per esperimento al posto del `BTreeMap`: `sciex` 483 311 → 480 535 B, `aperti` 562 295 B; precursore della NL senza `<isolationWindow>`: `sciex` 480 535 → 480 761 B, `aperti` 562 295 → 562 454 B; tetti invariati.
-- `flowtab`: `flow_plausible` (`table.plausible` nel browser) grezzo prima di wasm-bindgen 1 073 179 → 1 079 482 (+0,6 %, tetto 512 000 invariato).
+- `flowtab`, `flow_plausible`: grezzo 1 073 179 → 1 079 482 (+0,6 %).
+- `attributio-all`, `flow_rtpredict`: grezzo 3 600 399 → 3 642 385 (+1,2 %).

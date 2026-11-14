@@ -1,6 +1,7 @@
 """An Agilent MassHunter .D folder loaded with «Load a folder» (cartella-carica.js + agilent-d.js), on the built site with the Rust engine and WITHOUT Pyodide: the folder becomes one mzML (named like the folder), listed and indexed like any file, with its TIC; a .D without MSPeak.bin gives a notice;
 two .D folders give two files. Synthetic folders of tools/agilent_sintetico.py (no laboratory data).
 Needs the site and the .wasm: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
+# covers: mzlab/web/agilent-d.js, tools/agilent_sintetico.py, mzlab/web/rust-nativo, mzlab/web/nativo
 import os, shutil, struct, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

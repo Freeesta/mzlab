@@ -3,6 +3,7 @@ menu of the MRM panel has «UV spectrum at this RT», «TWC» and «Allinea»; a
 274 nm at compound A), moved back by the DAD → MS delay when «Allinea» is on; the «TWC» check draws the TWC on a right axis, with the hover and cursor
 readings and its column in the data table, survives a reload, and a file with no DAD offers none of it. axe on the menu and the table. WebKit-safe
 (mouse and keyboard only). Run from the repo root: python3 tests_e2e/e2e_dad_mrm_overlay.py"""
+# covers: tools/wiff_dad_mrm.py, mzlab/web/dad-mrm.js
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

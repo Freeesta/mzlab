@@ -1,4 +1,5 @@
 """Load table and file list: order of the files (time, mixed units), time field without arrows and with validation, unit of the time (min, h, d) saved in mzlab.tunit."""
+# covers: mzlab/web/ordine.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from synth import write_full

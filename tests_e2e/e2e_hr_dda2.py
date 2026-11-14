@@ -1,4 +1,5 @@
 """B6: DDA complete: nearby precursors, average of the MS2 of an ion, follow an ion, ions without MS2, co-isolation."""
+# covers: mzlab/web/dda.js, mzlab/web/dda-marcatori.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

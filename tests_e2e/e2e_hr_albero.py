@@ -1,6 +1,7 @@
 """MSn tree (api/msntree) of a synthetic direct-infusion MSn file with the browser version on the built site: the spectra are read from
 the mzML by offset in the Rust engine, Pyodide is not downloaded, nothing is left in window.MZLAB_LR_MISS, and the JSON equals the Python reference's (pyref.py).
 Needs the site and the .wasm (python tools/build_site.py)."""
+# covers: mzlab/web/rust-, crates/
 import subprocess, sys, tempfile, time
 from pathlib import Path
 import numpy as np

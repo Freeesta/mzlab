@@ -2,6 +2,7 @@
 file from its items in the list, so it enters with "_" (hashFree, conversione.js), the notice names the old and the new name once per file, and every file
 opens, also after a reload (it used to stay listed but never open once another file was there). Needs the site and the .wasm (python3 tools/prepara_sito.py).
 Run from the repo root: python3 tests_e2e/e2e_nome_cancelletto.py"""
+# covers: mzlab/web/conversione.js
 import json, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

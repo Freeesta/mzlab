@@ -1,6 +1,6 @@
 # Paper test: four real third-party workflows in the `mzflow/2` format
 
-Part of `docs/studi/WORKFLOW_MODULARI.md` (§5). Each workflow was read in a real file (URLs in §1 of the main file) and rewritten by hand in the draft format (`contract.schema.json`). For each case: how it is written, what cannot be expressed, which contract correction came from it. The corrections are already in the draft; the JSON blocks below validate it (V).
+Paper tests of the workflow contract (`docs/agenti/rust-step.md`). Each workflow was read in a real file and rewritten by hand in the draft format (`contract.schema.json`). For each case: how it is written, what cannot be expressed, which contract correction came from it. The corrections are already in the draft; the JSON blocks below validate it (V).
 
 ## A. mzmine 4.0.2, FBMN batch (`mzmine_microbial_workshop.mzbatch.xml`, 20 steps)
 ```json

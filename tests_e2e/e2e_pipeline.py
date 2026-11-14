@@ -5,6 +5,7 @@ Builds the site (python3 tools/build_site.py) and the two .wasm of the feature e
 opens the panel. Needs cargo, the wasm32 target, wasm-bindgen and numpy (SKIP without). MZLAB_PIPE_SITE=<built site with static/wasm-feat> reuses a site (the TP_Mine
 files are copied over it); MZLAB_PIPE_MZIDX=<file .mzidx> adds the time of the preview on a real file (its time is printed).
 Run from the repo root: python3 tests_e2e/e2e_pipeline.py"""
+# covers: TP_Mine/
 import re
 import json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path

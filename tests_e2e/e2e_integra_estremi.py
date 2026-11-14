@@ -2,6 +2,7 @@
 24 px sliders with a name, on the baseline; the keyboard moves an end one point (Shift five), the mouse and a finger drag it onto a point of the trace,
 never past the other end; the area follows from the engine; the live text and the data table carry the new ends; the page and `mzlab-cli peak-window`
 give the same bytes; the default baseline stays zero; light and dark theme on a 1024x768 touch viewport. Synthetic low-resolution file only."""
+# covers: mzlab/web/integra-base.js, mzlab/web/integra-estremi.js
 import sys, os, subprocess, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import load

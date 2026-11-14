@@ -1,5 +1,5 @@
 # Proxy pubblico anonimo dell'assistente (`proxy/`)
-Worker Cloudflare che inoltra al fornitore le richieste dell'assistente del sito senza chiave dell'utente, con un tetto di spesa per sessione, per IP, al giorno e al mese. Progetto e passi del deploy: `docs/studi/assistente-dati/09-worker.md` (§9 segreti e deploy).
+Worker Cloudflare che inoltra al fornitore le richieste dell'assistente del sito senza chiave dell'utente, con un tetto di spesa per sessione, per IP, al giorno e al mese. Fasi, passi del deploy e costo: sezioni «Fasi e scelte», «Passi del proprietario», «Costo» in fondo.
 
 ## Pezzi
 - `crates/mzlab-llm/src/spend/ledger.rs`: `Ledger` (registro della spesa in micro-dollari, stato JSON `ledger/1` scritto con `mzlab_core::json`, senza serde): `rollover(day)`, `ip_hash(ip, entropia)`, `admit(prices, model, byte, max_tokens, &Keys, &Caps) -> Hold`, `settle(prices, &Hold, Option<&Usage>)`; `usage_of_stream` ricava l'uso dagli eventi `message_start` e `message_delta` (`provider::anthropic::start_usage`). Errori: `err.llm.limit.spend` (parametri `limit`, `cap`, `spent`), `err.llm.ledger` per uno stato o una chiave non validi.
@@ -28,3 +28,29 @@ Worker Cloudflare che inoltra al fornitore le richieste dell'assistente del sito
 ## Misure e prove
 - CPU per richiesta (node 22, a caldo, fornitore finto tolto): circa 2,5 ms per una risposta di 1 KB, circa 5 ms per un flusso di 462 KB con 4000 delta; prima richiesta circa 3 ms.
 - `cargo test -p mzlab-llm --test spend` (tetti mai superati, due ammissioni in parallelo, flusso troncato, cambio di giorno e di mese, HMAC fissato al riferimento Python); `node --test proxy/test/` (`body`, `spend`, `secret`, `nolog`, `cpu`; il Rust da `MZLAB_LLM_WASM_DIR` o compilato in una cartella temporanea); `tests/test_proxy.py` li lancia e controlla che in `proxy/` non ci sia `sk-ant`.
+
+## Fasi e scelte
+- Fase 0 (`PHASE = "0"` in `wrangler.toml`): passa solo il proprietario con la frase segreta (`x-mzlab-owner`); la frase si scrive una volta nel pannello, sta solo nell'IndexedDB dell'iframe del trasporto (mai nella pagina principale) e si cancella con «Forget». Non è un account, è un interruttore.
+- Fase 1 (`PHASE = "1"`): ogni visitatore, solo nel Flow dietro «Try the assistant», mai nelle pagine del corso; si apre solo dopo la demo provata e il parere del responsabile della protezione dei dati (l'IP è un dato personale anche se trattato solo in memoria). Spento: `ASSIST_OFF`, o chiave revocata nella Console.
+- Host: Cloudflare Workers, piano gratuito, un Durable Object come registro; piano a pagamento solo se la CPU per richiesta non basta (misura in «Misure e prove»). Deno Deploy è la seconda scelta; Vercel Hobby, Netlify e AI Gateway non bastano (uso non commerciale, durata, nessun tetto per IP-hash né prompt chiuso).
+- Chiave: solo segreto `ANTHROPIC_KEY` di un workspace dedicato «mzlab-demo» con limite di spesa mensile 180 $; il 400 di limite del workspace è `err.llm.limit.workspace` e ferma senza ritentare. Rotazione = nuovo segreto + revoca della vecchia. Mai nel repository, nelle chat, nella pagina o nell'app.
+- Modelli: Sonnet 5.5 effort medium per lettori e orchestratore, Haiku 5.5 effort low per router e grafici; Opus mai nel prodotto.
+- Corpo chiuso: niente strumenti lato server (`web_search`, `web_fetch`, `code_execution`, MCP), niente `service_tier`, `temperature`, `top_p`, `top_k`, immagini o documenti. Il prompt di sistema rifiuta ciò che non riguarda mzLab e i dati aperti: il proxy non è un chatbot gratuito.
+- Un client non browser può mentire sull'`Origin`: contano i tetti, non il CORS. Bot e IP che ruotano costano al più il tetto del giorno (6 $).
+- Consenso prima della prima chiamata di ogni visita: che cosa parte (i fatti ridotti, con «What will be sent»), a chi (proxy di mzLab su Cloudflare, poi Anthropic), che mzLab non conserva nulla (né testo, né file, né IP: solo un contatore giornaliero sull'IP mescolato), che Anthropic tratta i dati secondo le sue condizioni commerciali API e non addestra, che i file grezzi non partono e che tutto il resto funziona senza consenso.
+- Parità sito/app: l'app usa lo stesso fornitore `mzlab-demo` di `fornitori-1.json` (url del proxy, nessuna chiave) e manda lo stesso corpo byte per byte (`tools_demo.rs`, `provider/demo.rs`). Nella demo il tetto del pannello è 0,5 $ e non si alza: quello vero è del proxy.
+- Proposta non realizzata: Turnstile, solo se il tetto del giorno lo esauriscono i bot due volte (aggiunge un host alla CSP).
+
+## Passi del proprietario (nessuna chat li fa)
+1) Console Anthropic: workspace «mzlab-demo», limite mensile 180 $, una chiave solo per quel workspace.
+2) Cloudflare (piano gratuito): dalla cartella `proxy/` `npx wrangler secret put ANTHROPIC_KEY`, `npx wrangler secret put OWNER_SHA256` (SHA-256 della frase segreta, calcolato in locale), poi `npx wrangler deploy`.
+3) Al Coordinatore va solo l'indirizzo pubblico del proxy (per la CSP del trasporto), mai chiave o frase.
+4) Fase 1: `PHASE = "1"` in `wrangler.toml` o nel cruscotto. Spegnere: `ASSIST_OFF = 1` o revoca della chiave.
+
+## Costo
+- Prezzi (USD per milione di token, ingresso / scrittura cache 5 min / 1 h / lettura / uscita): Sonnet 5.5 2 / 2,5 / 4 / 0,10 / 10; Haiku 5.5 0,10 / 0,125 / 0,20 / 0,01 / 0,50 (prompt ≤ 100 000 token). `inference_geo: "us"` costa ×1,1 e non si usa. Il ragionamento si paga come uscita; `max_tokens` per ruolo lo limita.
+- Cache: un punto `ttl: "1h"` sull'ultimo blocco del sistema (dopo gli strumenti) perché pause oltre 5 minuti sono normali, cache automatica di 5 minuti per la coda; catalogo con byte stabili, strumenti in ordine fisso, nessuna data o id variabile nel sistema; le istruzioni a metà conversazione entrano come messaggio `role: "system"` senza toccare il prefisso. Prefisso minimo 512 token.
+- Ammissione: costo massimo = `ceil(byte/3)` × prezzo pieno + `max_tokens` × prezzo d'uscita; se speso + massimo supera il tetto la chiamata non parte. All'80 % l'assistente lo dice una volta, al 100 % nessuna chiamata nuova e restano le parti Rust.
+- Il 429 di frequenza con `retry-after` si ritenta al più 2 volte; il 429 senza `retry-after` (`enforced_spend_limit_reached`) mai.
+- Obiettivi di costo per compito (spesa / compiti d'oro completati): lettura dei metadati ≤ 0,05 $, proposta dei parametri ≤ 0,10 $, lettura della tabella ≤ 0,10 $, grafico ≤ 0,01 $, sessione intera ≤ 1,50 $ di mediana e ≤ 5 $ di massimo. Sessione tipo con chiave propria (12 file, una corsa, 25 turni) ≈ 0,77 $; la cache ne vale circa il 60 %.
+- Con 150 $ al mese: ≈ 535 sessioni pubbliche tipiche (0,28 $) o 300 al tetto di sessione, ≈ 12-21 al giorno col tetto di 6 $. Crediti a scadenza: la fase 1 dura quanto il credito.

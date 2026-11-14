@@ -1,5 +1,5 @@
 //! `mol/1` against RDKit golden data (tests/data/golden.json, from tools/struttura_dato/confronto.py --golden) and the traps of
-//! docs/studi/STRUTTURA_DATO.md: the record round-trips JSON byte for byte, the core hash equals the one computed in Python, and
+//! docs/agenti/mol.md: the record round-trips JSON byte for byte, the core hash equals the one computed in Python, and
 //! "unknown", "none", racemic and pure are all different records.
 
 use mzlab_mol::{Atom, Bond, Cfg, Mol, MolError, Parity, Status, Stereo};

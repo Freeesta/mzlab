@@ -5,6 +5,7 @@ keeps its width at Split View 1/3 and 1/2 and after a rotation; a tap outside cl
 lacks) compat.js stands in and an OPFS file written through createWritable reads back the same. No browser errors and no answer of 400 or more.
 The real engine of Safari is WebKit: with --browser webkit (the nightly round on macOS) every step runs in WebKit; the cloud has only Chromium, which
 emulates the iPad (touch, coarse pointer, mobile viewport) and the output says so."""
+# covers: mzlab/web/compat, mzlab/web/capacita, mzlab/web/tooltip.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

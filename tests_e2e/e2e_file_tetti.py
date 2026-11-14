@@ -1,6 +1,7 @@
 """The caps of the safe file reader (file-sicuri.js) shown to the user: a .mzflow over 8 MB opened with «Open workflow» gets one calm notice that names
 the limit, says the file was not opened and gives the next step, in English and Italian, without the «invalid format» prefix (the file was never read); a typed ion list over 300 lines says its size and the cap; a contaminant CSV over 5000 rows says how many were imported and left out.
 Synthetic bytes only."""
+# covers: mzlab/web/workflow.js, mzlab/web/file-sicuri, mzlab/web/tabella.js
 import sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
 from lib import *

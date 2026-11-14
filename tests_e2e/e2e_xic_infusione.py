@@ -1,5 +1,6 @@
 """An infusion has no real chromatogram: the XIC button of its spectrum is disabled (tooltip from the catalogue) and the lens (XIC preview over a peak)
 never opens. The same data under an ordinary name keeps both (control)."""
+# covers: mzlab/web/xic-spettro.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth

@@ -1,6 +1,6 @@
 """Guard over every tooltip key of the catalogs (IT and EN): one short sentence that says only what
 the control does. No privacy or policy promises, marketing, «not an identification» disclaimers,
-or «instead of» comparisons (docs/studi/TOOLTIP_CENSUS.md, Rule)."""
+or «instead of» comparisons (docs/inventari/TOOLTIP.md, Regola)."""
 import glob, json, re
 from pathlib import Path
 

@@ -1,6 +1,7 @@
 """Logo easter egg (logo-piccone.js): 5 hits (click or Enter): the logo turns gold and stays gold after a reload; the next five hits
 give the original logo back and leave the administrator mode (alternation, two rounds, light and dark theme); the cracks close if the hits stop; with and without reduced motion.
 Run from the repo root: python3 tests_e2e/e2e_logo_piccone.py"""
+# covers: mzlab/web/tpmine-loader.js, mzlab/web/logo-piccone.js
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))

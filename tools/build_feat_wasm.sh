@@ -66,6 +66,9 @@ wasm_pack "$out/msnregole" $R/mzlab_msnregole_wasm.wasm $limit_msnregole "msnreg
 # the statistics, molecules, Data and Flow routes (crates/mzlab-rotte-wasm), loaded by the worker of the engine on the first request of one of them
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-rotte-wasm
 wasm_pack "$out/rotte" $R/mzlab_rotte_wasm.wasm $limit_rotte "rotte" @motore
+# the TIC/BPC without the chemical background (crates/mzlab-ticfondo-wasm, api/tic_background), loaded by the worker of the engine on the first request; standard limit
+tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-ticfondo-wasm
+wasm_pack "$out/ticfondo" $R/mzlab_ticfondo_wasm.wasm $limit "ticfondo" @motore
 # the assistant (crates/mzlab-llm-wasm: llm-provider/1 requests, answer streams, recordings), loaded by mzlab/web/llm/llm-worker.js for the facts of the Flow (profile «ricerca») or after the opt-in; never fused with another module
 tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-llm-wasm
 wasm_pack "$out/llm" $R/mzlab_llm_wasm.wasm $limit_llm "assistant" @motore
@@ -126,6 +129,8 @@ m["msnregole"] = {"js": "msnregole/mzlab_msnregole_wasm.js", "wasm": "msnregole/
               "sha256": hashlib.sha256(open(f"{o}/msnregole/mzlab_msnregole_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["rotte"] = {"js": "rotte/mzlab_rotte_wasm.js", "wasm": "rotte/mzlab_rotte_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/rotte/mzlab_rotte_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["ticfondo"] = {"js": "ticfondo/mzlab_ticfondo_wasm.js", "wasm": "ticfondo/mzlab_ticfondo_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/ticfondo/mzlab_ticfondo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["normative"] = {"js": "normative/mzlab_normative_wasm.js", "wasm": "normative/mzlab_normative_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/normative/mzlab_normative_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",

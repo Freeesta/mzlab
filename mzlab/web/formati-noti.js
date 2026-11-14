@@ -1,7 +1,7 @@
 // @ts-check
 // The one table of the instrument file formats mzLab recognises by name (vendor, format, can we read it): the load notice (shell.js, reportLoad) tells
 // a known format we cannot open from an unknown file with it. Lazy (carica), shared by the site and the desktop; checked against order.rs and
-// converti.py by tests/test_formati_noti.py. Facts per format: docs/studi/formati-matrice.md.
+// converti.py by tests/test_formati_noti.py. Facts per format: docs/agenti/lettura-nativa.md.
 
 /** st: "read" = a reader opens it (the notice appears only where that reader could not run), "unsupported" = recognised, no reader and no converter yet.
  * @typedef {{ re: RegExp, ext: string, vendors: string[], fmt: string, st: "read" | "unsupported" }} Formato */

@@ -1,5 +1,6 @@
 """Disegno: right click on a bond shows the two pieces it would leave (formula, mass, m/z of [F+H]+) from the Rust graph, a ring bond says it does not split alone,
 and «All cuts…» opens the table of every cut. Needs site/static/wasm-feat/grafo (tools/build_feat_wasm.sh); SKIP without it."""
+# covers: mzlab/web/disegno-frammenti.js, mzlab/web/disegno-molfile.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):

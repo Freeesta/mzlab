@@ -1,6 +1,8 @@
 """Garbage in the fields of the calculators (campi.js gate, lib_campi.sweep): «calc here», the composition drawer and its full dialog, the KMD form and the
 origin of an ion; each field refuses letters, 1e999, empty, out-of-bound numbers, decimals where a whole number is due and a «from» above its «to» with one
 note and the old value, no live recompute and no request on garbage; Enter in the KMD form does not submit a refused field; a comma decimal is taken."""
+# covers: mzlab/web/campi.js, mzlab/web/composizione.js, mzlab/web/elementare.js, mzlab/web/elementare-pannello.js, mzlab/web/calc-qui-ui.js
+# covers: mzlab/web/calc-qui-html.js, mzlab/web/kmd.js, mzlab/web/masscal.js, mzlab/web/origine.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

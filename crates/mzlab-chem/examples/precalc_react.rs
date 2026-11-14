@@ -1,4 +1,4 @@
-//! Study C32 (docs/studi/C32_reattivita_precalcolata.md): runs `reactivity_json` with the app defaults over every SMILES of
+//! Study C32 (docs/agenti/reattivita-studi.md, «Reattività precalcolata»): runs `reactivity_json` with the app defaults over every SMILES of
 //! `composti.csv`, prints timings and writes a compact per-compound table. Not part of the wasm build nor of the tests.
 //! Usage: cargo run --release -p mzlab-chem --example precalc_react -- <composti.csv> <out.json> [step] [threads]
 

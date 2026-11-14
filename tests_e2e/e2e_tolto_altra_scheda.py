@@ -1,5 +1,6 @@
 """A file removed in another tab: tab B still lists it (the tabs are not kept in step), and ticking it says that it was removed in another tab or
 window, with its name, instead of «This file cannot be read: {name}», which in its turn now names the file. Two tabs of one browser profile share the folder of the site. Synthetic files only."""
+# covers: mzlab/web/rust-
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import misura_lista_molti as mlm

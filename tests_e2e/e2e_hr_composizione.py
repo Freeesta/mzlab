@@ -1,4 +1,5 @@
 """H5: «Formule compatibili» (elemental composition): the dialog gives the formula of the infusion progenitor, shows the checks, keeps the elements in use; the menu entry is only on high-resolution spectra."""
+# covers: mzlab/web/elementare.js, mzlab/web/composizione.js, mzlab/chem/composition.py, mzlab/chem/isoscore.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
