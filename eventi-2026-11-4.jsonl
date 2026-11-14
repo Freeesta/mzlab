@@ -22822,3 +22822,4 @@
 {"v":1,"ts_utc":"2026-11-14T09:35:22Z","azione":"aperta","tipo":"pr","pr":3281,"sha":"f9ae03c6fc64f2808b54b1e26cec6aabdc05bbfe"}
 {"v":1,"ts_utc":"2026-11-14T09:37:34Z","azione":"aperta","tipo":"pr","pr":3282,"sha":"ed441d00231da67302d4bd8fbb9f9ed3a7d19f32"}
 {"v":1,"ts_utc":"2026-11-14T10:02:30Z","azione":"push","titolo":"Docs: mzfeat-cicli.md puts legacy behind a feature instead of a crate split","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":3281,"sha":"4838d6886493dbb4f89ee0acc5f97d187f7238aa"}
+{"v":1,"ts_utc":"2026-11-14T09:39:30Z","azione":"aperta","tipo":"pr","pr":3283,"sha":"702bb5eb11e356f99e785c6e580f5287a0b3f8f3"}
