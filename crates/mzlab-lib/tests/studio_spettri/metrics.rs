@@ -1,5 +1,6 @@
 //! Metrics of the spectral study: Recall@1, MRR, the area under the precision-recall curve up to 1 % true FDP, the calibration error of the
-//! estimated q against the true FDP, the share of queries passing the `shared` gate of `livelli-1.js`, the q of true hits against traps.
+//! estimated q against the true FDP, the share of queries passing the `shared` gate of `livelli-1.js`, the q of true hits against traps and
+//! the separation of q between right and wrong top hits.
 
 use super::arms::Row;
 use super::scen::Q;
@@ -67,6 +68,31 @@ pub fn calibration(rows: &[&Row], qs: &[&Q]) -> (f64, f64) {
     (ece, at(0.01).map_or(0.0, |x| x.0))
 }
 
+/// Separation of q: the probability that a wrong top hit (a trap or an error) gets a higher q than a right one, ties counting half; 1 is a
+/// perfect separation, 0.5 none. `None` when either side is empty.
+pub fn q_auc(rows: &[&Row], qs: &[&Q]) -> Option<f64> {
+    let (mut right, mut wrong) = (Vec::new(), Vec::new());
+    for i in (0..rows.len()).filter(|&i| !rows[i].ranked.is_empty()) {
+        if correct(rows[i], qs[i]) {
+            &mut right
+        } else {
+            &mut wrong
+        }
+        .push(rows[i].q);
+    }
+    if right.is_empty() || wrong.is_empty() {
+        return None;
+    }
+    right.sort_by(f32::total_cmp);
+    let mut sum = 0.0;
+    for w in &wrong {
+        let lo = right.partition_point(|x| x < w);
+        let eq = right.partition_point(|x| x <= w) - lo;
+        sum += lo as f64 + 0.5 * eq as f64;
+    }
+    Some(sum / (right.len() * wrong.len()) as f64)
+}
+
 fn median(mut v: Vec<f64>) -> f64 {
     if v.is_empty() {
         return f64::NAN;
@@ -97,6 +123,12 @@ pub fn metrics(rows: &[&Row], qs: &[&Q]) -> Value {
         .sum::<f64>()
         / np;
     let (ece, fdp1) = calibration(rows, qs);
+    // power of the null: right top hits accepted at q <= 0.01, over the queries whose truth is in the library
+    let acc1 = pos
+        .iter()
+        .filter(|&&i| correct(rows[i], qs[i]) && rows[i].q <= 0.01)
+        .count() as f64
+        / np;
     let share = |f: &dyn Fn(&Row) -> bool| {
         rows.iter().filter(|r| f(r)).count() as f64 / rows.len().max(1) as f64
     };
@@ -114,27 +146,35 @@ pub fn metrics(rows: &[&Row], qs: &[&Q]) -> Value {
             .filter_map(|r| r.ranked.first().map(|x| x.1 as f64))
             .collect(),
     );
+    let auc = q_auc(rows, qs).unwrap_or(f64::NAN);
     json!({
         "n": qs.len(), "score": r4(score), "n_pos": pos.len(), "recall1": r4(recall), "mrr": r4(mrr), "pauprc": r4(pauprc(rows, qs)),
-        "ece": r4(ece), "fdp_q01": r4(fdp1), "gate": r4(gate), "hit": r4(hit), "q_true": r4(q_of(false)), "q_trap": r4(q_of(true)),
+        "ece": r4(ece), "fdp_q01": r4(fdp1), "recall_q01": r4(acc1), "gate": r4(gate), "hit": r4(hit), "q_true": r4(q_of(false)), "q_trap": r4(q_of(true)),
+        "q_auc": r4(auc),
     })
 }
 
-/// `all` plus one entry per subgroup of the queries (sorted by name).
+/// `all` plus one entry per subgroup of the queries and per prefix before `/` (`e1` of `e1/true` and `e1/trap`), sorted by name.
 pub fn report(rows: &[Row], qs: &[Q]) -> Value {
     let all = metrics(
         &rows.iter().collect::<Vec<_>>(),
         &qs.iter().collect::<Vec<_>>(),
     );
-    let mut groups: Vec<&str> = qs.iter().map(|q| q.group.as_str()).collect();
+    let prefix = |g: &str| g.split_once('/').map(|x| x.0.to_string());
+    let mut groups: Vec<String> = qs.iter().map(|q| q.group.clone()).collect();
+    groups.extend(qs.iter().filter_map(|q| prefix(&q.group)));
     groups.sort();
     groups.dedup();
     let mut g = serde_json::Map::new();
     for name in groups {
-        let i: Vec<usize> = (0..qs.len()).filter(|&i| qs[i].group == name).collect();
+        let i: Vec<usize> = (0..qs.len())
+            .filter(|&i| {
+                qs[i].group == name || prefix(&qs[i].group).as_deref() == Some(name.as_str())
+            })
+            .collect();
         let r: Vec<&Row> = i.iter().map(|&k| &rows[k]).collect();
         let q: Vec<&Q> = i.iter().map(|&k| &qs[k]).collect();
-        g.insert(name.to_string(), metrics(&r, &q));
+        g.insert(name, metrics(&r, &q));
     }
     json!({ "all": all, "groups": g })
 }
