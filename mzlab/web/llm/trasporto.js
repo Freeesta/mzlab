@@ -38,10 +38,11 @@
     await store("wrap", { key: k });
     return k;
   };
-  const remember = async (/** @type {string} */ v) => {
+  // `provider` is the one of the click, not of whatever init has landed while the key was being encrypted
+  const remember = async (/** @type {string} */ v, /** @type {string} */ provider) => {
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await wrapKey(), new TextEncoder().encode(v));
-    await store("k:" + st.provider, { iv, data });
+    await store("k:" + provider, { iv, data });
   };
   const recall = async () => {
     try {
@@ -77,12 +78,13 @@
 
   /** @param {{id: string, request: {url: string, headers: string[][], body: string, auth: {header: string, prefix: string}}}} m */
   const send = async m => {
-    const { id, request: r } = m, ctl = new AbortController();
+    const { id, request: r } = m, ctl = new AbortController(), gen = initGen;
     live.set(id, ctl);
     try {
       let ok = false;
       try { ok = /^https?:\/\//.test(r.url) && (await origins()).includes(new URL(r.url).origin); } catch (_) { /* no registry: nothing leaves */ }
-      if (!ok) throw { key: "err.llm.network", params: { reason: "url" } };
+      // the origins were taken for the provider of this send: if an init landed while they were fetched, the key now held is another provider's (nothing is awaited from here to the fetch)
+      if (!ok || gen !== initGen) throw { key: "err.llm.network", params: { reason: "url" } };
       const headers = new Headers(/** @type {[string, string][]} */ (r.headers));
       if (r.auth.header) {
         if (!key) throw { key: "err.llm.auth", params: { reason: "nokey" } };
@@ -127,7 +129,8 @@
   });
   $("b-use").addEventListener("click", async () => {
     key = $("key").value.trim(); $("key").value = "";
-    try { if (($("remember").checked || st.owner) && key) await remember(key); else await store("k:" + st.provider, null); } catch (_) { /* storage blocked: the key stays for this session */ }
+    const provider = st.provider;
+    try { if (($("remember").checked || st.owner) && key) await remember(key, provider); else await store("k:" + provider, null); } catch (_) { /* storage blocked: the key stays for this session */ }
     paint(); window.parent.postMessage({ op: "key", hasKey: !!key }, location.origin);
   });
   $("b-forget").addEventListener("click", async () => {
