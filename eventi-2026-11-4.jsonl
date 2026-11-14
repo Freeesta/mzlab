@@ -28084,3 +28084,4 @@
 {"v":1,"ts_utc":"2026-11-14T17:02:25Z","azione":"aperta","tipo":"pr","pr":3317,"sha":"efa89dd825d819c96d13b353486a96c5af89e6ab"}
 {"v":1,"ts_utc":"2026-11-14T17:03:49Z","azione":"push","titolo":"Merge origin/main into claude/e2e-llm-routing","merge_main":true,"aree":{"docs":31,"workflow":7,"altro":3,"rust":259},"tipo":"pr","pr":3240,"sha":"d72ab87952a2f04c12459a90c191c26b9573a0b7"}
 {"v":1,"ts_utc":"2026-11-14T17:16:29Z","azione":"aperta","tipo":"pr","pr":3318,"sha":"72e549fdf845ca7190291a65e03c5eb255732aaf"}
+{"v":1,"ts_utc":"2026-11-14T17:22:10Z","azione":"aperta","tipo":"pr","pr":3319,"sha":"0d2f48e7e5ec15cacb359d212795aa9fb1a0617a"}
