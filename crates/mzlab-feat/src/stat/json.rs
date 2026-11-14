@@ -136,6 +136,17 @@ fn write_anova(o: &mut Out, a: &super::Anova) {
     o.raw("]}");
 }
 
+fn write_indices(o: &mut Out, xs: &[usize]) {
+    o.raw("[");
+    for (i, &x) in xs.iter().enumerate() {
+        if i > 0 {
+            o.raw(",");
+        }
+        o.int(x as i64);
+    }
+    o.raw("]");
+}
+
 /// The `stat/1` text of a comparison run: groups, warnings, comparisons with their rows, the ANOVA and the heat map.
 pub fn write_stats(s: &StatsOut, lay: &Layout) -> String {
     let mut o = Out::default();
@@ -185,19 +196,17 @@ pub fn write_stats(s: &StatsOut, lay: &Layout) -> String {
     }
     o.raw("],\"anova\":");
     write_anova(&mut o, &s.anova);
-    o.raw(",\"heat\":{\"groups\":[");
-    o.raw(
-        &s.heat_groups
-            .iter()
-            .map(|g| g.to_string())
-            .collect::<Vec<_>>()
-            .join(","),
-    );
-    o.raw("],\"z\":[");
+    o.raw(",\"heat\":{\"groups\":");
+    write_indices(&mut o, &s.heat_groups);
+    o.raw(",\"z\":[");
     for (i, row) in s.heat.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" }).floats(row);
     }
-    o.raw("]}}");
+    o.raw("],\"rowOrder\":");
+    write_indices(&mut o, &s.heat_row_order);
+    o.raw(",\"colOrder\":");
+    write_indices(&mut o, &s.heat_col_order);
+    o.raw("}}");
     o.0
 }
 
