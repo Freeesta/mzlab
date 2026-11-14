@@ -62,3 +62,9 @@ def test_the_output_line(tmp_path, monkeypatch):
     monkeypatch.chdir(ROOT)
     assert ci.main([head]) == 0 and out.read_text(encoding="utf-8").startswith("e2e=")
     assert ci.main([]) == 0
+
+
+def test_the_assistant_e2e_needs_the_llm_wasm_so_the_changed_files_job_leaves_it_out():
+    assert "wasm" in verifica.NEEDS["e2e_llm"]          # its site must carry wasm-feat/manifest.json `llm` (tools/build_feat_wasm.sh), which only the wasm jobs build
+    tests, _ = ci.pick({"tests_e2e/e2e_llm.py", "mzlab/web/llm/llm-worker.js"})
+    assert "e2e_llm" not in tests
