@@ -4,7 +4,7 @@
 //! Y is an adduct of X, Y is the dimer of X, or X is an in-source fragment of Y (Y minus a neutral loss). Several readings can fit one step
 //! (+17.0265 is `[M+NH4]+` and also the loss of NH3; +46.0055 is formate and also the loss of HCOOH): all are returned.
 
-use crate::legacy::edge::{Iimn, ISOTOPES};
+use crate::iimn::{Iimn, ISOTOPES};
 
 impl Tables {
     pub fn new(pol: i8) -> Self {
