@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 
 const TOL_DA: f64 = 0.2;
 const TOL_S: f64 = 4.0;

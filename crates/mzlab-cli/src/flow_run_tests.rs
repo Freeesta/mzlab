@@ -355,14 +355,14 @@ fn the_recipe_of_the_layers_gives_the_bytes_of_flow_run() {
         layered_table(&files, "[]", true),
         "the layers change the table"
     );
-    assert!(mzlab_feat_wasm::run::layers_from_json(r#"{"step":1}"#).is_err());
+    assert!(mzlab_ops::run::feat::run::layers_from_json(r#"{"step":1}"#).is_err());
     let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
 fn the_parallel_alignment_reports_its_progress_and_the_bytes_do_not_change() {
     use mzlab_core::budget::MemBudget;
-    use mzlab_feat_wasm::run;
+    use mzlab_ops::run::feat::run;
 
     use crate::flow_base::{open, Files};
 
@@ -419,7 +419,7 @@ fn the_alignment_reads_the_weak_candidates_the_detection_stored() {
     use mzlab_core::budget::MemBudget;
     use mzlab_feat::slabs::Stored;
     use mzlab_feat::weakfile;
-    use mzlab_feat_wasm::run;
+    use mzlab_ops::run::feat::run;
 
     use crate::flow_base::{open, Files};
 

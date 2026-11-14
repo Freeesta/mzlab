@@ -1,5 +1,5 @@
 //! mzFinder in the app: the routes `feat/*` and `finder/*` on the high-resolution examples give the same bytes and the same JSON as the steps of the `.wasm`
-//! (`mzlab_feat_wasm::run`, `mzlab_feat::legacy`) run directly on the same `.mzidx`: the `.mzfeatf`, the `.mzfeat`, the one with the proofs, the Dig.
+//! (`mzlab_ops::run::feat::run`, `mzlab_feat::legacy`) run directly on the same `.mzidx`: the `.mzfeatf`, the `.mzfeat`, the one with the proofs, the Dig.
 use std::fs::File;
 use std::path::Path;
 
@@ -9,7 +9,7 @@ use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
 use mzlab_feat::legacy;
 use mzlab_feat::store::Slice;
-use mzlab_feat_wasm::run;
+use mzlab_ops::run::feat::run;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
