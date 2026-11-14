@@ -272,7 +272,7 @@ I18N.add("it", {
   "calc.diff.name": "Coppia",
   "calc.diff.pol": "Polarità",
   "calc.delta": "Δ tra due picchi",
-  "calc.delta.title": "Scrivi la differenza tra due m/z osservati",
+  "calc.delta.title": "Differenza tra due m/z osservati",
   "calc.delta.none": "nessuna coppia di addotti entro {tol} ppm",
   "calc.err.sign": "non capisco questo segno",
   "cursor.handle": "Posizione corrente nel cromatogramma: trascina il pallino col dito o la penna, oppure usa le frecce per spostarti di una scansione (Maiusc: cinque)",
