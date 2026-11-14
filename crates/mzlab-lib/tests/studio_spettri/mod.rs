@@ -5,6 +5,7 @@
 pub mod analogue;
 pub mod arms;
 pub mod r#gen;
+pub mod idf;
 pub mod metrics;
 pub mod null;
 pub mod scen;
@@ -89,11 +90,12 @@ pub fn check_engine(name: &str, n: usize) {
 /// A function that runs a set of arms on a scenario: (name, seed, n_lib, n) -> one JSON object per arm.
 pub type Runner = fn(&str, u64, usize, usize) -> Vec<Value>;
 
-/// The arm sets of the example and of `tools/studio_spettri.py`: the baselines and arm A (`null`).
+/// The arm sets of the example and of `tools/studio_spettri.py`: the baselines, arm A (`null`) and arm B (`idf`).
 pub fn runner(set: &str) -> Runner {
     match set {
         "base" => run_baselines,
         "null" => null::run_null,
+        "idf" => idf::run_idf,
         _ => panic!("unknown arm set {set}"),
     }
 }
