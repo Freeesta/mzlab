@@ -36,7 +36,8 @@ try:
             step(f"{w} px: no m/z field under the header buttons, each focused field in view", narrow)
         def wide():
             pg.set_viewport_size({"width": 1400, "height": 900}); frames(pg, 6)
-            assert pg.evaluate(f"{X}.el.querySelector('.hd input.mzf').offsetWidth") == 78, "the m/z field keeps its width when there is room"
+            pg.evaluate(f"{X}.el.querySelector('.hd .rngb').click()"); wait_for_js(pg, f"!!{X}.el.querySelector('.cpop [data-o=xlo]')?.offsetWidth")     # the edges live in the «Range» popover (#3181)
+            assert pg.evaluate(f"{X}.el.querySelector('.cpop [data-o=xlo]').offsetWidth") == 78, "the m/z field keeps its width when there is room"
         step("wide window: the m/z fields keep 78 px", wide)
     r.close()
 except Exception as e:
