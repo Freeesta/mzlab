@@ -81,5 +81,3 @@ Parte del motore Rust (`rust.md`). Binario nativo `mzlab-cli` (mai nel sito; `mz
 6. **Lunghezze**: comando ≤ 12, sottocomando ≤ 8, opzione ≤ 14 senza i trattini, parametro ≤ 20, id di passo ≤ 20, variabile d'ambiente ≤ 24; più lungo solo se un nome più corto obbligherebbe a indovinare.
 7. **Alias**: un nome vecchio resta accettato in ingresso per sempre, non si stampa mai tranne nell'unica riga `old names still accepted` di `--help`, e la tabella degli alias sta accanto al parser.
 - **Prova**: `name_rule_tests.rs` legge il `--help` di ogni comando, gli id dei passi di `flow::steps()` e i loro parametri (anche degli algoritmi) e rifiuta i nomi fuori regola e quelli con una radice italiana (`basso, prove, toll, perdita, regole, rotture, legami, vista, figura, canal, campion, somma, tutti`). I nomi fuori regola tenuti per scelta (id e parametri salvati nei piani, `explain-missing`) stanno in `KNOWN`, con la riga di `docs/studi/NOMI_TERMINALE.md`: la lista può solo accorciarsi; va tolto un nome tornato in regola.
-
-## Piano dei lavori

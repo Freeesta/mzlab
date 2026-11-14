@@ -1,6 +1,6 @@
 //! Synthetic Orbitrap-like profile mzML: gen OUT MS1_SCANS PEAKS_PER_SCAN (every 4th scan is followed by 3 MS2 centroid scans).
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter, Opzioni};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, Options};
 fn main() {
     let a: Vec<String> = std::env::args().collect();
     let out = &a[1];
@@ -34,7 +34,7 @@ fn main() {
             }
         }
     }
-    let mut w = MzmlWriter::con_opzioni(Vec::new(), &Header { run: "x".into(), ..Default::default() }, Opzioni { livello: 1, numpress: false, ..Opzioni::default() }).unwrap();
+    let mut w = MzmlWriter::with_options(Vec::new(), &Header { run: "x".into(), ..Default::default() }, Options { livello: 1, numpress: false, ..Options::default() }).unwrap();
     w.open_spectra(sp.len()).unwrap();
     for s in &sp { w.spectrum(s).unwrap(); }
     w.close_spectra().unwrap();
