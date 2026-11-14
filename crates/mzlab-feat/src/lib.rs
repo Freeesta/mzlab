@@ -87,6 +87,7 @@ pub mod params_drift;
 pub mod params_height;
 pub mod params_unit;
 pub mod pipeline;
+mod pipeline_steps;
 pub mod polpair;
 mod post;
 pub mod prof;
