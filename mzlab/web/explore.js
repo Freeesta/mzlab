@@ -314,7 +314,7 @@ function uiSave(now = false) {
     NB.ui = {
       contEx: window.LISTE ? LISTE.exclExport() : undefined,
       ref: { ...S.ref, k: S.ref.k === "auto" ? "auto" : E.files[S.ref.k]?.file ?? "auto" },
-      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map((/** @type {FileAperto} */ f) => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined, ugrp: f.ugrp || undefined })), ugBy: E.ugBy, ugOrder: E.ugOrder,
+      tab: E.tab, cur: E.cur, msn: window.INF ? INF.state() : undefined, files: E.files.map((/** @type {FileAperto} */ f) => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined, ugrp: f.ugrp || undefined })), ugBy: E.ugBy, ugOrder: E.ugOrder, ugNone: E.ugNone,
       panels: E.panels.map(panelRec)
     };
     nbSave(now);
@@ -443,7 +443,7 @@ async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;
   if (typeof AVVIO !== "undefined" && AVVIO.segnaSessione) AVVIO.segnaSessione(!!j.session);
-  if (!j.session) { E.files = []; E.ugBy = E.ugOrder = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
+  if (!j.session) { E.files = []; E.ugBy = E.ugOrder = E.ugNone = undefined; E.key = ""; E.pending = []; E._seq = false; E._mem = null; E.progTok = null; return; }
   const key = JSON.stringify(j.session.map((/** @type {Bag} */ s) => s.file));
   if (key === E.key) return;
   const oldNames = E.files.map((/** @type {FileAperto} */ f) => f.file), mem = E._mem || {};
@@ -525,7 +525,7 @@ function riapriPannello(sp) {
   });
 }
 function restoreUi() {
-  const u = NB.ui; if (u) { E.ugBy = u.ugBy; E.ugOrder = u.ugOrder; }
+  const u = NB.ui; if (u) { E.ugBy = u.ugBy; E.ugOrder = u.ugOrder; E.ugNone = u.ugNone; }
   // the contaminant exclusions travel with the session
   if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);
   // the grouping of the MSn tree travels with the session

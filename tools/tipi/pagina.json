@@ -70,6 +70,7 @@
     "../../mzlab/web/upload-rows.js",
     "../../mzlab/web/lista-file-menu.js",
     "../../mzlab/web/gruppi.js",
+    "../../mzlab/web/gruppi-nome.js",
     "../../mzlab/web/gruppi-per.js",
     "../../mzlab/web/gruppi-dnd.js",
     "../../mzlab/web/gruppi-tab.js",
