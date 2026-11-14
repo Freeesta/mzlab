@@ -21157,3 +21157,4 @@
 {"v":1,"ts_utc":"2026-11-14T07:40:32Z","tipo":"carico","k":"2026-11-14T07:4","job_in_coda":0,"job_in_corso":40}
 {"v":1,"ts_utc":"2026-11-14T07:40:50Z","tipo":"coda","k":"2026-11-14T07:40:50Z","aperte":6,"indietro":3,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":33056,"piu_vecchia_verde_s":null}
 {"v":1,"ts_utc":"2026-11-14T07:41:23Z","azione":"aperta","tipo":"pr","pr":3264,"sha":"c710e9ec3cc009782215d2dbfea87a857b334925"}
+{"v":1,"ts_utc":"2026-11-14T07:43:56Z","azione":"push","titolo":"Drop the test of the committed stretto*.json: the files are no longer committed","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":3262,"sha":"148612b2a120f1f82936855a335933a71c49e39a"}
