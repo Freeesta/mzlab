@@ -85,3 +85,10 @@ def test_a_remembered_key_is_stored_under_the_provider_of_the_click():
     """init B lands while the key of A is being encrypted: it is stored for A, never for B."""
     stored = race("remember-vs-init")["stored"]
     assert stored.get("k:anthropic") == "typed-key" and "k:openai" not in stored, stored
+
+
+def test_two_concurrent_first_uses_share_one_wrap_key():
+    """no wrap key stored yet and two callers need it (a remembered key and a recall): the key encrypted by the first still decrypts afterwards."""
+    r = race("wrap-single-flight")
+    (f,) = r["fetched"]
+    assert f["key"] == "typed-key", r
