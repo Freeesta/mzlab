@@ -71,7 +71,7 @@ try:
         step("«+» opens the Columns chooser (keyboard), the picked column appears, «+» stays sticky", plus)
         def reload():
             wait_for_js(pg, "true"); pg.evaluate("uiSave && uiSave()"); saved(pg)
-            pg.reload(); wait_for_js(pg, "window.E && E.files && document.readyState === 'complete'", 120000)
+            pg.reload(); wait_for_js(pg, "typeof E !== 'undefined' && E.files && document.readyState === 'complete'", 120000)
             wait_for_js(pg, "E.files.some(f => f.ugrp === 'Kbd') || E.ugNone === 'Loose'", 30000)
             assert pg.evaluate("E.ugNone") == "Loose", pg.evaluate("E.ugNone")
         step("the names are kept after a reload of the session", reload)
