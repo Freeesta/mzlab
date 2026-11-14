@@ -61,7 +61,8 @@
   /** @type {Promise<any[]> | null} */
   let registry = null;
   const origins = async () => {
-    registry = registry || fetch("fornitori-1.json", { credentials: "omit" }).then(r => r.json()).then(j => j.providers || []);
+    // a failed fetch is not kept: the next send asks again
+    registry = registry || fetch("fornitori-1.json", { credentials: "omit" }).then(r => r.json()).then(j => j.providers || []).catch(e => { registry = null; throw e; });
     const p = (await registry).find(x => x.id === st.provider);
     if (!p) return [];
     const out = [new URL(p.base_url).origin];
@@ -86,7 +87,7 @@
         if (!key) throw { key: "err.llm.auth", params: { reason: "nokey" } };
         headers.set(r.auth.header, r.auth.prefix + key);
       } else if (st.owner && key) headers.set(st.owner, key);
-      const res = await fetch(r.url, { method: "POST", headers, body: r.body, signal: ctl.signal, credentials: "omit", referrerPolicy: "no-referrer" });
+      const res = await fetch(r.url, { method: "POST", headers, body: r.body, signal: ctl.signal, credentials: "omit", redirect: "error", referrerPolicy: "no-referrer" });
       post({ t: "head", id, status: res.status, spend: res.headers.get("x-mzlab-spend") || "", soft: !!res.headers.get("x-mzlab-soft") });
       const rd = res.body && res.body.getReader();
       if (rd) for (;;) { const { done, value } = await rd.read(); if (done) break; const b = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength); st.port && st.port.postMessage({ t: "chunk", id, bytes: b }, [b]); }

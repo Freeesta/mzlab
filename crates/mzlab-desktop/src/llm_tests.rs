@@ -175,12 +175,107 @@ fn the_demo_send_needs_the_proxy_host_and_a_session_but_no_key() {
         Some("err.llm.network")
     );
     assert_eq!(
-        key(json!({"conv": conv, "proxy_host": "https://assist.example.org", "session": "x"}))
-            .as_deref(),
+        st.llm_send(
+            &json!({"conv": conv, "session": "x"}),
+            "https://assist.example.org"
+        )
+        .err()
+        .map(|e| e.key.to_string())
+        .as_deref(),
         Some("err.llm.conversation")
     );
     let Answer::Text(t) = st.op_llm("llm/providers", &json!({})).unwrap() else {
         panic!()
     };
     assert!(t.contains("\"mzlab-demo\":false"), "{t}");
+}
+
+#[test]
+fn the_proxy_host_is_the_binary_constant_and_the_page_value_is_ignored() {
+    let st = State::default();
+    let d = tempfile::tempdir().unwrap();
+    st.store.lock().unwrap().set_dir(d.path().to_path_buf());
+    let r = |url: &str| {
+        json!({"url": url, "headers": [], "body": "{}", "auth": {"header": "", "prefix": ""}})
+            .to_string()
+    };
+    let reason = |p: Value, host: &str| {
+        st.llm_send(&p, host).err().map(|e| {
+            (
+                e.key.to_string(),
+                e.params
+                    .iter()
+                    .find(|(k, _)| *k == "reason")
+                    .map(|(_, v)| v.clone()),
+            )
+        })
+    };
+    let url = Some(("err.llm.network".to_string(), Some("url".to_string())));
+    // a page that names its own host (and the url to match) gets nothing, with the real host known or not
+    let evil = json!({"provider": "mzlab-demo", "request": r("https://evil.org/v1/messages"), "proxy_host": "https://evil.org", "session": "panel_0123456789"});
+    assert_eq!(reason(evil.clone(), "https://assist.example.org"), url);
+    assert_eq!(reason(evil, ""), url);
+    // the constant of the tree is the one of proxy-host.js (empty until the proxy exists)
+    assert!(
+        crate::llm::proxy_host().is_empty() || crate::llm::proxy_host().starts_with("https://")
+    );
+    // `op_llm` never takes the host from the page
+    let page = json!({"provider": "mzlab-demo", "request": r("https://evil.org/v1/messages"), "proxy_host": "https://evil.org", "session": "panel_0123456789"});
+    assert_eq!(
+        st.op_llm("llm/send", &page)
+            .err()
+            .map(|e| e.key.to_string())
+            .as_deref(),
+        Some("err.llm.network")
+    );
+}
+
+#[test]
+fn a_redirect_of_the_provider_is_not_followed_with_the_key() {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    let other = TcpListener::bind("127.0.0.1:0").unwrap();
+    other.set_nonblocking(true).unwrap();
+    let first = TcpListener::bind("127.0.0.1:0").unwrap();
+    let (pa, pb) = (
+        first.local_addr().unwrap().port(),
+        other.local_addr().unwrap().port(),
+    );
+    let t = std::thread::spawn(move || {
+        let (mut c, _) = first.accept().unwrap();
+        let mut buf = [0u8; 2048];
+        let _ = c.read(&mut buf);
+        let _ = write!(c, "HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:{pb}/x\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+    });
+    let p = find("anthropic").unwrap();
+    let req = Request {
+        url: format!("http://127.0.0.1:{pa}/v1/messages"),
+        headers: vec![],
+        body: "{}".into(),
+        auth: provider::AuthSlot {
+            header: "x-api-key".into(),
+            prefix: String::new(),
+        },
+    };
+    let id = with_jobs(|n, m| {
+        *n += 1;
+        m.insert(*n, Job::default());
+        *n
+    });
+    run(
+        id,
+        p,
+        false,
+        req,
+        Some("sk-secret".into()),
+        Arc::new(AtomicBool::new(false)),
+    );
+    t.join().unwrap();
+    std::thread::sleep(Duration::from_millis(200));
+    assert!(other.accept().is_err(), "the redirect target was contacted");
+    let ev = with_jobs(|_, m| m.remove(&id).unwrap().events.join("\n"));
+    assert!(
+        ev.contains("err.llm.network") && ev.contains("redirect"),
+        "{ev}"
+    );
 }

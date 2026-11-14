@@ -22,6 +22,20 @@ use crate::engine::State;
 use crate::rpc::{text, Answer};
 
 const KEYS_FILE: &str = "llm-chiavi.json";
+/// The one constant of the proxy host, the same file the site reads (`PROXY_HOST` of `llm/proxy-host.js`): the page does not choose where the demo's owner passphrase goes.
+const PROXY_HOST_JS: &str = include_str!("../../../mzlab/web/llm/proxy-host.js");
+
+/// `PROXY_HOST` of `proxy-host.js` when it is a checked host, else "" (nothing of the demo leaves).
+pub(crate) fn proxy_host() -> &'static str {
+    PROXY_HOST_JS
+        .lines()
+        .find_map(|l| {
+            l.strip_prefix("export const PROXY_HOST = \"")?
+                .strip_suffix("\";")
+        })
+        .filter(|h| demo::host_ok(h))
+        .unwrap_or("")
+}
 
 impl State {
     fn keys_path(&self) -> Result<PathBuf> {
@@ -46,49 +60,7 @@ impl State {
                 text(json!({ "providers": provider::BUILTIN_JSON, "has_key": has }).to_string())
             }
             "llm/request" => text(build(s("conv"))?.2.to_json()),
-            "llm/send" => {
-                // a call of a subagent comes as a request already built by Rust (`request`) and has no tool call to read from the text
-                let (prov, prompted, req) = match p["request"].as_str() {
-                    Some(r) => {
-                        let prov = find(s("provider"))?;
-                        let v = mzlab_core::json::parse(r.as_bytes())?;
-                        (prov, false, provider::Request::from_value(&v)?)
-                    }
-                    None => {
-                        let (prov, conv, req) = build(s("conv"))?;
-                        let prompted = prov
-                            .model(&conv.model)
-                            .is_some_and(|m| m.tools == ToolMode::Prompted);
-                        (prov, prompted, req)
-                    }
-                };
-                // the key only goes where the provider lives: a request the page hands over is checked against the provider's own origin
-                if !demo::url_belongs(&prov, &req.url, s("proxy_host")) {
-                    return Err(err("err.llm.network", "reason", "url"));
-                }
-                // the demo provider: the host of `llm/proxy-host.js` and the session of the panel, as in the site (`demo_send` of the .wasm); the owner
-                // passphrase is the stored «key» of the demo, read only here (the page never holds it)
-                let key = read_keys(&self.keys_path()?).remove(&prov.id);
-                let owner = match &key {
-                    Some(k) if prov.id == DEMO_PROVIDER => k.as_str(),
-                    _ => "",
-                };
-                let req = demo::for_send(&prov, req, s("proxy_host"), s("session"), owner)?;
-                let abort = Arc::new(AtomicBool::new(false));
-                let id = with_jobs(|n, m| {
-                    *n += 1;
-                    m.insert(
-                        *n,
-                        Job {
-                            abort: abort.clone(),
-                            ..Job::default()
-                        },
-                    );
-                    *n
-                });
-                std::thread::spawn(move || run(id, prov, prompted, req, key, abort));
-                text(json!({ "id": id.to_string() }).to_string())
-            }
+            "llm/send" => self.llm_send(p, proxy_host()),
             "llm/poll" => poll(s("id")),
             "llm/abort" => {
                 if let Ok(id) = s("id").parse::<u64>() {
@@ -103,6 +75,56 @@ impl State {
             "llm/key/set" | "llm/key/forget" => key_route(&self.keys_path()?, op, p),
             _ => Err(Error::new("rpc.unknown")),
         }
+    }
+
+    /// `llm/send`. `proxy_host` is the host of mzLab's proxy as the binary knows it (`proxy_host()`); the page's own `proxy_host` field is never read.
+    pub(crate) fn llm_send(&self, p: &Value, proxy_host: &str) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        // a call of a subagent comes as a request already built by Rust (`request`) and has no tool call to read from the text
+        let (prov, prompted, req) = match p["request"].as_str() {
+            Some(r) => {
+                let prov = find(s("provider"))?;
+                let v = mzlab_core::json::parse(r.as_bytes())?;
+                (prov, false, provider::Request::from_value(&v)?)
+            }
+            None => {
+                let (prov, conv, req) = build(s("conv"))?;
+                let prompted = prov
+                    .model(&conv.model)
+                    .is_some_and(|m| m.tools == ToolMode::Prompted);
+                (prov, prompted, req)
+            }
+        };
+        // the key only goes where the provider lives: a request the page hands over is checked against the provider's own origin
+        if !demo::url_belongs(&prov, &req.url, proxy_host) {
+            return Err(err("err.llm.network", "reason", "url"));
+        }
+        // the demo provider: the host of `llm/proxy-host.js` and the session of the panel, as in the site (`demo_send` of the .wasm); the owner
+        // passphrase is the stored «key» of the demo, read only here (the page never holds it)
+        let key = read_keys(&self.keys_path()?).remove(&prov.id);
+        let owner = match &key {
+            Some(k) if prov.id == DEMO_PROVIDER => k.as_str(),
+            _ => "",
+        };
+        let req = demo::for_send(&prov, req, proxy_host, s("session"), owner)?;
+        // and again as it leaves: the proxy host has replaced the placeholder, the origin must still be the provider's
+        if !demo::url_belongs(&prov, &req.url, proxy_host) {
+            return Err(err("err.llm.network", "reason", "url"));
+        }
+        let abort = Arc::new(AtomicBool::new(false));
+        let id = with_jobs(|n, m| {
+            *n += 1;
+            m.insert(
+                *n,
+                Job {
+                    abort: abort.clone(),
+                    ..Job::default()
+                },
+            );
+            *n
+        });
+        std::thread::spawn(move || run(id, prov, prompted, req, key, abort));
+        text(json!({ "id": id.to_string() }).to_string())
     }
 }
 
@@ -263,6 +285,27 @@ fn key_route(path: &PathBuf, op: &str, p: &Value) -> Result<Answer> {
     text("{}")
 }
 
+/// Feeds the bytes of an answer to the decoder of the provider until the end, an abort or a read error.
+fn drain(id: u64, resp: ureq::Response, mut stream: Stream, abort: &AtomicBool) {
+    keep_spend(id, &resp);
+    let mut rd = resp.into_reader();
+    let mut buf = [0u8; 4096];
+    loop {
+        if abort.load(Ordering::Relaxed) {
+            return push_events(id, &[Event::error("err.llm.aborted", &[])]);
+        }
+        match rd.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => push_events(id, &stream.push(&buf[..n])),
+            Err(_) => {
+                let e = Event::error("err.llm.network", &[("reason", "read".to_string())]);
+                return push_events(id, &[e]);
+            }
+        }
+    }
+    push_events(id, &stream.finish());
+}
+
 /// Runs one request to its end: the bytes of the answer go through the decoder of the provider, whatever the split.
 fn run(
     id: u64,
@@ -272,7 +315,9 @@ fn run(
     key: Option<String>,
     abort: Arc<AtomicBool>,
 ) {
+    // no redirect is followed: it would carry the key headers to another host
     let agent = ureq::AgentBuilder::new()
+        .redirects(0)
         .timeout_connect(Duration::from_secs(15))
         .timeout_read(Duration::from_secs(120))
         .build();
@@ -298,32 +343,16 @@ fn run(
         stream = stream.prompted();
     }
     match r.send_string(&req.body) {
-        Ok(resp) => {
-            keep_spend(id, &resp);
-            let mut rd = resp.into_reader();
-            let mut buf = [0u8; 4096];
-            loop {
-                if abort.load(Ordering::Relaxed) {
-                    push_events(id, &[Event::error("err.llm.aborted", &[])]);
-                    return finish_job(id);
-                }
-                match rd.read(&mut buf) {
-                    Ok(0) => break,
-                    Ok(n) => push_events(id, &stream.push(&buf[..n])),
-                    Err(_) => {
-                        push_events(
-                            id,
-                            &[Event::error(
-                                "err.llm.network",
-                                &[("reason", "read".to_string())],
-                            )],
-                        );
-                        return finish_job(id);
-                    }
-                }
-            }
-            push_events(id, &stream.finish());
+        Ok(resp) if (300..400).contains(&resp.status()) => {
+            push_events(
+                id,
+                &[Event::error(
+                    "err.llm.network",
+                    &[("reason", "redirect".to_string())],
+                )],
+            );
         }
+        Ok(resp) => drain(id, resp, stream, &abort),
         Err(ureq::Error::Status(code, resp)) => {
             let mut body = String::new();
             let _ = resp.into_reader().take(4096).read_to_string(&mut body);
