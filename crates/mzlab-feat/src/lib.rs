@@ -130,6 +130,7 @@ mod trace_text;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 pub mod uv_bands;
+pub mod uv_text;
 pub mod view;
 pub mod view_table;
 pub mod weakfile;

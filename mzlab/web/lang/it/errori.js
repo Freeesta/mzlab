@@ -135,6 +135,7 @@ I18N.add("it", {
   "error.quotaWrite": "Il browser si è fermato dopo {scritti_mb} MB dei circa {serve_mb} MB necessari, pur dichiarando {libero_mb} MB liberi: di solito il disco del computer è quasi pieno (su Mac il Finder conta come libero anche lo spazio «eliminabile»), oppure è una finestra privata, che tiene circa 1 GB. Libera spazio sul disco, usa una finestra normale o l'app desktop, che legge il file dove si trova.",
   "error.fileInUse": "Il file «{file}» è in uso in un'altra scheda di mzLab. Riprova tra poco.",
   "err.analog.none": "Questa traccia non esiste nel file.",
+  "err.uv.manifest": "L'elenco dei file mzML del passo non è valido.",
   "err.pda.none": "Questo file non ha la matrice del DAD.",
   "err.subxic.many": "Formula troppo grande: {n} sottoformule. Scrivine una più piccola.",
   "err.subxic.lr": "L'XIC da formula serve un file ad alta risoluzione.",

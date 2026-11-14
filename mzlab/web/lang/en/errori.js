@@ -135,6 +135,7 @@ I18N.add("en", {
   "error.quotaWrite": "The browser stopped after {scritti_mb} MB of the about {serve_mb} MB needed, although it reports {libero_mb} MB free: usually the disk of the computer is nearly full (on a Mac, Finder counts «purgeable» space as free), or this is a private window, which keeps about 1 GB. Free space on the disk, use a normal window, or the desktop app, which reads the file where it is.",
   "error.fileInUse": "The file «{file}» is in use in another mzLab tab. Try again in a moment.",
   "err.analog.none": "This trace does not exist in the file.",
+  "err.uv.manifest": "The list of mzML files of the step is not valid.",
   "err.pda.none": "This file has no DAD matrix.",
   "err.subxic.many": "Formula too large: {n} sub-formulas. Write a smaller one.",
   "err.subxic.lr": "The XIC from a formula needs a high-resolution file.",
