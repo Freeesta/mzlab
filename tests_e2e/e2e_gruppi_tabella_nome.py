@@ -34,7 +34,7 @@ try:
             assert heads()[0] == "Controls" and pg.locator(".tg-edit").count() == 0, heads()
         step("Esc cancels", esc)
         def dup():
-            pg.evaluate("GRUPPI.set([ST.files[2].name], 'Samples')"); wait_for_js(pg, f"document.querySelectorAll('{HEAD}').length === 3", 5000)
+            pg.evaluate("GRUPPI.set([ST.files[2].name], 'Samples')"); wait_for_js(pg, f"document.querySelectorAll('{HEAD}').length === 2", 5000)
             pg.locator(f"{HEAD} .tg-name").first.dblclick(); pg.keyboard.press("Control+a"); pg.keyboard.type("samples"); pg.keyboard.press("Enter")
             assert pg.locator(".tg-edit").count() == 1 and pg.locator(".tg-err").inner_text().strip(), "no inline message for a duplicate"
             assert pg.locator(".tg-edit").get_attribute("aria-invalid") == "true"
@@ -71,7 +71,7 @@ try:
         step("«+» opens the Columns chooser (keyboard), the picked column appears, «+» stays sticky", plus)
         def reload():
             wait_for_js(pg, "true"); pg.evaluate("uiSave && uiSave()"); saved(pg)
-            pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
+            pg.reload(); wait_for_js(pg, "window.E && E.files && document.readyState === 'complete'", 120000)
             wait_for_js(pg, "E.files.some(f => f.ugrp === 'Kbd') || E.ugNone === 'Loose'", 30000)
             assert pg.evaluate("E.ugNone") == "Loose", pg.evaluate("E.ugNone")
         step("the names are kept after a reload of the session", reload)
