@@ -16,7 +16,7 @@ import verifica  # noqa: E402
 ELSEWHERE = {"sito", "dam", "veri", "wasm"}
 GREEN = Path(__file__).resolve().parent / "ci_e2e_verdi.json"   # the e2e that passed on the runner in the latest full nightly, with their seconds there: the only ones the safety set may take
 TEST_CAP_S = 60       # a test slower than this is not a representative: it would eat the budget of ten others
-BUDGET_S = 800        # sum of the nightly seconds of the safety set; the job's step took about 1.25x that on the runner, plus ~1.5 min of setup: the whole job stays under 22 of its 30 min
+BUDGET_S = 700        # sum of the nightly seconds of the safety set; the job's step took about 1.25x that on the runner, plus ~1.5 min of setup: the whole job stays under 22 of its 30 min
 
 
 def core_set() -> tuple[list[str], str]:
