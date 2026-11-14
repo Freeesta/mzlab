@@ -1,118 +1,38 @@
 //! The subcommands of `mzlab-cli` that take their arguments as a plain list, and the old command names still accepted for them.
 
-use crate::{
-    channels_cmd, flow_explain, ion_pattern_cmd, llm, manual_table_cmd, mol_cut_cmd, mol_label_cmd,
-    mol_search_cmd, msn_rules, peaks_auto_cmd, peaks_edges_cmd, samples_cmd, steps_cmd, Outcome,
-};
-
 #[path = "background_cmd.rs"]
-mod background_cmd;
+pub(crate) mod background_cmd;
 #[path = "dda_window_cmd.rs"]
-mod dda_window_cmd;
+pub(crate) mod dda_window_cmd;
 #[path = "ion_mz_cmd.rs"]
-mod ion_mz_cmd;
+pub(crate) mod ion_mz_cmd;
 #[path = "match_mz_cmd.rs"]
-mod match_mz_cmd;
+pub(crate) mod match_mz_cmd;
 #[path = "mol_check_cmd.rs"]
-mod mol_check_cmd;
+pub(crate) mod mol_check_cmd;
 #[path = "mol_cip_cmd.rs"]
-mod mol_cip_cmd;
+pub(crate) mod mol_cip_cmd;
 #[path = "mol_export_cmd.rs"]
-mod mol_export_cmd;
+pub(crate) mod mol_export_cmd;
 #[path = "mol_hilite_cmd.rs"]
-mod mol_hilite_cmd;
+pub(crate) mod mol_hilite_cmd;
 #[path = "mol_link_cmd.rs"]
-mod mol_link_cmd;
+pub(crate) mod mol_link_cmd;
 #[path = "mol_mech_cmd.rs"]
-mod mol_mech_cmd;
+pub(crate) mod mol_mech_cmd;
 #[path = "mol_sel_cmd.rs"]
-mod mol_sel_cmd;
+pub(crate) mod mol_sel_cmd;
 #[path = "peak_area_cmd.rs"]
 pub(crate) mod peak_area_cmd;
 #[path = "peak_split_cmd.rs"]
-mod peak_split_cmd;
+pub(crate) mod peak_split_cmd;
 #[path = "peak_window_cmd.rs"]
-mod peak_window_cmd;
-
-/// The subcommands that take their arguments as a plain list.
-pub(crate) const PLAIN: [&str; 28] = [
-    "llm",
-    "background",
-    "steps",
-    "explain-missing",
-    "msn-rules",
-    "channels",
-    "dda-window",
-    "ion-pattern",
-    "ion-mz",
-    "match-mz",
-    "mol-label",
-    "mol-anal",
-    "mol-check",
-    "mol-export",
-    "mol-cip",
-    "mol-hilite",
-    "mol-cut",
-    "mol-mech",
-    "mol-search",
-    "mol-sel",
-    "mol-link",
-    "samples",
-    "peak-edges",
-    "manual-table",
-    "peak-split",
-    "peak-auto",
-    "peak-area",
-    "peak-window",
-];
-
-/// Old command names still accepted on input, as `(old, new)`; they are never printed outside `--help`.
-const ALIASES: [(&str, &str); 3] = [
-    ("canali", "channels"),
-    ("campioni", "samples"),
-    ("peaks-edges", "peak-edges"),
-];
+pub(crate) mod peak_window_cmd;
 
 pub(crate) fn canonical(command: &str) -> &str {
-    ALIASES
-        .iter()
-        .find(|(old, _)| *old == command)
-        .map_or(command, |(_, new)| new)
-}
-
-pub(crate) fn run(command: &str, args: Vec<String>) -> Outcome {
-    match command {
-        "llm" => llm::run(args),
-        "steps" => steps_cmd::run(args),
-        "explain-missing" => flow_explain::run(args),
-        "msn-rules" => msn_rules::run(args),
-        "background" => background_cmd::run(args),
-        "channels" => channels_cmd::run(args),
-        "dda-window" => dda_window_cmd::run(args),
-        "ion-pattern" => ion_pattern_cmd::run(args),
-        "ion-mz" => ion_mz_cmd::run(args),
-        "match-mz" => match_mz_cmd::run(args),
-        "mol-label" => mol_label_cmd::run(args),
-        "mol-anal" => mol_label_cmd::run_anal(args),
-        "mol-check" => mol_check_cmd::run(args),
-        "mol-export" => mol_export_cmd::run(args),
-        "mol-cip" => mol_cip_cmd::run(args),
-        "mol-hilite" => mol_hilite_cmd::run(args),
-        "mol-cut" => mol_cut_cmd::run(args),
-        "mol-mech" => mol_mech_cmd::run(args),
-        "mol-search" => mol_search_cmd::run(args),
-        "mol-sel" => mol_sel_cmd::run(args),
-        "mol-link" => mol_link_cmd::run(args),
-        "samples" => samples_cmd::run(args),
-        "manual-table" => manual_table_cmd::run(args),
-        "peak-split" => peak_split_cmd::run(args),
-        "peak-auto" => peaks_auto_cmd::run(args),
-        "peak-area" => peak_area_cmd::run(args),
-        "peak-window" => peak_window_cmd::run(args),
-        _ => peaks_edges_cmd::run(args),
-    }
+    crate::cmd::canonical(command)
 }
 
 #[cfg(test)]
 #[path = "plain_tests.rs"]
-mod tests;
+pub(crate) mod tests;
