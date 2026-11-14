@@ -209,12 +209,12 @@ fn trace_choices() -> Vec<Param> {
     vec![
         Param::choice("area_from", "Area from", &["channel", "window", "xic"])
             .default_str("window")
-            .doc("Window (default at high resolution) sums every point of the quality window over the row's scans, so a wandering m/z keeps its area; channel sums only the points of the channel segment that found the row.")
+            .doc("Window (default at high resolution) sums every point of the quality window over the row's scans, so a wandering m/z keeps its area.")
             .tip("Window sums the quality trace over the row; xic integrates it by trapezoid on the real retention times.")
             .advanced(),
         Param::choice("stitch", "Stitch", &["strict", "wide"])
             .default_str("wide")
-            .doc("Wide (default at high resolution) also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row; strict joins only overlapping pieces or touching ones above 2e6.")
+            .doc("Wide (default at high resolution) also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row.")
             .advanced(),
     ]
 }

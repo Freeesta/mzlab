@@ -142,7 +142,8 @@ fn the_window_area_adds_its_sentence_to_the_detection() {
     );
     let channel = run("channel");
     assert!(
-        channel.contains("Feature areas were summed over the points of the trace of the m/z channel"),
+        channel
+            .contains("Feature areas were summed over the points of the trace of the m/z channel"),
         "{channel}"
     );
     assert!(!channel.contains("every point within the m/z window"));
@@ -165,7 +166,10 @@ fn the_wide_stitch_adds_its_sentence_to_the_detection() {
     };
     assert!(run("wide").contains("Pieces of a trace in neighbouring m/z channels were joined"));
     let strict = run("strict");
-    assert!(strict.contains("were joined when they overlapped by half of the shorter one"), "{strict}");
+    assert!(
+        strict.contains("were joined when they overlapped by half of the shorter one"),
+        "{strict}"
+    );
     assert!(!strict.contains("whatever their height"));
 }
 

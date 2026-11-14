@@ -767,13 +767,13 @@
                   {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
                   {
                     "enum":["channel","window","xic"],
-                    "default":"channel",
-                    "description":"Window sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
+                    "default":"window",
+                    "description":"Window (default at high resolution) sums every point of the quality window over the row's scans, so a wandering m/z keeps its area."
                   },
                   {
                     "enum":["strict","wide"],
-                    "default":"strict",
-                    "description":"Wide also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row."
+                    "default":"wide",
+                    "description":"Wide (default at high resolution) also joins touching low pieces of neighbouring channels, so an ion whose m/z wanders ±3 ppm stays one row."
                   },
                   {
                     "type":"number",
