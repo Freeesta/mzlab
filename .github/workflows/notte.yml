@@ -116,7 +116,13 @@ jobs:
           sudo fc-cache -f
           fc-match system-ui
       - name: Smoke tests
-        run: python tools/verifica.py --browser ${{ matrix.browser }} --fumo ${{ inputs.solo != '' && format('--solo {0}', inputs.solo) || '' }}
+        shell: bash
+        env:
+          SOLO: ${{ inputs.solo }}
+        run: |
+          args=(--browser "${{ matrix.browser }}" --fumo)
+          if [ -n "$SOLO" ]; then args+=(--solo "$SOLO"); fi
+          python tools/verifica.py "${args[@]}"
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
@@ -144,6 +150,9 @@ jobs:
         parte: [core, feat-a, feat-b]
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    # same commands as pages.yml's wasm-*: its records vouch for this build too (tools/ci_cargo_mtime.py)
+    env:
+      MZLAB_CACHE_JOB: wasm-${{ matrix.parte }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # the binaryen tarball of tools/wasm_opt.sh, the cache of pages.yml and sito-rust.yml: a GitHub release outage does not leave the night's .wasm unoptimised and over their caps
@@ -153,6 +162,9 @@ jobs:
           key: binaryen-version_133-${{ runner.os }}
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the build identity of pages.yml: option_env! in mzlab-core reads it, and a different value would rebuild every crate of the cache below
+      - name: Build identity of the WASM modules (as pages.yml)
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       - id: rcache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -162,7 +174,9 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: sito-v2-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          # pages.yml saves this build on every push to main (the nightly sito-v2 cache is evicted within the hour)
           restore-keys: |
+            pages-${{ matrix.parte }}-${{ runner.os }}-
             sito-v2-${{ matrix.parte }}-${{ runner.os }}-
             sito-v2-rust-${{ runner.os }}-
       - name: Reuse the compiled crates of the cache
@@ -177,10 +191,10 @@ jobs:
           if [ "${{ matrix.parte }}" = core ]; then
             tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
             wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-            tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2174976 engine @motore
+            tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --tetto motore)" engine @motore
             tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
             wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-            tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
+            tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --tetto librerie)" libraries @motore
             tools/build_lettori_wasm.sh site/static
           else
             tools/build_feat_wasm.sh site/static "${{ matrix.parte == 'feat-a' && 'a' || 'b' }}"

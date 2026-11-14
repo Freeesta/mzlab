@@ -218,7 +218,7 @@ impl State {
     /// `feat/table`: the table held by the last `feat/align` or `feat/evidence`. `kind` = `view`, `report`, `qc`, `check` (`tabcheck/1`; `polarity`, `options`), `plausible` (`plausible/1`; `options`), `samples`, `export` (`export_kind`), `ms2`
     /// (`export_kind`, the indexes of `names`) as the Pipeline panel asks of `mzlab-feat-table-wasm`; `bytes` = a piece (`off`, `len`) of the `.mzfeat`.
     fn feat_table(&self, p: &Value) -> Result<Answer> {
-        use mzlab_feat_table_wasm::core as t;
+        use mzlab_ops::run::table::core as t;
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let kind = s("kind");
         if kind == "samples" {
@@ -299,14 +299,14 @@ impl State {
     /// `feat/table` with `kind` = `check`: the `tabcheck/1` of the held table under the view `spec`; `options` is the JSON text of `core::tabcheck_json`. `plausible`: the `plausible/1` read with the `options` text of `plausible::Limits::from_json`.
     fn check_text(kind: &str, at: &mut Slice, size: u64, p: &Value, pol: i32) -> Result<String> {
         if kind == "plausible" {
-            return mzlab_feat_table_wasm::core::plausible_json(
+            return mzlab_ops::run::table::core::plausible_json(
                 at,
                 size,
                 p["options"].as_str().unwrap_or(""),
             );
         }
         let s = |k: &str| p[k].as_str().unwrap_or("");
-        mzlab_feat_table_wasm::core::tabcheck_json(
+        mzlab_ops::run::table::core::tabcheck_json(
             at,
             size,
             s("samples"),

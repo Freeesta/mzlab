@@ -21,3 +21,7 @@ def test_functions_and_boundary():
     base = {"file": {}, "funzioni": {"b.js::f": 100}}
     assert controlla.neighbor_tolerance({"file": {}, "funzioni": {"b.js::f": 90}}, base) == []
     assert len(controlla.neighbor_tolerance({"file": {}, "funzioni": {"b.js::f": 91}}, base)) == 1
+
+
+def test_the_index_has_no_size_cap_but_keeps_the_line_cap():
+    assert "INDICE.md" in controlla.SIZE_EXEMPT and "INDICE.md" not in controlla.DOC_SKIP

@@ -6,4 +6,5 @@ chiavi = { feat = 1, proofs = 2, finder = 4, finder_edge = 5, finder_msn = 6 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 1716224
+misura = 1711946
 nota = "detect, proofs, finder, finder_edge and finder_msn in ONE .wasm; +4.4 % for the isotope finder of features.detect, decision of the Coordinator; the only cap of the group"

@@ -78,3 +78,24 @@ def test_plain_commands_of_the_cli_are_known(tmp_path):
     (root / "docs/agenti/INDICE.md").write_text("see docs/agenti/area.md and per-agenti.md\n")
     assert g.known_commands(root) == {"flow", "llm", "steps"}
     assert g.check_guides(root)[1] == []
+
+
+def _index(root, *rows):
+    (root / "docs/agenti/INDICE.md").write_text("# x\n| Se tocchi… | Leggi |\n|---|---|\n" + "\n".join(rows) + "\n")
+    return g.check_index_rows(root)[1]
+
+
+def test_index_rows_one_sorted_short_row_per_file(tmp_path):
+    root = tree(tmp_path)
+    assert _index(root, "| a | `docs/agenti/area.md` |", "| c | `docs/agenti/cli.md` |", "| ext | `tools/lab/README.md` (x) |") == []
+    assert "exactly one" in _index(root, "| a | `docs/agenti/area.md`, `cli.md` |")[0]
+    assert "exactly one" in _index(root, "| a | `docs/agenti/area.md` (see `cli.md`) |")[0]
+    assert "not after" in _index(root, "| c | `docs/agenti/cli.md` |", "| a | `docs/agenti/area.md` |")[0]
+    assert "not after" in _index(root, "| a | `docs/agenti/area.md` |", "| b | `docs/agenti/area.md` |")[0]
+    assert "300" in _index(root, "| " + "x" * 300 + " | `docs/agenti/area.md` |")[0]
+
+
+def test_the_real_index_has_one_row_per_area_file():
+    assert g.check_index_rows(g.ROOT)[1] == []
+    rows = [line for line in (g.ROOT / "docs/agenti/INDICE.md").read_text(encoding="utf-8").splitlines() if line.startswith("|") and "`docs/agenti/" in line.rsplit("|", 2)[-2]]
+    assert sorted(line.rsplit("`", 2)[-2].rsplit("/", 1)[-1] for line in rows) == sorted(p.name for p in (g.ROOT / "docs/agenti").glob("*.md") if p.name != "INDICE.md")

@@ -1,7 +1,7 @@
 //! The query of `table.match`: the MGF of the rows of the aligned table that have an MS2 spectrum (`core::ms2_file`, so the page export and the plan pick the same scan),
 //! with the id of the row as the accession the matcher names its query by. One function for `flow run` (`mzlab-cli`) and for the browser (`table_match_rows` of the bridge).
 
-use crate::{core, pol};
+use super::{core, pol};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{Out, Value};

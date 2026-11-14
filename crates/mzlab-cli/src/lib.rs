@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::budget::{sha256_hex, MemBudget};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
-use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
+use mzlab_ops::run::table::core::{samples_json, table_file};
 
 mod channels_cmd;
 mod cmd;
@@ -297,6 +297,8 @@ mod flow_ident_tests;
 mod flow_json_tests;
 #[cfg(test)]
 mod flow_kmd_tests;
+#[cfg(test)]
+mod flow_level_ms2_tests;
 #[cfg(test)]
 mod flow_level_tests;
 #[cfg(test)]

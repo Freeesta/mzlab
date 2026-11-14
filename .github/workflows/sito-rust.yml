@@ -106,10 +106,10 @@ jobs:
           mkdir -p site/static
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2174976 engine @motore
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --tetto motore)" engine @motore
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
+          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --tetto librerie)" libraries @motore
           # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
           tools/build_lettori_wasm.sh site/static
       # saved right after the build, so a red e2e does not lose the cache (nightly main only)
@@ -354,9 +354,11 @@ jobs:
           tools/build_feat_wasm.sh site/static manifest
           python3 tools/build_site.py --build-json      # the service worker's manifest must list the .wasm now in place
       - name: e2e on the built site
+        env:
+          SOLO: ${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_indice_parallelo,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_lettori_modulo,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf,e2e_flow_motore,e2e_flow_msn,e2e_msn_un_clic,e2e_flow_live,e2e_flow_web_plausible,e2e_flow_web_rtpredict,e2e_flow_web_lookup' }}
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
-          python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_indice_parallelo,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_lettori_modulo,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf,e2e_flow_motore,e2e_flow_msn,e2e_msn_un_clic,e2e_flow_live,e2e_flow_web_plausible,e2e_flow_web_rtpredict,e2e_flow_web_lookup' }}"
+          python tools/verifica.py --fumo --browser chromium --solo "$SOLO"
       # post-merge net, push to main only (never a pull request, not a required check): the areas that broke unseen between two nightly runs (groups, load folder, Ketcher focus, integration, QA/QC, panel headers, tour); a red step marks the run of the commit red in the actions list
       - name: e2e of the user paths (push to main only)
         if: ${{ !cancelled() && github.event_name == 'push' && !inputs.solo }}

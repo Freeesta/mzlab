@@ -327,6 +327,11 @@ jobs:
             target
           key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           restore-keys: sito-e2e-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        if: steps.solo.outputs.solo != 'true'
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: Install
         if: steps.solo.outputs.kind != 'doc'
         run: |
@@ -351,6 +356,12 @@ jobs:
           name: wasm-dimensioni
           path: wasm-dimensioni.json
           retention-days: 3
+      # incremental data only bloats the cache; the record vouches for the sources of the crates this run compiled, so the next run reuses them
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        run: |
+          find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
+          python3 tools/ci_cargo_mtime.py record
       # saved after the smoke tests have built the site and its .wasm (main only; a red test does not lose it)
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
