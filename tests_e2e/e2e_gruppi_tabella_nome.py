@@ -18,6 +18,7 @@ try:
         stage(pg, fs)
         pg.evaluate("carica('gruppi.js').then(() => { const n = ST.files.map(f => f.name); GRUPPI.set(n.slice(0, 2), 'Blank'); })")
         wait_for_js(pg, f"document.querySelectorAll('{HEAD}').length === 2", 10000)
+        pg.click("text=Tabella dei campioni"); wait_for_js(pg, "!!document.querySelector('.tg-name') && document.querySelector('.tg-name').offsetWidth > 0", 5000)
         def heads(): return pg.evaluate(NAMES)
         def dbl():
             assert heads() == ["Blank", "Senza gruppo"] or heads() == ["Blank", "Ungrouped"], heads()
