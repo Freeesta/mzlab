@@ -1,6 +1,6 @@
 # Modulo «aperti»: formati aperti (mzML con numpress, mzML e mzXML gzip, mzXML)
 
-Famiglia `aperti` (`crates/mzlab-lettori/src/open/`, feature `aperti`, tetto 393 216 B, `.wasm` in `wasm-lettori/aperti/`). Contratto dei lettori e caricamento a richiesta: `lettori-modulo.md`, `estendere.md`.
+Famiglia `aperti` (`crates/mzlab-lettori/src/open/`, feature `aperti`, cap in `tools/build_lettori_wasm.sh` (copiato in `tests/test_lettori_wasm.py`), `.wasm` in `wasm-lettori/aperti/`). Contratto dei lettori e caricamento a richiesta: `lettori-modulo.md`, `estendere.md`.
 
 ## mzML con MS-Numpress (`open/mzml_numpress.rs`)
 - `numpress.rs` (`mzlab-core`, solo con `estesi`, fuori dal motore): decodifica `Np::{Linear, Pic, Slof}` (MS:1002312/13/14, e le forme con zlib 1002746/47/48 via `of_accession`); `decode(np, byte, atteso)` limita i valori a `atteso` (8 M se 0) e dà `err.file.numpress`; `decode_text` aggiunge base64 e zlib limitato (`error.memoryBudget` oltre `max_bytes`); `plain_base64` scrive f64 piani; i codificatori `encode_linear/pic/slof` servono ai test.

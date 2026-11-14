@@ -1,5 +1,5 @@
 # Level 2 of the tests (CLAUDE.md): quick checks on every pull request and on every push to main (goal < 6 min).
-# Unit tests on Linux with the oldest supported and the newest Python, JavaScript syntax, the e2e smoke tests on Chromium.
+# Unit tests on Linux (Python 3.11 shards; the required `pytest (ubuntu-latest, 3.14)` name is a gate, 3.14 really runs only in notte.yml), JavaScript syntax, the e2e smoke tests on Chromium.
 # The rest (Mac, Windows, Firefox, WebKit and all the e2e) runs once a day on main: notte.yml.
 name: test
 
@@ -10,8 +10,6 @@ on:
   push:
     branches: [main]
   pull_request:
-  # merge queue: the required checks must report on the queue branch too (the base of a pull request is not set there: the jobs run everything)
-  merge_group:
 
 permissions:
   contents: read
