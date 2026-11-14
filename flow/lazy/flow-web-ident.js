@@ -8,7 +8,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const STEPS = ["spectra.ms2", "spectra.match", "table.match", "formula.ms1", "formula.ms2", "annot.level"];
+  const STEPS = ["spectra.ms2", "spectra.lookup", "spectra.match", "table.match", "formula.ms1", "formula.ms2", "annot.level"];
   /** the largest mzML the page reads into memory for the step (bytes); a bigger file stays with the computer */
   const MAX_MZML = 256 * 1024 * 1024;
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
@@ -76,12 +76,27 @@
   };
 
   /** the result of a match job kept like the other texts, under the key of the job and the library (the plan does not hold the library) @param {any} x @param {any} spec @param {any} inst @param {string} key
-   * @param {number} t0 @param {string} text */
-  const keep = async (x, spec, inst, key, t0, text) => {
-    const p = await kit().getPool(), r = { name: inst.id + ".json", text };
+   * @param {number} t0 @param {string} text @param {string} [name] */
+  const keep = async (x, spec, inst, key, t0, text, name = inst.id + ".json") => {
+    const p = await kit().getPool(), r = { name, text };
     await F.webMsn.keep(r.name, r.text); await J().remember(p, key, r);
     x.files.set(inst.id, { id: inst.id, ...r });
     await x.call("finished", { job: J().job(spec), result: { ms: performance.now() - t0 } });
+  };
+
+  /** spectra.lookup: the MGF of the entries of the library file of the plan that carry the value (`flow_lookup` of the `lib` .wasm, the function `flow run` calls); an `.mzlib` stays with the computer @param {any} x @param {any} spec @param {any} inst */
+  const lookup = async (x, spec, inst) => {
+    const j = J().job(spec), p = await kit().getPool(), library = await textOf(x, p, inst, "library");
+    if (!library || library.name.endsWith(".mzlib")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha(spec.key + "\n" + await J().sha(library.text)), hit = await J().recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now(), params = paramsOf(x, inst);
+    return J().detached(x, spec, inst, async () => {
+      let text;
+      try { text = (await lib()).flow_lookup(params, library.name, enc(library.text)); } catch (e) { throw asError(e); }
+      await keep(x, spec, inst, key, t0, text, inst.id + ".mgf");
+    });
   };
 
   /** spectra.match with the algorithms other than `tree`: the query (the MGF of a spectra.ms2 of this plan, or a file of the plan) against the library file of the plan @param {any} x @param {any} spec @param {any} inst */
@@ -212,5 +227,5 @@
     return el("div", { class: "fl-results" }, pick, F.btn("import", "Choose the library file", () => pick.click(), "Library file…"), say);
   });
 
-  F.webIdent = { ms2, match, tableMatch, ms1Formula, ms2Formula, level, textOf, STEPS };
+  F.webIdent = { ms2, lookup, match, tableMatch, ms1Formula, ms2Formula, level, textOf, STEPS };
 })();

@@ -284,6 +284,7 @@ I18N.add("en", {
   "err.flow.match.decoysAlgorithm": "Decoys cannot be used with the tree search: switch them off or choose another algorithm.",
   "err.flow.match.format": "The library file {file} has a format the program does not know.",
   "err.flow.match.library": "The library cannot be read: the file is damaged or has a wrong format.",
+  "err.flow.lookup.value": "Write what to look for: the value is empty, or for the precursor it is not a number.",
   "err.flow.param.range": "This value is outside the allowed range.",
   "err.flow.param.type": "The value of {param} in {instance} is not of the right type ({detail}).",
   "err.flow.param.unknown": "The step {instance} has no parameter named {param}.",

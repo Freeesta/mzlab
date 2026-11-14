@@ -284,6 +284,7 @@ I18N.add("it", {
   "err.flow.match.decoysAlgorithm": "Le esche non si possono usare con la ricerca ad albero: spegnile o scegli un altro algoritmo.",
   "err.flow.match.format": "Il file di libreria {file} ha un formato che il programma non conosce.",
   "err.flow.match.library": "La libreria non si legge: il file è danneggiato o ha un formato sbagliato.",
+  "err.flow.lookup.value": "Scrivi cosa cercare: il valore è vuoto o, per il precursore, non è un numero.",
   "err.flow.param.range": "Questo valore è fuori dall'intervallo permesso.",
   "err.flow.param.type": "Il valore di {param} in {instance} non è del tipo giusto ({detail}).",
   "err.flow.param.unknown": "Il passo {instance} non ha un parametro chiamato {param}.",
