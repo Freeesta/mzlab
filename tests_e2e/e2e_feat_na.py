@@ -1,6 +1,7 @@
 """Cells not measured (`CELL_NA`) in the `.wasm` and the native engine: a series cut in RT (`tools/feat_ritagliata.py`, two files kept only between 3 and 10 min) gives
 cells with state 4 in the table, and `e2e_feat_run.py` (the same series, the `rt_range` recipe too) finds every file and the table byte for byte the native ones.
 Needs cargo, the wasm32 target, wasm-bindgen and numpy."""
+# covers: tools/feat_ritagliata.py
 import os, shutil, struct, json, subprocess, sys, tempfile
 from collections import Counter
 from pathlib import Path

@@ -1,6 +1,7 @@
 """The copy of a dropped file does not wait for the script of the hash worker (impronta-worker.js): the server holds that script until the first
 file has loaded, as a slow first visit queues it behind the page's own downloads. The file must still load (its fingerprints taken in place,
 impronta.js), and a second file, dropped once the script has arrived, must load too. Synthetic files only."""
+# covers: mzlab/web/impronta
 import sys, os, threading, functools
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from http.server import SimpleHTTPRequestHandler

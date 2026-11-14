@@ -1,4 +1,5 @@
 """Addition B: internal blank (constant mean/median, line between two stretches), band + chip, clip negatives, undo, areas on the subtracted trace, notes in tables/xlsx/PNG metadata, spectrum subtraction, reload."""
+# covers: mzlab/web/fondo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

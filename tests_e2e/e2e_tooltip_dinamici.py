@@ -3,6 +3,7 @@ high-resolution DDA, .wiff Q1 / PI / EPI and SIM), every element that carries a 
 collected in Italian and in English, and the real hover is measured for the group headers, every HTML tooltip and the longest texts. Fails on a tooltip longer than 60
 characters, with more than one sentence, wider than 28ch or taller than 3 lines when it is drawn. The static twin over the catalogs is tests/test_tooltip_corti.py.
 Needs the site (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_tooltip_dinamici.py"""
+# covers: mzlab/web/tooltip.js
 import json, os, re, subprocess, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

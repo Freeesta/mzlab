@@ -1,6 +1,7 @@
 """Guided tour of the Disegno view (TOUR.disegno(), chapter 3): 7 steps, each finds its visible target (the zoom buttons live inside the Ketcher iframe), the
 arrow points at it, the steps about the right-hand panels show them if the student hid them and hide them again at the end, «Fine» and Escape close the tour
 without touching the state of the Dati invitation (mzlab.tour.lr), English texts."""
+# covers: mzlab/web/disegno-etichette.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

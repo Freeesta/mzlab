@@ -1,6 +1,7 @@
 """Capacities of the browser (capacita.js, avviso-capacita.js): with ?cap-off=<name> the function bound to that capacity is off, with the common notice
 («non disponibile in questo browser. Usa l'app») and the link to the app; without it no notice at all; Dati with an example file works for every capacity that is not
 the engine's; the probes of the page cost less than 5 ms (median of 5)."""
+# covers: mzlab/web/compat, mzlab/web/capacita
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

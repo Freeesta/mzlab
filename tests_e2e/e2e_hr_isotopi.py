@@ -1,5 +1,6 @@
 """H6: the isotope simulation of a high-resolution spectrum takes the resolving power into account: the fine structure of M+2 is ONE peak at R 27 000 (m/z 319) and separates at high R;
 the M+1/M ratio of the formula; the menu entry sets R."""
+# covers: mzlab/web/hr.js, mzlab/web/banco.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

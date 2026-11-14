@@ -1,5 +1,6 @@
 """One way to show errors: an uncaught error and an unhandled rejection give a short role=alert message with «Copy details»;
 the workflow messages use the program dialog, never alert()."""
+# covers: mzlab/web/workflow.js, mzlab/web/errori.js
 import os
 import sys
 

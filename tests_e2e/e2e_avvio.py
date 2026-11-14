@@ -1,5 +1,6 @@
 """Start-up of the site: static title, ONE status line with a progress bar, and a saved-files database that is blocked by another tab
 or never answers (message, «start from scratch» button = same clean slate as «New session»). Build first: python tools/build_site.py"""
+# covers: mzlab/web/qqq-db.js, mzlab/web/browser, mzlab/web/qqq-db, mzlab/web/sw.js
 from pathlib import Path
 import re, subprocess, sys, time
 from playwright.sync_api import sync_playwright

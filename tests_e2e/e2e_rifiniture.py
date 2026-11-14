@@ -1,5 +1,6 @@
 # e2e_rifiniture: loading animations, progress bar for slow API calls, Disegno panel toggle and label colours, font / high contrast in the gear.
 # Synthetic data (tests_e2e/synth.py): no real lab files needed.
+# covers: mzlab/web/draw.js, mzlab/web/an-, mzlab/web/aggiorna.js, mzlab/web/settings.js
 import os, sys, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth

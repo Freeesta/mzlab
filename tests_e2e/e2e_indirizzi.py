@@ -1,5 +1,6 @@
 """Separate addresses: #/data and #/draw open the right view from cold (title per view, Back/Forward walk the views); the retired Teoria addresses
 (#/theory, #/practice, #/teoria) open the start view."""
+# covers: mzlab/web/telefono-scheda.js
 import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

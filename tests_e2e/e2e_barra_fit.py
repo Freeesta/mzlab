@@ -1,4 +1,5 @@
 # e2e_barra_fit: the toolbar fits at six widths (nothing overflows, the labels step down as the room shrinks), fit() forces few layouts, and Ctrl+B still toggles the drawer
+# covers: mzlab/web/barra.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

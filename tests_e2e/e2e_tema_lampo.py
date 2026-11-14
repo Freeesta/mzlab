@@ -1,5 +1,6 @@
 """No flash of the wrong theme: while the stylesheets and scripts of a page are still being fetched (delayed on purpose) the first frames already have the
 background of the theme (system dark / saved dark / saved light), in the app."""
+# covers: tools/tema_testa.py
 import sys, os, io, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import lib

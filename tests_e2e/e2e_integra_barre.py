@@ -1,5 +1,6 @@
 """Manual integration window: the area is the trace between the two bars cut vertically down to zero (no sloped baseline), the label and the area table show
 the same number; the bar handles are 44 px targets that a finger/pen drags (and the arrows move); the cursor dot is hidden while the tool is on."""
+# covers: mzlab/web/integra-zero.js, mzlab/web/integra-estremi.js, mzlab/web/barre-maniglie.js
 import sys, os, math; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

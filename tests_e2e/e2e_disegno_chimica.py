@@ -2,6 +2,7 @@
 because the piece molfile carries M  ISO, M  RAD, wedge/hash bonds and atom parity. The labels under the structures and above the arrows come from the engine
 (`etich/1`): isotopes, every element (Pt), «massa nominale»/«massa esatta», «isotopologo» across an arrow, the copied formula of a dianion in brackets.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static."""
+# covers: mzlab/web/disegno-molfile.js, mzlab/web/disegno-etichette.js, mzlab/web/draw.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

@@ -1,5 +1,6 @@
 """Gradient and analog traces: the Method window has no gradient section (and no way to enter one) for a file without a gradient (mzML files never have one),
 the file lists its pressure trace, the overlays of the TIC; the answers of api/analog and api/gradient."""
+# covers: mzlab/web/registro-serie.js, mzlab/web/gradiente.js, mzlab/analog.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import numpy as np

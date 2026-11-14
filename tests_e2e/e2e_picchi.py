@@ -1,5 +1,6 @@
 """H7: settings of the automatic integration: with the defaults the edges are exactly those of the algorithm that always was (values recorded before the change on four synthetic traces),
 every setting of the dialog really changes the result, stored keys outside the dialog are dropped, and the dialog fits without scrolling at 1280x720 and 1366x768."""
+# covers: mzlab/web/grafici.js, mzlab/web/picchi.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

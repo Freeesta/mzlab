@@ -1,5 +1,6 @@
 """Ctrl+wheel zoom of the TIC and of the spectrum: one draw() of the zoomed panel per wheel step, and the picture is the one a fresh draw gives
 (same y axis labels, same margins: nothing is drawn late). Three steps inside one frame of the TIC: one draw(), and the view three separate steps give."""
+# covers: mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

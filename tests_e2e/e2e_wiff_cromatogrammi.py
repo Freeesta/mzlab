@@ -3,6 +3,7 @@ sample, two MRM experiments, Full Scan alone; no laboratory data): the index cou
 `mzlab-cli convert` lists them (tests/test_wiff_cromatogrammi.py compares the arrays); an index of an older generation of the readers (`"reader":1` in its
 `source`) is refused when the sample is opened again and built once more. Needs the site and the .wasm (python3 tools/prepara_sito.py).
 Run from the repo root: python3 tests_e2e/e2e_wiff_cromatogrammi.py"""
+# covers: tools/wiff_cromatogrammi.py, crates/mzlab-core/src/wiff/
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

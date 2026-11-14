@@ -2,6 +2,7 @@
 system (a REAL FileSystemDirectoryHandle: it is stored in IndexedDB and found again after a reload). Steps: grey rows (data / others), unknown files absent, a click loads one
 (the row turns «loaded»), the handle is remembered across a reload, a file added to the folder shows up when the tab is shown again, the permission asked again with a click,
 «Forget», and the message of a browser without the API. What a real folder of the disk adds (the picker window, FileSystemObserver on it) cannot be run in the cloud."""
+# covers: mzlab/web/cartella-puntata.js
 import sys, os, base64, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pathlib import Path
 from lib import *

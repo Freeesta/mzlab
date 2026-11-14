@@ -3,6 +3,7 @@ analogues are searched, the library survives a reload, an old MZL1 archive (made
 replaced (and a second death within a minute sends the page to the JavaScript path), the .wasm stays under 600 KB, and an iPad with the Mac user agent gets the
 block cache of tablets (the page names the device to the worker).
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm-lib)."""
+# covers: mzlab/web/libreria, crates/
 from pathlib import Path
 import json, os, shutil, subprocess, sys, time
 from playwright.sync_api import sync_playwright

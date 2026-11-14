@@ -1,4 +1,5 @@
 """Prompt 2, block 4: the «Perdite neutre» tab: simple view, Dettagli, isobaric groups, Cerca Δm (62, 72), polarity filter, entry from the ruler."""
+# covers: mzlab/web/tables.js, mzlab/web/perdite.js, mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

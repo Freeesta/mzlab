@@ -2,6 +2,7 @@
 language switch, theme switch, narrow window, keyboard only, reduced motion, undo/redo, rapid repeated clicks), on synthetic files only.
 Every cell logs page errors, console errors, unhandled rejections, MZLAB_LR_MISS entries, empty panels and axe violations; a cell with
 anything logged fails. Needs the built site (tools/build_site.py). Run from the repo root: python3 tests_e2e/e2e_matrice_bug.py"""
+# covers: mzlab/web/scroll.js, mzlab/web/shell.js, mzlab/web/lr, mzlab/web/lista-file.js, mzlab/web/app.css, mzlab/web/qaqc.js, mzlab/web/profilo.js
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

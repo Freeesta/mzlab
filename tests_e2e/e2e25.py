@@ -1,5 +1,6 @@
 # e2e25: settings gear (3 controls), chart colours (4 palettes, colours by time on the Full Scan tab), "Nuova sessione" with warning and cleanup.
 # Synthetic data (tests_e2e/synth.py): no real lab files needed.
+# covers: mzlab/web/settings.js
 import os, sys, re, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth

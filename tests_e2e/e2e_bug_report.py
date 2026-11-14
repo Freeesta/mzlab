@@ -1,6 +1,7 @@
 """«Report a bug» (group «Segnala un bug» of the settings panel, bug-report.js): one field, no header button; Esc closes the panel and gives the focus back to the gear;
 the diagnostics hold NO name of a loaded file (a file with a recognisable name is loaded) nor of an error; «Copy» fills the clipboard; «GitHub» has the expected link (form bug.yml, label bug, <= 6000 characters).
 Run from the repo root: python3 tests_e2e/e2e_bug_report.py"""
+# covers: mzlab/web/bug-report
 import os, shutil, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

@@ -1,6 +1,7 @@
 """SIM channels whose file gives no Q1 (synthetic SIM .wiff of tools/wiff_sim.py whose method names no ion, no laboratory data): the seven channels stay apart, each is called
 «ione N» (never «null»), the picker has one row per channel, the chromatogram menu extracts one of them, the plot keeps one trace and the title names it, the banner of a long list says «SIM files»,
 and the method panel shows «—» for what the file does not say. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_senzaq1.py"""
+# covers: mzlab/web/sim-ui.js, mzlab/web/titoli.js, tools/wiff_sim.py
 import subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,4 +1,5 @@
 """MS2/Full scan: live spectrum under the chromatogram (double click), frozen older ones, group move, arrows (MS2: nearest scan with data), reload."""
+# covers: mzlab/web/legende.js, mzlab/web/affianca.js, mzlab/web/layout.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

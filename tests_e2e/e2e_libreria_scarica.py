@@ -3,6 +3,7 @@ tools/librerie_pacchetti.py) and served from site/static/librerie/. Nothing is r
 download resumes from the first missing piece; the old package stays until the new one is verified; a cancel keeps the verified pieces; «update available» is known
 at the next visit without asking the network.
 Needs the site: python tools/build_site.py and the engine in site/static/wasm-lib (built here when cargo and wasm-bindgen exist; the CI builds it in pages.yml)."""
+# covers: mzlab/web/libreria
 import base64, json, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright

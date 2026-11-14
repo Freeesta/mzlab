@@ -1,6 +1,7 @@
 """A spectrum with 200 000 centroids and a 200 000-point profile: drawn without RangeError (no Math.max(...a) on the arrays), the nearest peak under the pointer
 equals the brute-force one, the intensity axis fits the window, and the same holds when the m/z array is not ascending.
 Drawn as bars, many more peaks than pixels draw the tallest of each pixel column only: the same set as a brute-force pass, after a zoom and a resize too."""
+# covers: mzlab/web/grafici.js, mzlab/web/picchi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

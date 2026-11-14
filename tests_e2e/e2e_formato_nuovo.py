@@ -1,5 +1,6 @@
 """An index written by a newer program (header version above the known one) in OPFS: the file is uploaded again, the page warns (error.newerFormat), the index is not
 touched and not rebuilt. An index of the known version is replaced as before. Synthetic file."""
+# covers: mzlab/web/manifesto.js, mzlab/web/archivio.js, mzlab/web/rust-worker.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

@@ -1,5 +1,6 @@
 """Disegno: the quick rings are a column on the left of Ketcher's tools (no bottom row), the editor fits the window, the first zoom is
 above 100 %, no tooltip on the canvas, and the «Strumenti dell'editor» card shows/hides groups of buttons (kept after a reload)."""
+# covers: mzlab/web/disegno-font.js, mzlab/web/disegno-barra.js, mzlab/web/draw.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

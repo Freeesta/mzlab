@@ -1,4 +1,5 @@
 """Block F1: Disegno, mass labels with 0-5 decimals (half-up); an old notebook with labDec 0-4 still works."""
+# covers: mzlab/web/draw.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

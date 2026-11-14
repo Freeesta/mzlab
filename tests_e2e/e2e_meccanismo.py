@@ -2,6 +2,7 @@
 well formed and drawn over the canvas; a full-head arrow from a methyl (no lone pair) is named as malformed and dashed; the keyboard path (start and
 end from the selection) adds a row; lone pairs drawn beyond what the atom holds are named; «•+» puts charge and radical on the selected atom; the
 arrows survive a .ket round trip and go out in the SVG export; the row button removes an arrow. The check says whether an arrow is well formed only."""
+# covers: mzlab/web/disegno-meccanismo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

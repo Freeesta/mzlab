@@ -2,6 +2,7 @@
 flow-imported.js in a host page with a stand-in for the Library module (two imported lists and their bytes): ticking adds `imported-ID.mzsus` as an input of type library with its SHA-256 and the b64 content in
 S.samplesJson and wires it to `imported_lists` (the package port stays empty); a second step shares the file; unticking removes the wire, and the input once no step uses it; the box is keyboard-reachable.
 No site build, no cargo."""
+# covers: mzlab/web/libreria-normative.js, flow/lazy/flow-imported.js
 import sys, os, json, hashlib, tempfile, shutil, threading; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 

@@ -2,6 +2,7 @@
 and as the native one (`cargo run --example mzidx`, when cargo is there); with a small budget too (rounds from the scratch file). Without cross-origin
 isolation the helpers asked for are not started and the builder gives the same bytes, with no error. Build first: python tools/build_site.py
 `--browser firefox|webkit` runs it in another engine."""
+# covers: mzlab/web/idx, crates/mzlab-core/src/mzml
 import base64, hashlib, http.server, json, random, shutil, socketserver, struct, subprocess, sys, tempfile, threading, zlib
 from functools import partial
 from pathlib import Path

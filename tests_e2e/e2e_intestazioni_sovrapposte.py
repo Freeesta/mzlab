@@ -1,5 +1,6 @@
 """Panel headers: no control paints over another at 1000/1280/1600/2000 px and on iPad (1024x768, 1366x1024, touch), for the MRM panel after an integration
 (its integration controls appear later and the «⋯» menu must take them into account) and for the chromatogram, spectrum, XIC and map of a full-scan file."""
+# covers: mzlab/web/mappa.js, mzlab/web/app.css, mzlab/web/pannelli.js
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

@@ -1,5 +1,6 @@
 """Instrument files (.lcd, .wiff2, .d: the ones the engine cannot convert; .raw and .wiff are converted by it, lettura nativa) dropped in the start page: ONE notice for the whole loading (count + collapsible names, max 5 + «and N more»),
 the openable mzML still loads, no repeated notice for the same group, and the guide «Non hai file mzML?» opens from the button and from the keyboard."""
+# covers: mzlab/web/shell.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth

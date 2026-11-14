@@ -1,5 +1,6 @@
 """Prompt 2, block 2: header of the chromatogram in one row with the Parametri popover and chips, legend inside the graph (none with one file),
 no icons in the tabs (the tooltip of a tab shows Q1 -> q2 -> Q3), TIP_DELAY, whole file row clickable, gentle zoom line on the axes."""
+# covers: mzlab/web/affianca.js, mzlab/web/layout.js, mzlab/web/pannelli.js, mzlab/web/tooltip.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

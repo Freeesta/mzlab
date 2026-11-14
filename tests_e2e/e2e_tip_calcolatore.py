@@ -1,5 +1,6 @@
 """Every control of the Adducts & losses page (calculator, choices row, the three tabs) and of the floating Calculator window has a short tooltip of its own, in Italian
 and English, with no data file: the mouse shows it after the rest delay, a long touch press shows it without pressing the button, and Tab reaches the controls with a focus ring."""
+# covers: mzlab/web/tooltip.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

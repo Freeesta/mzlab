@@ -1,5 +1,6 @@
 """RT x nm map of the PDA of a SCIEX .wiff in the browser: the engine reads the optical detector of the pair, the map offers the PDA choice, draws the matrix with
 the wavelength axis in nm and the table of the data (RT, nm, mAU) is there. Synthetic pair (tools/wiff_riferimento.py), no laboratory data."""
+# covers: mzlab/web/uv-spettro.js
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path

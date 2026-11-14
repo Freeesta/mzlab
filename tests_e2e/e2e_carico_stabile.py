@@ -3,6 +3,7 @@ landing (drop area, its box, the box of the notices #up: no card, no bar over it
 layout-shift entries of the work area in that window add up to ~0 (the rows of the side list go one by one as their files open). The first file read opens by itself (once): the landing frames come first, then only
 the frames of the open panels, never back; at the end the other files wait in the list and no loading row is left. Needs the
 site and the .wasm (python tools/build_site.py + the CI build). Run: python3 tests_e2e/e2e_carico_stabile.py"""
+# covers: mzlab/web/conversione.js, mzlab/web/progresso.js
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

@@ -2,6 +2,7 @@
 are answered by the Rust engine, Pyodide is never downloaded (the requests are counted, `MZLAB_LR_MISS` stays empty); the JSON equals the one of the Python reference
 (pyref.py: mzlab/api.py in this process); the files are still there after a reload (OPFS).
 Needs the site: python tools/build_site.py; the .wasm is built here when cargo and wasm-bindgen exist (the CI builds it in site/static/wasm)."""
+# covers: mzlab/web/browser, mzlab/web/lr, mzlab/web/qqq-db, mzlab/web/idx, mzlab/web/rust-, mzlab/web/lettura-sync.js, mzlab/web/idx-worker.js
 import shutil, subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
