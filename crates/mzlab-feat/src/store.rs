@@ -12,7 +12,6 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
 use crate::facts::FileFacts;
-use crate::recipe::Recipe;
 use crate::rowident::adduct_names;
 use crate::table::{Aligned, FileFeatures};
 use crate::tp::TpBlock;
@@ -21,6 +20,22 @@ pub(crate) const MAGIC: &[u8; 8] = b"MZFEAT01";
 pub(crate) const ALIGN: usize = 64;
 /// Version of the container of the aligned table (`"version"` of its meta): 2 adds the `id`, the summaries of the rows and, optional, the identity columns (`identity` = 1 in the meta); the files of version 1 are still read.
 pub const TABLE_FORMAT: i64 = 2;
+
+/// The texts of a recipe that the meta of a container carries (`recipe::Recipe` implements it), so that `store` does not depend on the recipe.
+pub trait RecipeTexts {
+    fn file_text(&self) -> String;
+    fn table_text(&self) -> String;
+}
+
+/// FNV-1a over `text` in two 64-bit lanes with different seeds: 32 hex digits.
+pub fn fingerprint(text: &str) -> String {
+    let (mut a, mut b) = (0xcbf29ce484222325u64, 0x84222325cbf29ce4u64);
+    for &c in text.as_bytes() {
+        a = (a ^ c as u64).wrapping_mul(0x100000001b3);
+        b = (b ^ c as u64).wrapping_mul(0x100000001b3).rotate_left(5);
+    }
+    format!("{a:016x}{b:016x}")
+}
 
 pub(crate) fn bad() -> Error {
     Error::new("error.badMzfeat")
@@ -186,7 +201,7 @@ fn meta_json(
         .raw(",\"recipe\":")
         .str(text);
     j.raw(",\"recipe_hash\":")
-        .str(&crate::recipe::fingerprint(text))
+        .str(&fingerprint(text))
         .raw(",\"inputs\":[");
     for (i, (name, sha)) in o.inputs.iter().enumerate() {
         j.raw(if i > 0 { ",{\"name\":" } else { "{\"name\":" })
@@ -302,10 +317,10 @@ fn file_cols(f: &FileFeatures) -> Vec<(&'static str, Col<'_>)> {
 }
 
 /// Writes the `.mzfeatf` of one file to `sink`.
-pub fn write_file_to<W: WriteAt>(
+pub fn write_file_to<W: WriteAt, R: RecipeTexts + ?Sized>(
     sink: &mut W,
     f: &FileFeatures,
-    r: &Recipe,
+    r: &R,
     o: &Origin,
 ) -> Result<()> {
     let mut cols = file_cols(f);
@@ -327,7 +342,7 @@ pub fn write_file_to<W: WriteAt>(
 }
 
 /// Bytes of the `.mzfeatf` of one file.
-pub fn write_file(f: &FileFeatures, r: &Recipe, o: &Origin) -> Vec<u8> {
+pub fn write_file<R: RecipeTexts + ?Sized>(f: &FileFeatures, r: &R, o: &Origin) -> Vec<u8> {
     let mut v = Vec::new();
     write_file_to(&mut v, f, r, o).expect("a Vec grows");
     v
@@ -346,15 +361,15 @@ fn tp_cols<'a>(tp: &'a TpBlock, cols: &mut Vec<(&'static str, Col<'a>)>) -> bool
 }
 
 /// Bytes of the `.mzfeat` of a series, with an empty `evid` section.
-pub fn write_table(t: &Aligned, r: &Recipe, o: &Origin) -> Vec<u8> {
+pub fn write_table<R: RecipeTexts + ?Sized>(t: &Aligned, r: &R, o: &Origin) -> Vec<u8> {
     write_table_with_evid(t, r, o, &[])
 }
 
 /// Writes the `.mzfeat` of a series to `sink` with `evid` (the graph of the proofs, `evid/1` JSON) as its last section.
-pub fn write_table_to<W: WriteAt>(
+pub fn write_table_to<W: WriteAt, R: RecipeTexts + ?Sized>(
     sink: &mut W,
     t: &Aligned,
-    r: &Recipe,
+    r: &R,
     o: &Origin,
     evid: &mut dyn Section,
 ) -> Result<()> {
@@ -362,11 +377,11 @@ pub fn write_table_to<W: WriteAt>(
 }
 
 /// `write_table_to` with the block `tp/1` given apart from the table (the view of the products is computed from the proofs, which borrow the table).
-pub fn write_table_tp<W: WriteAt>(
+pub fn write_table_tp<W: WriteAt, R: RecipeTexts + ?Sized>(
     sink: &mut W,
     t: &Aligned,
     tp: &TpBlock,
-    r: &Recipe,
+    r: &R,
     o: &Origin,
     evid: &mut dyn Section,
 ) -> Result<()> {
@@ -448,7 +463,12 @@ fn write_table_recipe<W: WriteAt>(
 }
 
 /// Bytes of the `.mzfeat` of a series with the graph of the proofs (`evid/1`, JSON bytes of `evid::graph_json`) in the `evid` section.
-pub fn write_table_with_evid(t: &Aligned, r: &Recipe, o: &Origin, evid: &[u8]) -> Vec<u8> {
+pub fn write_table_with_evid<R: RecipeTexts + ?Sized>(
+    t: &Aligned,
+    r: &R,
+    o: &Origin,
+    evid: &[u8],
+) -> Vec<u8> {
     let mut v = Vec::new();
     write_table_to(&mut v, t, r, o, &mut { evid }).expect("a Vec grows");
     v
