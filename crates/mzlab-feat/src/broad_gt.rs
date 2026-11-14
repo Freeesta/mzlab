@@ -10,7 +10,7 @@ use std::sync::Arc;
 use mzlab_core::error::Result;
 
 use crate::broad::decimate;
-use crate::trace::{filled, reserve};
+use crate::trace_base::{filled, reserve};
 
 /// A trace is persistent when it has at least this many scans or covers this fraction of the run.
 const MIN_SCANS: usize = 400;

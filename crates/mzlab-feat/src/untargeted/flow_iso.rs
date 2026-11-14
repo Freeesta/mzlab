@@ -8,7 +8,7 @@ use mzlab_core::error::Result;
 use super::isotopes::{group_items, IsoParams, Item, Representative, ISOTOPE_STEP};
 use crate::align_mzmine::IsoGrouper;
 use crate::table::{FileFeatures, FLAG_ISOTOPE};
-use crate::trace::filled;
+use crate::trace_base::filled;
 
 /// The `IsoParams` of the grouper.
 pub fn iso_params(g: &IsoGrouper) -> IsoParams {

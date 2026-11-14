@@ -15,7 +15,7 @@ pub const MIN_HEIGHT_FACTOR: f64 = 10.0;
 pub fn min_height_from_noise(n: &Noise) -> f64 {
     let raw = MIN_HEIGHT_FACTOR * n.mode;
     let unit = libm::pow(10.0, libm::floor(libm::log10(raw.max(1.0))) - 1.0);
-    (libm::round(raw / unit) * unit).max(crate::trace::MIN_HEIGHT)
+    (libm::round(raw / unit) * unit).max(crate::trace_base::MIN_HEIGHT)
 }
 
 /// The noise lump of the MS1 section `si` and the minimum height it gives; `None` when the histogram has no lump.

@@ -5,7 +5,7 @@
 
 use crate::axis::half;
 use crate::sortc;
-use crate::trace::filled;
+use crate::trace_base::filled;
 use mzlab_core::error::Result;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;

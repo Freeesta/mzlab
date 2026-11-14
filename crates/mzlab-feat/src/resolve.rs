@@ -16,7 +16,8 @@ use mzlab_core::peakq::{detect_prominence, ProminenceParams};
 use crate::ms2::Ms2Links;
 use crate::quality::{around_apex, assess_with, fill_row, QParams, RowQ, AREA_HALF_WINDOW};
 use crate::table::{FileFeatures, FLAG_MIXTURE, FLAG_RESOLVED};
-use crate::trace::{filled, Params};
+use crate::trace::Params;
+use crate::trace_base::filled;
 
 #[derive(Debug, Clone)]
 pub struct ResolveParams {

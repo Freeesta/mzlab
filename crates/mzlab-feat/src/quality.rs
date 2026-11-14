@@ -15,7 +15,8 @@ use mzlab_core::peakq;
 use crate::chunked::chunked;
 use crate::sweep::{ppm_ranges, windows_by_slab, Slab};
 use crate::table::{FileFeatures, FLAG_EDGE, FLAG_GOOD};
-use crate::trace::{filled, Params};
+use crate::trace::Params;
+use crate::trace_base::filled;
 
 /// Reason bits of `FileFeatures::qreason`.
 pub const Q_SHAPE: u8 = 1;
@@ -348,7 +349,7 @@ pub(crate) fn assess_with<R: ReadAt, T: Default + Send>(
     };
     let rt: Vec<f64> = index.arrays(si)?.rt.clone();
     let nscan = rt.len();
-    let max_peaks = (p.budget / 24).clamp(1024, crate::trace::SLAB_PEAKS);
+    let max_peaks = (p.budget / 24).clamp(1024, crate::trace_base::SLAB_PEAKS);
     let ranges = ppm_ranges(&f.mz, q.window_ppm);
     windows_by_slab(index, si, &ranges, max_peaks, |slab, hits| {
         let items: Vec<Item> = hits
