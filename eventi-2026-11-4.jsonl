@@ -20796,3 +20796,4 @@
 {"v":1,"ts_utc":"2026-11-14T06:43:09Z","tipo":"carico","k":"2026-11-14T06:4","job_in_coda":0,"job_in_corso":17}
 {"v":1,"ts_utc":"2026-11-14T06:44:05Z","tipo":"coda","k":"2026-11-14T06:44:05Z","aperte":5,"indietro":2,"sporche":3,"verdi_in_attesa":0,"piu_vecchia_aperta_s":29651,"piu_vecchia_verde_s":null}
 {"v":1,"ts_utc":"2026-11-14T06:52:44Z","azione":"aperta","tipo":"pr","pr":3260,"sha":"22b0b58fcc0685aa0559161eaf33e9354d744a6e"}
+{"v":1,"ts_utc":"2026-11-14T06:58:54Z","azione":"push","titolo":"mzlab-cli: drop a redundant field name in the features entry","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":3260,"sha":"8e3a3b9b1de285ad9111998084dcde3065630f15"}
