@@ -19054,3 +19054,4 @@
 {"v":1,"ts_utc":"2026-11-14T03:27:18Z","tipo":"cache","k":"132314193351","workflow":"rust","job":"rust-misc-b","esito_cache":"primary","ripristinate":["rust-v3-Linux-testmiscb-1dde2ef163ee1c44fec4011019e706adede6af037e129be980bb6dafdc9105fc-4e9841c2b89ae69baf1013db8508292e297507fb81d97d2eb77b0066b1fbf84e"],"mancate":[],"salvata":null,"mb":624,"pr":null,"sha":"ba0a2fbbe6b36fc5ffbe13c27b95117e246fe565","run_id":43551298999,"run_attempt":1}
 {"v":1,"ts_utc":"2026-11-14T03:31:59Z","tipo":"carico","k":"2026-11-14T03:3","job_in_coda":0,"job_in_corso":32}
 {"v":1,"ts_utc":"2026-11-14T03:33:23Z","azione":"aperta","tipo":"pr","pr":3251,"sha":"2e5b2f343767a239a58365dedca4a33524361a5c"}
+{"v":1,"ts_utc":"2026-11-14T03:35:57Z","azione":"push","titolo":"CI: leave e2e_ricerca_ms2 out of the safety set (red on the runner, green locally)","merge_main":false,"aree":{"docs":1,"tools":1},"tipo":"pr","pr":3235,"sha":"0bf36739f4487d5c94f24dcdc30aa8186c729974"}
