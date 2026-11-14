@@ -102,6 +102,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | prove di mutazione (`cargo-mutants`) di `mzlab-lettori` e del modulo wiff: comandi, campioni, sopravvissuti e perché restano | `docs/agenti/mutanti.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
+| shard pytest della CI (cache `target`, `doppi`, `aree`, `prebuilt`, ordine e metà dei test lenti) | `docs/agenti/ci-selezione.md` |
 | metriche di main nel tempo (`tools/metriche.py`, ramo `stat-ci`, tendenze) | `docs/agenti/metriche.md` |
 | sito di laboratorio parallelo (`MZLAB_LAB=1`, `MZLAB_LAB_EXPIRES`, `tools/lab/lab.js`: solo Dati e Disegno, scadenza, banner, nessun file di esempio salvo i due disegni del link «Vedi un esempio di disegno»; workflow per `Freeesta/qqq`) | `tools/lab/README.md` (test: `tests/test_lab_build.py`, `tests_e2e/e2e_lab.py`, `tests_e2e/e2e_lab_vuoto.py` = giro senza file) |
 | contratto dei lettori dei produttori (`readers.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
