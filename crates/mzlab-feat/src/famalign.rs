@@ -10,7 +10,7 @@ use crate::align::{align_grouped, AlignParams};
 use crate::rtmap::{build, RtMap, RtParams};
 use crate::sortc;
 use crate::table::{Aligned, FileFeatures, ROLE_M, ROLE_NONE};
-use crate::trace::filled;
+use crate::trace_base::filled;
 use mzlab_core::error::Result;
 
 /// Parameters of `align_families`.

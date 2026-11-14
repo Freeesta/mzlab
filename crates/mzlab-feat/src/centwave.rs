@@ -7,7 +7,8 @@ use mzlab_core::error::Result;
 
 use crate::broad::{detect_broad_at, BroadParams};
 use crate::channels::Seg;
-use crate::trace::{filled, reserve, Params};
+use crate::trace::Params;
+use crate::trace_base::{filled, reserve};
 
 /// How the segments of a slab become peaks: the cut of the runs at their gaps (`masstrace`), the wavelet model, or the ADAP chromatograms and the
 /// local-minimum resolver of mzmine (`adap_localmin`, which builds its own traces from the index).

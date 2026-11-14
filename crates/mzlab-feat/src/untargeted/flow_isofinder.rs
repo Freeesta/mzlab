@@ -11,7 +11,7 @@ use super::isofinder::{Config, ElementMode, Engine, Tol};
 use crate::align_mzmine::IsoFinder;
 use crate::sortc::SortC;
 use crate::table::{FileFeatures, FLAG_ISOTOPE};
-use crate::trace::filled;
+use crate::trace_base::filled;
 
 /// Half width, m/z, of the part of the apex spectrum kept around a feature; wider than any pattern the finder walks.
 const WINDOW: f64 = 12.0;

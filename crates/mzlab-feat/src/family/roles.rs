@@ -11,7 +11,7 @@ use super::rel::{RKind, Tables};
 use super::Arc;
 use crate::sortc;
 use crate::table::*;
-use crate::trace::filled;
+use crate::trace_base::filled;
 use mzlab_core::error::Result;
 
 /// Whether the arc is oriented only because `Orient::Evidence` lets its proof stand in for the factor.

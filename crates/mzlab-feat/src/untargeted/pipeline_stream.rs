@@ -45,7 +45,7 @@ fn scan_noise<R: ReadAt>(
     if p.noise_factor <= 0.0 {
         return Ok(None);
     }
-    let mut low = crate::trace::filled(nscans, f64::INFINITY)?;
+    let mut low = crate::trace_base::filled(nscans, f64::INFINITY)?;
     let n = ix.sections[si].n_peaks;
     ix.each_peak(si, 0, n, |pos, _, inten| {
         if pos < nscans && inten > 0.0 && inten < low[pos] {

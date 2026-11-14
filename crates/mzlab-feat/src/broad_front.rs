@@ -5,7 +5,7 @@ use crate::broad_gt::median;
 use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
-use crate::trace::reserve;
+use crate::trace_base::reserve;
 
 /// Seconds from the left half-height point of the front to the apex: block `t` of the series `y` cut in blocks of `k` scans, baseline at block `lo_d`.
 /// Zero when `lo_d` is the apex block (no flank: a step, as at the foot of something higher); when no block is below half height the width runs to `lo_d`.

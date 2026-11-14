@@ -128,6 +128,7 @@ pub mod tp;
 mod tp_block;
 pub mod transitions;
 pub mod trace;
+mod trace_base;
 pub mod trace_estimate;
 mod trace_text;
 #[cfg(feature = "untargeted")]

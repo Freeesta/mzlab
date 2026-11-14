@@ -27,10 +27,10 @@ pub use crate::tp_block::{FitCandidate, RoleCounts, TpBlock, TpParams, KIN_CERTA
 
 use mzlab_core::error::Result;
 
-use crate::trace::filled;
 use crate::aligned::Aligned;
 use crate::evid::rowproofs::Signs;
 use crate::hypo::Hypothesis;
+use crate::trace_base::filled;
 
 pub const SCHEMA: &str = "tp/1";
 
