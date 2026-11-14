@@ -36,11 +36,16 @@ def timings(pkg, reps, idx):
     return json.loads(run("node", "tools/bench_hr.js", str(pkg), str(reps), *idx).splitlines()[-1])
 
 
+def spread(v):
+    q = statistics.quantiles(v, n=10)
+    return (q[-1] - q[0]) / statistics.median(v) * 100
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--extra", default="--merge-similar-functions")
     ap.add_argument("--reps", type=int, default=7)
-    ap.add_argument("--rounds", type=int, default=3, help="ABAB rounds; the samples of all rounds are pooled")
+    ap.add_argument("--rounds", type=int, default=7, help="ABAB rounds; the samples of all rounds are pooled")
     ap.add_argument("--max-slowdown", type=float, default=3.0)
     a = ap.parse_args()
     run("python3", "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(work := Path(tempfile.mkdtemp()) / "ser"))
@@ -60,8 +65,9 @@ def main():
         ratio = (med["variant"] / med["base"] - 1) * 100
         same = all(r["sha"][name] == runs["base"][0]["sha"][name] for k in runs for r in runs[k])
         bad += (ratio > a.max_slowdown) + (not same)
-        print(f"{name:14} base {med['base']:9.2f} ms (min {min(m['base']):.2f} max {max(m['base']):.2f})  variant {med['variant']:9.2f} ms "
-              f"(min {min(m['variant']):.2f} max {max(m['variant']):.2f})  {ratio:+.1f} %  output {'identical' if same else 'DIFFERENT'}")
+        sp = {k: spread(v) for k, v in m.items()}   # (p90 - p10) / median, percent: the noise of the machine on this path
+        print(f"{name:14} base {med['base']:8.2f} ms (spread {sp['base']:.1f} %)  variant {med['variant']:8.2f} ms (spread {sp['variant']:.1f} %)  "
+              f"{ratio:+.1f} %  output {'identical' if same else 'DIFFERENT'}")
     sys.exit(1 if bad else 0)
 
 
