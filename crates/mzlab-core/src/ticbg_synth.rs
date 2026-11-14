@@ -50,12 +50,12 @@ pub fn mzml(n: usize, seed: u64, blank: bool) -> Vec<u8> {
         // a peak of sigma 0.08 min as a raised-cosine bump of the same area (no exp)
         let d = (t - 14.3) / 0.08;
         if !blank && d.abs() < 2.5 {
-            let g = 0.5 * (1.0 + (std::f64::consts::PI * d / 2.5).cos()) * 1.0026;
+            let g = 0.5 * (1.0 + libm::cos(std::f64::consts::PI * d / 2.5)) * 1.0026;
             for (mz, h) in PEAK {
                 pts.push((mz + 0.1 * (u() - 0.5), h * g));
             }
         }
-        pts.sort_by(|a, b| a.0.total_cmp(&b.0));
+        crate::sortc::slice_by(&mut pts, |a, b| a.0.total_cmp(&b.0));
         let sp = Spectrum {
             index: j,
             id: format!("scan={}", j + 1),

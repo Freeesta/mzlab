@@ -4,6 +4,9 @@
 //! windows and `Action::Exclude` drop whole ions. Pure functions on peaks streamed in m/z order (the order of the index); `ticbg_route` reads the index.
 use crate::signal::median as median_of;
 
+/// The peak source: called with a sink, it streams (scan, m/z, intensity) in m/z order.
+pub type Peaks<'a> = dyn FnMut(&mut dyn FnMut(usize, f64, f64)) + 'a;
+
 /// Where the baseline of a background ion comes from.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Mode {
@@ -136,11 +139,7 @@ struct Bin {
 
 /// Per bin: the number of distinct scans it is in (first pass). `peaks` streams (scan, m/z, intensity) in m/z order.
 #[inline(never)]
-pub fn presence(
-    n: usize,
-    p: &Params,
-    peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)),
-) -> Vec<(i64, u32)> {
+pub fn presence(n: usize, p: &Params, peaks: &mut Peaks) -> Vec<(i64, u32)> {
     let mut seen = vec![i64::MIN; n];
     let mut out: Vec<(i64, u32)> = Vec::new();
     bins(n, p, peaks, &mut |b| {
@@ -156,12 +155,7 @@ pub fn presence(
 
 /// The peaks grouped by bin, one bin at a time in m/z order; peaks in the manual windows are left out. Returns (raw total, windows total).
 #[inline(never)]
-fn bins(
-    n: usize,
-    p: &Params,
-    peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)),
-    f: &mut dyn FnMut(Bin),
-) -> (f64, f64) {
+fn bins(n: usize, p: &Params, peaks: &mut Peaks, f: &mut dyn FnMut(Bin)) -> (f64, f64) {
     let mut cur = Bin {
         id: i64::MIN,
         pts: Vec::new(),
@@ -296,7 +290,7 @@ pub fn clean(
     p: &Params,
     flags: &[i64],
     blank: Option<&BlankProfile>,
-    peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)),
+    peaks: &mut Peaks,
 ) -> Cleaned {
     let n = rt.len();
     let mut out = Cleaned {
@@ -457,11 +451,7 @@ fn merge(parts: Vec<(i64, Ion, f64)>, total: f64) -> Vec<Ion> {
 
 /// The blank profile of `Mode::Blank` from the blank's peaks: median per bin of the bins present in `persist` of its scans.
 #[inline(never)]
-pub fn blank_profile(
-    n: usize,
-    p: &Params,
-    peaks: &mut dyn FnMut(&mut dyn FnMut(usize, f64, f64)),
-) -> BlankProfile {
+pub fn blank_profile(n: usize, p: &Params, peaks: &mut Peaks) -> BlankProfile {
     let pres = presence(n, p, peaks);
     let keep: Vec<i64> = flagged(
         n,
