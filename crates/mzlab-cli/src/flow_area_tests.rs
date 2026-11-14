@@ -1,7 +1,8 @@
 //! `area_from` of `features.detect` run from a Flow plan by `mzlab-cli flow run`, on one synthetic high-resolution file: six Gaussian ions
 //! (3e5 to 3e7 counts) whose m/z wanders ±2 ppm from scan to scan. With `channel` (the default) the points that fall into the next channel
 //! of `masstrace` are lost from the area; with `window` the area is the one of the Gaussian within a few hundredths of log2. At ±3 ppm the
-//! `strict` stitch splits ions into pieces; `stitch=wide` keeps one row per ion.
+//! `strict` stitch splits ions into pieces; `stitch=wide` keeps one row per ion. When MS2 scans space the MS1 scans unevenly, only `xic`
+//! (the trapezoid on the real retention times) keeps the area: `channel` and `window` multiply by the median scan interval.
 
 use std::fmt::Write as _;
 
@@ -37,14 +38,33 @@ fn rnd(seed: &mut u64) -> f64 {
     (*seed >> 11) as f64 / (1u64 << 53) as f64
 }
 
-/// One centroid MS1 run; points below 50 counts are not written, two flat traces at 1e3 keep every scan non-empty.
-fn mzml(jitter_ppm: f64) -> String {
+/// Regular scans, `DT` apart.
+fn regular() -> Vec<f64> {
+    (0..SCANS).map(|i| i as f64 * DT).collect()
+}
+
+/// Scans `DT` apart, 2.5 `DT` apart while an ion is within 1.5 sigma of its apex (the MS2 scans a DDA cycle puts between them).
+fn uneven() -> Vec<f64> {
+    let mut t = vec![0.0];
+    while t.len() < SCANS {
+        let now = *t.last().unwrap();
+        let busy = ions()
+            .iter()
+            .any(|&(_, _, a)| (now / DT - a).abs() < 1.5 * SIGMA);
+        t.push(now + if busy { 2.5 * DT } else { DT });
+    }
+    t
+}
+
+/// One centroid MS1 run at `times` (minutes); the ions are Gaussians in time. Points below 50 counts are not written, two flat traces at 1e3
+/// keep every scan non-empty.
+fn mzml(jitter_ppm: f64, times: &[f64]) -> String {
     let mut seed = 7u64;
     let mut x = format!(
         r#"<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.ms.info/ms/mzml"><run id="r"><spectrumList count="{SCANS}">"#
     );
-    for i in 0..SCANS {
-        let k = i as f64;
+    for (i, &t) in times.iter().enumerate() {
+        let k = t / DT;
         let mut pts: Vec<(f64, f64)> = vec![(120.05, 1e3), (590.05, 1e3)];
         for (m, h, a) in ions() {
             let y = h * (-0.5 * ((k - a) / SIGMA).powi(2)).exp();
@@ -60,7 +80,7 @@ fn mzml(jitter_ppm: f64) -> String {
             r#"<spectrum index="{i}" id="scan={}" defaultArrayLength="{}"><cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="1"/><cvParam cvRef="MS" accession="MS:1000127" name="centroid spectrum"/><cvParam cvRef="MS" accession="MS:1000130" name="scan"/><cvParam cvRef="MS" accession="MS:1000512" name="filter string" value="FTMS + p ESI Full ms [100.00-600.00]"/><scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{}" unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/></scan></scanList><binaryDataArrayList count="2">{}{}</binaryDataArrayList></spectrum>"#,
             i + 1,
             mz.len(),
-            k * DT,
+            t,
             array("MS:1000514", &mz),
             array("MS:1000515", &y)
         );
@@ -74,10 +94,14 @@ fn run(tag: &str, set: &[&str]) -> Vec<(String, Vec<u8>)> {
 }
 
 fn run_at(tag: &str, set: &[&str], jitter_ppm: f64) -> Vec<(String, Vec<u8>)> {
+    run_on(tag, set, jitter_ppm, &regular())
+}
+
+fn run_on(tag: &str, set: &[&str], jitter_ppm: f64, times: &[f64]) -> Vec<(String, Vec<u8>)> {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_area_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("data")).unwrap();
-    std::fs::write(dir.join("data/a.mzML"), mzml(jitter_ppm)).unwrap();
+    std::fs::write(dir.join("data/a.mzML"), mzml(jitter_ppm, times)).unwrap();
     std::fs::write(dir.join("plan.json"), PLAN).unwrap();
     let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
     let mut args = vec![p(&plan), "--in", p(&data), "--out", p(&out)];
@@ -107,6 +131,26 @@ fn bias(f: &FileFeatures) -> Vec<f64> {
                 .map(|i| f.area[i])
                 .fold(0.0, f64::max);
             (area / truth).log2().abs()
+        })
+        .collect()
+}
+
+/// |log2(area / XIC area)| of each ion, from its largest row: the trapezoid of the noise-free Gaussian on the real times of the row's scans
+/// (the chromatogram a user integrates), so the tails below the intensity floor do not count.
+fn to_xic(f: &FileFeatures, times: &[f64]) -> Vec<f64> {
+    ions()
+        .iter()
+        .map(|&(m, h, a)| {
+            let r = (0..f.mz.len())
+                .filter(|&i| (f.mz[i] - m).abs() < 0.01)
+                .max_by(|&i, &j| f.area[i].total_cmp(&f.area[j]))
+                .unwrap();
+            let y = |t: f64| h * (-0.5 * ((t / DT - a) / SIGMA).powi(2)).exp();
+            let (lo, hi) = (f.scan_lo[r] as usize, f.scan_hi[r] as usize);
+            let xic: f64 = (lo..hi)
+                .map(|k| 0.5 * (y(times[k]) + y(times[k + 1])) * (times[k + 1] - times[k]) * 60.0)
+                .sum();
+            (f.area[r] / xic).log2().abs()
         })
         .collect()
 }
@@ -177,4 +221,31 @@ fn stitch_can_be_set_from_the_command_line() {
     let plan = String::from_utf8(plan.1.clone()).unwrap();
     assert!(plan.contains("\"stitch\":\"wide\""), "{plan}");
     assert_ne!(features(&wide).1, features(&base).1);
+}
+
+/// MS1 scans 2.5 times further apart around the apices: the median interval undercounts every peak, the trapezoid on the real times does not.
+#[test]
+fn the_xic_area_follows_uneven_scans() {
+    let t = uneven();
+    let area = |tag: &str, from: &str| {
+        let set = format!("det.area_from={from}");
+        to_xic(&features(&run_on(tag, &[&set], 0.0, &t)).0, &t)
+    };
+    let (window, xic) = (area("uwin", "window"), area("uxic", "xic"));
+    eprintln!("|log2| to the XIC: window {window:.4?}\n|log2| to the XIC: xic    {xic:.4?}");
+    assert!(median(&window) > 0.5, "{window:?}");
+    assert!(xic.iter().all(|&b| b <= 0.005), "{xic:?}");
+}
+
+/// `area_from=xic` reaches the run, also on wandering ions (its window is the one of `window`), and changes the recipe of the features.
+#[test]
+fn the_xic_area_can_be_set_from_the_command_line() {
+    let xic = run("xic", &["det.area_from=xic"]);
+    let plan = xic.iter().find(|f| f.0 == "plan.json").unwrap();
+    let plan = String::from_utf8(plan.1.clone()).unwrap();
+    assert!(plan.contains("\"area_from\":\"xic\""), "{plan}");
+    let (f, meta) = features(&xic);
+    assert!(meta.contains("area_xic"), "{meta}");
+    let b = bias(&f);
+    assert!(median(&b) <= 0.025, "{b:?}");
 }

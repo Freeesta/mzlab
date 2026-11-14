@@ -141,6 +141,12 @@ fn the_window_area_adds_its_sentence_to_the_detection() {
         run("window").contains("Feature areas were summed over every point within the m/z window")
     );
     assert!(!run("channel").contains("Feature areas were summed"));
+    let xic = run("xic");
+    assert!(
+        xic.contains("integrated by the trapezoidal rule on the real retention times"),
+        "{xic}"
+    );
+    assert!(!xic.contains("Feature areas were summed"));
 }
 
 #[test]
