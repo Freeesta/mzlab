@@ -9,8 +9,12 @@ use crate::family::{FamParams, FAMILY_VERSION};
 use crate::gapfill::FillParams;
 use crate::pipeline_steps::Steps;
 use crate::rtmap::RtParams;
+use crate::store::RecipeTexts;
 use crate::trace::Params;
 use crate::FEAT_VERSION;
+
+/// The old path of `fingerprint`, which lives in `store` so that the containers do not depend on the recipe.
+pub use crate::store::fingerprint;
 
 /// How the groups of the table are made.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -188,17 +192,17 @@ impl Recipe {
     }
 }
 
-/// FNV-1a over `text` in two 64-bit lanes with different seeds: 32 hex digits.
+impl RecipeTexts for Recipe {
+    fn file_text(&self) -> String {
+        Recipe::file_text(self)
+    }
+
+    fn table_text(&self) -> String {
+        Recipe::table_text(self)
+    }
+}
+
 /// True when the recipe text stored in the meta of a file or a table is the one of the unit-resolution profile (m/z axis in Da).
 pub fn is_unit_text(text: &str) -> bool {
     text.contains("axis: Da {")
-}
-
-pub fn fingerprint(text: &str) -> String {
-    let (mut a, mut b) = (0xcbf29ce484222325u64, 0x84222325cbf29ce4u64);
-    for &c in text.as_bytes() {
-        a = (a ^ c as u64).wrapping_mul(0x100000001b3);
-        b = (b ^ c as u64).wrapping_mul(0x100000001b3).rotate_left(5);
-    }
-    format!("{a:016x}{b:016x}")
 }
