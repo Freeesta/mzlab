@@ -19629,3 +19629,4 @@
 {"v":1,"ts_utc":"2026-11-14T04:08:19Z","tipo":"coda","k":"2026-11-14T04:08:19Z","aperte":4,"indietro":4,"sporche":0,"verdi_in_attesa":1,"piu_vecchia_aperta_s":20305,"piu_vecchia_verde_s":8950}
 {"v":1,"ts_utc":"2026-11-14T04:11:31Z","azione":"aperta","tipo":"pr","pr":3253,"sha":"73ba4dbff749a76ca16eb10ed1fba0a0aaf5a1ef"}
 {"v":1,"ts_utc":"2026-11-14T04:12:31Z","azione":"aperta","tipo":"pr","pr":3254,"sha":"a45f52592f9c644a0681064f3471c6de66e302b6"}
+{"v":1,"ts_utc":"2026-11-14T04:16:35Z","azione":"aperta","tipo":"pr","pr":3255,"sha":"2bc416708e38620715269b22516a64bfd3de3c14"}
