@@ -2,7 +2,7 @@
 `python3 tools/ci_e2e_cambiati.py <base sha>` prints what it chose and why, and appends `e2e=<names, comma-separated>` to $GITHUB_OUTPUT (empty: run nothing).
 The map from files to tests is `changed_tests` of tools/verifica.py (the `# covers:` header lines of the tests); the smoke tests (job `browser`) and the tests that need the site build, the CI .wasm build (`wasm`), a .dam
 or the lab data (sito-e2e and notte.yml) are left out. A core file selects every e2e: the complete round is too long for this job (30 min) and runs in notte.yml, so the job runs a fixed safety set
-instead: tests that cover as many `# covers:` prefixes as the time budget allows (`core_set`, from the seconds in tools/ci_e2e_costi.json; `--costi` rewrites that file from .verifica/ultimo.md)."""
+instead: tests that cover as many `# covers:` prefixes as the time budget allows (`core_set`, from the allow list tools/ci_e2e_verdi.json: the e2e that passed on the runner in the latest full nightly, with their seconds there; `--verdi <ultimo.md of each shard>` rewrites it from the artifacts `notte-completa-K`)."""
 import json
 import os
 import re
@@ -14,17 +14,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verifica  # noqa: E402
 
 ELSEWHERE = {"sito", "dam", "veri", "wasm"}
-COSTS = Path(__file__).resolve().parent / "ci_e2e_costi.json"
+GREEN = Path(__file__).resolve().parent / "ci_e2e_verdi.json"   # the e2e that passed on the runner in the latest full nightly, with their seconds there: the only ones the safety set may take
 TEST_CAP_S = 60       # a test slower than this is not a representative: it would eat the budget of ten others
-# Red on main when the set was first run (owner NIGHTLY-TRIAGE, docs/agenti/test.md): left out so that a red of the set is the pull request's own; they still run in the nightly complete round
-KNOWN_RED = {"e2e_apri_subito", "e2e_dad_mrm_overlay", "e2e_disegno_verifica", "e2e_fondo_piatto", "e2e_hr_pannelli", "e2e_integra_barre", "e2e_integra_modi", "e2e_mappa_apice", "e2e_mappa_estrai", "e2e_parziali", "e2e_qaqc", "e2e_predefinito", "e2e_radicali", "e2e_ricerca_ms2", "e2e_xic_stretto"}
-BUDGET_S = 900        # sum of the local seconds of the safety set; on the runner the step took 1.28x that (1514 s for 1179 s) plus ~1 min of setup, so the whole job stays under 22 of its 30 min
+BUDGET_S = 800        # sum of the nightly seconds of the safety set; the job's step took about 1.25x that on the runner, plus ~1.5 min of setup: the whole job stays under 22 of its 30 min
 
 
 def core_set() -> tuple[list[str], str]:
-    """Safety set for a core file: greedy cover of the `# covers:` prefixes by the cheapest tests (most entries per second), within BUDGET_S."""
-    cost = json.loads(COSTS.read_text(encoding="utf-8"))
-    smoke = set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX) | KNOWN_RED
+    """Safety set for a core file: greedy cover of the `# covers:` prefixes by the cheapest tests (most entries per second) among the allow-listed ones, within BUDGET_S."""
+    cost = json.loads(GREEN.read_text(encoding="utf-8"))
+    smoke = set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX)
     by_prefix: dict[str, set[str]] = {}
     for prefix, n in verifica.covers():
         by_prefix.setdefault(prefix, set()).add(n)
@@ -46,11 +44,11 @@ def core_set() -> tuple[list[str], str]:
     return sorted(chosen), f"{len(entries) - len(left)} of {len(entries)} areas covered, {used} s of {BUDGET_S} s"
 
 
-def write_costs(report: Path) -> int:
-    """Rewrite the cost table from a verifica.py report (the lines «- OK e2e_x (12 s)»)."""
-    cost = {m[1]: int(m[2]) for m in (re.match(r"- (?:OK|FAIL) +(e2e\w*) \((\d+) s\)", l) for l in report.read_text(encoding="utf-8").splitlines()) if m}
-    COSTS.write_text(json.dumps(dict(sorted(cost.items())), indent=0) + "\n", encoding="utf-8")
-    return len(cost)
+def write_green(reports: list[Path]) -> int:
+    """Rewrite the allow list from the reports (ultimo.md) of the shards of a full nightly: only the lines «- OK e2e_x (12 s)»."""
+    green = {m[1]: int(m[2]) for r in reports for m in (re.match(r"- OK +(e2e\w*) \((\d+) s\)", l) for l in r.read_text(encoding="utf-8").splitlines()) if m}
+    GREEN.write_text(json.dumps(dict(sorted(green.items())), indent=0) + "\n", encoding="utf-8")
+    return len(green)
 
 
 def pick(files: set[str]) -> tuple[list[str], str]:
@@ -75,8 +73,8 @@ def changed(base: str) -> set[str]:
 
 
 def main(argv: list[str]) -> int:
-    if argv[:1] == ["--costi"]:
-        print(f"{write_costs(Path(argv[1] if len(argv) > 1 else '.verifica/ultimo.md'))} costs written")
+    if argv[:1] == ["--verdi"]:
+        print(f"{write_green([Path(a) for a in argv[1:]])} green tests written")
         return 0
     if not argv:
         tests, why = [], "no base commit (not a pull request): nothing to choose"

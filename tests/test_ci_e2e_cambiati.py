@@ -17,13 +17,13 @@ def test_documents_only_run_nothing():
 
 def test_a_core_file_runs_a_bounded_safety_set():
     tests, why = ci.pick({"tests_e2e/lib.py"})
-    cost = json.loads(ci.COSTS.read_text(encoding="utf-8"))
+    cost = json.loads(ci.GREEN.read_text(encoding="utf-8"))
     assert tests and tests == sorted(tests) and len(set(tests)) == len(tests) and "areas covered" in why
     assert all((ROOT / "tests_e2e" / f"{n}.py").exists() for n in tests)
     assert sum(cost[n] for n in tests) <= ci.BUDGET_S and max(cost[n] for n in tests) <= ci.TEST_CAP_S
     assert not set(tests) & (set(verifica.SMOKE) | set(verifica.SMOKE_CHROMIUM_LINUX))
     assert not any(verifica.NEEDS.get(n, set()) & ci.ELSEWHERE for n in tests)
-    assert not set(tests) & ci.KNOWN_RED and all((ROOT / "tests_e2e" / f"{n}.py").exists() for n in ci.KNOWN_RED)
+    assert set(tests) <= set(cost)   # only what passed on the runner in the nightly
 
 
 def test_the_safety_set_is_the_same_for_every_core_file():
