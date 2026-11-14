@@ -1,6 +1,6 @@
 # Elenco degli esperimenti MSn di un file DDA
 
-Codice: `mzlab/web/msn-elenco.js` (modulo ES caricato al primo uso da `COMP.tree` in `composizione.js`), `DDA.get`/`DDA.showMs2` (`dda.js`). Nota di progetto: `docs/studi/msn-elenco-esperimenti.md`. Prova: `tests_e2e/e2e_hr_msnelenco.py`.
+Codice: `mzlab/web/msn-elenco.js` (modulo ES caricato al primo uso da `COMP.tree` in `composizione.js`), `DDA.get`/`DDA.showMs2` (`dda.js`). Prova: `tests_e2e/e2e_hr_msnelenco.py`.
 
 - **Quando**: la finestra «Albero MSn» di un file con un elemento `dda` si apre sulla scheda «Experiments»; la scheda «Tree» c'è solo se il file ha MS3 o oltre (l'albero di `/api/msntree` rifiuta i DDA con soli MS2) e si calcola alla prima apertura. Le frecce passano da una scheda all'altra.
 - **Dati**: `/api/dda` (Rust `hrroutes.rs`, riferimento `explore.dda`, parità `hr_parity`) con le colonne `lev` (livello MS) e `z` (carica, null se manca); l'intensità del picco base da `/api/scanlist?level=N`. `groups(D, tol)` raggruppa le scansioni per il precursore del loro antenato MS2 (moda dei m/z entro la tolleranza del file).

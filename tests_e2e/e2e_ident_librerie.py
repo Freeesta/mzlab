@@ -34,8 +34,15 @@ try:
             assert "Spettro: RT 5.25 min · MS2 · precursore m/z 300.1000 · polarità +" in " ".join(body().split()), body()
             ck = pg.evaluate("[...document.querySelectorAll('#hri-body input[data-id]')].map(c => [c.getAttribute('aria-label'), c.checked, c.closest('tr').title])")
             d = {n: (c, t) for n, c, t in ck}; assert d["pos"][0] and not d["neg"][0], ck
-            assert d["neg"][1] == "Altra polarità" and d["pos"][1] == "Compatibile con lo spettro", ck
+            assert d["neg"][1] == "neg: 1 spettri · spenta, polarità diversa dallo spettro" and d["pos"][1] == "pos: 1 spettri · cercata per questo spettro", ck
+            st = pg.evaluate("[...document.querySelectorAll('#hri-body tbody tr')].map(t => t.lastElementChild.innerText)"); assert st == ["Attiva", "Spenta"] or st == ["Spenta", "Attiva"], st
         step("two libraries (positive, negative): the compatible one is ticked by itself, with the reason as tooltip", autoselect)
+        def nospectrum():
+            pg.evaluate("IDP.render(document.querySelector('#hri-body'), null, () => false)"); pg.wait_for_selector("#hri-body input[data-id]", timeout=15000)
+            ck = pg.evaluate("[...document.querySelectorAll('#hri-body input[data-id]')].map(c => [c.checked, c.disabled, c.title])")
+            assert ck and all(not c and d and "finché non scegli uno spettro MS²" in t for c, d, t in ck), ck
+            pg.evaluate("IDP.render(document.querySelector('#hri-body'), {level: 2}, () => false)"); pg.wait_for_selector("#hri-body input[data-id]:not([disabled])", timeout=15000)
+        step("no MS2 spectrum: the rows are off and disabled, the tooltip says why", nospectrum)
         def search():
             pg.click("#idn-go"); pg.wait_for_selector("#idn-res tbody tr", timeout=20000)
             names = pg.locator("#idn-res tbody tr th").all_inner_texts(); assert names == ["Entry Pos"], names
@@ -45,9 +52,12 @@ try:
             pg.click("#idn-go"); pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Seleziona una libreria')", timeout=10000)
         step("search: the table shows the ticked libraries only; an unticked box leaves it out of the search", search)
         def folder():
-            import tempfile; d = tempfile.mkdtemp(); open(d + "/c.msp", "w").write(msp("Entry C", "Positive")); open(d + "/nota.txt", "w").write("x")
+            import tempfile; d = tempfile.mkdtemp(); open(d + "/c.msp", "w").write(msp("Entry C", "Positive")); open(d + "/nota.txt", "w").write("x"); open(d + "/vuota.msp", "w").write("")
             pg.set_input_files("#idn-din", d)
-            pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Caricate: 1 · ignorate: 1')", timeout=20000)
+            pg.wait_for_function("document.querySelector('#idn-msg').innerText.includes('Caricate: 1 · ignorate: 2')", timeout=20000)
+            pg.click("#idn-ign"); assert pg.get_attribute("#idn-ign", "aria-expanded") == "true"
+            t = pg.text_content("#idn-ignl"); assert "formato non supportato" in t and "nota.txt" in t and "vuota.msp" in t, t
+            pg.click("#idn-ign"); assert pg.locator("#idn-ignl").count() == 0
         step("load folder: what is recognised is loaded, the rest is counted", folder)
         def catalog():
             pg.evaluate("IDP.render(document.querySelector('#hri-body'), {level: 2}, () => false)"); pg.click("#cat-b"); pg.wait_for_selector("#cat-box .cat-it", timeout=10000)

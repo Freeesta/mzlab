@@ -283,7 +283,7 @@ fn time_it<R>(giri: usize, f: impl FnMut() -> R) -> f64 {
     measure::median(&g.iter().map(|x| x.s).collect::<Vec<_>>())
 }
 
-/// `T_min = max(B_in / BW_read, B_out / BW_write, W_cpu / N, W_serial)` of `RISPOSTE.md` §1.3, from the stages measured alone.
+/// `T_min = max(B_in / BW_read, B_out / BW_write, W_cpu / N, W_serial)` (the lower bound of a run), from the stages measured alone.
 fn tmin(phases: &Value, testata_s: f64, byte_in: u64, a: &Args, micro: Option<&Value>) -> Value {
     let st = &phases["stadi_s"];
     let g = |k: &str| st[k].as_f64().unwrap_or(f64::NAN);

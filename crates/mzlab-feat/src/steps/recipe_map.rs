@@ -22,19 +22,35 @@ fn bad(step: &str, name: &str, v: &Value) -> Error {
         .with("detail", mzlab_core::flow::value_text(v))
 }
 
-/// `area_from` of `features.detect` (`channel` or `window`, the area of the quality trace) and `stitch` (`strict` or `wide`): the second value turns its switch on.
+/// `area_from` of `features.detect` (`channel`; `window`, the sum of the quality trace; `xic`, its trapezoid on the real retention times) and
+/// `stitch` (`strict` or `wide`): a value other than the first turns its switch on.
 fn set_trace_choice(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
-    let (flag, on) = if k == "area_from" {
-        (&mut r.steps.quality.area_window, ["channel", "window"])
-    } else {
-        (&mut r.detect.stitch_wide, ["strict", "wide"])
-    };
+    if k == "area_from" {
+        let q = &mut r.steps.quality;
+        (q.area_window, q.area_xic) = match v.str() {
+            Some("channel") => (false, false),
+            Some("window") => (true, false),
+            Some("xic") => (false, true),
+            _ => return Err(bad(step, k, v)),
+        };
+        r.fill.xic = q.area_xic;
+        return Ok(());
+    }
+    let (flag, on) = (&mut r.detect.stitch_wide, ["strict", "wide"]);
     *flag = match v.str() {
         Some(x) if x == on[0] => false,
         Some(x) if x == on[1] => true,
         _ => return Err(bad(step, k, v)),
     };
     Ok(())
+}
+
+fn area_from(q: &crate::quality::QParams) -> &'static str {
+    match (q.area_window, q.area_xic) {
+        (_, true) => "xic",
+        (true, _) => "window",
+        _ => "channel",
+    }
 }
 
 fn choice(on: bool, yes: &str, no: &str) -> Value {
@@ -343,10 +359,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("max_gap", n(f64::from(r.detect.max_gap))),
                 ("long_trace", n(f64::from(r.detect.long_trace))),
                 ("merge_overlap", n(r.detect.merge_overlap)),
-                (
-                    "area_from",
-                    choice(r.steps.quality.area_window, "window", "channel"),
-                ),
+                ("area_from", Value::Str(area_from(&r.steps.quality).into())),
                 ("stitch", choice(r.detect.stitch_wide, "wide", "strict")),
                 ("min_width", n(r.detect.min_width)),
                 ("min_snr", n(r.detect.min_snr)),
