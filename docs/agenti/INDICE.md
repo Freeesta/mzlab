@@ -104,6 +104,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | libreria (area: grafo di frammentazione MSn dell'infusione (`msngrafo/1`: ioni…) | `docs/agenti/msnlib.md` |
 | prove di mutazione (`cargo-mutants`) di `mzlab-lettori` e del modulo wiff: comandi, campioni, sopravvissuti e perché restano | `docs/agenti/mutanti.md` |
 | bande larghe (`broad.rs`), opzioni del passaggio mirato (`target.rs`: picchi stimati, controllo di forma /\, fusione di righe sovrapposte), correzione e allineamento dell'RT (`rtmap.rs`, `rtwarp.rs`), cinetica come prova (`kinetic.rs`, `kinetic/`) | `docs/agenti/mzfeat-broad.md` |
+| dipendenze fra i moduli di `crates/mzlab-feat` (ciclo grande, archi di ritorno, tagli, separazione in crate del motore di attribuzione) | `docs/agenti/mzfeat-cicli.md` |
 | pipeline delle feature a bassa risoluzione (full scan, asse in Da, profilo `lr`: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
 | prove e misure (area: pipeline delle feature HR in Rust (`crates/mzlab-feat`)) | `docs/agenti/mzfeat-prove.md` |
 | Feature table nella Pipeline (passi 5-6: QC, barra dei filtri, `PIPET` con `TPTAB` e riga espansa `TPRIGA`) | `docs/agenti/mzfeat-tabella-vista.md` |
@@ -160,7 +161,7 @@ Una riga per file d'area, in ordine di nome file (max 300 caratteri): se tocchi 
 | tabella delle transizioni SIM/MRM di un triplo quadrupolo (`chrom.transitions`, `transitions/`, integrazione per campione, candidati di RT, preset di esempio) | `docs/agenti/transizioni.md` |
 | pulsante «XIC» nella barra dello spettro, lente XIC al passaggio sul picco (`xic-lente.js`), banco e tabella di partenza dei tempi del visualizzatore (`tools/bench_viewer.py`, `viewer_times.rs`) | `docs/agenti/visore-veloce.md` |
 | potenziale di WebAssembly (profili `opt-level`, SIMD128, binaryen, zlib-rs, thread, memory64, browser minimi; misure) | `docs/agenti/wasm-potenziale.md` |
-| misure prima/dopo dei .wasm per ogni modifica (byte dopo `wasm-opt`, tetti in vigore) | `docs/agenti/wasm-tetti-misure.md` |
+| misure dei .wasm (campo `misura` di `tools/moduli/*.toml`, riga prima → dopo in PR, cosa costa di più) | `docs/agenti/wasm-tetti-misure.md` |
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio) | `docs/agenti/wasm-tetti.md` |
 | lettore cartelle Waters MassLynx `.raw` (`crates/mzlab-lettori/src/waters/`, modulo `waters`, raggruppamento in `waters-raw.js`) | `docs/agenti/waters.md` |
 | altri strumenti SCIEX, sMRM, PIS/NL, feature `estesi` (area: lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`)) | `docs/agenti/wiff-varianti.md` |

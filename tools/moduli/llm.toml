@@ -4,4 +4,5 @@ chiavi = { llm = 15 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 397312
+misura = 386795
 nota = "assistant and facts without a model; measured 358897 x 1.10, multiple of 4 KiB; never fused with another module"

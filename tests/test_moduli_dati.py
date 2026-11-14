@@ -1,4 +1,4 @@
-"""tools/moduli/*.toml against the cap literals still in the build scripts and workflows: they must be equal, module by module (the build scripts read the data; the workflow lines still carry the engine and libraries caps)."""
+"""tools/moduli/*.toml: complete, no cap literals in scripts or workflows, cap rule against a base, `--misura` writer."""
 import re
 import subprocess
 import sys
@@ -67,3 +67,43 @@ def test_base_sconosciuta_fallisce():
 def test_base_head_nessun_cambio():
     r = subprocess.run([sys.executable, str(ROOT / "tools/moduli.py"), "--controlla", "--base", "HEAD"], capture_output=True, text=True)
     assert r.returncode == 0 and "0 caps changed" in r.stdout, r.stdout + r.stderr
+
+
+def _finto(tmp_path, monkeypatch, byte):
+    """A copy of the data and a fake built site where every module is `byte` bytes."""
+    dati = tmp_path / "moduli"
+    dati.mkdir(parents=True)
+    for f in moduli.DIR.glob("*.toml"):
+        (dati / f.name).write_bytes(f.read_bytes())
+    monkeypatch.setattr(moduli, "DIR", dati)
+    static = tmp_path / "static"
+    for r in moduli.carica().values():
+        w = static / r["uscita"] / f"{r['pacchetto'].replace('-', '_')}_bg.wasm"
+        w.parent.mkdir(parents=True, exist_ok=True)
+        w.write_bytes(b"\0" * byte)
+    return dati, static
+
+
+def test_misura_scrive_e_ripetuta_non_cambia(tmp_path, monkeypatch):
+    dati, static = _finto(tmp_path, monkeypatch, 1234)
+    assert moduli.misure(moduli.carica(), static) == []
+    prima = {f.name: f.read_text() for f in dati.glob("*.toml")}
+    assert all(r["misura"] == 1234 for r in moduli.carica().values())
+    assert all(t.count("misura = ") == 1 for t in prima.values())
+    assert moduli.misure(moduli.carica(), static) == []
+    assert {f.name: f.read_text() for f in dati.glob("*.toml")} == prima       # the second run gives no diff
+    assert moduli.errori(moduli.carica()) == []
+
+
+def test_misura_non_scrive_se_manca_o_supera(tmp_path, monkeypatch):
+    dati, static = _finto(tmp_path, monkeypatch, 1234)
+    prima = {f.name: f.read_text() for f in dati.glob("*.toml")}
+    next(static.rglob("*.wasm")).unlink()
+    assert moduli.misure(moduli.carica(), static)
+    assert {f.name: f.read_text() for f in dati.glob("*.toml")} == prima       # nothing half-written
+    dati2, static2 = _finto(tmp_path / "b", monkeypatch, 10 ** 8)
+    assert any("above the cap" in e for e in moduli.misure(moduli.carica(), static2))
+
+
+def test_ogni_modulo_ha_la_misura():
+    assert [n for n, r in moduli.carica().items() if "misura" not in r] == []
