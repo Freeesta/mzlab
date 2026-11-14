@@ -17,7 +17,6 @@ SOLO_APP = {
     "convert.mzml": "gap: the site converts at upload (conversione.js), not as a Flow step",
     "spectra.chimeric": "gap: no Flow executor in the browser yet",
     "meta.compare": "gap: flow-compare.js adds the comparison to the plan; the browser runner refuses it until the executor exists",
-    "spectra.lookup": "gap: no Flow executor in the browser yet",
     "chrom.uv_peaks": "gap: no Flow executor in the browser yet",
     "quant.calibrate": "gap: no Flow executor in the browser yet",
 }
