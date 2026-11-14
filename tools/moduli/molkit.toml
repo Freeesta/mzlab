@@ -1,5 +1,6 @@
 uscita = "wasm-feat/molkit"
 pacchetto = "mzlab-mol-wasm"
+chiavi = { molkit = 13 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000

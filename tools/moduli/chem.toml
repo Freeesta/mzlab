@@ -1,5 +1,6 @@
 uscita = "wasm-feat/chem"
 pacchetto = "mzlab-chem-wasm"
+chiavi = { chem = 14 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 569344

@@ -1,5 +1,6 @@
 uscita = "wasm-feat/normative"
 pacchetto = "mzlab-normative-wasm"
+chiavi = { normative = 21 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000

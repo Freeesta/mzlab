@@ -1,6 +1,7 @@
 uscita = "wasm-lettori/bruker"
 pacchetto = "mzlab-lettori-wasm"
 feature = "bruker"
+senza_default = true
 wasm_opt = "@estesi"
 parte = "lettori"
 tetto = 532480

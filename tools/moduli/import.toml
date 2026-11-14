@@ -1,5 +1,6 @@
 uscita = "wasm-feat/import"
 pacchetto = "mzlab-feat-import-wasm"
+chiavi = { import = 22 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000

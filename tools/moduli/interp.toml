@@ -1,6 +1,8 @@
 uscita = "wasm-feat/interp"
 pacchetto = "mzlab-feat-wasm"
 feature = "interp"
+senza_default = true
+chiavi = { interp = 10 }
 wasm_opt = "@motore"
 parte = "b"
 tetto = 623200

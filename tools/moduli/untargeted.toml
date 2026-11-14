@@ -1,6 +1,8 @@
 uscita = "wasm-feat/untargeted"
 pacchetto = "mzlab-feat-wasm"
 feature = "untargeted"
+senza_default = true
+chiavi = { untargeted = 11 }
 wasm_opt = "@motore"
 parte = "b"
 tetto = 585728

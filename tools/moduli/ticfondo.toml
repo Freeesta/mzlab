@@ -1,5 +1,6 @@
 uscita = "wasm-feat/ticfondo"
 pacchetto = "mzlab-ticfondo-wasm"
+chiavi = { ticfondo = 20 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 512000

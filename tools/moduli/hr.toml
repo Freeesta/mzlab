@@ -1,6 +1,8 @@
 uscita = "wasm-feat/hr"
 pacchetto = "mzlab-feat-wasm"
 feature = "detect,proofs,finder,finder_edge,finder_msn,flow_ms2"
+senza_default = true
+chiavi = { feat = 1, proofs = 2, finder = 4, finder_edge = 5, finder_msn = 6 }
 wasm_opt = "@motore"
 parte = "a"
 tetto = 1716224

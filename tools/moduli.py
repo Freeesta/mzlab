@@ -1,7 +1,10 @@
 """Data of the site's .wasm modules: one tools/moduli/<name>.toml each (output, cargo package, features, wasm-opt set, build part, cap, note, last measure).
-The only reader of those files: `--elenco <part>` (names, for the shell scripts), `--tetto <name>`, `--controlla [--base <git ref>]`.
+The only reader of those files: `--elenco <part>` (names, for the shell scripts), `--riga <name>` (how to build one), `--tetto <name>`,
+`--manifest <wasm-feat dir>` (writes its manifest.json from a build), `--controlla [--base <git ref>]`.
 Cap rule (docs/agenti/wasm-tetti.md): a cap rises by at most 10 % per new function and never in a workflow; with --base a cap above 1.10 x its base value fails."""
 import argparse
+import hashlib
+import json
 import subprocess
 import sys
 import tomllib
@@ -60,22 +63,46 @@ def cambi(mod: dict[str, dict], base: dict[str, dict]) -> list[str]:
     return out
 
 
+def riga(r: dict) -> str:
+    """`out dir|package|cargo flags|cap|wasm-opt set` for the build scripts (`|` keeps an empty field in place)."""
+    flags = ("--no-default-features " if r.get("senza_default") else "") + (f"--features {r['feature']}" if r.get("feature") else "")
+    return "|".join((r["uscita"], r["pacchetto"], flags.strip(), str(r["tetto"]), r["wasm_opt"]))
+
+
+def manifesto(mod: dict[str, dict], o: Path) -> None:
+    """manifest.json of wasm-feat: one key per `chiavi` entry, in the order of its number; modules fused in one .wasm (hr, attributio-all) repeat their entry."""
+    voci = {}
+    for r in mod.values():
+        for chiave, pos in r.get("chiavi", {}).items():
+            d, stem = r["uscita"].rsplit("/", 1)[1], r["pacchetto"].replace("-", "_")
+            sha = hashlib.sha256((o / d / f"{stem}_bg.wasm").read_bytes()).hexdigest()
+            voci[pos] = (chiave, {"js": f"{d}/{stem}.js", "wasm": f"{d}/{stem}_bg.wasm", "sha256": sha})
+    m = dict(voci[p] for p in sorted(voci))
+    m["attributio_rev"]["classes"] = "attributio-all/classi-1.json"   # the table of classes beside the fused attributio module
+    (o / "manifest.json").write_text(json.dumps(m, indent=1), encoding="utf-8")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--elenco", choices=PARTI, metavar="PART")
     g.add_argument("--tetto", metavar="NAME")
+    g.add_argument("--riga", metavar="NAME")
+    g.add_argument("--manifest", metavar="DIR")
     g.add_argument("--controlla", action="store_true")
     ap.add_argument("--base", metavar="REF")
     a = ap.parse_args()
     mod = carica()
     if a.elenco:
         print("\n".join(n for n, r in mod.items() if r["parte"] == a.elenco))
-    elif a.tetto:
-        if a.tetto not in mod:
-            print(f"unknown module {a.tetto}", file=sys.stderr)
+    elif a.tetto or a.riga:
+        n = a.tetto or a.riga
+        if n not in mod:
+            print(f"unknown module {n}", file=sys.stderr)
             return 2
-        print(mod[a.tetto]["tetto"])
+        print(mod[n]["tetto"] if a.tetto else riga(mod[n]))
+    elif a.manifest:
+        manifesto(mod, Path(a.manifest))
     else:
         err = errori(mod)
         if a.base:
