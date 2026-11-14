@@ -60,7 +60,7 @@ impl<F: Fetch> BlockReader<F> {
     }
 }
 
-pub(crate) const BLOCK: usize = 4 << 20; // 4 MiB: ~2.5x faster OPFS reads than 1 MiB in Chromium (docs/studi/wasm-potenza.md 3e); JS buffers grow to it
+pub(crate) const BLOCK: usize = 4 << 20; // 4 MiB: ~2.5x faster OPFS reads than 1 MiB in Chromium (docs/agenti/capacita.md); JS buffers grow to it
 
 /// A `BlockReader` over the `read(offset, length)` function the worker gives.
 pub(crate) fn js_blocks(read: Function, size: u64) -> BlockReader {

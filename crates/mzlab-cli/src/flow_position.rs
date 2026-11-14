@@ -20,7 +20,7 @@ fn param(job: &Job, name: &str) -> Option<f64> {
 /// `sites/1` text of the `.mzfeat` `tp` (with the block `interp`) for the parent file `parent`: the code the `.wasm` `interp` runs.
 pub fn position_text(job: &Job, tp: &[u8], parent: &[u8]) -> Result<String> {
     let p = parent_of(parent)?;
-    mzlab_feat_wasm::interp::position_text(&|n| param(job, n), tp, &p.smiles, &p.formula)
+    mzlab_ops::run::feat::interp::position_text(&|n| param(job, n), tp, &p.smiles, &p.formula)
 }
 
 /// `tp.position`: `sites/1` written next to the other outputs of the run.

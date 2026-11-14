@@ -1,4 +1,4 @@
-//! The steps of mzFlow in both polarities and both resolutions (`docs/studi/MATRICE_NEG_LR.md`) on the invented bentazone series of `flow_bentazone_tests.rs`:
+//! The steps of mzFlow in both polarities and both resolutions (`docs/agenti/rust-step.md`) on the invented bentazone series of `flow_bentazone_tests.rs`:
 //! what runs in HR+, HR-, LR+ and LR- and follows the files. Each ignored `gap_*` test states what an open gap should do; closing it removes the `#[ignore]`.
 
 use std::path::{Path, PathBuf};
@@ -318,7 +318,7 @@ fn a_negative_table_is_searched_as_negative_by_table_match() {
         Some(p) => crate::flow_base::open(p),
         None => Err(mzlab_core::error::Error::new("err.flow.tablematch.files")),
     };
-    let mgf = mzlab_feat_table_wasm::rows_mgf::rows_mgf(
+    let mgf = mzlab_ops::run::table::rows_mgf::rows_mgf(
         &mut mzlab_feat::store::Slice(&table),
         table.len() as u64,
         &samples,

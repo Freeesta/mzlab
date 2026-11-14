@@ -2,6 +2,7 @@
 the bar goes forward only and ends; each sample has its row with the phase, the scans done and the time, and the page never stays still for more than 5 s; at the end each sample keeps
 «Loaded ✓ (n scans, t s)» and the totals by kind; a truncated .wiff.scan says how many scans are missing; «Cancel» stops the files still running and they do not enter the list; a damaged pair leaves an error with «Details» and «Copy diagnosis», whose text carries the
 trace of the loading and no file name. Needs the site and the .wasm (python tools/build_site.py + wasm, see e2e_wiff.py). Run from the repo root: python3 tests_e2e/e2e_wiff_carico.py"""
+# covers: mzlab/web/upload-rows.js
 import json, os, re, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -57,8 +58,8 @@ try:
         step("the bar only goes forward and the loading ends with the 4 samples in the list", bar)
         def rows():
             phases = {st for s in states for _, st in s["rows"]}
-            assert {"nscan"} <= phases and all(st == "done" for _, st in states[-1]["rows"]), (phases, states[-1]["rows"])
-            assert any(" of 700" in s["see"] for s in states), "the row counts the scans of its sample"
+            assert {"nread"} <= phases and all(st == "done" for _, st in states[-1]["rows"]), (phases, states[-1]["rows"])
+            assert any("Reading" in s["see"] for s in states) and any("700 scans" in s["see"] for s in states), "the row shows the reading and ends with the scans of its sample"
         step("each sample has its row with its phases and the scans done", rows)
         def alive(): assert still <= 5, f"the loading was still for {still:.1f} s"
         step("the visible text never stays the same for more than 5 s", alive)
@@ -98,13 +99,13 @@ try:
             n, t = int(li.get_attribute("data-cvmiss")), li.inner_text()
             assert li.count() == 1 and pg.locator("#flist .cvsum li").count() == 1, "only the file with a warning is listed"
             assert 0 < n < 200 and (m := re.search(r"partial read: ([\d,]+) of ([\d,]+) scans, the file ends before the rest", t)) and int(m[2].replace(",", "")) - int(m[1].replace(",", "")) == n and "Loaded ✓" in t, t
-            assert "1 with scans missing" in pg.inner_text("#flist .cvsum [data-cvtot]")
+            assert "1 with a partial read" in pg.inner_text("#flist .cvsum [data-cvtot]")
             pg.evaluate("document.querySelector('#flist .cvsum [data-cvact=close]')?.click()")      # the table may stand behind the first file shown
         step("a truncated .wiff.scan loads what it has and says how many scans are missing", truncated)
 
         def cancel():
             pg.set_input_files("#pick", [str(D / "ferma.wiff"), str(D / "ferma.wiff.scan")])
-            pg.wait_for_function("CONVROWS.rows.some(r => r.state === 'nscan')", timeout=120000)
+            pg.wait_for_function("CONVROWS.rows.some(r => r.state === 'nread')", timeout=120000)
             pg.evaluate("document.querySelector('#fl-up [data-up-all]').click()"); t0 = time.time()      # «Cancel» of the side list
             pg.wait_for_function("UPBUSY === 0", timeout=30000)
             assert time.time() - t0 < 15, f"Cancel took {time.time() - t0:.1f} s"

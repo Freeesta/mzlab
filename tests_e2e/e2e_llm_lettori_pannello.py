@@ -1,4 +1,4 @@
-"""Readers on the assistant panel in Flow (docs/agenti/llm-lettori.md): the card shows each reader queued, running, then done / discarded / error / skipped / cancelled with a short outcome; the state
+"""Readers on the assistant panel in Flow (docs/agenti/llm-subagenti.md): the card shows each reader queued, running, then done / discarded / error / skipped / cancelled with a short outcome; the state
 is in words (not only colour); the next batch opens a new card; targets of 24 px (40 on touch); axe. Driven through the display (FLOW.llmReaders) that the host of the panel uses.
 No request leaves the site. Run from the repo root: python3 tests_e2e/e2e_llm_lettori_pannello.py"""
 import json, socket, subprocess, sys, tempfile

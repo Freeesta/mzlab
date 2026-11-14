@@ -1,4 +1,5 @@
 """HR file list: only the first file (in list order) is open, groups DDA / Full Scan / MS2 / Infusion, a click opens another file, compact list folds groups."""
+# covers: mzlab/web/ordine.js, mzlab/web/qqq-db
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import re

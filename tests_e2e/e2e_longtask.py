@@ -1,4 +1,5 @@
 """Space (play) and the held arrow walk the scans at the same pace and cost the same: Space on a focused button does not also click it, and the main thread is not blocked longer by one than by the other."""
+# covers: mzlab/web/scroll.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

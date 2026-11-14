@@ -115,7 +115,7 @@ pub fn median_cols(full: &[f32], rows: usize, nmz: usize) -> Vec<f32> {
     (0..nmz)
         .map(|j| {
             let mut c: Vec<f32> = (0..rows).map(|r| full[r * nmz + j]).collect();
-            // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/studi/OTTIMIZZAZIONE_CORE.md §4.1)
+            // hot path: per-point/per-peak sort, std is ~2x faster than sortc (docs/agenti/wasm-tetti.md, «Ordinamenti std nei percorsi caldi»)
             #[allow(clippy::disallowed_methods)]
             c.sort_by(f32::total_cmp);
             match c.len() {

@@ -1,6 +1,7 @@
 """Disegno, radical mark (disegno-radicale.js, item «Radical •» of the charge menu of the drop-down bar): with the tool on, a click on an atom puts the
 mark (one H less, the label of the structure gets • and the mass of the radical) and a second click takes it off; Esc ends the tool; from the keyboard
 the item marks the selected atoms; the mark is one undo step and goes out in the molfile (M  RAD) and in the SMILES (bracket atom with its H)."""
+# covers: mzlab/web/disegno-barra.js, mzlab/web/disegno-radicale.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

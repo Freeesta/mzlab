@@ -3,6 +3,7 @@ candidates and their ppm, «Use» chooses one, the isolation window and the unex
 export as CSV, MGF and MSP, «Add to library» warns about a duplicate, «Copy data», the keys, axe, Italian and English. The engine routes (/api/msn_grafo, the export,
 /api/msnlib/aggiungi, /api/molecules/*) are answered here by a stand-in with the JSON of tests_e2e/fixtures/msngrafo_esempio.json until the Rust ones are in main; the
 file is the synthetic one of TP_Mine/tests/msn_synth.py (no real data, no real compounds)."""
+# covers: mzlab/web/mol-svg.js, mzlab/web/infusione-grafo
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

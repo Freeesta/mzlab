@@ -17,8 +17,7 @@ mzlab-llm = { path = "../mzlab-llm" }
 mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
 # the same features as mzlab-desktop: one build of each crate in the workspace
 mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "flow_formula", "interp", "record", "figura", "sel", "check"] }
-mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect", "proofs", "finder", "untargeted", "interp"] }
-mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
+mzlab-ops = { path = "../mzlab-ops", features = ["table", "detect", "proofs", "untargeted"] }
 # `normative build` (native only): the same crates as the rest of the workspace; ureq as in mzlab-desktop
 sha2 = { version = "0.11", default-features = false }
 flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }

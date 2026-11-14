@@ -1,5 +1,6 @@
 """One bar for every loading: loading a .mzML series and a SCIEX .wiff pair together, the bar of the loading card (role=progressbar in #up) only goes forward, is not 100 before the end, and the
 shares of the phases are printed (the weights of progresso.js); five small mzML: no row keeps the same percent for more than 400 ms unless it is queued. Synthetic data. Needs the site and the .wasm (python tools/build_site.py + the CI build). Run: python3 tests_e2e/e2e_progresso.py"""
+# covers: mzlab/web/idx-worker.js, mzlab/web/conversione.js, mzlab/web/progresso.js
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright

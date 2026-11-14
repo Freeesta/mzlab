@@ -7,7 +7,7 @@ use mzlab_core::error::Result;
 
 use crate::broad::decimate;
 use crate::broad_gt::median;
-use crate::trace::{filled, reserve};
+use crate::trace_base::{filled, reserve};
 
 /// Most traces the bank keeps (the strongest ones).
 const MAX_ITEMS: usize = 4096;

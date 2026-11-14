@@ -1,4 +1,5 @@
 """A5: sharp canvases at any pixel ratio (also when it changes while the page is open), area label 13 px, no canvas text under 12 px."""
+# covers: mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

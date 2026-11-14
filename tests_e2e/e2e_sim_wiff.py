@@ -6,6 +6,7 @@ export, the engine's sum rows and «Copy table» (tab-separated) are the bytes o
 a row's Delete removes the integration; «Split at the valleys» (V) proposes the engine's drop line (`mzlab-cli peak-split`), moved by mouse, keys and finger and
 confirmed into one row per part; a window drawn on one sample stays drawn when another sample is chosen in the left panel, measured on that sample with no row added; the channels of a sample equal `mzlab-cli channels`. The copy whose .wiff.scan is cut at 60 % measures the
 points before the cut. Needs the site and the .wasm (python3 tools/prepara_sito.py) and cargo for the CLI. Run from the repo root: python3 tests_e2e/e2e_sim_wiff.py"""
+# covers: mzlab/web/integrazioni-manuali.js, mzlab/web/integra-segue.js, mzlab/web/integra-valli.js, mzlab/web/sim-ui.js, tools/wiff_sim.py
 import json, shutil, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

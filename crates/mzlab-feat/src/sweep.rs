@@ -6,7 +6,7 @@
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
-use crate::trace::{filled, reserve};
+use crate::trace_base::{filled, reserve};
 use std::sync::{Mutex, OnceLock};
 
 /// Peaks of a slab: m/z, intensity and position of the scan (in the section), in table order.

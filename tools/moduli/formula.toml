@@ -1,0 +1,10 @@
+uscita = "wasm-feat/formula"
+pacchetto = "mzlab-feat-wasm"
+feature = "flow_formula"
+senza_default = true
+chiavi = { formula = 7 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+misura = 408349
+nota = "formula.ms1 of the Flow, loaded only by its executor; standard cap"

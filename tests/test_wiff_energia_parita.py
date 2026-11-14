@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from cargo_util import run
+from cargo_util import build, cli, run
 from test_wiff_tic_parita import parts
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,9 +21,9 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("wiff_energy")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
-    run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli")
+    build("-p", "mzlab-cli")
     subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_riferimento.py"), str(d / "ref")], check=True, capture_output=True)
     return d
 
@@ -43,7 +43,7 @@ def test_the_engine_and_the_app_index_product_ion_scans_with_their_energy_and_wi
     plan = work / "plan.json"
     plan.write_text(json.dumps({"format": "mzflow/2", "inputs": [{"name": "energia.wiff", "type": "raw"}],
                                 "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:energia.wiff"]}}]}), encoding="utf-8")
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(plan), "--in", str(ref / "energia.wiff"), "--in", str(ref / "energia.wiff.scan"), "--out", str(work / "run"))
+    cli("flow", "run", str(plan), "--in", str(ref / "energia.wiff"), "--in", str(ref / "energia.wiff.scan"), "--out", str(work / "run"))
     app = work / "run" / "idx-energia.mzidx"
     assert rows(eng) == rows(app)
     assert parts(eng) == parts(app)

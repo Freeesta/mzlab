@@ -2,6 +2,7 @@
 experiment cell says «SIM · N ions» (not «no data»), the side list group, the panel title, the toolbar button and the channel picker speak of SIM ions, overlaid traces take
 the colour of their sample and a dash per ion, the chromatogram menu holds the «Extract ion ›» submenu (check mark, «All», click / Ctrl / Shift rules) in place
 of XIC, the «Area» toggle fills the traces (on by default), the Range popover has «Reset zoom» and no how-to sentence is on screen. Needs the site and the .wasm (python3 tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_sim_ui.py"""
+# covers: mzlab/web/sim-ui.js, tools/wiff_sim.py
 import json, subprocess, sys, os, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -1,4 +1,5 @@
 """B4: XIC with the tolerance of the profile (5 ppm for the Orbitrap), the unit window for the QqQ, and the switch «spenta»."""
+# covers: mzlab/web/visualizza.js, mzlab/web/hr.js, mzlab/reader/profile.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

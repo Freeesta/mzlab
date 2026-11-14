@@ -1,4 +1,5 @@
 """Open-data exports from an HR MS2 spectrum: right-click menu → MassBank record (dialog with checks, download) and SIRIUS 6 .ms; nothing in low resolution."""
+# covers: mzlab/web/fair.js, tests/test_fair.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

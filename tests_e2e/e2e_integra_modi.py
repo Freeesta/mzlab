@@ -2,6 +2,7 @@
 (the line between the edges, from zero, a custom line), the custom line moved by mouse, by keyboard and by finger on a 1024x768 touch viewport, in the light and
 the dark theme; the part under the line is reported apart and drawn hatched; a new integration is from zero and names it (`bm`), the default of the peak dialog
 (`PK.bmode`, edges still chosen there or in the dialog, where it is written as `bm` = edges); a record without a mode (a saved session) keeps its old number and fields."""
+# covers: mzlab/web/integra-base.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import load
@@ -57,7 +58,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         load(pg, [LRF], 4000, 1)
-        xic(pg, "364")
+        xic(pg, "194")
         integrate(pg, 14.3)
         def from_zero():
             v = pg.evaluate(f"(()=>{{const i={IT};return {{bm:i.bm,area:i.area,below:i.below}}}})()")
@@ -155,7 +156,7 @@ try:
             tp = r.b.new_page(viewport={"width": 1024, "height": 768}, has_touch=True, reduced_motion="reduce")
             tp.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
             tp.goto(f"http://127.0.0.1:{r.port}/"); wait_for_js(tp, "typeof E==='object' && !!document.querySelector('#pick')")
-            load(tp, [LRF], 4000, 1); xic(tp, "364"); integrate(tp, 14.3); mode(tp, "line")
+            load(tp, [LRF], 4000, 1); xic(tp, "194"); integrate(tp, 14.3); mode(tp, "line")
             tp.locator(".ibp[data-k='0']").scroll_into_view_if_needed()
             x, y, b = point(tp, 0); assert b["width"] >= 24, b
             y1 = tp.evaluate(f"{IT}.bl[1]"); cdp = tp.context.new_cdp_session(tp)

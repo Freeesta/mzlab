@@ -231,13 +231,31 @@ fn sentence(s: &Step) -> String {
             out.push(' ');
             out.push_str(&fill(t, s));
         }
-        if value_of(s, "area_from") == "window" {
-            out.push(' ');
-            out.push_str(templates::AREA_WINDOW);
+        match value_of(s, "area_from").as_str() {
+            "window" => {
+                out.push(' ');
+                out.push_str(templates::AREA_WINDOW);
+            }
+            "xic" => {
+                out.push(' ');
+                out.push_str(templates::AREA_XIC);
+            }
+            "channel" => {
+                out.push(' ');
+                out.push_str(templates::AREA_CHANNEL);
+            }
+            _ => {}
         }
-        if value_of(s, "stitch") == "wide" {
-            out.push(' ');
-            out.push_str(templates::STITCH_WIDE);
+        match value_of(s, "stitch").as_str() {
+            "wide" => {
+                out.push(' ');
+                out.push_str(templates::STITCH_WIDE);
+            }
+            "strict" => {
+                out.push(' ');
+                out.push_str(templates::STITCH_STRICT);
+            }
+            _ => {}
         }
     }
     if s.failed {

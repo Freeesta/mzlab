@@ -1,6 +1,6 @@
 # Attributio in Rust (cascata dei livelli, Banco 2b) e binario MZ
 
-Studio e piano: `docs/studi/ATTRIBUTIO.md`. Attributio vive dentro Flow (`flow/`), che si registra in `QTOOLS` senza condizioni (meccanismo in `docs/agenti/mzfinder.md`); i pannelli interni di ricerca restano dietro `uipAdminOn()` (`mzlab/web/settings.js`).
+Attributio vive dentro Flow (`flow/`), che si registra in `QTOOLS` senza condizioni (meccanismo in `docs/agenti/mzfinder.md`); i pannelli interni di ricerca restano dietro `uipAdminOn()` (`mzlab/web/settings.js`).
 
 ## Binario AT: passaggio di Attributio
 - **Scopo**: portare Attributio 1.12.0 (repository privato `Freeesta/attributio`) in Rust con parità sulla campagna sintetica. Il livello 2b è una decisione del chimico: il programma propone e mostra le prove; solo con `[levels] auto_2b = true` (spento di default) il programma scrive da sé il 2b delle proposte `2b-strong`, sempre marcato «auto-2b».
@@ -21,7 +21,7 @@ Studio e piano: `docs/studi/ATTRIBUTIO.md`. Attributio vive dentro Flow (`flow/`
 - **Prova delle letture**: `cargo test --release -p mzlab-feat --features attributio --test attributio_letture --test attributio_standard` (16 prove, helper in `tests/attributio_common/`: parità con `sintetica/{campagna,letture,rilevazione,sirius,standard,decisioni}.json` e `sorbenti/sorbenti.json`, casi a mano per TOML, unione delle decisioni e messaggi d'errore; con `MZLAB_DATI` legge le campagne vere e stampa le righe per fonte, senza si salta).
 - **Pannello e `.wasm`**: tabella dei livelli, crate `mzlab-attributio-wasm`, rotta desktop e pagina in `docs/agenti/attributio-pannello.md`; il Banco 2b (revisione, lista di controllo, alternative, decisioni) è in `docs/agenti/attributio-banco.md`.
 - **Campagna sintetica**: `tests/data/attributio/campagna_sintetica/` (inventata, 148 KB, 15 feature: POS 1-6 e 8-14, NEG 1-2; `livelli_attesi.csv` con colonne `_pol;_id;mz;rt;level;level_sub;level_basis;name;level_decisive`); provenienza e sha256 in `tests/data/attributio/LEGGIMI.md`.
-- **Revisione (AT-05)**: abbinamento spettrale, indice delle librerie, fonti e impostazioni in `crates/mzlab-feat/src/attributio/review/`; moduli, differenze volute e prova in `docs/agenti/attributio-abbinamento.md`.
+- **Revisione (AT-05)**: abbinamento spettrale, indice delle librerie, fonti e impostazioni in `crates/mzlab-feat/src/attributio/review/`; moduli, differenze volute e prova in `docs/agenti/attributio-revisione.md`.
 - **Dati di registro, liste e pericolo**: `crates/mzlab-feat/src/attributio/tox/`, istantanee in testo, nessuna rete:
   - `vocab.rs`: parole in inglese, alias italiani in sola lettura.
   - `ghs.rs`: categorie CLP/GHS acute e croniche (`classify`, `from_h_codes`).
@@ -40,10 +40,17 @@ Studio e piano: `docs/studi/ATTRIBUTIO.md`. Attributio vive dentro Flow (`flow/`
 - **Dati d'oro**: `tests/golden/attributio/sintetica/{campagna,letture,rilevazione,livelli,identita,proposte,decisioni,sirius,standard,abbinamenti}.json` e `tests/golden/attributio/sorbenti/sorbenti.json` (campagna `tests/data/attributio/campagna_sorbenti/`: liste per sorbente, gemelli, abbondanza del bianco); chiavi ordinate, ~40 KB in tutto; li scrive `tools/attributio_reference.py`, comando e sha256 in `tests/golden/attributio/LEGGIMI.md`. Un caso che non torna non si risolve cambiando il dato d'oro.
 - **Riferimento**: `ATTRIBUTIO_SRC=<attributio/src> python3 tools/attributio_reference.py [--campagna D] [--uscita D] [--controlla]` (imposta `UNTARGET_OFFLINE=1`; richiede pandas, numpy e matplotlib; senza `ATTRIBUTIO_SRC` esce con 2). `--controlla` confronta `livelli.json` con `livelli_attesi.csv` ed esce 1 se una riga differisce. Uno stadio nuovo = una funzione `stadio_*` e un JSON.
 - **Prova senza sorgente**: `tests/test_attributio_oro.py` (non importa Attributio): i JSON esistono, sono sotto 100 KB l'uno e 300 KB in tutto, e `livelli.json` coincide con `livelli_attesi.csv`.
-- **Soglie di parità** (§3 dello studio): uguaglianza per livelli, sottolivelli, basi, nomi, identità, conteggi e classi di proposta; numeri 1e-9 relativo; frammenti assegnati con la stessa formula e ppm entro 0,005; frammentatore senza RDKit ≥ 0,90 di frammenti spiegati uguali. Le campagne vere le confronta l'agente locale sul Mac (`MZLAB_DATI`); qui solo numeri aggregati.
+- **Soglie di parità**: uguaglianza per livelli, sottolivelli, basi, nomi, identità, conteggi e classi di proposta; numeri 1e-9 relativo; frammenti assegnati con la stessa formula e ppm entro 0,005; frammentatore senza RDKit ≥ 0,90 di frammenti spiegati uguali. Le campagne vere le confronta l'agente locale sul Mac (`MZLAB_DATI`); qui solo numeri aggregati.
 
 ## Binario MS
 Motore MS2 sperimentale, frammentazione in silico, attribuzione dei frammenti e previsione dell'RT: `docs/agenti/attributio-ms2.md`.
 
 ## Binario MZ
 Rilevamento alla mzmine 3.9.0 dai grezzi (ADAP, risolutore, join, riempimento, isotopi, identità, ingresso della cascata): `docs/agenti/attributio-mz.md`.
+
+## Decisioni in vigore
+- **Scelte**: Attributio si porta in Rust (nessun Pyodide); mzLab scrive `evidence_checklist` e Attributio la ignora; i CSV di curazione si leggono dalla cartella della campagna; `.siriusdb` solo nell'app desktop (nel sito MGF, MSP, JSON, MassBank); le campagne vere si confrontano solo sul Mac con `MZLAB_DATI`; POS e NEG si confrontano separati, come in Attributio.
+- **Risolutore a minimo locale** (binario MZ, `crates/mzlab-feat/src/untargeted/resolve.rs`, dopo mzmine 3.9.0): ingresso il cromatogramma su tutte le scansioni MS1 con zeri dove manca; soglia = quantile `chromThreshold` (0,85) con gli zeri, sotto diventa 0; regioni fra zeri. Un punto è minimo locale se nessun punto entro ± `searchRange` (0,1 min) è più basso e il massimo fin lì è ≥ `minRatio` (1,7) volte il minimo.
+- **Picco del risolutore**: una regione è un picco con ≥ `minDataPoints` punti, massimo ≥ max(altezza assoluta, relativa × massimo) e ≥ `minRatio` × i due bordi, durata in `peakDuration`. Dove questa riga è più larga del sorgente di mzmine vince il sorgente.
+- **Concordanza con mzmine** (`tools/bench/motivi_mzmine.py`): la differenza viene dalla definizione della riga e dal protocollo, non dai parametri: righe per famiglia contro righe per ione, popolazione senza pavimento comune di altezza (aree in unità diverse), fondo (le tracce persistenti le scartiamo noi, mzmine ne tiene ciò che sporge), buchi e tagli (mzmine chiude a una scansione mancante e scarta picchi oltre 1 min), allineamento uno a uno per file contro la feature più grande del gruppo, aree.
+- **Protocollo della concordanza**: si confronta per ione, sopra un pavimento comune di altezza, per file prima dell'allineamento, con il motivo di ogni riga non abbinata.

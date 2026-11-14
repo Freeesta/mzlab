@@ -1,5 +1,6 @@
 """One «Correction» menu in the chromatogram, the spectrum and the map (same items, short one-line descriptions; the map and the chromatogram also have the automatic
 background), the map header on a single row without the fixed guide text, old preferences converted (PREF.bg, p.ref), the numbers unchanged (same requests to the API)."""
+# covers: mzlab/web/mappa.js, mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

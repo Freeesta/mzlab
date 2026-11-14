@@ -2,6 +2,7 @@
 and the same nitrogen drawn as N+ is fine, and common groups (sulfone, nitro, phosphate, DMSO, pyridine, carboxylic acid, azide) raise no alarm.
 A remark selects its atoms on the canvas and «Perché?» opens its three parts; draw -> Check -> remark -> Why? is three clicks; auto-run is off by default.
 Run from the repo root after tools/build_site.py and tools/build_feat_wasm.sh site/static (molkit); SKIP without site/static/wasm-feat."""
+# covers: mzlab/web/disegno-verifica.js, mzlab/web/lang/it/disegno-verifica.js, mzlab/web/lang/en/disegno-verifica.js, mzlab/web/draw.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "static", "wasm-feat", "manifest.json")):
     print("SKIP site/static/wasm-feat is missing (tools/build_feat_wasm.sh site/static)"); sys.exit(0)

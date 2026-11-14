@@ -52,6 +52,8 @@ pub mod flow_level;
 pub mod flow_ms2;
 #[cfg(feature = "attributio")]
 pub mod flow_regulatory;
+#[cfg(all(feature = "attributio", any(feature = "record", feature = "crippen")))]
+pub mod flow_rtpredict;
 #[cfg(feature = "attributio")]
 pub mod normative;
 pub mod flow_screen_suspects;
@@ -85,6 +87,7 @@ pub mod params_drift;
 pub mod params_height;
 pub mod params_unit;
 pub mod pipeline;
+mod pipeline_steps;
 pub mod polpair;
 mod post;
 pub mod prof;
@@ -96,6 +99,7 @@ mod recipe_lr;
 pub mod regulatory;
 pub mod report;
 pub mod resolve;
+pub mod netarcs;
 pub mod network;
 pub mod row;
 pub mod rowident;
@@ -121,8 +125,10 @@ pub mod tabcheck;
 pub mod table;
 pub mod target;
 pub mod tp;
+mod tp_block;
 pub mod transitions;
 pub mod trace;
+mod trace_base;
 pub mod trace_estimate;
 mod trace_text;
 #[cfg(feature = "untargeted")]

@@ -1,6 +1,8 @@
 """Garbage in the fields of the Statistica sections and of the QA/QC (campi.js gate, lib_campi.sweep): blank subtraction, difference from the reference,
 PCA, PFAS, time profile and QA/QC; each field refuses letters, 1e999, empty where a value is due, out-of-bound numbers and decimals where a whole number
 is due with one note and the old value, a refused field blocks its form, «auto» is taken as the pseudocount and a comma decimal is taken."""
+# covers: mzlab/web/campi.js, mzlab/web/pfas.js, mzlab/web/riferimento-corpo.js, mzlab/web/qaqc.js, mzlab/web/profilo.js, mzlab/web/bianco.js
+# covers: mzlab/web/pca.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_campi import sweep, typed

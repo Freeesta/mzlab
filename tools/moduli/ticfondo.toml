@@ -1,0 +1,8 @@
+uscita = "wasm-feat/ticfondo"
+pacchetto = "mzlab-ticfondo-wasm"
+chiavi = { ticfondo = 20 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 512000
+misura = 139750
+nota = "TIC/BPC without the chemical background (api/tic_background); standard cap"

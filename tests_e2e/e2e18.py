@@ -1,4 +1,5 @@
 """One XIC window (da/a with automatic "a", "oppure", neutral formula), right-click menu with "Ripristina zoom", header button groups, xlsx exports."""
+# covers: mzlab/web/xlsx.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -86,7 +87,7 @@ try:
             assert t[2].startswith("m/z ") and abs(t[1] - 0.25) < 1e-9, t          # default unit window [n-0.2, n+0.3]
         step("right click on a peak of the spectrum extracts the XIC at once, no window", spec_menu)
         def groups():
-            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "smooth", "log", "xic", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "smooth", "log", "dl", "max"]), (".pnl.spec", ["xicb", "fit", "rul", "par", "rel", "lock", "dl", "tabp", "max"])]:
+            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "smooth", "log", "xic", "ticbg", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "smooth", "log", "dl", "max"]), (".pnl.spec", ["xicb", "fit", "rul", "par", "rel", "lock", "dl", "tabp", "max"])]:
                 got = pg.evaluate(f"[...document.querySelector('{sel}').querySelectorAll('.tbs [data-a]')].filter(b=>b.tagName==='BUTTON'&&!b.hidden).map(b=>b.dataset.a)"); assert got == expect, (sel, got)
             # hidden until needed
             assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr], .pnl.xic [data-a=itab]')].every(b=>b.hidden)")

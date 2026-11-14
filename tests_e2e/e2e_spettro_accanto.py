@@ -1,5 +1,6 @@
 # e2e_spettro_accanto: the spectrum of the double click always goes below the chromatogram, in its own row; an old stored «beside» preference is ignored;
 # the settings panel has no switch for it; a narrow window keeps it below
+# covers: mzlab/web/settings.js, mzlab/web/affianca.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

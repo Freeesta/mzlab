@@ -1,6 +1,7 @@
 """Peak quality (Rust engine, qualita.js) on the built site: the optional columns of the integration table (Gaussian similarity, asymmetry at 10 %,
 noise score) and the Peak detection panel (one method for the limits, sections, reset button).
 Needs the site and the .wasm (python tools/build_site.py; the CI builds the .wasm in site/static/wasm)."""
+# covers: mzlab/web/qualita, mzlab/web/peaks-worker, mzlab/web/picchi.js
 import subprocess, sys, time, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *

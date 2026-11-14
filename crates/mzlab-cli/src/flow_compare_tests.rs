@@ -205,3 +205,6 @@ fn keys_keep_the_order_of_first_appearance() {
         "{out}"
     );
 }
+
+#[path = "flow_compare_table_tests.rs"]
+mod table_tests;

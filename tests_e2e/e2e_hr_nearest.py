@@ -1,4 +1,5 @@
 """H1: a click on the chromatogram of a DDA file (sparse MS2) always gives the closest scan, never an empty spectrum; the cursor moves to its real RT."""
+# covers: mzlab/web/dda.js, mzlab/web/dda-marcatori.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

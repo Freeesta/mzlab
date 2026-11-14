@@ -1,5 +1,6 @@
 """Gestures of the RT x m/z map with mouse and keyboard (SC-4): the wheel alone scrolls the page, Ctrl/⌘ + wheel zooms, a drag draws the zoom box,
 Backspace = whole view, Esc does not take the zoom back (the sight only), the right-click menu on the plot and on the margins. LR example files."""
+# covers: mzlab/web/mappa.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"

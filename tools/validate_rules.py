@@ -1,4 +1,4 @@
-"""Runs the validation of the fragmentation rules (`docs/studi/regole-frammentazione-piano.md` §3) on public MassBank spectra: the records of the pinned
+"""Runs the validation of the fragmentation rules (protocol in `docs/agenti/msn-manuale.md`) on public MassBank spectra: the records of the pinned
 release of `tools/librerie_pacchetti.py` (SHA-256 checked) with a SMILES and the licence CC0 or CC BY are written to a cache in `.verifica/` (never committed),
 `mzlab-cli msn-rules` judges them (decoys included) and `mzlab-cli msn-rules somma` adds the lines up. This script only moves files and starts the
 commands: every number is computed in Rust.

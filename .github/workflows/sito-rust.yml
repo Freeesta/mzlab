@@ -1,5 +1,5 @@
 # The built site with the Rust engine (.wasm) driven by the e2e tests that need it: e2e_rust, e2e_mzidx, e2e_progressivo.
-# Runs on every pull request, on the merge queue (merge_group), on every push to main (the deploy gate of pages.yml waits for it), by hand and once a night on main. `sito-changes` decides from the changed paths whether the build and the e2e run; the jobs it skips
+# Runs on every pull request, on every push to main (the deploy gate of pages.yml waits for it), by hand and once a night on main. `sito-changes` decides from the changed paths whether the build and the e2e run; the jobs it skips
 # report "skipped", which a required check accepts, so `sito` can be required without hanging a pull request that touches none of those paths.
 # `sito-wasm-core`, `sito-wasm-feat-a` and `sito-wasm-feat-b` build the .wasm in parallel and hand them over as artifacts; `sito-e2e` runs the quick checks of tools/verifica.py
 # (JS syntax and the shell, i18n, code map, sizes), builds the site, adds the artifacts and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
@@ -14,9 +14,6 @@ on:
   schedule:
     - cron: "11 3 * * *"
   pull_request:
-  # merge queue: GitHub ignores `paths` on merge_group, so `sito-changes` filters on the diff of the queue branch against its base
-  merge_group:
-    types: [checks_requested]
   workflow_dispatch:
     inputs:
       solo:
@@ -45,11 +42,16 @@ jobs:
       run: ${{ steps.diff.outputs.run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       - id: diff
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ] && ! echo "$BASE" | grep -qE '^0+$'; then git fetch --no-tags --depth=1 origin "$BASE" || true; fi
+          # the caps of the .wasm modules against the base: fails when one is above 1.10 x its base value (tools/moduli.py, docs/agenti/wasm-tetti.md); prints every changed cap
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then python3 tools/moduli.py --controlla --base "$BASE"; fi
           if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$' || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|Cargo\.|mzlab/|flow/|TP_Mine/|tests_e2e/|tests/golden/|tools/(build_site\.py|dati_sintetici\.py|verifica\.py|wasm_opt\.sh|wasm_paralleli\.sh|build_feat_wasm\.sh|build_lettori_wasm\.sh)$|\.github/workflows/sito-rust\.yml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
@@ -104,10 +106,10 @@ jobs:
           mkdir -p site/static
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2174976 engine @motore
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm "$(python3 tools/moduli.py --tetto motore)" engine @motore
           tools/cargo_wasm.sh build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
+          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm "$(python3 tools/moduli.py --tetto librerie)" libraries @motore
           # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
           tools/build_lettori_wasm.sh site/static
       # saved right after the build, so a red e2e does not lose the cache (nightly main only)
@@ -352,9 +354,15 @@ jobs:
           tools/build_feat_wasm.sh site/static manifest
           python3 tools/build_site.py --build-json      # the service worker's manifest must list the .wasm now in place
       - name: e2e on the built site
+        env:
+          SOLO: ${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_indice_parallelo,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_lettori_modulo,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf,e2e_flow_motore,e2e_flow_msn,e2e_msn_un_clic,e2e_flow_live,e2e_flow_web_plausible,e2e_flow_web_rtpredict,e2e_flow_web_lookup' }}
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
-          python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_indice_parallelo,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_lettori_modulo,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf,e2e_flow_motore,e2e_flow_msn,e2e_msn_un_clic,e2e_flow_live,e2e_flow_web_plausible' }}"
+          python tools/verifica.py --fumo --browser chromium --solo "$SOLO"
+      # post-merge net, push to main only (never a pull request, not a required check): the areas that broke unseen between two nightly runs (groups, load folder, Ketcher focus, integration, QA/QC, panel headers, tour); a red step marks the run of the commit red in the actions list
+      - name: e2e of the user paths (push to main only)
+        if: ${{ !cancelled() && github.event_name == 'push' && !inputs.solo }}
+        run: python tools/verifica.py --fumo --browser chromium --solo "e2e_gruppi_nomi,e2e_gruppi_per,e2e_gruppi_singoli,e2e_gruppi_su_file,e2e_gruppi_trascina,e2e_gruppi_utente,e2e_gruppi_visibile,e2e_carica_cartella,e2e_disegno_caricamento,e2e_disegno_click,e2e_strumenti_ketcher,e2e_integra_base,e2e_integrazioni,e2e_intestazioni,e2e_tour"
       # saved right after the e2e (a red one keeps the build); incremental data is dropped so the cache stays small
       - name: Prepare the cache of the native builds
         if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'push' && steps.rcache.outputs.cache-hit != 'true' }}

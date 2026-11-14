@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from cargo_util import build
 
 ROOT = Path(__file__).resolve().parents[1]
 GUARD = ROOT / "tools" / "guardie_memoria.json"
@@ -31,7 +32,7 @@ needs = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bind
 
 
 def build_wasm(tmp_path):
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "-p", "mzlab-wasm")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "-p", "mzlab-wasm", runner=run)
     for crate, name in (("feat", "mzlab_feat_wasm"), ("eng", "mzlab_wasm")):
         run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(tmp_path / crate), f"target/wasm32-unknown-unknown/release/{name}.wasm")
 

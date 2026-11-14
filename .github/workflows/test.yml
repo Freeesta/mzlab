@@ -1,5 +1,5 @@
 # Level 2 of the tests (CLAUDE.md): quick checks on every pull request and on every push to main (goal < 6 min).
-# Unit tests on Linux with the oldest supported and the newest Python, JavaScript syntax, the e2e smoke tests on Chromium.
+# Unit tests on Linux (Python 3.11 shards; the required `pytest (ubuntu-latest, 3.14)` name is a gate, 3.14 really runs only in notte.yml), JavaScript syntax, the e2e smoke tests on Chromium.
 # The rest (Mac, Windows, Firefox, WebKit and all the e2e) runs once a day on main: notte.yml.
 name: test
 
@@ -10,8 +10,6 @@ on:
   push:
     branches: [main]
   pull_request:
-  # merge queue: the required checks must report on the queue branch too (the base of a pull request is not set there: the jobs run everything)
-  merge_group:
 
 permissions:
   contents: read
@@ -23,6 +21,69 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
+  # Builds once what most tests build in every shard (tools/ci_prebuilt.py): mzlab-cli, the examples and the .wasm of the crates, in three parallel groups. The shards wait for it and set
+  # MZLAB_PREBUILT (tests/cargo_util.py installs the file instead of running cargo). NOT a required check: if it fails the shards build for themselves, as before. Caches are restored, never saved.
+  prebuilt:
+    name: prebuilt (${{ matrix.parte }})
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [native, wasm-a, wasm-b]
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
+      - id: solo
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
+          if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
+          python3 tools/ci_solo_doc.py "$BASE"   # documents only: nothing to build
+          python3 tools/ci_pytest_aree.py --build "$BASE"   # no test that calls cargo is selected: nothing to build either
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: steps.solo.outputs.solo != 'true'
+        with:
+          python-version: "3.11"
+      - name: Toolchain (version pinned in rust-toolchain.toml) and wasm32 target
+        if: steps.solo.outputs.solo != 'true'
+        run: |
+          python tools/ci_toolchain.py
+          rustup target add wasm32-unknown-unknown
+      # warm start: the newest cache of a pytest shard (target/ with the crates of main already compiled); the path list must equal the shard's, it is part of the cache version
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.solo.outputs.solo != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: prebuilt-${{ matrix.parte }}-${{ github.run_id }}
+          restore-keys: |
+            pytest-wasm-v3-rest-a-${{ runner.os }}-
+      - name: Reuse the compiled crates of the cache
+        if: steps.solo.outputs.solo != 'true'
+        env:
+          MZLAB_CACHE_JOB: pytest-shard   # the tree record is tied to the job that saved it; this job only restores
+        run: python3 tools/ci_cargo_mtime.py restore
+      # tools/ci_cargo/cargo: one target folder per feature family, the files hard-linked to target/ where tools/ci_prebuilt.py reads them
+      - name: Build
+        if: steps.solo.outputs.solo != 'true'
+        run: |
+          export PATH="$PWD/tools/ci_cargo:$PATH"
+          python3 tools/ci_prebuilt.py build "${{ matrix.parte }}" "$RUNNER_TEMP/prebuilt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.solo.outputs.solo != 'true'
+        with:
+          name: prebuilt-${{ matrix.parte }}
+          path: ${{ runner.temp }}/prebuilt
+          retention-days: 1
+
   # Three parallel shards on 3.11: `rest-a` and `rest-b` (the two halves of `rest`) run every test except tools/pytest_solo_311.txt, `solo311` runs exactly those (slow tests where Python only
   # drives the Rust binaries and .wasm). Together they cover the whole suite once. Python 3.14 runs the whole suite in notte.yml; the `pytest` job below is the gate that keeps
   # both required names (3.14 included) and depends on the 3.11 shards.
@@ -39,15 +100,18 @@ jobs:
       contents: read
       actions: read   # tools/ci_cache_fresca.py lists the caches of main
     runs-on: ubuntu-latest
-    # safety net only: the run lasts far less since the crates of the cache are reused (tools/ci_cargo_mtime.py)
-    timeout-minutes: 30
+    # safety net only: the wait for the prebuilt jobs (own limit, below) and the tests (own limit) each have their own ceiling, so a late runner does not eat the test time
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       # pull request only: is every changed file a document? (a push to main gets no base, so nothing is written)
       - id: solo
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
           python3 tools/ci_solo_doc.py "$BASE"   # documents only: appends solo=true and kind=doc
       # test files that rust.yml (rust-wasm) runs on the same diff are left out here (tools/ci_pytest_doppi.py); a push to main uses the previous head as base
@@ -56,8 +120,18 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE" || BASE=; fi
           python3 tools/ci_pytest_doppi.py "$BASE"
+      # pull request only: the tests that call cargo are left out when the diff cannot reach them (tools/ci_pytest_aree.py); push and merge_group run everything
+      - id: aree
+        if: steps.solo.outputs.solo != 'true'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
+          if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE" || BASE=; fi
+          python3 tools/ci_pytest_aree.py "$BASE"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
@@ -105,11 +179,31 @@ jobs:
       - name: Install
         if: steps.solo.outputs.solo != 'true' || matrix.parte != 'solo311'
         run: python -m pip install -e ".[test]" pytest-xdist
+      # the files of the `prebuilt` jobs (tests/cargo_util.py installs them instead of running cargo); if those jobs failed, the tests build for themselves
+      - id: prebuilt
+        if: steps.solo.outputs.solo != 'true' && steps.aree.outputs.cargo != 'false'
+        continue-on-error: true
+        timeout-minutes: 22
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MZLAB_ATTENDI_MIN: 20   # past it the shard builds for itself (continue-on-error)
+        run: python3 tools/ci_attendi_job.py "prebuilt (native)" "prebuilt (wasm-a)" "prebuilt (wasm-b)"
+      - if: steps.prebuilt.outcome == 'success'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: prebuilt-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/prebuilt
+      - if: steps.prebuilt.outcome == 'success'
+        run: |
+          echo "MZLAB_PREBUILT=$RUNNER_TEMP/prebuilt" >> "$GITHUB_ENV"
+          echo "MZLAB_PREBUILT_MISSES=$RUNNER_TEMP/prebuilt-misses.txt" >> "$GITHUB_ENV"
       # the tests spread over the 4 CPUs of the runner; --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once);
       # the slowest files go first (tools/ci_pytest_ordine.py). The `rest` shard skips tools/pytest_solo_311.txt: tests where Python only drives the Rust
       # binaries and .wasm and compares their output, identical on every Python; the 3.11 `solo311` shard runs only them, minus the files that rust-wasm runs on the same diff.
       - name: Unit tests
         if: steps.solo.outputs.solo != 'true'
+        timeout-minutes: 30
         env:
           PYTHONPATH: tools
           PARTE: ${{ matrix.parte }}
@@ -117,7 +211,7 @@ jobs:
           # `cargo run` holds the build-directory lock until the program ends: tools/ci_cargo/cargo builds, releases the lock and then runs the binary
           export PATH="$PWD/tools/ci_cargo:$PATH"
           skip=(); alvo=(tests)
-          ign=" ${{ steps.doppi.outputs.ignore }} "
+          ign=" ${{ steps.doppi.outputs.ignore }} ${{ steps.aree.outputs.ignore }} "
           if [ "${{ matrix.parte }}" = solo311 ]; then
             # --ignore does not drop a file named on the command line, so the files rust-wasm already runs are left out of the list here
             alvo=()
@@ -128,7 +222,10 @@ jobs:
           fi
           # the `rest` shard runs in two halves (rest-a, rest-b: tools/ci_pytest_meta.py); solo311 runs whole
           if [ "$PARTE" != solo311 ]; then export CI_PYTEST_MITA="${PARTE#rest-}"; fi
-          python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_meta -p ci_pytest_tempi --durations=50 --junitxml="junit-${{ matrix.python }}-${{ matrix.parte }}.xml" "${skip[@]}" ${{ steps.doppi.outputs.ignore }} "${alvo[@]}"
+          python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_meta -p ci_pytest_tempi --durations=50 --junitxml="junit-${{ matrix.python }}-${{ matrix.parte }}.xml" "${skip[@]}" ${{ steps.doppi.outputs.ignore }} ${{ steps.aree.outputs.ignore }} "${alvo[@]}"
+      - name: Builds the tests ran themselves
+        if: ${{ !cancelled() && steps.prebuilt.outcome == 'success' }}
+        run: python3 tools/ci_prebuilt.py misses "$RUNNER_TEMP/prebuilt-misses.txt"
       # incremental data was 3.7 of the 11.5 GB of `target` (a 3.2 GB cache that takes 40-90 s to restore and pushes the other caches out of the 10 GB limit); a crate that changed is compiled in full instead
       - name: Drop the incremental data before the cache is saved
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' }}
@@ -193,11 +290,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       # pull request only: is every changed file a document? (a push to main gets no base, so nothing is written)
       - id: solo
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE"; fi
           python3 tools/ci_solo_doc.py "$BASE"   # documents only: appends solo=true and kind=doc
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -230,6 +330,11 @@ jobs:
             target
           key: sito-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           restore-keys: sito-e2e-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        if: steps.solo.outputs.solo != 'true'
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: Install
         if: steps.solo.outputs.kind != 'doc'
         run: |
@@ -254,6 +359,12 @@ jobs:
           name: wasm-dimensioni
           path: wasm-dimensioni.json
           retention-days: 3
+      # incremental data only bloats the cache; the record vouches for the sources of the crates this run compiled, so the next run reuses them
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        run: |
+          find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
+          python3 tools/ci_cargo_mtime.py record
       # saved after the smoke tests have built the site and its .wasm (main only; a red test does not lose it)
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
@@ -291,10 +402,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2   # tools/ci_base.py: a pull request diffs its merge commit with its first parent
       - id: scelta
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
+          BASE=$(python3 tools/ci_base.py "$BASE")
           git fetch --no-tags --depth=1 origin "$BASE"
           python3 tools/ci_e2e_cambiati.py "$BASE"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -331,7 +445,7 @@ jobs:
         if: steps.scelta.outputs.e2e != ''
         env:
           E2E: ${{ steps.scelta.outputs.e2e }}
-        run: python tools/verifica.py --browser chromium --solo "$E2E"
+        run: python tools/verifica.py --browser chromium --timeout 150 --solo "$E2E"
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash

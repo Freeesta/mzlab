@@ -1,6 +1,6 @@
 # Attributio: motore MS2, frammentazione in silico e plugin (pacchetti MS)
 
-Studio e piano: `docs/studi/ATTRIBUTIO.md` §6 (righe MS-00..MS-04). Tutto in Rust (`crates/mzlab-feat/src/attributio/ms2_engine/`, feature `attributio`), nessun Java, nessuna rete a runtime. Le uscite sono PROVE mostrate accanto alla cascata: non fanno identità, non assegnano livelli (il 2b resta del chimico). Spento di serie (`[annotation] use_ms2_engine = false`), visibile solo con `uipAdminOn()`.
+Tutto in Rust (`crates/mzlab-feat/src/attributio/ms2_engine/`, feature `attributio`), nessun Java, nessuna rete a runtime. Le uscite sono PROVE mostrate accanto alla cascata: non fanno identità, non assegnano livelli (il 2b resta del chimico). Spento di serie (`[annotation] use_ms2_engine = false`), visibile solo con `uipAdminOn()`.
 
 ## MS-00: motore MS2
 - **Compilatore** (`compile.rs`): legge librerie GNPS JSON/JSON-lines e MSP con i parser di `mzlab-lib` (`parse_all`), tiene polarità, precursore, addotto, picchi; spettri senza polarità, picchi o id sono scartati. `clean_library_name` toglie dal nome i nomi di file (`.mzML`…), il tag `CollisionEnergy…` e i suffissi di energia (` - 30.0 eV`), poi `names::clean_raw`.

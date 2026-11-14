@@ -1,4 +1,5 @@
 """Block 1 (prompt 3): integrations never overlap, select/delete one peak, Ctrl+Z, border drag stops at the neighbour, table x button."""
+# covers: mzlab/web/area-copia.js, mzlab/web/integra-zero.js, mzlab/web/barre-maniglie.js, mzlab/web/grafici.js, mzlab/web/picchi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

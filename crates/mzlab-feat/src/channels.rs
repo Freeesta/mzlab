@@ -4,7 +4,8 @@
 use mzlab_core::error::Result;
 
 use crate::axis::{LR_STITCH, LR_TOUCH};
-use crate::trace::{filled, reserve, Params, TOUCH_HEIGHT};
+use crate::trace::Params;
+use crate::trace_base::{filled, reserve, TOUCH_HEIGHT};
 
 /// A run of scans in one channel.
 #[derive(Clone, Copy)]

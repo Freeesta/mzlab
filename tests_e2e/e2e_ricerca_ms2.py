@@ -1,6 +1,7 @@
 """«What is it?»: the voice of the menu exists only for high-resolution MS2 spectra; identity and analogs together, level and evidence, stereoisomer groups,
 the decision of the chemist (2b only there), the lines of the mirror (pairs of the golden file of Attributio), the thresholds; the master/detail window (layout at
 1280 px, sorting, Options, download, 2D structure, hover, keyboard, axe)."""
+# covers: mzlab/web/libreria, mzlab/web/mol-svg.js, mzlab/web/livelli
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

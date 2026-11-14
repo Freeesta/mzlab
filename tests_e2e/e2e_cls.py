@@ -1,5 +1,6 @@
 """Layout stability of the first load: Disegno (direct #/draw) must not shift after the first paint
 (layout-shift sum without recent input <= 0.02), with the CPU slowed 4x so that late scripts really land after the first paint."""
+# covers: mzlab/web/draw.js, mzlab/web/first-paint.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 LIMIT = 0.02

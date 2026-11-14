@@ -1,5 +1,6 @@
 """Spectrum panel: the % axis ends at 100, an MS2 spectrum has no XIC button (MS1 keeps it), and the peak table (threshold, max rows, sort, only labelled,
 Copy = TSV + html on the clipboard, Ctrl+C on the table, IT/EN, axe, target sizes)."""
+# covers: mzlab/web/tabella-picchi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 AXE = axe_path()

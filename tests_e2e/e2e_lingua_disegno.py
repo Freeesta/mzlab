@@ -1,5 +1,6 @@
 """Disegno in English: the static texts, the shortcut table, the export file names and the context texts are English, nothing Italian is left
 in the visible text of the view; the Italian Disegno keeps the same texts. Synthetic data (nothing is loaded)."""
+# covers: mzlab/web/draw.js
 import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

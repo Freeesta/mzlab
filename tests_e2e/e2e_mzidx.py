@@ -1,6 +1,7 @@
 """The site keeps the mzML files and their .mzidx indexes in OPFS (mounted with WORKERFS, no copy in the memory of the engine); a reload does not read the
 spectra again; what an older visit left in IndexedDB passes to OPFS; the gear shows the space and frees the indexes of removed files; «New session» empties
 OPFS. Build first: python tools/build_site.py"""
+# covers: mzlab/web/browser, mzlab/web/archivio, mzlab/web/qqq-db, mzlab/web/idx, mzlab/reader/mzidx
 from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright

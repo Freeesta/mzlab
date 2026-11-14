@@ -1,5 +1,6 @@
 """Provenance of the exported tables (provenienza/1): the line «# mzLab x.y.z · ...» in CSV/TSV and the clipboard, the last sheet of the .xlsx.
 One step per family: xlsx of a graph, TSV (metadata) and its re-import, CSV (dl), clipboard text."""
+# covers: mzlab/web/xlsx.js, mzlab/web/provenienza.js, mzlab/web/export-pezzi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

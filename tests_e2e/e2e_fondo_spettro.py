@@ -1,5 +1,6 @@
 """Automatic background of the spectrum: «background of a stretch» with nothing typed picks a stretch from the TIC (after waste and front), shows it, lets the student choose another or type one.
 Synthetic series SUB_t0/t10/t20 (see e2e_sottrazione)."""
+# covers: mzlab/web/fondo-spettro.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from synth import make_subtraction

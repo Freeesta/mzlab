@@ -1,5 +1,6 @@
 """File menu of the spectrum panel: it lists only the files ticked in the list; the choice stays after a click in the TIC (the click changes only the RT);
 unticking the chosen file moves the panel to the first ticked one."""
+# covers: mzlab/web/picchi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

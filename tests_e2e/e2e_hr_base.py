@@ -1,4 +1,5 @@
 """B1: mass profile of each file (decimals, tolerance), the switch «Alta risoluzione» and the fallback to low resolution."""
+# covers: mzlab/web/hr.js, mzlab/reader/profile.py
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, real_cuttings, load

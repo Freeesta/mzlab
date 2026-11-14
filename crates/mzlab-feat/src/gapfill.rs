@@ -10,10 +10,11 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::rtmap::RtMap;
 use crate::sweep::{ppm_ranges, windows};
 use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED, CELL_NA};
-use crate::trace::{reserve, Params, SLAB_PEAKS};
+use crate::trace::Params;
+use crate::trace_base::{reserve, SLAB_PEAKS};
 
 /// Parameters of the integration (defaults of `fill_gaps` and `trace_area`).
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct FillParams {
     pub floor: f64,
     pub ppm: f64,
@@ -23,6 +24,25 @@ pub struct FillParams {
     pub max_gap: usize,
     /// A trace longer than this many scans is background and is not taken.
     pub long_trace: usize,
+    /// The area of a filled cell is the trapezoid on the real retention times (`area_from` = `xic` of `features.detect`), not sum x median interval.
+    pub xic: bool,
+}
+
+// written by hand so that `xic` appears only when on: the fingerprints of the tables without it stay the same
+impl std::fmt::Debug for FillParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("FillParams");
+        d.field("floor", &self.floor)
+            .field("ppm", &self.ppm)
+            .field("rt_tol", &self.rt_tol)
+            .field("min_points", &self.min_points)
+            .field("max_gap", &self.max_gap)
+            .field("long_trace", &self.long_trace);
+        if self.xic {
+            d.field("xic", &self.xic);
+        }
+        d.finish()
+    }
 }
 
 impl Default for FillParams {
@@ -34,6 +54,7 @@ impl Default for FillParams {
             min_points: 5,
             max_gap: 2,
             long_trace: 400,
+            xic: false,
         }
     }
 }
@@ -96,13 +117,14 @@ pub(crate) fn trace_area(
     dt: f64,
     p: &FillParams,
 ) -> Option<f64> {
-    trace_area_in(y, s0, i0, i1, dt, p, &mut Vec::new())
+    trace_area_in(y, (s0, None), i0, i1, dt, p, &mut Vec::new())
 }
 
-/// `trace_area` with `x` as the buffer of the thresholded series, so that a file's cells share one allocation.
+/// `trace_area` with `x` as the buffer of the thresholded series, so that a file's cells share one allocation; `rt` (minutes, aligned with `y`)
+/// gives the trapezoid on the real retention times instead of the sum times `dt`.
 fn trace_area_in(
     y: &[f64],
-    s0: usize,
+    (s0, rt): (usize, Option<&[f64]>),
     i0: usize,
     i1: usize,
     dt: f64,
@@ -143,7 +165,10 @@ fn trace_area_in(
     if seg.iter().filter(|&&v| v > 0.0).count() < p.min_points || z - a + 1 > p.long_trace {
         return None;
     }
-    Some(seg.iter().sum::<f64>() * dt)
+    Some(match rt {
+        Some(t) => crate::quality::trapezoid(&t[a..=z], seg, dt),
+        None => seg.iter().sum::<f64>() * dt,
+    })
 }
 
 /// A cell to integrate: row, window of m/z of its reference ion and window of scans where the apex must lie.
@@ -241,7 +266,17 @@ pub fn fill_find<R: ReadAt>(
         reserve(&mut y, s1 - s0)?;
         y.resize(s1 - s0, 0.0f64);
         slab.add_trace(a, b, s0, &mut y)?;
-        if let Some(area) = trace_area_in(&y, s0, t.i0, t.i1, dt, p, &mut x).filter(|&v| v > 0.0) {
+        if let Some(area) = trace_area_in(
+            &y,
+            (s0, p.xic.then(|| &rt[s0..s1])),
+            t.i0,
+            t.i1,
+            dt,
+            p,
+            &mut x,
+        )
+        .filter(|&v| v > 0.0)
+        {
             found.push((t.row, area));
         }
         Ok(())
@@ -263,4 +298,24 @@ pub fn fill_apply(al: &mut Aligned, file: usize, found: &[(usize, f64)]) -> usiz
         }
     }
     filled
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A filled cell with `xic` is the trapezoid on the real times: scans twice as far apart at the apex count twice, the median does not.
+    #[test]
+    fn the_xic_fill_integrates_on_the_real_times() {
+        let y = [0.0, 3e4, 6e4, 1e5, 6e4, 3e4, 0.0];
+        let rt = [0.0, 0.01, 0.02, 0.04, 0.06, 0.07, 0.08];
+        let p = FillParams::default();
+        let sum = trace_area_in(&y, (0, None), 0, 7, 0.6, &p, &mut Vec::new()).unwrap();
+        let xic = trace_area_in(&y, (0, Some(&rt)), 0, 7, 0.6, &p, &mut Vec::new()).unwrap();
+        assert!((sum - 2.8e5 * 0.6).abs() < 1e-6, "{sum}");
+        let want = 60.0 * (0.5 * 9e4 * 0.01 + 0.5 * 1.6e5 * 0.02 * 2.0 + 0.5 * 9e4 * 0.01);
+        assert!((xic - want).abs() < 1e-6, "{xic} {want}");
+        assert!(format!("{p:?}").find("xic").is_none());
+        assert!(format!("{:?}", FillParams { xic: true, ..p }).contains("xic: true"));
+    }
 }

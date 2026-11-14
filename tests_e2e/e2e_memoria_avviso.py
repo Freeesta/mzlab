@@ -1,6 +1,7 @@
 """Warning «this phase needs more memory» (memoria-avviso.js, asked by feat-run.js through window.mzlabAskMore): two buttons, the safe one («Cancel») is the default (Enter, Esc),
 «Use more memory» resolves true; the text carries the numbers and the phase in the language of the page.
 Needs the site: python tools/build_site.py and the .wasm (tools/prepara_sito.py)."""
+# covers: mzlab/web/memoria-avviso.js
 from pathlib import Path
 import socket, subprocess, sys, threading
 from playwright.sync_api import sync_playwright

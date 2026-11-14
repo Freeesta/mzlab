@@ -1,5 +1,6 @@
 """Draw tab, touch targets and names (WCAG 2.5.8): side cards and Ketcher controls >= 24 px, 40 px context-menu rows, named copy triangle,
 long-press tooltip with the tool name, skip link to Quick draw, and no change of the desktop layout."""
+# covers: mzlab/web/disegno-tablet.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

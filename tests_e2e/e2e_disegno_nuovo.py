@@ -1,6 +1,7 @@
 """Draw, Ketcher's «New» (`clear-canvas`, disegno-nuovo.js): an empty canvas is cleared without a question; a non-empty one asks (alertdialog of
 memoria-avviso.js: «Cancel» has the focus, Tab stays inside, Esc and «Cancel» keep the drawing, «New drawing» clears it); Ctrl+Delete asks the same;
 undo after the clear works as in Ketcher."""
+# covers: mzlab/web/disegno-nuovo.js, mzlab/web/memoria-avviso.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

@@ -1,4 +1,5 @@
 # e2e6: default view (TIC on top, spectrum at the apex), collapsible file list, white PNG, formula+mass labels in Disegno
+# covers: mzlab/web/tavola-periodica.js, mzlab/web/draw.js, mzlab/web/tables.js, mzlab/web/elements.js, mzlab/web/xlsx.js
 import os, sys, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

@@ -1,4 +1,5 @@
 """Scan-by-scan walk with the arrow keys: frozen axes (lock), no blank frames, last key wins, Maiusc = 5 scans, Space = play, MS2 skips empty scans."""
+# covers: mzlab/web/dda-naviga.js, mzlab/web/scroll.js, mzlab/web/azioni-esc.js, mzlab/web/eventi.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

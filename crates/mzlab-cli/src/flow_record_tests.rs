@@ -8,7 +8,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::json::{Out, Value};
 use mzlab_core::step::json::registry_json;
 use mzlab_feat::slabs::Stored;
-use mzlab_feat_wasm::run::meta::{job_meta, meta_json};
+use mzlab_ops::run::feat::run::meta::{job_meta, meta_json};
 use std::path::Path;
 
 /// The stored files of a series held in memory.

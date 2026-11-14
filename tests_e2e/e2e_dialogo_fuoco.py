@@ -1,6 +1,7 @@
 """Focus after a dialog closes: a window opened from the «⋯» menu of a chart header (the menu hides itself, so its item cannot take the focus back)
 gives the focus to the menu's button, never to the body; with Escape and with the window's own close button. The floating calculator of the Draw view
 gives it back to its toolbar button. Found by tools/fuzz_ui.py. Synthetic data."""
+# covers: mzlab/web/azioni-esc.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

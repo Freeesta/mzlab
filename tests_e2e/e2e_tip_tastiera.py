@@ -1,5 +1,6 @@
 """Keyboard focus shows the same tooltip as the pointer (WCAG 1.4.13): Tab onto a control with a tip brings up #qtip with its text after the rest delay,
 clear of the control, and the control keeps its accessible name; leaving the control hides it; Esc hides only the tooltip and leaves the Settings panel open (a second Esc closes the panel); a click does not."""
+# covers: mzlab/web/tooltip.js
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

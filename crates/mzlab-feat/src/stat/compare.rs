@@ -11,6 +11,8 @@ use mzlab_core::error::{Error, Result};
 pub const FLOOR: f64 = 1000.0;
 /// Pseudocount = this x the median of the positive areas of the blank files.
 pub const NOISE_FACTOR: f64 = 3.0;
+/// Maximum item count for full O(n^2)-O(n^3) UPGMA clustering before switching to O(n log n) contrast ordering.
+const CLUSTER_UPGMA_MAX: usize = 256;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StatsOpts {
@@ -86,6 +88,9 @@ pub struct StatsOut {
     /// Conditions of the heat map (the ones with enough files) and, per feature, the z-score of the mean of log2(area + pseudocount) in each.
     pub heat_groups: Vec<usize>,
     pub heat: Vec<Vec<f64>>,
+    /// Deterministic UPGMA cluster leaf order (Eisen et al. 1998) with boundary-leaf orientation flipping (Bar-Joseph et al. 2001) for rows and columns.
+    pub heat_row_order: Vec<usize>,
+    pub heat_col_order: Vec<usize>,
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
@@ -298,9 +303,21 @@ pub fn compare(
         .copied()
         .filter(|&g| lay.files_of(g).len() >= MIN_REPLICHE as usize)
         .collect();
+    let heat = heatmap(m, lay, &heat_groups, pseudo);
+    let heat_row_order = cluster_order(&heat);
+    let heat_col_order = if heat.is_empty() {
+        Vec::new()
+    } else {
+        let cols: Vec<Vec<f64>> = (0..heat_groups.len())
+            .map(|c| heat.iter().map(|row| row[c]).collect())
+            .collect();
+        cluster_order(&cols)
+    };
     Ok(StatsOut {
-        heat: heatmap(m, lay, &heat_groups, pseudo),
+        heat,
         heat_groups,
+        heat_row_order,
+        heat_col_order,
         pseudo,
         pseudo_source,
         n_features: m.len(),
@@ -332,4 +349,134 @@ fn heatmap(m: &Matrix, lay: &Layout, groups: &[usize], pseudo: f64) -> Vec<Vec<f
                 .collect()
         })
         .collect()
+}
+
+fn finite_at(v: &[f64], k: usize) -> f64 {
+    v.get(k).copied().filter(|x| x.is_finite()).unwrap_or(0.0)
+}
+
+/// Euclidean distance between two profiles over finite entries (non-finite entries count as 0.0).
+fn dist(a: &[f64], b: &[f64]) -> f64 {
+    let sum: f64 = (0..a.len().max(b.len()))
+        .map(|k| {
+            let d = finite_at(a, k) - finite_at(b, k);
+            d * d
+        })
+        .sum();
+    libm::sqrt(sum)
+}
+
+/// Fast deterministic ordering for large matrices (> `CLUSTER_UPGMA_MAX`): projects onto the two-farthest-point contrast axis and sorts with `sortc::by`.
+fn contrast_order(rows: &[Vec<f64>]) -> Vec<usize> {
+    let n = rows.len();
+    let d = rows.iter().map(Vec::len).max().unwrap_or(0);
+    let mean: Vec<f64> = (0..d)
+        .map(|k| rows.iter().map(|r| finite_at(r, k)).sum::<f64>() / n as f64)
+        .collect();
+    let farthest = |target: &[f64]| -> usize {
+        rows.iter()
+            .enumerate()
+            .fold((0, -1.0_f64), |(bi, bd), (i, r)| {
+                let c = dist(r, target);
+                if c > bd {
+                    (i, c)
+                } else {
+                    (bi, bd)
+                }
+            })
+            .0
+    };
+    let p1 = farthest(&mean);
+    let p2 = farthest(&rows[p1]);
+    let axis: Vec<f64> = (0..d)
+        .map(|k| finite_at(&rows[p2], k) - finite_at(&rows[p1], k))
+        .collect();
+    let proj: Vec<f64> = rows
+        .iter()
+        .map(|r| (0..d).map(|k| (finite_at(r, k) - mean[k]) * axis[k]).sum())
+        .collect();
+    let mut order: Vec<usize> = (0..n).collect();
+    crate::sortc::by(&mut order, |&a, &b| {
+        proj[a].total_cmp(&proj[b]).then_with(|| a.cmp(&b))
+    });
+    order
+}
+
+/// Merges two ordered subtrees using the orientation minimizing boundary leaf distance (Bar-Joseph et al. 2001 heuristic).
+fn merge_oriented(left: &mut Vec<usize>, mut right: Vec<usize>, leaf_dist: &[f64], n: usize) {
+    let (l0, l1) = (left[0], left[left.len() - 1]);
+    let (r0, r1) = (right[0], right[right.len() - 1]);
+    let opts = [
+        (false, false, leaf_dist[l1 * n + r0]),
+        (true, false, leaf_dist[l0 * n + r0]),
+        (false, true, leaf_dist[l1 * n + r1]),
+        (true, true, leaf_dist[l0 * n + r1]),
+    ];
+    let best = opts
+        .into_iter()
+        .min_by(|a, b| a.2.total_cmp(&b.2))
+        .unwrap_or((false, false, 0.0));
+    if best.0 {
+        left.reverse();
+    }
+    if best.1 {
+        right.reverse();
+    }
+    left.extend(right);
+}
+
+fn upgma_order(rows: &[Vec<f64>]) -> Vec<usize> {
+    let n = rows.len();
+    let mut leaf_dist = vec![0.0; n * n];
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let v = dist(&rows[i], &rows[j]);
+            leaf_dist[i * n + j] = v;
+            leaf_dist[j * n + i] = v;
+        }
+    }
+    let (mut link, mut sizes) = (leaf_dist.clone(), vec![1usize; n]);
+    let mut orders: Vec<Vec<usize>> = (0..n).map(|i| vec![i]).collect();
+    let mut active: Vec<usize> = (0..n).collect();
+    while active.len() > 1 {
+        let (mut pa_best, mut pb_best) = (0, 1);
+        let mut best_d = link[active[0] * n + active[1]];
+        for (pa, &ia) in active.iter().enumerate() {
+            for (pb, &ib) in active.iter().enumerate().skip(pa + 1) {
+                let d = link[ia * n + ib];
+                if d < best_d {
+                    (best_d, pa_best, pb_best) = (d, pa, pb);
+                }
+            }
+        }
+        let (ia, ib) = (active[pa_best], active[pb_best]);
+        let right = std::mem::take(&mut orders[ib]);
+        merge_oriented(&mut orders[ia], right, &leaf_dist, n);
+        let (na, nb) = (sizes[ia] as f64, sizes[ib] as f64);
+        active.remove(pb_best);
+        for &k in &active {
+            if k != ia {
+                let d = (na * link[ia * n + k] + nb * link[ib * n + k]) / (na + nb);
+                (link[ia * n + k], link[k * n + ia]) = (d, d);
+            }
+        }
+        sizes[ia] += sizes[ib];
+    }
+    std::mem::take(&mut orders[active[0]])
+}
+
+/// Deterministic UPGMA hierarchical clustering leaf order (Eisen et al. 1998, *PNAS* 95(25):14863-14868,
+/// DOI:10.1073/pnas.95.25.14863) with O(1)-per-merge boundary-leaf orientation flipping (Bar-Joseph et al. 2001,
+/// *Bioinformatics* 17(Suppl 1):S22-S29, DOI:10.1093/bioinformatics/17.suppl_1.s22).
+fn cluster_order(rows: &[Vec<f64>]) -> Vec<usize> {
+    let n = rows.len();
+    if n == 0 {
+        Vec::new()
+    } else if n <= 2 {
+        (0..n).collect()
+    } else if n > CLUSTER_UPGMA_MAX {
+        contrast_order(rows)
+    } else {
+        upgma_order(rows)
+    }
 }

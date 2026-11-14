@@ -27,3 +27,17 @@ Il sito è una cartella statica; non c'è uno specchio attivo. **Costruire** `si
 **Controllare**: nessun file sopra 25 MiB (`find site -size +25M`, limite di Cloudflare Pages), nessun errore in console da `python3 -m http.server -d site` con service worker registrato, `.wasm` servito come `application/wasm`.
 **Pubblicare**: Cloudflare Pages «Direct Upload» (`npx wrangler pages deploy site --project-name mzlab`) o un altro ospite statico via HTTPS che serva i file come sono.
 **Nuovo indirizzo**: aggiornare `README.md`, `CITATION.cff`, `.zenodo.json`; l'app desktop controlla gli aggiornamenti solo da `https://freeesta.github.io/mzlab/` (`crates/mzlab-desktop/src/update.rs`), quindi serve prima una versione che accetti il nuovo e il vecchio indirizzo; i dati salvati nel browser restano legati al vecchio indirizzo. Annunciare con una issue fissata e nella pagina del corso.
+
+## Pubblicazione delle librerie
+Nessun crate o pacchetto npm è pubblicato; ogni azione verso l'esterno (crates.io, npm, nomi riservati, DOI) chiede il «via» del Coordinatore.
+- Candidati, in ordine: 1) il codec numpress separato da `mzlab-core` (`src/numpress.rs`, nessuna dipendenza, verità esterna nei vettori della specifica MS-Numpress); 2) `mzlab-lib` (formato `.mzlib`, lettori di librerie, punteggi; nessuna dipendenza interna); 3) `mzlab-lettori` con la parte di lettura di `mzlab-core`, da separare prima; 4) npm `mzlab-lettori-wasm`, solo dopo 3, con i tetti dei `.wasm` invariati.
+- Non candidati: `mzlab-feat` (contratti ancora in movimento), `mzlab-desktop`, `mzlab-cli`, i crate `*-wasm` della pagina; `vendor/opentfraw` non si ripubblica, le modifiche (`vendor/opentfraw/MODIFICHE-MZLAB.md`) si offrono al progetto originale.
+- Licenze: MIT ereditata con `license.workspace = true`; il job `deny` (`deny.toml`) controlla le dipendenze a ogni PR; con «MIT OR Apache-2.0» si sceglie MIT; chi ridistribuisce `opentfraw` porta la licenza Apache-2.0 e il NOTICE delle modifiche; nessun codice GPL copiato.
+- Una libreria pubblica chiede: facciata in inglese con semver (`0.x` finché cambia), rustdoc su ogni elemento pubblico e README con un esempio che compila, MSRV dichiarato, test con verità esterna senza il repository privato, `cargo package --list` senza dati di `mzlab-dati` né cognomi vietati, CHANGELOG per crate e `cargo semver-checks` prima di ogni rilascio; nomi liberi su crates.io e npm da verificare.
+- Proposta non realizzata: `publish = false` su tutti i crate (nessuno lo porta: un `cargo publish` per sbaglio passerebbe), da togliere solo dal crate scelto.
+
+## Igiene di sicurezza del repository
+
+- `dependabot.yml` (cargo, pip, github-actions: settimanale, un gruppo per ecosistema, massimo 3 PR aperte, mai unite da sole; `wasm-bindgen`, `js-sys`, `web-sys` senza salti major/minor, `tauri*` senza major) e `codeql.yml` (JavaScript e Rust, solo settimanale e a mano, non obbligatorio) non aggiungono job alle PR.
+- Impostazioni che solo il proprietario accende a mano (nessun file le può impostare), in Settings → Code security: Dependabot alerts, Dependabot security updates, push protection, Private vulnerability reporting; in Settings → General: Allow auto-merge. La scansione dei segreti per i repository pubblici è gratuita e automatica (docs.github.com, «About secret scanning»); per gli altri interruttori la documentazione non dichiara un'attivazione predefinita, quindi vanno controllati.
+- Niente CodeQL «default setup»: il flusso `codeql.yml` lo sostituisce (il default setup girerebbe anche sulle PR).

@@ -1,5 +1,6 @@
 """Double click (mouse), double tap (touch) and Enter INSIDE the dragged range of a chromatogram open the averaged spectrum of that range in a new spectrum panel;
 outside the range or without one the old behaviour stays; selection beats zoom. Synthetic data only."""
+# covers: mzlab/web/eventi.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

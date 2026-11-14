@@ -17,7 +17,7 @@ fn param(job: &Job, name: &str) -> Option<f64> {
 
 /// `filtri/1` text of the `.mzfeat` `tp` (with the block `interp`) and the `ipotesi/1` `hypotheses`: the code the `.wasm` `interp` runs.
 pub fn refilter_text(job: &Job, tp: &[u8], hypotheses: &[u8]) -> Result<String> {
-    mzlab_feat_wasm::interp::refilter_text(
+    mzlab_ops::run::feat::interp::refilter_text(
         &|n| param(job, n),
         tp,
         &String::from_utf8_lossy(hypotheses),

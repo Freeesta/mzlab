@@ -3,10 +3,8 @@
 // ------------------------------------------------------------------ chart drawing
 // width (CSS px) of every trace line: thin like the vendor software; 1 px when dense (decima.js hairline); the high contrast palette adds its own extra (LWX)
 const TRACE_LW = 1.25;
-// ---- corrections applied to the traces (fondo.js): the difference with a reference, then ONE background on the difference. Nothing is clipped here.
-// ---- internal blank: a stretch of the trace chosen by the student (for example 0-2 min, where nothing elutes) gives the background level, which is
-// subtracted from the whole trace. p.fondo.ib = { mode: "mean" | "median" | "line", a: [t0, t1], b: [t0, t1] (line only: second stretch) } (fondo.js).
-// Not a blank-file subtraction: one number (or a straight line), not a profile in time. The level is computed on each trace (each file) on its own.
+// ---- corrections (fondo.js): the difference with a reference, then ONE background on it; nothing is clipped. Internal blank: a stretch chosen by the student (say 0-2 min)
+// gives one level or a line (p.fondo.ib = { mode: "mean" | "median" | "line", a: [t0, t1], b: second stretch of a line }), subtracted from each trace on its own.
 const ibkRange = (a, d = 1) => `${+a[0].toFixed(d)}-${+a[1].toFixed(d)} min`;
 const ibkRanges = ib => ib.mode === "line" && ib.b ? I18N.t("ibk.and", { a: ibkRange(ib.a), b: ibkRange(ib.b) }) : ibkRange(ib.a);
 const fondoText = p => (ibOf(p) ? ibkText(ibOf(p)) : p.fondo && p.fondo.mode === "auto" ? I18N.t("fondo.auto.text", { w: p.fondo.w }) : ibkText(null));
@@ -87,6 +85,7 @@ async function rawSeries(p) {
   if (p.type === "chrom") {
     let fl = shownFor(p);
     if (p.kind !== "pda" && p.prec != null) fl = fl.filter(f => f.kind !== "ms2" || (f.precursors || []).some(v => Math.abs(v - p.prec) < 0.6));   // an MS2 experiment is a precursor: only the files that have it
+    if (p.kind === "tic" || p.kind === "bpc") { const TB = (/** @type {any} */ (window).TICBG ||= await import("./tic-fondo-ui.js")); TB.mount(p); if (TB.on(p)) return TB.series(p, fl); }
     const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt, p.ptol).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: kindUp(p), time: f.time }))));
     if (p.xw && p.mz0 != null) r.push(...await (await xwc()).series(p, fl));      // extra XWC bands
     const sh = p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0;       // «Allinea DAD e massa»: the PDA trace is shown later by the delay of the detector in series (display only)

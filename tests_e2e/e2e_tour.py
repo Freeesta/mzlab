@@ -1,4 +1,7 @@
 """Guided tour of the Dati view (low-resolution only): invitation, 15 steps, try-it steps, keyboard, EN, HR exclusion, example file."""
+# covers: mzlab/web/barre-maniglie.js, mzlab/web/tour.js, mzlab/web/barra.js, mzlab/web/affianca.js, mzlab/web/suggerimenti.js, mzlab/web/pannelli.js
+# covers: mzlab/web/grafici.js, mzlab/web/picchi.js, mzlab/web/tooltip.js, mzlab/web/eventi.js, mzlab/web/qaqc.js, mzlab/web/riferimento.js
+# covers: mzlab/web/stat.js
 import json, sys, os, shutil
 from pathlib import Path
 

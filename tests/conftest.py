@@ -28,9 +28,11 @@ def _import_pkg(tmp_path_factory):
         return None
     out = tmp_path_factory.mktemp("import-wasm")
     try:
-        for cmd in (["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-import-wasm"],
+        from cargo_util import installed
+        for cmd in (None if installed("--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-import-wasm") else ["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-import-wasm"],
                     ["wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(out), "target/wasm32-unknown-unknown/release/mzlab_feat_import_wasm.wasm"]):
-            subprocess.run(cmd, cwd=_ROOT, check=True, capture_output=True)
+            if cmd:
+                subprocess.run(cmd, cwd=_ROOT, check=True, capture_output=True)
     except (subprocess.CalledProcessError, OSError):
         return None
     return out

@@ -1,4 +1,5 @@
 """Draw tab on tablets: no scroll jump on open, no keyboard trap from Ketcher's hidden textarea, 16 px fields (no iOS zoom), a reachable top bar in split view, stable rotation."""
+# covers: mzlab/web/disegno-tablet.js, mzlab/web/draw.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []

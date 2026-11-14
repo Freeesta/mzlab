@@ -1,4 +1,4 @@
-//! The browser runs `spectra.ms2`, `spectra.match` and `table.match` with the library functions the CLI wraps (`mzlab_feat::flow_ms2`, `mzlab_lib::flowmatch`, `mzlab_feat_table_wasm::rows_mgf`). Each test runs the plan
+//! The browser runs `spectra.ms2`, `spectra.match` and `table.match` with the library functions the CLI wraps (`mzlab_feat::flow_ms2`, `mzlab_lib::flowmatch`, `mzlab_ops::run::table::rows_mgf`). Each test runs the plan
 //! natively and calls the library function the page calls, with the resolved parameters the page sends, and asks for the same bytes.
 
 use std::path::Path;
@@ -109,7 +109,7 @@ fn table_match_in_the_libraries_gives_the_bytes_of_the_cli() {
         None => Err(mzlab_core::error::Error::new("err.flow.tablematch.files")),
     };
     let all = resolved(&plan(step), "tm");
-    let mgf = mzlab_feat_table_wasm::rows_mgf::rows_mgf(
+    let mgf = mzlab_ops::run::table::rows_mgf::rows_mgf(
         &mut Slice(&table),
         table.len() as u64,
         &samples,

@@ -1,6 +1,7 @@
 """Header walk: on every view (Dati, Disegno, Flow, Tabui), without samples and with one, every header button opens its window, menu or panel and
 Esc (or the same button) closes it; the page comes back to the state it had and no main block (header, side panel, toolbar, work area, panels)
-has moved. Leaving Dati for another view and coming back moves nothing (and slides nothing, with motion on); the page is never taller than the window; the first file keeps the width of the side panel; the Flow bar does not jump when its late part arrives; no console error, no failed request. Audit: docs/studi/AUDIT_PAGINE.md."""
+has moved. Leaving Dati for another view and coming back moves nothing (and slides nothing, with motion on); the page is never taller than the window; the first file keeps the width of the side panel; the Flow bar does not jump when its late part arrives; no console error, no failed request. Audit: tests_e2e/audit_pagine.py."""
+# covers: mzlab/web/barra.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -27,7 +28,7 @@ HDR = r"""() => [...document.querySelectorAll('header button')].filter(b => { co
  .map(b => b.id ? '#' + b.id : b.dataset.cmd ? `header [data-cmd="${b.dataset.cmd}"]` : b.dataset.cmdMain ? `header [data-cmd-main="${b.dataset.cmdMain}"]` : b.dataset.cmdCar ? `header [data-cmd-car="${b.dataset.cmdCar}"]` : b.dataset.help != null ? `header .hq[data-help="${b.dataset.help}"]` : null).filter(Boolean)"""
 # outside Dati these open their window: a click that does nothing there is a dead button
 FLOATING = {"#np-calc2", "#np-add", "#np-nl", "#np-addloss", "#np-liste", "#np-pt", "#tb-search", "#tb-more", "#np-set", "#newrun"}
-# outside Dati these go back to Dati with their side panel page (the Adducts & losses lists never float: docs/studi/ADDOTTI_PERDITE_PAGINA_UNICA.md §5)
+# outside Dati these go back to Dati with their side panel page (the Adducts & losses lists never float: docs/agenti/dati-3200.md)
 TO_DATA = {"#np-addloss": "addloss"}
 MOVE_PX = 2       # rounding of sub-pixel layouts; a slide or a jump is tens of pixels
 

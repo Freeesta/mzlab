@@ -1,5 +1,6 @@
 """Interface language: Italian by default whatever the browser language is (it-IT, en-US, fr-FR), ?lang=, choice from the gear (remembered in
 mzlab.lang, files stay open after the reload). Synthetic data."""
+# covers: mzlab/web/settings.js, mzlab/web/lang/, mzlab/web/i18n.js
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import synth

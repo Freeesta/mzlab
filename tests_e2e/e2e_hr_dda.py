@@ -1,4 +1,5 @@
 """B5: DDA trio: chromatogram, Full Scan (MS1) and MS2 one under the other, flags on the precursors, triangles, arrows in the MS2 panel."""
+# covers: mzlab/web/dda.js, mzlab/web/dda-marcatori.js, mzlab/web/dda-elenco.js, mzlab/web/dda-naviga.js, mzlab/reader/profile.py, mzlab/web/layout.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

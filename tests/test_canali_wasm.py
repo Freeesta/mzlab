@@ -7,11 +7,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from cargo_util import build_example, run
+from cargo_util import build, build_example, cli, example, run
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-import dati_sintetici as ds  # noqa: E402
+import dati_sintetici as ds
 
 MSN = ROOT / "tests" / "golden" / "ref" / "msntree_rotta" / "msn.mzML"
 pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
@@ -20,9 +20,9 @@ pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
     d = tmp_path_factory.mktemp("canali")
-    run("cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
+    build("--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(d / "pkg"), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
-    run("cargo", "build", "--release", "--locked", "-p", "mzlab-cli")
+    build("-p", "mzlab-cli")
     build_example("mzlab-core", "mzidx")
     ds.mrm(d / "srm.mzML", 2.0e5, np.random.default_rng(7), 1)
     ds.mixed_mrm_epi(d / "srm_epi.mzML", np.random.default_rng(7))
@@ -35,7 +35,7 @@ def files(work):
 
 def wasm_channels(work, mzml):
     idx = work / (mzml.stem + ".mzidx")
-    run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-core", "--example", "mzidx", "--", str(mzml), str(idx))
+    example("mzlab-core", "mzidx", str(mzml), str(idx))
     plan = work / "plan.json"
     plan.write_text(json.dumps([{"op": "idxopen", "slot": 0, "name": mzml.name}, {"op": "canali", "slot": 0, "name": mzml.name}]), encoding="utf-8")
     out = json.loads(run("node", str(ROOT / "tests" / "rotte_wasm_node.js"), str(work / "pkg"), str(idx), str(mzml), str(plan)).stdout)
@@ -47,7 +47,7 @@ def wasm_channels(work, mzml):
 def test_wasm_and_cli_give_the_same_channels(work, which):
     mzml = files(work)[which]
     got = wasm_channels(work, mzml)
-    want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "canali", str(mzml)).stdout
+    want = cli("canali", str(mzml)).stdout
     assert got.strip() == want.strip()
     doc = json.loads(got)
     assert doc["v"] == "canali/1" and doc["canali"]

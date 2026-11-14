@@ -1,6 +1,7 @@
 """«+ XIC» / «+ chromatogram» opened while the active experiment tab shows no file (the lone MS2 tab of a DDA file) land on the tab of the first ticked file
 and draw one trace per ticked file, in the colours of the file list; with no file ticked of the panel's type the empty hint says so, and the «n/N» counter
 says what it counts. Synthetic low-resolution files only."""
+# covers: mzlab/web/pannelli.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import pathlib

@@ -14,7 +14,7 @@ use mzlab_feat::interp::run::run_to_with;
 use mzlab_feat::parent::parent_of;
 use mzlab_feat::store::Slice;
 use mzlab_feat::tp::TpRoles;
-use mzlab_feat_wasm::run_tp::{link_evidence, LinkParent, Series as LinkSeries};
+use mzlab_ops::run::feat::run_tp::{link_evidence, LinkParent, Series as LinkSeries};
 
 use crate::flow::{all_inputs, io, read_one, FileRunner, Lineage, Made};
 use crate::flow_base::{open, rebuild, Files};
@@ -34,7 +34,7 @@ fn param(job: &Job, name: &str) -> Option<f64> {
 
 /// The thresholds of the step over `LinkParams::default()`.
 pub fn link_params(job: &Job) -> LinkParams {
-    mzlab_feat_wasm::interp::link_params(&|n| param(job, n))
+    mzlab_ops::run::feat::interp::link_params(&|n| param(job, n))
 }
 
 /// The plan sets the polarity of the link only when the instance writes it; else the detection's polarity decides.

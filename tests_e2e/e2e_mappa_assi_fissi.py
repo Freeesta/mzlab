@@ -1,5 +1,6 @@
 """RT x m/z map: changing the file (arrows or menu) keeps both axes identical. The whole view is the union of the data of all the open files of the tab
 (not the file shown), and a zoom chosen by the user stays. Three files with different RT and m/z ranges."""
+# covers: mzlab/web/grafici.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import numpy as np

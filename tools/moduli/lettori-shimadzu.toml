@@ -1,0 +1,9 @@
+uscita = "wasm-lettori/shimadzu"
+pacchetto = "mzlab-lettori-wasm"
+feature = "shimadzu"
+senza_default = true
+wasm_opt = "@estesi"
+parte = "lettori"
+tetto = 380928
+misura = 366535
+nota = "zlib-rs +30 KB, measured rounded to 256 B"

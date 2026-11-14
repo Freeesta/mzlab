@@ -2,21 +2,26 @@
 //! the algorithm, preset and parameters of the variant, on the same inputs) and a compare instance that reads their outputs. `compare_text` measures how the
 //! outputs differ (`comparison/1`). It only reports the differences; it never says which variant is right.
 
-use crate::flow::{read_all, write_made, FileRunner};
-use crate::flow_read::blobs;
+use crate::flow::FileRunner;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{check as check_core, Instance, Plan, Platform, Problem, Ref};
-use mzlab_core::flow::{Artifact, Job};
+use mzlab_core::flow::{
+    check as check_core, Artifact, Instance, Job, Plan, Platform, Problem, Ref,
+};
 use mzlab_core::json::{parse, round, Out, Value};
+use mzlab_core::sortc::slice_by;
 use mzlab_core::step::{find as find_step, DataType, Param, Port, RunsIn, Status, Step};
 use std::collections::{HashMap, HashSet};
+
+#[path = "flow_compare_feats.rs"]
+mod feats;
+pub use feats::Tol;
 
 /// The descriptor of the compare instance an expanded plan holds: it reads the output of every variant, in the order of `labels`.
 pub fn compare_step() -> Step {
     Step {
         ins: vec![Port::new("variants", DataType::Candidates, "Output of every variant")
             .many()
-            .accepts(&[DataType::Annot])],
+            .accepts(&[DataType::Annot, DataType::Peaks, DataType::Table])],
         outs: vec![Port::new("comparison", DataType::Comparison, "Differences between variants")],
         params: vec![
             Param::text("step", "Wrapped step"),
@@ -111,7 +116,7 @@ fn compare_problems(inst: &Instance, registry: &[Step]) -> Vec<Problem> {
             Some(Value::Obj(o)) => o.clone(),
             _ => Vec::new(),
         };
-        params.sort_by(|a, b| a.0.cmp(&b.0));
+        slice_by(&mut params, |a, b| a.0.cmp(&b.0));
         let key = (
             algorithm,
             v.get("preset").and_then(Value::str).unwrap_or(""),
@@ -161,7 +166,7 @@ fn variant(v: &Value) -> Result<Variant> {
         Some(Value::Obj(o)) => o.clone(),
         _ => Vec::new(),
     };
-    params.sort_by(|a, b| a.0.cmp(&b.0));
+    slice_by(&mut params, |a, b| a.0.cmp(&b.0));
     let label = text("label").unwrap_or_else(|| algorithm.clone());
     if label.is_empty() || label.contains(',') {
         return Err(Error::new("err.flow.compare.variants"));
@@ -211,7 +216,13 @@ fn wrapped<'a>(inst: &Instance, registry: &'a [Step]) -> Result<&'a Step> {
         .and_then(|(id, v)| registry.iter().find(|s| s.id == id && s.version == v));
     let step = found.ok_or_else(|| Error::new("err.flow.compare.step").with("step", name))?;
     match step.outs.as_slice() {
-        [o] if matches!(o.ty, DataType::Candidates | DataType::Annot) => Ok(step),
+        [o] if matches!(
+            o.ty,
+            DataType::Candidates | DataType::Annot | DataType::Peaks | DataType::Table
+        ) =>
+        {
+            Ok(step)
+        }
         _ => Err(Error::new("err.flow.compare.type").with("step", name)),
     }
 }
@@ -409,32 +420,31 @@ fn write_key(o: &mut Out, all: &[Ranked], key: &str) {
         .raw("}");
 }
 
-/// The `comparison/1` text for the outputs of the variants (`labels`, one file each, in the same order) of the step `wrapped`.
-pub fn compare_text(wrapped: &str, labels: &[&str], files: &[&[u8]]) -> Result<String> {
-    let all = files
-        .iter()
-        .map(|f| ranked(f))
-        .collect::<Result<Vec<_>>>()?;
-    let (Some(first), true) = (all.first(), all.len() == labels.len()) else {
+/// The `comparison/1` text for variant groups `groups` (`(name, bytes)` per file inside each variant) using tolerances `tol`.
+pub fn compare_groups(
+    wrapped: &str,
+    labels: &[&str],
+    groups: &[&[(&str, &[u8])]],
+    tol: Tol,
+) -> Result<String> {
+    if labels.is_empty() || groups.len() != labels.len() {
         return Err(Error::new("err.flow.compare.variants"));
-    };
-    let keys = all_keys(&all);
-    let mut o = Out::default();
-    o.raw("{\"format\":\"comparison/1\",\"step\":").str(wrapped);
-    o.raw(",\"type\":")
-        .str(first.kind)
-        .raw(",\"by\":")
-        .str(first.by);
-    o.raw(",\"variants\":[");
-    for (i, l) in labels.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(l);
     }
-    o.raw("],\"pairs\":[");
-    let mut first_pair = true;
+    let kind = feats::detect_kind(wrapped, groups)?;
+    if kind != feats::Kind::Json {
+        return feats::compare_feats(wrapped, labels, kind, groups, tol);
+    }
+    let all = groups
+        .iter()
+        .map(|g| ranked(g[0].1))
+        .collect::<Result<Vec<_>>>()?;
+    let keys = all_keys(&all);
+    let mut o = feats::start_json(wrapped, all[0].kind, all[0].by, labels);
+    let mut first = true;
     for i in 0..all.len() {
         for j in i + 1..all.len() {
-            o.raw(if first_pair { "" } else { "," });
-            first_pair = false;
+            o.raw(if first { "" } else { "," });
+            first = false;
             write_pair(&mut o, (labels[i], labels[j]), (&all[i], &all[j]), &keys);
         }
     }
@@ -447,14 +457,17 @@ pub fn compare_text(wrapped: &str, labels: &[&str], files: &[&[u8]]) -> Result<S
     Ok(o.0)
 }
 
+/// The `comparison/1` text for the outputs of the variants (`labels`, one file each, or an equal number of `.mzfeatf` files per variant) of `wrapped`.
+pub fn compare_text(wrapped: &str, labels: &[&str], files: &[&[u8]]) -> Result<String> {
+    if labels.is_empty() || files.is_empty() || !files.len().is_multiple_of(labels.len()) {
+        return Err(Error::new("err.flow.compare.variants"));
+    }
+    let per = files.len() / labels.len();
+    let named: Vec<(&str, &[u8])> = files.iter().map(|&b| ("", b)).collect();
+    let slices: Vec<&[(&str, &[u8])]> = named.chunks_exact(per).collect();
+    compare_groups(wrapped, labels, &slices, Tol::default())
+}
+
 pub(crate) fn compare_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text_of = |name: &str| {
-        let found = job.resolved.params.iter().find(|(k, _)| k == name);
-        found.and_then(|(_, v)| v.str()).unwrap_or("").to_string()
-    };
-    let (step, labels) = (text_of("step"), text_of("labels"));
-    let files = read_all(r, job, "variants")?;
-    let labels: Vec<&str> = labels.split(',').collect();
-    let text = compare_text(&step, &labels, &blobs(&files))?;
-    write_made(r, job, text, DataType::Comparison)
+    feats::compare_job(r, job)
 }

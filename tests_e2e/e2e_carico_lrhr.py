@@ -1,5 +1,6 @@
 """Low- and high-resolution files together in the loading table: the world of the first file read opens, the files of the other world stay unticked in the list and a gentle note
 (no error) offers «Switch»; the switch closes one world and opens the other; ticking a file of the other world leaves it aside."""
+# covers: mzlab/web/open-now.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import pathlib

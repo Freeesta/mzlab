@@ -1,6 +1,6 @@
 //! Deterministic checks of an aligned table, `tabcheck/1` (`docs/schemi/tabcheck-1.json`): fifteen measurements, each with its value, the threshold it is
 //! read against, a flag (`ok|note|warn`), up to 20 example rows and the numbers used. Numbers only: nothing here says what a row is. The assistant reads this
-//! text instead of the table (`docs/studi/assistente-dati/04-feature-table.md`); the areas are the measured ones, the rows those of the view when there is one.
+//! text instead of the table; the areas are the measured ones, the rows those of the view when there is one.
 //! Same table and options give the same bytes; the text is cut to `MAX_TOKENS` estimated tokens by shrinking the example rows and pairs, never the checks.
 
 use mzlab_core::error::{Error, Result};

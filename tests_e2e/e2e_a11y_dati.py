@@ -1,7 +1,8 @@
 """Accessibility of the Dati view in the fast path (--fumo, mandatory CI job): axe-core (serious/critical, WCAG 2.2 AA, contrast included) on nine states (start, file, MRM, map, settings, search, calculator, integration window, MSn tree; moderate/minor best practice on the Data view),
 keyboard only (every visible control reachable with Tab, visible focus, no focus trap in the charts, Esc closes each dialog), reflow at 320 CSS px (= 400 % zoom), forced colours
-and reduced motion. Known gaps live in docs/agenti/a11y-da-sistemare.md and in KNOWN below (an id there is reported but does not fail).
+and reduced motion. Known gaps live in docs/agenti/accessibilita.md and in KNOWN below (an id there is reported but does not fail).
 Unlike e2e_axe_grafici this test does NOT skip when axe is missing: in CI that is a failure."""
+# covers: mzlab/web/affianca.js, mzlab/web/settings.js, mzlab/web/paletta.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 sys.path.insert(0, str(ROOT))
@@ -10,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 AXE = axe_path()
 if not AXE:
     print("FAIL axe-core not available (pip install axe-playwright-python)"); sys.exit(1)
-KNOWN = set()          # axe rule ids tolerated for now (each one listed in docs/agenti/a11y-da-sistemare.md)
+KNOWN = set()          # axe rule ids tolerated for now (each one listed in docs/agenti/accessibilita.md)
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

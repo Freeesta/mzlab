@@ -1,4 +1,5 @@
 """H8/H9: identify all the MS2 of a high-resolution file against a library (grouping, verdict, the 1-scan rule), the analogue search, the verdict thresholds."""
+# covers: mzlab/web/libreria, mzlab/web/livelli
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load

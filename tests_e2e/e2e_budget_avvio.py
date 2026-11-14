@@ -1,8 +1,9 @@
-"""Regression budget of the page's own load (docs/agenti/avvio-rapido.md): on the built site, a reload served by the service worker and a first
+"""Regression budget of the page's own load (docs/agenti/avvio.md): on the built site, a reload served by the service worker and a first
 visit must keep few requests and bytes before the first paint, few render-blocking files, no layout shift, and no long main-thread task with
 the CPU slowed 4x, both while the shell comes up and until every start-up script of the list L (carica.js) has run. Counts, bytes and task
 lengths, never wall-clock times; the margins are stated in BUDGET. Needs the site with the engine (python3 tools/prepara_sito.py): without it
 the page shows the engine error banner, which moves the page and is reported as such, not as a layout shift."""
+# covers: mzlab/web/sw.js, tools/build_site.py, mzlab/web/index.html, mzlab/web/first-paint, mzlab/web/carica.js
 from pathlib import Path
 import re, socket, subprocess, sys
 from playwright.sync_api import sync_playwright

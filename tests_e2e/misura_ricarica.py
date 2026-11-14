@@ -1,5 +1,5 @@
 """Probe of page-load and click latency of the published site: first visit (cold), repeat visit (warm), first example file, typical clicks,
-«New session → Full reset» and the reloads that follow. Measures, never asserts: used by docs/studi/VELOCITA_RICARICA.md.
+«New session → Full reset» and the reloads that follow. Measures, never asserts.
 Targets: the live GitHub Pages site (--url) or a local mirror of it with GitHub-Pages-like headers (--mirror DIR: files missing from DIR are fetched
 from --url once and kept). Profiles: none, fast4g (9 Mbps down, --rtt ms added), cpu4 (CPU x4), slow (both); throttling is applied over CDP to the page,
 its workers and the service worker. Output: one JSON per run (--out) with per-navigation marks, resources, long tasks and event timings.

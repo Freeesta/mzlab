@@ -1,4 +1,4 @@
-//! Benchmark of the peak-integration candidates on synthetic XIC traces with known areas (docs/studi/INTEGRAZIONE_PICCHI.md).
+//! Benchmark of the peak-integration candidates on synthetic XIC traces with known areas (docs/agenti/dati-integrazione.md).
 //! Each case is drawn with 30 noise seeds; the table (area error, boundary error, missed and false peaks, time) is printed with
 //! `cargo test --release -p mzlab-core --test integration_bench -- --nocapture`; the asserts keep the chosen method's numbers.
 

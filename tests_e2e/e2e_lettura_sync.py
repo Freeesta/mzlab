@@ -1,5 +1,6 @@
 """Source files of the index builder read from OPFS with a read-only SyncAccessHandle (lettura-sync.js): the same bytes as the Blob, also read `into` a view of a
 WebAssembly.Memory, and the Blob fallback when the file is taken (a writer holds it), has another size or is missing. Run in a worker, the only place where handles exist."""
+# covers: mzlab/web/lettura-sync.js, mzlab/web/idx-worker.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
