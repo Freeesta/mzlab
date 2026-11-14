@@ -17,7 +17,7 @@ ELSEWHERE = {"sito", "dam", "veri", "wasm"}
 COSTS = Path(__file__).resolve().parent / "ci_e2e_costi.json"
 TEST_CAP_S = 60       # a test slower than this is not a representative: it would eat the budget of ten others
 # Red on main when the set was first run (owner NIGHTLY-TRIAGE, docs/agenti/test.md): left out so that a red of the set is the pull request's own; they still run in the nightly complete round
-KNOWN_RED = {"e2e_apri_subito", "e2e_dad_mrm_overlay", "e2e_disegno_verifica", "e2e_fondo_piatto", "e2e_hr_pannelli", "e2e_integra_barre", "e2e_integra_modi", "e2e_mappa_apice", "e2e_mappa_estrai", "e2e_parziali", "e2e_qaqc", "e2e_radicali", "e2e_xic_stretto"}
+KNOWN_RED = {"e2e_apri_subito", "e2e_dad_mrm_overlay", "e2e_disegno_verifica", "e2e_fondo_piatto", "e2e_hr_pannelli", "e2e_integra_barre", "e2e_integra_modi", "e2e_mappa_apice", "e2e_mappa_estrai", "e2e_parziali", "e2e_qaqc", "e2e_radicali", "e2e_ricerca_ms2", "e2e_xic_stretto"}
 BUDGET_S = 900        # sum of the local seconds of the safety set; on the runner the step took 1.28x that (1514 s for 1179 s) plus ~1 min of setup, so the whole job stays under 22 of its 30 min
 
 
